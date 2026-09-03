@@ -359,8 +359,8 @@ describe('the call sites', () => {
     'src/components/theleague/season-heroes/RecapCompositeHero.astro',
     'src/pages/theleague/lineup.astro',
     'src/pages/afl-fantasy/lineup.astro',
-    'src/pages/theleague/draft-broadcast.astro',
-    'src/pages/afl-fantasy/draft-broadcast.astro',
+    'src/pages/theleague/draft/broadcast.astro',
+    'src/pages/afl-fantasy/draft/broadcast.astro',
   ];
 
   for (const file of SURFACES) {

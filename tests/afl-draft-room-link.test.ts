@@ -90,7 +90,7 @@ describe('AL draft-day hero CTA', () => {
   it('morning of the draft: the displaced draft order stays reachable', () => {
     const view = viewFor(morningOf, '00');
     expect(view.secondaryLinks).toEqual([
-      { label: 'View Draft Order', href: '/afl-fantasy/draft-predictor' },
+      { label: 'View Draft Order', href: '/afl-fantasy/draft/order' },
     ]);
     // The board is 108 empty slots until the first pick — never offered early.
     expect(JSON.stringify(view.secondaryLinks)).not.toContain('draft-broadcast');
@@ -105,13 +105,13 @@ describe('AL draft-day hero CTA', () => {
     expect(view.link).toBe(roomUrl2026);
     expect(view.linkLabel).toBe('Enter Draft Room');
     expect(view.secondaryLinks).toEqual([
-      { label: 'AL Draft Board', href: '/afl-fantasy/draft-broadcast?conference=00', live: true },
+      { label: 'AL Draft Board', href: '/afl-fantasy/draft/broadcast?conference=00', live: true },
     ]);
   });
 
   it('the day BEFORE the draft is unchanged — order page, no external link', () => {
     const view = viewFor(dayBefore, '00');
-    expect(view.link).toBe('/afl-fantasy/draft-predictor');
+    expect(view.link).toBe('/afl-fantasy/draft/order');
     expect(view.linkLabel).toBe('View Draft Order');
     expect(view.isExternal).toBeFalsy();
     expect(view.secondaryLinks).toBeUndefined();
@@ -135,7 +135,7 @@ describe('NL draft-day hero CTA', () => {
     expect(view.linkLabel).toBe('Open Email Draft');
     expect(view.isExternal).toBe(true);
     expect(view.secondaryLinks).toEqual([
-      { label: 'View Draft Order', href: '/afl-fantasy/draft-predictor' },
+      { label: 'View Draft Order', href: '/afl-fantasy/draft/order' },
     ]);
   });
 
@@ -143,13 +143,13 @@ describe('NL draft-day hero CTA', () => {
     const view = viewFor(live, '01');
     expect(view.link).toBe(emailDraftUrl2026);
     expect(view.secondaryLinks).toEqual([
-      { label: 'NL Draft Board', href: '/afl-fantasy/draft-broadcast?conference=01', live: true },
+      { label: 'NL Draft Board', href: '/afl-fantasy/draft/broadcast?conference=01', live: true },
     ]);
   });
 
   it('the day BEFORE the NL draft is unchanged — order page, no external link', () => {
     const view = viewFor(dayBefore, '01');
-    expect(view.link).toBe('/afl-fantasy/draft-predictor');
+    expect(view.link).toBe('/afl-fantasy/draft/order');
     expect(view.isExternal).toBeFalsy();
   });
 });
@@ -157,19 +157,19 @@ describe('NL draft-day hero CTA', () => {
 describe('the MFL draft page is only for owners of that conference', () => {
   it('logged out on AL draft day: the public CTA stays our own page', () => {
     const morning = viewFor(new Date(2026, 7, 29, 7, 19));
-    expect(morning.link).toBe('/afl-fantasy/draft-predictor');
+    expect(morning.link).toBe('/afl-fantasy/draft/order');
     expect(morning.isExternal).toBeFalsy();
     // A guest we can't identify would just hit MFL's login wall.
     expect(morning.link).not.toContain('ajax_ld');
 
     const live = viewFor(new Date(2026, 7, 29, 13, 0));
-    expect(live.link).toBe('/afl-fantasy/draft-broadcast?conference=00');
+    expect(live.link).toBe('/afl-fantasy/draft/broadcast?conference=00');
     expect(live.linkLabel).toBe('Open the Draft Board');
   });
 
   it('logged out on NL draft day: same, no email draft page', () => {
     const live = viewFor(new Date(2026, 7, 30, 12, 0));
-    expect(live.link).toBe('/afl-fantasy/draft-broadcast?conference=01');
+    expect(live.link).toBe('/afl-fantasy/draft/broadcast?conference=01');
     expect(live.isExternal).toBeFalsy();
   });
 
@@ -177,14 +177,14 @@ describe('the MFL draft page is only for owners of that conference', () => {
     // Their own draft is past by now and drops out of the lead candidates, so
     // the NL card leads for them. They do not draft in it.
     const view = viewFor(new Date(2026, 7, 30, 12, 0), '00');
-    expect(view.link).toBe('/afl-fantasy/draft-broadcast?conference=01');
+    expect(view.link).toBe('/afl-fantasy/draft/broadcast?conference=01');
     expect(view.isExternal).toBeFalsy();
     expect(view.linkLabel).toBe('Watch the Board');
   });
 
   it('NL owner on AL draft day: leads with their own card, never the AL room', () => {
     const view = viewFor(new Date(2026, 7, 29, 7, 19), '01');
-    expect(view.link).toBe('/afl-fantasy/draft-predictor');
+    expect(view.link).toBe('/afl-fantasy/draft/order');
     expect(view.isExternal).toBeFalsy();
   });
 });

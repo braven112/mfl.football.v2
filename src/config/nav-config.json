@@ -250,10 +250,42 @@
           "description": "Next season's schedule, locked and revealed — plus the games to circle"
         },
         {
+          "id": "draft-hub",
+          "label": "Draft",
+          "icon": "draft-podium",
+          "path": "/draft",
+          "external": false,
+          "description": "The draft front door — countdown, your picks, and every draft tool"
+        },
+        {
+          "id": "draft-predictor",
+          "label": "Draft Order",
+          "icon": "draft-podium",
+          "path": "/draft/order",
+          "external": false,
+          "description": "Draft order — projected in-season, official once the playoffs wrap"
+        },
+        {
+          "id": "draft-results",
+          "label": "Draft Results",
+          "icon": "history",
+          "path": "/draft/results",
+          "external": false,
+          "description": "Every draft the league has ever held, pick by pick"
+        },
+        {
+          "id": "draft-broadcast",
+          "label": "Draft Broadcast",
+          "icon": "podium-empty",
+          "path": "/draft/broadcast",
+          "external": false,
+          "description": "The big board for draft night — plug a laptop into the TV and watch every pick land"
+        },
+        {
           "id": "draft-room",
           "label": "Draft Room",
           "icon": "draft-podium",
-          "path": "/draft-room",
+          "path": "/draft/room",
           "external": false,
           "leagueOnly": "theleague",
           "description": "Live rookie draft board with picks, queue, and chat"
@@ -262,27 +294,10 @@
           "id": "mock-draft",
           "label": "Mock Draft",
           "icon": "podium-persona",
-          "path": "/mock-draft",
+          "path": "/draft/mock",
           "external": false,
           "leagueOnly": "theleague",
           "description": "Run a mock auction or rookie draft simulation"
-        },
-        {
-          "id": "draft-predictor",
-          "label": "Draft Order",
-          "icon": "draft-podium",
-          "path": "/draft-predictor",
-          "external": false,
-          "description": "Draft order — projected in-season, official once the playoffs wrap"
-        },
-        {
-          "id": "afl-draft-broadcast",
-          "label": "Draft Broadcast",
-          "icon": "podium-empty",
-          "path": "/draft-broadcast",
-          "external": false,
-          "leagueOnly": "afl",
-          "description": "The big board for draft night — plug a laptop into the TV and watch every pick land"
         },
         {
           "id": "afl-keepers",
@@ -557,7 +572,7 @@
     "/salary-archive": "/salary-archive",
     "/mvp": "/mvp",
     "/dead-money": "/dead-money",
-    "/draft-predictor": "/draft-predictor",
+    "/draft/order": "/draft/order",
     "/icons": "/icons",
     "/assets": "/assets",
     "/contracts/manage": "/contracts/manage",
@@ -572,13 +587,18 @@
     "/activity": "/activity",
     "/search": "/search",
     "/news": "/news",
-    "/mock-draft": "/mock-draft",
-    "/draft-room": "/draft-room",
+    "/draft/mock": "/draft/mock",
+    "/draft/room": "/draft/room",
+    "/mock-draft": "/draft/mock",
+    "/draft-room": "/draft/room",
     "/suggestions": "/suggestions",
     "/stats": "/stats",
     "/rules-chat": "/rules-chat",
     "/owners": "/owners",
-    "/division-strength": "/division-strength"
+    "/division-strength": "/division-strength",
+    "/draft": "/draft",
+    "/draft/results": "/draft/results",
+    "/draft/broadcast": "/draft/broadcast"
   },
   "verifyTeamUrl": {
     "theleague": "https://{host}/{year}/home/{leagueId}?MODULE=MESSAGE20",

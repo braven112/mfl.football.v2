@@ -217,7 +217,7 @@ When determining which team to display:
 **Files to Modify**:
 - `src/pages/theleague/standings.astro`
 - `src/pages/theleague/playoffs.astro`
-- `src/pages/theleague/draft-predictor.astro`
+- `src/pages/theleague/draft/order.astro`
 
 ### Phase 3: AFL Integration
 **Timeline**: Week 4

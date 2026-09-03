@@ -123,7 +123,7 @@ const CAPTURE_PATHS = {
   // the AFL card has no contract UI at all.
   'free-agents-rostered-by': '/theleague/players',
   // Single-league entry, but its link is the league-neutral bare
-  // `/draft-broadcast`, which only routes on TheLeague's own apex host. The
+  // `/draft/broadcast`, which only routes on TheLeague's own apex host. The
   // REHEARSAL url is deliberate: the live board is whatever state the real
   // draft is in — for most of the year "Draft complete", which is a dull and
   // uninformative launch image. Replaying a finished season puts an actual
@@ -131,7 +131,16 @@ const CAPTURE_PATHS = {
   // waits for one and strips the rehearsal badge so the shot is not captioned
   // as a dry run.
   'theleague-draft-broadcast':
-    '/theleague/draft-broadcast?conference=league&year=2025&rehearse=0',
+    '/theleague/draft/broadcast?conference=league&year=2025&rehearse=0',
+  // Both-league entry, so its link is the league-neutral bare
+  // `/draft/results`, which only routes on a league's own apex host. Shot
+  // against a HISTORICAL season rather than the default (the most recent
+  // draft): the subject of the article is that old drafts are browsable at
+  // all, and the current year is the one board everybody already remembers.
+  // 2015 is fully resolved — every pick has a name and a headshot — whereas
+  // the startup drafts the article also mentions are, by their nature, a page
+  // of blanks and would sell the feature badly.
+  'draft-section': '/theleague/draft/results?year=2015',
 };
 
 const PAGE_HOOKS = {

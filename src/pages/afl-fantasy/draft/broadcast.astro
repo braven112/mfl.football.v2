@@ -32,12 +32,13 @@
  *                       standing in front of a TV for ten minutes.
  */
 
-import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
-import DraftBroadcastIsland from '../../components/shared/draft-broadcast/DraftBroadcast';
-import aflConfig from '../../../data/afl-fantasy/afl.config.json';
-import { getLeagueBySlug } from '../../config/leagues';
-import { getLeagueYearForSlug } from '../../utils/league-year';
-import { buildDraftPlayers } from '../../utils/build-draft-players';
+import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
+import DraftNav from '../../../components/shared/draft-nav/DraftNav.astro';
+import DraftBroadcastIsland from '../../../components/shared/draft-broadcast/DraftBroadcast';
+import aflConfig from '../../../../data/afl-fantasy/afl.config.json';
+import { getLeagueBySlug } from '../../../config/leagues';
+import { getLeagueYearForSlug } from '../../../utils/league-year';
+import { buildDraftPlayers } from '../../../utils/build-draft-players';
 import {
   assignBoardRanks,
   buildConferenceBoard,
@@ -49,20 +50,20 @@ import {
   loadConferenceKeepers,
   loadFranchiseHoldings,
   trimToDraftable,
-} from '../../utils/draft-broadcast-server';
-import { resolveBroadcastSource } from '../../utils/draft-broadcast-source';
-import { broadcastStrokeIndex, resolveBroadcastCrest } from '../../utils/broadcast-crest';
-import { resolveWarmDepth } from '../../utils/draft-broadcast-images';
-import { resolveScreensaverIdleMs } from '../../utils/draft-broadcast';
+} from '../../../utils/draft-broadcast-server';
+import { resolveBroadcastSource } from '../../../utils/draft-broadcast-source';
+import { broadcastStrokeIndex, resolveBroadcastCrest } from '../../../utils/broadcast-crest';
+import { resolveWarmDepth } from '../../../utils/draft-broadcast-images';
+import { resolveScreensaverIdleMs } from '../../../utils/draft-broadcast';
 import type {
   BroadcastConference,
   BroadcastPlayer,
   DraftBroadcastPageData,
-} from '../../types/draft-broadcast';
-import type { DraftRoomTeam } from '../../types/draft-room';
+} from '../../../types/draft-broadcast';
+import type { DraftRoomTeam } from '../../../types/draft-room';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import '../../styles/draft-broadcast.css';
+import '../../../styles/draft-broadcast.css';
 
 export const prerender = false;
 
@@ -275,6 +276,7 @@ const title = `${conference?.name ?? 'AFL'} Draft Board | AFL`;
 ---
 
 <TheLeagueLayout title={title} hideMobileNavIcons>
+  <DraftNav leagueSlug="afl-fantasy" current="broadcast" crumb="Broadcast" />
   <DraftBroadcastIsland
     client:load
     pageData={JSON.stringify(pageData)}

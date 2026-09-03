@@ -1,0 +1,56 @@
+---
+/**
+ * Draft Results (AFL) — thin route wrapper.
+ *
+ * Shared implementation lives in
+ * components/shared/draft-results/DraftResultsPage. See TheLeague's twin for
+ * why the glob is here and why it is lazy.
+ *
+ * Two things differ from TheLeague's wrapper, and they are the whole diff:
+ *
+ *  1. CONFERENCES. The AFL drafts as two independent boards, so unit labels
+ *     come from the config's conference names rather than a constant. 2003 and
+ *     2004 carry an empty second unit — the league drafted as one body then —
+ *     and `listDraftUnits` drops it upstream so no dead tab is offered.
+ *
+ *  2. PLAYER IDENTITY reads two unions. AFL drafts reach back to 2003 but its
+ *     players.json only begins in 2011, so about half the 2004 board and a
+ *     shrinking tail through 2009 name players nothing can resolve. MFL ids
+ *     are global, so TheLeague's union is chained on — today it adds nothing
+ *     (the AFL union is a superset, a redraft league rostering far more
+ *     players), but the chain keeps that coincidence from becoming a silent
+ *     dependency. The page says why a name is missing rather than leaving a
+ *     blank that reads as a bug.
+ */
+import DraftResultsPage from '../../../components/shared/draft-results/DraftResultsPage.astro';
+import aflConfigData from '../../../../data/afl-fantasy/afl.config.json';
+import { getGlobalPlayerMap } from '../../../utils/player-map';
+import { resolveConfigForYear } from '../../../utils/team-names';
+import { buildDraftResultsView } from '../../../utils/draft-results-feeds';
+
+export const prerender = false;
+
+const aflIdentities = getGlobalPlayerMap('afl-fantasy');
+const leagueIdentities = getGlobalPlayerMap('theleague');
+
+/** MFL names the units CONFERENCE00/CONFERENCE01; the config names them. */
+const conferenceNames = new Map<string, string>(
+  ((aflConfigData as any).conferences ?? []).map((c: any) => [`CONFERENCE${c.code}`, c.name])
+);
+
+const view = await buildDraftResultsView({
+  feeds: import.meta.glob('../../../../data/afl-fantasy/mfl-feeds/*/draftResults.json'),
+  params: Astro.url.searchParams,
+  teamsForYear: (year) =>
+    (resolveConfigForYear(aflConfigData as any, year).teams ?? []).map((t: any) => ({
+      id: t.franchiseId,
+      name: t.name,
+      icon: t.icon,
+      banner: t.banner,
+    })),
+  labelForUnit: (code) => conferenceNames.get(code) ?? code,
+  resolvePlayer: (id) => aflIdentities.get(id) ?? leagueIdentities.get(id),
+});
+---
+
+<DraftResultsPage leagueSlug="afl-fantasy" view={view} basePath="/afl-fantasy/draft/results" />

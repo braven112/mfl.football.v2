@@ -1,0 +1,476 @@
+---
+/**
+ * Draft Predictor Page
+ * Displays projected draft order for next season based on current standings
+ * Updates as season progresses with real-time standings
+ */
+
+import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
+import DraftNav from '../../../components/shared/draft-nav/DraftNav.astro';
+import DraftPredictorGrid from '../../../components/theleague/DraftPredictorGrid.astro';
+import DraftViewSelector from '../../../components/theleague/DraftViewSelector.astro';
+import leagueConfigData from '../../../data/theleague.config.json';
+import { calculateDraftOrder, buildActualDraftPicks, convertActualPicksToPredictions, isLeagueDraftOrderFinal, isDraftConducted } from '../../../utils/draft-utils';
+import { extractToiletBowlWinners, extractLeagueChampion } from '../../../utils/toilet-bowl-utils';
+import { mergeStandingsWithFuturePicks, isValidFutureDraftPicksData } from '../../../utils/future-draft-picks-utils';
+import type { DraftPrediction, ToiletBowlResult } from '../../../types/standings';
+import { getTheLeaguePreference, setTheLeaguePreference, resolveTeamSelection } from '../../../utils/team-preferences';
+import { getAuthUser } from '../../../utils/auth';
+import { resolveLeaguePath } from '../../../utils/nav-utils';
+import { getCurrentSeasonYear, getNextDraftYear, getTestDateFromSearchParams } from '../../../utils/league-year';
+
+const standingsFeeds = import.meta.glob('../../../../data/theleague/mfl-feeds/*/standings.json', {
+  eager: true,
+});
+const playoffBracketFeeds = import.meta.glob(
+  '../../../../data/theleague/mfl-feeds/*/playoff-brackets.json',
+  {
+    eager: true,
+  }
+);
+// All years, eagerly: this page reads only NEXT year's board, but the feed is
+// small (304 KB across twenty seasons) and the glob predates the split. The
+// historical archive that used to browse it with ?year= is now
+// /draft/results, which globs the same feed LAZILY — see
+// utils/draft-results-feeds.ts for why that matters for the AFL's 1.2 MB.
+const draftResultsFeeds = import.meta.glob('../../../../data/theleague/mfl-feeds/*/draftResults.json', {
+  eager: true,
+});
+const futureDraftPicksFeeds = import.meta.glob('../../../../data/theleague/mfl-feeds/*/futureDraftPicks.json', {
+  eager: true,
+});
+
+const getModuleData = (mod: any) =>
+  mod && typeof mod === 'object' && 'default' in mod ? mod.default : mod;
+
+const extractFeedSeason = (filepath: string) => {
+  const match = filepath.match(/mfl-feeds\/(\d{4})\//);
+  return match ? match[1] : null;
+};
+
+// Get current season year (updates Labor Day) and next draft year.
+// `?testDate=YYYY-MM-DD` shifts the reference date server-side so year
+// rollover (and the data files each year loads) can be QA'd without
+// touching the clock.
+const testDate = getTestDateFromSearchParams(Astro.url.searchParams) ?? undefined;
+const currentYear = getCurrentSeasonYear(testDate);
+const nextYear = getNextDraftYear(testDate);
+
+// Load standings for current year
+const standingsKey = Object.keys(standingsFeeds).find(
+  (path) => extractFeedSeason(path) === String(currentYear)
+);
+const standingsData = standingsKey ? getModuleData(standingsFeeds[standingsKey]) : null;
+
+// Load playoff bracket for current year to determine toilet bowl winners
+const bracketKey = Object.keys(playoffBracketFeeds).find(
+  (path) => extractFeedSeason(path) === String(currentYear)
+);
+const bracketData = bracketKey ? getModuleData(playoffBracketFeeds[bracketKey]) : null;
+
+// Load draft results for next year (to show actual picks with trades)
+const draftResultsKey = Object.keys(draftResultsFeeds).find(
+  (path) => extractFeedSeason(path) === String(nextYear)
+);
+const draftResultsData = draftResultsKey ? getModuleData(draftResultsFeeds[draftResultsKey]) : null;
+
+// Load futureDraftPicks for current year (to show team ownership of draft picks)
+let futureDraftPicksData = null;
+const futureDraftPicksKey = Object.keys(futureDraftPicksFeeds).find(
+  (path) => extractFeedSeason(path) === String(currentYear)
+);
+
+if (futureDraftPicksKey) {
+  futureDraftPicksData = getModuleData(futureDraftPicksFeeds[futureDraftPicksKey]);
+}
+
+// Build team config map
+const teamsList = (leagueConfigData.teams ?? []).map((team: any) => ({
+  id: team.franchiseId,
+  name: team.name,
+  icon: team.icon ?? '',
+  banner: team.banner ?? '',
+}));
+
+const currentTeamConfigMap = new Map(teamsList.map((team) => [team.id, team]));
+
+// Extract toilet bowl winners
+let toiletBowlWinners: ToiletBowlResult[] = [];
+if (bracketData) {
+  toiletBowlWinners = extractToiletBowlWinners(bracketData);
+}
+
+// Extract league champion from playoff bracket
+let leagueWinnerId = '';
+if (bracketData) {
+  leagueWinnerId = extractLeagueChampion(bracketData);
+}
+
+// Calculate draft predictions
+let draftPredictions: DraftPrediction[] = [];
+let specialPickMap = new Map<string, DraftPrediction>();
+
+if (standingsData?.leagueStandings?.franchise) {
+  const franchises = standingsData.leagueStandings.franchise;
+
+  // Draft predictions will be calculated with league winner and toilet bowl winners
+  draftPredictions = calculateDraftOrder(
+    franchises,
+    currentTeamConfigMap,
+    leagueWinnerId,
+    toiletBowlWinners
+  );
+
+  // Track toilet bowl picks so we can preserve them (they don't trade)
+  // NOTE: Champion picks are NOT included here - they CAN be traded!
+  specialPickMap = new Map(
+    draftPredictions
+      .filter(p => p.isToiletBowlPick)
+      .map(p => [`${p.round}.${p.pickInRound}`, p])
+  );
+}
+
+// Sort by overall pick number
+const sortedPredictions = draftPredictions.sort(
+  (a, b) => a.overallPickNumber - b.overallPickNumber
+);
+
+// Build actual draft picks from draft results (showing current ownership after trades)
+let actualDraftPicksRaw: ReturnType<typeof buildActualDraftPicks> = [];
+let actualDraftPicks: ReturnType<typeof convertActualPicksToPredictions> = [];
+if (draftResultsData) {
+  actualDraftPicksRaw = buildActualDraftPicks(draftResultsData, currentTeamConfigMap);
+  actualDraftPicks = convertActualPicksToPredictions(actualDraftPicksRaw, currentTeamConfigMap);
+}
+
+// Get view from query parameter (default to 'final'); map deprecated 'assets' to 'final'
+const rawView = Astro.url.searchParams.get('view') || 'final';
+const normalizedView = rawView === 'assets' ? 'final' : rawView;
+
+// `?view=history` (and its older alias `?view=trades`) used to render a
+// pick-by-pick board as this page's third tab — a full draft archive buried
+// inside a page called "Draft Order", TheLeague-only, absent from the nav and
+// from page-directory.json. It is now /draft/results, for both leagues.
+//
+// The redirect lives HERE rather than in vercel.json because it is conditional
+// on a QUERY parameter, and it carries ?year= and ?team= across because those
+// mean the same thing on the new page — an owner's bookmark of one team's
+// draft history keeps working.
+//
+// This must stay ABOVE the view resolution below: it is what makes the whole
+// history branch unreachable.
+if (normalizedView === 'history' || normalizedView === 'trades') {
+  const carried = new URLSearchParams();
+  const year = Astro.url.searchParams.get('year');
+  const team = Astro.url.searchParams.get('team');
+  if (year) carried.set('year', year);
+  if (team && team !== 'all') carried.set('team', team);
+  const qs = carried.toString();
+  return Astro.redirect(
+    resolveLeaguePath('/theleague/draft/results', Astro.locals.hideLeaguePrefix ?? false) +
+      (qs ? `?${qs}` : ''),
+    301
+  );
+}
+
+// Fall back to 'final' for any unrecognized value so the page never renders blank.
+const VALID_VIEWS = ['projected', 'final'] as const;
+type DraftView = (typeof VALID_VIEWS)[number];
+const view: DraftView = (VALID_VIEWS as readonly string[]).includes(normalizedView)
+  ? (normalizedView as DraftView)
+  : 'final';
+
+// Note: Champion logic is already applied by calculateDraftOrder above
+// No need to apply it again here
+
+// Seasonal framing — three phases:
+//   'projected' — season underway, playoffs incomplete: the order is a live
+//                 prediction that shifts with the standings.
+//   'official'  — champion crowned and all three toilet bowl comp slots
+//                 settled, draft not yet held: the order is locked. No more
+//                 predicting.
+//   'drafted'   — the rookie draft has been conducted: the order is history,
+//                 and the page is back to being a predictor once the new
+//                 season's standings start rolling in (post-Labor Day).
+// In official AND drafted phases nothing is being predicted — only the
+// in-season projection earns the "Predictor" tab title below.
+const draftPhase: 'projected' | 'official' | 'drafted' = isDraftConducted(draftResultsData)
+  ? 'drafted'
+  : isLeagueDraftOrderFinal(leagueWinnerId, toiletBowlWinners)
+    ? 'official'
+    : 'projected';
+
+// Final order: merge standings-based predictions with futureDraftPicks ownership
+let finalBase: DraftPrediction[];
+if (draftPhase === 'drafted' && actualDraftPicks.length > 0) {
+  // The draft happened — the as-drafted results are ground truth. The
+  // futureDraftPicks snapshot is a pre-draft fetch (frozen months earlier)
+  // and misses any pick trades made after it, so it must NOT win here.
+  finalBase = actualDraftPicks;
+} else if (futureDraftPicksData && isValidFutureDraftPicksData(futureDraftPicksData)) {
+  // Merge standings order (with champion at pick 16) with current ownership from futureDraftPicks API
+  finalBase = mergeStandingsWithFuturePicks(sortedPredictions, futureDraftPicksData, currentTeamConfigMap, nextYear);
+} else if (actualDraftPicks.length > 0) {
+  // After draft, use actual picks
+  finalBase = actualDraftPicks;
+} else {
+  // Fallback to standings-based projection with champion logic
+  finalBase = sortedPredictions;
+}
+
+const mergeSpecialPicks = (
+  base: DraftPrediction[],
+  specials: Map<string, DraftPrediction>
+) => {
+  const merged = new Map<string, DraftPrediction>();
+  base.forEach(p => merged.set(`${p.round}.${p.pickInRound}`, p));
+  specials.forEach((p, key) => merged.set(key, p));
+  return Array.from(merged.values()).sort((a, b) => a.overallPickNumber - b.overallPickNumber);
+};
+
+const finalPredictions = mergeSpecialPicks(finalBase, specialPickMap);
+
+// Team personalization: URL params + cookie integration
+const myTeamParam = Astro.url.searchParams.get('myteam');
+const franchiseParam = Astro.url.searchParams.get('franchise');
+const cookiePreference = getTheLeaguePreference(Astro.cookies);
+const authUser = getAuthUser(Astro.request);
+
+// If myteam param is provided, update the cookie
+if (myTeamParam) {
+  setTheLeaguePreference(Astro.cookies, myTeamParam);
+}
+
+// Resolve which team to highlight/filter by (priority: myteam → franchise → cookie → auth → null)
+const selectedTeamId = resolveTeamSelection({
+  myTeamParam,
+  franchiseParam,
+  cookiePreference: cookiePreference?.franchiseId,
+  authUserFranchise: authUser?.franchiseId,
+  defaultTeam: '', // No default for draft predictor - user might not have picks
+});
+
+---
+
+<TheLeagueLayout title={draftPhase === 'projected' ? 'Draft Predictor' : `${nextYear} Draft Order`}>
+  <DraftNav leagueSlug="theleague" current="order" crumb="Order" />
+  <section class="draft-predictor-page">
+    <header class="draft-predictor-header">
+      <div>
+        <h1 class="draft-predictor-title">
+          {nextYear} Draft Order
+          {draftPhase === 'official' && <span class="official-badge">Official</span>}
+        </h1>
+        <p class="draft-predictor-subtitle">
+          {view === 'projected' && (
+            draftPhase === 'projected'
+              ? `Projected base draft order based on current ${currentYear} season standings`
+              : `Base draft order locked in by the final ${currentYear} standings and playoff results`
+          )}
+          {view === 'final' && (
+            draftPhase === 'drafted'
+              ? `The ${nextYear} rookie draft is in the books — final order as drafted. The ${nextYear + 1} predictor fires up when the new season kicks off.`
+              : draftPhase === 'official'
+                ? `The official ${nextYear} draft order with traded pick ownership applied`
+                : `Projected final draft order with traded pick ownership applied`
+          )}
+        </p>
+      </div>
+      <DraftViewSelector activeView={view} />
+    </header>
+
+    <div class="draft-predictor-content">
+      {sortedPredictions.length > 0 ? (
+        <>
+          {view === 'projected' && (
+            <DraftPredictorGrid
+              predictions={sortedPredictions}
+              userTeamId={selectedTeamId}
+              championshipDetermined={!!leagueWinnerId}
+            />
+          )}
+          {view === 'final' && finalPredictions.length > 0 && (
+            <DraftPredictorGrid
+              predictions={finalPredictions}
+              userTeamId={selectedTeamId}
+              championshipDetermined={!!leagueWinnerId}
+            />
+          )}
+          {view === 'final' && finalPredictions.length === 0 && (
+            <div class="draft-predictor-loading">
+              <p>No final draft order available yet.</p>
+            </div>
+          )}
+        </>
+      ) : (
+        <div class="draft-predictor-loading">
+          <p>Loading draft predictions...</p>
+        </div>
+      )}
+    </div>
+
+    <div class="draft-predictor-info">
+      <div class="info-card">
+        <h3>How It Works</h3>
+        <ul>
+          <li>
+            <strong>Regular Picks (1-15, 17-48):</strong> Determined by reverse standings order (worst record gets 1st pick)
+          </li>
+          <li>
+            <strong>Pick 16:</strong> League champion always receives the 16th pick
+          </li>
+          <li>
+            <strong>Compensatory Picks (1.17, 2.17, 2.18):</strong> Awarded to toilet bowl tournament winners
+          </li>
+          <li>
+            <strong>Tiebreakers:</strong> Uses same wild card tiebreaker rules as standings (all-play %, points for, power rating, victory points, points against)
+          </li>
+          <li>
+            <strong>Updates:</strong> Refreshes in real-time as season progresses
+          </li>
+        </ul>
+      </div>
+    </div>
+  </section>
+</TheLeagueLayout>
+
+<style>
+  .draft-predictor-page {
+    display: grid;
+    gap: var(--padding-lg);
+  }
+
+  .draft-predictor-header {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 2rem;
+    justify-items: center;
+    align-items: center;
+    padding: 2rem;
+    background: var(--card-bg, #fff);
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  }
+
+  :global(html.dark) .draft-predictor-header {
+    box-shadow:
+      0 0 0 1px var(--content-border, #555555),
+      var(--shadow-lg, 0 10px 15px -3px rgb(0 0 0 / 0.1));
+  }
+
+  @media (min-width: 550px) {
+    .draft-predictor-header {
+      grid-template-columns: 1fr auto;
+      align-items: start;
+      justify-items: start;
+    }
+  }
+
+  .draft-predictor-title {
+    margin: 0;
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--color-gray-900, #111827);
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm, 0.5rem);
+    flex-wrap: wrap;
+  }
+
+  .official-badge {
+    display: inline-block;
+    padding: var(--spacing-xs, 0.25rem) var(--spacing-sm, 0.5rem);
+    border-radius: var(--radius-full, 9999px);
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #fff;
+    background: var(--color-secondary, #2e8743);
+    box-shadow: var(--shadow-sm, 0.5px 1px 1px rgba(0, 0, 0, 0.09));
+  }
+
+  .draft-predictor-subtitle {
+    margin: 0;
+    color: var(--content-text-muted, #64748b);
+    font-size: 1rem;
+  }
+
+  .draft-predictor-content {
+    min-height: 400px;
+  }
+
+  .draft-predictor-loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 400px;
+    color: var(--content-text-muted, #64748b);
+    font-size: 1.125rem;
+  }
+
+
+  .draft-predictor-info {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: var(--padding-md);
+  }
+
+  .info-card {
+    background: var(--card-bg-color, #fff);
+    border-radius: 1rem;
+    padding: 1.5rem;
+    box-shadow: var(--box-shadow-lg, 0 10px 15px -3px rgb(0 0 0 / 0.1));
+  }
+
+  :global(html.dark) .info-card {
+    box-shadow:
+      0 0 0 1px var(--content-border, #555555),
+      var(--shadow-lg, var(--box-shadow-lg, 0 10px 15px -3px rgb(0 0 0 / 0.1)));
+  }
+
+  .info-card h3 {
+    margin: 0 0 1rem;
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: var(--color-gray-900, #111827);
+  }
+
+  .info-card ul {
+    margin: 0;
+    padding-left: 1.5rem;
+    list-style: disc;
+    color: var(--content-text-muted, #64748b);
+    font-size: 0.925rem;
+    line-height: 1.6;
+  }
+
+  .info-card li {
+    margin-bottom: 0.75rem;
+  }
+
+  .info-card li strong {
+    color: var(--color-gray-900, #111827);
+  }
+
+  .info-card p {
+    margin: 0;
+    color: var(--content-text-muted, #64748b);
+    font-size: 0.925rem;
+    line-height: 1.6;
+  }
+
+  @media (max-width: 767px) {
+    .draft-predictor-title {
+      font-size: 1.5rem;
+    }
+
+    .draft-predictor-subtitle {
+      font-size: 0.925rem;
+    }
+
+    .draft-predictor-info {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

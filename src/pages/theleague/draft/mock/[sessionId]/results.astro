@@ -7,19 +7,19 @@
  * the draft board and per-team pick summaries.
  */
 
-import TheLeagueLayout from '../../../../layouts/TheLeagueLayout.astro';
-import Breadcrumbs from '../../../../components/theleague/Breadcrumbs.astro';
-import { getAuthUser } from '../../../../utils/auth';
-import { getCurrentLeagueYear } from '../../../../utils/league-year';
-import { getPlayerHeadshot } from '../../../../constants/roster-constants';
-import leagueConfigData from '../../../../data/theleague.config.json';
-import espnCollegeIds from '../../../../../data/theleague/espn-college-ids.json';
+import TheLeagueLayout from '../../../../../layouts/TheLeagueLayout.astro';
+import DraftNav from '../../../../../components/shared/draft-nav/DraftNav.astro';
+import { getAuthUser } from '../../../../../utils/auth';
+import { getCurrentLeagueYear } from '../../../../../utils/league-year';
+import { getPlayerHeadshot } from '../../../../../constants/roster-constants';
+import leagueConfigData from '../../../../../data/theleague.config.json';
+import espnCollegeIds from '../../../../../../data/theleague/espn-college-ids.json';
 
 export const prerender = false;
 
 const { sessionId } = Astro.params;
 if (!sessionId) {
-  return Astro.redirect('/theleague/mock-draft');
+  return Astro.redirect('/theleague/draft/mock');
 }
 
 const user = getAuthUser(Astro.request);
@@ -51,7 +51,7 @@ if (partyHost) {
 }
 
 if (!session) {
-  return Astro.redirect('/theleague/mock-draft');
+  return Astro.redirect('/theleague/draft/mock');
 }
 
 // ── Build team lookup ──
@@ -72,7 +72,7 @@ const getModuleData = (mod: any) =>
 // Year-filtered (2025+): only the current league year is read below.
 // tests/current-era-feed-globs.test.ts guards it.
 const playersFeeds = import.meta.glob(
-  '../../../../../data/theleague/mfl-feeds/20{2[5-9],[3-9][0-9]}/players.json',
+  '../../../../../../data/theleague/mfl-feeds/20{2[5-9],[3-9][0-9]}/players.json',
   { eager: true },
 );
 const playersKey = Object.keys(playersFeeds).find(
@@ -149,11 +149,7 @@ const createdDate = new Date(session.createdAt).toLocaleDateString('en-US', {
   <div class="results">
     <!-- Header -->
     <header class="results__header">
-      <Breadcrumbs items={[
-        { label: 'The League', href: '/theleague' },
-        { label: 'Mock Draft', href: '/theleague/mock-draft' },
-        { label: 'Results' },
-      ]} />
+      <DraftNav leagueSlug="theleague" current="mock" crumb="Results" crumbParent={{ label: 'Mock Draft', path: '/draft/mock' }} />
       <h1 class="results__title">Mock Draft Results</h1>
       <p class="results__meta">
         {creatorTeam?.nameShort || 'Unknown'}'s mock · {createdDate} · {totalRounds} rounds · {session.timerSeconds}s timer
@@ -271,7 +267,7 @@ const createdDate = new Date(session.createdAt).toLocaleDateString('en-US', {
 
     <!-- CTA -->
     <div class="results__cta">
-      <a href="/theleague/mock-draft" class="results__cta-btn">Run Another Mock Draft</a>
+      <a href="/theleague/draft/mock" class="results__cta-btn">Run Another Mock Draft</a>
     </div>
   </div>
 </TheLeagueLayout>

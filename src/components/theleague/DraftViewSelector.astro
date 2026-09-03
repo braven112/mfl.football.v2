@@ -2,15 +2,19 @@
 import { spriteUrl } from '../../utils/sprite-url';
 
 export interface Props {
-  activeView: 'projected' | 'final' | 'history';
+  activeView: 'projected' | 'final';
 }
 
 const { activeView } = Astro.props;
 
+// 'history' used to be the third tab here. It rendered a full pick-by-pick
+// archive inside a page called "Draft Order" — TheLeague-only, and reachable
+// from nowhere else. It is now its own page at /draft/results, linked from the
+// DraftNav strip on every draft page; the order page redirects ?view=history
+// there. Do not re-add it as a tab.
 const VIEWS = [
   { key: 'final', label: 'Final', icon: 'icon-podium-persona', aria: 'Final Draft Order' },
   { key: 'projected', label: 'Base', icon: 'icon-podium-empty', aria: 'Projected Draft Order' },
-  { key: 'history', label: 'History', icon: 'icon-history', aria: 'Draft History' },
 ] as const;
 
 // Build each tab's href from the current URL so other params (e.g. ?year=)

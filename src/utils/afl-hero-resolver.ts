@@ -187,10 +187,10 @@ const GLOW_NAVY = 'rgba(28,73,124,.55)';
  * falls back to the first conference (the AL) when the param is missing, so a
  * bare path silently sends National League owners to the American League board.
  */
-const AFL_BROADCAST_PATH = '/afl-fantasy/draft-broadcast';
+const AFL_BROADCAST_PATH = '/afl-fantasy/draft/broadcast';
 
 /** Our own draft-order page — the useful destination BEFORE draft day. */
-const AFL_DRAFT_ORDER_PATH = '/afl-fantasy/draft-predictor';
+const AFL_DRAFT_ORDER_PATH = '/afl-fantasy/draft/order';
 
 /** MFL option number for the league's Email Draft page (`O=`). */
 const MFL_EMAIL_DRAFT_OPTION = 52;

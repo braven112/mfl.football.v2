@@ -1,0 +1,52 @@
+---
+/**
+ * Draft hub (AFL) — thin route wrapper.
+ *
+ * Shared render lives in components/shared/draft-hub/DraftHubPage; the
+ * assembly lives in utils/draft-hub-data#buildDraftHubProps.
+ *
+ * The globs are HERE because a static import specifier can't be a runtime
+ * variable. They are LAZY, and the calendar/futureDraftPicks feeds are globbed
+ * rather than imported by year for the same reason — writing the year into the
+ * specifier is a league constant that goes stale at the next rollover.
+ */
+import DraftHubPage from '../../../components/shared/draft-hub/DraftHubPage.astro';
+import aflConfigData from '../../../../data/afl-fantasy/afl.config.json';
+import { getAuthUser, isAuthorizedForLeague } from '../../../utils/auth';
+import { getLeagueBySlug } from '../../../config/leagues';
+import { resolveConfigForYear } from '../../../utils/team-names';
+import { getLeagueYearForSlug } from '../../../utils/league-year';
+import { buildDraftHubProps } from '../../../utils/draft-hub-data';
+
+export const prerender = false;
+
+// Draft capital is shown only to a signed-in owner OF THIS LEAGUE. Without the
+// league check, a TheLeague owner browsing the AFL would be shown their own
+// franchise id's AFL picks — both leagues have a franchise 0001.
+const league = getLeagueBySlug('afl-fantasy')!;
+const user = getAuthUser(Astro.request);
+const myFranchiseId = user && isAuthorizedForLeague(user, league.id) ? user.franchiseId : null;
+
+const props = await buildDraftHubProps({
+  draftFeeds: import.meta.glob('../../../../data/afl-fantasy/mfl-feeds/*/draftResults.json'),
+  calendarFeeds: import.meta.glob('../../../../data/afl-fantasy/mfl-feeds/*/calendar.json'),
+  futurePickFeeds: import.meta.glob('../../../../data/afl-fantasy/mfl-feeds/*/futureDraftPicks.json'),
+  // Per-league rollover, NOT TheLeague's clock: the AFL flips June 1 and
+  // TheLeague Feb 14, so using the latter would put the AFL hub on the wrong
+  // season's calendar, future picks and team config for ~3.5 months a year.
+  // getLeagueYearForSlug falls back for a league that declares no rollover,
+  // so TheLeague's behaviour is unchanged.
+  leagueYear: getLeagueYearForSlug('afl-fantasy'),
+  unionSlug: 'afl-fantasy',
+  myFranchiseId,
+  teamsForYear: (year) =>
+    (resolveConfigForYear(aflConfigData as any, year).teams ?? []).map((t: any) => ({
+      id: t.franchiseId,
+      name: t.name,
+      icon: t.icon,
+      banner: t.banner,
+    })),
+});
+---
+
+<DraftHubPage leagueSlug="afl-fantasy" {...props} />

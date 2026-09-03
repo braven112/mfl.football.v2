@@ -82,7 +82,7 @@ export const DESTINATIONS = {
   'pecking-order': { path: '/pecking-order', label: 'the pecking order', leagues: BOTH },
   rivalries: { path: '/rivalries', label: 'the rivalry pages', leagues: BOTH },
   franchises: { path: '/franchises', label: 'the franchise histories', leagues: BOTH },
-  'draft-predictor': { path: '/draft-predictor', label: 'the draft order', leagues: BOTH },
+  'draft-predictor': { path: '/draft/order', label: 'the draft order', leagues: BOTH },
   calendar: { path: '/calendar', label: 'the league calendar', leagues: BOTH },
 
   // ── Site features worth a plug ──
@@ -102,8 +102,8 @@ export const DESTINATIONS = {
   mvp: { path: '/mvp', label: 'the MVP tracker', leagues: ['theleague'] },
   'dead-money': { path: '/dead-money', label: 'the dead money report', leagues: ['theleague'] },
   'projected-free-agents': { path: '/projected-free-agents', label: "next year's free agent class", leagues: ['theleague'] },
-  'draft-room': { path: '/draft-room', label: 'the draft room', leagues: ['theleague'] },
-  'mock-draft': { path: '/mock-draft', label: 'the mock draft room', leagues: ['theleague'] },
+  'draft-room': { path: '/draft/room', label: 'the draft room', leagues: ['theleague'] },
+  'mock-draft': { path: '/draft/mock', label: 'the mock draft room', leagues: ['theleague'] },
   salary: { path: '/salary', label: 'the salary benchmarks', leagues: ['theleague'] },
   stats: { path: '/stats', label: 'the stats hub', leagues: ['theleague'] },
   'league-summary': { path: '/league-summary', label: 'the league summary', leagues: ['theleague'] },

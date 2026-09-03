@@ -171,7 +171,7 @@ This matching logic already exists in `rookies-2026.astro` (`normalizeFbgName`).
 |------|---------|
 | `src/pages/api/mock-draft/create.ts` | Build multiple ranked lists, accept ranking config |
 | `party/draft-room.ts` | Per-team auto-pick source selection |
-| `src/pages/theleague/mock-draft/index.astro` | Board Settings UI in lobby |
+| `src/pages/theleague/draft/mock/index.astro` | Board Settings UI in lobby |
 | `src/utils/player-name-matching.ts` | NEW — shared fuzzy name → MFL ID matching |
 | `src/types/draft-room.ts` | Add `RankingSource` type, update `MockDraftSession` |
 

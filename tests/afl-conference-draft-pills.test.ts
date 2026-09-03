@@ -181,9 +181,9 @@ describe('live conference board links', () => {
   it('AL draft day: an NL owner gets the live AL board as a secondary link', () => {
     const view = viewFor(alDraftDay, '01');
     // Their own (not-yet-live) conference still owns the CTA.
-    expect(view.link).toBe('/afl-fantasy/draft-predictor');
+    expect(view.link).toBe('/afl-fantasy/draft/order');
     expect(view.secondaryLinks).toEqual([
-      { label: 'AL Draft Board', href: '/afl-fantasy/draft-broadcast?conference=00', live: true },
+      { label: 'AL Draft Board', href: '/afl-fantasy/draft/broadcast?conference=00', live: true },
     ]);
   });
 
@@ -193,23 +193,23 @@ describe('live conference board links', () => {
     // the AL board is no longer a duplicate of it and rides along as secondary.
     expect(view.link).toContain('/ajax_ld?L=');
     expect(view.secondaryLinks).toEqual([
-      { label: 'AL Draft Board', href: '/afl-fantasy/draft-broadcast?conference=00', live: true },
+      { label: 'AL Draft Board', href: '/afl-fantasy/draft/broadcast?conference=00', live: true },
     ]);
   });
 
   it('NL draft day: an AL owner reaches the live NL board', () => {
     const view = viewFor(nlDraftDay, '00');
     const hrefs = [view.link, ...(view.secondaryLinks ?? []).map((l) => l.href)];
-    expect(hrefs).toContain('/afl-fantasy/draft-broadcast?conference=01');
+    expect(hrefs).toContain('/afl-fantasy/draft/broadcast?conference=01');
     // Never offer a board for a draft that has not started — it is 108 empty slots.
-    expect(hrefs).not.toContain('/afl-fantasy/draft-broadcast?conference=00');
+    expect(hrefs).not.toContain('/afl-fantasy/draft/broadcast?conference=00');
   });
 
   it('lead-up week: no board links at all, for either conference', () => {
     for (const conf of ['00', '01'] as const) {
       const view = viewFor(leadUp, conf);
       expect(view.secondaryLinks).toBeUndefined();
-      expect(view.link).toBe('/afl-fantasy/draft-predictor');
+      expect(view.link).toBe('/afl-fantasy/draft/order');
     }
   });
 
@@ -219,7 +219,7 @@ describe('live conference board links', () => {
         const view = viewFor(ref, conf);
         const links = [view.link, ...(view.secondaryLinks ?? []).map((l) => l.href)];
         for (const href of links) {
-          if (href?.includes('/draft-broadcast')) {
+          if (href?.includes('/draft/broadcast')) {
             expect(href).toMatch(/\?conference=(00|01)$/);
           }
         }

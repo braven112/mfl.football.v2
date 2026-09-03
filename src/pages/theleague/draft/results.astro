@@ -1,0 +1,40 @@
+---
+/**
+ * Draft Results (The League) — thin route wrapper.
+ *
+ * Shared implementation lives in
+ * components/shared/draft-results/DraftResultsPage; the assembly lives in
+ * utils/draft-results-feeds#buildDraftResultsView.
+ *
+ * The glob is HERE because a static import specifier can't be a runtime
+ * variable, and globbing both leagues in the shared component would pull the
+ * other league's twenty-odd seasons into every render of either route. It is
+ * LAZY: the keys give the season list at build time, while only the season
+ * being viewed is read per request.
+ */
+import DraftResultsPage from '../../../components/shared/draft-results/DraftResultsPage.astro';
+import leagueConfigData from '../../../data/theleague.config.json';
+import { getGlobalPlayerMap } from '../../../utils/player-map';
+import { resolveConfigForYear } from '../../../utils/team-names';
+import { buildDraftResultsView } from '../../../utils/draft-results-feeds';
+
+export const prerender = false;
+
+const identities = getGlobalPlayerMap('theleague');
+
+const view = await buildDraftResultsView({
+  feeds: import.meta.glob('../../../../data/theleague/mfl-feeds/*/draftResults.json'),
+  params: Astro.url.searchParams,
+  teamsForYear: (year) =>
+    (resolveConfigForYear(leagueConfigData as any, year).teams ?? []).map((t: any) => ({
+      id: t.franchiseId,
+      name: t.name,
+      icon: t.icon,
+      banner: t.banner,
+    })),
+  labelForUnit: () => 'League',
+  resolvePlayer: (id) => identities.get(id),
+});
+---
+
+<DraftResultsPage leagueSlug="theleague" view={view} basePath="/theleague/draft/results" />

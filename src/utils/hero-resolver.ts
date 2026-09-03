@@ -1238,7 +1238,7 @@ export function resolveHeroState(
           source: 'event',
           title: 'Draft Season Is Here',
           summary: 'The auction is settled — now scout the rookie class. Build your board and rehearse before draft day.',
-          link: '/theleague/mock-draft',
+          link: '/theleague/draft/mock',
           linkLabel: 'Run a mock draft',
           icon: 'draft-podium',
           accentColor: 'var(--cat-draft, #7c3aed)',
