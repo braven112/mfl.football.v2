@@ -1,0 +1,484 @@
+---
+/**
+ * Draft Results — the historical draft archive, shared by both leagues.
+ *
+ * Every draft the league has ever held, one season at a time: TheLeague back
+ * to its 2007 startup, the AFL back to 2003. The season the page opens on is
+ * the most recent draft that actually HAPPENED, not merely the newest feed —
+ * MFL stubs a draft's slots before it is conducted, so "newest year" would
+ * open on an empty board for most of the offseason.
+ *
+ * ── Zero client JS ─────────────────────────────────────────────────────────
+ *
+ * Every control is an `<a href>` that changes a query param, per the repo's
+ * rule (see DivisionStrengthPage's note on why YearSelector is not reused: it
+ * drives navigation from an inline `onchange` and dead-ends without script).
+ * The page this replaces used `<select>` + a change handler, which is also
+ * the shape that left DraftViewSelector's tabs dead under the ClientRouter.
+ *
+ * ── The conference switcher is the AFL's, and only the AFL's ───────────────
+ *
+ * TheLeague drafts as one LEAGUE unit and `view.unit` is null for it, so the
+ * switcher renders for nobody else. The AFL's 2003 and 2004 boards carry an
+ * EMPTY second conference in the feed; `listDraftUnits` drops it upstream, so
+ * those years correctly show one board and no switcher rather than a tab that
+ * opens onto nothing.
+ *
+ * All shaping decisions live in utils/draft-results-view.ts. This file
+ * renders; it does not decide.
+ */
+import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
+import Breadcrumbs from '../../theleague/Breadcrumbs.astro';
+import DraftNav from '../draft-nav/DraftNav.astro';
+import { resolveLeaguePath } from '../../../utils/nav-utils';
+import { getLeagueBySlug } from '../../../config/leagues';
+import type { CanonicalLeagueSlug } from '../../../config/leagues';
+import type { DraftResultsView } from '../../../utils/draft-results-view';
+
+interface Props {
+  leagueSlug: CanonicalLeagueSlug;
+  view: DraftResultsView;
+  /** This league's own Draft Results path, unprefixed-safe. */
+  basePath: string;
+}
+
+const { leagueSlug, view, basePath } = Astro.props;
+const league = getLeagueBySlug(leagueSlug)!;
+const hideLeaguePrefix = Astro.locals.hideLeaguePrefix ?? false;
+const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
+const base = r(basePath);
+
+/** Build a link that changes ONE param and keeps the rest of the view. */
+function hrefWith(overrides: Record<string, string | null>): string {
+  const params = new URLSearchParams();
+  if (view.year) params.set('year', String(view.year));
+  if (view.unit) params.set('conference', view.unit);
+  if (view.team !== 'all') params.set('team', view.team);
+  for (const [k, v] of Object.entries(overrides)) {
+    if (v === null) params.delete(k);
+    else params.set(k, v);
+  }
+  const qs = params.toString();
+  return qs ? `${base}?${qs}` : base;
+}
+
+const selectedTeam = view.teams.find((t) => t.id === view.team);
+const heading = `${view.year} Draft Results`;
+const subtitle = selectedTeam
+  ? `${selectedTeam.name} — every pick they made`
+  : view.shape.badge
+    ? `${view.shape.picks} picks over ${view.shape.rounds} rounds`
+    : `${view.shape.picks} picks over ${view.shape.rounds} rounds`;
+---
+
+<TheLeagueLayout title={`${league.name} — ${heading}`}>
+  <main class="dr">
+    <Breadcrumbs
+      items={[
+        { label: 'Home', href: `/${leagueSlug}` },
+        { label: 'Draft', href: `/${leagueSlug}/draft` },
+        { label: 'Results' },
+      ]}
+    />
+
+    <DraftNav leagueSlug={leagueSlug} current="results" />
+
+    <header class="dr__head">
+      <div class="dr__title-row">
+        <h1 class="dr__title">{heading}</h1>
+        {view.shape.badge && <span class="dr__badge">{view.shape.badge}</span>}
+      </div>
+      <p class="dr__subtitle">{subtitle}</p>
+    </header>
+
+    {/* ── Season rail ─────────────────────────────────────────────────── */}
+    <nav class="dr__rail" aria-label="Draft season">
+      <span class="dr__rail-label" id="dr-season-label">Season</span>
+      <ul class="dr__rail-list" aria-labelledby="dr-season-label">
+        {view.years.map((y) => (
+          <li>
+            <a
+              href={hrefWith({ year: String(y), conference: null })}
+              class:list={['dr__chip', { 'dr__chip--on': y === view.year }]}
+              aria-current={y === view.year ? 'page' : undefined}
+            >{y}</a>
+          </li>
+        ))}
+      </ul>
+    </nav>
+
+    {/* ── Conference switcher — the AFL only; null for a single-unit league ── */}
+    {view.unit && view.units.length > 1 && (
+      <nav class="dr__rail" aria-label="Conference">
+        <span class="dr__rail-label" id="dr-conf-label">Conference</span>
+        <ul class="dr__rail-list" aria-labelledby="dr-conf-label">
+          {view.units.map((u) => (
+            <li>
+              <a
+                href={hrefWith({ conference: u.code })}
+                class:list={['dr__chip', { 'dr__chip--on': u.code === view.unit }]}
+                aria-current={u.code === view.unit ? 'page' : undefined}
+              >{u.label}</a>
+            </li>
+          ))}
+        </ul>
+      </nav>
+    )}
+
+    {/* ── Team filter ─────────────────────────────────────────────────── */}
+    <nav class="dr__rail" aria-label="Filter by franchise">
+      <span class="dr__rail-label" id="dr-team-label">Team</span>
+      <ul class="dr__rail-list" aria-labelledby="dr-team-label">
+        <li>
+          <a
+            href={hrefWith({ team: null })}
+            class:list={['dr__chip', { 'dr__chip--on': view.team === 'all' }]}
+            aria-current={view.team === 'all' ? 'page' : undefined}
+          >All teams</a>
+        </li>
+        {view.teams.map((t) => (
+          <li>
+            <a
+              href={hrefWith({ team: t.id })}
+              class:list={['dr__chip', { 'dr__chip--on': t.id === view.team }]}
+              aria-current={t.id === view.team ? 'page' : undefined}
+              title={t.name}
+            >{t.name}</a>
+          </li>
+        ))}
+      </ul>
+    </nav>
+
+    {view.isEmpty ? (
+      <p class="dr__empty">
+        No picks are recorded for the {view.year} draft yet.
+        {view.years.length > 1 && (
+          <> Try <a href={hrefWith({ year: String(view.years[0]), conference: null })}>{view.years[0]}</a>.</>
+        )}
+      </p>
+    ) : view.picks.length === 0 ? (
+      <p class="dr__empty">
+        {selectedTeam?.name} made no picks in the {view.year} draft.
+        {' '}<a href={hrefWith({ team: null })}>Show the whole board</a>.
+      </p>
+    ) : (
+      <div class="dr__table-wrap">
+        {/* Say WHY a board has blanks in it. Both cases are properties of
+            MFL's archive, not of this page, and an unexplained column of
+            dashes reads as a bug. */}
+        {view.shape.concatenatedFrom !== null && (
+          <p class="dr__notice">
+            MFL recorded both of this season's conference drafts in a single board.
+            Rounds {view.shape.concatenatedFrom} and later are the other conference's
+            draft — which is why the same players appear twice and the round numbers
+            run past where a normal {league.name} draft ends.
+          </p>
+        )}
+        {view.selectionless === view.totalPicks ? (
+          <p class="dr__notice">
+            MFL's {view.year} archive records the draft ORDER but not the selections —
+            every slot is here, but the players who filled them were never written to the feed.
+          </p>
+        ) : view.unnamed > 0 && (
+          <p class="dr__notice">
+            {view.unnamed} of these picks can't be named:
+            the league's player archive begins in {leagueSlug === 'afl-fantasy' ? 2011 : 2007},
+            so a player drafted before then who left before it starts has no record to match.
+          </p>
+        )}
+        <table class="dr__table">
+          <caption class="dr__caption">
+            {view.picks.length === view.totalPicks
+              ? `All ${view.totalPicks} picks`
+              : `${view.picks.length} of ${view.totalPicks} picks`}
+          </caption>
+          <thead>
+            <tr>
+              <th scope="col" class="dr__num">#</th>
+              <th scope="col">Pick</th>
+              <th scope="col">Team</th>
+              <th scope="col">Player</th>
+              <th scope="col">Via</th>
+            </tr>
+          </thead>
+          <tbody>
+            {view.picks.map((p) => (
+              <tr>
+                <td class="dr__num">{p.overall}</td>
+                <td class="dr__pick">{p.label}</td>
+                <td>
+                  <span class="dr__team">
+                    {p.teamIcon && <img src={p.teamIcon} alt="" class="dr__team-icon" loading="lazy" width="24" height="24" />}
+                    <span class="dr__team-name">{p.teamName}</span>
+                  </span>
+                </td>
+                <td>
+                  {p.playerName ? (
+                    <span class="dr__player">
+                      {p.headshot && (
+                        <img src={p.headshot} alt="" class="dr__headshot" loading="lazy" width="32" height="32" />
+                      )}
+                      <span class="dr__player-meta">
+                        <span class="dr__player-name">{p.playerName}</span>
+                        <span class="dr__player-sub">
+                          {[p.position, p.nflTeam].filter(Boolean).join(' · ')}
+                        </span>
+                      </span>
+                    </span>
+                  ) : (
+                    /* A pick with no resolvable player is a real thing for the
+                       oldest drafts — the AFL's pre-2011 seasons have no
+                       players.json to resolve against. Say so rather than
+                       rendering an empty cell that reads as a bug. */
+                    <span class="dr__player-unknown">
+                      {p.playerId ? `Player #${p.playerId}` : 'No selection'}
+                    </span>
+                  )}
+                </td>
+                <td class="dr__via">{p.tradedFrom ?? '—'}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    )}
+  </main>
+</TheLeagueLayout>
+
+<style>
+  .dr {
+    --dres-accent: var(--league-accent, #1c497c);
+    --dres-surface: var(--card-bg, #fff);
+    --dres-surface-muted: var(--content-bg-muted, #f7f7f7);
+    --dres-border: var(--content-border, #e5e5e5);
+    --dres-ink: var(--page-text, #1a1a1a);
+    --dres-ink-muted: var(--content-text-muted, #666);
+    --dres-on-accent: var(--btn-primary-text, #fff);
+
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 1rem;
+  }
+
+  .dr__head {
+    margin: 1rem 0 1.25rem;
+  }
+
+  .dr__title-row {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+  }
+
+  .dr__title {
+    margin: 0;
+    font-size: 1.75rem;
+    line-height: 1.2;
+    color: var(--dres-ink);
+  }
+
+  .dr__badge {
+    padding: 0.2rem 0.6rem;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    background: var(--dres-surface-muted);
+    color: var(--dres-accent);
+    border: 1px solid var(--dres-border);
+  }
+
+  .dr__subtitle {
+    margin: 0.35rem 0 0;
+    color: var(--dres-ink-muted);
+    font-size: 0.9rem;
+  }
+
+  /* ── Rails ───────────────────────────────────────────────────────────── */
+
+  .dr__rail {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    margin-bottom: 0.6rem;
+  }
+
+  .dr__rail-label {
+    flex: 0 0 auto;
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--dres-ink-muted);
+  }
+
+  .dr__rail-list {
+    display: flex;
+    gap: 0.35rem;
+    margin: 0;
+    padding: 0.15rem 0;
+    list-style: none;
+    overflow-x: auto;
+    scrollbar-width: thin;
+  }
+
+  .dr__chip {
+    display: inline-block;
+    padding: 0.3rem 0.7rem;
+    border-radius: 999px;
+    border: 1px solid var(--dres-border);
+    background: var(--dres-surface-muted);
+    color: var(--dres-ink-muted);
+    font-size: 0.82rem;
+    font-weight: 600;
+    text-decoration: none;
+    white-space: nowrap;
+  }
+
+  .dr__chip:hover {
+    border-color: var(--dres-accent);
+    color: var(--dres-ink);
+  }
+
+  .dr__chip--on {
+    background: var(--dres-accent);
+    border-color: var(--dres-accent);
+    color: var(--dres-on-accent);
+  }
+
+  /* ── Table ───────────────────────────────────────────────────────────── */
+
+  .dr__table-wrap {
+    overflow-x: auto;
+    border: 1px solid var(--dres-border);
+    border-radius: 0.6rem;
+    background: var(--dres-surface);
+  }
+
+  .dr__table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.88rem;
+  }
+
+  .dr__caption {
+    caption-side: top;
+    text-align: left;
+    padding: 0.6rem 0.75rem;
+    color: var(--dres-ink-muted);
+    font-size: 0.78rem;
+    border-bottom: 1px solid var(--dres-border);
+  }
+
+  .dr__table th {
+    text-align: left;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--dres-ink-muted);
+    border-bottom: 1px solid var(--dres-border);
+    white-space: nowrap;
+  }
+
+  .dr__table td {
+    padding: 0.5rem 0.75rem;
+    border-bottom: 1px solid var(--dres-border);
+    color: var(--dres-ink);
+    vertical-align: middle;
+  }
+
+  .dr__table tbody tr:last-child td {
+    border-bottom: 0;
+  }
+
+  .dr__num {
+    width: 3rem;
+    color: var(--dres-ink-muted);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .dr__pick {
+    font-variant-numeric: tabular-nums;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
+  .dr__team,
+  .dr__player {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .dr__team-icon {
+    width: 24px;
+    height: 24px;
+    object-fit: contain;
+    flex: 0 0 auto;
+  }
+
+  .dr__team-name {
+    white-space: nowrap;
+  }
+
+  .dr__headshot {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    object-fit: cover;
+    background: var(--dres-surface-muted);
+    flex: 0 0 auto;
+  }
+
+  .dr__player-meta {
+    display: flex;
+    flex-direction: column;
+    line-height: 1.25;
+  }
+
+  .dr__player-name {
+    font-weight: 600;
+  }
+
+  .dr__player-sub,
+  .dr__player-unknown,
+  .dr__via {
+    color: var(--dres-ink-muted);
+    font-size: 0.78rem;
+  }
+
+  .dr__notice {
+    margin: 0;
+    padding: 0.6rem 0.75rem;
+    border-bottom: 1px solid var(--dres-border);
+    background: var(--dres-surface-muted);
+    color: var(--dres-ink-muted);
+    font-size: 0.78rem;
+    line-height: 1.4;
+  }
+
+  .dr__empty {
+    padding: 1.5rem;
+    text-align: center;
+    color: var(--dres-ink-muted);
+    border: 1px dashed var(--dres-border);
+    border-radius: 0.6rem;
+  }
+
+  @media (max-width: 640px) {
+    .dr__rail {
+      align-items: flex-start;
+      flex-direction: column;
+      gap: 0.25rem;
+    }
+    .dr__rail-list {
+      width: 100%;
+    }
+    .dr__title {
+      font-size: 1.35rem;
+    }
+  }
+</style>

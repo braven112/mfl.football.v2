@@ -227,8 +227,9 @@ export function getPlayer(year: number, mflId: string): PlayerIdentity | undefin
   return getPlayerMap(year).get(mflId);
 }
 
-/** Module-level cache for the unioned all-years map */
-let globalMapCache: Map<string, PlayerIdentity> | null = null;
+/** Per-league union caches. Keyed by league slug — the AFL has its own
+ * artifact, and one shared cache would serve whichever league asked first. */
+const globalMapCache = new Map<string, Map<string, PlayerIdentity>>();
 
 /**
  * Union of every season's player map into one lookup, keyed by MFL ID.
@@ -248,14 +249,28 @@ let globalMapCache: Map<string, PlayerIdentity> | null = null;
  * `readdirSync` on a runtime-constructed path defeated Vercel's file tracer,
  * which then copied all of `data/` into the serverless bundle.
  *
+ * Each league has its OWN artifact. The AFL needs one because its Draft
+ * Results page reaches back to 2003 while TheLeague's union only covers
+ * players who appeared in TheLeague. MFL player ids are global, so the two
+ * unions COMPOSE — the AFL page reads its own first and falls back to
+ * TheLeague's for anyone it misses.
+ *
+ * @param leagueSlug - Which league's union to read. Defaults to TheLeague,
+ *   which is what every pre-existing caller means.
  * @returns Map of MFL player ID → PlayerIdentity (most-recent-season wins)
  */
-export function getGlobalPlayerMap(): Map<string, PlayerIdentity> {
-  if (globalMapCache) return globalMapCache;
+export function getGlobalPlayerMap(
+  leagueSlug: string = 'theleague'
+): Map<string, PlayerIdentity> {
+  const cached = globalMapCache.get(leagueSlug);
+  if (cached) return cached;
 
   const merged = new Map<string, PlayerIdentity>();
   try {
-    const filePath = join(process.cwd(), 'data/theleague/derived/player-identity-union.json');
+    const filePath = join(
+      process.cwd(),
+      `data/${leagueSlug}/derived/player-identity-union.json`
+    );
     const raw = JSON.parse(readFileSync(filePath, 'utf-8'));
     const collegeIds = loadCollegeIds();
     const backfill = loadNflIdBackfill();
@@ -269,7 +284,7 @@ export function getGlobalPlayerMap(): Map<string, PlayerIdentity> {
     // behaviour when the feeds directory was absent.
   }
 
-  globalMapCache = merged;
+  globalMapCache.set(leagueSlug, merged);
   return merged;
 }
 
@@ -280,7 +295,7 @@ export function clearPlayerMapCache(): void {
   cache.clear();
   collegeIdMap = null;
   nflIdBackfill = null;
-  globalMapCache = null;
+  globalMapCache.clear();
 }
 
 // Vite HMR support — clear cache when module is hot-replaced in dev
@@ -289,6 +304,6 @@ if ((import.meta as any).hot) {
     cache.clear();
     collegeIdMap = null;
     nflIdBackfill = null;
-    globalMapCache = null;
+    globalMapCache.clear();
   });
 }

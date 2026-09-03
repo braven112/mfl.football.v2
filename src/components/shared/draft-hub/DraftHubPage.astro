@@ -1,0 +1,454 @@
+---
+/**
+ * The Draft hub — the front door to the draft section, shared by both leagues.
+ *
+ * Exists because the draft tools were six pages scattered across the nav with
+ * no idea the others existed. This page and the DraftNav strip are the two
+ * halves of the fix: the hub is where you arrive, the strip is how you move
+ * between pages once you are inside.
+ *
+ * It shows only the pages THIS league actually has (draft-pages.ts owns that
+ * list), so the AFL is not offered a Mock Draft that 404s. That is a deliberate
+ * choice over a "coming soon" tile — see docs/plans/draft-hub-and-results.md.
+ *
+ * Three things beyond the links, so it is a destination rather than a menu:
+ *   1. the draft's live state — counting down, on the clock, or done
+ *   2. your own draft capital for the next draft
+ *   3. a strip of the last draft's opening picks
+ *
+ * Zero client JS, like the Results page: everything here is server-rendered
+ * and every control is a link.
+ */
+import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
+import Breadcrumbs from '../../theleague/Breadcrumbs.astro';
+import DraftNav from '../draft-nav/DraftNav.astro';
+import { spriteUrl } from '../../../utils/sprite-url';
+import { resolveLeaguePath } from '../../../utils/nav-utils';
+import { getLeagueBySlug } from '../../../config/leagues';
+import { draftPagesFor, type DraftLeagueSlug } from '../draft-nav/draft-pages';
+import type { DraftHubStatus } from '../../../utils/draft-hub-state';
+import type { DraftResultsPick } from '../../../utils/draft-results-view';
+
+interface Props {
+  leagueSlug: DraftLeagueSlug;
+  status: DraftHubStatus;
+  /** Opening picks of the most recent completed draft. */
+  recap: DraftResultsPick[];
+  /** Season those picks came from. */
+  recapYear: number | null;
+  /** The signed-in owner's franchise, when there is one. */
+  myTeam: { id: string; name: string; icon?: string } | null;
+  /** That franchise's picks in the NEXT draft, by round. */
+  myCapital: { round: number; count: number }[];
+  capitalYear: number | null;
+}
+
+const { leagueSlug, status, recap, recapYear, myTeam, myCapital, capitalYear } = Astro.props;
+const league = getLeagueBySlug(leagueSlug)!;
+const hideLeaguePrefix = Astro.locals.hideLeaguePrefix ?? false;
+const r = (path: string) => resolveLeaguePath(`/${leagueSlug}${path}`, hideLeaguePrefix);
+const pages = draftPagesFor(leagueSlug);
+
+const dateFmt = new Intl.DateTimeFormat('en-US', {
+  weekday: 'long',
+  month: 'long',
+  day: 'numeric',
+  timeZone: 'America/Los_Angeles',
+});
+const timeFmt = new Intl.DateTimeFormat('en-US', {
+  hour: 'numeric',
+  minute: '2-digit',
+  timeZone: 'America/Los_Angeles',
+  timeZoneName: 'short',
+});
+
+const totalCapital = myCapital.reduce((sum, c) => sum + c.count, 0);
+---
+
+<TheLeagueLayout title={`${league.name} — Draft`}>
+  <main class="dh">
+    <Breadcrumbs items={[{ label: 'Home', href: `/${leagueSlug}` }, { label: 'Draft' }]} />
+
+    <DraftNav leagueSlug={leagueSlug} current="hub" />
+
+    <header class="dh__head">
+      <h1 class="dh__title">Draft</h1>
+      <p class="dh__sub">Everything for draft day, and every draft that came before it.</p>
+    </header>
+
+    {/* ── Live state ──────────────────────────────────────────────────── */}
+    {status.kind !== 'unknown' && (
+      <section class:list={['dh__status', `dh__status--${status.kind}`]}>
+        {status.kind === 'scheduled' && (
+          <>
+            <span class="dh__status-count">{status.daysAway}</span>
+            <span class="dh__status-body">
+              <strong class="dh__status-line">
+                {status.daysAway === 1 ? 'day' : 'days'} to the {status.year} draft
+              </strong>
+              <span class="dh__status-sub">
+                {dateFmt.format(status.startsAt)} at {timeFmt.format(status.startsAt)}
+              </span>
+            </span>
+            <a class="dh__status-cta" href={r('/draft/order')}>See the order</a>
+          </>
+        )}
+        {status.kind === 'live' && (
+          <>
+            <span class="dh__status-count">{status.made}</span>
+            <span class="dh__status-body">
+              <strong class="dh__status-line">picks in — the {status.year} draft is live</strong>
+              <span class="dh__status-sub">{status.slots - status.made} still on the board</span>
+            </span>
+            <a class="dh__status-cta" href={r('/draft/broadcast')}>Open the board</a>
+          </>
+        )}
+        {status.kind === 'complete' && (
+          <>
+            <span class="dh__status-count">{status.made}</span>
+            <span class="dh__status-body">
+              <strong class="dh__status-line">picks — the {status.year} draft is done</strong>
+              <span class="dh__status-sub">Every selection is in the archive</span>
+            </span>
+            <a class="dh__status-cta" href={r(`/draft/results?year=${status.year}`)}>See the results</a>
+          </>
+        )}
+      </section>
+    )}
+
+    {/* ── Your draft capital ──────────────────────────────────────────── */}
+    {myTeam && capitalYear && (
+      <section class="dh__capital">
+        <h2 class="dh__h2">
+          {myTeam.icon && <img src={myTeam.icon} alt="" class="dh__capital-icon" width="24" height="24" />}
+          Your {capitalYear} picks
+        </h2>
+        {totalCapital === 0 ? (
+          <p class="dh__capital-empty">
+            {myTeam.name} holds no {capitalYear} picks — they've all been traded away.
+          </p>
+        ) : (
+          <>
+            <ul class="dh__capital-list">
+              {myCapital.map((c) => (
+                <li class="dh__capital-pill">
+                  <span class="dh__capital-round">Rd {c.round}</span>
+                  <span class="dh__capital-count">×{c.count}</span>
+                </li>
+              ))}
+            </ul>
+            <p class="dh__capital-total">
+              {totalCapital} {totalCapital === 1 ? 'pick' : 'picks'} in the {capitalYear} draft.
+              {' '}<a href={r('/draft/order')}>Where they land →</a>
+            </p>
+          </>
+        )}
+      </section>
+    )}
+
+    {/* ── The pages ───────────────────────────────────────────────────── */}
+    <section aria-labelledby="dh-tools">
+      <h2 class="dh__h2" id="dh-tools">Draft tools</h2>
+      <ul class="dh__cards">
+        {pages.map((p) => (
+          <li>
+            <a class="dh__card" href={r(p.path)}>
+              <svg class="dh__card-icon" viewBox="0 0 512 512" aria-hidden="true">
+                <use href={`${spriteUrl}#${p.icon}`} />
+              </svg>
+              <span class="dh__card-text">
+                <span class="dh__card-title">{p.label}</span>
+                <span class="dh__card-blurb">{p.blurb}</span>
+              </span>
+            </a>
+          </li>
+        ))}
+      </ul>
+    </section>
+
+    {/* ── Last draft recap ────────────────────────────────────────────── */}
+    {recap.length > 0 && recapYear && (
+      <section class="dh__recap" aria-labelledby="dh-recap">
+        <div class="dh__recap-head">
+          <h2 class="dh__h2" id="dh-recap">How the {recapYear} draft opened</h2>
+          <a class="dh__recap-all" href={r(`/draft/results?year=${recapYear}`)}>All picks →</a>
+        </div>
+        <ol class="dh__recap-list">
+          {recap.map((p) => (
+            <li class="dh__recap-item">
+              <span class="dh__recap-pick">{p.label}</span>
+              {p.headshot ? (
+                <img src={p.headshot} alt="" class="dh__recap-shot" loading="lazy" width="40" height="40" />
+              ) : (
+                <span class="dh__recap-shot dh__recap-shot--blank" aria-hidden="true"></span>
+              )}
+              <span class="dh__recap-name">{p.playerName || 'No selection'}</span>
+              <span class="dh__recap-team">{p.teamName}</span>
+            </li>
+          ))}
+        </ol>
+      </section>
+    )}
+  </main>
+</TheLeagueLayout>
+
+<style>
+  .dh {
+    --dhub-accent: var(--league-accent, #1c497c);
+    --dhub-surface: var(--card-bg, #fff);
+    --dhub-surface-muted: var(--content-bg-muted, #f7f7f7);
+    --dhub-border: var(--content-border, #e5e5e5);
+    --dhub-ink: var(--page-text, #1a1a1a);
+    --dhub-ink-muted: var(--content-text-muted, #666);
+    --dhub-on-accent: var(--btn-primary-text, #fff);
+
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 1rem;
+  }
+
+  .dh__head { margin: 1rem 0 1.25rem; }
+
+  .dh__title {
+    margin: 0;
+    font-size: 2rem;
+    line-height: 1.15;
+    color: var(--dhub-ink);
+  }
+
+  .dh__sub {
+    margin: 0.35rem 0 0;
+    color: var(--dhub-ink-muted);
+    font-size: 0.95rem;
+  }
+
+  .dh__h2 {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin: 0 0 0.6rem;
+    font-size: 1rem;
+    color: var(--dhub-ink);
+  }
+
+  /* ── Status band ─────────────────────────────────────────────────────── */
+
+  .dh__status {
+    display: flex;
+    align-items: center;
+    gap: 0.9rem;
+    padding: 0.9rem 1rem;
+    margin-bottom: 1.25rem;
+    border: 1px solid var(--dhub-border);
+    border-radius: 0.7rem;
+    background: var(--dhub-surface);
+    flex-wrap: wrap;
+  }
+
+  .dh__status--live {
+    border-color: var(--dhub-accent);
+  }
+
+  .dh__status-count {
+    font-size: 2rem;
+    font-weight: 800;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+    color: var(--dhub-accent);
+  }
+
+  .dh__status-body {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 12rem;
+  }
+
+  .dh__status-line {
+    color: var(--dhub-ink);
+    font-size: 0.95rem;
+  }
+
+  .dh__status-sub {
+    color: var(--dhub-ink-muted);
+    font-size: 0.8rem;
+  }
+
+  .dh__status-cta {
+    padding: 0.45rem 0.9rem;
+    border-radius: 0.4rem;
+    background: var(--dhub-accent);
+    color: var(--dhub-on-accent);
+    font-size: 0.85rem;
+    font-weight: 700;
+    text-decoration: none;
+    white-space: nowrap;
+  }
+
+  /* ── Capital ─────────────────────────────────────────────────────────── */
+
+  .dh__capital {
+    padding: 0.9rem 1rem;
+    margin-bottom: 1.25rem;
+    border: 1px solid var(--dhub-border);
+    border-radius: 0.7rem;
+    background: var(--dhub-surface);
+  }
+
+  .dh__capital-icon { object-fit: contain; }
+
+  .dh__capital-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    margin: 0 0 0.6rem;
+    padding: 0;
+    list-style: none;
+  }
+
+  .dh__capital-pill {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 0.3rem;
+    padding: 0.25rem 0.6rem;
+    border-radius: 999px;
+    border: 1px solid var(--dhub-border);
+    background: var(--dhub-surface-muted);
+    font-size: 0.8rem;
+  }
+
+  .dh__capital-round { font-weight: 700; color: var(--dhub-ink); }
+  .dh__capital-count { color: var(--dhub-ink-muted); }
+
+  .dh__capital-total,
+  .dh__capital-empty {
+    margin: 0;
+    color: var(--dhub-ink-muted);
+    font-size: 0.82rem;
+  }
+
+  /* ── Cards ───────────────────────────────────────────────────────────── */
+
+  .dh__cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(255px, 1fr));
+    gap: 0.6rem;
+    margin: 0 0 1.5rem;
+    padding: 0;
+    list-style: none;
+  }
+
+  .dh__card {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.65rem;
+    height: 100%;
+    padding: 0.85rem;
+    border: 1px solid var(--dhub-border);
+    border-radius: 0.6rem;
+    background: var(--dhub-surface);
+    text-decoration: none;
+  }
+
+  .dh__card:hover {
+    border-color: var(--dhub-accent);
+    background: var(--dhub-surface-muted);
+  }
+
+  .dh__card-icon {
+    width: 22px;
+    height: 22px;
+    flex: 0 0 auto;
+    fill: var(--dhub-accent);
+  }
+
+  .dh__card-text { display: flex; flex-direction: column; gap: 0.15rem; }
+
+  .dh__card-title {
+    font-weight: 700;
+    font-size: 0.92rem;
+    color: var(--dhub-ink);
+  }
+
+  .dh__card-blurb {
+    font-size: 0.78rem;
+    line-height: 1.35;
+    color: var(--dhub-ink-muted);
+  }
+
+  /* ── Recap ───────────────────────────────────────────────────────────── */
+
+  .dh__recap-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+  }
+
+  .dh__recap-all {
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--dhub-accent);
+    text-decoration: none;
+  }
+
+  .dh__recap-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(255px, 1fr));
+    gap: 0.4rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .dh__recap-item {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    padding: 0.45rem 0.6rem;
+    border: 1px solid var(--dhub-border);
+    border-radius: 0.5rem;
+    background: var(--dhub-surface);
+  }
+
+  .dh__recap-pick {
+    font-variant-numeric: tabular-nums;
+    font-weight: 700;
+    font-size: 0.78rem;
+    color: var(--dhub-ink-muted);
+    flex: 0 0 auto;
+  }
+
+  .dh__recap-shot {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    object-fit: cover;
+    background: var(--dhub-surface-muted);
+    flex: 0 0 auto;
+  }
+
+  .dh__recap-name {
+    font-weight: 600;
+    font-size: 0.85rem;
+    color: var(--dhub-ink);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .dh__recap-team {
+    margin-left: auto;
+    font-size: 0.72rem;
+    color: var(--dhub-ink-muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 8rem;
+  }
+
+  @media (max-width: 560px) {
+    .dh__title { font-size: 1.5rem; }
+    .dh__status-cta { flex: 1 1 100%; text-align: center; }
+  }
+</style>

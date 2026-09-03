@@ -1,0 +1,142 @@
+---
+/**
+ * DraftNav — the strip that sits on top of every page in the draft section.
+ *
+ * The point of the whole draft consolidation: from any draft page you can
+ * reach every other one without going back through a menu. It renders only
+ * the pages THIS league has (draft-pages.ts owns that), so the AFL is not
+ * shown a Mock Draft link that 404s.
+ *
+ * Real `<a>` links, deliberately. DraftViewSelector's own header records why:
+ * its tabs were buttons with a click handler, the handler never bound under
+ * the ClientRouter, and the tabs shipped dead. Links need no script and
+ * survive view transitions.
+ */
+import { spriteUrl } from '../../../utils/sprite-url';
+import { resolveLeaguePath } from '../../../utils/nav-utils';
+import { DRAFT_HUB_PATH, draftPagesFor, type DraftLeagueSlug } from './draft-pages';
+
+interface Props {
+  leagueSlug: DraftLeagueSlug;
+  /** `key` of the page rendering this strip, or 'hub'. */
+  current: string;
+}
+
+const { leagueSlug, current } = Astro.props;
+const hideLeaguePrefix = Astro.locals.hideLeaguePrefix ?? false;
+const r = (path: string) => resolveLeaguePath(`/${leagueSlug}${path}`, hideLeaguePrefix);
+const pages = draftPagesFor(leagueSlug);
+---
+
+<nav class="dnav" aria-label="Draft pages">
+  <a
+    href={r(DRAFT_HUB_PATH)}
+    class:list={['dnav__item', 'dnav__item--hub', { 'dnav__item--on': current === 'hub' }]}
+    aria-current={current === 'hub' ? 'page' : undefined}
+  >
+    <svg class="dnav__icon" viewBox="0 0 512 512" aria-hidden="true"><use href={`${spriteUrl}#icon-draft-podium`} /></svg>
+    <span class="dnav__label">Draft</span>
+  </a>
+  <span class="dnav__divider" aria-hidden="true"></span>
+  <ul class="dnav__list">
+    {pages.map((p) => (
+      <li>
+        <a
+          href={r(p.path)}
+          class:list={['dnav__item', { 'dnav__item--on': p.key === current }]}
+          aria-current={p.key === current ? 'page' : undefined}
+          title={p.label}
+        >
+          <svg class="dnav__icon" viewBox="0 0 512 512" aria-hidden="true"><use href={`${spriteUrl}#${p.icon}`} /></svg>
+          <span class="dnav__label">{p.shortLabel}</span>
+        </a>
+      </li>
+    ))}
+  </ul>
+</nav>
+
+<style>
+  .dnav {
+    --dnav-accent: var(--league-accent, #1c497c);
+    --dnav-surface: var(--card-bg, #fff);
+    --dnav-surface-muted: var(--content-bg-muted, #f7f7f7);
+    --dnav-border: var(--content-border, #e5e5e5);
+    --dnav-ink: var(--page-text, #1a1a1a);
+    --dnav-ink-muted: var(--content-text-muted, #666);
+    --dnav-on-accent: var(--btn-primary-text, #fff);
+
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    margin: 0.5rem 0 1rem;
+    padding: 0.35rem;
+    border: 1px solid var(--dnav-border);
+    border-radius: 0.6rem;
+    background: var(--dnav-surface);
+    overflow-x: auto;
+    scrollbar-width: thin;
+  }
+
+  .dnav__list {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .dnav__divider {
+    flex: 0 0 auto;
+    width: 1px;
+    align-self: stretch;
+    background: var(--dnav-border);
+    margin: 0 0.2rem;
+  }
+
+  .dnav__item {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.35rem 0.6rem;
+    border-radius: 0.4rem;
+    color: var(--dnav-ink-muted);
+    text-decoration: none;
+    font-size: 0.82rem;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
+  .dnav__item:hover {
+    background: var(--dnav-surface-muted);
+    color: var(--dnav-ink);
+  }
+
+  .dnav__item--on {
+    background: var(--dnav-accent);
+    color: var(--dnav-on-accent);
+  }
+
+  .dnav__item--hub {
+    font-weight: 700;
+  }
+
+  .dnav__icon {
+    width: 16px;
+    height: 16px;
+    fill: currentColor;
+    flex: 0 0 auto;
+  }
+
+  @media (max-width: 560px) {
+    .dnav__label {
+      display: none;
+    }
+    .dnav__item--hub .dnav__label {
+      display: inline;
+    }
+    .dnav__item {
+      padding: 0.4rem 0.5rem;
+    }
+  }
+</style>
