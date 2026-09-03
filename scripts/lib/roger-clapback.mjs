@@ -37,6 +37,8 @@
  * comeback" — returning shot:false to stay silent on sincere messages.
  */
 
+import { buildReplyAttachment, buildMentionAttachment } from './groupme.mjs';
+
 /** Model + endpoint. Matches the raw-fetch pattern every sibling scanner uses. */
 const API_URL = 'https://api.anthropic.com/v1/messages';
 const MODEL = 'claude-opus-5';
@@ -381,4 +383,89 @@ export async function generateClapback({ ownerText, ownerName, factSheet, fetchI
   if (reply.length > 400) return { shot: false, reason: `too-long (${reply.length})` };
 
   return { shot: true, reply };
+}
+
+// ── Delivery ────────────────────────────────────────────────────────────────
+// A comeback posted as bare text lands in the chat with no visible connection
+// to the message that earned it. Fifteen minutes after the fact — the cron's
+// cadence — the rest of the league reads it as Roger heckling nobody. Two
+// GroupMe attachments fix that: a native reply quotes the original inline, and
+// a mention pings the owner so they actually see it.
+
+/** Split points for trimming a nickname down to something you'd say out loud. */
+const MENTION_LABEL_TAIL = /[/|([]/;
+
+/**
+ * The label Roger @-mentions an owner by.
+ *
+ * AFL nicknames routinely staple the team onto the person — "Nigel Dee
+ * (Titsburgh Feelers)", "Smokane FC/The Commish", "Team Minty Fresh / Michio" —
+ * and "@Champ Champ or you can call me daddy" opening a one-liner eats the
+ * joke. So the label is the first segment only. The range is what GroupMe
+ * highlights and it is bound to the user id, not to any name lookup, so a
+ * trimmed label still pings the right person.
+ */
+export function mentionLabel(nickname) {
+  if (typeof nickname !== 'string') return null;
+  const full = nickname.trim().replace(/\s+/g, ' ');
+  if (!full) return null;
+  const head = full.split(MENTION_LABEL_TAIL)[0].trim().replace(/[\s,;:.-]+$/, '');
+  // A nickname that STARTS with a split char ("(Kev)") would trim to nothing;
+  // fall back rather than emit a bare "@".
+  return head.length >= 2 ? head : full;
+}
+
+function escapeRegExp(text) {
+  return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+/**
+ * Compose the text and attachments for one clapback.
+ *
+ * WHY THE MENTION GOES FIRST, AND WHY THAT IS NOT A STYLE CHOICE.
+ * `loci` are character offsets into the delivered message, and `postToGroupMe`
+ * still has one edit left to make after this function returns: the link
+ * sanitizer (src/utils/link-punctuation.mjs) DELETES characters on the way out.
+ * Any deletion before an offset slides that offset, and a slid offset
+ * highlights the wrong bytes — a mention pointing at nothing, on a post going
+ * to two dozen people.
+ *
+ * Anchoring the mention at index 0 makes that unreachable rather than merely
+ * unlikely: that sanitizer only ever removes punctuation TRAILING a URL, so its
+ * earliest possible edit is after a `://`, and nothing can be deleted ahead of
+ * position 0. Which is why this function does not sanitize defensively — it
+ * does not need to, and that job is deliberately pinned to the send path alone
+ * (tests/link-punctuation.test.ts pins the call sites, by name, so a defensive
+ * copy here would fail the build). Move the mention off the front and this
+ * reasoning stops holding.
+ *
+ * @returns {{ text: string, attachments: Array<object> }}
+ */
+export function buildClapbackDelivery({ replyText, ownerName, ownerUserId, replyToMessageId }) {
+  const sanitized = String(replyText ?? '').trim();
+
+  const attachments = [];
+  const replyAttachment = buildReplyAttachment(replyToMessageId);
+  if (replyAttachment) attachments.push(replyAttachment);
+
+  const label = mentionLabel(ownerName);
+  // No user id means no ping is possible, and a bare "@Name" that notifies
+  // nobody is worse than no mention at all — it looks like Roger tried and the
+  // owner missed it. Leave the text exactly as the model wrote it.
+  if (!label || typeof ownerUserId !== 'string' || !ownerUserId) {
+    return { text: sanitized, attachments };
+  }
+
+  const token = `@${label}`;
+  // Roger's brief says "no greeting", but a model that opens with the owner's
+  // name anyway would otherwise get it twice ("@Nigel Dee Nigel Dee, ..."), so
+  // absorb an existing address into the mention instead of stacking on it.
+  const leadingAddress = new RegExp(`^@?${escapeRegExp(label)}[\\s,:.\\-—]*`, 'i');
+  const body = sanitized.replace(leadingAddress, '').trim();
+  const text = body ? `${token} ${body}` : token;
+
+  const mention = buildMentionAttachment([{ userId: ownerUserId, start: 0, length: token.length }]);
+  if (mention) attachments.push(mention);
+
+  return { text, attachments };
 }

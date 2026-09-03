@@ -41,6 +41,7 @@ import {
   detectRogerTarget,
   isRogerBotMessage,
   buildFactSheet,
+  buildClapbackDelivery,
   generateClapback,
   MAX_CLAPBACKS_PER_DAY,
   OWNER_COOLDOWN_MS,
@@ -404,16 +405,29 @@ export async function scanRogerReplies({ league, dryRun = false }) {
       continue;
     }
 
+    // Answer IN the thread and ping the owner. Roger's cron runs every 15
+    // minutes, so by the time a comeback lands the message that earned it has
+    // usually scrolled away — without the quoted original the rest of the
+    // league sees Roger swinging at nobody.
+    const delivery = buildClapbackDelivery({
+      replyText: clapback.reply,
+      ownerName: msg.name,
+      ownerUserId: userId,
+      replyToMessageId: msg.id,
+    });
+
     if (dryRun) {
-      log(`  [dry-run] Would reply to ${msg.name}: ${clapback.reply}`);
+      log(`  [dry-run] Would reply to ${msg.name}: ${delivery.text}`);
+      log(`  [dry-run]   attachments: ${JSON.stringify(delivery.attachments)}`);
       result.posted += 1;
       continue;
     }
 
     await postToGroupMe({
       botId: league.groupMeRogerBotId,
-      text: clapback.reply,
-      onPosted: () => log(`  Replied to ${msg.name}: ${clapback.reply}`),
+      text: delivery.text,
+      attachments: delivery.attachments,
+      onPosted: () => log(`  Replied to ${msg.name}: ${delivery.text}`),
       onFetchError: (err) => warn(`  GroupMe send failed: ${err.message}`),
     });
     await recordClapback(redis, league, userId, nowMs);
