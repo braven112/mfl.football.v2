@@ -14,7 +14,13 @@
 
 import type { AuthUser } from './auth';
 import { isCommissionerOrAdmin } from './auth';
-import { getEligibleThrowbackEras } from './throwback-identity';
+import {
+  eraPickKey,
+  getEligibleThrowbackEras,
+  parseThrowbackPickKey,
+  throwbackPickKey,
+  type ThrowbackPick,
+} from './throwback-identity';
 import { getAllThrowbackPreferences } from './throwback-store';
 import { applyThrowbackOverrides, type ConfigTeam } from './live-scoring-data';
 import { isThrowbackWeekForScope, type ThrowbackScope } from './throwback-scope';
@@ -65,26 +71,29 @@ export async function applyThrowbackToBoard(
     return { configTeams, active: false, preview: null };
   }
 
-  const ownerOverrides = await getAllThrowbackPreferences(
+  const ownerOverrides: Record<string, ThrowbackPick> = await getAllThrowbackPreferences(
     configTeams.map((t) => t.franchiseId),
     scope
   );
 
   let preview: ThrowbackPreview | null = null;
 
-  // Try-before-save: ?previewEra={yearStart} lets a signed-in owner see an era
-  // on THEIR OWN team without persisting it (the picker's per-card Preview
-  // links use this), and only for an era the picker would actually offer.
+  // Try-before-save: ?previewEra={key} lets a signed-in owner see an era on
+  // THEIR OWN team without persisting it (the picker's per-card Preview links
+  // use this), and only for an era the picker would actually offer. The key is
+  // a bare year for the franchise's own era and `{slot}:{year}` for one
+  // inherited from a slot it used to occupy — the same value the radio and
+  // the stored preference use.
   // Commissioners may add ?previewFranchise={id} to dress ANY team for
   // validation — still view-only; non-admins get the param ignored.
   const previewEraParam = searchParams.get('previewEra');
-  const previewEra = previewEraParam ? parseInt(previewEraParam, 10) : NaN;
+  const previewPick = previewEraParam ? parseThrowbackPickKey(previewEraParam) : null;
   const userFranchiseId = authUser?.franchiseId;
   // League scoping: franchiseIds overlap across leagues, so only a session for
   // THIS league may dress a team here (or pass the admin gate).
   const isLeagueSession = !!authUser && authUser.leagueId === leagueId;
 
-  if (Number.isFinite(previewEra) && userFranchiseId && isLeagueSession) {
+  if (previewPick && userFranchiseId && isLeagueSession) {
     const previewFranchiseParam = searchParams.get('previewFranchise');
     const isAdmin = isCommissionerOrAdmin(authUser);
     const targetFranchiseId =
@@ -94,14 +103,15 @@ export async function applyThrowbackToBoard(
     const chosen = targetTeam
       ? getEligibleThrowbackEras(
           targetTeam as Parameters<typeof getEligibleThrowbackEras>[0],
-          scope
-        ).find((e) => e.yearStart === previewEra)
+          scope,
+          configTeams as Parameters<typeof getEligibleThrowbackEras>[2]
+        ).find((e) => eraPickKey(e) === throwbackPickKey(previewPick))
       : undefined;
 
     if (chosen && targetTeam) {
-      ownerOverrides[targetFranchiseId] = previewEra;
+      ownerOverrides[targetFranchiseId] = previewPick;
       preview = {
-        yearStart: previewEra,
+        yearStart: previewPick.yearStart,
         eraName: chosen.name,
         teamName: targetTeam.name,
         ownSave: targetFranchiseId === userFranchiseId,

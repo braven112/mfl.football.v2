@@ -35,6 +35,95 @@ function isSameAsCurrent(team: TeamConfig, entry: FranchiseHistoryEntry): boolea
 }
 
 /**
+ * An owner's chosen era. `yearStart` identifies it within a franchise's own
+ * `history[]`; `sourceFranchiseId` is set only for an era INHERITED from a
+ * slot the franchise used to occupy, where `yearStart` alone is ambiguous —
+ * Da Dangsters have a 2003 era of their own AND inherit one that also starts
+ * in 2003 from the slot they left.
+ */
+export interface ThrowbackPick {
+  yearStart: number;
+  sourceFranchiseId?: string | null;
+}
+
+/**
+ * The stable identity of an era within one franchise's picker: the storage
+ * value, the radio value and what the API validates against.
+ *
+ * An own era keeps its bare year, byte-identical to what every stored
+ * preference already holds, so no owner loses a pick they already made.
+ */
+export function throwbackPickKey(pick: ThrowbackPick): string {
+  return pick.sourceFranchiseId ? `${pick.sourceFranchiseId}:${pick.yearStart}` : String(pick.yearStart);
+}
+
+/**
+ * Inverse of `throwbackPickKey`; null for anything that is not a valid key.
+ *
+ * Both halves are matched as literal digit strings rather than coerced.
+ * `Number('')` is 0, so a lenient parse turned an empty `?previewEra=` into
+ * the perfectly valid-looking pick `{ yearStart: 0 }`, which then quietly
+ * matched nothing and fell through to the default.
+ */
+const YEAR = /^\d{4}$/;
+const SLOT = /^\d{4}$/;
+export function parseThrowbackPickKey(raw: string): ThrowbackPick | null {
+  const parts = String(raw).split(':');
+  if (parts.length === 1) {
+    return YEAR.test(parts[0]) ? { yearStart: Number(parts[0]) } : null;
+  }
+  if (parts.length !== 2) return null;
+  const [slot, year] = parts;
+  return SLOT.test(slot) && YEAR.test(year)
+    ? { yearStart: Number(year), sourceFranchiseId: slot }
+    : null;
+}
+
+export const eraPickKey = (era: FranchiseHistoryEntry): string =>
+  throwbackPickKey({ yearStart: era.yearStart, sourceFranchiseId: era.sourceFranchiseId });
+
+const samePick = (a: ThrowbackPick, b: ThrowbackPick) =>
+  a.yearStart === b.yearStart && (a.sourceFranchiseId ?? null) === (b.sourceFranchiseId ?? null);
+
+/**
+ * Eras this franchise wore under a DIFFERENT MFL slot.
+ *
+ * Four AFL franchises changed slots — the owner left and came back, or the
+ * commissioner reshuffled — and `ownerHistory` is where the config records
+ * which slot they held in which years. Their old-school looks are filed under
+ * that slot's `history[]`: the Chatmaster of 2004-2009 lives in franchise
+ * 0007, Muck Juggling Micks 2005-2007 in 0004, Dicks out for Harambe
+ * 2017-2018 in 0016, Da Dangsters 2003-2008 in 0021.
+ *
+ * Without this they were unreachable — worse, `AFL_THROWBACK_ASSET_CONFLICTS`
+ * excludes each of them from the slot's CURRENT occupant (rightly: two teams
+ * cannot wear one identity on one scoreboard), so the era was offered to
+ * nobody at all.
+ *
+ * The era is returned unclipped, carrying its own `yearStart`, so its key
+ * still points at the entry it came from. An era straddling the edge of an
+ * ownership window would claim seasons this franchise did not own, which is
+ * why `tests/afl-throwback-identity.test.ts` pins that none does.
+ */
+export function getInheritedThrowbackEras(
+  team: TeamConfig,
+  allTeams: TeamConfig[] | undefined
+): FranchiseHistoryEntry[] {
+  if (!allTeams?.length || !team.ownerHistory?.length) return [];
+  const out: FranchiseHistoryEntry[] = [];
+  for (const window of team.ownerHistory) {
+    if (!window.franchiseId || window.franchiseId === team.franchiseId) continue;
+    const source = allTeams.find((t) => t.franchiseId === window.franchiseId);
+    for (const era of source?.history ?? []) {
+      const end = era.yearEnd ?? era.yearStart;
+      if (era.yearStart > window.yearEnd || end < window.yearStart) continue;
+      out.push({ ...era, sourceFranchiseId: source!.franchiseId });
+    }
+  }
+  return out;
+}
+
+/**
  * Eras a franchise may throw back to: its own `history[]` IN THIS LEAGUE,
  * minus entries whose art asset is claimed by another franchise (the scope's
  * asset conflicts) and minus entries identical to the team's current identity.
@@ -51,9 +140,11 @@ function isSameAsCurrent(team: TeamConfig, entry: FranchiseHistoryEntry): boolea
  */
 export function getEligibleThrowbackEras(
   team: TeamConfig,
-  scope: ThrowbackScope = DEFAULT_THROWBACK_SCOPE
+  scope: ThrowbackScope = DEFAULT_THROWBACK_SCOPE,
+  allTeams?: TeamConfig[]
 ): FranchiseHistoryEntry[] {
-  if (!team.history?.length) return [];
+  const inherited = getInheritedThrowbackEras(team, allTeams);
+  if (!team.history?.length && inherited.length === 0) return [];
   const { rebrand } = throwbackRules(scope);
   // An era on loan to the Throwback Rebrand leaves its OWNER's picker while
   // it is being worn elsewhere. Two teams in one identity on a single
@@ -64,12 +155,17 @@ export function getEligibleThrowbackEras(
     rebrand.sourceFranchiseId === team.franchiseId &&
     rebrand.era.yearStart === entry.yearStart;
 
-  return team.history.filter(
+  // Conflicts are keyed on the OWNING franchise, so an inherited era is not
+  // filtered by the conflict that (correctly) keeps the slot's current
+  // occupant from wearing it.
+  const own = (team.history ?? []).filter(
     (entry) =>
       !isConflicted(team.franchiseId, entry.yearStart, scope) &&
       !isSameAsCurrent(team, entry) &&
       !onLoan(entry)
   );
+  const borrowed = inherited.filter((entry) => !isSameAsCurrent(team, entry) && !onLoan(entry));
+  return [...own, ...borrowed].sort((a, b) => a.yearStart - b.yearStart);
 }
 
 /**
@@ -167,15 +263,21 @@ export function pickDefaultThrowbackEra(
  * no-shame-name rule governs what we CHOOSE for someone, not what they may
  * choose for themselves.
  *
- * @param ownerOverrideYearStart - `yearStart` of the era the owner picked
- *   via the league's throwback-settings page, if any.
+ * @param ownerOverride - the era the owner picked via the league's
+ *   throwback-settings page, if any. A bare number is accepted and means
+ *   "my own era starting that year" — that is the shape of every preference
+ *   stored before eras could be inherited from a former franchise slot.
+ * @param allTeams - the league's full team list, needed only to resolve eras
+ *   inherited from a former slot. Omit it and a franchise sees just its own
+ *   `history[]`, which is the correct answer for a league where nobody moved.
  * @param scope - which league's era rules apply. Defaults to TheLeague; see
  *   `getEligibleThrowbackEras` for why an AFL caller must pass its own.
  */
 export function resolveThrowbackIdentity(
   team: TeamConfig,
-  ownerOverrideYearStart?: number,
-  scope: ThrowbackScope = DEFAULT_THROWBACK_SCOPE
+  ownerOverride?: ThrowbackPick | number,
+  scope: ThrowbackScope = DEFAULT_THROWBACK_SCOPE,
+  allTeams?: TeamConfig[]
 ): TeamIdentity {
   // The Throwback Rebrand comes FIRST and ignores the owner override. A
   // last-place rename is imposed, not chosen — this franchise did not pick
@@ -183,10 +285,16 @@ export function resolveThrowbackIdentity(
   const imposed = getImposedThrowbackEra(team.franchiseId, scope);
   if (imposed) return toIdentity(imposed);
 
-  const eligible = getEligibleThrowbackEras(team, scope);
+  const eligible = getEligibleThrowbackEras(team, scope, allTeams);
 
-  if (ownerOverrideYearStart !== undefined) {
-    const chosen = eligible.find((e) => e.yearStart === ownerOverrideYearStart);
+  if (ownerOverride !== undefined && ownerOverride !== null) {
+    // A bare number stays valid: that is every stored preference written
+    // before eras could be inherited, and it means "my own era of that year".
+    const pick: ThrowbackPick =
+      typeof ownerOverride === 'number' ? { yearStart: ownerOverride } : ownerOverride;
+    const chosen = eligible.find((e) =>
+      samePick({ yearStart: e.yearStart, sourceFranchiseId: e.sourceFranchiseId }, pick),
+    );
     if (chosen) return toIdentity(chosen);
   }
 

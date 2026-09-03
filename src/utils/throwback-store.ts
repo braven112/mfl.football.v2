@@ -24,6 +24,13 @@ export { getRedis };
 
 export interface ThrowbackPreference {
   yearStart: number;
+  /**
+   * Set only when the pick is an era inherited from a franchise slot this
+   * team used to occupy, where `yearStart` alone is ambiguous. Absent on
+   * every preference written before that was possible, which is why it is
+   * optional rather than nullable — an old record stays valid as-is.
+   */
+  sourceFranchiseId?: string;
 }
 
 export function makeThrowbackKey(
@@ -49,13 +56,18 @@ export async function getThrowbackPreference(
 
 export async function setThrowbackPreference(
   franchiseId: string,
-  yearStart: number,
+  pick: ThrowbackPreference,
   scope: ThrowbackScope = DEFAULT_THROWBACK_SCOPE
 ): Promise<boolean> {
   const redis = await getRedis();
   if (!redis) return false;
   try {
-    await redis.set(makeThrowbackKey(franchiseId, scope), { yearStart } satisfies ThrowbackPreference);
+    // Written without the key when it is not an inherited era, so a plain
+    // pick round-trips to exactly the record shape that already exists.
+    const value: ThrowbackPreference = pick.sourceFranchiseId
+      ? { yearStart: pick.yearStart, sourceFranchiseId: pick.sourceFranchiseId }
+      : { yearStart: pick.yearStart };
+    await redis.set(makeThrowbackKey(franchiseId, scope), value);
     return true;
   } catch (err) {
     console.error('Failed to save throwback preference to KV:', err);
@@ -65,13 +77,13 @@ export async function setThrowbackPreference(
 
 /**
  * Batch-read every franchise's stored pick in one round trip. Returns a map
- * of franchiseId -> yearStart, omitting franchises with no stored pick.
+ * of franchiseId -> pick, omitting franchises with no stored pick.
  */
 export async function getAllThrowbackPreferences(
   franchiseIds: string[],
   scope: ThrowbackScope = DEFAULT_THROWBACK_SCOPE
-): Promise<Record<string, number>> {
-  const result: Record<string, number> = {};
+): Promise<Record<string, ThrowbackPreference>> {
+  const result: Record<string, ThrowbackPreference> = {};
   if (franchiseIds.length === 0) return result;
 
   const redis = await getRedis();
@@ -83,7 +95,9 @@ export async function getAllThrowbackPreferences(
     franchiseIds.forEach((franchiseId, i) => {
       const pref = values[i];
       if (pref && typeof pref.yearStart === 'number') {
-        result[franchiseId] = pref.yearStart;
+        result[franchiseId] = typeof pref.sourceFranchiseId === 'string'
+          ? { yearStart: pref.yearStart, sourceFranchiseId: pref.sourceFranchiseId }
+          : { yearStart: pref.yearStart };
       }
     });
   } catch (err) {

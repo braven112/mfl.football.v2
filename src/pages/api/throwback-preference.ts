@@ -21,8 +21,10 @@
 import type { APIRoute } from 'astro';
 import { getAuthUser, type AuthUser } from '../../utils/auth';
 import {
+  eraPickKey,
   getEligibleThrowbackEras,
   getImposedThrowbackEra,
+  throwbackPickKey,
 } from '../../utils/throwback-identity';
 import { getThrowbackPreference, setThrowbackPreference } from '../../utils/throwback-store';
 import { strictThrowbackScopeForLeagueId, type ThrowbackScope } from '../../utils/throwback-scope';
@@ -97,7 +99,7 @@ export const POST: APIRoute = async ({ request }) => {
     );
   }
 
-  let body: { yearStart?: unknown };
+  let body: { yearStart?: unknown; sourceFranchiseId?: unknown };
   try {
     body = await request.json();
   } catch {
@@ -115,19 +117,31 @@ export const POST: APIRoute = async ({ request }) => {
     });
   }
 
+  // Present only for an era inherited from a franchise slot this team used to
+  // occupy, where the year alone does not identify it.
+  const sourceFranchiseId = body.sourceFranchiseId;
+  if (sourceFranchiseId !== undefined && typeof sourceFranchiseId !== 'string') {
+    return new Response(JSON.stringify({ error: 'sourceFranchiseId must be a string' }), {
+      status: 400,
+      headers: JSON_HEADERS,
+    });
+  }
+
   // Never trust the client: the chosen era must be one of this franchise's
   // actual eligible eras IN THIS LEAGUE (rejects bogus years, the excluded
-  // asset-conflict entries, and an era that only exists in the other league's
-  // config for the same franchise id).
-  const eligible = getEligibleThrowbackEras(team, scope);
-  if (!eligible.some((e) => e.yearStart === yearStart)) {
+  // asset-conflict entries, an era that only exists in the other league's
+  // config for the same franchise id, and — now that eras can be inherited —
+  // an era from a slot this franchise never occupied).
+  const pick = { yearStart, sourceFranchiseId };
+  const eligible = getEligibleThrowbackEras(team, scope, TEAMS_BY_SCOPE[scope]);
+  if (!eligible.some((e) => eraPickKey(e) === throwbackPickKey(pick))) {
     return new Response(JSON.stringify({ error: 'yearStart is not an eligible throwback era for your franchise' }), {
       status: 400,
       headers: JSON_HEADERS,
     });
   }
 
-  const saved = await setThrowbackPreference(user.franchiseId, yearStart, scope);
+  const saved = await setThrowbackPreference(user.franchiseId, pick, scope);
   if (!saved) {
     return new Response(JSON.stringify({ success: false, error: 'Storage not configured or write failed' }), {
       status: 503,

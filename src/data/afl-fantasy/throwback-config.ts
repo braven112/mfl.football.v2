@@ -88,7 +88,8 @@ export const AFL_DEFAULT_THROWBACK_ERA: Record<string, number> = {
   '0001': 2006, // Smokane FC → Smokane FC (The gas mask) — 13 seasons
   '0002': 2003, // Drunk Indians → Drunk Indians (The original Wahoo) — 14 seasons
   '0003': 2013, // Team Minty Fresh → Team Minty Fresh (The mint leaf) — 12 seasons
-  '0004': 2012, // Get off my Ditka → The Dude that Abides — 5 seasons
+  '0004': 2019, // Get off my Ditka → Maga Nation — commissioner pick over the
+                //   tenure rule, which would say 2012 (The Dude that Abides, 5).
   '0005': 2010, // Computer Jocks → booyakasha — 5 seasons
   '0006': 2013, // Da Dangsters → Da Dangsters (The tommy gun) — 12 seasons
   '0007': 2010, // Avenging Amish → Touchdown My Pants — 4 seasons

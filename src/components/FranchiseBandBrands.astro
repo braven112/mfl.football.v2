@@ -35,6 +35,7 @@ import {
   strictThrowbackScopeForLeagueSlug,
 } from '../utils/throwback-scope';
 import { getAllThrowbackPreferences } from '../utils/throwback-store';
+import type { ThrowbackPick } from '../utils/throwback-identity';
 import { getCurrentNFLWeek } from '../utils/current-week';
 import { getTestDateFromSearchParams } from '../utils/league-year';
 
@@ -57,14 +58,14 @@ const { league } = Astro.props;
  * `rankings-storage.ts` caches a `Map<scope, …>` instead of one array.
  */
 const THROWBACK_CACHE_TTL_MS = 60_000;
-const throwbackCache = new Map<string, { at: number; value: Record<string, number> }>();
+const throwbackCache = new Map<string, { at: number; value: Record<string, ThrowbackPick> }>();
 
 const TEAMS_BY_SCOPE: Record<string, any[]> = {
   theleague: (theleagueConfig as any).teams ?? [],
   afl: (aflConfig as any).teams ?? [],
 };
 
-async function cachedThrowbackOverrides(scope: string): Promise<Record<string, number>> {
+async function cachedThrowbackOverrides(scope: string): Promise<Record<string, ThrowbackPick>> {
   const nowMs = Date.now();
   const hit = throwbackCache.get(scope);
   if (hit && nowMs - hit.at < THROWBACK_CACHE_TTL_MS) return hit.value;

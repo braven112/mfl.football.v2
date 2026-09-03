@@ -52,7 +52,7 @@ import { getTeamColorPrimary, getTeamColorSecondary } from './team-colors';
 import { mixHex } from './nfl-team-colors';
 import { pickBrandHue } from './franchise-hue';
 import { AA_LARGE_TEXT_RATIO, ensureContrastOn } from './team-color-contrast';
-import { resolveThrowbackIdentity } from './throwback-identity';
+import { resolveThrowbackIdentity, type ThrowbackPick } from './throwback-identity';
 import { strictThrowbackScopeForLeagueSlug } from './throwback-scope';
 import { preferredIconSrc } from './team-icon-dark-css';
 import { crestStrokeFilter, withStrokeColors } from './crest-dark-stroke-css';
@@ -82,7 +82,7 @@ export interface BuildFranchiseBandBrandsOptions {
   /** Dress every franchise in its resolved legacy identity (TheLeague only). */
   throwbackActive?: boolean;
   /** franchiseId -> owner-chosen era `yearStart`, from the throwback store. */
-  throwbackOverrides?: Record<string, number>;
+  throwbackOverrides?: Record<string, ThrowbackPick | number>;
 }
 
 const LEAGUE_TEAMS: Record<LeagueSlug, any[]> = {
@@ -268,7 +268,7 @@ export function buildFranchiseBandBrands(
     let crestFilter = team.iconDark ? undefined : strokes[franchiseId];
 
     if (throwback && scope) {
-      const identity = resolveThrowbackIdentity(team, overrides[franchiseId], scope);
+      const identity = resolveThrowbackIdentity(team, overrides[franchiseId], scope, teams);
       name = identity.name;
       // Same treatment as the current identity above — a few eras are
       // monochrome (the palette sampler falls back to a dark neutral for
@@ -278,11 +278,13 @@ export function buildFranchiseBandBrands(
       // carries no era palette — taking one anyway would land on the chart
       // hue this file deliberately stopped anchoring on, on the one week a
       // year it shows. Same shape as the crest bug `resolveEraCrest` guards.
-      const eraHasColors = identity.isHistorical && !!identity.colorPrimary;
+      // Held in a local so the narrowing survives into both arms — reading
+      // `identity.colorPrimary` again re-widens it to `string | undefined`.
+      const eraPrimary = identity.isHistorical ? identity.colorPrimary : undefined;
       const eraPair = resolveBandPair(
-        eraHasColors ? identity.colorPrimary : getTeamColorPrimary(franchiseId, league),
-        eraHasColors
-          ? (identity.colorSecondary ?? identity.colorPrimary)
+        eraPrimary ?? getTeamColorPrimary(franchiseId, league),
+        eraPrimary
+          ? (identity.colorSecondary ?? eraPrimary)
           : getTeamColorSecondary(franchiseId, league),
       );
       primary = eraPair.anchor;

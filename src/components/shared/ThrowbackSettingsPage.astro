@@ -22,6 +22,7 @@
 import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
 import type { ThrowbackSettingsView } from '../../utils/throwback-settings-view';
 import { eraBannerStyle } from '../../utils/era-banner-style';
+import { eraPickKey } from '../../utils/throwback-identity';
 
 interface Props {
   view: ThrowbackSettingsView;
@@ -36,8 +37,8 @@ const {
   team,
   imposedEra,
   eligibleEras,
-  selectedYearStart,
-  ownDefaultYearStart,
+  selectedKey,
+  ownDefaultKey,
   previewWeek,
   isAdmin,
   storageAvailable,
@@ -98,14 +99,14 @@ const weekLabel = `Week ${previewWeek}`;
         once more vintage art is recovered.
       </p>
     ) : (
-      <form id="tbw-form" class="tbw-grid" data-selected={selectedYearStart ?? ''}>
+      <form id="tbw-form" class="tbw-grid" data-selected={selectedKey ?? ''}>
         {eligibleEras.map((era) => (
-          <label class="tbw-card" data-year-start={era.yearStart}>
+          <label class="tbw-card" data-era-key={eraPickKey(era)}>
             <input
               type="radio"
-              name="yearStart"
-              value={era.yearStart}
-              checked={era.yearStart === selectedYearStart}
+              name="eraKey"
+              value={eraPickKey(era)}
+              checked={eraPickKey(era) === selectedKey}
             />
             <img
               class="tbw-card__banner"
@@ -119,20 +120,25 @@ const weekLabel = `Week ${previewWeek}`;
               <div>
                 <div class="tbw-card__name">
                   {era.name}
-                  {selectedYearStart === null && era.yearStart === ownDefaultYearStart && (
+                  {selectedKey === null && eraPickKey(era) === ownDefaultKey && (
                     <span class="tbw-card__default-chip">Your {weekLabel} default</span>
                   )}
                 </div>
                 <div class="tbw-card__years">
                   {era.yearStart}–{era.yearEnd}
                   {era.eraLabel && <span class="tbw-card__era-label">· {era.eraLabel}</span>}
+                  {era.sourceFranchiseId && (
+                    <span class="tbw-card__slot" title="Your team wore this under an earlier franchise slot">
+                      · as franchise {era.sourceFranchiseId}
+                    </span>
+                  )}
                 </div>
               </div>
               {/* Interactive content inside a label doesn't activate the radio,
                   so following this link neither selects nor saves the era. */}
               <a
                 class="tbw-card__preview"
-                href={`${scoreboard}&previewEra=${era.yearStart}`}
+                href={`${scoreboard}&previewEra=${eraPickKey(era)}`}
                 aria-label={`Preview ${era.name} (${era.yearStart}) on the scoreboard without saving`}
               >
                 Preview →
@@ -201,7 +207,7 @@ const weekLabel = `Week ${previewWeek}`;
                       </div>
                       <a
                         class="tbw-cg__preview"
-                        href={`${scoreboard}&previewFranchise=${row.franchiseId}&previewEra=${era.yearStart}`}
+                        href={`${scoreboard}&previewFranchise=${row.franchiseId}&previewEra=${era.key}`}
                         aria-label={`Preview ${row.teamName} as ${era.name} (${era.yearStart}) on the scoreboard`}
                       >
                         Preview →
@@ -230,9 +236,14 @@ const weekLabel = `Week ${previewWeek}`;
 
     form.addEventListener('change', async (event) => {
       const target = event.target as HTMLInputElement;
-      if (target.name !== 'yearStart') return;
+      if (target.name !== 'eraKey') return;
 
-      const yearStart = Number(target.value);
+      // `{slot}:{year}` for an era inherited from a franchise slot this team
+      // used to occupy, a bare year for its own — the API validates both.
+      const [a, b] = target.value.split(':');
+      const payload = b === undefined
+        ? { yearStart: Number(a) }
+        : { yearStart: Number(b), sourceFranchiseId: a };
       if (status) status.textContent = 'Saving…';
 
       try {
@@ -242,7 +253,7 @@ const weekLabel = `Week ${previewWeek}`;
         const res = await fetch('/api/throwback-preference', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ yearStart }),
+          body: JSON.stringify(payload),
         });
         const data = await res.json();
         if (status) status.textContent = data.success ? 'Saved.' : (data.error || 'Failed to save.');
@@ -436,6 +447,11 @@ const weekLabel = `Week ${previewWeek}`;
     margin-top: 1rem;
     min-height: 1.2em;
     color: var(--content-text-muted);
+  }
+
+  .tbw-card__slot {
+    font-style: italic;
+    opacity: 0.85;
   }
 
   .tbw-card__era-label {

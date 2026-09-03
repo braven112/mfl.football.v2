@@ -437,9 +437,8 @@ const userProjTotal = slots.reduce(
 // could not see, and rings the crests that stay on light artwork — four
 // franchises today (Harambe, Suh girls, Swiftie, the Boondock Saints) that the
 // site strokes under `html.dark` and this panel did not.
-const aflTeamsById = new Map<string, any>(
-  ((aflConfig as any).teams ?? []).map((t: any) => [t.franchiseId, t]),
-);
+const aflTeams: any[] = (aflConfig as any).teams ?? [];
+const aflTeamsById = new Map<string, any>(aflTeams.map((t: any) => [t.franchiseId, t]));
 
 // Throwback Week. Resolved server-side, once, for the franchises this page
 // actually renders — the viewer's team and its opponents.
@@ -476,6 +475,7 @@ const matchupCards = buildMatchupCards({
         team,
         aflThrowbackOverrides[franchiseId],
         'afl',
+        aflTeams,
       );
       // Only when the franchise ACTUALLY threw back. `resolveThrowbackIdentity`
       // falls through to the current identity for one with no eligible era,

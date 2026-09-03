@@ -4,10 +4,14 @@ import { join } from 'node:path';
 import aflConfig from '../data/afl-fantasy/afl.config.json';
 import theleagueConfig from '../src/data/theleague.config.json';
 import {
+  eraPickKey,
   getEligibleThrowbackEras,
   getImposedThrowbackEra,
+  getInheritedThrowbackEras,
+  parseThrowbackPickKey,
   pickDefaultThrowbackEra,
   resolveThrowbackIdentity,
+  throwbackPickKey,
 } from '../src/utils/throwback-identity';
 import { applyThrowbackOverrides, type ConfigTeam } from '../src/utils/live-scoring-data';
 import {
@@ -559,6 +563,121 @@ describe('no era is invisible', () => {
         getEligibleThrowbackEras(team, 'afl').length,
         `${team.name} has nothing to wear on Throwback Week`,
       ).toBeGreaterThan(0);
+    }
+  });
+});
+
+describe('a franchise that changed MFL slots keeps its old looks', () => {
+  // Four AFL franchises moved slots. `ownerHistory` is where the config says
+  // which slot each held in which years; the looks themselves are filed under
+  // the slot that wore them.
+  const MOVED: [string, string, number, string][] = [
+    ['0006', '0021', 2003, 'Da Dangsters'],
+    ['0008', '0016', 2017, 'Dicks out for Harambe'],
+    ['0013', '0004', 2005, 'Muck Juggling Micks'],
+    ['0021', '0007', 2004, 'Chatmaster'],
+  ];
+
+  it.each(MOVED)('franchise %s inherits %s\'s %d "%s"', (fid, slot, yearStart, name) => {
+    const inherited = getInheritedThrowbackEras(findTeam(fid), teams);
+    const era = inherited.find((e) => e.sourceFranchiseId === slot && e.yearStart === yearStart);
+    expect(era, `${fid} did not inherit ${slot} ${yearStart}`).toBeTruthy();
+    expect(era!.name).toBe(name);
+    expect(getEligibleThrowbackEras(findTeam(fid), 'afl', teams).map(eraPickKey))
+      .toContain(`${slot}:${yearStart}`);
+  });
+
+  it('Chatmaster can wear the Chatmaster of 2004, which lives in slot 0007', () => {
+    // The case that prompted this: the name moved with the owner, so the old
+    // art sat in a slot they no longer hold and the asset-conflict rule
+    // (correctly) kept it from 0007 — leaving it offered to nobody at all.
+    const identity = resolveThrowbackIdentity(
+      findTeam('0021'), { yearStart: 2004, sourceFranchiseId: '0007' }, 'afl', teams,
+    );
+    expect(identity.name).toBe('Chatmaster');
+    expect(identity.isHistorical).toBe(true);
+    const source = (findTeam('0007').history ?? []).find((e) => e.yearStart === 2004)!;
+    expect(identity.icon).toBe(source.icon);
+  });
+
+  it('does not hand the era back to the slot\'s current occupant', () => {
+    // Both franchises wearing one identity on one scoreboard is exactly what
+    // AFL_THROWBACK_ASSET_CONFLICTS exists to stop, and inheriting must not
+    // reopen it from the other side.
+    for (const [fid, slot, yearStart] of MOVED) {
+      const occupantEras = getEligibleThrowbackEras(findTeam(slot), 'afl', teams);
+      expect(
+        occupantEras.some((e) => !e.sourceFranchiseId && e.yearStart === yearStart),
+        `${slot} is still offered the era ${fid} inherited from it`,
+      ).toBe(false);
+    }
+  });
+
+  it('every era key is unique inside a franchise\'s picker', () => {
+    // Da Dangsters have an era of their own starting in 2003 AND inherit one
+    // that also starts in 2003 — a bare year is no longer an identity, which
+    // is the whole reason the key exists.
+    for (const team of teams) {
+      const keys = getEligibleThrowbackEras(team, 'afl', teams).map(eraPickKey);
+      expect(new Set(keys).size, `${team.name} has duplicate era keys: ${keys.join(', ')}`)
+        .toBe(keys.length);
+    }
+    const dangsters = getEligibleThrowbackEras(findTeam('0006'), 'afl', teams);
+    expect(dangsters.filter((e) => e.yearStart === 2003)).toHaveLength(2);
+  });
+
+  it('never inherits an era that straddles the ownership window', () => {
+    // The era is carried across UNCLIPPED so its key still points at the entry
+    // it came from. That is only honest while no era crosses the boundary —
+    // one that did would claim seasons this franchise never owned.
+    for (const team of teams) {
+      for (const window of team.ownerHistory ?? []) {
+        if (window.franchiseId === team.franchiseId) continue;
+        const source = teams.find((t) => t.franchiseId === window.franchiseId);
+        for (const era of source?.history ?? []) {
+          const end = era.yearEnd ?? era.yearStart;
+          if (era.yearStart > window.yearEnd || end < window.yearStart) continue;
+          expect(
+            era.yearStart >= window.yearStart && end <= window.yearEnd,
+            `${team.name} would inherit "${era.name}" (${era.yearStart}-${end}) from ` +
+              `slot ${window.franchiseId}, whose window is ${window.yearStart}-${window.yearEnd}`,
+          ).toBe(true);
+        }
+      }
+    }
+  });
+
+  it('offers nothing extra when the league list is withheld', () => {
+    // Every pre-existing call site passes no team list, and TheLeague has no
+    // slot moves at all — both must keep seeing exactly their own history.
+    for (const team of teams) {
+      const own = getEligibleThrowbackEras(team, 'afl');
+      expect(own.every((e) => !e.sourceFranchiseId)).toBe(true);
+    }
+    expect(getInheritedThrowbackEras(findTeam('0021'), undefined)).toEqual([]);
+  });
+});
+
+describe('era pick keys', () => {
+  it('round-trips both shapes', () => {
+    expect(throwbackPickKey({ yearStart: 2014 })).toBe('2014');
+    expect(throwbackPickKey({ yearStart: 2004, sourceFranchiseId: '0007' })).toBe('0007:2004');
+    expect(parseThrowbackPickKey('2014')).toEqual({ yearStart: 2014 });
+    expect(parseThrowbackPickKey('0007:2004')).toEqual({ yearStart: 2004, sourceFranchiseId: '0007' });
+  });
+
+  it('keeps an own era on its bare year, so stored picks survive', () => {
+    // Every preference written before eras could be inherited holds a plain
+    // number. Changing that key shape would silently reset the league.
+    const era = (findTeam('0001').history ?? [])[0];
+    expect(eraPickKey(era)).toBe(String(era.yearStart));
+    const identity = resolveThrowbackIdentity(findTeam('0001'), era.yearStart, 'afl', teams);
+    expect(identity.name).toBe(era.name);
+  });
+
+  it('rejects junk rather than resolving something arbitrary', () => {
+    for (const bad of ['', 'abc', '20x4', ':2004', '7:2004', '0007:', '0007:abc']) {
+      expect(parseThrowbackPickKey(bad), bad).toBeNull();
     }
   });
 });

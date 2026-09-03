@@ -185,6 +185,23 @@ export interface FranchiseHistoryEntry {
    * PNG for the same reason.
    */
   iconStroke?: string;
+  /**
+   * Set at RUNTIME, never in a config file: the franchise slot this era was
+   * inherited from, when a franchise changed MFL slots and its earlier looks
+   * live in the other slot's `history[]`.
+   *
+   * Four AFL franchises moved slots (`ownerHistory` records it) and their
+   * old-school looks are filed under the id they used at the time — the
+   * Chatmaster of 2004-2009 sits in franchise 0007's history, not 0021's.
+   * Throwback Week offers those back to the franchise that actually wore
+   * them; see `getInheritedThrowbackEras`.
+   *
+   * It is deliberately NOT written into `history[]`. That array answers "what
+   * was THIS SLOT called in year N" for award naming, standings and owner
+   * attribution, and copying a borrowed era in makes two franchises claim the
+   * same slot-year — a bug this repo has already shipped once.
+   */
+  sourceFranchiseId?: string;
 }
 
 /**

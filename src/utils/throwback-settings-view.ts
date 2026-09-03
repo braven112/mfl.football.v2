@@ -17,9 +17,11 @@
 import type { AuthUser } from './auth';
 import { isCommissionerOrAdmin } from './auth';
 import {
+  eraPickKey,
   getEligibleThrowbackEras,
   getImposedThrowbackEra,
   pickDefaultThrowbackEra,
+  throwbackPickKey,
 } from './throwback-identity';
 import { getAllThrowbackPreferences, getThrowbackPreference, getRedis } from './throwback-store';
 import { throwbackRules, type ThrowbackScope } from './throwback-scope';
@@ -42,6 +44,16 @@ export interface ThrowbackEraView {
    */
   colorPrimary: string | undefined;
   colorSecondary: string | undefined;
+  /**
+   * The era's stable id within this franchise's picker — a bare year for its
+   * own era, `{slot}:{year}` for one inherited from a slot it used to occupy.
+   * This, not `yearStart`, is the radio value and what gets stored: Da
+   * Dangsters have an era of their own starting in 2003 AND inherit one that
+   * also starts in 2003.
+   */
+  key: string;
+  /** Set when the era was worn under a different franchise slot. */
+  sourceFranchiseId: string | undefined;
 }
 
 export interface ThrowbackCommishEra extends ThrowbackEraView {
@@ -72,10 +84,10 @@ export interface ThrowbackSettingsView {
   imposedEra: ThrowbackEraView | null;
   /** Eras this franchise may pick. */
   eligibleEras: FranchiseHistoryEntry[];
-  /** The owner's saved pick, or null when they are riding the default. */
-  selectedYearStart: number | null;
+  /** The owner's saved pick as an era KEY, or null when riding the default. */
+  selectedKey: string | null;
   /** The era they wear with no pick saved — mirrors resolveThrowbackIdentity. */
-  ownDefaultYearStart: number | null;
+  ownDefaultKey: string | null;
   /** The league's throwback week, for preview links. Never a baked-in 4. */
   previewWeek: number;
   isAdmin: boolean;
@@ -93,6 +105,8 @@ function toEraView(era: FranchiseHistoryEntry): ThrowbackEraView {
     banner: era.banner,
     colorPrimary: era.colorPrimary,
     colorSecondary: era.colorSecondary,
+    key: eraPickKey(era),
+    sourceFranchiseId: era.sourceFranchiseId,
   };
 }
 
@@ -128,11 +142,14 @@ export async function buildThrowbackSettingsView(
   if (!team) return null;
 
   const imposed = getImposedThrowbackEra(user.franchiseId, scope);
-  const eligibleEras = imposed ? [] : getEligibleThrowbackEras(team, scope);
+  const eligibleEras = imposed ? [] : getEligibleThrowbackEras(team, scope, teams);
   const preference = await getThrowbackPreference(user.franchiseId, scope);
-  const selectedYearStart = preference?.yearStart ?? null;
-  const ownDefaultYearStart =
-    defaultEraFor(eligibleEras, user.franchiseId, scope)?.yearStart ?? null;
+  const selectedKey = preference ? throwbackPickKey(preference) : null;
+  const ownDefaultKey =
+    (() => {
+      const era = defaultEraFor(eligibleEras, user.franchiseId, scope);
+      return era ? eraPickKey(era) : null;
+    })();
 
   const isAdmin = isCommissionerOrAdmin(user);
   let storageAvailable = true;
@@ -161,10 +178,11 @@ export async function buildThrowbackSettingsView(
           eras: [],
         };
       }
-      const eligible = getEligibleThrowbackEras(t, scope);
-      const storedYear = picks[t.franchiseId];
+      const eligible = getEligibleThrowbackEras(t, scope, teams);
+      const stored = picks[t.franchiseId];
+      const storedKey = stored ? throwbackPickKey(stored) : null;
       const pickedEra =
-        storedYear !== undefined ? eligible.find((e) => e.yearStart === storedYear) : undefined;
+        storedKey !== null ? eligible.find((e) => eraPickKey(e) === storedKey) : undefined;
       const defaultEra = defaultEraFor(eligible, t.franchiseId, scope);
       const wears = pickedEra ?? defaultEra;
 
@@ -177,8 +195,8 @@ export async function buildThrowbackSettingsView(
         wearsYear: wears?.yearStart ?? null,
         eras: eligible.map((e) => ({
           ...toEraView(e),
-          isDefault: defaultEra?.yearStart === e.yearStart,
-          isPicked: pickedEra?.yearStart === e.yearStart,
+          isDefault: !!defaultEra && eraPickKey(defaultEra) === eraPickKey(e),
+          isPicked: !!pickedEra && eraPickKey(pickedEra) === eraPickKey(e),
         })),
       };
     });
@@ -188,8 +206,8 @@ export async function buildThrowbackSettingsView(
     team,
     imposedEra: imposed ? toEraView(imposed) : null,
     eligibleEras,
-    selectedYearStart,
-    ownDefaultYearStart,
+    selectedKey,
+    ownDefaultKey,
     previewWeek: throwbackRules(scope).weeks[0] ?? 4,
     isAdmin,
     storageAvailable,
