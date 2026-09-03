@@ -51,3 +51,35 @@ for (const m of region.matchAll(/<(?:input|select|button)[^>]*>/gi)) {
 }
 console.log('\n--- TABLE COPY');
 console.log(region.replace(/<[^>]+>/g, ' ').replace(/&nbsp;/gi, ' ').replace(/\s+/g, ' ').trim().slice(0, 900));
+
+// ── Follow the Edit link ─────────────────────────────────────────────────────
+// It targets a PER-ROUND page (options?O=255&ROUND=n), not a per-claim one,
+// which is where ordering would have to live if MFL exposes it at all.
+const editHref = region.match(/<a[^>]*href=["']([^"']*O=255[^"']*)["']/i)?.[1];
+if (!editHref) {
+  console.log('\nNO EDIT LINK FOUND.');
+} else {
+  const editUrl = new URL(editHref.replace(/&amp;/g, '&'), `https://${league.mflHost}/${year}/`).href;
+  const edit = await fetchPage(editUrl);
+  console.log(`\n===== EDIT PAGE: ${editUrl} -> ${edit.status}, ${edit.html.length} bytes`);
+  console.log('TITLE:', edit.html.match(/<title[^>]*>([\s\S]*?)<\/title>/i)?.[1]?.trim());
+  for (const m of edit.html.matchAll(/<form[^>]*>/gi)) console.log('FORM:', m[0].replace(/\s+/g, ' '));
+  const names = new Set();
+  for (const m of edit.html.matchAll(/<(?:input|select|textarea)[^>]*>/gi)) {
+    const tag = m[0].replace(/\s+/g, ' ');
+    const n = tag.match(/\bname\s*=\s*["']([^"']+)/i)?.[1];
+    if (n) names.add(n);
+    // Controls only — never <option> lists, which carry player and owner data.
+    if (/type\s*=\s*["']?(submit|hidden|checkbox|radio)/i.test(tag) || /<select/i.test(tag)) {
+      console.log('CONTROL:', tag.slice(0, 220));
+    }
+  }
+  console.log('FIELD NAMES:', JSON.stringify([...names]));
+  const text = edit.html
+    .replace(/<script[\s\S]*?<\/script>/gi, ' ')
+    .replace(/<style[\s\S]*?<\/style>/gi, ' ')
+    .replace(/<option[^>]*>[\s\S]*?<\/option>/gi, ' ')
+    .replace(/<[^>]+>/g, ' ').replace(/&nbsp;/gi, ' ').replace(/\s+/g, ' ').trim();
+  const nav = text.lastIndexOf('Select Keepers');
+  console.log('PAGE COPY:', text.slice(nav < 0 ? 0 : nav + 14, (nav < 0 ? 0 : nav + 14) + 1200));
+}
