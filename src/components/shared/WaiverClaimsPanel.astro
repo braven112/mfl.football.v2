@@ -1,0 +1,187 @@
+---
+import '../../styles/waiver-claims-panel.css';
+/**
+ * WaiverClaimsPanel — the claims you have already filed, and what you can do
+ * to them.
+ *
+ * ONE component for both leagues, same reason as WaiverClaimModal: the two
+ * waiver systems differ in data (the AFL shows no bid), not in layout. Forking
+ * it is how this repo grew 24 forked siblings — see
+ * tests/page-fork-ratchet.test.ts.
+ *
+ * WHAT IT DELIBERATELY DOES NOT DO: reorder. MFL exposes no reorder control —
+ * a round is one record whose `addsDrops` is an ordered list, MFL appends to
+ * it, `REPLACE=1` is inert, and MFL's own editor changes only the drop and the
+ * comment. Reordering could therefore only be delete-then-refile, which leaves
+ * a window where the owner holds no claim at all. Delete and edit-drop each map
+ * to a single MFL primitive with no such window, which is why they are safe to
+ * offer while waivers are open. See
+ * docs/claude/insights/features/waiver-claims.md (2026-09-03).
+ *
+ * Claims are FETCHED CLIENT-SIDE. The list needs a live owner-authenticated MFL
+ * read, and doing that during SSR would put an MFL round-trip in front of every
+ * Free Agents page load for every visitor, including the signed-out ones who
+ * can never see this panel.
+ */
+export interface WaiverClaimsPanelConfig {
+  /** False for a signed-out visitor or a session with no franchise. */
+  canManage: boolean;
+  /** Whether the league bids, so an award amount is worth a column. */
+  system: 'bbid' | 'priority';
+  /** The owner's roster, for the "drop instead" picker. */
+  roster: Array<{ id: string; name: string }>;
+}
+
+interface Props {
+  config: WaiverClaimsPanelConfig;
+}
+const { config } = Astro.props;
+---
+
+<script type="application/json" id="waiver-claims-config" set:html={JSON.stringify(config)}></script>
+
+{config.canManage && (
+  <section class="wcp" id="waiver-claims-panel" hidden aria-labelledby="wcp-heading">
+    <div class="wcp__head">
+      <h2 class="wcp__title" id="wcp-heading">Your waiver claims</h2>
+      <a class="wcp__mfl" id="wcp-mfl" href="#" target="_blank" rel="noopener" hidden>View on MyFantasyLeague &#8599;</a>
+    </div>
+    <p class="wcp__note" id="wcp-note" hidden></p>
+    <ul class="wcp__list" id="wcp-list"></ul>
+  </section>
+)}
+
+<script>
+  const raw = document.getElementById('waiver-claims-config')?.textContent;
+  const cfg = raw ? JSON.parse(raw) : null;
+
+  if (cfg?.canManage) {
+    const panel = document.getElementById('waiver-claims-panel')!;
+    const list = document.getElementById('wcp-list')!;
+    const note = document.getElementById('wcp-note')!;
+    const mflLink = document.getElementById('wcp-mfl') as HTMLAnchorElement;
+
+    const esc = (s: unknown) =>
+      String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
+    const showNote = (msg: string, kind: 'ok' | 'warn' | 'error' = 'ok') => {
+      note.textContent = msg;
+      note.className = `wcp__note wcp__note--${kind}`;
+      note.hidden = !msg;
+    };
+
+    /** Render the list. Order is MFL's own, which IS the claim priority. */
+    const render = (claims: any[]) => {
+      if (!claims.length) {
+        panel.hidden = true;
+        return;
+      }
+      panel.hidden = false;
+      list.innerHTML = claims
+        .map((c, i) => {
+          const meta = [c.addPosition, c.addNflTeam].filter(Boolean).join(' · ');
+          const dropLabel = c.dropName
+            ? `Dropping <strong>${esc(c.dropName)}</strong>`
+            : 'Adding without dropping';
+          // The number is the priority MFL will honour, not a row count — say so
+          // rather than leaving an unexplained ordinal.
+          return `<li class="wcp__item" data-round="${esc(c.round)}" data-add="${esc(c.addPlayerId)}">
+            <span class="wcp__rank" title="Priority within round ${esc(c.round)}">${i + 1}</span>
+            <span class="wcp__who">
+              <strong class="wcp__name">${esc(c.addName)}</strong>
+              <span class="wcp__meta">${esc(meta)}${c.bid != null ? ` · $${Number(c.bid).toLocaleString()}` : ''}</span>
+              <span class="wcp__drop">${dropLabel} &middot; Round ${esc(c.round)}</span>
+            </span>
+            <span class="wcp__actions">
+              <button type="button" class="wcp__btn" data-act="edit">Change drop</button>
+              <button type="button" class="wcp__btn wcp__btn--danger" data-act="delete">Delete</button>
+            </span>
+          </li>`;
+        })
+        .join('');
+    };
+
+    const load = async () => {
+      try {
+        const res = await fetch('/api/waiver-claims');
+        const data = await res.json().catch(() => ({}));
+        if (data?.confirmUrl) {
+          mflLink.href = data.confirmUrl;
+          mflLink.hidden = false;
+        }
+        if (!res.ok || !data.success) {
+          // A failed read must not imply "you have no claims" — that is the
+          // same conflation this whole feature was built to stop.
+          if (res.status !== 401 && res.status !== 403) {
+            panel.hidden = false;
+            list.innerHTML = '';
+            showNote(data.message || 'Could not read your pending waivers.', 'error');
+          }
+          return;
+        }
+        showNote('');
+        render(data.claims ?? []);
+      } catch {
+        /* Offline or blocked — leave the panel hidden rather than alarm anyone. */
+      }
+    };
+
+    const act = async (body: Record<string, unknown>, pending: string) => {
+      showNote(pending, 'ok');
+      list.querySelectorAll('button').forEach((b) => ((b as HTMLButtonElement).disabled = true));
+      try {
+        const res = await fetch('/api/waiver-claims', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || !data.success) {
+          showNote(data.message || `That didn't work (HTTP ${res.status}).`, 'error');
+          return load();
+        }
+        // `verified` is the one that means MFL actually shows the change.
+        showNote(data.message || 'Done.', data.verified === false ? 'warn' : 'ok');
+        if (Array.isArray(data.claims)) render(data.claims);
+        else await load();
+      } catch {
+        showNote('Network error — nothing was changed.', 'error');
+        await load();
+      }
+    };
+
+    list.addEventListener('click', async (e) => {
+      const btn = (e.target as HTMLElement).closest('button[data-act]') as HTMLButtonElement | null;
+      if (!btn) return;
+      const item = btn.closest('.wcp__item') as HTMLElement;
+      const round = item.dataset.round;
+      const addPlayerId = item.dataset.add;
+      const name = item.querySelector('.wcp__name')?.textContent ?? 'this player';
+
+      if (btn.dataset.act === 'delete') {
+        if (!confirm(`Delete your claim on ${name}? This cannot be undone from here.`)) return;
+        await act({ action: 'delete', round, addPlayerId }, 'Deleting…');
+        return;
+      }
+
+      // Change drop: a plain prompt-free picker built from the roster we were
+      // given, so no extra request is needed to offer the choice.
+      const options = [{ id: '0000', name: 'Nobody — add without dropping' }, ...cfg.roster];
+      const choice = window.prompt(
+        `Drop instead of…?\n\n${options.map((o, i) => `${i}. ${o.name}`).join('\n')}\n\nEnter a number:`,
+        '0'
+      );
+      if (choice === null) return;
+      const picked = options[Number(choice)];
+      if (!picked) return showNote('That was not one of the options.', 'error');
+      await act({ action: 'editDrop', round, addPlayerId, dropPlayerId: picked.id }, 'Saving…');
+    });
+
+    const start = () => { void load(); };
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start, { once: true });
+    else start();
+    // Re-init on in-site navigation, or the panel goes dead after a ClientRouter hop.
+    document.addEventListener('astro:page-load', start);
+  }
+</script>
+

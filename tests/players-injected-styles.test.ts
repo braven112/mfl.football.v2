@@ -122,3 +122,51 @@ describe('the shared free-agent action pill', () => {
     }
   });
 });
+
+/**
+ * The panel that lists FILED claims renders its rows with `innerHTML` too, so it
+ * has exactly the same exposure — and it shipped with exactly the same bug in
+ * its first draft: the rank badge computed to `background: rgba(0,0,0,0)` and
+ * rows collapsed to 28px, because every rule for the injected markup sat in the
+ * component's SCOPED `<style>` block and matched nothing.
+ *
+ * Third occurrence of this trap in one feature. Guard it by class.
+ */
+describe('WaiverClaimsPanel — injected-row styles', () => {
+  const COMPONENT = 'src/components/shared/WaiverClaimsPanel.astro';
+  const PANEL_CSS = 'src/styles/waiver-claims-panel.css';
+  /** Classes that only ever exist on markup the client script injects. */
+  const INJECTED = ['wcp__item', 'wcp__rank', 'wcp__who', 'wcp__name', 'wcp__meta', 'wcp__drop', 'wcp__actions', 'wcp__btn'];
+
+  it('keeps injected-row rules OUT of the component\'s scoped style block', () => {
+    const src = read(COMPONENT);
+    const scoped = src.match(/\n<style>([\s\S]*?)<\/style>/)?.[1] ?? '';
+    const leaked = INJECTED.filter((cls) => scoped.includes(`.${cls}`));
+    expect(
+      leaked,
+      `${COMPONENT} styles injected markup from a scoped <style> block, where it ` +
+        `matches nothing (no data-astro-cid). Move these to ${PANEL_CSS}:\n  ` +
+        leaked.join('\n  ')
+    ).toEqual([]);
+  });
+
+  it('imports the stylesheet from frontmatter, where it lands globally', () => {
+    const frontmatter = read(COMPONENT).split('---')[1] ?? '';
+    expect(frontmatter, `${COMPONENT} must import ${PANEL_CSS}`).toContain('styles/waiver-claims-panel.css');
+  });
+
+  it('actually styles every injected class', () => {
+    const css = read(PANEL_CSS);
+    for (const cls of INJECTED) {
+      expect(css, `${PANEL_CSS} has no rule for .${cls}`).toContain(`.${cls}`);
+    }
+  });
+
+  it('colours from the league token, never a literal', () => {
+    // One stylesheet serves both leagues; a hardcoded hex paints one league's
+    // colour on the other.
+    const css = read(PANEL_CSS);
+    expect(css).toContain('--league-accent');
+    expect(css, 'a literal accent would paint both leagues the same').not.toMatch(/background:\s*#[0-9a-f]{6}\s*;/i);
+  });
+});

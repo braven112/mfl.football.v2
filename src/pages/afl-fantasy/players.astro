@@ -44,6 +44,7 @@ import { readBidRules } from '../../utils/waiver-claim';
 import { resolveWaiverWindow, describeWaiverWindow } from '../../utils/waiver-window';
 import { getAflLeagueYear } from '../../utils/league-year';
 import WaiverClaimModal from '../../components/shared/WaiverClaimModal.astro';
+import WaiverClaimsPanel from '../../components/shared/WaiverClaimsPanel.astro';
 // AFL uses team defenses (no IDP), so a DEF free agent has no headshot of its
 // own. Mirror TheLeague's hero treatment: surface a rotating pool of the team's
 // marquee defenders (ESPN headshots) over the logo watermark. The data is keyed
@@ -177,6 +178,14 @@ const claimConfig = {
   windowMode: waiverWindow.mode,
   windowLabel: waiverWindowLabel,
   year: claimYear,
+};
+// Filed claims are managed by the SAME shared component in both leagues — see
+// tests/page-fork-ratchet.test.ts. `canManage` mirrors `canClaim`: an owner who
+// cannot file a claim has none to manage.
+const claimsPanelConfig = {
+  canManage: canClaim,
+  system: claimRules.system,
+  roster: claimRoster,
 };
 const faCounts = scoped.faCounts;
 const freeAgentsCount = scoped.freeAgentsCount;
@@ -474,6 +483,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     </div>
 
     <WaiverClaimModal config={claimConfig} />
+    <WaiverClaimsPanel config={claimsPanelConfig} />
 
     <!-- Show more -->
     <div class="show-more-wrapper" id="show-more-wrapper">

@@ -314,3 +314,79 @@ export function readPendingWaiverPlayerIds(body: any): string[] | null {
   if (adds.size === 0 && Object.keys(pending as Record<string, unknown>).length > 0) return null;
   return [...adds];
 }
+
+/**
+ * One claim an owner has already filed, as `pendingWaivers` describes it.
+ *
+ * `index` is its POSITION within the round's `addsDrops` list. MFL's own edit
+ * form addresses claims positionally (`drop_0`, `drop_1`, …), so the position
+ * is part of the claim's identity, not a display detail.
+ */
+export interface FiledWaiverClaim {
+  round: string;
+  /** Position within the round, 0-based — MFL's `drop_N` index. */
+  index: number;
+  addPlayerId: string;
+  /** null when the claim adds without dropping. */
+  dropPlayerId: string | null;
+  /** Whole dollars, when the league bids. */
+  bid: number | null;
+  comment: string;
+  /** MFL's own epoch seconds for when the claim was entered. */
+  timestamp: string | null;
+}
+
+/**
+ * The claims an owner has filed, in MFL's own order — which IS their priority,
+ * since a round is one record whose `addsDrops` is an ordered list and MFL
+ * appends to the end.
+ *
+ * Returns null on an unreadable payload, for the same reason
+ * {@link readPendingWaiverPlayerIds} does: "could not read" and "nothing filed"
+ * must not share a representation.
+ *
+ * A pick is `add_drop`, or `add_bid_drop` where the league bids — the same
+ * shape {@link buildPicksParam} writes, read back.
+ */
+export function readFiledWaiverClaims(body: any): FiledWaiverClaim[] | null {
+  if (!body || typeof body !== 'object') return null;
+  if (body.error) return null;
+  const pending = body.pendingWaivers ?? body.pendingWaiver;
+  if (pending === undefined || pending === null) return null;
+  if (typeof pending === 'string') return pending.trim() === '' ? [] : null;
+  if (typeof pending !== 'object') return null;
+
+  const raw = (pending as any).waiverRequest ?? (pending as any).waiver;
+  const requests = Array.isArray(raw) ? raw : raw ? [raw] : [];
+  if (requests.length === 0) {
+    // An empty container is a credible "nothing filed"; anything else is a
+    // shape we do not recognise and must not report as empty.
+    return Object.keys(pending as Record<string, unknown>).length === 0 ? [] : null;
+  }
+
+  const out: FiledWaiverClaim[] = [];
+  for (const req of requests) {
+    const picks = String(req?.addsDrops ?? '').trim();
+    if (!picks) continue;
+    const round = String(req?.round ?? '');
+    picks.split(',').forEach((pick, index) => {
+      const parts = pick.trim().split('_').map((p) => p.trim());
+      const add = parts[0];
+      if (!add || !/^\d{2,6}$/.test(add)) return;
+      // Two parts is add_drop; three is add_bid_drop. The DROP is always last.
+      const last = parts.length >= 2 ? parts[parts.length - 1] : '';
+      const bid = parts.length === 3 ? Number(parts[1]) : NaN;
+      out.push({
+        round,
+        index,
+        addPlayerId: add,
+        dropPlayerId: last && last !== NO_DROP && /^\d{2,6}$/.test(last) ? last : null,
+        bid: Number.isFinite(bid) ? bid : null,
+        comment: String(req?.comments ?? req?.comment ?? ''),
+        timestamp: req?.timestamp != null ? String(req.timestamp) : null,
+      });
+    });
+  }
+  // Requests existed but nothing parsed — unreadable, not empty.
+  return out.length === 0 ? null : out;
+}
