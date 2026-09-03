@@ -13,7 +13,7 @@
       "sleeper": "cached",
       "nflverse": "https://github.com/nflverse/nflverse-data/releases/download/snap_counts/snap_counts_2026.csv.gz"
     },
-    "fetchedAt": "2026-09-03T00:42:46.898Z"
+    "fetchedAt": "2026-09-03T05:06:51.641Z"
   },
   "players": [
     {
@@ -4367,6 +4367,10 @@
         {
           "id": "16747",
           "name": "Tracy, Tyrone"
+        },
+        {
+          "id": "15254",
+          "name": "Harris, Najee"
         }
       ]
     },
@@ -9034,28 +9038,55 @@
       "depthChartAhead": null
     },
     {
-      "id": "15777",
-      "name": "Austin III, Calvin",
-      "position": "WR",
-      "salary": 695447.5,
+      "id": "14063",
+      "name": "Stidham, Jarrett",
+      "position": "QB",
+      "salary": 425000,
       "franchiseId": "0008",
-      "status": "INJURED_RESERVE",
+      "status": "ROSTER",
       "contractYear": "1",
       "points": 0,
-      "team": "NYG",
-      "draftYear": 2022,
-      "draftTeam": "PIT",
-      "birthdate": 922251600,
-      "headshot": "https://www49.myfantasyleague.com/player_photos_2014/15777_thumb.jpg",
+      "team": "DEN",
+      "draftYear": 2019,
+      "draftTeam": "NEP",
+      "birthdate": 839480400,
+      "headshot": "https://www49.myfantasyleague.com/player_photos_2014/14063_thumb.jpg",
       "externalIds": {
-        "mfl": "15777",
-        "sleeper": null,
-        "gsis": null
+        "mfl": "14063",
+        "sleeper": "6136",
+        "gsis": " 00-0035264"
       },
-      "sleeper": null,
+      "sleeper": {
+        "id": "6136",
+        "fullName": "Jarrett Stidham",
+        "team": "DEN",
+        "age": 30,
+        "height": "75",
+        "weight": "215",
+        "number": 8,
+        "college": "Auburn",
+        "birthDate": "1996-08-08",
+        "status": "Active",
+        "active": true,
+        "position": "QB",
+        "depthChartPosition": "QB",
+        "depthChartOrder": 2,
+        "fantasyPositions": [
+          "QB"
+        ],
+        "experience": 7,
+        "injuryStatus": null,
+        "injuryBodyPart": null,
+        "gsisId": " 00-0035264"
+      },
       "nflverse": null,
       "gamesPlayed": null,
-      "depthChartAhead": null
+      "depthChartAhead": [
+        {
+          "id": "16582",
+          "name": "Nix, Bo"
+        }
+      ]
     },
     {
       "id": "15749",
@@ -11408,6 +11439,57 @@
       "nflverse": null,
       "gamesPlayed": null,
       "depthChartAhead": null
+    },
+    {
+      "id": "16613",
+      "name": "Laube, Dylan",
+      "position": "RB",
+      "salary": 425000,
+      "franchiseId": "0010",
+      "status": "ROSTER",
+      "contractYear": "1",
+      "points": 0,
+      "team": "LV",
+      "draftYear": 2024,
+      "draftTeam": "LVR",
+      "birthdate": 945147600,
+      "headshot": "https://www49.myfantasyleague.com/player_photos_2014/16613_thumb.jpg",
+      "externalIds": {
+        "mfl": "16613",
+        "sleeper": "11574",
+        "gsis": null
+      },
+      "sleeper": {
+        "id": "11574",
+        "fullName": "Dylan Laube",
+        "team": "LV",
+        "age": 26,
+        "height": "69",
+        "weight": "204",
+        "number": 23,
+        "college": "New Hampshire",
+        "birthDate": "1999-12-14",
+        "status": "Active",
+        "active": true,
+        "position": "RB",
+        "depthChartPosition": "RB",
+        "depthChartOrder": 4,
+        "fantasyPositions": [
+          "RB"
+        ],
+        "experience": 2,
+        "injuryStatus": null,
+        "injuryBodyPart": null,
+        "gsisId": null
+      },
+      "nflverse": null,
+      "gamesPlayed": null,
+      "depthChartAhead": [
+        {
+          "id": "17042",
+          "name": "Jeanty, Ashton"
+        }
+      ]
     },
     {
       "id": "17477",
@@ -14603,6 +14685,61 @@
       "depthChartAhead": null
     },
     {
+      "id": "15254",
+      "name": "Harris, Najee",
+      "position": "RB",
+      "salary": 425000,
+      "franchiseId": "0013",
+      "status": "ROSTER",
+      "contractYear": "1",
+      "points": 0,
+      "team": "NYG",
+      "draftYear": 2021,
+      "draftTeam": "PIT",
+      "birthdate": 889419600,
+      "headshot": "https://www49.myfantasyleague.com/player_photos_2014/15254_thumb.jpg",
+      "externalIds": {
+        "mfl": "15254",
+        "sleeper": "7528",
+        "gsis": null
+      },
+      "sleeper": {
+        "id": "7528",
+        "fullName": "Najee Harris",
+        "team": "NYG",
+        "age": 28,
+        "height": "73",
+        "weight": "232",
+        "number": 22,
+        "college": "Alabama",
+        "birthDate": "1998-03-09",
+        "status": "Active",
+        "active": true,
+        "position": "RB",
+        "depthChartPosition": "RB",
+        "depthChartOrder": 3,
+        "fantasyPositions": [
+          "RB"
+        ],
+        "experience": 5,
+        "injuryStatus": null,
+        "injuryBodyPart": null,
+        "gsisId": null
+      },
+      "nflverse": null,
+      "gamesPlayed": null,
+      "depthChartAhead": [
+        {
+          "id": "17045",
+          "name": "Skattebo, Cam"
+        },
+        {
+          "id": "16747",
+          "name": "Tracy, Tyrone"
+        }
+      ]
+    },
+    {
       "id": "17501",
       "name": "Concepcion, KC",
       "position": "WR",
@@ -16537,52 +16674,6 @@
       ]
     },
     {
-      "id": "16444",
-      "name": "Grupe, Blake",
-      "position": "PK",
-      "salary": 467500,
-      "franchiseId": "0015",
-      "status": "ROSTER",
-      "contractYear": "4",
-      "points": 0,
-      "team": "NYJ",
-      "draftYear": 2023,
-      "draftTeam": "FA",
-      "birthdate": 910242000,
-      "headshot": "https://www49.myfantasyleague.com/player_photos_2014/16444_thumb.jpg",
-      "externalIds": {
-        "mfl": "16444",
-        "sleeper": "11058",
-        "gsis": null
-      },
-      "sleeper": {
-        "id": "11058",
-        "fullName": "Blake Grupe",
-        "team": "NYJ",
-        "age": 27,
-        "height": "67",
-        "weight": "156",
-        "number": 4,
-        "college": "Notre Dame",
-        "birthDate": "1998-11-05",
-        "status": "Active",
-        "active": true,
-        "position": "K",
-        "depthChartPosition": "K",
-        "depthChartOrder": 1,
-        "fantasyPositions": [
-          "K"
-        ],
-        "experience": 3,
-        "injuryStatus": null,
-        "injuryBodyPart": null,
-        "gsisId": null
-      },
-      "nflverse": null,
-      "gamesPlayed": null,
-      "depthChartAhead": null
-    },
-    {
       "id": "17106",
       "name": "Taylor, Mason",
       "position": "TE",
@@ -17073,6 +17164,52 @@
           "name": "Allen, Braelon"
         }
       ]
+    },
+    {
+      "id": "16896",
+      "name": "Shrader, Spencer",
+      "position": "PK",
+      "salary": 425000,
+      "franchiseId": "0015",
+      "status": "ROSTER",
+      "contractYear": "1",
+      "points": 0,
+      "team": "IND",
+      "draftYear": 2024,
+      "draftTeam": "FA",
+      "birthdate": 927090000,
+      "headshot": "https://www49.myfantasyleague.com/player_photos_2014/16896_thumb.jpg",
+      "externalIds": {
+        "mfl": "16896",
+        "sleeper": "12185",
+        "gsis": null
+      },
+      "sleeper": {
+        "id": "12185",
+        "fullName": "Spencer Shrader",
+        "team": "IND",
+        "age": 27,
+        "height": "74",
+        "weight": "201",
+        "number": 3,
+        "college": "Notre Dame",
+        "birthDate": "1999-05-19",
+        "status": "Active",
+        "active": true,
+        "position": "K",
+        "depthChartPosition": "K",
+        "depthChartOrder": 1,
+        "fantasyPositions": [
+          "K"
+        ],
+        "experience": 2,
+        "injuryStatus": null,
+        "injuryBodyPart": null,
+        "gsisId": null
+      },
+      "nflverse": null,
+      "gamesPlayed": null,
+      "depthChartAhead": null
     },
     {
       "id": "17500",
