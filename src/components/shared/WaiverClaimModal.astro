@@ -106,207 +106,232 @@ const { config } = Astro.props;
   import { applyPlayerModalBand } from '../../utils/player-modal-band';
   import { resumePendingClaim } from '../../utils/claim-resume';
 
-  const raw = document.getElementById('waiver-claim-config')?.textContent;
-  const cfg = raw ? JSON.parse(raw) : null;
+  /**
+   * CLIENTROUTER-SAFE INIT (frontend.md, "Interactive scripts must re-init on
+   * astro:page-load"). A component's module script is evaluated ONCE per
+   * document, and ClientRouter swaps the DOM without re-evaluating it. Every
+   * element below — and the config blob itself — therefore has to be re-read
+   * inside init(), or after the first in-site navigation back onto Free Agents
+   * they all point at the previous page's detached nodes and `dlg.showModal()`
+   * opens a dialog that is not in the document. The Bid button silently does
+   * nothing until a hard reload. That shipped; see
+   * docs/claude/insights/features/waiver-claims.md.
+   *
+   * `document` is the one thing that SURVIVES the swap, so the delegated
+   * `.claim-open` listener is the one thing that would stack — one more per
+   * navigation. It is held here and removed before it is re-added, which gives
+   * exactly one listener AND a closure over the live nodes. (A once-flag would
+   * give one listener over DEAD nodes, which is the same bug wearing a hat.)
+   */
+  let onDocumentClick: ((e: MouseEvent) => void) | null = null;
 
-  if (cfg?.canClaim) {
-    const dlg = document.getElementById('waiver-claim-modal') as HTMLDialogElement;
-    const band = document.getElementById('wcm-band');
-    const nameEl = document.getElementById('wcm-player-name')!;
-    const metaEl = document.getElementById('wcm-meta-text')!;
-    const subEl = document.getElementById('wcm-sub-text')!;
-    const logoEl = document.getElementById('wcm-nfl-logo') as HTMLImageElement;
-    const bidField = document.getElementById('wcm-bid-field')!;
-    const bidInput = document.getElementById('wcm-bid') as HTMLInputElement;
-    const bidHint = document.getElementById('wcm-bid-hint')!;
-    const dropSel = document.getElementById('wcm-drop') as HTMLSelectElement;
-    const roundSel = document.getElementById('wcm-round') as HTMLSelectElement;
-    const roundHint = document.getElementById('wcm-round-hint')!;
-    const errBox = document.getElementById('wcm-error')!;
-    const confirmBox = document.getElementById('wcm-confirm')!;
-    const confirmLink = document.getElementById('wcm-confirm-link') as HTMLAnchorElement;
-    /**
-     * Offer MFL's own add/drop page, which lists the round's pending claims.
-     * The owner asked for this: a filed claim is invisible on our side until
-     * waivers process, so "it worked" should come with somewhere to go and see
-     * it. The URL comes from the server (registry-derived per league) — never
-     * built here, where it would be a hardcoded host.
-     */
-    const showConfirmLink = (url?: string) => {
-      if (!url) { confirmBox.hidden = true; return; }
-      confirmLink.href = url;
-      confirmBox.hidden = false;
-    };
-    const submitBtn = document.getElementById('wcm-submit') as HTMLButtonElement;
+  function init() {
+    // Drop the previous page's handler before building this page's — see above.
+    if (onDocumentClick) document.removeEventListener('click', onDocumentClick);
+    onDocumentClick = null;
 
-    // FCFS adds resolve IMMEDIATELY at the league minimum — there is nothing to
-    // bid and no round to file under. `unknown` falls back to the queued claim,
-    // matching the server: a claim that bounces is recoverable, an unintended
-    // instant pickup is not.
-    const immediate = cfg.windowMode === 'fcfs';
-    /** Sub-line under the player name; set below once the mode is known. */
-    let subLine = '';
-    const isBid = cfg.system === 'bbid' && !immediate;
-    const money = (n: number) => '$' + Number(n).toLocaleString();
+    const raw = document.getElementById('waiver-claim-config')?.textContent;
+    const cfg = raw ? JSON.parse(raw) : null;
 
-    bidField.hidden = !isBid;
-    (roundSel.closest('.wcm-field') as HTMLElement).hidden = immediate;
-    if (isBid) {
-      bidInput.min = String(cfg.rules.minimum);
-      bidInput.step = String(cfg.rules.increment);
-      bidHint.textContent =
-        `Minimum ${money(cfg.rules.minimum)}, in ${money(cfg.rules.increment)} steps.` +
-        (cfg.balance != null ? ` You have ${money(cfg.balance)} left.` : '');
-    } else if (!immediate) {
-      roundHint.textContent = 'Claims are awarded by waiver priority, not by bid.';
-    }
-    if (immediate) {
-      subLine = cfg.system === 'bbid'
-        ? `Free agent pickup at the league minimum (${money(cfg.rules.minimum)})`
-        : 'Free agent pickup — first come, first served';
-    }
-    submitBtn.textContent = immediate ? 'Add player' : 'Submit claim';
+    if (cfg?.canClaim) {
+      const dlg = document.getElementById('waiver-claim-modal') as HTMLDialogElement;
+      const band = document.getElementById('wcm-band');
+      const nameEl = document.getElementById('wcm-player-name')!;
+      const metaEl = document.getElementById('wcm-meta-text')!;
+      const subEl = document.getElementById('wcm-sub-text')!;
+      const logoEl = document.getElementById('wcm-nfl-logo') as HTMLImageElement;
+      const bidField = document.getElementById('wcm-bid-field')!;
+      const bidInput = document.getElementById('wcm-bid') as HTMLInputElement;
+      const bidHint = document.getElementById('wcm-bid-hint')!;
+      const dropSel = document.getElementById('wcm-drop') as HTMLSelectElement;
+      const roundSel = document.getElementById('wcm-round') as HTMLSelectElement;
+      const roundHint = document.getElementById('wcm-round-hint')!;
+      const errBox = document.getElementById('wcm-error')!;
+      const confirmBox = document.getElementById('wcm-confirm')!;
+      const confirmLink = document.getElementById('wcm-confirm-link') as HTMLAnchorElement;
+      /**
+       * Offer MFL's own add/drop page, which lists the round's pending claims.
+       * The owner asked for this: a filed claim is invisible on our side until
+       * waivers process, so "it worked" should come with somewhere to go and see
+       * it. The URL comes from the server (registry-derived per league) — never
+       * built here, where it would be a hardcoded host.
+       */
+      const showConfirmLink = (url?: string) => {
+        if (!url) { confirmBox.hidden = true; return; }
+        confirmLink.href = url;
+        confirmBox.hidden = false;
+      };
+      const submitBtn = document.getElementById('wcm-submit') as HTMLButtonElement;
 
-    for (const p of cfg.roster) {
-      const opt = document.createElement('option');
-      opt.value = p.id;
-      opt.textContent = p.name;
-      dropSel.appendChild(opt);
-    }
-    for (let r = 1; r <= cfg.rules.maxRounds; r++) {
-      const opt = document.createElement('option');
-      opt.value = String(r);
-      opt.textContent = `Round ${r}`;
-      roundSel.appendChild(opt);
-    }
+      // FCFS adds resolve IMMEDIATELY at the league minimum — there is nothing to
+      // bid and no round to file under. `unknown` falls back to the queued claim,
+      // matching the server: a claim that bounces is recoverable, an unintended
+      // instant pickup is not.
+      const immediate = cfg.windowMode === 'fcfs';
+      /** Sub-line under the player name; set below once the mode is known. */
+      let subLine = '';
+      const isBid = cfg.system === 'bbid' && !immediate;
+      const money = (n: number) => '$' + Number(n).toLocaleString();
 
-    let activeId: string | null = null;
-    const showError = (msg: string) => {
-      errBox.textContent = msg;
-      errBox.hidden = !msg;
-      confirmBox.hidden = true;
-      errBox.classList.remove('wcm-error--warn');
-    };
-    /** Softer than an error: MFL took the write but we could not confirm it. */
-    const showWarning = (msg: string) => {
-      errBox.textContent = msg;
-      errBox.hidden = !msg;
-      errBox.classList.add('wcm-error--warn');
-    };
-    const reset = () => {
-      submitBtn.disabled = false;
-      submitBtn.textContent = immediate ? 'Add player' : 'Submit claim';
-    };
-
-    document.addEventListener('click', (e) => {
-      const btn = (e.target as HTMLElement)?.closest?.('.claim-open') as HTMLElement | null;
-      if (!btn) return;
-      activeId = btn.getAttribute('data-claim-id');
-      const name = btn.getAttribute('data-claim-name') || '';
-      const pos = btn.getAttribute('data-claim-pos') || '';
-      const team = btn.getAttribute('data-claim-team') || '';
-
-      nameEl.textContent = name;
-      metaEl.textContent = [pos, team].filter(Boolean).join(' · ');
-      subEl.textContent = subLine || (isBid ? 'Blind bid' : 'Waiver priority claim');
-      logoEl.src = team ? `/assets/nfl/${team.toLowerCase()}.svg` : '';
-      logoEl.style.display = team ? '' : 'none';
-
-      // Same painter the player modals use — gradient, ghost wordmark, cutout.
-      applyPlayerModalBand(band, {
-        name,
-        position: pos,
-        nflTeam: team,
-        espnId: btn.getAttribute('data-claim-espn'),
-        headshot: btn.getAttribute('data-claim-headshot'),
-      });
-
-      if (isBid) bidInput.value = String(cfg.rules.minimum);
-      dropSel.value = '0000';
-      showError('');
-      reset();
-      dlg.showModal();
-    });
-
-    document.getElementById('wcm-cancel')!.addEventListener('click', () => dlg.close());
-    document.getElementById('wcm-close')!.addEventListener('click', () => dlg.close());
-
-    submitBtn.addEventListener('click', async () => {
-      const bid = isBid ? Number(bidInput.value) : undefined;
+      bidField.hidden = !isBid;
+      (roundSel.closest('.wcm-field') as HTMLElement).hidden = immediate;
       if (isBid) {
-        if (!Number.isFinite(bid!) || bid! < cfg.rules.minimum) {
-          return showError(`Bid must be at least ${money(cfg.rules.minimum)}.`);
-        }
-        if (bid! % cfg.rules.increment !== 0) {
-          return showError(`Bid must be a multiple of ${money(cfg.rules.increment)}.`);
-        }
+        bidInput.min = String(cfg.rules.minimum);
+        bidInput.step = String(cfg.rules.increment);
+        bidHint.textContent =
+          `Minimum ${money(cfg.rules.minimum)}, in ${money(cfg.rules.increment)} steps.` +
+          (cfg.balance != null ? ` You have ${money(cfg.balance)} left.` : '');
+      } else if (!immediate) {
+        roundHint.textContent = 'Claims are awarded by waiver priority, not by bid.';
       }
-      showError('');
-      submitBtn.disabled = true;
-      submitBtn.textContent = 'Submitting…';
-      try {
-        const res = await fetch('/api/waiver-claim', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            claims: [{ addPlayerId: activeId, ...(isBid ? { bid } : {}), dropPlayerId: dropSel.value }],
-            round: Number(roundSel.value || 1),
-            year: cfg.year,
-          }),
-        });
-        const data = await res.json().catch(() => ({}));
-        if (!res.ok || !data.success) {
-          reset();
-          return showError(data.message || `Claim failed (HTTP ${res.status}).`);
-        }
-        // `success` only means MFL acknowledged the write; `verified` means the
-        // server read the claim back out of MFL afterwards. A checkmark on an
-        // UNVERIFIED write is the whole bug this modal shipped with — the owner
-        // is told it's filed, closes the tab, and nothing is on MFL. So show
-        // the caveat and leave the modal open for them to act on.
-        // Tell the claims panel on this page to re-read, BEFORE branching on
-        // `verified`. A claim can land on MFL and still come back unverified —
-        // the read-back is best-effort — so the unverified path is exactly when
-        // a stale list is most misleading. The panel owns the refresh; this
-        // only says something changed.
-        document.dispatchEvent(new CustomEvent('waiver-claims:changed'));
+      if (immediate) {
+        subLine = cfg.system === 'bbid'
+          ? `Free agent pickup at the league minimum (${money(cfg.rules.minimum)})`
+          : 'Free agent pickup — first come, first served';
+      }
+      submitBtn.textContent = immediate ? 'Add player' : 'Submit claim';
 
-        if (data.verified === false) {
-          reset();
-          showWarning(data.message || 'Submitted, but we could not confirm it with MFL.');
-          // Especially here: we could not confirm, so hand them the page that can.
-          return showConfirmLink(data.confirmUrl);
-        }
-        submitBtn.textContent = immediate ? 'Added ✓' : 'Submitted ✓';
-        showConfirmLink(data.confirmUrl);
-        // Long enough to read the confirmation and click through if they want
-        // to; a filed claim is invisible on our side until waivers process.
-        setTimeout(() => dlg.close(), data.confirmUrl ? 3200 : 900);
-      } catch {
-        reset();
-        showError('Network error — your claim was not submitted.');
+      for (const p of cfg.roster) {
+        const opt = document.createElement('option');
+        opt.value = p.id;
+        opt.textContent = p.name;
+        dropSel.appendChild(opt);
       }
-    });
+      for (let r = 1; r <= cfg.rules.maxRounds; r++) {
+        const opt = document.createElement('option');
+        opt.value = String(r);
+        opt.textContent = `Round ${r}`;
+        roundSel.appendChild(opt);
+      }
+
+      let activeId: string | null = null;
+      const showError = (msg: string) => {
+        errBox.textContent = msg;
+        errBox.hidden = !msg;
+        confirmBox.hidden = true;
+        errBox.classList.remove('wcm-error--warn');
+      };
+      /** Softer than an error: MFL took the write but we could not confirm it. */
+      const showWarning = (msg: string) => {
+        errBox.textContent = msg;
+        errBox.hidden = !msg;
+        errBox.classList.add('wcm-error--warn');
+      };
+      const reset = () => {
+        submitBtn.disabled = false;
+        submitBtn.textContent = immediate ? 'Add player' : 'Submit claim';
+      };
+
+      onDocumentClick = (e) => {
+        const btn = (e.target as HTMLElement)?.closest?.('.claim-open') as HTMLElement | null;
+        if (!btn) return;
+        activeId = btn.getAttribute('data-claim-id');
+        const name = btn.getAttribute('data-claim-name') || '';
+        const pos = btn.getAttribute('data-claim-pos') || '';
+        const team = btn.getAttribute('data-claim-team') || '';
+
+        nameEl.textContent = name;
+        metaEl.textContent = [pos, team].filter(Boolean).join(' · ');
+        subEl.textContent = subLine || (isBid ? 'Blind bid' : 'Waiver priority claim');
+        logoEl.src = team ? `/assets/nfl/${team.toLowerCase()}.svg` : '';
+        logoEl.style.display = team ? '' : 'none';
+
+        // Same painter the player modals use — gradient, ghost wordmark, cutout.
+        applyPlayerModalBand(band, {
+          name,
+          position: pos,
+          nflTeam: team,
+          espnId: btn.getAttribute('data-claim-espn'),
+          headshot: btn.getAttribute('data-claim-headshot'),
+        });
+
+        if (isBid) bidInput.value = String(cfg.rules.minimum);
+        dropSel.value = '0000';
+        showError('');
+        reset();
+        dlg.showModal();
+      };
+      document.addEventListener('click', onDocumentClick);
+
+      document.getElementById('wcm-cancel')!.addEventListener('click', () => dlg.close());
+      document.getElementById('wcm-close')!.addEventListener('click', () => dlg.close());
+
+      submitBtn.addEventListener('click', async () => {
+        const bid = isBid ? Number(bidInput.value) : undefined;
+        if (isBid) {
+          if (!Number.isFinite(bid!) || bid! < cfg.rules.minimum) {
+            return showError(`Bid must be at least ${money(cfg.rules.minimum)}.`);
+          }
+          if (bid! % cfg.rules.increment !== 0) {
+            return showError(`Bid must be a multiple of ${money(cfg.rules.increment)}.`);
+          }
+        }
+        showError('');
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Submitting…';
+        try {
+          const res = await fetch('/api/waiver-claim', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              claims: [{ addPlayerId: activeId, ...(isBid ? { bid } : {}), dropPlayerId: dropSel.value }],
+              round: Number(roundSel.value || 1),
+              year: cfg.year,
+            }),
+          });
+          const data = await res.json().catch(() => ({}));
+          if (!res.ok || !data.success) {
+            reset();
+            return showError(data.message || `Claim failed (HTTP ${res.status}).`);
+          }
+          // `success` only means MFL acknowledged the write; `verified` means the
+          // server read the claim back out of MFL afterwards. A checkmark on an
+          // UNVERIFIED write is the whole bug this modal shipped with — the owner
+          // is told it's filed, closes the tab, and nothing is on MFL. So show
+          // the caveat and leave the modal open for them to act on.
+          // Tell the claims panel on this page to re-read, BEFORE branching on
+          // `verified`. A claim can land on MFL and still come back unverified —
+          // the read-back is best-effort — so the unverified path is exactly when
+          // a stale list is most misleading. The panel owns the refresh; this
+          // only says something changed.
+          document.dispatchEvent(new CustomEvent('waiver-claims:changed'));
+
+          if (data.verified === false) {
+            reset();
+            showWarning(data.message || 'Submitted, but we could not confirm it with MFL.');
+            // Especially here: we could not confirm, so hand them the page that can.
+            return showConfirmLink(data.confirmUrl);
+          }
+          submitBtn.textContent = immediate ? 'Added ✓' : 'Submitted ✓';
+          showConfirmLink(data.confirmUrl);
+          // Long enough to read the confirmation and click through if they want
+          // to; a filed claim is invisible on our side until waivers process.
+          setTimeout(() => dlg.close(), data.confirmUrl ? 3200 : 900);
+        } catch {
+          reset();
+          showError('Network error — your claim was not submitted.');
+        }
+      });
+    }
+
+    // Did this page load come from the sign-in modal? If so, reopen the form on
+    // the player they were trying to claim when we interrupted them.
+    //
+    // OUTSIDE the `canClaim` block on purpose. This call is also the only thing
+    // that CLEARS the parked id, so gating it on claimability would leave the id
+    // parked through every load that cannot use it — a visitor who dismisses the
+    // sign-in dialog and signs in through the nav later would then get a claim
+    // form they never asked for. Here it runs on every Free Agents load; with no
+    // matching button the observer simply times out. See claim-resume.ts.
+    //
+    // LAST, because its first act is a synchronous click on the parked player's
+    // button — the delegated handler above has to be wired before that lands.
+    resumePendingClaim();
   }
 
-  // Did this page load come from the sign-in modal? If so, reopen the form on
-  // the player they were trying to claim when we interrupted them.
-  //
-  // OUTSIDE the `canClaim` block on purpose. This call is also the only thing
-  // that CLEARS the parked id, so gating it on claimability would leave the id
-  // parked through every load that cannot use it — a visitor who dismisses the
-  // sign-in dialog and signs in through the nav later would then get a claim
-  // form they never asked for. Here it runs on every Free Agents load; with no
-  // matching button the observer simply times out. See claim-resume.ts.
-  //
-  // NOT on `astro:page-load`: this module's delegated `.claim-open` handler is
-  // registered at module scope and holds the FIRST document's dialog, so after
-  // an in-site navigation the click it fires would open a detached node. The
-  // sign-in flow always does a full reload (LoginForm sets location.href), so
-  // the shipping path is a fresh module and this is correct. Making the resume
-  // work after a ClientRouter navigation means fixing that capture first —
-  // tracked separately, see docs/claude/insights/features/waiver-claims.md.
-  resumePendingClaim();
+  // Fires on the initial load too, so there is no separate first-run call to
+  // double up with.
+  document.addEventListener('astro:page-load', init);
 </script>
 
 <style>
