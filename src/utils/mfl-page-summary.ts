@@ -26,8 +26,32 @@ export interface MflPageSummary {
   title: string | null;
   /** `name=value` of every submit control, in document order. */
   submits: string[];
-  /** Visible text, collapsed, truncated to `maxText`. */
+  /**
+   * Visible text with MFL'S NAV MENU REMOVED, collapsed, truncated to `maxText`.
+   *
+   * The menu is the whole reason this field needs explaining. It is ~1300
+   * characters of league links on every single page, so an excerpt taken from
+   * the top of the document is *only* the menu — four rounds of production logs
+   * captured "LEAGUE MENU MyFantasyLeague.com Home My Account…" and nothing of
+   * what MFL was actually saying. The content starts after it.
+   */
   text: string;
+}
+
+/**
+ * Last item of MFL's standard league menu. Everything up to and including this
+ * is chrome present on every page; the page's own content follows it.
+ * Matched as the LAST occurrence — some pages repeat menu fragments.
+ */
+const NAV_TAIL_MARKERS = ['Select Keepers', 'Future Draft Picks', 'My Draft List'];
+
+/** Strip MFL's league menu, if it is recognisable. Otherwise return as-is. */
+function dropNav(text: string): string {
+  for (const marker of NAV_TAIL_MARKERS) {
+    const at = text.lastIndexOf(marker);
+    if (at >= 0) return text.slice(at + marker.length).trim();
+  }
+  return text;
 }
 
 const attr = (tag: string, name: string): string | null =>
@@ -66,5 +90,5 @@ export function summarizeMflPage(html: string, maxText = 1200): MflPageSummary {
     .replace(/\s+/g, ' ')
     .trim();
 
-  return { title, submits, text: text.slice(0, maxText) };
+  return { title, submits, text: dropNav(text).slice(0, maxText) };
 }

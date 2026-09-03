@@ -14,6 +14,7 @@ const PAGE = `<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN">
 <script>var leagueId = '19621';</script>
 </head>
 <body>
+  <div id="menu">LEAGUE MENU MyFantasyLeague.com Home My Account Draft/Auction Draft Results My Draft List Future Draft Picks Select Keepers</div>
   <p>Free agents are locked. Submit a waiver request instead.</p>
   <form action="add_drop" method="post">
     <input type="hidden" name="L" value="19621" />
@@ -31,6 +32,18 @@ describe('summarizeMflPage', () => {
     // The load-bearing field. During a locked waiver period the button is not
     // the one free agency shows, and that difference is the whole answer.
     expect(summarizeMflPage(PAGE).submits).toEqual(['SUBMIT=Submit Waiver Request', 'CANCEL=Never mind']);
+  });
+
+  it('drops MFL\'s nav menu, which is longer than any sane excerpt cap', () => {
+    // Four rounds of production logs captured only "LEAGUE MENU
+    // MyFantasyLeague.com Home My Account…" because the menu is ~1300 chars on
+    // every page and the excerpt was taken from the top of the document.
+    const { text } = summarizeMflPage(PAGE);
+    expect(text.startsWith('Free agents are locked')).toBe(true);
+    expect(text).not.toContain('LEAGUE MENU');
+    expect(text).not.toContain('My Account');
+    // A page with no recognisable menu is returned intact rather than emptied.
+    expect(summarizeMflPage('<body><p>Just this.</p></body>').text).toBe('Just this.');
   });
 
   it('returns visible copy with script, style and head stripped', () => {
