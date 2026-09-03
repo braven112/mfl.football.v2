@@ -120,15 +120,44 @@ export function resolveWaiverWindow(
   }
 
   marks.sort((a, b) => a.at - b.at);
+
+  // A LOCK AND A PROCESS AT THE SAME INSTANT MEAN LOCKED. MFL schedules both on
+  // one timestamp when it runs a round and then shuts the pool again — which is
+  // exactly what TheLeague's 2026 preseason does:
+  //
+  //   WAIVER_LOCK  Wed 2026-09-02 19:00
+  //   WAIVER_BBID  Wed 2026-09-02 19:00
+  //
+  // and MFL's own transaction log confirms it acted on both, logging
+  // BBID_AUTO_PROCESS_WAIVERS and LOCK_ALL_PLAYERS at that minute. Without this
+  // collapse the winner of the tie is decided by the ORDER MFL HAPPENS TO LIST
+  // THE EVENTS IN — `Array.prototype.sort` is stable, so equal timestamps keep
+  // payload order — and TheLeague's payload put the process last, which read as
+  // FCFS for the whole locked week. Owners were shown "First come, first
+  // served", their add went to `import?TYPE=fcfsWaiver`, and MFL answered a
+  // locked pool with an empty 200 that stores nothing: every pickup 502'd
+  // (2026-09-03, Nick Folk).
+  //
+  // Collapsing is not a tiebreak dressed up — the two events are one moment,
+  // and the pool's state at the end of that moment is what the next window is.
+  // Locked wins because a lock is a STATE while a run is an EVENT: after both
+  // have happened the pool is shut, so the only way in is a claim.
+  const collapsed: Array<{ at: number; opens: boolean }> = [];
+  for (const mark of marks) {
+    const last = collapsed[collapsed.length - 1];
+    if (last && last.at === mark.at) last.opens = last.opens || mark.opens;
+    else collapsed.push({ ...mark });
+  }
+
   const t = now.getTime();
   // The most recent transition at or before now decides the current mode.
-  const past = marks.filter((m) => m.at <= t);
-  const next = marks.find((m) => m.at > t) ?? null;
+  const past = collapsed.filter((m) => m.at <= t);
+  const next = collapsed.find((m) => m.at > t) ?? null;
 
   if (past.length === 0) {
     // Every transition is in the future — the season has not reached the first
     // one yet, so the mode is whatever precedes it.
-    const first = marks[0];
+    const first = collapsed[0];
     return {
       mode: first.opens ? 'fcfs' : 'waiver',
       changesAt: new Date(first.at),

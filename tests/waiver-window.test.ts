@@ -80,6 +80,62 @@ describe('resolveWaiverWindow', () => {
     }
   });
 
+  it('reads a lock and a run at the SAME timestamp as LOCKED, whatever order MFL lists them in', () => {
+    // TheLeague's 2026 preseason schedules both on one minute:
+    //   WAIVER_LOCK  Wed 2026-09-02 19:00 PT
+    //   WAIVER_BBID  Wed 2026-09-02 19:00 PT
+    // and MFL's transaction log shows it ran BOTH — BBID_AUTO_PROCESS_WAIVERS
+    // and LOCK_ALL_PLAYERS at that minute. So the round processes and the pool
+    // stays shut: the week that follows is a WAIVER window.
+    //
+    // `Array.prototype.sort` is stable, so before the fix the winner of the tie
+    // was whichever event MFL happened to list last. It listed the run last,
+    // the page said "First come, first served" for a locked week, and every
+    // pickup went to `import?TYPE=fcfsWaiver` — which a locked pool answers
+    // with an empty 200 that stores nothing, so owners got a 502
+    // (2026-09-03, Nick Folk). BOTH orderings are asserted because either one
+    // is a calendar payload MFL can hand us tomorrow.
+    const tie = at('2026-09-03T02:00:00Z');
+    const orderings = [
+      [
+        { type: 'WAIVER_LOCK', start_time: tie },
+        { type: 'WAIVER_BBID', start_time: tie },
+      ],
+      [
+        { type: 'WAIVER_BBID', start_time: tie },
+        { type: 'WAIVER_LOCK', start_time: tie },
+      ],
+    ];
+    for (const events of orderings) {
+      const listed = events.map((e) => e.type).join(' then ');
+      const win = resolveWaiverWindow(
+        [...events, { type: 'WAIVER_BBID', start_time: at('2026-09-10T02:00:00Z') }],
+        new Date('2026-09-03T22:30:00Z')
+      );
+      expect(win.mode, `${listed} should still read as a locked pool`).toBe('waiver');
+      // And the lock/run pair is ONE transition, not two — the next change is
+      // the following week's run, not the other half of the tie.
+      expect(win.changesAt?.toISOString()).toBe('2026-09-10T02:00:00.000Z');
+      expect(win.nextMode).toBe('fcfs');
+    }
+  });
+
+  it('leaves a same-timestamp pair of CLOSING events closing', () => {
+    // The AFL's 2026 calendar carries WAIVER_REVERSE and WAIVER_UNLOCK on the
+    // same minute (Labor Day, Mon 2026-09-07 19:00 PT). Collapsing simultaneous
+    // marks must not invent a lock that isn't there.
+    const tie = at('2026-09-08T02:00:00Z');
+    const win = resolveWaiverWindow(
+      [
+        { type: 'WAIVER_LOCK', start_time: at('2026-08-30T16:00:00Z') },
+        { type: 'WAIVER_REVERSE', start_time: tie },
+        { type: 'WAIVER_UNLOCK', start_time: tie },
+      ],
+      new Date('2026-09-09T12:00:00Z')
+    );
+    expect(win.mode).toBe('fcfs');
+  });
+
   it('returns unknown — not a guess — when the calendar has no waiver events', () => {
     // A wrong confident answer routes the claim through the wrong endpoint.
     // `unknown` lets the UI offer both and let MFL adjudicate.

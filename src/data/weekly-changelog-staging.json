@@ -4,6 +4,14 @@
     {
       "date": "2026-09-03",
       "type": "bug-fix",
+      "summary": "Free Agents spent a whole locked week telling you it was first come, first served. It was not — the pool has been shut since Wednesday's waiver run, so every attempt to grab a player went out as an instant pickup, MyFantasyLeague refused it without a word, and you got a bare error for your trouble. The mix-up was one minute on the league calendar: MFL processes the round and re-locks the pool at the exact same time, and when two events share a timestamp we were reading whichever one happened to be listed second. A lock and a run at the same moment now mean what they plainly mean — locked — so the page says \"Waivers open\", the button files a claim, and the pickup path comes back on its own when the pool actually reopens.",
+      "impact": "user",
+      "area": "free-agents",
+      "league": "both"
+    },
+    {
+      "date": "2026-09-03",
+      "type": "bug-fix",
       "summary": "The Bid button on Free Agents went dead if you had wandered off and come back. Click through to Rosters, click back to Free Agents, hit Bid — and nothing happened at all, no form, no error, until you reloaded the page. The site swaps in the new page without re-running the little script behind the claim form, so the form it was still trying to open belonged to the page you had already left, and opening something that is no longer on screen looks exactly like a broken button. It now rebuilds itself on every page you land on, so Bid works on the first click whether you arrived by link or by reload — and the form it opens is filled in from the league you are actually looking at, not the last one. The same fix restores the hand-off after signing in: click Bid while signed out, sign in, and the form comes back up on the player you wanted.",
       "impact": "user",
       "area": "free-agents",
