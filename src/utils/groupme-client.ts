@@ -17,10 +17,156 @@ function getGroupId(): string {
   return id;
 }
 
+function readServiceToken(): string | null {
+  return process.env.GROUPME_SERVICE_TOKEN || process.env.GROUPME_ACCESS_TOKEN || null;
+}
+
 function getServiceToken(): string {
-  const token = process.env.GROUPME_SERVICE_TOKEN || process.env.GROUPME_ACCESS_TOKEN;
+  const token = readServiceToken();
   if (!token) throw new Error('[groupme] GROUPME_SERVICE_TOKEN not configured');
   return token;
+}
+
+/**
+ * Service-token health.
+ *
+ * `not-set` and `rejected` are DELIBERATELY different states. A revoked token
+ * is still a truthy string, so `!!process.env.GROUPME_SERVICE_TOKEN` reports a
+ * dead credential as healthy — which is exactly what the admin dashboard did
+ * while every GroupMe read 401'd. Anything that surfaces token health to a
+ * human must distinguish "never configured" from "configured and refused".
+ *
+ * `unreachable` means we could not get an answer (network error, timeout) —
+ * it is NOT evidence the token is bad, so callers should not treat it as such.
+ */
+export type GroupMeTokenState = 'not-set' | 'rejected' | 'valid' | 'unreachable';
+
+export interface GroupMeTokenHealth {
+  state: GroupMeTokenState;
+  /** true only when GroupMe accepted the token. */
+  ok: boolean;
+  /** Epoch ms of the probe this result came from (not of this call). */
+  checkedAt: number;
+  /** HTTP status GroupMe answered with, when we got that far. */
+  httpStatus?: number;
+  /** Short human-readable reason, safe to render. Never contains the token. */
+  detail?: string;
+  /** The account the token authenticates as, when valid. */
+  userName?: string;
+}
+
+/** How long a probe result stands before we ask GroupMe again. */
+const TOKEN_PROBE_TTL_MS = 5 * 60 * 1000;
+/** A failure to reach GroupMe is likely transient — retry sooner. */
+const TOKEN_PROBE_ERROR_TTL_MS = 30 * 1000;
+// Generous on purpose: a warm probe answers in ~300ms, but the first fetch out
+// of a cold lambda paid >5s here during testing, and a timeout reads as
+// `unreachable` — an honest "unchecked", but still a worse answer than waiting.
+const TOKEN_PROBE_TIMEOUT_MS = 8000;
+
+/**
+ * Cached probe, keyed on the token itself so a rotation invalidates the cache
+ * immediately rather than leaving a stale `rejected` on screen for the TTL.
+ * `inFlight` collapses concurrent dashboard loads into one request.
+ */
+let tokenProbeCache: { key: string; result: GroupMeTokenHealth; expiresAt: number } | null = null;
+let tokenProbeInFlight: { key: string; promise: Promise<GroupMeTokenHealth> } | null = null;
+
+async function probeServiceToken(token: string): Promise<GroupMeTokenHealth> {
+  const checkedAt = Date.now();
+  try {
+    const res = await fetch(`${API_BASE}/users/me?token=${encodeURIComponent(token)}`, {
+      signal: AbortSignal.timeout(TOKEN_PROBE_TIMEOUT_MS),
+    });
+
+    if (res.status === 401 || res.status === 403) {
+      return {
+        state: 'rejected',
+        ok: false,
+        checkedAt,
+        httpStatus: res.status,
+        detail: 'GroupMe rejected the token — it has been revoked or regenerated.',
+      };
+    }
+
+    if (!res.ok) {
+      return {
+        state: 'unreachable',
+        ok: false,
+        checkedAt,
+        httpStatus: res.status,
+        detail: `GroupMe returned HTTP ${res.status}.`,
+      };
+    }
+
+    const data = (await res.json().catch(() => null)) as GroupMeUserResponse | null;
+    if (!data?.response?.id) {
+      return {
+        state: 'unreachable',
+        ok: false,
+        checkedAt,
+        httpStatus: res.status,
+        detail: 'GroupMe answered 200 with an unrecognized body.',
+      };
+    }
+
+    return {
+      state: 'valid',
+      ok: true,
+      checkedAt,
+      httpStatus: res.status,
+      userName: data.response.name,
+    };
+  } catch (err) {
+    return {
+      state: 'unreachable',
+      ok: false,
+      checkedAt,
+      detail: `Could not reach GroupMe: ${(err as Error)?.message ?? String(err)}`,
+    };
+  }
+}
+
+/**
+ * Probe the service token against `GET /v3/users/me` and report what GroupMe
+ * actually said. Cached briefly (see TTLs above) so an admin page that polls
+ * does not hammer the API; pass `{ force: true }` for an explicit re-check.
+ */
+export async function checkServiceTokenHealth(opts?: { force?: boolean }): Promise<GroupMeTokenHealth> {
+  const token = readServiceToken();
+  if (!token) {
+    return {
+      state: 'not-set',
+      ok: false,
+      checkedAt: Date.now(),
+      detail: 'GROUPME_SERVICE_TOKEN is not set in this environment.',
+    };
+  }
+
+  const now = Date.now();
+  if (!opts?.force && tokenProbeCache?.key === token && tokenProbeCache.expiresAt > now) {
+    return tokenProbeCache.result;
+  }
+  if (!opts?.force && tokenProbeInFlight?.key === token) {
+    return tokenProbeInFlight.promise;
+  }
+
+  const promise = probeServiceToken(token).then((result) => {
+    const ttl = result.state === 'unreachable' ? TOKEN_PROBE_ERROR_TTL_MS : TOKEN_PROBE_TTL_MS;
+    tokenProbeCache = { key: token, result, expiresAt: Date.now() + ttl };
+    return result;
+  }).finally(() => {
+    if (tokenProbeInFlight?.promise === promise) tokenProbeInFlight = null;
+  });
+
+  tokenProbeInFlight = { key: token, promise };
+  return promise;
+}
+
+/** Test seam — drops the cached probe so a suite can re-probe deterministically. */
+export function resetServiceTokenHealthCache(): void {
+  tokenProbeCache = null;
+  tokenProbeInFlight = null;
 }
 
 /**

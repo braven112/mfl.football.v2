@@ -18,6 +18,7 @@ import type { LeagueDefinition } from '../../../config/leagues';
 import { parseAssets } from '../../../utils/trade-asset-parsing';
 import { getPlayerMap } from '../../../utils/player-map';
 import { getRedis, type RedisClient } from '../../../utils/redis-client';
+import { checkServiceTokenHealth } from '../../../utils/groupme-client';
 import { getLeagueById } from '../../../config/leagues';
 import { JSON_HEADERS_NO_STORE as JSON_HEADERS } from '../../../utils/api-response';
 
@@ -1020,8 +1021,17 @@ export const GET: APIRoute = async ({ request }) => {
       })
     : null;
 
+  // Presence is not health: a revoked GroupMe token is still a truthy string,
+  // and for months this row read green while every GroupMe call 401'd. Probe
+  // it (cached inside the client) so the dashboard reports what GroupMe says.
+  const groupmeToken = await checkServiceTokenHealth().catch((err) => {
+    console.error('[admin/schefter-stats] GroupMe token probe error:', err);
+    return null;
+  });
+
   const vercelEnv = {
     groupmeTokenConfigured: !!process.env.GROUPME_SERVICE_TOKEN,
+    groupmeToken,
     anthropicKeyConfigured: !!process.env.ANTHROPIC_API_KEY,
     tipsterSaltConfigured: !!process.env.SCHEFTER_TIPSTER_SALT,
     upstashConfigured:

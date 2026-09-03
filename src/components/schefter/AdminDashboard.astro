@@ -867,7 +867,6 @@ const { base, navSlug } = Astro.props;
     if (vercelEl) {
       const labels: Array<[string, string]> = [
         ['upstashConfigured', 'UPSTASH_REDIS_REST_URL + TOKEN'],
-        ['groupmeTokenConfigured', 'GROUPME_SERVICE_TOKEN'],
         ['anthropicKeyConfigured', 'ANTHROPIC_API_KEY'],
         ['tipsterSaltConfigured', 'SCHEFTER_TIPSTER_SALT'],
       ];
@@ -875,6 +874,32 @@ const { base, navSlug } = Astro.props;
         const ok = !!vercel[k];
         return `<li class="ops-env__item">${pill(ok ? 'ok' : 'bad', ok ? 'SET' : 'missing')} <code>${name}</code></li>`;
       });
+
+      // GroupMe gets a probed row, not a presence row: a revoked token is
+      // still a truthy string, so "SET" told us nothing while every read 401'd.
+      // `state` comes from a live GET /v3/users/me (cached server-side).
+      const gmToken = vercel.groupmeToken || null;
+      const gmState: string = gmToken?.state
+        ?? (vercel.groupmeTokenConfigured ? 'unreachable' : 'not-set');
+      const gmPill: Record<string, ['ok' | 'bad' | 'warn', string]> = {
+        'valid': ['ok', 'VALID'],
+        'rejected': ['bad', 'REVOKED'],
+        'not-set': ['bad', 'missing'],
+        'unreachable': ['warn', 'unchecked'],
+      };
+      const [gmPillState, gmPillLabel] = gmPill[gmState] ?? gmPill['unreachable'];
+      // `userName` comes back from GroupMe and `detail` can carry a thrown
+      // error's message — both go through escapeHtml before innerHTML.
+      const gmNote = gmState === 'valid'
+        ? (gmToken?.userName ? ` <span class="ops-env__note">authenticates as ${escapeHtml(gmToken.userName)}</span>` : '')
+        : gmState === 'rejected'
+          ? ` <span class="ops-env__note">${escapeHtml(gmToken?.detail || 'GroupMe rejected the token.')} Rotate it at <a href="https://dev.groupme.com/" target="_blank" rel="noopener">dev.groupme.com</a> and update the Vercel env var.</span>`
+          : gmToken?.detail
+            ? ` <span class="ops-env__note">${escapeHtml(gmToken.detail)}</span>`
+            : '';
+      items.splice(1, 0,
+        `<li class="ops-env__item">${pill(gmPillState, gmPillLabel)} <code>GROUPME_SERVICE_TOKEN</code>${gmNote}</li>`,
+      );
       items.push(
         data.redisAvailable
           ? `<li class="ops-env__item">${pill('ok', 'LIVE')} Upstash Redis</li>`

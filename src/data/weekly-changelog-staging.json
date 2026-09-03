@@ -4,6 +4,14 @@
     {
       "date": "2026-09-03",
       "type": "bug-fix",
+      "summary": "The Schefter admin dashboard has been reporting a dead GroupMe login as healthy. Its green \"SET\" row only ever meant the token existed as a line of text somewhere — not that GroupMe would still answer to it — so when the copy stored on the site's host was revoked, the panel kept saying everything was fine while every read of the group chat came back refused. The row now asks GroupMe directly and reports the answer: valid, revoked, or never configured, with the reason spelled out and a link to go regenerate it. The message sync route stopped taking the same thing on faith too, and fails loudly instead of walking into a refusal. Scheduled Schefter scans were never affected — those run on GitHub, which holds its own copy.",
+      "impact": "admin",
+      "area": "admin",
+      "league": "both"
+    },
+    {
+      "date": "2026-09-03",
+      "type": "bug-fix",
       "summary": "Filing a waiver claim from Free Agents now actually files it. Every claim TheLeague sent through the site was being thrown away by MyFantasyLeague, because the form we submit on your behalf was missing one box: the bid amount. The feature was built and tested in the AFL, which runs waiver priority and has no bid to send — TheLeague bids, so MFL read an empty amount, decided it was below the $425,000 minimum, and refused. It said so, too, in plain English, and we were not reading the part of the page it said it on: the error you saw was our own vague shrug rather than MFL's actual complaint. Both are fixed — the bid goes with the claim, and when MFL does turn one down you now get its exact words instead of a guess.",
       "impact": "user",
       "area": "free-agents",
