@@ -1,5 +1,26 @@
 [
   {
+    "id": "waiver-claim-manager",
+    "date": "2026-09-02",
+    "category": "new-feature",
+    "icon": "clipboard",
+    "leagues": [
+      "theleague",
+      "afl"
+    ],
+    "title": "Your Waiver Claims, On Your Own Site",
+    "link": "/players",
+    "linkLabel": "See your claims",
+    "summary": "File a claim and it used to vanish into MyFantasyLeague until Monday night told you how it went. Now the claims you have pending sit at the top of Free Agents in the order they'll be awarded, and you can change who you're dropping or scrap one entirely without leaving.",
+    "description": [
+      "Filing was only ever half of it. You'd pick a player on <a href=\"/players\">Free Agents</a>, hit submit, and then the claim disappeared into MyFantasyLeague — no way to see what you had pending, no way to change the guy you'd promised to drop, no way to back out of a claim you'd thought better of at 11pm. The only honest answer was to open MFL in another tab and do it there, which rather defeats the point of building any of this.",
+      "So the claims you've filed now sit right above the player list, numbered in the order MyFantasyLeague will actually award them. Each one tells you who you're adding, who you're dropping, and which round it's in. <strong>Change drop</strong> swaps the casualty without touching the claim. <strong>Delete</strong> takes the whole thing back. Both go straight to MFL and are read back out again before we'll tell you they worked — if we can't confirm it, we say so rather than showing you a checkmark and hoping.",
+      "One thing it deliberately won't do: reorder. MyFantasyLeague has no reorder control — we went looking, and the only way to shuffle a round is to delete every claim and re-file them in a new sequence, which leaves a gap where you own nothing at all. That's a lousy trade during a live waiver window, so the priority you see is the order you filed in. Get the order right on the way in, and fix the drops from here. If you'd rather see it all on MFL, the link at the corner of the panel goes straight there."
+    ],
+    "image": "waiver-claim-manager.webp",
+    "imageAlt": "The Your Waiver Claims panel above the Free Agents table, listing three pending claims numbered by priority with Change drop and Delete buttons on each"
+  },
+  {
     "id": "hero-wears-your-colors",
     "date": "2026-09-02",
     "category": "enhancement",
@@ -882,27 +903,6 @@
     "excludeFromHero": true,
     "leagues": [
       "theleague"
-    ]
-  },
-  {
-    "id": "rules-qa-report-answer-2026-08-13",
-    "date": "2026-08-13",
-    "category": "enhancement",
-    "icon": "gavel",
-    "title": "Roger Can Be Wrong. Now You Can Say So Without Deleting the Question.",
-    "summary": "Every Ask Roger card gets a “This answer looks wrong” button. Report it, say why, and the commissioner sees it — the question stays right where it is.",
-    "description": [
-      "Two of <a href=\"/rules-chat\">Roger's answers</a> turned out to be wrong this month, and both took an embarrassingly long time to catch. The taxi squad ruling stood for seventeen days. The 5th-year option card had the wrong salary formula on it since March. In both cases somebody read the wrong answer, moved on, and nobody had a way to say anything.",
-      "That's because there wasn't one. The only lever on a bad answer was the commissioner's delete button, and deleting is a blunt instrument — it throws away the question along with the answer. The owner who asked it loses their card, their name comes off it, and the next person with the same question starts from scratch. So nothing got deleted, and wrong answers just sat there.",
-      "Now every card has a “This answer looks wrong” button. Hit it, optionally type what's actually wrong, and it's logged. The card picks up a red banner so the next owner scrolling past knows not to lean on it, and the commissioner sees who reported it and why. Changed your mind? Undo it. Nothing gets deleted, ever.",
-      "Worth knowing: this works on the pinned League Office cards too, not just the ones Roger writes on the fly. The 5th-year option mistake was on a hand-written card, which is exactly the kind nobody thinks to double-check. And a correction to <a href=\"/rules\">the rulebook</a> still doesn't rewrite an answer that's already on the page — Roger writes each one once and it stays written — so flagging it is what actually gets it looked at."
-    ],
-    "image": "rules-chat-report-answer.webp",
-    "imageAlt": "An Ask Roger card about the 5th-year team option showing a red banner reading “2 owners reported this answer as wrong — the commissioner is reviewing it”, the list of reporting teams and their reasons, and a “You reported this — undo” button.",
-    "excludeFromHero": true,
-    "leagues": [
-      "theleague",
-      "afl"
     ]
   }
 ]

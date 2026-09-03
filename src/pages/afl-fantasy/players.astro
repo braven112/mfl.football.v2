@@ -451,6 +451,8 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
       </div>
     </div>
 
+    <WaiverClaimsPanel config={claimsPanelConfig} />
+
     <!-- Table -->
     <div class="table-wrapper">
       <table class="players-table" id="players-table">
@@ -483,7 +485,6 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     </div>
 
     <WaiverClaimModal config={claimConfig} />
-    <WaiverClaimsPanel config={claimsPanelConfig} />
 
     <!-- Show more -->
     <div class="show-more-wrapper" id="show-more-wrapper">
