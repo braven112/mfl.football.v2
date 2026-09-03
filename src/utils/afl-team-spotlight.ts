@@ -185,7 +185,7 @@ export function resolveAflDraftSpotlight(slot: AflDraftSlot): AflSpotlight {
       value: base,
       sub: `${conf} · ${slot.draftYear}`,
       icon: 'draft-podium',
-      href: '/afl-fantasy/draft-predictor',
+      href: '/afl-fantasy/draft/order',
       hint: `Your earned slot in the ${slot.draftYear} ${conf} draft: pick ${slot.basePick} of round 1.`,
     };
   }
@@ -198,7 +198,7 @@ export function resolveAflDraftSpotlight(slot: AflDraftSlot): AflSpotlight {
       value: `${base}*`,
       sub: 'traded away',
       icon: 'draft-podium',
-      href: '/afl-fantasy/draft-predictor',
+      href: '/afl-fantasy/draft/order',
       hint: `You earned the ${base} slot in the ${slot.draftYear} ${conf} draft but traded out of round 1.`,
     };
   }
@@ -210,7 +210,7 @@ export function resolveAflDraftSpotlight(slot: AflDraftSlot): AflSpotlight {
     value: `${base}*`,
     sub: `traded · now ${nowLabels.join(', ')}`,
     icon: 'draft-podium',
-    href: '/afl-fantasy/draft-predictor',
+    href: '/afl-fantasy/draft/order',
     hint: `You earned the ${base} slot in the ${slot.draftYear} ${conf} draft; after trades you pick ${nowLabels.join(' and ')} in round 1.`,
   };
 }

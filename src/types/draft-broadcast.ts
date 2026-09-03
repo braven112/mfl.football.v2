@@ -1,5 +1,5 @@
 /**
- * Types for the AFL live draft broadcast board (`/afl-fantasy/draft-broadcast`).
+ * Types for the AFL live draft broadcast board (`/afl-fantasy/draft/broadcast`).
  *
  * Deliberately separate from `draft-room.ts`: the draft room is an interactive
  * tool (queue, chat, filters, submit-pick) and the broadcast is a zero-input

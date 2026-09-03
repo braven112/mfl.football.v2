@@ -54,7 +54,7 @@ function updateTheLeagueLinks(scope, franchiseId) {
     { selector: 'a[href*="/theleague/rosters"]', page: 'rosters' },
     { selector: 'a[href*="/theleague/standings"]', page: 'standings' },
     { selector: 'a[href*="/theleague/playoffs"]', page: 'playoffs' },
-    { selector: 'a[href*="/theleague/draft-predictor"]', page: 'draft-predictor' },
+    { selector: 'a[href*="/theleague/draft/order"]', page: 'draft-predictor' },
   ];
 
   linksToUpdate.forEach(({ selector, page }) => {

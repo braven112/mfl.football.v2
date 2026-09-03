@@ -123,7 +123,7 @@ const CAPTURE_PATHS = {
   // the AFL card has no contract UI at all.
   'free-agents-rostered-by': '/theleague/players',
   // Single-league entry, but its link is the league-neutral bare
-  // `/draft-broadcast`, which only routes on TheLeague's own apex host. The
+  // `/draft/broadcast`, which only routes on TheLeague's own apex host. The
   // REHEARSAL url is deliberate: the live board is whatever state the real
   // draft is in — for most of the year "Draft complete", which is a dull and
   // uninformative launch image. Replaying a finished season puts an actual
@@ -131,7 +131,7 @@ const CAPTURE_PATHS = {
   // waits for one and strips the rehearsal badge so the shot is not captioned
   // as a dry run.
   'theleague-draft-broadcast':
-    '/theleague/draft-broadcast?conference=league&year=2025&rehearse=0',
+    '/theleague/draft/broadcast?conference=league&year=2025&rehearse=0',
 };
 
 const PAGE_HOOKS = {

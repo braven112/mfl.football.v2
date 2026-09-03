@@ -52,7 +52,7 @@ function updateAFLLinks(scope, franchiseId) {
     { selector: 'a[href*="/afl-fantasy/standings"]', page: 'standings' },
     { selector: 'a[href*="/afl-fantasy/schedule"]', page: 'schedule' },
     { selector: 'a[href*="/afl-fantasy/playoffs"]', page: 'playoffs' },
-    { selector: 'a[href*="/afl-fantasy/draft-predictor"]', page: 'draft-predictor' },
+    { selector: 'a[href*="/afl-fantasy/draft/order"]', page: 'draft-predictor' },
   ];
 
   linksToUpdate.forEach(({ selector, page }) => {

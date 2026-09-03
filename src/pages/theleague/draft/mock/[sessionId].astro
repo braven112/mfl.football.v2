@@ -7,22 +7,22 @@
  * but picks/timer/state come from PartyKit instead of MFL polling.
  */
 
-import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
-import DraftRoom from '../../../components/theleague/draft-room/DraftRoom';
-import leagueConfigData from '../../../data/theleague.config.json';
-import { getCurrentLeagueYear } from '../../../utils/league-year';
-import { getTheLeaguePreference, resolveTeamSelection } from '../../../utils/team-preferences';
-import { getAuthUser } from '../../../utils/auth';
-import { buildDraftPlayers } from '../../../utils/build-draft-players';
-import { getFranchiseBrand } from '../../../utils/franchise-brand';
-import type { DraftRoomPageData, DraftRoomTeam } from '../../../types/draft-room';
-import { DEFAULT_LEAGUE_ID } from '../../../config/leagues';
+import TheLeagueLayout from '../../../../layouts/TheLeagueLayout.astro';
+import DraftRoom from '../../../../components/theleague/draft-room/DraftRoom';
+import leagueConfigData from '../../../../data/theleague.config.json';
+import { getCurrentLeagueYear } from '../../../../utils/league-year';
+import { getTheLeaguePreference, resolveTeamSelection } from '../../../../utils/team-preferences';
+import { getAuthUser } from '../../../../utils/auth';
+import { buildDraftPlayers } from '../../../../utils/build-draft-players';
+import { getFranchiseBrand } from '../../../../utils/franchise-brand';
+import type { DraftRoomPageData, DraftRoomTeam } from '../../../../types/draft-room';
+import { DEFAULT_LEAGUE_ID } from '../../../../config/leagues';
 
 export const prerender = false;
 
 const { sessionId } = Astro.params;
 if (!sessionId) {
-  return Astro.redirect('/theleague/mock-draft');
+  return Astro.redirect('/theleague/draft/mock');
 }
 
 const leagueYear = getCurrentLeagueYear();

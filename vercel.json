@@ -1,51 +1,166 @@
 {
   "redirects": [
     {
-      "source": "/theleague/:path*",
-      "destination": "/:path*",
-      "has": [{ "type": "host", "value": "theleague.us" }],
+      "source": "/draft-predictor",
+      "destination": "/draft/order",
+      "statusCode": 301
+    },
+    {
+      "source": "/draft-broadcast",
+      "destination": "/draft/broadcast",
+      "statusCode": 301
+    },
+    {
+      "source": "/draft-room",
+      "destination": "/draft/room",
+      "statusCode": 301
+    },
+    {
+      "source": "/mock-draft",
+      "destination": "/draft/mock",
+      "statusCode": 301
+    },
+    {
+      "source": "/mock-draft/:path*",
+      "destination": "/draft/mock/:path*",
+      "statusCode": 301
+    },
+    {
+      "source": "/theleague/draft-predictor",
+      "destination": "/theleague/draft/order",
+      "statusCode": 301
+    },
+    {
+      "source": "/theleague/draft-broadcast",
+      "destination": "/theleague/draft/broadcast",
+      "statusCode": 301
+    },
+    {
+      "source": "/afl-fantasy/draft-predictor",
+      "destination": "/afl-fantasy/draft/order",
+      "statusCode": 301
+    },
+    {
+      "source": "/afl-fantasy/draft-broadcast",
+      "destination": "/afl-fantasy/draft/broadcast",
+      "statusCode": 301
+    },
+    {
+      "source": "/theleague/draft-room",
+      "destination": "/theleague/draft/room",
+      "statusCode": 301
+    },
+    {
+      "source": "/theleague/mock-draft",
+      "destination": "/theleague/draft/mock",
+      "statusCode": 301
+    },
+    {
+      "source": "/theleague/mock-draft/:path*",
+      "destination": "/theleague/draft/mock/:path*",
+      "statusCode": 301
+    },
+    {
+      "source": "/best-ball-1/draft/room",
+      "destination": "/best-ball-1/draft-room",
+      "statusCode": 301
+    },
+    {
+      "source": "/best-ball-1/draft/mock",
+      "destination": "/best-ball-1/mock-draft",
+      "statusCode": 301
+    },
+    {
+      "source": "/best-ball-1/draft/mock/:path*",
+      "destination": "/best-ball-1/mock-draft/:path*",
       "statusCode": 301
     },
     {
       "source": "/theleague/:path*",
       "destination": "/:path*",
-      "has": [{ "type": "host", "value": "www.theleague.us" }],
+      "has": [
+        {
+          "type": "host",
+          "value": "theleague.us"
+        }
+      ],
+      "statusCode": 301
+    },
+    {
+      "source": "/theleague/:path*",
+      "destination": "/:path*",
+      "has": [
+        {
+          "type": "host",
+          "value": "www.theleague.us"
+        }
+      ],
       "statusCode": 301
     },
     {
       "source": "/theleague",
       "destination": "/",
-      "has": [{ "type": "host", "value": "theleague.us" }],
+      "has": [
+        {
+          "type": "host",
+          "value": "theleague.us"
+        }
+      ],
       "statusCode": 301
     },
     {
       "source": "/theleague",
       "destination": "/",
-      "has": [{ "type": "host", "value": "www.theleague.us" }],
+      "has": [
+        {
+          "type": "host",
+          "value": "www.theleague.us"
+        }
+      ],
       "statusCode": 301
     },
     {
       "source": "/afl-fantasy/:path*",
       "destination": "/:path*",
-      "has": [{ "type": "host", "value": "afl-fantasy.com" }],
+      "has": [
+        {
+          "type": "host",
+          "value": "afl-fantasy.com"
+        }
+      ],
       "statusCode": 301
     },
     {
       "source": "/afl-fantasy/:path*",
       "destination": "/:path*",
-      "has": [{ "type": "host", "value": "www.afl-fantasy.com" }],
+      "has": [
+        {
+          "type": "host",
+          "value": "www.afl-fantasy.com"
+        }
+      ],
       "statusCode": 301
     },
     {
       "source": "/afl-fantasy",
       "destination": "/",
-      "has": [{ "type": "host", "value": "afl-fantasy.com" }],
+      "has": [
+        {
+          "type": "host",
+          "value": "afl-fantasy.com"
+        }
+      ],
       "statusCode": 301
     },
     {
       "source": "/afl-fantasy",
       "destination": "/",
-      "has": [{ "type": "host", "value": "www.afl-fantasy.com" }],
+      "has": [
+        {
+          "type": "host",
+          "value": "www.afl-fantasy.com"
+        }
+      ],
       "statusCode": 301
     }
   ],
@@ -53,12 +168,22 @@
     {
       "source": "/forum/:path*",
       "destination": "https://forum.theleague.us/forum/:path*",
-      "has": [{ "type": "host", "value": "www.theleague.us" }]
+      "has": [
+        {
+          "type": "host",
+          "value": "www.theleague.us"
+        }
+      ]
     },
     {
       "source": "/forum/:path*",
       "destination": "https://forum.theleague.us/forum/:path*",
-      "has": [{ "type": "host", "value": "theleague.us" }]
+      "has": [
+        {
+          "type": "host",
+          "value": "theleague.us"
+        }
+      ]
     }
   ]
 }

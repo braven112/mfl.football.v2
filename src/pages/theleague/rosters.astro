@@ -2741,7 +2741,7 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
               <div class="draft-card-wrapper">
                 {assetsPredictions.length > 0 ? (
                   <ChartCard title={`${draftNextYear} Draft Assets`} subtitle="Picks your team owns after all trades">
-                    <a href={r("/theleague/draft-predictor?view=assets")} class="chart-card-link" title="View full draft assets" slot="actions">
+                    <a href={r("/theleague/draft/order?view=assets")} class="chart-card-link" title="View full draft assets" slot="actions">
                       <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
                         <path d="M8.5 1.5H2.5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V7.5M14.5 1.5l-6 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
                       </svg>
@@ -2765,7 +2765,7 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
                   </ChartCard>
                 ) : draftPredictions.length > 0 ? (
                   <ChartCard title={`${draftNextYear} Draft Picks`} subtitle="Pick positions from the current draft order">
-                    <a href={r("/theleague/draft-predictor")} class="chart-card-link" title="View full draft order" slot="actions">
+                    <a href={r("/theleague/draft/order")} class="chart-card-link" title="View full draft order" slot="actions">
                       <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
                         <path d="M8.5 1.5H2.5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V7.5M14.5 1.5l-6 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
                       </svg>
@@ -2806,7 +2806,7 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
             <div class="planner-section planner-section--draft-2026">
               {assetsPredictions.length > 0 ? (
                 <ChartCard title={`${draftNextYear} Draft Assets`} subtitle="Picks your team owns after all trades">
-                  <a href={r("/theleague/draft-predictor?view=assets")} class="chart-card-link" title="View full draft assets" slot="actions">
+                  <a href={r("/theleague/draft/order?view=assets")} class="chart-card-link" title="View full draft assets" slot="actions">
                     <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
                       <path d="M8.5 1.5H2.5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V7.5M14.5 1.5l-6 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
                     </svg>
@@ -2830,7 +2830,7 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
                 </ChartCard>
               ) : draftPredictions.length > 0 ? (
                 <ChartCard title={`${draftNextYear} Draft Picks`} subtitle="Pick positions from the current draft order">
-                  <a href={r("/theleague/draft-predictor")} class="chart-card-link" title="View full draft order" slot="actions">
+                  <a href={r("/theleague/draft/order")} class="chart-card-link" title="View full draft order" slot="actions">
                     <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
                       <path d="M8.5 1.5H2.5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V7.5M14.5 1.5l-6 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
                     </svg>

@@ -1296,8 +1296,8 @@ describe('the board serves single-unit leagues too', () => {
 
   it('both league pages exist and share the one island', () => {
     for (const page of [
-      'src/pages/afl-fantasy/draft-broadcast.astro',
-      'src/pages/theleague/draft-broadcast.astro',
+      'src/pages/afl-fantasy/draft/broadcast.astro',
+      'src/pages/theleague/draft/broadcast.astro',
     ]) {
       const src = readFileSync(page, 'utf-8');
       expect(src, `${page} must import the shared island`).toMatch(
@@ -1310,7 +1310,7 @@ describe('the board serves single-unit leagues too', () => {
     // A rookies-only draft ranked against the whole unrostered dynasty pool
     // makes every pick in the class read as a massive reach — 1.01 came back
     // as board rank #300-something. Non-rookies have to join the off-board set.
-    const src = readFileSync('src/pages/theleague/draft-broadcast.astro', 'utf-8');
+    const src = readFileSync('src/pages/theleague/draft/broadcast.astro', 'utf-8');
     expect(src).toMatch(/if \(!p\.isRookie\) offBoardIds\.add/);
     expect(src).toMatch(/assignBoardRanks\(enriched,\s*offBoardIds\)/);
   });
@@ -1320,7 +1320,7 @@ describe('the board serves single-unit leagues too', () => {
     // re-parses the 1.38 MB players.json. A second call to recompute rookie
     // status paid that on every SSR request for a flag the first call already
     // stamped on each player (`isRookie`, same predicate).
-    const src = readFileSync('src/pages/theleague/draft-broadcast.astro', 'utf-8');
+    const src = readFileSync('src/pages/theleague/draft/broadcast.astro', 'utf-8');
     const calls = src.match(/buildDraftPlayers\(/g) ?? [];
     expect(calls.length, 'one buildDraftPlayers call per request, not two').toBe(1);
   });
@@ -1697,7 +1697,7 @@ describe('the screensaver never impersonates a live pick', () => {
 
   it('both league pages hand the island the idle threshold', () => {
     for (const page of ['afl-fantasy', 'theleague']) {
-      const src = readFileSync(`src/pages/${page}/draft-broadcast.astro`, 'utf-8');
+      const src = readFileSync(`src/pages/${page}/draft/broadcast.astro`, 'utf-8');
       expect(src, `${page} must resolve ?screensaver=`).toMatch(
         /screensaverIdleMs:\s*resolveScreensaverIdleMs\(/
       );
@@ -1910,7 +1910,7 @@ describe('the panels are wired to real data, not decoration', () => {
     // Without holdings the roster panel is just tonight's picks, which for a
     // rookie draft is three players and answers nothing.
     for (const page of ['afl-fantasy', 'theleague']) {
-      const src = read(`pages/${page}/draft-broadcast.astro`);
+      const src = read(`pages/${page}/draft/broadcast.astro`);
       expect(src, `${page} must load holdings`).toMatch(/loadFranchiseHoldings\(/);
       expect(src, `${page} must ship holdings on the page data`).toMatch(/^\s*holdings,$/m);
     }
@@ -1920,7 +1920,7 @@ describe('the panels are wired to real data, not decoration', () => {
     // trimToDraftable drops everyone nobody will draft — which is exactly what
     // a keeper IS. Passing the trimmed pool leaves every panel empty.
     for (const page of ['afl-fantasy', 'theleague']) {
-      const src = read(`pages/${page}/draft-broadcast.astro`);
+      const src = read(`pages/${page}/draft/broadcast.astro`);
       const call = /loadFranchiseHoldings\(([\s\S]*?)\);/.exec(src)?.[1] ?? '';
       expect(call, `${page} passes the trimmed pool to loadFranchiseHoldings`).toMatch(
         /\branked\b/

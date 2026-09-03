@@ -2,7 +2,7 @@
 /**
  * TheLeague Draft Broadcast — the big board for the room.
  *
- * The rookie-draft twin of `/afl-fantasy/draft-broadcast`, and deliberately the
+ * The rookie-draft twin of `/afl-fantasy/draft/broadcast`, and deliberately the
  * SAME island: a laptop plugged into a TV, following MFL's own live draft room
  * and throwing each selection on screen over the drafting franchise's colors.
  * Owners still make their picks in MFL; this page only watches.
@@ -27,13 +27,13 @@
  * `draft-broadcast.ts`.
  */
 
-import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
-import DraftBroadcastIsland from '../../components/shared/draft-broadcast/DraftBroadcast';
-import leagueConfigData from '../../data/theleague.config.json';
-import { getLeagueBySlug } from '../../config/leagues';
-import { getCurrentLeagueYear } from '../../utils/league-year';
-import { buildDraftPlayers } from '../../utils/build-draft-players';
-import { getFranchiseBrand } from '../../utils/franchise-brand';
+import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
+import DraftBroadcastIsland from '../../../components/shared/draft-broadcast/DraftBroadcast';
+import leagueConfigData from '../../../data/theleague.config.json';
+import { getLeagueBySlug } from '../../../config/leagues';
+import { getCurrentLeagueYear } from '../../../utils/league-year';
+import { buildDraftPlayers } from '../../../utils/build-draft-players';
+import { getFranchiseBrand } from '../../../utils/franchise-brand';
 import {
   assignBoardRanks,
   buildConferenceBoard,
@@ -44,20 +44,20 @@ import {
   loadConferenceKeepers,
   loadFranchiseHoldings,
   trimToDraftable,
-} from '../../utils/draft-broadcast-server';
-import { resolveBroadcastSource } from '../../utils/draft-broadcast-source';
-import { broadcastStrokeIndex, resolveBroadcastCrest } from '../../utils/broadcast-crest';
-import { resolveWarmDepth } from '../../utils/draft-broadcast-images';
-import { resolveScreensaverIdleMs } from '../../utils/draft-broadcast';
+} from '../../../utils/draft-broadcast-server';
+import { resolveBroadcastSource } from '../../../utils/draft-broadcast-source';
+import { broadcastStrokeIndex, resolveBroadcastCrest } from '../../../utils/broadcast-crest';
+import { resolveWarmDepth } from '../../../utils/draft-broadcast-images';
+import { resolveScreensaverIdleMs } from '../../../utils/draft-broadcast';
 import type {
   BroadcastConference,
   BroadcastPlayer,
   DraftBroadcastPageData,
-} from '../../types/draft-broadcast';
-import type { DraftRoomTeam } from '../../types/draft-room';
+} from '../../../types/draft-broadcast';
+import type { DraftRoomTeam } from '../../../types/draft-room';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import '../../styles/draft-broadcast.css';
+import '../../../styles/draft-broadcast.css';
 
 export const prerender = false;
 

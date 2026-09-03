@@ -56,10 +56,10 @@ const quickLinks: QuickLink[] = [
   // order instead. Owners still pick in MFL (the CTA above) — this is the
   // screen the room watches.
   ...(live
-    ? [{ label: 'Draft broadcast', href: r('/theleague/draft-broadcast'), icon: 'scoreboard-2', external: false }]
+    ? [{ label: 'Draft broadcast', href: r('/theleague/draft/broadcast'), icon: 'scoreboard-2', external: false }]
     : []),
-  { label: 'Draft order', href: r(`/theleague/draft-predictor?view=history&year=${leagueYear}&team=all`), icon: 'standings-2', external: false },
-  { label: 'Draft results', href: r('/theleague/draft-room'), icon: 'check', external: false },
+  { label: 'Draft order', href: r(`/theleague/draft/order?view=history&year=${leagueYear}&team=all`), icon: 'standings-2', external: false },
+  { label: 'Draft results', href: r('/theleague/draft/room'), icon: 'check', external: false },
   { label: 'Future picks', href: `${mflBase}&O=100`, icon: 'calendar', external: true },
   { label: 'Free agents', href: r('/theleague/players'), icon: 'binoculars', external: false },
   { label: 'Trade builder', href: r('/theleague/trade-builder'), icon: 'transactions-2', external: false },

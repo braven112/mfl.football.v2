@@ -1,7 +1,7 @@
 /**
  * DraftBroadcast — the AFL draft-night TV board.
  *
- * Owns the live half of `/afl-fantasy/draft-broadcast`: poll MFL, diff the
+ * Owns the live half of `/afl-fantasy/draft/broadcast`: poll MFL, diff the
  * board, queue reveals, and swap between the reveal and the idle screen. The
  * static half (board skeleton, franchise brands, player pool) is SSR'd and
  * arrives as `pageData` — nothing on this screen depends on a client fetch

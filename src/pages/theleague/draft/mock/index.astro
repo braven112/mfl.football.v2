@@ -5,12 +5,12 @@
  * Auth-gated: only authenticated owners can create/join.
  */
 
-import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
-import { getAuthUser, isCommissionerOrAdmin } from '../../../utils/auth';
-import '../../../styles/loading.css';
-import { getCurrentLeagueYear } from '../../../utils/league-year';
-import leagueConfigData from '../../../data/theleague.config.json';
-import { DEFAULT_LEAGUE_ID } from '../../../config/leagues';
+import TheLeagueLayout from '../../../../layouts/TheLeagueLayout.astro';
+import { getAuthUser, isCommissionerOrAdmin } from '../../../../utils/auth';
+import '../../../../styles/loading.css';
+import { getCurrentLeagueYear } from '../../../../utils/league-year';
+import leagueConfigData from '../../../../data/theleague.config.json';
+import { DEFAULT_LEAGUE_ID } from '../../../../config/leagues';
 
 export const prerender = false;
 
@@ -437,7 +437,7 @@ const rankingSourcesJson = JSON.stringify(rankingSources);
         const data = await res.json();
 
         if (data.success && data.sessionId) {
-          window.location.href = `/theleague/mock-draft/${data.sessionId}`;
+          window.location.href = `/theleague/draft/mock/${data.sessionId}`;
           return;
         }
 
@@ -488,7 +488,7 @@ const rankingSourcesJson = JSON.stringify(rankingSources);
     const isYours = s.createdBy === userFranchiseId;
 
     const card = document.createElement('a');
-    card.href = `/theleague/mock-draft/${encodeURIComponent(s.id)}`;
+    card.href = `/theleague/draft/mock/${encodeURIComponent(s.id)}`;
     const statusClass = `mock-lobby__session-card--${s.status}`;
     card.className = `mock-lobby__session-card ${statusClass}` + (isYours ? ' mock-lobby__session-card--yours' : '');
 

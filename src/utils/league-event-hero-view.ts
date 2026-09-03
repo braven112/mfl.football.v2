@@ -92,7 +92,7 @@ const EVENT_VIEW: Record<string, EventViewBuilder> = {
         : `${days} days until the NFL Draft. Scout the incoming rookie class and see where your picks land.`,
     // This hero only surfaces in the post-playoffs offseason window, when
     // the rookie draft order is already official — never "predictor" here.
-    link: '/theleague/draft-predictor',
+    link: '/theleague/draft/order',
     linkLabel: 'View Draft Order',
     icon: 'nfl',
     accent: accentFor(event),
@@ -111,7 +111,7 @@ const EVENT_VIEW: Record<string, EventViewBuilder> = {
         ? 'The 3-round rookie draft is live — 12-hour pick timer. Make your selections.'
         : `${days} days until the rookie draft. Three rounds, 12-hour timer — line up your queue now.`,
     // Same as nfl-draft above: offseason-only hero, the order is official.
-    link: '/theleague/draft-predictor',
+    link: '/theleague/draft/order',
     linkLabel: 'View Draft Order',
     icon: 'draft-podium',
     accent: accentFor(event),
