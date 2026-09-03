@@ -76,3 +76,42 @@ for (const qs of [
     console.log('FETCH FAILED:', err.message);
   }
 }
+
+// ── The add/drop form region ────────────────────────────────────────────────
+// GET only. The route's page diagnostic caps its excerpt and MFL's nav menu is
+// longer than any sane cap, so every log so far captured the menu and none of
+// the content. Slicing to the <form> skips the nav entirely.
+{
+  const url = `https://${league.mflHost}/${year}/add_drop?L=${league.id}`;
+  console.log(`\n===== GET ${url}`);
+  try {
+    const res = await mflFetch({ url, cookies: { MFL_USER_ID: cookie }, timeoutMs: 20_000 });
+    const html = await res.text();
+    console.log(`status ${res.status}, ${html.length} bytes`);
+    console.log('AUTHENTICATED:', !/PASSWORD/i.test(html));
+    const strip = (h) => h
+      .replace(/<script[\s\S]*?<\/script>/gi, ' ')
+      .replace(/<style[\s\S]*?<\/style>/gi, ' ')
+      .replace(/<option[^>]*>[\s\S]*?<\/option>/gi, ' ')
+      .replace(/<[^>]+>/g, ' ')
+      .replace(/&nbsp;/gi, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+    const start = html.search(/<form[^>]*action=["\']?add_drop/i);
+    if (start < 0) {
+      console.log('NO add_drop FORM ON THE PAGE — that is itself the answer.');
+      const text = strip(html);
+      const navEnd = text.lastIndexOf('Select Keepers');
+      console.log('TEXT AFTER NAV:', show(text.slice(navEnd < 0 ? 0 : navEnd + 14), 2500));
+    } else {
+      const region = html.slice(start, html.indexOf('</form>', start) + 7);
+      console.log('FORM COPY:', show(strip(region), 2000));
+      const notes = [...region.matchAll(/<(?:b|strong)>([\s\S]{0,200}?)<\/(?:b|strong)>/gi)]
+        .map((m) => m[1].replace(/<[^>]*>/g, '').trim())
+        .filter(Boolean);
+      console.log('EMPHASISED COPY:', JSON.stringify(notes.slice(0, 20)));
+    }
+  } catch (err) {
+    console.log('FETCH FAILED:', err.message);
+  }
+}
