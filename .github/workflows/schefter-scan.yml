@@ -47,14 +47,12 @@ jobs:
           # separate GroupMe credentials. The service token is account-wide
           # (one GroupMe user, all their groups); the GROUP is per-league.
           GROUPME_SERVICE_TOKEN: ${{ secrets.GROUPME_SERVICE_TOKEN }}
-          # AFL first — features.rogerReplies is true for the AFL only, so this
-          # is the group the lane actually reads today. NEW SECRET: the AFL has
-          # only ever been posted to, so its group id has never been needed
-          # here. Until it is set the lane logs a warning and no-ops; Roger's
-          # AFL reminders are unaffected.
+          # Both group ids below are OPTIONAL overrides, not requirements. The
+          # lane derives a league's group from its own Roger bot id via
+          # GET /v3/bots (see scripts/lib/groupme-groups.mjs) and caches it, so
+          # no new secret was needed to switch the AFL on. Set one only to
+          # point a league at a group the service token doesn't own.
           GROUPME_AFL_GROUP_ID: ${{ secrets.GROUPME_AFL_GROUP_ID }}
-          # TheLeague's group. Wired now so flipping features.rogerReplies on
-          # for TheLeague is a one-line change rather than a workflow edit too.
           GROUPME_GROUP_ID: ${{ secrets.GROUPME_GROUP_ID }}
           # Optional, per league. Roger's own posts are otherwise identified by
           # sender_type==='bot' plus a /roger/i name match; these pin them by id

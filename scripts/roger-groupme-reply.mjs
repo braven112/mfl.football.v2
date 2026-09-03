@@ -35,6 +35,7 @@ import { getRedisConfig, createUpstashClient } from './lib/redis.mjs';
 import { postToGroupMe } from './lib/groupme.mjs';
 import { isQuietHours, secondsUntilPtMidnight } from './lib/schefter-groupme-budget.mjs';
 import { getCurrentYears } from './lib/league-years.mjs';
+import { resolveLeagueGroupId } from './lib/groupme-groups.mjs';
 import { buildRosterRoast, buildDraftContext } from './lib/roger-roster-context.mjs';
 import {
   detectRogerTarget,
@@ -284,10 +285,6 @@ export async function scanRogerReplies({ league, dryRun = false }) {
     log(`Skipping ${league.slug} — no Roger bot id configured`);
     return result;
   }
-  if (!league.groupMeGroupId) {
-    log(`Skipping ${league.slug} — no GroupMe group id configured for this league`);
-    return result;
-  }
 
   // Quiet hours wrap the WHOLE scan, matching scanEventReminders. Unlike the
   // reminder lane there is no catch-up window to worry about: a shot Roger
@@ -304,6 +301,19 @@ export async function scanRogerReplies({ league, dryRun = false }) {
     return result;
   }
 
+  // Which group to read. Derived from the league's Roger bot id when not
+  // configured — see lib/groupme-groups.mjs for why no new secret is needed.
+  const { groupId, source } = await resolveLeagueGroupId({ league, redis });
+  if (!groupId) {
+    warn(
+      `Skipping ${league.slug} — could not resolve a GroupMe group. ` +
+        `The service token must own ${league.groupMeRogerBotId ? "this league's Roger bot" : 'a Roger bot'} ` +
+        `for derivation to work; otherwise set the group id explicitly.`,
+    );
+    return result;
+  }
+  log(`${league.slug} group ${groupId} (${source})`);
+
   const watermarkKey = rogerKey(league.slug, 'groupme:last_reply_id');
   const botIdsKey = rogerKey(league.slug, 'groupme:bot_message_ids');
 
@@ -316,7 +326,7 @@ export async function scanRogerReplies({ league, dryRun = false }) {
   }
 
   log(`Fetching ${league.slug} messages since watermark=${watermark ?? '(none)'}`);
-  const messages = await fetchGroupMeSince(watermark, league.groupMeGroupId);
+  const messages = await fetchGroupMeSince(watermark, groupId);
   if (messages === null) return result;
   result.scanned = messages.length;
   if (messages.length === 0) {
