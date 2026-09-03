@@ -106,6 +106,38 @@ describe('readPendingWaiverPlayerIds — "could not verify" is not "nothing ther
     expect(readPendingWaiverPlayerIds(flat)).toEqual(expect.arrayContaining(['12616', '15708']));
   });
 
+  it('separates a REFUSAL from an indeterminate answer', () => {
+    // The load-bearing distinction. `import?TYPE=waiverRequest` answers with an
+    // EMPTY body whether it stored the claim or not — probed live against
+    // www44, where every import type including a bogus one does the same. So
+    // "no affirmative OK" cannot mean failure, or every good claim is rejected.
+    const empty = readMflImportResult('');
+    expect(empty.accepted).toBe(false);
+    expect(empty.refused, 'an empty body is indeterminate, not a refusal').toBe(false);
+
+    const unknown = readMflImportResult('something new from MFL');
+    expect(unknown.refused).toBe(false);
+
+    // These ARE refusals and must stay hard failures.
+    for (const body of ['<error>Invalid Waiver Round</error>', '<html><body>Login</body></html>', '{"error":{"$t":"nope"}}']) {
+      expect(readMflImportResult(body).refused, body.slice(0, 30)).toBe(true);
+    }
+    expect(readMflImportResult('', 500).refused).toBe(true);
+    expect(readMflImportResult('<status>OK</status>').accepted).toBe(true);
+    expect(readMflImportResult('<status>OK</status>').refused).toBe(false);
+  });
+
+  it('the route hard-fails on a refusal, not on a missing OK', () => {
+    // Gating the write on `!outcome.accepted` 502'd a real claim during a live
+    // waiver window, because MFL affirms nothing on this endpoint.
+    expect(ROUTE).toContain('if (outcome.refused)');
+    expect(ROUTE, 'must not block the write on the absence of an affirmative OK').not.toMatch(
+      /if \(!outcome\.accepted\) \{\s*\n\s*return fail/
+    );
+    // But an unaffirmed write whose read-back shows nothing is still a failure.
+    expect(ROUTE).toMatch(/unconfirmed\.length > 0 && !outcome\.accepted/);
+  });
+
   it('an object payload it cannot read is null, NOT a verified-empty list', () => {
     // Returning [] here told the owner their claim "did not go through" on the
     // strength of a payload we did not understand. {} stays [] — an empty
@@ -164,8 +196,11 @@ describe('the route still requires both proofs', () => {
     expect(modal.indexOf('data.verified === false')).toBeLessThan(modal.indexOf('Submitted ✓'));
   });
 
-  it('logs MFL\'s response body on a refused write — a no-op is invisible without it', () => {
-    expect(ROUTE).toMatch(/console\.error\('\[waiver-claim\][^)]*text\.slice/);
+  it('logs MFL\'s response body whenever it does not affirm — a no-op is invisible without it', () => {
+    // console.warn, not error: an unaffirmed write is not yet known to have
+    // failed (MFL affirms nothing on this endpoint), but the body is still the
+    // whole diagnosis and must never be discarded.
+    expect(ROUTE).toMatch(/console\.(warn|error)\('\[waiver-claim\][^)]*text\.slice/);
   });
 
   it('verifies an FCFS add against the ONE claim it sent, not the whole board', () => {

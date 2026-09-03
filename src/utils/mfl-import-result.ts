@@ -11,11 +11,19 @@
  *   > Require an affirmative signal; treat an HTML body as failure, since MFL
  *   > answers imports with XML.
  *
- * So this module inverts the default: nothing is accepted unless MFL says so.
+ * So this module inverts the default: nothing is `accepted` unless MFL says so.
  * `<status>OK</status>` is the affirmative signal, and it is the ONLY one — an
  * unrecognized body is reported with its first 200 characters so the next
  * surprise is diagnosable instead of silent (same doc: "Never discard MFL's
  * response body on the success path").
+ *
+ * BUT `!accepted` IS NOT FAILURE, and conflating the two took down live waiver
+ * claims for a few hours on 2026-09-02. Many import types say NOTHING at all:
+ * probed live against `www44`, `waiverRequest`, `blindBidWaiverRequest`,
+ * `fcfsWaiver`, `ir` and even `TYPE=bogusType` every one returns an empty 200.
+ * There is no body that distinguishes a stored waiver claim from a dropped one.
+ * So callers get three outcomes, not two — `accepted`, `refused`, and neither —
+ * and on `neither` the ONLY way to know is to read the result back.
  *
  * NOTE this is deliberately NOT a success check for whether the write did what
  * you wanted — MFL will answer OK and quietly no-op a field it does not accept
@@ -27,6 +35,20 @@
 export interface MflImportResult {
   /** True only when MFL affirmatively acknowledged the write. */
   accepted: boolean;
+  /**
+   * True when MFL affirmatively REFUSED — an `<error>` element, an HTML page, or
+   * a non-2xx status. Distinct from `!accepted`, which also covers the
+   * INDETERMINATE case where MFL said nothing at all.
+   *
+   * The distinction is load-bearing. Several import types answer a write with a
+   * completely empty 200 whether it worked or not — verified live 2026-09-02
+   * against `www44`, where `waiverRequest`, `blindBidWaiverRequest`,
+   * `fcfsWaiver`, `ir` and even `TYPE=bogusType` ALL return an empty body. So a
+   * caller that treats "no affirmative OK" as failure rejects every good write
+   * on those endpoints. Treat `refused` as failure; treat indeterminate as
+   * "ask the data", and verify by reading the result back.
+   */
+  refused: boolean;
   /** MFL's own message when it refused, else null. */
   error: string | null;
   /**
@@ -51,7 +73,7 @@ export function readMflImportResult(text: string, httpStatus = 200): MflImportRe
   const body = (text ?? '').trim();
 
   if (httpStatus < 200 || httpStatus >= 300) {
-    return { accepted: false, error: null, reason: `HTTP ${httpStatus}` };
+    return { accepted: false, refused: true, error: null, reason: `HTTP ${httpStatus}` };
   }
 
   // MFL's refusals come in two shapes and BOTH carry the message we want to
@@ -61,17 +83,17 @@ export function readMflImportResult(text: string, httpStatus = 200): MflImportRe
   // response", which is still correctly REJECTED but throws MFL's own
   // explanation away at the moment it is most useful.
   const explicit = body.match(/<error[^>]*>([\s\S]*?)<\/error>/i)?.[1]?.trim();
-  if (explicit) return { accepted: false, error: explicit, reason: null };
+  if (explicit) return { accepted: false, refused: true, error: explicit, reason: null };
   if (/<error\b/i.test(body)) {
-    return { accepted: false, error: null, reason: 'MFL returned an error element.' };
+    return { accepted: false, refused: true, error: null, reason: 'MFL returned an error element.' };
   }
   if (body.startsWith('{')) {
     try {
       const err = (JSON.parse(body) as { error?: unknown })?.error;
       const message =
         typeof err === 'string' ? err : typeof (err as { $t?: unknown })?.$t === 'string' ? (err as { $t: string }).$t : null;
-      if (message?.trim()) return { accepted: false, error: message.trim(), reason: null };
-      if (err) return { accepted: false, error: null, reason: 'MFL returned a JSON error payload.' };
+      if (message?.trim()) return { accepted: false, refused: true, error: message.trim(), reason: null };
+      if (err) return { accepted: false, refused: true, error: null, reason: 'MFL returned a JSON error payload.' };
     } catch {
       // Not JSON after all — fall through to the unrecognized-body branch,
       // which keeps the first 200 characters for the log either way.
@@ -81,15 +103,19 @@ export function readMflImportResult(text: string, httpStatus = 200): MflImportRe
   // A page, not an API answer — almost always the signed-out login page or a
   // permission notice, which is a silent auth failure.
   if (looksLikeHtml(body)) {
-    return { accepted: false, error: null, reason: 'MFL returned an HTML page, not an API response.' };
+    return { accepted: false, refused: true, error: null, reason: 'MFL returned an HTML page, not an API response.' };
   }
 
   if (/<status\b[^>]*>\s*OK\s*<\/status>/i.test(body)) {
-    return { accepted: true, error: null, reason: null };
+    return { accepted: true, refused: false, error: null, reason: null };
   }
 
+  // INDETERMINATE — not accepted, but not a refusal either. An empty body is
+  // the normal answer from several import types regardless of outcome, so this
+  // must not be reported as failure on its own.
   return {
     accepted: false,
+    refused: false,
     error: null,
     reason: body ? `Unrecognized MFL response: ${body.slice(0, 200)}` : 'MFL returned an empty response.',
   };

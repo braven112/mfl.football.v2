@@ -243,14 +243,24 @@ export const POST: APIRoute = async ({ request }) => {
     // and this route reported "Round 1 submitted" for exactly that. See
     // src/utils/mfl-import-result.ts.
     const outcome = readMflImportResult(text, res.status);
+    // Never discard MFL's body on a write — a silent no-op is invisible without
+    // it and it is the whole diagnosis.
     if (!outcome.accepted) {
-      // Never discard MFL's body on a write — a silent no-op is invisible
-      // without it and it is the whole diagnosis.
-      console.error('[waiver-claim] MFL did not accept the write:', outcome.reason ?? outcome.error, text.slice(0, 300));
+      console.warn('[waiver-claim] MFL did not affirm the write:', outcome.reason ?? outcome.error, text.slice(0, 300));
+    }
+    // Hard-fail ONLY on an affirmative refusal. `refused`, not `!accepted`:
+    // MFL answers `import?TYPE=waiverRequest` with a completely EMPTY body
+    // whether it stored the claim or not (probed live — every import type does,
+    // including a bogus one), so demanding `<status>OK</status>` here rejects
+    // every good claim. That shipped, and it 502'd a real claim during a live
+    // waiver window. The read-back below is the only thing that can tell the two
+    // apart, so an indeterminate answer goes THROUGH to it rather than stopping
+    // here.
+    if (outcome.refused) {
       return fail(
         outcome.error
           ? `MFL rejected the claim: ${outcome.error}`
-          : 'MFL did not confirm the claim, so nothing was recorded. Try again, or file it on MyFantasyLeague.',
+          : 'MFL rejected the claim, so nothing was recorded. Try again, or file it on MyFantasyLeague.',
         502
       );
     }
@@ -286,16 +296,26 @@ export const POST: APIRoute = async ({ request }) => {
       const fcfsAdds = [String(claims![0].addPlayerId)];
       const landed = stored ? fcfsAdds.filter((id) => stored!.includes(id)) : [];
       const missing = stored ? fcfsAdds.filter((id) => !stored!.includes(id)) : fcfsAdds;
+      // KNOWN-not-there is a failure; UNKNOWN is not. MFL affirmed nothing (an
+      // empty body is its normal answer either way), and the roster says the
+      // player is not on it — between them that is a definite miss, and calling
+      // it "submitted" is the bug this route exists to prevent.
+      if (stored !== null && missing.length > 0 && !outcome.accepted) {
+        return fail(
+          'MFL did not add the player and your roster does not show them. Nothing was recorded — try again, or add them on MyFantasyLeague.',
+          502
+        );
+      }
       return new Response(
         JSON.stringify({
           success: true,
           verified: stored !== null && missing.length === 0,
           message:
             stored === null
-              ? 'MFL accepted the add, but we could not read your roster back to confirm it. Check your roster before retrying.'
+              ? 'Submitted, but we could not read your roster back to confirm it. Check your roster before retrying.'
               : missing.length === 0
                 ? 'Added — the player is on your roster now.'
-                : 'MFL accepted the add but your roster does not show it. It probably did NOT go through — check your roster before retrying.',
+                : 'MFL accepted the add but your roster does not show it yet. Check your roster before retrying.',
           mode: 'fcfs',
           // `submitted`, not `requestedAdds`: an FCFS write resolves instantly,
           // so only the first claim was ever sent. Reporting the whole board as
@@ -331,6 +351,21 @@ export const POST: APIRoute = async ({ request }) => {
       );
     }
 
+    // KNOWN-not-there is a failure; UNKNOWN is not. `waiverRequest` affirms
+    // nothing on success OR failure, so when the read-back succeeded and the
+    // claim is NOT newly pending, the delta is the whole evidence and it says
+    // the write did not land. Reporting that as "Round N submitted" is exactly
+    // the bug this route was rewritten to stop — so it is a hard failure the
+    // owner can act on, not a caveat under a checkmark.
+    if (canDiff && unconfirmed.length > 0 && !outcome.accepted) {
+      return fail(
+        `MFL did not record ${
+          unconfirmed.length === 1 ? 'the claim' : `${unconfirmed.length} of your claims`
+        } — your pending waivers do not show ${unconfirmed.length === 1 ? 'it' : 'them'}. Nothing was filed; try again, or file on MyFantasyLeague.`,
+        502,
+        { round, submitted: requestedAdds, confirmed: newlyPending }
+      );
+    }
     return new Response(
       JSON.stringify({
         success: true,
@@ -341,7 +376,7 @@ export const POST: APIRoute = async ({ request }) => {
             ? `Round ${round} submitted — ${claims!.length} claim${claims!.length === 1 ? '' : 's'}.`
             : `MFL accepted the request but your pending waivers do not show ${
                 unconfirmed.length === 1 ? 'the claim' : `${unconfirmed.length} of the claims`
-              } as newly added. It may NOT have gone through — check your pending waivers before retrying.`,
+              } as newly added yet. Check your pending waivers before retrying.`,
         mode: 'waiver',
         round,
         submitted: requestedAdds,
