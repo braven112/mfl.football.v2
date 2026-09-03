@@ -159,22 +159,60 @@ export function roastScore({ count, limit }) {
 }
 
 /**
+ * One position's surplus for a franchise: how many they carry, how many the
+ * league lets them start, and the names behind the gap.
+ *
+ * `topRoast` is the highest-scoring element of `positions`, so it is this same
+ * shape — declaring it as a bare `object` (as this did originally) let every
+ * caller read `.startMax` off it without the checker ever confirming the field
+ * exists, which is a poor trade on a module whose entire job is to be factually
+ * correct out loud in front of two dozen owners.
+ *
+ * @typedef {{
+ *   position: string,
+ *   count: number,
+ *   startMax: number|null,
+ *   hardCap: boolean,
+ *   surplus: number,
+ *   score: number,
+ *   names: string[]
+ * }} RosterPositionSurplus
+ */
+
+/**
+ * How one franchise's count at a position compares with the rest of the league.
+ *
+ * @typedef {{
+ *   position: string,
+ *   count: number,
+ *   leagueMax: number,
+ *   leagueMedian: number,
+ *   isLeagueMax: boolean,
+ *   tiedAtMax: number
+ * }} RosterLeagueContext
+ */
+
+/**
+ * Everything Roger is allowed to know about one franchise's roster.
+ *
+ * @typedef {{
+ *   franchiseId: string,
+ *   rosterSize: number,
+ *   positions: RosterPositionSurplus[],
+ *   topRoast: RosterPositionSurplus|null,
+ *   leagueContext: RosterLeagueContext|null
+ * }} RosterRoast
+ */
+
+/**
  * Assemble the full fact sheet for one franchise.
  *
  * @param {object} opts
  * @param {string} opts.franchiseId
  * @param {object} opts.rostersFeed  parsed rosters.json
  * @param {object} opts.playersFeed  parsed players.json
- * @param {object} opts.leagueFeed   parsed league.json (for starter limits)
- * @returns {{
- *   franchiseId: string,
- *   rosterSize: number,
- *   positions: Array<{position: string, count: number, startMax: number|null,
- *     hardCap: boolean, surplus: number, score: number, names: string[]}>,
- *   topRoast: object|null,
- *   leagueContext: {position: string, count: number, leagueMax: number,
- *     leagueMedian: number, isLeagueMax: boolean, tiedAtMax: number}|null
- * } | null}  null when the franchise isn't in the feed at all.
+ * @param {object} [opts.leagueFeed]  parsed league.json (for starter limits)
+ * @returns {RosterRoast|null}  null when the franchise isn't in the feed at all.
  */
 export function buildRosterRoast({ franchiseId, rostersFeed, playersFeed, leagueFeed }) {
   const playerIndex = indexPlayers(playersFeed);
@@ -244,6 +282,15 @@ export function buildRosterRoast({ franchiseId, rostersFeed, playersFeed, league
  * the difference between "you drafted four quarterbacks" and "a robot drafted
  * four quarterbacks for you", and Roger should know which one he's looking at
  * before he swings.
+ *
+ * @typedef {{
+ *   position: string,
+ *   drafted: number,
+ *   autodrafted: number,
+ *   names: string[]
+ * }} DraftContext
+ *
+ * @returns {DraftContext}
  */
 export function buildDraftContext({ franchiseId, draftFeed, playersFeed, position }) {
   const playerIndex = indexPlayers(playersFeed);

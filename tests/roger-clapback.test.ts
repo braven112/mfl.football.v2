@@ -168,7 +168,7 @@ describe('validateClapbackContent', () => {
 describe('cross-lane disjointness — Roger and Schefter never both claim a message', () => {
   it('Roger takes the sarcastic reply; Schefter does not', () => {
     expect(detectRogerTarget(replyMsg(OWNER_SHOT), ROGER_IDS).match).toBe(true);
-    expect(detectMention(OWNER_SHOT).match).toBe(false);
+    expect(detectMention(OWNER_SHOT)!.match).toBe(false);
   });
 
   it('Roger yields any message naming Schefter, even as a reply to his own post', () => {
@@ -177,20 +177,20 @@ describe('cross-lane disjointness — Roger and Schefter never both claim a mess
     expect(r.match).toBe(false);
     expect(r.reason).toBe('yields-to-schefter');
     // ...and Schefter picks it up, so the message is still answered once.
-    expect(detectMention(text).match).toBe(true);
+    expect(detectMention(text)!.match).toBe(true);
   });
 
   it.each([
     'schefty you were wrong about that trade',
     'the claude bot is hallucinating again',
   ])('Schefter keeps %s', (text) => {
-    expect(detectMention(text).match).toBe(true);
+    expect(detectMention(text)!.match).toBe(true);
     expect(detectRogerTarget({ id: 'x', text }, new Set()).match).toBe(false);
   });
 
   it('Roger keeps the messages Schefter explicitly refuses', () => {
     for (const text of ['ask roger when the next deadline is', "roger's bot broke again"]) {
-      expect(detectMention(text).match).toBe(false);
+      expect(detectMention(text)!.match).toBe(false);
       expect(detectRogerTarget({ id: 'x', text }, new Set()).match).toBe(true);
     }
   });
@@ -362,15 +362,15 @@ describe('buildRosterRoast', () => {
   });
 
   it('surfaces the quarterback pile in a start-one league', () => {
-    expect(roast.topRoast.position).toBe('QB');
-    expect(roast.topRoast.count).toBe(4);
-    expect(roast.topRoast.startMax).toBe(1);
-    expect(roast.topRoast.hardCap).toBe(true);
-    expect(roast.topRoast.surplus).toBe(3);
+    expect(roast!.topRoast!.position).toBe('QB');
+    expect(roast!.topRoast!.count).toBe(4);
+    expect(roast!.topRoast!.startMax).toBe(1);
+    expect(roast!.topRoast!.hardCap).toBe(true);
+    expect(roast!.topRoast!.surplus).toBe(3);
   });
 
   it('names the actual quarterbacks, first name first', () => {
-    expect(roast.topRoast.names).toEqual([
+    expect(roast!.topRoast!.names).toEqual([
       'J.J. McCarthy',
       'Josh Allen',
       'Aaron Rodgers',
@@ -379,9 +379,9 @@ describe('buildRosterRoast', () => {
   });
 
   it('reports league context so "most in the league" is checkable', () => {
-    expect(roast.leagueContext.leagueMax).toBe(4);
-    expect(roast.leagueContext.isLeagueMax).toBe(true);
-    expect(roast.leagueContext.tiedAtMax).toBe(1);
+    expect(roast!.leagueContext!.leagueMax).toBe(4);
+    expect(roast!.leagueContext!.isLeagueMax).toBe(true);
+    expect(roast!.leagueContext!.tiedAtMax).toBe(1);
   });
 
   it('returns no roast for a legal roster rather than inventing one', () => {
@@ -391,7 +391,7 @@ describe('buildRosterRoast', () => {
       playersFeed: PLAYERS_FEED,
       leagueFeed: LEAGUE_FEED,
     });
-    expect(clean.topRoast).toBeNull();
+    expect(clean!.topRoast).toBeNull();
   });
 
   it('returns null for a franchise that is not in the feed', () => {
@@ -413,8 +413,8 @@ describe('buildRosterRoast', () => {
       leagueFeed: {},
     });
     // No limits means no provable surplus, so there is nothing to swing at.
-    expect(noLimits.topRoast).toBeNull();
-    expect(noLimits.rosterSize).toBe(6);
+    expect(noLimits!.topRoast).toBeNull();
+    expect(noLimits!.rosterSize).toBe(6);
   });
 
   it('ignores dropped players — they are not the owner\'s to be mocked for', () => {
@@ -437,7 +437,7 @@ describe('buildRosterRoast', () => {
       playersFeed: PLAYERS_FEED,
       leagueFeed: LEAGUE_FEED,
     });
-    expect(r.rosterSize).toBe(1);
+    expect(r!.rosterSize).toBe(1);
   });
 });
 
@@ -716,9 +716,9 @@ describe('AFL roster shape — the QB joke has to survive the move', () => {
       playersFeed,
       leagueFeed,
     });
-    expect(roast.topRoast.position).toBe('QB');
-    expect(roast.topRoast.count).toBeGreaterThanOrEqual(4);
-    expect(roast.topRoast.startMax).toBe(1);
+    expect(roast!.topRoast!.position).toBe('QB');
+    expect(roast!.topRoast!.count).toBeGreaterThanOrEqual(4);
+    expect(roast!.topRoast!.startMax).toBe(1);
   });
 
   it('reads BOTH conference draft units, not just the first', () => {

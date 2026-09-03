@@ -20,6 +20,27 @@
 
 const GROUPME_API_BASE = 'https://api.groupme.com/v3';
 
+/**
+ * The slice of `fetch` this module actually uses.
+ *
+ * Typed structurally rather than as `typeof fetch` on purpose: nothing here
+ * touches a Response beyond `ok`, `status` and `json()`, and demanding the full
+ * DOM signature would force every caller and test stub to build a whole
+ * Response object to satisfy a checker rather than a runtime.
+ *
+ * @typedef {(url: string, init?: object) => Promise<any>} MinimalFetch
+ */
+
+/**
+ * The two Redis operations the group-id cache needs. Any client providing them
+ * works; the scripts pass an @upstash/redis instance.
+ *
+ * @typedef {{
+ *   get: (key: string) => Promise<any>,
+ *   set: (key: string, value: string, opts?: object) => Promise<any>
+ * }} GroupIdCache
+ */
+
 /** Cache key for a derived group id. Long-lived: a bot's group never changes. */
 export function groupIdCacheKey(navSlug) {
   return `groupme:${navSlug}:resolved_group_id`;
@@ -34,6 +55,8 @@ function serviceToken() {
 
 /**
  * List the bots owned by the service token.
+ *
+ * @param {{fetchImpl?: MinimalFetch, token?: string|null}} [opts]
  * @returns {Promise<Array<{bot_id: string, group_id: string, name: string}>|null>}
  *   null on any failure — callers degrade rather than throw mid-scan.
  */
@@ -52,6 +75,8 @@ export async function fetchBots({ fetchImpl = fetch, token = serviceToken() } = 
 
 /**
  * Find the group a given bot posts into.
+ *
+ * @param {{botId?: string|null, fetchImpl?: MinimalFetch, token?: string|null}} opts
  * @returns {Promise<string|null>}
  */
 export async function resolveGroupIdForBot({ botId, fetchImpl = fetch, token = serviceToken() }) {
@@ -70,6 +95,11 @@ export async function resolveGroupIdForBot({ botId, fetchImpl = fetch, token = s
  *   2. The Redis cache, so the common path costs one GET.
  *   3. `GET /v3/bots`, matching the league's Roger bot id; cached on success.
  *
+ * @param {object} opts
+ * @param {object} opts.league  a SCHEFTER_LEAGUES entry
+ * @param {GroupIdCache|null} [opts.redis]
+ * @param {MinimalFetch} [opts.fetchImpl]
+ * @param {string|null} [opts.token]
  * @returns {Promise<{groupId: string|null, source: string}>}
  */
 export async function resolveLeagueGroupId({
@@ -111,6 +141,8 @@ export async function resolveLeagueGroupId({
 
 /**
  * List a group's members.
+ *
+ * @param {{groupId?: string|null, fetchImpl?: MinimalFetch, token?: string|null}} opts
  * @returns {Promise<Array<{user_id: string, nickname: string}>|null>}
  */
 export async function fetchGroupMembers({ groupId, fetchImpl = fetch, token = serviceToken() }) {

@@ -109,6 +109,9 @@ export function namesSchefter(rawText) {
  * `senderId` is passed in per-league rather than read from a global env var:
  * TheLeague and the AFL run separate Roger bots in separate groups, so a
  * module-level read would apply one league's id to the other's messages.
+ *
+ * @param {object} msg  a GroupMe message
+ * @param {string|null} [senderId]  the league's pinned Roger sender id, when set
  */
 export function isRogerBotMessage(msg, senderId = null) {
   if (!msg || typeof msg !== 'object') return false;
@@ -263,6 +266,16 @@ Respond with ONLY valid JSON, no markdown fences:
  * autodraft clock picked rather than the owner. Nothing else about the roster
  * is included, because anything in this sheet is something Roger might say out
  * loud to sixteen people.
+ *
+ * Every field is optional and independently nullable — that is the degradation
+ * path, not laxness. A missing feed yields a sheet with no roster specifics and
+ * Roger makes the joke without them.
+ *
+ * @param {object} opts
+ * @param {string|null} [opts.teamName]
+ * @param {import('./roger-roster-context.mjs').RosterRoast|null} [opts.roast]
+ * @param {import('./roger-roster-context.mjs').DraftContext|null} [opts.draft]
+ * @param {string|null} [opts.rogerPostText]  the Roger post being replied to
  */
 export function buildFactSheet({ teamName, roast, draft, rogerPostText }) {
   const lines = [];
@@ -313,6 +326,18 @@ export function buildFactSheet({ teamName, roast, draft, rogerPostText }) {
  * Returns `{ shot, reply }`. Any failure — no key, non-2xx, unparseable body,
  * over-long reply — resolves to `{ shot: false }` so the caller stays silent.
  * A missed clapback costs nothing; a mangled one is posted to sixteen people.
+ *
+ * `fetchImpl` is deliberately typed loosely rather than as `typeof fetch`: the
+ * only thing this reads off the response is `ok`, `status`, `text()` and
+ * `json()`, and pinning the full DOM signature would force every test stub to
+ * implement a whole Response for no added safety.
+ *
+ * @param {object} opts
+ * @param {string} opts.ownerText  what the owner said
+ * @param {string|null} [opts.ownerName]
+ * @param {string} opts.factSheet
+ * @param {(url: string, init?: object) => Promise<any>} [opts.fetchImpl]
+ * @returns {Promise<{shot: boolean, reply?: string, reason?: string}>}
  */
 export async function generateClapback({ ownerText, ownerName, factSheet, fetchImpl = fetch }) {
   const apiKey = process.env.ANTHROPIC_API_KEY;
