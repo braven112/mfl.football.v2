@@ -242,32 +242,43 @@ describe('throwback defaults — never a punitive last-place rebrand', () => {
     }
   });
 
-  it('defaults to the longest-running eligible era', () => {
+  it('defaults to the longest-running era, unless the commissioner said otherwise', () => {
     // Compared by ENTRY, not by name: two of Fullybaked's eras are both called
     // "Fullybaked" and differ only by eraLabel, so a name lookup here silently
     // grades the wrong one.
+    //
+    // The seeded map is allowed to WIN over tenure — that is what it is for,
+    // and The Show is deliberately seeded to the three-season "clean wordmark"
+    // No Frills over the fourteen-season "bananas" one. What must never happen
+    // is a franchise drifting to a short era by accident, so a default that is
+    // not the longest has to be the seed, spelled out in the config.
     for (const team of teams) {
       if (getImposedThrowbackEra(team.franchiseId, 'afl')) continue;
       const eligible = getEligibleThrowbackEras(team, 'afl');
       const clean = eligible.filter((e) => !e.rebrand);
       if (clean.length === 0) continue;
+      const seed = throwbackRules('afl').defaults[team.franchiseId];
       const longest = Math.max(...clean.map(span));
-      const worn = pickDefaultThrowbackEra(
-        eligible,
-        throwbackRules('afl').defaults[team.franchiseId],
-      )!;
+      const worn = pickDefaultThrowbackEra(eligible, seed)!;
+      const deliberate = worn.yearStart === seed;
       expect(
-        span(worn),
-        `${team.name} defaults to "${worn.name}" (${worn.yearStart}, ${span(worn)}yr) ` +
-          `but its longest non-rebrand era runs ${longest}yr`,
-      ).toBe(longest);
+        deliberate || span(worn) === longest,
+        `${team.name} defaults to "${worn.name}" (${worn.yearStart}, ${span(worn)}yr), ` +
+          `which is neither its seeded era (${seed}) nor its longest (${longest}yr)`,
+      ).toBe(true);
     }
   });
 
-  it('The Show wears No Frills (14 seasons), not Cock Gobbler (1)', () => {
-    // The case that prompted the rule.
+  it('The Show wears the No Frills the commissioner picked, not Cock Gobbler', () => {
+    // Cock Gobbler is the one-season shame name that prompted the no-rebrand
+    // rule; the seed then chose BETWEEN the two No Frills eras.
     const identity = resolveThrowbackIdentity(findTeam('0023'), undefined, 'afl');
     expect(identity.name).toBe('No Frills');
+    const seeded = (findTeam('0023').history ?? []).find(
+      (e) => e.yearStart === throwbackRules('afl').defaults['0023'],
+    )!;
+    expect(identity.icon).toBe(seeded.icon);
+    expect(seeded.eraLabel).toBe('The clean wordmark');
   });
 
   it('an owner may still CHOOSE a rebrand era', () => {

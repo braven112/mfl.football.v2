@@ -107,7 +107,8 @@ export const AFL_DEFAULT_THROWBACK_ERA: Record<string, number> = {
   '0020': 2008, // The Boondock Saints → The Boondock Saints (The brothers) — 8 seasons
   '0021': 2010, // Chatmaster → Chatmaster (The AIM lockup) — 15 seasons
   '0022': 2005, // Balls Deep → Way More Funner — 7 seasons
-  '0023': 2005, // The Show → No Frills — 17 seasons
+  '0023': 2019, // The Show → No Frills (The clean wordmark) — commissioner pick
+                //   over the tenure rule, which would say 2005 (14 seasons).
   '0024': 2019, // No Soup For You → No Soup For You (The Soup Nazi) — 6 seasons
 };
 
