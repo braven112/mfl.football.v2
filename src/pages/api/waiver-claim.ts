@@ -261,6 +261,20 @@ export const POST: APIRoute = async ({ request }) => {
             PROJSRC: 'mfl',
             add_pid: String(c.addPlayerId),
             drop_pid: c.dropPlayerId && c.dropPlayerId !== '0000' ? String(c.dropPlayerId) : '',
+            // FORCE_WAIVER IS THE WHOLE THING. Without it `add_drop` attempts an
+            // INSTANT add, which a locked free-agent pool refuses — and MFL
+            // refuses it by silently re-rendering the form, which is what four
+            // rounds of debugging kept landing on. Ticking it is what turns the
+            // page into a waiver CLAIM, and it is also what un-hides ROUND and
+            // COMMENTS (its onchange calls
+            // `check_waiver_claim(this,'add_drop_submit','add_note_field_id','amt_field_id,round_field_id,comments_field_id')`),
+            // so those two fields only ever meant anything alongside it.
+            //
+            // `on`, because MFL's checkbox carries NO `value` attribute, and a
+            // browser posts `on` for a valueless checked box. Read off the live
+            // authenticated form, not guessed:
+            //   <input type="checkbox" name="FORCE_WAIVER" id="FORCE_WAIVER" …>
+            FORCE_WAIVER: 'on',
             ROUND: String(round),
             COMMENTS: '',
             SUBMIT: 'Perform Add/Drop',

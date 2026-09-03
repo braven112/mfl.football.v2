@@ -158,7 +158,11 @@ describe('readPendingWaiverPlayerIds — "could not verify" is not "nothing ther
     expect(ROUTE_CODE).toContain('/add_drop');
     expect(ROUTE_CODE).toContain("SUBMIT: 'Perform Add/Drop'");
     expect(ROUTE_CODE).toContain('add_pid');
-    // ROUND is what makes it a CLAIM rather than an instant add.
+    // FORCE_WAIVER is what makes it a CLAIM rather than an instant add. Without
+    // it, a locked free-agent pool refuses the add by silently re-rendering the
+    // form — no error, no transaction. Read off MFL's live authenticated form,
+    // where it is a checkbox with no `value` attribute (so: 'on').
+    expect(ROUTE_CODE).toMatch(/FORCE_WAIVER: 'on'/);
     expect(ROUTE_CODE).toMatch(/ROUND: String\(round\)/);
     // The FCFS path still uses the import API, which does work.
     expect(ROUTE_CODE).toContain('TYPE=fcfsWaiver');
