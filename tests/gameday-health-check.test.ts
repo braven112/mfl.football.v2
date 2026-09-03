@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   clampHealthCheckWeek,
+  shouldProbeLiveScoring,
   evaluateJsonValue,
   evaluateJsonText,
   buildFailureSummary,
@@ -8,6 +9,9 @@ import {
 
 describe('clampHealthCheckWeek', () => {
   it('floors pre-season week 0 to 1 (early-September runs before TNF week 1)', () => {
+    // Week 1 is the right target for the NFL scoreboard, which serves the
+    // upcoming schedule year-round. Live scoring is gated separately —
+    // see shouldProbeLiveScoring.
     expect(clampHealthCheckWeek(0)).toBe(1);
   });
 
@@ -26,6 +30,33 @@ describe('clampHealthCheckWeek', () => {
     expect(clampHealthCheckWeek(Infinity)).toBe(1);
     // @ts-expect-error deliberate bad input
     expect(clampHealthCheckWeek(undefined)).toBe(1);
+  });
+});
+
+describe('shouldProbeLiveScoring', () => {
+  // The check's first-ever scheduled run (2026-09-03) fired a week before
+  // the Week 1 kickoff and reported both leagues' live scoring as broken.
+  // MFL serves no live scoring until there are games; the cron window opens
+  // in September but kickoff is mid-month, so this gap recurs every season.
+  it('skips the probe before the Week 1 kickoff', () => {
+    expect(shouldProbeLiveScoring(0)).toBe(false);
+  });
+
+  it('probes once the season is under way', () => {
+    expect(shouldProbeLiveScoring(1)).toBe(true);
+    expect(shouldProbeLiveScoring(9)).toBe(true);
+    expect(shouldProbeLiveScoring(18)).toBe(true);
+  });
+
+  it('reads the RAW week, so a clamped 0 cannot smuggle the pre-season past it', () => {
+    expect(shouldProbeLiveScoring(clampHealthCheckWeek(0))).toBe(true);
+    expect(shouldProbeLiveScoring(0)).toBe(false);
+  });
+
+  it('defends against non-finite input', () => {
+    expect(shouldProbeLiveScoring(NaN)).toBe(false);
+    // @ts-expect-error deliberate bad input
+    expect(shouldProbeLiveScoring(undefined)).toBe(false);
   });
 });
 

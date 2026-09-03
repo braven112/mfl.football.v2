@@ -11,16 +11,32 @@
  * which have no live gameday surface owners watch on an apex domain):
  *
  *   1. `/api/live-scoring?week=<current week>` on the league's apex domain
- *      responds 200 with valid non-empty JSON (per-league `L` + `host`
- *      params so each probe exercises that league's MFL path end to end).
+ *      responds 200 with valid non-empty JSON. Only `L` is sent: the route
+ *      derives that league's MFL host from the registry, so the probe still
+ *      exercises the league's own MFL path end to end without putting a
+ *      `host=<hostname>` param on the wire (see below).
  *   2. `/api/nfl-scoreboard?week=<current week>` on the same domain
  *      responds 200 with valid non-empty JSON (ESPN proxy behind the
  *      NFL-games strip).
  *   3. The MFL export API for the league answers `TYPE=league` on the
  *      league's own MFL host.
  *
+ * Check 1 is SKIPPED before the Week 1 kickoff. MFL serves no live scoring
+ * until there are games, so a pre-season probe fails on a perfectly healthy
+ * league; the cron window opens in September but kickoff is mid-month, so
+ * that gap is real every year. Checks 2 and 3 stay meaningful year-round and
+ * keep running.
+ *
  * The current week comes from the shared resolver
  * (scripts/article-utils/week-resolver.mjs) — do not reinvent week math here.
+ *
+ * Two false alarms this shape has already produced, both on the check's very
+ * first scheduled run (2026-09-03) — do not reintroduce either:
+ *   - A `host=` param on the probe URL reads like an SSRF attempt to a WAF.
+ *     Both leagues' live-scoring probes came back 403 from the edge, with no
+ *     matching entry in the app's runtime logs — the request never reached
+ *     the route. `L` alone is enough now.
+ *   - Probing week 1 in the pre-kickoff window (see above).
  *
  * Failures: prints a per-check summary and exits non-zero so the Actions run
  * fails visibly. If GROUPME_ROGER_BOT_ID is set, also posts a short
@@ -37,6 +53,7 @@ import { getCurrentNFLWeek, getSeasonYear } from './article-utils/week-resolver.
 import { postToGroupMe } from './lib/groupme.mjs';
 import {
   clampHealthCheckWeek,
+  shouldProbeLiveScoring,
   evaluateJsonText,
   evaluateJsonValue,
   buildFailureSummary,
@@ -96,7 +113,14 @@ async function main() {
   const year = getSeasonYear(now);
   const rawWeek = getCurrentNFLWeek(year, now);
   const week = clampHealthCheckWeek(rawWeek);
+  const liveScoringInPlay = shouldProbeLiveScoring(rawWeek);
   console.log(`${TAG} season ${year}, current NFL week ${rawWeek} → probing week ${week}`);
+  if (!liveScoringInPlay) {
+    console.log(
+      `${TAG} pre-season (week ${rawWeek}) — skipping live-scoring probes; ` +
+        'MFL serves no live scoring until Week 1 kicks off.',
+    );
+  }
 
   /** @type {CheckResult[]} */
   const results = [];
@@ -109,10 +133,11 @@ async function main() {
     // Path-only leagues (no apex domain) fall back to the shared app origin.
     const origin = leagueOrigin(league) ?? SHARED_APP_ORIGIN;
 
-    const liveScoringUrl =
-      `${origin}/api/live-scoring?week=${week}` +
-      `&L=${encodeURIComponent(league.id)}&host=${encodeURIComponent(league.mflHost)}`;
-    results.push(await checkAppEndpoint(`${league.slug} /api/live-scoring (${origin})`, liveScoringUrl));
+    if (liveScoringInPlay) {
+      // `L` only — the route resolves this league's MFL host from the registry.
+      const liveScoringUrl = `${origin}/api/live-scoring?week=${week}&L=${encodeURIComponent(league.id)}`;
+      results.push(await checkAppEndpoint(`${league.slug} /api/live-scoring (${origin})`, liveScoringUrl));
+    }
     results.push(
       await checkAppEndpoint(
         `${league.slug} /api/nfl-scoreboard (${origin})`,

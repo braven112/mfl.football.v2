@@ -8,12 +8,13 @@
  */
 
 /**
- * Clamp a week number to the range the live-scoring API accepts (1-18).
+ * Clamp a week number to the range the probed APIs accept (1-18).
  *
  * `getCurrentNFLWeek` (scripts/article-utils/week-resolver.mjs) returns 0
- * before kickoff and already caps at 18 after the regular season, but the
- * health check can fire in early September before Thursday night Week 1 —
- * probing week 1 in that window is the honest "next thing owners will hit".
+ * before kickoff and already caps at 18 after the regular season. Week 1 is
+ * the right probe target in the pre-kickoff window for the NFL scoreboard,
+ * which serves the upcoming schedule year-round — but NOT for live scoring;
+ * see `shouldProbeLiveScoring`.
  *
  * @param {number} week
  * @returns {number}
@@ -21,6 +22,27 @@
 export function clampHealthCheckWeek(week) {
   if (!Number.isFinite(week) || week < 1) return 1;
   return Math.min(Math.floor(week), 18);
+}
+
+/**
+ * Whether the live-scoring probe is meaningful right now.
+ *
+ * MFL does not serve live scoring before the season starts — there are no
+ * games to score — so a pre-kickoff probe of week 1 fails on a healthy
+ * league and pages the commissioner about nothing. The cron window opens in
+ * September but Week 1 kicks off mid-month, so every run in that gap is
+ * pre-season. Gate on the season actually being under way rather than on
+ * clamped week numbers: `getCurrentNFLWeek` returns 0 until the Week 1
+ * Thursday kickoff, which is exactly the signal we want.
+ *
+ * Take the RAW week here, not the clamped one — clamping 0 to 1 is what
+ * hides the pre-season case.
+ *
+ * @param {number} rawWeek Result of `getCurrentNFLWeek`, unclamped.
+ * @returns {boolean}
+ */
+export function shouldProbeLiveScoring(rawWeek) {
+  return Number.isFinite(rawWeek) && rawWeek >= 1;
 }
 
 /**

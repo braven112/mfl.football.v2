@@ -113,3 +113,28 @@ which is exactly why the split exists — verify parsing offline against
   (25s live / 5min final, and a PARTIAL read is never cached). Both routes are
   `no-store`; a CDN copy of a live box score is wrong while looking live.
 
+- **`host` is a hint; `L` is the answer.** `/api/live-scoring` accepts a `host`
+  param that is interpolated into a server-side MFL fetch, so it is validated
+  against the registry's MFL hosts to stop SSRF. What that validation used to
+  do on a miss was fall back to the DEFAULT league's host — and MFL answers a
+  league id it does not host with that host's own league rather than an error,
+  so a rejected host silently returned another league's scores. `resolveHost`
+  now falls back to the registry entry for `L`, and only to the default league
+  when `L` names nothing known. Callers may therefore send `L` alone.
+  `tests/live-scoring-host-resolution.test.ts` pins all four cases.
+- **A `host=<hostname>` param on a public URL reads like SSRF to a WAF.** The
+  gameday health check's first scheduled run (2026-09-03) got HTTP 403 on both
+  leagues' live-scoring probes, with NO matching entry in the app's Vercel
+  runtime logs — blocked at the edge, never reached the route, while the
+  param-free `/api/nfl-scoreboard` probe from the same runner in the same
+  second passed. The same URL from a residential IP returned 200, so it scores
+  on datacenter-IP + payload together. Don't put a hostname in a query string
+  the check controls; name the league and let the server resolve it.
+- **MFL serves no live scoring before Week 1 kicks off.** The gameday health
+  check's cron window opens in September but kickoff is mid-month, so every run
+  in that gap is pre-season and a week-1 live-scoring probe fails on a
+  perfectly healthy league — it pages the commissioner about nothing. Clamping
+  week 0 up to 1 is what hides this; `shouldProbeLiveScoring`
+  (`scripts/lib/gameday-health.mjs`) takes the RAW `getCurrentNFLWeek` result,
+  which is 0 until the Week 1 Thursday. The scoreboard and MFL-export probes
+  stay meaningful year-round and keep running.

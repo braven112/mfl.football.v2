@@ -1,7 +1,7 @@
 import type { APIRoute } from 'astro';
 import type { LivePlayerRow, MatchupPairing } from '../../types/live-scoring';
 import { getCurrentSeasonYear } from '../../utils/league-year';
-import { ALL_LEAGUES, getLeagueBySlug, DEFAULT_LEAGUE_SLUG } from '../../config/leagues';
+import { ALL_LEAGUES, getLeagueById, getLeagueBySlug, DEFAULT_LEAGUE_SLUG } from '../../config/leagues';
 import { buildMflExportUrl } from '../../utils/mfl-url';
 
 export const prerender = false;
@@ -13,22 +13,39 @@ const DEFAULT_LEAGUE_ID = DEFAULT_LEAGUE.id;
 /**
  * The `host` query param is interpolated into a server-side fetch, so it must
  * be constrained to prevent SSRF. Only the MFL hosts registered for our
- * leagues are permitted; anything else falls back to the default host. Keyed
- * by the registry so adding a league needs no change here.
+ * leagues are permitted. Keyed by the registry so adding a league needs no
+ * change here.
  */
 const ALLOWED_HOSTS = new Set(ALL_LEAGUES.map((l) => l.mflHost.toLowerCase()));
 
-function resolveHost(raw: string | null): string {
-  if (!raw) return DEFAULT_HOST;
-  try {
-    const u = new URL(raw.includes('://') ? raw : `https://${raw}`);
-    if (u.protocol === 'https:' && ALLOWED_HOSTS.has(u.hostname.toLowerCase())) {
-      return `https://${u.hostname}`;
+/**
+ * Resolve the MFL host to fetch from.
+ *
+ * `host` is a hint, not an input: an absent or unrecognized one is answered
+ * from the registry using `L`, NOT by defaulting to TheLeague's MFL host.
+ * Every league lives on a different MFL server, so pairing one league's id
+ * with another's host returns that other league — a silent wrong-data answer
+ * rather than an error. Only a request that names neither falls back to the
+ * default league.
+ *
+ * Callers may therefore send `L` alone. That matters beyond tidiness: a URL
+ * carrying a `host=<hostname>` param reads like an SSRF attempt to a WAF, and
+ * the gameday health check's probes were blocked at the edge with a 403 that
+ * never reached this route (2026-09-03).
+ */
+function resolveHost(raw: string | null, leagueId: string): string {
+  if (raw) {
+    try {
+      const u = new URL(raw.includes('://') ? raw : `https://${raw}`);
+      if (u.protocol === 'https:' && ALLOWED_HOSTS.has(u.hostname.toLowerCase())) {
+        return `https://${u.hostname}`;
+      }
+    } catch {
+      /* fall through to the registry */
     }
-  } catch {
-    /* fall through to default */
   }
-  return DEFAULT_HOST;
+  const league = getLeagueById(leagueId);
+  return league ? `https://${league.mflHost}` : DEFAULT_HOST;
 }
 
 export const GET: APIRoute = async ({ url }) => {
@@ -52,7 +69,7 @@ export const GET: APIRoute = async ({ url }) => {
   const leagueParam = url.searchParams.get('L');
   const leagueId = leagueParam && /^\d+$/.test(leagueParam) ? leagueParam : DEFAULT_LEAGUE_ID;
 
-  const host = resolveHost(url.searchParams.get('host'));
+  const host = resolveHost(url.searchParams.get('host'), leagueId);
 
   try {
     // Fetch both live scoring AND playoff brackets to get all scores

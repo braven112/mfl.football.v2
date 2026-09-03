@@ -4,6 +4,14 @@
     {
       "date": "2026-09-03",
       "type": "bug-fix",
+      "summary": "The new pre-kickoff gameday health check cried wolf on its very first run, telling the commissioner both leagues' live scoring was down a week before Week 1 kicks off. Nothing was down. Two things were wrong with the alarm itself. It was asking for Week 1 live scores in a window where MyFantasyLeague has no games to score, so a perfectly healthy league had no honest answer to give — that probe now waits until the season is actually under way, while the NFL scoreboard and MyFantasyLeague checks keep running year-round. And the way it asked put a server address in the web address, which our own edge security reads as an attack and blocked before the request ever reached us. It now names the league and lets the site look up that league's server, which fixes a real trap underneath: every league sits on a different MyFantasyLeague server, and asking the wrong one for a league it does not host returns that server's league instead of an error. Live scoring now resolves the server from the league every time, so there is no path where one league's board can quietly fill with another league's scores.",
+      "impact": "admin",
+      "area": "live-scoring",
+      "league": "both"
+    },
+    {
+      "date": "2026-09-03",
+      "type": "bug-fix",
       "summary": "Filing a waiver claim from Free Agents now actually files it. Every claim TheLeague sent through the site was being thrown away by MyFantasyLeague, because the form we submit on your behalf was missing one box: the bid amount. The feature was built and tested in the AFL, which runs waiver priority and has no bid to send — TheLeague bids, so MFL read an empty amount, decided it was below the $425,000 minimum, and refused. It said so, too, in plain English, and we were not reading the part of the page it said it on: the error you saw was our own vague shrug rather than MFL's actual complaint. Both are fixed — the bid goes with the claim, and when MFL does turn one down you now get its exact words instead of a guess.",
       "impact": "user",
       "area": "free-agents",
