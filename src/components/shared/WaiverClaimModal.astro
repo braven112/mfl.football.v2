@@ -287,13 +287,26 @@ const { config } = Astro.props;
         showError('Network error — your claim was not submitted.');
       }
     });
-
-    // Did this page load come from the sign-in modal? If so, reopen the form
-    // on the player they were trying to claim when we interrupted them.
-    // Registered AFTER the delegated open handler above, which is what it
-    // ultimately fires. See src/utils/claim-resume.ts.
-    resumePendingClaim();
   }
+
+  // Did this page load come from the sign-in modal? If so, reopen the form on
+  // the player they were trying to claim when we interrupted them.
+  //
+  // OUTSIDE the `canClaim` block on purpose. This call is also the only thing
+  // that CLEARS the parked id, so gating it on claimability would leave the id
+  // parked through every load that cannot use it — a visitor who dismisses the
+  // sign-in dialog and signs in through the nav later would then get a claim
+  // form they never asked for. Here it runs on every Free Agents load; with no
+  // matching button the observer simply times out. See claim-resume.ts.
+  //
+  // NOT on `astro:page-load`: this module's delegated `.claim-open` handler is
+  // registered at module scope and holds the FIRST document's dialog, so after
+  // an in-site navigation the click it fires would open a detached node. The
+  // sign-in flow always does a full reload (LoginForm sets location.href), so
+  // the shipping path is a fresh module and this is correct. Making the resume
+  // work after a ClientRouter navigation means fixing that capture first —
+  // tracked separately, see docs/claude/insights/features/waiver-claims.md.
+  resumePendingClaim();
 </script>
 
 <style>

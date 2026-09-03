@@ -25,7 +25,7 @@
 
 import type { APIRoute } from 'astro';
 import { getAuthUser } from '../../utils/auth';
-import { getLeagueById, DEFAULT_LEAGUE_ID } from '../../config/leagues';
+import { getLeagueById } from '../../config/leagues';
 import { getCurrentLeagueYear, getRolloverLeagueYear } from '../../utils/league-year';
 import { buildMflExportUrl } from '../../utils/mfl-url';
 import { fetchWithTimeout } from '../../utils/fetch-with-timeout';
@@ -68,13 +68,21 @@ async function readLiveOrder(leagueId: string, year: number) {
     return fresh;
   } catch (err) {
     console.warn('[waiver-order] MFL league fetch failed:', err);
+    // RE-READ the cache rather than reusing the `prior` captured before the
+    // fetch. Two cold requests can be in flight at once; if the other one
+    // succeeded while this one was failing, `prior` is a stale `undefined` and
+    // writing it back would replace a good order with an empty one and 502
+    // every caller for the error TTL. Whatever is in the cache NOW is at least
+    // as good as what we had.
+    const latest = cache.get(key);
+    if (latest?.ok) return latest;
     // Keep the last good payload (and its original asOf, so the modal can say
     // honestly how old the number is) through the outage.
     const degraded = {
       at: now,
       ok: false,
-      order: prior?.order ?? [],
-      asOf: prior?.asOf ?? new Date(now).toISOString(),
+      order: latest?.order ?? prior?.order ?? [],
+      asOf: latest?.asOf ?? prior?.asOf ?? new Date(now).toISOString(),
     };
     cache.set(key, degraded);
     return degraded;
@@ -87,7 +95,12 @@ export const GET: APIRoute = async ({ request }) => {
     return fail('Sign in to see your conference’s waiver priority.', 401, { needsLogin: true });
   }
 
-  const league = getLeagueById(user.leagueId || DEFAULT_LEAGUE_ID);
+  // FAILS CLOSED, deliberately — no DEFAULT_LEAGUE_ID fallback. This whole
+  // feature exists because both leagues have a franchise 0001, so guessing a
+  // league for a session that does not name one would answer with the wrong
+  // league's order and highlight a team that isn't the caller's. A session
+  // without a recognised league is broken; say so and let them sign in again.
+  const league = user.leagueId ? getLeagueById(user.leagueId) : null;
   if (!league) return fail('Unrecognized league on session. Please sign in again.', 400);
 
   const year = league.leagueYearRollover

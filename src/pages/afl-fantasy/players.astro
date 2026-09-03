@@ -223,11 +223,16 @@ const waiverPriorityConfig = {
   system: claimRules.system,
 };
 
-// A visitor with no AFL session — signed out, or signed in against TheLeague.
-// They get the action column too, but its button opens the on-site sign-in
-// instead of a claim form (and used to be nothing at all, which left them
-// with no way in from this page).
-const promptSignIn = !priorityConfId;
+// A visitor the priority modal would show its sign-in gate to — signed out, or
+// signed in against TheLeague. They get the action column too, but its button
+// opens the on-site sign-in instead of a claim form (it used to be nothing at
+// all, which left them with no way in from this page).
+//
+// DERIVED FROM `waiverPriorityConfig.signedIn`, not re-computed. SignInModal
+// owns the `[data-signin-open]` handler that the gate's own Sign in button
+// depends on, and SignInModal renders only when this is true — so any
+// condition that disagrees with the gate's renders that button dead.
+const promptSignIn = !waiverPriorityConfig.signedIn;
 const signInConfig = {
   leagueId: aflLeague.id,
   seasonYear: claimYear,

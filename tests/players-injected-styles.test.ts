@@ -8,7 +8,7 @@
  * the template at BUILD time — so a scoped rule targeting an injected element
  * matches nothing and silently does nothing.
  *
- * That is not theoretical, and it has now shipped twice:
+ * That is not theoretical, and it has now shipped three times:
  *
  * - TheLeague's waiver Bid button rendered as a washed-out grey pill because
  *   `button.place-bid-link { background: none }` was scoped. Only the browser's
@@ -19,11 +19,17 @@
  *   emitted `class="place-bid-link claim-open"` while EVERY rule for it lived
  *   inside `theleague/players.astro`'s scoped `<style>`.
  *
+ * - The Waiver Priority modal (2026-09-03) shipped its shell correctly styled
+ *   and its team list as unstyled 50px icons: the shell is in the component's
+ *   template and got the scope attribute, the rows are built by its own script
+ *   and did not. Same component, same `<style>` block, opposite outcomes.
+ *
  * The fix for the second one is why the rules now live in
- * src/styles/fa-claim-button.css, imported from both pages' frontmatter: a
- * plain `.css` import is global, and one copy cannot be missing from a page
- * that needs it. Nothing here fails at build time — it just looks wrong, and
- * only in the rendered page — so these assertions are the whole safety net.
+ * src/styles/fa-claim-button.css, imported from both pages' frontmatter, and
+ * the fix for the third is src/styles/waiver-priority-modal.css: a plain `.css`
+ * import is global, and one copy cannot be missing from a page that needs it.
+ * Nothing here fails at build time — it just looks wrong, and only in the
+ * rendered page — so these assertions are the whole safety net.
  */
 import { describe, it, expect } from 'vitest';
 import fs from 'node:fs';
@@ -171,5 +177,60 @@ describe('WaiverClaimsPanel — injected-row styles', () => {
     const css = read(PANEL_CSS);
     expect(css).toContain('--league-accent');
     expect(css, 'a literal accent would paint both leagues the same').not.toMatch(/background:\s*#[0-9a-f]{6}\s*;/i);
+  });
+});
+
+/**
+ * The same rule, for a COMPONENT that builds its own rows.
+ *
+ * WaiverPriorityModal renders a shell (header, close button, sign-in gate) from
+ * its template and a ranked team list from its client script. A scoped `<style>`
+ * would style the first and silently skip the second — which is exactly how it
+ * shipped the first time. The whole stylesheet therefore lives outside the
+ * component, and the component must keep no `<style>` block at all: a partial
+ * one is the state that looks correct in review and wrong in the browser.
+ */
+describe('WaiverPriorityModal — injected-row styles', () => {
+  const COMPONENT = 'src/components/shared/WaiverPriorityModal.astro';
+  const MODAL_STYLESHEET = 'src/styles/waiver-priority-modal.css';
+  const source = read(COMPONENT);
+  const css = read(MODAL_STYLESHEET);
+
+  it('keeps no <style> block — its rows are script-built and would not be reached', () => {
+    expect(
+      source.includes('<style'),
+      `${COMPONENT} must not carry a <style> block. Its list rows are injected via ` +
+        `innerHTML and carry no scope attribute, so a scoped rule silently does nothing. ` +
+        `Put every rule in ${MODAL_STYLESHEET}.`
+    ).toBe(false);
+  });
+
+  it('imports the stylesheet from FRONTMATTER, where it stays global', () => {
+    const frontmatter = source.slice(0, source.indexOf('\n---', 3));
+    expect(frontmatter, `${COMPONENT} must import ${MODAL_STYLESHEET}`).toContain(
+      'styles/waiver-priority-modal.css'
+    );
+  });
+
+  it('defines every class the script actually emits', () => {
+    // Read the class names out of the row template rather than listing them
+    // here, so a new class added to the builder cannot ship unstyled.
+    const emitted = new Set(
+      [...source.matchAll(/class="(wpm-[a-z0-9_ -]+)"/g)]
+        .flatMap((m) => m[1].split(/\s+/))
+        .filter(Boolean)
+    );
+    // The `--me` state class is applied conditionally, so it is not in a static
+    // class="" attribute; assert it explicitly.
+    emitted.add('wpm-row--me');
+    const missing = [...emitted].filter((cls) => !css.includes(`.${cls}`));
+    expect(missing, `Classes emitted by ${COMPONENT} with no rule in ${MODAL_STYLESHEET}`).toEqual([]);
+  });
+
+  it('the trigger lives in the host page, so its rule must be here too', () => {
+    // `.wpm-trigger` is rendered by afl-fantasy/players.astro, not by the
+    // component — a scoped rule could never have reached it either.
+    expect(css).toContain('.wpm-trigger');
+    expect(read('src/pages/afl-fantasy/players.astro')).toContain('wpm-trigger');
   });
 });

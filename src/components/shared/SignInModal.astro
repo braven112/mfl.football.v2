@@ -63,32 +63,72 @@ const { config } = Astro.props;
 <script>
   import { rememberPendingClaim } from '../../utils/claim-resume';
 
-  const dlg = document.getElementById('signin-modal') as HTMLDialogElement | null;
+  /**
+   * CLIENTROUTER-SAFE INIT — same shape as WaiverPriorityModal, same reason
+   * (frontend.md, "Interactive scripts must re-init on astro:page-load"). The
+   * module is evaluated once per document; ClientRouter swaps the DOM without
+   * re-evaluating it, so a `dlg` captured at module scope points at a detached
+   * dialog after the first in-site navigation and `showModal()` shows nothing.
+   * Elements are re-resolved per page load; the delegated document listener,
+   * which would stack, goes on once behind a module-scoped flag.
+   */
+  let wired = false;
+  let dialog: HTMLDialogElement | null = null;
 
-  if (dlg) {
-    const closeBtn = document.getElementById('sim-close');
+  /**
+   * Closing without signing in is an explicit abandon, so drop the parked
+   * player rather than leaving it for some later load to consume. Only the
+   * deliberate dismissals (close button, backdrop) — NOT the dialog's `close`
+   * event, which also fires on the success path as LoginForm navigates away and
+   * would clear the very id the reload is meant to pick up.
+   */
+  const abandonPendingClaim = () => rememberPendingClaim(null);
 
-    // Delegated on document: triggers live in the player table, which is
-    // rebuilt via innerHTML on every sort, filter and page-size change.
-    document.addEventListener('click', (e) => {
-      const trigger = (e.target as HTMLElement | null)?.closest<HTMLElement>('[data-signin-open]');
-      if (!trigger) return;
-      e.preventDefault();
+  const onDocumentClick = (e: MouseEvent) => {
+    const trigger = (e.target as HTMLElement | null)?.closest<HTMLElement>('[data-signin-open]');
+    if (!trigger || !dialog) return;
+    e.preventDefault();
 
-      // The other half of this runs in WaiverClaimModal, after the reload —
-      // see src/utils/claim-resume.ts for why they can't live together.
-      rememberPendingClaim(trigger.getAttribute('data-signin-player'));
+    // The other half of this runs in WaiverClaimModal, after the reload — see
+    // src/utils/claim-resume.ts for why they can't live together.
+    rememberPendingClaim(trigger.getAttribute('data-signin-player'));
 
-      if (!dlg.open) dlg.showModal();
-      // Focus the username field so a keyboard user can start typing.
-      (dlg.querySelector('[autocomplete="username"]') as HTMLInputElement | null)?.focus();
+    if (!dialog.open) dialog.showModal();
+    // Focus the username field so a keyboard user can start typing.
+    (dialog.querySelector('[autocomplete="username"]') as HTMLInputElement | null)?.focus();
+  };
+
+  function init() {
+    dialog = document.getElementById('signin-modal') as HTMLDialogElement | null;
+    if (!dialog) return;
+    const dlg = dialog;
+
+    // New nodes after every swap, so these cannot stack.
+    document.getElementById('sim-close')?.addEventListener('click', () => {
+      abandonPendingClaim();
+      dlg.close();
     });
-
-    closeBtn?.addEventListener('click', () => dlg.close());
     dlg.addEventListener('click', (e) => {
-      if (e.target === dlg) dlg.close();
+      if (e.target === dlg) {
+        abandonPendingClaim();
+        dlg.close();
+      }
     });
+
+    // Escape closes a <dialog> through `cancel`, which neither click path
+    // above sees — so without this an Escape-dismissed sign-in leaves the
+    // player parked. `cancel` is the right event rather than `close`: `close`
+    // also fires on the success path while LoginForm navigates away, and would
+    // drop the very id the reload is meant to pick up.
+    dlg.addEventListener('cancel', abandonPendingClaim);
+
+    if (!wired) {
+      wired = true;
+      document.addEventListener('click', onDocumentClick);
+    }
   }
+
+  document.addEventListener('astro:page-load', init);
 </script>
 
 <style>

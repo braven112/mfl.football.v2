@@ -329,3 +329,43 @@ The guard's own doc header is honest about what it does NOT cover: a token
 defined only in some other file's scoped block satisfies it repo-wide while
 still rendering the fallback for you. That failure mode is row 2 of
 `design-system.md`'s "Four ways a token fails" table and remains unguarded.
+
+## 2026-09-03 - The Bid Button Dies After An In-Site Navigation (PRE-EXISTING, NOT FIXED)
+
+**Found while reviewing the waiver-priority PR, in code that PR did not touch.**
+
+`WaiverClaimModal.astro` resolves `dlg`, `nameEl`, `band` and the rest at module
+scope, then registers its delegated `.claim-open` handler over them. An Astro
+component script is evaluated ONCE per document and ClientRouter swaps the DOM
+without re-evaluating it — so after any in-site navigation back onto Free
+Agents, every one of those references points at the previous page's detached
+nodes. `dlg.showModal()` opens a dialog that is no longer in the document and
+the Bid/Claim button appears to do nothing at all.
+
+**Measured, not theorised.** Replacing `#waiver-claim-modal` with a fresh clone
+and firing `astro:page-load` — exactly what ClientRouter does — then clicking
+`.claim-open`: `liveDialogOpened: false`, player name still `—`. The same probe
+against the fixed `WaiverPriorityModal` returns `open: true` with all 12 rows.
+
+Reproduce it as a user: Free Agents → Rosters → back to Free Agents (in-site
+links, no hard reload) → click Bid. Nothing happens until you reload.
+
+**Why it was not fixed in that PR.** The repair is mechanical — the repo already
+has the shape, in `WaiverClaimsPanel.astro`: hold the delegated handler in a
+module-scoped variable, `removeEventListener` it before re-adding, and re-run
+the whole init on `astro:page-load` so the closure is rebuilt against live
+nodes. But it wraps ~190 lines including the MFL submit flow, and a first
+attempt at it mid-review corrupted the file. Restructuring a working submit path
+under a merge is how a shipped feature breaks. It wants its own change and its
+own verification.
+
+**What that PR did instead:** `resumePendingClaim()` is called at module scope
+rather than on `astro:page-load`, with a comment saying why. The sign-in flow
+always does a full reload (LoginForm sets `location.href`), so the shipping path
+gets a fresh module and works; only the navigate-in-with-a-parked-id path is
+degraded, and it consumes the id rather than leaving it to ambush someone later.
+
+**The general rule, now in `frontend.md`'s head and worth restating:** anything a
+component script resolves at module scope is stale after the first ClientRouter
+navigation. `document` survives the swap; every element inside it does not.
+
