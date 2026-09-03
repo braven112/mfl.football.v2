@@ -46,6 +46,15 @@ export function buildSchefterLeague(registrySlug, overrides) {
     registrySlug: reg.slug,
     leagueId: reg.id,
     playersPath: (year) => path.join(projectRoot, reg.dataPath, 'mfl-feeds', String(year), 'players.json'),
+    /**
+     * Any other MFL feed file for a season, resolved off the registry's
+     * dataPath. Roger's clapback lane reads rosters/league/draftResults through
+     * this rather than joining a league directory by hand — the
+     * league-literal guard forbids the literal, and the registry is the only
+     * thing that knows where a league's feeds actually live.
+     */
+    feedFilePath: (year, file) =>
+      path.join(projectRoot, reg.dataPath, 'mfl-feeds', String(year), file),
     // Canonical (cookie-safe) host — leagueOrigin, never domains[0] ad hoc:
     // session cookies are host-only, so a bare-apex link opens logged-out.
     baseUrl: leagueOrigin(reg),
@@ -68,6 +77,12 @@ export const SCHEFTER_LEAGUES = [
     eventsPath: path.join(projectRoot, 'src', 'data', 'theleague', 'resolved-events.json'),
     groupMeSchefterBotId: process.env.GROUPME_SCHEFTER_BOT_ID,
     groupMeRogerBotId: process.env.GROUPME_ROGER_BOT_ID,
+    // READ credentials — distinct from the BOT_ID above, which only posts.
+    // The unprefixed names are TheLeague's by history: they predate the AFL
+    // and every existing caller (groupme-sync, the Schefter mention listener)
+    // already means TheLeague's group when it reads them.
+    groupMeGroupId: process.env.GROUPME_GROUP_ID,
+    groupMeRogerBotSenderId: process.env.GROUPME_ROGER_BOT_SENDER_ID,
     features: {
       rumorMill: getLeagueBySlug('theleague').features.schefterTips,
       tradeBait: true,
@@ -76,12 +91,23 @@ export const SCHEFTER_LEAGUES = [
       directGroupMe: false,
       tradeOfferRumors: true,
       groupmeListen: true,
+      // Roger's clapback lane. AFL-first by request: the AFL drafts on the
+      // Labor Day weekend, so its autodraft damage is days old and its owners
+      // are the ones currently taking shots at Roger's countdowns. Flip this
+      // on for TheLeague once the AFL has run a season's worth of replies.
+      rogerReplies: false,
     },
   }),
   buildSchefterLeague('afl-fantasy', {
     eventsPath: path.join(projectRoot, 'data', 'afl-fantasy', 'resolved-events.json'),
     groupMeSchefterBotId: process.env.GROUPME_AFL_SCHEFTER_BOT_ID,
     groupMeRogerBotId: process.env.GROUPME_AFL_ROGER_BOT_ID,
+    // The AFL's own group. NOTE: this secret is new — the AFL has only ever
+    // been POSTED to (GROUPME_AFL_ROGER_BOT_ID), so nothing in this repo has
+    // ever needed its group id before. Roger's reply lane no-ops with a
+    // warning until it is set; his reminders are unaffected either way.
+    groupMeGroupId: process.env.GROUPME_AFL_GROUP_ID,
+    groupMeRogerBotSenderId: process.env.GROUPME_AFL_ROGER_BOT_SENDER_ID,
     features: {
       rumorMill: getLeagueBySlug('afl-fantasy').features.schefterTips,
       tradeBait: false,
@@ -91,6 +117,12 @@ export const SCHEFTER_LEAGUES = [
       // Deferred for AFL — see module doc.
       tradeOfferRumors: false,
       groupmeListen: false,
+      // Roger answers the AFL first. Note this is independent of
+      // groupmeListen above: that flag is Schefter's mention→tip ingest, which
+      // is still TheLeague-only (its Redis keys are all TheLeague-scoped).
+      // Roger's lane keys off its own league-scoped prefix, so the two do not
+      // have to be switched on together.
+      rogerReplies: true,
     },
   }),
 ];

@@ -46,6 +46,18 @@ jobs:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           GROUPME_SCHEFTER_BOT_ID: ${{ secrets.GROUPME_SCHEFTER_BOT_ID }}
           GROUPME_AFL_SCHEFTER_BOT_ID: ${{ secrets.GROUPME_AFL_SCHEFTER_BOT_ID }}
+          # Phase 3 of the scanner calls ingestGroupMeMentions, which READS the
+          # group to turn @Schefter mentions and native replies into tips. The
+          # BOT_ID secrets above only authorize POSTING — reading needs these
+          # two, and without them the ingest logged a warning and returned
+          # empty on every run, so the mention lane was silently dead in CI.
+          # TheLeague only: groupmeListen is false for the AFL, and the
+          # listener's Redis keys are TheLeague-scoped, so the AFL step is
+          # deliberately left without them.
+          GROUPME_SERVICE_TOKEN: ${{ secrets.GROUPME_SERVICE_TOKEN }}
+          GROUPME_GROUP_ID: ${{ secrets.GROUPME_GROUP_ID }}
+          GROUPME_SCHEFTER_BOT_SENDER_ID: ${{ secrets.GROUPME_SCHEFTER_BOT_SENDER_ID }}
+          GROUPME_ROGER_BOT_SENDER_ID: ${{ secrets.GROUPME_ROGER_BOT_SENDER_ID }}
           SCHEFTER_TIPSTER_SALT: ${{ secrets.SCHEFTER_TIPSTER_SALT }}
           MFL_USER_ID: ${{ secrets.MFL_USER_ID }}
           UPSTASH_REDIS_REST_URL: ${{ secrets.UPSTASH_REDIS_REST_URL }}

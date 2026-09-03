@@ -27,6 +27,16 @@ jobs:
         with:
           node-version: 22
 
+      # This job ran for months WITHOUT this step, and nothing failed loudly:
+      # every consumer of `@upstash/redis` here imports it dynamically and
+      # degrades on error, so a missing package logged "Redis import failed"
+      # and the scan exited 0. The visible symptoms were trade-bait drift
+      # state never persisting and Roger's reply lane skipping every tick
+      # ("No Redis — cannot read watermark or enforce rails"), neither of
+      # which surfaces as a red run. Same line as every sibling scanner.
+      - name: Install dependencies
+        run: npm ci --omit=dev --ignore-scripts || npm install --omit=dev --ignore-scripts
+
       - name: Recompute league events
         env:
           TZ: America/Los_Angeles
@@ -42,6 +52,23 @@ jobs:
           GROUPME_AFL_ROGER_BOT_ID: ${{ secrets.GROUPME_AFL_ROGER_BOT_ID }}
           GROUPME_SCHEFTER_BOT_ID: ${{ secrets.GROUPME_SCHEFTER_BOT_ID }}
           GROUPME_AFL_SCHEFTER_BOT_ID: ${{ secrets.GROUPME_AFL_SCHEFTER_BOT_ID }}
+          # Roger's reply lane READS the group to find shots aimed at him, which
+          # the bot-post credentials above can't do — posting and reading are
+          # separate GroupMe credentials. The service token is account-wide
+          # (one GroupMe user, all their groups); the GROUP is per-league.
+          GROUPME_SERVICE_TOKEN: ${{ secrets.GROUPME_SERVICE_TOKEN }}
+          # Both group ids below are OPTIONAL overrides, not requirements. The
+          # lane derives a league's group from its own Roger bot id via
+          # GET /v3/bots (see scripts/lib/groupme-groups.mjs) and caches it, so
+          # no new secret was needed to switch the AFL on. Set one only to
+          # point a league at a group the service token doesn't own.
+          GROUPME_AFL_GROUP_ID: ${{ secrets.GROUPME_AFL_GROUP_ID }}
+          GROUPME_GROUP_ID: ${{ secrets.GROUPME_GROUP_ID }}
+          # Optional, per league. Roger's own posts are otherwise identified by
+          # sender_type==='bot' plus a /roger/i name match; these pin them by id
+          # so a bot rename can't break reply detection.
+          GROUPME_AFL_ROGER_BOT_SENDER_ID: ${{ secrets.GROUPME_AFL_ROGER_BOT_SENDER_ID }}
+          GROUPME_ROGER_BOT_SENDER_ID: ${{ secrets.GROUPME_ROGER_BOT_SENDER_ID }}
           SCHEFTER_RUMOR_MILL_ENABLED: ${{ vars.SCHEFTER_RUMOR_MILL_ENABLED }}
           UPSTASH_REDIS_REST_URL: ${{ secrets.UPSTASH_REDIS_REST_URL }}
           UPSTASH_REDIS_REST_TOKEN: ${{ secrets.UPSTASH_REDIS_REST_TOKEN }}
