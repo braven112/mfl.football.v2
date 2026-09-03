@@ -66,7 +66,16 @@
   color: #fff;
 }
 .wpm-head__text { flex: 1; min-width: 0; }
-.wpm-title { margin: 0; font-size: 1rem; font-weight: 800; letter-spacing: -0.01em; }
+/* Explicit #fff, not inherited from .wpm-head: the global heading rules set a
+   colour on h1-h6 and out-specify a parent's `color`, so the title rendered
+   near-black on the accent band while the subtitle beside it was white. */
+.wpm-title {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  color: #fff;
+}
 .wpm-sub {
   margin: 0.15rem 0 0;
   font-size: 0.72rem;
@@ -86,18 +95,17 @@
 .wpm-close:hover { color: #fff; }
 
 .wpm-body {
-  padding: 0.9rem 1.15rem 1.15rem;
+  /* The generous bottom value is deliberate: the last team in the order sat
+     flush against the modal edge, which reads as a list that got cut off
+     rather than one that ended. */
+  padding: 0.9rem 1.15rem 1.4rem;
   overflow-y: auto;
   overscroll-behavior: contain;
 }
 
+/* Loading and failure only — it is never on screen at the same time as the
+   list, so it does not need to be sticky. */
 .wpm-status {
-  /* Pinned while the order scrolls under it: "you claim 10th" is the answer
-     the owner opened this for, and it must not scroll away while they read
-     who is ahead of them. */
-  position: sticky;
-  top: 0;
-  z-index: 1;
   margin: 0 0 0.75rem;
   padding: 0.5rem 0.6rem;
   border-radius: var(--radius-sm, 0.375rem);
@@ -109,7 +117,7 @@
 }
 .wpm-status--error { color: var(--color-error, #b91c1c); }
 
-.wpm-list { list-style: none; margin: 0; padding: 0; }
+.wpm-list { list-style: none; margin: 0 0 0.35rem; padding: 0; }
 .wpm-row {
   display: flex;
   align-items: center;

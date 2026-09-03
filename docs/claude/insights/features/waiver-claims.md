@@ -289,6 +289,23 @@ signed-out visitor, so closing the dialog on success would leave them staring at
 the same page with no button. `LoginForm`'s `redirectUrl` carries the current
 path, which makes it a reload rather than a bounce to a league home.
 
+## 2026-09-03 - A Global Heading Rule Out-Specifies A Parent's `color`
+
+**Context:** the priority modal's `<h3>` rendered near-black on the accent
+band, while the `<p>` subtitle two lines below it — same parent, same inherited
+`color: #fff` — was correctly white.
+
+**Insight:** inheritance is the weakest source of a value. The parent's `color`
+only reaches a child that has no rule of its own, and the global stylesheet sets
+a colour on `h1`-`h6`; that rule beats inheritance outright, no specificity
+contest required. The paragraph had no such rule, so it inherited and looked
+fine, which is what made the header look like a one-off glitch rather than a
+category of bug.
+
+**Rule:** any heading placed on a coloured band needs its colour set
+explicitly. Do not rely on the band's own `color` to carry it, and do not
+conclude the band is fine because the non-heading text on it is.
+
 ## 2026-09-03 - `--content-text` Does Not Exist
 
 **Context:** the priority modal's body text rendered near-black on dark navy.

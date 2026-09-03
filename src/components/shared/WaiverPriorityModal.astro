@@ -97,13 +97,6 @@ const { config } = Astro.props;
       const listEl = document.getElementById('wpm-list');
       const footEl = document.getElementById('wpm-foot');
 
-      /** 1st / 2nd / 3rd / 4th — English ordinals, teens included. */
-      const ordinal = (n: number) => {
-        const rem100 = n % 100;
-        if (rem100 >= 11 && rem100 <= 13) return `${n}th`;
-        return `${n}${['th', 'st', 'nd', 'rd'][n % 10] ?? 'th'}`;
-      };
-
       const esc = (s: unknown) =>
         String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
@@ -127,8 +120,6 @@ const { config } = Astro.props;
         const byId = new Map(teams.map((t) => [t.franchiseId, t]));
         const ranked = rankWithinConference(order, teams.map((t) => t.franchiseId));
 
-        const mine = ranked.find((r) => r.franchiseId === cfg.franchiseId);
-
         listEl.innerHTML = ranked
           .map(({ franchiseId, rank }) => {
             const team = byId.get(franchiseId);
@@ -148,20 +139,11 @@ const { config } = Astro.props;
           .join('');
         listEl.hidden = false;
 
-        if (mine) {
-          // The actionable half of the ask. "How many backups do I want" has a
-          // real answer — every team ahead of you can take one target before
-          // your turn — so state the number and say where it comes from,
-          // rather than leaving the owner to count rows.
-          const ahead = mine.rank - 1;
-          const odds =
-            ahead === 0
-              ? `You claim first in the ${cfg.conferenceName || 'league'}. Nobody can take a target ahead of you.`
-              : `You claim ${ordinal(mine.rank)}. Up to ${ahead} ${ahead === 1 ? 'player' : 'players'} can be gone before your turn, so rank ${ahead + 1} targets to be sure of landing one.`;
-          setStatus(odds, 'info');
-        } else {
-          setStatus('');
-        }
+        // Nothing to say once the list is up — the owner's own row, badged and
+        // numbered, IS the answer, and a sentence restating it above the list
+        // was just furniture. The status line stays for loading and failure,
+        // which are the two states the list cannot narrate for itself.
+        setStatus('');
 
         if (footEl) {
           const when = new Date(asOf);
