@@ -1,0 +1,176 @@
+/**
+ * WaiverPriorityModal styles.
+ *
+ * AN EXTERNAL STYLESHEET, NOT A SCOPED <style> BLOCK, and that is load-bearing:
+ * Astro scopes a component's styles by stamping `data-astro-cid-*` on the
+ * elements IN ITS TEMPLATE. The team rows here are built in the browser and
+ * injected with innerHTML, so they never get that attribute and a scoped rule
+ * would not reach them — the list shipped with 50px icons and no layout the
+ * first time. Same reason waiver-claims-panel.css exists next door. See
+ * docs/claude/insights/features/waiver-claims.md, "A Class Name Is Not A Style".
+ */
+/* The trigger lives in the host page's hero, not in this component's own
+   template — another reason these rules cannot be scoped. */
+.wpm-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  margin-left: 0.6rem;
+  padding: 0.2rem 0.55rem;
+  border-radius: var(--radius-full, 999px);
+  /* Same chip idiom as .waiver-window-line beside it: `currentColor` border
+     over a transparent fill, so it reads correctly on the hero in BOTH
+     themes without needing a token that may not exist. A hard-coded
+     translucent-white fill would vanish on the light hero. */
+  border: 1px solid currentColor;
+  background: transparent;
+  color: var(--content-text-muted, #6b7280);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.wpm-trigger:hover { color: var(--color-gray-900, #111827); }
+
+.wpm {
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-md, 0.5rem);
+  max-width: 24rem;
+  width: calc(100% - 2rem);
+  overflow: hidden;
+  background: var(--content-bg, #ffffff);
+  color: var(--color-gray-900, #111827);
+  /* A 12-team list is taller than a short laptop viewport, and a <dialog>
+     that overflows is simply clipped — the bottom of the order, which is
+     where the owner asking this question usually sits, would be unreachable.
+     Cap the shell and let the body scroll instead. */
+  max-height: min(86vh, 34rem);
+  display: flex;
+  flex-direction: column;
+}
+.wpm::backdrop {
+  background: rgb(0 0 0 / 0.55);
+  backdrop-filter: blur(2px);
+}
+
+.wpm-head {
+  flex-shrink: 0;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 0.9rem 1rem 0.8rem 1.15rem;
+  background: var(--league-accent, var(--color-primary, #1c497c));
+  color: #fff;
+}
+.wpm-head__text { flex: 1; min-width: 0; }
+/* Explicit #fff, not inherited from .wpm-head: the global heading rules set a
+   colour on h1-h6 and out-specify a parent's `color`, so the title rendered
+   near-black on the accent band while the subtitle beside it was white. */
+.wpm-title {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  color: #fff;
+}
+.wpm-sub {
+  margin: 0.15rem 0 0;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: rgb(255 255 255 / 0.85);
+}
+.wpm-close {
+  flex-shrink: 0;
+  background: none;
+  border: none;
+  color: rgb(255 255 255 / 0.85);
+  cursor: pointer;
+  padding: 0.15rem;
+  line-height: 0;
+}
+.wpm-close:hover { color: #fff; }
+
+.wpm-body {
+  /* The generous bottom value is deliberate: the last team in the order sat
+     flush against the modal edge, which reads as a list that got cut off
+     rather than one that ended. */
+  padding: 0.9rem 1.15rem 1.4rem;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+/* Loading and failure only — it is never on screen at the same time as the
+   list, so it does not need to be sticky. */
+.wpm-status {
+  margin: 0 0 0.75rem;
+  padding: 0.5rem 0.6rem;
+  border-radius: var(--radius-sm, 0.375rem);
+  background: var(--color-gray-100, #f3f4f6);
+  color: var(--content-text-muted, #6b7280);
+  font-size: 0.78rem;
+  font-weight: 600;
+  line-height: 1.4;
+}
+.wpm-status--error { color: var(--color-error, #b91c1c); }
+
+.wpm-list { list-style: none; margin: 0 0 0.35rem; padding: 0; }
+.wpm-row {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.3rem 0.4rem;
+  border-radius: var(--radius-sm, 0.375rem);
+  font-size: 0.85rem;
+}
+.wpm-row + .wpm-row { margin-top: 0.1rem; }
+.wpm-row--me {
+  background: var(--color-gray-100, #f3f4f6);
+  font-weight: 700;
+  outline: 1px solid var(--league-accent, var(--color-primary, #1c497c));
+}
+.wpm-row__rank {
+  flex-shrink: 0;
+  width: 1.4rem;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  color: var(--content-text-muted, #6b7280);
+}
+.wpm-row--me .wpm-row__rank { color: var(--league-accent, var(--color-primary, #1c497c)); }
+.wpm-row__icon { width: 22px; height: 22px; object-fit: contain; flex-shrink: 0; }
+.wpm-row__icon--blank { display: inline-block; }
+.wpm-row__name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wpm-row__you {
+  flex-shrink: 0;
+  font-size: 0.62rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 0.1rem 0.35rem;
+  border-radius: 999px;
+  background: var(--league-accent, var(--color-primary, #1c497c));
+  color: #fff;
+}
+
+.wpm-foot {
+  margin: 0.85rem 0 0;
+  font-size: 0.7rem;
+  line-height: 1.45;
+  color: var(--content-text-muted, #6b7280);
+}
+
+.wpm-gate__lead { margin: 0 0 0.4rem; font-size: 0.9rem; font-weight: 700; }
+.wpm-gate__note { margin: 0 0 0.9rem; font-size: 0.78rem; line-height: 1.5; color: var(--content-text-muted, #6b7280); }
+.wpm-btn {
+  padding: 0.45rem 0.9rem;
+  border-radius: var(--radius-sm, 0.375rem);
+  border: 1px solid transparent;
+  background: var(--league-accent, var(--color-primary, #1c497c));
+  color: #fff;
+  font-weight: 700;
+  cursor: pointer;
+}

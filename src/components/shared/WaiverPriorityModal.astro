@@ -1,0 +1,243 @@
+---
+import '../../styles/waiver-priority-modal.css';
+/**
+ * WaiverPriorityModal — "where am I in line, and how many backups do I need?"
+ *
+ * Opened from a trigger anywhere on the page (`[data-waiver-priority-open]`,
+ * delegated on document so it survives client re-renders). Shows ONE
+ * conference: the signed-in owner's own, because that is the only order that
+ * decides any claim they can file — see src/utils/waiver-order.ts for why the
+ * raw league-wide `waiverSortOrder` is a lie about a National owner's odds.
+ *
+ * THE TEAM LIST IS SSR, THE ORDER IS LIVE. Names and icons come from the
+ * league config at build time (free, and the relative icon paths are what the
+ * dark-variant stylesheet keys on — an absolute MFL-hosted icon URL would not
+ * swap in dark mode). Only the priority numbers are fetched, on open, from
+ * /api/waiver-order — because priority is rolling and MFL renumbers it every
+ * time a claim is awarded.
+ *
+ * SIGNED OUT: no conference exists to scope to, so the body is a sign-in
+ * prompt that hands off to SignInModal rather than a bounce to /login — the
+ * owner came here to read a list, and losing the page to read it is a bad
+ * trade.
+ */
+export interface WaiverPriorityTeam {
+  franchiseId: string;
+  name: string;
+  /** Site-relative icon path (`/assets/...`), never an MFL-hosted absolute URL. */
+  icon?: string;
+}
+
+export interface WaiverPriorityConfig {
+  /** A session that belongs to THIS league and has a franchise. */
+  signedIn: boolean;
+  /** The viewer's franchise, highlighted in the list. Null when signed out. */
+  franchiseId: string | null;
+  /** e.g. "American League". Empty for a league with no conference split. */
+  conferenceName: string;
+  /** The viewer's conference, in config order. Empty when signed out. */
+  teams: WaiverPriorityTeam[];
+  /** Whether priority decides claims outright (FCFS) or only breaks tied bids. */
+  system: 'bbid' | 'priority';
+}
+
+interface Props {
+  config: WaiverPriorityConfig;
+}
+const { config } = Astro.props;
+---
+
+<script type="application/json" id="waiver-priority-config" set:html={JSON.stringify(config)}></script>
+
+<dialog id="waiver-priority-modal" class="wpm" aria-labelledby="wpm-title">
+  <div class="wpm-head">
+    <div class="wpm-head__text">
+      <h3 class="wpm-title" id="wpm-title">Waiver priority</h3>
+      <p class="wpm-sub" id="wpm-sub">{config.conferenceName}</p>
+    </div>
+    <button type="button" class="wpm-close" id="wpm-close" aria-label="Close">
+      <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true">
+        <path d="M14 4L4 14M4 4l10 10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+    </button>
+  </div>
+
+  <div class="wpm-body">
+    {config.signedIn ? (
+      <>
+        <p class="wpm-status" id="wpm-status">Reading the live order from MyFantasyLeague&hellip;</p>
+        <ol class="wpm-list" id="wpm-list" hidden></ol>
+        <p class="wpm-foot" id="wpm-foot" hidden></p>
+      </>
+    ) : (
+      <div class="wpm-gate">
+        <p class="wpm-gate__lead">Sign in to see where you sit in the waiver order.</p>
+        <p class="wpm-gate__note">
+          Priority is per conference, so we need to know which team is yours before we can
+          show you the line you&rsquo;re actually standing in.
+        </p>
+        <button type="button" class="wpm-btn" data-signin-open>Sign in</button>
+      </div>
+    )}
+  </div>
+</dialog>
+
+<script>
+  import { rankWithinConference } from '../../utils/waiver-order';
+
+  /**
+   * CLIENTROUTER-SAFE INIT (frontend.md, "Interactive scripts must re-init on
+   * astro:page-load"). A component's module script is evaluated ONCE per
+   * document, and ClientRouter swaps the DOM without re-evaluating it — so
+   * anything captured here at module scope is stale after the first in-site
+   * navigation, and a dialog reference in particular ends up pointing at a
+   * detached node whose showModal() puts nothing on screen.
+   *
+   * So: the config blob and every element are re-read inside init(), which runs
+   * on every `astro:page-load` (it fires on the initial load too, so there is
+   * no separate first-run call to double up with). The one thing that must NOT
+   * be re-registered is the delegated document listener — `document` survives
+   * the swap, so re-adding would stack a handler per navigation. It goes on
+   * once behind a module-scoped flag and reads `ctx` at call time.
+   */
+  let wired = false;
+  let ctx: {
+    cfg: any;
+    dlg: HTMLDialogElement;
+    statusEl: HTMLElement | null;
+    listEl: HTMLElement | null;
+    footEl: HTMLElement | null;
+    loaded: boolean;
+  } | null = null;
+
+  const esc = (s: unknown) =>
+    String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
+  const setStatus = (msg: string, kind: 'info' | 'error' = 'info') => {
+    const el = ctx?.statusEl;
+    if (!el) return;
+    el.textContent = msg;
+    el.className = `wpm-status wpm-status--${kind}`;
+    el.hidden = !msg;
+  };
+
+  const render = (
+    order: Array<{ franchiseId: string; sortOrder: number }>,
+    asOf: string,
+    live: boolean,
+  ) => {
+    if (!ctx?.listEl) return;
+    const { cfg, listEl, footEl } = ctx;
+    const teams: Array<{ franchiseId: string; name: string; icon?: string }> = cfg.teams ?? [];
+    const byId = new Map(teams.map((t) => [t.franchiseId, t]));
+    const ranked = rankWithinConference(order, teams.map((t) => t.franchiseId));
+
+    listEl.innerHTML = ranked
+      .map(({ franchiseId, rank }) => {
+        const team = byId.get(franchiseId);
+        const isMe = franchiseId === cfg.franchiseId;
+        const icon = team?.icon
+          ? `<img class="wpm-row__icon" src="${esc(team.icon)}" alt="" loading="lazy" decoding="async" />`
+          : '<span class="wpm-row__icon wpm-row__icon--blank" aria-hidden="true"></span>';
+        return (
+          `<li class="wpm-row${isMe ? ' wpm-row--me' : ''}">` +
+            `<span class="wpm-row__rank">${rank}</span>` +
+            icon +
+            `<span class="wpm-row__name">${esc(team?.name ?? franchiseId)}</span>` +
+            (isMe ? '<span class="wpm-row__you">You</span>' : '') +
+          `</li>`
+        );
+      })
+      .join('');
+    listEl.hidden = false;
+
+    // Nothing to say once the list is up — the owner's own row, badged and
+    // numbered, IS the answer, and a sentence restating it above the list was
+    // just furniture. The status line stays for loading and failure, which are
+    // the two states the list cannot narrate for itself.
+    setStatus('');
+
+    if (footEl) {
+      const when = new Date(asOf);
+      const stamp = Number.isNaN(when.getTime())
+        ? ''
+        : when.toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+      const note =
+        ctx.cfg.system === 'bbid'
+          ? 'Priority breaks ties between equal bids.'
+          : 'Priority is rolling — win a claim and you drop to the back of the line.';
+      footEl.textContent = live
+        ? `${note} Live from MyFantasyLeague${stamp ? `, ${stamp}` : ''}.`
+        : `${note} MyFantasyLeague is not answering — showing the last order we read${stamp ? `, ${stamp}` : ''}.`;
+      footEl.hidden = false;
+    }
+  };
+
+  /**
+   * Fetched once per page view, not once per open. The order is rolling but it
+   * only moves when waivers process, so re-reading it on every open of a modal
+   * an owner may toggle half a dozen times buys nothing.
+   */
+  const load = async () => {
+    if (!ctx || ctx.loaded) return;
+    ctx.loaded = true;
+    setStatus('Reading the live order from MyFantasyLeague…');
+    try {
+      const res = await fetch('/api/waiver-order', { credentials: 'include' });
+      const data = await res.json();
+      if (!res.ok || !data?.success) throw new Error(data?.message || 'Could not read the waiver order.');
+      render(data.order, data.asOf, data.live !== false);
+    } catch (err) {
+      // Let the next open retry — a failed read is usually a blip, and an owner
+      // who reopens the modal is asking for exactly that.
+      if (ctx) ctx.loaded = false;
+      if (ctx?.listEl) ctx.listEl.hidden = true;
+      if (ctx?.footEl) ctx.footEl.hidden = true;
+      setStatus(err instanceof Error ? err.message : 'Could not read the waiver order.', 'error');
+    }
+  };
+
+  /** Delegated: the trigger lives in the host page, which re-renders. */
+  const onDocumentClick = (e: MouseEvent) => {
+    const trigger = (e.target as HTMLElement | null)?.closest('[data-waiver-priority-open]');
+    if (!trigger || !ctx) return;
+    e.preventDefault();
+    if (!ctx.dlg.open) ctx.dlg.showModal();
+    if (ctx.cfg.signedIn) load();
+  };
+
+  function init() {
+    const raw = document.getElementById('waiver-priority-config')?.textContent;
+    const cfg = raw ? JSON.parse(raw) : null;
+    const dlg = document.getElementById('waiver-priority-modal') as HTMLDialogElement | null;
+    if (!cfg || !dlg) {
+      ctx = null;
+      return;
+    }
+
+    ctx = {
+      cfg,
+      dlg,
+      statusEl: document.getElementById('wpm-status'),
+      listEl: document.getElementById('wpm-list'),
+      footEl: document.getElementById('wpm-foot'),
+      loaded: false,
+    };
+
+    // These hang off elements the swap REPLACED, so re-attaching per page load
+    // is correct and cannot stack — they are new nodes every time.
+    document.getElementById('wpm-close')?.addEventListener('click', () => dlg.close());
+    // <dialog> reports a backdrop click as a click on the dialog element
+    // itself, so compare against the content box.
+    dlg.addEventListener('click', (e) => {
+      if (e.target === dlg) dlg.close();
+    });
+
+    if (!wired) {
+      wired = true;
+      document.addEventListener('click', onDocumentClick);
+    }
+  }
+
+  document.addEventListener('astro:page-load', init);
+</script>

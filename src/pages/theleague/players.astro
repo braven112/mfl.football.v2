@@ -23,6 +23,7 @@ import { readBidRules } from '../../utils/waiver-claim';
 import { resolveWaiverWindow, describeWaiverWindow } from '../../utils/waiver-window';
 import WaiverClaimModal from '../../components/shared/WaiverClaimModal.astro';
 import WaiverClaimsPanel from '../../components/shared/WaiverClaimsPanel.astro';
+import SignInModal from '../../components/shared/SignInModal.astro';
 import '../../styles/player-cell.css';
 import '../../styles/ranking-columns.css';
 import '../../styles/fa-claim-button.css';
@@ -684,7 +685,11 @@ const isAdmin = !!authUser && isCommissionerOrAdmin(authUser);
 // Owners can bid on a free agent without leaving for MFL. Bid rules come from
 // the league feed, never constants — the minimum and increment are league
 // settings and TheLeague's have changed before.
-const claimFranchiseId = authUser?.franchiseId ?? null;
+// League-scoped, not just "has a franchise": both leagues have a franchise
+// 0001, so an AFL owner browsing here matched a TheLeague roster by id and was
+// offered Bid buttons for a league they don't play in. Mirror of the same fix
+// on the AFL page.
+const claimFranchiseId = authUser && authUser.leagueId === mflLeagueId ? (authUser.franchiseId ?? null) : null;
 const bidRules = readBidRules((leagueData as any)?.league ?? {});
 // The drop picker only ever offers the caller's OWN roster; the server verifies
 // this again, but sending anything else would be a bug worth not shipping.
@@ -721,6 +726,22 @@ const claimConfig = {
 // Filed claims are managed by the SAME shared component in both leagues — see
 // tests/page-fork-ratchet.test.ts. `canManage` mirrors `canClaim`: an owner who
 // cannot file a claim has none to manage.
+// ── On-site sign-in ─────────────────────────────────────────────────────────
+// A signed-out visitor used to be handed an "Add \u2197" deep-link to MFL's
+// add/drop page, which ended their visit here and dropped them into the UI
+// this site exists to replace. Now the same button opens our own sign-in and
+// brings them back to this page, on this player, able to bid.
+//
+// AUCTION SEASON IS THE EXCEPTION and keeps its MFL link: auction bidding is
+// MFL's own flow, not something a session here unlocks, so prompting for a
+// sign-in would promise something the reload cannot deliver.
+const promptSignIn = !claimFranchiseId && !isAuctionSeason;
+const signInConfig = {
+  leagueId: mflLeagueId,
+  redirectUrl: `${Astro.url.pathname}${Astro.url.search}`,
+  subtitle: 'Sign in with your MFL credentials to bid here',
+};
+
 const claimsPanelConfig = {
   canManage: canClaim,
   leagueId: mflLeagueId,
@@ -1094,8 +1115,9 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
 </TheLeagueLayout>
 
 <WaiverClaimModal config={claimConfig} />
+{promptSignIn && <SignInModal config={signInConfig} />}
 
-<script define:vars={{ canClaim, playerDataJson, hasProjected, hasLastYrPts, hasSnapCounts, nflTeamsJson, hasSurplusData, hasAuctionData, isAuctionSeason, isAdmin, currentYear, mflHost, mflLeagueId, mflActionYear, franchiseNamesJson, franchiseBannersJson, defSpotlightJson, nflAvatarBgJson, nflAvatarBgFallback, nflAvatarBorderJson, nflAvatarBorderFallback, nflAvatarRingJson, nflAvatarRingFallback, nflAvatarRingDarkJson, nflAvatarRingDarkFallback, noHeadshot, logoOnerror: NFL_LOGO_ONERROR, collegeLogoOnerror: COLLEGE_LOGO_ONERROR, collegeLogoOnload: COLLEGE_LOGO_ONLOAD, rookieDraftComplete }}>
+<script define:vars={{ canClaim, promptSignIn, playerDataJson, hasProjected, hasLastYrPts, hasSnapCounts, nflTeamsJson, hasSurplusData, hasAuctionData, isAuctionSeason, isAdmin, currentYear, mflHost, mflLeagueId, mflActionYear, franchiseNamesJson, franchiseBannersJson, defSpotlightJson, nflAvatarBgJson, nflAvatarBgFallback, nflAvatarBorderJson, nflAvatarBorderFallback, nflAvatarRingJson, nflAvatarRingFallback, nflAvatarRingDarkJson, nflAvatarRingDarkFallback, noHeadshot, logoOnerror: NFL_LOGO_ONERROR, collegeLogoOnerror: COLLEGE_LOGO_ONERROR, collegeLogoOnload: COLLEGE_LOGO_ONLOAD, rookieDraftComplete }}>
   // define:vars creates const — copy to let so polling can update at runtime
   let _hasAuctionData = hasAuctionData;
   const players = JSON.parse(playerDataJson);
@@ -2183,6 +2205,11 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
           // Signed-in owner outside the auction window: bid in place. The
           // server re-verifies everything this button implies.
           html += `<td class="col-fa-action"><button type="button" class="place-bid-link claim-open" data-claim-id="${escapeAttr(p.id)}" data-claim-name="${escapeAttr(p.name)}" data-claim-pos="${escapeAttr(p.position || '')}" data-claim-team="${escapeAttr(p.nflTeam || '')}" data-claim-espn="${escapeAttr(p.espnId || '')}" data-claim-headshot="${escapeAttr(p.headshot || '')}" aria-label="Bid on ${escapeAttr(p.name)}">Bid</button></td>`;
+        } else if (promptSignIn) {
+          // Signed out, outside the auction: our own sign-in, not a one-way
+          // trip to MFL. The player id rides along so the claim form reopens
+          // on this player after the post-login reload.
+          html += `<td class="col-fa-action"><button type="button" class="place-bid-link" data-signin-open data-signin-player="${escapeAttr(p.id)}" aria-label="Sign in to bid on ${escapeAttr(p.name)}">Bid</button></td>`;
         } else {
           const acqUrl = isAuctionSeason
             ? `https://${mflHost}/${mflActionYear}/options?L=${mflLeagueId}&O=43&P=${encodeURIComponent(p.id)}`

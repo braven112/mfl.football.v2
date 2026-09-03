@@ -45,6 +45,9 @@ import { resolveWaiverWindow, describeWaiverWindow } from '../../utils/waiver-wi
 import { getAflLeagueYear } from '../../utils/league-year';
 import WaiverClaimModal from '../../components/shared/WaiverClaimModal.astro';
 import WaiverClaimsPanel from '../../components/shared/WaiverClaimsPanel.astro';
+import WaiverPriorityModal from '../../components/shared/WaiverPriorityModal.astro';
+import SignInModal from '../../components/shared/SignInModal.astro';
+import { getConferenceName, getConferenceTeams, isValidConferenceId } from '../../utils/afl-conference';
 // AFL uses team defenses (no IDP), so a DEF free agent has no headshot of its
 // own. Mirror TheLeague's hero treatment: surface a rotating pool of the team's
 // marquee defenders (ESPN headshots) over the logo watermark. The data is keyed
@@ -116,7 +119,7 @@ const conferenceMeta = snapshot.conferences;
 // headers (s-maxage/CDN caching) to this page or one user's default
 // conference gets served to everyone.
 const authUser = getAuthUser(Astro.request);
-const { activeConfId } = resolveConferenceSelection(
+const { userConfId, activeConfId } = resolveConferenceSelection(
   conferenceMeta,
   authUser,
   aflLeague.id,
@@ -144,7 +147,14 @@ const claimYear = getAflLeagueYear();
 const aflLeagueFeed =
   (Object.entries(aflLeagueModules).find(([path]) => path.includes(`/${claimYear}/`))?.[1] as any)
     ?.default?.league ?? {};
-const claimFranchiseId = authUser?.franchiseId ?? null;
+// The session must belong to THIS league, not merely carry a franchise id.
+// Both leagues have a franchise 0001, so a signed-in TheLeague owner browsing
+// the AFL previously matched an AFL roster by id and was offered Claim buttons
+// they could not file — the server, which resolves the league from the session,
+// would have written the claim against the wrong league or refused it. Surfaced
+// by the waiver-priority gate below, which (correctly) told the same visitor to
+// sign in while the table (incorrectly) told them they already had.
+const claimFranchiseId = authUser && authUser.leagueId === aflLeague.id ? (authUser.franchiseId ?? null) : null;
 const claimRules = readBidRules(aflLeagueFeed);
 // The drop picker offers only the caller's OWN roster IN THE ACTIVE CONFERENCE
 // — `owners` is keyed by conference because a player can be held once in each.
@@ -188,6 +198,52 @@ const claimsPanelConfig = {
   system: claimRules.system,
   roster: claimRoster,
 };
+// ── Waiver priority + on-site sign-in ────────────────────────────────
+// The order that decides an owner's claims is their OWN conference's, never
+// the one they happen to be browsing — they can only ever file with their own
+// team, and the AFL is a duplicate-player league where the two conferences
+// never contend for the same player. So this reads `userConfId`, not
+// `activeConfId`: an AL owner peeking at the NL still sees the AL order.
+const priorityConfId =
+  userConfId && isValidConferenceId(userConfId) ? userConfId : null;
+const waiverPriorityConfig = {
+  signedIn: !!priorityConfId && !!claimFranchiseId,
+  franchiseId: priorityConfId ? claimFranchiseId : null,
+  conferenceName: priorityConfId ? getConferenceName(priorityConfId) : '',
+  // Names and icons are SSR (and the icon paths are site-relative, which is
+  // what the dark-variant stylesheet keys on); only the priority numbers are
+  // fetched live, because MFL renumbers them every time a claim is awarded.
+  teams: priorityConfId
+    ? getConferenceTeams(priorityConfId).map((t) => ({
+        franchiseId: t.franchiseId,
+        name: t.nameMedium || t.name,
+        icon: t.icon,
+      }))
+    : [],
+  system: claimRules.system,
+};
+
+// A visitor the priority modal would show its sign-in gate to — signed out, or
+// signed in against TheLeague. They get the action column too, but its button
+// opens the on-site sign-in instead of a claim form (it used to be nothing at
+// all, which left them with no way in from this page).
+//
+// DERIVED FROM `waiverPriorityConfig.signedIn`, not re-computed. SignInModal
+// owns the `[data-signin-open]` handler that the gate's own Sign in button
+// depends on, and SignInModal renders only when this is true — so any
+// condition that disagrees with the gate's renders that button dead.
+const promptSignIn = !waiverPriorityConfig.signedIn;
+const signInConfig = {
+  leagueId: aflLeague.id,
+  seasonYear: claimYear,
+  // Back to THIS page, conference selection and all — the point of the modal
+  // is that signing in doesn't cost you your place.
+  redirectUrl: `${Astro.url.pathname}${Astro.url.search}`,
+  logoSrc: '/assets/logos/afl-logo.svg',
+  logoAlt: 'AFL logo',
+  subtitle: 'Sign in with your MFL credentials to claim players here',
+};
+
 const faCounts = scoped.faCounts;
 const freeAgentsCount = scoped.freeAgentsCount;
 const topFa = scoped.topFa;
@@ -281,6 +337,13 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
           {canClaim && (
             <span class="waiver-window-line" data-window={waiverWindow.mode}>{waiverWindowLabel}</span>
           )}
+          <button type="button" class="wpm-trigger" data-waiver-priority-open>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <line x1="8" y1="6" x2="21" y2="6" /><line x1="8" y1="12" x2="21" y2="12" /><line x1="8" y1="18" x2="21" y2="18" />
+              <line x1="3" y1="6" x2="3.01" y2="6" /><line x1="3" y1="12" x2="3.01" y2="12" /><line x1="3" y1="18" x2="3.01" y2="18" />
+            </svg>
+            Waiver priority
+          </button>
         </div>
         <a href={r('/afl-fantasy/rosters')} class="hero-cross-link">
           View rosters
@@ -476,7 +539,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
             {hasProjected && (
               <th class="sortable col-num col-projected col-group--stats" data-sort="projected"><div class="th-content">Proj</div></th>
             )}
-            {claimConfig.canClaim && (
+            {(claimConfig.canClaim || promptSignIn) && (
               <th class="col-fa-action" aria-label="Claim this player"><div class="th-content">Claim</div></th>
             )}
           </tr>
@@ -486,6 +549,8 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     </div>
 
     <WaiverClaimModal config={claimConfig} />
+    <WaiverPriorityModal config={waiverPriorityConfig} />
+    {promptSignIn && <SignInModal config={signInConfig} />}
 
     <!-- Show more -->
     <div class="show-more-wrapper" id="show-more-wrapper">
@@ -505,7 +570,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
   <PlayerDetailsModal hideContract={true} />
 </TheLeagueLayout>
 
-<script define:vars={{ canClaim, playerDataJson, hasProjected, hasLastYrPts, hasAdp, defaultSort, defaultDir, mflHost, defSpotlightJson, conferenceMetaJson, activeConfIdJson, nflAvatarBgJson, nflAvatarBorderJson, nflAvatarBgFallback, nflAvatarBorderFallback, nflAvatarRingJson, nflAvatarRingFallback, nflAvatarRingDarkJson, nflAvatarRingDarkFallback, noHeadshot, logoOnerror: NFL_LOGO_ONERROR, collegeLogoOnerror: COLLEGE_LOGO_ONERROR, collegeLogoOnload: COLLEGE_LOGO_ONLOAD }}>
+<script define:vars={{ canClaim, promptSignIn, playerDataJson, hasProjected, hasLastYrPts, hasAdp, defaultSort, defaultDir, mflHost, defSpotlightJson, conferenceMetaJson, activeConfIdJson, nflAvatarBgJson, nflAvatarBorderJson, nflAvatarBgFallback, nflAvatarBorderFallback, nflAvatarRingJson, nflAvatarRingFallback, nflAvatarRingDarkJson, nflAvatarRingDarkFallback, noHeadshot, logoOnerror: NFL_LOGO_ONERROR, collegeLogoOnerror: COLLEGE_LOGO_ONERROR, collegeLogoOnload: COLLEGE_LOGO_ONLOAD }}>
   const players = JSON.parse(playerDataJson);
   // Duplicate-player conference metadata (null = single shared pool).
   const conferenceMeta = JSON.parse(conferenceMetaJson);
@@ -1100,6 +1165,13 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
         html += rosteredForView
           ? `<td class="col-fa-action"></td>`
           : `<td class="col-fa-action"><button type="button" class="place-bid-link claim-open" data-claim-id="${escapeAttr(p.id)}" data-claim-name="${escapeAttr(p.name)}" data-claim-pos="${escapeAttr(p.position || '')}" data-claim-team="${escapeAttr(p.nflTeam || p.team || '')}" data-claim-espn="${escapeAttr(p.espnId || '')}" data-claim-headshot="${escapeAttr(p.headshot || '')}" aria-label="Claim ${escapeAttr(p.name)}">Claim</button></td>`;
+      } else if (promptSignIn) {
+        // No AFL session: the same button, wired to the on-site sign-in. It
+        // carries the player id so that after the reload we reopen the claim
+        // form on the player they were actually after.
+        html += rosteredForView
+          ? `<td class="col-fa-action"></td>`
+          : `<td class="col-fa-action"><button type="button" class="place-bid-link" data-signin-open data-signin-player="${escapeAttr(p.id)}" aria-label="Sign in to claim ${escapeAttr(p.name)}">Claim</button></td>`;
       }
       html += `</tr>`;
     }
