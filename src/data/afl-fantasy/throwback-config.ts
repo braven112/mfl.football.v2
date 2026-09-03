@@ -94,7 +94,12 @@ export const AFL_DEFAULT_THROWBACK_ERA: Record<string, number> = {
   '0006': 2013, // Da Dangsters → Da Dangsters (The tommy gun) — 12 seasons
   '0007': 2010, // Avenging Amish → Touchdown My Pants — 4 seasons
   '0008': 2003, // Dicks out for Harambe → The Nukes — 13 seasons
-  '0009': 2010, // Vitside Mafia → Vitside Mafia (The old lockup) — 15 seasons
+  '0009': 2009, // Vitside Mafia → Gamecocks — commissioner pick over the tenure
+                //   rule, which would say 2010 (Vitside Mafia, 15 seasons). That era
+                //   is the same dragon and wordmark Vitside wears today, so it would
+                //   change the banner and nothing else; the Gamecocks are a real
+                //   throwback. 2009 over the longer 2004-2008 Gamecocks because its
+                //   art is the clean navy plate with the bird, not a washed-out photo.
   '0010': 2005, // Fullybaked → Fullybaked (Red graffiti) — 12 seasons
   '0011': 2010, // Midwestside Connection → Midwestside Connection (The gold lockup) — 15 seasons
   '0012': 2009, // Suh girls, one cup → Pubes — 10 seasons
