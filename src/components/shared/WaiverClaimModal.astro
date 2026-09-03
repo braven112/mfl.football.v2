@@ -263,6 +263,13 @@ const { config } = Astro.props;
         // UNVERIFIED write is the whole bug this modal shipped with — the owner
         // is told it's filed, closes the tab, and nothing is on MFL. So show
         // the caveat and leave the modal open for them to act on.
+        // Tell the claims panel on this page to re-read, BEFORE branching on
+        // `verified`. A claim can land on MFL and still come back unverified —
+        // the read-back is best-effort — so the unverified path is exactly when
+        // a stale list is most misleading. The panel owns the refresh; this
+        // only says something changed.
+        document.dispatchEvent(new CustomEvent('waiver-claims:changed'));
+
         if (data.verified === false) {
           reset();
           showWarning(data.message || 'Submitted, but we could not confirm it with MFL.');

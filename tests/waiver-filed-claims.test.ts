@@ -162,3 +162,45 @@ describe('the claims panel — hiding it', () => {
     expect(COMPONENT).toContain('aria-controls="wcp-body"');
   });
 });
+
+describe('the panel refreshes when a claim is filed', () => {
+  const PANEL = fs.readFileSync(
+    path.join(process.cwd(), 'src/components/shared/WaiverClaimsPanel.astro'),
+    'utf-8'
+  );
+  const MODAL = fs.readFileSync(
+    path.join(process.cwd(), 'src/components/shared/WaiverClaimModal.astro'),
+    'utf-8'
+  );
+
+  it('the modal announces the change and the panel listens', () => {
+    // The panel loaded once on page load and never heard about a claim filed
+    // through the modal on the same page — an owner filed one, watched it land
+    // on MFL, and saw nothing here.
+    expect(MODAL).toContain("new CustomEvent('waiver-claims:changed')");
+    expect(PANEL).toContain("addEventListener('waiver-claims:changed'");
+  });
+
+  it('announces BEFORE branching on verified', () => {
+    // A claim can land on MFL and still come back unverified — the read-back is
+    // best-effort — and that is exactly when a stale list misleads most. So the
+    // dispatch must not sit inside the verified-only path.
+    const submitBody = MODAL.slice(MODAL.indexOf('const data = await res.json()'));
+    const dispatchAt = submitBody.indexOf("waiver-claims:changed");
+    const verifiedAt = submitBody.indexOf('data.verified === false');
+    expect(dispatchAt).toBeGreaterThan(-1);
+    expect(verifiedAt).toBeGreaterThan(-1);
+    expect(dispatchAt, 'the refresh must fire on the unverified path too').toBeLessThan(verifiedAt);
+  });
+
+  it('replaces its document listeners instead of once-flagging them', () => {
+    // Both failure modes are real. Adding them plainly STACKS across a
+    // ClientRouter hop between the two leagues' Free Agents pages; a once-flag
+    // is worse still, pinning the surviving listener to the first evaluation's
+    // closure, whose DOM the hop detached — a silently dead panel.
+    expect(PANEL).toContain("removeEventListener('waiver-claims:changed'");
+    expect(PANEL).toContain("removeEventListener('astro:page-load'");
+    expect(PANEL, 'a bare once-flag would keep a stale closure alive')
+      .not.toMatch(/if \(!w\.__wcpListeners\)/);
+  });
+});

@@ -231,8 +231,38 @@ const { config } = Astro.props;
     const start = () => { void load(); };
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start, { once: true });
     else start();
-    // Re-init on in-site navigation, or the panel goes dead after a ClientRouter hop.
-    document.addEventListener('astro:page-load', start);
+
+    /**
+     * DOCUMENT-level listeners: exactly one of each, always bound to the CURRENT
+     * module evaluation.
+     *
+     * Both halves of that matter. They stack if simply added, because this
+     * module can be re-evaluated on a ClientRouter hop between the two leagues'
+     * Free Agents pages — every extra registration is another duplicate fetch.
+     * But a plain once-flag is WORSE: it pins the surviving listener to the
+     * FIRST evaluation's closure, whose `panel`/`list`/`cfg` refer to DOM that
+     * the hop detached, so the panel would silently stop updating on the page
+     * you are actually looking at. That is the stale-module-eval trap from
+     * docs/claude/insights/domains/frontend.md, in its nastiest form — no
+     * error, just a dead UI.
+     *
+     * Remove-then-add gives one listener AND a live closure.
+     *
+     * - `waiver-claims:changed` — a claim was filed through the modal on this
+     *   same page. The panel used to load once and never hear about it, so an
+     *   owner filed a claim, watched it land on MFL, and saw nothing here.
+     * - `astro:page-load` — re-read after an in-site navigation.
+     */
+    const w = window as unknown as {
+      __wcpOnChanged?: EventListener;
+      __wcpOnPageLoad?: EventListener;
+    };
+    if (w.__wcpOnChanged) document.removeEventListener('waiver-claims:changed', w.__wcpOnChanged);
+    if (w.__wcpOnPageLoad) document.removeEventListener('astro:page-load', w.__wcpOnPageLoad);
+    w.__wcpOnChanged = () => { void load(); };
+    w.__wcpOnPageLoad = () => { void load(); };
+    document.addEventListener('waiver-claims:changed', w.__wcpOnChanged);
+    document.addEventListener('astro:page-load', w.__wcpOnPageLoad);
   }
 </script>
 
