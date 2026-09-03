@@ -162,7 +162,7 @@ no franchise renders its own light crest during a throwback week.
 
 ---
 
-## Two era crests are mirrored ESPN marks (September 2026)
+## Three era crests are free-standing marks, not banner cuts (September 2026)
 
 `trevors_team_2003_icon.png` (Texas Tech's Double T) and
 `limp_ditkas_2006_icon.png` (the Bears' dark-mode mark) are **not** cut from
@@ -204,6 +204,13 @@ Two things about them are deliberate and easy to undo by accident:
   inscribed circle (70.7% of the box) — is worse, because it renders visibly
   smaller than the banner cuts beside it, which is the sizing problem this art
   was brought in to fix.
+
+The AFL's ATF badge (`atf_2003_icon.png`, worn by both the 2003 and 2004
+eras) is the third, and it is `iconFreeform` for a starker reason: at 1.92:1
+a round slot would leave it as three letters with the badge sliced off both
+ends. It is cropped to the GOLD rounded-rect by scanning for the badge's own
+gold rather than by `sharp.trim()` — the navy outside the badge and the navy
+inside it are the same colour, so a colour trim stops at the wrong edge.
 
 Both read correctly on the light card and the dark one, which is why the
 Bears' *dark* variant was the right pick rather than the standard mark: its
