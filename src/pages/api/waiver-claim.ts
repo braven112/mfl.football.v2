@@ -32,7 +32,7 @@ import { getAuthUser } from '../../utils/auth';
 import { getCurrentLeagueYear, getRolloverLeagueYear } from '../../utils/league-year';
 import { mflFetch } from '../../utils/mfl-fetch';
 import { createMFLApiClient } from '../../utils/mfl-matchup-api';
-import { getLeagueById, DEFAULT_LEAGUE_ID } from '../../config/leagues';
+import { getLeagueById, getLeagueBySlug, DEFAULT_LEAGUE_ID, DEFAULT_LEAGUE_SLUG } from '../../config/leagues';
 import { bustRosterCaches } from '../../utils/mfl-roster-cache';
 import { JSON_HEADERS_NO_STORE as JSON_HEADERS } from '../../utils/api-response';
 import { resolveWaiverWindow } from '../../utils/waiver-window';
@@ -230,8 +230,20 @@ export const POST: APIRoute = async ({ request }) => {
     // That also needs no assumption about MFL's undocumented round/bid shape.
     const pendingBefore = immediate ? null : await readPendingWaivers(year, leagueId, user.id);
     const importType = immediate ? 'fcfsWaiver' : waiverImportType(rules);
+    // THE LEAGUE'S OWN HOST, not the `api.` gateway. Posting the import to
+    // api.myfantasyleague.com returns HTTP 200 with an empty body and stores
+    // NOTHING — and it is the only call in this route that does not 302 to
+    // www44, which is the tell: every export redirects and works, while the
+    // import is answered by the gateway itself and quietly dropped. Confirmed
+    // against a live claim whose pendingWaivers read-back came back without it.
+    // cut-player.ts already carries the same note for `add_drop` ("the `api.`
+    // gateway is for the API, not page handlers"), and the same fallback: an
+    // unresolvable league must not send a TheLeague write to the AFL's host.
+    const importHost = league.mflHost || getLeagueBySlug(DEFAULT_LEAGUE_SLUG)!.mflHost;
+    const importUrl = `https://${importHost}/${year}/import?TYPE=${importType}&L=${leagueId}`;
+    console.log(`[waiver-claim] POST ${importUrl} (${params.toString()})`);
     const res = await mflFetch({
-      url: `https://api.myfantasyleague.com/${year}/import?TYPE=${importType}&L=${leagueId}`,
+      url: importUrl,
       method: 'POST',
       mflUserCookie: user.id,
       body: params.toString(),
