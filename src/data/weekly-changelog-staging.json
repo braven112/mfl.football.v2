@@ -4,6 +4,14 @@
     {
       "date": "2026-09-03",
       "type": "bug-fix",
+      "summary": "The Bid button on the Auction and Value views has been pointing at MyFantasyLeague's place-a-bid page all year, including the ten months a year the auction is closed. That button does not join a bidding war — on a player nobody has nominated it starts one, at the league minimum. So during a waiver week, with the free-agent pool locked and everyone else filing blind bids, one click could open an auction on a player instead. Both columns now appear only while the auction window is actually open, from the third Thursday of March to the third Sunday of August. The rest of the year the Auction tab is what it should always have been: a record of what the bidding did, not a way to start more of it. Adding a player outside the auction is the Bid button on the main list, which files a proper waiver claim.",
+      "impact": "user",
+      "area": "free-agents",
+      "league": "theleague"
+    },
+    {
+      "date": "2026-09-03",
+      "type": "bug-fix",
       "summary": "Free Agents spent a whole locked week telling you it was first come, first served. It was not — the pool has been shut since Wednesday's waiver run, so every attempt to grab a player went out as an instant pickup, MyFantasyLeague refused it without a word, and you got a bare error for your trouble. The mix-up was one minute on the league calendar: MFL processes the round and re-locks the pool at the exact same time, and when two events share a timestamp we were reading whichever one happened to be listed second. A lock and a run at the same moment now mean what they plainly mean — locked — so the page says \"Waivers open\", the button files a claim, and the pickup path comes back on its own when the pool actually reopens.",
       "impact": "user",
       "area": "free-agents",
