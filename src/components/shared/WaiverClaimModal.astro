@@ -104,6 +104,7 @@ const { config } = Astro.props;
 
 <script>
   import { applyPlayerModalBand } from '../../utils/player-modal-band';
+  import { resumePendingClaim } from '../../utils/claim-resume';
 
   const raw = document.getElementById('waiver-claim-config')?.textContent;
   const cfg = raw ? JSON.parse(raw) : null;
@@ -286,6 +287,12 @@ const { config } = Astro.props;
         showError('Network error — your claim was not submitted.');
       }
     });
+
+    // Did this page load come from the sign-in modal? If so, reopen the form
+    // on the player they were trying to claim when we interrupted them.
+    // Registered AFTER the delegated open handler above, which is what it
+    // ultimately fires. See src/utils/claim-resume.ts.
+    resumePendingClaim();
   }
 </script>
 

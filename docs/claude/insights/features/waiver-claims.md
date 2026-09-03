@@ -214,3 +214,93 @@ acceptable during a live window.
 The cheap, safe subset — worth shipping before any reorder UI — is **edit the
 drop** (one POST to `editwr`, no destructive step) and **delete a claim** (one
 GET), both of which map to a single MFL primitive with no window of loss.
+
+## 2026-09-03 - An Astro Scoped Style Cannot Reach A Row The Browser Built
+
+**Context:** the new Waiver Priority modal shipped its shell correctly styled —
+header, accent band, close button — and its team list as unstyled 50px icons
+stacked in a column, inside the same component, from the same `<style>` block.
+
+**Insight:** Astro scopes a component's CSS by stamping `data-astro-cid-*` onto
+the elements **in its template** and appending that attribute selector to every
+rule. Rows built in the browser and written in with `innerHTML` never get the
+attribute, so the rule matches nothing. The shell was in the template; the rows
+were not. Nothing errors, nothing warns, and the diff looks correct — the class
+names in the JS string and the selectors in the `<style>` block match perfectly.
+
+This is the same failure the 2026-09-02 entry below records ("A Class Name Is Not
+A Style") arriving from the opposite direction: there the rules were in another
+file, here they were in the right file but scoped away from the elements. The
+shared lesson is that **the rules for markup a script generates must live in a
+plain stylesheet** — `src/styles/waiver-priority-modal.css`, imported from the
+component's frontmatter, the way `waiver-claims-panel.css` already was next
+door. A `:global()` wrapper works too, but a component whose list, rows and
+trigger are all dynamic ends up with `:global()` on nearly every selector, which
+is a stylesheet wearing a disguise.
+
+**Rule of thumb:** if a selector's element is created by `innerHTML`,
+`createElement`, or lives in the HOST page rather than this component's own
+template, it does not belong in a scoped `<style>`.
+
+## 2026-09-03 - `Number('')` Is 0, And 0 Sorts To The Front Of The Waiver Order
+
+**Context:** `readWaiverSortOrder` guarded its parse with
+`Number.isFinite(Number(f.waiverSortOrder))`, which reads as careful and is not.
+
+**Insight:** `Number('')` is `0`, and so is `Number(' ')` and `Number(null)` —
+all finite, all passing the guard. A franchise MFL sent with an empty
+`waiverSortOrder` therefore parsed as order **zero** and sorted ahead of the
+team that actually holds first claim. The lie is worse than an omission: the
+modal exists to tell an owner how many teams pick before they do, and this
+silently inserts a phantom at the front of that count.
+
+`tests/waiver-order-display.test.ts` pins it. The parse now requires a number,
+or a string with something in it, before trusting the coercion — and the entry
+is DROPPED rather than defaulted, because "we don't know this team's priority"
+and "this team is first" must never share a representation. Same distinction as
+the `null`-vs-`[]` one in the pendingWaivers reader above; it keeps coming up
+because MFL's payloads are full of empty strings.
+
+## 2026-09-03 - The Two Halves Of A Sign-In Resume Are Never On The Page Together
+
+**Context:** clicking Bid while signed out now opens an on-site sign-in instead
+of deep-linking to MFL. It parks the player id, reloads after login, and reopens
+the claim form on that player. Both halves were written inside `SignInModal`,
+where they read as one tidy feature. The resume never fired once.
+
+**Insight:** `SignInModal` renders only when the visitor is signed **out**.
+`WaiverClaimModal` renders only when they **can claim**. Those two conditions
+are mutually exclusive by construction — which is the entire point of the
+feature — so the code that reads the parked id was absent from precisely the
+page load that had one to read. It failed silently in the worst way: the id sat
+in `sessionStorage` unclaimed, ready to pop a modal on some unrelated later
+visit.
+
+The fix is `src/utils/claim-resume.ts`: `rememberPendingClaim` imported by the
+signed-out component, `resumePendingClaim` by the signed-in one, one key in one
+file. **When a flow spans a state change that re-renders the page, its two ends
+belong in a module, not in whichever component owns the first half.** The read
+is also read-and-clear in one step, so a click that never lands can't resurrect
+the modal a week later.
+
+Related, and the reason a reload is involved at all: whether an owner may claim
+is decided in SSR frontmatter and the Claim column is not in the DOM for a
+signed-out visitor, so closing the dialog on success would leave them staring at
+the same page with no button. `LoginForm`'s `redirectUrl` carries the current
+path, which makes it a reload rather than a bounce to a league home.
+
+## 2026-09-03 - `--content-text` Does Not Exist
+
+**Context:** the priority modal's body text rendered near-black on dark navy.
+
+**Insight:** `color: var(--content-text, #111827)` — invented by analogy with
+the real `--content-bg` and `--content-text-muted`, both of which do exist.
+There is no `--content-text`, so every theme got the fallback, and the fallback
+is the light-mode value. Exactly the trap in
+`docs/claude/rules/theming-and-assets.md`, arrived at by guessing a token name
+that sounded like its neighbours. The body text token that flips is
+`--color-gray-900` (`#111827` light, `#e8eef4` dark) — what `WaiverClaimModal`
+next door was already using.
+
+Worth stating because "check the token exists" is not the same instinct as
+"check the fallback is right": the fallback here WAS right, for one theme.

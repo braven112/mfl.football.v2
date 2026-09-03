@@ -219,6 +219,28 @@ The order is **rolling**, so MFL mutates it all season as claims are awarded.
 Re-running mid-season refunds priority that teams have already spent; the script
 refuses once any waiver transaction exists for the year unless `--force`.
 
+#### Showing the order to an owner
+
+Owners read the live order from the **Waiver priority** button on the AFL Free
+Agents page (`WaiverPriorityModal` + `/api/waiver-order`). Three rules, all of
+them consequences of the two bullets above:
+
+- **Read it LIVE, never from the synced `league.json` feed.** The order is
+  rolling, so the cron-synced copy is stale exactly when an owner cares — the
+  morning after waivers processed. `/api/waiver-order` fetches
+  `export?TYPE=league` (public, ~12 KB) with a 60s in-process cache, and serves
+  the last known-good order rather than an error if MFL blips.
+- **Never show MFL's raw `waiverSortOrder`.** It is a flat 1-24 across two
+  serialized conference blocks, so the National team holding 13 is FIRST in
+  line. `rankWithinConference` (`src/utils/waiver-order.ts`) renumbers the
+  viewer's conference from 1 and is the only thing that should reach a UI.
+  `tests/waiver-order-display.test.ts` pins that a wholesale shift of one
+  block changes nothing.
+- **Scope to the owner's OWN conference, not the one they're browsing.** The
+  Free Agents page has a conference switcher; the waiver order does not follow
+  it, because an American owner peeking at the National pool can still only
+  ever file with their American team.
+
 ---
 
 ## Keepers
