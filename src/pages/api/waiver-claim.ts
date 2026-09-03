@@ -277,7 +277,24 @@ export const POST: APIRoute = async ({ request }) => {
             FORCE_WAIVER: 'on',
             ROUND: String(round),
             COMMENTS: '',
-            SUBMIT: 'Perform Add/Drop',
+            // `Submit Request`, NOT `Perform Add/Drop`. MFL's server dispatches
+            // on the submit button's VALUE, and its own picker.js rewrites that
+            // value the moment FORCE_WAIVER is ticked:
+            //
+            //   if (obj.checked) { submit.value = "Submit Request";
+            //     note.innerHTML = "This add/drop will be submitted as a
+            //                       waiver request."; }
+            //   else             { submit.value = "Perform Add/Drop"; }
+            //
+            // Sending the else-branch value asks for an INSTANT ADD, which a
+            // locked free-agent pool refuses — MFL said so in as many words
+            // once the log finally printed past its nav menu:
+            // "Okonkwo, Chigoziem WAS TE Cannot Be Added Because Is Locked."
+            // FORCE_WAIVER alone was never enough; the pair is the request.
+            //
+            // cut-player.ts keeps `Perform Add/Drop` and is right to: a cut is
+            // an instant drop, not a claim.
+            SUBMIT: 'Submit Request',
           }).toString(),
         }));
 
