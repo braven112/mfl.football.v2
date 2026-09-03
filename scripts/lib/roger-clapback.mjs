@@ -99,14 +99,18 @@ export function namesSchefter(rawText) {
 /**
  * Return true if a GroupMe message was posted by the Roger bot.
  *
- * Mirror of the Schefter listener's isSchefterBotMessage: explicit sender-id
- * env var first, then sender_type==='bot' plus a name check. Schefter is
- * excluded by name so Roger never caches — and therefore never answers replies
- * to — a post that wasn't his.
+ * Mirror of the Schefter listener's isSchefterBotMessage: explicit sender id
+ * first, then sender_type==='bot' plus a name check. Schefter is excluded by
+ * name so Roger never caches — and therefore never answers replies to — a post
+ * that wasn't his.
+ *
+ * `senderId` is passed in per-league rather than read from a global env var:
+ * TheLeague and the AFL run separate Roger bots in separate groups, so a
+ * module-level read would apply one league's id to the other's messages.
  */
-export function isRogerBotMessage(msg) {
+export function isRogerBotMessage(msg, senderId = null) {
   if (!msg || typeof msg !== 'object') return false;
-  const explicitId = process.env.GROUPME_ROGER_BOT_SENDER_ID;
+  const explicitId = senderId;
   if (explicitId && (msg.user_id === explicitId || msg.sender_id === explicitId)) return true;
   if (msg.sender_type !== 'bot') return false;
   if (typeof msg.name !== 'string') return false;

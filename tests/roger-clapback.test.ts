@@ -24,6 +24,7 @@
  *     came from it — Roger reads these out to sixteen people.
  */
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { readFileSync } from 'node:fs';
 import {
   detectRogerTarget,
   detectRogerMention,
@@ -42,6 +43,14 @@ import {
   detectMention,
   // @ts-ignore — .mjs via allowJs
 } from '../scripts/schefter-groupme-listen.mjs';
+import {
+  franchiseMapKeys,
+  // @ts-ignore — .mjs via allowJs
+} from '../scripts/roger-groupme-reply.mjs';
+import {
+  SCHEFTER_LEAGUES,
+  // @ts-ignore — .mjs via allowJs
+} from '../scripts/lib/schefter-leagues.mjs';
 import {
   buildRosterRoast,
   buildDraftContext,
@@ -194,12 +203,6 @@ describe('cross-lane disjointness — Roger and Schefter never both claim a mess
 });
 
 describe('isRogerBotMessage', () => {
-  const OLD = process.env.GROUPME_ROGER_BOT_SENDER_ID;
-  afterEach(() => {
-    if (OLD === undefined) delete process.env.GROUPME_ROGER_BOT_SENDER_ID;
-    else process.env.GROUPME_ROGER_BOT_SENDER_ID = OLD;
-  });
-
   it('matches the Roger bot by name', () => {
     expect(isRogerBotMessage({ sender_type: 'bot', name: 'Ask Roger', id: 'a' })).toBe(true);
   });
@@ -213,9 +216,41 @@ describe('isRogerBotMessage', () => {
     expect(isRogerBotMessage({ sender_type: 'user', name: 'Roger Goodell' })).toBe(false);
   });
 
-  it('matches by explicit sender id when set', () => {
-    process.env.GROUPME_ROGER_BOT_SENDER_ID = 'sender-9';
-    expect(isRogerBotMessage({ sender_type: 'user', name: 'whatever', user_id: 'sender-9' })).toBe(true);
+  it('matches by explicit sender id when one is passed', () => {
+    expect(
+      isRogerBotMessage({ sender_type: 'user', name: 'whatever', user_id: 'sender-9' }, 'sender-9'),
+    ).toBe(true);
+  });
+
+  it('takes the sender id per call, not from the environment', () => {
+    // TheLeague and the AFL run separate Roger bots in separate groups. A
+    // module-level env read would apply one league's id to the other's
+    // messages, so the id has to arrive as an argument.
+    const msg = { sender_type: 'user', name: 'whatever', user_id: 'afl-roger' };
+    expect(isRogerBotMessage(msg, 'afl-roger')).toBe(true);
+    expect(isRogerBotMessage(msg, 'theleague-roger')).toBe(false);
+    expect(isRogerBotMessage(msg)).toBe(false);
+  });
+});
+
+describe('franchiseMapKeys — the AFL cannot read TheLeague franchise ids', () => {
+  it('scopes the AFL to its own key with NO legacy fallback', () => {
+    // The bare `groupme:user:<id>` key is written by groupme-storage.ts against
+    // TheLeague's team config. Both leagues have a franchise "0001", so falling
+    // back to it in the AFL resolves a TheLeague franchise id against AFL
+    // feeds — a roster belonging to a different person in a different league.
+    expect(franchiseMapKeys('afl', 'u1')).toEqual(['groupme:afl:user:u1']);
+  });
+
+  it('keeps the legacy bare key for TheLeague so existing mappings still work', () => {
+    expect(franchiseMapKeys('theleague', 'u1')).toEqual([
+      'groupme:theleague:user:u1',
+      'groupme:user:u1',
+    ]);
+  });
+
+  it('prefers the scoped key over the legacy one', () => {
+    expect(franchiseMapKeys('theleague', 'u1')[0]).toBe('groupme:theleague:user:u1');
   });
 });
 
@@ -620,5 +655,99 @@ describe('rails', () => {
   it('answers a pile-on once, not once per pile-r', () => {
     expect(MIN_GAP_MS).toBeGreaterThanOrEqual(10 * 60 * 1000);
     expect(MIN_GAP_MS).toBeLessThan(OWNER_COOLDOWN_MS);
+  });
+});
+
+// ── AFL first ───────────────────────────────────────────────────────────────
+
+describe('league rollout — the AFL gets Roger first', () => {
+  const byNav = (nav: string) => SCHEFTER_LEAGUES.find((l: any) => l.slug === nav);
+
+  it('turns the reply lane on for the AFL and leaves TheLeague off', () => {
+    expect(byNav('afl').features.rogerReplies).toBe(true);
+    expect(byNav('theleague').features.rogerReplies).toBe(false);
+  });
+
+  it('keeps the lane independent of Schefter\'s mention ingest', () => {
+    // groupmeListen is Schefter's tip pipeline and its Redis keys are all
+    // TheLeague-scoped, so it stays TheLeague-only. Roger's lane keys off its
+    // own league-scoped prefix and therefore rolls out the other way round.
+    expect(byNav('afl').features.groupmeListen).toBe(false);
+    expect(byNav('afl').features.rogerReplies).toBe(true);
+  });
+
+  it('reads each league\'s group id from its own registry entry', () => {
+    // Not a shared module-level env read: two leagues, two groups.
+    expect(Object.hasOwn(byNav('afl'), 'groupMeGroupId')).toBe(true);
+    expect(Object.hasOwn(byNav('theleague'), 'groupMeGroupId')).toBe(true);
+  });
+
+  it('still requires Roger to actually post in a league before he can reply', () => {
+    for (const league of SCHEFTER_LEAGUES) {
+      if (league.features.rogerReplies) expect(league.features.eventReminders).toBe(true);
+    }
+  });
+});
+
+describe('AFL roster shape — the QB joke has to survive the move', () => {
+  // The AFL is a different league: 24 franchises, 16-man rosters (vs 16 and 25),
+  // and a two-unit conference draft. The burn only works if it ALSO starts
+  // exactly one quarterback — pinned here because a rules change that made the
+  // AFL superflex would silently turn every clapback into a false statement.
+  const leagueFeed = JSON.parse(
+    readFileSync('data/afl-fantasy/mfl-feeds/2026/league.json', 'utf8'),
+  );
+
+  it('starts exactly one QB, as a fixed requirement', () => {
+    const limits = buildStarterLimits(leagueFeed);
+    expect(limits.get('QB')).toEqual({ min: 1, max: 1, hardCap: true });
+  });
+
+  it('finds a real surplus on a real AFL roster', () => {
+    const rostersFeed = JSON.parse(
+      readFileSync('data/afl-fantasy/mfl-feeds/2026/rosters.json', 'utf8'),
+    );
+    const playersFeed = JSON.parse(
+      readFileSync('data/afl-fantasy/mfl-feeds/2026/players.json', 'utf8'),
+    );
+    const roast = buildRosterRoast({
+      franchiseId: '0008',
+      rostersFeed,
+      playersFeed,
+      leagueFeed,
+    });
+    expect(roast.topRoast.position).toBe('QB');
+    expect(roast.topRoast.count).toBeGreaterThanOrEqual(4);
+    expect(roast.topRoast.startMax).toBe(1);
+  });
+
+  it('reads BOTH conference draft units, not just the first', () => {
+    // AFL draftResults nests draftUnit as an ARRAY (CONFERENCE00/CONFERENCE01).
+    // TheLeague's is a single object. Treating the array as an object would
+    // silently drop every pick made in the other conference.
+    const draftFeed = JSON.parse(
+      readFileSync('data/afl-fantasy/mfl-feeds/2026/draftResults.json', 'utf8'),
+    );
+    const playersFeed = JSON.parse(
+      readFileSync('data/afl-fantasy/mfl-feeds/2026/players.json', 'utf8'),
+    );
+    expect(Array.isArray(draftFeed.draftResults.draftUnit)).toBe(true);
+
+    // 0008 drafts in one conference, 0015 in the other; both must resolve.
+    const a = buildDraftContext({
+      franchiseId: '0008',
+      draftFeed,
+      playersFeed,
+      position: 'QB',
+    });
+    const b = buildDraftContext({
+      franchiseId: '0015',
+      draftFeed,
+      playersFeed,
+      position: 'QB',
+    });
+    expect(a.drafted).toBeGreaterThan(0);
+    expect(b.drafted).toBeGreaterThan(0);
+    expect(b.autodrafted).toBeGreaterThan(0);
   });
 });

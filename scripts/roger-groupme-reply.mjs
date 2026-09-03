@@ -73,12 +73,16 @@ async function getRedis() {
   }
 }
 
-/** Fetch GroupMe messages since the watermark, oldest first. */
-async function fetchGroupMeSince(watermarkId) {
+/**
+ * Fetch GroupMe messages since the watermark, oldest first.
+ *
+ * The service token is account-wide (one GroupMe user, all their groups), so
+ * it stays global; the GROUP is per-league and comes from the registry.
+ */
+async function fetchGroupMeSince(watermarkId, groupId) {
   const token = process.env.GROUPME_SERVICE_TOKEN || process.env.GROUPME_ACCESS_TOKEN;
-  const groupId = process.env.GROUPME_GROUP_ID;
   if (!token || !groupId) {
-    warn('GROUPME_SERVICE_TOKEN or GROUPME_GROUP_ID not set — skipping Roger reply scan');
+    warn('GroupMe service token or group id not set — skipping Roger reply scan');
     return null;
   }
 
@@ -114,25 +118,44 @@ async function readJson(filePath) {
 }
 
 /**
- * Resolve a GroupMe sender to a franchise.
+ * Resolve a GroupMe sender to a franchise, scoped to the league.
  *
  * The mapping is the commissioner-curated one written by
- * src/utils/groupme-storage.ts#linkFranchise (`groupme:user:<userId>` →
- * franchiseId). Display names are deliberately NOT used as a fallback: GroupMe
- * nicknames are free text an owner can change to anything, and a fuzzy name
- * match that lands on the wrong franchise means Roger reads out a roster
- * belonging to someone else entirely. No mapping simply means no roster facts —
- * the clapback still fires, just without specifics.
+ * src/utils/groupme-storage.ts#linkFranchise. That writer uses a BARE
+ * `groupme:user:<userId>` key and loads TheLeague's team config, so the ids
+ * behind it are TheLeague franchise ids — and both leagues have a franchise
+ * "0001". An owner who plays in both would collide on the bare key, and the
+ * AFL would read a TheLeague franchise id against AFL feeds: a roster that
+ * belongs to a different person in a different league.
+ *
+ * So the lookup is league-scoped, with the legacy bare key kept as a
+ * TheLeague-only fallback (same idiom as rankings-scope.ts, where TheLeague
+ * keeps the unprefixed key and every other league gets its own). The AFL gets
+ * NO fallback — reading the bare key there is exactly the bug above.
+ *
+ * Display names are deliberately not a fallback in either league: GroupMe
+ * nicknames are free text an owner can change to anything (the message that
+ * prompted this feature came from "Dicks out for Harambe", which is not a team
+ * name in any league), and a fuzzy match that lands wrong means Roger reads
+ * out someone else's roster to the whole chat. No mapping simply means no
+ * roster facts — the clapback still fires, just without specifics.
  */
-async function resolveFranchiseId(redis, userId) {
+export function franchiseMapKeys(navSlug, userId) {
+  const scoped = `groupme:${navSlug}:user:${userId}`;
+  return navSlug === 'theleague' ? [scoped, `groupme:user:${userId}`] : [scoped];
+}
+
+async function resolveFranchiseId(redis, navSlug, userId) {
   if (!redis || !userId) return null;
-  try {
-    const value = await redis.get(`groupme:user:${userId}`);
-    return typeof value === 'string' && value ? value : null;
-  } catch (err) {
-    warn(`Franchise lookup failed for ${userId}: ${err.message}`);
-    return null;
+  for (const key of franchiseMapKeys(navSlug, userId)) {
+    try {
+      const value = await redis.get(key);
+      if (typeof value === 'string' && value) return value;
+    } catch (err) {
+      warn(`Franchise lookup failed on ${key}: ${err.message}`);
+    }
   }
+  return null;
 }
 
 /** Load the team display name for a franchise from the league config. */
@@ -249,12 +272,20 @@ async function recordClapback(redis, league, userId, nowMs) {
 export async function scanRogerReplies({ league, dryRun = false }) {
   const result = { scanned: 0, targeted: 0, posted: 0, skipped: [] };
 
-  if (!league?.features?.eventReminders) {
-    log(`Skipping ${league?.slug} — Roger doesn't post here`);
+  if (!league?.features?.rogerReplies) {
+    log(`Skipping ${league?.slug} — Roger's reply lane is off for this league`);
+    return result;
+  }
+  if (!league.features.eventReminders) {
+    log(`Skipping ${league.slug} — Roger doesn't post here, so there is nothing to reply to`);
     return result;
   }
   if (!league.groupMeRogerBotId) {
     log(`Skipping ${league.slug} — no Roger bot id configured`);
+    return result;
+  }
+  if (!league.groupMeGroupId) {
+    log(`Skipping ${league.slug} — no GroupMe group id configured for this league`);
     return result;
   }
 
@@ -285,7 +316,7 @@ export async function scanRogerReplies({ league, dryRun = false }) {
   }
 
   log(`Fetching ${league.slug} messages since watermark=${watermark ?? '(none)'}`);
-  const messages = await fetchGroupMeSince(watermark);
+  const messages = await fetchGroupMeSince(watermark, league.groupMeGroupId);
   if (messages === null) return result;
   result.scanned = messages.length;
   if (messages.length === 0) {
@@ -313,7 +344,7 @@ export async function scanRogerReplies({ league, dryRun = false }) {
   for (const msg of messages) {
     // Track Roger's own posts BEFORE the bot filter — replies later in this
     // same batch need them.
-    if (isRogerBotMessage(msg) && typeof msg.id === 'string') {
+    if (isRogerBotMessage(msg, league.groupMeRogerBotSenderId) && typeof msg.id === 'string') {
       if (!rogerBotMsgIds.has(msg.id)) {
         rogerBotMsgIds.add(msg.id);
         newRogerMsgIds.push(msg.id);
@@ -342,7 +373,7 @@ export async function scanRogerReplies({ league, dryRun = false }) {
       continue;
     }
 
-    const franchiseId = await resolveFranchiseId(redis, userId);
+    const franchiseId = await resolveFranchiseId(redis, league.slug, userId);
     const { roast, draft, teamName } = await buildFacts(league, franchiseId, currentLeagueYear);
     const factSheet = buildFactSheet({
       teamName,
