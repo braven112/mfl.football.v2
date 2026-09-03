@@ -30,6 +30,13 @@ export interface WaiverClaimsPanelConfig {
   system: 'bbid' | 'priority';
   /** The owner's roster, for the "drop instead" picker. */
   roster: Array<{ id: string; name: string }>;
+  /**
+   * MFL league id, used to scope the collapsed preference. BOTH leagues render
+   * this panel and an owner may well want it hidden in one and not the other —
+   * and with the ClientRouter a single module instance survives a hop between
+   * them, so an unscoped key would carry the wrong league's choice across.
+   */
+  leagueId: string;
 }
 
 interface Props {
@@ -44,10 +51,15 @@ const { config } = Astro.props;
   <section class="wcp" id="waiver-claims-panel" hidden aria-labelledby="wcp-heading">
     <div class="wcp__head">
       <h2 class="wcp__title" id="wcp-heading">Your waiver claims</h2>
-      <a class="wcp__mfl" id="wcp-mfl" href="#" target="_blank" rel="noopener" hidden>View on MyFantasyLeague &#8599;</a>
+      <span class="wcp__head-right">
+        <a class="wcp__mfl" id="wcp-mfl" href="#" target="_blank" rel="noopener" hidden>View on MyFantasyLeague &#8599;</a>
+        <button type="button" class="wcp__toggle" id="wcp-toggle" aria-expanded="true" aria-controls="wcp-body">Hide</button>
+      </span>
     </div>
-    <p class="wcp__note" id="wcp-note" hidden></p>
-    <ul class="wcp__list" id="wcp-list"></ul>
+    <div id="wcp-body">
+      <p class="wcp__note" id="wcp-note" hidden></p>
+      <ul class="wcp__list" id="wcp-list"></ul>
+    </div>
   </section>
 )}
 
@@ -60,6 +72,41 @@ const { config } = Astro.props;
     const list = document.getElementById('wcp-list')!;
     const note = document.getElementById('wcp-note')!;
     const mflLink = document.getElementById('wcp-mfl') as HTMLAnchorElement;
+    const toggle = document.getElementById('wcp-toggle') as HTMLButtonElement;
+    const body = document.getElementById('wcp-body')!;
+
+    /**
+     * Collapsed state, remembered per league. localStorage throws outright in
+     * some privacy modes, so every read and write is guarded and a failure just
+     * means the panel opens — never that the page breaks.
+     */
+    const STORE_KEY = `wcp.collapsed.${cfg.leagueId}`;
+    const readCollapsed = () => {
+      try { return localStorage.getItem(STORE_KEY) === '1'; } catch { return false; }
+    };
+    const writeCollapsed = (v: boolean) => {
+      try { v ? localStorage.setItem(STORE_KEY, '1') : localStorage.removeItem(STORE_KEY); } catch { /* ignore */ }
+    };
+    let collapsed = readCollapsed();
+
+    /**
+     * Collapse HIDES THE LIST, never the panel. A control that made the whole
+     * thing vanish would leave no way back to claims that are still live and
+     * still going to process — the count in the header is the point.
+     */
+    const applyCollapsed = (count: number) => {
+      body.hidden = collapsed;
+      toggle.textContent = collapsed ? `Show${count ? ` (${count})` : ''}` : 'Hide';
+      toggle.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+      panel.classList.toggle('wcp--collapsed', collapsed);
+    };
+
+    let lastCount = 0;
+    toggle.addEventListener('click', () => {
+      collapsed = !collapsed;
+      writeCollapsed(collapsed);
+      applyCollapsed(lastCount);
+    });
 
     const esc = (s: unknown) =>
       String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -77,6 +124,8 @@ const { config } = Astro.props;
         return;
       }
       panel.hidden = false;
+      lastCount = claims.length;
+      applyCollapsed(lastCount);
       list.innerHTML = claims
         .map((c, i) => {
           const meta = [c.addPosition, c.addNflTeam].filter(Boolean).join(' · ');
@@ -115,6 +164,8 @@ const { config } = Astro.props;
           if (res.status !== 401 && res.status !== 403) {
             panel.hidden = false;
             list.innerHTML = '';
+            lastCount = 0;
+            applyCollapsed(0);
             showNote(data.message || 'Could not read your pending waivers.', 'error');
           }
           return;

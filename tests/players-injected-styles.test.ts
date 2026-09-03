@@ -137,6 +137,9 @@ describe('WaiverClaimsPanel — injected-row styles', () => {
   const PANEL_CSS = 'src/styles/waiver-claims-panel.css';
   /** Classes that only ever exist on markup the client script injects. */
   const INJECTED = ['wcp__item', 'wcp__rank', 'wcp__who', 'wcp__name', 'wcp__meta', 'wcp__drop', 'wcp__actions', 'wcp__btn'];
+  /** In the component's own markup, so scoping them would be fine — but they
+   *  live in the same stylesheet, and a missing rule is still a broken control. */
+  const STATIC = ['wcp__toggle', 'wcp__head-right'];
 
   it('keeps injected-row rules OUT of the component\'s scoped style block', () => {
     const src = read(COMPONENT);
@@ -157,7 +160,7 @@ describe('WaiverClaimsPanel — injected-row styles', () => {
 
   it('actually styles every injected class', () => {
     const css = read(PANEL_CSS);
-    for (const cls of INJECTED) {
+    for (const cls of [...INJECTED, ...STATIC]) {
       expect(css, `${PANEL_CSS} has no rule for .${cls}`).toContain(`.${cls}`);
     }
   });
