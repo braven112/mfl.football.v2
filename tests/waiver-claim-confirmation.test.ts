@@ -127,6 +127,21 @@ describe('readPendingWaiverPlayerIds — "could not verify" is not "nothing ther
     expect(readMflImportResult('<status>OK</status>').refused).toBe(false);
   });
 
+  it('posts the import to the LEAGUE host, never the api. gateway', () => {
+    // api.myfantasyleague.com answers `import?TYPE=waiverRequest` with an empty
+    // 200 and stores nothing — the only call in this route that does not 302 to
+    // the league host. cut-player.ts carries the same rule for add_drop.
+    expect(ROUTE).toContain('league.mflHost');
+    const writeBlock = ROUTE.slice(ROUTE.indexOf('const importType'), ROUTE.indexOf('const text = (await res.text())'))
+      // Strip comments — this rule is written up in prose right there, and the
+      // prose necessarily names the host it is warning against.
+      .split('\n')
+      .filter((line) => !line.trim().startsWith('//'))
+      .join('\n');
+    expect(writeBlock, 'the import must not be posted to the api. gateway').not.toContain('api.myfantasyleague.com');
+    expect(writeBlock).toMatch(/importUrl\s*=\s*`https:\/\/\$\{importHost\}/);
+  });
+
   it('the route hard-fails on a refusal, not on a missing OK', () => {
     // Gating the write on `!outcome.accepted` 502'd a real claim during a live
     // waiver window, because MFL affirms nothing on this endpoint.
