@@ -947,6 +947,20 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     <!-- Screen reader announcer for bid changes -->
     <div class="sr-only" aria-live="polite" aria-atomic="true" id="auction-announcer"></div>
 
+    <!--
+      OUTSIDE `.table-wrapper`, matching afl-fantasy/players.astro. The panel is
+      a self-contained card — its own border, radius, background and bottom
+      margin — and `.table-wrapper` is another one, so nesting it drew a rounded
+      bordered box inside a rounded ringed box with the legend's divider between
+      them. The AFL never had this because it never nested it.
+
+      The Bid Status legend below IS deliberately inside the wrapper: it is a
+      strip belonging to the table's own header, hence a `border-bottom` rather
+      than a box. Attached-to-the-table and standalone-card are different jobs;
+      don't merge them.
+    -->
+    <WaiverClaimsPanel config={claimsPanelConfig} />
+
     <!-- Table -->
     <div class="table-wrapper">
       <!-- Bid Status Legend (inside table-wrapper so it's visually attached) -->
@@ -971,7 +985,6 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
           No bid
         </span>
       </div>
-      <WaiverClaimsPanel config={claimsPanelConfig} />
 
       <table class="players-table" id="players-table">
         <thead>
