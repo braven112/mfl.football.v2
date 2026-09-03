@@ -27,7 +27,11 @@ import theleagueConfig from '../data/theleague.config.json';
 import aflConfig from '../../data/afl-fantasy/afl.config.json';
 import { buildTeamIconDarkCss } from './team-icon-dark-css';
 import { buildCrestDarkStrokeCss, withStrokeColors } from './crest-dark-stroke-css';
-import { buildEraCrestStrokeCss, buildEraCrestShapeCss } from './era-crest-stroke-css';
+import {
+  buildEraCrestStrokeCss,
+  buildEraCrestShapeCss,
+  buildEraCrestDarkStrokeCss,
+} from './era-crest-stroke-css';
 
 const THELEAGUE_ICON_DIR = '/assets/theleague/icons';
 const AFL_ICON_DIR = '/assets/afl/icons';
@@ -62,6 +66,8 @@ export function buildAllTeamIconDarkCss(): string {
     buildEraCrestStrokeCss(aflConfig.teams),
     buildEraCrestShapeCss(theleagueConfig.teams),
     buildEraCrestShapeCss(aflConfig.teams),
+    buildEraCrestDarkStrokeCss(theleagueConfig.teams),
+    buildEraCrestDarkStrokeCss(aflConfig.teams),
   ]
     .filter(Boolean)
     .join('\n');

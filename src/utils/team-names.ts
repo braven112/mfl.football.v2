@@ -203,6 +203,25 @@ export interface FranchiseHistoryEntry {
    */
   iconFreeform?: boolean;
   /**
+   * Trace this era's crest in white, in DARK MODE ONLY — `true` for the
+   * default hairline, or a hex to override the colour.
+   *
+   * The third and last of the era-crest treatments, and the three answer
+   * different questions. `iconStroke` rings the element BOX in the era's own
+   * colour in both themes, because a banner cut has no edge. `iconFreeform`
+   * removes the round slot, because a real mark is not a circle. This one
+   * traces the ART's silhouette, because a mark can be perfectly shaped and
+   * still sink into a near-black card — Smokane's green elephant reads fine
+   * on the light card and dissolves on the dark one.
+   *
+   * Emitted by `buildEraCrestDarkStrokeCss`, which delegates to the same
+   * `drop-shadow` stack the franchise-level `iconStrokeDark` uses. It is a
+   * `filter` rather than a `box-shadow` for the reason recorded there: only
+   * `drop-shadow` follows an image's alpha, and a box ring on a transparent
+   * PNG is a white square around the logo.
+   */
+  iconStrokeDark?: string | boolean;
+  /**
    * Set at RUNTIME, never in a config file: the franchise slot this era was
    * inherited from, when a franchise changed MFL slots and its earlier looks
    * live in the other slot's `history[]`.

@@ -212,6 +212,33 @@ ends. It is cropped to the GOLD rounded-rect by scanning for the badge's own
 gold rather than by `sharp.trim()` — the navy outside the badge and the navy
 inside it are the same colour, so a colour trim stops at the wrong edge.
 
+Smokane's elephant (`smokane_2003_icon.png`, the 2003-2005 era) is the fourth
+and the one that needed the third treatment. It arrived already transparent —
+what read as a black background in the preview was empty alpha over a dark
+backdrop, so it is trimmed on ALPHA, not on colour; trimming on colour would
+have kept the whole canvas.
+
+### The three era-crest treatments do not overlap
+
+| Field | What it draws | When | Why |
+|---|---|---|---|
+| `iconStroke` | a ring on the element BOX, in the era's colour | both themes | a circle punched out of a banner has no edge of its own |
+| `iconFreeform` | nothing — removes the round slot | both themes | the mark's shape is not a circle |
+| `iconStrokeDark` | the ART's silhouette, in white | dark only | the mark is fine on the light card and sinks into the dark one |
+
+Smokane's elephant needs the last two and must not have the first: it is a
+shaped mark (so no round slot) that is mid-green on a near-black card (so an
+outline), and a box ring around it would be a rectangle enclosing loose art.
+`buildEraCrestDarkStrokeCss` delegates to `crest-dark-stroke-css.ts` rather
+than restating the four-stacked-`drop-shadow` trick — that is also why it is
+a `filter` and not the `box-shadow` `iconStroke` uses: only `drop-shadow`
+follows an image's alpha, and on a transparent PNG a box ring is a white
+square around the logo.
+
+`tests/era-crest-stroke.test.ts` pins each treatment's opt-in as exact, that
+`iconStrokeDark` is gated on `html.dark` while `iconStroke` deliberately is
+not, and that no crest carries both.
+
 Both read correctly on the light card and the dark one, which is why the
 Bears' *dark* variant was the right pick rather than the standard mark: its
 white keyline disappears on the light card and the orange bear carries it,

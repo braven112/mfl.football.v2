@@ -43,10 +43,19 @@
  */
 
 import { iconSrcVariants } from './team-icon-dark-css';
+import { buildCrestDarkStrokeCss } from './crest-dark-stroke-css';
 
 /** Minimal shape this builder needs from a league config's teams. */
 interface EraStrokeTeam {
-  history?: { icon?: string; iconStroke?: string; iconFreeform?: boolean }[];
+  history?: {
+    icon?: string;
+    iconStroke?: string;
+    iconFreeform?: boolean;
+    // `boolean` rather than `true`: the config is imported JSON, and TS
+    // infers a literal `true` there as plain `boolean`. A falsy value means
+    // no stroke, which is what the collector already checks for.
+    iconStrokeDark?: string | boolean;
+  }[];
 }
 
 const HEX = /^#[0-9a-f]{6}$/i;
@@ -142,4 +151,44 @@ export function buildEraCrestShapeCss(teams: EraStrokeTeam[]): string {
     `  object-fit: contain !important;\n` +
     `}`
   );
+}
+
+/**
+ * Dark-mode white outline for an era crest that is a free-standing mark.
+ *
+ * A THIRD treatment, and the three do not overlap:
+ *
+ * - `iconStroke` rings the element box in the era's own colour, in BOTH
+ *   themes, because a circle punched out of a banner has no edge of its own.
+ * - `iconFreeform` takes the round slot away entirely, for a mark whose shape
+ *   is not a circle.
+ * - `iconStrokeDark` — this one — traces the ART's silhouette in white, in
+ *   DARK MODE ONLY, for a mark that is dark enough to sink into the dark card.
+ *   Smokane's green elephant is the case: fine on the light card, a green
+ *   shape on a near-black one.
+ *
+ * It delegates to `buildCrestDarkStrokeCss` rather than restating the stroke,
+ * because the four-stacked-`drop-shadow` trick is not obvious and having two
+ * copies of it is how they drift. That function is the reason this is a
+ * `filter` and not a `box-shadow` like `iconStroke`: only `drop-shadow`
+ * follows an image's alpha silhouette, and on a transparent PNG a box ring
+ * would be a white square around the logo.
+ *
+ * `true` means "the default white"; a hex overrides it, the same contract the
+ * franchise-level `iconStrokeDark` already has.
+ */
+export function buildEraCrestDarkStrokeCss(teams: EraStrokeTeam[]): string {
+  const entries: { icon: string; strokeColor?: string }[] = [];
+  for (const team of teams ?? []) {
+    for (const era of team?.history ?? []) {
+      if (!era?.icon || !era.iconStrokeDark) continue;
+      entries.push({
+        icon: era.icon,
+        // `true` is spelled `undefined` downstream — that is how the shared
+        // builder says "use the default colour".
+        strokeColor: typeof era.iconStrokeDark === 'string' ? era.iconStrokeDark : undefined,
+      });
+    }
+  }
+  return buildCrestDarkStrokeCss(entries);
 }

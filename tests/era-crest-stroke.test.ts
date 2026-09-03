@@ -3,7 +3,11 @@ import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import aflConfig from '../data/afl-fantasy/afl.config.json';
 import theleagueConfig from '../src/data/theleague.config.json';
-import { buildEraCrestShapeCss, buildEraCrestStrokeCss } from '../src/utils/era-crest-stroke-css';
+import {
+  buildEraCrestDarkStrokeCss,
+  buildEraCrestShapeCss,
+  buildEraCrestStrokeCss,
+} from '../src/utils/era-crest-stroke-css';
 import { buildAllTeamIconDarkCss } from '../src/utils/team-icon-dark-styles';
 
 const aflTeams = (aflConfig as any).teams as any[];
@@ -200,5 +204,54 @@ describe('free-standing era crests', () => {
     expect(buildEraCrestShapeCss((theleagueConfig as any).teams)).toBe('');
     expect(buildEraCrestShapeCss([])).toBe('');
     expect(buildEraCrestShapeCss([{ history: [{ icon: '/a.png' }] }] as any)).toBe('');
+  });
+});
+
+describe('dark-mode outline for a free-standing era crest', () => {
+  const darkStroked = eras.filter(({ era }) => era.iconStrokeDark);
+
+  it('strokes every era that opts in, under html.dark only', () => {
+    const css = buildEraCrestDarkStrokeCss(aflTeams);
+    expect(darkStroked.length).toBeGreaterThan(0);
+    for (const { team, era } of darkStroked) {
+      expect(css, `${team.name} "${era.name}" opted in but got no rule`)
+        .toContain(`html.dark img[src="${era.icon}"]`);
+    }
+    // Unlike `iconStroke`, which is deliberately BOTH themes, every selector
+    // here is gated — a white outline on the light card is a sticker edge.
+    for (const line of css.split('\n')) {
+      if (line.includes('img[src=')) expect(line).toContain('html.dark');
+    }
+  });
+
+  it('follows the art, not the box', () => {
+    // `drop-shadow` is the only one of outline / box-shadow / a plate that
+    // traces an image's ALPHA. On a transparent PNG the others draw a white
+    // square around the logo, which is worse than the problem.
+    const css = buildEraCrestDarkStrokeCss(aflTeams);
+    expect(css).toContain('drop-shadow');
+    expect(css).not.toContain('box-shadow');
+  });
+
+  it('never doubles up with the both-themes box rim', () => {
+    // One crest cannot need both: the box rim is for a banner cut with no
+    // edge, this is for a shaped mark that sinks into the dark card.
+    for (const { team, era } of darkStroked) {
+      expect(
+        era.iconStroke,
+        `${team.name} "${era.name}" carries both era-crest strokes`,
+      ).toBeUndefined();
+    }
+  });
+
+  it('rides in the shared composition', () => {
+    const all = buildAllTeamIconDarkCss();
+    expect(all).toContain(`html.dark img[src="${darkStroked[0].era.icon}"]`);
+  });
+
+  it('emits nothing when no era opts in', () => {
+    expect(buildEraCrestDarkStrokeCss((theleagueConfig as any).teams)).toBe('');
+    expect(buildEraCrestDarkStrokeCss([])).toBe('');
+    expect(buildEraCrestDarkStrokeCss([{ history: [{ icon: '/a.png' }] }] as any)).toBe('');
   });
 });
