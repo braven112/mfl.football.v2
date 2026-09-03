@@ -1,0 +1,83 @@
+/**
+ * Waiver claims panel — GLOBAL, and that is the whole point.
+ *
+ * The panel's list items are injected with `innerHTML` after an API call, so
+ * they carry no `data-astro-cid` and a SCOPED rule never matches them. Written
+ * inside the component's `<style>` block, every `.wcp__item` / `.wcp__rank` /
+ * `.wcp__btn` rule below was silently dead: the rank badge rendered with
+ * `background: rgba(0,0,0,0)` and rows collapsed to 28px, while the container
+ * — which IS in the component's own markup — looked fine.
+ *
+ * That is the third time this exact trap has bitten this feature (the AFL Claim
+ * button shipped as raw browser chrome for the same reason). Frontmatter import
+ * is the repo's answer, same as WaiverClaimModal does with player-modal-band.css,
+ * and `tests/players-injected-styles.test.ts` now guards it.
+ *
+ * Colour comes from `--league-accent`, which resolves per league in tokens.css
+ * and tokens-dark.css. A literal here would paint one league's colour on both.
+ */
+  .wcp {
+  margin: 0 0 1rem;
+  padding: 0.9rem 1.1rem 1rem;
+  border: 1px solid var(--card-border, #e5e7eb);
+  border-radius: var(--radius-md, 0.5rem);
+  background: var(--content-bg, #fff);
+}
+.wcp__head { display: flex; align-items: baseline; justify-content: space-between; gap: 0.75rem; }
+.wcp__title {
+  margin: 0;
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--content-text-muted, #6b7280);
+}
+.wcp__mfl { font-size: 0.75rem; color: var(--league-accent, var(--color-primary, #1c497c)); text-decoration: underline; }
+.wcp__note { margin: 0.6rem 0 0; font-size: 0.78rem; }
+.wcp__note--ok { color: var(--content-text-muted, #6b7280); }
+.wcp__note--warn { color: var(--color-warning-dark, #b45309); }
+.wcp__note--error { color: var(--color-error, #b91c1c); }
+.wcp__list { list-style: none; margin: 0.6rem 0 0; padding: 0; display: flex; flex-direction: column; gap: 0.4rem; }
+.wcp__item {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 0.5rem 0.6rem;
+  border: 1px solid var(--card-border, #e5e7eb);
+  border-radius: var(--radius-sm, 0.375rem);
+}
+.wcp__rank {
+  flex: none;
+  width: 1.6rem;
+  height: 1.6rem;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  background: var(--league-accent, var(--color-primary, #1c497c));
+  color: #fff;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+.wcp__who { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.wcp__name { font-size: 0.9rem; }
+.wcp__meta, .wcp__drop { font-size: 0.72rem; color: var(--content-text-muted, #6b7280); }
+.wcp__actions { display: flex; gap: 0.35rem; flex: none; }
+.wcp__btn {
+  padding: 0.2rem 0.5rem;
+  font-size: 0.68rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--league-accent, var(--color-primary, #1c497c));
+  background: none;
+  border: 1px solid currentColor;
+  border-radius: var(--radius-full, 999px);
+  cursor: pointer;
+  font-family: inherit;
+}
+.wcp__btn[disabled] { opacity: 0.5; cursor: default; }
+.wcp__btn--danger { color: var(--color-error, #b91c1c); }
+@media (max-width: 640px) {
+  .wcp__item { flex-wrap: wrap; }
+  .wcp__actions { width: 100%; justify-content: flex-end; }
+}
