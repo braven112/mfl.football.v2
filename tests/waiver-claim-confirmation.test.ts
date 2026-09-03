@@ -32,6 +32,19 @@ const ROUTE = fs.readFileSync(
   'utf-8'
 );
 
+/**
+ * `ROUTE` with comments removed. Several rules here are written up in prose in
+ * the route itself, and that prose necessarily NAMES the thing it is warning
+ * against — so a naive `not.toContain` on the raw file matches the warning and
+ * fails on a correct implementation. Assert structure against this.
+ */
+const ROUTE_CODE = ROUTE.split('\n')
+  .filter((line) => {
+    const t = line.trim();
+    return t !== '' && !t.startsWith('//') && !t.startsWith('*') && !t.startsWith('/*');
+  })
+  .join('\n');
+
 describe('readMflImportResult — nothing is accepted unless MFL says OK', () => {
   it('accepts only an affirmative status', () => {
     expect(readMflImportResult('<status>OK</status>').accepted).toBe(true);
@@ -127,19 +140,38 @@ describe('readPendingWaiverPlayerIds — "could not verify" is not "nothing ther
     expect(readMflImportResult('<status>OK</status>').refused).toBe(false);
   });
 
-  it('posts the import to the LEAGUE host, never the api. gateway', () => {
-    // api.myfantasyleague.com answers `import?TYPE=waiverRequest` with an empty
-    // 200 and stores nothing — the only call in this route that does not 302 to
-    // the league host. cut-player.ts carries the same rule for add_drop.
+  it('writes to the LEAGUE host, never the api. gateway', () => {
+    // api.myfantasyleague.com is the API gateway, not a page handler: it answers
+    // a posted write with an empty 200 and stores nothing.
     expect(ROUTE).toContain('league.mflHost');
-    const writeBlock = ROUTE.slice(ROUTE.indexOf('const importType'), ROUTE.indexOf('const text = (await res.text())'))
-      // Strip comments — this rule is written up in prose right there, and the
-      // prose necessarily names the host it is warning against.
-      .split('\n')
-      .filter((line) => !line.trim().startsWith('//'))
-      .join('\n');
-    expect(writeBlock, 'the import must not be posted to the api. gateway').not.toContain('api.myfantasyleague.com');
-    expect(writeBlock).toMatch(/importUrl\s*=\s*`https:\/\/\$\{importHost\}/);
+    const writeBlock = ROUTE_CODE.slice(ROUTE_CODE.indexOf('const writeHost'), ROUTE_CODE.indexOf('let text ='));
+    expect(writeBlock, 'the write must not be posted to the api. gateway').not.toContain('api.myfantasyleague.com');
+    expect(writeBlock).toContain('${writeHost}');
+  });
+
+  it('files a QUEUED claim through add_drop, not the import API', () => {
+    // `import?TYPE=waiverRequest` answers an authenticated, correctly-hosted
+    // request with an empty 200 and stores nothing — proven twice against a live
+    // owner session, with the pendingWaivers read-back confirming the claim
+    // never appeared. add_drop is the page owners actually use, and the one
+    // cut-player.ts already replays for the same class of reason.
+    expect(ROUTE_CODE).toContain('/add_drop');
+    expect(ROUTE_CODE).toContain("SUBMIT: 'Perform Add/Drop'");
+    expect(ROUTE_CODE).toContain('add_pid');
+    // ROUND is what makes it a CLAIM rather than an instant add.
+    expect(ROUTE_CODE).toMatch(/ROUND: String\(round\)/);
+    // The FCFS path still uses the import API, which does work.
+    expect(ROUTE_CODE).toContain('TYPE=fcfsWaiver');
+    expect(ROUTE_CODE, 'the dead waiverRequest import must be gone').not.toContain('TYPE=waiverRequest');
+  });
+
+  it('reads add_drop\'s HTML page for MFL\'s own complaint', () => {
+    // add_drop re-renders the page carrying its error rather than returning XML,
+    // so readMflImportResult (which would call any HTML a refusal) must not be
+    // the reader for that path.
+    expect(ROUTE).toMatch(/Transaction Would Create/);
+    expect(ROUTE).toMatch(/Exceeds League Limit/);
+    expect(ROUTE).toMatch(/immediate\s*\n?\s*\?\s*readMflImportResult/);
   });
 
   it('the route hard-fails on a refusal, not on a missing OK', () => {
