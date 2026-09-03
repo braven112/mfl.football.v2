@@ -33,6 +33,7 @@
  */
 
 import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
+import DraftNav from '../../../components/shared/draft-nav/DraftNav.astro';
 import DraftBroadcastIsland from '../../../components/shared/draft-broadcast/DraftBroadcast';
 import aflConfig from '../../../../data/afl-fantasy/afl.config.json';
 import { getLeagueBySlug } from '../../../config/leagues';
@@ -275,6 +276,7 @@ const title = `${conference?.name ?? 'AFL'} Draft Board | AFL`;
 ---
 
 <TheLeagueLayout title={title} hideMobileNavIcons>
+  <DraftNav leagueSlug="afl-fantasy" current="broadcast" crumb="Broadcast" />
   <DraftBroadcastIsland
     client:load
     pageData={JSON.stringify(pageData)}

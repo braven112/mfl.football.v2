@@ -6,6 +6,7 @@
  */
 
 import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
+import DraftNav from '../../../components/shared/draft-nav/DraftNav.astro';
 import DraftRoomIsland from '../../../components/theleague/draft-room/DraftRoom';
 import leagueConfigData from '../../../data/theleague.config.json';
 import { getCurrentLeagueYear } from '../../../utils/league-year';
@@ -155,6 +156,7 @@ const pageData: DraftRoomPageData = {
 ---
 
 <TheLeagueLayout title="Draft Room | The League" hideMobileNavIcons>
+  <DraftNav leagueSlug="theleague" current="room" crumb="Room" />
   <DraftRoomIsland
     client:load
     pageData={JSON.stringify(pageData)}

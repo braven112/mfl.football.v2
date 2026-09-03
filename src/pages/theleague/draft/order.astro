@@ -6,6 +6,7 @@
  */
 
 import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
+import DraftNav from '../../../components/shared/draft-nav/DraftNav.astro';
 import DraftPredictorGrid from '../../../components/theleague/DraftPredictorGrid.astro';
 import DraftViewSelector from '../../../components/theleague/DraftViewSelector.astro';
 import leagueConfigData from '../../../data/theleague.config.json';
@@ -252,6 +253,7 @@ const selectedTeamId = resolveTeamSelection({
 ---
 
 <TheLeagueLayout title={draftPhase === 'projected' ? 'Draft Predictor' : `${nextYear} Draft Order`}>
+  <DraftNav leagueSlug="theleague" current="order" crumb="Order" />
   <section class="draft-predictor-page">
     <header class="draft-predictor-header">
       <div>

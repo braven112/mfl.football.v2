@@ -6,6 +6,7 @@
  */
 
 import TheLeagueLayout from '../../../../layouts/TheLeagueLayout.astro';
+import DraftNav from '../../../../components/shared/draft-nav/DraftNav.astro';
 import { getAuthUser, isCommissionerOrAdmin } from '../../../../utils/auth';
 import '../../../../styles/loading.css';
 import { getCurrentLeagueYear } from '../../../../utils/league-year';
@@ -50,6 +51,7 @@ const rankingSourcesJson = JSON.stringify(rankingSources);
 ---
 
 <TheLeagueLayout title="Mock Draft | The League">
+  <DraftNav leagueSlug="theleague" current="mock" crumb="Mock Draft" />
   <div class="mock-lobby">
     <!-- Header -->
     <header class="mock-lobby__header">

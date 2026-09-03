@@ -11,24 +11,45 @@
  * its tabs were buttons with a click handler, the handler never bound under
  * the ClientRouter, and the tabs shipped dead. Links need no script and
  * survive view transitions.
+ *
+ * It carries the BREADCRUMBS too, rather than leaving each page to render its
+ * own. Not tidiness: the Draft Broadcast and Draft Room render nothing but a
+ * full-bleed island, so before this they had no crumb, no strip and no way
+ * back at all — you landed on the big board and the only exit was the browser
+ * button. Making one component own "how you get out of here" is what stops a
+ * draft page from shipping without one.
  */
 import { spriteUrl } from '../../../utils/sprite-url';
 import { resolveLeaguePath } from '../../../utils/nav-utils';
+import Breadcrumbs from '../../theleague/Breadcrumbs.astro';
 import { DRAFT_HUB_PATH, draftPagesFor, type DraftLeagueSlug } from './draft-pages';
 
 interface Props {
   leagueSlug: DraftLeagueSlug;
   /** `key` of the page rendering this strip, or 'hub'. */
   current: string;
+  /**
+   * Trailing breadcrumb for this page ('Results', 'Broadcast', …). Omit on the
+   * hub, whose trail ends at Draft itself.
+   */
+  crumb?: string;
 }
 
-const { leagueSlug, current } = Astro.props;
+const { leagueSlug, current, crumb } = Astro.props;
+const trail = [
+  { label: 'Home', href: `/${leagueSlug}` },
+  ...(crumb
+    ? [{ label: 'Draft', href: `/${leagueSlug}/draft` }, { label: crumb }]
+    : [{ label: 'Draft' }]),
+];
 const hideLeaguePrefix = Astro.locals.hideLeaguePrefix ?? false;
 const r = (path: string) => resolveLeaguePath(`/${leagueSlug}${path}`, hideLeaguePrefix);
 const pages = draftPagesFor(leagueSlug);
 ---
 
-<nav class="dnav" aria-label="Draft pages">
+<div class="dnav-chrome">
+  <Breadcrumbs items={trail} />
+  <nav class="dnav" aria-label="Draft pages">
   <a
     href={r(DRAFT_HUB_PATH)}
     class:list={['dnav__item', 'dnav__item--hub', { 'dnav__item--on': current === 'hub' }]}
@@ -53,9 +74,16 @@ const pages = draftPagesFor(leagueSlug);
       </li>
     ))}
   </ul>
-</nav>
+  </nav>
+</div>
 
 <style>
+  /* The islands below this (broadcast, room) are full-bleed, so the chrome
+     needs its own breathing room rather than inheriting a page's padding. */
+  .dnav-chrome {
+    padding: 0.75rem 1rem 0;
+  }
+
   .dnav {
     --dnav-accent: var(--league-accent, #1c497c);
     --dnav-surface: var(--card-bg, #fff);

@@ -28,7 +28,6 @@
  * renders; it does not decide.
  */
 import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
-import Breadcrumbs from '../../theleague/Breadcrumbs.astro';
 import DraftNav from '../draft-nav/DraftNav.astro';
 import { resolveLeaguePath } from '../../../utils/nav-utils';
 import { getLeagueBySlug } from '../../../config/leagues';
@@ -85,15 +84,7 @@ const subtitle = selectedTeam
 
 <TheLeagueLayout title={`${league.name} — ${heading}`}>
   <main class="dr">
-    <Breadcrumbs
-      items={[
-        { label: 'Home', href: `/${leagueSlug}` },
-        { label: 'Draft', href: `/${leagueSlug}/draft` },
-        { label: 'Results' },
-      ]}
-    />
-
-    <DraftNav leagueSlug={leagueSlug} current="results" />
+    <DraftNav leagueSlug={leagueSlug} current="results" crumb="Results" />
 
     <header class="dr__head">
       <div class="dr__title-row">

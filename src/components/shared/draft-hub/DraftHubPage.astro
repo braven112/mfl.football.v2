@@ -20,7 +20,6 @@
  * and every control is a link.
  */
 import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
-import Breadcrumbs from '../../theleague/Breadcrumbs.astro';
 import DraftNav from '../draft-nav/DraftNav.astro';
 import { spriteUrl } from '../../../utils/sprite-url';
 import { resolveLeaguePath } from '../../../utils/nav-utils';
@@ -67,8 +66,6 @@ const totalCapital = myCapital.reduce((sum, c) => sum + c.count, 0);
 
 <TheLeagueLayout title={`${league.name} — Draft`}>
   <main class="dh">
-    <Breadcrumbs items={[{ label: 'Home', href: `/${leagueSlug}` }, { label: 'Draft' }]} />
-
     <DraftNav leagueSlug={leagueSlug} current="hub" />
 
     <header class="dh__head">
@@ -337,11 +334,23 @@ const totalCapital = myCapital.reduce((sum, c) => sum + c.count, 0);
     list-style: none;
   }
 
+  /* Equal-height cards WITHOUT a percentage height.
+     `height: 100%` here resolved against the grid track and then had the
+     card's own padding and border added on top of it — this repo has no
+     global border-box (TheLeagueLayout sets it on `main` itself, and
+     box-sizing does not inherit), so every card rendered 34px taller than
+     its row and overlapped the row beneath. Stretching a flex item fills
+     the track exactly and cannot overflow it, whatever the box model. */
+  .dh__cards > li {
+    display: flex;
+  }
+
   .dh__card {
     display: flex;
     align-items: flex-start;
     gap: 0.65rem;
-    height: 100%;
+    flex: 1;
+    box-sizing: border-box;
     padding: 0.85rem;
     border: 1px solid var(--dhub-border);
     border-radius: 0.6rem;
@@ -449,6 +458,6 @@ const totalCapital = myCapital.reduce((sum, c) => sum + c.count, 0);
 
   @media (max-width: 560px) {
     .dh__title { font-size: 1.5rem; }
-    .dh__status-cta { flex: 1 1 100%; text-align: center; }
+    .dh__status-cta { flex: 1 1 100%; box-sizing: border-box; text-align: center; }
   }
 </style>

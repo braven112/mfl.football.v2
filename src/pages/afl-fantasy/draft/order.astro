@@ -1,5 +1,6 @@
 ---
 import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
+import DraftNav from '../../../components/shared/draft-nav/DraftNav.astro';
 import DraftPredictorGrid from '../../../components/theleague/DraftPredictorGrid.astro';
 import aflConfig from '../../../../data/afl-fantasy/afl.config.json';
 import { calculateAFLDraftOrder, parseConferenceChampions, parseNITResults, buildHeadToHeadFromRaw, isDraftOrderFinal } from '../../../utils/afl-draft-utils';
@@ -144,6 +145,7 @@ const nlOrder = draftOrders.find(order => order.conference === 'National League'
     document.body.setAttribute('data-preferred-conference', preferredConference === '00' ? 'AL' : 'NL');
   </script>
 
+  <DraftNav leagueSlug="afl-fantasy" current="order" crumb="Order" />
   <section class="draft-predictor-page">
     <header class="draft-predictor-header">
       <div>

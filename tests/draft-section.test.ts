@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { readFileSync, existsSync } from 'node:fs';
+import { existsSync, globSync, readFileSync } from 'node:fs';
 import navConfig from '../src/config/nav-config.json';
 import pageDirectory from '../src/data/page-directory.json';
 import { DRAFT_PAGES, draftPagesFor } from '../src/components/shared/draft-nav/draft-pages';
@@ -106,6 +106,65 @@ describe('the draft page registry', () => {
     }
     expect(covered('theleague', '/draft')).toBe(true);
     expect(covered('afl-fantasy', '/draft')).toBe(true);
+  });
+});
+
+describe('every draft page has a way back', () => {
+  // The bug this pins: Draft Broadcast and Draft Room render nothing but a
+  // full-bleed island. They shipped with no breadcrumb, no strip and no exit —
+  // you landed on the big board and the only way out was the browser button.
+  const DRAFT_ROUTES = [
+    'src/pages/theleague/draft/index.astro',
+    'src/pages/theleague/draft/results.astro',
+    'src/pages/theleague/draft/order.astro',
+    'src/pages/theleague/draft/broadcast.astro',
+    'src/pages/theleague/draft/room.astro',
+    'src/pages/theleague/draft/mock/index.astro',
+    'src/pages/afl-fantasy/draft/index.astro',
+    'src/pages/afl-fantasy/draft/results.astro',
+    'src/pages/afl-fantasy/draft/order.astro',
+    'src/pages/afl-fantasy/draft/broadcast.astro',
+  ];
+
+  it('covers every route under a draft/ directory', () => {
+    // The list above is hand-written, so it has to be checked against the
+    // filesystem — otherwise a new draft page that forgets DraftNav simply
+    // never gets looked at by the test below. Dynamic routes are excluded:
+    // they render inside a parent that carries the chrome.
+    const onDisk = globSync('src/pages/*/draft/**/*.astro')
+      .filter((f) => !f.includes('['))
+      .sort();
+    expect(onDisk).toEqual([...DRAFT_ROUTES].sort());
+  });
+
+  it('renders DraftNav — the breadcrumb trail and the strip — on each one', () => {
+    for (const route of DRAFT_ROUTES) {
+      const src = readFileSync(route, 'utf-8');
+      const rendered = /<DraftNav\b/.test(src) || /<DraftNav\s/.test(src);
+      const delegated = /DraftResultsPage|DraftHubPage/.test(src);
+      expect(rendered || delegated, `${route} has no way back`).toBe(true);
+    }
+  });
+
+  it('gives every page but the hub a trailing crumb', () => {
+    for (const route of DRAFT_ROUTES) {
+      const src = readFileSync(route, 'utf-8');
+      if (!/<DraftNav\b/.test(src)) continue; // delegates to a shared page
+      const isHub = /current="hub"/.test(src);
+      if (isHub) continue;
+      expect(/crumb="/.test(src), `${route} renders DraftNav without a crumb`).toBe(true);
+    }
+  });
+
+  it('keeps the breadcrumb trail inside DraftNav, not duplicated per page', () => {
+    // Two trails on one page is the failure mode of "fix it on every page".
+    for (const route of DRAFT_ROUTES) {
+      const src = readFileSync(route, 'utf-8');
+      expect(/<Breadcrumbs\b/.test(src), `${route} renders its own Breadcrumbs`).toBe(false);
+    }
+    expect(readFileSync('src/components/shared/draft-nav/DraftNav.astro', 'utf-8')).toMatch(
+      /<Breadcrumbs/
+    );
   });
 });
 
