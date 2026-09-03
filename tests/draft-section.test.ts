@@ -125,13 +125,19 @@ describe('every draft page has a way back', () => {
     'src/pages/afl-fantasy/draft/results.astro',
     'src/pages/afl-fantasy/draft/order.astro',
     'src/pages/afl-fantasy/draft/broadcast.astro',
+    // Dynamic routes are pages too. They were excluded here at first, on the
+    // reasoning that they "render inside a parent that carries the chrome" —
+    // which is simply false: Astro routes do not nest, and the mock SESSION
+    // page had no breadcrumb, no strip and no way back at all. The exclusion
+    // hid from this guard exactly the bug the guard exists to catch.
+    'src/pages/theleague/draft/mock/[sessionId].astro',
+    'src/pages/theleague/draft/mock/[sessionId]/results.astro',
   ];
 
   it('covers every route under a draft/ directory', () => {
     // The list above is hand-written, so it has to be checked against the
     // filesystem — otherwise a new draft page that forgets DraftNav simply
-    // never gets looked at by the test below. Dynamic routes are excluded:
-    // they render inside a parent that carries the chrome.
+    // never gets looked at by the test below.
     //
     // readdirSync rather than a glob, matching page-fork-ratchet.test.ts —
     // this repo has no glob dependency, and node:fs does not export globSync
@@ -145,7 +151,6 @@ describe('every draft page has a way back', () => {
 
     const onDisk = ['theleague', 'afl-fantasy']
       .flatMap((league) => walk(join('src/pages', league, 'draft')))
-      .filter((f) => !f.includes('['))
       .sort();
     expect(onDisk).toEqual([...DRAFT_ROUTES].sort());
   });

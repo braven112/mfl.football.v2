@@ -8,7 +8,7 @@
  */
 
 import TheLeagueLayout from '../../../../../layouts/TheLeagueLayout.astro';
-import Breadcrumbs from '../../../../../components/theleague/Breadcrumbs.astro';
+import DraftNav from '../../../../../components/shared/draft-nav/DraftNav.astro';
 import { getAuthUser } from '../../../../../utils/auth';
 import { getCurrentLeagueYear } from '../../../../../utils/league-year';
 import { getPlayerHeadshot } from '../../../../../constants/roster-constants';
@@ -149,11 +149,7 @@ const createdDate = new Date(session.createdAt).toLocaleDateString('en-US', {
   <div class="results">
     <!-- Header -->
     <header class="results__header">
-      <Breadcrumbs items={[
-        { label: 'The League', href: '/theleague' },
-        { label: 'Mock Draft', href: '/theleague/draft/mock' },
-        { label: 'Results' },
-      ]} />
+      <DraftNav leagueSlug="theleague" current="mock" crumb="Results" crumbParent={{ label: 'Mock Draft', path: '/draft/mock' }} />
       <h1 class="results__title">Mock Draft Results</h1>
       <p class="results__meta">
         {creatorTeam?.nameShort || 'Unknown'}'s mock · {createdDate} · {totalRounds} rounds · {session.timerSeconds}s timer

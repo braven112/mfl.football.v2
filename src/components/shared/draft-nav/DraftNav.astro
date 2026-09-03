@@ -33,13 +33,25 @@ interface Props {
    * hub, whose trail ends at Draft itself.
    */
   crumb?: string;
+  /**
+   * One linked segment between Draft and `crumb`, for a page that lives under
+   * another draft page rather than beside it — a mock draft SESSION belongs
+   * under Mock Draft, not directly under Draft. `path` is league-neutral.
+   */
+  crumbParent?: { label: string; path: string };
 }
 
-const { leagueSlug, current, crumb } = Astro.props;
+const { leagueSlug, current, crumb, crumbParent } = Astro.props;
 const trail = [
   { label: 'Home', href: `/${leagueSlug}` },
   ...(crumb
-    ? [{ label: 'Draft', href: `/${leagueSlug}/draft` }, { label: crumb }]
+    ? [
+        { label: 'Draft', href: `/${leagueSlug}/draft` },
+        ...(crumbParent
+          ? [{ label: crumbParent.label, href: `/${leagueSlug}${crumbParent.path}` }]
+          : []),
+        { label: crumb },
+      ]
     : [{ label: 'Draft' }]),
 ];
 const hideLeaguePrefix = Astro.locals.hideLeaguePrefix ?? false;
