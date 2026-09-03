@@ -115,3 +115,33 @@ for (const qs of [
     console.log('FETCH FAILED:', err.message);
   }
 }
+
+// ── check_waiver_claim(), MFL's own JS ───────────────────────────────────────
+// The FORCE_WAIVER checkbox's onchange takes the SUBMIT button's id as an
+// argument, so ticking it evidently rewrites that button — and the server
+// almost certainly dispatches on the button's value. We post
+// `SUBMIT=Perform Add/Drop` and MFL answers "Cannot Be Added Because Is
+// Locked", i.e. it is still reading the request as an instant ADD. This prints
+// the function so the real value is read rather than guessed. Inline on the
+// AUTHENTICATED page only — mfl_common.js does not carry it.
+{
+  const url = `https://${league.mflHost}/${year}/add_drop?L=${league.id}`;
+  console.log(`\n===== check_waiver_claim() from ${url}`);
+  try {
+    const res = await mflFetch({ url, cookies: { MFL_USER_ID: cookie }, timeoutMs: 20_000 });
+    const html = await res.text();
+    const at = html.search(/function\s+check_waiver_claim/);
+    if (at < 0) {
+      console.log('NOT DEFINED INLINE. Script srcs on the page:');
+      for (const m of html.matchAll(/<script[^>]+src=["\']([^"\']+)["\']/gi)) console.log('  ', m[1]);
+    } else {
+      console.log(show(html.slice(at, at + 1800), 1800));
+    }
+    // Whatever the JS does, the button's server-visible identity is name+value.
+    for (const m of html.matchAll(/<input[^>]*id=["\']add_drop_submit["\'][^>]*>/gi)) {
+      console.log('SUBMIT BUTTON:', m[0].replace(/\s+/g, ' '));
+    }
+  } catch (err) {
+    console.log('FETCH FAILED:', err.message);
+  }
+}
