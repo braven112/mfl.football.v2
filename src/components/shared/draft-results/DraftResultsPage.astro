@@ -31,11 +31,14 @@ import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
 import DraftNav from '../draft-nav/DraftNav.astro';
 import { resolveLeaguePath } from '../../../utils/nav-utils';
 import { getLeagueBySlug } from '../../../config/leagues';
-import type { CanonicalLeagueSlug } from '../../../config/leagues';
+import type { DraftLeagueSlug } from '../draft-nav/draft-pages';
 import type { DraftResultsView } from '../../../utils/draft-results-view';
 
 interface Props {
-  leagueSlug: CanonicalLeagueSlug;
+  /** Draft Results exists only for the two full-format leagues, and
+   * DraftNav below only accepts those — CanonicalLeagueSlug would widen
+   * this to include best-ball-1, which has its own draft-board instead. */
+  leagueSlug: DraftLeagueSlug;
   view: DraftResultsView;
   /** This league's own Draft Results path, unprefixed-safe. */
   basePath: string;

@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { existsSync, globSync, readFileSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync } from 'node:fs';
+import { join } from 'node:path';
 import navConfig from '../src/config/nav-config.json';
 import pageDirectory from '../src/data/page-directory.json';
 import { DRAFT_PAGES, draftPagesFor } from '../src/components/shared/draft-nav/draft-pages';
@@ -131,7 +132,19 @@ describe('every draft page has a way back', () => {
     // filesystem — otherwise a new draft page that forgets DraftNav simply
     // never gets looked at by the test below. Dynamic routes are excluded:
     // they render inside a parent that carries the chrome.
-    const onDisk = globSync('src/pages/*/draft/**/*.astro')
+    //
+    // readdirSync rather than a glob, matching page-fork-ratchet.test.ts —
+    // this repo has no glob dependency, and node:fs does not export globSync
+    // at the @types/node version pinned here.
+    const walk = (dir: string): string[] =>
+      readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
+        const path = join(dir, entry.name);
+        if (entry.isDirectory()) return walk(path);
+        return entry.name.endsWith('.astro') ? [path] : [];
+      });
+
+    const onDisk = ['theleague', 'afl-fantasy']
+      .flatMap((league) => walk(join('src/pages', league, 'draft')))
       .filter((f) => !f.includes('['))
       .sort();
     expect(onDisk).toEqual([...DRAFT_ROUTES].sort());
