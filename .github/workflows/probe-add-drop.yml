@@ -59,6 +59,11 @@ jobs:
             // Field NAMES only — never values, which carry roster/owner data.
             const names = [...html.matchAll(/<(?:input|select)[^>]*\bname\s*=\s*["\x27]([^"\x27]+)/gi)].map(m => m[1]);
             console.log("FIELD NAMES:", JSON.stringify([...new Set(names)]));
+            const SAFE = ["FORCE_WAIVER", "ROUND", "add_settings", "PROJSRC", "L", "SUBMIT"];
+            for (const [tag] of html.matchAll(/<(?:input|select)[^>]*>/gi)) {
+              const n = tag.match(/\bname\s*=\s*["\x27]([^"\x27]+)/i)?.[1];
+              if (n && SAFE.includes(n)) console.log("CONTROL:", tag.replace(/\s+/g, " "));
+            }
             const text = html.replace(/<script[\s\S]*?<\/script>/gi," ").replace(/<style[\s\S]*?<\/style>/gi," ")
               .replace(/<[^>]+>/g," ").replace(/&nbsp;/gi," ").replace(/\s+/g," ").trim();
             const i = text.toLowerCase().indexOf("waiver");
