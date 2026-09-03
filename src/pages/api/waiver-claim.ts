@@ -1,15 +1,18 @@
 /**
  * POST /api/waiver-claim
  *
- * Submit a round of blind-bid waiver claims for the authenticated user's
- * franchise, via MFL's `import?TYPE=blindBidWaiverRequest`. Owner-mode only —
- * never commissioner credentials, never FRANCHISE_ID (MFL treats that as
- * commissioner impersonation).
+ * Submit a round of waiver claims for the authenticated user's franchise.
+ * Owner-mode only — never commissioner credentials, never FRANCHISE_ID (MFL
+ * treats that as commissioner impersonation).
+ *
+ * A QUEUED CLAIM REPLAYS MFL'S OWN `add_drop` PAGE, not `import?TYPE=…`. The
+ * import API answers an authenticated, correctly-hosted waiver request with an
+ * empty 200 and stores nothing — proven twice against a live owner session. An
+ * immediate (FCFS) add still uses `import?TYPE=fcfsWaiver`, which does work.
  *
  * Body: {
  *   claims: [{ addPlayerId, bid, dropPlayerId? }],   // in priority order
  *   round: number,                                   // required (league is conditional)
- *   replace?: boolean,                               // replace the round vs append
  *   year?: number,                                   // page's league year, checked
  * }
  *
@@ -42,8 +45,6 @@ import {
   readPendingWaiverPlayerIds,
   validateClaims,
   validateRound,
-  buildPicksParam,
-  waiverImportType,
   conferenceOfFranchise,
   freeAgencyIsLeagueWide,
   type WaiverClaim,
@@ -88,10 +89,9 @@ export const POST: APIRoute = async ({ request }) => {
   if (!user.franchiseId) return fail('No franchise associated with your account.', 403);
 
   try {
-    const { claims, round, replace, year: clientYear } = (await request.json()) as {
+    const { claims, round, year: clientYear } = (await request.json()) as {
       claims?: WaiverClaim[];
       round?: number;
-      replace?: boolean;
       year?: number;
     };
 
@@ -203,9 +203,9 @@ export const POST: APIRoute = async ({ request }) => {
     if (errors.length > 0) return fail(errors[0], 400, { errors });
 
     // ── Write, owner mode ───────────────────────────────────────────────────
-    // FCFS is a different call entirely: a single immediate add/drop, no PICKS
-    // list and no round. Only the FIRST claim is meaningful — an ordered board
-    // of alternatives has no meaning when the add resolves instantly.
+    // FCFS is a different call entirely: a single immediate add/drop against the
+    // import API, no round. Only the FIRST claim is meaningful — an ordered
+    // board of alternatives has no meaning when the add resolves instantly.
     const params = new URLSearchParams({ L: leagueId });
     if (immediate) {
       const first = claims![0];
@@ -213,12 +213,6 @@ export const POST: APIRoute = async ({ request }) => {
       if (first.dropPlayerId && first.dropPlayerId !== '0000') {
         params.set('DROP', String(first.dropPlayerId));
       }
-    } else {
-      params.set('PICKS', buildPicksParam(claims!, rules.system));
-      // `waiverRequest` requires ROUND unconditionally; `blindBidWaiverRequest`
-      // only when the league bids conditionally.
-      if (rules.conditional || rules.system === 'priority') params.set('ROUND', String(round));
-      if (replace) params.set('REPLACE', '1');
     }
 
     // ── Snapshot the pending round BEFORE the write ─────────────────────────
@@ -229,32 +223,88 @@ export const POST: APIRoute = async ({ request }) => {
     // mfl-api.md), so confirmation is the DELTA: present after, absent before.
     // That also needs no assumption about MFL's undocumented round/bid shape.
     const pendingBefore = immediate ? null : await readPendingWaivers(year, leagueId, user.id);
-    const importType = immediate ? 'fcfsWaiver' : waiverImportType(rules);
-    // THE LEAGUE'S OWN HOST, not the `api.` gateway. Posting the import to
-    // api.myfantasyleague.com returns HTTP 200 with an empty body and stores
-    // NOTHING — and it is the only call in this route that does not 302 to
-    // www44, which is the tell: every export redirects and works, while the
-    // import is answered by the gateway itself and quietly dropped. Confirmed
-    // against a live claim whose pendingWaivers read-back came back without it.
-    // cut-player.ts already carries the same note for `add_drop` ("the `api.`
-    // gateway is for the API, not page handlers"), and the same fallback: an
-    // unresolvable league must not send a TheLeague write to the AFL's host.
-    const importHost = league.mflHost || getLeagueBySlug(DEFAULT_LEAGUE_SLUG)!.mflHost;
-    const importUrl = `https://${importHost}/${year}/import?TYPE=${importType}&L=${leagueId}`;
-    console.log(`[waiver-claim] POST ${importUrl} (${params.toString()})`);
-    const res = await mflFetch({
-      url: importUrl,
-      method: 'POST',
-      mflUserCookie: user.id,
-      body: params.toString(),
-    });
-    const text = (await res.text()).trim();
+    // THE LEAGUE'S OWN HOST, never the `api.` gateway — that is for the API, not
+    // page handlers, and it answers a posted import with an empty 200 that
+    // stores nothing.
+    const writeHost = league.mflHost || getLeagueBySlug(DEFAULT_LEAGUE_SLUG)!.mflHost;
+
+    // ── The write ───────────────────────────────────────────────────────────
+    // A QUEUED CLAIM REPLAYS MFL'S OWN add_drop FORM, it does not call
+    // `import?TYPE=waiverRequest`. That import answers an authenticated,
+    // correctly-formed, correctly-hosted request with an empty 200 and stores
+    // NOTHING — proven twice against Brandon's live session, with the
+    // pendingWaivers read-back confirming the claim never appeared.
+    //
+    // `add_drop` is the page every owner actually uses, and this repo already
+    // depends on it twice over: cut-player.ts replays it for the same reason
+    // ("the fcfsWaiver API… refuses any cut while a roster is over the limit"),
+    // and theleague/players.astro deep-links owners to it precisely because it
+    // "auto-presents blind-bid (waiver) vs FCFS based on MFL's own in-season
+    // schedule". Its form has always carried `ROUND` — a field that only means
+    // anything for a waiver claim.
+    //
+    // It returns an HTML PAGE, not API XML, so `readMflImportResult` is not the
+    // right reader for it (that would classify every response as a refusal).
+    // Errors are recognized from the page the way cut-player does it, and
+    // success is settled by the pendingWaivers delta below.
+    const writes: Array<{ url: string; body: string }> = immediate
+      ? [{
+          url: `https://${writeHost}/${year}/import?TYPE=fcfsWaiver&L=${leagueId}`,
+          body: params.toString(),
+        }]
+      : claims!.map((c) => ({
+          url: `https://${writeHost}/${year}/add_drop`,
+          body: new URLSearchParams({
+            L: leagueId,
+            add_settings: '',
+            PROJSRC: 'mfl',
+            add_pid: String(c.addPlayerId),
+            drop_pid: c.dropPlayerId && c.dropPlayerId !== '0000' ? String(c.dropPlayerId) : '',
+            ROUND: String(round),
+            COMMENTS: '',
+            SUBMIT: 'Perform Add/Drop',
+          }).toString(),
+        }));
+
+    // One POST per claim, in the owner's priority order — the form files one at
+    // a time, and MFL appends them to the round in the order they arrive.
+    let text = '';
+    let res!: Response;
+    for (const write of writes) {
+      console.log(`[waiver-claim] POST ${write.url} (${write.body})`);
+      res = (await mflFetch({
+        url: write.url,
+        method: 'POST',
+        mflUserCookie: user.id,
+        body: write.body,
+      })) as Response;
+      text = (await res.text()).trim();
+      console.log(`[waiver-claim] MFL response: ${res.status} ${text.slice(0, 200)}`);
+      // MFL re-renders the page carrying its own complaint. Stop on the first
+      // one rather than firing the rest of the board at a refusing endpoint.
+      const pageError =
+        text.match(/Transaction Would Create[^<]*/i) ||
+        text.match(/Exceeds League Limit[^<]*/i) ||
+        text.match(/<error[^>]*>([\s\S]*?)<\/error>/i);
+      if (pageError) {
+        return fail(
+          `MFL rejected the claim: ${(pageError[1] || pageError[0] || '').trim()}`,
+          502
+        );
+      }
+    }
     // Require an AFFIRMATIVE `<status>OK</status>`. `!res.ok || /<error/` was
     // not a success check: MFL answers a refused import with HTTP 200 and a
     // body carrying no `<error>` at all (a login page, a permission notice),
     // and this route reported "Round 1 submitted" for exactly that. See
     // src/utils/mfl-import-result.ts.
-    const outcome = readMflImportResult(text, res.status);
+    // Only the FCFS path talks to the import API and can be read this way. The
+    // queued path replayed an HTML page above, which this classifier would call
+    // a refusal — its errors were already handled there, and its success is the
+    // delta.
+    const outcome = immediate
+      ? readMflImportResult(text, res.status)
+      : { accepted: false, refused: false, error: null, reason: 'add_drop returns a page; the delta decides.' };
     // Never discard MFL's body on a write — a silent no-op is invisible without
     // it and it is the whole diagnosis.
     if (!outcome.accepted) {
