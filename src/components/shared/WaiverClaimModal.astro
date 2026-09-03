@@ -91,6 +91,9 @@ const { config } = Astro.props;
     </div>
 
     <p class="wcm-error" id="wcm-error" role="alert" hidden></p>
+    <p class="wcm-confirm" id="wcm-confirm" hidden>
+      <a id="wcm-confirm-link" href="#" target="_blank" rel="noopener">Check it on MyFantasyLeague &#8599;</a>
+    </p>
 
     <div class="wcm-actions">
       <button type="button" id="wcm-cancel" class="wcm-btn wcm-btn--ghost">Cancel</button>
@@ -119,6 +122,20 @@ const { config } = Astro.props;
     const roundSel = document.getElementById('wcm-round') as HTMLSelectElement;
     const roundHint = document.getElementById('wcm-round-hint')!;
     const errBox = document.getElementById('wcm-error')!;
+    const confirmBox = document.getElementById('wcm-confirm')!;
+    const confirmLink = document.getElementById('wcm-confirm-link') as HTMLAnchorElement;
+    /**
+     * Offer MFL's own add/drop page, which lists the round's pending claims.
+     * The owner asked for this: a filed claim is invisible on our side until
+     * waivers process, so "it worked" should come with somewhere to go and see
+     * it. The URL comes from the server (registry-derived per league) — never
+     * built here, where it would be a hardcoded host.
+     */
+    const showConfirmLink = (url?: string) => {
+      if (!url) { confirmBox.hidden = true; return; }
+      confirmLink.href = url;
+      confirmBox.hidden = false;
+    };
     const submitBtn = document.getElementById('wcm-submit') as HTMLButtonElement;
 
     // FCFS adds resolve IMMEDIATELY at the league minimum — there is nothing to
@@ -166,6 +183,7 @@ const { config } = Astro.props;
     const showError = (msg: string) => {
       errBox.textContent = msg;
       errBox.hidden = !msg;
+      confirmBox.hidden = true;
       errBox.classList.remove('wcm-error--warn');
     };
     /** Softer than an error: MFL took the write but we could not confirm it. */
@@ -247,10 +265,15 @@ const { config } = Astro.props;
         // the caveat and leave the modal open for them to act on.
         if (data.verified === false) {
           reset();
-          return showWarning(data.message || 'Submitted, but we could not confirm it with MFL.');
+          showWarning(data.message || 'Submitted, but we could not confirm it with MFL.');
+          // Especially here: we could not confirm, so hand them the page that can.
+          return showConfirmLink(data.confirmUrl);
         }
         submitBtn.textContent = immediate ? 'Added ✓' : 'Submitted ✓';
-        setTimeout(() => dlg.close(), 900);
+        showConfirmLink(data.confirmUrl);
+        // Long enough to read the confirmation and click through if they want
+        // to; a filed claim is invisible on our side until waivers process.
+        setTimeout(() => dlg.close(), data.confirmUrl ? 3200 : 900);
       } catch {
         reset();
         showError('Network error — your claim was not submitted.');
@@ -355,6 +378,12 @@ const { config } = Astro.props;
      is defined in BOTH tokens.css (#d97706) and tokens-dark.css (#fcd34d), so
      it reads correctly in each theme. */
   .wcm-error--warn { color: var(--color-warning-dark, #b45309); }
+  .wcm-confirm { margin: 0.6rem 0 0; font-size: 0.8rem; }
+  .wcm-confirm a {
+    color: var(--league-accent, var(--color-primary, #1c497c));
+    font-weight: 600;
+    text-decoration: underline;
+  }
   .wcm-actions { display: flex; gap: 0.5rem; justify-content: flex-end; margin-top: 1.1rem; }
   .wcm-btn {
     padding: 0.45rem 0.9rem;

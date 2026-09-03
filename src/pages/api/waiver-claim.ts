@@ -228,6 +228,10 @@ export const POST: APIRoute = async ({ request }) => {
     // page handlers, and it answers a posted import with an empty 200 that
     // stores nothing.
     const writeHost = league.mflHost || getLeagueBySlug(DEFAULT_LEAGUE_SLUG)!.mflHost;
+    // Where an owner can see the claim with their own eyes. Derived from the
+    // registry, never written out — a literal would send TheLeague's owners to
+    // the AFL's host (tests/league-literal-guard.test.ts).
+    const confirmUrl = `https://${writeHost}/${year}/add_drop?L=${leagueId}`;
 
     // ── The write ───────────────────────────────────────────────────────────
     // A QUEUED CLAIM REPLAYS MFL'S OWN add_drop FORM, it does not call
@@ -423,6 +427,7 @@ export const POST: APIRoute = async ({ request }) => {
                 ? 'Added — the player is on your roster now.'
                 : 'MFL accepted the add but your roster does not show it yet. Check your roster before retrying.',
           mode: 'fcfs',
+          confirmUrl,
           // `submitted`, not `requestedAdds`: an FCFS write resolves instantly,
           // so only the first claim was ever sent. Reporting the whole board as
           // submitted would be a lie the client could act on.
@@ -485,6 +490,7 @@ export const POST: APIRoute = async ({ request }) => {
               } as newly added yet. Check your pending waivers before retrying.`,
         mode: 'waiver',
         round,
+        confirmUrl,
         submitted: requestedAdds,
         // Only the ids this request demonstrably ADDED — not everything of ours
         // MFL happens to be holding, which would re-report an older round's

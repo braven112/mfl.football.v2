@@ -231,30 +231,58 @@ export function freeAgencyIsLeagueWide(league: Record<string, any> = {}): boolea
 }
 
 /**
- * Player ids appearing in an `export?TYPE=pendingWaivers` payload — the
- * read-back that proves a submitted round actually landed.
+ * The ADD player ids in an `export?TYPE=pendingWaivers` payload — the read-back
+ * that proves a submitted round actually landed.
  *
- * Returns **null** when the payload cannot be interpreted (an error body, or no
- * `pendingWaivers` key at all). Null is not "nothing is stored": the caller
- * must report it as UNVERIFIED rather than as success or failure. Collapsing
- * those two is what let a dropped write report "Round 1 submitted".
+ * Returns **null** when the payload cannot be interpreted (an error body, no
+ * `pendingWaivers` key, or a populated shape with nothing id-like in it). Null
+ * is not "nothing is stored": the caller must report it as UNVERIFIED rather
+ * than as success or failure. Collapsing those two is what let a dropped write
+ * report "Round 1 submitted".
  *
- * MFL's shape here is undocumented and has changed before, so rather than pin
- * one key path this walks the subtree and collects every id-shaped value. The
- * bias is deliberate: a loose match can only cause a real failure to go
- * unreported, whereas a too-narrow match tells an owner their perfectly good
- * claim did not go through. `""` is MFL's empty-state for these list exports
- * (same as `pendingTrades`) and is a genuine, verified "nothing pending".
+ * THE REAL SHAPE, captured from a live filed claim (2026-09-02) rather than
+ * guessed — the first version of this function guessed, looked for `id`/`player`
+ * keys that do not exist here, and reported a perfectly good claim as
+ * unverifiable:
+ *
+ *   { "pendingWaivers": { "waiverRequest": {
+ *       "timestamp": "1788405970",
+ *       "addsDrops":  "15889_14059",     // add_drop, `,`-joined across picks
+ *       "comments":   "",
+ *       "round":      "1" } } }
+ *
+ * `addsDrops` is the whole payload: each comma-separated group is one pick, and
+ * within a group the FIRST id is the add. Only adds are returned — a drop is a
+ * player already on your roster, so counting it would let an unrelated drop
+ * vouch for an add that never landed.
+ *
+ * MFL collapses a single-element list to a bare object, so one claim and four
+ * claims are different shapes; `asArray` handling is not optional here.
+ *
+ * A tolerant fallback still walks the subtree for id-shaped values under
+ * `id`/`player`, so a future shape change degrades to "verified" rather than
+ * to a hard failure — but an unrecognised, non-empty payload is null.
  */
 export function readPendingWaiverPlayerIds(body: any): string[] | null {
   if (!body || typeof body !== 'object') return null;
   if (body.error) return null;
   const pending = body.pendingWaivers ?? body.pendingWaiver;
   if (pending === undefined || pending === null) return null;
+  // MFL's empty-state for these list exports, same as `pendingTrades`.
   if (typeof pending === 'string') return pending.trim() === '' ? [] : null;
   if (typeof pending !== 'object') return null;
 
-  const ids = new Set<string>();
+  const adds = new Set<string>();
+  const isId = (v: string) => /^\d{2,6}$/.test(v);
+
+  /** `"15889_14059,16174_0000"` → the add of each pick. */
+  const readAddsDrops = (value: string) => {
+    for (const pick of value.split(',')) {
+      const first = pick.trim().split('_')[0]?.trim();
+      if (first && isId(first)) adds.add(first);
+    }
+  };
+
   const walk = (node: unknown): void => {
     if (Array.isArray(node)) {
       for (const child of node) walk(child);
@@ -262,22 +290,27 @@ export function readPendingWaiverPlayerIds(body: any): string[] | null {
     }
     if (!node || typeof node !== 'object') return;
     for (const [key, value] of Object.entries(node as Record<string, unknown>)) {
-      if (
-        (key === 'id' || key === 'player' || key === 'add' || key === 'drop') &&
-        (typeof value === 'string' || typeof value === 'number')
-      ) {
+      if (key === 'addsDrops' && typeof value === 'string') {
+        readAddsDrops(value);
+        continue;
+      }
+      // Tolerant fallback for a shape we have not seen. Deliberately narrow:
+      // `round`, `timestamp` and a bid amount are all digit strings too, so
+      // only genuinely player-shaped keys count.
+      if ((key === 'id' || key === 'player') && (typeof value === 'string' || typeof value === 'number')) {
         const id = String(value).trim();
-        if (/^\d{2,6}$/.test(id)) ids.add(id);
+        if (isId(id)) adds.add(id);
         continue;
       }
       walk(value);
     }
   };
   walk(pending);
+
   // Zero ids out of a payload that HAD content is not "nothing pending" — it is
-  // a shape we do not recognize, and the two must not collapse. Reporting it as
+  // a shape we do not recognise, and the two must not collapse. Reporting it as
   // a verified empty list tells an owner their good claim did not go through;
   // `null` tells them we could not check, which is the truth.
-  if (ids.size === 0 && Object.keys(pending as Record<string, unknown>).length > 0) return null;
-  return [...ids];
+  if (adds.size === 0 && Object.keys(pending as Record<string, unknown>).length > 0) return null;
+  return [...adds];
 }

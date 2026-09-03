@@ -106,7 +106,12 @@ describe('readPendingWaiverPlayerIds — "could not verify" is not "nothing ther
     expect(readPendingWaiverPlayerIds({ pendingWaivers: '' })).toEqual([]);
   });
 
-  it('finds the claimed player however MFL nests him', () => {
+  it('keeps a tolerant fallback for a shape MFL has not shown us', () => {
+    // These are HYPOTHETICAL shapes, and this test used to assert them as if
+    // they were real — including that a DROP id counts. The live payload
+    // (below) proved both wrong. The fallback survives only so a future shape
+    // change degrades to "verified" instead of hard-failing every claim; it is
+    // not a description of anything MFL is known to return.
     const nested = { pendingWaivers: { waiverRequest: [{ round: '1', player: { id: '12616' } }] } };
     expect(readPendingWaiverPlayerIds(nested)).toContain('12616');
 
@@ -114,9 +119,49 @@ describe('readPendingWaiverPlayerIds — "could not verify" is not "nothing ther
     const single = { pendingWaivers: { waiver: { player: { id: '12616' } } } };
     expect(readPendingWaiverPlayerIds(single)).toContain('12616');
 
-    // ...and sometimes carries the ids flat on the request itself.
-    const flat = { pendingWaivers: { request: [{ add: '12616', drop: '15708' }] } };
-    expect(readPendingWaiverPlayerIds(flat)).toEqual(expect.arrayContaining(['12616', '15708']));
+    // A drop is NOT an add. Counting one would let an unrelated drop vouch for
+    // an add that never landed — the false confirmation this whole route
+    // exists to prevent.
+    const withDrop = { pendingWaivers: { waiverRequest: { addsDrops: '12616_15708', round: '1' } } };
+    expect(readPendingWaiverPlayerIds(withDrop)).toEqual(['12616']);
+  });
+
+  it('reads the REAL pendingWaivers payload — captured from a live filed claim', () => {
+    // The shape, verbatim from MFL on 2026-09-02 after a claim actually filed.
+    // The first version of this parser guessed at `id`/`player` keys that do not
+    // exist here, found nothing, and reported a perfectly good claim as
+    // unverifiable — the owner was shown "we could not confirm it" for a claim
+    // MFL was already listing.
+    const real = {
+      version: '1.0',
+      encoding: 'utf-8',
+      pendingWaivers: {
+        waiverRequest: { timestamp: '1788405970', addsDrops: '15889_14059', comments: '', round: '1' },
+      },
+    };
+    // The ADD only. 14059 is the drop — a player already on the roster, so
+    // counting it would let an unrelated drop vouch for an add that never landed.
+    expect(readPendingWaiverPlayerIds(real)).toEqual(['15889']);
+
+    // `round` and `timestamp` are digit strings too and must not be mistaken for ids.
+    expect(readPendingWaiverPlayerIds(real)).not.toContain('1');
+    expect(readPendingWaiverPlayerIds(real)).not.toContain('1788405970');
+
+    // MFL collapses a single-element list to a bare object, so several claims
+    // in a round arrive as an ARRAY, and multiple picks share one addsDrops.
+    expect(
+      readPendingWaiverPlayerIds({
+        pendingWaivers: {
+          waiverRequest: [
+            { addsDrops: '15889_14059', round: '1' },
+            { addsDrops: '16174_0000,15754_13001', round: '2' },
+          ],
+        },
+      })
+    ).toEqual(['15889', '16174', '15754']);
+
+    // Verified-empty stays empty; that is what an unclaimed round looks like.
+    expect(readPendingWaiverPlayerIds({ pendingWaivers: {} })).toEqual([]);
   });
 
   it('separates a REFUSAL from an indeterminate answer', () => {
@@ -138,6 +183,17 @@ describe('readPendingWaiverPlayerIds — "could not verify" is not "nothing ther
     expect(readMflImportResult('', 500).refused).toBe(true);
     expect(readMflImportResult('<status>OK</status>').accepted).toBe(true);
     expect(readMflImportResult('<status>OK</status>').refused).toBe(false);
+  });
+
+  it('hands the owner a link to see the claim on MFL, built from the registry', () => {
+    // A filed claim is invisible on our side until waivers process, so the
+    // success message points at MFL's own add/drop page, which lists the round.
+    expect(ROUTE_CODE).toMatch(/confirmUrl = `https:\/\/\$\{writeHost\}\/\$\{year\}\/add_drop\?L=\$\{leagueId\}`/);
+    // Returned on BOTH outcomes — most of all when we could not confirm it
+    // ourselves, which is exactly when the owner needs somewhere to look.
+    const fcfs = ROUTE_CODE.slice(ROUTE_CODE.indexOf("mode: 'fcfs'"), ROUTE_CODE.indexOf("mode: 'fcfs'") + 200);
+    expect(fcfs).toContain('confirmUrl');
+    expect(ROUTE_CODE.slice(ROUTE_CODE.indexOf("mode: 'waiver'"))).toContain('confirmUrl');
   });
 
   it('writes to the LEAGUE host, never the api. gateway', () => {
