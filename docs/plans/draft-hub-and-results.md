@@ -1,6 +1,8 @@
 # Draft Hub, Draft Results, and `/draft/*` consolidation
 
-Status: planned (2026-09-02). Branch `claude/draft-results-page-be59e6`.
+Status: Phases 1-4 + 6 SHIPPED (2026-09-02). Phase 5 (AFL Draft Room) and the
+deferred AFL Mock Draft are the remaining work.
+Branch `claude/draft-results-page-be59e6`.
 
 Goal: one coherent draft section. Every draft page reachable from every other,
 a real historical Draft Results page, and TheLeague / AFL holding the same set
@@ -177,3 +179,69 @@ applet, the NL runs a slow email draft off MFL's option page. So:
    prefixes per reader, so a prefixed href sends half the audience to the
    other league's site.
 6. Vercel redirect ordering vs. the existing apex prefix-strip rules.
+
+
+## What the feeds actually turned out to contain
+
+Written after building it. Every item here was found by reading the real
+archive, and every one is pinned by `tests/draft-results-view.test.ts`.
+
+1. **TheLeague's rounds are 16, 17 and 18 picks** — the toilet-bowl
+   compensatory slots (1.17, 2.17, 2.18) make each round a different size. The
+   `(round - 1) * 16 + pick` in the old history tab therefore gave round 3 pick
+   1 the number 33, which round 2 pick 17 already had, and ended a 51-pick
+   draft at 50. Overall numbering is now a running total of each round's real
+   size. AFL 2010 and 2020 carry a 13th pick in one round for the same reason.
+
+2. **AFL 2004 is two drafts in one unit.** Rounds 1-8 belong to twelve
+   franchises and rounds 9-16 to a disjoint twelve — the same two sets MFL
+   splits into proper conference units from 2005 on. The same players are
+   drafted in both halves. Detected from the data (a round boundary with
+   disjoint franchises either side), and REPORTED rather than rearranged:
+   renumbering the second half would silently rewrite what MFL recorded.
+
+3. **AFL 2003 has no selections at all** — 360 slots, not one player id. So
+   does TheLeague's 2007 startup (320 slots, no ids). Both render as a board of
+   blanks, which is correct, so the page says why.
+
+4. **AFL 2004-2009 name players nothing can resolve** — 47% resolve in 2004
+   rising to 96% by 2009 — because AFL `players.json` only begins in 2011.
+   TheLeague's identity union is chained on as a fallback and currently adds
+   NOTHING (the AFL union is a strict superset: a redraft league rosters far
+   more players). The chain stays so that coincidence can't become a silent
+   dependency.
+
+5. **`----` is a skipped pick**, not a player id. MFL writes it with a "Pick
+   Skipped By Commissioner" comment.
+
+6. **The NFL team in the identity union is the player's CURRENT team**, not the
+   one he was on when drafted — "Jameis Winston · NYG" on a 2015 board is
+   simply false. It is shown only on the newest season, where it is a rookie's
+   actual landing spot.
+
+## Guards that caught real bugs during the build
+
+Worth recording, because both fired on work that looked finished:
+
+- `design-token-guard` rejected three tokens invented out of thin air
+  (`--color-border`, `--color-accent-contrast`, `--color-accent-soft`). Each
+  would have rendered its fallback in BOTH themes — light fine, dark broken.
+  Fixed by adopting DivisionStrengthPage's local-alias idiom over the repo's
+  real globals.
+- `page-fork-ratchet` rejected 85- and 89-line route wrappers as too close to
+  call. The data assembly moved into `buildDraftResultsView` /
+  `buildDraftHubProps`, leaving the wrappers at 40-56 lines.
+
+## Still to do
+
+- **Phase 5 — AFL Draft Room, conference-aware.** `afl-draft-room-link.test.ts`
+  is the authority on why it is not a port: the AL meets live in MFL's
+  `ajax_ld` applet, the NL runs a slow email draft off MFL's option page. It
+  must be a shared component behind a thin wrapper, or `draft/room.astro`
+  becomes a genuine new fork.
+- **AFL Mock Draft** (deferred). TheLeague's mocks a 3-round, 51-pick rookie
+  draft; the AFL is 108 picks per conference.
+- Publishing either to the AFL is a ONE-LINE edit: add `'afl-fantasy'` to that
+  page's `leagues` in `src/components/shared/draft-nav/draft-pages.ts`. The hub,
+  the strip and `tests/draft-section.test.ts` all read that list, and the test
+  fails if a page is advertised to a league whose route file doesn't exist.

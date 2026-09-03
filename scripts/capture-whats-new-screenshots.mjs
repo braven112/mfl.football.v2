@@ -132,6 +132,15 @@ const CAPTURE_PATHS = {
   // as a dry run.
   'theleague-draft-broadcast':
     '/theleague/draft/broadcast?conference=league&year=2025&rehearse=0',
+  // Both-league entry, so its link is the league-neutral bare
+  // `/draft/results`, which only routes on a league's own apex host. Shot
+  // against a HISTORICAL season rather than the default (the most recent
+  // draft): the subject of the article is that old drafts are browsable at
+  // all, and the current year is the one board everybody already remembers.
+  // 2015 is fully resolved — every pick has a name and a headshot — whereas
+  // the startup drafts the article also mentions are, by their nature, a page
+  // of blanks and would sell the feature badly.
+  'draft-section': '/theleague/draft/results?year=2015',
 };
 
 const PAGE_HOOKS = {

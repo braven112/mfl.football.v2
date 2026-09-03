@@ -62,6 +62,18 @@ function hrefWith(overrides: Record<string, string | null>): string {
   return qs ? `${base}?${qs}` : base;
 }
 
+/**
+ * The NFL team in the identity union is the player's CURRENT one, not the one
+ * he was on when he was drafted — so on a 2015 board it reads "Jameis Winston
+ * · NYG", which is simply false about that draft. It is genuinely useful on
+ * the newest board (a rookie's NFL landing spot), so it is shown there and
+ * nowhere else.
+ */
+const showNflTeam = view.year === view.years[0];
+
+/** 'NFL' and 'FA' are the union's placeholders for "no team" — not teams. */
+const isRealNflTeam = (code: string) => !!code && code !== 'NFL' && code !== 'FA';
+
 const selectedTeam = view.teams.find((t) => t.id === view.team);
 const heading = `${view.year} Draft Results`;
 const subtitle = selectedTeam
@@ -221,7 +233,9 @@ const subtitle = selectedTeam
                       <span class="dr__player-meta">
                         <span class="dr__player-name">{p.playerName}</span>
                         <span class="dr__player-sub">
-                          {[p.position, p.nflTeam].filter(Boolean).join(' · ')}
+                          {[p.position, showNflTeam && isRealNflTeam(p.nflTeam) ? p.nflTeam : '']
+                            .filter(Boolean)
+                            .join(' · ')}
                         </span>
                       </span>
                     </span>
