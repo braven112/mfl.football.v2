@@ -3,6 +3,14 @@
   "changes": [
     {
       "date": "2026-09-03",
+      "type": "style-tweak",
+      "summary": "\"Your Waiver Claims\" on Free Agents was drawing a bordered, rounded box inside another bordered, rounded box, with the Bid Status strip's divider running between the two. It is its own card and had been dropped inside the table's card. It now sits above the table as its own panel, which is where the AFL has always had it.",
+      "impact": "user",
+      "area": "free-agents",
+      "league": "theleague"
+    },
+    {
+      "date": "2026-09-03",
       "type": "bug-fix",
       "summary": "\"Your Waiver Claims\" on Free Agents said \"Could not read your pending waivers\" for anyone who actually had one filed, and filing a claim came back with a shrug — \"submitted, but we could not confirm it\" — instead of a clean checkmark. The claim was always there; we just could not find it when we looked. MyFantasyLeague labels the record differently depending on how a league runs waivers, and we only knew the label the AFL uses. TheLeague bids, so its claims went by another name and we read straight past them. The panel now finds a filed claim by its shape rather than by what MFL decided to call it that week, so a third name would not break it either. Your claims, your bids and the drop attached to each are all listed again.",
       "impact": "user",

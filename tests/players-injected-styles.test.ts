@@ -234,3 +234,53 @@ describe('WaiverPriorityModal — injected-row styles', () => {
     expect(read('src/pages/afl-fantasy/players.astro')).toContain('wpm-trigger');
   });
 });
+
+/**
+ * The waiver claims panel is a CARD, so it must not be rendered inside another
+ * one.
+ *
+ * `.wcp` brings its own border, radius, background and bottom margin.
+ * `.table-wrapper` is also a card — a radius plus, in dark mode, a 1px ring.
+ * TheLeague nested the panel inside the wrapper, which drew a rounded bordered
+ * box inside a rounded ringed box with the Bid Status legend's divider running
+ * between them (reported 2026-09-03). The AFL never had it, because the AFL
+ * never nested it: this was pure sibling drift between two near-identical pages,
+ * which is the recurring bug class `tests/page-fork-ratchet.test.ts` exists for.
+ *
+ * The legend is the counter-example and belongs where it is: it is a strip
+ * attached to the table's own header, styled with a `border-bottom` rather than
+ * a box. Attached-to-the-table and standalone-card are different jobs.
+ */
+describe('waiver claims panel placement', () => {
+  const PLAYERS_PAGES = [
+    'src/pages/theleague/players.astro',
+    'src/pages/afl-fantasy/players.astro',
+  ];
+
+  for (const page of PLAYERS_PAGES) {
+    it(`${page}: renders the panel outside .table-wrapper`, () => {
+      const html = read(page);
+      const panel = html.indexOf('<WaiverClaimsPanel');
+      expect(panel, `${page} does not render WaiverClaimsPanel`).toBeGreaterThan(-1);
+
+      const wrapperOpen = html.indexOf('<div class="table-wrapper">');
+      expect(wrapperOpen, `${page} has no .table-wrapper`).toBeGreaterThan(-1);
+
+      // The panel must come BEFORE the table card opens. Both pages render one
+      // table-wrapper, so "before the opening tag" is the whole test — no need
+      // to balance tags to find where it closes.
+      expect(
+        panel,
+        `${page} renders WaiverClaimsPanel inside .table-wrapper — it is a card with its own border and radius, so it draws a box inside a box`
+      ).toBeLessThan(wrapperOpen);
+    });
+  }
+
+  it('keeps the Bid Status legend INSIDE the table card, where it belongs', () => {
+    // Guards the over-correction: the legend is not a card and moving it out
+    // would detach a header strip from its table.
+    const html = read('src/pages/theleague/players.astro');
+    const wrapperOpen = html.indexOf('<div class="table-wrapper">');
+    expect(html.indexOf('class="bid-legend"')).toBeGreaterThan(wrapperOpen);
+  });
+});
