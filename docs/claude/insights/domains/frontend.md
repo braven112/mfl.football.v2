@@ -15,12 +15,12 @@
   `max-width` to an inner wrapper.
 - **Scoped CSS dies silently on markup the component didn't emit.** `set:html`,
   client-injected DOM, and *a child component's own tags* carry no (or a
-  different) `data-astro-cid`, so `.parent img {…}` stops matching the moment
-  you swap an inline tag for a component. Re-anchor as
-  `.parent :global(img)`; and never extract a `<td>`/`<th>` into a child
-  component to dedupe markup — it leaves the parent's table styles behind. Never `@import` a shared stylesheet inside a scoped
-  `<style>` — Vite inlines it and scopes every imported selector; import it in
-  frontmatter instead.
+  different) `data-astro-cid`, so `.parent img {…}` stops matching. Re-anchor as
+  `.parent :global(img)` — but if MOST selectors need it, use a plain
+  `src/styles/*.css`. Never extract a `<td>`/`<th>` into a child component to
+  dedupe markup (it leaves the parent's table styles behind), and never
+  `@import` a shared stylesheet inside a scoped `<style>` — Vite inlines and
+  scopes every imported selector; import it in frontmatter instead.
 - **Interactive scripts must re-init on `astro:page-load`,** or they go dead on
   in-site navigation. Three traps: `document`-level listeners *stack* (guard
   with a module-scoped once-flag); config captured at module-eval goes stale

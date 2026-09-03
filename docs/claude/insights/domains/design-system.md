@@ -41,6 +41,9 @@ themes takes a literal** (`#111827`), never a gray token.
 - **Never remap `--color-primary` per league** to correct heading color — it also
   feeds every primary fill and the nav's active pill. Headings come from the
   `--link-color` family; override that instead.
+- **A heading on a colored band needs `color` set explicitly** — the global
+  `h1`-`h6` rule beats the band's inherited value, so its `<p>` looks right
+  and its `<h2>` renders near-black. Sibling text proves nothing.
 - `--card-bg` is a **gradient** in dark — never paint form fields with it
   (`--input-bg` is the solid one).
 - Trace a bad dark value to *every* consumer before overriding. The fix belongs

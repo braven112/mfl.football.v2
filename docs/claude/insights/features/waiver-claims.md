@@ -215,32 +215,28 @@ The cheap, safe subset — worth shipping before any reorder UI — is **edit th
 drop** (one POST to `editwr`, no destructive step) and **delete a claim** (one
 GET), both of which map to a single MFL primitive with no window of loss.
 
-## 2026-09-03 - An Astro Scoped Style Cannot Reach A Row The Browser Built
+## 2026-09-03 - Scoped CSS And Injected Rows, For The Third Time — Use A Plain Stylesheet
 
-**Context:** the new Waiver Priority modal shipped its shell correctly styled —
-header, accent band, close button — and its team list as unstyled 50px icons
-stacked in a column, inside the same component, from the same `<style>` block.
+**Context:** the Waiver Priority modal shipped its shell correctly styled and
+its team list as unstyled 50px icons, from the same `<style>` block.
 
-**Insight:** Astro scopes a component's CSS by stamping `data-astro-cid-*` onto
-the elements **in its template** and appending that attribute selector to every
-rule. Rows built in the browser and written in with `innerHTML` never get the
-attribute, so the rule matches nothing. The shell was in the template; the rows
-were not. Nothing errors, nothing warns, and the diff looks correct — the class
-names in the JS string and the selectors in the `<style>` block match perfectly.
+**This is a known trap, and that is the finding.** `frontend.md`'s curated head
+already says scoped CSS dies on markup the component didn't emit, and the
+archive already carries two dated cases of it (`set:html` icons, KeeperPlanner's
+rebuilt slots). It was hit anyway, in a component sitting next to
+`waiver-claims-panel.css` — a file that exists for precisely this reason.
 
-This is the same failure the 2026-09-02 entry below records ("A Class Name Is Not
-A Style") arriving from the opposite direction: there the rules were in another
-file, here they were in the right file but scoped away from the elements. The
-shared lesson is that **the rules for markup a script generates must live in a
-plain stylesheet** — `src/styles/waiver-priority-modal.css`, imported from the
-component's frontmatter, the way `waiver-claims-panel.css` already was next
-door. A `:global()` wrapper works too, but a component whose list, rows and
-trigger are all dynamic ends up with `:global()` on nearly every selector, which
-is a stylesheet wearing a disguise.
+**What is worth adding is the third remedy.** The documented fixes are
+`:global()` re-anchoring (for injected children under a stable scoped parent)
+and `<style is:global>` (when a script rebuilds whole subtrees). Neither is
+right for a component whose list, rows AND trigger are all outside its own
+template: `:global()` ends up on nearly every selector, which is a stylesheet
+wearing a disguise. **Put the rules in a plain `src/styles/*.css` imported from
+frontmatter** — global by construction, greppable, and what the panel next door
+was already doing. Added to the frontend head.
 
-**Rule of thumb:** if a selector's element is created by `innerHTML`,
-`createElement`, or lives in the HOST page rather than this component's own
-template, it does not belong in a scoped `<style>`.
+Quick test for which remedy you need: count the selectors that would need
+`:global()`. One or two, use it. Most of them, you wanted a stylesheet.
 
 ## 2026-09-03 - `Number('')` Is 0, And 0 Sorts To The Front Of The Waiver Order
 
@@ -306,18 +302,30 @@ category of bug.
 explicitly. Do not rely on the band's own `color` to carry it, and do not
 conclude the band is fine because the non-heading text on it is.
 
-## 2026-09-03 - `--content-text` Does Not Exist
+## 2026-09-03 - The Token Guard Would Have Caught It In 40ms; I Used My Eyes Instead
 
-**Context:** the priority modal's body text rendered near-black on dark navy.
+**Context:** the modal's body text rendered near-black on dark navy, from
+`color: var(--content-text, #111827)` — a token invented by analogy with the
+real `--content-bg` and `--content-text-muted`. Found by opening dark mode and
+squinting at it.
 
-**Insight:** `color: var(--content-text, #111827)` — invented by analogy with
-the real `--content-bg` and `--content-text-muted`, both of which do exist.
-There is no `--content-text`, so every theme got the fallback, and the fallback
-is the light-mode value. Exactly the trap in
-`docs/claude/rules/theming-and-assets.md`, arrived at by guessing a token name
-that sounded like its neighbours. The body text token that flips is
-`--color-gray-900` (`#111827` light, `#e8eef4` dark) — what `WaiverClaimModal`
-next door was already using.
+**Insight:** `tests/design-token-guard.test.ts` fails on any `var(--token)` in
+`src/` that is defined nowhere in `src/`, which is exactly what this was. It
+runs in milliseconds. It never saw the bug only because I fixed it by eye
+before the next `pnpm test:unit` — so the guard's value here was zero, for no
+reason other than ordering.
 
-Worth stating because "check the token exists" is not the same instinct as
-"check the fallback is right": the fallback here WAS right, for one theme.
+`--content-text` specifically has been hit before: `src/styles/my-rank-editor.css:49`
+carries the comment *"--color-gray-900, not --content-text: the latter is not a
+token here"*. Two independent authors invented the same plausible name.
+
+**Workflow rule, not a CSS rule:** after writing any block of new CSS, run
+`pnpm vitest run tests/design-token-guard.test.ts` before you open a browser.
+It is instant and it answers "does this token exist" definitively, which
+eyeballing a rendered page does not — the fallback renders, so a page with an
+invented token looks *fine* in one of the two themes.
+
+The guard's own doc header is honest about what it does NOT cover: a token
+defined only in some other file's scoped block satisfies it repo-wide while
+still rendering the fallback for you. That failure mode is row 2 of
+`design-system.md`'s "Four ways a token fails" table and remains unguarded.
