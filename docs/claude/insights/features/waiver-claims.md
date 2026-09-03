@@ -157,3 +157,60 @@ Note also that the SERVER re-derives the window live from MFL's calendar with th
 owner's own cookie, so it can disagree with the page — deliberately, because the
 page's copy is a build-time feed and the endpoint choice must not be trusted from
 the client.
+
+## 2026-09-03 - Every Way MFL Lets An Owner Touch A FILED Claim (And Why Reordering Is Delete-And-Refile)
+
+Established by read-only probe against a real filed claim, plus one live write
+test, rather than from the docs — which are wrong about the important part.
+
+**The round is ONE record, not N.** `export?TYPE=pendingWaivers` returns:
+
+```json
+{ "pendingWaivers": { "waiverRequest": {
+    "timestamp": "1788405970", "addsDrops": "15889_14059",
+    "comments": "", "round": "1" } } }
+```
+
+`addsDrops` is a comma-separated ORDERED list of `add_drop` pairs. So priority
+within a round is literally the order of that string, and MFL appends new claims
+to the end.
+
+**`import?TYPE=waiverRequest` + `REPLACE=1` is INERT for this league.** MFL
+documents it as "replaces the current entries", which would make reordering one
+atomic call. It is not. Tested live 2026-09-02 by replaying an existing claim's
+own picks unchanged:
+
+```
+BEFORE  addsDrops "15889_14059"  timestamp 1788405970
+POST    import?TYPE=waiverRequest … REPLACE=1  →  200, empty body
+AFTER   addsDrops "15889_14059"  timestamp 1788405970   ← unchanged
+```
+
+Empty 200, and the TIMESTAMP DID NOT MOVE. That is the discriminator worth
+stealing: for an endpoint that echoes nothing, replay a write that should be a
+no-op and watch a field MFL controls. Same picks proves nothing; same timestamp
+proves it never wrote.
+
+This also retro-explains the original outage. The import endpoint was never
+formed wrong — it does not write here at all.
+
+**What the page actually offers**, from the claims table on `add_drop`:
+
+| Control | Target | Effect |
+|---|---|---|
+| Edit | `options?L=…&O=255&F=<franchise>&ROUND=<n>` | POST `form_name=editwr`, `ROUND`, `drop_0..N`, `comment`, `SAVE=Save Waiver Request`. **Drop and comment only** — the add is fixed text and there is NO order field. |
+| Copy To Round N | `add_drop?L=…&F=…&COPY_ROUND=<round>_<add>_<drop>_<toRound>` | Plain GET. |
+| Delete | `add_drop?L=…&F=…&DELETE=<round>_<add>_<drop>` | Plain GET. |
+| File a claim | POST `add_drop` + `FORCE_WAIVER=on` + `SUBMIT=Submit Request` | Appends to the END of the round. |
+
+**So MFL exposes no reorder control at all.** Ordering is insertion order, and
+the only way to change it is DELETE the claims and refile them in the wanted
+sequence. Anything built on top of that must own the consequence: between the
+delete and the refile the owner has no claim, so it needs to run server-side in
+one request, verify against `pendingWaivers` afterwards, and attempt to restore
+the original order if a refile fails. Deleting first and hoping is not
+acceptable during a live window.
+
+The cheap, safe subset — worth shipping before any reorder UI — is **edit the
+drop** (one POST to `editwr`, no destructive step) and **delete a claim** (one
+GET), both of which map to a single MFL primitive with no window of loss.
