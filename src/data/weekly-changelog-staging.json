@@ -4,6 +4,14 @@
     {
       "date": "2026-09-02",
       "type": "bug-fix",
+      "summary": "You can file a waiver claim from the Free Agents page again, and it now tells you the truth about whether it worked. MyFantasyLeague turns out to want two things at once to treat an add as a claim rather than an instant pickup, and we were sending neither — so a locked free-agent pool refused every attempt without ever saying why. Fixed, and the confirmation is no longer taken on faith: the claim is read back out of your pending waivers before you see a checkmark, and the message now links straight to MyFantasyLeague's add/drop page so you can see the claim listed with your own eyes.",
+      "impact": "user",
+      "area": "free-agents",
+      "league": "both"
+    },
+    {
+      "date": "2026-09-02",
+      "type": "bug-fix",
       "summary": "Schefter's trade-offer radar has been blind and nobody knew. Its reads of MyFantasyLeague's pending-trade list were losing their login on the way through — MFL forwards you from one server to another, and Node quietly drops the credential when it does — so every check came back as an anonymous visitor and the scan shrugged and logged a warning instead of an error. A dead feature that looked like a config nag. Fixed, along with the calendar-writing script that was one environment variable away from the same fate.",
       "impact": "admin",
       "area": "other",
