@@ -229,6 +229,52 @@ describe('readPendingWaiverPlayerIds — "could not verify" is not "nothing ther
     expect(ROUTE_CODE, 'the dead waiverRequest import must be gone').not.toContain('TYPE=waiverRequest');
   });
 
+  it('sends the BID with a blind-bid claim, and only for a blind-bid league', () => {
+    // THE BUG THIS PINS (2026-09-03): the add_drop replay was built and proven
+    // against the AFL, which runs rolling waiver PRIORITY and has no amount box
+    // on its form. TheLeague is blind-bid, so MFL rejected every claim it ever
+    // filed through this route:
+    //
+    //   Cannot Save Request: Invalid Bid Amount (bid amount must not include
+    //   letters or symbols)
+    //   Cannot Save Request: Bid amount ($) is below bid minimum ($425000)
+    //
+    // The `($)` is MFL echoing back the empty value it read. A whole league's
+    // claims failed for one missing field.
+    //
+    // `BBID_AMT` is the name off MFL's LIVE form. It is worth spelling out that
+    // it was not guessable: MFL's own JS calls the wrapper `amt_field_id`, and
+    // the sibling wrappers `round_field_id` / `comments_field_id` hold inputs
+    // named ROUND and COMMENTS — so the two obvious inferences, `AMT` and
+    // `AMOUNT`, are both wrong.
+    expect(ROUTE_CODE).toContain('BBID_AMT');
+    // Gated on the league's SYSTEM, read from MFL's live payload — not sent
+    // unconditionally. The AFL's form has no such field and its claims work.
+    expect(ROUTE_CODE).toMatch(/rules\.blindBid\s*\?\s*\{\s*BBID_AMT:/);
+    // The claim's own bid, not the league minimum: an owner who bids above the
+    // floor must not have it silently rewritten down to it.
+    expect(ROUTE_CODE).toMatch(/BBID_AMT:\s*String\(c\.bid\)/);
+    // Bare integer dollars. MFL parses this field itself and says so — "must
+    // not include letters or symbols" — so any formatting sent here is a
+    // rejection.
+    expect(ROUTE_CODE, 'the bid must not be currency-formatted').not.toMatch(
+      /BBID_AMT:[^,\n]*(toLocaleString|toFixed|\$\{'\$'\}|'\$')/
+    );
+  });
+
+  it('surfaces MFL\'s own "Cannot Save Request" wording to the owner', () => {
+    // MFL states a rejected waiver claim as prose in the page body, one sentence
+    // per problem. The matcher only knew about `Transaction Would Create` and
+    // `Exceeds League Limit`, so a bid problem classified as "no error found",
+    // the pendingWaivers delta then reported the claim missing, and the owner
+    // was told the generic "MFL did not record the claim" — while MFL had named
+    // the cause. That is what made the missing BBID_AMT cost an afternoon.
+    expect(ROUTE).toMatch(/Cannot Save Request:/);
+    // EVERY occurrence, not the first: MFL emits one line per problem and the
+    // second is usually the actionable one.
+    expect(ROUTE_CODE).toMatch(/matchAll\(\/Cannot Save Request:\[\^<\]\*\/gi\)/);
+  });
+
   it('reads add_drop\'s HTML page for MFL\'s own complaint', () => {
     // add_drop re-renders the page carrying its error rather than returning XML,
     // so readMflImportResult (which would call any HTML a refusal) must not be
