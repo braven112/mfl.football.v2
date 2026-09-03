@@ -1234,8 +1234,10 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
         '.players-table td.cell-age',
         rankTd,
         '.players-table td.col-value-money',
-        '.players-table th.col-place-bid',
-        '.players-table td.col-place-bid',
+        // Place Bid is an MFL deep-link that OPENS AN AUCTION, so it only
+        // belongs on the page while the auction window is open. Outside it the
+        // column stays hidden by the blanket hide above — see the render site.
+        ...(isAuctionSeason ? ['.players-table th.col-place-bid', '.players-table td.col-place-bid'] : []),
       ];
       for (const selector of keepSelectors) {
         document.querySelectorAll(selector).forEach(el => {
@@ -1260,6 +1262,15 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
       // Hide auction Rank column if no rankings are loaded
       if (!hasRankingColumns) {
         document.querySelectorAll('.col-auction-rank').forEach(el => {
+          el.style.display = 'none';
+        });
+      }
+      // The Auction view is available YEAR-ROUND (`canShowAuctionView` is just
+      // "the feed has auction data"), so outside the auction window it is a
+      // record of what happened — not a place to start something. Drop the
+      // Place Bid column; the rest of the view still reads.
+      if (!isAuctionSeason) {
+        document.querySelectorAll('.col-auction-placebid').forEach(el => {
           el.style.display = 'none';
         });
       }
@@ -2111,10 +2122,16 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
         }
       }
 
-      // Place Bid button (Value view only — links to MFL's Place Bid page with player pre-selected)
+      // Place Bid button (Value view only — links to MFL's Place Bid page with
+      // player pre-selected). AUCTION WINDOW ONLY. `O=43` does not join a bidding
+      // war already in progress; on a player nobody has nominated it OPENS an
+      // auction, which is why this cannot be left standing out of season — see
+      // the auction-view cell below for the incident.
       {
         const bidUrl = `https://${mflHost}/${mflActionYear}/options?L=${mflLeagueId}&O=43&P=${encodeURIComponent(p.id)}`;
-        html += `<td class="col-group--value col-value-money col-place-bid"><a href="${escapeAttr(bidUrl)}" target="_blank" rel="noopener" class="place-bid-link" aria-label="Place bid on ${escapeAttr(p.name)} (opens in new tab)">Bid &#8599;</a></td>`;
+        html += isAuctionSeason
+          ? `<td class="col-group--value col-value-money col-place-bid"><a href="${escapeAttr(bidUrl)}" target="_blank" rel="noopener" class="place-bid-link" aria-label="Place bid on ${escapeAttr(p.name)} (opens in new tab)">Bid &#8599;</a></td>`
+          : `<td class="col-group--value col-value-money col-place-bid"></td>`;
       }
 
       // ── Auction view cells ──
@@ -2169,9 +2186,28 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
           html += `<td class="cell-num col-group--auction col-auction-timeleft"><span class="na">&mdash;</span></td>`;
         }
 
-        // Place Bid (auction view)
+        // Place Bid (auction view) — AUCTION WINDOW ONLY.
+        //
+        // This link and the Value view's twin were the only two acquisition
+        // controls on the page never gated on `isAuctionSeason`. The Auction tab
+        // itself is shown whenever the feed carries any auction data
+        // (`canShowAuctionView`), which is true all year, so out of season the
+        // page was still handing owners a live "Bid ↗" into MFL's `O=43` page —
+        // and `O=43` on an un-nominated player OPENS an auction at the league
+        // minimum rather than joining one.
+        //
+        // On 2026-09-03, during a waiver week with the free-agent pool locked, an
+        // owner used it and MFL recorded `AUCTION_INIT 0006 8851|425000|` — an
+        // auction on a player every other owner had to file a blind bid for. The
+        // main acquisition column had switched to the claim modal months earlier;
+        // these two columns had not.
+        //
+        // The cell is emitted EMPTY rather than merely hidden: the column hide
+        // above is `display: none`, which leaves a working link in the DOM for
+        // find-in-page, the accessibility tree and anything that reads the
+        // markup.
         const bidUrl = `https://${mflHost}/${mflActionYear}/options?L=${mflLeagueId}&O=43&P=${encodeURIComponent(p.id)}`;
-        if (p.auctionStatus === 'won') {
+        if (p.auctionStatus === 'won' || !isAuctionSeason) {
           html += `<td class="col-group--auction col-auction-placebid"></td>`;
         } else {
           html += `<td class="col-group--auction col-auction-placebid"><a href="${escapeAttr(bidUrl)}" target="_blank" rel="noopener" class="place-bid-link" aria-label="Place bid on ${escapeAttr(p.name)} (opens in new tab)">Bid &#8599;</a></td>`;
