@@ -156,7 +156,11 @@ describe('readPendingWaiverPlayerIds — "could not verify" is not "nothing ther
     // never appeared. add_drop is the page owners actually use, and the one
     // cut-player.ts already replays for the same class of reason.
     expect(ROUTE_CODE).toContain('/add_drop');
-    expect(ROUTE_CODE).toContain("SUBMIT: 'Perform Add/Drop'");
+    // MFL dispatches on the button VALUE, and its picker.js rewrites it to
+    // "Submit Request" when FORCE_WAIVER is ticked. Sending the unticked value
+    // asks for an instant add, which a locked pool refuses.
+    expect(ROUTE_CODE).toContain("SUBMIT: 'Submit Request'");
+    expect(ROUTE_CODE, 'the instant-add button value files no claim').not.toContain("SUBMIT: 'Perform Add/Drop'");
     expect(ROUTE_CODE).toContain('add_pid');
     // FORCE_WAIVER is what makes it a CLAIM rather than an instant add. Without
     // it, a locked free-agent pool refuses the add by silently re-rendering the
