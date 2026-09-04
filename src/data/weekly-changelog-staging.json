@@ -4,6 +4,14 @@
     {
       "date": "2026-09-04",
       "type": "bug-fix",
+      "summary": "Salary Analytics only worked the first time you opened it. Arrive from anywhere else on the site and the Week dropdown had collapsed to a single \"Season Total\" — the other thirty weeks were simply gone — while the Season picker and Export to Excel had both stopped answering. Reloading brought them all back, which is a fine trick if you knew it. The page was still wired to the copy of itself you had already left. It rebuilds itself on every arrival now, so the week list, the season switch and the export all work on the tenth visit the same as the first.",
+      "impact": "user",
+      "area": "salary",
+      "league": "theleague"
+    },
+    {
+      "date": "2026-09-04",
+      "type": "bug-fix",
       "summary": "Set Lineup went dead the second time you opened it. Come in from the homepage and everything worked; click away to standings, click back, and the page turned into a photograph — tapping a slot brought up nothing, Set Optimal did nothing, Submit did nothing, and there was no error to tell you why. Reloading fixed it, which is a fine trick if you knew it. The page was still wired to the copy of itself you had already left. It now rebuilds itself every time you arrive, so the tenth visit behaves exactly like the first.",
       "impact": "user",
       "area": "rosters",

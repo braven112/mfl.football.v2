@@ -42,4 +42,15 @@ function initExportButton() {
   });
 }
 
-initExportButton();
+/**
+ * Same trap as the page's own controller: this module is evaluated ONCE per
+ * document, so a single call at module scope bound the listener to the FIRST
+ * page's button and closed over the FIRST page's config. On a return visit
+ * Export to Excel was dead, silently. `astro:page-load` fires on the initial
+ * load too, so this replaces the direct call rather than joining it.
+ *
+ * No teardown is needed here: the listener is on the button, which the router
+ * replaces along with the rest of the DOM. Only `document`/`window`
+ * registrations survive a swap and have to be removed before re-adding.
+ */
+document.addEventListener('astro:page-load', initExportButton);
