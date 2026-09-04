@@ -523,7 +523,7 @@ describe('era keys stay unique', () => {
  * the only option available — not a mistake left in place.
  */
 const KNOWN_INVISIBLE_ERAS = new Set([
-  // All four are the same story, and it is TheLeague's version of the AFL bug
+  // All three are the same story, and it is TheLeague's version of the AFL bug
   // this guard was written for: the franchise's LAST pre-2025 look lived on
   // `theleague.us/images/team_banners/*.png` — named in every one of those
   // years' league.json — and that host now answers every image request with a
@@ -532,9 +532,10 @@ const KNOWN_INVISIBLE_ERAS = new Set([
   // and the eras do not appear in TheLeague's picker.
   //
   // Recover the art — an owner's copy, an archive — and the line comes out.
+  // Gridiron Geeks 2014 came out that way: #706 gave it real
+  // `history/geeks_2014_*` art, so the ratchet caught the stale entry.
   'theleague 0003 2016', // Maverick
   'theleague 0010 2016', // Computer Jocks
-  'theleague 0013 2014', // Gridiron Geeks
   'theleague 0014 2018', // Cowboy Up
 ]);
 
