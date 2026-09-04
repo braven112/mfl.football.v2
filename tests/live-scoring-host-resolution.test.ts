@@ -1,5 +1,6 @@
 /**
- * Which MFL server /api/live-scoring fetches from, driven through the real route.
+ * Which MFL server our league-scoped routes fetch from, driven through the real
+ * handlers.
  *
  * Every league lives on a different MFL host, and MFL answers a league id it
  * does not host with that host's own data rather than an error. So pairing
@@ -20,6 +21,7 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { GET } from '../src/pages/api/live-scoring';
+import { GET as draftStatusGET } from '../src/pages/api/draft/status';
 import { getLeagueBySlug, DEFAULT_LEAGUE } from '../src/config/leagues';
 
 const AFL = getLeagueBySlug('afl-fantasy')!;
@@ -66,5 +68,41 @@ describe('GET /api/live-scoring — MFL host resolution', () => {
   it('falls back to the default league only when `L` names no known league', async () => {
     const hosts = await hostsFetchedFor('?week=3');
     expect(new Set(hosts)).toEqual(new Set([DEFAULT_LEAGUE.mflHost]));
+  });
+});
+
+/**
+ * `/api/draft/status` had the identical branch — `resolveMflHost(raw,
+ * DEFAULT_HOST)` — and it is reachable the same way: the broadcast board's
+ * `?mflLeague=` override is a documented public caller, so a league id can
+ * arrive without a matching host. Fixing one route and not the other would
+ * leave the trap in place behind a different door.
+ */
+describe('GET /api/draft/status — MFL host resolution', () => {
+  let fetchMock: ReturnType<typeof vi.fn>;
+  beforeEach(() => {
+    fetchMock = vi.fn().mockResolvedValue(ok());
+    vi.stubGlobal('fetch', fetchMock);
+  });
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  async function hostsFetchedFor(search: string): Promise<string[]> {
+    await draftStatusGET({ url: new URL(`https://example.test/api/draft/status${search}`) } as never);
+    return fetchMock.mock.calls.map((c) => new URL(String(c[0])).hostname);
+  }
+
+  it('derives the host from the league id when no host param is sent', async () => {
+    const hosts = await hostsFetchedFor(`?league=${AFL.id}`);
+    expect(hosts.length).toBeGreaterThan(0);
+    expect(hosts).not.toContain(DEFAULT_LEAGUE.mflHost);
+    expect(new Set(hosts)).toEqual(new Set([AFL.mflHost]));
+  });
+
+  it('rejects an off-registry host without falling through to another league', async () => {
+    const hosts = await hostsFetchedFor(`?league=${AFL.id}&host=evil.example.com`);
+    expect(hosts).not.toContain('evil.example.com');
+    expect(new Set(hosts)).toEqual(new Set([AFL.mflHost]));
   });
 });

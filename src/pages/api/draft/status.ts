@@ -24,7 +24,7 @@ import { parseTradeFromComment, selectDraftUnit } from '../../../utils/draft-uti
 import type { DraftRoomPick, DraftStatusResponse } from '../../../types/draft-room';
 import { getCurrentLeagueYear } from '../../../utils/league-year';
 import { buildMflExportUrl } from '../../../utils/mfl-url';
-import { getLeagueBySlug } from '../../../config/leagues';
+import { getLeagueById, getLeagueBySlug } from '../../../config/leagues';
 import { resolveMflHost, resolveMflLeagueId, toSafeMflUrl } from '../../../utils/draft-broadcast-source';
 
 export const prerender = false;
@@ -329,7 +329,17 @@ export const GET: APIRoute = async ({ url }) => {
   const leagueId =
     resolveMflLeagueId(url.searchParams.get('league') || url.searchParams.get('L')) ||
     DEFAULT_LEAGUE_ID;
-  const host = resolveMflHost(url.searchParams.get('host'), DEFAULT_HOST);
+  // The fallback is the host for THIS league, not TheLeague's. Every league
+  // sits on a different `www##` server, and MFL answers a league id that
+  // server does not host with its OWN league rather than an error — so
+  // defaulting to a constant here returns TheLeague's draft results for
+  // `?league=<afl>&host=<missing or junk>`, at 200, in the right shape. The
+  // allowlist above still rejects the bad value; this only decides what to
+  // fall back TO. See src/pages/api/live-scoring.ts#resolveHost.
+  const host = resolveMflHost(
+    url.searchParams.get('host'),
+    getLeagueById(leagueId)?.mflHost ?? DEFAULT_HOST,
+  );
   const unit = url.searchParams.get('unit');
 
   const mflUrl = buildMflExportUrl({ type: 'draftResults', leagueId, year, host: `https://${host}` });
