@@ -458,3 +458,10 @@ is NOT the same as our web login, which still never captures it
 missing.** The first cut gated the login on `(!userCookie || !commishCookie)`,
 which could never fire: the failure mode is a cookie that is *present and
 expired*, and a present cookie is a non-empty string forever.
+
+And the login's two cookies are taken as a **pair**. Keeping a stored
+`MFL_IS_COMMISH` next to a freshly-issued `MFL_USER_ID` pairs a new session
+with an old session's privilege flag; MFL refuses that as *"not authorized"* —
+the same string the expiry produces, so the mixed pair would be
+indistinguishable from the bug it was meant to fix. If a login returns no
+commissioner cookie the run refuses to start and says so.

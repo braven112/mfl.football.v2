@@ -206,8 +206,14 @@ async function main() {
   if (username && password) {
     try {
       const fresh = await loginToMFL(username, password);
-      if (fresh.mflUserId) userCookie = fresh.mflUserId;
-      if (fresh.mflIsCommish) commishCookie = fresh.mflIsCommish;
+      // Take the login's cookies as a PAIR. Keeping a stored MFL_IS_COMMISH
+      // alongside a freshly-issued MFL_USER_ID pairs a new session with an
+      // old session's privilege flag — MFL rejects that, and it rejects it
+      // as "not authorized", which is indistinguishable from the expiry this
+      // whole path exists to fix. If the login yields no commish cookie the
+      // preflight below refuses the run, which is the diagnosable outcome.
+      userCookie = fresh.mflUserId || '';
+      commishCookie = fresh.mflIsCommish || '';
       console.log(`Logged in to MFL as ${username} (commish cookie: ${fresh.mflIsCommish ? 'yes' : 'no'})`);
     } catch (error) {
       // Fall through to the stored cookies — they may still be good, and the
@@ -235,7 +241,10 @@ async function main() {
   if (!commishCookie && !args.dryRun) {
     console.error(
       'No MFL_IS_COMMISH cookie — MFL will reject every accounting write. Refusing to start. '
-        + 'Set the secret, or set MFL_USERNAME + MFL_PASSWORD so a fresh one can be fetched at run time.'
+        + (username && password
+          ? 'The login succeeded but MFL issued no commissioner cookie, so this account is '
+            + 'not the commissioner of these leagues (or MFL did not treat the login as one).'
+          : 'Set the secret, or set MFL_USERNAME + MFL_PASSWORD so a fresh one can be fetched at run time.')
     );
     process.exit(1);
   }
