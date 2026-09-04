@@ -85,36 +85,15 @@ export function getRosteredPlayerIds(
   return ids;
 }
 
-/** Map of rostered playerId → owning franchiseId, from the rosters feed. */
-export function getOwnerByPlayer(
-  leagueYear: number,
-  league: CanonicalLeagueSlug = 'theleague',
-): Map<string, string> {
-  const ownerByPlayer = new Map<string, string>();
-  const rosterData = readJsonFile(feedPath(league, leagueYear, 'rosters.json'));
-  const franchises = rosterData?.rosters?.franchise;
-  for (const franchise of franchises ? (Array.isArray(franchises) ? franchises : [franchises]) : []) {
-    const players = Array.isArray(franchise.player)
-      ? franchise.player
-      : franchise.player
-        ? [franchise.player]
-        : [];
-    for (const p of players) {
-      if (p?.id) ownerByPlayer.set(p.id, franchise.id);
-    }
-  }
-  return ownerByPlayer;
-}
-
 /**
  * Map of rostered playerId → EVERY owning franchiseId.
  *
- * `getOwnerByPlayer` returns one franchise per player, which is wrong for the
- * AFL: its two conferences (AL and NL) run independent player pools inside one
- * MFL league, so the same NFL player is legitimately rostered twice. In the
- * 2026 feed that is 143 of 199 rostered players — a single-owner map credits
- * ~72% of the league's players to an arbitrary one of their two owners.
- * Anything that asks "does THIS franchise roster him" must use this.
+ * A player can be rostered by more than one franchise, so ownership is a LIST.
+ * The AFL's two conferences (AL and NL) run independent player pools inside one
+ * MFL league id, so the same NFL player is legitimately rostered twice: 143 of
+ * 199 rostered players in the 2026 feed. A single-owner map credited ~72% of
+ * the league to an arbitrary one of their two owners — every consumer of it had
+ * the same bug, so it is gone rather than fixed. This is the only owner map.
  *
  * `activeOnly` (default) counts ACTIVE roster spots only — `status` absent or
  * `ROSTER` — matching `getFranchiseHeadliners`. That default is load-bearing
@@ -127,8 +106,9 @@ export function getOwnerByPlayer(
  * him there loses a real listing (and, if it was the owner's only one, widens
  * their block hero to a stranger).
  *
- * `getOwnerByPlayer` (singular) is the old single-owner map — it answers a
- * different question and keeps its own callers.
+ * There is deliberately no single-owner variant: one existed, every caller had
+ * the same latent bug, and `tests/afl-hero-casting.test.ts` now fails the build
+ * if a "playerId → one franchiseId" map comes back.
  */
 export function getOwnersByPlayer(
   leagueYear: number,
@@ -487,9 +467,9 @@ export interface MarqueeGameStars {
   awayName: string;
   homeName: string;
   /** Scored candidates on the away team (highest = the side's star) */
-  awayCandidates: Array<{ playerId: string; franchiseId: string; score: number }>;
+  awayCandidates: Array<{ playerId: string; franchiseId: string; franchiseIds: string[]; score: number }>;
   /** Scored candidates on the home team (highest = the side's star) */
-  homeCandidates: Array<{ playerId: string; franchiseId: string; score: number }>;
+  homeCandidates: Array<{ playerId: string; franchiseId: string; franchiseIds: string[]; score: number }>;
 }
 
 /**
@@ -619,11 +599,11 @@ export function getMarqueeGameStars(
 
   const [awayCode, homeCode] = game.teamCodes;
   const playerMap = getUnifiedPlayerMap(seasonYear);
-  const ownerByPlayer = getOwnerByPlayer(seasonYear, league);
+  const ownersByPlayer = getOwnersByPlayer(seasonYear, league);
   const scoreOf = getGameScoreMap(seasonYear, league, game.source);
 
-  const awayCandidates: Array<{ playerId: string; franchiseId: string; score: number }> = [];
-  const homeCandidates: Array<{ playerId: string; franchiseId: string; score: number }> = [];
+  const awayCandidates: MarqueeGameStars['awayCandidates'] = [];
+  const homeCandidates: MarqueeGameStars['homeCandidates'] = [];
   for (const p of playerMap.values()) {
     if (p.position === 'DEF') continue;
     if (p.nflTeam !== awayCode && p.nflTeam !== homeCode) continue;
@@ -631,9 +611,11 @@ export function getMarqueeGameStars(
     // (NaN isn't null), and castBestScoredModel doesn't filter finite, so a NaN
     // candidate could otherwise win the pick.
     const rawScore = scoreOf.get(p.mflId);
+    const franchiseIds = ownersByPlayer.get(p.mflId) ?? [];
     const candidate = {
       playerId: p.mflId,
-      franchiseId: ownerByPlayer.get(p.mflId) ?? '',
+      franchiseId: franchiseIds[0] ?? '',
+      franchiseIds,
       score: Number.isFinite(rawScore) ? (rawScore as number) : 0,
     };
     if (p.nflTeam === awayCode) awayCandidates.push(candidate);
@@ -809,19 +791,24 @@ export function selectBreakingStory(
 export function getWeeklyTopScorerCandidates(
   leagueYear: number,
   league: CanonicalLeagueSlug = 'theleague',
-): Array<{ playerId: string; franchiseId: string; score: number }> {
+): Array<{ playerId: string; franchiseId: string; franchiseIds: string[]; score: number }> {
   const data = readJsonFile(feedPath(league, leagueYear, 'playerScores.json'));
   const list = data?.playerScores?.playerScore;
   if (!list) return [];
 
-  const ownerByPlayer = getOwnerByPlayer(leagueYear, league);
+  const ownersByPlayer = getOwnersByPlayer(leagueYear, league);
   const scores = Array.isArray(list) ? list : [list];
-  const candidates: Array<{ playerId: string; franchiseId: string; score: number }> = [];
+  const candidates: Array<{
+    playerId: string;
+    franchiseId: string;
+    franchiseIds: string[];
+    score: number;
+  }> = [];
   for (const ps of scores) {
     const score = parseFloat(ps?.score || '');
-    const franchiseId = ps?.id ? ownerByPlayer.get(ps.id) : undefined;
-    if (!ps?.id || !franchiseId || !Number.isFinite(score) || score <= 0) continue;
-    candidates.push({ playerId: ps.id, franchiseId, score });
+    const franchiseIds = ps?.id ? ownersByPlayer.get(ps.id) ?? [] : [];
+    if (!ps?.id || franchiseIds.length === 0 || !Number.isFinite(score) || score <= 0) continue;
+    candidates.push({ playerId: ps.id, franchiseId: franchiseIds[0], franchiseIds, score });
   }
   return candidates;
 }

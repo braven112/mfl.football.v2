@@ -280,9 +280,7 @@ export function castBestScoredModel(
   });
   if (resolvable.length === 0) return null;
 
-  const own = userFranchiseId
-    ? resolvable.filter((c) => c.franchiseId === userFranchiseId)
-    : [];
+  const own = userFranchiseId ? resolvable.filter((c) => castsFor(c, userFranchiseId)) : [];
   const pool = own.length > 0 ? own : resolvable;
 
   const best = pool.reduce((a, b) =>
@@ -737,7 +735,7 @@ export function castTopRankedModel(
   });
   if (resolvable.length === 0) return null;
 
-  const own = userFranchiseId ? resolvable.filter((c) => c.franchiseId === userFranchiseId) : [];
+  const own = userFranchiseId ? resolvable.filter((c) => castsFor(c, userFranchiseId)) : [];
   const pool = own.length > 0 ? own : resolvable;
 
   const best = pool.reduce((a, b) => {

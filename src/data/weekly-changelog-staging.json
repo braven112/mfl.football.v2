@@ -12,7 +12,7 @@
     {
       "date": "2026-09-04",
       "type": "bug-fix",
-      "summary": "The same fix reaches further on the AFL homepage: the game-day and live-scoring heroes pick their face the same way the kickoff hero does, so they were borrowing other teams' players too. Both now cast from your roster only — and because the AL and NL run separate player pools, a player you share with a team in the other conference no longer counts as theirs instead of yours.",
+      "summary": "The same fix reaches further on the AFL homepage: the game-day and live-scoring heroes pick their face the same way the kickoff hero does, so they were borrowing other teams' players too. Both now cast from your roster only. The bigger one is underneath: because the AL and NL run separate player pools, most of the league is rostered by two teams at once, and we had been crediting each of those players to just one of their owners — so the trade-block, matchup and recap heroes could all decide your own player wasn't yours. Every one of them now knows a player can belong to two teams.",
       "impact": "user",
       "area": "homepage",
       "league": "afl"

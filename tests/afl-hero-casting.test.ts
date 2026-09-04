@@ -1,19 +1,21 @@
 import { describe, it, expect } from 'vitest';
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
+import { extname, join } from 'node:path';
 import { castAflHeroModel, type AflCastingInput } from '../src/utils/afl-hero-casting';
 import { resolveAflHeroState, type AflHeroState, type EventHeroView } from '../src/utils/afl-hero-resolver';
 import type { WhatsNewEntry } from '../src/types/whats-new';
 import type { HeroContent } from '../src/types/whats-new';
-import { castRandomStarterModel } from '../src/utils/hero-casting';
+import { castBestScoredModel, castRandomStarterModel, castsFor } from '../src/utils/hero-casting';
 import {
   getAdpRankedIds,
   getFranchiseCompositableHeadliners,
   getFranchiseHeadliners,
   getKickoffGame,
+  getMarqueeGameStars,
   getOwnersByPlayer,
   getRosteredPlayerIds,
-  getWeekGameCandidates,
   getTradeBaitCandidates,
+  getWeekGameCandidates,
   getWeeklyTopScorerCandidates,
 } from '../src/utils/offseason-hero-data';
 import { getPlayerMap } from '../src/utils/player-map';
@@ -251,6 +253,96 @@ describe('league-aware hero data helpers (AFL)', () => {
       // test would pass vacuously.
       if (league === 'theleague') expect(benched).toBeGreaterThan(0);
     }
+  });
+
+  it('every candidate builder names EVERY owner, and some players have two', () => {
+    // The AFL's two conferences roster independently inside one MFL league id,
+    // so ownership is a list. A builder that keeps one franchise per player
+    // credits ~72% of the league to a coin flip, and the owner asking for "my
+    // player" loses him about half the time.
+    const owners = getOwnersByPlayer(YEAR, AFL);
+    const ownersWithBench = getOwnersByPlayer(YEAR, AFL, { activeOnly: false });
+    const builders: Array<[string, Array<{ playerId: string; franchiseIds: string[] }>, Map<string, string[]>]> = [
+      ['getWeekGameCandidates', getWeekGameCandidates(YEAR, AFL), owners],
+      ['getTradeBaitCandidates', getTradeBaitCandidates(YEAR, AFL), ownersWithBench],
+      ['getWeeklyTopScorerCandidates', getWeeklyTopScorerCandidates(YEAR, AFL), owners],
+    ];
+    const marquee = getMarqueeGameStars(YEAR, AFL);
+    if (marquee) {
+      builders.push([
+        'getMarqueeGameStars',
+        [...marquee.awayCandidates, ...marquee.homeCandidates],
+        owners,
+      ]);
+    }
+
+    let sawShared = 0;
+    for (const [name, candidates, truth] of builders) {
+      for (const c of candidates) {
+        expect(c.franchiseIds, `${name} dropped franchiseIds for ${c.playerId}`).toBeDefined();
+        // A rostered player's list must be exactly his owners; a free agent's
+        // is empty (only the pools that include unrostered players have those).
+        const expected = truth.get(c.playerId) ?? [];
+        expect(c.franchiseIds, `${name} mis-attributed ${c.playerId}`).toEqual(expected);
+        if (c.franchiseIds.length > 1) sawShared++;
+      }
+    }
+    // Guard the guard: if no candidate anywhere is dual-rostered, the
+    // assertions above pass without ever exercising the bug.
+    expect(sawShared, 'no dual-rostered candidate in any AFL pool — test is vacuous').toBeGreaterThan(0);
+  });
+
+  it('casts a shared player for BOTH of his owners', () => {
+    // The behavioral half: a player on two AFL rosters must count as "mine"
+    // for each of them, through the same castsFor path every caster uses.
+    const owners = getOwnersByPlayer(YEAR, AFL);
+    const players = getPlayerMap(YEAR);
+    const candidates = getWeekGameCandidates(YEAR, AFL);
+    const shared = candidates.find(
+      (c) =>
+        c.franchiseIds.length > 1 &&
+        c.score > 0 &&
+        players.get(c.playerId)?.headshot.includes('espncdn.com'),
+    );
+    expect(shared, 'no compositable dual-rostered candidate to test with').toBeDefined();
+    if (!shared) return;
+    for (const franchiseId of owners.get(shared.playerId) ?? []) {
+      expect(castsFor(shared, franchiseId)).toBe(true);
+      const model = castBestScoredModel([shared], players, franchiseId, 'Top');
+      expect(model?.mflId, `${franchiseId} could not cast their own ${shared.playerId}`).toBe(
+        shared.playerId,
+      );
+    }
+  });
+
+  it('keeps a single-owner map from coming back', () => {
+    // The mistake was one helper every consumer trusted, so the fix is that the
+    // helper does not exist. This fails the build if it (or a hand-rolled
+    // equivalent) reappears.
+    // Same walk idiom as tests/league-literal-guard.test.ts — node:fs globSync
+    // isn't in this TS lib's types, and the ratchet counts that as an error.
+    const CODE = new Set(['.ts', '.tsx', '.astro', '.mjs', '.js']);
+    const walk = (dir: string): string[] => {
+      const out: string[] = [];
+      for (const entry of readdirSync(dir, { withFileTypes: true })) {
+        const full = join(dir, entry.name);
+        if (entry.isDirectory()) out.push(...walk(full));
+        else if (CODE.has(extname(entry.name))) out.push(full);
+      }
+      return out;
+    };
+    const files = walk('src');
+    expect(files.length).toBeGreaterThan(100);
+    const offenders: string[] = [];
+    for (const file of files) {
+      const src = readFileSync(file, 'utf8');
+      if (/getOwnerByPlayer\b/.test(src)) offenders.push(`${file}: getOwnerByPlayer`);
+      // A hand-rolled `playerId -> one franchiseId` map over the rosters feed:
+      // `.set(<player>.id, <franchise>.id)` inside a franchise loop.
+      const handRolled = src.match(/ownerByPlayer\s*\.set\(/g);
+      if (handRolled) offenders.push(`${file}: hand-rolled ownerByPlayer.set`);
+    }
+    expect(offenders, 'ownership is a LIST — use getOwnersByPlayer').toEqual([]);
   });
 
   it('returns empty for a non-existent year', () => {

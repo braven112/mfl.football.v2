@@ -1721,9 +1721,25 @@ invisible in testing unless you assert ownership with the plural map — the
 first version of the guard test failed on a CORRECT cast for exactly this
 reason.
 
-Three callers still use the single-owner map and were deliberately left alone
-(they are outside this change's slots, and each needs its own think about what
-"the owner" means for a player two teams roster): `getMarqueeGameStars`,
-`getTradeBaitCandidates`, `getWeeklyTopScorerCandidates`. `rookies-2026.astro`
-is TheLeague-only, where the collapse is a no-op. If you touch any of them for
-the AFL, this is the trap.
+**The single-owner map is gone** (Brandon, same day: "all players can be on two
+AFL rosters"). It was first left in place for the three slots outside this
+change — `getMarqueeGameStars`, `getTradeBaitCandidates`,
+`getWeeklyTopScorerCandidates` — on the theory that each needed its own think
+about what "the owner" means. It doesn't: ownership is a LIST everywhere, and a
+helper that returns one franchise gives every caller the same bug. So
+`getOwnerByPlayer` was deleted rather than fixed, every candidate builder now
+carries `franchiseIds`, and every ownership test in the casters goes through
+`castsFor` (`castBestScoredModel` and `castTopRankedModel` had their own bare
+compares). `rookies-2026.astro` was TheLeague-only, where the collapse is a
+no-op, and still moved — a block that asks the question wrongly is a block
+someone copies into the AFL.
+
+`tests/afl-hero-casting.test.ts` holds three guards: every builder's
+`franchiseIds` must equal `getOwnersByPlayer` (with a `sawShared > 0` check so
+it can't pass vacuously), a shared player must cast for BOTH owners, and a
+source scan fails the build if `getOwnerByPlayer` or a hand-rolled equivalent
+reappears. Verified the scan catches it by putting the function back.
+
+**When you need one franchise for display, take `franchiseIds[0]` and say so.**
+The bug was never that code wanted a single owner; it was that a shared helper
+picked one silently, at a call site that had no idea it was choosing.

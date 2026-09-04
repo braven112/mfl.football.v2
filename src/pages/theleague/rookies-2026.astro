@@ -16,7 +16,7 @@ import {
 } from '../../utils/nfl-team-colors';
 import { normalizeTeamCode, getNFLTeamLogo } from '../../utils/nfl-logo';
 import { getCollegeHeadshot as espnCollegeUrl } from '../../constants/roster-constants';
-import { getOwnerByPlayer } from '../../utils/offseason-hero-data';
+import { getOwnersByPlayer } from '../../utils/offseason-hero-data';
 import { getFranchiseBrand } from '../../utils/franchise-brand';
 import rspData from '../../../data/fantasy-expert/sources/rsp/2026-pre-draft.json';
 import rsp2025 from '../../../data/fantasy-expert/sources/rsp/2025-post-draft.json';
@@ -286,7 +286,12 @@ for (const identity of getPlayerMap(LEAGUE_YEAR).values()) {
   if (identity.position === 'DEF') continue;
   rookieByName.set(normalizePlayerName(identity.name), identity);
 }
-const ownerByPlayer = getOwnerByPlayer(LEAGUE_YEAR);
+// Plural map: a player can be rostered by more than one franchise (the AFL's
+// two conferences run separate pools). This page is TheLeague-only, where that
+// never happens, so [0] is the owner — but ask the question the right way, so
+// copying this block into a league where it does happen doesn't silently pick
+// one owner at random.
+const ownersByPlayer = getOwnersByPlayer(LEAGUE_YEAR);
 
 type ShowcaseCard = {
   rank: number;
@@ -334,7 +339,7 @@ const showcaseCards: ShowcaseCard[] = top50.map((p, i) => {
   const headshot = drafted ? (nflUrl ?? collegeUrl) : collegeUrl;
   const headshotFallback = drafted && nflUrl && collegeUrl && collegeUrl !== nflUrl ? collegeUrl : undefined;
 
-  const ownerId = identity ? ownerByPlayer.get(identity.mflId) : undefined;
+  const ownerId = identity ? ownersByPlayer.get(identity.mflId)?.[0] : undefined;
   const brand = ownerId ? getFranchiseBrand(ownerId) : undefined;
 
   const nameParts = p.name.replace(/\s+(jr\.?|sr\.?|ii|iii|iv|v)$/i, '').trim().split(/\s+/);
