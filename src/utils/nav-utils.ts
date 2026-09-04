@@ -24,6 +24,7 @@ import {
   getLeagueByNavSlug,
   leagueOrigin,
   SHARED_APP_ORIGIN,
+  type CanonicalLeagueSlug,
 } from '../config/leagues';
 import type { LeagueDefinition } from '../config/leagues';
 
@@ -143,6 +144,28 @@ export function resolveLeaguePath(path: string, hidePrefix: boolean): string {
     if (path.startsWith(`${prefix}/`)) return path.slice(prefix.length);
   }
   return path;
+}
+
+/**
+ * The site-search directory path for a league, or null when it has none.
+ *
+ * ONE place decides this, because two surfaces link to search on every page —
+ * the header magnifying glass and the footer utility bar — and they disagreed
+ * once already: the footer's link was gated while the header's was hardcoded
+ * to /theleague/search, so the AFL had no way in at all. The paths differ in
+ * shape too (TheLeague's directory entry is the bare `/search`, the AFL's is
+ * prefixed), which is exactly the asymmetry a second copy gets wrong.
+ *
+ * Best Ball has none: it is draft-only, so its handful of pages all sit in the
+ * nav and a search page would list nine cards.
+ *
+ * Returns a page-directory path — run it through resolveDirectoryHref() (and
+ * resolveLeaguePath() on an apex host) before using it as an href.
+ */
+export function getSearchPath(league: CanonicalLeagueSlug): string | null {
+  if (league === 'theleague') return '/search';
+  if (league === 'afl-fantasy') return '/afl-fantasy/search';
+  return null;
 }
 
 /**

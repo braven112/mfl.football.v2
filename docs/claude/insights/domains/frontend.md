@@ -133,6 +133,56 @@ hrefs to local copies, and open it in the bundled Chromium — it isolates
 
 ---
 
+## 2026-09-04 - A Per-Page Link Rendered By Two Chrome Components Will Diverge
+
+Site search existed on TheLeague and, in a sense, on the AFL too: the AFL had
+41 entries in `page-directory.json` and no way to search them. Three surfaces
+decide whether to show a search link on every page, and each answered the
+question its own way:
+
+- `Header.astro` — `{!isAFL && <a href="/theleague/search">}`. A hardcoded path
+  behind a negative league gate.
+- `Footer.astro` — `pathBelongsToLeague('/search', slug)`, which is TheLeague-
+  only because the DIRECTORY path for search is the bare `/search` and bare
+  paths are TheLeague's by convention. Correct reasoning, unrelated to whether
+  the AFL could have a search page.
+- `QuickLinks.astro` — the homepage "All pages" CTA, which for the AFL pointed
+  at the AFL HOMEPAGE, i.e. the page the reader was already on.
+
+Three independent mechanisms, three different reasons, one accidental
+consensus. Fixing any one of them alone would have shipped a link nobody else
+agreed with.
+
+**The shape that holds:** one helper (`getSearchPath(slug)` in `nav-utils.ts`)
+returning a page-directory path or `null`, with every surface rendering on the
+truthiness of its result. `null` is what makes it safe to call everywhere —
+Best Ball genuinely has no search page and gets no link, without a fourth
+bespoke gate.
+
+**Why this class of bug is invisible.** A wrong link 404s and someone reports
+it. A `!isAFL` gate is a feature flag with no registry entry: the feature is
+simply absent, nothing errors, no test fails, and the only symptom is an owner
+eventually asking why the other site has a magnifying glass. Grep for negative
+league gates (`!isAFL`, `slug === 'theleague' &&`) in shared chrome — each one
+is a per-league capability decision that was never written down as one.
+
+`tests/site-search-links.test.ts` now pins that every league's search path
+resolves to a real route under `src/pages/`, belongs to its own league, has a
+directory entry, and that the header builds its href through the helper rather
+than a hardcoded path.
+
+**Extracting the page cost nothing and was not optional.** `/theleague/search`
+was a 440-line page; copying it to `/afl-fantasy/search` would have tripped
+`tests/page-fork-ratchet.test.ts` (a route under two league directories whose
+largest copy exceeds 80 lines). The shared component is
+`components/shared/search/SearchPage.astro` and both routes are ~14-line
+wrappers. Note the component must be added to the `CONSUMERS` registry in
+`tests/stats-hub-links.test.ts` — the route that used to import
+`page-directory.json` no longer does, and the guard fails on an unregistered
+consumer, which is exactly the prompt you want.
+
+---
+
 ## 2026-09-03 - A Once-Flag Is Not A Fix For A Stacking ClientRouter Listener
 
 The head used to say: guard a `document`-level listener with a module-scoped

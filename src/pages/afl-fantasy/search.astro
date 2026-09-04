@@ -1,0 +1,15 @@
+---
+/**
+ * Search (AFL) — thin route wrapper.
+ *
+ * Shared implementation lives in components/shared/search/SearchPage. The
+ * page list is scoped there by pathBelongsToLeague(), so this route shows the
+ * AFL's own pages only — TheLeague's contracts/salary pages have no AFL route.
+ */
+import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
+import SearchPage from '../../components/shared/search/SearchPage.astro';
+---
+
+<TheLeagueLayout title="Search | AFL">
+  <SearchPage leagueSlug="afl-fantasy" />
+</TheLeagueLayout>

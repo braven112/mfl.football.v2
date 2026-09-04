@@ -232,3 +232,60 @@ Three details in that shim that are load-bearing:
 For a capture that *also* needs auth (this one did), the shim doesn't help on
 its own — forge the session cookie and take an element screenshot, and add the
 entry to `MANUAL_CAPTURE_ONLY` with the staging recipe.
+
+
+## 2026-09-04 - Running the COMMITTED capture script in a cloud session (browser build mismatch)
+
+The 2026-07-08 entry above says to launch with `executablePath:
+'/opt/pw-browsers/chromium'`. That works for a hand-written script; it does not
+help you run `scripts/capture-whats-new-screenshots.mjs`, which takes no such
+option and is the thing you actually want to run (it owns `CAPTURE_PATHS`,
+`MANUAL_CAPTURE_ONLY`, the external-asset shim and the theme pairing).
+
+The failure is a **build-number** mismatch, not a missing browser:
+
+```
+browserType.launch: Executable doesn't exist at
+/opt/pw-browsers/chromium_headless_shell-1200/chrome-headless-shell-linux64/chrome-headless-shell
+```
+
+`ls /opt/pw-browsers` showed `chromium-1194` and
+`chromium_headless_shell-1194` — the image ships 1194, the repo's Playwright
+wants 1200. Do NOT run `npx playwright install` (the env blocks the download,
+and `PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1` is set for a reason). `/opt/pw-browsers`
+is writable, so alias the build the pin is looking for:
+
+```bash
+mkdir -p /opt/pw-browsers/chromium_headless_shell-1200/chrome-headless-shell-linux64
+# headless_shell is renamed chrome-headless-shell in the newer layout
+ln -sf /opt/pw-browsers/chromium_headless_shell-1194/chrome-linux/headless_shell \
+  /opt/pw-browsers/chromium_headless_shell-1200/chrome-headless-shell-linux64/chrome-headless-shell
+# ...symlink every OTHER file in chrome-linux/ beside it (the .pak, .dat, .so
+# and .bin files load from the executable's own directory)
+touch /opt/pw-browsers/chromium_headless_shell-1200/INSTALLATION_COMPLETE
+```
+
+The `INSTALLATION_COMPLETE` marker is what stops Playwright printing the
+"just installed or updated" banner and refusing. Do the same for
+`chromium-1200/chrome-linux` if a run asks for the headful build.
+
+**`cwebp` is still absent, and the script now fails LOUDLY on it** — an
+improvement on the silent no-op the earlier entry describes:
+
+```
+[afl-search] cwebp failed — kept afl-search.png, afl-search.webp NOT written
+```
+
+The PNG pair is on disk, so the recovery is a conversion, not a re-capture:
+
+```bash
+node -e "const sharp=require('sharp');(async()=>{for(const n of ['x','x-dark'])
+  await sharp('public/assets/whats-new/'+n+'.png').webp({quality:82})
+    .toFile('public/assets/whats-new/'+n+'.webp')})()"
+rm public/assets/whats-new/*.png
+```
+
+Delete the PNGs — nothing references them and `whats-new.json` names the webp.
+
+Both of these are environment repairs, not repo changes: nothing was committed
+to accommodate either, and a laptop run is unaffected.

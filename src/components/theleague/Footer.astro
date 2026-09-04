@@ -19,8 +19,8 @@
  * is only rendered as text when there is no banner.
  */
 import { getLeagueContext } from '../../utils/league-context';
-import { resolveLeaguePath, resolveDirectoryHref } from '../../utils/nav-utils';
-import { getFooterColumns, getDeepCuts, pathBelongsToLeague } from '../../config/footer-config';
+import { getSearchPath, resolveLeaguePath, resolveDirectoryHref } from '../../utils/nav-utils';
+import { getFooterColumns, getDeepCuts } from '../../config/footer-config';
 import {
   getFooterChampions,
   getFooterDraftStatus,
@@ -83,13 +83,16 @@ const bandYear = champions[0]?.year ?? draftStatus?.year ?? null;
 const trophyHref = href('/franchises');
 
 /**
- * Search exists only for TheLeague (src/pages/theleague/search.astro hardcodes
- * its own base path). Prefixing the bare /search for another league produced a
- * 404 in the utility bar — on EVERY page of AFL and Best Ball. QuickLinks
- * already routes AFL's "all pages" CTA to the league home for the same reason.
+ * Search: link it only where a search route actually exists. Prefixing the
+ * bare /search for a league that has none produced a 404 in the utility bar —
+ * on EVERY page of AFL and Best Ball. The AFL now has its own route, so
+ * getSearchPath() hands back the RIGHT path per league (TheLeague's directory
+ * entry is the bare /search, the AFL's is prefixed) and null for Best Ball,
+ * which is draft-only and has no search page. Same helper the header's
+ * magnifying glass uses, so the two links can't diverge again.
  */
-const showSearch = pathBelongsToLeague('/search', slug);
-const searchHref = href('/search');
+const searchPath = getSearchPath(slug);
+const searchHref = searchPath ? href(searchPath) : null;
 
 /**
  * The Trophy Case is only for leagues that HAVE a trophy history. Best-ball is
@@ -244,7 +247,7 @@ const bandStyle =
 
     <div class="footer-util">
       <span>© {new Date().getFullYear()} {league.name}</span>
-      {showSearch && (
+      {searchHref && (
         <>
           <span class="util-sep" aria-hidden="true">·</span>
           <a href={searchHref}>Search</a>

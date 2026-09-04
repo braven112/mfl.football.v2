@@ -128,7 +128,7 @@ describe("TheLeague's directory hrefs", () => {
  */
 const CONSUMERS: Record<string, { scope: boolean; href: boolean; why?: string }> = {
   'src/pages/theleague/stats.astro': { scope: true, href: true },
-  'src/pages/theleague/search.astro': { scope: true, href: true },
+  'src/components/shared/search/SearchPage.astro': { scope: true, href: true },
   'src/components/theleague/RelatedReports.astro': { scope: true, href: true },
   'src/components/shared/hp-sections/QuickLinks.astro': { scope: true, href: true },
   'src/config/footer-config.ts': {
