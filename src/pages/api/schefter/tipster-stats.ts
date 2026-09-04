@@ -7,13 +7,27 @@
  *
  * Response shape:
  *   {
- *     me: { codename: string | null, rumorsTotal: number, rumorsSeason: number } | null,
+ *     me: {
+ *       codename: string | null,
+ *       rumorsTotal: number,
+ *       rumorsSeason: number,
+ *       badges: string[],
+ *       lastReceipt: TipReceipt | null
+ *     } | null,
  *     leaderboard: Array<{ codename: string, rumorsSeason: number, isMe: boolean }>,
  *     seasonYear: number
  *   }
  *
  * `me.codename === null` means the tipster has submitted tips but none have
  * produced a rumor yet (codenames are only issued when a scan commits a post).
+ *
+ * `me.lastReceipt` is the outcome of this tipster's most recent tip, written
+ * by the scanner (`recordTipReceipt`) when the tip leaves the queue for good.
+ * It exists so "I sent a tip and nothing happened" stops being indisputable:
+ * a suppressed or expired tip now has a visible ending. Null means the last
+ * tip is still in the queue (or predates receipts / aged past the 14d TTL).
+ * The receipt is keyed on the tipster hash and read only for the caller's own
+ * hash — it is never listed, aggregated, or exposed for anyone else.
  */
 
 import type { APIRoute } from 'astro';
@@ -28,6 +42,47 @@ import { JSON_HEADERS_NO_STORE as JSON_HEADERS } from '../../../utils/api-respon
 export const prerender = false;
 
 const LEADERBOARD_LIMIT = 10;
+
+/** Outcome of a tipster's most recent tip. Mirrors `recordTipReceipt`. */
+export type TipReceipt = {
+  /** published = a rumor shipped; spiked = gate suppressed it to exhaustion; expired = aged out unposted */
+  status: 'published' | 'spiked' | 'expired';
+  postId: string | null;
+  topic: string | null;
+  submittedAt: number | null;
+  at: number;
+};
+
+const RECEIPT_STATUSES = new Set(['published', 'spiked', 'expired']);
+
+/**
+ * Parse a receipt written by the scanner. Upstash may hand back either a JSON
+ * string or an already-parsed object depending on client version, and a
+ * receipt written by an older scanner may be missing fields — so validate
+ * `status` rather than trusting the blob, and drop anything unrecognized
+ * instead of rendering a broken card.
+ */
+function parseReceipt(raw: unknown): TipReceipt | null {
+  if (!raw) return null;
+  let obj: unknown = raw;
+  if (typeof raw === 'string') {
+    try {
+      obj = JSON.parse(raw);
+    } catch {
+      return null;
+    }
+  }
+  if (!obj || typeof obj !== 'object') return null;
+  const r = obj as Record<string, unknown>;
+  if (typeof r.status !== 'string' || !RECEIPT_STATUSES.has(r.status)) return null;
+  return {
+    status: r.status as TipReceipt['status'],
+    postId: typeof r.postId === 'string' ? r.postId : null,
+    topic: typeof r.topic === 'string' ? r.topic : null,
+    submittedAt: typeof r.submittedAt === 'number' ? r.submittedAt : null,
+    at: typeof r.at === 'number' ? r.at : 0,
+  };
+}
 
 function json(data: unknown, status = 200): Response {
   return new Response(JSON.stringify(data), { status, headers: JSON_HEADERS });
@@ -87,7 +142,7 @@ export const GET: APIRoute = async ({ request }) => {
   const redis = await getRedis();
   if (!redis) {
     return json({
-      me: { codename: null, rumorsTotal: 0, rumorsSeason: 0 },
+      me: { codename: null, rumorsTotal: 0, rumorsSeason: 0, badges: [], lastReceipt: null },
       leaderboard: [],
       seasonYear,
     });
@@ -102,20 +157,25 @@ export const GET: APIRoute = async ({ request }) => {
   let rumorsSeason = 0;
   let rawLeaderboard: unknown = [];
   let badges: string[] = [];
+  let lastReceipt: TipReceipt | null = null;
 
   try {
-    const [cn, total, season, zrangeRaw, rawBadges] = await Promise.all([
+    const [cn, total, season, zrangeRaw, rawBadges, rawReceipt] = await Promise.all([
       getCodename(redis, hashedOwnerId, navSlug),
       redis.get<string | number>(totalKey),
       redis.get<string | number>(seasonKey),
       redis.zrange(leaderboardKey, 0, LEADERBOARD_LIMIT - 1, { rev: true, withScores: true }),
       redis.smembers(`${schefterKey(navSlug, 'tipster:badges:')}${hashedOwnerId}`).catch(() => []),
+      redis
+        .get<string>(`${schefterKey(navSlug, 'tipster:last_receipt:')}${hashedOwnerId}`)
+        .catch(() => null),
     ]);
     codename = cn;
     rumorsTotal = coerceCount(total);
     rumorsSeason = coerceCount(season);
     rawLeaderboard = zrangeRaw;
     badges = Array.isArray(rawBadges) ? rawBadges.map((b) => String(b)).sort().reverse() : [];
+    lastReceipt = parseReceipt(rawReceipt);
   } catch (err) {
     console.error('[tipster-stats] Read error:', err);
     return json({ error: 'redis_unavailable' }, 503);
@@ -145,7 +205,7 @@ export const GET: APIRoute = async ({ request }) => {
   }
 
   return json({
-    me: { codename, rumorsTotal, rumorsSeason, badges },
+    me: { codename, rumorsTotal, rumorsSeason, badges, lastReceipt },
     leaderboard,
     seasonYear,
   });
