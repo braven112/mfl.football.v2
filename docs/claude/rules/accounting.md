@@ -421,3 +421,40 @@ commissioner's session. They cannot be exercised from a container with no
 verified from the app by a signed-in commissioner. Start with one small
 transaction: MFL's import has no delete, so a bad record is corrected with an
 offsetting one by hand.
+
+### A DRY RUN CANNOT VALIDATE A CREDENTIAL
+
+The dry run reads both ledgers and prints the plan. Reads are not auth-gated
+(above), so **expired credentials produce a flawless dry run** and then fail
+every single write. That is exactly what happened: run #2 was a clean dry run
+of both leagues; run #3 the same night carried `0/13` and `0/15`. The only
+proof a credential can write is a write.
+
+### The credentials the workflow actually has
+
+`.github/workflows/accounting-carry-over.yml` passes four secrets, and only
+two of them exist:
+
+| Secret | Set? | What it is |
+|---|---|---|
+| `MFL_USER_ID` | yes | the stored session cookie — **expires** |
+| `MFL_IS_COMMISH` | yes | the stored commissioner cookie — **expires** |
+| `MFL_USERNAME` | **no** | login fallback, referenced by five workflows, never set |
+| `MFL_PASSWORD` | **no** | ditto |
+
+Do not infer a secret exists because a workflow references it — an unset
+secret interpolates to an empty string and the step runs anyway. Run #4's env
+block showed `MFL_USERNAME:` and `MFL_PASSWORD:` blank while the two cookie
+secrets showed `***`. The script now logs which source it used, so the next
+run's log answers this without pulling the raw log.
+
+Because the cookies expire, the durable fix is the username/password pair. The
+login helper (`scripts/lib/mfl-api.mjs#loginToMFL`) does capture
+`MFL_IS_COMMISH` off the `Set-Cookie` header — that is the script path, and it
+is NOT the same as our web login, which still never captures it
+(`docs/claude/insights/domains/mfl-api.md`).
+
+**A login must be PREFERRED over a stored cookie, not used only when one is
+missing.** The first cut gated the login on `(!userCookie || !commishCookie)`,
+which could never fire: the failure mode is a cookie that is *present and
+expired*, and a present cookie is a non-empty string forever.

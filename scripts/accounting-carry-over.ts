@@ -197,16 +197,31 @@ async function main() {
   const username = process.env.MFL_USERNAME;
   const password = process.env.MFL_PASSWORD;
 
-  if ((!userCookie || !commishCookie) && username && password) {
+  // A LOGIN WINS OVER A STORED COOKIE, ALWAYS. The first cut of this only
+  // logged in when a cookie was MISSING, which is the one failure mode that
+  // never happens: a stored cookie is a non-empty string forever, and it is
+  // its EXPIRY that breaks the run. That condition could not have fired on
+  // the run it was written to fix. If credentials are configured, use them;
+  // the stored cookies are the fallback, not the other way round.
+  if (username && password) {
     try {
       const fresh = await loginToMFL(username, password);
-      // Only fill what is missing, so an explicitly-set cookie still wins.
-      userCookie = userCookie || fresh.mflUserId || '';
-      commishCookie = commishCookie || fresh.mflIsCommish || '';
+      if (fresh.mflUserId) userCookie = fresh.mflUserId;
+      if (fresh.mflIsCommish) commishCookie = fresh.mflIsCommish;
       console.log(`Logged in to MFL as ${username} (commish cookie: ${fresh.mflIsCommish ? 'yes' : 'no'})`);
     } catch (error) {
-      console.error(`MFL login failed: ${(error as Error).message}`);
+      // Fall through to the stored cookies — they may still be good, and the
+      // preflight below refuses the run if they are not present at all.
+      console.error(`MFL login failed, falling back to stored cookies: ${(error as Error).message}`);
     }
+  } else {
+    // Say so in the log. Run #4 (2026-09-03) failed every write against
+    // expired cookies while the log gave no hint that the login path had
+    // simply never been configured; one line here answers that next time.
+    console.log(
+      'No MFL_USERNAME/MFL_PASSWORD configured — using the stored '
+        + 'MFL_USER_ID/MFL_IS_COMMISH cookies, which expire.'
+    );
   }
 
   if (!userCookie) {
