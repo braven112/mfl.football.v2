@@ -126,6 +126,46 @@
 
 ---
 
+## 2026-09-04 - The Cookie Guard Only Sees Cookies It Can Read In The Call
+
+**Context:** emptying the last two entries from `KNOWN_UNFIXED` in
+`tests/mfl-cookie-redirect-guard.test.ts` — the contracts sites deferred out of
+the waiver PR. The fix itself was mechanical. What was worth keeping is what
+the guard could not see.
+
+**The finding:** `bareFetchCalls()` extracts the literal source text of each
+`fetch(...)` argument list and filters it with `/Cookie\s*:/`. That only matches
+a cookie written **inline in the call**. A call site that builds its headers in
+a variable first is invisible to it:
+
+```ts
+const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+if (this.config.mflUserId) headers['Cookie'] = `MFL_USER_ID=${...}`;
+const response = await fetch(url, { headers, signal: ... });  // call text has no "Cookie"
+```
+
+That is `src/utils/mfl-matchup-api.ts#makeRequest`, and it is a live instance of
+the bug the guard exists to prevent — `baseUrl` defaults to
+`api.myfantasyleague.com`, and two other methods in that same file already route
+through `mflFetch` with a comment explaining the redirect. The file-level
+`source.includes('Cookie')` prescreen passes; the per-call filter is what drops
+it.
+
+**The lesson, which generalizes past this guard:** a green run of a
+source-scanning test is evidence about *the shapes the scanner can parse*, not
+about the codebase. This one has now caught the bug four times and been widened
+twice (once to cover `scripts/`, once for the schefter scans), and each widening
+immediately found real, in-production offenders rather than theoretical ones.
+When a guard's baseline reaches empty, that is the moment to ask what shape it
+cannot match — an empty baseline reads like "all clear" and is the most
+misleading state it can be in.
+
+Fixing the call site and widening the detection is tracked separately; it was
+deliberately kept out of the PR that emptied the baseline, for the same reason
+the contracts sites were kept out of the waiver PR.
+
+---
+
 ## 2026-09-03 - An MFL Host Answers For A League It Does Not Host. With Its Own League.
 
 **Context:** hardening `/api/live-scoring` so the gameday health check could
