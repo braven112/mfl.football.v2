@@ -1041,7 +1041,8 @@ const preselectTeam = (() => {
   .tip-rail-cooker[data-state="capped"] .tip-rail-cooker__body {
     color: var(--color-error-dark, #b91c1c);
   }
-  .tip-rail-cooker__countdown {
+  /* Injected into __body by the cooker poller — see the :global() note below. */
+  :global(.tip-rail-cooker__countdown) {
     display: inline-flex;
     align-items: center;
     gap: 0.375rem;
@@ -1128,12 +1129,12 @@ const preselectTeam = (() => {
     gap: 0.375rem;
   }
   .tip-rail-hot__loading,
-  .tip-rail-hot__empty {
+  :global(.tip-rail-hot__empty) {
     font-size: 0.75rem;
     font-style: italic;
     color: var(--color-gray-500, #6b7280);
   }
-  .tip-rail-hot__chip {
+  :global(.tip-rail-hot__chip) {
     display: inline-flex;
     align-items: center;
     gap: 0.25rem;
@@ -1148,17 +1149,17 @@ const preselectTeam = (() => {
 
   /* Dark: gray-50/100 invert to near-black — glass wash so the pill
      still reads as a chip on the card. */
-  :global(html.dark) .tip-rail-hot__chip {
+  :global(html.dark .tip-rail-hot__chip) {
     background: rgba(255, 255, 255, 0.06);
     border-color: rgba(255, 255, 255, 0.12);
   }
-  .tip-rail-hot__chip[data-rank="1"] {
+  :global(.tip-rail-hot__chip[data-rank="1"]) {
     background: color-mix(in srgb, var(--color-primary, #1c497c) 10%, transparent);
     border-color: color-mix(in srgb, var(--color-primary, #1c497c) 25%, transparent);
     color: var(--color-primary, #1c497c);
     font-weight: 700;
   }
-  .tip-rail-hot__chip-count {
+  :global(.tip-rail-hot__chip-count) {
     font-weight: 600;
     color: var(--color-gray-900, #111827);
   }
