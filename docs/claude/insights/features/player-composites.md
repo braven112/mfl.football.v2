@@ -1700,3 +1700,30 @@ Implementation, in one line each:
 prefer-then-widen (own pool → league). That is correct for the slots they serve
 (a guest must still see somebody). Do not "fix" them to match — the strict rule
 belongs to the starter slots, where the whole point is that the face is yours.
+
+### The AFL rosters the same player twice — a single-owner map is wrong there
+
+Found while guarding the rule above. `getOwnerByPlayer` returns ONE franchise
+per player (last write wins over the rosters feed). In TheLeague that is fine —
+0 of 386 rostered players are on two rosters. In the AFL it is wrong for most
+of the league: **143 of 199** rostered players are on more than one roster,
+because the AL and NL conferences run independent player pools inside a single
+MFL league id. Joe Burrow is franchise 0001's headliner AND franchise 0016's.
+
+So "is this player on MY roster" cannot be answered by comparing against
+`getOwnerByPlayer`. `getOwnersByPlayer` (plural) returns every owning
+franchise, and `getWeekGameCandidates` now attaches `franchiseIds[]` to each
+candidate; `castsFor()` in hero-casting matches against that when present.
+Without it the strict own-roster rule *silently misfires in the owner's
+disfavor*: their own starter is credited to the other conference's franchise,
+drops out of their pool, and the hero falls back to their headliner. That is
+invisible in testing unless you assert ownership with the plural map — the
+first version of the guard test failed on a CORRECT cast for exactly this
+reason.
+
+Three callers still use the single-owner map and were deliberately left alone
+(they are outside this change's slots, and each needs its own think about what
+"the owner" means for a player two teams roster): `getMarqueeGameStars`,
+`getTradeBaitCandidates`, `getWeeklyTopScorerCandidates`. `rookies-2026.astro`
+is TheLeague-only, where the collapse is a no-op. If you touch any of them for
+the AFL, this is the trap.

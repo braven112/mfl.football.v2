@@ -241,6 +241,14 @@ export interface ScoredCastCandidate {
   playerId: string;
   /** League franchise that rosters the player; '' = free agent */
   franchiseId: string;
+  /**
+   * EVERY franchise rostering the player, when the pool's source can say.
+   * The AFL's two conferences run independent pools inside one MFL league, so
+   * a player is routinely rostered twice and the single `franchiseId` above is
+   * an arbitrary one of them — ownership questions must consult this when it
+   * is present (`castsFor` below).
+   */
+  franchiseIds?: string[];
   score: number;
   /**
    * Unix-seconds kickoff of this player's NFL game, when the pool spans a
@@ -287,9 +295,11 @@ export function castBestScoredModel(
  * Cast a RANDOM likely starter from a scored candidate pool — daily rotation.
  *
  * Starter rule (Brandon, 2026-09): the hero shows a player from the SIGNED-IN
- * OWNER'S OWN ROSTER. Own candidates win outright when the owner rosters any —
- * the pool never widens back to the league, because "some other team's guy" is
- * exactly what this rule exists to stop.
+ * OWNER'S OWN ROSTER. The pool never widens back to the league — not when the
+ * owner's players are all outside the starter tier, and not when they have
+ * nobody in the remaining slate at all (that returns null, so the caller's
+ * own-roster fallback runs). "Some other team's guy" is exactly what this rule
+ * exists to stop, and a half-applied version of it is still that bug.
  *
  * Which of their players: whoever PLAYS FIRST. The pool is narrowed to the
  * earliest kickoff it contains, so an owner with a player in the Thursday
@@ -339,8 +349,14 @@ export function castRandomStarterModel(
     for (const c of arr.slice(0, perTeam)) starterTier.add(c.playerId);
   }
 
-  // The owner's own players are the pool whenever they have any — no widening.
-  const own = userFranchiseId ? eligible.filter((c) => c.franchiseId === userFranchiseId) : [];
+  // The owner's own players are the pool — and when they have NONE, the answer
+  // is "nobody", never a stranger. The remaining slate shrinks as games finish
+  // (see getWeekGameCandidates), so by Sunday night an owner can have nobody
+  // left playing; widening there is what put another franchise's player in the
+  // hero captioned "In Action". Returning null hands the caller its own-roster
+  // fallback ladder instead.
+  const own = userFranchiseId ? eligible.filter((c) => castsFor(c, userFranchiseId)) : [];
+  if (userFranchiseId && own.length === 0) return null;
   const base = own.length > 0 ? own : eligible;
 
   // Then the first game that pool plays in. Ordering matters: "your player in
@@ -363,6 +379,13 @@ export function castRandomStarterModel(
   const isLaterGame =
     firstKickoff !== null && openerKickoff !== null && firstKickoff > openerKickoff;
   return toModel(players.get(pick.playerId)!, isLaterGame ? laterGameDescriptor ?? descriptor : descriptor);
+}
+
+/** Whether a franchise rosters this candidate — every owner, not just the first. */
+function castsFor(candidate: ScoredCastCandidate, franchiseId: string): boolean {
+  return candidate.franchiseIds
+    ? candidate.franchiseIds.includes(franchiseId)
+    : candidate.franchiseId === franchiseId;
 }
 
 /** Earliest kickoff carried by a candidate pool; null when none carry one. */

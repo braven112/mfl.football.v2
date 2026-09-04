@@ -3,11 +3,12 @@ import { castAflHeroModel, type AflCastingInput } from '../src/utils/afl-hero-ca
 import { resolveAflHeroState, type AflHeroState, type EventHeroView } from '../src/utils/afl-hero-resolver';
 import type { WhatsNewEntry } from '../src/types/whats-new';
 import type { HeroContent } from '../src/types/whats-new';
+import { castRandomStarterModel } from '../src/utils/hero-casting';
 import {
   getAdpRankedIds,
   getFranchiseHeadliners,
   getKickoffGame,
-  getOwnerByPlayer,
+  getOwnersByPlayer,
   getRosteredPlayerIds,
   getWeekGameCandidates,
   getTradeBaitCandidates,
@@ -210,7 +211,7 @@ describe('castAflHeroModel', () => {
     // The rule this hero exists to enforce: never someone else's guy. Whether
     // the cast comes from the week slate or the headliner fallback, a
     // signed-in owner's model must be on THEIR roster.
-    const owners = getOwnerByPlayer(YEAR, AFL);
+    const owners = getOwnersByPlayer(YEAR, AFL);
     const franchiseId = getFranchiseHeadliners(YEAR, AFL)[0]?.franchiseId;
     expect(franchiseId, 'AFL rosters feed has no franchises').toBeDefined();
     if (!franchiseId) return;
@@ -222,7 +223,70 @@ describe('castAflHeroModel', () => {
     for (const state of states) {
       const model = castAflHeroModel(state, input({ userFranchiseId: franchiseId }));
       expect(model).not.toBeNull();
-      expect(owners.get(model!.mflId)).toBe(franchiseId);
+      expect(owners.get(model!.mflId) ?? []).toContain(franchiseId);
+    }
+  });
+
+  it('never casts another franchise’s player at ANY hour of the week, in either league', () => {
+    // The Sunday-night hole: getWeekGameCandidates drops finished games, so the
+    // remaining slate shrinks and an owner can end the week with nobody left
+    // playing. The first cut of this feature widened to the league there and
+    // captioned a stranger "In Action". Sweep the whole week, both leagues,
+    // every franchise — a cast model must be OWNED by the franchise it is
+    // cast for, or be null so the caller's own-roster fallback runs.
+    const hours = [
+      '2026-09-10T09:00:00-07:00', // before the Thursday opener
+      '2026-09-11T18:00:00-07:00', // opener done, Sunday ahead
+      '2026-09-13T10:00:00-07:00', // Sunday morning
+      '2026-09-13T23:00:00-07:00', // Sunday night — slate nearly spent
+      '2026-09-14T18:00:00-07:00', // Monday night
+      '2026-09-16T12:00:00-07:00', // whole week played (full-slate fallback)
+    ].map((iso) => new Date(iso));
+
+    for (const league of [AFL, 'theleague'] as const) {
+      // Every owner, not one: 143 of the AFL's 199 rostered players are on two
+      // rosters (AL + NL run separate pools inside one MFL league), so the
+      // single-owner map would fail this test on correct casts.
+      const owners = getOwnersByPlayer(YEAR, league);
+      const franchiseIds = getFranchiseHeadliners(YEAR, league).map((h) => h.franchiseId);
+      expect(franchiseIds.length).toBeGreaterThan(0);
+      const players = getPlayerMap(YEAR);
+      for (const referenceDate of hours) {
+        const candidates = getWeekGameCandidates(YEAR, league, referenceDate);
+        for (const franchiseId of franchiseIds) {
+          const model = castRandomStarterModel(
+            candidates,
+            players,
+            franchiseId,
+            referenceDate,
+            'Kickoff Starter',
+            8,
+            'Your First Starter',
+          );
+          if (!model) continue; // null is fine — the caller falls back to their own roster
+          expect(
+            owners.get(model.mflId) ?? [],
+            `${league} ${franchiseId} @ ${referenceDate.toISOString()} cast ${model.name}`,
+          ).toContain(franchiseId);
+        }
+      }
+    }
+  });
+
+  it('the AFL ladder keeps a signed-in owner on their own roster all week', () => {
+    // Same sweep through the real ladder (cast → own compositable headliner →
+    // own headliner), which is what the homepage actually renders.
+    const owners = getOwnersByPlayer(YEAR, AFL);
+    const franchiseIds = getFranchiseHeadliners(YEAR, AFL).map((h) => h.franchiseId);
+    for (const iso of ['2026-09-10T09:00:00-07:00', '2026-09-13T23:00:00-07:00', '2026-09-14T18:00:00-07:00']) {
+      const referenceDate = new Date(iso);
+      for (const franchiseId of franchiseIds) {
+        for (const state of [calendarEvent('afl-season-start'), seasonSlot('live-scoring')]) {
+          const model = castAflHeroModel(state, input({ referenceDate, userFranchiseId: franchiseId }));
+          if (!model) continue;
+          expect(owners.get(model.mflId) ?? [], `${franchiseId} @ ${iso} cast ${model.name}`).toContain(franchiseId);
+        }
+      }
     }
   });
 

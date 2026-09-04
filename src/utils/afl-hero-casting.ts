@@ -102,16 +102,20 @@ export function castAflHeroModel(state: AflHeroState, input: AflCastingInput): H
   // of their players kicks off first (see castRandomStarterModel). The
   // fallback stays on their roster too — getFranchiseHeadliners returns each
   // team's top player compositable or not, so a DEF/photo-less headliner would
-  // hand the hero to some other franchise.
+  // hand the hero to some other franchise, and castRosterModel widens on an
+  // empty own pool.
   let compositableHeadlinerPool: Array<{ playerId: string; franchiseId: string }> | null = null;
-  const ownRosterFallback = (descriptor: string): HeroModel | null =>
-    castRosterModel(
-      (compositableHeadlinerPool ??= getFranchiseCompositableHeadliners(leagueYear, AFL)),
-      players,
-      userFranchiseId,
-      referenceDate,
-      descriptor,
-    ) ?? headliner(descriptor);
+  const ownRosterFallback = (descriptor: string): HeroModel | null => {
+    const pool = (compositableHeadlinerPool ??= getFranchiseCompositableHeadliners(leagueYear, AFL));
+    // Scope the pool BEFORE casting: castRosterModel widens to the league when
+    // the owner's slice is empty, which is the behavior this ladder exists to
+    // avoid. A signed-in owner gets their own player or no composite at all
+    // (the hero then draws its static art) — never someone else's.
+    const scoped = userFranchiseId ? pool.filter((c) => c.franchiseId === userFranchiseId) : pool;
+    const model = castRosterModel(scoped, players, userFranchiseId, referenceDate, descriptor);
+    if (model || userFranchiseId) return model;
+    return headliner(descriptor);
+  };
 
   const gameStarter = (descriptor: string, laterGameDescriptor: string): HeroModel | null =>
     castRandomStarterModel(

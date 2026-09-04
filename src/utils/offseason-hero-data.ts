@@ -106,6 +106,39 @@ export function getOwnerByPlayer(
   return ownerByPlayer;
 }
 
+/**
+ * Map of rostered playerId → EVERY owning franchiseId.
+ *
+ * `getOwnerByPlayer` returns one franchise per player, which is wrong for the
+ * AFL: its two conferences (AL and NL) run independent player pools inside one
+ * MFL league, so the same NFL player is legitimately rostered twice. In the
+ * 2026 feed that is 143 of 199 rostered players — a single-owner map credits
+ * ~72% of the league's players to an arbitrary one of their two owners.
+ * Anything that asks "does THIS franchise roster him" must use this.
+ */
+export function getOwnersByPlayer(
+  leagueYear: number,
+  league: CanonicalLeagueSlug = 'theleague',
+): Map<string, string[]> {
+  const owners = new Map<string, string[]>();
+  const rosterData = readJsonFile(feedPath(league, leagueYear, 'rosters.json'));
+  const franchises = rosterData?.rosters?.franchise;
+  for (const franchise of franchises ? (Array.isArray(franchises) ? franchises : [franchises]) : []) {
+    const players = Array.isArray(franchise.player)
+      ? franchise.player
+      : franchise.player
+        ? [franchise.player]
+        : [];
+    for (const p of players) {
+      if (!p?.id) continue;
+      const list = owners.get(p.id);
+      if (list) list.push(franchise.id);
+      else owners.set(p.id, [franchise.id]);
+    }
+  }
+  return owners;
+}
+
 // ── Franchise Headliners ──
 
 /**
@@ -342,7 +375,13 @@ export function getWeekGameCandidates(
   leagueYear: number,
   league: CanonicalLeagueSlug = 'theleague',
   referenceDate?: Date,
-): Array<{ playerId: string; franchiseId: string; score: number; kickoff: number }> {
+): Array<{
+  playerId: string;
+  franchiseId: string;
+  franchiseIds: string[];
+  score: number;
+  kickoff: number;
+}> {
   const slate = upcomingWeekGames(readWeekGames(leagueYear, league), referenceDate);
   if (slate.length === 0) return [];
 
@@ -357,16 +396,27 @@ export function getWeekGameCandidates(
 
   const projections = getProjectionMap(leagueYear, league);
   const playerMap = getUnifiedPlayerMap(leagueYear);
-  const ownerByPlayer = getOwnerByPlayer(leagueYear, league);
+  // Every owner, not one: an AFL player is routinely rostered in both
+  // conferences, and casting "your own starter" must not miss him because the
+  // other conference's franchise happened to be written last.
+  const ownersByPlayer = getOwnersByPlayer(leagueYear, league);
 
-  const candidates: Array<{ playerId: string; franchiseId: string; score: number; kickoff: number }> = [];
+  const candidates: Array<{
+    playerId: string;
+    franchiseId: string;
+    franchiseIds: string[];
+    score: number;
+    kickoff: number;
+  }> = [];
   for (const p of playerMap.values()) {
     if (p.position === 'DEF') continue;
     const kickoff = kickoffByTeam.get(p.nflTeam);
     if (kickoff === undefined) continue;
+    const franchiseIds = ownersByPlayer.get(p.mflId) ?? [];
     candidates.push({
       playerId: p.mflId,
-      franchiseId: ownerByPlayer.get(p.mflId) ?? '',
+      franchiseId: franchiseIds[0] ?? '',
+      franchiseIds,
       score: projections.get(p.mflId) ?? 0,
       kickoff,
     });

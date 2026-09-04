@@ -327,8 +327,9 @@ describe('castRandomStarterModel', () => {
       ),
     );
     expect([...owned].sort()).toEqual(['2', '6']); // only 0001's players
-    // Guest with no players in the game → full pool
-    expect(castRandomStarterModel(mixed, players, '0099', JUL_4, 'x', 4)).not.toBeNull();
+    // An owner who rosters NOBODY in the pool gets null, not a stranger — the
+    // caller's own-roster fallback ladder takes it from there.
+    expect(castRandomStarterModel(mixed, players, '0099', JUL_4, 'x', 4)).toBeNull();
   });
 
   it('returns null when nothing qualifies', () => {
@@ -430,19 +431,33 @@ describe('castRandomStarterModel', () => {
     expect([...picks].sort()).toEqual(['1', '5']);
   });
 
-  it('falls back to the whole slate for an owner who rosters nobody playing', () => {
-    const model = castRandomStarterModel(
+  it('casts nobody for an owner with no one left in the remaining slate', () => {
+    // The Sunday-night case: getWeekGameCandidates drops finished games, so an
+    // owner can have nobody left playing. Widening to the league here is what
+    // put another franchise's player in the hero captioned "In Action".
+    expect(
+      castRandomStarterModel(
+        slate({ '1': '0002', '5': '0002', '20': '0003', '21': '0003' }),
+        slatePlayers,
+        '0099',
+        JUL_4,
+        'Kickoff Starter',
+        8,
+        'Your First Starter',
+      ),
+    ).toBeNull();
+    // A guest in the same slate still gets the opener — nothing to scope to.
+    const guest = castRandomStarterModel(
       slate({ '1': '0002', '5': '0002', '20': '0003', '21': '0003' }),
       slatePlayers,
-      '0099',
+      undefined,
       JUL_4,
       'Kickoff Starter',
       8,
       'Your First Starter',
     );
-    // League-wide pool → the opener, captioned as the opener.
-    expect(['1', '5']).toContain(model?.mflId);
-    expect(model?.descriptor).toBe('Kickoff Starter');
+    expect(['1', '5']).toContain(guest?.mflId);
+    expect(guest?.descriptor).toBe('Kickoff Starter');
   });
 
   it('casts the owner’s own backup in the opener over their starter on Sunday', () => {

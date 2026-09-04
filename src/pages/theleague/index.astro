@@ -498,7 +498,11 @@ if (heroState.phase === 'preseason-countdown' && heroState.preseasonProps) {
   // own player (their top projected player may be a DEF or have no cutout).
   if (!preseasonModel) {
     const compositable = getFranchiseCompositableHeadliners(leagueYear);
-    const headliners = compositable.length > 0 ? compositable : getFranchiseHeadliners(leagueYear);
+    const all = compositable.length > 0 ? compositable : getFranchiseHeadliners(leagueYear);
+    // Scope to the owner BEFORE casting — castRosterModel widens to the league
+    // on an empty own pool, and a signed-in owner must never be shown someone
+    // else's player here either.
+    const headliners = userFranchiseId ? all.filter((h) => h.franchiseId === userFranchiseId) : all;
     preseasonModel = castRosterModel(headliners, hpPlayerIdentityMap, userFranchiseId, now, 'Headliner');
     preseasonModelIsOwn =
       !!preseasonModel &&
