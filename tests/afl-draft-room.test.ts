@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { readFileSync } from 'node:fs';
+import { globSync, readFileSync } from 'node:fs';
 import aflConfig from '../data/afl-fantasy/afl.config.json';
 import { LEAGUES } from '../src/config/leagues';
 import {
@@ -256,4 +256,38 @@ describe('the draft queue is scoped per board', () => {
     // and never reverts to the unscoped id for queue reads/writes
     expect(src).not.toMatch(/(saveQueue|getQueue)\(state\.leagueId/);
   });
+});
+
+describe('no page outside TheLeague can unlock its licensed RSP', () => {
+  /**
+   * Generalises the leak Codex found. `RSP_AUTHORIZED_FRANCHISES` holds bare
+   * franchise ids, and EVERY league in this app has an `0001` who is a
+   * different person — so any caller passing its own league's franchise id
+   * without saying which league it is inherits TheLeague's licence by
+   * collision. Fixing the one page that prompted this would have left two
+   * others leaking, which is why the rule is asserted over all of them.
+   */
+  const CALLERS = globSync('src/pages/**/*.astro').filter((f) =>
+    readFileSync(f, 'utf-8').includes('buildDraftPlayers(')
+  );
+
+  it('finds the callers it means to check', () => {
+    expect(CALLERS.length).toBeGreaterThan(3);
+  });
+
+  for (const file of CALLERS) {
+    const isTheLeague = file.startsWith('src/pages/theleague/');
+    it(`${file.replace('src/pages/', '')} ${isTheLeague ? 'may rely on the default league' : 'declares its own league or passes no franchise'}`, () => {
+      const src = readFileSync(file, 'utf-8');
+      const call = src.slice(src.indexOf('buildDraftPlayers('));
+      const args = call.slice(0, call.indexOf('});') + 1);
+      // A comment mentioning the field is not passing it — match the property.
+      const passesFranchise = /^\s*viewerFranchiseId:/m.test(args);
+      if (isTheLeague || !passesFranchise) return;
+      expect(
+        /^\s*viewerLeagueSlug:/m.test(args),
+        `${file} passes viewerFranchiseId without viewerLeagueSlug — its 0001 would inherit TheLeague's RSP licence`
+      ).toBe(true);
+    });
+  }
 });
