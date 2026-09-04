@@ -20,6 +20,8 @@ import {
   sortByAccuracy,
   topHomer,
   topContrarian,
+  topAccurate,
+  topParticipant,
   type VoterIssue,
 } from '../../../utils/owners-poll-voters';
 import { teamAccentVar } from '../../../utils/team-accent-css';
@@ -39,6 +41,9 @@ const season = computeVoterSeason(issues, eligible);
 const leaderboard = sortByAccuracy(season.voters);
 const homer = topHomer(season.voters);
 const contrarian = topContrarian(season.voters);
+// Only crowned once there is a real sample behind it — see topAccurate.
+const champion = topAccurate(season.voters);
+const participant = topParticipant(season.voters);
 
 const name = (fid: string) => brands[fid]?.nameShort ?? fid;
 const accent = (fid: string) =>
@@ -100,8 +105,26 @@ const hasPolls = season.weeks.length > 0;
           </div>
         </dl>
 
-        {(homer || contrarian) && (
+        {(champion || participant || homer || contrarian) && (
           <div class="opv-badges">
+            {champion && (
+              <div class="opv-badge opv-badge--crown" style={accent(champion.franchiseId)}>
+                <span class="opv-badge__label">Most accurate</span>
+                <span class="opv-badge__name">{name(champion.franchiseId)}</span>
+                <span class="opv-badge__value">
+                  {pct(champion.accuracyPct)} across {champion.accuracyPairs} calls
+                </span>
+              </div>
+            )}
+            {participant && participant.ballotsCast > 1 && (
+              <div class="opv-badge" style={accent(participant.franchiseId)}>
+                <span class="opv-badge__label">Never misses</span>
+                <span class="opv-badge__name">{name(participant.franchiseId)}</span>
+                <span class="opv-badge__value">
+                  {participant.ballotsCast} of {participant.weeksAvailable} ballots
+                </span>
+              </div>
+            )}
             {homer && (
               <div class="opv-badge" style={accent(homer.franchiseId)}>
                 <span class="opv-badge__label">Biggest homer</span>

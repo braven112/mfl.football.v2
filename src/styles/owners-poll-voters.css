@@ -193,3 +193,11 @@
 }
 .opv-notes p { margin: 0 0 0.6rem; }
 .opv-notes strong { color: var(--page-text); }
+
+/* The accuracy champion is the one badge that is an actual ranking rather than
+   a personality label, so it reads slightly louder than the rest. */
+.opv-badge--crown {
+  border-color: var(--primary-color);
+  background: var(--content-bg-muted);
+}
+.opv-badge--crown .opv-badge__label { color: var(--primary-color); font-weight: 700; }

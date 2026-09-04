@@ -123,6 +123,13 @@ jobs:
           # cut-watch reads autocut:{fid} cutdown-plan status (counts only)
           # so Schefter can credit owners who already made their picks and
           # call out over-limit teams with no plan on file.
+          # owners-poll-close POSTs its per-voter reveal pushes back to the
+          # site (web push must be sent server-side, and a node script cannot
+          # import the TypeScript sender). The target origin comes from the
+          # league registry (leagueUrl), not a workflow variable — CLAUDE.md
+          # keeps configuration in code. An absent secret skips the push and
+          # never fails the job.
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
           UPSTASH_REDIS_REST_URL: ${{ secrets.UPSTASH_REDIS_REST_URL }}
           UPSTASH_REDIS_REST_TOKEN: ${{ secrets.UPSTASH_REDIS_REST_TOKEN }}
           KV_REST_API_URL: ${{ secrets.KV_REST_API_URL }}
@@ -214,8 +221,12 @@ jobs:
             FILES="$FILES,data/afl-fantasy/schefter-feed.json,data/theleague/derived,data/afl-fantasy/derived"
           elif [ "$ARTICLE_TYPE" = "schedule-release" ]; then
             FILES="$FILES,data/afl-fantasy/schefter-feed.json"
-          elif [ "$ARTICLE_TYPE" = "pecking-order" ] || [ "$ARTICLE_TYPE" = "owners-poll-close" ]; then
+          elif [ "$ARTICLE_TYPE" = "pecking-order" ]; then
             FILES="data/theleague/pecking-order,data/afl-fantasy/pecking-order"
+          elif [ "$ARTICLE_TYPE" = "owners-poll-close" ]; then
+            # The close pass amends the issue AND writes the reveal into each
+            # league's Schefter feed, so both have to be committed.
+            FILES="data/theleague/pecking-order,data/afl-fantasy/pecking-order,src/data/theleague/schefter-feed.json,data/afl-fantasy/schefter-feed.json"
           fi
           node scripts/commit-feed-and-push.mjs \
             --branch main \

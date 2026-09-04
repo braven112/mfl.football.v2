@@ -377,3 +377,89 @@
 
 .op-admin__ok { margin: 0.6rem 0 0; font-size: 0.85rem; color: var(--color-success); }
 .op-admin__err { margin: 0.6rem 0 0; font-size: 0.85rem; color: var(--color-error); }
+
+/* --- lineup-page strip --------------------------------------------------
+ * Sits above the lineup itself. Deliberately quiet: it is a guest on someone
+ * else's page, and an owner who came to set a lineup must never have to scroll
+ * past a poll to do it.
+ */
+
+.op-lineup {
+  margin: 0.75rem 0 1rem;
+  border: 1px solid var(--content-border);
+  border-left: 4px solid var(--primary-color);
+  border-radius: var(--radius-md, 8px);
+  background: var(--content-bg);
+}
+.op-lineup--done { border-left-color: var(--color-success); }
+
+.op-lineup__head {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.6rem 0.75rem;
+  min-height: 2.75rem;
+  background: none;
+  border: 0;
+  color: var(--page-text);
+  font-size: 0.9rem;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+.op-lineup__title { flex: 1; min-width: 0; }
+.op-lineup__meta {
+  font-weight: 400;
+  font-size: 0.8rem;
+  color: var(--content-text-muted);
+  white-space: nowrap;
+}
+.op-lineup__chev { color: var(--content-text-muted); }
+
+.op-lineup__sub {
+  margin: 0;
+  padding: 0 0.75rem 0.7rem;
+  font-size: 0.825rem;
+  color: var(--content-text-muted);
+}
+
+/* A button, not an anchor: it expands in place rather than navigating, and
+   styling an anchor to do nothing would lie to a screen reader. */
+.op-lineup__link {
+  background: none;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  color: var(--primary-color);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.op-lineup__body {
+  padding: 0 0.75rem 0.75rem;
+  border-top: 1px solid var(--content-border);
+}
+/* The builder brings its own card; inside the strip that second frame is
+   redundant, so it is flattened. */
+.op-lineup__body .op-builder {
+  border: 0;
+  box-shadow: none;
+  padding: 0.75rem 0 0;
+  background: transparent;
+}
+
+/* The pool is 16 cards. At the ballot page's full width that grid is three
+   columns and fine; inside this narrower strip it collapsed to one and made
+   the panel ~3900px tall, putting the whole poll between an owner and the
+   lineup they came for. Tighter columns plus a bounded, self-scrolling pool
+   keeps the strip a panel rather than a page. */
+.op-lineup__body .op-pool {
+  grid-template-columns: repeat(auto-fill, minmax(10rem, 1fr));
+  max-height: 20rem;
+  overflow-y: auto;
+  /* Room for the focus ring on the last row inside the scroll container. */
+  padding: 2px;
+}
+.op-lineup__body .op-slots { gap: 0.3rem; }
+.op-lineup__body .op-slot { min-height: 2.5rem; }

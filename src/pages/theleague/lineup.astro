@@ -14,6 +14,9 @@ export const prerender = false;
 import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
 import PlayerCell from '../../components/theleague/PlayerCell.astro';
 import { getAuthUser } from '../../utils/auth';
+import LineupBallotStrip from '../../components/shared/owners-poll/LineupBallotStrip';
+import { getLeagueTeamBrands } from '../../utils/league-team-brands';
+import '../../styles/owners-poll.css';
 import { getCurrentLeagueYear } from '../../utils/league-year';
 import { getCurrentWeekForYear } from '../../utils/current-week';
 import { normalizeTeamCode } from '../../utils/nfl-logo';
@@ -27,7 +30,7 @@ import { isThrowbackWeek } from '../../data/theleague/throwback-config';
 import { getAllThrowbackPreferences } from '../../utils/throwback-store';
 import LineupGameStrip from '../../components/shared/LineupGameStrip.astro';
 import { buildMatchupCards } from '../../utils/lineup-matchup-cards';
-import { getLeagueBySlug } from '../../config/leagues';
+import { getLeagueBySlug, ensureLeaguePrefix } from '../../config/leagues';
 import { findWeekMatchups, resolveRostersPayload, resolveLineupFillState, resolveWeekLineup, resolvePlayerName } from '../../utils/lineup-sources';
 import { resolveSubmitButtonState } from '../../utils/lineup-submit-state';
 import '../../styles/loading.css';
@@ -514,10 +517,49 @@ const payloadJson = JSON.stringify(lineupPayload);
 
 // Build roster map for server-side rendering
 const rosterById = new Map(roster.map(p => [p.id, p]));
+
+// ---------------------------------------------------------------------------
+// The Owners' Poll strip
+// ---------------------------------------------------------------------------
+// Setting a lineup is the one obligatory weekly action in this league, so this
+// is the only page every active owner reliably visits — and since the ballot
+// closes at the first kickoff, the two deadlines are now the same deadline.
+// The island renders NOTHING unless a ballot is actually open, so the page is
+// unchanged for most of the year.
+//
+// Brands rather than the week's issue: this page has no Pecking Order data in
+// scope, and the cards drop their record line rather than gaining a glob.
+//
+// The island is client:idle, NOT client:visible. It renders nothing on the
+// server (it does not yet know whether a ballot is open), so a client:visible
+// island has ZERO HEIGHT, never intersects, and never hydrates — the strip
+// silently never appears at all. client:idle has no layout dependency and
+// still waits for the browser to finish the lineup's own work first.
+const ownersPollLeague = getLeagueBySlug('theleague')!;
+const ownersPollConfig = ownersPollLeague.ownersPoll;
+const ownersPollTeams = Object.values(getLeagueTeamBrands(ownersPollLeague.slug))
+  .map((brand) => ({ ...brand, record: null, ppg: null }))
+  // Alphabetical, never by any ranking — sorting the ballot by the column's
+  // order would anchor every owner to the thing the poll exists to disagree
+  // with.
+  .sort((a, b) => a.nameShort.localeCompare(b.nameShort));
+
 ---
 
 <TheLeagueLayout title="Set Lineup">
   <div class="lineup-page">
+    {ownersPollConfig.enabled && (
+      <LineupBallotStrip
+        client:idle
+        teams={ownersPollTeams}
+        slots={ownersPollConfig.slots}
+        quorum={ownersPollConfig.quorum}
+        leagueParam={ownersPollLeague.navSlug}
+        ownFranchiseId={userFranchiseId}
+        ballotHref={ensureLeaguePrefix(ownersPollLeague, '/pecking-order/ballot')}
+        columnHref={ensureLeaguePrefix(ownersPollLeague, '/pecking-order')}
+      />
+    )}
     <!-- Header -->
     <header class="lineup-header">
       <h1 class="lineup-title">Set Lineup</h1>

@@ -207,6 +207,29 @@ export function sortByAccuracy(voters: VoterRow[]): VoterRow[] {
   });
 }
 
+/**
+ * The season's most accurate voter — the leaderboard's actual champion.
+ *
+ * Requires a real sample: with 7 slots a week is only 21 pairs, so crowning
+ * anyone off one or two ballots would be noise dressed as an award. Null until
+ * the season has enough behind it, and the page says so rather than showing an
+ * empty podium.
+ */
+export function topAccurate(voters: VoterRow[], minPairs = 100): VoterRow | null {
+  const ranked = voters
+    .filter((v) => v.accuracyPct != null && v.accuracyPairs >= minPairs)
+    .sort((a, b) => b.accuracyPct! - a.accuracyPct! || b.ballotsCast - a.ballotsCast);
+  return ranked[0] ?? null;
+}
+
+/** The owner who simply showed up most. Ties break on accuracy. */
+export function topParticipant(voters: VoterRow[]): VoterRow | null {
+  const ranked = [...voters]
+    .filter((v) => v.ballotsCast > 0)
+    .sort((a, b) => b.ballotsCast - a.ballotsCast || (b.accuracyPct ?? 0) - (a.accuracyPct ?? 0));
+  return ranked[0] ?? null;
+}
+
 /** The season's biggest homer — highest average self-rank premium. */
 export function topHomer(voters: VoterRow[]): VoterRow | null {
   const ranked = voters

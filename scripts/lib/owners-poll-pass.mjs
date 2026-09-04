@@ -287,7 +287,7 @@ export function buildNagMessage({ league, week, ballotsIn, eligibleVoters, close
 }
 
 /** The Wednesday-evening reveal. */
-export function buildRevealMessage({ league, issue, teams }) {
+export function buildRevealMessage({ league, issue, teams, callback = null }) {
   const poll = issue.ownersPoll;
   if (!poll || poll.status !== 'closed') return null;
   const name = (fid) => teams.get(fid)?.nameMedium ?? fid;
@@ -324,6 +324,10 @@ export function buildRevealMessage({ league, issue, teams }) {
       `🏠 Homer of the week: ${name(homer.franchiseId)}, ${homer.homerIndex} spots above where the room has them.`,
     );
   }
+
+  // The callback is what makes the poll a running argument rather than a
+  // weekly form, so it goes in the chat post, not only the feed.
+  if (callback) lines.push(`📼 ${callback}`);
 
   lines.push(`Every ballot ▸ ${leagueUrl(league, '/pecking-order')}`);
   return lines.join('\n');

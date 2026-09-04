@@ -49,6 +49,13 @@ import {
   normalizeFranchiseIds,
 } from './lib/owners-poll-pass.mjs';
 import {
+  buildVoterPushes,
+  sendVoterPushes,
+  buildRevealFeedPost,
+  buildCallback,
+  upsertFeedPost,
+} from './lib/owners-poll-posts.mjs';
+import {
   buildFactSheet,
   getSystemPrompt,
   getUserPrompt,
@@ -785,11 +792,54 @@ async function runClosePoll(opts, league) {
   await fs.writeFile(outPath, JSON.stringify(issue, null, 2) + '\n', 'utf8');
   console.log(`  ✓ Amended ${path.relative(projectRoot, outPath)}`);
 
+  const teamsConfig = await loadTeamsConfig(league);
+
+  // Earlier weeks of this season, for the callback — the line that resurfaces
+  // what the room got wrong. Read once and shared by the feed post and the
+  // chat post so they cannot disagree about which week they are quoting.
+  const priorIssues = await loadSeasonIssues(league, redisWindowYear, week);
+
+  // The feed post is written even without --publish: it is a durable record on
+  // the site, not an announcement, and a dry operator run that skips chat
+  // still wants the archive correct. Replace-by-id, so a re-run cannot leave
+  // two Owners' Poll posts for the same week.
+  await writeRevealFeedPost({ league, issue, teams: teamsConfig.teams, priorIssues });
+
   if (opts.publish) {
-    const teamsConfig = await loadTeamsConfig(league);
-    const text = buildRevealMessage({ league, issue, teams: teamsConfig.teams });
+    const callback = buildCallback({ issue, priorIssues, teams: teamsConfig.teams });
+    const text = buildRevealMessage({ league, issue, teams: teamsConfig.teams, callback });
     if (text) await postPollMessage(text, league, 'reveal');
+
+    // Personal, per voter, and only to voters. The chat post is a broadcast;
+    // this is the payoff that makes voting worth doing. Never fatal — the
+    // issue is already committed and the reveal already went out, so a push
+    // outage must not turn a successful week into a failed job.
+    const previousIssue = await tryLoadJSON(
+      issueFilePath(league, redisWindowYear, week - 1),
+    );
+    const notifications = buildVoterPushes({
+      league,
+      issue,
+      teams: teamsConfig.teams,
+      previousIssue,
+    });
+    await sendVoterPushes({ league, notifications });
   }
+}
+
+/** Write (or replace) the Owners' Poll reveal post in the league's feed. */
+async function writeRevealFeedPost({ league, issue, teams, priorIssues = [] }) {
+  const post = buildRevealFeedPost({ league, issue, teams, priorIssues });
+  if (!post) return;
+
+  const feedPath = path.join(projectRoot, league.schefterFeedPath);
+  const feed = await tryLoadJSON(feedPath);
+  if (!feed) {
+    console.warn(`  [poll] No feed at ${league.schefterFeedPath} — skipping the reveal post.`);
+    return;
+  }
+  await fs.writeFile(feedPath, JSON.stringify(upsertFeedPost(feed, post), null, 2) + '\n', 'utf8');
+  console.log(`  ✓ Feed post ${post.id}`);
 }
 
 /**
@@ -859,6 +909,29 @@ async function resolveUpcomingKickoff(league, year, completedWeek) {
   if (kickoffs.length === 0) return null;
 
   return new Date(Math.min(...kickoffs));
+}
+
+/** Every earlier issue of this season, oldest first. */
+async function loadSeasonIssues(league, year, beforeWeek) {
+  let entries;
+  try {
+    entries = await fs.readdir(peckingOrderDir(league));
+  } catch {
+    return [];
+  }
+  const weeks = entries
+    .map((f) => f.match(new RegExp(`^${year}-(\\d{1,2})\\.json$`)))
+    .filter(Boolean)
+    .map((m) => Number(m[1]))
+    .filter((w) => w < beforeWeek)
+    .sort((a, b) => a - b);
+
+  const issues = [];
+  for (const w of weeks) {
+    const data = await tryLoadJSON(issueFilePath(league, year, w));
+    if (data) issues.push(data);
+  }
+  return issues;
 }
 
 /** Newest issue week on disk for a season, so the poll passes need no --week. */

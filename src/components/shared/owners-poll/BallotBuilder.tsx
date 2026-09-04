@@ -26,9 +26,13 @@ export interface BallotTeam {
   colorPrimary: string;
   colorPrimaryDark: string;
   icon: string;
-  /** Context shown on the card. Null when the week's issue has no row for them. */
-  record: string | null;
-  ppg: number | null;
+  /**
+   * Context shown on the card. Optional: the ballot page reads it from the
+   * week's issue, but the lineup-page strip has no issue in scope and simply
+   * omits the line rather than rendering a row of em-dashes.
+   */
+  record?: string | null;
+  ppg?: number | null;
 }
 
 interface Props {
@@ -333,10 +337,12 @@ export default function BallotBuilder({
                     {team.nameShort}
                     {isOwn && <span className="op-card__you"> · you</span>}
                   </span>
-                  <span className="op-card__meta">
-                    {team.record ?? '—'}
-                    {team.ppg != null ? ` · ${team.ppg.toFixed(1)} PPG` : ''}
-                  </span>
+                  {(team.record || team.ppg != null) && (
+                    <span className="op-card__meta">
+                      {team.record ?? ''}
+                      {team.ppg != null ? `${team.record ? ' · ' : ''}${team.ppg.toFixed(1)} PPG` : ''}
+                    </span>
+                  )}
                 </span>
               </button>
             </li>
