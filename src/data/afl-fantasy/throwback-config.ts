@@ -91,7 +91,11 @@ export const AFL_DEFAULT_THROWBACK_ERA: Record<string, number> = {
   '0004': 2019, // Get off my Ditka → Maga Nation — commissioner pick over the
                 //   tenure rule, which would say 2012 (The Dude that Abides, 5).
   '0005': 2010, // Computer Jocks → booyakasha — 5 seasons
-  '0006': 2013, // Da Dangsters → Da Dangsters (The tommy gun) — 12 seasons
+  '0006': 2003, // Da Dangsters → Da Dangsters (The DD monogram) — commissioner
+                //   pick over the tenure rule, which would say 2013 (12
+                //   seasons). The monogram era lives on slot 0021 and reaches
+                //   0006 through its ownerHistory window, so the conflict that
+                //   keeps 0021 itself off the name does not apply.
   '0007': 2010, // Avenging Amish → Touchdown My Pants — 4 seasons
   '0008': 2003, // Dicks out for Harambe → The Nukes — 13 seasons
   '0009': 2009, // Vitside Mafia → Gamecocks — commissioner pick over the tenure
@@ -103,7 +107,9 @@ export const AFL_DEFAULT_THROWBACK_ERA: Record<string, number> = {
   '0010': 2005, // Fullybaked → Fullybaked (Red graffiti) — 12 seasons
   '0011': 2010, // Midwestside Connection → Midwestside Connection (The gold lockup) — 15 seasons
   '0012': 2009, // Suh girls, one cup → Pubes — 10 seasons
-  '0013': 2010, // Muck Juggling Micks → Delirium Tremens — 10 seasons
+  '0013': 2017, // Muck Juggling Micks → Delirium Tremens (The heebie geebies) —
+                //   commissioner pick over the tenure rule, which would say
+                //   2010 (7 seasons vs 3).
   '0014': 2007, // A Bruin Pegs Me → Thundering Herd — 19 seasons
   '0015': 2003, // The Mariachi Ninjas → The Blunt Bros. — 8 seasons
   '0016': 2009, // Swiftie 4 Life → Brady's Bastards — 5 seasons
