@@ -33,6 +33,8 @@ import { getSeasonYear, getCurrentNFLWeek, getCompletedWeek } from './article-ut
 import { callAnthropic } from './article-utils/ai-client.mjs';
 import { isDuplicate, appendToFeed } from './article-utils/feed-writer.mjs';
 import { postToGroupMe } from './lib/groupme.mjs';
+import { postToGroupMeCapped } from './lib/groupme-capped.mjs';
+import { LEAGUES } from '../src/config/leagues-data.mjs';
 import { withLinkDirective, applyArticleLinks } from './article-utils/article-links.mjs';
 
 const projectRoot = path.resolve(fileURLToPath(new URL('..', import.meta.url)));
@@ -257,7 +259,12 @@ async function main() {
     const text = mod.buildGroupMePromo(post, enrichment, { league });
     if (text) {
       const botId = process.env[GROUPME_BOT_ENV[league]];
-      const { posted } = await postToGroupMe({
+      // Capped: the article TYPE is the post kind, and the weekday calendar
+      // decides whether it is today's one chat post. A held promo is not a
+      // failure — the article is still written and still on the site.
+      const { posted, refused } = await postToGroupMeCapped({
+        league: LEAGUES[league],
+        kind: opts.type,
         botId,
         text,
         checkStatus: true,
@@ -266,7 +273,7 @@ async function main() {
         onHttpError: (status) => console.warn(`  [groupme] promo failed: HTTP ${status}`),
         onFetchError: (err) => console.warn(`  [groupme] promo failed: ${err.message}`),
       });
-      if (!posted) console.log('  [groupme] promo not delivered (see above).');
+      if (!posted && !refused) console.log('  [groupme] promo not delivered (see above).');
     }
   }
 }

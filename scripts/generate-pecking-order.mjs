@@ -38,6 +38,7 @@ import { getCompletedWeek } from './article-utils/week-resolver.mjs';
 import { currentSeasonYear } from './lib/schefter-recurrence-ledger.mjs';
 import { isSeasonWindowOpen } from '../src/utils/pecking-order-season-window.mjs';
 import { postToGroupMe } from './lib/groupme.mjs';
+import { postToGroupMeCapped } from './lib/groupme-capped.mjs';
 import {
   openPoll,
   closePoll,
@@ -707,7 +708,11 @@ export function buildGroupMeAnnouncement(issue, teams, league) {
 async function postAnnouncement(issue, teams, league) {
   const text = buildGroupMeAnnouncement(issue, teams, league);
   const botEnv = GROUPME_BOT_ENV[league.slug];
-  const { posted } = await postToGroupMe({
+  // Tuesday's designated post. The ballot invite rides along inside it rather
+  // than being a second message.
+  const { posted } = await postToGroupMeCapped({
+    league,
+    kind: 'pecking-order',
     botId: process.env[botEnv],
     text,
     checkStatus: true,
@@ -957,7 +962,11 @@ async function resolveLatestIssueWeek(league, year) {
 
 async function postPollMessage(text, league, label) {
   const botEnv = GROUPME_BOT_ENV[league.slug];
-  const { posted } = await postToGroupMe({
+  // Thursday's designated post: the poll result. The reminder that used to
+  // share this day is push-only now.
+  const { posted } = await postToGroupMeCapped({
+    league,
+    kind: 'owners-poll-close',
     botId: process.env[botEnv],
     text,
     checkStatus: true,

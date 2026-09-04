@@ -41,6 +41,7 @@ import { getSchefterLeague } from './lib/schefter-leagues.mjs';
 import { schefterKey } from './lib/schefter-keys.mjs';
 import { getRedisConfig, createUpstashClient } from './lib/redis.mjs';
 import { postToGroupMe } from './lib/groupme.mjs';
+import { postToGroupMeCapped } from './lib/groupme-capped.mjs';
 import { fetchWithRetry } from './lib/fetch-retry.mjs';
 import { getPtDateString } from './lib/pt-date.mjs';
 import { isQuietHours, consumeDailyPost } from './lib/schefter-groupme-budget.mjs';
@@ -348,7 +349,14 @@ async function checkLeague(league, now = new Date()) {
     return 'skipped';
   }
 
-  const result = await postToGroupMe({
+  // EXEMPT from the daily cap, deliberately. This file's own note above calls
+  // the warning "deadline-critical and useless after kickoff": an owner who
+  // misses it starts an empty or illegal slot and loses real points. That is
+  // the same harm the Roger deadline-reminder exemption exists to prevent, so
+  // it gets the same treatment even though it is Schefter sending it.
+  const result = await postToGroupMeCapped({
+    league,
+    kind: 'lineup-deadline',
     botId,
     text,
     checkStatus: true,

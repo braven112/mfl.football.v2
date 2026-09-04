@@ -47,6 +47,7 @@ import { getRedisConfig, createUpstashClient } from './lib/redis.mjs';
 import { getNonEmpty } from './lib/env.mjs';
 import { leagueYearFor } from './lib/schefter-league-year.mjs';
 import { postToGroupMe as sharedPostToGroupMe } from './lib/groupme.mjs';
+import { postToGroupMeCapped } from './lib/groupme-capped.mjs';
 import { scanRogerReplies } from './roger-groupme-reply.mjs';
 
 const projectRoot = path.resolve(fileURLToPath(new URL('..', import.meta.url)));
@@ -547,9 +548,22 @@ function recordGroupMeSuppression(entry) {
   groupMeSuppressions.push(entry);
 }
 
-async function postToGroupMe(text, { botIdOverride } = {}) {
+/**
+ * Post to GroupMe, subject to the league-wide daily cap.
+ *
+ * `kind` is REQUIRED at every call site and defaults to nothing, because this
+ * one function carries two completely different classes of message: routine
+ * transaction chatter, which is push-only now, and Roger's DEADLINE REMINDERS,
+ * which are exempt and must never be held — an owner who misses a draft or a
+ * cut deadline loses real value. Defaulting would eventually swallow one of
+ * those silently, so the caller has to say which it is.
+ */
+async function postToGroupMe(text, { botIdOverride, kind, league } = {}) {
   const botId = botIdOverride || process.env.GROUPME_ROGER_BOT_ID;
-  await sharedPostToGroupMe({
+  if (!kind) throw new TypeError('schefter-scan postToGroupMe: a `kind` is required.');
+  await postToGroupMeCapped({
+    league,
+    kind,
     botId,
     text,
     onPosted: () => console.log('  [GroupMe] Posted'),
@@ -832,7 +846,7 @@ async function scanLeague(league) {
               timestamp: new Date().toISOString(),
             });
           } else {
-            await postToGroupMe(groupMeText, { botIdOverride: botId });
+            await postToGroupMe(groupMeText, { botIdOverride: botId, kind: 'transaction', league });
             console.log(`  [GroupMe] Posted: ${post.headline}`);
           }
         }
@@ -988,7 +1002,14 @@ async function flushPendingBigDrops(now) {
       continue;
     }
 
-    await postToGroupMe(entry.text, { botIdOverride: schefterBotId });
+    // Each staged drop carries its OWN league (see the routing note above), so
+    // the cap is charged to that league's day rather than to whichever league
+    // happened to be scanning when the queue flushed.
+    await postToGroupMe(entry.text, {
+      botIdOverride: schefterBotId,
+      kind: 'transaction',
+      league: { navSlug: entryLeague },
+    });
     await consumeDailyPost(redis, now, entryLeague);
     console.log(`  [big-drop] Pinged GroupMe (post ${window.postsToday + 1}, cap ${window.atCap ? 'exceeded' : 'ok'}): ${entry.headline}`);
     // One ping per run: spacing now blocks the rest until a later scan.
@@ -1320,7 +1341,7 @@ async function scanPendingTrades(league) {
           });
         } else {
           const groupMeText = `${post.headline}\n\n${post.body}\n\n@Brandon the league awaits.`;
-          await postToGroupMe(groupMeText, { botIdOverride: schefterBotId });
+          await postToGroupMe(groupMeText, { botIdOverride: schefterBotId, kind: 'transaction', league });
         }
       }
 
@@ -2034,7 +2055,9 @@ async function scanEventReminders(league) {
     for (const post of newPosts) {
       const url = groupMeUrlOverrides.get(post.id) ?? league.calendarUrl;
       const text = `${post.headline}\n\n${post.body}\n\n${url}`;
-      await postToGroupMe(text, { botIdOverride: rogerBotId });
+      // EXEMPT: a missed draft or cut deadline costs an owner real value,
+      // which is far worse than an extra message.
+      await postToGroupMe(text, { botIdOverride: rogerBotId, kind: 'roger-reminder', league });
     }
   }
   return newPosts.length;

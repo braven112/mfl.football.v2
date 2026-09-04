@@ -131,6 +131,7 @@ import { buildFormerNameCallback } from './lib/schefter-former-name.mjs';
 import { checkGroupMeQuality, RELAXED_QUALITY_THRESHOLD } from './lib/schefter-quality-gate.mjs';
 import { getRedisConfig, createUpstashClient } from './lib/redis.mjs';
 import { postToGroupMe as sharedPostToGroupMe } from './lib/groupme.mjs';
+import { postToGroupMeCapped } from './lib/groupme-capped.mjs';
 import {
   getLeagueBySlug,
   buildHostToSlugMap,
@@ -1265,7 +1266,16 @@ async function postToGroupMe(text) {
     warn('[rumor-scan] GROUPME_SCHEFTER_BOT_ID not set — skipping GroupMe (Roger is reserved for deadlines)');
     return;
   }
-  await sharedPostToGroupMe({
+  // Rumors are push-only under the league-wide cap: high volume, and none of
+  // it is the day's news. Held here rather than removed, so re-enabling is a
+  // one-line calendar change if the league ever wants a rumor day.
+  await postToGroupMeCapped({
+    // SCHEFTER_LEAGUE.slug IS the nav slug here (see schefter-leagues.mjs) —
+    // passed explicitly rather than letting the wrapper guess, because a
+    // registry entry's `slug` is the CANONICAL one ('afl-fantasy') and keying
+    // the day off the wrong one would silently give a league two slots.
+    league: { navSlug: SCHEFTER_LEAGUE.slug },
+    kind: 'rumor',
     botId,
     text,
     dryRun: DRY_RUN,
