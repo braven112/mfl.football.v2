@@ -4,6 +4,14 @@
     {
       "date": "2026-09-04",
       "type": "bug-fix",
+      "summary": "The trade builder only worked the first time you opened it. Come in from your roster and you could stack up an offer as usual; wander off to another page and come back, and the Add buttons stopped adding, the remove X stopped removing, and the fairness meter sat frozen at whatever it last said. No error, no spinner, nothing — just a page that had quietly stopped listening, because it was still wired to the copy of itself you had already left. It rebuilds on every arrival now, so the tenth visit builds a trade exactly like the first.",
+      "impact": "user",
+      "area": "trade-builder",
+      "league": "afl"
+    },
+    {
+      "date": "2026-09-04",
+      "type": "bug-fix",
       "summary": "Salary Analytics only worked the first time you opened it. Arrive from anywhere else on the site and the Week dropdown had collapsed to a single \"Season Total\" — the other thirty weeks were simply gone — while the Season picker and Export to Excel had both stopped answering. Reloading brought them all back, which is a fine trick if you knew it. The page was still wired to the copy of itself you had already left. It rebuilds itself on every arrival now, so the week list, the season switch and the export all work on the tenth visit the same as the first.",
       "impact": "user",
       "area": "salary",
