@@ -49,8 +49,12 @@ const SCOPE_BY_NAV_SLUG: Record<string, ThrowbackScope> = {
 export interface ThrowbackRules {
   /** NFL weeks that trigger throwback identity in this league. */
   weeks: number[];
-  /** franchiseId → the era `yearStart` the commissioner seeded. */
-  defaults: Record<string, number>;
+  /**
+   * franchiseId → the era the commissioner seeded: a bare `yearStart`, or a
+   * pick key (`"0021:2003"`) when the era is inherited from a former slot and
+   * the franchise also has one of its own starting that year.
+   */
+  defaults: Record<string, number | string>;
   /** Eras excluded from eligibility (art or name claimed elsewhere). */
   conflicts: { franchiseId: string; yearStart: number }[];
   /**
@@ -140,6 +144,23 @@ export function strictThrowbackScopeForLeagueId(
 ): ThrowbackScope | null {
   if (!leagueId) return null;
   const navSlug = getLeagueById(leagueId)?.navSlug;
+  if (!navSlug) return null;
+  return SCOPE_BY_NAV_SLUG[navSlug] ?? null;
+}
+
+/**
+ * Same, from a NAV slug (e.g. 'afl') — the vocabulary `LeagueSlug` uses
+ * everywhere in the layout and brand layers, where `LEAGUE_TEAMS` is keyed
+ * `theleague | afl | bb1`.
+ *
+ * The registry-slug variant below silently returns null for 'afl', because
+ * `getLeagueBySlug('afl')` finds nothing — the registry knows that league as
+ * 'afl-fantasy'. TheLeague hides the bug: its registry slug and nav slug are
+ * the same string, so a nav-slug caller works there and only there.
+ */
+export function strictThrowbackScopeForNavSlug(
+  navSlug: string | null | undefined,
+): ThrowbackScope | null {
   if (!navSlug) return null;
   return SCOPE_BY_NAV_SLUG[navSlug] ?? null;
 }

@@ -53,7 +53,7 @@ import { mixHex } from './nfl-team-colors';
 import { pickBrandHue } from './franchise-hue';
 import { AA_LARGE_TEXT_RATIO, ensureContrastOn } from './team-color-contrast';
 import { resolveThrowbackIdentity, type ThrowbackPick } from './throwback-identity';
-import { strictThrowbackScopeForLeagueSlug } from './throwback-scope';
+import { strictThrowbackScopeForNavSlug } from './throwback-scope';
 import { preferredIconSrc } from './team-icon-dark-css';
 import { crestStrokeFilter, withStrokeColors } from './crest-dark-stroke-css';
 
@@ -230,7 +230,7 @@ export function buildFranchiseBandBrands(
   options: BuildFranchiseBandBrandsOptions = {}
 ): FranchiseBandBrandMap {
   const teams = LEAGUE_TEAMS[league] ?? [];
-  const scope = strictThrowbackScopeForLeagueSlug(league);
+  const scope = strictThrowbackScopeForNavSlug(league);
   const throwback = !!options.throwbackActive && scope !== null;
   const overrides = options.throwbackOverrides ?? {};
   const strokes = strokeFilterByFranchise(league, teams);

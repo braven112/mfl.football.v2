@@ -17,6 +17,10 @@ import { buildFranchiseBandBrands, resolveEraCrest } from '../src/utils/franchis
 import { contrastRatio, AA_LARGE_TEXT_RATIO } from '../src/utils/team-color-contrast';
 import { DEFAULT_THROWBACK_ERA } from '../src/data/theleague/throwback-config';
 import { getEligibleThrowbackEras } from '../src/utils/throwback-identity';
+import {
+  isThrowbackWeekForScope,
+  strictThrowbackScopeForNavSlug,
+} from '../src/utils/throwback-scope';
 
 const root = (p: string) => resolve(__dirname, '..', p);
 const read = (p: string) => readFileSync(root(p), 'utf8');
@@ -301,12 +305,41 @@ describe('buildFranchiseBandBrands', () => {
   });
 
   it('leaves other leagues alone when a throwback week fires', () => {
-    // Only TheLeague has a history[] and a throwback store; an AFL page
-    // rendering during TheLeague's throwback week must look untouched.
+    // The two leagues run DIFFERENT weeks — TheLeague's is week 4, the AFL's
+    // is week 8 — and the isolation lives in that week check, which is what
+    // the layout feeds `throwbackActive`. This test used to assert that the
+    // AFL was never dressed at all; that was true only while the AFL had no
+    // history[], and it went on passing afterwards because the brand layer
+    // was handed a NAV slug ('afl') and resolved its scope through the
+    // REGISTRY resolver, which knows that league as 'afl-fantasy' and
+    // returned null. The AFL's own band was dark for the whole of its
+    // throwback week and this test called that correct.
+    const aflScope = strictThrowbackScopeForNavSlug('afl')!;
+    const tlScope = strictThrowbackScopeForNavSlug('theleague')!;
+
+    // TheLeague's week does not fire for the AFL...
+    const tlWeek = [4, 5, 6, 7].find((w) => isThrowbackWeekForScope(w, tlScope))!;
+    expect(isThrowbackWeekForScope(tlWeek, aflScope)).toBe(false);
+
     const plain = buildFranchiseBandBrands('afl');
-    const during = buildFranchiseBandBrands('afl', { throwbackActive: true });
-    expect(during.throwback).toBe(false);
-    expect(during.teams).toEqual(plain.teams);
+    const notItsWeek = buildFranchiseBandBrands('afl', {
+      throwbackActive: isThrowbackWeekForScope(tlWeek, aflScope),
+    });
+    expect(notItsWeek.throwback).toBe(false);
+    expect(notItsWeek.teams).toEqual(plain.teams);
+
+    // ...but its own week does.
+    const aflWeek = [8, 9, 10].find((w) => isThrowbackWeekForScope(w, aflScope))!;
+    const itsWeek = buildFranchiseBandBrands('afl', {
+      throwbackActive: isThrowbackWeekForScope(aflWeek, aflScope),
+    });
+    expect(itsWeek.throwback).toBe(true);
+  });
+
+  it('never dresses Best Ball, which runs no throwback week', () => {
+    expect(strictThrowbackScopeForNavSlug('bb1')).toBeNull();
+    const bb = buildFranchiseBandBrands('bb1', { throwbackActive: true });
+    expect(bb.throwback).toBe(false);
   });
 
   it('builds for every league in the registry without a crest-less crash', () => {

@@ -17,10 +17,12 @@ import { applyThrowbackOverrides, type ConfigTeam } from '../src/utils/live-scor
 import {
   scopedThrowbackKey,
   strictThrowbackScopeForLeagueSlug,
+  strictThrowbackScopeForNavSlug,
   isThrowbackWeekForScope,
   throwbackRules,
 } from '../src/utils/throwback-scope';
 import { makeThrowbackKey } from '../src/utils/throwback-store';
+import { buildFranchiseBandBrands } from '../src/utils/franchise-band-brand';
 import {
   AFL_THROWBACK_ASSET_CONFLICTS,
   AFL_THROWBACK_REBRAND,
@@ -63,6 +65,36 @@ describe('AFL throwback — scope separation', () => {
     expect(strictThrowbackScopeForLeagueSlug('best-ball-1')).toBeNull();
     expect(strictThrowbackScopeForLeagueSlug('afl-fantasy')).toBe('afl');
     expect(strictThrowbackScopeForLeagueSlug('theleague')).toBe('theleague');
+  });
+
+  it('resolves the NAV vocabulary too, which the brand layer speaks', () => {
+    // The registry-slug resolver above returns null for 'afl' — the registry
+    // knows that league as 'afl-fantasy'. Everything keyed off `LeagueSlug`
+    // (LEAGUE_TEAMS, the layout's league prop, buildFranchiseBandBrands) uses
+    // the NAV slug, and passing one to the registry resolver silently turned
+    // the AFL's franchise band brands off for the whole of Throwback Week.
+    // TheLeague cannot catch this: its two slugs are the same string.
+    expect(strictThrowbackScopeForNavSlug('afl')).toBe('afl');
+    expect(strictThrowbackScopeForNavSlug('theleague')).toBe('theleague');
+    expect(strictThrowbackScopeForNavSlug('bb1')).toBeNull();
+    expect(strictThrowbackScopeForNavSlug('afl-fantasy')).toBeNull();
+  });
+
+  it('dresses the AFL franchise band during a throwback week', () => {
+    const brands: any = buildFranchiseBandBrands('afl' as never, { throwbackActive: true });
+    expect(brands.throwback).toBe(true);
+    const bb: any = buildFranchiseBandBrands('bb1' as never, { throwbackActive: true });
+    expect(bb.throwback).toBe(false);
+  });
+
+  it('seeds 0006 to the INHERITED DD monogram, not its own 2003 era', () => {
+    // 0006 has its own Chieftans 2003-2003 AND inherits 0021's Da Dangsters
+    // 2003-2008. A bare-year seed matches whichever the eligible list orders
+    // first, which is the franchise's own — so this default is seeded by pick
+    // key and must stay that way.
+    const team = teams.find((t: any) => t.franchiseId === '0006')!;
+    const id = resolveThrowbackIdentity(team, undefined, 'afl', teams);
+    expect(id.icon).toBe('/assets/afl/history/da_dangsters_2003_icon.png');
   });
 
   it('runs Week 8, and NOT TheLeague\'s Week 4', () => {

@@ -76,6 +76,20 @@ export function parseThrowbackWeeks(source) {
 }
 
 /** Event id convention for resolved-events.json entries. */
+/**
+ * Redis key for a franchise's stored era pick, by NAV slug.
+ *
+ * Mirrors `scopedThrowbackKey` in src/utils/throwback-scope.ts — TheLeague
+ * keeps the legacy un-namespaced key so no owner loses a pick they already
+ * made, every other league is namespaced. Both leagues have a franchise 0001,
+ * so a bare `throwback:0001` reads whichever league wrote last.
+ */
+export function scopedThrowbackKeyForNavSlug(franchiseId, navSlug) {
+  return navSlug === 'theleague'
+    ? `throwback:${franchiseId}`
+    : `throwback:${navSlug}:${franchiseId}`;
+}
+
 export function throwbackEventId(week) {
   return `throwback-week-${week}`;
 }

@@ -238,13 +238,21 @@ function eraSpan(entry: FranchiseHistoryEntry): number {
  */
 export function pickDefaultThrowbackEra(
   eligible: FranchiseHistoryEntry[],
-  seededYearStart?: number
+  seededYearStart?: number | string
 ): FranchiseHistoryEntry | null {
   if (eligible.length === 0) return null;
 
   const defaultable = (e: FranchiseHistoryEntry) => !e.rebrand;
 
-  const seeded = eligible.find((e) => e.yearStart === seededYearStart);
+  // A bare year is ambiguous once eras can be inherited: franchise 0006 has
+  // its OWN 2003 era (Chieftans) AND inherits 0021's 2003 Da Dangsters, and
+  // `find` takes whichever the eligible list happens to order first. A seed
+  // may therefore also be a pick key ("0021:2003") naming the slot it came
+  // from, which is exact.
+  const seeded =
+    typeof seededYearStart === 'string'
+      ? eligible.find((e) => eraPickKey(e) === seededYearStart)
+      : eligible.find((e) => e.yearStart === seededYearStart);
   if (seeded && defaultable(seeded)) return seeded;
 
   const byTenure = (pool: FranchiseHistoryEntry[]) =>

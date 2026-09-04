@@ -33,6 +33,14 @@ import { isThrowbackWeekForScope, type ThrowbackScope } from './throwback-scope'
  */
 export interface ThrowbackPreview {
   yearStart: number;
+  /**
+   * The former slot an INHERITED era came from, carried so "Save this era"
+   * stores the era actually being previewed. Without it the save sends a bare
+   * year, and a franchise that has its own era starting that year saves that
+   * one instead — silently the wrong identity for exactly the franchises
+   * lineage exists for.
+   */
+  sourceFranchiseId?: string;
   eraName: string;
   teamName: string;
   ownSave: boolean;
@@ -112,6 +120,7 @@ export async function applyThrowbackToBoard(
       ownerOverrides[targetFranchiseId] = previewPick;
       preview = {
         yearStart: previewPick.yearStart,
+        sourceFranchiseId: previewPick.sourceFranchiseId ?? undefined,
         eraName: chosen.name,
         teamName: targetTeam.name,
         ownSave: targetFranchiseId === userFranchiseId,

@@ -23,7 +23,12 @@ interface Props {
 const { preview, settingsPath } = Astro.props as Props;
 ---
 
-<div class="ls-tb-preview" id="tb-preview-bar" data-year-start={preview.yearStart}>
+<div
+  class="ls-tb-preview"
+  id="tb-preview-bar"
+  data-year-start={preview.yearStart}
+  data-source-franchise-id={preview.sourceFranchiseId ?? ''}
+>
   <span class="ls-tb-preview__text">
     {preview.ownSave ? (
       <>
@@ -60,6 +65,9 @@ const { preview, settingsPath } = Astro.props as Props;
 
     btn.addEventListener('click', async () => {
       const yearStart = Number(bar.dataset.yearStart);
+      // Empty for an era of the franchise's own; set when the previewed era is
+      // inherited from a former slot, which the bare year cannot identify.
+      const sourceFranchiseId = bar.dataset.sourceFranchiseId || undefined;
       btn.disabled = true;
       if (status) status.textContent = 'Saving…';
       try {
@@ -68,7 +76,7 @@ const { preview, settingsPath } = Astro.props as Props;
         const res = await fetch('/api/throwback-preference', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ yearStart }),
+          body: JSON.stringify({ yearStart, sourceFranchiseId }),
         });
         const data = await res.json();
         if (data.success) {

@@ -32,7 +32,7 @@ import type { LeagueSlug } from '../types/nav';
 import { buildFranchiseBandBrands } from '../utils/franchise-band-brand';
 import {
   isThrowbackWeekForScope,
-  strictThrowbackScopeForLeagueSlug,
+  strictThrowbackScopeForNavSlug,
 } from '../utils/throwback-scope';
 import { getAllThrowbackPreferences } from '../utils/throwback-store';
 import type { ThrowbackPick } from '../utils/throwback-identity';
@@ -87,7 +87,7 @@ const week =
   Number.isFinite(weekParam) && weekParam > 0 ? weekParam : (getCurrentNFLWeek(now) ?? 0);
 
 // Null for a league that does not run Throwback Week at all (Best Ball).
-const throwbackScope = strictThrowbackScopeForLeagueSlug(league);
+const throwbackScope = strictThrowbackScopeForNavSlug(league);
 const throwbackActive = throwbackScope !== null && isThrowbackWeekForScope(week, throwbackScope);
 const throwbackOverrides =
   throwbackActive && throwbackScope ? await cachedThrowbackOverrides(throwbackScope) : {};

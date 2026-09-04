@@ -84,18 +84,26 @@ export const AFL_THROWBACK_ASSET_CONFLICTS: { franchiseId: string; yearStart: nu
  * never changed their NAME, so their `history[]` was empty and they were the
  * only AFL teams that could not throw back.
  */
-export const AFL_DEFAULT_THROWBACK_ERA: Record<string, number> = {
+/**
+ * franchiseId → the era wear by default. A bare `yearStart`, or a pick key
+ * (`"0021:2003"`) when the era is INHERITED from a former franchise slot and
+ * the franchise also has one of its own starting that year — a bare year is
+ * ambiguous there and resolves to the franchise's own era.
+ */
+export const AFL_DEFAULT_THROWBACK_ERA: Record<string, number | string> = {
   '0001': 2006, // Smokane FC → Smokane FC (The gas mask) — 13 seasons
   '0002': 2003, // Drunk Indians → Drunk Indians (The original Wahoo) — 14 seasons
   '0003': 2013, // Team Minty Fresh → Team Minty Fresh (The mint leaf) — 12 seasons
   '0004': 2019, // Get off my Ditka → Maga Nation — commissioner pick over the
                 //   tenure rule, which would say 2012 (The Dude that Abides, 5).
   '0005': 2010, // Computer Jocks → booyakasha — 5 seasons
-  '0006': 2003, // Da Dangsters → Da Dangsters (The DD monogram) — commissioner
+  '0006': '0021:2003', // Da Dangsters → Da Dangsters (The DD monogram) — commissioner
                 //   pick over the tenure rule, which would say 2013 (12
                 //   seasons). The monogram era lives on slot 0021 and reaches
                 //   0006 through its ownerHistory window, so the conflict that
-                //   keeps 0021 itself off the name does not apply.
+                //   keeps 0021 itself off the name does not apply. Seeded by
+                //   PICK KEY, not a bare year: 0006 has its own 2003 era
+                //   (Chieftans) and a bare 2003 resolves to that one instead.
   '0007': 2010, // Avenging Amish → Touchdown My Pants — 4 seasons
   '0008': 2003, // Dicks out for Harambe → The Nukes — 13 seasons
   '0009': 2009, // Vitside Mafia → Gamecocks — commissioner pick over the tenure
