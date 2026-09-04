@@ -23,6 +23,7 @@ interface Props {
   ownFranchiseId: string;
   ballotHref: string;
   columnHref: string;
+  vapidPublicKey?: string;
 }
 
 interface Status {
@@ -32,7 +33,7 @@ interface Status {
 }
 
 export default function LineupBallotStrip(props: Props) {
-  const { teams, slots, quorum, leagueParam, ownFranchiseId, ballotHref, columnHref } = props;
+  const { teams, slots, quorum, leagueParam, ownFranchiseId, ballotHref, columnHref, vapidPublicKey = '' } = props;
   const [status, setStatus] = useState<Status | null>(null);
   const [expanded, setExpanded] = useState(false);
 
@@ -102,6 +103,7 @@ export default function LineupBallotStrip(props: Props) {
             leagueParam={leagueParam}
             ownFranchiseId={ownFranchiseId}
             columnHref={ballotHref}
+            vapidPublicKey={vapidPublicKey}
           />
         </div>
       )}

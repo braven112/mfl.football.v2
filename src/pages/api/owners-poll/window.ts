@@ -33,6 +33,7 @@ import {
   windowHours,
   SHORT_WINDOW_HOURS,
 } from '../../../utils/owners-poll-window.mjs';
+import { getSubscriptions } from '../../../utils/push-subscriptions';
 import {
   clearOwnersPollWindow,
   countBallots,
@@ -176,10 +177,26 @@ export const GET: APIRoute = async ({ request }) => {
   }
 
   const { scope, league } = resolved.caller;
+
+  // Push coverage, because the poll now leans on push: one chat post a day and
+  // everything else personal. That only works if owners have actually opted
+  // in, and until this number is healthy the daily chat post is the poll's
+  // real reach. Counts only — never which owners, and never an endpoint.
+  const pushCoverage = await countPushCoverage(league.id, eligibleFranchiseIdsFor(league));
+
   const window = await readOwnersPollWindow(scope);
   const state = windowState(window);
   if (!window) {
-    return json({ status: state, window: null, eligibleVoters: eligibleFranchiseIdsFor(league).length }, 200, headers);
+    return json(
+      {
+        status: state,
+        window: null,
+        eligibleVoters: eligibleFranchiseIdsFor(league).length,
+        pushCoverage,
+      },
+      200,
+      headers,
+    );
   }
   const ballotsIn = await countBallots(scope, window);
   return json(
@@ -194,8 +211,33 @@ export const GET: APIRoute = async ({ request }) => {
       },
       ballotsIn,
       eligibleVoters: window.eligibleFranchiseIds.length,
+      pushCoverage,
     },
     200,
     headers,
   );
 };
+
+/**
+ * How many franchises have at least one push subscription.
+ *
+ * A COUNT, deliberately — the commissioner needs to know whether push is
+ * reaching the league, not who has it off. Degrades to zeros rather than
+ * throwing: a coverage read must never take down the control panel.
+ */
+async function countPushCoverage(leagueId: string, franchiseIds: string[]) {
+  let withPush = 0;
+  let devices = 0;
+  for (const franchiseId of franchiseIds) {
+    try {
+      const subs = await getSubscriptions(leagueId, franchiseId);
+      if (subs.length > 0) {
+        withPush += 1;
+        devices += subs.length;
+      }
+    } catch {
+      // Skip this franchise rather than failing the whole count.
+    }
+  }
+  return { withPush, of: franchiseIds.length, devices };
+}

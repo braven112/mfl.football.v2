@@ -5,6 +5,8 @@
 import { describe, it, expect } from 'vitest';
 import {
   buildVoterPushes,
+  buildOpenPushes,
+  buildNagPushes,
   buildRevealFeedPost,
   buildCallback,
   upsertFeedPost,
@@ -280,5 +282,72 @@ describe('reveal post carries the callback', () => {
       priorIssues: [prior],
     })!;
     expect(post.body).toMatch(/week 2/i);
+  });
+});
+
+describe('buildOpenPushes', () => {
+  const openIssue = {
+    year: 2026,
+    week: 5,
+    rankings: FIELD.map((franchiseId, i) => ({ franchiseId, rank: i + 1 })),
+    ownersPoll: { status: 'open', slots: 7 },
+  };
+
+  it('goes to EVERY owner — at open there are no voters yet', () => {
+    const pushes = buildOpenPushes({ issue: openIssue, teams, eligibleFranchiseIds: FIELD });
+    expect(pushes).toHaveLength(16);
+    expect(pushes.map((p: any) => p.franchiseId)).toEqual(FIELD);
+  });
+
+  it('leads with the disagreement bait, not the chore', () => {
+    const pushes = buildOpenPushes({ issue: openIssue, teams, eligibleFranchiseIds: FIELD });
+    expect(pushes[0].body).toContain('Team 1');
+    expect(pushes[0].body).toContain('Team 16');
+    expect(pushes[0].body).toMatch(/rank your top 7/i);
+    expect(pushes[0].url).toContain('/pecking-order/ballot');
+  });
+
+  it('sends nothing once the poll is closed', () => {
+    expect(
+      buildOpenPushes({
+        issue: { ...openIssue, ownersPoll: { status: 'closed', slots: 7 } },
+        teams,
+        eligibleFranchiseIds: FIELD,
+      }),
+    ).toEqual([]);
+  });
+});
+
+describe('buildNagPushes', () => {
+  const base = {
+    league: LEAGUE,
+    week: 5,
+    ballotsIn: 9,
+    eligibleVoters: 16,
+    closesAt: '2026-09-10T23:00:00.000Z',
+  };
+
+  it('goes ONLY to the owners who have not voted', () => {
+    const nonVoters = FIELD.slice(9);
+    const pushes = buildNagPushes({ ...base, nonVoters });
+    expect(pushes.map((p: any) => p.franchiseId)).toEqual(nonVoters);
+  });
+
+  it('tells them the count but never who else is missing', () => {
+    // Count-only survives the move to push: an owner learns how many ballots
+    // are in, never whose are absent.
+    const pushes = buildNagPushes({ ...base, nonVoters: ['0016'] });
+    expect(pushes[0].body).toContain('9 of 16');
+    for (const fid of FIELD) expect(pushes[0].body).not.toContain(fid);
+    expect(pushes[0].body).not.toMatch(/Team \d/);
+  });
+
+  it('ties the ask to the deadline owners already obey', () => {
+    const pushes = buildNagPushes({ ...base, nonVoters: ['0016'] });
+    expect(pushes[0].body).toMatch(/same deadline as your lineup/i);
+  });
+
+  it('sends nothing at full turnout', () => {
+    expect(buildNagPushes({ ...base, nonVoters: [] })).toEqual([]);
   });
 });

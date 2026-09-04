@@ -90,6 +90,63 @@ export function buildVoterPushes({ league, issue, teams, previousIssue = null })
 }
 
 /**
+ * Ballot-open push, to every owner.
+ *
+ * Tuesday's chat post carries the column; this carries the ask. Sending it to
+ * everyone rather than "non-voters" is deliberate — at open there are no
+ * voters yet, and a push that arrives with the column is the one an owner is
+ * most likely to act on immediately.
+ */
+export function buildOpenPushes({ issue, teams, eligibleFranchiseIds }) {
+  const poll = issue?.ownersPoll;
+  if (!poll || poll.status !== 'open') return [];
+  const name = (fid) => teams.get(fid)?.nameMedium ?? fid;
+  const top = issue.rankings?.[0];
+  const bottom = issue.rankings?.[issue.rankings.length - 1];
+
+  const bait =
+    top && bottom
+      ? `The computer has ${name(top.franchiseId)} #1 and ${name(bottom.franchiseId)} last.`
+      : 'The column is up.';
+
+  return eligibleFranchiseIds.map((franchiseId) => ({
+    franchiseId,
+    title: `Owners' Poll — Week ${issue.week} is open`,
+    body: `${bait} Rank your top ${poll.slots} — about a minute.`,
+    url: BALLOT_PATH,
+    tag: `owners-poll-open-${issue.year}-${issue.week}`,
+  }));
+}
+
+/**
+ * The turnout reminder, as push, to the owners who have NOT voted.
+ *
+ * This is the post that most deserved to leave the chat. A count-only nag is
+ * the least newsworthy thing the poll produces and the most repetitive, and in
+ * a personal channel it can do what it could never do publicly: address the
+ * person who actually still needs to act, without naming them to anyone else.
+ *
+ * The count-only rule still holds in what it SAYS — an owner is told how many
+ * ballots are in, never who is missing.
+ */
+export function buildNagPushes({ league, week, ballotsIn, eligibleVoters, closesAt, nonVoters }) {
+  if (!Array.isArray(nonVoters) || nonVoters.length === 0) return [];
+  const closes = new Date(closesAt).toLocaleString('en-US', {
+    timeZone: 'America/Los_Angeles',
+    weekday: 'long',
+    hour: 'numeric',
+    hour12: true,
+  });
+  return nonVoters.map((franchiseId) => ({
+    franchiseId,
+    title: `Owners' Poll closes ${closes} PT`,
+    body: `${ballotsIn} of ${eligibleVoters} ballots are in and yours isn't. Same deadline as your lineup.`,
+    url: BALLOT_PATH,
+    tag: `owners-poll-nag-${week}`,
+  }));
+}
+
+/**
  * POST the composed pushes to the site's cron route.
  *
  * Never throws and never fails the close pass: the reveal has already reached

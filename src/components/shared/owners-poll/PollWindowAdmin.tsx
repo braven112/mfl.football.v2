@@ -24,6 +24,7 @@ interface WindowState {
   window: { year: number; week: number; opensAt: string; closesAt: string; slots: number } | null;
   ballotsIn?: number;
   eligibleVoters?: number;
+  pushCoverage?: { withPush: number; of: number; devices: number };
 }
 
 export default function PollWindowAdmin({ leagueParam, quorum, slots }: Props) {
@@ -163,6 +164,26 @@ export default function PollWindowAdmin({ leagueParam, quorum, slots }: Props) {
               </button>
             )}
           </div>
+
+          {state.pushCoverage && (
+            <p
+              className={`op-admin__coverage ${
+                state.pushCoverage.withPush * 2 < state.pushCoverage.of ? 'op-admin__coverage--low' : ''
+              }`}
+            >
+              <strong>
+                {state.pushCoverage.withPush} of {state.pushCoverage.of}
+              </strong>{' '}
+              owners have notifications on ({state.pushCoverage.devices} devices).
+              {state.pushCoverage.withPush * 2 < state.pushCoverage.of && (
+                <>
+                  {' '}
+                  The poll sends one chat post a day and everything else by push, so
+                  under half the league is reachable for the reminder and the result.
+                </>
+              )}
+            </p>
+          )}
 
           <p className="op-admin__note">
             {slots} slots · quorum {quorum}

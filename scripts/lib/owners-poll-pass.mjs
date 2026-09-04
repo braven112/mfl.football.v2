@@ -265,28 +265,13 @@ export function buildOpenLine(issue, teams, league) {
 }
 
 /**
- * Wednesday-morning reminder. COUNT ONLY — no names, no @-mentions.
+ * The reveal — the poll's ONE chat post on the day it closes.
  *
- * That is a deliberate product decision, not an oversight: naming non-voters
- * was the stronger lever and was rejected. Compensate with scarcity (a
- * deadline and a shrinking number), never by adding the names back.
+ * GroupMe is capped at a single poll post per Pacific day (see
+ * owners-poll-groupme-budget), so the turnout reminder moved to push and this
+ * is what the chat gets: a result, which is the only part of the poll that is
+ * news rather than admin.
  */
-export function buildNagMessage({ league, week, ballotsIn, eligibleVoters, closesAt }) {
-  const remaining = eligibleVoters - ballotsIn;
-  if (remaining <= 0) return null;
-  const closes = new Date(closesAt).toLocaleString('en-US', {
-    timeZone: 'America/Los_Angeles',
-    weekday: 'long',
-    hour: 'numeric',
-    hour12: true,
-  });
-  return [
-    `🗳️ Owners' Poll — Week ${week}: ${ballotsIn} of ${eligibleVoters} ballots in.`,
-    `${remaining} to go, and it closes ${closes} PT ▸ ${leagueUrl(league, BALLOT_PATH)}`,
-  ].join('\n');
-}
-
-/** The Wednesday-evening reveal. */
 export function buildRevealMessage({ league, issue, teams, callback = null }) {
   const poll = issue.ownersPoll;
   if (!poll || poll.status !== 'closed') return null;
@@ -356,13 +341,24 @@ export async function readTurnout({ league }) {
   if (!window) return { ok: false, reason: 'no-window' };
   if (Date.parse(window.closesAt) <= Date.now()) return { ok: false, reason: 'already-closed' };
 
-  const ballotsIn = await countBallots(redis, league.navSlug, window.year, window.week);
+  // Reads the ballots rather than just HLEN, because the nag is now a PUSH to
+  // the owners who haven't voted, and that needs to know which ones. This runs
+  // server-side in the close/nag cron and never crosses an HTTP boundary — the
+  // public /api/owners-poll/turnout endpoint still uses HLEN and still cannot
+  // name a voter.
+  const { ballots } = await readAllBallots(redis, league.navSlug, window.year, window.week, {
+    slots: window.slots,
+    eligibleFranchiseIds: window.eligibleFranchiseIds,
+  });
+  const voted = new Set(ballots.map((b) => b.franchiseId));
+
   return {
     ok: true,
     week: window.week,
     year: window.year,
-    ballotsIn,
+    ballotsIn: voted.size,
     eligibleVoters: window.eligibleFranchiseIds.length,
+    nonVoters: window.eligibleFranchiseIds.filter((fid) => !voted.has(fid)),
     closesAt: window.closesAt,
   };
 }

@@ -558,6 +558,7 @@ const ownersPollTeams = Object.values(getLeagueTeamBrands(ownersPollLeague.slug)
         ownFranchiseId={userFranchiseId}
         ballotHref={ensureLeaguePrefix(ownersPollLeague, '/pecking-order/ballot')}
         columnHref={ensureLeaguePrefix(ownersPollLeague, '/pecking-order')}
+        vapidPublicKey={(import.meta.env.PUBLIC_VAPID_PUBLIC_KEY as string | undefined) ?? ''}
       />
     )}
     <!-- Header -->

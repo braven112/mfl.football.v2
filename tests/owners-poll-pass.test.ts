@@ -46,7 +46,6 @@ const {
   closePoll,
   readTurnout,
   describeTurnoutFailure,
-  buildNagMessage,
   buildRevealMessage,
   buildOpenLine,
   normalizeFranchiseIds,
@@ -298,6 +297,10 @@ describe('readTurnout', () => {
     seedBallots(4);
     const turnout = await readTurnout({ league: LEAGUE });
     expect(turnout).toMatchObject({ ok: true, week: 5, ballotsIn: 4, eligibleVoters: 16 });
+    // The nag is a push now, so it has to know WHICH owners still owe a ballot.
+    expect(turnout.nonVoters).toHaveLength(12);
+    expect(turnout.nonVoters).not.toContain(FIELD[0]);
+    expect(turnout.nonVoters).toContain(FIELD[15]);
   });
 
   it('reports already-closed rather than a zero count', async () => {
@@ -309,32 +312,12 @@ describe('readTurnout', () => {
 describe('chat copy', () => {
   const teams = new Map(FIELD.map((fid, i) => [fid, { nameMedium: `Team ${i + 1}` }]));
 
-  it('nag names nobody and states the count', () => {
-    const text = buildNagMessage({
-      league: LEAGUE,
-      week: 5,
-      ballotsIn: 9,
-      eligibleVoters: 16,
-      closesAt: '2026-09-10T01:00:00.000Z',
-    })!;
-    expect(text).toContain('9 of 16');
-    expect(text).toContain('7 to go');
-    // No franchise id and no team name may appear — count-only is the rule.
-    for (const fid of FIELD) expect(text).not.toContain(fid);
-    expect(text).not.toMatch(/Team \d/);
-    expect(text).not.toContain('@');
-  });
-
-  it('nag stays silent at full turnout', () => {
-    expect(
-      buildNagMessage({
-        league: LEAGUE,
-        week: 5,
-        ballotsIn: 16,
-        eligibleVoters: 16,
-        closesAt: '2026-09-10T01:00:00.000Z',
-      }),
-    ).toBeNull();
+  it('no longer posts a nag to chat at all', async () => {
+    // One GroupMe post per day, and the reveal earns it. The reminder moved to
+    // push, where it can reach the owners who still need to act without
+    // naming them to everyone else.
+    const mod: Record<string, unknown> = await import('../scripts/lib/owners-poll-pass.mjs');
+    expect(mod.buildNagMessage).toBeUndefined();
   });
 
   it('open line leads with the disagreement, not the chore', () => {

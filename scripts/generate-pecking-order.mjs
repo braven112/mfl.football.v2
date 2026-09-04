@@ -44,7 +44,6 @@ import {
   readTurnout,
   describeTurnoutFailure,
   buildOpenLine,
-  buildNagMessage,
   buildRevealMessage,
   normalizeFranchiseIds,
 } from './lib/owners-poll-pass.mjs';
@@ -54,6 +53,8 @@ import {
   buildRevealFeedPost,
   buildCallback,
   upsertFeedPost,
+  buildOpenPushes,
+  buildNagPushes,
 } from './lib/owners-poll-posts.mjs';
 import {
   buildFactSheet,
@@ -866,18 +867,23 @@ async function runNagPoll(opts, league) {
     return;
   }
 
-  const text = buildNagMessage({ league, ...turnout });
-  if (!text) {
+  // PUSH ONLY. The chat gets one poll post per day and the reveal earns it;
+  // a count-only reminder is the least newsworthy thing the poll produces.
+  // In a personal channel it can also do what it never could publicly: reach
+  // the owners who still need to act without naming them to everyone else.
+  const notifications = buildNagPushes({ league, ...turnout });
+  if (notifications.length === 0) {
     console.log(`  [skip] All ${turnout.eligibleVoters} ballots are already in.`);
     return;
   }
 
   if (opts.dryRun || !opts.publish) {
-    console.log('--- NAG PREVIEW ---');
-    console.log(text);
+    console.log('--- NAG PREVIEW (push) ---');
+    console.log(`  ${notifications.length} owners have not voted:`);
+    console.log(`  "${notifications[0].title}" / "${notifications[0].body}"`);
     return;
   }
-  await postPollMessage(text, league, 'nag');
+  await sendVoterPushes({ league, notifications });
 }
 
 /**
@@ -1053,7 +1059,22 @@ async function main() {
   // Announce only on a fresh write (dedup above guarantees this) so a re-run
   // can never re-buzz the chat. Missing bot id skips silently by design.
   if (opts.publish) {
+    // ONE chat post: the column, with the ballot invite folded in.
     await postAnnouncement(issue, teams, league);
+
+    // Everyone gets the open on their phone. At open there are no voters yet,
+    // and a push that lands with the column is the one most likely to be acted
+    // on straight away.
+    if (pollBlock) {
+      await sendVoterPushes({
+        league,
+        notifications: buildOpenPushes({
+          issue,
+          teams,
+          eligibleFranchiseIds: normalizeFranchiseIds(teams.keys()),
+        }),
+      });
+    }
   }
 }
 

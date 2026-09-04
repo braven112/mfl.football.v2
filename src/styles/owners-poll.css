@@ -463,3 +463,49 @@
 }
 .op-lineup__body .op-slots { gap: 0.3rem; }
 .op-lineup__body .op-slot { min-height: 2.5rem; }
+
+/* --- inline push opt-in -------------------------------------------------
+ * The poll leans on push now, and its only opt-in lived on a page almost
+ * nobody visits. This asks where owners already are. It renders nothing once
+ * permission is granted, so it can never become a nag.
+ */
+.op-push {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0.75rem 0 0;
+  font-size: 0.825rem;
+  color: var(--content-text-muted);
+}
+.op-push--muted { display: block; }
+.op-push__btn {
+  min-height: 2.25rem;
+  padding: 0.4rem 0.8rem;
+  border-radius: var(--radius-md, 8px);
+  border: 1px solid var(--primary-color);
+  background: none;
+  color: var(--primary-color);
+  font-weight: 600;
+  font-size: 0.825rem;
+  cursor: pointer;
+}
+.op-push__btn:disabled { opacity: 0.5; cursor: default; }
+.op-push__why { flex: 1; min-width: 10rem; }
+.op-push__err { color: var(--color-error); }
+
+/* Push coverage, in the commissioner panel. Loud when it is low, because the
+   poll's reminder and result both ride on push now — a low number here means
+   most of the league only sees the one daily chat post. */
+.op-admin__coverage {
+  margin: 0.6rem 0 0;
+  font-size: 0.825rem;
+  color: var(--content-text-muted);
+}
+.op-admin__coverage strong { color: var(--page-text); }
+.op-admin__coverage--low {
+  padding: 0.5rem 0.65rem;
+  border-left: 3px solid var(--color-warning);
+  background: var(--content-bg);
+  border-radius: var(--radius-md, 8px);
+}

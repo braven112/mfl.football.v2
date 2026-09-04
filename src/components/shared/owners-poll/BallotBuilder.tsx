@@ -11,6 +11,7 @@
  */
 
 import { useCallback, useEffect, useMemo, useState, type CSSProperties } from 'react';
+import EnablePushButton from './EnablePushButton';
 import {
   isComplete,
   moveTeam,
@@ -42,6 +43,8 @@ interface Props {
   /** The viewer's own franchise, highlighted — self-voting is allowed. */
   ownFranchiseId: string;
   columnHref: string;
+  /** Empty when push isn't configured; the prompt then renders nothing. */
+  vapidPublicKey?: string;
 }
 
 /**
@@ -66,6 +69,7 @@ export default function BallotBuilder({
   leagueParam,
   ownFranchiseId,
   columnHref,
+  vapidPublicKey = '',
 }: Props) {
   const [load, setLoad] = useState<LoadState>('loading');
   const [status, setStatus] = useState<WindowStatus>('none');
@@ -296,9 +300,17 @@ export default function BallotBuilder({
       </div>
 
       {justSaved && !dirty && (
-        <p className="op-saved" role="status">
-          Ballot saved. You can change it until the poll closes.
-        </p>
+        <>
+          <p className="op-saved" role="status">
+            Ballot saved. You can change it until the poll closes.
+          </p>
+          {/* Asked HERE and not before: they have just shown they care about
+              the result, and the thing being offered is that result. */}
+          <EnablePushButton
+            vapidPublicKey={vapidPublicKey}
+            reason="Get your result the moment the poll closes — where the room put you, and how your ballot scored."
+          />
+        </>
       )}
       {saveError && (
         <p className="op-error" role="alert">

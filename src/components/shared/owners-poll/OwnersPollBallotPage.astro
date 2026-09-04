@@ -72,6 +72,10 @@ const columnHref = ensureLeaguePrefix(league, '/pecking-order');
 // inside the island: shipping the control markup to every owner and hiding it
 // with a client check is the kind of gate view-source defeats.
 const isCommish = isCommissionerOrAdmin(user);
+
+// Empty when push isn't configured on this deployment; the prompt then renders
+// nothing rather than offering a button that cannot work.
+const vapidPublicKey = (import.meta.env.PUBLIC_VAPID_PUBLIC_KEY as string | undefined) ?? '';
 ---
 
 <TheLeagueLayout title={`The Owners’ Poll — Cast Your Ballot | ${league.name}`}>
@@ -107,6 +111,7 @@ const isCommish = isCommissionerOrAdmin(user);
       leagueParam={league.navSlug}
       ownFranchiseId={user.franchiseId}
       columnHref={columnHref}
+      vapidPublicKey={vapidPublicKey}
     />
 
     <footer class="op-footnote">
