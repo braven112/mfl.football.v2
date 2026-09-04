@@ -33,7 +33,7 @@ import { getAllResolvedAflEvents } from './league-event-resolver';
 import { getDailySlot } from './hero-resolver';
 import { getCurrentNFLWeek } from './current-week';
 import { randomHeroPlayer } from './hero-players';
-import { buildMflLiveDraftUrl, buildMflOptionUrl } from './mfl-url';
+import { MFL_EMAIL_DRAFT_OPTION, buildMflLiveDraftUrl, buildMflOptionUrl } from './mfl-url';
 import { LEAGUES } from '../config/leagues';
 
 /** How long a fresh What's New entry stays in the hero. */
@@ -191,9 +191,6 @@ const AFL_BROADCAST_PATH = '/afl-fantasy/draft/broadcast';
 
 /** Our own draft-order page — the useful destination BEFORE draft day. */
 const AFL_DRAFT_ORDER_PATH = '/afl-fantasy/draft/order';
-
-/** MFL option number for the league's Email Draft page (`O=`). */
-const MFL_EMAIL_DRAFT_OPTION = 52;
 
 const aflMflHost = () => `https://${LEAGUES['afl-fantasy'].mflHost}`;
 

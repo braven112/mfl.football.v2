@@ -170,8 +170,14 @@ export function resolveRoomConference(
   available: string[]
 ): string | null {
   if (available.length === 0) return null;
-  const want = (requested ?? '').trim();
-  if (want && available.includes(want)) return want;
+  // Accepts the bare code AND MFL's unit id, because the other two pages that
+  // take `?conference=` do: the broadcast board links `?conference=00`, while
+  // Draft Results' matcher takes either. A URL copied between them must not
+  // silently land the reader on a different conference than the one they
+  // copied.
+  const want = (requested ?? '').trim().toUpperCase().replace(/^CONFERENCE/, '');
+  const match = available.find((c) => c.trim().toUpperCase() === want);
+  if (match) return match;
   if (viewerConference && available.includes(viewerConference)) return viewerConference;
   return available[0];
 }

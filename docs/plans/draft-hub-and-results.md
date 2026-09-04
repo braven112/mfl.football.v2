@@ -1,7 +1,8 @@
 # Draft Hub, Draft Results, and `/draft/*` consolidation
 
-Status: Phases 1-4 + 6 SHIPPED (2026-09-02). Phase 5 (AFL Draft Room) and the
-deferred AFL Mock Draft are the remaining work.
+Status: Phases 1-6 SHIPPED. Phases 1-4 + 6 on 2026-09-02; Phase 5 (the AFL's
+conference-aware draft room) on 2026-09-03. The deferred AFL Mock Draft is the
+only remaining work — and the only page the two leagues no longer share.
 Branch `claude/draft-results-page-be59e6`.
 
 Goal: one coherent draft section. Every draft page reachable from every other,
@@ -234,11 +235,16 @@ Worth recording, because both fired on work that looked finished:
 
 ## Still to do
 
-- **Phase 5 — AFL Draft Room, conference-aware.** `afl-draft-room-link.test.ts`
-  is the authority on why it is not a port: the AL meets live in MFL's
-  `ajax_ld` applet, the NL runs a slow email draft off MFL's option page. It
-  must be a shared component behind a thin wrapper, or `draft/room.astro`
-  becomes a genuine new fork.
+- ~~**Phase 5 — AFL Draft Room, conference-aware.**~~ SHIPPED 2026-09-03. It
+  did become a shared component behind thin wrappers, as required — and the
+  guard forced that order: TheLeague's 165-line route had to be extracted
+  first, because `draft/room.astro` turns into a two-league sibling the moment
+  the AFL has one. The AL/NL split is declared in `afl.config.json`'s
+  conferences (MFL's league-wide `draft_kind` cannot express it) and read via
+  `getConferenceDraftKind`. See
+  `docs/claude/insights/features/draft-hub-and-results.md` for the three bugs
+  it turned up, including the one that mattered most: a conference-scoped page
+  is not scoped until its POLL URL is scoped too.
 - **AFL Mock Draft** (deferred). TheLeague's mocks a 3-round, 51-pick rookie
   draft; the AFL is 108 picks per conference.
 - Publishing either to the AFL is a ONE-LINE edit: add `'afl-fantasy'` to that

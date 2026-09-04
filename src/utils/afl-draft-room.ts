@@ -25,14 +25,15 @@ import {
   type ConferenceDraftKind,
   type ConferenceId,
 } from './afl-conference';
-import { buildMflLiveDraftUrl, buildMflOptionUrl } from './mfl-url';
+import { buildMflLiveDraftUrl, buildMflOptionUrl, MFL_EMAIL_DRAFT_OPTION } from './mfl-url';
 import { buildDraftPlayers } from './build-draft-players';
 import { buildDraftRoomData, resolveRoomConference, type EagerFeedGlob } from './draft-room-data';
 import { getCurrentLeagueYear } from './league-year';
 import type { DraftRoomPageData, DraftRoomTeam } from '../types/draft-room';
 
-/** MFL option number for the league's Email Draft page (`O=`). */
-export const MFL_EMAIL_DRAFT_OPTION = 52;
+// Re-exported so this module stays the one place the room's callers look,
+// while the NUMBER itself has a single definition in mfl-url.
+export { MFL_EMAIL_DRAFT_OPTION };
 
 export interface AflRoomConference {
   code: string;

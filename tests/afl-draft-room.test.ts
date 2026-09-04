@@ -92,6 +92,15 @@ describe('which conference the room opens on', () => {
     expect(resolveRoomConference(null, null, codes)).toBe('00');
   });
 
+  it('accepts MFL’s unit id as well as the bare code', () => {
+    // The broadcast board links `?conference=00` and Draft Results' matcher
+    // takes either form. A URL copied between the three pages must land on
+    // the conference it names, not silently on the reader's own.
+    expect(resolveRoomConference('CONFERENCE01', '00', codes)).toBe('01');
+    expect(resolveRoomConference('conference01', '00', codes)).toBe('01');
+    expect(resolveRoomConference('CONFERENCE00', '01', codes)).toBe('00');
+  });
+
   it('ignores an unrecognised ?conference= rather than erroring', () => {
     expect(resolveRoomConference('99', '01', codes)).toBe('01');
     expect(resolveRoomConference('', '01', codes)).toBe('01');
