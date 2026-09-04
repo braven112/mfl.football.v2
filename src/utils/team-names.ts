@@ -164,6 +164,80 @@ export interface FranchiseHistoryEntry {
    */
   colorPrimary?: string;
   colorSecondary?: string;
+  /**
+   * Ring this era's crest in the given hex, in BOTH themes.
+   *
+   * Most era crests were cut out of the era's BANNER rather than drawn as
+   * icons, so they are a circle of banner — a gradient, a slice of a
+   * photograph, half a wordmark — with no rim of their own. A stroke in the
+   * era's own color gives that circle an edge and it reads as a badge instead
+   * of a crop.
+   *
+   * Deliberately NOT the same mechanism as a team's `iconStrokeDark`, which
+   * exists for dark-mode legibility, is measured by
+   * `scripts/measure-crest-contrast.mjs`, and is white. White is useless here
+   * — it vanishes on the light card, which is exactly where a banner cut looks
+   * most unfinished.
+   *
+   * **Presence is the opt-in, and absence is the endgame.** Better era art
+   * arriving is expected: drop the new file in and delete this field, and the
+   * crest renders as authored with no other change. Never bake a ring into the
+   * PNG for the same reason.
+   */
+  iconStroke?: string;
+  /**
+   * Render this era's crest as a free-standing mark: no circular clip, and
+   * contained rather than cover-cropped.
+   *
+   * The crest slots are round because 100+ era crests ARE a circle punched
+   * out of a banner. A real logo on transparency is not — the Bears' ears and
+   * Texas Tech's Double T both put art outside the inscribed circle, and the
+   * round slot bites the corners off. Scaling the mark down until it fits is
+   * the alternative and is worse: it renders visibly smaller than the banner
+   * cuts beside it.
+   *
+   * Mutually exclusive with `iconStroke` by construction: a rim on an
+   * un-clipped mark is a rectangle drawn around loose art.
+   * `buildEraCrestShapeCss` emits the rule; `tests/era-crest-stroke.test.ts`
+   * pins that the two never appear together.
+   */
+  iconFreeform?: boolean;
+  /**
+   * Trace this era's crest in white, in DARK MODE ONLY — `true` for the
+   * default hairline, or a hex to override the colour.
+   *
+   * The third and last of the era-crest treatments, and the three answer
+   * different questions. `iconStroke` rings the element BOX in the era's own
+   * colour in both themes, because a banner cut has no edge. `iconFreeform`
+   * removes the round slot, because a real mark is not a circle. This one
+   * traces the ART's silhouette, because a mark can be perfectly shaped and
+   * still sink into a near-black card — Smokane's green elephant reads fine
+   * on the light card and dissolves on the dark one.
+   *
+   * Emitted by `buildEraCrestDarkStrokeCss`, which delegates to the same
+   * `drop-shadow` stack the franchise-level `iconStrokeDark` uses. It is a
+   * `filter` rather than a `box-shadow` for the reason recorded there: only
+   * `drop-shadow` follows an image's alpha, and a box ring on a transparent
+   * PNG is a white square around the logo.
+   */
+  iconStrokeDark?: string | boolean;
+  /**
+   * Set at RUNTIME, never in a config file: the franchise slot this era was
+   * inherited from, when a franchise changed MFL slots and its earlier looks
+   * live in the other slot's `history[]`.
+   *
+   * Four AFL franchises moved slots (`ownerHistory` records it) and their
+   * old-school looks are filed under the id they used at the time — the
+   * Chatmaster of 2004-2009 sits in franchise 0007's history, not 0021's.
+   * Throwback Week offers those back to the franchise that actually wore
+   * them; see `getInheritedThrowbackEras`.
+   *
+   * It is deliberately NOT written into `history[]`. That array answers "what
+   * was THIS SLOT called in year N" for award naming, standings and owner
+   * attribution, and copying a borrowed era in makes two franchises claim the
+   * same slot-year — a bug this repo has already shipped once.
+   */
+  sourceFranchiseId?: string;
 }
 
 /**

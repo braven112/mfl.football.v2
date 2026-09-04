@@ -168,6 +168,18 @@ export const LEAGUES = {
     // defaults lean redraft/ADP. FantasyCalc dynasty stays AVAILABLE, just
     // not on by default — it overrates youth for a one-season horizon.
     defaultRankingSources: ['mfl-adp', 'espn', 'sharks'],
+    /**
+     * Week 8, deliberately NOT TheLeague's Week 4 — the two leagues share
+     * owners and a site, so spacing the events apart gives each its own
+     * moment instead of one crowded weekend.
+     *
+     * Week 8 is also a plain 12-matchup slate. The AFL plays doubleheaders in
+     * weeks 1, 2 and one LATE week that moves year to year (12 in 2023/2026,
+     * 13 in 2024/2025) — picking one of those would have made the throwback
+     * week a derived value rather than a constant, with the same
+     * copy-last-year's-number trap `schedule-optimization.md` documents.
+     */
+    throwbackWeeks: [8],
   },
   'best-ball-1': {
     id: '37610',

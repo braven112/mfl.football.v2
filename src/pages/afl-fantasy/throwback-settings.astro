@@ -1,0 +1,55 @@
+---
+/**
+ * Throwback Week settings (AFL) — thin route wrapper.
+ *
+ * Shared implementation lives in components/shared/ThrowbackSettingsPage.
+ *
+ * The league config is imported HERE because a static import specifier can't
+ * be a runtime variable, and importing both leagues' configs in the shared
+ * component would ship the other league's teams on every render.
+ *
+ * Every redirect also lives HERE, and must: `Astro.redirect()` only redirects
+ * from a PAGE. Returned from a component's frontmatter it merely stops
+ * rendering that component and the response is still a 200 with a blank body.
+ */
+export const prerender = false;
+
+import ThrowbackSettingsPage from '../../components/shared/ThrowbackSettingsPage.astro';
+import { getAuthUser } from '../../utils/auth';
+import { buildThrowbackSettingsView } from '../../utils/throwback-settings-view';
+import { getLeagueBySlug } from '../../config/leagues';
+import { resolveLeaguePath } from '../../utils/nav-utils';
+import type { TeamConfig } from '../../utils/team-names';
+import aflConfig from '../../../data/afl-fantasy/afl.config.json';
+
+const user = getAuthUser(Astro.request);
+if (!user?.franchiseId) {
+  return Astro.redirect('/afl-fantasy/login?redirect=/afl-fantasy/throwback-settings');
+}
+
+// League scoping, and it is not decoration: TheLeague's franchiseIds fully
+// overlap the AFL's, so a TheLeague session would otherwise resolve to a
+// same-numbered AFL team — and TheLeague 0001's admin bit would open this
+// league's commissioner panel.
+if (user.leagueId !== getLeagueBySlug('afl-fantasy')?.id) {
+  return Astro.redirect('/afl-fantasy');
+}
+
+const view = await buildThrowbackSettingsView(
+  user as typeof user & { franchiseId: string },
+  ((aflConfig as any).teams ?? []) as TeamConfig[],
+  'afl'
+);
+if (!view) return Astro.redirect('/afl-fantasy');
+
+const scoreboardPath = resolveLeaguePath(
+  '/afl-fantasy/live-scoring',
+  Astro.locals.hideLeaguePrefix ?? false
+);
+---
+
+<ThrowbackSettingsPage
+  view={view}
+  title="Throwback Week Settings | AFL Fantasy"
+  scoreboardPath={scoreboardPath}
+/>

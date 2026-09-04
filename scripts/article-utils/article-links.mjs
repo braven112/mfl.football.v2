@@ -109,7 +109,7 @@ export const DESTINATIONS = {
   salary: { path: '/salary', label: 'the salary benchmarks', leagues: ['theleague'] },
   stats: { path: '/stats', label: 'the stats hub', leagues: ['theleague'] },
   'league-summary': { path: '/league-summary', label: 'the league summary', leagues: ['theleague'] },
-  'throwback-settings': { path: '/throwback-settings', label: 'your throwback era', leagues: ['theleague'] },
+  'throwback-settings': { path: '/throwback-settings', label: 'your throwback era', leagues: ['theleague', 'afl-fantasy'] },
   suggestions: { path: '/suggestions', label: 'the suggestion board', leagues: ['theleague'] },
 
   // Same path, genuinely different pages: TheLeague's /activity tracks when

@@ -159,3 +159,223 @@ deliberately does not expose it.
 (verified to FAIL when the guard is removed) plus a real-config sweep asserting
 no franchise renders its own light crest during a throwback week.
 
+
+---
+
+## Three era crests are free-standing marks, not banner cuts (September 2026)
+
+`trevors_team_2003_icon.png` (Texas Tech's Double T) and
+`limp_ditkas_2006_icon.png` (the Bears' dark-mode mark) are **not** cut from
+their banners. They are ESPN's own team logos, mirrored from
+`a.espncdn.com/i/teamlogos/ncaa/500/2641.png` and
+`.../nfl/500-dark/CHI.png` — the same source `scripts/fetch-nfl-dark-logos.mjs`
+already mirrors from, and in both cases the identical mark the era's banner
+carries, only transparent and at full resolution instead of punched out of a
+950x158 strip.
+
+Two things about them are deliberate and easy to undo by accident:
+
+- **They are trimmed, then fitted to 96 of the 100 px box.** An ESPN mark
+  arrives 500x500 with a wide transparent margin, so a plain resize renders it
+  visibly smaller than the full-bleed banner cuts beside it. Trim the margin
+  first; the 4px of remaining padding is breathing room, not slack.
+- **Neither carries an `iconStroke`.** The rim exists to give a banner CUT an
+  edge it does not have. These marks bring their own outline — the Bears' is
+  literally a white keyline — and a ring around a transparent PNG is a circle
+  floating in empty space with the art loose inside it. Limp Ditkas had one
+  and lost it in the same change.
+- **Both carry `iconFreeform`, which un-clips the crest slot.** Every crest
+  slot on the site is `border-radius: 50%` + `object-fit: cover`, correct for
+  the 100+ crests that ARE a circle of banner and wrong for a mark on
+  transparency: the Bears' ears sit at a radius of ~54 in a box whose circle
+  stops at 50, so the round slot bit them off. `buildEraCrestShapeCss`
+  (`era-crest-stroke-css.ts`) emits `border-radius: 0; object-fit: contain`
+  keyed on the src, riding the same composition as the rims.
+
+  The `!important` on those two declarations is load-bearing. Astro compiles a
+  component's scoped `.tbw-card__icon` to `.tbw-card__icon[data-astro-cid-…]`
+  — specificity (0,2,0) — which outranks a global sheet's `img[src="…"]` at
+  (0,1,1), so no selector reachable from `TeamIconDarkStyles` wins on
+  specificity alone. Verified in the browser, not assumed: the flagged crest
+  computes to `border-radius: 0px / object-fit: contain` while the two beside
+  it stay `50% / cover`.
+
+  The other way out — shrinking the mark until its bounding box fits the
+  inscribed circle (70.7% of the box) — is worse, because it renders visibly
+  smaller than the banner cuts beside it, which is the sizing problem this art
+  was brought in to fix.
+
+The AFL's ATF badge (`atf_2003_icon.png`, worn by both the 2003 and 2004
+eras) is the third, and it is `iconFreeform` for a starker reason: at 1.92:1
+a round slot would leave it as three letters with the badge sliced off both
+ends. It is cropped to the GOLD rounded-rect by scanning for the badge's own
+gold rather than by `sharp.trim()` — the navy outside the badge and the navy
+inside it are the same colour, so a colour trim stops at the wrong edge.
+
+Smokane's elephant (`smokane_2003_icon.png`, the 2003-2005 era) is the fourth
+and the one that needed the third treatment. It arrived already transparent —
+what read as a black background in the preview was empty alpha over a dark
+backdrop, so it is trimmed on ALPHA, not on colour; trimming on colour would
+have kept the whole canvas.
+
+### The three era-crest treatments do not overlap
+
+| Field | What it draws | When | Why |
+|---|---|---|---|
+| `iconStroke` | a ring on the element BOX, in the era's colour | both themes | a circle punched out of a banner has no edge of its own |
+| `iconFreeform` | nothing — removes the round slot | both themes | the mark's shape is not a circle |
+| `iconStrokeDark` | the ART's silhouette, in white | dark only | the mark is fine on the light card and sinks into the dark one |
+
+Smokane's elephant needs the last two and must not have the first: it is a
+shaped mark (so no round slot) that is mid-green on a near-black card (so an
+outline), and a box ring around it would be a rectangle enclosing loose art.
+`buildEraCrestDarkStrokeCss` delegates to `crest-dark-stroke-css.ts` rather
+than restating the four-stacked-`drop-shadow` trick — that is also why it is
+a `filter` and not the `box-shadow` `iconStroke` uses: only `drop-shadow`
+follows an image's alpha, and on a transparent PNG a box ring is a white
+square around the logo.
+
+`tests/era-crest-stroke.test.ts` pins each treatment's opt-in as exact, that
+`iconStrokeDark` is gated on `html.dark` while `iconStroke` deliberately is
+not, and that no crest carries both.
+
+Both read correctly on the light card and the dark one, which is why the
+Bears' *dark* variant was the right pick rather than the standard mark: its
+white keyline disappears on the light card and the orange bear carries it,
+while on the dark card the keyline is what separates the mark from the ground.
+
+The palettes are untouched — `scripts/derive-era-palettes.mjs` samples the
+BANNER, never the crest, so swapping crest art cannot move an era's colors.
+
+---
+
+## Reworking era art: what an era edit touches (September 2026)
+
+A pass over the AFL's 117 eras — recutting crests, splitting two eras, moving
+three off the wrong asset — turned up four traps that have nothing to do with
+the art itself.
+
+### Editing `afl.config.json` eras leaves the derived chain stale
+
+`data/<league>/derived/franchise-history.json` carries a COPY of every era's
+`icon` and `banner` path, and `season-ledger.json`, `owner-tenures.json` and
+`division-strength.json` copy it again. The AFL franchise and owner pages
+(`src/pages/afl-fantasy/franchises/[id].astro`, `owners/[slug].astro`) read
+those files directly, NOT the config.
+
+Nothing regenerates them on build — `scripts/prebuild.mjs` does not run the
+compute scripts, and the only automated caller is
+`.github/workflows/fetch-owner-names.yml`. So a config-only era edit ships a
+site where the throwback pages show the new art and the franchise pages show
+the old, with the old year spans beside it. After changing eras, run in this
+order (the later two read the first's output):
+
+```bash
+node scripts/compute-franchise-history.mjs --league=afl
+node scripts/compute-owner-tenures.mjs
+node scripts/compute-division-strength.mjs
+```
+
+Grep the derived tree for a renamed asset to confirm it propagated; a count of
+0 means the chain did not rerun.
+
+### An era's crest can be a LIVE franchise's icon
+
+Four AFL eras pointed their crest at `/assets/afl/icons/*.png` — `chat.png`,
+`computer_jocks.png`, `micks.png` — files that are ALSO the current icon of
+franchises 0021, 0005 and 0013. Rewriting one in place to fix an era's framing
+silently changes that club's present-day mark everywhere it renders.
+
+Before editing any era asset, check whether a `teams[].icon` claims the same
+path. If it does, write a new file under `history/` and repoint the era.
+Patch the era line by INDENT — `"icon": "/assets/afl/icons/chat.png",` appears
+twice, at indent 6 for the team and indent 10 for the era.
+
+### The banner's top edge is three layers, not one
+
+Filling a crest's transparent band by walking down each column to the first
+opaque pixel produces a black line, because these 300x50 MFL banners stack
+transparent rows, then a SEMI-transparent black rule (alpha ~147, which an
+`alpha >= 200` test skips rather than replaces), then a dark bevel, and only
+then the field. Shifty Joe landed on the bevel at `103,31,31` instead of the
+field at `190,39,39`. Take the fill from the first true field row, found by
+inspection, not from "first opaque".
+
+The same walk is wrong at the left and right of a rounded plate: there the
+topmost opaque pixel of a column IS the plate's dark border, so the extend
+paints black down both sides. The A-Team's fix was to abandon the plate —
+key the wordmark by luminance, unmix it against the field it sat on, and lay
+it on a flat square of the era's own colour.
+
+### Measure the mark in the crest, not in the banner
+
+Sampling a mark's bounding box in the source banner catches its glow, outline
+and drop shadow asymmetrically. The Nukes' radiation symbol measured as
+centred in the banner and sat 9px right of centre in the rendered 100px crest.
+Measure in the crest against 49.5 and convert back: `Δbanner = Δcrest × S/100`.
+
+### Recovering an unknown crop window
+
+Most crests were generated by a script whose parameters are gone. To find them,
+template-match the crest against its banner with a summed-area table so each
+sample is the MEAN over its footprint — point sampling fails because a crest is
+a heavy downscale, and it reported rms 20-40 for correct matches. Sample only
+inside the inscribed circle so a baked circular alpha does not skew the fit.
+Box-filtered, a genuine match lands under ~15 and a wrong one over ~30, which
+is a clean enough split to drive a bulk fix (it found 60 crests carrying the
+banner's own border).
+
+An rms that stays high at every offset means the crest is not a crop of the
+configured banner at all. That is how two mismatches surfaced: The Street
+2005-2007 had been cut from the OTHER Street era's banner, and Minnesota Road
+Kill from a source not in the repo.
+
+### A mark wedged between letters needs a flood fill, not a crop
+
+The Blitzkrieg bolt sits between the "L" and the "T"; the Zephyr hurricane
+between the "R" and the tagline. No rectangle holds one without a neighbour.
+Seed a flood fill inside the mark and let the field colour bound it — a 3px
+gap of field is enough — then composite the result onto a canvas rebuilt from
+the banner's own per-row field colour.
+
+Per-row sampling is right for a gradient (Blitzkrieg's blue) and wrong for a
+flat ground (Zephyr's dark), where rows crossing the wordmark drag the median
+and band the result; use a plain gradient there.
+
+### A transparent cutout is not automatically the better answer
+
+Isolating a mark onto transparency reads beautifully on the dark card and can
+be unusable on the light one. Zephyr's hurricane is roughly half WHITE rings:
+cut out, it renders on a light page as three disconnected purple blobs. Keep a
+field behind any mark whose silhouette is substantially white, and reserve the
+cutout for marks that carry their own dark outline.
+
+### The per-year `logo` URL is the art archaeology index
+
+`data/<league>/mfl-feeds/<year>/league.json` holds each franchise's `logo` and
+`icon` URL for that season, so a club's whole art history is a loop over the
+years. Two things the URLs tell you at a glance:
+
+- `images/team_banners/…` and `team_banners/<year>_team_banners/…` are real
+  strip banners; `images/franchise_history_banner/…` and `images/team_pages/…`
+  are full team PAGES — tall composites carrying a small strip banner, a player
+  card and a stats box. A page is not a banner, but the strip inside it usually
+  is, and so is the club logo nobody ever used elsewhere (Drunk Indians' chief
+  drawing a bow sat in one for sixteen seasons).
+- A URL that never changes across a name's whole run means there IS no earlier
+  art. Titsburgh Feelers served one file 2013-2024, byte-identical to the one
+  in the repo, so there is nothing to make a second era from.
+
+Fetch through `https://mfl.football/afl-fantasy.com/<path>` with a browser
+User-Agent; the rehost answers 406 to curl's default. Team pages carry white
+overlay text across the art — inpaint it from the median of its clean
+neighbours rather than cropping around it, which costs more of the mark than
+the text does.
+
+### The conference badge still poisons hand-set palettes
+
+`scripts/derive-era-palettes.mjs` masks the AL/NL badge, but eras whose colours
+were set before that lived on. Dan Marino's Tan Isotoners carried
+`colorSecondary: #466286` — a blue sampled off the NL badge in the corner of a
+banner that is brown and tan and nothing else. When a palette contains a colour
+you cannot point to in the art, check the badge first.

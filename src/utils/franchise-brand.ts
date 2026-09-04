@@ -26,7 +26,7 @@ import {
   getTeamColorTertiary,
   getTeamColorQuaternary,
 } from './team-colors';
-import { resolveThrowbackIdentity } from './throwback-identity';
+import { resolveThrowbackIdentity, type ThrowbackPick } from './throwback-identity';
 
 export interface FranchiseBrand {
   franchiseId: string;
@@ -145,7 +145,7 @@ export function getFranchiseBrand(franchiseId: string): FranchiseBrand {
 export function getThrowbackFranchiseBrand(
   franchiseId: string,
   isActive: boolean,
-  ownerOverrideYearStart?: number
+  ownerOverride?: ThrowbackPick | number
 ): FranchiseBrand {
   const brand = getFranchiseBrand(franchiseId);
   if (!isActive) return brand;
@@ -153,7 +153,7 @@ export function getThrowbackFranchiseBrand(
   const team = ((leagueConfig as any).teams ?? []).find((t: any) => t.franchiseId === franchiseId);
   if (!team) return brand;
 
-  const identity = resolveThrowbackIdentity(team, ownerOverrideYearStart);
+  const identity = resolveThrowbackIdentity(team, ownerOverride);
   return {
     ...brand,
     name: identity.name,

@@ -35,10 +35,37 @@
       "history": [
         {
           "name": "Smokane",
-          "icon": "/assets/afl/history/smokane_banner_icon_circle.png",
-          "banner": "/assets/afl/history/smokane_banner.png",
+          "eraLabel": "The elephant",
+          "icon": "/assets/afl/history/smokane_2003_icon.png",
+          "iconFreeform": true,
+          "iconStrokeDark": true,
+          "banner": "/assets/afl/history/smokane_2004_banner.png",
+          "colorPrimary": "#39612f",
+          "colorSecondary": "#e0e0df",
           "yearStart": 2003,
-          "yearEnd": 2008
+          "yearEnd": 2005
+        },
+        {
+          "name": "Smokane FC",
+          "eraLabel": "The gas mask",
+          "icon": "/assets/afl/history/smokane_2006_icon.png",
+          "banner": "/assets/afl/history/smokane_2006_banner.png",
+          "colorPrimary": "#96a45b",
+          "colorSecondary": "#555555",
+          "iconStroke": "#96a45b",
+          "yearStart": 2006,
+          "yearEnd": 2018
+        },
+        {
+          "name": "Smokane FC",
+          "eraLabel": "The wide wordmark",
+          "icon": "/assets/afl/history/smokane_2019_icon.png",
+          "banner": "/assets/afl/history/smokane_2019_banner.png",
+          "colorPrimary": "#507963",
+          "colorSecondary": "#dedede",
+          "iconStroke": "#507963",
+          "yearStart": 2019,
+          "yearEnd": 2024
         }
       ],
       "groupMe": "/assets/afl/group-me/smokane.png",
@@ -67,6 +94,29 @@
       "icon": "/assets/afl/icons/drunk_indians.png",
       "iconDark": "/assets/afl/icons/drunk_indians_dark.png",
       "banner": "/assets/afl/banners/drunk_indians.png",
+      "history": [
+        {
+          "name": "Drunk Indians",
+          "eraLabel": "The original Wahoo",
+          "icon": "/assets/afl/history/drunk_indians_2003_icon.png",
+          "banner": "/assets/afl/history/drunk_indians_2003_banner.png",
+          "colorPrimary": "#1f3962",
+          "colorSecondary": "#eeece0",
+          "yearStart": 2003,
+          "yearEnd": 2007
+        },
+        {
+          "name": "Drunk Indians",
+          "eraLabel": "The bow and arrow",
+          "icon": "/assets/afl/history/drunk_indians_2008_icon.png",
+          "banner": "/assets/afl/history/drunk_indians_2008_banner.png",
+          "colorPrimary": "#bc3243",
+          "colorSecondary": "#927b5c",
+          "iconStroke": "#bc3243",
+          "yearStart": 2008,
+          "yearEnd": 2016
+        }
+      ],
       "groupMe": "/assets/afl/group-me/drunk_indians.png",
       "groupMeDark": "/assets/afl/group-me/drunk_indians_dark.png"
     },
@@ -101,6 +151,9 @@
           "nameShort": "MWC",
           "icon": "/assets/afl/history/marriedwithchildren_banner_icon_circle.png",
           "banner": "/assets/afl/history/marriedwithchildren_banner.png",
+          "colorPrimary": "#074e3b",
+          "colorSecondary": "#ebc097",
+          "iconStroke": "#074e3b",
           "yearStart": 2003,
           "yearEnd": 2010
         },
@@ -110,8 +163,24 @@
           "nameShort": "Inception",
           "icon": "/assets/afl/history/level_3_inception_banner_icon_circle.png",
           "banner": "/assets/afl/history/level_3_inception_banner.png",
+          "colorPrimary": "#bf0505",
+          "colorSecondary": "#49595b",
+          "iconStroke": "#bf0505",
           "yearStart": 2011,
           "yearEnd": 2012
+        },
+        {
+          "name": "Team Minty Fresh",
+          "eraLabel": "The mint leaf",
+          "icon": "/assets/afl/history/minty_fresh_2013_icon.png",
+          "banner": "/assets/afl/history/minty_fresh_2013_banner.png",
+          "colorPrimary": "#5b8053",
+          "colorSecondary": "#9bb396",
+          "iconStroke": "#5b8053",
+          "yearStart": 2013,
+          "yearEnd": 2024,
+          "nameMedium": "Minty Fresh",
+          "nameShort": "Minty"
         }
       ],
       "groupMe": "/assets/afl/group-me/minty-fresh.png",
@@ -146,6 +215,9 @@
           "name": "Coke n Blowjobs",
           "icon": "/assets/afl/history/coke_n_blowjobs_banner_icon_circle.png",
           "banner": "/assets/afl/history/coke_n_blowjobs_banner_face.jpg",
+          "colorPrimary": "#e8b6a5",
+          "colorSecondary": "#906c6b",
+          "iconStroke": "#e8b6a5",
           "yearStart": 2003,
           "yearEnd": 2003
         },
@@ -153,6 +225,8 @@
           "name": "The Vandalizers",
           "icon": "/assets/afl/history/the_vandalizers_icon_gif_icon_circle.png",
           "banner": "/assets/afl/history/the_vandalizers_banner.gif",
+          "colorPrimary": "#cc0f0e",
+          "colorSecondary": "#515151",
           "yearStart": 2004,
           "yearEnd": 2004
         },
@@ -160,8 +234,10 @@
           "name": "Muck Juggling Micks",
           "nameMedium": "Juggling Micks",
           "nameShort": "Micks",
-          "icon": "/assets/afl/icons/micks.png",
+          "icon": "/assets/afl/history/micks_2005_icon.png",
           "banner": "/assets/afl/history/muck_juggling_micks_banner.png",
+          "colorPrimary": "#19591a",
+          "colorSecondary": "#4e624a",
           "yearStart": 2005,
           "yearEnd": 2007
         },
@@ -171,6 +247,9 @@
           "nameShort": "Ballers",
           "icon": "/assets/afl/history/bay_area_ballers_banner_icon_circle.png",
           "banner": "/assets/afl/history/bay_area_ballers_banner.png",
+          "colorPrimary": "#185b18",
+          "colorSecondary": "#acaeab",
+          "iconStroke": "#185b18",
           "yearStart": 2008,
           "yearEnd": 2011
         },
@@ -180,6 +259,8 @@
           "nameShort": "The Dude",
           "icon": "/assets/afl/history/the_dude_that_abides_icon_icon_circle.png",
           "banner": "/assets/afl/history/the_dude_that_abides_banner.png",
+          "colorPrimary": "#deba34",
+          "colorSecondary": "#492d13",
           "yearStart": 2012,
           "yearEnd": 2016
         },
@@ -188,13 +269,17 @@
           "icon": "/assets/afl/history/cska_sofia_icon_icon_circle.png",
           "banner": "/assets/afl/history/cska_sofia_banner.png",
           "conference": "00",
+          "colorPrimary": "#d12017",
+          "colorSecondary": "#dab50b",
           "yearStart": 2017,
           "yearEnd": 2018
         },
         {
           "name": "Maga Nation",
-          "icon": "/assets/afl/history/maga_nation_icon_icon_circle.png",
+          "icon": "/assets/afl/history/maga_nation_2019_icon.png",
           "banner": "/assets/afl/history/maga_nation_banner.png",
+          "colorPrimary": "#d42117",
+          "colorSecondary": "#fbdb1a",
           "yearStart": 2019,
           "yearEnd": 2022
         },
@@ -204,6 +289,8 @@
           "nameShort": "GNP",
           "icon": "/assets/afl/history/team_ground_n_pound_icon_icon_circle.png",
           "banner": "/assets/afl/history/team_ground_n_pound_banner.png",
+          "colorPrimary": "#faca41",
+          "colorSecondary": "#0b5b31",
           "yearStart": 2023,
           "yearEnd": 2023
         },
@@ -213,6 +300,8 @@
           "nameShort": "Baby Gate",
           "icon": "/assets/afl/history/can_t_get_over_the_baby_gate_icon_icon_circle.png",
           "banner": "/assets/afl/history/can_t_get_over_the_baby_gate_banner.png",
+          "colorPrimary": "#d5ebe8",
+          "colorSecondary": "#565b5b",
           "yearStart": 2024,
           "yearEnd": 2024,
           "rebrand": {
@@ -252,6 +341,9 @@
           "name": "Bernies Brewers",
           "icon": "/assets/afl/history/bernies_brewers_banner_icon_circle.png",
           "banner": "/assets/afl/history/bernies_brewers_banner.png",
+          "colorPrimary": "#2d3b56",
+          "colorSecondary": "#7e8278",
+          "iconStroke": "#2d3b56",
           "yearStart": 2003,
           "yearEnd": 2006
         },
@@ -259,6 +351,9 @@
           "name": "420 All-Stars",
           "icon": "/assets/afl/history/420_all_stars_banner_icon_circle.png",
           "banner": "/assets/afl/history/420_all_stars_banner.png",
+          "colorPrimary": "#194010",
+          "colorSecondary": "#546e52",
+          "iconStroke": "#194010",
           "yearStart": 2007,
           "yearEnd": 2009
         },
@@ -266,6 +361,9 @@
           "name": "booyakasha",
           "icon": "/assets/afl/history/booyakasha_banner_icon_circle.png",
           "banner": "/assets/afl/history/booyakasha_banner.png",
+          "colorPrimary": "#6be766",
+          "colorSecondary": "#0f1e4b",
+          "iconStroke": "#6be766",
           "yearStart": 2010,
           "yearEnd": 2014
         }
@@ -314,6 +412,8 @@
           "name": "Chieftans",
           "icon": "/assets/afl/history/chieftans_icon_icon_circle.png",
           "banner": "/assets/afl/history/chieftans_banner_face.jpg",
+          "colorPrimary": "#a06e63",
+          "colorSecondary": "#4a4751",
           "yearStart": 2003,
           "yearEnd": 2003
         },
@@ -321,6 +421,8 @@
           "name": "Taco Hell",
           "icon": "/assets/afl/history/taco_hell_banner_gif_icon_circle.png",
           "banner": "/assets/afl/history/taco_hell_banner.gif",
+          "colorPrimary": "#ed5523",
+          "colorSecondary": "#50589c",
           "yearStart": 2004,
           "yearEnd": 2004
         },
@@ -328,6 +430,8 @@
           "name": "The Street",
           "icon": "/assets/afl/history/the_street_icon_icon_circle.png",
           "banner": "/assets/afl/history/the_street_banner.png",
+          "colorPrimary": "#581b11",
+          "colorSecondary": "#d2c9a9",
           "yearStart": 2005,
           "yearEnd": 2007
         },
@@ -335,6 +439,8 @@
           "name": "More Cowbell",
           "icon": "/assets/afl/history/more_cowbell_icon_icon_circle.png",
           "banner": "/assets/afl/history/more_cowbell_banner.png",
+          "colorPrimary": "#7e5a2b",
+          "colorSecondary": "#362e2a",
           "yearStart": 2008,
           "yearEnd": 2010
         },
@@ -344,8 +450,20 @@
           "nameShort": "Wonders",
           "icon": "/assets/afl/history/whitman_s_wonders_icon_icon_circle.png",
           "banner": "/assets/afl/history/whitman_s_wonders_banner.png",
+          "colorPrimary": "#148f4c",
+          "colorSecondary": "#193f83",
           "yearStart": 2011,
           "yearEnd": 2012
+        },
+        {
+          "name": "Da Dangsters",
+          "eraLabel": "The tommy gun",
+          "icon": "/assets/afl/history/da_dangsters_2013_icon.png",
+          "banner": "/assets/afl/history/da_dangsters_2013_banner.png",
+          "colorPrimary": "#1b293b",
+          "colorSecondary": "#dadbdd",
+          "yearStart": 2013,
+          "yearEnd": 2024
         }
       ],
       "groupMe": "/assets/afl/group-me/da_dangsters.png",
@@ -381,14 +499,19 @@
           "name": "The Vandalizers",
           "icon": "/assets/afl/history/the_vandalizers_icon_jpg_icon_circle.png",
           "banner": "/assets/afl/history/the_vandalizers_banner_face.jpg",
+          "colorPrimary": "#dba47d",
+          "colorSecondary": "#878982",
           "yearStart": 2003,
           "yearEnd": 2003
         },
         {
           "name": "Chatmaster",
-          "icon": "/assets/afl/icons/chat.png",
+          "eraLabel": "The gold lightning",
+          "icon": "/assets/afl/history/chatmaster_2004_icon.png",
           "banner": "/assets/afl/history/chatmaster_banner.png",
           "conference": "00",
+          "colorPrimary": "#c2a93e",
+          "colorSecondary": "#303031",
           "yearStart": 2004,
           "yearEnd": 2009
         },
@@ -398,6 +521,9 @@
           "nameShort": "TD Pants",
           "icon": "/assets/afl/history/touchdown_my_pants_banner_icon_circle.png",
           "banner": "/assets/afl/history/touchdown_my_pants_banner.png",
+          "colorPrimary": "#c4b362",
+          "colorSecondary": "#12204d",
+          "iconStroke": "#c4b362",
           "yearStart": 2010,
           "yearEnd": 2013
         },
@@ -405,6 +531,8 @@
           "name": "Team Murderface",
           "icon": "/assets/afl/history/team_murderface_icon_icon_circle.png",
           "banner": "/assets/afl/history/team_murderface_banner.png",
+          "colorPrimary": "#61482d",
+          "colorSecondary": "#1f1f1f",
           "yearStart": 2014,
           "yearEnd": 2014
         },
@@ -412,6 +540,8 @@
           "name": "Vit's Brother",
           "icon": "/assets/afl/history/vit_s_brother_icon_icon_circle.png",
           "banner": "/assets/afl/history/vit_s_brother_banner.png",
+          "colorPrimary": "#89cbdc",
+          "colorSecondary": "#b25f55",
           "yearStart": 2021,
           "yearEnd": 2021,
           "rebrand": {
@@ -425,6 +555,8 @@
           "nameShort": "Broke Back",
           "icon": "/assets/afl/history/broke_back_lil_half_dead_s_brother_icon_icon_circle.png",
           "banner": "/assets/afl/history/broke_back_lil_half_dead_s_brother_banner.png",
+          "colorPrimary": "#8fc7d4",
+          "colorSecondary": "#eaf1e8",
           "yearStart": 2023,
           "yearEnd": 2023,
           "rebrand": {
@@ -474,6 +606,9 @@
           "name": "The Nukes",
           "icon": "/assets/afl/history/the_nukes_banner_icon_circle.png",
           "banner": "/assets/afl/history/the_nukes_banner.png",
+          "colorPrimary": "#8d322a",
+          "colorSecondary": "#302b27",
+          "iconStroke": "#8d322a",
           "yearStart": 2003,
           "yearEnd": 2015
         },
@@ -481,6 +616,8 @@
           "name": "Blowing My Horn",
           "icon": "/assets/afl/history/blowing_my_horn_icon_icon_circle.png",
           "banner": "/assets/afl/history/blowing_my_horn_banner.png",
+          "colorPrimary": "#e7c89b",
+          "colorSecondary": "#313030",
           "yearStart": 2016,
           "yearEnd": 2018
         }
@@ -516,10 +653,45 @@
       "history": [
         {
           "name": "Gamecocks",
-          "icon": "/assets/afl/history/gamecocks_icon_icon_circle.png",
+          "eraLabel": "The original",
+          "icon": "/assets/afl/history/gamecocks_mascot_icon.png",
+          "iconFreeform": true,
           "banner": "/assets/afl/history/gamecocks_banner.png",
+          "colorPrimary": "#874d46",
+          "colorSecondary": "#d2d2d3",
           "yearStart": 2003,
+          "yearEnd": 2003
+        },
+        {
+          "name": "Gamecocks",
+          "eraLabel": "The red oval",
+          "icon": "/assets/afl/history/gamecocks_2004_icon.png",
+          "banner": "/assets/afl/history/gamecocks_2004_banner.png",
+          "colorPrimary": "#aa7671",
+          "colorSecondary": "#d6d5d5",
+          "yearStart": 2004,
+          "yearEnd": 2008
+        },
+        {
+          "name": "Gamecocks",
+          "eraLabel": "The rooster",
+          "icon": "/assets/afl/history/gamecocks_mascot_icon.png",
+          "iconFreeform": true,
+          "banner": "/assets/afl/history/gamecocks_2009_banner.png",
+          "colorPrimary": "#a65468",
+          "colorSecondary": "#272727",
+          "yearStart": 2009,
           "yearEnd": 2009
+        },
+        {
+          "name": "Vitside Mafia",
+          "eraLabel": "The old lockup",
+          "icon": "/assets/afl/history/vitside_2010_icon.png",
+          "banner": "/assets/afl/history/vitside_2010_banner.png",
+          "colorPrimary": "#68100d",
+          "colorSecondary": "#afacac",
+          "yearStart": 2010,
+          "yearEnd": 2024
         }
       ]
     },
@@ -545,6 +717,29 @@
       "icon": "/assets/afl/icons/fullybaked.png",
       "iconDark": "/assets/afl/icons/fullybaked_dark.png",
       "banner": "/assets/afl/banners/fullybaked.png",
+      "history": [
+        {
+          "name": "Fullybaked",
+          "eraLabel": "Half Baked",
+          "icon": "/assets/afl/history/fullybaked_2003_icon.png",
+          "banner": "/assets/afl/history/fullybaked_2003_banner.png",
+          "colorPrimary": "#83aadd",
+          "colorSecondary": "#5f71ae",
+          "yearStart": 2003,
+          "yearEnd": 2004
+        },
+        {
+          "name": "Fullybaked",
+          "eraLabel": "Red graffiti",
+          "icon": "/assets/afl/history/fullybaked_2005_icon.png",
+          "banner": "/assets/afl/history/fullybaked_2005_banner.png",
+          "colorPrimary": "#9b0506",
+          "colorSecondary": "#86bbdb",
+          "iconStroke": "#9b0506",
+          "yearStart": 2005,
+          "yearEnd": 2016
+        }
+      ],
       "groupMe": "/assets/afl/group-me/fullybaked.png",
       "groupMeDark": "/assets/afl/group-me/fullybaked_dark.png"
     },
@@ -578,6 +773,8 @@
           "name": "HiGhClImBeRs",
           "icon": "/assets/afl/history/highclimbers_icon_icon_circle.png",
           "banner": "/assets/afl/history/highclimbers_banner.gif",
+          "colorPrimary": "#c00502",
+          "colorSecondary": "#eec461",
           "yearStart": 2003,
           "yearEnd": 2004
         },
@@ -585,6 +782,8 @@
           "name": "The Rookies",
           "icon": "/assets/afl/history/the_rookies_icon_icon_circle.png",
           "banner": "/assets/afl/history/the_rookies_banner.png",
+          "colorPrimary": "#b45131",
+          "colorSecondary": "#2a2b2b",
           "yearStart": 2005,
           "yearEnd": 2008
         },
@@ -592,8 +791,21 @@
           "name": "The Dark Side",
           "icon": "/assets/afl/history/the_dark_side_banner_icon_circle.png",
           "banner": "/assets/afl/history/the_dark_side_banner.png",
+          "colorPrimary": "#1f363d",
+          "colorSecondary": "#7e8482",
+          "iconStroke": "#1f363d",
           "yearStart": 2009,
           "yearEnd": 2009
+        },
+        {
+          "name": "Midwestside Connection",
+          "eraLabel": "The gold lockup",
+          "icon": "/assets/afl/history/midwestside_2010_icon.png",
+          "banner": "/assets/afl/history/midwestside_2010_banner.png",
+          "colorPrimary": "#796c26",
+          "colorSecondary": "#2a2927",
+          "yearStart": 2010,
+          "yearEnd": 2024
         }
       ],
       "groupMe": "/assets/afl/group-me/midwestside.png",
@@ -631,6 +843,8 @@
           "nameShort": "Stalions",
           "icon": "/assets/afl/history/italian_stalions_icon_icon_circle.png",
           "banner": "/assets/afl/history/italian_stalions_banner_face.jpg",
+          "colorPrimary": "#06a8e2",
+          "colorSecondary": "#d1a67f",
           "yearStart": 2003,
           "yearEnd": 2003
         },
@@ -638,6 +852,8 @@
           "name": "C.P. Bruisers",
           "icon": "/assets/afl/history/c_p_bruisers_icon_icon_circle.png",
           "banner": "/assets/afl/history/c_p_bruisers_banner.jpg",
+          "colorPrimary": "#956022",
+          "colorSecondary": "#a1a1a1",
           "yearStart": 2004,
           "yearEnd": 2004
         },
@@ -645,6 +861,9 @@
           "name": "Habanero's",
           "icon": "/assets/afl/history/habanero_s_banner_icon_circle.png",
           "banner": "/assets/afl/history/habanero_s_banner.png",
+          "colorPrimary": "#89392f",
+          "colorSecondary": "#e3dfd1",
+          "iconStroke": "#89392f",
           "yearStart": 2005,
           "yearEnd": 2006
         },
@@ -652,6 +871,9 @@
           "name": "Blitzkrieg",
           "icon": "/assets/afl/history/blitzkrieg_banner_icon_circle.png",
           "banner": "/assets/afl/history/blitzkrieg_banner.png",
+          "colorPrimary": "#081ec7",
+          "colorSecondary": "#fb682f",
+          "iconStroke": "#081ec7",
           "yearStart": 2007,
           "yearEnd": 2007
         },
@@ -659,6 +881,9 @@
           "name": "Shifty Joe",
           "icon": "/assets/afl/history/shifty_joe_banner_icon_circle.png",
           "banner": "/assets/afl/history/shifty_joe_banner.png",
+          "colorPrimary": "#ab2121",
+          "colorSecondary": "#2c2b29",
+          "iconStroke": "#ab2121",
           "yearStart": 2008,
           "yearEnd": 2008
         },
@@ -666,6 +891,9 @@
           "name": "Pubes",
           "icon": "/assets/afl/history/pubes_banner_icon_circle.png",
           "banner": "/assets/afl/history/pubes_banner.png",
+          "colorPrimary": "#862b29",
+          "colorSecondary": "#897d7d",
+          "iconStroke": "#862b29",
           "yearStart": 2009,
           "yearEnd": 2018
         }
@@ -713,6 +941,8 @@
           "name": "Lucky Buck$",
           "icon": "/assets/afl/history/lucky_buck_icon_icon_circle.png",
           "banner": "/assets/afl/history/lucky_buck_banner.jpg",
+          "colorPrimary": "#dcb515",
+          "colorSecondary": "#132050",
           "yearStart": 2003,
           "yearEnd": 2003
         },
@@ -720,6 +950,8 @@
           "name": "Cougs",
           "icon": "/assets/afl/history/cougs_icon_icon_circle.png",
           "banner": "/assets/afl/history/cougs_banner.png",
+          "colorPrimary": "#7b2d2f",
+          "colorSecondary": "#d4d3d3",
           "yearStart": 2004,
           "yearEnd": 2007
         },
@@ -729,17 +961,36 @@
           "nameShort": "Isotoners",
           "icon": "/assets/afl/history/dan_marino_s_tan_isotoners_banner_icon_circle.png",
           "banner": "/assets/afl/history/dan_marino_s_tan_isotoners_banner.png",
+          "colorPrimary": "#543711",
+          "colorSecondary": "#bda484",
+          "iconStroke": "#543711",
           "yearStart": 2008,
           "yearEnd": 2009
         },
         {
           "name": "Delirium Tremens",
+          "eraLabel": "The cocktail",
           "nameMedium": "Delirium",
           "nameShort": "DTs",
           "icon": "/assets/afl/history/delirium_tremens_icon_icon_circle.png",
           "banner": "/assets/afl/history/delirium_tremens_banner.png",
+          "colorPrimary": "#cba604",
+          "colorSecondary": "#103765",
           "yearStart": 2010,
-          "yearEnd": 2019
+          "yearEnd": 2016
+        },
+        {
+          "name": "Delirium Tremens",
+          "eraLabel": "The heebie geebies",
+          "icon": "/assets/afl/history/delirium_tremens_2017_icon.png",
+          "banner": "/assets/afl/history/delirium_tremens_2017_banner.png",
+          "colorPrimary": "#225cb0",
+          "colorSecondary": "#d7b504",
+          "iconStroke": "#225cb0",
+          "yearStart": 2017,
+          "yearEnd": 2019,
+          "nameMedium": "Delirium",
+          "nameShort": "DTs"
         }
       ],
       "groupMe": "/assets/afl/group-me/micks.png",
@@ -780,8 +1031,11 @@
       "history": [
         {
           "name": "Trevors Team",
-          "icon": "/assets/afl/history/trevors_team_icon_icon_circle.png",
+          "icon": "/assets/afl/history/trevors_team_2003_icon.png",
+          "iconFreeform": true,
           "banner": "/assets/afl/history/trevors_team_banner.png",
+          "colorPrimary": "#c61440",
+          "colorSecondary": "#d2d2d2",
           "yearStart": 2003,
           "yearEnd": 2003
         },
@@ -789,6 +1043,9 @@
           "name": "The A-Team",
           "icon": "/assets/afl/history/the_a_team_banner_icon_circle.png",
           "banner": "/assets/afl/history/the_a_team_banner.jpg",
+          "colorPrimary": "#931532",
+          "colorSecondary": "#dba7d2",
+          "iconStroke": "#931532",
           "yearStart": 2004,
           "yearEnd": 2004
         },
@@ -796,15 +1053,34 @@
           "name": "ISIS",
           "icon": "/assets/afl/history/isis_banner_icon_circle.png",
           "banner": "/assets/afl/history/isis_banner.png",
+          "colorPrimary": "#111f53",
+          "colorSecondary": "#657ca1",
+          "iconStroke": "#111f53",
           "yearStart": 2005,
           "yearEnd": 2006
         },
         {
           "name": "Thundering Herd",
+          "eraLabel": "The Trojan",
           "icon": "/assets/afl/history/thundering_herd_icon.png",
           "banner": "/assets/afl/history/thundering_herd_banner.png",
+          "colorPrimary": "#e09636",
+          "colorSecondary": "#961d39",
           "yearStart": 2007,
-          "yearEnd": 2025
+          "yearEnd": 2016
+        },
+        {
+          "name": "Thundering Herd",
+          "eraLabel": "Southern California's",
+          "icon": "/assets/afl/history/thundering_herd_2017_icon.png",
+          "banner": "/assets/afl/history/thundering_herd_2017_banner.png",
+          "colorPrimary": "#971008",
+          "colorSecondary": "#fae19f",
+          "iconStroke": "#971008",
+          "yearStart": 2017,
+          "yearEnd": 2025,
+          "nameMedium": "Herd",
+          "nameShort": "Herd"
         }
       ],
       "groupMe": "/assets/afl/group-me/bruin.png",
@@ -840,6 +1116,9 @@
           "name": "The Blunt Bros.",
           "icon": "/assets/afl/history/the_blunt_bros_banner_icon_circle.png",
           "banner": "/assets/afl/history/the_blunt_bros_banner.png",
+          "colorPrimary": "#e89426",
+          "colorSecondary": "#d4cda4",
+          "iconStroke": "#e89426",
           "yearStart": 2003,
           "yearEnd": 2010
         },
@@ -847,8 +1126,20 @@
           "name": "Gaelic Rams",
           "icon": "/assets/afl/history/gaelic_rams_icon_icon_circle.png",
           "banner": "/assets/afl/history/gaelic_rams_banner.png",
+          "colorPrimary": "#a91c29",
+          "colorSecondary": "#ececec",
           "yearStart": 2011,
           "yearEnd": 2011
+        },
+        {
+          "name": "The Mariachi Ninjas",
+          "eraLabel": "The two-line lockup",
+          "icon": "/assets/afl/history/mariachi_ninjas_2012_icon.png",
+          "banner": "/assets/afl/history/mariachi_ninjas_2012_banner.png",
+          "colorPrimary": "#9f8230",
+          "colorSecondary": "#222222",
+          "yearStart": 2012,
+          "yearEnd": 2018
         }
       ],
       "groupMe": "/assets/afl/group-me/ninjas.png",
@@ -886,6 +1177,9 @@
           "nameShort": "My Fault",
           "icon": "/assets/afl/history/its_all_my_fault_icon_icon_circle.png",
           "banner": "/assets/afl/history/its_all_my_fault_banner.gif",
+          "colorPrimary": "#d7985a",
+          "colorSecondary": "#441105",
+          "iconStroke": "#441105",
           "yearStart": 2003,
           "yearEnd": 2003
         },
@@ -893,6 +1187,9 @@
           "name": "Joey's Team",
           "icon": "/assets/afl/history/joey_s_team_banner_icon_circle.png",
           "banner": "/assets/afl/history/joey_s_team_banner.jpg",
+          "colorPrimary": "#83cbe1",
+          "colorSecondary": "#e1e0db",
+          "iconStroke": "#83cbe1",
           "yearStart": 2004,
           "yearEnd": 2004
         },
@@ -900,6 +1197,8 @@
           "name": "Reckless",
           "icon": "/assets/afl/history/reckless_icon_icon_circle.png",
           "banner": "/assets/afl/history/reckless_banner.png",
+          "colorPrimary": "#d76972",
+          "colorSecondary": "#2b3669",
           "yearStart": 2005,
           "yearEnd": 2006
         },
@@ -907,6 +1206,9 @@
           "name": "NOSX",
           "icon": "/assets/afl/history/nosx_banner_icon_circle.png",
           "banner": "/assets/afl/history/nosx_banner.png",
+          "colorPrimary": "#225789",
+          "colorSecondary": "#081548",
+          "iconStroke": "#225789",
           "yearStart": 2007,
           "yearEnd": 2008
         },
@@ -916,6 +1218,9 @@
           "nameShort": "Bastards",
           "icon": "/assets/afl/history/brady_s_bastards_banner_icon_circle.png",
           "banner": "/assets/afl/history/brady_s_bastards_banner.png",
+          "colorPrimary": "#c8293a",
+          "colorSecondary": "#243e6a",
+          "iconStroke": "#c8293a",
           "yearStart": 2009,
           "yearEnd": 2013
         },
@@ -925,6 +1230,8 @@
           "nameShort": "Chlamydia",
           "icon": "/assets/afl/history/incurable_chlamydia_icon_icon_circle.png",
           "banner": "/assets/afl/history/incurable_chlamydia_banner.png",
+          "colorPrimary": "#ca3639",
+          "colorSecondary": "#d39c9c",
           "yearStart": 2014,
           "yearEnd": 2015
         },
@@ -933,6 +1240,8 @@
           "icon": "/assets/afl/history/cska_sofia_0016_icon_icon_circle.png",
           "banner": "/assets/afl/history/cska_sofia_0016_banner.png",
           "conference": "01",
+          "colorPrimary": "#d12017",
+          "colorSecondary": "#dab50b",
           "yearStart": 2016,
           "yearEnd": 2016
         },
@@ -943,6 +1252,8 @@
           "icon": "/assets/afl/icons/harambe.png",
           "banner": "/assets/afl/history/dicks_out_for_harambe_banner.png",
           "conference": "01",
+          "colorPrimary": "#5897c5",
+          "colorSecondary": "#b0aeaf",
           "yearStart": 2017,
           "yearEnd": 2018
         },
@@ -952,6 +1263,8 @@
           "nameShort": "Be Gentle",
           "icon": "/assets/afl/history/be_gentle_it_s_my_first_time_icon_icon_circle.png",
           "banner": "/assets/afl/history/be_gentle_it_s_my_first_time_banner.png",
+          "colorPrimary": "#03b3e1",
+          "colorSecondary": "#245da8",
           "yearStart": 2019,
           "yearEnd": 2019
         },
@@ -961,6 +1274,8 @@
           "nameShort": "Be Rough",
           "icon": "/assets/afl/history/be_rough_i_m_used_to_it_icon_icon_circle.png",
           "banner": "/assets/afl/history/be_rough_i_m_used_to_it_banner.png",
+          "colorPrimary": "#dbb708",
+          "colorSecondary": "#112039",
           "yearStart": 2020,
           "yearEnd": 2020,
           "rebrand": {
@@ -974,6 +1289,8 @@
           "nameShort": "Be Gentle",
           "icon": "/assets/afl/history/be_gentle_it_s_my_first_time_icon_icon_circle.png",
           "banner": "/assets/afl/history/be_gentle_it_s_my_first_time_banner.png",
+          "colorPrimary": "#03b3e1",
+          "colorSecondary": "#245da8",
           "yearStart": 2021,
           "yearEnd": 2021
         },
@@ -981,6 +1298,9 @@
           "name": "Silver Bullets",
           "icon": "/assets/afl/history/silver_bullets_banner_icon_circle.png",
           "banner": "/assets/afl/history/silver_bullets_banner.png",
+          "colorPrimary": "#02284a",
+          "colorSecondary": "#d2d2d3",
+          "iconStroke": "#02284a",
           "yearStart": 2022,
           "yearEnd": 2022
         },
@@ -988,6 +1308,8 @@
           "name": "Swifty 4 Life",
           "icon": "/assets/afl/history/swifty_4_life_icon_icon_circle.png",
           "banner": "/assets/afl/history/swifty_4_life_banner.png",
+          "colorPrimary": "#ee7476",
+          "colorSecondary": "#f2ccc6",
           "yearStart": 2023,
           "yearEnd": 2024
         }
@@ -1027,6 +1349,8 @@
           "nameShort": "Fat Chicks",
           "icon": "/assets/afl/history/fat_chicks_a_six_pack_icon_icon_circle.png",
           "banner": "/assets/afl/history/fat_chicks_a_six_pack_banner_face.jpg",
+          "colorPrimary": "#5f3616",
+          "colorSecondary": "#84754c",
           "yearStart": 2003,
           "yearEnd": 2003
         },
@@ -1036,6 +1360,8 @@
           "nameShort": "Bukkake",
           "icon": "/assets/afl/history/bukkake_warriors_icon_icon_circle.png",
           "banner": "/assets/afl/history/bukkake_warriors_banner_face.jpg",
+          "colorPrimary": "#e6bcc2",
+          "colorSecondary": "#2d2d2d",
           "yearStart": 2004,
           "yearEnd": 2004
         },
@@ -1043,6 +1369,8 @@
           "name": "Taco Hell",
           "icon": "/assets/afl/history/taco_hell_banner_png_icon_circle.png",
           "banner": "/assets/afl/history/taco_hell_banner.png",
+          "colorPrimary": "#cb7865",
+          "colorSecondary": "#361a57",
           "yearStart": 2005,
           "yearEnd": 2006
         },
@@ -1050,6 +1378,9 @@
           "name": "Fly Fishermen",
           "icon": "/assets/afl/history/fly_fishermen_banner_icon_circle.png",
           "banner": "/assets/afl/history/fly_fishermen_banner.png",
+          "colorPrimary": "#5a868c",
+          "colorSecondary": "#9dafb1",
+          "iconStroke": "#5a868c",
           "yearStart": 2007,
           "yearEnd": 2007
         },
@@ -1057,6 +1388,9 @@
           "name": "Blitzkrieg",
           "icon": "/assets/afl/history/blitzkrieg_banner_icon_circle.png",
           "banner": "/assets/afl/history/blitzkrieg_banner.png",
+          "colorPrimary": "#081ec7",
+          "colorSecondary": "#fb682f",
+          "iconStroke": "#081ec7",
           "yearStart": 2008,
           "yearEnd": 2012
         }
@@ -1093,7 +1427,10 @@
           "nameMedium": "GL Meanies",
           "nameShort": "Meanies",
           "icon": "/assets/afl/history/green_lake_meanies_icon_icon_circle.png",
+          "iconFreeform": true,
           "banner": "/assets/afl/history/green_lake_meanies_banner.gif",
+          "colorPrimary": "#07a887",
+          "colorSecondary": "#38116b",
           "yearStart": 2003,
           "yearEnd": 2003
         },
@@ -1101,6 +1438,8 @@
           "name": "Red Dawn",
           "icon": "/assets/afl/history/red_dawn_icon_icon_circle.png",
           "banner": "/assets/afl/history/red_dawn_banner.png",
+          "colorPrimary": "#be2428",
+          "colorSecondary": "#dadbdb",
           "yearStart": 2004,
           "yearEnd": 2006
         },
@@ -1108,6 +1447,9 @@
           "name": "Carolina Blues",
           "icon": "/assets/afl/history/carolina_blues_banner_icon_circle.png",
           "banner": "/assets/afl/history/carolina_blues_banner.png",
+          "colorPrimary": "#90b2d5",
+          "colorSecondary": "#72798e",
+          "iconStroke": "#90b2d5",
           "yearStart": 2007,
           "yearEnd": 2008
         },
@@ -1115,20 +1457,29 @@
           "name": "Zephyr",
           "icon": "/assets/afl/history/zephyr_banner_icon_circle.png",
           "banner": "/assets/afl/history/zephyr_banner.png",
+          "colorPrimary": "#4c3366",
+          "colorSecondary": "#adacaf",
+          "iconStroke": "#4c3366",
           "yearStart": 2009,
           "yearEnd": 2013
         },
         {
           "name": "Computer Jocks",
-          "icon": "/assets/afl/icons/computer_jocks.png",
+          "icon": "/assets/afl/history/computer_jocks_2014_icon.png",
           "banner": "/assets/afl/history/computer_jocks_banner.png",
+          "colorPrimary": "#018a01",
+          "colorSecondary": "#242424",
           "yearStart": 2014,
           "yearEnd": 2014
         },
         {
           "name": "Jewpacabra",
-          "icon": "/assets/afl/icons/jewpacabra.png",
-          "banner": "/assets/afl/banners/jewpacabra.png",
+          "eraLabel": "The script lockup",
+          "icon": "/assets/afl/history/jewpacabra_2015_icon.png",
+          "banner": "/assets/afl/history/jewpacabra_2015_banner.png",
+          "colorPrimary": "#14bc70",
+          "colorSecondary": "#1b4b7d",
+          "iconStroke": "#14bc70",
           "yearStart": 2015,
           "yearEnd": 2018
         },
@@ -1136,6 +1487,8 @@
           "name": "Jesus Killers",
           "icon": "/assets/afl/history/jesus_killers_icon_icon_circle.png",
           "banner": "/assets/afl/history/jesus_killers_banner.png",
+          "colorPrimary": "#73553e",
+          "colorSecondary": "#eae5d7",
           "yearStart": 2019,
           "yearEnd": 2019,
           "rebrand": {
@@ -1173,6 +1526,9 @@
           "name": "M.L. Maniacs",
           "icon": "/assets/afl/history/m_l_maniacs_banner_icon_circle.png",
           "banner": "/assets/afl/history/m_l_maniacs_banner.gif",
+          "colorPrimary": "#f19305",
+          "colorSecondary": "#111075",
+          "iconStroke": "#f19305",
           "yearStart": 2003,
           "yearEnd": 2003
         },
@@ -1180,14 +1536,30 @@
           "name": "L.C. Maniacs",
           "icon": "/assets/afl/history/l_c_maniacs_icon_icon_circle.png",
           "banner": "/assets/afl/history/l_c_maniacs_banner.gif",
+          "colorPrimary": "#f09306",
+          "colorSecondary": "#030275",
           "yearStart": 2004,
           "yearEnd": 2004
         },
         {
           "name": "The Bandwagon",
+          "eraLabel": "The wagon",
+          "icon": "/assets/afl/history/the_bandwagon_2005_icon.png",
+          "banner": "/assets/afl/history/the_bandwagon_2005_banner.png",
+          "colorPrimary": "#a54540",
+          "colorSecondary": "#eed35e",
+          "iconStroke": "#a54540",
+          "yearStart": 2005,
+          "yearEnd": 2005
+        },
+        {
+          "name": "The Bandwagon",
+          "eraLabel": "The gold block",
           "icon": "/assets/afl/history/the_bandwagon_icon_icon_circle.png",
           "banner": "/assets/afl/history/the_bandwagon_banner.png",
-          "yearStart": 2005,
+          "colorPrimary": "#dec238",
+          "colorSecondary": "#4f0d16",
+          "yearStart": 2006,
           "yearEnd": 2008
         },
         {
@@ -1196,6 +1568,9 @@
           "nameShort": "Roadkill",
           "icon": "/assets/afl/history/minnesota_road_kill_banner_icon_circle.png",
           "banner": "/assets/afl/history/minnesota_road_kill_banner.png",
+          "colorPrimary": "#e9c22b",
+          "colorSecondary": "#290846",
+          "iconStroke": "#e9c22b",
           "yearStart": 2009,
           "yearEnd": 2010
         },
@@ -1205,6 +1580,9 @@
           "nameShort": "Clowns",
           "icon": "/assets/afl/history/cliffside_killer_clowns_banner_icon_circle.png",
           "banner": "/assets/afl/history/cliffside_killer_clowns_banner.png",
+          "colorPrimary": "#5d3512",
+          "colorSecondary": "#d8d8d8",
+          "iconStroke": "#5d3512",
           "yearStart": 2011,
           "yearEnd": 2014
         }
@@ -1238,17 +1616,36 @@
       "history": [
         {
           "name": "Your Team Sucks",
-          "icon": "/assets/afl/history/your_team_sucks_banner_icon_circle.png",
+          "icon": "/assets/afl/history/your_team_sucks_2003_icon.png",
           "banner": "/assets/afl/history/your_team_sucks_banner.jpg",
+          "colorPrimary": "#81313c",
+          "colorSecondary": "#19295d",
+          "iconStroke": "#81313c",
           "yearStart": 2003,
           "yearEnd": 2005
         },
         {
           "name": "Limp Ditkas",
-          "icon": "/assets/afl/history/limp_ditkas_banner_icon_circle.png",
+          "icon": "/assets/afl/history/limp_ditkas_2006_icon.png",
+          "iconFreeform": true,
           "banner": "/assets/afl/history/limp_ditkas_banner.png",
+          "colorPrimary": "#da5624",
+          "colorSecondary": "#1f3146",
           "yearStart": 2006,
           "yearEnd": 2007
+        },
+        {
+          "name": "The Boondock Saints",
+          "eraLabel": "The brothers",
+          "icon": "/assets/afl/history/boondock_saints_2008_icon.png",
+          "banner": "/assets/afl/history/boondock_saints_2008_banner.png",
+          "colorPrimary": "#680403",
+          "colorSecondary": "#302b27",
+          "iconStroke": "#680403",
+          "yearStart": 2008,
+          "yearEnd": 2015,
+          "nameMedium": "Saints",
+          "nameShort": "Saints"
         }
       ],
       "groupMe": "/assets/afl/group-me/saints.png",
@@ -1291,8 +1688,12 @@
       "history": [
         {
           "name": "Da Dangsters",
-          "icon": "/assets/afl/icons/da_dangsters.png",
+          "eraLabel": "The DD monogram",
+          "icon": "/assets/afl/history/da_dangsters_2003_icon.png",
+          "iconFreeform": true,
           "banner": "/assets/afl/history/da_dangsters_banner.png",
+          "colorPrimary": "#1d1d2f",
+          "colorSecondary": "#87878b",
           "yearStart": 2003,
           "yearEnd": 2008
         },
@@ -1302,8 +1703,22 @@
           "nameShort": "Dummies",
           "icon": "/assets/afl/history/tackling_dummies_banner_icon_circle.png",
           "banner": "/assets/afl/history/tackling_dummies_banner.png",
+          "colorPrimary": "#9dbedb",
+          "colorSecondary": "#343434",
+          "iconStroke": "#9dbedb",
           "yearStart": 2009,
           "yearEnd": 2009
+        },
+        {
+          "name": "Chatmaster",
+          "eraLabel": "The AIM lockup",
+          "icon": "/assets/afl/history/chatmaster_2010_icon.png",
+          "banner": "/assets/afl/history/chatmaster_2010_banner.png",
+          "colorPrimary": "#cab24d",
+          "colorSecondary": "#2d2d2d",
+          "iconStroke": "#cab24d",
+          "yearStart": 2010,
+          "yearEnd": 2024
         }
       ],
       "groupMe": "/assets/afl/group-me/chat.png",
@@ -1337,20 +1752,37 @@
           "nameShort": "Roadsters",
           "icon": "/assets/afl/history/melville_roadsters_icon_icon_circle.png",
           "banner": "/assets/afl/history/melville_roadsters_banner.gif",
+          "colorPrimary": "#077771",
+          "colorSecondary": "#b2b8b3",
           "yearStart": 2003,
           "yearEnd": 2004
         },
         {
           "name": "Way More Funner",
-          "icon": "/assets/afl/history/way_more_funner_icon_icon_circle.png",
+          "eraLabel": "The receiver",
+          "icon": "/assets/afl/history/way_more_funner_2005_icon.png",
           "banner": "/assets/afl/history/way_more_funner_banner.png",
+          "colorPrimary": "#eae61c",
+          "colorSecondary": "#065018",
           "yearStart": 2005,
+          "yearEnd": 2005
+        },
+        {
+          "name": "Way More Funner",
+          "eraLabel": "The pin-up",
+          "icon": "/assets/afl/history/way_more_funner_icon_icon_circle.png",
+          "banner": "/assets/afl/history/way_more_funner_2006_banner.png",
+          "colorPrimary": "#eae61c",
+          "colorSecondary": "#065018",
+          "yearStart": 2006,
           "yearEnd": 2011
         },
         {
           "name": "Sparta FC",
           "icon": "/assets/afl/history/sparta_fc_icon_icon_circle.png",
           "banner": "/assets/afl/history/sparta_fc_banner.png",
+          "colorPrimary": "#24660f",
+          "colorSecondary": "#a7b9a2",
           "yearStart": 2012,
           "yearEnd": 2012
         }
@@ -1384,6 +1816,8 @@
           "name": "P-89s",
           "icon": "/assets/afl/history/p_89s_icon_icon_circle.png",
           "banner": "/assets/afl/history/p_89s_banner_face.jpg",
+          "colorPrimary": "#b2947c",
+          "colorSecondary": "#5e3f36",
           "yearStart": 2003,
           "yearEnd": 2003
         },
@@ -1391,20 +1825,39 @@
           "name": "Magnum's",
           "icon": "/assets/afl/history/magnum_s_icon_icon_circle.png",
           "banner": "/assets/afl/history/magnum_s_banner.jpg",
+          "colorPrimary": "#b0a161",
+          "colorSecondary": "#252527",
           "yearStart": 2004,
           "yearEnd": 2004
         },
         {
           "name": "No Frills",
-          "icon": "/assets/afl/history/no_frills_icon_icon_circle.png",
-          "banner": "/assets/afl/history/no_frills_banner.png",
+          "eraLabel": "The bananas",
+          "icon": "/assets/afl/history/no_frills_2005_icon.png",
+          "banner": "/assets/afl/history/no_frills_2005_banner.png",
+          "colorPrimary": "#cc9744",
+          "colorSecondary": "#e0dfdf",
+          "iconStroke": "#cc9744",
           "yearStart": 2005,
+          "yearEnd": 2018
+        },
+        {
+          "name": "No Frills",
+          "eraLabel": "The clean wordmark",
+          "icon": "/assets/afl/history/no_frills_2019_icon.png",
+          "banner": "/assets/afl/history/no_frills_banner.png",
+          "colorPrimary": "#d15353",
+          "colorSecondary": "#cecece",
+          "iconStroke": "#d15353",
+          "yearStart": 2019,
           "yearEnd": 2021
         },
         {
           "name": "Cock Gobbler",
           "icon": "/assets/afl/history/gobblers_icon_circle.png",
           "banner": "/assets/afl/banners/gobblers.png",
+          "colorPrimary": "#b6096f",
+          "colorSecondary": "#ebe5d7",
           "yearStart": 2025,
           "yearEnd": 2025,
           "rebrand": {
@@ -1442,15 +1895,21 @@
           "name": "Alcohol, Tobacco and Firearms",
           "nameMedium": "ATF",
           "nameShort": "ATF",
-          "icon": "/assets/afl/history/atf_icon_100.png",
+          "icon": "/assets/afl/history/atf_2003_icon.png",
+          "iconFreeform": true,
           "banner": "/assets/afl/history/atf_banner.png",
+          "colorPrimary": "#3a415d",
+          "colorSecondary": "#7d8386",
           "yearStart": 2003,
           "yearEnd": 2003
         },
         {
           "name": "ATF",
-          "icon": "/assets/afl/history/atf_icon_100.png",
+          "icon": "/assets/afl/history/atf_2003_icon.png",
+          "iconFreeform": true,
           "banner": "/assets/afl/history/atf_banner.png",
+          "colorPrimary": "#3a415d",
+          "colorSecondary": "#7d8386",
           "yearStart": 2004,
           "yearEnd": 2006
         },
@@ -1458,6 +1917,9 @@
           "name": "Sharpest Blade",
           "icon": "/assets/afl/history/sharpest_blade_banner_icon_circle.png",
           "banner": "/assets/afl/history/sharpest_blade_banner.png",
+          "colorPrimary": "#4f4e4e",
+          "colorSecondary": "#222222",
+          "iconStroke": "#4f4e4e",
           "yearStart": 2007,
           "yearEnd": 2007
         },
@@ -1465,6 +1927,9 @@
           "name": "The Street",
           "icon": "/assets/afl/history/the_street_0024_banner_icon_circle.png",
           "banner": "/assets/afl/history/the_street_0024_banner.png",
+          "colorPrimary": "#571b11",
+          "colorSecondary": "#dbc38a",
+          "iconStroke": "#571b11",
           "yearStart": 2008,
           "yearEnd": 2011
         },
@@ -1472,6 +1937,8 @@
           "name": "Angry Irish",
           "icon": "/assets/afl/history/angry_irish_icon_icon_circle.png",
           "banner": "/assets/afl/history/angry_irish_banner.png",
+          "colorPrimary": "#74a643",
+          "colorSecondary": "#2b5423",
           "yearStart": 2012,
           "yearEnd": 2012
         },
@@ -1479,6 +1946,8 @@
           "name": "Vinegar Strokes",
           "icon": "/assets/afl/history/vinegar_strokes_icon_icon_circle.png",
           "banner": "/assets/afl/history/vinegar_strokes_banner.png",
+          "colorPrimary": "#efc077",
+          "colorSecondary": "#4f3c6e",
           "yearStart": 2013,
           "yearEnd": 2015
         },
@@ -1486,8 +1955,23 @@
           "name": "BronxBommr",
           "icon": "/assets/afl/history/bronxbommr_icon_icon_circle.png",
           "banner": "/assets/afl/history/bronxbommr_banner.png",
+          "colorPrimary": "#0e3b65",
+          "colorSecondary": "#d9dbdd",
           "yearStart": 2016,
           "yearEnd": 2018
+        },
+        {
+          "name": "No Soup For You",
+          "eraLabel": "The Soup Nazi",
+          "icon": "/assets/afl/history/no_soup_for_you_2019_icon.png",
+          "banner": "/assets/afl/history/no_soup_for_you_2019_banner.png",
+          "colorPrimary": "#be5736",
+          "colorSecondary": "#101e36",
+          "iconStroke": "#be5736",
+          "yearStart": 2019,
+          "yearEnd": 2024,
+          "nameMedium": "No Soup",
+          "nameShort": "Soup"
         }
       ],
       "groupMe": "/assets/afl/group-me/no_soup.png",

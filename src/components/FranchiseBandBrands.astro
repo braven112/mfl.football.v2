@@ -27,10 +27,15 @@
  * which is not memoized — already shows the new one.
  */
 import theleagueConfig from '../data/theleague.config.json';
+import aflConfig from '../../data/afl-fantasy/afl.config.json';
 import type { LeagueSlug } from '../types/nav';
 import { buildFranchiseBandBrands } from '../utils/franchise-band-brand';
-import { isThrowbackWeek } from '../data/theleague/throwback-config';
+import {
+  isThrowbackWeekForScope,
+  strictThrowbackScopeForNavSlug,
+} from '../utils/throwback-scope';
 import { getAllThrowbackPreferences } from '../utils/throwback-store';
+import type { ThrowbackPick } from '../utils/throwback-identity';
 import { getCurrentNFLWeek } from '../utils/current-week';
 import { getTestDateFromSearchParams } from '../utils/league-year';
 
@@ -43,22 +48,33 @@ const { league } = Astro.props;
 /**
  * Module-scope, so it is shared across requests on a warm instance. That is
  * safe here and would not be for most cached data: throwback preferences are
- * LEAGUE-WIDE (all 16 franchises' picks), never scoped to the viewer, so there
+ * LEAGUE-WIDE (every franchise's pick), never scoped to the viewer, so there
  * is no per-user state to leak. A failed read caches `{}` too — deliberately.
  * If Redis is down, every render should not pay the timeout to rediscover it.
+ *
+ * Keyed BY SCOPE. A single shared slot would serve TheLeague's picks to an AFL
+ * page and vice versa for up to a minute, and the two leagues use the same
+ * franchise ids, so every id would collide rather than miss — the same reason
+ * `rankings-storage.ts` caches a `Map<scope, …>` instead of one array.
  */
 const THROWBACK_CACHE_TTL_MS = 60_000;
-let throwbackCache: { at: number; value: Record<string, number> } | null = null;
+const throwbackCache = new Map<string, { at: number; value: Record<string, ThrowbackPick> }>();
 
-async function cachedThrowbackOverrides(): Promise<Record<string, number>> {
+const TEAMS_BY_SCOPE: Record<string, any[]> = {
+  theleague: (theleagueConfig as any).teams ?? [],
+  afl: (aflConfig as any).teams ?? [],
+};
+
+async function cachedThrowbackOverrides(scope: string): Promise<Record<string, ThrowbackPick>> {
   const nowMs = Date.now();
-  if (throwbackCache && nowMs - throwbackCache.at < THROWBACK_CACHE_TTL_MS) {
-    return throwbackCache.value;
-  }
+  const hit = throwbackCache.get(scope);
+  if (hit && nowMs - hit.at < THROWBACK_CACHE_TTL_MS) return hit.value;
+
   const value = await getAllThrowbackPreferences(
-    ((theleagueConfig as any).teams ?? []).map((t: any) => t.franchiseId)
+    (TEAMS_BY_SCOPE[scope] ?? []).map((t: any) => t.franchiseId),
+    scope as Parameters<typeof getAllThrowbackPreferences>[1]
   );
-  throwbackCache = { at: nowMs, value };
+  throwbackCache.set(scope, { at: nowMs, value });
   return value;
 }
 
@@ -70,8 +86,11 @@ const weekParam = parseInt(Astro.url.searchParams.get('week') ?? '', 10);
 const week =
   Number.isFinite(weekParam) && weekParam > 0 ? weekParam : (getCurrentNFLWeek(now) ?? 0);
 
-const throwbackActive = league === 'theleague' && isThrowbackWeek(week);
-const throwbackOverrides = throwbackActive ? await cachedThrowbackOverrides() : {};
+// Null for a league that does not run Throwback Week at all (Best Ball).
+const throwbackScope = strictThrowbackScopeForNavSlug(league);
+const throwbackActive = throwbackScope !== null && isThrowbackWeekForScope(week, throwbackScope);
+const throwbackOverrides =
+  throwbackActive && throwbackScope ? await cachedThrowbackOverrides(throwbackScope) : {};
 
 const brands = buildFranchiseBandBrands(league, { throwbackActive, throwbackOverrides });
 // `</script>` can't appear in a crest path or a hex, but escaping `<` is the

@@ -23,6 +23,9 @@ import LineupGameStrip from '../../components/shared/LineupGameStrip.astro';
 import { buildMatchupCards } from '../../utils/lineup-matchup-cards';
 import aflConfig from '../../../data/afl-fantasy/afl.config.json';
 import { crestStrokeIndex, resolveDarkSurfaceCrest } from '../../utils/dark-surface-crest';
+import { resolveThrowbackIdentity } from '../../utils/throwback-identity';
+import { isThrowbackWeekForScope } from '../../utils/throwback-scope';
+import { getAllThrowbackPreferences } from '../../utils/throwback-store';
 import { resolveSubmitButtonState } from '../../utils/lineup-submit-state';
 import { getCurrentWeekForYear } from '../../utils/current-week';
 import { getAflLeagueYear } from '../../utils/league-year';
@@ -422,8 +425,8 @@ const userProjTotal = slots.reduce(
 );
 
 // Each panel wears its FRANCHISE, not the player's NFL team: brand color tint
-// plus the team's crest as the watermark, straight from the league config
-// (the AFL has no throwback identities, so there is nothing to resolve).
+// plus the team's crest as the watermark, straight from the league config —
+// or from the franchise's LEGACY era during Throwback Week (Week 8).
 //
 // The DARK cut first, and not gated on the theme: the faceoff panel is a
 // team-color gradient over near-black in BOTH themes, so the site-wide
@@ -434,9 +437,18 @@ const userProjTotal = slots.reduce(
 // could not see, and rings the crests that stay on light artwork — four
 // franchises today (Harambe, Suh girls, Swiftie, the Boondock Saints) that the
 // site strokes under `html.dark` and this panel did not.
-const aflTeamsById = new Map<string, any>(
-  ((aflConfig as any).teams ?? []).map((t: any) => [t.franchiseId, t]),
-);
+const aflTeams: any[] = (aflConfig as any).teams ?? [];
+const aflTeamsById = new Map<string, any>(aflTeams.map((t: any) => [t.franchiseId, t]));
+
+// Throwback Week. Resolved server-side, once, for the franchises this page
+// actually renders — the viewer's team and its opponents.
+const aflThrowbackActive = isThrowbackWeekForScope(week, 'afl');
+const aflThrowbackOverrides = aflThrowbackActive
+  ? await getAllThrowbackPreferences(
+      [user.franchiseId, ...userMatchups.map((m) => m.opponentFranchiseId)],
+      'afl',
+    )
+  : {};
 // The manifest key is the league SLUG (`afl`), not the route directory.
 const crestStrokes = crestStrokeIndex('afl', (aflConfig as any).teams ?? []);
 
@@ -456,7 +468,32 @@ const matchupCards = buildMatchupCards({
   slotEligibility: SLOT_ELIGIBILITY,
   brandFor: (franchiseId) => {
     const team = aflTeamsById.get(franchiseId);
-    const crest = team ? resolveDarkSurfaceCrest(team, 'afl', crestStrokes) : null;
+    if (!team) return { name: '' };
+
+    if (aflThrowbackActive) {
+      const identity = resolveThrowbackIdentity(
+        team,
+        aflThrowbackOverrides[franchiseId],
+        'afl',
+        aflTeams,
+      );
+      // Only when the franchise ACTUALLY threw back. `resolveThrowbackIdentity`
+      // falls through to the current identity for one with no eligible era,
+      // and taking its `icon` as "the era crest" would hand back the modern
+      // LIGHT art — wrong on a panel that is dark in both themes. Same guard
+      // as `resolveEraCrest` at the player-modal band.
+      if (identity.isHistorical) {
+        return {
+          name: identity.nameShort || identity.name,
+          color: identity.colorPrimary ?? team.colorPrimary,
+          // Era art has no dark cut and was never stroke-measured, so it
+          // renders as authored — no filter.
+          watermark: identity.icon,
+        };
+      }
+    }
+
+    const crest = resolveDarkSurfaceCrest(team, 'afl', crestStrokes);
     return {
       name: team?.nameShort || team?.name || '',
       color: team?.colorPrimary,

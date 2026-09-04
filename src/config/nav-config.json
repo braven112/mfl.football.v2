@@ -180,6 +180,15 @@
           "description": "Real-time scores, NFL box scores & win probability"
         },
         {
+          "id": "afl-throwback-settings",
+          "label": "Throwback Week",
+          "icon": "history",
+          "path": "/throwback-settings",
+          "external": false,
+          "leagueOnly": "afl",
+          "description": "Pick which legacy era your team wears in Week 8"
+        },
+        {
           "id": "standings",
           "label": "Standings",
           "icon": "shield",

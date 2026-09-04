@@ -29,6 +29,7 @@ import {
   buildThrowbackReminder,
   isThrowbackEventId,
   throwbackWeekFromEventId,
+  scopedThrowbackKeyForNavSlug,
 } from './lib/throwback-reminder.mjs';
 import { detectTradeBaitChanges } from './lib/trade-bait-detector.mjs';
 import { checkGroupMeQuality } from './lib/schefter-quality-gate.mjs';
@@ -1809,8 +1810,9 @@ function pickRogerTemplate(touchId, eventId) {
 
 /**
  * Throwback Week: count how many franchises are still on the commissioner's
- * default era (no `throwback:{franchiseId}` key in Redis — the same keys
- * src/utils/throwback-store.ts writes). Best-effort flavor for the pre-event
+ * default era (no stored pick in Redis — the same SCOPED keys
+ * src/utils/throwback-store.ts writes: `throwback:{id}` in TheLeague,
+ * `throwback:{navSlug}:{id}` everywhere else). Best-effort flavor for the pre-event
  * nudges: any failure (no creds, network, bad payload) returns null and the
  * copy degrades to the generic no-count version.
  */
@@ -1821,7 +1823,9 @@ async function countThrowbackDefaults(league) {
     const teams = await loadTeams(league.configPath);
     const franchiseIds = [...teams.keys()];
     if (franchiseIds.length === 0) return null;
-    const values = await redis.mget(...franchiseIds.map(id => `throwback:${id}`));
+    const values = await redis.mget(
+      ...franchiseIds.map(id => scopedThrowbackKeyForNavSlug(id, league.slug)),
+    );
     let count = 0;
     for (const value of values) {
       let pref = value;
@@ -1909,11 +1913,14 @@ async function scanEventReminders(league) {
         });
         if (!built) continue;
         ({ headline, body } = built);
+        // PREFIXED route for THIS league — `league.url` drops the prefix on
+        // the league's own apex. Hardcoding /theleague/ here sent every AFL
+        // owner to afl-fantasy.com/theleague/..., which 404s.
         if (touch.id === 'dayof') {
-          link = '/theleague/live-scoring';
+          link = `/${league.registrySlug}/live-scoring`;
           linkLabel = 'See the throwbacks';
         } else {
-          link = '/theleague/throwback-settings';
+          link = `/${league.registrySlug}/throwback-settings`;
           linkLabel = 'Pick your era';
         }
         groupMeUrlOverrides.set(postId, league.url(link));
