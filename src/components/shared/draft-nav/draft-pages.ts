@@ -66,10 +66,10 @@ export const DRAFT_PAGES: DraftPage[] = [
     shortLabel: 'Room',
     path: '/draft/room',
     icon: 'icon-podium-persona',
-    // AFL joins this list in Phase 5, once its room knows that the AL drafts
-    // live in MFL's applet and the NL runs a slow email draft.
+    // The AFL joined once its room learned that the AL drafts live in MFL's
+    // applet while the NL runs a slow email draft — see utils/afl-draft-room.
     blurb: 'The live board while the draft runs — picks, queue and who is on the clock.',
-    leagues: ['theleague'],
+    leagues: BOTH,
   },
   {
     key: 'mock',

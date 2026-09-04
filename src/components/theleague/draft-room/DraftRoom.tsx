@@ -375,7 +375,17 @@ export default function DraftRoom({ pageData, userTeamId, mode = 'live', mockSes
 
     const poll = async () => {
       try {
-        const res = await fetch(`/api/draft/status?year=${state.leagueYear}&league=${state.leagueId}`);
+        // `unit` and `host` matter for a league that drafts by conference:
+        // without a unit the endpoint returns the FIRST one, which would show
+        // an NL owner the AL's picks. Both are omitted for TheLeague, whose
+        // single unit and default host are what the endpoint already assumes.
+        const pollParams = new URLSearchParams({
+          year: String(state.leagueYear),
+          league: state.leagueId,
+        });
+        if (data.pollUnit) pollParams.set('unit', data.pollUnit);
+        if (data.mflHost) pollParams.set('host', data.mflHost);
+        const res = await fetch(`/api/draft/status?${pollParams.toString()}`);
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const result: DraftStatusResponse = await res.json();
         if (active) dispatch({ type: 'POLL_SUCCESS', picks: result.picks });
@@ -394,7 +404,9 @@ export default function DraftRoom({ pageData, userTeamId, mode = 'live', mockSes
       active = false;
       clearTimeout(timeoutId);
     };
-  }, [state.leagueYear, isMock]);
+    // `data` joins the deps because the poll URL now reads pollUnit/mflHost
+    // off it. It is memoized on the `pageData` prop, so this does not churn.
+  }, [state.leagueYear, state.leagueId, data, isMock]);
 
   // Keyboard shortcuts
   // `/` = focus search, 1-6 = position filter, Q = focus queue tab, C = focus chat tab, B = focus board tab

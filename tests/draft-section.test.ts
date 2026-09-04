@@ -82,15 +82,18 @@ describe('the draft page registry', () => {
     expect(existsSync('src/pages/afl-fantasy/draft/index.astro')).toBe(true);
   });
 
-  it('records the AFL’s two known gaps rather than hiding them', () => {
-    // The AFL has no Draft Room or Mock Draft yet — Phase 5 and the deferred
-    // mock. The decision was to show each league what it HAS, so these must
-    // stay off the AFL list until the routes exist. When they land, this test
-    // is the reminder to publish them here.
+  it('records the AFL’s remaining gap rather than hiding it', () => {
+    // Each league shows what it HAS, so a page must stay off the AFL list
+    // until its route exists. When one lands, this test is the reminder to
+    // publish it here.
     const afl = draftPagesFor('afl-fantasy').map((p) => p.key);
     const tl = draftPagesFor('theleague').map((p) => p.key);
     expect(tl).toContain('room');
     expect(tl).toContain('mock');
+    // The room landed for the AFL; the mock draft is still deferred, since
+    // TheLeague's mocks a 3-round rookie draft and the AFL is a 108-pick
+    // redraft per conference.
+    expect(afl).toContain('room');
     expect(afl).not.toContain('mock');
     expect(afl).toEqual(expect.arrayContaining(['order', 'results', 'broadcast']));
   });
@@ -125,6 +128,7 @@ describe('every draft page has a way back', () => {
     'src/pages/afl-fantasy/draft/results.astro',
     'src/pages/afl-fantasy/draft/order.astro',
     'src/pages/afl-fantasy/draft/broadcast.astro',
+    'src/pages/afl-fantasy/draft/room.astro',
     // Dynamic routes are pages too. They were excluded here at first, on the
     // reasoning that they "render inside a parent that carries the chrome" —
     // which is simply false: Astro routes do not nest, and the mock SESSION
@@ -159,7 +163,9 @@ describe('every draft page has a way back', () => {
     for (const route of DRAFT_ROUTES) {
       const src = readFileSync(route, 'utf-8');
       const rendered = /<DraftNav\b/.test(src) || /<DraftNav\s/.test(src);
-      const delegated = /DraftResultsPage|DraftHubPage/.test(src);
+      // A route may render DraftNav itself, or delegate to a shared page
+      // component that renders it — both are "has a way back".
+      const delegated = /DraftResultsPage|DraftHubPage|DraftRoomPage/.test(src);
       expect(rendered || delegated, `${route} has no way back`).toBe(true);
     }
   });
@@ -201,9 +207,13 @@ describe('nav', () => {
     expect(navLinks.find((l: any) => l.id === 'afl-draft-broadcast')).toBeUndefined();
   });
 
-  it('does not leave the Draft Room or Mock Draft advertised to the AFL', () => {
-    for (const id of ['draft-room', 'mock-draft']) {
-      expect(navLinks.find((l: any) => l.id === id)?.leagueOnly, id).toBe('theleague');
-    }
+  it('advertises the Draft Room to BOTH leagues now the AFL has one', () => {
+    // Was theleague-only until the AFL's conference-aware room landed. An
+    // untagged link is "every full-format league" (see nav-utils).
+    expect(navLinks.find((l: any) => l.id === 'draft-room')?.leagueOnly).toBeUndefined();
+  });
+
+  it('still keeps Mock Draft off the AFL, which has none', () => {
+    expect(navLinks.find((l: any) => l.id === 'mock-draft')?.leagueOnly).toBe('theleague');
   });
 });

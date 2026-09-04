@@ -1,0 +1,209 @@
+---
+/**
+ * Draft Room — shared render for both leagues.
+ *
+ * The live board: picks as they land, the pool, the queue, chat, and a timer.
+ * Owners still make their picks on MFL; this room watches the same draft and
+ * deep-links out to the page where the pick is actually made.
+ *
+ * ── The conference switcher is the AFL's, and it is not decoration ─────────
+ *
+ * The AFL runs two INDEPENDENT drafts: the AL meets in person and picks in
+ * MFL's live applet, the NL runs a slow email draft over days. They are
+ * different events on different MFL pages, and crossing them is the failure
+ * this page has to design against — an NL owner shown the AL's board, or
+ * handed the AL's "make your pick" link, is worse than no page at all.
+ *
+ * So the conference is chosen ONCE, server-side, and everything downstream —
+ * the board, the timer's units, the franchise list, the MFL deep link, and the
+ * client's poll URL — is scoped to it. TheLeague passes no conferences and the
+ * switcher does not render.
+ */
+import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
+import DraftNav from '../draft-nav/DraftNav.astro';
+import DraftRoomIsland from '../../theleague/draft-room/DraftRoom';
+import { resolveLeaguePath } from '../../../utils/nav-utils';
+import type { DraftLeagueSlug } from '../draft-nav/draft-pages';
+import type { DraftContext, DraftRoomPageData } from '../../../types/draft-room';
+
+export interface RoomConference {
+  /** MFL conference code, '00' / '01'. */
+  code: string;
+  /** Display name, e.g. 'American League'. */
+  label: string;
+  /** Short name for the chip, e.g. 'AL'. */
+  short: string;
+  /** How this conference drafts — shown so the timer's units make sense. */
+  draftKind: 'live' | 'email';
+}
+
+interface Props {
+  leagueSlug: DraftLeagueSlug;
+  title: string;
+  pageData: DraftRoomPageData;
+  /** Franchise to highlight — the viewer's own, when they have one here. */
+  userTeamId: string;
+  /** Selectable conferences. Empty for a league that drafts as one body. */
+  conferences?: RoomConference[];
+  /** Selected conference code, when there is more than one. */
+  conference?: string | null;
+  /** This league's own room path, for the switcher's links. */
+  basePath: string;
+  /** True when the viewer owns a team in the conference being shown. */
+  isViewersConference?: boolean;
+  /**
+   * What KIND of draft this is, which decides whether the pool opens filtered
+   * to rookies. TheLeague drafts rookies only; the AFL redrafts its whole
+   * roster every season, so a rookies filter would hide almost the entire
+   * pool it is about to draft from.
+   */
+  draftContext?: DraftContext;
+}
+
+const {
+  leagueSlug,
+  title,
+  pageData,
+  userTeamId,
+  conferences = [],
+  conference = null,
+  basePath,
+  isViewersConference = true,
+  draftContext = 'rookie',
+} = Astro.props;
+
+const hideLeaguePrefix = Astro.locals.hideLeaguePrefix ?? false;
+const base = resolveLeaguePath(basePath, hideLeaguePrefix);
+const current = conferences.find((c) => c.code === conference) ?? null;
+---
+
+<TheLeagueLayout title={title} hideMobileNavIcons>
+  <DraftNav leagueSlug={leagueSlug} current="room" crumb="Room" />
+
+  {conferences.length > 1 && (
+    <div class="droom-conf">
+      <nav class="droom-conf__rail" aria-label="Conference">
+        <span class="droom-conf__label" id="droom-conf-label">Conference</span>
+        <ul class="droom-conf__list" aria-labelledby="droom-conf-label">
+          {conferences.map((c) => (
+            <li>
+              <a
+                href={`${base}?conference=${c.code}`}
+                class:list={['droom-conf__chip', { 'droom-conf__chip--on': c.code === conference }]}
+                aria-current={c.code === conference ? 'page' : undefined}
+              >
+                {c.label}
+                <span class="droom-conf__kind">{c.draftKind === 'live' ? 'live draft' : 'email draft'}</span>
+              </a>
+            </li>
+          ))}
+        </ul>
+      </nav>
+
+      {/* Say plainly whose draft this is. An owner who lands on the other
+          conference's board should know before reading a single pick — the
+          two drafts share nothing but a season. */}
+      {current && !isViewersConference && (
+        <p class="droom-conf__notice">
+          You're watching the {current.label}'s draft. You don't pick in this one —
+          switch above for your own conference.
+        </p>
+      )}
+      {current?.draftKind === 'email' && (
+        <p class="droom-conf__notice">
+          The {current.short} drafts by email over several days, so the clock below counts
+          in hours rather than minutes and the board fills slowly. That is the draft
+          working, not a stalled page.
+        </p>
+      )}
+    </div>
+  )}
+
+  <DraftRoomIsland
+    client:load
+    pageData={JSON.stringify(pageData)}
+    userTeamId={userTeamId}
+    draftContext={draftContext}
+  />
+</TheLeagueLayout>
+
+<style>
+  .droom-conf {
+    --droom-accent: var(--league-accent, #1c497c);
+    --droom-surface: var(--card-bg, #fff);
+    --droom-surface-muted: var(--content-bg-muted, #f7f7f7);
+    --droom-border: var(--content-border, #e5e5e5);
+    --droom-ink: var(--page-text, #1a1a1a);
+    --droom-ink-muted: var(--content-text-muted, #666);
+    --droom-on-accent: var(--btn-primary-text, #fff);
+    padding: 0 1rem 0.75rem;
+  }
+
+  .droom-conf__rail {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    flex-wrap: wrap;
+  }
+
+  .droom-conf__label {
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--droom-ink-muted);
+  }
+
+  .droom-conf__list {
+    display: flex;
+    gap: 0.4rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    flex-wrap: wrap;
+  }
+
+  .droom-conf__chip {
+    display: inline-flex;
+    flex-direction: column;
+    box-sizing: border-box;
+    padding: 0.35rem 0.8rem;
+    border-radius: 0.5rem;
+    border: 1px solid var(--droom-border);
+    background: var(--droom-surface-muted);
+    color: var(--droom-ink-muted);
+    font-size: 0.85rem;
+    font-weight: 600;
+    text-decoration: none;
+    line-height: 1.25;
+  }
+
+  .droom-conf__chip:hover {
+    border-color: var(--droom-accent);
+    color: var(--droom-ink);
+  }
+
+  .droom-conf__chip--on {
+    background: var(--droom-accent);
+    border-color: var(--droom-accent);
+    color: var(--droom-on-accent);
+  }
+
+  .droom-conf__kind {
+    font-size: 0.68rem;
+    font-weight: 500;
+    opacity: 0.85;
+    text-transform: lowercase;
+  }
+
+  .droom-conf__notice {
+    margin: 0.5rem 0 0;
+    padding: 0.5rem 0.7rem;
+    border: 1px solid var(--droom-border);
+    border-radius: 0.45rem;
+    background: var(--droom-surface-muted);
+    color: var(--droom-ink-muted);
+    font-size: 0.8rem;
+    line-height: 1.4;
+  }
+</style>
