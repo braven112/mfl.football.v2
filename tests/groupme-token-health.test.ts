@@ -21,8 +21,14 @@ const read = (rel: string) => readFileSync(fileURLToPath(new URL(rel, import.met
 const ORIGINAL_SERVICE = process.env.GROUPME_SERVICE_TOKEN;
 const ORIGINAL_ACCESS = process.env.GROUPME_ACCESS_TOKEN;
 
-function mockFetch(impl: (url: string) => Promise<Response> | Response) {
-  const spy = vi.fn((input: RequestInfo | URL) => Promise.resolve(impl(String(input))));
+/** The probe authenticates by header, so tests read the token from there. */
+const sentToken = (init?: RequestInit): string =>
+  String((init?.headers as Record<string, string> | undefined)?.['X-Access-Token'] ?? '');
+
+function mockFetch(impl: (url: string, init?: RequestInit) => Promise<Response> | Response) {
+  const spy = vi.fn((input: RequestInfo | URL, init?: RequestInit) =>
+    Promise.resolve(impl(String(input), init)),
+  );
   vi.stubGlobal('fetch', spy);
   return spy;
 }
@@ -78,8 +84,11 @@ describe('checkServiceTokenHealth', () => {
 
   it('reports valid when GroupMe accepts the token', async () => {
     process.env.GROUPME_SERVICE_TOKEN = 'good-token';
-    const spy = mockFetch((url) => {
-      expect(url).toContain('/v3/users/me?token=good-token');
+    const spy = mockFetch((url, init) => {
+      // The credential travels in a header, never in the URL — see the leak
+      // note below.
+      expect(url).toBe('https://api.groupme.com/v3/users/me');
+      expect(sentToken(init)).toBe('good-token');
       return okUser('Brandon');
     });
 
@@ -111,8 +120,8 @@ describe('checkServiceTokenHealth', () => {
 
   it('falls back to GROUPME_ACCESS_TOKEN, matching the client', async () => {
     process.env.GROUPME_ACCESS_TOKEN = 'fallback-token';
-    mockFetch((url) => {
-      expect(url).toContain('token=fallback-token');
+    mockFetch((_url, init) => {
+      expect(sentToken(init)).toBe('fallback-token');
       return okUser();
     });
 
@@ -132,13 +141,62 @@ describe('checkServiceTokenHealth', () => {
 
   it('re-probes immediately when the token is rotated, rather than serving a stale verdict', async () => {
     process.env.GROUPME_SERVICE_TOKEN = 'revoked';
-    const spy = mockFetch((url) => (url.includes('token=revoked') ? unauthorized() : okUser()));
+    const spy = mockFetch((_url, init) => (sentToken(init) === 'revoked' ? unauthorized() : okUser()));
 
     expect((await checkServiceTokenHealth()).state).toBe('rejected');
 
     process.env.GROUPME_SERVICE_TOKEN = 'rotated';
     expect((await checkServiceTokenHealth()).state).toBe('valid');
     expect(spy).toHaveBeenCalledTimes(2);
+  });
+
+  it('never leaks the token into detail, even when the error message quotes the URL', async () => {
+    process.env.GROUPME_SERVICE_TOKEN = 'super-secret-token';
+    // Node really does this: `fetch('ht!tp://…?token=SECRET')` rejects with
+    // "Failed to parse URL from ht!tp://…?token=SECRET". `detail` is returned
+    // as JSON and rendered on the admin dashboard, so it must not carry it.
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(() =>
+        Promise.reject(
+          new Error('Failed to parse URL from https://api.groupme.com/v3/users/me?token=super-secret-token'),
+        ),
+      ),
+    );
+
+    const health = await checkServiceTokenHealth();
+
+    expect(health.state).toBe('unreachable');
+    expect(health.detail).not.toContain('super-secret-token');
+    expect(health.detail).toContain('[redacted]');
+    expect(JSON.stringify(health)).not.toContain('super-secret-token');
+  });
+
+  it('a slow probe does not overwrite a fresher verdict that landed first', async () => {
+    process.env.GROUPME_SERVICE_TOKEN = 'good-token';
+
+    // First probe hangs; the forced re-check answers immediately. The stale
+    // one then resolves LAST and must not clobber the newer cached result.
+    let releaseSlow: (r: Response) => void = () => {};
+    let call = 0;
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(() => {
+        call += 1;
+        if (call === 1) return new Promise<Response>((res) => { releaseSlow = res; });
+        return Promise.resolve(okUser('Fresh'));
+      }),
+    );
+
+    const slow = checkServiceTokenHealth();
+    const fresh = await checkServiceTokenHealth({ force: true });
+    expect(fresh.userName).toBe('Fresh');
+
+    releaseSlow(unauthorized());
+    // The stale caller still gets the answer to the probe it asked for…
+    expect((await slow).state).toBe('rejected');
+    // …but the shared cache keeps the newer verdict.
+    expect((await checkServiceTokenHealth()).userName).toBe('Fresh');
   });
 
   it('honors force, bypassing the cache for an explicit re-check', async () => {
@@ -183,5 +241,63 @@ describe('the surfaces that report GroupMe health', () => {
     // "not configured" must stay a distinct outcome from "rejected".
     expect(src).toContain("'not-set'");
     expect(src).toContain("'rejected'");
+  });
+});
+
+describe('operator-facing messages name the variable actually in play', () => {
+  const ORIG_S = process.env.GROUPME_SERVICE_TOKEN;
+  const ORIG_A = process.env.GROUPME_ACCESS_TOKEN;
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    resetServiceTokenHealthCache();
+    if (ORIG_S === undefined) delete process.env.GROUPME_SERVICE_TOKEN;
+    else process.env.GROUPME_SERVICE_TOKEN = ORIG_S;
+    if (ORIG_A === undefined) delete process.env.GROUPME_ACCESS_TOKEN;
+    else process.env.GROUPME_ACCESS_TOKEN = ORIG_A;
+  });
+
+  it('reports GROUPME_SERVICE_TOKEN as the source when it supplied the token', async () => {
+    delete process.env.GROUPME_ACCESS_TOKEN;
+    process.env.GROUPME_SERVICE_TOKEN = 'primary';
+    mockFetch(() => okUser());
+    expect((await checkServiceTokenHealth()).source).toBe('GROUPME_SERVICE_TOKEN');
+  });
+
+  it('reports the ACCESS fallback as the source when it is what is actually in use', async () => {
+    delete process.env.GROUPME_SERVICE_TOKEN;
+    process.env.GROUPME_ACCESS_TOKEN = 'fallback';
+    mockFetch(() => unauthorized());
+
+    const health = await checkServiceTokenHealth();
+
+    // A revoked-token row that told the admin to rotate GROUPME_SERVICE_TOKEN
+    // here would send them to a variable that is not set at all.
+    expect(health.state).toBe('rejected');
+    expect(health.source).toBe('GROUPME_ACCESS_TOKEN');
+  });
+
+  it('names both variables when neither is set', async () => {
+    delete process.env.GROUPME_SERVICE_TOKEN;
+    delete process.env.GROUPME_ACCESS_TOKEN;
+
+    const health = await checkServiceTokenHealth();
+
+    expect(health.state).toBe('not-set');
+    expect(health.detail).toContain('GROUPME_SERVICE_TOKEN');
+    expect(health.detail).toContain('GROUPME_ACCESS_TOKEN');
+    expect(health.source).toBeUndefined();
+  });
+
+  it('the stats presence flag counts the ACCESS fallback too', () => {
+    const src = read('../src/pages/api/admin/schefter-stats.ts');
+    const flag = src.match(/groupmeTokenConfigured:.*/)?.[0] ?? '';
+    expect(flag).toContain('GROUPME_ACCESS_TOKEN');
+  });
+
+  it('the dashboard label and the sync hint use the reported source, not a literal', () => {
+    const dash = read('../src/components/schefter/AdminDashboard.astro');
+    expect(dash).toContain('gmToken?.source');
+    const sync = read('../src/pages/api/groupme/sync.ts');
+    expect(sync).toContain('tokenHealth.source');
   });
 });

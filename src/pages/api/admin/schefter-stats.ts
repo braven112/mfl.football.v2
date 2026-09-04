@@ -1030,7 +1030,10 @@ export const GET: APIRoute = async ({ request }) => {
   });
 
   const vercelEnv = {
-    groupmeTokenConfigured: !!process.env.GROUPME_SERVICE_TOKEN,
+    // Both vars, matching what the client actually resolves — this flag is the
+    // dashboard's fallback when the probe itself failed, so a deployment running
+    // on the ACCESS fallback must not read as "missing".
+    groupmeTokenConfigured: !!(process.env.GROUPME_SERVICE_TOKEN || process.env.GROUPME_ACCESS_TOKEN),
     groupmeToken,
     anthropicKeyConfigured: !!process.env.ANTHROPIC_API_KEY,
     tipsterSaltConfigured: !!process.env.SCHEFTER_TIPSTER_SALT,

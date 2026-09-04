@@ -17,14 +17,28 @@ function getGroupId(): string {
   return id;
 }
 
-function readServiceToken(): string | null {
-  return process.env.GROUPME_SERVICE_TOKEN || process.env.GROUPME_ACCESS_TOKEN || null;
+/** The env vars that can supply the service token, in precedence order. */
+const SERVICE_TOKEN_VARS = ['GROUPME_SERVICE_TOKEN', 'GROUPME_ACCESS_TOKEN'] as const;
+export type GroupMeTokenSource = (typeof SERVICE_TOKEN_VARS)[number];
+
+/**
+ * Resolve the service token AND say which variable supplied it. The source
+ * matters to every operator-facing message: naming `GROUPME_SERVICE_TOKEN` at
+ * a deployment that is actually running on the `GROUPME_ACCESS_TOKEN` fallback
+ * sends an on-call admin to rotate the wrong secret.
+ */
+function readServiceToken(): { token: string; source: GroupMeTokenSource } | null {
+  for (const source of SERVICE_TOKEN_VARS) {
+    const token = process.env[source];
+    if (token) return { token, source };
+  }
+  return null;
 }
 
 function getServiceToken(): string {
-  const token = readServiceToken();
-  if (!token) throw new Error('[groupme] GROUPME_SERVICE_TOKEN not configured');
-  return token;
+  const resolved = readServiceToken();
+  if (!resolved) throw new Error(`[groupme] no service token — set ${SERVICE_TOKEN_VARS.join(' or ')}`);
+  return resolved.token;
 }
 
 /**
@@ -53,6 +67,11 @@ export interface GroupMeTokenHealth {
   detail?: string;
   /** The account the token authenticates as, when valid. */
   userName?: string;
+  /**
+   * Which env var supplied the token. Absent only for `not-set`. Operator-
+   * facing labels and rotation hints must use THIS, not a hardcoded name.
+   */
+  source?: GroupMeTokenSource;
 }
 
 /** How long a probe result stands before we ask GroupMe again. */
@@ -71,11 +90,24 @@ const TOKEN_PROBE_TIMEOUT_MS = 8000;
  */
 let tokenProbeCache: { key: string; result: GroupMeTokenHealth; expiresAt: number } | null = null;
 let tokenProbeInFlight: { key: string; promise: Promise<GroupMeTokenHealth> } | null = null;
+/**
+ * Monotonic id of the newest probe started. A slow probe that resolves after a
+ * newer one has already landed must NOT overwrite the fresher verdict — with a
+ * re-check button on the dashboard that is a live race, and losing it pins the
+ * stale answer for the whole TTL.
+ */
+let tokenProbeGeneration = 0;
 
 async function probeServiceToken(token: string): Promise<GroupMeTokenHealth> {
   const checkedAt = Date.now();
   try {
-    const res = await fetch(`${API_BASE}/users/me?token=${encodeURIComponent(token)}`, {
+    // Header auth, not `?token=`: a fetch rejection can carry the request URL
+    // in its message (`Failed to parse URL from …?token=SECRET`), and that
+    // message goes into `detail`, which is returned as JSON and rendered on the
+    // dashboard. Keeping the credential out of the URL removes the leak at the
+    // source rather than scrubbing it downstream.
+    const res = await fetch(`${API_BASE}/users/me`, {
+      headers: { 'X-Access-Token': token },
       signal: AbortSignal.timeout(TOKEN_PROBE_TIMEOUT_MS),
     });
 
@@ -122,9 +154,17 @@ async function probeServiceToken(token: string): Promise<GroupMeTokenHealth> {
       state: 'unreachable',
       ok: false,
       checkedAt,
-      detail: `Could not reach GroupMe: ${(err as Error)?.message ?? String(err)}`,
+      // Belt and braces alongside the header auth above: `detail` is documented
+      // as never containing the token, so redact rather than trust the shape of
+      // an error message we do not author.
+      detail: `Could not reach GroupMe: ${redactToken((err as Error)?.message ?? String(err), token)}`,
     };
   }
+}
+
+/** Remove the token from text bound for a response body or the DOM. */
+function redactToken(text: string, token: string): string {
+  return token ? text.split(token).join('[redacted]') : text;
 }
 
 /**
@@ -133,15 +173,16 @@ async function probeServiceToken(token: string): Promise<GroupMeTokenHealth> {
  * does not hammer the API; pass `{ force: true }` for an explicit re-check.
  */
 export async function checkServiceTokenHealth(opts?: { force?: boolean }): Promise<GroupMeTokenHealth> {
-  const token = readServiceToken();
-  if (!token) {
+  const resolved = readServiceToken();
+  if (!resolved) {
     return {
       state: 'not-set',
       ok: false,
       checkedAt: Date.now(),
-      detail: 'GROUPME_SERVICE_TOKEN is not set in this environment.',
+      detail: `Neither ${SERVICE_TOKEN_VARS.join(' nor ')} is set in this environment.`,
     };
   }
+  const { token, source } = resolved;
 
   const now = Date.now();
   if (!opts?.force && tokenProbeCache?.key === token && tokenProbeCache.expiresAt > now) {
@@ -151,9 +192,20 @@ export async function checkServiceTokenHealth(opts?: { force?: boolean }): Promi
     return tokenProbeInFlight.promise;
   }
 
-  const promise = probeServiceToken(token).then((result) => {
-    const ttl = result.state === 'unreachable' ? TOKEN_PROBE_ERROR_TTL_MS : TOKEN_PROBE_TTL_MS;
-    tokenProbeCache = { key: token, result, expiresAt: Date.now() + ttl };
+  // Claim a generation BEFORE starting, so a probe that resolves out of order
+  // can tell it has been superseded. A `force` re-check overlapping an in-flight
+  // poll is the case that makes this reachable.
+  const generation = ++tokenProbeGeneration;
+
+  const promise = probeServiceToken(token).then((probed) => {
+    // Stamped here rather than inside the probe so every state carries it.
+    const result: GroupMeTokenHealth = { ...probed, source };
+    if (generation === tokenProbeGeneration) {
+      const ttl = result.state === 'unreachable' ? TOKEN_PROBE_ERROR_TTL_MS : TOKEN_PROBE_TTL_MS;
+      tokenProbeCache = { key: token, result, expiresAt: Date.now() + ttl };
+    }
+    // The caller still gets the answer to the probe IT asked for; only the
+    // shared cache is reserved for the newest one.
     return result;
   }).finally(() => {
     if (tokenProbeInFlight?.promise === promise) tokenProbeInFlight = null;
@@ -167,6 +219,7 @@ export async function checkServiceTokenHealth(opts?: { force?: boolean }): Promi
 export function resetServiceTokenHealthCache(): void {
   tokenProbeCache = null;
   tokenProbeInFlight = null;
+  tokenProbeGeneration++;
 }
 
 /**

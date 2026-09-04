@@ -45,7 +45,8 @@ export const POST: APIRoute = async () => {
       return json({
         error: 'GroupMe token rejected',
         detail: tokenHealth.detail,
-        hint: 'Regenerate the token at https://dev.groupme.com/ and update GROUPME_SERVICE_TOKEN.',
+        // Name the var that supplied the dead token, not a hardcoded guess.
+        hint: `Regenerate the token at https://dev.groupme.com/ and update ${tokenHealth.source ?? 'GROUPME_SERVICE_TOKEN'}.`,
       }, 503);
     }
 

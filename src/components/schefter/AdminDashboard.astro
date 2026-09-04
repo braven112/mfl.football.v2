@@ -890,15 +890,19 @@ const { base, navSlug } = Astro.props;
       const [gmPillState, gmPillLabel] = gmPill[gmState] ?? gmPill['unreachable'];
       // `userName` comes back from GroupMe and `detail` can carry a thrown
       // error's message — both go through escapeHtml before innerHTML.
+      // Label the variable that ACTUALLY supplied the token — the client falls
+      // back to GROUPME_ACCESS_TOKEN, and naming the wrong one sends an on-call
+      // admin to rotate a secret that is not in play.
+      const gmVar = escapeHtml(gmToken?.source || 'GROUPME_SERVICE_TOKEN');
       const gmNote = gmState === 'valid'
         ? (gmToken?.userName ? ` <span class="ops-env__note">authenticates as ${escapeHtml(gmToken.userName)}</span>` : '')
         : gmState === 'rejected'
-          ? ` <span class="ops-env__note">${escapeHtml(gmToken?.detail || 'GroupMe rejected the token.')} Rotate it at <a href="https://dev.groupme.com/" target="_blank" rel="noopener">dev.groupme.com</a> and update the Vercel env var.</span>`
+          ? ` <span class="ops-env__note">${escapeHtml(gmToken?.detail || 'GroupMe rejected the token.')} Rotate it at <a href="https://dev.groupme.com/" target="_blank" rel="noopener">dev.groupme.com</a> and update <code>${gmVar}</code> on Vercel.</span>`
           : gmToken?.detail
             ? ` <span class="ops-env__note">${escapeHtml(gmToken.detail)}</span>`
             : '';
       items.splice(1, 0,
-        `<li class="ops-env__item">${pill(gmPillState, gmPillLabel)} <code>GROUPME_SERVICE_TOKEN</code>${gmNote}</li>`,
+        `<li class="ops-env__item">${pill(gmPillState, gmPillLabel)} <code>${gmVar}</code>${gmNote}</li>`,
       );
       items.push(
         data.redisAvailable
