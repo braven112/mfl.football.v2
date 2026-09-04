@@ -561,8 +561,36 @@ const pageConfig = {
   <script id="tb-config" type="application/json" set:html={JSON.stringify(pageConfig).replace(/</g, '\\u003c')}></script>
 
   <script>
-    const cfgEl = document.getElementById('tb-config');
-    if (cfgEl) {
+    /**
+     * CLIENTROUTER-SAFE INIT (frontend.md, "Interactive scripts must re-init on
+     * astro:page-load"). Astro bundles this script, so it is evaluated ONCE per
+     * document and the router swaps the DOM without re-evaluating it. Every ref
+     * below ran at module scope, so on a return visit the picker buttons, the
+     * team switch and Send proposal were all bound to detached nodes, and the
+     * delegated remove-from-zone handler — which SURVIVES, because `document`
+     * is the one node the swap does not replace — was still driving the
+     * previous page's `offer` object and writing into its detached zones.
+     * Nothing threw; the builder just stopped responding.
+     *
+     * The delegated handler is held in a module-scoped var and removed before
+     * it is re-added: one listener AND a closure over the live page. A
+     * once-flag would give one listener over DEAD nodes, which is the bug it
+     * would be meant to fix.
+     */
+    let onRemoveClick: ((e: MouseEvent) => void) | null = null;
+
+    function init() {
+      // Drop the previous page's delegated handler before building this page's.
+      if (onRemoveClick) document.removeEventListener('click', onRemoveClick);
+      onRemoveClick = null;
+
+      // Re-read the SSR config INSIDE init: `#tb-config` is swapped out with
+      // everything else, so a blob parsed at module scope carries the previous
+      // page's franchises, roster and pre-selected assets — and
+      // `fromFranchiseId` from it is what the submitted proposal is sent as.
+      const cfgEl = document.getElementById('tb-config');
+      if (!cfgEl) return;
+
       const config = JSON.parse(cfgEl.textContent || '{}');
       const { fromFranchiseId, preSelectedPlayer, preSelectedTarget, isAflOwner, playerLookup, pickLookup } = config;
 
@@ -721,8 +749,9 @@ const pageConfig = {
         });
       });
 
-      // Wire zone removal
-      document.addEventListener('click', (e) => {
+      // Wire zone removal. Held above and torn down at the top of init() —
+      // `document` is the one node the swap does not replace.
+      onRemoveClick = (e) => {
         const target = e.target as HTMLElement;
         const rm = target.closest<HTMLElement>('.tb-asset__remove');
         if (!rm) return;
@@ -732,7 +761,8 @@ const pageConfig = {
         const type = asset.dataset.assetType as 'player' | 'pick';
         const id = asset.dataset.assetId || '';
         remove(side, type, id);
-      });
+      };
+      document.addEventListener('click', onRemoveClick);
 
       // Wire team switch
       toSelect?.addEventListener('change', () => {
@@ -810,6 +840,12 @@ const pageConfig = {
       renderZone('to');
       updateFairness();
     }
+
+    /**
+     * Never call init() directly — `astro:page-load` fires on the FIRST load as
+     * well as after every swap.
+     */
+    document.addEventListener('astro:page-load', init);
   </script>
 
   <style>
