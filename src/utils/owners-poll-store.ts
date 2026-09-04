@@ -151,6 +151,30 @@ export async function readBallot(
 }
 
 /**
+ * The caller's ballot from the PREVIOUS week, for prefill.
+ *
+ * From week 2 onward the ballot opens pre-populated with the owner's own prior
+ * ballot, which is the single largest ongoing reduction in effort — by week 6
+ * the ask becomes "submit as-is or move two teams" rather than a fresh
+ * seven-tap build. It is not the anchoring hazard a system-suggested seed
+ * would be: it is that owner's own previous opinion, not an ordering the site
+ * is nudging them toward.
+ *
+ * Returns null in week 1, when they didn't vote last week, or when last week's
+ * ballot no longer validates against this week's field or depth — a franchise
+ * can leave, and `slots` can change. Dropping it is right: prefilling a ballot
+ * the owner would have to repair is worse than prefilling nothing.
+ */
+export async function readPreviousBallot(
+  scope: string,
+  window: OwnersPollWindow,
+  franchiseId: string,
+): Promise<StoredBallot | null> {
+  if (window.week <= 1) return null;
+  return readBallot(scope, { ...window, week: window.week - 1 }, franchiseId);
+}
+
+/**
  * Upsert one franchise's ballot.
  *
  * HSET on a per-franchise field, so two owners submitting simultaneously

@@ -364,8 +364,8 @@ Tuesday pass has never needed Redis.
 
 ## Build status
 
-**Step 1 (math + storage) is built.** What shipped, and one thing that came
-out differently from the sketch above:
+**Steps 1-2 are built.** What shipped, and the things that came out
+differently from the sketch above:
 
 | File | Role |
 |---|---|
@@ -375,7 +375,14 @@ out differently from the sketch above:
 | `src/pages/api/owners-poll/ballot.ts` | GET/POST the caller's own ballot |
 | `src/pages/api/owners-poll/turnout.ts` | Public count-only turnout |
 | `src/config/leagues-data.mjs`, `leagues.ts` | `ownersPoll` registry entry + `OwnersPollConfig` type |
-| `tests/owners-poll-{math,ballot,api}.test.ts` | 72 tests |
+| `src/utils/owners-poll-access.ts` | Page gate (routes own the redirect) |
+| `src/utils/owners-poll-builder.ts` | Pure tap-to-add state transitions |
+| `src/components/shared/owners-poll/OwnersPollBallotPage.astro` | Shared page |
+| `src/components/shared/owners-poll/BallotBuilder.tsx` | Ballot island |
+| `src/pages/theleague/pecking-order/ballot.astro` | Thin route wrapper |
+| `src/styles/owners-poll.css` | Page styles |
+| `src/data/page-directory.json` | Search entry (21 tags) |
+| `tests/owners-poll-{math,ballot,api,builder}.test.ts` | 90 tests |
 
 **The math did not all land in one file.** The plan said
 `scripts/lib/owners-poll-math.mjs` for everything, but validation is asked by
@@ -404,15 +411,36 @@ Three decisions worth knowing before touching this code:
   runtime variable), and guarantees the API validates against exactly the field
   the close pass will tally.
 
+**Reordering is arrow buttons, not drag.** The sketch said long-press/drag
+within the selected list. For a seven-row list, up/down buttons are more
+reliable under a thumb and work with a keyboard and a screen reader, which
+drag does not without a full a11y implementation. Verified in a real browser:
+removing a pick renumbers the rest and drops Submit to `(6/7)`, disabled.
+
+**Card order is alphabetical, and the composite rank is not shown on a card.**
+Sorting the ballot by the machine's ranking would anchor every owner to it —
+the one thing the poll exists to disagree with. Records and PPG are shown as
+neutral context, read from the latest issue's standings snapshot.
+
+**The team accent ships both brand colours.** `--op-team` and `--op-team-dark`
+are set inline per card and CSS picks per theme, covering both the
+`prefers-color-scheme` default and an explicit `[data-theme]` toggle. The first
+cut passed only `colorPrimary`; several teams' primaries are near-black and
+vanished against a dark card, which is the "looks perfect in light, ships
+invisible in dark" failure this repo has shipped before.
+`tests/design-token-guard.test.ts` is the standing guard for the broader
+version of that bug and already covers this file.
+
 Not yet wired: nothing writes the window pointer — that is the Tuesday pass in
-step 4. Until then the API correctly reports `status: "none"` and refuses
-writes.
+step 4. Until then the API correctly reports `status: "none"`, refuses writes,
+and the page renders "No ballot is open right now." That is also why there is
+still no What's New entry: the page exists but the feature cannot be used, so
+it is unreleased. Write the entry in step 4, when a ballot can actually open.
 
 ## Remaining build order
 
 1. ~~**Math + storage.**~~ Done — see above.
-2. **Ballot page.** Shared component, thin wrappers, tap-to-add UI, prefill.
-   Ship it behind the season-window gate and test with `?testDate=`.
+2. ~~**Ballot page.**~~ Done — see above.
 3. **Article integration.** `ownersPoll` block in the issue schema; open and
    closed states in `PeckingOrderIssue.astro`; the server-side results gate;
    turnout meter.
@@ -424,9 +452,9 @@ writes.
 Steps 1-3 are a usable feature on their own (a poll owners can vote in and see
 results from). 4-6 are what make it *stick*.
 
-No What's New entry yet: nothing here is user-facing until the ballot page
-lands in step 2. Write it then, as a `new-feature` — screenshot required,
-league-neutral inline links, and an explicit call on hero eligibility.
+The What's New entry belongs to step 4, when a ballot can actually open — a
+`new-feature`, so screenshot required, league-neutral inline links, and an
+explicit call on hero eligibility.
 
 ## Phase 2 options (deliberately not in v1)
 

@@ -25,6 +25,7 @@ import {
   countBallots,
   readBallot,
   readOwnersPollWindow,
+  readPreviousBallot,
   resolveOwnersPollCaller,
   windowState,
   writeBallot,
@@ -61,8 +62,9 @@ export const GET: APIRoute = async ({ request }) => {
     return json({ status: state, window: null, ballot: null }, 200, headers);
   }
 
-  const [ballot, ballotsIn] = await Promise.all([
+  const [ballot, previous, ballotsIn] = await Promise.all([
     readBallot(scope, window, franchiseId),
+    readPreviousBallot(scope, window, franchiseId),
     countBallots(scope, window),
   ]);
 
@@ -71,6 +73,10 @@ export const GET: APIRoute = async ({ request }) => {
       status: 'open',
       window: publicWindow(window),
       ballot,
+      // Only offered when they haven't voted THIS week — once a ballot exists
+      // it is the thing to edit, and shipping both would let a stale prefill
+      // overwrite a submitted ballot.
+      prefill: ballot ? null : (previous?.ranking ?? null),
       turnout: { ballotsIn, eligible: window.eligibleFranchiseIds.length },
     },
     200,

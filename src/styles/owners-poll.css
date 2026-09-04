@@ -1,0 +1,288 @@
+/**
+ * The Owners' Poll — ballot page.
+ *
+ * Every custom property used here is defined in BOTH src/styles/tokens.css and
+ * src/styles/tokens-dark.css. A var() with no definition anywhere silently
+ * renders its fallback in both themes, which is how "looks perfect in light,
+ * ships white-on-black in dark" happens — so no new token names are invented
+ * in this file.
+ *
+ * `--op-team` / `--op-team-dark` are the exception and are set INLINE per card
+ * by the island from the franchise's brand colours. They are values, not theme
+ * tokens — which is why the theme switch for them lives at the bottom of this
+ * file rather than in tokens.css.
+ */
+
+.op-page {
+  max-width: 56rem;
+  margin: 0 auto;
+  padding: 1rem 1rem 4rem;
+  color: var(--page-text);
+}
+
+.op-crumbs {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  font-size: 0.85rem;
+  color: var(--content-text-muted);
+  margin-bottom: 1rem;
+}
+.op-crumbs a { color: inherit; }
+
+.op-hero__title {
+  font-size: clamp(1.75rem, 5vw, 2.5rem);
+  line-height: 1.1;
+  margin: 0 0 0.5rem;
+}
+.op-hero__lede {
+  margin: 0 0 1.5rem;
+  max-width: 46rem;
+  color: var(--content-text-muted);
+  line-height: 1.55;
+}
+
+/* --- builder shell ------------------------------------------------------ */
+
+.op-builder {
+  background: var(--content-bg);
+  border: 1px solid var(--content-border);
+  border-radius: var(--radius-lg, 12px);
+  box-shadow: var(--shadow-sm);
+  padding: 1.25rem;
+}
+
+.op-builder__head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+.op-builder__title { margin: 0; font-size: 1.15rem; }
+.op-builder__sub {
+  margin: 0.25rem 0 0;
+  font-size: 0.9rem;
+  color: var(--content-text-muted);
+}
+
+/* Public and always visible: a turnout number that climbs is the cheapest
+   nudge on the page, and the count-only decision means it never names anyone. */
+.op-turnout {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--content-text-muted);
+  white-space: nowrap;
+}
+.op-turnout strong { color: var(--page-text); font-size: 1.05rem; }
+
+.op-deadline {
+  margin: 0.75rem 0 0;
+  font-size: 0.85rem;
+  color: var(--content-text-muted);
+}
+
+/* --- slots -------------------------------------------------------------- */
+
+.op-slots {
+  list-style: none;
+  margin: 1rem 0 0;
+  padding: 0;
+  display: grid;
+  gap: 0.4rem;
+}
+
+.op-slot {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.5rem 0.6rem;
+  border-radius: var(--radius-md, 8px);
+  background: var(--content-bg-muted);
+  border-left: 4px solid var(--op-team, var(--content-border));
+  min-height: 2.75rem;
+}
+.op-slot--empty {
+  border-left-color: var(--content-border);
+  border-left-style: dashed;
+}
+
+.op-slot__rank {
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  min-width: 1.25rem;
+  text-align: center;
+  color: var(--content-text-muted);
+}
+.op-slot__crest { width: 1.5rem; height: 1.5rem; object-fit: contain; }
+.op-slot__name { font-weight: 600; flex: 1; min-width: 0; }
+.op-slot__placeholder { color: var(--content-text-muted); font-size: 0.9rem; }
+.op-slot__actions { display: flex; gap: 0.25rem; }
+
+.op-icon-btn {
+  /* 2.25rem keeps the arrows inside a comfortable touch target without
+     forcing the row taller than a thumb-scrollable list. */
+  min-width: 2.25rem;
+  min-height: 2.25rem;
+  border: 1px solid var(--content-border);
+  background: var(--content-bg);
+  color: var(--page-text);
+  border-radius: var(--radius-md, 8px);
+  cursor: pointer;
+  font-size: 1rem;
+  line-height: 1;
+}
+.op-icon-btn:disabled { opacity: 0.35; cursor: default; }
+.op-icon-btn--remove { color: var(--color-error); }
+
+/* --- actions ------------------------------------------------------------ */
+
+.op-actions {
+  display: flex;
+  gap: 0.6rem;
+  align-items: center;
+  margin-top: 1rem;
+  flex-wrap: wrap;
+}
+
+.op-submit {
+  background: var(--primary-color);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-md, 8px);
+  padding: 0.7rem 1.25rem;
+  font-weight: 700;
+  font-size: 1rem;
+  min-height: 2.75rem;
+  cursor: pointer;
+}
+.op-submit:disabled { opacity: 0.45; cursor: default; }
+
+.op-clear {
+  background: none;
+  border: 1px solid var(--content-border);
+  color: var(--content-text-muted);
+  border-radius: var(--radius-md, 8px);
+  padding: 0.7rem 1rem;
+  min-height: 2.75rem;
+  cursor: pointer;
+}
+
+.op-saved { color: var(--color-success); font-size: 0.9rem; margin: 0.75rem 0 0; }
+.op-error { color: var(--color-error); font-size: 0.9rem; margin: 0.75rem 0 0; }
+.op-note { color: var(--content-text-muted); }
+
+/* --- pool --------------------------------------------------------------- */
+
+.op-pool__title {
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--content-text-muted);
+  margin: 1.75rem 0 0.6rem;
+}
+
+.op-pool {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.5rem;
+  grid-template-columns: repeat(auto-fill, minmax(13rem, 1fr));
+}
+
+.op-card {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  text-align: left;
+  padding: 0.6rem;
+  min-height: 3.25rem;
+  background: var(--content-bg);
+  border: 1px solid var(--content-border);
+  border-left: 4px solid var(--op-team, var(--content-border));
+  border-radius: var(--radius-md, 8px);
+  color: var(--page-text);
+  cursor: pointer;
+}
+.op-card:disabled { opacity: 0.4; cursor: default; }
+.op-card--picked {
+  background: var(--content-bg-muted);
+  border-color: var(--op-team, var(--primary-color));
+}
+.op-card--own {
+  /* The "· you" label already marks the owner's own team. A dashed ring on top
+     of the picked state's team-coloured border read as an error box in dark
+     mode, so the marker stays textual. */
+  box-shadow: inset 0 0 0 1px var(--content-border);
+}
+
+.op-card__slot {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  min-width: 1.25rem;
+  text-align: center;
+}
+.op-card__crest { width: 1.75rem; height: 1.75rem; object-fit: contain; }
+.op-card__body { display: flex; flex-direction: column; min-width: 0; }
+.op-card__name { font-weight: 600; }
+.op-card__you { color: var(--content-text-muted); font-weight: 400; }
+.op-card__meta {
+  font-size: 0.8rem;
+  color: var(--content-text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* --- callouts ----------------------------------------------------------- */
+
+.op-callout {
+  background: var(--content-bg-muted);
+  border: 1px solid var(--content-border);
+  border-radius: var(--radius-md, 8px);
+  padding: 1rem;
+}
+.op-callout p { margin: 0.35rem 0 0; color: var(--content-text-muted); }
+.op-callout--error { border-color: var(--color-error); }
+.op-callout--hint { margin-top: 1rem; font-size: 0.9rem; }
+
+.op-footnote {
+  margin-top: 1.5rem;
+  font-size: 0.85rem;
+  color: var(--content-text-muted);
+  line-height: 1.55;
+}
+.op-footnote p { margin: 0 0 0.5rem; }
+
+@media (max-width: 30rem) {
+  .op-pool { grid-template-columns: 1fr; }
+}
+
+/* --- team accent, per theme ---------------------------------------------
+ * The brand primaries are chosen for LIGHT surfaces; several are near-black
+ * and disappear against a dark card. `--op-team-dark` is the config's own
+ * dark-surface variant (falling back to the light primary in
+ * league-team-brands for teams that don't define one), so the accent stays
+ * visible in both themes instead of looking perfect in light and vanishing in
+ * dark.
+ *
+ * Both directions are covered on purpose: the media query for the default
+ * "system" setting, and [data-theme] for an explicit toggle, which must win.
+ */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) .op-slot,
+  :root:not([data-theme='light']) .op-card {
+    border-left-color: var(--op-team-dark, var(--op-team, var(--content-border)));
+  }
+  :root:not([data-theme='light']) .op-card--picked {
+    border-color: var(--op-team-dark, var(--op-team, var(--primary-color)));
+  }
+}
+
+:root[data-theme='dark'] .op-slot,
+:root[data-theme='dark'] .op-card {
+  border-left-color: var(--op-team-dark, var(--op-team, var(--content-border)));
+}
+:root[data-theme='dark'] .op-card--picked {
+  border-color: var(--op-team-dark, var(--op-team, var(--primary-color)));
+}

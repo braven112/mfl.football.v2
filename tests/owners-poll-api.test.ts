@@ -52,6 +52,7 @@ import { GET as ballotGET, POST as ballotPOST } from '../src/pages/api/owners-po
 import { GET as turnoutGET } from '../src/pages/api/owners-poll/turnout';
 import { ownersPollBallotsKey, ownersPollCurrentKey } from '../src/utils/owners-poll-ballot.mjs';
 import { resolveOwnersPollCaller } from '../src/utils/owners-poll-store';
+import { resolveOwnersPollAccess } from '../src/utils/owners-poll-access';
 
 // ---------------------------------------------------------------------------
 // Fixtures
@@ -358,5 +359,128 @@ describe('GET /api/owners-poll/turnout', () => {
   it('reports no turnout when no ballot is open', async () => {
     const res = await turnoutGET(makeContext(req(`/api/owners-poll/turnout?league=${THELEAGUE.navSlug}`)));
     expect(await res.json()).toEqual({ status: 'none', turnout: null });
+  });
+});
+
+describe('prefill from last week', () => {
+  const lastWeek = ['0009', '0010', '0011', '0012', '0013', '0014', '0015'];
+
+  function storeLastWeeksBallot(ranking = lastWeek, franchiseId = '0003') {
+    hashes.set(
+      ownersPollBallotsKey(THELEAGUE.navSlug, 2026, 4),
+      new Map([[franchiseId, JSON.stringify({ franchiseId, ranking })]]),
+    );
+  }
+
+  it('offers last week\'s ballot when this week has none', async () => {
+    openTheBallot();
+    storeLastWeeksBallot();
+    const res = await ballotGET(makeContext(authed('/api/owners-poll/ballot', sessionCookie('0003'))));
+    const body = await res.json();
+    expect(body.ballot).toBeNull();
+    expect(body.prefill).toEqual(lastWeek);
+  });
+
+  it('does NOT offer a prefill once this week\'s ballot exists', async () => {
+    // Shipping both would let a stale prefill overwrite a submitted ballot.
+    openTheBallot();
+    storeLastWeeksBallot();
+    hashes.set(
+      ownersPollBallotsKey(THELEAGUE.navSlug, 2026, 5),
+      new Map([['0003', JSON.stringify({ franchiseId: '0003', ranking: OK })]]),
+    );
+    const body = await (
+      await ballotGET(makeContext(authed('/api/owners-poll/ballot', sessionCookie('0003'))))
+    ).json();
+    expect(body.ballot.ranking).toEqual(OK);
+    expect(body.prefill).toBeNull();
+  });
+
+  it('offers nothing in week 1', async () => {
+    openTheBallot({ ...OPEN_WINDOW, week: 1 });
+    const body = await (
+      await ballotGET(makeContext(authed('/api/owners-poll/ballot', sessionCookie('0003'))))
+    ).json();
+    expect(body.prefill).toBeNull();
+  });
+
+  it('drops a prefill that no longer validates against this week\'s field', async () => {
+    // A franchise left the league since last week. Prefilling a ballot the
+    // owner would have to repair is worse than prefilling nothing.
+    openTheBallot();
+    storeLastWeeksBallot([...lastWeek.slice(0, 6), '0099']);
+    const body = await (
+      await ballotGET(makeContext(authed('/api/owners-poll/ballot', sessionCookie('0003'))))
+    ).json();
+    expect(body.prefill).toBeNull();
+  });
+
+  it('never offers another owner\'s ballot as a prefill', async () => {
+    openTheBallot();
+    storeLastWeeksBallot(lastWeek, '0011');
+    const body = await (
+      await ballotGET(makeContext(authed('/api/owners-poll/ballot', sessionCookie('0003'))))
+    ).json();
+    expect(body.prefill).toBeNull();
+  });
+});
+
+describe('resolveOwnersPollAccess (page gate)', () => {
+  const url = (path: string) => new URL(`http://test.invalid${path}`);
+
+  it('admits an owner to their own league\'s ballot page', () => {
+    const access = resolveOwnersPollAccess(
+      authed('/theleague/pecking-order/ballot', sessionCookie()),
+      url('/theleague/pecking-order/ballot'),
+    );
+    expect(access?.user.franchiseId).toBe('0003');
+    expect(access?.league.slug).toBe('theleague');
+  });
+
+  it('refuses an unauthenticated visitor, so the route can redirect', () => {
+    expect(
+      resolveOwnersPollAccess(
+        authed('/theleague/pecking-order/ballot', null),
+        url('/theleague/pecking-order/ballot'),
+      ),
+    ).toBeNull();
+  });
+
+  it('refuses a session from another league', () => {
+    // Franchise ids collide across leagues — an AFL 0001 opening TheLeague's
+    // ballot would be voting as a different team.
+    expect(
+      resolveOwnersPollAccess(
+        authed('/theleague/pecking-order/ballot', sessionCookie('0001', AFL.id)),
+        url('/theleague/pecking-order/ballot'),
+      ),
+    ).toBeNull();
+  });
+
+  it('refuses a session with no franchise', () => {
+    expect(
+      resolveOwnersPollAccess(
+        authed('/theleague/pecking-order/ballot', sessionCookie('')),
+        url('/theleague/pecking-order/ballot'),
+      ),
+    ).toBeNull();
+  });
+
+  it('mirrors the API: a page never renders a ballot the API would refuse', () => {
+    // Same session, same verdict from both gates — for every case above.
+    const cases: Array<[string | null, string]> = [
+      [sessionCookie(), 'admit'],
+      [null, 'refuse'],
+      [sessionCookie(''), 'refuse'],
+      [sessionCookie('0001', AFL.id), 'refuse'],
+      [sessionCookie('0003', 'not-a-league'), 'refuse'],
+    ];
+    for (const [cookie, expected] of cases) {
+      const request = authed('/theleague/pecking-order/ballot', cookie);
+      const page = resolveOwnersPollAccess(request, url('/theleague/pecking-order/ballot'));
+      const api = resolveOwnersPollCaller(request);
+      expect(Boolean(page), `page gate for ${expected}`).toBe(expected === 'admit');
+      expect(api.ok, `api gate for ${expected}`).toBe(expected === 'admit');
+    }
   });
 });
