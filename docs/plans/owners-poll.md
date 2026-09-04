@@ -22,13 +22,22 @@ things this feature produces.
 | Ballot shape | **Rank a top N only**, not the full field [DECIDED] |
 | Home | **Merged into the Tuesday Pecking Order article** [DECIDED] |
 | Turnout levers in scope | **Results locked until you vote**, **GroupMe reminders with deep link**, **voter accountability + accuracy scoring** [DECIDED] |
+| Scope for v1 | **TheLeague only.** AFL is a follow-on [DECIDED] |
+| Ballot depth | **7 slots** (of TheLeague's 16) [DECIDED] |
+| Non-voter nag | **Count-only** — no @-mentions, no names in chat [DECIDED] |
 
 ### One tension worth naming
 
 The original ask was "rank them 1st through last"; the chosen ballot shape is
 top-N. Those are not the same thing, and the gap shows up at the bottom of the
-table: with a top-N ballot, teams 9–16 are not *ordered* by the poll, they are
-merely *omitted* by it, and every omitted team ties at zero points.
+table: with a 7-slot ballot in a 16-team league, **nine teams** are not *ordered*
+by the poll, they are merely *omitted* by it, and any team nobody ranked ties at
+zero points.
+
+In practice the unranked block will be smaller than nine, because ballots
+disagree — a team ranked 7th on one ballot and left off six others still scores.
+Expect roughly the bottom four to six teams to land there in a typical week, and
+most of the field to score in a chaotic one.
 
 This plan resolves it by being honest rather than clever: the poll publishes a
 ranked block (the teams that received votes) and an **unranked block** below
@@ -123,16 +132,19 @@ Tap-to-add has no seed to anchor to, and is a sub-60-second flow on mobile.
 
 ```js
 ownersPoll: {
-  enabled: true,
-  slots: 8,        // TheLeague: 8 of 16
-  quorum: 8,
+  enabled: true,   // theleague only for v1; afl-fantasy stays false
+  slots: 7,        // TheLeague: 7 of 16
+  quorum: 8,       // 8 of 16 ballots
   closeHourPT: 18,
 }
 ```
 
-Suggested: TheLeague `slots: 8` (half the field), AFL `slots: 10` (24 teams —
-half would be 12 taps, too many). `tests/league-literal-guard.test.ts` enforces
-that nothing hardcodes these.
+`slots: 7` is set. It stays **registry config rather than a constant** even
+though only one league uses it in v1 — that is what
+`tests/league-literal-guard.test.ts` enforces, and it is what makes adding the
+AFL a config entry later instead of a refactor. Give `afl-fantasy` an
+`ownersPoll: { enabled: false }` entry now so the shape exists and the shared
+components always have something to read.
 
 **Ballot resubmission.** An owner may change their ballot freely until close.
 The stored record keeps `submittedAt` and `updatedAt`.
@@ -165,11 +177,15 @@ stays exactly as it is; the poll sits beside it with a **Δ column** showing
 disagreement. Averaging the two would destroy both signals and delete the only
 interesting thing here — where the room and the machine disagree.
 
-**Quorum.** Below `quorum` ballots the poll does not publish a consensus. The
-section instead reads "No quorum — only 5 of 16 ballots cast," names the
-non-voters, and the column runs algorithm-only that week. This makes turnout a
-collective stake rather than an individual chore, and it is honest: a
+**Quorum: 8 of 16.** Below that the poll does not publish a consensus. The
+section instead reads "No quorum — only 5 of 16 ballots cast" (a count, not a
+list of names) and the column runs algorithm-only that week. This makes turnout
+a collective stake rather than an individual chore, and it is honest: a
 "consensus" backed by four ballots is not one.
+
+Half the league is the right bar for a 16-team field — low enough to clear in a
+normal week, high enough that the published consensus means something. Revisit
+it after a few weeks of real turnout data rather than guessing again now.
 
 ## Turnout levers (all three chosen levers, plus the cheap ones)
 
@@ -199,10 +215,15 @@ Three posts per week through `postToGroupMe`, per-league Schefter bot:
 1. **Tue 07:00 PT — open.** Bundled into the existing column announcement.
    Lead with bait, not a chore: *"The computer has the Magicians #1 and the
    Pigskins 11th. Disagree? Ballot's open."*
-2. **Wed 10:00 PT — nag.** `buildMentionAttachment` @-mentions only the owners
-   who haven't voted, using the mapping from `scripts/map-groupme-owners.mjs`.
-   Public, specific, and impossible to miss — the strongest free lever here.
-   Skip the post entirely at 100% turnout.
+2. **Wed 10:00 PT — nag, count-only.** *"9 of 16 ballots are in. Seven owners
+   left, poll closes at 6."* **No @-mentions and no names.** That rules out
+   `buildMentionAttachment` here, and it means this feature needs no dependency
+   on `scripts/map-groupme-owners.mjs` at all. Skip the post entirely at 100%
+   turnout.
+
+   Count-only is the weaker lever, deliberately. Compensate with the ones that
+   don't call anyone out: the scarcity framing above (a deadline and a
+   shrinking number), the public turnout meter, and the ballot prefill.
 3. **Wed 19:00 PT — reveal.** Top 3, biggest riser/faller, the largest
    room-vs-machine disagreement, and the week's Homer.
 
@@ -212,9 +233,9 @@ optional: build the deep link with `leagueUrl(league, '/pecking-order/ballot')`
 `stripLinkAdjacentPunctuation`, or GroupMe autolinks the trailing period and
 404s the link for every owner.
 
-**[OPEN]** Confirm the nag is acceptable socially. Naming non-voters in chat is
-the most effective lever available and also the one most likely to annoy
-somebody. A softer variant posts the count without the names.
+**[DECIDED]** Count-only. Naming non-voters was the stronger lever and was
+rejected on purpose — record that here so a future session doesn't "improve" the
+nag by adding the names back.
 
 ### 3. Voter accountability + accuracy scoring [DECIDED]
 
@@ -231,8 +252,9 @@ Per owner, per season:
   not raw rank error, so a ballot isn't punished for the field shifting
   underneath it; all-play rather than head-to-head result, because a single
   fantasy matchup is mostly luck and would make the leaderboard noise. With
-  `slots: 8` that is 28 pairs per ballot per week — enough that the noise washes
-  out by midseason.
+  `slots: 7` that is **21 pairs** per ballot per week, so a 14-week season
+  yields ~294 comparisons per owner — enough that the noise washes out, though
+  the leaderboard won't mean much before about week 6. Don't headline it early.
 - **Contrarian Index** — mean absolute distance from the final consensus. Not
   accuracy, and labeled as such: it measures independence, and it is a badge,
   not a demerit.
@@ -247,8 +269,10 @@ therefore a permanent, attributable record — which is the point.
 
 - **Live turnout meter** on the article, visible to everyone, all window.
   Public progress bars move people.
-- **Non-voters named in the column itself**, not just in chat: *"Ballots not
-  cast: Vitside, Computer Jocks."* Permanent and public, at zero build cost.
+- **Turnout stated in the column**, as a count: *"14 of 16 ballots cast."*
+  Naming non-voters there would contradict the count-only decision for chat, so
+  don't — the participation record lives on the accountability page, where it
+  reads as a season stat rather than a weekly callout.
 - **Prefill from last week's ballot** (above) — the effort lever that matters
   most from week 3 onward.
 - **One-tap entry from the nag.** The deep link should land logged-in owners
@@ -310,7 +334,9 @@ omits it makes every blurb silently fall back to the template.**
 
 Cron: a second entry in `.github/workflows/schefter-articles.yml` at
 `0 2 * * 4` (Wed 19:00 PT = Thu 02:00 UTC) running `--close-poll` for each
-league sequentially, AFL non-fatal, exactly as the Tuesday pass does.
+league sequentially — v1 runs TheLeague only, but keep the per-league loop and
+the non-fatal-per-league error handling the Tuesday pass already uses, so
+enabling the AFL later is a registry flip rather than a workflow edit.
 
 **Prerequisite:** the workflow needs Upstash credentials to read ballots.
 Confirm those secrets are available to that workflow before starting — the
@@ -373,12 +399,25 @@ results from). 4–6 are what make it *stick*.
 
 ## Open questions
 
-1. Two-stage publish (recommended) or move the column to Wednesday?
-2. `slots` per league — 8 for TheLeague / 10 for the AFL?
-3. Quorum threshold — 8 of 16 for TheLeague, and what for the AFL's 24?
-4. Ballot close time — Wed 6pm PT or 9pm PT?
-5. Is the @-mention non-voter nag acceptable, or count-only?
-6. AFL from day one, or ship TheLeague first? The AFL's two conferences may
-   want conference-scoped ballots rather than one 24-team poll — that is a
-   design fork, not a config value.
-7. Any real stake attached to participation, or is the leaderboard enough?
+Settled: v1 is **TheLeague only**, the ballot is **7 slots**, and the nag is
+**count-only**. Four calls remain, and none of them block starting on step 1 of
+the build order — the math and storage layer is identical either way.
+
+1. **Two-stage publish, or move the column to Wednesday?** Two-stage is the
+   recommendation and the rest of this doc assumes it. Say so if you'd rather
+   move the column.
+2. **Quorum at 8 of 16?** Written in as the default. It is one registry number,
+   trivially changed after real turnout data.
+3. **Close time Wed 6pm PT or 9pm PT?** 6pm is written in. 9pm catches the
+   evening crowd but pushes the reveal to ~10pm, which is a worse time to land
+   a GroupMe post people will actually read.
+4. **Any real stake on participation, or is the leaderboard enough?** No stake
+   assumed in v1. A dues- or draft-order-linked penalty is a constitution
+   question, not a code one, so it needs a league decision before it could be
+   built regardless.
+
+Deferred with the AFL, to revisit when it is enabled: the AFL's two conferences
+may want conference-scoped ballots rather than one 24-team poll. That is a
+design fork, not a config value — the draft pages hit the same split, where a
+conference-scoped feature that didn't scope its data source served everyone the
+AL's picks.
