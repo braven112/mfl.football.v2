@@ -393,6 +393,8 @@ came out differently from the sketch above:
 | `src/utils/owners-poll-voters.ts` | Season accountability math |
 | `src/components/shared/owners-poll/OwnersPollVotersPage.astro` | Voters page |
 | `src/pages/theleague/pecking-order/voters.astro` | Thin route wrapper |
+| `src/pages/api/owners-poll/window.ts` | Commissioner open/close control |
+| `src/components/shared/owners-poll/PollWindowAdmin.tsx` | Commissioner strip |
 | `.github/workflows/schefter-articles.yml` | Wed nag + Wed close crons |
 | `tests/owners-poll-{window,pass,voters}.test.ts` | 135 tests across 7 suites |
 
@@ -453,18 +455,28 @@ self-skips until the season it would rank is actually being played
 (`isSeasonWindowOpen`), so the earliest real ballot is the Tuesday after
 Week 1.
 
-To see it before then, open a window by hand — this needs Upstash credentials,
-which a sandbox cannot get:
+To see it before then, open a window by hand. **Two ways, and the browser one
+needs no credentials** — the deployment already holds them:
+
+**From the ballot page (commissioner only).** A `Commissioner` strip sits above
+the ballot when `isCommissionerOrAdmin` passes: set a week and a duration, press
+*Open ballot*. This is the recovery path in a real season too — a Tuesday run
+that errored after writing the issue, or a league that wants the window
+extended.
+
+**From a shell** (needs `pnpm dlx vercel env pull` first):
 
 ```bash
-pnpm dlx vercel env pull            # once, in the repo root
 node scripts/owners-poll-window.mjs open --league theleague --week 1 --hours 48
 node scripts/owners-poll-window.mjs status --league theleague
-node scripts/owners-poll-window.mjs close  --league theleague   # stops voting; keeps ballots
+node scripts/owners-poll-window.mjs close  --league theleague
 ```
 
-`close` only removes the pointer — it never tallies and never deletes ballots,
-so re-opening the same week picks them all back up.
+Both write the same key and the same record shape. `close` on either only
+removes the pointer — it never tallies and never deletes ballots, so re-opening
+the same week picks them all back up (and the API reports the existing count,
+so a non-zero number on a "fresh" open is not a surprise). Tallying is
+`generate-pecking-order.mjs --close-poll`, deliberately a separate action.
 
 ## Build order (all complete)
 
