@@ -749,8 +749,34 @@ const serializedConfig = JSON.stringify({
 ></script>
 
 <script type="module">
-  const summaryConfigEl = document.getElementById('salary-config');
-  if (summaryConfigEl) {
+  /**
+   * CLIENTROUTER-SAFE INIT (frontend.md, "Interactive scripts must re-init on
+   * astro:page-load"). Astro bundles this script, so it is evaluated ONCE per
+   * document and the router swaps the DOM without re-evaluating it. Everything
+   * below used to run at module scope, which meant that on a return visit the
+   * season and week selects were bound to detached nodes and the delegated
+   * Show More handler — the one thing that SURVIVES the swap, because
+   * `document` does — was still closed over the previous page's tables and
+   * config. Nothing threw; the controls simply stopped answering.
+   *
+   * The delegated handler is held in a module-scoped var and removed before it
+   * is re-added: that is the only shape that gives exactly one listener AND a
+   * closure over the live page. A once-flag would give one listener over DEAD
+   * nodes, which is the bug it was meant to fix.
+   */
+  let onShowMoreClick = null;
+
+  function init() {
+    // Drop the previous page's delegated handler before building this page's.
+    if (onShowMoreClick) document.removeEventListener('click', onShowMoreClick);
+    onShowMoreClick = null;
+
+    // Re-read the SSR config INSIDE init: `#salary-config` is swapped out with
+    // everything else, so a blob parsed at module scope is the previous page's
+    // seasons, weekly data and franchise metadata.
+    const summaryConfigEl = document.getElementById('salary-config');
+    if (!summaryConfigEl) return;
+
     const {
       seasons = {},
       weeklyData = {},
@@ -1012,8 +1038,9 @@ const serializedConfig = JSON.stringify({
       renderData(currentSeason, currentWeek);
     });
 
-    // Show More click handler (delegated)
-    document.addEventListener('click', (event) => {
+    // Show More click handler (delegated). Held above and torn down at the top
+    // of init() — `document` is the one node the swap does not replace.
+    onShowMoreClick = (event) => {
       const btn = event.target.closest('[data-show-more]');
       if (!btn) return;
       const position = btn.dataset.showMore;
@@ -1023,8 +1050,15 @@ const serializedConfig = JSON.stringify({
       const allPlayers = summary?.positions?.[position]?.topPlayers ?? [];
       visibleCounts[position] = (visibleCounts[position] ?? INITIAL_COUNT) + PAGE_SIZE;
       renderPlayersForPosition(position, allPlayers, visibleCounts[position]);
-    });
+    };
+    document.addEventListener('click', onShowMoreClick);
   }
+
+  /**
+   * Never call init() directly — `astro:page-load` fires on the FIRST load as
+   * well as after every swap.
+   */
+  document.addEventListener('astro:page-load', init);
 </script>
 
 <script src="../../scripts/salary-export-handler.ts"></script>
