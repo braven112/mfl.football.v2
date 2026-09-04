@@ -381,8 +381,14 @@ export function castRandomStarterModel(
   return toModel(players.get(pick.playerId)!, isLaterGame ? laterGameDescriptor ?? descriptor : descriptor);
 }
 
-/** Whether a franchise rosters this candidate — every owner, not just the first. */
-function castsFor(candidate: ScoredCastCandidate, franchiseId: string): boolean {
+/**
+ * Whether a franchise rosters this candidate — every owner, not just the first.
+ * Exported because the ownership question gets asked outside the casters too
+ * (TheLeague's homepage decides its "Your Kickoff Starter" caption with it),
+ * and a second hand-rolled `franchiseId ===` compare is how the AFL's
+ * dual-rostered half quietly falls out of its own pool again.
+ */
+export function castsFor(candidate: ScoredCastCandidate, franchiseId: string): boolean {
   return candidate.franchiseIds
     ? candidate.franchiseIds.includes(franchiseId)
     : candidate.franchiseId === franchiseId;

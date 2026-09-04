@@ -229,6 +229,20 @@ export function getFranchiseCompositableHeadliners(
   if (!franchises) return [];
   const projections = getProjectionMap(leagueYear, league);
   const players = getUnifiedPlayerMap(leagueYear);
+  // ADP rank before the bare id, for the same reason getFranchiseHeadliners
+  // carries it: in an AFL league year whose projections feed is dead, and whose
+  // rosters carry no salaries at all, score and salary are 0 for EVERY player
+  // and an id tie-break degenerates to "lowest MFL id" — a random deep bench
+  // player as the franchise's face. Loaded lazily; with live projections the
+  // earlier comparisons decide and the extra feed read never happens.
+  let adpRank: Map<string, number> | null = null;
+  const rankOf = (id: string): number => {
+    if (!adpRank) {
+      adpRank = new Map();
+      getAdpRankedIds(leagueYear, league).forEach((pid, i) => adpRank!.set(pid, i));
+    }
+    return adpRank.get(id) ?? Number.MAX_SAFE_INTEGER;
+  };
 
   const out: Array<{ playerId: string; franchiseId: string }> = [];
   for (const franchise of Array.isArray(franchises) ? franchises : [franchises]) {
@@ -240,9 +254,17 @@ export function getFranchiseCompositableHeadliners(
     )
       .filter((p: any) => p?.id && (!p.status || p.status === 'ROSTER'))
       .map((p: any) => ({ id: p.id, score: projections.get(p.id) ?? 0, salary: parseFloat(p.salary || '0') || 0 }))
-      // id tie-break keeps the pick stable (deterministic SSR) when a franchise
-      // has players tied on both projection and salary — mirrors getFranchiseHeadliners.
-      .sort((a: any, b: any) => b.score - a.score || b.salary - a.salary || String(a.id).localeCompare(String(b.id)));
+      // Score, then salary, then ADP rank, then id — the trailing tie-breaks
+      // keep the pick meaningful when projections and/or salaries are empty,
+      // and the id keeps it stable (deterministic SSR). Mirrors
+      // getFranchiseHeadliners; keep the two sorts in step.
+      .sort(
+        (a: any, b: any) =>
+          b.score - a.score ||
+          b.salary - a.salary ||
+          rankOf(a.id) - rankOf(b.id) ||
+          String(a.id).localeCompare(String(b.id)),
+      );
     for (const p of roster) {
       const pm = players.get(p.id);
       if (pm && pm.position !== 'DEF' && pm.headshot.includes('espncdn.com')) {

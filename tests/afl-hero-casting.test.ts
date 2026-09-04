@@ -7,6 +7,7 @@ import type { HeroContent } from '../src/types/whats-new';
 import { castRandomStarterModel } from '../src/utils/hero-casting';
 import {
   getAdpRankedIds,
+  getFranchiseCompositableHeadliners,
   getFranchiseHeadliners,
   getKickoffGame,
   getOwnersByPlayer,
@@ -81,6 +82,48 @@ describe('league-aware hero data helpers (AFL)', () => {
         expect(players.get(h.playerId)?.position).not.toBe('DEF');
       }
     }
+  });
+
+  it('picks a real face, not the lowest MFL id, when projections are dead (2025)', () => {
+    // The compositable variant feeds the starter slots' own-roster fallback,
+    // which runs exactly when the candidate pool is empty — one cause of which
+    // is a dead projectedScores feed. AFL rosters carry no salaries, so with
+    // projections gone score and salary are 0 for everyone and the sort has
+    // only tie-breaks left: without the ADP rank it collapses to lowest id.
+    const YEAR_DEAD = 2025;
+    const headliners = getFranchiseCompositableHeadliners(YEAR_DEAD, AFL);
+    if (headliners.length === 0) return; // no 2025 feed — nothing to assert
+    const players = getPlayerMap(YEAR_DEAD);
+    const adpRank = new Map(getAdpRankedIds(YEAR_DEAD, AFL).map((id, i) => [id, i]));
+    const rosters = JSON.parse(
+      readFileSync(`data/${AFL}/mfl-feeds/${YEAR_DEAD}/rosters.json`, 'utf8'),
+    );
+    const franchises = rosters?.rosters?.franchise ?? [];
+    const rosterById = new Map<string, string[]>();
+    for (const f of Array.isArray(franchises) ? franchises : [franchises]) {
+      const ps = Array.isArray(f.player) ? f.player : f.player ? [f.player] : [];
+      rosterById.set(
+        f.id,
+        ps.filter((p: any) => p?.id && (!p.status || p.status === 'ROSTER')).map((p: any) => p.id),
+      );
+    }
+
+    let ranked = 0;
+    for (const h of headliners) {
+      const pm = players.get(h.playerId);
+      expect(pm?.position).not.toBe('DEF');
+      // Nobody on the roster who is ADP-ranked ABOVE the pick may have been passed over.
+      const pickRank = adpRank.get(h.playerId) ?? Number.MAX_SAFE_INTEGER;
+      if (pickRank !== Number.MAX_SAFE_INTEGER) ranked++;
+      for (const id of rosterById.get(h.franchiseId) ?? []) {
+        const other = players.get(id);
+        if (!other || other.position === 'DEF' || !other.headshot.includes('espncdn.com')) continue;
+        const rank = adpRank.get(id) ?? Number.MAX_SAFE_INTEGER;
+        expect(rank, `${h.franchiseId}: ${other.name} outranks the cast ${pm?.name}`).toBeGreaterThanOrEqual(pickRank);
+      }
+    }
+    // Guard the guard: a feed with no ADP overlap would pass vacuously.
+    expect(ranked, '2025 ADP list overlaps no headliner — assertion is vacuous').toBeGreaterThan(0);
   });
 
   it('returns AFL ADP rankings as non-empty id list', () => {

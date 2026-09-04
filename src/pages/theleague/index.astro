@@ -36,7 +36,7 @@ import { getWhatsNextTimeline } from '../../utils/league-event-resolver';
 import { getCurrentLeagueYear, getCurrentSeasonYear } from '../../utils/league-year';
 import { getPlayerMap } from '../../utils/player-map';
 import { chooseTeamName } from '../../utils/team-names';
-import { castFeaturedModel, castTopFreeAgentModel, castRosterModel, castRandomStarterModel, castClosingAuctionModel, castRookiesOnBoard, castStoryModel, castShowcasePanels } from '../../utils/hero-casting';
+import { castFeaturedModel, castTopFreeAgentModel, castRosterModel, castRandomStarterModel, castClosingAuctionModel, castRookiesOnBoard, castStoryModel, castShowcasePanels, castsFor } from '../../utils/hero-casting';
 import type { HeroModel } from '../../utils/hero-casting';
 import { normalizePlayoffBracket, buildSeedMaps } from '../../utils/playoffs';
 import { isEliminated, buildBracketSummary } from '../../utils/playoff-hero-helpers';
@@ -492,7 +492,7 @@ if (heroState.phase === 'preseason-countdown' && heroState.preseasonProps) {
     !!preseasonModel &&
     !!userFranchiseId &&
     openerCodes.has(preseasonModel.nflTeam) &&
-    candidates.some((c) => c.franchiseId === userFranchiseId && c.playerId === preseasonModel!.mflId);
+    candidates.some((c) => c.playerId === preseasonModel!.mflId && castsFor(c, userFranchiseId));
   // No slate data (schedule feed missing) or no projections yet → franchise
   // headliners, compositable ones first so a signed-in owner still gets their
   // own player (their top projected player may be a DEF or have no cutout).
