@@ -1810,8 +1810,9 @@ function pickRogerTemplate(touchId, eventId) {
 
 /**
  * Throwback Week: count how many franchises are still on the commissioner's
- * default era (no `throwback:{franchiseId}` key in Redis — the same keys
- * src/utils/throwback-store.ts writes). Best-effort flavor for the pre-event
+ * default era (no stored pick in Redis — the same SCOPED keys
+ * src/utils/throwback-store.ts writes: `throwback:{id}` in TheLeague,
+ * `throwback:{navSlug}:{id}` everywhere else). Best-effort flavor for the pre-event
  * nudges: any failure (no creds, network, bad payload) returns null and the
  * copy degrades to the generic no-count version.
  */
