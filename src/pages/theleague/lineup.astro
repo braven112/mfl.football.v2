@@ -775,917 +775,970 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
     import { resolveSubmitButtonState } from '../../utils/lineup-submit-state';
     import { loadLineupRankings, byRank, applyRankChips, onRankingsChanged } from '../../utils/lineup-rankings';
     import type { LineupPlayer } from '../../types/lineups';
+    /**
+     * CLIENTROUTER-SAFE INIT (frontend.md, "Interactive scripts must re-init on
+     * astro:page-load"). This module is bundled, so it is evaluated ONCE per
+     * document, and ClientRouter swaps the DOM without re-evaluating it. Every
+     * ref resolved below therefore belonged to the FIRST page: on a return visit
+     * tapping a slot opened nothing, Submit did nothing, and nothing was logged,
+     * because every handler was bound to nodes the router had already detached.
+     * A hard reload "fixed" it. See docs/claude/rules/lineups.md.
+     *
+     * So the whole controller lives in init(), which re-reads the payload, the
+     * refs and the saved draft per load. The three registrations that OUTLIVE a
+     * swap — `document` and `window` are the nodes the router does NOT replace —
+     * are held here and torn down before they are re-added. That is the only
+     * shape that gives exactly one of each AND a closure over the live page: a
+     * once-flag would give one listener over DEAD nodes, which is this same bug
+     * wearing a hat.
+     */
+    let onMotionPermissionClick: (() => void) | null = null;
+    let onDeviceMotion: ((e: DeviceMotionEvent) => void) | null = null;
+    let stopRankingsWatch: (() => void) | null = null;
 
-    // ---------------------------------------------------------------------------
-    // State
-    // ---------------------------------------------------------------------------
-    const data = (window as any).__LINEUP_DATA__;
-    if (!data) throw new Error('Missing lineup data');
+    function init() {
+      // Drop the previous page's global registrations before building this
+      // page's — see above.
+      if (onMotionPermissionClick) document.removeEventListener('click', onMotionPermissionClick);
+      onMotionPermissionClick = null;
+      if (onDeviceMotion) window.removeEventListener('devicemotion', onDeviceMotion);
+      onDeviceMotion = null;
+      stopRankingsWatch?.();
+      stopRankingsWatch = null;
 
-    interface SlotState { position: string; index: number; playerId: string | null; locked: boolean; }
 
-    let currentSlots: SlotState[] = [...data.slots];
-    const originalSlots: SlotState[] = data.slots.map((s: SlotState) => ({ ...s }));
-    // Annotating the tuple is what gives this a real type: a bare
-    // `new Map(data.roster.map(...))` infers `Map<{}, {}>`, and every player
-    // property read below it then fails to compile.
-    const rosterMap = new Map(
-      (data.roster as LineupPlayer[]).map((p): [string, LineupPlayer] => [p.id, p]),
-    );
-    let lastSwap: { slotIndex: number; oldPlayerId: string; newPlayerId: string } | null = null;
-    let lastClear: { slots: (string | null)[] } | null = null;
-    let previousFocus: HTMLElement | null = null;
+      // ---------------------------------------------------------------------------
+      // State
+      // ---------------------------------------------------------------------------
+      // Re-read per load, never captured beside the imports. The `is:inline`
+      // payload script above is re-executed by the router on every arrival, so
+      // a captured `data` would be the week (or the page) the owner just left.
+      const data = (window as any).__LINEUP_DATA__;
+      if (!data) return;
 
-    // DOM refs
-    const slotsContainer = document.getElementById('lineup-slots')!;
-    const submitBtn = document.getElementById('lineup-submit') as HTMLButtonElement;
-    const submitText = submitBtn.querySelector('.lineup-submit__text') as HTMLElement;
-    const changesEl = document.getElementById('lineup-changes') as HTMLElement;
-    const unsavedNote = document.querySelector('.lineup-unsaved-note');
-    const cdmEl = document.getElementById('lineup-cdm')!;
-    const cdmOverlay = cdmEl.querySelector('.lineup-cdm__overlay') as HTMLElement;
-    const cdmSheet = cdmEl.querySelector('.lineup-cdm__sheet') as HTMLElement;
-    const cdmClose = cdmEl.querySelector('.lineup-cdm__close') as HTMLButtonElement;
-    const cdmCurrent = document.getElementById('cdm-current-starter')!;
-    const cdmThead = document.getElementById('cdm-thead')!;
-    const cdmTbody = document.getElementById('cdm-tbody')!;
-    const cdmSortToggle = document.getElementById('cdm-sort-toggle') as HTMLButtonElement;
-    const announcer = document.getElementById('lineup-announcer')!;
-    const toastEl = document.getElementById('lineup-toast')!;
-    const toastText = document.getElementById('lineup-toast-text')!;
-    const weekSelect = document.getElementById('lineup-week') as HTMLSelectElement;
-    const optimalBtn = document.getElementById('lineup-optimal') as HTMLButtonElement;
-    const clearBtn = document.getElementById('lineup-clear') as HTMLButtonElement;
-    const statusEl = document.getElementById('lineup-status')!;
+      interface SlotState { position: string; index: number; playerId: string | null; locked: boolean; }
 
-    let activeSlotIndex: number | null = null;
+      let currentSlots: SlotState[] = [...data.slots];
+      const originalSlots: SlotState[] = data.slots.map((s: SlotState) => ({ ...s }));
+      // Annotating the tuple is what gives this a real type: a bare
+      // `new Map(data.roster.map(...))` infers `Map<{}, {}>`, and every player
+      // property read below it then fails to compile.
+      const rosterMap = new Map(
+        (data.roster as LineupPlayer[]).map((p): [string, LineupPlayer] => [p.id, p]),
+      );
+      let lastSwap: { slotIndex: number; oldPlayerId: string; newPlayerId: string } | null = null;
+      let lastClear: { slots: (string | null)[] } | null = null;
+      let previousFocus: HTMLElement | null = null;
 
-    // ── Rankings ──
-    // The owner's top board (composite "My Rank" when they've built one), shown
-    // next to each candidate so the start/sit call has more than a projection
-    // behind it. Scoped to this league by rankings-scope.ts, via the helper.
-    let rankings = loadLineupRankings();
-    // Which order the candidate list is in. Projection is the in-season default;
-    // rank is the "who's the better player" read.
-    let cdmSort: 'projection' | 'rank' = 'projection';
+      // DOM refs
+      const slotsContainer = document.getElementById('lineup-slots')!;
+      const submitBtn = document.getElementById('lineup-submit') as HTMLButtonElement;
+      const submitText = submitBtn.querySelector('.lineup-submit__text') as HTMLElement;
+      const changesEl = document.getElementById('lineup-changes') as HTMLElement;
+      const unsavedNote = document.querySelector('.lineup-unsaved-note');
+      const cdmEl = document.getElementById('lineup-cdm')!;
+      const cdmOverlay = cdmEl.querySelector('.lineup-cdm__overlay') as HTMLElement;
+      const cdmSheet = cdmEl.querySelector('.lineup-cdm__sheet') as HTMLElement;
+      const cdmClose = cdmEl.querySelector('.lineup-cdm__close') as HTMLButtonElement;
+      const cdmCurrent = document.getElementById('cdm-current-starter')!;
+      const cdmThead = document.getElementById('cdm-thead')!;
+      const cdmTbody = document.getElementById('cdm-tbody')!;
+      const cdmSortToggle = document.getElementById('cdm-sort-toggle') as HTMLButtonElement;
+      const announcer = document.getElementById('lineup-announcer')!;
+      const toastEl = document.getElementById('lineup-toast')!;
+      const toastText = document.getElementById('lineup-toast-text')!;
+      const weekSelect = document.getElementById('lineup-week') as HTMLSelectElement;
+      const optimalBtn = document.getElementById('lineup-optimal') as HTMLButtonElement;
+      const clearBtn = document.getElementById('lineup-clear') as HTMLButtonElement;
+      const statusEl = document.getElementById('lineup-status')!;
 
-    // ---------------------------------------------------------------------------
-    // Helpers
-    // ---------------------------------------------------------------------------
-    function announce(msg: string) {
-      announcer.textContent = '';
-      requestAnimationFrame(() => { announcer.textContent = msg; });
-    }
+      let activeSlotIndex: number | null = null;
 
-    function haptic(style: 'light' | 'medium' | 'heavy' = 'medium') {
-      if ('vibrate' in navigator) {
-        const d = { light: 10, medium: 20, heavy: 40 };
-        navigator.vibrate(d[style]);
+      // ── Rankings ──
+      // The owner's top board (composite "My Rank" when they've built one), shown
+      // next to each candidate so the start/sit call has more than a projection
+      // behind it. Scoped to this league by rankings-scope.ts, via the helper.
+      let rankings = loadLineupRankings();
+      // Which order the candidate list is in. Projection is the in-season default;
+      // rank is the "who's the better player" read.
+      let cdmSort: 'projection' | 'rank' = 'projection';
+
+      // ---------------------------------------------------------------------------
+      // Helpers
+      // ---------------------------------------------------------------------------
+      function announce(msg: string) {
+        announcer.textContent = '';
+        requestAnimationFrame(() => { announcer.textContent = msg; });
       }
-    }
 
-    function isMobileSheet(): boolean {
-      return !window.matchMedia('(min-width: 640px)').matches;
-    }
-
-    function getPlayer(id: string | null) {
-      return id ? rosterMap.get(id) : null;
-    }
-
-    function getGame(player: any) {
-      return player?.gameIndex != null ? data.schedule[player.gameIndex] : null;
-    }
-
-    /** Escape HTML to prevent XSS when inserting server-fetched data */
-    function esc(str: string): string {
-      const el = document.createElement('span');
-      el.textContent = str;
-      return el.innerHTML;
-    }
-
-    // ---------------------------------------------------------------------------
-    // Change tracking
-    // ---------------------------------------------------------------------------
-    function countChanges(): number {
-      let count = 0;
-      for (let i = 0; i < currentSlots.length; i++) {
-        if (currentSlots[i].playerId !== originalSlots[i].playerId) count++;
+      function haptic(style: 'light' | 'medium' | 'heavy' = 'medium') {
+        if ('vibrate' in navigator) {
+          const d = { light: 10, medium: 20, heavy: 40 };
+          navigator.vibrate(d[style]);
+        }
       }
-      return count;
-    }
 
-    function updateSubmitBar() {
-      const changes = countChanges();
-      const state = resolveSubmitButtonState({
-        changes,
-        allFilled: currentSlots.every(s => s.playerId != null),
-        lineupOnFile: data.lineupOnFile,
-        canSubmitEdits: data.canSubmitEdits,
-        canSubmitUnsaved: data.canSubmitUnsaved,
-        fromCache: data.lineupFromCache,
-      });
-
-      submitBtn.className = state.className;
-      submitBtn.disabled = state.disabled;
-      submitText.textContent = state.text;
-      changesEl.style.display = state.showChanges ? '' : 'none';
-      changesEl.querySelector('strong')!.textContent = String(changes);
-
-      updateFaceoffTotal();
-      saveDraft();
-    }
-
-    // ---------------------------------------------------------------------------
-    // Live projected-points total — our side recomputes from the starting slots
-    // whenever the lineup changes. The opponent's total is server-fixed.
-    //
-    // EVERY card, not just the first: a double-header week scores the SAME
-    // submitted lineup in both games, so our total has to move on both cards.
-    // Updating only `querySelector`'s first hit left the second game showing a
-    // stale total that contradicted the one a swipe away.
-    // ---------------------------------------------------------------------------
-    const faceoffScoreboards = Array.from(
-      document.querySelectorAll('.lineup-faceoff__scoreboard'),
-    ) as HTMLElement[];
-
-    function updateFaceoffTotal() {
-      if (faceoffScoreboards.length === 0) return;
-
-      let total = 0;
-      for (const s of currentSlots) {
-        const p = s.playerId ? getPlayer(s.playerId) : null;
-        if (p && typeof p.projection === 'number') total += p.projection;
+      function isMobileSheet(): boolean {
+        return !window.matchMedia('(min-width: 640px)').matches;
       }
-      const next = total.toFixed(1);
 
-      for (const board of faceoffScoreboards) {
-        const side = board.dataset.userSide; // 'away' | 'home'
-        const totalEl = board.querySelector(`.lineup-faceoff__total[data-side="${side}"]`) as HTMLElement | null;
-        if (!totalEl) continue;
-        if (totalEl.dataset.total === next) continue;
-
-        totalEl.dataset.total = next;
-        totalEl.textContent = next;
-        // Keep the SR label in sync with the live value (aria-live announces it).
-        const prevLabel = totalEl.getAttribute('aria-label');
-        if (prevLabel) totalEl.setAttribute('aria-label', prevLabel.replace(/projected [\d.]+ points/, `projected ${next} points`));
-        totalEl.classList.remove('lineup-faceoff__total--bumped');
-        // Reflow so the animation restarts on each change.
-        void totalEl.offsetWidth;
-        totalEl.classList.add('lineup-faceoff__total--bumped');
+      function getPlayer(id: string | null) {
+        return id ? rosterMap.get(id) : null;
       }
-    }
 
-    // ---------------------------------------------------------------------------
-    // localStorage draft persistence
-    // ---------------------------------------------------------------------------
-    const STORAGE_KEY = 'lineup-draft';
-
-    function saveDraft() {
-      // Only real edits are worth persisting. Storing an untouched page also
-      // stored the projection FILL, and loadDraft() replayed it on the next
-      // visit — where a lineup that had since been submitted now sits in
-      // originalSlots, so the stale fill read as nine unsaved changes with
-      // the submit button armed over the owner's actual lineup.
-      // A draft built on a base we couldn't verify must not outlive the
-      // visit that made it: one swap during a read-failed load would persist
-      // all nine slots (eight of them the projection guess), and replaying
-      // that on a healthy visit arms the bar with nine changes over the
-      // owner's real lineup — the overwrite, one day later.
-      if (countChanges() === 0 || !data.canSubmitEdits) {
-        try { localStorage.removeItem(STORAGE_KEY); } catch {}
-        return;
+      function getGame(player: any) {
+        return player?.gameIndex != null ? data.schedule[player.gameIndex] : null;
       }
-      const draft = {
-        franchiseId: data.franchiseId,
-        leagueYear: data.leagueYear,
-        week: data.week,
-        // The state the edits were made against. A draft from a different
-        // base is not resumable, it's a stale overwrite.
-        fillMode: data.fillMode,
-        slots: currentSlots.map(s => ({ index: s.index, playerId: s.playerId })),
-        savedAt: new Date().toISOString(),
-      };
-      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(draft)); } catch {}
-    }
 
-    function loadDraft() {
-      try {
-        const raw = localStorage.getItem(STORAGE_KEY);
-        if (!raw) return;
-        const draft = JSON.parse(raw);
-        if (draft.franchiseId !== data.franchiseId || draft.leagueYear !== data.leagueYear || draft.week !== data.week) return;
-        // Same reason as the save guard: replaying edits over a different
-        // base silently substitutes the eight slots the owner never touched.
-        if (draft.fillMode !== data.fillMode) {
+      /** Escape HTML to prevent XSS when inserting server-fetched data */
+      function esc(str: string): string {
+        const el = document.createElement('span');
+        el.textContent = str;
+        return el.innerHTML;
+      }
+
+      // ---------------------------------------------------------------------------
+      // Change tracking
+      // ---------------------------------------------------------------------------
+      function countChanges(): number {
+        let count = 0;
+        for (let i = 0; i < currentSlots.length; i++) {
+          if (currentSlots[i].playerId !== originalSlots[i].playerId) count++;
+        }
+        return count;
+      }
+
+      function updateSubmitBar() {
+        const changes = countChanges();
+        const state = resolveSubmitButtonState({
+          changes,
+          allFilled: currentSlots.every(s => s.playerId != null),
+          lineupOnFile: data.lineupOnFile,
+          canSubmitEdits: data.canSubmitEdits,
+          canSubmitUnsaved: data.canSubmitUnsaved,
+          fromCache: data.lineupFromCache,
+        });
+
+        submitBtn.className = state.className;
+        submitBtn.disabled = state.disabled;
+        submitText.textContent = state.text;
+        changesEl.style.display = state.showChanges ? '' : 'none';
+        changesEl.querySelector('strong')!.textContent = String(changes);
+
+        updateFaceoffTotal();
+        saveDraft();
+      }
+
+      // ---------------------------------------------------------------------------
+      // Live projected-points total — our side recomputes from the starting slots
+      // whenever the lineup changes. The opponent's total is server-fixed.
+      //
+      // EVERY card, not just the first: a double-header week scores the SAME
+      // submitted lineup in both games, so our total has to move on both cards.
+      // Updating only `querySelector`'s first hit left the second game showing a
+      // stale total that contradicted the one a swipe away.
+      // ---------------------------------------------------------------------------
+      const faceoffScoreboards = Array.from(
+        document.querySelectorAll('.lineup-faceoff__scoreboard'),
+      ) as HTMLElement[];
+
+      function updateFaceoffTotal() {
+        if (faceoffScoreboards.length === 0) return;
+
+        let total = 0;
+        for (const s of currentSlots) {
+          const p = s.playerId ? getPlayer(s.playerId) : null;
+          if (p && typeof p.projection === 'number') total += p.projection;
+        }
+        const next = total.toFixed(1);
+
+        for (const board of faceoffScoreboards) {
+          const side = board.dataset.userSide; // 'away' | 'home'
+          const totalEl = board.querySelector(`.lineup-faceoff__total[data-side="${side}"]`) as HTMLElement | null;
+          if (!totalEl) continue;
+          if (totalEl.dataset.total === next) continue;
+
+          totalEl.dataset.total = next;
+          totalEl.textContent = next;
+          // Keep the SR label in sync with the live value (aria-live announces it).
+          const prevLabel = totalEl.getAttribute('aria-label');
+          if (prevLabel) totalEl.setAttribute('aria-label', prevLabel.replace(/projected [\d.]+ points/, `projected ${next} points`));
+          totalEl.classList.remove('lineup-faceoff__total--bumped');
+          // Reflow so the animation restarts on each change.
+          void totalEl.offsetWidth;
+          totalEl.classList.add('lineup-faceoff__total--bumped');
+        }
+      }
+
+      // ---------------------------------------------------------------------------
+      // localStorage draft persistence
+      // ---------------------------------------------------------------------------
+      const STORAGE_KEY = 'lineup-draft';
+
+      function saveDraft() {
+        // Only real edits are worth persisting. Storing an untouched page also
+        // stored the projection FILL, and loadDraft() replayed it on the next
+        // visit — where a lineup that had since been submitted now sits in
+        // originalSlots, so the stale fill read as nine unsaved changes with
+        // the submit button armed over the owner's actual lineup.
+        // A draft built on a base we couldn't verify must not outlive the
+        // visit that made it: one swap during a read-failed load would persist
+        // all nine slots (eight of them the projection guess), and replaying
+        // that on a healthy visit arms the bar with nine changes over the
+        // owner's real lineup — the overwrite, one day later.
+        if (countChanges() === 0 || !data.canSubmitEdits) {
           try { localStorage.removeItem(STORAGE_KEY); } catch {}
           return;
         }
-        const age = Date.now() - new Date(draft.savedAt).getTime();
-        if (age > 24 * 60 * 60 * 1000) return;
-        draft.slots.forEach((s: { index: number; playerId: string | null }) => {
-          if (typeof s.index === 'number' && s.index >= 0 && s.index < currentSlots.length
-              && (!s.playerId || rosterMap.has(s.playerId))) {
-            currentSlots[s.index].playerId = s.playerId;
+        const draft = {
+          franchiseId: data.franchiseId,
+          leagueYear: data.leagueYear,
+          week: data.week,
+          // The state the edits were made against. A draft from a different
+          // base is not resumable, it's a stale overwrite.
+          fillMode: data.fillMode,
+          slots: currentSlots.map(s => ({ index: s.index, playerId: s.playerId })),
+          savedAt: new Date().toISOString(),
+        };
+        try { localStorage.setItem(STORAGE_KEY, JSON.stringify(draft)); } catch {}
+      }
+
+      function loadDraft() {
+        try {
+          const raw = localStorage.getItem(STORAGE_KEY);
+          if (!raw) return;
+          const draft = JSON.parse(raw);
+          if (draft.franchiseId !== data.franchiseId || draft.leagueYear !== data.leagueYear || draft.week !== data.week) return;
+          // Same reason as the save guard: replaying edits over a different
+          // base silently substitutes the eight slots the owner never touched.
+          if (draft.fillMode !== data.fillMode) {
+            try { localStorage.removeItem(STORAGE_KEY); } catch {}
+            return;
           }
-        });
-      } catch {}
-    }
+          const age = Date.now() - new Date(draft.savedAt).getTime();
+          if (age > 24 * 60 * 60 * 1000) return;
+          draft.slots.forEach((s: { index: number; playerId: string | null }) => {
+            if (typeof s.index === 'number' && s.index >= 0 && s.index < currentSlots.length
+                && (!s.playerId || rosterMap.has(s.playerId))) {
+              currentSlots[s.index].playerId = s.playerId;
+            }
+          });
+        } catch {}
+      }
 
-    // ---------------------------------------------------------------------------
-    // Render slot card content
-    // ---------------------------------------------------------------------------
-    /**
-      * Rank chips on the starters and the bench.
-      *
-      * Every path that rewrites a slot's innerHTML destroys its chip, so this
-      * is called from the renderSlotCard wrapper rather than from each of the
-      * six callers — one of which would eventually be missed.
-      */
-    function refreshRankChips() {
-      applyRankChips(rankings, [
-        { rowSelector: '.lineup-slot[data-player-id]', afterSelector: '.lineup-slot__player' },
-        { rowSelector: '.lineup-bench-row[data-player-id]', afterSelector: '.lineup-bench-row__player' },
-      ]);
-    }
+      // ---------------------------------------------------------------------------
+      // Render slot card content
+      // ---------------------------------------------------------------------------
+      /**
+        * Rank chips on the starters and the bench.
+        *
+        * Every path that rewrites a slot's innerHTML destroys its chip, so this
+        * is called from the renderSlotCard wrapper rather than from each of the
+        * six callers — one of which would eventually be missed.
+        */
+      function refreshRankChips() {
+        applyRankChips(rankings, [
+          { rowSelector: '.lineup-slot[data-player-id]', afterSelector: '.lineup-slot__player' },
+          { rowSelector: '.lineup-bench-row[data-player-id]', afterSelector: '.lineup-bench-row__player' },
+        ]);
+      }
 
-    function renderSlotCard(slotIndex: number) {
-      renderSlotCardBody(slotIndex);
-      refreshRankChips();
-    }
+      function renderSlotCard(slotIndex: number) {
+        renderSlotCardBody(slotIndex);
+        refreshRankChips();
+      }
 
-    function renderSlotCardBody(slotIndex: number) {
-      const slot = currentSlots[slotIndex];
-      const li = slotsContainer.children[slotIndex] as HTMLElement;
-      if (!li) return;
+      function renderSlotCardBody(slotIndex: number) {
+        const slot = currentSlots[slotIndex];
+        const li = slotsContainer.children[slotIndex] as HTMLElement;
+        if (!li) return;
 
-      const player = getPlayer(slot.playerId);
-      const game = player ? getGame(player) : null;
-      const oppTeam = game ? (player!.nflTeam === game.home ? game.away : game.home) : null;
-      const isHome = game ? player!.nflTeam === game.home : false;
-      const isSwapped = slot.playerId !== originalSlots[slotIndex].playerId;
+        const player = getPlayer(slot.playerId);
+        const game = player ? getGame(player) : null;
+        const oppTeam = game ? (player!.nflTeam === game.home ? game.away : game.home) : null;
+        const isHome = game ? player!.nflTeam === game.home : false;
+        const isSwapped = slot.playerId !== originalSlots[slotIndex].playerId;
 
-      li.dataset.playerId = player?.id || '';
-      li.className = `lineup-slot${slot.locked ? ' lineup-slot--locked' : ''}${!player ? ' lineup-slot--empty' : ''}${isSwapped ? ' lineup-slot--swapped' : ''}`;
+        li.dataset.playerId = player?.id || '';
+        li.className = `lineup-slot${slot.locked ? ' lineup-slot--locked' : ''}${!player ? ' lineup-slot--empty' : ''}${isSwapped ? ' lineup-slot--swapped' : ''}`;
 
-      const btn = li.querySelector('.lineup-slot__card') as HTMLButtonElement;
-      if (!btn) return;
+        const btn = li.querySelector('.lineup-slot__card') as HTMLButtonElement;
+        if (!btn) return;
 
-      btn.ariaLabel = player
-        ? `${esc(slot.position)}: ${esc(player.name)}, ${esc(player.nflTeam)}. ${player.projection ? `Projected ${player.projection.toFixed(1)} points.` : ''} Tap to change.`
-        : `${esc(slot.position)}: Empty slot. Tap to set.`;
-      btn.ariaDisabled = slot.locked ? 'true' : 'false';
-      btn.disabled = slot.locked;
+        btn.ariaLabel = player
+          ? `${esc(slot.position)}: ${esc(player.name)}, ${esc(player.nflTeam)}. ${player.projection ? `Projected ${player.projection.toFixed(1)} points.` : ''} Tap to change.`
+          : `${esc(slot.position)}: Empty slot. Tap to set.`;
+        btn.ariaDisabled = slot.locked ? 'true' : 'false';
+        btn.disabled = slot.locked;
 
-      if (!player) {
-        const emptyCell = buildPlayerCellHTML({
-          name: 'Tap to set',
-          headshot: '/assets/nfl-logos/NFL.svg',
-          position: slot.position,
-          nflTeam: '',
+        if (!player) {
+          const emptyCell = buildPlayerCellHTML({
+            name: 'Tap to set',
+            headshot: '/assets/nfl-logos/NFL.svg',
+            position: slot.position,
+            nflTeam: '',
+            size: 'default',
+            isLogoAvatar: true,
+          });
+          btn.innerHTML = `<div class="lineup-slot__player lineup-slot__player--empty">${emptyCell}</div>`;
+          return;
+        }
+
+        // buildPlayerCellHTML is the established codebase pattern for client-side player rendering
+        const playerCell = buildPlayerCellHTML({
+          name: player.name,
+          headshot: player.headshot,
+          position: player.position,
+          nflTeam: player.nflTeam,
+          mflId: player.id,
+          espnId: player.espnId,
           size: 'default',
-          isLogoAvatar: true,
-        });
-        btn.innerHTML = `<div class="lineup-slot__player lineup-slot__player--empty">${emptyCell}</div>`;
-        return;
-      }
-
-      // buildPlayerCellHTML is the established codebase pattern for client-side player rendering
-      const playerCell = buildPlayerCellHTML({
-        name: player.name,
-        headshot: player.headshot,
-        position: player.position,
-        nflTeam: player.nflTeam,
-        mflId: player.id,
-        espnId: player.espnId,
-        size: 'default',
-      });
-
-      let gameHtml = '';
-      if (player.isBye) {
-        gameHtml = `<span class="lineup-slot__bye">BYE</span>`;
-      } else if (oppTeam) {
-        const matchupPrefix = isHome ? 'vs' : '@';
-        const matchupLabel = isHome ? `vs ${oppTeam}` : `at ${oppTeam}`;
-        gameHtml = `
-          <div class="lineup-slot__opp" aria-label="${esc(matchupLabel)}">
-            <span class="lineup-slot__opp-prefix">${matchupPrefix}</span>
-            <img src="/assets/nfl-logos/${esc(oppTeam)}.svg" alt="" aria-hidden="true" class="lineup-slot__opp-logo" width="16" height="16" onerror="${NFL_LOGO_ONERROR}" onload="${NFL_LOGO_ONLOAD}" />
-            <span class="lineup-slot__opp-team">${esc(oppTeam)}</span>
-          </div>
-          ${player.projection != null ? `<span class="lineup-slot__proj">${player.projection.toFixed(1)}</span>` : ''}
-        `;
-      }
-      if (player.streak) {
-        gameHtml += `<span class="lineup-streak" title="${esc(String(player.streak))}-week hot streak">🔥</span>`;
-      }
-
-      let lockHtml = '';
-      if (slot.locked) {
-        lockHtml = `<div class="lineup-slot__lock" aria-label="Locked"><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="2" y="6" width="10" height="7" rx="1.5" stroke="currentColor" stroke-width="1.2"/><path d="M4.5 6V4.5a2.5 2.5 0 015 0V6" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg></div>`;
-      }
-
-      btn.innerHTML = `<div class="lineup-slot__player">${playerCell}</div><div class="lineup-slot__game">${gameHtml}</div>${lockHtml}`;
-    }
-
-    // ---------------------------------------------------------------------------
-    // CDM (bottom sheet / modal)
-    // ---------------------------------------------------------------------------
-    /**
-     * The sort control doubles as the label for how the list is ordered. With
-     * no board loaded there is nothing to switch to, so it stays a plain label.
-     */
-    function updateSortToggle() {
-      if (!cdmSortToggle) return;
-      const sortingByRank = cdmSort === 'rank' && rankings.available;
-      cdmSortToggle.textContent = sortingByRank ? `by ${rankings.label}` : 'by Projection';
-      cdmSortToggle.disabled = !rankings.available;
-      cdmSortToggle.classList.toggle('lineup-cdm__sort-label--interactive', rankings.available);
-      cdmSortToggle.title = rankings.available
-        ? `Sorted ${sortingByRank ? `by ${rankings.fullName}` : 'by projection'} — tap to switch`
-        : '';
-    }
-
-    function toggleCdmSort() {
-      if (!rankings.available) return;
-      cdmSort = cdmSort === 'rank' ? 'projection' : 'rank';
-      haptic('light');
-      if (activeSlotIndex !== null) renderCdmList(activeSlotIndex);
-      updateSortToggle();
-      announce(cdmSort === 'rank'
-        ? `Sorted by ${rankings.fullName}.`
-        : 'Sorted by projection.');
-    }
-
-    /**
-     * Build the eligible-replacement list for a slot. Split out of openCDM so
-     * the sort toggle can re-order the list in place without re-opening the
-     * sheet. Returns how many candidates there are.
-     */
-    function renderCdmList(slotIndex: number): number {
-      const slot = currentSlots[slotIndex];
-
-      // Eligible replacements
-      const usedIds = new Set(currentSlots.map(s => s.playerId).filter(Boolean));
-      if (slot.playerId) usedIds.delete(slot.playerId);
-
-      const eligible = data.roster.filter((p: any) => {
-        if (usedIds.has(p.id)) return false;
-        if (p.id === slot.playerId) return false;
-        // Taxi-squad and IR players can't start. Offering them here is how
-        // the third fill path disagreed with the other two — the pick armed
-        // submit and MFL rejected the POST with a raw error.
-        if (p.rosterStatus !== 'ROSTER') return false;
-        if (p.gameLocked) return false;
-        return p.eligibleSlots.includes(slot.position);
-      });
-
-      if (eligible.length === 0) {
-        console.warn('[CDM] No eligible players for slot:', slot.position, '| roster:', data.roster.length,
-          '| sample:', data.roster.slice(0, 5).map((p: any) => ({ name: p.name, pos: p.position, slots: p.eligibleSlots, locked: p.gameLocked })));
-      }
-
-      if (cdmSort === 'rank' && rankings.available) {
-        eligible.sort(byRank(rankings));
-      } else {
-        eligible.sort((a: any, b: any) => (b.projection ?? 0) - (a.projection ?? 0));
-      }
-      updateSortToggle();
-
-      cdmThead.innerHTML = `<tr>
-        <th class="cdm-th cdm-th--player">Player</th>
-        ${rankings.available ? `<th class="cdm-th cdm-th--num cdm-th--rank" title="${esc(rankings.fullName)}">${esc(rankings.label)}</th>` : ''}
-        <th class="cdm-th cdm-th--num">FPA</th>
-        <th class="cdm-th cdm-th--num">Proj</th>
-        <th class="cdm-th cdm-th--num">L3</th>
-        <th class="cdm-th cdm-th--num">Avg</th>
-      </tr>`;
-
-      cdmTbody.innerHTML = eligible.map((p: any, i: number) => {
-        const game = getGame(p);
-        const oppTeam = game ? (p.nflTeam === game.home ? game.away : game.home) : null;
-
-        let fpaRank = '';
-        let fpaClass = '';
-        if (game && oppTeam) {
-          const ranks = game.fpaRanks?.[p.nflTeam];
-          const posKey = p.position === 'PK' ? 'PK' : p.position;
-          const rank = ranks?.[posKey];
-          if (rank) {
-            fpaRank = String(rank);
-            fpaClass = rank <= 8 ? 'fpa--good' : rank >= 25 ? 'fpa--bad' : '';
-          }
-        }
-
-        const cell = buildPlayerCellHTML({
-          name: p.name,
-          headshot: p.headshot,
-          position: p.position,
-          nflTeam: p.nflTeam,
-          mflId: p.id,
-          espnId: p.espnId,
-          size: 'compact',
         });
 
-        const isHome = game ? p.nflTeam === game.home : false;
-        let matchupHtml = '';
-        if (p.isBye) {
-          matchupHtml = `<span class="cdm-matchup cdm-matchup--bye">BYE</span>`;
+        let gameHtml = '';
+        if (player.isBye) {
+          gameHtml = `<span class="lineup-slot__bye">BYE</span>`;
         } else if (oppTeam) {
-          matchupHtml = `<div class="cdm-matchup">
-            <span class="cdm-matchup__text">
-              <span class="cdm-matchup__prefix">${isHome ? 'vs' : '@'}</span>
-              <img src="/assets/nfl-logos/${esc(oppTeam)}.svg" alt="" aria-hidden="true" class="cdm-matchup__logo" width="12" height="12" onerror="${NFL_LOGO_ONERROR}" onload="${NFL_LOGO_ONLOAD}" />
-              <span class="cdm-matchup__team">${esc(oppTeam)}</span>
-            </span>
-          </div>`;
-        }
-
-        return `<tr class="cdm-row" role="option" tabindex="${i === 0 ? '0' : '-1'}" data-player-id="${esc(p.id)}" aria-selected="false">
-          <td class="cdm-td cdm-td--player">${cell}${matchupHtml}</td>
-          ${rankings.available ? `<td class="cdm-td cdm-td--num cdm-td--rank">${rankings.rank(p.id) ?? '-'}</td>` : ''}
-          <td class="cdm-td cdm-td--num ${fpaClass}">${esc(fpaRank)}</td>
-          <td class="cdm-td cdm-td--num cdm-td--proj">${p.projection != null ? p.projection.toFixed(1) : '-'}</td>
-          <td class="cdm-td cdm-td--num">${p.last3Avg != null ? p.last3Avg.toFixed(1) : '-'}</td>
-          <td class="cdm-td cdm-td--num">${p.seasonAvg != null ? p.seasonAvg.toFixed(1) : '-'}</td>
-        </tr>`;
-      }).join('');
-
-      return eligible.length;
-    }
-
-    function openCDM(slotIndex: number) {
-      activeSlotIndex = slotIndex;
-      const slot = currentSlots[slotIndex];
-      const currentPlayer = getPlayer(slot.playerId);
-      previousFocus = document.activeElement as HTMLElement;
-
-      const slotEl = slotsContainer.children[slotIndex] as HTMLElement;
-      slotEl?.classList.add('lineup-slot--active');
-
-      // Current starter card
-      if (currentPlayer) {
-        const cell = buildPlayerCellHTML({
-          name: currentPlayer.name,
-          headshot: currentPlayer.headshot,
-          position: currentPlayer.position,
-          nflTeam: currentPlayer.nflTeam,
-          mflId: currentPlayer.id,
-          espnId: currentPlayer.espnId,
-          size: 'compact',
-        });
-        cdmCurrent.innerHTML = `
-          <h3 class="lineup-cdm__section-title section-title">Current Starter</h3>
-          <div class="lineup-cdm__current-card">
-            ${cell}
-            <div class="lineup-cdm__current-stats">
-              ${rankings.available && rankings.rank(currentPlayer.id) != null ? `<span class="lineup-cdm__stat lineup-cdm__stat--rank" title="${esc(rankings.fullName)}">#${rankings.rank(currentPlayer.id)} ${esc(rankings.label)}</span>` : ''}
-              ${currentPlayer.projection != null ? `<span class="lineup-cdm__stat"><strong>${currentPlayer.projection.toFixed(1)}</strong> proj</span>` : ''}
-              ${currentPlayer.last3Avg != null ? `<span class="lineup-cdm__stat">${currentPlayer.last3Avg.toFixed(1)} L3</span>` : ''}
-              ${currentPlayer.seasonAvg != null ? `<span class="lineup-cdm__stat">${currentPlayer.seasonAvg.toFixed(1)} avg</span>` : ''}
+          const matchupPrefix = isHome ? 'vs' : '@';
+          const matchupLabel = isHome ? `vs ${oppTeam}` : `at ${oppTeam}`;
+          gameHtml = `
+            <div class="lineup-slot__opp" aria-label="${esc(matchupLabel)}">
+              <span class="lineup-slot__opp-prefix">${matchupPrefix}</span>
+              <img src="/assets/nfl-logos/${esc(oppTeam)}.svg" alt="" aria-hidden="true" class="lineup-slot__opp-logo" width="16" height="16" onerror="${NFL_LOGO_ONERROR}" onload="${NFL_LOGO_ONLOAD}" />
+              <span class="lineup-slot__opp-team">${esc(oppTeam)}</span>
             </div>
-          </div>
-        `;
-      } else {
-        cdmCurrent.innerHTML = `
-          <h3 class="lineup-cdm__section-title section-title">Current Starter</h3>
-          <div class="lineup-cdm__current-card lineup-cdm__current-card--empty">
-            <span>No player assigned</span>
-          </div>
-        `;
-      }
-
-      const eligibleCount = renderCdmList(slotIndex);
-
-      cdmEl.ariaHidden = 'false';
-      cdmEl.classList.add('lineup-cdm--open');
-      document.body.style.overflow = 'hidden';
-
-      announce(`Choose replacement for ${slot.position} slot. ${eligibleCount} players available.`);
-
-      setTimeout(() => {
-        const firstRow = cdmTbody.querySelector('.cdm-row') as HTMLElement;
-        (firstRow || cdmClose).focus();
-      }, 320);
-    }
-
-    function closeCDM() {
-      cdmEl.classList.remove('lineup-cdm--open');
-      document.body.style.overflow = '';
-
-      if (activeSlotIndex !== null) {
-        const slotEl = slotsContainer.children[activeSlotIndex] as HTMLElement;
-        slotEl?.classList.remove('lineup-slot--active');
-      }
-
-      setTimeout(() => {
-        cdmEl.ariaHidden = 'true';
-        previousFocus?.focus();
-        activeSlotIndex = null;
-      }, 260);
-    }
-
-    // ---------------------------------------------------------------------------
-    // Swap
-    // ---------------------------------------------------------------------------
-    function performSwap(slotIndex: number, newPlayerId: string) {
-      const oldPlayerId = currentSlots[slotIndex].playerId;
-      currentSlots[slotIndex].playerId = newPlayerId;
-
-      lastSwap = { slotIndex, oldPlayerId: oldPlayerId || '', newPlayerId };
-      lastClear = null;
-
-      renderSlotCard(slotIndex);
-      updateSubmitBar();
-
-      const newPlayer = getPlayer(newPlayerId);
-      const oldPlayer = getPlayer(oldPlayerId);
-      announce(`Swapped ${oldPlayer?.name || 'empty'} out for ${newPlayer?.name || 'empty'} at ${currentSlots[slotIndex].position}.`);
-      haptic('medium');
-
-      showToast('Shake to undo');
-      closeCDM();
-
-      const slotEl = slotsContainer.children[slotIndex] as HTMLElement;
-      slotEl?.classList.add('lineup-slot--flash');
-      setTimeout(() => slotEl?.classList.remove('lineup-slot--flash'), 400);
-    }
-
-    // ---------------------------------------------------------------------------
-    // Undo
-    // ---------------------------------------------------------------------------
-    function undoLastSwap() {
-      if (!lastSwap) return;
-      currentSlots[lastSwap.slotIndex].playerId = lastSwap.oldPlayerId || null;
-      const restored = getPlayer(lastSwap.oldPlayerId);
-      renderSlotCard(lastSwap.slotIndex);
-      updateSubmitBar();
-      announce(`Undo: restored ${restored?.name || 'empty'} to ${currentSlots[lastSwap.slotIndex].position}.`);
-      haptic('medium');
-      lastSwap = null;
-    }
-
-    function undoClear() {
-      if (!lastClear) return;
-      let restoredCount = 0;
-      for (let i = 0; i < currentSlots.length; i++) {
-        if (currentSlots[i].locked) continue;
-        if (currentSlots[i].playerId !== lastClear.slots[i]) {
-          currentSlots[i].playerId = lastClear.slots[i];
-          restoredCount++;
+            ${player.projection != null ? `<span class="lineup-slot__proj">${player.projection.toFixed(1)}</span>` : ''}
+          `;
         }
-      }
-      for (let i = 0; i < currentSlots.length; i++) renderSlotCard(i);
-      updateSubmitBar();
-      announce(`Undo clear: ${restoredCount} starters restored.`);
-      haptic('medium');
-      lastClear = null;
-    }
-
-    // ---------------------------------------------------------------------------
-    // Set Optimal
-    // ---------------------------------------------------------------------------
-    function setOptimalLineup() {
-      // Taxi-squad and IR players are not legal starters, so "Set Optimal"
-      // must exclude them exactly as the server-side fill does — otherwise
-      // one tap seats an ineligible player and arms submit over him.
-      const available = data.roster.filter((p: any) =>
-        !p.gameLocked && !p.isBye && p.rosterStatus === 'ROSTER');
-      const used = new Set<string>();
-      const newSlots = currentSlots.map(s => ({ ...s }));
-
-      function getScore(p: any): number {
-        if (p.customRank != null) return 1000 - p.customRank;
-        return p.projection ?? 0;
-      }
-
-      for (let i = 0; i < newSlots.length; i++) {
-        if (newSlots[i].locked) {
-          if (newSlots[i].playerId) used.add(newSlots[i].playerId!);
-          continue;
+        if (player.streak) {
+          gameHtml += `<span class="lineup-streak" title="${esc(String(player.streak))}-week hot streak">🔥</span>`;
         }
-        if (newSlots[i].position === 'FLEX') continue;
 
-        const pos = newSlots[i].position;
-        const best = available
-          .filter((p: any) => !used.has(p.id) && p.eligibleSlots.includes(pos))
-          .sort((a: any, b: any) => getScore(b) - getScore(a))[0];
-
-        if (best) {
-          newSlots[i].playerId = best.id;
-          used.add(best.id);
+        let lockHtml = '';
+        if (slot.locked) {
+          lockHtml = `<div class="lineup-slot__lock" aria-label="Locked"><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="2" y="6" width="10" height="7" rx="1.5" stroke="currentColor" stroke-width="1.2"/><path d="M4.5 6V4.5a2.5 2.5 0 015 0V6" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg></div>`;
         }
+
+        btn.innerHTML = `<div class="lineup-slot__player">${playerCell}</div><div class="lineup-slot__game">${gameHtml}</div>${lockHtml}`;
       }
 
-      for (let i = 0; i < newSlots.length; i++) {
-        if (newSlots[i].locked || newSlots[i].position !== 'FLEX') continue;
-        const best = available
-          .filter((p: any) => !used.has(p.id) && p.eligibleSlots.includes('FLEX'))
-          .sort((a: any, b: any) => getScore(b) - getScore(a))[0];
-        if (best) {
-          newSlots[i].playerId = best.id;
-          used.add(best.id);
-        }
+      // ---------------------------------------------------------------------------
+      // CDM (bottom sheet / modal)
+      // ---------------------------------------------------------------------------
+      /**
+       * The sort control doubles as the label for how the list is ordered. With
+       * no board loaded there is nothing to switch to, so it stays a plain label.
+       */
+      function updateSortToggle() {
+        if (!cdmSortToggle) return;
+        const sortingByRank = cdmSort === 'rank' && rankings.available;
+        cdmSortToggle.textContent = sortingByRank ? `by ${rankings.label}` : 'by Projection';
+        cdmSortToggle.disabled = !rankings.available;
+        cdmSortToggle.classList.toggle('lineup-cdm__sort-label--interactive', rankings.available);
+        cdmSortToggle.title = rankings.available
+          ? `Sorted ${sortingByRank ? `by ${rankings.fullName}` : 'by projection'} — tap to switch`
+          : '';
       }
 
-      let changedCount = 0;
-      for (let i = 0; i < newSlots.length; i++) {
-        if (newSlots[i].playerId !== currentSlots[i].playerId) changedCount++;
+      function toggleCdmSort() {
+        if (!rankings.available) return;
+        cdmSort = cdmSort === 'rank' ? 'projection' : 'rank';
+        haptic('light');
+        if (activeSlotIndex !== null) renderCdmList(activeSlotIndex);
+        updateSortToggle();
+        announce(cdmSort === 'rank'
+          ? `Sorted by ${rankings.fullName}.`
+          : 'Sorted by projection.');
       }
 
-      if (changedCount === 0) {
-        announce('Lineup is already optimal.');
-        statusEl.textContent = 'Already optimal!';
-        setTimeout(() => { statusEl.textContent = ''; }, 2000);
-        return;
-      }
+      /**
+       * Build the eligible-replacement list for a slot. Split out of openCDM so
+       * the sort toggle can re-order the list in place without re-opening the
+       * sheet. Returns how many candidates there are.
+       */
+      function renderCdmList(slotIndex: number): number {
+        const slot = currentSlots[slotIndex];
 
-      currentSlots = newSlots;
-      for (let i = 0; i < currentSlots.length; i++) renderSlotCard(i);
-      updateSubmitBar();
-      announce(`Optimal lineup set. ${changedCount} changes made.`);
-      haptic('light');
-    }
+        // Eligible replacements
+        const usedIds = new Set(currentSlots.map(s => s.playerId).filter(Boolean));
+        if (slot.playerId) usedIds.delete(slot.playerId);
 
-    // ---------------------------------------------------------------------------
-    // Clear Lineup
-    // ---------------------------------------------------------------------------
-    function clearLineup() {
-      let clearedCount = 0;
-      const snapshot = currentSlots.map(s => s.playerId);
-
-      for (let i = 0; i < currentSlots.length; i++) {
-        if (currentSlots[i].locked || !currentSlots[i].playerId) continue;
-        currentSlots[i].playerId = null;
-        clearedCount++;
-      }
-
-      if (clearedCount === 0) {
-        announce('Lineup is already empty.');
-        statusEl.textContent = 'Already empty!';
-        setTimeout(() => { statusEl.textContent = ''; }, 2000);
-        return;
-      }
-
-      lastClear = { slots: snapshot };
-      lastSwap = null;
-
-      for (let i = 0; i < currentSlots.length; i++) renderSlotCard(i);
-      updateSubmitBar();
-      announce(`Lineup cleared. ${clearedCount} slots emptied.`);
-      haptic('light');
-      showToast('Shake to undo');
-    }
-
-    // ---------------------------------------------------------------------------
-    // Submit
-    // ---------------------------------------------------------------------------
-    async function submitLineup() {
-      if (submitBtn.disabled) return;
-
-      const starterIds = currentSlots.map(s => s.playerId).filter(Boolean);
-      if (starterIds.length !== 9) {
-        announce('Lineup is incomplete.');
-        return;
-      }
-
-      // Submitting replaces all nine slots. When the base came from the
-      // daily feed rather than from MFL, the eight the owner didn't touch
-      // could be a day out of date — so make that an informed choice instead
-      // of a silent revert. (Blocking the submit outright was tried and is
-      // worse: the outage is on MFL's export, submitting uses its import, and
-      // the owner would be stranded before kickoff with no way to clear it.)
-      if (data.lineupFromCache && !confirm(
-        `We couldn't confirm your current Week ${data.week} lineup with MFL, so this page is showing the last one we synced. `
-        + `Submitting replaces all nine starters with what's on screen — any change you made on MFL since then will be undone.\n\n`
-        + `Submit anyway?`
-      )) {
-        return;
-      }
-
-      submitBtn.className = 'lineup-submit lineup-submit--ready loading-btn loading-btn--on-accent is-loading';
-      submitBtn.disabled = true;
-      submitBtn.setAttribute('aria-busy', 'true');
-      submitText.textContent = 'Submitting...';
-
-      try {
-        const res = await fetch('/api/lineup', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ week: data.week, starters: starterIds }),
+        const eligible = data.roster.filter((p: any) => {
+          if (usedIds.has(p.id)) return false;
+          if (p.id === slot.playerId) return false;
+          // Taxi-squad and IR players can't start. Offering them here is how
+          // the third fill path disagreed with the other two — the pick armed
+          // submit and MFL rejected the POST with a raw error.
+          if (p.rosterStatus !== 'ROSTER') return false;
+          if (p.gameLocked) return false;
+          return p.eligibleSlots.includes(slot.position);
         });
 
-        const result = await res.json();
+        if (eligible.length === 0) {
+          console.warn('[CDM] No eligible players for slot:', slot.position, '| roster:', data.roster.length,
+            '| sample:', data.roster.slice(0, 5).map((p: any) => ({ name: p.name, pos: p.position, slots: p.eligibleSlots, locked: p.gameLocked })));
+        }
 
-        if (res.ok && result.success) {
-          for (let i = 0; i < currentSlots.length; i++) {
-            originalSlots[i].playerId = currentSlots[i].playerId;
-          }
-          // MFL now holds a lineup for this week, so an untouched page is
-          // genuinely saved from here on. Both flags have to move: the
-          // "offer to save the fill" branch is tested FIRST, so leaving it
-          // set would re-arm the button after any swap-then-undo.
-          data.lineupOnFile = true;
-          data.canSubmitUnsaved = false;
-          // What MFL holds is now exactly what's on screen, so the button
-          // must stop hedging with "Saved (last sync)" — and a draft saved
-          // after this point belongs to the new base, not the old one.
-          data.lineupFromCache = false;
-          data.fillMode = 'saved';
-          unsavedNote?.remove();
-          try { localStorage.removeItem(STORAGE_KEY); } catch {}
-
-          submitBtn.className = 'lineup-submit lineup-submit--success';
-          submitBtn.removeAttribute('aria-busy');
-          submitText.textContent = 'Saved!';
-          haptic('heavy');
-          announce(`Lineup submitted successfully for Week ${data.week}.`);
-
-          document.querySelectorAll('.lineup-slot--swapped').forEach(el => el.classList.remove('lineup-slot--swapped'));
-
-          // Recompute rather than hardcode: the owner may have swapped a
-          // slot during the two seconds "Saved!" is showing, and pinning the
-          // button to disabled/"Lineup Saved" would bury that edit.
-          setTimeout(updateSubmitBar, 2000);
+        if (cdmSort === 'rank' && rankings.available) {
+          eligible.sort(byRank(rankings));
         } else {
+          eligible.sort((a: any, b: any) => (b.projection ?? 0) - (a.projection ?? 0));
+        }
+        updateSortToggle();
+
+        cdmThead.innerHTML = `<tr>
+          <th class="cdm-th cdm-th--player">Player</th>
+          ${rankings.available ? `<th class="cdm-th cdm-th--num cdm-th--rank" title="${esc(rankings.fullName)}">${esc(rankings.label)}</th>` : ''}
+          <th class="cdm-th cdm-th--num">FPA</th>
+          <th class="cdm-th cdm-th--num">Proj</th>
+          <th class="cdm-th cdm-th--num">L3</th>
+          <th class="cdm-th cdm-th--num">Avg</th>
+        </tr>`;
+
+        cdmTbody.innerHTML = eligible.map((p: any, i: number) => {
+          const game = getGame(p);
+          const oppTeam = game ? (p.nflTeam === game.home ? game.away : game.home) : null;
+
+          let fpaRank = '';
+          let fpaClass = '';
+          if (game && oppTeam) {
+            const ranks = game.fpaRanks?.[p.nflTeam];
+            const posKey = p.position === 'PK' ? 'PK' : p.position;
+            const rank = ranks?.[posKey];
+            if (rank) {
+              fpaRank = String(rank);
+              fpaClass = rank <= 8 ? 'fpa--good' : rank >= 25 ? 'fpa--bad' : '';
+            }
+          }
+
+          const cell = buildPlayerCellHTML({
+            name: p.name,
+            headshot: p.headshot,
+            position: p.position,
+            nflTeam: p.nflTeam,
+            mflId: p.id,
+            espnId: p.espnId,
+            size: 'compact',
+          });
+
+          const isHome = game ? p.nflTeam === game.home : false;
+          let matchupHtml = '';
+          if (p.isBye) {
+            matchupHtml = `<span class="cdm-matchup cdm-matchup--bye">BYE</span>`;
+          } else if (oppTeam) {
+            matchupHtml = `<div class="cdm-matchup">
+              <span class="cdm-matchup__text">
+                <span class="cdm-matchup__prefix">${isHome ? 'vs' : '@'}</span>
+                <img src="/assets/nfl-logos/${esc(oppTeam)}.svg" alt="" aria-hidden="true" class="cdm-matchup__logo" width="12" height="12" onerror="${NFL_LOGO_ONERROR}" onload="${NFL_LOGO_ONLOAD}" />
+                <span class="cdm-matchup__team">${esc(oppTeam)}</span>
+              </span>
+            </div>`;
+          }
+
+          return `<tr class="cdm-row" role="option" tabindex="${i === 0 ? '0' : '-1'}" data-player-id="${esc(p.id)}" aria-selected="false">
+            <td class="cdm-td cdm-td--player">${cell}${matchupHtml}</td>
+            ${rankings.available ? `<td class="cdm-td cdm-td--num cdm-td--rank">${rankings.rank(p.id) ?? '-'}</td>` : ''}
+            <td class="cdm-td cdm-td--num ${fpaClass}">${esc(fpaRank)}</td>
+            <td class="cdm-td cdm-td--num cdm-td--proj">${p.projection != null ? p.projection.toFixed(1) : '-'}</td>
+            <td class="cdm-td cdm-td--num">${p.last3Avg != null ? p.last3Avg.toFixed(1) : '-'}</td>
+            <td class="cdm-td cdm-td--num">${p.seasonAvg != null ? p.seasonAvg.toFixed(1) : '-'}</td>
+          </tr>`;
+        }).join('');
+
+        return eligible.length;
+      }
+
+      function openCDM(slotIndex: number) {
+        activeSlotIndex = slotIndex;
+        const slot = currentSlots[slotIndex];
+        const currentPlayer = getPlayer(slot.playerId);
+        previousFocus = document.activeElement as HTMLElement;
+
+        const slotEl = slotsContainer.children[slotIndex] as HTMLElement;
+        slotEl?.classList.add('lineup-slot--active');
+
+        // Current starter card
+        if (currentPlayer) {
+          const cell = buildPlayerCellHTML({
+            name: currentPlayer.name,
+            headshot: currentPlayer.headshot,
+            position: currentPlayer.position,
+            nflTeam: currentPlayer.nflTeam,
+            mflId: currentPlayer.id,
+            espnId: currentPlayer.espnId,
+            size: 'compact',
+          });
+          cdmCurrent.innerHTML = `
+            <h3 class="lineup-cdm__section-title section-title">Current Starter</h3>
+            <div class="lineup-cdm__current-card">
+              ${cell}
+              <div class="lineup-cdm__current-stats">
+                ${rankings.available && rankings.rank(currentPlayer.id) != null ? `<span class="lineup-cdm__stat lineup-cdm__stat--rank" title="${esc(rankings.fullName)}">#${rankings.rank(currentPlayer.id)} ${esc(rankings.label)}</span>` : ''}
+                ${currentPlayer.projection != null ? `<span class="lineup-cdm__stat"><strong>${currentPlayer.projection.toFixed(1)}</strong> proj</span>` : ''}
+                ${currentPlayer.last3Avg != null ? `<span class="lineup-cdm__stat">${currentPlayer.last3Avg.toFixed(1)} L3</span>` : ''}
+                ${currentPlayer.seasonAvg != null ? `<span class="lineup-cdm__stat">${currentPlayer.seasonAvg.toFixed(1)} avg</span>` : ''}
+              </div>
+            </div>
+          `;
+        } else {
+          cdmCurrent.innerHTML = `
+            <h3 class="lineup-cdm__section-title section-title">Current Starter</h3>
+            <div class="lineup-cdm__current-card lineup-cdm__current-card--empty">
+              <span>No player assigned</span>
+            </div>
+          `;
+        }
+
+        const eligibleCount = renderCdmList(slotIndex);
+
+        cdmEl.ariaHidden = 'false';
+        cdmEl.classList.add('lineup-cdm--open');
+        document.body.style.overflow = 'hidden';
+
+        announce(`Choose replacement for ${slot.position} slot. ${eligibleCount} players available.`);
+
+        setTimeout(() => {
+          const firstRow = cdmTbody.querySelector('.cdm-row') as HTMLElement;
+          (firstRow || cdmClose).focus();
+        }, 320);
+      }
+
+      function closeCDM() {
+        cdmEl.classList.remove('lineup-cdm--open');
+        document.body.style.overflow = '';
+
+        if (activeSlotIndex !== null) {
+          const slotEl = slotsContainer.children[activeSlotIndex] as HTMLElement;
+          slotEl?.classList.remove('lineup-slot--active');
+        }
+
+        setTimeout(() => {
+          cdmEl.ariaHidden = 'true';
+          previousFocus?.focus();
+          activeSlotIndex = null;
+        }, 260);
+      }
+
+      // ---------------------------------------------------------------------------
+      // Swap
+      // ---------------------------------------------------------------------------
+      function performSwap(slotIndex: number, newPlayerId: string) {
+        const oldPlayerId = currentSlots[slotIndex].playerId;
+        currentSlots[slotIndex].playerId = newPlayerId;
+
+        lastSwap = { slotIndex, oldPlayerId: oldPlayerId || '', newPlayerId };
+        lastClear = null;
+
+        renderSlotCard(slotIndex);
+        updateSubmitBar();
+
+        const newPlayer = getPlayer(newPlayerId);
+        const oldPlayer = getPlayer(oldPlayerId);
+        announce(`Swapped ${oldPlayer?.name || 'empty'} out for ${newPlayer?.name || 'empty'} at ${currentSlots[slotIndex].position}.`);
+        haptic('medium');
+
+        showToast('Shake to undo');
+        closeCDM();
+
+        const slotEl = slotsContainer.children[slotIndex] as HTMLElement;
+        slotEl?.classList.add('lineup-slot--flash');
+        setTimeout(() => slotEl?.classList.remove('lineup-slot--flash'), 400);
+      }
+
+      // ---------------------------------------------------------------------------
+      // Undo
+      // ---------------------------------------------------------------------------
+      function undoLastSwap() {
+        if (!lastSwap) return;
+        currentSlots[lastSwap.slotIndex].playerId = lastSwap.oldPlayerId || null;
+        const restored = getPlayer(lastSwap.oldPlayerId);
+        renderSlotCard(lastSwap.slotIndex);
+        updateSubmitBar();
+        announce(`Undo: restored ${restored?.name || 'empty'} to ${currentSlots[lastSwap.slotIndex].position}.`);
+        haptic('medium');
+        lastSwap = null;
+      }
+
+      function undoClear() {
+        if (!lastClear) return;
+        let restoredCount = 0;
+        for (let i = 0; i < currentSlots.length; i++) {
+          if (currentSlots[i].locked) continue;
+          if (currentSlots[i].playerId !== lastClear.slots[i]) {
+            currentSlots[i].playerId = lastClear.slots[i];
+            restoredCount++;
+          }
+        }
+        for (let i = 0; i < currentSlots.length; i++) renderSlotCard(i);
+        updateSubmitBar();
+        announce(`Undo clear: ${restoredCount} starters restored.`);
+        haptic('medium');
+        lastClear = null;
+      }
+
+      // ---------------------------------------------------------------------------
+      // Set Optimal
+      // ---------------------------------------------------------------------------
+      function setOptimalLineup() {
+        // Taxi-squad and IR players are not legal starters, so "Set Optimal"
+        // must exclude them exactly as the server-side fill does — otherwise
+        // one tap seats an ineligible player and arms submit over him.
+        const available = data.roster.filter((p: any) =>
+          !p.gameLocked && !p.isBye && p.rosterStatus === 'ROSTER');
+        const used = new Set<string>();
+        const newSlots = currentSlots.map(s => ({ ...s }));
+
+        function getScore(p: any): number {
+          if (p.customRank != null) return 1000 - p.customRank;
+          return p.projection ?? 0;
+        }
+
+        for (let i = 0; i < newSlots.length; i++) {
+          if (newSlots[i].locked) {
+            if (newSlots[i].playerId) used.add(newSlots[i].playerId!);
+            continue;
+          }
+          if (newSlots[i].position === 'FLEX') continue;
+
+          const pos = newSlots[i].position;
+          const best = available
+            .filter((p: any) => !used.has(p.id) && p.eligibleSlots.includes(pos))
+            .sort((a: any, b: any) => getScore(b) - getScore(a))[0];
+
+          if (best) {
+            newSlots[i].playerId = best.id;
+            used.add(best.id);
+          }
+        }
+
+        for (let i = 0; i < newSlots.length; i++) {
+          if (newSlots[i].locked || newSlots[i].position !== 'FLEX') continue;
+          const best = available
+            .filter((p: any) => !used.has(p.id) && p.eligibleSlots.includes('FLEX'))
+            .sort((a: any, b: any) => getScore(b) - getScore(a))[0];
+          if (best) {
+            newSlots[i].playerId = best.id;
+            used.add(best.id);
+          }
+        }
+
+        let changedCount = 0;
+        for (let i = 0; i < newSlots.length; i++) {
+          if (newSlots[i].playerId !== currentSlots[i].playerId) changedCount++;
+        }
+
+        if (changedCount === 0) {
+          announce('Lineup is already optimal.');
+          statusEl.textContent = 'Already optimal!';
+          setTimeout(() => { statusEl.textContent = ''; }, 2000);
+          return;
+        }
+
+        currentSlots = newSlots;
+        for (let i = 0; i < currentSlots.length; i++) renderSlotCard(i);
+        updateSubmitBar();
+        announce(`Optimal lineup set. ${changedCount} changes made.`);
+        haptic('light');
+      }
+
+      // ---------------------------------------------------------------------------
+      // Clear Lineup
+      // ---------------------------------------------------------------------------
+      function clearLineup() {
+        let clearedCount = 0;
+        const snapshot = currentSlots.map(s => s.playerId);
+
+        for (let i = 0; i < currentSlots.length; i++) {
+          if (currentSlots[i].locked || !currentSlots[i].playerId) continue;
+          currentSlots[i].playerId = null;
+          clearedCount++;
+        }
+
+        if (clearedCount === 0) {
+          announce('Lineup is already empty.');
+          statusEl.textContent = 'Already empty!';
+          setTimeout(() => { statusEl.textContent = ''; }, 2000);
+          return;
+        }
+
+        lastClear = { slots: snapshot };
+        lastSwap = null;
+
+        for (let i = 0; i < currentSlots.length; i++) renderSlotCard(i);
+        updateSubmitBar();
+        announce(`Lineup cleared. ${clearedCount} slots emptied.`);
+        haptic('light');
+        showToast('Shake to undo');
+      }
+
+      // ---------------------------------------------------------------------------
+      // Submit
+      // ---------------------------------------------------------------------------
+      async function submitLineup() {
+        if (submitBtn.disabled) return;
+
+        const starterIds = currentSlots.map(s => s.playerId).filter(Boolean);
+        if (starterIds.length !== 9) {
+          announce('Lineup is incomplete.');
+          return;
+        }
+
+        // Submitting replaces all nine slots. When the base came from the
+        // daily feed rather than from MFL, the eight the owner didn't touch
+        // could be a day out of date — so make that an informed choice instead
+        // of a silent revert. (Blocking the submit outright was tried and is
+        // worse: the outage is on MFL's export, submitting uses its import, and
+        // the owner would be stranded before kickoff with no way to clear it.)
+        if (data.lineupFromCache && !confirm(
+          `We couldn't confirm your current Week ${data.week} lineup with MFL, so this page is showing the last one we synced. `
+          + `Submitting replaces all nine starters with what's on screen — any change you made on MFL since then will be undone.\n\n`
+          + `Submit anyway?`
+        )) {
+          return;
+        }
+
+        submitBtn.className = 'lineup-submit lineup-submit--ready loading-btn loading-btn--on-accent is-loading';
+        submitBtn.disabled = true;
+        submitBtn.setAttribute('aria-busy', 'true');
+        submitText.textContent = 'Submitting...';
+
+        try {
+          const res = await fetch('/api/lineup', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ week: data.week, starters: starterIds }),
+          });
+
+          const result = await res.json();
+
+          if (res.ok && result.success) {
+            for (let i = 0; i < currentSlots.length; i++) {
+              originalSlots[i].playerId = currentSlots[i].playerId;
+            }
+            // MFL now holds a lineup for this week, so an untouched page is
+            // genuinely saved from here on. Both flags have to move: the
+            // "offer to save the fill" branch is tested FIRST, so leaving it
+            // set would re-arm the button after any swap-then-undo.
+            data.lineupOnFile = true;
+            data.canSubmitUnsaved = false;
+            // What MFL holds is now exactly what's on screen, so the button
+            // must stop hedging with "Saved (last sync)" — and a draft saved
+            // after this point belongs to the new base, not the old one.
+            data.lineupFromCache = false;
+            data.fillMode = 'saved';
+            unsavedNote?.remove();
+            try { localStorage.removeItem(STORAGE_KEY); } catch {}
+
+            submitBtn.className = 'lineup-submit lineup-submit--success';
+            submitBtn.removeAttribute('aria-busy');
+            submitText.textContent = 'Saved!';
+            haptic('heavy');
+            announce(`Lineup submitted successfully for Week ${data.week}.`);
+
+            document.querySelectorAll('.lineup-slot--swapped').forEach(el => el.classList.remove('lineup-slot--swapped'));
+
+            // Recompute rather than hardcode: the owner may have swapped a
+            // slot during the two seconds "Saved!" is showing, and pinning the
+            // button to disabled/"Lineup Saved" would bury that edit.
+            setTimeout(updateSubmitBar, 2000);
+          } else {
+            submitBtn.className = 'lineup-submit lineup-submit--error';
+            submitBtn.removeAttribute('aria-busy');
+            submitText.textContent = 'Failed — Retry';
+            submitBtn.disabled = false;
+            announce(`Lineup submission failed. ${result.error || 'Please try again.'}`);
+          }
+        } catch {
           submitBtn.className = 'lineup-submit lineup-submit--error';
           submitBtn.removeAttribute('aria-busy');
           submitText.textContent = 'Failed — Retry';
           submitBtn.disabled = false;
-          announce(`Lineup submission failed. ${result.error || 'Please try again.'}`);
+          announce('Lineup submission failed. Please try again.');
         }
-      } catch {
-        submitBtn.className = 'lineup-submit lineup-submit--error';
-        submitBtn.removeAttribute('aria-busy');
-        submitText.textContent = 'Failed — Retry';
-        submitBtn.disabled = false;
-        announce('Lineup submission failed. Please try again.');
       }
-    }
 
-    // ---------------------------------------------------------------------------
-    // Toast
-    // ---------------------------------------------------------------------------
-    function showToast(msg: string) {
-      toastText.textContent = msg;
-      toastEl.classList.add('lineup-toast--visible');
-      toastEl.ariaHidden = 'false';
-      setTimeout(() => {
-        toastEl.classList.remove('lineup-toast--visible');
-        toastEl.ariaHidden = 'true';
-      }, 3000);
-    }
+      // ---------------------------------------------------------------------------
+      // Toast
+      // ---------------------------------------------------------------------------
+      function showToast(msg: string) {
+        toastText.textContent = msg;
+        toastEl.classList.add('lineup-toast--visible');
+        toastEl.ariaHidden = 'false';
+        setTimeout(() => {
+          toastEl.classList.remove('lineup-toast--visible');
+          toastEl.ariaHidden = 'true';
+        }, 3000);
+      }
 
-    // ---------------------------------------------------------------------------
-    // Event listeners
-    // ---------------------------------------------------------------------------
-    slotsContainer.addEventListener('click', (e) => {
-      const btn = (e.target as HTMLElement).closest('.lineup-slot__card') as HTMLButtonElement;
-      if (!btn || btn.disabled) return;
-      const li = btn.closest('.lineup-slot') as HTMLElement;
-      const index = parseInt(li?.dataset.index || '', 10);
-      if (!isNaN(index)) openCDM(index);
-    });
+      // ---------------------------------------------------------------------------
+      // Event listeners
+      // ---------------------------------------------------------------------------
+      slotsContainer.addEventListener('click', (e) => {
+        const btn = (e.target as HTMLElement).closest('.lineup-slot__card') as HTMLButtonElement;
+        if (!btn || btn.disabled) return;
+        const li = btn.closest('.lineup-slot') as HTMLElement;
+        const index = parseInt(li?.dataset.index || '', 10);
+        if (!isNaN(index)) openCDM(index);
+      });
 
-    cdmOverlay.addEventListener('click', closeCDM);
-    cdmClose.addEventListener('click', closeCDM);
-    cdmSortToggle?.addEventListener('click', toggleCdmSort);
+      cdmOverlay.addEventListener('click', closeCDM);
+      cdmClose.addEventListener('click', closeCDM);
+      cdmSortToggle?.addEventListener('click', toggleCdmSort);
 
-    // The owner can import or re-weight a board in another tab while this page
-    // is open — pick the new one up rather than showing a stale column.
-    onRankingsChanged(() => {
-      rankings = loadLineupRankings();
-      if (!rankings.available) cdmSort = 'projection';
+      // The owner can import or re-weight a board in another tab while this page
+      // is open — pick the new one up rather than showing a stale column.
+      // Registers on `window`, which the router does not replace — keep the
+      // unsubscribe so this page's watch dies with this page.
+      stopRankingsWatch = onRankingsChanged(() => {
+        rankings = loadLineupRankings();
+        if (!rankings.available) cdmSort = 'projection';
+        updateSortToggle();
+        refreshRankChips();
+        if (activeSlotIndex !== null) renderCdmList(activeSlotIndex);
+      });
       updateSortToggle();
       refreshRankChips();
-      if (activeSlotIndex !== null) renderCdmList(activeSlotIndex);
-    });
-    updateSortToggle();
-    refreshRankChips();
 
-    cdmTbody.addEventListener('click', (e) => {
-      const row = (e.target as HTMLElement).closest('.cdm-row') as HTMLElement;
-      if (!row || activeSlotIndex === null) return;
-      const playerId = row.dataset.playerId;
-      if (playerId) performSwap(activeSlotIndex, playerId);
-    });
+      cdmTbody.addEventListener('click', (e) => {
+        const row = (e.target as HTMLElement).closest('.cdm-row') as HTMLElement;
+        if (!row || activeSlotIndex === null) return;
+        const playerId = row.dataset.playerId;
+        if (playerId) performSwap(activeSlotIndex, playerId);
+      });
 
-    cdmEl.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape') { closeCDM(); return; }
+      cdmEl.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') { closeCDM(); return; }
 
-      const rows = Array.from(cdmTbody.querySelectorAll('.cdm-row')) as HTMLElement[];
-      const focusedIdx = rows.indexOf(document.activeElement as HTMLElement);
+        const rows = Array.from(cdmTbody.querySelectorAll('.cdm-row')) as HTMLElement[];
+        const focusedIdx = rows.indexOf(document.activeElement as HTMLElement);
 
-      if (e.key === 'ArrowDown' && focusedIdx < rows.length - 1) {
-        e.preventDefault(); rows[focusedIdx + 1]?.focus();
-      } else if (e.key === 'ArrowUp' && focusedIdx > 0) {
-        e.preventDefault(); rows[focusedIdx - 1]?.focus();
-      } else if ((e.key === 'Enter' || e.key === ' ') && focusedIdx >= 0) {
-        e.preventDefault();
-        const playerId = rows[focusedIdx]?.dataset.playerId;
-        if (playerId && activeSlotIndex !== null) performSwap(activeSlotIndex, playerId);
-      } else if (e.key === 'Home') {
-        e.preventDefault(); rows[0]?.focus();
-      } else if (e.key === 'End') {
-        e.preventDefault(); rows[rows.length - 1]?.focus();
-      }
-    });
-
-    submitBtn.addEventListener('click', submitLineup);
-    optimalBtn.addEventListener('click', setOptimalLineup);
-    // Long-press to clear (1300ms hold)
-    const clearProgress = clearBtn.querySelector('.lineup-clear__progress') as SVGCircleElement;
-    const CLEAR_HOLD_MS = 1300;
-    let clearTimer: ReturnType<typeof setTimeout> | null = null;
-
-    function startClearHold() {
-      clearProgress.style.transition = `stroke-dashoffset ${CLEAR_HOLD_MS}ms cubic-bezier(0.4, 0, 0.2, 1)`;
-      clearProgress.style.strokeDashoffset = '0';
-      clearBtn.classList.add('lineup-clear--holding');
-      clearTimer = setTimeout(() => {
-        clearLineup();
-        cancelClearHold();
-      }, CLEAR_HOLD_MS);
-    }
-
-    function cancelClearHold() {
-      if (clearTimer) { clearTimeout(clearTimer); clearTimer = null; }
-      clearProgress.style.transition = 'stroke-dashoffset 0.15s ease';
-      clearProgress.style.strokeDashoffset = '75.4';
-      clearBtn.classList.remove('lineup-clear--holding');
-    }
-
-    clearBtn.addEventListener('pointerdown', (e) => { e.preventDefault(); startClearHold(); });
-    clearBtn.addEventListener('pointerup', cancelClearHold);
-    clearBtn.addEventListener('pointerleave', cancelClearHold);
-    clearBtn.addEventListener('contextmenu', (e) => e.preventDefault());
-
-    weekSelect.addEventListener('change', () => {
-      const newWeek = weekSelect.value;
-      const changes = countChanges();
-      if (changes > 0 && !confirm(`You have ${changes} unsaved changes for Week ${data.week}. Discard?`)) {
-        weekSelect.value = String(data.week);
-        return;
-      }
-      window.location.href = `/theleague/lineup?week=${newWeek}`;
-    });
-
-    // Shake to undo (mobile)
-    let lastShakeTime = 0;
-    const shakeThreshold = 15;
-
-    if ('DeviceMotionEvent' in window) {
-      const requestPermission = (DeviceMotionEvent as any).requestPermission;
-      if (typeof requestPermission === 'function') {
-        document.addEventListener('click', async function reqMotion() {
-          try { await requestPermission(); } catch {}
-          document.removeEventListener('click', reqMotion);
-        }, { once: true });
-      }
-
-      window.addEventListener('devicemotion', (e) => {
-        if (!lastSwap && !lastClear) return;
-        const acc = e.accelerationIncludingGravity;
-        if (!acc) return;
-        const force = Math.sqrt((acc.x || 0) ** 2 + (acc.y || 0) ** 2 + (acc.z || 0) ** 2);
-        const now = Date.now();
-        if (force > shakeThreshold && now - lastShakeTime > 1000) {
-          lastShakeTime = now;
-          if (lastClear) {
-            undoClear();
-          } else {
-            undoLastSwap();
-            lastSwap = null;
-          }
-          toastEl.classList.remove('lineup-toast--visible');
+        if (e.key === 'ArrowDown' && focusedIdx < rows.length - 1) {
+          e.preventDefault(); rows[focusedIdx + 1]?.focus();
+        } else if (e.key === 'ArrowUp' && focusedIdx > 0) {
+          e.preventDefault(); rows[focusedIdx - 1]?.focus();
+        } else if ((e.key === 'Enter' || e.key === ' ') && focusedIdx >= 0) {
+          e.preventDefault();
+          const playerId = rows[focusedIdx]?.dataset.playerId;
+          if (playerId && activeSlotIndex !== null) performSwap(activeSlotIndex, playerId);
+        } else if (e.key === 'Home') {
+          e.preventDefault(); rows[0]?.focus();
+        } else if (e.key === 'End') {
+          e.preventDefault(); rows[rows.length - 1]?.focus();
         }
       });
-    }
 
-    // Desktop undo via toast click
-    toastEl.addEventListener('click', () => {
-      if (!isMobileSheet()) {
-        if (lastClear) {
-          undoClear();
-          toastEl.classList.remove('lineup-toast--visible');
-        } else if (lastSwap) {
-          undoLastSwap();
-          lastSwap = null;
-          toastEl.classList.remove('lineup-toast--visible');
+      submitBtn.addEventListener('click', submitLineup);
+      optimalBtn.addEventListener('click', setOptimalLineup);
+      // Long-press to clear (1300ms hold)
+      const clearProgress = clearBtn.querySelector('.lineup-clear__progress') as SVGCircleElement;
+      const CLEAR_HOLD_MS = 1300;
+      let clearTimer: ReturnType<typeof setTimeout> | null = null;
+
+      function startClearHold() {
+        clearProgress.style.transition = `stroke-dashoffset ${CLEAR_HOLD_MS}ms cubic-bezier(0.4, 0, 0.2, 1)`;
+        clearProgress.style.strokeDashoffset = '0';
+        clearBtn.classList.add('lineup-clear--holding');
+        clearTimer = setTimeout(() => {
+          clearLineup();
+          cancelClearHold();
+        }, CLEAR_HOLD_MS);
+      }
+
+      function cancelClearHold() {
+        if (clearTimer) { clearTimeout(clearTimer); clearTimer = null; }
+        clearProgress.style.transition = 'stroke-dashoffset 0.15s ease';
+        clearProgress.style.strokeDashoffset = '75.4';
+        clearBtn.classList.remove('lineup-clear--holding');
+      }
+
+      clearBtn.addEventListener('pointerdown', (e) => { e.preventDefault(); startClearHold(); });
+      clearBtn.addEventListener('pointerup', cancelClearHold);
+      clearBtn.addEventListener('pointerleave', cancelClearHold);
+      clearBtn.addEventListener('contextmenu', (e) => e.preventDefault());
+
+      weekSelect.addEventListener('change', () => {
+        const newWeek = weekSelect.value;
+        const changes = countChanges();
+        if (changes > 0 && !confirm(`You have ${changes} unsaved changes for Week ${data.week}. Discard?`)) {
+          weekSelect.value = String(data.week);
+          return;
+        }
+        window.location.href = `/theleague/lineup?week=${newWeek}`;
+      });
+
+      // Shake to undo (mobile)
+      let lastShakeTime = 0;
+      const shakeThreshold = 15;
+
+      if ('DeviceMotionEvent' in window) {
+        const requestPermission = (DeviceMotionEvent as any).requestPermission;
+        if (typeof requestPermission === 'function') {
+          // `once: true` drops it after the first click, but an owner who
+          // navigates away without clicking leaves it armed — hence the
+          // module-scoped handle and the teardown at the top of init().
+          onMotionPermissionClick = async () => {
+            try { await requestPermission(); } catch {}
+            if (onMotionPermissionClick) document.removeEventListener('click', onMotionPermissionClick);
+            onMotionPermissionClick = null;
+          };
+          document.addEventListener('click', onMotionPermissionClick, { once: true });
+        }
+
+        // `window` survives the swap, so an un-torn-down devicemotion listener
+        // both stacks per navigation and keeps shaking a detached page's
+        // lineup back through undoLastSwap().
+        onDeviceMotion = (e) => {
+          if (!lastSwap && !lastClear) return;
+          const acc = e.accelerationIncludingGravity;
+          if (!acc) return;
+          const force = Math.sqrt((acc.x || 0) ** 2 + (acc.y || 0) ** 2 + (acc.z || 0) ** 2);
+          const now = Date.now();
+          if (force > shakeThreshold && now - lastShakeTime > 1000) {
+            lastShakeTime = now;
+            if (lastClear) {
+              undoClear();
+            } else {
+              undoLastSwap();
+              lastSwap = null;
+            }
+            toastEl.classList.remove('lineup-toast--visible');
+          }
+        };
+        window.addEventListener('devicemotion', onDeviceMotion);
+      }
+
+      // Desktop undo via toast click
+      toastEl.addEventListener('click', () => {
+        if (!isMobileSheet()) {
+          if (lastClear) {
+            undoClear();
+            toastEl.classList.remove('lineup-toast--visible');
+          } else if (lastSwap) {
+            undoLastSwap();
+            lastSwap = null;
+            toastEl.classList.remove('lineup-toast--visible');
+          }
+        }
+      });
+
+      // ---------------------------------------------------------------------------
+      // Init
+      // ---------------------------------------------------------------------------
+      loadDraft();
+      updateSubmitBar();
+      for (let i = 0; i < currentSlots.length; i++) {
+        if (currentSlots[i].playerId !== originalSlots[i].playerId) {
+          renderSlotCard(i);
         }
       }
-    });
-
-    // ---------------------------------------------------------------------------
-    // Init
-    // ---------------------------------------------------------------------------
-    loadDraft();
-    updateSubmitBar();
-    for (let i = 0; i < currentSlots.length; i++) {
-      if (currentSlots[i].playerId !== originalSlots[i].playerId) {
-        renderSlotCard(i);
-      }
     }
+
+    /**
+     * Never call init() directly. `astro:page-load` fires on the FIRST load as
+     * well as after every swap, so a direct call would double-bind every slot
+     * and run loadDraft() twice.
+     */
+    document.addEventListener('astro:page-load', init);
   </script>
 </TheLeagueLayout>
 
