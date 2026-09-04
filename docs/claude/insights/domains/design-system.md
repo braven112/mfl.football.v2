@@ -139,6 +139,53 @@ excludes stroke, and the halo on every `-dark` badge *is* a stroke.
 
 ---
 
+## 2026-09-03 - Un-deadening a Rule Can Ship a New Dark-Mode Bug in the Same Commit
+
+**Context:** The Schefter tip rail's Tip of the Week badges (`TipPage.astro`)
+were authored as amber pills but rendered as plain text, because
+`renderRecord()` builds them with `innerHTML` and Astro's scoped selectors
+never match runtime-injected markup. The mechanical half of that is documented
+several times over in `frontend.md` (2026-07-03, `set:html`; the
+`player-cell__avatar` entry). This is about what the fix *uncovers*.
+
+**Insight:** A rule that has never matched anything has also never been
+rendered, so its colours were never reviewed against either theme — the moment
+`:global()` makes it live, whatever was wrong with it ships. The badge paired a
+**hardcoded** fill with a **token** ink:
+
+```css
+color: var(--color-gray-800, #1f2937);   /* inverts:  #1f2937 → #d8d8d8 */
+background: #fef3c7;                     /* does not invert */
+```
+
+The `--color-gray-*` ramp self-inverts under `html.dark`, so the first frame
+that rule ever painted would have been near-white text on light amber (~1.2:1)
+— a dark-mode bug introduced *by* a cosmetic fix, in a diff that adds no
+colours and looks perfect in light mode.
+
+**Recommendation:** When un-deadening CSS (a `:global()` conversion, a renamed
+class, a selector that finally matches), treat every declaration in the rule as
+**new code** and check it in both themes — it is new code, it just has an old
+`git blame`. The specific tell is a **mixed pair**: one side of a
+fill/ink couple hardcoded and the other a token. Either both hardcode or both
+tokenize; a hardcoded fill under a self-inverting ink is always latently broken.
+
+For warning/amber chips the tokenized pair already exists and inverts together,
+so it needs no `html.dark` override at all:
+
+| | light | dark |
+|---|---|---|
+| `--badge-warning-bg` | `#fef3c7` | `rgba(245,158,11,.15)` |
+| `--badge-warning-text` | `#d97706` | `#fcd34d` |
+
+Same shape as the `--badge-success-*` / `--badge-error-*` / `--badge-info-*`
+pairs under "Component Tokens - Badges/Status" in `tokens.css`, each with a
+dark counterpart in `tokens-dark.css`. Reach for these before hand-rolling
+`#fef3c7` — `grep -rn '#fef3c7' src/` returns ~30 hardcoded fills, and any one
+of them carrying token ink is this bug waiting for a dark-mode reader.
+
+---
+
 ## 2026-09-02 - On a Dark Surface, "Lighten the Fill" Has a Ceiling — That's What Forces the Invert
 
 **Context:** The AFL playoffs *hero* (`AflPlayoffsHero.astro`) had the same

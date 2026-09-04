@@ -1050,7 +1050,8 @@ const preselectTeam = (() => {
   .tip-rail-cooker[data-state="capped"] .tip-rail-cooker__body {
     color: var(--color-error-dark, #b91c1c);
   }
-  .tip-rail-cooker__countdown {
+  /* Injected into __body by the cooker poller — see the :global() note below. */
+  :global(.tip-rail-cooker__countdown) {
     display: inline-flex;
     align-items: center;
     gap: 0.375rem;
@@ -1137,12 +1138,12 @@ const preselectTeam = (() => {
     gap: 0.375rem;
   }
   .tip-rail-hot__loading,
-  .tip-rail-hot__empty {
+  :global(.tip-rail-hot__empty) {
     font-size: 0.75rem;
     font-style: italic;
     color: var(--color-gray-500, #6b7280);
   }
-  .tip-rail-hot__chip {
+  :global(.tip-rail-hot__chip) {
     display: inline-flex;
     align-items: center;
     gap: 0.25rem;
@@ -1157,17 +1158,17 @@ const preselectTeam = (() => {
 
   /* Dark: gray-50/100 invert to near-black — glass wash so the pill
      still reads as a chip on the card. */
-  :global(html.dark) .tip-rail-hot__chip {
+  :global(html.dark .tip-rail-hot__chip) {
     background: rgba(255, 255, 255, 0.06);
     border-color: rgba(255, 255, 255, 0.12);
   }
-  .tip-rail-hot__chip[data-rank="1"] {
+  :global(.tip-rail-hot__chip[data-rank="1"]) {
     background: color-mix(in srgb, var(--color-primary, #1c497c) 10%, transparent);
     border-color: color-mix(in srgb, var(--color-primary, #1c497c) 25%, transparent);
     color: var(--color-primary, #1c497c);
     font-weight: 700;
   }
-  .tip-rail-hot__chip-count {
+  :global(.tip-rail-hot__chip-count) {
     font-weight: 600;
     color: var(--color-gray-900, #111827);
   }
@@ -1185,7 +1186,11 @@ const preselectTeam = (() => {
   .tip-rail-leaderboard__loading {
     margin: 0;
   }
-  .tip-rail-record__codename {
+  /* renderRecord() / renderLeaderboard() build these at runtime via innerHTML,
+     so they never carry a data-astro-cid-* attribute and scoped selectors are
+     dead CSS against them. Wrap the FULL selector in :global(...) — same fix
+     the .tip-card dark rules needed. */
+  :global(.tip-rail-record__codename) {
     display: inline-flex;
     align-items: center;
     gap: 0.375rem;
@@ -1198,36 +1203,39 @@ const preselectTeam = (() => {
     letter-spacing: 0.02em;
     align-self: flex-start;
   }
-  .tip-rail-record__counts {
+  :global(.tip-rail-record__counts) {
     display: flex;
     gap: 1rem;
     color: var(--color-gray-700, #374151);
   }
-  .tip-rail-record__counts strong {
+  :global(.tip-rail-record__counts strong) {
     color: var(--color-gray-900, #111827);
     font-variant-numeric: tabular-nums;
   }
-  .tip-rail-record__empty {
+  :global(.tip-rail-record__empty) {
     margin: 0;
     font-size: 0.8125rem;
     color: var(--color-gray-600, #4b5563);
   }
-  .tip-rail-record__badges {
+  :global(.tip-rail-record__badges) {
     display: flex;
     flex-wrap: wrap;
     gap: 0.25rem;
     margin-top: 0.25rem;
   }
-  .tip-rail-record__badge {
+  /* Amber pill. The --badge-warning-* pair already inverts per theme, so this
+     needs NO html.dark override — the old hardcoded #fef3c7 + gray-800 ink
+     would have shipped light-on-light the moment the rule started matching. */
+  :global(.tip-rail-record__badge) {
     display: inline-flex;
     align-items: center;
     gap: 0.25rem;
     padding: 0.125rem 0.5rem;
     font-size: 0.6875rem;
     font-weight: 600;
-    color: var(--color-gray-800, #1f2937);
-    background: #fef3c7;
-    border: 1px solid #fcd34d;
+    color: var(--badge-warning-text, #d97706);
+    background: var(--badge-warning-bg, #fef3c7);
+    border: 1px solid color-mix(in srgb, var(--badge-warning-text, #d97706) 35%, transparent);
     border-radius: 999px;
   }
   /* Tip receipt — the outcome of the tipster's most recent tip.
@@ -1281,7 +1289,7 @@ const preselectTeam = (() => {
     gap: 0.375rem;
     counter-reset: tipster-rank;
   }
-  .tip-rail-leaderboard__row {
+  :global(.tip-rail-leaderboard__row) {
     display: flex;
     align-items: center;
     gap: 0.625rem;
@@ -1290,7 +1298,7 @@ const preselectTeam = (() => {
     font-variant-numeric: tabular-nums;
     counter-increment: tipster-rank;
   }
-  .tip-rail-leaderboard__row::before {
+  :global(.tip-rail-leaderboard__row::before) {
     content: counter(tipster-rank);
     flex: 0 0 1.5rem;
     font-size: 0.6875rem;
@@ -1298,25 +1306,25 @@ const preselectTeam = (() => {
     color: var(--color-gray-500, #6b7280);
     text-align: right;
   }
-  .tip-rail-leaderboard__row--me {
+  :global(.tip-rail-leaderboard__row--me) {
     color: var(--color-primary, #1c497c);
     font-weight: 700;
   }
-  .tip-rail-leaderboard__codename {
+  :global(.tip-rail-leaderboard__codename) {
     flex: 1;
     min-width: 0;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
   }
-  .tip-rail-leaderboard__count {
+  :global(.tip-rail-leaderboard__count) {
     flex-shrink: 0;
     color: var(--color-gray-500, #6b7280);
   }
-  .tip-rail-leaderboard__row--me .tip-rail-leaderboard__count {
+  :global(.tip-rail-leaderboard__row--me .tip-rail-leaderboard__count) {
     color: var(--color-primary, #1c497c);
   }
-  .tip-rail-leaderboard__empty {
+  :global(.tip-rail-leaderboard__empty) {
     margin: 0;
     font-size: 0.8125rem;
     color: var(--color-gray-600, #4b5563);

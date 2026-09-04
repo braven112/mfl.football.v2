@@ -4,6 +4,14 @@
     {
       "date": "2026-09-03",
       "type": "style-tweak",
+      "summary": "The whole right rail on the Tip Schefter page was rendering as plain unstyled text the moment it filled in with real data — Your Record, Top Tipsters This Season and Hot Topics This Week alike. Every one of those panels is drawn by the browser after the page loads, and the styling we had written only ever reached the parts of the page the server sends down, so each panel lost its formatting at exactly the moment it had something to show. Your codename is a badge again, your season and lifetime counts line up, the leaderboard gets its rank numbers with your own row highlighted, the hot-topic chips are rounded pills with the week's most-tipped subject picked out in league colors, and Tip of the Week badges are amber pills instead of a run-on line of text. All of it reads correctly in dark mode too, which the badges would not have the first time they appeared.",
+      "impact": "user",
+      "area": "schefter",
+      "league": "both"
+    },
+    {
+      "date": "2026-09-03",
+      "type": "style-tweak",
       "summary": "\"Your Waiver Claims\" on Free Agents was drawing a bordered, rounded box inside another bordered, rounded box, with the Bid Status strip's divider running between the two. It is its own card and had been dropped inside the table's card. It now sits above the table as its own panel, which is where the AFL has always had it.",
       "impact": "user",
       "area": "free-agents",
