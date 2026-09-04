@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { globSync, readFileSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import aflConfig from '../data/afl-fantasy/afl.config.json';
 import { LEAGUES } from '../src/config/leagues';
 import {
@@ -267,7 +268,17 @@ describe('no page outside TheLeague can unlock its licensed RSP', () => {
    * collision. Fixing the one page that prompted this would have left two
    * others leaking, which is why the rule is asserted over all of them.
    */
-  const CALLERS = globSync('src/pages/**/*.astro').filter((f) =>
+  // readdirSync, not a glob: this repo has no glob dependency and node:fs
+  // does not export globSync at the pinned @types/node — an import of it
+  // passes at runtime while the astro check ratchet goes red.
+  const walkAstro = (dir: string): string[] =>
+    readdirSync(dir, { withFileTypes: true }).flatMap((e) => {
+      const path = join(dir, e.name);
+      if (e.isDirectory()) return walkAstro(path);
+      return e.name.endsWith('.astro') ? [path] : [];
+    });
+
+  const CALLERS = walkAstro('src/pages').filter((f) =>
     readFileSync(f, 'utf-8').includes('buildDraftPlayers(')
   );
 
