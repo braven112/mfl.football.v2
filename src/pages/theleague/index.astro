@@ -474,12 +474,20 @@ if (heroState.phase === 'preseason-countdown' && heroState.preseasonProps) {
   // the opener if they have one, else a likely starter from their earliest
   // game (which is why the pool is the week, not just the opener). Guests get
   // the league-wide opener pick. See castRandomStarterModel.
+  // League-scope the id before casting, same reason as heroBackdropTeam above:
+  // AFL franchise ids overlap TheLeague's, so an AFL session's 0003 would be
+  // cast TheLeague's 0003 and captioned "Your Headliner" for a team they do
+  // not own — and AFL 0017-0024, which TheLeague has no counterpart for, would
+  // scope to an empty pool and lose the composite entirely. A visitor from
+  // another league is a guest here, and guests get the league-wide opener.
+  const heroFranchiseId =
+    authUser?.leagueId === THELEAGUE.id ? userFranchiseId : undefined;
   kickoffGame = getKickoffGame(leagueYear, 'theleague', now);
   const candidates = getWeekGameCandidates(leagueYear, 'theleague', now);
   preseasonModel = castRandomStarterModel(
     candidates,
     hpPlayerIdentityMap,
-    userFranchiseId,
+    heroFranchiseId,
     now,
     'Kickoff Night',
     8,
@@ -490,9 +498,9 @@ if (heroState.phase === 'preseason-countdown' && heroState.preseasonProps) {
   const openerCodes = new Set(kickoffGame?.teamCodes ?? []);
   preseasonModelIsOwn =
     !!preseasonModel &&
-    !!userFranchiseId &&
+    !!heroFranchiseId &&
     openerCodes.has(preseasonModel.nflTeam) &&
-    candidates.some((c) => c.playerId === preseasonModel!.mflId && castsFor(c, userFranchiseId));
+    candidates.some((c) => c.playerId === preseasonModel!.mflId && castsFor(c, heroFranchiseId));
   // No slate data (schedule feed missing) or no projections yet → franchise
   // headliners, compositable ones first so a signed-in owner still gets their
   // own player (their top projected player may be a DEF or have no cutout).
@@ -502,14 +510,14 @@ if (heroState.phase === 'preseason-countdown' && heroState.preseasonProps) {
     // Scope to the owner BEFORE casting — castRosterModel widens to the league
     // on an empty own pool, and a signed-in owner must never be shown someone
     // else's player here either.
-    const headliners = userFranchiseId ? all.filter((h) => h.franchiseId === userFranchiseId) : all;
+    const headliners = heroFranchiseId ? all.filter((h) => h.franchiseId === heroFranchiseId) : all;
     // 'Your Headliner' rather than the isOwn flag: that flag makes the hero say
     // "Your Kickoff Starter" and claim the player is in the opener, which a
     // headliner cast has no basis for — this branch runs precisely when we have
     // no slate to place him in. The descriptor keeps the ownership signal
     // without the claim.
-    const descriptor = userFranchiseId && headliners.length > 0 ? 'Your Headliner' : 'Headliner';
-    preseasonModel = castRosterModel(headliners, hpPlayerIdentityMap, userFranchiseId, now, descriptor);
+    const descriptor = heroFranchiseId && headliners.length > 0 ? 'Your Headliner' : 'Headliner';
+    preseasonModel = castRosterModel(headliners, hpPlayerIdentityMap, heroFranchiseId, now, descriptor);
     preseasonModelIsOwn = false;
   }
 }
