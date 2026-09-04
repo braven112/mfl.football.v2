@@ -2,6 +2,22 @@
   "weekOf": "2026-08-31",
   "changes": [
     {
+      "date": "2026-09-04",
+      "type": "style-tweak",
+      "summary": "Three throwback crests were wearing the wrong face. Dicks out for Harambe went into its 2017-18 seasons showing the modern gorilla instead of the original circle badge — the screaming silverback, the little guy perched on his fist, and the Hebrew running over the top of them both. The Mariachi Ninjas had the sombrero sliced off at the brim, and Midwestside Connection was cropped tight enough to shear the bottom off its own gold ring. All three now wear the original badges, whole circle intact, everywhere an era crest turns up: franchise pages, owner pages and the Throwback Week picker.",
+      "impact": "user",
+      "area": "design-system",
+      "league": "afl"
+    },
+    {
+      "date": "2026-09-04",
+      "type": "style-tweak",
+      "summary": "The Music City Mafia 2019-24 era was wearing the crest the franchise did not put on until 2025 — a neat trick for a run that ended the year before. The old badge is back: trench coat, cigar, and the red-white-and-blue ring around it, on the franchise page, the owner pages and in the Throwback Week picker.",
+      "impact": "user",
+      "area": "design-system",
+      "league": "theleague"
+    },
+    {
       "date": "2026-09-03",
       "type": "style-tweak",
       "summary": "The whole right rail on the Tip Schefter page was rendering as plain unstyled text the moment it filled in with real data — Your Record, Top Tipsters This Season and Hot Topics This Week alike. Every one of those panels is drawn by the browser after the page loads, and the styling we had written only ever reached the parts of the page the server sends down, so each panel lost its formatting at exactly the moment it had something to show. Your codename is a badge again, your season and lifetime counts line up, the leaderboard gets its rank numbers with your own row highlighted, the hot-topic chips are rounded pills with the week's most-tipped subject picked out in league colors, and Tip of the Week badges are amber pills instead of a run-on line of text. All of it reads correctly in dark mode too, which the badges would not have the first time they appeared.",
