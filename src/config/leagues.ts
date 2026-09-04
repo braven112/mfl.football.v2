@@ -117,7 +117,12 @@ export interface OwnersPollConfig {
   slots: number;
   /** Minimum ballots before a consensus publishes at all. */
   quorum: number;
-  /** Hour (24h, America/Los_Angeles) the ballot closes on the Wednesday. */
+  /**
+   * Day the ballot closes (0 = Sunday). Thursday, so the deadline is the one
+   * owners already obey — lineups are due before the first kickoff.
+   */
+  closeWeekday: number;
+  /** Hour (24h, America/Los_Angeles) the ballot closes on `closeWeekday`. */
   closeHourPT: number;
 }
 

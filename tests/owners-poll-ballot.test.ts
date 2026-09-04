@@ -258,12 +258,15 @@ describe('registry config', () => {
     }
   });
 
-  it('pins TheLeague at the decided 7 slots / 8 quorum', () => {
+  it('pins TheLeague at the decided 7 slots / 8 quorum, closing Thursday', () => {
+    // Thursday, not Wednesday: the deadline rides the one owners already obey
+    // (lineups before the first kickoff) rather than competing with it.
     expect(LEAGUES.theleague.ownersPoll).toMatchObject({
       enabled: true,
       slots: 7,
       quorum: 8,
-      closeHourPT: 18,
+      closeWeekday: 4,
+      closeHourPT: 16,
     });
   });
 });

@@ -8,22 +8,40 @@
  * The shape of the week, and why:
  *
  *   Tue ~07:00 PT  The Pecking Order publishes. The ballot OPENS with it.
- *   Wed  18:00 PT  The ballot CLOSES (per-league `closeHourPT`).
- *   Wed ~19:00 PT  The close pass tallies, amends the issue, reveals.
+ *   Thu  16:00 PT  The ballot CLOSES — or earlier, if kickoff is earlier.
+ *   Thu ~17:00 PT  The close pass tallies, amends the issue, reveals.
  *
- * Opening with the column rather than closing before it is the whole point: a
- * ballot that had to close before Tuesday's generation would have run
- * overnight from the end of Monday Night Football, a ~6-hour window that is a
- * guaranteed turnout failure. Opening it instead buys ~36 hours and three
- * GroupMe touchpoints (open, nag, reveal) instead of one.
+ * Two decisions are load-bearing here.
+ *
+ * **The ballot opens WITH the column, not before it.** A ballot that had to
+ * close before Tuesday's generation would have run overnight from the end of
+ * Monday Night Football — a ~6-hour window, and a guaranteed turnout failure.
+ *
+ * **It closes at the deadline owners already obey.** Setting a lineup before
+ * the first kickoff is the one obligatory weekly action in this league, and it
+ * mostly happens Wednesday through Sunday. A Wednesday-evening ballot deadline
+ * therefore closed before the highest-traffic weekly action even started, so
+ * the poll was competing with owners' existing habit instead of riding it.
+ * Closing at kickoff means one trip does both.
  *
  * See docs/plans/owners-poll.md, "Timing".
  */
 
 const TZ = 'America/Los_Angeles';
 
-/** Wednesday. The close day is fixed; only the HOUR is per-league config. */
-export const CLOSE_WEEKDAY_PT = 3;
+/**
+ * Thursday — the day the NFL week starts, so the last full day to vote.
+ * Both the day and the hour are per-league config; these are the defaults.
+ */
+export const CLOSE_WEEKDAY_PT = 4;
+
+/**
+ * How far before the first kickoff the ballot shuts.
+ *
+ * Not zero: a ballot that closes exactly at kickoff lets an owner submit while
+ * the first snap is being played, and the close cron would race the game.
+ */
+export const KICKOFF_BUFFER_MINUTES = 15;
 
 /**
  * How far ahead of UTC the wall clock in `tz` reads at `date`, in ms.
@@ -101,8 +119,11 @@ export function ptWallTimeToInstant(year, month, day, hour, tz = TZ) {
  * @param {object} args
  * @param {Date|number|string} args.publishedAt When the issue went out.
  * @param {number} args.closeHourPT League config, 24h Pacific.
- * @param {number} [args.closeWeekday] Defaults to Wednesday.
- * @returns {{ opensAt: string, closesAt: string }} ISO instants.
+ * @param {number} [args.closeWeekday] Defaults to Thursday.
+ * @param {Date|number|string|null} [args.firstKickoff] First kickoff of the
+ *   UPCOMING NFL week, when the schedule feed can supply it.
+ * @param {number} [args.kickoffBufferMinutes]
+ * @returns {{ opensAt: string, closesAt: string, clampedToKickoff: boolean }}
  *
  * The close is the FIRST `closeWeekday` at `closeHourPT` strictly after the
  * open. Publishing late enough on a Wednesday that the hour has already
@@ -123,6 +144,8 @@ export function resolveOwnersPollWindow({
   publishedAt,
   closeHourPT,
   closeWeekday = CLOSE_WEEKDAY_PT,
+  firstKickoff = null,
+  kickoffBufferMinutes = KICKOFF_BUFFER_MINUTES,
 }) {
   const opensMs = publishedAt instanceof Date ? publishedAt.getTime() : new Date(publishedAt).getTime();
   if (!Number.isFinite(opensMs)) {
@@ -140,9 +163,35 @@ export function resolveOwnersPollWindow({
     closesMs = ptWallTimeToInstant(year, month, day + daysAhead + 7, closeHourPT);
   }
 
+  // Never let voting run past the first snap. On a normal week the scheduled
+  // hour lands well before Thursday night football and this changes nothing;
+  // on Thanksgiving, where the week opens around 10:00 PT, the scheduled hour
+  // would otherwise sit HOURS after two games had been played. Voting with
+  // results in hand is not the same poll.
+  let clampedToKickoff = false;
+  const kickoffMs =
+    firstKickoff == null
+      ? NaN
+      : firstKickoff instanceof Date
+        ? firstKickoff.getTime()
+        : new Date(firstKickoff).getTime();
+  if (Number.isFinite(kickoffMs)) {
+    const cutoff = kickoffMs - kickoffBufferMinutes * 60000;
+    if (cutoff < closesMs) {
+      // Only if it still leaves a window at all — a kickoff BEFORE the column
+      // published means the feed is describing a different week, and trusting
+      // it would produce an already-closed ballot.
+      if (cutoff > opensMs) {
+        closesMs = cutoff;
+        clampedToKickoff = true;
+      }
+    }
+  }
+
   return {
     opensAt: new Date(opensMs).toISOString(),
     closesAt: new Date(closesMs).toISOString(),
+    clampedToKickoff,
   };
 }
 

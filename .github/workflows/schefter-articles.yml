@@ -24,15 +24,17 @@ on:
     # leagues). Stays at 16:00 from when cut-watch ran daily at 15:00 and
     # would have shadowed a Wednesday mapping; no reason to churn it back.
     - cron: "0 16 * * 3"
-    # Wednesday 10am PT (17:00 UTC) — owners-poll-nag. The count-only turnout
-    # reminder while Tuesday's ballot is still open. Posts nothing at full
-    # turnout and nothing when no ballot is open, so it is safe year-round.
-    - cron: "0 17 * * 3"
-    # Wednesday 7pm PT (02:00 UTC Thursday) — owners-poll-close. Tallies the
-    # ballot into Tuesday's issue and posts the reveal. Runs an hour after the
-    # 6pm PT close so a ballot cast at the deadline is always counted; the pass
-    # refuses to tally a window that has not actually closed.
-    - cron: "0 2 * * 4"
+    # Thursday 9am PT (16:00 UTC) — owners-poll-nag. The count-only turnout
+    # reminder, on the morning the ballot closes and the same morning owners
+    # are thinking about lineups. Posts nothing at full turnout and nothing
+    # when no ballot is open, so it is safe year-round.
+    - cron: "0 16 * * 4"
+    # Thursday 5pm PT (00:00 UTC Friday) — owners-poll-close. Tallies and
+    # reveals, an hour after the 4pm PT close so a ballot cast at the deadline
+    # is always counted, and before Thursday night kickoff. The pass refuses to
+    # tally a window that has not actually closed, so on a week clamped to an
+    # early kickoff (Thanksgiving) this still runs after it.
+    - cron: "0 0 * * 5"
   workflow_dispatch:
     inputs:
       type:
@@ -99,8 +101,8 @@ jobs:
               "0 13 * * 2") TYPE="weekly-recap" ;;
               "0 14 * * 2") TYPE="pecking-order" ;;
               "0 16 * * 3") TYPE="schedule-strength" ;;
-              "0 17 * * 3") TYPE="owners-poll-nag" ;;
-              "0 2 * * 4")  TYPE="owners-poll-close" ;;
+              "0 16 * * 4") TYPE="owners-poll-nag" ;;
+              "0 0 * * 5")  TYPE="owners-poll-close" ;;
               "0 5 * * 4")  TYPE="waiver-pickups" ;;
               "0 15 * * 5") TYPE="weekend-preview" ;;
               "0 16 * * 6") TYPE="matchup-preview" ;;

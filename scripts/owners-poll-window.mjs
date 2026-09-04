@@ -160,7 +160,11 @@ async function open(redis, league, opts) {
         opensAt: now.toISOString(),
         closesAt: new Date(now.getTime() + Number(opts.hours) * 3600000).toISOString(),
       }
-    : resolveOwnersPollWindow({ publishedAt: now, closeHourPT: poll.closeHourPT });
+    : resolveOwnersPollWindow({
+        publishedAt: now,
+        closeHourPT: poll.closeHourPT,
+        closeWeekday: poll.closeWeekday,
+      });
 
   const record = {
     year,

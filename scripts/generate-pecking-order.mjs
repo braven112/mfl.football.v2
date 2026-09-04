@@ -830,6 +830,37 @@ async function runNagPoll(opts, league) {
   await postPollMessage(text, league, 'nag');
 }
 
+/**
+ * First kickoff of the week AFTER the one just ranked, or null.
+ *
+ * MFL's nflSchedule feed carries ONE week and `fetch-mfl-feeds` re-syncs it to
+ * the current NFL week daily, so the week it holds is not guaranteed to be the
+ * one we want. The week number is therefore CHECKED, not assumed: a feed
+ * describing any other week returns null and the window falls back to its
+ * scheduled hour. Trusting a mismatched feed could close the ballot before it
+ * opened.
+ */
+async function resolveUpcomingKickoff(league, year, completedWeek) {
+  const feed = await tryLoadJSON(path.join(feedDir(league, year), 'nflSchedule.json'));
+  const schedule = feed?.nflSchedule;
+  if (!schedule) return null;
+
+  if (Number(schedule.week) !== completedWeek + 1) {
+    console.log(
+      `  [poll] nflSchedule holds week ${schedule.week}, not ${completedWeek + 1} — using the scheduled close.`,
+    );
+    return null;
+  }
+
+  const matchups = Array.isArray(schedule.matchup) ? schedule.matchup : [schedule.matchup];
+  const kickoffs = matchups
+    .map((m) => Number(m?.kickoff) * 1000)
+    .filter((ms) => Number.isFinite(ms) && ms > 0);
+  if (kickoffs.length === 0) return null;
+
+  return new Date(Math.min(...kickoffs));
+}
+
 /** Newest issue week on disk for a season, so the poll passes need no --week. */
 async function resolveLatestIssueWeek(league, year) {
   let entries;
@@ -918,6 +949,13 @@ async function main() {
     return;
   }
 
+  // The ballot must not still be open once games have started, so the close is
+  // clamped to the real first kickoff of the UPCOMING week when the schedule
+  // feed can supply it. Returns null when it can't, and the window then falls
+  // back to the scheduled hour — which is right on a normal week and only
+  // matters on the odd one (Thanksgiving) where kickoff is much earlier.
+  const firstKickoff = await resolveUpcomingKickoff(league, year, week);
+
   // Open the ballot BEFORE writing, so the issue carries the window it
   // advertises. A poll that fails to open returns null and the column simply
   // publishes without the section — additive, never fatal.
@@ -926,6 +964,7 @@ async function main() {
     year,
     week,
     eligibleFranchiseIds: normalizeFranchiseIds(teams.keys()),
+    firstKickoff,
   });
   if (pollBlock) issue.ownersPoll = pollBlock;
 

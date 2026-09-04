@@ -556,14 +556,14 @@ describe('POST /api/owners-poll/window (commissioner control)', () => {
     expect(strings.size).toBe(0);
   });
 
-  it('defaults to the real Wednesday schedule when no hours are given', async () => {
+  it('defaults to the real Thursday schedule when no hours are given', async () => {
     const body = await (await postWindow({ action: 'open', week: 3 }, commishCookie())).json();
     const closes = new Date(body.window.closesAt);
     const weekday = new Intl.DateTimeFormat('en-US', {
       timeZone: 'America/Los_Angeles',
       weekday: 'short',
     }).format(closes);
-    expect(weekday).toBe('Wed');
+    expect(weekday).toBe('Thu');
   });
 
   it('close stops voting WITHOUT touching ballots', async () => {

@@ -133,6 +133,7 @@ export const POST: APIRoute = async ({ request }) => {
     ({ opensAt, closesAt } = resolveOwnersPollWindow({
       publishedAt: now,
       closeHourPT: poll.closeHourPT,
+      closeWeekday: poll.closeWeekday,
     }));
   }
 

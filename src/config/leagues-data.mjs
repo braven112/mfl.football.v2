@@ -56,14 +56,21 @@ export const LEAGUES = {
      * `quorum` is the minimum ballots required to publish a consensus at all —
      * below it the column runs algorithm-only and says so. Half the field.
      *
-     * `closeHourPT` is the hour (24h, America/Los_Angeles) on the Wednesday
-     * after publication when the ballot closes.
+     * `closeWeekday` / `closeHourPT` are when the ballot shuts (0=Sun).
+     * THURSDAY, not Wednesday, and that is a turnout decision: setting a
+     * lineup before the first kickoff is the one obligatory weekly action in
+     * this league and it mostly happens Wed-Sun, so a Wednesday deadline
+     * closed before the highest-traffic weekly action even began. The close is
+     * additionally clamped to just before the real first kickoff, so a
+     * Thanksgiving week (games at ~10:00 PT) cannot take votes after two games
+     * have been played.
      */
     ownersPoll: {
       enabled: true,
       slots: 7,
       quorum: 8,
-      closeHourPT: 18,
+      closeWeekday: 4,
+      closeHourPT: 16,
     },
     features: {
       contracts: true,
@@ -149,7 +156,7 @@ export const LEAGUES = {
      * deciding whether the AFL's two conferences want separate ballots
      * (docs/plans/owners-poll.md, "Open questions").
      */
-    ownersPoll: { enabled: false, slots: 0, quorum: 0, closeHourPT: 18 },
+    ownersPoll: { enabled: false, slots: 0, quorum: 0, closeWeekday: 4, closeHourPT: 16 },
     features: {
       contracts: false,
       salaryCap: false,
@@ -247,7 +254,7 @@ export const LEAGUES = {
      * deciding whether the AFL's two conferences want separate ballots
      * (docs/plans/owners-poll.md, "Open questions").
      */
-    ownersPoll: { enabled: false, slots: 0, quorum: 0, closeHourPT: 18 },
+    ownersPoll: { enabled: false, slots: 0, quorum: 0, closeWeekday: 4, closeHourPT: 16 },
     features: {
       contracts: false,
       salaryCap: false,

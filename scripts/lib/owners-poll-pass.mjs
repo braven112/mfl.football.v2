@@ -56,7 +56,15 @@ export const BALLOT_PATH = '/pecking-order/ballot';
  * can't or shouldn't open. Null is not an error: the caller publishes the
  * column without a poll section, which is the correct degraded state.
  */
-export async function openPoll({ league, year, week, eligibleFranchiseIds, now = new Date(), log = DEFAULT_LOG }) {
+export async function openPoll({
+  league,
+  year,
+  week,
+  eligibleFranchiseIds,
+  firstKickoff = null,
+  now = new Date(),
+  log = DEFAULT_LOG,
+}) {
   const poll = league.ownersPoll;
   if (!poll?.enabled) return null;
 
@@ -76,8 +84,16 @@ export async function openPoll({ league, year, week, eligibleFranchiseIds, now =
     return null;
   }
 
-  const window = resolveOwnersPollWindow({ publishedAt: now, closeHourPT: poll.closeHourPT });
+  const window = resolveOwnersPollWindow({
+    publishedAt: now,
+    closeHourPT: poll.closeHourPT,
+    closeWeekday: poll.closeWeekday,
+    firstKickoff,
+  });
   const hours = windowHours(window);
+  if (window.clampedToKickoff) {
+    log.log?.(`  [poll] Close pulled back to just before kickoff (${window.closesAt}).`);
+  }
   if (hours < SHORT_WINDOW_HOURS) {
     log.warn?.(
       `  [poll] Window is only ${hours.toFixed(1)}h (under ${SHORT_WINDOW_HOURS}h) — a late run?`,
@@ -87,7 +103,8 @@ export async function openPoll({ league, year, week, eligibleFranchiseIds, now =
   const record = {
     year,
     week,
-    ...window,
+    opensAt: window.opensAt,
+    closesAt: window.closesAt,
     slots: poll.slots,
     eligibleFranchiseIds,
   };
