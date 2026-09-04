@@ -125,7 +125,30 @@ const sortedMatchups = availableMatchups.slice().sort((a, b) => {
    * Matchup selector dropdown functionality
    * Handles dropdown open/close and matchup selection
    */
+  /**
+   * CLIENTROUTER-SAFE INIT (frontend.md, "Interactive scripts must re-init on
+   * astro:page-load"). Astro bundles this script, so it runs ONCE per document.
+   * It was registered on `DOMContentLoaded`, which never fires again after an
+   * in-site navigation, so the dropdown was dead on any return visit — and the
+   * two `document`-level listeners it adds closed over `trigger` and `menu`,
+   * which the router had already detached.
+   *
+   * Both are held here and removed before they are re-added. `document` is the
+   * one node the swap does NOT replace, so plain re-adding stacks one handler
+   * per navigation, and a once-flag would pin the survivor to the first page's
+   * dead nodes — the original bug. The teardown runs BEFORE the "is this
+   * component even on the page" bail, or navigating to a page WITHOUT the
+   * selector would leave the previous page's handlers armed on `document`.
+   */
+  let onDocumentClick: ((e: MouseEvent) => void) | null = null;
+  let onDocumentKeydown: ((e: KeyboardEvent) => void) | null = null;
+
   const initMatchupSelector = () => {
+    if (onDocumentClick) document.removeEventListener('click', onDocumentClick);
+    onDocumentClick = null;
+    if (onDocumentKeydown) document.removeEventListener('keydown', onDocumentKeydown);
+    onDocumentKeydown = null;
+
     const trigger = document.getElementById('matchup-dropdown-trigger');
     const menu = document.getElementById('matchup-dropdown-menu');
     const options = document.querySelectorAll('.matchup-option');
@@ -174,18 +197,20 @@ const sortedMatchups = availableMatchups.slice().sort((a, b) => {
     });
 
     // Close dropdown when clicking outside
-    document.addEventListener('click', (e) => {
+    onDocumentClick = (e) => {
       if (!trigger.contains(e.target as Node) && !menu.contains(e.target as Node)) {
         closeDropdown();
       }
-    });
+    };
+    document.addEventListener('click', onDocumentClick);
 
     // Handle escape key
-    document.addEventListener('keydown', (e) => {
+    onDocumentKeydown = (e) => {
       if (e.key === 'Escape') {
         closeDropdown();
       }
-    });
+    };
+    document.addEventListener('keydown', onDocumentKeydown);
 
     // Handle arrow keys for accessibility
     let focusedIndex = -1;
@@ -214,11 +239,13 @@ const sortedMatchups = availableMatchups.slice().sort((a, b) => {
     });
   };
 
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initMatchupSelector);
-  } else {
-    initMatchupSelector();
-  }
+  /**
+   * `astro:page-load` fires on the FIRST load as well as after every swap, so
+   * it replaces the `DOMContentLoaded` / immediate-call pair rather than
+   * joining it — calling init() directly on top of this would double-bind
+   * every option.
+   */
+  document.addEventListener('astro:page-load', initMatchupSelector);
 </script>
 
 <style>
