@@ -1,5 +1,28 @@
 [
   {
+    "id": "afl-mock-draft",
+    "date": "2026-09-04",
+    "category": "new-page",
+    "icon": "draft-podium",
+    "leagues": [
+      "afl"
+    ],
+    "title": "The AFL Mock Draft Knows Who You Kept",
+    "link": "/draft/mock",
+    "linkLabel": "Open the mock draft",
+    "summary": "Nine rounds against the clock, drafting from the players your conference actually left unkept — not a generic board, not last year's names. It opens when the keeper cuts land in July and closes when the real draft starts, because those are the only weeks it tells you anything true.",
+    "description": [
+      "The League has had a mock draft for a while. Running the same thing for the AFL would have been a morning's work and completely useless, because the AFL doesn't draft rookies off a fixed board — it drafts whoever twelve owners decided not to keep. A mock that doesn't know that is just a list of famous people.",
+      "So this one starts from your <a href=\"/keepers\">keepers</a> and works backwards. Every draftable player, minus the seven each of your conference's twelve teams held onto. What's left is the board — and this year that's a little over eleven hundred names in the American League, which is a real number rather than a round one.",
+      "The part that took the longest is the part nobody will notice. MyFantasyLeague lets a player sit on one roster <em>per conference</em>, and the AFL leans on that hard: of the eighty-four men the AL kept this July, sixty are also kept in the National League. The same guy went first overall in <a href=\"/draft/results\">both drafts</a>. So the pool subtracts your conference's rosters and only yours — do it league-wide and you quietly delete twenty-four players the AL is perfectly free to draft, and the board still looks fine, which is the worst kind of wrong.",
+      "It also drafts in the right shape. Nine rounds, and the same order every round — no snake, because the AFL doesn't snake — pulled straight from MFL's own slots so traded picks land where they really land. The bots pick off redraft ADP, or dynasty, or your own <a href=\"/cr\">draft list</a>, or pure chaos if you want to see what happens when the room loses its mind. You pick your conference at the top, the same way <a href=\"/draft/room\">the draft room</a> does.",
+      "And it tells you when it's not worth running. Before the cuts, the board is still holding a hundred players who are about to be released, so it stays shut and names the teams it's waiting on. Once the real draft starts, it shuts again and points you at <a href=\"/draft/broadcast\">the big board</a>. The window is roughly mid-July to draft weekend — which, if you were wondering why it's closed today, is the honest answer. It's sitting with the rest of the tools on the <a href=\"/draft\">draft hub</a>, next to the <a href=\"/draft/order\">order</a>, one click away."
+    ],
+    "image": "afl-mock-draft.webp",
+    "imageAlt": "The AFL Mock Draft room, opened on the American League. Breadcrumbs read Home / Draft / Mock Draft / Session, above a row of draft tabs — Draft, Order, Results, Broadcast, Room, Mock, Rankings, My List — with Mock highlighted in red. A note beneath reads that the board is drafting from the American League's available pool and that players kept in the NL are still draftable here. A dark banner says “Waiting for draft to begin…” with Go Back, Pause and Reset Draft buttons. Under it the draft board offers nine round tabs, Rd 1 through Rd 9, with Rd 1 selected, and tabs for Players, Queue and Chat. The Players pane is headed AVAILABLE with a count of 1109, a search box, position filters, and a list of available players led by C.J. Stroud, Sam Darnold and Malik Willis.",
+    "excludeFromHero": true
+  },
+  {
     "id": "afl-search",
     "date": "2026-09-04",
     "category": "new-page",
@@ -868,28 +891,6 @@
     ],
     "image": "player-news-modal.webp",
     "imageAlt": "The player detail modal for Ryan Flournoy: the team-colored hero band with his name, position and draft details, a three-card metrics strip showing 62.6 points and 5.2 per game, then a Latest News section listing three recent ESPN stories with type labels and timestamps, above the Season Results table.",
-    "excludeFromHero": true,
-    "leagues": [
-      "theleague",
-      "afl"
-    ]
-  },
-  {
-    "id": "pecking-order-preseason-preview",
-    "date": "2026-08-18",
-    "category": "enhancement",
-    "icon": "rank",
-    "title": "The Pecking Order Explains Itself",
-    "summary": "The column doesn't publish again until the Tuesday after Week 1, so its page spent the preseason showing last season's rankings with nothing to say they were last season's. It now opens with what the column actually is — the formula, the awards, the date the first real issue lands — and stamps the issue underneath it as a sample.",
-    "description": [
-      "<a href=\"/pecking-order\">The Pecking Order</a> arrived three days ago and immediately went quiet for a month, because there is nothing to rank until Week 1 has been played. That left both leagues with a page that opened cold on a set of rankings from last December: real numbers, real teams, a live-looking headline, and no way for anyone who had never heard of the column to tell that none of it was current.",
-      "The page now knows which of those two situations it is in. Out of season it leads with the column itself — every Tuesday morning, every team in your league ranked top to bottom, and a plain-English pass at the math. Half your score is your all-play record, which runs your points against every other team in the league instead of the one you happened to draw: post the fourth-best score in a given week and the week is worth beating everybody but three, whether you won by 40 or lost by 2. The other half is your last three weeks, so a hot month moves you and one bad Sunday in Week 2 stops following you around in November.",
-      "Under that, the six things every issue carries — the ranking cards with their movement arrows, Stat of the Week, Bench Blunder, Heater, Cooler, next week's Matchup of the Week, and the full <a href=\"/standings\">standings</a> and all-play tables. And the date, spelled out: the first real issue of the season lands Tuesday, September 15, the Tuesday after Week 1.",
-      "The issue below all that is still there, still real, and now clearly labelled a sample — a past week published so you can see the format, with its publish date dropped so nothing about it reads as breaking news. The moment a real issue exists for the season being played, every bit of the explainer disappears and the page goes back to leading with this week's verdict.",
-      "Both leagues get it from the same component, so neither drifts, and it re-arms itself every February when the season ends."
-    ],
-    "image": "afl-pecking-order-preview.webp",
-    "imageAlt": "The AFL Pecking Order landing page in its preseason state: a 'New weekly column' eyebrow above the title, a lede explaining the Tuesday-morning column, the date of the first issue, and six cards covering the formula, the awards and the standings snapshot.",
     "excludeFromHero": true,
     "leagues": [
       "theleague",

@@ -82,20 +82,18 @@ describe('the draft page registry', () => {
     expect(existsSync('src/pages/afl-fantasy/draft/index.astro')).toBe(true);
   });
 
-  it('records the AFL’s remaining gap rather than hiding it', () => {
-    // Each league shows what it HAS, so a page must stay off the AFL list
-    // until its route exists. When one lands, this test is the reminder to
-    // publish it here.
+  it('has the two leagues at full parity, which they now are', () => {
+    // The draft section shipped with the AFL missing a Room and then a Mock;
+    // both have since landed, so the two lists are identical. This asserts the
+    // parity rather than a snapshot of one league's list, so ADDING a page to
+    // one league and forgetting the other fails here — which is the regression
+    // that actually costs something, and the one the section started with.
     const afl = draftPagesFor('afl-fantasy').map((p) => p.key);
     const tl = draftPagesFor('theleague').map((p) => p.key);
-    expect(tl).toContain('room');
-    expect(tl).toContain('mock');
-    // The room landed for the AFL; the mock draft is still deferred, since
-    // TheLeague's mocks a 3-round rookie draft and the AFL is a 108-pick
-    // redraft per conference.
-    expect(afl).toContain('room');
-    expect(afl).not.toContain('mock');
-    expect(afl).toEqual(expect.arrayContaining(['order', 'results', 'broadcast']));
+    expect(afl).toEqual(tl);
+    expect(tl).toEqual(
+      expect.arrayContaining(['order', 'results', 'broadcast', 'room', 'mock']),
+    );
   });
 
   it('has a page-directory entry for every page it advertises', () => {
@@ -136,7 +134,23 @@ describe('every draft page has a way back', () => {
     // hid from this guard exactly the bug the guard exists to catch.
     'src/pages/theleague/draft/mock/[sessionId].astro',
     'src/pages/theleague/draft/mock/[sessionId]/results.astro',
+    'src/pages/afl-fantasy/draft/mock/index.astro',
+    'src/pages/afl-fantasy/draft/mock/[sessionId].astro',
+    'src/pages/afl-fantasy/draft/mock/[sessionId]/results.astro',
   ];
+
+  /** Does this route hand its chrome to a shared component that renders DraftNav? */
+  const delegatesToNav = (src: string): boolean => {
+    const imports = [...src.matchAll(/from\s+'([^']*components\/shared\/[^']+\.astro)'/g)];
+    return imports.some(([, spec]) => {
+      const file = join('src/components/shared', spec.split('components/shared/')[1]);
+      try {
+        return /<DraftNav\b/.test(readFileSync(file, 'utf-8'));
+      } catch {
+        return false;
+      }
+    });
+  };
 
   it('covers every route under a draft/ directory', () => {
     // The list above is hand-written, so it has to be checked against the
@@ -165,9 +179,25 @@ describe('every draft page has a way back', () => {
       const rendered = /<DraftNav\b/.test(src) || /<DraftNav\s/.test(src);
       // A route may render DraftNav itself, or delegate to a shared page
       // component that renders it — both are "has a way back".
-      const delegated = /DraftResultsPage|DraftHubPage|DraftRoomPage/.test(src);
-      expect(rendered || delegated, `${route} has no way back`).toBe(true);
+      //
+      // The delegate is RESOLVED and read rather than matched against a list
+      // of known component names. A name list silently stops covering the next
+      // shared component somebody writes, which is the same shape of hole the
+      // dynamic-route exclusion above turned out to be.
+      expect(rendered || delegatesToNav(src), `${route} has no way back`).toBe(true);
     }
+  });
+
+  it('resolves shared delegates rather than trusting their names', () => {
+    // Guards the guard: if the import-resolution below silently matched
+    // nothing, every delegating route would fail loudly rather than pass
+    // quietly — but a route that renders DraftNav ITSELF would mask that. This
+    // asserts the resolver finds at least one real delegate.
+    const delegating = DRAFT_ROUTES.filter((r) => {
+      const src = readFileSync(r, 'utf-8');
+      return !/<DraftNav\b/.test(src) && delegatesToNav(src);
+    });
+    expect(delegating.length).toBeGreaterThan(0);
   });
 
   it('gives every page but the hub a trailing crumb', () => {
@@ -213,7 +243,11 @@ describe('nav', () => {
     expect(navLinks.find((l: any) => l.id === 'draft-room')?.leagueOnly).toBeUndefined();
   });
 
-  it('still keeps Mock Draft off the AFL, which has none', () => {
-    expect(navLinks.find((l: any) => l.id === 'mock-draft')?.leagueOnly).toBe('theleague');
+  it('advertises Mock Draft to BOTH leagues now the AFL has one', () => {
+    // Publishing a draft page is TWO edits, not one: draft-pages.ts drives the
+    // hub and the strip, nav-config.json drives the site nav. Leaving this
+    // leagueOnly behind would have hidden the AFL's new mock from the menu
+    // while the hub advertised it.
+    expect(navLinks.find((l: any) => l.id === 'mock-draft')?.leagueOnly).toBeUndefined();
   });
 });

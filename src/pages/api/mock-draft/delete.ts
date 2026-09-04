@@ -13,7 +13,8 @@
 import type { APIRoute } from 'astro';
 import { getAuthUser, isCommissionerOrAdmin } from '../../../utils/auth';
 import { JSON_HEADERS_NO_STORE as JSON_HEADERS } from '../../../utils/api-response';
-import { DEFAULT_LEAGUE_ID } from '../../../config/leagues';
+import { DEFAULT_LEAGUE_ID, getLeagueById } from '../../../config/leagues';
+import { conferenceUnit, mockRegistryRoom, parseConference } from '../../../utils/mock-draft-scope';
 
 export const POST: APIRoute = async ({ request }) => {
   const user = getAuthUser(request);
@@ -24,7 +25,9 @@ export const POST: APIRoute = async ({ request }) => {
     );
   }
 
-  const body = await request.json().catch(() => null) as { sessionId?: string } | null;
+  const body = await request.json().catch(() => null) as
+    | { sessionId?: string; conference?: string }
+    | null;
   const sessionId = body?.sessionId;
   if (!sessionId || typeof sessionId !== 'string') {
     return new Response(
@@ -34,6 +37,10 @@ export const POST: APIRoute = async ({ request }) => {
   }
 
   const leagueId = user.leagueId || DEFAULT_LEAGUE_ID;
+  // Same registry the lobby listed from, or the lookup below finds nothing and
+  // reports a phantom success while the session stays on screen.
+  const isAfl = getLeagueById(leagueId)?.slug === 'afl-fantasy';
+  const conference = isAfl ? parseConference(body?.conference) : null;
   const rawPartyHost = import.meta.env.PUBLIC_PARTYKIT_HOST;
   if (!rawPartyHost) {
     return new Response(
@@ -42,7 +49,10 @@ export const POST: APIRoute = async ({ request }) => {
     );
   }
   const partyHost = rawPartyHost.startsWith('http') ? rawPartyHost : `https://${rawPartyHost}`;
-  const registryUrl = `${partyHost}/party/${leagueId}-registry`;
+  const registryUrl = `${partyHost}/party/${mockRegistryRoom(
+    leagueId,
+    conference ? conferenceUnit(conference) : null,
+  )}`;
 
   // Fetch the registry so we can verify ownership before unregistering.
   let createdBy: string | null = null;

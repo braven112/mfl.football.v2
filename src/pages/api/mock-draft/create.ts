@@ -25,6 +25,10 @@ import { JSON_HEADERS_NO_STORE as JSON_HEADERS } from '../../../utils/api-respon
 import { buildMflExportUrl } from '../../../utils/mfl-url';
 import { DEFAULT_LEAGUE_ID, getLeagueBySlug, getLeagueById } from '../../../config/leagues';
 import bb1Config from '../../../../data/best-ball-1/bb1.config.json';
+import { buildAflMockContext } from '../../../utils/afl-mock-draft-data';
+import { AFL_MOCK_ROUNDS, isMockWindowOpen } from '../../../utils/afl-mock-draft';
+import { getConferenceTeams, getFranchiseConference } from '../../../utils/afl-conference';
+import { mockRegistryRoom, parseConference } from '../../../utils/mock-draft-scope';
 
 const ALL_RANKING_SOURCES: MockRankingSource[] = [
   'mfl-rookie',
@@ -87,7 +91,7 @@ export const POST: APIRoute = async ({ request }) => {
   try {
     const body = await request.json();
     const timerSeconds = body.timerSeconds ?? 10;
-    const totalRounds = body.totalRounds ?? 3;
+    let totalRounds = body.totalRounds ?? 3;
     const useRealOrder = body.useRealOrder ?? true;
 
     // Validate timer presets
@@ -103,8 +107,50 @@ export const POST: APIRoute = async ({ request }) => {
     const leagueId = user.leagueId || DEFAULT_LEAGUE_ID;
     const userLeague = getLeagueById(leagueId);
     const isBestBall = !!userLeague?.bestBall;
+    const isAfl = userLeague?.slug === 'afl-fantasy';
+
+    // ── The AFL drafts by conference, from an available pool, in a window ──
+    // Resolved up front because all three can REFUSE, and refusing after
+    // building a thousand-player board is just slower.
+    const conference = isAfl ? parseConference(body.conference) : null;
+    if (isAfl && !conference) {
+      return new Response(
+        JSON.stringify({ success: false, message: 'A conference is required for an AFL mock draft.' }),
+        { status: 400, headers: JSON_HEADERS },
+      );
+    }
+    if (isAfl && getFranchiseConference(user.franchiseId) !== conference) {
+      // Not a permission check so much as a coherence one: a franchise that is
+      // not in this board's draft order would never be on the clock.
+      return new Response(
+        JSON.stringify({ success: false, message: 'You can only run a mock in your own conference.' }),
+        { status: 403, headers: JSON_HEADERS },
+      );
+    }
+
+    const aflContext = isAfl && conference
+      ? await buildAflMockContext({ conference, year: getLeagueYearForMflId(leagueId), leagueId })
+      : null;
+    if (aflContext && !isMockWindowOpen(aflContext.window)) {
+      // The lobby already says this at length; the endpoint enforces it,
+      // because a lobby left open in a tab outlives the window it was drawn in.
+      return new Response(
+        JSON.stringify({
+          success: false,
+          message:
+            aflContext.window.state === 'drafting'
+              ? 'That conference is drafting for real — a mock would run against a pool nobody is picking from.'
+              : 'Rosters are not down to keepers yet, so the available pool is not final. Try again once the cuts land.',
+        }),
+        { status: 409, headers: JSON_HEADERS },
+      );
+    }
+
+    // The AFL drafts a fixed nine rounds; a shorter AFL mock is not a thing.
+    if (isAfl) totalRounds = AFL_MOCK_ROUNDS;
+
     const maxRounds = isBestBall ? 25 : 5;
-    if (totalRounds < 1 || totalRounds > maxRounds) {
+    if (!isAfl && (totalRounds < 1 || totalRounds > maxRounds)) {
       return new Response(
         JSON.stringify({ success: false, message: `Rounds must be between 1 and ${maxRounds}.` }),
         { status: 400, headers: JSON_HEADERS },
@@ -118,6 +164,15 @@ export const POST: APIRoute = async ({ request }) => {
     // stale-year directory between Feb 14 and June 1 if we used its own
     // clock for file lookups. Session metadata keeps the league's clock.
     const feedYearStr = String(getCurrentLeagueYear());
+
+    // ADP is the one feed that must come from the DRAFTING league's own
+    // directory: MFL's ADP export is filtered by that league's scoring, roster
+    // and keeper settings, so TheLeague's copy is the wrong board for the AFL.
+    // The player CATALOGUE below stays TheLeague's — MFL player ids are global
+    // and one archive serves every league.
+    const adpLeague = isAfl ? getLeagueBySlug('afl-fantasy')! : getLeagueBySlug('theleague')!;
+    const adpDataPath = adpLeague.dataPath;
+    const adpYearStr = isAfl ? String(leagueYear) : feedYearStr;
 
     // Best-ball config is per-league; only bb1's is wired so far. Fail loudly
     // for a future sister league rather than silently drafting bb1's teams.
@@ -137,7 +192,12 @@ export const POST: APIRoute = async ({ request }) => {
     // comes straight from the league config (shuffled below unless the
     // caller asked for config order).
     let franchiseOrder: string[] = [];
-    if (isBestBall) {
+    if (isAfl && conference) {
+      // Conference order, from the league config. The actual PICK SEQUENCE is
+      // taken whole from aflContext.draftOrder below — MFL's own pre-populated
+      // slots, which carry traded picks a round-one order cannot reconstruct.
+      franchiseOrder = getConferenceTeams(conference).map((t) => t.franchiseId);
+    } else if (isBestBall) {
       franchiseOrder = (bb1Config.teams ?? []).map((t: any) => t.franchiseId as string);
     } else try {
       const draftResultsFeeds = import.meta.glob(
@@ -184,7 +244,15 @@ export const POST: APIRoute = async ({ request }) => {
     }
 
     const picksPerRound = franchiseOrder.length;
-    const draftOrder = buildSnakeOrder(franchiseOrder, totalRounds);
+    // The AFL is NOT a snake — every round repeats the same order. Snaking it
+    // would reverse four of its nine rounds and teach owners the wrong thing
+    // about where they pick. See utils/afl-mock-draft.
+    const draftOrder =
+      aflContext && useRealOrder
+        ? aflContext.draftOrder
+        : isAfl
+          ? Array.from({ length: totalRounds }, () => franchiseOrder).flat()
+          : buildSnakeOrder(franchiseOrder, totalRounds);
 
     // ── Load MFL player catalog (needed by every ranking source below) ──
     // We ship the players feed with the build; third-party sources (Sleeper,
@@ -212,18 +280,26 @@ export const POST: APIRoute = async ({ request }) => {
     // build-draft-players → DRAFTABLE_POSITIONS) excludes them, so those
     // slots render blank ("—") on the board even though the server thinks
     // the pick was made.
-    // NOTE: despite the name, this is the league's draftable MOCK POOL —
-    // rookies-only for the dynasty leagues' rookie-draft mocks, the full
-    // veteran+rookie pool for best-ball startup-draft mocks.
-    const rookiePool = allPlayers.filter(
-      (p: any) =>
-        (isBestBall || p.status === 'R' || p.draft_year === feedYearStr) &&
-        isDraftablePosition(p.position || ''),
-    );
+    // NOTE: despite the name, this is the league's draftable MOCK POOL, and
+    // it is a different set in each of the three cases — rookies only for the
+    // dynasty leagues' rookie-draft mocks, the full veteran+rookie pool for
+    // best-ball's startup mocks, and everyone THIS CONFERENCE did not keep for
+    // the AFL's.
+    // The AFL redrafts everyone its conference did not keep, so its pool is
+    // "draftable AND not on one of THIS conference's twelve rosters" — never
+    // all twenty-four, because MFL allows a player one roster PER CONFERENCE
+    // and the AFL uses that (the same man went 1.01 in both drafts in 2026).
+    const rookiePool = allPlayers.filter((p: any) => {
+      if (!isDraftablePosition(p.position || '')) return false;
+      if (aflContext) return !aflContext.rostered.has(p.id);
+      return isBestBall || p.status === 'R' || p.draft_year === feedYearStr;
+    });
     const rookieIdSet = new Set(rookiePool.map((p: any) => p.id));
 
-    // Normalized "first last" → MFL id for fuzzy matching (rookies only;
-    // the auto-pick list should never include veterans).
+    // Normalized "first last" → MFL id for fuzzy matching, over whatever the
+    // pool above turned out to be. Built from the POOL rather than the whole
+    // catalogue so a third-party board can never auto-pick someone this mock
+    // cannot draft — a rookie board's veteran, or a player already kept.
     const rookieNameLookup = buildMflNameLookup(
       rookiePool.map((p: any) => ({
         id: p.id,
@@ -281,7 +357,7 @@ export const POST: APIRoute = async ({ request }) => {
     const rankedLists: Partial<Record<MockRankingSource, string[]>> = {};
 
     // MFL rookie ADP (live, pre-draft cutoff 3) — rookie mocks only
-    if (!isBestBall) try {
+    if (!isBestBall && !isAfl) try {
       const adpUrl = buildMflExportUrl({
         type: 'adp',
         leagueId,
@@ -310,7 +386,7 @@ export const POST: APIRoute = async ({ request }) => {
     // MFL dynasty ADP (local feed, filter to rookies)
     {
       const dynasty = loadJsonFile(
-        `${getLeagueBySlug('theleague')!.dataPath}/mfl-feeds/${feedYearStr}/adp-dynasty.json`,
+        `${adpDataPath}/mfl-feeds/${adpYearStr}/adp-dynasty.json`,
       );
       const raw = dynasty?.adp?.player;
       const arr: any[] = raw ? (Array.isArray(raw) ? raw : [raw]) : [];
@@ -328,9 +404,9 @@ export const POST: APIRoute = async ({ request }) => {
     // MFL redraft ADP (local feed) — best-ball mocks only. These leagues are
     // seasonal redrafts, so this is their PRIMARY board (dynasty ADP
     // overrates youth/longevity for a one-season roster).
-    if (isBestBall) {
+    if (isBestBall || isAfl) {
       const redraft = loadJsonFile(
-        `${getLeagueBySlug('theleague')!.dataPath}/mfl-feeds/${feedYearStr}/adp-redraft.json`,
+        `${adpDataPath}/mfl-feeds/${adpYearStr}/adp-redraft.json`,
       );
       const raw = redraft?.adp?.player;
       const arr: any[] = raw ? (Array.isArray(raw) ? raw : [raw]) : [];
@@ -346,7 +422,7 @@ export const POST: APIRoute = async ({ request }) => {
     }
 
     // Sleeper (cached) — a rookie board; useless against a full startup pool
-    if (!isBestBall) {
+    if (!isBestBall && !isAfl) {
       const sleeper = loadJsonFile(`data/adp/sleeper-rookies-${feedYearStr}.json`);
       if (sleeper?.players?.length) {
         const ids = (sleeper.players as any[])
@@ -359,8 +435,8 @@ export const POST: APIRoute = async ({ request }) => {
       }
     }
 
-    // KTC (cached, 1QB) — also a rookie board; skip for best-ball mocks
-    if (!isBestBall) {
+    // KTC (cached, 1QB) — also a rookie board; skip for best-ball and AFL mocks
+    if (!isBestBall && !isAfl) {
       const ktc = loadJsonFile(`data/adp/ktc-rookies-${feedYearStr}.json`);
       if (ktc?.players?.length) {
         const ids = (ktc.players as any[])
@@ -396,7 +472,9 @@ export const POST: APIRoute = async ({ request }) => {
     // Pick a usable default in priority order so if the caller doesn't
     // specify one, we use the freshest/most-authoritative source that loaded.
     const availableSources = Object.keys(rankedLists) as MockRankingSource[];
-    const defaultPriority: MockRankingSource[] = isBestBall
+    // The AFL and best-ball both REDRAFT, so redraft ADP leads; dynasty values
+    // would have a bot spend early capital on youth it does not get to keep.
+    const defaultPriority: MockRankingSource[] = isBestBall || isAfl
       ? ['mfl-redraft', 'mfl-dynasty', 'my-rank', 'random']
       : ['mfl-rookie', 'mfl-dynasty', 'sleeper', 'ktc', 'my-rank', 'random'];
     const fallbackDefault: MockRankingSource =
@@ -464,6 +542,9 @@ export const POST: APIRoute = async ({ request }) => {
       useRealOrder,
       rankingAssignments,
       defaultRankingSource,
+      // Present only for a league that drafts by conference. The room scopes
+      // its chat channel and queue to it.
+      ...(aflContext ? { unit: aflContext.unit, conference } : {}),
     };
 
     // ── Write session to PartyKit storage via HTTP ──
@@ -508,7 +589,7 @@ export const POST: APIRoute = async ({ request }) => {
     // ── Track active session ──
     // Store in a lightweight KV so the list endpoint can find active sessions
     // We'll use a second PartyKit room keyed by leagueId as a session registry
-    const registryUrl = `${partyHost}/party/${leagueId}-registry`;
+    const registryUrl = `${partyHost}/party/${mockRegistryRoom(leagueId, aflContext?.unit)}`;
     try {
       await fetch(registryUrl, {
         method: 'POST',

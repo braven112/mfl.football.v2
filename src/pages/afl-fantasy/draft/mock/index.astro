@@ -1,0 +1,71 @@
+---
+/**
+ * Mock Draft lobby (AFL) — thin route wrapper.
+ *
+ * Shared render lives in components/shared/draft-mock/DraftMockLobby; the
+ * conference, the available pool and the window live in utils/afl-mock-page.
+ *
+ * Unlike TheLeague's, this lobby can REFUSE. The AFL keeps seven and drafts
+ * the rest, so a mock only means anything between the keeper cuts landing and
+ * the real draft starting — see utils/afl-mock-draft for why that is read off
+ * the rosters rather than the calendar.
+ */
+import DraftMockLobby from '../../../../components/shared/draft-mock/DraftMockLobby.astro';
+import aflConfigData from '../../../../../data/afl-fantasy/afl.config.json';
+import { getAuthUser, isAuthorizedForLeague, isCommissionerOrAdmin } from '../../../../utils/auth';
+import { getLeagueBySlug } from '../../../../config/leagues';
+import { getLeagueYearForSlug } from '../../../../utils/league-year';
+import {
+  AFL_MOCK_BASE_PATH,
+  AFL_MOCK_DEFAULT_SOURCE,
+  AFL_MOCK_RANKING_SOURCES,
+  aflMockConferences,
+  aflMockFranchises,
+  aflMockQueueScope,
+  aflMockSubtitle,
+  resolveAflMock,
+} from '../../../../utils/afl-mock-page';
+
+export const prerender = false;
+
+const league = getLeagueBySlug('afl-fantasy')!;
+const user = getAuthUser(Astro.request);
+const leagueYear = getLeagueYearForSlug('afl-fantasy');
+
+const resolution = await resolveAflMock({
+  configConferences: aflConfigData.conferences ?? [],
+  requestedConference: Astro.url.searchParams.get('conference'),
+  // Authenticated identity only — never a browse-as id. See resolveAflMock.
+  myFranchiseId: user && isAuthorizedForLeague(user, league.id) ? user.franchiseId : null,
+  viewerSignedIn: !!user,
+  leagueYear,
+  leagueId: league.id,
+});
+
+const { room, context, gate } = resolution;
+---
+
+<DraftMockLobby
+  leagueSlug="afl-fantasy"
+  title={`${room.selected.short} Mock Draft | AFL`}
+  heading={`${room.selected.short} Mock Draft`}
+  subtitle={aflMockSubtitle(resolution)}
+  basePath={AFL_MOCK_BASE_PATH}
+  loginPath="/afl-fantasy/login"
+  signedIn={!!user}
+  userFranchiseId={room.userTeamId || undefined}
+  isAdmin={user ? isCommissionerOrAdmin(user) : false}
+  leagueId={league.id}
+  leagueYear={leagueYear}
+  franchises={aflMockFranchises(room)}
+  rankingSources={AFL_MOCK_RANKING_SOURCES}
+  defaultRankingSource={AFL_MOCK_DEFAULT_SOURCE}
+  roundOptions={[]}
+  rounds={context.rounds}
+  createExtras={{ conference: room.conference }}
+  scopeQuery={`conference=${room.conference}`}
+  queueScope={aflMockQueueScope(league.id, context.unit)}
+  conferences={aflMockConferences(aflConfigData.conferences ?? [])}
+  conference={room.conference}
+  gate={gate}
+/>

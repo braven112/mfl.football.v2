@@ -1,0 +1,33 @@
+---
+/**
+ * Mock Draft results (AFL) — thin route wrapper.
+ *
+ * All 24 franchises are passed rather than one conference's twelve: a session
+ * link is shareable, and a board should still name its teams when an NL owner
+ * opens an AL owner's finished mock.
+ */
+import DraftMockResultsPage from '../../../../../components/shared/draft-mock/DraftMockResultsPage.astro';
+import { getAuthUser } from '../../../../../utils/auth';
+import { getAllTeams } from '../../../../../utils/afl-conference';
+import { AFL_MOCK_BASE_PATH } from '../../../../../utils/afl-mock-page';
+
+export const prerender = false;
+
+const { sessionId } = Astro.params;
+if (!sessionId) return Astro.redirect(AFL_MOCK_BASE_PATH);
+if (!getAuthUser(Astro.request)) return Astro.redirect('/afl-fantasy/login');
+---
+
+<DraftMockResultsPage
+  leagueSlug="afl-fantasy"
+  sessionId={sessionId}
+  title="Mock Draft Results | AFL"
+  basePath={AFL_MOCK_BASE_PATH}
+  teams={getAllTeams().map((t) => ({
+    franchiseId: t.franchiseId,
+    name: t.name,
+    nameMedium: t.nameMedium || t.name,
+    nameShort: t.nameShort || t.name,
+    icon: t.icon || '',
+  }))}
+/>
