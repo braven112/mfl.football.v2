@@ -329,17 +329,21 @@ export const GET: APIRoute = async ({ url }) => {
   const leagueId =
     resolveMflLeagueId(url.searchParams.get('league') || url.searchParams.get('L')) ||
     DEFAULT_LEAGUE_ID;
-  // The fallback is the host for THIS league, not TheLeague's. Every league
-  // sits on a different `www##` server, and MFL answers a league id that
-  // server does not host with its OWN league rather than an error — so
-  // defaulting to a constant here returns TheLeague's draft results for
-  // `?league=<afl>&host=<missing or junk>`, at 200, in the right shape. The
-  // allowlist above still rejects the bad value; this only decides what to
-  // fall back TO. See src/pages/api/live-scoring.ts#resolveHost.
-  const host = resolveMflHost(
-    url.searchParams.get('host'),
-    getLeagueById(leagueId)?.mflHost ?? DEFAULT_HOST,
-  );
+  // `league` and the host are ONE composite key, and MFL validates neither
+  // against the other: a `www##` server asked for a league id it does not
+  // host answers with its OWN league instead of erroring. So for a league in
+  // our registry the registry host wins outright and `host` is not consulted
+  // — a supplied one can only agree (redundant) or disagree (TheLeague's
+  // draft results served at 200, in the right shape, as the AFL's).
+  //
+  // `host` still decides for a league id we do NOT know, which is the point
+  // of the `?mflLeague=` override above: watching another league's draft is a
+  // real feature, and there the hint is the only information available. It
+  // stays allowlist-checked. See src/pages/api/live-scoring.ts#resolveHost.
+  const registryLeague = getLeagueById(leagueId);
+  const host = registryLeague
+    ? registryLeague.mflHost
+    : resolveMflHost(url.searchParams.get('host'), DEFAULT_HOST);
   const unit = url.searchParams.get('unit');
 
   const mflUrl = buildMflExportUrl({ type: 'draftResults', leagueId, year, host: `https://${host}` });
