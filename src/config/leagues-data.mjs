@@ -41,6 +41,30 @@ export const LEAGUES = {
      */
     configPath: 'src/data/theleague.config.json',
     schefterFeedPath: 'src/data/theleague/schefter-feed.json',
+    /**
+     * The Owners' Poll — the weekly owner vote that publishes inside The
+     * Pecking Order. See docs/plans/owners-poll.md.
+     *
+     * `slots` is the ballot depth (rank your top N), NOT the field size, and
+     * the two are deliberately independent: a 7-slot ballot in a 16-team
+     * league leaves a tail the poll does not order, which is a stated design
+     * trade rather than an oversight. It lives here rather than as a constant
+     * because the AFL's 24-team field would want a different depth, and
+     * because tests/league-literal-guard.test.ts is the thing that keeps a
+     * number like this from being retyped into three modules.
+     *
+     * `quorum` is the minimum ballots required to publish a consensus at all —
+     * below it the column runs algorithm-only and says so. Half the field.
+     *
+     * `closeHourPT` is the hour (24h, America/Los_Angeles) on the Wednesday
+     * after publication when the ballot closes.
+     */
+    ownersPoll: {
+      enabled: true,
+      slots: 7,
+      quorum: 8,
+      closeHourPT: 18,
+    },
     features: {
       contracts: true,
       salaryCap: true,
@@ -118,6 +142,14 @@ export const LEAGUES = {
      * rosters in this league.
      */
     duplicatePlayers: true,
+    /**
+     * The Owners' Poll is TheLeague-only for v1. The entry exists disabled so
+     * the shape is present everywhere and shared components always have
+     * something to read — enabling it here is the whole port, apart from
+     * deciding whether the AFL's two conferences want separate ballots
+     * (docs/plans/owners-poll.md, "Open questions").
+     */
+    ownersPoll: { enabled: false, slots: 0, quorum: 0, closeHourPT: 18 },
     features: {
       contracts: false,
       salaryCap: false,
@@ -208,6 +240,14 @@ export const LEAGUES = {
      * offers any of those must be skipped for leagues with this flag.
      */
     bestBall: true,
+    /**
+     * The Owners' Poll is TheLeague-only for v1. The entry exists disabled so
+     * the shape is present everywhere and shared components always have
+     * something to read — enabling it here is the whole port, apart from
+     * deciding whether the AFL's two conferences want separate ballots
+     * (docs/plans/owners-poll.md, "Open questions").
+     */
+    ownersPoll: { enabled: false, slots: 0, quorum: 0, closeHourPT: 18 },
     features: {
       contracts: false,
       salaryCap: false,

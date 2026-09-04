@@ -322,10 +322,8 @@ Non-negotiables, all of them prior bugs in this repo:
 ## Generator changes
 
 `scripts/generate-pecking-order.mjs` gains a `--close-poll` mode for the
-Wednesday pass. Ballot aggregation math goes in a new pure
-`scripts/lib/owners-poll-math.mjs` (Borda, ties, quorum, accuracy, homer,
-contrarian) so it is unit-testable and has no file I/O or league literals —
-same shape as `pecking-order-math.mjs`.
+Wednesday pass. The aggregation math it calls is already built — see *Build
+status* below.
 
 The Schefter voice pass gets the poll as new fact-sheet material: biggest
 room-vs-machine disagreement, unanimous #1, the week's Homer. Note the recorded
@@ -364,11 +362,55 @@ Tuesday pass has never needed Redis.
 - **Best ball** is excluded. No games are played, so there is nothing to rank —
   same reason it is excluded from the column.
 
-## Suggested build order
+## Build status
 
-1. **Math + storage.** `owners-poll-math.mjs` with unit tests (Borda, ties,
-   quorum, unranked block, accuracy/homer/contrarian). Registry config. Ballot
-   API routes with auth, scope, and validation tests.
+**Step 1 (math + storage) is built.** What shipped, and one thing that came
+out differently from the sketch above:
+
+| File | Role |
+|---|---|
+| `src/utils/owners-poll-ballot.mjs` | Ballot validation, KV key construction, window state, stored-record parsing |
+| `scripts/lib/owners-poll-math.mjs` | Borda tally, ties, quorum, unranked block, pairwise accuracy, contrarian, homer |
+| `src/utils/owners-poll-store.ts` | Caller resolution + Redis reads/writes for the API |
+| `src/pages/api/owners-poll/ballot.ts` | GET/POST the caller's own ballot |
+| `src/pages/api/owners-poll/turnout.ts` | Public count-only turnout |
+| `src/config/leagues-data.mjs`, `leagues.ts` | `ownersPoll` registry entry + `OwnersPollConfig` type |
+| `tests/owners-poll-{math,ballot,api}.test.ts` | 72 tests |
+
+**The math did not all land in one file.** The plan said
+`scripts/lib/owners-poll-math.mjs` for everything, but validation is asked by
+BOTH sides — the API rejecting a submission, and the close pass skipping a
+stored ballot that no longer validates — and scripts cannot import TypeScript.
+So the shared half lives in `src/utils/owners-poll-ballot.mjs` (plain `.mjs`,
+the same dual-consumer pattern as `franchise-id.mjs` and
+`pecking-order-season-window.mjs`), and only the generator-only tally math is
+in `scripts/lib/`. Duplicating the ballot rules across the two would have been
+the version that eventually disagrees with itself.
+
+Three decisions worth knowing before touching this code:
+
+- **Keys are always league-scoped, with no legacy bare form.**
+  `poll:<navSlug>:<year>-w<week>`, deliberately NOT reusing
+  `rankings-scope.ts#scopedKvKey`, whose conditional shape exists only to
+  preserve TheLeague's pre-existing keys and whose default fails OPEN to
+  TheLeague. The poll has no legacy data, so it takes the safe shape.
+- **Ballots are a Redis HASH keyed by franchise**, not one key per owner.
+  HGETALL reads the week in one round trip at close, HLEN answers the public
+  turnout meter without transferring a single ballot, and per-field writes are
+  atomic so simultaneous submissions cannot clobber each other.
+- **The eligible-franchise list travels with the window record**, written by
+  the Tuesday pass. That keeps a route from doing a filesystem read or a
+  static import of one league's config (a static import specifier cannot be a
+  runtime variable), and guarantees the API validates against exactly the field
+  the close pass will tally.
+
+Not yet wired: nothing writes the window pointer — that is the Tuesday pass in
+step 4. Until then the API correctly reports `status: "none"` and refuses
+writes.
+
+## Remaining build order
+
+1. ~~**Math + storage.**~~ Done — see above.
 2. **Ballot page.** Shared component, thin wrappers, tap-to-add UI, prefill.
    Ship it behind the season-window gate and test with `?testDate=`.
 3. **Article integration.** `ownersPoll` block in the issue schema; open and
@@ -379,8 +421,12 @@ Tuesday pass has never needed Redis.
 5. **GroupMe.** Open bait, @-mention nag, reveal.
 6. **Accountability page.** Leaderboards, per-week grid, published ballots.
 
-Steps 1–3 are a usable feature on their own (a poll owners can vote in and see
-results from). 4–6 are what make it *stick*.
+Steps 1-3 are a usable feature on their own (a poll owners can vote in and see
+results from). 4-6 are what make it *stick*.
+
+No What's New entry yet: nothing here is user-facing until the ballot page
+lands in step 2. Write it then, as a `new-feature` — screenshot required,
+league-neutral inline links, and an explicit call on hero eligibility.
 
 ## Phase 2 options (deliberately not in v1)
 
