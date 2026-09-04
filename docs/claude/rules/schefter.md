@@ -260,6 +260,83 @@ Load-bearing details:
 resolve to a real route. That is what catches a hand-edited feed, which no
 amount of pipeline enforcement would.
 
+## The tip queue — a producer and its consumer must agree on shape
+
+Three independent failures in Sep 2026 all had the same signature: the tip
+line looked alive from every angle we normally check, and delivered nothing.
+Read this before touching the queue, the scan workflow, or the tip page.
+
+- **`text` is required only of sources that CARRY text.**
+  `scripts/lib/schefter-tip-queue.mjs#isUsableTip` is the single admission
+  rule; `TEXTLESS_TIP_SOURCES` is its allowlist and `trade_offer` is in it.
+  A trade-offer tip is built by `redactTradeOffer` with `text: ''` on purpose
+  — the signal is `volumeHint` / `positionTokens` / `pickTokens` /
+  `playerNames`, and prose comes later. The scanner used to demand truthy
+  `obj.text` from every queue item, so from the lane's launch (2026-04-30) to
+  2026-09-03 it enqueued a trade-offer tip, re-read its own queue ~200ms
+  later, parsed zero usable tips, and then hit the "no fresh tips" branch and
+  **deleted the queue**. Forty consecutive workflow runs logged
+  `Enqueued 1 trade-offer tip(s)` immediately above `Queue depth: 0`.
+  Two things that let it hide for four months, both worth generalizing:
+  - **The enqueue logged success.** A producer reporting "wrote 1" is not
+    evidence the consumer can read it. Nothing logged the drop until this fix
+    added the `unparseable` warn — a silent `else` branch on a filter is a
+    data-loss path with no alarm on it.
+  - **The downstream was fully built and tested.** `resolveTipScope` has a
+    complete `trade_offer` branch, and `schefter-trade-cta`,
+    `schefter-trade-corroboration` and friends all cover it. Every test used a
+    hand-built fixture that carried the fields the consumer wanted. None
+    round-tripped the REAL producer's output through the REAL admission check
+    — which is exactly what `tests/schefter-tip-queue-admission.test.ts` now
+    does, and the one thing that would have caught it on day one.
+- **A `hidden` attribute loses to any author `display`.** `.tip-confirm` set
+  `display: flex` and shipped with `hidden`, so every owner opening the tip
+  page saw "Schefter's got it." over a dead "Undo 60s" button before typing a
+  word — a tip line that looks like it already ate something you never sent.
+  Restate `[hidden] { display: none }` on any element you give a `display` to.
+- **Scoped CSS cannot reach markup the page builds at runtime.** Astro
+  compiles `.foo` to `.foo[data-astro-cid-…]`, an attribute only the
+  server-rendered template carries. Anything written in by `innerHTML` — the
+  whole tipster record rail — needs `:global(...)`, wrapping the FULL
+  selector (`:global(html.dark .foo)`, not `:global(html.dark) .foo`).
+- **Do not re-state `--color-gray-*` under `html.dark`.** The ramp inverts
+  itself: `gray-700` is `#374151` in light and `silver` in dark, `gray-50` is
+  `#f9fafb` / `#181818`. "Fixing" dark mode by overriding to `gray-300`
+  resolves to `#3a3a3a` there and ships near-black text on a near-black card.
+  Only literal hexes need a dark variant.
+
+### The GroupMe mention ingest is TheLeague's, and needs its own credentials
+
+`ingestGroupMeMentions` hardcodes TheLeague's keys (queue, watermark, style
+book) because TheLeague owns the only group chat we read. Two consequences:
+
+- It **must** be gated on `SCHEFTER_LEAGUE.features?.groupmeListen` at the
+  call site. Before Sep 2026 it was called unconditionally for both leagues
+  and only the missing credentials stopped the AFL invocation from reading
+  TheLeague's group and pushing into TheLeague's queue a second time per
+  cycle. A missing env var is not an access-control mechanism.
+- `GROUPME_SERVICE_TOKEN` + `GROUPME_GROUP_ID` must be in the scan workflow's
+  env for TheLeague's step. Both secrets existed in the repo for months while
+  the workflow passed neither, so every run logged `GROUPME_SERVICE_TOKEN or
+  GROUPME_GROUP_ID not set — skipping mention ingest` and every mention tipped
+  in the group chat was discarded. The job exited 0 throughout.
+
+### Every terminal tip outcome leaves a receipt
+
+`recordTipReceipt` writes `schefter:<league>:tipster:last_receipt:<hash>`
+(14d TTL, web tips only, one per tipster) at all three points a tip can end:
+consumed into a post (`published`), struck out by the quality gate
+(`spiked` — 3 strikes or past `MAX_HELD_MS`), or aged out unposted
+(`expired`). `/api/schefter/tipster-stats` returns it as `me.lastReceipt` and
+only ever for the caller's own hash.
+
+This exists because "a post appeared, or it didn't" was the tipster's entire
+feedback channel, and the back half of the pipeline — suppression, holding,
+expiry — all rendered identically as silence. An owner's tip on 2026-09-02
+was generated, scored 2/10, held, and struck out over ~30h with no signal
+reaching them; from their seat the tip line was simply broken, and they were
+not wrong to say so. If you add a new way for a tip to die, give it a receipt.
+
 ## Schefter tipster context (Phase 8 — bot intelligence)
 
 The rumor-mill scanner weights bucket priority and surfaces voice cues

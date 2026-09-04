@@ -28,6 +28,30 @@
     {
       "date": "2026-09-03",
       "type": "bug-fix",
+      "impact": "user",
+      "area": "schefter",
+      "league": "theleague",
+      "summary": "Schefter's trade-offer rumors have not worked since they launched in April, and the failure was invisible from the outside. When a pending trade offer passed the dice roll, the scanner built the rumor, queued it, and logged a success — then re-read its own queue two hundred milliseconds later, decided the item was malformed, and deleted the whole queue as stale. The check it was failing asked every queued item for tip text, and a trade-offer rumor deliberately has none: it is built from positions, picks and player names, and the wording gets written afterwards. Four months of rumors were thrown away by the scanner that had just written them. The queue now asks each source for the fields that source actually carries, and anything it still cannot use gets shouted about in the logs rather than dropped in silence."
+    },
+    {
+      "date": "2026-09-03",
+      "type": "bug-fix",
+      "impact": "user",
+      "area": "schefter",
+      "league": "theleague",
+      "summary": "Tipping Schefter by @-mentioning him in the group chat is finally being read. The scanner has always had the code to pull mentions out of GroupMe and turn them into tips, and it ran on every scan — but it had never been handed the two credentials it needs to actually read the chat, so it logged 'skipping mention ingest' and moved on, every run, for months. Those are in place now, and the ingest is fenced to TheLeague in code rather than by accident: it reads TheLeague's group and writes TheLeague's queue, so the AFL's half of the scan no longer runs it at all."
+    },
+    {
+      "date": "2026-09-03",
+      "type": "bug-fix",
+      "impact": "user",
+      "area": "schefter",
+      "league": "both",
+      "summary": "The tip page greeted everyone with a confirmation for a tip they had not sent. The 'Schefter's got it' panel and its dead 'Undo 60s' button are supposed to appear only after you file something; they were marked hidden, but a styling rule overrode the hiding and left them on screen from the moment the page loaded. Fixed — the panel now stays out of sight until you actually send a tip."
+    },
+    {
+      "date": "2026-09-03",
+      "type": "bug-fix",
       "summary": "Filing a waiver claim from Free Agents now actually files it. Every claim TheLeague sent through the site was being thrown away by MyFantasyLeague, because the form we submit on your behalf was missing one box: the bid amount. The feature was built and tested in the AFL, which runs waiver priority and has no bid to send — TheLeague bids, so MFL read an empty amount, decided it was below the $425,000 minimum, and refused. It said so, too, in plain English, and we were not reading the part of the page it said it on: the error you saw was our own vague shrug rather than MFL's actual complaint. Both are fixed — the bid goes with the claim, and when MFL does turn one down you now get its exact words instead of a guess.",
       "impact": "user",
       "area": "free-agents",

@@ -53,7 +53,8 @@ jobs:
           # empty on every run, so the mention lane was silently dead in CI.
           # TheLeague only: groupmeListen is false for the AFL, and the
           # listener's Redis keys are TheLeague-scoped, so the AFL step is
-          # deliberately left without them.
+          # deliberately left without them — a gate the scanner now enforces
+          # itself rather than relying on the absent credential.
           GROUPME_SERVICE_TOKEN: ${{ secrets.GROUPME_SERVICE_TOKEN }}
           GROUPME_GROUP_ID: ${{ secrets.GROUPME_GROUP_ID }}
           GROUPME_SCHEFTER_BOT_SENDER_ID: ${{ secrets.GROUPME_SCHEFTER_BOT_SENDER_ID }}

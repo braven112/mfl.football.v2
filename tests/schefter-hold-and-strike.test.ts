@@ -178,12 +178,61 @@ describe('hold-and-strike — queue-load filter drops exhausted tips', () => {
     expect(SCANNER_SRC).toMatch(/const MAX_HELD_MS\s*=\s*48\s*\*\s*60\s*\*\s*60\s*\*\s*1000\b/);
   });
 
-  it('queue-load filter rejects tips with suppressedStrikes >= MAX_SUPPRESSED_STRIKES', () => {
-    expect(SCANNER_SRC).toMatch(/if \(strikes >= MAX_SUPPRESSED_STRIKES\) return false/);
+  // The filter was a plain `.filter()` returning false until Sep 2026, when it
+  // became a loop so each dropped tip could be classified (spiked vs expired)
+  // and given a receipt. Same rule, different shape — assert the routing, not
+  // the old `return false`.
+  it('queue-load filter routes tips with suppressedStrikes >= MAX_SUPPRESSED_STRIKES to the dropped list', () => {
+    expect(SCANNER_SRC).toMatch(
+      /if \(strikes >= MAX_SUPPRESSED_STRIKES\) \{\s*droppedTips\.push\(\[t, 'spiked'\]\)/,
+    );
   });
 
-  it('queue-load filter rejects tips held longer than MAX_HELD_MS', () => {
+  it('queue-load filter routes tips held longer than MAX_HELD_MS to the dropped list', () => {
     expect(SCANNER_SRC).toMatch(/now\.getTime\(\) - t\.firstSuppressedAt > MAX_HELD_MS/);
+    expect(SCANNER_SRC).toMatch(/droppedTips\.push\(\[t, 'spiked'\]\)/);
+  });
+
+  it('separates aged-out tips from strike-exhausted ones so the receipt can say which', () => {
+    expect(SCANNER_SRC).toMatch(/age > TIP_EXPIRY_MS\) \{\s*droppedTips\.push\(\[t, 'expired'\]\)/);
+  });
+
+  it('writes a receipt for every tip dropped at queue load', () => {
+    expect(SCANNER_SRC).toMatch(
+      /for \(const \[t, status\] of droppedTips\) await recordTipReceipt\(redis, t, \{ status \}\)/,
+    );
+  });
+});
+
+// A tip's only observable outcome used to be "a post appeared, or it didn't",
+// which made a suppressed tip indistinguishable from a broken tip line. Every
+// terminal path must now leave a receipt behind.
+describe('tip receipts — every terminal outcome is recorded', () => {
+  it('records a receipt when the gate exhausts a tip mid-cycle', () => {
+    const strikeBlock = SCANNER_SRC.slice(SCANNER_SRC.indexOf('[hold-strike]'));
+    expect(strikeBlock).toMatch(/recordTipReceipt\(redis, tip, \{ status: 'spiked' \}\)/);
+  });
+
+  it('records a published receipt carrying the postId for shipped tips', () => {
+    expect(SCANNER_SRC).toMatch(
+      /recordTipReceipt\(redis, tip, \{ status: 'published', postId \}\)/,
+    );
+  });
+
+  it('pairs allowedBeats with allowedPosts by index when attributing the postId', () => {
+    expect(SCANNER_SRC).toMatch(/const postId = allowedPosts\[j\]\?\.id \?\? null/);
+  });
+
+  it('only writes receipts for web tips — GroupMe and trade-offer tips have no tipster to notify', () => {
+    expect(SCANNER_SRC).toMatch(/if \(!tip \|\| tip\.source !== 'web'\) return;/);
+  });
+
+  it('never writes a receipt during a dry run', () => {
+    expect(SCANNER_SRC).toMatch(/if \(!redis \|\| DRY_RUN\) return;/);
+  });
+
+  it('scopes the receipt key per league through schefterKey', () => {
+    expect(SCANNER_SRC).toMatch(/schefterKey\(NAV_SLUG, 'tipster:last_receipt:'\)/);
   });
 });
 

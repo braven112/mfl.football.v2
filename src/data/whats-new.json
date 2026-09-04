@@ -1,5 +1,28 @@
 [
   {
+    "id": "schefter-tip-receipts",
+    "date": "2026-09-03",
+    "category": "enhancement",
+    "icon": "clipboard",
+    "leagues": [
+      "theleague",
+      "afl"
+    ],
+    "excludeFromHero": true,
+    "title": "Your Tip Now Tells You How It Ended",
+    "link": "/schefter/tip",
+    "linkLabel": "Send Schefter a tip",
+    "summary": "Send a tip and it either turns into a rumor or it doesn't — and until now, \"doesn't\" looked exactly like a broken tip line. Your record card on the tip page now carries a receipt for your last tip: it ran, it got spiked, or it aged out.",
+    "description": [
+      "Here is what filing a tip used to feel like. You'd write something up on the <a href=\"/schefter/tip\">tip page</a>, hit send, get a cheerful \"Schefter's got it\" — and then nothing. Maybe a rumor showed up on <a href=\"/schefter\">the feed</a> a few hours later. Maybe it never did. There was no way to tell the difference between a tip Schefter passed on and a tip line that had quietly stopped working, which is a rough way to treat the people doing the reporting.",
+      "So your <strong>record</strong> card now shows a receipt for your most recent tip, and it says one of three things. <strong>It made the wire</strong> — with a link straight to the rumor it became. <strong>It got spiked</strong> — Schefter ran it, couldn't find an angle he was willing to print, and let it go. Or <strong>it aged out</strong> — nothing wrong with the tip, the wire was just quiet and it never got picked up before it expired.",
+      "The spiked note is the useful one, because it comes with the actual editorial standard attached: tips carrying a name, a number, or a deadline clear the bar far more often than tips carrying a vibe. \"Somebody's shopping a receiver\" is a shrug. \"They want a second for the receiver before Sunday\" is a story.",
+      "Nothing about this touches your anonymity. The receipt is filed against the same one-way hash your <a href=\"/schefter/tip\">codename</a> hangs on, it only ever loads for you, and it clears itself out after two weeks. Schefter still doesn't know who you are, and neither do we."
+    ],
+    "image": "schefter-tip-receipts.webp",
+    "imageAlt": "The Tip Schefter page with the Your Record card in the right rail showing a spiked receipt: 'Your last tip didn't make the wire — Schefter couldn't find an angle he could print.'"
+  },
+  {
     "id": "waiver-priority-modal",
     "date": "2026-09-03",
     "category": "new-feature",
@@ -881,26 +904,6 @@
     "excludeFromHero": true,
     "leagues": [
       "bb1"
-    ]
-  },
-  {
-    "id": "afl-cup-2017-correction-2026-08-17",
-    "date": "2026-08-17",
-    "title": "The 2017 Trophy Nobody Was Holding: the AFL Cup Comes Back, and Smokane FC Gets It",
-    "summary": "2017's all-play season was the last AFL Cup — not the \"Founders Table\" we made up for it — and it ended in week 16, not 17. That one week moves the title to Smokane FC.",
-    "description": [
-      "Two things were wrong about 2017, and the second one only became visible once the first was fixed.",
-      "Start with the name. That season ran as one 24-team all-play table, the format the Premier League and D-League grew out of the year after, and we shipped it under a heading called the \"Founders Table.\" Nobody in the league has ever called it that. We invented it. The league called it what it had called the same competition for the two seasons before: the AFL Cup. The Cup did not die in 2016 — it changed shape, traded a knockout bracket for a table, and ran one more year before the split replaced it. It says AFL Cup on the standings page now, and the trophy room treats 2017 as the Cup's last season instead of pretending it never happened.",
-      "Then the week. Every one of these tables gets cut off somewhere, the site was using week 17 for all of them, and 2017 ended at week 16. One week does not sound like much. It is the entire competition here. Through week 16 Smokane FC finishes 259-109 and Fullybaked 258-110 — one all-play win apart, out of 368. Play the extra week and Fullybaked passes them. The site had been showing the week-17 answer under a name the league never used, so the 2017 AFL Cup had effectively been awarded to the wrong team and filed under the wrong competition. What settled it was not the math: the commissioner went and checked what the league actually paid out that season, and the Cup money went to Smokane FC.",
-      "Smokane FC's trophy room gains an AFL Cup badge stamped 2017, its eighteenth piece of hardware. Nothing else about that season moves: Thundering Herd keeps the 2017 AFL Championship they won in that week-16 final, and the promotion line is untouched — the top 12 is the same twelve franchises whichever week you stop at, and it still matches the 2018 Premier League roster exactly. The cutoff week is now recorded per season rather than assumed, so no future era can quietly inherit the wrong finish line."
-    ],
-    "category": "bug-fix",
-    "link": "/afl-fantasy/standings?year=2017&view=all_play",
-    "linkLabel": "See the 2017 AFL Cup table",
-    "icon": "trophy",
-    "excludeFromHero": true,
-    "leagues": [
-      "afl"
     ]
   }
 ]

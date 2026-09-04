@@ -98,6 +98,7 @@ import {
 } from './lib/schefter-lore.mjs';
 import { incrementTipsterCounters, incrementTipsterTopicCounters } from './lib/schefter-tipster-counters.mjs';
 import { schefterKey, globalSchefterKey } from './lib/schefter-keys.mjs';
+import { isUsableTip } from './lib/schefter-tip-queue.mjs';
 import { getTopicPolicy, DRAINABLE_TOPIC_IDS } from '../src/config/schefter-topics.mjs';
 import {
   classifyTipKind,
@@ -1160,6 +1161,58 @@ function redactSafePayload(safe, teams) {
     if (typeof safe.meta?.[field] === 'string') safe.meta[field] = scrub(safe.meta[field]);
   }
   return safe;
+}
+
+// ── Tip receipts ──
+
+/**
+ * Record what became of one owner's tip, so the tip page can answer "what
+ * happened to the thing I sent?".
+ *
+ * Before this existed, a web tip had exactly two observable outcomes: a post
+ * appears, or nothing ever happens. "Nothing ever happens" covered the whole
+ * back half of the pipeline — the quality gate suppressing a beat three times
+ * until the tip struck out, a tip aging past TIP_EXPIRY_MS in a quiet week,
+ * a hold that ran past MAX_HELD_MS. All three are legitimate editorial
+ * outcomes; none of them was survivable as a user experience, because the
+ * tipster could not distinguish them from a broken tip line. (Sep 2026: an
+ * owner's tip was generated, scored 2/10, held, and struck out over ~30h
+ * without a single signal reaching them.)
+ *
+ * One key per tipster, overwritten each time — this is a receipt for your
+ * most recent tip, not an audit log, and it never accumulates history that
+ * could be correlated back to an identity. Web tips only: GroupMe tippers
+ * have no hashedOwnerId and trade-offer tips have no human behind them.
+ *
+ * `status`:
+ *   published — a post carrying this tip shipped to the feed
+ *   spiked    — the quality gate suppressed it to exhaustion (3 strikes /
+ *               past the 48h hold window). Schefter couldn't find the angle.
+ *   expired   — aged out of the queue unposted (quiet week, never chosen)
+ */
+const TIP_RECEIPT_TTL_SEC = 14 * 24 * 60 * 60;
+
+async function recordTipReceipt(redis, tip, outcome) {
+  if (!redis || DRY_RUN) return;
+  if (!tip || tip.source !== 'web') return;
+  const hash = typeof tip.hashedOwnerId === 'string' ? tip.hashedOwnerId : '';
+  if (!hash) return;
+  try {
+    await redis.set(
+      `${schefterKey(NAV_SLUG, 'tipster:last_receipt:')}${hash}`,
+      JSON.stringify({
+        status: outcome.status,
+        postId: outcome.postId ?? null,
+        tipId: tip.id,
+        topic: typeof tip.topic === 'string' ? tip.topic : null,
+        submittedAt: tip.submittedAt ?? null,
+        at: Date.now(),
+      }),
+      { ex: TIP_RECEIPT_TTL_SEC },
+    );
+  } catch (err) {
+    warn(`  [tip-receipt] write failed for ${tip.id}: ${err.message}`);
+  }
 }
 
 // ── GroupMe ──
@@ -3453,6 +3506,16 @@ async function main() {
   // Feed any @Schefter / @Claude mentions since the last watermark into the
   // same tips queue. Runs BEFORE the queue read so fresh mentions are included
   // in this cycle's batch.
+  //
+  // TheLeague-only, and the gate is load-bearing rather than cosmetic:
+  // `schefter-groupme-listen.mjs` hardcodes TheLeague's keys (queue,
+  // watermark, style book) because TheLeague owns the only group chat we
+  // ingest. Running it from the AFL invocation would read TheLeague's group
+  // and push into TheLeague's queue a second time per cycle. Until the env
+  // was wired up (Sep 2026) the missing token no-op'd it and hid that.
+  if (!SCHEFTER_LEAGUE.features?.groupmeListen) {
+    log(`  [groupme] mention ingest disabled for ${LEAGUE_SLUG} — skipping`);
+  } else {
   try {
     const ingest = await ingestGroupMeMentions({ redis, dryRun: DRY_RUN });
     if (ingest.detected > 0) {
@@ -3472,6 +3535,7 @@ async function main() {
   } catch (err) {
     warn(`  [groupme] ingest failed: ${err.message} — continuing with web tips only`);
   }
+  }
 
   // Read queue
   let queueRaw = [];
@@ -3487,34 +3551,56 @@ async function main() {
     return 0;
   }
 
-  // Parse tips (strings from Upstash may already be auto-parsed objects)
+  // Parse tips (strings from Upstash may already be auto-parsed objects).
+  // `isUsableTip` owns the admission rule — see scripts/lib/schefter-tip-queue.mjs
+  // for why `text` is required of some sources and not others.
   const parsedTips = [];
+  let unparseableCount = 0;
   for (const item of queueRaw) {
     try {
       const obj = typeof item === 'string' ? JSON.parse(item) : item;
-      if (obj && typeof obj === 'object' && obj.id && obj.text) {
+      if (isUsableTip(obj)) {
         parsedTips.push(obj);
+      } else {
+        unparseableCount++;
       }
     } catch {
-      // skip malformed
+      unparseableCount++;
     }
   }
-  log(`  Queue depth: ${parsedTips.length}`);
+  // Never let queue items vanish quietly again. Anything counted here is
+  // about to be destroyed by the stale-queue cleanup below, so it has to be
+  // loud enough to show up in a workflow log.
+  if (unparseableCount > 0) {
+    warn(`  ${unparseableCount} queue item(s) missing id/text or malformed — these will be DROPPED`);
+  }
+  log(`  Queue depth: ${parsedTips.length}${unparseableCount > 0 ? ` (+${unparseableCount} unusable)` : ''}`);
 
   // Drop expired — by submitted age, by suppressed-strike count, or by
   // total time spent on hold. The strike/hold checks let Option A age out
   // a tip that the gate keeps rejecting without an LLM call ever firing.
   const now = new Date();
-  const freshTips = parsedTips.filter((t) => {
+  const freshTips = [];
+  const droppedTips = [];
+  for (const t of parsedTips) {
     const age = now.getTime() - (t.submittedAt ?? 0);
-    if (age > TIP_EXPIRY_MS) return false;
     const strikes = typeof t.suppressedStrikes === 'number' ? t.suppressedStrikes : 0;
-    if (strikes >= MAX_SUPPRESSED_STRIKES) return false;
-    if (typeof t.firstSuppressedAt === 'number' && now.getTime() - t.firstSuppressedAt > MAX_HELD_MS) return false;
-    return true;
-  });
-  const expiredCount = parsedTips.length - freshTips.length;
-  if (expiredCount > 0) log(`  Dropped tips (expired / strike-exhausted / hold-aged): ${expiredCount}`);
+    // A tip that struck out reached the LLM and lost on the merits; one that
+    // simply aged out never got picked. The tipster deserves to know which.
+    if (strikes >= MAX_SUPPRESSED_STRIKES) {
+      droppedTips.push([t, 'spiked']);
+    } else if (typeof t.firstSuppressedAt === 'number' && now.getTime() - t.firstSuppressedAt > MAX_HELD_MS) {
+      droppedTips.push([t, 'spiked']);
+    } else if (age > TIP_EXPIRY_MS) {
+      droppedTips.push([t, 'expired']);
+    } else {
+      freshTips.push(t);
+    }
+  }
+  if (droppedTips.length > 0) {
+    log(`  Dropped tips (expired / strike-exhausted / hold-aged): ${droppedTips.length}`);
+    for (const [t, status] of droppedTips) await recordTipReceipt(redis, t, { status });
+  }
 
   if (freshTips.length === 0) {
     log('  No fresh tips — clearing stale queue');
@@ -4228,11 +4314,13 @@ async function main() {
       if (strikes >= MAX_SUPPRESSED_STRIKES) {
         log(`  [hold-strike] ${tip.id} hit ${MAX_SUPPRESSED_STRIKES} strikes — dropping`);
         heldTipsExhausted.push(tip);
+        await recordTipReceipt(redis, tip, { status: 'spiked' });
         continue;
       }
       if (now.getTime() - firstSuppressedAt > MAX_HELD_MS) {
         log(`  [hold-strike] ${tip.id} held > ${(MAX_HELD_MS / 3600000).toFixed(0)}h — dropping`);
         heldTipsExhausted.push(tip);
+        await recordTipReceipt(redis, tip, { status: 'spiked' });
         continue;
       }
       heldTipsForRequeue.push({ ...tip, suppressedStrikes: strikes, firstSuppressedAt });
@@ -4505,6 +4593,17 @@ async function main() {
         } catch (err) {
           warn(`  [hash-for-tip] set failed for ${tip.id}: ${err.message}`);
         }
+      }
+    }
+
+    // Tip receipts for the happy path. `allowedBeats` and `allowedPosts` are
+    // filtered from the same index set, so beat j is the batch behind post j
+    // — that pairing is what lets the receipt carry a postId the tip page
+    // can link straight to.
+    for (let j = 0; j < allowedBeats.length; j++) {
+      const postId = allowedPosts[j]?.id ?? null;
+      for (const tip of allowedBeats[j].batch ?? []) {
+        await recordTipReceipt(redis, tip, { status: 'published', postId });
       }
     }
 
