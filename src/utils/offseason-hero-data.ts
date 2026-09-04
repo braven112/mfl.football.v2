@@ -678,17 +678,22 @@ export function getAdpRankedIds(
 export function getTradeBaitCandidates(
   leagueYear: number,
   league: CanonicalLeagueSlug = 'theleague',
-): Array<{ playerId: string; franchiseId: string }> {
+): Array<{ playerId: string; franchiseId: string; franchiseIds: string[] }> {
   const data = readJsonFile(feedPath(league, leagueYear, 'tradeBait.json'));
   if (!Array.isArray(data)) return [];
 
-  const ownerByPlayer = getOwnerByPlayer(leagueYear, league);
+  // Every owner, not one: an AFL player is routinely rostered in both
+  // conferences, so the singular map attributes a shared player's block
+  // listing to a coin-flip franchise and the other owner's own trade-block
+  // hero widens to a stranger. One entry per player still (the guest pool
+  // must not weight a shared player twice); `franchiseIds` answers ownership.
+  const ownersByPlayer = getOwnersByPlayer(leagueYear, league);
   return data
     .filter((id: unknown): id is string => typeof id === 'string' && id.length > 0)
-    .map((playerId: string) => ({
-      playerId,
-      franchiseId: ownerByPlayer.get(playerId) ?? '',
-    }))
+    .map((playerId: string) => {
+      const franchiseIds = ownersByPlayer.get(playerId) ?? [];
+      return { playerId, franchiseId: franchiseIds[0] ?? '', franchiseIds };
+    })
     // A block listing for a player no longer rostered is stale — drop it.
     .filter((c) => c.franchiseId !== '');
 }

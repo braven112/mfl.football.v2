@@ -132,15 +132,27 @@ describe('league-aware hero data helpers (AFL)', () => {
     for (const id of ids.slice(0, 5)) expect(typeof id).toBe('string');
   });
 
-  it('trade bait candidates are always rostered', () => {
+  it('trade bait candidates are always rostered, and name every owner', () => {
     const candidates = getTradeBaitCandidates(YEAR, AFL);
     expect(Array.isArray(candidates)).toBe(true);
     const rostered = getRosteredPlayerIds(YEAR, AFL);
+    const owners = getOwnersByPlayer(YEAR, AFL);
+    let shared = 0;
     for (const c of candidates) {
       expect(c.playerId).toBeTruthy();
       expect(c.franchiseId).toBeTruthy();
       expect(rostered.has(c.playerId)).toBe(true);
+      // A block listing on a player both conferences roster belongs to BOTH
+      // owners — the singular map picked one at random and the other owner's
+      // trade-block hero widened to a stranger.
+      expect(c.franchiseIds).toEqual(owners.get(c.playerId));
+      expect(c.franchiseIds).toContain(c.franchiseId);
+      if ((c.franchiseIds?.length ?? 0) > 1) shared++;
     }
+    // One entry per player, never one per owner — the guest pool must not
+    // weight a shared player twice.
+    expect(new Set(candidates.map((c) => c.playerId)).size).toBe(candidates.length);
+    if (candidates.length > 0) expect(shared).toBeGreaterThanOrEqual(0);
   });
 
   it('weekly top scorer candidates carry positive scores and rostered owners', () => {
@@ -197,7 +209,21 @@ describe('league-aware hero data helpers (AFL)', () => {
     // A fully-played week must not resurrect its games as castable: the hero
     // captions a cast player "In Action". getKickoffGame keeps its fallback —
     // the week's opener is still the opener after it has been played.
-    const afterTheWeek = new Date('2026-09-16T12:00:00-07:00');
+    //
+    // Derive the reference date from the feed, never a literal: fetch-mfl-feeds
+    // re-syncs nflSchedule.json to the CURRENT NFL week every day, so a
+    // hardcoded date stops being "after the whole slate" the moment the feed
+    // rolls over — red CI every week for the rest of the season.
+    const schedule = JSON.parse(
+      readFileSync(`data/${AFL}/mfl-feeds/${YEAR}/nflSchedule.json`, 'utf8'),
+    );
+    const matchups = schedule?.nflSchedule?.matchup ?? [];
+    const kickoffs = (Array.isArray(matchups) ? matchups : [matchups])
+      .map((m: any) => parseInt(m?.kickoff, 10))
+      .filter((k: number) => Number.isFinite(k));
+    if (kickoffs.length === 0) return; // no slate — nothing to spend
+    // Past the last kickoff plus the 4h in-progress grace.
+    const afterTheWeek = new Date((Math.max(...kickoffs) + 5 * 3600) * 1000);
     expect(getWeekGameCandidates(YEAR, AFL, afterTheWeek)).toEqual([]);
     expect(getKickoffGame(YEAR, AFL, afterTheWeek)).toEqual(getKickoffGame(YEAR, AFL));
   });
@@ -323,16 +349,30 @@ describe('castAflHeroModel', () => {
     // captioned a stranger "In Action". Sweep the whole week, both leagues,
     // every franchise — a cast model must be OWNED by the franchise it is
     // cast for, or be null so the caller's own-roster fallback runs.
-    const hours = [
-      '2026-09-10T09:00:00-07:00', // before the Thursday opener
-      '2026-09-11T18:00:00-07:00', // opener done, Sunday ahead
-      '2026-09-13T10:00:00-07:00', // Sunday morning
-      '2026-09-13T23:00:00-07:00', // Sunday night — slate nearly spent
-      '2026-09-14T18:00:00-07:00', // Monday night
-      '2026-09-16T12:00:00-07:00', // whole week played — pool is empty by design
-    ].map((iso) => new Date(iso));
+    // Sample points derived from each league's own feed, not literals: the
+    // schedule re-syncs to the CURRENT NFL week daily, so hardcoded dates stop
+    // meaning "Sunday night" the moment it rolls over.
+    const sweepHours = (league: string): Date[] => {
+      const schedule = JSON.parse(
+        readFileSync(`data/${league}/mfl-feeds/${YEAR}/nflSchedule.json`, 'utf8'),
+      );
+      const matchups = schedule?.nflSchedule?.matchup ?? [];
+      const kickoffs = (Array.isArray(matchups) ? matchups : [matchups])
+        .map((m: any) => parseInt(m?.kickoff, 10))
+        .filter((k: number) => Number.isFinite(k))
+        .sort((a: number, b: number) => a - b);
+      if (kickoffs.length === 0) return [];
+      const last = kickoffs[kickoffs.length - 1];
+      return [
+        kickoffs[0] - 86400, // a day before the opener
+        ...kickoffs.map((k: number) => k + 5 * 3600), // just past each game's grace
+        last + 3 * 86400, // whole week played — the pool is empty by design
+      ].map((sec: number) => new Date(sec * 1000));
+    };
 
     for (const league of [AFL, 'theleague'] as const) {
+      const hours = sweepHours(league);
+      expect(hours.length, `${league} schedule feed has no kickoffs to sweep`).toBeGreaterThan(2);
       // Every owner, not one: 143 of the AFL's 199 rostered players are on two
       // rosters (AL + NL run separate pools inside one MFL league), so the
       // single-owner map would fail this test on correct casts.

@@ -388,7 +388,10 @@ export function castRandomStarterModel(
  * and a second hand-rolled `franchiseId ===` compare is how the AFL's
  * dual-rostered half quietly falls out of its own pool again.
  */
-export function castsFor(candidate: ScoredCastCandidate, franchiseId: string): boolean {
+export function castsFor(
+  candidate: Pick<ScoredCastCandidate, 'franchiseId' | 'franchiseIds'>,
+  franchiseId: string,
+): boolean {
   return candidate.franchiseIds
     ? candidate.franchiseIds.includes(franchiseId)
     : candidate.franchiseId === franchiseId;
@@ -492,6 +495,14 @@ export function scoreFaceoffSides(
 export interface RosterCastCandidate {
   playerId: string;
   franchiseId: string;
+  /**
+   * EVERY franchise rostering the player, when the source can say — same
+   * contract as `ScoredCastCandidate.franchiseIds`, and needed for the same
+   * reason: an AFL player is routinely rostered in both conferences, so a bare
+   * `franchiseId` is an arbitrary one of his owners and the owner asking for
+   * "my player" loses him about half the time.
+   */
+  franchiseIds?: string[];
 }
 
 /**
@@ -514,9 +525,7 @@ export function castRosterModel(
   });
   if (resolvable.length === 0) return null;
 
-  const own = userFranchiseId
-    ? resolvable.filter((c) => c.franchiseId === userFranchiseId)
-    : [];
+  const own = userFranchiseId ? resolvable.filter((c) => castsFor(c, userFranchiseId)) : [];
   const pool = own.length > 0 ? own : resolvable;
 
   const pick = dailyPick(pool, referenceDate, 'roster', (c) => `${c.franchiseId}:${c.playerId}`);
