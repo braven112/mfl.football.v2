@@ -9,6 +9,7 @@
 import type { APIRoute } from 'astro';
 import { getAuthUser, isCommissionerOrAdmin } from '../../../utils/auth';
 import { buildMflExportUrl } from '../../../utils/mfl-url';
+import { mflFetch } from '../../../utils/mfl-fetch';
 import { JSON_HEADERS } from '../../../utils/api-response';
 import { DEFAULT_LEAGUE_ID } from '../../../config/leagues';
 
@@ -43,11 +44,12 @@ export const GET: APIRoute = async ({ request }) => {
     const year = new Date().getFullYear();
     const url = buildMflExportUrl({ type: 'salaries', leagueId: MFL_LEAGUE_ID, year, host: MFL_HOST });
 
-    const response = await fetch(url, {
-      headers: MFL_USER_ID ? { Cookie: `MFL_USER_ID=${MFL_USER_ID}` } : {},
-      redirect: 'follow',
-      signal: AbortSignal.timeout(10_000),
-    });
+    // An authenticated read must go through mflFetch — undici drops Cookie on
+    // the api→www49 302, and the logged-out answer comes back HTTP 200 with an
+    // empty payload rather than throwing. No cookie to preserve => plain fetch.
+    const response = MFL_USER_ID
+      ? await mflFetch({ url, method: 'GET', mflUserCookie: MFL_USER_ID })
+      : await fetch(url, { redirect: 'follow', signal: AbortSignal.timeout(10_000) });
 
     if (!response.ok) {
       return new Response(

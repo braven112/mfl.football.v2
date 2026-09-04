@@ -82,13 +82,9 @@ export async function createPreWriteBackup(): Promise<string | null> {
     const year = getYear();
     const url = buildMflExportUrl({ type: 'salaries', leagueId: MFL_LEAGUE_ID, year, host: MFL_READ_HOST });
 
-    const response = await fetch(url, {
-      headers: {
-        Cookie: `MFL_USER_ID=${MFL_USER_ID}`,
-      },
-      redirect: 'follow',
-      signal: AbortSignal.timeout(10_000),
-    });
+    // mflFetch, not bare fetch — undici drops Cookie on the api→www49 302 and
+    // MFL answers "requires a logged in user" with a 200 that parses as empty.
+    const response = await mflFetch({ url, method: 'GET', mflUserCookie: MFL_USER_ID });
 
     if (!response.ok) {
       console.error(`Backup fetch failed: ${response.status} ${response.statusText}`);
@@ -154,11 +150,12 @@ export async function fetchMFLSalaries(): Promise<Record<string, { salary: strin
     const year = getYear();
     const url = buildMflExportUrl({ type: 'salaries', leagueId: MFL_LEAGUE_ID, year, host: MFL_READ_HOST });
 
-    const response = await fetch(url, {
-      headers: MFL_USER_ID ? { Cookie: `MFL_USER_ID=${MFL_USER_ID}` } : {},
-      redirect: 'follow',
-      signal: AbortSignal.timeout(10_000),
-    });
+    // An authenticated read must go through mflFetch — undici drops Cookie on
+    // the api→www49 302, and the logged-out answer comes back HTTP 200 with an
+    // empty payload rather than throwing. No cookie to preserve => plain fetch.
+    const response = MFL_USER_ID
+      ? await mflFetch({ url, method: 'GET', mflUserCookie: MFL_USER_ID })
+      : await fetch(url, { redirect: 'follow', signal: AbortSignal.timeout(10_000) });
 
     if (!response.ok) return null;
 
