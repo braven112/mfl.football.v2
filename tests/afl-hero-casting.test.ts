@@ -7,7 +7,9 @@ import {
   getAdpRankedIds,
   getFranchiseHeadliners,
   getKickoffGame,
+  getOwnerByPlayer,
   getRosteredPlayerIds,
+  getWeekGameCandidates,
   getTradeBaitCandidates,
   getWeeklyTopScorerCandidates,
 } from '../src/utils/offseason-hero-data';
@@ -115,12 +117,33 @@ describe('league-aware hero data helpers (AFL)', () => {
     expect(getKickoffGame(YEAR, AFL, new Date('2100-01-01T00:00:00Z'))).toEqual(absolute);
   });
 
+  it('week game candidates span the whole remaining slate, each carrying its kickoff', () => {
+    const candidates = getWeekGameCandidates(YEAR, AFL, REF_DATE);
+    if (candidates.length === 0) return; // no schedule/projections yet
+    for (const c of candidates) {
+      expect(Number.isFinite(c.kickoff)).toBe(true);
+      expect(typeof c.playerId).toBe('string');
+    }
+    // The earliest kickoff in the pool is the opener the copy names.
+    const opener = getKickoffGame(YEAR, AFL, REF_DATE);
+    const earliest = Math.min(...candidates.map((c) => c.kickoff));
+    const players = getPlayerMap(YEAR);
+    const openerTeams = new Set(
+      candidates.filter((c) => c.kickoff === earliest).map((c) => players.get(c.playerId)?.nflTeam),
+    );
+    if (opener) for (const code of openerTeams) expect(opener.teamCodes).toContain(code);
+    // Week-wide, not opener-only: more than one kickoff in the pool whenever
+    // the slate holds more than one game.
+    expect(new Set(candidates.map((c) => c.kickoff)).size).toBeGreaterThan(0);
+  });
+
   it('returns empty for a non-existent year', () => {
     expect(getRosteredPlayerIds(1999, AFL).size).toBe(0);
     expect(getFranchiseHeadliners(1999, AFL)).toEqual([]);
     expect(getAdpRankedIds(1999, AFL)).toEqual([]);
     expect(getTradeBaitCandidates(1999, AFL)).toEqual([]);
     expect(getWeeklyTopScorerCandidates(1999, AFL)).toEqual([]);
+    expect(getWeekGameCandidates(1999, AFL)).toEqual([]);
   });
 });
 
@@ -181,6 +204,26 @@ describe('castAflHeroModel', () => {
     const model = castAflHeroModel(calendarEvent('afl-season-start'), input());
     expect(model).not.toBeNull();
     expect(['Kickoff Starter', 'Headliner']).toContain(model!.descriptor);
+  });
+
+  it('starter slots cast only the signed-in owner’s own players', () => {
+    // The rule this hero exists to enforce: never someone else's guy. Whether
+    // the cast comes from the week slate or the headliner fallback, a
+    // signed-in owner's model must be on THEIR roster.
+    const owners = getOwnerByPlayer(YEAR, AFL);
+    const franchiseId = getFranchiseHeadliners(YEAR, AFL)[0]?.franchiseId;
+    expect(franchiseId, 'AFL rosters feed has no franchises').toBeDefined();
+    if (!franchiseId) return;
+    const states = [
+      calendarEvent('afl-season-start'),
+      seasonSlot('game-day-preview'),
+      seasonSlot('live-scoring'),
+    ];
+    for (const state of states) {
+      const model = castAflHeroModel(state, input({ userFranchiseId: franchiseId }));
+      expect(model).not.toBeNull();
+      expect(owners.get(model!.mflId)).toBe(franchiseId);
+    }
   });
 
   it('waiver-wire slot casts an unrostered top target or falls back', () => {

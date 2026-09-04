@@ -242,6 +242,13 @@ export interface ScoredCastCandidate {
   /** League franchise that rosters the player; '' = free agent */
   franchiseId: string;
   score: number;
+  /**
+   * Unix-seconds kickoff of this player's NFL game, when the pool spans a
+   * slate rather than a single game. `castRandomStarterModel` casts from the
+   * FIRST game the pool plays in; pools without it (single-game callers) are
+   * treated as one game.
+   */
+  kickoff?: number;
 }
 
 /**
@@ -279,13 +286,26 @@ export function castBestScoredModel(
 /**
  * Cast a RANDOM likely starter from a scored candidate pool — daily rotation.
  *
- * Kickoff rule: rotate among the likely starters in the earliest game of the
- * week, not just the single best. "Likely starters" = the top `perTeam`
- * fantasy players per NFL team by projection (the real starters, not the
- * deep bench); a projection of 0 is never a starter. When signed in, the
- * pool narrows to the owner's own likely starters in that game, falling back
- * to the full pool when they roster none. The pick rotates by PT day so the
- * same face doesn't hold the hero all window.
+ * Starter rule (Brandon, 2026-09): the hero shows a player from the SIGNED-IN
+ * OWNER'S OWN ROSTER. Own candidates win outright when the owner rosters any —
+ * the pool never widens back to the league, because "some other team's guy" is
+ * exactly what this rule exists to stop.
+ *
+ * Which of their players: whoever PLAYS FIRST. The pool is narrowed to the
+ * earliest kickoff it contains, so an owner with a player in the Thursday
+ * opener sees him, and an owner with nobody in it sees a likely starter from
+ * their earliest game instead (rather than a stranger from the opener).
+ * "Likely starters" = the top `perTeam` fantasy players per NFL team by
+ * projection (the real starters, not the deep bench); a projection of 0 is
+ * never a starter. The pick rotates by PT day so the same face doesn't hold
+ * the hero all window.
+ *
+ * Guests have no roster, so their pool is the whole league and the earliest
+ * kickoff is always the opener — the pre-2026-09 behavior, unchanged.
+ *
+ * @param laterGameDescriptor - Caption used when the pick is NOT in the week's
+ *   earliest game (only reachable for a signed-in owner) — "Kickoff Starter"
+ *   would be a lie for someone playing Sunday. Defaults to `descriptor`.
  */
 export function castRandomStarterModel(
   candidates: ScoredCastCandidate[],
@@ -294,31 +314,65 @@ export function castRandomStarterModel(
   referenceDate: Date,
   descriptor: string,
   perTeam: number = 8,
+  laterGameDescriptor?: string,
 ): HeroModel | null {
-  // Group compositable, projected candidates by NFL team.
-  const byTeam = new Map<string, ScoredCastCandidate[]>();
-  for (const c of candidates) {
+  const eligible = candidates.filter((c) => {
     const p = players.get(c.playerId);
     // A non-finite projection (malformed feed → NaN) is never a likely starter.
-    if (!p || !isCompositable(p) || !Number.isFinite(c.score) || c.score <= 0) continue;
-    const arr = byTeam.get(p.nflTeam) ?? [];
-    arr.push(c);
-    byTeam.set(p.nflTeam, arr);
-  }
+    return !!p && isCompositable(p) && Number.isFinite(c.score) && c.score > 0;
+  });
+  if (eligible.length === 0) return null;
 
-  // Keep each team's top `perTeam` by projection — that's the starter tier.
-  const pool: ScoredCastCandidate[] = [];
+  // The starter tier: each NFL team's top `perTeam` by projection, taken over
+  // the WHOLE pool — a player's starter status is a fact about his NFL team,
+  // not about which fantasy roster is being cast from.
+  const byTeam = new Map<string, ScoredCastCandidate[]>();
+  for (const c of eligible) {
+    const team = players.get(c.playerId)!.nflTeam;
+    const arr = byTeam.get(team) ?? [];
+    arr.push(c);
+    byTeam.set(team, arr);
+  }
+  const starterTier = new Set<string>();
   for (const arr of byTeam.values()) {
     arr.sort((a, b) => b.score - a.score || a.playerId.localeCompare(b.playerId));
-    pool.push(...arr.slice(0, perTeam));
+    for (const c of arr.slice(0, perTeam)) starterTier.add(c.playerId);
   }
+
+  // The owner's own players are the pool whenever they have any — no widening.
+  const own = userFranchiseId ? eligible.filter((c) => c.franchiseId === userFranchiseId) : [];
+  const base = own.length > 0 ? own : eligible;
+
+  // Then the first game that pool plays in. Ordering matters: "your player in
+  // the opener" beats "your best player, on Sunday". Candidates carrying no
+  // kickoff (single-game callers) are one undifferentiated game.
+  const firstKickoff = earliestKickoff(base);
+  const slate = firstKickoff === null ? base : base.filter((c) => c.kickoff === firstKickoff);
+
+  // Prefer the starter tier inside that game, but never at the cost of the
+  // rule above: an owner whose only player in it is a backup still sees HIM,
+  // not a stranger and not one of their own players who doesn't play till Sunday.
+  const tiered = slate.filter((c) => starterTier.has(c.playerId));
+  const pool = tiered.length > 0 ? tiered : slate;
   if (pool.length === 0) return null;
 
-  const own = userFranchiseId ? pool.filter((c) => c.franchiseId === userFranchiseId) : [];
-  const finalPool = own.length > 0 ? own : pool;
+  const pick = dailyPick(pool, referenceDate, 'starter', (c) => c.playerId);
+  if (!pick) return null;
 
-  const pick = dailyPick(finalPool, referenceDate, 'starter', (c) => c.playerId);
-  return pick ? toModel(players.get(pick.playerId)!, descriptor) : null;
+  const openerKickoff = earliestKickoff(eligible);
+  const isLaterGame =
+    firstKickoff !== null && openerKickoff !== null && firstKickoff > openerKickoff;
+  return toModel(players.get(pick.playerId)!, isLaterGame ? laterGameDescriptor ?? descriptor : descriptor);
+}
+
+/** Earliest kickoff carried by a candidate pool; null when none carry one. */
+function earliestKickoff(candidates: ScoredCastCandidate[]): number | null {
+  let earliest: number | null = null;
+  for (const c of candidates) {
+    if (!Number.isFinite(c.kickoff)) continue;
+    if (earliest === null || c.kickoff! < earliest) earliest = c.kickoff!;
+  }
+  return earliest;
 }
 
 /**

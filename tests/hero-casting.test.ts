@@ -348,6 +348,161 @@ describe('castRandomStarterModel', () => {
       castRandomStarterModel([{ playerId: '1', franchiseId: '', score: NaN }], players, undefined, JUL_4, 'x'),
     ).toBeNull();
   });
+
+  // ── Week-wide slate: own roster first, earliest kickoff wins ──────────────
+  // NE/SEA play the Thursday opener (kickoff 100); DAL/GB play Sunday (200).
+  const slatePlayers = mapOf(
+    player({ mflId: '1', nflTeam: 'NE' }),
+    player({ mflId: '5', nflTeam: 'SEA' }),
+    player({ mflId: '20', nflTeam: 'DAL' }),
+    player({ mflId: '21', nflTeam: 'GB' }),
+  );
+  const OPENER = 100;
+  const SUNDAY = 200;
+  const slate = (owners: Record<string, string>) => [
+    { playerId: '1', franchiseId: owners['1'] ?? '', score: 20, kickoff: OPENER },
+    { playerId: '5', franchiseId: owners['5'] ?? '', score: 18, kickoff: OPENER },
+    { playerId: '20', franchiseId: owners['20'] ?? '', score: 22, kickoff: SUNDAY },
+    { playerId: '21', franchiseId: owners['21'] ?? '', score: 25, kickoff: SUNDAY },
+  ];
+
+  it('casts the owner’s own player in the opener when they roster one', () => {
+    // 0001 rosters an opener player AND a higher-projected Sunday player —
+    // the opener wins, because the rule is "who plays first", not "who is best".
+    const model = castRandomStarterModel(
+      slate({ '5': '0001', '21': '0001', '1': '0002', '20': '0002' }),
+      slatePlayers,
+      '0001',
+      JUL_4,
+      'Kickoff Starter',
+      8,
+      'Your First Starter',
+    );
+    expect(model?.mflId).toBe('5');
+    expect(model?.descriptor).toBe('Kickoff Starter');
+  });
+
+  it('casts the owner’s earliest-game starter when they roster nobody in the opener', () => {
+    // Never someone else's opener player — 0001 only plays Sunday.
+    const picks = new Set(
+      Array.from({ length: 20 }, (_, d) =>
+        castRandomStarterModel(
+          slate({ '1': '0002', '5': '0002', '20': '0001', '21': '0001' }),
+          slatePlayers,
+          '0001',
+          new Date(`2026-08-${String(1 + d).padStart(2, '0')}T12:00:00-07:00`),
+          'Kickoff Starter',
+          8,
+          'Your First Starter',
+        )?.mflId,
+      ),
+    );
+    expect([...picks].sort()).toEqual(['20', '21']);
+  });
+
+  it('captions a later-game pick with the later-game descriptor', () => {
+    const model = castRandomStarterModel(
+      slate({ '1': '0002', '5': '0002', '20': '0001', '21': '0001' }),
+      slatePlayers,
+      '0001',
+      JUL_4,
+      'Kickoff Starter',
+      8,
+      'Your First Starter',
+    );
+    expect(model?.descriptor).toBe('Your First Starter');
+  });
+
+  it('gives guests the opener, league-wide', () => {
+    const picks = new Set(
+      Array.from({ length: 20 }, (_, d) =>
+        castRandomStarterModel(
+          slate({ '1': '0002', '5': '0003', '20': '0001', '21': '0004' }),
+          slatePlayers,
+          undefined,
+          new Date(`2026-08-${String(1 + d).padStart(2, '0')}T12:00:00-07:00`),
+          'Kickoff Starter',
+          8,
+          'Your First Starter',
+        )?.mflId,
+      ),
+    );
+    expect([...picks].sort()).toEqual(['1', '5']);
+  });
+
+  it('falls back to the whole slate for an owner who rosters nobody playing', () => {
+    const model = castRandomStarterModel(
+      slate({ '1': '0002', '5': '0002', '20': '0003', '21': '0003' }),
+      slatePlayers,
+      '0099',
+      JUL_4,
+      'Kickoff Starter',
+      8,
+      'Your First Starter',
+    );
+    // League-wide pool → the opener, captioned as the opener.
+    expect(['1', '5']).toContain(model?.mflId);
+    expect(model?.descriptor).toBe('Kickoff Starter');
+  });
+
+  it('casts the owner’s own backup in the opener over their starter on Sunday', () => {
+    // 0001's only opener player is NE's WR3 — outside the league starter tier.
+    // "Your player in the opener" outranks both "a real starter" and "your
+    // better player later in the week".
+    const players3 = mapOf(
+      player({ mflId: '1', nflTeam: 'NE' }),
+      player({ mflId: '2', nflTeam: 'NE' }),
+      player({ mflId: '3', nflTeam: 'NE' }),
+      player({ mflId: '21', nflTeam: 'GB' }),
+    );
+    const model = castRandomStarterModel(
+      [
+        { playerId: '1', franchiseId: '0002', score: 20, kickoff: OPENER },
+        { playerId: '2', franchiseId: '0002', score: 15, kickoff: OPENER },
+        { playerId: '3', franchiseId: '0001', score: 3, kickoff: OPENER },
+        { playerId: '21', franchiseId: '0001', score: 25, kickoff: SUNDAY },
+      ],
+      players3,
+      '0001',
+      JUL_4,
+      'Kickoff Starter',
+      2, // starter tier = NE's top 2 (1, 2) — player 3 is outside it
+      'Your First Starter',
+    );
+    expect(model?.mflId).toBe('3');
+    expect(model?.descriptor).toBe('Kickoff Starter');
+  });
+
+  it('keeps the starter tier when the owner has real starters in the game', () => {
+    const players3 = mapOf(
+      player({ mflId: '1', nflTeam: 'NE' }),
+      player({ mflId: '2', nflTeam: 'NE' }),
+      player({ mflId: '3', nflTeam: 'NE' }),
+    );
+    const picks = new Set(
+      Array.from({ length: 20 }, (_, d) =>
+        castRandomStarterModel(
+          [
+            { playerId: '1', franchiseId: '0001', score: 20, kickoff: OPENER },
+            { playerId: '2', franchiseId: '0001', score: 15, kickoff: OPENER },
+            { playerId: '3', franchiseId: '0001', score: 3, kickoff: OPENER },
+          ],
+          players3,
+          '0001',
+          new Date(`2026-08-${String(1 + d).padStart(2, '0')}T12:00:00-07:00`),
+          'Kickoff Starter',
+          2,
+          'Your First Starter',
+        )?.mflId,
+      ),
+    );
+    expect([...picks].sort()).toEqual(['1', '2']); // the deep bench guy stays out
+  });
+
+  it('treats a kickoff-less pool as a single game (single-game callers)', () => {
+    const model = castRandomStarterModel(cands(), players, undefined, JUL_4, 'Kickoff Night', 2, 'Later');
+    expect(model?.descriptor).toBe('Kickoff Night');
+  });
 });
 
 describe('castRosterModel', () => {

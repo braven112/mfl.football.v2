@@ -5,12 +5,15 @@
  * the hero casting rules (docs/claude/insights/features/player-composites.md):
  * the keeper cornerstone for the keeper deadline, the draft board's best
  * available for draft week, a player actually on the trade block for the
- * trade window, a starter in the week's earliest game on game days, the top
- * waiver target on waiver day, the week's top scorer for the recap, a rookie
- * for the new-season reset, and — for fresh What's New features — ONLY the
- * player the entry names (the feature's screenshot is the art otherwise).
+ * trade window, the owner's own likely starter in the first game they play
+ * on game days, the top waiver target on waiver day, the week's top scorer
+ * for the recap, a rookie for the new-season reset, and — for fresh What's
+ * New features — ONLY the player the entry names (the feature's screenshot is
+ * the art otherwise).
  * Signed-in owners see THEIR player wherever a roster-action pool includes
- * one; guests get a league-wide pick.
+ * one; guests get a league-wide pick. The starter slots (kickoff, game-day,
+ * live) never widen back to the league for a signed-in owner — see
+ * `castRandomStarterModel`.
  *
  * Server-side only — reads AFL MFL feeds from disk via the league-aware
  * helpers in offseason-hero-data.ts. Returns null when no model resolves;
@@ -34,9 +37,10 @@ import {
 import { getPlayerMap } from './player-map';
 import {
   getAdpRankedIds,
+  getFranchiseCompositableHeadliners,
   getFranchiseHeadliners,
-  getKickoffGameCandidates,
   getRosteredPlayerIds,
+  getWeekGameCandidates,
   getTradeBaitCandidates,
   getWeeklyTopScorerCandidates,
 } from './offseason-hero-data';
@@ -94,13 +98,30 @@ export function castAflHeroModel(state: AflHeroState, input: AflCastingInput): H
     return model ? { ...model, descriptor } : null;
   };
 
-  const gameStarter = (descriptor: string): HeroModel | null =>
-    castRandomStarterModel(
-      getKickoffGameCandidates(leagueYear, AFL, referenceDate),
+  // Starter slots cast from the signed-in owner's OWN roster, from whichever
+  // of their players kicks off first (see castRandomStarterModel). The
+  // fallback stays on their roster too — getFranchiseHeadliners returns each
+  // team's top player compositable or not, so a DEF/photo-less headliner would
+  // hand the hero to some other franchise.
+  let compositableHeadlinerPool: Array<{ playerId: string; franchiseId: string }> | null = null;
+  const ownRosterFallback = (descriptor: string): HeroModel | null =>
+    castRosterModel(
+      (compositableHeadlinerPool ??= getFranchiseCompositableHeadliners(leagueYear, AFL)),
       players,
       userFranchiseId,
       referenceDate,
       descriptor,
+    ) ?? headliner(descriptor);
+
+  const gameStarter = (descriptor: string, laterGameDescriptor: string): HeroModel | null =>
+    castRandomStarterModel(
+      getWeekGameCandidates(leagueYear, AFL, referenceDate),
+      players,
+      userFranchiseId,
+      referenceDate,
+      descriptor,
+      8,
+      laterGameDescriptor,
     );
 
   switch (state.kind) {
@@ -120,8 +141,8 @@ export function castAflHeroModel(state: AflHeroState, input: AflCastingInput): H
           // AFL drafts rookies AND veterans — the board's best available.
           return bestAvailable('Best Available') ?? headliner('Headliner');
         case 'afl-season-start':
-          // Kickoff rule: a likely starter in the earliest game of the week.
-          return gameStarter('Kickoff Starter') ?? headliner('Headliner');
+          // Kickoff rule: your likely starter in the first game you play in.
+          return gameStarter('Kickoff Starter', 'Your First Starter') ?? ownRosterFallback('Headliner');
         case 'afl-trade-deadline':
           // A player actually on the block; falls back when blocks are empty.
           return (
@@ -145,9 +166,9 @@ export function castAflHeroModel(state: AflHeroState, input: AflCastingInput): H
     case 'regular-season':
       switch (state.slot) {
         case 'live-scoring':
-          return gameStarter('In Action') ?? headliner('Headliner');
+          return gameStarter('In Action', 'Up Next') ?? ownRosterFallback('Headliner');
         case 'game-day-preview':
-          return gameStarter('Kickoff Starter') ?? headliner('Headliner');
+          return gameStarter('Kickoff Starter', 'Your First Starter') ?? ownRosterFallback('Headliner');
         case 'waiver-wire': {
           const model = bestAvailable('Top Target');
           return model ?? headliner('Headliner');

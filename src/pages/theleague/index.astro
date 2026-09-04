@@ -31,7 +31,7 @@ import { resolveHeroFranchiseBackdrop } from '../../utils/hero-franchise-backdro
 import { resolveHeroState, parseTestDate, isAuctionStripPeriod, isEntryInHeroWindow } from '../../utils/hero-resolver';
 import { getRelease } from '../../utils/schedule-release-store';
 import { getThrowbackPreference } from '../../utils/throwback-store';
-import { enrichHeroState, isDraftComplete, getRosteredPlayerIds, getAdpRankedIds, getFranchiseHeadliners, getKickoffGame, getKickoffGameCandidates, selectBreakingStory } from '../../utils/offseason-hero-data';
+import { enrichHeroState, isDraftComplete, getRosteredPlayerIds, getAdpRankedIds, getFranchiseHeadliners, getFranchiseCompositableHeadliners, getKickoffGame, getWeekGameCandidates, selectBreakingStory } from '../../utils/offseason-hero-data';
 import { getWhatsNextTimeline } from '../../utils/league-event-resolver';
 import { getCurrentLeagueYear, getCurrentSeasonYear } from '../../utils/league-year';
 import { getPlayerMap } from '../../utils/player-map';
@@ -469,19 +469,36 @@ let preseasonModel = null;
 let preseasonModelIsOwn = false;
 let kickoffGame = null;
 if (heroState.phase === 'preseason-countdown' && heroState.preseasonProps) {
-  // Preseason hero: a likely starter in the earliest game of the week (the
-  // season opener), rotating daily. Signed-in owners with a player in that
-  // game see one of their own likely starters in it instead.
-  kickoffGame = getKickoffGame(leagueYear);
-  const candidates = getKickoffGameCandidates(leagueYear);
-  preseasonModel = castRandomStarterModel(candidates, hpPlayerIdentityMap, userFranchiseId, now, 'Kickoff Night');
+  // Preseason hero: a likely starter from the week's slate, rotating daily.
+  // A signed-in owner is cast strictly from their OWN roster — their player in
+  // the opener if they have one, else a likely starter from their earliest
+  // game (which is why the pool is the week, not just the opener). Guests get
+  // the league-wide opener pick. See castRandomStarterModel.
+  kickoffGame = getKickoffGame(leagueYear, 'theleague', now);
+  const candidates = getWeekGameCandidates(leagueYear, 'theleague', now);
+  preseasonModel = castRandomStarterModel(
+    candidates,
+    hpPlayerIdentityMap,
+    userFranchiseId,
+    now,
+    'Kickoff Night',
+    8,
+    'Your First Starter',
+  );
+  // "Your Kickoff Starter" is only true for a player in the opener itself —
+  // an owner playing Sunday carries the caster's own later-game descriptor.
+  const openerCodes = new Set(kickoffGame?.teamCodes ?? []);
   preseasonModelIsOwn =
     !!preseasonModel &&
     !!userFranchiseId &&
+    openerCodes.has(preseasonModel.nflTeam) &&
     candidates.some((c) => c.franchiseId === userFranchiseId && c.playerId === preseasonModel!.mflId);
-  // No opener data (schedule feed missing) → fall back to franchise headliners.
+  // No slate data (schedule feed missing) or no projections yet → franchise
+  // headliners, compositable ones first so a signed-in owner still gets their
+  // own player (their top projected player may be a DEF or have no cutout).
   if (!preseasonModel) {
-    const headliners = getFranchiseHeadliners(leagueYear);
+    const compositable = getFranchiseCompositableHeadliners(leagueYear);
+    const headliners = compositable.length > 0 ? compositable : getFranchiseHeadliners(leagueYear);
     preseasonModel = castRosterModel(headliners, hpPlayerIdentityMap, userFranchiseId, now, 'Headliner');
     preseasonModelIsOwn =
       !!preseasonModel &&

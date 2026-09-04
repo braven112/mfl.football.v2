@@ -181,11 +181,12 @@ export function getFranchiseHeadliners(
  */
 export function getFranchiseCompositableHeadliners(
   leagueYear: number,
+  league: CanonicalLeagueSlug = 'theleague',
 ): Array<{ playerId: string; franchiseId: string }> {
-  const rosterData = readJsonFile(`${THELEAGUE_DATA_PATH}/mfl-feeds/${leagueYear}/rosters.json`);
+  const rosterData = readJsonFile(feedPath(league, leagueYear, 'rosters.json'));
   const franchises = rosterData?.rosters?.franchise;
   if (!franchises) return [];
-  const projections = getProjectionMap(leagueYear);
+  const projections = getProjectionMap(leagueYear, league);
   const players = getUnifiedPlayerMap(leagueYear);
 
   const out: Array<{ playerId: string; franchiseId: string }> = [];
@@ -268,11 +269,48 @@ function matchupToKickoffGame(matchup: any): KickoffGame | null {
   };
 }
 
+/** One parsed game from the current-week nflSchedule feed. */
+interface ScheduledGame extends KickoffGame {
+  /** Unix seconds kickoff timestamp. */
+  kickoff: number;
+}
+
+/**
+ * Every game in the current-week nflSchedule feed, earliest kickoff first.
+ * Malformed matchups (no kickoff, not two teams, unrecognized codes) drop out.
+ */
+function readWeekGames(leagueYear: number, league: CanonicalLeagueSlug): ScheduledGame[] {
+  const data = readJsonFile(feedPath(league, leagueYear, 'nflSchedule.json'));
+  const matchups = data?.nflSchedule?.matchup;
+  if (!matchups) return [];
+
+  const games: ScheduledGame[] = [];
+  for (const m of Array.isArray(matchups) ? matchups : [matchups]) {
+    const kickoff = parseInt(m?.kickoff, 10);
+    if (!Number.isFinite(kickoff)) continue;
+    const game = matchupToKickoffGame(m);
+    if (game) games.push({ ...game, kickoff });
+  }
+  return games.sort((a, b) => a.kickoff - b.kickoff);
+}
+
+/**
+ * The games still worth previewing at `referenceDate` — those not yet kicked
+ * off (plus a 4h in-progress grace), so a mid-week caller doesn't feature
+ * Thursday's finished game on Sunday. Falls back to the full slate once the
+ * whole week has been played, and whenever no reference date is given.
+ */
+function upcomingWeekGames(games: ScheduledGame[], referenceDate?: Date): ScheduledGame[] {
+  if (!referenceDate) return games;
+  const cutoff = Math.floor(referenceDate.getTime() / 1000) - 4 * 3600;
+  const upcoming = games.filter((g) => g.kickoff >= cutoff);
+  return upcoming.length > 0 ? upcoming : games;
+}
+
 /**
  * The earliest game of the current NFL week, from the live nflSchedule feed
  * (`nflSchedule.matchup` — the current week's slate; week 1 during the
- * preseason). Drives the kickoff-headliner hero casting rule: "the best player
- * starting in the earliest game of the week."
+ * preseason). Names the opener in kickoff-hero copy.
  *
  * With a `referenceDate`, prefers the earliest game still upcoming or live
  * (kickoff + 4h grace) so a mid-week caller doesn't feature Thursday's
@@ -284,56 +322,59 @@ export function getKickoffGame(
   league: CanonicalLeagueSlug = 'theleague',
   referenceDate?: Date,
 ): KickoffGame | null {
-  const data = readJsonFile(feedPath(league, leagueYear, 'nflSchedule.json'));
-  const matchups = data?.nflSchedule?.matchup;
-  if (!matchups) return null;
-
-  const games = (Array.isArray(matchups) ? matchups : [matchups]).filter(
-    (m: any) => m?.kickoff && Array.isArray(m.team) && m.team.length === 2,
-  );
+  const games = readWeekGames(leagueYear, league);
   if (games.length === 0) return null;
-
-  const sorted = [...games].sort((a: any, b: any) => parseInt(a.kickoff, 10) - parseInt(b.kickoff, 10));
-  let earliest = sorted[0];
-  if (referenceDate) {
-    const cutoff = Math.floor(referenceDate.getTime() / 1000) - 4 * 3600;
-    earliest = sorted.find((m: any) => parseInt(m.kickoff, 10) >= cutoff) ?? sorted[0];
-  }
-  return matchupToKickoffGame(earliest);
+  const [earliest] = upcomingWeekGames(games, referenceDate);
+  return earliest ? { teamCodes: earliest.teamCodes, awayName: earliest.awayName, homeName: earliest.homeName } : null;
 }
 
 /**
- * Scored candidates for the kickoff-game headliner: every fantasy player on
- * the two teams in the earliest game of the week, scored by projection,
- * with the league franchise that rosters them (empty string = free agent).
+ * Scored candidates for the starter-casting heroes: every fantasy player whose
+ * NFL team plays in the week's remaining slate, carrying that game's kickoff
+ * timestamp so the caster can prefer whoever plays FIRST.
+ *
+ * Deliberately week-wide, not opener-only: a signed-in owner is cast strictly
+ * from their own roster (see `castRandomStarterModel`), and most owners roster
+ * nobody in the Thursday opener — the pool has to reach their earliest game or
+ * the hero falls back to somebody else's player.
  */
-export function getKickoffGameCandidates(
+export function getWeekGameCandidates(
   leagueYear: number,
   league: CanonicalLeagueSlug = 'theleague',
   referenceDate?: Date,
-): Array<{ playerId: string; franchiseId: string; score: number }> {
-  const game = getKickoffGame(leagueYear, league, referenceDate);
-  if (!game) return [];
+): Array<{ playerId: string; franchiseId: string; score: number; kickoff: number }> {
+  const slate = upcomingWeekGames(readWeekGames(leagueYear, league), referenceDate);
+  if (slate.length === 0) return [];
+
+  // A team plays once a week, but keep the earliest if a feed ever repeats one.
+  const kickoffByTeam = new Map<string, number>();
+  for (const game of slate) {
+    for (const code of game.teamCodes) {
+      const prev = kickoffByTeam.get(code);
+      if (prev === undefined || game.kickoff < prev) kickoffByTeam.set(code, game.kickoff);
+    }
+  }
 
   const projections = getProjectionMap(leagueYear, league);
   const playerMap = getUnifiedPlayerMap(leagueYear);
-
   const ownerByPlayer = getOwnerByPlayer(leagueYear, league);
 
-  const codes = new Set(game.teamCodes);
-  const candidates: Array<{ playerId: string; franchiseId: string; score: number }> = [];
+  const candidates: Array<{ playerId: string; franchiseId: string; score: number; kickoff: number }> = [];
   for (const p of playerMap.values()) {
-    if (p.position === 'DEF' || !codes.has(p.nflTeam)) continue;
+    if (p.position === 'DEF') continue;
+    const kickoff = kickoffByTeam.get(p.nflTeam);
+    if (kickoff === undefined) continue;
     candidates.push({
       playerId: p.mflId,
       franchiseId: ownerByPlayer.get(p.mflId) ?? '',
       score: projections.get(p.mflId) ?? 0,
+      kickoff,
     });
   }
-  // "Best" means most projected points. If projections haven't published yet
-  // every score is 0 and "best" would be an arbitrary tie-break — return
-  // nothing so the caller's fallback ladder (franchise headliners, which
-  // tie-breaks on salary) takes over instead.
+  // "Likely starter" means most projected points. If projections haven't
+  // published yet every score is 0 and "likely" would be an arbitrary
+  // tie-break — return nothing so the caller's fallback ladder (franchise
+  // headliners, which tie-break on salary) takes over instead.
   if (!candidates.some((c) => c.score > 0)) return [];
   return candidates;
 }
