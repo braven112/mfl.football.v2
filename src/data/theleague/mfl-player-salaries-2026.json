@@ -13,7 +13,7 @@
       "sleeper": "cached",
       "nflverse": "https://github.com/nflverse/nflverse-data/releases/download/snap_counts/snap_counts_2026.csv.gz"
     },
-    "fetchedAt": "2026-09-04T00:17:37.887Z"
+    "fetchedAt": "2026-09-04T04:42:48.038Z"
   },
   "players": [
     {
@@ -3420,7 +3420,7 @@
         "id": "13299",
         "fullName": "Nate Boerkircher",
         "team": "JAX",
-        "age": 24,
+        "age": 25,
         "height": "77",
         "weight": "250",
         "number": 87,
@@ -5889,13 +5889,44 @@
       "headshot": "https://www49.myfantasyleague.com/player_photos_2014/17548_thumb.jpg",
       "externalIds": {
         "mfl": "17548",
-        "sleeper": null,
+        "sleeper": "13400",
         "gsis": null
       },
-      "sleeper": null,
+      "sleeper": {
+        "id": "13400",
+        "fullName": "Justin Joly",
+        "team": "MIA",
+        "age": 22,
+        "height": "75",
+        "weight": "241",
+        "number": 80,
+        "college": "North Carolina State",
+        "birthDate": "2004-07-09",
+        "status": "Active",
+        "active": true,
+        "position": "TE",
+        "depthChartPosition": "TE",
+        "depthChartOrder": 7,
+        "fantasyPositions": [
+          "TE"
+        ],
+        "experience": 0,
+        "injuryStatus": null,
+        "injuryBodyPart": null,
+        "gsisId": null
+      },
       "nflverse": null,
       "gamesPlayed": null,
-      "depthChartAhead": null
+      "depthChartAhead": [
+        {
+          "id": "15797",
+          "name": "Dulcich, Greg"
+        },
+        {
+          "id": "17605",
+          "name": "Kacmarek, Will"
+        }
+      ]
     },
     {
       "id": "17605",
@@ -14213,7 +14244,7 @@
         "id": "12536",
         "fullName": "Jaylin Noel",
         "team": "HOU",
-        "age": 23,
+        "age": 24,
         "height": "71",
         "weight": "201",
         "number": 13,
