@@ -7,7 +7,7 @@ import {
   pathBelongsToLeague,
 } from '../src/config/footer-config';
 import { getFooterChampions } from '../src/utils/footer-champions';
-import { resolveDirectoryHref } from '../src/utils/nav-utils';
+import { getSearchPath, resolveDirectoryHref } from '../src/utils/nav-utils';
 import type { CanonicalLeagueSlug } from '../src/config/leagues';
 import type { LeagueSlug } from '../src/types/nav';
 
@@ -22,7 +22,9 @@ import type { LeagueSlug } from '../src/types/nav';
  *    paths are TheLeague's, so prefixing it for AFL invented a route. (It is
  *    also a salary-cap tool, and AFL runs salaryCap:false.)
  *  - `/afl-fantasy/search` and `/best-ball-1/search` — the utility bar's
- *    Search link, on EVERY page of two leagues.
+ *    Search link, on EVERY page of two leagues. (The AFL has a real search
+ *    route as of Sep 2026; Best Ball still has none, and getSearchPath() is
+ *    what keeps the link off its pages.)
  *
  * Neither was catchable by the existing tests, which assert column structure
  * but never resolve a link and never look at src/pages/. This one does both.
@@ -82,8 +84,9 @@ function renderedHrefs(slug: CanonicalLeagueSlug): Array<{ label: string; href: 
   for (const champ of getFooterChampions(slug)) {
     out.push({ label: `Champion › ${champ.team}`, href: champ.href });
   }
-  if (pathBelongsToLeague('/search', slug)) {
-    out.push({ label: 'Utility › Search', href: resolveDirectoryHref('/search', nav) });
+  const searchPath = getSearchPath(slug);
+  if (searchPath) {
+    out.push({ label: 'Utility › Search', href: resolveDirectoryHref(searchPath, nav) });
   }
   return out;
 }

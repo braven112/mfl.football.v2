@@ -10,7 +10,7 @@
  * rendered output stays pixel-identical to the originals.
  */
 import { spriteUrl } from '../../../utils/sprite-url';
-import { resolveLeaguePath, resolveDirectoryHref } from '../../../utils/nav-utils';
+import { getSearchPath, resolveLeaguePath, resolveDirectoryHref } from '../../../utils/nav-utils';
 import { getLeagueBySlug, type CanonicalLeagueSlug } from '../../../config/leagues';
 import { pathBelongsToLeague } from '../../../config/footer-config';
 
@@ -89,7 +89,14 @@ if (isAfl) {
   pages = [...pinned, ...rest].slice(0, 8);
 }
 
-const ctaHref = isAfl ? `/${league.slug}` : r(`/${league.slug}/search`);
+// "All pages" goes to the league's search page. The AFL used to fall back to
+// its own homepage here because it had no search route — it does now, so the
+// CTA finally lands somewhere that lists more than eight cards. Any league
+// without a search page keeps the league-home fallback.
+const searchPath = getSearchPath(leagueSlug);
+const ctaHref = searchPath
+  ? r(resolveDirectoryHref(searchPath, league.navSlug))
+  : r(`/${league.slug}`);
 const cardHref = (page: PageEntry) =>
   isAfl ? page.path : r(resolveDirectoryHref(page.path, league.navSlug));
 ---

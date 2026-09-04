@@ -148,6 +148,10 @@ const CAPTURE_PATHS = {
   // conference chips, the 'not your draft' notice, and a clock counting in
   // HOURS because an email draft moves in days.
   'afl-draft-room': '/afl-fantasy/draft/room?conference=01',
+  // AFL-only entry whose link is the league-neutral bare `/search` (the AFL's
+  // directory path is prefixed, TheLeague's is not — see getSearchPath), and
+  // a bare path only routes on the league's own apex host.
+  'afl-search': '/afl-fantasy/search',
 };
 
 const PAGE_HOOKS = {
