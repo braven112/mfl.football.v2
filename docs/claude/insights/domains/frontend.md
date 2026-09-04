@@ -183,6 +183,47 @@ consumer, which is exactly the prompt you want.
 
 ---
 
+## 2026-09-04 - An `is:inline` Script Runs ONCE Per Session, And A Swap Probe Cannot See It
+
+The 2026-09-03 entry below is about the `document`-level half of a script. This
+is about the OTHER half, and the failure runs the opposite way.
+
+ClientRouter executes an inline script the first time it sees it, then marks it
+as already run for the rest of the session — it dedupes by content against the
+outgoing document. So an `is:inline` script's ELEMENT-scoped wiring fires on the
+FIRST arrival and never again, while its `document`-delegated handlers keep
+working perfectly, because `document` is exactly what survives.
+
+`AssetsPage.astro` shipped that split. Real navigations, salary → assets →
+salary → assets:
+
+| arrival | team filter | "size" lines filled | Copy button |
+|---|---|---|---|
+| 1st | works | 32 | works |
+| 2nd | **inert** | **0** | works |
+| 3rd | **inert** | **0** | works |
+
+Typing a team name hid nothing and every dimension line sat blank, with no error
+— while the copy buttons beside them were fine. That asymmetry is the tell.
+
+**The measurement trap, which cost real time here:** a probe that simulates a
+swap by re-fetching markup and re-executing the page's inline scripts reports
+this page as HEALTHY on every pass. The simulation re-runs the very script the
+real router refuses to re-run, so it reproduces the wiring the bug removes.
+
+- **On an `is:inline` script, a swap simulation proves nothing.** Drive real
+  ClientRouter navigations (click a real `<a>`, let the router do it) before
+  concluding either way.
+- Simulations remain the right tool for a BUNDLED module script, which the
+  router never re-executes — that is what the simulation already models.
+
+The fix is not remove-then-add on the delegation: that half was correct, and its
+once-flag is the safe variant below (the handlers hold no elements). The element
+wiring moves to an `astro:page-load` `init()`, which fires on every arrival
+whether or not the script itself is re-executed. `tests/assets-page-clientrouter.test.ts`
+pins both halves, including a case asserting the once-flag is DELIBERATE so the
+next sweep does not "fix" the working half.
+
 ## 2026-09-03 - A Once-Flag Is Not A Fix For A Stacking ClientRouter Listener
 
 The head used to say: guard a `document`-level listener with a module-scoped

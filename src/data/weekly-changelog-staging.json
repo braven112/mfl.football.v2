@@ -4,6 +4,14 @@
     {
       "date": "2026-09-04",
       "type": "bug-fix",
+      "summary": "The Asset Library's search box only worked the first time you opened the page. Come back to it later in the same visit and typing a team name did nothing at all — every logo stayed on screen — and the little size line under each image sat blank instead of telling you the dimensions. The copy buttons were fine throughout, which is probably why nobody filed it. Search and the size readout now come back to life on every visit, in both leagues.",
+      "impact": "user",
+      "area": "design-system",
+      "league": "both"
+    },
+    {
+      "date": "2026-09-04",
+      "type": "bug-fix",
       "summary": "The trade builder only worked the first time you opened it. Come in from your roster and you could stack up an offer as usual; wander off to another page and come back, and the Add buttons stopped adding, the remove X stopped removing, and the fairness meter sat frozen at whatever it last said. No error, no spinner, nothing — just a page that had quietly stopped listening, because it was still wired to the copy of itself you had already left. It rebuilds on every arrival now, so the tenth visit builds a trade exactly like the first.",
       "impact": "user",
       "area": "trade-builder",
