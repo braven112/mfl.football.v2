@@ -27,6 +27,17 @@
   once-flag is WORSE: one listener pinned to load 1's dead nodes); config goes
   stale (re-read the SSR blob in `init()`); and `init()` double-runs if you also
   call it.
+- **A swap-simulation probe over-reports listener growth for a script the
+  LAYOUT owns.** ClientRouter dedups inline scripts on `textContent` through a
+  module-level `Set` consulted only on the real swap path, so a layout script
+  byte-identical on every page executes once per hard load and never re-stacks;
+  re-executing its text by hand skips that Set and invents one listener per fake
+  swap. Measure with real navigations. Some growth is still expected and benign:
+  every script that follows the re-init rule above registers one
+  `astro:page-load` listener the first time its page is visited, so that count
+  climbs once per distinct page and then holds. Click listeners should NOT
+  climb at all — those scripts remove-then-add, so the count tracks whichever
+  page you are on.
 - **A control whose only job is switching a URL param should be an `<a href>`**
   built from `Astro.url` — not a `<button>` plus a click handler.
 - Never wrap a `<script>` in a conditional (breaks Astro's dedup). Read
