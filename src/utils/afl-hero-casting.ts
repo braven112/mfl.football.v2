@@ -114,7 +114,13 @@ export function castAflHeroModel(state: AflHeroState, input: AflCastingInput): H
     // ...unless the id rosters nobody (a commissioner-style franchise absent
     // from the roster feed). That is a viewer, not an owner to protect from a
     // stranger, and scoping strictly would leave them with no hero at all.
-    const rostersPlayers = !!userFranchiseId && pool.some((c) => c.franchiseId === userFranchiseId);
+    //
+    // Ask that of the FULL headliner pool, which holds every franchise that
+    // rosters anyone — `pool` here is the compositable subset, so a franchise
+    // whose players all lack an ESPN cutout would read as rosterless and be
+    // handed a stranger, the exact outcome this ladder exists to prevent.
+    const rostersPlayers =
+      !!userFranchiseId && headliners().some((c) => c.franchiseId === userFranchiseId);
     const scoped = rostersPlayers ? pool.filter((c) => c.franchiseId === userFranchiseId) : pool;
     const model = castRosterModel(scoped, players, userFranchiseId, referenceDate, descriptor);
     if (model || rostersPlayers) return model;
@@ -182,8 +188,9 @@ export function castAflHeroModel(state: AflHeroState, input: AflCastingInput): H
     case 'regular-season':
       switch (state.slot) {
         case 'live-scoring':
-          // 'In Action' claims only that he is playing, which is true off-tier too.
-          return gameStarter('In Action', 'Up Next', 'In Action') ?? ownRosterFallback('Headliner');
+          // Off-tier outranks later-game, so this caption has to be true at
+          // any hour — 'In Action' is not (an off-tier pick can be Sunday's).
+          return gameStarter('In Action', 'Up Next', 'On Your Roster') ?? ownRosterFallback('Headliner');
         case 'game-day-preview':
           return (
             gameStarter('Kickoff Starter', 'Your First Starter', 'On Your Roster') ??

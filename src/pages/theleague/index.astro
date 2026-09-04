@@ -458,8 +458,10 @@ if (heroState.phase === 'tagged-showcase' && heroState.taggedShowcaseProps) {
   });
 }
 // League-scope the session's franchise id once, for every hero on this page —
-// the casts below AND the `userFranchiseId` prop handed to SeasonDailyHero,
-// which its standings and matchup heroes use to highlight "your" row. AFL ids
+// the casts below, the `userFranchiseId` prop handed to SeasonDailyHero (its
+// standings and matchup heroes highlight "your" row with it), and the live
+// scoring + playoff prop bags built further down, which mark your matchup and
+// answer "are you eliminated". AFL ids
 // share TheLeague's space (both have 0001-0016; the AFL has 24), so an AFL
 // session's 0003 would be handed TheLeague 0003's player and row and told they
 // are theirs. Same guard as heroBackdropTeam above — a visitor from the other
@@ -527,7 +529,13 @@ if (heroState.phase === 'preseason-countdown' && heroState.preseasonProps) {
     // at all. A franchise absent from the roster feed is not an owner being
     // protected from a stranger — it is a viewer, and viewers get the
     // league-wide pick.
-    const rostersPlayers = !!heroFranchiseId && all.some((h) => h.franchiseId === heroFranchiseId);
+    // Presence against the FULL headliner pool (every franchise that rosters
+    // anyone), not the compositable subset — a franchise whose players all
+    // lack an ESPN cutout would otherwise read as rosterless and be handed a
+    // stranger, the outcome this whole branch exists to prevent.
+    const rostersPlayers =
+      !!heroFranchiseId &&
+      getFranchiseHeadliners(leagueYear).some((h) => h.franchiseId === heroFranchiseId);
     const headliners = rostersPlayers ? all.filter((h) => h.franchiseId === heroFranchiseId) : all;
     // 'Your Headliner' rather than the isOwn flag: that flag makes the hero say
     // "Your Kickoff Starter" and claim the player is in the opener, which a
@@ -641,7 +649,8 @@ if (heroState.slot === 'live-scoring' && heroState.metadata.week) {
 
     liveScoring = {
       week: heroState.metadata.week,
-      userFranchiseId,
+      // Scoped: the live hero marks "your" matchup with it (see heroFranchiseId).
+      userFranchiseId: heroFranchiseId,
       matchups: liveData?.matchups ?? [],
       teams: teamsMap,
       initialScores: liveData?.scores,
@@ -694,8 +703,8 @@ if ((heroState.phase === 'playoffs' || heroState.phase === 'championship') && he
         }
 
         const bracketSummary = buildBracketSummary(champBracket, seedMaps, allTeamsMap);
-        const userEliminated = userFranchiseId
-          ? isEliminated(userFranchiseId, champBracket)
+        const userEliminated = heroFranchiseId
+          ? isEliminated(heroFranchiseId, champBracket)
           : undefined;
 
         // Resolve the live round to the composite round-hero shape (wild card /
@@ -713,14 +722,14 @@ if ((heroState.phase === 'playoffs' || heroState.phase === 'championship') && he
             bracketSummary,
             standingsFranchises: franchiseList,
             teamAssets,
-            userFranchiseId,
+            userFranchiseId: heroFranchiseId,
             currentWeek: heroState.metadata.week,
           });
         } catch { /* round view is optional — falls back to bracket list */ }
 
         heroState.playoffProps = {
           leagueYear: seasonYear,
-          userFranchiseId,
+          userFranchiseId: heroFranchiseId,
           userIsEliminated: userEliminated,
           bracketSummary,
           roundView,
