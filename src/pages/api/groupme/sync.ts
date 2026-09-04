@@ -9,7 +9,7 @@
  */
 
 import type { APIRoute } from 'astro';
-import { fetchMessages } from '../../../utils/groupme-client';
+import { fetchMessages, checkServiceTokenHealth } from '../../../utils/groupme-client';
 import { normalizeGroupMeMessage } from '../../../types/groupme';
 import {
   storeMessages,
@@ -29,8 +29,25 @@ function json(data: unknown, status = 200): Response {
 
 export const POST: APIRoute = async () => {
   try {
-    if (!process.env.GROUPME_SERVICE_TOKEN || !process.env.GROUPME_GROUP_ID) {
+    if (!process.env.GROUPME_GROUP_ID) {
       return json({ error: 'GroupMe not configured' }, 503);
+    }
+
+    // Presence is not health — a revoked token is still a truthy string, and
+    // the old `!!process.env.GROUPME_SERVICE_TOKEN` guard let every sync sail
+    // past it into a 401. `unreachable` is not evidence the token is bad, so
+    // we still attempt the sync and let fetchMessages report the real failure.
+    const tokenHealth = await checkServiceTokenHealth();
+    if (tokenHealth.state === 'not-set') {
+      return json({ error: 'GroupMe not configured' }, 503);
+    }
+    if (tokenHealth.state === 'rejected') {
+      return json({
+        error: 'GroupMe token rejected',
+        detail: tokenHealth.detail,
+        // Name the var that supplied the dead token, not a hardcoded guess.
+        hint: `Regenerate the token at https://dev.groupme.com/ and update ${tokenHealth.source ?? 'GROUPME_SERVICE_TOKEN'}.`,
+      }, 503);
     }
 
     const lastId = await getLastMessageId();

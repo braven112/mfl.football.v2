@@ -154,6 +154,57 @@ admin pages, default to `<details>` over a custom toggle. Don't add
 
 ---
 
+## 2026-09-03 - A Health Row That Reads `!!process.env.X` Is Not A Health Row
+
+**Context:** The Vercel copy of `GROUPME_SERVICE_TOKEN` was revoked. Every
+GroupMe read from the site 401'd for an unknown length of time while the ops
+panel rendered a green `SET` pill for that exact variable, because the check
+behind it was `!!process.env.GROUPME_SERVICE_TOKEN`. A revoked token is still a
+non-empty string. Nobody noticed sooner because the scheduled Schefter scans
+kept succeeding — **GitHub Actions holds its own copy of the secret**, so the
+cron lane and the Vercel runtime can disagree indefinitely and only the
+runtime's failures are invisible.
+
+**Insight:** Presence and validity are different questions, and a dashboard
+that asks the first while displaying the answer to the second is worse than no
+dashboard — it actively certifies a broken system as healthy. This is the
+credential-shaped sibling of the 2026-04-30 queue-pill insight above: the panel
+reported what it could cheaply see rather than what it actually needed to know.
+
+Three states minimum, and the third is the one people forget:
+- **not-set** — never configured. Must stay distinct; it has a different fix.
+- **rejected** — configured and refused (401/403). The state that was invisible.
+- **unreachable** — network error, timeout, unrecognized body. This must NOT
+  be reported as a bad credential. A dashboard that cries "REVOKED" every time
+  GroupMe has a bad minute trains the reader to ignore the row, which returns
+  us to where we started.
+
+**Evidence:** `checkServiceTokenHealth()` in `src/utils/groupme-client.ts`
+probes `GET /v3/users/me`. `src/pages/api/admin/schefter-stats.ts` ships the
+result as `vercelEnv.groupmeToken`; `AdminDashboard.astro` renders
+VALID / REVOKED / missing / unchecked. `tests/groupme-token-health.test.ts`
+pins all four states and asserts no surface regresses to reading presence.
+`src/pages/api/groupme/sync.ts` had the identical presence-only guard and got
+the same treatment — when you fix one of these, grep for the others.
+
+**Recommendation:** Probe-backed rows need a cache or they violate this page's
+60s-poll budget (see Architectural Notes). Two details that are load-bearing:
+
+- **Key the cache on the secret's VALUE, not just a timestamp.** Rotating the
+  env var must invalidate the verdict immediately — otherwise the admin fixes
+  the token, reloads, still sees REVOKED, and concludes the fix didn't work.
+- **Collapse concurrent calls into one in-flight promise.** The page polls, and
+  a TTL alone does not stop a thundering herd on a cold start.
+
+**Still presence-only on this dashboard, deliberately:** `ANTHROPIC_API_KEY`,
+`SCHEFTER_TIPSTER_SALT`, `GITHUB_ADMIN_TOKEN`, and the Upstash pair. The salt
+has no probe endpoint (it is a salt, not a credential). The other three DO have
+cheap validity probes and carry the same latent bug — the GitHub PAT already
+half-reports it, since its per-variable rows fail visibly when the token is
+bad. Worth doing when one of them next burns someone.
+
+---
+
 ## 2026-04-30 - Deferred Follow-Ups (Not Done This PR)
 
 **1. GitHub API calls fire every 60s regardless of `<details>` state.**

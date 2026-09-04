@@ -17,10 +17,209 @@ function getGroupId(): string {
   return id;
 }
 
+/** The env vars that can supply the service token, in precedence order. */
+const SERVICE_TOKEN_VARS = ['GROUPME_SERVICE_TOKEN', 'GROUPME_ACCESS_TOKEN'] as const;
+export type GroupMeTokenSource = (typeof SERVICE_TOKEN_VARS)[number];
+
+/**
+ * Resolve the service token AND say which variable supplied it. The source
+ * matters to every operator-facing message: naming `GROUPME_SERVICE_TOKEN` at
+ * a deployment that is actually running on the `GROUPME_ACCESS_TOKEN` fallback
+ * sends an on-call admin to rotate the wrong secret.
+ */
+function readServiceToken(): { token: string; source: GroupMeTokenSource } | null {
+  for (const source of SERVICE_TOKEN_VARS) {
+    const token = process.env[source];
+    if (token) return { token, source };
+  }
+  return null;
+}
+
 function getServiceToken(): string {
-  const token = process.env.GROUPME_SERVICE_TOKEN || process.env.GROUPME_ACCESS_TOKEN;
-  if (!token) throw new Error('[groupme] GROUPME_SERVICE_TOKEN not configured');
-  return token;
+  const resolved = readServiceToken();
+  if (!resolved) throw new Error(`[groupme] no service token — set ${SERVICE_TOKEN_VARS.join(' or ')}`);
+  return resolved.token;
+}
+
+/**
+ * Service-token health.
+ *
+ * `not-set` and `rejected` are DELIBERATELY different states. A revoked token
+ * is still a truthy string, so `!!process.env.GROUPME_SERVICE_TOKEN` reports a
+ * dead credential as healthy — which is exactly what the admin dashboard did
+ * while every GroupMe read 401'd. Anything that surfaces token health to a
+ * human must distinguish "never configured" from "configured and refused".
+ *
+ * `unreachable` means we could not get an answer (network error, timeout) —
+ * it is NOT evidence the token is bad, so callers should not treat it as such.
+ */
+export type GroupMeTokenState = 'not-set' | 'rejected' | 'valid' | 'unreachable';
+
+export interface GroupMeTokenHealth {
+  state: GroupMeTokenState;
+  /** true only when GroupMe accepted the token. */
+  ok: boolean;
+  /** Epoch ms of the probe this result came from (not of this call). */
+  checkedAt: number;
+  /** HTTP status GroupMe answered with, when we got that far. */
+  httpStatus?: number;
+  /** Short human-readable reason, safe to render. Never contains the token. */
+  detail?: string;
+  /** The account the token authenticates as, when valid. */
+  userName?: string;
+  /**
+   * Which env var supplied the token. Absent only for `not-set`. Operator-
+   * facing labels and rotation hints must use THIS, not a hardcoded name.
+   */
+  source?: GroupMeTokenSource;
+}
+
+/** How long a probe result stands before we ask GroupMe again. */
+const TOKEN_PROBE_TTL_MS = 5 * 60 * 1000;
+/** A failure to reach GroupMe is likely transient — retry sooner. */
+const TOKEN_PROBE_ERROR_TTL_MS = 30 * 1000;
+// Generous on purpose: a warm probe answers in ~300ms, but the first fetch out
+// of a cold lambda paid >5s here during testing, and a timeout reads as
+// `unreachable` — an honest "unchecked", but still a worse answer than waiting.
+const TOKEN_PROBE_TIMEOUT_MS = 8000;
+
+/**
+ * Cached probe, keyed on the token itself so a rotation invalidates the cache
+ * immediately rather than leaving a stale `rejected` on screen for the TTL.
+ * `inFlight` collapses concurrent dashboard loads into one request.
+ */
+let tokenProbeCache: { key: string; result: GroupMeTokenHealth; expiresAt: number } | null = null;
+let tokenProbeInFlight: { key: string; promise: Promise<GroupMeTokenHealth> } | null = null;
+/**
+ * Monotonic id of the newest probe started. A slow probe that resolves after a
+ * newer one has already landed must NOT overwrite the fresher verdict — with a
+ * re-check button on the dashboard that is a live race, and losing it pins the
+ * stale answer for the whole TTL.
+ */
+let tokenProbeGeneration = 0;
+
+async function probeServiceToken(token: string): Promise<GroupMeTokenHealth> {
+  const checkedAt = Date.now();
+  try {
+    // Header auth, not `?token=`: a fetch rejection can carry the request URL
+    // in its message (`Failed to parse URL from …?token=SECRET`), and that
+    // message goes into `detail`, which is returned as JSON and rendered on the
+    // dashboard. Keeping the credential out of the URL removes the leak at the
+    // source rather than scrubbing it downstream.
+    const res = await fetch(`${API_BASE}/users/me`, {
+      headers: { 'X-Access-Token': token },
+      signal: AbortSignal.timeout(TOKEN_PROBE_TIMEOUT_MS),
+    });
+
+    if (res.status === 401 || res.status === 403) {
+      return {
+        state: 'rejected',
+        ok: false,
+        checkedAt,
+        httpStatus: res.status,
+        detail: 'GroupMe rejected the token — it has been revoked or regenerated.',
+      };
+    }
+
+    if (!res.ok) {
+      return {
+        state: 'unreachable',
+        ok: false,
+        checkedAt,
+        httpStatus: res.status,
+        detail: `GroupMe returned HTTP ${res.status}.`,
+      };
+    }
+
+    const data = (await res.json().catch(() => null)) as GroupMeUserResponse | null;
+    if (!data?.response?.id) {
+      return {
+        state: 'unreachable',
+        ok: false,
+        checkedAt,
+        httpStatus: res.status,
+        detail: 'GroupMe answered 200 with an unrecognized body.',
+      };
+    }
+
+    return {
+      state: 'valid',
+      ok: true,
+      checkedAt,
+      httpStatus: res.status,
+      userName: data.response.name,
+    };
+  } catch (err) {
+    return {
+      state: 'unreachable',
+      ok: false,
+      checkedAt,
+      // Belt and braces alongside the header auth above: `detail` is documented
+      // as never containing the token, so redact rather than trust the shape of
+      // an error message we do not author.
+      detail: `Could not reach GroupMe: ${redactToken((err as Error)?.message ?? String(err), token)}`,
+    };
+  }
+}
+
+/** Remove the token from text bound for a response body or the DOM. */
+function redactToken(text: string, token: string): string {
+  return token ? text.split(token).join('[redacted]') : text;
+}
+
+/**
+ * Probe the service token against `GET /v3/users/me` and report what GroupMe
+ * actually said. Cached briefly (see TTLs above) so an admin page that polls
+ * does not hammer the API; pass `{ force: true }` for an explicit re-check.
+ */
+export async function checkServiceTokenHealth(opts?: { force?: boolean }): Promise<GroupMeTokenHealth> {
+  const resolved = readServiceToken();
+  if (!resolved) {
+    return {
+      state: 'not-set',
+      ok: false,
+      checkedAt: Date.now(),
+      detail: `Neither ${SERVICE_TOKEN_VARS.join(' nor ')} is set in this environment.`,
+    };
+  }
+  const { token, source } = resolved;
+
+  const now = Date.now();
+  if (!opts?.force && tokenProbeCache?.key === token && tokenProbeCache.expiresAt > now) {
+    return tokenProbeCache.result;
+  }
+  if (!opts?.force && tokenProbeInFlight?.key === token) {
+    return tokenProbeInFlight.promise;
+  }
+
+  // Claim a generation BEFORE starting, so a probe that resolves out of order
+  // can tell it has been superseded. A `force` re-check overlapping an in-flight
+  // poll is the case that makes this reachable.
+  const generation = ++tokenProbeGeneration;
+
+  const promise = probeServiceToken(token).then((probed) => {
+    // Stamped here rather than inside the probe so every state carries it.
+    const result: GroupMeTokenHealth = { ...probed, source };
+    if (generation === tokenProbeGeneration) {
+      const ttl = result.state === 'unreachable' ? TOKEN_PROBE_ERROR_TTL_MS : TOKEN_PROBE_TTL_MS;
+      tokenProbeCache = { key: token, result, expiresAt: Date.now() + ttl };
+    }
+    // The caller still gets the answer to the probe IT asked for; only the
+    // shared cache is reserved for the newest one.
+    return result;
+  }).finally(() => {
+    if (tokenProbeInFlight?.promise === promise) tokenProbeInFlight = null;
+  });
+
+  tokenProbeInFlight = { key: token, promise };
+  return promise;
+}
+
+/** Test seam — drops the cached probe so a suite can re-probe deterministically. */
+export function resetServiceTokenHealthCache(): void {
+  tokenProbeCache = null;
+  tokenProbeInFlight = null;
+  tokenProbeGeneration++;
 }
 
 /**
