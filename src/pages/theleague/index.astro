@@ -457,11 +457,17 @@ if (heroState.phase === 'tagged-showcase' && heroState.taggedShowcaseProps) {
     };
   });
 }
-// League-scope the session's franchise id once, for every hero cast on this
-// page: AFL ids share TheLeague's space (both have 0001-0016; the AFL has 24),
-// so an AFL session's 0003 would be handed TheLeague 0003's player and told it
-// is theirs. Same guard as heroBackdropTeam above — a visitor from the other
-// league is a guest here.
+// League-scope the session's franchise id once, for every hero on this page —
+// the casts below AND the `userFranchiseId` prop handed to SeasonDailyHero,
+// which its standings and matchup heroes use to highlight "your" row. AFL ids
+// share TheLeague's space (both have 0001-0016; the AFL has 24), so an AFL
+// session's 0003 would be handed TheLeague 0003's player and row and told they
+// are theirs. Same guard as heroBackdropTeam above — a visitor from the other
+// league is a guest here, and undefined simply highlights nobody.
+//
+// Keep any note about this ON THIS DECLARATION, never as a `{/* … */}` comment
+// in the component's prop list: that parses at runtime but breaks `astro
+// check`'s template parse (+6 errors on the ratchet, none visible in dev).
 const heroFranchiseId = authUser?.leagueId === THELEAGUE.id ? userFranchiseId : undefined;
 
 if (heroState.phase === 'cut-watch' && heroState.cutWatchProps) {
@@ -483,21 +489,27 @@ if (heroState.phase === 'preseason-countdown' && heroState.preseasonProps) {
   // the league-wide opener pick. See castRandomStarterModel.
   kickoffGame = getKickoffGame(leagueYear, 'theleague', now);
   const candidates = getWeekGameCandidates(leagueYear, 'theleague', now);
+  const ON_TIER_OPENER = 'Kickoff Night';
   preseasonModel = castRandomStarterModel(
     candidates,
     hpPlayerIdentityMap,
     heroFranchiseId,
     now,
-    'Kickoff Night',
+    ON_TIER_OPENER,
     8,
     'Your First Starter',
+    'On Your Roster',
   );
-  // "Your Kickoff Starter" is only true for a player in the opener itself —
-  // an owner playing Sunday carries the caster's own later-game descriptor.
+  // "Your Kickoff Starter" is only true for a likely starter in the opener
+  // itself. The caster swaps the descriptor when the pick is in a later game or
+  // outside the starter tier, so keeping the base one IS the on-tier-opener
+  // signal — an owner whose only opener player is a bench guy gets the honest
+  // 'In the Opener' caption instead.
   const openerCodes = new Set(kickoffGame?.teamCodes ?? []);
   preseasonModelIsOwn =
     !!preseasonModel &&
     !!heroFranchiseId &&
+    preseasonModel.descriptor === ON_TIER_OPENER &&
     openerCodes.has(preseasonModel.nflTeam) &&
     candidates.some((c) => c.playerId === preseasonModel!.mflId && castsFor(c, heroFranchiseId));
   // No slate data (schedule feed missing) or no projections yet → franchise
@@ -509,13 +521,20 @@ if (heroState.phase === 'preseason-countdown' && heroState.preseasonProps) {
     // Scope to the owner BEFORE casting — castRosterModel widens to the league
     // on an empty own pool, and a signed-in owner must never be shown someone
     // else's player here either.
-    const headliners = heroFranchiseId ? all.filter((h) => h.franchiseId === heroFranchiseId) : all;
+    //
+    // Unless the id rosters NOBODY: the commissioner signs in as franchise
+    // 0000, which owns no players, so scoping strictly left them with no hero
+    // at all. A franchise absent from the roster feed is not an owner being
+    // protected from a stranger — it is a viewer, and viewers get the
+    // league-wide pick.
+    const rostersPlayers = !!heroFranchiseId && all.some((h) => h.franchiseId === heroFranchiseId);
+    const headliners = rostersPlayers ? all.filter((h) => h.franchiseId === heroFranchiseId) : all;
     // 'Your Headliner' rather than the isOwn flag: that flag makes the hero say
     // "Your Kickoff Starter" and claim the player is in the opener, which a
     // headliner cast has no basis for — this branch runs precisely when we have
     // no slate to place him in. The descriptor keeps the ownership signal
     // without the claim.
-    const descriptor = heroFranchiseId && headliners.length > 0 ? 'Your Headliner' : 'Headliner';
+    const descriptor = rostersPlayers ? 'Your Headliner' : 'Headliner';
     preseasonModel = castRosterModel(headliners, hpPlayerIdentityMap, heroFranchiseId, now, descriptor);
     preseasonModelIsOwn = false;
   }
@@ -724,7 +743,7 @@ if ((heroState.phase === 'playoffs' || heroState.phase === 'championship') && he
         resolveLeaguePath={r}
         spriteUrl={spriteUrl}
         liveScoring={liveScoring}
-        userFranchiseId={userFranchiseId}
+        userFranchiseId={heroFranchiseId}
         isAuthenticated={isAuthenticated}
         featureModel={featureModel}
         auctionModel={auctionModel}

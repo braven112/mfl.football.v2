@@ -316,6 +316,15 @@ export function castBestScoredModel(
  * @param laterGameDescriptor - Caption used when the pick is NOT in the week's
  *   earliest game (only reachable for a signed-in owner) — "Kickoff Starter"
  *   would be a lie for someone playing Sunday. Defaults to `descriptor`.
+ * @param offTierDescriptor - Caption used when the pick is outside the starter
+ *   tier, which happens when the owner's only players in that game are bench
+ *   guys. He is genuinely theirs and genuinely playing, so he keeps the hero —
+ *   but calling a 1.2-projected WR5 a "Starter" is the same kind of small lie.
+ *   Takes precedence over `laterGameDescriptor` — so keep it game-agnostic
+ *   ("On Your Roster", not "In the Opener"): an off-tier pick can also be in a
+ *   later game, and then both captions have to hold at once. Only ever
+ *   reachable for a signed-in owner; a guest's pool always contains its own
+ *   game's starter tier. Defaults to `descriptor`.
  */
 export function castRandomStarterModel(
   candidates: ScoredCastCandidate[],
@@ -325,6 +334,7 @@ export function castRandomStarterModel(
   descriptor: string,
   perTeam: number = 8,
   laterGameDescriptor?: string,
+  offTierDescriptor?: string,
 ): HeroModel | null {
   const eligible = candidates.filter((c) => {
     const p = players.get(c.playerId);
@@ -378,7 +388,12 @@ export function castRandomStarterModel(
   const openerKickoff = earliestKickoff(eligible);
   const isLaterGame =
     firstKickoff !== null && openerKickoff !== null && firstKickoff > openerKickoff;
-  return toModel(players.get(pick.playerId)!, isLaterGame ? laterGameDescriptor ?? descriptor : descriptor);
+  const caption = !starterTier.has(pick.playerId)
+    ? offTierDescriptor ?? descriptor
+    : isLaterGame
+      ? laterGameDescriptor ?? descriptor
+      : descriptor;
+  return toModel(players.get(pick.playerId)!, caption);
 }
 
 /**

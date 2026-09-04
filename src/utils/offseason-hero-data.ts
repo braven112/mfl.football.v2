@@ -116,17 +116,24 @@ export function getOwnerByPlayer(
  * ~72% of the league's players to an arbitrary one of their two owners.
  * Anything that asks "does THIS franchise roster him" must use this.
  *
- * Counts ACTIVE roster spots only (`status` absent or `ROSTER`), matching
- * `getFranchiseHeadliners` / `getFranchiseCompositableHeadliners`. Unlike them,
- * this one is load-bearing for it: the owner's slice is now the SOLE pool the
- * starter heroes cast from, so an unfiltered map lets a TAXI_SQUAD rookie win
- * outright as "your kickoff starter" (45 taxi + 5 IR of 386 in TheLeague's
- * 2026 feed). `getOwnerByPlayer` (singular) does NOT filter — it answers a
- * different question and has its own callers.
+ * `activeOnly` (default) counts ACTIVE roster spots only — `status` absent or
+ * `ROSTER` — matching `getFranchiseHeadliners`. That default is load-bearing
+ * for the starter heroes: the owner's slice is their SOLE pool, so an
+ * unfiltered map lets a TAXI_SQUAD rookie win outright as "your kickoff
+ * starter" (45 taxi + 5 IR of 386 in TheLeague's 2026 feed).
+ *
+ * Pass `activeOnly: false` where the question is ownership rather than
+ * startability — a taxi-squad player CAN be on the trade block, and dropping
+ * him there loses a real listing (and, if it was the owner's only one, widens
+ * their block hero to a stranger).
+ *
+ * `getOwnerByPlayer` (singular) is the old single-owner map — it answers a
+ * different question and keeps its own callers.
  */
 export function getOwnersByPlayer(
   leagueYear: number,
   league: CanonicalLeagueSlug = 'theleague',
+  { activeOnly = true }: { activeOnly?: boolean } = {},
 ): Map<string, string[]> {
   const owners = new Map<string, string[]>();
   const rosterData = readJsonFile(feedPath(league, leagueYear, 'rosters.json'));
@@ -138,7 +145,8 @@ export function getOwnersByPlayer(
         ? [franchise.player]
         : [];
     for (const p of players) {
-      if (!p?.id || (p.status && p.status !== 'ROSTER')) continue;
+      if (!p?.id) continue;
+      if (activeOnly && p.status && p.status !== 'ROSTER') continue;
       const list = owners.get(p.id);
       if (list) list.push(franchise.id);
       else owners.set(p.id, [franchise.id]);
@@ -687,7 +695,7 @@ export function getTradeBaitCandidates(
   // listing to a coin-flip franchise and the other owner's own trade-block
   // hero widens to a stranger. One entry per player still (the guest pool
   // must not weight a shared player twice); `franchiseIds` answers ownership.
-  const ownersByPlayer = getOwnersByPlayer(leagueYear, league);
+  const ownersByPlayer = getOwnersByPlayer(leagueYear, league, { activeOnly: false });
   return data
     .filter((id: unknown): id is string => typeof id === 'string' && id.length > 0)
     .map((playerId: string) => {

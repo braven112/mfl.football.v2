@@ -514,6 +514,47 @@ describe('castRandomStarterModel', () => {
     expect([...picks].sort()).toEqual(['1', '2']); // the deep bench guy stays out
   });
 
+  it('captions an off-tier pick honestly rather than calling him a starter', () => {
+    // The owner's only man in the opener is NE's WR3, outside the league
+    // starter tier. He keeps the hero — he is theirs and he is playing — but
+    // "Kickoff Starter" would be a claim about him that isn't true.
+    const players3 = mapOf(
+      player({ mflId: '1', nflTeam: 'NE' }),
+      player({ mflId: '2', nflTeam: 'NE' }),
+      player({ mflId: '3', nflTeam: 'NE' }),
+    );
+    const cands3 = [
+      { playerId: '1', franchiseId: '0002', score: 20, kickoff: OPENER },
+      { playerId: '2', franchiseId: '0002', score: 15, kickoff: OPENER },
+      { playerId: '3', franchiseId: '0001', score: 3, kickoff: OPENER },
+    ];
+    const offTier = castRandomStarterModel(
+      cands3, players3, '0001', JUL_4, 'Kickoff Starter', 2, 'Your First Starter', 'On Your Roster',
+    );
+    expect(offTier?.mflId).toBe('3');
+    expect(offTier?.descriptor).toBe('On Your Roster');
+    // An on-tier pick keeps the starter caption.
+    const onTier = castRandomStarterModel(
+      cands3, players3, '0002', JUL_4, 'Kickoff Starter', 2, 'Your First Starter', 'On Your Roster',
+    );
+    expect(onTier?.descriptor).toBe('Kickoff Starter');
+    // Off-tier wins over the later-game caption when both apply — which is why
+    // it must be game-agnostic: 'In the Opener' would be false here.
+    const both = castRandomStarterModel(
+      [
+        { playerId: '1', franchiseId: '0002', score: 20, kickoff: OPENER },
+        { playerId: '2', franchiseId: '0002', score: 15, kickoff: OPENER },
+        { playerId: '3', franchiseId: '0001', score: 3, kickoff: SUNDAY },
+      ],
+      players3, '0001', JUL_4, 'Kickoff Starter', 2, 'Your First Starter', 'On Your Roster',
+    );
+    expect(both?.descriptor).toBe('On Your Roster');
+    // Default: no off-tier descriptor given → the base caption, as before.
+    expect(
+      castRandomStarterModel(cands3, players3, '0001', JUL_4, 'Kickoff Starter', 2)?.descriptor,
+    ).toBe('Kickoff Starter');
+  });
+
   it('treats a kickoff-less pool as a single game (single-game callers)', () => {
     const model = castRandomStarterModel(cands(), players, undefined, JUL_4, 'Kickoff Night', 2, 'Later');
     expect(model?.descriptor).toBe('Kickoff Night');

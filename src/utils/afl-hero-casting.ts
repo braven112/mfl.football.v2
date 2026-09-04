@@ -111,13 +111,21 @@ export function castAflHeroModel(state: AflHeroState, input: AflCastingInput): H
     // the owner's slice is empty, which is the behavior this ladder exists to
     // avoid. A signed-in owner gets their own player or no composite at all
     // (the hero then draws its static art) — never someone else's.
-    const scoped = userFranchiseId ? pool.filter((c) => c.franchiseId === userFranchiseId) : pool;
+    // ...unless the id rosters nobody (a commissioner-style franchise absent
+    // from the roster feed). That is a viewer, not an owner to protect from a
+    // stranger, and scoping strictly would leave them with no hero at all.
+    const rostersPlayers = !!userFranchiseId && pool.some((c) => c.franchiseId === userFranchiseId);
+    const scoped = rostersPlayers ? pool.filter((c) => c.franchiseId === userFranchiseId) : pool;
     const model = castRosterModel(scoped, players, userFranchiseId, referenceDate, descriptor);
-    if (model || userFranchiseId) return model;
+    if (model || rostersPlayers) return model;
     return headliner(descriptor);
   };
 
-  const gameStarter = (descriptor: string, laterGameDescriptor: string): HeroModel | null =>
+  const gameStarter = (
+    descriptor: string,
+    laterGameDescriptor: string,
+    offTierDescriptor: string,
+  ): HeroModel | null =>
     castRandomStarterModel(
       getWeekGameCandidates(leagueYear, AFL, referenceDate),
       players,
@@ -126,6 +134,7 @@ export function castAflHeroModel(state: AflHeroState, input: AflCastingInput): H
       descriptor,
       8,
       laterGameDescriptor,
+      offTierDescriptor,
     );
 
   switch (state.kind) {
@@ -146,7 +155,10 @@ export function castAflHeroModel(state: AflHeroState, input: AflCastingInput): H
           return bestAvailable('Best Available') ?? headliner('Headliner');
         case 'afl-season-start':
           // Kickoff rule: your likely starter in the first game you play in.
-          return gameStarter('Kickoff Starter', 'Your First Starter') ?? ownRosterFallback('Headliner');
+          return (
+            gameStarter('Kickoff Starter', 'Your First Starter', 'On Your Roster') ??
+            ownRosterFallback('Headliner')
+          );
         case 'afl-trade-deadline':
           // A player actually on the block; falls back when blocks are empty.
           return (
@@ -170,9 +182,13 @@ export function castAflHeroModel(state: AflHeroState, input: AflCastingInput): H
     case 'regular-season':
       switch (state.slot) {
         case 'live-scoring':
-          return gameStarter('In Action', 'Up Next') ?? ownRosterFallback('Headliner');
+          // 'In Action' claims only that he is playing, which is true off-tier too.
+          return gameStarter('In Action', 'Up Next', 'In Action') ?? ownRosterFallback('Headliner');
         case 'game-day-preview':
-          return gameStarter('Kickoff Starter', 'Your First Starter') ?? ownRosterFallback('Headliner');
+          return (
+            gameStarter('Kickoff Starter', 'Your First Starter', 'On Your Roster') ??
+            ownRosterFallback('Headliner')
+          );
         case 'waiver-wire': {
           const model = bestAvailable('Top Target');
           return model ?? headliner('Headliner');
