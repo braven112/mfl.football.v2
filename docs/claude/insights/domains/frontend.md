@@ -133,6 +133,61 @@ hrefs to local copies, and open it in the bundled Chromium — it isolates
 
 ---
 
+## 2026-09-04 - A Swap-Simulation Probe Invents Listener Stacking That Real Navigation Does Not
+
+A Playwright probe that simulated ClientRouter swaps by re-executing inline
+scripts reported `TheLeagueLayout`'s nav-progress `document` click listener
+growing one handler per swap, on every page using that layout. It does not.
+**Measure listener counts with real navigations, or you will chase a growth
+curve the router prevents.**
+
+ClientRouter keys inline-script dedup on `script.textContent` in the
+module-level `scriptsAlreadyRan` Set
+(`astro/dist/transitions/swap-functions.js`) — seeded from the initial document
+on hard load (`router.js`'s exec-marking loop, whose return value is discarded),
+then consulted by `deselectScripts()` on every real swap, which stamps
+`data-astro-exec=""` on the incoming copy. Both halves matter: the seeding is
+what lets the FIRST swap dedup a layout script. Re-running a script's text by
+hand goes through neither, so it reproduces exactly the accumulation the router
+exists to prevent.
+
+The precondition is byte-identical text. The nav-progress script carries no
+Astro interpolation, so it is the same 2084 bytes on every page — verified
+across six, including the 404.
+
+**Measured** with real navigations (clicking genuine nav links), counting via
+CDP `DOMDebugger.getEventListeners` on uninstrumented pages rather than by
+patching `addEventListener` — an instrumented probe is one more thing that can
+be wrong, and this one was:
+
+| Path | Handler count on `document` |
+|---|---|
+| theleague → theleague ×4 | 1 at every arrival |
+| cross-league theleague ↔ afl | 1 |
+| arriving from the SplashLayout homepage | 1 (full page load — splash has no ClientRouter) |
+| through the 404 error page ×2 | 1 (a real swap; its script text is identical, so it dedups) |
+| out to splash and back in | 1 |
+
+`data-astro-exec` was `""` on every arrival. The two paths where the script
+*could* legitimately re-run — arrival from a different layout, and the error
+page — were the ones worth checking, and neither re-runs it.
+
+**Two traps for the next person measuring:**
+
+- **A net add/remove count can go negative** and is not a listener count.
+  `removeEventListener` on an unregistered handler is a silent no-op that still
+  increments a naive counter. Ask the browser instead.
+- **What legitimately climbs is `astro:page-load`,** once per distinct page
+  visited, because that is the re-init rule working. Click listeners should not
+  climb for scripts that follow it — they remove-then-add — but a
+  `data-astro-rerun` script re-executes on every swap and still stacks without
+  a teardown, which is the pairing recorded in the 2026-08-27 entry below.
+
+Re-measured after rebasing onto main with #751-#755 merged, since those PRs
+fixed two of the pages first sampled. The result above is unchanged; the
+pre-fix click-listener growth (5 → 6 → 7, then flat) is gone, and the count now
+simply tracks whichever page you are on.
+
 ## 2026-09-04 - A Per-Page Link Rendered By Two Chrome Components Will Diverge
 
 Site search existed on TheLeague and, in a sense, on the AFL too: the AFL had
