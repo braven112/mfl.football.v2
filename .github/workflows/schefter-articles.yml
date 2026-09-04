@@ -24,6 +24,15 @@ on:
     # leagues). Stays at 16:00 from when cut-watch ran daily at 15:00 and
     # would have shadowed a Wednesday mapping; no reason to churn it back.
     - cron: "0 16 * * 3"
+    # Wednesday 10am PT (17:00 UTC) — owners-poll-nag. The count-only turnout
+    # reminder while Tuesday's ballot is still open. Posts nothing at full
+    # turnout and nothing when no ballot is open, so it is safe year-round.
+    - cron: "0 17 * * 3"
+    # Wednesday 7pm PT (02:00 UTC Thursday) — owners-poll-close. Tallies the
+    # ballot into Tuesday's issue and posts the reveal. Runs an hour after the
+    # 6pm PT close so a ballot cast at the deadline is always counted; the pass
+    # refuses to tally a window that has not actually closed.
+    - cron: "0 2 * * 4"
   workflow_dispatch:
     inputs:
       type:
@@ -41,6 +50,8 @@ on:
           - team-grades
           - schedule-strength
           - pecking-order
+          - owners-poll-nag
+          - owners-poll-close
           - schedule-release
       week:
         description: "Override week number (optional)"
@@ -88,6 +99,8 @@ jobs:
               "0 13 * * 2") TYPE="weekly-recap" ;;
               "0 14 * * 2") TYPE="pecking-order" ;;
               "0 16 * * 3") TYPE="schedule-strength" ;;
+              "0 17 * * 3") TYPE="owners-poll-nag" ;;
+              "0 2 * * 4")  TYPE="owners-poll-close" ;;
               "0 5 * * 4")  TYPE="waiver-pickups" ;;
               "0 15 * * 5") TYPE="weekend-preview" ;;
               "0 16 * * 6") TYPE="matchup-preview" ;;
@@ -134,6 +147,21 @@ jobs:
             # a failure on one must not cost the other its issue.
             node scripts/generate-pecking-order.mjs --league theleague --publish $WEEK_ARG
             node scripts/generate-pecking-order.mjs --league afl-fantasy --publish $WEEK_ARG || echo "AFL pecking order failed (non-fatal)"
+          elif [ "$ARTICLE_TYPE" = "owners-poll-nag" ]; then
+            # Count-only turnout reminder. NO @-mentions and no names — that is
+            # a product decision (docs/plans/owners-poll.md), not chat styling.
+            # Writes nothing to disk, so the commit step is skipped below.
+            # Fails loudly on missing credentials rather than reporting a quiet
+            # week, so a broken deployment cannot hide for a season.
+            node scripts/generate-pecking-order.mjs --nag-poll --publish --league theleague
+            node scripts/generate-pecking-order.mjs --nag-poll --publish --league afl-fantasy || echo "AFL poll nag failed (non-fatal)"
+          elif [ "$ARTICLE_TYPE" = "owners-poll-close" ]; then
+            # Amends Tuesday's ALREADY-PUBLISHED issue with the tally. The AI is
+            # never called on this path: rewriting the headline and blurbs
+            # owners read on Tuesday would change the column underneath them.
+            # A league with no open ballot is a clean no-op.
+            node scripts/generate-pecking-order.mjs --close-poll --publish --league theleague
+            node scripts/generate-pecking-order.mjs --close-poll --publish --league afl-fantasy || echo "AFL poll close failed (non-fatal)"
           elif [ "$ARTICLE_TYPE" = "schedule-strength" ]; then
             # The Gauntlet runs for BOTH leagues: compute fresh derived data
             # first (the article reads the derived JSON, never raw feeds), then
@@ -165,7 +193,10 @@ jobs:
           fi
 
       - name: Commit and push
-        if: steps.resolve.outputs.type != ''
+        # owners-poll-nag posts to chat and touches no file — running the
+        # committer for it would be a no-op that still costs a checkout race
+        # against the other article crons.
+        if: steps.resolve.outputs.type != '' && steps.resolve.outputs.type != 'owners-poll-nag'
         env:
           ARTICLE_TYPE: ${{ steps.resolve.outputs.type }}
         run: |
@@ -181,7 +212,7 @@ jobs:
             FILES="$FILES,data/afl-fantasy/schefter-feed.json,data/theleague/derived,data/afl-fantasy/derived"
           elif [ "$ARTICLE_TYPE" = "schedule-release" ]; then
             FILES="$FILES,data/afl-fantasy/schefter-feed.json"
-          elif [ "$ARTICLE_TYPE" = "pecking-order" ]; then
+          elif [ "$ARTICLE_TYPE" = "pecking-order" ] || [ "$ARTICLE_TYPE" = "owners-poll-close" ]; then
             FILES="data/theleague/pecking-order,data/afl-fantasy/pecking-order"
           fi
           node scripts/commit-feed-and-push.mjs \

@@ -1,0 +1,353 @@
+/**
+ * The Owners' Poll — the open pass, the close pass, and their chat copy.
+ *
+ * Called by scripts/generate-pecking-order.mjs. Kept out of that file because
+ * it already runs to 800 lines and because the poll is ADDITIVE to the column:
+ * everything here is written so that a poll failure degrades to "the column
+ * publishes without a poll section" rather than taking the column down.
+ *
+ * See docs/plans/owners-poll.md.
+ */
+
+import { leagueUrl } from '../../src/config/leagues-data.mjs';
+import {
+  resolveOwnersPollWindow,
+  windowHours,
+  SHORT_WINDOW_HOURS,
+} from '../../src/utils/owners-poll-window.mjs';
+import { normalizeFranchiseId } from '../../src/utils/franchise-id.mjs';
+import {
+  tallyOwnersPoll,
+  consensusRankMap,
+  contrarianIndex,
+  homerIndex,
+  describeScoring,
+} from './owners-poll-math.mjs';
+import {
+  ownersPollRedis,
+  writeWindow,
+  readWindow,
+  clearWindow,
+  countBallots,
+  readAllBallots,
+} from './owners-poll-redis.mjs';
+
+/** Where the ballot lives, for every message that links to it. */
+export const BALLOT_PATH = '/pecking-order/ballot';
+
+/**
+ * Open a ballot alongside a freshly written issue.
+ *
+ * Returns the `ownersPoll` block to stamp on the issue, or null when the poll
+ * can't or shouldn't open. Null is not an error: the caller publishes the
+ * column without a poll section, which is the correct degraded state.
+ */
+export async function openPoll({ league, year, week, eligibleFranchiseIds, now = new Date(), log = console }) {
+  const poll = league.ownersPoll;
+  if (!poll?.enabled) return null;
+
+  if (eligibleFranchiseIds.length <= poll.slots) {
+    log.warn?.(
+      `  [poll] ${league.name} has ${eligibleFranchiseIds.length} franchises but ${poll.slots} ballot slots — not opening.`,
+    );
+    return null;
+  }
+
+  const redis = ownersPollRedis();
+  if (!redis) {
+    // Additive-not-fatal: the column is the product, the poll is a section of
+    // it. Failing the whole run over storage would trade a working column for
+    // a missing one.
+    log.warn?.('  [poll] No Redis credentials — publishing the column without a ballot.');
+    return null;
+  }
+
+  const window = resolveOwnersPollWindow({ publishedAt: now, closeHourPT: poll.closeHourPT });
+  const hours = windowHours(window);
+  if (hours < SHORT_WINDOW_HOURS) {
+    log.warn?.(
+      `  [poll] Window is only ${hours.toFixed(1)}h (under ${SHORT_WINDOW_HOURS}h) — a late run?`,
+    );
+  }
+
+  const record = {
+    year,
+    week,
+    ...window,
+    slots: poll.slots,
+    eligibleFranchiseIds,
+  };
+
+  try {
+    await writeWindow(redis, league.navSlug, record);
+  } catch (err) {
+    log.warn?.(`  [poll] Could not open the ballot: ${err.message}`);
+    return null;
+  }
+
+  log.log?.(`  [poll] Ballot open for Week ${week} — closes ${window.closesAt} (${hours.toFixed(1)}h).`);
+
+  return {
+    status: 'open',
+    opensAt: window.opensAt,
+    closesAt: window.closesAt,
+    slots: poll.slots,
+    quorum: poll.quorum,
+    eligibleVoters: eligibleFranchiseIds.length,
+    methodology: describeScoring(poll.slots, poll.quorum, eligibleFranchiseIds.length),
+  };
+}
+
+/**
+ * Close the ballot and tally it.
+ *
+ * @returns {{ block, ballotsIn, dropped, hasQuorum }} the `ownersPoll` block to
+ *   write over the issue's open one.
+ *
+ * Unlike the open pass, missing Redis here IS fatal — writing an empty
+ * consensus over an issue would erase ballots owners actually cast, and a
+ * silent no-op would leave the column advertising a ballot that never resolves.
+ */
+export async function closePoll({ league, issue, compositeRankByFid, now = new Date(), log = console }) {
+  const poll = league.ownersPoll;
+  if (!poll?.enabled) return null;
+
+  const redis = ownersPollRedis();
+  if (!redis) throw new Error('Owners\' Poll close pass needs Redis credentials.');
+
+  const window = await readWindow(redis, league.navSlug);
+  if (!window) {
+    log.log?.('  [poll] No open ballot to close.');
+    return null;
+  }
+  if (window.year !== issue.year || window.week !== issue.week) {
+    throw new Error(
+      `Open ballot is Week ${window.week} (${window.year}) but the issue is Week ${issue.week} (${issue.year}).`,
+    );
+  }
+  if (Date.parse(window.closesAt) > now.getTime()) {
+    log.log?.(
+      `  [poll] Ballot is still open until ${window.closesAt} — not tallying yet.`,
+    );
+    return null;
+  }
+
+  const { ballots, dropped, stored } = await readAllBallots(
+    redis,
+    league.navSlug,
+    window.year,
+    window.week,
+    { slots: window.slots, eligibleFranchiseIds: window.eligibleFranchiseIds },
+  );
+  if (dropped > 0) {
+    // Said out loud rather than swallowed: the turnout meter counted these,
+    // so a silent drop makes the published poll smaller than owners were told.
+    log.warn?.(`  [poll] Dropped ${dropped} of ${stored} stored ballots (no longer valid).`);
+  }
+
+  const tally = tallyOwnersPoll({
+    ballots,
+    eligibleFranchiseIds: window.eligibleFranchiseIds,
+    slots: window.slots,
+    quorum: poll.quorum,
+    compositeRankByFid,
+  });
+
+  const consensus = consensusRankMap(tally);
+  const voters = ballots.map((ballot) => ({
+    franchiseId: ballot.franchiseId,
+    ranking: ballot.ranking,
+    submittedAt: ballot.submittedAt,
+    updatedAt: ballot.updatedAt,
+    contrarianIndex: round2(contrarianIndex(ballot.ranking, consensus)),
+    homerIndex: homerIndex({
+      franchiseId: ballot.franchiseId,
+      ranking: ballot.ranking,
+      consensusRankByFid: consensus,
+      slots: window.slots,
+    }),
+  }));
+
+  // The pointer goes LAST, and only once the tally succeeded: clearing it
+  // first would close voting on a run that then threw, leaving a week with no
+  // ballot and no result.
+  await clearWindow(redis, league.navSlug);
+
+  const nonVoters = window.eligibleFranchiseIds.filter(
+    (fid) => !ballots.some((b) => b.franchiseId === fid),
+  );
+
+  const block = {
+    status: 'closed',
+    opensAt: window.opensAt,
+    closesAt: window.closesAt,
+    slots: window.slots,
+    quorum: poll.quorum,
+    eligibleVoters: window.eligibleFranchiseIds.length,
+    ballotsIn: tally.ballotsIn,
+    hasQuorum: tally.hasQuorum,
+    methodology: describeScoring(window.slots, poll.quorum, window.eligibleFranchiseIds.length),
+    ranked: tally.ranked,
+    unranked: tally.unranked,
+    // Published in full — every ballot becomes public once its week closes.
+    // That is the accountability half of the feature, and it is the reason
+    // voting is worth doing.
+    ballots: voters,
+    // A COUNT of who didn't vote, never a list. The count-only decision
+    // (docs/plans/owners-poll.md) is a product rule, not just chat copy: an
+    // issue file carrying names would route straight around it.
+    nonVoterCount: nonVoters.length,
+  };
+
+  log.log?.(
+    `  [poll] Closed Week ${window.week}: ${tally.ballotsIn}/${window.eligibleFranchiseIds.length} ballots, ` +
+      `quorum ${tally.hasQuorum ? 'met' : 'NOT met'}.`,
+  );
+
+  return { block, ballotsIn: tally.ballotsIn, dropped, hasQuorum: tally.hasQuorum };
+}
+
+function round2(x) {
+  if (x == null || !Number.isFinite(x)) return null;
+  return Math.round(x * 100) / 100;
+}
+
+// ─── Chat copy ─────────────────────────────────────────────────────
+
+/**
+ * The line appended to Tuesday's column announcement.
+ *
+ * Leads with the disagreement bait rather than the chore. "Cast your ballot"
+ * is a task; "the computer says X is #1, disagree?" is an invitation, and the
+ * whole feature is built on owners wanting to argue with the machine.
+ */
+export function buildOpenLine(issue, teams, league) {
+  const poll = issue.ownersPoll;
+  if (!poll || poll.status !== 'open') return null;
+  const top = issue.rankings[0];
+  const bottom = issue.rankings[issue.rankings.length - 1];
+  const name = (fid) => teams.get(fid)?.nameMedium ?? fid;
+  return [
+    `🗳️ THE OWNERS' POLL is open — rank your top ${poll.slots}.`,
+    `The computer has ${name(top.franchiseId)} #1 and ${name(bottom.franchiseId)} last. Argue with it ▸ ${leagueUrl(league, BALLOT_PATH)}`,
+  ].join('\n');
+}
+
+/**
+ * Wednesday-morning reminder. COUNT ONLY — no names, no @-mentions.
+ *
+ * That is a deliberate product decision, not an oversight: naming non-voters
+ * was the stronger lever and was rejected. Compensate with scarcity (a
+ * deadline and a shrinking number), never by adding the names back.
+ */
+export function buildNagMessage({ league, week, ballotsIn, eligibleVoters, closesAt }) {
+  const remaining = eligibleVoters - ballotsIn;
+  if (remaining <= 0) return null;
+  const closes = new Date(closesAt).toLocaleString('en-US', {
+    timeZone: 'America/Los_Angeles',
+    weekday: 'long',
+    hour: 'numeric',
+    hour12: true,
+  });
+  return [
+    `🗳️ Owners' Poll — Week ${week}: ${ballotsIn} of ${eligibleVoters} ballots in.`,
+    `${remaining} to go, and it closes ${closes} PT ▸ ${leagueUrl(league, BALLOT_PATH)}`,
+  ].join('\n');
+}
+
+/** The Wednesday-evening reveal. */
+export function buildRevealMessage({ league, issue, teams }) {
+  const poll = issue.ownersPoll;
+  if (!poll || poll.status !== 'closed') return null;
+  const name = (fid) => teams.get(fid)?.nameMedium ?? fid;
+
+  if (!poll.hasQuorum) {
+    return [
+      `🗳️ Owners' Poll — Week ${issue.week}: only ${poll.ballotsIn} of ${poll.eligibleVoters} ballots came in.`,
+      `That is short of the ${poll.quorum} needed, so there is no consensus this week and the column runs on the numbers alone.`,
+      `Next Tuesday ▸ ${leagueUrl(league, BALLOT_PATH)}`,
+    ].join('\n');
+  }
+
+  const lines = [`🗳️ THE OWNERS' POLL — Week ${issue.week} (${poll.ballotsIn}/${poll.eligibleVoters} ballots)`];
+  poll.ranked.slice(0, 3).forEach((row) => {
+    const firsts = row.firstPlaceVotes > 0 ? ` (${row.firstPlaceVotes})` : '';
+    lines.push(`${row.rank}. ${name(row.franchiseId)}${firsts} — ${row.points} pts`);
+  });
+
+  // The most interesting number in the whole feature: where the room and the
+  // machine disagree most.
+  const biggest = [...poll.ranked].sort((a, b) => Math.abs(b.delta) - Math.abs(a.delta))[0];
+  if (biggest && Math.abs(biggest.delta) >= 2) {
+    const dir = biggest.delta > 0 ? 'higher' : 'lower';
+    lines.push(
+      `↕️ Biggest split: the room has ${name(biggest.franchiseId)} ${Math.abs(biggest.delta)} spots ${dir} than the computer.`,
+    );
+  }
+
+  const homer = [...(poll.ballots ?? [])]
+    .filter((b) => b.homerIndex != null)
+    .sort((a, b) => b.homerIndex - a.homerIndex)[0];
+  if (homer && homer.homerIndex > 0) {
+    lines.push(
+      `🏠 Homer of the week: ${name(homer.franchiseId)}, ${homer.homerIndex} spots above where the room has them.`,
+    );
+  }
+
+  lines.push(`Every ballot ▸ ${leagueUrl(league, '/pecking-order')}`);
+  return lines.join('\n');
+}
+
+/**
+ * Turnout for the nag, without reading a single ballot.
+ *
+ * Returns a REASON rather than a bare null, because "we could not read the
+ * poll" and "there is no ballot open" are different facts and must not merge —
+ * that conflation is the recurring bug class in this repo (see
+ * resolveLineupFillState, live-poll-store). A cron that prints "no ballot is
+ * open" when it actually has no credentials hides a broken deployment for as
+ * long as nobody checks by hand.
+ */
+export async function readTurnout({ league }) {
+  const redis = ownersPollRedis();
+  if (!redis) return { ok: false, reason: 'no-credentials' };
+
+  let window;
+  try {
+    window = await readWindow(redis, league.navSlug);
+  } catch (err) {
+    return { ok: false, reason: 'read-failed', error: err.message };
+  }
+  if (!window) return { ok: false, reason: 'no-window' };
+  if (Date.parse(window.closesAt) <= Date.now()) return { ok: false, reason: 'already-closed' };
+
+  const ballotsIn = await countBallots(redis, league.navSlug, window.year, window.week);
+  return {
+    ok: true,
+    week: window.week,
+    year: window.year,
+    ballotsIn,
+    eligibleVoters: window.eligibleFranchiseIds.length,
+    closesAt: window.closesAt,
+  };
+}
+
+/** One line explaining why there is no turnout to report. */
+export function describeTurnoutFailure(reason, error) {
+  switch (reason) {
+    case 'no-credentials':
+      return 'No Redis credentials — cannot tell whether a ballot is open.';
+    case 'read-failed':
+      return `Could not read the ballot window: ${error}`;
+    case 'already-closed':
+      return 'The ballot has already closed.';
+    case 'no-window':
+    default:
+      return 'No ballot is open.';
+  }
+}
+
+/** Normalize a franchise list once, for callers building eligible sets. */
+export function normalizeFranchiseIds(ids) {
+  return Array.from(new Set(Array.from(ids ?? [], (id) => normalizeFranchiseId(id)))).filter(Boolean);
+}

@@ -39,6 +39,16 @@ import { currentSeasonYear } from './lib/schefter-recurrence-ledger.mjs';
 import { isSeasonWindowOpen } from '../src/utils/pecking-order-season-window.mjs';
 import { postToGroupMe } from './lib/groupme.mjs';
 import {
+  openPoll,
+  closePoll,
+  readTurnout,
+  describeTurnoutFailure,
+  buildOpenLine,
+  buildNagMessage,
+  buildRevealMessage,
+  normalizeFranchiseIds,
+} from './lib/owners-poll-pass.mjs';
+import {
   buildFactSheet,
   getSystemPrompt,
   getUserPrompt,
@@ -72,7 +82,15 @@ const GROUPME_BOT_ENV = {
 
 function parseArgs() {
   const args = process.argv.slice(2);
-  const opts = { league: 'theleague', year: null, week: null, dryRun: false, regenerate: false, ai: null, publish: false };
+  const opts = {
+    league: 'theleague', year: null, week: null, dryRun: false, regenerate: false,
+    ai: null, publish: false,
+    // Owners' Poll passes. Each is a MODE, not a flag on the normal run: the
+    // column is generated Tuesday, the ballot is nagged Wednesday morning and
+    // tallied Wednesday evening, and conflating them would mean regenerating
+    // the column three times a week.
+    closePoll: false, nagPoll: false,
+  };
   for (let i = 0; i < args.length; i++) {
     switch (args[i]) {
       case '--league': opts.league = args[++i]; break;
@@ -81,6 +99,8 @@ function parseArgs() {
       case '--dry-run': opts.dryRun = true; break;
       case '--regenerate': opts.regenerate = true; break;
       case '--publish': opts.publish = true; break;
+      case '--close-poll': opts.closePoll = true; break;
+      case '--nag-poll': opts.nagPoll = true; break;
       case '--ai': opts.ai = true; break;
       case '--no-ai': opts.ai = false; break;
       case '-h':
@@ -100,7 +120,9 @@ function printUsage() {
   console.log(`Usage: node scripts/generate-pecking-order.mjs [--league SLUG] [--year YYYY] [--week N] [--dry-run] [--regenerate] [--publish] [--ai|--no-ai]`);
   console.log(`  --league   ${VALID_LEAGUES.join(' | ')} (default theleague)`);
   console.log(`  default    year = current season (Labor Day clock), week = last completed week`);
-  console.log(`  --publish  Post the GroupMe announcement when a new issue is written`);
+  console.log(`  --publish     Post the GroupMe announcement when a new issue is written`);
+  console.log(`  --close-poll  Tally the Owners' Poll into an existing issue and reveal it`);
+  console.log(`  --nag-poll    Post the count-only turnout reminder while the ballot is open`);
   console.log(`  --ai       Force Schefter voice (requires ANTHROPIC_API_KEY)`);
   console.log(`  --no-ai    Force templated voice (no API call)`);
 }
@@ -664,6 +686,13 @@ export function buildGroupMeAnnouncement(issue, teams, league) {
   // own apex host and adds one on the shared host, so the link never burns a
   // redirect hop or 404s.
   lines.push(`Full rankings, awards, and standings ▸ ${leagueUrl(league, '/pecking-order')}`);
+
+  // The ballot invite rides along with the column rather than as its own post:
+  // one Tuesday message, not two. buildOpenLine returns null when no ballot
+  // opened, so the announcement is unchanged for a league without the poll.
+  const openLine = buildOpenLine(issue, teams, league);
+  if (openLine) lines.push('', openLine);
+
   return lines.join('\n');
 }
 
@@ -704,9 +733,141 @@ export function resolveSeasonGate({ optsYear, now = new Date() }) {
   return { skip: false, year };
 }
 
+/**
+ * Wednesday evening: tally the ballot into Tuesday's issue and reveal it.
+ *
+ * Amends the EXISTING issue file in place rather than regenerating: the
+ * headline, lede and blurbs owners read on Tuesday must not change under them,
+ * and the AI is not called at all on this path.
+ */
+async function runClosePoll(opts, league) {
+  if (!league.ownersPoll?.enabled) {
+    console.log(`  [skip] ${league.name} does not run the Owners' Poll.`);
+    return;
+  }
+
+  const redisWindowYear = opts.year ?? currentSeasonYear();
+  const week = opts.week ?? (await resolveLatestIssueWeek(league, redisWindowYear));
+  if (!week) {
+    console.log(`  [skip] No ${league.name} issue found for ${redisWindowYear}.`);
+    return;
+  }
+
+  const outPath = issueFilePath(league, redisWindowYear, week);
+  const issue = await tryLoadJSON(outPath);
+  if (!issue) {
+    console.log(`  [skip] ${path.relative(projectRoot, outPath)} does not exist.`);
+    return;
+  }
+  if (issue.ownersPoll?.status === 'closed') {
+    console.log(`  [skip] Week ${week}'s poll is already closed.`);
+    return;
+  }
+
+  // The composite is the tiebreaker AND the ordering of the unranked block, so
+  // it comes from the issue itself — the same numbers owners saw, not a fresh
+  // computation that could have drifted.
+  const compositeRankByFid = Object.fromEntries(
+    (issue.rankings ?? []).map((r) => [r.franchiseId, r.rank]),
+  );
+
+  const result = await closePoll({ league, issue, compositeRankByFid });
+  if (!result) return;
+
+  issue.ownersPoll = result.block;
+
+  if (opts.dryRun) {
+    console.log('--- DRY RUN ---');
+    console.log(JSON.stringify(issue.ownersPoll, null, 2));
+    return;
+  }
+
+  await fs.writeFile(outPath, JSON.stringify(issue, null, 2) + '\n', 'utf8');
+  console.log(`  ✓ Amended ${path.relative(projectRoot, outPath)}`);
+
+  if (opts.publish) {
+    const teamsConfig = await loadTeamsConfig(league);
+    const text = buildRevealMessage({ league, issue, teams: teamsConfig.teams });
+    if (text) await postPollMessage(text, league, 'reveal');
+  }
+}
+
+/**
+ * Wednesday morning: the count-only turnout reminder.
+ *
+ * Silent at full turnout, and silent when no ballot is open — a cron that
+ * posts "0 of 16" in the offseason is worse than no cron.
+ */
+async function runNagPoll(opts, league) {
+  if (!league.ownersPoll?.enabled) {
+    console.log(`  [skip] ${league.name} does not run the Owners' Poll.`);
+    return;
+  }
+
+  const turnout = await readTurnout({ league });
+  if (!turnout.ok) {
+    const why = describeTurnoutFailure(turnout.reason, turnout.error);
+    // A credential or read failure is NOT a clean skip: exiting 0 on it would
+    // let a broken deployment look like a quiet week for the whole season.
+    if (turnout.reason === 'no-credentials' || turnout.reason === 'read-failed') {
+      throw new Error(why);
+    }
+    console.log(`  [skip] ${why}`);
+    return;
+  }
+
+  const text = buildNagMessage({ league, ...turnout });
+  if (!text) {
+    console.log(`  [skip] All ${turnout.eligibleVoters} ballots are already in.`);
+    return;
+  }
+
+  if (opts.dryRun || !opts.publish) {
+    console.log('--- NAG PREVIEW ---');
+    console.log(text);
+    return;
+  }
+  await postPollMessage(text, league, 'nag');
+}
+
+/** Newest issue week on disk for a season, so the poll passes need no --week. */
+async function resolveLatestIssueWeek(league, year) {
+  let entries;
+  try {
+    entries = await fs.readdir(peckingOrderDir(league));
+  } catch {
+    return null;
+  }
+  const weeks = entries
+    .map((f) => f.match(new RegExp(`^${year}-(\\d{1,2})\\.json$`)))
+    .filter(Boolean)
+    .map((m) => Number(m[1]));
+  return weeks.length ? Math.max(...weeks) : null;
+}
+
+async function postPollMessage(text, league, label) {
+  const botEnv = GROUPME_BOT_ENV[league.slug];
+  const { posted } = await postToGroupMe({
+    botId: process.env[botEnv],
+    text,
+    checkStatus: true,
+    onMissingBotId: () => console.log(`  [groupme] ${botEnv} not set — skipping ${label}.`),
+    onPosted: () => console.log(`  [groupme] ${label} posted.`),
+    onHttpError: (status) => console.warn(`  [groupme] ${label} failed: HTTP ${status}`),
+    onFetchError: (err) => console.warn(`  [groupme] ${label} failed: ${err.message}`),
+  });
+  if (!posted) console.log(`  [groupme] ${label} not delivered (see above).`);
+}
+
 async function main() {
   const opts = parseArgs();
   const league = LEAGUES[opts.league];
+
+  // The poll passes operate on an issue that ALREADY EXISTS. They never
+  // generate or re-voice one — re-running the AI on Wednesday would rewrite
+  // Tuesday's published prose underneath the owners who already read it.
+  if (opts.closePoll) return runClosePoll(opts, league);
+  if (opts.nagPoll) return runNagPoll(opts, league);
 
   const gate = resolveSeasonGate({ optsYear: opts.year });
   if (gate.skip) {
@@ -756,6 +917,17 @@ async function main() {
     console.log(buildGroupMeAnnouncement(issue, teams, league));
     return;
   }
+
+  // Open the ballot BEFORE writing, so the issue carries the window it
+  // advertises. A poll that fails to open returns null and the column simply
+  // publishes without the section — additive, never fatal.
+  const pollBlock = await openPoll({
+    league,
+    year,
+    week,
+    eligibleFranchiseIds: normalizeFranchiseIds(teams.keys()),
+  });
+  if (pollBlock) issue.ownersPoll = pollBlock;
 
   await fs.mkdir(peckingOrderDir(league), { recursive: true });
   await fs.writeFile(outPath, JSON.stringify(issue, null, 2) + '\n', 'utf8');
