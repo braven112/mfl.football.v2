@@ -362,60 +362,91 @@ const copyIcons = `
   {teamList.length > 0 && (
     <script is:inline>
       (() => {
-        const input = document.querySelector('#team-filter');
-        const cards = Array.from(document.querySelectorAll('.team-grid .team-card'));
-        if (!input || cards.length === 0) return;
+        /**
+         * CLIENTROUTER-SAFE INIT (frontend.md, "Interactive scripts must re-init
+         * on astro:page-load"). The `document`-level delegation further down is
+         * FINE and deliberately left alone — its handlers close over nothing but
+         * `copyText` and resolve every element at event time, which is the one
+         * shape where a once-flag is safe (frontend.md, 2026-09-03).
+         *
+         * The ELEMENT-scoped wiring is what broke, and it broke for a different
+         * reason than usual: ClientRouter re-executes an inline script the first
+         * time it sees it, then marks it as already run for the rest of the
+         * session. So the filter and the dimension fill wired themselves on the
+         * FIRST arrival and never again — measured by driving real router
+         * navigations, the second and every later arrival came back with the
+         * team filter inert and every "size" line blank, silently. They now run
+         * from `astro:page-load`, which fires on every arrival whether or not
+         * the script itself is re-executed.
+         */
+        const initAssetsPage = () => {
+          const input = document.querySelector('#team-filter');
+          const cards = Array.from(document.querySelectorAll('.team-grid .team-card'));
+          if (!input || cards.length === 0) return;
 
-        const filterCards = (query) => {
-          const needle = query.trim().toLowerCase();
-          cards.forEach(card => {
-            const haystack = [
-              card.dataset.name,
-              card.dataset.franchiseId,
-              card.dataset.conference,
-              card.dataset.division,
-              card.dataset.tier,
-              card.dataset.aliases,
-              card.id,
-            ].join(' ').toLowerCase();
-            const match = needle === '' || haystack.includes(needle);
-            card.style.display = match ? '' : 'none';
-          });
-          // Hide a team section header when the filter empties its grid
-          document.querySelectorAll('.library-section--teams').forEach(section => {
-            const anyVisible = [...section.querySelectorAll('.team-card')]
-              .some(card => card.style.display !== 'none');
-            section.style.display = anyVisible ? '' : 'none';
-          });
-        };
+          const filterCards = (query) => {
+            const needle = query.trim().toLowerCase();
+            cards.forEach(card => {
+              const haystack = [
+                card.dataset.name,
+                card.dataset.franchiseId,
+                card.dataset.conference,
+                card.dataset.division,
+                card.dataset.tier,
+                card.dataset.aliases,
+                card.id,
+              ].join(' ').toLowerCase();
+              const match = needle === '' || haystack.includes(needle);
+              card.style.display = match ? '' : 'none';
+            });
+            // Hide a team section header when the filter empties its grid
+            document.querySelectorAll('.library-section--teams').forEach(section => {
+              const anyVisible = [...section.querySelectorAll('.team-card')]
+                .some(card => card.style.display !== 'none');
+              section.style.display = anyVisible ? '' : 'none';
+            });
+          };
 
-        const updateDimensions = (img) => {
-          const meta = img.closest('.asset-card')?.querySelector('.asset-dimensions');
-          if (!meta) return;
-          if (img.naturalWidth && img.naturalHeight) {
-            meta.textContent = `${img.naturalWidth} × ${img.naturalHeight}px`;
-          } else {
-            meta.textContent = 'Size unavailable';
-          }
-        };
-
-        const initDimensions = () => {
-          document.querySelectorAll('.asset-card img').forEach((img) => {
-            if (img.complete && img.naturalWidth) {
-              updateDimensions(img);
+          const updateDimensions = (img) => {
+            const meta = img.closest('.asset-card')?.querySelector('.asset-dimensions');
+            if (!meta) return;
+            if (img.naturalWidth && img.naturalHeight) {
+              meta.textContent = `${img.naturalWidth} × ${img.naturalHeight}px`;
             } else {
-              img.addEventListener('load', () => updateDimensions(img), { once: true });
-              img.addEventListener('error', () => {
-                const meta = img.closest('.asset-card')?.querySelector('.asset-dimensions');
-                if (meta) meta.textContent = 'Failed to load';
-              }, { once: true });
+              meta.textContent = 'Size unavailable';
             }
-          });
+          };
+
+          const initDimensions = () => {
+            document.querySelectorAll('.asset-card img').forEach((img) => {
+              if (img.complete && img.naturalWidth) {
+                updateDimensions(img);
+              } else {
+                img.addEventListener('load', () => updateDimensions(img), { once: true });
+                img.addEventListener('error', () => {
+                  const meta = img.closest('.asset-card')?.querySelector('.asset-dimensions');
+                  if (meta) meta.textContent = 'Failed to load';
+                }, { once: true });
+              }
+            });
+          };
+
+          filterCards(input.value);
+          input.addEventListener('input', (event) => filterCards(event.target.value));
+          initDimensions();
         };
 
-        filterCards(input.value);
-        input.addEventListener('input', (event) => filterCards(event.target.value));
-        initDimensions();
+        /**
+         * `document` survives the swap, so hold the registration and replace
+         * it rather than adding a second one. `astro:page-load` fires on the
+         * initial load too, so this replaces the direct calls rather than
+         * joining them.
+         */
+        if (window.__assetsPageInit) {
+          document.removeEventListener('astro:page-load', window.__assetsPageInit);
+        }
+        window.__assetsPageInit = initAssetsPage;
+        document.addEventListener('astro:page-load', initAssetsPage);
 
         const copyText = async (text) => {
           if (navigator.clipboard && window.isSecureContext) {
