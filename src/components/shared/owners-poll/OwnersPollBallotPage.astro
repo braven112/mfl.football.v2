@@ -15,8 +15,10 @@
  */
 import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
 import BallotBuilder from './BallotBuilder';
+import PollWindowAdmin from './PollWindowAdmin';
 import { getLeagueTeamBrands } from '../../../utils/league-team-brands';
 import { ensureLeaguePrefix, type LeagueDefinition } from '../../../config/leagues';
+import { isCommissionerOrAdmin } from '../../../utils/auth';
 import '../../../styles/owners-poll.css';
 import type { AuthUser } from '../../../utils/auth';
 
@@ -65,6 +67,11 @@ const teams = Object.values(brands)
   .sort((a, b) => a.nameShort.localeCompare(b.nameShort));
 
 const columnHref = ensureLeaguePrefix(league, '/pecking-order');
+
+// The panel renders for a commissioner only. Gated on the SERVER as well as
+// inside the island: shipping the control markup to every owner and hiding it
+// with a client check is the kind of gate view-source defeats.
+const isCommish = isCommissionerOrAdmin(user);
 ---
 
 <TheLeagueLayout title={`The Owners’ Poll — Cast Your Ballot | ${league.name}`}>
@@ -83,6 +90,15 @@ const columnHref = ensureLeaguePrefix(league, '/pecking-order');
         think you belong there.
       </p>
     </header>
+
+    {isCommish && (
+      <PollWindowAdmin
+        client:load
+        leagueParam={league.navSlug}
+        quorum={poll.quorum}
+        slots={poll.slots}
+      />
+    )}
 
     <BallotBuilder
       client:load

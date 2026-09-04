@@ -29,6 +29,10 @@ const fakeRedis = {
     strings.set(key, value);
     return 'OK';
   }),
+  del: vi.fn(async (key: string) => {
+    const had = strings.delete(key);
+    return had ? 1 : 0;
+  }),
   hget: vi.fn(async (key: string, field: string) => hashes.get(key)?.get(field) ?? null),
   hgetall: vi.fn(async (key: string) => {
     const h = hashes.get(key);
@@ -50,6 +54,7 @@ vi.mock('../src/utils/redis-client', () => ({
 
 import { GET as ballotGET, POST as ballotPOST } from '../src/pages/api/owners-poll/ballot';
 import { GET as turnoutGET } from '../src/pages/api/owners-poll/turnout';
+import { POST as windowPOST, GET as windowGET } from '../src/pages/api/owners-poll/window';
 import { ownersPollBallotsKey, ownersPollCurrentKey } from '../src/utils/owners-poll-ballot.mjs';
 import { resolveOwnersPollCaller } from '../src/utils/owners-poll-store';
 import { resolveOwnersPollAccess } from '../src/utils/owners-poll-access';
@@ -77,15 +82,33 @@ function openTheBallot(window: object = OPEN_WINDOW) {
   strings.set(ownersPollCurrentKey(THELEAGUE.navSlug), window);
 }
 
-function sessionCookie(franchiseId = '0003', leagueId: string = THELEAGUE.id) {
+function sessionCookie(
+  franchiseId = '0003',
+  leagueId: string = THELEAGUE.id,
+  role: 'owner' | 'commissioner' = 'owner',
+) {
   const token = createSessionToken({
     userId: 'test-user',
     username: 'Test Owner',
     franchiseId,
     leagueId,
-    role: 'owner',
+    role,
   });
   return `session_token=${token}`;
+}
+
+const commishCookie = (franchiseId = '0003', leagueId: string = THELEAGUE.id) =>
+  sessionCookie(franchiseId, leagueId, 'commissioner');
+
+function postWindow(body: unknown, cookie: string | null) {
+  return windowPOST(
+    makeContext(
+      authed('/api/owners-poll/window', cookie, {
+        method: 'POST',
+        body: JSON.stringify(body),
+      }),
+    ),
+  );
 }
 
 function makeContext(request: Request) {
@@ -482,5 +505,134 @@ describe('resolveOwnersPollAccess (page gate)', () => {
       expect(Boolean(page), `page gate for ${expected}`).toBe(expected === 'admit');
       expect(api.ok, `api gate for ${expected}`).toBe(expected === 'admit');
     }
+  });
+});
+
+describe('POST /api/owners-poll/window (commissioner control)', () => {
+  it('opens a real window a commissioner can then vote in', async () => {
+    const res = await postWindow({ action: 'open', week: 3, hours: 48 }, commishCookie());
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body).toMatchObject({ ok: true, status: 'open', quorum: 8, eligibleVoters: 16 });
+    expect(body.window).toMatchObject({ week: 3, slots: 7 });
+    expect(body.hours).toBeCloseTo(48, 0);
+
+    // The window it wrote must be the one the OWNER-facing route now reads.
+    const ballot = await ballotGET(makeContext(authed('/api/owners-poll/ballot', sessionCookie())));
+    const ballotBody = await ballot.json();
+    expect(ballotBody.status).toBe('open');
+    expect(ballotBody.window.week).toBe(3);
+  });
+
+  it('refuses a plain owner', async () => {
+    // This writes league-wide state that changes what every owner sees.
+    const res = await postWindow({ action: 'open', week: 3 }, sessionCookie('0009'));
+    expect(res.status).toBe(403);
+    expect(strings.size).toBe(0);
+  });
+
+  it('refuses an unauthenticated caller', async () => {
+    expect((await postWindow({ action: 'open', week: 3 }, null)).status).toBe(403);
+  });
+
+  it('refuses a commissioner of ANOTHER league', async () => {
+    // isCommissionerOrAdmin is league-scoped; the ?league= check is too.
+    const res = await postWindow({ action: 'open', week: 3 }, commishCookie('0001', AFL.id));
+    expect(res.status).toBe(403);
+    expect(strings.size).toBe(0);
+  });
+
+  it('validates the week and the hours rather than writing junk', async () => {
+    for (const body of [
+      { action: 'open' },
+      { action: 'open', week: 0 },
+      { action: 'open', week: 99 },
+      { action: 'open', week: 3, hours: 0 },
+      { action: 'open', week: 3, hours: 100000 },
+      { action: 'sideways' },
+    ]) {
+      expect((await postWindow(body, commishCookie())).status).toBe(400);
+    }
+    expect(strings.size).toBe(0);
+  });
+
+  it('defaults to the real Wednesday schedule when no hours are given', async () => {
+    const body = await (await postWindow({ action: 'open', week: 3 }, commishCookie())).json();
+    const closes = new Date(body.window.closesAt);
+    const weekday = new Intl.DateTimeFormat('en-US', {
+      timeZone: 'America/Los_Angeles',
+      weekday: 'short',
+    }).format(closes);
+    expect(weekday).toBe('Wed');
+  });
+
+  it('close stops voting WITHOUT touching ballots', async () => {
+    await postWindow({ action: 'open', week: 3, hours: 48 }, commishCookie());
+    hashes.set(
+      ownersPollBallotsKey(THELEAGUE.navSlug, new Date().getUTCFullYear(), 3),
+      new Map([['0003', JSON.stringify({ franchiseId: '0003', ranking: OK })]]),
+    );
+
+    const res = await postWindow({ action: 'close' }, commishCookie());
+    expect(res.status).toBe(200);
+    expect((await res.json()).status).toBe('closed');
+
+    // Voting is off...
+    const ballot = await ballotGET(makeContext(authed('/api/owners-poll/ballot', sessionCookie())));
+    expect((await ballot.json()).status).toBe('none');
+    // ...but the vote itself survives, so re-opening picks it back up.
+    const key = ownersPollBallotsKey(THELEAGUE.navSlug, new Date().getUTCFullYear(), 3);
+    expect(hashes.get(key)?.size).toBe(1);
+  });
+
+  it('reports existing ballots when re-opening a week', async () => {
+    // A commissioner recovering from a failed run should not be surprised by a
+    // non-zero count on a "fresh" open.
+    const year = new Date().getUTCFullYear();
+    hashes.set(
+      ownersPollBallotsKey(THELEAGUE.navSlug, year, 3),
+      new Map([['0003', JSON.stringify({ franchiseId: '0003', ranking: OK })]]),
+    );
+    const body = await (
+      await postWindow({ action: 'open', week: 3, year, hours: 24 }, commishCookie())
+    ).json();
+    expect(body.ballotsIn).toBe(1);
+  });
+
+  it('close on nothing is a clean no-op', async () => {
+    const res = await postWindow({ action: 'close' }, commishCookie());
+    expect(res.status).toBe(200);
+    expect((await res.json()).status).toBe('none');
+  });
+
+  it('reports a storage outage instead of claiming success', async () => {
+    redisAvailable = false;
+    const res = await postWindow({ action: 'open', week: 3, hours: 24 }, commishCookie());
+    expect(res.status).toBe(503);
+  });
+});
+
+describe('GET /api/owners-poll/window', () => {
+  it('is commissioner-only', async () => {
+    expect(
+      (await windowGET(makeContext(authed('/api/owners-poll/window', sessionCookie('0009'))))).status,
+    ).toBe(403);
+    expect(
+      (await windowGET(makeContext(authed('/api/owners-poll/window', null)))).status,
+    ).toBe(403);
+  });
+
+  it('reports no window, then the open one', async () => {
+    const before = await (
+      await windowGET(makeContext(authed('/api/owners-poll/window', commishCookie())))
+    ).json();
+    expect(before).toMatchObject({ status: 'none', window: null, eligibleVoters: 16 });
+
+    await postWindow({ action: 'open', week: 6, hours: 12 }, commishCookie());
+    const after = await (
+      await windowGET(makeContext(authed('/api/owners-poll/window', commishCookie())))
+    ).json();
+    expect(after.status).toBe('open');
+    expect(after.window.week).toBe(6);
   });
 });

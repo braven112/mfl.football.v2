@@ -286,3 +286,94 @@
 :root[data-theme='dark'] .op-card--picked {
   border-color: var(--op-team-dark, var(--op-team, var(--primary-color)));
 }
+
+/* --- commissioner window control ---------------------------------------
+ * Rendered only for a commissioner, and gated on the SERVER too — a control
+ * shipped to everyone and hidden with a client check is a gate view-source
+ * defeats.
+ */
+
+.op-admin {
+  margin: 0 0 1rem;
+  border: 1px dashed var(--content-border);
+  border-radius: var(--radius-md, 8px);
+  background: var(--content-bg-muted);
+}
+
+.op-admin__toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.6rem 0.8rem;
+  min-height: 2.75rem;
+  background: none;
+  border: 0;
+  color: var(--content-text-muted);
+  font-size: 0.85rem;
+  text-align: left;
+  cursor: pointer;
+}
+
+.op-admin__badge {
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-weight: 700;
+  padding: 0.15rem 0.4rem;
+  border-radius: 999px;
+  background: var(--content-bg);
+  border: 1px solid var(--content-border);
+  color: var(--page-text);
+}
+
+.op-admin__body {
+  padding: 0 0.8rem 0.8rem;
+  border-top: 1px solid var(--content-border);
+}
+
+.op-admin__note {
+  margin: 0.6rem 0;
+  font-size: 0.8rem;
+  color: var(--content-text-muted);
+  line-height: 1.5;
+  max-width: 46rem;
+}
+
+.op-admin__row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0.6rem;
+}
+.op-admin__row label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  font-size: 0.75rem;
+  color: var(--content-text-muted);
+}
+.op-admin__row input {
+  width: 6rem;
+  min-height: 2.5rem;
+  padding: 0.4rem 0.5rem;
+  background: var(--content-bg);
+  color: var(--page-text);
+  border: 1px solid var(--content-border);
+  border-radius: var(--radius-md, 8px);
+}
+.op-admin__row button {
+  min-height: 2.5rem;
+  padding: 0.5rem 0.9rem;
+  border-radius: var(--radius-md, 8px);
+  border: 1px solid var(--content-border);
+  background: var(--content-bg);
+  color: var(--page-text);
+  font-weight: 600;
+  cursor: pointer;
+}
+.op-admin__row button:disabled { opacity: 0.5; cursor: default; }
+.op-admin__close { color: var(--color-error); }
+
+.op-admin__ok { margin: 0.6rem 0 0; font-size: 0.85rem; color: var(--color-success); }
+.op-admin__err { margin: 0.6rem 0 0; font-size: 0.85rem; color: var(--color-error); }
