@@ -5,7 +5,7 @@ import { castAflHeroModel, type AflCastingInput } from '../src/utils/afl-hero-ca
 import { resolveAflHeroState, type AflHeroState, type EventHeroView } from '../src/utils/afl-hero-resolver';
 import type { WhatsNewEntry } from '../src/types/whats-new';
 import type { HeroContent } from '../src/types/whats-new';
-import { castBestScoredModel, castRandomStarterModel, castsFor } from '../src/utils/hero-casting';
+import { castBestScoredModel, castRandomStarterModel, castsFor, isCompositable } from '../src/utils/hero-casting';
 import {
   getAdpRankedIds,
   getFranchiseCompositableHeadliners,
@@ -119,7 +119,10 @@ describe('league-aware hero data helpers (AFL)', () => {
       if (pickRank !== Number.MAX_SAFE_INTEGER) ranked++;
       for (const id of rosterById.get(h.franchiseId) ?? []) {
         const other = players.get(id);
-        if (!other || other.position === 'DEF' || !other.headshot.includes('espncdn.com')) continue;
+        // Ask through the production predicate rather than re-deriving "has an
+        // ESPN cutout" here: one definition, and a substring host test in a
+        // second place is what CodeQL flags (js/incomplete-url-substring-sanitization).
+        if (!other || !isCompositable(other)) continue;
         const rank = adpRank.get(id) ?? Number.MAX_SAFE_INTEGER;
         expect(rank, `${h.franchiseId}: ${other.name} outranks the cast ${pm?.name}`).toBeGreaterThanOrEqual(pickRank);
       }
@@ -298,12 +301,10 @@ describe('league-aware hero data helpers (AFL)', () => {
     const owners = getOwnersByPlayer(YEAR, AFL);
     const players = getPlayerMap(YEAR);
     const candidates = getWeekGameCandidates(YEAR, AFL);
-    const shared = candidates.find(
-      (c) =>
-        c.franchiseIds.length > 1 &&
-        c.score > 0 &&
-        players.get(c.playerId)?.headshot.includes('espncdn.com'),
-    );
+    const shared = candidates.find((c) => {
+      const player = players.get(c.playerId);
+      return c.franchiseIds.length > 1 && c.score > 0 && !!player && isCompositable(player);
+    });
     expect(shared, 'no compositable dual-rostered candidate to test with').toBeDefined();
     if (!shared) return;
     for (const franchiseId of owners.get(shared.playerId) ?? []) {
@@ -549,7 +550,7 @@ describe('castAflHeroModel', () => {
     // exactly him, with the entry's descriptor.
     const players = getPlayerMap(YEAR);
     const featured = [...players.values()].find(
-      (p) => p.position !== 'DEF' && p.headshot.includes('espncdn.com'),
+      (p) => isCompositable(p),
     );
     // Guard instead of `!`: a clear failure if the live feed ever loses ESPN
     // headshots entirely, rather than a TypeError deep in the cast.
