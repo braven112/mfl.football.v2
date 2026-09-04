@@ -115,6 +115,14 @@ export function getOwnerByPlayer(
  * 2026 feed that is 143 of 199 rostered players — a single-owner map credits
  * ~72% of the league's players to an arbitrary one of their two owners.
  * Anything that asks "does THIS franchise roster him" must use this.
+ *
+ * Counts ACTIVE roster spots only (`status` absent or `ROSTER`), matching
+ * `getFranchiseHeadliners` / `getFranchiseCompositableHeadliners`. Unlike them,
+ * this one is load-bearing for it: the owner's slice is now the SOLE pool the
+ * starter heroes cast from, so an unfiltered map lets a TAXI_SQUAD rookie win
+ * outright as "your kickoff starter" (45 taxi + 5 IR of 386 in TheLeague's
+ * 2026 feed). `getOwnerByPlayer` (singular) does NOT filter — it answers a
+ * different question and has its own callers.
  */
 export function getOwnersByPlayer(
   leagueYear: number,
@@ -130,7 +138,7 @@ export function getOwnersByPlayer(
         ? [franchise.player]
         : [];
     for (const p of players) {
-      if (!p?.id) continue;
+      if (!p?.id || (p.status && p.status !== 'ROSTER')) continue;
       const list = owners.get(p.id);
       if (list) list.push(franchise.id);
       else owners.set(p.id, [franchise.id]);
@@ -330,14 +338,26 @@ function readWeekGames(leagueYear: number, league: CanonicalLeagueSlug): Schedul
 /**
  * The games still worth previewing at `referenceDate` — those not yet kicked
  * off (plus a 4h in-progress grace), so a mid-week caller doesn't feature
- * Thursday's finished game on Sunday. Falls back to the full slate once the
- * whole week has been played, and whenever no reference date is given.
+ * Thursday's finished game on Sunday.
+ *
+ * `fallbackToFullSlate` decides what a fully-played week means, and the two
+ * callers genuinely differ. `getKickoffGame` NAMES the opener, and the week's
+ * opener is still the opener after it has been played — it falls back. The
+ * candidate pool must NOT: casting is a claim that the player is about to
+ * play (or is playing), so resurrecting a spent slate puts Thursday's man in
+ * the hero captioned "In Action" on Monday night. Empty is the honest answer
+ * there — the caller falls back to the owner's own headliner.
  */
-function upcomingWeekGames(games: ScheduledGame[], referenceDate?: Date): ScheduledGame[] {
+function upcomingWeekGames(
+  games: ScheduledGame[],
+  referenceDate: Date | undefined,
+  fallbackToFullSlate: boolean,
+): ScheduledGame[] {
   if (!referenceDate) return games;
   const cutoff = Math.floor(referenceDate.getTime() / 1000) - 4 * 3600;
   const upcoming = games.filter((g) => g.kickoff >= cutoff);
-  return upcoming.length > 0 ? upcoming : games;
+  if (upcoming.length > 0) return upcoming;
+  return fallbackToFullSlate ? games : [];
 }
 
 /**
@@ -357,7 +377,7 @@ export function getKickoffGame(
 ): KickoffGame | null {
   const games = readWeekGames(leagueYear, league);
   if (games.length === 0) return null;
-  const [earliest] = upcomingWeekGames(games, referenceDate);
+  const [earliest] = upcomingWeekGames(games, referenceDate, true);
   return earliest ? { teamCodes: earliest.teamCodes, awayName: earliest.awayName, homeName: earliest.homeName } : null;
 }
 
@@ -382,7 +402,7 @@ export function getWeekGameCandidates(
   score: number;
   kickoff: number;
 }> {
-  const slate = upcomingWeekGames(readWeekGames(leagueYear, league), referenceDate);
+  const slate = upcomingWeekGames(readWeekGames(leagueYear, league), referenceDate, false);
   if (slate.length === 0) return [];
 
   // A team plays once a week, but keep the earliest if a feed ever repeats one.

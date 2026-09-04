@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+import { readFileSync } from 'node:fs';
 import { castAflHeroModel, type AflCastingInput } from '../src/utils/afl-hero-casting';
 import { resolveAflHeroState, type AflHeroState, type EventHeroView } from '../src/utils/afl-hero-resolver';
 import type { WhatsNewEntry } from '../src/types/whats-new';
@@ -133,9 +134,54 @@ describe('league-aware hero data helpers (AFL)', () => {
       candidates.filter((c) => c.kickoff === earliest).map((c) => players.get(c.playerId)?.nflTeam),
     );
     if (opener) for (const code of openerTeams) expect(opener.teamCodes).toContain(code);
-    // Week-wide, not opener-only: more than one kickoff in the pool whenever
-    // the slate holds more than one game.
-    expect(new Set(candidates.map((c) => c.kickoff)).size).toBeGreaterThan(0);
+    // Week-wide, not opener-only — and assert it against the feed rather than
+    // `size > 0`, which any non-empty pool satisfies (Copilot, PR #749).
+    // REF_DATE is before Week 1, so every game in the slate is still upcoming.
+    const schedule = JSON.parse(
+      readFileSync(`data/${AFL}/mfl-feeds/${YEAR}/nflSchedule.json`, 'utf8'),
+    );
+    const matchups = schedule?.nflSchedule?.matchup ?? [];
+    const slateKickoffs = new Set(
+      (Array.isArray(matchups) ? matchups : [matchups])
+        .map((m: any) => parseInt(m?.kickoff, 10))
+        .filter((k: number) => Number.isFinite(k)),
+    );
+    expect(slateKickoffs.size, 'schedule feed has no distinct kickoffs to test with').toBeGreaterThan(1);
+    expect(new Set(candidates.map((c) => c.kickoff))).toEqual(slateKickoffs);
+  });
+
+  it('empties the candidate pool for a spent week, but still names the opener', () => {
+    // A fully-played week must not resurrect its games as castable: the hero
+    // captions a cast player "In Action". getKickoffGame keeps its fallback —
+    // the week's opener is still the opener after it has been played.
+    const afterTheWeek = new Date('2026-09-16T12:00:00-07:00');
+    expect(getWeekGameCandidates(YEAR, AFL, afterTheWeek)).toEqual([]);
+    expect(getKickoffGame(YEAR, AFL, afterTheWeek)).toEqual(getKickoffGame(YEAR, AFL));
+  });
+
+  it('counts only ACTIVE roster spots as ownership', () => {
+    // The owner's slice is the sole pool the starter heroes cast from, so a
+    // taxi-squad or IR player in this map wins outright as "your kickoff
+    // starter". Assert against the feed's own non-ROSTER entries.
+    for (const league of [AFL, 'theleague'] as const) {
+      const owners = getOwnersByPlayer(YEAR, league);
+      const rosterData = JSON.parse(
+        readFileSync(`data/${league}/mfl-feeds/${YEAR}/rosters.json`, 'utf8'),
+      );
+      const franchises = rosterData?.rosters?.franchise ?? [];
+      let benched = 0;
+      for (const f of Array.isArray(franchises) ? franchises : [franchises]) {
+        const players = Array.isArray(f.player) ? f.player : f.player ? [f.player] : [];
+        for (const p of players) {
+          if (!p?.id || !p.status || p.status === 'ROSTER') continue;
+          benched++;
+          expect(owners.get(p.id) ?? [], `${league} ${p.id} is ${p.status} on ${f.id}`).not.toContain(f.id);
+        }
+      }
+      // Guard the guard: if the feed ever stops carrying benched players this
+      // test would pass vacuously.
+      if (league === 'theleague') expect(benched).toBeGreaterThan(0);
+    }
   });
 
   it('returns empty for a non-existent year', () => {
@@ -240,7 +286,7 @@ describe('castAflHeroModel', () => {
       '2026-09-13T10:00:00-07:00', // Sunday morning
       '2026-09-13T23:00:00-07:00', // Sunday night — slate nearly spent
       '2026-09-14T18:00:00-07:00', // Monday night
-      '2026-09-16T12:00:00-07:00', // whole week played (full-slate fallback)
+      '2026-09-16T12:00:00-07:00', // whole week played — pool is empty by design
     ].map((iso) => new Date(iso));
 
     for (const league of [AFL, 'theleague'] as const) {

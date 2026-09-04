@@ -503,11 +503,14 @@ if (heroState.phase === 'preseason-countdown' && heroState.preseasonProps) {
     // on an empty own pool, and a signed-in owner must never be shown someone
     // else's player here either.
     const headliners = userFranchiseId ? all.filter((h) => h.franchiseId === userFranchiseId) : all;
-    preseasonModel = castRosterModel(headliners, hpPlayerIdentityMap, userFranchiseId, now, 'Headliner');
-    preseasonModelIsOwn =
-      !!preseasonModel &&
-      !!userFranchiseId &&
-      headliners.some((h) => h.franchiseId === userFranchiseId && h.playerId === preseasonModel!.mflId);
+    // 'Your Headliner' rather than the isOwn flag: that flag makes the hero say
+    // "Your Kickoff Starter" and claim the player is in the opener, which a
+    // headliner cast has no basis for — this branch runs precisely when we have
+    // no slate to place him in. The descriptor keeps the ownership signal
+    // without the claim.
+    const descriptor = userFranchiseId && headliners.length > 0 ? 'Your Headliner' : 'Headliner';
+    preseasonModel = castRosterModel(headliners, hpPlayerIdentityMap, userFranchiseId, now, descriptor);
+    preseasonModelIsOwn = false;
   }
 }
 
