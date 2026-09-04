@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { getSearchPath, resolveDirectoryHref } from '../src/utils/nav-utils';
-import { pathBelongsToLeague } from '../src/config/footer-config';
+import { getFooterColumns, getDeepCuts, pathBelongsToLeague } from '../src/config/footer-config';
 import { ALL_LEAGUES, getLeagueBySlug, type CanonicalLeagueSlug } from '../src/config/leagues';
 import directory from '../src/data/page-directory.json';
 
@@ -82,4 +82,34 @@ describe('the header search icon', () => {
     expect(header).not.toContain('"/theleague/search"');
     expect(header).not.toContain("'/theleague/search'");
   });
+
+  it('actually renders the icon from that value', () => {
+    // Without this, the test above passes on a Header that imports and calls
+    // getSearchPath() and then renders nothing from it — which is the exact
+    // end state (no icon on the AFL) this whole guard exists to prevent.
+    expect(header).toContain('{searchHref && (');
+    expect(header).toContain('href={searchHref}');
+    expect(header).toContain('breadcrumb-search-link');
+  });
+});
+
+describe('the footer links search exactly once', () => {
+  // Deep Cuts is a RULE, not a list: it surfaces any public, low-popularity
+  // directory entry the footer doesn't already link. Search is meant to be
+  // excluded because the utility bar carries it — but that exclusion was a
+  // hardcoded '/search', which is TheLeague's directory path only. The moment
+  // the AFL got a search page at the prefixed '/afl-fantasy/search', the AFL
+  // footer printed "Search" in Deep Cuts AND in the utility bar four lines
+  // below, both pointing at the same page.
+  for (const slug of LEAGUES) {
+    it(`${slug}: search appears in Deep Cuts or the utility bar, never both`, () => {
+      const searchPath = getSearchPath(slug);
+      const deepCuts = getDeepCuts(slug, getFooterColumns(slug, null));
+      const inDeepCuts = deepCuts.filter((c) => c.path === searchPath);
+      expect(
+        inDeepCuts.map((c) => `${c.label} -> ${c.path}`),
+        `Deep Cuts repeats the utility bar's Search link for ${slug}`,
+      ).toEqual([]);
+    });
+  }
 });

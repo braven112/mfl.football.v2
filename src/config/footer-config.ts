@@ -13,6 +13,7 @@
 import type { CanonicalLeagueSlug } from './leagues';
 import pageDirectory from '../data/page-directory.json';
 import { getCurrentTierMembership, D_LEAGUE, PREMIER_LEAGUE } from '../utils/afl-tier';
+import { getSearchPath } from '../utils/nav-utils';
 
 /**
  * The five columns, in order, for every full-management league.
@@ -340,7 +341,13 @@ export function getDeepCuts(
 ): ResolvedFooterLink[] {
   const linked = new Set(columns.map((c) => c.links.map((l) => l.path)).flat());
   // Search already sits in the utility bar; repeating it here reads as a bug.
-  const UTILITY_PATHS = new Set(['/search']);
+  // Ask getSearchPath which path THIS league's search lives at — the literal
+  // '/search' that used to sit here is TheLeague's directory path only, so the
+  // moment the AFL got a search page (at the prefixed '/afl-fantasy/search')
+  // the dedupe stopped matching and the footer printed Search twice, four
+  // lines apart, pointing at the same page.
+  const searchPath = getSearchPath(slug);
+  const UTILITY_PATHS = new Set(searchPath ? [searchPath] : []);
 
   return DIRECTORY.filter((e) => {
     if (e.visibility !== 'all') return false;
