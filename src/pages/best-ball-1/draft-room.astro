@@ -71,6 +71,8 @@ if (session) {
   const players = buildDraftPlayers(getCurrentLeagueYear(), {
     rookieOnly: false,
     viewerFranchiseId: user.franchiseId,
+    // Best Ball's 0001 is not TheLeague's 0001, and RSP is licensed there.
+    viewerLeagueSlug: 'best-ball-1',
     adpSource: 'redraft',
   });
 

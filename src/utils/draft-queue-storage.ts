@@ -10,8 +10,24 @@
 
 import type { DraftQueueItem } from '../types/draft-room';
 
-function storageKey(leagueId: string, year: number): string {
-  return `draft.queue.${leagueId}.${year}`;
+/**
+ * Queue scope — the first argument every function here takes.
+ *
+ * A league that drafts by CONFERENCE needs one queue per board, not one per
+ * league: the AFL is `duplicatePlayers: true`, so a player taken in the other
+ * conference is still perfectly draftable in yours. Sharing a key meant that
+ * merely opening the other board let its picks purge your own queue of players
+ * you could still have.
+ *
+ * The suffix is conditional so a single-unit league's key is byte-for-byte
+ * what it was — changing it would silently empty every existing queue.
+ */
+export function queueScope(leagueId: string, unit?: string | null): string {
+  return unit ? `${leagueId}.${unit.toLowerCase()}` : leagueId;
+}
+
+function storageKey(scope: string, year: number): string {
+  return `draft.queue.${scope}.${year}`;
 }
 
 // In-memory cache per league+year — avoids repeated localStorage.getItem + JSON.parse

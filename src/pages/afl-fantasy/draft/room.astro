@@ -1,0 +1,63 @@
+---
+/**
+ * Draft Room (AFL) — thin route wrapper.
+ *
+ * Shared render lives in components/shared/draft-room/DraftRoomPage; the
+ * AFL-specific decisions live in utils/afl-draft-room, which documents WHY
+ * the two conferences draft on different MFL pages and must never be crossed.
+ * See TheLeague's twin for why the globs are here.
+ *
+ * Everything downstream is scoped to the chosen conference: the board, the
+ * franchises, the deep link, the clock's units, and the client's poll URL —
+ * see `pollUnit`, without which /api/draft/status hands the AL's picks to
+ * everyone.
+ */
+import DraftRoomPage from '../../../components/shared/draft-room/DraftRoomPage.astro';
+import aflConfigData from '../../../../data/afl-fantasy/afl.config.json';
+import { getLeagueYearForSlug } from '../../../utils/league-year';
+import { getAFLPreference, resolveAFLTeamSelection } from '../../../utils/team-preferences';
+import { getAuthUser, isAuthorizedForLeague } from '../../../utils/auth';
+import { getLeagueBySlug } from '../../../config/leagues';
+import { buildAflRoomPageData, resolveAflRoomFor } from '../../../utils/afl-draft-room';
+
+export const prerender = false;
+
+const league = getLeagueBySlug('afl-fantasy')!;
+const user = getAuthUser(Astro.request);
+const myFranchiseId = resolveAFLTeamSelection({
+  myTeamParam: Astro.url.searchParams.get('myteam'),
+  franchiseParam: Astro.url.searchParams.get('franchise'),
+  cookiePreference:
+    getAFLPreference(Astro.cookies)?.franchiseId ??
+    (user && isAuthorizedForLeague(user, league.id) ? user.franchiseId : undefined),
+});
+
+const room = resolveAflRoomFor(
+  aflConfigData.conferences ?? [],
+  Astro.url.searchParams.get('conference'),
+  myFranchiseId
+);
+
+const pageData = buildAflRoomPageData({
+  room,
+  leagueYear: getLeagueYearForSlug('afl-fantasy'),
+  leagueId: league.id,
+  mflHost: league.mflHost,
+  myFranchiseId,
+  draftResultsFeeds: import.meta.glob('../../../../data/afl-fantasy/mfl-feeds/*/draftResults.json', { eager: true }),
+  leagueFeeds: import.meta.glob('../../../../data/afl-fantasy/mfl-feeds/*/league.json', { eager: true }),
+  partyHost: import.meta.env.PUBLIC_PARTYKIT_HOST || '',
+});
+---
+
+<DraftRoomPage
+  leagueSlug="afl-fantasy"
+  title={`${room.selected.short} Draft Room | AFL`}
+  pageData={pageData}
+  userTeamId={room.userTeamId}
+  conferences={room.conferences}
+  conference={room.conference}
+  basePath="/afl-fantasy/draft/room"
+  isViewersConference={room.isViewersConference}
+  draftContext="general"
+/>

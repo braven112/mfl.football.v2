@@ -108,3 +108,52 @@ Note `readdirSync`, not a glob: this repo has **no glob dependency**, and
 `node:fs` does not export `globSync` at the pinned `@types/node` version — a
 test that imports it type-checks red while passing at runtime, which the
 `astro check` ratchet catches and `pnpm test:unit` does not.
+
+---
+
+## 2026-09-03 - The AFL Drafts Twice, and MFL Can Only Say So Once
+
+**Context:** Giving the AFL a draft room, which the plan had deferred because
+its two conferences do not hold the same kind of draft.
+
+**Insight 1 — MFL's `league.json` carries ONE `draft_kind` for a league whose
+halves draft differently.** The AFL's says `"email"`. That is true of the
+National League, which drafts over days off MFL's email-draft page (option 52),
+and false of the American League, which meets in person and picks in the
+live-draft applet (`ajax_ld`). Software that trusts the feed gets one of the
+two wrong every time. The fact now lives in `afl.config.json`'s conferences and
+is read through `getConferenceDraftKind` — a league fact the feed cannot
+express belongs in league config, not in an inference.
+
+It was already encoded a SECOND time, structurally, in `afl-hero-resolver.ts`'s
+separate `afl-al-draft` / `afl-nl-draft` card builders, whose draft-day CTA
+logic is too subtle to safely rewrite as a config lookup.
+`tests/afl-conference-draft-kind.test.ts` therefore makes the two AGREE rather
+than merging them: each card must offer its own conference's URL and never the
+other's. When one source of truth is not achievable, a test that fails on
+disagreement is the next best thing.
+
+**Insight 2 — the poll URL is where conference scoping silently breaks.**
+`/api/draft/status` accepts `?unit=` and falls back to the FIRST unit without
+one. The draft room's client polled with only `year` and `league`, so an AFL
+room would have served every NL owner the AL's picks — server-rendered
+correctly, then overwritten within seconds by the wrong conference's board.
+`DraftRoomPageData` now carries `pollUnit` (and `mflHost`, since the endpoint
+defaults to TheLeague's). A conference-scoped page is not scoped until its
+POLLING is scoped too.
+
+**Insight 3 — `draftContext` defaults to `'rookie'`, which is wrong for every
+redraft league.** The room's pool opens filtered to rookies unless told
+otherwise. On the AFL that showed 133 players for a draft that takes 108 of
+~1,235 — a board that looked plausible and was almost entirely empty of the
+players about to be drafted. Best-ball already passed `'general'`; the AFL
+needs it too. Caught only by LOOKING at the rendered page: every test passed,
+and the number was wrong rather than missing.
+
+**Insight 4 — extraction is forced by the guard, and that is the right order.**
+`draft/room.astro` becomes a two-league sibling the moment the AFL gets one, so
+`page-fork-ratchet` fails unless BOTH copies are thin. TheLeague's 165-line
+route had to become a 73-line wrapper over
+`utils/draft-room-data#buildDraftRoomData` before the AFL's could exist at all.
+The AFL's needed a second extraction (`utils/afl-draft-room`) to clear the
+band — the guard rejects 75-98 lines as "too close to call", not just >80.

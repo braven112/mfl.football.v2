@@ -14,6 +14,22 @@ export type ConferenceId = '00' | '01';
 export type ConferenceName = 'American League' | 'National League';
 export type ConferenceShort = 'AL' | 'NL';
 
+/**
+ * How a conference actually drafts.
+ *
+ * MFL's `league.json` carries ONE `draft_kind` for the whole league ("email"),
+ * which is wrong for half of it: the AL meets in person and picks in MFL's
+ * live-draft applet, while the NL runs a slow email draft over days. The two
+ * are different events on different MFL pages, so the fact lives in the league
+ * config rather than being inferred from a feed that cannot express it.
+ *
+ * `tests/afl-conference-draft-kind.test.ts` pins this against the draft-day
+ * hero, which encodes the same fact in its own AL/NL card builders — if the
+ * two ever disagree, one of them is sending owners to the wrong page on the
+ * one day it matters.
+ */
+export type ConferenceDraftKind = 'live' | 'email';
+
 export interface AFLTeam {
   franchiseId: string;
   name: string;
@@ -90,6 +106,18 @@ export function getTeam(franchiseId: string): AFLTeam | undefined {
 
 export function getFranchiseConference(franchiseId: string): ConferenceId | null {
   return FRANCHISE_INDEX.get(franchiseId)?.conference ?? null;
+}
+
+/** Whether this conference drafts live in MFL's applet or by slow email. */
+export function getConferenceDraftKind(id: ConferenceId): ConferenceDraftKind {
+  const declared = (aflConfig.conferences as Array<{ code: string; draftKind?: string }>).find(
+    (c) => c.code === id
+  )?.draftKind;
+  // Falling back to 'email' is the SAFE direction: an email draft's timer is
+  // measured in hours, so a live draft mislabelled email merely shows a
+  // generous deadline, while the reverse would put a 90-second clock on a
+  // draft that runs for days.
+  return declared === 'live' ? 'live' : 'email';
 }
 
 export function getConferenceTeams(id: ConferenceId): AFLTeam[] {

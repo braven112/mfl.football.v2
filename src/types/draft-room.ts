@@ -133,6 +133,20 @@ export interface DraftRoomPageData {
    * made. Undefined in mock mode (mock picks go through PartyKit).
    */
   mflPickUrl?: string;
+  /**
+   * MFL draft unit to poll (`CONFERENCE00` / `CONFERENCE01`).
+   *
+   * REQUIRED for a league that drafts by conference. `draftResults.draftUnit`
+   * is an array there, and `/api/draft/status` falls back to the FIRST unit
+   * when no `unit` is given — so an NL owner's room would poll and be shown
+   * the AL's picks. Omitted for a single-draft league, which has one unit.
+   */
+  pollUnit?: string;
+  /**
+   * MFL host to poll, when it is not TheLeague's. `/api/draft/status` defaults
+   * to TheLeague's host, so the AFL must say which one it means.
+   */
+  mflHost?: string;
 }
 
 /** Response from /api/draft/status */
@@ -203,6 +217,14 @@ export type DraftRoomMode = 'live' | 'mock';
 
 /** React useReducer state */
 export interface DraftRoomState {
+  /**
+   * localStorage scope for the QUEUE — the league id, suffixed with the draft
+   * unit where there is one. The AFL's conferences need separate queues: it is
+   * `duplicatePlayers: true`, so a player taken on the other board is still
+   * draftable on yours, and a shared key let the other board's picks purge him
+   * out of your queue.
+   */
+  queueScope: string;
   picks: DraftRoomPick[];
   players: DraftRoomPlayer[];
   teams: DraftRoomTeam[];

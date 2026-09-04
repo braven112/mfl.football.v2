@@ -97,6 +97,16 @@ export function buildMflLiveDraftUrl({ leagueId, year, host }: BuildMflLiveDraft
   return `${trimmedHost}/${year}/ajax_ld?L=${encodeURIComponent(String(leagueId))}`;
 }
 
+/**
+ * MFL option number for a league's Email Draft page (`O=`).
+ *
+ * Lives here rather than beside either caller because BOTH the AFL's draft-day
+ * hero and its draft room need it, and a second copy of the number is a silent
+ * divergence: MFL identifies these pages only by number, so a wrong one is a
+ * valid URL to the wrong page rather than an error.
+ */
+export const MFL_EMAIL_DRAFT_OPTION = 52;
+
 export interface BuildMflOptionUrlOptions {
   /** League id, e.g. '19621'. Read it from the registry — never inline. */
   leagueId: string | number;

@@ -141,6 +141,13 @@ const CAPTURE_PATHS = {
   // the startup drafts the article also mentions are, by their nature, a page
   // of blanks and would sell the feature badly.
   'draft-section': '/theleague/draft/results?year=2015',
+  // AFL-only entry whose link is the league-neutral bare `/draft/room`,
+  // which only routes on the AFL's own apex host. Shot on the NATIONAL
+  // LEAGUE deliberately: the article is about the room knowing which of the
+  // two drafts you are in, and the NL board is the one that shows it —
+  // conference chips, the 'not your draft' notice, and a clock counting in
+  // HOURS because an email draft moves in days.
+  'afl-draft-room': '/afl-fantasy/draft/room?conference=01',
 };
 
 const PAGE_HOOKS = {

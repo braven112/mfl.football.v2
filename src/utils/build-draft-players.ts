@@ -18,8 +18,19 @@ import { getPlayerHeadshot, getCollegeHeadshot } from '../constants/roster-const
 import { getPlayerMap } from './player-map';
 import { enrichDraftPlayers, type DraftPlayerEnrichment, type AdpSource } from './draft-player-enrichment';
 
-/** Franchise IDs authorized to see licensed RSP (Rookie Scouting Portfolio) data. */
+/**
+ * Franchise IDs authorized to see licensed RSP (Rookie Scouting Portfolio) data.
+ *
+ * These are THELEAGUE's franchise ids, and the distinction is load-bearing:
+ * every league in this app has a franchise `0001`, and they are different
+ * people. Gating on a bare id therefore hands one league's licensed content to
+ * an unrelated owner in another — which is why the gate below also requires
+ * the viewer's LEAGUE, and why a caller outside TheLeague must say so.
+ */
 const RSP_AUTHORIZED_FRANCHISES = new Set(['0001']);
+
+/** The only league whose franchise ids RSP is licensed against. */
+const RSP_LICENSED_LEAGUE = 'theleague';
 
 interface BuildDraftPlayersOptions {
   /** When true, only rookies are returned (filters by status=R or draft_year === leagueYear) */
@@ -33,6 +44,13 @@ interface BuildDraftPlayersOptions {
    * ADP stays public for everyone.
    */
   viewerFranchiseId?: string;
+  /**
+   * Which league `viewerFranchiseId` belongs to. Defaults to TheLeague, which
+   * is what every pre-existing caller meant. A caller in another league MUST
+   * pass its own slug: franchise ids are not unique across leagues, so the
+   * default would otherwise grant that league's `0001` someone else's licence.
+   */
+  viewerLeagueSlug?: string;
   /**
    * Which MFL ADP feed drives the adp* fields (default 'dynasty').
    * Best-ball leagues are redraft — pass 'redraft' there.
@@ -96,8 +114,20 @@ export function buildDraftPlayers(
   leagueYear: number,
   options: BuildDraftPlayersOptions = {}
 ): DraftRoomPlayer[] {
-  const { rookieOnly = false, enrich = true, viewerFranchiseId, adpSource } = options;
-  const includeRsp = !!viewerFranchiseId && RSP_AUTHORIZED_FRANCHISES.has(viewerFranchiseId);
+  const {
+    rookieOnly = false,
+    enrich = true,
+    viewerFranchiseId,
+    viewerLeagueSlug = RSP_LICENSED_LEAGUE,
+    adpSource,
+  } = options;
+  // Licensed content: the franchise must be authorized AND be in the league
+  // the licence is held in. Both leagues have an 0001 and they are not the
+  // same person.
+  const includeRsp =
+    !!viewerFranchiseId &&
+    viewerLeagueSlug === RSP_LICENSED_LEAGUE &&
+    RSP_AUTHORIZED_FRANCHISES.has(viewerFranchiseId);
   const leagueYearStr = String(leagueYear);
   const identityMap = getPlayerMap(leagueYear);
   const collegeMap = loadCollegeMap();
