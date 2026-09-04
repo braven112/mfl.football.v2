@@ -28,13 +28,14 @@
   stale (re-read the SSR blob in `init()`); and `init()` double-runs if you also
   call it.
 - **A swap-simulation probe over-reports listener growth for a LAYOUT-owned
-  script.** ClientRouter dedups inline scripts on `textContent` via a
-  module-level `Set` read only on the real swap path, so a layout script
-  identical on every page runs once per hard load and never re-stacks —
-  re-executing its text by hand skips that Set and invents one listener per
-  fake swap. Measure with real navigations. Expect `astro:page-load` to climb
-  once per distinct page (that is the rule above working); click listeners
-  should not climb at all, since those scripts remove-then-add.
+  script.** ClientRouter keys inline-script dedup on `textContent` in a
+  module-level `Set` — seeded on hard load, consulted on every real swap — so a
+  layout script identical on every page runs once per load and never re-stacks;
+  re-executing its text by hand bypasses that state and invents one listener per
+  fake swap. Measure with real navigations. For scripts following the rule
+  above, expect `astro:page-load` to climb once per distinct page and click
+  listeners not to climb at all; a `data-astro-rerun` script re-runs on every
+  swap and still stacks without teardown.
 - **A control whose only job is switching a URL param should be an `<a href>`**
   built from `Astro.url` — not a `<button>` plus a click handler.
 - Never wrap a `<script>` in a conditional (breaks Astro's dedup). Read
