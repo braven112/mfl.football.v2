@@ -379,3 +379,101 @@ were set before that lived on. Dan Marino's Tan Isotoners carried
 `colorSecondary: #466286` — a blue sampled off the NL badge in the corner of a
 banner that is brown and tan and nothing else. When a palette contains a colour
 you cannot point to in the art, check the badge first.
+
+---
+
+## An era wearing a LIVE franchise's crest is invisible to every guard (September 2026)
+
+Four eras were rendering a mark their era never wore, and each had been sitting
+there since the art was first configured: AFL `0016` 2017-18 (Dicks out for
+Harambe) and TheLeague `0006` 2019-24 (The Music City Mafia) both pointed their
+era `icon` at a *currently live* franchise icon, while the AFL's Mariachi Ninjas
+2012-18 and Midwestside Connection 2010-24 were cropped inside their own badge
+rings.
+
+### `isSameAsCurrent` cannot catch it, and it is the only automatic check there is
+
+`getEligibleThrowbackEras` filters an era out when it is identical to the
+current identity — but `isSameAsCurrent` is
+`entry.name === team.name && entry.icon === team.icon && entry.banner === team.banner`,
+compared against **the era's own franchise**. Both escape routes were open:
+
+- **Different franchise.** AFL `0016` is *Swiftie 4 Life* today. Its Harambe era
+  pointed at `/assets/afl/icons/harambe.png` — franchise `0008`'s live icon.
+  Nothing compares an era to *another* club's current art, so this class of
+  mistake is 100% invisible to the resolver. `AFL_THROWBACK_ASSET_CONFLICTS` is
+  hand-maintained precisely because there is no computed check behind it.
+- **One word of difference.** TheLeague `0006` *is* Music City Mafia, and the era
+  pointed at its own live icon — but the era is named "**The** Music City Mafia",
+  so the `&&` short-circuits and the era stayed eligible while wearing the crest
+  the club adopted in 2025.
+
+The lesson generalises past throwback: **the eligibility filter is an
+all-three-fields equality, so any one field differing makes the other two
+unchecked.** Do not read "not filtered as same-as-current" as "the art was
+verified".
+
+**Auditing for it is one script**, and worth running after any era edit. Flag
+every `history[].icon` that is also some `teams[].icon` — but exclude the benign
+case first, or the report is mostly noise: a club whose art never changed points
+its own era at its own live icon quite correctly, and `isSameAsCurrent` filters
+that era out anyway.
+
+```bash
+node -e "const c=require('./src/data/theleague.config.json');   // or afl.config.json
+const live=new Map(c.teams.map(t=>[t.icon,t]));
+for(const t of c.teams) for(const h of t.history||[]) { const o=live.get(h.icon); if(!o) continue;
+  const benign = o.franchiseId===t.franchiseId && h.name===t.name && h.banner===t.banner;
+  console.log(benign?'ok  ':'FLAG', t.franchiseId, h.yearStart, h.name, '->', h.icon,
+    o.franchiseId===t.franchiseId?'(own live art)':'(f'+o.franchiseId+\" '\"+o.name+\"' live art)\"); }"
+```
+
+Run as of this pass the AFL is clean and TheLeague reports four, three of them
+`ok`. The fourth is worth knowing about as a *shape*: franchise `0016`'s
+2014-2024 era is named "Running **D**own **T**he Dream" against a club named
+"Running down the Dream" — a pure case difference, so `entry.name === team.name`
+is false, the era is not filtered, and it is selectable in the Throwback Week
+picker while carrying the club's current name, icon and banner. Picking it
+changes nothing on the scoreboard. Not wrong art, but a no-op era offered as a
+choice, and the same `&&` short-circuit that let Music City wear the wrong crest.
+
+Repointing an era does **not** move its eligibility: Harambe 2017 stays in
+`AFL_THROWBACK_ASSET_CONFLICTS` (that entry is about the *identity* being live on
+`0008`, not about the file), and Music City's default stays 2007 because
+`pickDefaultThrowbackEra` picks on run length — 12 seasons vs 6 — not on art.
+
+### A source that is ALREADY a circular badge is a fourth crest case
+
+The three treatments above (`iconStroke`, `iconFreeform`, `iconStrokeDark`) all
+answer "this art is not a circle". A source that arrives *as* a finished round
+badge needs none of them, and adding one is actively wrong — `iconStroke` draws a
+second ring outside the badge's own.
+
+What it does need is the crop going the other way. These badges arrived 200x200
+with the ring centred on (100,100) at r≈96.5; the crop is **190 square from
+(5,5)**, deliberately *inside* the ring, so the ring bleeds past the round slot's
+edge. Crop *outside* it — leaving even 2px of the source's ground — and the slot
+renders a white or black halo arc, invisible on the matching card and obvious on
+the other one. Then a circular alpha at r=50 on the 100px result, so the corners
+are transparent anywhere the slot is not round.
+
+Check the result on a light **and** a near-black ground before committing. Both
+badges that read as "black background" were fine; the one that would not have
+been is a badge whose outer ring is dark on a dark card, where the ring inside it
+is what carries the edge.
+
+### `sync-afl-assets.mjs` dirties the tree with files you must NOT commit
+
+Running it to register a new history asset also writes **72 franchise-ID aliases**
+(`icons/0001.png`, `banners/…`, `group-me/…`). TheLeague commits its 16
+equivalents; **the AFL commits none, on purpose.** The resolver built by `makeIconResolver`
+(`src/utils/owner-tenures.mjs`) probes `/assets/<navSlug>/icons/<franchiseId>.png`
+with an existence check and documents that the AFL is expected to miss and fall
+through to the placeholder. Committing those aliases silently flips that fallback
+for all 24 AFL franchises. Stage explicit paths, then delete them.
+
+The registry is also **stale by default** — nothing in CI or prebuild runs the
+sync, so a regeneration sweeps in whatever drifted since the last manual run.
+The Sept 2026 pass left nine entries pointing at files it had deleted; the next
+`sync:afl` fixes them and shows up as ~390 lines you did not write. Look at the
+deletions before assuming the diff is noise.
