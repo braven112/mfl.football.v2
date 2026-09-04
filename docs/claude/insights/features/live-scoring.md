@@ -348,3 +348,56 @@ Measured in Chromium at 393px and 320px, both leagues, empty and populated:
 `tests/live-scoring-layout-css.test.ts` pins the box-sizing, the collapsible
 track floor, the suppressed bar, and that the markup still asks for `.static` —
 the CSS half alone would pass with the class dropped from the island.
+
+## 2026-09-03 - The Monitor Broke, Not The Thing Monitored. Prove Which Before Fixing.
+
+**Context:** the gameday health check's first-ever scheduled run posted to
+GroupMe that both leagues' live scoring was down, an hour before nothing in
+particular. Live scoring was fine. Two independent faults, both in the probe.
+
+**The diagnostic that settled it in one step, and the transferable part.** The
+check reported `HTTP 403` on `/api/live-scoring` for both leagues while
+`/api/nfl-scoreboard` on the *same domains, in the same second, from the same
+runner* returned 200. Rather than reading the route, pull the deployment's
+runtime logs for that minute:
+
+```
+23:27:47 GET /api/nfl-scoreboard 200
+23:27:50 GET /api/nfl-scoreboard 200
+(no /api/live-scoring entry at all)
+```
+
+An absent log line is positive evidence. A 4xx our code produced would be
+logged; one produced *for* us at the edge is not. That single check moves the
+investigation from "which branch of the handler returns 403" — there isn't one —
+to "what does the edge dislike about this request", and it works for any
+deployed endpoint failing in a way you cannot reproduce locally. The 403 was
+the WAF: the probe's `host=www49.myfantasyleague.com` param reads as an SSRF
+attempt, and the identical URL from a residential IP returns 200, so it scores
+on datacenter-IP + payload together rather than on either alone.
+
+**The second fault is a calendar bug wearing a data-outage costume.** MFL serves
+no live scoring before Week 1 kicks off — there are no games. The check's cron
+window opens in September but kickoff is mid-month, so *every* run in that gap
+probed a week MFL could not answer for. What hid it is a line that reads as
+defensive hygiene:
+
+```js
+export function clampHealthCheckWeek(week) {
+  if (!Number.isFinite(week) || week < 1) return 1;  // 0 → 1
+```
+
+`getCurrentNFLWeek` returns 0 until the Week 1 Thursday — that 0 *is* the
+pre-season signal, and clamping it to 1 destroys the only bit of information
+that distinguishes "before the season" from "week 1". The gate therefore has to
+consume the RAW week (`shouldProbeLiveScoring`), and the test that matters is
+the one asserting a clamped 0 cannot smuggle the pre-season past it. Note the
+clamp itself is still correct for the *scoreboard* probe, which serves the
+upcoming schedule year-round — the bug was one clamp feeding two probes with
+different pre-season semantics.
+
+**Generalizable:** a monitor that fires before the thing it monitors exists is
+not a monitor, it is a scheduled false alarm — and the cost is not the noise,
+it is that the next real one gets ignored. When a health check fails on its
+first run, suspect the check. Both faults here were latent in the check's own
+source and neither was reachable from the code it probes.

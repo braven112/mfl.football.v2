@@ -126,6 +126,47 @@
 
 ---
 
+## 2026-09-03 - An MFL Host Answers For A League It Does Not Host. With Its Own League.
+
+**Context:** hardening `/api/live-scoring` so the gameday health check could
+send `L` alone (a `host=<hostname>` param on the probe URL was being 403'd at
+the edge as an SSRF signature). That meant the route had to resolve the MFL
+host itself, and reading `resolveHost` turned up something worse than the thing
+being fixed.
+
+**The finding:** every league sits on a different `www##` MFL server, and
+asking one server for a league id it does not host does **not** produce an
+error. It answers with the league that server *does* host. So this branch —
+
+```ts
+// old: any host that isn't in the registry allowlist
+return DEFAULT_HOST;
+```
+
+— meant that a request pairing the AFL's `L=19621` with an unrecognized or
+absent `host` fetched `www49` (TheLeague's server) and got **TheLeague's**
+live scoring back: HTTP 200, well-formed, non-empty, correct schema, wrong
+league. Nothing downstream can catch that. `res.ok` is true, a JSON-shape check
+passes, and the health check's own `evaluateJsonValue` — which exists precisely
+to catch 200s carrying an `error` key — sees a perfectly healthy payload.
+
+**This is the same failure mode as the head's pre-2016 league-id rule** (`L=13522`
+on a pre-2016 year "returns a real, valid-looking payload for *a different
+league*"). Worth generalizing: **`L` and the `www##` host are one composite key,
+and MFL validates neither against the other.** A mismatch in either dimension —
+wrong year, wrong host — is answered rather than rejected. Any code path that
+lets those two come from different places (a query param and a default, a
+session and a route) can serve one league's data on another league's page.
+
+**The fix that generalizes:** treat `host` as a hint and `L` as the answer.
+`resolveHost` now falls back to the registry entry for `L`, and to the default
+league only when `L` names nothing known — so the two halves of the key can no
+longer disagree. `tests/live-scoring-host-resolution.test.ts` asserts on the
+hostname actually fetched, because the old branch reads entirely reasonable in
+isolation: "unknown host → default host" is what you would write.
+
+---
+
 ## 2026-09-02 - The Stripped-Cookie Bug Does Not Fail Loudly. It Degrades Into A Plausible Warning.
 
 **Context:** widening `tests/mfl-cookie-redirect-guard.test.ts` past `src/`

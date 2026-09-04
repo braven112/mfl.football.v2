@@ -14,8 +14,28 @@ const KICKOFF_DATES = {
 };
 
 /**
+ * The Week 1 Thursday kickoff for a season, or null if we don't have one.
+ *
+ * Exported so callers can tell the two meanings of `getCurrentNFLWeek() === 0`
+ * apart: "the season hasn't started" and "this year isn't in the table, so the
+ * week math is dead". They look identical at the call site and only one of
+ * them is a normal Tuesday. The gameday health check fails loudly on the
+ * second rather than skipping its live-scoring probes in silence — a monitor
+ * that quietly stops monitoring is worse than one that cries wolf.
+ *
+ * @param {number} year
+ * @returns {Date | null}
+ */
+export function getKickoffDate(year) {
+  return KICKOFF_DATES[year] ?? null;
+}
+
+/**
  * Get the current NFL week number (1-18) for a given season year.
  * Returns 0 if before the season, caps at 18 if after.
+ *
+ * NOTE: also returns 0 for a year absent from KICKOFF_DATES. Use
+ * `getKickoffDate` to distinguish that case when it matters.
  */
 export function getCurrentNFLWeek(year, now = new Date()) {
   const kickoff = KICKOFF_DATES[year];

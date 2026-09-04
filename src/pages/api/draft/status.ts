@@ -24,7 +24,7 @@ import { parseTradeFromComment, selectDraftUnit } from '../../../utils/draft-uti
 import type { DraftRoomPick, DraftStatusResponse } from '../../../types/draft-room';
 import { getCurrentLeagueYear } from '../../../utils/league-year';
 import { buildMflExportUrl } from '../../../utils/mfl-url';
-import { getLeagueBySlug } from '../../../config/leagues';
+import { getLeagueById, getLeagueBySlug } from '../../../config/leagues';
 import { resolveMflHost, resolveMflLeagueId, toSafeMflUrl } from '../../../utils/draft-broadcast-source';
 
 export const prerender = false;
@@ -329,7 +329,21 @@ export const GET: APIRoute = async ({ url }) => {
   const leagueId =
     resolveMflLeagueId(url.searchParams.get('league') || url.searchParams.get('L')) ||
     DEFAULT_LEAGUE_ID;
-  const host = resolveMflHost(url.searchParams.get('host'), DEFAULT_HOST);
+  // `league` and the host are ONE composite key, and MFL validates neither
+  // against the other: a `www##` server asked for a league id it does not
+  // host answers with its OWN league instead of erroring. So for a league in
+  // our registry the registry host wins outright and `host` is not consulted
+  // — a supplied one can only agree (redundant) or disagree (TheLeague's
+  // draft results served at 200, in the right shape, as the AFL's).
+  //
+  // `host` still decides for a league id we do NOT know, which is the point
+  // of the `?mflLeague=` override above: watching another league's draft is a
+  // real feature, and there the hint is the only information available. It
+  // stays allowlist-checked. See src/pages/api/live-scoring.ts#resolveHost.
+  const registryLeague = getLeagueById(leagueId);
+  const host = registryLeague
+    ? registryLeague.mflHost
+    : resolveMflHost(url.searchParams.get('host'), DEFAULT_HOST);
   const unit = url.searchParams.get('unit');
 
   const mflUrl = buildMflExportUrl({ type: 'draftResults', leagueId, year, host: `https://${host}` });
