@@ -27,6 +27,14 @@
  * that gap is real every year. Checks 2 and 3 stay meaningful year-round and
  * keep running.
  *
+ * That skip has a failure mode of its own, and it is the worse one: the week
+ * resolver returns 0 BOTH before kickoff and for a year missing from its
+ * KICKOFF_DATES table (2024-2027 as of writing). Left alone, the first
+ * uncovered season would skip every live-scoring probe on every run and
+ * report all-green — a monitor that has quietly stopped monitoring, which is
+ * strictly worse than one that cries wolf. So a missing kickoff date is its
+ * own FAILING check, named as such.
+ *
  * The current week comes from the shared resolver
  * (scripts/article-utils/week-resolver.mjs) — do not reinvent week math here.
  *
@@ -49,7 +57,7 @@
 
 import { ALL_LEAGUES, leagueOrigin, SHARED_APP_ORIGIN } from '../src/config/leagues-data.mjs';
 import { fetchExport, mflHostPrefix } from './lib/mfl-api.mjs';
-import { getCurrentNFLWeek, getSeasonYear } from './article-utils/week-resolver.mjs';
+import { getCurrentNFLWeek, getKickoffDate, getSeasonYear } from './article-utils/week-resolver.mjs';
 import { postToGroupMe } from './lib/groupme.mjs';
 import {
   clampHealthCheckWeek,
@@ -115,15 +123,28 @@ async function main() {
   const week = clampHealthCheckWeek(rawWeek);
   const liveScoringInPlay = shouldProbeLiveScoring(rawWeek);
   console.log(`${TAG} season ${year}, current NFL week ${rawWeek} → probing week ${week}`);
-  if (!liveScoringInPlay) {
-    console.log(
-      `${TAG} pre-season (week ${rawWeek}) — skipping live-scoring probes; ` +
-        'MFL serves no live scoring until Week 1 kicks off.',
-    );
-  }
 
   /** @type {CheckResult[]} */
   const results = [];
+
+  // A week of 0 means "pre-season" only if we actually know when kickoff is.
+  // Without a kickoff date the week math is dead and the skip below would run
+  // all season without saying so, so make that its own loud failure.
+  const kickoff = getKickoffDate(year);
+  if (!kickoff) {
+    results.push({
+      name: `NFL kickoff date known for ${year}`,
+      ok: false,
+      detail:
+        `no ${year} entry in KICKOFF_DATES (scripts/article-utils/week-resolver.mjs) — ` +
+        'week math is dead and live-scoring probes are being skipped every run. Add the year.',
+    });
+  } else if (!liveScoringInPlay) {
+    console.log(
+      `${TAG} pre-season (week ${rawWeek}, kickoff ${kickoff.toISOString()}) — ` +
+        'skipping live-scoring probes; MFL serves no live scoring until Week 1 kicks off.',
+    );
+  }
 
   for (const league of ALL_LEAGUES) {
     if (league.bestBall) {
@@ -133,7 +154,7 @@ async function main() {
     // Path-only leagues (no apex domain) fall back to the shared app origin.
     const origin = leagueOrigin(league) ?? SHARED_APP_ORIGIN;
 
-    if (liveScoringInPlay) {
+    if (liveScoringInPlay && kickoff) {
       // `L` only — the route resolves this league's MFL host from the registry.
       const liveScoringUrl = `${origin}/api/live-scoring?week=${week}&L=${encodeURIComponent(league.id)}`;
       results.push(await checkAppEndpoint(`${league.slug} /api/live-scoring (${origin})`, liveScoringUrl));

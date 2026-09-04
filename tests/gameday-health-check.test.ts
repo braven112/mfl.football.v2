@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+import { getCurrentNFLWeek, getKickoffDate } from '../scripts/article-utils/week-resolver.mjs';
 import {
   clampHealthCheckWeek,
   shouldProbeLiveScoring,
@@ -57,6 +58,38 @@ describe('shouldProbeLiveScoring', () => {
     expect(shouldProbeLiveScoring(NaN)).toBe(false);
     // @ts-expect-error deliberate bad input
     expect(shouldProbeLiveScoring(undefined)).toBe(false);
+  });
+});
+
+/**
+ * The pre-season skip is only safe while we can tell pre-season apart from
+ * "we have no idea when the season starts". `getCurrentNFLWeek` returns 0 for
+ * both, so the health check treats a missing kickoff date as its own FAILING
+ * check rather than skipping live scoring in silence for a whole season.
+ */
+describe('getKickoffDate — the signal the pre-season skip depends on', () => {
+  const COVERED = [2024, 2025, 2026, 2027];
+
+  it('returns a date for every season the table covers', () => {
+    for (const year of COVERED) {
+      expect(getKickoffDate(year), `kickoff for ${year}`).toBeInstanceOf(Date);
+    }
+  });
+
+  it('returns null past the end of the table — NOT a date, and not a throw', () => {
+    expect(getKickoffDate(Math.max(...COVERED) + 1)).toBeNull();
+  });
+
+  it('is the only way to tell a missing year from the pre-season', () => {
+    // Both of these are week 0. Only one of them is a normal Tuesday in
+    // August, and the health check must not skip live scoring for the other.
+    const preSeason = new Date('2026-09-03T12:00:00-07:00');
+    expect(getCurrentNFLWeek(2026, preSeason)).toBe(0);
+    expect(getKickoffDate(2026)).toBeInstanceOf(Date);
+
+    const uncovered = Math.max(...COVERED) + 1;
+    expect(getCurrentNFLWeek(uncovered, new Date(`${uncovered}-11-15T12:00:00-08:00`))).toBe(0);
+    expect(getKickoffDate(uncovered)).toBeNull();
   });
 });
 
