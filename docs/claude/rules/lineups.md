@@ -104,8 +104,22 @@ comes out 0.0 on any week MFL hasn't recorded starters for.
   opens the page. `astro:page-load` also fires on the FIRST load, so the init
   is guarded by a `data-carousel-wired` flag on the track — which the router
   replaces along with the DOM, so it never blocks a real re-init.
-  (The lineup PAGES' own scripts still lack this and go inert on a return
-  visit — a pre-existing bug across both, worth its own change.)
+  (The lineup PAGES' own controllers had the same bug and were fixed the same
+  way in Sept 2026 — see the next bullet.)
+- **The page controllers re-init on `astro:page-load` too, and tear down their
+  globals first.** Both pages resolved every ref and read `__LINEUP_DATA__` at
+  module-eval time, so on a return visit tapping a slot opened nothing and
+  Submit did nothing, silently — no error, because the handlers were bound to
+  nodes the router had already detached. The whole controller now lives in an
+  `init()` that re-reads the payload and the refs per load, and the three
+  registrations that OUTLIVE a swap (`document` and `window` are the nodes the
+  router does NOT replace) are held in module-scoped vars and removed before
+  they are re-added: the motion-permission click, the `devicemotion` listener,
+  and `onRankingsChanged`'s unsubscribe. A once-flag would NOT do here — it
+  gives one listener over dead nodes, which is the original bug. Never call
+  `init()` directly; `astro:page-load` fires on the first load too.
+  `tests/lineup-page-clientrouter.test.ts` pins the shape on both pages, plus
+  a parity check so the next fix cannot land on only one of them.
 - **The AFL watermark takes `iconDark` first, ungated.** The panel is a
   team-color gradient over near-black in BOTH themes, so the site-wide
   `html.dark` crest swap (`TeamIconDarkStyles`) never fires on it. Nine of the
