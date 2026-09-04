@@ -217,6 +217,14 @@ export type DraftRoomMode = 'live' | 'mock';
 
 /** React useReducer state */
 export interface DraftRoomState {
+  /**
+   * localStorage scope for the QUEUE — the league id, suffixed with the draft
+   * unit where there is one. The AFL's conferences need separate queues: it is
+   * `duplicatePlayers: true`, so a player taken on the other board is still
+   * draftable on yours, and a shared key let the other board's picks purge him
+   * out of your queue.
+   */
+  queueScope: string;
   picks: DraftRoomPick[];
   players: DraftRoomPlayer[];
   teams: DraftRoomTeam[];

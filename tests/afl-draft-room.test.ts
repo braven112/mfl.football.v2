@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+import { readFileSync } from 'node:fs';
 import aflConfig from '../data/afl-fantasy/afl.config.json';
 import { LEAGUES } from '../src/config/leagues';
 import {
@@ -11,6 +12,8 @@ import {
 } from '../src/utils/afl-draft-room';
 import { getConferenceDraftKind } from '../src/utils/afl-conference';
 import { resolveRoomConference } from '../src/utils/draft-room-data';
+import { queueScope } from '../src/utils/draft-queue-storage';
+import { resolveAFLTeamSelection } from '../src/utils/team-preferences';
 import { buildMflLiveDraftUrl, buildMflOptionUrl } from '../src/utils/mfl-url';
 
 /**
@@ -151,6 +154,38 @@ describe('resolveAflRoomFor', () => {
   });
 });
 
+describe('the chat channel is scoped by conference too', () => {
+  // Scoping the PICKS but not the chat still crosses the two drafts, just
+  // more quietly: leagueId and leagueYear are identical for the AL and the
+  // NL, so the draft unit is the only thing that can separate their rooms.
+  const roomIdFrom = readFileSync(
+    'src/components/theleague/draft-room/DraftRoom.tsx',
+    'utf-8'
+  );
+
+  /** Mirrors the template in DraftRoom.tsx — kept in step by the test below. */
+  const partyRoomId = (leagueId: string, year: number, unit?: string) =>
+    `league-${leagueId}-draft-${year}${unit ? `-${unit.toLowerCase()}` : ''}`;
+
+  it('builds a DIFFERENT room id for each AFL conference', () => {
+    const al = partyRoomId('19621', 2026, 'CONFERENCE00');
+    const nl = partyRoomId('19621', 2026, 'CONFERENCE01');
+    expect(al).not.toBe(nl);
+  });
+
+  it('leaves a single-unit league’s room id byte-for-byte unchanged', () => {
+    // Changing TheLeague's would orphan its existing chat history.
+    expect(partyRoomId('13522', 2026)).toBe('league-13522-draft-2026');
+  });
+
+  it('actually derives the suffix from pollUnit in the component', () => {
+    // The helper above only proves the shape; this proves the component uses
+    // it, and conditionally.
+    expect(roomIdFrom).toMatch(/league-\$\{state\.leagueId\}-draft-\$\{state\.leagueYear\}/);
+    expect(roomIdFrom).toMatch(/data\.pollUnit \? `-\$\{data\.pollUnit\.toLowerCase\(\)\}` : ''/);
+  });
+});
+
 describe('the franchise → conference lookup the room depends on', () => {
   it('places every AFL franchise in exactly one conference', () => {
     for (const t of aflConfig.teams as any[]) {
@@ -166,5 +201,59 @@ describe('the franchise → conference lookup the room depends on', () => {
   it('splits the league 12 and 12', () => {
     expect(aflRoomTeams('00')).toHaveLength(12);
     expect(aflRoomTeams('01')).toHaveLength(12);
+  });
+});
+
+describe('licensed RSP data is not handed out by a browse-as id', () => {
+  /**
+   * The bug this pins: `resolveAFLTeamSelection` defaults to '0001' when there
+   * is no param, cookie or session — and '0001' is the one franchise the RSP
+   * licence covers. Feeding that browse-as selection to `buildDraftPlayers`
+   * gave every LOGGED-OUT visitor to the AFL draft room licensed scouting
+   * data. Every league has an 0001, and they are different people.
+   */
+  const roomSrc = readFileSync('src/utils/afl-draft-room.ts', 'utf-8');
+  const poolSrc = readFileSync('src/utils/build-draft-players.ts', 'utf-8');
+
+  it('confirms the default really is the licensed franchise', () => {
+    // If this ever stops being true the finding changes shape, so assert the
+    // premise rather than trusting the comment.
+    expect(resolveAFLTeamSelection({})).toBe('0001');
+  });
+
+  it('the AFL room passes NO viewer franchise into the player pool', () => {
+    const call = roomSrc.match(/buildDraftPlayers\([^)]*\)/s)?.[0] ?? '';
+    expect(call).not.toContain('viewerFranchiseId');
+  });
+
+  it('the gate requires the licensed LEAGUE, not just the id', () => {
+    expect(poolSrc).toContain('viewerLeagueSlug === RSP_LICENSED_LEAGUE');
+  });
+});
+
+describe('the draft queue is scoped per board', () => {
+  /**
+   * The AFL is `duplicatePlayers: true` — the same NFL player can be rostered
+   * by a franchise in each conference. So a player taken on the AL board is
+   * still perfectly draftable on the NL one, and the queues must not share a
+   * localStorage key: merely OPENING the other board let its picks purge your
+   * own queue of players you could still have had.
+   */
+  it('gives each AFL conference its own queue key', () => {
+    expect(queueScope('19621', 'CONFERENCE00')).not.toBe(queueScope('19621', 'CONFERENCE01'));
+  });
+
+  it('leaves a single-unit league’s key byte-for-byte unchanged', () => {
+    // Changing it would silently empty every queue already saved.
+    expect(queueScope('13522')).toBe('13522');
+    expect(queueScope('13522', null)).toBe('13522');
+    expect(queueScope('13522', undefined)).toBe('13522');
+  });
+
+  it('the room actually scopes its queue by the polled unit', () => {
+    const src = readFileSync('src/components/theleague/draft-room/DraftRoom.tsx', 'utf-8');
+    expect(src).toContain('queueScope(data.leagueId, data.pollUnit)');
+    // and never reverts to the unscoped id for queue reads/writes
+    expect(src).not.toMatch(/(saveQueue|getQueue)\(state\.leagueId/);
   });
 });

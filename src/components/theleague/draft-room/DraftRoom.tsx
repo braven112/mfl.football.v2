@@ -20,7 +20,7 @@ import { PlayerPoolPanel } from './PlayerPoolPanel';
 import { MobileTabBar } from './MobileTabBar';
 import { DraftChatPanel, broadcastPickToChat } from './DraftChatPanel';
 import { PickRevealSplash } from './PickRevealSplash';
-import { getQueue, saveQueue } from '../../../utils/draft-queue-storage';
+import { getQueue, queueScope, saveQueue } from '../../../utils/draft-queue-storage';
 import { collectFreshPicks, buildSplashItem, type PickSplashItem } from '../../../utils/pick-reveal';
 import { useMockDraftSocket } from '../../../hooks/useMockDraftSocket';
 import '../../../styles/draft-room.css';
@@ -64,7 +64,7 @@ function draftRoomReducer(state: DraftRoomState, action: DraftRoomAction): Draft
       const newlyDraftedIds = new Set(action.picks.filter((p) => p.playerId).map((p) => p.playerId));
       const updatedQueue = state.queue.filter((i) => !newlyDraftedIds.has(i.playerId));
       if (updatedQueue.length !== state.queue.length) {
-        saveQueue(state.leagueId, state.leagueYear, updatedQueue);
+        saveQueue(state.queueScope, state.leagueYear, updatedQueue);
       }
 
       return {
@@ -112,19 +112,19 @@ function draftRoomReducer(state: DraftRoomState, action: DraftRoomAction): Draft
         addedAt: Date.now(),
       };
       const updated = [...state.queue, newItem];
-      saveQueue(state.leagueId, state.leagueYear, updated);
+      saveQueue(state.queueScope, state.leagueYear, updated);
       return { ...state, queue: updated };
     }
     case 'REMOVE_FROM_QUEUE': {
       const updated = state.queue.filter((i) => i.id !== action.id);
-      saveQueue(state.leagueId, state.leagueYear, updated);
+      saveQueue(state.queueScope, state.leagueYear, updated);
       return { ...state, queue: updated };
     }
     case 'REORDER_QUEUE': {
       const updated = state.queue.slice();
       const [moved] = updated.splice(action.oldIndex, 1);
       updated.splice(action.newIndex, 0, moved);
-      saveQueue(state.leagueId, state.leagueYear, updated);
+      saveQueue(state.queueScope, state.leagueYear, updated);
       return { ...state, queue: updated };
     }
     case 'TOGGLE_AUTO_SUBMIT':
@@ -188,6 +188,8 @@ function initState(data: DraftRoomPageData, draftContext: DraftContext = 'rookie
     rookiesOnly: draftContext === 'rookie',
     lastPollTimestamp: Date.now(),
     pollError: null,
+    // One queue per BOARD, not per league — see queueScope.
+    queueScope: queueScope(data.leagueId, data.pollUnit),
     // Queue
     queue: [],
     autoSubmit: false,
@@ -349,11 +351,11 @@ export default function DraftRoom({ pageData, userTeamId, mode = 'live', mockSes
 
   // Load queue from localStorage on mount
   useEffect(() => {
-    const items = getQueue(state.leagueId, state.leagueYear);
+    const items = getQueue(state.queueScope, state.leagueYear);
     if (items.length > 0) {
       dispatch({ type: 'LOAD_QUEUE', items });
     }
-  }, [state.leagueId, state.leagueYear]);
+  }, [state.queueScope, state.leagueYear]);
 
   // Polling — adaptive interval via self-rescheduling setTimeout (reads ref fresh each tick)
   // Disabled in mock mode — state comes from PartyKit WebSocket instead
@@ -549,7 +551,18 @@ export default function DraftRoom({ pageData, userTeamId, mode = 'live', mockSes
     []
   );
 
-  const partyRoomId = `league-${state.leagueId}-draft-${state.leagueYear}`;
+  // The chat room is scoped by DRAFT UNIT as well as league and year. Without
+  // that suffix the AFL's two conferences share one channel — `pollUnit` is
+  // the only thing distinguishing them, since leagueId and leagueYear are
+  // identical for both — so the AL's live-draft chatter would land in the NL's
+  // room and vice versa. Scoping the picks but not the chat still crosses the
+  // two drafts, just more quietly.
+  //
+  // The suffix is CONDITIONAL so a single-unit league's room id is byte-for-
+  // byte what it was: changing TheLeague's would orphan its existing chat.
+  const partyRoomId = `league-${state.leagueId}-draft-${state.leagueYear}${
+    data.pollUnit ? `-${data.pollUnit.toLowerCase()}` : ''
+  }`;
   const partyHost = data.partyHost || '';
 
   // Side panel tab — shared between desktop (tab bar under board) and mobile (MobileTabBar).

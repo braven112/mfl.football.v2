@@ -1,71 +1,102 @@
 import { describe, it, expect } from 'vitest';
-import { readFileSync } from 'node:fs';
-import { getConferenceDraftKind } from '../src/utils/afl-conference';
+import { resolveAflHeroState } from '../src/utils/afl-hero-resolver';
 import { aflPickUrlFor } from '../src/utils/afl-draft-room';
+import { getConferenceDraftKind } from '../src/utils/afl-conference';
+import { buildMflLiveDraftUrl, buildMflOptionUrl, MFL_EMAIL_DRAFT_OPTION } from '../src/utils/mfl-url';
 import { LEAGUES } from '../src/config/leagues';
 
 /**
- * "The AL drafts live, the NL drafts by email" is now written in TWO places:
+ * "The AL drafts live, the NL drafts by email" is written in TWO places:
  *
  *  1. `afl.config.json`'s conferences, read by the draft ROOM through
  *     `getConferenceDraftKind`;
  *  2. `afl-hero-resolver.ts`, which encodes it structurally in separate
- *     `afl-al-draft` / `afl-nl-draft` card builders — each hardcoding its own
- *     MFL URL, with draft-day CTA logic too subtle to safely rewrite as a
- *     config lookup.
+ *     `afl-al-draft` / `afl-nl-draft` card builders whose draft-day CTA logic
+ *     is too subtle to safely rewrite as a config lookup.
  *
- * One source of truth would be better. Since there are two, this test makes
- * them agree: if someone changes the config, or swaps a URL in the hero, the
- * disagreement is caught here rather than by an owner opening the wrong MFL
- * page on the morning of their draft.
+ * One source of truth would be better. Since there are two, this makes them
+ * AGREE: the room and the hero must send a given conference to the same MFL
+ * page. If either moves, an owner opens the wrong page on the one morning it
+ * matters.
  *
- * If the league ever changes how a conference drafts, BOTH move together —
- * and this test is the list of what to edit.
+ * Asserted against what the hero RETURNS at real draft-day dates, not against
+ * its source text — the pattern `afl-draft-room-link.test.ts` already uses.
+ * A substring check on source would pass on code that never runs.
+ *
+ * 2026 anchors, matching that test: AL draft Sat Aug 29, NL draft Sun Aug 30.
  */
 
 const AFL = LEAGUES['afl-fantasy'];
-const hero = readFileSync('src/utils/afl-hero-resolver.ts', 'utf-8');
+const urlOpts = { leagueId: AFL.id, year: 2026, host: `https://${AFL.mflHost}` };
 
-/** The source of one conference's draft-day card, up to the next card. */
-function heroCard(cardId: 'afl-al-draft' | 'afl-nl-draft'): string {
-  const start = hero.indexOf(`'${cardId}': (event`);
-  expect(start, `${cardId} card not found in afl-hero-resolver`).toBeGreaterThan(-1);
-  const rest = hero.slice(start + 1);
-  const next = rest.search(/\n  '[a-z0-9-]+': \(event/);
-  return next === -1 ? rest : rest.slice(0, next);
+/** The hero's CTA for a conference's own owner, on the morning of its draft. */
+function heroCtaOn(date: Date, conference: '00' | '01'): string {
+  const state = resolveAflHeroState({
+    referenceDate: date,
+    whatsNewEntries: [],
+    userConferenceId: conference,
+  });
+  if (state.kind !== 'calendar-event') {
+    throw new Error(`expected calendar-event state, got ${state.kind}`);
+  }
+  const { link } = state.view;
+  // A draft-day card without a CTA is itself the regression this guards, so
+  // fail loudly here rather than comparing against undefined below.
+  if (!link) throw new Error(`conference ${conference} hero has no link on ${date.toISOString()}`);
+  return link;
 }
+
+const AL_DRAFT_MORNING = new Date(2026, 7, 29, 8, 0);
+const NL_DRAFT_MORNING = new Date(2026, 7, 30, 8, 0);
 
 describe('the AL/NL draft-kind fact, in both places that hold it', () => {
   it('config says AL live, NL email', () => {
+    // MFL's league.json says "email" for the WHOLE league, which is wrong for
+    // the AL. That is why the fact is configured rather than inferred.
     expect(getConferenceDraftKind('00')).toBe('live');
     expect(getConferenceDraftKind('01')).toBe('email');
   });
 
-  it('the hero leads the AL with the room URL and the NL with the email-draft URL', () => {
-    const al = heroCard('afl-al-draft');
-    const nl = heroCard('afl-nl-draft');
-
-    // Each card offers its OWN conference's page and never the other's — the
-    // crossing this whole arrangement exists to prevent.
-    expect(al).toContain('roomUrl');
-    expect(al).not.toContain('emailDraftUrl');
-    expect(nl).toContain('emailDraftUrl');
-    expect(nl).not.toContain('roomUrl');
+  it('the ROOM sends each conference to the page its draft kind implies', () => {
+    expect(aflPickUrlFor(getConferenceDraftKind('00'), urlOpts)).toBe(
+      buildMflLiveDraftUrl(urlOpts)
+    );
+    expect(aflPickUrlFor(getConferenceDraftKind('01'), urlOpts)).toBe(
+      buildMflOptionUrl({ ...urlOpts, option: MFL_EMAIL_DRAFT_OPTION })
+    );
   });
 
-  it('the room sends each conference to the SAME page the hero does', () => {
-    const opts = { leagueId: AFL.id, year: 2026, host: `https://${AFL.mflHost}` };
-    const roomAl = aflPickUrlFor(getConferenceDraftKind('00'), opts);
-    const roomNl = aflPickUrlFor(getConferenceDraftKind('01'), opts);
+  it('the HERO sends each conference to that SAME page on draft morning', () => {
+    expect(heroCtaOn(AL_DRAFT_MORNING, '00')).toBe(buildMflLiveDraftUrl(urlOpts));
+    expect(heroCtaOn(NL_DRAFT_MORNING, '01')).toBe(
+      buildMflOptionUrl({ ...urlOpts, option: MFL_EMAIL_DRAFT_OPTION })
+    );
+  });
 
-    // The hero builds these with the same two helpers; asserting the SHAPE
-    // catches a swap without duplicating its CTA logic here.
-    expect(roomAl).toContain('ajax_ld');
-    expect(roomNl).toContain('O=52');
-    expect(roomAl).not.toBe(roomNl);
+  it('room and hero agree exactly, per conference', () => {
+    // The assertion that actually matters: whatever each side decides, they
+    // decide the same thing.
+    expect(heroCtaOn(AL_DRAFT_MORNING, '00')).toBe(
+      aflPickUrlFor(getConferenceDraftKind('00'), urlOpts)
+    );
+    expect(heroCtaOn(NL_DRAFT_MORNING, '01')).toBe(
+      aflPickUrlFor(getConferenceDraftKind('01'), urlOpts)
+    );
+  });
 
-    // And the hero's own builders are still the ones it uses.
-    expect(hero).toContain('buildMflLiveDraftUrl');
-    expect(hero).toContain('MFL_EMAIL_DRAFT_OPTION');
+  it('neither ever hands a conference the OTHER’s page', () => {
+    const al = heroCtaOn(AL_DRAFT_MORNING, '00');
+    const nl = heroCtaOn(NL_DRAFT_MORNING, '01');
+    expect(al).toContain('ajax_ld');
+    expect(al).not.toContain(`O=${MFL_EMAIL_DRAFT_OPTION}`);
+    expect(nl).toContain(`O=${MFL_EMAIL_DRAFT_OPTION}`);
+    expect(nl).not.toContain('ajax_ld');
+  });
+
+  it('the email option number has ONE definition, shared by both', () => {
+    // It used to be declared separately in the hero and the room, where a
+    // divergence would be a valid URL to the wrong MFL page.
+    expect(MFL_EMAIL_DRAFT_OPTION).toBe(52);
+    expect(buildMflOptionUrl({ ...urlOpts, option: MFL_EMAIL_DRAFT_OPTION })).toContain('O=52');
   });
 });

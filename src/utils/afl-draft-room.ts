@@ -171,10 +171,14 @@ export function buildAflRoomPageData(input: {
     // this app archives it — on the DEFAULT league's year clock, the same
     // arrangement best-ball's room uses. Redraft ADP because the AFL redrafts
     // every season, so dynasty ranks would mis-sort the board.
-    players: buildDraftPlayers(getCurrentLeagueYear(), {
-      viewerFranchiseId: input.myFranchiseId ?? undefined,
-      adpSource: 'redraft',
-    }),
+    // NO viewerFranchiseId. Its only effect is the licensed-RSP gate, and the
+    // id handed in here is a BROWSE-AS selection — `?myteam=`, a cookie, or
+    // `resolveAFLTeamSelection`'s '0001' default — not an authenticated
+    // identity. Passing it would have given every logged-out visitor to this
+    // page RSP data, because the default id collides with the one franchise
+    // the licence covers. RSP is licensed inside TheLeague besides, so an AFL
+    // franchise id could never legitimately unlock it.
+    players: buildDraftPlayers(getCurrentLeagueYear(), { adpSource: 'redraft' }),
     leagueId: input.leagueId,
     partyHost: input.partyHost,
     unit: input.room.unit,
