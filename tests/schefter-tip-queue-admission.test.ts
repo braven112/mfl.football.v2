@@ -66,7 +66,13 @@ describe('tip-queue admission — the trade-offer round trip', () => {
     const result = redactTradeOffer(buildOfferArgs());
     expect(result.skip).toBeFalsy();
 
-    const tip = result.tip;
+    // `redactTradeOffer` returns EITHER `{skip, reason}` or `{tip, debug}`, so
+    // `tip` is optional on the result type. Throw rather than `!`-assert: if
+    // the redactor ever starts skipping this offer the fixture has gone stale,
+    // and that should say so instead of failing on a null deref two lines down.
+    const { tip } = result;
+    if (!tip) throw new Error(`redactTradeOffer skipped a well-formed offer: ${result.reason}`);
+
     // The precondition that made the bug invisible: the producer really does
     // emit an empty string here, and always has.
     expect(tip.text).toBe('');
