@@ -3,6 +3,22 @@
   "changes": [
     {
       "date": "2026-09-04",
+      "type": "bug-fix",
+      "summary": "The homepage hero was introducing you to someone else's player. On kickoff week it casts a likely starter from the week's first game — and if you didn't happen to roster anybody in the Thursday opener, it reached across the league and put a rival's star next to your own team card. It now only ever shows a player you actually own: your guy in the opener if you have one, otherwise a likely starter from whichever of your players kicks off first, captioned honestly (\"Your First Starter\" rather than pretending he's playing Thursday night). If none of your players are left to play, it falls back to your own headliner rather than borrowing a face from another team. Signed out, or before you've picked a team, the hero still shows the opener's headliner from anywhere in the league.",
+      "impact": "user",
+      "area": "homepage",
+      "league": "both"
+    },
+    {
+      "date": "2026-09-04",
+      "type": "bug-fix",
+      "summary": "The same fix reaches further on the AFL homepage: the game-day and live-scoring heroes pick their face the same way the kickoff hero does, so they were borrowing other teams' players too. Both now cast from your roster only. The bigger one is underneath: because the AL and NL run separate player pools, most of the league is rostered by two teams at once, and we had been crediting each of those players to just one of their owners — so the trade-block, matchup and recap heroes could all decide your own player wasn't yours. Every one of them now knows a player can belong to two teams.",
+      "impact": "user",
+      "area": "homepage",
+      "league": "afl"
+    },
+    {
+      "date": "2026-09-04",
       "type": "style-tweak",
       "summary": "Three throwback crests were wearing the wrong face. Dicks out for Harambe went into its 2017-18 seasons showing the modern gorilla instead of the original circle badge — the screaming silverback, the little guy perched on his fist, and the Hebrew running over the top of them both. The Mariachi Ninjas had the sombrero sliced off at the brim, and Midwestside Connection was cropped tight enough to shear the bottom off its own gold ring. All three now wear the original badges, whole circle intact, everywhere an era crest turns up: franchise pages, owner pages and the Throwback Week picker.",
       "impact": "user",

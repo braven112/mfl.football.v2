@@ -241,7 +241,22 @@ export interface ScoredCastCandidate {
   playerId: string;
   /** League franchise that rosters the player; '' = free agent */
   franchiseId: string;
+  /**
+   * EVERY franchise rostering the player, when the pool's source can say.
+   * The AFL's two conferences run independent pools inside one MFL league, so
+   * a player is routinely rostered twice and the single `franchiseId` above is
+   * an arbitrary one of them — ownership questions must consult this when it
+   * is present (`castsFor` below).
+   */
+  franchiseIds?: string[];
   score: number;
+  /**
+   * Unix-seconds kickoff of this player's NFL game, when the pool spans a
+   * slate rather than a single game. `castRandomStarterModel` casts from the
+   * FIRST game the pool plays in; pools without it (single-game callers) are
+   * treated as one game.
+   */
+  kickoff?: number;
 }
 
 /**
@@ -265,9 +280,7 @@ export function castBestScoredModel(
   });
   if (resolvable.length === 0) return null;
 
-  const own = userFranchiseId
-    ? resolvable.filter((c) => c.franchiseId === userFranchiseId)
-    : [];
+  const own = userFranchiseId ? resolvable.filter((c) => castsFor(c, userFranchiseId)) : [];
   const pool = own.length > 0 ? own : resolvable;
 
   const best = pool.reduce((a, b) =>
@@ -279,13 +292,37 @@ export function castBestScoredModel(
 /**
  * Cast a RANDOM likely starter from a scored candidate pool — daily rotation.
  *
- * Kickoff rule: rotate among the likely starters in the earliest game of the
- * week, not just the single best. "Likely starters" = the top `perTeam`
- * fantasy players per NFL team by projection (the real starters, not the
- * deep bench); a projection of 0 is never a starter. When signed in, the
- * pool narrows to the owner's own likely starters in that game, falling back
- * to the full pool when they roster none. The pick rotates by PT day so the
- * same face doesn't hold the hero all window.
+ * Starter rule (Brandon, 2026-09): the hero shows a player from the SIGNED-IN
+ * OWNER'S OWN ROSTER. The pool never widens back to the league — not when the
+ * owner's players are all outside the starter tier, and not when they have
+ * nobody in the remaining slate at all (that returns null, so the caller's
+ * own-roster fallback runs). "Some other team's guy" is exactly what this rule
+ * exists to stop, and a half-applied version of it is still that bug.
+ *
+ * Which of their players: whoever PLAYS FIRST. The pool is narrowed to the
+ * earliest kickoff it contains, so an owner with a player in the Thursday
+ * opener sees him, and an owner with nobody in it sees a likely starter from
+ * their earliest game instead (rather than a stranger from the opener).
+ * "Likely starters" = the top `perTeam` fantasy players per NFL team by
+ * projection (the real starters, not the deep bench); a projection of 0 is
+ * never a starter. The pick rotates by PT day so the same face doesn't hold
+ * the hero all window.
+ *
+ * Guests have no roster, so their pool is the whole league and the earliest
+ * kickoff is always the opener — the pre-2026-09 behavior, unchanged.
+ *
+ * @param laterGameDescriptor - Caption used when the pick is NOT in the week's
+ *   earliest game (only reachable for a signed-in owner) — "Kickoff Starter"
+ *   would be a lie for someone playing Sunday. Defaults to `descriptor`.
+ * @param offTierDescriptor - Caption used when the pick is outside the starter
+ *   tier, which happens when the owner's only players in that game are bench
+ *   guys. He is genuinely theirs and genuinely playing, so he keeps the hero —
+ *   but calling a 1.2-projected WR5 a "Starter" is the same kind of small lie.
+ *   Takes precedence over `laterGameDescriptor` — so keep it game-agnostic
+ *   ("On Your Roster", not "In the Opener"): an off-tier pick can also be in a
+ *   later game, and then both captions have to hold at once. Only ever
+ *   reachable for a signed-in owner; a guest's pool always contains its own
+ *   game's starter tier. Defaults to `descriptor`.
  */
 export function castRandomStarterModel(
   candidates: ScoredCastCandidate[],
@@ -294,31 +331,93 @@ export function castRandomStarterModel(
   referenceDate: Date,
   descriptor: string,
   perTeam: number = 8,
+  laterGameDescriptor?: string,
+  offTierDescriptor?: string,
 ): HeroModel | null {
-  // Group compositable, projected candidates by NFL team.
-  const byTeam = new Map<string, ScoredCastCandidate[]>();
-  for (const c of candidates) {
+  const eligible = candidates.filter((c) => {
     const p = players.get(c.playerId);
     // A non-finite projection (malformed feed → NaN) is never a likely starter.
-    if (!p || !isCompositable(p) || !Number.isFinite(c.score) || c.score <= 0) continue;
-    const arr = byTeam.get(p.nflTeam) ?? [];
-    arr.push(c);
-    byTeam.set(p.nflTeam, arr);
-  }
+    return !!p && isCompositable(p) && Number.isFinite(c.score) && c.score > 0;
+  });
+  if (eligible.length === 0) return null;
 
-  // Keep each team's top `perTeam` by projection — that's the starter tier.
-  const pool: ScoredCastCandidate[] = [];
+  // The starter tier: each NFL team's top `perTeam` by projection, taken over
+  // the WHOLE pool — a player's starter status is a fact about his NFL team,
+  // not about which fantasy roster is being cast from.
+  const byTeam = new Map<string, ScoredCastCandidate[]>();
+  for (const c of eligible) {
+    const team = players.get(c.playerId)!.nflTeam;
+    const arr = byTeam.get(team) ?? [];
+    arr.push(c);
+    byTeam.set(team, arr);
+  }
+  const starterTier = new Set<string>();
   for (const arr of byTeam.values()) {
     arr.sort((a, b) => b.score - a.score || a.playerId.localeCompare(b.playerId));
-    pool.push(...arr.slice(0, perTeam));
+    for (const c of arr.slice(0, perTeam)) starterTier.add(c.playerId);
   }
+
+  // The owner's own players are the pool — and when they have NONE, the answer
+  // is "nobody", never a stranger. The remaining slate shrinks as games finish
+  // (see getWeekGameCandidates), so by Sunday night an owner can have nobody
+  // left playing; widening there is what put another franchise's player in the
+  // hero captioned "In Action". Returning null hands the caller its own-roster
+  // fallback ladder instead.
+  const own = userFranchiseId ? eligible.filter((c) => castsFor(c, userFranchiseId)) : [];
+  if (userFranchiseId && own.length === 0) return null;
+  const base = own.length > 0 ? own : eligible;
+
+  // Then the first game that pool plays in. Ordering matters: "your player in
+  // the opener" beats "your best player, on Sunday". Candidates carrying no
+  // kickoff (single-game callers) are one undifferentiated game.
+  const firstKickoff = earliestKickoff(base);
+  const slate = firstKickoff === null ? base : base.filter((c) => c.kickoff === firstKickoff);
+
+  // Prefer the starter tier inside that game, but never at the cost of the
+  // rule above: an owner whose only player in it is a backup still sees HIM,
+  // not a stranger and not one of their own players who doesn't play till Sunday.
+  const tiered = slate.filter((c) => starterTier.has(c.playerId));
+  const pool = tiered.length > 0 ? tiered : slate;
   if (pool.length === 0) return null;
 
-  const own = userFranchiseId ? pool.filter((c) => c.franchiseId === userFranchiseId) : [];
-  const finalPool = own.length > 0 ? own : pool;
+  const pick = dailyPick(pool, referenceDate, 'starter', (c) => c.playerId);
+  if (!pick) return null;
 
-  const pick = dailyPick(finalPool, referenceDate, 'starter', (c) => c.playerId);
-  return pick ? toModel(players.get(pick.playerId)!, descriptor) : null;
+  const openerKickoff = earliestKickoff(eligible);
+  const isLaterGame =
+    firstKickoff !== null && openerKickoff !== null && firstKickoff > openerKickoff;
+  const caption = !starterTier.has(pick.playerId)
+    ? offTierDescriptor ?? descriptor
+    : isLaterGame
+      ? laterGameDescriptor ?? descriptor
+      : descriptor;
+  return toModel(players.get(pick.playerId)!, caption);
+}
+
+/**
+ * Whether a franchise rosters this candidate — every owner, not just the first.
+ * Exported because the ownership question gets asked outside the casters too
+ * (TheLeague's homepage decides its "Your Kickoff Starter" caption with it),
+ * and a second hand-rolled `franchiseId ===` compare is how the AFL's
+ * dual-rostered half quietly falls out of its own pool again.
+ */
+export function castsFor(
+  candidate: Pick<ScoredCastCandidate, 'franchiseId' | 'franchiseIds'>,
+  franchiseId: string,
+): boolean {
+  return candidate.franchiseIds
+    ? candidate.franchiseIds.includes(franchiseId)
+    : candidate.franchiseId === franchiseId;
+}
+
+/** Earliest kickoff carried by a candidate pool; null when none carry one. */
+function earliestKickoff(candidates: ScoredCastCandidate[]): number | null {
+  let earliest: number | null = null;
+  for (const c of candidates) {
+    if (!Number.isFinite(c.kickoff)) continue;
+    if (earliest === null || c.kickoff! < earliest) earliest = c.kickoff!;
+  }
+  return earliest;
 }
 
 /**
@@ -409,6 +508,14 @@ export function scoreFaceoffSides(
 export interface RosterCastCandidate {
   playerId: string;
   franchiseId: string;
+  /**
+   * EVERY franchise rostering the player, when the source can say — same
+   * contract as `ScoredCastCandidate.franchiseIds`, and needed for the same
+   * reason: an AFL player is routinely rostered in both conferences, so a bare
+   * `franchiseId` is an arbitrary one of his owners and the owner asking for
+   * "my player" loses him about half the time.
+   */
+  franchiseIds?: string[];
 }
 
 /**
@@ -431,9 +538,7 @@ export function castRosterModel(
   });
   if (resolvable.length === 0) return null;
 
-  const own = userFranchiseId
-    ? resolvable.filter((c) => c.franchiseId === userFranchiseId)
-    : [];
+  const own = userFranchiseId ? resolvable.filter((c) => castsFor(c, userFranchiseId)) : [];
   const pool = own.length > 0 ? own : resolvable;
 
   const pick = dailyPick(pool, referenceDate, 'roster', (c) => `${c.franchiseId}:${c.playerId}`);
@@ -630,7 +735,7 @@ export function castTopRankedModel(
   });
   if (resolvable.length === 0) return null;
 
-  const own = userFranchiseId ? resolvable.filter((c) => c.franchiseId === userFranchiseId) : [];
+  const own = userFranchiseId ? resolvable.filter((c) => castsFor(c, userFranchiseId)) : [];
   const pool = own.length > 0 ? own : resolvable;
 
   const best = pool.reduce((a, b) => {

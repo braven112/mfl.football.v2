@@ -85,12 +85,37 @@ export function getRosteredPlayerIds(
   return ids;
 }
 
-/** Map of rostered playerId → owning franchiseId, from the rosters feed. */
-export function getOwnerByPlayer(
+/**
+ * Map of rostered playerId → EVERY owning franchiseId.
+ *
+ * A player can be rostered by more than one franchise, so ownership is a LIST.
+ * The AFL's two conferences (AL and NL) run independent player pools inside one
+ * MFL league id, so the same NFL player is legitimately rostered twice: 143 of
+ * 199 rostered players in the 2026 feed. A single-owner map credited ~72% of
+ * the league to an arbitrary one of their two owners — every consumer of it had
+ * the same bug, so it is gone rather than fixed. This is the only owner map.
+ *
+ * `activeOnly` (default) counts ACTIVE roster spots only — `status` absent or
+ * `ROSTER` — matching `getFranchiseHeadliners`. That default is load-bearing
+ * for the starter heroes: the owner's slice is their SOLE pool, so an
+ * unfiltered map lets a TAXI_SQUAD rookie win outright as "your kickoff
+ * starter" (45 taxi + 5 IR of 386 in TheLeague's 2026 feed).
+ *
+ * Pass `activeOnly: false` where the question is ownership rather than
+ * startability — a taxi-squad player CAN be on the trade block, and dropping
+ * him there loses a real listing (and, if it was the owner's only one, widens
+ * their block hero to a stranger).
+ *
+ * There is deliberately no single-owner variant: one existed, every caller had
+ * the same latent bug, and `tests/afl-hero-casting.test.ts` now fails the build
+ * if a "playerId → one franchiseId" map comes back.
+ */
+export function getOwnersByPlayer(
   leagueYear: number,
   league: CanonicalLeagueSlug = 'theleague',
-): Map<string, string> {
-  const ownerByPlayer = new Map<string, string>();
+  { activeOnly = true }: { activeOnly?: boolean } = {},
+): Map<string, string[]> {
+  const owners = new Map<string, string[]>();
   const rosterData = readJsonFile(feedPath(league, leagueYear, 'rosters.json'));
   const franchises = rosterData?.rosters?.franchise;
   for (const franchise of franchises ? (Array.isArray(franchises) ? franchises : [franchises]) : []) {
@@ -100,10 +125,14 @@ export function getOwnerByPlayer(
         ? [franchise.player]
         : [];
     for (const p of players) {
-      if (p?.id) ownerByPlayer.set(p.id, franchise.id);
+      if (!p?.id) continue;
+      if (activeOnly && p.status && p.status !== 'ROSTER') continue;
+      const list = owners.get(p.id);
+      if (list) list.push(franchise.id);
+      else owners.set(p.id, [franchise.id]);
     }
   }
-  return ownerByPlayer;
+  return owners;
 }
 
 // ── Franchise Headliners ──
@@ -181,12 +210,27 @@ export function getFranchiseHeadliners(
  */
 export function getFranchiseCompositableHeadliners(
   leagueYear: number,
+  league: CanonicalLeagueSlug = 'theleague',
 ): Array<{ playerId: string; franchiseId: string }> {
-  const rosterData = readJsonFile(`${THELEAGUE_DATA_PATH}/mfl-feeds/${leagueYear}/rosters.json`);
+  const rosterData = readJsonFile(feedPath(league, leagueYear, 'rosters.json'));
   const franchises = rosterData?.rosters?.franchise;
   if (!franchises) return [];
-  const projections = getProjectionMap(leagueYear);
+  const projections = getProjectionMap(leagueYear, league);
   const players = getUnifiedPlayerMap(leagueYear);
+  // ADP rank before the bare id, for the same reason getFranchiseHeadliners
+  // carries it: in an AFL league year whose projections feed is dead, and whose
+  // rosters carry no salaries at all, score and salary are 0 for EVERY player
+  // and an id tie-break degenerates to "lowest MFL id" — a random deep bench
+  // player as the franchise's face. Loaded lazily; with live projections the
+  // earlier comparisons decide and the extra feed read never happens.
+  let adpRank: Map<string, number> | null = null;
+  const rankOf = (id: string): number => {
+    if (!adpRank) {
+      adpRank = new Map();
+      getAdpRankedIds(leagueYear, league).forEach((pid, i) => adpRank!.set(pid, i));
+    }
+    return adpRank.get(id) ?? Number.MAX_SAFE_INTEGER;
+  };
 
   const out: Array<{ playerId: string; franchiseId: string }> = [];
   for (const franchise of Array.isArray(franchises) ? franchises : [franchises]) {
@@ -198,9 +242,17 @@ export function getFranchiseCompositableHeadliners(
     )
       .filter((p: any) => p?.id && (!p.status || p.status === 'ROSTER'))
       .map((p: any) => ({ id: p.id, score: projections.get(p.id) ?? 0, salary: parseFloat(p.salary || '0') || 0 }))
-      // id tie-break keeps the pick stable (deterministic SSR) when a franchise
-      // has players tied on both projection and salary — mirrors getFranchiseHeadliners.
-      .sort((a: any, b: any) => b.score - a.score || b.salary - a.salary || String(a.id).localeCompare(String(b.id)));
+      // Score, then salary, then ADP rank, then id — the trailing tie-breaks
+      // keep the pick meaningful when projections and/or salaries are empty,
+      // and the id keeps it stable (deterministic SSR). Mirrors
+      // getFranchiseHeadliners; keep the two sorts in step.
+      .sort(
+        (a: any, b: any) =>
+          b.score - a.score ||
+          b.salary - a.salary ||
+          rankOf(a.id) - rankOf(b.id) ||
+          String(a.id).localeCompare(String(b.id)),
+      );
     for (const p of roster) {
       const pm = players.get(p.id);
       if (pm && pm.position !== 'DEF' && pm.headshot.includes('espncdn.com')) {
@@ -268,11 +320,60 @@ function matchupToKickoffGame(matchup: any): KickoffGame | null {
   };
 }
 
+/** One parsed game from the current-week nflSchedule feed. */
+interface ScheduledGame extends KickoffGame {
+  /** Unix seconds kickoff timestamp. */
+  kickoff: number;
+}
+
+/**
+ * Every game in the current-week nflSchedule feed, earliest kickoff first.
+ * Malformed matchups (no kickoff, not two teams, unrecognized codes) drop out.
+ */
+function readWeekGames(leagueYear: number, league: CanonicalLeagueSlug): ScheduledGame[] {
+  const data = readJsonFile(feedPath(league, leagueYear, 'nflSchedule.json'));
+  const matchups = data?.nflSchedule?.matchup;
+  if (!matchups) return [];
+
+  const games: ScheduledGame[] = [];
+  for (const m of Array.isArray(matchups) ? matchups : [matchups]) {
+    const kickoff = parseInt(m?.kickoff, 10);
+    if (!Number.isFinite(kickoff)) continue;
+    const game = matchupToKickoffGame(m);
+    if (game) games.push({ ...game, kickoff });
+  }
+  return games.sort((a, b) => a.kickoff - b.kickoff);
+}
+
+/**
+ * The games still worth previewing at `referenceDate` — those not yet kicked
+ * off (plus a 4h in-progress grace), so a mid-week caller doesn't feature
+ * Thursday's finished game on Sunday.
+ *
+ * `fallbackToFullSlate` decides what a fully-played week means, and the two
+ * callers genuinely differ. `getKickoffGame` NAMES the opener, and the week's
+ * opener is still the opener after it has been played — it falls back. The
+ * candidate pool must NOT: casting is a claim that the player is about to
+ * play (or is playing), so resurrecting a spent slate puts Thursday's man in
+ * the hero captioned "In Action" on Monday night. Empty is the honest answer
+ * there — the caller falls back to the owner's own headliner.
+ */
+function upcomingWeekGames(
+  games: ScheduledGame[],
+  referenceDate: Date | undefined,
+  fallbackToFullSlate: boolean,
+): ScheduledGame[] {
+  if (!referenceDate) return games;
+  const cutoff = Math.floor(referenceDate.getTime() / 1000) - 4 * 3600;
+  const upcoming = games.filter((g) => g.kickoff >= cutoff);
+  if (upcoming.length > 0) return upcoming;
+  return fallbackToFullSlate ? games : [];
+}
+
 /**
  * The earliest game of the current NFL week, from the live nflSchedule feed
  * (`nflSchedule.matchup` — the current week's slate; week 1 during the
- * preseason). Drives the kickoff-headliner hero casting rule: "the best player
- * starting in the earliest game of the week."
+ * preseason). Names the opener in kickoff-hero copy.
  *
  * With a `referenceDate`, prefers the earliest game still upcoming or live
  * (kickoff + 4h grace) so a mid-week caller doesn't feature Thursday's
@@ -284,56 +385,76 @@ export function getKickoffGame(
   league: CanonicalLeagueSlug = 'theleague',
   referenceDate?: Date,
 ): KickoffGame | null {
-  const data = readJsonFile(feedPath(league, leagueYear, 'nflSchedule.json'));
-  const matchups = data?.nflSchedule?.matchup;
-  if (!matchups) return null;
-
-  const games = (Array.isArray(matchups) ? matchups : [matchups]).filter(
-    (m: any) => m?.kickoff && Array.isArray(m.team) && m.team.length === 2,
-  );
+  const games = readWeekGames(leagueYear, league);
   if (games.length === 0) return null;
-
-  const sorted = [...games].sort((a: any, b: any) => parseInt(a.kickoff, 10) - parseInt(b.kickoff, 10));
-  let earliest = sorted[0];
-  if (referenceDate) {
-    const cutoff = Math.floor(referenceDate.getTime() / 1000) - 4 * 3600;
-    earliest = sorted.find((m: any) => parseInt(m.kickoff, 10) >= cutoff) ?? sorted[0];
-  }
-  return matchupToKickoffGame(earliest);
+  const [earliest] = upcomingWeekGames(games, referenceDate, true);
+  return earliest ? { teamCodes: earliest.teamCodes, awayName: earliest.awayName, homeName: earliest.homeName } : null;
 }
 
 /**
- * Scored candidates for the kickoff-game headliner: every fantasy player on
- * the two teams in the earliest game of the week, scored by projection,
- * with the league franchise that rosters them (empty string = free agent).
+ * Scored candidates for the starter-casting heroes: every fantasy player whose
+ * NFL team plays in the week's remaining slate, carrying that game's kickoff
+ * timestamp so the caster can prefer whoever plays FIRST.
+ *
+ * Deliberately week-wide, not opener-only: a signed-in owner is cast strictly
+ * from their own roster (see `castRandomStarterModel`), and most owners roster
+ * nobody in the Thursday opener — the pool has to reach their earliest game or
+ * the hero falls back to somebody else's player.
  */
-export function getKickoffGameCandidates(
+export function getWeekGameCandidates(
   leagueYear: number,
   league: CanonicalLeagueSlug = 'theleague',
   referenceDate?: Date,
-): Array<{ playerId: string; franchiseId: string; score: number }> {
-  const game = getKickoffGame(leagueYear, league, referenceDate);
-  if (!game) return [];
+): Array<{
+  playerId: string;
+  franchiseId: string;
+  franchiseIds: string[];
+  score: number;
+  kickoff: number;
+}> {
+  const slate = upcomingWeekGames(readWeekGames(leagueYear, league), referenceDate, false);
+  if (slate.length === 0) return [];
+
+  // A team plays once a week, but keep the earliest if a feed ever repeats one.
+  const kickoffByTeam = new Map<string, number>();
+  for (const game of slate) {
+    for (const code of game.teamCodes) {
+      const prev = kickoffByTeam.get(code);
+      if (prev === undefined || game.kickoff < prev) kickoffByTeam.set(code, game.kickoff);
+    }
+  }
 
   const projections = getProjectionMap(leagueYear, league);
   const playerMap = getUnifiedPlayerMap(leagueYear);
+  // Every owner, not one: an AFL player is routinely rostered in both
+  // conferences, and casting "your own starter" must not miss him because the
+  // other conference's franchise happened to be written last.
+  const ownersByPlayer = getOwnersByPlayer(leagueYear, league);
 
-  const ownerByPlayer = getOwnerByPlayer(leagueYear, league);
-
-  const codes = new Set(game.teamCodes);
-  const candidates: Array<{ playerId: string; franchiseId: string; score: number }> = [];
+  const candidates: Array<{
+    playerId: string;
+    franchiseId: string;
+    franchiseIds: string[];
+    score: number;
+    kickoff: number;
+  }> = [];
   for (const p of playerMap.values()) {
-    if (p.position === 'DEF' || !codes.has(p.nflTeam)) continue;
+    if (p.position === 'DEF') continue;
+    const kickoff = kickoffByTeam.get(p.nflTeam);
+    if (kickoff === undefined) continue;
+    const franchiseIds = ownersByPlayer.get(p.mflId) ?? [];
     candidates.push({
       playerId: p.mflId,
-      franchiseId: ownerByPlayer.get(p.mflId) ?? '',
+      franchiseId: franchiseIds[0] ?? '',
+      franchiseIds,
       score: projections.get(p.mflId) ?? 0,
+      kickoff,
     });
   }
-  // "Best" means most projected points. If projections haven't published yet
-  // every score is 0 and "best" would be an arbitrary tie-break — return
-  // nothing so the caller's fallback ladder (franchise headliners, which
-  // tie-breaks on salary) takes over instead.
+  // "Likely starter" means most projected points. If projections haven't
+  // published yet every score is 0 and "likely" would be an arbitrary
+  // tie-break — return nothing so the caller's fallback ladder (franchise
+  // headliners, which tie-break on salary) takes over instead.
   if (!candidates.some((c) => c.score > 0)) return [];
   return candidates;
 }
@@ -346,9 +467,9 @@ export interface MarqueeGameStars {
   awayName: string;
   homeName: string;
   /** Scored candidates on the away team (highest = the side's star) */
-  awayCandidates: Array<{ playerId: string; franchiseId: string; score: number }>;
+  awayCandidates: Array<{ playerId: string; franchiseId: string; franchiseIds: string[]; score: number }>;
   /** Scored candidates on the home team (highest = the side's star) */
-  homeCandidates: Array<{ playerId: string; franchiseId: string; score: number }>;
+  homeCandidates: Array<{ playerId: string; franchiseId: string; franchiseIds: string[]; score: number }>;
 }
 
 /**
@@ -478,11 +599,11 @@ export function getMarqueeGameStars(
 
   const [awayCode, homeCode] = game.teamCodes;
   const playerMap = getUnifiedPlayerMap(seasonYear);
-  const ownerByPlayer = getOwnerByPlayer(seasonYear, league);
+  const ownersByPlayer = getOwnersByPlayer(seasonYear, league);
   const scoreOf = getGameScoreMap(seasonYear, league, game.source);
 
-  const awayCandidates: Array<{ playerId: string; franchiseId: string; score: number }> = [];
-  const homeCandidates: Array<{ playerId: string; franchiseId: string; score: number }> = [];
+  const awayCandidates: MarqueeGameStars['awayCandidates'] = [];
+  const homeCandidates: MarqueeGameStars['homeCandidates'] = [];
   for (const p of playerMap.values()) {
     if (p.position === 'DEF') continue;
     if (p.nflTeam !== awayCode && p.nflTeam !== homeCode) continue;
@@ -490,9 +611,11 @@ export function getMarqueeGameStars(
     // (NaN isn't null), and castBestScoredModel doesn't filter finite, so a NaN
     // candidate could otherwise win the pick.
     const rawScore = scoreOf.get(p.mflId);
+    const franchiseIds = ownersByPlayer.get(p.mflId) ?? [];
     const candidate = {
       playerId: p.mflId,
-      franchiseId: ownerByPlayer.get(p.mflId) ?? '',
+      franchiseId: franchiseIds[0] ?? '',
+      franchiseIds,
       score: Number.isFinite(rawScore) ? (rawScore as number) : 0,
     };
     if (p.nflTeam === awayCode) awayCandidates.push(candidate);
@@ -545,17 +668,22 @@ export function getAdpRankedIds(
 export function getTradeBaitCandidates(
   leagueYear: number,
   league: CanonicalLeagueSlug = 'theleague',
-): Array<{ playerId: string; franchiseId: string }> {
+): Array<{ playerId: string; franchiseId: string; franchiseIds: string[] }> {
   const data = readJsonFile(feedPath(league, leagueYear, 'tradeBait.json'));
   if (!Array.isArray(data)) return [];
 
-  const ownerByPlayer = getOwnerByPlayer(leagueYear, league);
+  // Every owner, not one: an AFL player is routinely rostered in both
+  // conferences, so the singular map attributes a shared player's block
+  // listing to a coin-flip franchise and the other owner's own trade-block
+  // hero widens to a stranger. One entry per player still (the guest pool
+  // must not weight a shared player twice); `franchiseIds` answers ownership.
+  const ownersByPlayer = getOwnersByPlayer(leagueYear, league, { activeOnly: false });
   return data
     .filter((id: unknown): id is string => typeof id === 'string' && id.length > 0)
-    .map((playerId: string) => ({
-      playerId,
-      franchiseId: ownerByPlayer.get(playerId) ?? '',
-    }))
+    .map((playerId: string) => {
+      const franchiseIds = ownersByPlayer.get(playerId) ?? [];
+      return { playerId, franchiseId: franchiseIds[0] ?? '', franchiseIds };
+    })
     // A block listing for a player no longer rostered is stale — drop it.
     .filter((c) => c.franchiseId !== '');
 }
@@ -663,19 +791,24 @@ export function selectBreakingStory(
 export function getWeeklyTopScorerCandidates(
   leagueYear: number,
   league: CanonicalLeagueSlug = 'theleague',
-): Array<{ playerId: string; franchiseId: string; score: number }> {
+): Array<{ playerId: string; franchiseId: string; franchiseIds: string[]; score: number }> {
   const data = readJsonFile(feedPath(league, leagueYear, 'playerScores.json'));
   const list = data?.playerScores?.playerScore;
   if (!list) return [];
 
-  const ownerByPlayer = getOwnerByPlayer(leagueYear, league);
+  const ownersByPlayer = getOwnersByPlayer(leagueYear, league);
   const scores = Array.isArray(list) ? list : [list];
-  const candidates: Array<{ playerId: string; franchiseId: string; score: number }> = [];
+  const candidates: Array<{
+    playerId: string;
+    franchiseId: string;
+    franchiseIds: string[];
+    score: number;
+  }> = [];
   for (const ps of scores) {
     const score = parseFloat(ps?.score || '');
-    const franchiseId = ps?.id ? ownerByPlayer.get(ps.id) : undefined;
-    if (!ps?.id || !franchiseId || !Number.isFinite(score) || score <= 0) continue;
-    candidates.push({ playerId: ps.id, franchiseId, score });
+    const franchiseIds = ps?.id ? ownersByPlayer.get(ps.id) ?? [] : [];
+    if (!ps?.id || franchiseIds.length === 0 || !Number.isFinite(score) || score <= 0) continue;
+    candidates.push({ playerId: ps.id, franchiseId: franchiseIds[0], franchiseIds, score });
   }
   return candidates;
 }

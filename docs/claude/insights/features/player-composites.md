@@ -74,6 +74,8 @@ per player.
 - **Roster-action heroes (tags, cuts, contracts) cast a player from the
   signed-in owner's team** (the suggested candidate); guests get a relevant
   player from someone's team.
+- **Starter heroes (kickoff, game-day, live) cast ONLY the signed-in owner's
+  own players** — see the 2026-09 entry at the end of this file.
 - **Every hero casts a semantically relevant player** — the actual player in a
   breaking story, never a random star for decoration.
 - All casting goes through `src/utils/hero-casting.ts` — rotating casters are
@@ -149,10 +151,12 @@ per player.
    Deterministic best via `castBestScoredModel` (no daily rotation).
    Data: new `nflSchedule` MFL feed (league-agnostic, added to
    fetch-mfl-feeds.mjs — current week's games + kickoff timestamps);
-   `getKickoffGame` / `getKickoffGameCandidates` in offseason-hero-data.
+   `getKickoffGame` / `getWeekGameCandidates` in offseason-hero-data.
    Summary names the opener matchup. Falls back to franchise headliners
-   (`getFranchiseHeadliners`, top projected per franchise) when the
-   schedule feed is missing, then to the legacy randomHeroPlayer hero.
+   (compositable ones first) when the schedule feed is missing, then to the
+   legacy randomHeroPlayer hero. **Superseded 2026-09** — see "Starter slots
+   cast the owner's own roster" below: the pool is now the whole week's slate
+   and a signed-in owner is cast strictly from their own team.
 
 5. **UDFA window hero (7 days after the rookie draft)** —
    `src/components/theleague/UdfaCompositeHero.astro`: FOUR side-by-side
@@ -189,7 +193,8 @@ per player.
      the synced tradeBait.json is a FLAT ARRAY of player ids; ownership is
      derived from the rosters feed
    - season-start + game-day + live slots → `castRandomStarterModel` over
-     `getKickoffGameCandidates` ("Kickoff Starter" / "In Action")
+     `getWeekGameCandidates` ("Kickoff Starter" / "In Action"; "Your First
+     Starter" / "Up Next" when the owner plays later than the opener)
    - waivers → best available ("Top Target")
    - recap → NEW `getWeeklyTopScorerCandidates` + `castBestScoredModel`
      ("Top Scorer" — deterministic, no rotation; the week's top scorer IS
@@ -1643,3 +1648,98 @@ Two smaller things:
   img: every entry in the chain is remote, the silhouette included, so the end
   of the walk is a real state, and an unhandled 404 there paints the browser's
   broken-image glyph inside a team-coloured circle.
+
+
+## 2026-09-04 — Starter slots cast the owner's own roster, earliest game first
+
+**The bug (Brandon, from the AFL homepage on kickoff week):** the "Football is
+back" hero was modeling A.J. Brown — rostered by franchise 0020 — to the owner
+of Smokane FC (0001). Two independent reasons, both worth knowing:
+
+1. **The pool was the opener game, not the week.** `getKickoffGameCandidates`
+   returned only the players on the two teams in the week's earliest game. Most
+   owners roster nobody in a Thursday opener, so `castRandomStarterModel`'s
+   "own candidates win when any exist" narrowing had nothing to narrow to and
+   the league-wide pool took over — the hero showed a stranger.
+2. **The fallback could leave your roster too.** When projections haven't
+   published (the whole preseason), the candidate list is empty by design and
+   the ladder fell to `getFranchiseHeadliners` → `castRosterModel`. That pool
+   is each franchise's top projected player *compositable or not*, so an owner
+   whose #1 is a DEF or has no ESPN cutout gets filtered out of their own pool
+   — and `castRosterModel` widens to the league when the own pool is empty.
+
+**The rule now** (kickoff / game-day / live slots only — "best available",
+draft, UDFA and waiver slots are ABOUT players you don't roster and are
+untouched): the hero shows a player from YOUR team. Your player in the opener
+if you have one; otherwise a likely starter from whichever of your players
+plays first. Guests keep the league-wide opener pick — their pool is the whole
+league, whose earliest kickoff IS the opener, so that path is unchanged.
+
+Implementation, in one line each:
+- `getWeekGameCandidates` (replaces `getKickoffGameCandidates`) returns the
+  week's remaining slate with each player's `kickoff` timestamp attached.
+  `getKickoffGame` still exists — the hero COPY names the opener even when the
+  cast player plays Sunday.
+- `castRandomStarterModel` narrows to the owner's own candidates (never widening
+  back), then to the earliest kickoff that pool contains, then prefers the
+  starter tier (top-8 per NFL team by projection, computed league-wide — being
+  a starter is a fact about a player's NFL team, not about who rosters him),
+  then rotates daily. **That order is the rule, and it is deliberate:** your
+  WR3 who plays Thursday outranks your WR1 who plays Sunday, and an owner whose
+  only opener player is a backup still sees HIM rather than a stranger. The
+  tier is a preference inside the chosen game, never a filter that can empty
+  the owner's pool.
+- A pick outside the week's earliest game takes `laterGameDescriptor`
+  ("Your First Starter" / "Up Next") — captioning a Sunday player "Kickoff
+  Starter" is a lie the reader can see.
+- `getFranchiseCompositableHeadliners` took a `league` param so the AFL's
+  starter fallback can use it; the starter ladders now go
+  cast → compositable headliner (own) → plain headliner.
+
+**Trap for the next person:** `castRosterModel` and `castBestScoredModel` still
+prefer-then-widen (own pool → league). That is correct for the slots they serve
+(a guest must still see somebody). Do not "fix" them to match — the strict rule
+belongs to the starter slots, where the whole point is that the face is yours.
+
+### The AFL rosters the same player twice — a single-owner map is wrong there
+
+Found while guarding the rule above. `getOwnerByPlayer` returns ONE franchise
+per player (last write wins over the rosters feed). In TheLeague that is fine —
+0 of 386 rostered players are on two rosters. In the AFL it is wrong for most
+of the league: **143 of 199** rostered players are on more than one roster,
+because the AL and NL conferences run independent player pools inside a single
+MFL league id. Joe Burrow is franchise 0001's headliner AND franchise 0016's.
+
+So "is this player on MY roster" cannot be answered by comparing against
+`getOwnerByPlayer`. `getOwnersByPlayer` (plural) returns every owning
+franchise, and `getWeekGameCandidates` now attaches `franchiseIds[]` to each
+candidate; `castsFor()` in hero-casting matches against that when present.
+Without it the strict own-roster rule *silently misfires in the owner's
+disfavor*: their own starter is credited to the other conference's franchise,
+drops out of their pool, and the hero falls back to their headliner. That is
+invisible in testing unless you assert ownership with the plural map — the
+first version of the guard test failed on a CORRECT cast for exactly this
+reason.
+
+**The single-owner map is gone** (Brandon, same day: "all players can be on two
+AFL rosters"). It was first left in place for the three slots outside this
+change — `getMarqueeGameStars`, `getTradeBaitCandidates`,
+`getWeeklyTopScorerCandidates` — on the theory that each needed its own think
+about what "the owner" means. It doesn't: ownership is a LIST everywhere, and a
+helper that returns one franchise gives every caller the same bug. So
+`getOwnerByPlayer` was deleted rather than fixed, every candidate builder now
+carries `franchiseIds`, and every ownership test in the casters goes through
+`castsFor` (`castBestScoredModel` and `castTopRankedModel` had their own bare
+compares). `rookies-2026.astro` was TheLeague-only, where the collapse is a
+no-op, and still moved — a block that asks the question wrongly is a block
+someone copies into the AFL.
+
+`tests/afl-hero-casting.test.ts` holds three guards: every builder's
+`franchiseIds` must equal `getOwnersByPlayer` (with a `sawShared > 0` check so
+it can't pass vacuously), a shared player must cast for BOTH owners, and a
+source scan fails the build if `getOwnerByPlayer` or a hand-rolled equivalent
+reappears. Verified the scan catches it by putting the function back.
+
+**When you need one franchise for display, take `franchiseIds[0]` and say so.**
+The bug was never that code wanted a single owner; it was that a shared helper
+picked one silently, at a call site that had no idea it was choosing.

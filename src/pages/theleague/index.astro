@@ -31,12 +31,12 @@ import { resolveHeroFranchiseBackdrop } from '../../utils/hero-franchise-backdro
 import { resolveHeroState, parseTestDate, isAuctionStripPeriod, isEntryInHeroWindow } from '../../utils/hero-resolver';
 import { getRelease } from '../../utils/schedule-release-store';
 import { getThrowbackPreference } from '../../utils/throwback-store';
-import { enrichHeroState, isDraftComplete, getRosteredPlayerIds, getAdpRankedIds, getFranchiseHeadliners, getKickoffGame, getKickoffGameCandidates, selectBreakingStory } from '../../utils/offseason-hero-data';
+import { enrichHeroState, isDraftComplete, getRosteredPlayerIds, getAdpRankedIds, getFranchiseHeadliners, getFranchiseCompositableHeadliners, getKickoffGame, getWeekGameCandidates, selectBreakingStory } from '../../utils/offseason-hero-data';
 import { getWhatsNextTimeline } from '../../utils/league-event-resolver';
 import { getCurrentLeagueYear, getCurrentSeasonYear } from '../../utils/league-year';
 import { getPlayerMap } from '../../utils/player-map';
 import { chooseTeamName } from '../../utils/team-names';
-import { castFeaturedModel, castTopFreeAgentModel, castRosterModel, castRandomStarterModel, castClosingAuctionModel, castRookiesOnBoard, castStoryModel, castShowcasePanels } from '../../utils/hero-casting';
+import { castFeaturedModel, castTopFreeAgentModel, castRosterModel, castRandomStarterModel, castClosingAuctionModel, castRookiesOnBoard, castStoryModel, castShowcasePanels, castsFor } from '../../utils/hero-casting';
 import type { HeroModel } from '../../utils/hero-casting';
 import { normalizePlayoffBracket, buildSeedMaps } from '../../utils/playoffs';
 import { isEliminated, buildBracketSummary } from '../../utils/playoff-hero-helpers';
@@ -457,36 +457,94 @@ if (heroState.phase === 'tagged-showcase' && heroState.taggedShowcaseProps) {
     };
   });
 }
+// League-scope the session's franchise id once, for every hero on this page —
+// the casts below, the `userFranchiseId` prop handed to SeasonDailyHero (its
+// standings and matchup heroes highlight "your" row with it), and the live
+// scoring + playoff prop bags built further down, which mark your matchup and
+// answer "are you eliminated". AFL ids
+// share TheLeague's space (both have 0001-0016; the AFL has 24), so an AFL
+// session's 0003 would be handed TheLeague 0003's player and row and told they
+// are theirs. Same guard as heroBackdropTeam above — a visitor from the other
+// league is a guest here, and undefined simply highlights nobody.
+//
+// Keep any note about this ON THIS DECLARATION, never as a `{/* … */}` comment
+// in the component's prop list: that parses at runtime but breaks `astro
+// check`'s template parse (+6 errors on the ratchet, none visible in dev).
+const heroFranchiseId = authUser?.leagueId === THELEAGUE.id ? userFranchiseId : undefined;
+
 if (heroState.phase === 'cut-watch' && heroState.cutWatchProps) {
   // Cut watch hero: a real bubble player — YOUR suggested cut candidate when
   // your team is over the limit; a league-wide candidate for everyone else.
   const candidates = heroState.cutWatchProps.overLimitTeams.flatMap((team) =>
     team.cutCandidates.map((c) => ({ playerId: c.playerId, franchiseId: team.franchiseId })),
   );
-  cutWatchModel = castRosterModel(candidates, hpPlayerIdentityMap, userFranchiseId, now, 'On the Bubble');
+  cutWatchModel = castRosterModel(candidates, hpPlayerIdentityMap, heroFranchiseId, now, 'On the Bubble');
 }
 let preseasonModel = null;
 let preseasonModelIsOwn = false;
 let kickoffGame = null;
 if (heroState.phase === 'preseason-countdown' && heroState.preseasonProps) {
-  // Preseason hero: a likely starter in the earliest game of the week (the
-  // season opener), rotating daily. Signed-in owners with a player in that
-  // game see one of their own likely starters in it instead.
-  kickoffGame = getKickoffGame(leagueYear);
-  const candidates = getKickoffGameCandidates(leagueYear);
-  preseasonModel = castRandomStarterModel(candidates, hpPlayerIdentityMap, userFranchiseId, now, 'Kickoff Night');
+  // Preseason hero: a likely starter from the week's slate, rotating daily.
+  // A signed-in owner is cast strictly from their OWN roster — their player in
+  // the opener if they have one, else a likely starter from their earliest
+  // game (which is why the pool is the week, not just the opener). Guests get
+  // the league-wide opener pick. See castRandomStarterModel.
+  kickoffGame = getKickoffGame(leagueYear, 'theleague', now);
+  const candidates = getWeekGameCandidates(leagueYear, 'theleague', now);
+  const ON_TIER_OPENER = 'Kickoff Night';
+  preseasonModel = castRandomStarterModel(
+    candidates,
+    hpPlayerIdentityMap,
+    heroFranchiseId,
+    now,
+    ON_TIER_OPENER,
+    8,
+    'Your First Starter',
+    'On Your Roster',
+  );
+  // "Your Kickoff Starter" is only true for a likely starter in the opener
+  // itself. The caster swaps the descriptor when the pick is in a later game or
+  // outside the starter tier, so keeping the base one IS the on-tier-opener
+  // signal — an owner whose only opener player is a bench guy gets the honest
+  // 'In the Opener' caption instead.
+  const openerCodes = new Set(kickoffGame?.teamCodes ?? []);
   preseasonModelIsOwn =
     !!preseasonModel &&
-    !!userFranchiseId &&
-    candidates.some((c) => c.franchiseId === userFranchiseId && c.playerId === preseasonModel!.mflId);
-  // No opener data (schedule feed missing) → fall back to franchise headliners.
+    !!heroFranchiseId &&
+    preseasonModel.descriptor === ON_TIER_OPENER &&
+    openerCodes.has(preseasonModel.nflTeam) &&
+    candidates.some((c) => c.playerId === preseasonModel!.mflId && castsFor(c, heroFranchiseId));
+  // No slate data (schedule feed missing) or no projections yet → franchise
+  // headliners, compositable ones first so a signed-in owner still gets their
+  // own player (their top projected player may be a DEF or have no cutout).
   if (!preseasonModel) {
-    const headliners = getFranchiseHeadliners(leagueYear);
-    preseasonModel = castRosterModel(headliners, hpPlayerIdentityMap, userFranchiseId, now, 'Headliner');
-    preseasonModelIsOwn =
-      !!preseasonModel &&
-      !!userFranchiseId &&
-      headliners.some((h) => h.franchiseId === userFranchiseId && h.playerId === preseasonModel!.mflId);
+    const compositable = getFranchiseCompositableHeadliners(leagueYear);
+    const all = compositable.length > 0 ? compositable : getFranchiseHeadliners(leagueYear);
+    // Scope to the owner BEFORE casting — castRosterModel widens to the league
+    // on an empty own pool, and a signed-in owner must never be shown someone
+    // else's player here either.
+    //
+    // Unless the id rosters NOBODY: the commissioner signs in as franchise
+    // 0000, which owns no players, so scoping strictly left them with no hero
+    // at all. A franchise absent from the roster feed is not an owner being
+    // protected from a stranger — it is a viewer, and viewers get the
+    // league-wide pick.
+    // Presence against the FULL headliner pool (every franchise that rosters
+    // anyone), not the compositable subset — a franchise whose players all
+    // lack an ESPN cutout would otherwise read as rosterless and be handed a
+    // stranger, the outcome this whole branch exists to prevent.
+    const rostersPlayers =
+      !!heroFranchiseId &&
+      getFranchiseHeadliners(leagueYear).some((h) => h.franchiseId === heroFranchiseId);
+    const headliners = rostersPlayers ? all.filter((h) => h.franchiseId === heroFranchiseId) : all;
+    // 'Your Headliner' rather than the isOwn flag: that flag makes the hero say
+    // "Your Kickoff Starter" and claim the player is in the opener, which a
+    // headliner cast has no basis for — this branch runs precisely when we have
+    // no slate to place him in. The descriptor keeps the ownership signal
+    // without the claim.
+    const descriptor = rostersPlayers ? 'Your Headliner' : 'Headliner';
+    preseasonModel = castRosterModel(headliners, hpPlayerIdentityMap, heroFranchiseId, now, descriptor);
+    preseasonModelIsOwn = false;
   }
 }
 
@@ -591,7 +649,8 @@ if (heroState.slot === 'live-scoring' && heroState.metadata.week) {
 
     liveScoring = {
       week: heroState.metadata.week,
-      userFranchiseId,
+      // Scoped: the live hero marks "your" matchup with it (see heroFranchiseId).
+      userFranchiseId: heroFranchiseId,
       matchups: liveData?.matchups ?? [],
       teams: teamsMap,
       initialScores: liveData?.scores,
@@ -644,8 +703,8 @@ if ((heroState.phase === 'playoffs' || heroState.phase === 'championship') && he
         }
 
         const bracketSummary = buildBracketSummary(champBracket, seedMaps, allTeamsMap);
-        const userEliminated = userFranchiseId
-          ? isEliminated(userFranchiseId, champBracket)
+        const userEliminated = heroFranchiseId
+          ? isEliminated(heroFranchiseId, champBracket)
           : undefined;
 
         // Resolve the live round to the composite round-hero shape (wild card /
@@ -663,14 +722,14 @@ if ((heroState.phase === 'playoffs' || heroState.phase === 'championship') && he
             bracketSummary,
             standingsFranchises: franchiseList,
             teamAssets,
-            userFranchiseId,
+            userFranchiseId: heroFranchiseId,
             currentWeek: heroState.metadata.week,
           });
         } catch { /* round view is optional — falls back to bracket list */ }
 
         heroState.playoffProps = {
           leagueYear: seasonYear,
-          userFranchiseId,
+          userFranchiseId: heroFranchiseId,
           userIsEliminated: userEliminated,
           bracketSummary,
           roundView,
@@ -693,7 +752,7 @@ if ((heroState.phase === 'playoffs' || heroState.phase === 'championship') && he
         resolveLeaguePath={r}
         spriteUrl={spriteUrl}
         liveScoring={liveScoring}
-        userFranchiseId={userFranchiseId}
+        userFranchiseId={heroFranchiseId}
         isAuthenticated={isAuthenticated}
         featureModel={featureModel}
         auctionModel={auctionModel}
