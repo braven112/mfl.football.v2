@@ -32,6 +32,20 @@ import {
   readAllBallots,
 } from './owners-poll-redis.mjs';
 
+/**
+ * The only logging surface these passes use.
+ *
+ * Defaulting to `console` itself typed the parameter as the full `Console`,
+ * so a test passing a two-method stub failed to typecheck against 20+ methods
+ * this code never calls. Naming the real contract is both honest and what lets
+ * a caller inject a silent logger.
+ *
+ * @typedef {{ log?: (...args: any[]) => void, warn?: (...args: any[]) => void }} PollLogger
+ */
+
+/** @type {PollLogger} */
+const DEFAULT_LOG = { log: (...a) => console.log(...a), warn: (...a) => console.warn(...a) };
+
 /** Where the ballot lives, for every message that links to it. */
 export const BALLOT_PATH = '/pecking-order/ballot';
 
@@ -42,7 +56,7 @@ export const BALLOT_PATH = '/pecking-order/ballot';
  * can't or shouldn't open. Null is not an error: the caller publishes the
  * column without a poll section, which is the correct degraded state.
  */
-export async function openPoll({ league, year, week, eligibleFranchiseIds, now = new Date(), log = console }) {
+export async function openPoll({ league, year, week, eligibleFranchiseIds, now = new Date(), log = DEFAULT_LOG }) {
   const poll = league.ownersPoll;
   if (!poll?.enabled) return null;
 
@@ -108,7 +122,7 @@ export async function openPoll({ league, year, week, eligibleFranchiseIds, now =
  * consensus over an issue would erase ballots owners actually cast, and a
  * silent no-op would leave the column advertising a ballot that never resolves.
  */
-export async function closePoll({ league, issue, compositeRankByFid, now = new Date(), log = console }) {
+export async function closePoll({ league, issue, compositeRankByFid, now = new Date(), log = DEFAULT_LOG }) {
   const poll = league.ownersPoll;
   if (!poll?.enabled) return null;
 

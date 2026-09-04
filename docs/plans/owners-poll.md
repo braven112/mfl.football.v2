@@ -364,8 +364,8 @@ Tuesday pass has never needed Redis.
 
 ## Build status
 
-**Steps 1-2 are built.** What shipped, and the things that came out
-differently from the sketch above:
+**Steps 1-6 are built** — the whole plan. What shipped, and the things that
+came out differently from the sketch above:
 
 | File | Role |
 |---|---|
@@ -382,7 +382,19 @@ differently from the sketch above:
 | `src/pages/theleague/pecking-order/ballot.astro` | Thin route wrapper |
 | `src/styles/owners-poll.css` | Page styles |
 | `src/data/page-directory.json` | Search entry (21 tags) |
-| `tests/owners-poll-{math,ballot,api,builder}.test.ts` | 90 tests |
+| `tests/owners-poll-{math,ballot,api,builder}.test.ts` | ballot + API + math |
+| `src/utils/owners-poll-window.mjs` | Open/close timing, DST-correct |
+| `scripts/lib/owners-poll-redis.mjs` | Node-side store (keys shared with the app) |
+| `scripts/lib/owners-poll-pass.mjs` | Open pass, close pass, GroupMe copy |
+| `scripts/owners-poll-window.mjs` | Manual open / status / close CLI |
+| `src/components/shared/owners-poll/OwnersPollSection.astro` | Article section |
+| `src/components/shared/owners-poll/OwnersPollLive.tsx` | Open-state island |
+| `src/utils/owners-poll-accuracy.mjs` | Pairwise accuracy (page-side) |
+| `src/utils/owners-poll-voters.ts` | Season accountability math |
+| `src/components/shared/owners-poll/OwnersPollVotersPage.astro` | Voters page |
+| `src/pages/theleague/pecking-order/voters.astro` | Thin route wrapper |
+| `.github/workflows/schefter-articles.yml` | Wed nag + Wed close crons |
+| `tests/owners-poll-{window,pass,voters}.test.ts` | 135 tests across 7 suites |
 
 **The math did not all land in one file.** The plan said
 `scripts/lib/owners-poll-math.mjs` for everything, but validation is asked by
@@ -431,30 +443,50 @@ invisible in dark" failure this repo has shipped before.
 `tests/design-token-guard.test.ts` is the standing guard for the broader
 version of that bug and already covers this file.
 
-Not yet wired: nothing writes the window pointer — that is the Tuesday pass in
-step 4. Until then the API correctly reports `status: "none"`, refuses writes,
-and the page renders "No ballot is open right now." That is also why there is
-still no What's New entry: the page exists but the feature cannot be used, so
-it is unreleased. Write the entry in step 4, when a ballot can actually open.
+**Everything is wired, and it will start itself.** The Tuesday Pecking Order
+cron opens the ballot, Wednesday 10am PT nags, Wednesday 7pm PT tallies and
+reveals. The workflow already carried Upstash secrets (cut-watch needed them),
+so no new secret is required.
 
-## Remaining build order
+It cannot run *yet* only because the season hasn't started: the column
+self-skips until the season it would rank is actually being played
+(`isSeasonWindowOpen`), so the earliest real ballot is the Tuesday after
+Week 1.
+
+To see it before then, open a window by hand — this needs Upstash credentials,
+which a sandbox cannot get:
+
+```bash
+pnpm dlx vercel env pull            # once, in the repo root
+node scripts/owners-poll-window.mjs open --league theleague --week 1 --hours 48
+node scripts/owners-poll-window.mjs status --league theleague
+node scripts/owners-poll-window.mjs close  --league theleague   # stops voting; keeps ballots
+```
+
+`close` only removes the pointer — it never tallies and never deletes ballots,
+so re-opening the same week picks them all back up.
+
+## Build order (all complete)
 
 1. ~~**Math + storage.**~~ Done — see above.
 2. ~~**Ballot page.**~~ Done — see above.
-3. **Article integration.** `ownersPoll` block in the issue schema; open and
-   closed states in `PeckingOrderIssue.astro`; the server-side results gate;
-   turnout meter.
-4. **Close pass + cron.** `--close-poll`, the second workflow entry, and the
-   Wednesday commit.
-5. **GroupMe.** Open bait, @-mention nag, reveal.
-6. **Accountability page.** Leaderboards, per-week grid, published ballots.
+3. ~~**Article integration.**~~ Done.
+4. ~~**Close pass + cron.**~~ Done.
+5. ~~**GroupMe.**~~ Done — open bait folded into Tuesday's announcement, a
+   count-only nag, and the Wednesday reveal.
+6. ~~**Accountability page.**~~ Done — `/pecking-order/voters`.
 
-Steps 1-3 are a usable feature on their own (a poll owners can vote in and see
-results from). 4-6 are what make it *stick*.
+### Still open — needs Brandon
 
-The What's New entry belongs to step 4, when a ballot can actually open — a
-`new-feature`, so screenshot required, league-neutral inline links, and an
-explicit call on hero eligibility.
+**The What's New entry is deliberately NOT written.** It is a `new-feature`, so
+it needs a webp screenshot in `public/assets/whats-new/` (which only exists once
+a real ballot has been opened and photographed) and an explicit call on **hero
+eligibility** — CLAUDE.md says to ask rather than decide that silently, and
+`/update-whats-new` prompts for it. Run that once a ballot has run for real.
+
+Everything else on the four remaining open questions (two-stage publish, quorum
+8, close 6pm PT, no participation stake) is implemented as the recorded
+default and is a one-line registry or cron change if you want it different.
 
 ## Phase 2 options (deliberately not in v1)
 

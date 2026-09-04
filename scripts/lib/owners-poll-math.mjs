@@ -28,6 +28,12 @@
  */
 
 import { normalizeFranchiseId } from '../../src/utils/franchise-id.mjs';
+import { pairwiseAccuracy, toRankMap } from '../../src/utils/owners-poll-accuracy.mjs';
+
+// Re-exported, not reimplemented: the accountability page computes accuracy at
+// render time (it needs the week AFTER the ballot) and cannot import from
+// scripts/, so the function lives in src/utils and both sides share it.
+export { pairwiseAccuracy };
 
 /** Points a 1-indexed ballot slot is worth on a ballot of `slots` teams. */
 export function bordaPoints(slot, slots) {
@@ -182,39 +188,6 @@ export function consensusRankMap(tally) {
 }
 
 /**
- * Pairwise accuracy of one ballot against how the week actually went.
- *
- * For every pair of teams on the ballot, did the one ranked higher finish
- * higher in `actualRankByFid`? Pairs rather than raw rank error, so a ballot
- * isn't punished for the whole field shifting underneath it.
- *
- * `actualRankByFid` should be NEXT week's all-play order — a single head-to-head
- * result is mostly luck and would make this leaderboard noise. A pair whose
- * teams aren't both in the map is skipped rather than counted wrong.
- *
- * With slots = 7 this is 21 pairs a week. Real but small: expect ~6 weeks
- * before the leaderboard separates anyone.
- */
-export function pairwiseAccuracy(ranking, actualRankByFid) {
-  const actual = toRankMap(actualRankByFid);
-  const list = Array.from(ranking ?? [], (id) => normalizeFranchiseId(id));
-  let pairs = 0;
-  let correct = 0;
-
-  for (let i = 0; i < list.length; i += 1) {
-    for (let j = i + 1; j < list.length; j += 1) {
-      const a = actual.get(list[i]);
-      const b = actual.get(list[j]);
-      if (a == null || b == null || a === b) continue;
-      pairs += 1;
-      if (a < b) correct += 1;
-    }
-  }
-
-  return { pairs, correct, pct: pairs > 0 ? correct / pairs : null };
-}
-
-/**
  * Mean absolute distance between a ballot and the final consensus.
  *
  * Independence, not accuracy — a high score is a badge, not a demerit, and the
@@ -258,16 +231,4 @@ export function homerIndex({ franchiseId, ranking, consensusRankByFid, slots }) 
   const idx = list.indexOf(fid);
   const ownRank = idx >= 0 ? idx + 1 : slots + 1;
   return theirs - ownRank;
-}
-
-/** Accept either a Map or a plain object for the rank lookups above. */
-function toRankMap(input) {
-  if (input instanceof Map) {
-    return new Map(
-      Array.from(input, ([k, v]) => [normalizeFranchiseId(k), v]),
-    );
-  }
-  return new Map(
-    Object.entries(input ?? {}).map(([k, v]) => [normalizeFranchiseId(k), v]),
-  );
 }
