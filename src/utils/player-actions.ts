@@ -56,6 +56,11 @@ export interface PlayerActionSpec {
   signIn?: boolean;
   /** Navigate instead of running. */
   href?: string;
+  /**
+   * Close the sheet BEFORE `run()` — for an action that opens another dialog
+   * (the waiver claim form) and must not race it for the top layer.
+   */
+  closeFirst?: boolean;
   run?: () => Promise<PlayerActionRunResult>;
 }
 

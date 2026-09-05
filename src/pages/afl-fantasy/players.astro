@@ -41,6 +41,7 @@ import freeAgentsData from '../../../data/afl-fantasy/derived/free-agents.json';
 import { fetchLiveAflRosters, applyLiveRosters, conferenceScopedView, resolveConferenceSelection, type FaSnapshot } from '../../utils/afl-free-agents-live';
 import { getAuthUser } from '../../utils/auth';
 import { readBidRules } from '../../utils/waiver-claim';
+import { readWaiverSortOrder } from '../../utils/waiver-order';
 import { resolveWaiverWindow, describeWaiverWindow } from '../../utils/waiver-window';
 import { getAflLeagueYear } from '../../utils/league-year';
 import WaiverClaimModal from '../../components/shared/WaiverClaimModal.astro';
@@ -222,6 +223,9 @@ const waiverPriorityConfig = {
       }))
     : [],
   system: claimRules.system,
+  // The committed feed's order, so the dialog opens with a list; the live
+  // read replaces it (see WaiverPriorityModal's initialOrder note).
+  initialOrder: readWaiverSortOrder({ league: aflLeagueFeed }),
 };
 
 // A visitor the priority modal would show its sign-in gate to — signed out, or
@@ -537,6 +541,12 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
           <tr>
             <th class="sortable col-rank" data-sort="rank"><div class="th-content">#</div></th>
             <th class="sortable col-player" data-sort="name"><div class="th-content">Player</div></th>
+            {/* Actions sit right after the name so they are reachable on a
+                phone without scrolling the table sideways (Sep 2026). */}
+            {(claimConfig.canClaim || promptSignIn) && (
+              <th class="col-fa-action" aria-label="Claim this player"><div class="th-content">Claim</div></th>
+            )}
+            <th class="col-player-actions" aria-label="Player actions"><div class="th-content"></div></th>
             <th class="sortable col-age" data-sort="age"><div class="th-content">Age</div></th>
             <th class="sortable col-sm" data-sort="exp"><div class="th-content">Exp</div></th>
             <th class="sortable col-sm" data-sort="draftRd"><div class="th-content">Draft</div></th>
@@ -552,10 +562,6 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
             {hasProjected && (
               <th class="sortable col-num col-projected col-group--stats" data-sort="projected"><div class="th-content">Proj</div></th>
             )}
-            {(claimConfig.canClaim || promptSignIn) && (
-              <th class="col-fa-action" aria-label="Claim this player"><div class="th-content">Claim</div></th>
-            )}
-            <th class="col-player-actions" aria-label="Player actions"><div class="th-content"></div></th>
           </tr>
         </thead>
         <tbody id="player-table-body"></tbody>
@@ -1167,6 +1173,27 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
       const htDisplay = p.height ? Math.floor(p.height / 12) + "'" + (p.height % 12) + '"' : '-';
       const wtDisplay = p.weight ? p.weight + '' : '-';
 
+      // Claim cell. `rosteredForView`, NOT `p.rostered`: this is a
+      // duplicate-player league and only the ACTIVE conference decides
+      // whether you may claim someone. `p.rostered` means "held in EVERY
+      // conference" (afl-free-agents-live.ts: `confs.length === confCount`),
+      // so gating on it offered a Claim button — via "Include rostered" — on
+      // players already rostered in your own conference, and the server
+      // correctly 400s those with "that player is not a free agent."
+      let claimCell = '';
+      if (canClaim) {
+        claimCell = rosteredForView
+          ? `<td class="col-fa-action"></td>`
+          : `<td class="col-fa-action"><button type="button" class="place-bid-link claim-open" data-claim-id="${escapeAttr(p.id)}" data-claim-name="${escapeAttr(p.name)}" data-claim-pos="${escapeAttr(p.position || '')}" data-claim-team="${escapeAttr(p.nflTeam || p.team || '')}" data-claim-espn="${escapeAttr(p.espnId || '')}" data-claim-headshot="${escapeAttr(p.headshot || '')}" aria-label="Claim ${escapeAttr(p.name)}">Claim</button></td>`;
+      } else if (promptSignIn) {
+        // No AFL session: the same button, wired to the on-site sign-in. It
+        // carries the player id so that after the reload we reopen the claim
+        // form on the player they were actually after.
+        claimCell = rosteredForView
+          ? `<td class="col-fa-action"></td>`
+          : `<td class="col-fa-action"><button type="button" class="place-bid-link" data-signin-open data-signin-player="${escapeAttr(p.id)}" aria-label="Sign in to claim ${escapeAttr(p.name)}">Claim</button></td>`;
+      }
+
       html += `<tr class="${rosteredClass}" data-pos="${p.position.toLowerCase()}" data-player-id="${p.id}">
         <td class="cell-rank">${rank}</td>
         <td class="cell-player">
@@ -1182,6 +1209,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
             </div>
           </div>
         </td>
+        ${claimCell}${kebabCell}
         <td class="cell-age">${p.age ?? '-'}</td>
         <td class="cell-sm">${p.exp != null ? p.exp : '-'}</td>
         <td class="cell-sm">${p.draftRd != null ? 'Rd ' + p.draftRd : '<span class="na">-</span>'}</td>
@@ -1209,26 +1237,6 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
       if (hasProjected) {
         html += `<td class="cell-num cell-pts col-projected col-group--stats">${p.projected != null ? p.projected.toFixed(1) : '<span class="na">-</span>'}</td>`;
       }
-      if (canClaim) {
-        // `rosteredForView`, NOT `p.rostered`: this is a duplicate-player
-        // league and only the ACTIVE conference decides whether you may claim
-        // someone. `p.rostered` means "held in EVERY conference"
-        // (afl-free-agents-live.ts: `confs.length === confCount`), so gating on
-        // it offered a Claim button — via "Include rostered" — on players
-        // already rostered in your own conference, and the server correctly
-        // 400s those with "that player is not a free agent."
-        html += rosteredForView
-          ? `<td class="col-fa-action"></td>`
-          : `<td class="col-fa-action"><button type="button" class="place-bid-link claim-open" data-claim-id="${escapeAttr(p.id)}" data-claim-name="${escapeAttr(p.name)}" data-claim-pos="${escapeAttr(p.position || '')}" data-claim-team="${escapeAttr(p.nflTeam || p.team || '')}" data-claim-espn="${escapeAttr(p.espnId || '')}" data-claim-headshot="${escapeAttr(p.headshot || '')}" aria-label="Claim ${escapeAttr(p.name)}">Claim</button></td>`;
-      } else if (promptSignIn) {
-        // No AFL session: the same button, wired to the on-site sign-in. It
-        // carries the player id so that after the reload we reopen the claim
-        // form on the player they were actually after.
-        html += rosteredForView
-          ? `<td class="col-fa-action"></td>`
-          : `<td class="col-fa-action"><button type="button" class="place-bid-link" data-signin-open data-signin-player="${escapeAttr(p.id)}" aria-label="Sign in to claim ${escapeAttr(p.name)}">Claim</button></td>`;
-      }
-      html += kebabCell;
       html += `</tr>`;
     }
 

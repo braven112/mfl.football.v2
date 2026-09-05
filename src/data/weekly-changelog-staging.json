@@ -15,7 +15,23 @@
       "summary": "The AFL's app install file pointed at an address the site does not use — it claimed the app lived at /afl-fantasy/ when afl-fantasy.com serves everything from the front door. Phones read that, decided the file did not apply to the page they were on, and quietly threw it away, which is why the AFL never offered to install to your home screen and why its notifications had no app icon behind them. It now points where the site actually is, and ships an Android-shaped app icon to go with it.",
       "impact": "user",
       "area": "notifications",
+      "league": "both"
+    },
+    {
+      "date": "2026-09-05",
+      "type": "bug-fix",
+      "summary": "The waiver priority card used to open on a blank \"Reading the live order…\" line and, on a slow night, stay there. It now opens straight onto the order from our last sync and quietly checks MyFantasyLeague for a newer one; if MFL doesn't answer inside twelve seconds it says so and leaves the list where it is, rather than leaving you staring at a sentence.",
+      "impact": "user",
+      "area": "free-agents",
       "league": "afl"
+    },
+    {
+      "date": "2026-09-05",
+      "type": "style-tweak",
+      "summary": "On Free Agents the Bid or Claim button and the ⋮ actions menu now sit right beside the player's name instead of at the far right of the table — on a phone that meant a sideways scroll past nine columns of stats to reach the one button that does anything.",
+      "impact": "user",
+      "area": "free-agents",
+      "league": "both"
     },
     {
       "date": "2026-09-05",
