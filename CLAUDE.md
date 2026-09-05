@@ -138,6 +138,8 @@ scheduled job, comment out its `cron:` line. To gate behavior, use a `const`
 in the script itself. A few legacy vars predate this rule
 (`SCHEFTER_RUMOR_MILL_ENABLED`, `SCHEFTER_TRADE_OFFER_RUMORS_ENABLED`) — don't
 add more, and prefer moving them into code if you're already in the file.
+Guard: `tests/workflow-feature-flag-guard.test.ts` pins the legacy set to the
+two files that carry it.
 
 ## Local env — `vercel env pull`, and worktrees don't inherit it
 
@@ -375,9 +377,22 @@ and `git push --force-with-lease` — never plain `--force`. `git rerere` is
 enabled (see `.git/config`); identical conflicts on re-rebase replay
 automatically. Do not turn it off.
 
-## Edit-time safety net
+## Edit-time safety net — `path-guard`
 
-`.claude/settings.json` runs `.claude/hooks/roger-reminder-test.sh` on every
-Write/Edit/MultiEdit to a Roger-related file, and blocks the tool call if the
-reminder-window suite fails. If you edit one of those files and don't see a
-test run, `node_modules` probably isn't installed — run `pnpm install`.
+`.claude/settings.json` runs `.claude/hooks/path-guard.mjs` on every
+Write/Edit/MultiEdit. It maps the edited path through
+`.claude/hooks/path-guard.json` (domain → file globs → guard suites → rules
+doc), runs that domain's guard suites, and fails the tool call with the vitest
+output if one breaks. The first edit in a domain per session also injects the
+governing rules doc and its trap line from the table above, so the router
+fires mechanically instead of from memory.
+
+- **Adding a rule?** Add its guard test to the domain's `tests` list (or a
+  new domain) — `tests/path-guard-map.test.ts` fails on a test or doc path
+  that does not exist, on a glob that matches nothing, and on any
+  `docs/claude/rules/*.md` no domain routes to. `/guard-test` writes the
+  test AND the map entry.
+- Keep a domain's suites fast (each set runs in 1–4 s today); a slow suite
+  belongs in CI, not on every edit.
+- If you edit a mapped file and see no test run, `node_modules` probably
+  isn't installed — run `pnpm install`.
