@@ -285,14 +285,12 @@
 }
 .st-box__franchise { font-weight: normal; letter-spacing: 0; text-transform: none; }
 .st-box__unset { font-weight: normal; letter-spacing: 0; text-transform: none; font-style: italic; }
-.st-box__players { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.3rem; }
-.st-box__player { display: grid; grid-template-columns: 28px minmax(0, 1fr) auto auto; align-items: center; gap: 0.5rem; font-size: 0.85rem; }
-.st-box__headshot { width: 28px; height: 28px; border-radius: 50%; object-fit: cover; background: var(--content-border); }
-.st-box__headshot--blank { display: inline-block; }
-.st-box__name { color: var(--page-text); font-weight: var(--font-weight-bold); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.st-box__pos { color: var(--content-text-muted); font-size: 0.72rem; white-space: nowrap; }
-.st-box__proj { font-variant-numeric: tabular-nums; color: var(--page-text); font-size: 0.82rem; min-width: 2.6rem; text-align: right; }
-.st-box__more { font-size: 0.72rem; color: var(--content-text-muted); padding-left: calc(28px + 0.5rem); }
+.st-box__players { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.35rem; }
+/* One standard PlayerCell (compact) with the league's projection on the right. */
+.st-box__player { display: flex; align-items: center; justify-content: space-between; gap: 0.6rem; min-width: 0; }
+.st-box__player .player-cell { min-width: 0; flex: 1; }
+.st-box__proj { font-variant-numeric: tabular-nums; color: var(--page-text); font-size: 0.85rem; font-weight: var(--font-weight-bold); min-width: 2.6rem; text-align: right; flex: none; }
+.st-box__more { font-size: 0.72rem; color: var(--content-text-muted); padding-left: 2.6rem; }
 
 /* RedZone: the one box that is a channel, not a game. */
 .st-box--redzone {

@@ -8,11 +8,15 @@
  * dark cut by `NflLogoDarkStyles` exactly as everywhere else. The network is
  * the channel in the viewer's COUNTRY (`resolveChannel`): CBS at home, DAZN
  * in Canada, Kayo in Australia — drawn as the channel's mark from
- * `/assets/tv-logos/` when one exists, its name when not.
+ * `/assets/tv-logos/` when one exists, its name when not. Each player row is
+ * the site's standard PlayerCell (headshot on a team-color chip, DEF rows
+ * wearing the team logo, the MFL-photo fallback chain) with the league's
+ * projection beside it — the same lockup as rosters, lineups and free agents.
  */
 import type { SlateBox } from '../../../utils/sunday-ticket-slate';
 import { formatKickoffZones } from '../../../utils/sunday-ticket-slate';
 import { REDZONE_LOGO, countryTimeZones, resolveChannel, type CountryCode } from '../../../utils/broadcast-channels';
+import PlayerCell from '../../theleague/PlayerCell.astro';
 
 export interface Props {
   box: SlateBox;
@@ -112,13 +116,14 @@ const countNoun = (n: number, resolved: boolean) => `${n} ${resolved ? 'starter'
             <ul class="st-box__players">
               {shown.map((p) => (
                 <li class="st-box__player">
-                  {p.headshot ? (
-                    <img class="st-box__headshot" src={p.headshot} alt="" width="28" height="28" loading="lazy" />
-                  ) : (
-                    <span class="st-box__headshot st-box__headshot--blank" aria-hidden="true" />
-                  )}
-                  <span class="st-box__name">{p.name}</span>
-                  <span class="st-box__pos">{p.position}{p.nflTeam ? ` · ${p.nflTeam}` : ''}</span>
+                  <PlayerCell
+                    name={p.name}
+                    headshot={p.headshot}
+                    position={p.position}
+                    nflTeam={p.nflTeam}
+                    mflId={p.playerId}
+                    size="compact"
+                  />
                   <span class="st-box__proj">{p.proj > 0 ? p.proj.toFixed(1) : '—'}</span>
                 </li>
               ))}
