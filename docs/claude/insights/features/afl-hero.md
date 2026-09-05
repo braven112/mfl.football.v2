@@ -5,6 +5,44 @@ Insights for the AFL homepage hero system (`src/utils/afl-hero-resolver.ts`,
 
 ---
 
+## 2026-09-05 - An upcoming countdown is filler: it pools with What's New, one slot each
+
+**Context:** With NFL kickoff five days out, the AFL homepage showed the
+`afl-season-start` countdown on every visit while a day-old `new-feature`
+tagged for the AFL never appeared.
+
+**Insight:** The AFL resolver's P1 tier is a *lead-up* window (7 days for
+season start, 30 for the keeper deadline, 50 for the conference drafts) and
+it sat strictly above the P2 fresh-feature check. Every one of those windows
+is longer than the 7-day fresh window, so any launch that landed inside a
+countdown expired before the countdown did — the whole stretch of calendar
+that matters for launches was unreachable for What's New. The owner's framing:
+a countdown to something that has not happened yet is FILLER, not an event,
+and filler ranks *on par with* a What's New article, not above it.
+
+**Recommendation:** `resolveAflHeroState` takes an injectable `rng` (default
+`Math.random`). When the lead is P1 and fresh AFL-tagged entries exist, the
+hero is one uniform per-visit draw from `[countdown, ...fresh]`: five fresh
+articles → the countdown and each article show 20% of loads; one article →
+the same `rng() < 0.5` boundary TheLeague's Cut Watch flip uses; no article →
+the countdown at 100% and `rng` is never called. P0 (an ACTIVE event: draft
+day, deadline day, kickoff itself) never pools, and the regular-season slot
+rotation is untouched. "Active" is judged on the CARD, not the lead's own
+priority: on AL draft day an NL owner's lead is swapped to their not-yet-live
+NL card (P1) whose secondary link is the only homepage path to the live AL
+board, so a live sibling draft (`conferenceDraft.al.live || nl.live`) blocks
+pooling too — the first review of this PR caught exactly that. In the pooled path the article is chosen per VISIT
+(that is the point of the pool); the standalone P2 path, with no countdown
+competing, keeps its per-PT-day `dailyPick`.
+`tests/afl-hero-lead-event-flip.test.ts` pins the exact slot boundaries with a
+600-draw uniform sweep, the no-article short-circuit, and the P0 exemption.
+Note for curl-diff verification: `/afl-fantasy` now has the same "hero
+lottery" noise as `/theleague` during a lead-up — sample the same server twice
+before blaming a refactor (see `docs/claude/insights/domains/frontend.md`,
+2026-07-14).
+
+---
+
 ## 2026-07-05 - Composite player models: view.model attached post-resolve
 
 **Context:** The AFL hero now casts composite player models (transparent ESPN

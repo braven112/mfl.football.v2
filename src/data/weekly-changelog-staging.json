@@ -768,6 +768,14 @@
       "impact": "admin",
       "area": "other",
       "league": "both"
+    },
+    {
+      "date": "2026-09-05",
+      "type": "bug-fix",
+      "summary": "The AFL homepage hero had been showing the season-start countdown on every single visit, which meant anything new on the site launched into a wall. A countdown to something that hasn't happened yet is filler, so it now takes its turn like everything else: during a countdown, each fresh What's New article and the countdown itself get an equal share of your visits. Nothing new to show? The countdown still runs the whole homepage. Live events (draft day, deadline day, kickoff itself) still own it outright.",
+      "impact": "user",
+      "area": "homepage",
+      "league": "afl"
     }
   ]
 }

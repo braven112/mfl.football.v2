@@ -13,7 +13,7 @@
  *   P0   Champion Crowned window       → AflEventHero (calendar-driven)
  *   P0   Conference Playoffs (active)  → AflPlayoffsHero (bracket)
  *   P0   Calendar event active         → AflEventHero (calendar-driven)
- *   P1   Calendar event urgent         → AflEventHero (calendar-driven)
+ *   P1   Calendar event upcoming       → AflEventHero (calendar-driven; ONE slot in a per-visit pool with every fresh P2 feature)
  *   P0   Regular season slot rotation  → AflEventHero (Schefter-voiced slot, no border)
  *   P2   Fresh What's New entry        → AflEventHero (no border)
  *   P3   Active/upcoming timeline      → AflEventHero (no border)
@@ -141,6 +141,14 @@ export interface AflHeroResolverInput {
    * synchronous.
    */
   scheduleReleaseRevealed?: boolean;
+  /**
+   * Injectable random source (0..1) for the lead-up hero pool below; defaults
+   * to Math.random. Override in tests for deterministic results. The pool is
+   * `[countdown, ...freshEntries]` and the pick is `floor(rng() * pool.length)`,
+   * so `rng() < 1 / (N + 1)` = the countdown wins (with one fresh entry that is
+   * the same `rng() < 0.5` boundary TheLeague's `resolveHeroState` uses).
+   */
+  rng?: () => number;
 }
 
 // ── Date helpers ─────────────────────────────────────────────────────────────
@@ -888,6 +896,35 @@ function formatKickerDate(date: Date): string {
   return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
+/** AFL-tagged, hero-eligible What's New entries dated within the last 7 days. */
+function freshFeatureEntries(whatsNew: WhatsNewEntry[], now: Date): WhatsNewEntry[] {
+  return whatsNew
+    .filter((e) => entryAppliesToLeague(e, 'afl') && !e.excludeFromHero)
+    .filter((e) => {
+      const age = daysBetween(now, new Date(e.date + 'T00:00:00'));
+      return age >= 0 && age <= FEATURE_HERO_DAYS;
+    });
+}
+
+/**
+ * The P2 fresh-feature state. `fresh` must be non-empty.
+ *
+ * With no `pick`, the entry is chosen deterministically per PT day — a
+ * per-request random pick makes SSR flip hero content between same-day
+ * requests (and fights the composite model's own daily-stable casting). The
+ * lead-up pool below passes its own per-visit pick instead: there the whole
+ * point is that every load draws from the pool.
+ */
+function buildFreshFeatureState(fresh: WhatsNewEntry[], now: Date, pick?: WhatsNewEntry): AflHeroState {
+  pick ??= dailyPick(fresh, now, 'afl-feature', (e) => e.id) ?? fresh[0];
+  return {
+    kind: 'feature',
+    priority: 'P2',
+    content: featureToHero(pick),
+    view: SLOT_VIEW.feature({ now, whatsNewEntry: pick }),
+  };
+}
+
 /**
  * Entries without an explicit link CTA into their own What's New article —
  * never the generic listing.
@@ -1181,8 +1218,46 @@ export function resolveAflHeroState(input: AflHeroResolverInput): AflHeroState {
     return { kind: 'playoffs', priority: 'P0', content: buildPlayoffsHero() };
   }
 
+  // Fresh AFL-tagged What's New entries (≤7 days). Resolved here, above the
+  // calendar lead, because the P1 lead-up below splits the homepage with one.
+  const fresh = freshFeatureEntries(whatsNew, now);
+
   // P0/P1: Calendar-driven lead event — the new branded AflEventHero.
+  //
+  // A P1 lead-up (the countdown to season start, the keeper deadline, a
+  // conference draft, the end of the regular season) is FILLER — roster
+  // context, not a live event — and its urgency window (7–50 days) is longer
+  // than the 7-day fresh-feature window, so as written it locked every What's
+  // New launch out of the hero for good: the season-start countdown showed
+  // 100% of the time while a two-day-old feature never surfaced.
+  //
+  // The countdown is therefore ONE entry in a per-visit pool with every fresh
+  // What's New article, on equal footing: with N fresh articles it shows on
+  // 1/(N+1) of loads and so does each article (five articles → 20% each).
+  // Two things this deliberately does NOT do:
+  //  - It never touches a P0 (an ACTIVE event — draft day, the keeper
+  //    deadline itself, kickoff): a live event owns the homepage outright.
+  //  - With no fresh article the pool is just the countdown, so it still
+  //    shows 100% — the `rng` is not even consulted.
+  // Per-visit randomness is intentional (the hero may differ between
+  // refreshes, as TheLeague's does near the roster deadline); `rng` is
+  // injectable so tests stay deterministic.
+  //
+  // "Upcoming" is judged on the CARD, not just its own priority: on AL draft
+  // day an NL owner leads with their own not-yet-live NL card (P1), and that
+  // card is the only path from the homepage to the LIVE AL board (see the
+  // secondary-links block in pickLeadCalendarEvent). A live sibling draft
+  // makes the card a live event for pooling purposes.
   const lead = pickLeadCalendarEvent(events, rawEvents, ctx);
+  const siblingDraftLive = !!lead?.conferenceDraft && (lead.conferenceDraft.al.live || lead.conferenceDraft.nl.live);
+  if (lead && lead.priority === 'P1' && !siblingDraftLive && fresh.length > 0) {
+    const rng = input.rng ?? Math.random;
+    const poolSize = fresh.length + 1;
+    const slot = Math.min(poolSize - 1, Math.max(0, Math.floor(rng() * poolSize)));
+    if (slot > 0) {
+      return buildFreshFeatureState(fresh, now, fresh[slot - 1]);
+    }
+  }
   if (lead) {
     return {
       kind: 'calendar-event',
@@ -1257,23 +1332,8 @@ export function resolveAflHeroState(input: AflHeroResolverInput): AflHeroState {
   }
 
   // P2: Fresh AFL-tagged What's New (≤7 days) — branded fresh-on-the-site hero.
-  const fresh = whatsNew
-    .filter((e) => entryAppliesToLeague(e, 'afl') && !e.excludeFromHero)
-    .filter((e) => {
-      const age = daysBetween(now, new Date(e.date + 'T00:00:00'));
-      return age >= 0 && age <= FEATURE_HERO_DAYS;
-    });
   if (fresh.length > 0) {
-    // Deterministic per PT day — a per-request random pick makes SSR flip
-    // hero content between same-day requests (and fights the composite
-    // model's own daily-stable casting).
-    const pick = dailyPick(fresh, now, 'afl-feature', (e) => e.id) ?? fresh[0];
-    return {
-      kind: 'feature',
-      priority: 'P2',
-      content: featureToHero(pick),
-      view: SLOT_VIEW.feature({ now, whatsNewEntry: pick }),
-    };
+    return buildFreshFeatureState(fresh, now);
   }
 
   // P3/P4: Active or upcoming timeline event (fallback for any event without a calendar view config).
