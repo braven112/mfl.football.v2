@@ -30,15 +30,9 @@
   for exactly this; don't remove them.
 - **Never send `FRANCHISE_ID` on an owner-authenticated write.** It is
   commissioner-only and silently switches MFL to a stricter validation path.
-- **Commissioner writes need the `www##` host AND both cookies**
-  (`MFL_USER_ID` + `MFL_IS_COMMISH`). The `api.` host rejects them.
-- **`MFL_IS_COMMISH` comes from a LEAGUE-SCOPED login, not the `api.` one.**
-  `api.myfantasyleague.com/<year>/login` has no league in scope, so it has no
-  commissioner to grant and sets only `MFL_USER_ID`. The cookie is issued by
-  `https://<mflHost>/<year>/login?L=<id>` on the league's own host. Signing in
-  again against the api host can never produce it, however many times you try
-  — `authenticateWithMFL` now makes that second, league-scoped hop
-  (`tests/mfl-login-commish-cookie.test.ts`).
+- **`api.` neither accepts nor issues commissioner rights.** Writes need
+  `www##` + both cookies; only `<mflHost>/<year>/login?L=<id>` issues the
+  second (2026-09-05).
 - **Normalize every filtered export.** A one-result query returns a bare object,
   not a one-element array. Use `asArray` (`src/utils/mfl-normalize.ts`) *inside
   shared utils*, not at call sites. Offseason feeds ship a truthy object with
@@ -2933,3 +2927,40 @@ Guards live in `tests/draft-broadcast.test.ts` — one per shape above, the
 `traded to` and owner-chatter rejections, a sweep asserting every comment in the
 2023 feed saying `Pick traded from` parses, and a check that no consumer
 re-strips a `from ` prefix downstream.
+
+---
+
+## 2026-09-05 - MFL_IS_COMMISH Comes From a League-Scoped Login
+
+**Context:** The accounting console told a signed-in commissioner "Your session
+has no MFL commissioner credential" while the site's own nav showed him as
+commissioner. Six carry-over runs had already failed the same way through the
+workflow's stored cookies.
+
+**Insight:** `api.myfantasyleague.com/<year>/login` has no league in scope, so
+it has no commissioner to grant — it sets `MFL_USER_ID` and nothing else. Only
+a LEAGUE-SCOPED login issues `MFL_IS_COMMISH`:
+
+```
+https://<mflHost>/<year>/login?L=<leagueId>&USERNAME=…&PASSWORD=…&XML=1
+```
+
+`authenticateWithMFL` had only ever called the `api.` host, so no session it
+built could write as commissioner. Two consequences that cost real time:
+
+- **The app's commissioner role and MFL's cookie are different things.** Ours
+  comes from the session JWT; MFL's comes from that cookie. A user can be one
+  without the other, and only the cookie can write.
+- **"Sign out and sign in again" was unfixable advice** — it sent the user back
+  through the same `api.` login. Any error text telling a user to re-auth must
+  be checked against whether re-authing can actually produce the credential.
+
+The fix tries the login's season year and the current year, because the AFL
+signs in against a past season (the login route's `year` override), and takes
+the result best-effort: a non-commissioner still signs in and still reads.
+
+**Watch for:** the cookie is set at LOGIN, so sessions created before this
+shipped still lack it — those users must sign out and back in once.
+
+**Pinned by:** `tests/mfl-login-commish-cookie.test.ts`
+
