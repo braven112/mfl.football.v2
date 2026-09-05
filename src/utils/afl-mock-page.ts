@@ -18,6 +18,7 @@ import {
   AFL_MOCK_ROUNDS,
   availablePlayers,
   describeMockGate,
+  isMockWindowOpen,
   type MockGateCopy,
 } from './afl-mock-draft';
 import { buildDraftPlayers, isDraftablePosition } from './build-draft-players';
@@ -87,6 +88,12 @@ export async function resolveAflMock(input: {
    * offered a create button that builds a session in the wrong league.
    */
   viewerSignedIn?: boolean;
+  /**
+   * Build the player pool even when the window is shut. The session page sets
+   * it: a mock created inside the window stays playable after the window
+   * closes, and an empty board would be a silent wrong rather than a refusal.
+   */
+  needsPool?: boolean;
   leagueYear: number;
   leagueId: string;
   now?: Date;
@@ -97,25 +104,35 @@ export async function resolveAflMock(input: {
     input.myFranchiseId
   );
 
-  // The pool comes from TheLeague's players.json — MFL's player universe as
-  // this app archives it — on the DEFAULT league's clock, the same arrangement
-  // the AFL draft room and best-ball use. Redraft ADP because the AFL redrafts
-  // every season.
-  //
-  // NO viewerFranchiseId. Its only effect is the licensed-RSP gate, RSP is
-  // licensed inside TheLeague, and every league here has an 0001 who is a
-  // different person — so an AFL id could only ever unlock it by collision.
-  const catalogue = buildDraftPlayers(getCurrentLeagueYear(), { adpSource: 'redraft' });
-
   const context = await buildAflMockContext({
     conference: room.conference,
     year: input.leagueYear,
     leagueId: input.leagueId,
     now: input.now,
-    draftablePlayerCount: catalogue.length,
   });
 
-  const players = availablePlayers(catalogue, context.rostered, isDraftablePosition);
+  // The pool is built ONLY when it will be used. Building it means loading
+  // MFL's whole player catalogue (~1.4 MB, uncached) and joining ADP onto
+  // ~2,500 rows, and the lobby is shut for most of the year — so on its
+  // commonest state that work was all thrown away. The session page always
+  // needs it, since a session created inside the window stays playable.
+  //
+  // The catalogue is TheLeague's players.json — MFL's player universe as this
+  // app archives it — on the DEFAULT league's clock, the same arrangement the
+  // AFL draft room and best-ball use. Redraft ADP because the AFL redrafts
+  // every season.
+  //
+  // NO viewerFranchiseId. Its only effect is the licensed-RSP gate, RSP is
+  // licensed inside TheLeague, and every league here has an 0001 who is a
+  // different person — so an AFL id could only ever unlock it by collision.
+  const needsPool = input.needsPool || isMockWindowOpen(context.window);
+  const players = needsPool
+    ? availablePlayers(
+        buildDraftPlayers(getCurrentLeagueYear(), { adpSource: 'redraft' }),
+        context.rostered,
+        isDraftablePosition
+      )
+    : [];
 
   return {
     room,

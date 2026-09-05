@@ -34,6 +34,8 @@ const resolution = await resolveAflMock({
   myFranchiseId: isAuthorizedForLeague(user, league.id) ? user.franchiseId : null,
   leagueYear: getLeagueYearForSlug('afl-fantasy'),
   leagueId: league.id,
+  // A session created inside the window stays playable after it shuts.
+  needsPool: true,
 });
 ---
 

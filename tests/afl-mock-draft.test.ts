@@ -215,13 +215,13 @@ describe('the mock window', () => {
   const afterDeadline = new Date(2026, 6, 20);
 
   it('opens once every franchise is down to keepers', () => {
-    const w = resolveMockWindow({ cuts: clean, picksMade: 0, poolSize: 900, deadline, now: afterDeadline });
+    const w = resolveMockWindow({ cuts: clean, picksMade: 0, deadline, now: afterDeadline });
     expect(w.state).toBe('open');
     expect(isMockWindowOpen(w)).toBe(true);
   });
 
   it('stays shut while anyone still has cuts to make', () => {
-    const w = resolveMockWindow({ cuts: dirty, picksMade: 0, poolSize: 900, deadline, now: beforeDeadline });
+    const w = resolveMockWindow({ cuts: dirty, picksMade: 0, deadline, now: beforeDeadline });
     expect(w.state).toBe('waiting');
     if (w.state !== 'waiting') throw new Error('unreachable');
     expect(w.pending).toHaveLength(1);
@@ -229,7 +229,7 @@ describe('the mock window', () => {
   });
 
   it('says the cuts are LATE once the deadline has passed', () => {
-    const w = resolveMockWindow({ cuts: dirty, picksMade: 0, poolSize: 900, deadline, now: afterDeadline });
+    const w = resolveMockWindow({ cuts: dirty, picksMade: 0, deadline, now: afterDeadline });
     if (w.state !== 'waiting') throw new Error('unreachable');
     expect(w.deadlinePassed).toBe(true);
   });
@@ -238,13 +238,13 @@ describe('the mock window', () => {
     // Post-draft, rosters climb back to 16 — over the keeper limit. Asking the
     // roster question first would tell an owner in October to go make cuts.
     const postDraft = { total: 12, ready: 0, pending: AL.map((id) => ({ franchiseId: id, count: 16 })) };
-    const w = resolveMockWindow({ cuts: postDraft, picksMade: 108, poolSize: 20, deadline, now: new Date(2026, 9, 1) });
+    const w = resolveMockWindow({ cuts: postDraft, picksMade: 108, deadline, now: new Date(2026, 9, 1) });
     expect(w.state).toBe('drafting');
   });
 
   it('a single made pick closes the window — the pool is being consumed for real', () => {
     expect(
-      resolveMockWindow({ cuts: clean, picksMade: 1, poolSize: 900, deadline, now: afterDeadline }).state
+      resolveMockWindow({ cuts: clean, picksMade: 1, deadline, now: afterDeadline }).state
     ).toBe('drafting');
   });
 
@@ -252,7 +252,6 @@ describe('the mock window', () => {
     const w = resolveMockWindow({
       cuts: { total: 0, ready: 0, pending: [] },
       picksMade: 0,
-      poolSize: 3000,
       deadline,
       now: afterDeadline,
     });
@@ -320,7 +319,6 @@ describe('the pool, end to end, on a real cut-week snapshot', () => {
     const w = resolveMockWindow({
       cuts,
       picksMade: 0,
-      poolSize: 1,
       deadline: keeperDeadlineFor(SEASON),
       now: new Date(2026, 6, 21),
     });
@@ -373,7 +371,7 @@ describe('the gate explains itself', () => {
   };
 
   it('says nothing at all when the window is open', () => {
-    expect(describeMockGate({ state: 'open', poolSize: 900 }, opts)).toBeNull();
+    expect(describeMockGate({ state: 'open' }, opts)).toBeNull();
   });
 
   it('names who is still cutting, and how many they owe', () => {

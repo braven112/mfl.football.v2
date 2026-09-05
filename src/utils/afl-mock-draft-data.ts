@@ -104,17 +104,16 @@ export interface BuildAflMockContextInput {
   leagueId: string;
   /** Injectable for tests and `?testDate=`. */
   now?: Date;
-  /** How many draftable players exist at all — only used to size the pool. */
-  draftablePlayerCount?: number;
 }
 
 /**
  * Everything the lobby and the create endpoint both need, resolved once.
  *
- * The pool size is computed from the league's whole draftable catalogue minus
- * this conference's rosters. It is a headline number for the lobby; the create
- * endpoint re-derives the actual id list from `rostered`, because by then it
- * has the player catalogue in hand anyway.
+ * Deliberately does NOT touch the player catalogue. It answers "may a mock run
+ * here, and against whose rosters" — and for most of the year the answer is
+ * no, so loading 1.4 MB of players to size a pool nobody will see is work
+ * thrown away on the page's commonest state. Callers build the pool from
+ * `rostered` once they know the window is open.
  */
 export async function buildAflMockContext(
   input: BuildAflMockContextInput
@@ -137,8 +136,6 @@ export async function buildAflMockContext(
     unit
   );
 
-  const poolSize = Math.max(0, (input.draftablePlayerCount ?? 0) - rostered.size);
-
   return {
     conference,
     unit,
@@ -146,7 +143,6 @@ export async function buildAflMockContext(
     window: resolveMockWindow({
       cuts,
       picksMade: picksMadeIn(draftUnit),
-      poolSize,
       deadline: keeperDeadlineFor(year),
       now,
     }),

@@ -255,12 +255,11 @@ export type MockWindow =
       /** True once the deadline has passed and cuts are simply late. */
       deadlinePassed: boolean;
     }
-  | { state: 'open'; poolSize: number };
+  | { state: 'open' };
 
 export interface ResolveMockWindowInput {
   cuts: RosterCutState;
   picksMade: number;
-  poolSize: number;
   deadline: Date | null;
   now: Date;
 }
@@ -292,11 +291,18 @@ export function resolveMockWindow(input: ResolveMockWindowInput): MockWindow {
     };
   }
 
-  return { state: 'open', poolSize: input.poolSize };
+  return { state: 'open' };
 }
 
-/** True when a mock may be created — the one check every caller shares. */
-export function isMockWindowOpen(window: MockWindow): window is { state: 'open'; poolSize: number } {
+/**
+ * True when a mock may be created — the one check every caller shares.
+ *
+ * Deliberately says nothing about the POOL. Sizing the pool means loading the
+ * whole player catalogue, and for most of the year the answer here is "no",
+ * where that work is thrown away — so the caller builds the pool only after
+ * this returns true. See `resolveAflMock`.
+ */
+export function isMockWindowOpen(window: MockWindow): window is { state: 'open' } {
   return window.state === 'open';
 }
 
