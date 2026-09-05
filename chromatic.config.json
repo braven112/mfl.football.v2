@@ -3,6 +3,9 @@
   "buildScriptName": "build:storybook:stats",
   "diagnosticsFile": "chromatic-diagnostics.json",
   "onlyChanged": true,
+  "untraced": [
+    "public/assets/whats-new/**"
+  ],
   "externals": [
     "src/styles/loading.css",
     "src/styles/player-cell.css",
