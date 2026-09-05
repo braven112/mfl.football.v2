@@ -13,7 +13,13 @@
  *   any `[data-pa-open]` button (the ⋮ kebab a row renders), opening the
  *   sheet with the Watch action built from the button's data attributes;
  * - warms the list on page load when the page says the viewer is signed in
- *   to THIS league (`signedIn`), so the first paint has the right marks.
+ *   to THIS league (`signedIn`), so the first paint has the right marks;
+ * - adds a Bid / Claim action to the sheet, derived from the row's OWN
+ *   acquisition button (`.col-fa-action .place-bid-link`) so the sheet never
+ *   re-decides who may claim: a `.claim-open` button opens the waiver claim
+ *   form, a `[data-signin-open]` one hands off to sign-in, and an MFL deep
+ *   link (auction season) navigates. No button, no action — a rostered
+ *   player's sheet is Watch alone.
  *
  * Signed-in is the page's SSR decision — an owner logged into the other
  * league is "signed out" here, because MFL's watch list belongs to the
@@ -35,7 +41,9 @@ const { signedIn } = Astro.props;
   import {
     getWatchedIds, isWatched, loadWatchList, toggleWatch, getWatchListAuth, onWatchListChange,
   } from '../../utils/watch-list-client';
-  import { buildWatchAction, openPlayerActionModal, requestSignIn } from '../../utils/player-actions';
+  import {
+    buildWatchAction, openPlayerActionModal, requestSignIn, type PlayerActionSpec,
+  } from '../../utils/player-actions';
 
   declare global {
     interface Window {
@@ -64,6 +72,50 @@ const { signedIn } = Astro.props;
 
   let delegationBound = false;
 
+  /**
+   * The acquisition action for a row, or null when the row offers none.
+   * Reads the button the page already rendered rather than the page's
+   * claim rules — the page is the authority on who may claim what.
+   */
+  function buildAcquireAction(row: HTMLElement | null): PlayerActionSpec | null {
+    const el = row?.querySelector<HTMLElement>('.col-fa-action .place-bid-link');
+    if (!el) return null;
+    const label = (el.textContent || '').replace(/[↗\u2197]/g, '').trim() || 'Bid';
+    // "Claim this player" / "Bid on this player" — the page's own verb.
+    const verbLabel = /^claim$/i.test(label) ? 'Claim this player' : `${label} on this player`;
+    if (el.classList.contains('claim-open')) {
+      return {
+        id: 'acquire',
+        label: verbLabel,
+        desc: 'Opens the claim form — you choose the drop and confirm there',
+        icon: 'icon-gavel',
+        closeFirst: true,
+        run: async () => { el.click(); return { ok: true }; },
+      };
+    }
+    if (el.hasAttribute('data-signin-open')) {
+      return {
+        id: 'acquire',
+        label: verbLabel,
+        desc: 'Sign in to file a claim',
+        icon: 'icon-gavel',
+        signIn: true,
+      };
+    }
+    const href = el.getAttribute('href');
+    if (href) {
+      return {
+        id: 'acquire',
+        label: `${label} on MyFantasyLeague`,
+        desc: 'Opens MFL in a new tab',
+        icon: 'icon-gavel',
+        closeFirst: true,
+        run: async () => { window.open(href, '_blank', 'noopener'); return { ok: true }; },
+      };
+    }
+    return null;
+  }
+
   function onDocumentClick(e: MouseEvent) {
     const btn = (e.target as HTMLElement | null)?.closest<HTMLElement>('[data-pa-open]');
     if (!btn) return;
@@ -81,11 +133,14 @@ const { signedIn } = Astro.props;
       franchiseId: d.paFranchise || null,
       subText: d.paSub || null,
     };
+    const row = btn.closest<HTMLElement>('tr');
     const opened = openPlayerActionModal({
       player,
-      actions: () => [
-        buildWatchAction(id, { signedIn: pageSignedIn() && getWatchListAuth() !== 'signed-out' }),
-      ],
+      actions: () => {
+        const acquire = buildAcquireAction(row);
+        const watch = buildWatchAction(id, { signedIn: pageSignedIn() && getWatchListAuth() !== 'signed-out' });
+        return acquire ? [acquire, watch] : [watch];
+      },
     });
     if (!opened && !pageSignedIn()) requestSignIn();
   }

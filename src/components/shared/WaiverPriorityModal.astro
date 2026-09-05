@@ -21,6 +21,8 @@ import '../../styles/waiver-priority-modal.css';
  * owner came here to read a list, and losing the page to read it is a bad
  * trade.
  */
+import { rankWithinConference, type WaiverOrderEntry } from '../../utils/waiver-order';
+
 export interface WaiverPriorityTeam {
   franchiseId: string;
   name: string;
@@ -39,15 +41,30 @@ export interface WaiverPriorityConfig {
   teams: WaiverPriorityTeam[];
   /** Whether priority decides claims outright (FCFS) or only breaks tied bids. */
   system: 'bbid' | 'priority';
+  /**
+   * The order from the committed league feed, rendered server-side so the
+   * dialog opens WITH a list instead of a spinner. The live read replaces it;
+   * when MFL does not answer, this is what the owner keeps looking at, with
+   * the foot saying so. A dialog that shows only "Reading…" until a 6-second
+   * upstream timeout expires reads as broken on a phone (Sep 2026).
+   */
+  initialOrder?: WaiverOrderEntry[];
 }
 
 interface Props {
   config: WaiverPriorityConfig;
 }
 const { config } = Astro.props;
+
+const initialRanked = config.signedIn && config.initialOrder?.length
+  ? rankWithinConference(config.initialOrder, config.teams.map((t) => t.franchiseId))
+  : [];
+const teamById = new Map(config.teams.map((t) => [t.franchiseId, t]));
+// The client only needs the flags and names; the SSR list carries the order.
+const clientConfig = { ...config, initialOrder: undefined, hasInitialOrder: initialRanked.length > 0 };
 ---
 
-<script type="application/json" id="waiver-priority-config" set:html={JSON.stringify(config)}></script>
+<script type="application/json" id="waiver-priority-config" set:html={JSON.stringify(clientConfig)}></script>
 
 <dialog id="waiver-priority-modal" class="wpm" aria-labelledby="wpm-title">
   <div class="wpm-head">
@@ -65,9 +82,26 @@ const { config } = Astro.props;
   <div class="wpm-body">
     {config.signedIn ? (
       <>
-        <p class="wpm-status" id="wpm-status">Reading the live order from MyFantasyLeague&hellip;</p>
-        <ol class="wpm-list" id="wpm-list" hidden></ol>
-        <p class="wpm-foot" id="wpm-foot" hidden></p>
+        <p class="wpm-status" id="wpm-status">{initialRanked.length ? 'Checking the live order…' : 'Reading the live order from MyFantasyLeague…'}</p>
+        <ol class="wpm-list" id="wpm-list" hidden={initialRanked.length === 0}>
+          {initialRanked.map(({ franchiseId, rank }) => {
+            const team = teamById.get(franchiseId);
+            const isMe = franchiseId === config.franchiseId;
+            return (
+              <li class={`wpm-row${isMe ? ' wpm-row--me' : ''}`}>
+                <span class="wpm-row__rank">{rank}</span>
+                {team?.icon
+                  ? <img class="wpm-row__icon" src={team.icon} alt="" loading="lazy" decoding="async" />
+                  : <span class="wpm-row__icon wpm-row__icon--blank" aria-hidden="true"></span>}
+                <span class="wpm-row__name">{team?.name ?? franchiseId}</span>
+                {isMe && <span class="wpm-row__you">You</span>}
+              </li>
+            );
+          })}
+        </ol>
+        <p class="wpm-foot" id="wpm-foot" hidden={initialRanked.length === 0}>
+          {initialRanked.length ? 'From our last sync with MyFantasyLeague — checking for a newer order.' : ''}
+        </p>
       </>
     ) : (
       <div class="wpm-gate">
@@ -181,9 +215,14 @@ const { config } = Astro.props;
   const load = async () => {
     if (!ctx || ctx.loaded) return;
     ctx.loaded = true;
-    setStatus('Reading the live order from MyFantasyLeague…');
+    const hasSsrList = !!ctx.cfg.hasInitialOrder;
+    setStatus(hasSsrList ? 'Checking the live order…' : 'Reading the live order from MyFantasyLeague…');
+    // Time-boxed: the API waits up to 6s on MFL and a cold function adds
+    // more; a fetch that never settles left the dialog on "Reading…" for good.
+    const abort = new AbortController();
+    const timer = setTimeout(() => abort.abort(), 12_000);
     try {
-      const res = await fetch('/api/waiver-order', { credentials: 'include' });
+      const res = await fetch('/api/waiver-order', { credentials: 'include', signal: abort.signal });
       const data = await res.json();
       if (!res.ok || !data?.success) throw new Error(data?.message || 'Could not read the waiver order.');
       render(data.order, data.asOf, data.live !== false);
@@ -191,9 +230,24 @@ const { config } = Astro.props;
       // Let the next open retry — a failed read is usually a blip, and an owner
       // who reopens the modal is asking for exactly that.
       if (ctx) ctx.loaded = false;
-      if (ctx?.listEl) ctx.listEl.hidden = true;
-      if (ctx?.footEl) ctx.footEl.hidden = true;
-      setStatus(err instanceof Error ? err.message : 'Could not read the waiver order.', 'error');
+      const message = err instanceof DOMException && err.name === 'AbortError'
+        ? 'MyFantasyLeague is taking too long to answer.'
+        : err instanceof Error ? err.message : 'Could not read the waiver order.';
+      if (hasSsrList) {
+        // Keep the synced order on screen; say why it is not live.
+        setStatus('');
+        if (ctx?.listEl) ctx.listEl.hidden = false;
+        if (ctx?.footEl) {
+          ctx.footEl.textContent = `${message.replace(/[.!]*$/, '.')} Showing the order from our last sync.`;
+          ctx.footEl.hidden = false;
+        }
+      } else {
+        if (ctx?.listEl) ctx.listEl.hidden = true;
+        if (ctx?.footEl) ctx.footEl.hidden = true;
+        setStatus(message, 'error');
+      }
+    } finally {
+      clearTimeout(timer);
     }
   };
 
