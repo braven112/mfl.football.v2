@@ -84,6 +84,7 @@ export function buildVoterPushes({ league, issue, teams, previousIssue = null })
       // Per-week tag, so a re-run collapses onto the same notification rather
       // than stacking a second copy in the tray.
       tag: `owners-poll-${issue.year}-${issue.week}`,
+      category: 'poll-result',
       teamName: name(fid),
     };
   });
@@ -115,6 +116,7 @@ export function buildOpenPushes({ issue, teams, eligibleFranchiseIds }) {
     body: `${bait} Rank your top ${poll.slots} — about a minute.`,
     url: BALLOT_PATH,
     tag: `owners-poll-open-${issue.year}-${issue.week}`,
+    category: 'poll-open',
   }));
 }
 
@@ -143,6 +145,7 @@ export function buildNagPushes({ league, week, ballotsIn, eligibleVoters, closes
     body: `${ballotsIn} of ${eligibleVoters} ballots are in and yours isn't. Same deadline as your lineup.`,
     url: BALLOT_PATH,
     tag: `owners-poll-nag-${week}`,
+    category: 'poll-reminder',
   }));
 }
 
@@ -167,7 +170,7 @@ export async function sendVoterPushes({ league, notifications, log = console }) 
   }
 
   try {
-    const res = await fetch(`${base.replace(/\/$/, '')}/api/cron/owners-poll-push`, {
+    const res = await fetch(`${base.replace(/\/$/, '')}/api/cron/push-fanout`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -175,6 +178,9 @@ export async function sendVoterPushes({ league, notifications, log = console }) 
       },
       body: JSON.stringify({
         league: league.slug,
+        // `teamName` is for local logging only; everything else, `category`
+        // included, has to reach the route or the preference filter has
+        // nothing to check.
         notifications: notifications.map(({ teamName, ...n }) => n),
       }),
     });

@@ -34,6 +34,7 @@ import { callAnthropic } from './article-utils/ai-client.mjs';
 import { isDuplicate, appendToFeed } from './article-utils/feed-writer.mjs';
 import { postToGroupMe } from './lib/groupme.mjs';
 import { postToGroupMeCapped } from './lib/groupme-capped.mjs';
+import { sendPushFanout, broadcast } from './lib/push-fanout.mjs';
 import { LEAGUES } from '../src/config/leagues-data.mjs';
 import { withLinkDirective, applyArticleLinks } from './article-utils/article-links.mjs';
 
@@ -274,6 +275,21 @@ async function main() {
         onFetchError: (err) => console.warn(`  [groupme] promo failed: ${err.message}`),
       });
       if (!posted && !refused) console.log('  [groupme] promo not delivered (see above).');
+
+      // Most article types are held out of the chat by the daily cap, so push
+      // is how they reach anyone at all. Sent whether or not the chat post
+      // went out: the two are separate channels an owner chooses separately.
+      await sendPushFanout({
+        league: LEAGUES[league],
+        category: 'article',
+        notifications: broadcast({
+          franchiseIds: [...(await loadTeams(projectRoot, league)).keys()],
+          title: post.headline,
+          body: post.body?.slice(0, 160) ?? '',
+          url: post.link ?? '/news',
+          tag: post.id,
+        }),
+      });
     }
   }
 }

@@ -48,6 +48,7 @@ import {
   buildRevealMessage,
   normalizeFranchiseIds,
 } from './lib/owners-poll-pass.mjs';
+import { sendPushFanout, broadcast } from './lib/push-fanout.mjs';
 import {
   buildVoterPushes,
   sendVoterPushes,
@@ -1070,6 +1071,21 @@ async function main() {
   if (opts.publish) {
     // ONE chat post: the column, with the ballot invite folded in.
     await postAnnouncement(issue, teams, league);
+
+    // The column itself, to owners who asked for it. Separate from the ballot
+    // push below: an owner can want the rankings without the weekly ask, or
+    // the ask without the rankings.
+    await sendPushFanout({
+      league,
+      category: 'column',
+      notifications: broadcast({
+        franchiseIds: normalizeFranchiseIds(teams.keys()),
+        title: `The Pecking Order — Week ${week}`,
+        body: issue.headline,
+        url: '/pecking-order',
+        tag: `pecking-order-${year}-${week}`,
+      }),
+    });
 
     // Everyone gets the open on their phone. At open there are no voters yet,
     // and a push that lands with the column is the one most likely to be acted

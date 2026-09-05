@@ -1,22 +1,20 @@
 /**
- * The Owners' Poll — reveal push fan-out.
+ * Push fan-out for cron scripts.
  *
- * The close pass runs in GitHub Actions as a node script, and web push has to
- * be sent server-side from src/utils/push-sender.ts, which a script cannot
- * import (TypeScript). So the pass POSTs already-composed notifications here
- * and this route fans them out — the same shape as the existing Vercel-cron
- * bridge at api/cron/roster-sync.ts, and gated by the same CRON_SECRET.
+ * Web push has to be sent server-side from src/utils/push-sender.ts, and the
+ * scripts that know WHEN to send run in GitHub Actions as node and cannot
+ * import TypeScript. So they POST already-composed notifications here and this
+ * route delivers them — the same bridge shape as api/cron/roster-sync.ts, and
+ * gated by the same CRON_SECRET.
  *
- * WHY PUSH AT ALL, when the reveal already goes to GroupMe: the chat post is a
- * broadcast, and broadcasts only move people who were already going to act.
- * This one is personal — where the room put YOUR team, and how your ballot
- * did. Only voters get a number, so a non-voter watching others compare theirs
- * has nothing of their own, which is a better nudge than any reminder.
+ * This is what the group-chat cap leans on. Transactions, rumors, the weekly
+ * columns and the poll's reminder are all held out of the chat now, so this is
+ * the road they take instead, and each carries the notification CATEGORY an
+ * owner controls at /<league>/notifications.
  *
  * Notifications arrive fully composed. This route deliberately does NOT build
- * copy from league data: it is a transport, and keeping the wording with the
- * rest of the poll's voice (scripts/lib/owners-poll-posts.mjs) means there is
- * one place to read it.
+ * copy from league data: it is a transport, and keeping each feature's wording
+ * with that feature means there is one place to read it.
  */
 
 import type { APIRoute } from 'astro';
@@ -36,6 +34,8 @@ interface Incoming {
     body?: string;
     url?: string;
     tag?: string;
+    /** Which notification category this is — see notification-categories.ts. */
+    category?: string;
   }>;
 }
 
@@ -86,6 +86,12 @@ export const POST: APIRoute = async ({ request }) => {
 
     // One push per franchise; a franchise with no subscriptions is a no-op
     // inside the sender, which never throws.
+    // The category travels with each notification rather than being fixed for
+    // the whole call: one close pass sends results to voters and a reminder to
+    // non-voters, and an owner can want one without the other.
+    const category = typeof n.category === 'string' ? n.category : '';
+    if (!category) continue;
+
     const result = await sendPushToFranchise(league.id, franchiseId, {
       title,
       body,
@@ -93,7 +99,7 @@ export const POST: APIRoute = async ({ request }) => {
       // Same tag collapses repeats on the device, so a re-run of the close
       // pass cannot stack duplicate reveals in someone's notification tray.
       tag: typeof n.tag === 'string' ? n.tag : 'owners-poll',
-    });
+    }, category);
     sent += result.sent;
     if (result.sent > 0) recipients += 1;
   }

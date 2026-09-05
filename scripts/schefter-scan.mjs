@@ -48,6 +48,7 @@ import { getNonEmpty } from './lib/env.mjs';
 import { leagueYearFor } from './lib/schefter-league-year.mjs';
 import { postToGroupMe as sharedPostToGroupMe } from './lib/groupme.mjs';
 import { postToGroupMeCapped } from './lib/groupme-capped.mjs';
+import { sendPushFanout, broadcast } from './lib/push-fanout.mjs';
 import { scanRogerReplies } from './roger-groupme-reply.mjs';
 
 const projectRoot = path.resolve(fileURLToPath(new URL('..', import.meta.url)));
@@ -558,6 +559,30 @@ function recordGroupMeSuppression(entry) {
  * cut deadline loses real value. Defaulting would eventually swallow one of
  * those silently, so the caller has to say which it is.
  */
+/**
+ * Push the same news the chat is no longer getting.
+ *
+ * Transactions are held out of the group chat by the daily cap, so this is the
+ * only way they reach anyone — and unlike the chat, an owner chooses between
+ * 'transaction-big' (a few a week) and 'transaction-all' (a firehose).
+ */
+async function pushTransaction({ league, franchiseIds, headline, body, tag, big }) {
+  if (!league?.navSlug && !league?.slug) return;
+  await sendPushFanout({
+    league,
+    // Big moves go to the smaller, likelier-enabled audience; everything else
+    // only to owners who explicitly asked for every add and drop.
+    category: big ? 'transaction-big' : 'transaction-all',
+    notifications: broadcast({
+      franchiseIds,
+      title: headline,
+      body: (body ?? '').slice(0, 160),
+      url: '/news',
+      tag,
+    }),
+  });
+}
+
 async function postToGroupMe(text, { botIdOverride, kind, league } = {}) {
   const botId = botIdOverride || process.env.GROUPME_ROGER_BOT_ID;
   if (!kind) throw new TypeError('schefter-scan postToGroupMe: a `kind` is required.');
@@ -847,6 +872,15 @@ async function scanLeague(league) {
             });
           } else {
             await postToGroupMe(groupMeText, { botIdOverride: botId, kind: 'transaction', league });
+            // The chat holds this now, so push is how it reaches anyone.
+            await pushTransaction({
+              league,
+              franchiseIds: [...teams.keys()],
+              headline: post.headline,
+              body: post.body,
+              tag: post.id,
+              big: true,
+            });
             console.log(`  [GroupMe] Posted: ${post.headline}`);
           }
         }
@@ -1342,6 +1376,14 @@ async function scanPendingTrades(league) {
         } else {
           const groupMeText = `${post.headline}\n\n${post.body}\n\n@Brandon the league awaits.`;
           await postToGroupMe(groupMeText, { botIdOverride: schefterBotId, kind: 'transaction', league });
+          await pushTransaction({
+            league,
+            franchiseIds: [...teams.keys()],
+            headline: post.headline,
+            body: post.body,
+            tag: post.id,
+            big: true,
+          });
         }
       }
 

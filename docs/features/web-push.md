@@ -118,7 +118,42 @@ deployment, not `pnpm dev`.
 6. Mention the new alert type in the notifications page copy if it's
    user-visible.
 
-v1 deliberately has no per-type preferences — enabling push means "all
-notification types". If/when there are enough types to matter, store a
-per-franchise preference map alongside the subscriptions and filter in
+## Per-category preferences
+
+Shipped, and built exactly as this doc originally prescribed: a
+per-franchise preference map alongside the subscriptions, filtered inside
 `sendPushToFranchise`.
+
+- `src/config/notification-categories.ts` — the registry. One entry per
+  alert type: label, description, cadence, group, `defaultOn`, an optional
+  `requiresFeature` league gate, and `live`.
+- `src/utils/push-preferences.ts` — Redis storage,
+  `push:prefs:{leagueId}:{franchiseId}`. Only EXPLICIT choices are stored,
+  so a category added later still ships with its intended default rather
+  than arriving off for every owner who ever opened the page.
+- `src/pages/api/push/preferences.ts` — GET/POST for the command center.
+- `src/components/shared/notifications/NotificationCommandCenter.tsx` — the
+  settings UI, on both leagues' `/notifications` pages.
+
+**`category` is a required argument to `sendPushToFranchise`.** It is
+checked at that one door rather than at each call site: a preference
+honoured by some senders and not others is worse than none at all. An
+unknown category is REFUSED, so a typo cannot become a way around every
+setting an owner has chosen.
+
+**`live: false` means "no sender yet".** Such a category is hidden from the
+settings page — a switch that silently does nothing is worse than an absent
+one — and `tests/notification-preferences.test.ts` fails if a category is
+marked live while no code references its id. That guard caught four during
+the build.
+
+**Cron scripts** cannot import the TypeScript sender, so they compose the
+copy and POST it to `src/pages/api/cron/push-fanout.ts` (CRON_SECRET-gated)
+via `scripts/lib/push-fanout.mjs`.
+
+## Adding a notification type, in short
+
+1. Add a registry entry with `live: false`.
+2. Write the sender, passing the category id to `sendPushToFranchise` (or to
+   `sendPushFanout` from a script).
+3. Flip `live: true`. The settings page picks it up with no edit.

@@ -10,6 +10,8 @@ export const prerender = false;
 
 import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
 import NotificationSettingsCard from '../../components/shared/NotificationSettingsCard.astro';
+import NotificationCommandCenter from '../../components/shared/notifications/NotificationCommandCenter';
+import '../../styles/notification-command-center.css';
 import { getAuthUser } from '../../utils/auth';
 import { getLeagueBySlug } from '../../config/leagues';
 
@@ -37,6 +39,13 @@ if (user.leagueId !== getLeagueBySlug('theleague')?.id) {
     </header>
 
     <NotificationSettingsCard />
+
+    <!--
+      client:load, not client:visible. The command center renders nothing until
+      it has fetched, so a client:visible island would have zero height, never
+      intersect and never hydrate — the same trap the lineup ballot strip hit.
+    -->
+    <NotificationCommandCenter client:load />
   </div>
 </TheLeagueLayout>
 

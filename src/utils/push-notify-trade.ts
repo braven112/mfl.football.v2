@@ -103,7 +103,7 @@ export async function notifyTradeOfferPush(
       fromTeamName,
     });
 
-    return await sendPushToFranchise(leagueId, normalizedTo, payload);
+    return await sendPushToFranchise(leagueId, normalizedTo, payload, 'trade-offer');
   } catch (e) {
     console.warn('[push-notify-trade] failed:', e);
     return null;
