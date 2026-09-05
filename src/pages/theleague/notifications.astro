@@ -10,6 +10,8 @@ export const prerender = false;
 
 import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
 import NotificationSettingsCard from '../../components/shared/NotificationSettingsCard.astro';
+import NotificationCommandCenter from '../../components/shared/notifications/NotificationCommandCenter';
+import '../../styles/notification-command-center.css';
 import { getAuthUser } from '../../utils/auth';
 import { getLeagueBySlug } from '../../config/leagues';
 
@@ -31,12 +33,20 @@ if (user.leagueId !== getLeagueBySlug('theleague')?.id) {
       <h1>Notifications</h1>
       <p>
         Turn on push notifications and The League will tap you on the
-        shoulder when something needs your attention. First up: trade
-        offers — more alert types will land here as they ship.
+        shoulder when something needs your attention — a trade offer, a
+        broken lineup an hour before kickoff, a deadline you'd rather not
+        blow. Pick as many or as few as you like.
       </p>
     </header>
 
     <NotificationSettingsCard />
+
+    <!--
+      client:load, not client:visible. The command center renders nothing until
+      it has fetched, so a client:visible island would have zero height, never
+      intersect and never hydrate — the same trap the lineup ballot strip hit.
+    -->
+    <NotificationCommandCenter client:load />
   </div>
 </TheLeagueLayout>
 

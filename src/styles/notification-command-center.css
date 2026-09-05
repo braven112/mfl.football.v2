@@ -1,0 +1,182 @@
+/**
+ * Notification command center.
+ *
+ * Every custom property here is defined in BOTH tokens.css and tokens-dark.css
+ * (tests/design-token-guard.test.ts enforces that a referenced token exists).
+ */
+
+.ncc {
+  margin-top: 1.5rem;
+  color: var(--page-text);
+}
+
+.ncc__head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+}
+.ncc__title { margin: 0; font-size: 1.15rem; }
+.ncc__sub {
+  margin: 0.25rem 0 0;
+  max-width: 42rem;
+  font-size: 0.9rem;
+  color: var(--content-text-muted);
+  line-height: 1.5;
+}
+.ncc__count {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--content-text-muted);
+  white-space: nowrap;
+}
+.ncc__count strong { color: var(--page-text); font-size: 1.05rem; }
+.ncc__saved { color: var(--color-success); }
+
+.ncc__note { color: var(--content-text-muted); }
+.ncc__error { color: var(--color-error); font-size: 0.9rem; margin: 0 0 0.75rem; }
+.ncc__callout {
+  background: var(--content-bg);
+  border: 1px solid var(--color-error);
+  border-radius: var(--radius-md, 8px);
+  padding: 1rem;
+}
+.ncc__callout p { margin: 0.35rem 0 0; color: var(--content-text-muted); }
+
+/* --- group ------------------------------------------------------------- */
+
+.ncc__group {
+  background: var(--content-bg);
+  border: 1px solid var(--content-border);
+  border-radius: var(--radius-lg, 12px);
+  margin-bottom: 1rem;
+  overflow: hidden;
+}
+.ncc__group-head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 0.9rem 1rem;
+  background: var(--content-bg-muted);
+  border-bottom: 1px solid var(--content-border);
+}
+.ncc__group-title { margin: 0; font-size: 0.95rem; }
+.ncc__group-desc {
+  margin: 0.15rem 0 0;
+  font-size: 0.825rem;
+  color: var(--content-text-muted);
+  max-width: 38rem;
+}
+.ncc__all {
+  min-height: 2.25rem;
+  padding: 0.35rem 0.7rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  border-radius: var(--radius-md, 8px);
+  border: 1px solid var(--content-border);
+  background: var(--content-bg);
+  color: var(--page-text);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+/* --- rows -------------------------------------------------------------- */
+
+.ncc__list { list-style: none; margin: 0; padding: 0; }
+.ncc__row + .ncc__row { border-top: 1px solid var(--content-border); }
+
+.ncc__label {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 0.8rem 1rem;
+  cursor: pointer;
+  /* The whole row is the target, so a thumb does not have to find the switch. */
+  min-height: 3rem;
+}
+
+/* The real checkbox stays in the DOM and focusable — it is only visually
+   replaced by the track below, so keyboard and screen-reader behaviour is the
+   browser's rather than something reimplemented here. */
+.ncc__input {
+  position: absolute;
+  opacity: 0;
+  width: 1px;
+  height: 1px;
+}
+
+.ncc__switch {
+  flex: none;
+  position: relative;
+  width: 2.6rem;
+  height: 1.5rem;
+  margin-top: 0.1rem;
+  border-radius: 999px;
+  background: var(--content-bg-muted);
+  border: 1px solid var(--content-border);
+  transition: background 140ms ease, border-color 140ms ease;
+}
+.ncc__switch::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 0.15rem;
+  width: 1.1rem;
+  height: 1.1rem;
+  border-radius: 50%;
+  background: var(--content-bg);
+  border: 1px solid var(--content-border);
+  transform: translateY(-50%);
+  transition: transform 140ms ease;
+}
+.ncc__input:checked + .ncc__switch {
+  background: var(--primary-color);
+  border-color: var(--primary-color);
+}
+.ncc__input:checked + .ncc__switch::after {
+  transform: translate(1.05rem, -50%);
+  border-color: var(--primary-color);
+}
+/* Focus has to be visible on the TRACK, since the input itself is hidden. */
+.ncc__input:focus-visible + .ncc__switch {
+  outline: 2px solid var(--primary-color);
+  outline-offset: 2px;
+}
+
+.ncc__text { display: flex; flex-direction: column; gap: 0.1rem; min-width: 0; }
+.ncc__name {
+  font-weight: 600;
+  font-size: 0.925rem;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+}
+.ncc__badge {
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 700;
+  padding: 0.1rem 0.35rem;
+  border-radius: 999px;
+  background: var(--content-bg-muted);
+  border: 1px solid var(--content-border);
+  color: var(--content-text-muted);
+}
+.ncc__desc { font-size: 0.85rem; color: var(--content-text-muted); line-height: 1.45; }
+.ncc__cadence {
+  font-size: 0.75rem;
+  color: var(--content-text-muted);
+  opacity: 0.85;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ncc__switch,
+  .ncc__switch::after {
+    transition: none;
+  }
+}
