@@ -35,11 +35,17 @@
 }
 .st-page__title {
   margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
   font-family: var(--font-display);
   font-size: clamp(1.8rem, 4vw, 2.6rem);
   line-height: 1;
   color: var(--page-text);
 }
+/* The official mark sits with the headline; in dark mode it takes the crest
+   treatment from the tv-logo manifest like every other mark on the page. */
+.st-page__mark { height: 3.2rem; width: auto; object-fit: contain; flex: none; }
 .st-page__lede {
   margin: 0.5rem 0 0;
   max-width: 60ch;
@@ -161,6 +167,16 @@
 .st-chip--on .st-chip__dot { background: var(--league-accent); }
 .st-chip__ext { font-size: 0.7rem; opacity: 0.7; }
 .st-chip--all { border-style: dashed; }
+/* Outside leagues fold behind one chip; the disclosure opens when any is on. */
+.st-others { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 0.45rem; }
+.st-others > summary { list-style: none; cursor: pointer; }
+.st-others > summary::-webkit-details-marker { display: none; }
+.st-others[open] > summary { border-color: color-mix(in srgb, var(--league-accent) 40%, transparent); }
+.st-others__count { font-weight: normal; color: var(--content-text-muted); font-size: 0.72rem; }
+.st-others__list { display: inline-flex; flex-wrap: wrap; gap: 0.45rem; padding-left: 0.2rem; border-left: 2px solid var(--card-border); }
+.st-chip--outside { font-weight: normal; }
+.st-chip__franchise { font-size: 0.7rem; color: var(--content-text-muted); }
+.st-chip__franchise::before { content: '·'; margin-right: 0.3rem; }
 .st-countries { display: flex; flex-wrap: wrap; align-items: center; gap: 0.45rem; }
 .st-chip__flag { font-size: 0.95rem; line-height: 1; }
 .st-jump { display: flex; gap: 0.5rem; }

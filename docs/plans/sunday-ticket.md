@@ -69,7 +69,7 @@ specs, whose one unbuilt idea this is.
 | Leagues | TheLeague + AFL routes, and BOTH show a combined board across every league the owner is in |
 | Outside leagues | Included — any league `myleagues` returns for the signed-in MFL account |
 | League list source | Fetched on visit with the session's MFL cookie, Redis-cached 1h |
-| Default set | Every league on; per-league toggle chips, choice remembered per device |
+| Default set | The leagues this site runs (TheLeague, AFL, Best Ball) on; outside leagues OFF and folded behind an "Other leagues" disclosure until toggled on — an owner with test leagues, or in six other people's leagues, should not have them counted (or fetched) unasked. Revised from "every league on" on 2026-09-05. |
 | Cross-league ranking | Starter count first, summed projections as tiebreak; per-league points shown inside each box |
 | Best Ball | On the board; no lineups, so every rostered player counts as a starter |
 | Commentary | None. No blurbs, no LLM run. Prose stays in Schefter's Saturday article |

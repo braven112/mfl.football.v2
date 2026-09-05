@@ -50,15 +50,26 @@ export interface BoardLeague {
 // ── League selection (URL param ↔ cookie) ────────────────────────────────
 
 /**
+ * The board's default set: every league this site runs (TheLeague, the AFL,
+ * Best Ball) that the owner is in. Outside leagues start OFF — an owner with a
+ * few test leagues, or in six other people's leagues, should not have all of
+ * them counted (and fetched) until they say so.
+ */
+export function defaultLeagueSelection(leagues: readonly Pick<BoardLeague, 'id' | 'registered'>[]): string[] {
+  return leagues.filter((l) => l.registered).map((l) => l.id);
+}
+
+/**
  * Parse a `?leagues=` value (or the cookie) against the leagues actually on
- * the board. `null` means "all" — the default, and also the answer to an
- * empty or garbage value, so a stale cookie can never blank the board.
- * Returns ids in the order given, deduplicated, unknown ids dropped.
+ * the board. `null` means "the default set" — also the answer to an empty or
+ * garbage value, so a stale cookie can never blank the board. Returns ids in
+ * the order given, deduplicated, unknown ids dropped. The literal `default`
+ * (and the older `all`) both mean null.
  */
 export function parseLeagueSelection(raw: string | null | undefined, available: readonly string[]): string[] | null {
   if (!raw) return null;
   const trimmed = raw.trim();
-  if (!trimmed || trimmed === 'all') return null;
+  if (!trimmed || trimmed === 'all' || trimmed === 'default') return null;
   const allowed = new Set(available);
   const seen = new Set<string>();
   const ids: string[] = [];
@@ -71,20 +82,30 @@ export function parseLeagueSelection(raw: string | null | undefined, available: 
   return ids.length > 0 ? ids : null;
 }
 
-/** The set after toggling `id` — never empty: turning off the last league turns everything back on. */
-export function toggleLeagueSelection(enabled: readonly string[], all: readonly string[], id: string): string[] | null {
+/**
+ * The set after toggling `id`, normalized to board order. Collapses to `null`
+ * (the default) when it equals the default set, so the URL and cookie stay
+ * clean; turning off the last league falls back to the default rather than
+ * an empty board.
+ */
+export function toggleLeagueSelection(
+  enabled: readonly string[],
+  all: readonly string[],
+  id: string,
+  defaults: readonly string[] = all,
+): string[] | null {
   const next = enabled.includes(id) ? enabled.filter((x) => x !== id) : [...enabled, id];
   if (next.length === 0) return null;
-  // Normalize to board order so two routes to the same set produce the same URL.
   const ordered = all.filter((x) => next.includes(x));
-  return ordered.length === all.length ? null : ordered;
+  const isDefault = ordered.length === defaults.length && ordered.every((x) => defaults.includes(x));
+  return isDefault ? null : ordered;
 }
 
 /** Build the page href for a selection, preserving `?week=` when it was set. */
 export function leagueSelectionHref(pathname: string, selection: string[] | null, week: number | null): string {
   const params = new URLSearchParams();
   if (week !== null) params.set('week', String(week));
-  params.set('leagues', selection ? selection.join(',') : 'all');
+  params.set('leagues', selection ? selection.join(',') : 'default');
   return `${pathname}?${params.toString()}`;
 }
 
@@ -120,7 +141,7 @@ export interface CookieJar {
 export function rememberSundayTicketChoices(url: URL, cookies: CookieJar): void {
   const opts = { maxAge: LEAGUE_SELECTION_MAX_AGE, path: '/', sameSite: 'lax' as const };
   const leagues = url.searchParams.get('leagues');
-  if (leagues !== null) cookies.set(LEAGUE_SELECTION_COOKIE, leagues.trim() || 'all', opts);
+  if (leagues !== null) cookies.set(LEAGUE_SELECTION_COOKIE, leagues.trim() || 'default', opts);
   const country = url.searchParams.get('country');
   if (country !== null) cookies.set(COUNTRY_COOKIE, country.trim().toUpperCase(), opts);
 }

@@ -17,6 +17,7 @@ describe('parseLeagueSelection — URL param and cookie share one parser', () =>
     expect(parseLeagueSelection(null, BOARD)).toBeNull();
     expect(parseLeagueSelection('', BOARD)).toBeNull();
     expect(parseLeagueSelection('all', BOARD)).toBeNull();
+    expect(parseLeagueSelection('default', BOARD)).toBeNull();
     expect(parseLeagueSelection('99999,nope', BOARD)).toBeNull();
   });
 
@@ -30,20 +31,30 @@ describe('toggleLeagueSelection', () => {
     expect(toggleLeagueSelection(BOARD, BOARD, AFL.id)).toEqual([DEFAULT_LEAGUE.id, '55555']);
   });
 
-  it('turns a league back on, and a full set collapses to null (all)', () => {
-    expect(toggleLeagueSelection([DEFAULT_LEAGUE.id], BOARD, AFL.id)).toEqual([DEFAULT_LEAGUE.id, AFL.id]);
+  it('turns a league back on, and a set equal to the DEFAULT collapses to null', () => {
+    const defaults = [DEFAULT_LEAGUE.id, AFL.id]; // the leagues this site runs
+    expect(toggleLeagueSelection([DEFAULT_LEAGUE.id], BOARD, AFL.id, defaults)).toBeNull();
+    expect(toggleLeagueSelection([DEFAULT_LEAGUE.id, AFL.id], BOARD, '55555', defaults)).toEqual(BOARD);
+    // With no defaults given the full board is the default (the old behavior).
     expect(toggleLeagueSelection([DEFAULT_LEAGUE.id, '55555'], BOARD, AFL.id)).toBeNull();
   });
 
-  it('never leaves the board empty — turning off the last league turns everything on', () => {
-    expect(toggleLeagueSelection([AFL.id], BOARD, AFL.id)).toBeNull();
+  it('never leaves the board empty — turning off the last league falls back to the default', () => {
+    expect(toggleLeagueSelection([AFL.id], BOARD, AFL.id, [DEFAULT_LEAGUE.id, AFL.id])).toBeNull();
+  });
+
+  it('defaultLeagueSelection is the registered leagues only', async () => {
+    const { defaultLeagueSelection } = await import('../src/utils/sunday-ticket-selection');
+    expect(defaultLeagueSelection([
+      { id: DEFAULT_LEAGUE.id, registered: DEFAULT_LEAGUE }, { id: '55555', registered: null }, { id: AFL.id, registered: AFL },
+    ])).toEqual([DEFAULT_LEAGUE.id, AFL.id]);
   });
 });
 
 describe('leagueSelectionHref', () => {
   it('carries the explicit week and serializes the set or "all"', () => {
     expect(leagueSelectionHref('/theleague/sunday-ticket', [AFL.id], 7)).toBe(`/theleague/sunday-ticket?week=7&leagues=${AFL.id}`);
-    expect(leagueSelectionHref('/sunday-ticket', null, null)).toBe('/sunday-ticket?leagues=all');
+    expect(leagueSelectionHref('/sunday-ticket', null, null)).toBe('/sunday-ticket?leagues=default');
   });
 });
 
@@ -96,7 +107,7 @@ describe('rememberSundayTicketChoices — the route writes, the component reads'
     const { rememberSundayTicketChoices, LEAGUE_SELECTION_COOKIE, COUNTRY_COOKIE } = await import('../src/utils/sunday-ticket-selection');
     const j = jar();
     rememberSundayTicketChoices(new URL('https://x.test/theleague/sunday-ticket?country=ca&leagues='), j);
-    expect(j.writes).toEqual([[LEAGUE_SELECTION_COOKIE, 'all'], [COUNTRY_COOKIE, 'CA']]);
+    expect(j.writes).toEqual([[LEAGUE_SELECTION_COOKIE, 'default'], [COUNTRY_COOKIE, 'CA']]);
     const none = jar();
     rememberSundayTicketChoices(new URL('https://x.test/theleague/sunday-ticket?week=3'), none);
     expect(none.writes).toEqual([]);

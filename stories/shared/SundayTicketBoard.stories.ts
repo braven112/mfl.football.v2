@@ -34,9 +34,14 @@ export default {
   },
 };
 
-/** Three leagues on, both windows, overflow under the early grid, two national games. */
+/** Three leagues on (the outside one opted in), both windows, overflow under the early grid, two national games. */
 export const MultiLeague = {
-  args: { slate: multiLeague, leagues, enabled: null },
+  args: { slate: multiLeague, leagues, enabled: leagues.map((l) => l.id) },
+};
+
+/** The default: the site's own leagues on, the outside league folded behind "Other leagues". */
+export const OutsideFolded = {
+  args: { slate: singleLeague, leagues, enabled: null },
 };
 
 /** One league toggled off — its chip goes hollow and an "All leagues" chip appears. */
@@ -46,7 +51,7 @@ export const OneLeagueOff = {
 
 /** Same board seen from Canada: CBS/FOX become DAZN, NBC becomes CTV, the header mark is DAZN. */
 export const Canada = {
-  args: { slate: multiLeague, leagues, enabled: null, country: 'CA' },
+  args: { slate: multiLeague, leagues, enabled: leagues.map((l) => l.id), country: 'CA' },
 };
 
 /** A single-league owner: no chips, no league line inside the boxes, RedZone fills the third box. */

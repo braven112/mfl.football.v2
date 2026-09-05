@@ -5,6 +5,7 @@ import mappings from '../data/theleague/broadcast-mappings.json';
 import {
   COUNTRY_CODES,
   REDZONE_LOGO,
+  SUNDAY_TICKET_LOGO,
   countryOptions,
   normalizeUsNetwork,
   parseCountry,
@@ -30,8 +31,9 @@ describe('broadcast-mappings.json — every mark it names is on disk', () => {
     expect(missing).toEqual([]);
   });
 
-  it('RedZone mark', () => {
+  it('RedZone and Sunday Ticket marks', () => {
     expect(existsSync(resolve(LOGOS, REDZONE_LOGO.split('/').pop()!))).toBe(true);
+    expect(existsSync(resolve(LOGOS, SUNDAY_TICKET_LOGO.split('/').pop()!))).toBe(true);
   });
 
   it('every country the resolver offers has a mapping with a default carrier (outside the US)', () => {

@@ -46,6 +46,8 @@ export function collectTvLogos(mappings = JSON.parse(readFileSync(MAPPINGS_PATH,
   }
   // The RedZone mark is a constant on the board (REDZONE_LOGO), not a mapping entry.
   add('board/redzone', 'nfl-red-zone.png', null);
+  // The official Sunday Ticket mark in the page headline (SUNDAY_TICKET_LOGO).
+  add('page/headline', 'nfl-sunday-ticket.png', null);
   return [...byFile.values()].sort((a, b) => a.file.localeCompare(b.file));
 }
 

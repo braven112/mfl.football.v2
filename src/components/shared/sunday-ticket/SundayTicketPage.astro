@@ -41,8 +41,8 @@ import {
   loadRegisteredContribution,
   readLeagueFeed,
 } from '../../../utils/sunday-ticket-sources';
-import { COUNTRY_COOKIE } from '../../../utils/sunday-ticket-selection';
-import { parseCountry } from '../../../utils/broadcast-channels';
+import { COUNTRY_COOKIE, defaultLeagueSelection } from '../../../utils/sunday-ticket-selection';
+import { SUNDAY_TICKET_LOGO, parseCountry } from '../../../utils/broadcast-channels';
 import {
   LEAGUE_SELECTION_COOKIE,
   fetchEspnBroadcasts,
@@ -101,6 +101,9 @@ const allIds = boardLeagues.map((l) => l.id);
 // after the response has started, so this file only ever reads.
 const leaguesParam = Astro.url.searchParams.get('leagues');
 const enabled = parseLeagueSelection(leaguesParam ?? Astro.cookies.get(LEAGUE_SELECTION_COOKIE)?.value, allIds);
+// null = the default set: the leagues this site runs. Outside leagues are
+// opt-in, and an outside league that is off is never fetched from MFL.
+const enabledIds = new Set(enabled ?? defaultLeagueSelection(boardLeagues));
 
 // ── Country: which channels the boxes name. Same param → cookie pattern. ──
 const country = parseCountry(Astro.url.searchParams.get('country') ?? Astro.cookies.get(COUNTRY_COOKIE)?.value);
@@ -109,7 +112,7 @@ const country = parseCountry(Astro.url.searchParams.get('country') ?? Astro.cook
 const notices: string[] = [];
 const contributions: LeagueContribution[] = [];
 
-const outside = boardLeagues.filter((l) => !l.registered);
+const outside = boardLeagues.filter((l) => !l.registered && enabledIds.has(l.id));
 let outsideAllowed = outside.length > 0 && !!user?.id;
 if (outsideAllowed && user) {
   // A burst of cache misses is N live MFL reads per page view; cap it per owner.
@@ -131,7 +134,7 @@ for (const l of boardLeagues) {
       identity,
     });
     if (c) contributions.push(c);
-  } else if (outsideAllowed && user?.id) {
+  } else if (outsideAllowed && user?.id && enabledIds.has(l.id)) {
     const c = await loadOutsideContribution({
       source: { leagueId: l.id, leagueName: l.name, franchiseId: l.franchiseId, franchiseName: l.franchiseName },
       host: l.host,
@@ -187,7 +190,10 @@ const title = `Sunday Ticket — Week ${week}`;
     <header class="st-page__head">
       <div class="st-page__title-group">
         <p class="st-page__eyebrow">Week {week}</p>
-        <h1 class="st-page__title">Sunday Ticket</h1>
+        <h1 class="st-page__title">
+          <img class="st-page__mark" src={SUNDAY_TICKET_LOGO} alt="NFL Sunday Ticket" width="336" height="263" />
+          <span class="st-page__title-text">Sunday Ticket</span>
+        </h1>
         <p class="st-page__lede">
           {personalized
             ? 'The four games to put on your multiview each window, ranked by how many of your starters are on the field.'

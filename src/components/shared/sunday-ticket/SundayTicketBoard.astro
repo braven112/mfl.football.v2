@@ -11,6 +11,7 @@
 import { formatKickoffZones, type SundayTicketSlate } from '../../../utils/sunday-ticket-slate';
 import {
   countryHref,
+  defaultLeagueSelection,
   leagueSelectionHref,
   toggleLeagueSelection,
   type BoardLeague,
@@ -39,9 +40,18 @@ const zones = countryTimeZones(country);
 const clockOf = (epoch: number) => formatKickoffZones(epoch, zones);
 
 const allIds = leagues.map((l) => l.id);
-const enabledIds = enabled ?? allIds;
+const defaultIds = defaultLeagueSelection(leagues);
+const enabledIds = enabled ?? defaultIds;
 const multiLeague = enabledIds.length > 1;
 const showChips = leagues.length > 1;
+const homeLeagues = leagues.filter((l) => l.registered);
+const outsideLeagues = leagues.filter((l) => !l.registered);
+const outsideOn = outsideLeagues.filter((l) => enabledIds.includes(l.id)).length;
+const isDefault = enabled === null;
+const chipFor = (l: BoardLeague) => {
+  const on = enabledIds.includes(l.id);
+  return { on, href: leagueSelectionHref(pathname, toggleLeagueSelection(enabledIds, allIds, l.id, defaultIds), weekParam) };
+};
 const hasWindows = slate.windows.length > 0;
 const hasAnything = hasWindows || slate.other.length > 0;
 
@@ -52,24 +62,48 @@ const logo = (code: string) => `/assets/nfl-logos/${code}.svg`;
   {showChips && (
     <nav class="st-chips" aria-label="Leagues on the board">
       <span class="st-chips__label">Leagues</span>
-      {leagues.map((l) => {
-        const on = enabledIds.includes(l.id);
-        const next = toggleLeagueSelection(enabledIds, allIds, l.id);
+      {homeLeagues.map((l) => {
+        const { on, href } = chipFor(l);
         return (
           <a
             class:list={['st-chip', on && 'st-chip--on', l.isSession && 'st-chip--session']}
             aria-pressed={on ? 'true' : 'false'}
-            href={leagueSelectionHref(pathname, next, weekParam)}
+            href={href}
             title={l.franchiseName ? `${l.name} — ${l.franchiseName}` : l.name}
           >
             <span class="st-chip__dot" aria-hidden="true" />
             {l.name}
-            {!l.registered && <span class="st-chip__ext" aria-label="outside league">↗</span>}
           </a>
         );
       })}
-      {enabled !== null && (
-        <a class="st-chip st-chip--all" href={leagueSelectionHref(pathname, null, weekParam)}>All leagues</a>
+      {outsideLeagues.length > 0 && (
+        <details class="st-others" open={outsideOn > 0}>
+          <summary class="st-chip st-chip--others">
+            <span class="st-chip__dot" aria-hidden="true" />
+            Other leagues
+            <span class="st-others__count">{outsideOn > 0 ? `${outsideOn} of ${outsideLeagues.length} on` : `${outsideLeagues.length}`}</span>
+          </summary>
+          <div class="st-others__list">
+            {outsideLeagues.map((l) => {
+              const { on, href } = chipFor(l);
+              return (
+                <a
+                  class:list={['st-chip', 'st-chip--outside', on && 'st-chip--on']}
+                  aria-pressed={on ? 'true' : 'false'}
+                  href={href}
+                  title={l.franchiseName ? `${l.name} — ${l.franchiseName}` : l.name}
+                >
+                  <span class="st-chip__dot" aria-hidden="true" />
+                  {l.name}
+                  {l.franchiseName && <span class="st-chip__franchise">{l.franchiseName}</span>}
+                </a>
+              );
+            })}
+          </div>
+        </details>
+      )}
+      {!isDefault && (
+        <a class="st-chip st-chip--all" href={leagueSelectionHref(pathname, null, weekParam)}>Reset to my leagues</a>
       )}
     </nav>
   )}

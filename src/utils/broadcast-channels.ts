@@ -147,3 +147,5 @@ export function countryTimeZones(country: CountryCode): KickoffZone[] {
 }
 
 export const REDZONE_LOGO = `${LOGO_BASE}nfl-red-zone.png`;
+/** The official NFL Sunday Ticket mark — the page headline. */
+export const SUNDAY_TICKET_LOGO = `${LOGO_BASE}nfl-sunday-ticket.png`;
