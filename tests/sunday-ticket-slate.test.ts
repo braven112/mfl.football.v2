@@ -195,6 +195,23 @@ describe('buildSundayTicketSlate — ranking across leagues', () => {
     expect(gameBoxes(slate.windows[0].boxes)).toEqual(['CHI@DET', 'NYJ@BUF']);
   });
 
+  it('a roster standing in for an unreadable lineup is shown but never outranks real starters', () => {
+    const known = league('A', [player('1', 'BUF', 8)]);
+    const unread = league('B', [player('2', 'DET', 30), player('3', 'DET', 20), player('4', 'DET', 10)], { lineupResolved: false });
+    const slate = buildSundayTicketSlate({ games, contributions: [known, unread], personalized: true });
+    expect(gameBoxes(slate.windows[0].boxes)).toEqual(['NYJ@BUF', 'CHI@DET']);
+    const det = slate.windows[0].boxes[1] as GameBox;
+    expect(det.starterCount).toBe(0);
+    expect(det.rosterCount).toBe(3);
+  });
+
+  it('nor does it steer the tiebreak between equal starter counts', () => {
+    const known = league('A', [player('1', 'BUF', 12), player('2', 'DET', 10)]);          // one starter in each game
+    const unread = league('B', [player('3', 'DET', 30), player('4', 'DET', 28)], { lineupResolved: false }); // big roster projections on DET
+    const slate = buildSundayTicketSlate({ games, contributions: [known, unread], personalized: true });
+    expect(gameBoxes(slate.windows[0].boxes).slice(0, 2)).toEqual(['NYJ@BUF', 'CHI@DET']); // BUF's 12 beats DET's 10; the 58 never counts
+  });
+
   it('matches players on MFL codes and games on ESPN codes', () => {
     const a = league('A', [player('1', 'GBP', 10), player('2', 'WAS', 10)]);
     const slate = buildSundayTicketSlate({ games, contributions: [a], personalized: true });

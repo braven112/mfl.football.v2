@@ -45,6 +45,8 @@ const channelTitle = channel
   ? [channel.name, channel.note, channel.subscription].filter(Boolean).join(' · ')
   : '';
 const countNoun = (n: number, resolved: boolean) => `${n} ${resolved ? 'starter' : 'player'}${n === 1 ? '' : 's'}`;
+// Starters rank the box; roster-only players (a league whose lineup could not
+// be read) are listed but say so, both here and in the league line below.
 ---
 
 {box.kind === 'redzone' ? (
@@ -94,7 +96,9 @@ const countNoun = (n: number, resolved: boolean) => `${n} ${resolved ? 'starter'
         )}
         <span class="st-box__count">
           {personalized
-            ? countNoun(box.starterCount, box.byLeague.every((g) => g.lineupResolved))
+            ? (box.starterCount > 0
+                ? `${countNoun(box.starterCount, true)}${box.rosterCount > 0 ? ` + ${box.rosterCount} on roster` : ''}`
+                : `${box.rosterCount} on roster`)
             : `${box.projTotal.toFixed(1)} proj`}
         </span>
       </div>

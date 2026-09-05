@@ -69,9 +69,9 @@ describe('buildContribution', () => {
     expect(c!.players.map((p) => p.playerId)).toEqual(['100', '200', '300']);
   });
 
-  it('counts the whole roster for a best-ball league even when a lineup exists', () => {
+  it('counts the whole roster for a best-ball league — as STARTERS, since best ball has no lineup', () => {
     const c = buildContribution({ source: { ...source, bestBall: true }, rostersPayload: rosters, weekEntry, projectionsPayload: projections, week: 2, identity });
-    expect(c!.lineupResolved).toBe(false);
+    expect(c!.lineupResolved).toBe(true);
     expect(c!.players).toHaveLength(3);
   });
 

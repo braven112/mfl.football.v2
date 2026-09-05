@@ -458,9 +458,11 @@ export function parseBroadcast(competition: any): string {
       if (typeof name === 'string' && name.trim()) return name.trim();
     }
   }
+  // National TV only: a local-market affiliate (`market.type === 'Home'`) would
+  // name the wrong network for everyone outside that market.
   const geo = list(competition?.geoBroadcasts).find(
-    (g) => g?.market?.type === 'National' || g?.type?.shortName === 'TV',
-  );
+    (g) => g?.market?.type === 'National' && g?.type?.shortName === 'TV',
+  ) ?? list(competition?.geoBroadcasts).find((g) => g?.market?.type === 'National');
   const shortName = geo?.media?.shortName;
   return typeof shortName === 'string' ? shortName.trim() : '';
 }

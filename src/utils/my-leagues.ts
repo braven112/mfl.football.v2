@@ -60,10 +60,19 @@ function normalizeFranchise(value: unknown): string {
   return /^\d+$/.test(trimmed) ? trimmed.padStart(4, '0') : trimmed;
 }
 
-function hostOf(url: unknown): string | null {
+/**
+ * The league's MFL host, and ONLY an MFL host. The origin is later used to
+ * send the owner's MFL_USER_ID cookie (`loadOutsideContribution`), so a
+ * payload naming anything else — however it got there — must not become a
+ * destination for that credential. HTTPS `*.myfantasyleague.com` or nothing.
+ */
+export function hostOf(url: unknown): string | null {
   if (typeof url !== 'string' || !url) return null;
   try {
-    return new URL(url).origin;
+    const u = new URL(url);
+    if (u.protocol !== 'https:') return null;
+    if (u.hostname !== 'myfantasyleague.com' && !u.hostname.endsWith('.myfantasyleague.com')) return null;
+    return u.origin;
   } catch {
     return null;
   }
@@ -77,11 +86,13 @@ function hostOf(url: unknown): string | null {
 export function parseMyLeagues(payload: unknown): MyLeague[] | null {
   if (!payload || typeof payload !== 'object') return null;
   const p = payload as any;
-  const wrapper = p.myleagues ?? p.leagues;
-  if (!wrapper || typeof wrapper !== 'object') return null;
+  // Per PATH, not per wrapper: a host that answers `{"myleagues":{},"leagues":{"league":[…]}}`
+  // (the inconsistency mfl-api.md records) must still resolve to the list.
+  const rows = p.myleagues?.league ?? p.leagues?.league;
+  if (rows === undefined && !(p.myleagues && typeof p.myleagues === 'object') && !(p.leagues && typeof p.leagues === 'object')) return null;
 
   const leagues: MyLeague[] = [];
-  for (const l of asArray<any>(wrapper.league)) {
+  for (const l of asArray<any>(rows)) {
     const id = `${l?.id ?? l?.league_id ?? l?.leagueId ?? l?.league ?? ''}`.trim();
     if (!id) continue;
     leagues.push({
@@ -143,7 +154,9 @@ export async function fetchMyLeagues(
 
   const leagues = parseMyLeagues(payload);
   if (leagues === null) return { ok: false, leagues: [], reason: 'unparseable' };
-  if (leagues.length === 0) return { ok: false, leagues: [], reason: 'dead-cookie' };
+  // A row we could not id is still a row: the cookie is live even if the list is unusable.
+  const rawRows = asArray<any>((payload as any)?.myleagues?.league ?? (payload as any)?.leagues?.league).length;
+  if (leagues.length === 0 && rawRows === 0) return { ok: false, leagues: [], reason: 'dead-cookie' };
 
   if (redis) {
     try {

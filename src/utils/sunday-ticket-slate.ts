@@ -59,9 +59,11 @@ export interface LeagueContribution {
   franchiseId: string;
   franchiseName: string;
   /**
-   * True when `players` is a submitted lineup. False when no lineup could be
-   * read and the whole roster stands in — the UI says so, because a bench
-   * player is a weaker reason to watch than a starter.
+   * True when `players` are starters — a submitted lineup, or a best-ball
+   * roster (no lineups; everyone plays). False when no lineup could be read
+   * and the whole roster stands in: those players are SHOWN but never RANK,
+   * because an unreadable league's 20-man roster must not outrank a league
+   * whose nine starters are known.
    */
   lineupResolved: boolean;
   players: ContributionPlayer[];
@@ -80,8 +82,12 @@ export interface BoxLeagueGroup {
 export interface GameBox {
   kind: 'game';
   game: SlateGame;
-  /** Your players in this game, summed across the enabled leagues. */
+  /** Your STARTERS in this game, summed across the enabled leagues (resolved lineups and best-ball rosters only). */
   starterCount: number;
+  /** Your players in this game from leagues whose lineup could not be read — shown, never ranked. */
+  rosterCount: number;
+  /** Projected points of the STARTERS only — the tiebreak when ranking by starters. */
+  starterProjTotal: number;
   projTotal: number;
   byLeague: BoxLeagueGroup[];
 }
@@ -238,7 +244,9 @@ function boxFor(game: SlateGame, contributions: LeagueContribution[]): GameBox {
   const home = normalizeTeamCode(game.home);
   const byLeague: BoxLeagueGroup[] = [];
   let starterCount = 0;
+  let rosterCount = 0;
   let projTotal = 0;
+  let starterProjTotal = 0;
 
   for (const c of contributions) {
     const players = c.players
@@ -257,11 +265,24 @@ function boxFor(game: SlateGame, contributions: LeagueContribution[]): GameBox {
       players,
       projTotal: round1(leagueProj),
     });
-    starterCount += players.length;
+    if (c.lineupResolved) {
+      starterCount += players.length;
+      starterProjTotal += leagueProj;
+    } else {
+      rosterCount += players.length;
+    }
     projTotal += leagueProj;
   }
 
-  return { kind: 'game', game: { ...game, away, home }, starterCount, projTotal: round1(projTotal), byLeague };
+  return {
+    kind: 'game',
+    game: { ...game, away, home },
+    starterCount,
+    rosterCount,
+    projTotal: round1(projTotal),
+    starterProjTotal: round1(starterProjTotal),
+    byLeague,
+  };
 }
 
 function round1(n: number): number {
@@ -270,8 +291,10 @@ function round1(n: number): number {
 
 function comparatorFor(rankBy: SlateRankBy) {
   return (a: GameBox, b: GameBox): number => {
+    // Ranking by starters never lets a roster standing in for an unread
+    // lineup steer the order — not even as the tiebreak.
     const primary = rankBy === 'starters'
-      ? (b.starterCount - a.starterCount) || (b.projTotal - a.projTotal)
+      ? (b.starterCount - a.starterCount) || (b.starterProjTotal - a.starterProjTotal) || (b.rosterCount - a.rosterCount)
       : (b.projTotal - a.projTotal) || (b.starterCount - a.starterCount);
     return primary || (a.game.kickoff - b.game.kickoff) || a.game.id.localeCompare(b.game.id);
   };
@@ -295,7 +318,7 @@ export function buildSundayTicketSlate(input: BuildSlateInput): SundayTicketSlat
   for (const window of ['early', 'late'] as const) {
     const all = byWindow[window];
     if (all.length === 0) continue;
-    const relevant = all.filter((b) => b.starterCount > 0).sort(compare);
+    const relevant = all.filter((b) => b.starterCount + b.rosterCount > 0).sort(compare);
     const boxes: SlateBox[] = relevant.slice(0, boxesPerWindow);
     if (boxes.length < boxesPerWindow) boxes.push({ kind: 'redzone' });
     windows.push({
@@ -309,7 +332,7 @@ export function buildSundayTicketSlate(input: BuildSlateInput): SundayTicketSlat
   }
 
   const other = byWindow.other
-    .filter((b) => b.starterCount > 0)
+    .filter((b) => b.starterCount + b.rosterCount > 0)
     .sort((a, b) => a.game.kickoff - b.game.kickoff || a.game.id.localeCompare(b.game.id));
 
   return { windows, other, personalized: input.personalized, boxesPerWindow };

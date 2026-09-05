@@ -33,19 +33,6 @@ export interface BoardLeague {
 export const LEAGUE_SELECTION_COOKIE = 'st_leagues';
 export const LEAGUE_SELECTION_MAX_AGE = 180 * 24 * 60 * 60; // one season
 
-/** One league on the board — the owner's franchise in it, and how we read it. */
-export interface BoardLeague {
-  id: string;
-  name: string;
-  franchiseId: string;
-  franchiseName: string;
-  /** Registry entry when this site runs the league; null for an outside league. */
-  registered: LeagueDefinition | null;
-  /** MFL host for an outside league's exports; null → the api host. */
-  host: string | null;
-  /** True for the league the session belongs to. */
-  isSession: boolean;
-}
 
 // ── League selection (URL param ↔ cookie) ────────────────────────────────
 

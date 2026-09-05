@@ -96,6 +96,7 @@ describe('resolveChannel', () => {
   it('keeps a global streamer as itself abroad, and sends an unknown TV network to the default carrier', () => {
     expect(resolveChannel('Netflix', 'CA')?.name).toBe('Netflix');
     expect(resolveChannel('Netflix', 'AU')?.logo).toBe('/assets/tv-logos/netflix.png');
+    expect(resolveChannel('YouTube', 'CA')).toEqual({ name: 'YouTube', logo: null }); // the São Paulo game: worldwide, never DAZN
     expect(resolveChannel('Peacock', 'CA')?.name).toBe('DAZN Canada');
     expect(resolveChannel('Peacock', 'AU')?.name).toBe('Kayo Sports');
   });

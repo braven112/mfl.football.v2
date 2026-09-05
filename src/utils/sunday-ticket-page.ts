@@ -8,9 +8,8 @@
  * never this file, so the story graph stays free of fs and network.
  */
 
-import fs from 'node:fs';
-import path from 'node:path';
 import { ALL_LEAGUES, getLeagueById, type LeagueDefinition } from '../config/leagues';
+import { getLeagueTeamBrands } from './league-team-brands';
 import type { BoardLeague } from './sunday-ticket-selection';
 
 import type { MyLeague } from './my-leagues';
@@ -84,13 +83,15 @@ export function resolveBoardLeagues(session: SessionLeague | null, myLeagues: re
   return [...out, ...rest];
 }
 
-/** A franchise's display name from its league config, or '' when the config has no such team. */
+/**
+ * A franchise's display name, from the bundled league config via
+ * `getLeagueTeamBrands` — static imports the file tracer can follow, never an
+ * `fs` read through `configPath` (see league-team-brands.ts). '' when the
+ * league isn't wired there or has no such team.
+ */
 export function franchiseNameFromConfig(league: LeagueDefinition, franchiseId: string): string {
   try {
-    const raw = fs.readFileSync(path.join(process.cwd(), league.configPath), 'utf8');
-    const teams: any[] = JSON.parse(raw)?.teams ?? [];
-    // Both league configs key teams by `franchiseId` (a 4-digit string), not `id`.
-    return `${teams.find((t) => t?.franchiseId === franchiseId)?.name ?? ''}`;
+    return getLeagueTeamBrands(league.slug)[franchiseId]?.name ?? '';
   } catch {
     return '';
   }

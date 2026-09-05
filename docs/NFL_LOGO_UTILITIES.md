@@ -374,7 +374,7 @@ The NFL logo utilities are currently used in:
    - Mobile player cards
    - Player details modal
 
-2. **Sunday Ticket Multi-View** (`src/components/theleague/SundayTicketMultiView.astro`)
+2. **Sunday Ticket Multi-View** (`src/components/theleague/SundayTicketMultiView.astro`)  <!-- removed Sept 2026: unmounted; the Sunday Ticket board is src/components/shared/sunday-ticket/ -->
    - Game matchup displays
    - Dark variant for TV-style layout
 

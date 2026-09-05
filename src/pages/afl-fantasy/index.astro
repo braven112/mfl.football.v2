@@ -139,13 +139,14 @@ const aflScheduleReleaseRevealed = Boolean(
   await getRelease('afl-fantasy', effectiveDate.getUTCFullYear()),
 );
 // Saturday from 5pm: an owner whose lineup is already in gets the Sunday
-// Ticket hero instead of the lineup-lock reminder. One cached live read, and
-// only in that window for a signed-in owner — never on every homepage render.
+// Ticket hero instead of the lineup-lock reminder. One cached live read, only
+// in that window, and only for the SIGNED-IN owner (`authAflFranchiseId`) —
+// a browsed team from ?myteam= or the preference cookie is not an owner.
 const lineupSubmitted =
-  userFranchiseId && isSaturdayEveningPT(effectiveDate)
+  authAflFranchiseId && isSaturdayEveningPT(effectiveDate)
     ? await hasSubmittedLineup({
         league: AFL,
-        franchiseId: userFranchiseId,
+        franchiseId: authAflFranchiseId,
         week: currentNflWeekForHero(effectiveDate) ?? 1,
         leagueYear: getAflLeagueYear(effectiveDate),
       })

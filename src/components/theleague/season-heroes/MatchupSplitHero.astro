@@ -25,19 +25,17 @@ import FaceoffComposite from '../FaceoffComposite.astro';
 import MatchupPreviewHero from './MatchupPreviewHero.astro';
 import { SUNDAY_TICKET_LOGO } from '../../../utils/broadcast-channels';
 import { crestStrokeFilter } from '../../../utils/crest-dark-stroke-css';
-import { isSaturdayEveningPT, showSundayTicketHero } from '../../../utils/sunday-ticket-window';
-import { hasSubmittedLineup } from '../../../utils/lineup-submitted';
-import { DEFAULT_LEAGUE } from '../../../config/leagues';
-import { getLeagueYearForSlug } from '../../../utils/league-year';
-import { getCurrentNFLWeek } from '../../../utils/current-week';
+import { showSundayTicketHero } from '../../../utils/sunday-ticket-window';
 
 export interface Props {
   state: HeroState;
   resolveLeaguePath: (path: string) => string;
   userFranchiseId?: string;
+  /** Saturday-evening gate, resolved by the page (index.astro) for the signed-in owner. */
+  lineupSubmitted?: boolean | null;
 }
 
-const { state, resolveLeaguePath: r, userFranchiseId } = Astro.props;
+const { state, resolveLeaguePath: r, userFranchiseId, lineupSubmitted = null } = Astro.props;
 
 // No-arg season year (env-pinned to the last completed season); referenceDate
 // only steers which game of the current-week slate is "upcoming" in the live
@@ -56,17 +54,9 @@ const resolved = stars && awayStar && homeStar ? { stars, awayStar, homeStar } :
 // themes, so the dark-ink mark wears the crest ring here unconditionally
 // rather than through the html.dark manifest rule.
 // Saturday from 5pm the same hero shows for an owner whose lineup is already
-// in (one cached live read, only in that window for a signed-in owner).
+// in — the PAGE resolves that (auth-gated, on the hero's reference date) and
+// hands it down; this component never fetches.
 const ref = state.metadata.referenceDate;
-const lineupSubmitted =
-  userFranchiseId && isSaturdayEveningPT(ref)
-    ? await hasSubmittedLineup({
-        league: DEFAULT_LEAGUE,
-        franchiseId: userFranchiseId,
-        week: getCurrentNFLWeek(ref) ?? 1,
-        leagueYear: getLeagueYearForSlug(DEFAULT_LEAGUE.slug),
-      })
-    : null;
 const isSunday = showSundayTicketHero(ref, lineupSubmitted);
 const markFilter = crestStrokeFilter();
 ---
@@ -91,7 +81,7 @@ const markFilter = crestStrokeFilter();
         <h2 class="msh__title">{resolved.stars.awayName} at {resolved.stars.homeName}</h2>
       </div>
       <a class="msh__cta" href={r('/theleague/sunday-ticket')}>
-        Build your multiview
+        {isSunday ? 'Build your multiview' : 'Sunday Ticket preview'}
         <span aria-hidden="true">→</span>
       </a>
     </div>

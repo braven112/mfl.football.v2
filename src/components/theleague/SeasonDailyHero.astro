@@ -66,6 +66,8 @@ export interface Props {
   };
   /** Logged-in user's franchise ID (for personalized heroes) */
   userFranchiseId?: string;
+  /** Saturday-evening gate for the Sunday Ticket hero: the owner's lineup is in (true) / not (false) / unknown (null). Resolved by the page. */
+  lineupSubmitted?: boolean | null;
   /** Whether the user is authenticated */
   isAuthenticated?: boolean;
   /** Cast rookie model for the fresh What's New composite hero (page-resolved) */
@@ -103,7 +105,7 @@ export interface Props {
   heroBackdrop?: HeroFranchiseBackdrop | null;
 }
 
-const { state, resolveLeaguePath, spriteUrl, liveScoring, userFranchiseId, isAuthenticated, featureModel, auctionModel, auctionClosingBid, cutWatchModel, udfaModels = [], showcasePanels = [], preseasonModel, preseasonModelIsOwn, kickoffGame, breakingModel, breakingStory, heroBackdrop = null } = Astro.props;
+const { state, resolveLeaguePath, spriteUrl, liveScoring, userFranchiseId, lineupSubmitted = null, isAuthenticated, featureModel, auctionModel, auctionClosingBid, cutWatchModel, udfaModels = [], showcasePanels = [], preseasonModel, preseasonModelIsOwn, kickoffGame, breakingModel, breakingStory, heroBackdrop = null } = Astro.props;
 
 // Fresh What's New (P2) always gets the composite treatment. The model is
 // category-cast in the page frontmatter (rookie for new pages/features,
@@ -215,7 +217,7 @@ const isFridayArticle = ptWeekday === 'Fri';
 {slot === 'waiver-wire' && <WaiverWireHero state={state} resolveLeaguePath={resolveLeaguePath} />}
 {slot === 'article' && isFridayArticle && <WeekendPreviewHero state={state} />}
 {slot === 'article' && !isFridayArticle && <ArticleHero state={state} articleType="waiver-pickup" />}
-{slot === 'game-day-preview' && <MatchupSplitHero state={state} resolveLeaguePath={resolveLeaguePath} userFranchiseId={userFranchiseId} />}
+{slot === 'game-day-preview' && <MatchupSplitHero state={state} resolveLeaguePath={resolveLeaguePath} userFranchiseId={userFranchiseId} lineupSubmitted={lineupSubmitted} />}
 
 {/* Off-season heroes: dedicated components */}
 {phase === 'champion-crowned' && state.championProps && (

@@ -104,9 +104,12 @@ export function buildContribution(input: BuildContributionInput): LeagueContribu
   const rosterIds = activeRosterIds(input.rostersPayload, source.franchiseId);
   if (rosterIds === null) return null;
 
+  // Best ball has no lineup: every rostered player IS a starter, so it counts
+  // as resolved. Otherwise a lineup we could read counts; a roster standing in
+  // for one we could not does NOT (see LeagueContribution.lineupResolved).
   const starters = source.bestBall ? [] : extractLineupStarters(input.weekEntry, source.franchiseId);
-  const lineupResolved = starters.length > 0;
-  const ids = lineupResolved ? starters.map((s) => s.id) : rosterIds;
+  const lineupResolved = source.bestBall || starters.length > 0;
+  const ids = starters.length > 0 ? starters.map((s) => s.id) : rosterIds;
 
   const projections = projectionsForWeek(input.projectionsPayload, week);
   const players: ContributionPlayer[] = ids.map((playerId) => {
@@ -265,7 +268,10 @@ export async function loadOutsideContribution(input: OutsideContributionInput): 
   if (!bundle) {
     bundle = await fetchOutsideBundle(input);
     if (!bundle) return null;
-    if (redis) {
+    // Cache only a bundle that carries the week's lineups: a rosters-only
+    // answer (weeklyResults throttled) would otherwise pin "no lineup read"
+    // for 15 minutes past a transient failure.
+    if (redis && bundle.weekEntry) {
       try {
         await redis.set(key, bundle, { ex: OUTSIDE_TTL_SECONDS });
       } catch (error) {

@@ -66,6 +66,13 @@ describe('hasSubmittedLineup — live first, disk confirm-only, null when unknow
   // A league year with no feed on disk, so the disk fallback cannot confirm anything.
   const NO_FEED_YEAR = 1999;
 
+  it('never lets an unlabeled archive entry answer for another week (the lineups rule)', () => {
+    // The committed archive is an array of per-week payloads; one with no `week` key must not answer week 2.
+    const archive = [{ matchup: [{ franchise: [{ id: '0001', starters: '100,200' }] }] }];
+    expect(lineupSubmittedFromPayload(archive, 2, '0001')).toBeNull();
+    expect(lineupSubmittedFromPayload(archive, 2, '0001', { allowUnlabeled: true })).toBe(true);
+  });
+
   it('reads starters off the payload; a listed franchise with none is false; an unlisted one is null', () => {
     expect(lineupSubmittedFromPayload(payload('100,200,'), 3, '0001')).toBe(true);
     expect(lineupSubmittedFromPayload(payload(''), 3, '0001')).toBe(false);

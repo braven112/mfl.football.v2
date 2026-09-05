@@ -77,6 +77,9 @@ const US_NETWORK_ALIASES: Record<string, string> = {
 
 const countries = (mappings as any).countries as Record<string, any>;
 
+/** Services that carry a game worldwide under their own name, so no country maps them to a local carrier. */
+const GLOBAL_STREAMERS = new Set(['Netflix', 'Prime Video', 'YouTube']);
+
 export function parseCountry(raw: string | null | undefined): CountryCode {
   const code = `${raw ?? ''}`.trim().toUpperCase();
   return (COUNTRY_CODES as readonly string[]).includes(code) ? (code as CountryCode) : DEFAULT_COUNTRY;
@@ -120,11 +123,12 @@ export function resolveChannel(usNetwork: string | null | undefined, country: Co
   const mapping = countries[country]?.mapping ?? {};
   const mapped: string | undefined = mapping[key];
   if (mapped) return channelInfo(country, mapped) ?? { name: mapped, logo: null };
-  // Unknown to the mapping: a global streamer keeps its US mark; a TV network goes to the default carrier.
-  const us = channelInfo('US', key);
-  if (us && (key === 'Netflix' || key === 'Prime Video' || key === 'YouTube')) return us;
+  // Unknown to the mapping: a global streamer is the same service everywhere
+  // and keeps its own name/mark — checked BEFORE the default carrier, and not
+  // conditional on a US entry existing (YouTube's São Paulo game has none).
+  if (GLOBAL_STREAMERS.has(key)) return channelInfo('US', key) ?? { name: key, logo: null };
   const fallback = mapping.default;
-  return fallback ? channelInfo(country, fallback) ?? { name: fallback, logo: null } : us ?? { name: key, logo: null };
+  return fallback ? channelInfo(country, fallback) ?? { name: fallback, logo: null } : channelInfo('US', key) ?? { name: key, logo: null };
 }
 
 /** Where Sunday Ticket lives in this country — the mark in the window header. */

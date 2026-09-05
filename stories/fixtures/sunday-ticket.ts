@@ -66,8 +66,12 @@ const group = (
 const box = (g: SlateGame, groups: ReturnType<typeof group>[]): GameBox => ({
   kind: 'game',
   game: g,
-  starterCount: groups.reduce((n, x) => n + x.players.length, 0),
+  // Only a resolved lineup (or a best-ball roster) counts as starters; a
+  // roster standing in for an unreadable lineup is listed but never ranks.
+  starterCount: groups.filter((x) => x.lineupResolved).reduce((n, x) => n + x.players.length, 0),
+  rosterCount: groups.filter((x) => !x.lineupResolved).reduce((n, x) => n + x.players.length, 0),
   projTotal: Math.round(groups.reduce((s, x) => s + x.projTotal, 0) * 10) / 10,
+  starterProjTotal: Math.round(groups.filter((x) => x.lineupResolved).reduce((s, x) => s + x.projTotal, 0) * 10) / 10,
   byLeague: groups,
 });
 

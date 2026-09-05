@@ -22,6 +22,10 @@ describe('parseMyLeagues — every shape MFL has answered with', () => {
     expect(leagues).toEqual([{ id: '37610', name: 'Best Ball #1', franchiseId: '0007', franchiseName: '', host: null }]);
   });
 
+  it('resolves the list per PATH, so an empty myleagues beside a populated leagues still lists', () => {
+    expect(parseMyLeagues({ myleagues: {}, leagues: { league: [{ id: '13522', franchise_id: '0001' }] } })?.map((l) => l.id)).toEqual(['13522']);
+  });
+
   it('returns [] for the dead-cookie answer and null for a non-answer', () => {
     expect(parseMyLeagues({ leagues: {} })).toEqual([]);
     expect(parseMyLeagues({ myleagues: { league: [] } })).toEqual([]);
@@ -35,3 +39,16 @@ describe('parseMyLeagues — every shape MFL has answered with', () => {
     expect(leagues).toEqual([{ id: '1', name: '', franchiseId: '', franchiseName: '', host: null }]);
   });
 });
+
+describe('hostOf — the cookie only ever travels to MFL', () => {
+  it('keeps HTTPS myfantasyleague.com origins and drops everything else', async () => {
+    const { hostOf } = await import('../src/utils/my-leagues');
+    expect(hostOf('https://www49.myfantasyleague.com/2026/home/13522')).toBe('https://www49.myfantasyleague.com');
+    expect(hostOf('https://myfantasyleague.com/x')).toBe('https://myfantasyleague.com');
+    expect(hostOf('http://www49.myfantasyleague.com/2026/home/13522')).toBeNull();
+    expect(hostOf('https://www49.myfantasyleague.com.evil.example/x')).toBeNull();
+    expect(hostOf('https://evil.example/myfantasyleague.com')).toBeNull();
+    expect(hostOf('not a url')).toBeNull();
+  });
+});
+

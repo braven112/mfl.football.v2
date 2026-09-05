@@ -77,10 +77,14 @@ const sessionLeagueDef = user ? getLeagueById(user.leagueId) : null;
 
 let myLeagues: MyLeague[] = [];
 let cookieDead = false;
+let myLeaguesUnavailable = false;
 if (user?.id) {
   const result = await fetchMyLeagues(user.id, leagueYear);
   if (result.ok) myLeagues = result.leagues;
   else if (result.reason === 'dead-cookie') cookieDead = true;
+  // fetch-failed / unparseable: MFL, not the cookie. Say so — an empty list
+  // read as "no other leagues" is the degradation auth.md warns against.
+  else myLeaguesUnavailable = true;
 }
 
 let session: SessionLeague | null = null;
@@ -101,9 +105,12 @@ const allIds = boardLeagues.map((l) => l.id);
 // after the response has started, so this file only ever reads.
 const leaguesParam = Astro.url.searchParams.get('leagues');
 const enabled = parseLeagueSelection(leaguesParam ?? Astro.cookies.get(LEAGUE_SELECTION_COOKIE)?.value, allIds);
-// null = the default set: the leagues this site runs. Outside leagues are
-// opt-in, and an outside league that is off is never fetched from MFL.
-const enabledIds = new Set(enabled ?? defaultLeagueSelection(boardLeagues));
+// null = the default set (the home leagues). Resolve it ONCE here and hand the
+// same concrete list to the loaders and the slate: `null` means "default" to
+// the chips but "no filter" to the slate builder, and passing it through as
+// undefined once counted a Best Ball roster the chip said was off.
+const selectedIds = enabled ?? defaultLeagueSelection(boardLeagues);
+const enabledIds = new Set(selectedIds);
 
 // ── Country: which channels the boxes name. Same param → cookie pattern. ──
 const country = parseCountry(Astro.url.searchParams.get('country') ?? Astro.cookies.get(COUNTRY_COOKIE)?.value);
@@ -112,20 +119,36 @@ const country = parseCountry(Astro.url.searchParams.get('country') ?? Astro.cook
 const notices: string[] = [];
 const contributions: LeagueContribution[] = [];
 
+// ESPN's network per game is independent of everything below; start it now so
+// it overlaps the MFL reads instead of queueing behind them. LEAGUE year on
+// purpose: the games on this board come from the league-year feed folder, and
+// between Feb 14 and Labor Day that folder holds the UPCOMING season's
+// schedule — asking ESPN for the season year (last season) would paint last
+// year's networks onto this year's games. The live board's ESPN calls are on
+// the season clock because they show the season being played.
+const broadcastsPromise = fetchEspnBroadcasts(week, leagueYear);
+
 const outside = boardLeagues.filter((l) => !l.registered && enabledIds.has(l.id));
-let outsideAllowed = outside.length > 0 && !!user?.id;
+// Outside reads need a session WITH a franchise: the rate-limit key below is
+// league+franchise, and `user.id` (the MFL cookie, a credential) must never
+// stand in for it in a Redis key.
+let outsideAllowed = outside.length > 0 && !!user?.id && !!user?.franchiseId;
 if (outsideAllowed && user) {
   // A burst of cache misses is N live MFL reads per page view; cap it per owner.
-  const limit = await checkRateLimit('sunday-ticket', user.franchiseId || user.id, 20, 60);
+  // Both leagues have a franchise 0001, so the key carries the league too.
+  const limit = await checkRateLimit('sunday-ticket', `${user.leagueId}:${user.franchiseId}`, 20, 60);
   if (!limit.allowed) {
     outsideAllowed = false;
     notices.push('Outside leagues are resting for a minute — too many refreshes. Your own leagues are still live.');
   }
 }
 
-for (const l of boardLeagues) {
+// Registered leagues read synced feeds; outside leagues are live MFL reads and
+// independent of one another, so they run in parallel. Board order is kept.
+const loaded = await Promise.all(boardLeagues.map(async (l): Promise<LeagueContribution | null> => {
+  if (!enabledIds.has(l.id)) return null; // off: no read at all
   if (l.registered) {
-    const c = loadRegisteredContribution({
+    return loadRegisteredContribution({
       league: l.registered,
       franchiseId: l.franchiseId,
       franchiseName: l.franchiseName || franchiseNameFromConfig(l.registered, l.franchiseId),
@@ -133,21 +156,22 @@ for (const l of boardLeagues) {
       leagueYear: getLeagueYearForSlug(l.registered.slug),
       identity,
     });
-    if (c) contributions.push(c);
-  } else if (outsideAllowed && user?.id && enabledIds.has(l.id)) {
-    const c = await loadOutsideContribution({
-      source: { leagueId: l.id, leagueName: l.name, franchiseId: l.franchiseId, franchiseName: l.franchiseName },
-      host: l.host,
-      year: leagueYear,
-      week,
-      mflUserCookie: user.id,
-      identity,
-    });
-    if (c) contributions.push(c);
-    else notices.push(`${l.name} didn't answer — MFL may need you to sign in again for that league.`);
   }
-}
+  if (!outsideAllowed || !user?.id) return null;
+  const c = await loadOutsideContribution({
+    source: { leagueId: l.id, leagueName: l.name, franchiseId: l.franchiseId, franchiseName: l.franchiseName },
+    host: l.host,
+    year: leagueYear,
+    week,
+    mflUserCookie: user.id,
+    identity,
+  });
+  if (!c) notices.push(`${l.name} didn't answer — MFL may need you to sign in again for that league.`);
+  return c;
+}));
+for (const c of loaded) if (c) contributions.push(c);
 
+if (myLeaguesUnavailable) notices.push("Couldn't reach MFL for your other leagues just now — this is the board for the leagues this site runs.");
 const personalized = contributions.length > 0;
 if (!personalized) {
   const wide = loadLeagueWideContribution({ league: pageLeague, week, leagueYear, identity });
@@ -156,13 +180,15 @@ if (!personalized) {
 
 // ── The slate ───────────────────────────────────────────────────────────
 const scheduleFeed = readLeagueFeed(pageLeague, leagueYear, 'nflSchedule.json');
-const [broadcasts] = await Promise.all([fetchEspnBroadcasts(week, leagueYear)]);
+const broadcasts = await broadcastsPromise;
 const games = buildSlateGames(selectWeekMatchups(scheduleFeed, week), broadcasts);
 
 const slate = buildSundayTicketSlate({
   games,
   contributions,
-  enabledLeagueIds: enabled ?? undefined,
+  // The league-wide fallback is not a board league, so it must not be
+  // filtered by the board's selection (an empty allow-list drops everything).
+  enabledLeagueIds: personalized ? selectedIds : undefined,
   personalized,
 });
 
@@ -216,9 +242,9 @@ const title = `Sunday Ticket — Week ${week}`;
     {cookieDead && (
       <p class="st-banner st-banner--note">
         {personalized
-          ? 'MFL no longer recognizes your sign-in, so only the leagues this site syncs are on the board. '
-          : 'MFL no longer recognizes your sign-in, so this is the league-wide board. '}
-        <a href={r(`/${pageLeague.slug}/login?next=${encodeURIComponent(pathname)}`)}>Sign in again</a>
+          ? "MFL didn't list any leagues for your sign-in this season, so only the leagues this site syncs are on the board. "
+          : "MFL didn't list any leagues for your sign-in this season, so this is the league-wide board. "}
+        If your sign-in has expired, <a href={r(`/${pageLeague.slug}/login?next=${encodeURIComponent(pathname)}`)}>sign in again</a>
         {personalized ? ' to add your other leagues.' : ' to see your own players.'}
       </p>
     )}
