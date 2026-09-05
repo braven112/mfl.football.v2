@@ -24,7 +24,10 @@ one takes zero input and is read from ten feet away.
 | **Link label** | "Big Board", on the live-scoring page **[decided]** |
 | **Leagues** | TheLeague + AFL. Best Ball is out of scope (no head-to-head matchup to idle on) **[decided]** |
 | **Idle screen** | The signed-in owner's matchup; with no session, rotate every matchup **[decided]** |
-| **Reveal triggers** | TDs, all FGs, **and** big non-scoring plays **[decided]** — see §4 for how the "3+ points" ask resolves |
+| **Reveal triggers** | A **MFL fantasy-point gain of 3.0+** by a rostered starter, plus every TD and every kicker FG regardless of value **[decided]** |
+| **Source of truth** | **MFL for fantasy points. ESPN is supporting content** — the caption, the clock, the game state **[decided]** |
+| **Latency** | Reveals land on the MFL poll boundary (up to ~60s late). Accepted, in exchange for real numbers **[decided]** |
+| **Win probability** | On **both** screens — idle and reveal **[decided]** |
 | **Wording** | Nothing anywhere says TV, broadcast, cast or big screen **[decided]** |
 
 ### Prior art we looked at
@@ -38,27 +41,26 @@ one takes zero input and is read from ten feet away.
 | [ESPN on smart TVs](https://support.espn.com/hc/en-us/articles/40379185094676-How-can-I-view-my-fantasy-sports-matchup-or-pick-em-games-in-real-time-on-my-smart-TV-or-living-room-device) | Sign in on the TV, browse matchups | The thing we're avoiding — signing into a TV browser is the friction that makes the `?fid=` override (§5) necessary. |
 
 Nobody in that list does the **full-screen player reveal** the draft broadcast
-does. That card is the differentiator and it already exists in this repo.
+does, and nobody shows a **win-probability swing** on the moment it happens.
+That card is the differentiator and half of it already exists in this repo.
 
 ---
 
 ## 2. Data — no new sources, one extended parser
 
-Everything the board needs is already served, and the rules in
-`docs/claude/rules/live-scoring.md` all still apply.
-
 | Need | Source | Status |
 |---|---|---|
-| Fantasy scores, starter rows, matchup pairings | `assembleLiveScoringData` → `/api/live-scoring` | reuse as-is |
+| **Fantasy points — the source of truth** | MFL `liveScoring` → `/api/live-scoring` → `LivePlayerRow.live` | reuse as-is |
+| Matchup pairings, starter rows, remaining game-time | same | reuse as-is |
+| **Win probability + projected finals** | `src/utils/live-win-probability.ts` — pure, tested, computed client-side from data the board already holds | reuse as-is |
 | Team identity, colors, crests | `leagueConfig.teams` → `buildTeamsMap`, `getFranchiseBrand`, `franchiseGradient` | reuse as-is |
 | Real NFL game state, clock, red zone | `/api/nfl-scoreboard` via `useNflScoreboard` | reuse as-is |
 | Box-score stat lines | `/api/nfl-game-detail` → `PlayerBoxScore` | reuse as-is |
-| Scoring plays, attributed to MFL player ids | `/api/nfl-game-detail` → `LiveScoringPlay` + `buildMoments` | reuse as-is |
-| **Big non-scoring plays** | `parseScoringPlays` currently drops every `scoringPlay !== true` | **the one extension** — §4 |
-| Throwback identities | `applyThrowbackToBoard` | reuse as-is, or the board dresses teams differently from the main page |
+| Scoring plays, attributed to MFL player ids | `/api/nfl-game-detail` → `LiveScoringPlay` | reuse as-is |
+| **Big non-scoring plays, for captions only** | `parseScoringPlays` currently drops every `scoringPlay !== true` | **the one extension** — §4 |
 
-The route wrapper calls the same assembly function `/live-scoring` calls, so
-the two pages cannot drift on what a score is.
+The route wrapper calls the same `assembleLiveScoringData` that `/live-scoring`
+calls, so the two pages cannot drift on what a score is.
 
 ---
 
@@ -76,7 +78,7 @@ src/pages/afl-fantasy/live-scoring/board.astro   ~55 lines  route wrapper
             ├─ BoardMatchup.tsx    the idle screen
             ├─ BoardReveal.tsx     the full-screen moment
             └─ BoardPregame.tsx    before kickoff
-src/utils/live-board.ts            pure: queue, triggers, rotation, scenes
+src/utils/live-board.ts            pure: triggers, queue, rotation, scenes
 src/styles/live-board.css          vw/vh scale, dark in both themes
 ```
 
@@ -90,9 +92,9 @@ on one shared duration token, exactly as `draft-broadcast.css` documents — a
 hard swap reads as somebody changing the channel.
 
 **Polling.** The page reuses `live-poll-store.ts`; no third poller (see the
-"Two pollers on the page, not three" rule). It runs *without* `NflGamesStrip`,
-so it is the only subscriber and can request a tighter interval — see the open
-question in §9 about reveal latency.
+"Two pollers on the page, not three" rule). MFL at 60s, ESPN at 60s with the
+route's existing 25s cache — **unchanged from `/live-scoring`**, because the
+latency decision in §4 removes the reason to tighten either one.
 
 **Everything pure goes in `src/utils/live-board.ts`** so it is testable without
 a browser or ESPN: trigger classification, queue admission, rotation schedule,
@@ -100,66 +102,88 @@ scene timing. Same split that makes `draft-broadcast.ts` testable.
 
 ---
 
-## 4. The reveal trigger — how the "3+ point play" ask resolves
+## 4. The reveal trigger — MFL measures, ESPN captions
 
-You asked for TDs, all kicker FGs, **and** big non-scoring plays worth roughly
-3+ fantasy points. The first two are free. The third needs care, and here is
-the honest version of it.
+This is the heart of the feature and the part that changed once you said MFL is
+the source of truth and lateness is acceptable.
 
-**We cannot compute a per-play fantasy point value.** Two reasons, both
-load-bearing:
+### The two-source rule
 
-1. **We don't model league scoring rules.** There is no rules feed on disk
-   (`data/<league>/mfl-feeds/<year>/` has no `rules.json`), and MFL's rules
-   export is a DSL we'd have to write an evaluator for. Two leagues, two rule
-   sets, and every reveal would be a number we invented.
-2. **Inferring one from poll deltas is a bug we already removed.** The old
-   Moments feed diffed each starter's points between two 60s polls; a stat
-   correction invented scoring events out of nothing and a swing spanning a
-   poll boundary got attributed to the wrong moment. `buildMoments` is derived,
-   not accumulated, precisely so that can't happen. Re-introducing a delta to
-   size a reveal re-introduces the bug on the biggest surface we have.
+> **MFL's point delta decides *whether* a card fires and *what number* it
+> shows. An ESPN play decides *what the card says*. Both are required.**
 
-**So the board never prints a number it made up.** Same discipline as the
-`clockLabel()` rule — with no real clock we print the state, not a confident
-fake. What it prints instead is all real:
+Every 60s MFL poll, each starter's `live` total is compared against the
+previous poll. That delta is **real, authoritative fantasy points** — MFL's own
+number, not a model, not an estimate. It is what the card shows.
 
-> **PUKA NACUA** · 42 YD CATCH · Q2 7:14
-> **18.6** pts today
+Requiring a corroborating ESPN play in the same window is what makes this safe.
+The Moments feed was removed because a bare poll-delta *invents events*: a stat
+correction produces a positive swing with nothing behind it, and the old code
+would announce it. Here a delta with no ESPN play behind it fires **nothing**.
+The consequences of that guard, all of them good:
 
-The yardage is ESPN's own `statYardage`. The 18.6 is MFL's own live total for
-that player. Nothing is derived.
+- A stat correction can never produce a card.
+- If ESPN is 403 or down, the board still works completely — scores, projected
+  finals, win probability, all from MFL. It just stops interrupting itself.
+- The delta is anchored to a real play with a real game clock, so we never
+  fabricate a clock (the `clockLabel()` rule).
 
-**And the trigger is a yardage gate, not a points gate** — a proxy for "worth
-3+ points" that needs no scoring rules and is honest about what it measures:
+### The threshold
 
-| Tier | Fires on | Source |
-|---|---|---|
-| **1 — scores** | Any TD by a rostered starter; any FG by a rostered kicker; safeties and 2-pt conversions | `LiveScoringPlay.typeAbbrev` — already parsed, already attributed |
-| **2 — turnovers** | INT / fumble recovery credited to a rostered starter | `type.text`, already in the feed |
-| **3 — big plays** | Non-scoring play by a rostered starter over a per-position yardage floor: **25+** rush/receiving, **40+** passing (tunable constants, one place) | needs the parser extension below |
+| Fires when | Rationale |
+|---|---|
+| MFL delta **≥ 3.0 points** for a rostered starter, with a corroborating play | Your original ask, now measurable because MFL supplies the number |
+| **Any TD**, whatever it scored | It's a touchdown |
+| **Any FG by a kicker**, whatever it scored | Explicitly asked for **[decided]** |
+| A **turnover** credited to a rostered starter | Free, and ScoreProTV confirms it belongs |
+| Never on a **negative** delta | That's a correction, not a moment |
+| Never on the **first poll after mount** | No baseline yet — see below |
 
-Tier 3 is the only new parsing:
+3.0 is one constant in one file, tunable after a real Sunday. PATs are excluded
+(they ride the TD's play text and would double-card the kicker).
 
-- `parseScoringPlays` becomes `parseNotablePlays` — it keeps scoring plays as
-  today *plus* non-scoring plays that clear the floor, tagging each
-  `kind: 'score' | 'turnover' | 'big'` and carrying `yards`.
-- **The filter must run server-side.** A 16-game Sunday is ~2,900 plays; the
-  route currently ships ~40. Shipping the raw slate to a TV browser every poll
-  is not an option, and the rostered-starter join happens server-side anyway
-  (an ESPN athlete id must never cross the response boundary).
-- `LiveScoringPlay` gains `kind` and `yards`. `buildMoments` gains a filter so
-  the *existing* live-scoring ticker keeps showing scores only — Tier 3 is for
-  the board, and quietly changing what the main page's ticker means is not part
-  of this.
+### Baseline, and not replaying history
+
+The SSR props already carry a full snapshot of every starter's live points, so
+the first MFL poll after mount diffs against *that*, not against zero. Plug the
+TV in at 3pm and the board starts from where the day actually is — no dump of
+every touchdown since one o'clock. Same problem the draft board's warm-up
+solves, solved here for free by the page's own initial data.
+
+### Multiple plays in one window
+
+A 60s window can hold two catches by the same player. The delta covers the
+window, so **the card covers the window too**: one card, both plays named, one
+number. We never split a delta across plays and we never claim a specific play
+was worth a specific amount when the window held more than one. The caption
+says what happened; the number says what it was worth in total.
+
+### What the parser extension is now for
+
+Tier 3 (big non-scoring plays) still needs `parseScoringPlays` widened, but its
+job has changed from **measuring** to **captioning**:
+
+- It becomes `parseNotablePlays`, keeping scoring plays as today plus
+  non-scoring plays where a rostered starter is a participant and
+  `statYardage >= 10`, tagged `kind: 'score' | 'turnover' | 'big'` with `yards`.
+- **Server-side, always.** A 16-game Sunday is ~2,900 plays and the route
+  currently ships ~40; and the rostered-starter join has to happen server-side
+  anyway, because an ESPN athlete id must never cross the response boundary.
+- The yardage floor no longer has to approximate fantasy value, so getting it
+  slightly wrong costs a caption, never a wrong number.
+- `buildMoments` gains a filter so the *existing* live-scoring ticker keeps
+  showing scores only. Quietly changing what the main page's ticker means is
+  not part of this.
 - **Risk:** `tests/fixtures/espn-game-plays.json` is a 12-item trim with no
-  non-scoring play carrying `statYardage`, and ESPN 403s from the sandbox. This
-  needs a fuller re-recorded fixture before Tier 3 can be written with
-  confidence, and verification on a preview deploy, not locally.
+  non-scoring play carrying `statYardage`, and ESPN 403s from the sandbox. Needs
+  a fuller re-recorded fixture before this is written, and verification on a
+  preview deploy rather than locally.
 
-**Bench players never trigger a reveal.** `buildMoments` reads `players`, which
-by design excludes bench (they travel in their own map). A bench touchdown on a
-TV that says it's your matchup would be a lie. Don't opt in.
+### Bench players never trigger a reveal
+
+`buildMoments` reads `players`, which by design excludes bench (they travel in
+their own map). A bench touchdown on a screen that says it's your matchup would
+be a lie. Don't opt in.
 
 ---
 
@@ -168,12 +192,15 @@ TV that says it's your matchup would be a lie. Don't opt in.
 The matchup, at scale, in both franchises' colors. Full-bleed gradient per side
 (`franchiseGradient`), crest, and:
 
-- Team name + score at hero size, the way `BroadcastRevealCard` sizes a player
-  name — `vw`/`vh` with `clamp()`, never rem.
-- Projected final and "yet to play" under each score (`computeTeam`).
-- Win-probability bar between them.
-- Both starting lineups: player, position, live points, game state (`Q3 4:12`,
-  `FINAL`, kickoff time), red-zone flag — gated on
+- Team name + score at hero size, sized the way `BroadcastRevealCard` sizes a
+  player name — `vw`/`vh` with `clamp()`, never rem.
+- **Win probability, large.** A percentage under each team plus the split bar,
+  from `winProbability(...)` — the same model `/live-scoring` draws, so the two
+  pages always agree **[decided]**.
+- Projected final and "yet to play" under each score (`projectTeamFinal`,
+  `projectTeamRemaining`).
+- Both starting lineups: player, position, **live fantasy points**, game state
+  (`Q3 4:12`, `FINAL`, kickoff time), red-zone flag — gated on
   `situation.possession === player's nflTeam`, never on the game alone.
 - Recent scoring ticker along the bottom (`selectMatchupMoments`).
 
@@ -193,35 +220,57 @@ belonged to, so the room's eyes land on the right board when the card clears.
 ## 6. The reveal, and the queue behind it
 
 `BoardReveal.tsx` is `BroadcastRevealCard` retargeted: player cutout on the
-franchise gradient, crest, huge name, the play line, the real clock, the
-player's live total, and the matchup score **as it now stands** — the reveal is
-the only moment the room is definitely looking, so it should answer "am I
-winning" at the same time.
+franchise gradient, crest, huge name — and now a real stat block, because
+holding the card until MFL has caught up is precisely what buys us one:
+
+```
+        PUKA NACUA          LAR · WR
+   42 YD TD PASS FROM STAFFORD        Q2 7:14
+
+        +14.2                  24.6
+      this score            today
+
+   PACIFIC PIGSKINS  118.4  ·  92.1  MOTOR CITY
+   win probability   38% ──→ 61%
+```
+
+Every number on that card is real and sourced:
+
+| Element | Source |
+|---|---|
+| `+14.2` | MFL delta across the poll window |
+| `24.6` | MFL live total for the player |
+| Team scores | MFL live totals |
+| `38% → 61%` | `winProbability()` evaluated on the before and after snapshots |
+| Play text, clock, yardage | ESPN |
+
+**The win-probability swing is the best thing on this card.** We hold both
+snapshots anyway to compute the delta, so the before/after is free — and "that
+touchdown moved you from losing to winning" is the sentence a room actually
+reacts to. It is also the answer to "am I winning", asked at the one moment
+everybody is definitely looking up.
 
 Reuse verbatim from the draft broadcast, because these rules are site-wide:
 `isSplashCutoutEligible`, `resolveSplashColors`, the espncdn-only 404 cascade
 (`docs/claude/insights/features/player-composites.md`).
 
-**Queue discipline** — the part that decides whether this is delightful or
-maddening on a 1pm slate:
+**Queue discipline:**
 
-- **Seed the seen-set on mount.** Plugging the TV in at 3pm must not replay
-  every touchdown since 1pm. First payload marks everything seen and shows
-  nothing; the draft board solves the identical problem with its warm-up.
-- **Derived data, presentational seen-set.** The play feed stays recomputed
-  every poll (idempotent, no drift). The seen-set governs *what has been shown
-  on screen*, nothing else. These are different things and must not merge.
-- **One card at a time, ~10s each.** The draft board holds 18s because a pick
-  is the only thing happening. On a Sunday, eight games score in bursts.
-- **Cap the queue at 3.** Six scores in ninety seconds must not put the board
-  two minutes behind the live game — a reveal for a TD the room watched
-  three minutes ago is worse than no reveal. Overflow collapses into one
-  "3 more scores" strip on the idle board.
+- **One card at a time, ~10s each.** The draft board holds 18s because a pick is
+  the only thing happening; on a Sunday, eight games score in bursts.
+- **Cap the queue at 3.** The 60s poll boundary already batches a window's
+  worth of moments; a fourth card in the same burst puts the board minutes
+  behind. Overflow collapses into one "3 more scores" strip on the idle board.
 - **Your players jump the queue** when the board is locked to an owner.
-- **AFL: one play, two owners.** With `duplicatePlayers`, 85 of 131 starters
-  are shared. `buildMoments` already keys `playerId -> fid[]`; the reveal must
-  *name the owners* ("started by Pacific Pigskins and Motor City") rather than
-  firing twice or silently picking one.
+- **AFL: one play, two owners.** With `duplicatePlayers`, 85 of 131 starters are
+  shared. `buildMoments` already keys `playerId -> fid[]`; the reveal must *name
+  the owners* ("started by Pacific Pigskins and Motor City") rather than firing
+  twice or silently picking one. Note that each franchise's own delta and win-prob
+  swing are different, so a shared play can legitimately show two different
+  numbers — the card names whose matchup it is showing.
+- **Derived data, presentational queue.** The play feed stays recomputed every
+  poll (idempotent, no drift). The queue governs what has been *shown on
+  screen*, nothing else. These are different things and must not merge.
 
 ---
 
@@ -231,7 +280,9 @@ Straight from `docs/claude/rules/live-scoring.md` — each one already shipped a
 a bug once:
 
 - `res.ok` is not "the data is good". Gate on `data.ok === false`; `{}` is
-  truthy and gating on `data.players` wiped a live board once.
+  truthy and gating on `data.players` wiped a live board once. **Critical here:**
+  an `ok: false` poll must not be treated as a snapshot, or every player's delta
+  reads as a huge negative and then a huge positive on recovery.
 - A failed poll keeps the last good data and flips status — the board shows a
   stale-feed pill, never a blank screen. A TV that goes white is the worst
   possible failure here.
@@ -249,51 +300,56 @@ a bug once:
 
 ## 8. Phasing
 
-**Phase 1 — the page (no new parsing).**
-Routes, shared component, idle matchup board, rotation + owner lock + `?fid=`,
-reveals on Tier 1 (TD/FG/safety) and Tier 2 (turnovers), queue discipline,
-fullscreen affordance, page-directory entries. Ships the whole experience using
-only data the route already returns.
+**Phase 1 — the page.**
+Routes, shared component, idle matchup board with win probability, rotation +
+owner lock + `?fid=`, the MFL-delta trigger with ESPN corroboration on *scoring*
+plays only, the reveal card with delta / total / score / win-prob swing, queue
+discipline, fullscreen affordance, page-directory entries. Ships the whole
+experience — including the 3.0-point threshold — using only data the routes
+already return.
 
-**Phase 2 — Tier 3 big plays.**
-Re-record a full plays fixture, extend the parser to notable non-scoring plays
-server-side, add `kind`/`yards` to the type, tune the yardage floors on a live
-Sunday. Gated behind `?bigplays=1` until it's been watched through a real slate.
+**Phase 2 — big non-scoring plays.**
+Re-record a full plays fixture, widen the parser to notable non-scoring plays
+server-side, add `kind`/`yards` to the type. This only *adds captions*: a 42-yard
+catch that already cleared 3.0 points in Phase 1 fires a card captioned
+"receiving" from the box score; Phase 2 makes it say "42 yd catch from Stafford".
+Gated behind `?bigplays=1` until it's been watched through a real slate.
 
 **Phase 3 — the dead-window scenes** (the screensaver's analogue).
 Thursday 4pm with nothing playing is this page's email-draft problem. Candidate
 scenes, cycling: league-wide scoreboard grid (the octobox idea), today's top
-performers, closest matchups, who's still yet to play. Same "borrow the reveal
-layer, any real event ends it instantly" mechanism `buildScreensaverPlaylist`
-uses.
+performers, closest matchups by win probability, who's still yet to play. Same
+"borrow the reveal layer, any real event ends it instantly" mechanism
+`buildScreensaverPlaylist` uses.
 
 ---
 
 ## 9. Open questions
 
-1. **Reveal latency vs. upstream load.** The ESPN detail poller runs at 60s and
-   the route caches a live game 25s, so a TD could be ~60-85s old when the card
-   appears — noticeable in a room where the game is on the other TV. Tightening
-   to a 20s poll + 15s TTL is roughly +67% upstream fetches on a route already
-   fanning out to 16 games. **Recommendation: 25s poll, leave the TTL alone** —
-   worst case ~50s, which reads as a replay rather than a lag. Worth a decision.
-2. **Does this page get its own Throwback dressing**, or inherit whatever
+1. **Reveal length** — 10s is my starting number; it wants a real Sunday to tune.
+2. **The 3.0 threshold** — same. One constant, one file.
+3. **Does this page get its own Throwback dressing**, or inherit whatever
    `/live-scoring` shows? Inheriting is one line and is my default.
-3. **Reveal length** — 10s is my starting number; it wants a real Sunday to tune.
-4. **Homepage hero for the What's New entry.** New pages require the entry
-   (with a screenshot and inline links); hero eligibility is explicitly your
-   call, not mine.
+4. **Homepage hero for the What's New entry.** New pages require the entry (with
+   a screenshot and inline links); hero eligibility is explicitly your call.
+
+*(Resolved: reveal latency — 60s MFL poll accepted in exchange for real numbers,
+so no upstream cost increase and no cache retuning.)*
 
 ---
 
 ## 10. Test surface
 
-- `tests/live-board-queue.test.ts` — seed-on-mount shows nothing; cap at 3;
-  owner priority; a play never reveals twice.
-- `tests/live-board-triggers.test.ts` — Tier 1/2/3 classification, per-position
-  yardage floors, bench players excluded, AFL dual-owner attribution.
+- `tests/live-board-triggers.test.ts` — the two-source rule end to end: a delta
+  with no ESPN play fires nothing; a play with no delta fires nothing; a
+  negative delta fires nothing; the first poll after mount fires nothing;
+  TD/FG always fire; 3.0 is the gate otherwise; bench excluded; AFL dual-owner
+  attribution carries per-franchise numbers.
+- `tests/live-board-queue.test.ts` — cap at 3, owner priority, a moment never
+  shown twice, overflow strip.
 - `tests/live-board-rotation.test.ts` — lock vs. rotate vs. `?fid=`, pause and
   resume around a reveal.
+- `tests/live-win-probability.test.ts` — extend for the before/after swing pair.
 - Extend `tests/espn-game-detail.test.ts` for `parseNotablePlays` (Phase 2).
 - `tests/page-fork-ratchet.test.ts` — wrappers stay under 80 lines, no new
   forked sibling.
