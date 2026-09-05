@@ -132,31 +132,6 @@ jobs:
       - name: Consolidate roster history
         run: node ./scripts/consolidate-roster-history.mjs
 
-      # Push alerts ride this job rather than getting crons of their own:
-      # it already runs every five minutes with a checkout in hand, and both
-      # scripts read the feeds fetched above. Each is non-fatal by design and
-      # exits 0 on any failure — they run BEFORE the commit, and a push
-      # outage must not cost us the feed write that already succeeded.
-      #
-      # player-news diffs the injury report against a Redis snapshot it owns,
-      # so it is correct even on the runs where the commit step finds nothing
-      # to push. gameday no-ops on every non-game day, gated by the week's
-      # NFL schedule rather than a weekday list.
-      - name: Push player news (injury + status changes)
-        env:
-          CRON_SECRET: ${{ secrets.CRON_SECRET }}
-          UPSTASH_REDIS_REST_URL: ${{ secrets.UPSTASH_REDIS_REST_URL }}
-          UPSTASH_REDIS_REST_TOKEN: ${{ secrets.UPSTASH_REDIS_REST_TOKEN }}
-        run: node ./scripts/push-player-news.mjs
-
-      - name: Push game-day alerts (swings + finals)
-        env:
-          TZ: America/Los_Angeles
-          CRON_SECRET: ${{ secrets.CRON_SECRET }}
-          UPSTASH_REDIS_REST_URL: ${{ secrets.UPSTASH_REDIS_REST_URL }}
-          UPSTASH_REDIS_REST_TOKEN: ${{ secrets.UPSTASH_REDIS_REST_TOKEN }}
-        run: node ./scripts/push-gameday-alerts.mjs
-
       - name: Commit and push updates
         uses: ./.github/actions/commit-push
         with:

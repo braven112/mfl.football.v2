@@ -15,9 +15,6 @@
  */
 
 import { getSubscriptions, pruneSubscriptions } from './push-subscriptions';
-import { readPreferences } from './push-preferences';
-import { isCategoryEnabled } from '../config/notification-categories';
-import { getLeagueById } from '../config/leagues';
 
 export interface PushPayload {
   title: string;
@@ -54,27 +51,9 @@ export async function sendPushToFranchise(
   leagueId: string,
   franchiseId: string,
   payload: PushPayload,
-  /**
-   * Which category this alert belongs to. REQUIRED, and checked here rather
-   * than at each call site: this is the single door every push goes through,
-   * and a preference honoured in some senders but not others is worse than no
-   * preference at all — an owner turns something off and it keeps arriving.
-   *
-   * An unknown category is refused, not allowed through. A typo must not
-   * become a way to bypass every setting an owner has chosen.
-   */
-  category: string,
 ): Promise<PushSendResult> {
   const result: PushSendResult = { sent: 0, failed: 0, pruned: 0, total: 0 };
   if (!isPushConfigured()) return result;
-
-  const league = getLeagueById(leagueId);
-  if (!league) {
-    console.warn(`[push-sender] unknown league ${leagueId} — refusing to send.`);
-    return result;
-  }
-  const stored = await readPreferences(leagueId, franchiseId);
-  if (!isCategoryEnabled(category, stored, league)) return result;
 
   let webpush: typeof import('web-push') | null = null;
   try {
