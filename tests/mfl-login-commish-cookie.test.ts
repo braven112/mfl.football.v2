@@ -15,6 +15,17 @@ const MYLEAGUES = JSON.stringify({
   leagues: { league: [{ league_id: '19621', franchise_id: '0001', name: 'AFL' }] },
 });
 
+/**
+ * A league-scoped login URL, anchored at the scheme.
+ *
+ * Anchoring is not pedantry even in a stub: an unanchored host pattern matches
+ * `https://evil.example/www44.myfantasyleague.com/login` too, so the
+ * off-MFL-redirect test below could pass while the code under test was doing
+ * the exact thing it forbids. CodeQL flags every unanchored host regex for
+ * this reason (js/incomplete-url-substring-sanitization).
+ */
+const LEAGUE_LOGIN = /^https:\/\/www\d+\.myfantasyleague\.com\/\d{4}\/login(?:[?#]|$)/;
+
 /** A fetch stub that records every URL and answers by shape. */
 function stubFetch(opts: { commishOnLeagueHost: boolean }) {
   const calls: string[] = [];
@@ -24,7 +35,7 @@ function stubFetch(opts: { commishOnLeagueHost: boolean }) {
 
     const headers = new Headers();
     // Only the league's own host ever hands back the commissioner cookie.
-    if (opts.commishOnLeagueHost && /www\d+\.myfantasyleague\.com/.test(href) && href.includes('/login')) {
+    if (opts.commishOnLeagueHost && LEAGUE_LOGIN.test(href)) {
       // A SECOND login is a SECOND session: MFL hands back its own
       // MFL_USER_ID alongside the commissioner flag.
       headers.append('set-cookie', 'MFL_USER_ID=league-session-def; Path=/');
@@ -57,7 +68,7 @@ describe('authenticateWithMFL — commissioner cookie', () => {
     expect(result.userId).toBe('league-session-def');
     // It must be the LEAGUE's host, carrying L= — an api-host login cannot
     // produce this cookie no matter how many times you sign in again.
-    const leagueLogin = calls.find((u) => /www\d+\.myfantasyleague\.com\/\d{4}\/login/.test(u));
+    const leagueLogin = calls.find((u) => LEAGUE_LOGIN.test(u));
     expect(leagueLogin).toBeDefined();
     expect(leagueLogin).toContain('L=19621');
     // Credentials ride in the POST body. A URL is logged by the origin, by
@@ -85,7 +96,7 @@ describe('authenticateWithMFL — commissioner cookie', () => {
 
     await authenticateWithMFL('someone', 'secret', undefined, 2026);
 
-    expect(calls.some((u) => /www\d+\.myfantasyleague\.com\/\d{4}\/login/.test(u))).toBe(false);
+    expect(calls.some((u) => LEAGUE_LOGIN.test(u))).toBe(false);
   });
 
   it('keeps the api login intact when the league host grants a flag but no identity', async () => {
@@ -96,7 +107,7 @@ describe('authenticateWithMFL — commissioner cookie', () => {
       const href = typeof url === 'string' ? url : url.href;
       calls.push(href);
       const headers = new Headers();
-      const isLeagueLogin = /www\d+\.myfantasyleague\.com/.test(href) && href.includes('/login');
+      const isLeagueLogin = LEAGUE_LOGIN.test(href);
       if (isLeagueLogin) headers.append('set-cookie', 'MFL_IS_COMMISH=commish-xyz; Path=/');
       // No MFL_USER_ID anywhere in the league-host response, body included.
       const body = href.includes('TYPE=myleagues')
@@ -119,7 +130,7 @@ describe('authenticateWithMFL — commissioner cookie', () => {
     vi.stubGlobal('fetch', vi.fn(async (url: string | URL) => {
       const href = typeof url === 'string' ? url : url.href;
       calls.push(href);
-      if (/www\d+\.myfantasyleague\.com/.test(href) && href.includes('/login')) {
+      if (LEAGUE_LOGIN.test(href)) {
         return new Response('', {
           status: 302,
           headers: new Headers({ location: 'https://evil.example/collect' }),
