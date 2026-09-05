@@ -18,7 +18,7 @@
  * `#watch-list-bridge[data-signed-in]`.
  */
 import { describe, it, expect } from 'vitest';
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { franchiseIdForLeague, type AuthUser } from '../src/utils/auth';
 
@@ -84,6 +84,27 @@ describe('both free-agent pages derive their verdict through the resolver', () =
       expect(frontmatter).toContain('const watchSignedIn = !!claimFranchiseId;');
     });
   }
+});
+
+describe('no page re-derives a league-scoped franchise id inline', () => {
+  // The exact expression the helper replaced. It survived in both news pages
+  // after the players pages moved (caught in review of the follow-up PR), so
+  // the scan is repo-wide: a page that wants "the session's franchise in THIS
+  // league" calls franchiseIdForLeague, where the league test cannot be
+  // dropped by accident.
+  const INLINE_DERIVATION = /authUser\s*&&\s*authUser\.leagueId\s*===\s*[^?]+\?\s*\(?authUser\.franchiseId\s*\?\?\s*null\)?\s*:\s*null/;
+  const pages = (function walk(dir: string): string[] {
+    return readdirSync(join(root, dir), { withFileTypes: true }).flatMap((d) => {
+      const p = `${dir}/${d.name}`;
+      if (d.isDirectory()) return walk(p);
+      return d.name.endsWith('.astro') ? [p] : [];
+    });
+  })('src/pages');
+
+  it('every src/pages/**/*.astro goes through franchiseIdForLeague for that derivation', () => {
+    const offenders = pages.filter((p) => INLINE_DERIVATION.test(read(p)));
+    expect(offenders, 'inline `authUser.leagueId === … ? franchiseId : null` — use franchiseIdForLeague').toEqual([]);
+  });
 });
 
 describe('WatchListBridge exposes the verdict on one element and reads it from there', () => {

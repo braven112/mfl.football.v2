@@ -70,8 +70,12 @@ Forward fix, three commits squashed:
     `tests/free-agent-session.test.ts` pins the helper and both pages; new
     `free-agents` domain in `path-guard.json` runs it plus the placement guard
     on every edit to the two pages, the bridge, the priority modal and the API.
-    Not widened: `news.astro` ×2, `trade-builder`, `rosters`, `franchises/[id]`
-    carry the same inline compare and could adopt the helper.
+    Review of the follow-up PR found the identical expression still in both
+    `news.astro` pages; they now use the helper too, and the test scans every
+    `src/pages/**/*.astro` for that inline shape. `trade-builder`, `rosters`,
+    `franchises/[id]` and TheLeague `index` carry a boolean variant
+    (`!!authUser && leagueId === … && !!franchiseId`) — left alone, could be
+    `!!franchiseIdForLeague(…)`.
   - Source: Claude review on #971, carried over
   - Where: `src/pages/afl-fantasy/players.astro:212` (`waiverPriorityConfig.signedIn`),
     `:240` (`promptSignIn`), `:242` (`watchSignedIn`), `:903`
@@ -88,6 +92,9 @@ Forward fix, three commits squashed:
     `FAILED after <ms>: timed out at 6000ms | <error>`, plus whether the
     degraded branch is serving a last-good order (with its `asOf`) or a 502.
     The 6s literal is `MFL_TIMEOUT_MS` so the log and the budget cannot drift.
+    Review caught that `err.message` alone reads "fetch failed" for undici
+    network errors — the DNS / reset / TLS detail is on `err.cause`, which the
+    line now carries.
     Surfacing `asOf` in the dialog foot was already done by the hotfix for the
     live and last-good states; the SSR "from our last sync" foot has no
     timestamp because the committed feed carries none — not pursued.

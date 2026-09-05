@@ -87,10 +87,15 @@ async function readLiveOrder(leagueId: string, year: number) {
     // AbortSignal.timeout() rejects with a DOMException named TimeoutError;
     // name it as such so a hang reads as one in the logs, not as a generic
     // "fetch failed".
+    // undici wraps network failures as TypeError('fetch failed', { cause })
+    // — the DNS / reset / TLS detail lives on `cause`, so a log of `message`
+    // alone would read "fetch failed" for the exact class this line exists
+    // to identify. Carry the cause through.
+    const cause = err instanceof Error && err.cause instanceof Error ? ` (${err.cause.message})` : '';
     const reason =
       err instanceof DOMException && err.name === 'TimeoutError'
         ? `timed out at ${MFL_TIMEOUT_MS}ms`
-        : err instanceof Error ? err.message : String(err);
+        : err instanceof Error ? `${err.message}${cause}` : String(err);
     console.warn(`[waiver-order] ${key} MFL league read FAILED after ${elapsed()}: ${reason}`);
     // RE-READ the cache rather than reusing the `prior` captured before the
     // fetch. Two cold requests can be in flight at once; if the other one

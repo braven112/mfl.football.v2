@@ -21,7 +21,7 @@ import SchefterFeed from '../../components/shared/SchefterFeed.astro';
 import GroupMeChatPanel from '../../components/shared/GroupMeChatPanel.tsx';
 import HottestDesksWidget from '../../components/theleague/HottestDesksWidget.astro';
 import { getTopNamedTeams } from '../../../scripts/lib/schefter-team-naming.mjs';
-import { getAuthUser } from '../../utils/auth';
+import { getAuthUser, franchiseIdForLeague } from '../../utils/auth';
 import { getAuthor, getAuthorAvatar, SCHEFTER_AUTHORS } from '../../types/schefter';
 import type { SchefterPost } from '../../types/schefter';
 import feedData from '../../data/theleague/schefter-feed.json';
@@ -42,8 +42,7 @@ const feed = feedData as FeedType;
 // Watching — My Watch List + the viewer's own roster, league-scoped like
 // everything else here: a session from the other league has no list here.
 const newsLeague = getLeagueBySlug('theleague')!;
-const watchFranchiseId =
-  authUser && authUser.leagueId === newsLeague.id ? (authUser.franchiseId ?? null) : null;
+const watchFranchiseId = franchiseIdForLeague(authUser, newsLeague.id);
 const watchYear = getLeagueYearForSlug(newsLeague.slug);
 const watchingSets = await resolveWatchingSets(newsLeague, watchYear, watchFranchiseId);
 const canWatch = !!watchFranchiseId;
