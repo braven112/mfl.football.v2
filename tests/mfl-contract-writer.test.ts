@@ -342,5 +342,60 @@ describe('mfl-contract-writer', () => {
 
       expect(filepath).toBeNull();
     });
+
+    it('uses the credentials the WRITE will use, not just the env', async () => {
+      // A session-driven write on a box with no MFL_USER_ID set must still take
+      // a backup — otherwise the salary write proceeds with nothing to roll
+      // back to, and the null return says so only to the log.
+      process.env.MFL_USER_ID = '';
+      mockMflFetch.mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve({ salaries: { leagueUnit: { player: [] } } }),
+      });
+
+      const { createPreWriteBackup } = await import('../src/utils/mfl-contract-writer');
+      const filepath = await createPreWriteBackup({ mflUserId: 'session_cookie' });
+
+      expect(filepath).toContain('pre-write.json');
+      expect(mockMflFetch.mock.calls[0][0].mflUserCookie).toBe('session_cookie');
+    });
+  });
+
+  describe('fetchMFLSalaries', () => {
+    it('returns null rather than {} when no cookie is available', async () => {
+      // {} is truthy, so it slips past reconcile's `if (!salaries)` guard and
+      // makes a read that never happened look like "no stuck declarations".
+      process.env.MFL_USER_ID = '';
+
+      const { fetchMFLSalaries } = await import('../src/utils/mfl-contract-writer');
+      const salaries = await fetchMFLSalaries();
+
+      expect(salaries).toBeNull();
+      expect(mockMflFetch).not.toHaveBeenCalled();
+      expect(mockFetch).not.toHaveBeenCalled();
+    });
+
+    it('reads through mflFetch and maps players by id', async () => {
+      mockMflFetch.mockResolvedValueOnce({
+        ok: true,
+        json: () =>
+          Promise.resolve({
+            salaries: {
+              leagueUnit: {
+                player: [{ id: '14056', salary: '500000', contractYear: '3', contractInfo: 'RC' }],
+              },
+            },
+          }),
+      });
+
+      const { fetchMFLSalaries } = await import('../src/utils/mfl-contract-writer');
+      const salaries = await fetchMFLSalaries();
+
+      expect(salaries).toEqual({
+        '14056': { salary: '500000', contractYear: '3', contractInfo: 'RC' },
+      });
+      expect(mockMflFetch.mock.calls[0][0].mflUserCookie).toBe('test_cookie_value');
+      expect(mockFetch).not.toHaveBeenCalled();
+    });
   });
 });

@@ -4,7 +4,7 @@
     {
       "date": "2026-09-04",
       "type": "bug-fix",
-      "summary": "Every contract write to MFL takes a backup first, so there is something to roll back to when a write goes sideways. Those backups have been empty files. The same went for the commissioner's verify step — the one whose entire job is to confirm a contract change actually landed — which had been reading back an empty roster and calling it a clean bill of health. MFL was answering \"you are not logged in\" with a cheerful HTTP 200, so nothing ever looked broken. Backups now contain the league's actual salary data, and verification checks against something real.",
+      "summary": "Every contract write to MFL takes a backup first, so there is something to roll back to when a write goes sideways. Those backups have been empty files. The same went for the commissioner's verify step — the one whose entire job is to confirm a contract change actually landed — which had been reading back an empty salary sheet and calling it a clean bill of health. MFL was answering \"you are not logged in\" with a cheerful HTTP 200, so nothing ever looked broken. Backups now contain the league's actual salary data, and verification checks against something real.",
       "impact": "admin",
       "area": "salary",
       "league": "theleague"
