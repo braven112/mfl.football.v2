@@ -152,6 +152,20 @@ notification's app identity. The AFL shipped that way until Sept 2026.
 `purpose: "maskable"` icon, because Android crops adaptive icons to an
 OEM-chosen shape and a non-full-bleed icon gets a visible notch.
 
+**Every manifest needs a DISTINCT `id`, and that is not the same rule.** The
+AFL's manifest is also served on theleague.us — `vercel.json`'s
+`/afl-fantasy/*` → `/*` redirect is host-gated to afl-fantasy.com,
+`league-host-map.ts` keeps `/afl-fantasy/` in `SKIP_REWRITE_PREFIXES` so
+cross-league deep links resolve, and the layout picks the manifest by LEAGUE
+rather than by host. So an AFL page genuinely renders at
+`theleague.us/afl-fantasy/…` with the AFL manifest attached. A manifest's app
+id defaults to its `start_url`, so two manifests both saying `/` would be the
+SAME app on that origin, and the AFL's name and icons could overwrite an
+owner's installed TheLeague app. `id` is resolved against the origin and does
+**not** have to sit inside `scope`, which is what lets the AFL declare
+`"id": "/afl-fantasy"` while still being scoped to `/`. Uniqueness is pinned
+by the same test.
+
 ## Per-category preferences
 
 Shipped, and built exactly as this doc originally prescribed: a

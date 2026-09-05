@@ -59,6 +59,26 @@ describe('PWA manifests', () => {
     expect(m.start_url, `${path.basename(file)} start_url`).toBe('/');
   });
 
+  it('gives every manifest a DISTINCT app id', () => {
+    // `scope` and `start_url` must be "/" (above), but the AFL manifest is
+    // also served on theleague.us: vercel.json's /afl-fantasy/* -> /* redirect
+    // is host-gated to afl-fantasy.com, league-host-map keeps /afl-fantasy/ in
+    // SKIP_REWRITE_PREFIXES so cross-league deep links resolve, and the layout
+    // picks the manifest by LEAGUE, not by host. So an AFL page really does
+    // render at theleague.us/afl-fantasy/... with the AFL manifest attached.
+    //
+    // A manifest's app id defaults to its start_url, so "/" for both would
+    // make the two manifests the SAME app on that origin — letting the AFL's
+    // name and icons overwrite an owner's installed TheLeague app. `id` is
+    // resolved against the origin and does NOT have to sit inside `scope`,
+    // which is what makes a distinct id the surgical fix.
+    const ids = manifests.map((file) => {
+      const m = JSON.parse(fs.readFileSync(file, 'utf8'));
+      return m.id ?? m.start_url;
+    });
+    expect(new Set(ids).size, `duplicate app id among ${ids.join(', ')}`).toBe(ids.length);
+  });
+
   it.each(manifests)('%s points at icons that exist and are >=192px', (file) => {
     const m = JSON.parse(fs.readFileSync(file, 'utf8'));
     expect(Array.isArray(m.icons) && m.icons.length > 0).toBe(true);

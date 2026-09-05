@@ -22,8 +22,12 @@
  *    80% safe circle, because Android crops maskable icons to an
  *    OEM-chosen shape.
  *
- * Deterministic: same inputs → byte-identical outputs, so re-running this
- * never shows up as a spurious diff.
+ * Deterministic in the only sense that matters: same inputs → same PIXELS.
+ * `--check` decodes and compares pixels rather than compressed bytes, because
+ * the byte stream is zlib's to decide — a Node major that ships a different
+ * zlib re-encodes identical art to a different length, and comparing bytes
+ * would turn that into a guard-test failure that blocks every path-guard edit
+ * under public/assets, src/utils/push-*.ts and public/sw.js.
  *
  * Usage: node scripts/generate-notification-icons.mjs [--check]
  */
@@ -31,7 +35,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { readPng, encodePng } from './lib/png-raw.mjs';
+import { readPng, encodePng, decodePng } from './lib/png-raw.mjs';
 import { LEAGUES } from '../src/config/leagues-data.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -256,8 +260,21 @@ for (const target of TARGETS) {
   const emit = (relPath, image) => {
     const abs = path.join(ROOT, relPath);
     const next = encodePng(image);
-    const current = fs.existsSync(abs) ? fs.readFileSync(abs) : null;
-    if (current && current.equals(next)) return;
+    // Pixel comparison, not byte comparison — see the header note on zlib.
+    // An unreadable/absent file counts as "differs" rather than throwing.
+    // One read, no existsSync probe: a check-then-use pair is a file-system
+    // race (CodeQL flags it), and the catch already covers absent-or-corrupt.
+    let unchanged = false;
+    try {
+      const current = decodePng(fs.readFileSync(abs));
+      unchanged =
+        current.width === image.width &&
+        current.height === image.height &&
+        current.data.equals(image.data);
+    } catch {
+      unchanged = false;
+    }
+    if (unchanged) return;
     if (checkOnly) {
       drift = true;
       console.error(`[notification-icons] STALE: ${relPath}`);

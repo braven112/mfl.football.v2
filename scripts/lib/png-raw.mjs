@@ -29,7 +29,16 @@ function crc32(buf) {
 
 /** Decode a PNG file to `{ width, height, data }` with data as RGBA bytes. */
 export function readPng(file) {
-  const b = fs.readFileSync(file);
+  return decodePng(fs.readFileSync(file), file);
+}
+
+/**
+ * Decode a PNG buffer to `{ width, height, data }` with data as RGBA bytes.
+ * Separate from readPng so callers can compare PIXELS of an already-read file
+ * — comparing encoded bytes would make them hostage to zlib's output, which
+ * can differ between Node majors for identical art.
+ */
+export function decodePng(b, file = '<buffer>') {
   let off = 8;
   let width = 0, height = 0, bitDepth = 0, colorType = 0;
   const idat = [];
@@ -58,6 +67,10 @@ export function readPng(file) {
   let p = 0;
   for (let y = 0; y < height; y++) {
     const filter = raw[p++];
+    // Filter types are 0-4. Anything else means we misparsed the stream, and
+    // falling through to the filter-0 (no-op) branch would silently emit
+    // garbage pixels — the one outcome this codec's callers cannot detect.
+    if (filter > 4) throw new Error(`${file}: row ${y} has unknown filter type ${filter}`);
     const line = raw.subarray(p, p + stride);
     p += stride;
     const cur = flat.subarray(y * stride, (y + 1) * stride);
@@ -112,7 +125,10 @@ export function encodePng({ width, height, data }) {
   return Buffer.concat([
     Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
     chunk('IHDR', ihdr),
-    // Level 9 + a fixed strategy so a re-run of the generator is byte-identical.
+    // Level 9 for size. Deliberately NOT claimed as byte-stable: deflate output
+    // belongs to whatever zlib this Node was built against, so callers that
+    // need to detect a change must compare decoded pixels, not encoded bytes
+    // (see generate-notification-icons.mjs's `emit`).
     chunk('IDAT', zlib.deflateSync(raw, { level: 9 })),
     chunk('IEND', Buffer.alloc(0)),
   ]);
