@@ -500,6 +500,47 @@ Everything else on the four remaining open questions (two-stage publish, quorum
 8, close 6pm PT, no participation stake) is implemented as the recorded
 default and is a one-line registry or cron change if you want it different.
 
+## Next: enabling the AFL (handoff)
+
+TheLeague's poll shipped in PR #821. The AFL is deliberately not in it —
+`ownersPoll.enabled: false` in the registry, no ballot/voters route wrappers,
+and the categories are hidden there (see below). Start a FRESH branch off main
+rather than extending #821.
+
+**What already works, unchanged, the moment the flag flips.** The math, ballot
+validation, KV scoping, window/kickoff clamp, accuracy scoring and every API
+route are league-generic and already read their numbers from the registry. The
+nag and close passes both no-op cleanly today (`[skip] AFL does not run the
+Owners' Poll`, exit 0), and the workflow already invokes them for both leagues.
+
+**What has to be decided, because 24 teams is not 16:**
+
+| Question | Why it can't just be copied |
+|---|---|
+| Ballot depth | TheLeague ranks 7 of 16. Sevenof24 leaves 17 teams unranked — well past the "roughly the bottom four to six" this plan accepted. 10-12 is the honest starting range, and it changes how the unranked block reads. |
+| Quorum | 8 of 16 is half. Half of 24 is 12, which is a much harder turnout bar in a league that is already twice as hard to get moving. |
+| Conferences | The AFL is 12 + 12 across two conferences that draft differently and barely play each other. One leaguewide poll asks an AL owner to rank NL teams they have no read on — the same problem the draft room had to solve. A per-conference poll is the obvious alternative and is a real design fork, not a config change. |
+
+**Mechanical work, once those are answered:**
+
+1. `ownersPoll` block in `leagues-data.mjs` — `enabled: true`, plus the agreed
+   `slots` and `quorum`.
+2. Two thin route wrappers under `src/pages/afl-fantasy/pecking-order/`
+   (`ballot.astro`, `voters.astro`) — copy TheLeague's shape exactly: auth gate
+   and league data import in the route, everything else in the shared
+   component. Do NOT fork the component (`tests/page-fork-ratchet.test.ts`).
+3. `src/data/page-directory.json` entries for both, 10+ tags each.
+4. The lineup ballot strip on the AFL lineup page.
+5. Nothing needed for notifications: the three poll categories gate on
+   `ownersPoll.enabled` via `requiresOwnersPoll`, so they appear on the AFL's
+   `/notifications` page automatically and are correctly hidden until then.
+6. A What's New entry tagged `["afl"]`.
+
+**Guard that will catch a half-done job:** `tests/notification-preferences.test.ts`
+asserts the poll categories are hidden from a league that does not run the
+poll — flipping the flag without the pages will start offering toggles that
+link nowhere.
+
 ## Phase 2 options (deliberately not in v1)
 
 - **Optional deep ranks.** Top N required, ranks N+1…last optional, so a
