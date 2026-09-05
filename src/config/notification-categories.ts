@@ -128,9 +128,9 @@ export const NOTIFICATION_CATEGORIES: NotificationCategory[] = [
     group: 'your-team',
     label: 'News on your players',
     description: 'Injuries and status changes for players on your roster.',
-    cadence: 'Weekly in season',
+    cadence: 'A few a week in season',
     defaultOn: false,
-    live: false,
+    live: true,
   },
 
   // ── The Owners' Poll ─────────────────────────────────────────────
@@ -219,7 +219,7 @@ export const NOTIFICATION_CATEGORIES: NotificationCategory[] = [
     cadence: 'Weekly in season',
     defaultOn: false,
     requiresFeature: 'liveScoring',
-    live: false,
+    live: true,
   },
   {
     id: 'scoring-swing',
@@ -229,7 +229,7 @@ export const NOTIFICATION_CATEGORIES: NotificationCategory[] = [
     cadence: 'A few a season',
     defaultOn: false,
     requiresFeature: 'liveScoring',
-    live: false,
+    live: true,
   },
 ];
 

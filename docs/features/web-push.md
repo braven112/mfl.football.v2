@@ -151,6 +151,57 @@ the build.
 copy and POST it to `src/pages/api/cron/push-fanout.ts` (CRON_SECRET-gated)
 via `scripts/lib/push-fanout.mjs`.
 
+## Where each category is sent from
+
+Every category in the registry is live as of Sept 2026. The senders:
+
+| Category | Sender |
+|---|---|
+| `lineup-warning` | `scripts/schefter-lineup-check.mjs` |
+| `roster-deadline` | `scanEventReminders` in `scripts/schefter-scan.mjs` |
+| `transaction-big` / `transaction-all` | `scripts/schefter-scan.mjs` |
+| `rumor` | `scripts/schefter-rumor-scan.mjs` |
+| `player-news` | `scripts/push-player-news.mjs` (Roster Sync) |
+| `scoring-final` / `scoring-swing` | `scripts/push-gameday-alerts.mjs` (Roster Sync) |
+| owners-poll categories | `scripts/generate-pecking-order.mjs` + the poll close pass |
+| `weekly-recap` etc. | `scripts/schefter-weekly-articles.mjs` |
+
+The last two scripts ride Roster Sync rather than taking crons of their own:
+it already runs every five minutes with a checkout, and both read feeds it
+has just fetched. Both are non-fatal by design and run BEFORE the commit
+step — a push outage must never cost the feed write that already succeeded.
+
+### Game-day alerts
+
+`scripts/lib/gameday-alerts.mjs` holds the detection, pure and testable;
+the script is only I/O. Two things there are load-bearing:
+
+- **The swing gate is "the week's main slate is final".** A lead change at
+  10:30am Pacific, with eleven starters yet to play, is not a result. The
+  main slate is found in the DATA — the kickoff time the most games share —
+  rather than from a weekday and a clock, so it needs no DST handling and
+  survives Thanksgiving and the Saturday slates of Weeks 16-18. It fails
+  CLOSED: an unreadable schedule means no swing alerts.
+- **The leader is recorded on every poll, including suppressed ones.**
+  Recording it only once swings are allowed makes the first post-slate poll
+  compare against nothing and miss the change of hands that happened during
+  the window. A tie CLEARS the leader, and because the state is stored with
+  `HSET` — which can only add and overwrite — a cleared leader has to be
+  returned as an explicit `removed` list and deleted with `HDEL`.
+
+### Player news
+
+`scripts/push-player-news.mjs` diffs the injury report against a Redis
+snapshot **it owns**, not against git. Roster Sync's commit step is skipped
+when nothing else changed, so "diff the last commit" is only correct on the
+runs that commit. The snapshot means the diff is a function of what we last
+TOLD PEOPLE, which is the thing that must not repeat.
+
+It sends nothing on a first run — with no snapshot, every rostered injury
+in the league reads as brand new — and re-seeds without sending if more
+than 40 statuses change at once, which means the feed changed shape rather
+than that forty players got hurt.
+
 ## Adding a notification type, in short
 
 1. Add a registry entry with `live: false`.
