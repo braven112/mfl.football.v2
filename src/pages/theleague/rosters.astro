@@ -12,6 +12,7 @@ import AgeDistributionChart from '../../components/theleague/AgeDistributionChar
 import FranchiseOptions from '../../components/theleague/FranchiseOptions.astro';
 import VeteranExtensionCandidates from '../../components/theleague/VeteranExtensionCandidates.astro';
 import PlayerDetailsModal from '../../components/theleague/PlayerDetailsModal.astro';
+import SignInModal from '../../components/shared/SignInModal.astro';
 import PlayerCell from '../../components/theleague/PlayerCell.astro';
 import PlayerInjuryModal from '../../components/theleague/PlayerInjuryModal.astro';
 import ContractDeclarationModal from '../../components/theleague/ContractDeclarationModal.astro';
@@ -1100,6 +1101,14 @@ const knownTeamIds = new Set([
 // Get authenticated user and set default team to their franchise if logged in
 const authUser = getAuthUser(Astro.request);
 const isLoggedIn = !!authUser;
+
+// Signed-out visitors still see "Watch player" in the action sheet; it hands
+// off to this in-place sign-in rather than a disabled option.
+const watchSignInConfig = {
+  leagueId: THELEAGUE_ID,
+  redirectUrl: `${Astro.url.pathname}${Astro.url.search}`,
+  subtitle: 'Sign in with your MFL credentials to build your watch list',
+};
 const userFranchiseId = normalizeFranchiseId(authUser?.franchiseId);
 
 // Get URL parameters for team preference
@@ -5168,6 +5177,8 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
 <!-- Player Details Modal -->
 <PlayerDetailsModal />
 
+{!isLoggedIn && <SignInModal config={watchSignInConfig} />}
+
 <!-- Player Injury Modal -->
 <PlayerInjuryModal />
 
@@ -5280,6 +5291,8 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
   import type { PlayerModalData } from '../../utils/player-modal-trigger';
   import { applyPlayerModalBand } from '../../utils/player-modal-band';
   import { NFL_TEAM_CITIES, normalizeTeamCode } from '../../utils/nfl';
+  import { isWatched, toggleWatch, getWatchListAuth, loadWatchList } from '../../utils/watch-list-client';
+  import { requestSignIn } from '../../utils/player-actions';
   // Same selection function the deadline job runs — the Cutdown Plan preview
   // and the automation's reality cannot drift (plan requirement).
   import { selectAutoMoves } from '../../utils/august-cut-selection';
@@ -6024,6 +6037,12 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
   const initRosterPage = () => {
     // Guard: only run on the rosters page (skip after ViewTransitions navigates away)
     if (!document.getElementById('roster-config')) return;
+    // Warm My Watch List so the action sheet opens in the right state. The
+    // store caches per league and no-ops on a repeat call.
+    try {
+      const cfg = JSON.parse(document.getElementById('roster-config').textContent || '{}');
+      if (cfg?.authUser?.franchiseId) void loadWatchList();
+    } catch { /* config is parsed for real just below */ }
     const {
       seasons = {},
       defaultSeason,
@@ -8798,6 +8817,24 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
         }
       }
 
+      // Watch — per-VIEWER, not per-roster, so it sits outside the isOwnTeam
+      // block: you can watch anyone on any roster. A signed-out visitor sees
+      // the option too and is handed to sign-in (same trigger as PlayerDetailsModal).
+      {
+        const watchId = String(cdmPlayerData?._rawPlayer?.id || cdmPlayerData?.id || '');
+        const watchSignedOut = !config.authUser?.franchiseId || getWatchListAuth() === 'signed-out';
+        const watched = !watchSignedOut && isWatched(watchId);
+        actionOptions.appendChild(makeCdmActionBtn(
+          'watch',
+          watched ? 'Stop watching' : 'Watch player',
+          watchSignedOut
+            ? 'Sign in to build your watch list'
+            : (watched ? 'Remove him from your watch list' : 'His news lights up in the Schefter Report'),
+          () => toggleCdmWatch(watchId, watched, watchSignedOut),
+          false, watched ? 'icon-eye-slash' : 'icon-eye'
+        ));
+      }
+
       actionOptions.appendChild(makeCdmActionBtn(
         'cut', 'Cut Player', '50% cap hit + future penalties',
         () => goToCutStep2(),
@@ -9653,6 +9690,38 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
     };
 
     // ---- CDM action-option toggle ----------------------------------
+    // Watch / Stop watching — one tap, no confirm step. MFL's watch-list
+    // import is incremental, so the click IS the change. Re-renders the
+    // option in place (like the auto-cut toggle) rather than closing.
+    const toggleCdmWatch = async (playerId, watched, signedOut) => {
+      if (signedOut) { closeDeclarationModal(); requestSignIn(); return; }
+      const actionOptions = document.getElementById('cdm-action-options');
+      const btn = actionOptions?.querySelector('.cdm-action-option--watch');
+      const label = btn?.querySelector('.cdm-action-option__label');
+      const desc = btn?.querySelector('.cdm-action-option__desc');
+      if (btn) btn.disabled = true;
+      if (label) label.textContent = watched ? 'Removing…' : 'Adding…';
+      const res = await toggleWatch(playerId);
+      if (!res.ok) {
+        if (res.signedOut) { closeDeclarationModal(); requestSignIn(); return; }
+        if (label) label.textContent = watched ? 'Stop watching' : 'Watch player';
+        if (desc) desc.textContent = res.error || 'Something went wrong. Try again.';
+        if (btn) { btn.disabled = false; btn.classList.add('cdm-action-option--error'); }
+        return;
+      }
+      const message = res.watched ? 'Added to your watch list' : 'Removed from your watch list';
+      if (btn) btn.classList.add('cdm-action-option--success');
+      if (label) label.textContent = message;
+      const announcer = document.getElementById('cdm-announcer');
+      if (announcer) announcer.textContent = message;
+      setTimeout(() => {
+        if (announcer) announcer.textContent = '';
+        if (!cdmPlayerData || !cdmModal?.classList.contains('active')) return;
+        populateCdmActionOptions(cdmPlayerData.eligibility);
+        actionOptions?.querySelector('.cdm-action-option--watch')?.focus();
+      }, 900);
+    };
+
     const toggleAutocutMark = async (playerId, isMarked) => {
       const actionOptions = document.getElementById('cdm-action-options');
       const btn = actionOptions?.querySelector<HTMLButtonElement>('.cdm-action-option--autocut-toggle');

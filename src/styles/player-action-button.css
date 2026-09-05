@@ -1,0 +1,72 @@
+/**
+ * Player action kebab — the ⋮ button that opens the shared PlayerActionModal.
+ *
+ * GLOBAL on purpose, like fa-claim-button.css: the free-agent pages build
+ * their rows with innerHTML, so the button carries no Astro scope attribute
+ * and a scoped stylesheet would never reach it. Visually a twin of the
+ * roster page's `.ufa-action-btn` so the same affordance reads the same
+ * everywhere it appears.
+ */
+
+.pa-kebab {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 1px solid var(--content-border, #d1d5db);
+  background: var(--content-bg, #fff);
+  color: var(--color-gray-500, #6b7280);
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.18s ease, color 0.18s ease, border-color 0.18s ease;
+}
+
+.pa-kebab:hover {
+  background: var(--table-row-bg-hover, #f3f4f6);
+  color: var(--color-gray-700, #374151);
+  border-color: var(--color-gray-400, #9ca3af);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+.pa-kebab:focus-visible {
+  outline: 2px solid var(--league-accent, var(--color-primary, #1c497c));
+  outline-offset: 1px;
+}
+
+/* A watched player's kebab wears the accent so the list state shows at a glance. */
+.pa-kebab.is-watched {
+  color: var(--league-accent, var(--color-primary, #1c497c));
+  border-color: color-mix(in srgb, var(--league-accent, var(--color-primary, #1c497c)) 55%, transparent);
+  background: color-mix(in srgb, var(--league-accent, var(--color-primary, #1c497c)) 10%, var(--content-bg, #fff));
+}
+
+.pa-kebab svg {
+  width: 14px;
+  height: 14px;
+  fill: currentColor;
+}
+
+/* Inline watched marker used next to a player's name (rows, modal strips). */
+.pa-watch-mark {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  margin-left: 0.35rem;
+  padding: 0.05rem 0.4rem;
+  border-radius: 9999px;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--league-accent, var(--color-primary, #1c497c));
+  background: color-mix(in srgb, var(--league-accent, var(--color-primary, #1c497c)) 12%, transparent);
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
+.pa-watch-mark svg {
+  width: 11px;
+  height: 11px;
+  fill: currentColor;
+}

@@ -129,6 +129,19 @@ const t = (value?: string) => value ?? '\u2014';
         <span class="pdm-owner__name" id="pdm-owner-name">{preview?.ownerName}</span>
       </div>
 
+      <!-- My Watch List — one toggle, every page that opens this modal.
+           State comes from src/utils/watch-list-client.ts, so a change here
+           shows up on any row/modal on the same page that also reads it. -->
+      <button type="button" class="pdm-watch" id="pdm-watch" hidden>
+        <span class="pdm-watch__icon" aria-hidden="true">
+          <svg aria-hidden="true"><use id="pdm-watch-icon" href="/assets/icons/sprite.svg#icon-eye" /></svg>
+        </span>
+        <span class="pdm-watch__text">
+          <span class="pdm-watch__label" id="pdm-watch-label">Watch player</span>
+          <span class="pdm-watch__desc" id="pdm-watch-desc">His news lights up in the Schefter Report</span>
+        </span>
+      </button>
+
       <!-- Key Metrics -->
       <div class="pdm-metrics" id="pdm-metrics">
         <div class="pdm-metric" id="metric-card-points">
@@ -496,6 +509,63 @@ const t = (value?: string) => value ?? '\u2014';
   }
 
   /* ================================================================
+     Watch List Strip
+     ================================================================ */
+  .pdm-watch {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+    width: 100%;
+    margin-bottom: 1rem;
+    padding: 0.5rem 0.75rem;
+    border-radius: var(--radius-md, 0.5rem);
+    background: var(--content-bg-muted, #f3f4f6);
+    border: 1px solid var(--content-border, #e5e7eb);
+    color: var(--color-gray-900, #111827);
+    text-align: left;
+    cursor: pointer;
+    transition: background-color 0.15s ease, border-color 0.15s ease;
+  }
+  .pdm-watch[hidden] { display: none; }
+  .pdm-watch:hover {
+    border-color: var(--league-accent, var(--color-primary, #1c497c));
+  }
+  .pdm-watch:focus-visible {
+    outline: 2px solid var(--league-accent, var(--color-primary, #1c497c));
+    outline-offset: 1px;
+  }
+  .pdm-watch--on {
+    background: color-mix(in srgb, var(--league-accent, var(--color-primary, #1c497c)) 12%, transparent);
+    border-color: color-mix(in srgb, var(--league-accent, var(--color-primary, #1c497c)) 45%, transparent);
+  }
+  .pdm-watch--busy { opacity: 0.7; cursor: progress; }
+  .pdm-watch--error { border-color: var(--color-error, #dc2626); }
+  .pdm-watch__icon {
+    flex-shrink: 0;
+    width: 28px;
+    height: 28px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--radius-sm, 0.25rem);
+    background: var(--card-bg, #fff);
+    color: var(--color-gray-600, #4b5563);
+  }
+  .pdm-watch--on .pdm-watch__icon {
+    color: var(--league-accent, var(--color-primary, #1c497c));
+  }
+  .pdm-watch__icon svg { width: 15px; height: 15px; fill: currentColor; }
+  .pdm-watch__text { display: grid; gap: 0.05rem; min-width: 0; }
+  .pdm-watch__label { font-size: 0.875rem; font-weight: 700; line-height: 1.3; }
+  .pdm-watch__desc {
+    font-size: 0.75rem;
+    color: var(--color-gray-500, #6b7280);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  /* ================================================================
      Key Metrics Strip
      ================================================================ */
   .pdm-metrics {
@@ -852,6 +922,8 @@ const t = (value?: string) => value ?? '\u2014';
 <script>
   import { NFL_TEAM_CITIES } from '../../utils/nfl';
   import { applyPlayerModalBand, franchiseTintHue, getFranchiseBandBrand } from '../../utils/player-modal-band';
+  import { isWatched, loadWatchList, toggleWatch, getWatchListAuth, onWatchListChange } from '../../utils/watch-list-client';
+  import { requestSignIn } from '../../utils/player-actions';
   import { getDefSpotlightPlayer } from '../../data/theleague/def-spotlight-players';
   import {
     loadPlayerNews,
@@ -902,6 +974,9 @@ const t = (value?: string) => value ?? '\u2014';
     }
   }
 
+  // Set by initPlayerDetailsModal; openPlayerDetailsModal calls it per open.
+  let renderWatchStrip: (playerId: unknown) => void = () => {};
+
   function initPlayerDetailsModal() {
     const modal = document.querySelector('.player-details-modal');
 
@@ -936,6 +1011,62 @@ const t = (value?: string) => value ?? '\u2014';
       // Invalidate any pending render so a late response can't repaint a modal
       // the user already dismissed.
       cancelPlayerNews();
+    };
+
+    // ── My Watch List toggle ──
+    // The strip renders for every viewer; a signed-out one is offered the
+    // sign-in dialog rather than a hidden control. The store is the single
+    // truth, so a toggle here and a toggle on the row behind the modal agree.
+    const watchBtn = document.getElementById('pdm-watch') as HTMLButtonElement | null;
+    let watchPlayerId: string | null = null;
+    let watchBusy = false;
+    const paintWatch = () => {
+      if (!watchBtn || !watchPlayerId) return;
+      const signedOut = getWatchListAuth() === 'signed-out';
+      const watched = !signedOut && isWatched(watchPlayerId);
+      watchBtn.hidden = false;
+      watchBtn.classList.toggle('pdm-watch--on', watched);
+      watchBtn.setAttribute('aria-pressed', watched ? 'true' : 'false');
+      const icon = document.getElementById('pdm-watch-icon');
+      if (icon) icon.setAttribute('href', `/assets/icons/sprite.svg#${watched ? 'icon-eye-slash' : 'icon-eye'}`);
+      const label = document.getElementById('pdm-watch-label');
+      const desc = document.getElementById('pdm-watch-desc');
+      if (label) label.textContent = watched ? 'Watching' : 'Watch player';
+      if (desc) {
+        desc.textContent = signedOut
+          ? 'Sign in to build your watch list'
+          : watched
+            ? 'On your watch list — tap to remove'
+            : 'His news lights up in the Schefter Report';
+      }
+    };
+    if (watchBtn && !watchBtn.dataset.pdmWatchWired) {
+      watchBtn.dataset.pdmWatchWired = '1';
+      watchBtn.addEventListener('click', async () => {
+        if (!watchPlayerId || watchBusy) return;
+        if (getWatchListAuth() === 'signed-out') { requestSignIn(); return; }
+        watchBusy = true;
+        watchBtn.classList.add('pdm-watch--busy');
+        const res = await toggleWatch(watchPlayerId);
+        watchBusy = false;
+        watchBtn.classList.remove('pdm-watch--busy');
+        if (!res.ok) {
+          if (res.signedOut) { paintWatch(); requestSignIn(); return; }
+          announce(res.error || 'Could not update your watch list.');
+          watchBtn.classList.add('pdm-watch--error');
+          setTimeout(() => watchBtn.classList.remove('pdm-watch--error'), 1500);
+        }
+        paintWatch();
+      });
+      onWatchListChange(() => paintWatch());
+    }
+    renderWatchStrip = (playerId: unknown) => {
+      watchPlayerId = playerId != null && playerId !== '' ? String(playerId) : null;
+      if (!watchBtn) return;
+      if (!watchPlayerId) { watchBtn.hidden = true; return; }
+      paintWatch();
+      // Ask the server once per page session; the paint above used the cache.
+      void loadWatchList().then(paintWatch);
     };
 
     if (closeBtn) closeBtn.addEventListener('click', closeModal);
@@ -1172,6 +1303,9 @@ const t = (value?: string) => value ?? '\u2014';
           if (ownerCrest) ownerCrest.removeAttribute('src');
         }
       }
+
+      // ── Watch list strip ──
+      renderWatchStrip(playerData.id);
 
       // ── Hero: Name ──
 

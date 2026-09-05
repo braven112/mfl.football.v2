@@ -1,0 +1,485 @@
+---
+/**
+ * PlayerActionModal — the shared per-player action sheet.
+ *
+ * The roster pages each have a player action modal of their own (TheLeague's
+ * ContractDeclarationModal, the AFL's AFLActionModal). This is the same
+ * affordance for every OTHER surface — free agents, custom rankings, and
+ * anything that follows — built once so the next action (watch today, more
+ * later) lands everywhere in one edit.
+ *
+ * It renders whatever `payload.actions()` returns (src/utils/player-actions.ts)
+ * and knows nothing about MFL or watch lists itself: each action carries its
+ * own `run()`, and the list is re-rendered from `actions()` after a run so a
+ * toggle reads its new state without the caller doing anything.
+ *
+ * Header is the composite `.pmb` band shared with PlayerDetailsModal, so the
+ * two sheets read as siblings when opened for the same player.
+ *
+ * Signed-out visitors see the same options; an action marked `signIn` closes
+ * this sheet and opens the sign-in dialog (`requestSignIn` — SignInModal when
+ * the page mounts it, the league login page otherwise).
+ *
+ * Open via `openPlayerActionModal(payload)` from src/utils/player-actions.ts,
+ * or `window.openPlayerActionModal`. Close via the X, the overlay, or Escape.
+ */
+import '../../styles/player-modal-band.css';
+
+interface Props {
+  /** Section eyebrow above the option list. */
+  title?: string;
+}
+const { title = 'Player actions' } = Astro.props;
+---
+
+<div class="pam" id="player-action-modal" role="dialog" aria-modal="true" aria-labelledby="pam-name" hidden>
+  <div class="pam__overlay" data-pam-close></div>
+  <div class="pam__content">
+    <button class="pam-close" type="button" data-pam-close aria-label="Close (ESC)" title="Close (ESC)">
+      <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true">
+        <path d="M14 4L4 14M4 4l10 10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+      </svg>
+    </button>
+
+    <div class="pam-band pmb" id="pam-band">
+      <span class="pmb__ghost" aria-hidden="true"></span>
+      <div class="pmb__glow" aria-hidden="true"></div>
+      <img class="pmb__crest" alt="" aria-hidden="true" loading="lazy" decoding="async" style="display:none" />
+      <img class="pmb__cutout" alt="" aria-hidden="true" loading="eager" decoding="async" />
+      <div class="pam-band__info">
+        <h3 class="pam-band__name" id="pam-name">&mdash;</h3>
+        <div class="pam-band__meta">
+          <img class="pam-band__team-logo" id="pam-team-logo" src="" alt="" />
+          <span class="pam-band__meta-text" id="pam-meta">&mdash;</span>
+        </div>
+        <div class="pam-band__sub" id="pam-sub" hidden></div>
+      </div>
+    </div>
+
+    <div class="pam-body">
+      <h4 class="pam-section__title" id="pam-title">{title}</h4>
+      <ul class="pam-actions" id="pam-actions" role="list"></ul>
+      <div class="pam-note" id="pam-note" role="alert" hidden></div>
+    </div>
+  </div>
+</div>
+
+<script>
+  import { applyPlayerModalBand } from '../../utils/player-modal-band';
+  import { NFL_TEAM_CITIES, normalizeTeamCode } from '../../utils/nfl';
+  import { requestSignIn, type PlayerActionPayload, type PlayerActionSpec } from '../../utils/player-actions';
+
+  const SPRITE = '/assets/icons/sprite.svg#';
+
+  let modal: HTMLElement | null = null;
+  let payload: PlayerActionPayload | null = null;
+  let documentListenersBound = false;
+  let rerenderTimer: ReturnType<typeof setTimeout> | null = null;
+
+  const $ = (id: string) => modal?.querySelector<HTMLElement>(`#${id}`) ?? null;
+
+  function closeModal() {
+    if (!modal || modal.hidden) return;
+    modal.hidden = true;
+    modal.classList.remove('is-open');
+    document.body.style.overflow = '';
+    if (rerenderTimer) { clearTimeout(rerenderTimer); rerenderTimer = null; }
+  }
+
+  function setNote(text: string | null, kind: 'error' | 'success' = 'error') {
+    const note = $('pam-note');
+    if (!note) return;
+    note.classList.toggle('pam-note--error', kind === 'error');
+    note.classList.toggle('pam-note--success', kind === 'success');
+    note.textContent = text ?? '';
+    note.hidden = !text;
+  }
+
+  function makeOption(spec: PlayerActionSpec): HTMLLIElement {
+    const li = document.createElement('li');
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = `pam-action pam-action--${spec.kind ?? 'default'}`;
+    btn.dataset.pamAction = spec.id;
+    if (spec.disabled) {
+      btn.classList.add('pam-action--disabled');
+      btn.setAttribute('aria-disabled', 'true');
+    }
+
+    const icon = document.createElement('span');
+    icon.className = 'pam-action__icon';
+    icon.setAttribute('aria-hidden', 'true');
+    icon.innerHTML = `<svg aria-hidden="true"><use href="${SPRITE}${spec.icon}"></use></svg>`;
+
+    const body = document.createElement('span');
+    body.className = 'pam-action__body';
+    const label = document.createElement('span');
+    label.className = 'pam-action__label';
+    label.textContent = spec.label;
+    body.appendChild(label);
+    if (spec.desc) {
+      const desc = document.createElement('span');
+      desc.className = 'pam-action__desc';
+      desc.textContent = spec.desc;
+      body.appendChild(desc);
+    }
+
+    btn.append(icon, body);
+    btn.addEventListener('click', () => { void handleAction(spec, btn); });
+    li.appendChild(btn);
+    return li;
+  }
+
+  function renderActions() {
+    const list = $('pam-actions');
+    if (!list || !payload) return;
+    list.replaceChildren(...payload.actions().map(makeOption));
+  }
+
+  async function handleAction(spec: PlayerActionSpec, btn: HTMLButtonElement) {
+    if (spec.disabled) return;
+    if (spec.signIn) {
+      closeModal();
+      requestSignIn();
+      return;
+    }
+    if (spec.href) {
+      window.location.href = spec.href;
+      return;
+    }
+    if (!spec.run) return;
+
+    setNote(null);
+    const list = $('pam-actions');
+    list?.querySelectorAll<HTMLButtonElement>('.pam-action').forEach((b) => { b.disabled = true; });
+    btn.classList.add('pam-action--working');
+    const label = btn.querySelector<HTMLElement>('.pam-action__label');
+    const original = label?.textContent ?? '';
+    if (label) label.textContent = 'Working…';
+
+    let result;
+    try {
+      result = await spec.run();
+    } catch (err) {
+      result = { ok: false, error: (err as Error).message || 'Something went wrong.' };
+    }
+
+    if (result.ok) {
+      btn.classList.remove('pam-action--working');
+      btn.classList.add('pam-action--success');
+      if (label) label.textContent = result.message ?? 'Done';
+      if (result.close) {
+        rerenderTimer = setTimeout(closeModal, 900);
+      } else {
+        // Let the success state land, then show the option in its new state.
+        rerenderTimer = setTimeout(() => { rerenderTimer = null; renderActions(); }, 900);
+      }
+      return;
+    }
+
+    if (label) label.textContent = original;
+    btn.classList.remove('pam-action--working');
+    list?.querySelectorAll<HTMLButtonElement>('.pam-action').forEach((b) => { b.disabled = false; });
+    if (result.signedOut) {
+      // The store now knows the viewer is signed out; a re-render turns the
+      // option into the sign-in trigger.
+      renderActions();
+    }
+    setNote(result.error ?? 'Something went wrong.', 'error');
+    btn.focus();
+  }
+
+  function openModal(next: PlayerActionPayload) {
+    if (!modal) return;
+    payload = next;
+    const p = next.player;
+
+    const name = $('pam-name');
+    if (name) name.textContent = p.name;
+
+    const code = p.nflTeam ? normalizeTeamCode(p.nflTeam) : '';
+    const known = code && NFL_TEAM_CITIES[code] ? code : '';
+    const logo = $('pam-team-logo') as HTMLImageElement | null;
+    if (logo) {
+      logo.src = known ? `/assets/nfl-logos/${known}.svg` : '/assets/nfl-logos/NFL.svg';
+      logo.alt = known ? NFL_TEAM_CITIES[known] : 'Free Agent';
+    }
+    const meta = $('pam-meta');
+    if (meta) {
+      meta.textContent = [known ? NFL_TEAM_CITIES[known] : 'Free Agent', p.position || '']
+        .filter(Boolean)
+        .join(' · ');
+    }
+    const sub = $('pam-sub');
+    if (sub) {
+      sub.textContent = p.subText ?? '';
+      sub.hidden = !p.subText;
+    }
+    const title = $('pam-title');
+    if (title && next.title) title.textContent = next.title;
+
+    applyPlayerModalBand($('pam-band'), {
+      name: p.name,
+      position: p.position,
+      nflTeam: p.nflTeam,
+      espnId: p.espnId,
+      headshot: p.headshot,
+      franchiseId: p.franchiseId,
+    });
+
+    setNote(null);
+    renderActions();
+    modal.hidden = false;
+    modal.classList.add('is-open');
+    document.body.style.overflow = 'hidden';
+    ($('pam-actions')?.querySelector('.pam-action') as HTMLElement | null)?.focus();
+  }
+
+  function init() {
+    modal = document.getElementById('player-action-modal');
+    if (!modal) return;
+    if (!modal.dataset.pamWired) {
+      modal.dataset.pamWired = '1';
+      modal.querySelectorAll('[data-pam-close]').forEach((el) => {
+        el.addEventListener('click', closeModal);
+      });
+    }
+    if (!documentListenersBound) {
+      documentListenersBound = true;
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && modal && !modal.hidden) closeModal();
+      });
+    }
+    (window as any).openPlayerActionModal = openModal;
+  }
+
+  document.addEventListener('astro:page-load', init);
+</script>
+
+<style is:global>
+  /* Options are built by script, so everything below is global on purpose. */
+  .pam {
+    position: fixed;
+    inset: 0;
+    z-index: 1100;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+  }
+  .pam[hidden] { display: none; }
+
+  .pam__overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.5);
+    backdrop-filter: blur(2px);
+    cursor: pointer;
+  }
+  html.dark .pam__overlay { background: rgba(0, 0, 0, 0.6); }
+
+  .pam__content {
+    position: relative;
+    width: 100%;
+    max-width: 460px;
+    max-height: 90vh;
+    overflow: hidden auto;
+    background: var(--card-bg, #fff);
+    border-radius: 0.75rem;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.4);
+    animation: pam-pop 140ms ease-out;
+  }
+  html.dark .pam__content {
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.6), 0 0 0 1px var(--content-border, #2e4560);
+  }
+  @keyframes pam-pop {
+    from { opacity: 0; transform: translateY(8px) scale(0.98); }
+    to   { opacity: 1; transform: translateY(0) scale(1); }
+  }
+
+  .pam-close {
+    position: absolute;
+    top: 0.875rem;
+    right: 0.875rem;
+    width: 32px;
+    height: 32px;
+    border: 0;
+    background: rgba(6, 9, 13, 0.45);
+    border-radius: 50%;
+    color: #fff;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 3;
+    transition: background-color 0.15s ease;
+  }
+  .pam-close:hover { background: rgba(6, 9, 13, 0.7); }
+
+  /* Band — mirrors PlayerDetailsModal's .pdm-hero so the two read as siblings. */
+  .pam-band {
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
+    min-height: 108px;
+    padding: 1.1rem 1.5rem 1rem 1.5rem;
+    border-radius: 0.75rem 0.75rem 0 0;
+  }
+  .pam-band__info {
+    position: relative;
+    z-index: 2;
+    flex: 1;
+    min-width: 0;
+    padding-right: clamp(88px, 30%, 170px);
+  }
+  .pam-band.pmb--no-cutout .pam-band__info { padding-right: 2.25rem; }
+  .pam-band__name {
+    font-size: 1.35rem;
+    font-weight: 700;
+    color: #fff;
+    margin: 0 0 0.375rem;
+    line-height: 1.2;
+    text-shadow: 0 1px 8px rgba(0, 0, 0, 0.35);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .pam-band__meta {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    margin-bottom: 0.25rem;
+  }
+  .pam-band__team-logo {
+    width: 20px;
+    height: 20px;
+    object-fit: contain;
+    flex-shrink: 0;
+    filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.4));
+  }
+  .pam-band__meta-text {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: rgba(255, 255, 255, 0.85);
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .pam-band__sub {
+    font-size: 0.8125rem;
+    color: rgba(255, 255, 255, 0.62);
+    line-height: 1.4;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .pam-band__sub[hidden] { display: none; }
+
+  .pam-body { padding: 1rem 1.25rem 1.25rem; }
+
+  .pam-section__title {
+    margin: 0 0 0.625rem;
+    padding-left: 0.625rem;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.075em;
+    text-transform: uppercase;
+    color: var(--color-gray-500, #6b7280);
+    border-left: 3px solid var(--league-accent, var(--color-primary, #1c497c));
+    line-height: 1.4;
+  }
+
+  .pam-actions {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 0.375rem;
+  }
+  .pam-action {
+    display: flex;
+    align-items: center;
+    gap: 0.875rem;
+    width: 100%;
+    padding: 0.75rem 0.875rem;
+    background: var(--card-bg, #fff);
+    border: 1px solid var(--color-gray-200, #e5e7eb);
+    border-radius: 0.5rem;
+    color: var(--color-gray-900, #111827);
+    text-align: left;
+    cursor: pointer;
+    transition: background-color 120ms ease, border-color 120ms ease;
+  }
+  .pam-action:hover:not(:disabled):not(.pam-action--disabled) {
+    background: var(--color-gray-50, #f9fafb);
+    border-color: var(--league-accent, var(--color-primary, #1c497c));
+  }
+  .pam-action:focus-visible {
+    outline: 2px solid var(--league-accent, var(--color-primary, #1c497c));
+    outline-offset: 1px;
+  }
+  .pam-action:disabled { cursor: progress; }
+  .pam-action--disabled { opacity: 0.6; cursor: not-allowed; }
+  html.dark .pam-action {
+    background: var(--color-surface-3, #2a2a2a);
+    border-color: var(--content-border, #2e4560);
+  }
+  html.dark .pam-action:hover:not(:disabled):not(.pam-action--disabled) {
+    background: color-mix(in srgb, var(--league-accent, #ef5350) 14%, var(--color-surface-3, #2a2a2a));
+    border-color: var(--league-accent, #ef5350);
+  }
+
+  .pam-action__icon {
+    flex-shrink: 0;
+    width: 36px;
+    height: 36px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--color-gray-100, #f3f4f6);
+    border-radius: 0.5rem;
+    color: var(--color-gray-600, #4b5563);
+  }
+  .pam-action__icon svg { width: 18px; height: 18px; fill: currentColor; }
+  .pam-action--active .pam-action__icon {
+    background: color-mix(in srgb, var(--league-accent, var(--color-primary, #1c497c)) 16%, transparent);
+    color: var(--league-accent, var(--color-primary, #1c497c));
+  }
+  .pam-action--destructive .pam-action__icon {
+    background: var(--color-error-light, #fee2e2);
+    color: var(--color-error-dark, #991b1b);
+  }
+  .pam-action--success {
+    border-color: var(--color-success, #10b981);
+  }
+  .pam-action--success .pam-action__icon {
+    background: color-mix(in srgb, var(--color-success, #10b981) 18%, transparent);
+    color: var(--color-success-dark, #065f46);
+  }
+  .pam-action--working .pam-action__label { color: var(--color-gray-500, #6b7280); }
+
+  .pam-action__body { display: grid; gap: 0.125rem; min-width: 0; }
+  .pam-action__label { font-size: 0.9375rem; font-weight: 600; }
+  .pam-action__desc { font-size: 0.75rem; color: var(--color-gray-500, #6b7280); }
+
+  .pam-note {
+    margin-top: 0.75rem;
+    padding: 0.625rem 0.75rem;
+    border-radius: 0.375rem;
+    font-size: 0.8125rem;
+  }
+  .pam-note[hidden] { display: none; }
+  .pam-note--error { background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; }
+  .pam-note--success { background: #ecfdf5; color: #065f46; border: 1px solid #a7f3d0; }
+  html.dark .pam-note--error {
+    background: color-mix(in srgb, var(--color-error, #f87171) 22%, var(--content-bg-muted, #181818));
+    border-color: color-mix(in srgb, var(--color-error, #f87171) 40%, transparent);
+    color: var(--color-error-dark, #fca5a5);
+  }
+  html.dark .pam-note--success {
+    background: color-mix(in srgb, var(--color-success, #34d399) 22%, var(--content-bg-muted, #181818));
+    border-color: color-mix(in srgb, var(--color-success, #34d399) 40%, transparent);
+    color: var(--color-success-dark, #6ee7b7);
+  }
+</style>
