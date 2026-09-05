@@ -245,8 +245,9 @@
 .st-box__code { font-family: var(--font-display); font-weight: var(--font-weight-bold); font-size: 1.25rem; color: var(--page-text); }
 .st-box__at { color: var(--content-text-muted); font-size: 0.8rem; }
 .st-box__meta { display: flex; flex-wrap: wrap; align-items: center; gap: 0.35rem 0.6rem; font-size: 0.72rem; min-height: 1.6rem; }
-.st-box__kick { display: inline-flex; gap: 0.4rem; color: var(--content-text-muted); font-variant-numeric: tabular-nums; }
-.st-box__kick-pt { opacity: 0.75; }
+.st-box__kick { display: inline-flex; flex-wrap: wrap; gap: 0.15rem 0.5rem; color: var(--content-text-muted); font-variant-numeric: tabular-nums; }
+.st-box__kick-zone--alt { opacity: 0.75; }
+.st-box__kick-day { font-weight: var(--font-weight-bold); }
 /* The channel: its mark, or its name when the channel has no mark on disk.
    Marks sit on the card like the team crests do; in dark mode the ones that
    need it swap to white artwork or take the crest ring (tv-logo-dark-css.ts). */

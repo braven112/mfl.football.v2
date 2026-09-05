@@ -58,7 +58,17 @@
         "logo": "youtube-tv-black.png",
         "logoDark": "youtube-tv.png",
         "note": "NFL Sunday Ticket on YouTube TV — every out-of-market Sunday afternoon game, plus RedZone."
-      }
+      },
+      "timeZones": [
+        {
+          "zone": "America/New_York",
+          "label": "ET"
+        },
+        {
+          "zone": "America/Los_Angeles",
+          "label": "PT"
+        }
+      ]
     },
     "CA": {
       "name": "Canada",
@@ -107,7 +117,17 @@
         "logo": "dazn-ca-black.png",
         "logoDark": "dazn-ca.png",
         "note": "DAZN carries every game in Canada, RedZone included; CTV has Sunday night, TSN the ESPN/ABC games."
-      }
+      },
+      "timeZones": [
+        {
+          "zone": "America/Toronto",
+          "label": "ET"
+        },
+        {
+          "zone": "America/Vancouver",
+          "label": "PT"
+        }
+      ]
     },
     "AU": {
       "name": "Australia",
@@ -154,7 +174,19 @@
         "name": "Kayo Sports",
         "logo": "kayo-sports.png",
         "note": "Kayo carries every game via ESPN, RedZone included; 7mate has a free-to-air Sunday game."
-      }
+      },
+      "timeZones": [
+        {
+          "zone": "Australia/Sydney",
+          "label": "auto",
+          "locale": "en-AU"
+        },
+        {
+          "zone": "Australia/Perth",
+          "label": "auto",
+          "locale": "en-AU"
+        }
+      ]
     }
   },
   "notes": {

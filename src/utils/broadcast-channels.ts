@@ -40,6 +40,15 @@ export interface ChannelInfo {
   subscription?: string;
 }
 
+/** A clock a viewer reads kickoffs in — see `formatKickoffZones` in the slate module. */
+export interface KickoffZone {
+  zone: string;
+  /** Fixed label (the site's ET / PT convention) or 'auto' for Intl's short name (AEST / AEDT). */
+  label: string;
+  /** Locale for the auto label; en-AU spells the Australian zones, en-US would say GMT+10. */
+  locale?: string;
+}
+
 export interface SundayTicketProvider {
   name: string;
   logo: string | null;
@@ -128,6 +137,13 @@ export function sundayTicketProvider(country: CountryCode): SundayTicketProvider
     logoDark: p.logoDark ? `${LOGO_BASE}${p.logoDark}` : null,
     note: p.note ?? '',
   };
+}
+
+/** The two clocks this country's owners read kickoffs in; ET/PT when the mapping names none. */
+export function countryTimeZones(country: CountryCode): KickoffZone[] {
+  const zones = countries[country]?.timeZones;
+  if (Array.isArray(zones) && zones.length > 0) return zones.map((z: any) => ({ zone: z.zone, label: z.label ?? 'auto', ...(z.locale ? { locale: z.locale } : {}) }));
+  return countries.US?.timeZones ?? [{ zone: 'America/New_York', label: 'ET' }, { zone: 'America/Los_Angeles', label: 'PT' }];
 }
 
 export const REDZONE_LOGO = `${LOGO_BASE}nfl-red-zone.png`;

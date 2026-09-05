@@ -39,6 +39,12 @@ Status: BUILT 2026-09-04 on branch `claude/sunday-ticket-matchup-preview-3025b7`
   into `buildAllTeamIconDarkCss()` so the layout and Storybook agree). The
   RedZone box uses the RedZone logo, and each window header carries the
   country's Sunday Ticket carrier (YouTube TV, DAZN, Kayo).
+- **The country picks the CLOCKS too** (`timeZones` in the mapping file):
+  ET/PT at home and in Canada, AEST/AEDT + AWST in Australia — where a Sunday
+  1pm ET kickoff is Monday 3am and the box, the window header and the jump
+  link all say Monday (`formatKickoffZones`; the label comes from Intl under
+  en-AU so the DST flip shows; the time is assembled from parts because
+  ICU 72+ puts a narrow no-break space before AM/PM).
 - **Cookie writes live in the ROUTES, not the component.** `Astro.cookies.set()`
   from an imported component throws `ResponseSentError` and blanks the page —
   the first country click shipped exactly that. `rememberSundayTicketChoices`

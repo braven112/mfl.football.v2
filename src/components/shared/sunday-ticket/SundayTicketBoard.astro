@@ -8,14 +8,14 @@
  * the choice to a cookie), the window "tabs" are jump links. The repo's rule:
  * a control whose only job is switching a URL param is an `<a href>`.
  */
-import { formatKickoff, type SundayTicketSlate } from '../../../utils/sunday-ticket-slate';
+import { formatKickoffZones, type SundayTicketSlate } from '../../../utils/sunday-ticket-slate';
 import {
   countryHref,
   leagueSelectionHref,
   toggleLeagueSelection,
   type BoardLeague,
 } from '../../../utils/sunday-ticket-selection';
-import { countryOptions, resolveChannel, type CountryCode } from '../../../utils/broadcast-channels';
+import { countryOptions, countryTimeZones, resolveChannel, type CountryCode } from '../../../utils/broadcast-channels';
 import SundayTicketWindow from './SundayTicketWindow.astro';
 
 export interface Props {
@@ -35,6 +35,8 @@ export interface Props {
 
 const { slate, week, leagues, enabled, pathname, weekParam, country = 'US' } = Astro.props;
 const countries = countryOptions();
+const zones = countryTimeZones(country);
+const clockOf = (epoch: number) => formatKickoffZones(epoch, zones);
 
 const allIds = leagues.map((l) => l.id);
 const enabledIds = enabled ?? allIds;
@@ -91,7 +93,9 @@ const logo = (code: string) => `/assets/nfl-logos/${code}.svg`;
       {slate.windows.map((w) => (
         <a class="st-jump__link" href={`#st-${w.window}`}>
           {w.window === 'early' ? 'Early' : 'Late'}
-          <span class="st-jump__time">{w.window === 'early' ? '1:00 PM ET' : '4:25 PM ET'}</span>
+          {w.kickoff > 0 && (() => { const c = clockOf(w.kickoff)[0]; return c && (
+            <span class="st-jump__time">{c.dayDiffers ? `${c.day} ` : ''}{c.time} {c.label}</span>
+          ); })()}
         </a>
       ))}
     </nav>
@@ -109,11 +113,11 @@ const logo = (code: string) => `/assets/nfl-logos/${code}.svg`;
       </header>
       <ul class="st-other__list">
         {slate.other.map((b) => {
-          const k = formatKickoff(b.game.kickoff);
+          const k = clockOf(b.game.kickoff);
           const ch = resolveChannel(b.game.broadcast, country);
           return (
             <li class="st-other__game">
-              <span class="st-other__day">{k.day}</span>
+              <span class="st-other__day">{k[0]?.day}</span>
               <span class="st-other__teams">
                 <img class="st-other__logo" src={logo(b.game.away)} alt="" width="20" height="20" loading="lazy" />
                 {b.game.away}
@@ -121,7 +125,7 @@ const logo = (code: string) => `/assets/nfl-logos/${code}.svg`;
                 <img class="st-other__logo" src={logo(b.game.home)} alt="" width="20" height="20" loading="lazy" />
                 {b.game.home}
               </span>
-              <span class="st-other__time">{k.et} ET · {k.pt} PT</span>
+              <span class="st-other__time">{k.map((c) => `${c.time} ${c.label}`).join(' · ')}</span>
               {ch && (ch.logo
                 ? <span class="st-net st-net--mark" title={ch.name}><img class="st-net__logo" src={ch.logo} alt={ch.name} loading="lazy" /></span>
                 : <span class="st-net" title={ch.name}>{ch.name}</span>)}

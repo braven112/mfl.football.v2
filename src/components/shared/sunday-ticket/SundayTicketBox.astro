@@ -11,8 +11,8 @@
  * `/assets/tv-logos/` when one exists, its name when not.
  */
 import type { SlateBox } from '../../../utils/sunday-ticket-slate';
-import { formatKickoff } from '../../../utils/sunday-ticket-slate';
-import { REDZONE_LOGO, resolveChannel, type CountryCode } from '../../../utils/broadcast-channels';
+import { formatKickoffZones } from '../../../utils/sunday-ticket-slate';
+import { REDZONE_LOGO, countryTimeZones, resolveChannel, type CountryCode } from '../../../utils/broadcast-channels';
 
 export interface Props {
   box: SlateBox;
@@ -32,7 +32,10 @@ const { box, slot, country = 'US', multiLeague = false, personalized = false } =
 const MAX_PLAYERS_LEAGUE_WIDE = 5;
 
 const logo = (code: string) => `/assets/nfl-logos/${code}.svg`;
-const kickoff = box.kind === 'game' ? formatKickoff(box.game.kickoff) : null;
+// The kickoff in the viewer's own clocks — ET/PT at home, AEST/AWST in
+// Australia, where a Sunday 1pm ET game is Monday morning and says so.
+const clocks = box.kind === 'game' ? formatKickoffZones(box.game.kickoff, countryTimeZones(country)) : [];
+const kickoff = clocks[0] ?? null;
 const channel = box.kind === 'game' ? resolveChannel(box.game.broadcast, country) : null;
 const channelTitle = channel
   ? [channel.name, channel.note, channel.subscription].filter(Boolean).join(' · ')
@@ -51,7 +54,7 @@ const countNoun = (n: number, resolved: boolean) => `${n} ${resolved ? 'starter'
 ) : (
   <article
     class="st-box"
-    aria-label={`Box ${slot}: ${box.game.away} at ${box.game.home}${kickoff ? `, ${kickoff.day} ${kickoff.et} ET` : ''}${channel ? `, on ${channel.name}` : ''}`}
+    aria-label={`Box ${slot}: ${box.game.away} at ${box.game.home}${kickoff ? `, ${kickoff.day} ${kickoff.time} ${kickoff.label}` : ''}${channel ? `, on ${channel.name}` : ''}`}
   >
     <span class="st-box__rank" aria-hidden="true">#{slot}</span>
     <header class="st-box__head">
@@ -67,10 +70,13 @@ const countNoun = (n: number, resolved: boolean) => `${n} ${resolved ? 'starter'
         </span>
       </div>
       <div class="st-box__meta">
-        {kickoff && (
+        {clocks.length > 0 && (
           <span class="st-box__kick">
-            <span class="st-box__kick-et">{kickoff.et} ET</span>
-            <span class="st-box__kick-pt">{kickoff.pt} PT</span>
+            {clocks.map((c, i) => (
+              <span class:list={['st-box__kick-zone', i > 0 && 'st-box__kick-zone--alt']}>
+                {c.dayDiffers && <span class="st-box__kick-day">{c.day} </span>}{c.time} {c.label}
+              </span>
+            ))}
           </span>
         )}
         {channel && (

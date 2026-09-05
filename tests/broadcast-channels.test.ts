@@ -107,3 +107,15 @@ describe('sundayTicketProvider', () => {
     for (const code of COUNTRY_CODES) expect(sundayTicketProvider(code)?.note.length).toBeGreaterThan(20);
   });
 });
+
+describe('countryTimeZones', () => {
+  it('reads ET/PT at home and the Australian clocks with auto labels', async () => {
+    const { countryTimeZones } = await import('../src/utils/broadcast-channels');
+    expect(countryTimeZones('US').map((z) => z.label)).toEqual(['ET', 'PT']);
+    expect(countryTimeZones('CA').map((z) => z.zone)).toEqual(['America/Toronto', 'America/Vancouver']);
+    expect(countryTimeZones('AU')).toEqual([
+      { zone: 'Australia/Sydney', label: 'auto', locale: 'en-AU' },
+      { zone: 'Australia/Perth', label: 'auto', locale: 'en-AU' },
+    ]);
+  });
+});

@@ -95,6 +95,8 @@ export type SlateBox = GameBox | RedZoneBox;
 export interface WindowSlate {
   window: SundayWindow;
   label: string;
+  /** Earliest kickoff scheduled in the window (epoch seconds) — what the header clocks show. */
+  kickoff: number;
   /** How many NFL games kick off in this window at all. */
   scheduled: number;
   boxes: SlateBox[];
@@ -299,6 +301,7 @@ export function buildSundayTicketSlate(input: BuildSlateInput): SundayTicketSlat
     windows.push({
       window,
       label: WINDOW_LABELS[window],
+      kickoff: Math.min(...all.map((b) => b.game.kickoff)),
       scheduled: all.length,
       boxes,
       overflow: relevant.slice(boxesPerWindow),
@@ -325,4 +328,47 @@ export function formatKickoff(kickoffEpoch: number): { day: string; et: string; 
     et: timeIn('America/New_York').format(d),
     pt: timeIn('America/Los_Angeles').format(d),
   };
+}
+
+// ── Kickoff in a viewer's own clocks ─────────────────────────────────────
+
+export interface KickoffZoneSpec {
+  zone: string;
+  /** Fixed label (ET / PT) or 'auto' for Intl's short zone name (AEST / AEDT / AWST). */
+  label: string;
+  locale?: string;
+}
+
+export interface KickoffInZone {
+  label: string;
+  time: string;
+  /** Short weekday in that zone — a Sunday 1pm ET kickoff is Monday morning in Sydney. */
+  day: string;
+  /** True when the zone's weekday differs from the game's own (Eastern) day — show it. */
+  dayDiffers: boolean;
+}
+
+/**
+ * One kickoff rendered in each of a country's clocks. Times are always
+ * en-US (uppercase AM/PM, the site's style); only the AUTO zone label takes
+ * the zone's own locale, because en-US spells Sydney as "GMT+10" and en-AU as
+ * "AEST"/"AEDT" — and the DST flip is exactly the information the label carries.
+ */
+export function formatKickoffZones(kickoffEpoch: number, zones: readonly KickoffZoneSpec[]): KickoffInZone[] {
+  const d = new Date(kickoffEpoch * 1000);
+  const etDay = new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', weekday: 'short' }).format(d);
+  return zones.map((z) => {
+    const parts = new Intl.DateTimeFormat('en-US', { timeZone: z.zone, weekday: 'short', hour: 'numeric', minute: '2-digit' }).formatToParts(d);
+    const part = (type: string) => parts.find((p) => p.type === type)?.value ?? '';
+    const day = part('weekday');
+    // Assembled from parts: ICU 72+ puts a NARROW no-break space before the
+    // day period, so joining literals would either keep U+202F or drop the gap.
+    const time = `${part('hour')}:${part('minute')} ${part('dayPeriod')}`.trim();
+    let label = z.label;
+    if (label === 'auto') {
+      const named = new Intl.DateTimeFormat(z.locale ?? 'en-US', { timeZone: z.zone, timeZoneName: 'short' }).formatToParts(d);
+      label = named.find((p) => p.type === 'timeZoneName')?.value ?? z.zone;
+    }
+    return { label, time, day, dayDiffers: day !== etDay };
+  });
 }

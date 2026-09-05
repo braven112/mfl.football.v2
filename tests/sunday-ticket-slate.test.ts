@@ -3,6 +3,7 @@ import {
   buildSlateGames,
   buildSundayTicketSlate,
   classifyKickoff,
+  formatKickoffZones,
   selectWeekMatchups,
   type GameBox,
   type LeagueContribution,
@@ -209,5 +210,35 @@ describe('buildSundayTicketSlate — ranking across leagues', () => {
     expect(group.players.map((p) => p.name)).toEqual(['High', 'Low']);
     expect(group.lineupResolved).toBe(false);
     expect(group.projTotal).toBe(16);
+  });
+});
+
+describe('formatKickoffZones — the viewer\'s own clocks', () => {
+  const sunSep20_1pmET = Math.floor(Date.UTC(2026, 8, 20, 17) / 1000);
+  const sunOct18_1pmET = Math.floor(Date.UTC(2026, 9, 18, 17) / 1000);
+
+  it('keeps the fixed ET/PT labels and the game day at home', () => {
+    expect(formatKickoffZones(sunSep20_1pmET, [{ zone: 'America/New_York', label: 'ET' }, { zone: 'America/Los_Angeles', label: 'PT' }])).toEqual([
+      { label: 'ET', time: '1:00 PM', day: 'Sun', dayDiffers: false },
+      { label: 'PT', time: '10:00 AM', day: 'Sun', dayDiffers: false },
+    ]);
+  });
+
+  it('is Monday morning in Australia, with the DST flip in the label', () => {
+    const au = [{ zone: 'Australia/Sydney', label: 'auto', locale: 'en-AU' }, { zone: 'Australia/Perth', label: 'auto', locale: 'en-AU' }];
+    expect(formatKickoffZones(sunSep20_1pmET, au)).toEqual([
+      { label: 'AEST', time: '3:00 AM', day: 'Mon', dayDiffers: true },
+      { label: 'AWST', time: '1:00 AM', day: 'Mon', dayDiffers: true },
+    ]);
+    expect(formatKickoffZones(sunOct18_1pmET, au)[0]).toEqual({ label: 'AEDT', time: '4:00 AM', day: 'Mon', dayDiffers: true });
+  });
+
+  it('records each window\'s earliest kickoff on the slate', () => {
+    const g = (id: string, kickoff: number) => ({ id, kickoff, away: id.split('@')[0], home: id.split('@')[1] });
+    const slate = buildSundayTicketSlate({
+      games: [g('KC@LAR', sunSep20_1pmET + 3 * 3600 + 20 * 60), g('SEA@SF', sunSep20_1pmET + 3 * 3600 + 5 * 60), g('NYJ@BUF', sunSep20_1pmET)],
+      contributions: [], personalized: false,
+    });
+    expect(slate.windows.map((w) => [w.window, w.kickoff])).toEqual([['early', sunSep20_1pmET], ['late', sunSep20_1pmET + 3 * 3600 + 5 * 60]]);
   });
 });

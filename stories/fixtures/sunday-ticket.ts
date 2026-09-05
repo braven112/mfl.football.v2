@@ -95,10 +95,10 @@ const miaLv = box(game('MIA', 'LV', KICK.late, 'FOX'), [
 ]);
 
 const early = (boxes: WindowSlate['boxes'], overflow: GameBox[] = [], scheduled = 8): WindowSlate => ({
-  window: 'early', label: WINDOW_LABELS.early, scheduled, boxes, overflow,
+  window: 'early', label: WINDOW_LABELS.early, kickoff: KICK.early, scheduled, boxes, overflow,
 });
 const late = (boxes: WindowSlate['boxes'], scheduled = 4): WindowSlate => ({
-  window: 'late', label: WINDOW_LABELS.late, scheduled, boxes, overflow: [],
+  window: 'late', label: WINDOW_LABELS.late, kickoff: KICK.late, scheduled, boxes, overflow: [],
 });
 
 /** Three leagues, both windows, four full boxes early and one game + RedZone late. */
