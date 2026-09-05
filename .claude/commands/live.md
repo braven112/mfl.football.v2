@@ -125,9 +125,7 @@ if you enumerated them.
   `afl-fantasy/players.astro`, both lineup pages, both draft predictors). A fix
   applied to one and not the other is a recurring bug class here, and it is
   **invisible in a diff that only touches one of them** — so this check cannot
-  be done from the diff alone. Run `node scripts/sibling-drift.mjs` for the
-  complete twin list (or launch the `sibling-drift-checker` agent, which runs
-  it and reads each UNCHANGED twin against the diff), then open the sibling.
+  be done from the diff alone. Open the sibling.
 - **Registries and declarations the change should have updated:**
   `src/data/page-directory.json` (10+ tags) for any new page,
   `src/data/whats-new.json` for user-facing work, `defaultRankingSources` and
