@@ -270,10 +270,7 @@ describe('hold-and-strike — publish loop classifies allowed vs held beats', ()
   });
 
   it('GroupMe send loop iterates over allowedPosts only', () => {
-    // The trailing [^)]* tolerates the second argument (the post object, passed
-    // so the push fan-out can mirror the beat) without loosening the invariant:
-    // the text still has to come from groupMeTextFor(allowedPosts[i]).
-    expect(SCANNER_SRC).toMatch(/for \(let i = 0; i < allowedPosts\.length; i\+\+\)\s*\{[\s\S]*?postToGroupMe\(groupMeTextFor\(allowedPosts\[i\]\)[^)]*\)/);
+    expect(SCANNER_SRC).toMatch(/for \(let i = 0; i < allowedPosts\.length; i\+\+\)\s*\{[\s\S]*?postToGroupMe\(groupMeTextFor\(allowedPosts\[i\]\)\)/);
   });
 
   it('tipster scorecard credit fires only for consumedBatch (allowed beats)', () => {
