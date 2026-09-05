@@ -37,6 +37,15 @@ cross-cutting, add a line here. Keep this file short.
 - **Guard tests are the real memory.** ~228 suites in `tests/` mechanically
   enforce most rules in this repo. When a rule below names a test, that test
   is what stops the regression — read it before working around it.
+- **Prefer the mechanical path.** Several procedures here are scripts, not
+  memory: `/guard-test` (turn a rule into a scan guard), `/ratchet`
+  (re-measure every baseline), `/rebase` (conflicts by class, correct
+  ours/theirs), `/new-page` and `/new-cron` (scaffolds with the rules baked
+  in), `/rollover-check` (render a page at both clock boundaries). Agents
+  `sibling-drift-checker`, `guard-gap-auditor`,
+  `clientrouter-lifecycle-auditor` and `mfl-fixture-recorder` each run a
+  script first and judge second. `docs/claude/insights/features/deterministic-tooling.md`
+  records why each exists.
 
 ## Read before you touch
 
@@ -136,8 +145,11 @@ Editing a GitHub variable is never easier than editing code here, and the
 indirection splits the source of truth across two places. To disable a
 scheduled job, comment out its `cron:` line. To gate behavior, use a `const`
 in the script itself. A few legacy vars predate this rule
-(`SCHEFTER_RUMOR_MILL_ENABLED`, `SCHEFTER_TRADE_OFFER_RUMORS_ENABLED`) — don't
-add more, and prefer moving them into code if you're already in the file.
+(`SCHEFTER_RUMOR_MILL_ENABLED`, `SCHEFTER_TRADE_OFFER_RUMORS_ENABLED`,
+`SCHEFTER_TRADE_OFFER_RUMORS_DETECTION_ONLY`) — don't add more, and prefer
+moving them into code if you're already in the file.
+Guard: `tests/workflow-feature-flag-guard.test.ts` pins those three to the
+two workflow files that carry them.
 
 ## Local env — `vercel env pull`, and worktrees don't inherit it
 
@@ -353,8 +365,12 @@ and report what you did.
    run `pnpm install` and commit the regenerated lock.
 3. **Auto-generated data files** — `src/data/theleague/schefter-feed.json`,
    `data/<league>/mfl-feeds/**`, `src/data/theleague/post-history.json`, any
-   `*-feed.json` or `*.lock` — prefer `--theirs` (incoming main). Cron writes
-   these; the branch's snapshot is stale by definition. Never merge row-by-row.
+   `*-feed.json` or `*.lock` — take MAIN's copy whole. Under a rebase that is
+   `git checkout --ours` (HEAD is main's tip; `--theirs` is YOUR commit being
+   replayed — the reverse of a merge). Cron writes these; the branch's
+   snapshot is stale by definition. Never merge row-by-row.
+   `node scripts/resolve-rebase-conflicts.mjs` does classes 2, 3 and 6 with
+   the right side; `/rebase` is the full procedure.
 4. **Source code (`scripts/`, `src/`, `tests/`)** — integrate the intent. New imports/helpers stack
    additively. If the same function body changed on both sides, keep main's
    structural change and re-apply the branch's behavioral change on top.
@@ -375,9 +391,24 @@ and `git push --force-with-lease` — never plain `--force`. `git rerere` is
 enabled (see `.git/config`); identical conflicts on re-rebase replay
 automatically. Do not turn it off.
 
-## Edit-time safety net
+## Edit-time safety net — `path-guard`
 
-`.claude/settings.json` runs `.claude/hooks/roger-reminder-test.sh` on every
-Write/Edit/MultiEdit to a Roger-related file, and blocks the tool call if the
-reminder-window suite fails. If you edit one of those files and don't see a
-test run, `node_modules` probably isn't installed — run `pnpm install`.
+`.claude/settings.json` runs `.claude/hooks/path-guard.mjs` on every
+Write/Edit/MultiEdit. It maps the edited path through
+`.claude/hooks/path-guard.json` (domain → file globs → guard suites → rules
+doc), runs that domain's guard suites, and fails the tool call with the vitest
+output if one breaks. The first edit in a domain per session also injects the
+governing rules doc and its trap line from the table above, so the router
+fires mechanically instead of from memory.
+
+- **Adding a rule?** Add its guard test to the domain's `tests` list (or a
+  new domain) — `tests/path-guard-map.test.ts` fails on a test or doc path
+  that does not exist, on a glob that matches nothing, and on any
+  `docs/claude/rules/*.md` no domain routes to. `/guard-test` writes the
+  test AND the map entry.
+- Keep a domain's suites fast (each set runs in 1–4 s today); a slow suite
+  belongs in CI, not on every edit.
+- The hook needs Node >= 22.5 on PATH (`path.matchesGlob`). If it cannot
+  run — wrong Node, a malformed map — it fails the edit with one line rather
+  than skipping silently; a missing `node_modules` is the one silent case
+  (run `pnpm install`).
