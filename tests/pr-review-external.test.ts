@@ -871,3 +871,58 @@ describe('partial coverage always names the file it lost', () => {
     expect((result.diff.match(/^ {2}- /gm) ?? []).length).toBeLessThanOrEqual(101);
   });
 });
+
+describe('capDiff metadata survives the trip to the renderer', () => {
+  const realFetch = globalThis.fetch;
+  afterEach(() => {
+    globalThis.fetch = realFetch;
+    vi.restoreAllMocks();
+  });
+
+  /**
+   * Round-trip guard. `capDiff` gaining a field is worthless if `runProvider`
+   * does not destructure it onto the result — the value exists, every direct
+   * unit test of the producer passes, and the renderer silently reads
+   * undefined. That shipped once here: `partialFile` was returned by capDiff,
+   * never forwarded, and the PR comment could not name the file it lost.
+   *
+   * So assert the fields on the object the RENDERER actually receives, not on
+   * capDiff's return value.
+   */
+  it('forwards truncation metadata onto the provider result', async () => {
+    globalThis.fetch = (async () => fakeResponse(200, geminiOk('NO FINDINGS'))) as never;
+    const { runProvider, MAX_DIFF_BYTES } = await import('../scripts/lib/pr-review-providers.mjs');
+
+    const oversized =
+      `diff --git a/huge.ts b/huge.ts\n--- a/huge.ts\n+++ b/huge.ts\n@@ -1 +1 @@\n+` +
+      'q'.repeat(MAX_DIFF_BYTES + 5_000);
+    const result = await runProvider('gemini', {
+      diff: oversized,
+      env: { GEMINI_API_KEY: 'k' },
+    });
+
+    expect(result.truncated).toBe(true);
+    expect(result.partialFile).toBe('huge.ts');
+    expect(result).toHaveProperty('omittedFiles');
+  });
+
+  it('forwards the omitted-file list onto the provider result', async () => {
+    globalThis.fetch = (async () => fakeResponse(200, geminiOk('NO FINDINGS'))) as never;
+    const { runProvider, MAX_DIFF_BYTES } = await import('../scripts/lib/pr-review-providers.mjs');
+
+    // Trailing newline matters: without it the next file's `diff --git` header
+    // lands on the same line and the whole thing parses as one file.
+    const file = (path: string) =>
+      `diff --git a/${path} b/${path}\n--- a/${path}\n+++ b/${path}\n@@ -1 +1 @@\n+` +
+      'x'.repeat(Math.ceil(MAX_DIFF_BYTES / 3)) +
+      '\n';
+    const result = await runProvider('gemini', {
+      diff: [file('a.ts'), file('b.ts'), file('c.ts'), file('d.ts')].join(''),
+      env: { GEMINI_API_KEY: 'k' },
+    });
+
+    expect(result.truncated).toBe(true);
+    expect(result.omittedFiles.length).toBeGreaterThan(0);
+    expect(result.partialFile).toBeNull();
+  });
+});

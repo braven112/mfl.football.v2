@@ -655,7 +655,7 @@ export async function runProvider(name, { diff, context = '', env = process.env 
 
   const model = env[`${name.toUpperCase()}_REVIEW_MODEL`] || provider.defaultModel;
   const lens = LENSES[name];
-  const { diff: capped, truncated, omittedFiles } = capDiff(diff);
+  const { diff: capped, truncated, omittedFiles, partialFile } = capDiff(diff);
 
   // Repo context goes only to lenses that need it. See the LENSES comment:
   // the cross-cutting lens is unanswerable without knowing the conventions,
@@ -727,6 +727,7 @@ export async function runProvider(name, { diff, context = '', env = process.env 
       model,
       truncated,
       omittedFiles,
+      partialFile,
       text: finalText,
       malformed,
       salvaged,
