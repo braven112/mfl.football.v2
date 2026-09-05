@@ -962,6 +962,20 @@ function Rollover({
   const [busy, setBusy] = useState(false);
   const [applied, setApplied] = useState<string | null>(null);
   /**
+   * How the last carry actually went, kept separate from the message text so
+   * the result can be STYLED as what it is. "0 balances carried" rendered in
+   * the success colour is how a run that moved no money reads as a good one.
+   */
+  const [outcome, setOutcome] = useState<'ok' | 'partial' | 'none' | null>(null);
+  /**
+   * Set once a carry has been submitted and not yet re-checked. The carry is
+   * idempotent server-side — a repeat plans those rows as `already-migrated`
+   * and writes nothing — but "safe to double-click" is not the same as
+   * "invites a double-click" on a button that moves fifteen balances, so the
+   * second press is taken off the table until the plan is refreshed.
+   */
+  const [submitted, setSubmitted] = useState(false);
+  /**
    * Whether the season being closed out still has prizes owed — step 2 of the
    * sequence. Checked against the OLD year's own ledger, because that is where
    * a season's prizes belong: paying them after the carry would strand them in
@@ -972,10 +986,25 @@ function Rollover({
 
   const query = `league=${encodeURIComponent(leagueSlug)}&from=${from}&to=${year}`;
 
-  const loadPlan = useCallback(async () => {
+  /**
+   * `keepApplied` is why the result of a carry is visible at all.
+   *
+   * apply() ends with `await loadPlan()` so the table reflects what landed —
+   * and loadPlan cleared `applied` unconditionally, wiping the message it had
+   * set a moment earlier. The commissioner saw the button return to normal and
+   * nothing else, after a run that had genuinely reported its outcome. Two
+   * live attempts were spent believing the request had silently died.
+   *
+   * A refresh the user asked for (Recheck) still clears it; a refresh apply()
+   * triggers on their behalf does not.
+   */
+  const loadPlan = useCallback(async (keepApplied = false) => {
     setBusy(true);
     setError(null);
-    setApplied(null);
+    if (!keepApplied) {
+      setApplied(null);
+      setOutcome(null);
+    }
     try {
       const response = await fetch(`${base}/migrate?${query}`);
       const data = await response.json();
@@ -1017,8 +1046,15 @@ function Rollover({
   }, [loadPlan, loadPayoutState]);
 
   const apply = async () => {
+    // Re-entry guard. `busy` already disables the button, but a double tap on
+    // a phone can fire twice before React re-renders, and this one submits
+    // every outstanding balance.
+    if (busy || submitted) return;
     setBusy(true);
+    setSubmitted(true);
     setError(null);
+    setApplied(null);
+    setOutcome(null);
     try {
       const response = await fetch(`${base}/migrate?${query}`, {
         method: 'POST',
@@ -1032,19 +1068,35 @@ function Rollover({
       // every layer except the ledger itself.
       const unverified = Number(data.unverifiedCount ?? 0);
       const failedCount = Number(data.failedCount ?? 0);
+      const written = Number(data.written ?? 0);
+
+      // A RUN THAT WROTE NOTHING IS NOT A SUCCESS MESSAGE WITH A ZERO IN IT.
+      // The old wording ended at "0 balances carried into 2026, confirmed
+      // against the ledger" — which reads as confirmation of a carry that
+      // never happened, and is what a commissioner saw after two live
+      // attempts that moved no money.
+      const ok = written > 0 && failedCount === 0 && unverified === 0 && data.verified !== false;
+      setOutcome(ok ? 'ok' : written > 0 ? 'partial' : 'none');
       setApplied(
-        unverified > 0
-          ? `${data.written} carried. ${unverified} were accepted by MFL but are NOT in the ${year} ledger — nothing was actually written for them. Sign in again as commissioner and re-run.`
-          : failedCount
-            ? `${data.written} carried, ${failedCount} failed. Re-run to retry only the failures.`
-            : data.verified === false
-              ? `${data.written} submitted, but the ${year} ledger could not be re-read to confirm them. Refresh before re-running.`
-              : `${data.written} balance${data.written === 1 ? '' : 's'} carried into ${year}, confirmed against the ledger.`
+        data.outcome === 'nothing-to-do'
+          ? (data.message ?? `Nothing to carry into ${year}.`)
+          : written === 0
+            ? `NOTHING WAS CARRIED. MFL refused all ${failedCount + unverified || 'the'} write(s) and the ${year} ledger is unchanged — re-check below before trying again.`
+            : unverified > 0
+              ? `${written} carried. ${unverified} were accepted by MFL but are NOT in the ${year} ledger — nothing was actually written for them. Re-run to retry those.`
+              : failedCount
+                ? `${written} carried, ${failedCount} failed. Re-run to retry only the failures.`
+                : data.verified === false
+                  ? `${written} submitted, but the ${year} ledger could not be re-read to confirm them. Refresh before re-running.`
+                  : `${written} balance${written === 1 ? '' : 's'} carried into ${year}, confirmed against the ledger.`
       );
       onWritten();
-      await loadPlan();
+      // keepApplied — this refresh is ours, not the user's, and it must not
+      // erase the result they have not read yet.
+      await loadPlan(true);
     } catch (err) {
       setError((err as Error).message);
+      setOutcome('none');
     } finally {
       setBusy(false);
     }
@@ -1090,7 +1142,14 @@ function Rollover({
       />
 
       {error && <p className="acct__error" role="alert">{error}</p>}
-      {applied && <p className="acct__ok" role="status">{applied}</p>}
+      {applied && (
+        <p
+          className={outcome === 'ok' ? 'acct__ok' : outcome === 'partial' ? 'acct__warn' : 'acct__error'}
+          role="status"
+        >
+          {applied}
+        </p>
+      )}
       {busy && !plan && <p className="acct__note">Reading both years&rsquo; ledgers…</p>}
 
       {plan && (
@@ -1175,21 +1234,49 @@ function Rollover({
             </p>
           )}
 
+          {/*
+            The result also belongs HERE, beside the button that caused it.
+            The banner at the top of this tab is below fifteen table rows on a
+            phone — a commissioner who taps Carry and watches the button is
+            looking at the one place the outcome was never shown.
+          */}
+          {applied && (
+            <p
+              className={outcome === 'ok' ? 'acct__ok' : outcome === 'partial' ? 'acct__warn' : 'acct__error'}
+              // Visual only. The copy at the top of the tab is the live region;
+              // announcing the same result twice is worse than announcing it
+              // once in the place a sighted user is not looking.
+              aria-hidden="true"
+            >
+              {applied}
+            </p>
+          )}
+
           <div className="acct__actions">
-            <button type="button" className="acct__btn" onClick={loadPlan} disabled={busy}>
+            <button
+              type="button"
+              className="acct__btn"
+              onClick={() => {
+                setSubmitted(false);
+                void loadPlan();
+              }}
+              disabled={busy}
+            >
               Recheck
             </button>
             <button
               type="button"
               className="acct__btn acct__btn--primary"
               onClick={apply}
-              disabled={busy || carryable.length === 0 || conflicts.length > 0}
+              disabled={busy || submitted || carryable.length === 0 || conflicts.length > 0}
             >
               {busy
                 ? 'Carrying…'
-                : carryable.length === 0
-                  ? 'Nothing to carry'
-                  : `Carry ${carryable.length} balance${carryable.length === 1 ? '' : 's'} into ${year}`}
+                : submitted
+                  ? 'Submitted — Recheck to run again'
+                  : carryable.length === 0
+                    ? 'Nothing to carry'
+                    : `Carry ${carryable.length} balance${carryable.length === 1 ? '' : 's'} into ${year}`}
             </button>
           </div>
         </>

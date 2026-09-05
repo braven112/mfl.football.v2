@@ -205,9 +205,24 @@ export const POST: APIRoute = async (context) => {
   }
 
   const carryable = plan.lines.filter((line: any) => line.status === 'payable');
+
+  // ONE LINE THAT SAYS WHAT THIS RUN DECIDED, before it decides it.
+  //
+  // Two live attempts returned 200 having written nothing, and the logs could
+  // not distinguish "planned zero rows" from "attempted fifteen and every one
+  // failed" — the writes go straight to the www## host with no redirect, so
+  // mflFetch logs nothing for them, and both paths return 200 with an empty
+  // verify. An hour went into inferring from timings what this line states.
+  console.log(
+    `[accounting/migrate] ${ctx.league.slug} ${from}→${to}: `
+      + `${plan.lines.length} line(s), ${carryable.length} payable, `
+      + `${conflicts.length} conflict(s) — ${carryable.length ? 'writing' : 'nothing to write'}`
+  );
+
   if (!carryable.length) {
     return json(
       {
+        outcome: 'nothing-to-do',
         written: 0,
         message: plan.lines.length
           ? `Every ${from} balance is already carried into ${to}. Nothing to do.`
@@ -253,8 +268,34 @@ export const POST: APIRoute = async (context) => {
   const written = claimed.length - check.unverified.length;
   const unverified = check.unverified;
 
+  // When the re-read FAILS, verifyWrites returns verified:false and lists no
+  // rows — so `written` is just "what MFL claimed", and saying "N in the
+  // ledger" would assert the one thing the failed read could not establish.
+  // That is the phantom-carry mistake in log form, during the incident it
+  // would be read in.
+  console.log(
+    `[accounting/migrate] ${ctx.league.slug} ${from}→${to}: attempted ${results.length}, `
+      + `MFL accepted ${claimed.length}, refused ${failed.length}; `
+      + (check.verified
+        ? `re-read confirmed ${written} in the ledger, ${unverified.length} claimed but absent`
+        : `re-read FAILED — ${claimed.length} claimed, NONE confirmed`)
+      + (failed.length ? ` | first refusal: ${failed[0]?.error ?? 'unknown'}` : '')
+  );
+
   return json(
     {
+      // Named so the client never has to infer success from a count. A run
+      // that writes nothing is not a success message with a zero in it — and
+      // a run whose re-read FAILED is not `carried` either. verifyWrites
+      // reports verified:false with no rows listed, so `written` there is only
+      // what MFL claimed; calling that carried is exactly the phantom the
+      // re-read exists to catch.
+      outcome:
+        written === 0
+          ? 'failed'
+          : check.verified === false || failed.length || unverified.length
+            ? 'partial'
+            : 'carried',
       from,
       to,
       written,
