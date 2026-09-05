@@ -1,0 +1,119 @@
+---
+/**
+ * SundayTicketBoard — the board itself: league chips, the two Sunday windows,
+ * and the national games outside them. Props-only; the page assembles the
+ * slate and the chip hrefs' inputs, this renders them.
+ *
+ * Zero client JS. The chips are links carrying `?leagues=` (the page writes
+ * the choice to a cookie), the window "tabs" are jump links. The repo's rule:
+ * a control whose only job is switching a URL param is an `<a href>`.
+ */
+import { formatKickoff, type SundayTicketSlate } from '../../../utils/sunday-ticket-slate';
+import {
+  leagueSelectionHref,
+  toggleLeagueSelection,
+  type BoardLeague,
+} from '../../../utils/sunday-ticket-selection';
+import SundayTicketWindow from './SundayTicketWindow.astro';
+
+export interface Props {
+  slate: SundayTicketSlate;
+  week: number;
+  /** Leagues on the board, in display order. Empty for the league-wide fallback. */
+  leagues: BoardLeague[];
+  /** Enabled league ids, or null for all. */
+  enabled: string[] | null;
+  /** Route path the chips link back to. */
+  pathname: string;
+  /** The `?week=` that was explicitly asked for, to carry through the chip links. */
+  weekParam: number | null;
+}
+
+const { slate, week, leagues, enabled, pathname, weekParam } = Astro.props;
+
+const allIds = leagues.map((l) => l.id);
+const enabledIds = enabled ?? allIds;
+const multiLeague = enabledIds.length > 1;
+const showChips = leagues.length > 1;
+const hasWindows = slate.windows.length > 0;
+const hasAnything = hasWindows || slate.other.length > 0;
+
+const logo = (code: string) => `/assets/nfl-logos/${code}.svg`;
+---
+
+<div class="st-board" data-personalized={slate.personalized ? 'true' : 'false'}>
+  {showChips && (
+    <nav class="st-chips" aria-label="Leagues on the board">
+      <span class="st-chips__label">Leagues</span>
+      {leagues.map((l) => {
+        const on = enabledIds.includes(l.id);
+        const next = toggleLeagueSelection(enabledIds, allIds, l.id);
+        return (
+          <a
+            class:list={['st-chip', on && 'st-chip--on', l.isSession && 'st-chip--session']}
+            aria-pressed={on ? 'true' : 'false'}
+            href={leagueSelectionHref(pathname, next, weekParam)}
+            title={l.franchiseName ? `${l.name} — ${l.franchiseName}` : l.name}
+          >
+            <span class="st-chip__dot" aria-hidden="true" />
+            {l.name}
+            {!l.registered && <span class="st-chip__ext" aria-label="outside league">↗</span>}
+          </a>
+        );
+      })}
+      {enabled !== null && (
+        <a class="st-chip st-chip--all" href={leagueSelectionHref(pathname, null, weekParam)}>All leagues</a>
+      )}
+    </nav>
+  )}
+
+  {slate.windows.length > 1 && (
+    <nav class="st-jump" aria-label="Sunday windows">
+      {slate.windows.map((w) => (
+        <a class="st-jump__link" href={`#st-${w.window}`}>
+          {w.window === 'early' ? 'Early' : 'Late'}
+          <span class="st-jump__time">{w.window === 'early' ? '1:00 PM ET' : '4:25 PM ET'}</span>
+        </a>
+      ))}
+    </nav>
+  )}
+
+  {slate.windows.map((w) => (
+    <SundayTicketWindow window={w} multiLeague={multiLeague} personalized={slate.personalized} />
+  ))}
+
+  {slate.other.length > 0 && (
+    <section class="st-other" aria-labelledby="st-other-title">
+      <header class="st-window__head">
+        <h3 class="st-window__title" id="st-other-title">Also this week</h3>
+        <span class="st-window__label">National broadcasts — not on Sunday Ticket</span>
+      </header>
+      <ul class="st-other__list">
+        {slate.other.map((b) => {
+          const k = formatKickoff(b.game.kickoff);
+          return (
+            <li class="st-other__game">
+              <span class="st-other__day">{k.day}</span>
+              <span class="st-other__teams">
+                <img class="st-other__logo" src={logo(b.game.away)} alt="" width="20" height="20" loading="lazy" />
+                {b.game.away}
+                <span class="st-box__at" aria-hidden="true">@</span>
+                <img class="st-other__logo" src={logo(b.game.home)} alt="" width="20" height="20" loading="lazy" />
+                {b.game.home}
+              </span>
+              <span class="st-other__time">{k.et} ET · {k.pt} PT</span>
+              {b.game.broadcast && <span class="st-box__net">{b.game.broadcast}</span>}
+              <span class="st-box__count">
+                {b.starterCount} {slate.personalized ? 'of yours' : 'proj'}{slate.personalized ? '' : ` ${b.projTotal.toFixed(1)}`}
+              </span>
+            </li>
+          );
+        })}
+      </ul>
+    </section>
+  )}
+
+  {!hasAnything && (
+    <p class="st-empty">No NFL games on the schedule for Week {week}. The board fills in once MFL publishes the slate.</p>
+  )}
+</div>

@@ -78,6 +78,7 @@ export const DESTINATIONS = {
   players: { path: '/players', label: 'the free agent board', leagues: BOTH },
   playoffs: { path: '/playoffs', label: 'the playoff bracket', leagues: BOTH },
   'live-scoring': { path: '/live-scoring', label: 'the live scoreboard', leagues: BOTH },
+  'sunday-ticket': { path: '/sunday-ticket', label: 'the Sunday Ticket board', leagues: BOTH },
   lineup: { path: '/lineup', label: 'your lineup', leagues: BOTH },
   'pecking-order': { path: '/pecking-order', label: 'the pecking order', leagues: BOTH },
   rivalries: { path: '/rivalries', label: 'the rivalry pages', leagues: BOTH },

@@ -1,0 +1,108 @@
+---
+/**
+ * SundayTicketBox — one of the four multiview boxes: a game with your players
+ * in it, or the RedZone box that fills an open slot.
+ *
+ * Props-only (no feeds, no auth, no clock) so it stories from a fixture. The
+ * NFL logos are the site's own `/assets/nfl-logos/<code>.svg`, swapped to the
+ * dark cut by `NflLogoDarkStyles` exactly as everywhere else.
+ */
+import type { SlateBox } from '../../../utils/sunday-ticket-slate';
+import { formatKickoff } from '../../../utils/sunday-ticket-slate';
+
+export interface Props {
+  box: SlateBox;
+  /** 1-based position on the grid — the multiview's own numbering. */
+  slot: number;
+  /** Show the league + franchise line above each player group. */
+  multiLeague?: boolean;
+  /** An owner's board (counts read "starters"); false for the league-wide fallback. */
+  personalized?: boolean;
+}
+
+const { box, slot, multiLeague = false, personalized = false } = Astro.props;
+
+/** The league-wide list is every projected player on both teams; cap it. */
+const MAX_PLAYERS_LEAGUE_WIDE = 5;
+
+const logo = (code: string) => `/assets/nfl-logos/${code}.svg`;
+const kickoff = box.kind === 'game' ? formatKickoff(box.game.kickoff) : null;
+const countNoun = (n: number, resolved: boolean) => `${n} ${resolved ? 'starter' : 'player'}${n === 1 ? '' : 's'}`;
+---
+
+{box.kind === 'redzone' ? (
+  <article class="st-box st-box--redzone" aria-label={`Box ${slot}: NFL RedZone`}>
+    <span class="st-box__slot" aria-hidden="true">{slot}</span>
+    <div class="st-box__rz">
+      <span class="st-box__rz-mark">NFL <strong>RedZone</strong></span>
+      <p class="st-box__rz-copy">Every touchdown, every game. Takes the open box.</p>
+    </div>
+  </article>
+) : (
+  <article
+    class="st-box"
+    aria-label={`Box ${slot}: ${box.game.away} at ${box.game.home}${kickoff ? `, ${kickoff.day} ${kickoff.et} ET` : ''}`}
+  >
+    <span class="st-box__slot" aria-hidden="true">{slot}</span>
+    <header class="st-box__head">
+      <div class="st-box__teams">
+        <span class="st-box__team">
+          <img class="st-box__logo" src={logo(box.game.away)} alt="" width="28" height="28" loading="lazy" />
+          <span class="st-box__code">{box.game.away}</span>
+        </span>
+        <span class="st-box__at" aria-hidden="true">@</span>
+        <span class="st-box__team">
+          <img class="st-box__logo" src={logo(box.game.home)} alt="" width="28" height="28" loading="lazy" />
+          <span class="st-box__code">{box.game.home}</span>
+        </span>
+      </div>
+      <div class="st-box__meta">
+        {kickoff && (
+          <span class="st-box__kick">
+            <span class="st-box__kick-et">{kickoff.et} ET</span>
+            <span class="st-box__kick-pt">{kickoff.pt} PT</span>
+          </span>
+        )}
+        {box.game.broadcast && <span class="st-box__net">{box.game.broadcast}</span>}
+        <span class="st-box__count">
+          {personalized
+            ? countNoun(box.starterCount, box.byLeague.every((g) => g.lineupResolved))
+            : `${box.projTotal.toFixed(1)} proj`}
+        </span>
+      </div>
+    </header>
+
+    <div class="st-box__body">
+      {box.byLeague.map((group) => {
+        const shown = personalized ? group.players : group.players.slice(0, MAX_PLAYERS_LEAGUE_WIDE);
+        const hidden = group.players.length - shown.length;
+        return (
+          <div class="st-box__league">
+            {multiLeague && (
+              <h4 class="st-box__league-name">
+                {group.leagueName}
+                {group.franchiseName && <span class="st-box__franchise"> · {group.franchiseName}</span>}
+                {!group.lineupResolved && personalized && <span class="st-box__unset"> · roster, no lineup yet</span>}
+              </h4>
+            )}
+            <ul class="st-box__players">
+              {shown.map((p) => (
+                <li class="st-box__player">
+                  {p.headshot ? (
+                    <img class="st-box__headshot" src={p.headshot} alt="" width="28" height="28" loading="lazy" />
+                  ) : (
+                    <span class="st-box__headshot st-box__headshot--blank" aria-hidden="true" />
+                  )}
+                  <span class="st-box__name">{p.name}</span>
+                  <span class="st-box__pos">{p.position}{p.nflTeam ? ` · ${p.nflTeam}` : ''}</span>
+                  <span class="st-box__proj">{p.proj > 0 ? p.proj.toFixed(1) : '—'}</span>
+                </li>
+              ))}
+              {hidden > 0 && <li class="st-box__more">+{hidden} more</li>}
+            </ul>
+          </div>
+        );
+      })}
+    </div>
+  </article>
+)}

@@ -311,3 +311,18 @@ export function buildSundayTicketSlate(input: BuildSlateInput): SundayTicketSlat
 
   return { windows, other, personalized: input.personalized, boxesPerWindow };
 }
+
+// ── Kickoff display ──────────────────────────────────────────────────────
+
+const timeIn = (zone: string) => new Intl.DateTimeFormat('en-US', { timeZone: zone, hour: 'numeric', minute: '2-digit' });
+const dayIn = new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', weekday: 'short' });
+
+/** "Sun · 1:00 PM ET · 10:00 AM PT" as parts. The league's clock is PT; the NFL's is ET; owners are in both. */
+export function formatKickoff(kickoffEpoch: number): { day: string; et: string; pt: string } {
+  const d = new Date(kickoffEpoch * 1000);
+  return {
+    day: dayIn.format(d),
+    et: timeIn('America/New_York').format(d),
+    pt: timeIn('America/Los_Angeles').format(d),
+  };
+}

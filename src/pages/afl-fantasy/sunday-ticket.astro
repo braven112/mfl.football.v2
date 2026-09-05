@@ -1,0 +1,11 @@
+---
+/**
+ * /afl-fantasy/sunday-ticket — thin route over the shared SundayTicketPage.
+ * See src/pages/theleague/sunday-ticket.astro.
+ */
+import SundayTicketPage from '../../components/shared/sunday-ticket/SundayTicketPage.astro';
+
+export const prerender = false;
+---
+
+<SundayTicketPage />

@@ -134,7 +134,8 @@ export function buildContribution(input: BuildContributionInput): LeagueContribu
 
 // ── Registered leagues: disk feeds ───────────────────────────────────────
 
-function readFeedJson(league: LeagueDefinition, leagueYear: number, file: string): any | null {
+/** One committed feed file under `data/<league>/mfl-feeds/<year>/`, or null. */
+export function readLeagueFeed(league: LeagueDefinition, leagueYear: number, file: string): any | null {
   try {
     const filePath = path.join(process.cwd(), league.dataPath, 'mfl-feeds', String(leagueYear), file);
     return fs.existsSync(filePath) ? JSON.parse(fs.readFileSync(filePath, 'utf8')) : null;
@@ -160,7 +161,7 @@ export function loadRegisteredContribution(input: RegisteredContributionInput): 
   const rostersPayload = loadRostersFeedFromDisk(slug, leagueYear);
   if (!rostersPayload) return null;
   const weekEntry = findWeekResultsEntry(loadWeeklyResultsFeedFromDisk(slug, leagueYear), week);
-  const projectionsPayload = readFeedJson(league, leagueYear, 'projectedScores.json');
+  const projectionsPayload = readLeagueFeed(league, leagueYear, 'projectedScores.json');
 
   return buildContribution({
     source: {
@@ -281,4 +282,39 @@ export async function loadOutsideContribution(input: OutsideContributionInput): 
     week,
     identity: input.identity,
   });
+}
+
+// ── League-wide fallback: no owner, no cookie ────────────────────────────
+
+/**
+ * What the board shows a visitor with no franchise: every projected player
+ * in the league's own projections feed, so the boxes rank by "most fantasy
+ * points on the field" — the same fallback MatchupPreviewHero uses. Marked
+ * `lineupResolved: false` and never `personalized`.
+ */
+export function loadLeagueWideContribution(input: {
+  league: LeagueDefinition;
+  week: number;
+  leagueYear: number;
+  identity: Map<string, PlayerIdentity>;
+}): LeagueContribution | null {
+  const { league, week, leagueYear, identity } = input;
+  const projections = projectionsForWeek(readLeagueFeed(league, leagueYear, 'projectedScores.json'), week);
+  if (projections.size === 0) return null;
+  const players: ContributionPlayer[] = [];
+  for (const [playerId, proj] of projections) {
+    const who = identity.get(playerId);
+    if (!who?.nflTeam) continue;
+    const player: ContributionPlayer = { playerId, name: who.name, position: who.position, nflTeam: who.nflTeam, proj };
+    if (who.headshot) player.headshot = who.headshot;
+    players.push(player);
+  }
+  return {
+    leagueId: league.id,
+    leagueName: league.name,
+    franchiseId: '',
+    franchiseName: 'League-wide',
+    lineupResolved: false,
+    players,
+  };
 }

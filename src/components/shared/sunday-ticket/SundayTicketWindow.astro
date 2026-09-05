@@ -1,0 +1,52 @@
+---
+/**
+ * SundayTicketWindow — one Sunday window (1pm ET or 4pm ET) as a 2×2 multiview
+ * grid, plus the ranked games that did not make the cut.
+ *
+ * Props-only. Both windows are always rendered on the page — the "tabs" above
+ * them are jump links, so nothing hydrates and no-JS still shows everything.
+ */
+import type { WindowSlate } from '../../../utils/sunday-ticket-slate';
+import SundayTicketBox from './SundayTicketBox.astro';
+
+export interface Props {
+  window: WindowSlate;
+  multiLeague?: boolean;
+  personalized?: boolean;
+}
+
+const { window, multiLeague = false, personalized = false } = Astro.props;
+
+const TITLES = { early: 'Early window', late: 'Late window' } as const;
+const id = `st-${window.window}`;
+const gamesLabel = `${window.scheduled} game${window.scheduled === 1 ? '' : 's'} kick off`;
+---
+
+<section class="st-window" id={id} aria-labelledby={`${id}-title`}>
+  <header class="st-window__head">
+    <h3 class="st-window__title" id={`${id}-title`}>{TITLES[window.window]}</h3>
+    <span class="st-window__label">{window.label}</span>
+    <span class="st-window__sched">{gamesLabel}</span>
+  </header>
+
+  <div class="st-grid" role="list">
+    {window.boxes.map((box, i) => (
+      <div role="listitem" class="st-grid__cell">
+        <SundayTicketBox box={box} slot={i + 1} multiLeague={multiLeague} personalized={personalized} />
+      </div>
+    ))}
+  </div>
+
+  {window.overflow.length > 0 && (
+    <p class="st-window__overflow">
+      <span class="st-window__overflow-label">Also worth a flip:</span>
+      {window.overflow.map((b, i) => (
+        <span class="st-window__overflow-game">
+          {i > 0 && <span aria-hidden="true"> · </span>}
+          {b.game.away}@{b.game.home}
+          <span class="st-window__overflow-count"> ({b.starterCount})</span>
+        </span>
+      ))}
+    </p>
+  )}
+</section>

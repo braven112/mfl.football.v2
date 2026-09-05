@@ -1,7 +1,32 @@
 # Sunday Ticket — the multi-league "what to watch" board
 
-Status: PLANNED 2026-09-04. Nothing built yet. Branch
-`claude/sunday-ticket-matchup-preview-3025b7`.
+Status: BUILT 2026-09-04 on branch `claude/sunday-ticket-matchup-preview-3025b7`
+(phases 1–4 in one PR). Deviations from the plan below, each deliberate:
+
+- **No `LineupGameStrip` on top.** `buildMatchupCards` needs the lineup
+  page's whole world (throwback resolution, crest strokes, slot rules, scoring
+  maps) — wiring it here would have forked ~100 lines of that assembly. The
+  page carries a one-line "your week N" band (opponents from the schedule
+  feed, links to /lineup and /live-scoring) instead.
+- **Window "tabs" are jump links, not a script.** Both windows render; the
+  Early/Late buttons are `<a href="#st-early">`. Zero client JS on the page,
+  and no `is:inline` ClientRouter trap to guard.
+- **`sunday-ticket-selection.ts` exists** because Chromatic's dependency
+  guard treats everything a story can reach as a rendering file: the board
+  components importing the chip helpers from `sunday-ticket-page.ts` pulled
+  the page's fs / ESPN / registry graph (13 files) into the story. The pure
+  helpers and `BoardLeague` live in the selection module; `formatKickoff`
+  moved to the slate module; the page re-exports both for its own callers.
+- **The cleanup stopped at the verified closure (28 files + both specs).**
+  `mfl-matchup-api.ts` is live (real API routes import it). The rest of the
+  spec's "task 1" web — `mock-matchup-data.ts`, `types/matchup-previews.ts`,
+  `matchup-routing.ts`, `matchup-state-manager.ts`, `game-state-manager.ts`,
+  `lineup-data-builder.ts`, `matchup-preview-utils.ts` and their tests — is
+  referenced only by each other and by spec-era tests, and is a follow-up.
+- **The What's New screenshot is a manual capture** (registered in
+  `MANUAL_CAPTURE_ONLY`): the personalized board needs a signed-in owner, and
+  the dev session carries no live MFL cookie, so the re-sign-in note is
+  removed before the shot.
 
 Goal: one pre-game page per league that answers "which four games do I put on
 my Sunday Ticket multiview, and why" — for every league the signed-in owner
