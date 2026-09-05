@@ -141,6 +141,27 @@ function cookieHeaderVars(source: string): Set<string> {
   return names;
 }
 
+/**
+ * `redirect: 'manual'` — the shape of the FIX, not the bug.
+ *
+ * Undici strips the Cookie only on a redirect it follows ITSELF. With manual
+ * redirects fetch hands the 3xx back and the caller re-attaches the cookie on
+ * the next hop, which is precisely what `mfl-fetch.ts` and `lib/mfl-api.mjs`
+ * do — they are exempted by path above, but the path list is the wrong
+ * instrument: it has to be edited every time someone writes a correct manual
+ * walker, and until it is, the guard cries wolf on the one shape it should be
+ * endorsing. `scripts/probe-commish-cookie.mjs` is exactly that — a hand-rolled
+ * hop loop with a full cookie JAR, which it needs because it exists to discover
+ * which cookies MFL issues, something mflFetch's two-cookie signature cannot
+ * express. Exempt the mechanism, not the filename.
+ *
+ * This does NOT excuse a manual-redirect call that then ignores the 3xx; that
+ * is a different bug, and not one about stripped cookies.
+ */
+function isManualRedirect(call: string): boolean {
+  return /redirect\s*:\s*['"`]manual['"`]/.test(call);
+}
+
 /** Does this `fetch(...)` argument list reference a Cookie-carrying variable? */
 function carriesCookieVar(call: string, vars: Set<string>): boolean {
   for (const name of vars) {
@@ -183,6 +204,7 @@ describe('MFL authenticated reads must survive the api → www49 redirect', () =
       const vars = cookieHeaderVars(source);
       return bareFetchCalls(source)
         .filter((call) => /Cookie\s*:/.test(call) || carriesCookieVar(call, vars))
+        .filter((call) => !isManualRedirect(call))
         .map(() => path.relative(process.cwd(), file).split(path.sep).join('/'));
     });
 

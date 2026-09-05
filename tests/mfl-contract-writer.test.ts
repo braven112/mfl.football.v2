@@ -28,6 +28,33 @@ const mockFetch = vi.fn(() => {
 });
 vi.stubGlobal('fetch', mockFetch);
 
+/**
+ * Prime the pre-write backup read, which every write performs first.
+ *
+ * The payload must be NON-EMPTY: createPreWriteBackup refuses to write a
+ * backup with no players in it, so an empty response here would silently make
+ * every write test exercise the no-backup path instead.
+ */
+const primeBackupRead = () =>
+  mockMflFetch.mockResolvedValueOnce({
+    ok: true,
+    json: () =>
+      Promise.resolve({
+        salaries: {
+          leagueUnit: {
+            player: [{ id: '99999', salary: '100000', contractYear: '1', contractInfo: '' }],
+          },
+        },
+      }),
+  });
+
+/**
+ * The write is the POST. Found by method rather than by call index so the
+ * backup read sitting ahead of it in the queue can't skew the assertions.
+ */
+const writeCallArg = () =>
+  mockMflFetch.mock.calls.map((c) => c[0] as any).find((o) => o?.method === 'POST');
+
 // Mock env vars
 const originalEnv = process.env;
 
@@ -52,10 +79,7 @@ describe('mfl-contract-writer', () => {
   describe('writeContractToMFL', () => {
     it('succeeds on first attempt with valid response', async () => {
       // Mock the backup read in createPreWriteBackup (also via mflFetch)
-      mockMflFetch.mockResolvedValueOnce({
-        ok: true,
-        json: () => Promise.resolve({ salaries: { leagueUnit: { player: [] } } }),
-      });
+      primeBackupRead();
       // Mock write via mflFetch
       mockMflFetch.mockResolvedValueOnce({
         ok: true,
@@ -75,10 +99,7 @@ describe('mfl-contract-writer', () => {
     });
 
     it('includes APPEND=1 in the URL', async () => {
-      mockMflFetch.mockResolvedValueOnce({
-        ok: true,
-        json: () => Promise.resolve({ salaries: { leagueUnit: { player: [] } } }),
-      });
+      primeBackupRead();
       mockMflFetch.mockResolvedValueOnce({
         ok: true,
         text: () => Promise.resolve('<status>OK</status>'),
@@ -93,16 +114,12 @@ describe('mfl-contract-writer', () => {
       });
 
       // mflFetch receives an options object with url
-      // calls[0] is the pre-write backup read; the write is calls[1].
-      const writeCall = mockMflFetch.mock.calls[1][0];
+      const writeCall = writeCallArg();
       expect(writeCall.url).toContain('APPEND=1');
     });
 
     it('sends correct XML in body parameter', async () => {
-      mockMflFetch.mockResolvedValueOnce({
-        ok: true,
-        json: () => Promise.resolve({ salaries: { leagueUnit: { player: [] } } }),
-      });
+      primeBackupRead();
       mockMflFetch.mockResolvedValueOnce({
         ok: true,
         text: () => Promise.resolve('<status>OK</status>'),
@@ -116,8 +133,7 @@ describe('mfl-contract-writer', () => {
         contractInfo: 'RC',
       });
 
-      // calls[0] is the pre-write backup read; the write is calls[1].
-      const writeCall = mockMflFetch.mock.calls[1][0];
+      const writeCall = writeCallArg();
       const bodyStr = writeCall.body;
       expect(bodyStr).toContain('id%3D%2214056%22');
       expect(bodyStr).toContain('salary%3D%22500000%22');
@@ -126,10 +142,7 @@ describe('mfl-contract-writer', () => {
     });
 
     it('uses MFL_USER_ID for auth via mflFetch', async () => {
-      mockMflFetch.mockResolvedValueOnce({
-        ok: true,
-        json: () => Promise.resolve({ salaries: { leagueUnit: { player: [] } } }),
-      });
+      primeBackupRead();
       mockMflFetch.mockResolvedValueOnce({
         ok: true,
         text: () => Promise.resolve('<status>OK</status>'),
@@ -143,8 +156,7 @@ describe('mfl-contract-writer', () => {
         contractInfo: '',
       });
 
-      // calls[0] is the pre-write backup read; the write is calls[1].
-      const writeCall = mockMflFetch.mock.calls[1][0];
+      const writeCall = writeCallArg();
       expect(writeCall.mflUserCookie).toBe('test_cookie_value');
       expect(writeCall.mflCommishCookie).toBe('test_commish_value');
     });
@@ -168,10 +180,7 @@ describe('mfl-contract-writer', () => {
 
     it('retries on HTTP failure and reports attempts', async () => {
       // Mock backup
-      mockMflFetch.mockResolvedValueOnce({
-        ok: true,
-        json: () => Promise.resolve({ salaries: { leagueUnit: { player: [] } } }),
-      });
+      primeBackupRead();
       // 3 failed attempts via mflFetch
       mockMflFetch.mockResolvedValueOnce({ ok: false, status: 500, statusText: 'Server Error' });
       mockMflFetch.mockResolvedValueOnce({ ok: false, status: 500, statusText: 'Server Error' });
@@ -191,10 +200,7 @@ describe('mfl-contract-writer', () => {
     }, 20000);
 
     it('detects MFL error responses in otherwise OK HTTP responses', async () => {
-      mockMflFetch.mockResolvedValueOnce({
-        ok: true,
-        json: () => Promise.resolve({ salaries: { leagueUnit: { player: [] } } }),
-      });
+      primeBackupRead();
       // MFL returns 200 but with error in body — 3 retries
       mockMflFetch.mockResolvedValueOnce({
         ok: true,
@@ -224,10 +230,7 @@ describe('mfl-contract-writer', () => {
 
   describe('writeMultipleContractsToMFL', () => {
     it('sends multiple players in single XML payload', async () => {
-      mockMflFetch.mockResolvedValueOnce({
-        ok: true,
-        json: () => Promise.resolve({ salaries: { leagueUnit: { player: [] } } }),
-      });
+      primeBackupRead();
       mockMflFetch.mockResolvedValueOnce({
         ok: true,
         text: () => Promise.resolve('<status>OK</status>'),
@@ -241,8 +244,7 @@ describe('mfl-contract-writer', () => {
 
       expect(result.success).toBe(true);
 
-      // calls[0] is the pre-write backup read; the write is calls[1].
-      const writeCall = mockMflFetch.mock.calls[1][0];
+      const writeCall = writeCallArg();
       const bodyStr = writeCall.body;
       // Both player IDs should be in the same payload
       expect(bodyStr).toContain('14056');
@@ -275,10 +277,7 @@ describe('mfl-contract-writer', () => {
       );
 
       // Mock the backup read for writeMultipleContractsToMFL
-      mockMflFetch.mockResolvedValueOnce({
-        ok: true,
-        json: () => Promise.resolve({ salaries: { leagueUnit: { player: [] } } }),
-      });
+      primeBackupRead();
       // Mock write via mflFetch
       mockMflFetch.mockResolvedValueOnce({
         ok: true,
@@ -348,16 +347,84 @@ describe('mfl-contract-writer', () => {
       // a backup — otherwise the salary write proceeds with nothing to roll
       // back to, and the null return says so only to the log.
       process.env.MFL_USER_ID = '';
-      mockMflFetch.mockResolvedValueOnce({
-        ok: true,
-        json: () => Promise.resolve({ salaries: { leagueUnit: { player: [] } } }),
-      });
+      primeBackupRead();
 
       const { createPreWriteBackup } = await import('../src/utils/mfl-contract-writer');
       const filepath = await createPreWriteBackup({ mflUserId: 'session_cookie' });
 
       expect(filepath).toContain('pre-write.json');
       expect(mockMflFetch.mock.calls[0][0].mflUserCookie).toBe('session_cookie');
+    });
+
+    // An empty file is not a backup. MFL answers a failed or unauthenticated
+    // export with HTTP 200 and a body that parses cleanly, so without these
+    // checks the emptiness surfaces at ROLLBACK time — the one moment it
+    // cannot be fixed.
+    it.each([
+      ['an empty player array', { salaries: { leagueUnit: { player: [] } } }],
+      ['the zero-entry empty-string shape', { salaries: { leagueUnit: { player: '' } } }],
+      [
+        "MFL's empty-field sentinel row",
+        { salaries: { leagueUnit: { player: { id: '', salary: '' } } } },
+      ],
+      ['an unauthenticated error payload', { error: 'API requires a logged in user' }],
+      ['a body with no salaries key at all', {}],
+    ])('writes no file and returns null for %s', async (_label, payload) => {
+      mockMflFetch.mockResolvedValueOnce({ ok: true, json: () => Promise.resolve(payload) });
+
+      const { writeFileSync } = await import('node:fs');
+      const { createPreWriteBackup } = await import('../src/utils/mfl-contract-writer');
+      const filepath = await createPreWriteBackup();
+
+      expect(filepath).toBeNull();
+      expect(writeFileSync).not.toHaveBeenCalled();
+    });
+
+    it('accepts a single player returned as a bare object, not an array', async () => {
+      // MFL collapses a one-entry list to a bare object. Rejecting that shape
+      // would refuse a perfectly restorable backup.
+      mockMflFetch.mockResolvedValueOnce({
+        ok: true,
+        json: () =>
+          Promise.resolve({
+            salaries: {
+              leagueUnit: {
+                player: { id: '14056', salary: '500000', contractYear: '3', contractInfo: '' },
+              },
+            },
+          }),
+      });
+
+      const { writeFileSync } = await import('node:fs');
+      const { createPreWriteBackup } = await import('../src/utils/mfl-contract-writer');
+
+      expect(await createPreWriteBackup()).toContain('pre-write.json');
+      expect(writeFileSync).toHaveBeenCalled();
+    });
+
+    it('a write still proceeds when no backup could be taken', async () => {
+      // Deliberate: the backup is best-effort and the write uses APPEND=1, so
+      // it only touches the named players. Pinned so the coupling is a choice
+      // rather than an accident.
+      mockMflFetch.mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve({ salaries: { leagueUnit: { player: [] } } }),
+      });
+      mockMflFetch.mockResolvedValueOnce({
+        ok: true,
+        text: () => Promise.resolve('<status>OK</status>'),
+      });
+
+      const { writeContractToMFL } = await import('../src/utils/mfl-contract-writer');
+      const result = await writeContractToMFL({
+        playerId: '14056',
+        salary: '500000',
+        contractYear: '3',
+        contractInfo: '',
+      });
+
+      expect(result.success).toBe(true);
+      expect(result.backupFile).toBeUndefined();
     });
   });
 
