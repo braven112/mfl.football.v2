@@ -203,6 +203,11 @@ async function main() {
   // its EXPIRY that breaks the run. That condition could not have fired on
   // the run it was written to fix. If credentials are configured, use them;
   // the stored cookies are the fallback, not the other way round.
+  // Which credential path actually produced the cookies below. The preflight
+  // reports it, and a message that guesses is worse than none: two live runs
+  // were spent on a diagnostic that described a code path the run never took.
+  let loginOutcome: 'not-configured' | 'succeeded' | 'failed' = 'not-configured';
+
   if (username && password) {
     try {
       const fresh = await loginToMFL(username, password);
@@ -214,10 +219,21 @@ async function main() {
       // preflight below refuses the run, which is the diagnosable outcome.
       userCookie = fresh.mflUserId || '';
       commishCookie = fresh.mflIsCommish || '';
-      console.log(`Logged in to MFL as ${username} (commish cookie: ${fresh.mflIsCommish ? 'yes' : 'no'})`);
+      loginOutcome = 'succeeded';
+      // Deliberately does NOT name the account. The username is usually an
+      // email address, and workflow logs are a wider audience than the secret
+      // store; which account it is, is already knowable from the secret. What
+      // a reader needs is which path ran and whether it yielded the cookie
+      // that every write depends on.
+      console.log(
+        `Logged in to MFL with MFL_USERNAME/MFL_PASSWORD (commish cookie: ${
+          fresh.mflIsCommish ? 'yes' : 'no'
+        })`
+      );
     } catch (error) {
       // Fall through to the stored cookies — they may still be good, and the
       // preflight below refuses the run if they are not present at all.
+      loginOutcome = 'failed';
       console.error(`MFL login failed, falling back to stored cookies: ${(error as Error).message}`);
     }
   } else {
@@ -241,10 +257,16 @@ async function main() {
   if (!commishCookie && !args.dryRun) {
     console.error(
       'No MFL_IS_COMMISH cookie — MFL will reject every accounting write. Refusing to start. '
-        + (username && password
-          ? 'The login succeeded but MFL issued no commissioner cookie, so this account is '
-            + 'not the commissioner of these leagues (or MFL did not treat the login as one).'
-          : 'Set the secret, or set MFL_USERNAME + MFL_PASSWORD so a fresh one can be fetched at run time.')
+        + {
+          succeeded:
+            'The login succeeded but MFL issued no commissioner cookie, so this account is '
+            + 'not the commissioner of these leagues (or MFL did not treat the login as one).',
+          failed:
+            'The login failed (see above) and the stored cookies carry no MFL_IS_COMMISH, '
+            + 'so nothing here can write. Fix the credentials rather than the cookie.',
+          'not-configured':
+            'Set the secret, or set MFL_USERNAME + MFL_PASSWORD so a fresh one can be fetched at run time.',
+        }[loginOutcome]
     );
     process.exit(1);
   }

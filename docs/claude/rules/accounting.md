@@ -445,7 +445,13 @@ two of them exist:
 Do not infer a secret exists because a workflow references it — an unset
 secret interpolates to an empty string and the step runs anyway. Run #4's env
 block showed `MFL_USERNAME:` and `MFL_PASSWORD:` blank while the two cookie
-secrets showed `***`. The script now logs which source it used, so the next
+secrets showed `***`. The script now logs which source it used — the path, not
+the account: the username is usually an email and workflow logs are a wider
+audience than the secret store. It also records the outcome (`succeeded` /
+`failed` / `not-configured`) so the preflight can only describe the path the
+run actually took. A refusal message that guesses is worse than none — two
+live runs were spent on a diagnostic that described a code path never taken.
+The next
 run's log answers this without pulling the raw log.
 
 Because the cookies expire, the durable fix is the username/password pair. The
