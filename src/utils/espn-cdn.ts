@@ -22,8 +22,18 @@
  */
 
 /**
- * True only when the URL's actual HOST is ESPN's CDN (`espncdn.com` or a
- * subdomain of it — in practice always `a.espncdn.com`).
+ * True only when the URL is an http(s) URL whose actual HOST is ESPN's CDN
+ * (`espncdn.com` or a subdomain of it — in practice always `a.espncdn.com`).
+ *
+ * The SCHEME is checked as well as the host, because a host check alone is not
+ * enough: `javascript:`, `data:` and `ftp:` are not "special" schemes in the
+ * WHATWG URL parser, so it reads `//a.espncdn.com/...` after them as a real
+ * authority — `new URL('javascript://a.espncdn.com/%0aalert(1)').hostname` is
+ * `a.espncdn.com`. Nothing renders those today (`<img src="javascript:...">`
+ * does not execute, and the OG path's `fetch` throws into a catch) and the
+ * substring test had the same hole, so this is hardening rather than a fix for
+ * a live bug — but the predicate's contract is "this is an ESPN CDN image",
+ * and a `javascript:` URL must never satisfy it.
  *
  * Protocol-relative URLs (`//a.espncdn.com/...`) are resolved against `https:`
  * rather than rejected. `new URL()` throws on them, and the substring test this
@@ -36,7 +46,9 @@
 export function isEspnCdnUrl(url: string | null | undefined): boolean {
   if (!url) return false;
   try {
-    const host = new URL(url.startsWith('//') ? `https:${url}` : url).hostname;
+    const parsed = new URL(url.startsWith('//') ? `https:${url}` : url);
+    if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') return false;
+    const host = parsed.hostname;
     return host === 'espncdn.com' || host.endsWith('.espncdn.com');
   } catch {
     return false;

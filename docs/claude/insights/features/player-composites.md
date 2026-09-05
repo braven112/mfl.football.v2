@@ -33,7 +33,16 @@ per player.
   (`a.espncdn.com/i/headshots/nfl/players/full/{espnId}.png`) are transparent;
   the MFL fallback (`player_photos_big_2014/{id}_thumb.jpg`) has a baked-in
   background and ruins the composite. Gate rendering on
-  `headshot.includes('espncdn.com')` — never composite an MFL JPG.
+  `isEspnCdnUrl(headshot)` (`src/utils/espn-cdn.ts`) — never composite an MFL
+  JPG, and **never hand-roll the check**. It reads the URL's parsed HOST, not a
+  substring: `headshot.includes('espncdn.com')` is true for
+  `https://evil.com/espncdn.com/x.png` and `https://espncdn.com.evil.com/x.png`
+  alike, which is CodeQL's `js/incomplete-url-substring-sanitization` (high) —
+  these URLs go straight into an `<img src>`, and the OG path fetches them
+  server-side. Eight surfaces carried the substring version because two files
+  had been hardened privately and left no tripwire for the rest; there is now
+  exactly one definition and `tests/espn-cdn.test.ts` fails the build if a
+  substring check reappears anywhere in `src/`.
 - **DEF "players" are logos, not people** — always exclude `position === 'DEF'`
   from composites. Two surfaces deliberately opt BACK IN with a stand-in face
   from `def-spotlight-players` (the player modal, with one face; the AFL

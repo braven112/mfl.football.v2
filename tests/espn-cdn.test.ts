@@ -43,6 +43,29 @@ describe('isEspnCdnUrl', () => {
     expect(isEspnCdnUrl(undefined)).toBe(false);
   });
 
+  it('rejects a non-http(s) scheme even with an ESPN authority', () => {
+    // `javascript:`, `data:` and `ftp:` are not "special" schemes, so the
+    // WHATWG parser reads `//a.espncdn.com/...` after them as a real authority
+    // and `.hostname` really is `a.espncdn.com`. A host-only check passes these.
+    expect(isEspnCdnUrl('javascript://a.espncdn.com/%0aalert(1)')).toBe(false);
+    expect(isEspnCdnUrl('data://a.espncdn.com/x')).toBe(false);
+    expect(isEspnCdnUrl('ftp://a.espncdn.com/x.png')).toBe(false);
+  });
+
+  it('is not fooled by the usual host-confusion tricks', () => {
+    // Userinfo: the parsed host is what follows `@`, so this is evil.com.
+    expect(isEspnCdnUrl('https://a.espncdn.com@evil.com/x.png')).toBe(false);
+    // Backslashes normalize to slashes in a special scheme's authority.
+    expect(isEspnCdnUrl('https://evil.com\\@a.espncdn.com/x.png')).toBe(false);
+    // A trailing dot is a distinct host, not espncdn.com.
+    expect(isEspnCdnUrl('https://a.espncdn.com./x.png')).toBe(false);
+    // Case is normalized by the parser, so an uppercase host still matches.
+    expect(isEspnCdnUrl('https://A.ESPNCDN.COM/x.png')).toBe(true);
+    // `.endsWith('.espncdn.com')` must not accept a host that merely ends in
+    // the same letters without the dot boundary.
+    expect(isEspnCdnUrl('https://xespncdn.com/x.png')).toBe(false);
+  });
+
   it('accepts protocol-relative ESPN URLs', () => {
     // `new URL()` throws on these, so a naive host check would return false —
     // but the substring test this replaces accepted them. Resolving against
@@ -111,8 +134,17 @@ describe('scan guard', () => {
     // Comments are stripped first so espn-cdn.ts's own doc block — which has to
     // NAME the banned pattern to explain itself — needs no allowlist entry.
     // Nothing is exempt: an allowlist is how the second copy became eight.
+    //
+    // Only block comments and WHOLE-LINE `//` comments are removed. A line that
+    // has code on it is never touched, because a regex cannot tell a comment
+    // from a `//` inside a string literal: `x === '//foo' && a.includes('espncdn.com')`
+    // would have the real check stripped along with the fake comment, and the
+    // guard would pass on offending code. Erring this way can only produce a
+    // FALSE POSITIVE (a trailing comment that names the pattern gets flagged) —
+    // loud, and fixable by moving the note to its own line. A false negative
+    // here is the exact silence this whole guard exists to prevent.
     const stripComments = (src: string) =>
-      src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:])\/\/.*$/gm, '$1');
+      src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^[ \t]*\/\/.*$/gm, '');
 
     const files = walk('src');
     expect(files.length).toBeGreaterThan(100);

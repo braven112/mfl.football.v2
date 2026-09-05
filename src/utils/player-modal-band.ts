@@ -23,8 +23,9 @@
  * date logic of its own.
  *
  * Composite rules (docs/claude/insights/features/player-composites.md):
- *   - Only transparent ESPN headshots composite (URL contains espncdn.com);
- *     MFL JPGs have baked backgrounds and ruin the band — gradient-only then.
+ *   - Only transparent ESPN headshots composite (`isEspnCdnUrl`, which matches
+ *     the URL's parsed HOST — not a substring); MFL JPGs have baked
+ *     backgrounds and ruin the band — gradient-only then.
  *   - DEF "players" are logos, not people — never cut out.
  *   - A 404'd cutout hides itself and the band stays gradient-only.
  *

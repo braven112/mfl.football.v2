@@ -650,7 +650,8 @@ for (const [season, rankings] of jerryJonesStartersBySeason) {
                 const franchise = getFranchiseForYear(player.franchiseId, player.season);
                 const nflLogo = player.team ? getNflLogo(player.team) : null;
                 const identity = globalPlayers.get(player.id);
-                const espnShot = isEspnCdnUrl(identity?.headshot) ? identity!.headshot : null;
+                const identityShot = identity?.headshot;
+                const espnShot = isEspnCdnUrl(identityShot) ? identityShot : null;
                 // Fantasy franchise accent (the owner's shame), NFL color fallback
                 const accent = franchise?.colorPrimary ?? getNflTeamColors(player.team ?? '').primary;
                 return (
