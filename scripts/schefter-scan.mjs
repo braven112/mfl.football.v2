@@ -41,6 +41,7 @@ import {
 } from './lib/schefter-groupme-budget.mjs';
 import { schefterKey } from './lib/schefter-keys.mjs';
 import { SCHEFTER_LEAGUES, getSchefterLeague } from './lib/schefter-leagues.mjs';
+import { LEAGUES as REGISTRY_LEAGUES } from '../src/config/leagues-data.mjs';
 import { buildDropAdjustmentMap, resolveDropSalary } from './lib/drop-salary.mjs';
 
 import { getRedisConfig, createUpstashClient } from './lib/redis.mjs';
@@ -566,10 +567,24 @@ function recordGroupMeSuppression(entry) {
  * only way they reach anyone — and unlike the chat, an owner chooses between
  * 'transaction-big' (a few a week) and 'transaction-all' (a firehose).
  */
+/**
+ * The REGISTRY entry for a Schefter league.
+ *
+ * The two shapes are not interchangeable: a Schefter league's `slug` is the
+ * NAV slug ('afl'), while the registry's is the canonical one ('afl-fantasy'),
+ * and push fan-out needs the registry entry for the league's canonical origin.
+ * Resolved through `registrySlug` rather than guessed.
+ */
+function registryLeague(league) {
+  return REGISTRY_LEAGUES[league?.registrySlug] ?? null;
+}
+
 async function pushTransaction({ league, franchiseIds, headline, body, tag, big }) {
-  if (!league?.navSlug && !league?.slug) return;
+  const registry = registryLeague(league);
+  if (!registry) return;
   await sendPushFanout({
-    league,
+    league: registry,
+    dryRun: DRY_RUN,
     // Big moves go to the smaller, likelier-enabled audience; everything else
     // only to owners who explicitly asked for every add and drop.
     category: big ? 'transaction-big' : 'transaction-all',
@@ -775,6 +790,25 @@ async function scanLeague(league) {
 
   await fs.writeFile(league.feedPath, JSON.stringify(feed, null, 2) + '\n');
   console.log(`  Wrote ${newPosts.length} new posts. Feed total: ${feed.posts.length}`);
+
+  // Every transaction, to owners who asked for every transaction. Sent AFTER
+  // the feed is safely on disk, so a push outage can never cost us the write.
+  //
+  // A big drop may also push as 'transaction-big' below. Both use the post id
+  // as the notification tag, so a device that has both categories on collapses
+  // them into one notification rather than buzzing twice for one move.
+  //
+  // `newPosts` was reversed in place just above for the feed prepend; the
+  // copy-and-reverse restores chronological order, the same idiom the
+  // suppression reporting below uses.
+  await pushTransaction({
+    league,
+    franchiseIds: [...teams.keys()],
+    headline: `${newPosts.length} new ${newPosts.length === 1 ? 'move' : 'moves'}`,
+    body: [...newPosts].reverse().map((p) => p.headline).slice(0, 3).join(' · '),
+    tag: `transactions-${now.toISOString().slice(0, 10)}`,
+    big: false,
+  });
 
   // Direct GroupMe posting for leagues using the directGroupMe feature flag
   // (currently AFL). Feed is already persisted above; post breaking/standard
@@ -2102,6 +2136,32 @@ async function scanEventReminders(league) {
       await postToGroupMe(text, { botIdOverride: rogerBotId, kind: 'roger-reminder', league });
     }
   }
+
+  // The same deadlines on owners' phones. This one is on by default: a missed
+  // draft or cut deadline costs real value, and the chat post is the only
+  // other place it appears.
+  const registry = registryLeague(league);
+  if (registry && newPosts.length > 0) {
+    const teams = await loadTeams(league.configPath);
+    await sendPushFanout({
+      league: registry,
+      dryRun: DRY_RUN,
+      category: 'roster-deadline',
+      notifications: [...teams.keys()].flatMap((franchiseId) =>
+        newPosts.map((post) => ({
+          franchiseId,
+          title: post.headline,
+          body: (post.body ?? '').slice(0, 160),
+          url: post.link ?? '/calendar',
+          // Per post, so the 14-day and 7-day touches for one event are
+          // separate notifications rather than one silently replacing the
+          // other.
+          tag: post.id,
+        })),
+      ),
+    });
+  }
+
   return newPosts.length;
 }
 

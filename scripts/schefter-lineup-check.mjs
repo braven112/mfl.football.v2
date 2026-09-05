@@ -334,6 +334,7 @@ async function checkLeague(league, now = new Date()) {
   // problem.
   await sendPushFanout({
     league,
+    dryRun: DRY_RUN,
     category: 'lineup-deadline',
     notifications: warnings.map((w) => ({
       franchiseId: w.franchiseId,

@@ -121,8 +121,7 @@ export const NOTIFICATION_CATEGORIES: NotificationCategory[] = [
     description: 'Draft dates, cut deadlines, auction and keeper dates.',
     cadence: 'A few times a season',
     defaultOn: true,
-    live: false, // no push sender yet — see the note on `live`
-  
+    live: true,
   },
   {
     id: 'player-news',
@@ -189,8 +188,7 @@ export const NOTIFICATION_CATEGORIES: NotificationCategory[] = [
     description: 'Every add, drop and waiver claim in the league.',
     cadence: 'A firehose — dozens some weeks',
     defaultOn: false,
-    live: false, // no push sender yet — see the note on `live`
-  
+    live: true,
   },
   {
     id: 'rumor',
@@ -200,8 +198,7 @@ export const NOTIFICATION_CATEGORIES: NotificationCategory[] = [
     cadence: 'A few a week',
     defaultOn: false,
     requiresFeature: 'schefterTips',
-    live: false, // no push sender yet — see the note on `live`
-  
+    live: true,
   },
   {
     id: 'article',

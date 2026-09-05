@@ -281,6 +281,7 @@ async function main() {
       // went out: the two are separate channels an owner chooses separately.
       await sendPushFanout({
         league: LEAGUES[league],
+        dryRun,
         category: 'article',
         notifications: broadcast({
           franchiseIds: [...(await loadTeams(projectRoot, league)).keys()],

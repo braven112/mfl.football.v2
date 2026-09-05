@@ -1077,6 +1077,7 @@ async function main() {
     // the ask without the rankings.
     await sendPushFanout({
       league,
+      dryRun: opts.dryRun,
       category: 'column',
       notifications: broadcast({
         franchiseIds: normalizeFranchiseIds(teams.keys()),
