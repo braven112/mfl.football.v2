@@ -1,0 +1,61 @@
+name: Probe MFL Commissioner Cookie
+
+# READ-ONLY. Answers one question with evidence instead of theory: which MFL
+# request, if any, issues the MFL_IS_COMMISH cookie?
+#
+# Two candidates are already ruled out by CI's own logs. api/<year>/login
+# issues MFL_USER_ID and nothing else (#878), and <mflHost>/<year>/login with
+# XML=1 logged in successfully against www49 and still reported "issued no
+# MFL_IS_COMMISH" (mint-mfl-session, 2026-09-05) — which disproved the theory
+# #878 was built on. This probe walks what is left: the same league login
+# WITHOUT XML=1 (the interactive flow the docs describe), a commissioner-only
+# csetup page fetched with a live session, and the league home as a control.
+#
+# It only ever issues GETs and one login POST, refuses any non-myfantasyleague
+# host on a redirect, and prints cookie NAMES only — never a value.
+
+on:
+  workflow_dispatch:
+    inputs:
+      league:
+        description: "League slug from the registry"
+        required: false
+        type: choice
+        options: [afl-fantasy, theleague]
+        default: afl-fantasy
+      year:
+        description: "League year (default: current calendar year)"
+        required: false
+        type: string
+
+concurrency:
+  group: probe-commish-cookie
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup pnpm + Node + install
+        uses: ./.github/actions/setup
+
+      - name: Resolve the league id from the registry
+        id: league
+        run: |
+          ID=$(node -e "import('./src/config/leagues-data.mjs').then(m => process.stdout.write(m.LEAGUES['${{ inputs.league }}'].id))")
+          echo "id=$ID" >> "$GITHUB_OUTPUT"
+
+      - name: Probe
+        env:
+          MFL_USERNAME: ${{ secrets.MFL_USERNAME }}
+          MFL_PASSWORD: ${{ secrets.MFL_PASSWORD }}
+          MFL_LEAGUE_ID: ${{ steps.league.outputs.id }}
+          MFL_YEAR: ${{ inputs.year }}
+        run: node scripts/probe-commish-cookie.mjs
