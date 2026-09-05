@@ -60,6 +60,8 @@ const BASE_URL = process.env.BASE_URL || 'http://localhost:4321';
 const MANUAL_CAPTURE_ONLY = {
   'sunday-ticket':
     'the board is personalized for a signed-in owner (starters from the submitted lineup, league chips from myleagues) — a blind capture shoots the signed-out league-wide board. Needs a forged owner session for TheLeague franchise 0001 and the `.st-banner--note` removed (a dev session carries no live MFL cookie, so the page shows a re-sign-in note an owner would not see).',
+  'transaction-hub':
+    'the hub is a MODAL opened by the header bell, not a page, so a blind capture of the entry link shoots Free Agents with nothing on top of it — and its two waiver screens are auth-gated on top of that. Stage it without a session: load any page with `?mockTrades=2` (which seeds the trade sections and auto-opens the trades list), click `#thm-list-back` to reach the hub home, rewrite the `#transaction-hub-config` blob with `signedIn: true`, franchise 0001 and TheLeague team list (the hub script re-reads that blob on every call by design, so a DOM rewrite is enough), and route-stub /api/waiver-claims and /api/waiver-order — both 401 without an owner cookie, and an unstubbed order leaves the priority row with no rank chip.',
   'owners-poll':
     'auth-gated, and the ballot only renders when a window is OPEN in Redis — a blind capture shoots the sign-in redirect, and an authenticated one out of season shoots "No ballot is open right now". The staged shot forges an owner session and stubs an open window so the real builder renders a filled ballot.',
   'notification-command-center':

@@ -45,6 +45,28 @@
     ]
   },
   {
+    "id": "live-scoring-bench",
+    "date": "2026-08-21",
+    "category": "enhancement",
+    "icon": "football",
+    "title": "Your Bench Is on the Board Now",
+    "summary": "Open any matchup on Live Scoring and there's a Bench drawer under your nine starters — every guy you left out, his real points, his real game clock. Collapsed by default, because some Sundays you don't want to know.",
+    "description": [
+      "<a href=\"/live-scoring\">Live Scoring</a> has only ever shown you the nine players who count. Which is the right nine to lead with, and also about half the story: the other question every owner is asking by 1:30 on a Sunday is whether the guy on <a href=\"/rosters\">his bench</a> is having the day his starter isn't. Until now the only way to find out was to open MFL in another tab and read a table.",
+      "Tap into any matchup and there's a Bench section under <a href=\"/lineup\">the lineup</a>. It opens onto both teams' benches side by side, grouped by position and sorted so the highest scorer at each spot is the first one you see — because the question is almost never \"how did my bench do\", it's \"should I have started the other running back\", and that answer needs the two of them near each other.",
+      "Every bench row is the full row: headshot, NFL team, the real game clock off the live scoreboard, the red-zone flag, the box-score line underneath. Same treatment as a starter, because a bench player having a huge afternoon is exactly as interesting as a starter having one — just considerably more painful.",
+      "It's collapsed by default and it's staying that way. The starters are the matchup and they get the top of the page; the bench is a second-guess and it can wait for you to ask. The summary bar shows each side's bench total, so you can decide from one glance whether you actually want to open it.",
+      "One thing the numbers deliberately don't do: count. Bench points never touch a team's score, its projected final or its win-probability bar — the drawer says so right at the top, and the feed keeps the two lists apart end to end so a bench touchdown can't wander into the scoring ticker either. Your 71.8 points of bench are a story, not a total."
+    ],
+    "image": "live-scoring-bench.webp",
+    "imageAlt": "The Live Scoring matchup detail with the Bench section expanded below the starting lineup. A summary bar reads 66.2 / 13 players on the left, BENCH in the middle, and 71.8 / 11 players on the right, with a note underneath saying bench points don't count toward the matchup. Below it, two columns headed Dangsters and Pigskins list each team's bench players grouped by position — quarterbacks first, then running backs and receivers — each with a position chip, headshot, NFL team logo, live points, projected final and game state.",
+    "excludeFromHero": true,
+    "leagues": [
+      "theleague",
+      "afl"
+    ]
+  },
+  {
     "id": "afl-live-scoring",
     "date": "2026-08-20",
     "category": "new-page",

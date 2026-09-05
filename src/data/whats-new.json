@@ -1,5 +1,28 @@
 [
   {
+    "id": "transaction-hub",
+    "date": "2026-09-05",
+    "category": "new-feature",
+    "icon": "bell",
+    "leagues": [
+      "theleague",
+      "afl"
+    ],
+    "title": "The Bell Now Knows More Than One Thing",
+    "link": "/players",
+    "linkLabel": "File a claim",
+    "summary": "That bell in the corner used to have exactly one job: tell you somebody offered you a trade. It now opens a Transaction Hub — trade offers, the waiver claims you have filed, and your live spot in the waiver order, three taps from anywhere on the site. A number on the bell still means somebody is waiting on you. A quiet dot means there is something in there worth a look.",
+    "description": [
+      "The bell has been sitting up there for months doing one thing. Somebody offers you a trade, it lights up red, you go look. Useful, and also a strange amount of real estate for a single notification.",
+      "So it got two more rooms. Tap it now and you land on a hub: <strong>Trade Offers</strong>, <strong>Waiver Claims</strong>, and <strong>Waiver Priority</strong>, each with its own count, each one tap deep. Trade offers work exactly as they did — accept, reject, dismiss, open it in the <a href=\"/trade-builder\">Trade Builder</a> to check the cap damage before you say yes.",
+      "<strong>Waiver Claims</strong> shows what you have in, in the order MyFantasyLeague will actually process it — who you are adding, who you are dropping for him, what you bid. It is read-only on purpose. Deleting a claim or swapping the drop still lives on <a href=\"/players\">Free Agents</a>, next to the roster and the search you need to do either one, and there is a link straight there at the bottom of the screen. This is the answer to \"wait, did I actually put that claim in\" at 11pm on a Tuesday, which is a different question from \"let me redo my whole board\".",
+      "<strong>Waiver Priority</strong> is the live order, read from MyFantasyLeague the moment you open it rather than off a nightly sync — because priority is rolling, it moves every time somebody's claim processes, and the one night it is wrong is the night after waivers ran. Your row is badged. In the AFL it is your <em>conference's</em> order, renumbered from one, which is the only number that means anything: an owner sitting 13th league-wide is first in the National, and being told 13 is just a lie about your odds.",
+      "One deliberate restraint: the red number on the bell still counts trade offers and nothing else. A trade is somebody waiting on you. A claim you filed yourself is not, so it gets a small quiet dot instead — the hub has something in it, no one is holding a stopwatch. Turning every claim into a red badge is how a bell stops meaning anything."
+    ],
+    "image": "transaction-hub.webp",
+    "imageAlt": "The Transaction Hub modal open over the standings page on The League, headed \"Transaction Hub\" and \"Everything you have in flight\". Three rows: Trade Offers, 2 waiting on you, badged 2; Waiver Claims, 2 filed, badged 2; and Waiver Priority, Where you sit in line, chipped #16."
+  },
+  {
     "id": "sunday-ticket",
     "date": "2026-09-04",
     "category": "new-page",
@@ -877,28 +900,6 @@
     "excludeFromHero": true,
     "leagues": [
       "theleague"
-    ]
-  },
-  {
-    "id": "live-scoring-bench",
-    "date": "2026-08-21",
-    "category": "enhancement",
-    "icon": "football",
-    "title": "Your Bench Is on the Board Now",
-    "summary": "Open any matchup on Live Scoring and there's a Bench drawer under your nine starters — every guy you left out, his real points, his real game clock. Collapsed by default, because some Sundays you don't want to know.",
-    "description": [
-      "<a href=\"/live-scoring\">Live Scoring</a> has only ever shown you the nine players who count. Which is the right nine to lead with, and also about half the story: the other question every owner is asking by 1:30 on a Sunday is whether the guy on <a href=\"/rosters\">his bench</a> is having the day his starter isn't. Until now the only way to find out was to open MFL in another tab and read a table.",
-      "Tap into any matchup and there's a Bench section under <a href=\"/lineup\">the lineup</a>. It opens onto both teams' benches side by side, grouped by position and sorted so the highest scorer at each spot is the first one you see — because the question is almost never \"how did my bench do\", it's \"should I have started the other running back\", and that answer needs the two of them near each other.",
-      "Every bench row is the full row: headshot, NFL team, the real game clock off the live scoreboard, the red-zone flag, the box-score line underneath. Same treatment as a starter, because a bench player having a huge afternoon is exactly as interesting as a starter having one — just considerably more painful.",
-      "It's collapsed by default and it's staying that way. The starters are the matchup and they get the top of the page; the bench is a second-guess and it can wait for you to ask. The summary bar shows each side's bench total, so you can decide from one glance whether you actually want to open it.",
-      "One thing the numbers deliberately don't do: count. Bench points never touch a team's score, its projected final or its win-probability bar — the drawer says so right at the top, and the feed keeps the two lists apart end to end so a bench touchdown can't wander into the scoring ticker either. Your 71.8 points of bench are a story, not a total."
-    ],
-    "image": "live-scoring-bench.webp",
-    "imageAlt": "The Live Scoring matchup detail with the Bench section expanded below the starting lineup. A summary bar reads 66.2 / 13 players on the left, BENCH in the middle, and 71.8 / 11 players on the right, with a note underneath saying bench points don't count toward the matchup. Below it, two columns headed Dangsters and Pigskins list each team's bench players grouped by position — quarterbacks first, then running backs and receivers — each with a position chip, headshot, NFL team logo, live points, projected final and game state.",
-    "excludeFromHero": true,
-    "leagues": [
-      "theleague",
-      "afl"
     ]
   }
 ]
