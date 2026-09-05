@@ -268,22 +268,32 @@ export const POST: APIRoute = async (context) => {
   const written = claimed.length - check.unverified.length;
   const unverified = check.unverified;
 
+  // When the re-read FAILS, verifyWrites returns verified:false and lists no
+  // rows — so `written` is just "what MFL claimed", and saying "N in the
+  // ledger" would assert the one thing the failed read could not establish.
+  // That is the phantom-carry mistake in log form, during the incident it
+  // would be read in.
   console.log(
     `[accounting/migrate] ${ctx.league.slug} ${from}→${to}: attempted ${results.length}, `
       + `MFL accepted ${claimed.length}, refused ${failed.length}; `
-      + `re-read ${check.verified ? 'confirmed' : 'FAILED, so nothing is confirmed'} — `
-      + `${written} in the ledger, ${unverified.length} claimed but absent`
+      + (check.verified
+        ? `re-read confirmed ${written} in the ledger, ${unverified.length} claimed but absent`
+        : `re-read FAILED — ${claimed.length} claimed, NONE confirmed`)
       + (failed.length ? ` | first refusal: ${failed[0]?.error ?? 'unknown'}` : '')
   );
 
   return json(
     {
       // Named so the client never has to infer success from a count. A run
-      // that writes nothing is not a success message with a zero in it.
+      // that writes nothing is not a success message with a zero in it — and
+      // a run whose re-read FAILED is not `carried` either. verifyWrites
+      // reports verified:false with no rows listed, so `written` there is only
+      // what MFL claimed; calling that carried is exactly the phantom the
+      // re-read exists to catch.
       outcome:
         written === 0
           ? 'failed'
-          : failed.length || unverified.length
+          : check.verified === false || failed.length || unverified.length
             ? 'partial'
             : 'carried',
       from,

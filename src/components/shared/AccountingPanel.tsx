@@ -1243,8 +1243,10 @@ function Rollover({
           {applied && (
             <p
               className={outcome === 'ok' ? 'acct__ok' : outcome === 'partial' ? 'acct__warn' : 'acct__error'}
-              role="status"
-              aria-live="polite"
+              // Visual only. The copy at the top of the tab is the live region;
+              // announcing the same result twice is worse than announcing it
+              // once in the place a sighted user is not looking.
+              aria-hidden="true"
             >
               {applied}
             </p>
