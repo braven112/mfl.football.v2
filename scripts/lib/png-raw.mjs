@@ -63,6 +63,16 @@ export function decodePng(b, file = '<buffer>') {
   const raw = zlib.inflateSync(Buffer.concat(idat));
   const bpp = channels;
   const stride = width * bpp;
+  // Length precondition, checked ONCE up front. The per-row filter check below
+  // only catches a stream that runs out exactly ON a filter byte; a truncation
+  // mid-row leaves `line[x]` undefined, and `undefined & 255` is 0 — so the
+  // rows decode as silently-zeroed instead of failing. This is the check that
+  // actually makes "unreadable input throws" true.
+  if (raw.length < height * (stride + 1)) {
+    throw new Error(
+      `${file}: truncated image data (${raw.length} bytes, need ${height * (stride + 1)})`,
+    );
+  }
   const flat = Buffer.alloc(height * stride);
   let p = 0;
   for (let y = 0; y < height; y++) {

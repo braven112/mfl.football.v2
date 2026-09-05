@@ -122,12 +122,23 @@ describe('manifest host gating', () => {
     // really does render on theleague.us — and an ungated manifest link there
     // puts a scope:"/" start_url:"/" AFL manifest on TheLeague's origin.
     expect(layout).toMatch(/const onForeignLeagueHost =/);
+    // Plain substring match on whitespace-normalized source, not a RegExp built
+    // from a variable — interpolating a path into a pattern means escaping it,
+    // and a half-done escape is its own (CodeQL-flagged) bug.
+    const normalized = layout.replace(/\s+/g, ' ');
     for (const href of ['/assets/afl/favicons/site.webmanifest', '/manifest.json']) {
-      const link = new RegExp(
-        `\\{!onForeignLeagueHost && \\(\\s*<link rel="manifest" href="${href.replace(/\//g, '\\/')}"`,
+      expect(normalized, `${href} must be gated on !onForeignLeagueHost`).toContain(
+        `{!onForeignLeagueHost && ( <link rel="manifest" href="${href}"`,
       );
-      expect(layout, `${href} must be gated on !onForeignLeagueHost`).toMatch(link);
     }
+  });
+
+  it('treats the shared multi-league origin as foreign to every league', () => {
+    // mfl.football serves every league by path prefix and is in no league's
+    // `domains`, so a bare HOST_TO_SLUG lookup misses it and both manifests
+    // would land on that one origin.
+    expect(layout).toMatch(/onSharedMultiLeagueHost/);
+    expect(layout).toMatch(/new URL\(SHARED_APP_ORIGIN\)\.hostname/);
   });
 
   it('suppresses only on a known foreign apex, so localhost and previews keep theirs', () => {
@@ -135,6 +146,17 @@ describe('manifest host gating', () => {
     // host — localhost and Vercel previews included — and make the PWA
     // untestable anywhere but production.
     expect(layout).toMatch(/hostLeagueSlug !== null && hostLeagueSlug !== ownLeagueSlug/);
+  });
+
+  it('keeps every manifest id distinct, which is the only guard prerendered routes get', () => {
+    // The six `prerender = true` routes evaluate the host gate at BUILD time
+    // (hostname localhost), so they still ship their manifest on a foreign
+    // apex. Distinct ids are what stop that from being destructive there.
+    const ids = findManifests(PUBLIC).map((file) => {
+      const m = JSON.parse(fs.readFileSync(file, 'utf8'));
+      return m.id ?? m.start_url;
+    });
+    expect(new Set(ids).size).toBe(ids.length);
   });
 });
 

@@ -40,7 +40,7 @@ import type { NavTeamInfo, LeagueSlug } from '../types/nav';
 import { NAV_COOKIES } from '../types/nav';
 import { getAFLPreference, getTheLeaguePreference, getBestBall1Preference } from '../utils/team-preferences';
 import { getAuthUser, isCommissionerOrAdmin } from '../utils/auth';
-import { getLeagueBySlug, getLeagueByNavSlug } from '../config/leagues';
+import { getLeagueBySlug, getLeagueByNavSlug, SHARED_APP_ORIGIN } from '../config/leagues';
 import { HOST_TO_SLUG } from '../utils/league-host-map';
 import leagueConfigData from '../data/theleague.config.json';
 
@@ -226,9 +226,21 @@ const sections = getVisibleSections(league, navFranchiseId, adminFranchiseIds);
 // Suppress only on a KNOWN FOREIGN league apex, not "unless on our own apex":
 // localhost and Vercel preview hosts are in neither map, and they must keep
 // linking the manifest so the PWA stays testable off production.
+//
+// KNOWN RESIDUAL: the six `prerender = true` routes bake this decision at
+// BUILD time, where the hostname is localhost and no suppression happens, so
+// they still carry their manifest on a foreign apex. Closing that would mean
+// de-prerendering them; the distinct `id` in each manifest is what keeps the
+// destructive half (one league's app overwriting the other's) impossible
+// there. See docs/features/web-push.md.
 const hostLeagueSlug = HOST_TO_SLUG[Astro.url.hostname] ?? null;
 const ownLeagueSlug = getLeagueByNavSlug(league).slug;
-const onForeignLeagueHost = hostLeagueSlug !== null && hostLeagueSlug !== ownLeagueSlug;
+// mfl.football serves EVERY league by path prefix and belongs to none of them,
+// so no single league's PWA identity belongs on it either — it is foreign to
+// all three, not merely unknown.
+const onSharedMultiLeagueHost = Astro.url.hostname === new URL(SHARED_APP_ORIGIN).hostname;
+const onForeignLeagueHost =
+	onSharedMultiLeagueHost || (hostLeagueSlug !== null && hostLeagueSlug !== ownLeagueSlug);
 
 // Resolve theme preference (server-side). For 'auto', render no class — the
 // pre-paint inline script (ThemeScript) resolves it against prefers-color-scheme.

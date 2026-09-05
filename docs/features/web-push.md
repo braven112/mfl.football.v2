@@ -169,6 +169,20 @@ shape: it suppresses only on a **known foreign league apex**, not "unless on
 our own apex" — localhost and Vercel preview hosts are in neither map and must
 keep their manifest, or the PWA becomes untestable anywhere but production.
 
+Two gaps this gate does **not** close, both deliberate:
+
+- **The six `prerender = true` routes** (`theleague/insights`,
+  `theleague/about`, both `pecking-order/[year]/[week]`,
+  `afl-fantasy/players`, `afl-fantasy/draft/order`) evaluate the gate at BUILD
+  time, where the hostname is localhost and nothing is suppressed — so they
+  still carry their manifest on a foreign apex. Closing it would mean
+  de-prerendering them, which is a bigger call than this fix. The distinct
+  `id` below is what keeps the destructive half impossible there.
+- `mfl.football` (`SHARED_APP_ORIGIN`) serves every league by path prefix and
+  is in no league's `domains`, so a bare `HOST_TO_SLUG` lookup treats it like
+  localhost. It is special-cased as foreign to *all* leagues, since no single
+  league's PWA identity belongs on a multi-league origin.
+
 Belt and braces, every manifest also carries a **distinct `id`**. An app id
 defaults to `start_url`, so two manifests both saying `/` would be the same app
 on a shared origin. `id` is resolved against the origin and does **not** have
