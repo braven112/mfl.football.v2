@@ -142,8 +142,10 @@ function renderSection(result) {
     // Truncated, but no whole file was dropped: a single file was bigger than
     // the entire budget and got cut internally. Saying "0 file(s) were not
     // sent" describes that as if nothing were missing. (Copilot, PR #763.)
-    truncNote =
-      '\n\n⚠️ _**Coverage is partial** — one file was larger than the whole review budget and was cut off partway. No file was dropped, but the tail of that file was not reviewed._';
+    // Name it — the one file with partial coverage must not be the one file
+    // nothing can identify. (Codex, PR #763.)
+    const which = result.partialFile ? ` (\`${result.partialFile}\`)` : '';
+    truncNote = `\n\n⚠️ _**Coverage is partial** — one file${which} was larger than the whole review budget and was cut off partway. No file was dropped, but the tail of that file was not reviewed._`;
   }
 
   // An unparseable review must never render like a clean one. `/live` counts

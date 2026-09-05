@@ -10,6 +10,7 @@ import {
   capDiff,
   sliceToBytes,
   splitDiffByFile,
+  parseDiffHeaderPath,
   classifyReviewOutput,
   buildSystemPrompt,
   buildReformatPrompt,
@@ -773,5 +774,100 @@ describe('the PR comment survives hostile model output', () => {
     // render described that as if nothing were missing at all.
     expect(SCRIPT).toMatch(/omitted\.length > 0/);
     expect(SCRIPT).toMatch(/larger than the whole review budget/);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Codex's findings on PR #763 — the repair path must not reintroduce the bug
+// ---------------------------------------------------------------------------
+
+describe('the salvage pass can never turn a finding into a clean pass', () => {
+  const realFetch = globalThis.fetch;
+  afterEach(() => {
+    globalThis.fetch = realFetch;
+    vi.restoreAllMocks();
+  });
+
+  const TRACE = 'wait, the const initialises from itself at DraftMockLobby.astro:412 — that is a TDZ throw';
+
+  it('refuses a reformat that answers NO FINDINGS', async () => {
+    // THE bug this whole module exists to prevent, reintroduced through the
+    // repair path: a formatter that wrongly concludes the notes held nothing
+    // would overwrite prose containing a real finding with a clean pass, and
+    // the only output that actually read the code would be gone. The formatter
+    // cannot see the diff, so it does not get to say there was nothing.
+    const bodies = [geminiOk(TRACE), geminiOk('NO FINDINGS')];
+    globalThis.fetch = (async () => fakeResponse(200, bodies.shift()!)) as never;
+
+    const result = await runGemini();
+
+    expect(result.salvaged).toBe(false);
+    expect(result.malformed).toBe(true);
+    expect(result.text).toBe(TRACE);
+    expect(result.text).toContain('DraftMockLobby.astro:412');
+  });
+
+  it('still accepts a genuinely structured reformat', async () => {
+    const bodies = [geminiOk(TRACE), geminiOk('## Critical\n- TDZ throw at DraftMockLobby.astro:412')];
+    globalThis.fetch = (async () => fakeResponse(200, bodies.shift()!)) as never;
+
+    const result = await runGemini();
+
+    expect(result.salvaged).toBe(true);
+    expect(result.malformed).toBe(false);
+    expect(result.text).toContain('## Critical');
+  });
+});
+
+describe('diff headers are parsed by path, not by the first " b/"', () => {
+  it('handles the ordinary case', () => {
+    expect(parseDiffHeaderPath('diff --git a/src/foo.ts b/src/foo.ts')).toBe('src/foo.ts');
+  });
+
+  it('handles a rename, preferring where the code lives now', () => {
+    expect(parseDiffHeaderPath('diff --git a/old.ts b/new.ts')).toBe('new.ts');
+  });
+
+  it('handles a path that itself contains " b/"', () => {
+    // Splitting on the FIRST " b/" named `bar.ts b/dir/foo b/bar.ts`.
+    const line = 'diff --git a/dir/foo b/bar.ts b/dir/foo b/bar.ts';
+    expect(parseDiffHeaderPath(line)).toBe('dir/foo b/bar.ts');
+  });
+
+  it('returns null for anything that is not a diff header', () => {
+    expect(parseDiffHeaderPath('+++ b/src/foo.ts')).toBeNull();
+    expect(parseDiffHeaderPath('@@ -1 +1 @@')).toBeNull();
+    expect(parseDiffHeaderPath('diff --git a/no-b-side')).toBeNull();
+  });
+});
+
+describe('partial coverage always names the file it lost', () => {
+  const file = (path: string, body: string) =>
+    `diff --git a/${path} b/${path}\n--- a/${path}\n+++ b/${path}\n@@ -1 +1 @@\n+${body}\n`;
+
+  it('reports which file was cut internally', () => {
+    const result = capDiff(file('huge.ts', 'q'.repeat(5_000)), 500);
+    expect(result.truncated).toBe(true);
+    expect(result.omittedFiles).toEqual([]);
+    // Without this the one file with partial coverage is the one file nothing
+    // can identify.
+    expect(result.partialFile).toBe('huge.ts');
+  });
+
+  it('leaves partialFile null when whole files were dropped instead', () => {
+    const diff = file('a.ts', 'x'.repeat(200)) + file('b.ts', 'y'.repeat(200));
+    const result = capDiff(diff, 300);
+    expect(result.partialFile).toBeNull();
+    expect(result.omittedFiles.length).toBeGreaterThan(0);
+  });
+
+  it('keeps the omission note bounded when hundreds of files are dropped', () => {
+    // The note is appended ON TOP of the byte budget, so an unbounded list of
+    // names would push the prompt past the backstop it enforces.
+    const many = Array.from({ length: 400 }, (_, i) => file(`f${i}.ts`, 'z'.repeat(60))).join('');
+    const result = capDiff(many, 400);
+    expect(result.omittedFiles.length).toBeGreaterThan(100);
+    expect(result.diff).toContain('more, not listed');
+    expect((result.diff.match(/^ {2}- /gm) ?? []).length).toBeLessThanOrEqual(101);
   });
 });

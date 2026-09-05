@@ -488,15 +488,39 @@ export const PROVIDERS = {
  * @param {string} diff
  * @returns {Array<{ path: string | null, text: string }>}
  */
+/**
+ * Read the post-image path out of a `diff --git a/<x> b/<y>` header.
+ *
+ * A regex split on the FIRST ` b/` names the wrong file when a path itself
+ * contains that sequence (`dir/foo b/bar.ts`), so try every split point and
+ * prefer the one where both halves agree — which is every case except a
+ * rename, where the last split leaves a complete b-side path. Returns null
+ * for a line that is not a diff header. (Codex, PR #763.)
+ *
+ * @param {string} line
+ * @returns {string | null}
+ */
+export function parseDiffHeaderPath(line) {
+  const PREFIX = 'diff --git a/';
+  if (!line.startsWith(PREFIX)) return null;
+  const rest = line.slice(PREFIX.length);
+  const splits = [];
+  for (let i = rest.indexOf(' b/'); i !== -1; i = rest.indexOf(' b/', i + 1)) {
+    splits.push([rest.slice(0, i), rest.slice(i + 3)]);
+  }
+  if (splits.length === 0) return null;
+  const symmetric = splits.find(([before, after]) => before === after);
+  return (symmetric ?? splits[splits.length - 1])[1];
+}
+
 export function splitDiffByFile(diff) {
   const chunks = [];
   let current = null;
   for (const line of diff.split('\n')) {
-    const header = /^diff --git a\/(.+?) b\/(.+)$/.exec(line);
-    if (header) {
+    const headerPath = parseDiffHeaderPath(line);
+    if (headerPath !== null) {
       if (current) chunks.push(current);
-      // Prefer the b/ path: for a rename, that is where the code lives now.
-      current = { path: header[2], lines: [] };
+      current = { path: headerPath, lines: [] };
     } else if (!current) {
       current = { path: null, lines: [] };
     }
@@ -555,7 +579,7 @@ export function capDiff(diff, maxBytes = MAX_DIFF_BYTES) {
   // diff full of non-ASCII (this repo carries team names and emoji) would sail
   // past a cap that is documented in bytes.
   if (Buffer.byteLength(diff, 'utf8') <= maxBytes) {
-    return { diff, truncated: false, omittedFiles: [] };
+    return { diff, truncated: false, omittedFiles: [], partialFile: null };
   }
 
   const files = splitDiffByFile(diff);
@@ -580,27 +604,37 @@ export function capDiff(diff, maxBytes = MAX_DIFF_BYTES) {
   // A single file larger than the whole budget would otherwise omit everything
   // and send the model an empty diff — a "clean review" of nothing. Byte-cut
   // that one file instead: partial coverage of the real change beats none.
+  let partialFile = null;
   if (kept.length === 0 && files.length > 0) {
     const marker = `\n[... this file's diff was cut at ${maxBytes} bytes ...]`;
     const room = Math.max(0, maxBytes - Buffer.byteLength(marker, 'utf8'));
     kept.push(sliceToBytes(files[0].text, room) + marker);
-    omitted.shift();
+    // Record it before dropping it off the omitted list. Otherwise the only
+    // file whose coverage is partial is the one nothing can name. (Codex, #763.)
+    partialFile = omitted.shift() ?? null;
   }
 
   // A single over-budget file leaves nothing in `omitted`; it already carries
   // its own inline cut marker, so don't append an empty "0 files omitted" list.
+  // Cap the NAMES too. The note is appended on top of the byte budget, so an
+  // unbounded list would let a diff with thousands of omitted files push the
+  // prompt well past the backstop it is meant to enforce. (Codex, PR #763.)
+  const NAMED_IN_PROMPT = 100;
+  const named = omitted.slice(0, NAMED_IN_PROMPT);
+  const unnamed = omitted.length - named.length;
   const note = omitted.length
     ? [
         '',
         '',
         `[... diff truncated: ${omitted.length} file(s) omitted entirely to fit ${maxBytes} bytes.`,
         'You have NOT seen these files. Do not claim a call site is unupdated if it lives in one of them:',
-        ...omitted.map((path) => `  - ${path}`),
+        ...named.map((path) => `  - ${path}`),
+        ...(unnamed > 0 ? [`  - ...and ${unnamed} more, not listed`] : []),
         '...]',
       ].join('\n')
     : '';
 
-  return { diff: kept.join('\n') + note, truncated: true, omittedFiles: omitted };
+  return { diff: kept.join('\n') + note, truncated: true, omittedFiles: omitted, partialFile };
 }
 
 /**
@@ -663,13 +697,21 @@ export async function runProvider(name, { diff, context = '', env = process.env 
           system: buildReformatPrompt(),
           user: `Raw reviewer notes to reformat:\n\n${text}`,
         });
-        if (classifyReviewOutput(reformatted) === 'unstructured') {
-          // The salvage pass failed too. Keep the ORIGINAL notes rather than
-          // the reformat's — they are the ones that actually saw the code.
-          malformed = true;
-        } else {
+        // ONLY a structured reformat may replace the original notes.
+        //
+        // Testing for `!== 'unstructured'` also accepted NO FINDINGS — so a
+        // formatter that wrongly concluded the notes held nothing would
+        // overwrite prose containing a real finding with a clean pass, and the
+        // only output that actually read the code would be gone. That is this
+        // module's entire failure mode, reintroduced through the repair path.
+        // The formatter cannot see the diff, so it is in no position to be
+        // believed when it says there was nothing to report. (Codex, PR #763.)
+        if (classifyReviewOutput(reformatted) === 'structured') {
           finalText = reformatted;
           salvaged = true;
+        } else {
+          // Salvage failed. Keep the ORIGINAL notes — they saw the code.
+          malformed = true;
         }
       } catch (reformatError) {
         // Never let the salvage pass destroy the review it was meant to save.
