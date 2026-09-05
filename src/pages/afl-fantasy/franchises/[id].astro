@@ -218,8 +218,9 @@ const segmentsForFranchiseRange = (
   segmentsForFranchiseRangeUtil(aflConfig as any, id!, franchiseId, rangeStart, rangeEnd, finalSegmentIsCurrent);
 
 // The current OWNER's lineage. The boundary matches stat attribution exactly:
-// ownerHistory claims when present, otherwise getCurrentOwnerSince (the same
-// inference afl-awards uses). Seasons this slot played under EARLIER owners
+// ownerHistory claims when present, otherwise getCurrentOwnerSince — which
+// afl-awards.ts reads from the one shared implementation in
+// src/utils/owner-tenures.mjs. Seasons this slot played under EARLIER owners
 // are no longer re-derived here — PreviousOwners reads owner-tenures.json,
 // which is the reconciled record for exactly that question.
 let nameEras: NameEra[] = [];

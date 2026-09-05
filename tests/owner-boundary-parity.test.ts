@@ -1,32 +1,28 @@
 /**
  * Ownership-boundary parity — the anti-drift test.
  *
- * "When did the current owner take over, and whose season is this?" is
+ * "When did the current owner take over, and whose season is this?" used to be
  * answered by FIVE separate implementations in this repo, and two of them
- * already disagree:
+ * disagreed: `afl-awards.ts` walked back on NAME ONLY, without the `ownerEra`
+ * clause `compute-franchise-history.mjs` carried, and the two agreed only
+ * because no AFL team used `ownerEra`. Adding one would have silently forked
+ * award credit from display.
  *
- *   1. scripts/compute-franchise-history.mjs  `attributeYear` / `inferCurrentOwnerSince`
- *   2. src/utils/afl-awards.ts                `attributeAwardYear` / `getCurrentOwnerSince`
- *   3. src/utils/franchise-eras.ts            `buildFranchiseEras` / `renderedEraStarts`
- *   4. src/utils/team-names.ts                era resolution
- *   5. src/pages/afl-fantasy/franchises/[id].astro  page-local logic
+ * As of Sept 2026 there is ONE implementation — `inferCurrentOwnerSince` and
+ * `buildAttributor` in `src/utils/owner-tenures.mjs` — and every former copy
+ * calls it:
  *
- * (2) walks back on NAME ONLY — it has no `ownerEra` clause. (1) walks back on
- * `sameName || sameEra`. They agree today for exactly one accidental reason:
- * `ownerEra` is set on a single TheLeague slot (0003), and afl-awards.ts never
- * reads TheLeague's config. Add `ownerEra` to any AFL team and stat
- * attribution silently forks from display.
+ *   1. scripts/compute-franchise-history.mjs  `attributeYear` = `buildAttributor(...).attributeSeason`
+ *   2. src/utils/afl-awards.ts                `attributeAwardYear` / `getCurrentOwnerSince` wrap the same
+ *   3. src/utils/franchise-eras.ts            `groupHistory` groups eras with `entriesShareEra`
+ *   4. src/pages/afl-fantasy/franchises/[id].astro reads (2)
  *
- * `src/utils/owner-tenures.mjs` is a SIXTH implementation. Adding it without
- * pinning the equality would be the worst outcome, so this test asserts the
- * new one agrees with the existing ones, and — critically — asserts the
- * PRECONDITION that keeps (1) and (2) accidentally aligned. The day someone
- * adds `ownerEra` to an AFL team, this test says so instead of the AFL awards
- * page quietly crediting the wrong owner.
- *
- * PR 3 migrates the other four onto owner-tenures.mjs and resolves the
- * divergence for real; this test is what makes that refactor provable.
- * It pins CURRENT behaviour — including the divergence — deliberately.
+ * This test keeps it that way in two layers. The behavioural layer compares
+ * the shared function to what the OUTPUTS say over every real franchise-season
+ * (the ledger's `attributedTo`, the award attributor, the rendered era
+ * anchors). The structural layer fails if any of the three source files grows
+ * a local walk-back again — the equality must be by construction, never by
+ * coincidence. Both are required; neither is advisory.
  */
 import { describe, it, expect } from 'vitest';
 import { existsSync, readFileSync } from 'node:fs';
@@ -37,6 +33,7 @@ import { renderedEraStarts } from '../src/utils/franchise-eras';
 
 const ROOT = path.resolve(__dirname, '..');
 const readJson = (p: string) => JSON.parse(readFileSync(p, 'utf8'));
+const readSrc = (rel: string) => readFileSync(path.join(ROOT, rel), 'utf8');
 
 const loadLeague = (slug: string) => {
   const league: any = (LEAGUES as any)[slug];
@@ -58,12 +55,14 @@ it('has at least one league with a season ledger to check', () => {
 
 /**
  * THE core equality. `season-ledger.json`'s `attributedTo` is literally the
- * output of `attributeYear` — it was written by that function during the same
- * run. So checking every ledger row against `attributeSeason` compares the new
- * implementation to the authoritative one over every real franchise-season in
- * the repo, with no fixture in between.
+ * output of the compute script's `attributeYear` — it was written by that
+ * function during the same run. So checking every ledger row against
+ * `attributeSeason` compares the shared implementation to the committed
+ * output over every real franchise-season in the repo, with no fixture in
+ * between. If the script ever stops calling the shared function, the next
+ * regenerated ledger fails here.
  */
-describe.each(derivable)('%s: attributeSeason matches attributeYear', (slug: string) => {
+describe.each(derivable)('%s: attributeSeason matches the ledger', (slug: string) => {
   it('agrees on every franchise-season', () => {
     const loaded = loadLeague(slug);
     if (!loaded) return;
@@ -75,7 +74,7 @@ describe.each(derivable)('%s: attributeSeason matches attributeYear', (slug: str
       const ours = attributeSeason(row.franchiseId, row.year);
       const theirs = row.attributedTo ?? null;
       if ((ours ?? null) !== theirs) {
-        mismatches.push(`${row.franchiseId} ${row.year}: ours=${ours} attributeYear=${theirs}`);
+        mismatches.push(`${row.franchiseId} ${row.year}: ours=${ours} ledger=${theirs}`);
       }
     }
     expect(mismatches).toEqual([]);
@@ -86,23 +85,6 @@ describe.each(derivable)('%s: attributeSeason matches attributeYear', (slug: str
 describe('AFL: parity with afl-awards.ts', () => {
   const loaded = loadLeague('afl-fantasy');
   const runIf = loaded ? it : it.skip;
-
-  /**
-   * The precondition that keeps afl-awards.ts's missing `ownerEra` clause from
-   * mattering. If this ever fails, afl-awards.ts must gain the clause (or be
-   * migrated onto owner-tenures.mjs) BEFORE the config change ships —
-   * otherwise award attribution and display attribution disagree silently.
-   */
-  runIf('no AFL team uses ownerEra — the only reason the name-only walk-back agrees', () => {
-    const withEra = loaded!.teams
-      .filter((t: any) => (t.history ?? []).some((h: any) => h.ownerEra != null))
-      .map((t: any) => t.franchiseId);
-    expect(
-      withEra,
-      'An AFL team now has ownerEra. src/utils/afl-awards.ts:198 walks back on NAME ONLY and ' +
-        'will now disagree with compute-franchise-history.mjs. See trap 3 in docs/plans/owners-feature.md.'
-    ).toEqual([]);
-  });
 
   runIf('attributeAwardYear agrees with attributeSeason on every season', async () => {
     const { attributeAwardYear, getCurrentOwnerSince } = await import('../src/utils/afl-awards');
@@ -129,55 +111,141 @@ describe('AFL: parity with afl-awards.ts', () => {
     }
     expect(sinceMismatches).toEqual([]);
   });
+
+  runIf('fails closed on a null or unknown source id, like the awards path always did', () => {
+    const { attributeSeason } = buildAttributor(loaded!.teams);
+    expect(attributeSeason(null, 2020)).toBeNull();
+    expect(attributeSeason('9999', 2020)).toBeNull();
+  });
 });
 
-describe('TheLeague: the divergence, pinned', () => {
+/**
+ * The structural layer. The behavioural checks above can only see a
+ * divergence the CURRENT config exercises — exactly the blind spot that let
+ * the name-only copy in afl-awards.ts survive for two years. So also pin that
+ * the three files that used to carry their own walk-back now import the
+ * shared one and contain no walk-back of their own. A re-forked copy fails
+ * here on the day it is written, before any config change can expose it.
+ */
+describe('one implementation — no file carries its own walk-back', () => {
+  const walkBackSignatures = [
+    /function\s+inferCurrentOwnerSince\b/,
+    /const\s+inferCurrentOwnerSince\s*=/,
+    /sorted\[i\s*-\s*1\]/,
+    /ownerHistory\.map\(\s*\(?\w+\)?\s*=>\s*\w+\.yearStart\s*\)/,
+  ];
+
+  const consumers: Array<{ file: string; mustImport: RegExp; mustCall: RegExp }> = [
+    {
+      file: 'scripts/compute-franchise-history.mjs',
+      mustImport: /from '\.\.\/src\/utils\/owner-tenures\.mjs'/,
+      mustCall: /buildAttributor\(/,
+    },
+    {
+      file: 'src/utils/afl-awards.ts',
+      mustImport: /from '\.\/owner-tenures\.mjs'/,
+      mustCall: /buildAttributor\(/,
+    },
+    {
+      file: 'src/utils/franchise-eras.ts',
+      mustImport: /from '\.\/owner-tenures\.mjs'/,
+      mustCall: /entriesShareEra\(/,
+    },
+  ];
+
+  it.each(consumers)('$file imports the shared boundary and calls it', ({ file, mustImport, mustCall }) => {
+    const src = readSrc(file);
+    expect(src, `${file} must import from owner-tenures.mjs`).toMatch(mustImport);
+    expect(src, `${file} must use the shared boundary`).toMatch(mustCall);
+  });
+
+  it.each(consumers)('$file has no local walk-back', ({ file }) => {
+    const src = readSrc(file);
+    for (const sig of walkBackSignatures) {
+      expect(src, `${file} re-grew a local ownership walk-back (${sig}) — call owner-tenures.mjs instead`).not.toMatch(sig);
+    }
+  });
+
+  it('the shared module is the only place the walk-back lives', () => {
+    const src = readSrc('src/utils/owner-tenures.mjs');
+    expect(src).toMatch(/export const inferCurrentOwnerSince\s*=/);
+    expect(src).toMatch(/export const entriesShareEra\s*=/);
+    expect(src).toMatch(/export const buildAttributor\s*=/);
+  });
+});
+
+describe('TheLeague: the ownerEra clause is exercised, and it is worth three seasons', () => {
   const loaded = loadLeague('theleague');
   const runIf = loaded ? it : it.skip;
 
+  // The walk-back afl-awards.ts USED to carry — name only, no ownerEra. Kept
+  // here as a fixture so the test can show what the clause changes.
+  const nameOnlyWalkBack = (t: any) => {
+    if (typeof t.currentOwnerSince === 'number') return t.currentOwnerSince;
+    if (Array.isArray(t.ownerHistory) && t.ownerHistory.length > 0) {
+      return Math.min(...t.ownerHistory.map((h: any) => h.yearStart));
+    }
+    if (!Array.isArray(t.history) || t.history.length === 0) return null;
+    const norm = (s: string) =>
+      (s || '').trim().toLowerCase().replace(/^the\s+/, '').replace(/\s+/g, ' ');
+    const sorted = [...t.history].sort((a: any, b: any) => a.yearStart - b.yearStart);
+    const last = sorted[sorted.length - 1];
+    if (norm(last.name) !== norm(t.name)) return last.yearEnd + 1;
+    let i = sorted.length - 1;
+    while (i > 0 && norm(sorted[i - 1].name) === norm(sorted[i].name)) i--;
+    return sorted[i].yearStart;
+  };
+
   /**
-   * Documents WHY the parity above is accidental. TheLeague 0003 carries
-   * `ownerEra`, and the two walk-backs give different answers for it. This
-   * asserts the difference exists so nobody "cleans up" the `sameEra` clause
-   * believing it to be dead code — it is worth three seasons of attribution.
+   * TheLeague 0003 carries `ownerEra` across "Poker in the Rear / Generals /
+   * Poker in the Rear" (2012-2015). Today its current name sits AFTER that
+   * run, so both walk-backs happen to agree on the real config — which is
+   * precisely why the divergence went unnoticed. Put the era run at the
+   * boundary and the clause is the difference between 2012 and 2015.
    */
-  runIf('0003 needs the ownerEra clause — a name-only walk-back loses three seasons', () => {
+  runIf('0003 still carries a multi-name ownerEra run (re-point this test if that moves)', () => {
     const team: any = loaded!.teams.find((t: any) => t.franchiseId === '0003');
     expect(team, 'TheLeague 0003 not found').toBeTruthy();
+    const eraEntries = (team.history ?? []).filter((h: any) => h.ownerEra != null);
     expect(
-      (team.history ?? []).some((h: any) => h.ownerEra != null),
+      eraEntries.length,
       'TheLeague 0003 no longer uses ownerEra — re-point this test at whichever slot does, ' +
-        'or the sameEra clause is now genuinely untested.'
-    ).toBe(true);
+        'or the sameEra clause is now genuinely untested on real config.'
+    ).toBeGreaterThan(1);
+    expect(new Set(eraEntries.map((h: any) => h.name)).size).toBeGreaterThan(1);
+  });
 
-    const withEra = inferCurrentOwnerSince(team);
+  runIf('with the era run at the boundary, the shared walk-back keeps all of it and name-only loses it', () => {
+    const team: any = loaded!.teams.find((t: any) => t.franchiseId === '0003');
+    const eraEntries = (team.history ?? [])
+      .filter((h: any) => h.ownerEra != null)
+      .sort((a: any, b: any) => a.yearStart - b.yearStart);
+    const eraStart = eraEntries[0].yearStart;
+    const eraEnd = eraEntries[eraEntries.length - 1].yearEnd;
+    const lastEraName = eraEntries[eraEntries.length - 1].name;
 
-    // The same walk-back, minus the sameEra clause — i.e. afl-awards.ts's copy.
-    const nameOnly = (t: any) => {
-      if (typeof t.currentOwnerSince === 'number') return t.currentOwnerSince;
-      if (Array.isArray(t.ownerHistory) && t.ownerHistory.length > 0) {
-        return Math.min(...t.ownerHistory.map((h: any) => h.yearStart));
-      }
-      if (!Array.isArray(t.history) || t.history.length === 0) return null;
-      const norm = (s: string) =>
-        (s || '').trim().toLowerCase().replace(/^the\s+/, '').replace(/\s+/g, ' ');
-      const sorted = [...t.history].sort((a: any, b: any) => a.yearStart - b.yearStart);
-      const last = sorted[sorted.length - 1];
-      if (norm(last.name) !== norm(t.name)) return last.yearEnd + 1;
-      let i = sorted.length - 1;
-      while (i > 0 && norm(sorted[i - 1].name) === norm(sorted[i].name)) i--;
-      return sorted[i].yearStart;
+    // Same slot, but the current identity IS the era run's last name, so the
+    // current owner's run has to be walked back through the aliases.
+    const synthetic = {
+      ...team,
+      name: lastEraName,
+      history: (team.history ?? []).filter((h: any) => h.yearEnd <= eraEnd),
     };
 
-    // Both agree HERE only because 0003's current name run is unambiguous;
-    // the clause matters when the era run itself is the boundary. Assert the
-    // clause is exercised rather than asserting a specific divergence, so this
-    // stays true as the config evolves.
-    const eraEntries = team.history.filter((h: any) => h.ownerEra != null);
-    expect(eraEntries.length).toBeGreaterThan(1);
-    expect(new Set(eraEntries.map((h: any) => h.name)).size).toBeGreaterThan(1);
-    expect(typeof withEra).toBe('number');
-    expect(typeof nameOnly(team)).toBe('number');
+    expect(inferCurrentOwnerSince(synthetic)).toBe(eraStart);
+    const nameOnly = nameOnlyWalkBack(synthetic);
+    expect(nameOnly).not.toBe(eraStart);
+    expect(nameOnly).toBeGreaterThan(eraStart);
+
+    // And the attributor that stats, awards and the orphan pool all share
+    // hands the whole run to the current owner.
+    const { attributeSeason } = buildAttributor(
+      loaded!.teams.map((t: any) => (t.franchiseId === '0003' ? synthetic : t))
+    );
+    for (let y = eraStart; y <= eraEnd; y++) {
+      expect(attributeSeason('0003', y), `0003 ${y}`).toBe('0003');
+    }
+    expect(attributeSeason('0003', eraStart - 1)).toBeNull();
   });
 });
 

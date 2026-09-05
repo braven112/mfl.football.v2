@@ -63,23 +63,26 @@ export interface HistoricalIdentity {
 // this module calls it internally, and `export … from` creates no local
 // binding. Import path unchanged for every existing consumer.
 import { normalizeIdentity } from './identity-normalize.mjs';
+import { entriesShareEra, historyEraKey } from './owner-tenures.mjs';
 export { normalizeIdentity };
 
-type EraGroup = { entries: TeamHistoryEntry[]; key: string };
+type EraGroup = { entries: TeamHistoryEntry[] };
 
-// Group history entries by ownerEra (when set) so multiple aliases under one
-// owner collapse to a single era with a combined name like "Poker in the
-// Rear / Generals". Entries without ownerEra fall back to name-grouping.
-// Adjacent-only: two separate stints under the same name stay distinct.
+// Group ADJACENT history entries into eras with `entriesShareEra` — the same
+// predicate `inferCurrentOwnerSince` (owner-tenures.mjs) walks back over to
+// find the current owner's boundary — so an era anchor on the franchise page
+// can never straddle a season stat attribution hands to somebody else.
+// Multiple aliases under one `ownerEra` collapse to a single era with a
+// combined name like "Poker in the Rear / Generals"; otherwise a shared name
+// joins. Adjacent-only: two separate stints under the same name stay distinct.
 const groupHistory = (history: TeamHistoryEntry[]): EraGroup[] => {
   const groups: EraGroup[] = [];
   for (const h of history) {
-    const key = h.ownerEra != null ? `era:${h.ownerEra}` : `name:${normalizeIdentity(h.name)}`;
     const last = groups[groups.length - 1];
-    if (last && last.key === key) {
+    if (last && entriesShareEra(last.entries[last.entries.length - 1], h)) {
       last.entries.push(h);
     } else {
-      groups.push({ key, entries: [h] });
+      groups.push({ entries: [h] });
     }
   }
   return groups;
@@ -277,8 +280,7 @@ export function buildHistoricalIdentities(teams: TeamConfigLike[]): HistoricalId
     const currentNorm = normalizeIdentity(team.name);
     const groups = new Map<string, TeamHistoryEntry[]>();
     for (const h of team.history) {
-      const groupKey =
-        h.ownerEra != null ? `era:${h.ownerEra}` : `name:${normalizeIdentity(h.name)}`;
+      const groupKey = historyEraKey(h);
       if (!groups.has(groupKey)) groups.set(groupKey, []);
       groups.get(groupKey)!.push(h);
     }
