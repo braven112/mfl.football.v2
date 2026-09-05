@@ -396,7 +396,11 @@ const t = (value?: string) => value ?? '\u2014';
     height: 20px;
     object-fit: contain;
     flex-shrink: 0;
-    filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.4));
+    /* `--nfl-logo-ring` composes the site-wide white ring for dark-bodied
+       NFL marks (NFL_DARK_STROKE_CODES, nfl-logo-dark-css.ts) — `filter`
+       does not compose across rules, so a plain drop-shadow here would
+       silently discard it. `opacity(1)` is the no-op for every other team. */
+    filter: var(--nfl-logo-ring, opacity(1)) drop-shadow(0 1px 2px rgba(0, 0, 0, 0.4));
   }
 
   /* Both secondary lines clip rather than wrap, matching .cdm-band__* on the

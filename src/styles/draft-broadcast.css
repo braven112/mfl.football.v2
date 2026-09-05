@@ -889,8 +889,12 @@
   height: 1.55em;
   object-fit: contain;
   /* Enough separation for a mark whose own dark cut still runs close to the
-     franchise colour behind it — Jets green on a green gradient, say. */
-  filter: drop-shadow(0 0.08em 0.16em rgba(0, 0, 0, 0.55));
+     franchise colour behind it — Jets green on a green gradient, say. The
+     `--nfl-logo-ring` term composes the site-wide white ring for dark-bodied
+     NFL marks (the Panthers — see NFL_DARK_STROKE_CODES); `filter` does not
+     compose across rules, so without it this shadow would silently discard
+     that ring. `opacity(1)` is the no-op for every other team. */
+  filter: var(--nfl-logo-ring, opacity(1)) drop-shadow(0 0.08em 0.16em rgba(0, 0, 0, 0.55));
 }
 
 .dbc-reveal__injury {

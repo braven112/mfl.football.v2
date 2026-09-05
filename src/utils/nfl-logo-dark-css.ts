@@ -76,6 +76,19 @@ export const NFL_DARK_STROKE_CODES: readonly string[] = ['CAR'];
 export const NFL_DARK_STROKE_WIDTH = '1px';
 
 /**
+ * Custom property the ring rules set alongside `filter`, so a surface that
+ * needs its OWN filter on an NFL logo can compose the ring back in instead of
+ * silently discarding it: `filter: var(--nfl-logo-ring, opacity(1)) drop-shadow(…)`.
+ * `opacity(1)` is the no-op fallback for every un-ringed team (`filter` does
+ * not compose across rules, so the value has to be inline) — the same idiom
+ * as `--dbc-crest-ring` in draft-broadcast.css. A surface that deliberately
+ * dims a logo (the Free Agents 16%-opacity watermark) simply doesn't read it.
+ */
+export const NFL_LOGO_RING_VAR = '--nfl-logo-ring';
+// (The emitter below writes the property name as a literal rather than via this
+// constant so tests/design-token-guard.test.ts can see the declaration.)
+
+/**
  * Escape a value for use inside a double-quoted CSS string. Also neutralizes
  * `<` (as the CSS hex escape `\3c `) so a stray `</style>` in a src value can't
  * break out of the raw-text <style> element we render via `set:html`. Our srcs
@@ -197,6 +210,12 @@ export function buildNflLogoDarkCss(): string {
   // that with white halos. The ring is a DEFAULT: a surface that sets its own
   // filter has made a deliberate choice and must win, which is exactly what a
   // zero-specificity rule guarantees (any class selector beats it).
+  //
+  // The cost of losing is paid back through NFL_LOGO_RING_VAR: the rule also
+  // sets `--nfl-logo-ring`, which a class-level filter does NOT override, so a
+  // dark surface that wants its own shadow AND the ring composes
+  // `var(--nfl-logo-ring, opacity(1))` inline (the player-modal band and the
+  // broadcast origin line do). Pinned by tests/nfl-logo-dark-css.test.ts.
   const darkSrcs = NFL_DARK_STROKE_CODES.flatMap((code) => [
     getNFLTeamLogo(code, 'dark'),
     `/assets/nfl-logos/dark/${code}.png`,
@@ -204,7 +223,7 @@ export function buildNflLogoDarkCss(): string {
   const strokeFilter = crestStrokeFilter(undefined, NFL_DARK_STROKE_WIDTH);
   const strokeRule = (srcs: string[], guard: string): string | null =>
     srcs.length
-      ? `:where(${srcs.map((src) => `${guard}img[src="${cssStringEscape(src)}"]`).join(', ')}) { filter: ${strokeFilter}; }`
+      ? `:where(${srcs.map((src) => `${guard}img[src="${cssStringEscape(src)}"]`).join(', ')}) { --nfl-logo-ring: ${strokeFilter}; filter: var(--nfl-logo-ring); }`
       : null;
   for (const rule of [strokeRule(strokeSrcs, 'html.dark '), strokeRule(darkSrcs, '')]) {
     if (rule) rules.push(rule);

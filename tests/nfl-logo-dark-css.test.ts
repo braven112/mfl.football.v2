@@ -20,6 +20,7 @@ import {
   resolveNflDarkLogoUrl,
   NFL_DARK_STROKE_CODES,
   NFL_DARK_STROKE_WIDTH,
+  NFL_LOGO_RING_VAR,
 } from '../src/utils/nfl-logo-dark-css';
 import { crestStrokeFilter } from '../src/utils/crest-dark-stroke-css';
 import { getNFLTeamLogo as getNFLTeamLogoLegacy } from '../src/utils/nfl';
@@ -134,7 +135,9 @@ describe('white ring for dark-bodied marks (NFL_DARK_STROKE_CODES)', () => {
     // Same STACK as the crests, wider than their 0.5px hairline — a 16px
     // panther is a solid silhouette with no bright interior to help it.
     expect(NFL_DARK_STROKE_WIDTH).toBe('1px');
-    expect(strokeLine).toContain(`{ filter: ${crestStrokeFilter(undefined, NFL_DARK_STROKE_WIDTH)}; }`);
+    expect(strokeLine).toContain(
+      `{ ${NFL_LOGO_RING_VAR}: ${crestStrokeFilter(undefined, NFL_DARK_STROKE_WIDTH)}; filter: var(${NFL_LOGO_RING_VAR}); }`,
+    );
     expect(strokeLine).toContain('drop-shadow(1px 0 0 ');
     expect(strokeLine).not.toContain('0.5px');
     expect(strokeLine!.startsWith(':where(html.dark img[src="')).toBe(true);
@@ -149,7 +152,29 @@ describe('white ring for dark-bodied marks (NFL_DARK_STROKE_CODES)', () => {
     // so any class-level filter on the same img beats the default ring.
     for (const line of filterLines) {
       expect(line.startsWith(':where(')).toBe(true);
-      expect(line).toMatch(/^:where\([^{]+\) \{ filter: /);
+      expect(line).toMatch(/^:where\([^{]+\) \{ --nfl-logo-ring: /);
+    }
+  });
+
+  it('dark surfaces with their own logo filter compose the ring var back in; the watermark deliberately does not', () => {
+    // Losing to a class-level filter is the point of :where(), but two dark
+    // surfaces set a depth shadow on NFL logos and still want the ring: the
+    // player-modal band and the broadcast origin line. They read
+    // `var(--nfl-logo-ring, opacity(1))` inline (the --dbc-crest-ring idiom).
+    // The Free Agents watermark dims the logo on purpose and must NOT.
+    const compose = `var(${NFL_LOGO_RING_VAR}, opacity(1))`;
+    const read = (rel: string) => fs.readFileSync(path.join(__dirname, '..', rel), 'utf8');
+    const block = (css: string, selector: string) => {
+      const i = css.indexOf(selector);
+      expect(i, `${selector} not found`).toBeGreaterThan(-1);
+      return css.slice(i, css.indexOf('}', i));
+    };
+    expect(block(read('src/styles/draft-broadcast.css'), '.dbc-reveal__origin-logo {')).toContain(compose);
+    expect(block(read('src/components/theleague/PlayerDetailsModal.astro'), '.pdm-hero__team-logo {')).toContain(compose);
+    for (const page of ['src/pages/theleague/players.astro', 'src/pages/afl-fantasy/players.astro']) {
+      const b = block(read(page), '.hero-spotlight__logo {');
+      expect(b).toContain('filter:');
+      expect(b).not.toContain(NFL_LOGO_RING_VAR);
     }
   });
 
@@ -195,7 +220,9 @@ describe('white ring for dark-bodied marks (NFL_DARK_STROKE_CODES)', () => {
       expect(darkSrcStrokeLine).toContain(`[src="${getNFLTeamLogo(code, 'dark')}"]`);
       expect(darkSrcStrokeLine).toContain(`[src="/assets/nfl-logos/dark/${code}.png"]`);
     }
-    expect(darkSrcStrokeLine).toContain(`{ filter: ${crestStrokeFilter(undefined, NFL_DARK_STROKE_WIDTH)}; }`);
+    expect(darkSrcStrokeLine).toContain(
+      `{ ${NFL_LOGO_RING_VAR}: ${crestStrokeFilter(undefined, NFL_DARK_STROKE_WIDTH)}; filter: var(${NFL_LOGO_RING_VAR}); }`,
+    );
     expect(darkSrcStrokeLine).not.toContain('/DAL.');
   });
 
