@@ -27,6 +27,11 @@ on:
         description: "League year (default: current calendar year)"
         required: false
         type: string
+      write_test:
+        description: "Also run the no-op write test against the TEST league (36189)"
+        required: false
+        type: boolean
+        default: false
 
 concurrency:
   group: probe-commish-cookie
@@ -59,3 +64,17 @@ jobs:
           MFL_LEAGUE_ID: ${{ steps.league.outputs.id }}
           MFL_YEAR: ${{ inputs.year }}
         run: node scripts/probe-commish-cookie.mjs
+
+      # Writes to the TEST league only, and writes each value back UNCHANGED —
+      # a genuine authenticated write whose success is a no-op by construction,
+      # so MFL's answer is real and there is nothing to revert. It settles
+      # whether MFL_IS_COMMISH is required at all, or whether the host was the
+      # only variable that ever mattered.
+      - name: No-op write test (test league)
+        if: inputs.write_test
+        env:
+          MFL_USERNAME: ${{ secrets.MFL_USERNAME }}
+          MFL_PASSWORD: ${{ secrets.MFL_PASSWORD }}
+          MFL_IS_COMMISH: ${{ secrets.MFL_IS_COMMISH }}
+          MFL_YEAR: ${{ inputs.year }}
+        run: node scripts/probe-write-auth.mjs
