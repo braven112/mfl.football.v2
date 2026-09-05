@@ -422,27 +422,6 @@ verified from the app by a signed-in commissioner. Start with one small
 transaction: MFL's import has no delete, so a bad record is corrected with an
 offsetting one by hand.
 
-### The console's 403 was ours, not the commissioner's
-
-A signed-in commissioner — the app's own nav showed him as one — was told
-"Your session has no MFL commissioner credential". The app's commissioner role
-and MFL's `MFL_IS_COMMISH` cookie are different things, and the login only ever
-asked the `api.` host, which never issues that cookie (see the mfl-api note on
-league-scoped login). So the banner's advice, "sign out and sign in again",
-sent him back through the same login that could not produce it.
-
-`authenticateWithMFL` now makes a second, league-scoped hop against the
-league's own `www##` host to collect it, adopting BOTH of that response's
-cookies rather than mixing them with the api login's. The carry-over script
-does the same **per league** — the credential is league-scoped, so one cookie
-for two leagues was only ever going to satisfy one of them. Two consequences:
-
-- **Existing sessions do not have it.** The cookie is set at login, so anyone
-  signed in before this shipped must sign out and back in once.
-- **The UI path is the one that dodges credential expiry entirely** — it uses
-  the signed-in commissioner's live session rather than stored secrets, which
-  is why it is worth fixing ahead of the workflow's cookies.
-
 ### A DRY RUN CANNOT VALIDATE A CREDENTIAL
 
 The dry run reads both ledgers and prints the plan. Reads are not auth-gated

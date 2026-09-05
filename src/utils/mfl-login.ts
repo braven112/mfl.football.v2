@@ -10,25 +10,6 @@
  */
 
 import { mflFetch } from './mfl-fetch';
-import { getLeagueById } from '../config/leagues';
-import { getCurrentLeagueYear } from './league-year';
-
-/**
- * The whole league-scoped-login attempt, not per request. Every
- * non-commissioner sign-in pays this, so it must stay well inside the 30s
- * serverless budget with the rest of the login still to run.
- */
-const TOTAL_COMMISH_BUDGET_MS = 6000;
-const PER_HOP_TIMEOUT_MS = 3000;
-const MAX_COMMISH_HOPS = 3;
-
-/** MFL's own hosts over TLS — the only places a credential may be POSTed. */
-function isMFLHost(url: URL): boolean {
-  return (
-    url.protocol === 'https:'
-    && (url.hostname === 'myfantasyleague.com' || url.hostname.endsWith('.myfantasyleague.com'))
-  );
-}
 
 export interface MFLLoginResponse {
   success: boolean;
@@ -82,126 +63,6 @@ function parseMFLLoginXML(xml: string): { cookie?: string; error?: string } {
  *   because the 2026 AFL league hasn't been created on MFL yet, so calling
  *   `2026/myleagues` returns nothing for league 19621.
  */
-/** A commissioner session: BOTH cookies, from ONE login. Never mixed. */
-export interface MFLCommissionerSession {
-  mflUserId: string;
-  mflIsCommish: string;
-}
-
-/**
- * Log in AGAINST A LEAGUE to obtain a commissioner session.
- *
- * `api.myfantasyleague.com/<year>/login` issues MFL_USER_ID and nothing else —
- * it has no league in scope, so it has no commissioner to grant. MFL only sets
- * MFL_IS_COMMISH on a LEAGUE-SCOPED login: the league's own `www##` host, with
- * `L=<id>`. Every commissioner write then needs that same host plus both
- * cookies (docs/claude/insights/domains/mfl-api.md).
- *
- * ── WHY THIS RETURNS A PAIR ───────────────────────────────────────────────
- * This is a SECOND login, so it is a SECOND session. Keeping the first
- * login's MFL_USER_ID beside this one's MFL_IS_COMMISH pairs one session's
- * identity with another's privilege flag, and MFL refuses that as "not
- * authorized" — the same string an expired cookie produces. Worse than
- * failing: `accounting-request` would see a commish cookie, stop refusing up
- * front, and the commissioner would get fifteen per-write failures instead of
- * one clear banner. So both cookies come from this response or neither does.
- * (`scripts/accounting-carry-over.ts` learned the same lesson separately.)
- *
- * ── WHY IT IS ON A LEASH ──────────────────────────────────────────────────
- * `!commishCookie` is the NORMAL state — every owner who is not a
- * commissioner takes this path on every sign-in. Unbounded, its worst case
- * (two years x four hops x 8s) exceeds the 30s `maxDuration` in
- * astro.config.ts, which would turn a working owner login into a 504 with no
- * session at all. It gets one small shared budget and gives up quietly.
- */
-export async function fetchCommissionerSession(
-  username: string,
-  password: string,
-  leagueId: string,
-  seasonYear: number,
-): Promise<MFLCommissionerSession | null> {
-  const league = getLeagueById(leagueId);
-  if (!league?.mflHost) return null;
-
-  // Credentials go in the POST BODY, never the query string: a URL is logged
-  // by the origin, by every proxy in between, and by our own redirect tracing.
-  // Only the league id rides in the URL — and it comes from the REGISTRY
-  // entry, not from the caller's string. Same value, but nothing user-supplied
-  // reaches the request.
-  const credentials = new URLSearchParams({ USERNAME: username, PASSWORD: password, XML: '1' });
-  const query = new URLSearchParams({ L: league.id });
-
-  // The login route's `year` override makes seasonYear a past season for the
-  // AFL, so try the league year too. NOT `new Date().getFullYear()`: the MFL
-  // league year does not advance until Feb 14, so a January calendar year
-  // names a league that does not exist yet (CLAUDE.md, year rollover).
-  // Clamped to a real four-digit season. `seasonYear` originates in the login
-  // request body, and it is interpolated into a URL PATH below — a range check
-  // is what keeps a caller from steering that path anywhere.
-  const isSeason = (y: number) => Number.isInteger(y) && y >= 2000 && y <= 2100;
-  const years = [...new Set([seasonYear, getCurrentLeagueYear()])].filter(isSeason);
-
-  const deadline = Date.now() + TOTAL_COMMISH_BUDGET_MS;
-  const remaining = () => deadline - Date.now();
-
-  for (const year of years) {
-    let url = `https://${league.mflHost}/${year}/login?${query.toString()}`;
-
-    for (let hop = 0; hop < MAX_COMMISH_HOPS; hop++) {
-      if (remaining() <= 0) return null;
-      try {
-        // Re-POST across redirects rather than folding the body into the URL
-        // the way the api-host login above does — that trick is what puts
-        // credentials in a query string, and this helper does not need it.
-        const res = await fetch(url, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-          body: credentials.toString(),
-          redirect: 'manual',
-          signal: AbortSignal.timeout(Math.min(PER_HOP_TIMEOUT_MS, remaining())),
-        });
-
-        let userId = '';
-        let commish = '';
-        for (const cookieStr of res.headers.getSetCookie?.() ?? []) {
-          const user = cookieStr.match(/MFL_USER_ID=([^;]+)/);
-          if (user) userId = user[1];
-          const commishMatch = cookieStr.match(/MFL_IS_COMMISH=([^;]+)/);
-          if (commishMatch) commish = commishMatch[1];
-        }
-
-        if (commish) {
-          // The body carries MFL_USER_ID="…" when the Set-Cookie header does
-          // not — same response either way, so the pair stays intact.
-          if (!userId) {
-            const body = await res.text();
-            userId = body.match(/MFL_USER_ID="([^"]+)"/)?.[1] ?? '';
-          }
-          if (userId) return { mflUserId: userId, mflIsCommish: commish };
-          return null;
-        }
-
-        if (res.status < 300 || res.status >= 400) break;
-        const location = res.headers.get('location');
-        if (!location) break;
-        // NEVER follow a redirect off MFL. Each hop re-POSTs the commissioner's
-        // username and password, so a `Location:` pointing anywhere else would
-        // hand them to whoever sent it. MFL's own hosts only.
-        const next = location.startsWith('http') ? new URL(location) : new URL(location, url);
-        if (!isMFLHost(next)) {
-          console.log('[mfl-login] refusing an off-MFL redirect during league login');
-          break;
-        }
-        url = next.href;
-      } catch (error) {
-        console.log('[mfl-login] league-scoped login failed:', (error as Error).message);
-        break;
-      }
-    }
-  }
-  return null;
-}
-
 export async function authenticateWithMFL(
   username: string,
   password: string,
@@ -333,7 +194,7 @@ export async function authenticateWithMFL(
       };
     }
 
-    let mflCookie = parsed.cookie;
+    const mflCookie = parsed.cookie;
 
     // Capture MFL_IS_COMMISH cookie from Set-Cookie headers collected across ALL redirect hops.
     // MFL sets this alongside MFL_USER_ID for commissioner accounts.
@@ -346,18 +207,6 @@ export async function authenticateWithMFL(
         commishCookie = match[1];
         console.log('[mfl-login] found MFL_IS_COMMISH cookie');
         break;
-      }
-    }
-
-    // The api host's login never carries a league, so it never grants one.
-    // Ask the league's own host before concluding this is not a commissioner.
-    if (!commishCookie && leagueId) {
-      const commishSession = await fetchCommissionerSession(username, password, leagueId, seasonYear);
-      if (commishSession) {
-        // BOTH, or neither — see fetchCommissionerSession's header.
-        mflCookie = commishSession.mflUserId;
-        commishCookie = commishSession.mflIsCommish;
-        console.log('[mfl-login] found a commissioner session via league-scoped login');
       }
     }
 

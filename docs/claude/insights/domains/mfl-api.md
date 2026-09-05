@@ -30,9 +30,8 @@
   for exactly this; don't remove them.
 - **Never send `FRANCHISE_ID` on an owner-authenticated write.** It is
   commissioner-only and silently switches MFL to a stricter validation path.
-- **`api.` neither accepts nor issues commissioner rights.** Writes need
-  `www##` + both cookies; only `<mflHost>/<year>/login?L=<id>` issues the
-  second (2026-09-05).
+- **Commissioner writes need the `www##` host AND both cookies**
+  (`MFL_USER_ID` + `MFL_IS_COMMISH`). The `api.` host rejects them.
 - **Normalize every filtered export.** A one-result query returns a bare object,
   not a one-element array. Use `asArray` (`src/utils/mfl-normalize.ts`) *inside
   shared utils*, not at call sites. Offseason feeds ship a truthy object with
@@ -2927,61 +2926,3 @@ Guards live in `tests/draft-broadcast.test.ts` — one per shape above, the
 `traded to` and owner-chatter rejections, a sweep asserting every comment in the
 2023 feed saying `Pick traded from` parses, and a check that no consumer
 re-strips a `from ` prefix downstream.
-
----
-
-## 2026-09-05 - MFL_IS_COMMISH Comes From a League-Scoped Login
-
-**Context:** The accounting console told a signed-in commissioner "Your session
-has no MFL commissioner credential" while the site's own nav showed him as
-commissioner. Six carry-over runs had already failed the same way through the
-workflow's stored cookies.
-
-**Insight:** `api.myfantasyleague.com/<year>/login` has no league in scope, so
-it has no commissioner to grant — it sets `MFL_USER_ID` and nothing else. Only
-a LEAGUE-SCOPED login issues `MFL_IS_COMMISH`:
-
-```
-https://<mflHost>/<year>/login?L=<leagueId>&USERNAME=…&PASSWORD=…&XML=1
-```
-
-`authenticateWithMFL` had only ever called the `api.` host, so no session it
-built could write as commissioner. Two consequences that cost real time:
-
-- **The app's commissioner role and MFL's cookie are different things.** Ours
-  comes from the session JWT; MFL's comes from that cookie. A user can be one
-  without the other, and only the cookie can write.
-- **"Sign out and sign in again" was unfixable advice** — it sent the user back
-  through the same `api.` login. Any error text telling a user to re-auth must
-  be checked against whether re-authing can actually produce the credential.
-
-Three things the fix has to get right, each of which was a bug in a draft:
-
-- **Both cookies come from the league-scoped response, or neither does.** It is
-  a SECOND login, so it is a SECOND session; pairing its `MFL_IS_COMMISH` with
-  the api login's `MFL_USER_ID` is the mismatched pair MFL refuses as "not
-  authorized". Worse than failing outright: the write gate would see a commish
-  cookie, stop refusing up front, and the commissioner would collect one
-  failure per record instead of one banner.
-- **It is on a short shared leash.** `!commishCookie` is the NORMAL state —
-  every non-commissioner owner takes this path on every sign-in — and an
-  unbounded retry across years and redirect hops can exceed the 30s
-  `maxDuration`, turning a working owner login into a 504 with no session.
-- **The year candidates are the league year, not `getFullYear()`.** The MFL
-  league year does not advance until Feb 14, so a January calendar year names a
-  league that does not exist yet. The AFL also signs in against a past season
-  via the login route's `year` override, so both are tried.
-
-**Still open:** `scripts/lib/mfl-api.mjs#loginToMFL` remains api-host-only, so
-the six scripts that use it (`apply-pending-contracts`,
-`sync-draft-pick-contracts`, `fetch-owner-names`, `export-best-ball-draft`,
-`spike-owner-add-drop`, and its own callers) still cannot obtain a commissioner
-cookie by logging in — they depend on the stored secrets, which expire.
-`accounting-carry-over.ts` sidesteps this by calling
-`fetchCommissionerSession` per league instead; the others have not been moved.
-
-**Watch for:** the cookie is set at LOGIN, so sessions created before this
-shipped still lack it — those users must sign out and back in once.
-
-**Pinned by:** `tests/mfl-login-commish-cookie.test.ts`
-
