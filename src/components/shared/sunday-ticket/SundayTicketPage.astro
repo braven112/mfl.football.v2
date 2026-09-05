@@ -190,19 +190,19 @@ const title = `Sunday Ticket — Week ${week}`;
     <header class="st-page__head">
       <div class="st-page__title-group">
         <p class="st-page__eyebrow">Week {week}</p>
-        <h1 class="st-page__title">
-          <img class="st-page__mark" src={SUNDAY_TICKET_LOGO} alt="NFL Sunday Ticket" width="336" height="263" />
-          <span class="st-page__title-text">Sunday Ticket</span>
-        </h1>
+        <h1 class="st-page__title">Sunday Ticket</h1>
         <p class="st-page__lede">
           {personalized
             ? 'The four games to put on your multiview each window, ranked by how many of your starters are on the field.'
             : 'The four games with the most fantasy points on the field each window. Sign in to build it from your own rosters.'}
         </p>
       </div>
-      <div class="st-page__badges">
-        {personalized && <span class="st-badge st-badge--accent">Personalized</span>}
-        {boardLeagues.length > 1 && <span class="st-badge">{boardLeagues.length} leagues</span>}
+      <div class="st-page__side">
+        <img class="st-page__mark" src={SUNDAY_TICKET_LOGO} alt="NFL Sunday Ticket" width="336" height="263" />
+        <div class="st-page__badges">
+          {personalized && <span class="st-badge st-badge--accent">Personalized</span>}
+          {boardLeagues.length > 1 && <span class="st-badge">{boardLeagues.length} leagues</span>}
+        </div>
       </div>
     </header>
 
