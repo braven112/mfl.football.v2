@@ -56,9 +56,6 @@ import { ALL_LEAGUES, type LeagueDefinition } from '../src/config/leagues';
 // Shared .mjs helper used by the other MFL write scripts. No ts-expect-error:
 // its types resolve under the project config, so the directive would be unused.
 import { loginToMFL } from './lib/mfl-api.mjs';
-// The SAME helper the web login uses — one implementation of "which host issues
-// MFL_IS_COMMISH", so the script and the app cannot drift on it.
-import { fetchCommissionerSession } from '../src/utils/mfl-login';
 // .mjs planner, shared with the API route (see its header). Its JSDoc types
 // resolve, so no ts-expect-error is needed here.
 import { planYearMigration, assessCarryReadiness } from '../src/utils/accounting-migration.mjs';
@@ -89,48 +86,13 @@ const parseArgs = () => {
 
 async function carryLeague(
   league: LeagueDefinition,
-  opts: {
-    dryRun: boolean;
-    userCookie: string;
-    commishCookie?: string;
-    username?: string;
-    password?: string;
-  }
+  opts: { dryRun: boolean; userCookie: string; commishCookie?: string }
 ): Promise<Outcome> {
   const to = leagueYearFor(league);
   const from = to - 1;
   const label = `${league.name} ${from} → ${to}`;
 
-  let userCookie = opts.userCookie;
-  let commishCookie = opts.commishCookie;
-
-  // PER LEAGUE, because the credential is per league. MFL issues
-  // MFL_IS_COMMISH from a league-scoped login on that league's own host, so
-  // one cookie for two leagues was only ever going to satisfy one of them —
-  // and `loginToMFL` asks the api host, which issues none at all.
-  if (opts.username && opts.password) {
-    const session = await fetchCommissionerSession(opts.username, opts.password, league.id, to);
-    if (session) {
-      userCookie = session.mflUserId;
-      commishCookie = session.mflIsCommish;
-      console.log(`  ${league.name}: commissioner session acquired from ${league.mflHost}`);
-    } else {
-      console.warn(
-        `  ${league.name}: no commissioner session from ${league.mflHost} — this account is `
-          + 'not the commissioner of this league, or the credentials are wrong.'
-      );
-    }
-  }
-
-  if (!commishCookie && !opts.dryRun) {
-    return {
-      league: label,
-      status: 'skipped',
-      detail: 'no MFL_IS_COMMISH for this league — every write would be refused',
-    };
-  }
-
-  const creds = { mflUserCookie: userCookie, mflCommishCookie: commishCookie };
+  const creds = { mflUserCookie: opts.userCookie, mflCommishCookie: opts.commishCookie };
 
   // Sequential rather than concurrent: two authenticated reads against one
   // league gain nothing from parallelism, and a rate-limited second read would
@@ -196,8 +158,8 @@ async function carryLeague(
     {
       league,
       year: to,
-      mflUserCookie: userCookie,
-      mflCommishCookie: commishCookie,
+      mflUserCookie: opts.userCookie,
+      mflCommishCookie: opts.commishCookie,
     }
   );
 
@@ -244,7 +206,7 @@ async function main() {
   // Which credential path actually produced the cookies below. The preflight
   // reports it, and a message that guesses is worse than none: two live runs
   // were spent on a diagnostic that described a code path the run never took.
-  let loginOutcome: 'not-configured' | 'half-configured' | 'succeeded' | 'failed' = 'not-configured';
+  let loginOutcome: 'not-configured' | 'succeeded' | 'failed' = 'not-configured';
 
   if (username && password) {
     try {
@@ -274,20 +236,6 @@ async function main() {
       loginOutcome = 'failed';
       console.error(`MFL login failed, falling back to stored cookies: ${(error as Error).message}`);
     }
-  } else if (username || password) {
-    loginOutcome = 'half-configured';
-    // HALF a pair is a misconfiguration, not a choice. Run #5 (2026-09-05)
-    // was lost to exactly this: MFL_PASSWORD was set, MFL_USERNAME was not
-    // (MFL_USER_ID — a different secret entirely — was, which is the easy
-    // mix-up), so the login was skipped and 28 writes died on the expired
-    // cookies. Name the missing half rather than reporting the pair absent.
-    console.warn(
-      `${username ? 'MFL_PASSWORD' : 'MFL_USERNAME'} is not set while `
-        + `${username ? 'MFL_USERNAME' : 'MFL_PASSWORD'} is — the login needs BOTH, so it was `
-        + 'skipped. Note MFL_USERNAME (your login name) is a different secret '
-        + 'from MFL_USER_ID (a session cookie). Falling back to the stored '
-        + 'cookies, which expire.'
-    );
   } else {
     // Say so in the log. Run #4 (2026-09-03) failed every write against
     // expired cookies while the log gave no hint that the login path had
@@ -306,18 +254,13 @@ async function main() {
   }
   // Reads work without it, so an unset commish cookie would sail through the
   // whole plan and only fail at the first write. Fail before touching MFL.
-  // A successful login is a route to a commissioner cookie even when the api
-  // host handed back none: carryLeague fetches one per league. Only refuse
-  // when there is no route at all.
-  if (!commishCookie && loginOutcome !== 'succeeded' && !args.dryRun) {
+  if (!commishCookie && !args.dryRun) {
     console.error(
       'No MFL_IS_COMMISH cookie — MFL will reject every accounting write. Refusing to start. '
         + {
           succeeded:
-            'The login succeeded, so a commissioner session is fetched per league below.',
-          'half-configured':
-            'Only half the login pair is set (see the warning above) — set BOTH '
-            + 'MFL_USERNAME and MFL_PASSWORD, or supply the cookie.',
+            'The login succeeded but MFL issued no commissioner cookie, so this account is '
+            + 'not the commissioner of these leagues (or MFL did not treat the login as one).',
           failed:
             'The login failed (see above) and the stored cookies carry no MFL_IS_COMMISH, '
             + 'so nothing here can write. Fix the credentials rather than the cookie.',
@@ -341,15 +284,7 @@ async function main() {
   const outcomes: Outcome[] = [];
   for (const league of leagues) {
     try {
-      outcomes.push(
-        await carryLeague(league, {
-          dryRun: args.dryRun,
-          userCookie,
-          commishCookie: commishCookie || undefined,
-          username,
-          password,
-        })
-      );
+      outcomes.push(await carryLeague(league, { dryRun: args.dryRun, userCookie, commishCookie: commishCookie || undefined }));
     } catch (error) {
       outcomes.push({ league: league.name, status: 'failed', detail: (error as Error).message });
     }
