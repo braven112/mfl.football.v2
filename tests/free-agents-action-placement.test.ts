@@ -49,7 +49,9 @@ describe('free-agent action controls sit beside the player column', () => {
       expect(kebab).toBeGreaterThan(-1);
       expect(kebab).toBeLessThan(age);
       // The claim cell rides in the same slot, never appended after the row.
-      expect(row.indexOf('col-fa-action')).toBeLessThan(age);
+      const claim = Math.max(row.indexOf('${claimCell}'), row.indexOf('${faActionCell}'));
+      expect(claim).toBeGreaterThan(-1);
+      expect(claim).toBeLessThan(age);
       expect(src.slice(rowStart).includes('html += kebabCell')).toBe(false);
     });
   }

@@ -77,43 +77,45 @@ const { signedIn } = Astro.props;
    * Reads the button the page already rendered rather than the page's
    * claim rules — the page is the authority on who may claim what.
    */
-  function buildAcquireAction(row: HTMLElement | null): PlayerActionSpec | null {
-    const el = row?.querySelector<HTMLElement>('.col-fa-action .place-bid-link');
+  const acquireButtonFor = (playerId: string) =>
+    document.querySelector<HTMLElement>(
+      `#player-table-body tr[data-player-id="${CSS.escape(playerId)}"] .col-fa-action .place-bid-link`,
+    );
+
+  function buildAcquireAction(playerId: string): PlayerActionSpec | null {
+    const el = acquireButtonFor(playerId);
     if (!el) return null;
     const label = (el.textContent || '').replace(/[↗\u2197]/g, '').trim() || 'Bid';
     // "Claim this player" / "Bid on this player" — the page's own verb.
     const verbLabel = /^claim$/i.test(label) ? 'Claim this player' : `${label} on this player`;
-    if (el.classList.contains('claim-open')) {
-      return {
-        id: 'acquire',
-        label: verbLabel,
-        desc: 'Opens the claim form — you choose the drop and confirm there',
-        icon: 'icon-gavel',
-        closeFirst: true,
-        run: async () => { el.click(); return { ok: true }; },
-      };
-    }
-    if (el.hasAttribute('data-signin-open')) {
-      return {
-        id: 'acquire',
-        label: verbLabel,
-        desc: 'Sign in to file a claim',
-        icon: 'icon-gavel',
-        signIn: true,
-      };
-    }
-    const href = el.getAttribute('href');
-    if (href) {
-      return {
-        id: 'acquire',
-        label: `${label} on MyFantasyLeague`,
-        desc: 'Opens MFL in a new tab',
-        icon: 'icon-gavel',
-        closeFirst: true,
-        run: async () => { window.open(href, '_blank', 'noopener'); return { ok: true }; },
-      };
-    }
-    return null;
+    const isClaim = el.classList.contains('claim-open');
+    const isSignIn = el.hasAttribute('data-signin-open');
+    const isLink = !!el.getAttribute('href');
+    if (!isClaim && !isSignIn && !isLink) return null;
+    return {
+      id: 'acquire',
+      label: isLink ? `${label} on MyFantasyLeague` : verbLabel,
+      desc: isClaim
+        ? 'Opens the claim form — you choose the drop and confirm there'
+        : isSignIn
+          ? 'Sign in to file a claim'
+          : 'Opens MFL in a new tab',
+      icon: 'icon-gavel',
+      closeFirst: true,
+      // Click the row's button as it exists NOW, not the one captured when
+      // the sheet opened: a Watch toggle re-renders every row, and a captured
+      // node is detached by the time this runs. Clicking the live button also
+      // keeps each branch on the page's own path — WaiverClaimModal's
+      // delegated `.claim-open` listener, SignInModal's `[data-signin-open]`
+      // listener (which parks the player for the post-login claim resume),
+      // or the anchor's own navigation.
+      run: async () => {
+        const live = acquireButtonFor(playerId);
+        if (live) live.click();
+        else if (isSignIn) requestSignIn();
+        return { ok: true };
+      },
+    };
   }
 
   function onDocumentClick(e: MouseEvent) {
@@ -133,11 +135,10 @@ const { signedIn } = Astro.props;
       franchiseId: d.paFranchise || null,
       subText: d.paSub || null,
     };
-    const row = btn.closest<HTMLElement>('tr');
     const opened = openPlayerActionModal({
       player,
       actions: () => {
-        const acquire = buildAcquireAction(row);
+        const acquire = buildAcquireAction(id);
         const watch = buildWatchAction(id, { signedIn: pageSignedIn() && getWatchListAuth() !== 'signed-out' });
         return acquire ? [acquire, watch] : [watch];
       },

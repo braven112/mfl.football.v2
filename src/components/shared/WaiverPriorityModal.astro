@@ -237,11 +237,17 @@ const clientConfig = { ...config, initialOrder: undefined, hasInitialOrder: init
         ? 'MyFantasyLeague is taking too long to answer.'
         : err instanceof Error ? err.message : 'Could not read the waiver order.';
       if (hasSsrList) {
-        // Keep the synced order on screen; say why it is not live.
+        // Keep the synced order on screen; say why it is not live — and keep
+        // the line that says what priority DOES here, which the live foot
+        // always carries.
         setStatus('');
         if (ctx?.listEl) ctx.listEl.hidden = false;
         if (ctx?.footEl) {
-          ctx.footEl.textContent = `${message.replace(/[.!]*$/, '.')} Showing the order from our last sync.`;
+          const note =
+            ctx.cfg.system === 'bbid'
+              ? 'Priority breaks ties between equal bids.'
+              : 'Priority is rolling — win a claim and you drop to the back of the line.';
+          ctx.footEl.textContent = `${note} ${message.replace(/[.!]*$/, '.')} Showing the order from our last sync.`;
           ctx.footEl.hidden = false;
         }
       } else {
