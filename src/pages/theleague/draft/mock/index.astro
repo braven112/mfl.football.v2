@@ -8,15 +8,27 @@
  */
 import DraftMockLobby from '../../../../components/shared/draft-mock/DraftMockLobby.astro';
 import leagueConfigData from '../../../../data/theleague.config.json';
-import { getAuthUser, isCommissionerOrAdmin } from '../../../../utils/auth';
+import { getAuthUser, isAuthorizedForLeague, isCommissionerOrAdmin } from '../../../../utils/auth';
 import { getCurrentLeagueYear } from '../../../../utils/league-year';
-import { DEFAULT_LEAGUE_ID } from '../../../../config/leagues';
+import { DEFAULT_LEAGUE_ID, getLeagueBySlug } from '../../../../config/leagues';
 
 export const prerender = false;
 
 const user = getAuthUser(Astro.request);
 const leagueYear = getCurrentLeagueYear();
 const leagueId = user?.leagueId || DEFAULT_LEAGUE_ID;
+
+// The AFL half of this got the same treatment: a signed-in owner of the OTHER
+// league must not be offered a create form that can only fail, nor a session
+// list scoped to their own league rendered under this one's chrome. The create
+// endpoint keys off the SESSION's league, not the page's.
+const ownsHere = !!user && isAuthorizedForLeague(user, getLeagueBySlug('theleague')!.id);
+const gate = user && !ownsHere
+  ? {
+      heading: 'You don\u2019t have a team in The League',
+      body: 'A mock puts you in a chair, so it needs a franchise to put you in. The rest of the draft section is open to you \u2014 the board, the order, and every draft the league has held.',
+    }
+  : null;
 
 // Source catalog — keep in sync with MockRankingSource in src/types/draft-room.ts
 const rankingSources = [
@@ -51,4 +63,6 @@ const rankingSources = [
   roundOptions={[1, 2, 3]}
   rounds={3}
   queueScope={leagueId}
+  gate={gate}
+  showSessions={ownsHere}
 />
