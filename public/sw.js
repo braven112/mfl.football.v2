@@ -490,10 +490,16 @@ async function networkFirstWithOfflineFallback(event, request) {
  *
  * Payload contract (JSON, built server-side by src/utils/push-sender.ts
  * consumers — see docs/features/web-push.md):
- *   { title, body, url?, tag?, icon? }
+ *   { title, body, url?, tag?, icon?, badge? }
  * ========================================================================= */
 
 const DEFAULT_NOTIFICATION_ICON = '/assets/icons/pwa/icon-192.png';
+// The small icon. Android throws away a badge's RGB and tints ONLY its alpha
+// channel, so this must be a white-on-transparent silhouette — pointing it at
+// an opaque favicon (which is what DEFAULT_NOTIFICATION_ICON is: color type 2,
+// no alpha channel) renders a solid white square instead of a logo. Senders
+// pass a per-league badge; this is only the last-resort default.
+const DEFAULT_NOTIFICATION_BADGE = '/assets/icons/pwa/badge-96.png';
 
 // Show a notification for every push. userVisibleOnly is promised at
 // subscribe time, so always render something even if the payload is
@@ -510,7 +516,7 @@ self.addEventListener('push', (event) => {
   const options = {
     body: typeof data.body === 'string' ? data.body : '',
     icon: typeof data.icon === 'string' && data.icon ? data.icon : DEFAULT_NOTIFICATION_ICON,
-    badge: DEFAULT_NOTIFICATION_ICON,
+    badge: typeof data.badge === 'string' && data.badge ? data.badge : DEFAULT_NOTIFICATION_BADGE,
     data: { url: typeof data.url === 'string' && data.url.startsWith('/') ? data.url : '/' },
   };
   if (typeof data.tag === 'string' && data.tag) {

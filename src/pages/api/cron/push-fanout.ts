@@ -19,6 +19,7 @@
 
 import type { APIRoute } from 'astro';
 import { sendPushToFranchise, isPushConfigured } from '../../../utils/push-sender';
+import { leaguePushIcon, leaguePushBadge } from '../../../utils/push-notify-trade';
 import { getLeagueById, getLeagueBySlug } from '../../../config/leagues';
 
 /** Field limits, so a malformed caller cannot post a novel to every device. */
@@ -99,6 +100,11 @@ export const POST: APIRoute = async ({ request }) => {
       // Same tag collapses repeats on the device, so a re-run of the close
       // pass cannot stack duplicate reveals in someone's notification tray.
       tag: typeof n.tag === 'string' ? n.tag : 'owners-poll',
+      // Branded per league. This route resolved the league already but sent no
+      // art at all, so every fan-out fell through to the service worker's
+      // default — TheLeague's mark on an AFL owner's phone.
+      icon: leaguePushIcon(league.navSlug),
+      badge: leaguePushBadge(league.navSlug),
     }, category);
     sent += result.sent;
     if (result.sent > 0) recipients += 1;

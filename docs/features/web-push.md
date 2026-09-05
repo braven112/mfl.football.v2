@@ -102,10 +102,11 @@ deployment, not `pnpm dev`.
 
 1. **Build the payload with a pure function** in a new
    `src/utils/push-notify-<thing>.ts` (copy the shape of
-   `push-notify-trade.ts`): return `{ title, body, url, tag, icon }`.
-   Use `leaguePushIcon(navSlug)` for the icon, a site-relative `url`
-   (that's what the SW opens on click), and a stable `tag` so repeat
-   notifications collapse instead of stacking.
+   `push-notify-trade.ts`): return `{ title, body, url, tag, icon, badge }`.
+   Use `leaguePushIcon(navSlug)` AND `leaguePushBadge(navSlug)` — both, always
+   (see "Icon vs badge" below) — a site-relative `url` (that's what the SW
+   opens on click), and a stable `tag` so repeat notifications collapse
+   instead of stacking.
 2. **Wrap it** in a `notify*` function that resolves league/team context
    (registry lookups — never hardcode league ids) and calls
    `sendPushToFranchise`. Guard with `isPushConfigured()` and never throw.
@@ -114,9 +115,42 @@ deployment, not `pnpm dev`.
 4. **Unit-test the pure payload builder** in
    `tests/push-subscriptions.test.ts` or a sibling file.
 5. No SW change needed — the `push` handler renders any payload matching
-   the `{ title, body, url?, tag?, icon? }` contract.
+   the `{ title, body, url?, tag?, icon?, badge? }` contract.
 6. Mention the new alert type in the notifications page copy if it's
    user-visible.
+
+## Icon vs badge — they are not interchangeable
+
+`icon` is the large image in the notification. `badge` is the **small** icon,
+and Android renders it by discarding RGB entirely and using only the **alpha
+channel** as a stencil, which it then tints. Consequences:
+
+- **An opaque PNG is a solid block on the device, not a logo.** The service
+  worker used to pass TheLeague's `/assets/icons/pwa/icon-192.png` as the
+  badge for every league. That file is PNG color type 2 — no alpha channel at
+  all — so it rendered as a **blank white square**, which is what an AFL owner
+  saw next to a working test notification in Sept 2026.
+- Badges are `badge-96.png`: white-on-transparent silhouettes generated from
+  each league's favicon by `scripts/generate-notification-icons.mjs`.
+  Regenerate there; never hand-edit one, and never point `badge` at a favicon.
+- `tests/push-notification-icons.test.ts` fails on a badge with too little
+  transparency, on a badge that equals its league's icon, and on committed art
+  that has drifted from what the generator produces.
+
+## The manifest must be scoped to `/`
+
+Every league is served at the **root of its own apex domain** — the middleware
+rewrites `afl-fantasy.com/rosters` → `/afl-fantasy/rosters` internally, and
+`vercel.json` 301s `/afl-fantasy/*` → `/*` on that host. A manifest declaring
+`scope: "/afl-fantasy/"` therefore covers **no URL that domain actually
+serves**, and a manifest whose scope excludes its own document is discarded:
+no install prompt, no WebAPK, and no app icon for Android to show as the
+notification's app identity. The AFL shipped that way until Sept 2026.
+
+`start_url` and `scope` are both `/` in every manifest, pinned by
+`tests/push-notification-icons.test.ts`. Each manifest also carries a
+`purpose: "maskable"` icon, because Android crops adaptive icons to an
+OEM-chosen shape and a non-full-bleed icon gets a visible notch.
 
 ## Per-category preferences
 

@@ -54,6 +54,7 @@ const AREA_LABELS = {
   'awards': 'Awards & Trophies',
   'franchises': 'Franchise Pages',
   'owners': 'Owner Pages',
+  'notifications': 'Notifications',
   'other': 'Other',
 };
 
