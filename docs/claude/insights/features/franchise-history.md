@@ -1,5 +1,59 @@
 # Franchise History Pages — Insights
 
+## 2026-09-05 - Five copies of the ownership boundary became one, and the proof was a dump, not a screenshot
+
+**Context:** PR 3 of `docs/plans/owners-feature.md`. `compute-franchise-history.mjs`,
+`afl-awards.ts`, `franchise-eras.ts` and the AFL franchise page each carried
+their own "when did the current owner take over" walk-back, and the awards
+copy lacked the `ownerEra` clause. They agreed only because no AFL team used
+`ownerEra`. All of them now call `inferCurrentOwnerSince` / `buildAttributor`
+in `src/utils/owner-tenures.mjs`.
+
+**Insight:** a "zero user-visible change" refactor of a function that feeds
+three committed artifacts and two pages is cheapest to prove at the FUNCTION
+level, over every real input, rather than by rendering pages.
+
+- **Dump every boundary output over every (slot, year) before touching
+  anything.** One `vite-node` script called `buildFranchiseEras`,
+  `renderedEraStarts`, `buildHistoricalIdentities`, `attributeAwardYear`,
+  `getCurrentOwnerSince` and `attributeSeason` for every team and every ledger
+  row in both leagues (plus an unknown id and every slot × 2003-2026 for the
+  awards path) and wrote ~120 KB of JSON. After the migration the file was
+  byte-identical. That is a stronger statement than two screenshots of two
+  franchise pages, because it covers every page and every year at once, and it
+  costs seconds to re-run.
+- **`generatedAt` is the only line a no-op regenerate should move.** Both
+  leagues' `franchise-history.json` and `season-ledger.json` differed from the
+  committed copies by exactly that line after `pnpm compute:franchise-history`
+  and `--league=afl`. Discard the timestamp-only diff (`git checkout -- data/`)
+  rather than committing it — a derived-file commit with no content change is
+  noise the next rebase has to carry.
+- **Unify on the PREDICATE, not on a grouping key.** `franchise-eras.ts`
+  grouped adjacent history entries by a key (`era:N` else `name:x`), the
+  walk-back used a predicate (`sameName || sameEra`). Those differ when an
+  `ownerEra` entry sits next to a same-name entry without one. Real config
+  never hits that case, so switching the grouping to the shared predicate was
+  a no-op today and closes the gap for the day it isn't. The exported
+  `entriesShareEra` is deliberately narrower than `entriesShareTenure` — a
+  rebrand group or punitive rename bridges a TENURE but starts a new ERA and
+  has always stopped the walk-back; widening it would move the attribution
+  boundary of every slot with a punitive rename.
+- **The behavioural parity test could never see the divergence it existed to
+  guard.** It compared outputs on the real config, and the real config was the
+  one place the two copies agreed. `tests/owner-boundary-parity.test.ts` now
+  has a structural layer too: the three former copies must import
+  `owner-tenures.mjs`, must call it, and must not contain a walk-back
+  signature. A re-forked copy fails the day it is written. Beside it, a
+  synthetic 0003 with the era run AT the boundary shows the clause is worth
+  three seasons (2012 vs 2015) — the real config only exercises it, it never
+  differentiates on it.
+- **Fail-closed was the one behavioural difference, and it was the awards
+  copy that had it right.** `attributeAwardYear` returned null for an unknown
+  or null franchise id; the compute script's copy returned the id back. The
+  shared attributor now fails closed. Nothing changed on disk because no
+  ledger row names an unknown slot, but it is the correct default for a
+  function whose callers include award rows typed by hand.
+
 ## 2026-09-01 - Retiring a team's artwork into an era touches FOUR derived files, and none of them are the ones /publish-assets names
 
 **Context:** The Gridiron Geeks got new art (white facemask → orange) as their
