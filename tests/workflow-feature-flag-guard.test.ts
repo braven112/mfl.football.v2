@@ -65,6 +65,7 @@ describe('workflow feature-flag guard', () => {
   });
 
   it('scans the workflow directory it claims to', () => {
-    expect(walkFiles({ roots: ROOTS, extensions: EXTS }).length).toBeGreaterThan(20);
+    // A known file, not a count: consolidating workflows must not fail this.
+    expect(walkFiles({ roots: ROOTS, extensions: EXTS })).toContain('.github/workflows/ci.yml');
   });
 });

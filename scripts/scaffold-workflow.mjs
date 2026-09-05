@@ -100,7 +100,7 @@ function scriptSource(a) {
   // year resolves to LAST season, whose feeds are complete by definition, so
   // an ungated weekly job fires all preseason (CLAUDE.md "Year rollover — two
   // independent clocks").
-  const seasonYear = currentSeasonYear();
+  const { currentSeasonYear: seasonYear } = getCurrentYears();
   if (!isSeasonWindowOpen(seasonYear)) {
     console.log(\`${a.name}: season \${seasonYear} is not in progress — nothing to do.\`);
     return;
@@ -109,7 +109,7 @@ function scriptSource(a) {
     : '';
   const seasonImports = a.seasonGated
     ? `import { isSeasonWindowOpen } from '../src/utils/pecking-order-season-window.mjs';
-import { currentSeasonYear } from './lib/schefter-recurrence-ledger.mjs';
+import { getCurrentYears } from './lib/league-years.mjs';
 `
     : '';
   return `#!/usr/bin/env node
@@ -121,7 +121,7 @@ import { currentSeasonYear } from './lib/schefter-recurrence-ledger.mjs';
  */
 import { join } from 'node:path';
 import { ALL_LEAGUES } from '../src/config/leagues-data.mjs';
-import { fetchExport } from './lib/mfl-api.mjs';
+import { fetchExport, mflHostPrefix } from './lib/mfl-api.mjs';
 import { writeJsonIfChanged } from './lib/canonical-json.mjs';
 ${seasonImports}
 /** Behaviour switch. Flip here, not in a GitHub Actions variable. */
@@ -135,7 +135,7 @@ async function main() {
 ${seasonGate}
   for (const league of ALL_LEAGUES) {
     // Registry values only — never a literal id, host, or data path.
-    const host = league.mflHost.replace(/\\.myfantasyleague\\.com$/, '');
+    const host = mflHostPrefix(league.mflHost);
     // TODO: pick the export type this job needs and the year clock it runs on.
     // const data = await fetchExport({ host, leagueId: league.id, year, type: 'league' }, { retries: 2, sleepMs: 500, timeoutMs: 10_000 });
     // writeJsonIfChanged(join(process.cwd(), league.dataPath, 'derived', '${a.name}.json'), data);

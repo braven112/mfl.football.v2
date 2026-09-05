@@ -52,17 +52,38 @@ function changedFiles() {
 }
 
 const LEAGUE_DIRS = ALL_LEAGUES.map((l) => l.slug);
-// Component directories are keyed by navSlug in places (afl-fantasy vs afl);
-// accept both spellings when looking for a twin.
-const COMPONENT_DIRS = [...new Set(ALL_LEAGUES.flatMap((l) => [l.slug, l.navSlug]))].filter((d) =>
-  existsSync(path.join(ROOT, 'src/components', d)),
+// Component directories are keyed by slug OR navSlug (src/components/afl and
+// src/components/afl-fantasy are BOTH the AFL). Twins are looked up per
+// LEAGUE, so two directories of one league never read as each other's twin.
+const COMPONENT_DIRS_BY_LEAGUE = new Map(
+  ALL_LEAGUES.map((l) => [
+    l.slug,
+    [...new Set([l.slug, l.navSlug])].filter((d) => existsSync(path.join(ROOT, 'src/components', d))),
+  ]),
 );
+const componentDirLeague = (dir) => [...COMPONENT_DIRS_BY_LEAGUE].find(([, dirs]) => dirs.includes(dir))?.[0];
 
+/** Twin candidates per other league: `[{ league, paths: [...] }]` — a twin exists if ANY path does. */
 function classify(file) {
   const page = file.match(/^src\/pages\/([^/]+)\/(.+)$/);
-  if (page && LEAGUE_DIRS.includes(page[1])) return { kind: 'page', league: page[1], rest: page[2], dirs: LEAGUE_DIRS, root: 'src/pages' };
+  if (page && LEAGUE_DIRS.includes(page[1])) {
+    return {
+      kind: 'page',
+      league: page[1],
+      twins: LEAGUE_DIRS.filter((l) => l !== page[1]).map((l) => ({ league: l, paths: [`src/pages/${l}/${page[2]}`] })),
+    };
+  }
   const comp = file.match(/^src\/components\/([^/]+)\/(.+)$/);
-  if (comp && COMPONENT_DIRS.includes(comp[1])) return { kind: 'component', league: comp[1], rest: comp[2], dirs: COMPONENT_DIRS, root: 'src/components' };
+  const compLeague = comp && componentDirLeague(comp[1]);
+  if (compLeague) {
+    return {
+      kind: 'component',
+      league: compLeague,
+      twins: [...COMPONENT_DIRS_BY_LEAGUE]
+        .filter(([l, dirs]) => l !== compLeague && dirs.length)
+        .map(([l, dirs]) => ({ league: l, paths: dirs.map((d) => `src/components/${d}/${comp[2]}`) })),
+    };
+  }
   return { kind: 'shared' };
 }
 
@@ -98,12 +119,10 @@ for (const file of changed) {
     rows.push({ file, kind: 'shared', twin: null, status: 'n/a', reach: importersByLeague(file) });
     continue;
   }
-  for (const dir of c.dirs) {
-    if (dir === c.league) continue;
-    const twin = `${c.root}/${dir}/${c.rest}`;
-    const exists = existsSync(path.join(ROOT, twin));
-    const status = !exists ? 'MISSING' : changedSet.has(twin) ? 'ALSO CHANGED' : 'UNCHANGED';
-    rows.push({ file, kind: c.kind, twin, status });
+  for (const { league, paths } of c.twins) {
+    const twin = paths.find((p) => existsSync(path.join(ROOT, p)));
+    const status = !twin ? 'MISSING' : changedSet.has(twin) ? 'ALSO CHANGED' : 'UNCHANGED';
+    rows.push({ file, kind: c.kind, twin: twin ?? `${paths[0]} (${league})`, status });
   }
 }
 

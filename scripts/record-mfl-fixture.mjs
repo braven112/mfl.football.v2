@@ -8,8 +8,9 @@
  * against it can pass on the recording and fail on the next re-record for
  * no semantic reason — or, worse, encode "first element" assumptions that
  * hold only by accident. This records through the registry (no literal ids
- * or hosts), sorts every array by a stable key, and stamps provenance so the
- * fixture says where it came from and when.
+ * or hosts), sorts every array by a stable key, and stamps provenance (league,
+ * type, year, extra — never a timestamp, so re-recording an unchanged export
+ * is byte-identical).
  *
  *   node scripts/record-mfl-fixture.mjs --league theleague --type rosters --year 2026 \
  *     [--extra "&FRANCHISE=0001"] [--out tests/fixtures/mfl/theleague-rosters-2026.json] [--stdout]
@@ -27,7 +28,7 @@
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { getLeagueBySlug, ALL_LEAGUES } from '../src/config/leagues-data.mjs';
-import { fetchExport } from './lib/mfl-api.mjs';
+import { fetchExport, mflHostPrefix } from './lib/mfl-api.mjs';
 
 const SORT_KEYS = ['id', 'player', 'franchise', 'week', 'name'];
 
@@ -108,7 +109,7 @@ async function main() {
     process.exit(2);
   }
 
-  const host = league.mflHost.replace(/\.myfantasyleague\.com$/, '');
+  const host = mflHostPrefix(league.mflHost);
   const raw = await fetchExport(
     { host, leagueId: league.id, year: a.year, type: a.type, extra: a.extra },
     { retries: 2, sleepMs: 500, timeoutMs: 15_000, userAgent: 'mfl.football fixture recorder' },
@@ -119,7 +120,9 @@ async function main() {
       type: a.type,
       year: a.year,
       extra: a.extra || undefined,
-      recordedAt: new Date().toISOString(),
+      // No timestamp on purpose: the file must be byte-identical across
+      // recordings of an unchanged export, or the diff stops answering "did
+      // the data change?". The recording time is printed, not stored.
       note: 'Arrays sorted by a stable key for determinism (scripts/record-mfl-fixture.mjs). MFL itself returns them in arbitrary order — tests must not depend on position.',
     },
     data: canonicalizeForFixture(raw),
@@ -133,7 +136,7 @@ async function main() {
   // Persisting the response IS the purpose: a test fixture, at a path built
   // from validated CLI arguments and never from the response body.
   writeFileSync(join(process.cwd(), out), text); // lgtm[js/http-to-file-access] codeql[js/http-to-file-access]
-  console.log(`wrote ${out} (${(text.length / 1024).toFixed(1)} KB)`);
+  console.log(`wrote ${out} (${(text.length / 1024).toFixed(1)} KB) at ${new Date().toISOString()}`);
 }
 
 const invokedDirectly = process.argv[1] && /record-mfl-fixture\.mjs$/.test(process.argv[1]);

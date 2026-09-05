@@ -34,6 +34,7 @@ import { ALL_LEAGUES, DEFAULT_LEAGUE_SLUG, LEAGUES } from '../src/config/leagues
 const ROOT = process.cwd();
 const DIRECTORY = 'src/data/page-directory.json';
 const CATEGORIES = ['popular', 'my-team', 'reports', 'tools', 'info'];
+const VISIBILITIES = ['all', 'admin'];
 
 function parseArgs(argv) {
   const out = { leagues: null, auth: false, dryRun: false, tags: [], visibility: 'all', popularity: 30 };
@@ -65,6 +66,8 @@ function validate(a) {
   if (!a.description) errors.push('--description is required (one sentence, what the page answers)');
   if (!CATEGORIES.includes(a.category)) errors.push(`--category must be one of ${CATEGORIES.join(', ')}`);
   if (!a.icon) errors.push('--icon is required (a sprite icon id used elsewhere in page-directory.json)');
+  if (!VISIBILITIES.includes(a.visibility)) errors.push(`--visibility must be one of ${VISIBILITIES.join(', ')}`);
+  if (!Number.isInteger(a.popularity) || a.popularity < 0 || a.popularity > 100) errors.push('--popularity must be an integer 0-100');
   if (a.tags.length < 10) errors.push(`--tags needs 10+ comma-separated tags (got ${a.tags.length}); write synonyms, data types, actions, slang`);
   const known = ALL_LEAGUES.map((l) => l.slug);
   // Default: every non-best-ball league with a page directory. Best-ball is

@@ -212,7 +212,7 @@ export function expectAllPresent(result: RequiredResult, rule: string): void {
 }
 
 export interface RatchetOptions {
-  /** Repo-relative JSON file holding `{ "total": number, ... }` (or `items: string[]`). */
+  /** Repo-relative JSON file holding `{ "total": number, ... }`. (A set-shaped ratchet — a list that may only shrink — is its own test; see tests/page-fork-ratchet.test.ts.) */
   baselineFile: string;
   /** The number measured now. */
   current: number;

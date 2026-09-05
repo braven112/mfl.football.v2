@@ -37,7 +37,9 @@ export function walkFiles(root, { extensions = null, skipDirs = DEFAULT_SKIP_DIR
       entries = readdirSync(dir, { withFileTypes: true });
     } catch (err) {
       if (err.code === 'ENOTDIR') return keep(dir); // root was a file
-      if (err.code === 'ENOENT') return; // vanished between listing and descent; nothing to walk
+      // A descendant that vanished between listing and descent is nothing to
+      // walk; a missing ROOT is a caller bug and must not read as "no files".
+      if (err.code === 'ENOENT' && dir !== absRoot) return;
       throw err;
     }
     for (const entry of entries) {

@@ -13,7 +13,7 @@ rule already applied, in the shape of `.github/workflows/weekly-stats-sync.yml`.
 |---|---|---|
 | No `vars.*` feature gates | CLAUDE.md "Feature flags — code, not GitHub Actions variables" | `const ENABLED` in the script; disable by commenting the `cron:` line |
 | Registry constants only | `tests/league-literal-guard.test.ts` | loops `ALL_LEAGUES`, reads `league.id` / `mflHost` / `dataPath` |
-| Weekly job gates on the season being played | CLAUDE.md "Year rollover — two independent clocks" (Pecking Order fired all preseason) | `--season-gated` adds `isSeasonWindowOpen` |
+| Weekly job gates on the season being played | CLAUDE.md "Year rollover — two independent clocks" (Pecking Order fired all preseason) | `--season-gated` adds `isSeasonWindowOpen` on `getCurrentYears()` |
 | Deterministic feed writes | `docs/claude/rules/storage-and-build.md` | `writeJsonIfChanged` from `scripts/lib/canonical-json.mjs` |
 | Shared CI preamble + commit step | `.github/actions/setup`, `.github/actions/commit-push` | both wired |
 

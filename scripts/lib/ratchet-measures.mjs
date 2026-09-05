@@ -87,8 +87,8 @@ export function inBandRoutes(siblings, { largestThinRoute, smallestForkedRoute }
  * and the DOM is swapped underneath it, so an init that only runs on
  * DOMContentLoaded leaves the page inert on every in-site navigation after
  * the first (docs/claude/insights/domains/frontend.md "Astro and
- * ClientRouter"; five pages shipped that bug in one week). `is:inline`
- * scripts are skipped — they run per document. Judged per script block in
+ * ClientRouter"; five pages shipped that bug in one week). `is:inline` and
+ * `define:vars` scripts are skipped — Astro renders both inline, per document. Judged per script block in
  * .astro files and per module elsewhere under src/. Returns sorted
  * repo-relative paths, one per offending file.
  */
@@ -104,7 +104,9 @@ export function collectClientRouterOffenders(srcRoot) {
       // astro:page-load can still carry a second block that only ever ran on
       // DOMContentLoaded, and that block is just as dead after a swap.
       for (const m of src.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script\b[^>]*>/gi)) {
-        if (/\bis:inline\b/.test(m[1])) continue;
+        // `is:inline` and `define:vars` blocks are both rendered inline by Astro
+        // (per document, not per session), so neither is the bundled-once case.
+        if (/\bis:inline\b/.test(m[1]) || /\bdefine:vars\b/.test(m[1])) continue;
         if (m[2].includes('DOMContentLoaded') && !m[2].includes('astro:page-load')) offenders.add(rel);
       }
     } else if (!src.includes('astro:page-load')) {

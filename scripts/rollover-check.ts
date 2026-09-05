@@ -36,12 +36,20 @@ function parseArgs(argv: string[]) {
     base: 'http://localhost:4321',
     year: new Date().getFullYear(),
   };
+  const value = (flag: string, i: number) => {
+    const v = argv[i];
+    if (v === undefined || v.startsWith('--')) throw new Error(`${flag} needs a value`);
+    return v;
+  };
   for (let i = 0; i < argv.length; i += 1) {
     const a = argv[i];
-    if (a === '--base') out.base = argv[++i];
-    else if (a === '--cookie') out.cookie = argv[++i];
-    else if (a === '--year') out.year = Number(argv[++i]);
-    else if (a.startsWith('/')) out.path = a;
+    if (a === '--base') out.base = value(a, ++i);
+    else if (a === '--cookie') out.cookie = value(a, ++i);
+    else if (a === '--year') {
+      out.year = Number(value(a, ++i));
+      if (!Number.isInteger(out.year)) throw new Error('--year must be a four-digit year');
+    } else if (a.startsWith('/')) out.path = a;
+    else throw new Error(`unknown argument ${a}`);
   }
   return out;
 }
@@ -96,7 +104,13 @@ function visibleText(html: string): string {
 }
 
 async function main() {
-  const args = parseArgs(process.argv.slice(2));
+  let args: ReturnType<typeof parseArgs>;
+  try {
+    args = parseArgs(process.argv.slice(2));
+  } catch (err) {
+    console.error(`rollover-check: ${(err as Error).message}`);
+    process.exit(2);
+  }
   if (!args.path) {
     console.error('usage: pnpm exec tsx scripts/rollover-check.ts /<league>/<page> [--base URL] [--cookie "session=…"] [--year YYYY]');
     process.exit(2);
@@ -104,9 +118,10 @@ async function main() {
   // The expected league year is the LEAGUE's clock, not TheLeague's: the AFL
   // rolls on June 1 (registry `leagueYearRollover`), and judging an AFL page
   // against Feb 14 inverts the verdict for exactly the pages this exists for.
+  // getLeagueByPath always resolves (unprefixed paths belong to the default league).
   const league = getLeagueByPath(args.path);
-  const slug = league?.slug ?? 'theleague';
-  const rollover = league?.leagueYearRollover ?? null;
+  const slug = league.slug;
+  const rollover = league.leagueYearRollover ?? null;
   const candidates = [args.year - 2, args.year - 1, args.year, args.year + 1, args.year + 2];
   const rows: string[] = [];
   let failed = false;
