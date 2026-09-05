@@ -53,6 +53,7 @@ export const loadLeagueInputs = (root, league) => {
 
   const history = readJson(historyPath);
   const ledger = readJson(ledgerPath);
+  const awardRows = loadAwardRows(root, league);
 
   // The MFL feed's own name for a franchise in a given season. Used only for
   // gap fill — years no config `history[]` entry covers. Read lazily and
@@ -84,6 +85,7 @@ export const loadLeagueInputs = (root, league) => {
     teams,
     ledgerRows: ledger.rows ?? [],
     yearSummaries: history.yearSummaries ?? [],
+    awardRows,
     // Returning this is load-bearing: both callers pass it straight into
     // buildOwnerTenures, and without it every gap-filled year loses its name.
     feedIdentityFor,
@@ -91,6 +93,32 @@ export const loadLeagueInputs = (root, league) => {
     ledgerPath,
     derivedDir,
   };
+};
+
+/**
+ * The league's award ledger — `<dataPath>/awards-history.json` — flattened to
+ * one `{ year, slug, sourceFranchiseId }` per award. Only the AFL keeps one
+ * today; a league without the file simply gets no award rows, the same
+ * structural skip that excludes best-ball-1 from the whole pipeline — the
+ * path comes from the registry, so no league is named here.
+ *
+ * `sourceFranchiseId` is the RAW SLOT that won that season, stamped by
+ * scripts/compute-afl-awards.mjs. It is deliberately NOT `franchiseId`: that
+ * is who gets credit on a franchise page today, and pre-2016 it points at an
+ * owner, not a slot — 2007's champion was slot 0007 that season and is
+ * franchise 0021 now. A row with no slot cannot be placed on a tenure and is
+ * left out here; tests/afl-awards.test.ts fails the build on one.
+ */
+export const loadAwardRows = (root, league) => {
+  const awards = readJson(path.join(root, league.dataPath, 'awards-history.json'));
+  const rows = [];
+  for (const season of awards?.seasons ?? []) {
+    for (const [slug, award] of Object.entries(season.awards ?? {})) {
+      if (!award?.sourceFranchiseId) continue;
+      rows.push({ year: season.year, slug, sourceFranchiseId: award.sourceFranchiseId });
+    }
+  }
+  return rows;
 };
 
 /**

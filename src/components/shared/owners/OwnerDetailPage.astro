@@ -23,8 +23,9 @@ import EraSeasonTable from '../franchises/EraSeasonTable.astro';
 import { resolveLeaguePath } from '../../../utils/nav-utils';
 import { getLeagueBySlug } from '../../../config/leagues';
 import type { CanonicalLeagueSlug } from '../../../config/leagues';
-import type { Owner } from '../../../types/owner-tenures';
+import type { Owner, OwnerAward } from '../../../types/owner-tenures';
 import { formatOwnerRecord, ownerWinPct } from '../../../utils/owner-detail';
+import { AWARD_TYPES, getAwardBadge } from '../../../utils/afl-awards';
 
 interface Props {
   leagueSlug: CanonicalLeagueSlug;
@@ -79,6 +80,26 @@ const trophies = [
   },
 ].filter(Boolean) as { label: string; detail: string }[];
 
+/**
+ * The league's own award badges — `totals.awards` is the AFL's award ledger
+ * placed on whoever held the winning slot that season, so a departed owner's
+ * 2007 division title shows here and nowhere else. One chip per award type,
+ * in trophy-room order, wearing the same branded art as the franchise page's
+ * trophy case; the years go in the tooltip like every other chip. Empty for
+ * a league with no award ledger, so TheLeague's page renders exactly as before.
+ */
+const awardChips = (awards: OwnerAward[]) =>
+  AWARD_TYPES.flatMap((type) => {
+    const years = awards.filter((a) => a.slug === type.slug).map((a) => a.year);
+    if (years.length === 0) return [];
+    return [{
+      label: years.length === 1 ? type.label : `${type.label} ×${years.length}`,
+      badge: getAwardBadge(type.slug),
+      title: `${type.label}: ${years.join(', ')}`,
+    }];
+  });
+const careerAwardChips = awardChips(totals.awards);
+
 /** Award chips for one tenure — scoped to the years inside it. */
 const tenureAwards = (tenure: Owner['tenures'][number]) => {
   const years = new Set(tenure.seasons.map((s) => s.year));
@@ -94,7 +115,8 @@ const tenureAwards = (tenure: Owner['tenures'][number]) => {
     mvps > 0 && { label: `⭐ ${mvps} MVP` },
     jerrys > 0 && { label: `💸 ${jerrys} Jerry Jones` },
     osweilers > 0 && { label: `📉 ${osweilers} Osweiler` },
-  ].filter(Boolean) as { label: string }[];
+    ...awardChips(totals.awards.filter((a) => years.has(a.year))),
+  ].filter(Boolean) as { label: string; badge?: string; title?: string }[];
 };
 
 /**
@@ -198,6 +220,14 @@ const pageTitle = `${owner.title} — ${league.name} owner history`;
         <div class="trophy-chips">
           {trophies.map((t) => (
             <span class="era-award" title={t.detail}>{t.label}</span>
+          ))}
+        </div>
+      )}
+
+      {careerAwardChips.length > 0 && (
+        <div class="trophy-chips trophy-chips--awards">
+          {careerAwardChips.map((chip) => (
+            <span class="era-award" title={chip.title}><img class="era-award-badge" src={chip.badge} alt="" width="16" height="16" loading="lazy" />{chip.label}</span>
           ))}
         </div>
       )}
@@ -430,6 +460,13 @@ const pageTitle = `${owner.title} — ${league.name} owner history`;
     color: var(--content-text-muted, #555);
     font-weight: 600;
     cursor: help;
+  }
+  .trophy-chips--awards { margin-top: 0.5rem; }
+  .era-award-badge {
+    width: 1rem;
+    height: 1rem;
+    vertical-align: -0.2em;
+    margin-right: 0.25rem;
   }
 
   .tenures { margin-bottom: 2rem; }

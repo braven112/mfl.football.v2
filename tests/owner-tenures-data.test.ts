@@ -297,6 +297,59 @@ describe.each(leagues)('$league.slug owner tenures', ({ league, ownersPath, ledg
     expect(checked).toBeGreaterThan(0);
   });
 
+  /**
+   * The league's OWN award ledger (the AFL's awards-history.json) reaches the
+   * owner pages through `sourceFranchiseId` — the raw slot that won — placed
+   * on whoever held (slot, year). Every row must land on exactly one owner
+   * (co-owners of a declared shared team excepted), and no owner may carry an
+   * award the ledger does not record. A league with no ledger carries none.
+   */
+  it('lands every award-ledger row on exactly one owner', () => {
+    const awardsPath = path.join(ROOT, league.dataPath, 'awards-history.json');
+    if (!existsSync(awardsPath)) {
+      for (const owner of owners.owners) {
+        expect(owner.totals.awards, `${owner.slug} has awards but the league has no ledger`).toEqual([]);
+      }
+      return;
+    }
+
+    const has = (owner: any, year: number, slug: string) =>
+      owner.totals.awards.some((a: any) => a.year === year && a.slug === slug);
+
+    let rows = 0;
+    for (const season of readJson(awardsPath).seasons ?? []) {
+      for (const [slug, award] of Object.entries<any>(season.awards ?? {})) {
+        rows += 1;
+        const label = `${season.year} ${slug} (${award.name})`;
+        expect(award.sourceFranchiseId, `${label} has no sourceFranchiseId — it can reach no owner page`).toBeTruthy();
+        const holders = owners.owners.filter((o: any) => has(o, season.year, slug));
+        const shared = holders.length > 1 && holders.every((o: any) => o.isShared);
+        expect(shared ? 1 : holders.length, `${label} landed on ${holders.map((o: any) => o.slug).join(', ') || 'nobody'}`).toBe(1);
+        for (const holder of holders) {
+          expect(
+            holder.tenures.some((t: any) =>
+              t.franchiseId === award.sourceFranchiseId && t.seasons.some((s: any) => s.year === season.year)
+            ),
+            `${label} sits on ${holder.slug}, who never held slot ${award.sourceFranchiseId} that year`
+          ).toBe(true);
+        }
+      }
+    }
+    expect(rows).toBeGreaterThan(0);
+
+    // Nothing invented: every owner award is a ledger row.
+    const ledgerKeys = new Set(
+      (readJson(awardsPath).seasons ?? []).flatMap((s: any) =>
+        Object.keys(s.awards ?? {}).map((slug) => `${s.year}|${slug}`)
+      )
+    );
+    for (const owner of owners.owners) {
+      for (const a of owner.totals.awards) {
+        expect(ledgerKeys.has(`${a.year}|${a.slug}`), `${owner.slug} carries ${a.year} ${a.slug}, not in the ledger`).toBe(true);
+      }
+    }
+  });
+
   it('credits championships to the owner who actually won them', () => {
     const claimed = owners.owners.flatMap((o: any) =>
       o.totals.championships.map((year: number) => `${o.slug}|${year}`)

@@ -42,6 +42,15 @@ export interface EraSeason {
 
 export interface EraAward {
   label: string;
+  /**
+   * Branded badge art (e.g. an AFL award SVG). Text-only chips omit it.
+   * The chip markup below is kept on ONE line on purpose: whitespace inside
+   * a chip renders as a visible space beside its padding, and the franchise
+   * pages pin this markup byte-for-byte.
+   */
+  badge?: string;
+  /** Tooltip — typically the years won. */
+  title?: string;
 }
 
 interface Props {
@@ -180,7 +189,7 @@ const Heading = headingLevel;
   {awards.length > 0 && (
     <div class="era-awards">
       {awards.map((award) => (
-        <span class="era-award">{award.label}</span>
+        <span class="era-award" title={award.title}>{award.badge && <img class="era-award-badge" src={award.badge} alt="" width="16" height="16" loading="lazy" />}{award.label}</span>
       ))}
     </div>
   )}
@@ -345,6 +354,12 @@ const Heading = headingLevel;
     background: var(--content-bg-muted, #f5f5f5);
     color: var(--content-text-muted, #555);
     font-weight: 600;
+  }
+  .era-award-badge {
+    width: 1rem;
+    height: 1rem;
+    vertical-align: -0.2em;
+    margin-right: 0.25rem;
   }
 
   .dim {

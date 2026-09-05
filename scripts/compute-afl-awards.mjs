@@ -41,6 +41,13 @@
  * hand-curated rows (e.g. afl-cup, pre-2016 titles) and any award slug this
  * script doesn't compute are preserved, while the auto-derived slugs — the
  * bracket/division awards plus the two tier champions — are refreshed.
+ *
+ * Every row carries TWO ids. `franchiseId` is who gets CREDIT today (a current
+ * franchise, or null for a departed owner). `sourceFranchiseId` is the RAW SLOT
+ * that won that season — the id in that year's own MFL feed — and is what lets
+ * owner-tenures.mjs hand a departed owner's title to the tenure that held
+ * (slot, year). Pre-2016 the two routinely differ: 2007's champion was slot
+ * 0007 that season and is franchise 0021 today. See backfillSourceSlots().
  */
 
 import { promises as fs } from 'node:fs';
@@ -500,8 +507,8 @@ async function computeYear(year) {
       // the name through the slot credits the title to the wrong team's name.
       const mapped = currentIdForName(histName);
       enriched[slug] = mapped
-        ? { franchiseId: mapped, name: histName, source: val.source }
-        : { franchiseId: null, name: histName, source: val.source };
+        ? { franchiseId: mapped, sourceFranchiseId: val.franchiseId, name: histName, source: val.source }
+        : { franchiseId: null, sourceFranchiseId: val.franchiseId, name: histName, source: val.source };
       continue;
     }
 
@@ -509,12 +516,18 @@ async function computeYear(year) {
     // ownership changes (stable slot, new owner from `since`).
     const change = OWNERSHIP_CHANGES[val.franchiseId];
     if (change && year < change.since) {
-      enriched[slug] = { franchiseId: null, name: change.priorName, source: val.source };
+      enriched[slug] = {
+        franchiseId: null,
+        sourceFranchiseId: val.franchiseId,
+        name: change.priorName,
+        source: val.source,
+      };
       continue;
     }
 
     enriched[slug] = {
       franchiseId: val.franchiseId,
+      sourceFranchiseId: val.franchiseId,
       name: nameForYear(val.franchiseId, year, histName),
       source: val.source,
     };
@@ -522,6 +535,65 @@ async function computeYear(year) {
   const count = Object.keys(enriched).length;
   log(`${year}: ${count} auto-derived awards (${Object.keys(enriched).join(', ') || 'none'})`);
   return count ? { year, awards: enriched } : null;
+}
+
+// --- Source slots for rows this run did not derive ------------------------------
+
+const LEAGUE_CACHE = new Map();
+async function cachedLeague(year) {
+  if (!LEAGUE_CACHE.has(year)) LEAGUE_CACHE.set(year, await loadLeague(year));
+  return LEAGUE_CACHE.get(year);
+}
+
+// Loose enough that "Brady's Bastards" (2009 feed) and "Bradys Bastards" (the
+// hand-entered 2012 row) meet; a match still has to be UNIQUE in that feed.
+const looseName = (s) => String(s ?? '').toLowerCase().replace(/[^a-z0-9]+/g, '');
+
+async function slotForNameInFeed(year, name) {
+  const league = await cachedLeague(year);
+  const key = looseName(name);
+  if (!key) return null;
+  const hits = toArray(league?.league?.franchises?.franchise)
+    .filter((f) => looseName(f.name) === key)
+    .map((f) => f.id);
+  return hits.length === 1 ? hits[0] : null;
+}
+
+// `sourceFranchiseId` — the raw slot that won — is stamped by computeYear on
+// every row THIS run derives. Two kinds of row never pass through there and
+// are carried over from the existing file instead: `manual:*` rows (the merge
+// skips them by design) and, on an --offline run, bracket rows the local cache
+// cannot resolve. Fill the slot in for those, without touching who is
+// CREDITED (`franchiseId`/`source` stay exactly as curated).
+//
+//   2016+ and credited → the slot IS the franchiseId (owner-stable ids).
+//   otherwise          → the slot whose name in THAT SEASON'S feed matches the
+//                        row's recorded contemporaneous name. Pre-2016 the
+//                        row's `franchiseId` is an OWNER pointer, not a slot
+//                        (see computeYear), so it is only used to recover the
+//                        name that owner wore that year — 2005's al-champion
+//                        is recorded as "Smokane FC", a name 0001 adopted in
+//                        2006; its 2005 feed name was "Smokane".
+//
+// A row that resolves to nothing keeps `sourceFranchiseId: null` and is
+// warned about — tests/afl-awards.test.ts fails on it, so the gap is fixed in
+// the data rather than silently dropping the title from every owner page.
+async function backfillSourceSlots(byYear) {
+  await loadCanonicalNames();
+  for (const season of byYear.values()) {
+    for (const [slug, award] of Object.entries(season.awards)) {
+      const { franchiseId = null, sourceFranchiseId = null, name = null, source, ...rest } = award;
+      let slot = sourceFranchiseId;
+      if (!slot && season.year >= 2016 && franchiseId) slot = franchiseId;
+      if (!slot) slot = await slotForNameInFeed(season.year, name);
+      if (!slot && franchiseId && season.year < 2016) {
+        slot = await slotForNameInFeed(season.year, nameForYear(franchiseId, season.year, null));
+      }
+      if (!slot) warn(`${season.year} ${slug}: cannot resolve the winning slot for "${name}"`);
+      // Rebuilt in one key order so every row reads the same way on disk.
+      season.awards[slug] = { franchiseId, sourceFranchiseId: slot ?? null, name, source, ...rest };
+    }
+  }
 }
 
 async function main() {
@@ -587,9 +659,16 @@ async function main() {
     }
     const slug = `${conf}-champion`;
     if (!season.awards[slug]) {
-      season.awards[slug] = { franchiseId: id, name: champ.name, source: 'derived:afl-champion' };
+      season.awards[slug] = {
+        franchiseId: id,
+        sourceFranchiseId: champ.sourceFranchiseId ?? null,
+        name: champ.name,
+        source: 'derived:afl-champion',
+      };
     }
   }
+
+  await backfillSourceSlots(byYear);
 
   // Heal stale display names on 2016+ rows, whatever wrote them. The
   // enrichment above only reaches slugs this RUN could derive: bracket rows
@@ -643,7 +722,9 @@ async function main() {
       'decided at its week-16 cutoff, won by Smokane FC and confirmed against ' +
       'the season’s payout records), pre-2016 League Champions, and select ' +
       'pre-2016 conference champions. A null franchiseId means the winner is a defunct/pre-2016 ' +
-      'franchise with no current page — the historical name is retained.',
+      'franchise with no current page — the historical name is retained. sourceFranchiseId is ' +
+      'the RAW SLOT that won in that season’s own feed (pre-2016 it is not the same franchise ' +
+      'as franchiseId); owner-tenures.mjs uses it to credit the owner holding that slot-year.',
     seasons,
   };
   await writeJson(OUTPUT_PATH, output);

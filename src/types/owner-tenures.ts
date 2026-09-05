@@ -69,6 +69,18 @@ export interface OwnerDivisionTitle {
   divisionName: string | null;
 }
 
+/**
+ * One award from the league's own award ledger (the AFL's
+ * awards-history.json), placed on the owner who held the winning slot that
+ * season. `slug` is an `AwardSlug` from `src/utils/afl-awards.ts`; kept as a
+ * string here because this file describes derived data for every league, and
+ * only the AFL has an award ledger today — every other league's list is empty.
+ */
+export interface OwnerAward {
+  year: number;
+  slug: string;
+}
+
 export interface OwnerTotals {
   seasons: number;
   wins: number;
@@ -83,6 +95,7 @@ export interface OwnerTotals {
   mvpAwards: number[];
   jerryJonesAwards: number[];
   osweilerAwards: number[];
+  awards: OwnerAward[];
 }
 
 /** Previous / next owner of a given slot, for the succession footer. */

@@ -153,6 +153,7 @@ async function runLeague(slug, opts, registry) {
     teams: inputs.teams,
     ledgerRows: inputs.ledgerRows,
     yearSummaries: inputs.yearSummaries,
+    awardRows: inputs.awardRows,
     feedIdentityFor: inputs.feedIdentityFor,
     registry,
     // Verify against the real public/ tree so a dead config URL falls through
