@@ -5,6 +5,38 @@ Insights for the AFL homepage hero system (`src/utils/afl-hero-resolver.ts`,
 
 ---
 
+## 2026-09-05 - A P1 lead-up locked What's New out of the hero; now a 50/50 flip
+
+**Context:** With NFL kickoff five days out, the AFL homepage showed the
+`afl-season-start` countdown on every visit while a day-old `new-feature`
+tagged for the AFL never appeared. TheLeague's homepage in the same stretch
+rotates its ambient hero against a fresh feature about half the time.
+
+**Insight:** The AFL resolver's P1 tier is a *lead-up* window (7 days for
+season start, 30 for the keeper deadline, 50 for the conference drafts) and
+it sat strictly above the P2 fresh-feature check. Every one of those windows
+is longer than the 7-day fresh window, so any launch that landed inside a
+countdown expired before the countdown did — 100% of the calendar year that
+matters for launches was unreachable for What's New. TheLeague solves the same
+tension with a per-visit coin flip (`rosterDeadlineWinsCoinFlip`,
+`rng() < 0.5` = deadline wins) rather than a priority reorder, which keeps the
+"at least half the homepage" floor for the deadline.
+
+**Recommendation:** `resolveAflHeroState` now takes an injectable `rng`
+(default `Math.random`) and, when the lead is P1 AND a fresh AFL-tagged entry
+exists, returns the feature on `rng() >= 0.5` — same boundary as TheLeague.
+P0 (an ACTIVE event: draft day, deadline day, kickoff) never flips, the
+regular-season slot rotation never flips (TheLeague's doesn't either), and
+with no fresh entry the lead-up still shows 100%. The entry chosen on the
+feature side stays `dailyPick`-stable per PT day; only the *which tier* flip is
+per-visit. `tests/afl-hero-lead-event-flip.test.ts` pins the boundary, the
+no-feature short-circuit (rng is never called), and the P0 exemption. Note for
+curl-diff verification: `/afl-fantasy` now has the same "hero lottery" noise as
+`/theleague` during a lead-up — sample the same server twice before blaming a
+refactor (see `docs/claude/insights/domains/frontend.md`, 2026-07-14).
+
+---
+
 ## 2026-07-05 - Composite player models: view.model attached post-resolve
 
 **Context:** The AFL hero now casts composite player models (transparent ESPN

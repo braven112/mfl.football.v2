@@ -13,7 +13,7 @@
  *   P0   Champion Crowned window       → AflEventHero (calendar-driven)
  *   P0   Conference Playoffs (active)  → AflPlayoffsHero (bracket)
  *   P0   Calendar event active         → AflEventHero (calendar-driven)
- *   P1   Calendar event urgent         → AflEventHero (calendar-driven)
+ *   P1   Calendar event urgent         → AflEventHero (calendar-driven; splits ~50/50 with a fresh P2 feature)
  *   P0   Regular season slot rotation  → AflEventHero (Schefter-voiced slot, no border)
  *   P2   Fresh What's New entry        → AflEventHero (no border)
  *   P3   Active/upcoming timeline      → AflEventHero (no border)
@@ -141,6 +141,13 @@ export interface AflHeroResolverInput {
    * synchronous.
    */
   scheduleReleaseRevealed?: boolean;
+  /**
+   * Injectable random source (0..1) for the lead-up coin flip below; defaults
+   * to Math.random. Override in tests for deterministic results. Same
+   * contract as TheLeague's `resolveHeroState` rng: `rng() < 0.5` = the
+   * calendar event wins, `>= 0.5` = the fresh What's New entry wins.
+   */
+  rng?: () => number;
 }
 
 // ── Date helpers ─────────────────────────────────────────────────────────────
@@ -888,6 +895,30 @@ function formatKickerDate(date: Date): string {
   return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
+/** AFL-tagged, hero-eligible What's New entries dated within the last 7 days. */
+function freshFeatureEntries(whatsNew: WhatsNewEntry[], now: Date): WhatsNewEntry[] {
+  return whatsNew
+    .filter((e) => entryAppliesToLeague(e, 'afl') && !e.excludeFromHero)
+    .filter((e) => {
+      const age = daysBetween(now, new Date(e.date + 'T00:00:00'));
+      return age >= 0 && age <= FEATURE_HERO_DAYS;
+    });
+}
+
+/** The P2 fresh-feature state. `fresh` must be non-empty. */
+function buildFreshFeatureState(fresh: WhatsNewEntry[], now: Date): AflHeroState {
+  // Deterministic per PT day — a per-request random pick makes SSR flip
+  // hero content between same-day requests (and fights the composite
+  // model's own daily-stable casting).
+  const pick = dailyPick(fresh, now, 'afl-feature', (e) => e.id) ?? fresh[0];
+  return {
+    kind: 'feature',
+    priority: 'P2',
+    content: featureToHero(pick),
+    view: SLOT_VIEW.feature({ now, whatsNewEntry: pick }),
+  };
+}
+
 /**
  * Entries without an explicit link CTA into their own What's New article —
  * never the generic listing.
@@ -1181,8 +1212,35 @@ export function resolveAflHeroState(input: AflHeroResolverInput): AflHeroState {
     return { kind: 'playoffs', priority: 'P0', content: buildPlayoffsHero() };
   }
 
+  // Fresh AFL-tagged What's New entries (≤7 days). Resolved here, above the
+  // calendar lead, because the P1 lead-up below splits the homepage with one.
+  const fresh = freshFeatureEntries(whatsNew, now);
+
   // P0/P1: Calendar-driven lead event — the new branded AflEventHero.
+  //
+  // A P1 lead-up (the countdown to season start, the keeper deadline, a
+  // conference draft, the end of the regular season) is roster CONTEXT, not a
+  // live event — and its urgency window (7–50 days) is longer than the 7-day
+  // fresh-feature window, so as written it locked every What's New launch out
+  // of the hero for good: the season-start countdown showed 100% of the time
+  // while a two-day-old feature never surfaced. Mirror TheLeague's Cut Watch
+  // contract instead: when a fresh feature is competing, the lead-up wins ~50%
+  // of visits (a per-visit coin flip, `rng() < 0.5` = event wins) and the
+  // feature the rest. Two things this deliberately does NOT do:
+  //  - It never touches a P0 (an ACTIVE event — draft day, the keeper
+  //    deadline itself, kickoff): a live event owns the homepage outright,
+  //    same as TheLeague's P0 tier.
+  //  - With no fresh feature the lead-up still shows 100%, so the "at least
+  //    half" floor always holds.
+  // Per-visit randomness is intentional (the hero may differ between
+  // refreshes, as it does on TheLeague's homepage near the roster deadline);
+  // `rng` is injectable so tests stay deterministic.
   const lead = pickLeadCalendarEvent(events, rawEvents, ctx);
+  const rng = input.rng ?? Math.random;
+  const featureWinsFlip = !!lead && lead.priority === 'P1' && fresh.length > 0 && rng() >= 0.5;
+  if (featureWinsFlip) {
+    return buildFreshFeatureState(fresh, now);
+  }
   if (lead) {
     return {
       kind: 'calendar-event',
@@ -1257,23 +1315,8 @@ export function resolveAflHeroState(input: AflHeroResolverInput): AflHeroState {
   }
 
   // P2: Fresh AFL-tagged What's New (≤7 days) — branded fresh-on-the-site hero.
-  const fresh = whatsNew
-    .filter((e) => entryAppliesToLeague(e, 'afl') && !e.excludeFromHero)
-    .filter((e) => {
-      const age = daysBetween(now, new Date(e.date + 'T00:00:00'));
-      return age >= 0 && age <= FEATURE_HERO_DAYS;
-    });
   if (fresh.length > 0) {
-    // Deterministic per PT day — a per-request random pick makes SSR flip
-    // hero content between same-day requests (and fights the composite
-    // model's own daily-stable casting).
-    const pick = dailyPick(fresh, now, 'afl-feature', (e) => e.id) ?? fresh[0];
-    return {
-      kind: 'feature',
-      priority: 'P2',
-      content: featureToHero(pick),
-      view: SLOT_VIEW.feature({ now, whatsNewEntry: pick }),
-    };
+    return buildFreshFeatureState(fresh, now);
   }
 
   // P3/P4: Active or upcoming timeline event (fallback for any event without a calendar view config).
