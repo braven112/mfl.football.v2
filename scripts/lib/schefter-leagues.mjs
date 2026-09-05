@@ -44,18 +44,6 @@ export function buildSchefterLeague(registrySlug, overrides) {
     // navSlug = 'theleague' | 'afl' — the short slug already used throughout
     // the scanners (e.g. for post.league and Redis key prefixes).
     slug: reg.navSlug,
-    /**
-     * The SAME value as `slug`, under the name the shared helpers ask for.
-     *
-     * Not redundancy. A Schefter league's `slug` is the nav slug while a
-     * REGISTRY entry's `slug` is the canonical one ('afl' vs 'afl-fantasy'),
-     * so the two shapes disagree on what `slug` means and anything taking
-     * "a league" has to pick one. `postToGroupMeCapped` asks for `navSlug`
-     * and throws without it — including for exempt kinds, since the guard
-     * sits above the exemption check — which took out every GroupMe post
-     * from this scanner, Roger's deadline reminders included.
-     */
-    navSlug: reg.navSlug,
     registrySlug: reg.slug,
     leagueId: reg.id,
     // Per-league MFL year rollover (AFL: June 1; absent → Feb 14). Read by
