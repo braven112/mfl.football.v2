@@ -141,8 +141,13 @@ describe('path-guard matching', () => {
     }
   });
 
-  it('a sibling league page matches the page-forks domain on both sides', () => {
-    for (const p of ['src/pages/theleague/players.astro', 'src/pages/afl-fantasy/players.astro']) {
+  it('a sibling league page matches the page-forks domain on both sides, nested routes included', () => {
+    for (const p of [
+      'src/pages/theleague/players.astro',
+      'src/pages/afl-fantasy/players.astro',
+      'src/pages/theleague/draft/order.astro',
+      'src/pages/afl-fantasy/reports/deep/new.astro',
+    ]) {
       expect(matchDomains(p, map).map((d: { name: string }) => d.name)).toContain('page-forks');
     }
   });

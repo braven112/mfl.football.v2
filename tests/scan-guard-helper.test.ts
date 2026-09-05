@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import path from 'node:path';
 import {
   REPO_ROOT,
@@ -22,15 +23,19 @@ import {
  *   - a ratchet fails in BOTH directions.
  */
 
-const FIXTURE = 'tests/fixtures/__scan-guard-fixture';
-const abs = (p: string) => path.join(REPO_ROOT, FIXTURE, p);
+// Built OUTSIDE the repo: tests/path-guard-map.test.ts walks tests/ in a
+// parallel worker, and a fixture tree appearing and vanishing under it is a
+// race; it also keeps the fake literals out of anything `git add -A` sees.
+// walkFiles resolves roots against REPO_ROOT, so an absolute root works and
+// reported paths come back as repo-relative `../…` — hence `rel()` below.
+const FIXTURE_ABS = mkdtempSync(path.join(tmpdir(), 'scan-guard-fixture-'));
+const FIXTURE = path.relative(REPO_ROOT, FIXTURE_ABS).split(path.sep).join('/');
+const abs = (p: string) => path.join(FIXTURE_ABS, p);
 
 beforeAll(() => {
   mkdirSync(abs('nested/node_modules'), { recursive: true });
   writeFileSync(abs('clean.ts'), "export const ok = 'nothing to see';\n");
-  // Fake tokens on purpose: the fixture lives under tests/fixtures/ (gitignored,
-  // but an interrupted run leaves it behind) and must never carry a real
-  // league literal that `git add -A` could commit past league-literal-guard.
+  // Fake tokens on purpose: this tree must never carry a real league literal.
   writeFileSync(abs('dirty.ts'), "const id = 'FAKEID99';\n// second: FAKEID99 again\nconst host = 'www00.fakehost.example';\n");
   writeFileSync(abs('nested/listed.ts'), "const id = 'FAKEID99'; // allowlisted\n");
   writeFileSync(abs('nested/node_modules/ignored.ts'), "const id = 'FAKEID99';\n");
@@ -42,7 +47,7 @@ beforeAll(() => {
 });
 
 afterAll(() => {
-  rmSync(path.join(REPO_ROOT, FIXTURE), { recursive: true, force: true });
+  rmSync(FIXTURE_ABS, { recursive: true, force: true });
 });
 
 const roots = [FIXTURE];

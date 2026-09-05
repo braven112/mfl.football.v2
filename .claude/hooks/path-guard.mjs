@@ -182,11 +182,32 @@ async function main() {
   }
   const filePath = input?.tool_input?.file_path || input?.tool_response?.filePath;
   if (!filePath) return 0;
+  const relPath = toRepoRelative(filePath);
+  if (!relPath) return 0;
+
+  // New-page checks run BEFORE the domain match so a nested route no glob
+  // reaches still gets them; once per file per session so they do not nag.
+  let pageWarnings = [];
+  if (/^src\/pages\//.test(relPath)) {
+    const marker = seenFile(input.session_id, `newpage__${relPath}`);
+    if (!existsSync(marker)) {
+      writeFileSync(marker, new Date().toISOString());
+      const { ALL_LEAGUES } = await import(path.join(REPO_ROOT, 'src/config/leagues-data.mjs'));
+      const directory = JSON.parse(readFileSync(path.join(REPO_ROOT, 'src/data/page-directory.json'), 'utf8'));
+      pageWarnings = newPageWarnings(relPath, {
+        leagues: ALL_LEAGUES.map((l) => ({ slug: l.slug, bestBall: Boolean(l.bestBall) })),
+        directory,
+        exists: (p) => existsSync(path.join(REPO_ROOT, p)),
+      });
+    }
+  }
 
   const map = loadMap();
-  const relPath = toRepoRelative(filePath);
   const domains = matchDomains(relPath, map);
-  if (domains.length === 0) return 0;
+  if (domains.length === 0) {
+    if (pageWarnings.length) emit(pageWarnings.join('\n'));
+    return 0;
+  }
 
   const tests = [...new Set(domains.flatMap((d) => d.tests || []))].filter((t) =>
     existsSync(path.join(REPO_ROOT, t)),
@@ -213,37 +234,33 @@ async function main() {
   }
 
   const claudeMd = readFileSync(path.join(REPO_ROOT, 'CLAUDE.md'), 'utf8');
-  let additionalContext = buildContext({
-    relPath,
-    domains,
-    sessionId: input.session_id,
-    claudeMd,
-    testsRun,
-  });
-
-  // New-page checks, once per file per session so they do not nag on every edit.
-  if (/^src\/pages\//.test(relPath)) {
-    const marker = seenFile(input.session_id, `newpage__${relPath}`);
-    if (!existsSync(marker)) {
-      writeFileSync(marker, new Date().toISOString());
-      const { ALL_LEAGUES } = await import(path.join(REPO_ROOT, 'src/config/leagues-data.mjs'));
-      const directory = JSON.parse(readFileSync(path.join(REPO_ROOT, 'src/data/page-directory.json'), 'utf8'));
-      const warnings = newPageWarnings(relPath, {
-        leagues: ALL_LEAGUES.map((l) => ({ slug: l.slug, bestBall: Boolean(l.bestBall) })),
-        directory,
-        exists: (p) => existsSync(path.join(REPO_ROOT, p)),
-      });
-      if (warnings.length) additionalContext = [additionalContext, ...warnings].filter(Boolean).join('\n');
-    }
-  }
-
-  if (additionalContext) {
-    process.stdout.write(
-      JSON.stringify({ hookSpecificOutput: { hookEventName: 'PostToolUse', additionalContext } }) + '\n',
-    );
-  }
+  const additionalContext = [
+    buildContext({ relPath, domains, sessionId: input.session_id, claudeMd, testsRun }),
+    ...pageWarnings,
+  ]
+    .filter(Boolean)
+    .join('\n');
+  if (additionalContext) emit(additionalContext);
   return 0;
 }
 
-const invokedDirectly = process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url);
-if (invokedDirectly) main().then((code) => process.exit(code));
+function emit(additionalContext) {
+  process.stdout.write(
+    JSON.stringify({ hookSpecificOutput: { hookEventName: 'PostToolUse', additionalContext } }) + '\n',
+  );
+}
+
+// Basename match rather than a resolved-path compare: Node realpaths
+// import.meta.url but not argv[1], so under a symlinked checkout (macOS /tmp,
+// a worktree in a linked dir) the two differ and the hook would silently skip.
+const invokedDirectly = process.argv[1] && /path-guard\.mjs$/.test(process.argv[1]);
+if (invokedDirectly) {
+  main()
+    .then((code) => process.exit(code))
+    .catch((err) => {
+      // One line, never a stack: a broken map or a transient read error must
+      // not turn every Write/Edit in the repo into a wall of text.
+      process.stderr.write(`[path-guard] skipped: ${err?.message ?? err}\n`);
+      process.exit(0);
+    });
+}

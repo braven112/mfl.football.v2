@@ -119,6 +119,7 @@ async function main() {
     return;
   }
   mkdirSync(dirname(join(process.cwd(), out)), { recursive: true });
+  // codeql[js/http-to-file-access] — persisting the MFL response IS the purpose: this records a test fixture to a path built from validated CLI args, never from the response.
   writeFileSync(join(process.cwd(), out), text);
   console.log(`wrote ${out} (${(text.length / 1024).toFixed(1)} KB)`);
 }

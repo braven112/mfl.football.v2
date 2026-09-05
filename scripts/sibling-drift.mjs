@@ -45,6 +45,7 @@ function changedFiles() {
     add(git(['diff', '--name-only', base]));
   }
   add(git(['diff', '--name-only']));
+  add(git(['diff', '--name-only', '--cached'])); // staged, not yet committed — the /live pre-commit case
   add(git(['ls-files', '--others', '--exclude-standard']));
   return [...set].filter((f) => f.startsWith('src/')).sort();
 }
@@ -64,19 +65,24 @@ function classify(file) {
   return { kind: 'shared' };
 }
 
-let srcFiles = null;
-function allSrcFiles() {
-  if (srcFiles) return srcFiles;
-  srcFiles = [];
+/** Every league page's source, read ONCE — a branch touching 30 shared files must not read rosters.astro 30 times. */
+let leaguePages = null;
+function allLeaguePages() {
+  if (leaguePages) return leaguePages;
+  leaguePages = [];
   const walk = (d) => {
     for (const e of readdirSync(d)) {
       const f = path.join(d, e);
       if (statSync(f).isDirectory()) walk(f);
-      else if (/\.(astro|ts|tsx|js|mjs)$/.test(e)) srcFiles.push(f);
+      else if (/\.(astro|ts|tsx|js|mjs)$/.test(e)) {
+        const rel = path.relative(ROOT, f).split(path.sep).join('/');
+        const m = rel.match(/^src\/pages\/([^/]+)\//);
+        if (m && LEAGUE_DIRS.includes(m[1])) leaguePages.push({ league: m[1], src: readFileSync(f, 'utf8') });
+      }
     }
   };
-  walk(path.join(ROOT, 'src'));
-  return srcFiles;
+  walk(path.join(ROOT, 'src/pages'));
+  return leaguePages;
 }
 
 /** League pages that import `file` (by basename without extension — good enough for a reach count). */
@@ -84,11 +90,8 @@ function importersByLeague(file) {
   const stem = path.basename(file).replace(/\.[^.]+$/, '');
   const needle = new RegExp(`from\\s+['"][^'"]*\\/${stem.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?:\\.[a-z]+)?['"]`);
   const out = {};
-  for (const f of allSrcFiles()) {
-    const rel = path.relative(ROOT, f);
-    const m = rel.match(/^src\/pages\/([^/]+)\//);
-    if (!m || !LEAGUE_DIRS.includes(m[1])) continue;
-    if (needle.test(readFileSync(f, 'utf8'))) out[m[1]] = (out[m[1]] ?? 0) + 1;
+  for (const page of allLeaguePages()) {
+    if (needle.test(page.src)) out[page.league] = (out[page.league] ?? 0) + 1;
   }
   return out;
 }

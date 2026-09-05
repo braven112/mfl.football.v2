@@ -76,7 +76,7 @@ function walkClient(dir) {
   for (const entry of readdirSync(dir)) {
     const full = join(dir, entry);
     if (statSync(full).isDirectory()) out = out.concat(walkClient(full));
-    else if (/\.(astro|ts|js|mjs)$/.test(entry) && !/\.d\.ts$/.test(entry)) out.push(full);
+    else if (/\.(astro|ts|tsx|js|jsx|mjs)$/.test(entry) && !/\.d\.ts$/.test(entry)) out.push(full);
   }
   return out;
 }
@@ -104,7 +104,7 @@ export function collectClientRouterOffenders(srcRoot) {
       // Judged per <script> BLOCK: a file whose first block re-inits on
       // astro:page-load can still carry a second block that only ever ran on
       // DOMContentLoaded, and that block is just as dead after a swap.
-      for (const m of src.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/g)) {
+      for (const m of src.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script\s*>/gi)) {
         if (/\bis:inline\b/.test(m[1])) continue;
         if (m[2].includes('DOMContentLoaded') && !m[2].includes('astro:page-load')) offenders.add(rel);
       }

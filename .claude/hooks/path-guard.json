@@ -149,7 +149,6 @@
       ],
       "tests": [
         "tests/league-url-prefix.test.ts",
-        "tests/url-shareability.test.ts",
         "tests/league-literal-guard.test.ts",
         "tests/rankings-scope.test.ts",
         "tests/league-year-for-slug.test.ts"
@@ -369,8 +368,8 @@
     {
       "name": "page-forks",
       "paths": [
-        "src/pages/theleague/*.astro",
-        "src/pages/afl-fantasy/*.astro"
+        "src/pages/theleague/**/*.astro",
+        "src/pages/afl-fantasy/**/*.astro"
       ],
       "note": "A route under two league directories is a sibling: build a shared component, not a second page. See CLAUDE.md \"Second league's copy of a page\".",
       "tests": [
