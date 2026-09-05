@@ -594,3 +594,30 @@ response that means less than it appears to.
 Guard: `tests/waiver-priority-league-gate.test.ts`, which also pins that the
 two leagues really do differ in MFL — if that stops being true, the product
 decision changes with it.
+
+## 2026-09-05 - A Read A Dialog Waits On Must Log Its Round-Trip On BOTH Outcomes
+
+**Context:** Week 1 waivers, AFL, on a phone: the waiver priority dialog opened
+on "Reading the live order from MyFantasyLeague…" and stayed there. Hotfix #974
+removed the failure mode (the dialog now opens on the committed feed's order and
+time-boxes the live read at 12s). The cause was never found: Vercel
+`get_runtime_errors` had nothing in the six hours before the report, and
+`/api/waiver-order` answered in under a second from the sandbox.
+
+**Insight:** it was unfindable by construction. `readLiveOrder` logged only on
+failure, and only the error object — no duration. A slow SUCCESS (MFL answering
+in 5.9s of a 6s budget, plus a cold function start, past the browser's patience)
+leaves no error anywhere: not in the route, not in the runtime-error feed, which
+shows thrown errors and nothing else. The one signal that would have told the
+story — how long MFL took that night — was never written down.
+
+**Rule for any upstream read a user is visibly waiting on:** log one line per
+round-trip with the duration and the outcome, success included, and name the
+timeout as a timeout (`AbortSignal.timeout` rejects with a `DOMException` named
+`TimeoutError`; a generic "fetch failed" hides that it was the budget). The
+route now writes `[waiver-order] <leagueId:year> MFL league read ok in 412ms
+(24 entries)` / `FAILED after 6001ms: timed out at 6000ms`, plus whether the
+degraded branch is serving a last-good order or a 502. The next report is a
+grep, not a reproduction attempt. Keep the client time-box wider than the
+server budget plus a cold start, so a hang is attributed server-side with a
+line, not aborted blind by the browser.

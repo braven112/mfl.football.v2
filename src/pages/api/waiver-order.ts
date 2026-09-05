@@ -44,6 +44,13 @@ const fail = (message: string, status: number, extra: Record<string, unknown> = 
  */
 const OK_TTL_MS = 60_000;
 const ERROR_TTL_MS = 15_000;
+/**
+ * Upstream budget for one MFL read. The dialog's own client-side time-box
+ * (WaiverPriorityModal, 12s) is deliberately wider than this plus a cold
+ * function start, so a hang is attributed here — with a log line — rather
+ * than aborted blind by the browser.
+ */
+const MFL_TIMEOUT_MS = 6000;
 const cache = new Map<string, { at: number; ok: boolean; order: WaiverOrderEntry[]; asOf: string }>();
 
 async function readLiveOrder(leagueId: string, year: number) {
@@ -52,10 +59,18 @@ async function readLiveOrder(leagueId: string, year: number) {
   const now = Date.now();
   if (prior && now - prior.at < (prior.ok ? OK_TTL_MS : ERROR_TTL_MS)) return prior;
 
+  // DIAGNOSABILITY (follow-up to #974). The one production report of the
+  // priority dialog hanging on "Reading the live order…" could not be
+  // reproduced, and the runtime logs held nothing: this read failed silently
+  // on success and logged only the error object on failure, with no timing.
+  // Every MFL round-trip now leaves one line with its duration and outcome,
+  // so the next report can be matched to what MFL actually did that night.
+  const started = Date.now();
+  const elapsed = () => `${Date.now() - started}ms`;
   try {
     const res = await fetchWithTimeout(
       buildMflExportUrl({ type: 'league', leagueId, year }),
-      { timeoutMs: 6000 },
+      { timeoutMs: MFL_TIMEOUT_MS },
     );
     if (!res.ok) throw new Error(`MFL league HTTP ${res.status}`);
     const order = readWaiverSortOrder(await res.json());
@@ -64,11 +79,19 @@ async function readLiveOrder(leagueId: string, year: number) {
     // last known-good order keeps serving, rather than caching "nobody has
     // priority" for a minute.
     if (order.length === 0) throw new Error('MFL league payload carried no waiverSortOrder');
+    console.info(`[waiver-order] ${key} MFL league read ok in ${elapsed()} (${order.length} entries)`);
     const fresh = { at: now, ok: true, order, asOf: new Date(now).toISOString() };
     cache.set(key, fresh);
     return fresh;
   } catch (err) {
-    console.warn('[waiver-order] MFL league fetch failed:', err);
+    // AbortSignal.timeout() rejects with a DOMException named TimeoutError;
+    // name it as such so a hang reads as one in the logs, not as a generic
+    // "fetch failed".
+    const reason =
+      err instanceof DOMException && err.name === 'TimeoutError'
+        ? `timed out at ${MFL_TIMEOUT_MS}ms`
+        : err instanceof Error ? err.message : String(err);
+    console.warn(`[waiver-order] ${key} MFL league read FAILED after ${elapsed()}: ${reason}`);
     // RE-READ the cache rather than reusing the `prior` captured before the
     // fetch. Two cold requests can be in flight at once; if the other one
     // succeeded while this one was failing, `prior` is a stale `undefined` and
@@ -85,6 +108,11 @@ async function readLiveOrder(leagueId: string, year: number) {
       order: latest?.order ?? prior?.order ?? [],
       asOf: latest?.asOf ?? prior?.asOf ?? new Date(now).toISOString(),
     };
+    console.warn(
+      degraded.order.length
+        ? `[waiver-order] ${key} serving the last good order from ${degraded.asOf} for ${ERROR_TTL_MS}ms`
+        : `[waiver-order] ${key} has no cached order to serve — callers get a 502 for ${ERROR_TTL_MS}ms`,
+    );
     cache.set(key, degraded);
     return degraded;
   }

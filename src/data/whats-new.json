@@ -1,5 +1,27 @@
 [
   {
+    "id": "fa-sheet-bid-claim",
+    "date": "2026-09-05",
+    "category": "enhancement",
+    "icon": "gavel",
+    "leagues": [
+      "theleague",
+      "afl"
+    ],
+    "excludeFromHero": true,
+    "title": "Bid, Claim, Watch. One Tap, No Scrolling.",
+    "link": "/players",
+    "linkLabel": "Open the free-agent pool",
+    "summary": "On Free Agents the Bid or Claim button now sits right beside the player's name, and the ⋮ menu has grown a Bid / Claim option of its own — so on a phone you can file a claim, or start watching a guy, without scrolling the table sideways to find the button.",
+    "description": [
+      "Week 1 waivers found it: on a phone, the one button that does anything on <a href=\"/players\">Free Agents</a> — Bid in TheLeague, Claim in the AFL — lived in the last column of a table nine columns wide. Every claim started with a sideways scroll past age, bye week and three kinds of points to reach it. The <strong>&#8942;</strong> menu that arrived with <em>My Watch List</em> was parked out there with it.",
+      "Both now sit right after the player's name, ahead of Age, where a thumb can reach them. And the <strong>&#8942;</strong> sheet does more than watch: tap it on any free agent and the first option is <strong>Bid on this player</strong> or <strong>Claim this player</strong> — the same claim form, the same drop picker, opened from the sheet instead of the button. Signed out? That option opens the sign-in and brings you back to that player with the claim still pending. <em>Watch player</em> sits right underneath, so scouting a guy and striking on him are one tap apart, and every post about him in the <a href=\"/news\">Schefter Report</a> lights up the moment you do.",
+      "Nothing about the claim itself changed. Whoever may file for a player — and whoever may not — is decided exactly as before; the sheet just reads the button the page already drew for you and does what it does. A rostered player's sheet is still Watch alone."
+    ],
+    "image": "fa-sheet-bid-claim.webp",
+    "imageAlt": "The AFL free agents page with the ⋮ action sheet open on a free agent, showing Claim this player above Watch player"
+  },
+  {
     "id": "transaction-hub",
     "date": "2026-09-05",
     "category": "new-feature",
@@ -878,27 +900,6 @@
     "excludeFromHero": true,
     "leagues": [
       "afl",
-      "theleague"
-    ]
-  },
-  {
-    "id": "position-change-rule-clarified-2026-08-21",
-    "date": "2026-08-21",
-    "title": "Your Player, Your Position: The RotoWire Rule Now Says What It Meant",
-    "summary": "RotoWire has always been the league's official depth chart, but the rulebook never spelled out who got to pick when RotoWire and MFL disagreed. You do — and you can flip him back and forth all season long.",
-    "description": [
-      "Every year the same argument shows up in the group chat: RotoWire has your guy at tight end, MFL has him at wide receiver, and nobody can point to the line in the constitution that settles it. The line existed — \"the commissioner will adjust the position as desired by the owner\" — it just buried the important half of the sentence at the end.",
-      "So it now leads with it. When RotoWire and MFL list a player at different positions, the **owner** picks which of the two he carries. Not the commissioner, not whichever source loaded first. You ask, and the change lands before the upcoming week's kickoff.",
-      "The bigger clarification is the part that was never written down at all: that choice is not a one-time, season-long lock. A player the two sources disagree about is eligible at **both** positions for the entire season, and you can move him back and forth between them as often as you want. Ride him at tight end while the premium is worth it, slide him to receiver when your lineup math changes, slide him back in November. Each switch goes through the commissioner and takes effect before that week's kickoff, so the only real constraint is the deadline.",
-      "Two fences, because someone was going to ask. The only positions available are the ones MFL and RotoWire actually list — there is no third option hiding out there. And if both sources already agree on a player's position, there is nothing to choose; that is his position.",
-      "Ask Roger knows all of it now, too. The rules chat has a card on the position-change rule, and the constitution he answers from carries the clarified language."
-    ],
-    "category": "league-event",
-    "link": "/theleague/rules#team-rosters",
-    "linkLabel": "Read the rule",
-    "icon": "gavel",
-    "excludeFromHero": true,
-    "leagues": [
       "theleague"
     ]
   }

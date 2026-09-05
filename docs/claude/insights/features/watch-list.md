@@ -158,3 +158,26 @@ matched ("On your watch list" outranks "Your player"). The PUSH sender
 matches the watch list ONLY: roster injuries and status changes already go
 out under `player-news`, and doubling them is how push permission gets
 revoked. Same list, two different volumes.
+
+## 2026-09-05 — One server verdict, one DOM attribute: a classic script cannot read a module's global at eval time
+
+**Context:** After #971 each free-agent page decided "is this visitor an owner
+HERE?" three ways: an inline `authUser.leagueId === league.id` compare in
+frontmatter, a `watchSignedIn` copy handed to the classic `define:vars` script,
+and `WatchListBridge` re-reading `data-signed-in` off its own element. They
+agreed only because every copy started from `claimFranchiseId` — and both
+leagues have a franchise 0001, so any copy that dropped the league test would
+offer the other league's owner a Claim button the server refuses.
+
+**Insight:** the server derivation is now one helper, `franchiseIdForLeague`
+(`src/utils/auth.ts`), and the client has exactly one copy: the bridge
+element's `data-signed-in`. The page's classic script reads it off the DOM too.
+The tempting alternative — read `window.watchListStore.isSignedIn()` — does not
+work, and the reason is load order, not style: the `define:vars` script is a
+CLASSIC script that runs at parse time, and it applies the stored view
+preference right then; the bridge is a deferred MODULE that has not run yet, so
+the global is `undefined` at the moment the answer is needed. An element
+rendered above the script is already parsed, so a `data-` attribute is the one
+channel both script kinds can read at any time. `tests/free-agent-session.test.ts`
+pins the helper, both pages, and the bridge; the `free-agents` path-guard
+domain runs it on every edit to those files.
