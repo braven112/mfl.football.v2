@@ -54,7 +54,6 @@ import {
   hasDeclaredEntryBrackets,
 } from '../src/utils/playoff-entry-brackets.mjs';
 import { getLeagueBySlug } from '../src/config/leagues-data.mjs';
-import { buildAttributor } from '../src/utils/owner-tenures.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '..');
@@ -235,32 +234,78 @@ const getIdentityForYear = (franchiseId, year) => {
 // Some franchises moved IDs over the years (e.g. the current Midwestside
 // Connection owner held franchise 0010 from 2011-2015 then took over 0011
 // in 2019). For each (sourceFranchiseId, year) the attribution map returns
-// the franchise that should get credit, or null when the year belongs to a
-// former owner nobody claims.
-//
-// The boundary rule itself lives in `src/utils/owner-tenures.mjs`
-// (`inferCurrentOwnerSince` + `buildAttributor`) — one implementation shared
-// with `afl-awards.ts` (award credit) and the owner-tenures derivation (the
-// orphan pool); `franchise-eras.ts` groups era anchors with the same
-// predicate. This script used to carry its own copy;
-// `tests/owner-boundary-parity.test.ts` fails if one comes back.
-const { attributeSeason: attributeYear, currentOwnerSinceMap } = buildAttributor(currentTeams);
+// the franchise that should get credit.
+const teamsWithOwnerHistory = currentTeams.filter((t) => Array.isArray(t.ownerHistory) && t.ownerHistory.length > 0);
 
-// The attributor fails closed: a franchise id the config does not know gets
-// null, and every loop below `continue`s on null, so that franchise's season
-// would vanish from franchise-history.json without a trace. Say so — an
-// expansion slot missing from the config, or a stale id in an old feed, is
-// a config fix, not a silent drop.
-const knownFranchiseIds = new Set(currentTeams.map((t) => t.franchiseId));
-const warnedUnknownFranchiseIds = new Set();
-const warnIfUnknownFranchise = (franchiseId, year) => {
-  if (knownFranchiseIds.has(franchiseId) || warnedUnknownFranchiseIds.has(franchiseId)) return;
-  warnedUnknownFranchiseIds.add(franchiseId);
-  console.warn(
-    `[franchise-history] ${year}: standings name franchise ${franchiseId}, which is not in the ` +
-      `league config — its seasons are dropped from every franchise (attributeYear fails closed). ` +
-      `Add it to the config to keep them.`
-  );
+const normalizeName = (s) => (s || '').trim().toLowerCase().replace(/^the\s+/, '').replace(/\s+/g, ' ');
+
+// Infer the year the current owner took over for each franchise. Used to
+// exclude former-owner years from the franchise's career stats.
+//
+//   1. If the team has an ownerHistory: earliest yearStart across entries.
+//   2. Else if the most recent history entry's name matches the current
+//      top-level name: walk backwards including consecutive entries that
+//      share the same name OR the same ownerEra → return earliest yearStart
+//      of that run.
+//   3. Else if there's a history but no name match: yearEnd of the last
+//      history entry + 1 (current owner started after the prior owner).
+//   4. Else (no history at all): null → include all years.
+const inferCurrentOwnerSince = (team) => {
+  if (typeof team.currentOwnerSince === 'number') {
+    return team.currentOwnerSince;
+  }
+  if (Array.isArray(team.ownerHistory) && team.ownerHistory.length > 0) {
+    return Math.min(...team.ownerHistory.map((h) => h.yearStart));
+  }
+  if (!Array.isArray(team.history) || team.history.length === 0) {
+    return null;
+  }
+  const sorted = [...team.history].sort((a, b) => a.yearStart - b.yearStart);
+  const last = sorted[sorted.length - 1];
+  const currentNorm = normalizeName(team.name);
+  if (normalizeName(last.name) !== currentNorm) {
+    return last.yearEnd + 1;
+  }
+  let i = sorted.length - 1;
+  while (i > 0) {
+    const prev = sorted[i - 1];
+    const cur = sorted[i];
+    const sameName = normalizeName(prev.name) === normalizeName(cur.name);
+    const sameEra =
+      prev.ownerEra != null && cur.ownerEra != null && prev.ownerEra === cur.ownerEra;
+    if (sameName || sameEra) i--;
+    else break;
+  }
+  return sorted[i].yearStart;
+};
+
+const currentOwnerSinceMap = new Map();
+for (const team of currentTeams) {
+  currentOwnerSinceMap.set(team.franchiseId, inferCurrentOwnerSince(team));
+}
+
+const attributeYear = (sourceId, year) => {
+  // Cross-franchise ownerHistory claim wins first.
+  for (const team of teamsWithOwnerHistory) {
+    for (const entry of team.ownerHistory) {
+      if (entry.franchiseId === sourceId && year >= entry.yearStart && year <= entry.yearEnd) {
+        return team.franchiseId;
+      }
+    }
+  }
+  const sourceTeam = currentTeams.find((t) => t.franchiseId === sourceId);
+  // If the source team itself has an ownerHistory but none of its entries
+  // cover this year, the year belongs to a former owner we don't track.
+  if (Array.isArray(sourceTeam?.ownerHistory) && sourceTeam.ownerHistory.length > 0) {
+    return null;
+  }
+  // For teams without explicit ownerHistory, drop years before the inferred
+  // currentOwnerSince — those belong to a former owner.
+  const since = currentOwnerSinceMap.get(sourceId);
+  if (since != null && year < since) {
+    return null;
+  }
+  return sourceId;
 };
 
 /**
@@ -943,7 +988,6 @@ for (const year of years) {
   // Per-franchise per-year row — apply ownerHistory attribution so years
   // follow the human owner across franchise-ID changes.
   for (const row of standingsRows) {
-    warnIfUnknownFranchise(row.franchiseId, year);
     const targetId = attributeYear(row.franchiseId, year);
     const identity = getIdentityForYear(row.franchiseId, year);
 
