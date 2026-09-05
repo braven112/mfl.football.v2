@@ -400,7 +400,12 @@ hard-won facts (Aug 2026 "missing team images" saga):
   `nfl-logo-dark-css.ts` adds the league-crest white ring (the
   `crestStrokeFilter` drop-shadow stack) on top of the swap for those codes,
   at 1px rather than the crests' 0.5px hairline: a solid silhouette with no
-  bright interior needs the heavier edge at 16px (owner's call, 2026-09-05). Before adding one, measure the ALPHA channel and render the cut
+  bright interior needs the heavier edge at 16px (owner's call, 2026-09-05).
+  The ring is emitted twice: under `html.dark` keyed on the LIGHT srcs (the
+  themed pages), and with NO theme guard keyed on the dark cut's own URLs — the
+  draft broadcast and Sunday Ticket multi-view are dark in both themes and ship
+  the dark cut as `src` directly, where an `html.dark` rule never reaches a
+  light-theme viewer (the blind spot from 2026-08-28). Before adding one, measure the ALPHA channel and render the cut
   on the dark card: ESPN's PNGs store RGB white under alpha-0 pixels, so any
   alpha-dropping check reports a false "opaque white fill" (the Raiders' cut
   was reported that way on 2026-09-04 and is fine). The ring composes with

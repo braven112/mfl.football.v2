@@ -41,9 +41,11 @@
  *
  * White ring (Sep 2026): the swap alone is not enough for a mark whose body
  * is black rather than merely dark-outlined. `NFL_DARK_STROKE_CODES` lists
- * those (the Panthers), and the builder appends one `filter` rule keyed on
- * the same light srcs, reusing the league-crest ring stack from
- * `crest-dark-stroke-css.ts` at `NFL_DARK_STROKE_WIDTH`.
+ * those (the Panthers), and the builder appends two `filter` rules reusing
+ * the league-crest ring stack from `crest-dark-stroke-css.ts` at
+ * `NFL_DARK_STROKE_WIDTH`: one under `html.dark` keyed on the same light srcs
+ * as the swap, and one with no theme guard keyed on the dark cut's own URLs,
+ * for the surfaces that are dark in both themes and ship the dark cut as src.
  */
 
 import { getAllNFLTeamCodes, getNFLTeamLogo, normalizeTeamCode, TEAM_CODE_MAP } from './nfl-logo';
@@ -177,6 +179,25 @@ export function buildNflLogoDarkCss(): string {
   }
   if (strokeSrcs.length) {
     const selectors = strokeSrcs.map((src) => `html.dark img[src="${cssStringEscape(src)}"]`).join(', ');
+    rules.push(`${selectors} { filter: ${crestStrokeFilter(undefined, NFL_DARK_STROKE_WIDTH)}; }`);
+  }
+
+  // The same ring, theme-INDEPENDENT, keyed on the dark cut's own URLs. A few
+  // surfaces are dark in both themes (the draft broadcast board and reveal
+  // card, the Sunday Ticket multi-view) and therefore ship the dark cut as
+  // their `src` directly — `html.dark` never fires for a light-theme viewer
+  // there, so the rule above cannot reach them. An <img> whose src IS the
+  // dark cut is on a dark surface by construction (that is the only reason
+  // to hardcode it), so ringing it unconditionally is always right. Keyed on
+  // both the ESPN URL and the self-hosted mirror path, whichever the surface
+  // resolved. This is a `filter`, not a swap — no `content:` is ever keyed on
+  // a dark src, which is what the self-referential-swap guard pins.
+  const darkStrokeSrcs: string[] = [];
+  for (const code of NFL_DARK_STROKE_CODES) {
+    darkStrokeSrcs.push(getNFLTeamLogo(code, 'dark'), `/assets/nfl-logos/dark/${code}.png`);
+  }
+  if (darkStrokeSrcs.length) {
+    const selectors = darkStrokeSrcs.map((src) => `img[src="${cssStringEscape(src)}"]`).join(', ');
     rules.push(`${selectors} { filter: ${crestStrokeFilter(undefined, NFL_DARK_STROKE_WIDTH)}; }`);
   }
 
