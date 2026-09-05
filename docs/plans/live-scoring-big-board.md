@@ -330,11 +330,13 @@ performers, closest matchups by win probability, who's still yet to play. Same
 2. **The 3.0 threshold** — same. One constant, one file.
 3. **Does this page get its own Throwback dressing**, or inherit whatever
    `/live-scoring` shows? Inheriting is one line and is my default.
-4. **Homepage hero for the What's New entry.** New pages require the entry (with
-   a screenshot and inline links); hero eligibility is explicitly your call.
 
 *(Resolved: reveal latency — 60s MFL poll accepted in exchange for real numbers,
 so no upstream cost increase and no cache retuning.)*
+
+*(Resolved: the launch What's New entry is **not** hero-eligible **[decided]** —
+it carries `excludeFromHero: true`. It still needs a screenshot and inline
+league-neutral links, since `new-page` requires both.)*
 
 ---
 
