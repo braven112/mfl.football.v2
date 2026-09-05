@@ -832,6 +832,14 @@
       "impact": "user",
       "area": "homepage",
       "league": "afl"
+    },
+    {
+      "date": "2026-09-05",
+      "type": "bug-fix",
+      "summary": "Follow-up to this week's contract-backup fix. Every salary write still takes a backup first, and the backup read was repaired on Thursday — but nothing checked that what came back actually had players in it before saving the file. A backup with nothing in it looks identical to a real one on disk, and the emptiness only turned up at the moment you tried to roll a bad write back. The backup step now refuses to save a file with no players in it, says so in the log, and reports that no backup was taken — so a commissioner who is told a backup exists has one they can actually restore from.",
+      "impact": "admin",
+      "area": "salary",
+      "league": "theleague"
     }
   ]
 }
