@@ -251,6 +251,63 @@ describe('detectTradeBaitChanges — whole-snapshot', () => {
     expect(nextState['0005'].committedBlock).toEqual(['C']);
   });
 
+  // Seeding is a LEAGUE-level event, not a per-franchise one. MFL's tradeBait
+  // export only returns franchises with something listed, so a franchise
+  // absent from a seeded state had an EMPTY block — its first listing is a
+  // real add. Per-franchise seeding would have swallowed exactly that:
+  // TheLeague's state holds 5 of 16 franchises (the other 11 have never
+  // listed), and the AFL launches with nothing listed at all, so under the
+  // old rule nothing there would ever have posted.
+  it('a franchise missing from a SEEDED state diffs against an empty block — its first listing posts', () => {
+    const prev = {
+      '0001': { committedBlock: ['A'], observedBlock: ['A'], firstChangeTs: null, lastChangeTs: null },
+    };
+    // 0005 lists for the first time: drifts now…
+    const first = detectTradeBaitChanges({
+      currentByFranchise: { '0001': { playerIds: ['A'] }, '0005': { playerIds: ['X'] } },
+      prevState: prev,
+      nowMs: T0,
+    });
+    expect(first.emissions).toEqual([]);
+    expect(first.reasons['0005']).toBe('drifting');
+    expect(first.nextState['0005'].committedBlock).toEqual([]);
+    expect(first.nextState['0005'].firstChangeTs).toBe(T0);
+    // …and settles into a tip once the window clears.
+    const settled = detectTradeBaitChanges({
+      currentByFranchise: { '0001': { playerIds: ['A'] }, '0005': { playerIds: ['X'] } },
+      prevState: first.nextState,
+      nowMs: T0 + SETTLE + MIN,
+    });
+    expect(settled.emissions.map((e) => e.franchiseId)).toEqual(['0005']);
+    expect(settled.emissions[0].netAdds).toEqual(['X']);
+    expect(settled.nextState['0005'].committedBlock).toEqual(['X']);
+  });
+
+  it('leagueSeeded: true with an EMPTY prior state (AFL launch: nobody listed) still treats the first listing as adds', () => {
+    const r = detectTradeBaitChanges({
+      currentByFranchise: { '0007': { playerIds: ['Y'] } },
+      prevState: {},
+      leagueSeeded: true,
+      nowMs: T0,
+    });
+    expect(r.reasons['0007']).toBe('drifting');
+    expect(r.nextState['0007'].committedBlock).toEqual([]);
+  });
+
+  it('leagueSeeded: false forces a silent seed even when prior state has other franchises', () => {
+    const prev = {
+      '0001': { committedBlock: ['A'], observedBlock: ['A'], firstChangeTs: null, lastChangeTs: null },
+    };
+    const r = detectTradeBaitChanges({
+      currentByFranchise: { '0005': { playerIds: ['X'] } },
+      prevState: prev,
+      leagueSeeded: false,
+      nowMs: T0,
+    });
+    expect(r.reasons['0005']).toBe('seed');
+    expect(r.nextState['0005'].committedBlock).toEqual(['X']);
+  });
+
   it('handles a franchise that dropped out of the fetch (block went empty)', () => {
     const prev = {
       '0001': { committedBlock: ['A'], observedBlock: ['A'], firstChangeTs: null, lastChangeTs: null },

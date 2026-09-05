@@ -17,7 +17,15 @@
  * tip and advances committedBlock to the current state (settled).
  *
  * Edge behavior (codified; see tests/trade-bait-detector.test.ts):
- *   - First run: no prior entry → seed silently, emit nothing.
+ *   - First run for a LEAGUE: no prior state → seed every franchise silently,
+ *     emit nothing. Once the league is seeded, a franchise with no entry of
+ *     its own is a franchise whose block was EMPTY at seed time (MFL only
+ *     returns franchises with listings), so its first listing is a real add
+ *     and must post. Seeding per franchise instead made that a silent
+ *     "seed": TheLeague's state holds 5 of 16 franchises, so the other 11
+ *     (none of which has listed yet) would each have had their first
+ *     listing swallowed — and the AFL, launching with nobody listed, would
+ *     never have posted at all.
  *   - Add + remove same player within the window → netAdds stays empty, silent.
  *   - Pure removes → no tip; committedBlock advances so a future re-add fires.
  *   - Stuck drift: firstChangeTs ≥ MAX_SETTLE_WAIT_MS → force-emit regardless.
@@ -35,6 +43,11 @@ export const DEFAULT_MAX_SETTLE_WAIT_MS = 6 * 60 * 60 * 1000;
 
 /** Truncate `meta.adds` to this many — avoids an unreadable 20-player dump. */
 export const MAX_ADDS_PER_TIP = 10;
+
+/**
+ * Per-franchise persisted state (feed.tradeBaitState[franchiseId]).
+ * @typedef {{ committedBlock: string[], observedBlock: string[], firstChangeTs: number|null, lastChangeTs: number|null }} FranchiseEntry
+ */
 
 /**
  * Normalize a player-id array into a canonical sorted unique array.
@@ -188,25 +201,38 @@ export function detectFranchiseChange({
   };
 }
 
+/** The prior entry for a franchise that has never listed since the league was seeded. */
+const EMPTY_PREV_ENTRY = Object.freeze({
+  committedBlock: [],
+  observedBlock: [],
+  firstChangeTs: null,
+  lastChangeTs: null,
+});
+
 /**
  * Run the detector across every franchise in a single fetch snapshot.
  *
  * @param {object} args
  * @param {object<string, { playerIds: string[], willGiveUpComment?: string, willTakeComment?: string }>} args.currentByFranchise
- * @param {object<string, object>} args.prevState - feed.tradeBaitState (may be empty/undefined)
+ * @param {Record<string, FranchiseEntry>} [args.prevState] - feed.tradeBaitState (may be empty/undefined)
  * @param {number} args.nowMs
+ * @param {boolean} [args.leagueSeeded] - true once the league has been scanned
+ *   at least once (the scanner persists `tradeBaitState` on every run, even
+ *   as `{}`, so "the key exists on the feed" is the signal). Defaults to
+ *   "prevState has at least one franchise" for callers that predate the flag.
  * @param {number} [args.settleWindowMs]
  * @param {number} [args.maxSettleWaitMs]
  * @returns {{
- *   nextState: object,
+ *   nextState: Record<string, FranchiseEntry>,
  *   emissions: Array<{ franchiseId: string, netAdds: string[], netRemoves: string[], truncated: boolean, reason: string, willGiveUpComment?: string, willTakeComment?: string }>,
- *   reasons: object<string, string>,
+ *   reasons: Record<string, string>,
  * }}
  */
 export function detectTradeBaitChanges({
   currentByFranchise,
   prevState,
   nowMs,
+  leagueSeeded,
   settleWindowMs = DEFAULT_SETTLE_WINDOW_MS,
   maxSettleWaitMs = DEFAULT_MAX_SETTLE_WAIT_MS,
 }) {
@@ -214,14 +240,22 @@ export function detectTradeBaitChanges({
   const emissions = [];
   const reasons = {};
   const safePrev = prevState && typeof prevState === 'object' ? prevState : {};
+  const seeded = typeof leagueSeeded === 'boolean'
+    ? leagueSeeded
+    : Object.keys(safePrev).length > 0;
   const seen = new Set();
 
   for (const [franchiseId, entry] of Object.entries(currentByFranchise ?? {})) {
     seen.add(franchiseId);
+    // A seeded league with no entry for this franchise means its block was
+    // empty when we seeded — diff against an empty block so the listing
+    // counts as adds (and drifts/settles like any other) instead of being
+    // silently re-seeded and lost.
+    const prevEntry = safePrev[franchiseId] ?? (seeded ? EMPTY_PREV_ENTRY : undefined);
     const result = detectFranchiseChange({
       franchiseId,
       currentIds: entry?.playerIds ?? [],
-      prevEntry: safePrev[franchiseId],
+      prevEntry,
       nowMs,
       settleWindowMs,
       maxSettleWaitMs,

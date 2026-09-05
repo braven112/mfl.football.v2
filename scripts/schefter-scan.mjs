@@ -44,6 +44,8 @@ import { SCHEFTER_LEAGUES, getSchefterLeague } from './lib/schefter-leagues.mjs'
 import { buildDropAdjustmentMap, resolveDropSalary } from './lib/drop-salary.mjs';
 
 import { getRedisConfig, createUpstashClient } from './lib/redis.mjs';
+import { getNonEmpty } from './lib/env.mjs';
+import { leagueYearFor } from './lib/schefter-league-year.mjs';
 import { postToGroupMe as sharedPostToGroupMe } from './lib/groupme.mjs';
 import { scanRogerReplies } from './roger-groupme-reply.mjs';
 
@@ -1376,13 +1378,36 @@ async function scanPendingTrades(league) {
 const TRADE_BAIT_SOURCE = 'trade_bait';
 const TRADE_BAIT_TOPIC = 'trade_bait';
 
+// MFL's tradeBait export is owner-gated for PRIVATE leagues, and an
+// unauthenticated request does not fail: it answers HTTP 200 with
+// `{"tradeBaits":{}}`, indistinguishable from "nobody has anyone listed".
+// TheLeague is public and works bare; the AFL is private and read as empty
+// forever until the key went on (docs/claude/insights/domains/mfl-api.md,
+// 2026-07-15). MFL API keys are LEAGUE-scoped, so the secret must be a key
+// for the league being scanned — a key for the other league is silently the
+// same as no key. Both spellings accepted: roster-sync exports MFL_API_KEY,
+// everything else MFL_APIKEY (same trap fetch-mfl-feeds.mjs fell into).
+// Query param, never a header — the api→www## redirect keeps the query
+// string and strips headers.
+const MFL_API_KEY = getNonEmpty(process.env.MFL_APIKEY) || getNonEmpty(process.env.MFL_API_KEY) || '';
+
 async function fetchTradeBaitRaw(leagueId, year) {
-  const url = `https://${MFL_HOST}/${year}/export?TYPE=tradeBait&L=${leagueId}&JSON=1`;
+  const url = `https://${MFL_HOST}/${year}/export?TYPE=tradeBait&L=${leagueId}&JSON=1`
+    + (MFL_API_KEY ? `&APIKEY=${encodeURIComponent(MFL_API_KEY)}` : '');
   const res = await fetch(url, { headers: { 'User-Agent': 'schefter-scan/1.0' } });
   if (!res.ok) throw new Error(`MFL HTTP ${res.status}`);
   const text = await res.text();
   if (text.trim().startsWith('<')) throw new Error('MFL returned HTML for tradeBait');
-  return JSON.parse(text);
+  const data = JSON.parse(text);
+  // MFL reports failures (bad key, a league year it hasn't created yet) as
+  // HTTP 200 with an error body. Parsed as "zero franchises" that diffs as
+  // "everyone cleared their block", wiping every committedBlock so the next
+  // good fetch re-posts every existing listing as new. Throw instead — the
+  // caller's catch holds state and retries next tick.
+  if (data?.error) {
+    throw new Error(`MFL error: ${data.error?.$t ?? JSON.stringify(data.error)}`);
+  }
+  return data;
 }
 
 function parseTradeBaitByFranchise(data) {
@@ -1432,8 +1457,13 @@ async function getRedis() {
   }
 }
 
-const TIPS_QUEUE_KEY = schefterKey('theleague', 'tips:queue');
-const FIRST_TIP_TS_KEY = schefterKey('theleague', 'tips:first_tip_ts');
+// Tips-queue keys are PER LEAGUE (schefter:tips:queue for TheLeague,
+// schefter:afl:tips:queue for the AFL) — the rumor-mill scanner runs one
+// league per invocation and drains only its own queue, so a tip pushed under
+// the wrong league's key is a post in the wrong GroupMe. Built from the
+// league in scanTradeBait, never captured here as a TheLeague literal.
+const tipsQueueKey = (league) => schefterKey(league.slug, 'tips:queue');
+const firstTipTsKey = (league) => schefterKey(league.slug, 'tips:first_tip_ts');
 
 function buildTradeBaitTip({
   franchiseId,
@@ -1505,12 +1535,19 @@ async function scanTradeBait(league) {
   console.log(`\n=== Scanning Trade Bait (Rumor Mill) for ${league.slug} ===`);
 
   const feed = await loadFeed(league.feedPath);
-  const prevState = feed.tradeBaitState && typeof feed.tradeBaitState === 'object'
-    ? feed.tradeBaitState
-    : {};
+  // "Seeded" = this league has been scanned before. The state is persisted
+  // on EVERY run (even as `{}` when nobody has anything listed — the AFL's
+  // launch state), so the key's presence is the signal, not its size. A
+  // franchise missing from a seeded state had an empty block, and its first
+  // listing must post — see the detector's seed notes.
+  const leagueSeeded = !!feed.tradeBaitState && typeof feed.tradeBaitState === 'object';
+  const prevState = leagueSeeded ? feed.tradeBaitState : {};
 
   const now = new Date();
-  const year = now.getMonth() >= 1 ? now.getFullYear() : now.getFullYear() - 1;
+  // Per-league clock: the AFL's MFL league year rolls June 1, TheLeague's
+  // Feb 14. The calendar heuristic the other lanes use would point the AFL
+  // at a league year MFL hasn't created yet from Feb to June.
+  const year = leagueYearFor(league, now);
 
   let raw;
   try {
@@ -1522,10 +1559,37 @@ async function scanTradeBait(league) {
   const currentByFranchise = parseTradeBaitByFranchise(raw);
   const franchiseCount = Object.keys(currentByFranchise).length;
   console.log(`  [trade-bait] MFL returned ${franchiseCount} franchise(s) with listings`);
+  if (!MFL_API_KEY) {
+    console.warn('  [trade-bait] No MFL_APIKEY / MFL_API_KEY set — a private league reads as EMPTY here, not as an error');
+  }
+  // "Empty ≠ error": an owner-gated export answers a missing, expired, or
+  // other-league key with an empty 200. If this league has committed
+  // listings and MFL suddenly reports none, an auth blip is far likelier
+  // than every owner clearing their block in one 15-minute tick — and
+  // diffing it would wipe every committedBlock, so the next good fetch would
+  // re-post every existing listing as new. Hold state. A genuine league-wide
+  // clear syncs (silently — pure removes never post) the moment anyone lists
+  // again, and the seed run is unaffected because a fresh league has no
+  // committed listings to protect.
+  const hasCommittedListings = Object.values(prevState)
+    .some((entry) => Array.isArray(entry?.committedBlock) && entry.committedBlock.length > 0);
+  if (franchiseCount === 0 && hasCommittedListings) {
+    console.warn('  [trade-bait] MFL returned 0 franchises while committed listings exist — auth/empty-payload blip, holding state');
+    return 0;
+  }
+  // Same trap on the FIRST run: with no key, an empty answer from a private
+  // league is not a seedable "nobody listed" — seeding `{}` would make the
+  // first keyed run post every listing already on the block as new. Don't
+  // seed until the fetch is one we can believe.
+  if (!leagueSeeded && franchiseCount === 0 && !MFL_API_KEY) {
+    console.warn('  [trade-bait] Unseeded league read as empty with no MFL API key — not seeding until a key is set');
+    return 0;
+  }
 
   const { nextState, emissions, reasons } = detectTradeBaitChanges({
     currentByFranchise,
     prevState,
+    leagueSeeded,
     nowMs: now.getTime(),
   });
 
@@ -1534,7 +1598,7 @@ async function scanTradeBait(league) {
     .map(([fid, reason]) => `${fid}=${reason}`);
   if (changeSummary.length) {
     console.log(`  [trade-bait] Drift summary: ${changeSummary.join(', ')}`);
-  } else if (!Object.keys(prevState).length) {
+  } else if (!leagueSeeded) {
     console.log('  [trade-bait] Silent-seed run — no tips emitted, state captured');
   } else {
     console.log('  [trade-bait] Nothing drifting — state unchanged');
@@ -1587,6 +1651,8 @@ async function scanTradeBait(league) {
   }
 
   // Ensure the first-tip anchor exists so rumor-scan's marinate gate passes.
+  const TIPS_QUEUE_KEY = tipsQueueKey(league);
+  const FIRST_TIP_TS_KEY = firstTipTsKey(league);
   try {
     const existing = await redis.get(FIRST_TIP_TS_KEY);
     if (!existing) await redis.set(FIRST_TIP_TS_KEY, now.getTime());

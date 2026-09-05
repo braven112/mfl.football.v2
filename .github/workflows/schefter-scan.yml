@@ -47,6 +47,14 @@ jobs:
           TZ: America/Los_Angeles
           MFL_HOST: ${{ vars.MFL_HOST }}
           MFL_USER_ID: ${{ secrets.MFL_USER_ID }}
+          # The trade-block lane's tradeBait export is owner-gated for a
+          # PRIVATE league (the AFL): without a key MFL answers an EMPTY 200,
+          # not an error, so the lane would run green and never post. Keys
+          # are league-scoped — this must be a key for the AFL's MFL league
+          # to unlock it; TheLeague's export is public and ignores it. Both
+          # spellings, same as backfill-historical-feeds.yml.
+          MFL_APIKEY: ${{ secrets.MFL_APIKEY }}
+          MFL_API_KEY: ${{ secrets.MFL_API_KEY }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           GROUPME_ROGER_BOT_ID: ${{ secrets.GROUPME_ROGER_BOT_ID }}
           GROUPME_AFL_ROGER_BOT_ID: ${{ secrets.GROUPME_AFL_ROGER_BOT_ID }}

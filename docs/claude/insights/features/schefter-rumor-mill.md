@@ -3,6 +3,58 @@
 The load-bearing architecture rules live in CLAUDE.md ("Schefter multi-league").
 This file holds the finer operational learnings.
 
+## 2026-09-05 - "Is it on for the AFL?" is three questions, not one
+
+**Context:** The trade-block lane (owner lists players on MFL's trade bait →
+Schefter posts it) was TheLeague-only. Switching it on for the AFL looked like
+flipping `tradeBait: false` to `true` in `scripts/lib/schefter-leagues.mjs`.
+
+**Insight:** A per-league feature toggle answers "does the lane RUN", not
+"does it run CORRECTLY for this league". Two more things were TheLeague-shaped
+underneath the flag, and neither had a symptom while the flag was off:
+
+1. **The queue keys were captured at module load as
+   `schefterKey('theleague', …)`.** Every other league-scoped key in the two
+   scanners is built from the league being scanned; these two predated the
+   `--league` refactor and never got re-scoped because nothing ever exercised
+   them with a second league. Flipping the flag alone would have pushed AFL
+   listings into TheLeague's queue, which TheLeague's rumor-scan step drains
+   and posts to TheLeague's GroupMe — an AFL franchise named in the wrong
+   league's chat.
+2. **Seeding was per franchise, and MFL's `tradeBait` export omits
+   franchises with nothing listed.** So a franchise absent from the state
+   was re-seeded silently the first time it listed anything. TheLeague's
+   persisted state holds 5 of 16 franchises — the other 11 have never
+   listed, and the first time any of them did, the post would have been
+   swallowed. The AFL launches with NOBODY on the block, so under that rule
+   it would never have posted at all. Seed is now a league-level event
+   (`leagueSeeded`, keyed on the state key EXISTING on the feed, not on it
+   having entries) and a missing franchise diffs against an empty block.
+3. **The export itself is owner-gated for a private league, and the failure
+   is an EMPTY 200, not an error.** Caught by the PR review, not by me, and
+   it was already written down (`insights/domains/mfl-api.md`, 2026-07-15):
+   TheLeague is public so its bare fetch works; the AFL is private so its
+   bare fetch reads as "nobody listed" forever. The lane would have shipped
+   green and silent. The fetch now carries `MFL_APIKEY` (league-scoped, so
+   the secret must be the AFL's key), throws on MFL's HTTP-200 error body,
+   and holds state when a league with committed listings suddenly reads as
+   empty — because diffing that as "everyone cleared" would re-post every
+   listing as new once the feed recovered.
+
+The second one is the interesting failure: it was a latent bug in the league
+the feature was built for, invisible because the feature visibly worked for
+the five franchises that happened to be listed on launch day. The third is
+the humbling one: "the first run for the second league" also means "the
+first run against the second league's PRIVACY settings", and the repo had
+already learned that once.
+
+**Recommendation:** Before flipping a league toggle, grep the lane for the
+default league's navSlug as a LITERAL (not through the league object), re-read
+every "first run" / "seed" branch asking what the second league's first run
+actually looks like — an empty state is a different first run from a full one
+— and curl the export for the NEW league bare before trusting that an empty
+answer means empty.
+
 ## 2026-07-19 - Source-Guard Tests Are the Refactor Tax
 
 **Context:** League-scoping the Redis keyspace and adding the `--league` flag
