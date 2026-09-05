@@ -1,0 +1,225 @@
+---
+/**
+ * The Owners' Poll section inside a Pecking Order issue.
+ *
+ * Three states, and the split between them is what keeps this cheap:
+ *
+ *  - **absent** — the issue predates the poll, or the league doesn't run it.
+ *    Renders nothing at all, so every archived issue is untouched.
+ *  - **open** — a live island (turnout climbs, and whether YOU voted is not a
+ *    property of a prerendered page).
+ *  - **closed** — pure static markup from the issue JSON. No island, no fetch:
+ *    once the week is tallied the result is a fact in the committed file, and
+ *    every reader sees the same thing.
+ *
+ * The poll NEVER re-sorts the column's own rankings. The algorithmic order and
+ * the owners' order are shown side by side with a Δ, because the disagreement
+ * is the story — averaging them would erase both signals.
+ */
+import OwnersPollLive from './OwnersPollLive';
+import { teamAccentVar } from '../../../utils/team-accent-css';
+
+export interface OwnersPollRankedRow {
+  rank: number;
+  franchiseId: string;
+  points: number;
+  firstPlaceVotes: number;
+  ballotsRanking: number;
+  avgBallotRank: number | null;
+  compositeRank: number;
+  delta: number;
+}
+
+export interface OwnersPollBallot {
+  franchiseId: string;
+  ranking: string[];
+  submittedAt: string | null;
+  updatedAt: string | null;
+  contrarianIndex: number | null;
+  homerIndex: number | null;
+}
+
+export interface OwnersPollBlock {
+  status: 'open' | 'closed';
+  opensAt: string;
+  closesAt: string;
+  slots: number;
+  quorum: number;
+  eligibleVoters: number;
+  methodology?: string;
+  ballotsIn?: number;
+  hasQuorum?: boolean;
+  ranked?: OwnersPollRankedRow[] | null;
+  unranked?: { franchiseId: string; compositeRank: number }[] | null;
+  ballots?: OwnersPollBallot[];
+  nonVoterCount?: number;
+}
+
+interface Props {
+  poll: OwnersPollBlock | null | undefined;
+  teams: Map<string, any>;
+  /** Nav slug — the `?league=` the island sends as a session check. */
+  leagueParam: string;
+  ballotHref: string;
+  issueWeek: number;
+}
+
+const { poll, teams, leagueParam, ballotHref, issueWeek } = Astro.props as Props;
+
+const name = (fid: string) =>
+  teams.get(fid)?.nameMedium ?? teams.get(fid)?.name ?? fid;
+const icon = (fid: string) => teams.get(fid)?.icon ?? '';
+const accent = (fid: string) =>
+  `--op-accent: ${teamAccentVar(fid, 'var(--color-primary, #2563eb)')}`;
+
+const ranked = poll?.ranked ?? [];
+const unranked = poll?.unranked ?? [];
+
+// The single most interesting number in the section: where the room and the
+// machine disagree most. Surfaced rather than left for the reader to scan for.
+const biggestSplit = [...ranked].sort((a, b) => Math.abs(b.delta) - Math.abs(a.delta))[0];
+---
+
+{poll && (
+  <section class="op-strip" aria-label="The Owners' Poll">
+    <header class="op-strip__head">
+      <h2 class="op-strip__title">The Owners’ Poll</h2>
+      <p class="op-strip__sub">
+        The column ranks by the numbers. This is how the room voted.
+      </p>
+    </header>
+
+    {poll.status === 'open' && (
+      <OwnersPollLive
+        client:visible
+        ballotHref={ballotHref}
+        slots={poll.slots}
+        quorum={poll.quorum}
+        eligibleVoters={poll.eligibleVoters}
+        leagueParam={leagueParam}
+        issueWeek={issueWeek}
+      />
+    )}
+
+    {poll.status === 'closed' && !poll.hasQuorum && (
+      <div class="op-strip__noquorum">
+        <p>
+          <strong>
+            No quorum — {poll.ballotsIn} of {poll.eligibleVoters} ballots cast.
+          </strong>
+        </p>
+        <p>
+          The poll needs {poll.quorum} to publish a consensus, so this week’s
+          rankings above are the numbers alone. A consensus backed by
+          {' '}{poll.ballotsIn} {poll.ballotsIn === 1 ? 'ballot' : 'ballots'} would not be one.
+        </p>
+      </div>
+    )}
+
+    {poll.status === 'closed' && poll.hasQuorum && (
+      <>
+        <p class="op-strip__meta">
+          {poll.ballotsIn} of {poll.eligibleVoters} owners voted
+          {poll.methodology ? <> · {poll.methodology}</> : null}
+        </p>
+
+        {biggestSplit && Math.abs(biggestSplit.delta) >= 2 && (
+          <p class="op-strip__split">
+            <strong>Biggest split:</strong> the room has {name(biggestSplit.franchiseId)}{' '}
+            {Math.abs(biggestSplit.delta)} {Math.abs(biggestSplit.delta) === 1 ? 'spot' : 'spots'}{' '}
+            {biggestSplit.delta > 0 ? 'higher' : 'lower'} than the computer.
+          </p>
+        )}
+
+        <div class="op-table-wrap">
+          <table class="op-table">
+            <thead>
+              <tr>
+                <th scope="col" class="op-table__num">#</th>
+                <th scope="col">Team</th>
+                <th scope="col" class="op-table__num">Pts</th>
+                <th scope="col" class="op-table__num" title="First-place votes">1st</th>
+                <th scope="col" class="op-table__num" title="The Pecking Order's algorithmic rank">Computer</th>
+                <th scope="col" class="op-table__num" title="Computer rank minus poll rank">Δ</th>
+              </tr>
+            </thead>
+            <tbody>
+              {ranked.map((row) => (
+                <tr style={accent(row.franchiseId)}>
+                  <td class="op-table__num op-table__rank">{row.rank}</td>
+                  <td class="op-table__team">
+                    {icon(row.franchiseId) && (
+                      <img src={icon(row.franchiseId)} alt="" width="20" height="20" loading="lazy" />
+                    )}
+                    <span>{name(row.franchiseId)}</span>
+                  </td>
+                  <td class="op-table__num">{row.points}</td>
+                  <td class="op-table__num">{row.firstPlaceVotes || ''}</td>
+                  <td class="op-table__num op-table__muted">{row.compositeRank}</td>
+                  <td class={`op-table__num op-table__delta op-table__delta--${row.delta > 0 ? 'up' : row.delta < 0 ? 'down' : 'flat'}`}>
+                    {row.delta > 0 ? `+${row.delta}` : row.delta || '–'}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        {unranked.length > 0 && (
+          <div class="op-unranked">
+            <h3 class="op-unranked__title">Unranked</h3>
+            <p class="op-unranked__note">
+              No owner put these teams on a ballot. The poll did not order them —
+              they are listed by the column’s own ranking.
+            </p>
+            <ul class="op-unranked__list">
+              {unranked.map((row) => (
+                <li style={accent(row.franchiseId)}>
+                  {icon(row.franchiseId) && (
+                    <img src={icon(row.franchiseId)} alt="" width="16" height="16" loading="lazy" />
+                  )}
+                  <span>{name(row.franchiseId)}</span>
+                  <!-- Labelled, not a bare "#10": an unlabelled number next
+                       to a team in a poll section reads as a POLL rank, which
+                       is the exact misreading the unranked block exists to
+                       prevent. -->
+                  <span class="op-unranked__rank">computer #{row.compositeRank}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {poll.ballots && poll.ballots.length > 0 && (
+          <details class="op-ballots">
+            <summary>
+              Every ballot ({poll.ballots.length})
+              {poll.nonVoterCount ? ` · ${poll.nonVoterCount} owners didn’t vote` : ''}
+            </summary>
+            <ul class="op-ballots__list">
+              {poll.ballots.map((ballot) => (
+                <li class="op-ballot">
+                  <span class="op-ballot__owner" style={accent(ballot.franchiseId)}>
+                    {name(ballot.franchiseId)}
+                  </span>
+                  <ol class="op-ballot__ranking">
+                    {ballot.ranking.map((fid) => (
+                      <li class={fid === ballot.franchiseId ? 'op-ballot__self' : ''}>
+                        {name(fid)}
+                      </li>
+                    ))}
+                  </ol>
+                  {ballot.homerIndex != null && ballot.homerIndex > 0 && (
+                    <span class="op-ballot__badge" title="Spots above where the room has them">
+                      Homer +{ballot.homerIndex}
+                    </span>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </details>
+        )}
+      </>
+    )}
+  </section>
+)}
