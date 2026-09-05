@@ -40,6 +40,9 @@ import { getWhatsNewEntriesForLeague } from '../../utils/whats-new-entries';
 import type { SchefterFeed as FeedType } from '../../types/schefter';
 import { parseTestDate } from '../../utils/hero-resolver';
 import { resolveAflHeroState } from '../../utils/afl-hero-resolver';
+import { isSaturdayEveningPT } from '../../utils/sunday-ticket-window';
+import { hasSubmittedLineup } from '../../utils/lineup-submitted';
+import { getCurrentNFLWeek as currentNflWeekForHero } from '../../utils/current-week';
 import { getRelease } from '../../utils/schedule-release-store';
 import { castAflHeroModel } from '../../utils/afl-hero-casting';
 import { getAflWhatsNextTimeline } from '../../utils/league-event-resolver';
@@ -135,8 +138,22 @@ const aflWhatsNew = getWhatsNewEntriesForLeague('afl');
 const aflScheduleReleaseRevealed = Boolean(
   await getRelease('afl-fantasy', effectiveDate.getUTCFullYear()),
 );
+// Saturday from 5pm: an owner whose lineup is already in gets the Sunday
+// Ticket hero instead of the lineup-lock reminder. One cached live read, and
+// only in that window for a signed-in owner — never on every homepage render.
+const lineupSubmitted =
+  userFranchiseId && isSaturdayEveningPT(effectiveDate)
+    ? await hasSubmittedLineup({
+        league: AFL,
+        franchiseId: userFranchiseId,
+        week: currentNflWeekForHero(effectiveDate) ?? 1,
+        leagueYear: getAflLeagueYear(effectiveDate),
+      })
+    : null;
+
 const heroState = resolveAflHeroState({
   referenceDate: effectiveDate,
+  lineupSubmitted,
   testMode,
   whatsNewEntries: aflWhatsNew,
   timeline,

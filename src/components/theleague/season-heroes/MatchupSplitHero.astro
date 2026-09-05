@@ -25,6 +25,11 @@ import FaceoffComposite from '../FaceoffComposite.astro';
 import MatchupPreviewHero from './MatchupPreviewHero.astro';
 import { SUNDAY_TICKET_LOGO } from '../../../utils/broadcast-channels';
 import { crestStrokeFilter } from '../../../utils/crest-dark-stroke-css';
+import { isSaturdayEveningPT, showSundayTicketHero } from '../../../utils/sunday-ticket-window';
+import { hasSubmittedLineup } from '../../../utils/lineup-submitted';
+import { DEFAULT_LEAGUE } from '../../../config/leagues';
+import { getLeagueYearForSlug } from '../../../utils/league-year';
+import { getCurrentNFLWeek } from '../../../utils/current-week';
 
 export interface Props {
   state: HeroState;
@@ -45,13 +50,24 @@ const awayStar = stars ? castBestScoredModel(stars.awayCandidates, players, unde
 const homeStar = stars ? castBestScoredModel(stars.homeCandidates, players, undefined, 'Team Star') : null;
 const resolved = stars && awayStar && homeStar ? { stars, awayStar, homeStar } : null;
 
-// Saturday the band bills the game of the week; Sunday morning it is the
-// Sunday Ticket hero — same art, the official mark on the eyebrow, and the
+// Saturday the band bills the game of the week; Sunday morning (or Saturday
+// evening once the lineup is in) it is the Sunday Ticket hero — same art, the official mark on the eyebrow, and the
 // CTA that was always pointing at the board. The band is near-black in BOTH
 // themes, so the dark-ink mark wears the crest ring here unconditionally
 // rather than through the html.dark manifest rule.
-const isSunday = new Intl.DateTimeFormat('en-US', { timeZone: 'America/Los_Angeles', weekday: 'short' })
-  .format(state.metadata.referenceDate) === 'Sun';
+// Saturday from 5pm the same hero shows for an owner whose lineup is already
+// in (one cached live read, only in that window for a signed-in owner).
+const ref = state.metadata.referenceDate;
+const lineupSubmitted =
+  userFranchiseId && isSaturdayEveningPT(ref)
+    ? await hasSubmittedLineup({
+        league: DEFAULT_LEAGUE,
+        franchiseId: userFranchiseId,
+        week: getCurrentNFLWeek(ref) ?? 1,
+        leagueYear: getLeagueYearForSlug(DEFAULT_LEAGUE.slug),
+      })
+    : null;
+const isSunday = showSundayTicketHero(ref, lineupSubmitted);
 const markFilter = crestStrokeFilter();
 ---
 

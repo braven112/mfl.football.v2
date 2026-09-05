@@ -23,6 +23,7 @@
  * render the same card without it. HeroBanner is no longer used here.
  */
 
+import { showSundayTicketHero } from './sunday-ticket-window';
 import type { WhatsNewEntry, HeroContent } from '../types/whats-new';
 import { scheduleReleaseTease, scheduleReleaseTeaseCopy } from './schedule-release.mjs';
 import { dailyPick, type HeroModel } from './hero-casting';
@@ -516,6 +517,8 @@ interface SlotContext {
   gameWindow?: GameWindow;
   week?: number;
   whatsNewEntry?: WhatsNewEntry;
+  /** Owner's lineup for the week is in (true), not (false), or unknown / signed out (null). */
+  lineupSubmitted?: boolean | null;
 }
 
 const GAME_WINDOW_LABEL: Record<NonNullable<GameWindow>, string> = {
@@ -542,20 +545,19 @@ type SlotKey =
   | 'feature'
   | 'default';
 
-/** Is it Sunday in the league's clock (PT)? The game-day-preview slot spans Saturday and Sunday morning. */
-export function isSundayPT(now: Date): boolean {
-  return new Intl.DateTimeFormat('en-US', { timeZone: 'America/Los_Angeles', weekday: 'short' }).format(now) === 'Sun';
-}
+export { isSundayPT } from './sunday-ticket-window';
 
 /**
  * The Saturday / Sunday-morning slot, two different jobs: Saturday is the
  * last call to set a lineup; Sunday morning the lineup is (or isn't) in and
  * the question is which four games go on the multiview — the Sunday Ticket
- * board's. Exported so the split is testable without the whole resolver.
+ * board's — and from 5pm Saturday an owner whose lineup is already in gets
+ * the board too (`showSundayTicketHero`). Exported so the split is testable
+ * without the whole resolver.
  */
-export function gameDayPreviewSlotView({ now, week }: SlotContext): EventHeroView {
+export function gameDayPreviewSlotView({ now, week, lineupSubmitted }: SlotContext): EventHeroView {
   const weekLabel = week ? `Week ${week}` : 'this week';
-  if (isSundayPT(now)) {
+  if (showSundayTicketHero(now, lineupSubmitted)) {
     return {
       pill: 'SUNDAY TICKET',
       headline: 'BUILD YOUR',
@@ -1012,7 +1014,7 @@ function eventToHero(event: ResolvedLeagueEvent): HeroContent {
   };
 }
 
-function buildRegularSeasonHero(slot: DailySlot, week: number | undefined, gameWindow: GameWindow, now: Date = new Date()): HeroContent {
+function buildRegularSeasonHero(slot: DailySlot, week: number | undefined, gameWindow: GameWindow, now: Date = new Date(), lineupSubmitted: boolean | null = null): HeroContent {
   const weekLabel = week ? `Week ${week}` : 'Regular Season';
   switch (slot) {
     case 'live-scoring': {
@@ -1063,7 +1065,7 @@ function buildRegularSeasonHero(slot: DailySlot, week: number | undefined, gameW
         kicker: 'Waiver Day',
       };
     case 'game-day-preview':
-      if (isSundayPT(now)) {
+      if (showSundayTicketHero(now, lineupSubmitted)) {
         return {
           source: 'event',
           title: `Sunday Ticket — ${weekLabel}`,
@@ -1319,14 +1321,14 @@ export function resolveAflHeroState(input: AflHeroResolverInput): AflHeroState {
     const week = getCurrentNFLWeek(now) ?? undefined;
     const slotKey = `slot:${slot}` as SlotKey;
     const builder = SLOT_VIEW[slotKey] ?? SLOT_VIEW['slot:article'];
-    const view = builder({ now, slot, gameWindow, week });
+    const view = builder({ now, slot, gameWindow, week, lineupSubmitted: input.lineupSubmitted ?? null });
     return {
       kind: 'regular-season',
       priority: 'P0',
       slot,
       gameWindow,
       week,
-      content: buildRegularSeasonHero(slot, week, gameWindow, now),
+      content: buildRegularSeasonHero(slot, week, gameWindow, now, input.lineupSubmitted ?? null),
       view,
     };
   }

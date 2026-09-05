@@ -39,6 +39,16 @@ Status: BUILT 2026-09-04 on branch `claude/sunday-ticket-matchup-preview-3025b7`
   into `buildAllTeamIconDarkCss()` so the layout and Storybook agree). The
   RedZone box uses the RedZone logo, and each window header carries the
   country's Sunday Ticket carrier (YouTube TV, DAZN, Kayo).
+- **The homepage hero.** The `game-day-preview` slot (Saturday all day, Sunday
+  before 10am PT) is two heroes: Saturday is the lineup-lock reminder (the
+  AFL) / game of the week (TheLeague); Sunday morning is the Sunday Ticket
+  hero in both. From **Saturday 5pm** an owner whose lineup is confirmed in
+  gets the board too (`showSundayTicketHero` in `sunday-ticket-window.ts`).
+  "Confirmed" is `hasSubmittedLineup` (`lineup-submitted.ts`): one live
+  `weeklyResults&W=` read, cached 5 min per league/week, disk feed as
+  confirm-only fallback; `null` (unknown, signed out) keeps the reminder —
+  a hero that stops nagging an owner who has NOT set a lineup is the worse
+  failure. Read only in that window for a signed-in owner, never per render.
 - **The country picks the CLOCKS too** (`timeZones` in the mapping file):
   ET/PT at home and in Canada, AEST/AEDT + AWST in Australia — where a Sunday
   1pm ET kickoff is Monday 3am and the box, the window header and the jump
