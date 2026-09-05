@@ -56,19 +56,41 @@ export const kebab = (s) =>
 // ───────────────────────────────────────────────────────────────────────────
 
 /**
- * Infer the year the current owner took over. Ported VERBATIM from
- * `scripts/compute-franchise-history.mjs` — including the `sameEra` clause,
- * which the `afl-awards.ts` copy is missing (see trap 3 in the plan doc).
+ * Two ADJACENT `history[]` entries are one era of one owner when they share a
+ * name or an explicit `ownerEra`. This is THE ownership-boundary predicate —
+ * `inferCurrentOwnerSince` walks back over it, and `franchise-eras.ts`
+ * (`groupHistory`, which also feeds the Former Identities strip) chains it
+ * pairwise over the same sorted entries — so the franchise page's era anchors
+ * and stat attribution can never disagree about where an owner's run begins.
  *
- * Keeping this definitionally equal to `attributeYear` is the whole point:
- * `tests/owner-boundary-parity.test.ts` pins the equality, so PR 3 can migrate
- * the other four copies onto this one and prove nothing moved.
+ * Deliberately narrower than `entriesShareTenure` below: a rebrand group or a
+ * punitive rename bridges a TENURE (same person, different name) but starts a
+ * new ERA (the page shows the rename), and the current-owner walk-back has
+ * always stopped at a plain rename too. Widening this to rebrand groups moves
+ * the attribution boundary of every slot with a punitive rename.
+ */
+export const entriesShareEra = (prev, cur) => {
+  if (!prev || !cur) return false;
+  const sameName = normalizeIdentity(prev.name) === normalizeIdentity(cur.name);
+  const sameEra = prev.ownerEra != null && cur.ownerEra != null && prev.ownerEra === cur.ownerEra;
+  return sameName || sameEra;
+};
+
+/**
+ * Infer the year the current owner took over. This is THE implementation —
+ * `scripts/compute-franchise-history.mjs` (via `buildAttributor`) and
+ * `src/utils/afl-awards.ts` both call it, and `tests/owner-boundary-parity.test.ts`
+ * fails the build if either grows a local copy again. Until Sept 2026 there
+ * were five copies, and the AFL awards one lacked the `sameEra` clause (trap 3
+ * in docs/plans/owners-feature.md) — stat attribution and display attribution
+ * agreed only because no AFL team used `ownerEra`.
  *
  *   1. Explicit `currentOwnerSince` wins.
  *   2. If the team has an ownerHistory: earliest yearStart across entries.
  *   3. Else if the most recent history entry's name matches the current
  *      top-level name: walk backwards including consecutive entries that share
- *      the same name OR the same ownerEra → earliest yearStart of that run.
+ *      the same name OR the same ownerEra (`entriesShareEra`) → earliest
+ *      yearStart of that run.
  *   4. Else if there's a history but no name match: yearEnd of the last history
  *      entry + 1 (current owner started after the prior owner).
  *   5. Else (no history at all): null → include all years.
@@ -90,21 +112,20 @@ export const inferCurrentOwnerSince = (team) => {
     return last.yearEnd + 1;
   }
   let i = sorted.length - 1;
-  while (i > 0) {
-    const prev = sorted[i - 1];
-    const cur = sorted[i];
-    const sameName = normalizeIdentity(prev.name) === normalizeIdentity(cur.name);
-    const sameEra =
-      prev.ownerEra != null && cur.ownerEra != null && prev.ownerEra === cur.ownerEra;
-    if (sameName || sameEra) i--;
-    else break;
-  }
+  while (i > 0 && entriesShareEra(sorted[i - 1], sorted[i])) i--;
   return sorted[i].yearStart;
 };
 
 /**
- * Build the season attributor for a league. `attributeSeason` is the exact
- * counterpart of `attributeYear` in compute-franchise-history.mjs.
+ * "Whose season is this?" for every (sourceFranchiseId, year). Returns the
+ * CURRENT franchise that gets credit, or null when the year belongs to a former
+ * owner nobody claims. Fails closed: a null or unknown source id (a typo, a
+ * stale award row) is null, never a phantom franchise key.
+ *
+ * `scripts/compute-franchise-history.mjs` writes `franchise-history.json` and
+ * the season ledger's `attributedTo` from this; `afl-awards.ts` credits awards
+ * with it; this module carves the orphan pool with it. One function, so the
+ * three can only agree.
  */
 export const buildAttributor = (teams) => {
   const currentTeams = teams ?? [];
@@ -118,6 +139,7 @@ export const buildAttributor = (teams) => {
   }
 
   const attributeSeason = (sourceId, year) => {
+    if (!sourceId) return null;
     // Cross-franchise ownerHistory claim wins first.
     for (const team of teamsWithOwnerHistory) {
       for (const entry of team.ownerHistory) {
@@ -127,9 +149,12 @@ export const buildAttributor = (teams) => {
       }
     }
     const sourceTeam = currentTeams.find((t) => t.franchiseId === sourceId);
+    // Unknown franchise id (typo / stale data) — fail closed rather than
+    // crediting a nonexistent franchise key.
+    if (!sourceTeam) return null;
     // If the source team itself has an ownerHistory but none of its entries
     // cover this year, the year belongs to a former owner we don't track.
-    if (Array.isArray(sourceTeam?.ownerHistory) && sourceTeam.ownerHistory.length > 0) {
+    if (Array.isArray(sourceTeam.ownerHistory) && sourceTeam.ownerHistory.length > 0) {
       return null;
     }
     const since = currentOwnerSinceMap.get(sourceId);
