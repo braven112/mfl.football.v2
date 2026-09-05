@@ -134,6 +134,8 @@ export interface LeagueDefinition {
   name: string;
   mflHost: string;
   dataPath: string;
+  /** Repo-relative league config JSON (`configPath` in leagues-data.mjs). */
+  configPath: string;
   domains: string[];
   /** Canonical host for absolute URLs to this league — see leagueOrigin(). */
   canonicalDomain?: string;

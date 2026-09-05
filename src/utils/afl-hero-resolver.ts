@@ -142,6 +142,8 @@ export interface AflHeroResolverInput {
    * synchronous.
    */
   scheduleReleaseRevealed?: boolean;
+  /** Owner's lineup for the week is in (true), not (false), or unknown / signed out (null). The page reads it (hasSubmittedLineup) only on Saturday evening. */
+  lineupSubmitted?: boolean | null;
   /**
    * Injectable random source (0..1) for the lead-up hero pool below; defaults
    * to Math.random. Override in tests for deterministic results. The pool is

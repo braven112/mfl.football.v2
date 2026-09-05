@@ -20,8 +20,8 @@ import PlayerCell from '../../theleague/PlayerCell.astro';
 
 export interface Props {
   box: SlateBox;
-  /** 1-based position on the grid — the multiview's own numbering. */
-  slot: number;
+  /** 1-based position on the grid — the multiview's own numbering. (`slot` is Astro's reserved named-slot attribute, so not that.) */
+  rank: number;
   /** Whose channels to show. */
   country?: CountryCode;
   /** Show the league + franchise line above each player group. */
@@ -30,7 +30,7 @@ export interface Props {
   personalized?: boolean;
 }
 
-const { box, slot, country = 'US', multiLeague = false, personalized = false } = Astro.props;
+const { box, rank, country = 'US', multiLeague = false, personalized = false } = Astro.props;
 
 /** The league-wide list is every projected player on both teams; cap it. */
 const MAX_PLAYERS_LEAGUE_WIDE = 5;
@@ -48,8 +48,8 @@ const countNoun = (n: number, resolved: boolean) => `${n} ${resolved ? 'starter'
 ---
 
 {box.kind === 'redzone' ? (
-  <article class="st-box st-box--redzone" aria-label={`Box ${slot}: NFL RedZone`}>
-    <span class="st-box__rank" aria-hidden="true">#{slot}</span>
+  <article class="st-box st-box--redzone" aria-label={`Box ${rank}: NFL RedZone`}>
+    <span class="st-box__rank" aria-hidden="true">#{rank}</span>
     <div class="st-box__rz">
       <img class="st-box__rz-logo" src={REDZONE_LOGO} alt="NFL RedZone" width="180" height="60" loading="lazy" />
       <p class="st-box__rz-copy">Every touchdown, every game. Takes the open box.</p>
@@ -58,9 +58,9 @@ const countNoun = (n: number, resolved: boolean) => `${n} ${resolved ? 'starter'
 ) : (
   <article
     class="st-box"
-    aria-label={`Box ${slot}: ${box.game.away} at ${box.game.home}${kickoff ? `, ${kickoff.day} ${kickoff.time} ${kickoff.label}` : ''}${channel ? `, on ${channel.name}` : ''}`}
+    aria-label={`Box ${rank}: ${box.game.away} at ${box.game.home}${kickoff ? `, ${kickoff.day} ${kickoff.time} ${kickoff.label}` : ''}${channel ? `, on ${channel.name}` : ''}`}
   >
-    <span class="st-box__rank" aria-hidden="true">#{slot}</span>
+    <span class="st-box__rank" aria-hidden="true">#{rank}</span>
     <header class="st-box__head">
       <div class="st-box__teams">
         <span class="st-box__team">

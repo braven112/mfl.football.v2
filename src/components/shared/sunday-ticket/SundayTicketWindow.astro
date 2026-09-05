@@ -52,7 +52,7 @@ const clockLabel = clocks.length > 0
   <div class="st-grid" role="list">
     {window.boxes.map((box, i) => (
       <div role="listitem" class="st-grid__cell">
-        <SundayTicketBox box={box} slot={i + 1} country={country} multiLeague={multiLeague} personalized={personalized} />
+        <SundayTicketBox box={box} rank={i + 1} country={country} multiLeague={multiLeague} personalized={personalized} />
       </div>
     ))}
   </div>
