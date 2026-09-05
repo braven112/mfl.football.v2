@@ -17,20 +17,11 @@
  * Diff bytes beyond this are dropped before the prompt is built.
  *
  * Both models accept far more than this. The cap is about cost and signal:
- * a huge diff is often dominated by lockfiles and generated data feeds, and
- * reviewers get worse — not better — when the real change is buried. Callers
- * should pre-filter generated paths; this is the backstop.
- *
- * Raised from 200KB after PR #761. That PR's filtered diff was 276KB across 32
- * files, so the cap dropped ten whole files and cut an eleventh mid-hunk — and
- * because `git diff` emits paths in sorted order, the tail it dropped was
- * `src/pages/api/mock-draft/*`, `src/utils/mock-draft-scope.ts`,
- * `page-directory.json` and `nav-config.json`. Those are the registry and
- * call-site files the cross-cutting lens exists to check, so the truncation
- * removed exactly the evidence the reviewer was asked for. 400KB is roughly
- * 100k input tokens, still inside a single free-tier request.
+ * a 200KB diff is almost always dominated by lockfiles and generated data
+ * feeds, and reviewers get worse — not better — when the real change is
+ * buried. Callers should pre-filter generated paths; this is the backstop.
  */
-export const MAX_DIFF_BYTES = 400_000;
+export const MAX_DIFF_BYTES = 200_000;
 
 /**
  * HTTP statuses worth a second attempt.
@@ -246,79 +237,7 @@ Rules:
 - Do NOT restate what the diff does. Only report problems.
 - If you find nothing, reply with exactly: NO FINDINGS
 - Be direct and specific. A vague concern is worse than no concern.
-- You are ADVISORY. Your findings are adjudicated by a reviewer who owns this codebase and may reject them with reasons. Argue your case in the finding; don't hedge to seem agreeable.
-
-OUTPUT CONTRACT — your reply is parsed by a machine, not just read by a human:
-- Emit ONLY the finished findings. Your reasoning, deliberation and working notes are NOT part of the answer.
-- Never narrate your thinking. No "wait", no "let me check", no "why did the author...", no correcting yourself mid-sentence, no walking back an earlier guess. Do that work before you write, then write only the conclusion.
-- The FIRST characters of your reply must be either a \`##\` severity heading above or the exact string NO FINDINGS. Nothing may precede it — no preamble, no summary, no restatement of the task.
-- Reply with the severity headings verbatim: \`## Critical\`, \`## Important\`, \`## Suggestions\`. Invented severity words are dropped on the floor and your review counts as never having run.
-- Budget your length so the reply finishes. A trailing, half-written finding is worth less than one finding fewer.`;
-}
-
-/**
- * System prompt for the salvage pass.
- *
- * Fires only when a reviewer answered with prose instead of the contract. It
- * gets the model's OWN output back and reformats it — no diff, so it is a
- * cheap call, and it cannot invent a finding because it never sees the code.
- *
- * A reformat rather than a re-roll on purpose. Re-rolling the review would
- * spend a full diff-sized request AND throw away whatever the first pass
- * found — and the first pass is not usually wrong, just badly packaged. On
- * PR #761 the unusable prose contained a real TDZ bug that no other reviewer
- * caught; losing that to a formatting failure is the expensive mistake here.
- */
-export function buildReformatPrompt() {
-  return `You are a formatting pass, not a reviewer. You will be given the raw working notes of a code reviewer who failed to follow their output format.
-
-Re-emit the findings those notes contain, using these EXACT headings, omitting any heading with no findings:
-
-## Critical
-## Important
-## Suggestions
-
-Rules:
-- Do NOT add findings. Do NOT drop findings. Do NOT re-judge them. You cannot see the code, so you are in no position to.
-- Strip all reasoning, deliberation and self-correction. Keep only what the notes concluded.
-- Where the notes reached a conclusion but were cut off before finishing, state the conclusion they reached and mark it \`(truncated — the reviewer was cut off here)\`.
-- Keep every \`path:line\` citation the notes give.
-- If the notes contain no actual finding, reply with exactly: NO FINDINGS
-- Your FIRST characters must be a \`##\` heading or NO FINDINGS. No preamble.`;
-}
-
-/** A `## Critical` / `## Important` / `## Suggestions` heading on its own line. */
-const SEVERITY_HEADING = /^[ \t]*#{2,3}[ \t]*(Critical|Important|Suggestions?)\b/im;
-
-/** Fenced code blocks, which may quote a heading without ever emitting one. */
-const FENCED_BLOCK = /```[\s\S]*?```/g;
-
-/** "NO FINDINGS", allowing the markdown emphasis and trailing period models add. */
-const NO_FINDINGS = /^[*_`\s]*NO[ \t]+FINDINGS[*_`.\s]*$/i;
-
-/**
- * Decide whether a reviewer's reply honours the output contract.
- *
- * This is the guard that stops PR #761 from happening again. That review came
- * back as a raw reasoning trace — "wait, why did the author name the
- * variable..." — with no severity heading anywhere in it. `/live` tallies
- * findings BY those headings, so an unparseable reply and a clean review were
- * indistinguishable to it: a reviewer that had actually found a shipping bug
- * read as a reviewer with nothing to say.
- *
- * @param {string} text
- * @returns {'empty' | 'no-findings' | 'structured' | 'unstructured'}
- */
-export function classifyReviewOutput(text) {
-  const trimmed = (text ?? '').trim();
-  if (!trimmed) return 'empty';
-  if (NO_FINDINGS.test(trimmed)) return 'no-findings';
-  // Look for the heading OUTSIDE fenced code blocks only. A model that quotes
-  // its own instructions back inside a ``` fence has emitted no heading, and
-  // counting that as structured would let #761's exact failure through: prose
-  // the tally reads as zero findings. (Copilot, PR #763.)
-  if (SEVERITY_HEADING.test(trimmed.replace(FENCED_BLOCK, ''))) return 'structured';
-  return 'unstructured';
+- You are ADVISORY. Your findings are adjudicated by a reviewer who owns this codebase and may reject them with reasons. Argue your case in the finding; don't hedge to seem agreeable.`;
 }
 
 /**
@@ -372,12 +291,11 @@ export const PROVIDERS = {
           body: JSON.stringify({
             system_instruction: { parts: [{ text: system }] },
             contents: [{ role: 'user', parts: [{ text: user }] }],
-            // 16000, not 8000: PR #761 still ran out, and stopped mid-sentence
-            // on "The author refactored it to use the prop, but wrote:". Flash
-            // models spend part of this budget on reasoning before emitting
-            // text, so the visible output is well short of the cap — and a
-            // review cut off before its conclusion is a review of nothing.
-            generationConfig: { temperature: 0.2, maxOutputTokens: 16000 },
+            // 8000, not 4000: the first live review truncated mid-sentence on
+            // its second finding. Flash models spend part of this budget on
+            // reasoning before emitting text, so the visible output is well
+            // short of the cap.
+            generationConfig: { temperature: 0.2, maxOutputTokens: 8000 },
           }),
         }
       );
@@ -404,14 +322,7 @@ export const PROVIDERS = {
 
       const data = await res.json();
       const parts = data.candidates?.[0]?.content?.parts;
-      // Drop thought parts. Gemini marks its reasoning with `thought: true` in
-      // the SAME parts array as the answer, so joining the array blindly
-      // concatenates the model's deliberation onto the front of its review.
-      // That is one of the two ways PR #761's comment became a wall of "wait,
-      // why did the author…" instead of findings.
-      const text = Array.isArray(parts)
-        ? parts.filter((part) => part?.thought !== true).map((p) => p.text ?? '').join('')
-        : '';
+      const text = Array.isArray(parts) ? parts.map((p) => p.text ?? '').join('') : '';
       if (!text.trim()) {
         // A blocked or empty candidate is not the same as a clean review, and
         // must not be reported as one.
@@ -450,10 +361,7 @@ export const PROVIDERS = {
             { role: 'system', content: system },
             { role: 'user', content: user },
           ],
-          // Matches Gemini's budget. Reasoning models spend part of it before
-          // emitting any text, so a tight cap buys a review that stops
-          // mid-finding — see the note on maxOutputTokens above.
-          max_completion_tokens: 16000,
+          max_completion_tokens: 4000,
         }),
       });
 
@@ -479,168 +387,22 @@ export const PROVIDERS = {
 };
 
 /**
- * Split a unified diff into one chunk per file, preserving order.
+ * Truncate a diff to MAX_DIFF_BYTES, annotating that it happened.
  *
- * Anything before the first `diff --git` header (git emits nothing there, but
- * a caller could paste a preamble) is kept as a leading chunk with no path, so
- * splitting never silently eats bytes.
- *
- * @param {string} diff
- * @returns {Array<{ path: string | null, text: string }>}
- */
-/**
- * Read the post-image path out of a `diff --git a/<x> b/<y>` header.
- *
- * A regex split on the FIRST ` b/` names the wrong file when a path itself
- * contains that sequence (`dir/foo b/bar.ts`), so try every split point and
- * prefer the one where both halves agree — which is every case except a
- * rename, where the last split leaves a complete b-side path. Returns null
- * for a line that is not a diff header. (Codex, PR #763.)
- *
- * @param {string} line
- * @returns {string | null}
- */
-export function parseDiffHeaderPath(line) {
-  const PREFIX = 'diff --git a/';
-  if (!line.startsWith(PREFIX)) return null;
-  const rest = line.slice(PREFIX.length);
-  const splits = [];
-  for (let i = rest.indexOf(' b/'); i !== -1; i = rest.indexOf(' b/', i + 1)) {
-    splits.push([rest.slice(0, i), rest.slice(i + 3)]);
-  }
-  if (splits.length === 0) return null;
-  const symmetric = splits.find(([before, after]) => before === after);
-  return (symmetric ?? splits[splits.length - 1])[1];
-}
-
-export function splitDiffByFile(diff) {
-  const chunks = [];
-  let current = null;
-  for (const line of diff.split('\n')) {
-    const headerPath = parseDiffHeaderPath(line);
-    if (headerPath !== null) {
-      if (current) chunks.push(current);
-      current = { path: headerPath, lines: [] };
-    } else if (!current) {
-      current = { path: null, lines: [] };
-    }
-    current.lines.push(line);
-  }
-  if (current) chunks.push(current);
-  return chunks
-    .map((c) => ({ path: c.path, text: c.lines.join('\n') }))
-    .filter((c) => c.text.length > 0);
-}
-
-/**
- * Truncate `text` to at most `maxBytes` UTF-8 bytes, never splitting a character.
- *
- * `String.prototype.slice` counts UTF-16 code units, so slicing to `maxBytes`
- * can return up to ~3x that many bytes for non-ASCII content — which would
- * quietly defeat a cap this module documents in bytes. (Copilot, PR #763.)
- *
- * @param {string} text
- * @param {number} maxBytes
- * @returns {string}
- */
-export function sliceToBytes(text, maxBytes) {
-  const buf = Buffer.from(text, 'utf8');
-  if (buf.length <= maxBytes) return text;
-  // Walk back off any UTF-8 continuation bytes (10xxxxxx) so the cut lands on
-  // a character boundary rather than producing a replacement char.
-  let end = Math.max(0, maxBytes);
-  while (end > 0 && (buf[end] & 0xc0) === 0x80) end--;
-  return buf.subarray(0, end).toString('utf8');
-}
-
-/**
- * Cap a diff at `maxBytes`, dropping WHOLE FILES rather than cutting mid-hunk.
- *
- * The old implementation was a raw `diff.slice(0, maxBytes)`. Two things were
- * wrong with that, and PR #761 hit both:
- *
- *  1. It cut inside a file, handing the model half a hunk. A reviewer reading a
- *     truncated hunk cannot tell an incomplete change from a broken one.
- *  2. It never said WHICH files it dropped. `git diff` emits paths in sorted
- *     order, so "truncated" always means "everything after src/p… is gone" —
- *     and nobody reading the PR comment could know that. Coverage was partial
- *     in a way neither the model nor the human could locate.
- *
- * Now the omitted files are named, both in the prompt (so the model knows the
- * boundary of what it may claim) and in the returned metadata (so the PR
- * comment can tell the human exactly which files went unreviewed).
- *
- * `omittedFiles` names whole files that were dropped; `partialFile` names the
- * single file that was cut internally because it alone exceeded the budget.
- * They are mutually exclusive, and both must be forwarded onto the provider
- * result — a field returned here but not destructured in `runProvider` reaches
- * the renderer as undefined and silently reports nothing.
- *
- * @param {string} diff
- * @param {number} [maxBytes]
- * @returns {{ diff: string, truncated: boolean, omittedFiles: string[], partialFile: string | null }}
+ * Silent truncation would read to the reviewer as "this is the whole change",
+ * so it says so inline — the model should know its coverage is partial.
  */
 export function capDiff(diff, maxBytes = MAX_DIFF_BYTES) {
   // Measure BYTES, not string length: .length counts UTF-16 code units, so a
   // diff full of non-ASCII (this repo carries team names and emoji) would sail
   // past a cap that is documented in bytes.
-  if (Buffer.byteLength(diff, 'utf8') <= maxBytes) {
-    return { diff, truncated: false, omittedFiles: [], partialFile: null };
-  }
-
-  const files = splitDiffByFile(diff);
-  const kept = [];
-  const omitted = [];
-  let used = 0;
-
-  for (const file of files) {
-    const size = Buffer.byteLength(file.text, 'utf8');
-    // The chunks are rejoined with '\n', so every file after the first costs
-    // one byte the naive sum misses. Without this the returned diff can exceed
-    // maxBytes even though `used` says it fits. (Copilot, PR #763.)
-    const separator = kept.length ? 1 : 0;
-    if (used + separator + size <= maxBytes) {
-      kept.push(file.text);
-      used += separator + size;
-    } else {
-      omitted.push(file.path ?? '(diff preamble)');
-    }
-  }
-
-  // A single file larger than the whole budget would otherwise omit everything
-  // and send the model an empty diff — a "clean review" of nothing. Byte-cut
-  // that one file instead: partial coverage of the real change beats none.
-  let partialFile = null;
-  if (kept.length === 0 && files.length > 0) {
-    const marker = `\n[... this file's diff was cut at ${maxBytes} bytes ...]`;
-    const room = Math.max(0, maxBytes - Buffer.byteLength(marker, 'utf8'));
-    kept.push(sliceToBytes(files[0].text, room) + marker);
-    // Record it before dropping it off the omitted list. Otherwise the only
-    // file whose coverage is partial is the one nothing can name. (Codex, #763.)
-    partialFile = omitted.shift() ?? null;
-  }
-
-  // A single over-budget file leaves nothing in `omitted`; it already carries
-  // its own inline cut marker, so don't append an empty "0 files omitted" list.
-  // Cap the NAMES too. The note is appended on top of the byte budget, so an
-  // unbounded list would let a diff with thousands of omitted files push the
-  // prompt well past the backstop it is meant to enforce. (Codex, PR #763.)
-  const NAMED_IN_PROMPT = 100;
-  const named = omitted.slice(0, NAMED_IN_PROMPT);
-  const unnamed = omitted.length - named.length;
-  const note = omitted.length
-    ? [
-        '',
-        '',
-        `[... diff truncated: ${omitted.length} file(s) omitted entirely to fit ${maxBytes} bytes.`,
-        'You have NOT seen these files. Do not claim a call site is unupdated if it lives in one of them:',
-        ...named.map((path) => `  - ${path}`),
-        ...(unnamed > 0 ? [`  - ...and ${unnamed} more, not listed`] : []),
-        '...]',
-      ].join('\n')
-    : '';
-
-  return { diff: kept.join('\n') + note, truncated: true, omittedFiles: omitted, partialFile };
+  if (Buffer.byteLength(diff, 'utf8') <= maxBytes) return { diff, truncated: false };
+  return {
+    diff:
+      diff.slice(0, maxBytes) +
+      `\n\n[... diff truncated at ${maxBytes} bytes — review the above only ...]`,
+    truncated: true,
+  };
 }
 
 /**
@@ -661,7 +423,7 @@ export async function runProvider(name, { diff, context = '', env = process.env 
 
   const model = env[`${name.toUpperCase()}_REVIEW_MODEL`] || provider.defaultModel;
   const lens = LENSES[name];
-  const { diff: capped, truncated, omittedFiles, partialFile } = capDiff(diff);
+  const { diff: capped, truncated } = capDiff(diff);
 
   // Repo context goes only to lenses that need it. See the LENSES comment:
   // the cross-cutting lens is unanswerable without knowing the conventions,
@@ -682,61 +444,13 @@ export async function runProvider(name, { diff, context = '', env = process.env 
           ),
       }
     );
-    // The transport succeeded — but "the model replied" is not "the model
-    // reviewed". `/live` tallies findings by severity heading, so a reply with
-    // no heading in it reads to the tally as zero findings, which is the same
-    // thing a clean review reads as. Classify before returning, and never let
-    // those two states render alike.
-    const shape = classifyReviewOutput(text);
-    let finalText = text;
-    let malformed = false;
-    let salvaged = false;
-
-    if (shape === 'unstructured') {
-      console.log(
-        `  ${provider.label}: reply did not follow the output contract — attempting one reformat pass`
-      );
-      try {
-        const reformatted = await provider.call({
-          apiKey,
-          model,
-          system: buildReformatPrompt(),
-          user: `Raw reviewer notes to reformat:\n\n${text}`,
-        });
-        // ONLY a structured reformat may replace the original notes.
-        //
-        // Testing for `!== 'unstructured'` also accepted NO FINDINGS — so a
-        // formatter that wrongly concluded the notes held nothing would
-        // overwrite prose containing a real finding with a clean pass, and the
-        // only output that actually read the code would be gone. That is this
-        // module's entire failure mode, reintroduced through the repair path.
-        // The formatter cannot see the diff, so it is in no position to be
-        // believed when it says there was nothing to report. (Codex, PR #763.)
-        if (classifyReviewOutput(reformatted) === 'structured') {
-          finalText = reformatted;
-          salvaged = true;
-        } else {
-          // Salvage failed. Keep the ORIGINAL notes — they saw the code.
-          malformed = true;
-        }
-      } catch (reformatError) {
-        // Never let the salvage pass destroy the review it was meant to save.
-        console.log(`  ${provider.label}: reformat pass failed (${reformatError.message.split('\n')[0]})`);
-        malformed = true;
-      }
-    }
-
     return {
       name,
       label: provider.label,
       status: 'ok',
       model,
       truncated,
-      omittedFiles,
-      partialFile,
-      text: finalText,
-      malformed,
-      salvaged,
+      text,
       attempts,
       focus: lens?.focus,
     };

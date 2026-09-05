@@ -148,13 +148,6 @@ mode this step exists to prevent.
 you dispatch it, and posts a sticky comment with findings under
 `## Critical` / `## Important` / `## Suggestions` headings.
 
-Those headings are the contract, and the workflow now enforces it at the
-producer: a reply with no severity heading is reformatted once, and if that
-fails it is posted as an explicit "output did not follow the review format"
-block rather than as findings. So an unparseable review can no longer reach
-you looking like a clean one — but see the table below, because it is also the
-state most likely to be hiding a real bug.
-
 **Decide, then say what you decided.** Request Gemini when the diff has the
 shape where a second pair of eyes on the cross-cutting lens has somewhere to
 look — that is, when **any** of these hold:
@@ -195,19 +188,12 @@ as zero findings:
 | What the comment says | Report it as |
 |---|---|
 | ⚠️ failed to run (**transient**) | `Gemini: did not run — API unavailable` |
-| ⚠️ **output did not follow the review format** | `Gemini: ran, but output unparseable` — the findings are in a `<details>` block and the tally cannot see them. **Read them yourself and adjudicate them by hand.** This is the one row where "did not run" undersells it: the reviewer may well have found something |
-| ⚠️ **Coverage is partial** (a `<details>` naming omitted files) | Findings still count, but the named files were never sent. Say which ones, and cover them in your own step 5b pass |
 | ⛔ failed to run (**permanent**) | `Gemini: did not run — misconfigured`, **and fix it**: a dead model id or bad key is a real bug in this repo, not weather |
 | Skipped — `GEMINI_API_KEY` not set | `Gemini: did not run — no key` |
 | No comment at all | `Gemini: not requested` (only valid if you chose to skip it — otherwise the dispatch failed) |
 
-The honest line is never "Gemini: clean" — it is "did not run" for the failure
-rows, and "ran, but output unparseable" for the malformed one. Do not collapse
-that last one into "did not run": a reviewer that produced unreadable prose HAS
-looked at the diff, and on PR #761 that prose was the only place a real
-temporal-dead-zone bug got caught. Read it before you move on.
-
-Note also the asymmetry the retry logic surfaces: a **transient** failure is
+The honest line is always "Gemini: did not run", never "Gemini: clean". But
+note the asymmetry the retry logic now surfaces: a **transient** failure is
 weather and you proceed on your own cross-cutting pass; a **permanent** one is
 a broken tool that will keep failing for every future PR until someone fixes
 it, so fix it in this PR or open an issue. Do not shrug at the second kind
