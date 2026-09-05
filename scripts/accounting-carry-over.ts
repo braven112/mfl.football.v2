@@ -236,6 +236,19 @@ async function main() {
       loginOutcome = 'failed';
       console.error(`MFL login failed, falling back to stored cookies: ${(error as Error).message}`);
     }
+  } else if (username || password) {
+    // HALF a pair is a misconfiguration, not a choice. Run #5 (2026-09-05)
+    // was lost to exactly this: MFL_PASSWORD was set, MFL_USERNAME was not
+    // (MFL_USER_ID — a different secret entirely — was, which is the easy
+    // mix-up), so the login was skipped and 28 writes died on the expired
+    // cookies. Name the missing half rather than reporting the pair absent.
+    console.warn(
+      `${username ? 'MFL_PASSWORD' : 'MFL_USERNAME'} is not set while `
+        + `${username ? 'MFL_USERNAME' : 'MFL_PASSWORD'} is — the login needs BOTH, so it was `
+        + 'skipped. Note MFL_USERNAME (your login name) is a different secret '
+        + 'from MFL_USER_ID (a session cookie). Falling back to the stored '
+        + 'cookies, which expire.'
+    );
   } else {
     // Say so in the log. Run #4 (2026-09-03) failed every write against
     // expired cookies while the log gave no hint that the login path had
