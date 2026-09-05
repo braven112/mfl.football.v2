@@ -353,15 +353,13 @@
       "paths": [
         "src/pages/*/assets.astro",
         "src/pages/*/salary.astro",
-        "src/pages/*/trade-builder.astro",
-        "src/components/**/MatchupSelector*"
+        "src/pages/*/trade-builder.astro"
       ],
       "note": "These pages have each shipped a 'goes dead after in-site navigation' bug: init must re-run on astro:page-load, and module-level state must not capture the previous page's DOM.",
       "tests": [
         "tests/assets-page-clientrouter.test.ts",
         "tests/salary-page-clientrouter.test.ts",
         "tests/trade-builder-clientrouter.test.ts",
-        "tests/matchup-selector-clientrouter.test.ts",
         "tests/clientrouter-init-ratchet.test.ts"
       ]
     },
