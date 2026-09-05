@@ -87,3 +87,40 @@ export function leagueSelectionHref(pathname: string, selection: string[] | null
   params.set('leagues', selection ? selection.join(',') : 'all');
   return `${pathname}?${params.toString()}`;
 }
+
+// ── Country (broadcast view) ─────────────────────────────────────────────
+
+export const COUNTRY_COOKIE = 'st_country';
+
+/** The page href for a country choice, preserving an explicit `?week=`. */
+export function countryHref(pathname: string, country: string, week: number | null): string {
+  const params = new URLSearchParams();
+  if (week !== null) params.set('week', String(week));
+  params.set('country', country);
+  return `${pathname}?${params.toString()}`;
+}
+
+// ── Remembering the choices — from the ROUTE, never the component ────────
+
+/** The subset of `Astro.cookies` this needs; typed structurally so the module stays free of the astro runtime. */
+export interface CookieJar {
+  set(name: string, value: string, options: { maxAge: number; path: string; sameSite: 'lax' }): void;
+}
+
+/**
+ * Write `?leagues=` and `?country=` to their cookies when present.
+ *
+ * Call this from the PAGE's frontmatter (`src/pages/<league>/sunday-ticket.astro`),
+ * not from SundayTicketPage.astro: `Astro.cookies.set()` inside an imported
+ * component runs after the response headers are committed and throws
+ * `ResponseSentError`, blanking the page — the same trap as `Astro.redirect()`
+ * from a component. Reads are fine anywhere; only the write is route-only.
+ * The values are stored raw; the component re-parses them against the board.
+ */
+export function rememberSundayTicketChoices(url: URL, cookies: CookieJar): void {
+  const opts = { maxAge: LEAGUE_SELECTION_MAX_AGE, path: '/', sameSite: 'lax' as const };
+  const leagues = url.searchParams.get('leagues');
+  if (leagues !== null) cookies.set(LEAGUE_SELECTION_COOKIE, leagues.trim() || 'all', opts);
+  const country = url.searchParams.get('country');
+  if (country !== null) cookies.set(COUNTRY_COOKIE, country.trim().toUpperCase(), opts);
+}

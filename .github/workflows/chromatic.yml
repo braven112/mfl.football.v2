@@ -63,6 +63,7 @@ on:
       # Utils that reach a story. 247 utils exist; these 44 render.
       - 'src/utils/afl-tier-logo.ts'
       - 'src/utils/afl-tier.ts'
+      - 'src/utils/broadcast-channels.ts'
       - 'src/utils/college-logo-dark-css.ts'
       - 'src/utils/crest-dark-stroke-css.ts'
       - 'src/utils/current-week.ts'
@@ -124,6 +125,7 @@ on:
       # Hand-maintained data that renders. The cron-written feeds
       # (schefter-feed.json, mfl-feeds/**) are deliberately NOT here —
       # they are not in the import closure, so they never render.
+      - 'data/theleague/broadcast-mappings.json'
       - 'src/data/afl-fantasy/league-events.json'
       - 'src/data/college-dark-logos-manifest.json'
       - 'src/data/college-logos.json'
@@ -176,6 +178,7 @@ on:
       - 'public/assets/afl/premier-dark.svg'
       - 'public/assets/afl/premier.svg'
       - 'public/assets/nfl-logos/**'
+      - 'public/assets/tv-logos/**'
       - 'public/assets/college-logos/**'
       - 'public/assets/logos/**'
       - 'public/assets/icons/**'
@@ -248,6 +251,7 @@ on:
       # Utils that reach a story. 247 utils exist; these 44 render.
       - 'src/utils/afl-tier-logo.ts'
       - 'src/utils/afl-tier.ts'
+      - 'src/utils/broadcast-channels.ts'
       - 'src/utils/college-logo-dark-css.ts'
       - 'src/utils/crest-dark-stroke-css.ts'
       - 'src/utils/current-week.ts'
@@ -309,6 +313,7 @@ on:
       # Hand-maintained data that renders. The cron-written feeds
       # (schefter-feed.json, mfl-feeds/**) are deliberately NOT here —
       # they are not in the import closure, so they never render.
+      - 'data/theleague/broadcast-mappings.json'
       - 'src/data/afl-fantasy/league-events.json'
       - 'src/data/college-dark-logos-manifest.json'
       - 'src/data/college-logos.json'
@@ -361,6 +366,7 @@ on:
       - 'public/assets/afl/premier-dark.svg'
       - 'public/assets/afl/premier.svg'
       - 'public/assets/nfl-logos/**'
+      - 'public/assets/tv-logos/**'
       - 'public/assets/college-logos/**'
       - 'public/assets/logos/**'
       - 'public/assets/icons/**'

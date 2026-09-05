@@ -10,10 +10,12 @@
  */
 import { formatKickoff, type SundayTicketSlate } from '../../../utils/sunday-ticket-slate';
 import {
+  countryHref,
   leagueSelectionHref,
   toggleLeagueSelection,
   type BoardLeague,
 } from '../../../utils/sunday-ticket-selection';
+import { countryOptions, resolveChannel, type CountryCode } from '../../../utils/broadcast-channels';
 import SundayTicketWindow from './SundayTicketWindow.astro';
 
 export interface Props {
@@ -27,9 +29,12 @@ export interface Props {
   pathname: string;
   /** The `?week=` that was explicitly asked for, to carry through the chip links. */
   weekParam: number | null;
+  /** Whose channels the boxes show. */
+  country?: CountryCode;
 }
 
-const { slate, week, leagues, enabled, pathname, weekParam } = Astro.props;
+const { slate, week, leagues, enabled, pathname, weekParam, country = 'US' } = Astro.props;
+const countries = countryOptions();
 
 const allIds = leagues.map((l) => l.id);
 const enabledIds = enabled ?? allIds;
@@ -67,6 +72,20 @@ const logo = (code: string) => `/assets/nfl-logos/${code}.svg`;
     </nav>
   )}
 
+  <nav class="st-countries" aria-label="Broadcast country">
+    <span class="st-chips__label">Channels for</span>
+    {countries.map((c) => (
+      <a
+        class:list={['st-chip', 'st-chip--country', c.code === country && 'st-chip--on']}
+        aria-pressed={c.code === country ? 'true' : 'false'}
+        href={countryHref(pathname, c.code, weekParam)}
+      >
+        <span class="st-chip__flag" aria-hidden="true">{c.flag}</span>
+        {c.name}
+      </a>
+    ))}
+  </nav>
+
   {slate.windows.length > 1 && (
     <nav class="st-jump" aria-label="Sunday windows">
       {slate.windows.map((w) => (
@@ -79,7 +98,7 @@ const logo = (code: string) => `/assets/nfl-logos/${code}.svg`;
   )}
 
   {slate.windows.map((w) => (
-    <SundayTicketWindow window={w} multiLeague={multiLeague} personalized={slate.personalized} />
+    <SundayTicketWindow window={w} country={country} multiLeague={multiLeague} personalized={slate.personalized} />
   ))}
 
   {slate.other.length > 0 && (
@@ -91,6 +110,7 @@ const logo = (code: string) => `/assets/nfl-logos/${code}.svg`;
       <ul class="st-other__list">
         {slate.other.map((b) => {
           const k = formatKickoff(b.game.kickoff);
+          const ch = resolveChannel(b.game.broadcast, country);
           return (
             <li class="st-other__game">
               <span class="st-other__day">{k.day}</span>
@@ -102,7 +122,9 @@ const logo = (code: string) => `/assets/nfl-logos/${code}.svg`;
                 {b.game.home}
               </span>
               <span class="st-other__time">{k.et} ET · {k.pt} PT</span>
-              {b.game.broadcast && <span class="st-box__net">{b.game.broadcast}</span>}
+              {ch && (ch.logo
+                ? <span class="st-net st-net--mark" title={ch.name}><img class="st-net__logo" src={ch.logo} alt={ch.name} loading="lazy" /></span>
+                : <span class="st-net" title={ch.name}>{ch.name}</span>)}
               <span class="st-box__count">
                 {b.starterCount} {slate.personalized ? 'of yours' : 'proj'}{slate.personalized ? '' : ` ${b.projTotal.toFixed(1)}`}
               </span>

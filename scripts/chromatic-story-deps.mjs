@@ -87,7 +87,10 @@ const SEED_DIRS = ['stories/', '.storybook/'];
  * `public/assets/fonts/**` is the one that looks droppable and is not - the
  * story stylesheets @font-face against it, and a re-subset font reflows every
  * snapshot. Deliberately EXCLUDED (they render nowhere): whats-new/, news/,
- * schefter/, tv-logos/, css/, js/, and the non-Schefter avatars.
+ * schefter/, css/, js/, and the non-Schefter avatars. tv-logos/ used to be
+ * in that list; the SundayTicketBoard stories now render channel marks from
+ * it, resolved from broadcast-mappings.json rather than written as literals,
+ * which is why the literal scan below cannot see them and the glob is listed.
  */
 export const STORY_ASSET_GLOBS = [
   // The franchise crests TeamIconCell renders — one per dark-mode branch, in
@@ -112,6 +115,9 @@ export const STORY_ASSET_GLOBS = [
   'public/assets/theleague/icons/pigskins_dark.png',
   'public/assets/theleague/icons/wabbits.png',
   'public/assets/theleague/icons/wabbits_dark.png',
+  // Channel + Sunday Ticket carrier marks the SundayTicketBoard stories render
+  // (18 small PNGs, all of them the subject, so the whole directory).
+  'public/assets/tv-logos/**',
   'public/assets/afl/dleague-dark.svg',
   'public/assets/afl/dleague.svg',
   'public/assets/afl/premier-dark.svg',

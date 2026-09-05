@@ -23,6 +23,21 @@ Status: BUILT 2026-09-04 on branch `claude/sunday-ticket-matchup-preview-3025b7`
   `matchup-routing.ts`, `matchup-state-manager.ts`, `game-state-manager.ts`,
   `lineup-data-builder.ts`, `matchup-preview-utils.ts` and their tests — is
   referenced only by each other and by spec-era tests, and is a follow-up.
+- **Channels are per COUNTRY, with marks.** The original example page mapped
+  each US network to the viewer's country client-side from the browser
+  timezone; this does it server-side from a `?country=` param remembered in
+  `st_country` (US / Canada / Australia chips), through
+  `src/utils/broadcast-channels.ts` over `data/theleague/broadcast-mappings.json`
+  — CBS/FOX become DAZN in Canada, NBC becomes CTV, everything is Kayo in
+  Australia, a global streamer keeps its own mark. Channel and carrier marks
+  come from `public/assets/tv-logos/` on a white pill (the PNGs are drawn for
+  light surfaces), the RedZone box uses the RedZone logo, and each window
+  header carries the country's Sunday Ticket carrier (YouTube TV, DAZN, Kayo).
+- **Cookie writes live in the ROUTES, not the component.** `Astro.cookies.set()`
+  from an imported component throws `ResponseSentError` and blanks the page —
+  the first country click shipped exactly that. `rememberSundayTicketChoices`
+  is called from each thin route; the component only reads. Recorded in
+  CLAUDE.md next to the `Astro.redirect()` rule it mirrors.
 - **The What's New screenshot is a manual capture** (registered in
   `MANUAL_CAPTURE_ONLY`): the personalized board needs a signed-in owner, and
   the dev session carries no live MFL cookie, so the re-sign-in note is

@@ -41,9 +41,10 @@ import {
   loadRegisteredContribution,
   readLeagueFeed,
 } from '../../../utils/sunday-ticket-sources';
+import { COUNTRY_COOKIE } from '../../../utils/sunday-ticket-selection';
+import { parseCountry } from '../../../utils/broadcast-channels';
 import {
   LEAGUE_SELECTION_COOKIE,
-  LEAGUE_SELECTION_MAX_AGE,
   fetchEspnBroadcasts,
   franchiseNameFromConfig,
   parseLeagueSelection,
@@ -95,19 +96,14 @@ if (user && sessionLeagueDef && user.franchiseId) {
 const boardLeagues = resolveBoardLeagues(session, myLeagues);
 const allIds = boardLeagues.map((l) => l.id);
 
-// ── League selection: ?leagues= wins and is remembered; else the cookie ──
+// ── League selection: ?leagues= wins; else the cookie. The ROUTE wrote the
+// cookie (`rememberSundayTicketChoices`) — a component cannot set cookies
+// after the response has started, so this file only ever reads.
 const leaguesParam = Astro.url.searchParams.get('leagues');
-let enabled: string[] | null;
-if (leaguesParam !== null) {
-  enabled = parseLeagueSelection(leaguesParam, allIds);
-  Astro.cookies.set(LEAGUE_SELECTION_COOKIE, enabled ? enabled.join(',') : 'all', {
-    maxAge: LEAGUE_SELECTION_MAX_AGE,
-    path: '/',
-    sameSite: 'lax',
-  });
-} else {
-  enabled = parseLeagueSelection(Astro.cookies.get(LEAGUE_SELECTION_COOKIE)?.value, allIds);
-}
+const enabled = parseLeagueSelection(leaguesParam ?? Astro.cookies.get(LEAGUE_SELECTION_COOKIE)?.value, allIds);
+
+// ── Country: which channels the boxes name. Same param → cookie pattern. ──
+const country = parseCountry(Astro.url.searchParams.get('country') ?? Astro.cookies.get(COUNTRY_COOKIE)?.value);
 
 // ── Contributions ───────────────────────────────────────────────────────
 const notices: string[] = [];
@@ -254,12 +250,14 @@ const title = `Sunday Ticket — Week ${week}`;
       enabled={enabled}
       pathname={pathname}
       weekParam={weekParam}
+      country={country}
     />
 
     <footer class="st-page__foot">
       <p>
-        Kickoffs from MFL's NFL schedule; networks from ESPN. Sunday Ticket carries the out-of-market Sunday-afternoon
-        CBS and FOX games — Thursday, Saturday, Sunday night and Monday night are on their national networks.
+        Kickoffs from MFL's NFL schedule; networks from ESPN, translated to the channel that carries them in your
+        country. Sunday Ticket is the out-of-market Sunday-afternoon CBS and FOX games — Thursday, Saturday, Sunday
+        night and Monday night are on their national networks.
       </p>
     </footer>
   </div>

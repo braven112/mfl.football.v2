@@ -1,6 +1,6 @@
 {
   "metadata": {
-    "lastUpdated": "2024-12-13",
+    "lastUpdated": "2026-09-04",
     "description": "International broadcast mappings for NFL games by country"
   },
   "countries": {
@@ -35,7 +35,6 @@
         },
         "NFL Network": {
           "name": "NFL Network",
-          "logo": "nfl-network.png",
           "subscription": "Cable"
         },
         "Amazon Prime Video": {
@@ -47,7 +46,18 @@
           "name": "Prime Video",
           "logo": "prime-video.png",
           "subscription": "Prime Video"
+        },
+        "Netflix": {
+          "name": "Netflix",
+          "logo": "netflix.png",
+          "subscription": "Netflix"
         }
+      },
+      "sundayTicket": {
+        "name": "YouTube TV",
+        "logo": "youtube-tv-black.png",
+        "logoDark": "youtube-tv.png",
+        "note": "NFL Sunday Ticket on YouTube TV — every out-of-market Sunday afternoon game, plus RedZone."
       }
     },
     "CA": {
@@ -71,6 +81,12 @@
           "logo": "ctv-ca.png",
           "subscription": "Cable/Antenna",
           "note": "Sunday Night Football"
+        },
+        "Netflix": {
+          "name": "Netflix",
+          "logo": "netflix.png",
+          "subscription": "Netflix",
+          "note": "Christmas games"
         }
       },
       "mapping": {
@@ -82,7 +98,14 @@
         "ABC": "TSN",
         "NFL Network": "DAZN",
         "Amazon Prime Video": "DAZN",
-        "Prime Video": "DAZN"
+        "Prime Video": "DAZN",
+        "Netflix": "Netflix"
+      },
+      "sundayTicket": {
+        "name": "DAZN Canada",
+        "logo": "dazn-ca-black.png",
+        "logoDark": "dazn-ca.png",
+        "note": "DAZN carries every game in Canada, RedZone included; CTV has Sunday night, TSN the ESPN/ABC games."
       }
     },
     "AU": {
@@ -106,6 +129,12 @@
           "logo": "espn-au.png",
           "subscription": "Kayo/Foxtel",
           "note": "All games"
+        },
+        "Netflix": {
+          "name": "Netflix",
+          "logo": "netflix.png",
+          "subscription": "Netflix",
+          "note": "Christmas games"
         }
       },
       "mapping": {
@@ -117,7 +146,13 @@
         "ABC": "Kayo Sports",
         "NFL Network": "Kayo Sports",
         "Amazon Prime Video": "Kayo Sports",
-        "Prime Video": "Kayo Sports"
+        "Prime Video": "Kayo Sports",
+        "Netflix": "Netflix"
+      },
+      "sundayTicket": {
+        "name": "Kayo Sports",
+        "logo": "kayo-sports.png",
+        "note": "Kayo carries every game via ESPN, RedZone included; 7mate has a free-to-air Sunday game."
       }
     }
   },

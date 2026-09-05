@@ -27,6 +27,10 @@ export default {
     week: 2,
     pathname: '/theleague/sunday-ticket',
     weekParam: null,
+    country: 'US',
+  },
+  argTypes: {
+    country: { control: 'inline-radio', options: ['US', 'CA', 'AU'] },
   },
 };
 
@@ -38,6 +42,11 @@ export const MultiLeague = {
 /** One league toggled off — its chip goes hollow and an "All leagues" chip appears. */
 export const OneLeagueOff = {
   args: { slate: multiLeague, leagues, enabled: [leagues[0].id, leagues[2].id] },
+};
+
+/** Same board seen from Canada: CBS/FOX become DAZN, NBC becomes CTV, the header mark is DAZN. */
+export const Canada = {
+  args: { slate: multiLeague, leagues, enabled: null, country: 'CA' },
 };
 
 /** A single-league owner: no chips, no league line inside the boxes, RedZone fills the third box. */

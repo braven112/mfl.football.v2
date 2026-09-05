@@ -85,3 +85,20 @@ describe('formatKickoff', () => {
     expect(k).toEqual({ day: 'Sun', et: '1:00 PM', pt: '10:00 AM' });
   });
 });
+
+describe('rememberSundayTicketChoices — the route writes, the component reads', () => {
+  const jar = () => {
+    const writes: Array<[string, string]> = [];
+    return { writes, set: (name: string, value: string) => { writes.push([name, value]); } };
+  };
+
+  it('writes only the params that are present, raw, with "all" for an empty leagues value', async () => {
+    const { rememberSundayTicketChoices, LEAGUE_SELECTION_COOKIE, COUNTRY_COOKIE } = await import('../src/utils/sunday-ticket-selection');
+    const j = jar();
+    rememberSundayTicketChoices(new URL('https://x.test/theleague/sunday-ticket?country=ca&leagues='), j);
+    expect(j.writes).toEqual([[LEAGUE_SELECTION_COOKIE, 'all'], [COUNTRY_COOKIE, 'CA']]);
+    const none = jar();
+    rememberSundayTicketChoices(new URL('https://x.test/theleague/sunday-ticket?week=3'), none);
+    expect(none.writes).toEqual([]);
+  });
+});

@@ -4,8 +4,13 @@
  * See src/pages/theleague/sunday-ticket.astro.
  */
 import SundayTicketPage from '../../components/shared/sunday-ticket/SundayTicketPage.astro';
+import { rememberSundayTicketChoices } from '../../utils/sunday-ticket-selection';
 
 export const prerender = false;
+
+// Cookie writes belong to the route: a component's `Astro.cookies.set()` runs
+// after the response has started and throws (see rememberSundayTicketChoices).
+rememberSundayTicketChoices(Astro.url, Astro.cookies);
 ---
 
 <SundayTicketPage />
