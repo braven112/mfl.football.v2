@@ -103,3 +103,57 @@ const DEFAULT_LOG = { log: (...a) => console.log(...a), warn: (...a) => console.
 
 Fix it at the definition rather than casting at the test — the stub is the
 legitimate caller here, and the too-wide type is the defect.
+
+## 2026-09-05 — A notification `badge` is an ALPHA STENCIL, so an opaque icon is a white square
+
+Reported as "the AFL test notification shows a white screen while TheLeague
+shows its logo", with a screenshot in which the AFL football rendered
+perfectly. Both halves of that were true and they were two different bugs.
+
+Android draws `showNotification({ badge })` by **discarding RGB entirely** and
+using only the image's **alpha channel** as a stencil, which it then tints. So
+the failure mode of pointing `badge` at a normal app icon is not "slightly
+wrong art" — it is a **solid filled block**, and the more opaque the icon, the
+more completely it fails. The service worker had `badge: DEFAULT_NOTIFICATION_ICON`,
+i.e. `/assets/icons/pwa/icon-192.png`, which is PNG **color type 2** — no alpha
+channel at all — so it rendered as a featureless square for every league.
+
+Two things follow, and neither is visible in a code diff:
+
+- **Badges are a distinct asset class, not a smaller icon.** They are
+  white-on-transparent silhouettes (`badge-96.png`, generated from each
+  league's favicon by `scripts/generate-notification-icons.mjs`). Deriving
+  alpha from **inverted luminance** is what makes them readable: the light
+  parts of a mark — the AFL wordmark, TheLeague's stars — punch through as
+  holes instead of filling in.
+- **`file` is the diagnostic.** `PNG image data, 192 x 192, 8-bit/color RGB`
+  vs `RGBA` is the whole bug, one shell command, and it beats staring at the
+  image — the two icons look identical on screen and behave completely
+  differently on a phone.
+
+## 2026-09-05 — What the BROWSER sees is the apex path, so a manifest scoped to the route path is discarded
+
+The same report's second half. `public/assets/afl/favicons/site.webmanifest`
+declared `start_url` and `scope` of `/afl-fantasy/` — which is the **internal
+Astro route**, not any URL that domain serves. On afl-fantasy.com the
+middleware rewrites `/rosters` → `/afl-fantasy/rosters` invisibly, and
+`vercel.json` 301s `/afl-fantasy/*` → `/*`, so that scope covered **zero** real
+URLs.
+
+A manifest whose `scope` does not cover the document that links it is not
+partially applied — it is **thrown away**. No install prompt, no WebAPK, no app
+icon, and therefore no app identity behind a notification. TheLeague's
+`manifest.json` was fine only because its scope happened to be `/`.
+
+The general rule this is an instance of: **anything a browser reads by URL must
+use the PUBLIC apex path, never the `src/pages/` route path.** The two are
+equal for TheLeague and different for every other league, which is exactly the
+shape that ships an AFL-only bug nobody sees. The same trap already has
+precedent here — push `url`s must be bare for the same reason (see the
+2026-09-04 entry above) — so treat manifest scope, `start_url`, and any
+declared URL as members of that family.
+
+`tests/push-notification-icons.test.ts` pins both: every manifest's `scope` and
+`start_url` are `/`, every badge has real transparency and no non-white pixels,
+no league reuses its icon as its badge, and the committed art matches the
+generator's `--check`.

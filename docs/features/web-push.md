@@ -102,10 +102,11 @@ deployment, not `pnpm dev`.
 
 1. **Build the payload with a pure function** in a new
    `src/utils/push-notify-<thing>.ts` (copy the shape of
-   `push-notify-trade.ts`): return `{ title, body, url, tag, icon }`.
-   Use `leaguePushIcon(navSlug)` for the icon, a site-relative `url`
-   (that's what the SW opens on click), and a stable `tag` so repeat
-   notifications collapse instead of stacking.
+   `push-notify-trade.ts`): return `{ title, body, url, tag, icon, badge }`.
+   Use `leaguePushIcon(navSlug)` AND `leaguePushBadge(navSlug)` — both, always
+   (see "Icon vs badge" below) — a site-relative `url` (that's what the SW
+   opens on click), and a stable `tag` so repeat notifications collapse
+   instead of stacking.
 2. **Wrap it** in a `notify*` function that resolves league/team context
    (registry lookups — never hardcode league ids) and calls
    `sendPushToFranchise`. Guard with `isPushConfigured()` and never throw.
@@ -114,9 +115,82 @@ deployment, not `pnpm dev`.
 4. **Unit-test the pure payload builder** in
    `tests/push-subscriptions.test.ts` or a sibling file.
 5. No SW change needed — the `push` handler renders any payload matching
-   the `{ title, body, url?, tag?, icon? }` contract.
+   the `{ title, body, url?, tag?, icon?, badge? }` contract.
 6. Mention the new alert type in the notifications page copy if it's
    user-visible.
+
+## Icon vs badge — they are not interchangeable
+
+`icon` is the large image in the notification. `badge` is the **small** icon,
+and Android renders it by discarding RGB entirely and using only the **alpha
+channel** as a stencil, which it then tints. Consequences:
+
+- **An opaque PNG is a solid block on the device, not a logo.** The service
+  worker used to pass TheLeague's `/assets/icons/pwa/icon-192.png` as the
+  badge for every league. That file is PNG color type 2 — no alpha channel at
+  all — so it rendered as a **blank white square**, which is what an AFL owner
+  saw next to a working test notification in Sept 2026.
+- Badges are `badge-96.png`: white-on-transparent silhouettes generated from
+  each league's favicon by `scripts/generate-notification-icons.mjs`.
+  Regenerate there; never hand-edit one, and never point `badge` at a favicon.
+- `tests/push-notification-icons.test.ts` fails on a badge with too little
+  transparency, on a badge that equals its league's icon, and on committed art
+  that has drifted from what the generator produces.
+
+## The manifest must be scoped to `/`
+
+Every league is served at the **root of its own apex domain** — the middleware
+rewrites `afl-fantasy.com/rosters` → `/afl-fantasy/rosters` internally, and
+`vercel.json` 301s `/afl-fantasy/*` → `/*` on that host. A manifest declaring
+`scope: "/afl-fantasy/"` therefore covers **no URL that domain actually
+serves**, and a manifest whose scope excludes its own document is discarded:
+no install prompt, no WebAPK, and no app icon for Android to show as the
+notification's app identity. The AFL shipped that way until Sept 2026.
+
+`start_url` and `scope` are both `/` in every manifest, pinned by
+`tests/push-notification-icons.test.ts`. Each manifest also carries a
+`purpose: "maskable"` icon, because Android crops adaptive icons to an
+OEM-chosen shape and a non-full-bleed icon gets a visible notch.
+
+**A league's manifest is only linked on that league's own apex.** The AFL's
+manifest was otherwise served on theleague.us too — `vercel.json`'s
+`/afl-fantasy/*` → `/*` redirect is host-gated to afl-fantasy.com,
+`league-host-map.ts` keeps `/afl-fantasy/` in `SKIP_REWRITE_PREFIXES` so
+cross-league deep links resolve, and the layout picks its head block by LEAGUE
+rather than by host. So an AFL page genuinely renders at
+`theleague.us/afl-fantasy/…`, and an ungated `<link rel="manifest">` puts a
+`scope: "/"`, `start_url: "/"` AFL manifest on TheLeague's origin: Chrome
+offers to install an app called "AFL" that opens The League, and if the two
+share an app id the AFL's name and icons can overwrite an owner's installed
+TheLeague app.
+
+`onForeignLeagueHost` in `TheLeagueLayout.astro` suppresses the link. Note the
+shape: it suppresses only on a **known foreign league apex**, not "unless on
+our own apex" — localhost and Vercel preview hosts are in neither map and must
+keep their manifest, or the PWA becomes untestable anywhere but production.
+
+Two gaps this gate does **not** close, both deliberate:
+
+- **The six `prerender = true` routes** (`theleague/insights`,
+  `theleague/about`, both `pecking-order/[year]/[week]`,
+  `afl-fantasy/players`, `afl-fantasy/draft/order`) evaluate the gate at BUILD
+  time, where the hostname is localhost and nothing is suppressed — so they
+  still carry their manifest on a foreign apex. Closing it would mean
+  de-prerendering them, which is a bigger call than this fix. The distinct
+  `id` below is what keeps the destructive half impossible there.
+- `mfl.football` (`SHARED_APP_ORIGIN`) serves every league by path prefix and
+  is in no league's `domains`, so a bare `HOST_TO_SLUG` lookup treats it like
+  localhost. It is special-cased as foreign to *all* leagues, since no single
+  league's PWA identity belongs on a multi-league origin.
+
+Belt and braces, every manifest also carries a **distinct `id`**. An app id
+defaults to `start_url`, so two manifests both saying `/` would be the same app
+on a shared origin. `id` is resolved against the origin and does **not** have
+to sit inside `scope`, which lets the AFL declare `"id": "/afl-fantasy/"` while
+staying scoped to `/`. That exact string is also the id its old
+`start_url: "/afl-fantasy/"` produced implicitly, so nothing already installed
+gets re-keyed. Uniqueness and the host gating are both pinned by
+`tests/push-notification-icons.test.ts`.
 
 ## Per-category preferences
 

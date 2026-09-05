@@ -12,7 +12,7 @@ import { checkRateLimit } from '../../../utils/rate-limit';
 import { json, JSON_HEADERS_NO_STORE } from '../../../utils/api-response';
 import { getLeagueById } from '../../../config/leagues';
 import { isPushConfigured, sendPushToFranchise } from '../../../utils/push-sender';
-import { leaguePushIcon } from '../../../utils/push-notify-trade';
+import { leaguePushIcon, leaguePushBadge } from '../../../utils/push-notify-trade';
 
 export const POST: APIRoute = async ({ request }) => {
   const user = getAuthUser(request);
@@ -48,6 +48,10 @@ export const POST: APIRoute = async ({ request }) => {
       url: '/notifications',
       tag: 'push-test',
       icon: leaguePushIcon(league?.navSlug ?? 'theleague'),
+      // The badge is the half owners actually complained about: without it the
+      // service worker fell back to TheLeague's opaque favicon, which Android
+      // renders as a blank white square on every league.
+      badge: leaguePushBadge(league?.navSlug ?? 'theleague'),
     },
     // Its own always-on, hidden category. The test exists to prove THIS DEVICE
     // works, so it must not be silenced by an editorial preference — but it

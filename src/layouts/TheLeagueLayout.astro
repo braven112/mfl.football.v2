@@ -40,7 +40,8 @@ import type { NavTeamInfo, LeagueSlug } from '../types/nav';
 import { NAV_COOKIES } from '../types/nav';
 import { getAFLPreference, getTheLeaguePreference, getBestBall1Preference } from '../utils/team-preferences';
 import { getAuthUser, isCommissionerOrAdmin } from '../utils/auth';
-import { getLeagueBySlug } from '../config/leagues';
+import { getLeagueBySlug, getLeagueByNavSlug, SHARED_APP_ORIGIN } from '../config/leagues';
+import { HOST_TO_SLUG } from '../utils/league-host-map';
 import leagueConfigData from '../data/theleague.config.json';
 
 export interface Props {
@@ -214,6 +215,33 @@ const navFranchiseId =
 		: null) || myteam;
 const sections = getVisibleSections(league, navFranchiseId, adminFranchiseIds);
 
+// A league's PWA manifest must never be served on ANOTHER league's apex.
+// /theleague/* and /afl-fantasy/* stay in SKIP_REWRITE_PREFIXES so cross-league
+// deep links resolve from either host, and this layout picks its head block by
+// LEAGUE — so without this gate, theleague.us/afl-fantasy/standings serves the
+// AFL manifest on TheLeague's origin, where its scope:"/" claims the whole site
+// and its start_url:"/" is TheLeague's homepage. Chrome then offers to install
+// an app called "AFL" that opens The League.
+//
+// Suppress only on a KNOWN FOREIGN league apex, not "unless on our own apex":
+// localhost and Vercel preview hosts are in neither map, and they must keep
+// linking the manifest so the PWA stays testable off production.
+//
+// KNOWN RESIDUAL: the six `prerender = true` routes bake this decision at
+// BUILD time, where the hostname is localhost and no suppression happens, so
+// they still carry their manifest on a foreign apex. Closing that would mean
+// de-prerendering them; the distinct `id` in each manifest is what keeps the
+// destructive half (one league's app overwriting the other's) impossible
+// there. See docs/features/web-push.md.
+const hostLeagueSlug = HOST_TO_SLUG[Astro.url.hostname] ?? null;
+const ownLeagueSlug = getLeagueByNavSlug(league).slug;
+// mfl.football serves EVERY league by path prefix and belongs to none of them,
+// so no single league's PWA identity belongs on it either — it is foreign to
+// all three, not merely unknown.
+const onSharedMultiLeagueHost = Astro.url.hostname === new URL(SHARED_APP_ORIGIN).hostname;
+const onForeignLeagueHost =
+	onSharedMultiLeagueHost || (hostLeagueSlug !== null && hostLeagueSlug !== ownLeagueSlug);
+
 // Resolve theme preference (server-side). For 'auto', render no class — the
 // pre-paint inline script (ThemeScript) resolves it against prefers-color-scheme.
 const themePref = getThemePreference(Astro.cookies);
@@ -231,7 +259,9 @@ const themePref = getThemePreference(Astro.cookies);
 				<link rel="icon" type="image/svg+xml" href="/assets/afl/favicons/favicon-dark.svg" media="(prefers-color-scheme: dark)" />
 				<link rel="icon" type="image/x-icon" href="/assets/afl/favicons/favicon.ico" />
 				<link rel="apple-touch-icon" href="/assets/afl/favicons/apple-touch-icon.png" />
-				<link rel="manifest" href="/assets/afl/favicons/site.webmanifest" crossorigin="use-credentials" />
+				{!onForeignLeagueHost && (
+					<link rel="manifest" href="/assets/afl/favicons/site.webmanifest" crossorigin="use-credentials" />
+				)}
 				<meta name="theme-color" content="#002244" data-theme-color-light="#002244" />
 				<meta name="mobile-web-app-capable" content="yes" />
 				<meta name="apple-mobile-web-app-status-bar-style" content="default" />
@@ -249,7 +279,9 @@ const themePref = getThemePreference(Astro.cookies);
 			<>
 				<link rel="icon" type="image/svg+xml" href="/assets/logos/theleague-logo.svg" />
 				<link rel="icon" type="image/x-icon" href="/favicon.ico" />
-				<link rel="manifest" href="/manifest.json" crossorigin="use-credentials" />
+				{!onForeignLeagueHost && (
+					<link rel="manifest" href="/manifest.json" crossorigin="use-credentials" />
+				)}
 				<meta name="theme-color" content="#1c497c" data-theme-color-light="#1c497c" />
 				<meta name="mobile-web-app-capable" content="yes" />
 				<meta name="apple-mobile-web-app-status-bar-style" content="default" />
