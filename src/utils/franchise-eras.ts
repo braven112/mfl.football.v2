@@ -63,23 +63,36 @@ export interface HistoricalIdentity {
 // this module calls it internally, and `export … from` creates no local
 // binding. Import path unchanged for every existing consumer.
 import { normalizeIdentity } from './identity-normalize.mjs';
+import { entriesShareEra } from './owner-tenures.mjs';
 export { normalizeIdentity };
 
-type EraGroup = { entries: TeamHistoryEntry[]; key: string };
+type EraGroup = { entries: TeamHistoryEntry[] };
 
-// Group history entries by ownerEra (when set) so multiple aliases under one
-// owner collapse to a single era with a combined name like "Poker in the
-// Rear / Generals". Entries without ownerEra fall back to name-grouping.
-// Adjacent-only: two separate stints under the same name stay distinct.
+// Group ADJACENT history entries into eras with `entriesShareEra` — the same
+// predicate `inferCurrentOwnerSince` (owner-tenures.mjs) walks back over to
+// find the current owner's boundary — so an era anchor on the franchise page
+// can never straddle a season stat attribution hands to somebody else.
+// Multiple aliases under one `ownerEra` collapse to a single era with a
+// combined name like "Poker in the Rear / Generals"; otherwise a shared name
+// joins. Adjacent-only: two separate stints under the same name stay distinct.
+//
+// Two things that keep this literally the walk-back's relation, not merely
+// similar to it: entries are sorted by yearStart first (the walk-back sorts;
+// config order is not guaranteed), and the predicate is chained PAIRWISE —
+// each entry is compared with the last entry of the open group, exactly as
+// the walk-back compares `sorted[i - 1]` with `sorted[i]`. That is wider than
+// grouping by an equality key (A era 1 → B era 1 → B no era is ONE era here,
+// because the walk-back would step through all three). Do not "tidy" this
+// back into a key: it would re-fork the boundary.
 const groupHistory = (history: TeamHistoryEntry[]): EraGroup[] => {
+  const sorted = [...history].sort((a, b) => a.yearStart - b.yearStart);
   const groups: EraGroup[] = [];
-  for (const h of history) {
-    const key = h.ownerEra != null ? `era:${h.ownerEra}` : `name:${normalizeIdentity(h.name)}`;
+  for (const h of sorted) {
     const last = groups[groups.length - 1];
-    if (last && last.key === key) {
+    if (last && entriesShareEra(last.entries[last.entries.length - 1], h)) {
       last.entries.push(h);
     } else {
-      groups.push({ key, entries: [h] });
+      groups.push({ entries: [h] });
     }
   }
   return groups;
@@ -275,12 +288,15 @@ export function buildHistoricalIdentities(teams: TeamConfigLike[]): HistoricalId
   for (const team of teams) {
     if (!Array.isArray(team.history)) continue;
     const currentNorm = normalizeIdentity(team.name);
+    // Same adjacent eras the detail page renders, then merged ACROSS gaps by
+    // dominant name — so the strip and the detail page can never disagree
+    // about what one identity is, and a name that came back after a gap is
+    // still one identity here.
     const groups = new Map<string, TeamHistoryEntry[]>();
-    for (const h of team.history) {
-      const groupKey =
-        h.ownerEra != null ? `era:${h.ownerEra}` : `name:${normalizeIdentity(h.name)}`;
-      if (!groups.has(groupKey)) groups.set(groupKey, []);
-      groups.get(groupKey)!.push(h);
+    for (const era of groupHistory(team.history)) {
+      const key = normalizeIdentity(dominantNames(era.entries)[0][0]);
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key)!.push(...era.entries);
     }
     for (const entries of groups.values()) {
       const sortedNames = dominantNames(entries);

@@ -1,4 +1,4 @@
-import { normalizeIdentityName } from './afl-awards';
+import { normalizeIdentity } from './identity-normalize.mjs';
 
 export type NameEra = {
   name: string;
@@ -106,7 +106,7 @@ export function segmentsForFranchiseRange(
     });
   } else if (finalSegmentIsCurrent && segments.length > 0) {
     const last = segments[segments.length - 1];
-    if (normalizeIdentityName(last.name) === normalizeIdentityName(t.name)) {
+    if (normalizeIdentity(last.name) === normalizeIdentity(t.name)) {
       last.isCurrent = true;
     } else {
       segments.push({
