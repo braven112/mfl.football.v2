@@ -101,9 +101,7 @@ or the bug was never in a single commit.
   shipped; skipping the test is how it ships a second time. If the test takes
   under ~5 minutes, write it now. If not, ship without it and it becomes
   **follow-up item F1, always** — never a silent omission.
-- **Check the sibling league page** before you finish (point 3 above):
-  `node scripts/sibling-drift.mjs` lists every changed file's twin and whether
-  the diff reached it.
+- **Check the sibling league page** before you finish (point 3 above).
 - **Check the year clock** if anything date-shaped is involved:
   `getCurrentLeagueYear()` for roster/contract/cap, `getCurrentSeasonYear()` for
   standings/results/draft order.
