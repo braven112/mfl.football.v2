@@ -542,6 +542,51 @@ type SlotKey =
   | 'feature'
   | 'default';
 
+/** Is it Sunday in the league's clock (PT)? The game-day-preview slot spans Saturday and Sunday morning. */
+export function isSundayPT(now: Date): boolean {
+  return new Intl.DateTimeFormat('en-US', { timeZone: 'America/Los_Angeles', weekday: 'short' }).format(now) === 'Sun';
+}
+
+/**
+ * The Saturday / Sunday-morning slot, two different jobs: Saturday is the
+ * last call to set a lineup; Sunday morning the lineup is (or isn't) in and
+ * the question is which four games go on the multiview — the Sunday Ticket
+ * board's. Exported so the split is testable without the whole resolver.
+ */
+export function gameDayPreviewSlotView({ now, week }: SlotContext): EventHeroView {
+  const weekLabel = week ? `Week ${week}` : 'this week';
+  if (isSundayPT(now)) {
+    return {
+      pill: 'SUNDAY TICKET',
+      headline: 'BUILD YOUR',
+      accentWord: 'MULTIVIEW.',
+      summary: `Four boxes a window, ranked by how many of your starters are on the field — across every league you play. ${weekLabel} kicks off at 10 AM PT.`,
+      link: '/afl-fantasy/sunday-ticket',
+      linkLabel: 'BUILD YOUR SUNDAY',
+      icon: 'nfl',
+      accent: ACCENT_GREEN,
+      glow: GLOW_GREEN,
+      player: randomHeroPlayer(now),
+      countValue: '10 AM PT',
+      countLabel: 'Early window kicks off',
+    };
+  }
+  return {
+    pill: 'GAME DAY',
+    headline: 'LINEUPS LOCK AT',
+    accentWord: 'KICKOFF.',
+    summary: `Last call to set starters for ${weekLabel} — swap injuries, finalize FCFS pickups, lock it in.`,
+    link: '/afl-fantasy/lineup',
+    linkLabel: 'SET LINEUP',
+    icon: 'clipboard',
+    accent: ACCENT_AMBER,
+    glow: GLOW_AMBER,
+    player: randomHeroPlayer(now),
+    countValue: 'LIVE SOON',
+    countLabel: 'Lineups lock at kickoff',
+  };
+}
+
 const SLOT_VIEW: Record<SlotKey, (ctx: SlotContext) => EventHeroView> = {
   'slot:live-scoring': ({ now, gameWindow, week }) => {
     const gw = gameWindow && gameWindow in GAME_WINDOW_LABEL
@@ -613,20 +658,7 @@ const SLOT_VIEW: Record<SlotKey, (ctx: SlotContext) => EventHeroView> = {
     countLabel: 'Process at 8PM PT',
   }),
 
-  'slot:game-day-preview': ({ now, week }) => ({
-    pill: 'GAME DAY',
-    headline: 'LINEUPS LOCK AT',
-    accentWord: 'KICKOFF.',
-    summary: `Last call to set starters for ${week ? `Week ${week}` : 'this week'} — swap injuries, finalize FCFS pickups, lock it in.`,
-    link: '/afl-fantasy/lineup',
-    linkLabel: 'SET LINEUP',
-    icon: 'clipboard',
-    accent: ACCENT_AMBER,
-    glow: GLOW_AMBER,
-    player: randomHeroPlayer(now),
-    countValue: 'LIVE SOON',
-    countLabel: 'Lineups lock at kickoff',
-  }),
+  'slot:game-day-preview': (ctx) => gameDayPreviewSlotView(ctx),
 
   'slot:article': ({ now, week }) => ({
     pill: week ? `WEEK ${week}` : 'AROUND THE AFL',
@@ -980,7 +1012,7 @@ function eventToHero(event: ResolvedLeagueEvent): HeroContent {
   };
 }
 
-function buildRegularSeasonHero(slot: DailySlot, week: number | undefined, gameWindow: GameWindow): HeroContent {
+function buildRegularSeasonHero(slot: DailySlot, week: number | undefined, gameWindow: GameWindow, now: Date = new Date()): HeroContent {
   const weekLabel = week ? `Week ${week}` : 'Regular Season';
   switch (slot) {
     case 'live-scoring': {
@@ -1031,6 +1063,18 @@ function buildRegularSeasonHero(slot: DailySlot, week: number | undefined, gameW
         kicker: 'Waiver Day',
       };
     case 'game-day-preview':
+      if (isSundayPT(now)) {
+        return {
+          source: 'event',
+          title: `Sunday Ticket — ${weekLabel}`,
+          summary: 'The four games to put on your multiview each window, ranked by your starters across every league you play.',
+          link: '/afl-fantasy/sunday-ticket',
+          linkLabel: 'Build your multiview',
+          icon: 'nfl',
+          accentColor: 'var(--cat-regular-season, #1c497c)',
+          kicker: 'Sunday Ticket',
+        };
+      }
       return {
         source: 'event',
         title: `Game Day — ${weekLabel}`,
@@ -1282,7 +1326,7 @@ export function resolveAflHeroState(input: AflHeroResolverInput): AflHeroState {
       slot,
       gameWindow,
       week,
-      content: buildRegularSeasonHero(slot, week, gameWindow),
+      content: buildRegularSeasonHero(slot, week, gameWindow, now),
       view,
     };
   }
