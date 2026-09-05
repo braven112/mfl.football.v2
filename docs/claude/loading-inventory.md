@@ -14,7 +14,7 @@ Four/five distinct inline CSS spinners, each defined per-file, no shared compone
 |---|---|---|---|
 | [src/components/theleague/PlayerNewsModal.astro](../../src/components/theleague/PlayerNewsModal.astro) | `.spinner` div, `border-top: 3px solid #3b82f6` | **Hardcoded hex** — the token-contract anti-pattern. Paired with "Fetching latest news…" | `Spinner` + `var(--league-accent)` |
 | [src/components/theleague/LoginForm.astro](../../src/components/theleague/LoginForm.astro) | `.login-form__spinner` span, class toggle + `aria-busy` | Also referenced in `Header.astro` nav login (text-only there) | `Spinner` in button-loading |
-| [src/components/theleague/InjuryManager.astro](../../src/components/theleague/InjuryManager.astro) | `.ir-move-button.loading` `::after` pseudo, `color: transparent` text trick | Most complete non-React button loader | button-loading pattern |
+| [src/styles/loading.css](../../src/styles/loading.css) | `.loading-btn.is-loading::after` pseudo, `color: transparent` text trick | **The canonical button loader** — already extracted to the shared stylesheet; use this, don't re-inline it | done |
 | [GifPicker.tsx](../../src/components/theleague/suggestions/GifPicker.tsx) / [ImageUploader.tsx](../../src/components/theleague/suggestions/ImageUploader.tsx) / [IdeaComposer.tsx](../../src/components/theleague/suggestions/IdeaComposer.tsx) | `.sb-spinner`, CSS in [suggestions.astro](../../src/pages/theleague/suggestions.astro) | Shared across 3 components but CSS lives in the page; has reduced-motion guard | `Spinner` |
 | [AskInput.tsx](../../src/components/shared/rules-chat/AskInput.tsx) | `.rqa-input__spinner`, CSS duplicated in both [theleague/rules-chat.astro](../../src/pages/theleague/rules-chat.astro) + [afl-fantasy/rules-chat.astro](../../src/pages/afl-fantasy/rules-chat.astro) | Driven by `isLoading` prop | `Spinner` (+ tier 5 for the AI wait) |
 
@@ -62,7 +62,7 @@ Four/five distinct inline CSS spinners, each defined per-file, no shared compone
 |---|---|---|
 | [theleague/lineup.astro](../../src/pages/theleague/lineup.astro) | `.lineup-submit--loading` | opacity + text only, no spinner — duplicated in [afl-fantasy/lineup.astro](../../src/pages/afl-fantasy/lineup.astro) |
 | [ContractDeclarationModal.astro](../../src/components/theleague/ContractDeclarationModal.astro) | `.cdm-submit.loading` | opacity only, no spinner |
-| [InjuryManager.astro](../../src/components/theleague/InjuryManager.astro) | `.ir-move-button.loading` | `::after` spinner — promote this as the model |
+| [src/styles/loading.css](../../src/styles/loading.css) | `.loading-btn.is-loading` | `::after` spinner — this IS the model; import the stylesheet and add `loading-btn` + `is-loading` |
 
 Plus ~11 React components that only set `disabled` during fetch (no spinner): `SchefterReactionBar`, `SchefterWhisperBack`, `SchefterReplyThread`, trade-builder `LoginModal`/`TradeConfirmationModal`, suggestions `IdeaComposer`/`CommentComposer`/`PollCreator`/`ImageUploader`, `DraftQueuePanel`, `AskInput`.
 
