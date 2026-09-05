@@ -12,6 +12,7 @@ import { normalizeTeamCode } from '../../utils/nfl-logo';
 import { getGlobalPlayerMap } from '../../utils/player-map';
 import { resolveCutoutUrl } from '../../utils/player-modal-band';
 import { buildNoHeadshotPlaceholder, getNflTeamColors } from '../../utils/nfl-team-colors';
+import { isEspnCdnUrl } from '../../utils/espn-cdn';
 
 // Minimum salary to qualify for individual Brock Osweiler / Position Worst awards.
 // Filters out minimum-contract players — we want big-money busts, not dart throws.
@@ -649,7 +650,7 @@ for (const [season, rankings] of jerryJonesStartersBySeason) {
                 const franchise = getFranchiseForYear(player.franchiseId, player.season);
                 const nflLogo = player.team ? getNflLogo(player.team) : null;
                 const identity = globalPlayers.get(player.id);
-                const espnShot = identity?.headshot?.includes('espncdn.com') ? identity.headshot : null;
+                const espnShot = isEspnCdnUrl(identity?.headshot) ? identity!.headshot : null;
                 // Fantasy franchise accent (the owner's shame), NFL color fallback
                 const accent = franchise?.colorPrimary ?? getNflTeamColors(player.team ?? '').primary;
                 return (

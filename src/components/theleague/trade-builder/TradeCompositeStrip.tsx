@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import type { TradeBuilderPlayer } from '../../../types/trade-builder';
 import { getNflTeamColors, hexToRgba } from '../../../utils/nfl-team-colors';
+import { isEspnCdnUrl } from '../../../utils/espn-cdn';
 
 /**
  * TradeCompositeStrip — breaking-news player composite for trade surfaces.
@@ -24,7 +25,7 @@ export function isCompositableTradePlayer(
     !!player &&
     player.position?.toUpperCase() !== 'DEF' &&
     typeof player.headshot === 'string' &&
-    player.headshot.includes('espncdn.com')
+    isEspnCdnUrl(player.headshot)
   );
 }
 

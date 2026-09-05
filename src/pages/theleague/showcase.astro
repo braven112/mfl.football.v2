@@ -325,7 +325,7 @@ const castFns = [
     MFL JPGs have baked backgrounds. */
 function isCompositable(player: PlayerIdentity): boolean {
   return player.position !== 'DEF'
-    && player.headshot.includes('espncdn.com');
+    && isEspnCdnUrl(player.headshot);
 }`}</code></pre>
           </figure>
           <div class="hc-prose">
@@ -333,9 +333,12 @@ function isCompositable(player: PlayerIdentity): boolean {
               Two failure modes get gated out before anything renders. <strong>Transparency is
               load-bearing:</strong> the ESPN headshot has an alpha channel; MFL's fallback JPG
               (<code>player_photos_big_2014/…_thumb.jpg</code>) has a baked-in background that ruins
-              the composite. So the gate requires an <code>espncdn.com</code> URL. And a
-              <strong>team defense isn't a person</strong> — <code>position === 'DEF'</code> is
-              excluded, since a "DEF player" is a logo, not a face.
+              the composite. So the gate requires an ESPN CDN URL — matched on the parsed
+              <strong>host</strong>, never a substring, so a lookalike like
+              <code>espncdn.com.evil.com</code> can't slip a foreign image into an
+              <code>&lt;img src&gt;</code>. And a <strong>team defense isn't a person</strong> —
+              <code>position === 'DEF'</code> is excluded, since a "DEF player" is a logo, not a
+              face.
             </p>
             <p>
               Even a valid ESPN id can 404 (deep free agents sometimes have no photo). The cutout

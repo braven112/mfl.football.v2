@@ -41,6 +41,7 @@ import { getNflTeamColors, getNflTeamNickname, hexToRgba, mixHex } from './nfl-t
 import { normalizeTeamCode } from './nfl-logo';
 import type { FranchiseBandBrand, FranchiseBandBrandMap } from './franchise-band-brand';
 import { pickBrandHue } from './franchise-hue';
+import { isEspnCdnUrl } from './espn-cdn';
 
 /** Element id of the JSON island written by `FranchiseBandBrands.astro`. */
 export const FRANCHISE_BAND_BRANDS_ID = 'franchise-band-brands';
@@ -60,16 +61,6 @@ export interface BandOptions {
   accent?: string;
   /** Override the ghost wordmark (defaults to "POS NICKNAME") */
   ghost?: string;
-}
-
-/** True only when the URL's actual hostname is ESPN's CDN (or a subdomain) */
-function isEspnCdnUrl(url: string): boolean {
-  try {
-    const host = new URL(url).hostname;
-    return host === 'espncdn.com' || host.endsWith('.espncdn.com');
-  } catch {
-    return false;
-  }
 }
 
 /**

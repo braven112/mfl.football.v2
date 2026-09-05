@@ -27,6 +27,7 @@ import { getCurrentLeagueYear } from './league-year';
 import { getNflTeamColors, hexToRgba } from './nfl-team-colors';
 import { normalizeTeamCode } from './nfl-logo';
 import { isValidSchefterPostId, schefterPostOgText } from './schefter-feed';
+import { isEspnCdnUrl } from './espn-cdn';
 
 export const OG_WIDTH = 1200;
 export const OG_HEIGHT = 630;
@@ -139,7 +140,7 @@ export function findSchefterPost(
 
 /** Same gate as hero-casting's isCompositable: transparent ESPN cutout only. */
 function isCompositable(player: PlayerIdentity): boolean {
-  return player.position !== 'DEF' && player.headshot.includes('espncdn.com');
+  return player.position !== 'DEF' && isEspnCdnUrl(player.headshot);
 }
 
 function resolveFeaturedPlayer(post: SchefterPost): PlayerIdentity | null {
