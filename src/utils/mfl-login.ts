@@ -487,6 +487,16 @@ export async function authenticateWithMFL(
 /**
  * Validate MFL session using league export endpoint
  * Makes a test API call to verify the cookie is still valid
+ *
+ * UNUSED as of 2026-09-05 — it has no callers in src/, scripts/ or tests/. Two
+ * things to fix before wiring it to anything, neither touched here because the
+ * cookie routing below was the in-scope bug:
+ *   - `www${Number(leagueId) % 50}` invents a host. TheLeague is 13522, so this
+ *     computes www22; the registry says www49 (`LEAGUES[...].mflHost`). Take the
+ *     host from the registry rather than deriving it.
+ *   - `response.ok || response.status !== 401` is true for nearly every
+ *     response MFL can return, including the HTTP 200 it uses for auth
+ *     failures — so this validator can barely report an invalid session.
  */
 export async function validateMFLSession(
   mflCookie: string,
@@ -496,18 +506,22 @@ export async function validateMFLSession(
     const year = new Date().getFullYear();
     const testUrl = `https://www${Number(leagueId) % 50}.myfantasyleague.com/${year}/export`;
 
-    const response = await fetch(testUrl, {
+    // mflFetch, not bare fetch: undici drops the Cookie on a cross-origin 302,
+    // and a wrong `www##` (see the host caveat above) is exactly what makes MFL
+    // redirect. This call carried the cookie on a bare fetch for the whole life
+    // of tests/mfl-cookie-redirect-guard.test.ts without being flagged, purely
+    // because the key was written `'Cookie':` with quotes and the guard's
+    // pattern was `/Cookie\s*:/`.
+    const response = await mflFetch({
+      url: testUrl,
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-        'Cookie': `MFL_USER_ID=${mflCookie}`,
-      },
+      mflUserCookie: mflCookie,
       body: new URLSearchParams({
         TYPE: 'league',
         L: leagueId,
         JSON: '1',
       }).toString(),
-      signal: AbortSignal.timeout(8000),
+      timeoutMs: 8000,
     });
 
     return response.ok || response.status !== 401;

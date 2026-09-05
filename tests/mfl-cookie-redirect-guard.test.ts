@@ -97,6 +97,18 @@ const walk = (dir: string): string[] =>
     return /\.(ts|astro|mjs)$/.test(e.name) ? [full] : [];
   });
 
+/**
+ * A `Cookie` object KEY, quoted or not.
+ *
+ * `/Cookie\s*:/` — what this guard used until 2026-09-05 — does not match
+ * `{ "Cookie": c }`, because what follows `Cookie` is a quote rather than
+ * whitespace. That is a header written the way half of JavaScript writes
+ * headers, and it slipped the guard silently in both the inline check and the
+ * object-literal scan below. Found by running synthetic offender shapes through
+ * the real guard rather than by reading the regex.
+ */
+const COOKIE_KEY = /['"`]?Cookie['"`]?\s*:/;
+
 /** Read the balanced `(...)` or `{...}` starting at `start`, cheaply. */
 function balanced(source: string, start: number, open: '(' | '{'): string {
   const close = open === '(' ? ')' : '}';
@@ -135,7 +147,7 @@ function cookieHeaderVars(source: string): Set<string> {
   while ((m = decl.exec(source))) {
     const brace = source.indexOf('{', m.index + m[0].length - 1);
     if (brace === -1) continue;
-    if (/Cookie\s*:/.test(balanced(source, brace, '{'))) names.add(m[1]);
+    if (COOKIE_KEY.test(balanced(source, brace, '{'))) names.add(m[1]);
   }
 
   return names;
@@ -162,7 +174,16 @@ function isManualRedirect(call: string): boolean {
   return /redirect\s*:\s*['"`]manual['"`]/.test(call);
 }
 
-/** Does this `fetch(...)` argument list reference a Cookie-carrying variable? */
+/**
+ * Does this `fetch(...)` argument list reference a Cookie-carrying variable?
+ *
+ * KNOWN LIMIT, measured not guessed: this follows ONE hop of aliasing. A cookie
+ * spread through a second variable — `const base = { Cookie: c }; const headers
+ * = { ...base }; fetch(u, { headers })` — is still missed, because `headers`'
+ * own initializer has no `Cookie` key in it. Chasing that needs a real parser
+ * rather than a regex, and the shape has never appeared in this repo. If it
+ * ever does, this is the line that let it through.
+ */
 function carriesCookieVar(call: string, vars: Set<string>): boolean {
   for (const name of vars) {
     if (new RegExp(`(^|[^A-Za-z0-9_$.])${name}\\b`).test(call)) return true;
@@ -203,7 +224,7 @@ describe('MFL authenticated reads must survive the api → www49 redirect', () =
       if (!source.includes('Cookie')) return [];
       const vars = cookieHeaderVars(source);
       return bareFetchCalls(source)
-        .filter((call) => /Cookie\s*:/.test(call) || carriesCookieVar(call, vars))
+        .filter((call) => COOKIE_KEY.test(call) || carriesCookieVar(call, vars))
         .filter((call) => !isManualRedirect(call))
         .map(() => path.relative(process.cwd(), file).split(path.sep).join('/'));
     });
@@ -236,7 +257,7 @@ describe('MFL authenticated reads must survive the api → www49 redirect', () =
     expect(source).toContain('TYPE=calendar');
     expect(source).toContain('TYPE=pendingWaivers');
     for (const call of bareFetchCalls(source)) {
-      expect(/Cookie\s*:/.test(call), `bare fetch() with a Cookie header: ${call.slice(0, 120)}`).toBe(false);
+      expect(COOKIE_KEY.test(call), `bare fetch() with a Cookie header: ${call.slice(0, 120)}`).toBe(false);
     }
   });
 });
