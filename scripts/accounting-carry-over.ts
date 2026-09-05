@@ -56,9 +56,6 @@ import { ALL_LEAGUES, type LeagueDefinition } from '../src/config/leagues';
 // Shared .mjs helper used by the other MFL write scripts. No ts-expect-error:
 // its types resolve under the project config, so the directive would be unused.
 import { loginToMFL } from './lib/mfl-api.mjs';
-// The SAME helper the web login uses — one implementation of "which host issues
-// MFL_IS_COMMISH", so the script and the app cannot drift on it.
-import { fetchCommissionerSession } from '../src/utils/mfl-login';
 // .mjs planner, shared with the API route (see its header). Its JSDoc types
 // resolve, so no ts-expect-error is needed here.
 import { planYearMigration, assessCarryReadiness } from '../src/utils/accounting-migration.mjs';
@@ -89,47 +86,27 @@ const parseArgs = () => {
 
 async function carryLeague(
   league: LeagueDefinition,
-  opts: {
-    dryRun: boolean;
-    userCookie: string;
-    commishCookie?: string;
-    username?: string;
-    password?: string;
-  }
+  opts: { dryRun: boolean; userCookie: string; commishCookie?: string }
 ): Promise<Outcome> {
   const to = leagueYearFor(league);
   const from = to - 1;
   const label = `${league.name} ${from} → ${to}`;
 
-  let userCookie = opts.userCookie;
-  let commishCookie = opts.commishCookie;
+  const userCookie = opts.userCookie;
+  const commishCookie = opts.commishCookie;
 
-  // PER LEAGUE, because the credential is per league. MFL issues
-  // MFL_IS_COMMISH from a league-scoped login on that league's own host, so
-  // one cookie for two leagues was only ever going to satisfy one of them —
-  // and `loginToMFL` asks the api host, which issues none at all.
-  if (opts.username && opts.password) {
-    const session = await fetchCommissionerSession(opts.username, opts.password, league.id, to);
-    if (session) {
-      userCookie = session.mflUserId;
-      commishCookie = session.mflIsCommish;
-      console.log(`  ${league.name}: commissioner session acquired from ${league.mflHost}`);
-    } else {
-      console.warn(
-        `  ${league.name}: no commissioner session from ${league.mflHost} — this account is `
-          + 'not the commissioner of this league, or the credentials are wrong.'
-      );
-    }
-  }
-
-  if (!commishCookie && !opts.dryRun) {
-    return {
-      league: label,
-      status: 'skipped',
-      detail: 'no MFL_IS_COMMISH for this league — every write would be refused',
-    };
-  }
-
+  // NO PER-LEAGUE COMMISSIONER HOP, AND NO COMMISH-COOKIE SKIP.
+  //
+  // Both used to live here, and together they were worse than the bug they
+  // chased: `fetchCommissionerSession` only returns when it finds an
+  // MFL_IS_COMMISH, which nothing ever issues, so it always returned null —
+  // and the skip below then returned `skipped` for every league while main()
+  // exited 0. The Monday cron would have gone GREEN having carried nothing,
+  // which is the one failure shape this script was written to make impossible.
+  //
+  // MFL wants MFL_USER_ID on the www## host and nothing else
+  // (scripts/probe-write-auth.mjs, 2026-09-05). The fresh session cookie the
+  // login already produced above is the whole credential.
   const creds = { mflUserCookie: userCookie, mflCommishCookie: commishCookie };
 
   // Sequential rather than concurrent: two authenticated reads against one
@@ -304,28 +281,27 @@ async function main() {
     );
     process.exit(1);
   }
-  // Reads work without it, so an unset commish cookie would sail through the
-  // whole plan and only fail at the first write. Fail before touching MFL.
-  // A successful login is a route to a commissioner cookie even when the api
-  // host handed back none: carryLeague fetches one per league. Only refuse
-  // when there is no route at all.
-  if (!commishCookie && loginOutcome !== 'succeeded' && !args.dryRun) {
-    console.error(
-      'No MFL_IS_COMMISH cookie — MFL will reject every accounting write. Refusing to start. '
+  // There is no MFL_IS_COMMISH check here any more, because MFL does not ask
+  // for that cookie: MFL_USER_ID on the www## host is the whole credential
+  // (scripts/probe-write-auth.mjs, 2026-09-05). What DOES still matter is that
+  // the session cookie be a live one — a stored MFL_USER_ID expires, and an
+  // expired one reads every ledger perfectly while failing every write, which
+  // is how six runs came back "carried 0/13" after a flawless dry run.
+  if (loginOutcome !== 'succeeded') {
+    console.warn(
+      'Running on a STORED MFL_USER_ID rather than a fresh login. '
         + {
-          succeeded:
-            'The login succeeded, so a commissioner session is fetched per league below.',
           'half-configured':
             'Only half the login pair is set (see the warning above) — set BOTH '
-            + 'MFL_USERNAME and MFL_PASSWORD, or supply the cookie.',
+            + 'MFL_USERNAME and MFL_PASSWORD so each run mints its own session.',
           failed:
-            'The login failed (see above) and the stored cookies carry no MFL_IS_COMMISH, '
-            + 'so nothing here can write. Fix the credentials rather than the cookie.',
+            'The login failed (see above). If these writes are refused, that is why.',
           'not-configured':
-            'Set the secret, or set MFL_USERNAME + MFL_PASSWORD so a fresh one can be fetched at run time.',
+            'Set MFL_USERNAME + MFL_PASSWORD so each run mints its own session; '
+            + 'stored cookies expire and fail writes while reads keep working.',
+          succeeded: '',
         }[loginOutcome]
     );
-    process.exit(1);
   }
 
   const leagues = ALL_LEAGUES.filter(
@@ -346,8 +322,6 @@ async function main() {
           dryRun: args.dryRun,
           userCookie,
           commishCookie: commishCookie || undefined,
-          username,
-          password,
         })
       );
     } catch (error) {

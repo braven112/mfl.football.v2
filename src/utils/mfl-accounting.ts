@@ -274,9 +274,12 @@ export interface WriteRecordInput {
 export interface WriteRecordOptions {
   league: Pick<LeagueDefinition, 'id' | 'mflHost'>;
   year: string | number;
-  /** The commissioner's MFL_USER_ID cookie. */
+  /**
+   * The MFL_USER_ID cookie. THIS is the credential — a live session cookie on
+   * the www## host is all MFL asks for on an import (probe-write-auth, 2026-09-05).
+   */
   mflUserCookie: string;
-  /** The MFL_IS_COMMISH cookie. MFL rejects the import without commissioner rights. */
+  /** The MFL_IS_COMMISH cookie. Optional and not required; forwarded when a session has one. */
   mflCommishCookie?: string;
 }
 

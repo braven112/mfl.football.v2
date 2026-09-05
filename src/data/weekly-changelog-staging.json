@@ -764,7 +764,7 @@
     {
       "date": "2026-09-05",
       "type": "bug-fix",
-      "summary": "The commissioner accounting console stopped refusing writes it had no reason to refuse. It had been demanding a second MyFantasyLeague credential before it would touch the books — and it turns out MFL never asks for that credential at all, so the console was locking the commissioner out of his own ledger while every other admin tool in the app worked normally. The extra demand is gone, the parts that actually keep a write honest are unchanged, and the yearly carry-over now runs from an ordinary signed-in session.",
+      "summary": "The commissioner accounting console stopped refusing writes it had no reason to refuse. It had been demanding a second MyFantasyLeague credential before it would touch the books — and it turns out MFL never asks for that credential at all, so the console was locking the commissioner out of his own ledger while every other admin tool in the app worked normally. The extra demand is gone and the parts that actually keep a write honest are unchanged, so the console now works from an ordinary signed-in session and the scheduled year-end carry-over no longer skips every league in silence.",
       "impact": "admin",
       "area": "other",
       "league": "both"

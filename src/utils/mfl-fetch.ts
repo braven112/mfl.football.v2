@@ -17,7 +17,11 @@ interface MflFetchOptions {
   method: 'GET' | 'POST';
   /** The raw MFL_USER_ID cookie value */
   mflUserCookie: string;
-  /** The raw MFL_IS_COMMISH cookie value (commissioners only, needed for write operations) */
+  /**
+   * The raw MFL_IS_COMMISH cookie value. Optional, and NOT required for writes
+   * — MFL accepts an import with MFL_USER_ID alone on the www## host
+   * (scripts/probe-write-auth.mjs, 2026-09-05). Forwarded when present.
+   */
   mflCommishCookie?: string;
   /** URL-encoded body for POST requests */
   body?: string;

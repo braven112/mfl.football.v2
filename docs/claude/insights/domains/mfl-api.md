@@ -2932,7 +2932,14 @@ re-strips a `from ` prefix downstream.
 
 ---
 
-## 2026-09-05 - MFL_IS_COMMISH Comes From a League-Scoped Login
+## 2026-09-05 - ~~MFL_IS_COMMISH Comes From a League-Scoped Login~~ (WRONG)
+
+> **RETRACTED the same day, by measurement — see the next entry.** A
+> league-scoped login issues no commissioner cookie either; nothing does. Every
+> claim below about *where* the cookie comes from is wrong. The entry is kept
+> because the reasoning it records is exactly how the day was lost: a theory
+> that explained the symptom, was written up as a finding, and was built on
+> twice before anyone tried to observe it.
 
 **Context:** The accounting console told a signed-in commissioner "Your session
 has no MFL commissioner credential" while the site's own nav showed him as
