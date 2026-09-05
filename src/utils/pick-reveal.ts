@@ -10,6 +10,7 @@
 import type { DraftRoomPick, DraftRoomPlayer, DraftRoomTeam } from '../types/draft-room';
 import { getNflTeamColors } from './nfl-team-colors';
 import { normalizeTeamCode } from './nfl-logo';
+import { isEspnCdnUrl } from './espn-cdn';
 
 /** One queued splash. `id` includes the playerId so an undo + re-pick of the same slot splashes again. */
 export interface PickSplashItem {
@@ -18,17 +19,6 @@ export interface PickSplashItem {
   pickLabel: string;
   team?: DraftRoomTeam;
   player?: DraftRoomPlayer;
-}
-
-/** True only for genuine ESPN CDN URLs — host check, not substring, so a
- * malformed `https://evil.com/espncdn.com/x.png` in the player map can't pass. */
-function isEspnCdnUrl(url: string): boolean {
-  try {
-    const host = new URL(url).hostname;
-    return host === 'espncdn.com' || host.endsWith('.espncdn.com');
-  } catch {
-    return false;
-  }
 }
 
 /**

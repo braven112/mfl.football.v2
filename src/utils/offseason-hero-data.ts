@@ -15,6 +15,7 @@ import { getNthDayOfMonth, getNflDraftDate } from './league-event-resolver';
 import { isCutWatchUrgent } from './hero-resolver';
 import { normalizeTeamCode, getNFLTeamName } from './nfl-logo';
 import { getLeagueBySlug, type CanonicalLeagueSlug } from '../config/leagues';
+import { isEspnCdnUrl } from './espn-cdn';
 
 /**
  * Looks up a league's data path, or throws a clear, specific error instead
@@ -255,7 +256,7 @@ export function getFranchiseCompositableHeadliners(
       );
     for (const p of roster) {
       const pm = players.get(p.id);
-      if (pm && pm.position !== 'DEF' && pm.headshot.includes('espncdn.com')) {
+      if (pm && pm.position !== 'DEF' && isEspnCdnUrl(pm.headshot)) {
         out.push({ playerId: p.id, franchiseId: franchise.id });
         break;
       }

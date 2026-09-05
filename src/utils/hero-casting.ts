@@ -14,6 +14,7 @@
  */
 
 import type { PlayerIdentity } from './player-map';
+import { isEspnCdnUrl } from './espn-cdn';
 
 /** The player a composite hero features. */
 export interface HeroModel {
@@ -32,7 +33,7 @@ export interface HeroModel {
  *  whose only projected player is a DEF (or MFL-JPG-only) could elect a source
  *  that `castBestScoredModel` then can't honor, casting a 0-score fallback. */
 export function isCompositable(player: PlayerIdentity): boolean {
-  return player.position !== 'DEF' && player.headshot.includes('espncdn.com');
+  return player.position !== 'DEF' && isEspnCdnUrl(player.headshot);
 }
 
 function toModel(player: PlayerIdentity, descriptor: string): HeroModel {
@@ -455,7 +456,7 @@ export function castArticleModel(
 /** Whether a cast model has a transparent ESPN cutout to composite (vs
  *  rendering the team logo as the hero art). Same rule as `isCompositable`. */
 export function heroModelHasCutout(model: HeroModel): boolean {
-  return model.position !== 'DEF' && model.headshot.includes('espncdn.com');
+  return model.position !== 'DEF' && isEspnCdnUrl(model.headshot);
 }
 
 /** Raw stat lines for a faceoff candidate — the cascade elects ONE source. */

@@ -24,6 +24,7 @@ import { getFranchiseCompositableHeadliners, getFranchiseProjectedTotals } from 
 import { getFranchiseBrand } from '../franchise-brand';
 import { normalizeTeamCode } from '../nfl-logo';
 import { chooseTeamName } from '../team-names';
+import { isEspnCdnUrl } from '../espn-cdn';
 
 export type PlayoffRoundKind = 'wild-card' | 'semifinals' | 'championship';
 
@@ -276,7 +277,7 @@ export function buildPlayoffRoundView(params: {
     headlinerOf: (fid) => {
       const pid = headlinerByFid.get(fid);
       const p = pid ? players.get(pid) : null;
-      if (!p || p.position === 'DEF' || !p.headshot.includes('espncdn.com')) return null;
+      if (!p || p.position === 'DEF' || !isEspnCdnUrl(p.headshot)) return null;
       return { name: p.name, position: p.position, nflTeam: normalizeTeamCode(p.nflTeam), headshot: p.headshot };
     },
     projOf: (fid) => projTotals.get(fid) ?? 0,
