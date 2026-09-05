@@ -26,6 +26,8 @@
 
 import { stripLinkAdjacentPunctuation } from '../../src/utils/link-punctuation.mjs';
 
+import { isPlannedToday, describeRefusal } from './groupme-day-plan.mjs';
+
 const GROUPME_POST_URL = 'https://api.groupme.com/v3/bots/post';
 
 const SPECULATION_CTA_PREFIX = 'Read the speculation →';
@@ -110,6 +112,8 @@ export function buildSpeculationGroupMeText({ body, postId, publicBaseUrl }) {
  *                                              defaults to process.env
  * @param {typeof fetch} [args.fetcher]       - fetch override for tests
  * @param {boolean} [args.dryRun]             - skip the network call
+ * @param {() => boolean} [args.allowPost]     - daily-cap check; override in
+ *                                              tests to exercise the send path
  * @param {(...a:any[])=>void} [args.log]
  * @param {(...a:any[])=>void} [args.warn]
  */
@@ -119,6 +123,10 @@ export async function postSpeculationToGroupMe({
   env = process.env,
   fetcher = globalThis.fetch,
   dryRun = false,
+  // Injected like `fetcher` and `env` above, for the same reason: the send
+  // path still needs coverage even though the calendar holds this lane every
+  // day. Production always uses the default.
+  allowPost = () => isPlannedToday('trade-speculation'),
   log = () => {},
   warn = () => {},
 } = {}) {
@@ -135,6 +143,16 @@ export async function postSpeculationToGroupMe({
   if (dryRun) {
     log(`  [dry-run] Would post to GroupMe:\n${text}`);
     return { posted: false, reason: 'dry-run', text };
+  }
+
+  // The league-wide daily cap applies here too. This lane predates
+  // postToGroupMe and posts /v3/bots/post directly, so the gate has to be
+  // asked explicitly — a raw fetch is exactly how a sender ends up outside a
+  // cap nobody realises it is outside of.
+  if (!allowPost()) {
+    const why = describeRefusal('trade-speculation', null);
+    log(`  [speculation] Held: ${why}`);
+    return { posted: false, reason: 'daily-cap', why };
   }
 
   const botId = env?.GROUPME_SCHEFTER_BOT_ID;
