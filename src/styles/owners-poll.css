@@ -1,0 +1,511 @@
+/**
+ * The Owners' Poll — ballot page.
+ *
+ * Every custom property used here is defined in BOTH src/styles/tokens.css and
+ * src/styles/tokens-dark.css. A var() with no definition anywhere silently
+ * renders its fallback in both themes, which is how "looks perfect in light,
+ * ships white-on-black in dark" happens — so no new token names are invented
+ * in this file.
+ *
+ * `--op-team` / `--op-team-dark` are the exception and are set INLINE per card
+ * by the island from the franchise's brand colours. They are values, not theme
+ * tokens — which is why the theme switch for them lives at the bottom of this
+ * file rather than in tokens.css.
+ */
+
+.op-page {
+  max-width: 56rem;
+  margin: 0 auto;
+  padding: 1rem 1rem 4rem;
+  color: var(--page-text);
+}
+
+.op-crumbs {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  font-size: 0.85rem;
+  color: var(--content-text-muted);
+  margin-bottom: 1rem;
+}
+.op-crumbs a { color: inherit; }
+
+.op-hero__title {
+  font-size: clamp(1.75rem, 5vw, 2.5rem);
+  line-height: 1.1;
+  margin: 0 0 0.5rem;
+}
+.op-hero__lede {
+  margin: 0 0 1.5rem;
+  max-width: 46rem;
+  color: var(--content-text-muted);
+  line-height: 1.55;
+}
+
+/* --- builder shell ------------------------------------------------------ */
+
+.op-builder {
+  background: var(--content-bg);
+  border: 1px solid var(--content-border);
+  border-radius: var(--radius-lg, 12px);
+  box-shadow: var(--shadow-sm);
+  padding: 1.25rem;
+}
+
+.op-builder__head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+.op-builder__title { margin: 0; font-size: 1.15rem; }
+.op-builder__sub {
+  margin: 0.25rem 0 0;
+  font-size: 0.9rem;
+  color: var(--content-text-muted);
+}
+
+/* Public and always visible: a turnout number that climbs is the cheapest
+   nudge on the page, and the count-only decision means it never names anyone. */
+.op-turnout {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--content-text-muted);
+  white-space: nowrap;
+}
+.op-turnout strong { color: var(--page-text); font-size: 1.05rem; }
+
+.op-deadline {
+  margin: 0.75rem 0 0;
+  font-size: 0.85rem;
+  color: var(--content-text-muted);
+}
+
+/* --- slots -------------------------------------------------------------- */
+
+.op-slots {
+  list-style: none;
+  margin: 1rem 0 0;
+  padding: 0;
+  display: grid;
+  gap: 0.4rem;
+}
+
+.op-slot {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.5rem 0.6rem;
+  border-radius: var(--radius-md, 8px);
+  background: var(--content-bg-muted);
+  border-left: 4px solid var(--op-team, var(--content-border));
+  min-height: 2.75rem;
+}
+.op-slot--empty {
+  border-left-color: var(--content-border);
+  border-left-style: dashed;
+}
+
+.op-slot__rank {
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  min-width: 1.25rem;
+  text-align: center;
+  color: var(--content-text-muted);
+}
+.op-slot__crest { width: 1.5rem; height: 1.5rem; object-fit: contain; }
+.op-slot__name { font-weight: 600; flex: 1; min-width: 0; }
+.op-slot__placeholder { color: var(--content-text-muted); font-size: 0.9rem; }
+.op-slot__actions { display: flex; gap: 0.25rem; }
+
+.op-icon-btn {
+  /* 2.25rem keeps the arrows inside a comfortable touch target without
+     forcing the row taller than a thumb-scrollable list. */
+  min-width: 2.25rem;
+  min-height: 2.25rem;
+  border: 1px solid var(--content-border);
+  background: var(--content-bg);
+  color: var(--page-text);
+  border-radius: var(--radius-md, 8px);
+  cursor: pointer;
+  font-size: 1rem;
+  line-height: 1;
+}
+.op-icon-btn:disabled { opacity: 0.35; cursor: default; }
+.op-icon-btn--remove { color: var(--color-error); }
+
+/* --- actions ------------------------------------------------------------ */
+
+.op-actions {
+  display: flex;
+  gap: 0.6rem;
+  align-items: center;
+  margin-top: 1rem;
+  flex-wrap: wrap;
+}
+
+.op-submit {
+  background: var(--primary-color);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-md, 8px);
+  padding: 0.7rem 1.25rem;
+  font-weight: 700;
+  font-size: 1rem;
+  min-height: 2.75rem;
+  cursor: pointer;
+}
+.op-submit:disabled { opacity: 0.45; cursor: default; }
+
+.op-clear {
+  background: none;
+  border: 1px solid var(--content-border);
+  color: var(--content-text-muted);
+  border-radius: var(--radius-md, 8px);
+  padding: 0.7rem 1rem;
+  min-height: 2.75rem;
+  cursor: pointer;
+}
+
+.op-saved { color: var(--color-success); font-size: 0.9rem; margin: 0.75rem 0 0; }
+.op-error { color: var(--color-error); font-size: 0.9rem; margin: 0.75rem 0 0; }
+.op-note { color: var(--content-text-muted); }
+
+/* --- pool --------------------------------------------------------------- */
+
+.op-pool__title {
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--content-text-muted);
+  margin: 1.75rem 0 0.6rem;
+}
+
+.op-pool {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.5rem;
+  grid-template-columns: repeat(auto-fill, minmax(13rem, 1fr));
+}
+
+.op-card {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  text-align: left;
+  padding: 0.6rem;
+  min-height: 3.25rem;
+  background: var(--content-bg);
+  border: 1px solid var(--content-border);
+  border-left: 4px solid var(--op-team, var(--content-border));
+  border-radius: var(--radius-md, 8px);
+  color: var(--page-text);
+  cursor: pointer;
+}
+.op-card:disabled { opacity: 0.4; cursor: default; }
+.op-card--picked {
+  background: var(--content-bg-muted);
+  border-color: var(--op-team, var(--primary-color));
+}
+.op-card--own {
+  /* The "· you" label already marks the owner's own team. A dashed ring on top
+     of the picked state's team-coloured border read as an error box in dark
+     mode, so the marker stays textual. */
+  box-shadow: inset 0 0 0 1px var(--content-border);
+}
+
+.op-card__slot {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  min-width: 1.25rem;
+  text-align: center;
+}
+.op-card__crest { width: 1.75rem; height: 1.75rem; object-fit: contain; }
+.op-card__body { display: flex; flex-direction: column; min-width: 0; }
+.op-card__name { font-weight: 600; }
+.op-card__you { color: var(--content-text-muted); font-weight: 400; }
+.op-card__meta {
+  font-size: 0.8rem;
+  color: var(--content-text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* --- callouts ----------------------------------------------------------- */
+
+.op-callout {
+  background: var(--content-bg-muted);
+  border: 1px solid var(--content-border);
+  border-radius: var(--radius-md, 8px);
+  padding: 1rem;
+}
+.op-callout p { margin: 0.35rem 0 0; color: var(--content-text-muted); }
+.op-callout--error { border-color: var(--color-error); }
+.op-callout--hint { margin-top: 1rem; font-size: 0.9rem; }
+
+.op-footnote {
+  margin-top: 1.5rem;
+  font-size: 0.85rem;
+  color: var(--content-text-muted);
+  line-height: 1.55;
+}
+.op-footnote p { margin: 0 0 0.5rem; }
+
+@media (max-width: 30rem) {
+  .op-pool { grid-template-columns: 1fr; }
+}
+
+/* --- team accent, per theme ---------------------------------------------
+ * The brand primaries are chosen for LIGHT surfaces; several are near-black
+ * and disappear against a dark card. `--op-team-dark` is the config's own
+ * dark-surface variant (falling back to the light primary in
+ * league-team-brands for teams that don't define one), so the accent stays
+ * visible in both themes instead of looking perfect in light and vanishing in
+ * dark.
+ *
+ * Both directions are covered on purpose: the media query for the default
+ * "system" setting, and [data-theme] for an explicit toggle, which must win.
+ */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) .op-slot,
+  :root:not([data-theme='light']) .op-card {
+    border-left-color: var(--op-team-dark, var(--op-team, var(--content-border)));
+  }
+  :root:not([data-theme='light']) .op-card--picked {
+    border-color: var(--op-team-dark, var(--op-team, var(--primary-color)));
+  }
+}
+
+:root[data-theme='dark'] .op-slot,
+:root[data-theme='dark'] .op-card {
+  border-left-color: var(--op-team-dark, var(--op-team, var(--content-border)));
+}
+:root[data-theme='dark'] .op-card--picked {
+  border-color: var(--op-team-dark, var(--op-team, var(--primary-color)));
+}
+
+/* --- commissioner window control ---------------------------------------
+ * Rendered only for a commissioner, and gated on the SERVER too — a control
+ * shipped to everyone and hidden with a client check is a gate view-source
+ * defeats.
+ */
+
+.op-admin {
+  margin: 0 0 1rem;
+  border: 1px dashed var(--content-border);
+  border-radius: var(--radius-md, 8px);
+  background: var(--content-bg-muted);
+}
+
+.op-admin__toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.6rem 0.8rem;
+  min-height: 2.75rem;
+  background: none;
+  border: 0;
+  color: var(--content-text-muted);
+  font-size: 0.85rem;
+  text-align: left;
+  cursor: pointer;
+}
+
+.op-admin__badge {
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-weight: 700;
+  padding: 0.15rem 0.4rem;
+  border-radius: 999px;
+  background: var(--content-bg);
+  border: 1px solid var(--content-border);
+  color: var(--page-text);
+}
+
+.op-admin__body {
+  padding: 0 0.8rem 0.8rem;
+  border-top: 1px solid var(--content-border);
+}
+
+.op-admin__note {
+  margin: 0.6rem 0;
+  font-size: 0.8rem;
+  color: var(--content-text-muted);
+  line-height: 1.5;
+  max-width: 46rem;
+}
+
+.op-admin__row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0.6rem;
+}
+.op-admin__row label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  font-size: 0.75rem;
+  color: var(--content-text-muted);
+}
+.op-admin__row input {
+  width: 6rem;
+  min-height: 2.5rem;
+  padding: 0.4rem 0.5rem;
+  background: var(--content-bg);
+  color: var(--page-text);
+  border: 1px solid var(--content-border);
+  border-radius: var(--radius-md, 8px);
+}
+.op-admin__row button {
+  min-height: 2.5rem;
+  padding: 0.5rem 0.9rem;
+  border-radius: var(--radius-md, 8px);
+  border: 1px solid var(--content-border);
+  background: var(--content-bg);
+  color: var(--page-text);
+  font-weight: 600;
+  cursor: pointer;
+}
+.op-admin__row button:disabled { opacity: 0.5; cursor: default; }
+.op-admin__close { color: var(--color-error); }
+
+.op-admin__ok { margin: 0.6rem 0 0; font-size: 0.85rem; color: var(--color-success); }
+.op-admin__err { margin: 0.6rem 0 0; font-size: 0.85rem; color: var(--color-error); }
+
+/* --- lineup-page strip --------------------------------------------------
+ * Sits above the lineup itself. Deliberately quiet: it is a guest on someone
+ * else's page, and an owner who came to set a lineup must never have to scroll
+ * past a poll to do it.
+ */
+
+.op-lineup {
+  margin: 0.75rem 0 1rem;
+  border: 1px solid var(--content-border);
+  border-left: 4px solid var(--primary-color);
+  border-radius: var(--radius-md, 8px);
+  background: var(--content-bg);
+}
+.op-lineup--done { border-left-color: var(--color-success); }
+
+.op-lineup__head {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.6rem 0.75rem;
+  min-height: 2.75rem;
+  background: none;
+  border: 0;
+  color: var(--page-text);
+  font-size: 0.9rem;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+.op-lineup__title { flex: 1; min-width: 0; }
+.op-lineup__meta {
+  font-weight: 400;
+  font-size: 0.8rem;
+  color: var(--content-text-muted);
+  white-space: nowrap;
+}
+.op-lineup__chev { color: var(--content-text-muted); }
+
+.op-lineup__sub {
+  margin: 0;
+  padding: 0 0.75rem 0.7rem;
+  font-size: 0.825rem;
+  color: var(--content-text-muted);
+}
+
+/* A button, not an anchor: it expands in place rather than navigating, and
+   styling an anchor to do nothing would lie to a screen reader. */
+.op-lineup__link {
+  background: none;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  color: var(--primary-color);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.op-lineup__body {
+  padding: 0 0.75rem 0.75rem;
+  border-top: 1px solid var(--content-border);
+}
+/* The builder brings its own card; inside the strip that second frame is
+   redundant, so it is flattened. */
+.op-lineup__body .op-builder {
+  border: 0;
+  box-shadow: none;
+  padding: 0.75rem 0 0;
+  background: transparent;
+}
+
+/* The pool is 16 cards. At the ballot page's full width that grid is three
+   columns and fine; inside this narrower strip it collapsed to one and made
+   the panel ~3900px tall, putting the whole poll between an owner and the
+   lineup they came for. Tighter columns plus a bounded, self-scrolling pool
+   keeps the strip a panel rather than a page. */
+.op-lineup__body .op-pool {
+  grid-template-columns: repeat(auto-fill, minmax(10rem, 1fr));
+  max-height: 20rem;
+  overflow-y: auto;
+  /* Room for the focus ring on the last row inside the scroll container. */
+  padding: 2px;
+}
+.op-lineup__body .op-slots { gap: 0.3rem; }
+.op-lineup__body .op-slot { min-height: 2.5rem; }
+
+/* --- inline push opt-in -------------------------------------------------
+ * The poll leans on push now, and its only opt-in lived on a page almost
+ * nobody visits. This asks where owners already are. It renders nothing once
+ * permission is granted, so it can never become a nag.
+ */
+.op-push {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0.75rem 0 0;
+  font-size: 0.825rem;
+  color: var(--content-text-muted);
+}
+.op-push--muted { display: block; }
+.op-push__btn {
+  min-height: 2.25rem;
+  padding: 0.4rem 0.8rem;
+  border-radius: var(--radius-md, 8px);
+  border: 1px solid var(--primary-color);
+  background: none;
+  color: var(--primary-color);
+  font-weight: 600;
+  font-size: 0.825rem;
+  cursor: pointer;
+}
+.op-push__btn:disabled { opacity: 0.5; cursor: default; }
+.op-push__why { flex: 1; min-width: 10rem; }
+.op-push__err { color: var(--color-error); }
+
+/* Push coverage, in the commissioner panel. Loud when it is low, because the
+   poll's reminder and result both ride on push now — a low number here means
+   most of the league only sees the one daily chat post. */
+.op-admin__coverage {
+  margin: 0.6rem 0 0;
+  font-size: 0.825rem;
+  color: var(--content-text-muted);
+}
+.op-admin__coverage strong { color: var(--page-text); }
+.op-admin__coverage--low {
+  padding: 0.5rem 0.65rem;
+  border-left: 3px solid var(--color-warning);
+  background: var(--content-bg);
+  border-radius: var(--radius-md, 8px);
+}

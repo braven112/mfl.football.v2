@@ -21,6 +21,10 @@ import type { LeagueSlug } from '../../types/nav';
 import { teamAccentVar } from '../../utils/team-accent-css';
 import { getLeaguePrefix, resolveLeaguePath } from '../../utils/nav-utils';
 import { isRetroactivelyGenerated } from '../../utils/pecking-order-landing';
+import OwnersPollSection, {
+  type OwnersPollBlock,
+} from './owners-poll/OwnersPollSection.astro';
+import '../../styles/owners-poll-section.css';
 
 export interface RankingRow {
   rank: number;
@@ -74,6 +78,13 @@ export interface PeckingOrderData {
   headline: string;
   lede: string;
   rankings: RankingRow[];
+  /**
+   * The Owners' Poll for this week. ABSENT on every issue written before the
+   * poll existed and on any league that doesn't run it, which is why the
+   * section renders nothing at all rather than an empty state — the archive
+   * must not sprout a "no poll" notice on 40 old issues.
+   */
+  ownersPoll?: OwnersPollBlock | null;
   awards: {
     statOfWeek: AwardCard | null;
     benchBlunder: AwardCard | null;
@@ -278,6 +289,14 @@ const methodology = issue.methodology
       })}
     </ol>
   </section>
+
+  <OwnersPollSection
+    poll={issue.ownersPoll}
+    teams={teams}
+    leagueParam={league}
+    ballotHref={resolveLeaguePath(`${getLeaguePrefix(league)}/pecking-order/ballot`, hideLeaguePrefix)}
+    issueWeek={issue.week}
+  />
 
   <section class="pr-section" aria-label="Weekly awards">
     <h2 class="pr-section__title">Awards</h2>
