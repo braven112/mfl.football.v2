@@ -21,9 +21,11 @@
  *     emit nothing. Once the league is seeded, a franchise with no entry of
  *     its own is a franchise whose block was EMPTY at seed time (MFL only
  *     returns franchises with listings), so its first listing is a real add
- *     and must post. Seeding per franchise instead shipped exactly that bug:
- *     TheLeague's state held 5 of 16 franchises months after launch, and the
- *     other 11 had their first listing swallowed as a "seed".
+ *     and must post. Seeding per franchise instead made that a silent
+ *     "seed": TheLeague's state holds 5 of 16 franchises, so the other 11
+ *     (none of which has listed yet) would each have had their first
+ *     listing swallowed — and the AFL, launching with nobody listed, would
+ *     never have posted at all.
  *   - Add + remove same player within the window → netAdds stays empty, silent.
  *   - Pure removes → no tip; committedBlock advances so a future re-add fires.
  *   - Stuck drift: firstChangeTs ≥ MAX_SETTLE_WAIT_MS → force-emit regardless.
@@ -194,6 +196,14 @@ export function detectFranchiseChange({
   };
 }
 
+/** The prior entry for a franchise that has never listed since the league was seeded. */
+const EMPTY_PREV_ENTRY = Object.freeze({
+  committedBlock: [],
+  observedBlock: [],
+  firstChangeTs: null,
+  lastChangeTs: null,
+});
+
 /**
  * Run the detector across every franchise in a single fetch snapshot.
  *
@@ -213,14 +223,6 @@ export function detectFranchiseChange({
  *   reasons: object<string, string>,
  * }}
  */
-/** The prior entry for a franchise that has never listed since the league was seeded. */
-const EMPTY_PREV_ENTRY = Object.freeze({
-  committedBlock: [],
-  observedBlock: [],
-  firstChangeTs: null,
-  lastChangeTs: null,
-});
-
 export function detectTradeBaitChanges({
   currentByFranchise,
   prevState,

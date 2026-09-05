@@ -24,22 +24,36 @@ underneath the flag, and neither had a symptom while the flag was off:
 2. **Seeding was per franchise, and MFL's `tradeBait` export omits
    franchises with nothing listed.** So a franchise absent from the state
    was re-seeded silently the first time it listed anything. TheLeague's
-   persisted state held 5 of 16 franchises months after launch — the other
-   11 have had their first listing swallowed all season. The AFL launches
-   with NOBODY on the block, so under that rule it would never have posted
-   at all. Seed is now a league-level event (`leagueSeeded`, keyed on the
-   state key EXISTING on the feed, not on it having entries) and a missing
-   franchise diffs against an empty block.
+   persisted state holds 5 of 16 franchises — the other 11 have never
+   listed, and the first time any of them did, the post would have been
+   swallowed. The AFL launches with NOBODY on the block, so under that rule
+   it would never have posted at all. Seed is now a league-level event
+   (`leagueSeeded`, keyed on the state key EXISTING on the feed, not on it
+   having entries) and a missing franchise diffs against an empty block.
+3. **The export itself is owner-gated for a private league, and the failure
+   is an EMPTY 200, not an error.** Caught by the PR review, not by me, and
+   it was already written down (`insights/domains/mfl-api.md`, 2026-07-15):
+   TheLeague is public so its bare fetch works; the AFL is private so its
+   bare fetch reads as "nobody listed" forever. The lane would have shipped
+   green and silent. The fetch now carries `MFL_APIKEY` (league-scoped, so
+   the secret must be the AFL's key), throws on MFL's HTTP-200 error body,
+   and holds state when a league with committed listings suddenly reads as
+   empty — because diffing that as "everyone cleared" would re-post every
+   listing as new once the feed recovered.
 
-The second one is the interesting failure: it was a live bug in the league
-the feature was built for, invisible because the feature still visibly worked
-for the five franchises that happened to be listed on launch day.
+The second one is the interesting failure: it was a latent bug in the league
+the feature was built for, invisible because the feature visibly worked for
+the five franchises that happened to be listed on launch day. The third is
+the humbling one: "the first run for the second league" also means "the
+first run against the second league's PRIVACY settings", and the repo had
+already learned that once.
 
 **Recommendation:** Before flipping a league toggle, grep the lane for the
-default league's navSlug as a LITERAL (not through the league object), and
-re-read every "first run" / "seed" branch asking what the second league's
-first run actually looks like — an empty state is a different first run from
-a full one.
+default league's navSlug as a LITERAL (not through the league object), re-read
+every "first run" / "seed" branch asking what the second league's first run
+actually looks like — an empty state is a different first run from a full one
+— and curl the export for the NEW league bare before trusting that an empty
+answer means empty.
 
 ## 2026-07-19 - Source-Guard Tests Are the Refactor Tax
 

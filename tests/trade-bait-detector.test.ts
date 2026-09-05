@@ -254,10 +254,10 @@ describe('detectTradeBaitChanges — whole-snapshot', () => {
   // Seeding is a LEAGUE-level event, not a per-franchise one. MFL's tradeBait
   // export only returns franchises with something listed, so a franchise
   // absent from a seeded state had an EMPTY block — its first listing is a
-  // real add. Per-franchise seeding swallowed exactly that: TheLeague's
-  // state held 5 of 16 franchises months after launch, and the AFL launches
-  // with nothing listed at all, so under the old rule nothing there would
-  // ever have posted.
+  // real add. Per-franchise seeding would have swallowed exactly that:
+  // TheLeague's state holds 5 of 16 franchises (the other 11 have never
+  // listed), and the AFL launches with nothing listed at all, so under the
+  // old rule nothing there would ever have posted.
   it('a franchise missing from a SEEDED state diffs against an empty block — its first listing posts', () => {
     const prev = {
       '0001': { committedBlock: ['A'], observedBlock: ['A'], firstChangeTs: null, lastChangeTs: null },

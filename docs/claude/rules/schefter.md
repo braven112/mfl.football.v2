@@ -38,7 +38,11 @@ rules — breaking any of these cross-contaminates the leagues:
   so a franchise absent from an already-seeded state diffs against `[]` and
   its first listing posts. Per-franchise seeding silently swallowed the first
   listing of every franchise not on the block at launch (11 of TheLeague's
-  16). `tests/schefter-trade-bait-league-scope.test.ts` pins both.
+  16 had not listed yet). And the export is OWNER-GATED for a private league:
+  the AFL answers a bare request with an empty 200, so the fetch carries
+  `MFL_APIKEY` (league-scoped — it must be a key for 19621) and the scanner
+  holds state when a league with committed listings suddenly reads as empty.
+  `tests/schefter-trade-bait-league-scope.test.ts` pins all of it.
 - **Lore/persona** is per-league under `data/schefter/<navSlug>/`
   (personality, league-lore, running-bits, post-history, topic-recurrence).
   No legacy-path fallback on purpose — a missing file fails loudly rather

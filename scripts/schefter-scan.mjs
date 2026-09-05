@@ -1376,13 +1376,36 @@ async function scanPendingTrades(league) {
 const TRADE_BAIT_SOURCE = 'trade_bait';
 const TRADE_BAIT_TOPIC = 'trade_bait';
 
+// MFL's tradeBait export is owner-gated for PRIVATE leagues, and an
+// unauthenticated request does not fail: it answers HTTP 200 with
+// `{"tradeBaits":{}}`, indistinguishable from "nobody has anyone listed".
+// TheLeague is public and works bare; the AFL is private and read as empty
+// forever until the key went on (docs/claude/insights/domains/mfl-api.md,
+// 2026-07-15). MFL API keys are LEAGUE-scoped, so the secret must be a key
+// for the league being scanned — a key for the other league is silently the
+// same as no key. Both spellings accepted: roster-sync exports MFL_API_KEY,
+// everything else MFL_APIKEY (same trap fetch-mfl-feeds.mjs fell into).
+// Query param, never a header — the api→www## redirect keeps the query
+// string and strips headers.
+const MFL_API_KEY = process.env.MFL_APIKEY || process.env.MFL_API_KEY || '';
+
 async function fetchTradeBaitRaw(leagueId, year) {
-  const url = `https://${MFL_HOST}/${year}/export?TYPE=tradeBait&L=${leagueId}&JSON=1`;
+  const url = `https://${MFL_HOST}/${year}/export?TYPE=tradeBait&L=${leagueId}&JSON=1`
+    + (MFL_API_KEY ? `&APIKEY=${encodeURIComponent(MFL_API_KEY)}` : '');
   const res = await fetch(url, { headers: { 'User-Agent': 'schefter-scan/1.0' } });
   if (!res.ok) throw new Error(`MFL HTTP ${res.status}`);
   const text = await res.text();
   if (text.trim().startsWith('<')) throw new Error('MFL returned HTML for tradeBait');
-  return JSON.parse(text);
+  const data = JSON.parse(text);
+  // MFL reports failures (bad key, a league year it hasn't created yet) as
+  // HTTP 200 with an error body. Parsed as "zero franchises" that diffs as
+  // "everyone cleared their block", wiping every committedBlock so the next
+  // good fetch re-posts every existing listing as new. Throw instead — the
+  // caller's catch holds state and retries next tick.
+  if (data?.error) {
+    throw new Error(`MFL error: ${data.error?.$t ?? JSON.stringify(data.error)}`);
+  }
+  return data;
 }
 
 function parseTradeBaitByFranchise(data) {
@@ -1531,6 +1554,24 @@ async function scanTradeBait(league) {
   const currentByFranchise = parseTradeBaitByFranchise(raw);
   const franchiseCount = Object.keys(currentByFranchise).length;
   console.log(`  [trade-bait] MFL returned ${franchiseCount} franchise(s) with listings`);
+  if (!MFL_API_KEY) {
+    console.warn('  [trade-bait] No MFL_APIKEY / MFL_API_KEY set — a private league reads as EMPTY here, not as an error');
+  }
+  // "Empty ≠ error": an owner-gated export answers a missing, expired, or
+  // other-league key with an empty 200. If this league has committed
+  // listings and MFL suddenly reports none, an auth blip is far likelier
+  // than every owner clearing their block in one 15-minute tick — and
+  // diffing it would wipe every committedBlock, so the next good fetch would
+  // re-post every existing listing as new. Hold state. A genuine league-wide
+  // clear syncs (silently — pure removes never post) the moment anyone lists
+  // again, and the seed run is unaffected because a fresh league has no
+  // committed listings to protect.
+  const hasCommittedListings = Object.values(prevState)
+    .some((entry) => Array.isArray(entry?.committedBlock) && entry.committedBlock.length > 0);
+  if (franchiseCount === 0 && hasCommittedListings) {
+    console.warn('  [trade-bait] MFL returned 0 franchises while committed listings exist — auth/empty-payload blip, holding state');
+    return 0;
+  }
 
   const { nextState, emissions, reasons } = detectTradeBaitChanges({
     currentByFranchise,

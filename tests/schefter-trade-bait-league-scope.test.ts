@@ -59,3 +59,36 @@ describe('scanTradeBait — Redis keys are built from the scanned league', () =>
     expect(body).not.toMatch(/!Object\.keys\(prevState\)\.length/);
   });
 });
+
+describe('scanTradeBait — the export is owner-gated for a private league', () => {
+  // MFL answers an unauthenticated tradeBait request for a PRIVATE league
+  // (the AFL) with an EMPTY HTTP 200, not an error. TheLeague is public, so
+  // the lane "worked" for a year with no key and nothing said otherwise.
+  const fetchFn = src.match(/async function fetchTradeBaitRaw[\s\S]+?\n\}\n/)?.[0];
+  if (!fetchFn) throw new Error('fetchTradeBaitRaw not found in scanner');
+  const body = src.match(/async function scanTradeBait[\s\S]+?\n\}\n/)![0];
+
+  it('sends the MFL API key as a query param, accepting both env spellings', () => {
+    expect(src).toMatch(/process\.env\.MFL_APIKEY \|\| process\.env\.MFL_API_KEY/);
+    expect(fetchFn).toMatch(/&APIKEY=\$\{encodeURIComponent\(MFL_API_KEY\)\}/);
+  });
+
+  it('throws on MFL\'s HTTP-200 error body instead of parsing it as zero franchises', () => {
+    expect(fetchFn).toMatch(/if \(data\?\.error\)[\s\S]*?throw new Error/);
+  });
+
+  it('holds state when a league with committed listings suddenly reads as empty', () => {
+    expect(body).toMatch(/franchiseCount === 0 && hasCommittedListings/);
+    const guard = body.indexOf('franchiseCount === 0 && hasCommittedListings');
+    const detect = body.indexOf('detectTradeBaitChanges({');
+    expect(guard).toBeGreaterThan(0);
+    expect(guard).toBeLessThan(detect);
+  });
+
+  it('the scan workflow actually passes the key to the scanner', () => {
+    const wf = readFileSync(path.join(process.cwd(), '.github/workflows/schefter-scan.yml'), 'utf8');
+    const step = wf.slice(wf.indexOf('Run Schefter scanner'), wf.indexOf('run: node scripts/schefter-scan.mjs'));
+    expect(step).toMatch(/MFL_APIKEY: \$\{\{ secrets\.MFL_APIKEY \}\}/);
+    expect(step).toMatch(/MFL_API_KEY: \$\{\{ secrets\.MFL_API_KEY \}\}/);
+  });
+});
