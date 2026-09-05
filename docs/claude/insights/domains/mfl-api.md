@@ -30,9 +30,9 @@
   for exactly this; don't remove them.
 - **Never send `FRANCHISE_ID` on an owner-authenticated write.** It is
   commissioner-only and silently switches MFL to a stricter validation path.
-- **`api.` neither accepts nor issues commissioner rights.** Writes need
-  `www##` + both cookies; only `<mflHost>/<year>/login?L=<id>` issues the
-  second (2026-09-05).
+- **Writes need the `www##` host, NOT `MFL_IS_COMMISH`** — `MFL_USER_ID` alone
+  is accepted, as MFL's own sample sends. Measured, not assumed:
+  `scripts/probe-write-auth.mjs` (2026-09-05).
 - **Normalize every filtered export.** A one-result query returns a bare object,
   not a one-element array. Use `asArray` (`src/utils/mfl-normalize.ts`) *inside
   shared utils*, not at call sites. Offseason feeds ship a truthy object with
@@ -1132,11 +1132,13 @@ Behavior: COMPLETELY OVERWRITES the previous draft list — no partial updates
 
 1. **Host matters:** `api.myfantasyleague.com` rejects commissioner writes with "API requires commissioner access" even with valid cookies. Writes MUST target `www49.myfantasyleague.com` (the league's actual host) directly.
 
-2. **Two cookies required:** Commissioner writes need BOTH:
-   - `MFL_USER_ID` — authenticates the user
-   - `MFL_IS_COMMISH` — grants commissioner privilege
-
-   Read operations only need `MFL_USER_ID`.
+2. ~~**Two cookies required:**~~ **WRONG — retracted 2026-09-05.** This claimed
+   commissioner writes need both `MFL_USER_ID` and `MFL_IS_COMMISH`. The
+   evidence below sent BOTH cookies on both sides and varied only the HOST, so
+   it never isolated the second cookie. A later measurement
+   (`scripts/probe-write-auth.mjs`) found `MFL_USER_ID` alone is accepted, and
+   MFL's own import sample sends nothing else. Only point 1 survives. See the
+   2026-09-05 entry for what this cost.
 
 **Evidence:**
 ```
@@ -2930,7 +2932,14 @@ re-strips a `from ` prefix downstream.
 
 ---
 
-## 2026-09-05 - MFL_IS_COMMISH Comes From a League-Scoped Login
+## 2026-09-05 - ~~MFL_IS_COMMISH Comes From a League-Scoped Login~~ (WRONG)
+
+> **RETRACTED the same day, by measurement — see the next entry.** A
+> league-scoped login issues no commissioner cookie either; nothing does. Every
+> claim below about *where* the cookie comes from is wrong. The entry is kept
+> because the reasoning it records is exactly how the day was lost: a theory
+> that explained the symptom, was written up as a finding, and was built on
+> twice before anyone tried to observe it.
 
 **Context:** The accounting console told a signed-in commissioner "Your session
 has no MFL commissioner credential" while the site's own nav showed him as
@@ -2984,4 +2993,57 @@ cookie by logging in — they depend on the stored secrets, which expire.
 shipped still lack it — those users must sign out and back in once.
 
 **Pinned by:** `tests/mfl-login-commish-cookie.test.ts`
+
+**SUPERSEDED 2026-09-05 — see below. The hunt described above was for a cookie
+that is not required for anything.**
+
+---
+
+## 2026-09-05 - MFL_IS_COMMISH Is Not Required for Writes
+
+**Context:** A day spent chasing a commissioner cookie the accounting console
+demanded, across six failed carry-over runs, two PRs and three theories.
+
+**Insight:** MFL accepts a commissioner import with **`MFL_USER_ID` alone**.
+Measured on test league 36189 with a no-op write (each value written back
+unchanged), `scripts/probe-write-auth.mjs`:
+
+```
+www49.myfantasyleague.com — MFL_USER_ID only ................ ACCEPTED
+www49.myfantasyleague.com — MFL_USER_ID + MFL_IS_COMMISH .... ACCEPTED
+```
+
+MFL's own developer import sample sends `Cookie: MFL_USER_ID=…` and no
+commissioner cookie at all. Nothing issues `MFL_IS_COMMISH` on any login —
+api host, league host, HTML or XML, before or after visiting a commissioner
+page — because nothing needs to.
+
+**How the wrong rule survived so long.** The 2026-03 entry above recorded:
+
+```
+FAILS  api.myfantasyleague.com/…/import   Cookie: MFL_USER_ID=xxx; MFL_IS_COMMISH=yyy
+WORKS  www49.myfantasyleague.com/…/import Cookie: MFL_USER_ID=xxx; MFL_IS_COMMISH=yyy
+```
+
+One variable changed: the host. Both cookies were present throughout. The
+experiment proved the host mattered and said *nothing* about the second
+cookie — but it was written up as "two cookies required", and everything since
+was built on that sentence rather than on the data three lines above it.
+
+**The rule to take from this:** when an insight states a requirement, check
+that the recorded experiment actually varied it. A conclusion broader than its
+evidence is indistinguishable from a correct one until something is built on
+the difference — here, a gate that locked a signed-in commissioner out of his
+own ledger while every other write path in the app worked.
+
+**Also disproved along the way**, each by measurement rather than argument:
+a league-scoped login does not mint the cookie (CI's `mint-mfl-session`); no
+request does (`probe-commish-cookie.mjs`, steps A–E); and the registry's
+`mflHost` matches what `myleagues` reports for both leagues, so host discovery
+was a good hypothesis and a wrong one (step F).
+
+**Pinned by:** `tests/accounting-access.test.ts` (the write-without-the-cookie
+case, whose assertion is the inverse of what it was) and
+`scripts/probe-write-auth.mjs`, which is re-runnable whenever someone doubts
+this.
 

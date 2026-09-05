@@ -40,7 +40,8 @@ of helpfulness eventually pays a prize backwards.
 
 ```
 READ   export?TYPE=accounting&L=<id>&JSON=1   no cookie needed in practice
-WRITE  import?TYPE=accounting&L=<id>          the COMMISSIONER's cookie
+WRITE  import?TYPE=accounting&L=<id>          MFL_USER_ID, on the www## host
+                                              (NOT MFL_IS_COMMISH — see below)
 ```
 
 ### The response shape — verified, not guessed
@@ -422,26 +423,34 @@ verified from the app by a signed-in commissioner. Start with one small
 transaction: MFL's import has no delete, so a bad record is corrected with an
 offsetting one by hand.
 
-### The console's 403 was ours, not the commissioner's
+### The console's 403 was ours, and the cookie it wanted does not exist
 
 A signed-in commissioner — the app's own nav showed him as one — was told
-"Your session has no MFL commissioner credential". The app's commissioner role
-and MFL's `MFL_IS_COMMISH` cookie are different things, and the login only ever
-asked the `api.` host, which never issues that cookie (see the mfl-api note on
-league-scoped login). So the banner's advice, "sign out and sign in again",
-sent him back through the same login that could not produce it.
+"Your session has no MFL commissioner credential", while contracts, lineups
+and every other write path in the app worked fine for the same session.
 
-`authenticateWithMFL` now makes a second, league-scoped hop against the
-league's own `www##` host to collect it, adopting BOTH of that response's
-cookies rather than mixing them with the api login's. The carry-over script
-does the same **per league** — the credential is league-scoped, so one cookie
-for two leagues was only ever going to satisfy one of them. Two consequences:
+**There is no `MFL_IS_COMMISH` to get.** MFL accepts a commissioner import with
+`MFL_USER_ID` alone; its own developer sample sends nothing else. No login
+issues the second cookie — not the api host, not the league host, not the HTML
+flow, not after visiting a commissioner page — because nothing requires it.
+Measured on the test league with a no-op write:
+`scripts/probe-write-auth.mjs` (2026-09-05), and written up in the mfl-api
+insight of that date.
 
-- **Existing sessions do not have it.** The cookie is set at login, so anyone
-  signed in before this shipped must sign out and back in once.
-- **The UI path is the one that dodges credential expiry entirely** — it uses
-  the signed-in commissioner's live session rather than stored secrets, which
-  is why it is worth fixing ahead of the workflow's cookies.
+So the gate in `accounting-request.ts` is gone. What is left is the part that
+was always doing the work:
+
+- **The `www##` host, never `api.`** — that IS the real requirement, and it is
+  the only thing the 2026-03 experiment actually established.
+- **Verify by re-reading the ledger.** MFL answers a refused import with a
+  non-XML body and no error, so HTTP 200 is not evidence a write landed. This
+  is what catches the phantom carry, not a cookie check.
+
+**The lesson worth more than the fix:** the rule that produced this gate said
+"commissioner writes need both cookies", but the experiment beneath it varied
+only the host and sent both cookies throughout. A conclusion broader than its
+evidence reads exactly like a correct one until something is built on the
+difference. Check that a recorded experiment varied the thing the rule claims.
 
 ### A DRY RUN CANNOT VALIDATE A CREDENTIAL
 

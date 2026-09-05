@@ -89,13 +89,19 @@ export interface MFLCommissionerSession {
 }
 
 /**
- * Log in AGAINST A LEAGUE to obtain a commissioner session.
+ * Log in AGAINST A LEAGUE, in case MFL ever grants a commissioner cookie there.
  *
- * `api.myfantasyleague.com/<year>/login` issues MFL_USER_ID and nothing else —
- * it has no league in scope, so it has no commissioner to grant. MFL only sets
- * MFL_IS_COMMISH on a LEAGUE-SCOPED login: the league's own `www##` host, with
- * `L=<id>`. Every commissioner write then needs that same host plus both
- * cookies (docs/claude/insights/domains/mfl-api.md).
+ * ── THIS IS INERT, AND KEPT ONLY BECAUSE IT IS HARMLESS ───────────────────
+ * It was written on the theory that MFL issues MFL_IS_COMMISH on a
+ * league-scoped login. It does not — nothing does, on any host, in either
+ * format, before or after a commissioner page. And the cookie is not required
+ * for anything: MFL accepts a commissioner import with MFL_USER_ID alone
+ * (scripts/probe-write-auth.mjs, 2026-09-05).
+ *
+ * So this hop finds nothing and costs one bounded request per sign-in that
+ * lacks the cookie — which is every sign-in. Removing it belongs in its own
+ * change to the login path every owner depends on, not folded into the fix
+ * that made it pointless.
  *
  * ── WHY THIS RETURNS A PAIR ───────────────────────────────────────────────
  * This is a SECOND login, so it is a SECOND session. Keeping the first
