@@ -1,5 +1,27 @@
 [
   {
+    "id": "owners-poll",
+    "date": "2026-09-04",
+    "category": "new-page",
+    "icon": "rank",
+    "leagues": [
+      "theleague"
+    ],
+    "title": "The Room Gets A Vote",
+    "link": "/pecking-order/ballot",
+    "linkLabel": "Cast your ballot",
+    "summary": "Every Tuesday The Pecking Order ranks the league by the numbers. Now you get a say. Rank your top 7 — your own team included, if you think you belong — and the consensus runs in Tuesday's column right next to the algorithm. The week's real story is the room versus the machine.",
+    "description": [
+      "For two years The Pecking Order has ranked this league with math: half all-play record, half rolling three-week scoring, no opinions involved. It has been right often enough to be annoying and wrong often enough to be worth arguing with. The arguing has been happening in the group chat, where it dies.",
+      "So now it happens on the record. The ballot opens with <a href=\"/pecking-order\">the column</a> every Tuesday and closes Thursday at the week's first kickoff — not Wednesday night, deliberately. Setting a lineup is the one thing everybody in this league reliably does, and it mostly happens Wednesday through Sunday, so a Wednesday deadline was asking you to make a second trip. Now it's the same trip: there's a ballot strip on <a href=\"/lineup\">your lineup page</a>, and you can vote from there without going anywhere.",
+      "You rank seven of sixteen. First pick is worth 7 points, seventh is worth 1, every ballot counts the same, and you may absolutely rank yourself — that is not a loophole anybody is closing. It is the entire source of the Homer Index, which measures how much higher you rated your own team than the room did, and which is going to make somebody very famous around here. Eight ballots are needed for a consensus to publish; below that the column runs on the numbers alone and everybody knows why.",
+      "Ballots stay sealed until the poll closes, then all of them publish. There is a <a href=\"/pecking-order/voters\">voters page</a> keeping the receipts: who voted, how often, and how well they actually read the league — every ballot is scored against how the season plays out, so being loudly wrong in Week 3 is a thing that follows you to Week 14. The Contrarian Index is there too, for the owner whose ballot agrees with nobody. Sometimes that owner is the only one who saw it coming.",
+      "The chat will not be nagging you about this. It gets one automated post a day now, total, and the poll has to share that budget with everything else — so the reminders come to your phone instead, and only if you asked for them, on <a href=\"/notifications\">the notifications page</a>. Ballot opens, ballot closing, where the room put your team. Turn on the ones you want and ignore the rest."
+    ],
+    "image": "owners-poll.webp",
+    "imageAlt": "The Owners' Poll ballot page on The League. A commissioner strip reads \"Ballot open · Week 1 · 5/16 in\"; below it a card headed \"Rank your top 7 · Week 1\" shows \"5 of 16 ballots in\" and \"Closes Thursday, 10:00 AM PDT\", with seven numbered slots filled — Wabbits, Magicians, Dangsters, Vitside, Pain, Pigskins, CPU Jocks — each with its franchise crest, a team-colored accent bar, and up/down/remove controls."
+  },
+  {
     "id": "notification-command-center",
     "date": "2026-09-04",
     "category": "new-feature",
@@ -878,25 +900,6 @@
     "excludeFromHero": true,
     "leagues": [
       "theleague"
-    ]
-  },
-  {
-    "id": "afl-live-scoring",
-    "date": "2026-08-20",
-    "category": "new-page",
-    "icon": "goals",
-    "title": "The AFL Gets a Real Scoreboard",
-    "summary": "All twenty-four franchises, both of your games, live on one page — with real NFL box-score lines under every starter, the actual game clock, red-zone alerts and a scoring-play ticker. No more refreshing MFL's message board on a Sunday.",
-    "description": [
-      "Until today, watching your AFL week unfold meant a trip to MFL's live scoring summary — a page that tells you a number and nothing else. The league now has <a href=\"/live-scoring\">its own board</a>, and it is the same one TheLeague has been running, wired to AFL data end to end: your franchise's matchups pinned to the top, win-probability bars, projected finals, and a starter-by-starter breakdown when you tap in.",
-      "Because the AFL plays doubleheaders, the board shows all twenty-four matchups — every team's intra-conference game and its interconference game — and puts both of yours first. Tap either one and <a href=\"/lineup\">every starter you set</a> carries his real NFL box-score line: \"33/46, 394 yds, 2 TD · 14 car, 30 yds, 2 TD\" under Josh Allen, \"1 car, 3 yds · 7 rec (9 tgt), 76 yds\" under Tyler Warren. The quarter and clock come off the live NFL scoreboard, not off a calculation, and a RED ZONE flag lights up next to any starter whose team has the ball inside the twenty.",
-      "The scoring ticker was the interesting part to get right here. The AFL's two conferences roster duplicate players — in a typical week, 85 of 131 starters are owned by more than one franchise — so \"whose touchdown was that\" has more than one answer. Attribute it to a single owner and roughly four in ten scoring plays quietly vanish from somebody's board. Every owner of every credited player now gets the row, which is the only version of this that is actually true.",
-      "Two honest gaps, both deliberate. Team defenses show their points and no stat line, because the NFL box score is keyed to individual players and a defense is not one — a plausible invented number sitting next to your real score is worse than a blank. And in the offseason, when MFL switches the live feed off, the page replays the last completed AFL regular-season week with a Sample Data badge on it rather than showing you an empty board."
-    ],
-    "image": "live-scoring-afl.webp",
-    "imageAlt": "The AFL Live Scoring matchup detail: Fullybaked 120.5 vs Ninjas 120.6, marked Final. Each starter row shows a position chip, headshot, NFL team and points, with a real box-score line underneath — Josh Allen reading \"33/46, 394 yds, 2 TD · 14 car, 30 yds, 2 TD\" and Tyler Warren \"1 car, 3 yds · 7 rec (9 tgt), 76 yds\". Below the rows a Scoring Plays section lists real fourth-quarter touchdowns with their game clock, each tagged TD.",
-    "leagues": [
-      "afl"
     ]
   }
 ]

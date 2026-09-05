@@ -1,5 +1,24 @@
 [
   {
+    "id": "afl-live-scoring",
+    "date": "2026-08-20",
+    "category": "new-page",
+    "icon": "goals",
+    "title": "The AFL Gets a Real Scoreboard",
+    "summary": "All twenty-four franchises, both of your games, live on one page — with real NFL box-score lines under every starter, the actual game clock, red-zone alerts and a scoring-play ticker. No more refreshing MFL's message board on a Sunday.",
+    "description": [
+      "Until today, watching your AFL week unfold meant a trip to MFL's live scoring summary — a page that tells you a number and nothing else. The league now has <a href=\"/live-scoring\">its own board</a>, and it is the same one TheLeague has been running, wired to AFL data end to end: your franchise's matchups pinned to the top, win-probability bars, projected finals, and a starter-by-starter breakdown when you tap in.",
+      "Because the AFL plays doubleheaders, the board shows all twenty-four matchups — every team's intra-conference game and its interconference game — and puts both of yours first. Tap either one and <a href=\"/lineup\">every starter you set</a> carries his real NFL box-score line: \"33/46, 394 yds, 2 TD · 14 car, 30 yds, 2 TD\" under Josh Allen, \"1 car, 3 yds · 7 rec (9 tgt), 76 yds\" under Tyler Warren. The quarter and clock come off the live NFL scoreboard, not off a calculation, and a RED ZONE flag lights up next to any starter whose team has the ball inside the twenty.",
+      "The scoring ticker was the interesting part to get right here. The AFL's two conferences roster duplicate players — in a typical week, 85 of 131 starters are owned by more than one franchise — so \"whose touchdown was that\" has more than one answer. Attribute it to a single owner and roughly four in ten scoring plays quietly vanish from somebody's board. Every owner of every credited player now gets the row, which is the only version of this that is actually true.",
+      "Two honest gaps, both deliberate. Team defenses show their points and no stat line, because the NFL box score is keyed to individual players and a defense is not one — a plausible invented number sitting next to your real score is worse than a blank. And in the offseason, when MFL switches the live feed off, the page replays the last completed AFL regular-season week with a Sample Data badge on it rather than showing you an empty board."
+    ],
+    "image": "live-scoring-afl.webp",
+    "imageAlt": "The AFL Live Scoring matchup detail: Fullybaked 120.5 vs Ninjas 120.6, marked Final. Each starter row shows a position chip, headshot, NFL team and points, with a real box-score line underneath — Josh Allen reading \"33/46, 394 yds, 2 TD · 14 car, 30 yds, 2 TD\" and Tyler Warren \"1 car, 3 yds · 7 rec (9 tgt), 76 yds\". Below the rows a Scoring Plays section lists real fourth-quarter touchdowns with their game clock, each tagged TD.",
+    "leagues": [
+      "afl"
+    ]
+  },
+  {
     "id": "player-news-modals",
     "date": "2026-08-19",
     "category": "enhancement",

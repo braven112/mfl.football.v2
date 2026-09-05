@@ -6,8 +6,9 @@
  * voted is not a property of the page. Both are fetched here.
  *
  * It also self-corrects a stale build. The issue JSON is written Tuesday with
- * `status: "open"` and amended Wednesday evening; between the close and the
- * redeploy that carries the amendment, the prerendered page still says "open".
+ * `status: "open"` and amended after Thursday's close; between the close and
+ * the redeploy that carries the amendment, the prerendered page still says
+ * "open".
  * The API is the authority, so when it reports closed this renders "results
  * publishing shortly" instead of a ballot CTA that would 409 on submit.
  */

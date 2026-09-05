@@ -7,7 +7,8 @@
  * deployment already holds the credentials.
  *
  * Deliberately NOT a tally button. Closing here stops voting and nothing else;
- * publishing a consensus is the Wednesday pass. Keeping them apart means a
+ * publishing a consensus is the close pass that runs after Thursday's
+ * deadline. Keeping them apart means a
  * mis-click cannot destroy a vote or publish a result nobody checked.
  */
 

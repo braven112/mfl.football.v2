@@ -94,7 +94,7 @@ Wed 19:00 PT   Second cron pass AMENDS the same issue file in place:
                Commits it. GroupMe: the reveal.
 ```
 
-Why this over moving the column to Wednesday: it preserves the Tuesday-morning
+Why this over moving the column later in the week: it preserves the Tuesday-morning
 habit the column was deliberately built around, gives a **36-hour** voting
 window instead of six, and buys **three** GroupMe touchpoints per week instead
 of one — open, nag, reveal. The reveal is its own event, which is exactly what
@@ -288,7 +288,7 @@ therefore a permanent, attributable record — which is the point.
   decoration: both leagues have a franchise `0001`**, so an unscoped key is
   genuinely ambiguous the moment the AFL writes to it. That mistake is already
   documented in CLAUDE.md — do not re-make it here.
-- **After close (git).** The Wednesday pass reads every ballot, computes the
+- **After close (git).** The close pass reads every ballot, computes the
   consensus, and writes the whole thing — consensus *and* individual ballots —
   into `data/<league>/pecking-order/<year>-<week>.json`, then commits. Redis is
   the working set; the committed issue file is the archive, and the
@@ -322,7 +322,7 @@ Non-negotiables, all of them prior bugs in this repo:
 ## Generator changes
 
 `scripts/generate-pecking-order.mjs` gains a `--close-poll` mode for the
-Wednesday pass. The aggregation math it calls is already built — see *Build
+close pass. The aggregation math it calls is already built — see *Build
 status* below.
 
 The Schefter voice pass gets the poll as new fact-sheet material: biggest
@@ -446,8 +446,8 @@ invisible in dark" failure this repo has shipped before.
 version of that bug and already covers this file.
 
 **Everything is wired, and it will start itself.** The Tuesday Pecking Order
-cron opens the ballot, Wednesday 10am PT nags, Wednesday 7pm PT tallies and
-reveals. The workflow already carried Upstash secrets (cut-watch needed them),
+cron opens the ballot, Thursday morning nags, and the pass after Thursday's
+kickoff close tallies and reveals. The workflow already carried Upstash secrets (cut-watch needed them),
 so no new secret is required.
 
 It cannot run *yet* only because the season hasn't started: the column
@@ -485,7 +485,7 @@ so a non-zero number on a "fresh" open is not a surprise). Tallying is
 3. ~~**Article integration.**~~ Done.
 4. ~~**Close pass + cron.**~~ Done.
 5. ~~**GroupMe.**~~ Done — open bait folded into Tuesday's announcement, a
-   count-only nag, and the Wednesday reveal.
+   count-only nag, and the post-close reveal.
 6. ~~**Accountability page.**~~ Done — `/pecking-order/voters`.
 
 ### Still open — needs Brandon
@@ -521,7 +521,7 @@ Settled: v1 is **TheLeague only**, the ballot is **7 slots**, and the nag is
 **count-only**. Four calls remain, and none of them block starting on step 1 of
 the build order — the math and storage layer is identical either way.
 
-1. **Two-stage publish, or move the column to Wednesday?** Two-stage is the
+1. **Two-stage publish, or move the column later in the week?** Two-stage is the
    recommendation and the rest of this doc assumes it. Say so if you'd rather
    move the column.
 2. **Quorum at 8 of 16?** Written in as the default. It is one registry number,

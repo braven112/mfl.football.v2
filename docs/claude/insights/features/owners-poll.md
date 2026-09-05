@@ -11,7 +11,7 @@ generates Tuesday 07:00 PT. A ballot that had to close before generation would
 run overnight, roughly six hours, most of it while owners are asleep.
 
 The fix is a two-stage publish. Tuesday's column ships with the poll section in
-its **open** state; a second Wednesday-evening pass amends the *same* issue file
+its **open** state; a second pass after Thursday's close amends the *same* issue file
 with the tally. That buys ~35 hours and, incidentally, three GroupMe
 touchpoints (open, nag, reveal) where the one-stage design had one.
 
@@ -23,7 +23,7 @@ Consequences worth knowing before touching it:
 - **The issue pages are prerendered.** So the open state cannot be server
   rendered per viewer — turnout climbs during the window and "did you vote" is
   not a property of a static page. It is an island; the closed state is static.
-- **The island must trust the API over the baked JSON.** Between the Wednesday
+- **The island must trust the API over the baked JSON.** Between the close
   close and the redeploy carrying the amendment, the prerendered page still says
   `status: "open"`. Without that precedence the page shows a ballot CTA that
   409s on submit.

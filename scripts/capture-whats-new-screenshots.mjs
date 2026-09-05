@@ -58,6 +58,8 @@ const BASE_URL = process.env.BASE_URL || 'http://localhost:4321';
  * tests/whats-new-data.test.ts asserts every id here matches a real entry.
  */
 const MANUAL_CAPTURE_ONLY = {
+  'owners-poll':
+    'auth-gated, and the ballot only renders when a window is OPEN in Redis — a blind capture shoots the sign-in redirect, and an authenticated one out of season shoots "No ballot is open right now". The staged shot forges an owner session and stubs an open window so the real builder renders a filled ballot.',
   'notification-command-center':
     'auth-gated page, and the command center is a client island that renders nothing until it has fetched a signed-in owner\'s preferences — a blind capture shoots the sign-in redirect, and an unauthenticated one shoots an empty card.',
   'hero-wears-your-colors':
