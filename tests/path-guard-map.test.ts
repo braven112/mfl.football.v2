@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { existsSync, readdirSync, readFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, symlinkSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import path from 'node:path';
 import {
   loadMap,
@@ -122,6 +123,21 @@ describe('path-guard matching', () => {
     expect(rogerTests).toContain('tests/roger-reminder-window.test.ts');
   });
 
+  it('resolves a path reaching the repo through a symlink (REPO_ROOT is realpath\'d, the hook input is not)', () => {
+    const linkDir = mkdtempSync(path.join(tmpdir(), 'path-guard-link-'));
+    const link = path.join(linkDir, 'repo');
+    try {
+      symlinkSync(REPO_ROOT, link);
+      expect(toRepoRelative(path.join(link, 'src/utils/auth.ts'))).toBe('src/utils/auth.ts');
+      // A Write that has not landed yet: realpath the nearest existing ancestor.
+      expect(toRepoRelative(path.join(link, 'src/pages/theleague/not-yet-written.astro'))).toBe(
+        'src/pages/theleague/not-yet-written.astro',
+      );
+    } finally {
+      rmSync(linkDir, { recursive: true, force: true });
+    }
+  });
+
   it('accepts absolute paths and rejects paths outside the repo', () => {
     expect(toRepoRelative(path.join(REPO_ROOT, 'src/utils/auth.ts'))).toBe('src/utils/auth.ts');
     expect(toRepoRelative('/etc/passwd')).toBeNull();
@@ -135,7 +151,13 @@ describe('path-guard matching', () => {
   });
 
   it('every .astro component and page is covered by the ClientRouter init ratchet', () => {
-    for (const p of ['src/components/SomeRandomCard.astro', 'src/pages/theleague/anything.astro']) {
+    for (const p of [
+      'src/components/SomeRandomCard.astro',
+      'src/pages/theleague/anything.astro',
+      'src/pages/best-ball-1/anything.astro',
+      'src/pages/index.astro',
+      'src/pages/login.astro',
+    ]) {
       const tests = matchDomains(p, map).flatMap((d: { tests: string[] }) => d.tests);
       expect(tests, p).toContain('tests/clientrouter-init-ratchet.test.ts');
     }

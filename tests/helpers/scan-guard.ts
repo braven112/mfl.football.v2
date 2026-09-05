@@ -1,6 +1,6 @@
 import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
-import { walkFiles as walkTree } from '../../scripts/lib/walk.mjs';
+import { DEFAULT_SKIP_DIRS, walkFiles as walkTree } from '../../scripts/lib/walk.mjs';
 
 /**
  * Shared primitives for scan-style guard tests.
@@ -51,7 +51,7 @@ export function walkFiles(opts: WalkOptions): string[] {
     if (!existsSync(abs)) continue;
     for (const rel of walkTree(abs, {
       extensions: opts.extensions ?? null,
-      skipDirs: [...DEFAULT_SKIP_DIRS_TS, ...(opts.skipDirs ?? [])],
+      skipDirs: [...DEFAULT_SKIP_DIRS, ...(opts.skipDirs ?? [])],
       relativeTo: REPO_ROOT,
     })) {
       if (!skipFiles.has(rel)) out.push(rel);
@@ -59,8 +59,6 @@ export function walkFiles(opts: WalkOptions): string[] {
   }
   return out.sort();
 }
-
-const DEFAULT_SKIP_DIRS_TS = ['node_modules', '.git', 'dist', '.astro', '.vercel', 'coverage'];
 
 export interface Hit {
   file: string;

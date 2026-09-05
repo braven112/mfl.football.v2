@@ -62,7 +62,7 @@ describe('classifyConflict', () => {
     expect(attrs.length).toBeGreaterThan(3);
     for (const pattern of attrs) {
       // A slash-less pattern matches at any depth in git; test it nested, not at the root.
-      const sample = pattern.includes('/') || !pattern.includes('*') ? pattern.replace('**', '2026/sample.json') : `deep/er/${pattern.replace('*', 'sample')}`;
+      const sample = pattern.includes('/') || !pattern.includes('*') ? pattern.replace(/\*\*/g, '2026/sample.json') : `deep/er/${pattern.replace(/\*+/g, 'sample')}`;
       const { klass, auto } = classifyConflict(sample);
       expect(['generated-data', 'lockfile'], `${pattern} → ${klass}`).toContain(klass);
       expect(auto, pattern).toBe(true);

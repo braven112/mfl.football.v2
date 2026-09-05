@@ -391,6 +391,7 @@
     {
       "name": "client-scripts",
       "paths": [
+        "src/pages/**/*.astro",
         "src/components/**/*.astro",
         "src/scripts/*"
       ],
@@ -403,6 +404,7 @@
       "name": "dev-tooling",
       "paths": [
         "scripts/ratchet.mjs",
+        "scripts/lib/walk.mjs",
         "scripts/lib/ratchet-measures.mjs",
         "scripts/lib/rebase-conflicts.mjs",
         "scripts/resolve-rebase-conflicts.mjs",

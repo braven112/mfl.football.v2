@@ -145,10 +145,11 @@ Editing a GitHub variable is never easier than editing code here, and the
 indirection splits the source of truth across two places. To disable a
 scheduled job, comment out its `cron:` line. To gate behavior, use a `const`
 in the script itself. A few legacy vars predate this rule
-(`SCHEFTER_RUMOR_MILL_ENABLED`, `SCHEFTER_TRADE_OFFER_RUMORS_ENABLED`) — don't
-add more, and prefer moving them into code if you're already in the file.
-Guard: `tests/workflow-feature-flag-guard.test.ts` pins the legacy set to the
-two files that carry it.
+(`SCHEFTER_RUMOR_MILL_ENABLED`, `SCHEFTER_TRADE_OFFER_RUMORS_ENABLED`,
+`SCHEFTER_TRADE_OFFER_RUMORS_DETECTION_ONLY`) — don't add more, and prefer
+moving them into code if you're already in the file.
+Guard: `tests/workflow-feature-flag-guard.test.ts` pins those three to the
+two workflow files that carry them.
 
 ## Local env — `vercel env pull`, and worktrees don't inherit it
 

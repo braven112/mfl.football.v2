@@ -117,13 +117,16 @@ const basePath = resolveLeaguePath(\`/\${leagueSlug}/${a.route}\`, Astro.locals.
 </TheLeagueLayout>
 
 <style>
+  /* Tokens only — a var() with no definition renders its fallback in BOTH
+     themes (docs/claude/rules/theming-and-assets.md); tests/design-token-guard.test.ts
+     fails the build on one. These four exist in src/styles/tokens.css. */
   .${a.route} {
-    max-width: var(--content-max-width, 1100px);
+    max-width: var(--container-max-width, 1100px);
     margin: 0 auto;
-    padding: var(--space-6, 1.5rem) var(--space-4, 1rem);
+    padding: var(--spacing-lg, 1.5rem) var(--spacing-md, 1rem);
   }
   .${a.route}__empty {
-    color: var(--color-text-muted, #6b7280);
+    color: var(--color-gray-500, #6b7280);
   }
 </style>
 `;
@@ -215,7 +218,7 @@ function main() {
   console.log(`
 Next:
   1. Fill in the body of ${files[0].path}.
-  2. node_modules/.bin/vitest run tests/page-directory-data.test.ts tests/page-fork-ratchet.test.ts
+  2. node_modules/.bin/vitest run tests/page-directory-data.test.ts tests/page-fork-ratchet.test.ts tests/design-token-guard.test.ts
   3. Add a story if the page has visual states (docs/claude/rules/storybook.md).
   4. /update-whats-new — a new page needs an entry with a screenshot and inline links.
   5. If the page shows a year: /rollover-check /${leagues[0]}/${a.route}`);

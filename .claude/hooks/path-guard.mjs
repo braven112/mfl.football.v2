@@ -32,7 +32,7 @@
  * Stdin: Claude Code hook JSON. Stdout: hook JSON (additionalContext) on
  * success. Stderr: vitest output on failure. Exit: 0 pass/no-op, 2 fail.
  */
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, realpathSync, writeFileSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
@@ -49,12 +49,36 @@ export function loadMap(file = MAP_FILE) {
   return raw;
 }
 
-/** Repo-relative, forward-slash path — what the globs in the map are written against. */
+/**
+ * Repo-relative, forward-slash path — what the globs in the map are written
+ * against. REPO_ROOT comes from import.meta.url, which Node realpaths; the
+ * path Claude hands us is not, so under a symlinked checkout (macOS /tmp,
+ * a linked worktree) the two would disagree and every edit would resolve to
+ * `..`. Realpath the file (or its nearest existing ancestor, for a Write
+ * that has not landed yet) before comparing.
+ */
 export function toRepoRelative(filePath, root = REPO_ROOT) {
-  const abs = path.isAbsolute(filePath) ? filePath : path.resolve(root, filePath);
+  let abs = path.isAbsolute(filePath) ? filePath : path.resolve(root, filePath);
+  abs = realpathNearest(abs);
   const rel = path.relative(root, abs);
   if (rel.startsWith('..')) return null;
   return rel.split(path.sep).join('/');
+}
+
+function realpathNearest(abs) {
+  let probe = abs;
+  const tail = [];
+  while (!existsSync(probe)) {
+    const parent = path.dirname(probe);
+    if (parent === probe) return abs;
+    tail.unshift(path.basename(probe));
+    probe = parent;
+  }
+  try {
+    return path.join(realpathSync(probe), ...tail);
+  } catch {
+    return abs;
+  }
 }
 
 /** Every domain whose `paths` globs match the given repo-relative file. */

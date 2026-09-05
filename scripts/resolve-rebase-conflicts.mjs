@@ -130,7 +130,9 @@ if (lockPending) {
       manual.push({ file: 'pnpm-lock.yaml', klass: 'lockfile', action: 'Regenerate after package.json: pnpm install && git add pnpm-lock.yaml' });
     } else {
       try {
-        execFileSync('pnpm', ['install'], { stdio: 'inherit' });
+        // Not frozen: pnpm defaults to --frozen-lockfile whenever CI is set, and
+        // this runs precisely when main's lock does not match the resolved package.json.
+        execFileSync('pnpm', ['install', '--no-frozen-lockfile'], { stdio: 'inherit' });
         git(['add', '--', 'pnpm-lock.yaml']);
       } catch {
         console.log('    pnpm install failed — fix and re-run `pnpm install && git add pnpm-lock.yaml`.');
