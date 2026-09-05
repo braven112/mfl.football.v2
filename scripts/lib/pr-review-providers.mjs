@@ -570,9 +570,15 @@ export function sliceToBytes(text, maxBytes) {
  * boundary of what it may claim) and in the returned metadata (so the PR
  * comment can tell the human exactly which files went unreviewed).
  *
+ * `omittedFiles` names whole files that were dropped; `partialFile` names the
+ * single file that was cut internally because it alone exceeded the budget.
+ * They are mutually exclusive, and both must be forwarded onto the provider
+ * result — a field returned here but not destructured in `runProvider` reaches
+ * the renderer as undefined and silently reports nothing.
+ *
  * @param {string} diff
  * @param {number} [maxBytes]
- * @returns {{ diff: string, truncated: boolean, omittedFiles: string[] }}
+ * @returns {{ diff: string, truncated: boolean, omittedFiles: string[], partialFile: string | null }}
  */
 export function capDiff(diff, maxBytes = MAX_DIFF_BYTES) {
   // Measure BYTES, not string length: .length counts UTF-16 code units, so a

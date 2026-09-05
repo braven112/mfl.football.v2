@@ -922,7 +922,10 @@ describe('capDiff metadata survives the trip to the renderer', () => {
     });
 
     expect(result.truncated).toBe(true);
-    expect(result.omittedFiles.length).toBeGreaterThan(0);
+    // `runProvider` returns a union — an error result carries no omittedFiles —
+    // so narrow rather than asserting through a possibly-undefined field.
+    expect(result.status).toBe('ok');
+    expect(result.omittedFiles ?? []).not.toHaveLength(0);
     expect(result.partialFile).toBeNull();
   });
 });
