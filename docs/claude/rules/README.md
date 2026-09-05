@@ -17,11 +17,7 @@ into every session on every turn, most of it irrelevant to the task at hand.
 *only* if it applies to work anywhere in the repo — otherwise the router
 regrows into the encyclopedia this split undid. If the rule can be enforced by
 a guard test in `tests/`, write the test too: a test is checked, prose is
-skimmed. `/guard-test` does that end to end — helper in
-`tests/helpers/scan-guard.ts`, mutation check, and the
-`.claude/hooks/path-guard.json` entry that runs it on every edit in the
-domain. Then add `Guard: `tests/<file>`.` under the rule so the doc points
-at what enforces it.
+skimmed.
 
 **Adding a domain:** new file here + a row in the `CLAUDE.md` "Read before you
 touch" table. The row's third column is the trap in one line — that sentence is
