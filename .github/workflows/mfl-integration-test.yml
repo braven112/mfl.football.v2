@@ -21,6 +21,11 @@ concurrency:
 jobs:
   integration-test:
     runs-on: ubuntu-latest
+    outputs:
+      # Read by the rollback job. A dead cookie is an environment failure, not
+      # a regression in the pushed commit — the write tests fail with "requires
+      # commissioner access" no matter what the commit changed.
+      cookie_ok: ${{ steps.cookie.outcome == 'success' }}
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -46,6 +51,7 @@ jobs:
         # myleagues read on every pipeline run. Strictly read-only. Runs even
         # when the write tests above failed (independent signal for "the
         # cookie itself died"), and skips itself when the secret is absent.
+        id: cookie
         if: always()
         env:
           MFL_USER_ID: ${{ secrets.MFL_USER_ID }}
@@ -54,8 +60,24 @@ jobs:
   rollback:
     needs: integration-test
     runs-on: ubuntu-latest
-    # Only rollback on push to main (not PRs, cron, or manual runs)
-    if: failure() && github.event_name == 'push' && github.ref == 'refs/heads/main'
+    # Only rollback on push to main (not PRs, cron, or manual runs), and only
+    # when the failure can be the commit's fault:
+    #
+    #   - cookie_ok: when the stored MFL cookie is dead EVERY commit fails, so
+    #     a revert cannot fix anything — it just removes unrelated work.
+    #   - not our own commit: reverting a bot revert re-lands the original,
+    #     which fails the same way and gets reverted again. On 2026-09-05 an
+    #     expired cookie put that loop on main for over an hour — a production
+    #     deploy and a new issue every 75 seconds, with the notifications API
+    #     appearing and vanishing between them.
+    #
+    # tests/mfl-integration-rollback-guard.test.ts pins both conditions.
+    if: >-
+      failure()
+      && github.event_name == 'push'
+      && github.ref == 'refs/heads/main'
+      && needs.integration-test.outputs.cookie_ok == 'true'
+      && github.event.head_commit.author.name != 'MFL Integration Bot'
     permissions:
       contents: write
       issues: write

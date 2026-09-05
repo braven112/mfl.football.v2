@@ -385,7 +385,8 @@
       "note": "No new vars.* feature gates (comment out cron: to disable a job; gate with a const in the script); league ids/hosts come from the registry; a weekly job needs isSeasonWindowOpen, not \"the feeds have a completed week\". See CLAUDE.md \"Feature flags — code, not GitHub Actions variables\".",
       "tests": [
         "tests/workflow-feature-flag-guard.test.ts",
-        "tests/league-literal-guard.test.ts"
+        "tests/league-literal-guard.test.ts",
+        "tests/mfl-integration-rollback-guard.test.ts"
       ]
     },
     {
