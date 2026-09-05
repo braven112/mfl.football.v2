@@ -58,9 +58,10 @@ export const kebab = (s) =>
 /**
  * Two ADJACENT `history[]` entries are one era of one owner when they share a
  * name or an explicit `ownerEra`. This is THE ownership-boundary predicate —
- * `inferCurrentOwnerSince` walks back over it, and `franchise-eras.ts` groups
- * eras with it — so the franchise page's era anchors and stat attribution can
- * never disagree about where an owner's run begins.
+ * `inferCurrentOwnerSince` walks back over it, and `franchise-eras.ts`
+ * (`groupHistory`, which also feeds the Former Identities strip) chains it
+ * pairwise over the same sorted entries — so the franchise page's era anchors
+ * and stat attribution can never disagree about where an owner's run begins.
  *
  * Deliberately narrower than `entriesShareTenure` below: a rebrand group or a
  * punitive rename bridges a TENURE (same person, different name) but starts a
@@ -74,14 +75,6 @@ export const entriesShareEra = (prev, cur) => {
   const sameEra = prev.ownerEra != null && cur.ownerEra != null && prev.ownerEra === cur.ownerEra;
   return sameName || sameEra;
 };
-
-/**
- * Grouping key for NON-adjacent era grouping (the Former Identities strip
- * groups a name that came back after a gap as one identity). Same inputs as
- * `entriesShareEra`, expressed as a key so a `Map` can do the grouping.
- */
-export const historyEraKey = (entry) =>
-  entry?.ownerEra != null ? `era:${entry.ownerEra}` : `name:${normalizeIdentity(entry?.name)}`;
 
 /**
  * Infer the year the current owner took over. This is THE implementation —
@@ -123,10 +116,6 @@ export const inferCurrentOwnerSince = (team) => {
   return sorted[i].yearStart;
 };
 
-/**
- * Build the season attributor for a league. `attributeSeason` is the exact
- * counterpart of `attributeYear` in compute-franchise-history.mjs.
- */
 /**
  * "Whose season is this?" for every (sourceFranchiseId, year). Returns the
  * CURRENT franchise that gets credit, or null when the year belongs to a former

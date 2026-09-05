@@ -22,7 +22,6 @@
 import awardsHistory from '../../data/afl-fantasy/awards-history.json';
 import aflConfig from '../../data/afl-fantasy/afl.config.json';
 import { buildAttributor } from './owner-tenures.mjs';
-import { normalizeIdentity } from './identity-normalize.mjs';
 
 export type AwardSlug =
   | 'afl-championship'
@@ -164,9 +163,6 @@ type AflTeamConfig = {
 const CURRENT_TEAMS: AflTeamConfig[] = (
   (aflConfig as { teams?: AflTeamConfig[] }).teams ?? []
 );
-
-/** @deprecated alias kept for existing importers — this IS `normalizeIdentity`. */
-export const normalizeIdentityName = normalizeIdentity;
 
 // The ownership boundary — "when did the current owner take over, and whose
 // season is this?" — is computed ONCE, in `src/utils/owner-tenures.mjs`, and

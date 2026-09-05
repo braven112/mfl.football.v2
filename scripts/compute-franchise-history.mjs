@@ -240,10 +240,28 @@ const getIdentityForYear = (franchiseId, year) => {
 //
 // The boundary rule itself lives in `src/utils/owner-tenures.mjs`
 // (`inferCurrentOwnerSince` + `buildAttributor`) — one implementation shared
-// with `afl-awards.ts` (award credit), `franchise-eras.ts` (era anchors) and
-// the owner-tenures derivation (the orphan pool). This script used to carry
-// its own copy; `tests/owner-boundary-parity.test.ts` fails if one comes back.
+// with `afl-awards.ts` (award credit) and the owner-tenures derivation (the
+// orphan pool); `franchise-eras.ts` groups era anchors with the same
+// predicate. This script used to carry its own copy;
+// `tests/owner-boundary-parity.test.ts` fails if one comes back.
 const { attributeSeason: attributeYear, currentOwnerSinceMap } = buildAttributor(currentTeams);
+
+// The attributor fails closed: a franchise id the config does not know gets
+// null, and every loop below `continue`s on null, so that franchise's season
+// would vanish from franchise-history.json without a trace. Say so — an
+// expansion slot missing from the config, or a stale id in an old feed, is
+// a config fix, not a silent drop.
+const knownFranchiseIds = new Set(currentTeams.map((t) => t.franchiseId));
+const warnedUnknownFranchiseIds = new Set();
+const warnIfUnknownFranchise = (franchiseId, year) => {
+  if (knownFranchiseIds.has(franchiseId) || warnedUnknownFranchiseIds.has(franchiseId)) return;
+  warnedUnknownFranchiseIds.add(franchiseId);
+  console.warn(
+    `[franchise-history] ${year}: standings name franchise ${franchiseId}, which is not in the ` +
+      `league config — its seasons are dropped from every franchise (attributeYear fails closed). ` +
+      `Add it to the config to keep them.`
+  );
+};
 
 /**
  * Third place, with the invariant that caught the bug enforced.
@@ -925,6 +943,7 @@ for (const year of years) {
   // Per-franchise per-year row — apply ownerHistory attribution so years
   // follow the human owner across franchise-ID changes.
   for (const row of standingsRows) {
+    warnIfUnknownFranchise(row.franchiseId, year);
     const targetId = attributeYear(row.franchiseId, year);
     const identity = getIdentityForYear(row.franchiseId, year);
 

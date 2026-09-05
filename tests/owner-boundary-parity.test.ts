@@ -14,7 +14,7 @@
  *
  *   1. scripts/compute-franchise-history.mjs  `attributeYear` = `buildAttributor(...).attributeSeason`
  *   2. src/utils/afl-awards.ts                `attributeAwardYear` / `getCurrentOwnerSince` wrap the same
- *   3. src/utils/franchise-eras.ts            `groupHistory` groups eras with `entriesShareEra`
+ *   3. src/utils/franchise-eras.ts            `groupHistory` chains `entriesShareEra` (eras AND the identities strip)
  *   4. src/pages/afl-fantasy/franchises/[id].astro reads (2)
  *
  * This test keeps it that way in two layers. The behavioural layer compares
@@ -25,7 +25,7 @@
  * coincidence. Both are required; neither is advisory.
  */
 import { describe, it, expect } from 'vitest';
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import path from 'node:path';
 import { LEAGUES, ALL_LEAGUES } from '../src/config/leagues-data.mjs';
 import { buildAttributor, inferCurrentOwnerSince } from '../src/utils/owner-tenures.mjs';
@@ -128,28 +128,30 @@ describe('AFL: parity with afl-awards.ts', () => {
  * here on the day it is written, before any config change can expose it.
  */
 describe('one implementation — no file carries its own walk-back', () => {
+  // Shapes the five copies shared, written variable-agnostic so a renamed
+  // local (`hist[i - 1]`, `entries[i-1]`) does not slip past.
   const walkBackSignatures = [
     /function\s+inferCurrentOwnerSince\b/,
     /const\s+inferCurrentOwnerSince\s*=/,
-    /sorted\[i\s*-\s*1\]/,
-    /ownerHistory\.map\(\s*\(?\w+\)?\s*=>\s*\w+\.yearStart\s*\)/,
+    /\[\s*i\s*-\s*1\s*\]\s*\.\s*name\b/,
+    /Math\.min\(\s*\.\.\.\s*[\w.]+\.ownerHistory\.map\(/,
   ];
 
   const consumers: Array<{ file: string; mustImport: RegExp; mustCall: RegExp }> = [
     {
       file: 'scripts/compute-franchise-history.mjs',
-      mustImport: /from '\.\.\/src\/utils\/owner-tenures\.mjs'/,
-      mustCall: /buildAttributor\(/,
+      mustImport: /from\s+['"]\.\.\/src\/utils\/owner-tenures\.mjs['"]/,
+      mustCall: /\bbuildAttributor\s*\(/,
     },
     {
       file: 'src/utils/afl-awards.ts',
-      mustImport: /from '\.\/owner-tenures\.mjs'/,
-      mustCall: /buildAttributor\(/,
+      mustImport: /from\s+['"]\.\/owner-tenures\.mjs['"]/,
+      mustCall: /\bbuildAttributor\s*\(/,
     },
     {
       file: 'src/utils/franchise-eras.ts',
-      mustImport: /from '\.\/owner-tenures\.mjs'/,
-      mustCall: /entriesShareEra\(/,
+      mustImport: /from\s+['"]\.\/owner-tenures\.mjs['"]/,
+      mustCall: /\bentriesShareEra\s*\(/,
     },
   ];
 
@@ -159,11 +161,44 @@ describe('one implementation — no file carries its own walk-back', () => {
     expect(src, `${file} must use the shared boundary`).toMatch(mustCall);
   });
 
-  it.each(consumers)('$file has no local walk-back', ({ file }) => {
-    const src = readSrc(file);
-    for (const sig of walkBackSignatures) {
-      expect(src, `${file} re-grew a local ownership walk-back (${sig}) — call owner-tenures.mjs instead`).not.toMatch(sig);
+  /**
+   * Every source file, not just the three former copies: the fifth copy was
+   * page-local logic in an .astro file, and the next one would be too. The
+   * shared module is the one file allowed to match.
+   */
+  const SOURCE_ROOTS = ['src', 'scripts'];
+  const SOURCE_EXT = new Set(['.ts', '.mts', '.mjs', '.js', '.astro']);
+  const walk = (dir: string, out: string[] = []): string[] => {
+    for (const entry of readdirSync(dir, { withFileTypes: true })) {
+      if (entry.name === 'node_modules' || entry.name.startsWith('.')) continue;
+      const full = path.join(dir, entry.name);
+      if (entry.isDirectory()) walk(full, out);
+      else if (SOURCE_EXT.has(path.extname(entry.name))) out.push(full);
     }
+    return out;
+  };
+  const sourceFiles = SOURCE_ROOTS.flatMap((root) => walk(path.join(ROOT, root))).map((f) =>
+    path.relative(ROOT, f)
+  );
+
+  it('scans a meaningful number of source files', () => {
+    expect(sourceFiles.length).toBeGreaterThan(100);
+    for (const c of consumers) expect(sourceFiles).toContain(c.file);
+  });
+
+  it('no source file outside owner-tenures.mjs carries an ownership walk-back', () => {
+    const offenders: string[] = [];
+    for (const file of sourceFiles) {
+      if (file === 'src/utils/owner-tenures.mjs') continue;
+      const src = readSrc(file);
+      for (const sig of walkBackSignatures) {
+        if (sig.test(src)) offenders.push(`${file}: ${sig}`);
+      }
+    }
+    expect(
+      offenders,
+      'A local ownership walk-back re-grew. Call inferCurrentOwnerSince / buildAttributor from src/utils/owner-tenures.mjs instead.'
+    ).toEqual([]);
   });
 
   it('the shared module is the only place the walk-back lives', () => {

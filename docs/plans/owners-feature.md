@@ -29,8 +29,8 @@
 > `attributeSeason`), by `afl-awards.ts` (`attributeAwardYear` and
 > `getCurrentOwnerSince` are thin wrappers, so the AFL page's `nameEras`
 > follows for free), and by `franchise-eras.ts` (`groupHistory` groups eras
-> with the exported `entriesShareEra`; `buildHistoricalIdentities` keys on
-> `historyEraKey`). The `ownerEra` divergence (trap 3) is gone by
+> with the exported `entriesShareEra`, and `buildHistoricalIdentities` merges
+> those same eras across gaps by dominant name). The `ownerEra` divergence (trap 3) is gone by
 > construction, and the shared attributor fails closed on a null/unknown
 > franchise id, as the awards copy always did. Verified zero-change: both
 > leagues' `franchise-history.json` and `season-ledger.json` regenerate
@@ -39,8 +39,8 @@
 > `getCurrentOwnerSince` and `attributeSeason` over every (slot, year) in
 > both leagues is identical before and after. `tests/owner-boundary-parity.test.ts`
 > is now required in two layers — behavioural (over the real ledger) AND
-> structural (the three files must import the shared module and contain no
-> walk-back of their own). `team-names.ts`'s `getTeamIdentityForYear` was
+> structural (the three files must import the shared module, and NO source
+> file under `src/` or `scripts/` may contain a walk-back of its own). `team-names.ts`'s `getTeamIdentityForYear` was
 > never a boundary copy — it is a year→identity lookup — and is untouched.
 >
 > **Three things a follow-up session should know:**
