@@ -459,7 +459,9 @@ async function computeYear(year) {
   await loadCanonicalNames(); // ensures CANONICAL_NAMES + NAME_TO_ID are built
   const localLeague = await readJson(path.join(FEEDS_DIR, String(year), 'league.json'));
   const localGenuine = localLeague ? await isGenuineAfl(localLeague, year) : false;
-  const league = await loadLeague(year);
+  // Memoized: backfillSourceSlots reads the same season again, and online
+  // that would be a second MFL fetch (with its politeness delay) per year.
+  const league = await cachedLeague(year);
   if (!league) {
     warn(`${year}: no usable AFL league data, skipping`);
     return null;

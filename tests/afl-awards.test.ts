@@ -189,6 +189,39 @@ describe('awards-history.json data integrity', () => {
     expect(checked).toBeGreaterThan(10);
   });
 
+  it('agrees with franchise-history.json on which slots won each season’s divisions', () => {
+    // Both come from the same standings feed, so the SET of winning slots
+    // per season must match. A division row whose name lookup landed on the
+    // wrong slot would still land on *some* owner and pass the one-owner
+    // test — this is what catches it.
+    const history = JSON.parse(
+      readFileSync(path.join(ROOT, 'data/afl-fantasy/derived/franchise-history.json'), 'utf8')
+    ) as {
+      yearSummaries: Array<{
+        year: number;
+        divisionWinners?: Array<{ franchiseId: string | null; sourceFranchiseId?: string | null }>;
+      }>;
+    };
+    const divisionSlugs = new Set(AWARD_TYPES.filter((a) => a.category === 'division').map((a) => a.slug));
+    const fromHistory = new Map(
+      history.yearSummaries.map((y) => [
+        y.year,
+        (y.divisionWinners ?? []).map((w) => w.sourceFranchiseId ?? w.franchiseId).sort(),
+      ])
+    );
+    let checked = 0;
+    for (const s of seasons) {
+      const slots = Object.entries(s.awards)
+        .filter(([slug]) => divisionSlugs.has(slug as AwardSlug))
+        .map(([, val]) => val.sourceFranchiseId)
+        .sort();
+      if (slots.length === 0) continue;
+      expect(slots, `${s.year} division winners`).toEqual(fromHistory.get(s.year) ?? []);
+      checked += 1;
+    }
+    expect(checked).toBeGreaterThan(20);
+  });
+
   it('compute-afl-awards.mjs stamps the slot on every row it writes', () => {
     // The producer, not just today's output: every enrichment branch writes
     // the field, and the backfill pass covers the hand-curated rows the merge

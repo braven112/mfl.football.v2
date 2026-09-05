@@ -92,6 +92,8 @@
       "paths": [
         "scripts/compute-franchise-history.mjs",
         "scripts/compute-owner-tenures.mjs",
+        "scripts/compute-afl-awards.mjs",
+        "scripts/lib/owner-tenure-inputs.mjs",
         "src/utils/owner*",
         "src/utils/franchise-eras.ts",
         "src/pages/*/owners/**",
@@ -100,7 +102,8 @@
       "tests": [
         "tests/owner-tenures-data.test.ts",
         "tests/owner-boundary-parity.test.ts",
-        "tests/owner-history-boundaries.test.ts"
+        "tests/owner-history-boundaries.test.ts",
+        "tests/afl-awards.test.ts"
       ]
     },
     {
