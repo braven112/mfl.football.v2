@@ -17,18 +17,28 @@ import { astroRouteExists } from './helpers/astro-routes';
  *     the alert arrives, the owner taps it, and gets a 404. That shipped once
  *     already — the game-day alerts pointed at `/live` when the route is
  *     `live-scoring.astro`.
- *   - The path is written league-PREFIXED (`/theleague/lineup`). It resolves
- *     for one league's readers and sends the other league's owners to a page
- *     about a league they are not in. Same failure the What's New link guard
- *     exists to catch.
+ *   - The path is written league-PREFIXED (`/theleague/lineup`). On the
+ *     league's own apex domain that becomes theleague.us/theleague/lineup —
+ *     the double-prefixed form a redirect cleans up on the way through, so it
+ *     is not a dead link, but every tap pays for a round trip it does not
+ *     need and it contradicts the rule the other senders follow. It is also
+ *     one edit away from being a genuine cross-league link.
  *
  * Both are cheap to check and impossible to notice by hand, because the only
  * symptom is on a phone, after a real game.
  */
 
-const SCRIPTS_DIR = path.resolve(__dirname, '../scripts');
+const ROOT = path.resolve(__dirname, '..');
+/**
+ * Both trees, not just `scripts/`.
+ *
+ * The first cut walked only the cron senders — and missed a league-prefixed
+ * url in `src/pages/api/push/test.ts`, which is the one push every owner sends
+ * themselves while deciding whether the feature works.
+ */
+const SEARCH_DIRS = [path.join(ROOT, 'scripts'), path.join(ROOT, 'src')];
 
-/** Every `url: '/…'` literal in the cron senders, with its file for the message. */
+/** Every `url: '/…'` literal in a push sender, with its file for the message. */
 function collectSenderUrls(): Array<{ source: string; url: string }> {
   const found: Array<{ source: string; url: string }> = [];
 
@@ -40,16 +50,24 @@ function collectSenderUrls(): Array<{ source: string; url: string }> {
         walk(full);
         continue;
       }
-      if (!entry.name.endsWith('.mjs')) continue;
+      if (!/\.(mjs|ts)$/.test(entry.name)) continue;
       const src = readFileSync(full, 'utf8');
+      // Only files that actually send a push. `url:` is a common key — the
+      // page directory, nav config and article types all use it for links
+      // that are NOT notification targets and are legitimately prefixed.
+      if (!/sendPushToFranchise|sendPushFanout|broadcast\(/.test(src)) continue;
       // Only the object-literal form the senders use. A computed url would not
-      // be checkable here, and none exists today.
+      // be checkable here.
       for (const m of src.matchAll(/\burl:\s*'(\/[^']*)'/g)) {
-        found.push({ source: path.relative(SCRIPTS_DIR, full), url: m[1] });
+        found.push({ source: path.relative(ROOT, full), url: m[1] });
+      }
+      // Template-literal urls, which is how a prefixed one gets written.
+      for (const m of src.matchAll(/\burl:\s*[^'\n]*`(\/[^`]*)`/g)) {
+        found.push({ source: path.relative(ROOT, full), url: m[1] });
       }
     }
   };
-  walk(SCRIPTS_DIR);
+  for (const dir of SEARCH_DIRS) walk(dir);
   return found;
 }
 
@@ -87,7 +105,7 @@ describe('push notification target URLs', () => {
     }
     expect(
       broken,
-      'A push alert whose url has no page 404s the owner who taps it:\n  '
+      'A push url with no matching route lands the owner who taps it nowhere:\n  '
         + broken.join('\n  '),
     ).toEqual([]);
   });
@@ -99,7 +117,8 @@ describe('push notification target URLs', () => {
     );
     expect(
       prefixed.map((p) => `${p.source}: ${p.url}`),
-      'A league-prefixed push url sends the other league’s owners into a league they are not in',
+      'A league-prefixed push url double-prefixes on the league’s own domain — '
+        + 'a redirect round trip on every tap, and a cross-league link one edit away',
     ).toEqual([]);
   });
 });

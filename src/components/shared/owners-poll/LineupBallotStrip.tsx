@@ -9,7 +9,9 @@
  *
  * It renders NOTHING unless a ballot is actually open, so the lineup page is
  * unchanged for most of the year. The status fetch is the only cost, and it is
- * behind `client:visible`.
+ * behind `client:idle` — NOT `client:visible`, which never fires here: the
+ * strip renders nothing until it knows whether a ballot is open, so it has
+ * zero height and never intersects. See the note in lineup.astro.
  */
 
 import { useEffect, useState } from 'react';
@@ -102,7 +104,7 @@ export default function LineupBallotStrip(props: Props) {
             slots={slots}
             leagueParam={leagueParam}
             ownFranchiseId={ownFranchiseId}
-            columnHref={ballotHref}
+            columnHref={columnHref}
             vapidPublicKey={vapidPublicKey}
           />
         </div>

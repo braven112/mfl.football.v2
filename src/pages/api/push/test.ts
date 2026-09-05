@@ -42,7 +42,10 @@ export const POST: APIRoute = async ({ request }) => {
         const result = await sendPushToFranchise(user.leagueId, user.franchiseId, {
       title: 'Test notification',
       body: `Push notifications are working for your ${leagueName} team. This is what a trade-offer alert will feel like.`,
-      url: league ? `/${league.slug}/notifications` : '/',
+      // Bare — see the note in push-notify-trade.ts. This one is the push an
+      // owner sends themselves to decide whether the feature works at all, so
+      // a link that 404s is the worst possible first impression.
+      url: '/notifications',
       tag: 'push-test',
       icon: leaguePushIcon(league?.navSlug ?? 'theleague'),
     },

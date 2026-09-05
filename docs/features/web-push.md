@@ -157,7 +157,7 @@ Every category in the registry is live as of Sept 2026. The senders:
 
 | Category | Sender |
 |---|---|
-| `lineup-warning` | `scripts/schefter-lineup-check.mjs` |
+| `lineup-deadline` | `scripts/schefter-lineup-check.mjs` |
 | `roster-deadline` | `scanEventReminders` in `scripts/schefter-scan.mjs` |
 | `transaction-big` / `transaction-all` | `scripts/schefter-scan.mjs` |
 | `rumor` | `scripts/schefter-rumor-scan.mjs` |

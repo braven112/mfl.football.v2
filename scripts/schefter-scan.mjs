@@ -806,14 +806,14 @@ async function scanLeague(league) {
   // the cost of subscribing to a firehose AND its highlights, and it is
   // preferable to collapsing a 12-move digest onto one drop's tag.
   //
-  // `newPosts` was reversed in place just above for the feed prepend; the
-  // copy-and-reverse restores chronological order, the same idiom the
-  // suppression reporting below uses.
+  // `newPosts` was reversed IN PLACE just above for the feed prepend, so it is
+  // already newest-first here. Reversing a copy again — which is what this did
+  // — put the three OLDEST moves in a digest whose headline says "new".
   await pushTransaction({
     league,
     franchiseIds: [...teams.keys()],
     headline: `${newPosts.length} new ${newPosts.length === 1 ? 'move' : 'moves'}`,
-    body: [...newPosts].reverse().map((p) => p.headline).slice(0, 3).join(' · '),
+    body: newPosts.slice(0, 3).map((p) => p.headline).join(' · '),
     tag: `transactions-${newPosts[0]?.id ?? now.toISOString()}`,
     big: false,
   });
