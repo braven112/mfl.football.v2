@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { canonicalizeForFixture } from '../scripts/record-mfl-fixture.mjs';
+import { canonicalizeForFixture, normalizeExtra } from '../scripts/record-mfl-fixture.mjs';
 
 /**
  * The fixture recorder's canonical form. Pinned because a fixture is only
@@ -55,5 +55,15 @@ describe('canonicalizeForFixture', () => {
     const a = canonicalizeForFixture({ franchise: [{ id: '0001', players: ['x', 'y'] }, { id: '0002' }] });
     const b = canonicalizeForFixture({ franchise: [{ id: '0002' }, { players: ['y', 'x'], id: '0001' }] });
     expect(JSON.stringify(a)).toBe(JSON.stringify(b));
+  });
+});
+
+describe('normalizeExtra', () => {
+  it('always yields a leading & (or nothing), whatever the caller typed', () => {
+    expect(normalizeExtra('FRANCHISE=0001')).toBe('&FRANCHISE=0001');
+    expect(normalizeExtra('&FRANCHISE=0001')).toBe('&FRANCHISE=0001');
+    expect(normalizeExtra('?W=3')).toBe('&W=3');
+    expect(normalizeExtra('')).toBe('');
+    expect(normalizeExtra(undefined)).toBe('');
   });
 });

@@ -10,9 +10,13 @@
  *     holding the auth gate — Astro.redirect() only redirects from a PAGE, a
  *     gate inside the component ships a blank 200 (see the Astro.redirect
  *     note under CLAUDE.md "Rankings are per-league").
- *   - ONE league-neutral entry in src/data/page-directory.json with 10+ tags
+ *   - One src/data/page-directory.json entry PER LEAGUE, each with 10+ tags
  *     (CLAUDE.md "Page directory registry — required for every new page";
- *     tests/page-directory-data.test.ts enforces the shape).
+ *     tests/page-directory-data.test.ts enforces the shape). A bare path
+ *     ("/trade-ledger") registers the page for the default league only —
+ *     search filters with pathBelongsToLeague — so every other league gets
+ *     its prefixed twin ("/afl-fantasy/trade-ledger", id "afl-trade-ledger"),
+ *     which is how every shared page in the directory is registered today.
  *
  * Usage:
  *   node scripts/scaffold-page.mjs --route trade-ledger --title "Trade Ledger" \
@@ -25,7 +29,7 @@
  */
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
-import { ALL_LEAGUES, LEAGUES } from '../src/config/leagues-data.mjs';
+import { ALL_LEAGUES, DEFAULT_LEAGUE_SLUG, LEAGUES } from '../src/config/leagues-data.mjs';
 
 const ROOT = process.cwd();
 const DIRECTORY = 'src/data/page-directory.json';
@@ -174,34 +178,38 @@ function main() {
   ];
 
   const directory = JSON.parse(readFileSync(join(ROOT, DIRECTORY), 'utf8'));
+  const entries = leagues.map((slug) => {
+    const isDefault = slug === DEFAULT_LEAGUE_SLUG;
+    return {
+      id: isDefault ? a.route : `${LEAGUES[slug].navSlug}-${a.route}`,
+      title: a.title,
+      description: a.description,
+      path: isDefault ? `/${a.route}` : `/${slug}/${a.route}`,
+      icon: a.icon,
+      category: a.category,
+      tags: a.tags,
+      visibility: a.visibility,
+      popularity: a.popularity,
+    };
+  });
   const clashes = files.filter((f) => existsSync(join(ROOT, f.path))).map((f) => f.path);
-  if (directory.some((e) => e.id === a.route || e.path === `/${a.route}`)) clashes.push(`${DIRECTORY} (id/path ${a.route})`);
+  for (const entry of entries) {
+    if (directory.some((e) => e.id === entry.id || e.path === entry.path)) clashes.push(`${DIRECTORY} (id ${entry.id} / path ${entry.path})`);
+  }
   if (clashes.length) {
     console.error('scaffold-page: refusing to overwrite\n  ' + clashes.join('\n  '));
     process.exit(2);
   }
 
-  const entry = {
-    id: a.route,
-    title: a.title,
-    description: a.description,
-    path: `/${a.route}`,
-    icon: a.icon,
-    category: a.category,
-    tags: a.tags,
-    visibility: a.visibility,
-    popularity: a.popularity,
-  };
-
   for (const f of files) console.log(`${a.dryRun ? 'would write' : 'write'}  ${f.path}`);
-  console.log(`${a.dryRun ? 'would append' : 'append'} ${DIRECTORY} ← ${JSON.stringify({ id: entry.id, path: entry.path, tags: entry.tags.length })}`);
+  for (const entry of entries) console.log(`${a.dryRun ? 'would append' : 'append'} ${DIRECTORY} ← ${JSON.stringify({ id: entry.id, path: entry.path, tags: entry.tags.length })}`);
   if (a.dryRun) return;
 
   for (const f of files) {
     mkdirSync(dirname(join(ROOT, f.path)), { recursive: true });
     writeFileSync(join(ROOT, f.path), f.body);
   }
-  directory.push(entry);
+  directory.push(...entries);
   writeFileSync(join(ROOT, DIRECTORY), JSON.stringify(directory, null, 2) + '\n');
 
   console.log(`

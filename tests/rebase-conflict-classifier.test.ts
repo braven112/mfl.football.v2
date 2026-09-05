@@ -61,7 +61,8 @@ describe('classifyConflict', () => {
       .map((l) => l.split(/\s+/)[0]);
     expect(attrs.length).toBeGreaterThan(3);
     for (const pattern of attrs) {
-      const sample = pattern.replace('**', '2026/sample.json');
+      // A slash-less pattern matches at any depth in git; test it nested, not at the root.
+      const sample = pattern.includes('/') || !pattern.includes('*') ? pattern.replace('**', '2026/sample.json') : `deep/er/${pattern.replace('*', 'sample')}`;
       const { klass, auto } = classifyConflict(sample);
       expect(['generated-data', 'lockfile'], `${pattern} → ${klass}`).toContain(klass);
       expect(auto, pattern).toBe(true);
@@ -85,6 +86,16 @@ describe('generatedPatternsFrom', () => {
     expect(matches('pnpm-lock.yaml')).toBe(false);
     expect(matches('package.json')).toBe(false);
     expect(matches('anything-feed.json')).toBe(true);
+  });
+
+  it('follows gitattributes semantics: slash-less patterns match at any depth, ? is one character', () => {
+    const res = generatedPatternsFrom('*.snap merge=binary\nfeeds/week-?.json merge=binary\n');
+    const matches = (f: string) => res.some((re) => re.test(f));
+    expect(matches('tests/__snapshots__/x.snap')).toBe(true);
+    expect(matches('x.snap')).toBe(true);
+    expect(matches('feeds/week-3.json')).toBe(true);
+    expect(matches('feeds/week-10.json')).toBe(false);
+    expect(matches('other/feeds/week-3.json')).toBe(false);
   });
 });
 

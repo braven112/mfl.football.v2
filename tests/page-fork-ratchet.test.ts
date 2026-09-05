@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { join } from 'node:path';
 import { ALL_LEAGUES } from '../src/config/leagues-data.mjs';
-import { collectSiblings, describeRoute, forkedRoutes } from '../scripts/lib/ratchet-measures.mjs';
+import { collectSiblings, describeRoute, forkedRoutes, inBandRoutes } from '../scripts/lib/ratchet-measures.mjs';
 import baseline from './fixtures/page-fork-baseline.json';
 
 /**
@@ -104,15 +104,9 @@ describe('forked sibling pages', () => {
     // Classification is decided by a route's LARGEST copy — a forked route may
     // well have a small copy in some league (best-ball-1's rosters.astro is 245
     // lines next to TheLeague's 12,521) and that says nothing about the cut.
-    const inBand: string[] = [];
-    for (const [route, copies] of siblings) {
-      const largest = Math.max(...copies.map((c) => c.lines));
-      if (largest > largestThinRoute && largest < smallestForkedRoute) {
-        inBand.push(`${route} (largest copy: ${largest} lines)`);
-      }
-    }
+    const inBand: string[] = inBandRoutes(siblings, { largestThinRoute, smallestForkedRoute });
     expect(
-      inBand.sort(),
+      inBand,
       inBand.length === 0
         ? ''
         : `Sibling page(s) landed between ${largestThinRoute} and ${smallestForkedRoute} lines, ` +

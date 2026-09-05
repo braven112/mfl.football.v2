@@ -11,7 +11,7 @@ import {
   MAP_FILE,
   REPO_ROOT,
 } from '../.claude/hooks/path-guard.mjs';
-import { ALL_LEAGUES } from '../src/config/leagues-data.mjs';
+import { ALL_LEAGUES, DEFAULT_LEAGUE_SLUG } from '../src/config/leagues-data.mjs';
 
 /**
  * Path-guard map validator.
@@ -170,11 +170,17 @@ describe('new-page warnings', () => {
     'src/pages/afl-fantasy/prefixed.astro',
     'src/pages/theleague/lonely.astro',
   ]);
-  const ctx = { leagues, directory, exists: (p: string) => files.has(p) };
+  const ctx = { leagues, directory, exists: (p: string) => files.has(p), defaultLeague: 'theleague' };
 
-  it('accepts both league-neutral and league-prefixed directory paths', () => {
+  it('accepts a bare path for the default league only, and a prefixed path for any league', () => {
     expect(newPageWarnings('src/pages/theleague/registered.astro', ctx)).toEqual([]);
     expect(newPageWarnings('src/pages/theleague/prefixed.astro', ctx)).toEqual([]);
+    // AFL page registered only by the bare entry: search filters that entry to
+    // TheLeague (pathBelongsToLeague), so it is NOT registered for the AFL.
+    const w = newPageWarnings('src/pages/afl-fantasy/registered.astro', ctx);
+    expect(w).toHaveLength(1);
+    expect(w[0]).toMatch(/"\/afl-fantasy\/registered"/);
+    expect(w[0]).not.toMatch(/twin/);
   });
 
   it('is silent for a registered route with a twin, and for non-page paths', () => {
@@ -199,13 +205,14 @@ describe('new-page warnings', () => {
       leagues: ALL_LEAGUES.map((l: { slug: string; bestBall?: boolean }) => ({ slug: l.slug, bestBall: Boolean(l.bestBall) })),
       directory,
       exists: (p: string) => existsSync(path.join(REPO_ROOT, p)),
+      defaultLeague: DEFAULT_LEAGUE_SLUG,
     };
     const registeredPaths = new Set<string>(directory.map((e: { path: string }) => e.path));
     const falseAlarms: string[] = [];
     for (const rel of repoFiles.filter((f) => /^src\/pages\/(theleague|afl-fantasy)\/[^/[]+\.astro$/.test(f))) {
       const route = rel.replace(/^src\/pages\/[^/]+\//, '').replace(/\.astro$/, '');
       const league = rel.split('/')[2];
-      const registered = registeredPaths.has(`/${route}`) || registeredPaths.has(`/${league}/${route}`);
+      const registered = registeredPaths.has(`/${league}/${route}`) || (league === DEFAULT_LEAGUE_SLUG && registeredPaths.has(`/${route}`));
       const warned = newPageWarnings(rel, ctx).some((w) => w.includes('page-directory.json'));
       if (registered && warned) falseAlarms.push(rel);
     }

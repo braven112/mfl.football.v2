@@ -30,10 +30,14 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { ALL_LEAGUES } from '../src/config/leagues-data.mjs';
 import {
+  clearedClassRegressions,
   collectClientRouterOffenders,
   collectSiblings,
+  decolour,
   describeRoute,
   forkedRoutes,
+  inBandRoutes,
+  parseDiagnostics,
   parseErrorTotal,
   runAstroCheck,
 } from './lib/ratchet-measures.mjs';
@@ -82,7 +86,15 @@ let regressions = false;
       console.log(`  wrote ${FORK_BASELINE}`);
     }
   }
-  if (!added.length && !stale.length) console.log('  at baseline');
+  // The test's third assertion: nothing may sit in the empty band around the
+  // 80-line threshold. Not writable — the band has to be re-argued in review.
+  const inBand = inBandRoutes(siblings, baseline.emptyBand);
+  if (inBand.length) {
+    regressions = true;
+    console.log(`  in the empty band (${baseline.emptyBand.largestThinRoute}–${baseline.emptyBand.smallestForkedRoute} lines) — finish the extraction or re-argue the threshold in the fixture; --write cannot decide this:`);
+    for (const r of inBand) console.log(`    ${r}`);
+  }
+  if (!added.length && !stale.length && !inBand.length) console.log('  at baseline');
 }
 
 // ---------------------------------------------------------------------------
@@ -122,9 +134,21 @@ if (skipTypes) {
 } else {
   const baseline = readJson(TYPECHECK_BASELINE);
   console.log('type errors: running astro check (~2.5 min)…');
-  const total = parseErrorTotal(runAstroCheck({ cwd: ROOT }));
+  const output = runAstroCheck({ cwd: ROOT });
+  const total = parseErrorTotal(output);
   console.log(`type errors: ${total} now, ${baseline.total} in baseline`);
-  if (total > baseline.total) {
+  // Same cleared-class check as pnpm test:types — a lower total can hide a
+  // class that was driven to zero coming back, and that is a regression the
+  // test rejects even when the ratchet would read it as progress.
+  const cleared = clearedClassRegressions(parseDiagnostics(decolour(output)), baseline.clearedClasses);
+  if (cleared.length) {
+    regressions = true;
+    console.log('  cleared error class(es) came back — a regression whatever the total says:');
+    for (const c of cleared) console.log(`    ${c.key}: ${c.hits.length}  (${c.fix})`);
+  }
+  if (cleared.length) {
+    console.log('  not writing the baseline while a cleared class is red.');
+  } else if (total > baseline.total) {
     regressions = true;
     console.log(`  ROSE by ${total - baseline.total} — a regression. Fix the new errors; never raise the baseline.`);
     console.log('  To see them: NODE_OPTIONS=--max-old-space-size=12288 npx astro check --minimumSeverity error');

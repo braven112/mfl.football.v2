@@ -39,16 +39,21 @@ export function generatedPatternsFrom(gitattributesText) {
     .map((l) => l.trim().split(/\s+/)[0])
     .filter((pattern) => pattern !== 'pnpm-lock.yaml')
     .map((pattern) => {
-      // Escape regex metacharacters, then expand globs. `**` is swapped for a
-      // placeholder first so the single-star pass cannot eat the star in `.*`.
+      // gitattributes semantics: a pattern with no slash matches the basename
+      // at ANY depth; `?` is a single non-slash character; `**` spans
+      // directories. Escape regex metacharacters first, swapping `**` for a
+      // placeholder so the single-star pass cannot eat the star in `.*`.
+      const anchored = pattern.includes('/');
       const re = pattern
+        .replace(/^\//, '')
         .replace(/[.+^${}()|[\]\\]/g, '\\$&')
         .replace(/\*\*\//g, '\u0000/')
         .replace(/\*\*/g, '\u0000')
         .replace(/\*/g, '[^/]*')
+        .replace(/\?/g, '[^/]')
         .replace(/\u0000\//g, '(?:.*/)?')
         .replace(/\u0000/g, '.*');
-      return new RegExp(`^${re}$`);
+      return new RegExp(`^${anchored ? '' : '(?:.*/)?'}${re}$`);
     });
   return [...fromAttrs, /-feed\.json$/, /\.lock$/];
 }

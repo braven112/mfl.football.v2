@@ -22,6 +22,8 @@
  *
  * Silent no-op if: the edited path matches no domain, `node_modules/.bin/vitest`
  * is missing (CI clone before install), or the hook input can't be parsed.
+ * Anything else that stops the guard running (a malformed map, Node < 22.5
+ * without path.matchesGlob) exits 2 with one line, so it is seen, not skipped.
  *
  * `tests/path-guard-map.test.ts` validates the map: every glob matches a real
  * file, every test and rules doc exists, and every `docs/claude/rules/*.md`
@@ -30,16 +32,15 @@
  * Stdin: Claude Code hook JSON. Stdout: hook JSON (additionalContext) on
  * success. Stderr: vitest output on failure. Exit: 0 pass/no-op, 2 fail.
  */
-import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { walkFiles } from '../../scripts/lib/walk.mjs';
 
 export const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 export const MAP_FILE = process.env.PATH_GUARD_MAP || path.join(REPO_ROOT, '.claude/hooks/path-guard.json');
-
-const WALK_SKIP = new Set(['node_modules', '.git', 'dist', '.astro', '.vercel']);
 
 /** Load and lightly validate the domain map. */
 export function loadMap(file = MAP_FILE) {
@@ -68,23 +69,7 @@ export function matchDomains(relPath, map) {
  * @param {{ skipPaths?: string[] }} [opts]
  */
 export function walkRepo(root = REPO_ROOT, { skipPaths = [] } = {}) {
-  const out = [];
-  // `skipPaths` are repo-relative directory paths (e.g. 'data'), so skipping
-  // the 161 MB top-level data/ does not also skip src/data/, which the map
-  // does point into.
-  const skipRel = new Set(skipPaths);
-  const walk = (dir) => {
-    for (const entry of readdirSync(dir, { withFileTypes: true })) {
-      if (WALK_SKIP.has(entry.name)) continue;
-      const full = path.join(dir, entry.name);
-      const rel = path.relative(root, full).split(path.sep).join('/');
-      if (entry.isDirectory()) {
-        if (!skipRel.has(rel)) walk(full);
-      } else out.push(rel);
-    }
-  };
-  walk(root);
-  return out;
+  return walkFiles(root, { skipPaths, relativeTo: root });
 }
 
 /**
@@ -121,20 +106,24 @@ function seenFile(sessionId, domainName) {
  * is either a deliberate league-specific feature or a twin that was
  * forgotten — the hook cannot tell which, so it says so and moves on.
  */
-export function newPageWarnings(relPath, { leagues, directory, exists }) {
+export function newPageWarnings(relPath, { leagues, directory, exists, defaultLeague }) {
   const m = relPath.match(/^src\/pages\/([^/]+)\/(.+)\.astro$/);
   if (!m || !leagues.some((l) => l.slug === m[1])) return [];
   const [, league, route] = m;
   if (route.includes('[') || route === 'index') return []; // dynamic and index routes are not directory entries
   const warnings = [];
-  // Directory entries are written either league-neutral ("/lineup", rendered
-  // to every league) or league-prefixed ("/theleague/lineup"); both register
-  // the page. 66 of 116 entries were prefixed when this was written.
+  // A bare path ("/lineup") belongs to the DEFAULT league only — search
+  // filters entries with pathBelongsToLeague (src/config/footer-config.ts),
+  // which sends every unprefixed path to it. Every other league's page is
+  // registered only by its prefixed path ("/afl-fantasy/lineup"); today no
+  // AFL page is registered by a bare entry alone, and this keeps it that way.
   const bare = `/${route.replace(/\/index$/, '')}`;
   const prefixed = `/${league}${bare}`;
-  if (!directory.some((e) => e.path === bare || e.path === prefixed)) {
+  const registered = directory.some((e) => e.path === prefixed || (league === defaultLeague && e.path === bare));
+  if (!registered) {
+    const wanted = league === defaultLeague ? `"${bare}" (or "${prefixed}")` : `"${prefixed}"`;
     warnings.push(
-      `[path-guard] ${relPath} has no entry with path "${bare}" or "${prefixed}" in src/data/page-directory.json — add one (10+ tags) or site search cannot find it (CLAUDE.md "Page directory registry — required for every new page").`,
+      `[path-guard] ${relPath} has no entry with path ${wanted} in src/data/page-directory.json — add one (10+ tags) or ${league}'s site search cannot find it (CLAUDE.md "Page directory registry — required for every new page").`,
     );
   }
   // Best-ball leagues are draft-only with opt-in nav (docs/claude/rules/best-ball.md);
@@ -185,27 +174,40 @@ async function main() {
   const relPath = toRepoRelative(filePath);
   if (!relPath) return 0;
 
+  if (typeof path.matchesGlob !== 'function') {
+    throw new Error(`Node ${process.version} lacks path.matchesGlob — path-guard needs Node >= 22.5 on PATH (settings.json runs plain \`node\`).`);
+  }
+
   // New-page checks run BEFORE the domain match so a nested route no glob
-  // reaches still gets them; once per file per session so they do not nag.
+  // reaches still gets them. Once per file per session — but the marker is
+  // written only when the warnings are actually shown (see pageShown), so a
+  // failing guard suite on the same edit does not swallow them for the session.
   let pageWarnings = [];
+  let pageMarker = null;
   if (/^src\/pages\//.test(relPath)) {
-    const marker = seenFile(input.session_id, `newpage__${relPath}`);
-    if (!existsSync(marker)) {
-      writeFileSync(marker, new Date().toISOString());
-      const { ALL_LEAGUES } = await import(path.join(REPO_ROOT, 'src/config/leagues-data.mjs'));
+    pageMarker = seenFile(input.session_id, `newpage__${relPath}`);
+    if (!existsSync(pageMarker)) {
+      const { ALL_LEAGUES, DEFAULT_LEAGUE_SLUG } = await import(path.join(REPO_ROOT, 'src/config/leagues-data.mjs'));
       const directory = JSON.parse(readFileSync(path.join(REPO_ROOT, 'src/data/page-directory.json'), 'utf8'));
       pageWarnings = newPageWarnings(relPath, {
         leagues: ALL_LEAGUES.map((l) => ({ slug: l.slug, bestBall: Boolean(l.bestBall) })),
         directory,
         exists: (p) => existsSync(path.join(REPO_ROOT, p)),
+        defaultLeague: DEFAULT_LEAGUE_SLUG,
       });
+    } else {
+      pageMarker = null;
     }
   }
+  const pageShown = () => pageMarker && writeFileSync(pageMarker, new Date().toISOString());
 
   const map = loadMap();
   const domains = matchDomains(relPath, map);
   if (domains.length === 0) {
-    if (pageWarnings.length) emit(pageWarnings.join('\n'));
+    if (pageWarnings.length) {
+      emit(pageWarnings.join('\n'));
+      pageShown();
+    }
     return 0;
   }
 
@@ -228,6 +230,10 @@ async function main() {
         `[path-guard] ${relPath} matched domain(s) ${domains.map((d) => d.name).join(', ')}; guard tests FAILED:\n`,
       );
       process.stderr.write((res.stdout || '') + (res.stderr || ''));
+      if (pageWarnings.length) {
+        process.stderr.write(pageWarnings.join('\n') + '\n');
+        pageShown();
+      }
       return 2;
     }
     testsRun = tests;
@@ -241,6 +247,7 @@ async function main() {
     .filter(Boolean)
     .join('\n');
   if (additionalContext) emit(additionalContext);
+  pageShown();
   return 0;
 }
 
@@ -258,9 +265,11 @@ if (invokedDirectly) {
   main()
     .then((code) => process.exit(code))
     .catch((err) => {
-      // One line, never a stack: a broken map or a transient read error must
-      // not turn every Write/Edit in the repo into a wall of text.
-      process.stderr.write(`[path-guard] skipped: ${err?.message ?? err}\n`);
-      process.exit(0);
+      // A guard that cannot run must not fail open: exit 2 puts this one line
+      // in front of Claude on the edit, instead of silently skipping every
+      // suite for the rest of the session. The documented no-ops (unparseable
+      // stdin, no file_path, vitest missing) still exit 0 inside main().
+      process.stderr.write(`[path-guard] cannot run: ${err?.message ?? err}\n`);
+      process.exit(2);
     });
 }

@@ -54,7 +54,7 @@ const mainStage = side === 'ours' ? '2' : '3';
  * deleted the file, delete it here too rather than throwing out of the loop.
  * Returns a one-line description of what happened.
  */
-function takeMain(file) {
+function takeMain(file, { stage = true } = {}) {
   const stages = git(['ls-files', '-u', '--', file])
     .split('\n')
     .filter(Boolean)
@@ -69,6 +69,7 @@ function takeMain(file) {
     return `main deleted it — removed`;
   }
   git(['checkout', `--${side}`, '--', file]);
+  if (!stage) return `took main (--${side}) into the worktree, left UNMERGED in the index`;
   git(['add', '--', file]);
   return `took main (--${side}), git add`;
 }
@@ -115,13 +116,17 @@ if (lockPending) {
   const pkgStillConflicted = manual.some((c) => c.klass === 'package-json');
   console.log(`[lockfile] pnpm-lock.yaml\n    → take main (--${side}); then pnpm install; git add`);
   if (!dryRun) {
+    // While package.json is still conflicted the lock cannot be regenerated
+    // yet, so it is deliberately NOT staged: a staged main-copy would let
+    // `git rebase --continue` commit a lock that does not match the resolved
+    // package.json. Left unmerged, git refuses to continue until it is.
     try {
-      takeMain('pnpm-lock.yaml');
+      takeMain('pnpm-lock.yaml', { stage: !pkgStillConflicted });
     } catch (err) {
       console.log(`    FAILED to take main's lock: ${err.message.split('\n')[0]}`);
     }
     if (pkgStillConflicted) {
-      console.log('    package.json is still conflicted — resolve it, then run `pnpm install && git add pnpm-lock.yaml`.');
+      console.log('    package.json is still conflicted — resolve it, then run `pnpm install && git add pnpm-lock.yaml` (the lock is left unmerged on purpose).');
       manual.push({ file: 'pnpm-lock.yaml', klass: 'lockfile', action: 'Regenerate after package.json: pnpm install && git add pnpm-lock.yaml' });
     } else {
       try {

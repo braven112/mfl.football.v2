@@ -39,13 +39,24 @@ function parseArgs(argv) {
     if (a === '--league') out.league = next();
     else if (a === '--type') out.type = next();
     else if (a === '--year') out.year = next();
-    else if (a === '--extra') out.extra = next();
+    else if (a === '--extra') out.extra = normalizeExtra(next());
     else if (a === '--out') out.out = next();
     else if (a === '--force') out.force = true;
     else if (a === '--stdout') out.stdout = true;
     else throw new Error(`unknown argument ${a}`);
   }
   return out;
+}
+
+/**
+ * `--extra` is appended verbatim after `JSON=1`, so it must start with `&`.
+ * "FRANCHISE=0001" (the natural thing to type) would otherwise become
+ * `…&JSON=1FRANCHISE=0001`, which MFL ignores — recording the UNFILTERED
+ * export under a filename that promises one franchise. Exported for tests.
+ */
+export function normalizeExtra(extra) {
+  const trimmed = String(extra ?? '').trim().replace(/^[?&]+/, '');
+  return trimmed ? `&${trimmed}` : '';
 }
 
 /** Deterministic deep copy: sorted keys, arrays sorted by a stable key. Exported for tests. */
@@ -119,8 +130,9 @@ async function main() {
     return;
   }
   mkdirSync(dirname(join(process.cwd(), out)), { recursive: true });
-  // codeql[js/http-to-file-access] — persisting the MFL response IS the purpose: this records a test fixture to a path built from validated CLI args, never from the response.
-  writeFileSync(join(process.cwd(), out), text);
+  // Persisting the response IS the purpose: a test fixture, at a path built
+  // from validated CLI arguments and never from the response body.
+  writeFileSync(join(process.cwd(), out), text); // lgtm[js/http-to-file-access] codeql[js/http-to-file-access]
   console.log(`wrote ${out} (${(text.length / 1024).toFixed(1)} KB)`);
 }
 

@@ -407,5 +407,7 @@ fires mechanically instead of from memory.
   test AND the map entry.
 - Keep a domain's suites fast (each set runs in 1–4 s today); a slow suite
   belongs in CI, not on every edit.
-- If you edit a mapped file and see no test run, `node_modules` probably
-  isn't installed — run `pnpm install`.
+- The hook needs Node >= 22.5 on PATH (`path.matchesGlob`). If it cannot
+  run — wrong Node, a malformed map — it fails the edit with one line rather
+  than skipping silently; a missing `node_modules` is the one silent case
+  (run `pnpm install`).

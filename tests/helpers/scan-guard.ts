@@ -1,5 +1,6 @@
-import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
+import { walkFiles as walkTree } from '../../scripts/lib/walk.mjs';
 
 /**
  * Shared primitives for scan-style guard tests.
@@ -30,8 +31,6 @@ import path from 'node:path';
 
 export const REPO_ROOT = process.cwd();
 
-const DEFAULT_SKIP_DIRS = new Set(['node_modules', '.git', 'dist', '.astro', '.vercel', 'coverage']);
-
 export interface WalkOptions {
   /** Directories (repo-relative) to scan. Files are accepted too. */
   roots: string[];
@@ -43,30 +42,25 @@ export interface WalkOptions {
   skipFiles?: string[];
 }
 
-/** Every file under `roots`, as repo-relative forward-slash paths, sorted. */
+/** Every file under `roots`, as repo-relative forward-slash paths, sorted. One walker for the repo: scripts/lib/walk.mjs. */
 export function walkFiles(opts: WalkOptions): string[] {
-  const skipDirs = new Set([...DEFAULT_SKIP_DIRS, ...(opts.skipDirs ?? [])]);
   const skipFiles = new Set(opts.skipFiles ?? []);
-  const exts = opts.extensions ? new Set(opts.extensions) : null;
   const out: string[] = [];
-  const visit = (abs: string) => {
-    const rel = path.relative(REPO_ROOT, abs).split(path.sep).join('/');
-    const st = statSync(abs);
-    if (st.isDirectory()) {
-      if (skipDirs.has(path.basename(abs))) return;
-      for (const entry of readdirSync(abs)) visit(path.join(abs, entry));
-      return;
-    }
-    if (exts && !exts.has(path.extname(abs))) return;
-    if (skipFiles.has(rel)) return;
-    out.push(rel);
-  };
   for (const root of opts.roots) {
     const abs = path.resolve(REPO_ROOT, root);
-    if (existsSync(abs)) visit(abs);
+    if (!existsSync(abs)) continue;
+    for (const rel of walkTree(abs, {
+      extensions: opts.extensions ?? null,
+      skipDirs: [...DEFAULT_SKIP_DIRS_TS, ...(opts.skipDirs ?? [])],
+      relativeTo: REPO_ROOT,
+    })) {
+      if (!skipFiles.has(rel)) out.push(rel);
+    }
   }
   return out.sort();
 }
+
+const DEFAULT_SKIP_DIRS_TS = ['node_modules', '.git', 'dist', '.astro', '.vercel', 'coverage'];
 
 export interface Hit {
   file: string;

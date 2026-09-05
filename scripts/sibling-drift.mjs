@@ -25,9 +25,10 @@
  * look at). Exit code is always 0; the report is the output.
  */
 import { execFileSync } from 'node:child_process';
-import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { ALL_LEAGUES } from '../src/config/leagues-data.mjs';
+import { walkFiles } from './lib/walk.mjs';
 
 const ROOT = process.cwd();
 const args = process.argv.slice(2);
@@ -70,18 +71,10 @@ let leaguePages = null;
 function allLeaguePages() {
   if (leaguePages) return leaguePages;
   leaguePages = [];
-  const walk = (d) => {
-    for (const e of readdirSync(d)) {
-      const f = path.join(d, e);
-      if (statSync(f).isDirectory()) walk(f);
-      else if (/\.(astro|ts|tsx|js|mjs)$/.test(e)) {
-        const rel = path.relative(ROOT, f).split(path.sep).join('/');
-        const m = rel.match(/^src\/pages\/([^/]+)\//);
-        if (m && LEAGUE_DIRS.includes(m[1])) leaguePages.push({ league: m[1], src: readFileSync(f, 'utf8') });
-      }
-    }
-  };
-  walk(path.join(ROOT, 'src/pages'));
+  for (const rel of walkFiles(path.join(ROOT, 'src/pages'), { extensions: ['.astro', '.ts', '.tsx', '.js', '.mjs'], relativeTo: ROOT })) {
+    const m = rel.match(/^src\/pages\/([^/]+)\//);
+    if (m && LEAGUE_DIRS.includes(m[1])) leaguePages.push({ league: m[1], src: readFileSync(path.join(ROOT, rel), 'utf8') });
+  }
   return leaguePages;
 }
 

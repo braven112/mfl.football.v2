@@ -10,22 +10,13 @@
  * zero) live in the tests.
  */
 import { execFileSync } from 'node:child_process';
-import { readFileSync, readdirSync, statSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import { join, relative } from 'node:path';
+import { walkFiles } from './walk.mjs';
 
 // ---------------------------------------------------------------------------
 // Forked sibling pages
 // ---------------------------------------------------------------------------
-
-function walkAstro(dir) {
-  let out = [];
-  for (const entry of readdirSync(dir)) {
-    const full = join(dir, entry);
-    if (statSync(full).isDirectory()) out = out.concat(walkAstro(full));
-    else if (entry.endsWith('.astro')) out.push(full);
-  }
-  return out;
-}
 
 /**
  * route (relative to the league dir) → one `{ league, lines }` per league that
@@ -37,7 +28,7 @@ export function collectSiblings(pagesRoot, leagueDirs) {
     const dir = join(pagesRoot, league);
     let files;
     try {
-      files = walkAstro(dir);
+      files = walkFiles(dir, { extensions: ['.astro'] });
     } catch {
       continue; // a registry league with no page directory yet
     }
@@ -67,19 +58,26 @@ export function describeRoute(route, copies) {
   return `${route} [${copies.map((c) => `${c.league}:${c.lines}`).join(' ')}]`;
 }
 
+/**
+ * Sibling routes whose LARGEST copy sits inside the baseline's empty band —
+ * above the biggest known thin route and below the smallest known fork. The
+ * 80-line threshold is only defensible while nothing lands there, so a route
+ * that does is a judgment call to re-argue in review, not a count to
+ * retighten. Shared with the test so the script cannot say "at baseline"
+ * while the test fails.
+ */
+export function inBandRoutes(siblings, { largestThinRoute, smallestForkedRoute }) {
+  const out = [];
+  for (const [route, copies] of siblings) {
+    const largest = Math.max(...copies.map((c) => c.lines));
+    if (largest > largestThinRoute && largest < smallestForkedRoute) out.push(`${route} (largest copy: ${largest} lines)`);
+  }
+  return out.sort();
+}
+
 // ---------------------------------------------------------------------------
 // ClientRouter init — bundled scripts that only run on DOMContentLoaded
 // ---------------------------------------------------------------------------
-
-function walkClient(dir) {
-  let out = [];
-  for (const entry of readdirSync(dir)) {
-    const full = join(dir, entry);
-    if (statSync(full).isDirectory()) out = out.concat(walkClient(full));
-    else if (/\.(astro|ts|tsx|js|jsx|mjs)$/.test(entry) && !/\.d\.ts$/.test(entry)) out.push(full);
-  }
-  return out;
-}
 
 /**
  * Files whose client code initialises on `DOMContentLoaded` and never on
@@ -96,7 +94,8 @@ function walkClient(dir) {
  */
 export function collectClientRouterOffenders(srcRoot) {
   const offenders = new Set();
-  for (const file of walkClient(srcRoot)) {
+  const files = walkFiles(srcRoot, { extensions: ['.astro', '.ts', '.tsx', '.js', '.jsx', '.mjs'] }).filter((f) => !f.endsWith('.d.ts'));
+  for (const file of files) {
     const src = readFileSync(file, 'utf8');
     if (!src.includes('DOMContentLoaded')) continue;
     const rel = relative(join(srcRoot, '..'), file).split('\\').join('/');
@@ -104,7 +103,7 @@ export function collectClientRouterOffenders(srcRoot) {
       // Judged per <script> BLOCK: a file whose first block re-inits on
       // astro:page-load can still carry a second block that only ever ran on
       // DOMContentLoaded, and that block is just as dead after a swap.
-      for (const m of src.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script\s*>/gi)) {
+      for (const m of src.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script\b[^>]*>/gi)) {
         if (/\bis:inline\b/.test(m[1])) continue;
         if (m[2].includes('DOMContentLoaded') && !m[2].includes('astro:page-load')) offenders.add(rel);
       }
@@ -173,6 +172,53 @@ export function parseDiagnostics(plain) {
     if (m) out.push({ file: m[1], code: Number(m[4]), message: m[5] });
   }
   return out;
+}
+
+/**
+ * Error classes driven to zero that must stay there. The total alone does
+ * not protect them: an improvement anywhere can mask a regression here and
+ * still leave the total lower, which a ratchet reads as progress. Shared by
+ * the test and scripts/ratchet.mjs so neither can retighten a tree the other
+ * rejects.
+ */
+export const CLEARED_CLASSES = [
+  {
+    key: 'domElementCluster',
+    fix: "`Property 'x' does not exist on type 'Element'` — type the query, e.g. querySelectorAll<HTMLElement>(...)",
+    match: (d) => /does not exist on type 'Element'/.test(d.message),
+  },
+  {
+    key: 'tsExtensionImports',
+    fix: 'ts(5097) — an import path ending in .ts/.tsx',
+    match: (d) => d.code === 5097,
+  },
+  {
+    key: 'importNameCollisions',
+    fix: "ts(2440) — an import colliding with the .astro file's own name; alias it as <Name>Island",
+    match: (d) => d.code === 2440,
+  },
+  {
+    key: 'staleOptionShapes',
+    fix: "ts(2353) — a call passing a property the declared type omits. Usually the "
+      + 'declaration has drifted from what the function really accepts, so widen it '
+      + 'rather than deleting the argument — unless the option is genuinely dead.',
+    match: (d) => d.code === 2353,
+  },
+  {
+    key: 'nullSafetyOutsideRosters',
+    fix: 'possibly-null/undefined in src/ outside rosters.astro — fix at the guard by re-binding to a non-null const',
+    match: (d) =>
+      [18046, 18047, 18048, 2531, 2532].includes(d.code)
+      && d.file.startsWith('src/')
+      && !d.file.includes('pages/theleague/rosters.astro'),
+  },
+];
+
+/** Cleared classes that have come back above their baseline ceiling (default 0), with their hits. */
+export function clearedClassRegressions(diagnostics, baselineCleared = {}) {
+  return CLEARED_CLASSES
+    .map((c) => ({ ...c, hits: diagnostics.filter(c.match) }))
+    .filter((c) => c.hits.length > (baselineCleared?.[c.key] ?? 0));
 }
 
 /** Pull the error total out of astro check's `- N errors` summary line. */

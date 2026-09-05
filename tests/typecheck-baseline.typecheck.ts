@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import {
   CHECK_TIMEOUT_MS,
+  clearedClassRegressions,
   decolour,
   parseDiagnostics,
   parseErrorTotal,
@@ -36,56 +37,6 @@ interface Baseline {
   /** Per-class ceilings for classes deliberately driven to zero. */
   clearedClasses?: Record<string, number>;
 }
-
-interface Diagnostic {
-  file: string;
-  code: number;
-  message: string;
-}
-
-/**
- * Error classes driven to zero that must stay there.
- *
- * The total alone does not protect them: an improvement anywhere can mask a
- * regression here and still leave the total lower, which the ratchet would
- * read as progress. Each entry below is a class cleared deliberately.
- */
-const CLEARED_CLASSES: Array<{
-  key: string;
-  fix: string;
-  match: (d: Diagnostic) => boolean;
-}> = [
-  {
-    key: 'domElementCluster',
-    fix: "`Property 'x' does not exist on type 'Element'` — type the query, e.g. querySelectorAll<HTMLElement>(...)",
-    match: (d) => /does not exist on type 'Element'/.test(d.message),
-  },
-  {
-    key: 'tsExtensionImports',
-    fix: 'ts(5097) — an import path ending in .ts/.tsx',
-    match: (d) => d.code === 5097,
-  },
-  {
-    key: 'importNameCollisions',
-    fix: "ts(2440) — an import colliding with the .astro file's own name; alias it as <Name>Island",
-    match: (d) => d.code === 2440,
-  },
-  {
-    key: 'staleOptionShapes',
-    fix: "ts(2353) — a call passing a property the declared type omits. Usually the "
-      + 'declaration has drifted from what the function really accepts, so widen it '
-      + 'rather than deleting the argument — unless the option is genuinely dead.',
-    match: (d) => d.code === 2353,
-  },
-  {
-    key: 'nullSafetyOutsideRosters',
-    fix: 'possibly-null/undefined in src/ outside rosters.astro — fix at the guard by re-binding to a non-null const',
-    match: (d) =>
-      [18046, 18047, 18048, 2531, 2532].includes(d.code)
-      && d.file.startsWith('src/')
-      && !d.file.includes('pages/theleague/rosters.astro'),
-  },
-];
 
 describe('type-error baseline', () => {
   // One `astro check` run feeds both assertions below. It runs in beforeAll
@@ -124,9 +75,8 @@ describe('type-error baseline', () => {
     const diagnostics = parseDiagnostics(decolour(output));
     expect(diagnostics.length).toBeGreaterThan(0); // guard against a parser that matches nothing
 
-    const regressions = CLEARED_CLASSES
-      .map((c) => ({ ...c, hits: diagnostics.filter(c.match) }))
-      .filter((c) => c.hits.length > (baseline.clearedClasses?.[c.key] ?? 0));
+    // Same classifier scripts/ratchet.mjs uses, so --write can never retighten a tree this rejects.
+    const regressions = clearedClassRegressions(diagnostics, baseline.clearedClasses);
 
     if (regressions.length > 0) {
       throw new Error(
