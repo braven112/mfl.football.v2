@@ -32,6 +32,25 @@ describe('canonicalizeForFixture', () => {
     expect(canonicalizeForFixture(once)).toEqual(once);
   });
 
+  it('breaks ties and ignores non-scalar or empty keys, so order is a function of content alone', () => {
+    // schedule.weeklySchedule[].matchup[]: `franchise` is an ARRAY on every element
+    const matchups = [
+      { franchise: [{ id: '0002' }, { id: '0001' }] },
+      { franchise: [{ id: '0004' }, { id: '0003' }] },
+    ];
+    const a = canonicalizeForFixture([matchups[0], matchups[1]]);
+    const b = canonicalizeForFixture([matchups[1], matchups[0]]);
+    expect(JSON.stringify(a)).toBe(JSON.stringify(b));
+    // draftResults: `player` is '' on unmade picks — ties must still order deterministically
+    const picks = [{ player: '', round: '2' }, { player: '', round: '1' }, { player: '9', round: '1' }];
+    const p1 = canonicalizeForFixture(picks);
+    const p2 = canonicalizeForFixture([...picks].reverse());
+    expect(JSON.stringify(p1)).toBe(JSON.stringify(p2));
+    // transactions keyed by franchise: ties on the key fall through to the whole element
+    const t1 = canonicalizeForFixture([{ franchise: '0001', type: 'B' }, { franchise: '0001', type: 'A' }]);
+    expect(t1.map((t: { type: string }) => t.type)).toEqual(['A', 'B']);
+  });
+
   it('is order-blind: two permutations of the same payload canonicalize identically', () => {
     const a = canonicalizeForFixture({ franchise: [{ id: '0001', players: ['x', 'y'] }, { id: '0002' }] });
     const b = canonicalizeForFixture({ franchise: [{ id: '0002' }, { players: ['y', 'x'], id: '0001' }] });

@@ -11,6 +11,7 @@ import {
   MAP_FILE,
   REPO_ROOT,
 } from '../.claude/hooks/path-guard.mjs';
+import { ALL_LEAGUES } from '../src/config/leagues-data.mjs';
 
 /**
  * Path-guard map validator.
@@ -28,7 +29,9 @@ import {
 
 const map = loadMap(MAP_FILE);
 const asList = (v: string | string[] | undefined): string[] => (v === undefined ? [] : Array.isArray(v) ? v : [v]);
-const repoFiles = walkRepo(REPO_ROOT);
+// data/ is 161 MB and no map glob points into it; skipping it takes this
+// suite from ~3.6 s to well under a second, and it runs on every docs edit.
+const repoFiles = walkRepo(REPO_ROOT, { skipPaths: ['data'] });
 const claudeMd = readFileSync(path.join(REPO_ROOT, 'CLAUDE.md'), 'utf8');
 
 describe('path-guard map', () => {
@@ -146,17 +149,28 @@ describe('path-guard matching', () => {
 });
 
 describe('new-page warnings', () => {
-  const leagueSlugs = ['theleague', 'afl-fantasy', 'best-ball-1'];
-  const directory = [{ path: '/registered' }];
+  const leagues = [
+    { slug: 'theleague', bestBall: false },
+    { slug: 'afl-fantasy', bestBall: false },
+    { slug: 'best-ball-1', bestBall: true },
+  ];
+  const directory = [{ path: '/registered' }, { path: '/theleague/prefixed' }];
   const files = new Set([
     'src/pages/theleague',
     'src/pages/afl-fantasy',
     'src/pages/best-ball-1',
     'src/pages/theleague/registered.astro',
     'src/pages/afl-fantasy/registered.astro',
+    'src/pages/theleague/prefixed.astro',
+    'src/pages/afl-fantasy/prefixed.astro',
     'src/pages/theleague/lonely.astro',
   ]);
-  const ctx = { leagueSlugs, directory, exists: (p: string) => files.has(p) };
+  const ctx = { leagues, directory, exists: (p: string) => files.has(p) };
+
+  it('accepts both league-neutral and league-prefixed directory paths', () => {
+    expect(newPageWarnings('src/pages/theleague/registered.astro', ctx)).toEqual([]);
+    expect(newPageWarnings('src/pages/theleague/prefixed.astro', ctx)).toEqual([]);
+  });
 
   it('is silent for a registered route with a twin, and for non-page paths', () => {
     expect(newPageWarnings('src/pages/theleague/registered.astro', ctx)).toEqual([]);
@@ -172,5 +186,24 @@ describe('new-page warnings', () => {
     expect(w[0]).toMatch(/page-directory\.json/);
     expect(w[1]).toMatch(/src\/pages\/afl-fantasy\//);
     expect(w[1]).not.toMatch(/best-ball-1/);
+  });
+
+  it('flags no real registered page as unregistered (the directory mixes neutral and prefixed paths)', () => {
+    const directory = JSON.parse(readFileSync(path.join(REPO_ROOT, 'src/data/page-directory.json'), 'utf8'));
+    const ctx = {
+      leagues: ALL_LEAGUES.map((l: { slug: string; bestBall?: boolean }) => ({ slug: l.slug, bestBall: Boolean(l.bestBall) })),
+      directory,
+      exists: (p: string) => existsSync(path.join(REPO_ROOT, p)),
+    };
+    const registeredPaths = new Set<string>(directory.map((e: { path: string }) => e.path));
+    const falseAlarms: string[] = [];
+    for (const rel of repoFiles.filter((f) => /^src\/pages\/(theleague|afl-fantasy)\/[^/[]+\.astro$/.test(f))) {
+      const route = rel.replace(/^src\/pages\/[^/]+\//, '').replace(/\.astro$/, '');
+      const league = rel.split('/')[2];
+      const registered = registeredPaths.has(`/${route}`) || registeredPaths.has(`/${league}/${route}`);
+      const warned = newPageWarnings(rel, ctx).some((w) => w.includes('page-directory.json'));
+      if (registered && warned) falseAlarms.push(rel);
+    }
+    expect(falseAlarms).toEqual([]);
   });
 });

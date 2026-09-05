@@ -2,7 +2,7 @@
 /**
  * Re-measure every ratchet baseline and, with --write, retighten it.
  *
- * The repo pins two counts that may only go DOWN:
+ * The repo pins three counts that may only go DOWN:
  *   - tests/fixtures/typecheck-baseline.json         (`astro check` error total)
  *   - tests/fixtures/page-fork-baseline.json         (forked sibling routes)
  *   - tests/fixtures/clientrouter-init-baseline.json (DOMContentLoaded-only client init)

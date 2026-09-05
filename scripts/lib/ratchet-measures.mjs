@@ -1,5 +1,5 @@
 /**
- * The two ratchet measurements, shared by the tests that enforce them and by
+ * The ratchet measurements, shared by the tests that enforce them and by
  * `scripts/ratchet.mjs`, which re-measures and retightens the baselines.
  *
  * One measurement path on purpose: when the test and the retightening tool
@@ -90,8 +90,9 @@ function walkClient(dir) {
  * DOMContentLoaded leaves the page inert on every in-site navigation after
  * the first (docs/claude/insights/domains/frontend.md "Astro and
  * ClientRouter"; five pages shipped that bug in one week). `is:inline`
- * scripts are skipped — they run per document. Returns sorted repo-relative
- * paths: one per offending file, whatever the number of script blocks.
+ * scripts are skipped — they run per document. Judged per script block in
+ * .astro files and per module elsewhere under src/. Returns sorted
+ * repo-relative paths, one per offending file.
  */
 export function collectClientRouterOffenders(srcRoot) {
   const offenders = new Set();
@@ -100,13 +101,18 @@ export function collectClientRouterOffenders(srcRoot) {
     if (!src.includes('DOMContentLoaded')) continue;
     const rel = relative(join(srcRoot, '..'), file).split('\\').join('/');
     if (file.endsWith('.astro')) {
-      if (src.includes('astro:page-load')) continue;
+      // Judged per <script> BLOCK: a file whose first block re-inits on
+      // astro:page-load can still carry a second block that only ever ran on
+      // DOMContentLoaded, and that block is just as dead after a swap.
       for (const m of src.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/g)) {
         if (/\bis:inline\b/.test(m[1])) continue;
-        if (m[2].includes('DOMContentLoaded')) offenders.add(rel);
+        if (m[2].includes('DOMContentLoaded') && !m[2].includes('astro:page-load')) offenders.add(rel);
       }
-    } else if (rel.startsWith('src/scripts/')) {
-      if (!src.includes('astro:page-load')) offenders.add(rel);
+    } else if (!src.includes('astro:page-load')) {
+      // Any module under src/ can be imported by a page <script> and run once
+      // per session; server-only utils never mention DOMContentLoaded, so the
+      // string test above is the filter.
+      offenders.add(rel);
     }
   }
   return [...offenders].sort();

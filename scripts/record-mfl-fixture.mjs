@@ -54,9 +54,21 @@ export function canonicalizeForFixture(value) {
     const items = value.map(canonicalizeForFixture);
     const allObjects = items.every((v) => v && typeof v === 'object' && !Array.isArray(v));
     if (allObjects) {
-      const key = SORT_KEYS.find((k) => items.every((v) => k in v));
-      const str = (v) => (key ? String(v[key]) : JSON.stringify(v));
-      return items.sort((a, b) => str(a).localeCompare(str(b), 'en', { numeric: true }));
+      // A key only counts when every element has it as a SCALAR — `franchise`
+      // is an array on schedule matchups and `player` is '' on unmade picks,
+      // and a non-discriminating key leaves elements in MFL's arbitrary input
+      // order. Ties (and no key at all) fall back to the whole canonical
+      // element, so the result is a function of content alone.
+      const scalar = (v) => v === null || ['string', 'number', 'boolean'].includes(typeof v);
+      const key = SORT_KEYS.find((k) => items.every((v) => k in v && scalar(v[k]) && v[k] !== ''));
+      const whole = (v) => JSON.stringify(v);
+      return items.sort((a, b) => {
+        if (key) {
+          const c = String(a[key]).localeCompare(String(b[key]), 'en', { numeric: true });
+          if (c !== 0) return c;
+        }
+        return whole(a).localeCompare(whole(b));
+      });
     }
     return items.sort((a, b) => JSON.stringify(a).localeCompare(JSON.stringify(b)));
   }

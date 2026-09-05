@@ -62,15 +62,25 @@ export function matchDomains(relPath, map) {
   return map.domains.filter((d) => (d.paths || []).some((glob) => path.matchesGlob(relPath, glob)));
 }
 
-/** All repo files (relative, forward-slash). Used by the map validator. */
-export function walkRepo(root = REPO_ROOT) {
+/**
+ * All repo files (relative, forward-slash). Used by the map validator.
+ * @param {string} [root]
+ * @param {{ skipPaths?: string[] }} [opts]
+ */
+export function walkRepo(root = REPO_ROOT, { skipPaths = [] } = {}) {
   const out = [];
+  // `skipPaths` are repo-relative directory paths (e.g. 'data'), so skipping
+  // the 161 MB top-level data/ does not also skip src/data/, which the map
+  // does point into.
+  const skipRel = new Set(skipPaths);
   const walk = (dir) => {
     for (const entry of readdirSync(dir, { withFileTypes: true })) {
       if (WALK_SKIP.has(entry.name)) continue;
       const full = path.join(dir, entry.name);
-      if (entry.isDirectory()) walk(full);
-      else out.push(path.relative(root, full).split(path.sep).join('/'));
+      const rel = path.relative(root, full).split(path.sep).join('/');
+      if (entry.isDirectory()) {
+        if (!skipRel.has(rel)) walk(full);
+      } else out.push(rel);
     }
   };
   walk(root);
@@ -111,21 +121,27 @@ function seenFile(sessionId, domainName) {
  * is either a deliberate league-specific feature or a twin that was
  * forgotten — the hook cannot tell which, so it says so and moves on.
  */
-export function newPageWarnings(relPath, { leagueSlugs, directory, exists }) {
+export function newPageWarnings(relPath, { leagues, directory, exists }) {
   const m = relPath.match(/^src\/pages\/([^/]+)\/(.+)\.astro$/);
-  if (!m || !leagueSlugs.includes(m[1])) return [];
+  if (!m || !leagues.some((l) => l.slug === m[1])) return [];
   const [, league, route] = m;
   if (route.includes('[') || route === 'index') return []; // dynamic and index routes are not directory entries
   const warnings = [];
-  const path = `/${route.replace(/\/index$/, '')}`;
-  if (!directory.some((e) => e.path === path)) {
+  // Directory entries are written either league-neutral ("/lineup", rendered
+  // to every league) or league-prefixed ("/theleague/lineup"); both register
+  // the page. 66 of 116 entries were prefixed when this was written.
+  const bare = `/${route.replace(/\/index$/, '')}`;
+  const prefixed = `/${league}${bare}`;
+  if (!directory.some((e) => e.path === bare || e.path === prefixed)) {
     warnings.push(
-      `[path-guard] ${relPath} has no entry with path "${path}" in src/data/page-directory.json — add one (10+ tags) or site search cannot find it (CLAUDE.md "Page directory registry — required for every new page").`,
+      `[path-guard] ${relPath} has no entry with path "${bare}" or "${prefixed}" in src/data/page-directory.json — add one (10+ tags) or site search cannot find it (CLAUDE.md "Page directory registry — required for every new page").`,
     );
   }
-  const twinsMissing = leagueSlugs
-    .filter((slug) => slug !== league && exists(`src/pages/${slug}`) && !exists(`src/pages/${slug}/${route}.astro`))
-    .filter((slug) => slug !== 'best-ball-1');
+  // Best-ball leagues are draft-only with opt-in nav (docs/claude/rules/best-ball.md);
+  // a missing twin there is the norm, so they are skipped via the registry flag.
+  const twinsMissing = leagues
+    .filter((l) => l.slug !== league && !l.bestBall && exists(`src/pages/${l.slug}`) && !exists(`src/pages/${l.slug}/${route}.astro`))
+    .map((l) => l.slug);
   if (twinsMissing.length) {
     warnings.push(
       `[path-guard] ${relPath} has no twin under ${twinsMissing.map((s) => `src/pages/${s}/`).join(', ')} — if the feature applies there too, build it as a shared component with a thin route per league (/new-page), not a copy.`,
@@ -213,7 +229,7 @@ async function main() {
       const { ALL_LEAGUES } = await import(path.join(REPO_ROOT, 'src/config/leagues-data.mjs'));
       const directory = JSON.parse(readFileSync(path.join(REPO_ROOT, 'src/data/page-directory.json'), 'utf8'));
       const warnings = newPageWarnings(relPath, {
-        leagueSlugs: ALL_LEAGUES.map((l) => l.slug),
+        leagues: ALL_LEAGUES.map((l) => ({ slug: l.slug, bestBall: Boolean(l.bestBall) })),
         directory,
         exists: (p) => existsSync(path.join(REPO_ROOT, p)),
       });

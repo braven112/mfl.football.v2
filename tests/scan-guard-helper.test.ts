@@ -28,10 +28,13 @@ const abs = (p: string) => path.join(REPO_ROOT, FIXTURE, p);
 beforeAll(() => {
   mkdirSync(abs('nested/node_modules'), { recursive: true });
   writeFileSync(abs('clean.ts'), "export const ok = 'nothing to see';\n");
-  writeFileSync(abs('dirty.ts'), "const id = '13522';\n// second: 13522 again\nconst host = 'www49.myfantasyleague.com';\n");
-  writeFileSync(abs('nested/listed.ts'), "const id = '13522'; // allowlisted\n");
-  writeFileSync(abs('nested/node_modules/ignored.ts'), "const id = '13522';\n");
-  writeFileSync(abs('skip.md'), "13522\n");
+  // Fake tokens on purpose: the fixture lives under tests/fixtures/ (gitignored,
+  // but an interrupted run leaves it behind) and must never carry a real
+  // league literal that `git add -A` could commit past league-literal-guard.
+  writeFileSync(abs('dirty.ts'), "const id = 'FAKEID99';\n// second: FAKEID99 again\nconst host = 'www00.fakehost.example';\n");
+  writeFileSync(abs('nested/listed.ts'), "const id = 'FAKEID99'; // allowlisted\n");
+  writeFileSync(abs('nested/node_modules/ignored.ts'), "const id = 'FAKEID99';\n");
+  writeFileSync(abs('skip.md'), "FAKEID99\n");
   writeFileSync(abs('article-a.ts'), "type: 'trade'\nrelatedLinks: []\n");
   writeFileSync(abs('article-b.ts'), "type: 'recap'\n");
   writeFileSync(abs('not-an-article.ts'), "export {}\n");
@@ -60,8 +63,8 @@ describe('walkFiles', () => {
 
 describe('scanForbidden', () => {
   const forbidden = [
-    { name: 'league id', pattern: /13522/ },
-    { name: 'mfl host', pattern: /www\d+\.myfantasyleague/ },
+    { name: 'league id', pattern: /FAKEID99/ },
+    { name: 'mfl host', pattern: /www\d+\.fakehost/ },
   ];
 
   it('reports every match with file:line and pattern name', () => {

@@ -39,6 +39,7 @@ describe('classifyConflict', () => {
     expect(classifyConflict('data/theleague/schefter-scan.lock').klass).toBe('generated-data');
     expect(classifyConflict('tests/fixtures/typecheck-baseline.json').klass).toBe('ratchet-baseline');
     expect(classifyConflict('tests/fixtures/page-fork-baseline.json').klass).toBe('ratchet-baseline');
+    expect(classifyConflict('tests/fixtures/clientrouter-init-baseline.json').klass).toBe('ratchet-baseline');
     expect(classifyConflict('CLAUDE.md').klass).toBe('docs');
     expect(classifyConflict('docs/claude/rules/roger.md').klass).toBe('docs');
     expect(classifyConflict('src/utils/auth.ts').klass).toBe('source');
@@ -84,6 +85,15 @@ describe('generatedPatternsFrom', () => {
     expect(matches('pnpm-lock.yaml')).toBe(false);
     expect(matches('package.json')).toBe(false);
     expect(matches('anything-feed.json')).toBe(true);
+  });
+});
+
+describe('ratchet baselines', () => {
+  it('classifies every baseline scripts/ratchet.mjs manages (a new ratchet must be added in both places)', () => {
+    const src = readFileSync('scripts/ratchet.mjs', 'utf8');
+    const managed = [...src.matchAll(/'(tests\/fixtures\/[a-z-]+-baseline\.json)'/g)].map((m) => m[1]);
+    expect(managed.length).toBeGreaterThanOrEqual(3);
+    for (const f of managed) expect(classifyConflict(f).klass, f).toBe('ratchet-baseline');
   });
 });
 

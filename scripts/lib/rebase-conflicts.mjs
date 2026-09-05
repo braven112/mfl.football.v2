@@ -67,9 +67,11 @@ function isGenerated(file) {
   return generatedPatterns.some((re) => re.test(file));
 }
 
+/** Everything scripts/ratchet.mjs manages — keep in step with it. */
 const RATCHET_BASELINES = new Set([
   'tests/fixtures/typecheck-baseline.json',
   'tests/fixtures/page-fork-baseline.json',
+  'tests/fixtures/clientrouter-init-baseline.json',
 ]);
 
 /**
