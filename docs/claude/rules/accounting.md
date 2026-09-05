@@ -421,3 +421,53 @@ commissioner's session. They cannot be exercised from a container with no
 verified from the app by a signed-in commissioner. Start with one small
 transaction: MFL's import has no delete, so a bad record is corrected with an
 offsetting one by hand.
+
+### A DRY RUN CANNOT VALIDATE A CREDENTIAL
+
+The dry run reads both ledgers and prints the plan. Reads are not auth-gated
+(above), so **expired credentials produce a flawless dry run** and then fail
+every single write. That is exactly what happened: run #2 was a clean dry run
+of both leagues; run #3 the same night carried `0/13` and `0/15`. The only
+proof a credential can write is a write.
+
+### The credentials the workflow actually has
+
+`.github/workflows/accounting-carry-over.yml` passes four secrets, and only
+two of them exist:
+
+| Secret | Set? | What it is |
+|---|---|---|
+| `MFL_USER_ID` | yes | the stored session cookie — **expires** |
+| `MFL_IS_COMMISH` | yes | the stored commissioner cookie — **expires** |
+| `MFL_USERNAME` | **no** | login fallback, referenced by five workflows, never set |
+| `MFL_PASSWORD` | **no** | ditto |
+
+Do not infer a secret exists because a workflow references it — an unset
+secret interpolates to an empty string and the step runs anyway. Run #4's env
+block showed `MFL_USERNAME:` and `MFL_PASSWORD:` blank while the two cookie
+secrets showed `***`. The script now logs which source it used — the path, not
+the account: the username is usually an email and workflow logs are a wider
+audience than the secret store. It also records the outcome (`succeeded` /
+`failed` / `not-configured`) so the preflight can only describe the path the
+run actually took. A refusal message that guesses is worse than none — two
+live runs were spent on a diagnostic that described a code path never taken.
+The next
+run's log answers this without pulling the raw log.
+
+Because the cookies expire, the durable fix is the username/password pair. The
+login helper (`scripts/lib/mfl-api.mjs#loginToMFL`) does capture
+`MFL_IS_COMMISH` off the `Set-Cookie` header — that is the script path, and it
+is NOT the same as our web login, which still never captures it
+(`docs/claude/insights/domains/mfl-api.md`).
+
+**A login must be PREFERRED over a stored cookie, not used only when one is
+missing.** The first cut gated the login on `(!userCookie || !commishCookie)`,
+which could never fire: the failure mode is a cookie that is *present and
+expired*, and a present cookie is a non-empty string forever.
+
+And the login's two cookies are taken as a **pair**. Keeping a stored
+`MFL_IS_COMMISH` next to a freshly-issued `MFL_USER_ID` pairs a new session
+with an old session's privilege flag; MFL refuses that as *"not authorized"* —
+the same string the expiry produces, so the mixed pair would be
+indistinguishable from the bug it was meant to fix. If a login returns no
+commissioner cookie the run refuses to start and says so.
