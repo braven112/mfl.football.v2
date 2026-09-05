@@ -64,3 +64,49 @@ describe('mfl-integration-test rollback guard', () => {
     expect(cond).toContain("github.ref == 'refs/heads/main'");
   });
 });
+
+/**
+ * The job mints its own cookie from MFL_USERNAME/MFL_PASSWORD (which do not
+ * expire) and exports it via $GITHUB_ENV. A later step that re-declares
+ * `MFL_USER_ID: ${{ secrets.MFL_USER_ID }}` in its own env: silently wins
+ * over $GITHUB_ENV and puts the stale stored cookie back — so the stored
+ * secret may be read in exactly one place: the mint step's fallback input.
+ */
+describe('mfl-integration-test fresh-session step', () => {
+  const text = readFileSync(WORKFLOW, 'utf8');
+
+  it('mints a session from the username/password secrets before the tests run', () => {
+    const mint = text.indexOf('run: node scripts/mint-mfl-session.mjs');
+    const test = text.indexOf('run: pnpm test:mfl-integration');
+    expect(mint, 'no mint-mfl-session step').toBeGreaterThan(-1);
+    expect(mint).toBeLessThan(test);
+    expect(text).toContain('MFL_USERNAME: ${{ secrets.MFL_USERNAME }}');
+    expect(text).toContain('MFL_PASSWORD: ${{ secrets.MFL_PASSWORD }}');
+  });
+
+  it('the stored cookie secret is read only by the mint step (as its fallback)', () => {
+    const reads = text.match(/secrets\.MFL_USER_ID/g) ?? [];
+    expect(reads).toHaveLength(1);
+    const mintStep = text.indexOf('- name: Mint a fresh MFL session');
+    const nextStep = text.indexOf('- name:', mintStep + 1);
+    const only = text.indexOf('secrets.MFL_USER_ID');
+    expect(only).toBeGreaterThan(mintStep);
+    expect(only).toBeLessThan(nextStep);
+  });
+});
+
+describe('mint-mfl-session fallback order', () => {
+  it('prefers a fresh login, falls back to the stored cookie, then to nothing', async () => {
+    const { pickMflSession } = await import('../scripts/mint-mfl-session.mjs');
+    const stored = { userId: 'old', isCommish: 'old-c' };
+    expect(pickMflSession({ mflUserId: 'new', mflIsCommish: 'new-c' }, stored)).toEqual({
+      source: 'login',
+      userId: 'new',
+      isCommish: 'new-c',
+    });
+    // A login that yields no commish cookie keeps the stored one.
+    expect(pickMflSession({ mflUserId: 'new' }, stored).isCommish).toBe('old-c');
+    expect(pickMflSession(null, stored)).toEqual({ source: 'stored', userId: 'old', isCommish: 'old-c' });
+    expect(pickMflSession(null, {})).toEqual({ source: 'none' });
+  });
+});

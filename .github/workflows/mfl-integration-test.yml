@@ -36,10 +36,22 @@ jobs:
       - name: Setup pnpm + Node + install
         uses: ./.github/actions/setup
 
-      - name: Run MFL integration tests
+      # Log in with the username/password secrets (which do not expire) and
+      # export a fresh MFL_USER_ID / MFL_IS_COMMISH to every later step. The
+      # stored cookie secrets are only the fallback when login fails. Later
+      # steps must not re-declare the stored cookie secret in their own env:
+      # a step-level env overrides $GITHUB_ENV and would reinstate the stale
+      # one. tests/mfl-integration-rollback-guard.test.ts pins that.
+      - name: Mint a fresh MFL session
         env:
+          MFL_USERNAME: ${{ secrets.MFL_USERNAME }}
+          MFL_PASSWORD: ${{ secrets.MFL_PASSWORD }}
           MFL_USER_ID: ${{ secrets.MFL_USER_ID }}
           MFL_IS_COMMISH: ${{ secrets.MFL_IS_COMMISH }}
+        run: node scripts/mint-mfl-session.mjs
+
+      - name: Run MFL integration tests
+        env:
           # Hardcoded to test league — safe to write/revert without affecting production
           MFL_LEAGUE_ID: '36189'
         run: pnpm test:mfl-integration
@@ -53,8 +65,6 @@ jobs:
         # cookie itself died"), and skips itself when the secret is absent.
         id: cookie
         if: always()
-        env:
-          MFL_USER_ID: ${{ secrets.MFL_USER_ID }}
         run: node scripts/check-owner-cookie-replay.mjs
 
   rollback:
