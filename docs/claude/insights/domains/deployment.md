@@ -515,3 +515,29 @@ The general shape: a flag that *sounds* standard is more dangerous than a flag t
 **Insight:** The 2026-03-08 entry above concluded that preview protection blocks automated checking "unless preview auth/bypass is available." It now is. `mcp__Vercel__web_fetch_vercel_url` fetches a protected deployment directly, and `mcp__Vercel__get_access_to_vercel_url` mints a `_vercel_share` link valid for 23 hours for fetchers that handle their own cookies. Raw `curl` still gets 401, so the hostname-recovery procedure in that entry is still how you find the URL — only its "you can't read it" half is superseded.
 
 **Recommendation:** Validate a fix on its PR preview *before* merging rather than after deploying — the preview builds in parallel with CI, so it costs no extra wall-clock, and it carries the real env vars, Redis and MFL access that a fresh clone or worktree has no `.env.local` for. Keep production verification as its own step regardless: a working preview proves the fix, not the deploy.
+
+## 2026-09-05 - A Dead Upstash Host Escapes Every `try/catch` Through Auto-Pipelining, And A Worktree Cannot `vercel env pull` Without `.vercel/`
+
+**Context:** Building the Sunday Ticket page in a worktree, the dev server
+intermittently rendered Astro's "TypeError: fetch failed … redis/chunk-*.mjs"
+overlay on a page whose every Redis call was wrapped in `try/catch`. The
+copied `.env.local` pointed `KV_REST_API_URL` at `equipped-tick-80399.upstash.io`,
+which no longer resolves (ENOTFOUND).
+
+**Insights:**
+
+- **@upstash/redis batches same-tick commands (auto-pipelining), and a failed
+  batch rejects through the pipeline, not only through the awaited command.**
+  The awaited `get` lands in its `catch` and logs; the batch's own rejection is
+  unhandled, and Astro dev shows it as the page's error. Caught code, blank
+  page. It looks like a bug in the page; it is the env.
+- **The main checkout's `.env.local` can be stale too.** Copying it into a
+  worktree copies the dead host. `vercel env pull` in the worktree fails with
+  `not_linked`: the project link is `.vercel/` (gitignored) in the main
+  checkout. `cp -R <main>/.vercel .` then pull; the fresh file carries
+  `UPSTASH_REDIS_REST_URL` (which `getRedis()` prefers) on a live host. Verify
+  with `grep -o '[a-z-]*-[0-9]*\.upstash\.io' .env.local`.
+- **Do not copy `.vercel/output/` along with it.** `tests/root-catch-all.test.ts`
+  reads `.vercel/output/config.json` when present, and main's stale build
+  config fails it locally — a failure that exists nowhere but that worktree.
+

@@ -491,7 +491,7 @@ If MFL API is unreliable during live auction:
 
 ### Phase 3: Live UI (Task 6.4)
 - [x] Create `LiveAuctionPanel.astro` component
-- [x] Create `LiveModeToggle.astro` component
+- [x] Create `LiveModeToggle.astro` component  <!-- removed Sept 2026: unmounted; the Sunday Ticket board is src/components/shared/sunday-ticket/ -->
 - [x] Show current player on block
 - [x] Display activity feed (recent bids)
 - [x] Show price comparison dashboard

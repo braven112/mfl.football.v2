@@ -1,0 +1,310 @@
+---
+/**
+ * Sunday Ticket — shared page body for both leagues (docs/plans/sunday-ticket.md).
+ *
+ * Which four games go on the multiview this Sunday, and why — across EVERY
+ * league the signed-in owner plays in, not just the one this route belongs
+ * to. The session gives us the owner; `myleagues` (through the session's MFL
+ * cookie) gives us their other franchises; each league contributes its
+ * starters; `buildSundayTicketSlate` ranks the games.
+ *
+ * This is the only file in the feature that touches feeds, auth, cookies or
+ * the clock. The board components below it are props-only so they story.
+ *
+ * Clocks: the LEAGUE year (`getLeagueYearForSlug`) is the one that matters
+ * here — the schedule feed lives in that year's folder and `myleagues` lists
+ * that year's leagues — while the week comes from the NFL calendar and
+ * `?week=` overrides it, as on /live-scoring.
+ */
+import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
+import SundayTicketBoard from './SundayTicketBoard.astro';
+import { getAuthUser } from '../../../utils/auth';
+import { getLeagueContext } from '../../../utils/league-context';
+import { getLeagueById, getLeagueBySlug } from '../../../config/leagues';
+import { getLeagueYearForSlug } from '../../../utils/league-year';
+import { getCurrentNFLWeek } from '../../../utils/current-week';
+import { getDailySlot } from '../../../utils/hero-resolver';
+import { getPlayerMap } from '../../../utils/player-map';
+import { resolveLeaguePath } from '../../../utils/nav-utils';
+import { checkRateLimit } from '../../../utils/rate-limit';
+import { fetchMyLeagues, type MyLeague } from '../../../utils/my-leagues';
+import { findWeekMatchups } from '../../../utils/lineup-sources';
+import {
+  buildSlateGames,
+  buildSundayTicketSlate,
+  selectWeekMatchups,
+  type LeagueContribution,
+} from '../../../utils/sunday-ticket-slate';
+import {
+  loadLeagueWideContribution,
+  loadOutsideContribution,
+  loadRegisteredContribution,
+  readLeagueFeed,
+} from '../../../utils/sunday-ticket-sources';
+import { COUNTRY_COOKIE, defaultLeagueSelection } from '../../../utils/sunday-ticket-selection';
+import { SUNDAY_TICKET_LOGO, parseCountry } from '../../../utils/broadcast-channels';
+import {
+  LEAGUE_SELECTION_COOKIE,
+  fetchEspnBroadcasts,
+  franchiseNameFromConfig,
+  parseLeagueSelection,
+  resolveBoardLeagues,
+  type SessionLeague,
+} from '../../../utils/sunday-ticket-page';
+import '../../../styles/sunday-ticket.css';
+
+const ctx = getLeagueContext(Astro.url);
+const pageLeague = getLeagueBySlug(ctx.slug)!;
+const r = (p: string) => resolveLeaguePath(p, Astro.locals.hideLeaguePrefix ?? false);
+const pathname = r(`/${pageLeague.slug}/sunday-ticket`);
+
+const now = new Date();
+const leagueYear = getLeagueYearForSlug(pageLeague.slug);
+const weekParamRaw = parseInt(Astro.url.searchParams.get('week') ?? '', 10);
+const weekParam = Number.isFinite(weekParamRaw) && weekParamRaw > 0 && weekParamRaw <= 22 ? weekParamRaw : null;
+const week = weekParam ?? (getCurrentNFLWeek(now) ?? 1);
+
+// Once Sunday's games kick off the board's job is done — hand off to the
+// scoreboard rather than describe a slate that is already being played.
+const daily = getDailySlot(now);
+const sundayLive = daily.slot === 'live-scoring' && (daily.gameWindow === 'sunday' || daily.gameWindow === 'snf');
+
+const identity = getPlayerMap(leagueYear);
+
+// ── Who, and which leagues ─────────────────────────────────────────────
+const user = getAuthUser(Astro.request);
+const sessionLeagueDef = user ? getLeagueById(user.leagueId) : null;
+
+let myLeagues: MyLeague[] = [];
+let cookieDead = false;
+let myLeaguesUnavailable = false;
+if (user?.id) {
+  const result = await fetchMyLeagues(user.id, leagueYear);
+  if (result.ok && result.leagues.length > 0) myLeagues = result.leagues;
+  else if (result.ok) myLeaguesUnavailable = true; // rows we could not parse: live cookie, unusable list
+  else if (result.reason === 'dead-cookie') cookieDead = true;
+  // fetch-failed / unparseable: MFL, not the cookie. Say so — an empty list
+  // read as "no other leagues" is the degradation auth.md warns against.
+  else myLeaguesUnavailable = true;
+}
+
+let session: SessionLeague | null = null;
+if (user && sessionLeagueDef && user.franchiseId) {
+  const fromMfl = myLeagues.find((l) => l.id === sessionLeagueDef.id)?.franchiseName;
+  session = {
+    league: sessionLeagueDef,
+    franchiseId: user.franchiseId,
+    franchiseName: fromMfl || franchiseNameFromConfig(sessionLeagueDef, user.franchiseId),
+  };
+}
+
+const boardLeagues = resolveBoardLeagues(session, myLeagues);
+const allIds = boardLeagues.map((l) => l.id);
+
+// ── League selection: ?leagues= wins; else the cookie. The ROUTE wrote the
+// cookie (`rememberSundayTicketChoices`) — a component cannot set cookies
+// after the response has started, so this file only ever reads.
+const leaguesParam = Astro.url.searchParams.get('leagues');
+const enabled = parseLeagueSelection(leaguesParam ?? Astro.cookies.get(LEAGUE_SELECTION_COOKIE)?.value, allIds);
+// null = the default set (the home leagues). Resolve it ONCE here and hand the
+// same concrete list to the loaders and the slate: `null` means "default" to
+// the chips but "no filter" to the slate builder, and passing it through as
+// undefined once counted a Best Ball roster the chip said was off.
+const selectedIds = enabled ?? defaultLeagueSelection(boardLeagues);
+const enabledIds = new Set(selectedIds);
+
+// ── Country: which channels the boxes name. Same param → cookie pattern. ──
+const country = parseCountry(Astro.url.searchParams.get('country') ?? Astro.cookies.get(COUNTRY_COOKIE)?.value);
+
+// ── Contributions ───────────────────────────────────────────────────────
+const notices: string[] = [];
+const contributions: LeagueContribution[] = [];
+
+// ESPN's network per game is independent of everything below; start it now so
+// it overlaps the MFL reads instead of queueing behind them. LEAGUE year on
+// purpose: the games on this board come from the league-year feed folder, and
+// between Feb 14 and Labor Day that folder holds the UPCOMING season's
+// schedule — asking ESPN for the season year (last season) would paint last
+// year's networks onto this year's games. The live board's ESPN calls are on
+// the season clock because they show the season being played.
+const broadcastsPromise = fetchEspnBroadcasts(week, leagueYear);
+
+const outside = boardLeagues.filter((l) => !l.registered && enabledIds.has(l.id));
+// Outside reads need a session WITH a franchise: the rate-limit key below is
+// league+franchise, and `user.id` (the MFL cookie, a credential) must never
+// stand in for it in a Redis key.
+let outsideAllowed = outside.length > 0 && !!user?.id && !!user?.franchiseId;
+if (outsideAllowed && user) {
+  // A burst of cache misses is N live MFL reads per page view; cap it per owner.
+  // Both leagues have a franchise 0001, so the key carries the league too.
+  const limit = await checkRateLimit('sunday-ticket', `${user.leagueId}:${user.franchiseId}`, 20, 60);
+  if (!limit.allowed) {
+    outsideAllowed = false;
+    notices.push('Outside leagues are resting for a minute — too many refreshes. Your own leagues are still live.');
+  }
+}
+
+// Registered leagues read synced feeds; outside leagues are live MFL reads,
+// independent of one another, run a few at a time (each is three exports —
+// ten outside leagues on a cold cache must not be thirty simultaneous
+// authenticated MFL calls). Board order is kept; so is notice order.
+const OUTSIDE_CONCURRENCY = 3;
+const loadOne = async (l: (typeof boardLeagues)[number]): Promise<{ c: LeagueContribution | null; notice?: string }> => {
+  if (!enabledIds.has(l.id)) return { c: null }; // off: no read at all
+  if (l.registered) {
+    return { c: loadRegisteredContribution({
+      league: l.registered,
+      franchiseId: l.franchiseId,
+      franchiseName: l.franchiseName || franchiseNameFromConfig(l.registered, l.franchiseId),
+      week,
+      leagueYear: getLeagueYearForSlug(l.registered.slug),
+      identity,
+    }) };
+  }
+  if (!outsideAllowed || !user?.id) return { c: null };
+  const c = await loadOutsideContribution({
+    source: { leagueId: l.id, leagueName: l.name, franchiseId: l.franchiseId, franchiseName: l.franchiseName },
+    host: l.host,
+    year: leagueYear,
+    week,
+    mflUserCookie: user.id,
+    identity,
+  });
+  return c ? { c } : { c: null, notice: `${l.name} didn't answer — MFL may need you to sign in again for that league.` };
+};
+const loaded: Array<{ c: LeagueContribution | null; notice?: string }> = new Array(boardLeagues.length);
+{
+  let next = 0;
+  const worker = async () => {
+    while (next < boardLeagues.length) { const i = next++; loaded[i] = await loadOne(boardLeagues[i]); }
+  };
+  await Promise.all(Array.from({ length: Math.min(OUTSIDE_CONCURRENCY, boardLeagues.length) }, worker));
+}
+for (const r of loaded) {
+  if (r?.c) contributions.push(r.c);
+  if (r?.notice) notices.push(r.notice);
+}
+
+if (myLeaguesUnavailable) notices.push("Couldn't reach MFL for your other leagues just now — this is the board for the leagues this site runs.");
+const personalized = contributions.length > 0;
+if (!personalized) {
+  const wide = loadLeagueWideContribution({ league: pageLeague, week, leagueYear, identity });
+  if (wide) contributions.push(wide);
+}
+
+// ── The slate ───────────────────────────────────────────────────────────
+const scheduleFeed = readLeagueFeed(pageLeague, leagueYear, 'nflSchedule.json');
+const broadcasts = await broadcastsPromise;
+const games = buildSlateGames(selectWeekMatchups(scheduleFeed, week), broadcasts);
+
+const slate = buildSundayTicketSlate({
+  games,
+  contributions,
+  // The league-wide fallback is not a board league, so it must not be
+  // filtered by the board's selection (an empty allow-list drops everything).
+  enabledLeagueIds: personalized ? selectedIds : undefined,
+  personalized,
+});
+
+// ── Your fantasy game(s) this week, for the session league ──────────────
+interface OwnGame { opponent: string; home: boolean }
+let ownGames: OwnGame[] = [];
+if (session) {
+  const scheduleWeeks = readLeagueFeed(session.league, getLeagueYearForSlug(session.league.slug), 'schedule.json')
+    ?.schedule?.weeklySchedule;
+  const weekEntry = Array.isArray(scheduleWeeks)
+    ? scheduleWeeks.find((w: any) => parseInt(w?.week, 10) === week)
+    : scheduleWeeks;
+  ownGames = findWeekMatchups(weekEntry, session.franchiseId).map((m) => ({
+    opponent: franchiseNameFromConfig(session!.league, m.opponentFranchiseId) || `Franchise ${m.opponentFranchiseId}`,
+    home: m.userIsHome,
+  }));
+}
+const sessionSlug = session?.league.slug ?? pageLeague.slug;
+
+const title = `Sunday Ticket — Week ${week}`;
+---
+
+<TheLeagueLayout title={title}>
+  <div class="st-page">
+    <header class="st-page__head">
+      <div class="st-page__title-group">
+        <p class="st-page__eyebrow">Week {week}</p>
+        <h1 class="st-page__title">Sunday Ticket</h1>
+        <p class="st-page__lede">
+          {personalized
+            ? 'The four games to put on your multiview each window, ranked by how many of your starters are on the field.'
+            : 'The four games with the most fantasy points on the field each window. Sign in to build it from your own rosters.'}
+        </p>
+      </div>
+      <div class="st-page__side">
+        <img class="st-page__mark" src={SUNDAY_TICKET_LOGO} alt="NFL Sunday Ticket" width="336" height="263" />
+        <div class="st-page__badges">
+          {personalized && <span class="st-badge st-badge--accent">Personalized</span>}
+          {boardLeagues.length > 1 && <span class="st-badge">{boardLeagues.length} leagues</span>}
+        </div>
+      </div>
+    </header>
+
+    {sundayLive && (
+      <a class="st-banner st-banner--live" href={r(`/${pageLeague.slug}/live-scoring`)}>
+        <span class="st-banner__dot" aria-hidden="true" />
+        Games are on. This was the plan — <strong>Live Scoring</strong> is where it's happening →
+      </a>
+    )}
+
+    {cookieDead && (
+      <p class="st-banner st-banner--note">
+        {personalized
+          ? "MFL didn't list any leagues for your sign-in this season, so only the leagues this site syncs are on the board. "
+          : "MFL didn't list any leagues for your sign-in this season, so this is the league-wide board. "}
+        If your sign-in has expired, <a href={r(`/${pageLeague.slug}/login?next=${encodeURIComponent(pathname)}`)}>sign in again</a>
+        {personalized ? ' to add your other leagues.' : ' to see your own players.'}
+      </p>
+    )}
+
+    {!user && !cookieDead && (
+      <p class="st-banner st-banner--note">
+        <a href={r(`/${pageLeague.slug}/login?next=${encodeURIComponent(pathname)}`)}>Sign in</a> and the board is built from your rosters — in every league you're in.
+      </p>
+    )}
+
+    {notices.map((n) => <p class="st-banner st-banner--note">{n}</p>)}
+
+    {session && ownGames.length > 0 && (
+      <section class="st-own" aria-label="Your fantasy matchup this week">
+        <span class="st-own__label">Your week {week}{ownGames.length > 1 ? ' — doubleheader' : ''}</span>
+        <span class="st-own__games">
+          {ownGames.map((g, i) => (
+            <span class="st-own__game">
+              {i > 0 && <span aria-hidden="true"> · </span>}
+              <strong>{session.franchiseName || 'You'}</strong> {g.home ? 'vs' : 'at'} {g.opponent}
+            </span>
+          ))}
+        </span>
+        <span class="st-own__links">
+          <a href={r(`/${sessionSlug}/lineup`)}>Set lineup</a>
+          <a href={r(`/${sessionSlug}/live-scoring`)}>Live scoring</a>
+        </span>
+      </section>
+    )}
+
+    <SundayTicketBoard
+      slate={slate}
+      week={week}
+      leagues={personalized ? boardLeagues : []}
+      enabled={enabled}
+      pathname={pathname}
+      weekParam={weekParam}
+      country={country}
+    />
+
+    <footer class="st-page__foot">
+      <p>
+        Kickoffs from MFL's NFL schedule; networks from ESPN, translated to the channel that carries them in your
+        country. Sunday Ticket is the out-of-market Sunday-afternoon CBS and FOX games — Thursday, Saturday, Sunday
+        night and Monday night are on their national networks.
+      </p>
+    </footer>
+  </div>
+</TheLeagueLayout>

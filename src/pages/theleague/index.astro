@@ -33,7 +33,10 @@ import { getRelease } from '../../utils/schedule-release-store';
 import { getThrowbackPreference } from '../../utils/throwback-store';
 import { enrichHeroState, isDraftComplete, getRosteredPlayerIds, getAdpRankedIds, getFranchiseHeadliners, getFranchiseCompositableHeadliners, getKickoffGame, getWeekGameCandidates, selectBreakingStory } from '../../utils/offseason-hero-data';
 import { getWhatsNextTimeline } from '../../utils/league-event-resolver';
-import { getCurrentLeagueYear, getCurrentSeasonYear } from '../../utils/league-year';
+import { getCurrentLeagueYear, getCurrentSeasonYear, getLeagueYearForSlug } from '../../utils/league-year';
+import { getCurrentNFLWeek as heroNflWeek } from '../../utils/current-week';
+import { isSaturdayEveningPT } from '../../utils/sunday-ticket-window';
+import { hasSubmittedLineup } from '../../utils/lineup-submitted';
 import { getPlayerMap } from '../../utils/player-map';
 import { chooseTeamName } from '../../utils/team-names';
 import { castFeaturedModel, castTopFreeAgentModel, castRosterModel, castRandomStarterModel, castClosingAuctionModel, castRookiesOnBoard, castStoryModel, castShowcasePanels, castsFor } from '../../utils/hero-casting';
@@ -149,6 +152,20 @@ if (throwbackPromo && isEntryInHeroWindow(throwbackPromo, effectiveDate ?? new D
 // window boundary — and since the page's ternary is exclusive, a request that
 // split them would render no hero at all (review finding, #569).
 const heroReferenceDate = effectiveDate ?? new Date();
+
+// Saturday from 5pm: an owner whose lineup is already in gets the Sunday
+// Ticket hero instead of the game-of-the-week band. Resolved HERE, for the
+// signed-in owner only and on the hero's reference date (so ?testDate= and
+// the Feb 14 rollover agree), then handed down — the hero never fetches.
+const lineupSubmitted =
+  authUser?.leagueId === THELEAGUE.id && userFranchiseId && isSaturdayEveningPT(heroReferenceDate)
+    ? await hasSubmittedLineup({
+        league: THELEAGUE,
+        franchiseId: userFranchiseId,
+        week: heroNflWeek(heroReferenceDate) ?? 1,
+        leagueYear: getLeagueYearForSlug(THELEAGUE.slug, heroReferenceDate),
+      })
+    : null;
 const testDriveHero = showTestDriveHero(THELEAGUE.slug, heroReferenceDate);
 
 // Whether this season's reveal is already locked — read here rather than in
@@ -753,6 +770,7 @@ if ((heroState.phase === 'playoffs' || heroState.phase === 'championship') && he
         spriteUrl={spriteUrl}
         liveScoring={liveScoring}
         userFranchiseId={heroFranchiseId}
+        lineupSubmitted={lineupSubmitted}
         isAuthenticated={isAuthenticated}
         featureModel={featureModel}
         auctionModel={auctionModel}

@@ -28,36 +28,11 @@ import { json as jsonResponse } from '../../utils/api-response';
 import { getRedis } from '../../utils/redis-client';
 import { getCutList, saveCutList, captureCredential } from '../../utils/autocut-storage';
 import { getCurrentLeagueYear } from '../../utils/league-year';
-import { mflFetch } from '../../utils/mfl-fetch';
+import { isMflCookieLive } from '../../utils/my-leagues';
 
 /** Hard cap on saved list length (rosters top out well under this). */
 const MAX_CUT_LIST_LENGTH = 40;
 const PLAYER_ID_RE = /^\d{1,8}$/;
-
-/**
- * Validate an MFL_USER_ID cookie with the cheap authenticated read.
- * MFL returns {"leagues":{}} for a dead cookie — an empty list, a non-OK
- * status, unparseable JSON, or a thrown fetch all count as invalid.
- */
-async function isMflCookieLive(mflUserCookie: string, year: number): Promise<boolean> {
-  try {
-    const response = await mflFetch({
-      url: `https://api.myfantasyleague.com/${year}/export?TYPE=myleagues&JSON=1`,
-      method: 'GET',
-      mflUserCookie,
-    });
-    if (!response.ok) return false;
-    const data = await response.json().catch(() => null);
-    // Observed inconsistency: some MFL hosts/years wrap the response as
-    // {"myleagues":{"league":[...]}} and others as {"leagues":{"league":[...]}}
-    // (docs/claude/insights/domains/mfl-api.md, myleagues entries) — accept both.
-    const leagues = data?.myleagues?.league ?? data?.leagues?.league ?? [];
-    const leagueList = Array.isArray(leagues) ? leagues : leagues ? [leagues] : [];
-    return leagueList.length > 0;
-  } catch {
-    return false;
-  }
-}
 
 export const GET: APIRoute = async ({ request }) => {
   const user = getAuthUser(request);

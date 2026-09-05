@@ -1,6 +1,6 @@
 # High-Total NFL Blurbs Prompt
 
-Use this prompt set to generate sub-100-character betting-style hooks for NFL games with high projected totals. Keep this separate from the longer matchup-preview prompt in `ai-matchup-stories.md`.
+Use this prompt set to generate sub-100-character betting-style hooks for NFL games with high projected totals.
 
 ## System Message
 ```

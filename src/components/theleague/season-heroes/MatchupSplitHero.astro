@@ -23,14 +23,19 @@ import { castBestScoredModel } from '../../../utils/hero-casting';
 import { getNFLTeamLogo } from '../../../utils/nfl-logo';
 import FaceoffComposite from '../FaceoffComposite.astro';
 import MatchupPreviewHero from './MatchupPreviewHero.astro';
+import { SUNDAY_TICKET_LOGO } from '../../../utils/broadcast-channels';
+import { crestStrokeFilter } from '../../../utils/crest-dark-stroke-css';
+import { showSundayTicketHero } from '../../../utils/sunday-ticket-window';
 
 export interface Props {
   state: HeroState;
   resolveLeaguePath: (path: string) => string;
   userFranchiseId?: string;
+  /** Saturday-evening gate, resolved by the page (index.astro) for the signed-in owner. */
+  lineupSubmitted?: boolean | null;
 }
 
-const { state, resolveLeaguePath: r, userFranchiseId } = Astro.props;
+const { state, resolveLeaguePath: r, userFranchiseId, lineupSubmitted = null } = Astro.props;
 
 // No-arg season year (env-pinned to the last completed season); referenceDate
 // only steers which game of the current-week slate is "upcoming" in the live
@@ -42,6 +47,18 @@ const stars = getMarqueeGameStars(year, 'theleague', state.metadata.referenceDat
 const awayStar = stars ? castBestScoredModel(stars.awayCandidates, players, undefined, 'Team Star') : null;
 const homeStar = stars ? castBestScoredModel(stars.homeCandidates, players, undefined, 'Team Star') : null;
 const resolved = stars && awayStar && homeStar ? { stars, awayStar, homeStar } : null;
+
+// Saturday the band bills the game of the week; Sunday morning (or Saturday
+// evening once the lineup is in) it is the Sunday Ticket hero — same art, the official mark on the eyebrow, and the
+// CTA that was always pointing at the board. The band is near-black in BOTH
+// themes, so the dark-ink mark wears the crest ring here unconditionally
+// rather than through the html.dark manifest rule.
+// Saturday from 5pm the same hero shows for an owner whose lineup is already
+// in — the PAGE resolves that (auth-gated, on the hero's reference date) and
+// hands it down; this component never fetches.
+const ref = state.metadata.referenceDate;
+const isSunday = showSundayTicketHero(ref, lineupSubmitted);
+const markFilter = crestStrokeFilter();
 ---
 
 {resolved ? (
@@ -53,11 +70,18 @@ const resolved = stars && awayStar && homeStar ? { stars, awayStar, homeStar } :
 
     <div class="msh__band">
       <div class="msh__band-left">
-        <p class="msh__eyebrow">Game of the week</p>
+        {isSunday ? (
+          <p class="msh__eyebrow msh__eyebrow--st">
+            <img class="msh__mark" src={SUNDAY_TICKET_LOGO} alt="NFL Sunday Ticket" width="336" height="263" style={`filter: ${markFilter}`} />
+            Your Sunday Ticket
+          </p>
+        ) : (
+          <p class="msh__eyebrow">Game of the week</p>
+        )}
         <h2 class="msh__title">{resolved.stars.awayName} at {resolved.stars.homeName}</h2>
       </div>
-      <a class="msh__cta" href={r('/theleague/matchups')}>
-        Full preview
+      <a class="msh__cta" href={r('/theleague/sunday-ticket')}>
+        {isSunday ? 'Build your multiview' : 'Sunday Ticket preview'}
         <span aria-hidden="true">→</span>
       </a>
     </div>
@@ -129,6 +153,8 @@ const resolved = stars && awayStar && homeStar ? { stars, awayStar, homeStar } :
     transition: transform 120ms ease;
   }
 
+  .msh__eyebrow--st { display: inline-flex; align-items: center; gap: 0.5rem; }
+  .msh__mark { height: 1.9rem; width: auto; object-fit: contain; }
   .msh__cta:hover {
     transform: translateY(-1px);
   }

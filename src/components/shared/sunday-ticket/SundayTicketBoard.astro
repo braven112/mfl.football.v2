@@ -1,0 +1,180 @@
+---
+/**
+ * SundayTicketBoard — the board itself: league chips, the two Sunday windows,
+ * and the national games outside them. Props-only; the page assembles the
+ * slate and the chip hrefs' inputs, this renders them.
+ *
+ * Zero client JS. The chips are links carrying `?leagues=` (the page writes
+ * the choice to a cookie), the window "tabs" are jump links. The repo's rule:
+ * a control whose only job is switching a URL param is an `<a href>`.
+ */
+import { formatKickoffZones, type SundayTicketSlate } from '../../../utils/sunday-ticket-slate';
+import {
+  countryHref,
+  defaultLeagueSelection,
+  isHomeLeague,
+  leagueSelectionHref,
+  toggleLeagueSelection,
+  type BoardLeague,
+} from '../../../utils/sunday-ticket-selection';
+import { countryOptions, countryTimeZones, resolveChannel, type CountryCode } from '../../../utils/broadcast-channels';
+import SundayTicketWindow from './SundayTicketWindow.astro';
+
+export interface Props {
+  slate: SundayTicketSlate;
+  week: number;
+  /** Leagues on the board, in display order. Empty for the league-wide fallback. */
+  leagues: BoardLeague[];
+  /** Enabled league ids, or null for all. */
+  enabled: string[] | null;
+  /** Route path the chips link back to. */
+  pathname: string;
+  /** The `?week=` that was explicitly asked for, to carry through the chip links. */
+  weekParam: number | null;
+  /** Whose channels the boxes show. */
+  country?: CountryCode;
+}
+
+const { slate, week, leagues, enabled, pathname, weekParam, country = 'US' } = Astro.props;
+const countries = countryOptions();
+const zones = countryTimeZones(country);
+const clockOf = (epoch: number) => formatKickoffZones(epoch, zones);
+
+const allIds = leagues.map((l) => l.id);
+const defaultIds = defaultLeagueSelection(leagues);
+const enabledIds = enabled ?? defaultIds;
+const multiLeague = enabledIds.length > 1;
+const showChips = leagues.length > 1;
+const homeLeagues = leagues.filter(isHomeLeague);
+const outsideLeagues = leagues.filter((l) => !isHomeLeague(l));
+const outsideOn = outsideLeagues.filter((l) => enabledIds.includes(l.id)).length;
+const isDefault = enabled === null;
+const chipFor = (l: BoardLeague) => {
+  const on = enabledIds.includes(l.id);
+  return { on, href: leagueSelectionHref(pathname, toggleLeagueSelection(enabledIds, allIds, l.id, defaultIds), weekParam) };
+};
+const hasWindows = slate.windows.length > 0;
+const hasAnything = hasWindows || slate.other.length > 0;
+
+const logo = (code: string) => `/assets/nfl-logos/${code}.svg`;
+---
+
+<div class="st-board" data-personalized={slate.personalized ? 'true' : 'false'}>
+  {showChips && (
+    <nav class="st-chips" aria-label="Leagues on the board">
+      <span class="st-chips__label">Leagues</span>
+      {homeLeagues.map((l) => {
+        const { on, href } = chipFor(l);
+        return (
+          <a
+            class:list={['st-chip', on && 'st-chip--on', l.isSession && 'st-chip--session']}
+            aria-current={on ? 'true' : undefined}
+            href={href}
+            title={l.franchiseName ? `${l.name} — ${l.franchiseName}` : l.name}
+          >
+            <span class="st-chip__dot" aria-hidden="true" />
+            {l.name}
+          </a>
+        );
+      })}
+      {outsideLeagues.length > 0 && (
+        <details class="st-others" open={outsideOn > 0}>
+          <summary class="st-chip st-chip--others">
+            <span class="st-chip__dot" aria-hidden="true" />
+            Other leagues
+            <span class="st-others__count">{outsideOn > 0 ? `${outsideOn} of ${outsideLeagues.length} on` : `${outsideLeagues.length}`}</span>
+          </summary>
+          <div class="st-others__list">
+            {outsideLeagues.map((l) => {
+              const { on, href } = chipFor(l);
+              return (
+                <a
+                  class:list={['st-chip', 'st-chip--outside', on && 'st-chip--on']}
+                  aria-current={on ? 'true' : undefined}
+                  href={href}
+                  title={l.franchiseName ? `${l.name} — ${l.franchiseName}` : l.name}
+                >
+                  <span class="st-chip__dot" aria-hidden="true" />
+                  {l.name}
+                  {l.franchiseName && <span class="st-chip__franchise">{l.franchiseName}</span>}
+                </a>
+              );
+            })}
+          </div>
+        </details>
+      )}
+      {!isDefault && (
+        <a class="st-chip st-chip--all" href={leagueSelectionHref(pathname, null, weekParam)}>Reset to my leagues</a>
+      )}
+    </nav>
+  )}
+
+  <nav class="st-countries" aria-label="Broadcast country">
+    <span class="st-chips__label">Channels for</span>
+    {countries.map((c) => (
+      <a
+        class:list={['st-chip', 'st-chip--country', c.code === country && 'st-chip--on']}
+        aria-current={c.code === country ? 'true' : undefined}
+        href={countryHref(pathname, c.code, weekParam)}
+      >
+        <span class="st-chip__flag" aria-hidden="true">{c.flag}</span>
+        {c.name}
+      </a>
+    ))}
+  </nav>
+
+  {slate.windows.length > 1 && (
+    <nav class="st-jump" aria-label="Sunday windows">
+      {slate.windows.map((w) => (
+        <a class="st-jump__link" href={`#st-${w.window}`}>
+          {w.window === 'early' ? 'Early' : 'Late'}
+          {w.kickoff > 0 && (() => { const c = clockOf(w.kickoff)[0]; return c && (
+            <span class="st-jump__time">{c.dayDiffers ? `${c.day} ` : ''}{c.time} {c.label}</span>
+          ); })()}
+        </a>
+      ))}
+    </nav>
+  )}
+
+  {slate.windows.map((w) => (
+    <SundayTicketWindow window={w} country={country} multiLeague={multiLeague} personalized={slate.personalized} />
+  ))}
+
+  {slate.other.length > 0 && (
+    <section class="st-other" aria-labelledby="st-other-title">
+      <header class="st-window__head">
+        <h3 class="st-window__title" id="st-other-title">Also this week</h3>
+        <span class="st-window__label">National broadcasts — not on Sunday Ticket</span>
+      </header>
+      <ul class="st-other__list">
+        {slate.other.map((b) => {
+          const k = clockOf(b.game.kickoff);
+          const ch = resolveChannel(b.game.broadcast, country);
+          return (
+            <li class="st-other__game">
+              <span class="st-other__day">{k[0]?.day}</span>
+              <span class="st-other__teams">
+                <img class="st-other__logo" src={logo(b.game.away)} alt="" width="20" height="20" loading="lazy" />
+                {b.game.away}
+                <span class="st-box__at" aria-hidden="true">@</span>
+                <img class="st-other__logo" src={logo(b.game.home)} alt="" width="20" height="20" loading="lazy" />
+                {b.game.home}
+              </span>
+              <span class="st-other__time">{k.map((c) => `${c.time} ${c.label}`).join(' · ')}</span>
+              {ch && (ch.logo
+                ? <span class="st-net st-net--mark" title={ch.name}><img class="st-net__logo" src={ch.logo} alt={ch.name} loading="lazy" /></span>
+                : <span class="st-net" title={ch.name}>{ch.name}</span>)}
+              <span class="st-box__count">
+                {slate.personalized ? `${b.starterCount + b.rosterCount} of yours` : `proj ${b.projTotal.toFixed(1)}`}
+              </span>
+            </li>
+          );
+        })}
+      </ul>
+    </section>
+  )}
+
+  {!hasAnything && (
+    <p class="st-empty">No NFL games on the schedule for Week {week}. The board fills in once MFL publishes the slate.</p>
+  )}
+</div>

@@ -308,4 +308,3 @@ MIT - Use freely in your fantasy football league!
 
 ## Questions?
 
-See main documentation: [ai-matchup-stories.md](../src/pages/theleague/docs/ai-matchup-stories.md)

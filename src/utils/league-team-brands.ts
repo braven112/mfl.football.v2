@@ -19,6 +19,7 @@
  */
 import theLeagueConfig from '../data/theleague.config.json';
 import aflConfig from '../../data/afl-fantasy/afl.config.json';
+import bb1Config from '../../data/best-ball-1/bb1.config.json';
 
 /** One franchise's brand, as the matchup UI consumes it. */
 export interface TeamBrand {
@@ -41,6 +42,9 @@ export interface TeamBrand {
 const CONFIGS: Record<string, { teams?: any[] }> = {
   theleague: theLeagueConfig as unknown as { teams?: any[] },
   'afl-fantasy': aflConfig as unknown as { teams?: any[] },
+  // Best Ball is on the Sunday Ticket board as one of the owner's leagues, so
+  // its franchises need names here too (wired 2026-09-05).
+  'best-ball-1': bb1Config as unknown as { teams?: any[] },
 };
 
 /** Neutral stand-in so a franchise missing from a config renders, never throws. */

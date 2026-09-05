@@ -122,6 +122,8 @@ export interface NflGame {
   date: string;
   /** Present only while the game is being played; see NflGameSituation. */
   situation?: NflGameSituation | null;
+  /** National network (CBS / FOX / NBC / …) from ESPN; '' when not yet announced. */
+  broadcast?: string;
 }
 
 
