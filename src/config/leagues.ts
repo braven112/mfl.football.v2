@@ -100,6 +100,32 @@ export interface LeagueYearRollover {
   day: number;
 }
 
+/**
+ * The Owners' Poll — the weekly owner vote that publishes inside The Pecking
+ * Order (docs/plans/owners-poll.md).
+ *
+ * Present on every league, `enabled: false` where it doesn't run, so shared
+ * components always have a shape to read rather than branching on undefined.
+ */
+export interface OwnersPollConfig {
+  enabled: boolean;
+  /**
+   * Ballot depth — how many teams an owner ranks. Deliberately NOT the field
+   * size: a 7-slot ballot in a 16-team league leaves a tail the poll does not
+   * order, which is a stated design trade.
+   */
+  slots: number;
+  /** Minimum ballots before a consensus publishes at all. */
+  quorum: number;
+  /**
+   * Day the ballot closes (0 = Sunday). Thursday, so the deadline is the one
+   * owners already obey — lineups are due before the first kickoff.
+   */
+  closeWeekday: number;
+  /** Hour (24h, America/Los_Angeles) the ballot closes on `closeWeekday`. */
+  closeHourPT: number;
+}
+
 export interface LeagueDefinition {
   id: string;
   slug: CanonicalLeagueSlug;
@@ -144,6 +170,11 @@ export interface LeagueDefinition {
    * then offers the ledger and CSV import without a payouts panel.
    */
   payouts?: LeaguePayouts;
+  /**
+   * Owners' Poll configuration. Always present; check `enabled` before
+   * offering any poll UI or accepting a ballot.
+   */
+  ownersPoll: OwnersPollConfig;
   features: LeagueFeatures;
 }
 
