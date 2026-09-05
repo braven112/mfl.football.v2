@@ -289,7 +289,7 @@ export function buildGamedayNotifications({ alerts, teamNames, week }) {
           franchiseId,
           title: tied ? `Week ${week}: tie` : won ? `Week ${week}: win` : `Week ${week}: loss`,
           body: `Final ${versus}.`,
-          url: '/live',
+          url: '/live-scoring',
           // Per matchup per week, so a device never stacks two finals for the
           // same game and a re-send can only replace, never duplicate.
           tag: `scoring-final-w${week}-${alert.key}`,
@@ -302,7 +302,7 @@ export function buildGamedayNotifications({ alerts, teamNames, week }) {
         franchiseId,
         title: ahead ? `You just took the lead` : `You just lost the lead`,
         body: `Week ${week}: ${versus}.`,
-        url: '/live',
+        url: '/live-scoring',
         tag: `scoring-swing-w${week}-${alert.key}`,
       });
     }

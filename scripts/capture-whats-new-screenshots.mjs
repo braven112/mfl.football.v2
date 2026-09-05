@@ -58,6 +58,8 @@ const BASE_URL = process.env.BASE_URL || 'http://localhost:4321';
  * tests/whats-new-data.test.ts asserts every id here matches a real entry.
  */
 const MANUAL_CAPTURE_ONLY = {
+  'notification-command-center':
+    'auth-gated page, and the command center is a client island that renders nothing until it has fetched a signed-in owner\'s preferences — a blind capture shoots the sign-in redirect, and an unauthenticated one shoots an empty card.',
   'hero-wears-your-colors':
     'the franchise backdrop only paints for a signed-in owner, and the entry is both-league with no link — a blind capture shoots the MFL landing page, and even pointed at a homepage it shoots the signed-out league chrome, which is the BEFORE state. Needs a forged owner session (AFL league id from the registry, franchise 0001 = Smokane FC, whose green reads clearly against the navy it replaces) and an element screenshot of `.afl-event-hero`, not the full page.',
   'feature-first-heroes': 'both-league entry, no link — auto-capture would shoot the MFL landing page; capture the /theleague homepage hero manually',
