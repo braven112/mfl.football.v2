@@ -445,6 +445,26 @@
         "tests/insights-curated-head.test.ts",
         "tests/path-guard-map.test.ts"
       ]
+    },
+    {
+      "name": "watch-list",
+      "paths": [
+        "src/utils/mfl-watch-list.ts",
+        "src/utils/watch-list-*",
+        "src/pages/api/watch-list.ts",
+        "src/utils/player-actions.ts",
+        "src/components/shared/PlayerActionModal.astro",
+        "src/components/shared/WatchListBridge.astro",
+        "scripts/push-watch-list-news.mjs",
+        "src/utils/schefter-watching.ts"
+      ],
+      "note": "MFL's myWatchList is owner-cookie-only and incremental; the Redis mirror is a read cache keyed by registry slug. See docs/claude/insights/features/watch-list.md.",
+      "tests": [
+        "tests/mfl-watch-list.test.ts",
+        "tests/watch-list-api.test.ts",
+        "tests/watch-list-client.test.ts",
+        "tests/push-watch-list-news.test.ts"
+      ]
     }
   ]
 }

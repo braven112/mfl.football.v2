@@ -69,6 +69,8 @@ const MANUAL_CAPTURE_ONLY = {
   'schefter-og-unfurls': 'hand-made OG card image, not a page screenshot — auto-capture would replace it with the landing page',
   'trade-composites': 'hand-staged trade-confirmation modal with specific players — auto-capture shoots the bare trade builder',
   'my-draft-list': 'auth-gated page — blind capture shoots the sign-in redirect',
+  'my-watch-list':
+    'the view is empty until an owner has watched someone, and the watch list is read from MFL under a live owner cookie — a blind capture shoots the empty state. The staged shot forges an owner session, seeds the localStorage cache (`watchList.cache`) with a few ids so the first paint has rows, and opens the ⋮ sheet on one of them.',
   'submit-lineup': 'auth-gated page — blind capture shoots the sign-in redirect',
   'tip-schefter-gets-louder': 'auth-gated page — blind capture shoots the sign-in redirect',
   'lineup-faceoff-scoreboard': 'auth-gated page — blind capture shoots the sign-in redirect',
