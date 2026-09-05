@@ -23,7 +23,6 @@ import type { DraftLeagueSlug } from '../draft-nav/draft-pages';
 
 interface Props {
   leagueSlug: DraftLeagueSlug;
-  sessionId: string;
   /**
    * The session, already fetched by the ROUTE and already known to exist.
    *
@@ -41,7 +40,7 @@ interface Props {
   teams: Array<{ franchiseId: string; name: string; nameMedium?: string; nameShort?: string; icon?: string }>;
 }
 
-const { leagueSlug, sessionId, title, basePath, teams, session } = Astro.props as Props;
+const { leagueSlug, title, basePath, teams, session } = Astro.props as Props;
 const hideLeaguePrefix = Astro.locals.hideLeaguePrefix ?? false;
 const base = resolveLeaguePath(basePath, hideLeaguePrefix);
 
