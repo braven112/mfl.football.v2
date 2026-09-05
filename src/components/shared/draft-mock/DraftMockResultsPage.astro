@@ -11,14 +11,22 @@
  * arrangement the draft room and best-ball use; MFL player ids are global, so
  * one archive serves every league. Only the FRANCHISES are per-league, and
  * they arrive as a prop (one conference's twelve, for the AFL).
+ *
+ * Every player on this page renders through the shared PlayerCell — the same
+ * lockup as rosters, the draft room and Draft Results — rather than a
+ * hand-rolled name + position span. It carries the headshot fallback cascade
+ * and the DEF-shows-its-crest rule, neither of which a bespoke row has.
  */
 
 import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
 import DraftNav from '../draft-nav/DraftNav.astro';
+import PlayerCell from '../../theleague/PlayerCell.astro';
+import PlayerDetailsModal from '../../theleague/PlayerDetailsModal.astro';
 import { getCurrentLeagueYear } from '../../../utils/league-year';
 import { getPlayerHeadshot } from '../../../constants/roster-constants';
 import espnCollegeIds from '../../../../data/theleague/espn-college-ids.json';
 import { resolveLeaguePath } from '../../../utils/nav-utils';
+import { leagueHasFeature } from '../../../config/leagues';
 import type { DraftLeagueSlug } from '../draft-nav/draft-pages';
 
 interface Props {
@@ -93,16 +101,28 @@ const formatName = (mflName: string): string => {
 
 const espnCollegeMap = (espnCollegeIds as any)?.players || {};
 
-const playerMap = new Map<string, { name: string; position: string; nflTeam: string; headshot: string }>();
+const playerMap = new Map<string, { id: string; name: string; position: string; nflTeam: string; headshot: string; espnId: string }>();
 for (const p of playerArray) {
   const espnId = p.espn_id || espnCollegeMap[p.id]?.espnCollegeId || '';
   playerMap.set(p.id, {
+    id: p.id,
     name: formatName(p.name || ''),
     position: normPos(p.position || ''),
     nflTeam: (p.team || '').toUpperCase(),
     headshot: getPlayerHeadshot(p.id, espnId),
+    espnId,
   });
 }
+
+/** What PlayerCell's clickable name hands to PlayerDetailsModal. */
+type MockPlayer = NonNullable<ReturnType<typeof playerMap.get>>;
+const modalData = (player: MockPlayer) => ({
+  id: player.id,
+  espnId: player.espnId || undefined,
+  name: player.name,
+  position: player.position,
+  nflTeam: player.nflTeam,
+});
 
 // ── Process picks ──
 const picks = (session.picks || []).filter((p: any) => p.playerId);
@@ -178,12 +198,17 @@ const createdDate = new Date(session.createdAt).toLocaleDateString('en-US', {
                       {team?.nameShort || pick.franchiseId}
                     </div>
                     {player ? (
-                      <div class="results__pick-player">
-                        <span class="results__pick-name">{player.name}</span>
-                        <span class="results__pick-pos" style={`color: ${posColor}`}>
-                          {player.position} · {player.nflTeam}
-                        </span>
-                      </div>
+                      <PlayerCell
+                        name={player.name}
+                        headshot={player.headshot}
+                        position={player.position}
+                        nflTeam={player.nflTeam}
+                        mflId={player.id}
+                        espnId={player.espnId}
+                        size="compact"
+                        class="results__pick-cell"
+                        playerData={modalData(player)}
+                      />
                     ) : (
                       <div class="results__pick-player">
                         <span class="results__pick-name results__pick-name--unknown">Unknown Player</span>
@@ -226,17 +251,24 @@ const createdDate = new Date(session.createdAt).toLocaleDateString('en-US', {
                   const player = playerMap.get(pick.playerId);
                   const posColor = player ? posColors[player.position] || '#6b7280' : '#6b7280';
                   return (
-                    <div class="results__team-pick-row">
+                    /* The position colour moves to the row's own accent: the
+                       lockup's meta row is PlayerCell's and stays uniform. */
+                    <div class="results__team-pick-row" style={`--pick-pos-color: ${posColor}`}>
                       <span class="results__team-pick-num">
                         {pick.round}.{String(pick.pickInRound).padStart(2, '0')}
                       </span>
                       {player ? (
-                        <>
-                          <span class="results__team-pick-name">{player.name}</span>
-                          <span class="results__team-pick-pos" style={`color: ${posColor}`}>
-                            {player.position}
-                          </span>
-                        </>
+                        <PlayerCell
+                          name={player.name}
+                          headshot={player.headshot}
+                          position={player.position}
+                          nflTeam={player.nflTeam}
+                          mflId={player.id}
+                          espnId={player.espnId}
+                          size="compact"
+                          class="results__team-pick-cell"
+                          playerData={modalData(player)}
+                        />
                       ) : (
                         <span class="results__team-pick-name results__team-pick-name--unknown">—</span>
                       )}
@@ -263,7 +295,23 @@ const createdDate = new Date(session.createdAt).toLocaleDateString('en-US', {
       <a href={base} class="results__cta-btn">Run Another Mock Draft</a>
     </div>
   </div>
+
+  <PlayerDetailsModal hideContract={!leagueHasFeature(leagueSlug, 'contracts')} />
 </TheLeagueLayout>
+
+<script>
+  import { initPlayerModalTrigger } from '../../../utils/player-modal-trigger';
+
+  /* astro:page-load, not DOMContentLoaded: under the ClientRouter the second
+     visit never fires DOMContentLoaded and every name on the board would
+     arrive dead. Both containers are swapped in fresh per navigation, so the
+     delegated listeners cannot stack. */
+  document.addEventListener('astro:page-load', () => {
+    document
+      .querySelectorAll('.results__board-section, .results__teams-section')
+      .forEach((el) => initPlayerModalTrigger(el as HTMLElement));
+  });
+</script>
 
 <style>
   .results {
@@ -379,9 +427,36 @@ const createdDate = new Date(session.createdAt).toLocaleDateString('en-US', {
     color: var(--color-gray-300, #d1d5db);
   }
 
-  .results__pick-pos {
-    font-size: 0.6875rem;
-    font-weight: 600;
+  /* Board card + team row lockups are PlayerCell's; only their density is
+     tuned here, through the properties player-cell.css documents. */
+  .results__pick-card :global(.results__pick-cell) {
+    --player-avatar-size: 30px;
+    --player-name-size: 0.8125rem;
+    --player-meta-size: 0.6875rem;
+    --player-gap: 0.4rem;
+    min-width: 0;
+  }
+
+  .results__team-pick-row :global(.results__team-pick-cell) {
+    --player-avatar-size: 26px;
+    --player-name-size: 0.8125rem;
+    --player-meta-size: 0.6875rem;
+    --player-gap: 0.4rem;
+    min-width: 0;
+  }
+
+  .results__pick-card :global(.player-cell__info),
+  .results__team-pick-row :global(.player-cell__info) {
+    min-width: 0;
+  }
+
+  /* The position colour the row's own text no longer carries, kept as a left
+     accent so a team's haul still reads by position at a glance. It does NOT
+     go on the avatar: that chip already carries the NFL team's ring, and two
+     rings on one circle read as a rendering bug rather than a legend. */
+  .results__team-pick-row {
+    border-left: 2px solid var(--pick-pos-color, transparent);
+    padding-left: 0.35rem;
   }
 
   .results__auto-badge {

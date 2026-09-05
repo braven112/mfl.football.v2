@@ -8,13 +8,25 @@
  * MFL stubs a draft's slots before it is conducted, so "newest year" would
  * open on an empty board for most of the offseason.
  *
- * ── Zero client JS ─────────────────────────────────────────────────────────
+ * ── Navigation is zero client JS ───────────────────────────────────────────
  *
  * Every control is an `<a href>` that changes a query param, per the repo's
  * rule (see DivisionStrengthPage's note on why YearSelector is not reused: it
  * drives navigation from an inline `onchange` and dead-ends without script).
  * The page this replaces used `<select>` + a change handler, which is also
  * the shape that left DraftViewSelector's tabs dead under the ClientRouter.
+ * The ONE script here is the player-details modal trigger — it only opens a
+ * dialog, so every board and filter still works with script off.
+ *
+ * ── Players render through the shared PlayerCell, never a hand-rolled row ──
+ *
+ * A raw `<img src={headshot}>` is not the pattern: it has no fallback cascade
+ * and no DEF handling, so every defense on the board rendered a broken-image
+ * icon (a DEF's headshot URL is a 404 by construction — see the AFL's 2026
+ * board). PlayerCell swaps the team crest in for a DEF, falls back
+ * ESPN → college → MFL → silhouette for everyone else, and paints the
+ * team-color chip. Same lockup as rosters, the trade builder and the draft
+ * room.
  *
  * ── The conference switcher is the AFL's, and only the AFL's ───────────────
  *
@@ -29,8 +41,10 @@
  */
 import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
 import DraftNav from '../draft-nav/DraftNav.astro';
+import PlayerCell from '../../theleague/PlayerCell.astro';
+import PlayerDetailsModal from '../../theleague/PlayerDetailsModal.astro';
 import { resolveLeaguePath } from '../../../utils/nav-utils';
-import { getLeagueBySlug } from '../../../config/leagues';
+import { getLeagueBySlug, leagueHasFeature } from '../../../config/leagues';
 import type { DraftLeagueSlug } from '../draft-nav/draft-pages';
 import type { DraftResultsView } from '../../../utils/draft-results-view';
 
@@ -75,6 +89,20 @@ const showNflTeam = view.year === view.years[0];
 
 /** 'NFL' and 'FA' are the union's placeholders for "no team" — not teams. */
 const isRealNflTeam = (code: string) => !!code && code !== 'NFL' && code !== 'FA';
+
+/**
+ * The NFL team the player cell is allowed to assert for this row.
+ *
+ * Withheld on an older board for the reason above — the cell would otherwise
+ * put a current-team crest and team colors behind a pick made a decade ago —
+ * with one exception: a DEF *is* its NFL team, so that identity can't go
+ * stale, and without it the cell has no crest to show and falls back to the
+ * headshot URL that 404s.
+ */
+const cellTeam = (p: { position: string; nflTeam: string }) =>
+  isRealNflTeam(p.nflTeam) && (showNflTeam || p.position.toUpperCase() === 'DEF')
+    ? p.nflTeam
+    : '';
 
 const selectedTeam = view.teams.find((t) => t.id === view.team);
 const heading = `${view.year} Draft Results`;
@@ -220,19 +248,22 @@ const subtitle = selectedTeam
                 </td>
                 <td>
                   {p.playerName ? (
-                    <span class="dr__player">
-                      {p.headshot && (
-                        <img src={p.headshot} alt="" class="dr__headshot" loading="lazy" width="32" height="32" />
-                      )}
-                      <span class="dr__player-meta">
-                        <span class="dr__player-name">{p.playerName}</span>
-                        <span class="dr__player-sub">
-                          {[p.position, showNflTeam && isRealNflTeam(p.nflTeam) ? p.nflTeam : '']
-                            .filter(Boolean)
-                            .join(' · ')}
-                        </span>
-                      </span>
-                    </span>
+                    <PlayerCell
+                      name={p.playerName}
+                      headshot={p.headshot}
+                      position={p.position}
+                      nflTeam={cellTeam(p)}
+                      mflId={p.playerId}
+                      espnId={p.espnId}
+                      size="compact"
+                      playerData={{
+                        id: p.playerId,
+                        espnId: p.espnId || undefined,
+                        name: p.playerName,
+                        position: p.position,
+                        nflTeam: cellTeam(p),
+                      }}
+                    />
                   ) : (
                     /* A pick with no resolvable player is a real thing for the
                        oldest drafts — the AFL's pre-2011 seasons have no
@@ -251,7 +282,23 @@ const subtitle = selectedTeam
       </div>
     )}
   </main>
+
+  <PlayerDetailsModal hideContract={!leagueHasFeature(leagueSlug, 'contracts')} />
 </TheLeagueLayout>
+
+<script>
+  import { initPlayerModalTrigger } from '../../../utils/player-modal-trigger';
+
+  /* astro:page-load, not DOMContentLoaded: with the ClientRouter the second
+     visit to this page never fires DOMContentLoaded, and the board arrives
+     with dead names. The listener is delegated onto the table that this
+     navigation just swapped in, so nothing stacks across loads. */
+  document.addEventListener('astro:page-load', () => {
+    document.querySelectorAll('.dr__table').forEach((el) => {
+      initPlayerModalTrigger(el as HTMLElement);
+    });
+  });
+</script>
 
 <style>
   .dr {
@@ -414,8 +461,7 @@ const subtitle = selectedTeam
     white-space: nowrap;
   }
 
-  .dr__team,
-  .dr__player {
+  .dr__team {
     display: flex;
     align-items: center;
     gap: 0.5rem;
@@ -432,26 +478,14 @@ const subtitle = selectedTeam
     white-space: nowrap;
   }
 
-  .dr__headshot {
-    width: 32px;
-    height: 32px;
-    border-radius: 50%;
-    object-fit: cover;
-    background: var(--dres-surface-muted);
-    flex: 0 0 auto;
+  /* The player lockup is PlayerCell's — only the row's own density is set
+     here, through the custom properties player-cell.css documents. */
+  .dr__table :global(.player-cell) {
+    --player-avatar-size: 32px;
+    --player-name-size: 0.875rem;
+    --player-meta-size: 0.75rem;
   }
 
-  .dr__player-meta {
-    display: flex;
-    flex-direction: column;
-    line-height: 1.25;
-  }
-
-  .dr__player-name {
-    font-weight: 600;
-  }
-
-  .dr__player-sub,
   .dr__player-unknown,
   .dr__via {
     color: var(--dres-ink-muted);

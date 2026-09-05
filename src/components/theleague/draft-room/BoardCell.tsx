@@ -1,8 +1,17 @@
 import React from 'react';
 import type { DraftRoomPick, DraftRoomPlayer, DraftRoomTeam } from '../../../types/draft-room';
-import { getCollegeHeadshot, getPlayerImageUrl, nflLogoErrorHandler, nflLogoLoadHandler, nflLogoRefCallback, resolveHeadshotSrc } from '../../../constants/roster-constants';
-import { buildNoHeadshotPlaceholder } from '../../../utils/nfl-team-colors';
-import { normalizeTeamCode } from '../../../utils/nfl-logo';
+import { PlayerCell } from '../PlayerCell';
+
+/**
+ * One pick on the draft board.
+ *
+ * The player lockup is the site's shared PlayerCell, retuned to this grid's
+ * density through the custom properties player-cell.css documents. It used to
+ * be a hand-rolled `<img>` plus a name span carrying its OWN copy of the
+ * headshot fallback cascade (ESPN → college → MFL → silhouette) and its own
+ * DEF-shows-the-crest branch — a second implementation that could, and did,
+ * drift from the one every other surface uses.
+ */
 
 interface BoardCellProps {
   pick: DraftRoomPick;
@@ -73,62 +82,22 @@ export function BoardCell({ pick, player, team, teams, isCurrentPick, isUserTeam
     );
   }
 
-  const isDef = player?.position?.toUpperCase() === 'DEF';
-  const normalizedTeam = player?.nflTeam ? normalizeTeamCode(player.nflTeam) : '';
-  const teamLogoUrl = normalizedTeam ? `/assets/nfl-logos/${normalizedTeam}.svg` : '';
-  const noHeadshot = buildNoHeadshotPlaceholder(player?.nflTeam ?? '');
-  const avatarSrc = isDef && teamLogoUrl ? teamLogoUrl : resolveHeadshotSrc(player?.headshot, player?.nflTeam);
-  const avatarIsLogo = isDef && !!teamLogoUrl;
-
-  const handleImgError = (e: React.SyntheticEvent<HTMLImageElement>) => {
-    const img = e.currentTarget;
-    img.onerror = null;
-    if (player?.espnId) {
-      const college = getCollegeHeadshot(player.espnId);
-      if (player.mflId) {
-        const mfl = getPlayerImageUrl(player.mflId);
-        img.onerror = () => {
-          img.onerror = () => { img.onerror = null; img.src = noHeadshot; };
-          img.src = mfl;
-        };
-        img.src = college;
-      } else {
-        img.onerror = () => { img.onerror = null; img.src = noHeadshot; };
-        img.src = college;
-      }
-    } else if (player?.mflId) {
-      img.onerror = () => { img.onerror = null; img.src = noHeadshot; };
-      img.src = getPlayerImageUrl(player.mflId);
-    } else {
-      img.src = noHeadshot;
-    }
-  };
-
-  const avatarClass = `dr-cell__avatar${isDef ? ' dr-cell__avatar--def' : ''}`;
-  const metaClass = `dr-cell__meta${posKey ? ` dr-cell__meta--pos-${posKey}` : ''}`;
+  const posClass = posKey ? ` dr-cell__player--pos-${posKey}` : '';
 
   return (
     <div className={cellClass} aria-label={`Pick ${pickLabel} — ${player?.name || 'Unknown'}, ${player?.position || ''}`}>
       <span className="dr-cell__pick">{pickLabel}</span>
-      <div className="dr-cell__body">
-        <img
-          src={avatarSrc}
-          alt={isDef ? `${player?.nflTeam ?? 'DEF'} logo` : `${player?.name || ''} headshot`}
-          loading="lazy"
-          decoding="async"
-          onError={avatarIsLogo ? nflLogoErrorHandler : handleImgError}
-          onLoad={avatarIsLogo ? nflLogoLoadHandler : undefined}
-          ref={avatarIsLogo ? nflLogoRefCallback : undefined}
-          className={avatarClass}
-        />
-        <span className="dr-cell__name">
-          {player?.name || `Player ${pick.playerId}`}
-        </span>
-        {tierBadge}
-      </div>
-      <span className={metaClass}>
-        {player?.position || ''}{player?.nflTeam ? ` · ${player.nflTeam}` : ''}
-      </span>
+      <PlayerCell
+        name={player?.name || `Player ${pick.playerId}`}
+        headshot={player?.headshot}
+        position={player?.position}
+        nflTeam={player?.nflTeam}
+        mflId={player?.mflId}
+        espnId={player?.espnId}
+        size="compact"
+        className={`dr-cell__player${posClass}`}
+        afterName={tierBadge}
+      />
       {tradeTag}
     </div>
   );

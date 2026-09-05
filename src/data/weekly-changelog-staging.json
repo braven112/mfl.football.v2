@@ -4,6 +4,14 @@
     {
       "date": "2026-09-05",
       "type": "bug-fix",
+      "summary": "Every defense taken in the draft showed up as a broken-image icon on the Draft Results board, the draft hub's recap and the live draft room — a team defense has no headshot to load, and those pages were asking for one anyway. Players on the draft pages now use the same lockup as rosters and the trade builder: a defense gets its team crest, everyone else gets the full photo fallback chain instead of a torn-page icon, and every name is clickable straight through to the player card.",
+      "impact": "user",
+      "area": "draft",
+      "league": "both"
+    },
+    {
+      "date": "2026-09-05",
+      "type": "bug-fix",
       "summary": "AFL push notifications arrived wearing a blank white square where the shield should be. The little icon Android shows next to an alert is not a logo slot — the phone throws away the colors and traces the transparent parts, so the flat, edge-to-edge favicon we were handing it came out as an empty box. The AFL now has a proper stencil of its football, TheLeague has one of its crest, and both leagues get their own mark on every alert instead of sharing one.",
       "impact": "user",
       "area": "notifications",

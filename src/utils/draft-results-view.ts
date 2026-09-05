@@ -69,6 +69,13 @@ export interface DraftResultsPick {
   position: string;
   nflTeam: string;
   headshot: string;
+  /**
+   * Best-guess ESPN id, passed straight through to the shared player cell so
+   * its headshot cascade and the player modal have something to resolve
+   * against. May be a COLLEGE athlete id (see `resolveEspnId`) — fine for
+   * pictures, never safe for ESPN's NFL athlete endpoints.
+   */
+  espnId: string;
   /** MFL's comment with its bracket noise stripped; '' when there's nothing. */
   note: string;
   timestamp: number | null;
@@ -147,6 +154,7 @@ export type PlayerResolver = (mflId: string) => {
   position?: string;
   nflTeam?: string;
   headshot?: string;
+  espnId?: string | null;
 } | undefined;
 
 const toArray = <T,>(v: T | T[] | undefined): T[] =>
@@ -235,6 +243,7 @@ export function buildDraftBoard(
         position: identity?.position || '',
         nflTeam: identity?.nflTeam || '',
         headshot: identity?.headshot || '',
+        espnId: identity?.espnId || '',
         note: cleanNote(src.comments || ''),
         timestamp: Number.isFinite(ts) ? ts : null,
       };

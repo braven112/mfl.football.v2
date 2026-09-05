@@ -233,14 +233,17 @@
         "src/utils/draft*",
         "src/utils/*mock-draft*",
         "src/pages/api/draft/**",
-        "src/pages/api/draft-list.ts"
+        "src/pages/api/draft-list.ts",
+        "src/components/shared/draft-*/**",
+        "src/components/theleague/draft-room/**"
       ],
       "tests": [
         "tests/draft-status-units.test.ts",
         "tests/afl-draft-slot.test.ts",
         "tests/draft-order-phase.test.ts",
         "tests/afl-mock-draft.test.ts",
-        "tests/draft-route-redirects.test.ts"
+        "tests/draft-route-redirects.test.ts",
+        "tests/player-cell-pattern-guard.test.ts"
       ]
     },
     {

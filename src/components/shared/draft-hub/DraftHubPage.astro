@@ -16,14 +16,22 @@
  *   2. your own draft capital for the next draft
  *   3. a strip of the last draft's opening picks
  *
- * Zero client JS, like the Results page: everything here is server-rendered
- * and every control is a link.
+ * Zero client JS for navigation, like the Results page: everything here is
+ * server-rendered and every control is a link. The one script is the
+ * player-details modal trigger behind the recap names, which only opens a
+ * dialog — the hub is fully usable with script off.
+ *
+ * Recap picks render through the shared PlayerCell rather than a bare
+ * `<img src={headshot}>`: that hand-rolled lockup had no fallback cascade and
+ * no DEF handling, so a drafted defense showed a broken-image icon.
  */
 import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
 import DraftNav from '../draft-nav/DraftNav.astro';
+import PlayerCell from '../../theleague/PlayerCell.astro';
+import PlayerDetailsModal from '../../theleague/PlayerDetailsModal.astro';
 import { spriteUrl } from '../../../utils/sprite-url';
 import { resolveLeaguePath } from '../../../utils/nav-utils';
-import { getLeagueBySlug } from '../../../config/leagues';
+import { getLeagueBySlug, leagueHasFeature } from '../../../config/leagues';
 import { draftPagesFor, type DraftLeagueSlug } from '../draft-nav/draft-pages';
 import type { DraftHubStatus } from '../../../utils/draft-hub-state';
 import type { DraftResultsPick } from '../../../utils/draft-results-view';
@@ -174,12 +182,27 @@ const totalCapital = myCapital.reduce((sum, c) => sum + c.count, 0);
           {recap.map((p) => (
             <li class="dh__recap-item">
               <span class="dh__recap-pick">{p.label}</span>
-              {p.headshot ? (
-                <img src={p.headshot} alt="" class="dh__recap-shot" loading="lazy" width="40" height="40" />
+              {p.playerName ? (
+                <PlayerCell
+                  name={p.playerName}
+                  headshot={p.headshot}
+                  position={p.position}
+                  nflTeam={p.nflTeam}
+                  mflId={p.playerId}
+                  espnId={p.espnId}
+                  size="compact"
+                  class="dh__recap-cell"
+                  playerData={{
+                    id: p.playerId,
+                    espnId: p.espnId || undefined,
+                    name: p.playerName,
+                    position: p.position,
+                    nflTeam: p.nflTeam,
+                  }}
+                />
               ) : (
-                <span class="dh__recap-shot dh__recap-shot--blank" aria-hidden="true"></span>
+                <span class="dh__recap-name dh__recap-name--empty">No selection</span>
               )}
-              <span class="dh__recap-name">{p.playerName || 'No selection'}</span>
               <span class="dh__recap-team">{p.teamName}</span>
             </li>
           ))}
@@ -187,7 +210,23 @@ const totalCapital = myCapital.reduce((sum, c) => sum + c.count, 0);
       </section>
     )}
   </main>
+
+  <PlayerDetailsModal hideContract={!leagueHasFeature(leagueSlug, 'contracts')} />
 </TheLeagueLayout>
+
+<script>
+  import { initPlayerModalTrigger } from '../../../utils/player-modal-trigger';
+
+  /* astro:page-load, not DOMContentLoaded — see the Results page's note: the
+     second ClientRouter visit never fires DOMContentLoaded and the recap
+     names would arrive dead. The list element is swapped in fresh each
+     navigation, so the delegated listener cannot stack. */
+  document.addEventListener('astro:page-load', () => {
+    document.querySelectorAll('.dh__recap-list').forEach((el) => {
+      initPlayerModalTrigger(el as HTMLElement);
+    });
+  });
+</script>
 
 <style>
   .dh {
@@ -428,13 +467,17 @@ const totalCapital = myCapital.reduce((sum, c) => sum + c.count, 0);
     flex: 0 0 auto;
   }
 
-  .dh__recap-shot {
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    object-fit: cover;
-    background: var(--dhub-surface-muted);
-    flex: 0 0 auto;
+  /* Only the recap row's density is set here — the lockup itself is
+     PlayerCell's, retuned through the properties player-cell.css documents. */
+  .dh__recap-item :global(.dh__recap-cell) {
+    --player-avatar-size: 40px;
+    --player-name-size: 0.85rem;
+    --player-meta-size: 0.72rem;
+    min-width: 0;
+  }
+
+  .dh__recap-item :global(.player-cell__info) {
+    min-width: 0;
   }
 
   .dh__recap-name {
@@ -444,6 +487,11 @@ const totalCapital = myCapital.reduce((sum, c) => sum + c.count, 0);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+  }
+
+  .dh__recap-name--empty {
+    font-weight: 500;
+    color: var(--dhub-ink-muted);
   }
 
   .dh__recap-team {

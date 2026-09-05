@@ -143,7 +143,7 @@
  *     #1e1e1e/#121212 dark surfaces at light-mode alpha values. Rebuilt with
  *     color-mix against the dark --color-primary (#3b82f6) so the tint reads.
  *  2. --dr-pos-* position-coding colors — used as small text
- *     (.dr-cell__meta--pos-*, .dr-board-row__meta--pos-*), and the light hexes
+ *     (.dr-cell__player--pos-*, .dr-board-row__meta--pos-*), and the light hexes
  *     fall below 4.5:1 on dark cards (qb 3.45:1, wr 3.23:1, te 2.93:1).
  *     Swapped for the same brightened family already used by
  *     tokens-dark.css's semantic colors (--color-error/success/info/warning),
@@ -328,47 +328,33 @@ html.dark .dr-side-panel {
   color: var(--color-gray-400, #9ca3af);
   margin-bottom: 0.1875rem;
 }
-.dr-cell__body {
-  display: flex;
-  align-items: center;
-  gap: 0.25rem;
+/* The lockup itself is the shared .player-cell (BoardCell.tsx) — only this
+   grid's density is set here, through the properties player-cell.css
+   documents. Retuning beats re-implementing: the old .dr-cell__avatar carried
+   a second copy of the headshot cascade with it. */
+.dr-cell__player {
+  --player-avatar-size: 22px;
+  --player-name-size: 0.75rem;
+  --player-meta-size: 0.625rem;
+  --player-logo-size: 12px;
+  --player-gap: 0.25rem;
   min-width: 0;
 }
-.dr-cell__avatar {
-  width: 22px;
-  height: 22px;
-  border-radius: var(--radius-full, 9999px);
-  object-fit: cover;
-  object-position: top;
-  flex-shrink: 0;
-  background: var(--color-gray-100, #f3f4f6);
-}
-.dr-cell__avatar--def {
-  border-radius: 0;
-  object-fit: contain;
-}
-.dr-cell__name {
-  font-weight: 600;
-  color: var(--color-gray-900, #111827);
-  line-height: 1.2;
+.dr-cell__player .player-cell__info { min-width: 0; }
+.dr-cell__player .player-cell__name {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  min-width: 0;
-  flex: 1;
 }
-.dr-cell__meta {
-  font-size: 0.625rem;
-  font-weight: 600;
-  margin-top: 0.0625rem;
-  color: var(--color-gray-500, #6b7280);
-}
-.dr-cell__meta--pos-qb  { color: var(--dr-pos-qb); }
-.dr-cell__meta--pos-rb  { color: var(--dr-pos-rb); }
-.dr-cell__meta--pos-wr  { color: var(--dr-pos-wr); }
-.dr-cell__meta--pos-te  { color: var(--dr-pos-te); }
-.dr-cell__meta--pos-pk  { color: var(--dr-pos-pk); }
-.dr-cell__meta--pos-def { color: var(--dr-pos-def); }
+
+/* Position colouring stays on the meta text, where it always was. */
+.dr-cell__player .player-meta__pos { font-weight: 600; }
+.dr-cell__player--pos-qb  .player-meta__pos { color: var(--dr-pos-qb); }
+.dr-cell__player--pos-rb  .player-meta__pos { color: var(--dr-pos-rb); }
+.dr-cell__player--pos-wr  .player-meta__pos { color: var(--dr-pos-wr); }
+.dr-cell__player--pos-te  .player-meta__pos { color: var(--dr-pos-te); }
+.dr-cell__player--pos-pk  .player-meta__pos { color: var(--dr-pos-pk); }
+.dr-cell__player--pos-def .player-meta__pos { color: var(--dr-pos-def); }
 .dr-cell__empty {
   font-size: 0.6875rem;
   font-style: italic;
