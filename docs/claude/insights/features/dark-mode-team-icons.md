@@ -622,3 +622,46 @@ any reader cares about; count the axis the entry is claiming.
 `src/components/theleague/FaceoffComposite.astro` (`watermarkFilter`),
 `tests/dark-surface-crest.test.ts`. Rule lives in
 `docs/claude/rules/theming-and-assets.md`.
+
+## 2026-09-05 - A dark cut fixes a dark OUTLINE, not a dark BODY — and how a fine asset got reported as "opaque white"
+
+**Report:** "the Raiders logo renders as a white square in dark mode; ESPN's
+`500-dark/lv.png` is drawn on an opaque white background." Suggested fix: put
+LV in `knownMissing` so the light SVG stays.
+
+**What measurement showed.** Fetched all 32 `500-dark` cuts and scored the
+outer 3% ring: alpha 0 on every one, LV included, and prod's mirrored
+`/assets/nfl-logos/dark/LV.png` was byte-identical. The transparent pixels
+store RGB `(255,255,255)` under alpha 0 — so any inspection that drops alpha
+(`convert('RGB')`, ImageMagick mean color, a preview on white) reports a
+solid white fill for EVERY ESPN cut, not just LV. Rendered through the real
+`content: url()` swap in headless Chromium at 16/24/48/96px, LV is a correct
+shield. Adding it to `knownMissing` would have dropped a working dark cut.
+
+**The actual bug was the Panthers.** ESPN's dark cut re-inks a mark's
+OUTLINE light, which is why the Steelers/Jets/Bengals read fine after the
+swap. Carolina's panther is black clear through with a hairline blue edge —
+75% near-black pixels — so the swap leaves a smudge on the `#1e1e1e` card at
+the 16px chip size every player cell uses. The other dark-bodied marks (LV,
+HOU, ATL, CHI, JAX) carry a bright interior that clears them; CAR is the only
+one whose silhouette IS the logo.
+
+**Fix shape:** `NFL_DARK_STROKE_CODES` in `nfl-logo-dark-css.ts` — a curated
+list that appends ONE `filter` rule keyed on the same light srcs as the swap
+(ESPN 500, canonical SVG, every legacy alias), reusing `crestStrokeFilter`
+from the crest-stroke module so an NFL logo and a near-black AFL crest on one
+card wear the same edge. It composes with `content: url()` (filter applies to
+the rendered pixels and follows their alpha), so it is an ADDITION to the
+swap, never a `knownMissing` opt-out. Width is 1px, not the crests' 0.5px:
+rendered side by side, the hairline still left a 16px panther faint, because
+a solid silhouette has no interior detail doing half the work. Owner's call.
+
+**Also seen:** `500-dark/NO.png` answered four consecutive 404s across ~10s,
+then 200 on every later probe — the transient-404 behavior the mirror's
+comment already documents. Do not read one build's `✗ NO: HTTP 404` as a
+missing cut.
+
+**Rule:** before touching `knownMissing` for a "bad" dark asset, measure the
+ALPHA channel and render the cut on the dark card. Then ask which failure it
+is — a bad asset (rare; none found), a dark outline (the swap's job), or a
+dark body (the stroke's job).

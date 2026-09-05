@@ -393,6 +393,19 @@ hard-won facts (Aug 2026 "missing team images" saga):
   (owner decision: a wrong logo is worse than none). Dark mode is separate:
   the `content: url()` swap fires no error event, which is why the dark logos
   are prebuild-mirrored (see `nfl-logo-dark-css.ts`).
+- **A dark cut fixes dark OUTLINES, not a dark BODY.** ESPN's `500-dark` cut
+  re-inks a mark's outline light; a mark that is black all the way through
+  (the Panthers — 75% near-black pixels, hairline blue edge) still dissolves
+  into a `#1e1e1e` card at 16px after the swap. `NFL_DARK_STROKE_CODES` in
+  `nfl-logo-dark-css.ts` adds the league-crest white ring (the
+  `crestStrokeFilter` drop-shadow stack) on top of the swap for those codes,
+  at 1px rather than the crests' 0.5px hairline: a solid silhouette with no
+  bright interior needs the heavier edge at 16px (owner's call, 2026-09-05). Before adding one, measure the ALPHA channel and render the cut
+  on the dark card: ESPN's PNGs store RGB white under alpha-0 pixels, so any
+  alpha-dropping check reports a false "opaque white fill" (the Raiders' cut
+  was reported that way on 2026-09-04 and is fine). The ring composes with
+  `content: url()`; do not put a stroked code in `knownMissing`, which would
+  drop the dark cut it is meant to complement.
 - **The service worker is now the longest-lived cache in front of an asset,
   not the CDN.** `public/sw.js` holds `/assets/**` on stale-while-revalidate,
   so a bad copy survives exactly one more page view; it is cache-first ONLY

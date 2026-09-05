@@ -38,10 +38,40 @@
  * `resolveNflDarkLogoUrl` serves the local copy for manifest-listed teams and
  * falls back to the ESPN URL for anything missing, so a failed prebuild fetch
  * degrades to the old remote behavior — never to a 404ing local path.
+ *
+ * White ring (Sep 2026): the swap alone is not enough for a mark whose body
+ * is black rather than merely dark-outlined. `NFL_DARK_STROKE_CODES` lists
+ * those (the Panthers), and the builder appends one `filter` rule keyed on
+ * the same light srcs, reusing the league-crest ring stack from
+ * `crest-dark-stroke-css.ts` at `NFL_DARK_STROKE_WIDTH`.
  */
 
 import { getAllNFLTeamCodes, getNFLTeamLogo, normalizeTeamCode, TEAM_CODE_MAP } from './nfl-logo';
+import { crestStrokeFilter } from './crest-dark-stroke-css';
 import darkLogoManifest from '../data/nfl-dark-logos-manifest.json';
+
+/**
+ * Canonical codes whose logo needs a white ring in dark mode ON TOP of the
+ * dark swap. ESPN's `500-dark` cut fixes marks with dark OUTLINES (it
+ * re-inks them light), but it does nothing for a mark whose whole BODY is
+ * black: the Panthers' cut is 75% near-black pixels with a hairline blue
+ * edge, and on a #1e1e1e card it reads as a smudge at 16px — that is the
+ * shape the site renders it at in every player cell and box score. The ring
+ * is the league crests' `drop-shadow` stack (`crest-dark-stroke-css.ts`) at
+ * 1px rather than their 0.5px hairline — owner's call after a side-by-side
+ * render on 2026-09-05: a 16px panther is a solid black silhouette with no
+ * interior detail to help it, so the hairline that suffices for a crest with
+ * a bright middle still left it faint. Curated, not measured: the crest
+ * measurement scores legible PIXELS, and the other dark-bodied NFL marks (LV,
+ * HOU, ATL, CHI, JAX) carry a bright interior that clears them; CAR is the
+ * only one whose silhouette IS the logo. Verified by rendering all 32 dark
+ * cuts on the dark card, 2026-09-05. Not a swap opt-out — the ring composes
+ * with `content: url()`, so the dark cut still ships underneath it.
+ */
+export const NFL_DARK_STROKE_CODES: readonly string[] = ['CAR'];
+
+/** Ring width for NFL_DARK_STROKE_CODES — see the note above on why not 0.5px. */
+export const NFL_DARK_STROKE_WIDTH = '1px';
 
 /**
  * Escape a value for use inside a double-quoted CSS string. Also neutralizes
@@ -128,6 +158,26 @@ export function buildNflLogoDarkCss(): string {
       rules.push(swapRule(`/assets/nfl-logos/${code}.svg`, cssStringEscape(dark)));
       swappedSrcs.push(`/assets/nfl-logos/${code}.svg`);
     }
+  }
+
+  // White ring for dark-bodied marks (NFL_DARK_STROKE_CODES). Keyed on the
+  // same light srcs as the swap rules above — ESPN 500 PNG, canonical SVG and
+  // every legacy alias — so it reaches every call site the swap does. `filter`
+  // applies to the element's rendered pixels, i.e. the content:url() dark cut,
+  // and follows its alpha silhouette (never the img's bounding box).
+  const strokeSrcs: string[] = [];
+  for (const code of getAllNFLTeamCodes()) {
+    if (NFL_DARK_STROKE_CODES.includes(code)) strokeSrcs.push(getNFLTeamLogo(code));
+  }
+  for (const code of localCodes) {
+    const canonical = normalizeTeamCode(code);
+    if (canonical && NFL_DARK_STROKE_CODES.includes(canonical)) {
+      strokeSrcs.push(`/assets/nfl-logos/${code}.svg`);
+    }
+  }
+  if (strokeSrcs.length) {
+    const selectors = strokeSrcs.map((src) => `html.dark img[src="${cssStringEscape(src)}"]`).join(', ');
+    rules.push(`${selectors} { filter: ${crestStrokeFilter(undefined, NFL_DARK_STROKE_WIDTH)}; }`);
   }
 
   // Failed-logo hide: logo <img>s tag themselves `nfl-logo-failed` via

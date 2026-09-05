@@ -2,6 +2,14 @@
   "weekOf": "2026-08-31",
   "changes": [
     {
+      "date": "2026-09-05",
+      "type": "style-tweak",
+      "summary": "In dark mode the Panthers logo had been doing its best impression of a shadow. Every other NFL mark gets a dark-mode cut with its outline re-inked light, but Carolina's panther is black clear through, so on a dark card it dissolved into a smudge next to the player's name. It now wears a crisp white edge, the same treatment the league crests get in dark mode, so the cat is visible again at every size, in both leagues.",
+      "impact": "user",
+      "area": "design-system",
+      "league": "both"
+    },
+    {
       "date": "2026-09-04",
       "type": "bug-fix",
       "summary": "Every contract write to MFL takes a backup first, so there is something to roll back to when a write goes sideways. Those backups have been empty files. The same went for the commissioner's verify step — the one whose entire job is to confirm a contract change actually landed — which had been reading back an empty salary sheet and calling it a clean bill of health. MFL was answering \"you are not logged in\" with a cheerful HTTP 200, so nothing ever looked broken. Backups now contain the league's actual salary data, and verification checks against something real.",

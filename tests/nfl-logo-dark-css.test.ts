@@ -15,7 +15,13 @@
 import fs from 'fs';
 import path from 'path';
 import { describe, it, expect } from 'vitest';
-import { buildNflLogoDarkCss, resolveNflDarkLogoUrl } from '../src/utils/nfl-logo-dark-css';
+import {
+  buildNflLogoDarkCss,
+  resolveNflDarkLogoUrl,
+  NFL_DARK_STROKE_CODES,
+  NFL_DARK_STROKE_WIDTH,
+} from '../src/utils/nfl-logo-dark-css';
+import { crestStrokeFilter } from '../src/utils/crest-dark-stroke-css';
 import { getAllNFLTeamCodes, getNFLTeamLogo, normalizeTeamCode, TEAM_CODE_MAP } from '../src/utils/nfl-logo';
 import { getNflLogoUrl } from '../src/constants/roster-constants';
 import { NFL_TEAM_CODES } from '../scripts/fetch-nfl-dark-logos.mjs';
@@ -34,10 +40,11 @@ describe('buildNflLogoDarkCss', () => {
       const n = normalizeTeamCode(c);
       return n && n !== 'NFL';
     }).length;
-    // ...plus the two failed-logo rules (base hide + dark un-hide for
-    // swapped srcs) appended at the end.
-    expect(lines).toHaveLength(canonical.length + localRules + 2);
-    const swapLines = lines.filter((l) => !l.includes('nfl-logo-failed'));
+    // ...plus the white-ring rule for NFL_DARK_STROKE_CODES and the two
+    // failed-logo rules (base hide + dark un-hide for swapped srcs) appended
+    // at the end.
+    expect(lines).toHaveLength(canonical.length + localRules + 3);
+    const swapLines = lines.filter((l) => !l.includes('nfl-logo-failed') && !l.includes('filter:'));
     expect(swapLines).toHaveLength(canonical.length + localRules);
     for (const line of swapLines) {
       expect(line.startsWith('html.dark img[src="')).toBe(true);
@@ -99,6 +106,58 @@ describe('buildNflLogoDarkCss', () => {
     for (const code of getAllNFLTeamCodes()) {
       expect(css).toContain(resolveNflDarkLogoUrl(code));
     }
+  });
+});
+
+describe('white ring for dark-bodied marks (NFL_DARK_STROKE_CODES)', () => {
+  const css = buildNflLogoDarkCss();
+  const strokeLine = css.split('\n').find((l) => l.includes('filter:'));
+
+  it('emits exactly one html.dark filter rule using the shared crest ring', () => {
+    // The Panthers' dark cut is a black body with a hairline blue edge — the
+    // swap alone leaves a smudge on the dark card. The ring must be the SAME
+    // drop-shadow stack the league crests use, so an NFL logo and an AFL
+    // crest on one card wear one edge.
+    expect(NFL_DARK_STROKE_CODES).toContain('CAR');
+    expect(css.split('\n').filter((l) => l.includes('filter:'))).toHaveLength(1);
+    expect(strokeLine).toBeDefined();
+    // Same STACK as the crests, wider than their 0.5px hairline — a 16px
+    // panther is a solid silhouette with no bright interior to help it.
+    expect(NFL_DARK_STROKE_WIDTH).toBe('1px');
+    expect(strokeLine).toContain(`{ filter: ${crestStrokeFilter(undefined, NFL_DARK_STROKE_WIDTH)}; }`);
+    expect(strokeLine).toContain('drop-shadow(1px 0 0 ');
+    expect(strokeLine).not.toContain('0.5px');
+    expect(strokeLine!.startsWith('html.dark img[src="')).toBe(true);
+  });
+
+  it('keys the ring on every light src the swap keys on: ESPN 500, canonical SVG, legacy aliases', () => {
+    for (const code of NFL_DARK_STROKE_CODES) {
+      expect(strokeLine).toContain(`[src="${getNFLTeamLogo(code)}"]`);
+      expect(strokeLine).toContain(`[src="/assets/nfl-logos/${code}.svg"]`);
+      for (const [alias, canonical] of Object.entries(TEAM_CODE_MAP)) {
+        if (canonical === code && alias !== code) {
+          expect(strokeLine).toContain(`[src="/assets/nfl-logos/${alias}.svg"]`);
+        }
+      }
+    }
+    // Never keyed on the dark variant (the swap target), never on other teams.
+    expect(strokeLine).not.toContain('500-dark');
+    expect(strokeLine).not.toContain('/assets/nfl-logos/dark/');
+    expect(strokeLine).not.toContain('/DAL.');
+    expect(strokeLine).not.toContain('/LV.');
+  });
+
+  it('composes with the swap rather than replacing it — the dark cut still ships underneath', () => {
+    for (const code of NFL_DARK_STROKE_CODES) {
+      expect(css).toContain(
+        `html.dark img[src="${getNFLTeamLogo(code)}"] { content: url("${resolveNflDarkLogoUrl(code)}"); }`,
+      );
+    }
+  });
+
+  it('only lists canonical team codes', () => {
+    const canonical = new Set(getAllNFLTeamCodes());
+    for (const code of NFL_DARK_STROKE_CODES) expect(canonical.has(code)).toBe(true);
   });
 });
 
