@@ -10,6 +10,7 @@
  */
 
 import { mflFetch } from './mfl-fetch';
+import { getLeagueById } from '../config/leagues';
 
 export interface MFLLoginResponse {
   success: boolean;
@@ -63,6 +64,68 @@ function parseMFLLoginXML(xml: string): { cookie?: string; error?: string } {
  *   because the 2026 AFL league hasn't been created on MFL yet, so calling
  *   `2026/myleagues` returns nothing for league 19621.
  */
+/**
+ * Ask the LEAGUE's own host for the MFL_IS_COMMISH cookie.
+ *
+ * `api.myfantasyleague.com/<year>/login` issues MFL_USER_ID and nothing else —
+ * it has no league in scope, so it has no commissioner to grant. MFL only sets
+ * MFL_IS_COMMISH on a LEAGUE-SCOPED login: the league's own `www##` host, with
+ * `L=<id>`. Every commissioner write then needs that same host plus both
+ * cookies (docs/claude/insights/domains/mfl-api.md:33).
+ *
+ * That is why the accounting console told a signed-in commissioner his session
+ * had no commissioner credential, and why "sign out and sign in again" could
+ * never have fixed it — the login it sent him back to was the api host's.
+ *
+ * Best-effort by design: a failure here leaves the session exactly as it was,
+ * authenticated for reads and refused on writes, which is the status quo.
+ */
+async function fetchCommissionerCookie(
+  username: string,
+  password: string,
+  leagueId: string,
+  seasonYear: number,
+): Promise<string | undefined> {
+  const league = getLeagueById(leagueId);
+  if (!league?.mflHost) return undefined;
+
+  const params = new URLSearchParams({
+    L: leagueId,
+    USERNAME: username,
+    PASSWORD: password,
+    XML: '1',
+  });
+
+  // The AFL signs in against a PAST season (the login route's `year` override),
+  // so seasonYear alone can name a league year that is not the one being
+  // written. Try it first, then the current year, deduped.
+  const years = [...new Set([seasonYear, new Date().getFullYear()])];
+
+  for (const year of years) {
+    try {
+      let url = `https://${league.mflHost}/${year}/login?${params.toString()}`;
+      for (let hop = 0; hop <= 3; hop++) {
+        const res = await fetch(url, {
+          method: 'GET',
+          redirect: 'manual',
+          signal: AbortSignal.timeout(8000),
+        });
+        for (const cookieStr of res.headers.getSetCookie?.() ?? []) {
+          const match = cookieStr.match(/MFL_IS_COMMISH=([^;]+)/);
+          if (match) return match[1];
+        }
+        if (res.status < 300 || res.status >= 400) break;
+        const location = res.headers.get('location');
+        if (!location) break;
+        url = location.startsWith('http') ? location : new URL(location, url).href;
+      }
+    } catch (error) {
+      console.log('[mfl-login] league-scoped login failed:', (error as Error).message);
+    }
+  }
+  return undefined;
+}
+
 export async function authenticateWithMFL(
   username: string,
   password: string,
@@ -208,6 +271,13 @@ export async function authenticateWithMFL(
         console.log('[mfl-login] found MFL_IS_COMMISH cookie');
         break;
       }
+    }
+
+    // The api host's login never carries a league, so it never grants one.
+    // Ask the league's own host before concluding this is not a commissioner.
+    if (!commishCookie && leagueId) {
+      commishCookie = await fetchCommissionerCookie(username, password, leagueId, seasonYear);
+      if (commishCookie) console.log('[mfl-login] found MFL_IS_COMMISH via league-scoped login');
     }
 
     console.log('[mfl-login] Got MFL cookie (length:', mflCookie.length, ') commish:', !!commishCookie);

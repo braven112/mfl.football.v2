@@ -32,6 +32,13 @@
   commissioner-only and silently switches MFL to a stricter validation path.
 - **Commissioner writes need the `www##` host AND both cookies**
   (`MFL_USER_ID` + `MFL_IS_COMMISH`). The `api.` host rejects them.
+- **`MFL_IS_COMMISH` comes from a LEAGUE-SCOPED login, not the `api.` one.**
+  `api.myfantasyleague.com/<year>/login` has no league in scope, so it has no
+  commissioner to grant and sets only `MFL_USER_ID`. The cookie is issued by
+  `https://<mflHost>/<year>/login?L=<id>` on the league's own host. Signing in
+  again against the api host can never produce it, however many times you try
+  — `authenticateWithMFL` now makes that second, league-scoped hop
+  (`tests/mfl-login-commish-cookie.test.ts`).
 - **Normalize every filtered export.** A one-result query returns a bare object,
   not a one-element array. Use `asArray` (`src/utils/mfl-normalize.ts`) *inside
   shared utils*, not at call sites. Offseason feeds ship a truthy object with
