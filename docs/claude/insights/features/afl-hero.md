@@ -27,7 +27,11 @@ articles → the countdown and each article show 20% of loads; one article →
 the same `rng() < 0.5` boundary TheLeague's Cut Watch flip uses; no article →
 the countdown at 100% and `rng` is never called. P0 (an ACTIVE event: draft
 day, deadline day, kickoff itself) never pools, and the regular-season slot
-rotation is untouched. In the pooled path the article is chosen per VISIT
+rotation is untouched. "Active" is judged on the CARD, not the lead's own
+priority: on AL draft day an NL owner's lead is swapped to their not-yet-live
+NL card (P1) whose secondary link is the only homepage path to the live AL
+board, so a live sibling draft (`conferenceDraft.al.live || nl.live`) blocks
+pooling too — the first review of this PR caught exactly that. In the pooled path the article is chosen per VISIT
 (that is the point of the pool); the standalone P2 path, with no countdown
 competing, keeps its per-PT-day `dailyPick`.
 `tests/afl-hero-lead-event-flip.test.ts` pins the exact slot boundaries with a

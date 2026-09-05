@@ -111,6 +111,23 @@ describe('AFL hero: an upcoming countdown pools with fresh What\'s New articles'
     expect(state.kind).not.toBe('feature');
   });
 
+  it('an NL owner on AL draft day leads with a P1 NL card, but the LIVE AL draft still blocks pooling', () => {
+    // pickLeadCalendarEvent swaps the lead to the viewer's own conference draft,
+    // which is not yet active (P1) — but that card carries the only homepage link
+    // to the live AL board, so it must not be pooled away.
+    const state = resolveAflHeroState({
+      referenceDate: activeEventDate,
+      whatsNewEntries: [entry({ date: '2026-08-28' })],
+      userConferenceId: '01',
+      rng: () => 0.99,
+    });
+    expect(state.kind).toBe('calendar-event');
+    if (state.kind !== 'calendar-event') throw new Error('unreachable');
+    expect(state.eventId).toBe('afl-nl-draft');
+    expect(state.priority).toBe('P1');
+    expect(state.conferenceDraft?.al.live).toBe(true);
+  });
+
   it('an rng that returns exactly 1 still resolves (clamped to the last slot)', () => {
     expect(resolveAt(1, five).kind).toBe('feature');
   });

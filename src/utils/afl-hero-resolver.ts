@@ -1242,8 +1242,15 @@ export function resolveAflHeroState(input: AflHeroResolverInput): AflHeroState {
   // Per-visit randomness is intentional (the hero may differ between
   // refreshes, as TheLeague's does near the roster deadline); `rng` is
   // injectable so tests stay deterministic.
+  //
+  // "Upcoming" is judged on the CARD, not just its own priority: on AL draft
+  // day an NL owner leads with their own not-yet-live NL card (P1), and that
+  // card is the only path from the homepage to the LIVE AL board (see the
+  // secondary-links block in pickLeadCalendarEvent). A live sibling draft
+  // makes the card a live event for pooling purposes.
   const lead = pickLeadCalendarEvent(events, rawEvents, ctx);
-  if (lead && lead.priority === 'P1' && fresh.length > 0) {
+  const siblingDraftLive = !!lead?.conferenceDraft && (lead.conferenceDraft.al.live || lead.conferenceDraft.nl.live);
+  if (lead && lead.priority === 'P1' && !siblingDraftLive && fresh.length > 0) {
     const rng = input.rng ?? Math.random;
     const poolSize = fresh.length + 1;
     const slot = Math.min(poolSize - 1, Math.max(0, Math.floor(rng() * poolSize)));
