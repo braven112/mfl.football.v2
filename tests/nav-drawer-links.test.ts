@@ -12,6 +12,27 @@ const LEAGUE_PAGE_DIRS: Record<LeagueSlug, string> = {
   bb1: path.join(REPO_ROOT, 'src/pages/best-ball-1'),
 };
 
+interface NavLinkEntry {
+  link: NavLink;
+  /** The section's leagueOnly, or undefined for pinned links (no section). */
+  leagueOnly?: LeagueSlug;
+}
+
+/**
+ * Every drawer link: the pinned links that render above the sections plus
+ * every section's links. Pinned links are checked by the same rules — a
+ * pinned link to a missing or prerendered page breaks the drawer the same way.
+ */
+function getAllNavLinks(): NavLinkEntry[] {
+  const entries: NavLinkEntry[] = (navConfig.pinnedLinks ?? []).map((link: NavLink) => ({ link }));
+  for (const section of navConfig.sections) {
+    for (const link of section.links) {
+      entries.push({ link, leagueOnly: section.leagueOnly as LeagueSlug | undefined });
+    }
+  }
+  return entries;
+}
+
 function getTargetLeagues(link: NavLink, sectionLeagueOnly?: LeagueSlug): LeagueSlug[] {
   // Untagged links belong to the full-format leagues only — best-ball
   // leagues get an opt-in nav (see linkMatchesLeague in nav-utils).
@@ -33,36 +54,33 @@ function getPageSourceFile(league: LeagueSlug, navPath: string): string | null {
 
 describe('Nav drawer link integrity', () => {
   it('maps every internal nav link to an existing page', () => {
-    for (const section of navConfig.sections) {
-      for (const link of section.links) {
-        if (!link.path) continue;
+    for (const { link, leagueOnly } of getAllNavLinks()) {
+      if (!link.path) continue;
 
-        for (const league of getTargetLeagues(link, section.leagueOnly as LeagueSlug | undefined)) {
-          const sourceFile = getPageSourceFile(league, link.path);
-          expect(
-            sourceFile,
-            `Missing page for nav link "${link.id}" (${link.path}) in ${league}`
-          ).not.toBeNull();
-        }
+      for (const league of getTargetLeagues(link, leagueOnly)) {
+        const sourceFile = getPageSourceFile(league, link.path);
+        expect(
+          sourceFile,
+          `Missing page for nav link "${link.id}" (${link.path}) in ${league}`
+        ).not.toBeNull();
       }
     }
   });
 
   it('keeps TheLeague internal drawer links server-rendered for clean URL rewrites', () => {
-    for (const section of navConfig.sections) {
-      for (const link of section.links) {
-        if (!link.path) continue;
-        if (link.leagueOnly && link.leagueOnly !== 'theleague') continue;
+    for (const { link, leagueOnly } of getAllNavLinks()) {
+      if (!link.path) continue;
+      if (link.leagueOnly && link.leagueOnly !== 'theleague') continue;
+      if (leagueOnly && leagueOnly !== 'theleague') continue;
 
-        const sourceFile = getPageSourceFile('theleague', link.path);
-        expect(sourceFile, `Expected TheLeague page for nav link "${link.id}"`).not.toBeNull();
+      const sourceFile = getPageSourceFile('theleague', link.path);
+      expect(sourceFile, `Expected TheLeague page for nav link "${link.id}"`).not.toBeNull();
 
-        const source = readFileSync(sourceFile as string, 'utf8');
-        expect(
-          source,
-          `${link.id} (${link.path}) must not be prerendered; clean URL rewriting relies on runtime routing`
-        ).not.toMatch(PRERENDER_TRUE_EXPORT);
-      }
+      const source = readFileSync(sourceFile as string, 'utf8');
+      expect(
+        source,
+        `${link.id} (${link.path}) must not be prerendered; clean URL rewriting relies on runtime routing`
+      ).not.toMatch(PRERENDER_TRUE_EXPORT);
     }
   });
 });

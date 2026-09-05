@@ -3,6 +3,14 @@
   "changes": [
     {
       "date": "2026-09-05",
+      "type": "style-tweak",
+      "summary": "The side menu has a new first stop: Notifications now sits at the very top of the drawer, above every section, in both leagues. It is the one page that decides what reaches your phone, and until now the only way to find it was site search or a link buried in a What's New post. It stays first year-round \u2014 the sections below it shuffle between the season and the offseason, but this one does not move. The Add/Drop link is gone in the same pass; it kicked you out to MFL's own screen, and adds and drops already live on the site's player pages.",
+      "impact": "user",
+      "area": "navigation",
+      "league": "both"
+    },
+    {
+      "date": "2026-09-05",
       "type": "bug-fix",
       "summary": "AFL push notifications arrived wearing a blank white square where the shield should be. The little icon Android shows next to an alert is not a logo slot — the phone throws away the colors and traces the transparent parts, so the flat, edge-to-edge favicon we were handing it came out as an empty box. The AFL now has a proper stencil of its football, TheLeague has one of its crest, and both leagues get their own mark on every alert instead of sharing one.",
       "impact": "user",

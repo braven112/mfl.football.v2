@@ -1,4 +1,14 @@
 {
+  "pinnedLinks": [
+    {
+      "id": "notifications",
+      "label": "Notifications",
+      "icon": "bell",
+      "path": "/notifications",
+      "external": false,
+      "description": "Choose which league alerts reach your phone"
+    }
+  ],
   "sections": [
     {
       "id": "best-ball",
@@ -230,14 +240,6 @@
           "external": false,
           "leagueOnly": "afl",
           "description": "Browse available AFL free agents with ADP and projected points"
-        },
-        {
-          "id": "add-drop",
-          "label": "Add/Drop",
-          "icon": "plus",
-          "urlTemplate": "https://{host}/{year}/add_drop?L={leagueId}",
-          "external": true,
-          "description": "Add or drop players on MFL"
         }
       ]
     },

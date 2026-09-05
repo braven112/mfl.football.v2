@@ -205,6 +205,13 @@ export interface NavDrawerState {
  * This is the shape of nav-config.json
  */
 export interface NavConfig {
+  /**
+   * Links pinned above every section, rendered flat (no section header) at
+   * the very top of the drawer. Section order flips between phases, so a
+   * link that must always be first cannot live inside a section.
+   */
+  pinnedLinks?: NavLink[];
+
   /** All navigation sections */
   sections: NavSection[];
 
@@ -268,6 +275,9 @@ export interface NavHeaderProps {
  * Props for NavLinks component
  */
 export interface NavLinksProps {
+  /** Links rendered flat above the first section (already league-filtered) */
+  pinnedLinks?: NavLink[];
+
   /** Sections to render */
   sections: NavSection[];
 

@@ -15,6 +15,9 @@
  *   without overwriting the user's stored preference.
  * - In collapsed-drawer mode (icon-only) the section header buttons hide
  *   entirely — every visible link renders flat with its tooltip.
+ * - `pinnedLinks` render flat ABOVE the first section, outside the disclosure
+ *   pattern. Section order flips between in-season and off-season, so that is
+ *   the only place a link can sit that is first in both phases.
  */
 
 import type { NavLinksProps, NavSection, NavLink, LeagueSlug, LeaguePhase, NavSectionDefaultOpen } from '../../types/nav';
@@ -38,6 +41,7 @@ interface Props extends NavLinksProps {
 }
 
 const {
+  pinnedLinks = [],
   sections,
   league,
   currentPath = '',
@@ -219,6 +223,34 @@ const sectionRenderInfo = visibleSections.map((section) => {
   aria-label="Main navigation"
   data-nav-phase={phase}
 >
+  {pinnedLinks.length > 0 && (
+    <ul class="nav-links__section-links nav-links__pinned" role="list">
+      {pinnedLinks.map((link) => {
+        const href = resolveHref(link, league);
+        const active = isActive(link, currentPath, league);
+        const isExternal = link.external;
+        return (
+          <li class="nav-links__item">
+            <a
+              href={href}
+              class:list={['nav-links__link', { 'nav-links__link--active': active }]}
+              {...(isExternal && { target: '_blank', rel: 'noopener noreferrer' })}
+              data-astro-reload
+              aria-current={active ? 'page' : undefined}
+            >
+              <span class="nav-links__icon" aria-hidden="true">
+                <svg width="24" height="24" viewBox="0 0 24 24">
+                  <use href={`${spriteUrl}#icon-${getIcon(link, league)}`} />
+                </svg>
+              </span>
+              <span class="nav-links__label">{getLabel(link, league)}</span>
+            </a>
+          </li>
+        );
+      })}
+    </ul>
+  )}
+
   <ul class="nav-links__list" role="list">
     {sectionRenderInfo.map(({ section, initiallyOpen, containsActive }) => {
       const isAdminSection = (section as any)._adminOnly;
@@ -358,6 +390,15 @@ const sectionRenderInfo = visibleSections.map((section) => {
     list-style: none;
     padding: 0;
     margin: 0;
+  }
+
+  /* ============================================
+   * PINNED LINKS — flat, above every section
+   * ============================================ */
+  .nav-links__pinned {
+    margin-bottom: 8px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--nav-border, #d0d2d6);
   }
 
   /* ============================================

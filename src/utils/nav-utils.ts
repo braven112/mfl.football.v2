@@ -416,6 +416,32 @@ export function getVisibleLinks(
 }
 
 /**
+ * Get the pinned links visible for a league.
+ *
+ * Pinned links render flat above every section (see NavLinks), so they never
+ * move when the phase reorders the sections. They go through the same league
+ * + visibility filters as section links — an untagged pinned link is still
+ * excluded from best-ball navs, which do not have most of these pages.
+ *
+ * @param league - Current league context
+ * @param franchiseId - User's franchise ID (null if not authenticated)
+ * @param adminFranchiseIds - List of admin franchise IDs
+ * @returns Array of visible pinned links (empty when none are configured)
+ */
+export function getVisiblePinnedLinks(
+  league: LeagueSlug,
+  franchiseId: string | null,
+  adminFranchiseIds: string[] = navConfig.adminFranchiseIds[league] ?? []
+): NavLink[] {
+  return (navConfig.pinnedLinks ?? []).filter(link => {
+    if (!linkMatchesLeague(link, league)) {
+      return false;
+    }
+    return isLinkVisible(link, franchiseId, adminFranchiseIds);
+  });
+}
+
+/**
  * Get all visible sections with their visible links
  *
  * @param league - Current league context
