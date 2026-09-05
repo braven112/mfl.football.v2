@@ -1,5 +1,5 @@
 {
-  "$comment": "Path \u2192 guard-tests \u2192 rules-doc map consumed by .claude/hooks/path-guard.mjs on every Write/Edit. Globs use Node's path.matchesGlob against repo-relative paths. Keep each domain's tests FAST (scan-style guards, pure-function suites) \u2014 they run on every edit that matches. tests/path-guard-map.test.ts validates this file: every glob must match a real file, every test and rules doc must exist, and every docs/claude/rules/*.md must be routed by at least one domain.",
+  "$comment": "Path → guard-tests → rules-doc map consumed by .claude/hooks/path-guard.mjs on every Write/Edit. Globs use Node's path.matchesGlob against repo-relative paths. Keep each domain's tests FAST (scan-style guards, pure-function suites) — they run on every edit that matches. tests/path-guard-map.test.ts validates this file: every glob must match a real file, every test and rules doc must exist, and every docs/claude/rules/*.md must be routed by at least one domain.",
   "domains": [
     {
       "name": "roger",
@@ -250,7 +250,7 @@
     {
       "name": "rosters-page",
       "rules": "docs/plans/rosters-page-split.md",
-      "note": "Run `node scripts/roster-parity-check.mjs` before AND after editing \u2014 it is the only test of this 12k-line page's hydrated output.",
+      "note": "Run `node scripts/roster-parity-check.mjs` before AND after editing — it is the only test of this 12k-line page's hydrated output.",
       "paths": [
         "src/pages/*/rosters.astro",
         "scripts/roster-parity-check.mjs"
@@ -301,7 +301,7 @@
         "src/utils/league-year*",
         "src/utils/pecking-order-season-window.mjs"
       ],
-      "note": "Two independent clocks (Feb 14 \u2192 getCurrentLeagueYear, Labor Day \u2192 getCurrentSeasonYear); the base year is ALWAYS calendarYear - 1. See CLAUDE.md \"Year rollover \u2014 two independent clocks\".",
+      "note": "Two independent clocks (Feb 14 → getCurrentLeagueYear, Labor Day → getCurrentSeasonYear); the base year is ALWAYS calendarYear - 1. See CLAUDE.md \"Year rollover — two independent clocks\".",
       "tests": [
         "tests/league-year-rollover.test.ts",
         "tests/afl-league-year.test.ts",
@@ -350,7 +350,7 @@
         "src/utils/url-guard.ts",
         "src/middleware.ts"
       ],
-      "note": "Session JWT only \u2014 never re-add unsigned identity sources. See CLAUDE.md \"Auth \u2014 session JWT only\".",
+      "note": "Session JWT only — never re-add unsigned identity sources. See CLAUDE.md \"Auth — session JWT only\".",
       "tests": [
         "tests/url-guard.test.ts",
         "tests/mfl-cookie-redirect-guard.test.ts"
@@ -388,7 +388,7 @@
       "paths": [
         ".github/workflows/*.yml"
       ],
-      "note": "No new vars.* feature gates (comment out cron: to disable a job; gate with a const in the script); league ids/hosts come from the registry; a weekly job needs isSeasonWindowOpen, not \"the feeds have a completed week\". See CLAUDE.md \"Feature flags \u2014 code, not GitHub Actions variables\".",
+      "note": "No new vars.* feature gates (comment out cron: to disable a job; gate with a const in the script); league ids/hosts come from the registry; a weekly job needs isSeasonWindowOpen, not \"the feeds have a completed week\". See CLAUDE.md \"Feature flags — code, not GitHub Actions variables\".",
       "tests": [
         "tests/workflow-feature-flag-guard.test.ts",
         "tests/league-literal-guard.test.ts",

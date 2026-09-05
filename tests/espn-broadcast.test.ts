@@ -21,3 +21,12 @@ describe('parseBroadcast — the network off an ESPN scoreboard competition', ()
     expect(parseBroadcast(null)).toBe('');
   });
 });
+
+describe('parseBroadcast — the geo fallback never names a radio network', () => {
+  it('prefers national TV, then a national non-radio carrier, never Westwood One', () => {
+    const radioOnly = { geoBroadcasts: [{ type: { shortName: 'TV' }, market: { type: 'Home' }, media: { shortName: 'WCBS' } }, { type: { shortName: 'Radio' }, market: { type: 'National' }, media: { shortName: 'Westwood One' } }] };
+    expect(parseBroadcast(radioOnly)).toBe('');
+    const streaming = { geoBroadcasts: [{ type: { shortName: 'Radio' }, market: { type: 'National' }, media: { shortName: 'Westwood One' } }, { type: { shortName: 'Streaming' }, market: { type: 'National' }, media: { shortName: 'Prime Video' } }] };
+    expect(parseBroadcast(streaming)).toBe('Prime Video');
+  });
+});

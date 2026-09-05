@@ -80,7 +80,8 @@ let cookieDead = false;
 let myLeaguesUnavailable = false;
 if (user?.id) {
   const result = await fetchMyLeagues(user.id, leagueYear);
-  if (result.ok) myLeagues = result.leagues;
+  if (result.ok && result.leagues.length > 0) myLeagues = result.leagues;
+  else if (result.ok) myLeaguesUnavailable = true; // rows we could not parse: live cookie, unusable list
   else if (result.reason === 'dead-cookie') cookieDead = true;
   // fetch-failed / unparseable: MFL, not the cookie. Say so — an empty list
   // read as "no other leagues" is the degradation auth.md warns against.
@@ -143,21 +144,24 @@ if (outsideAllowed && user) {
   }
 }
 
-// Registered leagues read synced feeds; outside leagues are live MFL reads and
-// independent of one another, so they run in parallel. Board order is kept.
-const loaded = await Promise.all(boardLeagues.map(async (l): Promise<LeagueContribution | null> => {
-  if (!enabledIds.has(l.id)) return null; // off: no read at all
+// Registered leagues read synced feeds; outside leagues are live MFL reads,
+// independent of one another, run a few at a time (each is three exports —
+// ten outside leagues on a cold cache must not be thirty simultaneous
+// authenticated MFL calls). Board order is kept; so is notice order.
+const OUTSIDE_CONCURRENCY = 3;
+const loadOne = async (l: (typeof boardLeagues)[number]): Promise<{ c: LeagueContribution | null; notice?: string }> => {
+  if (!enabledIds.has(l.id)) return { c: null }; // off: no read at all
   if (l.registered) {
-    return loadRegisteredContribution({
+    return { c: loadRegisteredContribution({
       league: l.registered,
       franchiseId: l.franchiseId,
       franchiseName: l.franchiseName || franchiseNameFromConfig(l.registered, l.franchiseId),
       week,
       leagueYear: getLeagueYearForSlug(l.registered.slug),
       identity,
-    });
+    }) };
   }
-  if (!outsideAllowed || !user?.id) return null;
+  if (!outsideAllowed || !user?.id) return { c: null };
   const c = await loadOutsideContribution({
     source: { leagueId: l.id, leagueName: l.name, franchiseId: l.franchiseId, franchiseName: l.franchiseName },
     host: l.host,
@@ -166,10 +170,20 @@ const loaded = await Promise.all(boardLeagues.map(async (l): Promise<LeagueContr
     mflUserCookie: user.id,
     identity,
   });
-  if (!c) notices.push(`${l.name} didn't answer — MFL may need you to sign in again for that league.`);
-  return c;
-}));
-for (const c of loaded) if (c) contributions.push(c);
+  return c ? { c } : { c: null, notice: `${l.name} didn't answer — MFL may need you to sign in again for that league.` };
+};
+const loaded: Array<{ c: LeagueContribution | null; notice?: string }> = new Array(boardLeagues.length);
+{
+  let next = 0;
+  const worker = async () => {
+    while (next < boardLeagues.length) { const i = next++; loaded[i] = await loadOne(boardLeagues[i]); }
+  };
+  await Promise.all(Array.from({ length: Math.min(OUTSIDE_CONCURRENCY, boardLeagues.length) }, worker));
+}
+for (const r of loaded) {
+  if (r?.c) contributions.push(r.c);
+  if (r?.notice) notices.push(r.notice);
+}
 
 if (myLeaguesUnavailable) notices.push("Couldn't reach MFL for your other leagues just now — this is the board for the leagues this site runs.");
 const personalized = contributions.length > 0;
