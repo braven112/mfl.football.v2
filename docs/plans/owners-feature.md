@@ -1,11 +1,7 @@
 # Owners as a first-class concept
 
-> **Status:** **PRs 1, 2 and 3 shipped** (Aug–Sept 2026). PR 4 is half done:
-> the names are in (118 of 124 registry people; the six still anonymous are
-> pre-2007 AFL one-season teams MFL has no owner record for — re-derive the
-> count rather than trusting this line), and the `sourceFranchiseId` / AFL
-> award-badge half remains — see Phasing. Written August 2026 in the session
-> that fixed Midwestside's 2010
+> **Status:** **PRs 1 and 2 shipped** (Aug 2026). PRs 3-4 still to build — see
+> Phasing. Written August 2026 in the session that fixed Midwestside's 2010
 > attribution (PR #597), which is what surfaced the gap. Everything here was
 > measured against real data in this repo — a future session should not need to
 > re-derive any of it.
@@ -22,26 +18,6 @@
 > TheLeague, 95 of 95 in the AFL, all 118 verified live at 200), a shared
 > `PreviousOwners.astro` on BOTH franchise detail pages, and the What's New
 > entry (`excludeFromHero: true`). Full suite 259 files / 6586 tests.
->
-> **What PR 3 landed** (Sept 2026): the boundary rule has ONE implementation.
-> `inferCurrentOwnerSince` / `buildAttributor` in `src/utils/owner-tenures.mjs`
-> are now called by `compute-franchise-history.mjs` (`attributeYear` IS
-> `attributeSeason`), by `afl-awards.ts` (`attributeAwardYear` and
-> `getCurrentOwnerSince` are thin wrappers, so the AFL page's `nameEras`
-> follows for free), and by `franchise-eras.ts` (`groupHistory` groups eras
-> with the exported `entriesShareEra`, and `buildHistoricalIdentities` merges
-> those same eras across gaps by dominant name). The `ownerEra` divergence (trap 3) is gone by
-> construction, and the shared attributor fails closed on a null/unknown
-> franchise id, as the awards copy always did. Verified zero-change: both
-> leagues' `franchise-history.json` and `season-ledger.json` regenerate
-> byte-identical apart from `generatedAt`, and a dump of `buildFranchiseEras`,
-> `renderedEraStarts`, `buildHistoricalIdentities`, `attributeAwardYear`,
-> `getCurrentOwnerSince` and `attributeSeason` over every (slot, year) in
-> both leagues is identical before and after. `tests/owner-boundary-parity.test.ts`
-> is now required in two layers — behavioural (over the real ledger) AND
-> structural (the three files must import the shared module, and NO source
-> file under `src/` or `scripts/` may contain a walk-back of its own). `team-names.ts`'s `getTeamIdentityForYear` was
-> never a boundary copy — it is a year→identity lookup — and is untouched.
 >
 > **Three things a follow-up session should know:**
 > - The **"Not verified" risk at the bottom of this doc is resolved.** Apex
@@ -132,15 +108,14 @@ Per-franchise history keeps working exactly as it does today.
 2. **The orphaned SEASONS are not on disk anywhere.** `:915`
    (`if (!targetId) continue`) drops them before writing. Emitting a flat
    unattributed ledger is the one genuine prerequisite edit.
-3. ~~**Five parallel copies of the boundary rule exist, and two already
-   disagree.**~~ **Resolved in PR 3.** Historically
-   `compute-franchise-history.mjs` walked back on `sameName || sameEra` while
-   `src/utils/afl-awards.ts` walked back on **name only** — no `ownerEra`
-   clause — and they agreed only because `ownerEra` existed solely on
-   TheLeague `0003`, which `afl-awards.ts` never reads. There is now one
-   implementation in `src/utils/owner-tenures.mjs`; the structural half of
-   `tests/owner-boundary-parity.test.ts` fails the build if any consumer
-   re-grows a local walk-back. Do not inline one "just for this page".
+3. **Five parallel copies of the boundary rule exist, and two already
+   disagree.** `compute-franchise-history.mjs:265` walks back on
+   `sameName || sameEra`; `src/utils/afl-awards.ts:198` walks back on **name
+   only** — no `ownerEra` clause. They agree today only because `ownerEra`
+   exists solely on TheLeague `0003` and `afl-awards.ts` never reads TheLeague's
+   config. Adding `ownerEra` to any AFL team silently forks stat attribution
+   from display. The others: `franchise-eras.ts:172-194`, `team-names.ts:325`,
+   and page-local logic in `afl-fantasy/franchises/[id].astro:217-300`.
 4. **Astro scoped CSS never reaches a child component.** The era-table rules
    live in the franchise page's own `<style>`; moving the markup without the CSS
    ships an unstyled table. See `docs/claude/rules/theming-and-assets.md`.
@@ -394,15 +369,12 @@ identity needs it (TheLeague's "Poker in the Rear / Generals", 2012), and
 `tests/owner-identity-links.test.ts` fails on real data if either key is
 dropped.
 
-**PR 3 — "One boundary, one implementation."** ✅ **Shipped** (Sept 2026).
-Migrated `compute-franchise-history.mjs`, `afl-awards.ts`, `franchise-eras.ts`,
-and (transitively, through `getCurrentOwnerSince`)
-`afl-fantasy/franchises/[id].astro`'s `nameEras` onto `owner-tenures.mjs`,
-resolving the `ownerEra` divergence (trap 3). The parity test gained a
-structural layer. Zero user-visible change, proven at the data level rather
-than by page screenshots: the page templates were untouched and every function
-they call was dumped over every (slot, year) before and after — see the status
-block.
+**PR 3 — "One boundary, one implementation."** Migrate
+`compute-franchise-history.mjs`, `afl-awards.ts`, `franchise-eras.ts`, and
+`afl-fantasy/franchises/[id].astro`'s `nameEras` onto `owner-tenures.mjs`
+(its `priorOwnerEras` half is already gone — see the status block), resolving
+the `ownerEra` divergence (trap 3). Flip the parity test from advisory to
+required. Zero user-visible change; snapshot both franchise pages before/after.
 
 **PR 4 — "Names."** *(source found — see below.)* Add `sourceFranchiseId` to `compute-afl-awards.mjs` (~`:505`
 writes `{franchiseId: null, name, source}` with no source slot — the one genuine
