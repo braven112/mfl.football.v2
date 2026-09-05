@@ -24,6 +24,16 @@ import type { DraftLeagueSlug } from '../draft-nav/draft-pages';
 interface Props {
   leagueSlug: DraftLeagueSlug;
   sessionId: string;
+  /**
+   * The session, already fetched by the ROUTE and already known to exist.
+   *
+   * Fetched there rather than here because the "no session" case has to
+   * REDIRECT, and `Astro.redirect()` from a component's frontmatter only stops
+   * rendering the component — the response is still a 200 with a blank body
+   * (CLAUDE.md; the /cr page shipped exactly that). See
+   * utils/mock-draft-session for the shared half of the decision.
+   */
+  session: Record<string, any>;
   title: string;
   /** This league's mock lobby, for the bail-out redirects and the CTA. */
   basePath: string;
@@ -31,36 +41,12 @@ interface Props {
   teams: Array<{ franchiseId: string; name: string; nameMedium?: string; nameShort?: string; icon?: string }>;
 }
 
-const { leagueSlug, sessionId, title, basePath, teams } = Astro.props as Props;
+const { leagueSlug, sessionId, title, basePath, teams, session } = Astro.props as Props;
 const hideLeaguePrefix = Astro.locals.hideLeaguePrefix ?? false;
 const base = resolveLeaguePath(basePath, hideLeaguePrefix);
 
-const rawPartyHost = import.meta.env.PUBLIC_PARTYKIT_HOST || '';
-// Ensure protocol prefix for server-side fetch (env var may be bare hostname)
-const partyHost = rawPartyHost && !rawPartyHost.startsWith('http') ? `https://${rawPartyHost}` : rawPartyHost;
 const leagueYear = getCurrentLeagueYear();
 const leagueYearStr = String(leagueYear);
-
-// ── Fetch session from PartyKit ──
-let session: any = null;
-if (partyHost) {
-  try {
-    const res = await fetch(`${partyHost}/party/mock-${sessionId}`, {
-      method: 'GET',
-      headers: { 'Accept': 'application/json' },
-    });
-    if (res.ok) {
-      const data = await res.json();
-      session = data.session;
-    }
-  } catch (e) {
-    console.error('[mock-draft/results] Failed to fetch session:', e);
-  }
-}
-
-if (!session) {
-  return Astro.redirect(base);
-}
 
 // ── Build team lookup ──
 const teamMap = new Map<string, { name: string; nameMedium: string; nameShort: string; icon: string }>();

@@ -516,7 +516,12 @@ const rankingSourcesJson = JSON.stringify(rankingSources);
       const timerSeconds = parseInt(getChipValue('timer-chips') || '10');
       const totalRounds = roundCount > 0 ? parseInt(getChipValue('round-chips') || String(rounds)) : rounds;
       const useRealOrder = getChipValue('order-chips') === 'real';
-      const defaultRankingSource = defaultSourceSelect?.value || defaultRankingSource;
+      // NOT `const defaultRankingSource = ... || defaultRankingSource`: that
+      // declares a const initialized from ITSELF. The inner declaration shadows
+      // the define:vars binding for this whole block, so a falsy left side
+      // (no select, or an empty value) reads it inside its own temporal dead
+      // zone and throws. Different name, no shadow.
+      const selectedSource = defaultSourceSelect?.value || defaultRankingSource;
 
       // Read the user's personal queue from localStorage to back the
       // `my-rank` source. If the queue is empty the server falls back to
@@ -542,7 +547,7 @@ const rankingSourcesJson = JSON.stringify(rankingSources);
             timerSeconds,
             totalRounds,
             useRealOrder,
-            defaultRankingSource,
+            defaultRankingSource: selectedSource,
             rankingAssignments,
             myRankPlayerIds,
             ...createExtras,

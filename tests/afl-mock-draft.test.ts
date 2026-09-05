@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import {
   AFL_MOCK_ROUNDS,
@@ -464,4 +464,62 @@ describe('a mock’s chat channel', () => {
     expect(chat('a')).not.toBe(chat('b'));
     expect(chat('a')).not.toBe('league-19621-draft-2026-conference00');
   });
+});
+
+describe('no shared page component redirects', () => {
+  /**
+   * `Astro.redirect()` only redirects from a PAGE. Returned from a component's
+   * frontmatter it merely stops rendering that component — the response is
+   * still a 200 with a BLANK BODY. CLAUDE.md records this from the /cr
+   * extraction, and extracting the mock results page shipped it again: a
+   * missing session stopped bouncing to the lobby and started rendering
+   * nothing, in BOTH leagues.
+   *
+   * Guarded over every shared page component rather than the one that broke,
+   * because the trap belongs to the extraction pattern, not to that file.
+   */
+  const walk = (dir: string): string[] =>
+    readdirSync(dir, { withFileTypes: true }).flatMap((e) => {
+      const path = join(dir, e.name);
+      if (e.isDirectory()) return walk(path);
+      return e.name.endsWith('.astro') ? [path] : [];
+    });
+
+  const components = walk('src/components/shared');
+
+  it('finds the components it means to check', () => {
+    expect(components.length).toBeGreaterThan(5);
+  });
+
+  /**
+   * Comments are stripped first, and that is not incidental: four shared
+   * components already carry this rule in prose (`Astro.redirect()` only
+   * redirects from a PAGE), so a naive grep flags the files that document the
+   * trap and stays silent about the one committing it.
+   */
+  const codeOf = (file: string) =>
+    readFileSync(file, 'utf-8')
+      .replace(/\/\*[\s\S]*?\*\//g, '')
+      .replace(/^\s*\/\/.*$/gm, '');
+
+  it('strips comments rather than flagging the files that document the rule', () => {
+    // Guards the guard, and derives its own subjects: every shared component
+    // that MENTIONS the rule must survive the check. Four do today. A hardcoded
+    // list would rot; this one cannot name the wrong file.
+    const mentioners = components.filter((f) =>
+      readFileSync(f, 'utf-8').includes('Astro.redirect')
+    );
+    expect(mentioners.length).toBeGreaterThan(2);
+    for (const f of mentioners) {
+      expect(codeOf(f), `${f} documents the rule but reads as breaking it`).not.toMatch(
+        /\bAstro\.redirect\s*\(/
+      );
+    }
+  });
+
+  for (const file of components) {
+    it(`${file.replace('src/components/shared/', '')} leaves redirects to its route`, () => {
+      expect(codeOf(file)).not.toMatch(/\bAstro\.redirect\s*\(/);
+    });
+  }
 });
