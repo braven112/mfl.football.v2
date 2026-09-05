@@ -46,7 +46,7 @@ export const GET: APIRoute = async ({ request }) => {
   if (!caller) return json({ error: 'Authentication required' }, 401, headers);
   const { user, league } = caller;
 
-  const categories = visibleCategoriesForLeague(league.features);
+  const categories = visibleCategoriesForLeague(league);
   const stored = await readPreferences(league.id, user.franchiseId);
 
   return json(
@@ -61,7 +61,7 @@ export const GET: APIRoute = async ({ request }) => {
         defaultOn: c.defaultOn,
       })),
       // Effective values: the owner's explicit choice, or the default.
-      preferences: resolvePreferences(categories, stored, league.features),
+      preferences: resolvePreferences(categories, stored, league),
     },
     200,
     headers,
@@ -97,7 +97,7 @@ export const POST: APIRoute = async ({ request }) => {
   // Only categories this league actually offers. Without this, an owner in one
   // league could store a preference for a feature-gated category they do not
   // have, which would then apply if the feature were ever enabled.
-  const offered = new Set(visibleCategoriesForLeague(league.features).map((c) => c.id));
+  const offered = new Set(visibleCategoriesForLeague(league).map((c) => c.id));
   const next: Record<string, boolean> = {};
   for (const [id, value] of Object.entries(incoming)) {
     if (offered.has(id)) next[id] = value;
@@ -108,11 +108,11 @@ export const POST: APIRoute = async ({ request }) => {
     return json({ error: 'Could not save — storage unavailable' }, 503, headers);
   }
 
-  const categories = visibleCategoriesForLeague(league.features);
+  const categories = visibleCategoriesForLeague(league);
   return json(
     {
       success: true,
-      preferences: resolvePreferences(categories, next, league.features),
+      preferences: resolvePreferences(categories, next, league),
     },
     200,
     headers,

@@ -13,6 +13,12 @@
 import { leagueUrl } from '../../src/config/leagues-data.mjs';
 
 /**
+ * Must not exceed MAX_NOTIFICATIONS in src/pages/api/cron/push-fanout.ts.
+ * The route answers an oversized batch with a 400 and delivers none of it.
+ */
+const MAX_PER_CALL = 64;
+
+/**
  * Defaulting to `console` itself types the parameter as the full Console
  * interface, which rejects any two-method stub a caller (or a test) passes.
  * Narrow it to the two methods this module actually calls.
@@ -57,26 +63,49 @@ export async function sendPushFanout({ league, category, notifications, dryRun =
   // truth for it — never concatenated by hand, never a workflow variable.
   const base = leagueUrl(league, '').replace(/\/$/, '');
 
-  try {
-    const res = await fetch(`${base}/api/cron/push-fanout`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${secret}` },
-      body: JSON.stringify({
-        league: league.slug,
-        notifications: notifications.map((n) => ({ ...n, category })),
-      }),
-    });
-    if (!res.ok) {
-      log.warn?.(`  [push] ${category} fan-out failed: HTTP ${res.status}`);
-      return { sent: 0, skipped: `http ${res.status}` };
-    }
-    const data = await res.json();
-    log.log?.(`  [push] ${category} → ${data.recipients ?? 0} owners (${data.sent ?? 0} devices).`);
-    return data;
-  } catch (err) {
-    log.warn?.(`  [push] ${category} fan-out failed: ${err.message}`);
-    return { sent: 0, skipped: err.message };
+  // Chunked, because the route rejects a batch over MAX_NOTIFICATIONS (64)
+  // with a 400 and sends NOTHING. That ceiling is easy to cross without
+  // noticing: the deadline sender fans one alert per franchise per reminder
+  // post, so the 24-team AFL crosses it at three posts, and TheLeague at
+  // five. Batching here rather than at each sender means no caller has to
+  // know the route's limit — the same reason the dry-run guard lives here.
+  const batches = [];
+  for (let i = 0; i < notifications.length; i += MAX_PER_CALL) {
+    batches.push(notifications.slice(i, i + MAX_PER_CALL));
   }
+
+  let sent = 0;
+  let recipients = 0;
+  // Why nothing went out, for a caller (or a test) that needs to tell a push
+  // outage apart from an empty batch. Chunking made this a per-batch fact, so
+  // it records the LAST failure rather than the only one.
+  let skipped = null;
+  for (const batch of batches) {
+    try {
+      const res = await fetch(`${base}/api/cron/push-fanout`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${secret}` },
+        body: JSON.stringify({
+          league: league.slug,
+          notifications: batch.map((n) => ({ ...n, category })),
+        }),
+      });
+      if (!res.ok) {
+        log.warn?.(`  [push] ${category} fan-out failed: HTTP ${res.status}`);
+        skipped = `http ${res.status}`;
+        continue;
+      }
+      const data = await res.json();
+      sent += data.sent ?? 0;
+      recipients += data.recipients ?? 0;
+    } catch (err) {
+      // Per batch, so one failed chunk cannot cost the others.
+      log.warn?.(`  [push] ${category} fan-out failed: ${err.message}`);
+      skipped = err.message;
+    }
+  }
+  log.log?.(`  [push] ${category} → ${recipients} owners (${sent} devices).`);
+  return { sent, recipients, batches: batches.length, ...(skipped ? { skipped } : {}) };
 }
 
 /**

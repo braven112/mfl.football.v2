@@ -37,6 +37,7 @@ import {
   SHORT_WINDOW_HOURS,
 } from '../src/utils/owners-poll-window.mjs';
 import { normalizeFranchiseId } from '../src/utils/franchise-id.mjs';
+import { getCurrentYears } from './lib/league-years.mjs';
 import {
   ownersPollRedis,
   writeWindow,
@@ -134,7 +135,10 @@ async function open(redis, league, opts) {
   const poll = league.ownersPoll;
   const week = Number(opts.week);
   if (!Number.isInteger(week) || week < 1) usage('--week must be a week number.');
-  const year = opts.year ? Number(opts.year) : new Date().getUTCFullYear();
+  // See the note in src/pages/api/owners-poll/window.ts — the season clock,
+  // not the calendar year, or a January open is stored against a season that
+  // has not happened and the close pass refuses to tally it.
+  const year = opts.year ? Number(opts.year) : getCurrentYears().currentSeasonYear;
 
   const existing = await readWindow(redis, league.navSlug);
   if (existing && !opts.force) {

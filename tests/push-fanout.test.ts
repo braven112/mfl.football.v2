@@ -132,3 +132,52 @@ describe('broadcast', () => {
     expect(broadcast({})).toEqual([]);
   });
 });
+
+/**
+ * The route answers a batch over MAX_NOTIFICATIONS (64) with a 400 and
+ * delivers NONE of it. The deadline sender fans one alert per franchise per
+ * reminder post, so the 24-team AFL crosses that at three posts — and
+ * roster-deadline is on by default, so the failure would hit the category
+ * that matters most, silently, with no retry.
+ */
+describe('batching', () => {
+  it('splits a batch that would exceed the route cap', async () => {
+    const calls: number[] = [];
+    const fetchMock = vi.fn(async (_url: string, init: any) => {
+      calls.push(JSON.parse(init.body).notifications.length);
+      return { ok: true, json: async () => ({ sent: 1, recipients: 1 }) };
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    process.env.CRON_SECRET = 'x';
+
+    const notifications = Array.from({ length: 72 }, (_, i) => ({
+      franchiseId: String(i).padStart(4, '0'), title: 't', body: 'b',
+    }));
+    const result: any = await sendPushFanout({
+      league: LEAGUE, category: 'roster-deadline', notifications, log: silent,
+    });
+
+    expect(calls).toEqual([64, 8]);
+    expect(result.batches).toBe(2);
+    // Every notification reached a call — none silently dropped.
+    expect(calls.reduce((a, b) => a + b, 0)).toBe(72);
+  });
+
+  it('one failed chunk does not cost the others', async () => {
+    let n = 0;
+    vi.stubGlobal('fetch', vi.fn(async () => {
+      n += 1;
+      if (n === 1) throw new Error('boom');
+      return { ok: true, json: async () => ({ sent: 5, recipients: 5 }) };
+    }));
+    process.env.CRON_SECRET = 'x';
+    const notifications = Array.from({ length: 70 }, (_, i) => ({
+      franchiseId: String(i), title: 't', body: 'b',
+    }));
+    const result: any = await sendPushFanout({
+      league: LEAGUE, category: 'roster-deadline', notifications, log: silent,
+    });
+    expect(result.sent).toBe(5);
+    expect(result.skipped).toBe('boom');
+  });
+});

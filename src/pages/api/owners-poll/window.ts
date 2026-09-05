@@ -28,6 +28,7 @@ import type { APIRoute } from 'astro';
 import { json, JSON_HEADERS_NO_STORE } from '../../../utils/api-response';
 import { isCommissionerOrAdmin, getAuthUser } from '../../../utils/auth';
 import { checkRateLimit } from '../../../utils/rate-limit';
+import { getCurrentSeasonYear } from '../../../utils/league-year';
 import {
   resolveOwnersPollWindow,
   windowHours,
@@ -104,7 +105,12 @@ export const POST: APIRoute = async ({ request }) => {
   if (!Number.isInteger(week) || week < 1 || week > 25) {
     return json({ error: 'week must be a week number (1-25)' }, 400, headers);
   }
-  const year = Number.isInteger(body.year) ? Number(body.year) : new Date().getUTCFullYear();
+  // getCurrentSeasonYear, not getUTCFullYear: a ballot is results-shaped, and
+  // between January and Labor Day the calendar year is one AHEAD of the season
+  // being played. A January open would store 2027 against a 2026 season, and
+  // the close pass — which matches on year — would then refuse to tally it,
+  // stranding every ballot cast.
+  const year = Number.isInteger(body.year) ? Number(body.year) : getCurrentSeasonYear();
 
   const eligibleFranchiseIds = eligibleFranchiseIdsFor(league);
   if (eligibleFranchiseIds.length <= poll.slots) {

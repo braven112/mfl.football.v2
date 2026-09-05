@@ -43,8 +43,12 @@ import {
 } from '../src/utils/push-preferences';
 import { LEAGUES } from '../src/config/leagues';
 
-const FEATURES = LEAGUES.theleague.features;
-const AFL_FEATURES = LEAGUES['afl-fantasy'].features;
+// The gates take the LEAGUE, not its feature block: poll enablement lives in
+// the registry's `ownersPoll` entry, outside `features`, and passing features
+// alone made it unreachable — which is how the AFL came to be offered three
+// Owners' Poll toggles (one ON by default) for a poll it does not run.
+const FEATURES = LEAGUES.theleague;
+const AFL_FEATURES = LEAGUES['afl-fantasy'];
 
 beforeEach(() => {
   store.clear();
@@ -99,13 +103,35 @@ describe('the category registry', () => {
   it('only offers a feature-gated category where the league has the feature', () => {
     const lineup = getNotificationCategory('lineup-deadline')!;
     expect(lineup.requiresFeature).toBe('liveLineups');
-    const withOut = { ...FEATURES, liveLineups: false };
+    const withOut = { ...FEATURES, features: { ...FEATURES.features, liveLineups: false } };
     expect(categoriesForLeague(withOut).some((c) => c.id === 'lineup-deadline')).toBe(false);
     expect(isCategoryEnabled('lineup-deadline', { 'lineup-deadline': true }, withOut)).toBe(false);
   });
 
   it('offers a sensible set to a league with different features', () => {
     expect(visibleCategoriesForLeague(AFL_FEATURES).length).toBeGreaterThan(3);
+  });
+
+  /**
+   * The AFL runs no Owners' Poll (`ownersPoll.enabled: false`), so offering
+   * its toggles there is a switch that can never fire — and `poll-result` is
+   * defaultOn, so it was ON for every AFL owner.
+   */
+  it('hides the Owners\' Poll categories from a league that does not run it', () => {
+    const shown = new Set(visibleCategoriesForLeague(AFL_FEATURES).map((c) => c.id));
+    for (const id of ['poll-result', 'poll-open', 'poll-reminder']) {
+      expect(shown.has(id), `${id} offered to the AFL`).toBe(false);
+      // And refused at the SEND door, not merely hidden from the page.
+      expect(isCategoryEnabled(id, { [id]: true }, AFL_FEATURES)).toBe(false);
+    }
+  });
+
+  it('still offers them to the league that does run it', () => {
+    const shown = new Set(visibleCategoriesForLeague(FEATURES).map((c) => c.id));
+    for (const id of ['poll-result', 'poll-open', 'poll-reminder']) {
+      expect(shown.has(id), `${id} missing from TheLeague`).toBe(true);
+    }
+    expect(isCategoryEnabled('poll-result', {}, FEATURES)).toBe(true);
   });
 });
 

@@ -20,6 +20,7 @@ import {
   isCategoryEnabled,
   notificationCategoryIds,
   type NotificationCategory,
+  type NotificationLeague,
 } from '../config/notification-categories';
 import type { LeagueFeatures } from '../config/leagues';
 
@@ -92,11 +93,11 @@ export function sanitize(input: unknown): PreferenceMap {
 export function resolvePreferences(
   categories: NotificationCategory[],
   stored: PreferenceMap,
-  features: LeagueFeatures,
+  league: NotificationLeague,
 ): PreferenceMap {
   const out: PreferenceMap = {};
   for (const category of categories) {
-    out[category.id] = isCategoryEnabled(category.id, stored, features);
+    out[category.id] = isCategoryEnabled(category.id, stored, league);
   }
   return out;
 }

@@ -29,12 +29,23 @@ on:
     # are thinking about lineups. Posts nothing at full turnout and nothing
     # when no ballot is open, so it is safe year-round.
     - cron: "0 16 * * 4"
-    # Thursday 5pm PT (00:00 UTC Friday) — owners-poll-close. Tallies and
-    # reveals, an hour after the 4pm PT close so a ballot cast at the deadline
-    # is always counted, and before Thursday night kickoff. The pass refuses to
-    # tally a window that has not actually closed, so on a week clamped to an
-    # early kickoff (Thanksgiving) this still runs after it.
-    - cron: "0 0 * * 5"
+    # owners-poll-close — tallies and reveals. TWO entries, because one UTC
+    # cron cannot sit between the 4pm PT close and the ~5:15pm PT Thursday
+    # kickoff on both sides of the DST flip: 00:00 UTC Friday is 5pm PT in
+    # PDT but 4pm PT in PST, i.e. the stated hour of margin becomes ZERO in
+    # November, mid-season, and a ballot cast at the deadline races the pass
+    # that counts it.
+    #
+    # So both are scheduled and the pass — which refuses to tally a window
+    # that has not actually closed, and no-ops on one already tallied —
+    # decides which one is the real run:
+    #   23:30 UTC Thu = 4:30pm PDT (valid) / 3:30pm PST (window still open,
+    #                   refuses)
+    #   00:30 UTC Fri = 5:30pm PDT (already tallied, no-op) / 4:30pm PST
+    #                   (valid)
+    # Both land before kickoff in the half of the year where they do the work.
+    - cron: "30 23 * * 4"
+    - cron: "30 0 * * 5"
   workflow_dispatch:
     inputs:
       type:
@@ -102,7 +113,9 @@ jobs:
               "0 14 * * 2") TYPE="pecking-order" ;;
               "0 16 * * 3") TYPE="schedule-strength" ;;
               "0 16 * * 4") TYPE="owners-poll-nag" ;;
-              "0 0 * * 5")  TYPE="owners-poll-close" ;;
+              # Both DST halves map to the same type — see the schedule note.
+              "30 23 * * 4") TYPE="owners-poll-close" ;;
+              "30 0 * * 5")  TYPE="owners-poll-close" ;;
               "0 5 * * 4")  TYPE="waiver-pickups" ;;
               "0 15 * * 5") TYPE="weekend-preview" ;;
               "0 16 * * 6") TYPE="matchup-preview" ;;

@@ -45,6 +45,17 @@ export interface NotificationCategory {
   /** Only offered where the league has this feature. */
   requiresFeature?: keyof LeagueFeatures;
   /**
+   * Only offered where the league actually runs the Owners' Poll.
+   *
+   * A separate gate from `requiresFeature` because poll enablement lives in
+   * the registry's `ownersPoll` block, NOT in `features` — and mirroring it
+   * into `features` would create a second source of truth for the same fact,
+   * which is how the ownership-boundary rule ended up with four copies that
+   * disagree. The AFL was being offered all three poll toggles, one of them
+   * ON by default, for a poll it does not run.
+   */
+  requiresOwnersPoll?: true;
+  /**
    * Not offered as a toggle. For alerts that are not an editorial choice —
    * today, the "send yourself a test" button, which exists to prove a device
    * works and must therefore travel the SAME path a real alert does. Giving it
@@ -136,6 +147,7 @@ export const NOTIFICATION_CATEGORIES: NotificationCategory[] = [
   // ── The Owners' Poll ─────────────────────────────────────────────
   {
     id: 'poll-result',
+    requiresOwnersPoll: true,
     group: 'owners-poll',
     label: 'Your poll result',
     description: 'Where the room ranked your team, and how your ballot scored. Voters only.',
@@ -145,6 +157,7 @@ export const NOTIFICATION_CATEGORIES: NotificationCategory[] = [
   },
   {
     id: 'poll-open',
+    requiresOwnersPoll: true,
     group: 'owners-poll',
     label: 'Ballot opens',
     description: "Tuesday, when the column publishes and the week's ballot opens.",
@@ -154,6 +167,7 @@ export const NOTIFICATION_CATEGORIES: NotificationCategory[] = [
   },
   {
     id: 'poll-reminder',
+    requiresOwnersPoll: true,
     group: 'owners-poll',
     label: 'Ballot closing reminder',
     description: 'Thursday morning, only if you have not voted yet.',
@@ -245,15 +259,32 @@ export function notificationCategoryIds(): string[] {
 }
 
 /**
+ * What a league can offer, as far as this module is concerned.
+ *
+ * The registry entry satisfies this structurally, so callers pass the league
+ * itself rather than picking fields off it — which is the point. These gates
+ * used to take `features` alone, and a capability that lives OUTSIDE that
+ * block (poll enablement) therefore could not be honored at all.
+ */
+export interface NotificationLeague {
+  features: LeagueFeatures;
+  ownersPoll?: { enabled?: boolean } | null;
+}
+
+/**
  * The categories a league can actually offer.
  *
- * Filters on the league's feature flags and on `live`, so the settings page
+ * Filters on the league's capabilities and on `live`, so the settings page
  * never shows a toggle that cannot do anything — an owner who turns something
  * on and never hears from it stops trusting the whole page.
  */
-export function categoriesForLeague(features: LeagueFeatures): NotificationCategory[] {
+export function categoriesForLeague(league: NotificationLeague): NotificationCategory[] {
+  const pollEnabled = Boolean(league.ownersPoll?.enabled);
   return NOTIFICATION_CATEGORIES.filter(
-    (c) => c.live && (!c.requiresFeature || features[c.requiresFeature]),
+    (c) =>
+      c.live
+      && (!c.requiresFeature || league.features[c.requiresFeature])
+      && (!c.requiresOwnersPoll || pollEnabled),
   );
 }
 
@@ -263,14 +294,14 @@ export function categoriesForLeague(features: LeagueFeatures): NotificationCateg
  * Drops hidden ones — a toggle for the test button would be a control whose
  * only effect is to break the test button.
  */
-export function visibleCategoriesForLeague(features: LeagueFeatures): NotificationCategory[] {
-  return categoriesForLeague(features).filter((c) => !c.hidden);
+export function visibleCategoriesForLeague(league: NotificationLeague): NotificationCategory[] {
+  return categoriesForLeague(league).filter((c) => !c.hidden);
 }
 
 /** The default preference map for a league — what an owner gets untouched. */
-export function defaultPreferences(features: LeagueFeatures): Record<string, boolean> {
+export function defaultPreferences(league: NotificationLeague): Record<string, boolean> {
   const out: Record<string, boolean> = {};
-  for (const c of categoriesForLeague(features)) out[c.id] = c.defaultOn;
+  for (const c of categoriesForLeague(league)) out[c.id] = c.defaultOn;
   return out;
 }
 
@@ -284,12 +315,16 @@ export function defaultPreferences(features: LeagueFeatures): Record<string, boo
 export function isCategoryEnabled(
   categoryId: string,
   stored: Record<string, boolean> | null | undefined,
-  features: LeagueFeatures,
+  league: NotificationLeague,
 ): boolean {
   const category = BY_ID.get(categoryId);
   if (!category) return false;
   if (!category.live) return false;
-  if (category.requiresFeature && !features[category.requiresFeature]) return false;
+  if (category.requiresFeature && !league.features[category.requiresFeature]) return false;
+  // Same gate as the settings page, applied at the SEND door too — otherwise a
+  // preference stored while a league still offered the toggle keeps delivering
+  // after the capability is switched off.
+  if (category.requiresOwnersPoll && !league.ownersPoll?.enabled) return false;
   const explicit = stored?.[categoryId];
   return typeof explicit === 'boolean' ? explicit : category.defaultOn;
 }

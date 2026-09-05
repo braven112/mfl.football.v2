@@ -794,9 +794,17 @@ async function scanLeague(league) {
   // Every transaction, to owners who asked for every transaction. Sent AFTER
   // the feed is safely on disk, so a push outage can never cost us the write.
   //
-  // A big drop may also push as 'transaction-big' below. Both use the post id
-  // as the notification tag, so a device that has both categories on collapses
-  // them into one notification rather than buzzing twice for one move.
+  // Tagged per BATCH, not per day. A per-day tag replaces the previous
+  // notification, so an owner who hasn't looked since the last scan loses
+  // those headlines entirely — this body only lists the first three of THIS
+  // batch, so the replaced one is not recoverable from the new one. The
+  // newest post id is stable within a batch and distinct across batches.
+  //
+  // A big drop in the same batch also pushes as 'transaction-big', under its
+  // own post id. An owner with both categories on therefore gets two
+  // notifications for that move: the digest and the individual alert. That is
+  // the cost of subscribing to a firehose AND its highlights, and it is
+  // preferable to collapsing a 12-move digest onto one drop's tag.
   //
   // `newPosts` was reversed in place just above for the feed prepend; the
   // copy-and-reverse restores chronological order, the same idiom the
@@ -806,7 +814,7 @@ async function scanLeague(league) {
     franchiseIds: [...teams.keys()],
     headline: `${newPosts.length} new ${newPosts.length === 1 ? 'move' : 'moves'}`,
     body: [...newPosts].reverse().map((p) => p.headline).slice(0, 3).join(' · '),
-    tag: `transactions-${now.toISOString().slice(0, 10)}`,
+    tag: `transactions-${newPosts[0]?.id ?? now.toISOString()}`,
     big: false,
   });
 

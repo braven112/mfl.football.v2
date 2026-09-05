@@ -63,6 +63,35 @@ export default function NotificationCommandCenter() {
     };
   }, []);
 
+  /**
+   * Send only the choices that DIFFER from the category's default.
+   *
+   * The GET hands back effective values — the owner's choice or the default
+   * for every visible category — so posting the map back wholesale would
+   * write ~13 explicit rows the first time anyone flips one switch. Storage
+   * is supposed to hold explicit choices only (see push-preferences.ts), and
+   * the property that buys is that a default we later CHANGE still reaches
+   * everyone who never disagreed with it. Post the whole map and that
+   * property is gone for every owner who has ever touched this page.
+   *
+   * Dropping a choice that happens to equal the default is safe: it resolves
+   * to the same value on read, and if the default later moves, following it
+   * is the intended behavior for someone who never expressed a preference.
+   */
+  const explicitOnly = useCallback(
+    (next: Prefs): Prefs => {
+      const out: Prefs = {};
+      for (const category of categories) {
+        const value = next[category.id];
+        if (typeof value === 'boolean' && value !== category.defaultOn) {
+          out[category.id] = value;
+        }
+      }
+      return out;
+    },
+    [categories],
+  );
+
   const save = useCallback(async (next: Prefs) => {
     setError(null);
     try {
@@ -70,7 +99,7 @@ export default function NotificationCommandCenter() {
         method: 'POST',
         credentials: 'same-origin',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ preferences: next }),
+        body: JSON.stringify({ preferences: explicitOnly(next) }),
       });
       const data = await res.json().catch(() => null);
       if (!res.ok || data?.success === false) {
@@ -85,7 +114,7 @@ export default function NotificationCommandCenter() {
       setPrefs(confirmed.current);
       setError('Could not reach the server.');
     }
-  }, []);
+  }, [explicitOnly]);
 
   const toggle = useCallback(
     (id: string) => {

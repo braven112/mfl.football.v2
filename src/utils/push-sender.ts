@@ -74,7 +74,7 @@ export async function sendPushToFranchise(
     return result;
   }
   const stored = await readPreferences(leagueId, franchiseId);
-  if (!isCategoryEnabled(category, stored, league.features)) return result;
+  if (!isCategoryEnabled(category, stored, league)) return result;
 
   let webpush: typeof import('web-push') | null = null;
   try {

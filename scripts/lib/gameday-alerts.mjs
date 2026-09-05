@@ -156,7 +156,10 @@ export function leaderOf(pairing) {
 export function isFinal(pairing) {
   return [pairing.home, pairing.away].every(
     (side) =>
-      side.secondsRemaining === 0 && (side.playersYetToPlay == null || side.playersYetToPlay === 0),
+      // `null` is "MFL did not say", which is never grounds to declare a
+      // matchup over — see the coercion note in parseLivePairings.
+      side.secondsRemaining === 0
+      && (side.playersYetToPlay == null || side.playersYetToPlay === 0),
   );
 }
 
@@ -325,11 +328,22 @@ export function parseLivePairings(liveScoring) {
   for (const m of list) {
     const teams = Array.isArray(m?.franchise) ? m.franchise : m?.franchise ? [m.franchise] : [];
     if (teams.length < 2) continue;
+    // `|| 0` would be actively dangerous on the clock: a field MFL omits, or
+    // sends blank, would coerce to zero and read as "every game is over",
+    // firing a final — with a made-up win or loss in the title — to both
+    // owners while the games are still being played. And because the final is
+    // recorded as sent, the REAL one is then suppressed. Absent is null, and
+    // isFinal fails closed on it.
+    const num = (v) => {
+      if (v == null || v === '') return null;
+      const n = Number(v);
+      return Number.isFinite(n) ? n : null;
+    };
     const side = (t) => ({
       id: String(t.id),
-      score: Number(t.score) || 0,
-      secondsRemaining: Number(t.gameSecondsRemaining) || 0,
-      playersYetToPlay: t.playersYetToPlay == null ? null : Number(t.playersYetToPlay) || 0,
+      score: num(t.score) ?? 0,
+      secondsRemaining: num(t.gameSecondsRemaining),
+      playersYetToPlay: num(t.playersYetToPlay),
     });
     pairings.push({ home: side(teams[0]), away: side(teams[1]) });
   }
