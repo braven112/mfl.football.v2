@@ -205,9 +205,24 @@ export const POST: APIRoute = async (context) => {
   }
 
   const carryable = plan.lines.filter((line: any) => line.status === 'payable');
+
+  // ONE LINE THAT SAYS WHAT THIS RUN DECIDED, before it decides it.
+  //
+  // Two live attempts returned 200 having written nothing, and the logs could
+  // not distinguish "planned zero rows" from "attempted fifteen and every one
+  // failed" — the writes go straight to the www## host with no redirect, so
+  // mflFetch logs nothing for them, and both paths return 200 with an empty
+  // verify. An hour went into inferring from timings what this line states.
+  console.log(
+    `[accounting/migrate] ${ctx.league.slug} ${from}→${to}: `
+      + `${plan.lines.length} line(s), ${carryable.length} payable, `
+      + `${conflicts.length} conflict(s) — ${carryable.length ? 'writing' : 'nothing to write'}`
+  );
+
   if (!carryable.length) {
     return json(
       {
+        outcome: 'nothing-to-do',
         written: 0,
         message: plan.lines.length
           ? `Every ${from} balance is already carried into ${to}. Nothing to do.`
@@ -253,8 +268,24 @@ export const POST: APIRoute = async (context) => {
   const written = claimed.length - check.unverified.length;
   const unverified = check.unverified;
 
+  console.log(
+    `[accounting/migrate] ${ctx.league.slug} ${from}→${to}: attempted ${results.length}, `
+      + `MFL accepted ${claimed.length}, refused ${failed.length}; `
+      + `re-read ${check.verified ? 'confirmed' : 'FAILED, so nothing is confirmed'} — `
+      + `${written} in the ledger, ${unverified.length} claimed but absent`
+      + (failed.length ? ` | first refusal: ${failed[0]?.error ?? 'unknown'}` : '')
+  );
+
   return json(
     {
+      // Named so the client never has to infer success from a count. A run
+      // that writes nothing is not a success message with a zero in it.
+      outcome:
+        written === 0
+          ? 'failed'
+          : failed.length || unverified.length
+            ? 'partial'
+            : 'carried',
       from,
       to,
       written,
