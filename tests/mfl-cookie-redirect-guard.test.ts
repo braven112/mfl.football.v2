@@ -59,13 +59,16 @@ const ROOTS = [SRC, SCRIPTS];
  * reads had been arriving anonymous in production. They are fixed, not
  * baselined — see the 2026-09-02 note above.
  *
+ * The list is now EMPTY. The last two entries were the contracts sites, and
+ * they were not latent either: `createPreWriteBackup` captured an empty
+ * "backup" before every salary write, and `/api/contracts/verify` — the
+ * endpoint that exists to prove a write landed — reported an empty contract
+ * map as a successful verification. Both were fixed 2026-09-04.
+ *
  * This list may only SHRINK. Same idiom as tests/fixtures/typecheck-baseline.json:
  * fixing one and leaving it listed fails, so the baseline cannot rot.
  */
-const KNOWN_UNFIXED = [
-  'src/pages/api/contracts/verify.ts',
-  'src/utils/mfl-contract-writer.ts',
-];
+const KNOWN_UNFIXED: string[] = [];
 
 const walk = (dir: string): string[] =>
   fs.readdirSync(dir, { withFileTypes: true }).flatMap((e) => {

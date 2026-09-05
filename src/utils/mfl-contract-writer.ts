@@ -72,8 +72,14 @@ function ensureBackupDir(): void {
  * Export current salary data from MFL as a pre-write backup.
  * Returns the backup file path on success, null on failure.
  */
-export async function createPreWriteBackup(): Promise<string | null> {
-  if (!MFL_USER_ID) {
+export async function createPreWriteBackup(credentials?: MFLCredentials): Promise<string | null> {
+  // Must be the SAME credentials that will perform the write. The write path
+  // accepts session cookies and falls back to env; if the backup read only ever
+  // consulted env, a session-driven write on a box with no MFL_USER_ID set
+  // would proceed with NO backup at all — silently, since this returns null.
+  const userId = credentials?.mflUserId || MFL_USER_ID;
+
+  if (!userId) {
     console.error('MFL_USER_ID not set, skipping backup');
     return null;
   }
@@ -82,13 +88,9 @@ export async function createPreWriteBackup(): Promise<string | null> {
     const year = getYear();
     const url = buildMflExportUrl({ type: 'salaries', leagueId: MFL_LEAGUE_ID, year, host: MFL_READ_HOST });
 
-    const response = await fetch(url, {
-      headers: {
-        Cookie: `MFL_USER_ID=${MFL_USER_ID}`,
-      },
-      redirect: 'follow',
-      signal: AbortSignal.timeout(10_000),
-    });
+    // mflFetch, not bare fetch — undici drops Cookie on the api→www49 302 and
+    // MFL answers "requires a logged in user" with a 200 that parses as empty.
+    const response = await mflFetch({ url, method: 'GET', mflUserCookie: userId });
 
     if (!response.ok) {
       console.error(`Backup fetch failed: ${response.status} ${response.statusText}`);
@@ -154,11 +156,18 @@ export async function fetchMFLSalaries(): Promise<Record<string, { salary: strin
     const year = getYear();
     const url = buildMflExportUrl({ type: 'salaries', leagueId: MFL_LEAGUE_ID, year, host: MFL_READ_HOST });
 
-    const response = await fetch(url, {
-      headers: MFL_USER_ID ? { Cookie: `MFL_USER_ID=${MFL_USER_ID}` } : {},
-      redirect: 'follow',
-      signal: AbortSignal.timeout(10_000),
-    });
+    // Owner-gated: an anonymous read returns a well-formed EMPTY payload with
+    // HTTP 200. Returning {} here would be TRUTHY and slip past the caller's
+    // `if (!salaries)` guard, so reconcile would report "no stuck declarations"
+    // for a read that never happened. Null is the only honest answer.
+    if (!MFL_USER_ID) {
+      console.error('[mfl-writer] MFL_USER_ID not set — cannot read salaries');
+      return null;
+    }
+
+    // mflFetch, not bare fetch — undici drops Cookie on the api→www49 302 and
+    // MFL answers "requires a logged in user" with a 200 that parses as empty.
+    const response = await mflFetch({ url, method: 'GET', mflUserCookie: MFL_USER_ID });
 
     if (!response.ok) return null;
 
@@ -211,7 +220,7 @@ export async function writeContractToMFL(
   }
 
   // Create pre-write backup
-  const backupFile = await createPreWriteBackup();
+  const backupFile = await createPreWriteBackup({ mflUserId: userId, mflIsCommish: commish });
 
   const year = getYear();
   // Commissioner writes MUST use www49 host (api subdomain rejects commissioner imports)
@@ -295,7 +304,7 @@ export async function writeMultipleContractsToMFL(
     return { success: true, attempts: 0 };
   }
 
-  const backupFile = await createPreWriteBackup();
+  const backupFile = await createPreWriteBackup({ mflUserId: userId, mflIsCommish: commish });
 
   const year = getYear();
   // Commissioner writes MUST use www49 host (api subdomain rejects commissioner imports)

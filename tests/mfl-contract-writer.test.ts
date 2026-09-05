@@ -13,14 +13,19 @@ vi.mock('node:fs', () => ({
   unlinkSync: vi.fn(),
 }));
 
-// Mock mflFetch (used for write calls)
+// Mock mflFetch — every authenticated call goes through it, reads included.
+// A bare fetch would lose the Cookie on MFL's api→www49 302.
 const mockMflFetch = vi.fn();
 vi.mock('../src/utils/mfl-fetch', () => ({
   mflFetch: (...args: unknown[]) => mockMflFetch(...args),
 }));
 
-// Mock global fetch (used for backup reads in createPreWriteBackup)
-const mockFetch = vi.fn();
+// Stubbed so an unmocked path can never reach the network. Nothing in this
+// suite should land here — a hit means an authenticated call regressed to
+// bare fetch.
+const mockFetch = vi.fn(() => {
+  throw new Error('bare fetch: authenticated MFL calls must use mflFetch');
+});
 vi.stubGlobal('fetch', mockFetch);
 
 // Mock env vars
@@ -46,8 +51,8 @@ describe('mfl-contract-writer', () => {
 
   describe('writeContractToMFL', () => {
     it('succeeds on first attempt with valid response', async () => {
-      // Mock backup fetch (raw fetch for createPreWriteBackup)
-      mockFetch.mockResolvedValueOnce({
+      // Mock the backup read in createPreWriteBackup (also via mflFetch)
+      mockMflFetch.mockResolvedValueOnce({
         ok: true,
         json: () => Promise.resolve({ salaries: { leagueUnit: { player: [] } } }),
       });
@@ -70,7 +75,7 @@ describe('mfl-contract-writer', () => {
     });
 
     it('includes APPEND=1 in the URL', async () => {
-      mockFetch.mockResolvedValueOnce({
+      mockMflFetch.mockResolvedValueOnce({
         ok: true,
         json: () => Promise.resolve({ salaries: { leagueUnit: { player: [] } } }),
       });
@@ -88,12 +93,13 @@ describe('mfl-contract-writer', () => {
       });
 
       // mflFetch receives an options object with url
-      const writeCall = mockMflFetch.mock.calls[0][0];
+      // calls[0] is the pre-write backup read; the write is calls[1].
+      const writeCall = mockMflFetch.mock.calls[1][0];
       expect(writeCall.url).toContain('APPEND=1');
     });
 
     it('sends correct XML in body parameter', async () => {
-      mockFetch.mockResolvedValueOnce({
+      mockMflFetch.mockResolvedValueOnce({
         ok: true,
         json: () => Promise.resolve({ salaries: { leagueUnit: { player: [] } } }),
       });
@@ -110,7 +116,8 @@ describe('mfl-contract-writer', () => {
         contractInfo: 'RC',
       });
 
-      const writeCall = mockMflFetch.mock.calls[0][0];
+      // calls[0] is the pre-write backup read; the write is calls[1].
+      const writeCall = mockMflFetch.mock.calls[1][0];
       const bodyStr = writeCall.body;
       expect(bodyStr).toContain('id%3D%2214056%22');
       expect(bodyStr).toContain('salary%3D%22500000%22');
@@ -119,7 +126,7 @@ describe('mfl-contract-writer', () => {
     });
 
     it('uses MFL_USER_ID for auth via mflFetch', async () => {
-      mockFetch.mockResolvedValueOnce({
+      mockMflFetch.mockResolvedValueOnce({
         ok: true,
         json: () => Promise.resolve({ salaries: { leagueUnit: { player: [] } } }),
       });
@@ -136,7 +143,8 @@ describe('mfl-contract-writer', () => {
         contractInfo: '',
       });
 
-      const writeCall = mockMflFetch.mock.calls[0][0];
+      // calls[0] is the pre-write backup read; the write is calls[1].
+      const writeCall = mockMflFetch.mock.calls[1][0];
       expect(writeCall.mflUserCookie).toBe('test_cookie_value');
       expect(writeCall.mflCommishCookie).toBe('test_commish_value');
     });
@@ -160,7 +168,7 @@ describe('mfl-contract-writer', () => {
 
     it('retries on HTTP failure and reports attempts', async () => {
       // Mock backup
-      mockFetch.mockResolvedValueOnce({
+      mockMflFetch.mockResolvedValueOnce({
         ok: true,
         json: () => Promise.resolve({ salaries: { leagueUnit: { player: [] } } }),
       });
@@ -183,7 +191,7 @@ describe('mfl-contract-writer', () => {
     }, 20000);
 
     it('detects MFL error responses in otherwise OK HTTP responses', async () => {
-      mockFetch.mockResolvedValueOnce({
+      mockMflFetch.mockResolvedValueOnce({
         ok: true,
         json: () => Promise.resolve({ salaries: { leagueUnit: { player: [] } } }),
       });
@@ -216,7 +224,7 @@ describe('mfl-contract-writer', () => {
 
   describe('writeMultipleContractsToMFL', () => {
     it('sends multiple players in single XML payload', async () => {
-      mockFetch.mockResolvedValueOnce({
+      mockMflFetch.mockResolvedValueOnce({
         ok: true,
         json: () => Promise.resolve({ salaries: { leagueUnit: { player: [] } } }),
       });
@@ -233,7 +241,8 @@ describe('mfl-contract-writer', () => {
 
       expect(result.success).toBe(true);
 
-      const writeCall = mockMflFetch.mock.calls[0][0];
+      // calls[0] is the pre-write backup read; the write is calls[1].
+      const writeCall = mockMflFetch.mock.calls[1][0];
       const bodyStr = writeCall.body;
       // Both player IDs should be in the same payload
       expect(bodyStr).toContain('14056');
@@ -265,8 +274,8 @@ describe('mfl-contract-writer', () => {
         }),
       );
 
-      // Mock backup fetch for writeMultipleContractsToMFL
-      mockFetch.mockResolvedValueOnce({
+      // Mock the backup read for writeMultipleContractsToMFL
+      mockMflFetch.mockResolvedValueOnce({
         ok: true,
         json: () => Promise.resolve({ salaries: { leagueUnit: { player: [] } } }),
       });
@@ -298,7 +307,7 @@ describe('mfl-contract-writer', () => {
 
   describe('createPreWriteBackup', () => {
     it('fetches salary data and writes to backup file', async () => {
-      mockFetch.mockResolvedValueOnce({
+      mockMflFetch.mockResolvedValueOnce({
         ok: true,
         json: () =>
           Promise.resolve({
@@ -316,6 +325,13 @@ describe('mfl-contract-writer', () => {
 
       expect(filepath).toContain('pre-write.json');
       expect(writeFileSync).toHaveBeenCalled();
+
+      // The read is owner-gated, so it must carry the cookie through the
+      // api→www49 302 — bare fetch drops it and MFL answers empty with a 200.
+      const readCall = mockMflFetch.mock.calls[0][0];
+      expect(readCall.method).toBe('GET');
+      expect(readCall.mflUserCookie).toBe('test_cookie_value');
+      expect(mockFetch).not.toHaveBeenCalled();
     });
 
     it('returns null when cookie is missing', async () => {
@@ -325,6 +341,61 @@ describe('mfl-contract-writer', () => {
       const filepath = await createPreWriteBackup();
 
       expect(filepath).toBeNull();
+    });
+
+    it('uses the credentials the WRITE will use, not just the env', async () => {
+      // A session-driven write on a box with no MFL_USER_ID set must still take
+      // a backup — otherwise the salary write proceeds with nothing to roll
+      // back to, and the null return says so only to the log.
+      process.env.MFL_USER_ID = '';
+      mockMflFetch.mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve({ salaries: { leagueUnit: { player: [] } } }),
+      });
+
+      const { createPreWriteBackup } = await import('../src/utils/mfl-contract-writer');
+      const filepath = await createPreWriteBackup({ mflUserId: 'session_cookie' });
+
+      expect(filepath).toContain('pre-write.json');
+      expect(mockMflFetch.mock.calls[0][0].mflUserCookie).toBe('session_cookie');
+    });
+  });
+
+  describe('fetchMFLSalaries', () => {
+    it('returns null rather than {} when no cookie is available', async () => {
+      // {} is truthy, so it slips past reconcile's `if (!salaries)` guard and
+      // makes a read that never happened look like "no stuck declarations".
+      process.env.MFL_USER_ID = '';
+
+      const { fetchMFLSalaries } = await import('../src/utils/mfl-contract-writer');
+      const salaries = await fetchMFLSalaries();
+
+      expect(salaries).toBeNull();
+      expect(mockMflFetch).not.toHaveBeenCalled();
+      expect(mockFetch).not.toHaveBeenCalled();
+    });
+
+    it('reads through mflFetch and maps players by id', async () => {
+      mockMflFetch.mockResolvedValueOnce({
+        ok: true,
+        json: () =>
+          Promise.resolve({
+            salaries: {
+              leagueUnit: {
+                player: [{ id: '14056', salary: '500000', contractYear: '3', contractInfo: 'RC' }],
+              },
+            },
+          }),
+      });
+
+      const { fetchMFLSalaries } = await import('../src/utils/mfl-contract-writer');
+      const salaries = await fetchMFLSalaries();
+
+      expect(salaries).toEqual({
+        '14056': { salary: '500000', contractYear: '3', contractInfo: 'RC' },
+      });
+      expect(mockMflFetch.mock.calls[0][0].mflUserCookie).toBe('test_cookie_value');
+      expect(mockFetch).not.toHaveBeenCalled();
     });
   });
 });

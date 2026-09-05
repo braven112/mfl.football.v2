@@ -4,6 +4,14 @@
     {
       "date": "2026-09-04",
       "type": "bug-fix",
+      "summary": "Every contract write to MFL takes a backup first, so there is something to roll back to when a write goes sideways. Those backups have been empty files. The same went for the commissioner's verify step — the one whose entire job is to confirm a contract change actually landed — which had been reading back an empty salary sheet and calling it a clean bill of health. MFL was answering \"you are not logged in\" with a cheerful HTTP 200, so nothing ever looked broken. Backups now contain the league's actual salary data, and verification checks against something real.",
+      "impact": "admin",
+      "area": "salary",
+      "league": "theleague"
+    },
+    {
+      "date": "2026-09-04",
+      "type": "bug-fix",
       "summary": "The Asset Library's search box only worked the first time you opened the page. Come back to it later in the same visit and typing a team name did nothing at all — every logo stayed on screen — and the little size line under each image sat blank instead of telling you the dimensions. The copy buttons were fine throughout, which is probably why nobody filed it. Search and the size readout now come back to life on every visit, in both leagues.",
       "impact": "user",
       "area": "design-system",

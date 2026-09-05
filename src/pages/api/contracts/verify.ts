@@ -9,6 +9,7 @@
 import type { APIRoute } from 'astro';
 import { getAuthUser, isCommissionerOrAdmin } from '../../../utils/auth';
 import { buildMflExportUrl } from '../../../utils/mfl-url';
+import { mflFetch } from '../../../utils/mfl-fetch';
 import { JSON_HEADERS } from '../../../utils/api-response';
 import { DEFAULT_LEAGUE_ID } from '../../../config/leagues';
 
@@ -40,14 +41,23 @@ export const GET: APIRoute = async ({ request }) => {
       );
     }
 
+    // The salaries export is owner-gated: an anonymous read returns a
+    // well-formed EMPTY payload with HTTP 200. This route exists to prove a
+    // contract write landed, so answering "0 players, all good" without
+    // credentials is the exact false confirmation it is meant to catch.
+    if (!MFL_USER_ID) {
+      return new Response(
+        JSON.stringify({ error: 'Server is not configured with MFL credentials — cannot verify' }),
+        { status: 503, headers: JSON_HEADERS },
+      );
+    }
+
     const year = new Date().getFullYear();
     const url = buildMflExportUrl({ type: 'salaries', leagueId: MFL_LEAGUE_ID, year, host: MFL_HOST });
 
-    const response = await fetch(url, {
-      headers: MFL_USER_ID ? { Cookie: `MFL_USER_ID=${MFL_USER_ID}` } : {},
-      redirect: 'follow',
-      signal: AbortSignal.timeout(10_000),
-    });
+    // mflFetch, not bare fetch — undici drops Cookie on the api→www49 302 and
+    // MFL answers "requires a logged in user" with a 200 that parses as empty.
+    const response = await mflFetch({ url, method: 'GET', mflUserCookie: MFL_USER_ID });
 
     if (!response.ok) {
       return new Response(
