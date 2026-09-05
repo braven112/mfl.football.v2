@@ -25,7 +25,7 @@
 ## Testing Guidelines
 - Unit tests use Vitest; run `pnpm run test:unit` or `pnpm run test:watch` for watch mode.
 - E2E smoke test: `pnpm run test:e2e`.
-- Prefer naming tests by feature (e.g., `matchup-routing.test.ts`).
+- Prefer naming tests by feature (e.g., `contract-validation.test.ts`).
 
 ## Commit & Pull Request Guidelines
 - Recent history follows Conventional Commit prefixes (`feat:`, `fix:`, `chore:`), with occasional short messages.
