@@ -6040,7 +6040,7 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
     // Warm My Watch List so the action sheet opens in the right state. The
     // store caches per league and no-ops on a repeat call.
     try {
-      const cfg = JSON.parse(document.getElementById('roster-config').textContent || '{}');
+      const cfg = JSON.parse(document.getElementById('roster-config')?.textContent || '{}');
       if (cfg?.authUser?.franchiseId) void loadWatchList();
     } catch { /* config is parsed for real just below */ }
     const {
@@ -7431,6 +7431,9 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
               ...rawPlayer,
               eligibility: {
                 type: 'action-select',
+                // The Watch option needs the id without touching the untyped
+                // modal state; every other option here reads `elig` too.
+                playerId: rawPlayer.id,
                 currentSalary: playerSalary,
                 currentYears: playerYears,
                 contractInfo,
@@ -8821,7 +8824,7 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
       // block: you can watch anyone on any roster. A signed-out visitor sees
       // the option too and is handed to sign-in (same trigger as PlayerDetailsModal).
       {
-        const watchId = String(cdmPlayerData?._rawPlayer?.id || cdmPlayerData?.id || '');
+        const watchId = String(elig.playerId || '');
         const watchSignedOut = !config.authUser?.franchiseId || getWatchListAuth() === 'signed-out';
         const watched = !watchSignedOut && isWatched(watchId);
         actionOptions.appendChild(makeCdmActionBtn(
@@ -8830,7 +8833,7 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
           watchSignedOut
             ? 'Sign in to build your watch list'
             : (watched ? 'Remove him from your watch list' : 'His news lights up in the Schefter Report'),
-          () => toggleCdmWatch(watchId, watched, watchSignedOut),
+          () => toggleCdmWatch(watchId, watched, watchSignedOut, elig),
           false, watched ? 'icon-eye-slash' : 'icon-eye'
         ));
       }
@@ -9693,12 +9696,12 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
     // Watch / Stop watching — one tap, no confirm step. MFL's watch-list
     // import is incremental, so the click IS the change. Re-renders the
     // option in place (like the auto-cut toggle) rather than closing.
-    const toggleCdmWatch = async (playerId, watched, signedOut) => {
+    const toggleCdmWatch = async (playerId: string, watched: boolean, signedOut: boolean, elig: unknown) => {
       if (signedOut) { closeDeclarationModal(); requestSignIn(); return; }
       const actionOptions = document.getElementById('cdm-action-options');
-      const btn = actionOptions?.querySelector('.cdm-action-option--watch');
-      const label = btn?.querySelector('.cdm-action-option__label');
-      const desc = btn?.querySelector('.cdm-action-option__desc');
+      const btn = actionOptions?.querySelector<HTMLButtonElement>('.cdm-action-option--watch');
+      const label = btn?.querySelector<HTMLElement>('.cdm-action-option__label');
+      const desc = btn?.querySelector<HTMLElement>('.cdm-action-option__desc');
       if (btn) btn.disabled = true;
       if (label) label.textContent = watched ? 'Removing…' : 'Adding…';
       const res = await toggleWatch(playerId);
@@ -9716,9 +9719,9 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
       if (announcer) announcer.textContent = message;
       setTimeout(() => {
         if (announcer) announcer.textContent = '';
-        if (!cdmPlayerData || !cdmModal?.classList.contains('active')) return;
-        populateCdmActionOptions(cdmPlayerData.eligibility);
-        actionOptions?.querySelector('.cdm-action-option--watch')?.focus();
+        if (!cdmModal?.classList.contains('active')) return;
+        populateCdmActionOptions(elig);
+        actionOptions?.querySelector<HTMLButtonElement>('.cdm-action-option--watch')?.focus();
       }, 900);
     };
 
