@@ -20,9 +20,9 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node .claude/hooks/path-guard.mjs",
-            "timeout": 120,
-            "statusMessage": "Running path-scoped guard tests…"
+            "command": ".claude/hooks/roger-reminder-test.sh",
+            "timeout": 60,
+            "statusMessage": "Running Roger reminder tests…"
           }
         ]
       }

@@ -47,17 +47,7 @@ jobs:
           # default set. Deliberately NOT security-and-quality — the quality
           # pack is heavy on style findings this repo already covers with its
           # own guard tests, and noise is what kills adoption of a scanner.
-          #
-          # AlertSuppression makes `// lgtm[js/rule-id]` / `// codeql[js/rule-id]`
-          # comments honoured. It is NOT part of security-extended, so without
-          # it a deliberate, reasoned exception (a fixture recorder whose whole
-          # purpose is writing a fetched response to disk) fails the check on
-          # every future PR with no way to say so in code.
           queries: security-extended
-          # A query inside a pack is a `packs:` entry, not a `queries:` one —
-          # the init step rejects the pack:path form there ("Specifier for
-          # external repository is invalid").
-          packs: codeql/javascript-queries:AlertSuppression.ql
 
       # No build step: CodeQL analyzes JS/TS from source. Running the real
       # Astro build here would add minutes and pull in network fetches from
