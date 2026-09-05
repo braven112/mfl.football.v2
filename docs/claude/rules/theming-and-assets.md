@@ -488,3 +488,25 @@ Do NOT swap it for greps: every one of these bugs is invisible in the source
 text (7 of its 10 cases pass a source-level reading of the old file and fail
 on its behavior).
 
+## TV network marks get the crest treatment, from their own manifest
+
+`public/assets/tv-logos/` (the channel and Sunday Ticket carrier marks the
+Sunday Ticket board draws) follows the team-crest rules exactly, through a
+sibling pipeline rather than the crest one:
+
+- `scripts/measure-tv-logo-contrast.mjs` (`pnpm measure:tv-logo-contrast`)
+  scores every mark `data/theleague/broadcast-mappings.json` can render, plus
+  the RedZone mark, against the dark card and writes
+  `src/data/tv-logo-dark-stroke-manifest.json`. `tests/tv-logo-dark-stroke.test.ts`
+  fails when the committed manifest drifts from what the assets measure.
+- A mark with a `logoDark` in the mapping file (white artwork — DAZN's,
+  YouTube TV's) SWAPS under `html.dark` and is never stroked; a mark below the
+  threshold takes the same four-shadow ring as a crest
+  (`src/utils/tv-logo-dark-css.ts`, keyed on exact `src`).
+- It is composed into `buildAllTeamIconDarkCss()`, so the layout head and
+  Storybook's preview inject it from one source.
+
+**Not a white plate.** The board first shipped the marks on a white pill; that
+draws the mark's bounding box, which on a transparent PNG is a white rectangle
+on a dark card — the exact thing the crest ring exists to avoid.
+

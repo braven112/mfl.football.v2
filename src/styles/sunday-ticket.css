@@ -193,14 +193,9 @@
 .st-window__label { font-size: 0.78rem; color: var(--content-text-muted); }
 .st-window__sched { margin-left: auto; font-size: 0.72rem; color: var(--content-text-muted); }
 /* The country's Sunday Ticket carrier, on the same white pill as the channel marks. */
-.st-provider {
-  display: inline-flex; align-items: center;
-  height: 1.8rem; padding: 0.2rem 0.6rem;
-  background: #fff; border: 1px solid var(--card-border); border-radius: var(--radius-sm);
-  cursor: help;
-}
-.st-provider__logo { height: 1.15rem; width: auto; max-width: 7rem; object-fit: contain; display: block; }
-.st-provider__name { font-size: 0.72rem; font-weight: var(--font-weight-bold); color: #111827; }
+.st-provider { display: inline-flex; align-items: center; height: 1.8rem; cursor: help; }
+.st-provider__logo { height: 1.3rem; width: auto; max-width: 7.5rem; object-fit: contain; display: block; }
+.st-provider__name { font-size: 0.72rem; font-weight: var(--font-weight-bold); color: var(--page-text); }
 .st-window__overflow { margin: 0; font-size: 0.82rem; color: var(--content-text-muted); }
 .st-window__overflow-label { font-weight: var(--font-weight-bold); margin-right: 0.3rem; }
 .st-window__overflow-count { opacity: 0.8; }
@@ -252,9 +247,9 @@
 .st-box__meta { display: flex; flex-wrap: wrap; align-items: center; gap: 0.35rem 0.6rem; font-size: 0.72rem; min-height: 1.6rem; }
 .st-box__kick { display: inline-flex; gap: 0.4rem; color: var(--content-text-muted); font-variant-numeric: tabular-nums; }
 .st-box__kick-pt { opacity: 0.75; }
-/* The channel: its mark on a white pill (the PNGs are drawn for light
-   surfaces — DAZN's is black — so the pill keeps them legible in dark mode),
-   or its name when the channel has no mark on disk. */
+/* The channel: its mark, or its name when the channel has no mark on disk.
+   Marks sit on the card like the team crests do; in dark mode the ones that
+   need it swap to white artwork or take the crest ring (tv-logo-dark-css.ts). */
 .st-net {
   display: inline-flex; align-items: center;
   padding: 0.1rem 0.45rem;
@@ -267,12 +262,7 @@
   text-transform: uppercase;
   cursor: help;
 }
-.st-net--mark {
-  background: #fff;
-  border: 1px solid var(--card-border);
-  padding: 0.15rem 0.5rem;
-  height: 1.9rem;
-}
+.st-net--mark { background: none; padding: 0; height: 1.9rem; }
 .st-net__logo { height: 1.4rem; width: auto; max-width: 6rem; object-fit: contain; display: block; }
 .st-box__count {
   margin-left: auto;

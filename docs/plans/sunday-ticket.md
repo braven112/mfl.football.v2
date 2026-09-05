@@ -30,9 +30,15 @@ Status: BUILT 2026-09-04 on branch `claude/sunday-ticket-matchup-preview-3025b7`
   `src/utils/broadcast-channels.ts` over `data/theleague/broadcast-mappings.json`
   — CBS/FOX become DAZN in Canada, NBC becomes CTV, everything is Kayo in
   Australia, a global streamer keeps its own mark. Channel and carrier marks
-  come from `public/assets/tv-logos/` on a white pill (the PNGs are drawn for
-  light surfaces), the RedZone box uses the RedZone logo, and each window
-  header carries the country's Sunday Ticket carrier (YouTube TV, DAZN, Kayo).
+  come from `public/assets/tv-logos/` and get the TEAM-CREST dark-mode
+  treatment rather than a white pill: `scripts/measure-tv-logo-contrast.mjs`
+  scores each mark on the dark card and writes
+  `src/data/tv-logo-dark-stroke-manifest.json`; a mark with a `logoDark` in the
+  mapping file (DAZN, YouTube TV — white artwork) SWAPS under `html.dark`, one
+  below the threshold takes the crest ring (`tv-logo-dark-css.ts`, composed
+  into `buildAllTeamIconDarkCss()` so the layout and Storybook agree). The
+  RedZone box uses the RedZone logo, and each window header carries the
+  country's Sunday Ticket carrier (YouTube TV, DAZN, Kayo).
 - **Cookie writes live in the ROUTES, not the component.** `Astro.cookies.set()`
   from an imported component throws `ResponseSentError` and blanks the page —
   the first country click shipped exactly that. `rememberSundayTicketChoices`

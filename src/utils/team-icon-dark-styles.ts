@@ -32,6 +32,7 @@ import {
   buildEraCrestShapeCss,
   buildEraCrestDarkStrokeCss,
 } from './era-crest-stroke-css';
+import { buildTvLogoDarkCss } from './tv-logo-dark-css';
 
 const THELEAGUE_ICON_DIR = '/assets/theleague/icons';
 const AFL_ICON_DIR = '/assets/afl/icons';
@@ -68,6 +69,8 @@ export function buildAllTeamIconDarkCss(): string {
     buildEraCrestShapeCss(aflConfig.teams),
     buildEraCrestDarkStrokeCss(theleagueConfig.teams),
     buildEraCrestDarkStrokeCss(aflConfig.teams),
+    // TV network marks (Sunday Ticket board): same swap-else-stroke treatment.
+    buildTvLogoDarkCss(),
   ]
     .filter(Boolean)
     .join('\n');
