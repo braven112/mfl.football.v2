@@ -2,6 +2,14 @@
   "weekOf": "2026-08-31",
   "changes": [
     {
+      "date": "2026-09-05",
+      "type": "bug-fix",
+      "summary": "The Owners' Poll ballot spent half an hour on launch morning refusing to save — \"Could not save your ballot. Try again.\" — while the turnout counter cheerfully kept counting. Nothing was wrong with the ballot. A safety net that auto-reverts a bad deploy had tripped on an expired MFL login, reverted the launch, then reverted its own revert, and kept flipping the site between \"poll\" and \"no poll\" roughly once a minute. Your tap landed on whichever version was up at that instant. The net no longer reverts its own reverts, and no longer reverts a change to something it wasn't testing.",
+      "impact": "user",
+      "area": "other",
+      "league": "theleague"
+    },
+    {
       "date": "2026-09-04",
       "type": "bug-fix",
       "summary": "Every contract write to MFL takes a backup first, so there is something to roll back to when a write goes sideways. Those backups have been empty files. The same went for the commissioner's verify step — the one whose entire job is to confirm a contract change actually landed — which had been reading back an empty salary sheet and calling it a clean bill of health. MFL was answering \"you are not logged in\" with a cheerful HTTP 200, so nothing ever looked broken. Backups now contain the league's actual salary data, and verification checks against something real.",

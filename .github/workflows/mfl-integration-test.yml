@@ -54,8 +54,18 @@ jobs:
   rollback:
     needs: integration-test
     runs-on: ubuntu-latest
-    # Only rollback on push to main (not PRs, cron, or manual runs)
-    if: failure() && github.event_name == 'push' && github.ref == 'refs/heads/main'
+    # Only rollback on push to main (not PRs, cron, or manual runs) — and
+    # NEVER on a commit this job itself pushed. A revert is a push to main,
+    # so when the test fails for a reason no commit caused (the MFL_USER_ID
+    # cookie expiring is the one that has happened), the revert fails the
+    # same test and the bot reverts its own revert. On 2026-09-05 that
+    # flipped production between "feature" and "no feature" every ~70s for
+    # half an hour, and owners hit 404s on routes that existed a minute ago.
+    if: >-
+      failure()
+      && github.event_name == 'push'
+      && github.ref == 'refs/heads/main'
+      && github.event.head_commit.author.name != 'MFL Integration Bot'
     permissions:
       contents: write
       issues: write
@@ -77,7 +87,34 @@ jobs:
           echo "author=$COMMIT_AUTHOR" >> "$GITHUB_OUTPUT"
           echo "short_sha=${GH_SHA:0:7}" >> "$GITHUB_OUTPUT"
 
+      # A revert is only a fix if the commit could have caused the failure.
+      # The test exercises the contract writer and nothing else, so a commit
+      # that touched none of those files (a feature PR, a data sync, a cron
+      # commit) is reverted for a failure it did not cause — while the real
+      # cause, an expired credential, stays live. Same path list as the PR
+      # trigger above; keep them in step.
+      - name: Decide whether this commit can have caused the failure
+        id: scope
+        env:
+          GH_SHA: ${{ github.sha }}
+          COMMIT_AUTHOR: ${{ steps.commit-info.outputs.author }}
+        run: |
+          if [ "$COMMIT_AUTHOR" = "MFL Integration Bot" ]; then
+            echo "::warning::Commit was pushed by this job — never revert our own revert."
+            echo "revert=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          CHANGED=$(git diff --name-only "$GH_SHA~1" "$GH_SHA")
+          if echo "$CHANGED" | grep -Eq \
+            '^(src/utils/mfl-contract-writer\.ts|src/utils/contract-[^/]*\.ts|src/pages/api/contracts/|tests/mfl-write-integration\.test\.ts|\.github/workflows/mfl-integration-test\.yml)'; then
+            echo "revert=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::error::MFL integration test failed, but ${GH_SHA:0:7} touched none of the contract-write paths it covers. Not reverting — the cause is almost certainly the MFL_USER_ID cookie (see the owner-cookie replay check above); refresh the secret."
+            echo "revert=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Revert the commit
+        if: steps.scope.outputs.revert == 'true'
         env:
           GH_SHA: ${{ github.sha }}
         run: |
@@ -87,6 +124,7 @@ jobs:
           git push origin main
 
       - name: Create GitHub Issue
+        if: steps.scope.outputs.revert == 'true'
         uses: actions/github-script@v7
         env:
           COMMIT_MSG: ${{ steps.commit-info.outputs.message }}
