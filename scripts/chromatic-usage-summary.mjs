@@ -85,17 +85,11 @@ function main() {
   if (!turboSnap) {
     lines.push(
       '> TurboSnap is not active, so every story was captured at full price.',
-      '> It is NOT the account tier and NOT a missing stats file. Two causes,',
-      '> and the log names which one — search the Chromatic step above for',
-      '> "TurboSnap disabled":',
-      '>',
-      '> 1. `...due to matching --externals` — a changed file matched an',
-      '>    `externals` glob in `chromatic.config.json`.',
-      '> 2. `...due to file change` / "cannot be linked to any specific',
-      '>    stories" — a changed STATIC file under `public/`. Any such file',
-      '>    forces a full build, whether or not it is in `externals`. Add it',
-      '>    to `untraced` if no story renders it (What\'s New screenshots are',
-      '>    already there).',
+      '> The usual cause is NOT the account tier and NOT a missing stats file:',
+      '> it is a changed file matching an `externals` glob in',
+      '> `chromatic.config.json`, which disables TurboSnap for the whole build.',
+      '> Search the Chromatic step log above for',
+      '> "TurboSnap disabled due to matching --externals" — it names the files.',
       '',
     );
   }
