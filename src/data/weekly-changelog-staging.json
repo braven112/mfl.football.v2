@@ -764,7 +764,7 @@
     {
       "date": "2026-09-05",
       "type": "bug-fix",
-      "summary": "Signing in as commissioner now actually gives the site commissioner rights on MFL. It looked like it already did — the nav said commissioner, the admin pages opened — but every write to MFL was refused, because the login only ever asked MyFantasyLeague's shared API host, which has no league in scope and so has no commissioner to grant. The sign-in now makes a second, league-scoped call to your league's own MFL server and picks up the credential there. Anyone signed in before this shipped needs to sign out and back in once to get it.",
+      "summary": "The commissioner accounting console stopped refusing writes it had no reason to refuse. It had been demanding a second MyFantasyLeague credential before it would touch the books — and it turns out MFL never asks for that credential at all, so the console was locking the commissioner out of his own ledger while every other admin tool in the app worked normally. The extra demand is gone, the parts that actually keep a write honest are unchanged, and the yearly carry-over now runs from an ordinary signed-in session.",
       "impact": "admin",
       "area": "other",
       "league": "both"

@@ -102,30 +102,31 @@ export function resolveAccountingContext(
     );
   }
 
-  // WRITES ADDITIONALLY REQUIRE THE REAL MFL COMMISSIONER COOKIE.
+  // NO MFL_IS_COMMISH REQUIREMENT — there was one here, and it was wrong.
   //
-  // `isCommissionerOrAdmin` above is deliberately generous: it also trusts the
-  // nav-config admin franchise list, so it says yes "even if MFL didn't set the
-  // MFL_IS_COMMISH cookie at login" (its own words). That is right for showing
-  // admin UI and wrong for writing to MFL, which only honours the cookie.
+  // It refused every write whose session lacked that cookie, which is how a
+  // signed-in commissioner was told "your session has no MFL commissioner
+  // credential" while every other write path in the app worked fine. It also
+  // sent him to "sign out and sign in again", advice no login could satisfy.
   //
-  // Without this check a session that our app calls commissioner sends every
-  // import without the credential MFL needs, MFL refuses it with a non-XML
-  // body, and the write reports success having done nothing. That is exactly
-  // how a 15-record carry came back "carried into 2026" against a ledger that
-  // never changed (2026-08-31).
+  // The rule it enforced — commissioner writes need the www## host AND both
+  // cookies — came from an experiment that sent BOTH cookies on both sides and
+  // varied only the HOST (docs/claude/insights/domains/mfl-api.md, 2026-03).
+  // That proved the host matters; it never isolated the second cookie. MFL's
+  // own import sample sends `Cookie: MFL_USER_ID=…` and no commissioner cookie
+  // at all.
   //
-  // Inferred from the METHOD rather than passed in, so a future write route
-  // cannot forget to ask for it.
-  if (request.method !== 'GET' && request.method !== 'HEAD' && !mflIsCommish) {
-    return json(
-      {
-        error:
-          'Your session has no MFL commissioner credential, so MFL will reject every write. Sign out and sign in again — MFL only issues it when you log in as the league commissioner.',
-      },
-      403
-    );
-  }
+  // Measured on the test league, 2026-09-05 (scripts/probe-write-auth.mjs):
+  //     www49 — MFL_USER_ID only ................ ACCEPTED
+  //     www49 — MFL_USER_ID + MFL_IS_COMMISH .... ACCEPTED
+  // A session cookie alone writes. MFL issues MFL_IS_COMMISH on no login
+  // anywhere because there is nothing to issue, so gating on it could only
+  // ever lock out someone holding a perfectly good session.
+  //
+  // What actually protects a write, and is enforced elsewhere: the www## host
+  // (never `api.`), and verify-by-re-read — MFL answers a refused import with
+  // a non-XML body and no error, so HTTP 200 is not evidence it landed. That
+  // re-read, not this gate, is what catches the 2026-08-31 phantom carry.
 
   return {
     user,

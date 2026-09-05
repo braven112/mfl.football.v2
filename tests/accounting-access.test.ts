@@ -104,24 +104,42 @@ describe('resolveAccountingContext', () => {
     expect(result).not.toBeInstanceOf(Response);
   });
 
-  it('refuses a WRITE without the MFL commissioner cookie', async () => {
-    // THE BUG THIS EXISTS FOR: isCommissionerOrAdmin also trusts the nav-config
-    // admin list, so it says yes without MFL_IS_COMMISH. The write then goes to
-    // MFL with no commissioner credential, MFL refuses it with a non-XML body,
-    // and the write reports success having done nothing — which is how a
-    // 15-record carry came back "carried into 2026" against an unchanged
-    // ledger (2026-08-31).
+  it('lets a WRITE through WITHOUT the MFL commissioner cookie', async () => {
+    // This assertion is the inverse of what it was, and the inversion is the
+    // point. The old gate refused this case, which is how a signed-in
+    // commissioner got "your session has no MFL commissioner credential" while
+    // every other write path in the app worked.
+    //
+    // MFL does not require the cookie. Measured on the test league,
+    // 2026-09-05 (scripts/probe-write-auth.mjs — re-runnable):
+    //     www49 — MFL_USER_ID only ................ ACCEPTED
+    //     www49 — MFL_USER_ID + MFL_IS_COMMISH .... ACCEPTED
+    // MFL's own import sample sends only MFL_USER_ID too. The rule the gate
+    // enforced came from an experiment that varied the HOST while sending both
+    // cookies throughout, so it never isolated this variable.
     const mod = await loadContext(asUser(), { mflUserId: 'cookie' });
     const result = await call(mod, 'league=theleague', 'POST');
-    expect(result).toBeInstanceOf(Response);
-    expect((result as Response).status).toBe(403);
+    expect(result).not.toBeInstanceOf(Response);
+    expect(result.mflUserCookie).toBe('cookie');
   });
 
-  it('allows a WRITE once the commissioner cookie is present', async () => {
+  it('still forwards the commissioner cookie when the session happens to have one', async () => {
+    // Harmless and ACCEPTED alongside in the same measurement, so a session
+    // that carries one keeps sending it. Dropping it would be a second
+    // unmeasured guess in the opposite direction.
     const mod = await loadContext(asUser(), { mflUserId: 'cookie', mflIsCommish: 'yes' });
     const result = await call(mod, 'league=theleague', 'POST');
     expect(result).not.toBeInstanceOf(Response);
     expect(result.mflCommishCookie).toBe('yes');
+  });
+
+  it('still refuses a WRITE with no MFL session at all', async () => {
+    // The cookie was never the credential; MFL_USER_ID is. Without it there is
+    // nothing to authenticate with, and that refusal has to survive.
+    const mod = await loadContext(asUser(), {});
+    const result = await call(mod, 'league=theleague', 'POST');
+    expect(result).toBeInstanceOf(Response);
+    expect((result as Response).status).toBe(401);
   });
 
   it('keeps the ledger year and the payout season as separate clocks', async () => {
