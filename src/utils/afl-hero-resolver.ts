@@ -13,7 +13,7 @@
  *   P0   Champion Crowned window       → AflEventHero (calendar-driven)
  *   P0   Conference Playoffs (active)  → AflPlayoffsHero (bracket)
  *   P0   Calendar event active         → AflEventHero (calendar-driven)
- *   P1   Calendar event urgent         → AflEventHero (calendar-driven; splits ~50/50 with a fresh P2 feature)
+ *   P1   Calendar event upcoming       → AflEventHero (calendar-driven; ONE slot in a per-visit pool with every fresh P2 feature)
  *   P0   Regular season slot rotation  → AflEventHero (Schefter-voiced slot, no border)
  *   P2   Fresh What's New entry        → AflEventHero (no border)
  *   P3   Active/upcoming timeline      → AflEventHero (no border)
@@ -142,10 +142,11 @@ export interface AflHeroResolverInput {
    */
   scheduleReleaseRevealed?: boolean;
   /**
-   * Injectable random source (0..1) for the lead-up coin flip below; defaults
-   * to Math.random. Override in tests for deterministic results. Same
-   * contract as TheLeague's `resolveHeroState` rng: `rng() < 0.5` = the
-   * calendar event wins, `>= 0.5` = the fresh What's New entry wins.
+   * Injectable random source (0..1) for the lead-up hero pool below; defaults
+   * to Math.random. Override in tests for deterministic results. The pool is
+   * `[countdown, ...freshEntries]` and the pick is `floor(rng() * pool.length)`,
+   * so `rng() < 1 / (N + 1)` = the countdown wins (with one fresh entry that is
+   * the same `rng() < 0.5` boundary TheLeague's `resolveHeroState` uses).
    */
   rng?: () => number;
 }
@@ -905,12 +906,17 @@ function freshFeatureEntries(whatsNew: WhatsNewEntry[], now: Date): WhatsNewEntr
     });
 }
 
-/** The P2 fresh-feature state. `fresh` must be non-empty. */
-function buildFreshFeatureState(fresh: WhatsNewEntry[], now: Date): AflHeroState {
-  // Deterministic per PT day — a per-request random pick makes SSR flip
-  // hero content between same-day requests (and fights the composite
-  // model's own daily-stable casting).
-  const pick = dailyPick(fresh, now, 'afl-feature', (e) => e.id) ?? fresh[0];
+/**
+ * The P2 fresh-feature state. `fresh` must be non-empty.
+ *
+ * With no `pick`, the entry is chosen deterministically per PT day — a
+ * per-request random pick makes SSR flip hero content between same-day
+ * requests (and fights the composite model's own daily-stable casting). The
+ * lead-up pool below passes its own per-visit pick instead: there the whole
+ * point is that every load draws from the pool.
+ */
+function buildFreshFeatureState(fresh: WhatsNewEntry[], now: Date, pick?: WhatsNewEntry): AflHeroState {
+  pick ??= dailyPick(fresh, now, 'afl-feature', (e) => e.id) ?? fresh[0];
   return {
     kind: 'feature',
     priority: 'P2',
@@ -1219,27 +1225,31 @@ export function resolveAflHeroState(input: AflHeroResolverInput): AflHeroState {
   // P0/P1: Calendar-driven lead event — the new branded AflEventHero.
   //
   // A P1 lead-up (the countdown to season start, the keeper deadline, a
-  // conference draft, the end of the regular season) is roster CONTEXT, not a
-  // live event — and its urgency window (7–50 days) is longer than the 7-day
-  // fresh-feature window, so as written it locked every What's New launch out
-  // of the hero for good: the season-start countdown showed 100% of the time
-  // while a two-day-old feature never surfaced. Mirror TheLeague's Cut Watch
-  // contract instead: when a fresh feature is competing, the lead-up wins ~50%
-  // of visits (a per-visit coin flip, `rng() < 0.5` = event wins) and the
-  // feature the rest. Two things this deliberately does NOT do:
+  // conference draft, the end of the regular season) is FILLER — roster
+  // context, not a live event — and its urgency window (7–50 days) is longer
+  // than the 7-day fresh-feature window, so as written it locked every What's
+  // New launch out of the hero for good: the season-start countdown showed
+  // 100% of the time while a two-day-old feature never surfaced.
+  //
+  // The countdown is therefore ONE entry in a per-visit pool with every fresh
+  // What's New article, on equal footing: with N fresh articles it shows on
+  // 1/(N+1) of loads and so does each article (five articles → 20% each).
+  // Two things this deliberately does NOT do:
   //  - It never touches a P0 (an ACTIVE event — draft day, the keeper
-  //    deadline itself, kickoff): a live event owns the homepage outright,
-  //    same as TheLeague's P0 tier.
-  //  - With no fresh feature the lead-up still shows 100%, so the "at least
-  //    half" floor always holds.
+  //    deadline itself, kickoff): a live event owns the homepage outright.
+  //  - With no fresh article the pool is just the countdown, so it still
+  //    shows 100% — the `rng` is not even consulted.
   // Per-visit randomness is intentional (the hero may differ between
-  // refreshes, as it does on TheLeague's homepage near the roster deadline);
-  // `rng` is injectable so tests stay deterministic.
+  // refreshes, as TheLeague's does near the roster deadline); `rng` is
+  // injectable so tests stay deterministic.
   const lead = pickLeadCalendarEvent(events, rawEvents, ctx);
-  const rng = input.rng ?? Math.random;
-  const featureWinsFlip = !!lead && lead.priority === 'P1' && fresh.length > 0 && rng() >= 0.5;
-  if (featureWinsFlip) {
-    return buildFreshFeatureState(fresh, now);
+  if (lead && lead.priority === 'P1' && fresh.length > 0) {
+    const rng = input.rng ?? Math.random;
+    const poolSize = fresh.length + 1;
+    const slot = Math.min(poolSize - 1, Math.max(0, Math.floor(rng() * poolSize)));
+    if (slot > 0) {
+      return buildFreshFeatureState(fresh, now, fresh[slot - 1]);
+    }
   }
   if (lead) {
     return {
