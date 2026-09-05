@@ -110,21 +110,23 @@ const tradeBuilderHref = resolveLeaguePath(
           </svg>
         </button>
 
-        <button type="button" class="thm-hub-row" id="thm-hub-order" data-hub-target="order">
-          <span class="thm-hub-row__icon" aria-hidden="true">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/>
+        {config.showWaiverPriority && (
+          <button type="button" class="thm-hub-row" id="thm-hub-order" data-hub-target="order">
+            <span class="thm-hub-row__icon" aria-hidden="true">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/>
+              </svg>
+            </span>
+            <span class="thm-hub-row__body">
+              <span class="thm-hub-row__title">Waiver Priority</span>
+              <span class="thm-hub-row__sub" id="thm-hub-order-sub">{config.conferenceName || 'Where you sit in line'}</span>
+            </span>
+            <span class="thm-hub-row__rank" id="thm-hub-order-rank" hidden></span>
+            <svg class="thm-hub-row__arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M9 18l6-6-6-6"/>
             </svg>
-          </span>
-          <span class="thm-hub-row__body">
-            <span class="thm-hub-row__title">Waiver Priority</span>
-            <span class="thm-hub-row__sub" id="thm-hub-order-sub">{config.conferenceName || 'Where you sit in line'}</span>
-          </span>
-          <span class="thm-hub-row__rank" id="thm-hub-order-rank" hidden></span>
-          <svg class="thm-hub-row__arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <path d="M9 18l6-6-6-6"/>
-          </svg>
-        </button>
+          </button>
+        )}
       </div>
     </div>
 
@@ -299,8 +301,11 @@ const tradeBuilderHref = resolveLeaguePath(
 
     <!-- ============================================================
          VIEW 5: Waiver Priority — the owner's OWN conference's line.
+         Rendered ONLY where MFL says a priority order exists: TheLeague is
+         BBID_FCFS and has none, so this whole screen is absent there.
          Rows come from the shared renderer WaiverPriorityModal uses.
          ============================================================ -->
+    {config.showWaiverPriority && (
     <div class="thm-view" id="thm-order-view" style="display: none;">
       <div class="thm-header thm-header--with-back">
         <button class="thm-back" id="thm-order-back" aria-label="Back to the hub">
@@ -323,6 +328,7 @@ const tradeBuilderHref = resolveLeaguePath(
         <p class="thm-screen-foot__note" id="thm-order-foot"></p>
       </div>
     </div>
+    )}
   </div>
 </div>
 

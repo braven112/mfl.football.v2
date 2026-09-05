@@ -75,7 +75,7 @@ const THM_CLAIMS_DEBOUNCE_KEY = 'mfl:transaction-hub-claims-checked';
 const THM_CLAIMS_DEBOUNCE_MS = 300_000;
 
 /** Live waiver order, fetched once per page view when the hub is opened. */
-let thmOrder: { order: any[]; asOf: string; live: boolean; system: 'bbid' | 'priority' } | null = null;
+let thmOrder: { order: any[]; asOf: string; live: boolean } | null = null;
 let thmOrderError: string | null = null;
 let thmOrderLoading = false;
 
@@ -194,6 +194,7 @@ function thmConfig(): {
   conferenceName: string;
   teams: Array<{ franchiseId: string; name: string; icon?: string }>;
   freeAgentsPath: string;
+  showWaiverPriority: boolean;
 } | null {
   try {
     const raw = document.getElementById('transaction-hub-config')?.textContent;
@@ -298,7 +299,8 @@ function thmRenderHubView() {
             : `${thmClaims.length} filed`,
   );
 
-  // Priority — the rank chip only appears once the live order has landed.
+  // Priority — the row is absent entirely in a blind-bid league, so every
+  // lookup below is null-safe rather than assumed present.
   const rankEl = thmEl('thm-hub-order-rank');
   const myRank = thmMyWaiverRank();
   if (rankEl) {
@@ -320,7 +322,8 @@ function thmRenderHubView() {
 /** The viewer's rank within their own conference, or null until the order is read. */
 function thmMyWaiverRank(): number | null {
   const cfg = thmConfig();
-  if (!thmOrder || !cfg?.franchiseId || !cfg.teams?.length) return null;
+  if (!cfg?.showWaiverPriority) return null;
+  if (!thmOrder || !cfg.franchiseId || !cfg.teams?.length) return null;
   const ranked = rankWithinConference(
     thmOrder.order,
     cfg.teams.map((t) => t.franchiseId),
@@ -521,7 +524,7 @@ function thmRenderOrderView() {
   setStatus('');
 
   if (footEl && footWrap) {
-    footEl.textContent = waiverPriorityFootnote(thmOrder.system, thmOrder.asOf, thmOrder.live);
+    footEl.textContent = waiverPriorityFootnote(thmOrder.asOf, thmOrder.live);
     footWrap.hidden = false;
   }
 }
@@ -530,7 +533,11 @@ function thmRenderOrderView() {
  *  waivers process, so re-reading it on every toggle buys nothing. */
 async function thmLoadOrder(): Promise<void> {
   const cfg = thmConfig();
-  if (!cfg?.signedIn || thmOrder || thmOrderLoading) return;
+  // A blind-bid league has no priority order to read. Bailing here (rather
+  // than only hiding the row) is what keeps a league that does not use
+  // priority from spending an MFL read on a number it would never show.
+  if (!cfg?.showWaiverPriority) return;
+  if (!cfg.signedIn || thmOrder || thmOrderLoading) return;
   thmOrderLoading = true;
   try {
     const res = await fetch('/api/waiver-order', { credentials: 'include' });
@@ -538,12 +545,7 @@ async function thmLoadOrder(): Promise<void> {
     if (!res.ok || !data?.success) {
       throw new Error(data?.message || 'Could not read the waiver order.');
     }
-    thmOrder = {
-      order: data.order,
-      asOf: data.asOf,
-      live: data.live !== false,
-      system: data.system === 'priority' ? 'priority' : 'bbid',
-    };
+    thmOrder = { order: data.order, asOf: data.asOf, live: data.live !== false };
     thmOrderError = null;
   } catch (err) {
     // Let the next open retry — a failed read is usually a blip.
@@ -590,6 +592,9 @@ function thmShowClaimsView() {
 }
 
 function thmShowOrderView() {
+  // Unreachable in a blind-bid league — the row that opens it is not rendered
+  // — but guarded anyway so a stray call cannot show an empty screen.
+  if (!thmConfig()?.showWaiverPriority) return;
   thmShowView('order', 'in');
   thmRenderOrderView();
   void thmLoadOrder().then(() => {

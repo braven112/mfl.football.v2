@@ -180,7 +180,7 @@ const clientConfig = { ...config, initialOrder: undefined, hasInitialOrder: init
     setStatus('');
 
     if (footEl) {
-      footEl.textContent = waiverPriorityFootnote(cfg.system, asOf, live);
+      footEl.textContent = waiverPriorityFootnote(asOf, live);
       footEl.hidden = false;
     }
   };

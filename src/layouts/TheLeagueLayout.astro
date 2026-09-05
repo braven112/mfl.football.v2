@@ -209,6 +209,9 @@ const transactionHubConfig = buildTransactionHubConfig(
 		leagueContext.slug === 'afl-fantasy' ? '/afl-fantasy/players' : '/theleague/players',
 		hideLeaguePrefix,
 	),
+	// Roster-management clock: waivers are a roster action, so the waiver
+	// system is read off the LEAGUE year's feed, not the season year's.
+	Number(getLeagueYearForSlug(leagueContext.slug as LeagueSlug)),
 );
 
 // Get admin franchise IDs

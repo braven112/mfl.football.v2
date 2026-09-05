@@ -34,6 +34,7 @@ import {
   getFranchiseConference,
 } from './afl-conference';
 import theLeagueConfig from '../data/theleague.config.json';
+import { leagueUsesWaiverPriority } from './waiver-system';
 import type { WaiverPriorityRenderTeam } from './waiver-priority-render';
 
 export interface TransactionHubConfig {
@@ -45,12 +46,29 @@ export interface TransactionHubConfig {
   conferenceName: string;
   /** The teams the viewer actually competes with for claims, in config order. */
   teams: WaiverPriorityRenderTeam[];
+  /**
+   * Whether a waiver PRIORITY ORDER exists in this league at all — read from
+   * MFL's `currentWaiverType`, never from the slug. TheLeague is BBID_FCFS and
+   * has no priority order; MFL still serves it a `waiverSortOrder`, but it is
+   * a default nobody set and nothing reads. False hides the row AND the screen,
+   * rather than showing a queue that does not decide anything.
+   */
+  showWaiverPriority: boolean;
   /** Where "manage your claims" sends an owner — claims are read-only here. */
   freeAgentsPath: string;
 }
 
-/** Signed-out / wrong-league shell: the hub still renders, the waiver screens gate. */
-const SIGNED_OUT: Omit<TransactionHubConfig, 'freeAgentsPath'> = {
+/**
+ * Signed-out / wrong-league shell: the hub still renders, the waiver screens
+ * gate. Explicitly typed rather than `as const` — a const assertion makes
+ * `teams` a `readonly []`, which is not assignable to the mutable array the
+ * config declares.
+ *
+ * `showWaiverPriority` is omitted deliberately: it is a property of the
+ * LEAGUE, not of the viewer, so every caller supplies it and none of them can
+ * accidentally inherit a `false` from here.
+ */
+const SIGNED_OUT: Omit<TransactionHubConfig, 'freeAgentsPath' | 'showWaiverPriority'> = {
   signedIn: false,
   franchiseId: null,
   conferenceName: '',
@@ -61,20 +79,27 @@ export function buildTransactionHubConfig(
   leagueSlug: string,
   authUser: { franchiseId?: string | null; leagueId?: string | null } | null,
   freeAgentsPath: string,
+  leagueYear: number,
 ): TransactionHubConfig {
   const league = getLeagueBySlug(leagueSlug);
   const franchiseId = authUser?.franchiseId || null;
 
+  // Asked once, for signed-in and signed-out alike: whether the league runs a
+  // priority order is a property of the LEAGUE, not of who is looking. A
+  // signed-out visitor to a blind-bid league must not be shown a sign-in gate
+  // promising a spot in a line that does not exist.
+  const showWaiverPriority = leagueUsesWaiverPriority(leagueSlug, leagueYear);
+
   // The session must name THIS league. A franchise id alone proves nothing —
   // both leagues have an 0001.
   const inThisLeague = !!league && !!franchiseId && authUser?.leagueId === league.id;
-  if (!inThisLeague) return { ...SIGNED_OUT, freeAgentsPath };
+  if (!inThisLeague) return { ...SIGNED_OUT, freeAgentsPath, showWaiverPriority };
 
   if (leagueSlug === 'afl-fantasy') {
     const conf = getFranchiseConference(franchiseId);
     // A franchise the AFL config does not place in a conference has no line to
     // stand in; gate rather than guess one.
-    if (!conf) return { ...SIGNED_OUT, freeAgentsPath };
+    if (!conf) return { ...SIGNED_OUT, freeAgentsPath, showWaiverPriority };
     return {
       signedIn: true,
       franchiseId,
@@ -85,6 +110,7 @@ export function buildTransactionHubConfig(
         icon: t.icon,
       })),
       freeAgentsPath,
+      showWaiverPriority,
     };
   }
 
@@ -99,5 +125,6 @@ export function buildTransactionHubConfig(
       icon: t.icon,
     })),
     freeAgentsPath,
+    showWaiverPriority,
   };
 }

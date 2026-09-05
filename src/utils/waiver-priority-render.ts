@@ -70,15 +70,19 @@ export function renderWaiverPriorityRows(
 }
 
 /**
- * The line under the list: what priority decides in this league, and how fresh
- * the number is. `live: false` means MFL did not answer and the route served
- * its last known-good order — say so, rather than presenting stale as live.
+ * The line under the list: what priority decides, and how fresh the number is.
+ * `live: false` means MFL did not answer and the route served its last
+ * known-good order — say so, rather than presenting stale as live.
+ *
+ * NO BLIND-BID BRANCH, deliberately. This used to read "Priority breaks ties
+ * between equal bids" for a bbid league, which is false for TheLeague:
+ * BBID_FCFS breaks ties FIRST COME FIRST SERVED and consults no order at all.
+ * A league that does not run priority now has no priority screen to footnote
+ * (src/utils/waiver-system.ts), so the honest fix is to delete the claim
+ * rather than reword it — every caller of this is, by construction, a
+ * rolling-priority league.
  */
-export function waiverPriorityFootnote(
-  system: 'bbid' | 'priority',
-  asOf: string,
-  live: boolean,
-): string {
+export function waiverPriorityFootnote(asOf: string, live: boolean): string {
   const when = new Date(asOf);
   const stamp = Number.isNaN(when.getTime())
     ? ''
@@ -88,10 +92,7 @@ export function waiverPriorityFootnote(
         hour: 'numeric',
         minute: '2-digit',
       });
-  const note =
-    system === 'bbid'
-      ? 'Priority breaks ties between equal bids.'
-      : 'Priority is rolling — win a claim and you drop to the back of the line.';
+  const note = 'Priority is rolling — win a claim and you drop to the back of the line.';
   return live
     ? `${note} Live from MyFantasyLeague${stamp ? `, ${stamp}` : ''}.`
     : `${note} MyFantasyLeague is not answering — showing the last order we read${stamp ? `, ${stamp}` : ''}.`;

@@ -31,7 +31,7 @@ import { buildMflExportUrl } from '../../utils/mfl-url';
 import { fetchWithTimeout } from '../../utils/fetch-with-timeout';
 import { JSON_HEADERS_NO_STORE as JSON_HEADERS } from '../../utils/api-response';
 import { readWaiverSortOrder, type WaiverOrderEntry } from '../../utils/waiver-order';
-import { readBidRules, type WaiverSystem } from '../../utils/waiver-claim';
+import { leagueUsesWaiverPriority } from '../../utils/waiver-system';
 
 const fail = (message: string, status: number, extra: Record<string, unknown> = {}) =>
   new Response(JSON.stringify({ success: false, message, ...extra }), { status, headers: JSON_HEADERS });
@@ -44,10 +44,7 @@ const fail = (message: string, status: number, extra: Record<string, unknown> = 
  */
 const OK_TTL_MS = 60_000;
 const ERROR_TTL_MS = 15_000;
-const cache = new Map<
-  string,
-  { at: number; ok: boolean; order: WaiverOrderEntry[]; asOf: string; system: WaiverSystem }
->();
+const cache = new Map<string, { at: number; ok: boolean; order: WaiverOrderEntry[]; asOf: string }>();
 
 async function readLiveOrder(leagueId: string, year: number) {
   const key = `${leagueId}:${year}`;
@@ -61,20 +58,13 @@ async function readLiveOrder(leagueId: string, year: number) {
       { timeoutMs: 6000 },
     );
     if (!res.ok) throw new Error(`MFL league HTTP ${res.status}`);
-    const body = await res.json();
-    const order = readWaiverSortOrder(body);
-    // Read the bid system off the SAME payload rather than making the caller
-    // supply it. The Transaction Hub is mounted in the layout, so an SSR read
-    // of the league feed there would put an MFL round-trip (or a static import
-    // of a 12-league-year feed) in front of every page in the site — while
-    // this response is already parsed, already cached, and already live.
-    const system = readBidRules(body?.league ?? {}).system;
+    const order = readWaiverSortOrder(await res.json());
     // An empty parse is not a valid order — it means MFL answered with an
     // error body or a shape we don't recognise. Treat it as a failure so the
     // last known-good order keeps serving, rather than caching "nobody has
     // priority" for a minute.
     if (order.length === 0) throw new Error('MFL league payload carried no waiverSortOrder');
-    const fresh = { at: now, ok: true, order, asOf: new Date(now).toISOString(), system };
+    const fresh = { at: now, ok: true, order, asOf: new Date(now).toISOString() };
     cache.set(key, fresh);
     return fresh;
   } catch (err) {
@@ -94,10 +84,6 @@ async function readLiveOrder(leagueId: string, year: number) {
       ok: false,
       order: latest?.order ?? prior?.order ?? [],
       asOf: latest?.asOf ?? prior?.asOf ?? new Date(now).toISOString(),
-      // 'bbid' is the safe default for a league we have never read: it is what
-      // both live leagues use, and its footnote ("priority breaks ties")
-      // understates priority rather than promising it decides claims outright.
-      system: latest?.system ?? prior?.system ?? ('bbid' as WaiverSystem),
     };
     cache.set(key, degraded);
     return degraded;
@@ -122,7 +108,22 @@ export const GET: APIRoute = async ({ request }) => {
     ? getRolloverLeagueYear(league.leagueYearRollover)
     : getCurrentLeagueYear();
 
-  const { order, asOf, ok, system } = await readLiveOrder(league.id, year);
+  // NOT EVERY LEAGUE HAS ONE. TheLeague is BBID_FCFS — blind bidding, ties
+  // broken first come first served — so its `waiverSortOrder` is a default
+  // nobody set and nothing reads. MFL serves that number anyway, which is
+  // exactly why this has to be refused here and not merely hidden in the UI:
+  // the route is what makes the number look authoritative.
+  //
+  // Read from the build-time feed rather than the live payload BY DESIGN. The
+  // live read degrades to a last-known-good order during an MFL blip, and a
+  // system inferred from a failed read would flip a real priority league to
+  // "no order here" for the length of the outage — turning a brief blip into
+  // a wrong answer about the league's rules.
+  if (!leagueUsesWaiverPriority(league.slug, year)) {
+    return fail('This league does not use a waiver priority order.', 404, { usesPriority: false });
+  }
+
+  const { order, asOf, ok } = await readLiveOrder(league.id, year);
   if (order.length === 0) {
     return fail('MyFantasyLeague did not answer with a waiver order. Try again in a moment.', 502);
   }
@@ -136,9 +137,6 @@ export const GET: APIRoute = async ({ request }) => {
       // the modal can say so instead of presenting stale numbers as live.
       live: ok,
       franchiseId: user.franchiseId,
-      // Whether priority decides claims outright or only breaks tied bids —
-      // the footnote under the list changes on it.
-      system,
       order,
     }),
     { status: 200, headers: JSON_HEADERS },
