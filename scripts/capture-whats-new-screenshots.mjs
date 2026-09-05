@@ -69,6 +69,8 @@ const MANUAL_CAPTURE_ONLY = {
   'tip-schefter-gets-louder': 'auth-gated page — blind capture shoots the sign-in redirect',
   'lineup-faceoff-scoreboard': 'auth-gated page — blind capture shoots the sign-in redirect',
   'mock-draft': 'sign-in gate replaces the draft config UI',
+  'afl-mock-draft':
+    'the lobby is auth-gated AND time-gated — signed out it shoots the sign-in wall, and signed in outside the July cut window it shoots the gate ("the AL draft is over"), neither of which is the feature. Capture the ROOM instead (CAPTURE_PATHS below) with a forged AFL owner session: mint one via a temporary DEV-only route for the AFL (league id from the registry, franchise 0001), then shoot /afl-fantasy/draft/mock/<any-session-id> — the pool and the nine round tabs render without a live PartyKit session. Retry on failure: an unrelated Redis pipeline (schefter-reactions) intermittently throws against an unreachable Upstash host and Astro renders its error page, which must never be committed as the shot.',
   'afl-trophy-wall': 'hand-staged scroll to a franchise trophy wall',
   'owner-activity': 'analytics only populate in prod — dev shows the empty state',
   'afl-owner-activity': 'analytics only populate in prod — dev shows the empty state',
@@ -152,6 +154,12 @@ const CAPTURE_PATHS = {
   // directory path is prefixed, TheLeague's is not — see getSearchPath), and
   // a bare path only routes on the league's own apex host.
   'afl-search': '/afl-fantasy/search',
+  // AFL-only entry whose link is the league-neutral bare `/draft/mock`. Shot
+  // on the ROOM rather than the lobby: the lobby is shut outside the July cut
+  // window (by design — see utils/afl-mock-draft), so its honest state is a
+  // paragraph of text, while the room shows what the feature actually is —
+  // the conference-scoped pool and the nine rounds.
+  'afl-mock-draft': '/afl-fantasy/draft/mock/preview1',
 };
 
 const PAGE_HOOKS = {

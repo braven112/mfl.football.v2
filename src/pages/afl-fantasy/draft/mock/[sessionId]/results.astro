@@ -1,30 +1,35 @@
 ---
 /**
- * Mock Draft results (The League) — thin route wrapper.
+ * Mock Draft results (AFL) — thin route wrapper.
+ *
+ * All 24 franchises are passed rather than one conference's twelve: a session
+ * link is shareable, and a board should still name its teams when an NL owner
+ * opens an AL owner's finished mock.
  */
 import DraftMockResultsPage from '../../../../../components/shared/draft-mock/DraftMockResultsPage.astro';
-import leagueConfigData from '../../../../../data/theleague.config.json';
 import { getAuthUser } from '../../../../../utils/auth';
+import { getAllTeams } from '../../../../../utils/afl-conference';
+import { AFL_MOCK_BASE_PATH } from '../../../../../utils/afl-mock-page';
 import { fetchMockSession } from '../../../../../utils/mock-draft-session';
 
 export const prerender = false;
 
 const { sessionId } = Astro.params;
-if (!sessionId) return Astro.redirect('/theleague/draft/mock');
-if (!getAuthUser(Astro.request)) return Astro.redirect('/theleague/login');
+if (!sessionId) return Astro.redirect(AFL_MOCK_BASE_PATH);
+if (!getAuthUser(Astro.request)) return Astro.redirect('/afl-fantasy/login');
 
 // Fetched HERE, not in the shared component: a missing session has to bounce,
 // and Astro.redirect() from a component only blanks the body. See CLAUDE.md.
 const session = await fetchMockSession(import.meta.env.PUBLIC_PARTYKIT_HOST, sessionId);
-if (!session) return Astro.redirect('/theleague/draft/mock');
+if (!session) return Astro.redirect(AFL_MOCK_BASE_PATH);
 ---
 
 <DraftMockResultsPage
-  leagueSlug="theleague"
+  leagueSlug="afl-fantasy"
   session={session}
-  title="Mock Draft Results | The League"
-  basePath="/theleague/draft/mock"
-  teams={(leagueConfigData.teams ?? []).map((t: any) => ({
+  title="Mock Draft Results | AFL"
+  basePath={AFL_MOCK_BASE_PATH}
+  teams={getAllTeams().map((t) => ({
     franchiseId: t.franchiseId,
     name: t.name,
     nameMedium: t.nameMedium || t.name,

@@ -1,0 +1,90 @@
+---
+/**
+ * Mock Draft room — shared by both leagues.
+ *
+ * The same `DraftRoom` island the live room uses, in `mode: 'mock'`: picks,
+ * timer and state come from PartyKit instead of MFL polling.
+ *
+ * What differs between the leagues is entirely in the POOL, and it is the
+ * point of the whole feature rather than a detail:
+ *
+ *   - TheLeague mocks a ROOKIE draft, so the pool is the rookie class.
+ *   - The AFL redrafts from whatever its conference did not keep, so the pool
+ *     is everyone draftable MINUS that conference's twelve rosters — and only
+ *     that conference's. MFL allows a player on one roster PER CONFERENCE, so
+ *     subtracting all twenty-four would delete half the board.
+ *
+ * Both are resolved by the route and handed in, because a static import
+ * specifier can't be a runtime variable and the pool needs a live roster read.
+ */
+import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
+import DraftNav from '../draft-nav/DraftNav.astro';
+import DraftRoom from '../../theleague/draft-room/DraftRoom';
+import type { DraftLeagueSlug } from '../draft-nav/draft-pages';
+import type { DraftContext, DraftRoomPageData } from '../../../types/draft-room';
+
+interface Props {
+  leagueSlug: DraftLeagueSlug;
+  title: string;
+  sessionId: string;
+  pageData: DraftRoomPageData;
+  /** Franchise to highlight — the viewer's own, when they have one here. */
+  userTeamId: string;
+  /** This league's mock lobby, for the crumb back out. */
+  basePath: string;
+  /**
+   * Whether the pool opens filtered to rookies. TheLeague drafts rookies only;
+   * the AFL redrafts its whole roster, so that filter would hide nearly
+   * everything it is about to draft.
+   */
+  draftContext?: DraftContext;
+  /** Shown above the board — e.g. which conference's pool this is. */
+  poolNote?: string | null;
+}
+
+const {
+  leagueSlug,
+  title,
+  sessionId,
+  pageData,
+  userTeamId,
+  basePath,
+  draftContext = 'rookie',
+  poolNote = null,
+} = Astro.props as Props;
+
+// DraftNav takes league-NEUTRAL crumb paths and prefixes them per reader, so
+// strip this league's own prefix rather than handing it its own name twice.
+const crumbParentPath = basePath.replace(/^\/[^/]+/, '');
+---
+
+<TheLeagueLayout title={title} hideMobileNavIcons>
+  <DraftNav
+    leagueSlug={leagueSlug}
+    current="mock"
+    crumb="Session"
+    crumbParent={{ label: 'Mock Draft', path: crumbParentPath }}
+  />
+
+  {poolNote && <p class="dmock-note">{poolNote}</p>}
+
+  <DraftRoom
+    client:load
+    pageData={JSON.stringify(pageData)}
+    userTeamId={userTeamId}
+    mode="mock"
+    mockSessionId={sessionId}
+    draftContext={draftContext}
+  />
+</TheLeagueLayout>
+
+<style>
+  .dmock-note {
+    max-width: 60rem;
+    margin: 0 auto;
+    padding: 0 1rem 0.625rem;
+    font-size: 0.8125rem;
+    line-height: 1.5;
+    color: var(--content-text-muted, #666);
+  }
+</style>

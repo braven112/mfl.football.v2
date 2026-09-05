@@ -157,3 +157,68 @@ route had to become a 73-line wrapper over
 `utils/draft-room-data#buildDraftRoomData` before the AFL's could exist at all.
 The AFL's needed a second extraction (`utils/afl-draft-room`) to clear the
 band — the guard rejects 75-98 lines as "too close to call", not just >80.
+
+---
+
+## 2026-09-04 — The AFL mock draft, and why it was not a one-line edit
+
+The plan recorded the AFL Mock Draft as "deferred", and the note under it said
+publishing any deferred page was a one-line edit to `draft-pages.ts`. That was
+true of the ROUTE and wrong about the FEATURE. TheLeague mocks a fixed rookie
+class; the AFL redrafts whatever its keepers left behind, which makes the pool
+the whole product. Four things.
+
+**Insight 1 — availability is scoped to ONE CONFERENCE, and getting it wrong
+looks fine.** `league.json` carries `rostersPerPlayer: "1"` beside
+`playerLimitUnit: "CONFERENCE"`: a player may be on one roster *per
+conference*, so the same man can be — and routinely is — kept in both. The
+2026 numbers are stark: each conference kept 84 players and **60 of them are
+the same people**, and player 17472 went 1.01 in CONFERENCE00 *and* 1.01 in
+CONFERENCE01. Subtracting all 24 rosters therefore removes 108 distinct players
+where the rules remove 84, and the 24 it wrongly takes are exactly the NL-only
+keepers the AL is free to draft. The output is still a plausible list of
+available players, which is why this needs a test and not a careful reading.
+The league registry already carried the warning (`duplicatePlayers: true`, "any
+logic that treats 'player is on some other roster' as meaningful…"); this is
+the first feature where the whole point is that subtraction.
+
+**Insight 2 — the AFL draft is a straight repeat, not a snake.** Every round
+opens with the same franchise. Reusing TheLeague's `buildSnakeOrder` would
+reverse four of the AFL's nine rounds and teach owners the wrong thing about
+where they pick — with no error anywhere. Better still, the pick sequence is
+taken WHOLE from MFL's pre-populated slots rather than reconstructed from a
+round-one order, because only the feed carries traded picks: 2026's AL swapped
+two, so its round 2 is genuinely not its round 1.
+
+**Insight 3 — "only useful after the keeper deadline" is a DATA condition, and
+the calendar is not a good enough proxy.** The roster history proves it. Jul 10:
+franchises carrying 17-23. Jul 14, deadline eve: seven already at 7, others
+still at 20. Jul 16, past the deadline: five still owed cuts. Only from Jul 20
+were all 24 at exactly seven. So the gate counts rosters and uses the July 15
+deadline only to explain itself. It also checks the REAL DRAFT FIRST: after the
+draft rosters climb back to 16, which a roster-only gate would report as "still
+waiting on cuts" — wrong, and unfixable by the owner reading it.
+
+**Insight 4 — an HTML comment inside a template-expression branch 404s the
+page, silently.** `{gate ? (…) : (<!-- Create section --> <section>…)}` compiles
+without a diagnostic (`@astrojs/compiler` reported only an unrelated hint), and
+then the page module throws on import. Astro's dev server does not 500 or log
+anything — it serves the 404 page, so the route simply looks like it does not
+exist. Two pages that had worked minutes earlier appeared to vanish. Bisecting
+the component (frontmatter alone → markup alone) found it in a few minutes; no
+amount of reading the log would have. A branch of a template expression must be
+a single node.
+
+**Insight 5 — publishing a draft page is TWO one-line edits, not one.**
+`draft-pages.ts` drives the hub and the strip; `nav-config.json`'s `leagueOnly`
+drives the site nav; `article-links.mjs` decides whether Schefter may link it.
+Only the first was in the plan's note. `tests/draft-section.test.ts` now pins
+the nav one too, and asserts the two leagues' page lists are IDENTICAL rather
+than snapshotting one — so adding a page to one league and forgetting the other
+fails, which is the regression that actually costs something.
+
+**Insight 6 — the pages-only walk in the RSP guard had a hole.** The licensed-
+RSP test walked `src/pages/**` for `buildDraftPlayers(` callers. Both the AFL
+room and the AFL mock build their pool in a UTIL, so neither was ever checked —
+the same blind spot that let the leak ship the first time. The walk now covers
+`src/utils` too, where a caller can never rely on the default league.

@@ -558,11 +558,22 @@ export default function DraftRoom({ pageData, userTeamId, mode = 'live', mockSes
   // room and vice versa. Scoping the picks but not the chat still crosses the
   // two drafts, just more quietly.
   //
-  // The suffix is CONDITIONAL so a single-unit league's room id is byte-for-
-  // byte what it was: changing TheLeague's would orphan its existing chat.
-  const partyRoomId = `league-${state.leagueId}-draft-${state.leagueYear}${
-    data.pollUnit ? `-${data.pollUnit.toLowerCase()}` : ''
-  }`;
+  // The suffix is CONDITIONAL so a single-unit league's LIVE room id is
+  // byte-for-byte what it was: changing TheLeague's would orphan its chat.
+  //
+  // A MOCK is scoped to its own SESSION instead. Sharing the live room's
+  // channel meant two owners running separate mocks talked over each other,
+  // and mock chatter landed in the real draft room — which on the AFL is the
+  // one channel that matters on draft day, since a mock now carries a
+  // `pollUnit` too and would have collided with its conference's live room.
+  // NOTE the shape: the party routes a room to its MOCK-DRAFT handler when the
+  // id starts with `mock-` (or ends with `-registry`), so a `mock-<id>-chat`
+  // room would be handled as a draft session and chat would not work at all.
+  const partyRoomId = isMock
+    ? `league-${state.leagueId}-mockchat-${mockSessionId}`
+    : `league-${state.leagueId}-draft-${state.leagueYear}${
+        data.pollUnit ? `-${data.pollUnit.toLowerCase()}` : ''
+      }`;
   const partyHost = data.partyHost || '';
 
   // Side panel tab — shared between desktop (tab bar under board) and mobile (MobileTabBar).

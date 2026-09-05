@@ -105,7 +105,10 @@ export const DESTINATIONS = {
   // BOTH since the AFL got a conference-aware room: the AL's live board and
   // the NL's slow email draft are the same page, scoped by ?conference=.
   'draft-room': { path: '/draft/room', label: 'the draft room', leagues: BOTH },
-  'mock-draft': { path: '/draft/mock', label: 'the mock draft room', leagues: ['theleague'] },
+  // BOTH since the AFL got a mock too. Its version drafts from the pool its
+  // keepers left behind, so it only opens between the keeper cuts and the real
+  // draft — but the PATH exists year-round and explains itself when shut.
+  'mock-draft': { path: '/draft/mock', label: 'the mock draft room', leagues: BOTH },
   salary: { path: '/salary', label: 'the salary benchmarks', leagues: ['theleague'] },
   stats: { path: '/stats', label: 'the stats hub', leagues: ['theleague'] },
   'league-summary': { path: '/league-summary', label: 'the league summary', leagues: ['theleague'] },

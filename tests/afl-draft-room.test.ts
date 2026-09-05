@@ -278,15 +278,28 @@ describe('no page outside TheLeague can unlock its licensed RSP', () => {
       return e.name.endsWith('.astro') ? [path] : [];
     });
 
-  const CALLERS = walkAstro('src/pages').filter((f) =>
-    readFileSync(f, 'utf-8').includes('buildDraftPlayers(')
-  );
+  // src/utils too, not just pages: both the AFL draft room and the AFL mock
+  // build their pool in a util, and a pages-only walk would never have looked
+  // at either — the exact blind spot that let this leak ship the first time.
+  const walkSrc = (dir: string, ext: string[]): string[] =>
+    readdirSync(dir, { withFileTypes: true }).flatMap((e) => {
+      const path = join(dir, e.name);
+      if (e.isDirectory()) return walkSrc(path, ext);
+      return ext.some((x) => e.name.endsWith(x)) ? [path] : [];
+    });
+
+  const CALLERS = [
+    ...walkAstro('src/pages'),
+    ...walkSrc('src/utils', ['.ts']),
+  ].filter((f) => readFileSync(f, 'utf-8').includes('buildDraftPlayers('));
 
   it('finds the callers it means to check', () => {
     expect(CALLERS.length).toBeGreaterThan(3);
   });
 
   for (const file of CALLERS) {
+    // Only TheLeague's OWN pages may rely on the default. A util is shared by
+    // definition, so it never can.
     const isTheLeague = file.startsWith('src/pages/theleague/');
     it(`${file.replace('src/pages/', '')} ${isTheLeague ? 'may rely on the default league' : 'declares its own league or passes no franchise'}`, () => {
       const src = readFileSync(file, 'utf-8');

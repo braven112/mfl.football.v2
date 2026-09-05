@@ -2,13 +2,19 @@
  * GET /api/mock-draft/list
  *
  * Returns active mock draft sessions from the PartyKit registry.
- * Query params: ?leagueId=13522 (defaults to 13522)
+ *
+ * The LEAGUE always comes from the session, never a query param — a lobby
+ * lists the caller's own league and nobody else's. `?conference=` selects a
+ * board WITHIN that league: the AFL runs two independent drafts, and an AL
+ * session in the NL's lobby is one an NL owner can open and then never be on
+ * the clock in, because they are not in its order.
  */
 
 import type { APIRoute } from 'astro';
 import { getAuthUser } from '../../../utils/auth';
 import { JSON_HEADERS_NO_STORE as JSON_HEADERS } from '../../../utils/api-response';
-import { DEFAULT_LEAGUE_ID } from '../../../config/leagues';
+import { DEFAULT_LEAGUE_ID, getLeagueById } from '../../../config/leagues';
+import { conferenceUnit, mockRegistryRoom, parseConference } from '../../../utils/mock-draft-scope';
 
 export const GET: APIRoute = async ({ request }) => {
   const user = getAuthUser(request);
@@ -20,7 +26,18 @@ export const GET: APIRoute = async ({ request }) => {
   }
 
   const url = new URL(request.url);
-  const leagueId = url.searchParams.get('leagueId') || user.leagueId || DEFAULT_LEAGUE_ID;
+  const leagueId = user.leagueId || DEFAULT_LEAGUE_ID;
+  const isAfl = getLeagueById(leagueId)?.slug === 'afl-fantasy';
+  const conference = isAfl ? parseConference(url.searchParams.get('conference')) : null;
+  if (isAfl && !conference) {
+    // Same reasoning as delete: the unscoped registry is empty for the AFL, so
+    // falling back to it would answer "no sessions" for a board that has them.
+    // An empty list reads as "mine vanished", which is a silent wrong.
+    return new Response(
+      JSON.stringify({ success: false, sessions: [], message: 'A conference is required to list AFL mock drafts.' }),
+      { status: 400, headers: JSON_HEADERS },
+    );
+  }
 
   const rawPartyHost = import.meta.env.PUBLIC_PARTYKIT_HOST;
   if (!rawPartyHost) {
@@ -33,7 +50,10 @@ export const GET: APIRoute = async ({ request }) => {
   const partyHost = rawPartyHost.startsWith('http') ? rawPartyHost : `https://${rawPartyHost}`;
 
   try {
-    const registryUrl = `${partyHost}/party/${leagueId}-registry`;
+    const registryUrl = `${partyHost}/party/${mockRegistryRoom(
+      leagueId,
+      conference ? conferenceUnit(conference) : null,
+    )}`;
     const res = await fetch(registryUrl, { method: 'GET' });
 
     if (!res.ok) {

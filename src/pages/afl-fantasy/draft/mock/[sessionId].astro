@@ -1,0 +1,65 @@
+---
+/**
+ * Mock Draft room (AFL) — thin route wrapper.
+ *
+ * The pool is this conference's AVAILABLE players: everyone draftable minus
+ * its own twelve rosters, and only its own — a player kept in the other
+ * conference is still draftable here. See utils/afl-mock-draft.
+ */
+import DraftMockSessionPage from '../../../../components/shared/draft-mock/DraftMockSessionPage.astro';
+import aflConfigData from '../../../../../data/afl-fantasy/afl.config.json';
+import { getAuthUser, isAuthorizedForLeague } from '../../../../utils/auth';
+import { getLeagueBySlug } from '../../../../config/leagues';
+import { getLeagueYearForSlug } from '../../../../utils/league-year';
+import { fetchMockSession } from '../../../../utils/mock-draft-session';
+import {
+  AFL_MOCK_BASE_PATH,
+  aflMockPoolNote,
+  buildAflMockSessionData,
+  resolveAflMock,
+} from '../../../../utils/afl-mock-page';
+
+export const prerender = false;
+
+const { sessionId } = Astro.params;
+if (!sessionId) return Astro.redirect(AFL_MOCK_BASE_PATH);
+
+const league = getLeagueBySlug('afl-fantasy')!;
+const user = getAuthUser(Astro.request);
+if (!user) return Astro.redirect('/afl-fantasy/login');
+
+// The session's own picks, so a board reopened after the window closed still
+// renders the players it drafted. Best-effort: a failed read just means the
+// pool is the plain current one.
+const existing = await fetchMockSession(import.meta.env.PUBLIC_PARTYKIT_HOST, sessionId);
+const pickedIds: string[] = Array.isArray(existing?.picks)
+  ? existing.picks.map((p: { playerId?: string }) => p?.playerId).filter((id: unknown): id is string => !!id)
+  : [];
+
+const resolution = await resolveAflMock({
+  configConferences: aflConfigData.conferences ?? [],
+  requestedConference: Astro.url.searchParams.get('conference'),
+  // Authenticated identity only — never a browse-as id. See resolveAflMock.
+  myFranchiseId: isAuthorizedForLeague(user, league.id) ? user.franchiseId : null,
+  leagueYear: getLeagueYearForSlug('afl-fantasy'),
+  leagueId: league.id,
+  // A session created inside the window stays playable after it shuts.
+  needsPool: true,
+  keepPlayerIds: pickedIds,
+});
+---
+
+<DraftMockSessionPage
+  leagueSlug="afl-fantasy"
+  title={`${resolution.room.selected.short} Mock Draft Room | AFL`}
+  sessionId={sessionId}
+  pageData={buildAflMockSessionData({
+    resolution,
+    leagueId: league.id,
+    partyHost: import.meta.env.PUBLIC_PARTYKIT_HOST || '',
+  })}
+  userTeamId={resolution.room.userTeamId}
+  basePath={AFL_MOCK_BASE_PATH}
+  draftContext="general"
+  poolNote={aflMockPoolNote(resolution)}
+/>

@@ -245,9 +245,32 @@ Worth recording, because both fired on work that looked finished:
   `docs/claude/insights/features/draft-hub-and-results.md` for the three bugs
   it turned up, including the one that mattered most: a conference-scoped page
   is not scoped until its POLL URL is scoped too.
-- **AFL Mock Draft** (deferred). TheLeague's mocks a 3-round, 51-pick rookie
-  draft; the AFL is 108 picks per conference.
-- Publishing either to the AFL is a ONE-LINE edit: add `'afl-fantasy'` to that
-  page's `leagues` in `src/components/shared/draft-nav/draft-pages.ts`. The hub,
-  the strip and `tests/draft-section.test.ts` all read that list, and the test
-  fails if a page is advertised to a league whose route file doesn't exist.
+- ~~**AFL Mock Draft** (deferred).~~ SHIPPED 2026-09-04, and it was NOT the
+  one-line edit the note below predicted. Publishing the page is one line; the
+  mock itself had to be rebuilt, because the AFL does not draft a fixed rookie
+  class — it redrafts whatever its keepers left, which makes the POOL the
+  feature. Three things a copy of TheLeague's mock gets silently wrong:
+  availability is scoped to ONE CONFERENCE (MFL's `playerLimitUnit:
+  "CONFERENCE"`; 60 of the AL's 84 keepers are kept in the NL too, and the same
+  man went 1.01 in both drafts); the AFL draft is a STRAIGHT repeat, not a
+  snake, so `buildSnakeOrder` reverses four of its nine rounds; and a mock run
+  before the keeper cuts drafts from a pool still holding a hundred players
+  about to be released. See `src/utils/afl-mock-draft.ts` and
+  `docs/claude/insights/features/draft-hub-and-results.md`.
+- **Known limitation, accepted:** the "real draft has started" half of the mock
+  gate reads the COMMITTED `draftResults.json`, while rosters come from a live
+  2-minute cache. If a conference's draft starts before the feed's next sync,
+  the window can stay open for a few minutes. Raised by Codex on PR #761 and
+  not fixed: the blast radius is one practice board, and adding a live MFL
+  fetch to the create path buys a new failure mode on the hot path for it. If
+  this ever matters, the fix is to fetch draft status at create time only.
+- **The two leagues are now at full parity** — hub, order, results, broadcast,
+  room, mock, rankings, draft list. `tests/draft-section.test.ts` asserts the
+  two lists are IDENTICAL rather than snapshotting one, so adding a page to one
+  league and forgetting the other now fails.
+- Publishing a page to a league is a ONE-LINE edit in each of TWO places: the
+  page's `leagues` in `src/components/shared/draft-nav/draft-pages.ts` (the hub
+  and the strip) and its `leagueOnly` in `src/config/nav-config.json` (the site
+  nav). Missing the second hides the page from the menu while the hub
+  advertises it; a test now pins both. `article-links.mjs` is a third list, for
+  whether Schefter may link it.

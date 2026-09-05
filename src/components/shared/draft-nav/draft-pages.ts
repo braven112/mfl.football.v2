@@ -2,11 +2,13 @@
  * The draft section's page list — one registry, read by both the hub and the
  * sub-nav strip so the two can never disagree about what exists.
  *
- * `leagues` is the honest part. The AFL does not have a Draft Room or a Mock
- * Draft yet (docs/plans/draft-hub-and-results.md, Phases 5 and the deferred
- * mock), and the decision was to let each league show what it HAS rather than
- * advertise a page that 404s. Adding the AFL to a `leagues` list here is the
- * single edit that publishes that page to it, in both surfaces at once.
+ * `leagues` is the honest part: each league shows what it HAS rather than
+ * advertising a page that 404s. Adding a league to a `leagues` list here is the
+ * single edit that publishes that page to it, in both surfaces at once, and
+ * `tests/draft-section.test.ts` fails if the route file does not exist.
+ *
+ * As of September 2026 both leagues have every page, so no list is short. Keep
+ * the mechanism: the next league added starts with none of them.
  *
  * Paths are league-NEUTRAL and get prefixed per reader by `resolveLeaguePath`,
  * the same way nav-config.json's are. Writing `/theleague/draft/order` here
@@ -77,8 +79,11 @@ export const DRAFT_PAGES: DraftPage[] = [
     shortLabel: 'Mock',
     path: '/draft/mock',
     icon: 'icon-podium-empty',
+    // The AFL joined once its mock learned to draft from the pool its KEEPERS
+    // left behind — conference-scoped, and shut until the cuts land. See
+    // utils/afl-mock-draft.
     blurb: 'Practice the draft against the clock before it counts.',
-    leagues: ['theleague'],
+    leagues: BOTH,
   },
   {
     key: 'import-rankings',

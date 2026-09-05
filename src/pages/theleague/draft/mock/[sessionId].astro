@@ -1,15 +1,12 @@
 ---
 /**
- * Mock Draft Room — /theleague/mock-draft/[sessionId]
+ * Mock Draft room (The League) — thin route wrapper.
  *
- * Reuses the same DraftRoom.tsx component in `mode: 'mock'`.
- * Loads player + team data locally (same as real draft room),
- * but picks/timer/state come from PartyKit instead of MFL polling.
+ * Rookies only, which is what `rookieOnly` buys: the payload drops from the
+ * full ~229 KB pool to ~15 KB. RSP scouting is licensed content, enriched only
+ * for the viewer who holds the licence.
  */
-
-import TheLeagueLayout from '../../../../layouts/TheLeagueLayout.astro';
-import DraftNav from '../../../../components/shared/draft-nav/DraftNav.astro';
-import DraftRoom from '../../../../components/theleague/draft-room/DraftRoom';
+import DraftMockSessionPage from '../../../../components/shared/draft-mock/DraftMockSessionPage.astro';
 import leagueConfigData from '../../../../data/theleague.config.json';
 import { getCurrentLeagueYear } from '../../../../utils/league-year';
 import { getTheLeaguePreference, resolveTeamSelection } from '../../../../utils/team-preferences';
@@ -22,26 +19,15 @@ import { DEFAULT_LEAGUE_ID } from '../../../../config/leagues';
 export const prerender = false;
 
 const { sessionId } = Astro.params;
-if (!sessionId) {
-  return Astro.redirect('/theleague/draft/mock');
-}
+if (!sessionId) return Astro.redirect('/theleague/draft/mock');
+
+const user = getAuthUser(Astro.request);
+if (!user) return Astro.redirect('/theleague/login');
 
 const leagueYear = getCurrentLeagueYear();
 
-// ── Auth & team preference ──
-const user = getAuthUser(Astro.request);
-if (!user) {
-  return Astro.redirect('/theleague/login');
-}
-
-const cookiePref = getTheLeaguePreference(Astro.cookies, 'myteam');
-const defaultTeam = resolveTeamSelection({
-  myTeamParam: Astro.url.searchParams.get('myteam'),
-  authUserFranchise: user?.franchiseId,
-  cookiePreference: cookiePref,
-});
-
-// ── Build team configs ──
+// Brand colors drive the pick-reveal splash — rookies rarely have an NFL team
+// at draft time, so the drafting franchise tints the moment.
 const teams: DraftRoomTeam[] = (leagueConfigData.teams ?? []).map((team: any) => {
   const brand = getFranchiseBrand(team.franchiseId);
   return {
@@ -51,26 +37,12 @@ const teams: DraftRoomTeam[] = (leagueConfigData.teams ?? []).map((team: any) =>
     nameShort: team.nameShort || team.name,
     abbrev: team.abbrev || '',
     icon: team.icon || '',
-    // Brand colors drive the pick-reveal splash — rookies rarely have an NFL
-    // team at draft time, so the drafting franchise tints the moment.
     colorPrimary: brand.colorPrimary,
     colorSecondary: brand.colorSecondary,
   };
 });
 
-// ── Build player pool (rookies only — mock draft is always rookie draft) ──
-// This drops payload from ~229 KB to ~15 KB vs the previous full-pool version.
-// RSP scouting (licensed content) is only enriched when the viewer owns it.
-const players = buildDraftPlayers(leagueYear, {
-  rookieOnly: true,
-  viewerFranchiseId: user.franchiseId,
-});
-
-// ── Serialize page data ──
-// Picks start empty — they'll be populated by PartyKit session sync
-const partyHost = import.meta.env.PUBLIC_PARTYKIT_HOST || '';
-const leagueId = user.leagueId || DEFAULT_LEAGUE_ID;
-
+// Picks start empty — PartyKit session sync populates them.
 const pageData: DraftRoomPageData = {
   leagueYear,
   draftKind: 'live',
@@ -80,20 +52,22 @@ const pageData: DraftRoomPageData = {
   picksPerRound: teams.length,
   teams,
   picks: [],
-  players,
-  partyHost,
-  leagueId,
+  players: buildDraftPlayers(leagueYear, { rookieOnly: true, viewerFranchiseId: user.franchiseId }),
+  partyHost: import.meta.env.PUBLIC_PARTYKIT_HOST || '',
+  leagueId: user.leagueId || DEFAULT_LEAGUE_ID,
 };
 ---
 
-<TheLeagueLayout title="Mock Draft Room | The League" hideMobileNavIcons>
-  <DraftNav leagueSlug="theleague" current="mock" crumb="Session" crumbParent={{ label: 'Mock Draft', path: '/draft/mock' }} />
-  <DraftRoom
-    client:load
-    pageData={JSON.stringify(pageData)}
-    userTeamId={defaultTeam}
-    mode="mock"
-    mockSessionId={sessionId}
-    draftContext="rookie"
-  />
-</TheLeagueLayout>
+<DraftMockSessionPage
+  leagueSlug="theleague"
+  title="Mock Draft Room | The League"
+  sessionId={sessionId}
+  pageData={pageData}
+  userTeamId={resolveTeamSelection({
+    myTeamParam: Astro.url.searchParams.get('myteam'),
+    authUserFranchise: user?.franchiseId,
+    cookiePreference: getTheLeaguePreference(Astro.cookies, 'myteam'),
+  })}
+  basePath="/theleague/draft/mock"
+  draftContext="rookie"
+/>
