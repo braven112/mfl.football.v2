@@ -41,8 +41,6 @@ import { getSchefterLeague } from './lib/schefter-leagues.mjs';
 import { schefterKey } from './lib/schefter-keys.mjs';
 import { getRedisConfig, createUpstashClient } from './lib/redis.mjs';
 import { postToGroupMe } from './lib/groupme.mjs';
-import { postToGroupMeCapped } from './lib/groupme-capped.mjs';
-import { sendPushFanout } from './lib/push-fanout.mjs';
 import { fetchWithRetry } from './lib/fetch-retry.mjs';
 import { getPtDateString } from './lib/pt-date.mjs';
 import { isQuietHours, consumeDailyPost } from './lib/schefter-groupme-budget.mjs';
@@ -327,26 +325,6 @@ async function checkLeague(league, now = new Date()) {
   log(`  ⚠️  ${warnings.length}/${lineups.length} franchises flagged`);
   for (const w of warnings) log(`     ${formatWarningLine(w)}`);
 
-  // A push to each flagged owner, and ONLY to them. The chat post has to
-  // describe everyone's problems to everyone; this tells one owner about their
-  // own lineup, which is both more useful and less public. It is also the
-  // thing they can act on — the chat post is a broadcast about a private
-  // problem.
-  await sendPushFanout({
-    league,
-    dryRun: DRY_RUN,
-    category: 'lineup-deadline',
-    notifications: warnings.map((w) => ({
-      franchiseId: w.franchiseId,
-      title: w.noLineup ? 'No lineup submitted' : 'Check your lineup',
-      body: formatWarningLine(w),
-      url: '/lineup',
-      // Per franchise and per week, so a re-run replaces rather than stacks.
-      tag: `lineup-check-${w.franchiseId}`,
-    })),
-    log: { log, warn },
-  });
-
   // ── Compose + post ───────────────────────────────────────────────────────
   const intro = await generateLineupWarningIntro({
     leagueName: league.name,
@@ -370,14 +348,7 @@ async function checkLeague(league, now = new Date()) {
     return 'skipped';
   }
 
-  // EXEMPT from the daily cap, deliberately. This file's own note above calls
-  // the warning "deadline-critical and useless after kickoff": an owner who
-  // misses it starts an empty or illegal slot and loses real points. That is
-  // the same harm the Roger deadline-reminder exemption exists to prevent, so
-  // it gets the same treatment even though it is Schefter sending it.
-  const result = await postToGroupMeCapped({
-    league,
-    kind: 'lineup-deadline',
+  const result = await postToGroupMe({
     botId,
     text,
     checkStatus: true,

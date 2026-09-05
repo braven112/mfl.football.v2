@@ -180,11 +180,6 @@ async function main() {
   }
 
   console.error(`\n${summary}`);
-  // NOT capped, for two reasons. It has no single league to charge — the
-  // summary spans every league and is emitted outside the per-league loop —
-  // and it only fires when something is actually broken on a game day, where
-  // swallowing the alert is far worse than an extra message. Revisit if it
-  // ever becomes chatty.
   await postToGroupMe({
     botId: process.env.GROUPME_ROGER_BOT_ID,
     text: summary,

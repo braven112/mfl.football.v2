@@ -39,21 +39,13 @@ export const POST: APIRoute = async ({ request }) => {
   try {
     const league = getLeagueById(user.leagueId);
     const leagueName = league?.name ?? 'your league';
-        const result = await sendPushToFranchise(user.leagueId, user.franchiseId, {
+    const result = await sendPushToFranchise(user.leagueId, user.franchiseId, {
       title: 'Test notification',
       body: `Push notifications are working for your ${leagueName} team. This is what a trade-offer alert will feel like.`,
-      // Bare — see the note in push-notify-trade.ts. This one is the push an
-      // owner sends themselves to decide whether the feature works at all, so
-      // a link that 404s is the worst possible first impression.
-      url: '/notifications',
+      url: league ? `/${league.slug}/notifications` : '/',
       tag: 'push-test',
       icon: leaguePushIcon(league?.navSlug ?? 'theleague'),
-    },
-    // Its own always-on, hidden category. The test exists to prove THIS DEVICE
-    // works, so it must not be silenced by an editorial preference — but it
-    // still goes through the same door as every other push rather than around
-    // it, so there is no bypass to accidentally reuse.
-    'system-test');
+    });
 
     if (result.total === 0) {
       return json(
