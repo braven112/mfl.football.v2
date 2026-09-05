@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import { join } from 'node:path';
+import { readFileSync, readdirSync, statSync } from 'node:fs';
+import { join, relative } from 'node:path';
 import { ALL_LEAGUES } from '../src/config/leagues-data.mjs';
-import { collectSiblings, describeRoute, forkedRoutes, inBandRoutes } from '../scripts/lib/ratchet-measures.mjs';
 import baseline from './fixtures/page-fork-baseline.json';
 
 /**
@@ -38,16 +38,56 @@ const MAX_THIN_LINES = baseline.thinPageMaxLines;
 /** Every league's page directory, from the registry — never a hardcoded list. */
 const LEAGUE_DIRS = ALL_LEAGUES.map((l: { slug: string }) => l.slug);
 
+function walkAstro(dir: string): string[] {
+  let out: string[] = [];
+  for (const entry of readdirSync(dir)) {
+    const full = join(dir, entry);
+    if (statSync(full).isDirectory()) out = out.concat(walkAstro(full));
+    else if (entry.endsWith('.astro')) out.push(full);
+  }
+  return out;
+}
+
 interface Copy {
   league: string;
   lines: number;
 }
 
+/** route (path relative to the league dir) -> one entry per league that has it */
+function collectSiblings(): Map<string, Copy[]> {
+  const byRoute = new Map<string, Copy[]>();
+  for (const league of LEAGUE_DIRS) {
+    const dir = join(PAGES_ROOT, league);
+    let files: string[];
+    try {
+      files = walkAstro(dir);
+    } catch {
+      continue; // a registry league with no page directory yet
+    }
+    for (const file of files) {
+      const route = relative(dir, file);
+      const lines = readFileSync(file, 'utf8').split('\n').length;
+      if (!byRoute.has(route)) byRoute.set(route, []);
+      byRoute.get(route)!.push({ league, lines });
+    }
+  }
+  // A route present in only one league is not a fork — it is just a page.
+  for (const [route, copies] of byRoute) {
+    if (copies.length < 2) byRoute.delete(route);
+  }
+  return byRoute;
+}
+
+function describeRoute(route: string, copies: Copy[]): string {
+  return `${route} [${copies.map((c) => `${c.league}:${c.lines}`).join(' ')}]`;
+}
+
 describe('forked sibling pages', () => {
-  // Measurement is shared with scripts/ratchet.mjs (the retightening tool)
-  // so the two can never disagree about what counts as a fork.
-  const siblings: Map<string, Copy[]> = collectSiblings(PAGES_ROOT, LEAGUE_DIRS);
-  const forkedNow: Map<string, Copy[]> = forkedRoutes(siblings, MAX_THIN_LINES);
+  const siblings = collectSiblings();
+  const forkedNow = new Map<string, Copy[]>();
+  for (const [route, copies] of siblings) {
+    if (copies.some((c) => c.lines > MAX_THIN_LINES)) forkedNow.set(route, copies);
+  }
 
   const recorded = new Set<string>(baseline.forkedRoutes);
 
@@ -104,9 +144,15 @@ describe('forked sibling pages', () => {
     // Classification is decided by a route's LARGEST copy — a forked route may
     // well have a small copy in some league (best-ball-1's rosters.astro is 245
     // lines next to TheLeague's 12,521) and that says nothing about the cut.
-    const inBand: string[] = inBandRoutes(siblings, { largestThinRoute, smallestForkedRoute });
+    const inBand: string[] = [];
+    for (const [route, copies] of siblings) {
+      const largest = Math.max(...copies.map((c) => c.lines));
+      if (largest > largestThinRoute && largest < smallestForkedRoute) {
+        inBand.push(`${route} (largest copy: ${largest} lines)`);
+      }
+    }
     expect(
-      inBand,
+      inBand.sort(),
       inBand.length === 0
         ? ''
         : `Sibling page(s) landed between ${largestThinRoute} and ${smallestForkedRoute} lines, ` +
