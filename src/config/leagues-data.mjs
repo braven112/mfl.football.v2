@@ -41,37 +41,6 @@ export const LEAGUES = {
      */
     configPath: 'src/data/theleague.config.json',
     schefterFeedPath: 'src/data/theleague/schefter-feed.json',
-    /**
-     * The Owners' Poll — the weekly owner vote that publishes inside The
-     * Pecking Order. See docs/plans/owners-poll.md.
-     *
-     * `slots` is the ballot depth (rank your top N), NOT the field size, and
-     * the two are deliberately independent: a 7-slot ballot in a 16-team
-     * league leaves a tail the poll does not order, which is a stated design
-     * trade rather than an oversight. It lives here rather than as a constant
-     * because the AFL's 24-team field would want a different depth, and
-     * because tests/league-literal-guard.test.ts is the thing that keeps a
-     * number like this from being retyped into three modules.
-     *
-     * `quorum` is the minimum ballots required to publish a consensus at all —
-     * below it the column runs algorithm-only and says so. Half the field.
-     *
-     * `closeWeekday` / `closeHourPT` are when the ballot shuts (0=Sun).
-     * THURSDAY, not Wednesday, and that is a turnout decision: setting a
-     * lineup before the first kickoff is the one obligatory weekly action in
-     * this league and it mostly happens Wed-Sun, so a Wednesday deadline
-     * closed before the highest-traffic weekly action even began. The close is
-     * additionally clamped to just before the real first kickoff, so a
-     * Thanksgiving week (games at ~10:00 PT) cannot take votes after two games
-     * have been played.
-     */
-    ownersPoll: {
-      enabled: true,
-      slots: 7,
-      quorum: 8,
-      closeWeekday: 4,
-      closeHourPT: 16,
-    },
     features: {
       contracts: true,
       salaryCap: true,
@@ -149,14 +118,6 @@ export const LEAGUES = {
      * rosters in this league.
      */
     duplicatePlayers: true,
-    /**
-     * The Owners' Poll is TheLeague-only for v1. The entry exists disabled so
-     * the shape is present everywhere and shared components always have
-     * something to read — enabling it here is the whole port, apart from
-     * deciding whether the AFL's two conferences want separate ballots
-     * (docs/plans/owners-poll.md, "Open questions").
-     */
-    ownersPoll: { enabled: false, slots: 0, quorum: 0, closeWeekday: 4, closeHourPT: 16 },
     features: {
       contracts: false,
       salaryCap: false,
@@ -247,14 +208,6 @@ export const LEAGUES = {
      * offers any of those must be skipped for leagues with this flag.
      */
     bestBall: true,
-    /**
-     * The Owners' Poll is TheLeague-only for v1. The entry exists disabled so
-     * the shape is present everywhere and shared components always have
-     * something to read — enabling it here is the whole port, apart from
-     * deciding whether the AFL's two conferences want separate ballots
-     * (docs/plans/owners-poll.md, "Open questions").
-     */
-    ownersPoll: { enabled: false, slots: 0, quorum: 0, closeWeekday: 4, closeHourPT: 16 },
     features: {
       contracts: false,
       salaryCap: false,
