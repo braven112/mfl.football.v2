@@ -17,6 +17,7 @@ interface NavLink {
   iconAFL?: string;
 }
 interface NavConfig {
+  pinnedLinks?: NavLink[];
   sections: { id: string; links: NavLink[] }[];
   footerLinks: NavLink[];
 }
@@ -24,6 +25,12 @@ interface NavConfig {
 const nav = navConfig as unknown as NavConfig;
 
 const refs: SpriteIconRef[] = [];
+for (const link of nav.pinnedLinks ?? []) {
+  refs.push({ source: `pinnedLinks/${link.id} (icon)`, icon: link.icon });
+  if (link.iconAFL !== undefined) {
+    refs.push({ source: `pinnedLinks/${link.id} (iconAFL)`, icon: link.iconAFL });
+  }
+}
 for (const section of nav.sections) {
   for (const link of section.links) {
     refs.push({ source: `${section.id}/${link.id} (icon)`, icon: link.icon });

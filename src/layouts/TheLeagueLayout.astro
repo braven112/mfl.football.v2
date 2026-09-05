@@ -35,7 +35,7 @@ import RosterLoader from '../components/theleague/RosterLoader.astro';
 import { getLeagueContext } from '../utils/league-context';
 import { getLeagueYearForSlug } from '../utils/league-year';
 import { navConfig, getAdminFranchiseIds } from '../config/nav-config';
-import { getVisibleSections, parseMyTeamFromUrl, buildNavTeamInfo } from '../utils/nav-utils';
+import { getVisibleSections, getVisiblePinnedLinks, parseMyTeamFromUrl, buildNavTeamInfo } from '../utils/nav-utils';
 import type { NavTeamInfo, LeagueSlug } from '../types/nav';
 import { NAV_COOKIES } from '../types/nav';
 import { getAFLPreference, getTheLeaguePreference, getBestBall1Preference } from '../utils/team-preferences';
@@ -214,6 +214,7 @@ const navFranchiseId =
 		? layoutAuthUser?.franchiseId
 		: null) || myteam;
 const sections = getVisibleSections(league, navFranchiseId, adminFranchiseIds);
+const pinnedNavLinks = getVisiblePinnedLinks(league, navFranchiseId, adminFranchiseIds);
 
 // A league's PWA manifest must never be served on ANOTHER league's apex.
 // /theleague/* and /afl-fantasy/* stay in SKIP_REWRITE_PREFIXES so cross-league
@@ -415,6 +416,7 @@ const themePref = getThemePreference(Astro.cookies);
 
 		<!-- Navigation Drawer - outside page-wrapper for overlay behavior -->
 		<NavDrawer
+			pinnedLinks={pinnedNavLinks}
 			sections={sections}
 			league={league}
 			currentPath={currentPath}

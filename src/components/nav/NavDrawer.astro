@@ -29,13 +29,15 @@
  * @component
  */
 
-import type { NavDrawerProps, NavSection, NavTeamInfo, LeagueSlug } from '../../types/nav';
+import type { NavLink, NavSection, NavTeamInfo, LeagueSlug } from '../../types/nav';
 import { NAV_COOKIES } from '../../types/nav';
 import NavHeader from './NavHeader.astro';
 import NavLinks from './NavLinks.astro';
 import NavFooter from './NavFooter.astro';
 
 interface Props {
+  /** Links pinned flat above every section (already league-filtered) */
+  pinnedLinks?: NavLink[];
   /** Navigation sections from config */
   sections: NavSection[];
   /** Current league context */
@@ -63,6 +65,7 @@ interface Props {
 }
 
 const {
+  pinnedLinks = [],
   sections,
   league,
   currentPath,
@@ -139,6 +142,7 @@ const footerLinks = [
 
     <!-- Links: Scrollable navigation sections -->
     <NavLinks
+      pinnedLinks={pinnedLinks}
       sections={sections}
       league={league}
       currentPath={currentPath}

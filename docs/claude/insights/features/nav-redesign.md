@@ -900,3 +900,44 @@ The rule lives in `nav-utils#getLeagueSwitchUrl` / `#getLeagueSwitchTargets`; `t
 - The switcher renders for **every** visitor, not just dual-league owners: sessions don't cross the apex domains, so a login-gated switcher vanishes the moment you switch — a one-way door.
 - With 3+ leagues in the registry the chevron becomes a dropdown (`NavHeader`), automatic because `LEAGUE_PREFIXES` and the switch targets are now registry-derived. It's a **disclosure pattern** (button + `aria-expanded` + plain links), deliberately NOT `role="menu"` — a menu role promises arrow-key navigation we don't implement. Its Escape handler runs in the capture phase and calls `stopPropagation` **only when focus is inside the switcher** (so it doesn't also close the drawer, but doesn't hijack Escape from other UI either); focus leaving the switcher closes the list. To test 3-league mode, temporarily add a fake entry to `leagues-data.mjs` — the dev server picks it up without type errors blocking render (only `astro check` complains).
 - Canonical absolute origins come from the registry: `canonicalDomain` + `leagueOrigin()` in `leagues-data.mjs`/`leagues.ts` (www hosts — session cookies are host-only, so all absolute-URL producers must agree). `getLeagueByNavSlug` replaces the hand-rolled `ALL_LEAGUES.find(l => l.navSlug === x)` scans.
+
+## 2026-09-05 - No Section Is "First": Phase Order Means a Top Link Needs `pinnedLinks`
+
+**Context:** Notifications had no drawer link at all (site search or a What's New
+anchor were the only ways in), and the ask was to make it the very first link.
+
+**Insight — the drawer has no stable first position inside sections.** Every
+section carries `phaseOrder: { inSeason, offSeason }` and `NavLinks` re-sorts on
+`getLeaguePhase()` at render, so **This Week** leads in-season and **News &
+Updates** leads off-season. "First link in the drawer" is therefore not a
+property any section link can hold — putting it at the top of one section
+silently demotes it for half the calendar, and putting it in both renders it
+twice.
+
+`nav-config.json#pinnedLinks` is the place for that: a flat `<ul>` rendered
+**above** the section list, outside the disclosure pattern, with a bottom rule
+(`--nav-border`, defined in both `tokens.css` and `tokens-dark.css`) separating
+it from the first section header.
+
+Three things that are load-bearing:
+- **Pinned links go through the same filters as section links.**
+  `getVisiblePinnedLinks` (nav-utils) reuses `linkMatchesLeague` +
+  `isLinkVisible`, so an untagged pinned link reaches TheLeague and the AFL and
+  stays out of the best-ball drawer — which does not have most of these pages.
+  Bypassing that filter is how a pinned link 404s an entire league's nav.
+- **The pinned markup is deliberately simpler than a section link's** — no AFL
+  tier-crest override, no admin gating. Those belong to specific section links
+  (`premier-league`, the commissioner section); a pinned link that needs one
+  should get the branch, not inherit a copy of the whole block.
+- **The guards walk pinned links too.** `tests/nav-drawer-links.test.ts` and
+  `tests/nav-config-icons.test.ts` iterate `pinnedLinks` alongside the sections,
+  so a pinned link to a missing page, a prerendered page, or a sprite glyph that
+  does not exist fails the same way a section link does.
+  `tests/nav-pinned-links.test.ts` pins the ordering itself: Notifications first,
+  no pinned id duplicated inside a section, and the pinned `<ul>` rendered before
+  `nav-links__list` in the component.
+
+**Also:** the Add/Drop link was removed in the same pass — it handed the owner
+off to MFL's own `add_drop` screen, and adds and drops already live on the
+site's player pages. The same guard test fails if any nav link points at
+`add_drop` again.
