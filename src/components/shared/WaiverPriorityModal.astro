@@ -134,6 +134,9 @@ const clientConfig = { ...config, initialOrder: undefined, hasInitialOrder: init
    * the swap, so re-adding would stack a handler per navigation. It goes on
    * once behind a module-scoped flag and reads `ctx` at call time.
    */
+  /** The live read must settle or fail — a dialog parked on "Reading…" is the bug. */
+  const LIVE_READ_TIMEOUT_MS = 12_000;
+
   let wired = false;
   let ctx: {
     cfg: any;
@@ -220,7 +223,7 @@ const clientConfig = { ...config, initialOrder: undefined, hasInitialOrder: init
     // Time-boxed: the API waits up to 6s on MFL and a cold function adds
     // more; a fetch that never settles left the dialog on "Reading…" for good.
     const abort = new AbortController();
-    const timer = setTimeout(() => abort.abort(), 12_000);
+    const timer = setTimeout(() => abort.abort(), LIVE_READ_TIMEOUT_MS);
     try {
       const res = await fetch('/api/waiver-order', { credentials: 'include', signal: abort.signal });
       const data = await res.json();
