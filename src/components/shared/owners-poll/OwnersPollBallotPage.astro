@@ -1,0 +1,130 @@
+---
+/**
+ * The Owners' Poll ballot — shared implementation.
+ *
+ * Every league that runs the poll renders this through a thin route wrapper
+ * (see src/pages/theleague/pecking-order/ballot.astro). The auth gate is NOT
+ * here: `Astro.redirect()` only redirects from a page, so the routes own it
+ * and hand the resolved session down.
+ *
+ * Team cards are ordered ALPHABETICALLY, never by the Pecking Order composite.
+ * The column already published the machine's ranking, and re-sorting the
+ * ballot by it would anchor every owner to that order — which is precisely the
+ * thing the poll exists to disagree with. Records and PPG are shown as neutral
+ * context; the composite rank is deliberately absent from the card.
+ */
+import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
+import BallotBuilder from './BallotBuilder';
+import PollWindowAdmin from './PollWindowAdmin';
+import { getLeagueTeamBrands } from '../../../utils/league-team-brands';
+import { ensureLeaguePrefix, type LeagueDefinition } from '../../../config/leagues';
+import { isCommissionerOrAdmin } from '../../../utils/auth';
+import '../../../styles/owners-poll.css';
+import type { AuthUser } from '../../../utils/auth';
+
+/** The slice of a Pecking Order issue this page reads for card context. */
+export interface BallotStandingsRow {
+  franchiseId: string;
+  wins?: number;
+  losses?: number;
+  ties?: number;
+  ppg?: number;
+}
+
+interface Props {
+  league: LeagueDefinition;
+  user: AuthUser;
+  /**
+   * Standings rows from the most recent issue, for card context. Passed in by
+   * the ROUTE because the issue glob has to be a literal per league.
+   * Empty is fine — the cards just lose their record line.
+   */
+  standings: BallotStandingsRow[];
+}
+
+const { league, user, standings } = Astro.props as Props;
+
+const poll = league.ownersPoll;
+const brands = getLeagueTeamBrands(league.slug);
+const byFranchise = new Map(standings.map((row) => [row.franchiseId, row]));
+
+const teams = Object.values(brands)
+  .map((brand) => {
+    const row = byFranchise.get(brand.franchiseId);
+    const wins = row?.wins;
+    const losses = row?.losses;
+    const ties = row?.ties;
+    return {
+      ...brand,
+      record:
+        wins != null && losses != null
+          ? `${wins}-${losses}${ties ? `-${ties}` : ''}`
+          : null,
+      ppg: row?.ppg ?? null,
+    };
+  })
+  // Alphabetical — see the anchoring note above.
+  .sort((a, b) => a.nameShort.localeCompare(b.nameShort));
+
+const columnHref = ensureLeaguePrefix(league, '/pecking-order');
+
+// The panel renders for a commissioner only. Gated on the SERVER as well as
+// inside the island: shipping the control markup to every owner and hiding it
+// with a client check is the kind of gate view-source defeats.
+const isCommish = isCommissionerOrAdmin(user);
+
+// Empty when push isn't configured on this deployment; the prompt then renders
+// nothing rather than offering a button that cannot work.
+const vapidPublicKey = (import.meta.env.PUBLIC_VAPID_PUBLIC_KEY as string | undefined) ?? '';
+---
+
+<TheLeagueLayout title={`The Owners’ Poll — Cast Your Ballot | ${league.name}`}>
+  <div class="op-page">
+    <nav class="op-crumbs" aria-label="Breadcrumb">
+      <a href={columnHref}>The Pecking Order</a>
+      <span aria-hidden="true">›</span>
+      <span>The Owners’ Poll</span>
+    </nav>
+
+    <header class="op-hero">
+      <h1 class="op-hero__title">The Owners’ Poll</h1>
+      <p class="op-hero__lede">
+        The column ranks the league by the numbers. This is where the room gets
+        a say. Rank your top {poll.slots} — your own team included, if you
+        think you belong there.
+      </p>
+    </header>
+
+    {isCommish && (
+      <PollWindowAdmin
+        client:load
+        leagueParam={league.navSlug}
+        quorum={poll.quorum}
+        slots={poll.slots}
+      />
+    )}
+
+    <BallotBuilder
+      client:load
+      teams={teams}
+      slots={poll.slots}
+      leagueParam={league.navSlug}
+      ownFranchiseId={user.franchiseId}
+      columnHref={columnHref}
+      vapidPublicKey={vapidPublicKey}
+    />
+
+    <footer class="op-footnote">
+      <p>
+        Every ballot is worth the same: {poll.slots} points for your first pick
+        down to 1 for your {poll.slots}th. A consensus publishes only if at
+        least {poll.quorum} owners vote — below that the column runs on the
+        numbers alone.
+      </p>
+      <p>
+        Ballots stay private until the poll closes, then publish with the
+        column.
+      </p>
+    </footer>
+  </div>
+</TheLeagueLayout>
