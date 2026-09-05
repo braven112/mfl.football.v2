@@ -393,6 +393,35 @@ hard-won facts (Aug 2026 "missing team images" saga):
   (owner decision: a wrong logo is worse than none). Dark mode is separate:
   the `content: url()` swap fires no error event, which is why the dark logos
   are prebuild-mirrored (see `nfl-logo-dark-css.ts`).
+- **A dark cut fixes dark OUTLINES, not a dark BODY.** ESPN's `500-dark` cut
+  re-inks a mark's outline light; a mark that is black all the way through
+  (the Panthers — 75% near-black pixels, hairline blue edge) still dissolves
+  into a `#1e1e1e` card at 16px after the swap. `NFL_DARK_STROKE_CODES` in
+  `nfl-logo-dark-css.ts` adds the league-crest white ring (the
+  `crestStrokeFilter` drop-shadow stack) on top of the swap for those codes,
+  at 1px rather than the crests' 0.5px hairline: a solid silhouette with no
+  bright interior needs the heavier edge at 16px (owner's call, 2026-09-05).
+  The ring is emitted twice: under `html.dark` keyed on the LIGHT srcs (the
+  themed pages), and with NO theme guard keyed on the dark cut's own URLs — the
+  draft broadcast and Sunday Ticket multi-view are dark in both themes and ship
+  the dark cut as `src` directly, where an `html.dark` rule never reaches a
+  light-theme viewer (the blind spot from 2026-08-28).
+  Both are wrapped in `:where()` so they carry zero specificity: `filter` is
+  not additive, and a bare `html.dark img[src=…]` (0,2,2) would have replaced
+  the Free Agents hero's 16%-opacity `.hero-spotlight__logo { filter:
+  grayscale(.1) }` watermark with white halos. The ring is a default; a
+  surface's own class-level filter must win. The rule also sets
+  `--nfl-logo-ring`, so a dark surface that wants its own depth shadow AND the
+  ring composes `filter: var(--nfl-logo-ring, opacity(1)) drop-shadow(…)`
+  (the player-modal band and the broadcast origin line do; same idiom as
+  `--dbc-crest-ring`). A new `filter` on an NFL logo `<img>` must either
+  compose that var or be a deliberate dimming — `tests/nfl-logo-dark-css.test.ts`
+  pins the known composers and the watermark exclusion. Before adding one, measure the ALPHA channel and render the cut
+  on the dark card: ESPN's PNGs store RGB white under alpha-0 pixels, so any
+  alpha-dropping check reports a false "opaque white fill" (the Raiders' cut
+  was reported that way on 2026-09-04 and is fine). The ring composes with
+  `content: url()`; do not put a stroked code in `knownMissing`, which would
+  drop the dark cut it is meant to complement.
 - **The service worker is now the longest-lived cache in front of an asset,
   not the CDN.** `public/sw.js` holds `/assets/**` on stale-while-revalidate,
   so a bad copy survives exactly one more page view; it is cache-first ONLY
