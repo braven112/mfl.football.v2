@@ -147,17 +147,9 @@ describe('buildTradeOfferPayload', () => {
     expect(p.body).toContain('The League');
   });
 
-  /**
-   * The league home, as a BARE path. The service worker resolves the url
-   * against the origin the subscription was made on, which is already the
-   * league's own apex domain — so `/theleague` there becomes
-   * theleague.us/theleague, the double-prefixed form a redirect has to clean
-   * up on the way through. It works, but it costs a round trip on every tap
-   * and contradicts the bare-path rule the rest of the push senders follow.
-   */
   it('links to the league home (where TradeAlertModal pops) with a per-league collapse tag', () => {
     const p = buildTradeOfferPayload({ ...base, fromTeamName: 'X' });
-    expect(p.url).toBe('/');
+    expect(p.url).toBe('/theleague');
     expect(p.tag).toBe('trade-offer-theleague');
 
     const afl = buildTradeOfferPayload({
@@ -166,8 +158,7 @@ describe('buildTradeOfferPayload', () => {
       navSlug: 'afl',
       fromTeamName: null,
     });
-    // Same bare path — the origin is what makes it the AFL's home.
-    expect(afl.url).toBe('/');
+    expect(afl.url).toBe('/afl-fantasy');
     expect(afl.tag).toBe('trade-offer-afl-fantasy');
   });
 
