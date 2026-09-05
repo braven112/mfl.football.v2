@@ -1752,3 +1752,64 @@ reappears. Verified the scan catches it by putting the function back.
 **When you need one franchise for display, take `franchiseIds[0]` and say so.**
 The bug was never that code wanted a single owner; it was that a shared helper
 picked one silently, at a call site that had no idea it was choosing.
+
+---
+
+## 2026-09-04 — One espncdn gate, and why hardening two files made it worse
+
+**What happened.** Eight production surfaces gated compositing on
+`player.headshot.includes('espncdn.com')` — CodeQL's
+`js/incomplete-url-substring-sanitization` (high), since the string can sit
+anywhere in the URL: `https://evil.com/espncdn.com/x.png` and
+`https://espncdn.com.evil.com/x.png` both pass. The correct host check already
+existed in `pick-reveal.ts` and `player-modal-band.ts`, written privately in an
+earlier pass.
+
+**Insight: fixing N−1 of N copies is worse than fixing none, because it removes
+the symptom without leaving a tripwire.** Those two files stopped being
+examples of the bug, so nothing pointed at the other eight, and they survived
+months of composite work. The durable fix was never "harden the rest" — it was
+one definition (`src/utils/espn-cdn.ts`) plus `tests/espn-cdn.test.ts`, which
+walks `src/` and fails on a substring espncdn check in any code file. Same
+idiom as the `getOwnerByPlayer` guard in `afl-hero-casting.test.ts`. Verify a
+new scan guard bites by reverting the fix and watching it fail — an
+always-green guard is indistinguishable from no guard.
+
+**Insight: a hostname allowlist needs a SCHEME check first.** `javascript:`,
+`data:` and `ftp:` are not "special" schemes, so the WHATWG parser reads
+`//host/...` after them as a real authority:
+
+```js
+new URL('javascript://a.espncdn.com/%0aalert(1)').hostname // 'a.espncdn.com'
+```
+
+A host-only predicate returns true for that. Nothing renders it today (an
+`<img src="javascript:...">` does not execute, and the OG path's `fetch`
+throws into a catch), but the predicate's contract is "this is an ESPN CDN
+image" and it must not be satisfiable by a `javascript:` URL.
+`src/utils/url-guard.ts#validatePublicUrl` already had this ordering right —
+scheme first, then host — so check that file's shape before writing a new URL
+allowlist anywhere.
+
+**Insight: a scan guard's comment-stripping can manufacture false negatives.**
+The first version stripped `//` to end-of-line unless preceded by `:`, which
+also ate string literals — `x === '//foo' && url.includes('espncdn.com')` had
+the real call stripped before scanning, and the guard passed on offending code.
+A regex cannot tell a comment from a `//` inside a string. Strip only block
+comments and WHOLE-LINE `//` comments, never a line with code on it: the worst
+case then is a loud false positive, not the silence the guard exists to break.
+
+**Tightening a predicate over live data is provable, so prove it.** Before/after
+was compared across 20,451 headshots — `getPlayerMap(2025|2026)`, both leagues'
+identity unions, and all four raw `players.json` feeds: zero differences, zero
+unparseable URLs (every ESPN URL is `a.espncdn.com`; the rest are MFL's host).
+Protocol-relative URLs don't occur in the feeds, but the substring test would
+have accepted `//a.espncdn.com/x.png`, so the helper resolves a leading `//`
+against `https:` rather than letting `new URL()` throw — that is the difference
+between a tightening and a silent regression.
+
+**A new `src/utils/*.ts` leaf can break Chromatic's path filter.** If it reaches
+a Storybook story transitively, `tests/chromatic-path-filter.test.ts` fails
+until it is added to both `paths:` blocks in `.github/workflows/chromatic.yml`
+(regenerate with `node scripts/chromatic-story-deps.mjs`). Without it a visual
+regression there ships and is auto-accepted as the new baseline on main.
