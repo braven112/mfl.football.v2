@@ -150,6 +150,11 @@ const { title = 'Player actions' } = Astro.props;
       return;
     }
     if (!spec.run) return;
+    if (spec.closeFirst) {
+      closeModal();
+      void spec.run();
+      return;
+    }
 
     setNote(null);
     const list = $('pam-actions');
