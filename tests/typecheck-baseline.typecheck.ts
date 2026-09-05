@@ -1,7 +1,13 @@
 import { describe, it, expect, beforeAll } from 'vitest';
-import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
+import {
+  CHECK_TIMEOUT_MS,
+  decolour,
+  parseDiagnostics,
+  parseErrorTotal,
+  runAstroCheck,
+} from '../scripts/lib/ratchet-measures.mjs';
 
 /**
  * Type-error ratchet.
@@ -21,9 +27,9 @@ import { fileURLToPath } from 'node:url';
 const BASELINE_PATH = fileURLToPath(new URL('./fixtures/typecheck-baseline.json', import.meta.url));
 const REPO_ROOT = fileURLToPath(new URL('..', import.meta.url));
 
-/** Hard ceiling on one `astro check`. Observed runs are 140-230s. */
-const CHECK_TIMEOUT_MS = 420_000;
-
+// Measurement (running the checker, parsing its output) is shared with
+// scripts/ratchet.mjs so a baseline retightened by the tool is the number this
+// test will measure. The pinning semantics stay here.
 interface Baseline {
   total: number;
   recordedAt: string;
@@ -31,61 +37,10 @@ interface Baseline {
   clearedClasses?: Record<string, number>;
 }
 
-function runAstroCheck(): string {
-  try {
-    return execFileSync('npx', ['astro', 'check', '--minimumSeverity', 'error'], {
-      cwd: REPO_ROOT,
-      encoding: 'utf8',
-      stdio: ['ignore', 'pipe', 'pipe'],
-      // The checker normally takes ~2.5 min; this only has to stop a stall
-      // being unbounded, so it is deliberately generous.
-      timeout: CHECK_TIMEOUT_MS,
-      // The 12k-line rosters.astro OOMs the checker at the default heap.
-      // Overridable so a smaller CI runner can cap it below the local default.
-      env: {
-        ...process.env,
-        NODE_OPTIONS: process.env.TYPECHECK_NODE_OPTIONS ?? '--max-old-space-size=12288',
-      },
-      maxBuffer: 64 * 1024 * 1024,
-    });
-  } catch (err) {
-    // `astro check` exits non-zero whenever errors remain, which is the normal
-    // state here — the count in stdout is what matters, not the exit code.
-    const e = err as { stdout?: string; stderr?: string; code?: string; signal?: string };
-    if (e.code === 'ETIMEDOUT' || e.signal === 'SIGTERM') {
-      throw new Error(
-        `astro check did not finish within ${CHECK_TIMEOUT_MS / 1000}s and was killed. `
-          + 'That is a stall, not a type error — re-run, and raise CHECK_TIMEOUT_MS if the '
-          + 'checker has genuinely got slower.',
-      );
-    }
-    const out = `${e.stdout ?? ''}${e.stderr ?? ''}`;
-    if (!out) throw err;
-    return out;
-  }
-}
-
-/** Strip ANSI colour codes so the output can be matched line by line. */
-function decolour(output: string): string {
-  return output.replace(/\u001b\[[0-9;]*m/g, '');
-}
-
-/** One diagnostic line: `path:line:col - error ts(CODE): message`. */
 interface Diagnostic {
   file: string;
   code: number;
   message: string;
-}
-
-const DIAGNOSTIC_RE = /^(\S.*?):(\d+):(\d+) - error ts\((\d+)\): (.*)$/;
-
-function parseDiagnostics(plain: string): Diagnostic[] {
-  const out: Diagnostic[] = [];
-  for (const line of plain.split('\n')) {
-    const m = DIAGNOSTIC_RE.exec(line);
-    if (m) out.push({ file: m[1], code: Number(m[4]), message: m[5] });
-  }
-  return out;
 }
 
 /**
@@ -132,26 +87,6 @@ const CLEARED_CLASSES: Array<{
   },
 ];
 
-/** Pull the error total out of astro check's `- N errors` summary line. */
-function parseErrorTotal(output: string): number {
-  const plain = decolour(output);
-  const match = plain.match(/^-\s*(\d+)\s+errors?$/m);
-  if (!match) {
-    // The commonest cause is the checker running out of heap on rosters.astro,
-    // which aborts before printing the summary. Say so, rather than reporting
-    // it as an unparseable-output mystery.
-    const outOfMemory = /JavaScript heap out of memory|FATAL ERROR:.*Allocation failed/i.test(plain);
-    throw new Error(
-      (outOfMemory
-        ? 'astro check ran out of memory before printing its summary. Raise the heap via '
-          + 'TYPECHECK_NODE_OPTIONS (e.g. --max-old-space-size=12288).\n'
-        : "Could not find astro check's error summary in its output.\n")
-        + `Last 500 chars:\n${plain.slice(-500)}`,
-    );
-  }
-  return Number(match[1]);
-}
-
 describe('type-error baseline', () => {
   // One `astro check` run feeds both assertions below. It runs in beforeAll
   // rather than in the describe body because code at describe() evaluation is
@@ -161,7 +96,7 @@ describe('type-error baseline', () => {
   const baseline = JSON.parse(readFileSync(BASELINE_PATH, 'utf8')) as Baseline;
 
   beforeAll(() => {
-    output = runAstroCheck();
+    output = runAstroCheck({ cwd: REPO_ROOT });
   }, CHECK_TIMEOUT_MS + 60_000);
 
   it('never rises above the recorded baseline', () => {

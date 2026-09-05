@@ -37,6 +37,15 @@ cross-cutting, add a line here. Keep this file short.
 - **Guard tests are the real memory.** ~228 suites in `tests/` mechanically
   enforce most rules in this repo. When a rule below names a test, that test
   is what stops the regression — read it before working around it.
+- **Prefer the mechanical path.** Several procedures here are scripts, not
+  memory: `/guard-test` (turn a rule into a scan guard), `/ratchet`
+  (re-measure every baseline), `/rebase` (conflicts by class, correct
+  ours/theirs), `/new-page` and `/new-cron` (scaffolds with the rules baked
+  in), `/rollover-check` (render a page at both clock boundaries). Agents
+  `sibling-drift-checker`, `guard-gap-auditor`,
+  `clientrouter-lifecycle-auditor` and `mfl-fixture-recorder` each run a
+  script first and judge second. `docs/claude/insights/features/deterministic-tooling.md`
+  records why each exists.
 
 ## Read before you touch
 
@@ -355,8 +364,12 @@ and report what you did.
    run `pnpm install` and commit the regenerated lock.
 3. **Auto-generated data files** — `src/data/theleague/schefter-feed.json`,
    `data/<league>/mfl-feeds/**`, `src/data/theleague/post-history.json`, any
-   `*-feed.json` or `*.lock` — prefer `--theirs` (incoming main). Cron writes
-   these; the branch's snapshot is stale by definition. Never merge row-by-row.
+   `*-feed.json` or `*.lock` — take MAIN's copy whole. Under a rebase that is
+   `git checkout --ours` (HEAD is main's tip; `--theirs` is YOUR commit being
+   replayed — the reverse of a merge). Cron writes these; the branch's
+   snapshot is stale by definition. Never merge row-by-row.
+   `node scripts/resolve-rebase-conflicts.mjs` does classes 2, 3 and 6 with
+   the right side; `/rebase` is the full procedure.
 4. **Source code (`scripts/`, `src/`, `tests/`)** — integrate the intent. New imports/helpers stack
    additively. If the same function body changed on both sides, keep main's
    structural change and re-apply the branch's behavioral change on top.

@@ -4,6 +4,7 @@ import path from 'node:path';
 import {
   loadMap,
   matchDomains,
+  newPageWarnings,
   toRepoRelative,
   trapLineFor,
   walkRepo,
@@ -126,12 +127,50 @@ describe('path-guard matching', () => {
 
   it('a file that belongs to no domain matches nothing (the hook must stay silent there)', () => {
     expect(matchDomains('README.md', map)).toEqual([]);
-    expect(matchDomains('src/components/SomeRandomCard.astro', map)).toEqual([]);
+    expect(matchDomains('docs/plans/some-plan.md', map)).toEqual([]);
+    expect(matchDomains('src/utils/zzz-unmapped-helper.ts', map)).toEqual([]);
+  });
+
+  it('every .astro component and page is covered by the ClientRouter init ratchet', () => {
+    for (const p of ['src/components/SomeRandomCard.astro', 'src/pages/theleague/anything.astro']) {
+      const tests = matchDomains(p, map).flatMap((d: { tests: string[] }) => d.tests);
+      expect(tests, p).toContain('tests/clientrouter-init-ratchet.test.ts');
+    }
   });
 
   it('a sibling league page matches the page-forks domain on both sides', () => {
     for (const p of ['src/pages/theleague/players.astro', 'src/pages/afl-fantasy/players.astro']) {
       expect(matchDomains(p, map).map((d: { name: string }) => d.name)).toContain('page-forks');
     }
+  });
+});
+
+describe('new-page warnings', () => {
+  const leagueSlugs = ['theleague', 'afl-fantasy', 'best-ball-1'];
+  const directory = [{ path: '/registered' }];
+  const files = new Set([
+    'src/pages/theleague',
+    'src/pages/afl-fantasy',
+    'src/pages/best-ball-1',
+    'src/pages/theleague/registered.astro',
+    'src/pages/afl-fantasy/registered.astro',
+    'src/pages/theleague/lonely.astro',
+  ]);
+  const ctx = { leagueSlugs, directory, exists: (p: string) => files.has(p) };
+
+  it('is silent for a registered route with a twin, and for non-page paths', () => {
+    expect(newPageWarnings('src/pages/theleague/registered.astro', ctx)).toEqual([]);
+    expect(newPageWarnings('src/utils/auth.ts', ctx)).toEqual([]);
+    expect(newPageWarnings('src/pages/api/thing.ts', ctx)).toEqual([]);
+    expect(newPageWarnings('src/pages/theleague/news/[id].astro', ctx)).toEqual([]);
+    expect(newPageWarnings('src/pages/theleague/index.astro', ctx)).toEqual([]);
+  });
+
+  it('warns once for a missing directory entry and once for a missing twin, never for best-ball', () => {
+    const w = newPageWarnings('src/pages/theleague/lonely.astro', ctx);
+    expect(w).toHaveLength(2);
+    expect(w[0]).toMatch(/page-directory\.json/);
+    expect(w[1]).toMatch(/src\/pages\/afl-fantasy\//);
+    expect(w[1]).not.toMatch(/best-ball-1/);
   });
 });

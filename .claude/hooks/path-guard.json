@@ -362,7 +362,8 @@
         "tests/assets-page-clientrouter.test.ts",
         "tests/salary-page-clientrouter.test.ts",
         "tests/trade-builder-clientrouter.test.ts",
-        "tests/matchup-selector-clientrouter.test.ts"
+        "tests/matchup-selector-clientrouter.test.ts",
+        "tests/clientrouter-init-ratchet.test.ts"
       ]
     },
     {
@@ -373,7 +374,8 @@
       ],
       "note": "A route under two league directories is a sibling: build a shared component, not a second page. See CLAUDE.md \"Second league's copy of a page\".",
       "tests": [
-        "tests/page-fork-ratchet.test.ts"
+        "tests/page-fork-ratchet.test.ts",
+        "tests/clientrouter-init-ratchet.test.ts"
       ]
     },
     {
@@ -385,6 +387,43 @@
       "tests": [
         "tests/workflow-feature-flag-guard.test.ts",
         "tests/league-literal-guard.test.ts"
+      ]
+    },
+    {
+      "name": "client-scripts",
+      "paths": [
+        "src/components/**/*.astro",
+        "src/scripts/*"
+      ],
+      "note": "Bundled <script> blocks run ONCE per session under the ClientRouter: init on astro:page-load (never DOMContentLoaded), re-read elements inside init(), replace document/window listeners rather than stacking them. See docs/claude/insights/domains/frontend.md \"Astro and ClientRouter\".",
+      "tests": [
+        "tests/clientrouter-init-ratchet.test.ts"
+      ]
+    },
+    {
+      "name": "dev-tooling",
+      "paths": [
+        "scripts/ratchet.mjs",
+        "scripts/lib/ratchet-measures.mjs",
+        "scripts/lib/rebase-conflicts.mjs",
+        "scripts/resolve-rebase-conflicts.mjs",
+        "scripts/scaffold-*.mjs",
+        "scripts/record-mfl-fixture.mjs",
+        "scripts/sibling-drift.mjs",
+        "scripts/guard-gap.mjs",
+        "scripts/rollover-check.ts",
+        "tests/helpers/scan-guard.ts",
+        "tests/fixtures/*-baseline.json"
+      ],
+      "note": "These back the /ratchet, /rebase, /new-page, /new-cron, /guard-test and /rollover-check skills and the sibling-drift, guard-gap and fixture-recorder agents; their tests are the contract those skills rely on.",
+      "tests": [
+        "tests/page-fork-ratchet.test.ts",
+        "tests/clientrouter-init-ratchet.test.ts",
+        "tests/rebase-conflict-classifier.test.ts",
+        "tests/scan-guard-helper.test.ts",
+        "tests/mfl-fixture-canonicalize.test.ts",
+        "tests/workflow-feature-flag-guard.test.ts",
+        "tests/path-guard-map.test.ts"
       ]
     },
     {

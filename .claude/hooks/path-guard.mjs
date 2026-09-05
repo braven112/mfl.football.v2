@@ -100,6 +100,40 @@ function seenFile(sessionId, domainName) {
   return path.join(dir, domainName.replace(/[^a-z0-9_-]/gi, '_'));
 }
 
+/**
+ * New-page checks for a route under src/pages/<league>/: is it registered in
+ * page-directory.json, and does every other league that has a page directory
+ * carry the same route? Pure — takes the registry slugs and the directory
+ * entries so the validator can exercise it without touching disk.
+ *
+ * Both are CLAUDE.md rules with no other edit-time signal: an unregistered
+ * page is invisible to site search, and a route present in one league only
+ * is either a deliberate league-specific feature or a twin that was
+ * forgotten — the hook cannot tell which, so it says so and moves on.
+ */
+export function newPageWarnings(relPath, { leagueSlugs, directory, exists }) {
+  const m = relPath.match(/^src\/pages\/([^/]+)\/(.+)\.astro$/);
+  if (!m || !leagueSlugs.includes(m[1])) return [];
+  const [, league, route] = m;
+  if (route.includes('[') || route === 'index') return []; // dynamic and index routes are not directory entries
+  const warnings = [];
+  const path = `/${route.replace(/\/index$/, '')}`;
+  if (!directory.some((e) => e.path === path)) {
+    warnings.push(
+      `[path-guard] ${relPath} has no entry with path "${path}" in src/data/page-directory.json — add one (10+ tags) or site search cannot find it (CLAUDE.md "Page directory registry — required for every new page").`,
+    );
+  }
+  const twinsMissing = leagueSlugs
+    .filter((slug) => slug !== league && exists(`src/pages/${slug}`) && !exists(`src/pages/${slug}/${route}.astro`))
+    .filter((slug) => slug !== 'best-ball-1');
+  if (twinsMissing.length) {
+    warnings.push(
+      `[path-guard] ${relPath} has no twin under ${twinsMissing.map((s) => `src/pages/${s}/`).join(', ')} — if the feature applies there too, build it as a shared component with a thin route per league (/new-page), not a copy.`,
+    );
+  }
+  return warnings;
+}
+
 export function buildContext({ relPath, domains, sessionId, claudeMd, testsRun }) {
   const lines = [];
   for (const d of domains) {
@@ -123,7 +157,7 @@ export function buildContext({ relPath, domains, sessionId, claudeMd, testsRun }
   return lines.join('\n');
 }
 
-function main() {
+async function main() {
   let input;
   try {
     input = JSON.parse(readFileSync(0, 'utf8'));
@@ -163,13 +197,30 @@ function main() {
   }
 
   const claudeMd = readFileSync(path.join(REPO_ROOT, 'CLAUDE.md'), 'utf8');
-  const additionalContext = buildContext({
+  let additionalContext = buildContext({
     relPath,
     domains,
     sessionId: input.session_id,
     claudeMd,
     testsRun,
   });
+
+  // New-page checks, once per file per session so they do not nag on every edit.
+  if (/^src\/pages\//.test(relPath)) {
+    const marker = seenFile(input.session_id, `newpage__${relPath}`);
+    if (!existsSync(marker)) {
+      writeFileSync(marker, new Date().toISOString());
+      const { ALL_LEAGUES } = await import(path.join(REPO_ROOT, 'src/config/leagues-data.mjs'));
+      const directory = JSON.parse(readFileSync(path.join(REPO_ROOT, 'src/data/page-directory.json'), 'utf8'));
+      const warnings = newPageWarnings(relPath, {
+        leagueSlugs: ALL_LEAGUES.map((l) => l.slug),
+        directory,
+        exists: (p) => existsSync(path.join(REPO_ROOT, p)),
+      });
+      if (warnings.length) additionalContext = [additionalContext, ...warnings].filter(Boolean).join('\n');
+    }
+  }
+
   if (additionalContext) {
     process.stdout.write(
       JSON.stringify({ hookSpecificOutput: { hookEventName: 'PostToolUse', additionalContext } }) + '\n',
@@ -179,4 +230,4 @@ function main() {
 }
 
 const invokedDirectly = process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url);
-if (invokedDirectly) process.exit(main());
+if (invokedDirectly) main().then((code) => process.exit(code));
