@@ -180,8 +180,47 @@ await probe('E  league home (control)', {
   url: `https://${host}/${year}/home/${leagueId}`,
 });
 
+// F — the step MFL's OWN sample does and we never have: ask myleagues where
+// this league actually lives, instead of trusting the registry's mflHost.
+// MFL's developer sample resolves the host per user + league from the `url`
+// attribute and uses THAT for everything after. If a league has moved to a
+// different wwwNN, every commissioner request we send goes to the wrong host —
+// and a wrong host answers "API requires commissioner access", which is
+// exactly what we have been reading as a credential problem.
+const mlUrl = `https://api.myfantasyleague.com/${year}/export?TYPE=myleagues`;
+let discovered = '';
+try {
+  const res = await fetch(mlUrl, {
+    headers: { Cookie: jarHeader() ?? '' },
+    signal: AbortSignal.timeout(10000),
+  });
+  const xml = await res.text();
+  const re = new RegExp(`url="https?://([a-z0-9]+\\.myfantasyleague\\.com)/${year}/home/${leagueId}"`);
+  discovered = xml.match(re)?.[1] ?? '';
+  const leagueCount = (xml.match(/<league /g) || []).length;
+  console.log(
+    `F  myleagues host discovery\n`
+      + `   status ${res.status} | leagues visible to this account: ${leagueCount}\n`
+      + `   registry says:  ${host}\n`
+      + `   MFL says:       ${discovered || '(league not found in myleagues)'}\n`
+      + `   ${discovered && discovered !== host ? 'MISMATCH  <<<<<< every write has been going to the wrong host' : discovered ? 'match' : 'could not resolve — the account may not be in this league'}\n`
+  );
+} catch (error) {
+  console.log(`F  myleagues host discovery: failed — ${error.message}\n`);
+}
+
+// G — if MFL named a different host, retry the commissioner page there. A
+// full-size page here where the registry host gave a stub is the whole answer.
+if (discovered && discovered !== host) {
+  await probe(`G  csetup on the host MFL named (${discovered})`, {
+    url: `https://${discovered}/${year}/csetup?L=${leagueId}`,
+  });
+}
+
 console.log(
   jar.has('MFL_IS_COMMISH')
     ? 'RESULT: the cookie IS obtainable — the first step above marked YES is the one that issued it.'
-    : 'RESULT: no step issued MFL_IS_COMMISH. The XML API cannot mint it; the browser stays the only known source.'
+    : discovered && discovered !== host
+      ? 'RESULT: no cookie was issued, but the registry host is WRONG — fix that before concluding anything about the cookie.'
+      : 'RESULT: no step issued MFL_IS_COMMISH, and the registry host matches what MFL reports.'
 );
