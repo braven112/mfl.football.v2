@@ -2,13 +2,15 @@
 
 **Status:** Phase 0 audit. This is the complete catalog of every loading state on the site today, each tagged with its **target tier** and **target component** under the [Loading State Standard](loading-standards.md). It is the migration map for [loading-roadmap.md](loading-roadmap.md).
 
-**Headline finding:** there is **no shared loading infrastructure**. Every pattern is implemented in isolation — 5 distinct spinners, 1 real skeleton, 1 duplicated shimmer, ~18 ad-hoc loading-text mutations, ~11 one-off disabled-button patterns, 3 CSS button-loading approaches. `SaveIndicator` is the only reusable loading-adjacent component, and it's used once. The closest thing to shared spinner CSS is `.sb-spinner`, defined in a page file rather than an importable module.
+> **Update (2026-09-04):** the button-loading half of this has since shipped — `src/styles/loading.css` now holds the canonical `.loading-btn.is-loading` pattern and ~11 components import it. The Phase 0 headline below describes the state at audit time; rows marked `done` are no longer open work.
+
+**Headline finding:** at Phase 0 there was **no shared loading infrastructure**. Every pattern is implemented in isolation — 5 distinct spinners, 1 real skeleton, 1 duplicated shimmer, ~18 ad-hoc loading-text mutations, ~11 one-off disabled-button patterns, 3 CSS button-loading approaches. `SaveIndicator` is the only reusable loading-adjacent component, and it's used once. The closest thing to shared spinner CSS is `.sb-spinner`, defined in a page file rather than an importable module.
 
 ---
 
 ## 1. Spinners → one `Spinner` (tier 2/3)
 
-Four/five distinct inline CSS spinners, each defined per-file, no shared component.
+Four/five distinct inline CSS spinners. At audit time each was defined per-file with no shared component; the button-loading one has since been extracted to `src/styles/loading.css`.
 
 | File | Class / mechanism | Notes | Target |
 |---|---|---|---|
