@@ -7,7 +7,7 @@ hotfix_pr: https://github.com/braven112/mfl.football.v2/pull/974
 hotfix_sha: 2e6ac2b
 followup_issue: 975
 followup_pr:
-followup_session:
+followup_session: session_019nP8dJFuVN7jZWXmmx3sDn
 ---
 
 # Follow-up: free-agent actions off-screen, waiver priority dialog stuck on "Reading the live order…"
