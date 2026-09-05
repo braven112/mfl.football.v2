@@ -30,6 +30,13 @@
  */
 
 import { LEAGUES } from '../src/config/leagues-data.mjs';
+// mflFetch, not bare fetch: undici DROPS the Cookie header on the api → wwwNN
+// cross-origin 302, and MFL answers an unauthenticated myleagues with a
+// well-formed EMPTY payload at HTTP 200. A bare fetch here would have
+// reported "0 leagues, host not found" for a perfectly good session — the
+// third false negative this probe has been saved from, this one by
+// tests/mfl-cookie-redirect-guard.test.ts rather than by a reviewer.
+import { mflFetch } from './lib/mfl-api.mjs';
 
 const username = process.env.MFL_USERNAME;
 const password = process.env.MFL_PASSWORD;
@@ -190,9 +197,10 @@ await probe('E  league home (control)', {
 const mlUrl = `https://api.myfantasyleague.com/${year}/export?TYPE=myleagues`;
 let discovered = '';
 try {
-  const res = await fetch(mlUrl, {
-    headers: { Cookie: jarHeader() ?? '' },
-    signal: AbortSignal.timeout(10000),
+  const res = await mflFetch({
+    url: mlUrl,
+    method: 'GET',
+    cookies: { MFL_USER_ID: jar.get('MFL_USER_ID') ?? '' },
   });
   const xml = await res.text();
   const re = new RegExp(`url="https?://([a-z0-9]+\\.myfantasyleague\\.com)/${year}/home/${leagueId}"`);
