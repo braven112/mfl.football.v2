@@ -8,6 +8,7 @@ import {
   parseRetryAfter,
   backoffMs,
   capDiff,
+  sliceToBytes,
   splitDiffByFile,
   classifyReviewOutput,
   buildSystemPrompt,
@@ -686,5 +687,91 @@ describe('the salvage pass rescues a review that broke its own format', () => {
 
     expect(result.text).not.toContain('Wait, let me reconsider');
     expect(result.text).toBe('## Critical\n- real finding at foo.ts:1');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Copilot's findings on PR #763 — the fix's own edge cases
+// ---------------------------------------------------------------------------
+
+describe('capDiff honours the byte cap it advertises', () => {
+  const file = (path: string, body: string) =>
+    `diff --git a/${path} b/${path}\n--- a/${path}\n+++ b/${path}\n@@ -1 +1 @@\n+${body}\n`;
+
+  it('counts the newlines it rejoins chunks with', () => {
+    // `used` summed chunk sizes while the output was `kept.join('\n')`, so the
+    // returned diff could exceed maxBytes by one byte per kept file.
+    const diff = Array.from({ length: 12 }, (_, i) => file(`f${i}.ts`, 'x'.repeat(40))).join('');
+    for (const cap of [200, 320, 460, 700, 900]) {
+      const { diff: out, omittedFiles } = capDiff(diff, cap);
+      const body = out.split('\n\n[... diff truncated')[0];
+      expect(Buffer.byteLength(body, 'utf8')).toBeLessThanOrEqual(cap);
+      expect(omittedFiles.length).toBeGreaterThan(0);
+    }
+  });
+
+  it('cuts an over-budget single file by BYTES, not UTF-16 code units', () => {
+    // `.slice()` counts code units, so a multibyte file could return ~3x the
+    // cap — quietly defeating a limit this module documents in bytes.
+    const huge = file('emoji.ts', '🏈'.repeat(4_000));
+    const cap = 900;
+    const { diff: out, omittedFiles } = capDiff(huge, cap);
+    expect(omittedFiles).toEqual([]);
+    expect(Buffer.byteLength(out, 'utf8')).toBeLessThanOrEqual(cap);
+    expect(out).toContain("this file's diff was cut at");
+  });
+
+  it('never splits a multi-byte character', () => {
+    const text = '🏈'.repeat(50);
+    for (let bytes = 0; bytes < 40; bytes++) {
+      const cut = sliceToBytes(text, bytes);
+      expect(cut).not.toContain('\uFFFD');
+      expect(Buffer.byteLength(cut, 'utf8')).toBeLessThanOrEqual(bytes);
+    }
+  });
+});
+
+describe('classifyReviewOutput is not fooled by a quoted heading', () => {
+  it('ignores a severity heading that only appears inside a code fence', () => {
+    // A model that echoes its instructions back inside ``` has emitted no
+    // heading at all; counting it as structured lets #761 through again.
+    const quoted = [
+      'Here is the format I was asked for:',
+      '```',
+      '## Critical',
+      '## Important',
+      '```',
+      'Anyway, wait, why did the author name the variable that?',
+    ].join('\n');
+    expect(classifyReviewOutput(quoted)).toBe('unstructured');
+  });
+
+  it('still accepts a real heading that follows a line of preamble', () => {
+    // Leniency here is deliberate: the tally CAN read this, and sending it to
+    // the salvage pass would spend free-tier quota to fix nothing.
+    expect(classifyReviewOutput('Here are my findings:\n\n## Critical\n- x at a.ts:1')).toBe(
+      'structured'
+    );
+  });
+
+  it('accepts a real heading alongside a fenced code sample', () => {
+    const withSample = ['## Important', '- bad thing at a.ts:1', '```js', 'const x = 1;', '```'].join('\n');
+    expect(classifyReviewOutput(withSample)).toBe('structured');
+  });
+});
+
+describe('the PR comment survives hostile model output', () => {
+  const SCRIPT = readFileSync(join(ROOT, 'scripts/pr-review-external.mjs'), 'utf8');
+
+  it('fences raw output so it cannot break out of the <details> block', () => {
+    expect(SCRIPT).toMatch(/function fenceRaw/);
+    expect(SCRIPT).toMatch(/fenceRaw\(result\.text\)/);
+  });
+
+  it('does not claim "0 file(s) were not sent" when nothing was dropped', () => {
+    // Truncated-with-no-omissions means one file was cut internally. The old
+    // render described that as if nothing were missing at all.
+    expect(SCRIPT).toMatch(/omitted\.length > 0/);
+    expect(SCRIPT).toMatch(/larger than the whole review budget/);
   });
 });

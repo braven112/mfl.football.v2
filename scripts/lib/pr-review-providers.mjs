@@ -290,6 +290,9 @@ Rules:
 /** A `## Critical` / `## Important` / `## Suggestions` heading on its own line. */
 const SEVERITY_HEADING = /^[ \t]*#{2,3}[ \t]*(Critical|Important|Suggestions?)\b/im;
 
+/** Fenced code blocks, which may quote a heading without ever emitting one. */
+const FENCED_BLOCK = /```[\s\S]*?```/g;
+
 /** "NO FINDINGS", allowing the markdown emphasis and trailing period models add. */
 const NO_FINDINGS = /^[*_`\s]*NO[ \t]+FINDINGS[*_`.\s]*$/i;
 
@@ -310,7 +313,11 @@ export function classifyReviewOutput(text) {
   const trimmed = (text ?? '').trim();
   if (!trimmed) return 'empty';
   if (NO_FINDINGS.test(trimmed)) return 'no-findings';
-  if (SEVERITY_HEADING.test(trimmed)) return 'structured';
+  // Look for the heading OUTSIDE fenced code blocks only. A model that quotes
+  // its own instructions back inside a ``` fence has emitted no heading, and
+  // counting that as structured would let #761's exact failure through: prose
+  // the tally reads as zero findings. (Copilot, PR #763.)
+  if (SEVERITY_HEADING.test(trimmed.replace(FENCED_BLOCK, ''))) return 'structured';
   return 'unstructured';
 }
 
@@ -502,6 +509,27 @@ export function splitDiffByFile(diff) {
 }
 
 /**
+ * Truncate `text` to at most `maxBytes` UTF-8 bytes, never splitting a character.
+ *
+ * `String.prototype.slice` counts UTF-16 code units, so slicing to `maxBytes`
+ * can return up to ~3x that many bytes for non-ASCII content — which would
+ * quietly defeat a cap this module documents in bytes. (Copilot, PR #763.)
+ *
+ * @param {string} text
+ * @param {number} maxBytes
+ * @returns {string}
+ */
+export function sliceToBytes(text, maxBytes) {
+  const buf = Buffer.from(text, 'utf8');
+  if (buf.length <= maxBytes) return text;
+  // Walk back off any UTF-8 continuation bytes (10xxxxxx) so the cut lands on
+  // a character boundary rather than producing a replacement char.
+  let end = Math.max(0, maxBytes);
+  while (end > 0 && (buf[end] & 0xc0) === 0x80) end--;
+  return buf.subarray(0, end).toString('utf8');
+}
+
+/**
  * Cap a diff at `maxBytes`, dropping WHOLE FILES rather than cutting mid-hunk.
  *
  * The old implementation was a raw `diff.slice(0, maxBytes)`. Two things were
@@ -537,9 +565,13 @@ export function capDiff(diff, maxBytes = MAX_DIFF_BYTES) {
 
   for (const file of files) {
     const size = Buffer.byteLength(file.text, 'utf8');
-    if (used + size <= maxBytes) {
+    // The chunks are rejoined with '\n', so every file after the first costs
+    // one byte the naive sum misses. Without this the returned diff can exceed
+    // maxBytes even though `used` says it fits. (Copilot, PR #763.)
+    const separator = kept.length ? 1 : 0;
+    if (used + separator + size <= maxBytes) {
       kept.push(file.text);
-      used += size;
+      used += separator + size;
     } else {
       omitted.push(file.path ?? '(diff preamble)');
     }
@@ -549,7 +581,9 @@ export function capDiff(diff, maxBytes = MAX_DIFF_BYTES) {
   // and send the model an empty diff — a "clean review" of nothing. Byte-cut
   // that one file instead: partial coverage of the real change beats none.
   if (kept.length === 0 && files.length > 0) {
-    kept.push(`${files[0].text.slice(0, maxBytes)}\n[... this file's diff was cut at ${maxBytes} bytes ...]`);
+    const marker = `\n[... this file's diff was cut at ${maxBytes} bytes ...]`;
+    const room = Math.max(0, maxBytes - Buffer.byteLength(marker, 'utf8'));
+    kept.push(sliceToBytes(files[0].text, room) + marker);
     omitted.shift();
   }
 

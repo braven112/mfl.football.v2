@@ -133,11 +133,18 @@ function renderSection(result) {
   const omitted = result.omittedFiles ?? [];
   const shown = omitted.slice(0, 25);
   const more = omitted.length - shown.length;
-  const truncNote = result.truncated
-    ? `\n\n<details><summary>⚠️ <b>Coverage is partial</b> — ${omitted.length} file(s) were not sent to the reviewer</summary>\n\n${shown
-        .map((f) => `- \`${f}\``)
-        .join('\n')}${more > 0 ? `\n- _…and ${more} more_` : ''}\n\nNothing above was reviewed in these files. Do not read their absence from the findings as a pass.\n\n</details>`
-    : '';
+  let truncNote = '';
+  if (result.truncated && omitted.length > 0) {
+    truncNote = `\n\n<details><summary>⚠️ <b>Coverage is partial</b> — ${omitted.length} file(s) were not sent to the reviewer</summary>\n\n${shown
+      .map((f) => `- \`${f}\``)
+      .join('\n')}${more > 0 ? `\n- _…and ${more} more_` : ''}\n\nNothing above was reviewed in these files. Do not read their absence from the findings as a pass.\n\n</details>`;
+  } else if (result.truncated) {
+    // Truncated, but no whole file was dropped: a single file was bigger than
+    // the entire budget and got cut internally. Saying "0 file(s) were not
+    // sent" describes that as if nothing were missing. (Copilot, PR #763.)
+    truncNote =
+      '\n\n⚠️ _**Coverage is partial** — one file was larger than the whole review budget and was cut off partway. No file was dropped, but the tail of that file was not reviewed._';
+  }
 
   // An unparseable review must never render like a clean one. `/live` counts
   // findings by severity heading, so prose with no heading tallies as zero —
@@ -153,7 +160,7 @@ function renderSection(result) {
 
 <details><summary>Raw reviewer output (unstructured — not machine-parseable)</summary>
 
-${result.text}
+${fenceRaw(result.text)}
 
 </details>${truncNote}`;
   }
@@ -163,6 +170,22 @@ ${result.text}
     : '';
 
   return `${header}\n\n${result.text}${salvageNote}${truncNote}`;
+}
+
+/**
+ * Wrap untrusted model output in a code fence long enough to contain it.
+ *
+ * The malformed-output block interpolates raw model text into a `<details>`
+ * element. Unfenced, a `</details>` in that text closes the block early and
+ * the prose escapes to the top level of the comment. It cannot forge a
+ * severity heading (malformed means none matched), but it can wreck the
+ * rendering — so fence it, sizing the fence past any backtick run inside.
+ * (Copilot, PR #763.)
+ */
+function fenceRaw(text) {
+  const longestRun = Math.max(0, ...(String(text).match(/`+/g) ?? []).map((run) => run.length));
+  const fence = '`'.repeat(Math.max(3, longestRun + 1));
+  return `${fence}\n${text}\n${fence}`;
 }
 
 function buildComment(results) {
