@@ -41,15 +41,12 @@ import {
 } from './lib/schefter-groupme-budget.mjs';
 import { schefterKey } from './lib/schefter-keys.mjs';
 import { SCHEFTER_LEAGUES, getSchefterLeague } from './lib/schefter-leagues.mjs';
-import { LEAGUES as REGISTRY_LEAGUES } from '../src/config/leagues-data.mjs';
 import { buildDropAdjustmentMap, resolveDropSalary } from './lib/drop-salary.mjs';
 
 import { getRedisConfig, createUpstashClient } from './lib/redis.mjs';
 import { getNonEmpty } from './lib/env.mjs';
 import { leagueYearFor } from './lib/schefter-league-year.mjs';
 import { postToGroupMe as sharedPostToGroupMe } from './lib/groupme.mjs';
-import { postToGroupMeCapped } from './lib/groupme-capped.mjs';
-import { sendPushFanout, broadcast } from './lib/push-fanout.mjs';
 import { scanRogerReplies } from './roger-groupme-reply.mjs';
 
 const projectRoot = path.resolve(fileURLToPath(new URL('..', import.meta.url)));
@@ -550,60 +547,9 @@ function recordGroupMeSuppression(entry) {
   groupMeSuppressions.push(entry);
 }
 
-/**
- * Post to GroupMe, subject to the league-wide daily cap.
- *
- * `kind` is REQUIRED at every call site and defaults to nothing, because this
- * one function carries two completely different classes of message: routine
- * transaction chatter, which is push-only now, and Roger's DEADLINE REMINDERS,
- * which are exempt and must never be held — an owner who misses a draft or a
- * cut deadline loses real value. Defaulting would eventually swallow one of
- * those silently, so the caller has to say which it is.
- */
-/**
- * Push the same news the chat is no longer getting.
- *
- * Transactions are held out of the group chat by the daily cap, so this is the
- * only way they reach anyone — and unlike the chat, an owner chooses between
- * 'transaction-big' (a few a week) and 'transaction-all' (a firehose).
- */
-/**
- * The REGISTRY entry for a Schefter league.
- *
- * The two shapes are not interchangeable: a Schefter league's `slug` is the
- * NAV slug ('afl'), while the registry's is the canonical one ('afl-fantasy'),
- * and push fan-out needs the registry entry for the league's canonical origin.
- * Resolved through `registrySlug` rather than guessed.
- */
-function registryLeague(league) {
-  return REGISTRY_LEAGUES[league?.registrySlug] ?? null;
-}
-
-async function pushTransaction({ league, franchiseIds, headline, body, tag, big }) {
-  const registry = registryLeague(league);
-  if (!registry) return;
-  await sendPushFanout({
-    league: registry,
-    dryRun: DRY_RUN,
-    // Big moves go to the smaller, likelier-enabled audience; everything else
-    // only to owners who explicitly asked for every add and drop.
-    category: big ? 'transaction-big' : 'transaction-all',
-    notifications: broadcast({
-      franchiseIds,
-      title: headline,
-      body: (body ?? '').slice(0, 160),
-      url: '/news',
-      tag,
-    }),
-  });
-}
-
-async function postToGroupMe(text, { botIdOverride, kind, league } = {}) {
+async function postToGroupMe(text, { botIdOverride } = {}) {
   const botId = botIdOverride || process.env.GROUPME_ROGER_BOT_ID;
-  if (!kind) throw new TypeError('schefter-scan postToGroupMe: a `kind` is required.');
-  await postToGroupMeCapped({
-    league,
-    kind,
+  await sharedPostToGroupMe({
     botId,
     text,
     onPosted: () => console.log('  [GroupMe] Posted'),
@@ -791,33 +737,6 @@ async function scanLeague(league) {
   await fs.writeFile(league.feedPath, JSON.stringify(feed, null, 2) + '\n');
   console.log(`  Wrote ${newPosts.length} new posts. Feed total: ${feed.posts.length}`);
 
-  // Every transaction, to owners who asked for every transaction. Sent AFTER
-  // the feed is safely on disk, so a push outage can never cost us the write.
-  //
-  // Tagged per BATCH, not per day. A per-day tag replaces the previous
-  // notification, so an owner who hasn't looked since the last scan loses
-  // those headlines entirely — this body only lists the first three of THIS
-  // batch, so the replaced one is not recoverable from the new one. The
-  // newest post id is stable within a batch and distinct across batches.
-  //
-  // A big drop in the same batch also pushes as 'transaction-big', under its
-  // own post id. An owner with both categories on therefore gets two
-  // notifications for that move: the digest and the individual alert. That is
-  // the cost of subscribing to a firehose AND its highlights, and it is
-  // preferable to collapsing a 12-move digest onto one drop's tag.
-  //
-  // `newPosts` was reversed IN PLACE just above for the feed prepend, so it is
-  // already newest-first here. Reversing a copy again — which is what this did
-  // — put the three OLDEST moves in a digest whose headline says "new".
-  await pushTransaction({
-    league,
-    franchiseIds: [...teams.keys()],
-    headline: `${newPosts.length} new ${newPosts.length === 1 ? 'move' : 'moves'}`,
-    body: newPosts.slice(0, 3).map((p) => p.headline).join(' · '),
-    tag: `transactions-${newPosts[0]?.id ?? now.toISOString()}`,
-    big: false,
-  });
-
   // Direct GroupMe posting for leagues using the directGroupMe feature flag
   // (currently AFL). Feed is already persisted above; post breaking/standard
   // tier transactions to GroupMe using the league's own Schefter bot.
@@ -913,16 +832,7 @@ async function scanLeague(league) {
               timestamp: new Date().toISOString(),
             });
           } else {
-            await postToGroupMe(groupMeText, { botIdOverride: botId, kind: 'transaction', league });
-            // The chat holds this now, so push is how it reaches anyone.
-            await pushTransaction({
-              league,
-              franchiseIds: [...teams.keys()],
-              headline: post.headline,
-              body: post.body,
-              tag: post.id,
-              big: true,
-            });
+            await postToGroupMe(groupMeText, { botIdOverride: botId });
             console.log(`  [GroupMe] Posted: ${post.headline}`);
           }
         }
@@ -1078,14 +988,7 @@ async function flushPendingBigDrops(now) {
       continue;
     }
 
-    // Each staged drop carries its OWN league (see the routing note above), so
-    // the cap is charged to that league's day rather than to whichever league
-    // happened to be scanning when the queue flushed.
-    await postToGroupMe(entry.text, {
-      botIdOverride: schefterBotId,
-      kind: 'transaction',
-      league: { navSlug: entryLeague },
-    });
+    await postToGroupMe(entry.text, { botIdOverride: schefterBotId });
     await consumeDailyPost(redis, now, entryLeague);
     console.log(`  [big-drop] Pinged GroupMe (post ${window.postsToday + 1}, cap ${window.atCap ? 'exceeded' : 'ok'}): ${entry.headline}`);
     // One ping per run: spacing now blocks the rest until a later scan.
@@ -1417,15 +1320,7 @@ async function scanPendingTrades(league) {
           });
         } else {
           const groupMeText = `${post.headline}\n\n${post.body}\n\n@Brandon the league awaits.`;
-          await postToGroupMe(groupMeText, { botIdOverride: schefterBotId, kind: 'transaction', league });
-          await pushTransaction({
-            league,
-            franchiseIds: [...teams.keys()],
-            headline: post.headline,
-            body: post.body,
-            tag: post.id,
-            big: true,
-          });
+          await postToGroupMe(groupMeText, { botIdOverride: schefterBotId });
         }
       }
 
@@ -2139,37 +2034,9 @@ async function scanEventReminders(league) {
     for (const post of newPosts) {
       const url = groupMeUrlOverrides.get(post.id) ?? league.calendarUrl;
       const text = `${post.headline}\n\n${post.body}\n\n${url}`;
-      // EXEMPT: a missed draft or cut deadline costs an owner real value,
-      // which is far worse than an extra message.
-      await postToGroupMe(text, { botIdOverride: rogerBotId, kind: 'roger-reminder', league });
+      await postToGroupMe(text, { botIdOverride: rogerBotId });
     }
   }
-
-  // The same deadlines on owners' phones. This one is on by default: a missed
-  // draft or cut deadline costs real value, and the chat post is the only
-  // other place it appears.
-  const registry = registryLeague(league);
-  if (registry && newPosts.length > 0) {
-    const teams = await loadTeams(league.configPath);
-    await sendPushFanout({
-      league: registry,
-      dryRun: DRY_RUN,
-      category: 'roster-deadline',
-      notifications: [...teams.keys()].flatMap((franchiseId) =>
-        newPosts.map((post) => ({
-          franchiseId,
-          title: post.headline,
-          body: (post.body ?? '').slice(0, 160),
-          url: post.link ?? '/calendar',
-          // Per post, so the 14-day and 7-day touches for one event are
-          // separate notifications rather than one silently replacing the
-          // other.
-          tag: post.id,
-        })),
-      ),
-    });
-  }
-
   return newPosts.length;
 }
 

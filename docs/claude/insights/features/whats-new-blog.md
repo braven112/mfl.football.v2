@@ -183,27 +183,3 @@ this pair before its first article ships — a render-time href rewriter and a
 guard test that the category which exists to send readers somewhere actually
 does. An editorial rule with no test is a rule that has already been broken; both
 times here the rule was written down and the count was still zero.
-
-## 2026-09-04 - Entries Must Be PACIFIC-Dated, or They Sit Out the Hero They Were Written For
-
-`isEntryInHeroWindow` requires `age >= 0` — an entry dated in the future is not
-merely last in the rotation, it is **excluded from the pool entirely**. And the
-hero's day key is Pacific (`dailyPick` → `ptDayKey`), while a session writing
-the entry is very likely reading a UTC clock.
-
-Those two facts combine badly for about seven hours every evening. Between
-17:00 PT and midnight PT, UTC has already rolled to tomorrow — so an entry
-stamped with "today's" UTC date is future-dated in Pacific terms, and the
-brand-new hero-eligible launch silently loses the hero to whatever shipped
-three days ago. Nothing errors; the entry renders perfectly on the listing and
-its permalink, so the only symptom is a homepage that won't feature it.
-
-This was caught only because the homepage kept showing the previous entry after
-a hero-eligible one was added, and the resolver's own pool test disagreed with
-the live page. Date entries from the **Pacific** calendar day
-(`TZ=America/Los_Angeles date +%F`), never `date -u`.
-
-Related: the rotation is deterministic per PT day across ALL entries still
-inside their 7-day window, so a new entry does not take the hero every day — it
-alternates with the others in the pool. A hero-eligible entry not showing today
-is normal; verify by checking pool membership, not by reloading the homepage.
