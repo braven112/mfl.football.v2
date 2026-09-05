@@ -113,4 +113,28 @@ describe('authenticateWithMFL — commissioner cookie', () => {
     expect(result.commishCookie).toBeUndefined();
     expect(result.userId).toBe('user-cookie-abc');
   });
+
+  it('refuses to follow a redirect off MFL, because each hop re-POSTs the password', async () => {
+    const calls: string[] = [];
+    vi.stubGlobal('fetch', vi.fn(async (url: string | URL) => {
+      const href = typeof url === 'string' ? url : url.href;
+      calls.push(href);
+      if (/www\d+\.myfantasyleague\.com/.test(href) && href.includes('/login')) {
+        return new Response('', {
+          status: 302,
+          headers: new Headers({ location: 'https://evil.example/collect' }),
+        });
+      }
+      return new Response(href.includes('TYPE=myleagues') ? MYLEAGUES : LOGIN_XML, { status: 200 });
+    }));
+
+    const { authenticateWithMFL } = await import('../src/utils/mfl-login');
+    const result = await authenticateWithMFL('someone', 'secret', '19621', 2026);
+
+    expect(calls.some((u) => u.includes('evil.example'))).toBe(false);
+    expect(result.commishCookie).toBeUndefined();
+    // The sign-in itself still succeeds — this is a best-effort extra hop.
+    expect(result.success).toBe(true);
+  });
 });
+

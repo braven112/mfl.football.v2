@@ -22,6 +22,14 @@ const TOTAL_COMMISH_BUDGET_MS = 6000;
 const PER_HOP_TIMEOUT_MS = 3000;
 const MAX_COMMISH_HOPS = 3;
 
+/** MFL's own hosts over TLS — the only places a credential may be POSTed. */
+function isMFLHost(url: URL): boolean {
+  return (
+    url.protocol === 'https:'
+    && (url.hostname === 'myfantasyleague.com' || url.hostname.endsWith('.myfantasyleague.com'))
+  );
+}
+
 export interface MFLLoginResponse {
   success: boolean;
   userId?: string;
@@ -117,15 +125,21 @@ export async function fetchCommissionerSession(
 
   // Credentials go in the POST BODY, never the query string: a URL is logged
   // by the origin, by every proxy in between, and by our own redirect tracing.
-  // Only the league id rides in the URL.
+  // Only the league id rides in the URL — and it comes from the REGISTRY
+  // entry, not from the caller's string. Same value, but nothing user-supplied
+  // reaches the request.
   const credentials = new URLSearchParams({ USERNAME: username, PASSWORD: password, XML: '1' });
-  const query = new URLSearchParams({ L: leagueId });
+  const query = new URLSearchParams({ L: league.id });
 
   // The login route's `year` override makes seasonYear a past season for the
   // AFL, so try the league year too. NOT `new Date().getFullYear()`: the MFL
   // league year does not advance until Feb 14, so a January calendar year
   // names a league that does not exist yet (CLAUDE.md, year rollover).
-  const years = [...new Set([seasonYear, getCurrentLeagueYear()])];
+  // Clamped to a real four-digit season. `seasonYear` originates in the login
+  // request body, and it is interpolated into a URL PATH below — a range check
+  // is what keeps a caller from steering that path anywhere.
+  const isSeason = (y: number) => Number.isInteger(y) && y >= 2000 && y <= 2100;
+  const years = [...new Set([seasonYear, getCurrentLeagueYear()])].filter(isSeason);
 
   const deadline = Date.now() + TOTAL_COMMISH_BUDGET_MS;
   const remaining = () => deadline - Date.now();
@@ -170,7 +184,15 @@ export async function fetchCommissionerSession(
         if (res.status < 300 || res.status >= 400) break;
         const location = res.headers.get('location');
         if (!location) break;
-        url = location.startsWith('http') ? location : new URL(location, url).href;
+        // NEVER follow a redirect off MFL. Each hop re-POSTs the commissioner's
+        // username and password, so a `Location:` pointing anywhere else would
+        // hand them to whoever sent it. MFL's own hosts only.
+        const next = location.startsWith('http') ? new URL(location) : new URL(location, url);
+        if (!isMFLHost(next)) {
+          console.log('[mfl-login] refusing an off-MFL redirect during league login');
+          break;
+        }
+        url = next.href;
       } catch (error) {
         console.log('[mfl-login] league-scoped login failed:', (error as Error).message);
         break;
