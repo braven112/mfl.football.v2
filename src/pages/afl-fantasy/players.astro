@@ -47,6 +47,7 @@ import WaiverClaimModal from '../../components/shared/WaiverClaimModal.astro';
 import WaiverClaimsPanel from '../../components/shared/WaiverClaimsPanel.astro';
 import WaiverPriorityModal from '../../components/shared/WaiverPriorityModal.astro';
 import SignInModal from '../../components/shared/SignInModal.astro';
+import WatchListBridge from '../../components/shared/WatchListBridge.astro';
 import { getConferenceName, getConferenceTeams, isValidConferenceId } from '../../utils/afl-conference';
 // AFL uses team defenses (no IDP), so a DEF free agent has no headshot of its
 // own. Mirror TheLeague's hero treatment: surface a rotating pool of the team's
@@ -233,6 +234,8 @@ const waiverPriorityConfig = {
 // depends on, and SignInModal renders only when this is true — so any
 // condition that disagrees with the gate's renders that button dead.
 const promptSignIn = !waiverPriorityConfig.signedIn;
+// My Watch List is league-scoped like claims: only an AFL session can watch here.
+const watchSignedIn = !!claimFranchiseId;
 const signInConfig = {
   leagueId: aflLeague.id,
   seasonYear: claimYear,
@@ -413,6 +416,15 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
           <span class="col-group-toggles__label">View:</span>
           <button class="col-group-btn active" data-group="stats" type="button" aria-pressed="true">Stats</button>
           <button class="col-group-btn" data-group="rankings" id="col-group-btn-rankings" type="button" aria-pressed="false">Rankings</button>
+          <button class="col-group-btn col-group-btn--watch" data-group="watchlist" id="col-group-btn-watchlist" type="button" aria-pressed="false">
+            <svg class="col-group-btn__icon" aria-hidden="true"><use href="/assets/icons/sprite.svg#icon-eye" /></svg>
+            My Watch List
+          </button>
+        </div>
+        <div class="watch-scope" id="watch-scope" role="group" aria-label="Watch list scope" style="display: none;">
+          <button class="watch-scope-btn active" data-scope="all" type="button" aria-pressed="true">All</button>
+          <button class="watch-scope-btn" data-scope="fa" type="button" aria-pressed="false">Free agents</button>
+          <button class="watch-scope-btn" data-scope="rostered" type="button" aria-pressed="false">Rostered</button>
         </div>
         <MyRankEditor league="afl" />
         <button class="filter-toggle-btn" id="filter-toggle-btn" type="button" aria-expanded="false" aria-controls="filters-panel">
@@ -542,6 +554,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
             {(claimConfig.canClaim || promptSignIn) && (
               <th class="col-fa-action" aria-label="Claim this player"><div class="th-content">Claim</div></th>
             )}
+            <th class="col-player-actions" aria-label="Player actions"><div class="th-content"></div></th>
           </tr>
         </thead>
         <tbody id="player-table-body"></tbody>
@@ -550,7 +563,8 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
 
     <WaiverClaimModal config={claimConfig} />
     <WaiverPriorityModal config={waiverPriorityConfig} />
-    {promptSignIn && <SignInModal config={signInConfig} />}
+    {!claimFranchiseId && <SignInModal config={signInConfig} />}
+    <WatchListBridge signedIn={watchSignedIn} />
 
     <!-- Show more -->
     <div class="show-more-wrapper" id="show-more-wrapper">
@@ -854,7 +868,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
   function loadViewPref() {
     try {
       const saved = localStorage.getItem('aflPlayersViewMode');
-      if (saved === 'rankings' || saved === 'stats') {
+      if (saved === 'rankings' || saved === 'stats' || saved === 'watchlist') {
         activeView = saved;
         hasExplicitViewPref = true;
       }
@@ -867,12 +881,24 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     } catch (_) {}
   }
 
+  // ── My Watch List ──
+  // The list lives in window.watchListStore (WatchListBridge) — this classic
+  // script cannot import the store, so it reads through the bridge and
+  // re-renders on the bridge's change event. `watchScope` is the All / Free
+  // agents / Rostered sub-filter that only applies in that view, and
+  // "rostered" here means rostered IN THE ACTIVE CONFERENCE (isRosteredForView).
+  let watchScope = 'all';
+  const watchedIds = () => window.watchListStore?.getWatchedIds?.() || new Set();
+  const isWatchedId = (id) => watchedIds().has(String(id));
+  const watchListSignedIn = () => !!window.watchListStore?.isSignedIn?.();
+
   function applyGroupVisibility() {
     // Fall back to Stats if the owner has no board loaded (or deleted it while
     // the Rankings view was showing).
     if (activeView === 'rankings' && !hasRankingColumns) activeView = 'stats';
 
-    const showStats = activeView === 'stats';
+    // Watch list is a FILTER wearing the Stats columns, not a column group.
+    const showStats = activeView === 'stats' || activeView === 'watchlist';
 
     document.querySelectorAll('.col-group--stats').forEach(el => {
       el.style.display = showStats ? '' : 'none';
@@ -881,7 +907,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
       el.style.display = showStats ? 'none' : '';
     });
 
-    for (const group of ['stats', 'rankings']) {
+    for (const group of ['stats', 'rankings', 'watchlist']) {
       const btn = document.querySelector(`.col-group-btn[data-group="${group}"]`);
       if (btn) {
         const isActive = group === activeView;
@@ -890,23 +916,35 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
       }
     }
 
-    // The whole bar is meaningless without a second view to switch to.
+    // My Watch List is always a second view, so the bar always shows; the
+    // Rankings button alone hides without a board.
     const toggleBar = document.getElementById('col-group-toggles');
-    if (toggleBar) toggleBar.style.display = hasRankingColumns ? '' : 'none';
+    if (toggleBar) toggleBar.style.display = '';
+    const rankingsBtn = document.getElementById('col-group-btn-rankings');
+    if (rankingsBtn) rankingsBtn.style.display = hasRankingColumns ? '' : 'none';
+    const scopeBar = document.getElementById('watch-scope');
+    if (scopeBar) scopeBar.style.display = activeView === 'watchlist' ? '' : 'none';
   }
 
   function setActiveView(view) {
+    if (view === 'watchlist' && !watchListSignedIn()) {
+      window.watchListStore?.requestSignIn?.();
+      return;
+    }
+    const wasWatching = activeView === 'watchlist';
     activeView = view;
     hasExplicitViewPref = true;
     saveViewPref();
     applyGroupVisibility();
+    // The watch list is a filter, so entering or leaving it re-filters.
+    if (wasWatching || view === 'watchlist') filterPlayers();
   }
 
   loadViewPref();
 
   // ?view=stats|rankings — shareable, and wins over the stored preference.
   const viewParam = new URLSearchParams(window.location.search).get('view');
-  if (viewParam === 'stats' || viewParam === 'rankings') {
+  if (viewParam === 'stats' || viewParam === 'rankings' || viewParam === 'watchlist') {
     activeView = viewParam;
     hasExplicitViewPref = true;
   }
@@ -1025,7 +1063,15 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
   }
 
   function matchesBaseFilters(p, query) {
-    if (!showRostered && isRosteredForView(p)) return false;
+    if (activeView === 'watchlist') {
+      // The list IS the filter, and its own scope replaces "Include rostered".
+      if (!isWatchedId(p.id)) return false;
+      const rostered = isRosteredForView(p);
+      if (watchScope === 'fa' && rostered) return false;
+      if (watchScope === 'rostered' && !rostered) return false;
+    } else if (!showRostered && isRosteredForView(p)) {
+      return false;
+    }
     // rookiesOnly implies showRookies (applyRookiesOnlyLock forces it on),
     // so the two branches can't both apply.
     if (rookiesOnly && !p.rookie) return false;
@@ -1107,6 +1153,11 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
       const rosteredDot = rosteredForView
         ? `<span class="rostered-dot" title="${activeConf ? `Rostered in the ${escapeAttr(confName(activeConf))}` : 'Rostered'}"></span>`
         : '';
+      const watched = isWatchedId(p.id);
+      const watchMark = watched
+        ? `<span class="pa-watch-mark" title="On your watch list"><svg aria-hidden="true"><use href="/assets/icons/sprite.svg#icon-eye"></use></svg></span>`
+        : '';
+      const kebabCell = `<td class="col-player-actions"><button type="button" class="pa-kebab${watched ? ' is-watched' : ''}" data-pa-open data-pa-id="${escapeAttr(p.id)}" data-pa-name="${escapeAttr(p.name)}" data-pa-pos="${escapeAttr(p.position || '')}" data-pa-team="${escapeAttr(p.team || '')}" data-pa-espn="${escapeAttr(p.espnId || '')}" data-pa-headshot="${isDef ? '' : escapeAttr(headshot)}" data-pa-franchise="${escapeAttr(ownerForView(p) || '')}" data-pa-sub="${escapeAttr(rosteredForView ? (activeConf ? 'Rostered in the ' + confName(activeConf) : 'Rostered') : 'Free agent')}" aria-label="Actions for ${escapeAttr(p.name)}" title="Player actions"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg></button></td>`;
       const confTag = buildConfTag(p);
 
       const htDisplay = p.height ? Math.floor(p.height / 12) + "'" + (p.height % 12) + '"' : '-';
@@ -1120,7 +1171,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
               <img src="${headshot}" alt="" loading="lazy" decoding="async" onerror="${isDef ? escapeAttr(logoOnerror) : escapeAttr(buildOnerror(p.id, p.espnId))}" />
             </div>
             <div class="player-cell__info">
-              <strong class="player-cell__name player-cell__name--clickable" data-player-modal="${modalJson}">${escapeAttr(p.name)}${rosteredDot}</strong>
+              <strong class="player-cell__name player-cell__name--clickable" data-player-modal="${modalJson}">${escapeAttr(p.name)}${rosteredDot}${watchMark}</strong>
               <div class="player-meta">
                 ${isDef ? '' : `<img src="${escapeAttr(logo)}" alt="${escapeAttr(p.team)}" class="player-meta__logo" onerror="${escapeAttr(logoOnerror)}" />`}<span class="player-meta__pos">${posLabel}</span>${confTag}
               </div>
@@ -1173,9 +1224,14 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
           ? `<td class="col-fa-action"></td>`
           : `<td class="col-fa-action"><button type="button" class="place-bid-link" data-signin-open data-signin-player="${escapeAttr(p.id)}" aria-label="Sign in to claim ${escapeAttr(p.name)}">Claim</button></td>`;
       }
+      html += kebabCell;
       html += `</tr>`;
     }
 
+    if (!html && activeView === 'watchlist') {
+      // Empty watch list: say how to fill it rather than show a bare table.
+      html = `<tr class="row--empty"><td colspan="30" class="watch-empty">Nobody on your watch list${watchScope === 'fa' ? ' is a free agent' : watchScope === 'rostered' ? ' is rostered' : ' yet'}. Use the &#8942; button on any player here, on a roster, or on the custom rankings board to start watching.</td></tr>`;
+    }
     tbody.innerHTML = html;
 
     // Sort indicators
@@ -1292,6 +1348,33 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
       });
     });
 
+    // Watch list scope (All / Free agents / Rostered) — fresh nodes per init.
+    const watchScopeBar = document.getElementById('watch-scope');
+    if (watchScopeBar && !watchScopeBar.dataset.init) {
+      watchScopeBar.dataset.init = 'true';
+      watchScopeBar.addEventListener('click', (e) => {
+        const btn = e.target.closest('.watch-scope-btn');
+        if (!btn) return;
+        watchScope = btn.getAttribute('data-scope') || 'all';
+        watchScopeBar.querySelectorAll('.watch-scope-btn').forEach((b) => {
+          const on = b === btn;
+          b.classList.toggle('active', on);
+          b.setAttribute('aria-pressed', String(on));
+        });
+        filterPlayers();
+      });
+    }
+    // A change from any surface (the ⋮ sheet, the details modal) repaints the
+    // marks — and the whole table when the list is the active filter. Bound
+    // once; the live-page guard keeps a stale page from answering.
+    if (!watchChangeBound) {
+      watchChangeBound = true;
+      document.addEventListener('watchlist:change', () => {
+        if (!isLivePage()) return;
+        if (activeView === 'watchlist') filterPlayers(); else render();
+      });
+    }
+
     // Column view toggles (Stats / Rankings)
     const colGroupToggles = document.getElementById('col-group-toggles');
     if (colGroupToggles && !colGroupToggles.dataset.init) {
@@ -1393,6 +1476,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     };
     const valueOf = (id) => document.getElementById(id)?.value ?? '';
     showRostered = checkedOf('show-rostered', false);
+    watchScope = document.querySelector('.watch-scope-btn.active')?.getAttribute('data-scope') || 'all';
     rookiesOnly = checkedOf('rookies-only', false);
     showRookies = checkedOf('show-rookies', true);
     applyRookiesOnlyLock();
@@ -1424,6 +1508,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
   // from TheLeague's. Both pages use the same element ids, so a stale handler
   // reads/repaints the live page. Ignore events once our own table is detached.
   const OWN_TABLE = document.getElementById('players-table');
+  let watchChangeBound = false;
   function isLivePage() {
     return !!OWN_TABLE && OWN_TABLE.isConnected;
   }
@@ -1963,6 +2048,42 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     background: var(--league-accent, #c41e3a);
     border-color: var(--league-accent, #c41e3a);
     color: #fff;
+  }
+
+  .col-group-btn--watch {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+  }
+  .col-group-btn__icon {
+    width: 12px;
+    height: 12px;
+    fill: currentColor;
+  }
+  .watch-scope {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.2rem;
+    padding: 0.15rem;
+    border: 1px solid var(--content-border, #d1d5db);
+    border-radius: var(--radius-full, 999px);
+    background: var(--content-bg-muted, #f3f4f6);
+  }
+  .watch-scope-btn {
+    padding: 0.15rem 0.55rem;
+    border: 0;
+    border-radius: var(--radius-full, 999px);
+    background: transparent;
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: var(--color-gray-600, #4b5563);
+    cursor: pointer;
+    line-height: 1.4;
+  }
+  .watch-scope-btn.active {
+    background: var(--content-bg, #fff);
+    color: var(--league-accent, #c41e3a);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
   }
 
   /* ── Filter toggle ── */

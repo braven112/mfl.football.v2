@@ -70,3 +70,22 @@
   height: 11px;
   fill: currentColor;
 }
+
+/* The standalone column that hosts the kebab on the free-agent tables. It
+   is NOT a col-group--* member on purpose: the view toggles blanket-hide
+   those, and this column must survive every view (see
+   docs/claude/insights/features/free-agents-value.md, 2026-07-08). */
+.col-player-actions {
+  width: 2.25rem;
+  text-align: center;
+  padding-left: 0.25rem !important;
+  padding-right: 0.25rem !important;
+}
+
+/* Empty state for the watch-list view (JS-built row, so global). */
+.watch-empty {
+  padding: 1.5rem 1rem !important;
+  text-align: center;
+  font-size: 0.875rem;
+  color: var(--content-text-muted, #64748b);
+}

@@ -17,6 +17,8 @@ import RankingList from './RankingList';
 import PositionFilter from './PositionFilter';
 import SaveIndicator from './SaveIndicator';
 import DraftListSync from './DraftListSync';
+import { getWatchedIds, loadWatchList, onWatchListChange } from '../../../utils/watch-list-client';
+import { buildWatchAction, openPlayerActionModal } from '../../../utils/player-actions';
 import type { SaveStatus } from './SaveIndicator';
 import {
   buildCompositePlayerList,
@@ -441,6 +443,33 @@ export default function CustomRankingsPage({
     [rankings, positionFilter, playerById, activePool],
   );
 
+  // ── My Watch List ──
+  // The store is the truth (shared with every other surface on the site);
+  // this island mirrors it into state so rows re-render on a change made in
+  // the action sheet — or on any other page open in the same session.
+  const [watchedIds, setWatchedIds] = useState<Set<string>>(() => new Set(getWatchedIds()));
+  useEffect(() => {
+    const unsubscribe = onWatchListChange((detail) => setWatchedIds(new Set(detail.playerIds)));
+    void loadWatchList().then((ids) => setWatchedIds(new Set(ids)));
+    return unsubscribe;
+  }, []);
+
+  const handlePlayerActions = useCallback((player: RankedPlayer) => {
+    const opened = openPlayerActionModal({
+      player: {
+        id: player.id,
+        name: player.name,
+        position: player.position,
+        nflTeam: player.nflTeam,
+        headshot: player.headshot,
+      },
+      // The page is auth-gated, so the viewer is signed in by construction;
+      // the store still flips to sign-in if the session lapsed.
+      actions: () => [buildWatchAction(player.id)],
+    });
+    if (!opened) console.warn('[custom-rankings] PlayerActionModal is not mounted on this page.');
+  }, []);
+
   const enrichedPlayers: RankedPlayer[] = useMemo(
     () =>
       filteredPlayers.map((p, index) => ({
@@ -616,6 +645,8 @@ export default function CustomRankingsPage({
         players={enrichedPlayers}
         tiers={visibleTiers}
         isEditing={isEditing}
+        watchedIds={watchedIds}
+        onPlayerActions={handlePlayerActions}
         onReorder={handleReorder}
         onRemoveTier={handleRemoveTier}
         onRenameTier={handleRenameTier}

@@ -1,0 +1,103 @@
+---
+/**
+ * WatchListBridge — My Watch List for pages whose main script cannot import.
+ *
+ * The free-agent pages drive their table from a `define:vars` script, which
+ * is a CLASSIC script: no imports, so it cannot reach
+ * src/utils/watch-list-client.ts directly. This component is the bridge:
+ *
+ * - exposes the store on `window.watchListStore` (same functions, same
+ *   per-league cache, same `watchlist:change` event) for the classic script
+ *   to read the watched set and re-render;
+ * - mounts the shared PlayerActionModal and wires the delegated click for
+ *   any `[data-pa-open]` button (the ⋮ kebab a row renders), opening the
+ *   sheet with the Watch action built from the button's data attributes;
+ * - warms the list on page load when the page says the viewer is signed in
+ *   to THIS league (`signedIn`), so the first paint has the right marks.
+ *
+ * Signed-in is the page's SSR decision — an owner logged into the other
+ * league is "signed out" here, because MFL's watch list belongs to the
+ * league the session is scoped to.
+ */
+import PlayerActionModal from './PlayerActionModal.astro';
+import '../../styles/player-action-button.css';
+
+interface Props {
+  signedIn: boolean;
+}
+const { signedIn } = Astro.props;
+---
+
+<div id="watch-list-bridge" data-signed-in={signedIn ? 'true' : 'false'} hidden></div>
+<PlayerActionModal />
+
+<script>
+  import {
+    getWatchedIds, isWatched, loadWatchList, toggleWatch, getWatchListAuth, onWatchListChange,
+  } from '../../utils/watch-list-client';
+  import { buildWatchAction, openPlayerActionModal, requestSignIn } from '../../utils/player-actions';
+
+  declare global {
+    interface Window {
+      watchListStore?: {
+        getWatchedIds: typeof getWatchedIds;
+        isWatched: typeof isWatched;
+        loadWatchList: typeof loadWatchList;
+        toggleWatch: typeof toggleWatch;
+        getWatchListAuth: typeof getWatchListAuth;
+        onWatchListChange: typeof onWatchListChange;
+        requestSignIn: typeof requestSignIn;
+        /** The page's SSR verdict for THIS league, re-read per page load. */
+        isSignedIn: () => boolean;
+      };
+    }
+  }
+
+  const pageSignedIn = () =>
+    document.getElementById('watch-list-bridge')?.dataset.signedIn === 'true';
+
+  window.watchListStore = {
+    getWatchedIds, isWatched, loadWatchList, toggleWatch, getWatchListAuth, onWatchListChange,
+    requestSignIn,
+    isSignedIn: pageSignedIn,
+  };
+
+  let delegationBound = false;
+
+  function onDocumentClick(e: MouseEvent) {
+    const btn = (e.target as HTMLElement | null)?.closest<HTMLElement>('[data-pa-open]');
+    if (!btn) return;
+    e.preventDefault();
+    const d = btn.dataset;
+    const id = d.paId || '';
+    if (!id) return;
+    const player = {
+      id,
+      name: d.paName || 'Player',
+      position: d.paPos || null,
+      nflTeam: d.paTeam || null,
+      espnId: d.paEspn || null,
+      headshot: d.paHeadshot || null,
+      franchiseId: d.paFranchise || null,
+      subText: d.paSub || null,
+    };
+    const opened = openPlayerActionModal({
+      player,
+      actions: () => [
+        buildWatchAction(id, { signedIn: pageSignedIn() && getWatchListAuth() !== 'signed-out' }),
+      ],
+    });
+    if (!opened && !pageSignedIn()) requestSignIn();
+  }
+
+  function init() {
+    if (!document.getElementById('watch-list-bridge')) return;
+    if (pageSignedIn()) void loadWatchList();
+    if (!delegationBound) {
+      delegationBound = true;
+      document.addEventListener('click', onDocumentClick);
+    }
+  }
+
+  document.addEventListener('astro:page-load', init);
+</script>
