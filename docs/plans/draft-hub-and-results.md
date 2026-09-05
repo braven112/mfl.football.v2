@@ -257,6 +257,13 @@ Worth recording, because both fired on work that looked finished:
   before the keeper cuts drafts from a pool still holding a hundred players
   about to be released. See `src/utils/afl-mock-draft.ts` and
   `docs/claude/insights/features/draft-hub-and-results.md`.
+- **Known limitation, accepted:** the "real draft has started" half of the mock
+  gate reads the COMMITTED `draftResults.json`, while rosters come from a live
+  2-minute cache. If a conference's draft starts before the feed's next sync,
+  the window can stay open for a few minutes. Raised by Codex on PR #761 and
+  not fixed: the blast radius is one practice board, and adding a live MFL
+  fetch to the create path buys a new failure mode on the hot path for it. If
+  this ever matters, the fix is to fetch draft status at create time only.
 - **The two leagues are now at full parity** — hub, order, results, broadcast,
   room, mock, rankings, draft list. `tests/draft-section.test.ts` asserts the
   two lists are IDENTICAL rather than snapshotting one, so adding a page to one

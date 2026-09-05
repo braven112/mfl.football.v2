@@ -41,6 +41,17 @@ export const POST: APIRoute = async ({ request }) => {
   // reports a phantom success while the session stays on screen.
   const isAfl = getLeagueById(leagueId)?.slug === 'afl-fantasy';
   const conference = isAfl ? parseConference(body?.conference) : null;
+  if (isAfl && !conference) {
+    // Fail loudly rather than falling back to the unscoped registry. That
+    // registry is empty for the AFL, so the lookup below would find nothing,
+    // take the idempotent "already deleted" path, and answer success — while
+    // the session sat untouched in its conference's registry and came back on
+    // the next reload. A silent no-op reported as success is worse than a 400.
+    return new Response(
+      JSON.stringify({ success: false, message: 'A conference is required to delete an AFL mock draft.' }),
+      { status: 400, headers: JSON_HEADERS },
+    );
+  }
   const rawPartyHost = import.meta.env.PUBLIC_PARTYKIT_HOST;
   if (!rawPartyHost) {
     return new Response(

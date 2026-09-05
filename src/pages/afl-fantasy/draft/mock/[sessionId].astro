@@ -11,6 +11,7 @@ import aflConfigData from '../../../../../data/afl-fantasy/afl.config.json';
 import { getAuthUser, isAuthorizedForLeague } from '../../../../utils/auth';
 import { getLeagueBySlug } from '../../../../config/leagues';
 import { getLeagueYearForSlug } from '../../../../utils/league-year';
+import { fetchMockSession } from '../../../../utils/mock-draft-session';
 import {
   AFL_MOCK_BASE_PATH,
   aflMockPoolNote,
@@ -27,6 +28,14 @@ const league = getLeagueBySlug('afl-fantasy')!;
 const user = getAuthUser(Astro.request);
 if (!user) return Astro.redirect('/afl-fantasy/login');
 
+// The session's own picks, so a board reopened after the window closed still
+// renders the players it drafted. Best-effort: a failed read just means the
+// pool is the plain current one.
+const existing = await fetchMockSession(import.meta.env.PUBLIC_PARTYKIT_HOST, sessionId);
+const pickedIds: string[] = Array.isArray(existing?.picks)
+  ? existing.picks.map((p: { playerId?: string }) => p?.playerId).filter((id: unknown): id is string => !!id)
+  : [];
+
 const resolution = await resolveAflMock({
   configConferences: aflConfigData.conferences ?? [],
   requestedConference: Astro.url.searchParams.get('conference'),
@@ -36,6 +45,7 @@ const resolution = await resolveAflMock({
   leagueId: league.id,
   // A session created inside the window stays playable after it shuts.
   needsPool: true,
+  keepPlayerIds: pickedIds,
 });
 ---
 

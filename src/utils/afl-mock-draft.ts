@@ -207,22 +207,49 @@ export function buildAflMockOrder(
   rounds: number
 ): string[] {
   const picks = asArray(unit?.draftPick).filter((p) => p?.franchise);
+  const perRound = fallbackFranchiseIds.length;
 
   if (picks.length > 0) {
     const ordered = [...picks].sort((a, b) => {
       const r = parseInt(a.round || '1', 10) - parseInt(b.round || '1', 10);
       return r !== 0 ? r : parseInt(a.pick || '1', 10) - parseInt(b.pick || '1', 10);
     });
-    const wanted = rounds * fallbackFranchiseIds.length;
-    // Only trust the feed when it covers the whole mock. A partial unit (a
-    // season MFL kept the order but not every round) would otherwise end the
-    // draft early with no explanation.
-    if (ordered.length >= wanted) {
+    const wanted = rounds * perRound;
+
+    // Only trust the feed when it covers the whole mock AND every round is the
+    // same size. Both halves matter:
+    //
+    //  - a PARTIAL unit (a season MFL kept the order but not every round)
+    //    would end the draft early with no explanation;
+    //  - a NON-UNIFORM one would be truncated by the slice below, silently
+    //    dropping a pick. That is not hypothetical: the AFL has run 109-pick
+    //    drafts three times — 2010's AL had 13 picks in round 9, and both
+    //    conferences had 13 in round 3 in 2020. CLAUDE.md carries the same
+    //    warning for TheLeague, whose rounds are 16/17/18.
+    //
+    // A non-uniform year falls back to a clean uniform board rather than a
+    // truncated real one: the mock loses one compensatory slot instead of
+    // mis-shaping the round it belongs to.
+    const uniform = isUniformDraft(ordered, perRound, rounds);
+    if (ordered.length >= wanted && uniform) {
       return ordered.slice(0, wanted).map((p) => p.franchise!);
     }
   }
 
   return buildRepeatingOrder(fallbackFranchiseIds, rounds);
+}
+
+/** Every one of the first `rounds` rounds holds exactly `perRound` picks. */
+function isUniformDraft(ordered: RawPick[], perRound: number, rounds: number): boolean {
+  const counts = new Map<string, number>();
+  for (const p of ordered) {
+    const r = String(parseInt(p.round || '0', 10));
+    counts.set(r, (counts.get(r) ?? 0) + 1);
+  }
+  for (let round = 1; round <= rounds; round++) {
+    if ((counts.get(String(round)) ?? 0) !== perRound) return false;
+  }
+  return true;
 }
 
 /** The same order every round — the AFL's actual format. Not a snake. */
@@ -262,6 +289,14 @@ export interface ResolveMockWindowInput {
   picksMade: number;
   deadline: Date | null;
   now: Date;
+  /**
+   * Franchises this conference SHOULD have. `rosterCutState` skips any it
+   * could not see — a franchise missing from the feed is not evidence that it
+   * has cut — but skipping is only half the guard: without this, eleven loaded
+   * teams and one missing would read as "all ready" and open the board with
+   * the missing team's keepers still in the pool.
+   */
+  expectedTeams: number;
 }
 
 /**
@@ -272,15 +307,16 @@ export interface ResolveMockWindowInput {
  * would report a finished draft as "waiting on cuts", which is both wrong and
  * unfixable by the owner reading it.
  *
- * A conference we could see no rosters for is treated as not ready. Opening
- * the board on an empty feed would mock against the entire NFL.
+ * A conference we could not see EVERY roster for is treated as not ready.
+ * Opening on an empty feed would mock against the entire NFL; opening on a
+ * partial one would quietly leave the missing team's keepers draftable.
  */
 export function resolveMockWindow(input: ResolveMockWindowInput): MockWindow {
   if (input.picksMade > 0) {
     return { state: 'drafting', picksMade: input.picksMade };
   }
 
-  if (input.cuts.total === 0 || input.cuts.pending.length > 0) {
+  if (input.cuts.total < input.expectedTeams || input.cuts.pending.length > 0) {
     return {
       state: 'waiting',
       pending: input.cuts.pending,

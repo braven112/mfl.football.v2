@@ -94,6 +94,16 @@ export async function resolveAflMock(input: {
    * closes, and an empty board would be a silent wrong rather than a refusal.
    */
   needsPool?: boolean;
+  /**
+   * Player ids to keep in the pool even if they are now rostered.
+   *
+   * The pool is rebuilt from CURRENT rosters on every render, but a session
+   * outlives the window it was created in — and once the real draft starts,
+   * rosters climb from 7 back to 16. A player already PICKED in the session
+   * would drop out of the pool, and the board renders a pick whose player it
+   * cannot find as a blank row. The route passes the session's own picks.
+   */
+  keepPlayerIds?: Iterable<string>;
   leagueYear: number;
   leagueId: string;
   now?: Date;
@@ -126,10 +136,14 @@ export async function resolveAflMock(input: {
   // licensed inside TheLeague, and every league here has an 0001 who is a
   // different person — so an AFL id could only ever unlock it by collision.
   const needsPool = input.needsPool || isMockWindowOpen(context.window);
+  const keep = new Set(input.keepPlayerIds ?? []);
   const players = needsPool
     ? availablePlayers(
         buildDraftPlayers(getCurrentLeagueYear(), { adpSource: 'redraft' }),
-        context.rostered,
+        // Subtract the rosters, then put back anything this session already
+        // drafted — otherwise reopening it after the real draft starts blanks
+        // out its own picks.
+        keep.size ? new Set([...context.rostered].filter((id) => !keep.has(id))) : context.rostered,
         isDraftablePosition
       )
     : [];

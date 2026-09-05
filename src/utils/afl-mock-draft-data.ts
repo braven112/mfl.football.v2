@@ -145,6 +145,7 @@ export async function buildAflMockContext(
       picksMade: picksMadeIn(draftUnit),
       deadline: keeperDeadlineFor(year),
       now,
+      expectedTeams: franchiseIds.length,
     }),
     rostered,
     draftOrder: buildAflMockOrder(draftUnit, franchiseIds, AFL_MOCK_ROUNDS),

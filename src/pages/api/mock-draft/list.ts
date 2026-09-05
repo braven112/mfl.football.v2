@@ -29,6 +29,15 @@ export const GET: APIRoute = async ({ request }) => {
   const leagueId = user.leagueId || DEFAULT_LEAGUE_ID;
   const isAfl = getLeagueById(leagueId)?.slug === 'afl-fantasy';
   const conference = isAfl ? parseConference(url.searchParams.get('conference')) : null;
+  if (isAfl && !conference) {
+    // Same reasoning as delete: the unscoped registry is empty for the AFL, so
+    // falling back to it would answer "no sessions" for a board that has them.
+    // An empty list reads as "mine vanished", which is a silent wrong.
+    return new Response(
+      JSON.stringify({ success: false, sessions: [], message: 'A conference is required to list AFL mock drafts.' }),
+      { status: 400, headers: JSON_HEADERS },
+    );
+  }
 
   const rawPartyHost = import.meta.env.PUBLIC_PARTYKIT_HOST;
   if (!rawPartyHost) {

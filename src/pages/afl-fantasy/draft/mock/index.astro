@@ -68,4 +68,5 @@ const { room, context, gate } = resolution;
   conferences={aflMockConferences(aflConfigData.conferences ?? [])}
   conference={room.conference}
   gate={gate}
+  showSessions={!!room.viewerConference}
 />

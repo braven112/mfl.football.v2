@@ -79,6 +79,14 @@ interface Props {
   conferences?: MockConference[];
   conference?: string | null;
   gate?: MockGate | null;
+  /**
+   * Whether to show the Active Sessions list at all.
+   *
+   * False for a signed-in viewer who owns no team in THIS league. The list API
+   * scopes by the caller's own session league, so rendering it here would list
+   * TheLeague's mock drafts under AFL chrome, linking to AFL session URLs.
+   */
+  showSessions?: boolean;
 }
 
 const {
@@ -104,8 +112,14 @@ const {
   conferences = [],
   conference = null,
   gate = null,
+  showSessions = true,
 } = Astro.props as Props;
 
+// Every outbound href goes through resolveLeaguePath, INCLUDING the gate's.
+// A league-prefixed path still resolves on the apex host — vercel.json
+// 301s /afl-fantasy/* to /* there — so the cost of missing one is a wasted
+// round trip rather than a 404. It is still the wrong link to emit, and the
+// inconsistency is what makes the next one a real bug.
 const hideLeaguePrefix = Astro.locals.hideLeaguePrefix ?? false;
 const base = resolveLeaguePath(basePath, hideLeaguePrefix);
 const login = resolveLeaguePath(loginPath, hideLeaguePrefix);
@@ -164,7 +178,7 @@ const rankingSourcesJson = JSON.stringify(rankingSources);
             )}
             {gate.note && <p class="mock-lobby__gate-note">{gate.note}</p>}
             {gate.link && (
-              <a class="mock-lobby__gate-link" href={gate.link.href}>{gate.link.label}</a>
+              <a class="mock-lobby__gate-link" href={resolveLeaguePath(gate.link.href, hideLeaguePrefix)}>{gate.link.label}</a>
             )}
           </section>
         ) : (
@@ -251,6 +265,7 @@ const rankingSourcesJson = JSON.stringify(rankingSources);
         )}
 
         <!-- Active sessions -->
+        {showSessions && (
         <section class="mock-lobby__sessions">
           <div class="mock-lobby__section-header">
             <h2 class="mock-lobby__section-header-title">Active Sessions</h2>
@@ -270,12 +285,20 @@ const rankingSourcesJson = JSON.stringify(rankingSources);
             </div>
           </div>
         </section>
+        )}
       </>
     )}
   </div>
 </TheLeagueLayout>
 
 <script define:vars={{ userFranchiseId, teamMapJson, franchiseListJson, rankingSourcesJson, leagueYear, isAdmin, base, defaultRankingSource, rounds, roundCount: roundOptions.length, createExtras, scopeQuery, queueScope }}>
+  // A session link MUST carry the board it belongs to. The list is
+  // conference-scoped, but the session page resolves its conference from the
+  // VIEWER when the URL says nothing — so an AL owner opening an NL session
+  // from the NL lobby would get the AL's teams and pool rendered against the
+  // NL's room. Empty for a league that drafts as one body.
+  const sessionSuffix = scopeQuery ? `?${scopeQuery}` : '';
+
   const teamMap = JSON.parse(teamMapJson);
   const franchiseList = JSON.parse(franchiseListJson);
   const rankingSources = JSON.parse(rankingSourcesJson);
@@ -557,7 +580,7 @@ const rankingSourcesJson = JSON.stringify(rankingSources);
         const data = await res.json();
 
         if (data.success && data.sessionId) {
-          window.location.href = `${base}/${data.sessionId}`;
+          window.location.href = `${base}/${data.sessionId}${sessionSuffix}`;
           return;
         }
 
@@ -608,7 +631,7 @@ const rankingSourcesJson = JSON.stringify(rankingSources);
     const isYours = s.createdBy === userFranchiseId;
 
     const card = document.createElement('a');
-    card.href = `${base}/${encodeURIComponent(s.id)}`;
+    card.href = `${base}/${encodeURIComponent(s.id)}${sessionSuffix}`;
     const statusClass = `mock-lobby__session-card--${s.status}`;
     card.className = `mock-lobby__session-card ${statusClass}` + (isYours ? ' mock-lobby__session-card--yours' : '');
 
@@ -724,6 +747,7 @@ const rankingSourcesJson = JSON.stringify(rankingSources);
   }
 
   async function loadSessions() {
+    // Absent when showSessions is false — no element, no fetch.
     const container = document.getElementById('sessions-list');
     if (!container) return;
 

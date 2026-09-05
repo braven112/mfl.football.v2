@@ -215,13 +215,13 @@ describe('the mock window', () => {
   const afterDeadline = new Date(2026, 6, 20);
 
   it('opens once every franchise is down to keepers', () => {
-    const w = resolveMockWindow({ cuts: clean, picksMade: 0, deadline, now: afterDeadline });
+    const w = resolveMockWindow({ cuts: clean, picksMade: 0, deadline, now: afterDeadline, expectedTeams: 12 });
     expect(w.state).toBe('open');
     expect(isMockWindowOpen(w)).toBe(true);
   });
 
   it('stays shut while anyone still has cuts to make', () => {
-    const w = resolveMockWindow({ cuts: dirty, picksMade: 0, deadline, now: beforeDeadline });
+    const w = resolveMockWindow({ cuts: dirty, picksMade: 0, deadline, now: beforeDeadline, expectedTeams: 12 });
     expect(w.state).toBe('waiting');
     if (w.state !== 'waiting') throw new Error('unreachable');
     expect(w.pending).toHaveLength(1);
@@ -229,7 +229,7 @@ describe('the mock window', () => {
   });
 
   it('says the cuts are LATE once the deadline has passed', () => {
-    const w = resolveMockWindow({ cuts: dirty, picksMade: 0, deadline, now: afterDeadline });
+    const w = resolveMockWindow({ cuts: dirty, picksMade: 0, deadline, now: afterDeadline, expectedTeams: 12 });
     if (w.state !== 'waiting') throw new Error('unreachable');
     expect(w.deadlinePassed).toBe(true);
   });
@@ -238,13 +238,13 @@ describe('the mock window', () => {
     // Post-draft, rosters climb back to 16 — over the keeper limit. Asking the
     // roster question first would tell an owner in October to go make cuts.
     const postDraft = { total: 12, ready: 0, pending: AL.map((id) => ({ franchiseId: id, count: 16 })) };
-    const w = resolveMockWindow({ cuts: postDraft, picksMade: 108, deadline, now: new Date(2026, 9, 1) });
+    const w = resolveMockWindow({ cuts: postDraft, picksMade: 108, deadline, now: new Date(2026, 9, 1), expectedTeams: 12 });
     expect(w.state).toBe('drafting');
   });
 
   it('a single made pick closes the window — the pool is being consumed for real', () => {
     expect(
-      resolveMockWindow({ cuts: clean, picksMade: 1, deadline, now: afterDeadline }).state
+      resolveMockWindow({ cuts: clean, picksMade: 1, deadline, now: afterDeadline, expectedTeams: 12 }).state
     ).toBe('drafting');
   });
 
@@ -254,6 +254,7 @@ describe('the mock window', () => {
       picksMade: 0,
       deadline,
       now: afterDeadline,
+      expectedTeams: 12,
     });
     expect(w.state).toBe('waiting');
   });
@@ -321,6 +322,7 @@ describe('the pool, end to end, on a real cut-week snapshot', () => {
       picksMade: 0,
       deadline: keeperDeadlineFor(SEASON),
       now: new Date(2026, 6, 21),
+      expectedTeams: AL.length,
     });
     expect(cuts.total).toBe(12);
     expect(w.state).toBe('open');
@@ -522,4 +524,64 @@ describe('no shared page component redirects', () => {
       expect(codeOf(file)).not.toMatch(/\bAstro\.redirect\s*\(/);
     });
   }
+});
+
+describe('the two findings the review round caught in the order builder and the gate', () => {
+  const deadline = keeperDeadlineFor(2026);
+  const clean = { total: 12, ready: 12, pending: [] };
+
+  it('a partial roster feed does NOT open the board', () => {
+    // Eleven teams loaded, none over the limit, one missing. `rosterCutState`
+    // rightly refuses to count the missing one as ready — but without
+    // expectedTeams the window still opened, leaving that team's seven keepers
+    // sitting in the pool as available.
+    const w = resolveMockWindow({
+      cuts: { total: 11, ready: 11, pending: [] },
+      picksMade: 0,
+      deadline,
+      now: new Date(2026, 6, 21),
+      expectedTeams: 12,
+    });
+    expect(w.state).toBe('waiting');
+    expect(resolveMockWindow({ cuts: clean, picksMade: 0, deadline, now: new Date(2026, 6, 21), expectedTeams: 12 }).state).toBe('open');
+  });
+
+  /**
+   * The AFL really has run 109-pick drafts: 2010's AL put 13 picks in round 9,
+   * and BOTH conferences did in round 3 of 2020. Slicing the feed to a uniform
+   * rounds x 12 drops one, silently. CLAUDE.md carries the same warning for
+   * TheLeague's 16/17/18 rounds — this is that trap, in the AFL's own feeds.
+   */
+  const nonUniformYears: Array<[number, '00' | '01']> = [[2010, '00'], [2020, '00'], [2020, '01']];
+
+  it('confirms those seasons really are non-uniform', () => {
+    for (const [year, code] of nonUniformYears) {
+      const unit = selectDraftUnit<any>(
+        readFeed('draftResults.json', year).draftResults.draftUnit,
+        `CONFERENCE${code}`
+      )!;
+      const picks = unit.draftPick as any[];
+      expect(picks.length).toBe(109);
+    }
+  });
+
+  it('falls back to a uniform board rather than truncating a non-uniform feed', () => {
+    for (const [year, code] of nonUniformYears) {
+      const unit = selectDraftUnit<any>(
+        readFeed('draftResults.json', year).draftResults.draftUnit,
+        `CONFERENCE${code}`
+      );
+      const order = buildAflMockOrder(unit, AL, AFL_MOCK_ROUNDS);
+      expect(order).toHaveLength(AFL_MOCK_ROUNDS * AL.length);
+      // Uniform fallback: every round is the same 12, in config order.
+      expect(order.slice(0, 12)).toEqual(AL);
+      expect(order.slice(12, 24)).toEqual(AL);
+    }
+  });
+
+  it('still prefers the real feed when the season IS uniform', () => {
+    const order = buildAflMockOrder(unitFor('00'), AL, AFL_MOCK_ROUNDS);
+    // 2026 is uniform, so the traded-pick order survives (round 2 != round 1).
+    expect(order.slice(12, 24)).not.toEqual(order.slice(0, 12));
+  });
 });
