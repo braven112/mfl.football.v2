@@ -60,6 +60,12 @@ describe('authenticateWithMFL — commissioner cookie', () => {
     const leagueLogin = calls.find((u) => /www\d+\.myfantasyleague\.com\/\d{4}\/login/.test(u));
     expect(leagueLogin).toBeDefined();
     expect(leagueLogin).toContain('L=19621');
+    // Credentials ride in the POST body. A URL is logged by the origin, by
+    // every proxy between, and by our own redirect tracing.
+    for (const u of calls) {
+      expect(u).not.toContain('PASSWORD=');
+      expect(u).not.toContain('USERNAME=');
+    }
   });
 
   it('leaves the session commish-less rather than failing when the league host grants nothing', async () => {

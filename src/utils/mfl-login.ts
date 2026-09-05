@@ -115,12 +115,11 @@ export async function fetchCommissionerSession(
   const league = getLeagueById(leagueId);
   if (!league?.mflHost) return null;
 
-  const params = new URLSearchParams({
-    L: leagueId,
-    USERNAME: username,
-    PASSWORD: password,
-    XML: '1',
-  });
+  // Credentials go in the POST BODY, never the query string: a URL is logged
+  // by the origin, by every proxy in between, and by our own redirect tracing.
+  // Only the league id rides in the URL.
+  const credentials = new URLSearchParams({ USERNAME: username, PASSWORD: password, XML: '1' });
+  const query = new URLSearchParams({ L: leagueId });
 
   // The login route's `year` override makes seasonYear a past season for the
   // AFL, so try the league year too. NOT `new Date().getFullYear()`: the MFL
@@ -132,13 +131,18 @@ export async function fetchCommissionerSession(
   const remaining = () => deadline - Date.now();
 
   for (const year of years) {
-    let url = `https://${league.mflHost}/${year}/login?${params.toString()}`;
+    let url = `https://${league.mflHost}/${year}/login?${query.toString()}`;
 
     for (let hop = 0; hop < MAX_COMMISH_HOPS; hop++) {
       if (remaining() <= 0) return null;
       try {
+        // Re-POST across redirects rather than folding the body into the URL
+        // the way the api-host login above does — that trick is what puts
+        // credentials in a query string, and this helper does not need it.
         const res = await fetch(url, {
-          method: 'GET',
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: credentials.toString(),
           redirect: 'manual',
           signal: AbortSignal.timeout(Math.min(PER_HOP_TIMEOUT_MS, remaining())),
         });
