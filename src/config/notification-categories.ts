@@ -143,6 +143,15 @@ export const NOTIFICATION_CATEGORIES: NotificationCategory[] = [
     defaultOn: false,
     live: true,
   },
+  {
+    id: 'watch-list-news',
+    group: 'your-team',
+    label: 'News on your watch list',
+    description: 'A Schefter Report post about a player on your My Watch List — signings, cuts, trades, rumors, wire stories.',
+    cadence: 'Depends on your list — a few a week for most',
+    defaultOn: false,
+    live: true,
+  },
 
   // ── The Owners' Poll ─────────────────────────────────────────────
   {

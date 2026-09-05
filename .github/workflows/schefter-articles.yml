@@ -214,6 +214,11 @@ jobs:
             node scripts/schefter-weekly-articles.mjs --type "$ARTICLE_TYPE" $WEEK_ARG
           fi
 
+      # Stamp playerIds onto the new article (prose names → MFL ids) so My
+      # Watch List can highlight it. Idempotent, never fails the job.
+      - name: Tag players in feed posts
+        run: node scripts/schefter-tag-players.mjs
+
       - name: Commit and push
         # owners-poll-nag posts to chat and touches no file — running the
         # committer for it would be a no-op that still costs a checkout race
