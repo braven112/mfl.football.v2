@@ -432,7 +432,10 @@ league-scoped login). So the banner's advice, "sign out and sign in again",
 sent him back through the same login that could not produce it.
 
 `authenticateWithMFL` now makes a second, league-scoped hop against the
-league's own `www##` host to collect it. Two consequences:
+league's own `www##` host to collect it, adopting BOTH of that response's
+cookies rather than mixing them with the api login's. The carry-over script
+does the same **per league** — the credential is league-scoped, so one cookie
+for two leagues was only ever going to satisfy one of them. Two consequences:
 
 - **Existing sessions do not have it.** The cookie is set at login, so anyone
   signed in before this shipped must sign out and back in once.

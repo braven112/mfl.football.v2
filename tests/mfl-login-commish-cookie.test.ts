@@ -24,7 +24,10 @@ function stubFetch(opts: { commishOnLeagueHost: boolean }) {
 
     const headers = new Headers();
     // Only the league's own host ever hands back the commissioner cookie.
-    if (opts.commishOnLeagueHost && href.includes('myfantasyleague.com') && /www\d+\./.test(href) && href.includes('/login')) {
+    if (opts.commishOnLeagueHost && /www\d+\.myfantasyleague\.com/.test(href) && href.includes('/login')) {
+      // A SECOND login is a SECOND session: MFL hands back its own
+      // MFL_USER_ID alongside the commissioner flag.
+      headers.append('set-cookie', 'MFL_USER_ID=league-session-def; Path=/');
       headers.append('set-cookie', 'MFL_IS_COMMISH=commish-xyz; Path=/');
     }
     const body = href.includes('TYPE=myleagues') ? MYLEAGUES : LOGIN_XML;
@@ -47,6 +50,11 @@ describe('authenticateWithMFL — commissioner cookie', () => {
     const result = await authenticateWithMFL('someone', 'secret', '19621', 2026);
 
     expect(result.commishCookie).toBe('commish-xyz');
+    // BOTH cookies come from the league-scoped response. Pairing this
+    // session's privilege flag with the api login's identity is what MFL
+    // refuses as "not authorized" — and it would look like success here,
+    // letting the write gate through to fail once per record instead.
+    expect(result.userId).toBe('league-session-def');
     // It must be the LEAGUE's host, carrying L= — an api-host login cannot
     // produce this cookie no matter how many times you sign in again.
     const leagueLogin = calls.find((u) => /www\d+\.myfantasyleague\.com\/\d{4}\/login/.test(u));
@@ -72,5 +80,31 @@ describe('authenticateWithMFL — commissioner cookie', () => {
     await authenticateWithMFL('someone', 'secret', undefined, 2026);
 
     expect(calls.some((u) => /www\d+\.myfantasyleague\.com\/\d{4}\/login/.test(u))).toBe(false);
+  });
+
+  it('keeps the api login intact when the league host grants a flag but no identity', async () => {
+    // Half a session is not a session. Adopting the commissioner flag without
+    // the MFL_USER_ID it was issued with rebuilds the mismatched pair.
+    const calls: string[] = [];
+    vi.stubGlobal('fetch', vi.fn(async (url: string | URL) => {
+      const href = typeof url === 'string' ? url : url.href;
+      calls.push(href);
+      const headers = new Headers();
+      const isLeagueLogin = /www\d+\.myfantasyleague\.com/.test(href) && href.includes('/login');
+      if (isLeagueLogin) headers.append('set-cookie', 'MFL_IS_COMMISH=commish-xyz; Path=/');
+      // No MFL_USER_ID anywhere in the league-host response, body included.
+      const body = href.includes('TYPE=myleagues')
+        ? MYLEAGUES
+        : isLeagueLogin
+          ? '<?xml version="1.0"?><status/>'
+          : LOGIN_XML;
+      return new Response(body, { status: 200, headers });
+    }));
+
+    const { authenticateWithMFL } = await import('../src/utils/mfl-login');
+    const result = await authenticateWithMFL('someone', 'secret', '19621', 2026);
+
+    expect(result.commishCookie).toBeUndefined();
+    expect(result.userId).toBe('user-cookie-abc');
   });
 });

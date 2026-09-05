@@ -2955,9 +2955,30 @@ built could write as commissioner. Two consequences that cost real time:
   through the same `api.` login. Any error text telling a user to re-auth must
   be checked against whether re-authing can actually produce the credential.
 
-The fix tries the login's season year and the current year, because the AFL
-signs in against a past season (the login route's `year` override), and takes
-the result best-effort: a non-commissioner still signs in and still reads.
+Three things the fix has to get right, each of which was a bug in a draft:
+
+- **Both cookies come from the league-scoped response, or neither does.** It is
+  a SECOND login, so it is a SECOND session; pairing its `MFL_IS_COMMISH` with
+  the api login's `MFL_USER_ID` is the mismatched pair MFL refuses as "not
+  authorized". Worse than failing outright: the write gate would see a commish
+  cookie, stop refusing up front, and the commissioner would collect one
+  failure per record instead of one banner.
+- **It is on a short shared leash.** `!commishCookie` is the NORMAL state —
+  every non-commissioner owner takes this path on every sign-in — and an
+  unbounded retry across years and redirect hops can exceed the 30s
+  `maxDuration`, turning a working owner login into a 504 with no session.
+- **The year candidates are the league year, not `getFullYear()`.** The MFL
+  league year does not advance until Feb 14, so a January calendar year names a
+  league that does not exist yet. The AFL also signs in against a past season
+  via the login route's `year` override, so both are tried.
+
+**Still open:** `scripts/lib/mfl-api.mjs#loginToMFL` remains api-host-only, so
+the six scripts that use it (`apply-pending-contracts`,
+`sync-draft-pick-contracts`, `fetch-owner-names`, `export-best-ball-draft`,
+`spike-owner-add-drop`, and its own callers) still cannot obtain a commissioner
+cookie by logging in — they depend on the stored secrets, which expire.
+`accounting-carry-over.ts` sidesteps this by calling
+`fetchCommissionerSession` per league instead; the others have not been moved.
 
 **Watch for:** the cookie is set at LOGIN, so sessions created before this
 shipped still lack it — those users must sign out and back in once.
