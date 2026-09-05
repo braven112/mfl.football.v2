@@ -60,7 +60,11 @@ Do these three things immediately:
 
 ## Step 3: Implement
 
-Build the feature based on the approved design spec. Follow these mandatory patterns:
+Build the feature based on the approved design spec. **If it adds a route**, start
+with `/new-page` — it scaffolds the shared component, the thin per-league route
+wrappers with the auth gate in the page, and the page-directory entry, so the
+fork ratchet and the directory test pass from the first commit. **If it adds a
+scheduled job**, start with `/new-cron`. Then follow these mandatory patterns:
 
 - **Team names:** Use `chooseTeamName()` with the appropriate context (`default`, `short`, `abbrev`)
 - **Player display:** Use `PlayerCell.astro` (server) or `buildPlayerCellHTML()` (client)
