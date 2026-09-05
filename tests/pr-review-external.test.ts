@@ -7,7 +7,14 @@ import {
   callWithRetry,
   parseRetryAfter,
   backoffMs,
+  capDiff,
+  splitDiffByFile,
+  classifyReviewOutput,
+  buildSystemPrompt,
+  buildReformatPrompt,
+  LENSES,
   MAX_ATTEMPTS,
+  MAX_DIFF_BYTES,
 } from '../scripts/lib/pr-review-providers.mjs';
 
 /**
@@ -379,11 +386,305 @@ describe('/live keeps the cross-cutting lens covered', () => {
   });
 
   it('never lets an absent reviewer read as a clean one', () => {
-    expect(LIVE).toContain('"Gemini: did not run", never "Gemini: clean"');
+    expect(LIVE).toContain('never "Gemini: clean"');
+  });
+
+  it('distinguishes "ran but unparseable" from "did not run"', () => {
+    // These are different states and the response to them differs: a reviewer
+    // that failed to run found nothing because it never looked, while one that
+    // answered with prose HAS looked and may be sitting on a real bug. #761's
+    // unusable output was the only place that PR's TDZ bug was caught, so
+    // collapsing the two loses findings.
+    expect(LIVE).toMatch(/output unparseable/i);
+    expect(LIVE).toMatch(/Do not collapse/i);
+  });
+
+  it('tells the reader which files a partial-coverage review never saw', () => {
+    expect(LIVE).toMatch(/Coverage is partial/i);
   });
 
   it('tells the reader a permanent failure is a bug to fix, not weather', () => {
     expect(LIVE).toMatch(/permanent/i);
     expect(LIVE).toMatch(/misconfigured/i);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// The output contract, Sep 2026 (PR #761)
+// ---------------------------------------------------------------------------
+
+/**
+ * The bug: Gemini's review of PR #761 came back as a raw reasoning trace —
+ * "wait, why did the author name the variable…" — with no severity heading in
+ * it, cut off mid-sentence, and flagged only as "coverage is partial".
+ *
+ * Two independent failures, and this block pins both fixes:
+ *
+ *  1. `/live` tallies findings BY severity heading, so prose with no heading
+ *     tallies as zero findings — identical to a clean review. An unparseable
+ *     reviewer must never render like a reviewer with nothing to say.
+ *  2. The diff was byte-sliced at 200KB, which cut mid-hunk and silently
+ *     dropped whichever files sorted last. On #761 the dropped tail was the
+ *     registry and API files the cross-cutting lens exists to check, so the
+ *     truncation removed exactly the evidence the reviewer was asked for.
+ */
+describe('classifyReviewOutput refuses to read prose as a clean review', () => {
+  it('rejects the actual PR #761 output', () => {
+    const real = [
+      'inner `const defaultRankingSource` which is currently in TDZ!',
+      'Wait, why did the author name the variable `const defaultRankingSource = ...`?',
+      'The author refactored it to use the prop, but wrote:',
+    ].join('\n');
+    expect(classifyReviewOutput(real)).toBe('unstructured');
+  });
+
+  it('accepts the three severity headings the contract names', () => {
+    for (const heading of ['## Critical', '## Important', '## Suggestions']) {
+      expect(classifyReviewOutput(`${heading}\n- something at foo.ts:1`)).toBe('structured');
+    }
+  });
+
+  it('accepts NO FINDINGS, including the emphasis models like to add', () => {
+    for (const reply of ['NO FINDINGS', '**NO FINDINGS**', 'no findings.', '`NO FINDINGS`']) {
+      expect(classifyReviewOutput(reply)).toBe('no-findings');
+    }
+  });
+
+  it('separates empty from unstructured — one is a failed call, the other a failed format', () => {
+    expect(classifyReviewOutput('')).toBe('empty');
+    expect(classifyReviewOutput('   \n  ')).toBe('empty');
+  });
+
+  it('does not accept an invented severity word as structure', () => {
+    // The whole point of the contract: `/live` counts these three labels and
+    // nothing else, so a reviewer that invents "## Blocker" reads as zero.
+    expect(classifyReviewOutput('## Blocker\n- bad thing at foo.ts:1')).toBe('unstructured');
+  });
+});
+
+describe('the system prompt states the output contract', () => {
+  const prompt = buildSystemPrompt(LENSES.gemini);
+
+  it('forbids the reasoning trace that broke #761', () => {
+    expect(prompt).toMatch(/OUTPUT CONTRACT/);
+    expect(prompt).toMatch(/Never narrate your thinking/i);
+  });
+
+  it('pins the exact severity vocabulary /live parses', () => {
+    for (const heading of ['## Critical', '## Important', '## Suggestions']) {
+      expect(prompt).toContain(heading);
+    }
+  });
+
+  it('has a salvage prompt that reformats without re-judging', () => {
+    const reformat = buildReformatPrompt();
+    expect(reformat).toMatch(/Do NOT add findings\. Do NOT drop findings/);
+    expect(reformat).toMatch(/formatting pass, not a reviewer/i);
+  });
+});
+
+describe('capDiff drops whole files rather than cutting mid-hunk', () => {
+  // Three files, ~120 bytes of body each.
+  const file = (path: string, body: string) =>
+    `diff --git a/${path} b/${path}\n--- a/${path}\n+++ b/${path}\n@@ -1 +1 @@\n+${body}\n`;
+  const diff = file('a.ts', 'x'.repeat(200)) + file('b.ts', 'y'.repeat(200)) + file('z.ts', 'z'.repeat(200));
+
+  it('leaves a diff under the cap completely alone', () => {
+    const result = capDiff(diff, 10_000);
+    expect(result.truncated).toBe(false);
+    expect(result.diff).toBe(diff);
+    expect(result.omittedFiles).toEqual([]);
+  });
+
+  it('names the files it omitted, so partial coverage is locatable', () => {
+    const result = capDiff(diff, 300);
+    expect(result.truncated).toBe(true);
+    expect(result.omittedFiles.length).toBeGreaterThan(0);
+    // Every omitted path is named in the prompt text too — the model must know
+    // the boundary of what it is allowed to claim.
+    for (const path of result.omittedFiles) {
+      expect(result.diff).toContain(path);
+    }
+  });
+
+  it('never emits a half-written hunk', () => {
+    const result = capDiff(diff, 300);
+    // Whatever survived is whole-file: each retained `diff --git` header has
+    // its complete body, so the model never sees an incomplete change and
+    // mistakes it for a broken one.
+    const kept = result.diff.split('[... diff truncated')[0];
+    const headers = kept.match(/^diff --git /gm) ?? [];
+    expect(headers.length + result.omittedFiles.length).toBe(3);
+  });
+
+  it('still sends something when one file is bigger than the whole budget', () => {
+    // Degenerate case: file-granular packing would otherwise omit everything
+    // and hand the model an empty diff — a "clean review" of nothing.
+    const huge = file('huge.ts', 'q'.repeat(5_000));
+    const result = capDiff(huge, 500);
+    expect(result.truncated).toBe(true);
+    expect(result.diff).toContain('diff --git a/huge.ts');
+    expect(result.diff.length).toBeGreaterThan(0);
+  });
+
+  it('measures bytes, not UTF-16 code units', () => {
+    // This repo carries team names and emoji; a cap documented in bytes that
+    // counted .length would let a non-ASCII diff sail past it.
+    const emoji = file('e.ts', '🏈'.repeat(100));
+    expect(Buffer.byteLength(emoji, 'utf8')).toBeGreaterThan(emoji.length);
+    expect(capDiff(emoji, emoji.length).truncated).toBe(true);
+  });
+
+  it('parses every file out of a real multi-file diff', () => {
+    expect(splitDiffByFile(diff).map((f) => f.path)).toEqual(['a.ts', 'b.ts', 'z.ts']);
+  });
+
+  it('carries a cap large enough for the diffs /live actually sends it', () => {
+    // PR #761's filtered diff was 276KB. A cap below that guarantees partial
+    // coverage on exactly the large cross-cutting diffs this reviewer is
+    // dispatched for.
+    expect(MAX_DIFF_BYTES).toBeGreaterThanOrEqual(276_000);
+  });
+});
+
+describe('an unparseable review does not render like a clean one', () => {
+  const SCRIPT = readFileSync(join(ROOT, 'scripts/pr-review-external.mjs'), 'utf8');
+
+  it('renders a malformed result as its own flagged state', () => {
+    expect(SCRIPT).toMatch(/result\.malformed/);
+    expect(SCRIPT).toMatch(/did not follow the review format/i);
+    expect(SCRIPT).toMatch(/Do not count this as a clean pass/i);
+  });
+
+  it('preserves the raw output instead of discarding the findings in it', () => {
+    // #761's unusable prose held a real TDZ bug no other reviewer caught.
+    // Throwing it away to enforce a format would be a worse bug than the one
+    // being fixed.
+    expect(SCRIPT).toMatch(/<details><summary>Raw reviewer output/);
+  });
+
+  it('fences the raw output so the finding tally cannot read it as findings', () => {
+    expect(SCRIPT).toMatch(/not machine-parseable/i);
+  });
+
+  it('names the omitted files in the truncation note', () => {
+    expect(SCRIPT).toMatch(/omittedFiles/);
+    expect(SCRIPT).toMatch(/Coverage is partial/i);
+  });
+});
+
+describe('the salvage pass rescues a review that broke its own format', () => {
+  const realFetch = globalThis.fetch;
+  afterEach(() => {
+    globalThis.fetch = realFetch;
+    vi.restoreAllMocks();
+  });
+
+  // Trimmed from the comment Gemini actually posted on PR #761.
+  const TRACE = [
+    'inner `const defaultRankingSource` which is currently in TDZ!',
+    'Wait, why did the author name the variable that?',
+    'The author refactored it to use the prop, but wrote:',
+  ].join('\n');
+
+  it('reformats unstructured prose into the contract, keeping the finding', async () => {
+    const bodies = [
+      geminiOk(TRACE),
+      geminiOk('## Critical\n- TDZ self-reference at DraftMockLobby.astro:1'),
+    ];
+    globalThis.fetch = (async () => fakeResponse(200, bodies.shift()!)) as never;
+
+    const result = await runGemini();
+
+    expect(result.status).toBe('ok');
+    expect(result.salvaged).toBe(true);
+    expect(result.malformed).toBe(false);
+    expect(result.text).toContain('## Critical');
+    // The finding itself survives the reformat — that is the whole point.
+    expect(result.text).toContain('DraftMockLobby.astro');
+  });
+
+  it('keeps the ORIGINAL notes when the reformat also fails the contract', async () => {
+    // Losing #761's prose would have lost the only report of a real shipping
+    // bug. Enforcing a format must never cost a finding.
+    globalThis.fetch = (async () => fakeResponse(200, geminiOk(TRACE))) as never;
+
+    const result = await runGemini();
+
+    expect(result.status).toBe('ok');
+    expect(result.malformed).toBe(true);
+    expect(result.salvaged).toBe(false);
+    expect(result.text).toBe(TRACE);
+  });
+
+  it('survives a reformat pass that throws, rather than losing the review to it', async () => {
+    let n = 0;
+    vi.spyOn(globalThis, 'setTimeout' as never).mockImplementation(((fn: () => void) => {
+      fn();
+      return 0 as never;
+    }) as never);
+    globalThis.fetch = (async () =>
+      ++n === 1 ? fakeResponse(200, geminiOk(TRACE)) : fakeResponse(500, '{"error":"boom"}')) as never;
+
+    const result = await runGemini();
+
+    expect(result.status).toBe('ok');
+    expect(result.malformed).toBe(true);
+    expect(result.text).toBe(TRACE);
+  });
+
+  it('spends no extra quota on a review that already followed the contract', async () => {
+    // The salvage pass is a second API call on a shared free tier. It must
+    // fire only on the failure it exists for.
+    let calls = 0;
+    globalThis.fetch = (async () => {
+      calls++;
+      return fakeResponse(200, geminiOk('## Important\n- something at foo.ts:1'));
+    }) as never;
+
+    const result = await runGemini();
+
+    expect(calls).toBe(1);
+    expect(result.malformed).toBe(false);
+    expect(result.salvaged).toBe(false);
+  });
+
+  it('does not fire on NO FINDINGS — that is a conforming answer, not prose', async () => {
+    let calls = 0;
+    globalThis.fetch = (async () => {
+      calls++;
+      return fakeResponse(200, geminiOk('NO FINDINGS'));
+    }) as never;
+
+    await runGemini();
+    expect(calls).toBe(1);
+  });
+
+  it('drops the thinking parts Gemini returns alongside the answer', async () => {
+    // Gemini marks reasoning with `thought: true` in the SAME parts array as
+    // the answer, so joining the array blindly prepends the model's
+    // deliberation to its review — one of the two ways #761's comment became
+    // a wall of "wait, why did the author…".
+    globalThis.fetch = (async () =>
+      fakeResponse(
+        200,
+        JSON.stringify({
+          candidates: [
+            {
+              content: {
+                parts: [
+                  { text: 'Wait, let me reconsider that...', thought: true },
+                  { text: '## Critical\n- real finding at foo.ts:1' },
+                ],
+              },
+            },
+          ],
+        })
+      )) as never;
+
+    const result = await runGemini();
+
+    expect(result.text).not.toContain('Wait, let me reconsider');
+    expect(result.text).toBe('## Critical\n- real finding at foo.ts:1');
   });
 });

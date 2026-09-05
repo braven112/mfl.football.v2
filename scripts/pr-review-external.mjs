@@ -123,12 +123,46 @@ function renderSection(result) {
       : 'Check the model id and API key in `.github/workflows/pr-external-review.yml`.';
     return `### ${result.label}\n\n${kind} — ${result.reason}\n\nTreat this as "not reviewed", not as a clean pass. ${nextStep}`;
   }
-  const truncNote = result.truncated
-    ? '\n\n_Note: the diff was truncated — coverage is partial._'
-    : '';
   const retryNote = result.attempts > 1 ? ` · ${result.attempts} attempts` : '';
   const focus = result.focus ? ` · lens: **${result.focus}**` : '';
-  return `### ${result.label}\n\n<sub>\`${result.model}\`${focus}${retryNote}</sub>\n\n${result.text}${truncNote}`;
+  const header = `### ${result.label}\n\n<sub>\`${result.model}\`${focus}${retryNote}</sub>`;
+
+  // Say WHICH files went unreviewed. "Coverage is partial" told the reader
+  // that something was missing but not what, so there was no way to know the
+  // reviewer had never seen the registry files it was asked to check.
+  const omitted = result.omittedFiles ?? [];
+  const shown = omitted.slice(0, 25);
+  const more = omitted.length - shown.length;
+  const truncNote = result.truncated
+    ? `\n\n<details><summary>⚠️ <b>Coverage is partial</b> — ${omitted.length} file(s) were not sent to the reviewer</summary>\n\n${shown
+        .map((f) => `- \`${f}\``)
+        .join('\n')}${more > 0 ? `\n- _…and ${more} more_` : ''}\n\nNothing above was reviewed in these files. Do not read their absence from the findings as a pass.\n\n</details>`
+    : '';
+
+  // An unparseable review must never render like a clean one. `/live` counts
+  // findings by severity heading, so prose with no heading tallies as zero —
+  // exactly what a reviewer with nothing to say produces. The raw text is kept
+  // (PR #761's unusable prose held a real TDZ bug no one else caught) but it is
+  // fenced inside <details> and labelled, so it can only be read by a human.
+  if (result.malformed) {
+    return `${header}
+
+⚠️ **Reviewer ran, but its output did not follow the review format** — no \`## Critical\` / \`## Important\` / \`## Suggestions\` heading, and a reformat pass could not recover one.
+
+**Do not count this as a clean pass.** The finding tally cannot read it. The raw output is preserved below because output in this state has carried real bugs before — read it by hand and adjudicate anything in it yourself.
+
+<details><summary>Raw reviewer output (unstructured — not machine-parseable)</summary>
+
+${result.text}
+
+</details>${truncNote}`;
+  }
+
+  const salvageNote = result.salvaged
+    ? '\n\n<sub>_The reviewer replied with unstructured prose; a formatting pass recovered the findings above. Wording is the formatter\u2019s, findings are the reviewer\u2019s._</sub>'
+    : '';
+
+  return `${header}\n\n${result.text}${salvageNote}${truncNote}`;
 }
 
 function buildComment(results) {
