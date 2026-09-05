@@ -1,45 +1,5 @@
 [
   {
-    "id": "afl-live-scoring",
-    "date": "2026-08-20",
-    "category": "new-page",
-    "icon": "goals",
-    "title": "The AFL Gets a Real Scoreboard",
-    "summary": "All twenty-four franchises, both of your games, live on one page — with real NFL box-score lines under every starter, the actual game clock, red-zone alerts and a scoring-play ticker. No more refreshing MFL's message board on a Sunday.",
-    "description": [
-      "Until today, watching your AFL week unfold meant a trip to MFL's live scoring summary — a page that tells you a number and nothing else. The league now has <a href=\"/live-scoring\">its own board</a>, and it is the same one TheLeague has been running, wired to AFL data end to end: your franchise's matchups pinned to the top, win-probability bars, projected finals, and a starter-by-starter breakdown when you tap in.",
-      "Because the AFL plays doubleheaders, the board shows all twenty-four matchups — every team's intra-conference game and its interconference game — and puts both of yours first. Tap either one and <a href=\"/lineup\">every starter you set</a> carries his real NFL box-score line: \"33/46, 394 yds, 2 TD · 14 car, 30 yds, 2 TD\" under Josh Allen, \"1 car, 3 yds · 7 rec (9 tgt), 76 yds\" under Tyler Warren. The quarter and clock come off the live NFL scoreboard, not off a calculation, and a RED ZONE flag lights up next to any starter whose team has the ball inside the twenty.",
-      "The scoring ticker was the interesting part to get right here. The AFL's two conferences roster duplicate players — in a typical week, 85 of 131 starters are owned by more than one franchise — so \"whose touchdown was that\" has more than one answer. Attribute it to a single owner and roughly four in ten scoring plays quietly vanish from somebody's board. Every owner of every credited player now gets the row, which is the only version of this that is actually true.",
-      "Two honest gaps, both deliberate. Team defenses show their points and no stat line, because the NFL box score is keyed to individual players and a defense is not one — a plausible invented number sitting next to your real score is worse than a blank. And in the offseason, when MFL switches the live feed off, the page replays the last completed AFL regular-season week with a Sample Data badge on it rather than showing you an empty board."
-    ],
-    "image": "live-scoring-afl.webp",
-    "imageAlt": "The AFL Live Scoring matchup detail: Fullybaked 120.5 vs Ninjas 120.6, marked Final. Each starter row shows a position chip, headshot, NFL team and points, with a real box-score line underneath — Josh Allen reading \"33/46, 394 yds, 2 TD · 14 car, 30 yds, 2 TD\" and Tyler Warren \"1 car, 3 yds · 7 rec (9 tgt), 76 yds\". Below the rows a Scoring Plays section lists real fourth-quarter touchdowns with their game clock, each tagged TD.",
-    "leagues": [
-      "afl"
-    ]
-  },
-  {
-    "id": "player-news-modals",
-    "date": "2026-08-19",
-    "category": "enhancement",
-    "icon": "football",
-    "title": "Every Player Card Now Reads You In",
-    "summary": "Tap a player anywhere on the site and the modal now opens with his latest ESPN headlines sitting right under the numbers — why the usage spiked, what camp is saying, whether the beat writers think the job is his. No more bouncing to another tab to find out what the box score was hinting at.",
-    "description": [
-      "The player modal has always been good at telling you what happened. Sixty-two points, 5.2 a game, twelve starts — fine. What it could never tell you was why, and that is usually the part you actually opened it for. So you left, searched his name somewhere else, and came back.",
-      "Now the modal answers the question itself. Open <a href=\"/players\">any player</a> and a Latest News block sits directly beneath his metrics, carrying his three most recent ESPN stories with a timestamp on each. Ryan Flournoy's card, for instance, currently leads with \"Could Ryan Flournoy give Cowboys a third 1,000-yard receiver?\" — which is a considerably more useful thing to know in August than his 2025 per-game average.",
-      "It is genuinely his news, not his team's. That distinction sounds pedantic and is the entire feature: a team-level feed hands every Falcon on <a href=\"/rosters\">your roster</a> the same four headlines, and we measured it — the old approach returned 87 articles across 29 teams but only 28 different ones, with a Madden ratings piece filed under 27 of them. Pulling each player individually gets you 88% unique headlines instead of 32%.",
-      "Team defenses have no news feed of their own, so they borrow their best defender's and say so plainly rather than pretending the headlines belong to the unit. And when ESPN has nothing, the modal says it has nothing — it does not quietly show you stale filler, and if the feed itself is unreachable it tells you that instead, with a retry, because \"no news\" and \"we couldn't reach the wire\" are very different things to tell an owner."
-    ],
-    "image": "player-news-modal.webp",
-    "imageAlt": "The player detail modal for Ryan Flournoy: the team-colored hero band with his name, position and draft details, a three-card metrics strip showing 62.6 points and 5.2 per game, then a Latest News section listing three recent ESPN stories with type labels and timestamps, above the Season Results table.",
-    "excludeFromHero": true,
-    "leagues": [
-      "theleague",
-      "afl"
-    ]
-  },
-  {
     "id": "pecking-order-preseason-preview",
     "date": "2026-08-18",
     "category": "enhancement",
@@ -58,6 +18,26 @@
     "excludeFromHero": true,
     "leagues": [
       "theleague",
+      "afl"
+    ]
+  },
+  {
+    "id": "afl-cup-2017-correction-2026-08-17",
+    "date": "2026-08-17",
+    "title": "The 2017 Trophy Nobody Was Holding: the AFL Cup Comes Back, and Smokane FC Gets It",
+    "summary": "2017's all-play season was the last AFL Cup — not the \"Founders Table\" we made up for it — and it ended in week 16, not 17. That one week moves the title to Smokane FC.",
+    "description": [
+      "Two things were wrong about 2017, and the second one only became visible once the first was fixed.",
+      "Start with the name. That season ran as one 24-team all-play table, the format the Premier League and D-League grew out of the year after, and we shipped it under a heading called the \"Founders Table.\" Nobody in the league has ever called it that. We invented it. The league called it what it had called the same competition for the two seasons before: the AFL Cup. The Cup did not die in 2016 — it changed shape, traded a knockout bracket for a table, and ran one more year before the split replaced it. It says AFL Cup on the standings page now, and the trophy room treats 2017 as the Cup's last season instead of pretending it never happened.",
+      "Then the week. Every one of these tables gets cut off somewhere, the site was using week 17 for all of them, and 2017 ended at week 16. One week does not sound like much. It is the entire competition here. Through week 16 Smokane FC finishes 259-109 and Fullybaked 258-110 — one all-play win apart, out of 368. Play the extra week and Fullybaked passes them. The site had been showing the week-17 answer under a name the league never used, so the 2017 AFL Cup had effectively been awarded to the wrong team and filed under the wrong competition. What settled it was not the math: the commissioner went and checked what the league actually paid out that season, and the Cup money went to Smokane FC.",
+      "Smokane FC's trophy room gains an AFL Cup badge stamped 2017, its eighteenth piece of hardware. Nothing else about that season moves: Thundering Herd keeps the 2017 AFL Championship they won in that week-16 final, and the promotion line is untouched — the top 12 is the same twelve franchises whichever week you stop at, and it still matches the 2018 Premier League roster exactly. The cutoff week is now recorded per season rather than assumed, so no future era can quietly inherit the wrong finish line."
+    ],
+    "category": "bug-fix",
+    "link": "/afl-fantasy/standings?year=2017&view=all_play",
+    "linkLabel": "See the 2017 AFL Cup table",
+    "icon": "trophy",
+    "excludeFromHero": true,
+    "leagues": [
       "afl"
     ]
   },
@@ -136,26 +116,6 @@
     "excludeFromHero": true,
     "leagues": [
       "theleague"
-    ]
-  },
-  {
-    "id": "afl-cup-2017-correction-2026-08-17",
-    "date": "2026-08-17",
-    "title": "The 2017 Trophy Nobody Was Holding: the AFL Cup Comes Back, and Smokane FC Gets It",
-    "summary": "2017's all-play season was the last AFL Cup — not the \"Founders Table\" we made up for it — and it ended in week 16, not 17. That one week moves the title to Smokane FC.",
-    "description": [
-      "Two things were wrong about 2017, and the second one only became visible once the first was fixed.",
-      "Start with the name. That season ran as one 24-team all-play table, the format the Premier League and D-League grew out of the year after, and we shipped it under a heading called the \"Founders Table.\" Nobody in the league has ever called it that. We invented it. The league called it what it had called the same competition for the two seasons before: the AFL Cup. The Cup did not die in 2016 — it changed shape, traded a knockout bracket for a table, and ran one more year before the split replaced it. It says AFL Cup on the standings page now, and the trophy room treats 2017 as the Cup's last season instead of pretending it never happened.",
-      "Then the week. Every one of these tables gets cut off somewhere, the site was using week 17 for all of them, and 2017 ended at week 16. One week does not sound like much. It is the entire competition here. Through week 16 Smokane FC finishes 259-109 and Fullybaked 258-110 — one all-play win apart, out of 368. Play the extra week and Fullybaked passes them. The site had been showing the week-17 answer under a name the league never used, so the 2017 AFL Cup had effectively been awarded to the wrong team and filed under the wrong competition. What settled it was not the math: the commissioner went and checked what the league actually paid out that season, and the Cup money went to Smokane FC.",
-      "Smokane FC's trophy room gains an AFL Cup badge stamped 2017, its eighteenth piece of hardware. Nothing else about that season moves: Thundering Herd keeps the 2017 AFL Championship they won in that week-16 final, and the promotion line is untouched — the top 12 is the same twelve franchises whichever week you stop at, and it still matches the 2018 Premier League roster exactly. The cutoff week is now recorded per season rather than assumed, so no future era can quietly inherit the wrong finish line."
-    ],
-    "category": "bug-fix",
-    "link": "/afl-fantasy/standings?year=2017&view=all_play",
-    "linkLabel": "See the 2017 AFL Cup table",
-    "icon": "trophy",
-    "excludeFromHero": true,
-    "leagues": [
-      "afl"
     ]
   },
   {
@@ -273,23 +233,22 @@
     ]
   },
   {
-    "id": "theleague-division-titles-mfl-official-2026-08-11",
+    "id": "afl-division-titles-mfl-official-2026-08-11",
     "date": "2026-08-11",
-    "title": "The Audit Comes for TheLeague: 8 Division Banners Change Hands, and 2022 Comes Back From the Dead",
-    "summary": "Same homebrew tiebreaker, same bad math — this time in TheLeague's record books. MFL's official standings are now the source of truth, eight division titles just moved, and an entire missing season got its wins back.",
+    "title": "The Record Books Get an Audit: 22 Division Titles Restored to Their Rightful Owners",
+    "summary": "Historical AFL division titles were being computed with a homebrew tiebreaker instead of the constitution. MFL's official standings are now the source of truth — and 22 banners just changed hands, from 2004 all the way to last season.",
     "description": [
-      "Fresh off auditing the AFL's record books, we pointed the same flashlight at TheLeague. Same rot. The code crowning each division winner sorted by raw division record FIRST, which is not a thing the constitution says anywhere. Read the rulebook: division record is tiebreaker number two. Overall record wins the division. What that bug produced was ten seasons where a team with a worse record got the banner because it happened to beat up on its own division — 2020 Eastern went to a 12-6 club over a 14-4 one, and the 2025 Northwest and Southwest were both handed to the runner-up. Eight of those ten are banners you can actually see change hands on a franchise page; the other two (2015 Central, 2018 Southwest) went to teams from an earlier ownership era, so nobody's page was showing them either way.",
-      "So we did what we did for the AFL: stopped re-deriving history and went to the source. MFL applies the constitution's full tiebreaker chain itself, and its official standings order now decides every division title. If you want the single case that settles the argument, it's 2015 Central. Amish Rakefighters and The Executioners both finished 15-3, both went 4-2 in the division. The Executioners scored more points AND had the better all-play record, so every version of our math picked them. MFL picked Amish — because Amish swept the season series, 120.66-91.19 in Week 1 and 136.34-127.01 in Week 3. Head-to-head. Step one. It's the one tiebreaker our code could never see, because the standings feed doesn't carry it.",
-      "Then there was 2022, which the record books had simply lost. MFL's export for that season ships the win-loss columns in a different shape, and our reader was looking for the wrong one — so every franchise in TheLeague was carrying a 0-0-0 for 2022 while somehow having scored two thousand points. No division titles, no wins, no losses, a whole year of football filed under nothing. It's back: Vitside Mafia's 15-3, Dark Magicians' 14-4, all four division winners, and roughly a hundred and forty games returned to career records across the league.",
-      "We also went looking for the titles nobody could claim. Twenty-five division championships were won under a previous owner of a franchise slot — Amish Rakefighters, LBer-DeCleaters, Acer FC Edge, the Sabertooths — and because career stats follow the human and not the jersey, those banners had nowhere to live and were silently dropped from the record entirely. They're now written down under the names that won them, which is the necessary first step; putting them somewhere you can actually look at them is a job for another day. Meanwhile every standings page in TheLeague renders MFL's official order, and a regression suite locks all of it down so no homebrew math ever crawls back into the record books."
+      "Somewhere along the way, the site's record books started freelancing. When we backfilled two decades of AFL history, the code crowning each division's champion sorted by division record first — and at one point even used raw points-for as a tiebreaker. That's not how this league works. The constitution is clear: overall record wins the division, and ties run the full gauntlet — head-to-head, division record, conference record, Power Rank, points, all-play, victory points, most points allowed, coin flip. MFL has been applying those exact rules all along.",
+      "So we stopped re-deriving history and went to the source. MFL's official final standings now decide every division title, every season, 2004 through 2025 — and an independent recomputation using the constitution's own tiebreaker chain agrees with MFL in all 100-plus division-seasons on the books. The fallout: 22 division banners moved to their rightful owners. Dicks out for Harambe's 12-5 season finally beats a 9-8 record for the 2025 AL South crown. Chatmaster's 14-3 masterpiece in 2017 takes the NL West it always deserved. And the all-time trophy count has a new king: the Drunk Indians, at 19 pieces of hardware, with Smokane FC sliding to second at 17.",
+      "The standings pages got the same treatment — historical and current standings now render in MFL's official order on every AFL surface, so the trophy room, the standings page, and the playoff picture finally tell the same story. A regression suite now locks all of this in so no homebrew math ever sneaks back into the record books."
     ],
     "category": "bug-fix",
-    "link": "/theleague/standings",
+    "link": "/afl-fantasy/standings",
     "linkLabel": "See the corrected standings",
     "icon": "trophy",
     "excludeFromHero": true,
     "leagues": [
-      "theleague"
+      "afl"
     ]
   },
   {
@@ -314,22 +273,23 @@
     ]
   },
   {
-    "id": "afl-division-titles-mfl-official-2026-08-11",
+    "id": "theleague-division-titles-mfl-official-2026-08-11",
     "date": "2026-08-11",
-    "title": "The Record Books Get an Audit: 22 Division Titles Restored to Their Rightful Owners",
-    "summary": "Historical AFL division titles were being computed with a homebrew tiebreaker instead of the constitution. MFL's official standings are now the source of truth — and 22 banners just changed hands, from 2004 all the way to last season.",
+    "title": "The Audit Comes for TheLeague: 8 Division Banners Change Hands, and 2022 Comes Back From the Dead",
+    "summary": "Same homebrew tiebreaker, same bad math — this time in TheLeague's record books. MFL's official standings are now the source of truth, eight division titles just moved, and an entire missing season got its wins back.",
     "description": [
-      "Somewhere along the way, the site's record books started freelancing. When we backfilled two decades of AFL history, the code crowning each division's champion sorted by division record first — and at one point even used raw points-for as a tiebreaker. That's not how this league works. The constitution is clear: overall record wins the division, and ties run the full gauntlet — head-to-head, division record, conference record, Power Rank, points, all-play, victory points, most points allowed, coin flip. MFL has been applying those exact rules all along.",
-      "So we stopped re-deriving history and went to the source. MFL's official final standings now decide every division title, every season, 2004 through 2025 — and an independent recomputation using the constitution's own tiebreaker chain agrees with MFL in all 100-plus division-seasons on the books. The fallout: 22 division banners moved to their rightful owners. Dicks out for Harambe's 12-5 season finally beats a 9-8 record for the 2025 AL South crown. Chatmaster's 14-3 masterpiece in 2017 takes the NL West it always deserved. And the all-time trophy count has a new king: the Drunk Indians, at 19 pieces of hardware, with Smokane FC sliding to second at 17.",
-      "The standings pages got the same treatment — historical and current standings now render in MFL's official order on every AFL surface, so the trophy room, the standings page, and the playoff picture finally tell the same story. A regression suite now locks all of this in so no homebrew math ever sneaks back into the record books."
+      "Fresh off auditing the AFL's record books, we pointed the same flashlight at TheLeague. Same rot. The code crowning each division winner sorted by raw division record FIRST, which is not a thing the constitution says anywhere. Read the rulebook: division record is tiebreaker number two. Overall record wins the division. What that bug produced was ten seasons where a team with a worse record got the banner because it happened to beat up on its own division — 2020 Eastern went to a 12-6 club over a 14-4 one, and the 2025 Northwest and Southwest were both handed to the runner-up. Eight of those ten are banners you can actually see change hands on a franchise page; the other two (2015 Central, 2018 Southwest) went to teams from an earlier ownership era, so nobody's page was showing them either way.",
+      "So we did what we did for the AFL: stopped re-deriving history and went to the source. MFL applies the constitution's full tiebreaker chain itself, and its official standings order now decides every division title. If you want the single case that settles the argument, it's 2015 Central. Amish Rakefighters and The Executioners both finished 15-3, both went 4-2 in the division. The Executioners scored more points AND had the better all-play record, so every version of our math picked them. MFL picked Amish — because Amish swept the season series, 120.66-91.19 in Week 1 and 136.34-127.01 in Week 3. Head-to-head. Step one. It's the one tiebreaker our code could never see, because the standings feed doesn't carry it.",
+      "Then there was 2022, which the record books had simply lost. MFL's export for that season ships the win-loss columns in a different shape, and our reader was looking for the wrong one — so every franchise in TheLeague was carrying a 0-0-0 for 2022 while somehow having scored two thousand points. No division titles, no wins, no losses, a whole year of football filed under nothing. It's back: Vitside Mafia's 15-3, Dark Magicians' 14-4, all four division winners, and roughly a hundred and forty games returned to career records across the league.",
+      "We also went looking for the titles nobody could claim. Twenty-five division championships were won under a previous owner of a franchise slot — Amish Rakefighters, LBer-DeCleaters, Acer FC Edge, the Sabertooths — and because career stats follow the human and not the jersey, those banners had nowhere to live and were silently dropped from the record entirely. They're now written down under the names that won them, which is the necessary first step; putting them somewhere you can actually look at them is a job for another day. Meanwhile every standings page in TheLeague renders MFL's official order, and a regression suite locks all of it down so no homebrew math ever crawls back into the record books."
     ],
     "category": "bug-fix",
-    "link": "/afl-fantasy/standings",
+    "link": "/theleague/standings",
     "linkLabel": "See the corrected standings",
     "icon": "trophy",
     "excludeFromHero": true,
     "leagues": [
-      "afl"
+      "theleague"
     ]
   },
   {
@@ -425,6 +385,27 @@
     ]
   },
   {
+    "id": "afl-franchises-career-cards",
+    "date": "2026-08-09",
+    "category": "enhancement",
+    "icon": "trophy",
+    "title": "The AFL Franchise Page Finally Read Its Own Record Book",
+    "summary": "The franchises page graduates from a name tag and a trophy count to the full career ledger — all-time records, seasons served, career points, and a rack of title pills for every club — sorted into proper American League and National League sections. Twenty-three years of receipts, one page.",
+    "description": [
+      "For a league that has been settling scores since 2003, the AFL <a href=\"/franchises\">franchises page</a> was strangely shy about it: an icon, a name, a division pill, and — if you'd actually won something — a lone trophy emoji doing all the talking. Meanwhile TheLeague's franchise page has spent months strutting around with career records and a badge shelf. The beat desk kept both tabs open and the comparison was not kind.",
+      "No longer. Every card now carries the club's <strong>all-time record</strong> with winning percentage, seasons served, and career points — computed from <a href=\"/standings\">every standings feed</a> back to 2003, and it follows owners across franchise moves the same way the trophy room does, so your record is <em>yours</em>, not the slot's. Below the numbers sits the full title rack: AFL Championships, Premier League crowns, conference and division flags, D-League titles, even the NIT — hover any pill for the years. The cards sort by hardware first, wins second, inside proper <strong>American League</strong> and <strong>National League</strong> sections, and each one glows in its team color when you reach for it. The icon stays — this is the AFL, we lead with the crest.",
+      "The Former Identities archive now sits in the open instead of behind a collapsed toggle, all several dozen punitive rebrands of it. One footnote for the historians: points totals before 2023 are approximate — the early feeds kept score like the early league kept promises. The wins are exact. Argue accordingly."
+    ],
+    "link": "/afl-fantasy/franchises",
+    "linkLabel": "Browse the Franchises",
+    "image": "afl-franchises-career-cards.webp",
+    "imageAlt": "AFL franchises page showing American League cards with all-time records, seasons, career points, and title pills",
+    "excludeFromHero": true,
+    "leagues": [
+      "afl"
+    ]
+  },
+  {
     "id": "afl-keeper-report-card",
     "date": "2026-08-09",
     "category": "new-page",
@@ -444,27 +425,6 @@
     "linkLabel": "See the grades",
     "image": "keeper-report-card.webp",
     "imageAlt": "The Keeper Report Card: league summary tiles for the best keeper class and the worst keeper decisions, each scored as a share of optimal, above per-franchise rosters ranked by points with Kept, Miss, and Got Away badges.",
-    "leagues": [
-      "afl"
-    ]
-  },
-  {
-    "id": "afl-franchises-career-cards",
-    "date": "2026-08-09",
-    "category": "enhancement",
-    "icon": "trophy",
-    "title": "The AFL Franchise Page Finally Read Its Own Record Book",
-    "summary": "The franchises page graduates from a name tag and a trophy count to the full career ledger — all-time records, seasons served, career points, and a rack of title pills for every club — sorted into proper American League and National League sections. Twenty-three years of receipts, one page.",
-    "description": [
-      "For a league that has been settling scores since 2003, the AFL <a href=\"/franchises\">franchises page</a> was strangely shy about it: an icon, a name, a division pill, and — if you'd actually won something — a lone trophy emoji doing all the talking. Meanwhile TheLeague's franchise page has spent months strutting around with career records and a badge shelf. The beat desk kept both tabs open and the comparison was not kind.",
-      "No longer. Every card now carries the club's <strong>all-time record</strong> with winning percentage, seasons served, and career points — computed from <a href=\"/standings\">every standings feed</a> back to 2003, and it follows owners across franchise moves the same way the trophy room does, so your record is <em>yours</em>, not the slot's. Below the numbers sits the full title rack: AFL Championships, Premier League crowns, conference and division flags, D-League titles, even the NIT — hover any pill for the years. The cards sort by hardware first, wins second, inside proper <strong>American League</strong> and <strong>National League</strong> sections, and each one glows in its team color when you reach for it. The icon stays — this is the AFL, we lead with the crest.",
-      "The Former Identities archive now sits in the open instead of behind a collapsed toggle, all several dozen punitive rebrands of it. One footnote for the historians: points totals before 2023 are approximate — the early feeds kept score like the early league kept promises. The wins are exact. Argue accordingly."
-    ],
-    "link": "/afl-fantasy/franchises",
-    "linkLabel": "Browse the Franchises",
-    "image": "afl-franchises-career-cards.webp",
-    "imageAlt": "AFL franchises page showing American League cards with all-time records, seasons, career points, and title pills",
-    "excludeFromHero": true,
     "leagues": [
       "afl"
     ]
@@ -625,6 +585,27 @@
     ]
   },
   {
+    "id": "august-cutdown-plan",
+    "date": "2026-07-19",
+    "title": "Cutdown Day Runs Itself Now",
+    "summary": "Mark your August cuts from the player menu, let the new Cutdown Plan panel do the cap math, and sleep through the deadline — the automation executes your exact list at 8:45 PM PT so nobody has to set an alarm for roster panic.",
+    "description": [
+      "Every August it's the same movie: the roster limit says 22, your roster says 25, and somewhere around 8:40 PM on deadline Sunday you're squinting at salaries on your phone trying to remember who you promised yourself you'd cut back in June. This year the movie has a different ending. Open the ⋯ menu next to any player on your roster and there's a new option — <strong>Mark for August auto-cut</strong> — and just like that, cutdown day stops being an appointment and starts being a decision you already made.",
+      "The brains live on the Rosters page in the new <strong>Cutdown Plan</strong> panel, which shows you exactly what deadline night will do to your roster — not roughly, exactly. Your marked players line up first, in your order, and if you're still over the limit the panel fills the rest with your most recent waiver and free-agent pickups, each row showing salary, dead cap, and net savings, with the total cap damage tallied underneath. Roster rows wear honest badges — <strong>AUTO-CUT</strong> for players inside the cut line, <strong>MARKED</strong> for insurance picks below it — and every number comes from the same math the deadline job runs, so the preview can't lie to you. Hit <strong>Save cut list</strong>, confirm your MFL login once, and the panel stamps your plan credentials-verified. Feeling decisive? <strong>Cut marked players now</strong> does it on the spot instead.",
+      "And if you do absolutely nothing? The automation still has you covered at the deadline — last players in are the first ones out, with one civilized exception: players you traded for don't count as \"just added,\" so nobody's prized deadline-week acquisition gets swept out with the waiver-wire flotsam. Save a list, cut now, or let the machine sort it out — three ways to make the deadline, zero of them involving an 8:44 PM heart rate spike. The Cut Watch countdown on the homepage will still try to scare you. Now you can smile back at it."
+    ],
+    "category": "new-feature",
+    "link": "/theleague/rosters",
+    "linkLabel": "Open your Cutdown Plan",
+    "icon": "user-times",
+    "image": "august-cutdown-plan.webp",
+    "imageAlt": "The Cutdown Plan panel on the Rosters page showing three auto-selected cuts in execution order, each with salary, dead cap, and net savings, plus the Save cut list and Cut marked players now buttons",
+    "excludeFromHero": true,
+    "leagues": [
+      "theleague"
+    ]
+  },
+  {
     "id": "rumor-mill-insider-upgrade",
     "date": "2026-07-19",
     "category": "enhancement",
@@ -644,24 +625,24 @@
     ]
   },
   {
-    "id": "august-cutdown-plan",
+    "id": "afl-tip-schefter-rumor-mill",
     "date": "2026-07-19",
-    "title": "Cutdown Day Runs Itself Now",
-    "summary": "Mark your August cuts from the player menu, let the new Cutdown Plan panel do the cap math, and sleep through the deadline — the automation executes your exact list at 8:45 PM PT so nobody has to set an alarm for roster panic.",
+    "category": "new-page",
+    "icon": "user-secret",
+    "title": "The AFL Rumor Mill Is Open: Tip Schefter Anonymously",
+    "summary": "The beat desk's worst-kept secret weapon is now open for AFL business. Drop an anonymous tip — trade whispers, keeper intel, relegation panic, tampering chatter — and Schefter turns it into insider news. Nobody sees what you actually wrote. Not even the commish.",
     "description": [
-      "Every August it's the same movie: the roster limit says 22, your roster says 25, and somewhere around 8:40 PM on deadline Sunday you're squinting at salaries on your phone trying to remember who you promised yourself you'd cut back in June. This year the movie has a different ending. Open the ⋯ menu next to any player on your roster and there's a new option — <strong>Mark for August auto-cut</strong> — and just like that, cutdown day stops being an appointment and starts being a decision you already made.",
-      "The brains live on the Rosters page in the new <strong>Cutdown Plan</strong> panel, which shows you exactly what deadline night will do to your roster — not roughly, exactly. Your marked players line up first, in your order, and if you're still over the limit the panel fills the rest with your most recent waiver and free-agent pickups, each row showing salary, dead cap, and net savings, with the total cap damage tallied underneath. Roster rows wear honest badges — <strong>AUTO-CUT</strong> for players inside the cut line, <strong>MARKED</strong> for insurance picks below it — and every number comes from the same math the deadline job runs, so the preview can't lie to you. Hit <strong>Save cut list</strong>, confirm your MFL login once, and the panel stamps your plan credentials-verified. Feeling decisive? <strong>Cut marked players now</strong> does it on the spot instead.",
-      "And if you do absolutely nothing? The automation still has you covered at the deadline — last players in are the first ones out, with one civilized exception: players you traded for don't count as \"just added,\" so nobody's prized deadline-week acquisition gets swept out with the waiver-wire flotsam. Save a list, cut now, or let the machine sort it out — three ways to make the deadline, zero of them involving an 8:44 PM heart rate spike. The Cut Watch countdown on the homepage will still try to scare you. Now you can smile back at it."
+      "You know that thing where a rival GM leaks a story to the press just to watch another front office squirm? That's now a button on this website. The Schefter Rumor Mill — the anonymous tip line the beat desk has been running all offseason — is officially open for AFL business at Tip Schefter.",
+      "Here's the deal: you type the tip, Schefter's desk shreds the evidence. Your identity is one-way hashed before anything is stored, the raw text never gets printed, and only innuendo, rumor, and feeling survive the edit. You get a codename the moment you file — Burner Phone, The Ghost, Off the Record — and a spot on the tipster leaderboard when your intel makes the feed.",
+      "The topic list was rebuilt for how AFL front offices actually gossip: Trade interest. Keeper intentions ('hearing a team's letting a stud walk'). Relegation watch — because in this league, playing badly has consequences a spreadsheet can't hide. Tampering, for when somebody's been talking trade before the window opened. Front-office dysfunction, for everything else. Schefter marinates the queue, clusters corroborating whispers, and drops at most three rumors a day so every post hits.",
+      "One more thing, because the desk knows you'll ask: yes, there's a 60-second undo button now. Fat-thumb a tip, pull it back, no slot burned. The kitchen waits an hour before cooking anything, so your take-backs are safe. The tip line is live today — the AL and NL both have stories worth leaking, and Schefter has column inches to fill."
     ],
-    "category": "new-feature",
-    "link": "/theleague/rosters",
-    "linkLabel": "Open your Cutdown Plan",
-    "icon": "user-times",
-    "image": "august-cutdown-plan.webp",
-    "imageAlt": "The Cutdown Plan panel on the Rosters page showing three auto-selected cuts in execution order, each with salary, dead cap, and net savings, plus the Save cut list and Cut marked players now buttons",
-    "excludeFromHero": true,
+    "link": "/afl-fantasy/schefter/tip",
+    "linkLabel": "Open the tip line",
+    "image": "afl-tip-schefter.webp",
+    "imageAlt": "The AFL Tip Schefter page: anonymous tip form with topic and team selectors, Schefter's kitchen status, and the tipster leaderboard.",
     "leagues": [
-      "theleague"
+      "afl"
     ]
   },
   {
@@ -686,22 +667,22 @@
     ]
   },
   {
-    "id": "afl-tip-schefter-rumor-mill",
-    "date": "2026-07-19",
-    "category": "new-page",
-    "icon": "user-secret",
-    "title": "The AFL Rumor Mill Is Open: Tip Schefter Anonymously",
-    "summary": "The beat desk's worst-kept secret weapon is now open for AFL business. Drop an anonymous tip — trade whispers, keeper intel, relegation panic, tampering chatter — and Schefter turns it into insider news. Nobody sees what you actually wrote. Not even the commish.",
+    "id": "afl-gauntlet-schedule-strength",
+    "date": "2026-07-18",
+    "title": "The Gauntlet Comes to the AFL",
+    "summary": "Claude Schefter’s new weekly schedule-strength column now covers all 24 AFL squads — who has the cushiest run-in, who’s walking into a buzz saw, and whose record is a work of fiction.",
     "description": [
-      "You know that thing where a rival GM leaks a story to the press just to watch another front office squirm? That's now a button on this website. The Schefter Rumor Mill — the anonymous tip line the beat desk has been running all offseason — is officially open for AFL business at Tip Schefter.",
-      "Here's the deal: you type the tip, Schefter's desk shreds the evidence. Your identity is one-way hashed before anything is stored, the raw text never gets printed, and only innuendo, rumor, and feeling survive the edit. You get a codename the moment you file — Burner Phone, The Ghost, Off the Record — and a spot on the tipster leaderboard when your intel makes the feed.",
-      "The topic list was rebuilt for how AFL front offices actually gossip: Trade interest. Keeper intentions ('hearing a team's letting a stud walk'). Relegation watch — because in this league, playing badly has consequences a spreadsheet can't hide. Tampering, for when somebody's been talking trade before the window opened. Front-office dysfunction, for everything else. Schefter marinates the queue, clusters corroborating whispers, and drops at most three rumors a day so every post hits.",
-      "One more thing, because the desk knows you'll ask: yes, there's a 60-second undo button now. Fat-thumb a tip, pull it back, no slot burned. The kitchen waits an hour before cooking anything, so your take-backs are safe. The tip line is live today — the AL and NL both have stories worth leaking, and Schefter has column inches to fill."
+      "Twenty-four teams, two conferences, one uncomfortable truth: your record only means what your schedule says it means. Every Wednesday, Claude Schefter’s new column The Gauntlet rates every AFL squad’s remaining opponents on a 0-100 difficulty scale and ranks the league from “booked a buzz saw” down to “cupcake run to the Premier League.” He built the model himself. He trusts it more than he trusts your all-play record.",
+      "The dashboard behind the column does the heavy lifting: “The Run-In” ranks who has the hardest road left with week-over-week trend arrows, “What They’ve Been Through” scores the slate each team already survived, and the Schedule Luck callouts name the 14-3 team that’s been feasting on the soft part of the fixture list. The week-by-week heat map paints every franchise’s remaining schedule green to red — one click from any cell to your future opponent’s trophy wall. Trap Weeks flags the Sunday the whole league hits a wall at once.",
+      "Fresh numbers recompute from settled stats every Wednesday morning, the column files to the Schefter Report, and one perfectly-calibrated teaser lands in the GroupMe. Relegation-zone teams checking whether the math offers any hope: it’s all there. It may not."
     ],
-    "link": "/afl-fantasy/schefter/tip",
-    "linkLabel": "Open the tip line",
-    "image": "afl-tip-schefter.webp",
-    "imageAlt": "The AFL Tip Schefter page: anonymous tip form with topic and team selectors, Schefter's kitchen status, and the tipster leaderboard.",
+    "category": "new-page",
+    "link": "/afl-fantasy/schedule-strength?year=2025",
+    "linkLabel": "Enter The Gauntlet",
+    "icon": "line-chart",
+    "image": "afl-gauntlet-schedule-strength.webp",
+    "imageAlt": "The Gauntlet schedule-strength dashboard on the AFL site showing past-season difficulty rankings and schedule-luck callouts",
+    "excludeFromHero": true,
     "leagues": [
       "afl"
     ]
@@ -728,27 +709,6 @@
     "linkLabel": "Enter The Gauntlet"
   },
   {
-    "id": "afl-gauntlet-schedule-strength",
-    "date": "2026-07-18",
-    "title": "The Gauntlet Comes to the AFL",
-    "summary": "Claude Schefter’s new weekly schedule-strength column now covers all 24 AFL squads — who has the cushiest run-in, who’s walking into a buzz saw, and whose record is a work of fiction.",
-    "description": [
-      "Twenty-four teams, two conferences, one uncomfortable truth: your record only means what your schedule says it means. Every Wednesday, Claude Schefter’s new column The Gauntlet rates every AFL squad’s remaining opponents on a 0-100 difficulty scale and ranks the league from “booked a buzz saw” down to “cupcake run to the Premier League.” He built the model himself. He trusts it more than he trusts your all-play record.",
-      "The dashboard behind the column does the heavy lifting: “The Run-In” ranks who has the hardest road left with week-over-week trend arrows, “What They’ve Been Through” scores the slate each team already survived, and the Schedule Luck callouts name the 14-3 team that’s been feasting on the soft part of the fixture list. The week-by-week heat map paints every franchise’s remaining schedule green to red — one click from any cell to your future opponent’s trophy wall. Trap Weeks flags the Sunday the whole league hits a wall at once.",
-      "Fresh numbers recompute from settled stats every Wednesday morning, the column files to the Schefter Report, and one perfectly-calibrated teaser lands in the GroupMe. Relegation-zone teams checking whether the math offers any hope: it’s all there. It may not."
-    ],
-    "category": "new-page",
-    "link": "/afl-fantasy/schedule-strength?year=2025",
-    "linkLabel": "Enter The Gauntlet",
-    "icon": "line-chart",
-    "image": "afl-gauntlet-schedule-strength.webp",
-    "imageAlt": "The Gauntlet schedule-strength dashboard on the AFL site showing past-season difficulty rankings and schedule-luck callouts",
-    "excludeFromHero": true,
-    "leagues": [
-      "afl"
-    ]
-  },
-  {
     "id": "afl-trade-block-in-builder",
     "date": "2026-07-14",
     "title": "The Trade Block Comes to the AFL Trade Builder",
@@ -767,6 +727,27 @@
     "excludeFromHero": true,
     "leagues": [
       "afl"
+    ]
+  },
+  {
+    "id": "throwback-week",
+    "date": "2026-07-13",
+    "title": "Throwback Week: The Old Names Ride Again",
+    "summary": "Every Week 4, the league's weekly pages dust off the archives. Live scoring, matchups, and submit lineup swap every team's name, logo, banner — and colors — for a legacy identity from the franchise's own history. Thirty-seven eras of recovered art, from the Sabertooths to the skull wabbit. One week a season, the scoreboard becomes a family photo album.",
+    "description": [
+      "Sixteen franchises, nearly two decades of rebrands, and a commissioner who spent a weekend spelunking the Wayback Machine so none of it stays buried. Every season, for <strong>Week 4 only</strong>, the weekly pages — live scoring, the matchup scoreboard, and submit lineup — roll every team back to an old identity. Old name, old logo, old banner, and yes, <strong>old colors</strong>: the matchup washes and win-probability bars tint in each era's own palette, sampled from the era's own art. Thirty-seven eras made the cut, every one wearing genuine recovered artwork — Degenerates green, Sabertooths orange, the Barney Fife bullseye.",
+      "Each team defaults to a commissioner-picked former self — Heavy Chevy gives way to the Drunk Indians, the Computer Jocks take the floor as the Witch City Warlocks, and Maverick puckers up as the 2012 'smooch' Poker in the Rear. Rather choose your own ghost? <strong>Throwback Settings</strong> lets every owner browse their franchise's eligible eras — same-name eras get their own nicknames ('The razorback', 'The skull', 'Red graffiti era') so you always know which vintage you're buying. Hit <strong>Preview</strong> on any era to see it live on the scoreboard before committing, then save it right from the preview when it looks right. Your pick sticks for every future Throwback Week until you change it.",
+      "The rest of the site keeps its head: standings, rosters, and the trade builder stay on current identities, so nobody's wondering who the Sabertooths are in the middle of a trade negotiation. (Only one team can be the Sabertooths anyway — we checked. It's the Geeks.) Then Week 5 arrives, everyone snaps back to the present, and the archives go back to sleep for another year. See you next September, Warlocks."
+    ],
+    "category": "new-feature",
+    "link": "/theleague/throwback-settings",
+    "linkLabel": "Pick your era",
+    "icon": "history",
+    "image": "throwback-week.webp",
+    "imageAlt": "The live scoring scoreboard during Throwback Week, with matchup cards showing legacy franchise identities — old team names, logos, and banners from each franchise's history.",
+    "heroRotationDays": 14,
+    "leagues": [
+      "theleague"
     ]
   },
   {
@@ -817,27 +798,6 @@
     "linkLabel": "See all updates",
     "icon": "wrench",
     "excludeFromHero": true,
-    "leagues": [
-      "theleague"
-    ]
-  },
-  {
-    "id": "throwback-week",
-    "date": "2026-07-13",
-    "title": "Throwback Week: The Old Names Ride Again",
-    "summary": "Every Week 4, the league's weekly pages dust off the archives. Live scoring, matchups, and submit lineup swap every team's name, logo, banner — and colors — for a legacy identity from the franchise's own history. Thirty-seven eras of recovered art, from the Sabertooths to the skull wabbit. One week a season, the scoreboard becomes a family photo album.",
-    "description": [
-      "Sixteen franchises, nearly two decades of rebrands, and a commissioner who spent a weekend spelunking the Wayback Machine so none of it stays buried. Every season, for <strong>Week 4 only</strong>, the weekly pages — live scoring, the matchup scoreboard, and submit lineup — roll every team back to an old identity. Old name, old logo, old banner, and yes, <strong>old colors</strong>: the matchup washes and win-probability bars tint in each era's own palette, sampled from the era's own art. Thirty-seven eras made the cut, every one wearing genuine recovered artwork — Degenerates green, Sabertooths orange, the Barney Fife bullseye.",
-      "Each team defaults to a commissioner-picked former self — Heavy Chevy gives way to the Drunk Indians, the Computer Jocks take the floor as the Witch City Warlocks, and Maverick puckers up as the 2012 'smooch' Poker in the Rear. Rather choose your own ghost? <strong>Throwback Settings</strong> lets every owner browse their franchise's eligible eras — same-name eras get their own nicknames ('The razorback', 'The skull', 'Red graffiti era') so you always know which vintage you're buying. Hit <strong>Preview</strong> on any era to see it live on the scoreboard before committing, then save it right from the preview when it looks right. Your pick sticks for every future Throwback Week until you change it.",
-      "The rest of the site keeps its head: standings, rosters, and the trade builder stay on current identities, so nobody's wondering who the Sabertooths are in the middle of a trade negotiation. (Only one team can be the Sabertooths anyway — we checked. It's the Geeks.) Then Week 5 arrives, everyone snaps back to the present, and the archives go back to sleep for another year. See you next September, Warlocks."
-    ],
-    "category": "new-feature",
-    "link": "/theleague/throwback-settings",
-    "linkLabel": "Pick your era",
-    "icon": "history",
-    "image": "throwback-week.webp",
-    "imageAlt": "The live scoring scoreboard during Throwback Week, with matchup cards showing legacy franchise identities — old team names, logos, and banners from each franchise's history.",
-    "heroRotationDays": 14,
     "leagues": [
       "theleague"
     ]
@@ -905,21 +865,40 @@
     ]
   },
   {
-    "id": "trade-composites",
+    "id": "feature-first-heroes",
     "date": "2026-07-06",
-    "title": "Every Trade Proposal Is Now a Press Conference",
-    "summary": "The trade builder stopped treating blockbusters like receipts. Confirm a trade and the two headline players square off face-to-face over their real teams' colors — and every offer waiting in My Trades wears the same breaking-news poster.",
+    "title": "New Features Now Play Themselves",
+    "summary": "The homepage hero stopped casting random rookies to pose next to announcements. New features now star in their own banner — a live screenshot in a browser frame that matches your theme — and a player only appears when the story is actually about him.",
     "description": [
-      "You spend twenty minutes engineering the trade of the year — cap math checked, picks balanced, the whole heist — and then the confirmation screen hands you what amounts to a grocery receipt. Two names, two salaries, a Send button. The biggest adrenaline moment in fantasy football, rendered with all the drama of signing for a package.",
-      "Now the moment gets the poster it deserves. Hit Submit Trade and the confirmation modal leads with both headline players face-to-face — each cut out over a gradient in his real NFL team's colors, his team's logo ghosted behind him, a swap badge spinning between them like the trade machine graphic on deadline day. Open My Trades and every pending offer wears the same treatment: the guy you'd receive squaring off against the guy you'd surrender, labeled accordingly, so you can feel the trade before you read it. The strip is smart about who belongs on a poster, too — a defense or a draft pick headlining one side politely declines the photoshoot (logos aren't people, and a 2027 second-rounder has no face), and if a headshot ever fails to load, the whole banner bows out and leaves the trusty text list untouched.",
-      "The asset lists, salaries, and cap math are all still there below — this is a fantasy league, not an art gallery. But the next time someone offers you Breece Hall, you won't read about it. You'll see him standing there, waiting for an answer."
+      "For months, every time the site shipped something new, the hero banner hired a rookie to stand next to the headline. Nice kid, great cutout, absolutely nothing to do with the feature. Announcing a salary tool? Here’s a rookie. New calendar page? Rookie. It was the fantasy football equivalent of the stock-photo handshake.",
+      "The casting department has been reorganized. Feature announcements now show the feature — an actual screenshot of the thing, framed in a little browser window, captured in both light and dark mode so it matches whatever theme you’re running. When an announcement genuinely stars a player, he still gets the full spotlight treatment — cutout, team-color glow, caption chip — but only when he’s the story, never as set dressing. And on phones the screenshot politely bows out (nobody can read a full page squeezed into a hero thumbnail) and the league crest stands in.",
+      "The rookies are fine, by the way. They’ve been reassigned to stories about actual rookies — which, it turns out, is the only casting call they ever needed."
     ],
     "category": "enhancement",
-    "link": "/theleague/trade-builder",
-    "linkLabel": "Open the Trade Builder",
-    "icon": "helmet",
-    "image": "trade-composites.webp",
-    "imageAlt": "Trade confirmation modal with a split hero: Keon Coleman cut out over Bills blue and Breece Hall over Jets green, facing a center swap badge, above the Confirm Trade Proposal details.",
+    "icon": "star",
+    "image": "feature-first-heroes.webp",
+    "imageAlt": "TheLeague homepage hero showing a feature announcement with its own screenshot in a browser-style frame beside the headline and call-to-action.",
+    "leagues": [
+      "theleague",
+      "afl"
+    ]
+  },
+  {
+    "id": "draft-room-pick-reveal",
+    "date": "2026-07-06",
+    "title": "The Draft Room Learned How to Announce a Pick",
+    "summary": "Picks in the live draft room no longer just materialize in a grid cell. Every selection now gets a full-width reveal — \"With the 1.03, the Pigskins select…\" — with the player's cutout over the drafting franchise's colors, before settling into the board like nothing happened.",
+    "description": [
+      "Until now, the biggest moment in fantasy football — the pick — arrived in the draft room the way a cell updates in a spreadsheet. One second the slot said 'On the clock,' the next it had a tiny headshot and a polite green flash. Roger Goodell walks to a podium for this. Your draft room gave it the ceremony of an autosave.",
+      "No longer. When a pick lands, the room cuts to a full-width splash in the drafting franchise's colors: crest watermarked behind, the pick number ghosted across the background like a jumbotron graphic, and the player himself — college headshot and all, since most of these guys haven't put on an NFL jersey yet — rising from the bottom of the frame. 'With the 1.03, the Pacific Pigskins select Jeremiyah Love.' Hold for applause, then it settles back into the board. If autopick starts ripping through selections, the reveals politely queue up and take the stage one at a time. Tap anywhere to skip ahead — the clock and your controls stay live the whole time, because the ceremony should never cost you your own pick.",
+      "It works in mock drafts too, so you can practice being disappointed by who goes two picks before yours. The podium moment: delivered. The spreadsheet update: released. Nobody claimed it."
+    ],
+    "category": "new-feature",
+    "link": "/theleague/draft/room",
+    "linkLabel": "Step into the draft room",
+    "icon": "star",
+    "image": "draft-room-pick-reveal.webp",
+    "imageAlt": "The draft room pick-reveal splash: a deep-red Pacific Pigskins gradient band reading 'With the 3.17, the Pacific Pigskins select Sal Cannella' with the player's cutout rising from the bottom right over a ghosted pick number and franchise crest.",
     "leagues": [
       "theleague"
     ]
@@ -941,6 +920,26 @@
     "leagues": [
       "theleague",
       "afl"
+    ]
+  },
+  {
+    "id": "trade-composites",
+    "date": "2026-07-06",
+    "title": "Every Trade Proposal Is Now a Press Conference",
+    "summary": "The trade builder stopped treating blockbusters like receipts. Confirm a trade and the two headline players square off face-to-face over their real teams' colors — and every offer waiting in My Trades wears the same breaking-news poster.",
+    "description": [
+      "You spend twenty minutes engineering the trade of the year — cap math checked, picks balanced, the whole heist — and then the confirmation screen hands you what amounts to a grocery receipt. Two names, two salaries, a Send button. The biggest adrenaline moment in fantasy football, rendered with all the drama of signing for a package.",
+      "Now the moment gets the poster it deserves. Hit Submit Trade and the confirmation modal leads with both headline players face-to-face — each cut out over a gradient in his real NFL team's colors, his team's logo ghosted behind him, a swap badge spinning between them like the trade machine graphic on deadline day. Open My Trades and every pending offer wears the same treatment: the guy you'd receive squaring off against the guy you'd surrender, labeled accordingly, so you can feel the trade before you read it. The strip is smart about who belongs on a poster, too — a defense or a draft pick headlining one side politely declines the photoshoot (logos aren't people, and a 2027 second-rounder has no face), and if a headshot ever fails to load, the whole banner bows out and leaves the trusty text list untouched.",
+      "The asset lists, salaries, and cap math are all still there below — this is a fantasy league, not an art gallery. But the next time someone offers you Breece Hall, you won't read about it. You'll see him standing there, waiting for an answer."
+    ],
+    "category": "enhancement",
+    "link": "/theleague/trade-builder",
+    "linkLabel": "Open the Trade Builder",
+    "icon": "helmet",
+    "image": "trade-composites.webp",
+    "imageAlt": "Trade confirmation modal with a split hero: Keon Coleman cut out over Bills blue and Breece Hall over Jets green, facing a center swap badge, above the Confirm Trade Proposal details.",
+    "leagues": [
+      "theleague"
     ]
   },
   {
@@ -984,45 +983,6 @@
     ]
   },
   {
-    "id": "feature-first-heroes",
-    "date": "2026-07-06",
-    "title": "New Features Now Play Themselves",
-    "summary": "The homepage hero stopped casting random rookies to pose next to announcements. New features now star in their own banner — a live screenshot in a browser frame that matches your theme — and a player only appears when the story is actually about him.",
-    "description": [
-      "For months, every time the site shipped something new, the hero banner hired a rookie to stand next to the headline. Nice kid, great cutout, absolutely nothing to do with the feature. Announcing a salary tool? Here’s a rookie. New calendar page? Rookie. It was the fantasy football equivalent of the stock-photo handshake.",
-      "The casting department has been reorganized. Feature announcements now show the feature — an actual screenshot of the thing, framed in a little browser window, captured in both light and dark mode so it matches whatever theme you’re running. When an announcement genuinely stars a player, he still gets the full spotlight treatment — cutout, team-color glow, caption chip — but only when he’s the story, never as set dressing. And on phones the screenshot politely bows out (nobody can read a full page squeezed into a hero thumbnail) and the league crest stands in.",
-      "The rookies are fine, by the way. They’ve been reassigned to stories about actual rookies — which, it turns out, is the only casting call they ever needed."
-    ],
-    "category": "enhancement",
-    "icon": "star",
-    "image": "feature-first-heroes.webp",
-    "imageAlt": "TheLeague homepage hero showing a feature announcement with its own screenshot in a browser-style frame beside the headline and call-to-action.",
-    "leagues": [
-      "theleague",
-      "afl"
-    ]
-  },
-  {
-    "id": "draft-room-pick-reveal",
-    "date": "2026-07-06",
-    "title": "The Draft Room Learned How to Announce a Pick",
-    "summary": "Picks in the live draft room no longer just materialize in a grid cell. Every selection now gets a full-width reveal — \"With the 1.03, the Pigskins select…\" — with the player's cutout over the drafting franchise's colors, before settling into the board like nothing happened.",
-    "description": [
-      "Until now, the biggest moment in fantasy football — the pick — arrived in the draft room the way a cell updates in a spreadsheet. One second the slot said 'On the clock,' the next it had a tiny headshot and a polite green flash. Roger Goodell walks to a podium for this. Your draft room gave it the ceremony of an autosave.",
-      "No longer. When a pick lands, the room cuts to a full-width splash in the drafting franchise's colors: crest watermarked behind, the pick number ghosted across the background like a jumbotron graphic, and the player himself — college headshot and all, since most of these guys haven't put on an NFL jersey yet — rising from the bottom of the frame. 'With the 1.03, the Pacific Pigskins select Jeremiyah Love.' Hold for applause, then it settles back into the board. If autopick starts ripping through selections, the reveals politely queue up and take the stage one at a time. Tap anywhere to skip ahead — the clock and your controls stay live the whole time, because the ceremony should never cost you your own pick.",
-      "It works in mock drafts too, so you can practice being disappointed by who goes two picks before yours. The podium moment: delivered. The spreadsheet update: released. Nobody claimed it."
-    ],
-    "category": "new-feature",
-    "link": "/theleague/draft/room",
-    "linkLabel": "Step into the draft room",
-    "icon": "star",
-    "image": "draft-room-pick-reveal.webp",
-    "imageAlt": "The draft room pick-reveal splash: a deep-red Pacific Pigskins gradient band reading 'With the 3.17, the Pacific Pigskins select Sal Cannella' with the player's cutout rising from the bottom right over a ghosted pick number and franchise crest.",
-    "leagues": [
-      "theleague"
-    ]
-  },
-  {
     "id": "dead-money-shame-banners",
     "date": "2026-07-06",
     "title": "The Dead Money Awards Hang Their Winners on the Wall",
@@ -1045,24 +1005,6 @@
     ]
   },
   {
-    "id": "composite-hero-players",
-    "date": "2026-07-05",
-    "title": "The Homepage Hero Finally Knows Who It's Talking About",
-    "summary": "The big hero up top used to be illustrated by a random NFL stranger who had nothing to do with your league. Now every hero casts a player who actually belongs in it — a rookie for new features, the best free agent during the auction, your own cut candidate on deadline week, and the four best rookies left on the board during UDFA.",
-    "description": [
-      "For years the homepage hero has been illustrated by a random NFL player pulled from a hat. A stranger in a generic jersey, standing there looking vaguely athletic while the card beside him talked about YOUR auction, YOUR roster deadline, YOUR draft. It was the fantasy-football equivalent of a stock-photo handshake — technically a person, technically football, related to your actual league in no way whatsoever.",
-      "Now every hero casts a player who belongs in it. A new feature? Fronted by a rookie, because nothing says 'new' like a guy who's never taken an NFL snap. Auction season? The best free agent still on the board — and once bidding goes live, the player whose 36-hour clock runs out first, framed against the league shield. Cut-watch week? A real player on the bubble — your suggested cut if you're signed in, so the hero is essentially your conscience with a headshot. The kickoff countdown shows the best player starting in the actual season opener. And UDFA week lines up the four best rookies still unclaimed, each posed over his NFL team's logo like a trading card. Everyone's composited over their real team's colors — no stock photos, no licensing lawyers, just the guys who matter to whatever the hero is nagging you about.",
-      "So the next time the homepage tells you to set your lineup, the player staring back is one you might actually start. The stranger in the generic jersey has been released. He cleared waivers. Nobody claimed him."
-    ],
-    "category": "enhancement",
-    "icon": "helmet",
-    "image": "composite-heroes.webp",
-    "imageAlt": "The League homepage UDFA hero: four side-by-side team-color panels, each showing an undrafted rookie's headshot over his NFL team logo, ranked one through four, above a green 'best on the board' band.",
-    "leagues": [
-      "theleague"
-    ]
-  },
-  {
     "id": "afl-composite-heroes",
     "date": "2026-07-05",
     "title": "The AFL Hero Hired a Casting Director",
@@ -1080,6 +1022,24 @@
     "imageAlt": "AFL homepage keeper-deadline hero with a gold border: 'Lock In Your Core' headline and countdown beside a cutout of Jaxson Dart over a Giants-blue glow, with a frosted caption reading Keeper Cornerstone, QB, NYG.",
     "leagues": [
       "afl"
+    ]
+  },
+  {
+    "id": "composite-hero-players",
+    "date": "2026-07-05",
+    "title": "The Homepage Hero Finally Knows Who It's Talking About",
+    "summary": "The big hero up top used to be illustrated by a random NFL stranger who had nothing to do with your league. Now every hero casts a player who actually belongs in it — a rookie for new features, the best free agent during the auction, your own cut candidate on deadline week, and the four best rookies left on the board during UDFA.",
+    "description": [
+      "For years the homepage hero has been illustrated by a random NFL player pulled from a hat. A stranger in a generic jersey, standing there looking vaguely athletic while the card beside him talked about YOUR auction, YOUR roster deadline, YOUR draft. It was the fantasy-football equivalent of a stock-photo handshake — technically a person, technically football, related to your actual league in no way whatsoever.",
+      "Now every hero casts a player who belongs in it. A new feature? Fronted by a rookie, because nothing says 'new' like a guy who's never taken an NFL snap. Auction season? The best free agent still on the board — and once bidding goes live, the player whose 36-hour clock runs out first, framed against the league shield. Cut-watch week? A real player on the bubble — your suggested cut if you're signed in, so the hero is essentially your conscience with a headshot. The kickoff countdown shows the best player starting in the actual season opener. And UDFA week lines up the four best rookies still unclaimed, each posed over his NFL team's logo like a trading card. Everyone's composited over their real team's colors — no stock photos, no licensing lawyers, just the guys who matter to whatever the hero is nagging you about.",
+      "So the next time the homepage tells you to set your lineup, the player staring back is one you might actually start. The stranger in the generic jersey has been released. He cleared waivers. Nobody claimed him."
+    ],
+    "category": "enhancement",
+    "icon": "helmet",
+    "image": "composite-heroes.webp",
+    "imageAlt": "The League homepage UDFA hero: four side-by-side team-color panels, each showing an undrafted rookie's headshot over his NFL team logo, ranked one through four, above a green 'best on the board' band.",
+    "leagues": [
+      "theleague"
     ]
   },
   {
@@ -1108,22 +1068,22 @@
     ]
   },
   {
-    "id": "homepage-redesign",
+    "id": "dark-mode",
     "date": "2026-07-04",
-    "title": "The Front Door Got a Facelift",
-    "summary": "The landing page at MFL.football finally looks like it belongs to two proud leagues instead of a parked domain — full-color league banners, real logos, and a combined What's New feed from both sides of the house.",
+    "title": "Lights Out: Dark Mode Is Here",
+    "summary": "The whole site now comes in dark mode — it follows your phone's setting automatically, or pick Light, Auto, or Dark yourself from the menu drawer. Your 11pm waiver-wire spiral no longer doubles as a tactical flashbang.",
     "description": [
-      "For years, the very first page of MFL.football greeted visitors with all the ceremony of a hotel hallway: two beige cards, a league ID number (riveting), and a font that said \"this site was configured, not designed.\" It technically worked, the same way a folding chair technically counts as furniture.",
-      "The new front door gives each league the entrance it deserves. The League gets a deep-blue banner, AFL gets its red-to-navy fade, and both wear their actual logos — big, white, and unmistakable — with the vitals (teams, conferences, draft rounds) right where you can see them. Below the banners, a combined What's New feed pulls the latest six stories from both leagues into one place, each tagged with its league colors so you always know whose news you're reading. And when the site-wide dark mode arrives, this page is already dressed for it.",
-      "Pick your league and walk in. Or linger on the landing page and read the other league's news first — a little light espionage never hurt anyone."
+      "Let's be honest about how this league operates. Nobody checks their cap space at a reasonable hour. The real roster decisions happen at 11:47pm, in bed, one eye closed, phone brightness at minimum — and then the site loads and hits you with a wall of white so bright your ancestors feel it. You've been drafting like a raccoon caught in headlights for years. We saw the late-night traffic logs. We knew.",
+      "So: dark mode. The entire site — every page, every table, every modal, both leagues — now renders in a proper dark theme. It respects your device's system setting out of the box, which means if your phone flips to dark at sunset, the site flips with it, before the page even paints. Prefer to run your own life? There's a Light / Auto / Dark toggle in the menu drawer that remembers your choice. And this isn't one gray blanket thrown over everything: each league got its own treatment, with its own accent colors, and team logos and icons that swap to dark-ready versions where owners have supplied them. The salary tables, the charts, the draft boards — all of it re-tuned so the numbers you squint at actually pass a contrast check.",
+      "Flip it on tonight during your regularly scheduled pre-sleep roster anxiety. Your retinas — and whoever shares your bed — send their regards."
     ],
-    "category": "enhancement",
-    "icon": "home",
-    "image": "homepage-redesign.webp",
-    "imageAlt": "Redesigned MFL.football landing page showing the Two Leagues One Home headline, a blue The League banner and a red AFL banner with white league logos, above a combined What's New card grid",
+    "category": "new-feature",
+    "heroTheme": "dark",
+    "icon": "eye",
+    "image": "dark-mode.webp",
+    "imageAlt": "The League homepage rendered in dark mode: charcoal cards with bright blue accents, dark roster planning hero, and the Schefter Report feed on dark surfaces.",
     "leagues": [
-      "theleague",
-      "afl"
+      "theleague"
     ]
   },
   {
@@ -1145,22 +1105,22 @@
     ]
   },
   {
-    "id": "dark-mode",
+    "id": "homepage-redesign",
     "date": "2026-07-04",
-    "title": "Lights Out: Dark Mode Is Here",
-    "summary": "The whole site now comes in dark mode — it follows your phone's setting automatically, or pick Light, Auto, or Dark yourself from the menu drawer. Your 11pm waiver-wire spiral no longer doubles as a tactical flashbang.",
+    "title": "The Front Door Got a Facelift",
+    "summary": "The landing page at MFL.football finally looks like it belongs to two proud leagues instead of a parked domain — full-color league banners, real logos, and a combined What's New feed from both sides of the house.",
     "description": [
-      "Let's be honest about how this league operates. Nobody checks their cap space at a reasonable hour. The real roster decisions happen at 11:47pm, in bed, one eye closed, phone brightness at minimum — and then the site loads and hits you with a wall of white so bright your ancestors feel it. You've been drafting like a raccoon caught in headlights for years. We saw the late-night traffic logs. We knew.",
-      "So: dark mode. The entire site — every page, every table, every modal, both leagues — now renders in a proper dark theme. It respects your device's system setting out of the box, which means if your phone flips to dark at sunset, the site flips with it, before the page even paints. Prefer to run your own life? There's a Light / Auto / Dark toggle in the menu drawer that remembers your choice. And this isn't one gray blanket thrown over everything: each league got its own treatment, with its own accent colors, and team logos and icons that swap to dark-ready versions where owners have supplied them. The salary tables, the charts, the draft boards — all of it re-tuned so the numbers you squint at actually pass a contrast check.",
-      "Flip it on tonight during your regularly scheduled pre-sleep roster anxiety. Your retinas — and whoever shares your bed — send their regards."
+      "For years, the very first page of MFL.football greeted visitors with all the ceremony of a hotel hallway: two beige cards, a league ID number (riveting), and a font that said \"this site was configured, not designed.\" It technically worked, the same way a folding chair technically counts as furniture.",
+      "The new front door gives each league the entrance it deserves. The League gets a deep-blue banner, AFL gets its red-to-navy fade, and both wear their actual logos — big, white, and unmistakable — with the vitals (teams, conferences, draft rounds) right where you can see them. Below the banners, a combined What's New feed pulls the latest six stories from both leagues into one place, each tagged with its league colors so you always know whose news you're reading. And when the site-wide dark mode arrives, this page is already dressed for it.",
+      "Pick your league and walk in. Or linger on the landing page and read the other league's news first — a little light espionage never hurt anyone."
     ],
-    "category": "new-feature",
-    "heroTheme": "dark",
-    "icon": "eye",
-    "image": "dark-mode.webp",
-    "imageAlt": "The League homepage rendered in dark mode: charcoal cards with bright blue accents, dark roster planning hero, and the Schefter Report feed on dark surfaces.",
+    "category": "enhancement",
+    "icon": "home",
+    "image": "homepage-redesign.webp",
+    "imageAlt": "Redesigned MFL.football landing page showing the Two Leagues One Home headline, a blue The League banner and a red AFL banner with white league logos, above a combined What's New card grid",
     "leagues": [
-      "theleague"
+      "theleague",
+      "afl"
     ]
   },
   {
@@ -1208,26 +1168,6 @@
     ]
   },
   {
-    "id": "afl-trophy-wall",
-    "date": "2026-06-27",
-    "title": "Every AFL Franchise Gets a Trophy Room",
-    "summary": "AFL franchise pages now open with a four-tier trophy room — every AFL Championship, conference, division, NIT, tier, and old AFL Cup title since 2004, each badge stamped with the year it was won, and the ones you haven’t won faded out so everyone can see exactly what’s missing.",
-    "description": [
-      "For years the only way to settle who’d actually won what in the AFL was to argue about it in the group chat until someone gave up, and the franchise pages weren’t much help — a lone ‘Championships’ counter that lumped a dynasty and a one-hit wonder into the same tidy little number. Hardware deserves better than a footnote.",
-      "So every AFL franchise page now leads with a trophy room, sorted into four tiers — Championships, Conference Titles, Division Titles, and Consolation Titles — going all the way back to 2004. Every single win is its own badge, stamped with the year, so a three-peat looks like a three-peat. It covers the whole history: the AFL Championship, AL and NL crowns, all the division titles (including the long-gone AL Central and NL Pacific from the six-division days), the NIT, both tier titles, and the old AFL Cup. Win the AFL Championship and you automatically get your conference badge too, because you had to win the conference to get there. And it follows the owner, not the franchise slot — so a title you won under an old team name still lands on your wall, even if someone else has your old number now.",
-      "Anything active you haven’t won yet — AFL Championship, Premier League, your division, your conference — sits there faded and labeled ‘No division titles,’ ‘No AFL Championships,’ and so on. Motivation or a personal attack, depending on your franchise. Head to your page and see how the case looks; some of you are going to need a bigger room."
-    ],
-    "category": "enhancement",
-    "link": "/afl-fantasy/franchises",
-    "linkLabel": "See your trophy wall",
-    "icon": "trophy",
-    "image": "afl-trophy-wall.webp",
-    "imageAlt": "An AFL franchise trophy room grouped into Championships, Conference Titles, Division Titles, and Consolation Titles, with year-stamped gold-and-navy badges for each win and faded ‘No …’ placeholders for unwon awards",
-    "leagues": [
-      "afl"
-    ]
-  },
-  {
     "id": "afl-title-progress",
     "date": "2026-06-27",
     "title": "Your Trophy Wall Now Has a Checklist",
@@ -1243,6 +1183,26 @@
     "icon": "trophy",
     "image": "afl-title-progress.webp",
     "imageAlt": "An AFL franchise header showing a compact 'Trophy wall' progress bar — six slim pips, four filled in brand gold and two greyed out, with a '4 / 6' tally beside the franchise's trophy count.",
+    "leagues": [
+      "afl"
+    ]
+  },
+  {
+    "id": "afl-trophy-wall",
+    "date": "2026-06-27",
+    "title": "Every AFL Franchise Gets a Trophy Room",
+    "summary": "AFL franchise pages now open with a four-tier trophy room — every AFL Championship, conference, division, NIT, tier, and old AFL Cup title since 2004, each badge stamped with the year it was won, and the ones you haven’t won faded out so everyone can see exactly what’s missing.",
+    "description": [
+      "For years the only way to settle who’d actually won what in the AFL was to argue about it in the group chat until someone gave up, and the franchise pages weren’t much help — a lone ‘Championships’ counter that lumped a dynasty and a one-hit wonder into the same tidy little number. Hardware deserves better than a footnote.",
+      "So every AFL franchise page now leads with a trophy room, sorted into four tiers — Championships, Conference Titles, Division Titles, and Consolation Titles — going all the way back to 2004. Every single win is its own badge, stamped with the year, so a three-peat looks like a three-peat. It covers the whole history: the AFL Championship, AL and NL crowns, all the division titles (including the long-gone AL Central and NL Pacific from the six-division days), the NIT, both tier titles, and the old AFL Cup. Win the AFL Championship and you automatically get your conference badge too, because you had to win the conference to get there. And it follows the owner, not the franchise slot — so a title you won under an old team name still lands on your wall, even if someone else has your old number now.",
+      "Anything active you haven’t won yet — AFL Championship, Premier League, your division, your conference — sits there faded and labeled ‘No division titles,’ ‘No AFL Championships,’ and so on. Motivation or a personal attack, depending on your franchise. Head to your page and see how the case looks; some of you are going to need a bigger room."
+    ],
+    "category": "enhancement",
+    "link": "/afl-fantasy/franchises",
+    "linkLabel": "See your trophy wall",
+    "icon": "trophy",
+    "image": "afl-trophy-wall.webp",
+    "imageAlt": "An AFL franchise trophy room grouped into Championships, Conference Titles, Division Titles, and Consolation Titles, with year-stamped gold-and-navy badges for each win and faded ‘No …’ placeholders for unwon awards",
     "leagues": [
       "afl"
     ]
@@ -1426,26 +1386,6 @@
     ]
   },
   {
-    "id": "the-board",
-    "date": "2026-03-25",
-    "title": "The Board",
-    "summary": "The league finally leaves the 2000s. A modern discussion board replaces The League message board — no more phpBB3, no more forgotten passwords, and no more posting contracts only to find out the board's been down for a week.",
-    "description": [
-      "Let's talk about The League message board. The one powered by phpBB3 — the forum software that peaked the same year as flip phones and has aged about as gracefully. And the login experience — genuinely a gauntlet. You'd try to log in, realize you forgot your password, request a reset, then discover you couldn't remember your username either. So you'd message the Commissioner, who'd have to dig through the phpBB admin panel — a UI designed by people who actively resented their users — just to tell you your new password is 'pigskins_rule_07.' An entire afternoon, gone.",
-      "The Board is a full discussion platform built directly into the site — no external forum, no separate login, no phpBB admin panel, no password you set in 2009 and haven't thought about since. Post an idea, tag it as a rule change, website suggestion, or general topic, and other owners can comment, react with emoji, and actually engage in the same decade the conversation started. Each post gets its own thread with nested replies, image uploads, and an emoji reaction bar. The Commissioner can set statuses — Under Review, Approved, Rejected, Tabled — so proposals don't disappear into the void like they did when they were buried under three pages of off-topic replies about someone's fantasy football podcast. Website suggestions get a structured form that captures the page, the problem, and the desired behavior — and here's where it gets interesting: an army of AI agents is standing by to actually build the thing. Your suggestion isn't just a note in a backlog. It's a work order. Describe what you want, and the dev team — which at this point is mostly Claude wearing different hats — gets to work.",
-      "Gone are the days of posting your contract declarations to the message board, only to realize a week later that the board had quietly stopped working and nobody noticed. Rule changes still require a 75% vote per the constitution — The Board doesn't change that. But now the discussion, the reactions, and the Commissioner's ruling all live in one place instead of scattered across a dead phpBB3 instance, a group chat, and someone's DMs. Pour one out for The League message board. It survived the Obama administration, two league expansions, and an era where Comic Sans and Times New Roman coexisted on the same page. It earned its retirement."
-    ],
-    "category": "new-page",
-    "link": "/theleague/suggestions",
-    "linkLabel": "Visit The Board",
-    "icon": "commenting",
-    "image": "the-board.webp",
-    "imageAlt": "The Board page showing league discussion posts with emoji reactions and comment counts, category filter pills, and a sidebar with posting guidelines and an Ask Roger promo",
-    "leagues": [
-      "theleague"
-    ]
-  },
-  {
     "id": "schefter-report",
     "date": "2026-03-25",
     "title": "The Schefter Report",
@@ -1466,21 +1406,21 @@
     ]
   },
   {
-    "id": "projected-free-agents",
-    "date": "2026-03-24",
-    "title": "Projected Free Agents",
-    "summary": "A report showing every player in their final contract year — the ones who'll hit free agency after the season ends, ranked by projection with salary and stats.",
+    "id": "the-board",
+    "date": "2026-03-25",
+    "title": "The Board",
+    "summary": "The league finally leaves the 2000s. A modern discussion board replaces The League message board — no more phpBB3, no more forgotten passwords, and no more posting contracts only to find out the board's been down for a week.",
     "description": [
-      "Planning for free agency used to mean scrolling through sixteen roster pages, mentally flagging every player with a '1' in the contract years column, and trying to remember which ones were actually good. If you wanted salary context or projections alongside that list, you were building your own spreadsheet — and by the time you finished, someone else had already made the trade you were planning.",
-      "The Projected Free Agents report pulls every rostered player with one year remaining on their contract into a single table, sorted by projected points. You get their salary, age, last season's stats, and PPG — plus your imported dynasty rankings if you've got them. Filter by position, search by name, or narrow it down to a specific team's expiring players. The summary bar at the top shows the total count, total salary on the chopping block, and average age of the class.",
-      "Think of it as your offseason scouting report for the players who are about to become available — whether you're planning to re-sign your own guys, target someone else's expiring asset in a trade, or just want to know which teams are about to lose half their roster."
+      "Let's talk about The League message board. The one powered by phpBB3 — the forum software that peaked the same year as flip phones and has aged about as gracefully. And the login experience — genuinely a gauntlet. You'd try to log in, realize you forgot your password, request a reset, then discover you couldn't remember your username either. So you'd message the Commissioner, who'd have to dig through the phpBB admin panel — a UI designed by people who actively resented their users — just to tell you your new password is 'pigskins_rule_07.' An entire afternoon, gone.",
+      "The Board is a full discussion platform built directly into the site — no external forum, no separate login, no phpBB admin panel, no password you set in 2009 and haven't thought about since. Post an idea, tag it as a rule change, website suggestion, or general topic, and other owners can comment, react with emoji, and actually engage in the same decade the conversation started. Each post gets its own thread with nested replies, image uploads, and an emoji reaction bar. The Commissioner can set statuses — Under Review, Approved, Rejected, Tabled — so proposals don't disappear into the void like they did when they were buried under three pages of off-topic replies about someone's fantasy football podcast. Website suggestions get a structured form that captures the page, the problem, and the desired behavior — and here's where it gets interesting: an army of AI agents is standing by to actually build the thing. Your suggestion isn't just a note in a backlog. It's a work order. Describe what you want, and the dev team — which at this point is mostly Claude wearing different hats — gets to work.",
+      "Gone are the days of posting your contract declarations to the message board, only to realize a week later that the board had quietly stopped working and nobody noticed. Rule changes still require a 75% vote per the constitution — The Board doesn't change that. But now the discussion, the reactions, and the Commissioner's ruling all live in one place instead of scattered across a dead phpBB3 instance, a group chat, and someone's DMs. Pour one out for The League message board. It survived the Obama administration, two league expansions, and an era where Comic Sans and Times New Roman coexisted on the same page. It earned its retirement."
     ],
     "category": "new-page",
-    "link": "/theleague/projected-free-agents",
-    "linkLabel": "View the report",
-    "icon": "binoculars",
-    "image": "projected-free-agents.webp",
-    "imageAlt": "Projected Free Agents report showing a sortable table of players in their final contract year with salary, projected points, and position filter pills",
+    "link": "/theleague/suggestions",
+    "linkLabel": "Visit The Board",
+    "icon": "commenting",
+    "image": "the-board.webp",
+    "imageAlt": "The Board page showing league discussion posts with emoji reactions and comment counts, category filter pills, and a sidebar with posting guidelines and an Ask Roger promo",
     "leagues": [
       "theleague"
     ]
@@ -1501,6 +1441,26 @@
     "icon": "gavel",
     "image": "ask-roger.webp",
     "imageAlt": "Ask Roger page showing a two-column layout with AI-answered rules Q&A cards on the left and Roger's personality card on the right",
+    "leagues": [
+      "theleague"
+    ]
+  },
+  {
+    "id": "projected-free-agents",
+    "date": "2026-03-24",
+    "title": "Projected Free Agents",
+    "summary": "A report showing every player in their final contract year — the ones who'll hit free agency after the season ends, ranked by projection with salary and stats.",
+    "description": [
+      "Planning for free agency used to mean scrolling through sixteen roster pages, mentally flagging every player with a '1' in the contract years column, and trying to remember which ones were actually good. If you wanted salary context or projections alongside that list, you were building your own spreadsheet — and by the time you finished, someone else had already made the trade you were planning.",
+      "The Projected Free Agents report pulls every rostered player with one year remaining on their contract into a single table, sorted by projected points. You get their salary, age, last season's stats, and PPG — plus your imported dynasty rankings if you've got them. Filter by position, search by name, or narrow it down to a specific team's expiring players. The summary bar at the top shows the total count, total salary on the chopping block, and average age of the class.",
+      "Think of it as your offseason scouting report for the players who are about to become available — whether you're planning to re-sign your own guys, target someone else's expiring asset in a trade, or just want to know which teams are about to lose half their roster."
+    ],
+    "category": "new-page",
+    "link": "/theleague/projected-free-agents",
+    "linkLabel": "View the report",
+    "icon": "binoculars",
+    "image": "projected-free-agents.webp",
+    "imageAlt": "Projected Free Agents report showing a sortable table of players in their final contract year with salary, projected points, and position filter pills",
     "leagues": [
       "theleague"
     ]
@@ -1586,26 +1546,6 @@
     ]
   },
   {
-    "id": "salary-history-redesign",
-    "date": "2026-03-15",
-    "title": "Salary History Gets the Editorial Treatment",
-    "summary": "The historical salary trends chart went from bare-bones to best-in-class — tabbed views, accessible data tables, and a design that actually belongs on this site.",
-    "description": [
-      "The salary history chart used to look like it wandered in from a different website. A basic Chart.js line graph with default styling, a legend that did the bare minimum, and zero personality. It got the job done the way a gas station sandwich gets the job done — technically, but you wouldn't brag about it.",
-      "Now it's a proper editorial feature. A segmented control lets you toggle between Franchise Tag, Extension, and Team Option trends with smooth data transitions. The custom legend and tooltip follow the site's design language — muted steel-and-sienna palette, uppercase micro labels, tabular numbers that actually align. Every chart type has a collapsible data table underneath for accessibility and for the spreadsheet people who want the raw numbers. The whole thing is keyboard-navigable, screen-reader-friendly, and responsive down to mobile without losing readability.",
-      "It's also the first chart in the editorial design system, which means every future chart starts from this foundation. The palette tokens, the tooltip pattern, the legend style — all reusable. Think of it less as a page redesign and more as the chart department finally opening for business."
-    ],
-    "category": "enhancement",
-    "link": "/theleague/salary-history",
-    "linkLabel": "View salary trends",
-    "icon": "standings-2",
-    "image": "salary-history-redesign.webp",
-    "imageAlt": "Salary history page showing a styled line chart with Franchise Tag trends, segmented control tabs, custom legend, and collapsible data table",
-    "leagues": [
-      "theleague"
-    ]
-  },
-  {
     "id": "salary-analytics-redesign",
     "date": "2026-03-15",
     "title": "Salary Analytics Goes Editorial",
@@ -1621,6 +1561,26 @@
     "icon": "bar-chart",
     "image": "salary-analytics-redesign.webp",
     "imageAlt": "Salary Analytics page showing editorial-styled position cards with metric grids, detail rows, and top earner tables",
+    "leagues": [
+      "theleague"
+    ]
+  },
+  {
+    "id": "salary-history-redesign",
+    "date": "2026-03-15",
+    "title": "Salary History Gets the Editorial Treatment",
+    "summary": "The historical salary trends chart went from bare-bones to best-in-class — tabbed views, accessible data tables, and a design that actually belongs on this site.",
+    "description": [
+      "The salary history chart used to look like it wandered in from a different website. A basic Chart.js line graph with default styling, a legend that did the bare minimum, and zero personality. It got the job done the way a gas station sandwich gets the job done — technically, but you wouldn't brag about it.",
+      "Now it's a proper editorial feature. A segmented control lets you toggle between Franchise Tag, Extension, and Team Option trends with smooth data transitions. The custom legend and tooltip follow the site's design language — muted steel-and-sienna palette, uppercase micro labels, tabular numbers that actually align. Every chart type has a collapsible data table underneath for accessibility and for the spreadsheet people who want the raw numbers. The whole thing is keyboard-navigable, screen-reader-friendly, and responsive down to mobile without losing readability.",
+      "It's also the first chart in the editorial design system, which means every future chart starts from this foundation. The palette tokens, the tooltip pattern, the legend style — all reusable. Think of it less as a page redesign and more as the chart department finally opening for business."
+    ],
+    "category": "enhancement",
+    "link": "/theleague/salary-history",
+    "linkLabel": "View salary trends",
+    "icon": "standings-2",
+    "image": "salary-history-redesign.webp",
+    "imageAlt": "Salary history page showing a styled line chart with Franchise Tag trends, segmented control tabs, custom legend, and collapsible data table",
     "leagues": [
       "theleague"
     ]
@@ -1806,6 +1766,26 @@
     ]
   },
   {
+    "id": "free-agents-redesign",
+    "date": "2026-02-28",
+    "title": "Free Agents, From Scratch",
+    "summary": "The Free Agents page got rebuilt from the ground up — hero banner, college logos, advanced filters, and enough sorting options to make a spreadsheet jealous.",
+    "description": [
+      "The old Free Agents page was functional the way a phone book is functional — technically all the information was there, but finding what you wanted required patience, squinting, and a vague sense that there had to be a better way. Sorting was limited, filtering was nonexistent, and if you wanted to compare a player's snap count to their draft pedigree you were toggling between tabs like it was 2011.",
+      "The rebuilt page starts with a rotating hero banner featuring players from the available pool, because even a research tool deserves a little curb appeal. Below that, position pills give you instant counts — 86 QBs, 132 RBs, 211 WRs — and a search bar handles the 'I know who I want' moments. The new Filters panel lets you slice by NFL team, age range, height, weight, experience, and draft round, all collapsible so it stays out of your way when you don't need it. The Stats view packs in everything from college logos to snap percentages, and the Rankings view syncs with your imported rankings so you can sort by your own board. Every column is sortable, every row opens the redesigned player modal, and the whole thing remembers your last view preference.",
+      "Think of it less as a free agent list and more as a scouting department that fits in a browser tab. Use it before the auction to find the undervalued 26-year-old WR2 nobody's talking about. Or use it after to confirm that yes, you did in fact overpay for a 30-year-old running back. The data doesn't lie — it just waits patiently for you to ask the right question."
+    ],
+    "category": "enhancement",
+    "link": "/theleague/players",
+    "linkLabel": "Scout some free agents",
+    "icon": "binoculars",
+    "image": "free-agents-redesign.webp",
+    "imageAlt": "Redesigned Free Agents page with broadcast-style diagonal photo hero, editorial position filters, and sortable stats table showing top available players",
+    "leagues": [
+      "theleague"
+    ]
+  },
+  {
     "id": "player-details-modal-redesign",
     "date": "2026-02-28",
     "title": "Player Modal, Reimagined",
@@ -1827,21 +1807,21 @@
     ]
   },
   {
-    "id": "free-agents-redesign",
-    "date": "2026-02-28",
-    "title": "Free Agents, From Scratch",
-    "summary": "The Free Agents page got rebuilt from the ground up — hero banner, college logos, advanced filters, and enough sorting options to make a spreadsheet jealous.",
+    "id": "dead-money-awards",
+    "date": "2026-02-26",
+    "title": "The Dead Money Awards",
+    "summary": "Finally, a page dedicated to celebrating the league's worst financial decisions. You know who you are.",
     "description": [
-      "The old Free Agents page was functional the way a phone book is functional — technically all the information was there, but finding what you wanted required patience, squinting, and a vague sense that there had to be a better way. Sorting was limited, filtering was nonexistent, and if you wanted to compare a player's snap count to their draft pedigree you were toggling between tabs like it was 2011.",
-      "The rebuilt page starts with a rotating hero banner featuring players from the available pool, because even a research tool deserves a little curb appeal. Below that, position pills give you instant counts — 86 QBs, 132 RBs, 211 WRs — and a search bar handles the 'I know who I want' moments. The new Filters panel lets you slice by NFL team, age range, height, weight, experience, and draft round, all collapsible so it stays out of your way when you don't need it. The Stats view packs in everything from college logos to snap percentages, and the Rankings view syncs with your imported rankings so you can sort by your own board. Every column is sortable, every row opens the redesigned player modal, and the whole thing remembers your last view preference.",
-      "Think of it less as a free agent list and more as a scouting department that fits in a browser tab. Use it before the auction to find the undervalued 26-year-old WR2 nobody's talking about. Or use it after to confirm that yes, you did in fact overpay for a 30-year-old running back. The data doesn't lie — it just waits patiently for you to ask the right question."
+      "For years, the GM MVP Awards have been handing out trophies to the shrewd, the lucky, and the suspiciously well-informed. Meanwhile, the rest of you have been quietly lighting salary cap on fire and hoping nobody noticed. Well, someone noticed. The Dead Money Awards are here to immortalize every overpay, every busted contract, and every player who collected a paycheck and contributed exactly nothing in return.",
+      "The Jerry Jones Award goes to the GM whose best possible starting lineup still managed to be the worst value in the league — because spending $32 million to score fewer points than a team spending half that is a special kind of talent. The Brock Osweiler Award honors the individual player who burned the most salary per point scored, named after the QB who was so bad the Texans literally paid the Browns a second-round pick to take his contract away. And then there's the Zero-Point Hall of Shame: rostered players with real salary who scored exactly zero points. Not one. Not a half-point garbage time catch. Zero.",
+      "Every season is covered, every position has its worst, and the year filter lets you relive the financial mismanagement of seasons past. Think of it as a public service — or at least a cautionary tale for auction day. Check who's on the list before you bid. Or don't, and see yourself here next year."
     ],
-    "category": "enhancement",
-    "link": "/theleague/players",
-    "linkLabel": "Scout some free agents",
-    "icon": "binoculars",
-    "image": "free-agents-redesign.webp",
-    "imageAlt": "Redesigned Free Agents page with broadcast-style diagonal photo hero, editorial position filters, and sortable stats table showing top available players",
+    "category": "new-page",
+    "link": "/theleague/dead-money",
+    "linkLabel": "See who made the list",
+    "icon": "tombstone",
+    "image": "dead-money-awards.webp",
+    "imageAlt": "Dead Money Awards page showing the league's worst contracts and overpays by season",
     "leagues": [
       "theleague"
     ]
@@ -1862,26 +1842,6 @@
     "icon": "home",
     "image": "pwa-app.webp",
     "imageAlt": "The League installed as a Progressive Web App on a mobile home screen",
-    "leagues": [
-      "theleague"
-    ]
-  },
-  {
-    "id": "dead-money-awards",
-    "date": "2026-02-26",
-    "title": "The Dead Money Awards",
-    "summary": "Finally, a page dedicated to celebrating the league's worst financial decisions. You know who you are.",
-    "description": [
-      "For years, the GM MVP Awards have been handing out trophies to the shrewd, the lucky, and the suspiciously well-informed. Meanwhile, the rest of you have been quietly lighting salary cap on fire and hoping nobody noticed. Well, someone noticed. The Dead Money Awards are here to immortalize every overpay, every busted contract, and every player who collected a paycheck and contributed exactly nothing in return.",
-      "The Jerry Jones Award goes to the GM whose best possible starting lineup still managed to be the worst value in the league — because spending $32 million to score fewer points than a team spending half that is a special kind of talent. The Brock Osweiler Award honors the individual player who burned the most salary per point scored, named after the QB who was so bad the Texans literally paid the Browns a second-round pick to take his contract away. And then there's the Zero-Point Hall of Shame: rostered players with real salary who scored exactly zero points. Not one. Not a half-point garbage time catch. Zero.",
-      "Every season is covered, every position has its worst, and the year filter lets you relive the financial mismanagement of seasons past. Think of it as a public service — or at least a cautionary tale for auction day. Check who's on the list before you bid. Or don't, and see yourself here next year."
-    ],
-    "category": "new-page",
-    "link": "/theleague/dead-money",
-    "linkLabel": "See who made the list",
-    "icon": "tombstone",
-    "image": "dead-money-awards.webp",
-    "imageAlt": "Dead Money Awards page showing the league's worst contracts and overpays by season",
     "leagues": [
       "theleague"
     ]
@@ -1929,6 +1889,42 @@
     "icon": "chalkboard",
     "image": "league-planner.webp",
     "imageAlt": "League Planner showing offseason phase-aware roster tools with free agent targets and draft picks",
+    "leagues": [
+      "theleague"
+    ]
+  },
+  {
+    "id": "frozen-salary-averages-fix",
+    "date": "2026-02-22",
+    "title": "Extension Calculator Fix",
+    "summary": "Veteran extension and franchise tag calculations now correctly use the previous season's frozen salary averages.",
+    "description": [
+      "For a brief window after the February league year rollover, the extension and franchise tag calculators were doing their math with all the reliability of a rookie quarterback in a snow game. The problem? They were pulling salary averages from the new league year's roster pool — a pool where half the teams hadn't even finished assembling their rosters yet. The result was position averages that looked like they were generated by a random number generator rather than actual contract data.",
+      "The fix locks all extension and franchise tag calculations onto the previous season's week 14 frozen salary snapshot — the gold standard of salary data, captured when rosters are at their most complete and stable. This frozen data stays in play until the current season reaches its own week 14 freeze, ensuring you never get calculations based on incomplete information. If you used the Trade Builder, Rosters, or Contract Tools pages during the rollover window and something looked off, this is why — and it's now corrected."
+    ],
+    "category": "bug-fix",
+    "icon": "wrench",
+    "excludeFromHero": true,
+    "leagues": [
+      "theleague"
+    ]
+  },
+  {
+    "id": "composite-my-rank",
+    "date": "2026-02-22",
+    "title": "My Rank Composite",
+    "summary": "Pick your trusted ranking sources, assign weights, and see a single personalized \"My Rank\" column on the Free Agents page.",
+    "description": [
+      "The arms race of ranking sources has officially reached the point where owners need a ranking of their rankings. With seven import sources available — and some owners hoarding all seven — the Free Agents page was turning into a spreadsheet that would make an accountant weep. Something had to give, and that something is the new My Rank composite.",
+      "Head to the Import Rankings page, check the boxes next to the sources you actually trust, and assign each a weight: 1x for sources you respect, 2x for sources you swear by, and 3x for whatever gospel you've decided is the absolute truth this offseason. Once you've selected at least two sources, a blended \"My Rank\" column appears as the very first ranking column on the Free Agents page. Your composite members are grouped together with a visual separator so you can still see how the individual rankings compare to your custom blend.",
+      "It's worth noting that this is a weighted average, not a popularity contest. If you give KeepTradeCut 3x weight and everything else 1x, KTC's rankings will dominate your composite. Adjust accordingly — or don't, and blame the algorithm when your auction bids don't work out."
+    ],
+    "category": "new-feature",
+    "link": "/theleague/import-rankings",
+    "linkLabel": "Set up My Rank",
+    "icon": "star",
+    "image": "composite-my-rank.webp",
+    "imageAlt": "Import Rankings page showing ranking source selection with weight controls for building a My Rank composite",
     "leagues": [
       "theleague"
     ]
@@ -1990,42 +1986,6 @@
     "excludeFromHero": true,
     "image": "roster-ranking-source-label.webp",
     "imageAlt": "Roster page showing ranking source abbreviation in the column header",
-    "leagues": [
-      "theleague"
-    ]
-  },
-  {
-    "id": "frozen-salary-averages-fix",
-    "date": "2026-02-22",
-    "title": "Extension Calculator Fix",
-    "summary": "Veteran extension and franchise tag calculations now correctly use the previous season's frozen salary averages.",
-    "description": [
-      "For a brief window after the February league year rollover, the extension and franchise tag calculators were doing their math with all the reliability of a rookie quarterback in a snow game. The problem? They were pulling salary averages from the new league year's roster pool — a pool where half the teams hadn't even finished assembling their rosters yet. The result was position averages that looked like they were generated by a random number generator rather than actual contract data.",
-      "The fix locks all extension and franchise tag calculations onto the previous season's week 14 frozen salary snapshot — the gold standard of salary data, captured when rosters are at their most complete and stable. This frozen data stays in play until the current season reaches its own week 14 freeze, ensuring you never get calculations based on incomplete information. If you used the Trade Builder, Rosters, or Contract Tools pages during the rollover window and something looked off, this is why — and it's now corrected."
-    ],
-    "category": "bug-fix",
-    "icon": "wrench",
-    "excludeFromHero": true,
-    "leagues": [
-      "theleague"
-    ]
-  },
-  {
-    "id": "composite-my-rank",
-    "date": "2026-02-22",
-    "title": "My Rank Composite",
-    "summary": "Pick your trusted ranking sources, assign weights, and see a single personalized \"My Rank\" column on the Free Agents page.",
-    "description": [
-      "The arms race of ranking sources has officially reached the point where owners need a ranking of their rankings. With seven import sources available — and some owners hoarding all seven — the Free Agents page was turning into a spreadsheet that would make an accountant weep. Something had to give, and that something is the new My Rank composite.",
-      "Head to the Import Rankings page, check the boxes next to the sources you actually trust, and assign each a weight: 1x for sources you respect, 2x for sources you swear by, and 3x for whatever gospel you've decided is the absolute truth this offseason. Once you've selected at least two sources, a blended \"My Rank\" column appears as the very first ranking column on the Free Agents page. Your composite members are grouped together with a visual separator so you can still see how the individual rankings compare to your custom blend.",
-      "It's worth noting that this is a weighted average, not a popularity contest. If you give KeepTradeCut 3x weight and everything else 1x, KTC's rankings will dominate your composite. Adjust accordingly — or don't, and blame the algorithm when your auction bids don't work out."
-    ],
-    "category": "new-feature",
-    "link": "/theleague/import-rankings",
-    "linkLabel": "Set up My Rank",
-    "icon": "star",
-    "image": "composite-my-rank.webp",
-    "imageAlt": "Import Rankings page showing ranking source selection with weight controls for building a My Rank composite",
     "leagues": [
       "theleague"
     ]
@@ -2110,6 +2070,46 @@
     ]
   },
   {
+    "id": "gm-coach-mode",
+    "date": "2026-02-16",
+    "title": "GM/Coach Mode Toggle",
+    "summary": "Switch between GM and Coach views on your roster page.",
+    "description": [
+      "This one started with a simple request from The Dream: he wanted to see the top scores from every player. What he got was an entire second perspective on the roster page. The GM tab was always there — salaries, contracts, escalation projections, trade value — but not everyone opens the roster page thinking about cap space. Some people open it on Sunday morning wondering who to start.",
+      "The Coach tab strips away the front office and replaces it with what matters on game day. Player averages, opponent matchups, injury designations, Vegas lines, over/unders, and even stadium weather — everything a coach needs to set a lineup without wading through contract details. GM mode is still one click away for when the trade itch hits, but Coach mode is for the people who just want to win this week.",
+      "Coach mode is available to all users, with a demo experience for visitors who want to kick the tires. It's accessible directly via URL so anyone who's already decided which hat they're wearing today can skip straight to the view they need."
+    ],
+    "category": "new-feature",
+    "link": "/theleague/rosters?view=coach",
+    "linkLabel": "Try Coach Mode",
+    "icon": "submit",
+    "image": "gm-coach-mode.webp",
+    "imageAlt": "Roster page in Coach Mode showing matchup data and start/sit columns",
+    "leagues": [
+      "theleague"
+    ]
+  },
+  {
+    "id": "trade-bait-marketplace",
+    "date": "2026-02-16",
+    "title": "Trade Bait Marketplace",
+    "summary": "See which players teams have listed as available for trade.",
+    "description": [
+      "The trade deadline is approaching, and the eternal question echoes across the league: \"Who's available?\" Previously, answering that question required individually messaging every owner — a process roughly as efficient as going door-to-door asking if anyone wants to sell their house. The Trade Bait Marketplace eliminates the detective work by surfacing every player that teams have flagged as available for trade, all in one view.",
+      "Built directly into the Trade Builder, the marketplace shows trade bait across all sixteen teams, filterable by position. During the February transition period — when the league straddles two league years — trade bait from both the current and incoming seasons is displayed so you're working with the full picture.",
+      "See a player you like? You're already in the Trade Builder. Start dragging."
+    ],
+    "category": "new-feature",
+    "link": "/theleague/trade-builder",
+    "linkLabel": "Open Trade Builder",
+    "icon": "transactions-2",
+    "image": "trade-bait-marketplace.webp",
+    "imageAlt": "Trade Builder page showing the Trade Bait Marketplace with available players",
+    "leagues": [
+      "theleague"
+    ]
+  },
+  {
     "id": "weekly-rollup-2026-02-17",
     "date": "2026-02-16",
     "title": "Weekly Fixes & Polish (Feb 10-16)",
@@ -2137,41 +2137,21 @@
     ]
   },
   {
-    "id": "trade-bait-marketplace",
-    "date": "2026-02-16",
-    "title": "Trade Bait Marketplace",
-    "summary": "See which players teams have listed as available for trade.",
+    "id": "league-summary",
+    "date": "2026-02-15",
+    "title": "League Summary Page",
+    "summary": "Compare all 16 teams across cap, roster, and contract metrics.",
     "description": [
-      "The trade deadline is approaching, and the eternal question echoes across the league: \"Who's available?\" Previously, answering that question required individually messaging every owner — a process roughly as efficient as going door-to-door asking if anyone wants to sell their house. The Trade Bait Marketplace eliminates the detective work by surfacing every player that teams have flagged as available for trade, all in one view.",
-      "Built directly into the Trade Builder, the marketplace shows trade bait across all sixteen teams, filterable by position. During the February transition period — when the league straddles two league years — trade bait from both the current and incoming seasons is displayed so you're working with the full picture.",
-      "See a player you like? You're already in the Trade Builder. Start dragging."
+      "Trying to compare all sixteen teams used to require the patience of a saint and the memory of an elephant. Open one roster page, jot down some numbers, open another, compare, forget what the first team's cap situation looked like, go back, repeat until your browser has more tabs than your salary cap has dollars. The League Summary page ends this madness with a single dashboard.",
+      "Fourteen categories of competitive intelligence — salary cap usage, dead money, contract length distribution, draft capital, roster age, extension candidates, and more — are laid out across all sixteen teams in one sortable, scannable view. Five years of historical data lets you track which teams are building for the future and which ones are mortgaging it.",
+      "This is the page you open when someone in the group chat says their team is in great cap shape. Trust, but verify."
     ],
-    "category": "new-feature",
-    "link": "/theleague/trade-builder",
-    "linkLabel": "Open Trade Builder",
-    "icon": "transactions-2",
-    "image": "trade-bait-marketplace.webp",
-    "imageAlt": "Trade Builder page showing the Trade Bait Marketplace with available players",
-    "leagues": [
-      "theleague"
-    ]
-  },
-  {
-    "id": "gm-coach-mode",
-    "date": "2026-02-16",
-    "title": "GM/Coach Mode Toggle",
-    "summary": "Switch between GM and Coach views on your roster page.",
-    "description": [
-      "This one started with a simple request from The Dream: he wanted to see the top scores from every player. What he got was an entire second perspective on the roster page. The GM tab was always there — salaries, contracts, escalation projections, trade value — but not everyone opens the roster page thinking about cap space. Some people open it on Sunday morning wondering who to start.",
-      "The Coach tab strips away the front office and replaces it with what matters on game day. Player averages, opponent matchups, injury designations, Vegas lines, over/unders, and even stadium weather — everything a coach needs to set a lineup without wading through contract details. GM mode is still one click away for when the trade itch hits, but Coach mode is for the people who just want to win this week.",
-      "Coach mode is available to all users, with a demo experience for visitors who want to kick the tires. It's accessible directly via URL so anyone who's already decided which hat they're wearing today can skip straight to the view they need."
-    ],
-    "category": "new-feature",
-    "link": "/theleague/rosters?view=coach",
-    "linkLabel": "Try Coach Mode",
-    "icon": "submit",
-    "image": "gm-coach-mode.webp",
-    "imageAlt": "Roster page in Coach Mode showing matchup data and start/sit columns",
+    "category": "new-page",
+    "link": "/theleague/league-summary",
+    "linkLabel": "View League Summary",
+    "icon": "standings-2",
+    "image": "league-summary.webp",
+    "imageAlt": "League Summary dashboard comparing all 16 teams across salary cap and roster metrics",
     "leagues": [
       "theleague"
     ]
@@ -2192,26 +2172,6 @@
     "icon": "transactions-2",
     "image": "trade-builder.webp",
     "imageAlt": "Trade Builder showing two-team player selection with salary cap impact analysis",
-    "leagues": [
-      "theleague"
-    ]
-  },
-  {
-    "id": "league-summary",
-    "date": "2026-02-15",
-    "title": "League Summary Page",
-    "summary": "Compare all 16 teams across cap, roster, and contract metrics.",
-    "description": [
-      "Trying to compare all sixteen teams used to require the patience of a saint and the memory of an elephant. Open one roster page, jot down some numbers, open another, compare, forget what the first team's cap situation looked like, go back, repeat until your browser has more tabs than your salary cap has dollars. The League Summary page ends this madness with a single dashboard.",
-      "Fourteen categories of competitive intelligence — salary cap usage, dead money, contract length distribution, draft capital, roster age, extension candidates, and more — are laid out across all sixteen teams in one sortable, scannable view. Five years of historical data lets you track which teams are building for the future and which ones are mortgaging it.",
-      "This is the page you open when someone in the group chat says their team is in great cap shape. Trust, but verify."
-    ],
-    "category": "new-page",
-    "link": "/theleague/league-summary",
-    "linkLabel": "View League Summary",
-    "icon": "standings-2",
-    "image": "league-summary.webp",
-    "imageAlt": "League Summary dashboard comparing all 16 teams across salary cap and roster metrics",
     "leagues": [
       "theleague"
     ]
