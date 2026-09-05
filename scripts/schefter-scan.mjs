@@ -1432,8 +1432,13 @@ async function getRedis() {
   }
 }
 
-const TIPS_QUEUE_KEY = schefterKey('theleague', 'tips:queue');
-const FIRST_TIP_TS_KEY = schefterKey('theleague', 'tips:first_tip_ts');
+// Tips-queue keys are PER LEAGUE (schefter:tips:queue for TheLeague,
+// schefter:afl:tips:queue for the AFL) — the rumor-mill scanner runs one
+// league per invocation and drains only its own queue, so a tip pushed under
+// the wrong league's key is a post in the wrong GroupMe. Built from the
+// league in scanTradeBait, never captured here as a TheLeague literal.
+const tipsQueueKey = (league) => schefterKey(league.slug, 'tips:queue');
+const firstTipTsKey = (league) => schefterKey(league.slug, 'tips:first_tip_ts');
 
 function buildTradeBaitTip({
   franchiseId,
@@ -1505,9 +1510,13 @@ async function scanTradeBait(league) {
   console.log(`\n=== Scanning Trade Bait (Rumor Mill) for ${league.slug} ===`);
 
   const feed = await loadFeed(league.feedPath);
-  const prevState = feed.tradeBaitState && typeof feed.tradeBaitState === 'object'
-    ? feed.tradeBaitState
-    : {};
+  // "Seeded" = this league has been scanned before. The state is persisted
+  // on EVERY run (even as `{}` when nobody has anything listed — the AFL's
+  // launch state), so the key's presence is the signal, not its size. A
+  // franchise missing from a seeded state had an empty block, and its first
+  // listing must post — see the detector's seed notes.
+  const leagueSeeded = !!feed.tradeBaitState && typeof feed.tradeBaitState === 'object';
+  const prevState = leagueSeeded ? feed.tradeBaitState : {};
 
   const now = new Date();
   const year = now.getMonth() >= 1 ? now.getFullYear() : now.getFullYear() - 1;
@@ -1526,6 +1535,7 @@ async function scanTradeBait(league) {
   const { nextState, emissions, reasons } = detectTradeBaitChanges({
     currentByFranchise,
     prevState,
+    leagueSeeded,
     nowMs: now.getTime(),
   });
 
@@ -1534,7 +1544,7 @@ async function scanTradeBait(league) {
     .map(([fid, reason]) => `${fid}=${reason}`);
   if (changeSummary.length) {
     console.log(`  [trade-bait] Drift summary: ${changeSummary.join(', ')}`);
-  } else if (!Object.keys(prevState).length) {
+  } else if (!leagueSeeded) {
     console.log('  [trade-bait] Silent-seed run — no tips emitted, state captured');
   } else {
     console.log('  [trade-bait] Nothing drifting — state unchanged');
@@ -1587,6 +1597,8 @@ async function scanTradeBait(league) {
   }
 
   // Ensure the first-tip anchor exists so rumor-scan's marinate gate passes.
+  const TIPS_QUEUE_KEY = tipsQueueKey(league);
+  const FIRST_TIP_TS_KEY = firstTipTsKey(league);
   try {
     const existing = await redis.get(FIRST_TIP_TS_KEY);
     if (!existing) await redis.set(FIRST_TIP_TS_KEY, now.getTime());

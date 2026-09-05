@@ -3,6 +3,44 @@
 The load-bearing architecture rules live in CLAUDE.md ("Schefter multi-league").
 This file holds the finer operational learnings.
 
+## 2026-09-05 - "Is it on for the AFL?" is three questions, not one
+
+**Context:** The trade-block lane (owner lists players on MFL's trade bait →
+Schefter posts it) was TheLeague-only. Switching it on for the AFL looked like
+flipping `tradeBait: false` to `true` in `scripts/lib/schefter-leagues.mjs`.
+
+**Insight:** A per-league feature toggle answers "does the lane RUN", not
+"does it run CORRECTLY for this league". Two more things were TheLeague-shaped
+underneath the flag, and neither had a symptom while the flag was off:
+
+1. **The queue keys were captured at module load as
+   `schefterKey('theleague', …)`.** Every other league-scoped key in the two
+   scanners is built from the league being scanned; these two predated the
+   `--league` refactor and never got re-scoped because nothing ever exercised
+   them with a second league. Flipping the flag alone would have pushed AFL
+   listings into TheLeague's queue, which TheLeague's rumor-scan step drains
+   and posts to TheLeague's GroupMe — an AFL franchise named in the wrong
+   league's chat.
+2. **Seeding was per franchise, and MFL's `tradeBait` export omits
+   franchises with nothing listed.** So a franchise absent from the state
+   was re-seeded silently the first time it listed anything. TheLeague's
+   persisted state held 5 of 16 franchises months after launch — the other
+   11 have had their first listing swallowed all season. The AFL launches
+   with NOBODY on the block, so under that rule it would never have posted
+   at all. Seed is now a league-level event (`leagueSeeded`, keyed on the
+   state key EXISTING on the feed, not on it having entries) and a missing
+   franchise diffs against an empty block.
+
+The second one is the interesting failure: it was a live bug in the league
+the feature was built for, invisible because the feature still visibly worked
+for the five franchises that happened to be listed on launch day.
+
+**Recommendation:** Before flipping a league toggle, grep the lane for the
+default league's navSlug as a LITERAL (not through the league object), and
+re-read every "first run" / "seed" branch asking what the second league's
+first run actually looks like — an empty state is a different first run from
+a full one.
+
 ## 2026-07-19 - Source-Guard Tests Are the Refactor Tax
 
 **Context:** League-scoping the Redis keyspace and adding the `--league` flag

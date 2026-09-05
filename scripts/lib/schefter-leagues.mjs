@@ -11,7 +11,8 @@
  *                       flag — the owner-facing tips → rumor pipeline. To
  *                       launch (or kill) a league's rumor mill, flip the
  *                       registry flag in src/config/leagues-data.mjs.
- *   - tradeBait:        scanner lane for MFL trade-bait listings.
+ *   - tradeBait:        scanner lane for MFL trade-bait listings (both
+ *                       leagues; keys are league-scoped via schefterKey).
  *   - eventReminders:   Roger-style event reminder posts.
  *   - directGroupMe:    transaction scanner posts straight to GroupMe
  *                       (AFL) instead of routing through the rumor-mill
@@ -110,7 +111,10 @@ export const SCHEFTER_LEAGUES = [
     groupMeRogerBotSenderId: process.env.GROUPME_AFL_ROGER_BOT_SENDER_ID,
     features: {
       rumorMill: getLeagueBySlug('afl-fantasy').features.schefterTips,
-      tradeBait: false,
+      // Trade-block listings → rumor-mill tips, same lane as TheLeague. The
+      // scanner builds its tips-queue keys from the league (schefter:afl:…),
+      // so the AFL's tips land in the queue the AFL rumor-scan step drains.
+      tradeBait: true,
       eventReminders: true,
       // AFL posts breaking/standard transactions directly to GroupMe from scanLeague
       directGroupMe: true,

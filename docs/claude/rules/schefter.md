@@ -29,6 +29,16 @@ rules — breaking any of these cross-contaminates the leagues:
   The trade-offer lane and GroupMe mention ingestion are TheLeague-only
   (`scripts/lib/schefter-leagues.mjs` toggles) — AFL needs its own design
   for duplicate players before that lane can open.
+- **Trade-block lane runs in BOTH leagues** (`features.tradeBait`, since
+  Sep 2026). `schefter-scan.mjs#scanTradeBait` enqueues into the tips queue
+  the rumor-scan drains, so its keys MUST come from the scanned league
+  (`schefterKey(league.slug, …)`) — a module-level TheLeague literal put AFL
+  listings in TheLeague's GroupMe. And seeding is per LEAGUE, not per
+  franchise: MFL's `tradeBait` export omits franchises with an empty block,
+  so a franchise absent from an already-seeded state diffs against `[]` and
+  its first listing posts. Per-franchise seeding silently swallowed the first
+  listing of every franchise not on the block at launch (11 of TheLeague's
+  16). `tests/schefter-trade-bait-league-scope.test.ts` pins both.
 - **Lore/persona** is per-league under `data/schefter/<navSlug>/`
   (personality, league-lore, running-bits, post-history, topic-recurrence).
   No legacy-path fallback on purpose — a missing file fails loudly rather

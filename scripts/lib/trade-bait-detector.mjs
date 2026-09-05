@@ -17,7 +17,13 @@
  * tip and advances committedBlock to the current state (settled).
  *
  * Edge behavior (codified; see tests/trade-bait-detector.test.ts):
- *   - First run: no prior entry → seed silently, emit nothing.
+ *   - First run for a LEAGUE: no prior state → seed every franchise silently,
+ *     emit nothing. Once the league is seeded, a franchise with no entry of
+ *     its own is a franchise whose block was EMPTY at seed time (MFL only
+ *     returns franchises with listings), so its first listing is a real add
+ *     and must post. Seeding per franchise instead shipped exactly that bug:
+ *     TheLeague's state held 5 of 16 franchises months after launch, and the
+ *     other 11 had their first listing swallowed as a "seed".
  *   - Add + remove same player within the window → netAdds stays empty, silent.
  *   - Pure removes → no tip; committedBlock advances so a future re-add fires.
  *   - Stuck drift: firstChangeTs ≥ MAX_SETTLE_WAIT_MS → force-emit regardless.
@@ -195,6 +201,10 @@ export function detectFranchiseChange({
  * @param {object<string, { playerIds: string[], willGiveUpComment?: string, willTakeComment?: string }>} args.currentByFranchise
  * @param {object<string, object>} args.prevState - feed.tradeBaitState (may be empty/undefined)
  * @param {number} args.nowMs
+ * @param {boolean} [args.leagueSeeded] - true once the league has been scanned
+ *   at least once (the scanner persists `tradeBaitState` on every run, even
+ *   as `{}`, so "the key exists on the feed" is the signal). Defaults to
+ *   "prevState has at least one franchise" for callers that predate the flag.
  * @param {number} [args.settleWindowMs]
  * @param {number} [args.maxSettleWaitMs]
  * @returns {{
@@ -203,10 +213,19 @@ export function detectFranchiseChange({
  *   reasons: object<string, string>,
  * }}
  */
+/** The prior entry for a franchise that has never listed since the league was seeded. */
+const EMPTY_PREV_ENTRY = Object.freeze({
+  committedBlock: [],
+  observedBlock: [],
+  firstChangeTs: null,
+  lastChangeTs: null,
+});
+
 export function detectTradeBaitChanges({
   currentByFranchise,
   prevState,
   nowMs,
+  leagueSeeded,
   settleWindowMs = DEFAULT_SETTLE_WINDOW_MS,
   maxSettleWaitMs = DEFAULT_MAX_SETTLE_WAIT_MS,
 }) {
@@ -214,14 +233,22 @@ export function detectTradeBaitChanges({
   const emissions = [];
   const reasons = {};
   const safePrev = prevState && typeof prevState === 'object' ? prevState : {};
+  const seeded = typeof leagueSeeded === 'boolean'
+    ? leagueSeeded
+    : Object.keys(safePrev).length > 0;
   const seen = new Set();
 
   for (const [franchiseId, entry] of Object.entries(currentByFranchise ?? {})) {
     seen.add(franchiseId);
+    // A seeded league with no entry for this franchise means its block was
+    // empty when we seeded — diff against an empty block so the listing
+    // counts as adds (and drifts/settles like any other) instead of being
+    // silently re-seeded and lost.
+    const prevEntry = safePrev[franchiseId] ?? (seeded ? EMPTY_PREV_ENTRY : undefined);
     const result = detectFranchiseChange({
       franchiseId,
       currentIds: entry?.playerIds ?? [],
-      prevEntry: safePrev[franchiseId],
+      prevEntry,
       nowMs,
       settleWindowMs,
       maxSettleWaitMs,
