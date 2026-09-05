@@ -28,6 +28,14 @@ export interface PushPayload {
   tag?: string;
   /** Icon URL (site-relative). Defaults in the service worker. */
   icon?: string;
+  /**
+   * Badge URL (site-relative) — Android's SMALL notification icon. Must be a
+   * white-on-transparent silhouette: Android uses only the alpha channel as a
+   * stencil, so an opaque image renders as a solid block. Use
+   * `leaguePushBadge()`; the service worker falls back per-payload, not
+   * per-league, so an omitted badge is TheLeague's.
+   */
+  badge?: string;
 }
 
 export interface PushSendResult {

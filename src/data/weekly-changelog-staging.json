@@ -3,6 +3,22 @@
   "changes": [
     {
       "date": "2026-09-05",
+      "type": "bug-fix",
+      "summary": "AFL push notifications arrived wearing a blank white square where the shield should be. The little icon Android shows next to an alert is not a logo slot — the phone throws away the colors and traces the transparent parts, so the flat, edge-to-edge favicon we were handing it came out as an empty box. The AFL now has a proper stencil of its football, TheLeague has one of its crest, and both leagues get their own mark on every alert instead of sharing one.",
+      "impact": "user",
+      "area": "notifications",
+      "league": "both"
+    },
+    {
+      "date": "2026-09-05",
+      "type": "bug-fix",
+      "summary": "The AFL's app install file pointed at an address the site does not use — it claimed the app lived at /afl-fantasy/ when afl-fantasy.com serves everything from the front door. Phones read that, decided the file did not apply to the page they were on, and quietly threw it away, which is why the AFL never offered to install to your home screen and why its notifications had no app icon behind them. It now points where the site actually is, and ships an Android-shaped app icon to go with it.",
+      "impact": "user",
+      "area": "notifications",
+      "league": "afl"
+    },
+    {
+      "date": "2026-09-05",
       "type": "style-tweak",
       "summary": "In dark mode the Panthers logo had been doing its best impression of a shadow. Every other NFL mark gets a dark-mode cut with its outline re-inked light, but Carolina's panther is black clear through, so on a dark card it dissolved into a smudge next to the player's name. It now wears a crisp white edge, the same treatment the league crests get in dark mode, so the cat is visible again at every size, in both leagues.",
       "impact": "user",
