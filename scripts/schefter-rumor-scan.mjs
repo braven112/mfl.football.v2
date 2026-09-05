@@ -131,6 +131,9 @@ import { buildFormerNameCallback } from './lib/schefter-former-name.mjs';
 import { checkGroupMeQuality, RELAXED_QUALITY_THRESHOLD } from './lib/schefter-quality-gate.mjs';
 import { getRedisConfig, createUpstashClient } from './lib/redis.mjs';
 import { postToGroupMe as sharedPostToGroupMe } from './lib/groupme.mjs';
+import { postToGroupMeCapped } from './lib/groupme-capped.mjs';
+import { sendPushFanout, broadcast } from './lib/push-fanout.mjs';
+import { LEAGUES as REGISTRY_LEAGUES } from '../src/config/leagues-data.mjs';
 import {
   getLeagueBySlug,
   buildHostToSlugMap,
@@ -1259,13 +1262,55 @@ async function flushGroupMeSuppressions() {
 // check happens here, BEFORE the dry-run check, to preserve the original branch
 // order — if both are true, the original warned about the missing bot id rather
 // than logging the dry-run preview.
-async function postToGroupMe(text) {
+/** Push a rumor beat to owners who asked for the rumor mill. */
+async function pushRumor(post) {
+  if (!post?.headline) return;
+
+  const registry = REGISTRY_LEAGUES[SCHEFTER_LEAGUE.registrySlug];
+  if (!registry) return;
+  const teams = await loadTeams().catch(() => null);
+  if (!teams || teams.size === 0) return;
+
+  await sendPushFanout({
+    league: registry,
+    dryRun: DRY_RUN,
+    category: 'rumor',
+    notifications: broadcast({
+      franchiseIds: [...teams.keys()],
+      title: post.headline,
+      body: (post.body ?? '').slice(0, 160),
+      url: '/news',
+      tag: post.id,
+    }),
+    log: { log, warn },
+  });
+}
+
+/**
+ * Deliver one rumor beat.
+ *
+ * Takes the POST as well as the composed chat text: the group chat gets a
+ * single blob of body copy, but a push needs a headline, a link and a stable
+ * tag. Rumors are held out of the chat entirely by the daily cap, so in
+ * practice this function's real job is now the push.
+ */
+async function postToGroupMe(text, post = null) {
+  await pushRumor(post);
   const botId = SCHEFTER_LEAGUE.groupMeSchefterBotId;
   if (!botId) {
     warn('[rumor-scan] GROUPME_SCHEFTER_BOT_ID not set — skipping GroupMe (Roger is reserved for deadlines)');
     return;
   }
-  await sharedPostToGroupMe({
+  // Rumors are push-only under the league-wide cap: high volume, and none of
+  // it is the day's news. Held here rather than removed, so re-enabling is a
+  // one-line calendar change if the league ever wants a rumor day.
+  await postToGroupMeCapped({
+    // SCHEFTER_LEAGUE.slug IS the nav slug here (see schefter-leagues.mjs) —
+    // passed explicitly rather than letting the wrapper guess, because a
+    // registry entry's `slug` is the CANONICAL one ('afl-fantasy') and keying
+    // the day off the wrong one would silently give a league two slots.
+    league: { navSlug: SCHEFTER_LEAGUE.slug },
+    kind: 'rumor',
     botId,
     text,
     dryRun: DRY_RUN,
@@ -4361,7 +4406,7 @@ async function main() {
         : 'Greeting beat suppressed — would NOT set morning-greeting date'}`);
     }
     for (const p of allowedPosts) {
-      await postToGroupMe(groupMeTextFor(p));
+      await postToGroupMe(groupMeTextFor(p), p);
     }
     return 0;
   }
@@ -4384,7 +4429,7 @@ async function main() {
   // rate-limiting surprises.
   for (let i = 0; i < allowedPosts.length; i++) {
     if (i > 0) await new Promise((r) => setTimeout(r, 250));
-    await postToGroupMe(groupMeTextFor(allowedPosts[i]));
+    await postToGroupMe(groupMeTextFor(allowedPosts[i]), allowedPosts[i]);
   }
 
   // Per-team name counter: every ALLOWED post that named a franchise

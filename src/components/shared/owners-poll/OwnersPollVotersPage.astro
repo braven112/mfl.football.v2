@@ -1,0 +1,247 @@
+---
+/**
+ * The Owners' Poll — season accountability page.
+ *
+ * Reads committed Pecking Order issues only. No Redis, no auth: once a week
+ * closes, its ballots are public, and the permanence is the point. Voting
+ * weekly becomes an attributable record, which is the thing that makes voting
+ * worth doing at all.
+ *
+ * Three metrics, and only one of them is a leaderboard:
+ *   Accuracy    — pooled pairwise, scored against the FOLLOWING week's column.
+ *   Contrarian  — distance from consensus. Independence, NOT error. Labelled.
+ *   Homer       — how much higher you rate yourself than the room does.
+ */
+import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
+import { getLeagueTeamBrands } from '../../../utils/league-team-brands';
+import { ensureLeaguePrefix, type LeagueDefinition } from '../../../config/leagues';
+import {
+  computeVoterSeason,
+  sortByAccuracy,
+  topHomer,
+  topContrarian,
+  topAccurate,
+  topParticipant,
+  type VoterIssue,
+} from '../../../utils/owners-poll-voters';
+import { teamAccentVar } from '../../../utils/team-accent-css';
+import '../../../styles/owners-poll-voters.css';
+
+interface Props {
+  league: LeagueDefinition;
+  issues: VoterIssue[];
+  year: number;
+}
+
+const { league, issues, year } = Astro.props as Props;
+
+const brands = getLeagueTeamBrands(league.slug);
+const eligible = Object.keys(brands);
+const season = computeVoterSeason(issues, eligible);
+const leaderboard = sortByAccuracy(season.voters);
+const homer = topHomer(season.voters);
+const contrarian = topContrarian(season.voters);
+// Only crowned once there is a real sample behind it — see topAccurate.
+const champion = topAccurate(season.voters);
+const participant = topParticipant(season.voters);
+
+const name = (fid: string) => brands[fid]?.nameShort ?? fid;
+const accent = (fid: string) =>
+  `--opv-accent: ${teamAccentVar(fid, 'var(--color-primary, #2563eb)')}`;
+
+const pct = (x: number | null) => (x == null ? '—' : `${Math.round(x * 100)}%`);
+const num = (x: number | null, digits = 1) => (x == null ? '—' : x.toFixed(digits));
+
+const columnHref = ensureLeaguePrefix(league, '/pecking-order');
+const ballotHref = ensureLeaguePrefix(league, '/pecking-order/ballot');
+
+// Before about week 6 there are too few pairs for the ordering to mean much —
+// say so rather than letting an early leader look established.
+const THIN_SAMPLE_WEEKS = 6;
+const thinSample = season.weeks.length > 0 && season.weeks.length < THIN_SAMPLE_WEEKS;
+const hasPolls = season.weeks.length > 0;
+---
+
+<TheLeagueLayout title={`The Owners’ Poll — Voters | ${league.name}`}>
+  <div class="opv-page">
+    <nav class="opv-crumbs" aria-label="Breadcrumb">
+      <a href={columnHref}>The Pecking Order</a>
+      <span aria-hidden="true">›</span>
+      <span>Voters</span>
+    </nav>
+
+    <header class="opv-hero">
+      <h1 class="opv-hero__title">The Owners’ Poll — Voters</h1>
+      <p class="opv-hero__lede">
+        Every ballot is public once its week closes. This is who voted, how
+        often, and how well they read the league.
+      </p>
+    </header>
+
+    {!hasPolls && (
+      <div class="opv-empty">
+        <p><strong>No polls have closed yet this season.</strong></p>
+        <p>
+          The ballot opens with the column each Tuesday and closes Thursday,
+          at the week’s first kickoff. <a href={ballotHref}>Cast one</a> and
+          you’ll show up here.
+        </p>
+      </div>
+    )}
+
+    {hasPolls && (
+      <>
+        <dl class="opv-summary">
+          <div>
+            <dt>Polls run</dt>
+            <dd>{season.weeks.length}</dd>
+          </div>
+          <div>
+            <dt>Ballots cast</dt>
+            <dd>{season.totalBallots}</dd>
+          </div>
+          <div>
+            <dt>Average turnout</dt>
+            <dd>{pct(season.turnoutRate)}</dd>
+          </div>
+        </dl>
+
+        {(champion || participant || homer || contrarian) && (
+          <div class="opv-badges">
+            {champion && (
+              <div class="opv-badge opv-badge--crown" style={accent(champion.franchiseId)}>
+                <span class="opv-badge__label">Most accurate</span>
+                <span class="opv-badge__name">{name(champion.franchiseId)}</span>
+                <span class="opv-badge__value">
+                  {pct(champion.accuracyPct)} across {champion.accuracyPairs} calls
+                </span>
+              </div>
+            )}
+            {participant && participant.ballotsCast > 1 && (
+              <div class="opv-badge" style={accent(participant.franchiseId)}>
+                <span class="opv-badge__label">Never misses</span>
+                <span class="opv-badge__name">{name(participant.franchiseId)}</span>
+                <span class="opv-badge__value">
+                  {participant.ballotsCast} of {participant.weeksAvailable} ballots
+                </span>
+              </div>
+            )}
+            {homer && (
+              <div class="opv-badge" style={accent(homer.franchiseId)}>
+                <span class="opv-badge__label">Biggest homer</span>
+                <span class="opv-badge__name">{name(homer.franchiseId)}</span>
+                <span class="opv-badge__value">
+                  +{num(homer.homerIndex)} spots above where the room has them
+                </span>
+              </div>
+            )}
+            {contrarian && (
+              <div class="opv-badge" style={accent(contrarian.franchiseId)}>
+                <span class="opv-badge__label">Biggest contrarian</span>
+                <span class="opv-badge__name">{name(contrarian.franchiseId)}</span>
+                <span class="opv-badge__value">
+                  {num(contrarian.contrarianIndex)} spots from consensus, on average
+                </span>
+              </div>
+            )}
+          </div>
+        )}
+
+        {thinSample && (
+          <p class="opv-caveat">
+            Only {season.weeks.length} {season.weeks.length === 1 ? 'poll has' : 'polls have'} closed.
+            Accuracy is a small sample this early — it takes about {THIN_SAMPLE_WEEKS} weeks
+            before the order means much.
+          </p>
+        )}
+
+        <div class="opv-table-wrap">
+          <table class="opv-table">
+            <thead>
+              <tr>
+                <th scope="col">Owner</th>
+                <th scope="col" class="opv-num">Ballots</th>
+                <th scope="col" class="opv-num" title="Pairs called correctly against the following week's column">
+                  Accuracy
+                </th>
+                <th scope="col" class="opv-num" title="Average distance from the final consensus — independence, not error">
+                  Contrarian
+                </th>
+                <th scope="col" class="opv-num" title="How much higher they rank themselves than the room does">
+                  Homer
+                </th>
+                <th scope="col" class="opv-weeks-col">Weeks</th>
+              </tr>
+            </thead>
+            <tbody>
+              {leaderboard.map((row) => (
+                <tr style={accent(row.franchiseId)}>
+                  <td class="opv-team">
+                    {brands[row.franchiseId]?.icon && (
+                      <img src={brands[row.franchiseId].icon} alt="" width="20" height="20" loading="lazy" />
+                    )}
+                    <span>{name(row.franchiseId)}</span>
+                  </td>
+                  <td class="opv-num">
+                    {row.ballotsCast}<span class="opv-of">/{row.weeksAvailable}</span>
+                  </td>
+                  <td class="opv-num opv-accuracy">{pct(row.accuracyPct)}</td>
+                  <td class="opv-num opv-muted">{num(row.contrarianIndex)}</td>
+                  <td class="opv-num opv-muted">
+                    {row.homerIndex == null
+                      ? '—'
+                      : row.homerIndex > 0
+                        ? `+${num(row.homerIndex)}`
+                        : num(row.homerIndex)}
+                  </td>
+                  <td>
+                    <ol class="opv-weeks" aria-label={`Weeks ${name(row.franchiseId)} voted`}>
+                      {row.weeks.map((w) => (
+                        <li
+                          class={`opv-week ${w.voted ? 'opv-week--in' : 'opv-week--out'}`}
+                          title={`Week ${w.week}: ${w.voted ? 'voted' : 'no ballot'}`}
+                        >
+                          <span class="opv-week__label">{w.week}</span>
+                        </li>
+                      ))}
+                    </ol>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        <footer class="opv-notes">
+          <p>
+            <strong>Accuracy</strong> asks, for every pair of teams on a ballot,
+            whether the one ranked higher was in fact higher in the
+            <em> following</em> week’s column. Pairs rather than rank error, so a
+            ballot isn’t punished for the whole field shifting under it — and
+            scored against next week rather than this one, because this week’s
+            ranking is printed right above the ballot and copying it should not
+            count as foresight.
+            {season.unscoredWeeks.length > 0 && (
+              <> Week{season.unscoredWeeks.length > 1 ? 's' : ''} {season.unscoredWeeks.join(', ')}
+              {season.unscoredWeeks.length > 1 ? ' are' : ' is'} not scored yet — the next column hasn’t run.</>
+            )}
+          </p>
+          <p>
+            <strong>Contrarian</strong> is how far a ballot sat from the final
+            consensus, on average. It is independence, not error — a badge, not
+            a demerit.
+          </p>
+          <p>
+            <strong>Homer</strong> is how many spots higher an owner ranked their
+            own team than the room did. Ranking your own team is allowed, and
+            this is why.
+          </p>
+          <p>
+            Weeks with no quorum are excluded: with no consensus there is
+            nothing to measure a ballot against.
+          </p>
+        </footer>
+      </>
+    )}
+  </div>
+</TheLeagueLayout>
