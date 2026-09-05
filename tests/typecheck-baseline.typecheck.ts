@@ -85,7 +85,7 @@ describe('type-error baseline', () => {
             .map((r) => {
               const where = r.hits
                 .slice(0, 5)
-                .map((h) => `      ${h.file}: ${h.message}`)
+                .map((h: { file: string; message: string }) => `      ${h.file}: ${h.message}`)
                 .join('\n');
               const more = r.hits.length > 5 ? `\n      …and ${r.hits.length - 5} more` : '';
               return `  ${r.key}: ${r.hits.length}\n    ${r.fix}\n${where}${more}`;
