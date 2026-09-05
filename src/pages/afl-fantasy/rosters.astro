@@ -4,6 +4,7 @@ import CollegeLogoDarkStyles from '../../components/CollegeLogoDarkStyles.astro'
 import PlayerCell from '../../components/theleague/PlayerCell.astro';
 import PlayerDetailsModal from '../../components/theleague/PlayerDetailsModal.astro';
 import AFLActionModal from '../../components/afl-fantasy/AFLActionModal.astro';
+import SignInModal from '../../components/shared/SignInModal.astro';
 import KeeperPlanner, {
   type KeeperPlannerPlayer,
   type KeeperPlannerDraftPick,
@@ -225,6 +226,20 @@ const isOwner =
   !!authUser &&
   authUser.leagueId === AFL_LEAGUE_ID &&
   authUser.franchiseId === selectedTeam.franchiseId;
+
+// An AFL session of any franchise: the action sheet's Watch option runs for
+// them; everyone else is offered the in-place sign-in (My Watch List lives on
+// MFL under the viewer's own cookie, so a TheLeague-only session cannot use it
+// here either).
+const signedIn = !!authUser && authUser.leagueId === AFL_LEAGUE_ID && !!authUser.franchiseId;
+const signInConfig = {
+  leagueId: AFL_LEAGUE_ID,
+  seasonYear: selectedYear,
+  redirectUrl: `${Astro.url.pathname}${Astro.url.search}`,
+  logoSrc: '/assets/logos/afl-logo.svg',
+  logoAlt: 'AFL logo',
+  subtitle: 'Sign in with your MFL credentials to build your watch list',
+};
 
 // Trade bait badges for the selected team (per-franchise cache wins)
 const liveTradeBait =
@@ -687,6 +702,7 @@ const pageConfig = {
   selectedYear,
   selectedFranchiseId,
   isOwner,
+  signedIn,
   leagueId: AFL_LEAGUE_ID,
   initialView,
 };
@@ -826,7 +842,7 @@ const pageConfig = {
                     <thead>
                       <tr>
                         <th data-column="player">Player</th>
-                        {isOwner && <th data-column="actions" aria-label="Actions"></th>}
+                        <th data-column="actions" aria-label="Actions"></th>
                         {/* Rankings column — starts hidden and is revealed by the
                             rankings script only when the owner has a board loaded,
                             so an owner without one never sees an empty column. */}
@@ -880,24 +896,24 @@ const pageConfig = {
                           )}
                         </PlayerCell>
                       </td>
-                      {isOwner && (
-                        <td data-column="actions">
-                          <button
-                            type="button"
-                            class="ufa-action-btn"
-                            data-action-trigger
-                            data-player-id={player.id}
-                            aria-label={`Manage ${player.name}`}
-                            title="Manage player"
-                          >
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                              <circle cx="12" cy="5" r="2"/>
-                              <circle cx="12" cy="12" r="2"/>
-                              <circle cx="12" cy="19" r="2"/>
-                            </svg>
-                          </button>
-                        </td>
-                      )}
+                      {/* Every viewer gets the sheet: owners for roster
+                          writes, everyone for Watch (My Watch List). */}
+                      <td data-column="actions">
+                        <button
+                          type="button"
+                          class="ufa-action-btn"
+                          data-action-trigger
+                          data-player-id={player.id}
+                          aria-label={isOwner ? `Manage ${player.name}` : `Actions for ${player.name}`}
+                          title={isOwner ? 'Manage player' : 'Player actions'}
+                        >
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                            <circle cx="12" cy="5" r="2"/>
+                            <circle cx="12" cy="12" r="2"/>
+                            <circle cx="12" cy="19" r="2"/>
+                          </svg>
+                        </button>
+                      </td>
                       <td data-column="rank" class="ranking-col ranking-cell" style="display:none"></td>
                       <td data-column="oppRank">
                         {oppRank != null ? (
@@ -1263,12 +1279,14 @@ const pageConfig = {
   </section>
 
   <PlayerDetailsModal hideContract />
-  {isOwner && <AFLActionModal />}
+  <AFLActionModal />
+  {!signedIn && <SignInModal config={signInConfig} />}
 
   <script id="afl-roster-config" type="application/json" set:html={JSON.stringify(pageConfig)}></script>
 
   <script>
     import { initPlayerModalTrigger } from '../../utils/player-modal-trigger';
+  import { loadWatchList } from '../../utils/watch-list-client';
 
     // Re-read the page config from the DOM on demand — values like
     // selectedFranchiseId change between client-side (ClientRouter)
@@ -1364,7 +1382,11 @@ const pageConfig = {
     const rosterContainer = document.querySelector('.roster-page');
     if (rosterContainer) initPlayerModalTrigger(rosterContainer as HTMLElement);
 
-    // ── Player action button → AFLActionModal (owner only) ──
+    // Warm the watch list so the sheet's Watch option opens in the right
+    // state; the store caches per league and no-ops on repeat.
+    if (readConfig().signedIn === true) void loadWatchList();
+
+    // ── Player action button → AFLActionModal (every viewer; see the modal) ──
     // Bind the document-level delegation once; re-running init must not stack.
     if (actionDelegationBound) return;
     actionDelegationBound = true;
@@ -1392,6 +1414,8 @@ const pageConfig = {
             draftRound?: number | null;
             draftPick?: number | null;
             draftTeam?: string | null;
+            isOwner?: boolean;
+            signedIn?: boolean;
           }) => void)
         | undefined;
       if (typeof opener !== 'function') {
@@ -1450,6 +1474,8 @@ const pageConfig = {
         status: row.dataset.playerStatus,
         isOnTradeBait: row.dataset.onTradeBait === 'true',
         franchiseId: config.selectedFranchiseId,
+        isOwner: config.isOwner === true,
+        signedIn: config.signedIn === true,
         headshot: headshotImg?.getAttribute('src') ?? undefined,
         position: positionRaw || undefined,
         nflTeam: teamCode || undefined,

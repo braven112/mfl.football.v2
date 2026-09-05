@@ -15,9 +15,25 @@ interface PlayerRowProps {
   player: RankedPlayer;
   rank: number;
   isEditing?: boolean;
+  /** On the owner's My Watch List — paints the mark and the kebab. */
+  watched?: boolean;
+  /** Opens the shared player action sheet (Watch / Stop watching, …). */
+  onActions?: (player: RankedPlayer) => void;
 }
 
-export default function PlayerRow({ player, rank, isEditing = false }: PlayerRowProps) {
+const WATCH_MARK = (
+  <span className="pa-watch-mark" title="On your watch list">
+    <svg aria-hidden="true"><use href="/assets/icons/sprite.svg#icon-eye" /></svg>
+  </span>
+);
+
+export default function PlayerRow({
+  player,
+  rank,
+  isEditing = false,
+  watched = false,
+  onActions,
+}: PlayerRowProps) {
   const {
     attributes,
     listeners,
@@ -70,6 +86,7 @@ export default function PlayerRow({ player, rank, isEditing = false }: PlayerRow
         nflTeam={player.nflTeam}
         mflId={player.id}
         size="compact"
+        afterName={watched ? WATCH_MARK : undefined}
       />
 
       {/* VORP chip (when enabled) */}
@@ -96,6 +113,25 @@ export default function PlayerRow({ player, rank, isEditing = false }: PlayerRow
           </span>
         )}
       </div>
+
+      {/* Player actions (⋮) — the same sheet the free-agent rows open */}
+      {onActions && (
+        <div className="cr-row__actions">
+          <button
+            type="button"
+            className={`pa-kebab${watched ? ' is-watched' : ''}`}
+            aria-label={`Actions for ${player.name}`}
+            title="Player actions"
+            onClick={() => onActions(player)}
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <circle cx="12" cy="5" r="2" />
+              <circle cx="12" cy="12" r="2" />
+              <circle cx="12" cy="19" r="2" />
+            </svg>
+          </button>
+        </div>
+      )}
     </div>
   );
 }

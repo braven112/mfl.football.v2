@@ -21,6 +21,7 @@ import SchefterReactionBar from './SchefterReactionBar.tsx';
 import SchefterReplyThread from './SchefterReplyThread.tsx';
 import SchefterWhisperBack from './SchefterWhisperBack.tsx';
 import SocialEmbed from './SocialEmbed.tsx';
+import type { WatchHit } from '../../utils/schefter-watching';
 
 interface Props {
   post: SchefterPost;
@@ -31,9 +32,18 @@ interface Props {
   now?: Date;
   /** Server-resolved reactions (avoids per-post client fetch) */
   reactions?: { reactions: Record<string, number>; userReaction: string | null };
+  /** Watched players this post names — see src/utils/schefter-watching.ts. */
+  watching?: WatchHit[];
 }
 
-const { post, isAuthenticated = false, userFranchiseId, userTeamName, userTeamIcon, now, reactions } = Astro.props;
+const { post, isAuthenticated = false, userFranchiseId, userTeamName, userTeamIcon, now, reactions, watching } = Astro.props;
+const watchHits = watching ?? [];
+const isWatching = watchHits.length > 0;
+// "Watching" beats "your player" for the chip when a post hits both.
+const watchChipLabel = isWatching
+  ? (watchHits.some((h) => h.kind === 'watch') ? 'On your watch list' : 'Your player')
+  : '';
+const watchChipNames = watchHits.map((h) => h.name).join(', ');
 const relTime = formatRelativeTime(post.timestamp, now);
 const isGroupMe = post.type === 'groupme';
 const gmMeta = isGroupMe ? (post as SchefterPost & { _groupMe: GroupMePostMeta })._groupMe : null;
@@ -53,7 +63,7 @@ const isRumorLike = isRumorLikePost(post);
 // Franchise milestone posts carry badge metadata — surface it as a chip so
 // the body's flavor line has context ("what was this announcement for?").
 const milestoneLabel = getMilestoneLabel(post);
-const tierClass = `sf-post ${isGroupMe ? 'sf-post--groupme' : isArticle ? 'sf-post--article' : isExternal ? 'sf-post--external' : `sf-post--${post.tier}`}${isRumorLike ? ' sf-post--rumor' : ''}`;
+const tierClass = `sf-post ${isGroupMe ? 'sf-post--groupme' : isArticle ? 'sf-post--article' : isExternal ? 'sf-post--external' : `sf-post--${post.tier}`}${isRumorLike ? ' sf-post--rumor' : ''}${isWatching ? ' sf-post--watching' : ''}`;
 
 // GroupMe rich content: images from attachments, embedded URLs from body
 const gmImages = gmMeta?.attachments?.filter(a => a.type === 'image' && a.url) ?? [];
@@ -90,7 +100,7 @@ for (const url of allUrlsToStrip) {
 gmDisplayBody = gmDisplayBody.replace(/\n{3,}/g, '\n\n').trim();
 ---
 
-<article id={`post-${post.id}`} class={tierClass} data-post-id={post.id} data-tier={post.tier} data-post-type={post.transactionSubType ?? post.type} data-author={post.authorId ?? 'claude'} data-rumor-impression={isRumorLike ? 'true' : undefined} aria-label={`${displayName}: ${post.headline || post.body?.replace(/<[^>]+>/g, '').slice(0, 80) || 'Post'}`}>
+<article id={`post-${post.id}`} class={tierClass} data-post-id={post.id} data-tier={post.tier} data-post-type={post.transactionSubType ?? post.type} data-author={post.authorId ?? 'claude'} data-rumor-impression={isRumorLike ? 'true' : undefined} data-watching={isWatching ? 'true' : undefined} aria-label={`${displayName}: ${post.headline || post.body?.replace(/<[^>]+>/g, '').slice(0, 80) || 'Post'}`}>
   <img class={`sf-avatar${isGroupMe ? ' sf-avatar--groupme' : ''}`} src={avatarSrc} alt="" aria-hidden="true" width="40" height="40" loading="lazy" />
 
   <div class="sf-post__content">
@@ -214,6 +224,14 @@ gmDisplayBody = gmDisplayBody.replace(/\n{3,}/g, '\n\n').trim();
 
         {isArticle && (
           <div class="sf-post__headline">{post.headline}</div>
+        )}
+
+        {isWatching && (
+          <div class="sf-post__watching" title={`${watchChipLabel}: ${watchChipNames}`}>
+            <svg class="sf-post__watching-icon" aria-hidden="true"><use href="/assets/icons/sprite.svg#icon-eye" /></svg>
+            <span class="sf-post__watching-label">{watchChipLabel}</span>
+            <span class="sf-post__watching-names">{watchChipNames}</span>
+          </div>
         )}
 
         {milestoneLabel && (

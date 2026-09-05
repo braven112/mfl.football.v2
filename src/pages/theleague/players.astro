@@ -24,6 +24,7 @@ import { resolveWaiverWindow, describeWaiverWindow } from '../../utils/waiver-wi
 import WaiverClaimModal from '../../components/shared/WaiverClaimModal.astro';
 import WaiverClaimsPanel from '../../components/shared/WaiverClaimsPanel.astro';
 import SignInModal from '../../components/shared/SignInModal.astro';
+import WatchListBridge from '../../components/shared/WatchListBridge.astro';
 import '../../styles/player-cell.css';
 import '../../styles/ranking-columns.css';
 import '../../styles/fa-claim-button.css';
@@ -736,10 +737,15 @@ const claimConfig = {
 // MFL's own flow, not something a session here unlocks, so prompting for a
 // sign-in would promise something the reload cannot deliver.
 const promptSignIn = !claimFranchiseId && !isAuctionSeason;
+// My Watch List is league-scoped like claims (an AFL session cannot watch
+// here), and unlike claims it has no auction blackout — so the sign-in dialog
+// mounts for EVERY signed-out visitor, not just when claims are open.
+const watchSignedIn = !!claimFranchiseId;
 const signInConfig = {
   leagueId: mflLeagueId,
   redirectUrl: `${Astro.url.pathname}${Astro.url.search}`,
-  subtitle: 'Sign in with your MFL credentials to bid here',
+  // Neutral copy: the same dialog serves the Bid button and the Watch actions.
+  subtitle: 'Sign in with your MFL credentials to bid or watch players here',
 };
 
 const claimsPanelConfig = {
@@ -835,6 +841,15 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
           <button class="col-group-btn" data-group="rankings" id="col-group-btn-rankings" type="button" aria-pressed="false">Rankings</button>
           <button class="col-group-btn" data-group="auction" id="col-group-btn-auction" type="button" aria-pressed="false">Auction</button>
           {isAdmin && (hasSurplusData || hasAuctionData) && <button class="col-group-btn" data-group="value" id="col-group-btn-value" type="button" aria-pressed="false">Value</button>}
+          <button class="col-group-btn col-group-btn--watch" data-group="watchlist" id="col-group-btn-watchlist" type="button" aria-pressed="false">
+            <svg class="col-group-btn__icon" aria-hidden="true"><use href="/assets/icons/sprite.svg#icon-eye" /></svg>
+            My Watch List
+          </button>
+        </div>
+        <div class="watch-scope" id="watch-scope" role="group" aria-label="Watch list scope" style="display: none;">
+          <button class="watch-scope-btn active" data-scope="all" type="button" aria-pressed="true">All</button>
+          <button class="watch-scope-btn" data-scope="fa" type="button" aria-pressed="false">Free agents</button>
+          <button class="watch-scope-btn" data-scope="rostered" type="button" aria-pressed="false">Rostered</button>
         </div>
         <button class="auction-freshness" id="auction-freshness" type="button" aria-label="Refresh auction data" title="Click to refresh auction data" style="display: none;">
           <span class="freshness__dot" aria-hidden="true"></span>
@@ -1096,6 +1111,9 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
             <th class="col-fa-action" aria-label="Add or bid on this player">
               <div class="th-content"></div>
             </th>
+            <th class="col-player-actions" aria-label="Player actions">
+              <div class="th-content"></div>
+            </th>
           </tr>
         </thead>
         <tbody id="player-table-body"></tbody>
@@ -1128,9 +1146,10 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
 </TheLeagueLayout>
 
 <WaiverClaimModal config={claimConfig} />
-{promptSignIn && <SignInModal config={signInConfig} />}
+{!claimFranchiseId && <SignInModal config={signInConfig} />}
+<WatchListBridge signedIn={watchSignedIn} />
 
-<script define:vars={{ canClaim, promptSignIn, playerDataJson, hasProjected, hasLastYrPts, hasSnapCounts, nflTeamsJson, hasSurplusData, hasAuctionData, isAuctionSeason, isAdmin, currentYear, mflHost, mflLeagueId, mflActionYear, franchiseNamesJson, franchiseBannersJson, defSpotlightJson, nflAvatarBgJson, nflAvatarBgFallback, nflAvatarBorderJson, nflAvatarBorderFallback, nflAvatarRingJson, nflAvatarRingFallback, nflAvatarRingDarkJson, nflAvatarRingDarkFallback, noHeadshot, logoOnerror: NFL_LOGO_ONERROR, collegeLogoOnerror: COLLEGE_LOGO_ONERROR, collegeLogoOnload: COLLEGE_LOGO_ONLOAD, rookieDraftComplete }}>
+<script define:vars={{ canClaim, promptSignIn, watchSignedIn, playerDataJson, hasProjected, hasLastYrPts, hasSnapCounts, nflTeamsJson, hasSurplusData, hasAuctionData, isAuctionSeason, isAdmin, currentYear, mflHost, mflLeagueId, mflActionYear, franchiseNamesJson, franchiseBannersJson, defSpotlightJson, nflAvatarBgJson, nflAvatarBgFallback, nflAvatarBorderJson, nflAvatarBorderFallback, nflAvatarRingJson, nflAvatarRingFallback, nflAvatarRingDarkJson, nflAvatarRingDarkFallback, noHeadshot, logoOnerror: NFL_LOGO_ONERROR, collegeLogoOnerror: COLLEGE_LOGO_ONERROR, collegeLogoOnload: COLLEGE_LOGO_ONLOAD, rookieDraftComplete }}>
   // define:vars creates const — copy to let so polling can update at runtime
   let _hasAuctionData = hasAuctionData;
   const players = JSON.parse(playerDataJson);
@@ -1190,8 +1209,10 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
   function loadViewPref() {
     try {
       const saved = localStorage.getItem('playersViewMode');
-      if (saved === 'rankings' || saved === 'stats' || saved === 'value' || saved === 'auction') {
-        activeView = saved;
+      if (saved === 'rankings' || saved === 'stats' || saved === 'value' || saved === 'auction' || saved === 'watchlist') {
+        // A watch-list view is meaningless signed out: fall back to Stats
+        // rather than paint a stale cache or a "build your list" empty state.
+        activeView = saved === 'watchlist' && !watchListSignedIn() ? 'stats' : saved;
         hasExplicitViewPref = true;
       }
     } catch (_) {}
@@ -1202,6 +1223,19 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
       localStorage.setItem('playersViewMode', activeView);
     } catch (_) {}
   }
+
+  // ── My Watch List ──
+  // The list itself lives in window.watchListStore (WatchListBridge) — this
+  // classic script cannot import the store, so it reads through the bridge
+  // and re-renders on the bridge's change event. `watchScope` is the
+  // All / Free agents / Rostered sub-filter that only applies in that view.
+  let watchScope = 'all';
+  const watchedIds = () => window.watchListStore?.getWatchedIds?.() || new Set();
+  const isWatchedId = (id) => watchedIds().has(String(id));
+  // SSR's league-scoped verdict, available before the bridge module runs —
+  // the stored view preference is applied at script eval, when the bridge
+  // (a deferred module) has not yet set window.watchListStore.
+  const watchListSignedIn = () => !!watchSignedIn;
 
   function applyGroupVisibility() {
     const canShowRankingsView = hasRankingColumns;
@@ -1218,7 +1252,8 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
       activeView = canShowRankingsView ? 'rankings' : 'stats';
     }
 
-    const showStats = activeView === 'stats';
+    // Watch list is a FILTER wearing the Stats columns, not a column group.
+    const showStats = activeView === 'stats' || activeView === 'watchlist';
     const showRankings = activeView === 'rankings' && canShowRankingsView;
     const showValue = activeView === 'value' && canShowValueView;
     const showAuctionView = activeView === 'auction' && canShowAuctionView;
@@ -1309,7 +1344,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     }
 
     // Update button active states
-    for (const group of ['stats', 'rankings', 'auction', 'value']) {
+    for (const group of ['stats', 'rankings', 'auction', 'value', 'watchlist']) {
       const btn = document.querySelector(`.col-group-btn[data-group="${group}"]`);
       if (btn) {
         const isActive = group === activeView;
@@ -1326,14 +1361,15 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     const valueBtn = document.getElementById('col-group-btn-value');
     if (valueBtn) valueBtn.style.display = canShowValueView ? '' : 'none';
 
-    // Show/hide the toggle bar when at least one alternate view is available
+    // The bar always has My Watch List as an alternate view now, so it is
+    // always shown; the other buttons still hide individually above.
     const toggleBar = document.getElementById('col-group-toggles');
-    if (toggleBar) {
-      toggleBar.style.display = (canShowRankingsView || canShowAuctionView || canShowValueView) ? '' : 'none';
-    }
+    if (toggleBar) toggleBar.style.display = '';
+    const scopeBar = document.getElementById('watch-scope');
+    if (scopeBar) scopeBar.style.display = activeView === 'watchlist' ? '' : 'none';
 
     // Show/hide auction indicators in Value/Stats/Auction views
-    const showAuctionIndicators = showValue || showAuctionView || activeView === 'stats';
+    const showAuctionIndicators = showValue || showAuctionView || showStats;
     const freshnessEl = document.getElementById('auction-freshness');
     if (freshnessEl) {
       freshnessEl.style.display = (showAuctionIndicators && lastAuctionFetchTime > 0) ? '' : 'none';
@@ -1356,7 +1392,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
   function applyContractVisibility() {
     // Show contract columns (Yrs, Sal/Bid) when viewing rostered players
     // OR when auction data exists (free agents have bids in the Sal/Bid column)
-    const showContract = (showRostered || _hasAuctionData) && activeView !== 'value' && activeView !== 'auction';
+    const showContract = (showRostered || _hasAuctionData || activeView === 'watchlist') && activeView !== 'value' && activeView !== 'auction';
     document.querySelectorAll('.col-contract').forEach(el => {
       el.style.display = showContract ? '' : 'none';
     });
@@ -1396,6 +1432,10 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
   }
 
   function setActiveView(view) {
+    if (view === 'watchlist' && !watchListSignedIn()) {
+      window.watchListStore?.requestSignIn?.();
+      return;
+    }
     activeView = view;
     hasExplicitViewPref = true;
     saveViewPref();
@@ -1420,8 +1460,8 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
 
   // Query string override: ?view=stats|rankings|value|auction
   const viewParam = new URLSearchParams(window.location.search).get('view');
-  if (viewParam && ['stats', 'rankings', 'value', 'auction'].includes(viewParam)) {
-    activeView = viewParam;
+  if (viewParam && ['stats', 'rankings', 'value', 'auction', 'watchlist'].includes(viewParam)) {
+    activeView = viewParam === 'watchlist' && !watchListSignedIn() ? 'stats' : viewParam;
   }
 
   const posOrder = { QB: 1, RB: 2, WR: 3, TE: 4, PK: 5, DEF: 6 };
@@ -1932,10 +1972,22 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
 
   function filterPlayers() {
     const query = searchQuery.toLowerCase();
+    const watching = activeView === 'watchlist';
+    const watched = watching ? watchedIds() : null;
+    // Watch list view: the list IS the filter, and its own All / Free agents /
+    // Rostered scope replaces the "Include rostered" checkbox.
+    const passesWatch = (p) => {
+      if (!watched.has(String(p.id))) return false;
+      if (watchScope === 'fa' && p.rostered) return false;
+      if (watchScope === 'rostered' && !p.rostered) return false;
+      return true;
+    };
     filteredPlayers = players.filter(p => {
-      // Free agent filter (default on)
-      // In auction view, always show rostered players that have active bids
-      if (!showRostered && p.rostered) {
+      if (watching) {
+        if (!passesWatch(p)) return false;
+      } else if (!showRostered && p.rostered) {
+        // Free agent filter (default on)
+        // In auction view, always show rostered players that have active bids
         if (!(activeView === 'auction' && p.auctionBid != null)) return false;
       }
 
@@ -1958,7 +2010,9 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
 
     // Update category counts based on current filters + search (minus position filter)
     const pool = players.filter(p => {
-      if (!showRostered && p.rostered) {
+      if (watching) {
+        if (!passesWatch(p)) return false;
+      } else if (!showRostered && p.rostered) {
         if (!(activeView === 'auction' && p.auctionBid != null)) return false;
       }
       if (!showRookies && p.rookie) return false;
@@ -2032,6 +2086,11 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
       const rosteredDot = p.rostered
         ? `<span class="rostered-dot" title="${escapeAttr(rosteredTeam ? 'Rostered by ' + rosteredTeam : 'Rostered')}"></span>`
         : '';
+      const watched = isWatchedId(p.id);
+      const watchMark = watched
+        ? `<span class="pa-watch-mark" title="On your watch list"><svg aria-hidden="true"><use href="/assets/icons/sprite.svg#icon-eye"></use></svg></span>`
+        : '';
+      const kebabCell = `<td class="col-player-actions"><button type="button" class="pa-kebab${watched ? ' is-watched' : ''}" data-pa-open data-pa-id="${escapeAttr(p.id)}" data-pa-name="${escapeAttr(p.name)}" data-pa-pos="${escapeAttr(p.position || '')}" data-pa-team="${escapeAttr(p.team || '')}" data-pa-espn="${escapeAttr(p.espnId || '')}" data-pa-headshot="${isDef ? '' : escapeAttr(headshot)}" data-pa-franchise="${escapeAttr(p.franchiseId || '')}" data-pa-sub="${escapeAttr(rosteredTeam ? 'Rostered by ' + rosteredTeam : (p.rostered ? 'Rostered' : 'Free agent'))}" aria-label="Actions for ${escapeAttr(p.name)}" title="Player actions"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg></button></td>`;
 
       html += `<tr class="${rosteredClass}" data-pos="${p.position.toLowerCase()}" data-player-id="${p.id}">
         <td class="cell-rank">${rank}</td>
@@ -2042,7 +2101,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
                 onerror="${isDef ? escapeAttr(logoOnerror) : escapeAttr(buildOnerror(p.id, p.espnId))}" />
             </div>
             <div class="player-cell__info">
-              <strong class="player-cell__name player-cell__name--clickable" data-player-modal="${modalJson}">${p.name}${rosteredDot}</strong>
+              <strong class="player-cell__name player-cell__name--clickable" data-player-modal="${modalJson}">${p.name}${rosteredDot}${watchMark}</strong>
               <div class="player-meta">
                 ${isDef ? '' : `<img src="${escapeAttr(logo)}" alt="${escapeAttr(p.team)}" class="player-meta__logo" onerror="${escapeAttr(logoOnerror)}" />`}<span class="player-meta__pos">${posLabel}</span>
               </div>
@@ -2270,9 +2329,14 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
         html += `<td class="col-fa-action"></td>`;
       }
 
+      html += kebabCell;
       html += `</tr>`;
     }
 
+    if (!html && activeView === 'watchlist') {
+      // Empty watch list: say how to fill it rather than show a bare table.
+      html = `<tr class="row--empty"><td colspan="40" class="watch-empty">Nobody on your watch list${watchScope === 'fa' ? ' is a free agent' : watchScope === 'rostered' ? ' is rostered' : ' yet'}. Use the &#8942; button on any player here, on a roster, or on the custom rankings board to start watching.</td></tr>`;
+    }
     tbody.innerHTML = html;
 
     // Update sort indicators — only add arrow span to the actively sorted column
@@ -2323,6 +2387,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
   function isLivePage() {
     return !!OWN_TABLE && OWN_TABLE.isConnected;
   }
+  let watchChangeBound = false;
 
   document.addEventListener('rankings:set-lookup', function (e) {
     if (!isLivePage()) return;
@@ -2583,6 +2648,32 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
       });
     });
 
+    // Watch list scope (All / Free agents / Rostered) — fresh nodes per init.
+    const watchScopeBar = document.getElementById('watch-scope');
+    if (watchScopeBar) {
+      watchScopeBar.addEventListener('click', (e) => {
+        const btn = e.target.closest('.watch-scope-btn');
+        if (!btn) return;
+        watchScope = btn.getAttribute('data-scope') || 'all';
+        watchScopeBar.querySelectorAll('.watch-scope-btn').forEach((b) => {
+          const on = b === btn;
+          b.classList.toggle('active', on);
+          b.setAttribute('aria-pressed', String(on));
+        });
+        filterPlayers();
+      });
+    }
+    // A change from any surface (the ⋮ sheet, the details modal) repaints the
+    // marks — and the whole table when the list is the active filter. Bound
+    // once; the live-page guard keeps a stale page from answering.
+    if (!watchChangeBound) {
+      watchChangeBound = true;
+      document.addEventListener('watchlist:change', () => {
+        if (!isLivePage()) return;
+        if (activeView === 'watchlist') filterPlayers(); else render();
+      });
+    }
+
     // Column group toggles
     const colGroupToggles = document.getElementById('col-group-toggles');
     if (colGroupToggles) {
@@ -2629,6 +2720,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     filterWtMin = domNum('filter-wt-min');
     filterWtMax = domNum('filter-wt-max');
     filtersOpen = filtersPanel ? filtersPanel.classList.contains('open') : false;
+    watchScope = document.querySelector('.watch-scope-btn.active')?.getAttribute('data-scope') || 'all';
     visibleCount = BATCH_SIZE;
 
     filterPlayers();
@@ -3409,6 +3501,41 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     background: var(--color-primary, #1c497c);
     border-color: var(--color-primary, #1c497c);
     color: white;
+  }
+  .col-group-btn--watch {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+  }
+  .col-group-btn__icon {
+    width: 12px;
+    height: 12px;
+    fill: currentColor;
+  }
+  .watch-scope {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.2rem;
+    padding: 0.15rem;
+    border: 1px solid var(--content-border, #d1d5db);
+    border-radius: var(--radius-full, 999px);
+    background: var(--content-bg-muted, #f3f4f6);
+  }
+  .watch-scope-btn {
+    padding: 0.15rem 0.55rem;
+    border: 0;
+    border-radius: var(--radius-full, 999px);
+    background: transparent;
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: var(--color-gray-600, #4b5563);
+    cursor: pointer;
+    line-height: 1.4;
+  }
+  .watch-scope-btn.active {
+    background: var(--content-bg, #fff);
+    color: var(--color-primary, #1c497c);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
   }
 
   /* ── Filter Toggle Button ── */

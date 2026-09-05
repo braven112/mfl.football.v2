@@ -1,5 +1,27 @@
 [
   {
+    "id": "my-watch-list",
+    "date": "2026-09-05",
+    "category": "new-feature",
+    "icon": "eye",
+    "leagues": [
+      "theleague",
+      "afl"
+    ],
+    "title": "Keep An Eye On Him. Literally.",
+    "link": "/players?view=watchlist",
+    "linkLabel": "Start watching",
+    "summary": "My Watch List is live, and it is the same list MFL keeps under your name. Watch anyone from a roster, the free-agent pool, or your rankings board, and every Schefter post about him lights up — with a Watching tab to see nothing else, and a push alert if you want one.",
+    "description": [
+      "Every owner has a mental list. The rookie you almost drafted. The receiver whose target share you check every Monday. The running back one injury away from a job. Until now that list lived in your head, or worse, in a note on your phone that you last opened in August.",
+      "Now it lives on the site, and it lives on MFL — it IS MFL's My Watch List, so a player you watch here is watched there and back. Tap the <strong>&#8942;</strong> on any player on the <a href=\"/players\">free agents</a> page, any <a href=\"/rosters\">roster</a> in the league (yes, other people's), or your <a href=\"/cr\">custom rankings</a> board, hit <em>Watch player</em>, and he is on the list. The player card everywhere on the site carries the same switch. One tap adds, one tap removes, nothing to sync and nothing to push.",
+      "Then the list starts working for you. The <a href=\"/news\">Schefter Report</a> now flags any post about a player you watch — a signing, a cut, a trade, a rumor, a wire story — with a chip naming him, and a new <strong>Watching</strong> tab shows only those. Your own roster counts automatically, so the tab is your team's news and your shopping list in one scroll. On the free agents page a <strong>My Watch List</strong> view filters the pool to your list, with a toggle for who is still available and who got scooped.",
+      "And if you would rather not scroll at all, the <a href=\"/notifications\">notification center</a> has a new switch: <em>News on your watch list</em>. Off by default, because it is your list and your phone. But flip it, and the moment Schefter posts about one of your guys, so does your lock screen."
+    ],
+    "image": "my-watch-list.webp",
+    "imageAlt": "The free agents page in the My Watch List view, with the player action sheet open on a watched player showing the Stop watching option"
+  },
+  {
     "id": "afl-owner-award-badges",
     "date": "2026-09-05",
     "category": "enhancement",
@@ -879,27 +901,6 @@
       "afl",
       "theleague",
       "bb1"
-    ]
-  },
-  {
-    "id": "afl-team-spotlight",
-    "date": "2026-08-21",
-    "category": "enhancement",
-    "icon": "draft-podium",
-    "title": "The Dead Tile on Your Team Card Finally Says Something",
-    "summary": "\"Keepers — of 7 protected\" has been sitting blank on the AFL homepage since the day it shipped, because there was never a number to put there. It's gone. In its place: your earned round-1 draft slot until the conference drafts wrap, then your last trophy for the rest of the year. The roster count next to it is finally counting this year's team, too.",
-    "description": [
-      "If you have looked at your team card on <a href=\"/\">the AFL homepage</a> any time in the last while, you have seen a small grey dash where a keeper count was supposed to be. It was never going to be anything else. AFL does not have keepers the way MFL means keepers — the offseason auction wipes the slate every year — so the tile was measuring a thing that does not exist. Even if we had wired it up to the roster feed it would have read \"7 of 7\" for all twenty-four of you, which is a fact about the rules, not about your team.",
-      "So the slot now rotates with the calendar, and it always has something to say.",
-      "From June 1 until your conference finishes drafting, it shows your base draft position — the pick you earned out of <a href=\"/standings\">last season's standings</a>, run through the same tiebreaker chain <a href=\"/draft/order\">the Draft Predictor</a> uses. Smokane sits at 1.10 in the AL. If a trade has moved you off that slot, the number gets an asterisk and the line underneath tells you where you actually pick, so you can see both the pick you earned and the pick you own without opening another page.",
-      "Once the drafts are in the books it flips to hardware: the most recent title you have won, with your best one appended when the two are not the same trophy. That distinction turned out to matter for half the league. Smokane's most recent title is the 2025 AL North, which is real, and also not the thing worth leading with — so the tile reads AL North, then AFL '13. Ranking runs AFL Championship, Premier League, conference, division, D-League, NIT.",
-      "Four franchises have no hardware at all. Rather than hand them a counter of how long it has been, the tile falls through to the all-time record — the Micks have gone 78-72 since 2005, which reads a lot better than the alternative. And while we were in there: <a href=\"/rosters\">the roster count</a> on that same card was reading off the season clock instead of the league clock, which meant it spent every offseason counting a team that no longer exists. It counts the roster you have right now — which, eight days out from the draft, is your seven keepers and nobody else."
-    ],
-    "image": "afl-team-spotlight.webp",
-    "imageAlt": "The AFL homepage My Team card for Smokane FC with four tiles: Tier showing the Premier League badge, Conference showing the American League badge and North, Draft Slot showing 1.10 with AL · 2026 underneath, and Roster showing 7 with players underneath.",
-    "excludeFromHero": true,
-    "leagues": [
-      "afl"
     ]
   }
 ]

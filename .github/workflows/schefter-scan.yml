@@ -84,6 +84,24 @@ jobs:
           KV_REST_API_TOKEN: ${{ secrets.KV_REST_API_TOKEN }}
         run: node scripts/schefter-scan.mjs
 
+      # Stamp playerIds onto posts that only name players in prose (the wire,
+      # the rumor mill) so My Watch List can highlight them. Idempotent; a
+      # quiet run changes nothing and the commit step below sees no diff.
+      - name: Tag players in feed posts
+        run: node scripts/schefter-tag-players.mjs
+
+      # "News on your watch list" push — reads the watch-list mirrors in Redis
+      # and the posts newer than its watermark. Never fails the job.
+      - name: Push watch-list news
+        env:
+          TZ: America/Los_Angeles
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          UPSTASH_REDIS_REST_URL: ${{ secrets.UPSTASH_REDIS_REST_URL }}
+          UPSTASH_REDIS_REST_TOKEN: ${{ secrets.UPSTASH_REDIS_REST_TOKEN }}
+          KV_REST_API_URL: ${{ secrets.KV_REST_API_URL }}
+          KV_REST_API_TOKEN: ${{ secrets.KV_REST_API_TOKEN }}
+        run: node scripts/push-watch-list-news.mjs
+
       - name: Commit and push feed updates
         run: |
           # The feed files are append-only and written by several workflows on

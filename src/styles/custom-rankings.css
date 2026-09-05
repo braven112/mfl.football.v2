@@ -246,6 +246,12 @@
   flex-shrink: 0;
 }
 
+.cr-row__actions {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+}
+
 .cr-row__delta--up {
   color: var(--color-success-dark, #059669);
 }

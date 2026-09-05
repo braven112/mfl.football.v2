@@ -28,6 +28,9 @@ import feedData from '../../data/theleague/schefter-feed.json';
 import type { SchefterFeed as FeedType } from '../../types/schefter';
 import { getRecentMessages, toSchefterPosts, loadTeamConfig, enrichPostsWithOgPreviews } from '../../utils/groupme-storage';
 import { buildSchefterPostOg, isValidSchefterPostId } from '../../utils/schefter-feed';
+import { getLeagueBySlug } from '../../config/leagues';
+import { getLeagueYearForSlug } from '../../utils/league-year';
+import { resolveWatchingSets, matchPosts, postMentionsAny } from '../../utils/schefter-watching';
 import '../../styles/schefter-feed.css';
 import '../../styles/schefter-feed-compact.css';
 
@@ -35,6 +38,15 @@ const authUser = getAuthUser(Astro.request);
 const isAuthenticated = !!authUser;
 const userFranchiseId = authUser?.franchiseId;
 const feed = feedData as FeedType;
+
+// Watching — My Watch List + the viewer's own roster, league-scoped like
+// everything else here: a session from the other league has no list here.
+const newsLeague = getLeagueBySlug('theleague')!;
+const watchFranchiseId =
+  authUser && authUser.leagueId === newsLeague.id ? (authUser.franchiseId ?? null) : null;
+const watchYear = getLeagueYearForSlug(newsLeague.slug);
+const watchingSets = await resolveWatchingSets(newsLeague, watchYear, watchFranchiseId);
+const canWatch = !!watchFranchiseId;
 
 // Claude Schefter's featured articles — surfaced in the right rail
 const schefterArticles = feed.posts
@@ -93,9 +105,12 @@ const legacyAliases: Record<string, string> = {
   injuries: 'insider', odds: 'insider',
 };
 const resolvedSource = legacyAliases[sourceParam ?? ''] ?? sourceParam;
-const validSources = ['theleague', 'nfl', 'draft', 'insider', 'groupme'] as const;
+const validSources = ['theleague', 'nfl', 'draft', 'insider', 'groupme', 'watching'] as const;
 type SourceFilter = typeof validSources[number];
 const activeSource: SourceFilter | null = validSources.includes(resolvedSource as SourceFilter)
+  // Watching is only a tab for a viewer with a list; anyone else following a
+  // shared ?source=watching link lands on All rather than on an empty feed.
+  && !(resolvedSource === 'watching' && !canWatch)
   ? (resolvedSource as SourceFilter)
   : null;
 
@@ -141,8 +156,20 @@ const filteredPosts = (() => {
   });
   if (activeSource === 'draft') return feed.posts.filter(p => p.authorId === 'nfl-draft');
   if (activeSource === 'insider') return feed.posts.filter(p => insiderAuthorIds.has(p.authorId ?? ''));
+  if (activeSource === 'watching') {
+    if (!canWatch) return [];
+    return feed.posts.filter(p => postMentionsAny(p, watchingSets.all));
+  }
   return feed.posts;
 })();
+
+// Every tab highlights a post about a watched player; the Watching tab is
+// that highlight as a filter.
+const watchingByPost = matchPosts(filteredPosts, watchingSets, watchYear);
+const isWatchingTab = activeSource === 'watching';
+const watchingEmptyText = watchingSets.all.size === 0
+  ? 'Nothing to watch yet. Use the ⋮ button on any player — free agents, rosters, custom rankings — to build your watch list.'
+  : 'No news on your players or your watch list yet. Schefter is on it.';
 
 // Enrich GroupMe posts with Open Graph previews (server-side, Redis-cached).
 // Failures are silent — posts without previews fall back to simple link cards.
@@ -160,7 +187,7 @@ const sourceAuthorMap: Record<string, string> = {
   insider: 'nfl-insider',
 };
 // Default to Claude Schefter for the "All" tab, otherwise use the source's persona
-const profileAuthorId = activeSource && activeSource !== 'groupme' ? sourceAuthorMap[activeSource] : 'claude';
+const profileAuthorId = activeSource && activeSource !== 'groupme' ? (sourceAuthorMap[activeSource] ?? 'claude') : 'claude';
 const profileAuthor = profileAuthorId ? getAuthor(profileAuthorId) : null;
 const profileAvatar = profileAuthor ? getAuthorAvatar(profileAuthor) : null;
 
@@ -179,6 +206,7 @@ const og = ogPost ? buildSchefterPostOg(ogPost, Astro.url, 'theleague') : undefi
 const basePath = '/theleague/news';
 const tabs = [
   { label: 'All', href: basePath, active: !activeSource },
+  ...(canWatch ? [{ label: 'Watching', href: `${basePath}?source=watching`, active: isWatchingTab, watching: true }] : []),
   { label: 'The League', href: `${basePath}?source=theleague`, active: activeSource === 'theleague' },
   ...(isAuthenticated ? [{ label: 'Group Chat', href: `${basePath}?source=groupme`, active: activeSource === 'groupme' }] : []),
   { label: 'NFL', href: `${basePath}?source=nfl`, active: activeSource === 'nfl' },
@@ -220,9 +248,12 @@ const tabs = [
         {tabs.map(tab => (
           <a
             href={tab.href}
-            class={`sf-source-tab${tab.active ? ' sf-source-tab--active' : ''}`}
+            class={`sf-source-tab${tab.active ? ' sf-source-tab--active' : ''}${(tab as { watching?: boolean }).watching ? ' sf-source-tab--watching' : ''}`}
             {...(tab.active ? { 'aria-current': 'page' } : {})}
           >
+            {(tab as { watching?: boolean }).watching && (
+              <svg class="sf-source-tab__icon" aria-hidden="true"><use href="/assets/icons/sprite.svg#icon-eye" /></svg>
+            )}
             {tab.label}
           </a>
         ))}
@@ -252,6 +283,8 @@ const tabs = [
           userTeamName={userTeamName}
           userTeamIcon={userTeamIcon}
           initialLimit={25}
+          watching={watchingByPost}
+          emptyText={isWatchingTab ? watchingEmptyText : undefined}
         />
       </div>
     </div>

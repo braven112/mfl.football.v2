@@ -34,10 +34,16 @@ interface RankingListProps {
   onRenameTier: (afterPlayerId: string, newLabel: string) => void;
   onMoveTier: (afterPlayerId: string, direction: 'up' | 'down') => void;
   onAddTierAfter: (afterPlayerId: string) => void;
+  /** Ids on the owner's My Watch List. */
+  watchedIds?: Set<string>;
+  /** Opens the shared player action sheet for a row. */
+  onPlayerActions?: (player: RankedPlayer) => void;
 }
 
 export default function RankingList({
   players,
+  watchedIds,
+  onPlayerActions,
   tiers,
   isEditing,
   onReorder,
@@ -100,7 +106,13 @@ export default function RankingList({
             const isLast = index === players.length - 1;
             return (
               <React.Fragment key={player.id}>
-                <PlayerRow player={player} rank={index + 1} isEditing={isEditing} />
+                <PlayerRow
+                  player={player}
+                  rank={index + 1}
+                  isEditing={isEditing}
+                  watched={watchedIds?.has(player.id) ?? false}
+                  onActions={onPlayerActions}
+                />
                 {tier ? (
                   <TierDivider
                     tier={tier}

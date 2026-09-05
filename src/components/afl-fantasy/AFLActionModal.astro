@@ -1,11 +1,17 @@
 ---
 /**
- * AFLActionModal — owner-only player action menu for AFL roster pages.
+ * AFLActionModal — player action menu for AFL roster pages.
  *
- * Two-step flow:
+ * Two-step flow for roster WRITES (owner only):
  *   1. Choose action (Move to IR / Activate / Cut / Trade Block / Trade)
  *   2. Confirm + execute via /api/* — same write endpoints TheLeague uses,
  *      since user.leagueId on the JWT scopes them per-league.
+ *
+ * Plus one per-VIEWER action that needs no confirm and no ownership: Watch /
+ * Stop watching (My Watch List, src/utils/watch-list-client.ts). It is why
+ * the sheet now opens on every roster for every visitor — a signed-out one is
+ * offered the sign-in dialog; a signed-in non-owner sees only Watch. The
+ * payload's `isOwner` / `signedIn` flags decide which options render.
  *
  * AFL has no salary cap, no contracts, no franchise tag, and no extension
  * — so the action set is intentionally short. Trade routes to the AFL
@@ -64,6 +70,17 @@
         <!-- Step 1: action selector -->
         <div class="aam-step" data-aam-step="select">
           <ul class="aam-actions" role="list">
+            <li>
+              <button class="aam-action" data-aam-action="watch" type="button">
+                <span class="aam-action__icon" aria-hidden="true">
+                  <svg aria-hidden="true"><use id="aam-watch-icon" href="/assets/icons/sprite.svg#icon-eye" /></svg>
+                </span>
+                <span class="aam-action__body">
+                  <span class="aam-action__label" id="aam-watch-label">Watch player</span>
+                  <span class="aam-action__desc" id="aam-watch-desc">His news lights up in the Schefter Report</span>
+                </span>
+              </button>
+            </li>
             <li>
               <button class="aam-action" data-aam-action="ir-to" type="button" hidden>
                 <span class="aam-action__icon" aria-hidden="true">
@@ -131,6 +148,7 @@
               </button>
             </li>
           </ul>
+          <div class="aam-error" id="aam-select-error" hidden></div>
         </div>
 
         <!-- Step 2: confirm — replaces the action grid within the same section -->
@@ -151,8 +169,11 @@
 <script>
   import { NFL_TEAM_CITIES, normalizeTeamCode } from '../../utils/nfl';
   import { buildNoHeadshotPlaceholder } from '../../utils/nfl-team-colors';
+  import { isWatched, toggleWatch, getWatchListAuth } from '../../utils/watch-list-client';
+  import { requestSignIn } from '../../utils/player-actions';
 
-  type ModalAction = 'ir-to' | 'ir-from' | 'cut' | 'trade-bait-add' | 'trade-bait-remove' | 'trade';
+  type ModalAction = 'watch' | 'ir-to' | 'ir-from' | 'cut' | 'trade-bait-add' | 'trade-bait-remove' | 'trade';
+  const OWNER_ACTIONS: ModalAction[] = ['ir-to', 'ir-from', 'cut', 'trade-bait-add', 'trade-bait-remove', 'trade'];
 
   interface ActionPayload {
     playerId: string;
@@ -181,6 +202,10 @@
     draftPick?: number | null;
     /** Drafting NFL team code — used to detect undrafted (FA/UFA) */
     draftTeam?: string | null;
+    /** The viewer owns this roster → the write actions render. Default true (legacy callers). */
+    isOwner?: boolean;
+    /** The viewer has an AFL session → Watch runs; otherwise it hands off to sign-in. Default true. */
+    signedIn?: boolean;
   }
 
   const _modalEl = document.getElementById('afl-action-modal') as HTMLDivElement | null;
@@ -239,7 +264,9 @@
       return age >= 0 ? age : null;
     }
 
+    const selectErrorEl = modal.querySelector('#aam-select-error') as HTMLElement;
     const actionButtons = {
+      'watch': modal.querySelector('[data-aam-action="watch"]') as HTMLButtonElement,
       'ir-to': modal.querySelector('[data-aam-action="ir-to"]') as HTMLButtonElement,
       'ir-from': modal.querySelector('[data-aam-action="ir-from"]') as HTMLButtonElement,
       'cut': modal.querySelector('[data-aam-action="cut"]') as HTMLButtonElement,
@@ -331,6 +358,13 @@
       actionButtons['ir-from'].hidden = !onIR;
       actionButtons['trade-bait-add'].hidden = !!payload.isOnTradeBait;
       actionButtons['trade-bait-remove'].hidden = !payload.isOnTradeBait;
+      // Non-owners get the sheet for Watch alone — every write stays hidden.
+      if (payload.isOwner === false) {
+        for (const id of OWNER_ACTIONS) actionButtons[id].hidden = true;
+      }
+      selectErrorEl.hidden = true;
+      selectErrorEl.textContent = '';
+      paintWatch();
 
       stepSelect.hidden = false;
       stepConfirm.hidden = true;
@@ -347,6 +381,59 @@
       pendingAction = null;
     }
 
+    // ── Watch / Stop watching ──
+    // One-tap, no confirm step: MFL's watch-list import is incremental, so
+    // the click IS the change and nothing else on MFL is touched.
+    function watchSignedOut(): boolean {
+      return currentPayload?.signedIn === false || getWatchListAuth() === 'signed-out';
+    }
+    function paintWatch() {
+      if (!currentPayload) return;
+      const btn = actionButtons['watch'];
+      const label = modal.querySelector('#aam-watch-label') as HTMLElement | null;
+      const desc = modal.querySelector('#aam-watch-desc') as HTMLElement | null;
+      const icon = modal.querySelector('#aam-watch-icon');
+      const signedOut = watchSignedOut();
+      const watched = !signedOut && isWatched(currentPayload.playerId);
+      btn.hidden = false;
+      btn.disabled = false;
+      btn.classList.toggle('aam-action--active', watched);
+      if (icon) icon.setAttribute('href', `/assets/icons/sprite.svg#${watched ? 'icon-eye-slash' : 'icon-eye'}`);
+      if (label) label.textContent = watched ? 'Stop watching' : 'Watch player';
+      if (desc) {
+        desc.textContent = signedOut
+          ? 'Sign in to build your watch list'
+          : watched
+            ? 'Remove him from your watch list'
+            : 'His news lights up in the Schefter Report';
+      }
+    }
+    async function runWatch() {
+      if (!currentPayload) return;
+      if (watchSignedOut()) {
+        closeModal();
+        requestSignIn();
+        return;
+      }
+      const btn = actionButtons['watch'];
+      const label = modal.querySelector('#aam-watch-label') as HTMLElement | null;
+      const wasWatched = isWatched(currentPayload.playerId);
+      btn.disabled = true;
+      if (label) label.textContent = wasWatched ? 'Removing…' : 'Adding…';
+      selectErrorEl.hidden = true;
+      const res = await toggleWatch(currentPayload.playerId);
+      if (!currentPayload) return; // closed mid-flight
+      if (!res.ok) {
+        if (res.signedOut) { closeModal(); requestSignIn(); return; }
+        paintWatch();
+        selectErrorEl.textContent = res.error || 'Could not update your watch list.';
+        selectErrorEl.hidden = false;
+        return;
+      }
+      if (label) label.textContent = res.watched ? 'Added to your watch list' : 'Removed from your watch list';
+      setTimeout(() => { if (!modal.hidden) paintWatch(); }, 900);
+    }
+
     function confirmCopyFor(action: ModalAction, name: string): string {
       switch (action) {
         case 'ir-to':
@@ -361,6 +448,8 @@
           return `Remove ${name} from your trade block?`;
         case 'trade':
           return `Open the trade builder with ${name} preloaded?`;
+        case 'watch':
+          return ''; // never reaches the confirm step
       }
     }
 
@@ -371,6 +460,7 @@
 
     function pickAction(action: ModalAction) {
       if (!currentPayload) return;
+      if (action === 'watch') { void runWatch(); return; }
       pendingAction = action;
       confirmCopy.textContent = confirmCopyFor(action, currentPayload.playerName);
       confirmBtn.textContent = action === 'cut' ? 'Cut Player' : 'Confirm';
@@ -816,6 +906,11 @@
     background: var(--color-error-light, #fee2e2);
     color: var(--color-error-dark, #991b1b);
   }
+  .aam-action--active .aam-action__icon {
+    background: color-mix(in srgb, var(--league-accent, #c41e3a) 16%, transparent);
+    color: var(--league-accent, #c41e3a);
+  }
+  #aam-select-error { margin-top: 0.75rem; margin-bottom: 0; }
 
   .aam-action__body {
     display: grid;

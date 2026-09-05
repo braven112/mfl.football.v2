@@ -283,6 +283,12 @@ export interface SchefterPost {
   /** Player IDs involved (for linking to player modals) */
   playerIds?: string[];
   /**
+   * Player ids resolved from the post's PROSE by scripts/schefter-tag-players.mjs
+   * (full-name matching). Kept apart from `playerIds`, whose first entry is
+   * the hero the OG composite renders; read both via `postPlayerIds`.
+   */
+  namedPlayerIds?: string[];
+  /**
    * MFL player id of the player this article most prominently features — the
    * "hero" the composite article hero casts (ESPN cutout over that player's
    * NFL team gradient). Chosen deterministically by the article generator from

@@ -95,6 +95,11 @@ jobs:
             node scripts/schefter-rumor-scan.mjs --league afl-fantasy
           fi
 
+      # Stamp playerIds onto the new rumor posts (prose names → MFL ids) so
+      # My Watch List can highlight them. Idempotent, never fails the job.
+      - name: Tag players in feed posts
+        run: node scripts/schefter-tag-players.mjs
+
       - name: Commit and push feed updates
         env:
           DRY_RUN_INPUT: ${{ github.event.inputs.dry_run }}

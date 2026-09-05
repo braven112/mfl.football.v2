@@ -15,6 +15,7 @@ import { getBatchReactions, getBatchAnonymousReactions } from '../../utils/schef
 import { hashTipsterId } from '../../utils/schefter-tipster-hash';
 import { isRumorLikePost } from '../../utils/schefter-feed';
 import SchefterPostCard from './SchefterPostCard.astro';
+import type { WatchHit } from '../../utils/schefter-watching';
 
 interface Props {
   posts: SchefterPost[];
@@ -29,9 +30,19 @@ interface Props {
   userId?: string;
   /** Max posts to show initially (for pagination) */
   initialLimit?: number;
+  /**
+   * Post id → the watched players it names (src/utils/schefter-watching.ts).
+   * A post with hits renders with the watching accent and a chip naming them.
+   */
+  watching?: Record<string, WatchHit[]>;
+  /** Copy for the empty state — the Watching tab has its own. */
+  emptyText?: string;
 }
 
-const { posts, isAuthenticated = false, userFranchiseId, userTeamName, userTeamIcon, userId, initialLimit = 25 } = Astro.props;
+const {
+  posts, isAuthenticated = false, userFranchiseId, userTeamName, userTeamIcon, userId,
+  initialLimit = 25, watching = {}, emptyText = 'No news yet. Schefter is on assignment.',
+} = Astro.props;
 const now = new Date();
 
 // Partition rumor-like posts (rumor-mill + speculation) from the rest —
@@ -60,7 +71,7 @@ const allReactions: Record<string, SchefterReactionResponse> = { ...regularReact
   {posts.length === 0 ? (
     <div class="sf-empty">
       <div class="sf-empty__icon">🎙️</div>
-      <p class="sf-empty__text">No news yet. Schefter is on assignment.</p>
+      <p class="sf-empty__text">{emptyText}</p>
     </div>
   ) : (
     posts.map((post, i) => (
@@ -73,6 +84,7 @@ const allReactions: Record<string, SchefterReactionResponse> = { ...regularReact
           userTeamIcon={userTeamIcon}
           now={now}
           reactions={allReactions[post.id]}
+          watching={watching[post.id]}
         />
       </div>
     ))

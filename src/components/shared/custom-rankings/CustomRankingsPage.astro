@@ -24,6 +24,8 @@ import { defaultRankingSourcesFor } from '../../../config/leagues-data.mjs';
 import { resolveDraftAvailability } from '../../../utils/draft-availability';
 import '../../../styles/player-cell.css';
 import '../../../styles/custom-rankings.css';
+import '../../../styles/player-action-button.css';
+import PlayerActionModal from '../PlayerActionModal.astro';
 import { parseNumber } from '../../../utils/formatters';
 import { calculatePointsPerDollar } from '../../../utils/surplus-value';
 import { calculateAllVORP } from '../../../utils/vorp';
@@ -245,4 +247,5 @@ for (const [id, result] of vorpResults) {
     draftPool={availability?.pool ?? null}
     availabilityPerConference={availability?.perConference ?? false}
   />
+  <PlayerActionModal />
 </TheLeagueLayout>

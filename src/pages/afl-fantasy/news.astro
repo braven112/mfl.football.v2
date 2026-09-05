@@ -9,6 +9,9 @@ import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
 import SchefterFeed from '../../components/shared/SchefterFeed.astro';
 import { getAuthUser } from '../../utils/auth';
 import { buildSchefterPostOg, isValidSchefterPostId } from '../../utils/schefter-feed';
+import { getLeagueBySlug } from '../../config/leagues';
+import { getLeagueYearForSlug } from '../../utils/league-year';
+import { resolveWatchingSets, matchPosts, postMentionsAny } from '../../utils/schefter-watching';
 import type { SchefterFeed as FeedType } from '../../types/schefter';
 import '../../styles/schefter-feed.css';
 
@@ -23,6 +26,24 @@ try {
 
 const authUser = getAuthUser(Astro.request);
 const isAuthenticated = !!authUser;
+
+// Watching — My Watch List + the viewer's own roster, AFL sessions only.
+const newsLeague = getLeagueBySlug('afl-fantasy')!;
+const watchFranchiseId =
+  authUser && authUser.leagueId === newsLeague.id ? (authUser.franchiseId ?? null) : null;
+const userFranchiseId = watchFranchiseId ?? undefined;
+const watchYear = getLeagueYearForSlug(newsLeague.slug);
+const watchingSets = await resolveWatchingSets(newsLeague, watchYear, watchFranchiseId);
+const canWatch = !!watchFranchiseId;
+const isWatchingTab = Astro.url.searchParams.get('source') === 'watching' && canWatch;
+const filteredPosts = isWatchingTab
+  ? feed.posts.filter(p => postMentionsAny(p, watchingSets.all))
+  : feed.posts;
+const watchingByPost = matchPosts(filteredPosts, watchingSets, watchYear);
+const watchingEmptyText = watchingSets.all.size === 0
+  ? 'Nothing to watch yet. Use the ⋮ button on any player — free agents, rosters, custom rankings — to build your watch list.'
+  : 'No news on your players or your watch list yet. Schefter is on it.';
+const basePath = '/afl-fantasy/news';
 
 // Claude Schefter's featured articles — surfaced in the right rail.
 const schefterArticles = feed.posts
@@ -56,11 +77,25 @@ const og = ogPost ? buildSchefterPostOg(ogPost, Astro.url, 'afl-fantasy') : unde
         </p>
       </div>
 
+      {canWatch && (
+        <nav class="sf-source-tabs" aria-label="Filter news">
+          <a href={basePath} class={`sf-source-tab${isWatchingTab ? '' : ' sf-source-tab--active'}`} {...(isWatchingTab ? {} : { 'aria-current': 'page' })}>All</a>
+          <a href={`${basePath}?source=watching`} class={`sf-source-tab sf-source-tab--watching${isWatchingTab ? ' sf-source-tab--active' : ''}`} {...(isWatchingTab ? { 'aria-current': 'page' } : {})}>
+            <svg class="sf-source-tab__icon" aria-hidden="true"><use href="/assets/icons/sprite.svg#icon-eye" /></svg>
+            Watching
+          </a>
+        </nav>
+      )}
+
       <div data-feed-container>
         <SchefterFeed
-          posts={feed.posts}
+          posts={filteredPosts}
           isAuthenticated={isAuthenticated}
+          userFranchiseId={userFranchiseId}
+          userId={authUser?.id}
           initialLimit={25}
+          watching={watchingByPost}
+          emptyText={isWatchingTab ? watchingEmptyText : undefined}
         />
       </div>
     </div>
