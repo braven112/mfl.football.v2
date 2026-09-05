@@ -259,9 +259,7 @@ for (const target of TARGETS) {
 
   const emit = (relPath, image) => {
     const abs = path.join(ROOT, relPath);
-    const next = encodePng(image);
     // Pixel comparison, not byte comparison — see the header note on zlib.
-    // An unreadable/absent file counts as "differs" rather than throwing.
     // One read, no existsSync probe: a check-then-use pair is a file-system
     // race (CodeQL flags it), and the catch already covers absent-or-corrupt.
     let unchanged = false;
@@ -281,7 +279,10 @@ for (const target of TARGETS) {
       return;
     }
     fs.mkdirSync(path.dirname(abs), { recursive: true });
-    fs.writeFileSync(abs, next);
+    // Encoded only once we know we are writing: --check runs on every
+    // path-guard edit across this domain, and a level-9 deflate of a 512x512
+    // RGBA it then discards is pure latency on someone's keystroke.
+    fs.writeFileSync(abs, encodePng(image));
     written.push(relPath);
   };
 

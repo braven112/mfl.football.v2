@@ -112,6 +112,32 @@ describe('PWA manifests', () => {
   });
 });
 
+describe('manifest host gating', () => {
+  const layout = fs.readFileSync(path.join(ROOT, 'src/layouts/TheLeagueLayout.astro'), 'utf8');
+
+  it("never serves one league's manifest on another league's apex", () => {
+    // /theleague/* and /afl-fantasy/* are deliberately kept in
+    // SKIP_REWRITE_PREFIXES so cross-league deep links resolve from either
+    // host, and the layout picks its head block by LEAGUE. So an AFL page
+    // really does render on theleague.us — and an ungated manifest link there
+    // puts a scope:"/" start_url:"/" AFL manifest on TheLeague's origin.
+    expect(layout).toMatch(/const onForeignLeagueHost =/);
+    for (const href of ['/assets/afl/favicons/site.webmanifest', '/manifest.json']) {
+      const link = new RegExp(
+        `\\{!onForeignLeagueHost && \\(\\s*<link rel="manifest" href="${href.replace(/\//g, '\\/')}"`,
+      );
+      expect(layout, `${href} must be gated on !onForeignLeagueHost`).toMatch(link);
+    }
+  });
+
+  it('suppresses only on a known foreign apex, so localhost and previews keep theirs', () => {
+    // "unless on our own apex" would strip the manifest from every non-apex
+    // host — localhost and Vercel previews included — and make the PWA
+    // untestable anywhere but production.
+    expect(layout).toMatch(/hostLeagueSlug !== null && hostLeagueSlug !== ownLeagueSlug/);
+  });
+});
+
 describe('push notification art', () => {
   it.each(PUSH_LEAGUES)('%s has an icon and a badge that both exist', (navSlug) => {
     for (const rel of [leaguePushIcon(navSlug), leaguePushBadge(navSlug)]) {

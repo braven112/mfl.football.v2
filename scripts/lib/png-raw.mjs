@@ -70,7 +70,12 @@ export function decodePng(b, file = '<buffer>') {
     // Filter types are 0-4. Anything else means we misparsed the stream, and
     // falling through to the filter-0 (no-op) branch would silently emit
     // garbage pixels — the one outcome this codec's callers cannot detect.
-    if (filter > 4) throw new Error(`${file}: row ${y} has unknown filter type ${filter}`);
+    // Written as a positive range check on purpose: once the inflated stream
+    // runs out, `raw[p++]` is undefined, and `undefined > 4` is FALSE — so a
+    // `> 4` test lets a truncated IDAT through as silently-zeroed rows.
+    if (!(filter >= 0 && filter <= 4)) {
+      throw new Error(`${file}: row ${y} has unreadable filter type ${filter}`);
+    }
     const line = raw.subarray(p, p + stride);
     p += stride;
     const cur = flat.subarray(y * stride, (y + 1) * stride);

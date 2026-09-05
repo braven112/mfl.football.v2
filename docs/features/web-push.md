@@ -152,19 +152,31 @@ notification's app identity. The AFL shipped that way until Sept 2026.
 `purpose: "maskable"` icon, because Android crops adaptive icons to an
 OEM-chosen shape and a non-full-bleed icon gets a visible notch.
 
-**Every manifest needs a DISTINCT `id`, and that is not the same rule.** The
-AFL's manifest is also served on theleague.us — `vercel.json`'s
+**A league's manifest is only linked on that league's own apex.** The AFL's
+manifest was otherwise served on theleague.us too — `vercel.json`'s
 `/afl-fantasy/*` → `/*` redirect is host-gated to afl-fantasy.com,
 `league-host-map.ts` keeps `/afl-fantasy/` in `SKIP_REWRITE_PREFIXES` so
-cross-league deep links resolve, and the layout picks the manifest by LEAGUE
+cross-league deep links resolve, and the layout picks its head block by LEAGUE
 rather than by host. So an AFL page genuinely renders at
-`theleague.us/afl-fantasy/…` with the AFL manifest attached. A manifest's app
-id defaults to its `start_url`, so two manifests both saying `/` would be the
-SAME app on that origin, and the AFL's name and icons could overwrite an
-owner's installed TheLeague app. `id` is resolved against the origin and does
-**not** have to sit inside `scope`, which is what lets the AFL declare
-`"id": "/afl-fantasy"` while still being scoped to `/`. Uniqueness is pinned
-by the same test.
+`theleague.us/afl-fantasy/…`, and an ungated `<link rel="manifest">` puts a
+`scope: "/"`, `start_url: "/"` AFL manifest on TheLeague's origin: Chrome
+offers to install an app called "AFL" that opens The League, and if the two
+share an app id the AFL's name and icons can overwrite an owner's installed
+TheLeague app.
+
+`onForeignLeagueHost` in `TheLeagueLayout.astro` suppresses the link. Note the
+shape: it suppresses only on a **known foreign league apex**, not "unless on
+our own apex" — localhost and Vercel preview hosts are in neither map and must
+keep their manifest, or the PWA becomes untestable anywhere but production.
+
+Belt and braces, every manifest also carries a **distinct `id`**. An app id
+defaults to `start_url`, so two manifests both saying `/` would be the same app
+on a shared origin. `id` is resolved against the origin and does **not** have
+to sit inside `scope`, which lets the AFL declare `"id": "/afl-fantasy/"` while
+staying scoped to `/`. That exact string is also the id its old
+`start_url: "/afl-fantasy/"` produced implicitly, so nothing already installed
+gets re-keyed. Uniqueness and the host gating are both pinned by
+`tests/push-notification-icons.test.ts`.
 
 ## Per-category preferences
 
