@@ -95,8 +95,8 @@ describe('mfl-integration-test fresh-session step', () => {
   });
 });
 
-describe('mint-mfl-session fallback order', () => {
-  it('prefers a fresh login, falls back to the stored cookie, then to nothing', async () => {
+describe('mint-mfl-session', () => {
+  it('prefers a complete fresh pair, falls back to the stored pair, then to nothing', async () => {
     const { pickMflSession } = await import('../scripts/mint-mfl-session.mjs');
     const stored = { userId: 'old', isCommish: 'old-c' };
     expect(pickMflSession({ mflUserId: 'new', mflIsCommish: 'new-c' }, stored)).toEqual({
@@ -104,9 +104,62 @@ describe('mint-mfl-session fallback order', () => {
       userId: 'new',
       isCommish: 'new-c',
     });
-    // A login that yields no commish cookie keeps the stored one.
-    expect(pickMflSession({ mflUserId: 'new' }, stored).isCommish).toBe('old-c');
     expect(pickMflSession(null, stored)).toEqual({ source: 'stored', userId: 'old', isCommish: 'old-c' });
     expect(pickMflSession(null, {})).toEqual({ source: 'none' });
+  });
+
+  it('never pairs a fresh identity with the STORED commissioner flag (MFL refuses the mismatch)', async () => {
+    const { pickMflSession } = await import('../scripts/mint-mfl-session.mjs');
+    const stored = { userId: 'old', isCommish: 'old-c' };
+    // Login came back without the commissioner cookie: keep the stored pair whole.
+    expect(pickMflSession({ mflUserId: 'new' }, stored)).toEqual({
+      source: 'stored',
+      userId: 'old',
+      isCommish: 'old-c',
+    });
+    // No commissioner flag anywhere: a plain fresh session is fine.
+    expect(pickMflSession({ mflUserId: 'new' }, { userId: 'old' })).toEqual({
+      source: 'login',
+      userId: 'new',
+      isCommish: undefined,
+    });
+  });
+
+  it('reads both cookies from one response, taking MFL_USER_ID from the body when only the flag is a header', async () => {
+    const { parseSessionCookies } = await import('../scripts/mint-mfl-session.mjs');
+    expect(
+      parseSessionCookies(['MFL_USER_ID=u1; Path=/', 'MFL_IS_COMMISH=c1; Path=/'], ''),
+    ).toEqual({ mflUserId: 'u1', mflIsCommish: 'c1' });
+    expect(
+      parseSessionCookies(['MFL_IS_COMMISH=c1; Path=/'], '<?xml version="1.0"?><status MFL_USER_ID="u2"/>'),
+    ).toEqual({ mflUserId: 'u2', mflIsCommish: 'c1' });
+  });
+
+  it('logs into the LEAGUE on the write host with L=, credentials in the body, and never follows a redirect off MFL', async () => {
+    const { loginToLeague } = await import('../scripts/mint-mfl-session.mjs');
+    const calls: { url: string; body: string }[] = [];
+    const fetchImpl = async (url: string, init: { body: string }) => {
+      calls.push({ url, body: init.body });
+      if (calls.length === 1) {
+        return new Response('', {
+          status: 302,
+          headers: new Headers({ location: 'https://evil.example/collect' }),
+        });
+      }
+      return new Response('', { status: 200 });
+    };
+    const result = await loginToLeague({
+      username: 'u',
+      password: 'p',
+      leagueId: '36189',
+      year: 2026,
+      host: 'https://www49.myfantasyleague.com',
+      fetchImpl: fetchImpl as unknown as typeof fetch,
+    });
+    expect(calls).toHaveLength(1);
+    expect(calls[0].url).toBe('https://www49.myfantasyleague.com/2026/login?L=36189');
+    expect(calls[0].body).toContain('PASSWORD=p');
+    expect(calls[0].url).not.toContain('PASSWORD');
+    expect(result).toEqual({});
   });
 });

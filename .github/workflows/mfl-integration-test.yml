@@ -48,6 +48,9 @@ jobs:
           MFL_PASSWORD: ${{ secrets.MFL_PASSWORD }}
           MFL_USER_ID: ${{ secrets.MFL_USER_ID }}
           MFL_IS_COMMISH: ${{ secrets.MFL_IS_COMMISH }}
+          # The commissioner cookie is league-scoped, so the login names the
+          # same test league the writes below target.
+          MFL_LEAGUE_ID: '36189'
         run: node scripts/mint-mfl-session.mjs
 
       - name: Run MFL integration tests
