@@ -22,6 +22,7 @@ import {
   NFL_DARK_STROKE_WIDTH,
 } from '../src/utils/nfl-logo-dark-css';
 import { crestStrokeFilter } from '../src/utils/crest-dark-stroke-css';
+import { getNFLTeamLogo as getNFLTeamLogoLegacy } from '../src/utils/nfl';
 import { getAllNFLTeamCodes, getNFLTeamLogo, normalizeTeamCode, TEAM_CODE_MAP } from '../src/utils/nfl-logo';
 import { getNflLogoUrl } from '../src/constants/roster-constants';
 import { NFL_TEAM_CODES } from '../scripts/fetch-nfl-dark-logos.mjs';
@@ -96,13 +97,16 @@ describe('buildNflLogoDarkCss', () => {
   });
 
   it('never keys a SWAP on a dark-variant src (no self-referential swap)', () => {
-    // Only `content:` rules are swaps. The theme-independent stroke rule IS
-    // keyed on dark srcs by design (a filter, not a replacement) — see the
-    // NFL_DARK_STROKE_CODES block below.
-    for (const line of lines.filter((l) => l.includes('content:'))) {
-      const src = line.match(/img\[src="([^"]+)"\]/)?.[1] ?? '';
-      expect(src).not.toContain('500-dark');
-      expect(src).not.toContain('/assets/nfl-logos/dark/');
+    // Scans EVERY line: a rule keyed on a dark src is only ever allowed to be
+    // the theme-independent stroke (`filter:`, never `content:`) — see the
+    // NFL_DARK_STROKE_CODES block below. Any other rule type that turns up
+    // keyed on a dark src is the self-referential bug this guard exists for.
+    for (const line of lines) {
+      const srcs = [...line.matchAll(/img\[src="([^"]+)"\]/g)].map((m) => m[1]);
+      const onDarkSrc = srcs.some((s) => s.includes('500-dark') || s.includes('/assets/nfl-logos/dark/'));
+      if (!onDarkSrc) continue;
+      expect(line, `dark-src-keyed rule must be a filter, not a swap: ${line.slice(0, 120)}`).toContain('filter:');
+      expect(line).not.toContain('content:');
     }
   });
 
@@ -116,8 +120,8 @@ describe('buildNflLogoDarkCss', () => {
 describe('white ring for dark-bodied marks (NFL_DARK_STROKE_CODES)', () => {
   const css = buildNflLogoDarkCss();
   const filterLines = css.split('\n').filter((l) => l.includes('filter:'));
-  const strokeLine = filterLines.find((l) => l.startsWith('html.dark '));
-  const darkSrcStrokeLine = filterLines.find((l) => !l.startsWith('html.dark '));
+  const strokeLine = filterLines.find((l) => l.includes('html.dark '));
+  const darkSrcStrokeLine = filterLines.find((l) => !l.includes('html.dark '));
 
   it('emits one html.dark filter rule using the shared crest ring', () => {
     // The Panthers' dark cut is a black body with a hairline blue edge — the
@@ -133,7 +137,31 @@ describe('white ring for dark-bodied marks (NFL_DARK_STROKE_CODES)', () => {
     expect(strokeLine).toContain(`{ filter: ${crestStrokeFilter(undefined, NFL_DARK_STROKE_WIDTH)}; }`);
     expect(strokeLine).toContain('drop-shadow(1px 0 0 ');
     expect(strokeLine).not.toContain('0.5px');
-    expect(strokeLine!.startsWith('html.dark img[src="')).toBe(true);
+    expect(strokeLine!.startsWith(':where(html.dark img[src="')).toBe(true);
+  });
+
+  it('carries zero specificity so a surface\'s own filter wins (the Free Agents watermark)', () => {
+    // `filter` is not additive across rules. The Free Agents hero renders the
+    // top FA's logo as a 16%-opacity `.hero-spotlight__logo` watermark with
+    // `filter: grayscale(.1)` (a (0,1,0) class selector); a bare
+    // `html.dark img[src=…]` rule is (0,2,2) and would replace that with
+    // white halos. Wrapping the whole selector list in `:where()` zeroes it,
+    // so any class-level filter on the same img beats the default ring.
+    for (const line of filterLines) {
+      expect(line.startsWith(':where(')).toBe(true);
+      expect(line).toMatch(/^:where\([^{]+\) \{ filter: /);
+    }
+  });
+
+  it('reaches the Sunday Ticket multi-view, which builds its dark src through the OTHER getNFLTeamLogo', () => {
+    // src/utils/nfl.ts carries a duplicate getNFLTeamLogo that
+    // SundayTicketMultiView.astro uses. The theme-independent ring is keyed on
+    // nfl-logo.ts's output, so the two must agree byte-for-byte or that
+    // surface silently loses the ring.
+    for (const code of NFL_DARK_STROKE_CODES) {
+      expect(getNFLTeamLogoLegacy(code, 'dark')).toBe(getNFLTeamLogo(code, 'dark'));
+      expect(darkSrcStrokeLine).toContain(`[src="${getNFLTeamLogoLegacy(code, 'dark')}"]`);
+    }
   });
 
   it('keys the ring on every light src the swap keys on: ESPN 500, canonical SVG, legacy aliases', () => {
@@ -160,7 +188,7 @@ describe('white ring for dark-bodied marks (NFL_DARK_STROKE_CODES)', () => {
     // src IS the dark cut is on a dark surface by construction — ring it with
     // no theme guard, keyed on the ESPN URL and the self-hosted mirror path.
     expect(darkSrcStrokeLine).toBeDefined();
-    expect(darkSrcStrokeLine!.startsWith('img[src="')).toBe(true);
+    expect(darkSrcStrokeLine!.startsWith(':where(img[src="')).toBe(true);
     expect(darkSrcStrokeLine).not.toContain('html.dark');
     expect(darkSrcStrokeLine).not.toContain('content:');
     for (const code of NFL_DARK_STROKE_CODES) {

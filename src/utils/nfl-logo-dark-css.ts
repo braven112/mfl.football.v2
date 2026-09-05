@@ -140,13 +140,21 @@ export function buildNflLogoDarkCss(): string {
   if (cachedCss !== null) return cachedCss;
   const rules: string[] = [];
   const swappedSrcs: string[] = [];
+  // Light srcs of NFL_DARK_STROKE_CODES teams, collected alongside the swap
+  // keys below so the ring is keyed on exactly the srcs the swap is. NOT gated
+  // on a swap existing: a dark-bodied mark needs the ring in dark mode whether
+  // the dark cut or the light SVG is what ends up rendered.
+  const strokeSrcs: string[] = [];
+  const isStroked = (canonical: string) => NFL_DARK_STROKE_CODES.includes(canonical);
 
   // ESPN logos — always canonical.
   for (const code of getAllNFLTeamCodes()) {
+    const light = getNFLTeamLogo(code);
+    if (isStroked(code)) strokeSrcs.push(light);
     const dark = resolveNflDarkLogoUrl(code);
     if (dark) {
-      rules.push(swapRule(getNFLTeamLogo(code), cssStringEscape(dark)));
-      swappedSrcs.push(getNFLTeamLogo(code));
+      rules.push(swapRule(light, cssStringEscape(dark)));
+      swappedSrcs.push(light);
     }
   }
 
@@ -155,50 +163,51 @@ export function buildNflLogoDarkCss(): string {
   for (const code of localCodes) {
     const canonical = normalizeTeamCode(code);
     if (!canonical || canonical === 'NFL') continue;
+    const light = `/assets/nfl-logos/${code}.svg`;
+    if (isStroked(canonical)) strokeSrcs.push(light);
     const dark = resolveNflDarkLogoUrl(canonical);
     if (dark) {
-      rules.push(swapRule(`/assets/nfl-logos/${code}.svg`, cssStringEscape(dark)));
-      swappedSrcs.push(`/assets/nfl-logos/${code}.svg`);
+      rules.push(swapRule(light, cssStringEscape(dark)));
+      swappedSrcs.push(light);
     }
   }
 
-  // White ring for dark-bodied marks (NFL_DARK_STROKE_CODES). Keyed on the
-  // same light srcs as the swap rules above — ESPN 500 PNG, canonical SVG and
-  // every legacy alias — so it reaches every call site the swap does. `filter`
-  // applies to the element's rendered pixels, i.e. the content:url() dark cut,
-  // and follows its alpha silhouette (never the img's bounding box).
-  const strokeSrcs: string[] = [];
-  for (const code of getAllNFLTeamCodes()) {
-    if (NFL_DARK_STROKE_CODES.includes(code)) strokeSrcs.push(getNFLTeamLogo(code));
-  }
-  for (const code of localCodes) {
-    const canonical = normalizeTeamCode(code);
-    if (canonical && NFL_DARK_STROKE_CODES.includes(canonical)) {
-      strokeSrcs.push(`/assets/nfl-logos/${code}.svg`);
-    }
-  }
-  if (strokeSrcs.length) {
-    const selectors = strokeSrcs.map((src) => `html.dark img[src="${cssStringEscape(src)}"]`).join(', ');
-    rules.push(`${selectors} { filter: ${crestStrokeFilter(undefined, NFL_DARK_STROKE_WIDTH)}; }`);
-  }
-
-  // The same ring, theme-INDEPENDENT, keyed on the dark cut's own URLs. A few
-  // surfaces are dark in both themes (the draft broadcast board and reveal
-  // card, the Sunday Ticket multi-view) and therefore ship the dark cut as
-  // their `src` directly — `html.dark` never fires for a light-theme viewer
-  // there, so the rule above cannot reach them. An <img> whose src IS the
-  // dark cut is on a dark surface by construction (that is the only reason
-  // to hardcode it), so ringing it unconditionally is always right. Keyed on
-  // both the ESPN URL and the self-hosted mirror path, whichever the surface
-  // resolved. This is a `filter`, not a swap — no `content:` is ever keyed on
-  // a dark src, which is what the self-referential-swap guard pins.
-  const darkStrokeSrcs: string[] = [];
-  for (const code of NFL_DARK_STROKE_CODES) {
-    darkStrokeSrcs.push(getNFLTeamLogo(code, 'dark'), `/assets/nfl-logos/dark/${code}.png`);
-  }
-  if (darkStrokeSrcs.length) {
-    const selectors = darkStrokeSrcs.map((src) => `img[src="${cssStringEscape(src)}"]`).join(', ');
-    rules.push(`${selectors} { filter: ${crestStrokeFilter(undefined, NFL_DARK_STROKE_WIDTH)}; }`);
+  // White ring for dark-bodied marks (NFL_DARK_STROKE_CODES), emitted twice.
+  //
+  // 1. Under `html.dark`, keyed on the light srcs above — ESPN 500 PNG,
+  //    canonical SVG and every legacy alias — so it reaches every call site
+  //    the swap does. `filter` applies to the element's rendered pixels, i.e.
+  //    the content:url() dark cut, and follows its alpha silhouette (never
+  //    the img's bounding box).
+  // 2. Theme-INDEPENDENT, keyed on the dark cut's own URLs (ESPN and the
+  //    self-hosted mirror). A few surfaces are dark in both themes (the draft
+  //    broadcast board and reveal card, the Sunday Ticket multi-view) and ship
+  //    the dark cut as their `src` directly — `html.dark` never fires for a
+  //    light-theme viewer there, so rule 1 cannot reach them. An <img> whose
+  //    src IS the dark cut is on a dark surface by construction (that is the
+  //    only reason to hardcode it), so ringing it unconditionally is always
+  //    right. This is a `filter`, not a swap — no `content:` is ever keyed on
+  //    a dark src, which is what the self-referential-swap guard pins.
+  //
+  // Both are wrapped in `:where()` so they carry ZERO specificity. `filter` is
+  // not additive across rules, and a bare `html.dark img[src=…]` (0,2,2)
+  // out-ranks any surface's own class-level filter — the Free Agents hero
+  // renders the top FA's logo as a 16%-opacity `.hero-spotlight__logo`
+  // watermark with `filter: grayscale(.1)`, and the ring would have replaced
+  // that with white halos. The ring is a DEFAULT: a surface that sets its own
+  // filter has made a deliberate choice and must win, which is exactly what a
+  // zero-specificity rule guarantees (any class selector beats it).
+  const darkSrcs = NFL_DARK_STROKE_CODES.flatMap((code) => [
+    getNFLTeamLogo(code, 'dark'),
+    `/assets/nfl-logos/dark/${code}.png`,
+  ]);
+  const strokeFilter = crestStrokeFilter(undefined, NFL_DARK_STROKE_WIDTH);
+  const strokeRule = (srcs: string[], guard: string): string | null =>
+    srcs.length
+      ? `:where(${srcs.map((src) => `${guard}img[src="${cssStringEscape(src)}"]`).join(', ')}) { filter: ${strokeFilter}; }`
+      : null;
+  for (const rule of [strokeRule(strokeSrcs, 'html.dark '), strokeRule(darkSrcs, '')]) {
+    if (rule) rules.push(rule);
   }
 
   // Failed-logo hide: logo <img>s tag themselves `nfl-logo-failed` via

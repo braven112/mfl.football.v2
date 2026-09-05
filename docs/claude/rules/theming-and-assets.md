@@ -405,7 +405,12 @@ hard-won facts (Aug 2026 "missing team images" saga):
   themed pages), and with NO theme guard keyed on the dark cut's own URLs — the
   draft broadcast and Sunday Ticket multi-view are dark in both themes and ship
   the dark cut as `src` directly, where an `html.dark` rule never reaches a
-  light-theme viewer (the blind spot from 2026-08-28). Before adding one, measure the ALPHA channel and render the cut
+  light-theme viewer (the blind spot from 2026-08-28).
+  Both are wrapped in `:where()` so they carry zero specificity: `filter` is
+  not additive, and a bare `html.dark img[src=…]` (0,2,2) would have replaced
+  the Free Agents hero's 16%-opacity `.hero-spotlight__logo { filter:
+  grayscale(.1) }` watermark with white halos. The ring is a default; a
+  surface's own class-level filter must win. Before adding one, measure the ALPHA channel and render the cut
   on the dark card: ESPN's PNGs store RGB white under alpha-0 pixels, so any
   alpha-dropping check reports a false "opaque white fill" (the Raiders' cut
   was reported that way on 2026-09-04 and is fine). The ring composes with
