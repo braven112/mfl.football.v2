@@ -43,7 +43,11 @@ export function buildTradeOfferPayload(opts: {
     body: from
       ? `${from} sent you a trade offer in ${opts.leagueName}. Tap to review it.`
       : `You have a new trade offer in ${opts.leagueName}. Tap to review it.`,
-    url: `/${opts.leagueSlug}`,
+    // BARE, not `/${opts.leagueSlug}`. The service worker resolves this
+    // against the origin the subscription was made on, and each league has
+    // its own apex domain — so a prefixed path yields
+    // theleague.us/theleague/... which the root catch-all does not serve.
+    url: '/',
     // One collapsing notification per league — a flurry of offers updates
     // in place instead of stacking.
     tag: `trade-offer-${opts.leagueSlug}`,
@@ -103,7 +107,7 @@ export async function notifyTradeOfferPush(
       fromTeamName,
     });
 
-    return await sendPushToFranchise(leagueId, normalizedTo, payload);
+    return await sendPushToFranchise(leagueId, normalizedTo, payload, 'trade-offer');
   } catch (e) {
     console.warn('[push-notify-trade] failed:', e);
     return null;

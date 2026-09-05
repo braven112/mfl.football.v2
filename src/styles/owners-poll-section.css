@@ -1,0 +1,233 @@
+/**
+ * The Owners' Poll section, inside a Pecking Order issue.
+ *
+ * Every custom property here is defined in BOTH src/styles/tokens.css and
+ * tokens-dark.css (tests/design-token-guard.test.ts enforces that a referenced
+ * token exists at all). `--op-accent` is the exception: it is set per row from
+ * teamAccentVar, which already carries a value per theme — which is exactly
+ * why the raw brand colour is not used here.
+ */
+
+.op-strip {
+  margin: 2rem 0;
+  padding: 1.25rem;
+  background: var(--content-bg);
+  border: 1px solid var(--content-border);
+  border-radius: var(--radius-lg, 12px);
+}
+
+.op-strip__head { margin-bottom: 0.75rem; }
+.op-strip__title { margin: 0; font-size: 1.25rem; }
+.op-strip__sub {
+  margin: 0.2rem 0 0;
+  color: var(--content-text-muted);
+  font-size: 0.9rem;
+}
+.op-strip__meta,
+.op-strip__note {
+  color: var(--content-text-muted);
+  font-size: 0.875rem;
+  margin: 0.5rem 0 0;
+}
+.op-strip__split {
+  margin: 0.75rem 0 0;
+  font-size: 0.925rem;
+}
+
+.op-strip__live { margin-top: 0.75rem; }
+.op-strip__cta { margin: 0.65rem 0 0; font-size: 0.925rem; }
+.op-strip__tease { color: var(--content-text-muted); }
+
+.op-strip__button {
+  display: inline-block;
+  background: var(--primary-color);
+  color: #fff;
+  text-decoration: none;
+  font-weight: 700;
+  padding: 0.55rem 1rem;
+  min-height: 2.5rem;
+  border-radius: var(--radius-md, 8px);
+}
+
+/* --- turnout meter ------------------------------------------------------ */
+
+.op-meter__track {
+  position: relative;
+  height: 0.6rem;
+  border-radius: 999px;
+  background: var(--content-bg-muted);
+  border: 1px solid var(--content-border);
+  overflow: hidden;
+}
+.op-meter__fill {
+  height: 100%;
+  background: var(--primary-color);
+  transition: width 240ms ease;
+}
+/* The quorum mark is the reason the meter exists — a bar with no threshold on
+   it says nothing about whether the poll will publish at all. */
+.op-meter__quorum {
+  position: absolute;
+  top: -2px;
+  bottom: -2px;
+  width: 2px;
+  background: var(--page-text);
+  opacity: 0.55;
+}
+.op-meter__label {
+  margin: 0.4rem 0 0;
+  font-size: 0.85rem;
+  color: var(--content-text-muted);
+}
+.op-meter__label strong { color: var(--page-text); }
+.op-meter__ok { color: var(--color-success); }
+.op-meter__short { color: var(--color-warning); }
+
+/* --- no quorum ---------------------------------------------------------- */
+
+.op-strip__noquorum {
+  margin-top: 0.75rem;
+  padding: 0.85rem 1rem;
+  background: var(--content-bg-muted);
+  border-left: 4px solid var(--color-warning);
+  border-radius: var(--radius-md, 8px);
+  font-size: 0.925rem;
+}
+.op-strip__noquorum p { margin: 0 0 0.4rem; }
+.op-strip__noquorum p:last-child { margin-bottom: 0; color: var(--content-text-muted); }
+
+/* --- consensus table ---------------------------------------------------- */
+
+/* Wide content scrolls inside its own container — the page body must never
+   scroll horizontally on a phone. */
+.op-table-wrap { overflow-x: auto; margin-top: 0.85rem; }
+
+.op-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+  min-width: 32rem;
+}
+.op-table th {
+  text-align: left;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--content-text-muted);
+  padding: 0 0.5rem 0.4rem;
+  font-weight: 700;
+}
+.op-table td {
+  padding: 0.45rem 0.5rem;
+  border-top: 1px solid var(--content-border);
+}
+.op-table__num { text-align: right; font-variant-numeric: tabular-nums; }
+.op-table th.op-table__num { text-align: right; }
+.op-table__rank {
+  font-weight: 700;
+  border-left: 3px solid var(--op-accent, var(--content-border));
+}
+.op-table__team { display: flex; align-items: center; gap: 0.45rem; }
+.op-table__team img { object-fit: contain; }
+.op-table__muted { color: var(--content-text-muted); }
+.op-table__delta--up { color: var(--color-success); }
+.op-table__delta--down { color: var(--color-error); }
+.op-table__delta--flat { color: var(--content-text-muted); }
+
+/* --- unranked block ----------------------------------------------------- */
+
+.op-unranked { margin-top: 1.25rem; }
+.op-unranked__title {
+  margin: 0;
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--content-text-muted);
+}
+.op-unranked__note {
+  margin: 0.25rem 0 0.6rem;
+  font-size: 0.825rem;
+  color: var(--content-text-muted);
+  max-width: 44rem;
+}
+.op-unranked__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+.op-unranked__list li {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.3rem 0.55rem;
+  font-size: 0.85rem;
+  background: var(--content-bg-muted);
+  border-left: 3px solid var(--op-accent, var(--content-border));
+  border-radius: var(--radius-md, 8px);
+}
+.op-unranked__rank { color: var(--content-text-muted); font-variant-numeric: tabular-nums; }
+
+/* --- published ballots -------------------------------------------------- */
+
+.op-ballots { margin-top: 1.25rem; font-size: 0.875rem; }
+.op-ballots summary {
+  cursor: pointer;
+  color: var(--content-text-muted);
+  padding: 0.4rem 0;
+}
+.op-ballots__list {
+  list-style: none;
+  margin: 0.5rem 0 0;
+  padding: 0;
+  display: grid;
+  gap: 0.5rem;
+}
+.op-ballot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.5rem;
+  padding: 0.5rem 0.65rem;
+  background: var(--content-bg-muted);
+  border-radius: var(--radius-md, 8px);
+}
+.op-ballot__owner {
+  font-weight: 700;
+  border-left: 3px solid var(--op-accent, var(--content-border));
+  padding-left: 0.45rem;
+  min-width: 9rem;
+}
+.op-ballot__ranking {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: op-ballot;
+  color: var(--content-text-muted);
+}
+.op-ballot__ranking li { counter-increment: op-ballot; }
+.op-ballot__ranking li::before {
+  content: counter(op-ballot) '. ';
+  font-variant-numeric: tabular-nums;
+}
+.op-ballot__ranking li:not(:last-child)::after { content: ' ·'; }
+/* An owner ranking their own team is the feature, not a defect — mark it so
+   the Homer Index has something visible to point at. */
+.op-ballot__self { color: var(--page-text); font-weight: 600; }
+.op-ballot__badge {
+  font-size: 0.75rem;
+  padding: 0.15rem 0.45rem;
+  border-radius: 999px;
+  background: var(--content-bg);
+  border: 1px solid var(--content-border);
+  color: var(--content-text-muted);
+}
+
+@media (max-width: 34rem) {
+  .op-ballot__owner { min-width: 0; }
+}
