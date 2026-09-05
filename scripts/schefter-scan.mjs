@@ -44,6 +44,8 @@ import { SCHEFTER_LEAGUES, getSchefterLeague } from './lib/schefter-leagues.mjs'
 import { buildDropAdjustmentMap, resolveDropSalary } from './lib/drop-salary.mjs';
 
 import { getRedisConfig, createUpstashClient } from './lib/redis.mjs';
+import { getNonEmpty } from './lib/env.mjs';
+import { leagueYearFor } from './lib/schefter-league-year.mjs';
 import { postToGroupMe as sharedPostToGroupMe } from './lib/groupme.mjs';
 import { scanRogerReplies } from './roger-groupme-reply.mjs';
 
@@ -1387,7 +1389,7 @@ const TRADE_BAIT_TOPIC = 'trade_bait';
 // everything else MFL_APIKEY (same trap fetch-mfl-feeds.mjs fell into).
 // Query param, never a header — the api→www## redirect keeps the query
 // string and strips headers.
-const MFL_API_KEY = process.env.MFL_APIKEY || process.env.MFL_API_KEY || '';
+const MFL_API_KEY = getNonEmpty(process.env.MFL_APIKEY) || getNonEmpty(process.env.MFL_API_KEY) || '';
 
 async function fetchTradeBaitRaw(leagueId, year) {
   const url = `https://${MFL_HOST}/${year}/export?TYPE=tradeBait&L=${leagueId}&JSON=1`
@@ -1542,7 +1544,10 @@ async function scanTradeBait(league) {
   const prevState = leagueSeeded ? feed.tradeBaitState : {};
 
   const now = new Date();
-  const year = now.getMonth() >= 1 ? now.getFullYear() : now.getFullYear() - 1;
+  // Per-league clock: the AFL's MFL league year rolls June 1, TheLeague's
+  // Feb 14. The calendar heuristic the other lanes use would point the AFL
+  // at a league year MFL hasn't created yet from Feb to June.
+  const year = leagueYearFor(league, now);
 
   let raw;
   try {
@@ -1570,6 +1575,14 @@ async function scanTradeBait(league) {
     .some((entry) => Array.isArray(entry?.committedBlock) && entry.committedBlock.length > 0);
   if (franchiseCount === 0 && hasCommittedListings) {
     console.warn('  [trade-bait] MFL returned 0 franchises while committed listings exist — auth/empty-payload blip, holding state');
+    return 0;
+  }
+  // Same trap on the FIRST run: with no key, an empty answer from a private
+  // league is not a seedable "nobody listed" — seeding `{}` would make the
+  // first keyed run post every listing already on the block as new. Don't
+  // seed until the fetch is one we can believe.
+  if (!leagueSeeded && franchiseCount === 0 && !MFL_API_KEY) {
+    console.warn('  [trade-bait] Unseeded league read as empty with no MFL API key — not seeding until a key is set');
     return 0;
   }
 

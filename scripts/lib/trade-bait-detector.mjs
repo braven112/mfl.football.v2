@@ -45,6 +45,11 @@ export const DEFAULT_MAX_SETTLE_WAIT_MS = 6 * 60 * 60 * 1000;
 export const MAX_ADDS_PER_TIP = 10;
 
 /**
+ * Per-franchise persisted state (feed.tradeBaitState[franchiseId]).
+ * @typedef {{ committedBlock: string[], observedBlock: string[], firstChangeTs: number|null, lastChangeTs: number|null }} FranchiseEntry
+ */
+
+/**
  * Normalize a player-id array into a canonical sorted unique array.
  * The detector's equality checks depend on canonical ordering.
  */
@@ -209,7 +214,7 @@ const EMPTY_PREV_ENTRY = Object.freeze({
  *
  * @param {object} args
  * @param {object<string, { playerIds: string[], willGiveUpComment?: string, willTakeComment?: string }>} args.currentByFranchise
- * @param {object<string, object>} args.prevState - feed.tradeBaitState (may be empty/undefined)
+ * @param {Record<string, FranchiseEntry>} [args.prevState] - feed.tradeBaitState (may be empty/undefined)
  * @param {number} args.nowMs
  * @param {boolean} [args.leagueSeeded] - true once the league has been scanned
  *   at least once (the scanner persists `tradeBaitState` on every run, even
@@ -218,9 +223,9 @@ const EMPTY_PREV_ENTRY = Object.freeze({
  * @param {number} [args.settleWindowMs]
  * @param {number} [args.maxSettleWaitMs]
  * @returns {{
- *   nextState: object,
+ *   nextState: Record<string, FranchiseEntry>,
  *   emissions: Array<{ franchiseId: string, netAdds: string[], netRemoves: string[], truncated: boolean, reason: string, willGiveUpComment?: string, willTakeComment?: string }>,
- *   reasons: object<string, string>,
+ *   reasons: Record<string, string>,
  * }}
  */
 export function detectTradeBaitChanges({

@@ -46,6 +46,9 @@ export function buildSchefterLeague(registrySlug, overrides) {
     slug: reg.navSlug,
     registrySlug: reg.slug,
     leagueId: reg.id,
+    // Per-league MFL year rollover (AFL: June 1; absent → Feb 14). Read by
+    // scripts/lib/schefter-league-year.mjs#leagueYearFor.
+    leagueYearRollover: reg.leagueYearRollover,
     playersPath: (year) => path.join(projectRoot, reg.dataPath, 'mfl-feeds', String(year), 'players.json'),
     /**
      * Any other MFL feed file for a season, resolved off the registry's

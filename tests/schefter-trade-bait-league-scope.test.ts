@@ -69,7 +69,7 @@ describe('scanTradeBait — the export is owner-gated for a private league', () 
   const body = src.match(/async function scanTradeBait[\s\S]+?\n\}\n/)![0];
 
   it('sends the MFL API key as a query param, accepting both env spellings', () => {
-    expect(src).toMatch(/process\.env\.MFL_APIKEY \|\| process\.env\.MFL_API_KEY/);
+    expect(src).toMatch(/getNonEmpty\(process\.env\.MFL_APIKEY\) \|\| getNonEmpty\(process\.env\.MFL_API_KEY\)/);
     expect(fetchFn).toMatch(/&APIKEY=\$\{encodeURIComponent\(MFL_API_KEY\)\}/);
   });
 
@@ -85,10 +85,41 @@ describe('scanTradeBait — the export is owner-gated for a private league', () 
     expect(guard).toBeLessThan(detect);
   });
 
+  it('treats a whitespace-only key as absent (getNonEmpty), like the sibling fetch-trade-bait.mjs', () => {
+    expect(src).toMatch(/getNonEmpty\(process\.env\.MFL_APIKEY\) \|\| getNonEmpty\(process\.env\.MFL_API_KEY\)/);
+  });
+
+  it('does not seed an unseeded league from an empty, keyless fetch', () => {
+    expect(body).toMatch(/!leagueSeeded && franchiseCount === 0 && !MFL_API_KEY/);
+  });
+
   it('the scan workflow actually passes the key to the scanner', () => {
     const wf = readFileSync(path.join(process.cwd(), '.github/workflows/schefter-scan.yml'), 'utf8');
     const step = wf.slice(wf.indexOf('Run Schefter scanner'), wf.indexOf('run: node scripts/schefter-scan.mjs'));
     expect(step).toMatch(/MFL_APIKEY: \$\{\{ secrets\.MFL_APIKEY \}\}/);
     expect(step).toMatch(/MFL_API_KEY: \$\{\{ secrets\.MFL_API_KEY \}\}/);
+  });
+});
+
+describe('scanTradeBait — per-league MFL year', () => {
+  const body = src.match(/async function scanTradeBait[\s\S]+?\n\}\n/)![0];
+
+  it('resolves the year through leagueYearFor, not the calendar heuristic', () => {
+    expect(body).toMatch(/leagueYearFor\(league, now\)/);
+    expect(body).not.toMatch(/now\.getMonth\(\) >= 1/);
+  });
+
+  it('the Schefter league objects carry the registry rollover the helper reads', () => {
+    expect(getSchefterLeague('afl-fantasy').leagueYearRollover).toEqual({ month: 6, day: 1 });
+    expect(getSchefterLeague('theleague').leagueYearRollover).toBeUndefined();
+  });
+
+  it('AFL points at LAST year between Feb 14 and June 1; TheLeague has already flipped', async () => {
+    const { leagueYearFor } = await import('../scripts/lib/schefter-league-year.mjs');
+    const april = new Date('2027-04-10T18:00:00Z');
+    expect(leagueYearFor(getSchefterLeague('afl-fantasy'), april)).toBe(2026);
+    expect(leagueYearFor(getSchefterLeague('theleague'), april)).toBe(2027);
+    const july = new Date('2027-07-10T18:00:00Z');
+    expect(leagueYearFor(getSchefterLeague('afl-fantasy'), july)).toBe(2027);
   });
 });

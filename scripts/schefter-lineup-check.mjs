@@ -56,6 +56,7 @@ import {
   parseRequiredStarters,
   parseStartingLineups,
 } from './lib/lineup-warnings.mjs';
+import { leagueYearFor } from './lib/schefter-league-year.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const root = path.resolve(path.dirname(__filename), '..');
@@ -80,24 +81,8 @@ const warn = (...a) => console.warn(...a);
 
 // ── Year + season gates ─────────────────────────────────────────────────────
 
-/**
- * 4-digit MFL league year for a registry league. Mirrors the
- * getCurrentLeagueYear()/getAflLeagueYear() semantics from
- * src/utils/league-year.ts, driven by the registry's per-league
- * `leagueYearRollover` — same inline-mirror pattern as
- * scripts/schefter-rumor-scan.mjs#getSeasonYearForTipster (node .mjs can't
- * import the .ts module). Do NOT re-derive base-year math here — that's the
- * double-advance bug class CLAUDE.md documents.
- */
-function leagueYearFor(league, now = new Date()) {
-  const rollover = league.leagueYearRollover ?? { month: 2, day: 14 };
-  const pt = new Date(now.toLocaleString('en-US', { timeZone: 'America/Los_Angeles' }));
-  const year = pt.getFullYear();
-  const flipped =
-    pt.getMonth() + 1 > rollover.month ||
-    (pt.getMonth() + 1 === rollover.month && pt.getDate() >= rollover.day);
-  return flipped ? year : year - 1;
-}
+// leagueYearFor lives in scripts/lib/schefter-league-year.mjs (shared with the
+// trade-bait lane); re-exported below so existing importers keep working.
 
 /**
  * Lineup warnings only make sense while NFL games are being played. The

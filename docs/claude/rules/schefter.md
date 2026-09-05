@@ -41,7 +41,11 @@ rules — breaking any of these cross-contaminates the leagues:
   16 had not listed yet). And the export is OWNER-GATED for a private league:
   the AFL answers a bare request with an empty 200, so the fetch carries
   `MFL_APIKEY` (league-scoped — it must be a key for 19621) and the scanner
-  holds state when a league with committed listings suddenly reads as empty.
+  holds state when a league with committed listings suddenly reads as empty
+  (and refuses to seed from a keyless empty answer). Its MFL year comes from
+  `scripts/lib/schefter-league-year.mjs#leagueYearFor` — the AFL rolls June 1,
+  so the calendar heuristic the other scan lanes still use would aim it at a
+  league year MFL hasn't created from Feb to June.
   `tests/schefter-trade-bait-league-scope.test.ts` pins all of it.
 - **Lore/persona** is per-league under `data/schefter/<navSlug>/`
   (personality, league-lore, running-bits, post-history, topic-recurrence).
