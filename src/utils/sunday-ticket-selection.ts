@@ -50,13 +50,23 @@ export interface BoardLeague {
 // ── League selection (URL param ↔ cookie) ────────────────────────────────
 
 /**
- * The board's default set: every league this site runs (TheLeague, the AFL,
- * Best Ball) that the owner is in. Outside leagues start OFF — an owner with a
- * few test leagues, or in six other people's leagues, should not have all of
- * them counted (and fetched) until they say so.
+ * Is this one of the board's HOME leagues — on by default and shown inline?
+ * TheLeague and the AFL are; Best Ball is registered (it reads the synced
+ * feeds when on) but is draft-only with no Sunday to plan, so it folds in
+ * with the outside leagues and starts off.
+ */
+export function isHomeLeague(l: Pick<BoardLeague, 'registered'>): boolean {
+  return !!l.registered && !l.registered.bestBall;
+}
+
+/**
+ * The board's default set: the home leagues the owner is in. Everything else
+ * — Best Ball, and any league outside this site — starts OFF, so an owner with
+ * a few test leagues, or in six other people's leagues, does not have them
+ * counted (or fetched) until they say so.
  */
 export function defaultLeagueSelection(leagues: readonly Pick<BoardLeague, 'id' | 'registered'>[]): string[] {
-  return leagues.filter((l) => l.registered).map((l) => l.id);
+  return leagues.filter(isHomeLeague).map((l) => l.id);
 }
 
 /**

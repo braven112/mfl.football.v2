@@ -43,10 +43,12 @@ describe('toggleLeagueSelection', () => {
     expect(toggleLeagueSelection([AFL.id], BOARD, AFL.id, [DEFAULT_LEAGUE.id, AFL.id])).toBeNull();
   });
 
-  it('defaultLeagueSelection is the registered leagues only', async () => {
+  it('defaultLeagueSelection is the home leagues only — registered and not best-ball', async () => {
     const { defaultLeagueSelection } = await import('../src/utils/sunday-ticket-selection');
     expect(defaultLeagueSelection([
       { id: DEFAULT_LEAGUE.id, registered: DEFAULT_LEAGUE }, { id: '55555', registered: null }, { id: AFL.id, registered: AFL },
+      // Best Ball is registered but draft-only: it folds in with the outside leagues.
+      { id: LEAGUES['best-ball-1'].id, registered: LEAGUES['best-ball-1'] },
     ])).toEqual([DEFAULT_LEAGUE.id, AFL.id]);
   });
 });

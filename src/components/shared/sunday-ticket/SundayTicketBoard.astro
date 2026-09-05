@@ -12,6 +12,7 @@ import { formatKickoffZones, type SundayTicketSlate } from '../../../utils/sunda
 import {
   countryHref,
   defaultLeagueSelection,
+  isHomeLeague,
   leagueSelectionHref,
   toggleLeagueSelection,
   type BoardLeague,
@@ -44,8 +45,8 @@ const defaultIds = defaultLeagueSelection(leagues);
 const enabledIds = enabled ?? defaultIds;
 const multiLeague = enabledIds.length > 1;
 const showChips = leagues.length > 1;
-const homeLeagues = leagues.filter((l) => l.registered);
-const outsideLeagues = leagues.filter((l) => !l.registered);
+const homeLeagues = leagues.filter(isHomeLeague);
+const outsideLeagues = leagues.filter((l) => !isHomeLeague(l));
 const outsideOn = outsideLeagues.filter((l) => enabledIds.includes(l.id)).length;
 const isDefault = enabled === null;
 const chipFor = (l: BoardLeague) => {
