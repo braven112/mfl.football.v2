@@ -447,8 +447,12 @@ export default function CustomRankingsPage({
   // The store is the truth (shared with every other surface on the site);
   // this island mirrors it into state so rows re-render on a change made in
   // the action sheet — or on any other page open in the same session.
-  const [watchedIds, setWatchedIds] = useState<Set<string>>(() => new Set(getWatchedIds()));
+  // Starts EMPTY on purpose: this island is client:load, so the first client
+  // render must match the server HTML, which has no marks. The cached list
+  // is adopted right after mount (one repaint, no hydration mismatch).
+  const [watchedIds, setWatchedIds] = useState<Set<string>>(() => new Set());
   useEffect(() => {
+    setWatchedIds(new Set(getWatchedIds()));
     const unsubscribe = onWatchListChange((detail) => setWatchedIds(new Set(detail.playerIds)));
     void loadWatchList().then((ids) => setWatchedIds(new Set(ids)));
     return unsubscribe;

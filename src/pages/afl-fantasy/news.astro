@@ -11,7 +11,7 @@ import { getAuthUser } from '../../utils/auth';
 import { buildSchefterPostOg, isValidSchefterPostId } from '../../utils/schefter-feed';
 import { getLeagueBySlug } from '../../config/leagues';
 import { getLeagueYearForSlug } from '../../utils/league-year';
-import { resolveWatchingSets, matchPosts } from '../../utils/schefter-watching';
+import { resolveWatchingSets, matchPosts, postMentionsAny } from '../../utils/schefter-watching';
 import type { SchefterFeed as FeedType } from '../../types/schefter';
 import '../../styles/schefter-feed.css';
 
@@ -37,7 +37,7 @@ const watchingSets = await resolveWatchingSets(newsLeague, watchYear, watchFranc
 const canWatch = !!watchFranchiseId;
 const isWatchingTab = Astro.url.searchParams.get('source') === 'watching' && canWatch;
 const filteredPosts = isWatchingTab
-  ? feed.posts.filter(p => (p.playerIds ?? []).some(id => watchingSets.all.has(String(id))))
+  ? feed.posts.filter(p => postMentionsAny(p, watchingSets.all))
   : feed.posts;
 const watchingByPost = matchPosts(filteredPosts, watchingSets, watchYear);
 const watchingEmptyText = watchingSets.all.size === 0

@@ -976,6 +976,12 @@ const t = (value?: string) => value ?? '\u2014';
 
   // Set by initPlayerDetailsModal; openPlayerDetailsModal calls it per open.
   let renderWatchStrip: (playerId: unknown) => void = () => {};
+  // The store's change listener is a DOCUMENT listener, so it is bound once
+  // per module and re-pointed at the current init's painter — the modal
+  // markup is new after every navigation, so a guard on the button would
+  // re-bind (and leak) a listener per page.
+  let repaintWatch: () => void = () => {};
+  let watchChangeBound = false;
 
   function initPlayerDetailsModal() {
     const modal = document.querySelector('.player-details-modal');
@@ -1058,7 +1064,11 @@ const t = (value?: string) => value ?? '\u2014';
         }
         paintWatch();
       });
-      onWatchListChange(() => paintWatch());
+    }
+    repaintWatch = paintWatch;
+    if (!watchChangeBound) {
+      watchChangeBound = true;
+      onWatchListChange(() => repaintWatch());
     }
     renderWatchStrip = (playerId: unknown) => {
       watchPlayerId = playerId != null && playerId !== '' ? String(playerId) : null;

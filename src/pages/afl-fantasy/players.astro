@@ -244,7 +244,8 @@ const signInConfig = {
   redirectUrl: `${Astro.url.pathname}${Astro.url.search}`,
   logoSrc: '/assets/logos/afl-logo.svg',
   logoAlt: 'AFL logo',
-  subtitle: 'Sign in with your MFL credentials to claim players here',
+  // Neutral copy: the same dialog serves the Claim button and the Watch actions.
+  subtitle: 'Sign in with your MFL credentials to claim or watch players here',
 };
 
 const faCounts = scoped.faCounts;
@@ -584,7 +585,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
   <PlayerDetailsModal hideContract={true} />
 </TheLeagueLayout>
 
-<script define:vars={{ canClaim, promptSignIn, playerDataJson, hasProjected, hasLastYrPts, hasAdp, defaultSort, defaultDir, mflHost, defSpotlightJson, conferenceMetaJson, activeConfIdJson, nflAvatarBgJson, nflAvatarBorderJson, nflAvatarBgFallback, nflAvatarBorderFallback, nflAvatarRingJson, nflAvatarRingFallback, nflAvatarRingDarkJson, nflAvatarRingDarkFallback, noHeadshot, logoOnerror: NFL_LOGO_ONERROR, collegeLogoOnerror: COLLEGE_LOGO_ONERROR, collegeLogoOnload: COLLEGE_LOGO_ONLOAD }}>
+<script define:vars={{ canClaim, promptSignIn, watchSignedIn, playerDataJson, hasProjected, hasLastYrPts, hasAdp, defaultSort, defaultDir, mflHost, defSpotlightJson, conferenceMetaJson, activeConfIdJson, nflAvatarBgJson, nflAvatarBorderJson, nflAvatarBgFallback, nflAvatarBorderFallback, nflAvatarRingJson, nflAvatarRingFallback, nflAvatarRingDarkJson, nflAvatarRingDarkFallback, noHeadshot, logoOnerror: NFL_LOGO_ONERROR, collegeLogoOnerror: COLLEGE_LOGO_ONERROR, collegeLogoOnload: COLLEGE_LOGO_ONLOAD }}>
   const players = JSON.parse(playerDataJson);
   // Duplicate-player conference metadata (null = single shared pool).
   const conferenceMeta = JSON.parse(conferenceMetaJson);
@@ -869,7 +870,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     try {
       const saved = localStorage.getItem('aflPlayersViewMode');
       if (saved === 'rankings' || saved === 'stats' || saved === 'watchlist') {
-        activeView = saved;
+        activeView = saved === 'watchlist' && !watchListSignedIn() ? 'stats' : saved;
         hasExplicitViewPref = true;
       }
     } catch (_) {}
@@ -890,7 +891,10 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
   let watchScope = 'all';
   const watchedIds = () => window.watchListStore?.getWatchedIds?.() || new Set();
   const isWatchedId = (id) => watchedIds().has(String(id));
-  const watchListSignedIn = () => !!window.watchListStore?.isSignedIn?.();
+  // SSR's league-scoped verdict, available before the bridge module runs —
+  // the stored view preference is applied at script eval, when the bridge
+  // (a deferred module) has not yet set window.watchListStore.
+  const watchListSignedIn = () => !!watchSignedIn;
 
   function applyGroupVisibility() {
     // Fall back to Stats if the owner has no board loaded (or deleted it while
@@ -945,7 +949,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
   // ?view=stats|rankings — shareable, and wins over the stored preference.
   const viewParam = new URLSearchParams(window.location.search).get('view');
   if (viewParam === 'stats' || viewParam === 'rankings' || viewParam === 'watchlist') {
-    activeView = viewParam;
+    activeView = viewParam === 'watchlist' && !watchListSignedIn() ? 'stats' : viewParam;
     hasExplicitViewPref = true;
   }
 

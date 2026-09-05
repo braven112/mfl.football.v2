@@ -126,7 +126,14 @@ function canonicalTeam(code) {
   return TEAM_ALIASES[upper] ?? upper;
 }
 
-/** Which position codes and team codes the (normalized) text mentions. */
+/**
+ * How far (in words) from the name a position/team word still counts as
+ * describing THAT player. "Bills quarterback Josh Allen" is a hint; a
+ * "quarterback" two sentences away is somebody else's.
+ */
+const HINT_WINDOW = 6;
+
+/** Which position codes and team codes a (normalized) text fragment mentions. */
 function detectHints(normalized) {
   const padded = ` ${normalized} `;
   const positions = new Set();
@@ -153,7 +160,6 @@ export function findPlayerIdsInText(text, index) {
   const normalized = normalizeProse(text);
   if (!normalized) return [];
   const words = normalized.split(' ');
-  const hints = detectHints(normalized);
   const found = [];
   const seen = new Set();
 
@@ -164,11 +170,17 @@ export function findPlayerIdsInText(text, index) {
       const matches = index.byName.get(candidate);
       if (!matches) continue;
       let chosen = matches;
-      if (matches.length > 1 && (hints.positions.size || hints.teams.size)) {
+      if (matches.length > 1) {
+        // Only the words NEAR the name may disambiguate it — an incidental
+        // "quarterback" elsewhere in the story is about someone else.
+        const window = words
+          .slice(Math.max(0, i - HINT_WINDOW), Math.min(words.length, i + len + HINT_WINDOW))
+          .join(' ');
+        const hints = detectHints(window);
         const narrowed = matches.filter(
           (m) => hints.positions.has(m.position) || hints.teams.has(canonicalTeam(m.team)),
         );
-        if (narrowed.length > 0) chosen = narrowed;
+        if (narrowed.length > 0 && (hints.positions.size || hints.teams.size)) chosen = narrowed;
       }
       for (const m of chosen) {
         if (!seen.has(m.id)) { seen.add(m.id); found.push(m.id); }
@@ -186,19 +198,44 @@ export function postText(post) {
 }
 
 /**
- * Tag one post. Returns a NEW post object when ids were added, or the same
+ * Every player id a post is about: the structural `playerIds` the
+ * transaction lanes stamp, plus the prose-matched `namedPlayerIds`.
+ * Consumers that ask "is this post about X" read THIS; `playerIds` alone
+ * keeps its original meaning (see tagPost).
+ */
+export function postPlayerIds(post) {
+  const out = [];
+  for (const list of [post?.playerIds, post?.namedPlayerIds]) {
+    if (!Array.isArray(list)) continue;
+    for (const raw of list) {
+      const id = String(raw);
+      if (!out.includes(id)) out.push(id);
+    }
+  }
+  return out;
+}
+
+/**
+ * Tag one post. Returns a NEW post object when names resolved, or the same
  * object when nothing changed — callers diff by identity.
+ *
+ * Prose matches land in `namedPlayerIds`, NEVER in `playerIds`: `playerIds[0]`
+ * is the hero the OG composite (schefter-og.ts) and BreakingStoryHero render,
+ * and it is stamped structurally by the transaction lanes. Writing a
+ * name-matched id there would turn every wire story's unfurl into a
+ * composite of whichever player happens to be mentioned first.
  */
 export function tagPost(post, index) {
   if (!post || typeof post !== 'object') return post;
   // GroupMe messages are owner chatter, not news; leave them alone.
   if (post.type === 'groupme') return post;
-  const existing = Array.isArray(post.playerIds) ? post.playerIds.map(String) : [];
-  const named = findPlayerIdsInText(postText(post), index);
+  const structural = new Set(Array.isArray(post.playerIds) ? post.playerIds.map(String) : []);
+  const existing = Array.isArray(post.namedPlayerIds) ? post.namedPlayerIds.map(String) : [];
+  const named = findPlayerIdsInText(postText(post), index).filter((id) => !structural.has(id));
   const merged = [...existing];
   for (const id of named) if (!merged.includes(id)) merged.push(id);
   if (merged.length === existing.length) return post;
-  return { ...post, playerIds: merged };
+  return { ...post, namedPlayerIds: merged };
 }
 
 /**

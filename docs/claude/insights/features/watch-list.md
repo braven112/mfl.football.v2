@@ -129,9 +129,15 @@ has already bitten a matcher here:
   post the owner never sees. Commissioner's call.
 - **Never a team defense or a TM* slot.** Their MFL "names" are NFL teams
   and appear in prose constantly.
-- **Existing ids win and stay first** — `playerIds[0]` is the hero id the OG
-  composite reads. **Omit the key when empty** or `writeJsonIfChanged` sees
-  a 700-post semantic diff.
+- **Prose matches go to `namedPlayerIds`, never `playerIds`.** `playerIds[0]`
+  is the hero the OG composite and BreakingStoryHero render, stamped
+  structurally by the transaction lanes; a prose match written there turned
+  every wire story's unfurl into a composite of whoever was named first
+  (caught in review on PR #971). Consumers read the union via
+  `postPlayerIds`. **Omit the key when empty** or `writeJsonIfChanged` sees a
+  700-post semantic diff.
+- **A hint only counts NEAR the name** (±6 words). "Josh Allen recorded two
+  sacks on the quarterback" must not drop the linebacker.
 
 It runs as a step after every feed writer's workflow (scan, rumor scan,
 articles) and is idempotent; the first run after merge is the backfill. The

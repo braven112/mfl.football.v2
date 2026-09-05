@@ -146,22 +146,33 @@ export const POST: APIRoute = async ({ request }) => {
     return json({ ok: false, error: write.error ?? 'MFL rejected the change.' }, 502);
   }
 
-  // MFL accepted the change. Apply the same change to the mirror rather than
-  // re-reading: MFL's export can lag its own import by a beat, and the
-  // owner's next click should see the click before it.
+  // MFL accepted the change. Apply the same change on top of a RECONCILED
+  // base: a fresh mirror as is, otherwise MFL's own list (the export can lag
+  // the import by a beat, which is why the delta is re-applied on top). If
+  // neither is available the change is reported but the mirror is NOT
+  // written — stamping a one-player list as fresh would serve a truncated
+  // watch list to the news page and the push sender for ten minutes.
   const mirror = await readWatchListMirror(ctx.league.slug, ctx.franchiseId);
-  let baseIds: string[];
-  if (mirror) {
-    baseIds = mirror.playerIds;
-  } else {
+  let baseIds: string[] | null = mirror && isFresh(mirror.syncedAt) ? mirror.playerIds : null;
+  if (baseIds === null) {
     const live = await pullWatchList({ league: ctx.league, year: ctx.year, mflUserCookie: ctx.user.id });
-    baseIds = live.ok ? live.playerIds : [];
+    if (live.ok) baseIds = live.playerIds;
   }
-  const next = new Set(baseIds);
-  for (const id of add) next.add(id);
-  for (const id of remove) next.delete(id);
-  const playerIds = normalizeWatchIds([...next]);
-  const mirrored = await writeWatchListMirror(ctx.league.slug, ctx.franchiseId, playerIds);
+  const applyDelta = (base: string[]) => {
+    const next = new Set(base);
+    for (const id of add) next.add(id);
+    for (const id of remove) next.delete(id);
+    return normalizeWatchIds([...next]);
+  };
 
-  return json({ ok: true, playerIds, added: add, removed: remove, mirrored });
+  if (baseIds === null) {
+    // Best effort for the response only. A stale mirror keeps its old
+    // syncedAt so the next GET re-reads MFL instead of trusting it.
+    const playerIds = applyDelta(mirror?.playerIds ?? []);
+    return json({ ok: true, playerIds, added: add, removed: remove, mirrored: false, reconciled: false });
+  }
+
+  const playerIds = applyDelta(baseIds);
+  const mirrored = await writeWatchListMirror(ctx.league.slug, ctx.franchiseId, playerIds);
+  return json({ ok: true, playerIds, added: add, removed: remove, mirrored, reconciled: true });
 };

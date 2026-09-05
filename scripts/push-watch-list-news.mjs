@@ -30,6 +30,8 @@ import { getRedisConfig, redisCommand } from './lib/redis.mjs';
 import { sendPushFanout } from './lib/push-fanout.mjs';
 import { getLeagueBySlug } from '../src/config/leagues-data.mjs';
 import { watchListKey, mirrorPlayerIds } from '../src/utils/watch-list-keys.mjs';
+import { postPlayerIds } from '../src/utils/schefter-player-tagger.mjs';
+import { displayName } from './lib/player-news-diff.mjs';
 
 const args = process.argv.slice(2);
 const DRY_RUN = args.includes('--dry-run');
@@ -58,12 +60,6 @@ function stripHtml(text) {
   return String(text ?? '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
 }
 
-/** "Last, First" → "First Last". */
-function displayName(mflName) {
-  const parts = String(mflName ?? '').split(', ');
-  return parts.length === 2 ? `${parts[1]} ${parts[0]}` : String(mflName ?? '');
-}
-
 /** Franchise ids for the league year, from the committed rosters export. */
 function franchiseIdsFrom(rostersJson) {
   const f = rostersJson?.rosters?.franchise;
@@ -78,7 +74,7 @@ function franchiseIdsFrom(rostersJson) {
 export function buildWatchListNotifications({ posts, watchersByFranchise, playerName }) {
   const out = [];
   for (const post of posts) {
-    const ids = Array.isArray(post.playerIds) ? post.playerIds.map(String) : [];
+    const ids = postPlayerIds(post);
     if (ids.length === 0) continue;
     const headline = stripHtml(post.headline) || stripHtml(post.body).slice(0, 120);
     if (!headline) continue;
@@ -169,7 +165,7 @@ async function scanLeague(league, redis) {
   const notifications = buildWatchListNotifications({
     posts: fresh,
     watchersByFranchise,
-    playerName: (id) => displayName(byId.get(id)?.name),
+    playerName: (id) => (byId.has(id) ? displayName(byId.get(id).name) : ''),
   });
 
   console.log(

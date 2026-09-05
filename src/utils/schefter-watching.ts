@@ -26,6 +26,12 @@ import type { SchefterPost } from '../types/schefter';
 import { getWatchedPlayerIds } from './watch-list-store';
 import { getCachedRosterFranchises } from './mfl-roster-cache';
 import { getPlayerMap } from './player-map';
+import { postPlayerIds } from './schefter-player-tagger.mjs';
+
+/** Is this post about anyone in the set? Reads structural AND prose-matched ids. */
+export function postMentionsAny(post: SchefterPost, ids: Set<string>): boolean {
+  return postPlayerIds(post).some((id) => ids.has(id));
+}
 
 export type WatchKind = 'watch' | 'roster';
 
@@ -105,10 +111,8 @@ export function matchPosts(
   if (sets.all.size === 0) return out;
   const players = getPlayerMap(year);
   for (const post of posts) {
-    const ids = Array.isArray(post.playerIds) ? post.playerIds : [];
     const hits: WatchHit[] = [];
-    for (const raw of ids) {
-      const id = String(raw);
+    for (const id of postPlayerIds(post)) {
       if (!sets.all.has(id)) continue;
       const kind: WatchKind = sets.watched.has(id) ? 'watch' : 'roster';
       hits.push({ id, name: players.get(id)?.name ?? `Player ${id}`, kind });

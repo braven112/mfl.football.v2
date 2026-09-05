@@ -744,7 +744,8 @@ const watchSignedIn = !!claimFranchiseId;
 const signInConfig = {
   leagueId: mflLeagueId,
   redirectUrl: `${Astro.url.pathname}${Astro.url.search}`,
-  subtitle: 'Sign in with your MFL credentials to bid here',
+  // Neutral copy: the same dialog serves the Bid button and the Watch actions.
+  subtitle: 'Sign in with your MFL credentials to bid or watch players here',
 };
 
 const claimsPanelConfig = {
@@ -1148,7 +1149,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
 {!claimFranchiseId && <SignInModal config={signInConfig} />}
 <WatchListBridge signedIn={watchSignedIn} />
 
-<script define:vars={{ canClaim, promptSignIn, playerDataJson, hasProjected, hasLastYrPts, hasSnapCounts, nflTeamsJson, hasSurplusData, hasAuctionData, isAuctionSeason, isAdmin, currentYear, mflHost, mflLeagueId, mflActionYear, franchiseNamesJson, franchiseBannersJson, defSpotlightJson, nflAvatarBgJson, nflAvatarBgFallback, nflAvatarBorderJson, nflAvatarBorderFallback, nflAvatarRingJson, nflAvatarRingFallback, nflAvatarRingDarkJson, nflAvatarRingDarkFallback, noHeadshot, logoOnerror: NFL_LOGO_ONERROR, collegeLogoOnerror: COLLEGE_LOGO_ONERROR, collegeLogoOnload: COLLEGE_LOGO_ONLOAD, rookieDraftComplete }}>
+<script define:vars={{ canClaim, promptSignIn, watchSignedIn, playerDataJson, hasProjected, hasLastYrPts, hasSnapCounts, nflTeamsJson, hasSurplusData, hasAuctionData, isAuctionSeason, isAdmin, currentYear, mflHost, mflLeagueId, mflActionYear, franchiseNamesJson, franchiseBannersJson, defSpotlightJson, nflAvatarBgJson, nflAvatarBgFallback, nflAvatarBorderJson, nflAvatarBorderFallback, nflAvatarRingJson, nflAvatarRingFallback, nflAvatarRingDarkJson, nflAvatarRingDarkFallback, noHeadshot, logoOnerror: NFL_LOGO_ONERROR, collegeLogoOnerror: COLLEGE_LOGO_ONERROR, collegeLogoOnload: COLLEGE_LOGO_ONLOAD, rookieDraftComplete }}>
   // define:vars creates const — copy to let so polling can update at runtime
   let _hasAuctionData = hasAuctionData;
   const players = JSON.parse(playerDataJson);
@@ -1209,7 +1210,9 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     try {
       const saved = localStorage.getItem('playersViewMode');
       if (saved === 'rankings' || saved === 'stats' || saved === 'value' || saved === 'auction' || saved === 'watchlist') {
-        activeView = saved;
+        // A watch-list view is meaningless signed out: fall back to Stats
+        // rather than paint a stale cache or a "build your list" empty state.
+        activeView = saved === 'watchlist' && !watchListSignedIn() ? 'stats' : saved;
         hasExplicitViewPref = true;
       }
     } catch (_) {}
@@ -1229,7 +1232,10 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
   let watchScope = 'all';
   const watchedIds = () => window.watchListStore?.getWatchedIds?.() || new Set();
   const isWatchedId = (id) => watchedIds().has(String(id));
-  const watchListSignedIn = () => !!window.watchListStore?.isSignedIn?.();
+  // SSR's league-scoped verdict, available before the bridge module runs —
+  // the stored view preference is applied at script eval, when the bridge
+  // (a deferred module) has not yet set window.watchListStore.
+  const watchListSignedIn = () => !!watchSignedIn;
 
   function applyGroupVisibility() {
     const canShowRankingsView = hasRankingColumns;
@@ -1455,7 +1461,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
   // Query string override: ?view=stats|rankings|value|auction
   const viewParam = new URLSearchParams(window.location.search).get('view');
   if (viewParam && ['stats', 'rankings', 'value', 'auction', 'watchlist'].includes(viewParam)) {
-    activeView = viewParam;
+    activeView = viewParam === 'watchlist' && !watchListSignedIn() ? 'stats' : viewParam;
   }
 
   const posOrder = { QB: 1, RB: 2, WR: 3, TE: 4, PK: 5, DEF: 6 };

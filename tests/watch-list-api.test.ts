@@ -151,7 +151,34 @@ describe('POST', () => {
     updateWatchList.mockResolvedValue({ ok: true });
     pullWatchList.mockResolvedValue({ ok: true, playerIds: ['7'] });
     const body = await (await post({ add: ['8'] })).json();
-    expect(body.playerIds).toEqual(['7', '8']);
+    expect(body).toMatchObject({ playerIds: ['7', '8'], mirrored: true, reconciled: true });
+    expect((redisStore.get(mirrorKey) as any).playerIds).toEqual(['7', '8']);
+  });
+
+  it('re-reads MFL under a STALE mirror instead of trusting it', async () => {
+    redisStore.set(mirrorKey, { playerIds: ['1'], syncedAt: '2020-01-01T00:00:00.000Z' });
+    updateWatchList.mockResolvedValue({ ok: true });
+    pullWatchList.mockResolvedValue({ ok: true, playerIds: ['1', '2', '3'] });
+    const body = await (await post({ add: ['4'] })).json();
+    expect(body.playerIds).toEqual(['1', '2', '3', '4']);
+    expect(pullWatchList).toHaveBeenCalled();
+  });
+
+  it('never stamps an unreconciled base as fresh: no mirror + failed read = no write', async () => {
+    updateWatchList.mockResolvedValue({ ok: true });
+    pullWatchList.mockResolvedValue({ ok: false, playerIds: [], error: 'shape' });
+    const body = await (await post({ add: ['8'] })).json();
+    expect(body).toMatchObject({ ok: true, playerIds: ['8'], mirrored: false, reconciled: false });
+    expect(redisStore.has(mirrorKey)).toBe(false);
+  });
+
+  it('keeps a stale mirror stale when MFL cannot be re-read', async () => {
+    redisStore.set(mirrorKey, { playerIds: ['1'], syncedAt: '2020-01-01T00:00:00.000Z' });
+    updateWatchList.mockResolvedValue({ ok: true });
+    pullWatchList.mockResolvedValue({ ok: false, playerIds: [], error: 'down' });
+    const body = await (await post({ add: ['8'] })).json();
+    expect(body).toMatchObject({ playerIds: ['1', '8'], mirrored: false, reconciled: false });
+    expect((redisStore.get(mirrorKey) as any).syncedAt).toBe('2020-01-01T00:00:00.000Z');
   });
 
   it('rejects a body with nothing valid to do', async () => {

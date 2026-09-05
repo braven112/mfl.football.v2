@@ -75,6 +75,8 @@ const { title = 'Player actions' } = Astro.props;
   let payload: PlayerActionPayload | null = null;
   let documentListenersBound = false;
   let rerenderTimer: ReturnType<typeof setTimeout> | null = null;
+  /** The server-rendered eyebrow, restored on every open that passes no title. */
+  let defaultTitle = 'Player actions';
 
   const $ = (id: string) => modal?.querySelector<HTMLElement>(`#${id}`) ?? null;
 
@@ -216,7 +218,7 @@ const { title = 'Player actions' } = Astro.props;
       sub.hidden = !p.subText;
     }
     const title = $('pam-title');
-    if (title && next.title) title.textContent = next.title;
+    if (title) title.textContent = next.title ?? defaultTitle;
 
     applyPlayerModalBand($('pam-band'), {
       name: p.name,
@@ -240,6 +242,7 @@ const { title = 'Player actions' } = Astro.props;
     if (!modal) return;
     if (!modal.dataset.pamWired) {
       modal.dataset.pamWired = '1';
+      defaultTitle = $('pam-title')?.textContent?.trim() || defaultTitle;
       modal.querySelectorAll('[data-pam-close]').forEach((el) => {
         el.addEventListener('click', closeModal);
       });

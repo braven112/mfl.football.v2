@@ -12,6 +12,7 @@ import {
   findPlayerIdsInText,
   tagPost,
   tagFeed,
+  postPlayerIds,
   normalizeMflName,
 } from '../src/utils/schefter-player-tagger.mjs';
 
@@ -69,17 +70,42 @@ describe('findPlayerIdsInText', () => {
 });
 
 describe('tagPost / tagFeed', () => {
-  it('adds ids after any existing structural ids and keeps the hero id first', () => {
+  it('never touches playerIds — prose matches land in namedPlayerIds', () => {
+    // playerIds[0] is the OG-composite hero; a prose match must not move it.
     const post = { id: 'a', type: 'transaction', playerIds: ['9'], headline: 'Chase Brown signed' };
     const tagged = tagPost(post, index);
     expect(tagged).not.toBe(post);
-    expect(tagged.playerIds).toEqual(['9', '6']);
+    expect(tagged.playerIds).toEqual(['9']);
+    expect(tagged.namedPlayerIds).toEqual(['6']);
+  });
+
+  it('does not repeat a structural id in namedPlayerIds', () => {
+    const post = { id: 'a2', type: 'transaction', playerIds: ['6'], headline: 'Chase Brown signed' };
+    expect(tagPost(post, index)).toBe(post);
+  });
+
+  it('postPlayerIds reads the union, structural first', () => {
+    expect(postPlayerIds({ playerIds: ['9'], namedPlayerIds: ['6', '9'] })).toEqual(['9', '6']);
+    expect(postPlayerIds({})).toEqual([]);
+  });
+
+  it('narrows an ambiguous name only by words NEAR it', () => {
+    const idx = buildPlayerNameIndex([
+      { id: '1', name: 'Allen, Josh', position: 'QB', team: 'BUF' },
+      { id: '2', name: 'Allen, Josh', position: 'LB', team: 'JAC' },
+    ]);
+    // A "quarterback" far from the name is somebody else — both stay.
+    expect(findPlayerIdsInText('Josh Allen recorded two sacks and a forced fumble while nobody on the line could block the quarterback all afternoon', idx)).toEqual(['1', '2']);
+    // A team right next to the name narrows just as a position does.
+    expect(findPlayerIdsInText('Josh Allen of the Jaguars recorded two sacks', idx)).toEqual(['2']);
+    // Right next to the name, it disambiguates.
+    expect(findPlayerIdsInText('Jaguars linebacker Josh Allen recorded two sacks', idx)).toEqual(['2']);
   });
 
   it('returns the same object when nothing is named, and omits the key', () => {
     const post = { id: 'b', type: 'external', headline: 'League expands playoffs' };
     expect(tagPost(post, index)).toBe(post);
-    expect('playerIds' in tagPost(post, index)).toBe(false);
+    expect('namedPlayerIds' in tagPost(post, index)).toBe(false);
   });
 
   it('leaves GroupMe chatter alone', () => {
@@ -93,6 +119,6 @@ describe('tagPost / tagFeed', () => {
     const feed2 = { posts: [{ id: 'y', type: 'external', headline: 'Chase Brown update' }] };
     const res = tagFeed(feed2, index);
     expect(res.changed).toBe(1);
-    expect(res.feed.posts[0].playerIds).toEqual(['6']);
+    expect(res.feed.posts[0].namedPlayerIds).toEqual(['6']);
   });
 });
