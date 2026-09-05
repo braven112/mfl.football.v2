@@ -1,11 +1,10 @@
 # Owners as a first-class concept
 
-> **Status:** **PRs 1, 2 and 3 shipped** (Aug–Sept 2026). PR 4 is half done:
-> the names are in (118 of 124 registry people; the six still anonymous are
-> pre-2007 AFL one-season teams MFL has no owner record for — re-derive the
-> count rather than trusting this line), and the `sourceFranchiseId` / AFL
-> award-badge half remains — see Phasing. Written August 2026 in the session
-> that fixed Midwestside's 2010
+> **Status:** **PRs 1, 2, 3 and 4 shipped** (Aug–Sept 2026) — the feature is
+> complete; see Phasing for what each landed. Names: 118 of 124 registry
+> people; the six still anonymous are pre-2007 AFL one-season teams MFL has no
+> owner record for — re-derive the count rather than trusting this line.
+> Written August 2026 in the session that fixed Midwestside's 2010
 > attribution (PR #597), which is what surfaced the gap. Everything here was
 > measured against real data in this repo — a future session should not need to
 > re-derive any of it.
@@ -404,12 +403,21 @@ than by page screenshots: the page templates were untouched and every function
 they call was dumped over every (slot, year) before and after — see the status
 block.
 
-**PR 4 — "Names."** *(source found — see below.)* Add `sourceFranchiseId` to `compute-afl-awards.mjs` (~`:505`
-writes `{franchiseId: null, name, source}` with no source slot — the one genuine
-producer-side gap; the merge logic near `:603` preserves existing fields, so
-verify against a full re-derive) and light up AFL award badges. Then populate
-`displayName`s — a pure data edit. Optionally fold in the 15 names from
-`groupme-storage.ts:294-317`, making the registry the single source of truth.
+**PR 4 — "Names."** ✅ **Shipped** in two halves. Names first: 118 of 124
+registry people carry a `displayName` (the six still null are pre-2007 AFL
+one-season teams MFL has no owner record for — leave them). Then the badges:
+every `awards-history.json` row carries `sourceFranchiseId`, the raw slot that
+won that season (`compute-afl-awards.mjs` stamps it in `computeYear` and a
+`backfillSourceSlots` pass resolves the hand-curated rows the merge preserves,
+by contemporaneous feed name); `owner-tenures.mjs` attaches each row to the
+owner holding `(slot, year)` as `totals.awards: [{year, slug}]`, gated on the
+league's award ledger existing under its registry `dataPath`; the owner page
+renders them as badge chips (`getAwardBadge` art, `.era-award` language) in the
+career row and per tenure. Guards: `tests/owner-tenures-data.test.ts` lands
+every ledger row on exactly one owner, `tests/afl-awards.test.ts` requires the
+slot on every row and pins the producer. All 192 rows land, 192 = 192. The
+2026-09-05 entry in `docs/claude/insights/features/franchise-history.md` has
+the traps (the `franchiseId` owner-pointer, the manual rows, chip whitespace).
 
 **The names have a real source.** Locked decision 3 said owner names exist
 nowhere in this repo, and that is still true of what is COMMITTED — a

@@ -54,6 +54,66 @@ level, over every real input, rather than by rendering pages.
   ledger row names an unknown slot, but it is the correct default for a
   function whose callers include award rows typed by hand.
 
+## 2026-09-05 - An award's `franchiseId` says who gets CREDIT, not who WON — without the winning slot a departed owner's title reaches no page
+
+**Context:** PR 4 of `docs/plans/owners-feature.md`, the award-badge half.
+`awards-history.json` had 192 rows and 59 of them carried `franchiseId: null`
+— a departed owner — with nothing else to place them by. So AFL owner pages
+showed only the trophies `yearSummaries` happens to carry and none of the
+league's own award slugs (conference titles, the NIT, the tier champions), and
+a former owner's championship appeared nowhere on the site.
+
+**Insight:** the ledger's `franchiseId` answers "which current franchise gets
+this on its trophy wall" and is null on purpose for anyone gone. That is the
+right field for a franchise page and the WRONG key for an owner page, which
+needs the raw `(slot, year)` — the same key `divisionWinners[].sourceFranchiseId`
+and the raw ids in `yearSummaries` already use. Pre-2016 the two are routinely
+different franchises (2007's champion was slot 0007 that season, 0021 today),
+so no amount of reading `franchiseId` recovers the slot. Every row now carries
+`sourceFranchiseId`, and `owner-tenures.mjs` attaches awards with the existing
+`owns(slot, year)` shape into `totals.awards`.
+
+Three things about the producer that were not obvious from the diff:
+
+- **`manual:*` rows never pass through the enrichment.** The merge in `main()`
+  keeps them untouched by design, so stamping the field in `computeYear` alone
+  left every hand-curated row (all 23 pre-2016 titles) without a slot. A
+  `backfillSourceSlots` pass resolves those by the row's CONTEMPORANEOUS name
+  in that season's own `league.json`, loosely normalized and required to be
+  unique. Pre-2016 a row's `franchiseId` is an owner pointer, so it is used
+  only to recover the name that owner wore that year (2005's al-champion is
+  recorded as "Smokane FC", a name 0001 adopted in 2006; the 2005 feed says
+  "Smokane"). All 38 preserved rows resolve; a row that does not is warned
+  about and fails `tests/afl-awards.test.ts`, never silently dropped.
+- **`--offline` is enough and idempotent.** The offline run was byte-stable
+  before the change and is again after: the pass touches only rows with no
+  slot, so a second run is a no-op. The 2016+ bracket rows the offline run
+  cannot re-derive get their slot from `franchiseId`, which is owner-stable
+  from 2016 on.
+- **The gate is the file, via the registry.** `loadLeagueInputs` reads
+  `<league.dataPath>/awards-history.json` and returns an empty list when it is
+  absent — the same structural skip that keeps best-ball-1 out of the pipeline.
+  TheLeague's file gains an empty `awards: []` per owner and nothing else.
+
+Two rendering facts worth keeping:
+
+- **The badge chips are ADDITIVE to the 🏆 / 🛡 chips, not a replacement.**
+  `yearSummaries` and `awards-history.json` are not the same set: 2003's six
+  division winners exist only in franchise-history (the awards script starts at
+  2004 because MFL recorded no division play that year), and 2003's champion
+  exists only in the awards ledger. Replacing one with the other loses a row
+  either way.
+- **Whitespace inside an `.era-award` chip renders.** Splitting the chip's
+  markup across lines to add the optional badge `<img>` put a visible space
+  inside the padding on TheLeague's franchise page — caught by diffing the
+  rendered HTML against main before and after. The chip is one line on
+  purpose, and both franchise pages render byte-identically apart from the
+  unused `.era-award-badge` rule in the component's stylesheet.
+
+Verified: 192 of 192 rows land on exactly one owner and the sum of
+`totals.awards` across owners is 192; conservation counts unchanged (320 /
+576); `pnpm test:unit` 345 files / 8761 tests, `pnpm test:types` at 1764.
+
 ## 2026-09-01 - Retiring a team's artwork into an era touches FOUR derived files, and none of them are the ones /publish-assets names
 
 **Context:** The Gridiron Geeks got new art (white facemask → orange) as their

@@ -351,6 +351,7 @@ const emptyTotals = () => ({
   mvpAwards: [],
   jerryJonesAwards: [],
   osweilerAwards: [],
+  awards: [],
 });
 
 const addRowToTotals = (totals, row) => {
@@ -370,9 +371,20 @@ const addRowToTotals = (totals, row) => {
  * through `attributeYear`. That is exactly why the orphaned trophies are
  * recoverable at all (trap 1). `divisionWinners[]` IS attributed, but carries
  * `sourceFranchiseId` alongside, so it works the same way here.
+ *
+ * `awardRows` is the league's own award ledger (the AFL's awards-history.json,
+ * flattened by `loadAwardRows`), keyed the same way: `sourceFranchiseId` is
+ * the raw slot that won, so a departed owner's 2007 title lands on whoever
+ * held slot 0007 in 2007 — not on the franchise credited with it today.
  */
-const attachTrophies = (totals, yearSummaries, ownedSlotYears) => {
+const attachTrophies = (totals, yearSummaries, ownedSlotYears, awardRows = []) => {
   const owns = (franchiseId, year) => ownedSlotYears.has(`${franchiseId}|${year}`);
+
+  for (const row of awardRows) {
+    if (row.sourceFranchiseId && owns(row.sourceFranchiseId, row.year)) {
+      totals.awards.push({ year: row.year, slug: row.slug });
+    }
+  }
 
   for (const summary of yearSummaries ?? []) {
     const { year } = summary;
@@ -409,6 +421,7 @@ const attachTrophies = (totals, yearSummaries, ownedSlotYears) => {
   totals.jerryJonesAwards.sort((a, b) => a - b);
   totals.osweilerAwards.sort((a, b) => a - b);
   totals.divisionTitles.sort((a, b) => a.year - b.year);
+  totals.awards.sort((a, b) => a.year - b.year || a.slug.localeCompare(b.slug));
   return totals;
 };
 
@@ -516,6 +529,8 @@ export const indexRegistryClaims = (registry, leagueSlug) => {
  * @param teams           league config teams
  * @param ledgerRows      season-ledger.json rows
  * @param yearSummaries   franchise-history.json yearSummaries (raw trophy ids)
+ * @param awardRows       awards-history.json rows, `{year, slug, sourceFranchiseId}`
+ *                        (empty for a league without an award ledger)
  * @param feedIdentityFor (franchiseId, year) => {name, icon, banner} | null
  * @param registry        owners-registry.json (optional)
  * @param resolveIcon     (identity) => string (optional)
@@ -525,6 +540,7 @@ export const buildOwnerTenures = ({
   teams,
   ledgerRows,
   yearSummaries = [],
+  awardRows = [],
   feedIdentityFor = null,
   registry = null,
   resolveIcon = null,
@@ -710,7 +726,7 @@ export const buildOwnerTenures = ({
     }
     const totals = emptyTotals();
     for (const tenure of tenures) for (const season of tenure.seasons) addRowToTotals(totals, season);
-    attachTrophies(totals, yearSummaries, ownedSlotYears);
+    attachTrophies(totals, yearSummaries, ownedSlotYears, awardRows);
 
     const allIdentities = tenures.flatMap((t) => t.identities);
     const dominant = dominantIdentity(allIdentities);

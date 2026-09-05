@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { existsSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import {
   AWARD_TYPES,
@@ -130,7 +130,12 @@ describe('getFranchiseTrophyCase', () => {
 });
 
 describe('awards-history.json data integrity', () => {
-  const seasons = (awardsHistory as { seasons: Array<{ year: number; awards: Record<string, { franchiseId: string | null }> }> }).seasons;
+  const seasons = (awardsHistory as {
+    seasons: Array<{
+      year: number;
+      awards: Record<string, { franchiseId: string | null; sourceFranchiseId?: string | null; name?: string | null }>;
+    }>;
+  }).seasons;
 
   it('every award slug is a known AwardSlug', () => {
     for (const s of seasons) {
@@ -146,6 +151,87 @@ describe('awards-history.json data integrity', () => {
         if (val.franchiseId == null) continue;
         expect(getTeam(val.franchiseId), `${slug} ${s.year} → ${val.franchiseId}`).toBeDefined();
       }
+    }
+  });
+
+  /**
+   * `sourceFranchiseId` is the RAW SLOT that won that season — what lets a
+   * departed owner's title reach their page (owner-tenures.mjs attaches each
+   * row to whoever held (slot, year)). `franchiseId` is NOT a substitute:
+   * pre-2016 it is an owner pointer (2007's champion was slot 0007 that
+   * season, franchise 0021 today), and it is null for departed owners. A row
+   * without a slot silently drops a title from every owner page.
+   */
+  it('every row carries sourceFranchiseId — the raw slot that won that season', () => {
+    for (const s of seasons) {
+      for (const [slug, val] of Object.entries(s.awards)) {
+        expect(val.sourceFranchiseId, `${slug} ${s.year} (${val.name}) has no sourceFranchiseId`).toMatch(/^\d{4}$/);
+        // 2016+ slot ids are owner-stable, so a credited row's slot IS its franchise.
+        if (s.year >= 2016 && val.franchiseId) {
+          expect(val.sourceFranchiseId, `${slug} ${s.year}`).toBe(val.franchiseId);
+        }
+      }
+    }
+  });
+
+  it('agrees with franchise-history.json on which slot won each championship', () => {
+    const history = JSON.parse(
+      readFileSync(path.join(ROOT, 'data/afl-fantasy/derived/franchise-history.json'), 'utf8')
+    ) as { yearSummaries: Array<{ year: number; champion: string | null }> };
+    const raw = new Map(history.yearSummaries.map((y) => [y.year, y.champion]));
+    let checked = 0;
+    for (const s of seasons) {
+      const champ = s.awards['afl-championship'];
+      if (!champ || !raw.get(s.year)) continue;
+      expect(champ.sourceFranchiseId, `${s.year} champion slot`).toBe(raw.get(s.year));
+      checked += 1;
+    }
+    expect(checked).toBeGreaterThan(10);
+  });
+
+  it('agrees with franchise-history.json on which slots won each season’s divisions', () => {
+    // Both come from the same standings feed, so the SET of winning slots
+    // per season must match. A division row whose name lookup landed on the
+    // wrong slot would still land on *some* owner and pass the one-owner
+    // test — this is what catches it.
+    const history = JSON.parse(
+      readFileSync(path.join(ROOT, 'data/afl-fantasy/derived/franchise-history.json'), 'utf8')
+    ) as {
+      yearSummaries: Array<{
+        year: number;
+        divisionWinners?: Array<{ franchiseId: string | null; sourceFranchiseId?: string | null }>;
+      }>;
+    };
+    const divisionSlugs = new Set(AWARD_TYPES.filter((a) => a.category === 'division').map((a) => a.slug));
+    const fromHistory = new Map(
+      history.yearSummaries.map((y) => [
+        y.year,
+        (y.divisionWinners ?? []).map((w) => w.sourceFranchiseId ?? w.franchiseId).sort(),
+      ])
+    );
+    let checked = 0;
+    for (const s of seasons) {
+      const slots = Object.entries(s.awards)
+        .filter(([slug]) => divisionSlugs.has(slug as AwardSlug))
+        .map(([, val]) => val.sourceFranchiseId)
+        .sort();
+      if (slots.length === 0) continue;
+      expect(slots, `${s.year} division winners`).toEqual(fromHistory.get(s.year) ?? []);
+      checked += 1;
+    }
+    expect(checked).toBeGreaterThan(20);
+  });
+
+  it('compute-afl-awards.mjs stamps the slot on every row it writes', () => {
+    // The producer, not just today's output: every enrichment branch writes
+    // the field, and the backfill pass covers the hand-curated rows the merge
+    // preserves untouched (they never pass through computeYear).
+    const src = readFileSync(path.join(ROOT, 'scripts/compute-afl-awards.mjs'), 'utf8');
+    expect(src).toContain('await backfillSourceSlots(byYear)');
+    const enrichments = src.match(/enriched\[slug\] = /g) ?? [];
+    expect(enrichments.length).toBeGreaterThanOrEqual(3);
+    for (const block of src.split('enriched[slug] = ').slice(1)) {
+      expect(block.split(';')[0]).toContain('sourceFranchiseId');
     }
   });
 });
