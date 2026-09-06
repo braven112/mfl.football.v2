@@ -322,6 +322,14 @@ const windowLabel = config?.windowLabel ?? '';
     document.getElementById('wcm-close')!.addEventListener('click', () => dlg.close());
 
     submitBtn.addEventListener('click', async () => {
+      // No player, no request. `openFor` is a public entry point now
+      // (`window.openWaiverClaim`, and the declarative `.claim-open` path),
+      // so a caller can open the form on a payload with no id — every caller
+      // in the repo guards, but the one that does not would POST
+      // `addPlayerId: null` and get a server error that says nothing useful.
+      if (!activeId) {
+        return showError('No player selected — close this and try again.');
+      }
       const bid = isBid ? Number(bidInput.value) : undefined;
       if (isBid) {
         if (!Number.isFinite(bid!) || bid! < cfg.rules.minimum) {

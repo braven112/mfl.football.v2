@@ -156,6 +156,14 @@ describe('the button cannot outrun the form it opens', () => {
     expect(form).toContain('window.__playerClaimContext');
   });
 
+  it('the form refuses to submit without a player', () => {
+    // openFor is a public entry point (window.openWaiverClaim, and the
+    // declarative .claim-open path), so a caller can open it on a payload
+    // with no id; posting addPlayerId: null returns a server error that
+    // tells the owner nothing.
+    expect(form).toMatch(/if \(!activeId\) \{[\s\S]{0,120}showError/);
+  });
+
   it('init does not re-wire a dialog it already wired', () => {
     // Re-wiring the same nodes stacks a second submit listener: two POSTs,
     // two claims, from one click.
