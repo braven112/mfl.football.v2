@@ -8,6 +8,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
+import { readFileSync } from 'node:fs';
 import {
   applyLiveToContribution,
   buildSundayTicketSlate,
@@ -276,5 +277,55 @@ describe('AFL duplicate players', () => {
     expect(shared('0002').players[0].live).toBe(11);
     // And a franchise that does NOT start him gets nothing, not someone else's row.
     expect(shared('0099').players[0].live).toBeUndefined();
+  });
+});
+
+/**
+ * The two review findings that are SILENTLY wrong rather than visibly broken —
+ * the board still renders, it just stops telling the truth. Both are pinned
+ * here because neither shows up in a screenshot.
+ */
+describe('live-layer rendering contracts', () => {
+  const read = (p: string) => readFileSync(new URL(p, import.meta.url), 'utf8');
+
+  it('gates the league heading on liveSupported, not liveResolved', () => {
+    // The heading is the ONLY home of the per-league live subtotal, and the
+    // island can only patch a span the server rendered. `multiLeague` is
+    // `enabledIds.length > 1`, so gating on `liveResolved` meant a
+    // single-league owner who opened the board before kickoff never got the
+    // element — and therefore never got a running total, no matter how long
+    // they watched.
+    const box = read('../src/components/shared/sunday-ticket/SundayTicketBox.astro');
+    expect(box).toContain('(multiLeague || group.liveSupported)');
+    expect(box).not.toContain('(multiLeague || group.liveResolved)');
+  });
+
+  it('never lets the game-day hint pin the poll cadence to POLL_LIVE', () => {
+    // `live` comes from Astro frontmatter and is fixed for the life of the
+    // page. ORing it into liveNow made POLL_STALE unreachable on a Sunday, so
+    // the board kept polling every 60s per league long after the last game
+    // went final. Once a poll has landed, the DATA decides.
+    const hook = read('../src/hooks/useLiveScoringFeed.ts');
+    expect(hook).not.toMatch(/const liveNow = live \|\|/);
+    expect(hook).toMatch(/state\.fetchedAt === 0\s*\?\s*live/);
+  });
+
+  it('shows the error state even when the FIRST poll is the one that failed', () => {
+    // A failed first poll leaves fetchedAt at 0, so checking "Connecting…"
+    // first swallowed the one state the freshness pill exists to surface.
+    const island = read('../src/components/shared/sunday-ticket/SundayTicketLive.tsx');
+    // Assert the branch order exactly. An earlier version of this guard sliced
+    // from the first `el.textContent =` in the file — which is inside the
+    // `setText` helper, not the pill — so it spanned almost the whole module
+    // and passed with the bug reintroduced. Anchor on the assignment itself.
+    expect(island).toContain('el.textContent = erroring');
+    expect(island).not.toMatch(/el\.textContent = newest === 0/);
+  });
+
+  it('leaves a server-rendered value alone when the feed omits that franchise', () => {
+    // playersYetToPlay is populated conditionally, so a franchise can vanish
+    // between polls. Absent is "no answer", not "zero left to play".
+    const island = read('../src/components/shared/sunday-ticket/SundayTicketLive.tsx');
+    expect(island).toContain('if (ytp === undefined) return;');
   });
 });

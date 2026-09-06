@@ -126,7 +126,12 @@ function LeagueLive({
     document.querySelectorAll<HTMLElement>(`[data-st-live-ytp^="${CSS.escape(leagueId)}:"]`).forEach((el) => {
       const fid = el.dataset.stLiveYtp?.slice(leagueId.length + 1) ?? '';
       const ytp = feed.playersYetToPlay[fid];
-      setText(el, ytp ? `${ytp} to play` : '');
+      // MFL populates playersYetToPlay conditionally, so a franchise can be
+      // present in one poll and absent from the next. Absent means "no answer",
+      // not "zero left to play" — leave what the server rendered, the same way
+      // the score and player handlers above do.
+      if (ytp === undefined) return;
+      setText(el, ytp > 0 ? `${ytp} to play` : '');
     });
 
     // ── Card state, through the SAME derivation the server rendered with, so
@@ -164,10 +169,14 @@ export default function SundayTicketLive({ leagues, week, year, enabled, live }:
     const erroring = all.some((s) => s.status === 'error');
     const el = pillRef.current;
     if (!el) return;
-    el.textContent = newest === 0
-      ? 'Connecting…'
-      : erroring
-        ? 'Reconnecting…'
+    // Error is checked FIRST. A poll that fails before any has succeeded leaves
+    // `fetchedAt` at 0, so ordering "Connecting…" ahead of it meant the one
+    // state this pill exists to surface — we cannot reach the feed — rendered
+    // as a hopeful "Connecting…" indefinitely.
+    el.textContent = erroring
+      ? (newest === 0 ? "Can't reach the feed" : 'Reconnecting…')
+      : newest === 0
+        ? 'Connecting…'
         : `Updated ${new Date(newest).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}`;
     el.classList.toggle('st-fresh--error', erroring);
   };

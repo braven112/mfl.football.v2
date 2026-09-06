@@ -35,11 +35,15 @@ export interface Props {
   /** The viewer's chosen clocks (/preferences); omitted, the country's default pair. */
   zones?: KickoffZone[];
   /**
-   * Show the league + franchise line above each player group. A live group
-   * shows it regardless: that line is what carries the league's live subtotal,
-   * and a subtotal has to name the league it belongs to — scoring is not
-   * comparable across leagues, so an unattributed number would read as a
-   * cross-league sum, which is meaningless.
+   * Show the league + franchise line above each player group. Any league that
+   * CAN go live shows it regardless of this flag, because that line is the
+   * subtotal's only home and the island can only patch a span that the server
+   * rendered. Gating on `liveResolved` instead meant a single-league owner who
+   * opened the board before kickoff never got the element, so the running
+   * total never appeared for them no matter how long they watched.
+   *
+   * It has to name the league either way: scoring is not comparable across
+   * leagues, so an unattributed number would read as a cross-league sum.
    */
   multiLeague?: boolean;
   /** An owner's board (counts read "starters"); false for the league-wide fallback. */
@@ -128,7 +132,7 @@ const starters = (n: number) => `${n} starter${n === 1 ? '' : 's'}`;
         const hidden = group.players.length - shown.length;
         return (
           <div class="st-box__league">
-            {(multiLeague || group.liveResolved) && (
+            {(multiLeague || group.liveSupported) && (
               <h4 class="st-box__league-name">
                 {group.leagueName}
                 {group.franchiseName && <span class="st-box__franchise"> · {group.franchiseName}</span>}
