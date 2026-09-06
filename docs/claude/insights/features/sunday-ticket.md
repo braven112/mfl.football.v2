@@ -29,6 +29,11 @@ that are not in the plan.
   and the day is shown whenever it differs from the game's own. Marks get the
   team-crest dark treatment from their own manifest
   (`docs/claude/rules/theming-and-assets.md`), never a white pill.
+  **SUPERSEDED 2026-09-06:** the country still picks the channels, the carrier
+  and which clocks are on OFFER, but which one you read is a viewer preference
+  now — one chosen zone plus the league's PT beside it
+  (`docs/claude/rules/viewer-preferences.md`,
+  `docs/claude/insights/features/viewer-preferences.md`).
 - **The Sunday hero is a gate, not a slot.** `game-day-preview` spans
   Saturday and Sunday morning; Saturday is the lineup reminder, Sunday is the
   board, and from Saturday 5pm an owner whose lineup is CONFIRMED in gets the
