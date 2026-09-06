@@ -68,6 +68,8 @@ import {
 } from './lib/speculation-budget.mjs';
 import { postSpeculationToGroupMe } from './lib/speculation-groupme.mjs';
 import { getRedisConfig, createUpstashClient } from './lib/redis.mjs';
+import { sendPushFanout, broadcast } from './lib/push-fanout.mjs';
+import { getLeagueBySlug } from '../src/config/leagues-data.mjs';
 import { getPtHour, secondsUntilPtMidnight } from './lib/pt-date.mjs';
 
 const projectRoot = path.resolve(fileURLToPath(new URL('..', import.meta.url)));
@@ -553,6 +555,30 @@ async function main() {
     log,
     warn,
   });
+
+  // 11. Push. This lane had NO push route at all until Sep 2026 — it was held
+  // out of the chat by the day cap and never sent to a phone either, so a
+  // daily job published into the feed and reached nobody. It rides the
+  // existing `rumor` category rather than adding a toggle of its own: an owner
+  // who wants the trade whispers wants these too, and the notifications page
+  // earns nothing by growing a switch for the difference.
+  const registry = getLeagueBySlug(LEAGUE_SLUG) ?? getLeagueBySlug('theleague');
+  if (registry) {
+    await sendPushFanout({
+      league: registry,
+      dryRun: DRY_RUN,
+      category: 'rumor',
+      notifications: broadcast({
+        // The same loader the matcher already used this run.
+        franchiseIds: [...(await loadTeams()).keys()],
+        title: post.headline,
+        body: (post.body ?? '').slice(0, 160),
+        url: '/news',
+        tag: post.id,
+      }),
+      log: { log, warn },
+    });
+  }
 
   return 0;
 }

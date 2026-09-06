@@ -179,9 +179,24 @@ describe('every GroupMe sender is accounted for', () => {
     for (const rel of scriptsThatPost()) {
       if (rel in RAW_POST_ALLOWLIST) continue;
       const src = readFileSync(path.join(ROOT, 'scripts', rel), 'utf8');
-      // Either the wrapper, or the pure calendar check for a lane that posts
-      // /v3/bots/post directly.
-      if (/postToGroupMeCapped|isPlannedToday/.test(src)) continue;
+      // Evidence of a real cap, in any of the three shapes we accept:
+      //   - the wrapper (the normal path),
+      //   - the pure calendar check, for a lane posting /v3/bots/post directly,
+      //   - the shared trade budget, for the lanes governed by
+      //     MAX_POSTS_PER_DAY + 4h spacing instead of the weekday calendar
+      //     (OWN_BUDGET_KINDS). That budget is STRICTER than the calendar in
+      //     practice, so accepting it here is not a loosening — but it does
+      //     have to be named, or a lane that swapped one real cap for another
+      //     reads as uncapped.
+      // A CALL, with import lines stripped first. `toContain('...')` and a
+      // bare identifier regex are both satisfied by the import statement
+      // alone, so a lane could delete its gate and stay green — the failure
+      // mode this repo has shipped twice (docs/claude/rules/league-urls.md).
+      const body = src
+        .split('\n')
+        .filter((line) => !/^\s*(import|.*from '\.)/.test(line))
+        .join('\n');
+      if (/\b(postToGroupMeCapped|isPlannedToday|evaluatePingWindow)\s*\(/.test(body)) continue;
       unaccounted.push(rel);
     }
     expect(
