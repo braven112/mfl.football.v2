@@ -215,7 +215,13 @@ function isManualRedirect(call: string): boolean {
  */
 function carriesCookieVar(call: string, vars: Set<string>): boolean {
   for (const name of vars) {
-    if (new RegExp(`(^|[^A-Za-z0-9_$.])${name}\\b`).test(call)) return true;
+    // `$` is a legal JS identifier character AND a regex anchor, and
+    // cookieHeaderVars captures it (`[A-Za-z_$][\w$]*`). Interpolated raw, a
+    // variable named `$headers` compiles to `…$headers\b` — an anchor followed
+    // by literal text, which matches nothing. That is a false negative: the
+    // guard would go quiet on a real offender. Escape before interpolating.
+    const literal = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    if (new RegExp(`(^|[^A-Za-z0-9_$.])${literal}\\b`).test(call)) return true;
   }
   return false;
 }
