@@ -73,6 +73,14 @@ const THM_VIEW_IDS: Record<ThmView, string> = {
   order: 'thm-order-view',
 };
 
+/**
+ * A live read must settle or fail. `/api/waiver-order` waits up to 6s on MFL
+ * and a cold function adds more, so an unbounded fetch parks a screen on its
+ * loading line for good — the bug #974 fixed in WaiverPriorityModal, whose
+ * timeout this matches deliberately.
+ */
+const THM_LIVE_READ_TIMEOUT_MS = 12_000;
+
 /** Filed waiver claims. `null` = not read yet; `[]` = read, none filed. */
 let thmClaims: any[] | null = null;
 let thmClaimsError: string | null = null;
@@ -292,7 +300,7 @@ function thmRenderHubView() {
   thmSetHubRow(
     'thm-hub-claims-count',
     'thm-hub-claims-sub',
-    thmClaims?.length ?? 0,
+    thmVisibleClaims()?.length ?? 0,
     !cfg?.signedIn
       ? 'Sign in to see your claims'
       : thmClaimsError
@@ -322,6 +330,23 @@ function thmRenderHubView() {
       ? 'Sign in to see your spot'
       : cfg.conferenceName || 'Where you sit in line';
   }
+}
+
+/**
+ * The claims to SHOW on this page — not merely the ones we hold.
+ *
+ * `thmClaims` is module-scoped and a single module instance survives an
+ * in-site navigation under the ClientRouter, so a TheLeague owner's filed
+ * claims are still in memory when they land on an AFL page. The claims API
+ * resolves the league from the SESSION, so those claims are real — they are
+ * just not this page's league, and the row's own subtext already says
+ * "Sign in to see your claims". Reporting a count beside that made the row
+ * contradict itself and leaked the other league's number. Same reasoning as
+ * src/utils/rankings-scope.ts: the scope has to be re-read per call, and the
+ * things DERIVED from it re-checked with it.
+ */
+function thmVisibleClaims(): any[] | null {
+  return thmConfig()?.signedIn ? thmClaims : null;
 }
 
 /** The viewer's rank within their own conference, or null until the order is read. */
@@ -456,8 +481,13 @@ async function thmLoadClaims(force = false): Promise<void> {
     } catch {}
   }
 
+  const abort = new AbortController();
+  const timer = setTimeout(() => abort.abort(), THM_LIVE_READ_TIMEOUT_MS);
   try {
-    const res = await fetch('/api/waiver-claims', { credentials: 'include' });
+    const res = await fetch('/api/waiver-claims', {
+      credentials: 'include',
+      signal: abort.signal,
+    });
     const data = await res.json();
     if (!res.ok || !data?.success) {
       throw new Error(data?.message || 'Could not read your waiver claims.');
@@ -472,7 +502,14 @@ async function thmLoadClaims(force = false): Promise<void> {
     // Leave `thmClaims` null: "could not read" and "nothing filed" must not
     // share a representation, or the dot goes quiet on an outage and the hub
     // row claims you filed nothing.
-    thmClaimsError = err instanceof Error ? err.message : 'Could not read your waiver claims.';
+    thmClaimsError =
+      err instanceof DOMException && err.name === 'AbortError'
+        ? 'MyFantasyLeague is taking too long to answer.'
+        : err instanceof Error
+          ? err.message
+          : 'Could not read your waiver claims.';
+  } finally {
+    clearTimeout(timer);
   }
 }
 
@@ -544,8 +581,13 @@ async function thmLoadOrder(): Promise<void> {
   if (!cfg?.showWaiverPriority) return;
   if (!cfg.signedIn || thmOrder || thmOrderLoading) return;
   thmOrderLoading = true;
+  const abort = new AbortController();
+  const timer = setTimeout(() => abort.abort(), THM_LIVE_READ_TIMEOUT_MS);
   try {
-    const res = await fetch('/api/waiver-order', { credentials: 'include' });
+    const res = await fetch('/api/waiver-order', {
+      credentials: 'include',
+      signal: abort.signal,
+    });
     const data = await res.json();
     if (!res.ok || !data?.success) {
       throw new Error(data?.message || 'Could not read the waiver order.');
@@ -554,8 +596,14 @@ async function thmLoadOrder(): Promise<void> {
     thmOrderError = null;
   } catch (err) {
     // Let the next open retry — a failed read is usually a blip.
-    thmOrderError = err instanceof Error ? err.message : 'Could not read the waiver order.';
+    thmOrderError =
+      err instanceof DOMException && err.name === 'AbortError'
+        ? 'MyFantasyLeague is taking too long to answer.'
+        : err instanceof Error
+          ? err.message
+          : 'Could not read the waiver order.';
   } finally {
+    clearTimeout(timer);
     thmOrderLoading = false;
   }
 }
@@ -1090,7 +1138,7 @@ function thmUpdateNavBell(totalCount: number) {
 
   // Only when the badge is absent — a bell already carrying a number does not
   // need a second marker crowding the same corner.
-  const claimCount = thmClaims?.length ?? 0;
+  const claimCount = thmVisibleClaims()?.length ?? 0;
   const showDot = totalCount === 0 && claimCount > 0;
   if (dot) dot.style.display = showDot ? '' : 'none';
 

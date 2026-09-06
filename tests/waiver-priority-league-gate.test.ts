@@ -79,3 +79,49 @@ describe('waiver priority is gated on MFL settings', () => {
     expect(render).toMatch(/export function waiverPriorityFootnote\(asOf: string, live: boolean\)/);
   });
 });
+
+/**
+ * The hub's own state is module-scoped and a single module instance survives an
+ * in-site navigation under the ClientRouter — so anything DERIVED from the
+ * per-league config has to be re-derived with it, not just the config itself.
+ *
+ * The bug: a TheLeague owner with 2 filed claims navigating to an AFL page saw
+ * the hub row badged "2" directly beside its own subtext, "Sign in to see your
+ * claims", and the bell dot lit on a league where they hold no franchise.
+ */
+describe('per-league state does not survive a league hop', () => {
+  const script = read('src/scripts/transaction-hub.ts');
+
+  it('reads the claim count through the signed-in-here helper, not the raw store', () => {
+    // Both display sites — the hub row and the bell dot — must go through it.
+    const rawReads = [...script.matchAll(/thmClaims\?\.length/g)].length;
+    const scopedReads = [...script.matchAll(/thmVisibleClaims\(\)\?\.length/g)].length;
+    expect(scopedReads).toBeGreaterThanOrEqual(2);
+    expect(rawReads, 'a raw thmClaims?.length read is the cross-league leak').toBe(0);
+  });
+
+  it('the helper gates on the CURRENT page config, re-read per call', () => {
+    const fn = script.slice(script.indexOf('function thmVisibleClaims'));
+    const body = fn.slice(0, fn.indexOf('\n}'));
+    expect(body).toMatch(/thmConfig\(\)\?\.signedIn/);
+  });
+});
+
+/**
+ * A live read must settle or fail. WaiverPriorityModal learned this in #974 —
+ * "a dialog parked on Reading… is the bug" — and the hub makes the same two
+ * reads, so it carries the same time-box.
+ */
+describe('the hub time-boxes its live reads', () => {
+  const script = read('src/scripts/transaction-hub.ts');
+
+  it('both fetches abort rather than hanging forever', () => {
+    expect(script).toMatch(/THM_LIVE_READ_TIMEOUT_MS/);
+    // One AbortController per live read (claims + order), each cleared.
+    expect([...script.matchAll(/new AbortController\(\)/g)].length).toBe(2);
+    expect([...script.matchAll(/clearTimeout\(timer\)/g)].length).toBe(2);
+    for (const m of script.matchAll(/fetch\('\/api\/waiver-(order|claims)'[^)]*\)/g)) {
+      expect(m[0], `${m[0]} must pass an abort signal`).toMatch(/signal/);
+    }
+  });
+});
