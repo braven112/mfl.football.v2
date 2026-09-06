@@ -130,6 +130,36 @@ which is exactly why the split exists — verify parsing offline against
   second passed. The same URL from a residential IP returned 200, so it scores
   on datacenter-IP + payload together. Don't put a hostname in a query string
   the check controls; name the league and let the server resolve it.
+- **An UNPLAYED week is a full payload of zeros, not an error.** MFL answers
+  `liveScoring` for a week that has not happened with a well-formed 200:
+  every franchise present, every `score` "0.00", every player listed
+  `nonstarter` (no lineup was ever submitted), `gameSecondsRemaining` 0.
+  Verified on both leagues at 2026 W10 — 16 and 24 franchises, zero starters.
+  Read literally it says "both teams finished on 0.0", and the Sunday Ticket
+  board printed exactly that over a game nobody had played. `res.ok`,
+  `data.ok`, a JSON-shape check and a franchise COUNT all pass it; only the
+  content can tell you. `hasLiveSignal` (`src/utils/live-scoring-snapshot.ts`)
+  is the test: **starters**. MFL cannot be scoring a week in which no franchise
+  has one, while a real game that is still 0-0 in the first quarter always
+  does. A non-zero score anywhere also counts, so a week whose DETAILS
+  breakdown is missing but whose totals are real still reads as live. Both
+  halves gate on it — `loadLiveSnapshot` server-side, `useLiveScoringFeed`'s
+  `resolved` on the client. `tests/live-scoring-snapshot.test.ts` pins it.
+- **The liveScoring parse has ONE implementation.**
+  `parseLiveScoringPayload` (`src/utils/live-scoring-snapshot.ts`) is pure and
+  backs both `/api/live-scoring` and the Sunday Ticket board's server-side
+  first paint. It was inline in the route until Sept 2026; a second copy would
+  have meant the starter/bench split and the one-element-list collapse each
+  living in two places. Don't re-inline it.
+- **Sunday Ticket runs the slate on the LEAGUE year and every live call on the
+  SEASON year.** The board's games come from `nflSchedule.json` in the
+  league-year feed folder, but live scoring is results-shaped, so it takes
+  `getCurrentSeasonYear()`. Between Feb 14 and Labor Day the two differ and the
+  league year names a season MFL is not scoring. The live layer is additionally
+  gated on `isSeasonWindowOpen` so N MFL reads do not fire on every page view
+  in July, and the island is gated from OUTSIDE (`{cond && <Island/>}`) rather
+  than by an `enabled` prop — Astro ships the hydration bundle for a `client:`
+  component even when it renders null.
 - **MFL serves no live scoring before Week 1 kicks off.** The gameday health
   check's cron window opens in September but kickoff is mid-month, so every run
   in that gap is pre-season and a week-1 live-scoring probe fails on a

@@ -50,6 +50,14 @@ export interface ContributionPlayer {
   headshot?: string;
   /** That league's projection for the week; 0 when the league has none. */
   proj: number;
+  /**
+   * That league's LIVE points for the week, from MFL's liveScoring feed.
+   * `undefined` means "we have no live read for this league" — which is NOT
+   * zero, and must render as the projection rather than as 0.0.
+   */
+  live?: number;
+  /** NFL game-seconds still to be played for this player (0 = final). */
+  secondsRemaining?: number;
 }
 
 /** What one fantasy league adds to the board. */
@@ -66,6 +74,14 @@ export interface LeagueContribution {
    * whose nine starters are known.
    */
   lineupResolved: boolean;
+  /**
+   * Whether this league CAN be read live. True for leagues in the registry
+   * (we know their MFL host, so /api/live-scoring serves them from `L` alone).
+   * False for an outside league off `myleagues` — it renders projections and
+   * says so, rather than silently looking like a league whose games have not
+   * started. Flipping one to true is the whole of the outside-league feature.
+   */
+  liveSupported: boolean;
   players: ContributionPlayer[];
 }
 
@@ -74,9 +90,14 @@ export interface BoxLeagueGroup {
   leagueName: string;
   franchiseName: string;
   lineupResolved: boolean;
-  /** Sorted by projection, high to low. */
+  /** Sorted by live points once this league is live, else by projection. */
   players: ContributionPlayer[];
   projTotal: number;
+  /** Sum of this league's LIVE points in the game. 0 when not live. */
+  liveTotal: number;
+  /** True when a live read landed for this league — the flag the UI switches on. */
+  liveResolved: boolean;
+  liveSupported: boolean;
 }
 
 export interface GameBox {
@@ -249,14 +270,21 @@ function boxFor(game: SlateGame, contributions: LeagueContribution[]): GameBox {
   let starterProjTotal = 0;
 
   for (const c of contributions) {
-    const players = c.players
-      .filter((p) => {
-        const team = normalizeTeamCode(p.nflTeam);
-        return team === away || team === home;
-      })
-      .sort((a, b) => b.proj - a.proj || a.name.localeCompare(b.name));
-    if (players.length === 0) continue;
+    const matching = c.players.filter((p) => {
+      const team = normalizeTeamCode(p.nflTeam);
+      return team === away || team === home;
+    });
+    if (matching.length === 0) continue;
+    // A league is "live" for this box once ANY of its players in the game
+    // carries a live number. Sorting follows: live points once they exist,
+    // projection before kickoff. One flag, decided in one place.
+    const liveResolved = matching.some((p) => p.live !== undefined);
+    const players = matching.sort((a, b) =>
+      (liveResolved
+        ? (b.live ?? b.proj) - (a.live ?? a.proj)
+        : b.proj - a.proj) || a.name.localeCompare(b.name));
     const leagueProj = players.reduce((sum, p) => sum + (Number.isFinite(p.proj) ? p.proj : 0), 0);
+    const leagueLive = players.reduce((sum, p) => sum + (Number.isFinite(p.live) ? (p.live as number) : 0), 0);
     byLeague.push({
       leagueId: c.leagueId,
       leagueName: c.leagueName,
@@ -264,6 +292,9 @@ function boxFor(game: SlateGame, contributions: LeagueContribution[]): GameBox {
       lineupResolved: c.lineupResolved,
       players,
       projTotal: round1(leagueProj),
+      liveTotal: round1(leagueLive),
+      liveResolved,
+      liveSupported: c.liveSupported,
     });
     if (c.lineupResolved) {
       starterCount += players.length;
@@ -394,4 +425,57 @@ export function formatKickoffZones(kickoffEpoch: number, zones: readonly Kickoff
     }
     return { label, time, day, dayDiffers: day !== etDay };
   });
+}
+
+// ── Live points ──────────────────────────────────────────────────────────
+
+/** The slice of a LiveSnapshot this merge needs; keeps this module free of the parser. */
+export interface LiveMergeSource {
+  /** STARTERS only, keyed by franchise id. Never pass `bench` here. */
+  players: Record<string, ReadonlyArray<{ id: string; live: number; secondsRemaining: number }>>;
+}
+
+/**
+ * Merge one league's live points onto its contribution, joining on the MFL
+ * player id — the same id both sides already speak, so there is no
+ * translation step to get wrong.
+ *
+ * Three rules, all load-bearing:
+ *
+ *  - **Only `snapshot.players` is read, never `snapshot.bench`.** The bench
+ *    rides in its own map precisely so nothing can mistake it for a row that
+ *    scores (docs/claude/rules/live-scoring.md). A league standing in with its
+ *    whole roster (`lineupResolved: false`) will have players MFL lists as
+ *    bench; those get NO live number rather than a bench number, because a
+ *    bench player's points sitting in the same column as a starter's is the
+ *    projection-inflation bug wearing a new hat.
+ *  - **A player the snapshot does not mention keeps `live: undefined`**, which
+ *    renders as his projection. Absence of a live read is not zero.
+ *  - **The contribution is returned unchanged when there is no snapshot.**
+ *    `/api/live-scoring` answers 200 with empty collections on an upstream
+ *    failure, so callers gate on the flag and pass `null` here — never an
+ *    empty snapshot, which would blank every number on the board while the
+ *    poll reported itself healthy.
+ */
+export function applyLiveToContribution(
+  contribution: LeagueContribution,
+  snapshot: LiveMergeSource | null,
+): LeagueContribution {
+  if (!snapshot) return contribution;
+  const rows = snapshot.players[contribution.franchiseId];
+  if (!rows || rows.length === 0) return contribution;
+
+  const byId = new Map<string, { live: number; secondsRemaining: number }>();
+  for (const row of rows) {
+    if (!row?.id) continue;
+    byId.set(String(row.id), { live: row.live, secondsRemaining: row.secondsRemaining });
+  }
+
+  return {
+    ...contribution,
+    players: contribution.players.map((p) => {
+      const hit = byId.get(p.playerId);
+      return hit ? { ...p, live: hit.live, secondsRemaining: hit.secondsRemaining } : p;
+    }),
+  };
 }

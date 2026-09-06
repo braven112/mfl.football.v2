@@ -110,31 +110,78 @@
 }
 @media (prefers-reduced-motion: reduce) { .st-banner__dot { animation: none; } }
 
-/* ── Your matchup band ────────────────────────────────────────────────── */
-.st-own {
+/* ── Your matchup cards ───────────────────────────────────────────────── */
+.st-games {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(17rem, 1fr));
+  gap: var(--spacing-md);
+}
+.st-game {
   display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 0.4rem 1rem;
-  padding: 0.7rem 1rem;
+  flex-direction: column;
+  gap: 0.55rem;
+  padding: 0.8rem 1rem 0.7rem;
   border-radius: var(--radius-md);
+  border: 1px solid var(--card-border);
   border-left: 3px solid var(--league-accent);
   background: var(--card-surface);
-  border-top: 1px solid var(--card-border);
-  border-right: 1px solid var(--card-border);
-  border-bottom: 1px solid var(--card-border);
-  font-size: 0.9rem;
-  color: var(--page-text);
 }
-.st-own__label {
+.st-game__head { display: flex; align-items: baseline; justify-content: space-between; gap: 0.6rem; }
+.st-game__league {
   font-size: 0.68rem;
   font-weight: var(--font-weight-bold);
   letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--content-text-muted);
 }
-.st-own__links { margin-left: auto; display: flex; gap: 0.8rem; }
-.st-own__links a { color: var(--league-accent); font-weight: var(--font-weight-bold); font-size: 0.82rem; }
+.st-game__state { font-size: 0.7rem; color: var(--content-text-muted); }
+.st-game__state--live { color: var(--color-error); font-weight: var(--font-weight-bold); }
+
+.st-game__sides { display: flex; flex-direction: column; gap: 0.3rem; margin: 0; padding: 0; list-style: none; }
+.st-game__side {
+  display: grid;
+  grid-template-columns: 1.75rem 1fr auto;
+  grid-template-areas: 'crest name score' '. ytp ytp';
+  align-items: center;
+  gap: 0.15rem 0.55rem;
+}
+.st-game__side--you .st-game__name { font-weight: var(--font-weight-bold); color: var(--page-text); }
+.st-game__crest { grid-area: crest; width: 1.75rem; height: 1.75rem; object-fit: contain; }
+.st-game__crest--blank { background: var(--card-border); border-radius: var(--radius-full); }
+.st-game__name {
+  grid-area: name;
+  font-size: 0.88rem;
+  color: var(--content-text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.st-game__score {
+  grid-area: score;
+  font-variant-numeric: tabular-nums;
+  font-weight: var(--font-weight-bold);
+  font-size: 1.05rem;
+  color: var(--page-text);
+}
+.st-game__score--idle { color: var(--content-text-muted); font-weight: normal; }
+.st-game__ytp { grid-area: ytp; font-size: 0.68rem; color: var(--content-text-muted); }
+.st-game__ytp:empty { display: none; }
+.st-game__links { display: flex; gap: 0.8rem; margin-top: 0.15rem; }
+.st-game__links a { color: var(--league-accent); font-weight: var(--font-weight-bold); font-size: 0.78rem; }
+
+/* Freshness pill — a board that says "live" but has not been confirmed in ten
+   minutes is not live, and the scores alone cannot say so. */
+.st-fresh {
+  align-self: flex-start;
+  padding: 0.2rem 0.6rem;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--card-border);
+  background: var(--card-surface);
+  font-size: 0.7rem;
+  color: var(--content-text-muted);
+  font-variant-numeric: tabular-nums;
+}
+.st-fresh--error { color: var(--color-error); border-color: color-mix(in srgb, var(--color-error) 40%, transparent); }
 
 /* ── Board: chips + jump links ────────────────────────────────────────── */
 .st-board { display: flex; flex-direction: column; gap: var(--spacing-lg); }
@@ -360,3 +407,24 @@
   border: 1px dashed var(--card-border);
   border-radius: var(--radius-md);
 }
+
+/* ── Live numbers on the game boxes ───────────────────────────────────── */
+.st-box__score { display: inline-flex; align-items: baseline; gap: 0.4rem; }
+.st-box__live {
+  font-variant-numeric: tabular-nums;
+  font-weight: var(--font-weight-bold);
+  color: var(--page-text);
+}
+/* No live read yet: the element is empty and must take no space, so the
+   projection stays where it has always been rather than shifting on hydration. */
+.st-box__live--idle:empty { display: none; }
+.st-box__score .st-box__proj { font-size: 0.78rem; color: var(--content-text-muted); }
+
+.st-box__league-live {
+  margin-left: auto;
+  font-variant-numeric: tabular-nums;
+  font-weight: var(--font-weight-bold);
+  color: var(--league-accent);
+}
+.st-box__league-live--idle:empty { display: none; }
+.st-box__league-name { display: flex; align-items: baseline; gap: 0.3rem; }

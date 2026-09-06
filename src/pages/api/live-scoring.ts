@@ -1,8 +1,8 @@
 import type { APIRoute } from 'astro';
-import type { LivePlayerRow, MatchupPairing } from '../../types/live-scoring';
 import { getCurrentSeasonYear } from '../../utils/league-year';
 import { ALL_LEAGUES, getLeagueById, getLeagueBySlug, DEFAULT_LEAGUE_SLUG } from '../../config/leagues';
 import { buildMflExportUrl } from '../../utils/mfl-url';
+import { emptyLiveSnapshot, parseLiveScoringPayload } from '../../utils/live-scoring-snapshot';
 
 export const prerender = false;
 
@@ -99,91 +99,10 @@ export const GET: APIRoute = async ({ url }) => {
       }),
     ]);
 
-    const scores: Record<string, number> = {};
-    const remaining: Record<string, number> = {};
-    const matchups: MatchupPairing[] = [];
-    const players: Record<string, LivePlayerRow[]> = {};
-    const bench: Record<string, LivePlayerRow[]> = {};
-    const playersYetToPlay: Record<string, number> = {};
-
-    // Process live scoring data (regular matchups)
-    if (liveScoreResponse.ok) {
-      const data = await liveScoreResponse.json();
-      let franchises: any[] = [];
-
-      if (data?.liveScoring?.franchise) {
-        franchises = Array.isArray(data.liveScoring.franchise)
-          ? data.liveScoring.franchise
-          : [data.liveScoring.franchise];
-      } else if (data?.liveScoring?.matchup) {
-        const rawMatchups = Array.isArray(data.liveScoring.matchup)
-          ? data.liveScoring.matchup
-          : [data.liveScoring.matchup];
-
-        for (const matchup of rawMatchups) {
-          if (!matchup?.franchise) continue;
-          const teams = Array.isArray(matchup.franchise) ? matchup.franchise : [matchup.franchise];
-          franchises.push(...teams);
-
-          // Extract matchup pairing
-          if (teams.length >= 2 && teams[0]?.id && teams[1]?.id) {
-            matchups.push({
-              home: String(teams[0].id),
-              away: String(teams[1].id),
-            });
-          }
-        }
-      }
-
-      franchises.forEach((team: any) => {
-        if (!team?.id) return;
-        const fid = String(team.id);
-        scores[fid] = Number(team.score) || 0;
-        remaining[fid] = Number(team.gameSecondsRemaining) || 0;
-        if (team.playersYetToPlay != null) {
-          playersYetToPlay[fid] = Number(team.playersYetToPlay) || 0;
-        }
-
-        // Per-player breakdown (present when DETAILS=1). MFL nests this as
-        // franchise.players.player[] in liveScoring but flat franchise.player[]
-        // in weeklyResults — accept either.
-        //
-        // Starters and bench go into SEPARATE maps rather than one list with a
-        // status flag, and that split is load-bearing rather than tidiness.
-        // Every consumer of `players` treats a row as scoring for the matchup:
-        // computeTeam sums its remaining projection into the team's projected
-        // final and counts it in "yet to play", and buildMoments credits a
-        // scoring play to whoever is listed. Folding bench rows into that map
-        // would inflate every projection and every win-probability bar on the
-        // board with points that cannot be scored, and put bench touchdowns in
-        // a matchup ticker. Keeping them apart means a caller has to opt IN to
-        // the bench, which is exactly the property we want.
-        const rawPlayers = team?.players?.player ?? team?.player;
-        if (rawPlayers) {
-          const list = Array.isArray(rawPlayers) ? rawPlayers : [rawPlayers];
-          const starters: LivePlayerRow[] = [];
-          const reserves: LivePlayerRow[] = [];
-          for (const p of list) {
-            if (!p?.id) continue;
-            const status = String(p.status || 'starter');
-            const row: LivePlayerRow = {
-              id: String(p.id),
-              live: Number(p.score) || 0,
-              secondsRemaining: Number(p.gameSecondsRemaining) || 0,
-              status,
-            };
-            // Anything MFL does not confirm as a nonstarter is treated as a
-            // starter, the same direction the old filter erred in: a row we
-            // cannot classify belongs on the side that scores, because
-            // dropping a real starter out of the matchup is far worse than
-            // showing a bench player among the starters.
-            (status === 'nonstarter' ? reserves : starters).push(row);
-          }
-          players[fid] = starters;
-          if (reserves.length) bench[fid] = reserves;
-        }
-      });
-    }
+    const snapshot = liveScoreResponse.ok
+      ? parseLiveScoringPayload(await liveScoreResponse.json())
+      : emptyLiveSnapshot();
+    const { scores, remaining, matchups, players, bench, playersYetToPlay } = snapshot;
 
     // Process playoff bracket data (playoff games)
     if (playoffBracketsResponse.ok) {
