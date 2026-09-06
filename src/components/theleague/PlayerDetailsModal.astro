@@ -52,9 +52,10 @@ export interface PlayerDetailsPreview {
   subText?: string;
   ownerName?: string;
   /**
-   * Franchise crest for the owner strip. Optional, and its ABSENCE is the case
-   * that matters: this <img> ships with no `src` (the client script sets one on
-   * open), so leaving it visible paints an empty black box in both themes. The
+   * Franchise crest for the owner strip — the LIGHT artwork, as the strip is a
+   * themed surface (see `.pdm-owner__crest`). Optional, and its ABSENCE is the
+   * case that matters: this <img> ships with no `src` (the client script sets
+   * one on open), so leaving it visible paints a broken-image glyph. The
    * skeleton therefore hides it exactly as the script does for a franchise with
    * no crest — and the script sets `display = ''` whenever it has artwork, so
    * hiding it here cannot strand a real crest.
@@ -475,18 +476,22 @@ const t = (value?: string) => value ?? '\u2014';
     min-width: 0;
   }
 
-  /* The brand map deliberately hands out the DARK crest artwork (see
-     franchise-band-brand.ts), which is drawn for ink — on the white card it
-     would wash out. So the chip supplies the ink, in BOTH themes, exactly as
-     the band does. */
+  /* No plate behind the crest: unlike the band above it, this strip FOLLOWS
+     the theme, so it gets `brand.crestLight` — the light artwork — and the
+     global `html.dark img[src="<light>"]` rules in TeamIconDarkStyles resolve
+     it per theme (dark cut where a franchise has one, the measured ring where
+     it doesn't). An ink chip here was how the DARK artwork was made legible on
+     the white card; rendering the themed src removes the need for it, and the
+     crest sits on the strip's own franchise-tinted wash instead.
+
+     Which is also why nothing may set an inline `filter` on this img — an
+     inline style beats the global rule and would ring the crest in LIGHT mode
+     too. */
   .pdm-owner__crest {
     width: 26px;
     height: 26px;
     object-fit: contain;
     flex-shrink: 0;
-    padding: 3px;
-    border-radius: var(--radius-sm, 0.25rem);
-    background: #0b0e13;
   }
 
   .pdm-owner__label {
@@ -1294,12 +1299,15 @@ const t = (value?: string) => value ?? '\u2014';
           setText('pdm-owner-name', ownerBrand.name);
           ownerRow.style.setProperty('--pdm-owner-hue', franchiseTintHue(ownerBrand));
           if (ownerCrest) {
-            if (ownerBrand.crest) {
-              ownerCrest.src = ownerBrand.crest;
-              // Same inline-filter contract as the band: the map hands us the
-              // DARK artwork plus the measured stroke, and the chip behind it
-              // is ink in both themes, so the stroke applies in both too.
-              ownerCrest.style.filter = ownerBrand.crestFilter ?? '';
+            // The strip follows the theme (no ink plate — see .pdm-owner__crest),
+            // so it takes the LIGHT src and leaves the artwork swap AND the
+            // measured ring to the global TeamIconDarkStyles rules. Never the
+            // band's inline `crestFilter`: an inline filter outranks those
+            // rules and would ring the crest in light mode too.
+            var stripCrest = ownerBrand.crestLight || ownerBrand.crest;
+            if (stripCrest) {
+              ownerCrest.src = stripCrest;
+              ownerCrest.style.filter = '';
               ownerCrest.style.display = '';
             } else {
               ownerCrest.removeAttribute('src');

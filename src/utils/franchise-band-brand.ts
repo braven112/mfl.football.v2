@@ -17,6 +17,12 @@
  *   no theme to resolve — the crest always lands on ink. Picking `iconDark`
  *   here also sidesteps the global `html.dark img[src="<light>"]` swap, since
  *   that rule keys on the LIGHT src and never matches what we render.
+ * - **`crestLight` is the same crest for a surface that FOLLOWS the theme.**
+ *   The modal's owner strip is a themed card, not ink, so it renders the LIGHT
+ *   src and lets the global `TeamIconDarkStyles` rules resolve it — swap for a
+ *   franchise with an `iconDark`, measured ring for one without. Two fields
+ *   rather than one because the two surfaces genuinely want opposite artwork;
+ *   `crestFilter` belongs to `crest` alone.
  * - **`crestFilter` carries the measured white stroke.** For a franchise with
  *   no `iconDark` whose crest measures illegible on ink
  *   (`crest-dark-stroke-manifest.json`), the global stroke rule only fires
@@ -63,6 +69,21 @@ export interface FranchiseBandBrand {
   name: string;
   /** Crest to draw as the band watermark; `''` when the franchise has none. */
   crest: string;
+  /**
+   * Crest for a surface that FOLLOWS the site theme — the LIGHT artwork, so
+   * the global `html.dark img[src="<light>"]` rules in `TeamIconDarkStyles`
+   * do their job: the dark-cut swap for a franchise with an `iconDark`, the
+   * measured ring for one without. `''` when the franchise has no crest.
+   *
+   * This is the opposite call from `crest` above, and deliberately so: `crest`
+   * serves the band, which is deep ink in BOTH themes and therefore resolves
+   * its own artwork; a themed card has a theme to follow, so it must render
+   * the light src and let the stylesheet resolve it. Never render this one on
+   * a dark-in-both-themes surface, and never apply `crestFilter` to it (the
+   * inline filter would beat the global rule and ring the crest in light mode
+   * too).
+   */
+  crestLight: string;
   /** Gradient anchor hue, already floored to clear 3:1 against white ink. */
   primary: string;
   /** Glow / accent hue. */
@@ -242,6 +263,10 @@ export function buildFranchiseBandBrands(
 
     let name: string = team.name ?? '';
     let crest: string = team.iconDark || team.icon || '';
+    // The themed-surface counterpart — light art first, so the global
+    // stylesheet can swap/ring it. `iconDark` is only a fallback for a
+    // franchise that somehow has no light cut at all.
+    let crestLight: string = team.icon || team.iconDark || '';
     let secondary: string = getTeamColorSecondary(franchiseId, league);
     // The BRAND pair, never the chart hue. `color` is chosen for distinctness
     // on a bar graph and `design-system.md` says in as many words not to
@@ -296,6 +321,7 @@ export function buildFranchiseBandBrands(
         // Era artwork has no dark variant and is not in the stroke manifest
         // (which measures current crests only), so it renders as authored.
         crest = eraCrest;
+        crestLight = eraCrest;
         crestFilter = undefined;
       }
     }
@@ -303,6 +329,7 @@ export function buildFranchiseBandBrands(
     map[franchiseId] = {
       name,
       crest: crest ? preferredIconSrc(crest) : '',
+      crestLight: crestLight ? preferredIconSrc(crestLight) : '',
       primary: ensureContrastOn(primary, '#ffffff', AA_LARGE_TEXT_RATIO),
       secondary,
       ...(crestFilter ? { crestFilter } : {}),

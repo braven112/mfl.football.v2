@@ -15,6 +15,10 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 import { buildFranchiseBandBrands } from '../src/utils/franchise-band-brand';
+import { preferredIconSrc } from '../src/utils/team-icon-dark-css';
+import theleagueConfig from '../src/data/theleague.config.json';
+import aflConfig from '../data/afl-fantasy/afl.config.json';
+import bb1Config from '../data/best-ball-1/bb1.config.json';
 import { franchiseTintHue } from '../src/utils/player-modal-band';
 import { pickBrandHue } from '../src/utils/franchise-hue';
 import { chroma } from '../src/utils/nfl-team-colors';
@@ -24,6 +28,12 @@ const read = (p: string) => readFileSync(resolve(__dirname, '..', p), 'utf8');
 const playersPage = read('src/pages/theleague/players.astro');
 const aflPlayersPage = read('src/pages/afl-fantasy/players.astro');
 const modal = read('src/components/theleague/PlayerDetailsModal.astro');
+
+const LEAGUE_CONFIGS: Record<string, { teams?: any[] }> = {
+  theleague: theleagueConfig as any,
+  afl: aflConfig as any,
+  bb1: bb1Config as any,
+};
 
 describe('Free Agents → modal payload', () => {
   it('sends the owning franchise, so a rostered player wears his fantasy team', () => {
@@ -77,6 +87,54 @@ describe('PlayerDetailsModal → owner strip', () => {
 
   it('tints with the accent hue, not the band anchor', () => {
     expect(modal).toContain("franchiseTintHue(ownerBrand)");
+  });
+
+  it('draws the crest on the strip itself, with no ink plate behind it', () => {
+    // The plate existed only to make the band's DARK artwork legible on the
+    // white card. The strip now renders the LIGHT src instead, so a plate
+    // would be a black box behind artwork drawn for the card it sits on.
+    const rule = modal.match(/\.pdm-owner__crest \{[^}]*\}/)?.[0] ?? '';
+    expect(rule, '.pdm-owner__crest rule').not.toBe('');
+    expect(rule).not.toMatch(/background/);
+  });
+
+  it('takes the LIGHT crest, so the theme rules can resolve it', () => {
+    // `crest` is the band's pick — dark artwork for a surface that is ink in
+    // both themes. On a themed card that src never matches the global
+    // `html.dark img[src="<light>"]` rules, so it would show dark art to a
+    // light-mode owner forever.
+    expect(modal).toMatch(/ownerBrand\.crestLight \|\| ownerBrand\.crest/);
+  });
+
+  it('never applies the band\'s inline crestFilter to the strip', () => {
+    // An inline filter outranks the global `html.dark` stroke rule, so the
+    // measured ring would be drawn in LIGHT mode too — a white halo on white.
+    const block = modal.match(/var stripCrest[\s\S]*?\n {10}\}/)?.[0] ?? '';
+    expect(block, 'strip crest block').not.toBe('');
+    expect(block).not.toMatch(/crestFilter/);
+  });
+});
+
+describe('brand map → crestLight', () => {
+  it('is the light artwork for every franchise in every league', () => {
+    for (const league of ['theleague', 'afl', 'bb1'] as const) {
+      const config = LEAGUE_CONFIGS[league];
+      const map = buildFranchiseBandBrands(league);
+      for (const team of config.teams ?? []) {
+        const brand = map.teams[team.franchiseId];
+        if (!brand || !team.icon) continue;
+        // The light `icon` is what both TeamIconDarkStyles mechanisms key on;
+        // handing out `iconDark` here silently disables both.
+        expect(brand.crestLight, `${league} ${team.franchiseId}`).toBe(
+          preferredIconSrc(team.icon),
+        );
+        if (team.iconDark) {
+          expect(brand.crest, `${league} ${team.franchiseId} band`).not.toBe(
+            brand.crestLight,
+          );
+        }
+      }
+    }
   });
 });
 
