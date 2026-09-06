@@ -388,6 +388,64 @@ const themePref = getThemePreference(Astro.cookies);
 			})();
 		</script>
 
+		<!-- App icon badge — INSTALLED APP ONLY.
+		     setAppBadge paints a count on the Home Screen / dock icon, which is
+		     one of the few things the installed app can do that a browser tab
+		     cannot. Guarded on standalone rather than on the API's existence: in
+		     a tab the call is a silent no-op on some engines and a throw on
+		     others, and neither is worth spending on a surface with no icon.
+		     Throttled because astro:page-load fires on EVERY ClientRouter
+		     navigation; the server's own 90s cache is the real bound on MFL
+		     traffic (this throttle lives in sessionStorage, so a new tab starts
+		     fresh). -->
+		<script is:inline>
+			(function() {
+				var THROTTLE_MS = 60000;
+				var KEY = 'mfl:lastBadgeSync';
+
+				function installed() {
+					return window.matchMedia('(display-mode: standalone)').matches || !!navigator.standalone;
+				}
+
+				function syncBadge(force) {
+					if (!installed() || !('setAppBadge' in navigator)) return;
+					try {
+						var last = Number(sessionStorage.getItem(KEY) || '0');
+						if (!force && Date.now() - last < THROTTLE_MS) return;
+						sessionStorage.setItem(KEY, String(Date.now()));
+					} catch (_) {
+						// Storage blocked — fall through and sync every load rather
+						// than never showing a badge at all.
+					}
+					fetch('/api/app-badge', { credentials: 'include' })
+						.then(function(r) { return r.ok ? r.json() : null; })
+						.then(function(data) {
+							if (!data || typeof data.count !== 'number') return;
+							// clearAppBadge, not setAppBadge(0): a zero renders as a
+							// dot rather than nothing on some Android launchers.
+							if (data.count > 0) navigator.setAppBadge(data.count);
+							else navigator.clearAppBadge();
+						})
+						.catch(function() {});
+				}
+
+				window.mflSyncAppBadge = syncBadge;
+				document.addEventListener('astro:page-load', function() { syncBadge(false); });
+				// Coming back from the background is exactly when a badge set by a
+				// push needs re-checking against what the owner has since done.
+				document.addEventListener('visibilitychange', function() {
+					if (document.visibilityState === 'visible') syncBadge(false);
+				});
+				// The service worker asks for a resync when a push arrives while a
+				// window is open (see public/sw.js).
+				if (navigator.serviceWorker) {
+					navigator.serviceWorker.addEventListener('message', function(e) {
+						if (e.data && e.data.type === 'mfl:badge-refresh') syncBadge(true);
+					});
+				}
+			})();
+		</script>
+
 		<!-- Install prompt capture.
 		     `beforeinstallprompt` fires ONCE, early, and is the browser's only
 		     offer to install. Chrome fires it before any island hydrates, so if
