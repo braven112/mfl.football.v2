@@ -1,0 +1,79 @@
+---
+/**
+ * SundayTicketMatchups — the owner's own fantasy game, in every league they
+ * play in, with live scores and both franchises' crests.
+ *
+ * Replaces the one-line text strip this band used to be. That strip named the
+ * opponent and stopped; an owner in two leagues had to open two other pages to
+ * learn whether they were winning either.
+ *
+ * Props-only, so it stories from a fixture. The numbers are server-rendered
+ * and the single `SundayTicketLive` island updates them through the
+ * `data-st-live-team` / `data-st-live-state` hooks.
+ *
+ * The state hook carries BOTH franchise ids, not just the league. A card's
+ * state is a property of the PAIR — the server takes the max clock across the
+ * two sides, so a card whose owner is done but whose opponent is still playing
+ * is "In progress", not "Final" — and a doubleheader puts two cards with
+ * different opponents on the page under one league id.
+ *
+ * Crests come from `getLeagueTeamBrands` via the page — LIGHT artwork only.
+ * Dark mode needs nothing here: `TeamIconDarkStyles` in the shared layout head
+ * swaps a team's `iconDark` keyed on `src` alone, so shipping `iconDark` too
+ * would invite a second, divergent swap at this call site.
+ */
+import { liveStateLabel, type SundayTicketMatchupCard } from '../../../utils/sunday-ticket-matchups';
+
+export interface Props {
+  cards: SundayTicketMatchupCard[];
+  week: number;
+  /** Route-resolved hrefs for the two links, per league slug. */
+  linkFor: (slug: string, path: string) => string;
+}
+
+const { cards, week, linkFor } = Astro.props;
+
+// The status line comes from `liveStateLabel`, shared with the island so the
+// server render and every poll after it speak with one voice.
+---
+
+{cards.length > 0 && (
+  <section class="st-games" aria-label={`Your week ${week} matchups`}>
+    {cards.map((card) => (
+      <article class="st-game" data-st-live-card={card.leagueId}>
+        <header class="st-game__head">
+          <span class="st-game__league">{card.leagueName}</span>
+          <span
+            class:list={['st-game__state', card.liveResolved && card.secondsRemaining > 0 && 'st-game__state--live']}
+            data-st-live-state={`${card.leagueId}:${card.you.franchiseId}:${card.opponent.franchiseId}`}
+          >{liveStateLabel(card)}</span>
+        </header>
+
+        <ol class="st-game__sides">
+          {[card.you, card.opponent].map((side) => (
+            <li class:list={['st-game__side', side.isYou && 'st-game__side--you']}>
+              {side.icon
+                ? <img class="st-game__crest" src={side.icon} alt="" width="32" height="32" loading="lazy" />
+                : <span class="st-game__crest st-game__crest--blank" aria-hidden="true" />}
+              <span class="st-game__name">{side.name}</span>
+              <span
+                class:list={['st-game__score', !card.liveResolved && 'st-game__score--idle']}
+                data-st-live-team={`${card.leagueId}:${side.franchiseId}`}
+              >{card.liveResolved ? side.score.toFixed(1) : '—'}</span>
+              <span class="st-game__ytp" data-st-live-ytp={`${card.leagueId}:${side.franchiseId}`}
+              >{card.liveResolved && side.yetToPlay > 0 ? `${side.yetToPlay} to play` : ''}</span>
+            </li>
+          ))}
+        </ol>
+
+        <footer class="st-game__links">
+          {/* Best ball has no lineups at all — the registry says UI offering
+              one "must be skipped" for that flag, and the route genuinely
+              does not exist, so this would 404. */}
+          {!card.bestBall && <a href={linkFor(card.leagueSlug, 'lineup')}>Set lineup</a>}
+          <a href={linkFor(card.leagueSlug, 'live-scoring')}>Live scoring</a>
+        </footer>
+      </article>
+    ))}
+  </section>
+)}

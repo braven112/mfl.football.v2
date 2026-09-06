@@ -12,6 +12,14 @@
  * the site's standard PlayerCell (headshot on a team-color chip, DEF rows
  * wearing the team logo, the MFL-photo fallback chain) with the league's
  * projection beside it — the same lockup as rosters, lineups and free agents.
+ *
+ * Once a league is being scored live, that league's LIVE points lead and the
+ * projection drops to a secondary. This component stays props-only: the
+ * numbers arrive server-rendered, and the single `SundayTicketLive` island
+ * updates them in place through the `data-st-live*` hooks below. That keeps
+ * the whole board at ONE hydration root and one React-free renderer, rather
+ * than a React copy of this markup (which is exactly the kind of fork
+ * `page-fork-ratchet` exists to stop).
  */
 import type { SlateBox } from '../../../utils/sunday-ticket-slate';
 import { formatKickoffZones } from '../../../utils/sunday-ticket-slate';
@@ -26,7 +34,17 @@ export interface Props {
   country?: CountryCode;
   /** The viewer's chosen clocks (/preferences); omitted, the country's default pair. */
   zones?: KickoffZone[];
-  /** Show the league + franchise line above each player group. */
+  /**
+   * Show the league + franchise line above each player group. Any league that
+   * CAN go live shows it regardless of this flag, because that line is the
+   * subtotal's only home and the island can only patch a span that the server
+   * rendered. Gating on `liveResolved` instead meant a single-league owner who
+   * opened the board before kickoff never got the element, so the running
+   * total never appeared for them no matter how long they watched.
+   *
+   * It has to name the league either way: scoring is not comparable across
+   * leagues, so an unattributed number would read as a cross-league sum.
+   */
   multiLeague?: boolean;
   /** An owner's board (counts read "starters"); false for the league-wide fallback. */
   personalized?: boolean;
@@ -114,11 +132,17 @@ const starters = (n: number) => `${n} starter${n === 1 ? '' : 's'}`;
         const hidden = group.players.length - shown.length;
         return (
           <div class="st-box__league">
-            {multiLeague && (
+            {(multiLeague || group.liveSupported) && (
               <h4 class="st-box__league-name">
                 {group.leagueName}
                 {group.franchiseName && <span class="st-box__franchise"> · {group.franchiseName}</span>}
                 {!group.lineupResolved && personalized && <span class="st-box__unset"> · roster, no lineup yet</span>}
+                {group.liveSupported && (
+                  <span
+                    class:list={['st-box__league-live', !group.liveResolved && 'st-box__league-live--idle']}
+                    data-st-live-box={`${group.leagueId}:${box.game.id}`}
+                  >{group.liveResolved ? group.liveTotal.toFixed(1) : ''}</span>
+                )}
               </h4>
             )}
             <ul class="st-box__players">
@@ -132,7 +156,19 @@ const starters = (n: number) => `${n} starter${n === 1 ? '' : 's'}`;
                     mflId={p.playerId}
                     size="compact"
                   />
-                  <span class="st-box__proj">{p.proj > 0 ? p.proj.toFixed(1) : '—'}</span>
+                  <span class="st-box__score">
+                    {group.liveSupported ? (
+                      <span
+                        class:list={['st-box__live', p.live === undefined && 'st-box__live--idle']}
+                        data-st-live={`${group.leagueId}:${p.playerId}`}
+                      >{p.live === undefined ? '' : p.live.toFixed(1)}</span>
+                    ) : null}
+                    {/* No title when there is no projection: `proj` is 0 for
+                        "the league has none", and the row deliberately shows an
+                        em-dash — a "0.0 projected" tooltip over it reads as a
+                        real forecast of zero. */}
+                    <span class="st-box__proj" title={p.proj > 0 ? `${p.proj.toFixed(1)} projected` : undefined}>{p.proj > 0 ? p.proj.toFixed(1) : '—'}</span>
+                  </span>
                 </li>
               ))}
               {hidden > 0 && <li class="st-box__more">+{hidden} more</li>}

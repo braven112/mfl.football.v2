@@ -110,3 +110,64 @@ that are not in the plan.
   white background (site-wide dark swap, separate session); the rest of the
   spec's orphan web (`mock-matchup-data`, `types/matchup-previews`, …) is a
   separate cleanup.
+
+## 2026-09-06 - Making the board live (branch `claude/sunday-ticket-fantasy-points-au2vqh`)
+
+The board was a pre-game planner that bannered you to `/live-scoring` at
+kickoff. It now stays up: live points per player per league, and your own
+matchup with both crests. What that taught, beyond the rules that went into
+`docs/claude/rules/live-scoring.md`:
+
+- **Check whether the API already serves the shape before designing an
+  integration.** This looked like "add live scoring to Sunday Ticket" and was
+  actually a `Map` lookup. `/api/live-scoring` was already league-agnostic
+  (`L` selects the league, `resolveHost` maps it to the MFL server) and already
+  returned per-player live points under `DETAILS=1`; the board already held
+  each league's starters keyed by MFL player id. Same key on both sides, so the
+  whole feature is `applyLiveToContribution` — a 20-line pure join. The
+  expensive-looking half was already paid for by the live-scoring page.
+- **There are TWO polling mechanisms and the older one is the wrong default.**
+  `LiveScoreboard`'s `useLiveScoring` is a bespoke `setInterval` living inside
+  one component — fine for its one league and one consumer, which is why it was
+  never migrated. `createSharedPoller` (`src/utils/live-poll-store.ts`) is the
+  one to reach for anywhere the same feed has more than one reader: it keys by
+  params, joins in-flight requests, and runs at the MINIMUM interval any
+  subscriber asks. On a board watching N leagues from several places the
+  bespoke one multiplies to N x M timers. Prefer the store; treat
+  `useLiveScoring` as legacy rather than as the pattern.
+- **One island patching `data-*` hooks beats N islands or a forked renderer.**
+  The Astro box components are props-only so they story from a fixture, and
+  `SundayTicketBoard` advertises "Zero client JS". Making the numbers live via
+  a React island per box would have meant 8-16 hydration roots AND a React copy
+  of the box markup — the duplicated-renderer fork `page-fork-ratchet` exists to
+  stop. Instead the server renders real numbers into
+  `data-st-live="<leagueId>:<playerId>"` spans and ONE `client:idle` island
+  updates them. The page is fully useful with JS off, the components stay
+  storyable, and the cost is one deliberate exception to the zero-JS property
+  rather than a second renderer to keep in sync. Query the DOM inside the
+  effect, never at module scope — ClientRouter re-mounts islands, but a
+  module-scope capture would survive and patch a detached tree.
+- **"Unreachable today" is not the same as "handled".** The matchup card
+  offered a *Set lineup* link for every league. `best-ball-1` has no
+  `lineup.astro`, so that 404s — and it was unreachable only because bb1 ships
+  no `schedule.json`, so no card is ever built for it. The registry already
+  said the answer (`bestBall: true` → *"UI that offers any of those must be
+  skipped"*), and a flag phrased as "must be skipped" wants the skip written
+  even when today's data makes it moot. Safety by accident stops being safety
+  the moment a feed lands.
+- **A verification date has to line up with which feed YEARS are on disk, not
+  just with the season.** Live scoring only exists at MFL for a played week, so
+  verifying meant `?testDate=2025-11-10`. But the board's slate reads
+  `nflSchedule.json` from the LEAGUE-year folder, and only
+  `data/theleague/mfl-feeds/2025/` has one — the AFL's 2025 folder does not.
+  So the AFL rendered an empty board at a date where TheLeague rendered a full
+  live one, which looks exactly like a league-specific bug and is not. When a
+  page joins a synced feed to a live API, pick the test date where BOTH exist,
+  and check `ls data/<league>/mfl-feeds/<year>/` before concluding anything
+  from an empty render.
+- **`?testDate=` had to be wired in before any of this could be verified.** The
+  page took `new Date()` directly and passed no reference date to
+  `getLeagueYearForSlug` / `getCurrentSeasonYear` / `getCurrentNFLWeek` — all
+  three accept one. A feature that only fires inside a season window is
+  untestable until its clock is injectable, so wiring the override is part of
+  building it, not a follow-up.

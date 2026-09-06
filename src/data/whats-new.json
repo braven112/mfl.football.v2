@@ -1,5 +1,29 @@
 [
   {
+    "id": "sunday-ticket-live-scoring",
+    "date": "2026-09-06",
+    "category": "enhancement",
+    "icon": "goals",
+    "leagues": [
+      "theleague",
+      "afl"
+    ],
+    "excludeFromHero": true,
+    "title": "Sunday Ticket Stopped Clocking Out At Kickoff",
+    "link": "/sunday-ticket",
+    "linkLabel": "Open Sunday Ticket",
+    "summary": "The multiview board now keeps going once the games start: every player on it shows his live fantasy points instead of a projection, and your own matchup sits up top with both crests and both scores — in every league you play in, on one page.",
+    "description": [
+      "<a href=\"/sunday-ticket\">Sunday Ticket</a> had one job and it did it beautifully for about four hours a week. It read every league you're in, worked out which four games had the most of your starters on the field, and told you what to put on the multiview. Then at 10:00 AM Pacific it put up a banner pointing at <a href=\"/live-scoring\">Live Scoring</a> and effectively closed for the afternoon — right at the moment anybody actually cared.",
+      "It doesn't do that any more. Every player row on the board now carries his <strong>live fantasy points</strong> in that league's scoring, and each league's running total sits above its own group. Sit a guy in TheLeague and start him in the AFL and you'll see both numbers, side by side, counting differently — because they are different leagues and they always were.",
+      "Above the board, your own game. One card per league, your crest against your opponent's, both live scores, and how many starters each of you still has to play. If you're in both leagues you're watching two matchups on one page instead of two tabs. Doubleheader week gets two cards, because of course it does.",
+      "The numbers refresh themselves about once a minute while games are being played and then back off once everything's final, and the little <em>Updated</em> pill tells you when the board last actually heard from MFL — a board that says \"live\" and hasn't been confirmed since noon is not live, and now it says so. Lose your connection mid-afternoon and the scores you already have stay put rather than blanking out.",
+      "One deliberate omission: leagues from outside this site still show projections only. We can read your rosters there, but not their live scoring — those cards say <em>Projections only</em> rather than quietly showing you zeroes. TheLeague, the AFL and Best Ball are all live. And <a href=\"/live-scoring\">Live Scoring</a> is still the deep cut when you want box scores and the scoring ticker; Sunday Ticket is now the wide shot."
+    ],
+    "image": "sunday-ticket-live.webp",
+    "imageAlt": "The Sunday Ticket board mid-season: a matchup card showing Pacific Pigskins 76.6 against Gridiron Geeks 109.2 with both team crests, an Updated pill beneath it, and the early-window game boxes below showing live fantasy points beside each player."
+  },
+  {
     "id": "sunday-ticket-uk-mexico",
     "date": "2026-09-06",
     "category": "enhancement",
@@ -881,27 +905,5 @@
       "theleague",
       "afl"
     ]
-  },
-  {
-    "id": "light-bye-week-division-rule",
-    "date": "2026-08-23",
-    "title": "The Schedule Is Graded Now, Not Just Explained",
-    "summary": "The scheduling rules are goals now — ranked, and scored against the season they actually produced. Every release page shows how that year did on each one, because the NFL moves the bye calendar and the same goal is easy one year and impossible the next. Plus a new goal for 2027.",
-    "description": [
-      "A list of rules with no outcomes is a list of promises, and this one kept looking like a schedule breaking them. It is not. The league does not control the NFL’s bye calendar, so the same goal is trivial one year and unreachable the next — and a page that never says which is which reads as an accusation.",
-      "So they are goals, they are ranked, and every season is graded on <a href=\"/schedule-release\">the schedule release page</a> against the ones that were in force when it was drawn. Each goal now carries a verdict: MET, AS FAR AS THE CALENDAR ALLOWED, NOT ACHIEVABLE THIS YEAR, or OPTIMISED for the soft ones where inventing a pass mark would be less honest than showing the number. The AFL’s 2026 schedule scores eight met and two optimised. The League’s scores six met, two partial, two optimised — and the two partials are things the calendar decided, not things anyone got wrong.",
-      "Top of the list, and it is not close: no doubleheader lands on an NFL bye week. A doubleheader pays the bye penalty twice. In a year when no league-wide week works, the commissioner has staggered doubleheaders franchise by franchise so each team plays its two games in a week its own roster is whole — a last resort, built by hand, and still better than the alternative. Next is getting division games off bye weeks, which the AFL cannot fully do and The League can only do by giving up its all-division finish.",
-      "New for 2027, and <a href=\"/rules#schedule\">written into the constitution</a> already: the division games that cannot dodge a bye week take the LIGHTEST bye weeks — ideally ones with only two NFL teams out instead of six. Replayed over the last five seasons it improves three of them, 2024 by more than half.",
-      "The <a href=\"/schedule-release\">2026 schedules</a> are not re-drawn — they are locked and being played. They are graded against the ten goals that existed when they were made, and the new one is listed separately as adopted afterwards. Every goal is the same in both leagues; only the outcomes differ."
-    ],
-    "category": "enhancement",
-    "icon": "calendar-2",
-    "excludeFromHero": true,
-    "leagues": [
-      "theleague",
-      "afl"
-    ],
-    "image": "schedule-goal-scorecard.webp",
-    "imageAlt": "The AFL Schedule Release page. Under the heading 'The goals, ranked — and how 2026 did', ten numbered cards each show a goal, a coloured tier stripe and label, and a verdict chip. Examples: 'No doubleheader falls on an NFL bye week' with MET — Weeks 1, 2, 12, none with an NFL bye; 'Division games take every bye-free slot the format leaves them' with MET — 36 of 120 division games (30%) fall on a bye week, every one forced by the format. Two goals are marked OPTIMISED rather than met or missed. A dashed box at the bottom reads 'Adopted since this schedule was drawn' and lists the lightest-bye-week goal as applying from 2027."
   }
 ]

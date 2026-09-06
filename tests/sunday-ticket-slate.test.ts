@@ -40,6 +40,7 @@ const league = (leagueId: string, players: ReturnType<typeof player>[], extra: P
   franchiseId: '0001',
   franchiseName: 'Pacific Pigskins',
   lineupResolved: true,
+  liveSupported: true,
   players,
   ...extra,
 });
