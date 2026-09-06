@@ -1,12 +1,13 @@
 ---
 slug: fa-actions-waiver-priority
-status: open
+status: shipped
 severity: P1
 opened: 2026-09-05
 hotfix_pr: https://github.com/braven112/mfl.football.v2/pull/974
 hotfix_sha: 2e6ac2b
 followup_issue: 975
-followup_pr:
+followup_pr: https://github.com/braven112/mfl.football.v2/pull/981
+shipped: 2026-09-06
 followup_session: session_019nP8dJFuVN7jZWXmmx3sDn
 ---
 
