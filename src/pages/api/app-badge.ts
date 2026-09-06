@@ -31,7 +31,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { getAuthUser } from '../../utils/auth';
 import { json, JSON_HEADERS_NO_STORE } from '../../utils/api-response';
-import { getLeagueById, DEFAULT_LEAGUE, type LeagueDefinition } from '../../config/leagues';
+import { getLeagueById, type LeagueDefinition } from '../../config/leagues';
 import { getLeagueYearForMflId } from '../../utils/league-year';
 import { mflFetch } from '../../utils/mfl-fetch';
 import { buildMflExportUrl } from '../../utils/mfl-url';
@@ -221,7 +221,18 @@ export const GET: APIRoute = async ({ request }) => {
     return json({ count: 0, parts: EMPTY_PARTS }, 200, headers);
   }
 
-  const league = getLeagueById(user.leagueId ?? '') ?? DEFAULT_LEAGUE;
+  // Fail CLOSED on a league we don't recognize, the same way every other
+  // owner-scoped route does (src/utils/... / api/watch-list.ts). Falling back
+  // to the default league would compute — and CACHE — TheLeague's counts for a
+  // session that is not TheLeague's, and because both leagues have a franchise
+  // 0001 that lands on a real franchise rather than erroring. A 401 also leaves
+  // whatever is on the icon alone, which beats inventing a number we cannot
+  // actually resolve.
+  const league = user.leagueId ? getLeagueById(user.leagueId) : null;
+  if (!league) {
+    return json({ error: 'This session has no recognized league.' }, 401, headers);
+  }
+
   const franchiseId = user.franchiseId;
   const cacheKey = appBadgeCacheKey(league.id, franchiseId);
 
