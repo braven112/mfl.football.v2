@@ -32,6 +32,8 @@
  * Runs BEFORE `pnpm install`, so it uses Node builtins only.
  */
 
+import { pathToFileURL } from 'url';
+
 /** Vercel's exit codes. Inverted on purpose — see the header. */
 export const BUILD = 1;
 export const SKIP = 0;
@@ -100,8 +102,14 @@ export async function decide(env = process.env, fetchImpl = globalThis.fetch) {
 }
 
 // CLI. Guarded so importing this module for tests does not exit the process.
+//
+// pathToFileURL, NOT `file://` + argv[1]: import.meta.url is percent-encoded, so
+// a repo path containing a space (or any character needing escaping) makes the
+// naive comparison false. That would skip the CLI block and exit 0 — which
+// Vercel reads as IGNORE, silently cancelling every deployment including
+// production. The one fail-CLOSED path in a fail-open script.
 const invokedDirectly =
-  process.argv[1] && import.meta.url === `file://${process.argv[1]}`;
+  process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href;
 
 if (invokedDirectly) {
   const { code, reason } = await decide();

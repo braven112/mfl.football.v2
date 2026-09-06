@@ -11,6 +11,10 @@
  */
 
 import { describe, it, expect } from 'vitest';
+import { execFileSync } from 'child_process';
+import { mkdtempSync, copyFileSync, rmSync } from 'fs';
+import { tmpdir } from 'os';
+import { join } from 'path';
 import { decide, BUILD, SKIP } from '../scripts/vercel-ignore-build.mjs';
 
 /** Minimal preview env with everything the PR lookup needs. */
@@ -115,5 +119,38 @@ describe('fail open', () => {
   ])('builds when the env is missing %s', async (_label, overrides) => {
     const { code } = await decide(previewEnv(overrides), stubFetch([]));
     expect(code).toBe(BUILD);
+  });
+});
+
+describe('the CLI guard must not fail closed', () => {
+  /**
+   * import.meta.url is percent-encoded; `file://` + argv[1] is not. Comparing
+   * them naively is false for any path needing escaping, which skips the CLI
+   * block and exits 0 — and Vercel reads 0 as IGNORE. That is the one
+   * fail-CLOSED path in a fail-open script: it would silently cancel every
+   * deployment, production included. Hence pathToFileURL, and hence this test
+   * running the script from a directory with a space in its name.
+   */
+  it('still BUILDs when run from a path containing a space', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'pre build '));
+    try {
+      const script = join(dir, 'vercel-ignore-build.mjs');
+      copyFileSync('scripts/vercel-ignore-build.mjs', script);
+
+      let code = 0;
+      try {
+        execFileSync(process.execPath, [script], {
+          env: { ...process.env, VERCEL_ENV: 'production' },
+          encoding: 'utf8',
+        });
+      } catch (err) {
+        code = (err as { status: number }).status;
+      }
+
+      // 1 = proceed with the build. A 0 here means the guard fell through.
+      expect(code).toBe(1);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
   });
 });

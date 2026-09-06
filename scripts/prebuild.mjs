@@ -36,6 +36,7 @@
 
 import { exec, execSync } from 'child_process';
 import { readFileSync } from 'fs';
+import { pathToFileURL } from 'url';
 
 const SEQUENTIAL = [
   { name: 'build:styles', cmd: 'pnpm run build:styles' },
@@ -106,16 +107,12 @@ const PARALLEL = [
 ];
 
 /**
- * The files whose contents decide what a skippable step would produce, derived
- * from the steps themselves rather than hand-listed — add a step and its script
- * is watched automatically, which a prefix list silently would not do (the
- * first version of this missed prebuild.mjs itself).
- *
- * Each step's cmd is one or more `pnpm run <name>`; package.json resolves each
- * to `node scripts/<file>.mjs`. Plus scripts/lib/, which every one of them
- * imports from, and this orchestrator.
+ * Scripts whose contents decide what a skippable step produces, derived from the
+ * steps themselves rather than hand-listed — add a step and its script is
+ * watched automatically, which a prefix list silently would not do (the first
+ * version of this missed prebuild.mjs itself).
  */
-const pipelineFiles = () => {
+export const pipelineScripts = () => {
   const { scripts = {} } = JSON.parse(readFileSync('package.json', 'utf8'));
   const files = new Set(['scripts/prebuild.mjs']);
 
@@ -130,40 +127,64 @@ const pipelineFiles = () => {
 };
 
 /**
- * True when the diff touches the data pipeline itself. Such a PR must run the
- * full prebuild, or its preview renders the OLD derived files and the change
- * looks like it did nothing.
+ * True when a changed file could alter what a skipped step would have written.
  *
- * Vercel clones shallow, so the base ref may not exist locally. Every failure
- * here resolves to "run everything", never to "skip".
+ * Three shapes, because the scripts are only the entry points:
+ *   - the derived script set above, plus this orchestrator;
+ *   - scripts/lib/, which they all import from;
+ *   - any .mjs under src/. That is exactly the node-shared surface the compute
+ *     scripts pull their real logic from — owner-tenures, division-strength,
+ *     playoff-entry-brackets, leagues-data and nine others. Pages are .astro
+ *     and .ts and cannot reach a derived file, so this stays narrow (34 files)
+ *     while covering the whole dependency.
  */
-const touchesDataPipeline = () => {
-  const base = process.env.VERCEL_GIT_PREVIOUS_SHA || 'origin/main';
+export const isPipelineFile = (file, scripts = pipelineScripts()) =>
+  scripts.has(file) ||
+  file.startsWith('scripts/lib/') ||
+  (file.startsWith('src/') && file.endsWith('.mjs'));
+
+/**
+ * Files changed on this branch relative to main, or null if that cannot be
+ * determined — in which case the caller must run everything.
+ *
+ * Compared against origin/main, NOT VERCEL_GIT_PREVIOUS_SHA. That variable is
+ * the last successful DEPLOYMENT, so on a branch's second push the diff covers
+ * only that push: a pipeline change made in push 1 would go slim from push 2
+ * onward, previewing against stale derived files. Vercel clones shallow, so
+ * main is fetched at depth 1 first, and the comparison is two-dot (no merge
+ * base exists in a shallow clone) — that over-reports by including what main
+ * moved on, which errs toward FULL.
+ */
+export const changedVsMain = (runner = execSync) => {
+  const git = (cmd) => runner(cmd, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] });
   try {
-    const changed = execSync(`git diff --name-only ${base}...HEAD`, {
-      encoding: 'utf8',
-      stdio: ['ignore', 'pipe', 'ignore'],
-    });
-    const watched = pipelineFiles();
-    return changed
+    try {
+      git('git rev-parse --verify origin/main');
+    } catch {
+      git('git fetch --depth=1 origin main:refs/remotes/origin/main');
+    }
+    return git('git diff --name-only origin/main HEAD')
       .split('\n')
       .map((f) => f.trim())
-      .some((f) => f.startsWith('scripts/lib/') || watched.has(f));
+      .filter(Boolean);
   } catch {
-    // No base ref, shallow clone, not a repo — assume it did.
-    return true;
+    return null;
   }
 };
 
-const slimReason = (() => {
-  if (process.env.VERCEL_ENV !== 'preview') return null;
-  if (process.env.PREBUILD_FULL === '1') return null;
-  if (touchesDataPipeline()) return null;
+/**
+ * Why this build is slim, or null to run everything.
+ *
+ * Every uncertain case resolves to FULL: not a preview, an explicit override,
+ * an unresolvable diff, or a diff that touches the pipeline.
+ */
+export const resolveSlimReason = (env = process.env, changed = changedVsMain()) => {
+  if (env.VERCEL_ENV !== 'preview') return null;
+  if (env.PREBUILD_FULL === '1') return null;
+  if (changed === null) return null;
+  if (changed.some((f) => isPipelineFile(f))) return null;
   return 'preview build — reading committed data artifacts';
-})();
-
-/** Drop the steps this build does not need to run. */
-const applicable = (steps) => (slimReason ? steps.filter((s) => !s.previewSkip) : steps);
+};
 
 const run = (label, cmd) => {
   const start = Date.now();
@@ -176,7 +197,12 @@ const run = (label, cmd) => {
   }
 };
 
+async function main() {
 const totalStart = Date.now();
+
+const slimReason = resolveSlimReason();
+/** Drop the steps this build does not need to run. */
+const applicable = (steps) => (slimReason ? steps.filter((s) => !s.previewSkip) : steps);
 
 const sequential = applicable(SEQUENTIAL);
 const parallel = applicable(PARALLEL);
@@ -219,3 +245,11 @@ await Promise.all(
   )
 );
 console.log(`[prebuild] Done in ${Date.now() - totalStart}ms`);
+}
+
+// Only run when executed directly, so tests can import the decision helpers.
+// pathToFileURL, not `file://` + argv[1] — import.meta.url is percent-encoded,
+// so a repo path with a space breaks a naive comparison.
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  await main();
+}

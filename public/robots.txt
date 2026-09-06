@@ -7,50 +7,126 @@
 # Both apex domains (theleague.us, afl-fantasy.com) and the /theleague/ and
 # /afl-fantasy/ prefixed forms serve the same pages, so each rule is listed in
 # both shapes.
+#
+# EVERY GROUP REPEATS THE FULL RULE SET. Per RFC 9309 section 2.2.1 a crawler
+# obeys only the ONE most specific group that matches its token — it does not
+# inherit from `*`. An earlier version of this file gave the AI crawlers a group
+# containing only Crawl-delay, which meant those six were the only agents on the
+# internet allowed to crawl /api/ and all ~496 rivalry pages per league: the
+# exact opposite of the intent. Adding a bot below means copying the whole block.
+#
+# /api/og/ is Allow'd ahead of the /api/ block: it serves the og:image for every
+# Schefter post (src/utils/schefter-feed.ts:190), and a robots-respecting
+# unfurler that skips it drops the card. Longest-match wins, so the Allow beats
+# the Disallow for that prefix.
 
 User-agent: *
-
-# API surface — never useful to index, always a function invocation.
+Allow: /api/og/
 Disallow: /api/
-
-# Rivalry pages are every ordered pair of franchises: ~496 per league, and a
-# crawler will happily walk all of them.
 Disallow: /rivalries/
 Disallow: /theleague/rivalries/
 Disallow: /afl-fantasy/rivalries/
-
-# Mock-draft sessions are ephemeral and per-user. Indexing them is meaningless
-# and each one renders a full draft board.
 Disallow: /draft/mock/
 Disallow: /theleague/draft/mock/
 Disallow: /afl-fantasy/draft/mock/
 Disallow: /mock-draft/
 Disallow: /best-ball-1/mock-draft/
-
-# Owner-scoped and account pages.
 Disallow: /preferences
 Disallow: /login
 Disallow: /logout
 
-# Everything else — standings, rosters, franchises, owners, Schefter, history,
-# the pecking order (which is prerendered and therefore cheap) — stays open.
-
-# The AI crawlers are the ones that sweep hardest. public/llms.txt already tells
-# them what this site is; they do not need to re-render every page to find out.
 User-agent: GPTBot
 Crawl-delay: 10
+Allow: /api/og/
+Disallow: /api/
+Disallow: /rivalries/
+Disallow: /theleague/rivalries/
+Disallow: /afl-fantasy/rivalries/
+Disallow: /draft/mock/
+Disallow: /theleague/draft/mock/
+Disallow: /afl-fantasy/draft/mock/
+Disallow: /mock-draft/
+Disallow: /best-ball-1/mock-draft/
+Disallow: /preferences
+Disallow: /login
+Disallow: /logout
 
 User-agent: ClaudeBot
 Crawl-delay: 10
+Allow: /api/og/
+Disallow: /api/
+Disallow: /rivalries/
+Disallow: /theleague/rivalries/
+Disallow: /afl-fantasy/rivalries/
+Disallow: /draft/mock/
+Disallow: /theleague/draft/mock/
+Disallow: /afl-fantasy/draft/mock/
+Disallow: /mock-draft/
+Disallow: /best-ball-1/mock-draft/
+Disallow: /preferences
+Disallow: /login
+Disallow: /logout
 
 User-agent: CCBot
 Crawl-delay: 10
-
-User-agent: Bytespider
-Crawl-delay: 30
+Allow: /api/og/
+Disallow: /api/
+Disallow: /rivalries/
+Disallow: /theleague/rivalries/
+Disallow: /afl-fantasy/rivalries/
+Disallow: /draft/mock/
+Disallow: /theleague/draft/mock/
+Disallow: /afl-fantasy/draft/mock/
+Disallow: /mock-draft/
+Disallow: /best-ball-1/mock-draft/
+Disallow: /preferences
+Disallow: /login
+Disallow: /logout
 
 User-agent: PerplexityBot
 Crawl-delay: 10
+Allow: /api/og/
+Disallow: /api/
+Disallow: /rivalries/
+Disallow: /theleague/rivalries/
+Disallow: /afl-fantasy/rivalries/
+Disallow: /draft/mock/
+Disallow: /theleague/draft/mock/
+Disallow: /afl-fantasy/draft/mock/
+Disallow: /mock-draft/
+Disallow: /best-ball-1/mock-draft/
+Disallow: /preferences
+Disallow: /login
+Disallow: /logout
+
+User-agent: Bytespider
+Crawl-delay: 30
+Allow: /api/og/
+Disallow: /api/
+Disallow: /rivalries/
+Disallow: /theleague/rivalries/
+Disallow: /afl-fantasy/rivalries/
+Disallow: /draft/mock/
+Disallow: /theleague/draft/mock/
+Disallow: /afl-fantasy/draft/mock/
+Disallow: /mock-draft/
+Disallow: /best-ball-1/mock-draft/
+Disallow: /preferences
+Disallow: /login
+Disallow: /logout
 
 User-agent: Amazonbot
 Crawl-delay: 30
+Allow: /api/og/
+Disallow: /api/
+Disallow: /rivalries/
+Disallow: /theleague/rivalries/
+Disallow: /afl-fantasy/rivalries/
+Disallow: /draft/mock/
+Disallow: /theleague/draft/mock/
+Disallow: /afl-fantasy/draft/mock/
+Disallow: /mock-draft/
+Disallow: /best-ball-1/mock-draft/
+Disallow: /preferences
+Disallow: /login
+Disallow: /logout
