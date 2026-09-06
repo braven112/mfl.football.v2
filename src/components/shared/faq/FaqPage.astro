@@ -98,6 +98,11 @@ const knowsAboutList = joinList(knowsAbout);
  * here. "Where the record lives" and "where you can do the thing" are two
  * different questions and the table was answering the second with the first.
  */
+/** Only name the taxi squad in a league that HAS one — the AFL does not. */
+const rosterMovesJob = leagueHasFeature(leagueSlug, 'taxiSquad')
+  ? 'Roster moves — cuts, IR, taxi'
+  : 'Roster moves — cuts and IR';
+
 const officialRecordJob = leagueHasFeature(leagueSlug, 'contracts')
   ? 'The official record — rosters & contracts'
   : 'The official record — rosters';
@@ -108,11 +113,11 @@ const rosterStoreSentence = leagueHasFeature(leagueSlug, 'contracts')
 /** Where each job is done today. `where` drives the column styling. */
 const split: Array<{ job: string; where: 'mfl' | 'here' | 'both'; note: string }> = [
   { job: 'Setting your lineup', where: 'both', note: 'Either works. Ours is built around our starting requirements; MFL is the one that records it.' },
-  { job: 'Roster moves — cuts, IR, taxi', where: 'both', note: 'Do them here or on MFL. Ours are sent straight to MFL, so the move lands in the same place either way.' },
+  { job: rosterMovesJob, where: 'both', note: 'Do them here or on MFL. Ours are sent straight to MFL, so the move lands in the same place either way.' },
   { job: 'Trades, waivers, adds/drops', where: 'both', note: 'Propose, accept, withdraw and claim right here — it goes to MFL as if you had typed it there. MFL still processes and records it.' },
   { job: 'Official scoring', where: 'mfl', note: 'MFL scores every game. We read those numbers — we never compute our own.' },
   { job: officialRecordJob, where: 'mfl', note: 'Whatever you did and wherever you did it, this is the copy that counts. If we ever disagree with MFL, MFL is right.' },
-  { job: 'Live scoring on Sunday', where: 'here', note: 'Real-time scores, win probability, and who is still playing — built for a phone on the couch.' },
+  { job: 'Live scoring on Sunday', where: 'both', note: 'MFL has a live scoreboard too. Ours adds win probability and who is still to play, built for a phone on the couch.' },
   { job: 'Standings & playoff picture', where: 'both', note: 'MFL owns the tiebreakers. We show the same standings with the playoff math done for you.' },
   { job: 'Reading the rules', where: 'here', note: 'The constitution, searchable, plus Roger — who answers rules questions in plain English.' },
   { job: 'Draft night', where: 'both', note: 'The draft runs on MFL. The board, the queue, and the broadcast view are ours.' },
