@@ -146,8 +146,12 @@ const { config } = Astro.props;
           // be a plain "TE · WSH" text line, which read as a different kind of
           // thing than the table it sits above.
           //
+          // ONE fallback name, used by the lockup and by the delete confirm's
+          // data attribute alike — a claim whose player is missing from the map
+          // showed "Player 15913" in the row and "this player" in the confirm.
+          const addName = c.addName || `Player ${c.addPlayerId}`;
           const cell = buildPlayerCellHTML({
-            name: c.addName ?? `Player ${c.addPlayerId}`,
+            name: addName,
             headshot: c.addHeadshot,
             position: c.addPosition,
             nflTeam: c.addNflTeam,
@@ -171,7 +175,7 @@ const { config } = Astro.props;
           // rather than leaving an unexplained ordinal. The name is carried as a
           // data attribute because the confirm prompt below must not pick up the
           // bid badge that now lives inside the name element.
-          return `<li class="wcp__item" data-round="${esc(c.round)}" data-add="${esc(c.addPlayerId)}" data-name="${esc(c.addName ?? '')}">
+          return `<li class="wcp__item" data-round="${esc(c.round)}" data-add="${esc(c.addPlayerId)}" data-name="${esc(addName)}">
             <span class="wcp__rank" title="Priority within round ${esc(c.round)}">${i + 1}</span>
             <div class="wcp__who">
               ${cell}

@@ -213,6 +213,61 @@ describe('WaiverClaimsPanel — injected-row styles', () => {
 });
 
 /**
+ * The Transaction Hub's Waiver Claims screen lists the SAME claims, read from
+ * the SAME endpoint, as the panel above — and it kept hand-rolling the player
+ * as `name + "TE · WSH"` text for a full release after the panel adopted the
+ * shared lockup, while already importing `buildPlayerCellHTML` for the trade
+ * screen two views over. Two surfaces rendering one record is exactly the drift
+ * this file exists to stop, so pin BOTH ends: the builder in the script, and the
+ * global stylesheet its injected markup needs.
+ */
+describe('Transaction Hub waiver claims — one lockup, shared with the panel', () => {
+  const HUB_SCRIPT = 'src/scripts/transaction-hub.ts';
+  const HUB_MODAL = 'src/components/theleague/TransactionHubModal.astro';
+
+  it('builds the claimed player with the shared lockup, not hand-rolled text', () => {
+    const src = read(HUB_SCRIPT);
+    expect(src).toContain('buildPlayerCellHTML');
+    expect(
+      src,
+      `${HUB_SCRIPT} must render a filed claim's player with buildPlayerCellHTML ` +
+        `(className: 'thm-claim__cell') — the same builder ` +
+        `src/components/shared/WaiverClaimsPanel.astro uses, so the two views of one ` +
+        `claim cannot drift apart.`
+    ).toContain("className: 'thm-claim__cell'");
+    // The classes the hand-rolled name/meta text used. Their return is the
+    // regression this test names.
+    for (const dead of ['thm-claim__add', 'thm-claim__meta']) {
+      expect(src, `${HUB_SCRIPT} re-grew the hand-rolled .${dead} lockup`).not.toContain(dead);
+    }
+  });
+
+  it('imports player-cell.css from the modal frontmatter — its rows are injected', () => {
+    const frontmatter = read(HUB_MODAL).slice(0, read(HUB_MODAL).indexOf('\n---', 3));
+    expect(frontmatter, `${HUB_MODAL} must import styles/player-cell.css`).toContain(
+      'styles/player-cell.css'
+    );
+  });
+
+  it('styles the injected claim classes with :global()', () => {
+    const src = read(HUB_MODAL);
+    const styleBlock = src.slice(src.indexOf('<style'), src.lastIndexOf('</style>'));
+    for (const cls of ['thm-claim__cell', 'thm-claim__drop', 'thm-claim__bid']) {
+      const selectors = styleBlock
+        .split('\n')
+        .filter((line) => line.includes(`.${cls}`) && line.includes('{'))
+        .filter((line) => !line.trim().startsWith('*'));
+      expect(selectors.length, `${HUB_MODAL} has no rule for .${cls}`).toBeGreaterThan(0);
+      expect(
+        selectors.filter((line) => !line.includes(':global(')),
+        `Scoped rules for .${cls} never match — the claim rows are injected via innerHTML:\n  ` +
+          selectors.join('\n  ')
+      ).toEqual([]);
+    }
+  });
+});
+
+/**
  * The same rule, for a COMPONENT that builds its own rows.
  *
  * WaiverPriorityModal renders a shell (header, close button, sign-in gate) from
