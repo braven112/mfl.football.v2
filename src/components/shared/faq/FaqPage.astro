@@ -24,6 +24,7 @@
  */
 import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
 import { resolveLeaguePath } from '../../../utils/nav-utils';
+import { getLeagueYearForSlug } from '../../../utils/league-year';
 import { getLeagueBySlug, leagueHasFeature } from '../../../config/leagues';
 import type { CanonicalLeagueSlug } from '../../../config/leagues';
 
@@ -41,10 +42,17 @@ const hide = Astro.locals.hideLeaguePrefix ?? false;
 const path = (p: string) => resolveLeaguePath(`/${leagueSlug}${p}`, hide);
 
 // The league's own MFL home. Built from the registry — never a hardcoded host
-// or id (CLAUDE.md, "League registry"). The year segment is the CURRENT MFL
-// league year, but MFL redirects a stale year to the live one, so the link
-// does not need the rollover clocks to stay correct.
-const mflHome = `https://${league.mflHost}/${new Date().getFullYear()}/home/${league.id}`;
+// or id (CLAUDE.md, "League registry").
+//
+// The year segment MUST come from the league's own rollover clock. It was
+// `new Date().getFullYear()`, on the reasoning that MFL redirects a stale year
+// forward — which is true, and irrelevant: the calendar year is not stale, it
+// is EARLY. TheLeague's new MFL league is created Feb 14 and the AFL's on
+// June 1, so from Jan 1 the calendar year names a league that does not exist
+// yet, and every "on MyFantasyLeague" link on this page 404s — for six weeks
+// in TheLeague and FIVE MONTHS in the AFL. `Header.astro` carries a comment
+// about this exact trap; this is the same fix.
+const mflHome = `https://${league.mflHost}/${getLeagueYearForSlug(leagueSlug)}/home/${league.id}`;
 
 /**
  * The league's OWN rules vocabulary, in one place.
