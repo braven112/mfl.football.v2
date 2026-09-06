@@ -24,7 +24,6 @@
 import {
   COUNTRY_CODES,
   DEFAULT_COUNTRY,
-  countryTimeZones,
   parseCountry,
   type CountryCode,
   type KickoffZone,
@@ -255,33 +254,48 @@ export function zoneSummary(prefs: ViewerPreferences): string {
 export { COUNTRY_CODES };
 
 /**
- * A representative kickoff for the preview on the preferences page: the
- * coming Sunday at 1:00 PM ET, the window every NFL Sunday starts with.
- * Built from ET parts rather than a UTC offset so it stays 1pm through the
- * November DST flip, and returned as an epoch in seconds — the unit
- * `formatKickoffZones` takes.
+ * The offset `zone` is running at a given instant, in milliseconds. Derived by
+ * formatting the instant IN the zone and reading the wall clock back, which is
+ * the only way to get it right across a DST boundary — a fixed offset per zone
+ * is wrong for half the year.
  */
-export function nextSundayKickoffEpoch(now: Date = new Date()): number {
-  // ET's offset on the day in question; `now`'s is close enough for a sample
-  // and the ± hour never moves a 1pm kickoff across a day boundary at home.
-  const etParts = new Intl.DateTimeFormat('en-US', {
-    timeZone: 'America/New_York',
+function zoneOffsetMs(instant: number, zone: string): number {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: zone,
     year: 'numeric', month: '2-digit', day: '2-digit',
     hour: '2-digit', minute: '2-digit', second: '2-digit',
-    weekday: 'short', hour12: false,
+    hour12: false,
+  }).formatToParts(new Date(instant));
+  const n = (type: string) => Number(parts.find((p) => p.type === type)?.value ?? '0');
+  // `hour` comes back as 24 at midnight under hour12:false in some ICU builds.
+  const wall = Date.UTC(n('year'), n('month') - 1, n('day'), n('hour') % 24, n('minute'), n('second'));
+  return wall - instant;
+}
+
+/**
+ * A representative kickoff for the preview on the preferences page: the coming
+ * Sunday at 1:00 PM ET, the window every NFL Sunday starts with. Returned as
+ * an epoch in seconds — the unit `formatKickoffZones` takes.
+ *
+ * Solved rather than offset-shifted: the ET offset on the SUNDAY is what
+ * matters, not today's. In a DST-transition week those differ by an hour, and
+ * an offset borrowed from `now` printed the preview as "12:00 PM ET" under a
+ * caption that says 1:00 PM. Two passes, because the first guess can land on
+ * the wrong side of the transition; 1pm is never the ambiguous hour itself.
+ */
+export function nextSundayKickoffEpoch(now: Date = new Date()): number {
+  const ET = 'America/New_York';
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: ET, year: 'numeric', month: '2-digit', day: '2-digit', weekday: 'short',
   }).formatToParts(now);
-  const part = (type: string) => etParts.find((p) => p.type === type)?.value ?? '0';
+  const part = (type: string) => parts.find((p) => p.type === type)?.value ?? '0';
   const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
   const dow = Math.max(0, DAYS.indexOf(part('weekday')));
-  // The ET wall clock, expressed as a UTC instant, tells us the zone's offset.
-  const etWall = Date.UTC(
-    Number(part('year')), Number(part('month')) - 1, Number(part('day')),
-    Number(part('hour')) % 24, Number(part('minute')), Number(part('second')),
-  );
-  const offsetMs = etWall - Math.floor(now.getTime() / 1000) * 1000;
   const daysAhead = dow === 0 ? 0 : 7 - dow;
-  const sundayNoonEt = Date.UTC(
-    Number(part('year')), Number(part('month')) - 1, Number(part('day')) + daysAhead, 13, 0, 0,
-  );
-  return Math.floor((sundayNoonEt - offsetMs) / 1000);
+
+  // The Sunday's 1pm ET wall clock, read as if it were UTC.
+  const wall = Date.UTC(Number(part('year')), Number(part('month')) - 1, Number(part('day')) + daysAhead, 13, 0, 0);
+  let instant = wall - zoneOffsetMs(wall, ET);
+  instant = wall - zoneOffsetMs(instant, ET);
+  return Math.floor(instant / 1000);
 }

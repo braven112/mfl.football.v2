@@ -43,8 +43,10 @@ import {
   hasPreferenceParams,
   preferencesFromCookies,
   preferencesFromParams,
+  resolveViewerPreferences,
   zoneParamFor,
 } from '../src/utils/viewer-preferences-page';
+import { getLeagueBySlug } from '../src/config/leagues';
 
 const REPO = resolve(__dirname, '..');
 
@@ -238,6 +240,69 @@ describe('URL params — the board chips and the picker form', () => {
   it('accepts a bare ?zone= for a plain link', () => {
     expect(preferencesFromParams(url('?country=US&zone=MT'), current)).toEqual({ country: 'US', zoneId: 'MT' });
   });
+
+  it('finds the group even when the country arrives lowercase', () => {
+    // The field name is built FROM the country, so an unparsed `ca` looks for
+    // `zone-ca`, misses the `zone-CA` the form sent, and silently drops the
+    // clock. The old cookie stored the country uppercase but a hand-typed or
+    // legacy link need not.
+    expect(preferencesFromParams(url(`?country=ca&${zoneParamFor('CA')}=PT`), current))
+      .toEqual({ country: 'CA', zoneId: 'PT' });
+  });
+});
+
+describe('resolveViewerPreferences — defaults are read, never pinned', () => {
+  // No Redis configured under vitest, so the account mirror always misses and
+  // these exercise the cookie / seed / default rungs.
+  const jar = () => {
+    const writes: Array<[string, string]> = [];
+    const values: Record<string, string> = {};
+    return {
+      writes,
+      values,
+      get: (name: string) => (name in values ? { value: values[name] } : undefined),
+      set: (name: string, value: string) => { writes.push([name, value]); values[name] = value; },
+    };
+  };
+  // From the registry — never the literal (tests/league-literal-guard.test.ts).
+  const wabbits = { leagueId: getLeagueBySlug('theleague')!.id, franchiseId: '0009' };
+  const at = (qs = '') => new URL(`https://x.test/theleague/sunday-ticket${qs}`);
+
+  it('serves a seeded owner their seed without writing it to the device', async () => {
+    const j = jar();
+    const { prefs } = await resolveViewerPreferences(at(), j, wabbits);
+    expect(prefs).toEqual({ country: 'CA', zoneId: 'PT' });
+    // Pinning it would freeze the device: the owner could change it on their
+    // laptop and this one would keep the old value for a year.
+    expect(j.writes).toEqual([]);
+  });
+
+  it('applies a country chip ON TOP of the seed, not on top of the defaults', async () => {
+    // The Wabbits clicking their own already-active Canada chip must not have
+    // their PT replaced by Canada's generic ET default.
+    const { prefs } = await resolveViewerPreferences(at('?country=CA'), jar(), wabbits);
+    expect(prefs).toEqual({ country: 'CA', zoneId: 'PT' });
+  });
+
+  it('writes the cookie only for an explicit choice', async () => {
+    const j = jar();
+    await resolveViewerPreferences(at('?country=AU'), j, wabbits);
+    expect(j.writes.map(([name]) => name)).toEqual([COUNTRY_COOKIE, ZONE_COOKIE]);
+    expect(j.values[ZONE_COOKIE]).toBe(DEFAULT_ZONE_IDS.AU);
+  });
+
+  it("lets the device's own choice outrank the seed", async () => {
+    const j = jar();
+    j.values[COUNTRY_COOKIE] = 'US';
+    j.values[ZONE_COOKIE] = 'CT';
+    const { prefs } = await resolveViewerPreferences(at(), j, wabbits);
+    expect(prefs).toEqual({ country: 'US', zoneId: 'CT' });
+  });
+
+  it('leaves a signed-out viewer on the defaults', async () => {
+    const { prefs } = await resolveViewerPreferences(at(), jar(), null);
+    expect(prefs).toEqual(DEFAULT_VIEWER_PREFERENCES);
+  });
 });
 
 describe('zoneSummary — the label on the board and the picker', () => {
@@ -265,6 +330,24 @@ describe('nextSundayKickoffEpoch — the picker preview', () => {
     expect(et(nextSundayKickoffEpoch(new Date('2026-12-16T05:00:00Z')))).toBe('Sun 1:00 PM');
     // Sunday itself resolves to today, not next week.
     expect(et(nextSundayKickoffEpoch(new Date('2026-09-06T18:00:00Z')))).toBe('Sun 1:00 PM');
+  });
+
+  it('holds through the weeks the clocks actually change', () => {
+    // The bug this pins: borrowing TODAY's ET offset and applying it to the
+    // coming Sunday is an hour wrong in exactly these two weeks, so the
+    // preview read "12:00 PM ET" / "2:00 PM ET" under a caption that says
+    // 1:00 PM. Both directions, from a weekday inside the transition week.
+    for (const day of ['2026-10-28', '2026-10-30', '2027-03-08', '2027-03-11']) {
+      expect(et(nextSundayKickoffEpoch(new Date(`${day}T17:00:00Z`))), day).toBe('Sun 1:00 PM');
+    }
+  });
+
+  it('lands on a real Sunday, not just a 1pm', () => {
+    for (const day of ['2026-09-06', '2026-09-09', '2026-10-28', '2027-03-08']) {
+      const d = new Date(nextSundayKickoffEpoch(new Date(`${day}T17:00:00Z`)) * 1000);
+      expect(new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', weekday: 'short' }).format(d), day)
+        .toBe('Sun');
+    }
   });
 });
 

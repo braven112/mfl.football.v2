@@ -8,19 +8,31 @@
  * session, none of which a story should pull in.
  *
  * Precedence, most explicit first:
- *   1. `?country=` / `?zones=` on the request — someone just chose.
+ *   1. `?country=` / `?zone=` on the request — someone just chose.
  *   2. The cookie on this device.
- *   3. The signed-in owner's Redis mirror (then written to the cookie, so the
- *      read happens once per device rather than once per render).
+ *   3. The signed-in owner's Redis mirror.
  *   4. A SEEDED default for owners we already know are not on the league's
- *      clock (`SEEDED_PREFERENCES`). Never written anywhere — it stays a live
- *      fallback until the owner chooses for themselves.
+ *      clock (`SEEDED_PREFERENCES`).
  *   5. The defaults — US, ET · PT — exactly what the board showed before
  *      preferences existed.
  *
  * The cookie beating the mirror is deliberate: a device is where "show me
  * Sydney time" is true, and an owner watching from a hotel in Chicago should
  * not have their laptop at home overwrite it on the next render.
+ *
+ * ONLY AN EXPLICIT CHOICE WRITES THE COOKIE. Levels 3-5 are defaults, and
+ * pinning a default to the device would freeze it: an owner whose phone merely
+ * READ their account value would keep it for a year after they changed it on
+ * their laptop, which is the opposite of the "follows you to your phone" the
+ * page promises. The cost is one Redis GET per render for a signed-in owner
+ * who has not chosen on this device — cheap next to what the board already
+ * reads, and it stops the moment they pick.
+ *
+ * The order is resolved ONCE, before the params are applied, because the
+ * params are a DELTA on it: `?country=CA` alone must keep the clock the owner
+ * already has. Reading only the cookie there meant a seeded owner clicking
+ * their own already-active country chip overwrote their seed with the
+ * generic default.
  *
  * WRITES ARE ROUTE-ONLY. `Astro.cookies.set()` from an imported component
  * runs after the response headers are committed and throws
@@ -32,6 +44,7 @@
 import { getLeagueById } from '../config/leagues';
 import {
   DEFAULT_VIEWER_PREFERENCES,
+  parseCountry,
   parseViewerPreferences,
   seededPreferencesFor,
   type ViewerPreferences,
@@ -87,7 +100,10 @@ export function hasPreferenceParams(url: URL): boolean {
 
 /** The preferences named by the URL, read against whatever is already stored. */
 export function preferencesFromParams(url: URL, current: ViewerPreferences): ViewerPreferences {
-  const country = url.searchParams.get('country') ?? current.country;
+  // PARSED, not raw: the field name is built from it, so `?country=ca` has to
+  // become `CA` here or `zone-ca` misses the group the form actually sent and
+  // the submitted clock is silently dropped.
+  const country = parseCountry(url.searchParams.get('country') ?? current.country);
   // A country change with no zone named re-defaults the clock, because the
   // old id belongs to the old country (`parseZoneSelection` drops it).
   // The picker submits every country's group; only the chosen country's
@@ -117,47 +133,40 @@ export interface ViewerPreferenceResolution {
  * Resolve the viewer's preferences and persist any explicit choice — the one
  * call a route makes.
  *
- * Route-only: it writes cookies. Safe to call on every request; the Redis
- * read happens only when the device has no cookie, and the Redis write only
- * when the URL carried a choice.
+ * Route-only: it writes cookies, and ONLY for an explicit choice (see the
+ * module note). Safe to call on every request; the Redis read happens only
+ * while the device has no cookie of its own, and the Redis write only when the
+ * URL carried a choice.
  */
 export async function resolveViewerPreferences(
   url: URL,
   cookies: CookieJar,
   user: PreferenceOwner | null | undefined,
 ): Promise<ViewerPreferenceResolution> {
-  const fromCookies = preferencesFromCookies(cookies);
   const bucket = ownerBucket(user);
+  // The base the params modify. Resolving it FIRST is what stops `?country=CA`
+  // alone from discarding the clock the owner already has, wherever it came
+  // from — their cookie, their account, or their seed.
+  const current = await readViewerPreferences(cookies, user);
 
-  if (hasPreferenceParams(url)) {
-    const chosen = preferencesFromParams(url, fromCookies ?? DEFAULT_VIEWER_PREFERENCES);
-    writePreferenceCookies(cookies, chosen);
-    const savedToAccount = bucket
-      ? await setStoredViewerPreferences(bucket.slug, bucket.franchiseId, chosen)
-      : false;
-    return { prefs: chosen, savedToAccount };
-  }
+  if (!hasPreferenceParams(url)) return { prefs: current, savedToAccount: false };
 
-  if (fromCookies) return { prefs: fromCookies, savedToAccount: false };
-
-  if (bucket) {
-    const stored = await getStoredViewerPreferences(bucket.slug, bucket.franchiseId);
-    if (stored) {
-      // Mirror it onto the device so the next render is a cookie read.
-      writePreferenceCookies(cookies, stored);
-      return { prefs: stored, savedToAccount: false };
-    }
-  }
-
-  // A seed is deliberately NOT written to the cookie: it is a better default,
-  // not a choice the owner made, so correcting it here still reaches them.
-  const seeded = bucket ? seededPreferencesFor(bucket.slug, bucket.franchiseId) : null;
-  return { prefs: seeded ?? DEFAULT_VIEWER_PREFERENCES, savedToAccount: false };
+  const chosen = preferencesFromParams(url, current);
+  writePreferenceCookies(cookies, chosen);
+  const savedToAccount = bucket
+    ? await setStoredViewerPreferences(bucket.slug, bucket.franchiseId, chosen)
+    : false;
+  return { prefs: chosen, savedToAccount };
 }
 
 /**
- * Read-only resolution for a route that must not write (a GET that is not the
- * owner's own action, a prerendered page). Same precedence, no side effects.
+ * The preferences in force, with NO side effects — cookie, then the owner's
+ * account mirror, then their seed, then the defaults.
+ *
+ * That is the whole precedence minus the URL, which is what makes it usable
+ * two ways: `resolveViewerPreferences` takes it as the base its params modify,
+ * and any page that only wants to RENDER the preference (a prerendered one, or
+ * a GET that is not the owner's own action) can call it directly.
  */
 export async function readViewerPreferences(
   cookies: Pick<CookieJar, 'get'>,
