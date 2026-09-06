@@ -5,6 +5,79 @@ Insights for the AFL homepage hero system (`src/utils/afl-hero-resolver.ts`,
 
 ---
 
+## 2026-09-06 - The feature hero headlined a constant; and the copy ran under the screenshot
+
+**Context:** Every AFL feature launch arrived under the same display line —
+`headline: 'FRESH ON THE'` / `accentWord: 'SITE.'`, hardcoded in
+`SLOT_VIEW.feature` — so the biggest type on the homepage said only that
+something had shipped, and the actual news lived in the summary underneath.
+
+### The two leagues were never symmetric here, and one path is dead code
+
+TheLeague has always led with the entry's own title, but **not** through the
+view object. Its fresh-feature state renders `FeatureCompositeHero`
+(`content.title`), gated by `showFeatureComposite` in `SeasonDailyHero.astro` —
+which short-circuits the `state.eventView` branch entirely. So
+`buildFeatureView` in `league-event-hero-view.ts` still builds a
+`'Fresh on the' / 'site.'` pair for TheLeague and **nothing ever renders it.**
+
+Editing that function to change TheLeague's feature hero produces no visible
+effect whatsoever. The AFL's copy of the string (`SLOT_VIEW.feature`) is the
+one that reaches a screen. Check which component the state actually renders
+before editing a view builder.
+
+### `resolveFeatureHeadline` — authored copy first, title split second
+
+`src/utils/whats-new-hero-headline.ts` resolves the pair:
+
+1. `heroHeadline` (+ optional `heroAccentWord`) on the What's New entry — copy
+   written FOR the display line. Preferred, because article titles run 26-54
+   chars where the condensed type wants ~20.
+2. Derived from `title`. The split follows the punctuation the author already
+   used, because these titles are written as sentences: a **closing sentence**
+   ≤24 chars becomes the accent ("TWENTY-FOUR TEAMS. ONE BALLOT." / "YOUR
+   CALL."), otherwise the last word — plus the word before it when the last one
+   is a weak function word, so the accent is never "IN." or "YOU."
+
+`heroAccentWord` without `heroHeadline` is deliberately ignored (half an
+authored pair reads as a bug), and a data guard in
+`tests/whats-new-data.test.ts` catches the orphan — otherwise the authored word
+silently never renders.
+
+### The content column ran under an OPAQUE screenshot frame
+
+`.afl-event-hero__shot` covers the right ~38% of the card and is not
+translucent. The content column was `max-width: 640px` — wider than the space
+left of the frame — so long copy simply disappeared behind it. The **summary
+was already losing its last few words** before any headline change; nobody
+noticed because every hand-written slot headline was a two-word shout and the
+summary's own 24rem cap mostly held.
+
+Two things that made the fix non-obvious:
+
+- **`max-width` on a content-box element excludes padding.** Capping the
+  column at the frame's left edge left it 46px short — the column's own
+  `clamp(1.5rem, 3vw, 2.75rem)` padding pushed the box back under the frame.
+  The cap needs `box-sizing: border-box` to mean the OUTER edge.
+- **The frame's geometry was two clamps in one rule.** Any cap computed from a
+  second copy drifts the moment the frame is resized, so `--ev-shot-w` and
+  `--ev-shot-right` are now tokens on `.afl-event-hero` read by both the frame
+  and the column's `max-width: min(640px, calc(100% - var(--ev-shot-w) -
+  var(--ev-shot-right)))`. Only while the frame is on screen — it is
+  `display: none` below 640px, where the column goes full width.
+
+The display type also steps down past 26 and 46 characters
+(`--long` / `--xlong`), measured on the rendered pair rather than guessed per
+caller, so a long derived headline shrinks instead of spilling past the card.
+Keep an authored pair at or under 26 characters and it renders at full size.
+
+**Verifying:** the feature slot is a per-visit pick from the fresh pool, not a
+daily-stable one, so repeated loads of `/afl-fantasy/?testDate=YYYY-MM-DD`
+cycle through every eligible entry — loop until you have seen each one rather
+than trying to force a specific pick.
+
+---
+
 ## 2026-09-05 - An upcoming countdown is filler: it pools with What's New, one slot each
 
 **Context:** With NFL kickoff five days out, the AFL homepage showed the
