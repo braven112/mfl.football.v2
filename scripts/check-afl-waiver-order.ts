@@ -25,8 +25,14 @@
  *     compare against, so it reports "not yet computable" and stops.
  * Neither is a failure. Only a genuine mismatch inside the pre-season window is.
  *
+ * WHO HEARS ABOUT IT: the league's admins, by push, under the `ops-league-setup`
+ * category — not the group chat. Re-entering the waiver order is a job exactly
+ * one person can do (it is a hand edit on MFL's csetup page), so posting it to
+ * everyone spent the chat's one daily automated post telling eleven owners
+ * about a task none of them can action.
+ *
  * Env:
- *   GROUPME_ROGER_BOT_ID   optional — posts the drift summary; skipped if unset
+ *   CRON_SECRET   required to push; unset logs the summary and sends nothing
  *
  * Usage:
  *   pnpm exec tsx scripts/check-afl-waiver-order.ts
@@ -37,7 +43,7 @@ import { getLeagueBySlug } from '../src/config/leagues-data.mjs';
 import { getAflLeagueYear } from '../src/utils/league-year';
 import { computeAflWaiverOrder } from '../src/utils/afl-waiver-order-source';
 import { compareAflWaiverOrder } from '../src/utils/afl-waiver-order';
-import { postToGroupMe } from './lib/groupme.mjs';
+import { sendOpsAlert } from './lib/ops-alert.mjs';
 
 const argv = process.argv.slice(2);
 const DRY_RUN = argv.includes('--dry-run');
@@ -134,12 +140,19 @@ const summary =
   `Fix by hand: ${league.mflHost}/${targetYear}/csetup?L=${league.id}&C=WAIVORD`;
 
 console.error(`\n${summary}`);
-await postToGroupMe({
-  botId: process.env.GROUPME_ROGER_BOT_ID,
-  text: summary,
+// The push carries the headline; the full per-franchise diff stays in the
+// Actions log above, which is where the fix gets made from anyway. A
+// notification body long enough to hold 24 rows is unreadable on a lock screen
+// and truncated by the OS regardless.
+await sendOpsAlert({
+  league,
+  category: 'ops-league-setup',
+  title: 'AFL waiver order has drifted',
+  body:
+    `${problems.length} franchise${problems.length === 1 ? '' : 's'} out of constitutional order `
+    + `for ${targetYear}. MFL drops waiver priority at the rollover and no API can set it back — `
+    + 'it needs a hand fix on csetup.',
+  tag: `ops-waiver-order-${targetYear}`,
   dryRun: DRY_RUN,
-  checkStatus: true,
-  onDryRun: (t: string) => console.log(`\n[dry-run] would post to GroupMe:\n${t}`),
-  onMissingBotId: () => console.log('\nGROUPME_ROGER_BOT_ID unset — GroupMe post skipped.'),
 });
 process.exit(1);

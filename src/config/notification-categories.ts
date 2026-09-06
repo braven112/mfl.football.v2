@@ -21,7 +21,7 @@
 
 import type { LeagueFeatures } from './leagues';
 
-export type NotificationGroupId = 'your-team' | 'owners-poll' | 'league-news' | 'live';
+export type NotificationGroupId = 'your-team' | 'owners-poll' | 'league-news' | 'live' | 'ops';
 
 export interface NotificationGroup {
   id: NotificationGroupId;
@@ -55,6 +55,21 @@ export interface NotificationCategory {
    * ON by default, for a poll it does not run.
    */
   requiresOwnersPoll?: true;
+  /**
+   * Only offered to — and only deliverable to — an admin/commissioner
+   * franchise (`adminFranchiseIds` in nav-config.json).
+   *
+   * These are the league's PLUMBING talking: a cron that died, an MFL setting
+   * that drifted. They used to go to the group chat, where they were noise for
+   * eleven owners and an action item for one. A separate gate from
+   * `requiresFeature` because admin-ness is a property of the RECIPIENT, not
+   * of the league — both leagues offer these, to different people.
+   *
+   * The gate is applied at the settings page AND at the send door, and the
+   * send door resolves admin-ness from the franchise id itself rather than
+   * taking anyone's word for it.
+   */
+  adminOnly?: true;
   /**
    * Not offered as a toggle. For alerts that are not an editorial choice —
    * today, the "send yourself a test" button, which exists to prove a device
@@ -90,6 +105,12 @@ export const NOTIFICATION_GROUPS: NotificationGroup[] = [
     id: 'live',
     label: 'Game day',
     description: 'Scores and swings while games are being played.',
+  },
+  {
+    id: 'ops',
+    label: 'Behind the scenes',
+    description:
+      'The plumbing: a scheduled job that failed, a league setting that drifted. Only you see these.',
   },
 ];
 
@@ -254,6 +275,34 @@ export const NOTIFICATION_CATEGORIES: NotificationCategory[] = [
     requiresFeature: 'liveScoring',
     live: true,
   },
+
+  // ── Behind the scenes (admin only) ───────────────────────────────
+  //
+  // defaultOn, unlike almost everything else here. The "keep defaults few"
+  // rule protects owners from a firehose they did not ask for; these reach one
+  // person, only when something is broken, and the whole point is that an
+  // admin should not have to opt in to hearing that the automation stopped.
+  {
+    id: 'ops-job-failure',
+    group: 'ops',
+    label: 'Automation failures',
+    description: 'A scheduled job failed — the syncs, scans and generators that keep the site fed.',
+    cadence: 'Only when something breaks',
+    defaultOn: true,
+    adminOnly: true,
+    live: true,
+  },
+  {
+    id: 'ops-league-setup',
+    group: 'ops',
+    label: 'League setup drift',
+    description:
+      'An MFL setting no longer matches the constitution and needs fixing by hand — today, the AFL waiver order after a rollover.',
+    cadence: 'Rare',
+    defaultOn: true,
+    adminOnly: true,
+    live: true,
+  },
 ];
 
 const BY_ID = new Map(NOTIFICATION_CATEGORIES.map((c) => [c.id, c]));
@@ -281,19 +330,42 @@ export interface NotificationLeague {
 }
 
 /**
+ * Who is being offered, or sent, an alert.
+ *
+ * Only `adminOnly` categories read this, and it defaults to NOT an admin — so
+ * a caller that has not thought about it gets the owner-facing set, never the
+ * plumbing. Omitting it can hide a category; it can never reveal one.
+ */
+export interface NotificationRecipient {
+  isAdmin?: boolean;
+}
+
+/** Every gate that depends on the recipient rather than the league. */
+function allowedForRecipient(
+  category: NotificationCategory,
+  recipient?: NotificationRecipient,
+): boolean {
+  return !category.adminOnly || Boolean(recipient?.isAdmin);
+}
+
+/**
  * The categories a league can actually offer.
  *
  * Filters on the league's capabilities and on `live`, so the settings page
  * never shows a toggle that cannot do anything — an owner who turns something
  * on and never hears from it stops trusting the whole page.
  */
-export function categoriesForLeague(league: NotificationLeague): NotificationCategory[] {
+export function categoriesForLeague(
+  league: NotificationLeague,
+  recipient?: NotificationRecipient,
+): NotificationCategory[] {
   const pollEnabled = Boolean(league.ownersPoll?.enabled);
   return NOTIFICATION_CATEGORIES.filter(
     (c) =>
       c.live
       && (!c.requiresFeature || league.features[c.requiresFeature])
-      && (!c.requiresOwnersPoll || pollEnabled),
+      && (!c.requiresOwnersPoll || pollEnabled)
+      && allowedForRecipient(c, recipient),
   );
 }
 
@@ -303,14 +375,20 @@ export function categoriesForLeague(league: NotificationLeague): NotificationCat
  * Drops hidden ones — a toggle for the test button would be a control whose
  * only effect is to break the test button.
  */
-export function visibleCategoriesForLeague(league: NotificationLeague): NotificationCategory[] {
-  return categoriesForLeague(league).filter((c) => !c.hidden);
+export function visibleCategoriesForLeague(
+  league: NotificationLeague,
+  recipient?: NotificationRecipient,
+): NotificationCategory[] {
+  return categoriesForLeague(league, recipient).filter((c) => !c.hidden);
 }
 
 /** The default preference map for a league — what an owner gets untouched. */
-export function defaultPreferences(league: NotificationLeague): Record<string, boolean> {
+export function defaultPreferences(
+  league: NotificationLeague,
+  recipient?: NotificationRecipient,
+): Record<string, boolean> {
   const out: Record<string, boolean> = {};
-  for (const c of categoriesForLeague(league)) out[c.id] = c.defaultOn;
+  for (const c of categoriesForLeague(league, recipient)) out[c.id] = c.defaultOn;
   return out;
 }
 
@@ -325,11 +403,16 @@ export function isCategoryEnabled(
   categoryId: string,
   stored: Record<string, boolean> | null | undefined,
   league: NotificationLeague,
+  recipient?: NotificationRecipient,
 ): boolean {
   const category = BY_ID.get(categoryId);
   if (!category) return false;
   if (!category.live) return false;
   if (category.requiresFeature && !league.features[category.requiresFeature]) return false;
+  // An admin-only alert reaching a non-admin franchise is the one leak that
+  // undoes the whole point of moving these off the group chat, so it is
+  // refused here even if a preference for it is somehow stored.
+  if (!allowedForRecipient(category, recipient)) return false;
   // Same gate as the settings page, applied at the SEND door too — otherwise a
   // preference stored while a league still offered the toggle keeps delivering
   // after the capability is switched off.
