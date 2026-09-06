@@ -49,7 +49,8 @@ import WaiverClaimsPanel from '../../components/shared/WaiverClaimsPanel.astro';
 import WaiverPriorityModal from '../../components/shared/WaiverPriorityModal.astro';
 import SignInModal from '../../components/shared/SignInModal.astro';
 import WatchListBridge from '../../components/shared/WatchListBridge.astro';
-import { getConferenceName, getConferenceTeams, isValidConferenceId } from '../../utils/afl-conference';
+import { getConferenceName, getConferenceTeams, isValidConferenceId, getConferenceLogo, getConferenceLogoDark } from '../../utils/afl-conference';
+import ThemeImage from '../../components/ThemeImage.astro';
 // AFL uses team defenses (no IDP), so a DEF free agent has no headshot of its
 // own. Mirror TheLeague's hero treatment: surface a rotating pool of the team's
 // marquee defenders (ESPN headshots) over the logo watermark. The data is keyed
@@ -361,12 +362,6 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
             Waiver priority
           </button>
         </div>
-        <a href={r('/afl-fantasy/rosters')} class="hero-cross-link">
-          View rosters
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true">
-            <path d="M5 12h14M12 5l7 7-7 7"/>
-          </svg>
-        </a>
       </div>
 
       <!-- Conference boundary: one conference at a time. Duplicate-player
@@ -380,8 +375,25 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
               class={`conf-switch-btn${id === activeConfId ? ' active' : ''}`}
               data-conf={id}
               aria-pressed={id === activeConfId ? 'true' : 'false'}
+              title={conferenceMeta.names[id]?.name || id}
+              aria-label={conferenceMeta.names[id]?.name || id}
             >
-              {conferenceMeta.names[id]?.name || id}
+              {/* Branded crest instead of the full conference name. The logos
+                  only exist for the two real conference ids, so anything else
+                  (a feed that grew a third) still falls back to its name
+                  rather than requesting a 404 image. The button carries the
+                  accessible name, so both <img>s are decorative (alt=""). */}
+              {isValidConferenceId(id) ? (
+                <ThemeImage
+                  src={getConferenceLogo(id)}
+                  darkSrc={getConferenceLogoDark(id)}
+                  alt=""
+                  class="conf-switch-btn__logo"
+                  loading="eager"
+                />
+              ) : (
+                conferenceMeta.names[id]?.name || id
+              )}
             </button>
           ))}
         </div>
@@ -1827,27 +1839,6 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     gap: 1rem;
     flex-wrap: wrap;
   }
-  .hero-cross-link {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.375rem;
-    font-size: 0.8125rem;
-    font-weight: 600;
-    color: #fff;
-    background: var(--league-accent, #c41e3a);
-    padding: 0.4rem 0.8rem;
-    border-radius: var(--radius-full, 999px);
-    text-decoration: none;
-    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
-    transition: gap 0.15s ease, filter 0.15s ease, transform 0.15s ease;
-    white-space: nowrap;
-  }
-  .hero-cross-link:hover {
-    gap: 0.5rem;
-    filter: brightness(0.92);
-    transform: translateY(-1px);
-    text-decoration: none;
-  }
   .hero-title-group {
     display: flex;
     align-items: baseline;
@@ -1887,7 +1878,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
   .conf-switch-btn {
     display: inline-flex;
     align-items: center;
-    padding: 0.45rem 1rem;
+    padding: 0.35rem 1.1rem;
     border: none;
     background: transparent;
     color: var(--color-gray-600, #4b5563);
@@ -1896,6 +1887,27 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     cursor: pointer;
     transition: background 0.15s, color 0.15s;
     white-space: nowrap;
+  }
+  /* ThemeImage renders its own <img>s, so these have to be :global — scoped
+     to the button so nothing leaks out of the switcher. */
+  .conf-switch-btn :global(.conf-switch-btn__logo) {
+    height: 28px;
+    width: auto;
+    opacity: 0.7;
+    transition: opacity 0.15s;
+  }
+  .conf-switch-btn:hover :global(.conf-switch-btn__logo),
+  .conf-switch-btn.active :global(.conf-switch-btn__logo) {
+    opacity: 1;
+  }
+  /* The active pill paints the dark accent in BOTH themes, so the light
+     (navy) crest would vanish into it — force the white-haloed dark variant
+     there regardless of html.dark. */
+  .conf-switch-btn.active :global(.theme-img--light) {
+    display: none;
+  }
+  .conf-switch-btn.active :global(.theme-img--dark) {
+    display: block;
   }
   .conf-switch-btn + .conf-switch-btn {
     border-left: 1px solid var(--content-border, #d1d5db);

@@ -10,6 +10,14 @@
       "league": "both"
     },
     {
+      "date": "2026-09-06",
+      "type": "style-tweak",
+      "summary": "The Free Agents header got tidier. The AL/NL switcher now wears the two conference crests instead of spelling out \u201cAmerican League\u201d and \u201cNational League\u201d \u2014 same two buttons, half the width, and you can tell at a glance which pool you're looking at. The \u201cView rosters\u201d button that sat off to the right is gone; rosters are one tap away in the menu, and the header is now about the players actually available.",
+      "impact": "user",
+      "area": "free-agents",
+      "league": "afl"
+    },
+    {
       "date": "2026-09-05",
       "type": "bug-fix",
       "summary": "Closing the waiver priority card on Free Agents left it sitting on the page — no dimmed background, just the whole twelve-team list painted over the player table like a sticker nobody could peel off. The card was told how to lay itself out whether it was open or not, and a closed card that still has a layout is a card that still shows. It now only lays itself out while open, so closing it actually closes it.",
