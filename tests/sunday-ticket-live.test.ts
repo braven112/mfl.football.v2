@@ -206,6 +206,16 @@ describe('buildMatchupCards', () => {
   it('returns nothing without a franchise id', () => {
     expect(buildMatchupCards({ ...base, franchiseId: '', snapshot: null })).toEqual([]);
   });
+
+  it('flags a best-ball league so the card can drop its Set lineup link', () => {
+    // The registry is explicit that a `bestBall` league has NO lineups and
+    // that "UI that offers any of those must be skipped". src/pages/best-ball-1
+    // has no lineup.astro, so the link would 404 — and it is unreachable today
+    // only because bb1 happens to ship no schedule feed, which is safety by
+    // accident rather than by construction.
+    expect(buildMatchupCards({ ...base, snapshot: null })[0].bestBall).toBe(false);
+    expect(buildMatchupCards({ ...base, bestBall: true, snapshot: null })[0].bestBall).toBe(true);
+  });
 });
 
 describe('liveStateLabel', () => {

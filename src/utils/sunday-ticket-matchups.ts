@@ -33,6 +33,13 @@ export interface MatchupCard {
   liveResolved: boolean;
   /** Max NFL game-seconds left across the two sides. 0 = both final. */
   secondsRemaining: number;
+  /**
+   * Draft-only best-ball league. The registry is explicit that such a league
+   * has NO lineups and that "UI that offers any of those must be skipped"
+   * (`leagues-data.mjs`, the `bestBall` flag) — so the card omits its Set
+   * lineup link rather than pointing at a route that does not exist.
+   */
+  bestBall: boolean;
 }
 
 export interface BuildMatchupCardsInput {
@@ -47,6 +54,8 @@ export interface BuildMatchupCardsInput {
   /** The league's live snapshot, or null when there is no live read. */
   snapshot: LiveSnapshot | null;
   liveSupported: boolean;
+  /** `LeagueDefinition.bestBall` — drives whether a Set lineup link is offered. */
+  bestBall?: boolean;
 }
 
 const nameOf = (brands: Record<string, TeamBrand>, fid: string): string =>
@@ -69,6 +78,7 @@ const nameOf = (brands: Record<string, TeamBrand>, fid: string): string =>
  */
 export function buildMatchupCards(input: BuildMatchupCardsInput): MatchupCard[] {
   const { leagueId, leagueSlug, leagueName, franchiseId, weekMatchups, brands, snapshot, liveSupported } = input;
+  const bestBall = input.bestBall === true;
   if (!franchiseId) return [];
 
   return weekMatchups.map(({ opponentFranchiseId }) => {
@@ -97,6 +107,7 @@ export function buildMatchupCards(input: BuildMatchupCardsInput): MatchupCard[] 
       secondsRemaining: Math.max(
         ...ids.map((id) => snapshot?.remaining[id] ?? 0),
       ),
+      bestBall,
     };
   });
 }

@@ -307,6 +307,7 @@ for (const l of boardLeagues) {
     brands,
     snapshot: liveByLeague.get(l.id) ?? null,
     liveSupported: true,
+    bestBall: l.registered.bestBall === true,
   }));
 }
 
