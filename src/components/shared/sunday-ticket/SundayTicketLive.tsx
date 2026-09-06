@@ -27,8 +27,6 @@ import { liveStateLabel } from '../../../utils/sunday-ticket-matchups';
 
 export interface LiveLeague {
   leagueId: string;
-  /** The owner's franchise in this league — the one whose players are on the board. */
-  franchiseId: string;
 }
 
 export interface Props {
@@ -58,7 +56,6 @@ function setText(el: Element | null, text: string) {
  */
 function LeagueLive({
   leagueId,
-  franchiseId,
   week,
   year,
   enabled,
@@ -137,20 +134,26 @@ function LeagueLive({
     // ── Card state, through the SAME derivation the server rendered with, so
     // the first paint and every poll after it cannot disagree.
     //
-    // querySelectorAll, not querySelector: a doubleheader puts TWO cards on
-    // the page for one league, and the singular form silently updated only
-    // the first while the second sat on its server-rendered state forever.
-    const liveResolved = feed.resolved && feed.scores[franchiseId] !== undefined;
-    const label = liveStateLabel({
-      liveSupported: true,
-      liveResolved,
-      secondsRemaining: feed.remaining[franchiseId] ?? 0,
-    });
-    document.querySelectorAll<HTMLElement>(`[data-st-live-state="${CSS.escape(leagueId)}"]`).forEach((el) => {
+    // Derived PER CARD from both franchise ids in the hook, mirroring the
+    // server's `Math.max` across the pair. Reading only the owner's clock
+    // flipped a card to "Final" while the opponent was still playing — a
+    // divergence from the server render that sharing `liveStateLabel` is
+    // supposed to make impossible. And a doubleheader puts two cards with
+    // DIFFERENT opponents under one league id, so one shared label cannot be
+    // right for both.
+    document.querySelectorAll<HTMLElement>(`[data-st-live-state^="${CSS.escape(leagueId)}:"]`).forEach((el) => {
+      const [you, opponent] = (el.dataset.stLiveState ?? '').slice(leagueId.length + 1).split(':');
+      if (!you || !opponent) return;
+      const sides = [you, opponent];
+      const label = liveStateLabel({
+        liveSupported: true,
+        liveResolved: feed.resolved && sides.some((id) => feed.scores[id] !== undefined),
+        secondsRemaining: Math.max(...sides.map((id) => feed.remaining[id] ?? 0)),
+      });
       setText(el, label);
       el.classList.toggle('st-game__state--live', label === 'In progress');
     });
-  }, [enabled, leagueId, franchiseId, feed]);
+  }, [enabled, leagueId, feed]);
 
   return null;
 }
@@ -192,7 +195,6 @@ export default function SundayTicketLive({ leagues, week, year, enabled, live }:
         <LeagueLive
           key={l.leagueId}
           leagueId={l.leagueId}
-          franchiseId={l.franchiseId}
           week={week}
           year={year}
           enabled={enabled}

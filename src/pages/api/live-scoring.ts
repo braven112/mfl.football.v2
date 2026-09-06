@@ -99,8 +99,15 @@ export const GET: APIRoute = async ({ url }) => {
       }),
     ]);
 
+    // `.json()` REJECTS on a non-JSON body, and MFL answers a throttled or
+    // errored request with an HTML page under a 200 often enough that this is
+    // a real path, not a hypothetical. Without the catch it escapes to the
+    // outer handler and the route 500s — turning a condition the whole design
+    // degrades gracefully from ("no live data, keep what you have") into a
+    // hard failure. `parseLiveScoringPayload` takes null and yields an empty
+    // snapshot, which is the honest answer.
     const snapshot = liveScoreResponse.ok
-      ? parseLiveScoringPayload(await liveScoreResponse.json())
+      ? parseLiveScoringPayload(await liveScoreResponse.json().catch(() => null))
       : emptyLiveSnapshot();
     const { scores, remaining, matchups, players, bench, playersYetToPlay } = snapshot;
 

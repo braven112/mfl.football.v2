@@ -163,7 +163,11 @@ const starters = (n: number) => `${n} starter${n === 1 ? '' : 's'}`;
                         data-st-live={`${group.leagueId}:${p.playerId}`}
                       >{p.live === undefined ? '' : p.live.toFixed(1)}</span>
                     ) : null}
-                    <span class="st-box__proj" title={`${p.proj.toFixed(1)} projected`}>{p.proj > 0 ? p.proj.toFixed(1) : '—'}</span>
+                    {/* No title when there is no projection: `proj` is 0 for
+                        "the league has none", and the row deliberately shows an
+                        em-dash — a "0.0 projected" tooltip over it reads as a
+                        real forecast of zero. */}
+                    <span class="st-box__proj" title={p.proj > 0 ? `${p.proj.toFixed(1)} projected` : undefined}>{p.proj > 0 ? p.proj.toFixed(1) : '—'}</span>
                   </span>
                 </li>
               ))}
