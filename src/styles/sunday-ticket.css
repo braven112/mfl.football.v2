@@ -183,6 +183,16 @@
 .st-chip--prefs { margin-left: auto; border-style: dashed; }
 @media (max-width: 600px) { .st-chip--prefs { margin-left: 0; } }
 .st-chip__flag { font-size: 0.95rem; line-height: 1; }
+/* Free-to-air line: the one thing the network map cannot say — which
+   Sunday game a country's free channel picks up is that channel's call. */
+.st-free {
+  display: flex; align-items: center; flex-wrap: wrap; gap: 0.5rem;
+  margin: -0.15rem 0 0;
+  font-size: 0.78rem;
+  color: var(--content-text-muted);
+}
+.st-free__logo { height: 1.5rem; width: auto; max-width: 5rem; object-fit: contain; display: block; }
+.st-free__name { font-weight: var(--font-weight-bold); color: var(--page-text); }
 .st-jump { display: flex; gap: 0.5rem; }
 .st-jump__link {
   display: inline-flex; align-items: baseline; gap: 0.4rem;

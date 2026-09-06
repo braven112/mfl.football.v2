@@ -30,7 +30,7 @@ export default {
     country: 'US',
   },
   argTypes: {
-    country: { control: 'inline-radio', options: ['US', 'CA', 'AU'] },
+    country: { control: 'inline-radio', options: ['US', 'CA', 'AU', 'GB', 'MX'] },
   },
 };
 
@@ -52,6 +52,16 @@ export const OneLeagueOff = {
 /** Same board seen from Canada: CBS/FOX become DAZN, NBC becomes CTV, the header mark is DAZN. */
 export const Canada = {
   args: { slate: multiLeague, leagues, enabled: leagues.map((l) => l.id), country: 'CA' },
+};
+
+/** The UK: everything is Sky Sports, kickoffs read in one London clock, and the free-to-air line names Channel 5. */
+export const UnitedKingdom = {
+  args: { slate: multiLeague, leagues, enabled: leagues.map((l) => l.id), country: 'GB' },
+};
+
+/** Mexico: FOX, ESPN and TUDN split the slate, Game Pass catches the rest, two clocks. */
+export const Mexico = {
+  args: { slate: multiLeague, leagues, enabled: leagues.map((l) => l.id), country: 'MX' },
 };
 
 /** A single-league owner: no chips, no league line inside the boxes, RedZone fills the third box. */

@@ -1,6 +1,6 @@
 {
   "metadata": {
-    "lastUpdated": "2026-09-04",
+    "lastUpdated": "2026-09-06",
     "description": "International broadcast mappings for NFL games by country"
   },
   "countries": {
@@ -35,6 +35,7 @@
         },
         "NFL Network": {
           "name": "NFL Network",
+          "logo": "nfl-network.png",
           "subscription": "Cable"
         },
         "Amazon Prime Video": {
@@ -76,10 +77,10 @@
       "channels": {
         "DAZN": {
           "name": "DAZN Canada",
-          "logo": "dazn-ca-black.png",
+          "logo": "dazn-black.png",
           "subscription": "DAZN",
           "note": "Most games",
-          "logoDark": "dazn-ca.png"
+          "logoDark": "dazn.png"
         },
         "TSN": {
           "name": "TSN",
@@ -114,8 +115,8 @@
       },
       "sundayTicket": {
         "name": "DAZN Canada",
-        "logo": "dazn-ca-black.png",
-        "logoDark": "dazn-ca.png",
+        "logo": "dazn-black.png",
+        "logoDark": "dazn.png",
         "note": "DAZN carries every game in Canada, RedZone included; CTV has Sunday night, TSN the ESPN/ABC games."
       },
       "timeZones": [
@@ -170,6 +171,10 @@
         "Prime Video": "Kayo Sports",
         "Netflix": "Netflix"
       },
+      "freeToAir": {
+        "channel": "7mate",
+        "note": "7mate shows one Sunday game free-to-air, and the Monday-morning primetime one."
+      },
       "sundayTicket": {
         "name": "Kayo Sports",
         "logo": "kayo-sports.png",
@@ -187,11 +192,148 @@
           "locale": "en-AU"
         }
       ]
+    },
+    "GB": {
+      "name": "United Kingdom",
+      "primaryProvider": "Sky Sports NFL",
+      "channels": {
+        "Sky Sports NFL": {
+          "name": "Sky Sports NFL",
+          "logo": "sky-sports-uk.png",
+          "subscription": "Sky / NOW",
+          "note": "Most games, plus RedZone"
+        },
+        "Channel 5": {
+          "name": "Channel 5",
+          "logo": "channel-5-uk.png",
+          "subscription": "Free-to-air",
+          "note": "Two free Sunday games"
+        },
+        "NFL Game Pass": {
+          "name": "NFL Game Pass on DAZN",
+          "logo": "dazn-black.png",
+          "logoDark": "dazn.png",
+          "subscription": "DAZN",
+          "note": "Every game live"
+        },
+        "Netflix": {
+          "name": "Netflix",
+          "logo": "netflix.png",
+          "subscription": "Netflix",
+          "note": "Christmas games"
+        }
+      },
+      "mapping": {
+        "default": "Sky Sports NFL",
+        "CBS": "Sky Sports NFL",
+        "FOX": "Sky Sports NFL",
+        "NBC": "Sky Sports NFL",
+        "ESPN": "Sky Sports NFL",
+        "ABC": "Sky Sports NFL",
+        "NFL Network": "Sky Sports NFL",
+        "Amazon Prime Video": "Sky Sports NFL",
+        "Prime Video": "Sky Sports NFL",
+        "Netflix": "Netflix"
+      },
+      "freeToAir": {
+        "channel": "Channel 5",
+        "note": "Channel 5 shows two Sunday games free every week, the 6pm kick and the 9pm primetime one."
+      },
+      "sundayTicket": {
+        "name": "NFL Game Pass on DAZN",
+        "logo": "dazn-black.png",
+        "logoDark": "dazn.png",
+        "note": "Sky Sports NFL carries most games in the UK and RedZone with them; NFL Game Pass on DAZN has every one, and Channel 5 has two free on Sunday."
+      },
+      "timeZones": [
+        {
+          "zone": "Europe/London",
+          "label": "auto",
+          "locale": "en-GB"
+        }
+      ]
+    },
+    "MX": {
+      "name": "Mexico",
+      "primaryProvider": "FOX",
+      "channels": {
+        "FOX": {
+          "name": "FOX México",
+          "logo": "fox-mx.png",
+          "subscription": "FOX / FOX One",
+          "note": "Sunday games and Thursday night"
+        },
+        "ESPN": {
+          "name": "ESPN México",
+          "logo": "espn.png",
+          "subscription": "Disney+ / Cable",
+          "note": "Sunday and Monday night"
+        },
+        "TUDN": {
+          "name": "TUDN / ViX",
+          "logo": "tudn-mx.png",
+          "subscription": "Free-to-air / ViX",
+          "note": "Select Sunday games"
+        },
+        "NFL Network": {
+          "name": "NFL Network",
+          "logo": "nfl-network.png",
+          "subscription": "Cable",
+          "note": "International games"
+        },
+        "NFL Game Pass": {
+          "name": "NFL Game Pass on DAZN",
+          "logo": "dazn-black.png",
+          "logoDark": "dazn.png",
+          "subscription": "DAZN",
+          "note": "Every game live"
+        },
+        "Netflix": {
+          "name": "Netflix",
+          "logo": "netflix.png",
+          "subscription": "Netflix",
+          "note": "Christmas games"
+        }
+      },
+      "mapping": {
+        "default": "NFL Game Pass",
+        "CBS": "TUDN",
+        "FOX": "FOX",
+        "NBC": "ESPN",
+        "ESPN": "ESPN",
+        "ABC": "ESPN",
+        "NFL Network": "NFL Network",
+        "Amazon Prime Video": "FOX",
+        "Prime Video": "FOX",
+        "Netflix": "Netflix"
+      },
+      "freeToAir": {
+        "channel": "TUDN",
+        "note": "TUDN and ViX carry a free Sunday game each week, and Canal 5 has the afternoon one."
+      },
+      "sundayTicket": {
+        "name": "NFL Game Pass on DAZN",
+        "logo": "dazn-black.png",
+        "logoDark": "dazn.png",
+        "note": "NFL Game Pass on DAZN carries every game in Mexico; FOX has four Sunday games a week, ESPN the night ones, TUDN and ViX the free ones."
+      },
+      "timeZones": [
+        {
+          "zone": "America/Mexico_City",
+          "label": "CDMX"
+        },
+        {
+          "zone": "America/Tijuana",
+          "label": "Tijuana"
+        }
+      ]
     }
   },
   "notes": {
     "US": "Live broadcasts on various networks. Sunday Ticket available via YouTube TV.",
     "CA": "DAZN has exclusive rights to most NFL games in Canada. Some games on TSN/CTV.",
-    "AU": "All games available on Kayo Sports via ESPN. Select games on free-to-air 7mate."
+    "AU": "All games available on Kayo Sports via ESPN. Select games on free-to-air 7mate.",
+    "GB": "Sky Sports NFL has most games and RedZone; Channel 5 has two free Sunday games; NFL Game Pass on DAZN has the lot.",
+    "MX": "FOX has the Sunday and Thursday package, ESPN the night games, TUDN/ViX the free ones, NFL Game Pass on DAZN every game."
   }
 }

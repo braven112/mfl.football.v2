@@ -23,9 +23,31 @@ that are not in the plan.
   (`isHomeLeague`). The chips are links + a cookie, and the cookie is written
   by the ROUTE — a component's `Astro.cookies.set()` blanks the page
   (CLAUDE.md).
+- **A country is a data entry, not a code change — almost.** Adding the UK and
+  Mexico (2026-09-06, for the league's owner in Great Britain) was one block
+  each in `broadcast-mappings.json` plus the code list in
+  `broadcast-channels.ts` — `COUNTRY_CODES`, the flag, and nothing else: the
+  chips, the boxes, the window headers and the clocks all read the registry.
+  Three things were NOT data: `parseCountry` now takes aliases, because `UK` is
+  what a British owner types and it silently returned the US board; the
+  free-to-air line (below); and the marks, which have to exist on disk and be
+  re-measured (`pnpm measure:tv-logo-contrast`) or dark mode ships a black
+  wordmark on a black card.
+- **A free-to-air channel cannot be reached through the network map.** Sky gets
+  every UK game, so `CBS → Sky Sports` is total — but Channel 5 also shows two
+  of them, and WHICH two is Channel 5's call, not a property of CBS. A channel
+  entry with no mapping key pointing at it is dead config: `7mate` sat in the
+  AU block from the day the board shipped and could never render. The
+  `freeToAir` block + `freeToAirOption` say it in one line under the chips
+  instead, and 7mate finally appears.
+- **The DAZN mark was never Canadian.** It shipped as `dazn-ca.png` because
+  Canada was the only country that had it; the UK and Mexico both draw the same
+  square for NFL Game Pass. Renamed to `dazn.png` / `dazn-black.png` — a mark's
+  filename should say what it IS, not who first used it.
 - **Country picks channels AND clocks.** `broadcast-mappings.json` maps each
-  US network to DAZN/TSN/CTV or Kayo/7mate and carries each country's
-  `timeZones`; Australia reads Monday 3am AEST for a Sunday 1pm ET kickoff,
+  US network to DAZN/TSN/CTV, Kayo, Sky or FOX/ESPN/TUDN México and carries
+  each country's `timeZones` — one clock for the UK, two everywhere else;
+  Australia reads Monday 3am AEST for a Sunday 1pm ET kickoff,
   and the day is shown whenever it differs from the game's own. Marks get the
   team-crest dark treatment from their own manifest
   (`docs/claude/rules/theming-and-assets.md`), never a white pill.

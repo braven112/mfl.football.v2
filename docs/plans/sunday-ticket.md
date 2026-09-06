@@ -26,10 +26,13 @@ Status: BUILT 2026-09-04 on branch `claude/sunday-ticket-matchup-preview-3025b7`
 - **Channels are per COUNTRY, with marks.** The original example page mapped
   each US network to the viewer's country client-side from the browser
   timezone; this does it server-side from a `?country=` param remembered in
-  `st_country` (US / Canada / Australia chips), through
+  `st_country` (US / Canada / Australia / United Kingdom / Mexico chips), through
   `src/utils/broadcast-channels.ts` over `data/theleague/broadcast-mappings.json`
   — CBS/FOX become DAZN in Canada, NBC becomes CTV, everything is Kayo in
-  Australia, a global streamer keeps its own mark. Channel and carrier marks
+  Australia and Sky Sports in the UK, Mexico splits between FOX México, ESPN
+  México, TUDN/ViX and Game Pass, and a global streamer keeps its own mark
+  UNLESS the country maps it (Prime Video's Thursday package is US-only, so in
+  the UK that game is Sky's). Channel and carrier marks
   come from `public/assets/tv-logos/` and get the TEAM-CREST dark-mode
   treatment rather than a white pill: `scripts/measure-tv-logo-contrast.mjs`
   scores each mark on the dark card and writes
@@ -38,7 +41,13 @@ Status: BUILT 2026-09-04 on branch `claude/sunday-ticket-matchup-preview-3025b7`
   below the threshold takes the crest ring (`tv-logo-dark-css.ts`, composed
   into `buildAllTeamIconDarkCss()` so the layout and Storybook agree). The
   RedZone box uses the RedZone logo, and each window header carries the
-  country's Sunday Ticket carrier (YouTube TV, DAZN, Kayo).
+  country's Sunday Ticket carrier (YouTube TV, DAZN, Kayo, Game Pass).
+- **The free-to-air line says what no mapping can.** Which of Sunday's games
+  Channel 5, 7mate or ViX picks up is that channel's call, not a property of
+  the US network, so there is no key to map it to — a free channel added to
+  `channels` alone is dead config (7mate sat there unreachable from the day the
+  board shipped). The country's `freeToAir` block names it once, under the
+  country chips (`freeToAirOption`).
 - **The homepage hero.** The `game-day-preview` slot (Saturday all day, Sunday
   before 10am PT) is two heroes: Saturday is the lineup-lock reminder (the
   AFL) / game of the week (TheLeague); Sunday morning is the Sunday Ticket
@@ -52,7 +61,9 @@ Status: BUILT 2026-09-04 on branch `claude/sunday-ticket-matchup-preview-3025b7`
 - **The country picks the CLOCKS too** (`timeZones` in the mapping file):
   ET/PT at home and in Canada, AEST/AEDT + AWST in Australia — where a Sunday
   1pm ET kickoff is Monday 3am and the box, the window header and the jump
-  link all say Monday (`formatKickoffZones`; the label comes from Intl under
+  link all say Monday — CDMX + Tijuana in Mexico, and a SINGLE London clock in
+  the UK, because the list is however many clocks the country actually reads,
+  not a fixed two (`formatKickoffZones`; the label comes from Intl under
   en-AU so the DST flip shows; the time is assembled from parts because
   ICU 72+ puts a narrow no-break space before AM/PM).
 
