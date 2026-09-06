@@ -520,13 +520,19 @@
         "src/utils/player-claim-client.ts",
         "src/utils/claim-resume.ts",
         "src/pages/api/claim-context.ts",
-        "src/pages/api/waiver-order.ts"
+        "src/pages/api/waiver-order.ts",
+        "src/components/shared/WaiverClaimsPanel.astro",
+        "src/pages/api/waiver-claims.ts",
+        "src/scripts/transaction-hub.ts",
+        "src/components/theleague/TransactionHubModal.astro"
       ],
       "note": "The ⋮ menu sits right after the Player column (it was nine columns off-screen on a phone, #974) and its header carries the league's own verb; the acquisition itself lives in PlayerDetailsModal, so it reaches every page the modal does — which means WaiverClaimModal is mounted by that modal and by no page, the offer is a SESSION verdict from /api/claim-context (both leagues have a franchise 0001), and the form must survive landing before or after the context does. The waiver priority dialog opens on the synced order and time-boxes the live read; the page's signed-in verdict is computed ONCE (franchiseIdForLeague) and read back off #watch-list-bridge[data-signed-in], never a second copy. See docs/claude/insights/features/waiver-claims.md and watch-list.md.",
       "tests": [
         "tests/free-agents-action-placement.test.ts",
         "tests/free-agent-session.test.ts",
-        "tests/player-claim-offer.test.ts"
+        "tests/player-claim-offer.test.ts",
+        "tests/players-injected-styles.test.ts",
+        "tests/waiver-filed-claims.test.ts"
       ]
     },
     {

@@ -139,6 +139,36 @@ excludes stroke, and the halo on every `-dark` badge *is* a stroke.
 
 ---
 
+## 2026-09-06 - A Component's Size Tokens Are Redeclared Inside a Media Query, So Overriding Them Is a Specificity Question
+
+**Context:** The filed-waiver-claims panel reuses the shared player lockup
+(`buildPlayerCellHTML` → `.player-cell.player-cell--compact`) and needs it a
+notch smaller than the modifier's default, so it sets `--player-avatar-size`
+and friends on its own `.wcp__cell` class.
+
+**Insight:** `player-cell.css` sets those same custom properties **twice** — once
+on `.player-cell--compact`, and again on `.player-cell--compact` inside a
+`@media` block for narrow screens. A media query adds **no specificity**, so a
+consumer's `.wcp__cell { --player-avatar-size: 34px }` and the component's
+`.player-cell--compact { --player-avatar-size: 28px }` are both `(0,1,0)` and
+the winner is whichever stylesheet the bundler emitted last — which is not
+something the consumer controls, and which can change when an import moves.
+The symptom is the worst kind: correct at desktop width, silently reverted
+below the breakpoint, on a component nobody edited.
+
+**Rule:** overriding a component's custom properties from outside takes one
+extra class of specificity (`.wcp .wcp__cell`, not `.wcp__cell`) whenever the
+component redeclares them anywhere — and a component that has responsive
+variants always does. Grep the component's stylesheet for the property you are
+about to set before assuming a single declaration.
+
+Related: the same panel's rows are injected with `innerHTML`, so the lockup's
+stylesheet has to be imported from frontmatter to be global — the
+`player-cell__avatar` / scoped-styles trap in `frontend.md`, guarded by
+`tests/players-injected-styles.test.ts`.
+
+---
+
 ## 2026-09-06 - Every Band-Map Field Is Shaped for Ink, and Needs an Off-Band Twin
 
 **Context:** The player modal's "Rostered by" strip drew a black tile behind
