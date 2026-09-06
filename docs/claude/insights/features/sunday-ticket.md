@@ -44,6 +44,39 @@ that are not in the plan.
   Canada was the only country that had it; the UK and Mexico both draw the same
   square for NFL Game Pass. Renamed to `dazn.png` / `dazn-black.png` — a mark's
   filename should say what it IS, not who first used it.
+- **The mark treatment had to run in BOTH directions, and the crests' one
+  threshold did not transfer.** The dark-card ring
+  (`scripts/measure-tv-logo-contrast.mjs` → `tv-logo-theme-css.ts`) was built
+  from the crest pipeline, which only ever asks "does this dissolve into
+  #262626". Broadcaster brands broke that assumption: Channel 5 is a yellow 5
+  and Kayo is light green, and on a WHITE card they are exactly what a black
+  crest is on a dark one — with no light-mode artwork to swap to. Same ring,
+  `TV_LOGO_LIGHT_STROKE_COLOR`, guarded on `html:not(.dark)` (unguarded, it
+  would ink a dark outline around the white artwork a `logoDark` swaps in).
+  The threshold is the part that does NOT carry over: at the dark pass's 0.5
+  the light pass rings CBS, NBC, RedZone and Prime, whose INTERIORS are pale
+  but whose silhouettes read fine. A mark with pale detail is not a pale mark
+  — 0.25 splits them, and the measured gap is wide (Kayo 18%, then nothing
+  until Prime at 36%).
+- **Where the marks came from is now written down.** The originals (PR #972)
+  were committed with no provenance — not in the plan, not in the commit
+  body, nowhere — so nobody can re-cut one at a different size or check a
+  brand refresh against its source. The 2026-09-06 additions record it below,
+  and anything added later should too.
+
+  | Mark | Source |
+  |---|---|
+  | `sky-sports-uk.png` | Wikipedia `File:Sky Sports logo 2020.svg` |
+  | `channel-5-uk.png` | Wikipedia `File:Channel 5 2025.svg` |
+  | `tudn-mx.png` | Wikipedia `File:TUDN Logo.svg` |
+  | `fox-mx.png` | Wikipedia `File:FOX wordmark.svg` |
+  | `nfl-network.png` | Wikipedia `File:NFL Network logo.svg` |
+
+  All pulled through `https://en.wikipedia.org/wiki/Special:FilePath/<File>?width=640`,
+  which renders an SVG to a transparent PNG server-side — no local conversion,
+  and the only Wikimedia URL shape that works: `upload.wikimedia.org/.../<N>px-`
+  thumbs 400 on any width not in their allow-list, and the API rate-limits to
+  roughly one request every 20 seconds (429 with `retry-after`).
 - **Country picks channels AND clocks.** `broadcast-mappings.json` maps each
   US network to DAZN/TSN/CTV, Kayo, Sky or FOX/ESPN/TUDN México and carries
   each country's `timeZones` — one clock for the UK, two everywhere else;

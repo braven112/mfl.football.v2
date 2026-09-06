@@ -1,7 +1,9 @@
 {
   "threshold": 0.5,
+  "lightThreshold": 0.25,
   "minRatio": 3,
   "background": "#262626",
+  "lightBackground": "#ffffff",
   "needsStroke": [
     {
       "file": "abc.png",
@@ -22,6 +24,16 @@
     {
       "file": "tudn-mx.png",
       "legible": 0
+    }
+  ],
+  "needsLightStroke": [
+    {
+      "file": "channel-5-uk.png",
+      "legible": 0
+    },
+    {
+      "file": "kayo-sports.png",
+      "legible": 0.182
     }
   ],
   "darkVariants": [

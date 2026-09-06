@@ -508,13 +508,25 @@ sibling pipeline rather than the crest one:
 
 - `scripts/measure-tv-logo-contrast.mjs` (`pnpm measure:tv-logo-contrast`)
   scores every mark `data/theleague/broadcast-mappings.json` can render, plus
-  the RedZone mark, against the dark card and writes
-  `src/data/tv-logo-dark-stroke-manifest.json`. `tests/tv-logo-dark-stroke.test.ts`
+  the RedZone mark, against BOTH card surfaces and writes
+  `src/data/tv-logo-stroke-manifest.json`. `tests/tv-logo-theme-stroke.test.ts`
   fails when the committed manifest drifts from what the assets measure.
 - A mark with a `logoDark` in the mapping file (white artwork — DAZN's,
   YouTube TV's) SWAPS under `html.dark` and is never stroked; a mark below the
   threshold takes the same four-shadow ring as a crest
-  (`src/utils/tv-logo-dark-css.ts`, keyed on exact `src`).
+  (`src/utils/tv-logo-theme-css.ts`, keyed on exact `src`).
+- **The marks stroke in BOTH directions, and the crests do not.** A crest is
+  league artwork and skews dark; a network mark is whoever holds the rights,
+  and two of them are pale by brand — Channel 5's yellow 5 and Kayo's light
+  green are on a WHITE card what a black crest is on #262626, with no
+  light-mode artwork to swap to. Those take the same ring in
+  `TV_LOGO_LIGHT_STROKE_COLOR` under `html:not(.dark)`. The light pass uses a
+  STRICTER threshold (0.25 vs 0.5) on purpose: on white the common shape is a
+  mark whose interior is pale — CBS's white lettering, NBC's peacock, Prime's
+  arrow — which reads fine off its dark silhouette, and the dark bar would put
+  a halo on all four. The light rule is guarded on `html:not(.dark)` rather
+  than left unguarded, or it would ink a dark ring around the white artwork a
+  `logoDark` swaps in.
 - It is composed into `buildAllTeamIconDarkCss()`, so the layout head and
   Storybook's preview inject it from one source.
 

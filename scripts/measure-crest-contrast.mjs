@@ -33,6 +33,15 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 export const DARK_CARD_SURFACE = [0x26, 0x26, 0x26];
 
 /**
+ * `--card-surface` in src/styles/tokens.css (`--color-white`) — the solid
+ * behind a LIGHT card. Crests are only ever measured against the dark one;
+ * this exists for the TV network marks, where the reverse problem is real: a
+ * pale mark (Channel 5's yellow 5) vanishes on white the way a black crest
+ * vanishes on #262626. See `measure-tv-logo-contrast.mjs`.
+ */
+export const LIGHT_CARD_SURFACE = [0xff, 0xff, 0xff];
+
+/**
  * A crest needs the stroke when fewer than this fraction of its opaque pixels
  * clear 3:1 on the dark card. 0.5 = "less than half the logo is legible".
  * Above it, a white outline reads as an unnecessary halo rather than a help.
@@ -53,18 +62,18 @@ function relativeLuminance([r, g, b]) {
   return 0.2126 * f(r) + 0.7152 * f(g) + 0.0722 * f(b);
 }
 
-const BG_LUM = relativeLuminance(DARK_CARD_SURFACE);
-
-function contrastRatio(pixel) {
+function contrastRatio(pixel, bgLum) {
   const l = relativeLuminance(pixel);
-  return (Math.max(l, BG_LUM) + 0.05) / (Math.min(l, BG_LUM) + 0.05);
+  return (Math.max(l, bgLum) + 0.05) / (Math.min(l, bgLum) + 0.05);
 }
 
 /**
- * Fraction of a crest's opaque pixels that clear MIN_RATIO on the dark card.
- * Returns null when the file can't be read or has no opaque pixels.
+ * Fraction of a crest's opaque pixels that clear MIN_RATIO on `background`
+ * (the dark card unless a caller says otherwise — the TV-mark pass measures
+ * the light one too). Returns null when the file can't be read or has no
+ * opaque pixels.
  */
-export async function measureCrest(absPath) {
+export async function measureCrest(absPath, background = DARK_CARD_SURFACE) {
   let raw;
   try {
     raw = await sharp(absPath).raw().ensureAlpha().toBuffer({ resolveWithObject: true });
@@ -72,12 +81,13 @@ export async function measureCrest(absPath) {
     return null;
   }
   const { data } = raw;
+  const bgLum = relativeLuminance(background);
   let opaque = 0;
   let legible = 0;
   for (let i = 0; i < data.length; i += 4) {
     if (data[i + 3] < MIN_ALPHA) continue;
     opaque++;
-    if (contrastRatio([data[i], data[i + 1], data[i + 2]]) >= MIN_RATIO) legible++;
+    if (contrastRatio([data[i], data[i + 1], data[i + 2]], bgLum) >= MIN_RATIO) legible++;
   }
   return opaque === 0 ? null : legible / opaque;
 }
