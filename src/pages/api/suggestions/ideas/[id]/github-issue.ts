@@ -8,10 +8,20 @@
  *
  * Two properties worth keeping:
  *
- * - **Idempotent.** An idea that already carries a `githubIssue` is returned
- *   as-is with 200 rather than filed twice. The button is visible to every
- *   admin on a board several people admin, and a double-click is not a reason
- *   to open a duplicate.
+ * - **Idempotent against a repeat click, NOT against a true race.** An idea
+ *   that already carries a `githubIssue` is returned as-is with 200 rather
+ *   than filed twice, which covers the real case: the same admin clicking
+ *   again, or opening the idea later. It is a read-check-write, so two admins
+ *   clicking inside the same GitHub round-trip would still open two issues and
+ *   the second save would orphan the first.
+ *
+ *   Left as-is deliberately. The cost of that race is one duplicate issue,
+ *   visible and closable in a second; the fix is a lock with a TTL, which
+ *   introduces a stuck-lock failure mode on a write path in exchange for a
+ *   cosmetic problem. The UI already removes the common case by turning the
+ *   button into a link once filed. Revisit if a duplicate ever actually
+ *   happens — this comment is here so it is a known trade rather than a
+ *   surprise.
  * - **The issue link is saved before it can be lost.** If the GitHub call
  *   succeeds but the Redis write fails, the response still carries the issue
  *   URL and says the link wasn't saved — the issue exists either way, and
