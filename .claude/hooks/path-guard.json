@@ -525,6 +525,18 @@
         "tests/free-agent-session.test.ts",
         "tests/player-claim-offer.test.ts"
       ]
+    },
+    {
+      "name": "viewer-preferences",
+      "rules": "docs/claude/rules/viewer-preferences.md",
+      "paths": [
+        "src/utils/viewer-preferences*",
+        "src/components/shared/preferences/*",
+        "src/pages/*/preferences.astro"
+      ],
+      "tests": [
+        "tests/viewer-preferences.test.ts"
+      ]
     }
   ]
 }

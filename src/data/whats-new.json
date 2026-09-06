@@ -1,5 +1,28 @@
 [
   {
+    "id": "viewer-preferences",
+    "date": "2026-09-06",
+    "category": "new-page",
+    "icon": "wrench",
+    "leagues": [
+      "theleague",
+      "afl"
+    ],
+    "excludeFromHero": true,
+    "title": "Pick The Clock You Actually Live In.",
+    "link": "/preferences",
+    "linkLabel": "Set your country and clock",
+    "summary": "Preferences is a new page: pick the country whose channels you see and the one time zone you live in. Every kickoff on Sunday Ticket prints in your clock, with Pacific — the clock lineup locks and auction windows run on — beside it. Signed in, it follows you to your phone.",
+    "description": [
+      "<a href=\"/sunday-ticket\">Sunday Ticket</a> has known which country you watch from since the day it launched — CBS becomes DAZN in Canada, everything is Kayo in Australia. What it did not know was the clock on your wall. Pick the United States and you got Eastern and Pacific, whether you were in Chicago, Denver or Honolulu. Half the league has been doing time-zone arithmetic on a page whose entire job is telling you when to sit down.",
+      "The new <a href=\"/preferences\">Preferences</a> page fixes that. Choose your country — it still decides the channel on every box and which service carries Sunday Ticket — and then choose the one time zone you live in. Central. Mountain. Arizona, which refuses to change its clocks and now gets a line of its own. Newfoundland, half an hour off from everybody. Perth, where the early window is a Monday. Whatever you pick, <strong>your league's PT rides along beside it</strong>, because Pacific is the clock lineup locks and auction windows actually run on. Already on Pacific? Then you get PT once, not twice.",
+      "Every kickoff time on the board reads that way now — the window headers, the jump links, the four multiview boxes, the national games underneath. Set it once. It sticks to the browser you set it in, and if you're signed in it's saved to your account too, so the phone you check from the couch reads the same clock as the laptop you set your lineup on. A few of you we already knew about — the Wabbits and the Dream up in Canada, Maverick keeping Sydney hours — and your board comes up right the first time without touching a thing.",
+      "The country chips on the Sunday Ticket board still work exactly as they did, and now land right back in your preferences. Nothing about where you actually are gets stored; the schedule is the schedule, we just do the arithmetic for you. Sunday Ticket is the first page to ask. It won't be the last — anything that names a channel or prints a kickoff can read the same two answers."
+    ],
+    "image": "viewer-preferences.webp",
+    "imageAlt": "The Preferences page: the country picker with United States selected, the United States time zone list below it with Eastern chosen, and a preview reading a 1:00 PM ET Sunday kickoff as 1:00 PM ET and 10:00 AM PT"
+  },
+  {
     "id": "claim-from-player-modal",
     "date": "2026-09-06",
     "category": "new-feature",
@@ -877,27 +900,6 @@
     "image": "schedule-release-day.webp",
     "imageAlt": "The Schedule Release page reading “The Schedule Is Out — Released Monday, June 1, 2026”, above a Circle These row of four marquee cards. Each is striped with the two franchises’ brand colors and stacks the away team over the home team with their crests. Week 1 Da Dangsters at Pacific Pigskins, tagged division rivalry, opening week and doubleheader week; Week 4 carries a THROWBACK badge and shows old-school logos for Bring The Pain and BOYZ II MEN, labelled Vitside Mafia underneath, tagged “15 meetings, Vitside Mafia up 8-7”; Week 9 Computer Jocks at Dark Magicians of Chaos, tagged championship rematch; Week 14 Running down the Dream at Wascawy Wabbits with a division title on the line. Below sit stat tiles reading 144 games, doubleheaders in weeks 1, 2, 3 and 12, 40 of 48 possible division games clear of NFL byes and 9–9 home games, then the week-by-week matchup grid.",
     "link": "/schedule-release",
-    "excludeFromHero": true,
-    "leagues": [
-      "theleague",
-      "afl"
-    ]
-  },
-  {
-    "id": "lineup-double-header-carousel",
-    "date": "2026-08-22",
-    "category": "enhancement",
-    "icon": "chevron-right",
-    "title": "Both Halves of a Double-Header, Finally",
-    "summary": "On a week where you play twice, Set Lineup now shows both games instead of one — and both leagues' lineup pages carry the matchup panel. Swipe between games on your phone, click the arrows on a laptop, and watch your projected total move on every card at once.",
-    "description": [
-      "Double-headers are two opponents, two results, one lineup. TheLeague runs them in Weeks 1 through 3 and Week 13; the AFL has three of its own. <a href=\"/lineup\">Set Lineup</a> never let on. It found the first game with your name on it, drew the matchup panel, and stopped — so half the week you were setting a lineup for simply wasn't on the page. If your second opponent was the one you needed to worry about, the page had nothing to say about them.",
-      "Now there's a card for each game. On a phone they sit side by side and snap under your thumb, with a dot for each and a small “Game 1 of 2” that keeps up as you swipe. On anything with a mouse, arrows sit on the panel and click through the same cards. A normal single-game week looks exactly as it always has — no dots, no arrows, nothing new to learn.",
-      "Each card knows its own game. Home and away follow <a href=\"/schedule-release\">the schedule</a>, so you're on the right side of each scoreboard, and the projected total facing you is that opponent's, not a number borrowed from the other game. The one number both cards share is yours: MFL takes one lineup for the week and scores it twice, so every swap you make ticks your total on both cards at once. Watching one go up while the other sat there stale would have been its own kind of lie.",
-      "AFL owners get the whole thing at once. That page had no matchup panel at all — you set nine slots with no idea who they were pointed at. Now the same strip sits above the slots, each side wearing its franchise's colors and crest, with the projected score under it and a player of the game from <a href=\"/rosters\">each roster</a>. Two opponents means two of those faceoffs, which is what a double-header week actually looks like."
-    ],
-    "image": "lineup-game-carousel.webp",
-    "imageAlt": "The Set Lineup page for Week 1 showing a matchup card between Maverick and Pacific Pigskins with a player from each side, projected totals of 82.2 and 93.2, click arrows on the left and right of the panel, and a “Game 1 of 2” label with two dots below it.",
     "excludeFromHero": true,
     "leagues": [
       "theleague",

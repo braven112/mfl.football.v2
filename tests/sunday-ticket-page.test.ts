@@ -106,12 +106,21 @@ describe('rememberSundayTicketChoices — the route writes, the component reads'
   };
 
   it('writes only the params that are present, raw, with "all" for an empty leagues value', async () => {
-    const { rememberSundayTicketChoices, LEAGUE_SELECTION_COOKIE, COUNTRY_COOKIE } = await import('../src/utils/sunday-ticket-selection');
+    const { rememberSundayTicketChoices, LEAGUE_SELECTION_COOKIE } = await import('../src/utils/sunday-ticket-selection');
     const j = jar();
-    rememberSundayTicketChoices(new URL('https://x.test/theleague/sunday-ticket?country=ca&leagues='), j);
-    expect(j.writes).toEqual([[LEAGUE_SELECTION_COOKIE, 'default'], [COUNTRY_COOKIE, 'CA']]);
+    rememberSundayTicketChoices(new URL('https://x.test/theleague/sunday-ticket?leagues='), j);
+    expect(j.writes).toEqual([[LEAGUE_SELECTION_COOKIE, 'default']]);
     const none = jar();
     rememberSundayTicketChoices(new URL('https://x.test/theleague/sunday-ticket?week=3'), none);
     expect(none.writes).toEqual([]);
+  });
+
+  it('leaves ?country= alone — it belongs to the viewer preference now', async () => {
+    // Country moved to `viewer-preferences-page.ts` when it gained a clock to
+    // travel with; this module must not write a second, diverging cookie.
+    const { rememberSundayTicketChoices } = await import('../src/utils/sunday-ticket-selection');
+    const j = jar();
+    rememberSundayTicketChoices(new URL('https://x.test/theleague/sunday-ticket?country=ca'), j);
+    expect(j.writes).toEqual([]);
   });
 });

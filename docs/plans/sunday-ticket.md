@@ -55,10 +55,27 @@ Status: BUILT 2026-09-04 on branch `claude/sunday-ticket-matchup-preview-3025b7`
   link all say Monday (`formatKickoffZones`; the label comes from Intl under
   en-AU so the DST flip shows; the time is assembled from parts because
   ICU 72+ puts a narrow no-break space before AM/PM).
+
+- **Sep 2026: the clocks became a PREFERENCE, not a derivation.** The country
+  still picks the channel list, the carrier and which clocks are on offer, but
+  WHICH one you read is now yours: `/preferences` (both leagues) lets an owner
+  pick the ONE zone they live in — Central, Arizona, Newfoundland, Brisbane —
+  and the league's own PT rides along beside it (dropped for an owner already
+  on Pacific). The board's window headers, jump links, boxes and "also this
+  week" rows all print that pair. Three owners known to be off the league's
+  clock are seeded (`SEEDED_PREFERENCES`) so their first visit is right. `src/utils/viewer-preferences.ts`
+  holds the catalog and the defaults (pinned by test against `countryTimeZones`
+  so an owner who never opens the picker sees the board unchanged);
+  `viewer-preferences-page.ts` owns the cookie/Redis precedence and is called
+  from the ROUTE, since resolving it writes a cookie. The board keeps its
+  country chips — `?country=` still works, and now lands in the same
+  preference. `st_country` survives as a read-only fallback.
+  See `docs/claude/rules/viewer-preferences.md`.
 - **Cookie writes live in the ROUTES, not the component.** `Astro.cookies.set()`
   from an imported component throws `ResponseSentError` and blanks the page —
   the first country click shipped exactly that. `rememberSundayTicketChoices`
-  is called from each thin route; the component only reads. Recorded in
+  is called from each thin route (as is `resolveViewerPreferences`); the
+  component only reads. Recorded in
   CLAUDE.md next to the `Astro.redirect()` rule it mirrors.
 - **The What's New screenshot is a manual capture** (registered in
   `MANUAL_CAPTURE_ONLY`): the personalized board needs a signed-in owner, and

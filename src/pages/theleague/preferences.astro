@@ -1,0 +1,37 @@
+---
+/**
+ * /theleague/preferences — thin route over the shared PreferencesPage.
+ *
+ * The route owns the cookie writes and the account mirror:
+ * `Astro.cookies.set()` from an imported component runs after the response
+ * headers are committed and throws `ResponseSentError`, blanking the page.
+ * `resolveViewerPreferences` does both and hands back what to render.
+ *
+ * No auth gate — the preference is a cookie first, so it works signed out;
+ * signing in only makes it follow you to another device.
+ */
+import PreferencesPage from '../../components/shared/preferences/PreferencesPage.astro';
+import { getAuthUser } from '../../utils/auth';
+import { resolveViewerPreferences, hasPreferenceParams } from '../../utils/viewer-preferences-page';
+import { resolveLeaguePath } from '../../utils/nav-utils';
+
+export const prerender = false;
+
+const hide = Astro.locals.hideLeaguePrefix ?? false;
+const r = (p: string) => resolveLeaguePath(p, hide);
+const pathname = r('/theleague/preferences');
+const sundayTicketPath = r('/theleague/sunday-ticket');
+
+const user = getAuthUser(Astro.request);
+const { prefs, savedToAccount } = await resolveViewerPreferences(Astro.url, Astro.cookies, user);
+---
+
+<PreferencesPage
+  prefs={prefs}
+  title="Preferences | The League"
+  pathname={pathname}
+  sundayTicketPath={sundayTicketPath}
+  justSaved={hasPreferenceParams(Astro.url)}
+  syncedToAccount={savedToAccount}
+  loginPath={user ? null : r(`/theleague/login?next=${encodeURIComponent(pathname)}`)}
+/>

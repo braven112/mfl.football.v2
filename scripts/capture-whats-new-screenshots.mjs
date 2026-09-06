@@ -112,6 +112,11 @@ const MANUAL_CAPTURE_ONLY = {
  * an error page. Name a concrete page to shoot instead.
  */
 const CAPTURE_PATHS = {
+  // Both-league entry on the bare `/preferences`, which 404s on the shared
+  // host. Shot bare against TheLeague: a fresh context carries no preference
+  // cookie, so the picker renders its US / ET · PT default — and any param
+  // would add a "Saved." banner nobody clicked for.
+  'viewer-preferences': '/theleague/preferences',
   // Both-league entry, so its link is the league-neutral bare `/owners` —
   // which only routes on a league's own apex host, not the shared one.
   'owners-pages': '/theleague/owners',

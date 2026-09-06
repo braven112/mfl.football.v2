@@ -108,7 +108,14 @@ export function leagueSelectionHref(pathname: string, selection: string[] | null
 
 // ── Country (broadcast view) ─────────────────────────────────────────────
 
-export const COUNTRY_COOKIE = 'st_country';
+/**
+ * The board's country chips still carry `?country=`, but the cookie behind it
+ * is no longer this module's: country is half of a site-wide VIEWER
+ * PREFERENCE now (`viewer-preferences.ts`), written — with the viewer's
+ * chosen clocks — by `resolveViewerPreferences` in the route. The old
+ * `st_country` cookie is still READ there as a fallback, so nobody loses the
+ * country they picked before the preferences page existed.
+ */
 
 /** The page href for a country choice, preserving an explicit `?week=`. */
 export function countryHref(pathname: string, country: string, week: number | null): string {
@@ -126,7 +133,8 @@ export interface CookieJar {
 }
 
 /**
- * Write `?leagues=` and `?country=` to their cookies when present.
+ * Write `?leagues=` to its cookie when present. (`?country=` is written by
+ * `resolveViewerPreferences`, which owns the whole viewer preference.)
  *
  * Call this from the PAGE's frontmatter (`src/pages/<league>/sunday-ticket.astro`),
  * not from SundayTicketPage.astro: `Astro.cookies.set()` inside an imported
@@ -139,6 +147,4 @@ export function rememberSundayTicketChoices(url: URL, cookies: CookieJar): void 
   const opts = { maxAge: LEAGUE_SELECTION_MAX_AGE, path: '/', sameSite: 'lax' as const };
   const leagues = url.searchParams.get('leagues');
   if (leagues !== null) cookies.set(LEAGUE_SELECTION_COOKIE, leagues.trim() || 'default', opts);
-  const country = url.searchParams.get('country');
-  if (country !== null) cookies.set(COUNTRY_COOKIE, country.trim().toUpperCase(), opts);
 }

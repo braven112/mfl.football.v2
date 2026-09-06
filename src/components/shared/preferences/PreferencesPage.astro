@@ -1,0 +1,336 @@
+---
+/**
+ * Preferences — shared page body for every league.
+ *
+ * Two choices today: the COUNTRY whose channels you see, and which of that
+ * country's CLOCKS kickoffs print in. Sunday Ticket is the first reader (it
+ * used to derive both from the country alone); anything else that names a
+ * channel or a kickoff time can take the same two values through
+ * `viewer-preferences.ts`.
+ *
+ * ZERO client JS, on purpose. The form is a plain GET back to this route —
+ * the route's frontmatter writes the cookies and the account mirror, because
+ * `Astro.cookies.set()` from an imported component runs after the response
+ * headers are committed and throws `ResponseSentError` (the Sunday Ticket
+ * country chips shipped exactly that). Switching the country radio reveals
+ * that country's clocks through CSS `:has()`, and a stale tick from another
+ * country is dropped server-side by `parseZoneSelection` rather than by a
+ * script.
+ *
+ * Props-only apart from the clock: everything league-specific arrives from
+ * the thin route wrapper.
+ */
+import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
+import { formatKickoffZones } from '../../../utils/sunday-ticket-slate';
+import { countryOptions, sundayTicketProvider } from '../../../utils/broadcast-channels';
+import {
+  DEFAULT_ZONE_IDS,
+  LEAGUE_CLOCK,
+  isLeagueClock,
+  kickoffZonesFor,
+  nextSundayKickoffEpoch,
+  zoneOptionsFor,
+  zoneShortName,
+  COUNTRY_CODES,
+  type ViewerPreferences,
+} from '../../../utils/viewer-preferences';
+
+export interface Props {
+  /** The preferences in force, already resolved by the route. */
+  prefs: ViewerPreferences;
+  /** Page title, league-specific. */
+  title: string;
+  /** This route's own path, prefix already resolved — the form posts back to it. */
+  pathname: string;
+  /** The league's Sunday Ticket path, prefix already resolved. */
+  sundayTicketPath: string;
+  /** True when this request carried a choice, so the page can confirm it. */
+  justSaved?: boolean;
+  /** True when the choice was mirrored to the signed-in owner's account. */
+  syncedToAccount?: boolean;
+  /** Sign-in path for the "make it follow you" nudge; null when already signed in. */
+  loginPath?: string | null;
+  /** Overridable so a story renders a fixed clock. */
+  sampleKickoff?: number;
+}
+
+const {
+  prefs,
+  title,
+  pathname,
+  sundayTicketPath,
+  justSaved = false,
+  syncedToAccount = false,
+  loginPath = null,
+  sampleKickoff = nextSundayKickoffEpoch(),
+} = Astro.props;
+
+const countries = countryOptions();
+const provider = sundayTicketProvider(prefs.country);
+const preview = formatKickoffZones(sampleKickoff, kickoffZonesFor(prefs));
+const leagueClockLabel = zoneShortName(LEAGUE_CLOCK);
+---
+
+<TheLeagueLayout title={title}>
+  <div class="pf-page">
+    <header class="pf-head">
+      <p class="pf-eyebrow">Your settings</p>
+      <h1 class="pf-title">Preferences</h1>
+      <p class="pf-lede">
+        Where you're watching from, and which clock you read kickoffs in. We use it on
+        <a href={sundayTicketPath}>Sunday Ticket</a> today — channels, carrier and every kickoff time —
+        and on more screens as they learn to ask.
+      </p>
+    </header>
+
+    {justSaved && (
+      <p class="pf-banner pf-banner--ok" role="status">
+        Saved.{' '}
+        {syncedToAccount
+          ? 'Stored with your account, so it follows you to your phone.'
+          : 'Stored on this device.'}
+        {' '}<a href={sundayTicketPath}>See it on Sunday Ticket →</a>
+      </p>
+    )}
+
+    <section class="pf-preview" aria-label="How kickoffs read right now">
+      <span class="pf-preview__label">A 1:00 PM ET Sunday kickoff reads</span>
+      <span class="pf-preview__clocks">
+        {preview.map((c, i) => (
+          <span class="pf-preview__clock">
+            {i > 0 && <span class="pf-preview__sep" aria-hidden="true">·</span>}
+            {c.dayDiffers && <span class="pf-preview__day">{c.day}</span>}
+            <strong>{c.time}</strong> <span class="pf-preview__zone">{c.label}</span>
+          </span>
+        ))}
+      </span>
+      {provider && (
+        <span class="pf-preview__provider">
+          Sunday Ticket via <strong>{provider.name}</strong>
+        </span>
+      )}
+    </section>
+
+    <form class="pf-form" method="get" action={pathname}>
+      <fieldset class="pf-field">
+        <legend class="pf-field__legend">Where you watch</legend>
+        <p class="pf-field__hint">Decides which channel each game is on, and which carrier shows Sunday Ticket.</p>
+        <div class="pf-options pf-options--country">
+          {countries.map((c) => (
+            <label class="pf-option pf-option--country">
+              <input type="radio" name="country" value={c.code} id={`pf-country-${c.code}`} checked={c.code === prefs.country} />
+              <span class="pf-option__body">
+                <span class="pf-option__flag" aria-hidden="true">{c.flag}</span>
+                <span class="pf-option__name">{c.name}</span>
+              </span>
+            </label>
+          ))}
+        </div>
+      </fieldset>
+
+      <fieldset class="pf-field">
+        <legend class="pf-field__legend">Your clock</legend>
+        <p class="pf-field__hint">
+          Pick the one you live in. Every kickoff prints in your clock with the league's
+          <strong>{leagueClockLabel}</strong> beside it — the clock lineup locks and auction windows run on.
+          Already on {leagueClockLabel}? Then that's the only one you'll see.
+        </p>
+        {COUNTRY_CODES.map((code) => {
+          // Every country's clocks are rendered; CSS `:has()` shows the one
+          // whose country radio is checked. Each group has its OWN radio name
+          // (`zone-US`, `zone-CA`, …) — one shared name would let only a
+          // single radio on the whole page be checked, so the visible group
+          // would render with nothing selected. The route reads the group
+          // belonging to the chosen country and ignores the rest.
+          const selected = code === prefs.country ? prefs.zoneId : DEFAULT_ZONE_IDS[code];
+          return (
+            <div class="pf-zones" data-country={code}>
+              <span class="pf-zones__country">{countries.find((c) => c.code === code)?.name ?? code} clocks</span>
+              <div class="pf-options">
+                {zoneOptionsFor(code).map((z) => (
+                  <label class="pf-option pf-option--zone">
+                    <input type="radio" name={`zone-${code}`} value={z.id} checked={z.id === selected} />
+                    <span class="pf-option__body">
+                      <span class="pf-option__abbr">{zoneShortName(z)}</span>
+                      <span class="pf-option__name">{z.name}</span>
+                      {isLeagueClock(z) && <span class="pf-option__tag">league clock</span>}
+                    </span>
+                  </label>
+                ))}
+              </div>
+            </div>
+          );
+        })}
+      </fieldset>
+
+      <div class="pf-actions">
+        <button class="pf-save" type="submit">Save preferences</button>
+        <span class="pf-actions__note">
+          {loginPath ? (
+            <>Kept on this device. <a href={loginPath}>Sign in</a> and it follows you everywhere you're logged in.</>
+          ) : (
+            <>Kept on this device and with your account, so your phone reads the same clock.</>
+          )}
+        </span>
+      </div>
+    </form>
+
+    <footer class="pf-foot">
+      <p>
+        Kickoff times come from the NFL schedule and are converted here — nothing is stored about where you
+        actually are. Changing the country on the <a href={sundayTicketPath}>Sunday Ticket</a> board still works and
+        lands right back here.
+      </p>
+    </footer>
+  </div>
+</TheLeagueLayout>
+
+<style>
+  .pf-page {
+    max-width: 60rem;
+    margin: 0 auto;
+    padding: 1.5rem 1rem 3rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+  }
+
+  .pf-eyebrow {
+    margin: 0;
+    font-size: 0.75rem;
+    font-weight: var(--font-weight-bold);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--content-text-muted);
+  }
+  .pf-title { margin: 0.15rem 0 0.5rem; font-size: clamp(1.7rem, 4vw, 2.4rem); color: var(--page-text); }
+  .pf-lede { margin: 0; max-width: 46rem; color: var(--content-text-muted); line-height: 1.55; }
+  .pf-lede a, .pf-foot a, .pf-banner a, .pf-actions__note a { color: var(--league-accent); }
+
+  .pf-banner {
+    margin: 0;
+    padding: 0.7rem 1rem;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--card-border);
+    background: var(--card-surface);
+    color: var(--page-text);
+    font-size: 0.9rem;
+  }
+  .pf-banner--ok { border-color: color-mix(in srgb, var(--league-accent) 55%, transparent); }
+
+  /* The preview reads from the SAVED preferences, not the pending radio —
+     it is what the board is showing you right now, not a promise. */
+  .pf-preview {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.35rem 0.9rem;
+    padding: 0.9rem 1.1rem;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--card-border);
+    background: var(--card-surface);
+  }
+  .pf-preview__label {
+    font-size: 0.72rem;
+    font-weight: var(--font-weight-bold);
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    color: var(--content-text-muted);
+  }
+  .pf-preview__clocks { display: inline-flex; flex-wrap: wrap; gap: 0.5rem; color: var(--page-text); font-size: 1.05rem; }
+  .pf-preview__sep { margin-right: 0.5rem; color: var(--content-text-muted); }
+  .pf-preview__day { margin-right: 0.3rem; color: var(--league-accent); font-weight: var(--font-weight-bold); }
+  .pf-preview__zone { color: var(--content-text-muted); font-size: 0.85rem; }
+  .pf-preview__provider { margin-left: auto; font-size: 0.82rem; color: var(--content-text-muted); }
+
+  .pf-form { display: flex; flex-direction: column; gap: 1.25rem; }
+  .pf-field { margin: 0; padding: 1.1rem; border: 1px solid var(--card-border); border-radius: var(--radius-md); background: var(--card-surface); }
+  .pf-field__legend { padding: 0 0.4rem; font-weight: var(--font-weight-bold); color: var(--page-text); }
+  .pf-field__hint { margin: 0 0 0.85rem; font-size: 0.85rem; color: var(--content-text-muted); line-height: 1.5; }
+  .pf-field__note { margin: 0.75rem 0 0; font-size: 0.78rem; color: var(--content-text-muted); }
+
+  .pf-options { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+  .pf-option { cursor: pointer; }
+  .pf-option input { position: absolute; opacity: 0; width: 0; height: 0; }
+  .pf-option__body {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    padding: 0.45rem 0.85rem;
+    border-radius: var(--radius-full);
+    border: 1px solid var(--card-border);
+    color: var(--content-text-muted);
+    font-size: 0.85rem;
+    transition: border-color 0.15s ease, color 0.15s ease, background 0.15s ease;
+  }
+  .pf-option:hover .pf-option__body { border-color: var(--league-accent); color: var(--page-text); }
+  .pf-option input:checked + .pf-option__body {
+    color: var(--page-text);
+    border-color: color-mix(in srgb, var(--league-accent) 55%, transparent);
+    background: color-mix(in srgb, var(--league-accent) 12%, transparent);
+  }
+  /* Keyboard users get the ring the hidden input would have drawn. */
+  .pf-option input:focus-visible + .pf-option__body { outline: 2px solid var(--league-accent); outline-offset: 2px; }
+  .pf-option__flag { font-size: 1.05rem; line-height: 1; }
+  .pf-option__abbr { font-weight: var(--font-weight-bold); color: var(--page-text); }
+  .pf-option__name { font-size: 0.8rem; }
+  .pf-option__tag {
+    padding: 0.05rem 0.4rem;
+    border-radius: var(--radius-full);
+    background: color-mix(in srgb, var(--league-accent) 20%, transparent);
+    color: var(--page-text);
+    font-size: 0.65rem;
+    font-weight: var(--font-weight-bold);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  .pf-zones { margin-top: 0.4rem; }
+  .pf-zones__country {
+    display: block;
+    margin-bottom: 0.4rem;
+    font-size: 0.72rem;
+    font-weight: var(--font-weight-bold);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--content-text-muted);
+  }
+  /*
+   * Only the chosen country's clocks are on offer — switched by the radio
+   * above with no JS. Guarded by @supports because a browser without `:has()`
+   * must show ALL the groups (each captioned) rather than none: a picker that
+   * cannot be used is worse than one that shows too much. Ticks left in a
+   * hidden group are dropped server-side, not here.
+   *
+   * One rule per country in COUNTRY_CODES; `tests/viewer-preferences.test.ts`
+   * fails if a country is added to the registry without one.
+   */
+  @supports selector(:has(*)) {
+    .pf-zones { display: none; }
+    .pf-zones__country { display: none; }
+    .pf-form:has(#pf-country-US:checked) .pf-zones[data-country='US'] { display: block; }
+    .pf-form:has(#pf-country-CA:checked) .pf-zones[data-country='CA'] { display: block; }
+    .pf-form:has(#pf-country-AU:checked) .pf-zones[data-country='AU'] { display: block; }
+  }
+
+  .pf-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem 1rem; }
+  .pf-save {
+    padding: 0.6rem 1.4rem;
+    border-radius: var(--radius-full);
+    border: 1px solid color-mix(in srgb, var(--league-accent) 55%, transparent);
+    background: color-mix(in srgb, var(--league-accent) 18%, var(--card-surface));
+    color: var(--page-text);
+    font-weight: var(--font-weight-bold);
+    font-size: 0.95rem;
+    cursor: pointer;
+  }
+  .pf-save:hover { background: color-mix(in srgb, var(--league-accent) 30%, var(--card-surface)); }
+  .pf-actions__note { font-size: 0.82rem; color: var(--content-text-muted); }
+
+  .pf-foot { margin-top: 0.5rem; }
+  .pf-foot p { margin: 0; font-size: 0.8rem; color: var(--content-text-muted); line-height: 1.55; }
+
+  @media (max-width: 600px) {
+    .pf-preview__provider { margin-left: 0; width: 100%; }
+  }
+</style>
