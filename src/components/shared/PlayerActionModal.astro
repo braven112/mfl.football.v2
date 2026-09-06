@@ -152,7 +152,14 @@ const { title = 'Player actions' } = Astro.props;
     if (!spec.run) return;
     if (spec.closeFirst) {
       closeModal();
-      void spec.run();
+      // The sheet is gone, so there is no option row to render an error on —
+      // but a rejection must not escape as an unhandled promise either
+      // (Copilot on #974). Log it with the action id so the console says
+      // which action failed, and let the surface the action opened report
+      // its own errors.
+      spec.run().catch((err: unknown) => {
+        console.error(`[player-action] "${spec.id}" failed after closing the sheet:`, err);
+      });
       return;
     }
 

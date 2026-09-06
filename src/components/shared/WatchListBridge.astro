@@ -23,7 +23,11 @@
  *
  * Signed-in is the page's SSR decision — an owner logged into the other
  * league is "signed out" here, because MFL's watch list belongs to the
- * league the session is scoped to.
+ * league the session is scoped to. The page computes it ONCE
+ * (`franchiseIdForLeague` in src/utils/auth.ts) and this element's
+ * `data-signed-in` is the only client-side copy: this module's `pageSignedIn`
+ * and the page's own classic script both read it off the DOM, so the two
+ * scripts cannot carry different verdicts (tests/free-agent-session.test.ts).
  */
 import PlayerActionModal from './PlayerActionModal.astro';
 import '../../styles/player-action-button.css';

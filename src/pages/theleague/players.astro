@@ -18,7 +18,7 @@ import { getNthDayOfMonth } from '../../utils/league-event-resolver';
 import { buildWeeklyPlayerResults } from '../../utils/weekly-player-results';
 import { getFrozenSalaryAveragesYear } from '../../utils/salary-calculations';
 import { calculateAllSurplusValues } from '../../utils/surplus-value';
-import { getAuthUser, isCommissionerOrAdmin } from '../../utils/auth';
+import { getAuthUser, isCommissionerOrAdmin, franchiseIdForLeague } from '../../utils/auth';
 import { readBidRules } from '../../utils/waiver-claim';
 import { resolveWaiverWindow, describeWaiverWindow } from '../../utils/waiver-window';
 import WaiverClaimModal from '../../components/shared/WaiverClaimModal.astro';
@@ -690,7 +690,13 @@ const isAdmin = !!authUser && isCommissionerOrAdmin(authUser);
 // 0001, so an AFL owner browsing here matched a TheLeague roster by id and was
 // offered Bid buttons for a league they don't play in. Mirror of the same fix
 // on the AFL page.
-const claimFranchiseId = authUser && authUser.leagueId === mflLeagueId ? (authUser.franchiseId ?? null) : null;
+//
+// ONE verdict for the whole page (shared resolver in src/utils/auth.ts, used
+// by the AFL page too): claims, the sign-in prompt and My Watch List derive
+// from this id, and the client reads it back off
+// `#watch-list-bridge[data-signed-in]` rather than a second copy —
+// tests/free-agent-session.test.ts pins both.
+const claimFranchiseId = franchiseIdForLeague(authUser, mflLeagueId);
 const bidRules = readBidRules((leagueData as any)?.league ?? {});
 // The drop picker only ever offers the caller's OWN roster; the server verifies
 // this again, but sending anything else would be a bug worth not shipping.
@@ -1151,7 +1157,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
 {!claimFranchiseId && <SignInModal config={signInConfig} />}
 <WatchListBridge signedIn={watchSignedIn} />
 
-<script define:vars={{ canClaim, promptSignIn, watchSignedIn, playerDataJson, hasProjected, hasLastYrPts, hasSnapCounts, nflTeamsJson, hasSurplusData, hasAuctionData, isAuctionSeason, isAdmin, currentYear, mflHost, mflLeagueId, mflActionYear, franchiseNamesJson, franchiseBannersJson, defSpotlightJson, nflAvatarBgJson, nflAvatarBgFallback, nflAvatarBorderJson, nflAvatarBorderFallback, nflAvatarRingJson, nflAvatarRingFallback, nflAvatarRingDarkJson, nflAvatarRingDarkFallback, noHeadshot, logoOnerror: NFL_LOGO_ONERROR, collegeLogoOnerror: COLLEGE_LOGO_ONERROR, collegeLogoOnload: COLLEGE_LOGO_ONLOAD, rookieDraftComplete }}>
+<script define:vars={{ canClaim, promptSignIn, playerDataJson, hasProjected, hasLastYrPts, hasSnapCounts, nflTeamsJson, hasSurplusData, hasAuctionData, isAuctionSeason, isAdmin, currentYear, mflHost, mflLeagueId, mflActionYear, franchiseNamesJson, franchiseBannersJson, defSpotlightJson, nflAvatarBgJson, nflAvatarBgFallback, nflAvatarBorderJson, nflAvatarBorderFallback, nflAvatarRingJson, nflAvatarRingFallback, nflAvatarRingDarkJson, nflAvatarRingDarkFallback, noHeadshot, logoOnerror: NFL_LOGO_ONERROR, collegeLogoOnerror: COLLEGE_LOGO_ONERROR, collegeLogoOnload: COLLEGE_LOGO_ONLOAD, rookieDraftComplete }}>
   // define:vars creates const — copy to let so polling can update at runtime
   let _hasAuctionData = hasAuctionData;
   const players = JSON.parse(playerDataJson);
@@ -1234,10 +1240,14 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
   let watchScope = 'all';
   const watchedIds = () => window.watchListStore?.getWatchedIds?.() || new Set();
   const isWatchedId = (id) => watchedIds().has(String(id));
-  // SSR's league-scoped verdict, available before the bridge module runs —
-  // the stored view preference is applied at script eval, when the bridge
-  // (a deferred module) has not yet set window.watchListStore.
-  const watchListSignedIn = () => !!watchSignedIn;
+  // SSR's league-scoped verdict, read off the bridge element the page already
+  // rendered — the same attribute WatchListBridge's own script reads, so the
+  // classic script and the module cannot disagree. Read from the DOM rather
+  // than window.watchListStore because the stored view preference is applied
+  // at script eval, when the bridge (a deferred module) has not run yet; the
+  // element, rendered above this script, is already parsed.
+  const watchListSignedIn = () =>
+    document.getElementById('watch-list-bridge')?.dataset.signedIn === 'true';
 
   function applyGroupVisibility() {
     const canShowRankingsView = hasRankingColumns;

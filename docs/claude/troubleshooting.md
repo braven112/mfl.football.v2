@@ -193,6 +193,19 @@ Test API responses directly:
 curl "https://www.myfantasyleague.com/2025/export?TYPE=rosters&L=13522&JSON=1"
 ```
 
+### Reading a PR or issue thread from a cloud session
+`gh` is not installed in the remote sandbox, and `api.github.com` answers 403
+("GitHub access is not enabled for this session") unless the Claude GitHub App
+is connected — the `GH_TOKEN` in the environment does not change that. The
+public `github.com` HTML IS reachable through the proxy, and the PR page's
+text carries every review body, inline comment and commit message:
+```bash
+curl -sSL https://github.com/<owner>/<repo>/pull/<n> > pr.html
+# strip tags, then grep for the reviewer or the keyword you need
+```
+WebFetch on the same URL summarizes rather than quotes — use it for the shape
+of the thread, the scrape for exact comment text. (2026-09-05, /followup)
+
 ## Getting Help
 
 1. Check existing documentation in `/docs`

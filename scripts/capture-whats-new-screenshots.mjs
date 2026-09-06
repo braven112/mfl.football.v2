@@ -75,6 +75,8 @@ const MANUAL_CAPTURE_ONLY = {
   'my-draft-list': 'auth-gated page — blind capture shoots the sign-in redirect',
   'my-watch-list':
     'the view is empty until an owner has watched someone, and the watch list is read from MFL under a live owner cookie — a blind capture shoots the empty state. The staged shot forges an owner session, seeds the localStorage cache (`watchList.cache`) with a few ids so the first paint has rows, and opens the ⋮ sheet on one of them.',
+  'fa-sheet-bid-claim':
+    'the Bid / Claim option in the ⋮ sheet is derived from the row\'s own acquisition button, which only renders as a claim for a signed-in owner of THIS league with a roster — a blind capture shoots the sign-in variant. The staged shot forges an AFL owner session (league id from the registry, franchise 0001), opens /afl-fantasy/players, and opens the ⋮ sheet on the first row carrying a `.claim-open` button so the sheet shows Claim this player above Watch player.',
   'submit-lineup': 'auth-gated page — blind capture shoots the sign-in redirect',
   'tip-schefter-gets-louder': 'auth-gated page — blind capture shoots the sign-in redirect',
   'lineup-faceoff-scoreboard': 'auth-gated page — blind capture shoots the sign-in redirect',

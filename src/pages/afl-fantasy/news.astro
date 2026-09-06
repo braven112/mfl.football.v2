@@ -7,7 +7,7 @@ export const prerender = false;
 
 import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
 import SchefterFeed from '../../components/shared/SchefterFeed.astro';
-import { getAuthUser } from '../../utils/auth';
+import { getAuthUser, franchiseIdForLeague } from '../../utils/auth';
 import { buildSchefterPostOg, isValidSchefterPostId } from '../../utils/schefter-feed';
 import { getLeagueBySlug } from '../../config/leagues';
 import { getLeagueYearForSlug } from '../../utils/league-year';
@@ -29,8 +29,7 @@ const isAuthenticated = !!authUser;
 
 // Watching — My Watch List + the viewer's own roster, AFL sessions only.
 const newsLeague = getLeagueBySlug('afl-fantasy')!;
-const watchFranchiseId =
-  authUser && authUser.leagueId === newsLeague.id ? (authUser.franchiseId ?? null) : null;
+const watchFranchiseId = franchiseIdForLeague(authUser, newsLeague.id);
 const userFranchiseId = watchFranchiseId ?? undefined;
 const watchYear = getLeagueYearForSlug(newsLeague.slug);
 const watchingSets = await resolveWatchingSets(newsLeague, watchYear, watchFranchiseId);

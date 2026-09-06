@@ -90,3 +90,22 @@ export function isCommissionerOrAdmin(user: AuthUser): boolean {
 export function isAuthorizedForLeague(user: AuthUser, leagueId: string): boolean {
   return user.leagueId === leagueId;
 }
+
+/**
+ * The session's franchise IN THIS LEAGUE, or null.
+ *
+ * The one answer to "is this visitor an owner here?" for a league-scoped
+ * page: claims, the waiver-priority gate, My Watch List and the on-site
+ * sign-in prompt on the free-agent pages all hang off it. Both leagues have a
+ * franchise 0001, so a bare `franchiseId` check matched a TheLeague owner to
+ * an AFL roster and offered Claim buttons the server would refuse (#971) —
+ * the league test is what makes the id meaningful. Null covers all three
+ * "not an owner here" cases the same way: signed out, signed in to the other
+ * league, or a session with no franchise. Derive every signed-in flag from
+ * this rather than re-comparing `leagueId` inline, so the page cannot carry
+ * two verdicts that disagree.
+ */
+export function franchiseIdForLeague(user: AuthUser | null | undefined, leagueId: string): string | null {
+  if (!user || !isAuthorizedForLeague(user, leagueId)) return null;
+  return user.franchiseId || null;
+}

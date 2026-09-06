@@ -39,7 +39,7 @@ import '../../styles/fa-claim-button.css';
 // this page imports only the finished ~400KB result. See the SSR note below.
 import freeAgentsData from '../../../data/afl-fantasy/derived/free-agents.json';
 import { fetchLiveAflRosters, applyLiveRosters, conferenceScopedView, resolveConferenceSelection, type FaSnapshot } from '../../utils/afl-free-agents-live';
-import { getAuthUser } from '../../utils/auth';
+import { getAuthUser, franchiseIdForLeague } from '../../utils/auth';
 import { readBidRules } from '../../utils/waiver-claim';
 import { readWaiverSortOrder } from '../../utils/waiver-order';
 import { resolveWaiverWindow, describeWaiverWindow } from '../../utils/waiver-window';
@@ -156,7 +156,13 @@ const aflLeagueFeed =
 // would have written the claim against the wrong league or refused it. Surfaced
 // by the waiver-priority gate below, which (correctly) told the same visitor to
 // sign in while the table (incorrectly) told them they already had.
-const claimFranchiseId = authUser && authUser.leagueId === aflLeague.id ? (authUser.franchiseId ?? null) : null;
+//
+// ONE verdict for the whole page. Claims, the priority gate, the sign-in
+// prompt and My Watch List all derive from this id (shared resolver in
+// src/utils/auth.ts, used by TheLeague's page too); the client reads the
+// SAME verdict back off `#watch-list-bridge[data-signed-in]` rather than a
+// second copy — tests/free-agent-session.test.ts pins both.
+const claimFranchiseId = franchiseIdForLeague(authUser, aflLeague.id);
 const claimRules = readBidRules(aflLeagueFeed);
 // The drop picker offers only the caller's OWN roster IN THE ACTIVE CONFERENCE
 // — `owners` is keyed by conference because a player can be held once in each.
@@ -593,7 +599,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
   <PlayerDetailsModal hideContract={true} />
 </TheLeagueLayout>
 
-<script define:vars={{ canClaim, promptSignIn, watchSignedIn, playerDataJson, hasProjected, hasLastYrPts, hasAdp, defaultSort, defaultDir, mflHost, defSpotlightJson, conferenceMetaJson, activeConfIdJson, nflAvatarBgJson, nflAvatarBorderJson, nflAvatarBgFallback, nflAvatarBorderFallback, nflAvatarRingJson, nflAvatarRingFallback, nflAvatarRingDarkJson, nflAvatarRingDarkFallback, noHeadshot, logoOnerror: NFL_LOGO_ONERROR, collegeLogoOnerror: COLLEGE_LOGO_ONERROR, collegeLogoOnload: COLLEGE_LOGO_ONLOAD }}>
+<script define:vars={{ canClaim, promptSignIn, playerDataJson, hasProjected, hasLastYrPts, hasAdp, defaultSort, defaultDir, mflHost, defSpotlightJson, conferenceMetaJson, activeConfIdJson, nflAvatarBgJson, nflAvatarBorderJson, nflAvatarBgFallback, nflAvatarBorderFallback, nflAvatarRingJson, nflAvatarRingFallback, nflAvatarRingDarkJson, nflAvatarRingDarkFallback, noHeadshot, logoOnerror: NFL_LOGO_ONERROR, collegeLogoOnerror: COLLEGE_LOGO_ONERROR, collegeLogoOnload: COLLEGE_LOGO_ONLOAD }}>
   const players = JSON.parse(playerDataJson);
   // Duplicate-player conference metadata (null = single shared pool).
   const conferenceMeta = JSON.parse(conferenceMetaJson);
@@ -899,10 +905,14 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
   let watchScope = 'all';
   const watchedIds = () => window.watchListStore?.getWatchedIds?.() || new Set();
   const isWatchedId = (id) => watchedIds().has(String(id));
-  // SSR's league-scoped verdict, available before the bridge module runs —
-  // the stored view preference is applied at script eval, when the bridge
-  // (a deferred module) has not yet set window.watchListStore.
-  const watchListSignedIn = () => !!watchSignedIn;
+  // SSR's league-scoped verdict, read off the bridge element the page already
+  // rendered — the same attribute WatchListBridge's own script reads, so the
+  // classic script and the module cannot disagree. Read from the DOM rather
+  // than window.watchListStore because the stored view preference is applied
+  // at script eval, when the bridge (a deferred module) has not run yet; the
+  // element, rendered above this script, is already parsed.
+  const watchListSignedIn = () =>
+    document.getElementById('watch-list-bridge')?.dataset.signedIn === 'true';
 
   function applyGroupVisibility() {
     // Fall back to Stats if the owner has no board loaded (or deleted it while
