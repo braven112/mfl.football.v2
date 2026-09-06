@@ -730,5 +730,362 @@
         "pf": 1453.35
       }
     ]
+  },
+  "ownersPoll": {
+    "status": "closed",
+    "opensAt": "2026-08-15T22:44:53.209Z",
+    "closesAt": "2026-08-20T23:00:00.000Z",
+    "slots": 7,
+    "quorum": 8,
+    "eligibleVoters": 16,
+    "ballotsIn": 13,
+    "hasQuorum": true,
+    "methodology": "Each owner ranks 7 teams · 7 points for 1st down to 1 for 7th · 8 of 16 ballots required",
+    "ranked": [
+      {
+        "rank": 1,
+        "franchiseId": "0015",
+        "points": 83,
+        "firstPlaceVotes": 9,
+        "ballotsRanking": 13,
+        "avgBallotRank": 1.6153846153846154,
+        "compositeRank": 1,
+        "delta": 0
+      },
+      {
+        "rank": 2,
+        "franchiseId": "0016",
+        "points": 65,
+        "firstPlaceVotes": 3,
+        "ballotsRanking": 13,
+        "avgBallotRank": 3,
+        "compositeRank": 5,
+        "delta": 3
+      },
+      {
+        "rank": 3,
+        "franchiseId": "0012",
+        "points": 61,
+        "firstPlaceVotes": 1,
+        "ballotsRanking": 13,
+        "avgBallotRank": 3.3076923076923075,
+        "compositeRank": 2,
+        "delta": -1
+      },
+      {
+        "rank": 4,
+        "franchiseId": "0010",
+        "points": 57,
+        "firstPlaceVotes": 0,
+        "ballotsRanking": 13,
+        "avgBallotRank": 3.6153846153846154,
+        "compositeRank": 4,
+        "delta": 0
+      },
+      {
+        "rank": 5,
+        "franchiseId": "0002",
+        "points": 38,
+        "firstPlaceVotes": 0,
+        "ballotsRanking": 12,
+        "avgBallotRank": 4.833333333333333,
+        "compositeRank": 3,
+        "delta": -2
+      },
+      {
+        "rank": 6,
+        "franchiseId": "0005",
+        "points": 31,
+        "firstPlaceVotes": 0,
+        "ballotsRanking": 11,
+        "avgBallotRank": 5.181818181818182,
+        "compositeRank": 7,
+        "delta": 1
+      },
+      {
+        "rank": 7,
+        "franchiseId": "0013",
+        "points": 21,
+        "firstPlaceVotes": 0,
+        "ballotsRanking": 9,
+        "avgBallotRank": 5.666666666666667,
+        "compositeRank": 6,
+        "delta": -1
+      },
+      {
+        "rank": 8,
+        "franchiseId": "0004",
+        "points": 3,
+        "firstPlaceVotes": 0,
+        "ballotsRanking": 2,
+        "avgBallotRank": 6.5,
+        "compositeRank": 12,
+        "delta": 4
+      },
+      {
+        "rank": 9,
+        "franchiseId": "0009",
+        "points": 2,
+        "firstPlaceVotes": 0,
+        "ballotsRanking": 2,
+        "avgBallotRank": 7,
+        "compositeRank": 8,
+        "delta": -1
+      },
+      {
+        "rank": 10,
+        "franchiseId": "0008",
+        "points": 2,
+        "firstPlaceVotes": 0,
+        "ballotsRanking": 2,
+        "avgBallotRank": 7,
+        "compositeRank": 9,
+        "delta": -1
+      },
+      {
+        "rank": 11,
+        "franchiseId": "0011",
+        "points": 1,
+        "firstPlaceVotes": 0,
+        "ballotsRanking": 1,
+        "avgBallotRank": 7,
+        "compositeRank": 10,
+        "delta": -1
+      }
+    ],
+    "unranked": [
+      {
+        "franchiseId": "0001",
+        "compositeRank": 11
+      },
+      {
+        "franchiseId": "0006",
+        "compositeRank": 13
+      },
+      {
+        "franchiseId": "0007",
+        "compositeRank": 14
+      },
+      {
+        "franchiseId": "0014",
+        "compositeRank": 15
+      },
+      {
+        "franchiseId": "0003",
+        "compositeRank": 16
+      }
+    ],
+    "ballots": [
+      {
+        "franchiseId": "0001",
+        "ranking": [
+          "0015",
+          "0016",
+          "0012",
+          "0002",
+          "0013",
+          "0010",
+          "0005"
+        ],
+        "submittedAt": "2026-08-20T16:52:34.187Z",
+        "updatedAt": "2026-08-20T16:52:34.187Z",
+        "contrarianIndex": 0.86,
+        "homerIndex": 4
+      },
+      {
+        "franchiseId": "0002",
+        "ranking": [
+          "0015",
+          "0012",
+          "0010",
+          "0016",
+          "0013",
+          "0002",
+          "0005"
+        ],
+        "submittedAt": "2026-08-16T17:00:23.318Z",
+        "updatedAt": "2026-08-16T17:00:23.318Z",
+        "contrarianIndex": 1.14,
+        "homerIndex": -1
+      },
+      {
+        "franchiseId": "0004",
+        "ranking": [
+          "0015",
+          "0012",
+          "0016",
+          "0010",
+          "0005",
+          "0013",
+          "0002"
+        ],
+        "submittedAt": "2026-08-16T06:06:51.971Z",
+        "updatedAt": "2026-08-16T06:06:51.971Z",
+        "contrarianIndex": 0.86,
+        "homerIndex": 0
+      },
+      {
+        "franchiseId": "0005",
+        "ranking": [
+          "0015",
+          "0016",
+          "0010",
+          "0005",
+          "0012",
+          "0002",
+          "0011"
+        ],
+        "submittedAt": "2026-08-16T18:42:12.196Z",
+        "updatedAt": "2026-08-16T18:42:12.196Z",
+        "contrarianIndex": 1.43,
+        "homerIndex": 2
+      },
+      {
+        "franchiseId": "0006",
+        "ranking": [
+          "0012",
+          "0015",
+          "0005",
+          "0010",
+          "0002",
+          "0016",
+          "0008"
+        ],
+        "submittedAt": "2026-08-15T23:27:48.987Z",
+        "updatedAt": "2026-08-15T23:27:48.987Z",
+        "contrarianIndex": 1.86,
+        "homerIndex": 5
+      },
+      {
+        "franchiseId": "0007",
+        "ranking": [
+          "0015",
+          "0005",
+          "0010",
+          "0012",
+          "0016",
+          "0013",
+          "0009"
+        ],
+        "submittedAt": "2026-08-15T22:59:07.479Z",
+        "updatedAt": "2026-08-15T22:59:07.479Z",
+        "contrarianIndex": 1.71,
+        "homerIndex": 6
+      },
+      {
+        "franchiseId": "0008",
+        "ranking": [
+          "0015",
+          "0010",
+          "0002",
+          "0012",
+          "0013",
+          "0016",
+          "0008"
+        ],
+        "submittedAt": "2026-08-18T23:54:40.158Z",
+        "updatedAt": "2026-08-18T23:54:40.158Z",
+        "contrarianIndex": 2,
+        "homerIndex": 3
+      },
+      {
+        "franchiseId": "0009",
+        "ranking": [
+          "0016",
+          "0012",
+          "0015",
+          "0002",
+          "0010",
+          "0005",
+          "0004"
+        ],
+        "submittedAt": "2026-08-20T02:20:46.869Z",
+        "updatedAt": "2026-08-20T02:20:46.869Z",
+        "contrarianIndex": 1,
+        "homerIndex": 1
+      },
+      {
+        "franchiseId": "0010",
+        "ranking": [
+          "0016",
+          "0015",
+          "0005",
+          "0010",
+          "0012",
+          "0013",
+          "0002"
+        ],
+        "submittedAt": "2026-08-17T09:07:07.754Z",
+        "updatedAt": "2026-08-17T09:07:07.754Z",
+        "contrarianIndex": 1.43,
+        "homerIndex": 0
+      },
+      {
+        "franchiseId": "0013",
+        "ranking": [
+          "0015",
+          "0016",
+          "0002",
+          "0010",
+          "0013",
+          "0012",
+          "0005"
+        ],
+        "submittedAt": "2026-08-16T07:50:15.152Z",
+        "updatedAt": "2026-08-16T07:50:15.152Z",
+        "contrarianIndex": 1.14,
+        "homerIndex": 2
+      },
+      {
+        "franchiseId": "0014",
+        "ranking": [
+          "0015",
+          "0010",
+          "0016",
+          "0012",
+          "0002",
+          "0004",
+          "0009"
+        ],
+        "submittedAt": "2026-08-20T20:57:29.208Z",
+        "updatedAt": "2026-08-20T22:28:41.473Z",
+        "contrarianIndex": 1.14,
+        "homerIndex": 7
+      },
+      {
+        "franchiseId": "0015",
+        "ranking": [
+          "0015",
+          "0012",
+          "0016",
+          "0002",
+          "0010",
+          "0005",
+          "0013"
+        ],
+        "submittedAt": "2026-08-16T00:23:05.319Z",
+        "updatedAt": "2026-08-16T00:23:05.319Z",
+        "contrarianIndex": 0.57,
+        "homerIndex": 0
+      },
+      {
+        "franchiseId": "0016",
+        "ranking": [
+          "0016",
+          "0010",
+          "0012",
+          "0002",
+          "0015",
+          "0013",
+          "0005"
+        ],
+        "submittedAt": "2026-08-18T18:30:14.957Z",
+        "updatedAt": "2026-08-18T18:30:14.957Z",
+        "contrarianIndex": 1.43,
+        "homerIndex": 1
+      }
+    ],
+    "nonVoterCount": 3,
+    "source": "synthetic"
   }
 }

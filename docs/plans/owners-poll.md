@@ -626,3 +626,39 @@ no lineups, no weekly team story to rank). The third was really about the
 disabled, `poll-disabled` fired before the mismatch check ever ran. It now
 addresses TheLeague explicitly with an AFL commissioner's session, which is the
 guard it always claimed to be.
+
+## The worked example in the archive (2026-09-06)
+
+The poll shipped after the last real column ran, so every committed issue
+predated it and `OwnersPollSection.astro` — correctly — rendered nothing. The
+result was a one-way link: the ballot and voters pages point INTO the column,
+and the column mentioned the poll nowhere, which is the one page an owner
+following that link lands on.
+
+`scripts/seed-example-owners-poll.mjs` fills that gap until Week 1 produces a
+real poll. It is seeded into each league's latest issue —
+`data/theleague/pecking-order/2025-17.json` and
+`data/afl-fantasy/pecking-order/2025-14.json`.
+
+**These ballots are fabricated.** Nobody cast them. They are attributed to real
+franchises and they publish into the archive the voters page reads, so treat
+them as a demo fixture with a real byline, not as league history. Two things
+keep that honest:
+
+- Every seeded block carries `source: "synthetic"`, and the seeder **refuses to
+  overwrite a block without it** — a real tally is never clobbered by a demo.
+- The tally is not faked. Ballots run through the same `tallyOwnersPoll` /
+  `consensusRankMap` / `contrarianIndex` / `homerIndex` that `closePoll` uses,
+  assembled key-for-key the same way. What renders is the real pipeline over
+  invented input, which is what makes the example worth looking at.
+
+Ballots are built so the Δ column shows something: the room's shared base order
+blends the published composite with the pure recent-scoring order (owners chase
+last Sunday harder than a 50/50 composite does), then per-voter noise, then a
+per-owner homer bump. Output is deterministic — same seed, same file — so a
+re-run never churns the archive.
+
+**Known limit of seeding only the latest week.** Pairwise accuracy scores a
+ballot against the FOLLOWING week's all-play, and neither seeded week has a
+successor, so the voters page's accuracy column reads `—` for every owner.
+Seeding `2025-16` and `2025-13` as well would make the earlier week scorable.

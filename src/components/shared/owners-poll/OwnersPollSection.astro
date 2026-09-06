@@ -53,6 +53,13 @@ export interface OwnersPollBlock {
   unranked?: { franchiseId: string; compositeRank: number }[] | null;
   ballots?: OwnersPollBallot[];
   nonVoterCount?: number;
+  /**
+   * Present only on the worked example seeded by
+   * scripts/seed-example-owners-poll.mjs, whose ballots nobody cast. Nothing
+   * renders from it — it exists so that seeder can refuse to overwrite a week
+   * of real ballots.
+   */
+  source?: 'synthetic';
 }
 
 interface Props {
