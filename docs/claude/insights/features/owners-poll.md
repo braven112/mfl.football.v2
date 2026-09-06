@@ -3,6 +3,52 @@
 Weekly owner vote that publishes inside The Pecking Order. Plan:
 `docs/plans/owners-poll.md`.
 
+## 2026-09-06 — A section that renders nothing when its data is absent can ship invisible
+
+`OwnersPollSection.astro` correctly renders NOTHING when an issue has no
+`ownersPoll` block — that is what keeps archived columns untouched. But the
+poll shipped after the last real column ran, so every committed issue was in
+that state, and the result was a one-way link: `/pecking-order/ballot` and
+`/pecking-order/voters` both point INTO the column, and the column mentioned
+the poll nowhere. The one page an owner following that link lands on had no
+evidence the feature existed.
+
+Nothing was broken. Every test passed, both pages rendered, the absent state
+was deliberate. The gap only exists in the seam between "the feature is built"
+and "the feature has run once", and it is invisible to anything that tests the
+feature in isolation.
+
+The lesson generalizes past this feature: **when a new section is gated on data
+a cron will produce later, ask what its entry points look like in the window
+before the first run.** Either give the empty state something to say, or seed a
+worked example. Here it was the example —
+`scripts/seed-example-owners-poll.mjs`, seeded into each league's latest issue,
+described in `docs/plans/owners-poll.md`. Its ballots are fabricated but the
+tally is not: it calls the same `tallyOwnersPoll` / `consensusRankMap` /
+`contrarianIndex` / `homerIndex` that `closePoll` does, so the example
+exercises the real pipeline and cannot drift from it. Every seeded block
+carries `source: "synthetic"` and the seeder refuses to overwrite a block
+without it, so a real tally can never be clobbered by a demo re-run.
+
+## 2026-09-06 — `homerIndex`'s omission cap does not scale with field size
+
+Rendering the AFL example surfaced this, and it is shipped behaviour, not a
+seeding artifact: an owner who leaves their own team off the ballot is scored
+as having ranked it `slots + 1`, described in the source as "the most
+charitable bounded reading". That reasoning was worked out for TheLeague's
+7-of-16, where the cap sits at 8 in a field of 16 — genuinely modest.
+
+At the AFL's 10-of-24 it does not hold. The 24th-place franchise's owner
+omitted themselves, was scored at 11, and the consensus had them 24th, so their
+Homer Index came out **+13 — the largest in the league.** The most modest ballot
+on the board reads as the biggest homer, and the voters page prints it under
+"Biggest homer" with no way to tell the difference.
+
+The cap wants to be relative to the field (`eligibleVoters`), not to `slots`,
+or omission wants to score null rather than a number. Left alone for now
+because it is not this change's to fix, but any future league with a ballot
+covering under half the field will hit it harder.
+
 ## 2026-09-06 — A test that names one league as "the disabled one" expires
 
 Enabling the AFL broke four assertions across three suites, and none of them
