@@ -1229,9 +1229,6 @@ const t = (value?: string) => value ?? '\u2014';
     const tradeLink = document.getElementById('pdm-trade') as HTMLAnchorElement | null;
     const actionsRow = document.getElementById('pdm-actions') as HTMLElement | null;
     let claimPlayer: any = null;
-    // The same player drives both affordances; kept as its own binding so the
-    // trade side does not inherit claim's null-on-missing-id narrowing.
-    let tradePlayer: any = null;
     const paintClaim = () => {
       const offer = claimPlayer?.id ? offerFor(claimPlayer.id) : null;
       if (claimBtn) {
@@ -1253,7 +1250,7 @@ const t = (value?: string) => value ?? '\u2014';
       // Same paint pass as Claim, deliberately: the two are decided by one
       // context and occupy one slot, so painting them apart is how a player
       // ends up offered both or neither.
-      const target = tradeLink && tradePlayer?.id ? tradeTargetFor(tradePlayer.id) : null;
+      const target = tradeLink && claimPlayer?.id ? tradeTargetFor(claimPlayer.id) : null;
       const href = target
         ? buildTradeBuilderPath({
             scope: activeRankingsScope(),
@@ -1273,7 +1270,23 @@ const t = (value?: string) => value ?? '\u2014';
           const onApexHost = !pathHasLeaguePrefix(window.location.pathname);
           tradeLink.setAttribute('href', resolveLeaguePath(href, onApexHost));
           const desc = document.getElementById('pdm-trade-desc');
-          if (desc && target) desc.textContent = `Build a trade with ${target.teamName}`;
+          if (desc && target) {
+            // The "Rostered by" strip above is painted from the PAGE's payload
+            // (getFranchiseBandBrand(playerData.franchiseId)); this button is
+            // painted from the server's conference-scoped answer. In the AFL
+            // those two legitimately disagree — the same player is rostered
+            // once per conference, so browsing a rival CONFERENCE's roster
+            // shows his NL owner in the strip while the only club you may
+            // actually trade with is his AL one. Naming the relationship is
+            // what keeps the card from contradicting itself; saying "build a
+            // trade with" a team the card just said does not own him reads as
+            // a bug.
+            const shown = claimPlayer?.franchiseId;
+            const differs = shown && String(shown) !== String(target.franchiseId);
+            desc.textContent = differs
+              ? `${target.teamName} holds him in your conference`
+              : `Build a trade with ${target.teamName}`;
+          }
         }
       }
 
@@ -1317,7 +1330,6 @@ const t = (value?: string) => value ?? '\u2014';
     }
     renderClaimStrip = (player: any) => {
       claimPlayer = player?.id ? player : null;
-      tradePlayer = claimPlayer;
       paintClaim();
       // Paint again once the context lands — the first paint used the cache,
       // which on the first open of a page is empty.

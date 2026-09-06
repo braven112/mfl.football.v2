@@ -137,6 +137,15 @@ export function getLeaguePrefix(league: LeagueSlug): string {
  * @param hidePrefix - Whether to strip the prefix (true on a league apex host)
  * @returns Clean path (e.g. '/rosters') or original path if hidePrefix is false
  */
+export function resolveLeaguePath(path: string, hidePrefix: boolean): string {
+  if (!hidePrefix) return path;
+  for (const prefix of Object.values(LEAGUE_PREFIXES)) {
+    if (path === prefix) return '/';
+    if (path.startsWith(`${prefix}/`)) return path.slice(prefix.length);
+  }
+  return path;
+}
+
 /**
  * Whether a path is already league-PREFIXED — i.e. we are not on an apex host.
  *
@@ -151,15 +160,6 @@ export function pathHasLeaguePrefix(pathname: string): boolean {
   return Object.values(LEAGUE_PREFIXES).some(
     (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`)
   );
-}
-
-export function resolveLeaguePath(path: string, hidePrefix: boolean): string {
-  if (!hidePrefix) return path;
-  for (const prefix of Object.values(LEAGUE_PREFIXES)) {
-    if (path === prefix) return '/';
-    if (path.startsWith(`${prefix}/`)) return path.slice(prefix.length);
-  }
-  return path;
 }
 
 /**

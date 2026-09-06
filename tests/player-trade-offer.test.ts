@@ -130,6 +130,16 @@ describe('the href survives an apex host', () => {
     expect(resolveLeaguePath(path, false)).toBe(path);
   });
 
+  it('the card never contradicts its own "Rostered by" strip', () => {
+    // The strip is painted from the PAGE's payload franchiseId; the button from
+    // the server's conference-scoped tradeTargets. In the AFL those legitimately
+    // disagree (one holder per conference), so the copy must name the
+    // relationship rather than assert an ownership the card just denied.
+    const src = read(MODAL);
+    expect(src).toContain('holds him in your conference');
+    expect(src).toMatch(/String\(shown\) !== String\(target\.franchiseId\)/);
+  });
+
   it('the modal derives the host from the path, not a server flag', () => {
     // `hideLeaguePrefix` is an Astro local — it reaches the layout and never
     // the browser, so a client script has only the path it stands on.
@@ -165,6 +175,27 @@ describe('the server decides who a trade may target', () => {
     // One iteration over one roster set.
     expect(loop.match(/for \(const \[fid, list\] of Object\.entries\(rosters\)\)/g))
       .toHaveLength(1);
+  });
+
+  it('fails CLOSED when the viewer cannot be placed in a conference', () => {
+    // conferenceOfFranchise returns null on three separate degradations, and
+    // countsAgainstMe then compares null to null and admits all 24 clubs.
+    // That is merely conservative for rosteredIds (more players read as taken)
+    // and actively wrong for trades (it would name a rival-CONFERENCE holder,
+    // which the AFL builder silently swaps for a different team). The two
+    // consumers must therefore NOT share that fallback.
+    expect(src).toContain('const canPlaceViewer = leagueWide || myConference !== null');
+    expect(src).toMatch(/const theirs = canPlaceViewer && String\(fid\) !== String\(user\.franchiseId\)/);
+    // …and the claim set keeps the behaviour it shipped with: rosteredIds is
+    // still gated on countsAgainstMe alone, never on canPlaceViewer.
+    const loop = src.slice(
+      src.indexOf('const rosteredIds = new Set<string>()'),
+      src.indexOf('const ownIds =')
+    );
+    expect(loop).toContain('rosteredIds.add(id)');
+    expect(loop.slice(0, loop.indexOf('rosteredIds.add(id)'))).not.toContain(
+      'canPlaceViewer ? ',
+    );
   });
 
   it('ships franchise names only for the clubs it actually named', () => {
