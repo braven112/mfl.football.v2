@@ -133,12 +133,57 @@ describe('the chat lanes ask who was unreached before they post', () => {
     expect(src).toContain('buildFallbackPost');
   });
 
+  it('a league-audience deadline still announces in season, once, a week out', () => {
+    const src = read('scripts/schefter-scan.mjs');
+    // The trade deadline is a signal to the ROOM — get your offers in — not an
+    // obligation on any one owner, so a private push to each of them is the
+    // wrong shape and the in-season silence rule does not apply to it.
+    expect(src).toContain("LEAGUE_ANNOUNCE_TOUCH = '7d'");
+    expect(src).toMatch(/event\.audience === 'league'/);
+    expect(src).toMatch(/meta\.isAnnounce && \(meta\.leagueAudience \|\| !inSeason\)/);
+  });
+
+  it('both leagues mark their trade deadline as league-audience', () => {
+    for (const file of [
+      'src/data/theleague/resolved-events.json',
+      'data/afl-fantasy/resolved-events.json',
+    ]) {
+      const { events } = JSON.parse(read(file));
+      const deadline = events.find((e: { id: string }) => /trade|trading/.test(e.id));
+      expect(deadline, `${file} has no trade deadline event`).toBeTruthy();
+      // The resolver has to CARRY the flag, not just accept it in the source
+      // list — the scanner reads this file, not compute-league-events.mjs.
+      expect(deadline.audience, `${file}: trade deadline lost its audience flag`).toBe('league');
+    }
+  });
+
+  it('never marks an event league-audience that cannot reach the 7d touch', () => {
+    // The announce touch for a league-audience event is 7d, and 7d requires at
+    // least `standard` tier. Mark a `minor` event and the loop simply never
+    // reaches its announce touch: no post, no error, no way to tell from the
+    // log that the flag did nothing.
+    for (const file of [
+      'src/data/theleague/resolved-events.json',
+      'data/afl-fantasy/resolved-events.json',
+    ]) {
+      const { events } = JSON.parse(read(file));
+      const stranded = events
+        .filter((e: { audience?: string; tier: string }) => e.audience === 'league' && e.tier === 'minor')
+        .map((e: { id: string }) => e.id);
+      expect(
+        stranded,
+        `${file}: a minor event cannot announce at 7d — raise its tier or drop the audience flag`,
+      ).toEqual([]);
+    }
+  });
+
   it("Roger's mid-flight touches never reach the chat", () => {
     const src = read('scripts/schefter-scan.mjs');
-    // Only two lanes may post: the offseason first touch, and the day-of
-    // fallback. Anything else logs and continues.
-    expect(src).toMatch(/meta\.isFirstTouch && !inSeason/);
+    // Only two lanes may post: the announce touch, and the day-of fallback.
+    // Anything else logs and continues.
     expect(src).toMatch(/push only\$\{inSeason \? ' \(in season\)' : ''\}/);
+    // The 14d and 2d touches have no lane of their own in either direction.
+    expect(src).not.toMatch(/touchId === '14d'|touchId === '2d'/);
   });
 
   it('the fallback kinds stay exempt from the one-post-a-day cap', () => {

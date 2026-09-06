@@ -2092,13 +2092,29 @@ async function scanEventReminders(league) {
   for (const event of eventsData.events) {
     if (event.isPast) continue;
 
-    // The earliest touch this event's tier qualifies for — its save-the-date.
-    // REMINDER_TOUCHES is ordered furthest-out first, so this is simply the
-    // first qualifying entry. A minor event qualifies for `dayof` only, so its
-    // first touch and its final touch are the same one.
-    const firstTouchId = REMINDER_TOUCHES.find(
-      (t) => (TIER_RANK[event.tier] || 0) >= (TIER_RANK[t.minTier] || 0),
-    )?.id;
+    // WHICH touch, if any, is this event's chat announcement.
+    //
+    // Default (an obligation on individual owners): the earliest touch its tier
+    // qualifies for — the save-the-date. REMINDER_TOUCHES is ordered
+    // furthest-out first, so that is the first qualifying entry. A minor event
+    // qualifies for `dayof` only, so its first and final touch are the same
+    // one, and the fallback lane takes it.
+    //
+    // `audience: 'league'` (a trade deadline): the 7-day touch instead, and it
+    // posts IN SEASON too. This kind of deadline is aimed at the room rather
+    // than at anybody in particular — it is the signal to get offers in while
+    // there is still time, which is worthless as a private nudge to each owner
+    // separately and is exactly the sort of thing the chat is for. One post,
+    // not four: the 14-day and 2-day touches stay push-only either way, and
+    // using 7d as the announce touch rather than adding to the first-touch rule
+    // is what keeps a league-audience event from posting twice.
+    const LEAGUE_ANNOUNCE_TOUCH = '7d';
+    const announceTouchId =
+      event.audience === 'league'
+        ? LEAGUE_ANNOUNCE_TOUCH
+        : REMINDER_TOUCHES.find(
+            (t) => (TIER_RANK[event.tier] || 0) >= (TIER_RANK[t.minTier] || 0),
+          )?.id;
 
     for (const touch of REMINDER_TOUCHES) {
       // Check if this event tier qualifies for this touch
@@ -2159,7 +2175,11 @@ async function scanEventReminders(league) {
         league: league.slug,
       });
 
-      touchById.set(postId, { touchId: touch.id, isFirstTouch: touch.id === firstTouchId });
+      touchById.set(postId, {
+        touchId: touch.id,
+        isAnnounce: touch.id === announceTouchId,
+        leagueAudience: event.audience === 'league',
+      });
       console.log(`  [${touch.id}] ${headline}`);
     }
   }
@@ -2261,7 +2281,10 @@ async function scanEventReminders(league) {
         continue;
       }
 
-      if (meta.isFirstTouch && !inSeason) {
+      // A league-audience deadline announces regardless of season; everything
+      // else only out of season, where the chat is quiet enough for a
+      // save-the-date to get read.
+      if (meta.isAnnounce && (meta.leagueAudience || !inSeason)) {
         // The one place the notifications ask rides along on a normal post.
         const text = `${post.headline}\n\n${post.body}\n\n${url}\n\n${buildCta(notificationsUrl, { tagged: false })}`;
         await postToGroupMe(text, { botIdOverride: rogerBotId, kind: 'roger-reminder', league });
