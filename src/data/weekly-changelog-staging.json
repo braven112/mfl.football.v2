@@ -2,6 +2,14 @@
   "weekOf": "2026-08-31",
   "changes": [
     {
+      "date": "2026-09-06",
+      "type": "style-tweak",
+      "summary": "The \u201cRostered by\u201d strip in a player's profile card had a little black tile sitting behind the team crest. It was there for a reason \u2014 the crest was the dark-mode cut of the logo, drawn to sit on ink, so it needed ink to sit on \u2014 but it read as a sticker slapped onto the card. The strip now takes each franchise's normal crest and lets it follow your theme like every other logo on the site, so the mark sits straight on the card in both light and dark mode with nothing boxed in behind it.",
+      "impact": "user",
+      "area": "rosters",
+      "league": "both"
+    },
+    {
       "date": "2026-09-05",
       "type": "bug-fix",
       "summary": "Closing the waiver priority card on Free Agents left it sitting on the page — no dimmed background, just the whole twelve-team list painted over the player table like a sticker nobody could peel off. The card was told how to lay itself out whether it was open or not, and a closed card that still has a layout is a card that still shows. It now only lays itself out while open, so closing it actually closes it.",

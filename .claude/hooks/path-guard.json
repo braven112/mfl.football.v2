@@ -114,6 +114,10 @@
         "src/utils/theme*",
         "src/utils/team-color*",
         "src/utils/team-icon*",
+   "src/utils/franchise-band-brand.ts",
+   "src/utils/crest-dark-stroke-css.ts",
+   "src/utils/dark-surface-crest.ts",
+   "src/components/theleague/PlayerDetailsModal.astro",
         "src/utils/*logo*",
         "public/sw.js",
         "src/data/tv-logo-dark-stroke-manifest.json",
@@ -126,7 +130,10 @@
         "tests/team-color-backdrop-guard.test.ts",
         "tests/afl-brand-green-guard.test.ts",
         "tests/service-worker-cache.test.ts",
-        "tests/tv-logo-dark-stroke.test.ts"
+        "tests/tv-logo-dark-stroke.test.ts",
+    "tests/player-modal-owner-strip.test.ts",
+    "tests/franchise-band-brand.test.ts",
+    "tests/dark-surface-crest.test.ts"
       ]
     },
     {

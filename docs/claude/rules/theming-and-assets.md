@@ -286,8 +286,20 @@ Throwback Week-resolved. Four things there are load-bearing:
   `rankings-scope.ts` trap: one module instance survives a ClientRouter
   navigation between leagues, and a captured map paints the wrong league's
   crest.
+- **`crestLight` is the SECOND crest, for the modal's "Rostered by" strip.**
+  That strip sits on the card, not the band — a franchise-tinted wash that
+  follows the theme — so it is the one consumer of this map with a theme to
+  resolve. It therefore renders the LIGHT src and lets `TeamIconDarkStyles`
+  do both jobs (dark-cut swap, measured ring). It shipped the other way: the
+  band's dark artwork on a black chip drawn behind it in both themes, which is
+  the dark-in-both-themes recipe applied to a surface that isn't. Two rules
+  follow from the fix and neither is style — the chip must stay gone (it is a
+  black box behind art drawn for the card), and nothing may set an inline
+  `filter` on that img (an inline filter outranks the global `html.dark` rule
+  and rings the crest in light mode too). `tests/player-modal-owner-strip.test.ts`
+  pins both, plus that `crestLight` really is each franchise's `icon`.
 
-`tests/franchise-band-brand.test.ts` pins all four, plus the requirement that
+`tests/franchise-band-brand.test.ts` pins the first three, plus the requirement that
 exactly one component emits the map.
 
 ## The draft broadcast picks its own crests, and it needs TWO of them
