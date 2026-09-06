@@ -2,7 +2,10 @@
 /**
  * Submit Lineup Page — /theleague/lineup
  *
- * SSR page (auth-required). Mobile-first, zero React.
+ * SSR page (auth-required). Mobile-first. The page body is hand-rolled DOM,
+ * not React — the ONE island is the Owners' Poll ballot strip at the top,
+ * which renders nothing unless a ballot is open. Keep it that way: the
+ * client script below owns every starter slot directly.
  * Tap starter slot → CDM bottom-sheet → choose replacement → submit to MFL.
  *
  * Note: innerHTML usage throughout the client script is intentional and safe.
