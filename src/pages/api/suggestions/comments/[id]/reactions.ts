@@ -12,6 +12,7 @@ import {
   getCommentById,
   saveComment,
 } from '../../../../../utils/suggestions-storage';
+import { boardScope, type SuggestionsScope } from '../../../../../utils/suggestions-scope';
 
 function json(data: unknown, status = 200): Response {
   return new Response(JSON.stringify(data), {
@@ -21,10 +22,10 @@ function json(data: unknown, status = 200): Response {
 }
 
 /** Find which idea a comment belongs to */
-async function findCommentAcrossIdeas(commentId: string) {
-  const ideas = await getAllIdeas();
+async function findCommentAcrossIdeas(scope: SuggestionsScope, commentId: string) {
+  const ideas = await getAllIdeas(scope);
   for (const idea of ideas) {
-    const comment = await getCommentById(idea.id, commentId);
+    const comment = await getCommentById(scope, idea.id, commentId);
     if (comment) return comment;
   }
   return null;
@@ -34,7 +35,7 @@ export const POST: APIRoute = async ({ params, request }) => {
   const user = getAuthUser(request);
   if (!user?.franchiseId) return json({ error: 'Authentication required' }, 401);
 
-  const comment = await findCommentAcrossIdeas(params.id!);
+  const comment = await findCommentAcrossIdeas(boardScope(user), params.id!);
   if (!comment) return json({ error: 'Comment not found' }, 404);
 
   if (comment.deletedAt) {
@@ -69,7 +70,7 @@ export const POST: APIRoute = async ({ params, request }) => {
     comment.reactions[emoji] = [...existing, user.franchiseId];
   }
 
-  const ok = await saveComment(comment);
+  const ok = await saveComment(boardScope(user), comment);
   if (!ok) return json({ error: 'Failed to save reaction' }, 500);
 
   return json({ reactions: comment.reactions });

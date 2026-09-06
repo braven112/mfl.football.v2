@@ -253,6 +253,29 @@ export default function SuggestionBox({ isAuthenticated, isAdmin, teamIcons, use
     adminAction(ideaId, 'archive');
   }, [adminAction]);
 
+  /**
+   * File an idea as a GitHub issue.
+   *
+   * Not routed through `adminAction`: that helper swallows the response body,
+   * and this is the one admin action whose FAILURE carries information the
+   * commissioner needs (a missing token, a GitHub 403). It also has a partial
+   * success — 207, issue created but the backlink not saved — that a boolean
+   * cannot express.
+   */
+  const handleFileGithubIssue = useCallback(async (ideaId: string): Promise<string | null> => {
+    const res = await fetch(`/api/suggestions/ideas/${ideaId}/github-issue`, {
+      method: 'POST',
+      credentials: 'include',
+    });
+    const data = await res.json().catch(() => null);
+    if (data?.idea) {
+      setIdeas(prev => prev.map(i => (i.id === ideaId ? data.idea : i)));
+    }
+    if (!res.ok) return data?.error ?? `Couldn't file the issue (HTTP ${res.status}).`;
+    if (data?.warning) return data.warning;
+    return null;
+  }, []);
+
   const handleCreatePoll = useCallback(async (ideaId: string, options: string[], anonymous: boolean) => {
     const res = await fetch(`/api/suggestions/ideas/${ideaId}/poll`, {
       method: 'POST',
@@ -323,6 +346,7 @@ export default function SuggestionBox({ isAuthenticated, isAdmin, teamIcons, use
         onTogglePin={handleTogglePin}
         onToggleLock={handleToggleLock}
         onToggleArchive={handleToggleArchive}
+        onFileGithubIssue={handleFileGithubIssue}
         onCreatePoll={handleCreatePoll}
         onVote={handleVote}
         onDeletePoll={handleDeletePoll}

@@ -1,26 +1,23 @@
 ---
 /**
- * The Board (The League) — thin route wrapper.
+ * The Board (AFL) — thin route wrapper.
  *
  * Shared implementation lives in
- * components/shared/suggestions/SuggestionBoxPage.
+ * components/shared/suggestions/SuggestionBoxPage. See TheLeague's wrapper for
+ * why the auth read and the config import live in the route.
  *
- * The auth read and the config import stay HERE: a static import specifier
- * can't be a runtime variable, and importing both leagues' configs in the
- * shared component would ship the other league's crests on every render.
+ * This board's ideas live in their own Redis bucket (`sb:afl:*`, resolved by
+ * src/utils/suggestions-scope.ts from the SESSION's league) — never TheLeague's.
  */
 import SuggestionBoxPage from '../../components/shared/suggestions/SuggestionBoxPage.astro';
 import { getAuthUser, isCommissionerOrAdmin } from '../../utils/auth';
 import { LEAGUES } from '../../config/leagues';
-import config from '../../data/theleague.config.json';
+import config from '../../../data/afl-fantasy/afl.config.json';
 
 export const prerender = false;
 
 const authUser = getAuthUser(Astro.request);
-// Admin tools are league-scoped: a session signed into the OTHER league must
-// not get this board's commissioner buttons, so the league check rides along
-// with the role check (both leagues have a franchise 0001).
-const isThisLeague = authUser?.leagueId === LEAGUES.theleague.id;
+const isThisLeague = authUser?.leagueId === LEAGUES['afl-fantasy'].id;
 const isAdmin = authUser && isThisLeague ? isCommissionerOrAdmin(authUser) : false;
 const teamIcons = config.teams.map((t: { franchiseId: string; icon: string }) => ({
   franchiseId: t.franchiseId,
@@ -29,7 +26,7 @@ const teamIcons = config.teams.map((t: { franchiseId: string; icon: string }) =>
 ---
 
 <SuggestionBoxPage
-  leagueSlug="theleague"
+  leagueSlug="afl-fantasy"
   isAuthenticated={!!authUser && isThisLeague}
   isAdmin={isAdmin}
   userFranchiseId={(isThisLeague && authUser?.franchiseId) || ''}

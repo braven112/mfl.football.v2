@@ -15,6 +15,7 @@ import {
   deleteIdea,
   getCommentsForIdea,
 } from '../../../../utils/suggestions-storage';
+import { boardScope } from '../../../../utils/suggestions-scope';
 
 function json(data: unknown, status = 200): Response {
   return new Response(JSON.stringify(data), {
@@ -27,10 +28,10 @@ export const GET: APIRoute = async ({ params, request }) => {
   const user = getAuthUser(request);
   if (!user) return json({ error: 'Authentication required' }, 401);
 
-  const idea = await getIdeaById(params.id!);
+  const idea = await getIdeaById(boardScope(user), params.id!);
   if (!idea) return json({ error: 'Idea not found' }, 404);
 
-  const comments = await getCommentsForIdea(idea.id);
+  const comments = await getCommentsForIdea(boardScope(user), idea.id);
 
   return json({ idea, comments });
 };
@@ -39,7 +40,7 @@ export const PATCH: APIRoute = async ({ params, request }) => {
   const user = getAuthUser(request);
   if (!user) return json({ error: 'Authentication required' }, 401);
 
-  const idea = await getIdeaById(params.id!);
+  const idea = await getIdeaById(boardScope(user), params.id!);
   if (!idea) return json({ error: 'Idea not found' }, 404);
 
   const isAdmin = isCommissionerOrAdmin(user);
@@ -77,7 +78,7 @@ export const PATCH: APIRoute = async ({ params, request }) => {
 
   idea.editedAt = new Date().toISOString();
 
-  const ok = await saveIdea(idea);
+  const ok = await saveIdea(boardScope(user), idea);
   if (!ok) return json({ error: 'Failed to update idea' }, 500);
 
   return json({ idea });
@@ -87,7 +88,7 @@ export const DELETE: APIRoute = async ({ params, request }) => {
   const user = getAuthUser(request);
   if (!user) return json({ error: 'Authentication required' }, 401);
 
-  const idea = await getIdeaById(params.id!);
+  const idea = await getIdeaById(boardScope(user), params.id!);
   if (!idea) return json({ error: 'Idea not found' }, 404);
 
   const isAdmin = isCommissionerOrAdmin(user);
@@ -96,7 +97,7 @@ export const DELETE: APIRoute = async ({ params, request }) => {
     return json({ error: 'You can only delete your own ideas' }, 403);
   }
 
-  const ok = await deleteIdea(idea.id);
+  const ok = await deleteIdea(boardScope(user), idea.id);
   if (!ok) return json({ error: 'Failed to delete idea' }, 500);
 
   return json({ deleted: true, id: idea.id });

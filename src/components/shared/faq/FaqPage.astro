@@ -1,0 +1,568 @@
+---
+/**
+ * FAQ — this site vs. the MyFantasyLeague site.
+ *
+ * Written to answer the question owners actually ask when a second URL shows
+ * up for a league they have used for twenty years: "so which one is real?"
+ *
+ * The answer the page commits to, and every section serves it: MFL is the
+ * system of record — scoring, official rosters, the rules as enforced — and
+ * this site is a better front door onto that same data. Both are real, both
+ * keep working, and nothing here is a migration announcement. That last part
+ * is a deliberate constraint from the commissioner: the MFL site and the MFL
+ * apps are NOT going away, and the page must never imply a sunset.
+ *
+ * The closing sections are the point of the whole thing rather than a footer:
+ * an idea posted here becomes a GitHub issue an agent works, which is the one
+ * thing the MFL suggestion form has never been able to offer. The tone stays
+ * warm about MFL throughout — it has run this league reliably for two decades
+ * — and the jab is at the void ideas fall into, not at the product.
+ *
+ * Zero client JS. Every disclosure is a native <details>, so the page works
+ * before hydration, survives a ClientRouter navigation with no lifecycle
+ * wiring, and every answer is readable with script off.
+ */
+import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
+import { resolveLeaguePath } from '../../../utils/nav-utils';
+import { getLeagueBySlug } from '../../../config/leagues';
+import type { CanonicalLeagueSlug } from '../../../config/leagues';
+
+interface Props {
+  leagueSlug: CanonicalLeagueSlug;
+}
+
+const { leagueSlug } = Astro.props;
+const league = getLeagueBySlug(leagueSlug);
+if (!league) throw new Error(`FaqPage: unknown league ${leagueSlug}`);
+
+// Every internal href goes through resolveLeaguePath so an apex host
+// (theleague.us, afl-fantasy.com) does not get a doubled league prefix.
+const hide = Astro.locals.hideLeaguePrefix ?? false;
+const path = (p: string) => resolveLeaguePath(`/${leagueSlug}${p}`, hide);
+
+// The league's own MFL home. Built from the registry — never a hardcoded host
+// or id (CLAUDE.md, "League registry"). The year segment is the CURRENT MFL
+// league year, but MFL redirects a stale year to the live one, so the link
+// does not need the rollover clocks to stay correct.
+const mflHome = `https://${league.mflHost}/${new Date().getFullYear()}/home/${league.id}`;
+
+/** Where each job is done today. `where` drives the column styling. */
+const split: Array<{ job: string; where: 'mfl' | 'here' | 'both'; note: string }> = [
+  { job: 'Setting your lineup', where: 'both', note: 'Either works. Ours is built around our starting requirements; MFL is the one that records it.' },
+  { job: 'Official scoring', where: 'mfl', note: 'MFL scores every game. We read those numbers — we never compute our own.' },
+  { job: 'Official rosters & contracts', where: 'mfl', note: 'MFL stores them. Every roster you see here was read from there.' },
+  { job: 'Trades, waivers, adds/drops', where: 'mfl', note: 'Transactions are processed by MFL. We show them, analyze them, and tell you about them.' },
+  { job: 'Live scoring on Sunday', where: 'here', note: 'Real-time scores, win probability, and who is still playing — built for a phone on the couch.' },
+  { job: 'Standings & playoff picture', where: 'both', note: 'MFL owns the tiebreakers. We show the same standings with the playoff math done for you.' },
+  { job: 'Reading the rules', where: 'here', note: 'The constitution, searchable, plus Roger — who answers rules questions in plain English.' },
+  { job: 'Draft night', where: 'both', note: 'The draft runs on MFL. The board, the queue, and the broadcast view are ours.' },
+  { job: 'League history & records', where: 'here', note: 'Two decades of franchises, owners, rivalries and eras that MFL has the data for but no page to show.' },
+];
+
+const whereLabel: Record<'mfl' | 'here' | 'both', string> = {
+  mfl: 'MyFantasyLeague',
+  here: 'Here',
+  both: 'Either',
+};
+---
+
+<TheLeagueLayout title={`FAQ | ${league.name}`}>
+  <main class="faq">
+    <header class="faq__hero">
+      <p class="faq__eyebrow">Frequently Asked</p>
+      <h1 class="faq__title">Wait — so do I still use MyFantasyLeague?</h1>
+      <p class="faq__deck">
+        Yes. MFL still runs {league.name}, and it isn't going anywhere. This site
+        is a second, better-looking front door onto the same league — built
+        around <em>our</em> rules instead of a settings page that has to work
+        for forty thousand leagues at once. Here's how the two fit together.
+      </p>
+    </header>
+
+    <!-- The one-paragraph answer, for anyone who won't scroll. -->
+    <section class="faq__tldr" aria-labelledby="faq-tldr-title">
+      <h2 class="faq__tldr-title" id="faq-tldr-title">The short version</h2>
+      <ul class="faq__tldr-list">
+        <li><strong>MFL still works.</strong> The site, the apps, your bookmarks — all of it, exactly as before.</li>
+        <li><strong>MFL is the official source of truth.</strong> Scoring, rosters, and the rules as enforced live there.</li>
+        <li><strong>This site is built on top of it.</strong> Same data, better experience, shaped around our specific rules.</li>
+        <li><strong>Use whichever you like.</strong> Nobody is being moved off anything.</li>
+      </ul>
+    </section>
+
+    <section class="faq__section" aria-labelledby="faq-q-title">
+      <h2 class="faq__section-title" id="faq-q-title">Questions</h2>
+
+      <details class="faq__item" open>
+        <summary class="faq__q">Does the old MFL site still work?</summary>
+        <div class="faq__a">
+          <p>
+            Completely. <a href={mflHome} target="_blank" rel="noopener noreferrer">{league.name} on MyFantasyLeague</a>
+            works exactly like it did last season and the twenty before it. If it's how
+            you've always done things, keep doing them — nothing you rely on has moved.
+          </p>
+        </div>
+      </details>
+
+      <details class="faq__item">
+        <summary class="faq__q">What about the MFL apps on my phone?</summary>
+        <div class="faq__a">
+          <p>
+            Those work too. MyFantasyLeague's mobile apps talk to the same league they
+            always have. Set a lineup there, make a trade there, get the push notifications
+            there — all of it still lands.
+          </p>
+          <p>
+            The difference is that now there's <em>also</em> an app for this league
+            specifically. Add this site to your home screen and you get one that only
+            has to know about our rules — our contracts, our cap, our playoff format —
+            instead of every rule set MFL supports.
+          </p>
+        </div>
+      </details>
+
+      <details class="faq__item">
+        <summary class="faq__q">If I do something here, does it count?</summary>
+        <div class="faq__a">
+          <p>
+            Yes. When you set a lineup on this site, it is submitted to MFL — the same
+            place it would land if you'd typed it there. There is no separate copy of
+            your team living over here waiting to be reconciled. One league, one set of
+            official records, two ways to reach them.
+          </p>
+        </div>
+      </details>
+
+      <details class="faq__item">
+        <summary class="faq__q">Which one is the source of truth?</summary>
+        <div class="faq__a">
+          <p>
+            <strong>MyFantasyLeague, without qualification.</strong> MFL scores the games,
+            stores the official rosters and contracts, processes the transactions, and
+            enforces the settings. If this site and MFL ever disagree about a number,
+            MFL is right and we have a bug to fix.
+          </p>
+          <p>
+            That's a deliberate design choice, not a limitation we're working around. A
+            twenty-year-old league needs a system of record that has already survived
+            twenty years, and MFL has done that job reliably the entire time. This site
+            reads from it; it never invents a number of its own.
+          </p>
+        </div>
+      </details>
+
+      <details class="faq__item">
+        <summary class="faq__q">Then what does this site actually add?</summary>
+        <div class="faq__a">
+          <p>
+            The things a general-purpose platform can't justify building for one league.
+            MFL has to serve every league on earth, so its screens are configurable rather
+            than specific. Ours only has to serve {league.name}, so it can be specific:
+            pages that know what a contract year means here, what the cap does here, what
+            the playoff format is here.
+          </p>
+          <p>
+            Plus everything MFL has the data for but no page to show — franchise history,
+            owner records, rivalries, era-by-era archives, live win probability,
+            searchable rules with an AI that answers questions about them.
+          </p>
+        </div>
+      </details>
+
+      <details class="faq__item">
+        <summary class="faq__q">Is the league moving off MFL eventually?</summary>
+        <div class="faq__a">
+          <p>
+            No. Over time more of the <em>day-to-day</em> — the things you'd do on a
+            Tuesday to manage your team — will be doable here, simply because it's nicer
+            here. But MFL keeps the jobs it's best at: official scoring, official roster
+            storage, and enforcing the rules. It stays the system of record.
+          </p>
+          <p>
+            The honest framing: this is a better interface to MFL, not a replacement
+            for it.
+          </p>
+        </div>
+      </details>
+
+      <details class="faq__item">
+        <summary class="faq__q">Do I need a separate login?</summary>
+        <div class="faq__a">
+          <p>
+            No — you sign in with your MyFantasyLeague credentials. This site doesn't
+            keep its own password for you. Signing in is what lets it know which team is
+            yours, so your roster, your lineup, and your view of the league show up
+            correctly.
+          </p>
+        </div>
+      </details>
+    </section>
+
+    <!-- Where each job gets done. The concrete half of everything above. -->
+    <section class="faq__section" aria-labelledby="faq-split-title">
+      <h2 class="faq__section-title" id="faq-split-title">Who handles what</h2>
+      <p class="faq__section-note">
+        Not a competition — just where each job is done best today.
+      </p>
+      <div class="faq__table-wrap">
+        <table class="faq__table">
+          <thead>
+            <tr>
+              <th scope="col">Job</th>
+              <th scope="col">Where</th>
+              <th scope="col">Notes</th>
+            </tr>
+          </thead>
+          <tbody>
+            {split.map((row) => (
+              <tr>
+                <th scope="row">{row.job}</th>
+                <td>
+                  <span class={`faq__pill faq__pill--${row.where}`}>{whereLabel[row.where]}</span>
+                </td>
+                <td class="faq__note">{row.note}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- The reason the page exists: ideas here become work. -->
+    <section class="faq__section faq__section--feedback" aria-labelledby="faq-ideas-title">
+      <h2 class="faq__section-title" id="faq-ideas-title">Your ideas actually get built here</h2>
+      <p class="faq__lede">
+        Every owner has emailed a feature request into a suggestion form at some point
+        and watched it disappear. Not because anyone was rude about it — a platform
+        serving thousands of leagues simply can't build your league's idea. That's a
+        fair trade for a system that has kept our scoring straight for twenty years.
+        But it does mean good ideas go nowhere.
+      </p>
+      <p class="faq__lede">
+        This site is different in exactly one way that matters:
+        <strong>the person who can build it is in your league.</strong>
+        Post an idea and it gets read, argued about, and — if it's good — turned into
+        actual work, usually within days.
+      </p>
+
+      <ol class="faq__steps">
+        <li>
+          <span class="faq__step-n">1</span>
+          <div>
+            <strong>Post it on <a href={path('/suggestions')}>The Board</a>.</strong>
+            A sentence is enough. Bug reports get a short form — what page, what
+            happened, what you expected — because that's what makes a fix fast.
+          </div>
+        </li>
+        <li>
+          <span class="faq__step-n">2</span>
+          <div>
+            <strong>The league weighs in.</strong> Other owners comment and react.
+            Something with nine 🔥 on it moves ahead of something with none.
+          </div>
+        </li>
+        <li>
+          <span class="faq__step-n">3</span>
+          <div>
+            <strong>The commissioner files it as a work item.</strong> One click turns
+            your post into a tracked issue in the repo that runs this site — carrying
+            your words, your screenshots, and a link back to the thread.
+          </div>
+        </li>
+        <li>
+          <span class="faq__step-n">4</span>
+          <div>
+            <strong>It gets built, and you find out.</strong> Shipped changes show up in
+            <a href={path('/whats-new')}>What's New</a>, and your original post gets
+            marked <em>Implemented</em>. The thread you started is still there.
+          </div>
+        </li>
+      </ol>
+
+      <div class="faq__cta">
+        <a class="faq__cta-btn" href={path('/suggestions')}>Post an idea on The Board</a>
+        <p class="faq__cta-note">
+          Rule changes still need a 75% vote per the <a href={path('/rules')}>constitution</a> —
+          The Board is where they get pitched, not where they get ratified. Anything about
+          <em>this site</em>, though, is fair game and needs no vote at all.
+        </p>
+      </div>
+    </section>
+
+    <section class="faq__section" aria-labelledby="faq-more-title">
+      <h2 class="faq__section-title" id="faq-more-title">Still curious</h2>
+      <ul class="faq__links">
+        <li><a href={path('/about')}>How this site was built</a> — the long version, including where AI does and doesn't get to touch the math.</li>
+        <li><a href={path('/rules')}>The constitution</a> — every rule, searchable.</li>
+        <li><a href={path('/whats-new')}>What's New</a> — everything that has shipped, newest first.</li>
+        <li><a href={mflHome} target="_blank" rel="noopener noreferrer">{league.name} on MyFantasyLeague</a> — the official league site.</li>
+      </ul>
+    </section>
+  </main>
+</TheLeagueLayout>
+
+<style>
+  /* Tokens only — a var() with no definition renders its fallback in BOTH
+     themes (docs/claude/rules/theming-and-assets.md), so light looks perfect
+     and dark ships unreadable. tests/design-token-guard.test.ts fails on one. */
+  .faq {
+    max-width: 62rem;
+    margin: 0 auto;
+    padding: var(--spacing-lg, 1.5rem) var(--spacing-md, 1rem) 4rem;
+  }
+
+  /* ── Hero ── */
+  .faq__hero {
+    padding: 1.5rem 0 2rem;
+    border-bottom: 1px solid var(--content-border, #e2e8f0);
+  }
+  .faq__eyebrow {
+    margin: 0 0 0.5rem;
+    font-size: 0.6875rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--content-text-muted, #6b7280);
+  }
+  .faq__title {
+    margin: 0 0 0.75rem;
+    font-size: clamp(1.6rem, 4vw, 2.5rem);
+    line-height: 1.15;
+    color: var(--page-text, #111827);
+  }
+  .faq__deck {
+    margin: 0;
+    max-width: 46rem;
+    font-size: 1.0625rem;
+    line-height: 1.6;
+    color: var(--content-text-muted, #6b7280);
+  }
+
+  /* ── TL;DR ── */
+  .faq__tldr {
+    margin: 1.75rem 0;
+    padding: 1.25rem 1.5rem;
+    background: var(--color-gray-50, #f9fafb);
+    border: 1px solid var(--content-border, #e2e8f0);
+    border-left: 3px solid var(--league-accent, #1c497c);
+    border-radius: var(--radius-md, 0.5rem);
+  }
+  .faq__tldr-title {
+    margin: 0 0 0.75rem;
+    font-size: 0.6875rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--content-text-muted, #6b7280);
+  }
+  .faq__tldr-list {
+    margin: 0;
+    padding-left: 1.1rem;
+    display: grid;
+    gap: 0.5rem;
+    line-height: 1.55;
+    color: var(--page-text, #111827);
+  }
+
+  /* ── Sections ── */
+  .faq__section {
+    margin-top: 2.75rem;
+  }
+  .faq__section-title {
+    margin: 0 0 0.5rem;
+    padding-left: 0.5rem;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--content-text-muted, #6b7280);
+    border-left: 3px solid var(--league-accent, #1c497c);
+  }
+  .faq__section-note,
+  .faq__lede {
+    margin: 0 0 1rem;
+    max-width: 46rem;
+    line-height: 1.65;
+    color: var(--page-text, #111827);
+  }
+  .faq__section-note {
+    color: var(--content-text-muted, #6b7280);
+  }
+
+  /* ── Q&A disclosures ── */
+  .faq__item {
+    border-bottom: 1px solid var(--content-border, #e2e8f0);
+  }
+  .faq__q {
+    padding: 0.9rem 2rem 0.9rem 0;
+    font-size: 1.0625rem;
+    font-weight: 600;
+    line-height: 1.4;
+    color: var(--page-text, #111827);
+    cursor: pointer;
+    list-style: none;
+    position: relative;
+  }
+  .faq__q::-webkit-details-marker { display: none; }
+  /* Chevron drawn in CSS so the page ships no icon request and no script. */
+  .faq__q::after {
+    content: '';
+    position: absolute;
+    right: 0.4rem;
+    top: 1.25rem;
+    width: 0.5rem;
+    height: 0.5rem;
+    border-right: 2px solid var(--content-text-muted, #6b7280);
+    border-bottom: 2px solid var(--content-text-muted, #6b7280);
+    transform: rotate(45deg);
+    transition: transform 0.15s ease;
+  }
+  .faq__item[open] > .faq__q::after {
+    transform: rotate(-135deg);
+  }
+  .faq__q:hover { color: var(--league-accent, #1c497c); }
+  .faq__a {
+    padding: 0 0 1.1rem;
+    max-width: 46rem;
+  }
+  .faq__a p {
+    margin: 0 0 0.75rem;
+    line-height: 1.65;
+    color: var(--page-text, #111827);
+  }
+  .faq__a p:last-child { margin-bottom: 0; }
+
+  /* ── Split table ── */
+  .faq__table-wrap {
+    overflow-x: auto;   /* wide content scrolls itself; the page body never does */
+    background: var(--card-bg, #fff);
+    border: 1px solid var(--content-border, #e2e8f0);
+    border-radius: var(--radius-md, 0.5rem);
+  }
+  .faq__table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.875rem;
+  }
+  .faq__table th,
+  .faq__table td {
+    padding: 0.7rem 0.85rem;
+    text-align: left;
+    vertical-align: top;
+    border-bottom: 1px solid var(--content-border, #e2e8f0);
+  }
+  .faq__table thead th {
+    font-size: 0.625rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--content-text-muted, #6b7280);
+    background: var(--content-bg-muted, #eeeeee);
+  }
+  .faq__table tbody tr:last-child th,
+  .faq__table tbody tr:last-child td { border-bottom: none; }
+  .faq__table tbody th {
+    font-weight: 600;
+    color: var(--page-text, #111827);
+    white-space: nowrap;
+  }
+  .faq__note {
+    color: var(--content-text-muted, #6b7280);
+    line-height: 1.5;
+    min-width: 18rem;
+  }
+  .faq__pill {
+    display: inline-block;
+    padding: 0.15rem 0.5rem;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    white-space: nowrap;
+    border-radius: 999px;
+    border: 1px solid var(--content-border, #e2e8f0);
+    color: var(--content-text-muted, #6b7280);
+  }
+  .faq__pill--mfl {
+    color: var(--color-warning-dark, #d97706);
+    background: var(--color-warning-light, #fef3c7);
+    border-color: var(--color-warning-light, #fef3c7);
+  }
+  .faq__pill--here {
+    color: var(--color-primary, #1c497c);
+    background: color-mix(in srgb, var(--color-primary, #1c497c) 8%, transparent);
+    border-color: color-mix(in srgb, var(--color-primary, #1c497c) 25%, transparent);
+  }
+  .faq__pill--both {
+    color: var(--color-success-dark, #059669);
+    background: var(--color-success-light, #d1fae5);
+    border-color: var(--color-success-border, #a7f3d0);
+  }
+
+  /* ── Feedback pipeline ── */
+  .faq__steps {
+    margin: 1.25rem 0 0;
+    padding: 0;
+    list-style: none;
+    display: grid;
+    gap: 0.85rem;
+    counter-reset: none;
+  }
+  .faq__steps li {
+    display: flex;
+    gap: 0.85rem;
+    align-items: flex-start;
+    line-height: 1.6;
+    color: var(--page-text, #111827);
+  }
+  .faq__step-n {
+    flex: 0 0 auto;
+    display: grid;
+    place-items: center;
+    width: 1.6rem;
+    height: 1.6rem;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--color-white, #fff);
+    background: var(--league-accent, #1c497c);
+  }
+  .faq__cta {
+    margin-top: 1.75rem;
+    padding: 1.25rem 1.5rem;
+    background: var(--color-gray-50, #f9fafb);
+    border: 1px solid var(--content-border, #e2e8f0);
+    border-radius: var(--radius-md, 0.5rem);
+  }
+  .faq__cta-btn {
+    display: inline-block;
+    padding: 0.6rem 1.15rem;
+    font-weight: 600;
+    font-size: 0.9375rem;
+    color: var(--color-white, #fff);
+    background: var(--league-accent, #1c497c);
+    border-radius: var(--radius-sm, 0.25rem);
+    text-decoration: none;
+  }
+  .faq__cta-btn:hover { opacity: 0.9; }
+  .faq__cta-note {
+    margin: 0.85rem 0 0;
+    font-size: 0.8125rem;
+    line-height: 1.55;
+    color: var(--content-text-muted, #6b7280);
+  }
+
+  /* ── Closing links ── */
+  .faq__links {
+    margin: 0;
+    padding-left: 1.1rem;
+    display: grid;
+    gap: 0.55rem;
+    line-height: 1.55;
+    color: var(--content-text-muted, #6b7280);
+  }
+
+  @media (max-width: 640px) {
+    .faq__tldr,
+    .faq__cta { padding: 1rem; }
+    .faq__q { font-size: 1rem; }
+  }
+</style>

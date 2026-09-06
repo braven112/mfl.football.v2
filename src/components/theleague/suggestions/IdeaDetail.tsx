@@ -36,6 +36,8 @@ interface Props {
   onTogglePin?: (ideaId: string) => void;
   onToggleLock?: (ideaId: string) => void;
   onToggleArchive?: (ideaId: string) => void;
+  /** Resolves to an error/warning message, or null on a clean filing. */
+  onFileGithubIssue?: (ideaId: string) => Promise<string | null>;
   onCreatePoll?: (ideaId: string, options: string[], anonymous: boolean) => Promise<boolean>;
   onVote?: (ideaId: string, optionId: string) => void;
   onDeletePoll?: (ideaId: string) => void;
@@ -144,6 +146,7 @@ export default function IdeaDetail({
   onTogglePin,
   onToggleLock,
   onToggleArchive,
+  onFileGithubIssue,
   onCreatePoll,
   onVote,
   onDeletePoll,
@@ -322,6 +325,7 @@ export default function IdeaDetail({
               onTogglePin={() => onTogglePin(idea.id)}
               onToggleLock={() => onToggleLock(idea.id)}
               onToggleArchive={() => onToggleArchive(idea.id)}
+              onFileGithubIssue={onFileGithubIssue ? () => onFileGithubIssue(idea.id) : undefined}
               onDelete={() => onDelete(idea.id)}
             />
           )}

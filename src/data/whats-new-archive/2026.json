@@ -65,6 +65,48 @@
     ]
   },
   {
+    "id": "starter-aware-schedule-optimizer",
+    "date": "2026-08-23",
+    "category": "league-event",
+    "icon": "calendar-2",
+    "title": "The Scheduler Now Knows Who Is Actually Missing",
+    "summary": "Next year’s schedule is built against your projected starting nine instead of your whole roster, and it actively hunts for weeks where neither side of a rivalry game is missing anyone. Replayed on 2026 it cuts missing starters in division games by nearly a third.",
+    "description": [
+      "The old scheduler asked “does this week have NFL byes in it?” That question is nearly useless for a 24-man roster, because a 24-man roster almost always has somebody out. Measured on The League’s 2026 rosters, only 10% of team-week combinations were fully clean, and Weeks 8, 11 and 13 had none at all. Every week looked equally bad, so nothing could be optimised.",
+      "It now asks a better question: is either of THESE two teams missing a projected starter that week? Counting the starting nine instead of the whole roster takes The League from 10% usable weeks to 41%, and it unlocks Weeks 8, 11 and 13 entirely.",
+      "The AFL is unaffected, and that is the correct answer rather than an oversight. The AFL reveals its schedule before its draft, so a roster is seven keepers — fewer players than there are starting slots, which means everyone kept is a starter. Whole-roster and starter counts agree exactly there.",
+      "On top of that the optimiser now scores rivalry games specifically: starters missing from a division game, both sides added together. The old fairness measure could not see this at all, because it only checked whether the two teams were EQUALLY hurt — two rivals both missing three starters scored perfectly, which is exactly the game nobody wants to play. Replayed on 2026 the AFL goes from 58 missing starters across its division games to 40, and from 94 to 99 rivalry games with both rosters whole.",
+      "The 2026 schedules are untouched — locked, pasted and being played. This applies to the next one. Still to come: letting different teams play their division games in different weeks, which is a deeper rebuild of how rounds are constructed."
+    ],
+    "excludeFromHero": true,
+    "leagues": [
+      "theleague",
+      "afl"
+    ]
+  },
+  {
+    "id": "schefter-article-links",
+    "date": "2026-08-23",
+    "category": "enhancement",
+    "icon": "link",
+    "title": "Schefter Learned to Point at Things",
+    "summary": "Every Schefter column now links to the page it's about, and works in the tool that answers whatever question the paragraph just raised. His schedule release article somehow never linked to the schedule release page. That's fixed, and so is the reason it happened.",
+    "description": [
+      "Claude Schefter filed eight paragraphs about the 2026 schedule — the four games to circle, the rivalry records, the bye-week math — and never once told you where to go read the thing. <a href=\"/schedule-release\">The schedule release page</a> was right there. The column existed to announce it. Not a link in sight.",
+      "It turned out not to be a slip in one article. Searching the entire published feed for a link — 396 posts, every column he has ever filed, both leagues — turned up exactly zero. He had never linked to anything. He would name a roster crunch and not point at <a href=\"/rosters\">the rosters</a>, call out dead weight and not point at the dead money report, and finish a cut-watch column three days from a deadline without once mentioning <a href=\"/calendar\">the calendar</a>.",
+      "Now every article type declares where it points before a word is written. The page the column is about gets linked near the top and again at the end, and the pages it touches on the way through get linked where they come up. Go back and read the 2026 schedule release now: the opening line is the link, Throwback Week goes to your throwback settings, the rivalry section goes to <a href=\"/rivalries\">the rivalry pages</a>, and the closer hands you the full week-by-week grid. The three cut-watch columns from August got the same treatment — over-the-limit rosters, dead weight, a bloated receiver room that <a href=\"/trade-builder\">the trade builder</a> has opinions about.",
+      "The second half of the job is new: Schefter is now expected to plug the site. Not with a paragraph of housekeeping bolted to the end — with the tool that answers the question he just raised. Grading your auction and pointing at the salary benchmarks. Naming the guy you're about to lose and pointing at <a href=\"/players\">the free agent board</a>. He picks the ones that fit the story and skips the rest, because a plug he had to wedge in reads like an ad, and nobody clicks a columnist who sounds like an ad.",
+      "Links he makes up don't survive. He writes from a list of real pages, and anything that isn't on it gets quietly unwrapped before publishing — the sentence still reads, it just stops promising a page that doesn't exist. And if he forgets the main link entirely, the way he did in August, it gets put back in for him. A Schefter column with nothing to click is no longer something that can happen."
+    ],
+    "image": "schefter-article-links.webp",
+    "imageAlt": "The 2026 schedule release article on The Schefter Report, headlined “The 2026 Schedule Is Here. Four Games Will Define It.” under Claude Schefter’s byline. Three phrases in the prose are blue underlined links: “The 2026 schedule for The League is official” in the opening line, “Throwback Week” inside the Week 4 paragraph about Bring the Pain at Vitside Mafia, and “The rivalry renewals are stacked this season” opening the rivalry section.",
+    "excludeFromHero": true,
+    "leagues": [
+      "theleague",
+      "afl"
+    ]
+  },
+  {
     "id": "lineup-double-header-carousel",
     "date": "2026-08-22",
     "category": "enhancement",
