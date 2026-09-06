@@ -122,19 +122,19 @@ which is exactly why the split exists — verify parsing offline against
   now falls back to the registry entry for `L`, and only to the default league
   when `L` names nothing known. Callers may therefore send `L` alone.
   `tests/live-scoring-host-resolution.test.ts` pins all four cases.
-- **A `host=<hostname>` param on a public URL reads like SSRF to a WAF.** The
-  gameday health check's first scheduled run (2026-09-03) got HTTP 403 on both
-  leagues' live-scoring probes, with NO matching entry in the app's Vercel
-  runtime logs — blocked at the edge, never reached the route, while the
-  param-free `/api/nfl-scoreboard` probe from the same runner in the same
-  second passed. The same URL from a residential IP returned 200, so it scores
-  on datacenter-IP + payload together. Don't put a hostname in a query string
-  the check controls; name the league and let the server resolve it.
-- **MFL serves no live scoring before Week 1 kicks off.** The gameday health
-  check's cron window opens in September but kickoff is mid-month, so every run
-  in that gap is pre-season and a week-1 live-scoring probe fails on a
-  perfectly healthy league — it pages the commissioner about nothing. Clamping
-  week 0 up to 1 is what hides this; `shouldProbeLiveScoring`
-  (`scripts/lib/gameday-health.mjs`) takes the RAW `getCurrentNFLWeek` result,
-  which is 0 until the Week 1 Thursday. The scoreboard and MFL-export probes
-  stay meaningful year-round and keep running.
+- **A `host=<hostname>` param on a public URL reads like SSRF to a WAF.** A
+  since-removed pre-kickoff health check probed both leagues' live-scoring
+  routes from a GitHub runner and got HTTP 403, with NO matching entry in the
+  app's Vercel runtime logs — blocked at the edge, never reached the route,
+  while the param-free `/api/nfl-scoreboard` probe from the same runner in the
+  same second passed. The same URL from a residential IP returned 200, so it
+  scores on datacenter-IP + payload together. Any future automated probe: don't
+  put a hostname in a query string the caller controls; name the league and let
+  the server resolve it.
+- **MFL serves no live scoring before Week 1 kicks off.** `getCurrentNFLWeek`
+  returns 0 until the Week 1 Thursday, and clamping that up to 1 is what hides
+  the gap: a week-1 live-scoring request in the September pre-kickoff window
+  fails against a perfectly healthy league. Anything scheduled year-round must
+  read the RAW resolver result rather than a clamped week. (The pre-kickoff
+  health check that first hit this was removed in Sep 2026 — it posted its
+  failures to the league GroupMe.)
