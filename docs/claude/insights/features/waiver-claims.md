@@ -9,6 +9,119 @@ found in it the day after.
 The MFL-side auth story (why `calendar.json` had never synced) is in
 `domains/mfl-api.md`, 2026-09-02.
 
+## 2026-09-06 - The Rostered Half Of The Card, And What The Claim Context Was Quietly Assuming
+
+**Context:** the Claim button answered the free agents. The other ~85% of the
+league — everyone actually rostered — still opened a card with no action on it.
+Rostered players now get "Trade for him", linking into the league's Trade
+Builder with the holder and the player preselected. The work is a second
+consumer bolted onto `/api/claim-context`, and every insight below is something
+that only surfaced because there was now a SECOND reader of a thing built for
+one.
+
+### The player-modal payload's `franchiseId` is not a reliable owner — measure before you trust it
+
+The obvious implementation reads `franchiseId` off the payload the modal was
+opened with. `PlayerModalData` declares the field, so it looks safe. It is not:
+
+| Surface | modal rows | rows carrying a usable `franchiseId` |
+|---|---|---|
+| `theleague/rosters` | 278 | 28 (the viewer's own; the other 250 absent) |
+| `theleague/players` | 50 | 0 (all `null`) |
+
+Every page fills the payload from whatever it had on hand, and most had no
+reason to carry an owner. A trade link built on that field would have worked on
+one page and silently produced no button on the rest — the worst shape, because
+the surface where you *test* it is the one where it works.
+
+So ownership is a SERVER verdict: `claim-context` now ships `tradeTargets`
+(playerId → franchiseId). The client never consults the payload for it. The
+general rule: an optional field on a shared client payload is a hint, not a
+source of truth — `grep` how many call sites actually populate it before
+building on it.
+
+### `canClaim` is one consumer's precondition, and caching on it starves the next one
+
+`player-claim-client` did `state.context = ctx && ctx.canClaim ? ctx : null`.
+Perfectly correct while claiming was the only reader. But `canClaim` is
+`roster.length > 0 && !auctionOpen` — **false for the entire auction season** —
+so the trade button inherited a months-long outage that no test would show in
+September and every owner would hit in the offseason.
+
+The context is now retained on `signedIn`, and each affordance gates itself.
+When you add a second reader to a cached response, re-read what the cache
+condition actually encodes: if it is one consumer's precondition rather than
+"the payload is usable", it does not belong on the cache.
+
+### …and the counterweight: retaining it means the claim side must gate EXPLICITLY
+
+Relaxing the cache condition quietly removed a guard. A degraded MFL read
+answers with `canClaim: false` AND an empty `rosteredIds` — and `offerFor`
+decided claimability by *absence* from that set. Discarding the context used to
+mask it; retaining it would have lit the Claim button up on every player on the
+page, the viewer's own roster included.
+
+`offerFor` now checks `canClaim` itself. **Loosening a cache condition can
+delete an invariant that was being enforced by accident** — when you widen one,
+go find what the narrow version was incidentally protecting.
+
+### The AFL's conference rule was already solved here; the trade map had to ride in the SAME pass
+
+`claim-context` already had `countsAgainstMe` — league-wide for TheLeague, own
+conference for the AFL, which rosters the same player once per conference. The
+trade map is built inside that same loop rather than from a second roster read,
+because the AFL builder's failure mode for an out-of-conference `to` is not an
+error: it **silently substitutes a different same-conference team**, so the
+owner lands on a roster unrelated to the player they clicked. A separate walk
+that drifted by one franchise would produce a plausible, wrong page.
+
+Owner framing that settled the design (2026-09-06): from a viewer's seat there
+are only three states — in my conference and someone else's (trade), in my
+conference and unowned (claim), or mine (nothing). Out-of-conference ownership
+is not a weaker case to degrade gracefully; it is *irrelevant*.
+
+### The two Trade Builders speak different query dialects, and neither URL says which
+
+| League | Path | Other team | Their player |
+|---|---|---|---|
+| TheLeague | `/theleague/trade-builder` | `b` | `bp` |
+| AFL | `/afl-fantasy/trade-builder` | `to` | `target` |
+
+They also disagree about the viewer's own side: TheLeague *derives* it
+(`resolveInitialTradeState` seats the viewer on whichever side the link left
+empty), the AFL defaults `from` to the session's franchise. Both therefore want
+the counterparty and nothing else — passing your own franchise too is how one
+club ends up on both sides. `src/utils/trade-builder-link.ts` owns the mapping;
+Best Ball returns null rather than a guessed path.
+
+### An arithmetic invariant is the cheapest proof that scoping is right
+
+Verifying `tradeTargets` against live MFL beat reading the code back:
+
+```
+TheLeague  386 rostered - 361 tradeable = 25  == franchise 0001's roster
+AFL        192 rostered - 176 tradeable = 16  == franchise 0001's roster
+AFL        distinct franchises offered: 0002-0012 only (never 0013-0024)
+```
+
+Two subtraction checks prove both "own franchise excluded" and "conference
+scoping holds" against real data, with no fixtures. When a change produces a
+derived set, look for the identity that relates it to a set you already trust.
+
+### Where the button actually appears is narrower than "any rostered player"
+
+Worth knowing before assuming a surface: most pages never show you a RIVAL's
+player. Counted against live rosters —
+
+- `theleague/projected-free-agents` — 69 rival-rostered (the real home; they are
+  expiring contracts, so "trade for him now" is the whole point)
+- `theleague/rosters` — 0. Your team plus free agents; there is no team switcher
+- `theleague/players` — 0. Free agents only
+- `afl-fantasy/rosters?franchise=<rival>` — yes, via the `franchise` param;
+  the default view is your own team
+
+"The modal is mounted there" does not mean "the affordance is reachable there".
+
 ## 2026-09-06 - The Claim Left The Table, And Every Assumption The Column Was Holding Came Loose
 
 **Context:** #983 moved the acquisition out of the Bid/Claim column on both Free

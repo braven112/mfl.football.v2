@@ -44,6 +44,27 @@
     ]
   },
   {
+    "id": "schedule-constraints-in-priority-order",
+    "date": "2026-08-23",
+    "category": "enhancement",
+    "icon": "calendar-2",
+    "title": "The Schedule Now Shows Its Work",
+    "summary": "Schedule Release Day used to tell you how many division games dodged the NFL byes and stop there. It now tells you how many did NOT, what percentage that is, and how many of those the format left no way to avoid — plus the ten rules the draw had to satisfy, in the order they beat each other.",
+    "description": [
+      "The old line on <a href=\"/schedule-release\">the schedule release page</a> read '84 of 84 possible division games clear of NFL byes' and it was true, which is exactly the problem. Read it quickly and it sounds like a clean sweep. It is not: 36 of the AFL’s 120 division games are played on weeks with NFL byes, and the page never said so.",
+      "Both numbers are now on the board, with the part that actually matters underneath: all 36 are FORCED. A franchise has eight bye-free game slots, <a href=\"/rules#schedule\">the constitution</a> spends one of them on the Week 1 cross-conference game, and it plays ten division games. The math runs out before the calendar does. Every legal way of drawing the season lands on the same 36 — we checked all 336 of them — so this is the floor, not a miss.",
+      "The League’s eight are the opposite: nothing forces them. They are the price of ending the season on rivalry games in a year when Weeks 13 and 14 both carry byes. You cannot have the all-division finish and a perfectly clean sheet, and the league picked the finish. The page now says which kind of number you are looking at instead of leaving you to guess.",
+      "Underneath sits the whole rulebook, ranked: the format at the top, then the hard rules that get a schedule rejected outright, then the things the optimiser maximises, then the preferences, then home-and-away, which is settled exactly once everything above it is fixed. Ten rules, five tiers. Nearly every 'why is my schedule like this' question turns out to be a higher rule beating a lower one, and now you can see which."
+    ],
+    "image": "afl-schedule-constraints.webp",
+    "imageAlt": "The AFL Schedule Release page. A row of fact tiles reads 204 games, doubleheaders in weeks 1, 2 and 12, 84 of 84 possible division games clear of NFL byes, and a new tile reading 36 of 120 (30%) division games on an NFL bye with the caption 'all 36 forced by the format — the floor, not a miss', then home games 8 to 9. Below it a section headed 'The rules this draw had to satisfy' lists ten numbered cards in priority order, each with a coloured left stripe and a tier label: two THE FORMAT rules, three HARD RULE, three MAXIMISED, one PREFERENCE and one SETTLED EXACTLY.",
+    "excludeFromHero": true,
+    "leagues": [
+      "theleague",
+      "afl"
+    ]
+  },
+  {
     "id": "lineup-double-header-carousel",
     "date": "2026-08-22",
     "category": "enhancement",

@@ -488,6 +488,22 @@
       ]
     },
     {
+      "name": "player-acquisition",
+      "paths": [
+        "src/utils/claim-context*",
+        "src/utils/player-claim-client.ts",
+        "src/utils/trade-builder-link.ts",
+        "src/pages/api/claim-context.ts",
+        "src/components/shared/WaiverClaimModal.astro",
+        "src/components/theleague/PlayerDetailsModal.astro"
+      ],
+      "note": "The player card offers exactly one acquisition per player, decided by the SERVER: free agent -> Claim/Bid, held by a rival in the viewer's scope -> Trade for him, on the viewer's own roster -> neither. The scope is conference-aware (the AFL rosters the same player once per conference), and the two Trade Builders take different query params. Never gate the trade affordance on `canClaim` — that goes false for the whole auction season.",
+      "tests": [
+        "tests/player-claim-offer.test.ts",
+        "tests/player-trade-offer.test.ts"
+      ]
+    },
+    {
       "name": "watch-list",
       "paths": [
         "src/utils/mfl-watch-list.ts",

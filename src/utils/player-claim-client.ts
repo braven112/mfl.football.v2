@@ -49,6 +49,15 @@ export interface PlayerClaimOffer {
   playerId: string;
 }
 
+/** What a caller needs to offer a trade for one player. */
+export interface PlayerTradeTarget {
+  /** The franchise that holds him, within the viewer's own scope. */
+  franchiseId: string;
+  /** That franchise's display name, for the button's own copy. */
+  teamName: string;
+  playerId: string;
+}
+
 interface ScopeState {
   pending: Promise<ClaimContext | null> | null;
   context: ClaimContext | null;
@@ -101,7 +110,13 @@ export function loadClaimContext(): Promise<ClaimContext | null> {
   })
     .then((res) => (res.ok ? res.json() : null))
     .then((ctx: ClaimContext | null) => {
-      state.context = ctx && ctx.canClaim ? ctx : null;
+      // Kept on `signedIn`, NOT on `canClaim`. The two affordances this context
+      // now feeds have different preconditions: claiming needs a roster to drop
+      // from and a league not mid-auction, while proposing a trade needs
+      // neither. Discarding the whole context when claims are shut off — which
+      // is the entire auction season — would take the trade button down with
+      // them. Each reader gates itself instead; see offerFor.
+      state.context = ctx && ctx.signedIn ? ctx : null;
       state.rostered = state.context ? new Set(state.context.rosteredIds) : null;
       publishContext(scope);
       return state.context;
@@ -131,7 +146,10 @@ function publishContext(scope: RankingsScope): void {
   // before a ClientRouter hop resolves after it, and handing that stale
   // league's config to the claim form is the same cross-league write the
   // `?league=` check exists to stop.
-  if (!context || scope !== activeRankingsScope()) return;
+  // `canClaim` is the gate here, not `signedIn`: the context is now retained
+  // for the trade button too, and configuring the claim form from a context
+  // that cannot claim would wire a form the viewer must not be shown.
+  if (!context || !context.canClaim || scope !== activeRankingsScope()) return;
   window.__playerClaimContext = context;
   window.configureWaiverClaim?.(context);
 }
@@ -153,8 +171,37 @@ export function peekClaimContext(): ClaimContext | null {
 export function offerFor(playerId: string | null | undefined): PlayerClaimOffer | null {
   const state = states.get(activeRankingsScope());
   if (!playerId || !state?.context || !state.rostered) return null;
+  // Explicit, and load-bearing: a degraded MFL read answers with `canClaim`
+  // false and an EMPTY rostered set, which on its own reads as "the whole
+  // league is a free agent" and lights this button up on every player on the
+  // page — the viewer's own roster included. The context used to be thrown
+  // away in that case; now that it is retained for the trade button, this is
+  // the check that holds the line.
+  if (!state.context.canClaim) return null;
   if (state.rostered.has(String(playerId))) return null;
   return { verb: state.context.verb, playerId: String(playerId) };
+}
+
+/**
+ * The trade target for one player, or null when there is nothing to offer.
+ *
+ * Null covers: nobody signed in, a degraded MFL read (an empty `tradeTargets`
+ * offers nobody, which is the correct quiet outcome), a free agent — he is
+ * claimed, not traded for — and the player already on the viewer's own roster,
+ * whom the server leaves out of the map for that reason.
+ */
+export function tradeTargetFor(
+  playerId: string | null | undefined,
+): PlayerTradeTarget | null {
+  const state = states.get(activeRankingsScope());
+  if (!playerId || !state?.context) return null;
+  const franchiseId = state.context.tradeTargets?.[String(playerId)];
+  if (!franchiseId) return null;
+  return {
+    franchiseId,
+    teamName: state.context.franchiseNames?.[franchiseId] ?? franchiseId,
+    playerId: String(playerId),
+  };
 }
 
 /**

@@ -67,6 +67,20 @@ Playwright is in node_modules; Chromium is pre-installed:
   So: `ctx.route(/espncdn\.com|myfantasyleague\.com/, r => r.fulfill({ path: 'public/assets/nfl-logos/KC.svg' }))`.
   To check a glob before blaming the browser:
   `require('playwright-core/lib/utils/isomorphic/urlMatch.js').globToRegexPattern(p)`.
+- **`waitUntil: 'load'`, not `'domcontentloaded'`, before asserting on anything
+  a bundled `<script>` produced** — and no fixed `waitForTimeout` will save you.
+  Astro page scripts are modules that evaluate after DCL, so under
+  `domcontentloaded` a page can sit with its config JSON in the DOM, its
+  `astro:page-load` listener attached, and none of its init having run. On
+  2026-09-06 that read as "the AFL Trade Builder ignores `?target=`" — reported
+  as a pre-existing bug, wrongly; the same assertion under `waitUntil: 'load'`
+  passed first try. If a control looks inert, re-check under `'load'` before
+  concluding anything about the app.
+- **Don't hand-roll a page→node bridge to observe events.** `exposeFunction` +
+  `addInitScript` silently failed to record an `astro:page-load` that had in
+  fact fired, which is what made the above look confirmed. Push the evidence
+  into a page global (`window.__ev = []`) and read it back with one
+  `page.evaluate` at the end.
 - Dark mode: add cookie `theme_pref=dark`.
 
 ## Test data
