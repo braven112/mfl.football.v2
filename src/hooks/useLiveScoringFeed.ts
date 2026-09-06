@@ -112,8 +112,16 @@ export function useLiveScoringFeed(
   // interval. Computed inside subscribe it would freeze at whatever was true
   // when the island mounted, and a league that finished would poll every
   // 60s forever.
-  const remaining = poller.getState(params).data?.remaining;
-  const liveNow = live || Object.values(remaining ?? {}).some((r) => r > 0);
+  const state = poller.getState(params);
+  // The caller's `live` hint (the page's game-day window) is computed once in
+  // Astro frontmatter and never changes for the life of the page, so it can
+  // only stand in until real data lands — ORing it in permanently made
+  // POLL_STALE unreachable on a Sunday and kept every league at 60s long after
+  // the last game went final, which is the opposite of what the backoff below
+  // is for. Once a poll has succeeded the DATA decides.
+  const liveNow = state.fetchedAt === 0
+    ? live
+    : Object.values(state.data?.remaining ?? {}).some((r) => r > 0);
 
   const snapshot = useSyncExternalStore(
     useCallback(
