@@ -65,7 +65,7 @@ export function buildVoterPushes({ league, issue, teams, previousIssue = null })
     }
 
     if (ballot.homerIndex != null && ballot.homerIndex > 0) {
-      lines.push(`You had yourself ${ballot.homerIndex} higher than they did.`);
+      lines.push(`You had yourself ${ballot.homerIndex} higher than the computer did.`);
     }
 
     const prior = priorBallots.get(fid);
@@ -263,7 +263,7 @@ export function buildRevealFeedPost({
   }
   if (homer) {
     sentences.push(
-      `${name(homer.franchiseId)} ranked themselves ${homer.homerIndex} spots above where everyone else did.`,
+      `${name(homer.franchiseId)} ranked themselves ${homer.homerIndex} spots above where the computer did.`,
     );
   }
 

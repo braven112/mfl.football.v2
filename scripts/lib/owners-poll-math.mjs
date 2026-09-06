@@ -211,24 +211,43 @@ export function contrarianIndex(ranking, consensusRankByFid) {
 }
 
 /**
- * How much higher an owner rates their own team than the room does.
+ * How many spots above THE PECKING ORDER an owner ranked their own team.
  *
  * Positive = homer. Self-voting is allowed precisely so this exists.
  *
- * An owner who left their own team off the ballot entirely is treated as
- * having ranked it `slots + 1` — the most charitable bounded reading, since
- * "off a 7-team ballot" in a 16-team league could mean anywhere from 8th to
- * 16th. That caps how much credit a modest owner gets for omitting themselves,
- * which is the right direction to err.
+ * The baseline is the column's algorithmic rank, not the room's consensus.
+ * Two reasons, and the first is the one that makes the number mean anything:
+ *
+ * - **The composite is fixed before a single ballot is cast.** Scored against
+ *   the consensus, your Homer Index moves when OTHER people vote — a modest
+ *   ballot turns homer because the room soured on your team, which is not a
+ *   thing you did. Against the machine's number it measures exactly one
+ *   thing: how far above the computer you put yourself.
+ * - **It is the disagreement the whole column is built on.** The poll exists
+ *   to argue with the algorithm; the Homer Index is that argument made about
+ *   your own team, which is the version worth chat.
+ *
+ * Distance from the ROOM is still measured — that is `contrarianIndex`, and
+ * keeping the two on different baselines is deliberate: one is independence
+ * from your peers, the other is optimism about yourself.
+ *
+ * **An owner who left their own team off the ballot scores null, not a
+ * number.** This used to read as `slots + 1` — a bounded stand-in for
+ * "somewhere below the cut", reasoned out for a 7-of-16 ballot where 8th of 16
+ * is genuinely modest. It does not survive a wider field: at the AFL's
+ * 10-of-24 an owner who omitted their 24th-ranked team scored +13 and led the
+ * league's Homer board for the most self-effacing ballot on it. Omission is
+ * not a rank — "not in my top ten" spans fourteen places in a 24-team league,
+ * and inventing one of them puts a fabricated number under a public
+ * leaderboard. Null is what the rest of this module already means by "not
+ * scorable", and every consumer renders it as an em dash or skips it.
  */
-export function homerIndex({ franchiseId, ranking, consensusRankByFid, slots }) {
+export function homerIndex({ franchiseId, ranking, compositeRankByFid }) {
   const fid = normalizeFranchiseId(franchiseId);
-  const consensus = toRankMap(consensusRankByFid);
-  const theirs = consensus.get(fid);
-  if (theirs == null) return null;
+  const machine = toRankMap(compositeRankByFid).get(fid);
+  if (machine == null) return null;
 
-  const list = Array.from(ranking ?? [], (id) => normalizeFranchiseId(id));
-  const idx = list.indexOf(fid);
-  const ownRank = idx >= 0 ? idx + 1 : slots + 1;
-  return theirs - ownRank;
+  const idx = Array.from(ranking ?? [], (id) => normalizeFranchiseId(id)).indexOf(fid);
+  if (idx < 0) return null;
+  return machine - (idx + 1);
 }

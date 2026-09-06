@@ -222,53 +222,75 @@ describe('contrarianIndex', () => {
 });
 
 describe('homerIndex', () => {
-  it('is positive when an owner rates themselves above the room', () => {
-    // Room has them 12th; they put themselves 1st.
-    const consensus = { '0001': 12 };
+  // The baseline is the COLUMN's rank, not the room's consensus: the composite
+  // is fixed before a ballot is cast, so an owner's score cannot move because
+  // other people voted. Distance from the room is contrarianIndex's job.
+  it('is positive when an owner ranks themselves above the column', () => {
+    // The column has them 12th; they put themselves 1st.
     expect(
       homerIndex({
         franchiseId: '0001',
         ranking: ['0001', '0002', '0003', '0004', '0005', '0006', '0007'],
-        consensusRankByFid: consensus,
-        slots: SLOTS,
+        compositeRankByFid: { '0001': 12 },
       }),
     ).toBe(11);
   });
 
-  it('is negative when an owner rates themselves below the room', () => {
-    const consensus = { '0001': 2 };
+  it('is negative when an owner ranks themselves below the column', () => {
     expect(
       homerIndex({
         franchiseId: '0001',
         ranking: ['0002', '0003', '0004', '0005', '0006', '0001', '0007'],
-        consensusRankByFid: consensus,
-        slots: SLOTS,
+        compositeRankByFid: { '0001': 2 },
       }),
     ).toBe(-4);
   });
 
-  it('treats an owner who omitted themselves as having ranked themselves slots+1', () => {
-    // The bounded, charitable reading — "off a 7-team ballot" could mean 8th
-    // or 16th, and crediting the modest owner for 16th would be a guess.
-    const consensus = { '0001': 10 };
+  it('does not move when the room changes its mind', () => {
+    // Same ballot, same column rank, wildly different consensus around it.
+    // Scored against the consensus this owner would swing from modest to
+    // homer without touching their own ballot.
+    const ballot = {
+      franchiseId: '0001',
+      ranking: ['0001', '0002', '0003'],
+      compositeRankByFid: { '0001': 4 },
+    };
+    expect(homerIndex({ ...ballot, consensusRankByFid: { '0001': 1 } })).toBe(3);
+    expect(homerIndex({ ...ballot, consensusRankByFid: { '0001': 16 } })).toBe(3);
+  });
+
+  it('is null when an owner omitted their own team — omission is not a rank', () => {
+    // This used to score slots+1, which read as modest at 7-of-16 and became
+    // absurd at the AFL's 10-of-24: an owner who left their 24th-ranked team
+    // off scored +13 and topped the Homer board for the humblest ballot on it.
+    // "Not in my top N" spans most of the field; null says so honestly.
     expect(
       homerIndex({
         franchiseId: '0001',
         ranking: ['0002', '0003', '0004', '0005', '0006', '0007', '0008'],
-        consensusRankByFid: consensus,
-        slots: SLOTS,
+        compositeRankByFid: { '0001': 10 },
       }),
-    ).toBe(2);
+    ).toBeNull();
   });
 
-  it('is null when the consensus has no rank for the owner', () => {
+  it('is null when the column has no rank for the owner', () => {
     expect(
       homerIndex({
         franchiseId: '0001',
-        ranking: ['0002'],
-        consensusRankByFid: {},
-        slots: SLOTS,
+        ranking: ['0001'],
+        compositeRankByFid: {},
       }),
     ).toBeNull();
+  });
+
+  it('does not depend on slots at all any more', () => {
+    const args = {
+      franchiseId: '0001',
+      ranking: ['0002', '0001', '0003'],
+      compositeRankByFid: { '0001': 6 },
+    };
+    expect(homerIndex({ ...args, slots: 7 })).toBe(4);
+    expect(homerIndex({ ...args, slots: 10 })).toBe(4);
+    expect(homerIndex(args)).toBe(4);
   });
 });

@@ -258,9 +258,24 @@ Per owner, per season:
 - **Contrarian Index** — mean absolute distance from the final consensus. Not
   accuracy, and labeled as such: it measures independence, and it is a badge,
   not a demerit.
-- **Homer Index** — (consensus rank of your team) − (your rank of your team).
-  Positive means you rate yourself higher than the room does. This is the whole
-  reason self-voting is allowed, and it will produce the best chat of the week.
+- **Homer Index** — (**Pecking Order** rank of your team) − (your rank of your
+  team). Positive means you rate yourself higher than the column does. This is
+  the whole reason self-voting is allowed, and it will produce the best chat of
+  the week.
+
+  **The baseline is the column, not the consensus** (changed 2026-09-06; it was
+  the consensus originally). The composite is fixed before a single ballot is
+  cast, so your score cannot move because other owners voted — scored against
+  the room, a modest ballot turns homer when the room sours on your team, which
+  is not a thing you did. It also puts the metric on the axis the whole feature
+  is about: the poll exists to argue with the algorithm, and this is that
+  argument made about your own team. Distance from the ROOM is still measured —
+  that is the Contrarian Index — and the two deliberately sit on different
+  baselines: one is independence from your peers, the other optimism about
+  yourself.
+
+  **Omitting your own team scores null, not a number.** See the note below on
+  what the worked example caught.
 
 Every ballot becomes fully public once its week closes. Voting weekly is
 therefore a permanent, attributable record — which is the point.
@@ -671,3 +686,12 @@ re-run never churns the archive.
 ballot against the FOLLOWING week's all-play, and neither seeded week has a
 successor, so the voters page's accuracy column reads `—` for every owner.
 Seeding `2025-16` and `2025-13` as well would make the earlier week scorable.
+
+**What the example caught on its way in.** Rendering the AFL's 24-team version
+exposed a real scoring bug: `homerIndex` scored an owner who omitted their own
+team as having ranked it `slots + 1`, which at 10-of-24 made the league's most
+self-effacing ballot its biggest homer (+13). It now returns null — omission is
+not a rank — and every consumer already handled null. That is the example
+earning its keep: the shape had been shipped for weeks and no test could have
+found it, because nothing was wrong with the arithmetic, only with the
+assumption underneath it.

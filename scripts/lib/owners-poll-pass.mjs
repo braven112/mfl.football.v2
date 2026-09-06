@@ -173,11 +173,12 @@ export function buildClosedPollBlock({ ballots, window, quorum, compositeRankByF
     submittedAt: ballot.submittedAt,
     updatedAt: ballot.updatedAt,
     contrarianIndex: round2(contrarianIndex(ballot.ranking, consensus)),
+    // Against the COMPOSITE, not the consensus — the column's own rank, fixed
+    // before anyone voted. See homerIndex's note.
     homerIndex: homerIndex({
       franchiseId: ballot.franchiseId,
       ranking: ballot.ranking,
-      consensusRankByFid: consensus,
-      slots: window.slots,
+      compositeRankByFid,
     }),
   }));
 

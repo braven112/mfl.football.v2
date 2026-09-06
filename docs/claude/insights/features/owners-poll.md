@@ -32,24 +32,47 @@ that CALLS the pipeline stays honest for free. Every seeded block
 carries `source: "synthetic"` and the seeder refuses to overwrite a block
 without it, so a real tally can never be clobbered by a demo re-run.
 
-## 2026-09-06 — `homerIndex`'s omission cap does not scale with field size
+## 2026-09-06 — The Homer Index was measured against the wrong thing, twice
 
-Rendering the AFL example surfaced this, and it is shipped behaviour, not a
-seeding artifact: an owner who leaves their own team off the ballot is scored
-as having ranked it `slots + 1`, described in the source as "the most
-charitable bounded reading". That reasoning was worked out for TheLeague's
-7-of-16, where the cap sits at 8 in a field of 16 — genuinely modest.
+Rendering the seeded AFL example put the metric on screen at 24 teams for the
+first time, and two separate problems fell out of one badge.
 
-At the AFL's 10-of-24 it does not hold. The 24th-place franchise's owner
-omitted themselves, was scored at 11, and the consensus had them 24th, so their
-Homer Index came out **+13 — the largest in the league.** The most modest ballot
-on the board reads as the biggest homer, and the voters page prints it under
-"Biggest homer" with no way to tell the difference.
+**It scored omission as a rank.** An owner who left their own team off the
+ballot was treated as having ranked it `slots + 1` — "the most charitable
+bounded reading", reasoned out for TheLeague's 7-of-16 where the stand-in is
+8th of 16 and genuinely modest. At the AFL's 10-of-24 the 24th-place
+franchise's owner omitted themselves, was scored at 11 against a consensus of
+24, and led the league at **+13 for the most self-effacing ballot on the
+board.** Now null. "Not in my top ten" spans fourteen places in a 24-team
+league; inventing one of them puts a fabricated number under a public
+leaderboard. Every consumer already handled null — em dash on the voters page,
+skipped in the season average, filtered by `topHomer`, `!= null`-guarded in the
+issue section — so nothing downstream changed. Only the producer was guessing.
 
-The cap wants to be relative to the field (`eligibleVoters`), not to `slots`,
-or omission wants to score null rather than a number. Left alone for now
-because it is not this change's to fix, but any future league with a ballot
-covering under half the field will hit it harder.
+**And its baseline was the room, not the column.** Scored against the
+consensus, an owner's Homer Index moves when OTHER people vote: a ballot you
+submitted on Tuesday turns homer on Thursday because the room soured on your
+team. That is not a thing you did. The baseline is now the Pecking Order's
+composite, which is fixed before a single ballot is cast, so the number
+measures exactly one thing — how far above the computer you put yourself. It
+also puts the metric on the axis the feature is built on: the poll exists to
+argue with the algorithm, and this is that argument made about your own team.
+Contrarian Index still measures distance from the ROOM, and the two sitting on
+different baselines is the point, not an inconsistency.
+
+Two lessons worth separating:
+
+- **A metric tuned against one league's numbers is a constant in disguise.**
+  The AFL port re-derived `slots` and `quorum` from the rules rather than
+  copying TheLeague's, and got both right; the omission cap was buried inside a
+  scoring function, so nobody re-derived it. When a second league arrives, the
+  config is the easy half — the arithmetic that assumed the first league's
+  shape is the half that ships wrong.
+- **A derived stat needs a baseline that cannot move underneath it.** Nothing
+  about the consensus baseline was a bug in the arithmetic; it computed exactly
+  what it claimed. It just claimed the wrong thing, and no test could have
+  found that, because a test would have encoded the same assumption. Rendering
+  it in front of someone who knew what the number was FOR is what found it.
 
 ## 2026-09-06 — A test that names one league as "the disabled one" expires
 
