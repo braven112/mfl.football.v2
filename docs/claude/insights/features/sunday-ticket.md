@@ -44,6 +44,16 @@ that are not in the plan.
   Canada was the only country that had it; the UK and Mexico both draw the same
   square for NFL Game Pass. Renamed to `dazn.png` / `dazn-black.png` — a mark's
   filename should say what it IS, not who first used it.
+- **A country is not done until the CLOCK PICKER has it too.** Viewer
+  preferences (#985) landed between this work being written and merged, and it
+  turns the derived clock into a chosen one from a per-country zone list. A
+  country in the registry with no list is a picker with nothing in it, so GB
+  and MX joined `ZONE_OPTIONS` in the same breath. Two things the other three
+  countries did not teach: Britain gets `auto`, not a fixed `GMT`, because the
+  whole NFL season is BST and only the tail flips back; and Mexico gets CITY
+  labels rather than CT/MT/PT because it dropped daylight saving in 2022
+  EXCEPT along the US border, so Mexico City sits at UTC-6 year-round while US
+  Central is -5 half of it. Same two letters, different hour, twice a Sunday.
 - **The mark treatment had to run in BOTH directions, and the crests' one
   threshold did not transfer.** The dark-card ring
   (`scripts/measure-tv-logo-contrast.mjs` → `tv-logo-theme-css.ts`) was built
