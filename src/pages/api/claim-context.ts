@@ -33,6 +33,7 @@ import { json, unauthorized, JSON_HEADERS_NO_STORE } from '../../utils/api-respo
 import { rankingsScopeForLeagueId } from '../../utils/rankings-scope';
 import { checkRateLimit } from '../../utils/rate-limit';
 import { resolveClaimContext } from '../../utils/claim-context';
+import { readViewerClock } from '../../utils/viewer-preferences-page';
 
 export const prerender = false;
 
@@ -44,7 +45,7 @@ const NO_CLAIMS = {
   rosteredIds: [] as string[],
 };
 
-export const GET: APIRoute = async ({ request }) => {
+export const GET: APIRoute = async ({ request, cookies }) => {
   const user = getAuthUser(request);
   // 200, not 401: a signed-out visitor asking "can I claim?" gets a real
   // answer ("no"), and the modal renders Watch alone. A 401 here would make
@@ -66,7 +67,11 @@ export const GET: APIRoute = async ({ request }) => {
     return json({ ...NO_CLAIMS, signedIn: true, error: 'Slow down' }, 429, JSON_HEADERS_NO_STORE);
   }
 
-  const context = await resolveClaimContext(user);
+  // The waiver deadline in the modal is a LEAGUE event; a viewer who has named
+  // their own clock reads it in that one, with PT beside it. Read-only — this
+  // route must not write a preference cookie onto a background fetch.
+  const clock = await readViewerClock(cookies, user);
+  const context = await resolveClaimContext(user, clock);
   if (!context) return json(NO_CLAIMS, 200, JSON_HEADERS_NO_STORE);
 
   return json(context, 200, JSON_HEADERS_NO_STORE);

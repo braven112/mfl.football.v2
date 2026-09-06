@@ -26,6 +26,7 @@
  */
 
 import { normalizeTeamCode } from './nfl-logo';
+import { resolveZoneLabel } from './zone-label';
 
 export type SundayWindow = 'early' | 'late';
 
@@ -387,11 +388,9 @@ export function formatKickoffZones(kickoffEpoch: number, zones: readonly Kickoff
     // Assembled from parts: ICU 72+ puts a NARROW no-break space before the
     // day period, so joining literals would either keep U+202F or drop the gap.
     const time = `${part('hour')}:${part('minute')} ${part('dayPeriod')}`.trim();
-    let label = z.label;
-    if (label === 'auto') {
-      const named = new Intl.DateTimeFormat(z.locale ?? 'en-US', { timeZone: z.zone, timeZoneName: 'short' }).formatToParts(d);
-      label = named.find((p) => p.type === 'timeZoneName')?.value ?? z.zone;
-    }
-    return { label, time, day, dayDiffers: day !== etDay };
+    // ONE implementation of the auto label (viewer-clock.ts): the league-event
+    // renderer needs the identical answer, and two copies drift the first time
+    // a country with an `auto` zone joins the catalog.
+    return { label: resolveZoneLabel(z, d), time, day, dayDiffers: day !== etDay };
   });
 }

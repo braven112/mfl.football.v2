@@ -125,7 +125,11 @@ describe('waiver priority is gated on MFL settings', () => {
     const render = read('src/utils/waiver-priority-render.ts');
     expect(render).not.toMatch(/breaks ties between equal bids/);
     // And the footnote no longer takes a system it cannot act on honestly.
-    expect(render).toMatch(/export function waiverPriorityFootnote\(asOf: string, live: boolean\)/);
+    // Pinned as "does not take a system", not as an exact arity — the footnote
+    // legitimately grew a `cookies` argument when the stamp started honouring
+    // the viewer's chosen clock (docs/claude/rules/viewer-preferences.md).
+    expect(render).toMatch(/export function waiverPriorityFootnote\(asOf: string, live: boolean[,)]/);
+    expect(render).not.toMatch(/export function waiverPriorityFootnote\([^)]*system/);
   });
 });
 

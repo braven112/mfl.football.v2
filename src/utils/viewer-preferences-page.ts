@@ -43,16 +43,20 @@
 
 import { getLeagueById } from '../config/leagues';
 import {
+  COUNTRY_COOKIE,
   DEFAULT_VIEWER_PREFERENCES,
+  ZONE_COOKIE,
   parseCountry,
   parseViewerPreferences,
   seededPreferencesFor,
+  type ViewerClock,
   type ViewerPreferences,
 } from './viewer-preferences';
 import { getStoredViewerPreferences, setStoredViewerPreferences } from './viewer-preferences-store';
 
-export const COUNTRY_COOKIE = 'pref_country';
-export const ZONE_COOKIE = 'pref_zone';
+// Re-exported, not redeclared — the names live in the pure module so the
+// client-side reader and this writer cannot drift. See viewer-preferences.ts.
+export { COUNTRY_COOKIE, ZONE_COOKIE };
 /**
  * The Sunday Ticket board's original country cookie. Read-only here: an owner
  * who picked Canada last week keeps Canada without touching anything, and the
@@ -172,16 +176,35 @@ export async function readViewerPreferences(
   cookies: Pick<CookieJar, 'get'>,
   user: PreferenceOwner | null | undefined,
 ): Promise<ViewerPreferences> {
+  return (await readViewerClock(cookies, user)).prefs;
+}
+
+/**
+ * The same read, keeping WHERE the answer came from.
+ *
+ * A league-event surface needs that: the bare `US/ET` fallback is a guess, and
+ * printing an Eastern clock beside every waiver deadline in the league on the
+ * strength of a guess is a change nobody asked for. `explicit` is true only
+ * for a cookie, an account mirror, or a seed — the three answers an owner is
+ * actually responsible for. See `ViewerClock` and `eventZonesFor`.
+ */
+export async function readViewerClock(
+  cookies: Pick<CookieJar, 'get'>,
+  user: PreferenceOwner | null | undefined,
+): Promise<ViewerClock> {
   const fromCookies = preferencesFromCookies(cookies);
-  if (fromCookies) return fromCookies;
+  if (fromCookies) return { prefs: fromCookies, explicit: true };
   const bucket = ownerBucket(user);
   if (bucket) {
     const stored = await getStoredViewerPreferences(bucket.slug, bucket.franchiseId);
-    if (stored) return stored;
+    if (stored) return { prefs: stored, explicit: true };
+    // A seed is something we were TOLD about this owner, not a fallback we
+    // picked for them — so it speaks with the same authority as their own
+    // choice, right up until they make one.
     const seeded = seededPreferencesFor(bucket.slug, bucket.franchiseId);
-    if (seeded) return seeded;
+    if (seeded) return { prefs: seeded, explicit: true };
   }
-  return DEFAULT_VIEWER_PREFERENCES;
+  return { prefs: DEFAULT_VIEWER_PREFERENCES, explicit: false };
 }
 
 /** Write both cookies. ROUTE-ONLY — see the module note. */

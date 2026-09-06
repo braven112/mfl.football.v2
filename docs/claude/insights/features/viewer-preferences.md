@@ -70,3 +70,47 @@ that is not a rule.
   time someone changes it in the other place; the old `st_country` is read-only
   legacy so nobody loses a pick they already made. When a feature-local setting
   goes site-wide, move the WRITE and leave the read.
+
+## 2026-09-06 — Taking the preference site-wide
+
+Sunday Ticket was the only reader for a month. Widening it to the draft hub,
+the waiver windows, the poll deadline, the mock lobby, the keeper stamp and the
+game-day heroes turned up four things the original build could not have known.
+
+- **One default cannot serve two readers, and that is not a wart.** The stored
+  default is US/ET *because* it keeps the Sunday Ticket board byte-identical to
+  its pre-preferences self. Every other surface printed the league's PT alone,
+  and two (the poll deadline, the mock lobby) printed the DEVICE's clock. Reusing
+  the one default would have put an Eastern clock on every waiver deadline in the
+  league on the strength of a fallback nobody chose. The rule that came out of it
+  generalizes: **the floor is whatever THAT surface printed before**, so adopting
+  a preference is invisible to anyone who has not set one. `eventZonesFor` is the
+  league-surface floor; `clockZonesFromCookie` returning `null` is the device one.
+
+- **"Has the viewer chosen?" is not `isDefaultViewerPreferences`.** A stored
+  `{US, ET}` is indistinguishable from the fallback, so the answer has to come
+  from WHERE the value was read, not what it is. `readViewerClock` reports
+  `explicit` — true for a cookie, an account mirror, or a seed; false for the
+  bare catalog default. Client islands get the same signal for free from the
+  cookie's mere presence, because only an explicit choice ever writes one. Any
+  future "did they mean this or did we guess?" question wants this shape.
+
+- **Outside the US, never say "Sunday Ticket".** The catalog's own notes are
+  worded to avoid the phrase — "DAZN carries every game in Canada", "Kayo
+  carries every game via ESPN" — because Sunday Ticket is a US product and the
+  rest of the world buys something else. A generated string like `Sunday Ticket
+  via ${provider.name}` reintroduces the error the notes were written to dodge,
+  and it reads as a product that does not exist. The honest short form is the
+  CHANNEL a game is on (`resolveChannel`, visible text); the carrier needs the
+  note, and the note needs the room the board has. Caught in review after the
+  game-day heroes tried to badge themselves with the carrier's mark.
+  (`PreferencesPage.astro` still builds that phrase — US-framed context, but it
+  is the same construction and worth revisiting.)
+
+- **A shared page component may read the preference; only WRITING is
+  route-only.** The hazard was always `Astro.cookies.set()` after headers commit,
+  which is `resolveViewerPreferences` alone. Threading a `clock` prop through
+  routes that do nothing else with it is ceremony — and on `draft/mock/index.astro`
+  it added enough lines to trip `tests/page-fork-ratchet.test.ts`, which is how
+  the ceremony got noticed. Page components read for themselves; nested display
+  components (the heroes) take a prop, because they are not the page.

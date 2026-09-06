@@ -582,7 +582,7 @@ function thmRenderOrderView() {
   setStatus('');
 
   if (footEl && footWrap) {
-    footEl.textContent = waiverPriorityFootnote(thmOrder.asOf, thmOrder.live);
+    footEl.textContent = waiverPriorityFootnote(thmOrder.asOf, thmOrder.live, document.cookie);
     footWrap.hidden = false;
   }
 }

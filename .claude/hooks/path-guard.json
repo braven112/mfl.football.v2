@@ -540,11 +540,15 @@
       "rules": "docs/claude/rules/viewer-preferences.md",
       "paths": [
         "src/utils/viewer-preferences*",
+        "src/utils/viewer-clock.ts",
+        "src/utils/zone-label.ts",
+        "src/utils/waiver-window.ts",
         "src/components/shared/preferences/*",
         "src/pages/*/preferences.astro"
       ],
       "tests": [
-        "tests/viewer-preferences.test.ts"
+        "tests/viewer-preferences.test.ts",
+        "tests/viewer-clock.test.ts"
       ]
     }
   ]

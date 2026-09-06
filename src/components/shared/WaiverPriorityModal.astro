@@ -182,7 +182,7 @@ const clientConfig = { ...config, initialOrder: undefined, hasInitialOrder: init
     setStatus('');
 
     if (footEl) {
-      footEl.textContent = waiverPriorityFootnote(asOf, live);
+      footEl.textContent = waiverPriorityFootnote(asOf, live, document.cookie);
       footEl.hidden = false;
     }
   };

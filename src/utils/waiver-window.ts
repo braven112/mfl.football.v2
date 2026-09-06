@@ -21,6 +21,9 @@
  * credentials.
  */
 
+import { DEFAULT_VIEWER_CLOCK, type ViewerClock } from './viewer-preferences';
+import { formatForViewer } from './viewer-clock';
+
 /** One MFL calendar event, as the export returns it. */
 export interface MflCalendarEvent {
   type?: string;
@@ -178,13 +181,17 @@ export function resolveWaiverWindow(
   };
 }
 
-/** One-line summary for the page, e.g. "Waivers open · claims process Wed 8:00 PM". */
-export function describeWaiverWindow(win: WaiverWindow, timeZone = 'America/Los_Angeles'): string {
-  const when = win.changesAt
-    ? new Intl.DateTimeFormat('en-US', {
-        weekday: 'short', hour: 'numeric', minute: '2-digit', timeZone, timeZoneName: 'short',
-      }).format(win.changesAt)
-    : null;
+/**
+ * One-line summary for the page, e.g. "Waivers open · claims process Wed 8:00 PM PT".
+ *
+ * The deadline is a LEAGUE event, so it prints on the league's clock — and, for
+ * a viewer who has told us where they are, on theirs in front of it: an owner
+ * in Sydney reading "Wed 8:00 PM PT" has to work out for themselves that their
+ * claims land Thursday lunchtime. Until they choose, PT alone, exactly as
+ * before — see `eventZonesFor`.
+ */
+export function describeWaiverWindow(win: WaiverWindow, clock: ViewerClock = DEFAULT_VIEWER_CLOCK): string {
+  const when = win.changesAt ? formatForViewer(win.changesAt, clock, { weekday: true }) : null;
   if (win.mode === 'waiver') {
     return when ? `Waivers open · claims process ${when}` : 'Waivers open — claims are queued.';
   }
