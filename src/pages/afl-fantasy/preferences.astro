@@ -1,0 +1,31 @@
+---
+/**
+ * /afl-fantasy/preferences — thin route over the shared PreferencesPage.
+ * See src/pages/theleague/preferences.astro for why the cookie write and the
+ * account mirror live in the ROUTE rather than the component.
+ */
+import PreferencesPage from '../../components/shared/preferences/PreferencesPage.astro';
+import { getAuthUser } from '../../utils/auth';
+import { resolveViewerPreferences, hasPreferenceParams } from '../../utils/viewer-preferences-page';
+import { resolveLeaguePath } from '../../utils/nav-utils';
+
+export const prerender = false;
+
+const hide = Astro.locals.hideLeaguePrefix ?? false;
+const r = (p: string) => resolveLeaguePath(p, hide);
+const pathname = r('/afl-fantasy/preferences');
+const sundayTicketPath = r('/afl-fantasy/sunday-ticket');
+
+const user = getAuthUser(Astro.request);
+const { prefs, savedToAccount } = await resolveViewerPreferences(Astro.url, Astro.cookies, user);
+---
+
+<PreferencesPage
+  prefs={prefs}
+  title="Preferences | AFL Fantasy"
+  pathname={pathname}
+  sundayTicketPath={sundayTicketPath}
+  justSaved={hasPreferenceParams(Astro.url)}
+  syncedToAccount={savedToAccount}
+  loginPath={user ? null : r(`/afl-fantasy/login?next=${encodeURIComponent(pathname)}`)}
+/>

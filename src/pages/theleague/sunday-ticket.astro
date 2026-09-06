@@ -6,6 +6,8 @@
  */
 import SundayTicketPage from '../../components/shared/sunday-ticket/SundayTicketPage.astro';
 import { rememberSundayTicketChoices } from '../../utils/sunday-ticket-selection';
+import { getAuthUser } from '../../utils/auth';
+import { resolveViewerPreferences } from '../../utils/viewer-preferences-page';
 
 // Per-request: the session, the cookie-remembered league selection, and a
 // live myleagues/ESPN read all change the answer.
@@ -14,6 +16,11 @@ export const prerender = false;
 // Cookie writes belong to the route: a component's `Astro.cookies.set()` runs
 // after the response has started and throws (see rememberSundayTicketChoices).
 rememberSundayTicketChoices(Astro.url, Astro.cookies);
+
+// Country + clocks are a site-wide preference now (/preferences). Resolving
+// it here writes the cookie for a `?country=` chip click and mirrors it to the
+// signed-in owner's account, so the board is the same on their phone.
+const { prefs } = await resolveViewerPreferences(Astro.url, Astro.cookies, getAuthUser(Astro.request));
 ---
 
-<SundayTicketPage />
+<SundayTicketPage prefs={prefs} />

@@ -178,6 +178,10 @@
 .st-chip__franchise { font-size: 0.7rem; color: var(--content-text-muted); }
 .st-chip__franchise::before { content: '·'; margin-right: 0.3rem; }
 .st-countries { display: flex; flex-wrap: wrap; align-items: center; gap: 0.45rem; }
+/* The clocks are a viewer PREFERENCE (/preferences), not a param the board can
+   toggle, so this one is a link out rather than another chip that switches. */
+.st-chip--prefs { margin-left: auto; border-style: dashed; }
+@media (max-width: 600px) { .st-chip--prefs { margin-left: 0; } }
 .st-chip__flag { font-size: 0.95rem; line-height: 1; }
 .st-jump { display: flex; gap: 0.5rem; }
 .st-jump__link {

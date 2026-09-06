@@ -41,8 +41,9 @@ import {
   loadRegisteredContribution,
   readLeagueFeed,
 } from '../../../utils/sunday-ticket-sources';
-import { COUNTRY_COOKIE, defaultLeagueSelection } from '../../../utils/sunday-ticket-selection';
-import { SUNDAY_TICKET_LOGO, parseCountry } from '../../../utils/broadcast-channels';
+import { defaultLeagueSelection } from '../../../utils/sunday-ticket-selection';
+import { SUNDAY_TICKET_LOGO } from '../../../utils/broadcast-channels';
+import { kickoffZonesFor, zoneSummary, type ViewerPreferences } from '../../../utils/viewer-preferences';
 import {
   LEAGUE_SELECTION_COOKIE,
   fetchEspnBroadcasts,
@@ -53,10 +54,23 @@ import {
 } from '../../../utils/sunday-ticket-page';
 import '../../../styles/sunday-ticket.css';
 
+export interface Props {
+  /**
+   * The viewer's country + clocks, already resolved by the ROUTE (cookie →
+   * the signed-in owner's account mirror → the defaults). It arrives as a
+   * prop rather than being read here because resolving it can WRITE a cookie,
+   * and a component cannot set one after the response has started.
+   */
+  prefs: ViewerPreferences;
+}
+
+const { prefs } = Astro.props as Props;
+
 const ctx = getLeagueContext(Astro.url);
 const pageLeague = getLeagueBySlug(ctx.slug)!;
 const r = (p: string) => resolveLeaguePath(p, Astro.locals.hideLeaguePrefix ?? false);
 const pathname = r(`/${pageLeague.slug}/sunday-ticket`);
+const preferencesPath = r(`/${pageLeague.slug}/preferences`);
 
 const now = new Date();
 const leagueYear = getLeagueYearForSlug(pageLeague.slug);
@@ -113,8 +127,13 @@ const enabled = parseLeagueSelection(leaguesParam ?? Astro.cookies.get(LEAGUE_SE
 const selectedIds = enabled ?? defaultLeagueSelection(boardLeagues);
 const enabledIds = new Set(selectedIds);
 
-// ── Country: which channels the boxes name. Same param → cookie pattern. ──
-const country = parseCountry(Astro.url.searchParams.get('country') ?? Astro.cookies.get(COUNTRY_COOKIE)?.value);
+// ── Viewer preferences: whose channels the boxes name, and which clocks the
+// kickoffs print in. The ROUTE resolved them (cookie → account mirror →
+// defaults) and wrote any `?country=` the chips carried; this file only reads,
+// because a component cannot set a cookie after the response has started.
+const country = prefs.country;
+const zones = kickoffZonesFor(prefs);
+const clockLabel = zoneSummary(prefs);
 
 // ── Contributions ───────────────────────────────────────────────────────
 const notices: string[] = [];
@@ -297,6 +316,9 @@ const title = `Sunday Ticket — Week ${week}`;
       pathname={pathname}
       weekParam={weekParam}
       country={country}
+      zones={zones}
+      clockLabel={clockLabel}
+      preferencesPath={preferencesPath}
     />
 
     <footer class="st-page__foot">

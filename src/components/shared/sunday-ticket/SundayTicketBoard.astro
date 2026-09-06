@@ -17,7 +17,7 @@ import {
   toggleLeagueSelection,
   type BoardLeague,
 } from '../../../utils/sunday-ticket-selection';
-import { countryOptions, countryTimeZones, resolveChannel, type CountryCode } from '../../../utils/broadcast-channels';
+import { countryOptions, countryTimeZones, resolveChannel, type CountryCode, type KickoffZone } from '../../../utils/broadcast-channels';
 import SundayTicketWindow from './SundayTicketWindow.astro';
 
 export interface Props {
@@ -33,12 +33,25 @@ export interface Props {
   weekParam: number | null;
   /** Whose channels the boxes show. */
   country?: CountryCode;
+  /**
+   * The clocks kickoffs print in — the viewer's preference (/preferences).
+   * Omitted, it falls back to the country's default pair, which is what the
+   * board showed before the clocks could be chosen.
+   */
+  zones?: KickoffZone[];
+  /** "ET · PT" — what the preferences link says the board is currently on. */
+  clockLabel?: string;
+  /** Path to the preferences page; omitted, the clock line is plain text. */
+  preferencesPath?: string;
 }
 
-const { slate, week, leagues, enabled, pathname, weekParam, country = 'US' } = Astro.props;
+const {
+  slate, week, leagues, enabled, pathname, weekParam,
+  country = 'US', zones, clockLabel, preferencesPath,
+} = Astro.props;
 const countries = countryOptions();
-const zones = countryTimeZones(country);
-const clockOf = (epoch: number) => formatKickoffZones(epoch, zones);
+const clocks = zones && zones.length > 0 ? zones : countryTimeZones(country);
+const clockOf = (epoch: number) => formatKickoffZones(epoch, clocks);
 
 const allIds = leagues.map((l) => l.id);
 const defaultIds = defaultLeagueSelection(leagues);
@@ -109,7 +122,7 @@ const logo = (code: string) => `/assets/nfl-logos/${code}.svg`;
     </nav>
   )}
 
-  <nav class="st-countries" aria-label="Broadcast country">
+  <nav class="st-countries" aria-label="Broadcast country and kickoff times">
     <span class="st-chips__label">Channels for</span>
     {countries.map((c) => (
       <a
@@ -121,6 +134,12 @@ const logo = (code: string) => `/assets/nfl-logos/${code}.svg`;
         {c.name}
       </a>
     ))}
+    {preferencesPath && clockLabel && (
+      <a class="st-chip st-chip--prefs" href={preferencesPath}>
+        Times in {clockLabel}
+        <span class="st-chip__ext" aria-hidden="true">change</span>
+      </a>
+    )}
   </nav>
 
   {slate.windows.length > 1 && (
@@ -137,7 +156,7 @@ const logo = (code: string) => `/assets/nfl-logos/${code}.svg`;
   )}
 
   {slate.windows.map((w) => (
-    <SundayTicketWindow window={w} country={country} multiLeague={multiLeague} personalized={slate.personalized} />
+    <SundayTicketWindow window={w} country={country} zones={clocks} multiLeague={multiLeague} personalized={slate.personalized} />
   ))}
 
   {slate.other.length > 0 && (
