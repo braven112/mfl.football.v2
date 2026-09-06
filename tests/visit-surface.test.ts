@@ -16,9 +16,15 @@
  * 3. A HASH FROM ANOTHER DEPLOY MUST NOT BLANK THE PAGE. Unknown fields and
  *    junk counts are dropped, never thrown on — the report renders whatever it
  *    can understand.
+ *
+ * 4. `display-mode: fullscreen` IS NOT AN INSTALL. An ordinary tab pushed to
+ *    fullscreen with F11 matches it, so counting it files desktop browser
+ *    visitors as app users — a wrong number that looks like a real one.
  */
 
 import { describe, it, expect } from 'vitest';
+import { readFileSync } from 'node:fs';
+import path from 'node:path';
 import {
 	VISIT_SURFACES,
 	VISIT_PLATFORMS,
@@ -143,5 +149,24 @@ describe('labels', () => {
 		for (const platform of VISIT_PLATFORMS) {
 			expect(describePlatform(platform)).toBeTruthy();
 		}
+	});
+});
+
+describe('surface detection in the layout beacon', () => {
+	const layout = readFileSync(
+		path.join(process.cwd(), 'src/layouts/TheLeagueLayout.astro'),
+		'utf8',
+	);
+
+	it('treats standalone and minimal-ui as installed', () => {
+		expect(layout).toContain("['standalone', 'minimal-ui']");
+		// iOS Safari's home-screen apps report none of the display modes.
+		expect(layout).toContain('navigator as any).standalone');
+	});
+
+	it('never counts display-mode: fullscreen as an install', () => {
+		// F11 on a desktop browser matches `(display-mode: fullscreen)`, so a
+		// list containing it reports every fullscreened tab as `pwa:desktop`.
+		expect(layout).not.toContain("'fullscreen'");
 	});
 });

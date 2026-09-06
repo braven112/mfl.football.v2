@@ -168,37 +168,81 @@ export async function recordVisit(
 }
 
 /**
- * Two HINCRBYs for a logged-out visit: the league-wide hash and its anon
- * subset. Nothing identifying is written — there is no franchise, no page and
- * no timestamp here, because a visitor we cannot name is only ever counted.
+ * A logged-out visit, rate limit included, in ONE command.
+ *
+ * The counters are the only thing kept — no franchise, no page, no timestamp,
+ * because a visitor we cannot name is only ever counted.
+ *
+ * The limit lives INSIDE the script rather than in a preceding
+ * `checkRateLimit` call for two reasons: an anonymous beacon would otherwise
+ * cost 2-3 Upstash commands against unbounded unauthenticated traffic where a
+ * signed-in one costs 1, and a rejected request would still spend its INCR.
+ * Here a rejection costs the same single EVAL as an accepted visit, and the
+ * counters are never touched. Like `checkRateLimit` it fails open on a Redis
+ * error — analytics must not start rejecting because Redis blinked.
+ *
+ * KEYS[1] rate-limit counter   ARGV[1] surface field
+ * KEYS[2] league surface hash  ARGV[2] max requests per window
+ * KEYS[3] anon surface hash    ARGV[3] window seconds
  */
 const RECORD_ANON_SURFACE_LUA = `
-redis.call('HINCRBY', KEYS[1], ARGV[1], 1)
+local n = redis.call('INCR', KEYS[1])
+if n == 1 then
+  redis.call('EXPIRE', KEYS[1], ARGV[3])
+end
+if n > tonumber(ARGV[2]) then
+  return 0
+end
 redis.call('HINCRBY', KEYS[2], ARGV[1], 1)
+redis.call('HINCRBY', KEYS[3], ARGV[1], 1)
 return 1
 `;
+
+/** Fixed-window limit applied to the anonymous path, per caller. */
+export interface AnonymousVisitLimit {
+	/** Opaque per-caller identity — never a raw IP; see track-visit.ts. */
+	callerKey: string;
+	max: number;
+	windowSeconds: number;
+}
+
+/** `recorded: false` means the caller is over its limit (or Redis is absent). */
+export interface AnonymousVisitResult {
+	recorded: boolean;
+	limited: boolean;
+}
 
 /** Count one logged-out visit toward the league's PWA-vs-browser split. */
 export async function recordAnonymousSurface(
 	leagueId: string,
 	visit: VisitContext,
-): Promise<void> {
+	limit: AnonymousVisitLimit,
+): Promise<AnonymousVisitResult> {
 	const redis = await getRedis();
-	if (!redis) return;
+	if (!redis) return { recorded: false, limited: false };
 	const field = surfaceField(visit);
+	const rateKey = `rate:track-visit-anon:${limit.callerKey}`;
 
 	try {
-		await redis.eval(
+		const allowed = await redis.eval(
 			RECORD_ANON_SURFACE_LUA,
-			[leagueSurfaceKey(leagueId), anonSurfaceKey(leagueId)],
-			[field],
+			[rateKey, leagueSurfaceKey(leagueId), anonSurfaceKey(leagueId)],
+			[field, limit.max.toString(), limit.windowSeconds.toString()],
 		);
+		const recorded = Number(allowed) === 1;
+		return { recorded, limited: !recorded };
 	} catch (err) {
+		// Older Redis/Upstash instances without EVAL: the limit degrades to a
+		// separate INCR rather than being dropped.
 		console.warn('[owner-activity] anon surface EVAL failed, falling back:', err);
+		const count = await redis.incr(rateKey);
+		if (count === 1) await redis.expire(rateKey, limit.windowSeconds);
+		if (count > limit.max) return { recorded: false, limited: true };
 		await Promise.all([
 			redis.hincrby(leagueSurfaceKey(leagueId), field, 1),
 			redis.hincrby(anonSurfaceKey(leagueId), field, 1),
 		]);
+		return { recorded: true, limited: false };
 	}
 }
 

@@ -424,15 +424,21 @@ const themePref = getThemePreference(Astro.cookies);
 			/**
 			 * Installed app or browser tab? Only the CLIENT can answer this —
 			 * both send identical requests — so the beacon carries the answer.
-			 * `display-mode` covers Android/desktop installs and every display
-			 * mode a manifest can ask for (a manifest change to `fullscreen` or
-			 * `minimal-ui` must not silently start reporting "browser");
+			 * `display-mode: standalone` covers Android/desktop installs and
+			 * `minimal-ui` an installed app whose manifest asks for it;
 			 * `navigator.standalone` is iOS Safari's older, non-standard flag,
 			 * still the only signal for a home-screen app there.
+			 *
+			 * `fullscreen` is deliberately NOT in that list even though a
+			 * manifest can request it: an ordinary tab pushed to fullscreen
+			 * with F11 matches `(display-mode: fullscreen)` too, so counting it
+			 * would file every desktop browser visitor as an app install. If
+			 * the manifest ever moves to fullscreen, gate that mode on
+			 * something that separates the two rather than adding it back here.
 			 */
 			function detectSurface() {
 				try {
-					const installed = ['standalone', 'fullscreen', 'minimal-ui'].some(
+					const installed = ['standalone', 'minimal-ui'].some(
 						(mode) => window.matchMedia(`(display-mode: ${mode})`).matches,
 					);
 					return installed || (navigator as any).standalone === true ? 'pwa' : 'browser';
