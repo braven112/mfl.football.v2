@@ -322,6 +322,31 @@ describe('live-layer rendering contracts', () => {
     expect(island).not.toMatch(/el\.textContent = newest === 0/);
   });
 
+  it('derives card state from BOTH franchises, per card, like the server does', () => {
+    // The server takes Math.max across the pair, so a card whose owner is done
+    // but whose opponent is still playing is "In progress". The island read
+    // only the owner's clock and applied one label to every card in the
+    // league — so it flipped such a card to "Final" (a divergence from the
+    // very server render `liveStateLabel` is shared to keep it aligned with),
+    // and a doubleheader's two cards, which have DIFFERENT opponents under one
+    // league id, could never hold different states.
+    const island = read('../src/components/shared/sunday-ticket/SundayTicketLive.tsx');
+    expect(island).toMatch(/data-st-live-state\^=/);          // prefix match, per card
+    expect(island).not.toMatch(/data-st-live-state="\$\{CSS\.escape\(leagueId\)\}"/);
+    expect(island).toMatch(/Math\.max\(\.\.\.sides\.map/);
+    // And the hook the server writes must carry both ids for that to be possible.
+    const cards = read('../src/components/shared/sunday-ticket/SundayTicketMatchups.astro');
+    expect(cards).toContain('${card.leagueId}:${card.you.franchiseId}:${card.opponent.franchiseId}');
+  });
+
+  it('never 500s the live route on a non-JSON upstream body', () => {
+    // MFL answers a throttled request with an HTML page under a 200 often
+    // enough to matter; an unguarded .json() escapes to the outer handler and
+    // turns a degradable condition into a hard failure.
+    const route = read('../src/pages/api/live-scoring.ts');
+    expect(route).toContain('.json().catch(() => null)');
+  });
+
   it('leaves a server-rendered value alone when the feed omits that franchise', () => {
     // playersYetToPlay is populated conditionally, so a franchise can vanish
     // between polls. Absent is "no answer", not "zero left to play".

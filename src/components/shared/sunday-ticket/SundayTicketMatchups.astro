@@ -11,6 +11,12 @@
  * and the single `SundayTicketLive` island updates them through the
  * `data-st-live-team` / `data-st-live-state` hooks.
  *
+ * The state hook carries BOTH franchise ids, not just the league. A card's
+ * state is a property of the PAIR — the server takes the max clock across the
+ * two sides, so a card whose owner is done but whose opponent is still playing
+ * is "In progress", not "Final" — and a doubleheader puts two cards with
+ * different opponents on the page under one league id.
+ *
  * Crests come from `getLeagueTeamBrands` via the page — LIGHT artwork only.
  * Dark mode needs nothing here: `TeamIconDarkStyles` in the shared layout head
  * swaps a team's `iconDark` keyed on `src` alone, so shipping `iconDark` too
@@ -39,7 +45,7 @@ const { cards, week, linkFor } = Astro.props;
           <span class="st-game__league">{card.leagueName}</span>
           <span
             class:list={['st-game__state', card.liveResolved && card.secondsRemaining > 0 && 'st-game__state--live']}
-            data-st-live-state={card.leagueId}
+            data-st-live-state={`${card.leagueId}:${card.you.franchiseId}:${card.opponent.franchiseId}`}
           >{liveStateLabel(card)}</span>
         </header>
 

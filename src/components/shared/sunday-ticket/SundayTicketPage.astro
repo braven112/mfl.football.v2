@@ -315,7 +315,7 @@ for (const l of boardLeagues) {
 // on the page. A league with nothing rendered has nothing to poll for.
 const liveIslandLeagues = liveLeagues
   .filter((l) => contributions.some((c) => c.leagueId === l.id) || matchupCards.some((m) => m.leagueId === l.id))
-  .map((l) => ({ leagueId: l.id, franchiseId: l.franchiseId }));
+  .map((l) => ({ leagueId: l.id }));
 
 const linkForLeague = (slug: string, path: string) => r(`/${slug}/${path}`);
 
