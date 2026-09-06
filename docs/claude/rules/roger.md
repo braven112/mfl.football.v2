@@ -83,6 +83,19 @@ event dates in the past. Fixing one does not fix the other.
      an event that loses `audience`/`announceTouch` in the resolver — the
      scanner reads the JSON, not the source event list.
 
+     **Each lane sends at most ONE message per run**, however many deadlines
+     are due. TheLeague's "Declare Contracts / Cut to 22" and "Offseason FA
+     Closes" are both the third Sunday in August, so their 7-day touches fire
+     together and the chat got two back-to-back Roger monologues. The scanner
+     now sorts posts into lanes and sends once per lane;
+     `scripts/lib/reminder-digest.mjs` renders the merged copy (a list plus
+     the calendar link, deliberately terser than a single reminder — two full
+     monologues overrun GroupMe's cap). **The events themselves never merge**:
+     each keeps its own calendar row, feed entry, dedup id and push. Only the
+     chat message combines, because adjacency is a chat problem and nothing
+     else's. Merging matters most on the fallback lane, where two unmerged
+     posts would @-mention the same owners twice in a row.
+
      Every touch that is not the announce touch is push-only. `roger-fallback` is
      the kind for the second case and is exempt from the daily cap, for the
      same reason `roger-reminder` is: it is already the narrowest message
