@@ -13,6 +13,7 @@
  */
 
 import type { ClaimContext } from './claim-context-shape';
+import { activeRankingsScope, type RankingsScope } from './rankings-scope';
 
 declare global {
   interface Window {
@@ -48,30 +49,65 @@ export interface PlayerClaimOffer {
   playerId: string;
 }
 
-let pending: Promise<ClaimContext | null> | null = null;
-let cached: ClaimContext | null = null;
-let rosteredSet: Set<string> | null = null;
+interface ScopeState {
+  pending: Promise<ClaimContext | null> | null;
+  context: ClaimContext | null;
+  rostered: Set<string> | null;
+}
 
 /**
- * The viewer's claim context, fetched once.
+ * State per LEAGUE, and the scope re-read on every call.
+ *
+ * Not a single context, for the reason rankings-scope spells out: one JS module
+ * instance survives a ClientRouter navigation from one league's page to the
+ * other's, so anything captured belongs to the page before this one. And the
+ * page's league is not decoration here — see the guard in loadClaimContext.
+ */
+const states = new Map<RankingsScope, ScopeState>();
+
+function stateFor(scope: RankingsScope): ScopeState {
+  let s = states.get(scope);
+  if (!s) {
+    s = { pending: null, context: null, rostered: null };
+    states.set(scope, s);
+  }
+  return s;
+}
+
+/**
+ * The viewer's claim context for the league whose page they are on, fetched
+ * once per league.
+ *
+ * `?league=` IS THE POINT, not bookkeeping. The server resolves the league from
+ * the SESSION, so an owner signed into TheLeague who opens a player on an AFL
+ * page would otherwise be answered for TheLeague — and since MFL player ids are
+ * global, an AFL free agent who happens to be unrostered in TheLeague reads as
+ * claimable. The button appears on the wrong league's page and files a real
+ * bid in the other one. So the client sends the page's league and the server
+ * refuses a mismatch, exactly as /api/watch-list, /api/draft-list and
+ * kv-franchise-store do. The param is a CHECK, never an input.
  *
  * A failed fetch resolves to null and is NOT retried for the life of the page:
  * the fallback (no button) is correct and silent, and retrying on every modal
  * open would hammer a league that is already degraded.
  */
 export function loadClaimContext(): Promise<ClaimContext | null> {
-  if (cached) return Promise.resolve(cached);
-  if (pending) return pending;
-  pending = fetch('/api/claim-context', { credentials: 'same-origin' })
+  const scope = activeRankingsScope();
+  const state = stateFor(scope);
+  if (state.context) return Promise.resolve(state.context);
+  if (state.pending) return state.pending;
+  state.pending = fetch(`/api/claim-context?league=${encodeURIComponent(scope)}`, {
+    credentials: 'same-origin',
+  })
     .then((res) => (res.ok ? res.json() : null))
     .then((ctx: ClaimContext | null) => {
-      cached = ctx && ctx.canClaim ? ctx : null;
-      rosteredSet = cached ? new Set(cached.rosteredIds) : null;
-      publishContext();
-      return cached;
+      state.context = ctx && ctx.canClaim ? ctx : null;
+      state.rostered = state.context ? new Set(state.context.rosteredIds) : null;
+      publishContext(scope);
+      return state.context;
     })
     .catch(() => null);
-  return pending;
+  return state.pending;
 }
 
 /**
@@ -89,15 +125,20 @@ export function loadClaimContext(): Promise<ClaimContext | null> {
  * So: call it if it is there, and park the context either way. The modal's own
  * init reads the parked copy, which closes the other ordering.
  */
-function publishContext(): void {
-  if (!cached) return;
-  window.__playerClaimContext = cached;
-  window.configureWaiverClaim?.(cached);
+function publishContext(scope: RankingsScope): void {
+  const context = states.get(scope)?.context;
+  // Only ever publish the league the viewer is looking at NOW. A fetch begun
+  // before a ClientRouter hop resolves after it, and handing that stale
+  // league's config to the claim form is the same cross-league write the
+  // `?league=` check exists to stop.
+  if (!context || scope !== activeRankingsScope()) return;
+  window.__playerClaimContext = context;
+  window.configureWaiverClaim?.(context);
 }
 
-/** The already-resolved context, or null while it is still in flight. */
+/** The already-resolved context for the current page, or null if not loaded. */
 export function peekClaimContext(): ClaimContext | null {
-  return cached;
+  return states.get(activeRankingsScope())?.context ?? null;
 }
 
 /**
@@ -110,9 +151,10 @@ export function peekClaimContext(): ClaimContext | null {
  * than its complement.
  */
 export function offerFor(playerId: string | null | undefined): PlayerClaimOffer | null {
-  if (!playerId || !cached || !rosteredSet) return null;
-  if (rosteredSet.has(String(playerId))) return null;
-  return { verb: cached.verb, playerId: String(playerId) };
+  const state = states.get(activeRankingsScope());
+  if (!playerId || !state?.context || !state.rostered) return null;
+  if (state.rostered.has(String(playerId))) return null;
+  return { verb: state.context.verb, playerId: String(playerId) };
 }
 
 /**
@@ -121,14 +163,22 @@ export function offerFor(playerId: string | null | undefined): PlayerClaimOffer 
  * more honest than re-fetching: MFL's rosters export lags its own writes.
  */
 export function markClaimed(playerId: string): void {
-  if (rosteredSet) rosteredSet.add(String(playerId));
-  if (cached) cached.rosteredIds = [...rosteredSet ?? []];
+  const state = states.get(activeRankingsScope());
+  if (!state?.rostered) return;
+  state.rostered.add(String(playerId));
+  if (state.context) state.context.rosteredIds = [...state.rostered];
 }
 
-/** Test seam + ClientRouter safety: forget everything and re-ask on next use. */
+/**
+ * Test seam: forget everything and re-ask on next use.
+ *
+ * NOT called on navigation. The state is keyed by league, so a hop between the
+ * two leagues' pages already reads the right bucket — and a blanket reset on
+ * `astro:page-load` raced the warm-up fired on that same dispatch, discarding
+ * a fetch that was already in flight and letting its late `.then` repopulate
+ * what had just been cleared.
+ */
 export function resetClaimContext(): void {
-  pending = null;
-  cached = null;
-  rosteredSet = null;
+  states.clear();
   window.__playerClaimContext = undefined;
 }

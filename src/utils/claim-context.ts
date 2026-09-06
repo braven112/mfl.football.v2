@@ -37,6 +37,7 @@ import { getLeagueById, type LeagueDefinition } from '../config/leagues';
 import { resolveWaiverWindow, describeWaiverWindow } from './waiver-window';
 import { readBidRules, conferenceOfFranchise, freeAgencyIsLeagueWide } from './waiver-claim';
 import { claimVerb, type ClaimContext } from './claim-context-shape';
+import { isAuctionSeason } from './auction-window';
 import type { AuthUser } from './auth';
 
 // The wire shape and the verb rule live in claim-context-shape.ts, which the
@@ -170,6 +171,13 @@ export async function resolveClaimContext(user: AuthUser): Promise<ClaimContext 
   const events = live ?? committedWaiverEvents(league.dataPath, year);
   const window = resolveWaiverWindow(events as never);
 
+  // TheLeague replaces offseason free agency with a live auction on MFL. While
+  // that window is open an in-place waiver claim is the wrong mechanism — the
+  // free-agent page has always deep-linked to MFL's Place Bid page instead, and
+  // the modal must agree with it rather than offering a form beside it. The
+  // window comes from the shared resolver, never re-derived here.
+  const auctionOpen = isAuctionSeason(league.slug);
+
   const base: ClaimContext = {
     signedIn: true,
     canClaim: false,
@@ -234,7 +242,7 @@ export async function resolveClaimContext(user: AuthUser): Promise<ClaimContext 
 
   return {
     ...base,
-    canClaim: roster.length > 0,
+    canClaim: roster.length > 0 && !auctionOpen,
     roster,
     balance: rules.system === 'bbid' ? balance : undefined,
     rosteredIds: [...rosteredIds],

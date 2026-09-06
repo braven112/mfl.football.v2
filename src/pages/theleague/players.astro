@@ -14,7 +14,6 @@ import { resolveLeaguePath } from '../../utils/nav-utils';
 import { NFL_LOGO_ONERROR, NFL_LOGO_ONLOAD, COLLEGE_LOGO_ONERROR, COLLEGE_LOGO_ONLOAD, positionOrder } from '../../constants/roster-constants';
 import { getCurrentLeagueYear, getCurrentSeasonYear, getTestDateFromSearchParams } from '../../utils/league-year';
 import { getPlayerMap } from '../../utils/player-map';
-import { getNthDayOfMonth } from '../../utils/league-event-resolver';
 import { buildWeeklyPlayerResults } from '../../utils/weekly-player-results';
 import { getFrozenSalaryAveragesYear } from '../../utils/salary-calculations';
 import { calculateAllSurplusValues } from '../../utils/surplus-value';
@@ -32,6 +31,7 @@ import collegeLogos from '../../data/college-logos.json';
 import espnCollegeIds from '../../../data/theleague/espn-college-ids.json';
 import leagueConfig from '../../data/theleague.config.json';
 import { getLeagueBySlug } from '../../config/leagues';
+import { resolveAuctionWindow } from '../../utils/auction-window';
 import { NO_HEADSHOT_SILHOUETTE, getPlayerAvatarBackground, getPlayerAvatarBorder, getPlayerAvatarRing, getPlayerAvatarRingDark, getPlayerAvatarStyleMaps } from '../../utils/nfl-team-colors';
 import { isDraftComplete } from '../../utils/draft-utils';
 import { DEF_SPOTLIGHT_PLAYERS, getDefSpotlightPlayer } from '../../data/theleague/def-spotlight-players';
@@ -393,11 +393,13 @@ const hasAuctionData = auctionMap.size > 0;
 // can't request a year we have no feed data for. The auction window itself is
 // computed from the test date's league year so cross-year dates resolve correctly.
 const nowRef = getTestDateFromSearchParams(Astro.url.searchParams) ?? new Date();
-const auctionWindowYear = getCurrentLeagueYear(nowRef);
-const auctionStart = getNthDayOfMonth(auctionWindowYear, 2, 4, 3); // 3rd Thursday of March (month 2 = March)
-const auctionEnd = getNthDayOfMonth(auctionWindowYear, 7, 0, 3);   // 3rd Sunday of August (month 7 = August)
-auctionEnd.setHours(20, 45, 0, 0); // 8:45 PM PT close
-const isAuctionSeason = nowRef.getTime() >= auctionStart.getTime() && nowRef.getTime() < auctionEnd.getTime();
+// The window itself lives in src/utils/auction-window.ts, because the player
+// modal's claim context now has to answer the same question from the SERVER,
+// away from this page. Two copies of a date formula is how two surfaces end up
+// disagreeing about what season it is.
+const auctionWindow = resolveAuctionWindow(theLeagueDef.slug, nowRef);
+const auctionWindowYear = auctionWindow.year;
+const isAuctionSeason = auctionWindow.open;
 // MFL deep-links use the same league year that drives the Bid/Add state, so a
 // cross-year ?testDate can't show one year's auction while linking another.
 // For real requests (no testDate) this equals currentYear.

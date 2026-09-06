@@ -20,6 +20,15 @@
  * WaiverClaimModal after the reload — the two halves cannot share a component,
  * because this one only renders for a signed-out visitor and that one only
  * once they can claim. See src/utils/claim-resume.ts.
+ *
+ * SINCE SEP 2026 THE ⋮ SHEET IS THE PRIMARY PRODUCER, not a trigger attribute:
+ * WatchListBridge parks the whole player itself and then calls requestSignIn(),
+ * which opens this dialog directly rather than through a `[data-signin-open]`
+ * click. So a trigger WITHOUT a player must leave an existing park alone — the
+ * old unconditional `rememberPendingClaim(...)` cleared it, and any other
+ * sign-in trigger on the page (the waiver-priority gate's own Sign in button)
+ * would silently throw away the player they were mid-claim on. Dismissal still
+ * clears it, which is the case that should.
  */
 import LoginForm from '../theleague/LoginForm.astro';
 
@@ -90,8 +99,10 @@ const { config } = Astro.props;
     e.preventDefault();
 
     // The other half of this runs in WaiverClaimModal, after the reload — see
-    // src/utils/claim-resume.ts for why they can't live together.
-    rememberPendingClaim(trigger.getAttribute('data-signin-player'));
+    // src/utils/claim-resume.ts for why they can't live together. Only a
+    // trigger that NAMES a player touches the park: see the header note.
+    const triggerPlayer = trigger.getAttribute('data-signin-player');
+    if (triggerPlayer) rememberPendingClaim(triggerPlayer);
 
     if (!dialog.open) dialog.showModal();
     // Focus the username field so a keyboard user can start typing.

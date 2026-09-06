@@ -1019,9 +1019,12 @@ const t = (value?: string) => value ?? '\u2014';
   import { applyPlayerModalBand, franchiseTintHue, getFranchiseBandBrand } from '../../utils/player-modal-band';
   import { isWatched, loadWatchList, toggleWatch, getWatchListAuth, onWatchListChange } from '../../utils/watch-list-client';
   import { requestSignIn } from '../../utils/player-actions';
-  import {
-    loadClaimContext, offerFor, markClaimed, resetClaimContext,
-  } from '../../utils/player-claim-client';
+  // No per-navigation reset: player-claim-client keys its state by league and
+  // re-reads the page's league on every call, so a ClientRouter hop already
+  // reads the right bucket. A blanket reset on `astro:page-load` fired on the
+  // same dispatch as WatchListBridge's warm-up and threw away a fetch that was
+  // already in flight, whose late `.then` then repopulated what it had cleared.
+  import { loadClaimContext, offerFor, markClaimed } from '../../utils/player-claim-client';
   import { getDefSpotlightPlayer } from '../../data/theleague/def-spotlight-players';
   import {
     loadPlayerNews,
@@ -1076,6 +1079,13 @@ const t = (value?: string) => value ?? '\u2014';
   let renderWatchStrip: (playerId: unknown) => void = () => {};
   /** Set by initPlayerDetailsModal; openPlayerDetailsModal calls it per open. */
   let renderClaimStrip: (player: any) => void = () => {};
+  /**
+   * Re-pointed at each init's painter, exactly as repaintWatch is. The
+   * `waiver-claims:changed` listener below is bound ONCE per document but must
+   * paint THIS page's nodes: closing over the first init's `paintClaim` leaves
+   * it repainting a dialog ClientRouter detached two navigations ago.
+   */
+  let repaintClaim: () => void = () => {};
   let claimChangeBound = false;
   // The store's change listener is a DOCUMENT listener, so it is bound once
   // per module and re-pointed at the current init's painter — the modal
@@ -1230,6 +1240,7 @@ const t = (value?: string) => value ?? '\u2014';
         });
       });
     }
+    repaintClaim = paintClaim;
     if (!claimChangeBound) {
       claimChangeBound = true;
       // A filed claim takes the player out of the pool for this viewer. The
@@ -1238,7 +1249,7 @@ const t = (value?: string) => value ?? '\u2014';
       document.addEventListener('waiver-claims:changed', (e) => {
         const id = (e as CustomEvent)?.detail?.playerId;
         if (id) markClaimed(String(id));
-        paintClaim();
+        repaintClaim();
       });
     }
     renderClaimStrip = (player: any) => {
@@ -1825,12 +1836,4 @@ const t = (value?: string) => value ?? '\u2014';
 
   // Re-initialize after View Transitions (Astro page navigation)
   document.addEventListener('astro:page-load', initPlayerDetailsModal);
-
-  // Forget the cached claim context on every navigation. It is scoped to the
-  // viewer's LEAGUE and to a roster snapshot, and a single JS module instance
-  // survives a ClientRouter navigation — the same reason rankings-scope re-reads
-  // its scope per call rather than capturing it at module load. Nothing is
-  // re-fetched here: the next modal open asks, and pages where none is opened
-  // never do.
-  document.addEventListener('astro:page-load', () => resetClaimContext());
 </script>

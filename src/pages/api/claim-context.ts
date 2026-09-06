@@ -13,12 +13,14 @@
  * nothing until someone opens the modal.
  *
  * Session-scoped, so:
- * - No `league` parameter. The league comes from the session JWT, exactly as
- *   `POST /api/waiver-claim` resolves it. A signed-in TheLeague owner browsing
- *   the AFL is answered for TheLeague and the AFL page's modal will offer
- *   nothing, which is the correct outcome — both leagues have a franchise
- *   0001, and trusting a client-supplied league is how you file a claim into
- *   the wrong one.
+ * - The league comes from the session JWT, exactly as `POST /api/waiver-claim`
+ *   resolves it. `?league=` is a CHECK on top of that, never an input — the
+ *   same contract as /api/watch-list, /api/draft-list and kv-franchise-store.
+ *   It is load-bearing: MFL player ids are GLOBAL, so a TheLeague owner
+ *   browsing an AFL page, answered for TheLeague, would see AFL free agents
+ *   who happen to be unrostered in TheLeague come back claimable — a button on
+ *   the wrong league's page that files a real bid in the other one. A mismatch
+ *   401s and the modal quietly shows Watch alone, which is correct.
  * - `Cache-Control: no-store`. The body carries the viewer's own roster.
  *
  * Rate-limited because it fans out to MFL (league, calendar, rosters, names).
@@ -27,7 +29,8 @@
 
 import type { APIRoute } from 'astro';
 import { getAuthUser } from '../../utils/auth';
-import { json, JSON_HEADERS_NO_STORE } from '../../utils/api-response';
+import { json, unauthorized, JSON_HEADERS_NO_STORE } from '../../utils/api-response';
+import { rankingsScopeForLeagueId } from '../../utils/rankings-scope';
 import { checkRateLimit } from '../../utils/rate-limit';
 import { resolveClaimContext } from '../../utils/claim-context';
 
@@ -48,7 +51,17 @@ export const GET: APIRoute = async ({ request }) => {
   // every anonymous page view log a failed request.
   if (!user?.franchiseId) return json(NO_CLAIMS, 200, JSON_HEADERS_NO_STORE);
 
-  const limit = await checkRateLimit('claim-context', user.franchiseId, 60, 60);
+  // The page's league, checked against the session's. See the header note.
+  const requested = new URL(request.url).searchParams.get('league');
+  if (requested && requested !== rankingsScopeForLeagueId(user.leagueId)) {
+    return unauthorized({ error: 'League mismatch.' }, JSON_HEADERS_NO_STORE);
+  }
+
+  // Keyed on the MFL user id, not the franchise id: both leagues have a
+  // franchise 0001, so a franchise-keyed bucket would have two owners sharing
+  // one limit and a 429 would render as "no claim button". Same key as
+  // /api/waiver-claims.
+  const limit = await checkRateLimit('claim-context', user.id, 60, 60);
   if (!limit.allowed) {
     return json({ ...NO_CLAIMS, signedIn: true, error: 'Slow down' }, 429, JSON_HEADERS_NO_STORE);
   }

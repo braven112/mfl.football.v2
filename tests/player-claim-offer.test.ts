@@ -62,11 +62,52 @@ describe('the claim form travels with the player modal', () => {
 });
 
 describe('the offer comes from the session, never from the page', () => {
-  it('the endpoint reads the league off the session and takes no league param', () => {
+  it('the endpoint reads the league off the session, with ?league= only as a check', () => {
     const src = read(ENDPOINT);
     expect(src).toContain('getAuthUser(request)');
-    expect(src, 'a client-supplied league files claims into the wrong one')
-      .not.toMatch(/searchParams\.get\(['"]league/);
+    // The league is resolved from the session; the param is compared to it and
+    // never substituted for it. MFL player ids are GLOBAL, so a TheLeague
+    // owner answered for TheLeague while browsing an AFL page sees AFL free
+    // agents who happen to be unrostered in TheLeague come back claimable —
+    // a button on the wrong league's page that files a real bid in the other.
+    expect(src).toContain('rankingsScopeForLeagueId(user.leagueId)');
+    expect(src).toMatch(/searchParams\.get\('league'\)/);
+    expect(src, 'a mismatch must be refused, not served').toMatch(
+      /requested !== rankingsScopeForLeagueId[\s\S]{0,120}unauthorized/,
+    );
+  });
+
+  it('the client sends the page league it is actually on, re-read per call', () => {
+    const src = read(CLIENT);
+    expect(src).toContain('activeRankingsScope()');
+    expect(src).toMatch(/\/api\/claim-context\?league=/);
+    // Captured at module load it would be the previous page's league — one
+    // module instance survives a ClientRouter hop.
+    expect(src, 'the scope must not be captured at module scope').not.toMatch(
+      /^const scope = activeRankingsScope\(\);/m,
+    );
+  });
+
+  it('the rate limit is keyed per user, not per franchise', () => {
+    // Both leagues have a franchise 0001, so a franchise-keyed bucket has two
+    // owners sharing one limit — and a 429 here renders as "no claim button".
+    expect(read(ENDPOINT)).toContain("checkRateLimit('claim-context', user.id");
+  });
+
+  it('the offseason auction closes the in-place claim', () => {
+    // TheLeague's page has always deep-linked to MFL's Place Bid page while
+    // the auction is open. The modal has to agree with it rather than offer a
+    // waiver form beside it — and the window comes from the shared resolver,
+    // never re-derived (a second copy of a date formula is how two surfaces
+    // end up disagreeing about what season it is).
+    const src = read(SERVER);
+    expect(src).toContain("from './auction-window'");
+    expect(src).toMatch(/canClaim: roster\.length > 0 && !auctionOpen/);
+    const page = read('src/pages/theleague/players.astro');
+    expect(page).toContain('resolveAuctionWindow(');
+    expect(page, 'the page must not keep its own copy of the window').not.toContain(
+      'getNthDayOfMonth(auctionWindowYear',
+    );
   });
 
   it('the endpoint never caches a body carrying the viewer’s own roster', () => {
@@ -100,8 +141,15 @@ describe('the button cannot outrun the form it opens', () => {
   it('the client parks the context as well as calling into the form', () => {
     // The optional call is the fast path; the parked copy is what makes the
     // other module-evaluation order work.
-    expect(client).toContain('window.__playerClaimContext = cached');
-    expect(client).toContain('window.configureWaiverClaim?.(cached)');
+    expect(client).toContain('window.__playerClaimContext = context');
+    expect(client).toContain('window.configureWaiverClaim?.(context)');
+  });
+
+  it('a context that resolves after a league hop is not published', () => {
+    // A fetch begun before a ClientRouter navigation resolves after it, and
+    // handing that league's config to the claim form is the same cross-league
+    // write the ?league= check exists to stop.
+    expect(client).toMatch(/scope !== activeRankingsScope\(\)/);
   });
 
   it('the form reads the parked context at init', () => {
@@ -116,11 +164,25 @@ describe('the button cannot outrun the form it opens', () => {
     );
   });
 
-  it('the context is forgotten on every navigation', () => {
-    // It is scoped to the viewer's LEAGUE and to a roster snapshot, and one
-    // module instance survives a ClientRouter hop.
-    expect(read(MODAL)).toMatch(/astro:page-load['"],\s*\(\) => resetClaimContext\(\)/);
-    expect(client).toMatch(/export function resetClaimContext/);
+  it('state is keyed by league rather than reset on navigation', () => {
+    // A blanket reset on `astro:page-load` fired on the SAME dispatch as
+    // WatchListBridge's warm-up: it threw away a fetch already in flight, whose
+    // late `.then` then repopulated what it had just cleared. Keying the state
+    // by league makes the reset unnecessary — a hop already reads the right
+    // bucket — so the reset must not come back.
+    expect(client).toMatch(/const states = new Map<RankingsScope, ScopeState>\(\)/);
+    expect(read(MODAL), 'the per-navigation reset raced the warm-up').not.toMatch(
+      /astro:page-load['"],\s*\(\) => resetClaimContext\(\)/,
+    );
+  });
+
+  it('the claims-changed listener paints THIS page’s nodes', () => {
+    // Bound once per document, so closing over the first init's painter leaves
+    // it repainting a dialog ClientRouter detached two navigations ago — the
+    // documented stale-closure split. repaintWatch solves it the same way.
+    const src = read(MODAL);
+    expect(src).toMatch(/repaintClaim = paintClaim;/);
+    expect(src).toMatch(/waiver-claims:changed[\s\S]{0,220}repaintClaim\(\)/);
   });
 });
 

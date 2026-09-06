@@ -41,6 +41,13 @@ export interface LeagueFeatures {
   schefterTips: boolean;
   liveScoring: boolean;
   /**
+   * The league replaces offseason free agency with a live auction on MFL.
+   * While that window is open (src/utils/auction-window.ts) an in-place waiver
+   * claim is the wrong mechanism, so the acquisition affordance deep-links to
+   * MFL instead of opening the claim form.
+   */
+  offseasonAuction: boolean;
+  /**
    * Commissioner accounting page: read/write of MFL's league accounting
    * ledger and the season payout run. Requires a league that (a) actually
    * settles money on MFL and (b) has a documented prize table under
