@@ -141,6 +141,31 @@ sources. Rate-limit any new LLM-backed endpoint with
 `src/utils/rate-limit.ts`, and run any server-side fetch of a user-supplied
 URL through `src/utils/url-guard.ts#validatePublicUrl`.
 
+## Preview builds require an open PR
+
+`vercel.json`'s `ignoreCommand` runs `scripts/vercel-ignore-build.mjs`, which
+**cancels a preview build for any branch with no open PR**. Build CPU Minutes
+were 91% of the Vercel bill ($22.36 of $24.70, +291%) while bandwidth was $0.46,
+and preview builds from work-in-progress pushes were the bulk of the count — one
+branch built four times in 19 minutes. Production is never gated.
+
+- A skipped build shows as **`CANCELED`**, not as its own status. The build log
+  is the only place it says why (`[ignore-build] SKIP — no open PR for …`).
+- Need a preview without a PR? Open the PR, or set `FORCE_PREVIEW_BUILD=1`.
+- The script **fails open** — any network error, non-200 or missing env proceeds
+  with the build. Keep it that way; a cost optimization that can block a deploy
+  is worse than the cost. `tests/vercel-ignore-build.test.ts` pins that, and
+  pins Vercel's inverted exit codes (**0 ignores, 1 proceeds**) as literals,
+  because inverting them silently stops every deployment.
+
+Preview builds also run a **slim `prebuild`** (`VERCEL_ENV=preview`): 19 of 21
+steps are skipped and the committed data artifacts are read instead, which is
+what `pnpm dev` does locally. A diff touching the pipeline — the step scripts,
+`scripts/lib/`, or any `.mjs` under `src/` — forces the full run automatically,
+as does `PREBUILD_FULL=1`. If you add a prebuild step, its script is picked up
+from the step list with no extra wiring; `tests/prebuild-slim.test.ts` fails if
+that derivation breaks.
+
 ## Feature flags — code, not GitHub Actions variables
 
 Do not introduce new `vars.*` references in workflows as feature gates.

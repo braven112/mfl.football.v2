@@ -6,6 +6,22 @@ Push the current worktree branch to GitHub for a Vercel preview deployment, then
 
 2. **Push the branch** — Run `git push -u origin <current-branch>`. If the branch already tracks a remote and is up to date, skip this step.
 
+   **A branch with no open PR does not build.** `vercel.json`'s `ignoreCommand`
+   (`scripts/vercel-ignore-build.mjs`) cancels preview builds for branches that
+   have no PR, because preview builds from work-in-progress pushes were the bulk
+   of a build bill that ran 91% of Vercel spend. The deployment appears as
+   `CANCELED` and **no preview URL is ever produced**, so step 4 will poll
+   forever against a deployment that was never built.
+
+   So before polling, get a preview one of two ways:
+   - **Open a PR for the branch** — the normal path. Every push then builds as
+     it always did.
+   - **Set `FORCE_PREVIEW_BUILD=1`** in the Vercel project's environment for a
+     one-off preview without a PR.
+
+   If step 4 finds a `CANCELED` deployment, do not retry — check the build log
+   for `[ignore-build] SKIP` and say which of the two the user needs.
+
 3. **Wait for Vercel deployment** — Sleep 15 seconds to let Vercel register the deployment, then poll for the preview URL.
 
 4. **Extract the Vercel preview URL** — Use the GitHub API to find the actual preview hostname:
