@@ -146,6 +146,18 @@ describe('whats-new.json data integrity', () => {
     ).toEqual([]);
   });
 
+  it('heroAccentWord is never set without heroHeadline', () => {
+    // The AFL hero's display line is a PAIR. An accent word bolted onto a
+    // title-derived headline reads as a mistake, so resolveFeatureHeadline
+    // ignores the orphan and derives both halves — which means the authored
+    // copy silently never renders. Catch the typo here instead.
+    const orphans = typedEntries.filter((e) => e.heroAccentWord && !e.heroHeadline);
+    expect(
+      orphans.map((e) => e.id),
+      'Entries with heroAccentWord but no heroHeadline (the accent word is ignored)',
+    ).toEqual([]);
+  });
+
   it('heroPlayerId, when set, is a plausible MFL id (digits only)', () => {
     // The featured-player cast resolves the id against the player map at
     // render time; a malformed id silently falls back to the screenshot, so
