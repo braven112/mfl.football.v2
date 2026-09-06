@@ -523,8 +523,46 @@ self.addEventListener('push', (event) => {
     options.tag = data.tag;
   }
 
-  event.waitUntil(self.registration.showNotification(title, options));
+  // The notification is the promise; the badge is the debt. Showing it comes
+  // first and is never gated on the badge refresh succeeding.
+  event.waitUntil(
+    Promise.all([self.registration.showNotification(title, options), refreshAppBadge()]),
+  );
 });
+
+/**
+ * Re-read the owner's real badge count after a push.
+ *
+ * Deliberately NOT a count of notifications, and deliberately not carried in
+ * the payload. The badge means "things waiting for YOU" — pending trade
+ * offers, a broken lineup, an uncast ballot — and each sender would otherwise
+ * have to compute all three for every recipient. Asking the server for the
+ * truth keeps one definition (src/utils/app-badge.ts) and means a push about
+ * something unbadgeable (a rumor, a weekly recap) correctly leaves the number
+ * alone instead of inflating it.
+ *
+ * Fails silent in every direction: a signed-out device, an offline push, or a
+ * browser without the Badging API all leave whatever is on the icon untouched.
+ */
+async function refreshAppBadge() {
+  if (!self.navigator || !('setAppBadge' in self.navigator)) return;
+  try {
+    const res = await fetch('/api/app-badge', { credentials: 'include' });
+    if (!res.ok) return;
+    const data = await res.json();
+    if (typeof data?.count !== 'number') return;
+    // clearAppBadge, not setAppBadge(0) — a zero shows as a dot on some
+    // Android launchers, which is indistinguishable from a real alert.
+    if (data.count > 0) await self.navigator.setAppBadge(data.count);
+    else await self.navigator.clearAppBadge();
+
+    // A window may be open and showing stale UI behind the notification.
+    const clients = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+    for (const client of clients) client.postMessage({ type: 'mfl:badge-refresh' });
+  } catch {
+    // Leave the existing badge in place rather than clearing one that is real.
+  }
+}
 
 // Click: focus an existing tab on our origin (navigating it to the target
 // URL), otherwise open a new window.

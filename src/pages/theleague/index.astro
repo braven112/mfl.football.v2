@@ -26,6 +26,7 @@ import HpQuickLinks from '../../components/theleague/hp-sections/HpQuickLinks.as
 import WhatsNewRow from '../../components/theleague/WhatsNewRow.astro';
 import PlayerDetailsModal from '../../components/theleague/PlayerDetailsModal.astro';
 import { getAuthUser } from '../../utils/auth';
+import InstallAppPrompt from '../../components/shared/pwa/InstallAppPrompt.astro';
 import { readViewerClock } from '../../utils/viewer-preferences-page';
 import { getLeagueBySlug } from '../../config/leagues';
 import { resolveHeroFranchiseBackdrop } from '../../utils/hero-franchise-backdrop';
@@ -764,6 +765,7 @@ if ((heroState.phase === 'playoffs' || heroState.phase === 'championship') && he
 
 <TheLeagueLayout title="Home">
   <div class="hp2">
+    {isAuthenticated && <InstallAppPrompt variant="banner" leagueName="The League" />}
     <section class="hp2__main" aria-labelledby="hp2-hero-heading">
       <h2 id="hp2-hero-heading" class="visually-hidden">League Overview</h2>
       {testDriveHero ? (

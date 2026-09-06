@@ -1,5 +1,31 @@
 [
   {
+    "id": "install-app",
+    "date": "2026-09-06",
+    "category": "new-feature",
+    "icon": "bell",
+    "leagues": [
+      "theleague",
+      "afl"
+    ],
+    "title": "Put Us on Your Home Screen",
+    "heroHeadline": "Now it lives on your",
+    "heroAccentWord": "Home Screen.",
+    "link": "/notifications",
+    "linkLabel": "Install and turn on alerts",
+    "summary": "Install the site as an app and it stops being a tab you remember to check. The icon carries a number when a trade offer is waiting, when your lineup is broken, or when a ballot is open. Long-press it to jump straight to your lineup. And if you're on an iPhone, this is the part nobody told you: notifications have never worked in Safari, and they never will — the Home Screen is the only way in.",
+    "description": [
+      "Here is a thing that has quietly been true for a year, and that we did a bad job of telling anyone. If you are reading this on an iPhone in Safari, every switch on <a href=\"/notifications\">the notifications page</a> is decoration. Apple does not allow web notifications to a browser tab. Not ours, not anybody's. You could turn on lineup alerts, trade alerts, the lot, and your phone would sit there in total silence while the site cheerfully reported that everything was on. That is our fault for building a settings page that didn't say so.",
+      "<strong>So now it says so.</strong> If you're on an iPhone, a card at the top of the page walks you through the five seconds it takes — Share, then Add to Home Screen — and on Android and desktop there's just a button that installs it. Either way you end up with an icon, and the icon is where this gets good.",
+      "<strong>It carries a number.</strong> Not a notification count — an actual to-do count, and only for things you can go do something about. A trade somebody has offered <em>you</em> and you haven't answered. A <a href=\"/lineup\">lineup</a> with an empty slot or a starter on bye, from the day before the Thursday game until the Sunday slate kicks off and the point becomes moot. An open <a href=\"/pecking-order/ballot\">Owners' Poll ballot</a> you haven't cast. Answer the trade, fix the lineup, vote, and the number goes away on its own. Trades <em>you</em> proposed don't count, because there is nothing you can do about those but wait, and a badge you can't clear is just a red dot you learn to ignore.",
+      "Deliberately not counted: <a href=\"/schefter\">Schefter</a>. He files all day and he'd have that icon lit permanently by Tuesday, which would teach everyone to stop looking at it — and then the lineup one wouldn't work either.",
+      "<strong>Long-press the icon</strong> and you get four shortcuts straight past the homepage: Set Lineup, <a href=\"/live-scoring\">Live Scores</a>, <a href=\"/rosters\">My Roster</a>, Schefter. And the app now shows up in your phone's share sheet, pointed at <a href=\"/schefter/tip\">the tip line</a> — so when you see a post about somebody's rookie, you share it straight to Schefter instead of copying a link between apps. It fills in the box and waits. Nothing gets filed until you pick a topic and hit send.",
+      "None of this changes the website. Everything you already do in a browser still works exactly the same. It's just that the version with the icon knows how to interrupt you."
+    ],
+    "image": "install-app.webp",
+    "imageAlt": "The install banner at the top of the homepage, headed \"Put The League on your Home Screen\", explaining that on iPhone notifications only work once the app is on the Home Screen, with three numbered steps: tap Share in Safari's toolbar, choose Add to Home Screen, then open The League from the Home Screen and turn notifications on. A \"Not now\" button sits to the right."
+  },
+  {
     "id": "app-vs-browser-split",
     "date": "2026-09-06",
     "category": "enhancement",
@@ -894,26 +920,6 @@
       "Turned loose, it found something uncomfortable. It produced a season with ZERO division games on bye weeks and not a single starter missing from a rivalry game. It did that by cramming all 48 division games into Weeks 1 through 4 and Week 12, leaving Weeks 5 to 11, 13 and 14 without one, and the finale with none at all. Perfect on paper. A division race decided in September.",
       "The old builder had prevented that for free, by construction, which is exactly why nobody had ever written it down as a rule. So it is written down now: every franchise plays roughly half its division games after the midpoint, ranked just below keeping them off bye weeks.",
       "With that rule in place the arithmetic settles it. A 50/50 split needs 24 division games after Week 7, only one clean week remains that late, and it holds 16 — so at least eight must land on a bye week. Eight is exactly what the current schedule has. The schedule you are playing was already the right answer; we just proved it instead of assuming it."
-    ],
-    "excludeFromHero": true,
-    "leagues": [
-      "theleague",
-      "afl"
-    ]
-  },
-  {
-    "id": "starter-aware-schedule-optimizer",
-    "date": "2026-08-23",
-    "category": "league-event",
-    "icon": "calendar-2",
-    "title": "The Scheduler Now Knows Who Is Actually Missing",
-    "summary": "Next year’s schedule is built against your projected starting nine instead of your whole roster, and it actively hunts for weeks where neither side of a rivalry game is missing anyone. Replayed on 2026 it cuts missing starters in division games by nearly a third.",
-    "description": [
-      "The old scheduler asked “does this week have NFL byes in it?” That question is nearly useless for a 24-man roster, because a 24-man roster almost always has somebody out. Measured on The League’s 2026 rosters, only 10% of team-week combinations were fully clean, and Weeks 8, 11 and 13 had none at all. Every week looked equally bad, so nothing could be optimised.",
-      "It now asks a better question: is either of THESE two teams missing a projected starter that week? Counting the starting nine instead of the whole roster takes The League from 10% usable weeks to 41%, and it unlocks Weeks 8, 11 and 13 entirely.",
-      "The AFL is unaffected, and that is the correct answer rather than an oversight. The AFL reveals its schedule before its draft, so a roster is seven keepers — fewer players than there are starting slots, which means everyone kept is a starter. Whole-roster and starter counts agree exactly there.",
-      "On top of that the optimiser now scores rivalry games specifically: starters missing from a division game, both sides added together. The old fairness measure could not see this at all, because it only checked whether the two teams were EQUALLY hurt — two rivals both missing three starters scored perfectly, which is exactly the game nobody wants to play. Replayed on 2026 the AFL goes from 58 missing starters across its division games to 40, and from 94 to 99 rivalry games with both rosters whole.",
-      "The 2026 schedules are untouched — locked, pasted and being played. This applies to the next one. Still to come: letting different teams play their division games in different weeks, which is a deeper rebuild of how rounds are constructed."
     ],
     "excludeFromHero": true,
     "leagues": [

@@ -17,6 +17,7 @@
 
 import type { APIRoute } from 'astro';
 import { getAuthUser } from '../../../utils/auth';
+import { invalidateAppBadge } from '../../../utils/app-badge-cache';
 import { getLeagueYearForMflId } from '../../../utils/league-year';
 import { LEAGUES } from '../../../config/leagues';
 import { mflFetch } from '../../../utils/mfl-fetch';
@@ -129,6 +130,10 @@ export const POST: APIRoute = async ({ request }) => {
       reject: 'Trade rejected',
       revoke: 'Trade withdrawn',
     };
+
+    // The answered offer was one of the numbers on this owner's app icon.
+    // Fire-and-forget: a stale badge must never fail a trade response.
+    void invalidateAppBadge(leagueId, user.franchiseId);
 
     return new Response(
       JSON.stringify({ success: true, message: actionLabels[response as TradeResponse] }),

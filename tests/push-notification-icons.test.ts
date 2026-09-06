@@ -26,6 +26,7 @@ import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { readPng } from '../scripts/lib/png-raw.mjs';
 import { leaguePushIcon, leaguePushBadge } from '../src/utils/push-notify-trade';
+import { readSharedPayload } from '../src/utils/share-target';
 import { ALL_LEAGUES } from '../src/config/leagues';
 
 const ROOT = path.resolve(__dirname, '..');
@@ -224,5 +225,82 @@ describe('service worker badge contract', () => {
     let transparent = 0;
     for (let i = 0; i < png.data.length; i += 4) if (png.data[i + 3] < 16) transparent++;
     expect(transparent / (png.width * png.height)).toBeGreaterThan(0.25);
+  });
+});
+
+describe('manifest shortcuts and share target', () => {
+  const manifests = findManifests(PUBLIC);
+
+  /**
+   * Which league's pages a manifest's apex-relative URLs resolve against.
+   *
+   * Every league is served at the root of its own apex, so a manifest URL of
+   * `/lineup` means `src/pages/<that league>/lineup` — NOT a shared route. A
+   * shortcut copied between manifests therefore has to exist in both leagues
+   * or it dead-ends for one of them, and it dead-ends from the OS launcher,
+   * where nobody is watching.
+   */
+  const LEAGUE_DIR: Record<string, string> = {
+    'manifest.json': 'theleague',
+    'site.webmanifest': 'afl-fantasy',
+  };
+
+  function routeExists(leagueDir: string, url: string): boolean {
+    const rel = url.replace(/^\//, '').split('?')[0];
+    const base = path.join(ROOT, 'src/pages', leagueDir, rel);
+    return (
+      fs.existsSync(`${base}.astro`) ||
+      fs.existsSync(base) ||
+      fs.existsSync(path.join(base, 'index.astro'))
+    );
+  }
+
+  it.each(manifests)('%s declares shortcuts', (file) => {
+    const m = JSON.parse(fs.readFileSync(file, 'utf8'));
+    expect(Array.isArray(m.shortcuts), 'shortcuts').toBe(true);
+    expect(m.shortcuts.length).toBeGreaterThan(0);
+    // Android surfaces at most four on a long-press; more are simply dropped,
+    // silently, so a fifth is a shortcut nobody will ever see.
+    expect(m.shortcuts.length).toBeLessThanOrEqual(4);
+  });
+
+  it.each(manifests)('%s shortcuts point at real routes in that league', (file) => {
+    const m = JSON.parse(fs.readFileSync(file, 'utf8'));
+    const leagueDir = LEAGUE_DIR[path.basename(file)];
+    expect(leagueDir, `no league mapped for ${path.basename(file)}`).toBeTruthy();
+    for (const shortcut of m.shortcuts) {
+      expect(shortcut.name, 'every shortcut needs a name').toBeTruthy();
+      // Must be in scope ("/"), or the platform discards the shortcut.
+      expect(shortcut.url.startsWith('/'), `${shortcut.url} must be site-relative`).toBe(true);
+      expect(
+        routeExists(leagueDir, shortcut.url),
+        `${shortcut.url} has no page under src/pages/${leagueDir}`,
+      ).toBe(true);
+    }
+  });
+
+  it.each(manifests)('%s share target lands on a real page, in scope', (file) => {
+    const m = JSON.parse(fs.readFileSync(file, 'utf8'));
+    const leagueDir = LEAGUE_DIR[path.basename(file)];
+    expect(m.share_target?.action, 'share_target.action').toBeTruthy();
+    expect(m.share_target.action.startsWith('/')).toBe(true);
+    // GET, because the tip form prefills from the query string. A POST target
+    // would need a route that accepts multipart form data and would land the
+    // owner on a page with no way back to their draft.
+    expect(m.share_target.method ?? 'GET').toBe('GET');
+    expect(routeExists(leagueDir, m.share_target.action)).toBe(true);
+  });
+
+  it.each(manifests)('%s share params are the ones the tip page reads', (file) => {
+    // The param names are a contract between the manifest and
+    // readSharedPayload. Renaming one side silently drops every share on the
+    // floor — the page still renders, just empty.
+    const m = JSON.parse(fs.readFileSync(file, 'utf8'));
+    const { title, text, url } = m.share_target.params;
+    const params = new URLSearchParams();
+    params.set(title, 'T');
+    params.set(text, 'B');
+    params.set(url, 'U');
+    expect(readSharedPayload(params)).toEqual({ title: 'T', text: 'B', url: 'U' });
   });
 });

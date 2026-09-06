@@ -17,6 +17,7 @@
 import type { APIRoute } from 'astro';
 import { json, JSON_HEADERS_NO_STORE } from '../../../utils/api-response';
 import { checkRateLimit } from '../../../utils/rate-limit';
+import { invalidateAppBadge } from '../../../utils/app-badge-cache';
 import {
   buildBallotRecord,
   validateBallot,
@@ -138,6 +139,11 @@ export const POST: APIRoute = async ({ request }) => {
   if (!saved) {
     return json({ error: 'Could not save your ballot — storage unavailable' }, 503, headers);
   }
+
+  // An open ballot this owner had not cast was one of the numbers on their app
+  // icon; it isn't any more. Fire-and-forget — a stale badge must never fail a
+  // ballot that has already been written.
+  void invalidateAppBadge(resolved.caller.league.id, franchiseId);
 
   const ballotsIn = await countBallots(scope, window);
   return json(

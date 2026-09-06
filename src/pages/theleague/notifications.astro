@@ -10,6 +10,7 @@ export const prerender = false;
 
 import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
 import NotificationSettingsCard from '../../components/shared/NotificationSettingsCard.astro';
+import InstallAppPrompt from '../../components/shared/pwa/InstallAppPrompt.astro';
 import NotificationCommandCenter from '../../components/shared/notifications/NotificationCommandCenter';
 import '../../styles/notification-command-center.css';
 import { getAuthUser } from '../../utils/auth';
@@ -38,6 +39,8 @@ if (user.leagueId !== getLeagueBySlug('theleague')?.id) {
         blow. Pick as many or as few as you like.
       </p>
     </header>
+
+    <InstallAppPrompt variant="card" leagueName="The League" />
 
     <NotificationSettingsCard />
 

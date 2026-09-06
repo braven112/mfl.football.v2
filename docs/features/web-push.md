@@ -282,3 +282,128 @@ than that forty players got hurt.
 2. Write the sender, passing the category id to `sendPushToFranchise` (or to
    `sendPushFanout` from a script).
 3. Flip `live: true`. The settings page picks it up with no edit.
+
+## What the INSTALLED app can do that the website cannot
+
+Push is the oldest of these but not the only one. Four capabilities now key off
+`display-mode: standalone` or the manifest, and none of them exist in a tab.
+
+### The install pitch (`src/utils/pwa-install.ts`)
+
+On iOS, Web Push works **only** once the site is on the Home Screen. Every
+category in `notification-categories.ts` is therefore unreachable for an iPhone
+owner in Safari, and until Sept 2026 the only place that said so was one line
+of hint text at the bottom of the push card — so those owners were shown a page
+full of switches that could never fire.
+
+`InstallAppPrompt.astro` is one component in two variants: a dismissible banner
+on both homepages (signed-in owners only) and a permanent card above the push
+settings on both `/notifications` pages. `resolveInstallPitch` is pure and
+pinned by `tests/pwa-install.test.ts`, because both failure directions are
+invisible in a diff:
+
+- **The in-app check runs BEFORE the iOS check.** The GroupMe webview — where
+  every league link posted to chat opens — carries a complete iOS Safari user
+  agent, so a naive `/iPhone/` test shows Add-to-Home-Screen steps to a browser
+  that has no share sheet.
+- **Chrome/Firefox/Edge on iOS are not pitched.** They all wrap WebKit, but only
+  Safari's share sheet carries the item.
+- **iPadOS 13+ reports a Mac user agent.** `maxTouchPoints` is the only tell, so
+  the component swaps it in and `resolveInstallPitch` stays pure.
+- **Dismissal lapses after 60 days.** An owner who swipes the banner away in
+  June has no idea it is the only route to lineup alerts in September.
+
+`beforeinstallprompt` is captured **in the layout, not the component**. It fires
+once, early, before any island hydrates; if nothing is listening at that moment
+the browser's offer to install is gone for that page load. It is registered
+behind `window.__mflInstallPromptBound` because the ClientRouter re-executes
+body scripts on every navigation.
+
+### The app icon badge (`src/utils/app-badge.ts`, `/api/app-badge`)
+
+`setAppBadge` paints a count on the Home Screen / dock icon — the only surface
+that reaches an owner who never opens the app. Three things count, and the
+choice of three IS the design: a badge promises that something is waiting for
+**you**, so it may only count what the owner can act on and clear.
+
+| Part | Source |
+|---|---|
+| `trades` | MFL `pendingTrades`, filtered to offers made TO this franchise |
+| `lineup` | `buildLineupWarnings`, reduced to one bit, inside the kickoff window |
+| `poll` | an open Owners' Poll window with no ballot from this franchise |
+
+- **Trades this owner PROPOSED are not counted.** They are waiting on somebody
+  else, so nothing the owner does could clear the number.
+- **Unread Schefter posts are deliberately excluded.** Highest-volume source in
+  the league; a permanently lit badge is one people stop seeing, and it would
+  take the other three down with it.
+- **A lineup with three bye-week starters counts 1, not 3.** It is one thing to
+  go fix. `ownerLineupNeedsAttention` is what enforces that.
+- **The lineup window comes from the schedule DATA** — opens 24h before the
+  week's first kickoff, closes when the main slate does, both via
+  `gameday-alerts.mjs`'s `scheduleGames`/`mainSlate`. No DST handling, and
+  Thanksgiving, the Saturday slates of Weeks 16-18 and Christmas all work
+  without being named. It **fails closed**: an unreadable schedule means no
+  badge, because the cost of staying dark is one owner checking their own
+  lineup and the cost of guessing is a badge nobody can clear.
+- **Lineups are fetched LIVE; everything else is a committed feed.** The
+  committed `weekly-results.json` carries scores rather than starters, and the
+  whole value of the badge is that it reflects a lineup edited two minutes ago.
+  Byes are the one extra fetch — `parseByeTeams` reads an `nflByeWeeks` export
+  specifically, and handing it the `nflSchedule` feed silently yields an empty
+  bye set, which reads as "every lineup is clean" rather than as a failure.
+- **Every part fails quiet into a 0.** A badge must never be why an owner
+  opening the app sees an error, and a 500 would strand a stale count on the
+  icon with no way to clear it.
+- **The 90s per-franchise cache is invalidated by the three routes that resolve
+  a badged item** (`trades/respond`, the lineup POST in `lineup-route.ts`, the
+  ballot POST) via `invalidateAppBadge`. Without that, an owner who just
+  accepted a trade watches the number sit there, which reads as broken.
+- **The service worker re-reads the real count on push** rather than trusting a
+  payload field. One definition, and a push about something unbadgeable (a
+  rumor, a weekly recap) correctly leaves the number alone.
+
+### Manifest shortcuts
+
+Long-press the icon for Set Lineup / Live Scores / My Roster / Schefter. Two
+constraints, both pinned by `tests/push-notification-icons.test.ts`:
+
+- **Shortcut URLs are apex-relative, so they resolve against ONE league's
+  pages.** `/lineup` means `src/pages/<that manifest's league>/lineup`. A
+  shortcut copied between manifests dead-ends for whichever league lacks the
+  route — and it dead-ends from the OS launcher, where nobody is watching.
+- **At most four.** Android silently drops the rest on a long-press, so a fifth
+  is a shortcut nobody will ever see.
+
+Shortcut `icons` are deliberately omitted; platforms fall back to the app icon
+rather than requiring four more pieces of per-league art to keep in sync.
+
+**On a Vercel preview host these shortcuts 404, and that is correct.** A
+preview hostname is in no league's `domains`, so the middleware never rewrites
+`/lineup` → `/theleague/lineup` there — exactly as `/rosters` and every other
+apex path already 404s on a preview (verified on the #999 preview: `/rosters`
+404, `/theleague/rosters` 200). Do NOT "fix" it by prefixing the shortcut URLs.
+A manifest is installed from a league's own apex, where the bare paths are the
+only ones that work for both leagues from one shared shortcut list; prefixing
+them would hard-code TheLeague into the AFL's manifest. The guard asserts the
+route exists under `src/pages/<that manifest's league>/`, which is the
+invariant that actually matters.
+
+### Share target (`src/utils/share-target.ts`)
+
+The installed app appears in the phone's share sheet, which a website cannot do
+at all. Ours points at the Schefter tip form.
+
+**The share is a PREFILL, never a submission.** `/api/schefter/tip` requires a
+topic that no share sheet can supply, and rate-limits to 3 tips per owner per
+day — auto-filing would spend an owner's quota on something they never
+confirmed. The text is rendered as a `<textarea>` value (escaped like any other
+Astro expression, never `set:html`), because it is whatever a third-party app
+put on the clipboard.
+
+`composeSharedTip` de-duplicates: Android hands a link over in `text` about as
+often as in `url`, and plenty of apps repeat the page title verbatim in both
+`title` and `text`, so a naive join prints the headline twice and burns a third
+of the 500-character budget. The three param names are a contract between the
+manifests and `readSharedPayload`; renaming one side drops every share on the
+floor with the page still rendering, just empty. That contract is pinned.
