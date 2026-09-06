@@ -7,7 +7,7 @@ hotfix_pr: https://github.com/braven112/mfl.football.v2/pull/979
 hotfix_sha: 2d5eef5
 followup_issue: 980
 followup_pr:
-followup_session:
+followup_session: session_018ZthZQnmPnC3BYQyjPXEVz
 ---
 
 # Follow-up: closed waiver priority card stayed painted over Free Agents
