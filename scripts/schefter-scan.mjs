@@ -51,6 +51,7 @@ import { postToGroupMe as sharedPostToGroupMe } from './lib/groupme.mjs';
 import { postToGroupMeCapped } from './lib/groupme-capped.mjs';
 import { resolveFranchiseMentions } from './lib/groupme-mentions.mjs';
 import { buildCta, buildFallbackPost } from './lib/reminder-fallback.mjs';
+import { buildReminderDigest } from './lib/reminder-digest.mjs';
 import { isSeasonWindowOpen } from '../src/utils/pecking-order-season-window.mjs';
 import { sendPushFanout, broadcast } from './lib/push-fanout.mjs';
 import { scanRogerReplies } from './roger-groupme-reply.mjs';
@@ -2191,6 +2192,11 @@ async function scanEventReminders(league) {
         touchId: touch.id,
         isAnnounce: touch.id === announceTouchId,
         leagueAudience: event.audience === 'league',
+        // The EVENT's own name and distance, for the digest that merges two
+        // deadlines landing on the same day. The post headline is Roger
+        // riffing on one of them and does not list cleanly beside another.
+        eventName: event.name,
+        daysUntil: event.daysUntil,
       });
       console.log(`  [${touch.id}] ${headline}`);
     }
@@ -2231,18 +2237,21 @@ async function scanEventReminders(league) {
     });
   }
 
-  // THE CHAT IS NOW TWO NARROW LANES, not a copy of every touch.
+  // THE CHAT IS NOW TWO NARROW LANES, not a copy of every touch — and each
+  // lane sends AT MOST ONE MESSAGE per run, however many deadlines are due.
   //
-  //   1. OUT OF SEASON, the first touch for an event still posts in full. The
-  //      offseason chat is quiet, a save-the-date is genuinely news there, and
-  //      it is the one post that carries the "turn notifications on" ask to
-  //      people who are not reading anything else. In season it does not post
-  //      at all — there is real chatter to compete with and the phone already
-  //      has it.
+  //   1. THE ANNOUNCE TOUCH posts in full. Out of season for a normal event,
+  //      whose deadline is an obligation on individual owners: the offseason
+  //      chat is quiet, a save-the-date is genuinely news there, and it is the
+  //      one post carrying the "turn notifications on" ask to people who are
+  //      not reading anything else. In season it does not post at all — there
+  //      is real chatter to compete with and the phone already has it. An
+  //      `audience: 'league'` event (a trade deadline, Throwback Week) posts
+  //      in season too, on the touch it declares.
   //   2. THE FINAL TOUCH posts only if push left somebody unreached, names
   //      exactly those owners, and @-mentions them. Nobody unreached, no post.
   //
-  // Everything between — the 7-day and 2-day nags — is push only, always.
+  // Every other touch is push only, always.
   const rogerBotId = league.groupMeRogerBotId;
   const inSeason = isChatBusySeason(now);
   const unreachedIds = new Set(push.undelivered ?? []);
@@ -2256,22 +2265,74 @@ async function scanEventReminders(league) {
         ? await resolveFranchiseMentions({ league, redis: await getRedis() })
         : new Map();
 
+    // SORT INTO LANES FIRST, THEN SEND ONCE PER LANE. Posting inside the loop
+    // meant two deadlines that share a date — TheLeague's "Declare Contracts /
+    // Cut to 22" and "Offseason FA Closes" are both the third Sunday in August
+    // — produced two back-to-back Roger monologues. The events stay separate
+    // everywhere else (calendar row, feed entry, push); only the chat message
+    // merges, because adjacency is a chat problem and nothing else's.
+    const announcing = [];
+    const fallbacks = [];
     for (const post of newPosts) {
       const meta = touchById.get(post.id) ?? {};
-      const url = groupMeUrlOverrides.get(post.id) ?? league.calendarUrl;
-      const isFinalTouch = meta.touchId === 'dayof';
+      // The final touch takes precedence: on a minor event the announce touch
+      // IS the final one, and a callout naming the people who need it beats a
+      // broadcast naming nobody.
+      if (meta.touchId === 'dayof') fallbacks.push({ post, meta });
+      // A league-audience deadline announces regardless of season; everything
+      // else only out of season, where the chat is quiet enough for a
+      // save-the-date to get read.
+      else if (meta.isAnnounce && (meta.leagueAudience || !inSeason)) {
+        announcing.push({ post, meta });
+      } else {
+        console.log(
+          `  [${meta.touchId ?? '?'}] push only${inSeason ? ' (in season)' : ''} — no chat post`,
+        );
+      }
+    }
 
-      // Lane 2 takes precedence: on a minor event the first touch IS the final
-      // one, and a callout that names the people who need it beats a broadcast
-      // that names nobody.
-      if (isFinalTouch) {
-        if (unreachedIds.size === 0) {
-          console.log(`  [${meta.touchId}] every owner reached by push — no chat post`);
-          continue;
-        }
+    const digestItems = (group) =>
+      group.map(({ meta }) => ({ name: meta.eventName, daysUntil: meta.daysUntil }));
+
+    // ── Lane 1: the announcement ──────────────────────────────────────────
+    if (announcing.length > 0) {
+      const digest = buildReminderDigest({ items: digestItems(announcing) });
+      // One deadline keeps Roger's full voice and its own deep link. Several
+      // get the list and the calendar, which is the one page carrying all of
+      // them — and a per-event link would have to pick a winner anyway.
+      const { headline, body, url } = digest
+        ? { ...digest, url: league.calendarUrl }
+        : {
+            headline: announcing[0].post.headline,
+            body: announcing[0].post.body,
+            url: groupMeUrlOverrides.get(announcing[0].post.id) ?? league.calendarUrl,
+          };
+      console.log(
+        `  [announce] ${announcing.length} deadline(s) → ${digest ? 'one merged post' : 'one post'}`,
+      );
+      // The one place the notifications ask rides along on a normal post.
+      const text = `${headline}\n\n${body}\n\n${url}\n\n${buildCta(notificationsUrl, { tagged: false })}`;
+      await postToGroupMe(text, { botIdOverride: rogerBotId, kind: 'roger-reminder', league });
+    }
+
+    // ── Lane 2: the unreached-owner fallback ──────────────────────────────
+    if (fallbacks.length > 0) {
+      if (unreachedIds.size === 0) {
+        console.log(`  [dayof] every owner reached by push — no chat post`);
+      } else {
+        const digest = buildReminderDigest({
+          items: digestItems(fallbacks),
+          lead: `${fallbacks.length} deadlines today`,
+        });
+        const first = fallbacks[0];
+        const url = groupMeUrlOverrides.get(first.post.id) ?? league.calendarUrl;
+        // Merging matters more here than in lane 1: two unmerged fallbacks
+        // would @-mention the same owners twice in a row.
         const fallback = buildFallbackPost({
-          headline: post.headline,
-          body: `${post.body}\n\n${url}`,
+          headline: digest ? digest.headline : first.post.headline,
+          body: digest
+            ? `${digest.body}\n\n${league.calendarUrl}`
+            : `${first.post.body}\n\n${url}`,
           unreached: [...unreachedIds].map((franchiseId) => ({
             franchiseId,
             name: teams.get(franchiseId)?.name ?? `Franchise ${franchiseId}`,
@@ -2279,33 +2340,22 @@ async function scanEventReminders(league) {
           mentions,
           notificationsUrl,
         });
-        if (!fallback) continue;
-        console.log(`  [${meta.touchId}] chat fallback for ${unreachedIds.size} unreached owner(s)`);
-        // EXEMPT from the daily cap: this post exists precisely because these
-        // owners have no other channel, and a deadline they never hear about
-        // is the outcome the cap was never meant to cause.
-        await postToGroupMe(fallback.text, {
-          botIdOverride: rogerBotId,
-          kind: 'roger-fallback',
-          league,
-          attachments: fallback.attachments,
-        });
-        continue;
+        if (fallback) {
+          console.log(
+            `  [dayof] chat fallback for ${unreachedIds.size} unreached owner(s)` +
+              `${digest ? ` across ${fallbacks.length} deadlines` : ''}`,
+          );
+          // EXEMPT from the daily cap: this post exists precisely because
+          // these owners have no other channel, and a deadline they never
+          // hear about is the outcome the cap was never meant to cause.
+          await postToGroupMe(fallback.text, {
+            botIdOverride: rogerBotId,
+            kind: 'roger-fallback',
+            league,
+            attachments: fallback.attachments,
+          });
+        }
       }
-
-      // A league-audience deadline announces regardless of season; everything
-      // else only out of season, where the chat is quiet enough for a
-      // save-the-date to get read.
-      if (meta.isAnnounce && (meta.leagueAudience || !inSeason)) {
-        // The one place the notifications ask rides along on a normal post.
-        const text = `${post.headline}\n\n${post.body}\n\n${url}\n\n${buildCta(notificationsUrl, { tagged: false })}`;
-        await postToGroupMe(text, { botIdOverride: rogerBotId, kind: 'roger-reminder', league });
-        continue;
-      }
-
-      console.log(
-        `  [${meta.touchId ?? '?'}] push only${inSeason ? ' (in season)' : ''} — no chat post`,
-      );
     }
   }
 
