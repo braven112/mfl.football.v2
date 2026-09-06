@@ -606,11 +606,13 @@
         "src/pages/api/suggestions/**",
         "src/components/shared/suggestions/**",
         "src/components/theleague/suggestions/**",
-        "src/pages/*/suggestions.astro"
+        "src/pages/*/suggestions.astro",
+        "src/components/shared/faq/**"
       ],
       "tests": [
         "tests/suggestions-scope.test.ts",
-        "tests/suggestion-issue.test.ts"
+        "tests/suggestion-issue.test.ts",
+        "tests/faq-league-vocabulary.test.ts"
       ]
     }
   ]

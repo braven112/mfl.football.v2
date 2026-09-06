@@ -24,7 +24,7 @@
  */
 import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
 import { resolveLeaguePath } from '../../../utils/nav-utils';
-import { getLeagueBySlug } from '../../../config/leagues';
+import { getLeagueBySlug, leagueHasFeature } from '../../../config/leagues';
 import type { CanonicalLeagueSlug } from '../../../config/leagues';
 
 interface Props {
@@ -46,12 +46,72 @@ const path = (p: string) => resolveLeaguePath(`/${leagueSlug}${p}`, hide);
 // does not need the rollover clocks to stay correct.
 const mflHome = `https://${league.mflHost}/${new Date().getFullYear()}/home/${league.id}`;
 
+/**
+ * The league's OWN rules vocabulary, in one place.
+ *
+ * This page argues "we can be specific because we only serve one league", and
+ * the argument only lands if the specifics are that league's. The first draft
+ * said "our contracts, our cap" everywhere — TheLeague's vocabulary, printed to
+ * AFL readers who have neither (`contracts: false`, `salaryCap: false` in the
+ * registry). Naming another league's mechanics is worse than saying nothing:
+ * it tells the reader the page is not really about them.
+ *
+ * Derived from `leagueHasFeature` rather than a slug compare, so a league added
+ * to the registry gets its own list from its own flags. Every string below is
+ * something the league in question actually has.
+ */
+const ourRules: string[] = [
+  ...(leagueHasFeature(leagueSlug, 'contracts') ? ['our contracts'] : []),
+  ...(leagueHasFeature(leagueSlug, 'salaryCap') ? ['our cap'] : []),
+  ...(leagueHasFeature(leagueSlug, 'keepers') ? ['our keepers'] : []),
+  'our playoff format',
+];
+/**
+ * "a, b and c" — a plain comma join reads as a typo at TWO items, which is
+ * exactly what the AFL gets ("our keepers, our playoff format"). The list
+ * length is league-dependent, so the join has to handle both.
+ */
+const joinList = (items: string[]): string =>
+  items.length <= 1
+    ? (items[0] ?? '')
+    : `${items.slice(0, -1).join(', ')} and ${items[items.length - 1]}`;
+
+/** "our contracts, our cap and our playoff format" */
+const ourRulesList = joinList(ourRules);
+
+/** Same list, as the "pages that know what X means here" examples. */
+const knowsAbout: string[] = [
+  ...(leagueHasFeature(leagueSlug, 'contracts') ? ['what a contract year means here'] : []),
+  ...(leagueHasFeature(leagueSlug, 'salaryCap') ? ['what the cap does here'] : []),
+  ...(leagueHasFeature(leagueSlug, 'keepers') ? ['who counts as a keeper here'] : []),
+  'what the playoff format is here',
+];
+const knowsAboutList = joinList(knowsAbout);
+
+/**
+ * The row naming the official RECORD, not the action.
+ *
+ * Originally this row said rosters and trades happen on MFL, full stop. Wrong:
+ * cuts, IR and taxi moves (`/api/cut-player`, `/api/move-to-ir`,
+ * `/api/move-to-practice`), waiver claims and trade propose/accept/withdraw
+ * (`/api/trades/submit`, `/api/trades/respond`) all write through to MFL from
+ * here. "Where the record lives" and "where you can do the thing" are two
+ * different questions and the table was answering the second with the first.
+ */
+const officialRecordJob = leagueHasFeature(leagueSlug, 'contracts')
+  ? 'The official record — rosters & contracts'
+  : 'The official record — rosters';
+const rosterStoreSentence = leagueHasFeature(leagueSlug, 'contracts')
+  ? 'stores the official rosters and contracts'
+  : 'stores the official rosters';
+
 /** Where each job is done today. `where` drives the column styling. */
 const split: Array<{ job: string; where: 'mfl' | 'here' | 'both'; note: string }> = [
   { job: 'Setting your lineup', where: 'both', note: 'Either works. Ours is built around our starting requirements; MFL is the one that records it.' },
+  { job: 'Roster moves — cuts, IR, taxi', where: 'both', note: 'Do them here or on MFL. Ours are sent straight to MFL, so the move lands in the same place either way.' },
+  { job: 'Trades, waivers, adds/drops', where: 'both', note: 'Propose, accept, withdraw and claim right here — it goes to MFL as if you had typed it there. MFL still processes and records it.' },
   { job: 'Official scoring', where: 'mfl', note: 'MFL scores every game. We read those numbers — we never compute our own.' },
-  { job: 'Official rosters & contracts', where: 'mfl', note: 'MFL stores them. Every roster you see here was read from there.' },
-  { job: 'Trades, waivers, adds/drops', where: 'mfl', note: 'Transactions are processed by MFL. We show them, analyze them, and tell you about them.' },
+  { job: officialRecordJob, where: 'mfl', note: 'Whatever you did and wherever you did it, this is the copy that counts. If we ever disagree with MFL, MFL is right.' },
   { job: 'Live scoring on Sunday', where: 'here', note: 'Real-time scores, win probability, and who is still playing — built for a phone on the couch.' },
   { job: 'Standings & playoff picture', where: 'both', note: 'MFL owns the tiebreakers. We show the same standings with the playoff math done for you.' },
   { job: 'Reading the rules', where: 'here', note: 'The constitution, searchable, plus Roger — who answers rules questions in plain English.' },
@@ -115,8 +175,8 @@ const whereLabel: Record<'mfl' | 'here' | 'both', string> = {
           <p>
             The difference is that now there's <em>also</em> an app for this league
             specifically. Add this site to your home screen and you get one that only
-            has to know about our rules — our contracts, our cap, our playoff format —
-            instead of every rule set MFL supports.
+            has to know about our rules — {ourRulesList} — instead of every rule
+            set MFL supports.
           </p>
         </div>
       </details>
@@ -125,10 +185,18 @@ const whereLabel: Record<'mfl' | 'here' | 'both', string> = {
         <summary class="faq__q">If I do something here, does it count?</summary>
         <div class="faq__a">
           <p>
-            Yes. When you set a lineup on this site, it is submitted to MFL — the same
-            place it would land if you'd typed it there. There is no separate copy of
-            your team living over here waiting to be reconciled. One league, one set of
-            official records, two ways to reach them.
+            Yes. Set a lineup, cut a player, make a waiver claim, propose or accept a
+            trade — it is submitted to MFL, the same place it would land if you'd
+            typed it there. There is no separate copy of your team living over here
+            waiting to be reconciled. One league, one set of official records, two
+            ways to reach them.
+          </p>
+          <p>
+            Which also means MFL is where to confirm something worked. If a move
+            matters and you want to be certain, check it on
+            <a href={mflHome} target="_blank" rel="noopener noreferrer">MyFantasyLeague</a> —
+            that's the copy that counts, and it's the honest answer rather than asking
+            you to take our word for it.
           </p>
         </div>
       </details>
@@ -138,7 +206,7 @@ const whereLabel: Record<'mfl' | 'here' | 'both', string> = {
         <div class="faq__a">
           <p>
             <strong>MyFantasyLeague, without qualification.</strong> MFL scores the games,
-            stores the official rosters and contracts, processes the transactions, and
+            {rosterStoreSentence}, processes the transactions, and
             enforces the settings. If this site and MFL ever disagree about a number,
             MFL is right and we have a bug to fix.
           </p>
@@ -158,8 +226,7 @@ const whereLabel: Record<'mfl' | 'here' | 'both', string> = {
             The things a general-purpose platform can't justify building for one league.
             MFL has to serve every league on earth, so its screens are configurable rather
             than specific. Ours only has to serve {league.name}, so it can be specific:
-            pages that know what a contract year means here, what the cap does here, what
-            the playoff format is here.
+            pages that know {knowsAboutList}.
           </p>
           <p>
             Plus everything MFL has the data for but no page to show — franchise history,
