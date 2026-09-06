@@ -18,9 +18,9 @@
 import { postToGroupMe } from './groupme.mjs';
 import { getRedisConfig, redisCommand } from './redis.mjs';
 import {
+  bypassesDayCap,
   dayClaimKey,
   describeRefusal,
-  isExempt,
   isPlannedToday,
   ptDay,
   PUSH_ONLY_KINDS,
@@ -90,7 +90,7 @@ export async function postToGroupMeCapped({
     throw new TypeError('postToGroupMeCapped: league.navSlug is required to scope the daily cap.');
   }
 
-  if (!isExempt(kind)) {
+  if (!bypassesDayCap(kind)) {
     if (PUSH_ONLY_KINDS.has(kind) || !isPlannedToday(kind, now)) {
       const why = describeRefusal(kind, null, now);
       log.log?.(`  [groupme] Held: ${why}`);
@@ -108,7 +108,7 @@ export async function postToGroupMeCapped({
 
   // A post that never left (missing bot id, HTTP error) must not keep the day
   // claimed, or a transient failure costs the league its one message.
-  if (!result.posted && !isExempt(kind) && !dryRun) {
+  if (!result.posted && !bypassesDayCap(kind) && !dryRun) {
     await releaseDay({ navSlug: league.navSlug, kind, now, log });
   }
   return result;

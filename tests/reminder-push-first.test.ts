@@ -26,7 +26,13 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { EXEMPT_KINDS } from '../scripts/lib/groupme-day-plan.mjs';
+import {
+  bypassesDayCap,
+  EXEMPT_KINDS,
+  isPlannedToday,
+  OWN_BUDGET_KINDS,
+  PUSH_ONLY_KINDS,
+} from '../scripts/lib/groupme-day-plan.mjs';
 import { isSeasonWindowOpen } from '../src/utils/pecking-order-season-window.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -237,6 +243,56 @@ describe('the chat lanes ask who was unreached before they post', () => {
     expect(src).toMatch(/push only\$\{inSeason \? ' \(in season\)' : ''\}/);
     // The 14d and 2d touches have no lane of their own in either direction.
     expect(src).not.toMatch(/touchId === '14d'|touchId === '2d'/);
+  });
+
+  it('the trade lanes reach the chat, governed by their own budget', () => {
+    // These promote trading, which only works in the room where trades get
+    // talked about. They are not reminders competing with the league's
+    // chatter — they are the chatter.
+    expect(PUSH_ONLY_KINDS.has('rumor')).toBe(false);
+    expect(PUSH_ONLY_KINDS.has('trade-speculation')).toBe(false);
+    expect(OWN_BUDGET_KINDS.has('rumor')).toBe(true);
+    expect(OWN_BUDGET_KINDS.has('trade-speculation')).toBe(true);
+    // They skip the weekday calendar — a rumor held until its assigned day is
+    // not a rumor any more.
+    expect(bypassesDayCap('rumor')).toBe(true);
+    expect(isPlannedToday('rumor', new Date('2026-11-16T18:00:00Z'))).toBe(true);
+  });
+
+  it('the transaction firehose stays out of the chat', () => {
+    // Every add, drop and waiver claim, scanned every 15 minutes. This is the
+    // lane that got the chat muted in the first place.
+    expect(PUSH_ONLY_KINDS.has('transaction')).toBe(true);
+    expect(OWN_BUDGET_KINDS.has('transaction')).toBe(false);
+  });
+
+  it('an own-budget kind never claims or releases the day', () => {
+    // Claiming would spend the league's one calendar slot on a rumor and
+    // silence that day's column; releasing would hand back a slot it never
+    // took. Both gates must use the wider predicate.
+    const src = read('scripts/lib/groupme-capped.mjs');
+    expect(src).toMatch(/if \(!bypassesDayCap\(kind\)\) \{/);
+    expect(src).toMatch(/!result\.posted && !bypassesDayCap\(kind\)/);
+    expect(src, 'the narrow isExempt check must not survive here').not.toMatch(
+      /if \(!isExempt\(kind\)\)/,
+    );
+  });
+
+  it('speculation asks the shared budget and consumes a slot', () => {
+    const src = read('scripts/lib/speculation-groupme.mjs');
+    // Two lanes, ONE budget. A post that does not consume its slot lets the
+    // rumor mill believe it still has the full three.
+    expect(src).toMatch(/evaluatePingWindow/);
+    expect(src).toMatch(/await verdict\.consume\?\.\(\)/);
+    // Fails closed: posting blind is how an uncapped lane happens.
+    expect(src).toMatch(/no Redis — cannot check the trade budget/);
+  });
+
+  it('speculation actually reaches phones now', () => {
+    const src = read('scripts/schefter-trade-speculation.mjs');
+    // It had no push route at all — a daily job publishing into silence.
+    expect(src).toMatch(/sendPushFanout\(/);
+    expect(src).toMatch(/category: 'rumor'/);
   });
 
   it('the fallback kinds stay exempt from the one-post-a-day cap', () => {

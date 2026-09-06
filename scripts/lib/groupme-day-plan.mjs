@@ -88,14 +88,48 @@ export const EXEMPT_KINDS = new Set([
  * chat and always go to push. Listed explicitly rather than inferred, so that
  * "this is push-only" is a decision recorded in one place rather than an
  * accident of being absent from the calendar.
+ *
+ * `transaction` is the firehose that started all of this: every add, drop and
+ * waiver claim, scanned every 15 minutes. It stays here.
  */
 export const PUSH_ONLY_KINDS = new Set([
   'transaction',
-  'rumor',
-  'trade-speculation',
   'weekly-recap',
   'waiver-pickups',
 ]);
+
+/**
+ * Kinds that skip the day cap because they already have a STRICTER budget of
+ * their own — not because they are urgent.
+ *
+ * The trade lanes (rumor mill, trade bait, algorithmic speculation) exist to
+ * get owners trading, and that only works in the room where trades get talked
+ * about. They are not reminders competing with the league's chatter; they are
+ * the chatter. So they post to chat, governed by the budget the rumor mill has
+ * always carried in scripts/lib/schefter-groupme-budget.mjs:
+ *
+ *   - at most MAX_POSTS_PER_DAY (3) per Pacific day, shared across the lanes
+ *   - at least MIN_SPACING_MS (4 hours) between them
+ *   - a one-hour marinate window before a fresh tip may post
+ *   - quiet hours, and an LLM quality gate on top
+ *
+ * That is tighter than the one-a-day calendar in practice and far better
+ * targeted, because it can tell a real tip from filler. Routing these through
+ * the weekday calendar instead would have meant a trade rumor waiting until
+ * its assigned weekday, which is worthless — a rumor is news or it is nothing.
+ *
+ * The bar for adding a kind here is a real, enforced budget somewhere else.
+ * Absent that, this set is just a hole in the cap.
+ */
+export const OWN_BUDGET_KINDS = new Set([
+  'rumor',            // the rumor mill, which carries trade-bait listings
+  'trade-speculation',
+]);
+
+/** Does this kind skip the one-post-a-day cap, and why does it get to? */
+export function bypassesDayCap(kind) {
+  return isExempt(kind) || OWN_BUDGET_KINDS.has(kind);
+}
 
 const TZ = 'America/Los_Angeles';
 
@@ -136,7 +170,7 @@ export function isExempt(kind) {
  * whether the day has already been claimed is a separate, atomic check.
  */
 export function isPlannedToday(kind, now = new Date()) {
-  if (isExempt(kind)) return true;
+  if (bypassesDayCap(kind)) return true;
   return plannedKindsFor(ptDay(now).weekday).includes(kind);
 }
 
@@ -155,6 +189,11 @@ export function dayClaimKey(navSlug, now = new Date()) {
 export function describeRefusal(kind, claimedBy, now = new Date()) {
   if (PUSH_ONLY_KINDS.has(kind)) {
     return `${kind} is push-only — it never posts to chat.`;
+  }
+  // Should not be reachable: these bypass the cap entirely. Answer honestly
+  // rather than blaming the calendar if a caller asks anyway.
+  if (OWN_BUDGET_KINDS.has(kind)) {
+    return `${kind} is governed by the rumor budget, not the daily calendar.`;
   }
   if (!isPlannedToday(kind, now)) {
     const planned = plannedKindsFor(ptDay(now).weekday);
