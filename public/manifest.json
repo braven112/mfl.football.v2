@@ -24,5 +24,40 @@
       "type": "image/png",
       "purpose": "maskable"
     }
-  ]
+  ],
+  "shortcuts": [
+    {
+      "name": "Set Lineup",
+      "short_name": "Lineup",
+      "description": "Set this week's starting lineup",
+      "url": "/lineup"
+    },
+    {
+      "name": "Live Scores",
+      "short_name": "Scores",
+      "description": "Live scoring for this week's matchups",
+      "url": "/live-scoring"
+    },
+    {
+      "name": "My Roster",
+      "short_name": "Roster",
+      "description": "Your roster, contracts and cap",
+      "url": "/rosters"
+    },
+    {
+      "name": "Schefter Report",
+      "short_name": "Schefter",
+      "description": "The league's news feed",
+      "url": "/schefter"
+    }
+  ],
+  "share_target": {
+    "action": "/schefter/tip",
+    "method": "GET",
+    "params": {
+      "title": "shared_title",
+      "text": "shared_text",
+      "url": "shared_url"
+    }
+  }
 }
