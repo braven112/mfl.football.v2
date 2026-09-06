@@ -22,10 +22,10 @@
  * swaps a team's `iconDark` keyed on `src` alone, so shipping `iconDark` too
  * would invite a second, divergent swap at this call site.
  */
-import { liveStateLabel, type MatchupCard } from '../../../utils/sunday-ticket-matchups';
+import { liveStateLabel, type SundayTicketMatchupCard } from '../../../utils/sunday-ticket-matchups';
 
 export interface Props {
-  cards: MatchupCard[];
+  cards: SundayTicketMatchupCard[];
   week: number;
   /** Route-resolved hrefs for the two links, per league slug. */
   linkFor: (slug: string, path: string) => string;

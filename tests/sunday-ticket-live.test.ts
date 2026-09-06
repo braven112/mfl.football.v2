@@ -15,7 +15,7 @@ import {
   type LeagueContribution,
   type SlateGame,
 } from '../src/utils/sunday-ticket-slate';
-import { buildMatchupCards, liveStateLabel } from '../src/utils/sunday-ticket-matchups';
+import { buildSundayTicketMatchupCards, liveStateLabel } from '../src/utils/sunday-ticket-matchups';
 import { parseLiveScoringPayload } from '../src/utils/live-scoring-snapshot';
 
 const player = (playerId: string, nflTeam: string, proj: number) => ({
@@ -153,7 +153,7 @@ describe('live points never change the ranking', () => {
   });
 });
 
-describe('buildMatchupCards', () => {
+describe('buildSundayTicketMatchupCards', () => {
   const brands = {
     '0001': { franchiseId: '0001', name: 'Pacific Pigskins', nameShort: 'PAC', colorPrimary: '#111', colorPrimaryDark: '#111', icon: '/a.png' },
     '0002': { franchiseId: '0002', name: 'Grid Iron Ghosts', nameShort: 'GIG', colorPrimary: '#222', colorPrimaryDark: '#222', icon: '/b.png' },
@@ -165,7 +165,7 @@ describe('buildMatchupCards', () => {
   };
 
   it('names the opponent from the SCHEDULE even with no live read', () => {
-    const [card] = buildMatchupCards({ ...base, snapshot: null });
+    const [card] = buildSundayTicketMatchupCards({ ...base, snapshot: null });
     // The band must not blank on an MFL hiccup — the pairing is known all week.
     expect(card.opponent.name).toBe('Grid Iron Ghosts');
     expect(card.liveResolved).toBe(false);
@@ -173,7 +173,7 @@ describe('buildMatchupCards', () => {
   });
 
   it('carries both crests and marks which side is yours', () => {
-    const [card] = buildMatchupCards({ ...base, snapshot: null });
+    const [card] = buildSundayTicketMatchupCards({ ...base, snapshot: null });
     expect([card.you.icon, card.opponent.icon]).toEqual(['/a.png', '/b.png']);
     expect(card.you.isYou).toBe(true);
     expect(card.opponent.isYou).toBe(false);
@@ -186,7 +186,7 @@ describe('buildMatchupCards', () => {
         { id: '0002', score: '96.2', gameSecondsRemaining: '0', playersYetToPlay: '0' },
       ] } },
     });
-    const [card] = buildMatchupCards({ ...base, snapshot });
+    const [card] = buildSundayTicketMatchupCards({ ...base, snapshot });
     expect(card.you.score).toBe(118.4);
     expect(card.opponent.score).toBe(96.2);
     expect(card.you.yetToPlay).toBe(4);
@@ -195,7 +195,7 @@ describe('buildMatchupCards', () => {
   });
 
   it('renders one card per game of a doubleheader', () => {
-    const cards = buildMatchupCards({
+    const cards = buildSundayTicketMatchupCards({
       ...base,
       weekMatchups: [{ opponentFranchiseId: '0002' }, { opponentFranchiseId: '0003' }],
       snapshot: null,
@@ -205,7 +205,7 @@ describe('buildMatchupCards', () => {
   });
 
   it('returns nothing without a franchise id', () => {
-    expect(buildMatchupCards({ ...base, franchiseId: '', snapshot: null })).toEqual([]);
+    expect(buildSundayTicketMatchupCards({ ...base, franchiseId: '', snapshot: null })).toEqual([]);
   });
 
   it('flags a best-ball league so the card can drop its Set lineup link', () => {
@@ -214,8 +214,8 @@ describe('buildMatchupCards', () => {
     // has no lineup.astro, so the link would 404 — and it is unreachable today
     // only because bb1 happens to ship no schedule feed, which is safety by
     // accident rather than by construction.
-    expect(buildMatchupCards({ ...base, snapshot: null })[0].bestBall).toBe(false);
-    expect(buildMatchupCards({ ...base, bestBall: true, snapshot: null })[0].bestBall).toBe(true);
+    expect(buildSundayTicketMatchupCards({ ...base, snapshot: null })[0].bestBall).toBe(false);
+    expect(buildSundayTicketMatchupCards({ ...base, bestBall: true, snapshot: null })[0].bestBall).toBe(true);
   });
 });
 

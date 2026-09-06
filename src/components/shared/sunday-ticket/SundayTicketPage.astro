@@ -43,7 +43,7 @@ import {
   loadRegisteredContribution,
   readLeagueFeed,
 } from '../../../utils/sunday-ticket-sources';
-import { buildMatchupCards, type MatchupCard } from '../../../utils/sunday-ticket-matchups';
+import { buildSundayTicketMatchupCards, type SundayTicketMatchupCard } from '../../../utils/sunday-ticket-matchups';
 import { getLeagueTeamBrands } from '../../../utils/league-team-brands';
 import { isSeasonWindowOpen } from '../../../utils/pecking-order-season-window.mjs';
 import SundayTicketMatchups from './SundayTicketMatchups.astro';
@@ -281,7 +281,7 @@ const slate = buildSundayTicketSlate({
 // schedule is known all week, so the band still names your opponent when the
 // live read is unavailable. Sourcing it from the snapshot would blank the
 // whole band on an MFL hiccup.
-const matchupCards: MatchupCard[] = [];
+const matchupCards: SundayTicketMatchupCard[] = [];
 for (const l of boardLeagues) {
   if (!l.registered || !enabledIds.has(l.id) || !l.franchiseId) continue;
   const scheduleWeeks = readLeagueFeed(l.registered, getLeagueYearForSlug(l.registered.slug, now), 'schedule.json')
@@ -298,7 +298,7 @@ for (const l of boardLeagues) {
     // A league in the registry but not yet wired for brands renders without
     // crests rather than throwing the page.
   }
-  matchupCards.push(...buildMatchupCards({
+  matchupCards.push(...buildSundayTicketMatchupCards({
     leagueId: l.id,
     leagueSlug: l.registered.slug,
     leagueName: l.name,
