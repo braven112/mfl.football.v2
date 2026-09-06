@@ -151,7 +151,12 @@ describe('whats-new.json data integrity', () => {
     // title-derived headline reads as a mistake, so resolveFeatureHeadline
     // ignores the orphan and derives both halves — which means the authored
     // copy silently never renders. Catch the typo here instead.
-    const orphans = typedEntries.filter((e) => e.heroAccentWord && !e.heroHeadline);
+    // `.trim()` on both sides, because resolveFeatureHeadline trims: a
+    // whitespace-only heroHeadline is treated as ABSENT there, so it would
+    // slip past a bare truthiness check while still dropping the accent.
+    const orphans = typedEntries.filter(
+      (e) => e.heroAccentWord?.trim() && !e.heroHeadline?.trim(),
+    );
     expect(
       orphans.map((e) => e.id),
       'Entries with heroAccentWord but no heroHeadline (the accent word is ignored)',
