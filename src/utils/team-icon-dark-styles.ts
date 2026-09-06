@@ -32,7 +32,7 @@ import {
   buildEraCrestShapeCss,
   buildEraCrestDarkStrokeCss,
 } from './era-crest-stroke-css';
-import { buildTvLogoDarkCss } from './tv-logo-dark-css';
+import { buildTvLogoThemeCss } from './tv-logo-theme-css';
 
 const THELEAGUE_ICON_DIR = '/assets/theleague/icons';
 const AFL_ICON_DIR = '/assets/afl/icons';
@@ -69,8 +69,10 @@ export function buildAllTeamIconDarkCss(): string {
     buildEraCrestShapeCss(aflConfig.teams),
     buildEraCrestDarkStrokeCss(theleagueConfig.teams),
     buildEraCrestDarkStrokeCss(aflConfig.teams),
-    // TV network marks (Sunday Ticket board): same swap-else-stroke treatment.
-    buildTvLogoDarkCss(),
+    // TV network marks (Sunday Ticket board): same swap-else-stroke treatment,
+    // in both directions — a broadcaster's brand can be pale (Channel 5, Kayo)
+    // where a crest never is, so this block carries `html:not(.dark)` rules too.
+    buildTvLogoThemeCss(),
   ]
     .filter(Boolean)
     .join('\n');

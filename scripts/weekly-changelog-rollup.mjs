@@ -55,6 +55,7 @@ const AREA_LABELS = {
   'franchises': 'Franchise Pages',
   'owners': 'Owner Pages',
   'notifications': 'Notifications',
+  'sunday-ticket': 'Sunday Ticket',
   'other': 'Other',
 };
 

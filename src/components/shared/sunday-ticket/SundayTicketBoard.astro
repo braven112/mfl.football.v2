@@ -17,7 +17,7 @@ import {
   toggleLeagueSelection,
   type BoardLeague,
 } from '../../../utils/sunday-ticket-selection';
-import { countryOptions, countryTimeZones, resolveChannel, type CountryCode, type KickoffZone } from '../../../utils/broadcast-channels';
+import { countryOptions, countryTimeZones, freeToAirOption, resolveChannel, type CountryCode, type KickoffZone } from '../../../utils/broadcast-channels';
 import SundayTicketWindow from './SundayTicketWindow.astro';
 
 export interface Props {
@@ -50,6 +50,7 @@ const {
   country = 'US', zones, clockLabel, preferencesPath,
 } = Astro.props;
 const countries = countryOptions();
+const freeToAir = freeToAirOption(country);
 const clocks = zones && zones.length > 0 ? zones : countryTimeZones(country);
 const clockOf = (epoch: number) => formatKickoffZones(epoch, clocks);
 
@@ -141,6 +142,17 @@ const logo = (code: string) => `/assets/nfl-logos/${code}.svg`;
       </a>
     )}
   </nav>
+
+  {freeToAir && (
+    <p class="st-free">
+      {/* The note names the channel in words, so the mark beside it is decorative —
+          alt text here would read the name twice. */}
+      {freeToAir.logo
+        ? <img class="st-free__logo" src={freeToAir.logo} alt="" loading="lazy" />
+        : <span class="st-free__name">{freeToAir.name}</span>}
+      <span class="st-free__note">{freeToAir.note}</span>
+    </p>
+  )}
 
   {slate.windows.length > 1 && (
     <nav class="st-jump" aria-label="Sunday windows">

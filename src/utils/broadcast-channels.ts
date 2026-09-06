@@ -1,6 +1,6 @@
 /**
  * Broadcast channels by country — which channel a US network is on in
- * Canada or Australia, and what to draw for it.
+ * Canada, Australia, the UK or Mexico, and what to draw for it.
  *
  * PURE over `data/theleague/broadcast-mappings.json` (site-wide data that
  * happens to live under TheLeague's data path; the hero and Schefter's
@@ -16,12 +16,19 @@
 
 import mappings from '../../data/theleague/broadcast-mappings.json';
 
-export type CountryCode = 'US' | 'CA' | 'AU';
+export type CountryCode = 'US' | 'CA' | 'AU' | 'GB' | 'MX';
 
-export const COUNTRY_CODES: readonly CountryCode[] = ['US', 'CA', 'AU'];
+export const COUNTRY_CODES: readonly CountryCode[] = ['US', 'CA', 'AU', 'GB', 'MX'];
 export const DEFAULT_COUNTRY: CountryCode = 'US';
 
-const FLAGS: Record<CountryCode, string> = { US: '🇺🇸', CA: '🇨🇦', AU: '🇦🇺' };
+const FLAGS: Record<CountryCode, string> = { US: '🇺🇸', CA: '🇨🇦', AU: '🇦🇺', GB: '🇬🇧', MX: '🇲🇽' };
+
+/**
+ * Codes a viewer plausibly types or a browser plausibly reports that are not
+ * the ISO code we key on. `UK` is the one that matters — it is what everyone
+ * writes, and it used to fall silently back to the US board.
+ */
+const COUNTRY_ALIASES: Record<string, CountryCode> = { UK: 'GB', GBR: 'GB', MEX: 'MX', USA: 'US', CAN: 'CA', AUS: 'AU' };
 
 export interface CountryOption {
   code: CountryCode;
@@ -47,6 +54,13 @@ export interface KickoffZone {
   label: string;
   /** Locale for the auto label; en-AU spells the Australian zones, en-US would say GMT+10. */
   locale?: string;
+}
+
+/** A country's free-to-air option, which no US-network mapping can name — see `freeToAirOption`. */
+export interface FreeToAirOption {
+  name: string;
+  logo: string | null;
+  note: string;
 }
 
 export interface SundayTicketProvider {
@@ -82,7 +96,8 @@ const GLOBAL_STREAMERS = new Set(['Netflix', 'Prime Video', 'YouTube']);
 
 export function parseCountry(raw: string | null | undefined): CountryCode {
   const code = `${raw ?? ''}`.trim().toUpperCase();
-  return (COUNTRY_CODES as readonly string[]).includes(code) ? (code as CountryCode) : DEFAULT_COUNTRY;
+  if ((COUNTRY_CODES as readonly string[]).includes(code)) return code as CountryCode;
+  return COUNTRY_ALIASES[code] ?? DEFAULT_COUNTRY;
 }
 
 export function countryOptions(): CountryOption[] {
@@ -129,6 +144,24 @@ export function resolveChannel(usNetwork: string | null | undefined, country: Co
   if (GLOBAL_STREAMERS.has(key)) return channelInfo('US', key) ?? { name: key, logo: null };
   const fallback = mapping.default;
   return fallback ? channelInfo(country, fallback) ?? { name: fallback, logo: null } : channelInfo('US', key) ?? { name: key, logo: null };
+}
+
+/**
+ * The country's free-to-air game, named separately because the network map
+ * cannot express it: which of Sunday's games Channel 5, 7mate or ViX picks up
+ * is their call, not a property of the US network, so there is no key to map.
+ * The board says it once, under the country chips. null where there is none.
+ */
+export function freeToAirOption(country: CountryCode): FreeToAirOption | null {
+  const entry = countries[country]?.freeToAir;
+  if (!entry?.channel) return null;
+  const channel = channelInfo(country, entry.channel);
+  const name = channel?.name ?? entry.channel;
+  // The note is the only text on that line, and the mark beside it renders
+  // decorative (`alt=""`) precisely because the note names the channel. A
+  // country declaring `freeToAir` without one would ship an unlabelled logo
+  // and an empty span, so the name stands in rather than nothing.
+  return { name, logo: channel?.logo ?? null, note: entry.note?.trim() || name };
 }
 
 /** Where Sunday Ticket lives in this country — the mark in the window header. */

@@ -82,6 +82,23 @@ export const ZONE_OPTIONS: Record<CountryCode, readonly ZoneOption[]> = {
     { id: 'ADL', zone: 'Australia/Adelaide', label: 'auto', locale: 'en-AU', short: 'Adelaide', name: 'Central (Adelaide)' },
     { id: 'PER', zone: 'Australia/Perth', label: 'auto', locale: 'en-AU', short: 'Perth', name: 'Western (Perth)' },
   ],
+  // One country, one clock — but `auto` rather than a fixed 'GMT', because
+  // Britain spends the whole NFL season on BST and only flips back at the end
+  // of October. A fixed label would lie for two months of every year.
+  GB: [
+    { id: 'LON', zone: 'Europe/London', label: 'auto', locale: 'en-GB', short: 'London', name: 'United Kingdom (London)' },
+  ],
+  // Mexico dropped daylight saving in 2022 EXCEPT along the US border, so
+  // Tijuana still flips with California and the rest do not. City labels, not
+  // CT/MT/PT: Mexico City is UTC-6 year-round while US Central is -5 half the
+  // year, and printing them under the same two letters would be a lie the
+  // board tells twice a Sunday.
+  MX: [
+    { id: 'CUN', zone: 'America/Cancun', label: 'Cancún', name: 'Southeast (Cancún)' },
+    { id: 'CDMX', zone: 'America/Mexico_City', label: 'CDMX', name: 'Central (Mexico City, Guadalajara)' },
+    { id: 'CHI', zone: 'America/Chihuahua', label: 'Chihuahua', name: 'Pacific (Chihuahua, Mazatlán)' },
+    { id: 'TIJ', zone: 'America/Tijuana', label: 'Tijuana', name: 'Northwest (Tijuana)' },
+  ],
 };
 
 /**
@@ -124,6 +141,8 @@ export const DEFAULT_ZONE_IDS: Record<CountryCode, string> = {
   US: 'ET',
   CA: 'ET',
   AU: 'SYD',
+  GB: 'LON',
+  MX: 'CDMX',
 };
 
 /** The country's options, or the default country's for anything unrecognized. */

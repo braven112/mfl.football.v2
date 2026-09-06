@@ -7,6 +7,8 @@ import {
   REDZONE_LOGO,
   SUNDAY_TICKET_LOGO,
   countryOptions,
+  countryTimeZones,
+  freeToAirOption,
   normalizeUsNetwork,
   parseCountry,
   resolveChannel,
@@ -45,16 +47,27 @@ describe('broadcast-mappings.json — every mark it names is on disk', () => {
 });
 
 describe('parseCountry / countryOptions', () => {
-  it('accepts the three codes case-insensitively and defaults to US', () => {
+  it('accepts every code case-insensitively and defaults to US', () => {
     expect(parseCountry('ca')).toBe('CA');
     expect(parseCountry(' AU ')).toBe('AU');
-    expect(parseCountry('UK')).toBe('US');
+    expect(parseCountry('gb')).toBe('GB');
+    expect(parseCountry('mx')).toBe('MX');
     expect(parseCountry(null)).toBe('US');
+    expect(parseCountry('ZZ')).toBe('US');
   });
 
-  it('offers US, Canada and Australia with flags', () => {
+  // 'UK' is what a UK owner types, and it used to land them on the US board.
+  it('reads the aliases people actually type', () => {
+    expect(parseCountry('UK')).toBe('GB');
+    expect(parseCountry('gbr')).toBe('GB');
+    expect(parseCountry('MEX')).toBe('MX');
+    expect(parseCountry('usa')).toBe('US');
+  });
+
+  it('offers the five countries with flags', () => {
     expect(countryOptions().map((c) => [c.code, c.name])).toEqual([
       ['US', 'United States'], ['CA', 'Canada'], ['AU', 'Australia'],
+      ['GB', 'United Kingdom'], ['MX', 'Mexico'],
     ]);
     expect(countryOptions().every((c) => c.flag.length > 0)).toBe(true);
   });
@@ -76,14 +89,14 @@ describe('normalizeUsNetwork — ESPN names to mapping keys', () => {
 describe('resolveChannel', () => {
   it('in the US returns the network with its mark, or the bare name for an unknown one', () => {
     expect(resolveChannel('FOX', 'US')).toMatchObject({ name: 'FOX', logo: '/assets/tv-logos/fox.png' });
-    expect(resolveChannel('NFL Network', 'US')).toMatchObject({ name: 'NFL Network', logo: null });
+    expect(resolveChannel('NFL Network', 'US')).toMatchObject({ name: 'NFL Network', logo: '/assets/tv-logos/nfl-network.png' });
     expect(resolveChannel('Peacock', 'US')).toEqual({ name: 'Peacock', logo: null });
     expect(resolveChannel('', 'US')).toBeNull();
     expect(resolveChannel(undefined, 'CA')).toBeNull();
   });
 
   it('maps the Sunday networks to DAZN in Canada, NBC to CTV, ESPN to TSN', () => {
-    expect(resolveChannel('CBS', 'CA')).toMatchObject({ name: 'DAZN Canada', logo: '/assets/tv-logos/dazn-ca-black.png' });
+    expect(resolveChannel('CBS', 'CA')).toMatchObject({ name: 'DAZN Canada', logo: '/assets/tv-logos/dazn-black.png' });
     expect(resolveChannel('FOX', 'CA')?.name).toBe('DAZN Canada');
     expect(resolveChannel('NBC', 'CA')).toMatchObject({ name: 'CTV', note: 'Sunday Night Football' });
     expect(resolveChannel('ESPN', 'CA')?.name).toBe('TSN');
@@ -91,6 +104,30 @@ describe('resolveChannel', () => {
 
   it('sends everything to Kayo in Australia', () => {
     for (const n of ['CBS', 'FOX', 'NBC', 'ESPN', 'ABC']) expect(resolveChannel(n, 'AU')?.name).toBe('Kayo Sports');
+  });
+
+  it('sends the UK slate to Sky Sports, including the Thursday game Prime does not carry there', () => {
+    for (const n of ['CBS', 'FOX', 'NBC', 'ESPN', 'ABC', 'NFL Network']) {
+      expect(resolveChannel(n, 'GB')?.name, n).toBe('Sky Sports NFL');
+    }
+    // Prime Video's Thursday package is US-only; in the UK that game is Sky's,
+    // so the global-streamer shortcut must not win over an explicit mapping.
+    expect(resolveChannel('Prime Video', 'GB')?.name).toBe('Sky Sports NFL');
+    expect(resolveChannel('Netflix', 'GB')?.name).toBe('Netflix');
+  });
+
+  it('splits Mexico between FOX and ESPN, with Game Pass as the catch-all', () => {
+    expect(resolveChannel('FOX', 'MX')).toMatchObject({ name: 'FOX México', logo: '/assets/tv-logos/fox-mx.png' });
+    expect(resolveChannel('NBC', 'MX')?.name).toBe('ESPN México');
+    expect(resolveChannel('ESPN', 'MX')?.name).toBe('ESPN México');
+    expect(resolveChannel('Peacock', 'MX')?.name).toBe('NFL Game Pass on DAZN');
+    // TUDN and ViX take ONE Sunday game, not the whole CBS package, and which
+    // one is their call — so CBS resolves to the carrier that has them all and
+    // TUDN is named on the free-to-air line instead. Badging five games TUDN
+    // directly above a line saying they carry one free game a week is a lie
+    // the board would tell every Sunday.
+    expect(resolveChannel('CBS', 'MX')?.name).toBe('NFL Game Pass on DAZN');
+    expect(freeToAirOption('MX')?.name).toBe('TUDN / ViX');
   });
 
   it('keeps a global streamer as itself abroad, and sends an unknown TV network to the default carrier', () => {
@@ -107,18 +144,50 @@ describe('sundayTicketProvider', () => {
     expect(sundayTicketProvider('US')).toMatchObject({ name: 'YouTube TV', logo: '/assets/tv-logos/youtube-tv-black.png' });
     expect(sundayTicketProvider('CA')?.name).toBe('DAZN Canada');
     expect(sundayTicketProvider('AU')?.name).toBe('Kayo Sports');
+    expect(sundayTicketProvider('GB')).toMatchObject({ name: 'NFL Game Pass on DAZN', logoDark: '/assets/tv-logos/dazn.png' });
+    expect(sundayTicketProvider('MX')?.name).toBe('NFL Game Pass on DAZN');
     for (const code of COUNTRY_CODES) expect(sundayTicketProvider(code)?.note.length).toBeGreaterThan(20);
   });
 });
 
 describe('countryTimeZones', () => {
-  it('reads ET/PT at home and the Australian clocks with auto labels', async () => {
-    const { countryTimeZones } = await import('../src/utils/broadcast-channels');
+  it('reads ET/PT at home and the Australian clocks with auto labels', () => {
     expect(countryTimeZones('US').map((z) => z.label)).toEqual(['ET', 'PT']);
     expect(countryTimeZones('CA').map((z) => z.zone)).toEqual(['America/Toronto', 'America/Vancouver']);
     expect(countryTimeZones('AU')).toEqual([
       { zone: 'Australia/Sydney', label: 'auto', locale: 'en-AU' },
       { zone: 'Australia/Perth', label: 'auto', locale: 'en-AU' },
     ]);
+  });
+
+  // The UK is one clock, not two — the second slot is optional, not padding.
+  it('gives the UK a single London clock and Mexico its two', () => {
+    expect(countryTimeZones('GB')).toEqual([{ zone: 'Europe/London', label: 'auto', locale: 'en-GB' }]);
+    expect(countryTimeZones('MX').map((z) => z.zone)).toEqual(['America/Mexico_City', 'America/Tijuana']);
+  });
+});
+
+describe('freeToAirOption', () => {
+  // Which of Sunday's games a free channel picks up is that channel's call,
+  // so no US-network key can map to it; the board says it once instead.
+  it('names the free channel where there is one, with its mark', () => {
+    expect(freeToAirOption('GB')).toMatchObject({ name: 'Channel 5', logo: '/assets/tv-logos/channel-5-uk.png' });
+    expect(freeToAirOption('AU')?.name).toBe('7mate');
+    expect(freeToAirOption('MX')?.name).toBe('TUDN / ViX');
+    // Derived from the data, not a hardcoded list: a country added to the
+    // registry with a `freeToAir` block is held to the same bar.
+    for (const code of COUNTRY_CODES) {
+      const option = freeToAirOption(code);
+      if (!option) continue;
+      expect(option.name.length, code).toBeGreaterThan(0);
+      // Never empty — the note is the line's only text, and the mark beside
+      // it is decorative, so a missing note falls back to the channel name.
+      expect(option.note.length, code).toBeGreaterThan(0);
+    }
+  });
+
+  it('is null where every game is behind a carrier the mapping already names', () => {
+    expect(freeToAirOption('US')).toBeNull();
+    expect(freeToAirOption('CA')).toBeNull();
   });
 });

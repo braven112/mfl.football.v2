@@ -30,9 +30,16 @@ import { ALL_LEAGUES, DEFAULT_LEAGUE_SLUG } from '../src/config/leagues-data.mjs
 
 const map = loadMap(MAP_FILE);
 const asList = (v: string | string[] | undefined): string[] => (v === undefined ? [] : Array.isArray(v) ? v : [v]);
-// data/ is 161 MB and no map glob points into it; skipping it takes this
-// suite from ~3.6 s to well under a second, and it runs on every docs edit.
+// data/ is 161 MB; skipping it takes this suite from ~3.6 s to well under a
+// second, and it runs on every docs edit. A glob MAY point into it — the
+// broadcast mappings live there — so a wildcard-free glob is checked against
+// disk instead of the walk. The hook itself never walks; it matches the edited
+// path, so routing a data/ file has always worked at runtime.
 const repoFiles = walkRepo(REPO_ROOT, { skipPaths: ['data'] });
+const isLiteralPath = (glob: string) => !/[*?[\]{}!]/.test(glob);
+const globGuardsSomething = (glob: string) =>
+  repoFiles.some((f) => path.matchesGlob(f, glob)) ||
+  (isLiteralPath(glob) && existsSync(path.join(REPO_ROOT, glob)));
 const claudeMd = readFileSync(path.join(REPO_ROOT, 'CLAUDE.md'), 'utf8');
 
 describe('path-guard map', () => {
@@ -53,7 +60,7 @@ describe('path-guard map', () => {
     const dead: string[] = [];
     for (const d of map.domains) {
       for (const glob of d.paths) {
-        if (!repoFiles.some((f) => path.matchesGlob(f, glob))) dead.push(`${d.name}: ${glob}`);
+        if (!globGuardsSomething(glob)) dead.push(`${d.name}: ${glob}`);
       }
     }
     expect(dead, `globs that match nothing:\n  ${dead.join('\n  ')}`).toEqual([]);
