@@ -7,6 +7,12 @@ interface Props {
   onTogglePin: () => void;
   onToggleLock: () => void;
   onToggleArchive: () => void;
+  /**
+   * Files the idea as a GitHub issue. Resolves to an error/warning message, or
+   * null when it worked. Optional so a board rendered without the handler
+   * simply omits the button rather than showing one that does nothing.
+   */
+  onFileGithubIssue?: () => Promise<string | null>;
   onDelete: () => void;
 }
 
@@ -19,8 +25,25 @@ const STATUS_OPTIONS: { value: IdeaStatus; label: string; icon: string }[] = [
   { value: 'tabled', label: 'Tabled', icon: '⚫' },
 ];
 
-export default function AdminToolbar({ idea, onSetStatus, onTogglePin, onToggleLock, onToggleArchive, onDelete }: Props) {
+export default function AdminToolbar({ idea, onSetStatus, onTogglePin, onToggleLock, onToggleArchive, onFileGithubIssue, onDelete }: Props) {
   const [statusOpen, setStatusOpen] = useState(false);
+  const [filing, setFiling] = useState(false);
+  const [fileError, setFileError] = useState<string | null>(null);
+
+  const filed = idea.githubIssue;
+
+  const handleFile = async () => {
+    if (!onFileGithubIssue || filing) return;
+    setFiling(true);
+    setFileError(null);
+    try {
+      setFileError(await onFileGithubIssue());
+    } catch (err) {
+      setFileError((err as Error).message);
+    } finally {
+      setFiling(false);
+    }
+  };
 
   return (
     <div className="sb-admin">
@@ -97,6 +120,39 @@ export default function AdminToolbar({ idea, onSetStatus, onTogglePin, onToggleL
           {idea.archived ? 'Archived' : 'Archive'}
         </button>
 
+        {/*
+          GitHub handoff. Once filed this becomes a LINK rather than a button —
+          the issue is the work item now, and a second filing would open a
+          duplicate (the route refuses, but the UI shouldn't invite it).
+        */}
+        {filed ? (
+          <a
+            className="sb-admin__btn sb-admin__btn--active"
+            href={filed.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            title={`Filed as issue #${filed.number}`}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+              <path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"/>
+            </svg>
+            Issue #{filed.number}
+          </a>
+        ) : onFileGithubIssue ? (
+          <button
+            type="button"
+            className="sb-admin__btn"
+            onClick={handleFile}
+            disabled={filing}
+            title="Create a GitHub issue from this idea"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+              <path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"/>
+            </svg>
+            {filing ? 'Filing…' : 'File as issue'}
+          </button>
+        ) : null}
+
         {/* Delete */}
         <button
           type="button"
@@ -110,6 +166,9 @@ export default function AdminToolbar({ idea, onSetStatus, onTogglePin, onToggleL
           Delete
         </button>
       </div>
+      {fileError && (
+        <div className="sb-admin__error" role="alert">{fileError}</div>
+      )}
     </div>
   );
 }
