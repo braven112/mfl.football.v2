@@ -42,6 +42,7 @@ import { postToGroupMeCapped } from './lib/groupme-capped.mjs';
 import {
   openPoll,
   closePoll,
+  SYNTHETIC_POLL_SOURCE,
   readTurnout,
   describeTurnoutFailure,
   buildOpenLine,
@@ -773,9 +774,16 @@ async function runClosePoll(opts, league) {
     console.log(`  [skip] ${path.relative(projectRoot, outPath)} does not exist.`);
     return;
   }
-  if (issue.ownersPoll?.status === 'closed') {
+  // A seeded example is not a closed week — it is a placeholder standing in
+  // until a real poll runs, so a real tally is allowed to replace it. Skipping
+  // on it would discard the ballots owners actually cast, suppress the reveal,
+  // and leave the window pointer uncleared.
+  if (issue.ownersPoll?.status === 'closed' && issue.ownersPoll.source !== SYNTHETIC_POLL_SOURCE) {
     console.log(`  [skip] Week ${week}'s poll is already closed.`);
     return;
+  }
+  if (issue.ownersPoll?.source === SYNTHETIC_POLL_SOURCE) {
+    console.log(`  [poll] Replacing the seeded example on Week ${week} with the real tally.`);
   }
 
   // The composite is the tiebreaker AND the ordering of the unranked block, so

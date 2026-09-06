@@ -3,6 +3,77 @@
 Weekly owner vote that publishes inside The Pecking Order. Plan:
 `docs/plans/owners-poll.md`.
 
+## 2026-09-06 — A section that renders nothing when its data is absent can ship invisible
+
+`OwnersPollSection.astro` correctly renders NOTHING when an issue has no
+`ownersPoll` block — that is what keeps archived columns untouched. But the
+poll shipped after the last real column ran, so every committed issue was in
+that state, and the result was a one-way link: `/pecking-order/ballot` and
+`/pecking-order/voters` both point INTO the column, and the column mentioned
+the poll nowhere. The one page an owner following that link lands on had no
+evidence the feature existed.
+
+Nothing was broken. Every test passed, both pages rendered, the absent state
+was deliberate. The gap only exists in the seam between "the feature is built"
+and "the feature has run once", and it is invisible to anything that tests the
+feature in isolation.
+
+The lesson generalizes past this feature: **when a new section is gated on data
+a cron will produce later, ask what its entry points look like in the window
+before the first run.** Either give the empty state something to say, or seed a
+worked example. Here it was the example —
+`scripts/seed-example-owners-poll.mjs`, seeded into each league's latest issue,
+described in `docs/plans/owners-poll.md`. Its ballots are fabricated but the
+tally is not, and the mechanism matters: the block is built by
+`buildClosedPollBlock`, extracted out of `closePoll` so both callers share ONE
+assembly rather than the seeder mirroring it. A demo that mirrors the pipeline
+is true on the day it is written and false at the first added field; a demo
+that CALLS the pipeline stays honest for free. Every seeded block
+carries `source: "synthetic"` and the seeder refuses to overwrite a block
+without it, so a real tally can never be clobbered by a demo re-run.
+
+## 2026-09-06 — The Homer Index was measured against the wrong thing, twice
+
+Rendering the seeded AFL example put the metric on screen at 24 teams for the
+first time, and two separate problems fell out of one badge.
+
+**It scored omission as a rank.** An owner who left their own team off the
+ballot was treated as having ranked it `slots + 1` — "the most charitable
+bounded reading", reasoned out for TheLeague's 7-of-16 where the stand-in is
+8th of 16 and genuinely modest. At the AFL's 10-of-24 the 24th-place
+franchise's owner omitted themselves, was scored at 11 against a consensus of
+24, and led the league at **+13 for the most self-effacing ballot on the
+board.** Now null. "Not in my top ten" spans fourteen places in a 24-team
+league; inventing one of them puts a fabricated number under a public
+leaderboard. Every consumer already handled null — em dash on the voters page,
+skipped in the season average, filtered by `topHomer`, `!= null`-guarded in the
+issue section — so nothing downstream changed. Only the producer was guessing.
+
+**And its baseline was the room, not the column.** Scored against the
+consensus, an owner's Homer Index moves when OTHER people vote: a ballot you
+submitted on Tuesday turns homer on Thursday because the room soured on your
+team. That is not a thing you did. The baseline is now the Pecking Order's
+composite, which is fixed before a single ballot is cast, so the number
+measures exactly one thing — how far above the computer you put yourself. It
+also puts the metric on the axis the feature is built on: the poll exists to
+argue with the algorithm, and this is that argument made about your own team.
+Contrarian Index still measures distance from the ROOM, and the two sitting on
+different baselines is the point, not an inconsistency.
+
+Two lessons worth separating:
+
+- **A metric tuned against one league's numbers is a constant in disguise.**
+  The AFL port re-derived `slots` and `quorum` from the rules rather than
+  copying TheLeague's, and got both right; the omission cap was buried inside a
+  scoring function, so nobody re-derived it. When a second league arrives, the
+  config is the easy half — the arithmetic that assumed the first league's
+  shape is the half that ships wrong.
+- **A derived stat needs a baseline that cannot move underneath it.** Nothing
+  about the consensus baseline was a bug in the arithmetic; it computed exactly
+  what it claimed. It just claimed the wrong thing, and no test could have
+  found that, because a test would have encoded the same assumption. Rendering
+  it in front of someone who knew what the number was FOR is what found it.
+
 ## 2026-09-06 — A test that names one league as "the disabled one" expires
 
 Enabling the AFL broke four assertions across three suites, and none of them

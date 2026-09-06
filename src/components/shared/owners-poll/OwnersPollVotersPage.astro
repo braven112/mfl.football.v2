@@ -10,7 +10,7 @@
  * Three metrics, and only one of them is a leaderboard:
  *   Accuracy    — pooled pairwise, scored against the FOLLOWING week's column.
  *   Contrarian  — distance from consensus. Independence, NOT error. Labelled.
- *   Homer       — how much higher you rate yourself than the room does.
+ *   Homer       — how much higher you rate yourself than the COLUMN does.
  */
 import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
 import { getLeagueTeamBrands } from '../../../utils/league-team-brands';
@@ -131,7 +131,7 @@ const hasPolls = season.weeks.length > 0;
                 <span class="opv-badge__label">Biggest homer</span>
                 <span class="opv-badge__name">{name(homer.franchiseId)}</span>
                 <span class="opv-badge__value">
-                  +{num(homer.homerIndex)} spots above where the room has them
+                  +{num(homer.homerIndex)} spots above where the column has them
                 </span>
               </div>
             )}
@@ -233,8 +233,9 @@ const hasPolls = season.weeks.length > 0;
           </p>
           <p>
             <strong>Homer</strong> is how many spots higher an owner ranked their
-            own team than the room did. Ranking your own team is allowed, and
-            this is why.
+            own team than The Pecking Order did. The column's number is set
+            before anyone votes, so this measures your optimism and not the
+            room's mood. Ranking your own team is allowed, and this is why.
           </p>
           <p>
             Weeks with no quorum are excluded: with no consensus there is

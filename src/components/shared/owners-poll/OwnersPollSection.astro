@@ -53,6 +53,13 @@ export interface OwnersPollBlock {
   unranked?: { franchiseId: string; compositeRank: number }[] | null;
   ballots?: OwnersPollBallot[];
   nonVoterCount?: number;
+  /**
+   * Present only on the worked example seeded by
+   * scripts/seed-example-owners-poll.mjs, whose ballots nobody cast. Nothing
+   * renders from it — it exists so that seeder can refuse to overwrite a week
+   * of real ballots.
+   */
+  source?: 'synthetic';
 }
 
 interface Props {
@@ -210,7 +217,7 @@ const biggestSplit = [...ranked].sort((a, b) => Math.abs(b.delta) - Math.abs(a.d
                     ))}
                   </ol>
                   {ballot.homerIndex != null && ballot.homerIndex > 0 && (
-                    <span class="op-ballot__badge" title="Spots above where the room has them">
+                    <span class="op-ballot__badge" title="Spots above where the column has them">
                       Homer +{ballot.homerIndex}
                     </span>
                   )}

@@ -7,6 +7,7 @@
  * for real rather than stubbed past.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { readFileSync } from 'node:fs';
 
 const store = new Map<string, unknown>();
 const hashes = new Map<string, Map<string, string>>();
@@ -44,6 +45,8 @@ const { LEAGUES } = await import('../src/config/leagues-data.mjs');
 const {
   openPoll,
   closePoll,
+  buildClosedPollBlock,
+  SYNTHETIC_POLL_SOURCE,
   readTurnout,
   describeTurnoutFailure,
   buildRevealMessage,
@@ -276,6 +279,111 @@ describe('closePoll', () => {
       log: silent,
     });
     expect(result).toBeNull();
+  });
+});
+
+describe('buildClosedPollBlock — shared with the seeded example', () => {
+  // The worked example in the archive (scripts/seed-example-owners-poll.mjs)
+  // publishes through this same function. Its whole claim is that it is the
+  // real pipeline over invented input, so a key added to a closed poll must
+  // reach it too — which it does only while both callers share this builder.
+  const window = {
+    opensAt: '2026-09-08T14:00:00.000Z',
+    closesAt: '2026-09-10T01:00:00.000Z',
+    slots: SLOTS,
+    eligibleFranchiseIds: FIELD,
+  };
+  const ballots = Array.from({ length: 10 }, (_, i) => ({
+    franchiseId: FIELD[i],
+    ranking: Array.from({ length: SLOTS }, (_, k) => FIELD[(i + k) % FIELD.length]),
+    submittedAt: null,
+    updatedAt: null,
+  }));
+
+  it('publishes exactly the keys the archive and the pages read', () => {
+    const { block } = buildClosedPollBlock({
+      ballots,
+      window,
+      quorum: 8,
+      compositeRankByFid: composite,
+    });
+
+    expect(Object.keys(block).sort()).toEqual(
+      [
+        'ballots',
+        'ballotsIn',
+        'closesAt',
+        'eligibleVoters',
+        'hasQuorum',
+        'methodology',
+        'nonVoterCount',
+        'opensAt',
+        'quorum',
+        'ranked',
+        'slots',
+        'status',
+        'unranked',
+      ].sort(),
+    );
+    expect(block.status).toBe('closed');
+    expect(block.ballotsIn).toBe(10);
+    expect(block.hasQuorum).toBe(true);
+    expect(block.nonVoterCount).toBe(FIELD.length - 10);
+  });
+
+  it('is what closePoll returns, not a parallel implementation', async () => {
+    seedWindow();
+    seedBallots(10);
+    const viaClose = await closePoll({
+      league: LEAGUE,
+      issue: issue(),
+      compositeRankByFid: composite,
+      now: new Date('2026-09-10T02:00:00.000Z'),
+      log: silent,
+    });
+    const { block } = buildClosedPollBlock({
+      ballots,
+      window,
+      quorum: LEAGUE.ownersPoll.quorum,
+      compositeRankByFid: composite,
+    });
+
+    expect(viaClose?.block).toEqual(block);
+  });
+});
+
+describe('the seeded example never blocks a real tally', () => {
+  // A synthetic block is a PLACEHOLDER, not a finished week. The close pass
+  // skips any week already reading status: "closed", so without the source
+  // check that placeholder would discard ballots owners actually cast,
+  // suppress the reveal, and leave the window pointer uncleared.
+  const generator = readFileSync(
+    new URL('../scripts/generate-pecking-order.mjs', import.meta.url),
+    'utf8',
+  );
+  const seeder = readFileSync(
+    new URL('../scripts/seed-example-owners-poll.mjs', import.meta.url),
+    'utf8',
+  );
+
+  it("qualifies the generator's already-closed skip with the synthetic marker", () => {
+    const skip = generator.match(/if \(issue\.ownersPoll\?\.status === 'closed'[^)]*\)/);
+    expect(skip?.[0]).toContain('SYNTHETIC_POLL_SOURCE');
+  });
+
+  it('gives both sides one marker rather than two string literals', () => {
+    expect(SYNTHETIC_POLL_SOURCE).toBe('synthetic');
+    for (const [name, src] of [
+      ['generate-pecking-order.mjs', generator],
+      ['seed-example-owners-poll.mjs', seeder],
+    ] as const) {
+      expect(src, `${name} imports the shared marker`).toContain('SYNTHETIC_POLL_SOURCE');
+      expect(src.match(/'synthetic'/g) ?? [], `${name} re-declares the literal`).toHaveLength(0);
+    }
+  });
+
+  it('refuses, in the seeder, to overwrite a block that is not synthetic', () => {
+    expect(seeder).toMatch(/source !== SYNTHETIC_POLL_SOURCE[\s\S]{0,200}refusing to overwrite/);
   });
 });
 

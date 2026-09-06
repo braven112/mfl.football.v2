@@ -258,9 +258,24 @@ Per owner, per season:
 - **Contrarian Index** — mean absolute distance from the final consensus. Not
   accuracy, and labeled as such: it measures independence, and it is a badge,
   not a demerit.
-- **Homer Index** — (consensus rank of your team) − (your rank of your team).
-  Positive means you rate yourself higher than the room does. This is the whole
-  reason self-voting is allowed, and it will produce the best chat of the week.
+- **Homer Index** — (**Pecking Order** rank of your team) − (your rank of your
+  team). Positive means you rate yourself higher than the column does. This is
+  the whole reason self-voting is allowed, and it will produce the best chat of
+  the week.
+
+  **The baseline is the column, not the consensus** (changed 2026-09-06; it was
+  the consensus originally). The composite is fixed before a single ballot is
+  cast, so your score cannot move because other owners voted — scored against
+  the room, a modest ballot turns homer when the room sours on your team, which
+  is not a thing you did. It also puts the metric on the axis the whole feature
+  is about: the poll exists to argue with the algorithm, and this is that
+  argument made about your own team. Distance from the ROOM is still measured —
+  that is the Contrarian Index — and the two deliberately sit on different
+  baselines: one is independence from your peers, the other optimism about
+  yourself.
+
+  **Omitting your own team scores null, not a number.** See the note below on
+  what the worked example caught.
 
 Every ballot becomes fully public once its week closes. Voting weekly is
 therefore a permanent, attributable record — which is the point.
@@ -626,3 +641,57 @@ no lineups, no weekly team story to rank). The third was really about the
 disabled, `poll-disabled` fired before the mismatch check ever ran. It now
 addresses TheLeague explicitly with an AFL commissioner's session, which is the
 guard it always claimed to be.
+
+## The worked example in the archive (2026-09-06)
+
+The poll shipped after the last real column ran, so every committed issue
+predated it and `OwnersPollSection.astro` — correctly — rendered nothing. The
+result was a one-way link: the ballot and voters pages point INTO the column,
+and the column mentioned the poll nowhere, which is the one page an owner
+following that link lands on.
+
+`scripts/seed-example-owners-poll.mjs` fills that gap until Week 1 produces a
+real poll. It is seeded into each league's latest issue —
+`data/theleague/pecking-order/2025-17.json` and
+`data/afl-fantasy/pecking-order/2025-14.json`.
+
+**These ballots are fabricated.** Nobody cast them. They are attributed to real
+franchises and they publish into the archive the voters page reads, so treat
+them as a demo fixture with a real byline, not as league history. Two things
+keep that honest:
+
+- Every seeded block carries `source: "synthetic"`, and the marker is checked
+  in BOTH directions. The seeder **refuses to overwrite a block without it**, so
+  a real tally is never clobbered by a demo; and the close pass treats a block
+  WITH it as absent rather than as a finished week, so a seeded example can
+  never suppress a real one. That second direction is the one that bites
+  silently: `generate-pecking-order.mjs` skips any week already reading
+  `status: "closed"`, so an unqualified placeholder would have discarded the
+  ballots owners actually cast, skipped the reveal, and left the window pointer
+  uncleared. `tests/owners-poll-pass.test.ts` pins both directions.
+- The tally is not faked. The block is assembled by `buildClosedPollBlock`
+  (`scripts/lib/owners-poll-pass.mjs`) — the SAME function the real close pass
+  calls, not a copy of it, which is why a field added to a closed poll cannot
+  silently skip the example. What renders is the real pipeline over invented
+  input, and `tests/owners-poll-pass.test.ts` pins both the published key set
+  and the fact that `closePoll` returns exactly what the builder produces.
+
+Ballots are built so the Δ column shows something: the room's shared base order
+blends the published composite with the pure recent-scoring order (owners chase
+last Sunday harder than a 50/50 composite does), then per-voter noise, then a
+per-owner homer bump. Output is deterministic — same seed, same file — so a
+re-run never churns the archive.
+
+**Known limit of seeding only the latest week.** Pairwise accuracy scores a
+ballot against the FOLLOWING week's all-play, and neither seeded week has a
+successor, so the voters page's accuracy column reads `—` for every owner.
+Seeding `2025-16` and `2025-13` as well would make the earlier week scorable.
+
+**What the example caught on its way in.** Rendering the AFL's 24-team version
+exposed a real scoring bug: `homerIndex` scored an owner who omitted their own
+team as having ranked it `slots + 1`, which at 10-of-24 made the league's most
+self-effacing ballot its biggest homer (+13). It now returns null — omission is
+not a rank — and every consumer already handled null. That is the example
+earning its keep: the shape had been shipped for weeks and no test could have
+found it, because nothing was wrong with the arithmetic, only with the
+assumption underneath it.
