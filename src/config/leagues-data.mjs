@@ -81,6 +81,7 @@ export const LEAGUES = {
       schefterFeed: true,
       schefterTips: true,
       liveScoring: true,
+      offseasonAuction: true,
       accounting: true,
     },
     /**
@@ -166,6 +167,7 @@ export const LEAGUES = {
       schefterFeed: true,
       schefterTips: true,
       liveScoring: true,
+      offseasonAuction: false,
       accounting: true,
     },
     /**
@@ -268,6 +270,8 @@ export const LEAGUES = {
        * scoreboard watching is the whole in-season experience here.
        */
       liveScoring: true,
+      /** Draft-only: nothing is acquired here after the draft. */
+      offseasonAuction: false,
       /**
        * Draft-only league: no MFL syncing, no commissioner write path, and no
        * prize table in its rules. Turning this on would make the accounting

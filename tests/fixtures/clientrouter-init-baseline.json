@@ -1,6 +1,6 @@
 {
   "$comment": "Ratchet baseline for client scripts that initialise only on DOMContentLoaded under the ClientRouter. This list may only SHRINK: tests/clientrouter-init-ratchet.test.ts fails if a file is added (a new page that goes dead after in-site navigation) and if a listed file was fixed but not removed (retighten with node scripts/ratchet.mjs --write). Rule: docs/claude/insights/domains/frontend.md, Astro and ClientRouter. is:inline scripts are exempt.",
-  "recordedAt": "2026-09-05",
+  "recordedAt": "2026-09-06",
   "files": [
     "src/components/theleague/AnchorNav.astro",
     "src/components/theleague/DraftPredictorView.astro",
@@ -18,7 +18,6 @@
     "src/pages/theleague/players.astro",
     "src/pages/theleague/playoffs.astro",
     "src/scripts/afl.js",
-    "src/scripts/main.js",
-    "src/utils/claim-resume.ts"
+    "src/scripts/main.js"
   ]
 }

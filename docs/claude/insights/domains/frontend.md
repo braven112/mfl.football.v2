@@ -2,8 +2,7 @@
 
 <!-- CURATED-HEAD -->
 > **Read this head, then stop.** Everything below `/CURATED-HEAD` is a dated
-> archive (~140 KB, 64 entries) — do NOT read it start-to-finish. Grep it for
-> your topic: `grep -n "sticky" docs/claude/insights/domains/frontend.md`.
+> archive (~140 KB, 64 entries) — do NOT read it whole. Grep your topic: `grep -n "sticky" docs/claude/insights/domains/frontend.md`.
 >
 > Design tokens, theming and dark mode are NOT here — see
 > `docs/claude/rules/theming-and-assets.md` and `domains/design-system.md`.
@@ -11,36 +10,37 @@
 ## Astro and ClientRouter
 
 - **Never add your own `<main>`.** `TheLeagueLayout` owns the one main landmark,
-  the 1232px cap, and the horizontal gutter. Use a `<div>`; scope any narrower
+  the 1232px cap and the horizontal gutter. Use a `<div>`; scope a narrower
   `max-width` to an inner wrapper.
 - **Scoped CSS dies silently on markup the component didn't emit.** `set:html`,
   client-injected DOM, and *a child component's own tags* carry no (or a
   different) `data-astro-cid`, so `.parent img {…}` stops matching. Re-anchor as
   `.parent :global(img)` — but if MOST selectors need it, use a plain
-  `src/styles/*.css`. Never extract a `<td>`/`<th>` into a child component to
-  dedupe markup (it leaves the parent's table styles behind), and never
-  `@import` a shared stylesheet inside a scoped `<style>` — Vite inlines and
-  scopes every imported selector; import it in frontmatter instead.
+  `src/styles/*.css`. Never extract a `<td>`/`<th>` into a child to dedupe
+  markup (it leaves the parent's table styles behind), and never `@import`
+  a shared stylesheet inside a scoped `<style>` — Vite inlines and scopes every
+  imported selector; import it in frontmatter instead.
 - **Interactive scripts must re-init on `astro:page-load`,** or they go dead on
-  in-site navigation. Three traps: `document` listeners *stack* — keep the
-  handler in a module-scoped var and `removeEventListener` before re-adding (a
-  once-flag is WORSE: one listener pinned to load 1's dead nodes); config goes
-  stale (re-read the SSR blob in `init()`); and `init()` double-runs if you also
-  call it.
+  in-site navigation. Traps: `document` listeners *stack* — module-scoped var,
+  `removeEventListener` before re-adding (a once-flag is WORSE: one listener
+  pinned to load 1's dead nodes); config goes stale (re-read the SSR blob in
+  `init()`); and `init()` double-runs if you also call it, or if a LATE async
+  config already wired the DOM — guard teardown on DOM identity, else a doubled
+  submit button fires twice.
 - **A control whose only job is switching a URL param should be an `<a href>`**
-  built from `Astro.url` — not a `<button>` plus a click handler.
-- Never wrap a `<script>` in a conditional (breaks Astro's dedup). Read
-  `public/` files with `path.join(process.cwd(), …)`, never `import.meta.url`.
-- **A hydrating island must SSR something, and nothing time- or
-  request-derived.** Clock: start `null`, tick in `useEffect`. Query string:
-  take it as a prop (`Astro.url.search`) — `window.location` behind `typeof
-  window !== 'undefined'` *guarantees* the mismatch. Renders `null` until
-  opened: `client:only`, else Astro SSRs an EMPTY `<astro-island>`. Each is
-  #418, which `reportError` re-fires as an uncaught window error.
-- **`window` listeners outlive the page that added them:** ClientRouter swaps
-  the DOM, not the window, so a page-scoped `error` handler blames later pages'
-  faults on its own. Drop it on `astro:before-swap`, and mark that script
-  `data-astro-rerun` or it never re-installs on the way back in.
+  from `Astro.url`, not a `<button>` plus a click handler.
+- Never wrap a `<script>` in a conditional (breaks Astro's dedup). Read `public/`
+  files with `path.join(process.cwd(), …)`, never `import.meta.url`.
+- **A hydrating island must SSR something, and nothing time- or request-derived.**
+  Clock: start `null`, tick in `useEffect`. Query string: take it as a prop
+  (`Astro.url.search`) — `window.location` behind `typeof window !== 'undefined'`
+  *guarantees* the mismatch. Renders `null` until opened: `client:only`, else
+  Astro SSRs an EMPTY `<astro-island>`. Each is #418, which `reportError`
+  re-fires as an uncaught window error.
+- **`window` listeners outlive the page that added them:** ClientRouter swaps the
+  DOM, not the window, so a page-scoped `error` handler blames later pages' faults
+  on its own. Drop it on `astro:before-swap`, and mark that script
+  `data-astro-rerun` or it never re-installs.
 
 ## Layout traps that keep recurring
 
@@ -72,12 +72,12 @@
 - Collapsibles animate `grid-template-rows: 0fr → 1fr` with `overflow: hidden`
   on a **bare** wrapper — a fixed `max-height` clips the moment content reflows.
 - **`visually-hidden` is `position: absolute`, which bites twice.** It breaks
-  `:not(:first-child)` spacing when it's the first child (use flex/grid `gap`);
-  and with auto offsets it lays out at its STATIC position in the nearest
-  *positioned* ancestor — so one inside a horizontally-scrolled table or chip
-  rail sits far past the viewport in document coords, growing the page's scroll
-  width. Symptom: the page scrolls sideways while every element measures fine.
-  Give the containing cell/chip `position: relative`.
+  `:not(:first-child)` spacing when it's the first child (use `gap`); and with
+  auto offsets it lays out at its STATIC position in the nearest *positioned*
+  ancestor — so one inside a horizontally-scrolled table or chip rail sits far
+  past the viewport in document coords, growing the page's scroll width.
+  Symptom: the page scrolls sideways while every element measures fine. Give the
+  containing cell/chip `position: relative`.
 - **No global `box-sizing: border-box`** (`TheLeagueLayout` scopes it to
   `main`), so one class on a `<button>` and a `<div>` sizes differently: the UA
   sheet gives buttons border-box, divs content-box, so `width: 100%` + padding
@@ -102,10 +102,10 @@ CSS**. A fix applied to one does not propagate — grep both before calling it d
   in nav-config: a correct `href` still bounces the user cross-league if the
   page's logged-out gate redirects to the other league's login. Each login page
   validates its return param against its own path space, so send AFL users to
-  `/afl-fantasy/login` and TheLeague users to `/theleague/login`. (Both pages
-  accept `?next=` and `?redirect=`; they differ only in precedence — an older
-  entry below says otherwise and is stale.) Find leaks by rendering the page and
-  grepping the HTML, and follow the 302 — an href-only audit misses the gate.
+  `/afl-fantasy/login`, TheLeague users to `/theleague/login`. (Both accept
+  `?next=` and `?redirect=`, differing only in precedence — an older entry below
+  says otherwise and is stale.) Find leaks by rendering the page and grepping the
+  HTML, and follow the 302 — an href-only audit misses the gate.
 
 ## One page can need BOTH year clocks
 

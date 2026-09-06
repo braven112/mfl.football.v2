@@ -9,6 +9,115 @@ found in it the day after.
 The MFL-side auth story (why `calendar.json` had never synced) is in
 `domains/mfl-api.md`, 2026-09-02.
 
+## 2026-09-06 - The Claim Left The Table, And Every Assumption The Column Was Holding Came Loose
+
+**Context:** #983 moved the acquisition out of the Bid/Claim column on both Free
+Agents pages and into `PlayerDetailsModal`, so a player met anywhere on the site
+can be added from the card that opens. The column had been carrying more
+contracts than it looked like, and a session-scoped endpoint replaced a
+page-scoped SSR decision. Five real bugs came out of the review pass; four of
+them are the same shape.
+
+### A session-scoped answer is not a league-scoped one, because PLAYER ids are identical across leagues
+
+The endpoint resolves the league from the session, exactly as
+`POST /api/waiver-claim` does, and the first draft's own docstring claimed that
+made it safe: "a signed-in TheLeague owner browsing the AFL is answered for
+TheLeague and the AFL page's modal will offer nothing."
+
+That is wrong, and the reason is worth holding onto. The franchise-id collision
+this repo keeps guarding against (both leagues have a 0001) makes a wrong-league
+answer *look* wrong. Player ids don't collide — **they are the same ids**. So
+"is player 15779 rostered?" answered against TheLeague's rosters returns a
+perfectly well-formed answer to a question nobody asked, and any AFL free agent
+who happens to also be unrostered in TheLeague comes back claimable. The button
+renders on the AFL page and the form files a real bid in TheLeague.
+
+An identifier space that is *shared* rather than *colliding* is more dangerous,
+not less: nothing ever fails to match, so there is no error to notice.
+
+The fix is the contract this repo already had for exactly this shape —
+`/api/watch-list`, `/api/draft-list`, `kv-franchise-store`: the client sends the
+page's league from `activeRankingsScope()` (re-read per call, never captured),
+the server compares it to the session's and 401s a mismatch. The param is a
+CHECK, never an input. Client state is keyed by league too, so a ClientRouter
+hop reads the right bucket rather than relying on a reset.
+
+**Generalisation:** when a page-scoped decision becomes an endpoint, "the
+session says which league" is only sufficient if the *question* is league-scoped.
+Here the question was "is this player, on this page, available to me" — and the
+page is half of that.
+
+### `window.foo?.()` between two component bundles is a race, and its failure mode is a control that renders and does nothing
+
+`PlayerDetailsModal` decides whether to show the Claim button;
+`WaiverClaimModal` owns the form it opens. They are separate bundles, so the
+context fetch can resolve before the form's module has evaluated — and
+`window.configureWaiverClaim?.(ctx)` then silently no-ops. Verification caught
+it: the button rendered, the drop list filled in, and the click opened nothing.
+
+Optional-call handshakes between components need **both** directions: call it
+if it is there, *and* park the value so the late module reads it at its own
+init. One direction is a coin flip on bundle order.
+
+### Once a second path can wire the DOM, `init()`'s tear-down-and-rebuild is itself the bug
+
+The repo's ClientRouter idiom — drop the old handler, re-resolve the elements,
+re-add — assumes `init()` is the only thing that wires. Add a late async
+configure and that stops being true: if the config lands first, `init()` then
+tears down live wiring and rebuilds it, stacking a second listener on the submit
+button. One click, two claims.
+
+`init()` now returns early when the dialog it would wire is the one already
+wired. A ClientRouter navigation swaps the node, so the check fails there and
+the teardown runs as it must. **Guard on DOM IDENTITY, not on a once-flag** —
+that is the same distinction the head-of-file rule already makes for listeners.
+
+### Resetting state on `astro:page-load` races anything else warming on that dispatch
+
+`resetClaimContext()` and `WatchListBridge`'s warm-up both ran on
+`astro:page-load`. The reset threw away a fetch already in flight, whose late
+`.then` then repopulated exactly what had been cleared. Keying the state by
+league removed the need for the reset entirely — which is the better fix anyway,
+because it makes the correct bucket a property of the data rather than of
+listener ordering.
+
+### Deleting a column deletes an API — grep for the PRODUCERS, not just the consumers
+
+The Bid/Claim column was the only producer of three separate contracts, and each
+had a consumer that outlived it:
+
+- `.col-fa-action .place-bid-link` — `WatchListBridge` built the ⋮ sheet's
+  acquisition action by *reading that button out of the DOM*. With no column, the
+  sheet quietly lost the option. It now takes two independent verdicts: the page
+  says the player is a free agent IN THIS VIEW (`data-pa-claimable`, which in a
+  duplicate-player league is a per-conference fact only the page knows), and the
+  claim context says this viewer may claim him. Either alone ships a 400.
+- `data-signin-player` — `SignInModal` read it off any `[data-signin-open]`
+  trigger and called `rememberPendingClaim(...)` unconditionally. With no
+  producer left, that call only ever cleared, so the waiver-priority gate's own
+  Sign in button would silently discard the player an owner was mid-claim on.
+- `.claim-open` — the delegated trigger survives deliberately (it is still the
+  declarative way in), but `resumePendingClaim` could no longer find a button to
+  click, so the park now carries the whole player and the resume calls
+  `window.openWaiverClaim` directly.
+
+**The check that would have caught all three in one pass:** for every selector,
+attribute or class the diff deletes, grep the repo for readers. A deleted
+producer leaves no compile error and no failing test — only a feature that
+stops.
+
+### Two surfaces on one page disagreeing about the season
+
+The endpoint's first draft dropped TheLeague's `!isAuctionSeason` gate, so from
+the third Thursday of March the modal would have offered an in-place waiver form
+beside a ⋮ sheet correctly deep-linking to MFL's Place Bid page. The window now
+lives in `src/utils/auction-window.ts` behind a registry `offseasonAuction`
+flag, read by both — extracted rather than re-ported, per the CLAUDE.md rule
+about copied date formulas. A window that only one surface knows about stops
+being a window the moment a second surface needs it.
+
+
 ## 2026-09-02 - "MFL Answered" Is Not "MFL Stored It" — And The Read-Back Was Disabled In The Only Case It Mattered
 
 **Context:** Brandon filed an AFL claim, the modal said "Submitted ✓", nothing

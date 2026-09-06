@@ -48,8 +48,11 @@ const styleBlockOf = (source: string) =>
 /**
  * Classes that only ever appear on injected rows. A rule for one of these must
  * be global, or it does nothing.
+ *
+ * `col-fa-action` left this list in Sep 2026 with the column it named: the
+ * acquisition pill moved into the player modal, so neither page emits it.
  */
-const INJECTED_ROW_CLASSES = ['place-bid-link', 'claim-open', 'col-fa-action'];
+const INJECTED_ROW_CLASSES = ['place-bid-link', 'claim-open'];
 
 describe.each(PAGES)('%s — injected-row styles', (page) => {
   const source = read(page);
@@ -72,9 +75,17 @@ describe.each(PAGES)('%s — injected-row styles', (page) => {
     });
   }
 
-  it('imports the shared pill stylesheet from FRONTMATTER, where it stays global', () => {
-    expect(source, `${page} emits .place-bid-link`).toContain('place-bid-link');
+  it('imports the shared pill stylesheet from FRONTMATTER when it emits the class', () => {
     const frontmatter = source.slice(0, source.indexOf('\n---', 3));
+    // A page that stopped emitting the pill must also stop importing it — an
+    // orphan global stylesheet is how a rule outlives the thing it styled and
+    // then gets "fixed" by someone who cannot find its markup.
+    if (!source.includes('place-bid-link')) {
+      expect(frontmatter, `${page} no longer emits .place-bid-link`).not.toContain(
+        'styles/fa-claim-button.css',
+      );
+      return;
+    }
     expect(frontmatter, `${page} must import ${STYLESHEET}`).toContain('styles/fa-claim-button.css');
   });
 
@@ -91,13 +102,12 @@ describe.each(PAGES)('%s — injected-row styles', (page) => {
 describe('the shared free-agent action pill', () => {
   const css = read(STYLESHEET);
 
-  it('defines the pill, the <button> reset, the focus ring and the column', () => {
+  it('defines the pill, the <button> reset and the focus ring', () => {
     for (const selector of [
       '.place-bid-link',
       '.place-bid-link:hover',
       'button.place-bid-link',
       'button.place-bid-link:focus-visible',
-      '.col-fa-action',
     ]) {
       expect(css).toContain(`${selector} {`);
     }
@@ -122,9 +132,16 @@ describe('the shared free-agent action pill', () => {
     expect(css).not.toMatch(/#1c497c\s*;/);
   });
 
-  it('the Bid/Claim buttons reuse the pill class so they cannot drift from the anchors', () => {
-    for (const page of PAGES) {
-      expect(read(page)).toMatch(/class="place-bid-link claim-open"/);
+  it('is imported by exactly the pages that still emit the pill', () => {
+    // The button reset exists so a <button> and an <a> wearing the same class
+    // cannot drift. With the acquisition column retired, TheLeague's auction
+    // view is the last emitter — but the reset stays, because the delegated
+    // `.claim-open` trigger is still the declarative way to open the form and
+    // the next emitter of it will be a <button> again.
+    const emitters = PAGES.filter((page) => read(page).includes('place-bid-link'));
+    expect(emitters.length, 'no page emits .place-bid-link — retire the stylesheet').toBeGreaterThan(0);
+    for (const page of emitters) {
+      expect(read(page)).toContain('styles/fa-claim-button.css');
     }
   });
 });

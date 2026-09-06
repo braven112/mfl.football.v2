@@ -14,12 +14,16 @@
  *   sheet with the Watch action built from the button's data attributes;
  * - warms the list on page load when the page says the viewer is signed in
  *   to THIS league (`signedIn`), so the first paint has the right marks;
- * - adds a Bid / Claim action to the sheet, derived from the row's OWN
- *   acquisition button (`.col-fa-action .place-bid-link`) so the sheet never
- *   re-decides who may claim: a `.claim-open` button opens the waiver claim
- *   form, a `[data-signin-open]` one hands off to sign-in, and an MFL deep
- *   link (auction season) navigates. No button, no action — a rostered
- *   player's sheet is Watch alone.
+ * - adds a Bid / Claim action to the sheet. This used to be derived by reading
+ *   the row's own acquisition button out of the DOM, which worked only while
+ *   the free-agent table HAD such a column. It no longer does — the claim moved
+ *   into the player modal so it can be offered on every page — so the action is
+ *   now built from two independent verdicts, and needs BOTH: the page says the
+ *   player is a free agent IN THIS VIEW (`data-pa-claimable` on the ⋮ button,
+ *   which in a duplicate-player league is a per-conference fact only the page
+ *   knows), and src/utils/player-claim-client.ts says this VIEWER may claim
+ *   him. A signed-out visitor gets the same option wired to sign-in, and the
+ *   post-reload resume reopens the form on that player.
  *
  * Signed-in is the page's SSR decision — an owner logged into the other
  * league is "signed out" here, because MFL's watch list belongs to the
@@ -34,11 +38,28 @@ import '../../styles/player-action-button.css';
 
 interface Props {
   signedIn: boolean;
+  /**
+   * The league's word for an acquisition — 'Claim' (rolling priority) or
+   * 'Bid' (blind bid). Resolved once per page by claimVerb() so the table
+   * header, this sheet and the player modal cannot call it three things.
+   */
+  claimVerb?: 'Bid' | 'Claim';
+  /**
+   * The page renders a SignInModal and wants signed-out visitors offered the
+   * claim through it, rather than nothing at all.
+   */
+  promptSignIn?: boolean;
 }
-const { signedIn } = Astro.props;
+const { signedIn, claimVerb = 'Claim', promptSignIn = false } = Astro.props;
 ---
 
-<div id="watch-list-bridge" data-signed-in={signedIn ? 'true' : 'false'} hidden></div>
+<div
+  id="watch-list-bridge"
+  data-signed-in={signedIn ? 'true' : 'false'}
+  data-claim-verb={claimVerb}
+  data-prompt-signin={promptSignIn ? 'true' : 'false'}
+  hidden
+></div>
 <PlayerActionModal />
 
 <script>
@@ -48,6 +69,8 @@ const { signedIn } = Astro.props;
   import {
     buildWatchAction, openPlayerActionModal, requestSignIn, type PlayerActionSpec,
   } from '../../utils/player-actions';
+  import { loadClaimContext, offerFor } from '../../utils/player-claim-client';
+  import { rememberPendingClaim } from '../../utils/claim-resume';
 
   declare global {
     interface Window {
@@ -65,8 +88,12 @@ const { signedIn } = Astro.props;
     }
   }
 
-  const pageSignedIn = () =>
-    document.getElementById('watch-list-bridge')?.dataset.signedIn === 'true';
+  /** Every page verdict is re-read off the DOM per call, never captured: a
+   *  single module instance survives a ClientRouter navigation. */
+  const bridgeEl = () => document.getElementById('watch-list-bridge');
+  const pageSignedIn = () => bridgeEl()?.dataset.signedIn === 'true';
+  const pageVerb = () => (bridgeEl()?.dataset.claimVerb === 'Bid' ? 'Bid' : 'Claim');
+  const pagePromptsSignIn = () => bridgeEl()?.dataset.promptSignin === 'true';
 
   window.watchListStore = {
     getWatchedIds, isWatched, loadWatchList, toggleWatch, getWatchListAuth, onWatchListChange,
@@ -77,46 +104,70 @@ const { signedIn } = Astro.props;
   let delegationBound = false;
 
   /**
-   * The acquisition action for a row, or null when the row offers none.
-   * Reads the button the page already rendered rather than the page's
-   * claim rules — the page is the authority on who may claim what.
+   * The acquisition action for a player, or null when there is none to offer.
+   *
+   * Two gates, and both must pass. The page's `data-pa-claimable` is the only
+   * thing that knows whether he is a free agent IN THE VIEW being browsed;
+   * the claim context is the only thing that knows whether THIS viewer has a
+   * franchise here and a roster to drop from. Either one alone has shipped a
+   * button that 400s.
    */
-  const acquireButtonFor = (playerId: string) =>
-    document.querySelector<HTMLElement>(
-      `#player-table-body tr[data-player-id="${CSS.escape(playerId)}"] .col-fa-action .place-bid-link`,
-    );
+  function buildAcquireAction(player: {
+    id: string; name: string; position: string | null; nflTeam: string | null;
+    espnId: string | null; headshot: string | null;
+  }, claimable: boolean, acqUrl: string, acqLabel: string): PlayerActionSpec | null {
+    if (!claimable) return null;
+    const verb = pageVerb();
 
-  function buildAcquireAction(playerId: string): PlayerActionSpec | null {
-    const el = acquireButtonFor(playerId);
-    if (!el) return null;
-    const label = (el.textContent || '').replace(/[↗\u2197]/g, '').trim() || 'Bid';
-    // "Claim this player" / "Bid on this player" — the page's own verb.
-    const verbLabel = /^claim$/i.test(label) ? 'Claim this player' : `${label} on this player`;
-    const isClaim = el.classList.contains('claim-open');
-    const isSignIn = el.hasAttribute('data-signin-open');
-    const isLink = !!el.getAttribute('href');
-    if (!isClaim && !isSignIn && !isLink) return null;
+    // MFL's own flow, when the page says that is the intended path — the
+    // offseason auction's per-player Place Bid page, or a visitor we can offer
+    // neither an in-place form nor a sign-in. Checked FIRST because it is the
+    // page overriding the default, not a fallback: during auction season an
+    // owner who could otherwise bid in place must still go to MFL.
+    if (acqUrl) {
+      return {
+        id: 'acquire',
+        label: `${acqLabel || verb} on MyFantasyLeague`,
+        desc: 'Opens MFL in a new tab',
+        icon: 'icon-gavel',
+        closeFirst: true,
+        run: async () => {
+          window.open(acqUrl, '_blank', 'noopener');
+          return { ok: true };
+        },
+      };
+    }
+
+    if (!pageSignedIn()) {
+      // Same option, wired to sign-in. The player is parked so the reload
+      // lands back on his claim form rather than on 600 anonymous rows.
+      if (!pagePromptsSignIn()) return null;
+      return {
+        id: 'acquire',
+        label: `Sign in to ${verb.toLowerCase()}`,
+        desc: 'Sign in with MFL and we will bring you back here',
+        icon: 'icon-gavel',
+        closeFirst: true,
+        run: async () => {
+          rememberPendingClaim(player);
+          requestSignIn();
+          return { ok: true };
+        },
+      };
+    }
+
+    const offer = offerFor(player.id);
+    if (!offer) return null;
     return {
       id: 'acquire',
-      label: isLink ? `${label} on MyFantasyLeague` : verbLabel,
-      desc: isClaim
-        ? 'Opens the claim form — you choose the drop and confirm there'
-        : isSignIn
-          ? 'Sign in to file a claim'
-          : 'Opens MFL in a new tab',
+      label: `${offer.verb} this player`,
+      desc: offer.verb === 'Bid'
+        ? 'Opens the bid form — you choose the amount and the drop there'
+        : 'Opens the claim form — you choose the drop and confirm there',
       icon: 'icon-gavel',
       closeFirst: true,
-      // Click the row's button as it exists NOW, not the one captured when
-      // the sheet opened: a Watch toggle re-renders every row, and a captured
-      // node is detached by the time this runs. Clicking the live button also
-      // keeps each branch on the page's own path — WaiverClaimModal's
-      // delegated `.claim-open` listener, SignInModal's `[data-signin-open]`
-      // listener (which parks the player for the post-login claim resume),
-      // or the anchor's own navigation.
       run: async () => {
-        const live = acquireButtonFor(playerId);
-        if (live) live.click();
-        else if (isSignIn) requestSignIn();
+        window.openWaiverClaim?.(player);
         return { ok: true };
       },
     };
@@ -139,10 +190,17 @@ const { signedIn } = Astro.props;
       franchiseId: d.paFranchise || null,
       subText: d.paSub || null,
     };
+    const claimable = d.paClaimable === 'true';
     const opened = openPlayerActionModal({
       player,
       actions: () => {
-        const acquire = buildAcquireAction(id);
+        const acquire = buildAcquireAction(
+          { id, name: player.name, position: player.position, nflTeam: player.nflTeam,
+            espnId: player.espnId, headshot: player.headshot },
+          claimable,
+          d.paAcqUrl || '',
+          d.paAcqLabel || '',
+        );
         const watch = buildWatchAction(id, { signedIn: pageSignedIn() && getWatchListAuth() !== 'signed-out' });
         return acquire ? [acquire, watch] : [watch];
       },
@@ -151,8 +209,16 @@ const { signedIn } = Astro.props;
   }
 
   function init() {
-    if (!document.getElementById('watch-list-bridge')) return;
-    if (pageSignedIn()) void loadWatchList();
+    if (!bridgeEl()) return;
+    if (pageSignedIn()) {
+      void loadWatchList();
+      // Warmed here rather than on first sheet open: this component only ships
+      // on the free-agent pages, where the acquisition IS the point, and
+      // `actions()` is built synchronously when the sheet opens — an unresolved
+      // context would render the sheet without its Claim option and never
+      // revisit it.
+      void loadClaimContext();
+    }
     if (!delegationBound) {
       delegationBound = true;
       document.addEventListener('click', onDocumentClick);
