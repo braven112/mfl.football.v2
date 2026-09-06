@@ -141,16 +141,25 @@ export class MFLMatchupApiClient {
    * Make API request
    */
   private async makeRequest<T>(url: string): Promise<T> {
-    const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
-    };
-
-    // Add user ID cookie if available
-    if (this.config.mflUserId) {
-      headers['Cookie'] = `MFL_USER_ID=${this.config.mflUserId}`;
-    }
-
-    const response = await fetch(url, { headers, signal: AbortSignal.timeout(8000) });
+    // An authenticated read MUST go through mflFetch. `baseUrl` defaults to
+    // api.myfantasyleague.com, which always 302s to www##.myfantasyleague.com,
+    // and undici drops the Cookie header on that cross-origin hop — MFL then
+    // answers `API requires a logged in user` with HTTP 200, so `response.ok`
+    // is true and the payload just parses as empty. mflFetch re-attaches the
+    // cookie on every hop. (timeoutMs is per hop; 8000 preserves the timeout
+    // this call site has always used.)
+    const response = this.config.mflUserId
+      ? await mflFetch({
+          url,
+          method: 'GET',
+          mflUserCookie: this.config.mflUserId,
+          timeoutMs: 8000,
+        })
+      : // No cookie to preserve — an anonymous read can follow redirects normally.
+        await fetch(url, {
+          headers: { 'Content-Type': 'application/json' },
+          signal: AbortSignal.timeout(8000),
+        });
 
     if (!response.ok) {
       throw new Error(`MFL API error: ${response.status} ${response.statusText}`);

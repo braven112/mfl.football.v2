@@ -127,6 +127,46 @@
 
 ---
 
+## 2026-09-05 - `redirect: 'manual'` Is The Fix, So The Guard Must Exempt The Mechanism And Not A List Of Filenames
+
+**Context:** widening `tests/mfl-cookie-redirect-guard.test.ts` to follow a
+Cookie into a `headers` variable (the gap the 2026-09-04 entry below describes)
+and fixing `MFLMatchupApiClient#makeRequest`. The widened guard immediately
+flagged a file that was not a bug.
+
+**The finding:** `scripts/probe-commish-cookie.mjs` (#965) sets `headers.Cookie`
+and calls a bare `fetch`. By the letter of the rule that is the exact shape this
+guard exists to catch. It is nevertheless correct code: its `probe()` is a
+hand-rolled hop loop with `redirect: 'manual'` and a full cookie **jar**, which
+it needs because its whole purpose is to discover *which* cookies MFL issues —
+something `mflFetch`'s two-cookie signature cannot express.
+
+**The mechanism, which is the part worth remembering:** undici strips the Cookie
+only on a redirect it follows **itself**. With `redirect: 'manual'` there is no
+automatic hop; fetch hands the 3xx back and the caller re-attaches the cookie.
+That is not a workaround — it is precisely what `src/utils/mfl-fetch.ts` and
+`scripts/lib/mfl-api.mjs` do internally. So "bare `fetch` + Cookie" is not the
+bug. "**Cookie on a redirect someone else follows for you**" is the bug.
+
+**The lesson:** the guard had exempted `mfl-fetch.ts` and `lib/mfl-api.mjs` **by
+path**. A path allowlist encodes *which files* were correct on the day it was
+written, so it must be edited every time someone writes another correct walker —
+and until it is, the guard cries wolf on the one shape it should be endorsing. A
+guard that flags correct code teaches people to add exemptions, which is how a
+baseline rots. The filter is now `isManualRedirect()`: exempt the mechanism, and
+the allowlist stops needing maintenance. Generalizes to any guard whose
+exemption list is filenames — ask what property those files share, and test for
+that instead.
+
+**Also from this branch:** `createPreWriteBackup` wrote its backup file straight
+from the response. An MFL error payload parses cleanly at HTTP 200, so it wrote
+an EMPTY file, returned a path, and reported success — and `restoreFromBackup`
+already rejected empty files, so the emptiness surfaced only at ROLLBACK time,
+the one moment it cannot be fixed. Both ends now share one `backupPlayers()`
+admission check. **A producer's validity check must be the consumer's own check,
+or it moves the failure instead of fixing it** — and a file existing on disk is
+not evidence that it contains anything.
+
 ## 2026-09-04 - The Cookie Guard Only Sees Cookies It Can Read In The Call
 
 **Context:** emptying the last two entries from `KNOWN_UNFIXED` in

@@ -35,6 +35,22 @@
  * warning and carried on, so a dead feature looked like a config nag. That is
  * the real lesson of this guard: the bug does not announce itself, it degrades
  * into a plausible-looking warning.
+ *
+ * A FIFTH instance then shipped anyway, and this test looked straight at it and
+ * said nothing (2026-09-04). `MFLMatchupApiClient#makeRequest` — the shared read
+ * path behind getStartingLineups / getPlayers / getInjuryReport / getLeagueInfo
+ * / getProjectedScores / getSchedule — assigned `headers['Cookie']` into a
+ * variable and then called `fetch(url, { headers, signal })`. The guard only
+ * matched `Cookie:` inside the `fetch(...)` argument TEXT, and that text is
+ * `(url, { headers, signal })`: no `Cookie` substring, no match. Every call site
+ * that builds its headers in a variable evaded the guard, which is most of the
+ * shapes a reviewer would actually write. Detection now follows the variable
+ * (`cookieHeaderVars` + `carriesCookieVar`), not just the literal.
+ *
+ * Two things made that one worse than latent: `baseUrl` defaults to
+ * `api.myfantasyleague.com` whenever `MFL_HOST` is unset, and two OTHER methods
+ * in the same file already routed through `mflFetch` with a comment naming this
+ * exact redirect — so the file documented the bug it was shipping.
  */
 import { describe, it, expect } from 'vitest';
 import fs from 'node:fs';
@@ -67,6 +83,10 @@ const ROOTS = [SRC, SCRIPTS];
  *
  * This list may only SHRINK. Same idiom as tests/fixtures/typecheck-baseline.json:
  * fixing one and leaving it listed fails, so the baseline cannot rot.
+ *
+ * Widening the detection to variable-built headers (2026-09-04) added NOTHING
+ * here: `makeRequest` was the only offender it found, and it was fixed rather
+ * than baselined. This list is unchanged from before that change.
  */
 const KNOWN_UNFIXED: string[] = [];
 
@@ -76,6 +96,135 @@ const walk = (dir: string): string[] =>
     if (e.isDirectory()) return e.name === 'node_modules' ? [] : walk(full);
     return /\.(ts|astro|mjs)$/.test(e.name) ? [full] : [];
   });
+
+/**
+ * A `Cookie` object KEY — quoted or not, any case.
+ *
+ * `/Cookie\s*:/`, what this guard used until 2026-09-05, missed two shapes that
+ * are both ordinary JavaScript and both real offenders:
+ *
+ *   - `{ "Cookie": c }` — after `Cookie` comes a quote, not whitespace. This
+ *     one had been hiding `validateMFLSession` in `src/utils/mfl-login.ts` for
+ *     the whole life of this guard.
+ *   - `{ cookie: c }` — HTTP header names are case-insensitive and undici
+ *     normalizes them, so a lowercase key authenticates exactly as well and
+ *     gets stripped exactly as readily.
+ *
+ * The leading `(?:^|[^A-Za-z0-9_$])` is what keeps that case-insensitivity
+ * affordable: without it, `[Cc]ookie:` also matches the tail of
+ * `mflUserCookie:` — mflFetch's own option name — and the guard would flag
+ * every correct call site in the repo.
+ */
+const COOKIE_KEY = /(?:^|[^A-Za-z0-9_$])['"`]?[Cc]ookie['"`]?\s*:/;
+
+/** Read the balanced `(...)` or `{...}` starting at `start`, cheaply. */
+function balanced(source: string, start: number, open: '(' | '{'): string {
+  const close = open === '(' ? ')' : '}';
+  let depth = 0;
+  for (let i = start; i < source.length && i < start + 4000; i++) {
+    if (source[i] === open) depth++;
+    else if (source[i] === close) {
+      depth--;
+      if (depth === 0) return source.slice(start, i + 1);
+    }
+  }
+  return source.slice(start, start + 4000);
+}
+
+/**
+ * Identifiers that hold a Cookie header somewhere in this file.
+ *
+ * The original guard only looked for `Cookie:` INSIDE the `fetch(...)` argument
+ * text, so `mfl-matchup-api.ts#makeRequest` — which assigned
+ * `headers['Cookie']` into a variable one line above and then called
+ * `fetch(url, { headers, signal })` — read as clean. It was not: it was the
+ * fifth shipped instance of this bug. Any call site that builds its headers in
+ * a variable evaded the guard entirely, so the variable is now tracked to the
+ * `fetch` that consumes it.
+ */
+function cookieHeaderVars(source: string): Set<string> {
+  const names = new Set<string>();
+
+  // headers['Cookie'] = … / headers.Cookie = … / headers.set|append('Cookie', …)
+  // `append` counts: on a Headers object it sets the header just as `set` does.
+  // Case-insensitive throughout, for the reason COOKIE_KEY gives.
+  const assign =
+    /([A-Za-z_$][\w$]*)\s*(?:\[\s*['"`][Cc]ookie['"`]\s*\]\s*=|\.\s*[Cc]ookie\s*=|\.\s*(?:set|append)\s*\(\s*['"`][Cc]ookie['"`])/g;
+  let m: RegExpExecArray | null;
+  while ((m = assign.exec(source))) names.add(m[1]);
+
+  // const headers = { ..., Cookie: ... } — including a ternary/typed declaration.
+  const decl = /(?:const|let|var)\s+([A-Za-z_$][\w$]*)\b[^=;\n]*=\s*(?=[^;\n]*\{)/g;
+  while ((m = decl.exec(source))) {
+    const brace = source.indexOf('{', m.index + m[0].length - 1);
+    if (brace === -1) continue;
+    if (COOKIE_KEY.test(balanced(source, brace, '{'))) names.add(m[1]);
+  }
+
+  return names;
+}
+
+/**
+ * `redirect: 'manual'` — the shape of the FIX, not the bug.
+ *
+ * Undici strips the Cookie only on a redirect it follows ITSELF. With manual
+ * redirects fetch hands the 3xx back and the caller re-attaches the cookie on
+ * the next hop, which is precisely what `mfl-fetch.ts` and `lib/mfl-api.mjs`
+ * do — they are exempted by path above, but the path list is the wrong
+ * instrument: it has to be edited every time someone writes a correct manual
+ * walker, and until it is, the guard cries wolf on the one shape it should be
+ * endorsing. `scripts/probe-commish-cookie.mjs` is exactly that — a hand-rolled
+ * hop loop with a full cookie JAR, which it needs because it exists to discover
+ * which cookies MFL issues, something mflFetch's two-cookie signature cannot
+ * express. Exempt the mechanism, not the filename.
+ *
+ * This does NOT excuse a manual-redirect call that then ignores the 3xx; that
+ * is a different bug, and not one about stripped cookies.
+ */
+function isManualRedirect(call: string): boolean {
+  // Must be a TOP-LEVEL key of the init object — depth 1 inside `fetch( … )`.
+  //
+  // A loose `.test(call)` is not symmetric with the detectors above, and the
+  // asymmetry is the whole point: loose matching on a DETECTOR over-flags,
+  // which is safe, while loose matching on an EXEMPTION under-flags, which
+  // ships the bug. `fetch(url, { headers: { Cookie: c }, body:
+  // JSON.stringify({ redirect: 'manual' }) })` is an auto-following offender
+  // that a whole-text scan would wave straight through.
+  const re = /redirect\s*:\s*['"`]manual['"`]/g;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(call))) {
+    let depth = 0;
+    for (let i = 0; i < m.index; i++) {
+      if (call[i] === '{') depth++;
+      else if (call[i] === '}') depth--;
+    }
+    if (depth === 1) return true;
+  }
+  return false;
+}
+
+/**
+ * Does this `fetch(...)` argument list reference a Cookie-carrying variable?
+ *
+ * KNOWN LIMIT, measured not guessed: this follows ONE hop of aliasing. A cookie
+ * spread through a second variable — `const base = { Cookie: c }; const headers
+ * = { ...base }; fetch(u, { headers })` — is still missed, because `headers`'
+ * own initializer has no `Cookie` key in it. Chasing that needs a real parser
+ * rather than a regex, and the shape has never appeared in this repo. If it
+ * ever does, this is the line that let it through.
+ */
+function carriesCookieVar(call: string, vars: Set<string>): boolean {
+  for (const name of vars) {
+    // `$` is a legal JS identifier character AND a regex anchor, and
+    // cookieHeaderVars captures it (`[A-Za-z_$][\w$]*`). Interpolated raw, a
+    // variable named `$headers` compiles to `…$headers\b` — an anchor followed
+    // by literal text, which matches nothing. That is a false negative: the
+    // guard would go quiet on a real offender. Escape before interpolating.
+    const literal = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    if (new RegExp(`(^|[^A-Za-z0-9_$.])${literal}\\b`).test(call)) return true;
+  }
+  return false;
+}
 
 /** Every `fetch(` call that is not `mflFetch(`, with its argument list. */
 function bareFetchCalls(source: string): string[] {
@@ -107,9 +256,13 @@ describe('MFL authenticated reads must survive the api → www49 redirect', () =
     .filter((f) => !f.endsWith(path.join('lib', 'mfl-api.mjs')))
     .flatMap((file) => {
       const source = fs.readFileSync(file, 'utf-8');
-      if (!source.includes('Cookie')) return [];
+      // Case-insensitive: a file that only ever writes `cookie:` is exactly
+      // as exposed, and this prescreen used to skip it entirely.
+      if (!/cookie/i.test(source)) return [];
+      const vars = cookieHeaderVars(source);
       return bareFetchCalls(source)
-        .filter((call) => /Cookie\s*:/.test(call))
+        .filter((call) => COOKIE_KEY.test(call) || carriesCookieVar(call, vars))
+        .filter((call) => !isManualRedirect(call))
         .map(() => path.relative(process.cwd(), file).split(path.sep).join('/'));
     });
 
@@ -141,7 +294,7 @@ describe('MFL authenticated reads must survive the api → www49 redirect', () =
     expect(source).toContain('TYPE=calendar');
     expect(source).toContain('TYPE=pendingWaivers');
     for (const call of bareFetchCalls(source)) {
-      expect(/Cookie\s*:/.test(call), `bare fetch() with a Cookie header: ${call.slice(0, 120)}`).toBe(false);
+      expect(COOKIE_KEY.test(call), `bare fetch() with a Cookie header: ${call.slice(0, 120)}`).toBe(false);
     }
   });
 });

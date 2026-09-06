@@ -10,6 +10,7 @@
 import { readFileSync, writeFileSync, mkdirSync, existsSync, readdirSync, unlinkSync } from 'node:fs';
 import { join, basename } from 'node:path';
 import { mflFetch } from './mfl-fetch';
+import { asArray } from './mfl-normalize';
 import { LEAGUES, DEFAULT_LEAGUE_SLUG, defaultMflWriteHost } from '../config/leagues';
 import { buildMflExportUrl } from './mfl-url';
 
@@ -62,6 +63,25 @@ function getYear(): string {
   return new Date().getFullYear().toString();
 }
 
+/**
+ * The players a salary export/backup actually carries.
+ *
+ * ONE definition, used by both ends: `createPreWriteBackup` decides whether a
+ * file is worth writing, and `restoreFromBackup` decides whether one is worth
+ * reading. If those two disagree, a backup that passes creation can still fail
+ * rollback — which is the failure we are trying to remove, moved rather than
+ * fixed.
+ *
+ * `asArray` covers MFL's single-entry-as-object shape; the `.id` filter drops
+ * MFL's empty-field sentinel (`{ id: "", salary: "" }`), which survives
+ * normalization by design — see the note on asArray.
+ */
+type BackupPlayer = MFLSalaryExport['salaries']['leagueUnit']['player'][number];
+
+function backupPlayers(data: MFLSalaryExport | null | undefined): BackupPlayer[] {
+  return asArray<BackupPlayer>(data?.salaries?.leagueUnit?.player).filter((p) => p?.id);
+}
+
 function ensureBackupDir(): void {
   if (!existsSync(BACKUP_DIR)) {
     mkdirSync(BACKUP_DIR, { recursive: true });
@@ -70,7 +90,11 @@ function ensureBackupDir(): void {
 
 /**
  * Export current salary data from MFL as a pre-write backup.
- * Returns the backup file path on success, null on failure.
+ *
+ * Returns the backup file path on success, null on failure — including when
+ * MFL answers with no salary data, in which case NO file is written. A
+ * returned path therefore means a restorable backup exists, not merely that a
+ * request succeeded.
  */
 export async function createPreWriteBackup(credentials?: MFLCredentials): Promise<string | null> {
   // Must be the SAME credentials that will perform the write. The write path
@@ -97,7 +121,24 @@ export async function createPreWriteBackup(credentials?: MFLCredentials): Promis
       return null;
     }
 
-    const data = await response.json();
+    const data = await response.json() as MFLSalaryExport;
+
+    // A file with no players in it is not a backup. `response.ok` above is not
+    // evidence of content — MFL answers a failed or unauthenticated export with
+    // HTTP 200 and a body that parses cleanly — and `restoreFromBackup` rejects
+    // an empty file with 'No player data found in backup'. So without this
+    // check the emptiness is discovered at ROLLBACK time: the one moment it
+    // cannot be fixed, in front of a commissioner who was told a backup existed.
+    // Deliberately the SAME admission check restore applies, so that a file
+    // which gets written is a file that can be restored.
+    const players = backupPlayers(data);
+    if (players.length === 0) {
+      console.error(
+        '[mfl-writer] MFL returned no salary data — refusing to write an empty backup. ' +
+          'Most likely the export came back unauthenticated; check MFL_USER_ID.',
+      );
+      return null;
+    }
 
     ensureBackupDir();
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
@@ -105,6 +146,7 @@ export async function createPreWriteBackup(credentials?: MFLCredentials): Promis
     const filepath = join(BACKUP_DIR, filename);
 
     writeFileSync(filepath, JSON.stringify(data, null, 2), 'utf-8');
+    console.log(`[mfl-writer] pre-write backup: ${players.length} players → ${filename}`);
     return filepath;
   } catch (error) {
     console.error('Failed to create pre-write backup:', error);
@@ -375,9 +417,10 @@ export async function writeMultipleContractsToMFL(
 export async function restoreFromBackup(backupFilePath: string): Promise<ContractWriteResult> {
   try {
     const data = JSON.parse(readFileSync(backupFilePath, 'utf-8')) as MFLSalaryExport;
-    const players = data.salaries?.leagueUnit?.player;
+    // Same check createPreWriteBackup applies before writing the file.
+    const players = backupPlayers(data);
 
-    if (!players || players.length === 0) {
+    if (players.length === 0) {
       return { success: false, error: 'No player data found in backup', attempts: 0 };
     }
 
