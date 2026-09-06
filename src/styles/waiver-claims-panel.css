@@ -76,9 +76,46 @@ text-decoration: underline;
   font-size: 0.72rem;
   font-weight: 700;
 }
-.wcp__who { flex: 1; min-width: 0; display: flex; flex-direction: column; }
-.wcp__name { font-size: 0.9rem; }
-.wcp__meta, .wcp__drop { font-size: 0.72rem; color: var(--content-text-muted, #6b7280); }
+.wcp__who {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  /* Avatar box and gap live here, not on the cell, because the drop line below
+     indents by exactly their sum to sit under the player's name. One source of
+     truth, so the two can never drift apart. */
+  --wcp-avatar: 34px;
+  --wcp-cell-gap: 0.55rem;
+}
+/* The claimed player is a PlayerCell (src/utils/player-cell-html.ts), sized to
+   sit level with the rank badge and the action pills rather than tower over
+   them. Only the size tokens are overridden — the chip, ring and fallback
+   cascade stay whatever the shared pattern says they are.
+   Two classes deep on purpose: `.player-cell--compact` re-declares these same
+   variables inside a media query, and at equal specificity the winner would be
+   whichever stylesheet the bundler happened to emit last. */
+.wcp .wcp__cell {
+  --player-avatar-size: var(--wcp-avatar);
+  --player-name-size: 0.9rem;
+  --player-meta-size: 0.72rem;
+  --player-logo-size: 14px;
+  --player-gap: var(--wcp-cell-gap);
+}
+/* Bid rides inside the name, so it needs its own spacing — the lockup's name
+   element is a plain <strong> with no gap of its own. Priority leagues never
+   render it. */
+.wcp__bid {
+  margin-left: 0.35rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--league-accent, var(--color-primary, #1c497c));
+}
+.wcp__drop {
+  padding-left: calc(var(--wcp-avatar) + var(--wcp-cell-gap));
+  font-size: 0.72rem;
+  color: var(--content-text-muted, #6b7280);
+}
 .wcp__actions { display: flex; gap: 0.35rem; flex: none; }
 .wcp__btn {
   padding: 0.2rem 0.5rem;

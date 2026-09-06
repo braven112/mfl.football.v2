@@ -82,17 +82,30 @@ async function readClaims(year: number, leagueId: string, cookie: string): Promi
   }
 }
 
-/** Attach names so the panel is readable without shipping the player map. */
+/**
+ * Attach names so the panel is readable without shipping the player map.
+ *
+ * The claimed player also carries `addHeadshot` / `addEspnId`, because the
+ * panel renders him with the same PlayerCell lockup the Free Agents rows use
+ * and that lockup needs a photo. Both come from the SAME player map the rows
+ * are built from, so the claim card and the table below it can never disagree
+ * about a player's face. `espnId` here is the map's best-guess id (NFL or
+ * college) — correct for picking a headshot, which is all it is used for.
+ */
 function withNames(claims: FiledWaiverClaim[], year: number) {
   const players = getPlayerMap(year);
   const name = (id: string | null) => (id ? (players.get(id)?.name ?? `Player ${id}`) : null);
   const position = (id: string | null) => (id ? (players.get(id)?.position ?? '') : '');
   const nflTeam = (id: string | null) => (id ? (players.get(id)?.nflTeam ?? '') : '');
+  const headshot = (id: string | null) => (id ? (players.get(id)?.headshot ?? '') : '');
+  const espnId = (id: string | null) => (id ? (players.get(id)?.espnId ?? '') : '');
   return claims.map((c) => ({
     ...c,
     addName: name(c.addPlayerId),
     addPosition: position(c.addPlayerId),
     addNflTeam: nflTeam(c.addPlayerId),
+    addHeadshot: headshot(c.addPlayerId),
+    addEspnId: espnId(c.addPlayerId),
     dropName: name(c.dropPlayerId),
     dropPosition: position(c.dropPlayerId),
     dropNflTeam: nflTeam(c.dropPlayerId),

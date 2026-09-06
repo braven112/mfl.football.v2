@@ -159,7 +159,7 @@ describe('WaiverClaimsPanel — injected-row styles', () => {
   const COMPONENT = 'src/components/shared/WaiverClaimsPanel.astro';
   const PANEL_CSS = 'src/styles/waiver-claims-panel.css';
   /** Classes that only ever exist on markup the client script injects. */
-  const INJECTED = ['wcp__item', 'wcp__rank', 'wcp__who', 'wcp__name', 'wcp__meta', 'wcp__drop', 'wcp__actions', 'wcp__btn'];
+  const INJECTED = ['wcp__item', 'wcp__rank', 'wcp__who', 'wcp__cell', 'wcp__bid', 'wcp__drop', 'wcp__actions', 'wcp__btn'];
   /** In the component's own markup, so scoping them would be fine — but they
    *  live in the same stylesheet, and a missing rule is still a broken control. */
   const STATIC = ['wcp__toggle', 'wcp__head-right'];
@@ -186,6 +186,21 @@ describe('WaiverClaimsPanel — injected-row styles', () => {
     for (const cls of [...INJECTED, ...STATIC]) {
       expect(css, `${PANEL_CSS} has no rule for .${cls}`).toContain(`.${cls}`);
     }
+  });
+
+  it('imports the player-cell stylesheet too — the claim row IS a player cell', () => {
+    // The claimed player is rendered with `buildPlayerCellHTML`, injected via
+    // innerHTML like everything else here. Its rules live in
+    // src/styles/player-cell.css, and a global import is the only thing that
+    // reaches injected markup — so the component owns that import rather than
+    // relying on whichever page happens to have imported it already.
+    const frontmatter = read(COMPONENT).split('---')[1] ?? '';
+    expect(frontmatter, `${COMPONENT} must import styles/player-cell.css`).toContain(
+      'styles/player-cell.css'
+    );
+    expect(read(COMPONENT), `${COMPONENT} must build its claim row with the shared lockup`).toContain(
+      'buildPlayerCellHTML'
+    );
   });
 
   it('colours from the league token, never a literal', () => {
