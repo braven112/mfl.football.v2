@@ -645,8 +645,15 @@ franchises and they publish into the archive the voters page reads, so treat
 them as a demo fixture with a real byline, not as league history. Two things
 keep that honest:
 
-- Every seeded block carries `source: "synthetic"`, and the seeder **refuses to
-  overwrite a block without it** — a real tally is never clobbered by a demo.
+- Every seeded block carries `source: "synthetic"`, and the marker is checked
+  in BOTH directions. The seeder **refuses to overwrite a block without it**, so
+  a real tally is never clobbered by a demo; and the close pass treats a block
+  WITH it as absent rather than as a finished week, so a seeded example can
+  never suppress a real one. That second direction is the one that bites
+  silently: `generate-pecking-order.mjs` skips any week already reading
+  `status: "closed"`, so an unqualified placeholder would have discarded the
+  ballots owners actually cast, skipped the reveal, and left the window pointer
+  uncleared. `tests/owners-poll-pass.test.ts` pins both directions.
 - The tally is not faked. The block is assembled by `buildClosedPollBlock`
   (`scripts/lib/owners-poll-pass.mjs`) — the SAME function the real close pass
   calls, not a copy of it, which is why a field added to a closed poll cannot

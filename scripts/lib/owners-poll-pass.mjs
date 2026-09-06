@@ -130,6 +130,17 @@ export async function openPoll({
 }
 
 /**
+ * Marks a poll block written by scripts/seed-example-owners-poll.mjs — a
+ * worked example whose ballots nobody cast.
+ *
+ * It exists to be checked, not rendered. A seeded block is a PLACEHOLDER, so
+ * the close pass must be able to overwrite it with a real tally; a block
+ * WITHOUT this marker is real ballots and neither the seeder nor anything else
+ * may clobber it.
+ */
+export const SYNTHETIC_POLL_SOURCE = 'synthetic';
+
+/**
  * Assemble the `ownersPoll` block a closed week publishes.
  *
  * Pure — no Redis, no clock, no league lookup — so the close pass and

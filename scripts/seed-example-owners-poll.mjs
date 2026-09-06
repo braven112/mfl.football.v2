@@ -45,12 +45,9 @@ import { fileURLToPath } from 'node:url';
 import { getLeagueBySlug } from '../src/config/leagues-data.mjs';
 import { resolveOwnersPollWindow } from '../src/utils/owners-poll-window.mjs';
 import { normalizeFranchiseId } from '../src/utils/franchise-id.mjs';
-import { buildClosedPollBlock } from './lib/owners-poll-pass.mjs';
+import { buildClosedPollBlock, SYNTHETIC_POLL_SOURCE } from './lib/owners-poll-pass.mjs';
 
 const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-
-/** Marks a block this script wrote. Its absence means "real ballots — hands off". */
-const SYNTHETIC = 'synthetic';
 
 /** Share of the field that votes when --turnout isn't given. */
 const DEFAULT_TURNOUT_RATE = 0.8;
@@ -151,7 +148,7 @@ async function main() {
   const issuePath = path.join(projectRoot, league.dataPath, 'pecking-order', `${opts.year}-${opts.week}.json`);
   const issue = JSON.parse(await fs.readFile(issuePath, 'utf8'));
 
-  if (issue.ownersPoll && issue.ownersPoll.source !== SYNTHETIC) {
+  if (issue.ownersPoll && issue.ownersPoll.source !== SYNTHETIC_POLL_SOURCE) {
     throw new Error(`${path.relative(projectRoot, issuePath)} already carries a REAL poll — refusing to overwrite it.`);
   }
   if (issue.ownersPoll && !opts.force) {
@@ -185,6 +182,14 @@ async function main() {
   // Who showed up. Seeded on the week so the same non-voters don't recur if
   // this is ever run for more than one issue.
   const turnout = opts.turnout ?? Math.round(eligibleFranchiseIds.length * DEFAULT_TURNOUT_RATE);
+  // `--turnout` with no value parses to NaN, and NaN fails every comparison
+  // below silently: the quorum warning does not fire, slice(0, NaN) takes
+  // nothing, and a "0 of 16, no quorum" block lands on the committed issue.
+  if (!Number.isInteger(turnout) || turnout < 1 || turnout > eligibleFranchiseIds.length) {
+    throw new Error(
+      `--turnout must be a whole number from 1 to ${eligibleFranchiseIds.length}, got ${JSON.stringify(opts.turnout)}.`,
+    );
+  }
   if (turnout < poll.quorum) {
     console.warn(`  [warn] ${turnout} ballots is under the ${poll.quorum}-ballot quorum — the example will render the no-quorum state.`);
   }
@@ -236,7 +241,7 @@ async function main() {
     quorum: poll.quorum,
     compositeRankByFid,
   });
-  block.source = SYNTHETIC;
+  block.source = SYNTHETIC_POLL_SOURCE;
 
   issue.ownersPoll = block;
 
