@@ -530,3 +530,67 @@ for an unreadable payload and `[]` only for a genuinely empty one. The panel
 therefore said *could not read* rather than showing an empty list — so the owner
 saw a broken panel, not a vanished claim. That distinction is load-bearing and is
 pinned by test; do not let a future refactor collapse them.
+
+## 2026-09-05 - MFL Serves A Waiver Order To A League That Has None, And It Looks Exactly Like A Real One
+
+**Context:** the Transaction Hub shipped a "Waiver Priority" screen to both
+leagues. It showed the signed-in TheLeague owner `#16`, badged, renumbered,
+with a live timestamp under it. Brandon: *"the league has no waiver priority
+order."* He was right, and nothing in the data said so.
+
+**Insight:** `export?TYPE=league` returns a populated `waiverSortOrder` for
+**every** franchise in **every** league, whether or not the league's waiver
+system consults one. TheLeague is `currentWaiverType: BBID_FCFS` — blind
+bidding, ties broken *first come first served* — so no claim it ever processes
+looks at an order. The 1..16 it serves is the default reverse-franchise-id list
+nobody set and nothing reads.
+
+This is a nastier shape than a missing field. A missing field fails loudly at
+the first `undefined`; this one arrives **well-formed, complete, plausibly
+ordered, and stable across reads**, so every sanity check passes and the number
+renders. It had already survived a live API call, a screenshot, a preview
+deploy and my own review before a human who knew the league rules looked at it.
+
+**The discriminator is `currentWaiverType`, and nothing else in the payload
+carries it.** `readBidRules` already parsed the field for the claim builder
+(`BBID` in the string → `system: 'bbid'`), so the fact was in the codebase the
+whole time — just never consulted by anything that drew a queue.
+`leagueUsesWaiverPriority` (`src/utils/waiver-system.ts`) is now the single
+reader for the display question.
+
+Four things that are load-bearing:
+
+- **Gate on the SETTING, never the slug.** A `slug === 'afl-fantasy'` check is
+  a hardcoded league constant (CLAUDE.md) *and* silently wrong the day a
+  commissioner flips the setting in MFL without touching this repo. The gate
+  reads the feed, so that day it just works.
+- **Refuse at the ROUTE, not only in the UI.** `/api/waiver-order` now 404s for
+  a non-priority league. Hiding the row leaves an endpoint that still hands out
+  the fake number to the next caller — and the route is what makes it look
+  authoritative.
+- **The route's gate reads the BUILD-TIME feed, not the payload it just
+  fetched** — deliberately. That route degrades to a last-known-good order
+  during an MFL blip; a system inferred from a failed read would flip a real
+  priority league to "no order here" for the length of the outage, turning
+  weather into a wrong answer about the league's rules.
+- **Fail closed.** Unknown league, unread feed and blind-bid all answer *no
+  order*. Hiding a real order costs a missing screen; showing a fake one has an
+  owner planning around a queue that does not exist.
+
+**And the footnote was asserting the misconception in prose.** It read
+"Priority breaks ties between equal bids" whenever `system === 'bbid'` — false
+for `BBID_FCFS`, where ties go FCFS and the order is never consulted. It was
+also unreachable once the screen was gated, so it was deleted rather than
+reworded: every caller is now, by construction, a rolling-priority league.
+`WAIVER_PRIORITY_NOTE` is the one copy of the sentence, shared by the live foot
+and the degraded-read foot that #974 added.
+
+**The general lesson, for any MFL field:** "MFL returned a value" and "this
+league uses that value" are different questions, and only the second one
+decides whether it belongs on screen. See also `domains/mfl-api.md`
+2026-09-02 — "MFL answered" is not "MFL stored it". Same family: a confident
+response that means less than it appears to.
+
+Guard: `tests/waiver-priority-league-gate.test.ts`, which also pins that the
+two leagues really do differ in MFL — if that stops being true, the product
+decision changes with it.

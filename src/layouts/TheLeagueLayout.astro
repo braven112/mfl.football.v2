@@ -90,7 +90,7 @@ const currentYear = (year || getLeagueYearForSlug(leagueContext.slug)).toString(
 const league: LeagueSlug =
 	(getLeagueBySlug(leagueContext.slug)?.navSlug as LeagueSlug | undefined) ?? 'theleague';
 // Draft-only best-ball leagues have no trades — management chrome like the
-// trade-alert modal must not render (its links would point cross-league).
+// Transaction Hub must not render (its links would point cross-league).
 const isBestBallLeague = !!getLeagueBySlug(leagueContext.slug)?.bestBall;
 
 // Check for myteam in URL and set cookie if present

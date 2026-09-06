@@ -82,6 +82,9 @@ export function renderWaiverPriorityRows(
  * rather than reword it — every caller of this is, by construction, a
  * rolling-priority league.
  */
+export const WAIVER_PRIORITY_NOTE =
+  'Priority is rolling — win a claim and you drop to the back of the line.';
+
 export function waiverPriorityFootnote(asOf: string, live: boolean): string {
   const when = new Date(asOf);
   const stamp = Number.isNaN(when.getTime())
@@ -92,7 +95,7 @@ export function waiverPriorityFootnote(asOf: string, live: boolean): string {
         hour: 'numeric',
         minute: '2-digit',
       });
-  const note = 'Priority is rolling — win a claim and you drop to the back of the line.';
+  const note = WAIVER_PRIORITY_NOTE;
   return live
     ? `${note} Live from MyFantasyLeague${stamp ? `, ${stamp}` : ''}.`
     : `${note} MyFantasyLeague is not answering — showing the last order we read${stamp ? `, ${stamp}` : ''}.`;

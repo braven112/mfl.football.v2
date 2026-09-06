@@ -155,7 +155,7 @@ describe('buildTradeOfferPayload', () => {
    * up on the way through. It works, but it costs a round trip on every tap
    * and contradicts the bare-path rule the rest of the push senders follow.
    */
-  it('links to the league home (where TradeAlertModal pops) with a per-league collapse tag', () => {
+  it('links to the league home (where the Transaction Hub pops) with a per-league collapse tag', () => {
     const p = buildTradeOfferPayload({ ...base, fromTeamName: 'X' });
     expect(p.url).toBe('/');
     expect(p.tag).toBe('trade-offer-theleague');

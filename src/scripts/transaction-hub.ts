@@ -31,6 +31,11 @@ import {
 } from '../utils/waiver-priority-render';
 import { rankWithinConference } from '../utils/waiver-order';
 
+// THE OLD NAMES ARE DELIBERATE. These two keys predate the Transaction Hub and
+// are NOT renamed with the file: `dismissed` holds the trade ids every owner
+// has already waved away, so renaming it silently re-alerts them all, and
+// `last-check` is also written by TradeBuilder.tsx to force a fresh poll after
+// a trade action — renaming here alone would quietly break that.
 const THM_STORAGE_KEY = 'mfl:trade-alert-dismissed';
 const THM_DEBOUNCE_KEY = 'mfl:trade-alert-last-check';
 const THM_DEBOUNCE_MS = 60_000;
