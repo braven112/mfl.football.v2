@@ -52,7 +52,7 @@ export function describeDaysUntil(daysUntil) {
  * Merge several due reminders into one chat message.
  *
  * @param {object} args
- * @param {Array<{name: string, daysUntil?: number}>} args.items One per event.
+ * @param {Array<{name: string, daysUntil?: number}>} [args.items] One per event.
  * @param {string} [args.lead] Opening line; a default is supplied.
  * @returns {{ headline: string, body: string } | null} null for fewer than two
  *   items — one reminder must keep its own voice, and callers check this

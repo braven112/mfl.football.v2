@@ -222,7 +222,7 @@ describe('the shared trade budget', () => {
       publicBaseUrl: 'https://www.theleague.us',
       env: { GROUPME_SCHEFTER_BOT_ID: 'bot' },
       allowPost: () => ({ ok: true, consume: async () => { consumed += 1; } }),
-      fetcher: async () => ({ status: 202 }),
+      fetcher: vi.fn().mockResolvedValue({ status: 202 }),
     });
     expect(result.posted).toBe(true);
     expect(consumed).toBe(1);
@@ -235,7 +235,7 @@ describe('the shared trade budget', () => {
       publicBaseUrl: 'https://www.theleague.us',
       env: { GROUPME_SCHEFTER_BOT_ID: 'bot' },
       allowPost: () => ({ ok: true, consume: async () => { consumed += 1; } }),
-      fetcher: async () => ({ status: 500 }),
+      fetcher: vi.fn().mockResolvedValue({ status: 500 }),
     });
     expect(result.posted).toBe(false);
     expect(consumed, 'a failed post must not burn a slot').toBe(0);
