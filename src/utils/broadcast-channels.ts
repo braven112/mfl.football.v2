@@ -156,7 +156,12 @@ export function freeToAirOption(country: CountryCode): FreeToAirOption | null {
   const entry = countries[country]?.freeToAir;
   if (!entry?.channel) return null;
   const channel = channelInfo(country, entry.channel);
-  return { name: channel?.name ?? entry.channel, logo: channel?.logo ?? null, note: entry.note ?? '' };
+  const name = channel?.name ?? entry.channel;
+  // The note is the only text on that line, and the mark beside it renders
+  // decorative (`alt=""`) precisely because the note names the channel. A
+  // country declaring `freeToAir` without one would ship an unlabelled logo
+  // and an empty span, so the name stands in rather than nothing.
+  return { name, logo: channel?.logo ?? null, note: entry.note?.trim() || name };
 }
 
 /** Where Sunday Ticket lives in this country — the mark in the window header. */

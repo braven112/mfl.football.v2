@@ -116,12 +116,18 @@ describe('resolveChannel', () => {
     expect(resolveChannel('Netflix', 'GB')?.name).toBe('Netflix');
   });
 
-  it('splits Mexico between FOX, ESPN and TUDN, with Game Pass as the catch-all', () => {
+  it('splits Mexico between FOX and ESPN, with Game Pass as the catch-all', () => {
     expect(resolveChannel('FOX', 'MX')).toMatchObject({ name: 'FOX México', logo: '/assets/tv-logos/fox-mx.png' });
-    expect(resolveChannel('CBS', 'MX')?.name).toBe('TUDN / ViX');
     expect(resolveChannel('NBC', 'MX')?.name).toBe('ESPN México');
     expect(resolveChannel('ESPN', 'MX')?.name).toBe('ESPN México');
     expect(resolveChannel('Peacock', 'MX')?.name).toBe('NFL Game Pass on DAZN');
+    // TUDN and ViX take ONE Sunday game, not the whole CBS package, and which
+    // one is their call — so CBS resolves to the carrier that has them all and
+    // TUDN is named on the free-to-air line instead. Badging five games TUDN
+    // directly above a line saying they carry one free game a week is a lie
+    // the board would tell every Sunday.
+    expect(resolveChannel('CBS', 'MX')?.name).toBe('NFL Game Pass on DAZN');
+    expect(freeToAirOption('MX')?.name).toBe('TUDN / ViX');
   });
 
   it('keeps a global streamer as itself abroad, and sends an unknown TV network to the default carrier', () => {
@@ -168,8 +174,15 @@ describe('freeToAirOption', () => {
     expect(freeToAirOption('GB')).toMatchObject({ name: 'Channel 5', logo: '/assets/tv-logos/channel-5-uk.png' });
     expect(freeToAirOption('AU')?.name).toBe('7mate');
     expect(freeToAirOption('MX')?.name).toBe('TUDN / ViX');
-    for (const code of ['GB', 'AU', 'MX'] as const) {
-      expect(freeToAirOption(code)!.note.length, code).toBeGreaterThan(20);
+    // Derived from the data, not a hardcoded list: a country added to the
+    // registry with a `freeToAir` block is held to the same bar.
+    for (const code of COUNTRY_CODES) {
+      const option = freeToAirOption(code);
+      if (!option) continue;
+      expect(option.name.length, code).toBeGreaterThan(0);
+      // Never empty — the note is the line's only text, and the mark beside
+      // it is decorative, so a missing note falls back to the channel name.
+      expect(option.note.length, code).toBeGreaterThan(0);
     }
   });
 

@@ -36,9 +36,9 @@ Status: BUILT 2026-09-04 on branch `claude/sunday-ticket-matchup-preview-3025b7`
   come from `public/assets/tv-logos/` and get the TEAM-CREST dark-mode
   treatment rather than a white pill: `scripts/measure-tv-logo-contrast.mjs`
   scores each mark on the dark card and writes
-  `src/data/tv-logo-dark-stroke-manifest.json`; a mark with a `logoDark` in the
+  `src/data/tv-logo-stroke-manifest.json`; a mark with a `logoDark` in the
   mapping file (DAZN, YouTube TV — white artwork) SWAPS under `html.dark`, one
-  below the threshold takes the crest ring (`tv-logo-dark-css.ts`, composed
+  below the threshold takes the crest ring (`tv-logo-theme-css.ts`, composed
   into `buildAllTeamIconDarkCss()` so the layout and Storybook agree). The
   RedZone box uses the RedZone logo, and each window header carries the
   country's Sunday Ticket carrier (YouTube TV, DAZN, Kayo, Game Pass).

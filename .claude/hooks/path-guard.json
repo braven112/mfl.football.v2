@@ -122,7 +122,9 @@
         "public/sw.js",
         "src/data/tv-logo-stroke-manifest.json",
         "public/assets/tv-logos/**",
-        "scripts/measure-tv-logo-contrast.mjs"
+        "scripts/measure-tv-logo-contrast.mjs",
+        "data/theleague/broadcast-mappings.json",
+        "src/utils/broadcast-channels.ts"
       ],
       "tests": [
         "tests/design-token-guard.test.ts",
@@ -133,7 +135,8 @@
         "tests/tv-logo-theme-stroke.test.ts",
         "tests/player-modal-owner-strip.test.ts",
         "tests/franchise-band-brand.test.ts",
-        "tests/dark-surface-crest.test.ts"
+        "tests/dark-surface-crest.test.ts",
+        "tests/broadcast-channels.test.ts"
       ]
     },
     {
