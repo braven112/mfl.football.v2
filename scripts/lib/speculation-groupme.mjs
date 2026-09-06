@@ -118,8 +118,12 @@ export function buildSpeculationGroupMeText({ body, postId, publicBaseUrl }) {
  *                                              defaults to process.env
  * @param {typeof fetch} [args.fetcher]       - fetch override for tests
  * @param {boolean} [args.dryRun]             - skip the network call
- * @param {() => boolean} [args.allowPost]     - daily-cap check; override in
- *                                              tests to exercise the send path
+ * @param {() => ({ok: boolean, why?: string, consume?: () => Promise<void>}
+ *                    | Promise<{ok: boolean, why?: string, consume?: () => Promise<void>}>)}
+ *          [args.allowPost] - budget gate. Returns a VERDICT, not a boolean:
+ *          the caller needs the refusal reason for the log and the `consume`
+ *          callback to burn a slot only once the send actually succeeded.
+ *          Override in tests to exercise the send path.
  * @param {(...a:any[])=>void} [args.log]
  * @param {(...a:any[])=>void} [args.warn]
  */

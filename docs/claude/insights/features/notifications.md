@@ -212,3 +212,69 @@ Visit` failure from that morning that had gone entirely unremarked.
 **Scoping note for anyone adding one:** PR checks are deliberately out of
 scope. They already announce themselves on the pull request, and alerting on
 them would bury the one signal that has no other home.
+
+---
+
+## Sep 2026 — the deadline migration, and three ways a channel dies quietly
+
+Deadline reminders became push-first: the chat now carries one only for the
+owners the fan-out could not reach, @-mentions them, and links
+`/<league>/notifications`. Volume falls to zero on its own as owners subscribe,
+so there is no cutover date to schedule and no flag to flip later. The design
+notes live in `scripts/lib/reminder-fallback.mjs` and
+`docs/claude/rules/roger.md`; what follows is what the work *found*.
+
+**A push lane can be dead for months and look perfectly healthy.** Three
+workflows were sending nothing: `lineup-reminders.yml` had no `CRON_SECRET` at
+all, and `schefter-scan.yml` and `schefter-rumor-scan.yml` had it on the wrong
+step or not at all. Every run logged `CRON_SECRET not set — skipping` and
+exited 0. Nobody noticed because the *chat* post still went out and covered for
+it. The 2026-09-06 08:49 PT rumor run is the worked example of what happens
+when the cover is removed: two posts the quality gate scored 8/10, written to
+the feed, `Held: rumor is push-only` AND `CRON_SECRET not set` in the same run,
+delivered to nobody, run green. **A secret belongs on the step that runs the
+script**, and `tests/reminder-push-first.test.ts` now pins it per step by name —
+a whole-file grep calls the wrong-step case green.
+
+**Make "we never asked" and "nobody needed it" different values.** The fallback
+decides who to name from `push-fanout`'s per-franchise `undelivered`. If an
+absent push had returned an empty list, that would have read as "everyone was
+reached" and silently cancelled the league's only remaining notice of a
+deadline. Every early return therefore reports the FULL roster as unreached, so
+a push outage degrades to the redundant broadcast the chat always got.
+Degrading toward a redundant message is correct; degrading toward silence is
+not — and the two are one `?? []` apart.
+
+**A grep-guard is satisfied by the import line.** This bit twice in one branch.
+A workflow guard passed on a *comment* containing `CRON_SECRET`; the
+sender-accounting guard in `tests/groupme-day-plan.test.ts` passed on
+`import { evaluatePingWindow }` after the call had been deleted. Both now match
+an assignment or a call with import lines stripped, and both were verified by
+deleting the real thing and watching them fail. The repo already records this
+class in `docs/claude/rules/league-urls.md`; it recurs because the fix looks
+like it works.
+
+**"In season" is Labor Day + 3, not September.** `month >= 9` put the Sunday
+lineup check in season up to nine days early. On 2026-09-06 — four days before
+the opener — it named every team that had not set a Week 1 lineup: 4 of 16 in
+TheLeague and 17 of 24 in the AFL, for a week nobody could have set one. Use
+`isSeasonWindowOpen`, asked about BOTH candidate years, which answers the
+question without re-deriving the rollover pivot that shipped wrong in five
+files.
+
+**Not every bot post is a nag, and the distinction is worth encoding.** Events
+now declare an `audience`. The default is an obligation on individuals — push
+each owner, name only the unreached. `audience: 'league'` is aimed at the room
+and posts in season too: a trade deadline is the signal to get offers in, which
+is worthless as a private nudge. Throwback Week overrides `announceTouch` to
+`'2d'`, which on a Thursday-anchored NFL week IS the Tuesday that opens it —
+nothing in the code says "Tuesday", so the test asserts the real weekday off the
+resolved dates. The same reasoning kept the rumor mill, trade bait and
+speculation IN the chat: they are not reminders competing with the league's
+chatter, they are the chatter, and they already carry a Trade Builder CTA.
+
+**Count by the field that actually distinguishes things.** I reported the rumor
+mill as idle — "zero posts in 30 days" — after bucketing the feed by `type`.
+Rumor posts carry `type: 'transaction'` with `transactionSubType: 'rumor_mill'`,
+so they were hiding inside the count I called transactions. The real rate was
+3–4 a day. The owner's screenshots, not my query, caught it.

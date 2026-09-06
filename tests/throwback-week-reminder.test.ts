@@ -107,7 +107,7 @@ describe('event id round-trip', () => {
 describe('buildThrowbackReminder copy', () => {
   it('pre-event touches nudge owners to pick an era', () => {
     for (const touch of ['14d', '7d', '2d'] as const) {
-      const r = buildThrowbackReminder(touch, { week: 4, days: touch === '14d' ? 14 : touch === '7d' ? 7 : 2 });
+      const r = buildThrowbackReminder(touch, { week: 4, days: touch === '14d' ? 14 : touch === '7d' ? 7 : 2 })!;
       expect(r).not.toBeNull();
       expect(`${r.headline} ${r.body}`.toLowerCase()).toContain('throwback');
       expect(`${r.headline} ${r.body}`.toLowerCase()).toContain('era');
@@ -119,29 +119,29 @@ describe('buildThrowbackReminder copy', () => {
   });
 
   it('interpolates {days} and {week}', () => {
-    const r = buildThrowbackReminder('14d', { week: 4, days: 14 });
+    const r = buildThrowbackReminder('14d', { week: 4, days: 14 })!;
     expect(r.body).toContain('4');
     expect(`${r.headline} ${r.body}`).toContain('14');
   });
 
   it('day-of announces the feature is live on scoring surfaces', () => {
-    const r = buildThrowbackReminder('dayof', { week: 4, days: 0 });
+    const r = buildThrowbackReminder('dayof', { week: 4, days: 0 })!;
     expect(r.body.toLowerCase()).toContain('live scoring');
     expect(r.body.toLowerCase()).toContain('matchups');
     expect(r.body.toLowerCase()).toContain('lineup');
   });
 
   it('appends the still-on-default count only when known and > 0', () => {
-    const withCount = buildThrowbackReminder('7d', { week: 4, days: 7, defaultCount: 5 });
+    const withCount = buildThrowbackReminder('7d', { week: 4, days: 7, defaultCount: 5 })!;
     expect(withCount.body).toContain('5 teams are still riding');
 
-    const one = buildThrowbackReminder('7d', { week: 4, days: 7, defaultCount: 1 });
+    const one = buildThrowbackReminder('7d', { week: 4, days: 7, defaultCount: 1 })!;
     expect(one.body).toContain('one team is still riding');
 
     // Graceful degradation: no Redis / zero remaining → generic copy.
-    const unknown = buildThrowbackReminder('7d', { week: 4, days: 7, defaultCount: null });
+    const unknown = buildThrowbackReminder('7d', { week: 4, days: 7, defaultCount: null })!;
     expect(unknown.body).not.toContain('still riding');
-    const zero = buildThrowbackReminder('7d', { week: 4, days: 7, defaultCount: 0 });
+    const zero = buildThrowbackReminder('7d', { week: 4, days: 7, defaultCount: 0 })!;
     expect(zero.body).not.toContain('still riding');
   });
 
@@ -152,7 +152,7 @@ describe('buildThrowbackReminder copy', () => {
       pickedCount: 9,
       totalCount: 16,
       defaultCount: 7,
-    });
+    })!;
     // The Tuesday kickoff post goes to the whole room, so it has to say how
     // big the outstanding group is relative to the league — "7 on default"
     // alone reads the same whether that is most of the league or a couple of
@@ -164,25 +164,25 @@ describe('buildThrowbackReminder copy', () => {
   });
 
   it('keeps the tally grammatical at every boundary', () => {
-    const one = buildThrowbackReminder('2d', { week: 4, days: 2, pickedCount: 15, totalCount: 16 });
+    const one = buildThrowbackReminder('2d', { week: 4, days: 2, pickedCount: 15, totalCount: 16 })!;
     expect(one.body).toContain('One still needs to confirm');
 
-    const singlePick = buildThrowbackReminder('2d', { week: 4, days: 2, pickedCount: 1, totalCount: 24 });
+    const singlePick = buildThrowbackReminder('2d', { week: 4, days: 2, pickedCount: 1, totalCount: 24 })!;
     expect(singlePick.body).toContain('One team of 24 has locked an era in');
 
     // Everybody in: say so, rather than trailing off after a number.
-    const all = buildThrowbackReminder('2d', { week: 4, days: 2, pickedCount: 16, totalCount: 16 });
+    const all = buildThrowbackReminder('2d', { week: 4, days: 2, pickedCount: 16, totalCount: 16 })!;
     expect(all.body).toContain('That is everybody');
     expect(all.body).not.toContain('still need');
   });
 
   it('falls back to the older nag when only the default count is known', () => {
-    const r = buildThrowbackReminder('2d', { week: 4, days: 2, defaultCount: 5 });
+    const r = buildThrowbackReminder('2d', { week: 4, days: 2, defaultCount: 5 })!;
     expect(r.body).toContain('5 teams are still riding');
   });
 
   it('degrades to generic copy when Redis gave us nothing', () => {
-    const r = buildThrowbackReminder('2d', { week: 4, days: 2 });
+    const r = buildThrowbackReminder('2d', { week: 4, days: 2 })!;
     expect(r.body).not.toContain('locked an era in');
     expect(r.body).not.toContain('still riding');
   });
@@ -193,17 +193,19 @@ describe('buildThrowbackReminder copy', () => {
       days: 0,
       pickedCount: 9,
       totalCount: 16,
-    });
+    })!;
     expect(r.body).not.toContain('locked an era in');
   });
 
   it('day-of never carries the default-count nag even if passed one', () => {
-    const r = buildThrowbackReminder('dayof', { week: 4, days: 0, defaultCount: 5 });
+    const r = buildThrowbackReminder('dayof', { week: 4, days: 0, defaultCount: 5 })!;
     expect(r.body).not.toContain('still riding');
   });
 
   it('returns null for unknown touch ids', () => {
-    expect(buildThrowbackReminder('30d', { week: 4, days: 30 })).toBeNull();
+    // Deliberately out-of-contract: the cast is the point of the test, which
+    // is that an unknown touch id returns null rather than throwing.
+    expect(buildThrowbackReminder('30d' as '14d', { week: 4, days: 30 })).toBeNull();
   });
 });
 
