@@ -1,0 +1,45 @@
+---
+/**
+ * The Owners' Poll voters page (AFL) — thin route wrapper.
+ *
+ * Public: once a week's ballot closes, every ballot in it is public, so there
+ * is no auth gate here. The issue glob has to live in the route because Vite
+ * requires a literal pattern — the league cannot be interpolated.
+ *
+ * One segment, so it cannot collide with the sibling [year]/[week] permalink.
+ */
+import OwnersPollVotersPage from '../../../components/shared/owners-poll/OwnersPollVotersPage.astro';
+import type { VoterIssue } from '../../../utils/owners-poll-voters';
+import { getLeagueBySlug } from '../../../config/leagues';
+import { getCurrentSeasonYear } from '../../../utils/league-year';
+
+const issueFiles = import.meta.glob<VoterIssue>(
+  '../../../../data/afl-fantasy/pecking-order/*.json',
+  { eager: true, import: 'default' },
+);
+
+const all = Object.entries(issueFiles)
+  .map(([file, data]) => {
+    const m = file.match(/(\d{4})-(\d{1,2})\.json$/);
+    return m ? { year: Number(m[1]), week: Number(m[2]), data } : null;
+  })
+  .filter((x): x is { year: number; week: number; data: VoterIssue } => x !== null);
+
+// Results-shaped page, so the season clock (Labor Day), not the league year.
+// The AFL's own June 1 league-year rollover is the roster clock and is wrong
+// here for the same reason it is wrong on standings.
+const year = getCurrentSeasonYear();
+
+// Fall back to the newest season on disk when the current one hasn't started —
+// an empty page in September would otherwise hide the whole previous season.
+const seasons = Array.from(new Set(all.map((i) => i.year))).sort((a, b) => b - a);
+const shownYear = seasons.includes(year) ? year : (seasons[0] ?? year);
+
+const issues: VoterIssue[] = all
+  .filter((i) => i.year === shownYear)
+  .map((i) => ({ ...i.data, year: i.year, week: i.week }));
+
+const league = getLeagueBySlug('afl-fantasy')!;
+---
+
+<OwnersPollVotersPage league={league} issues={issues} year={shownYear} />

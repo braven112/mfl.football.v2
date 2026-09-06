@@ -3,6 +3,69 @@
 Weekly owner vote that publishes inside The Pecking Order. Plan:
 `docs/plans/owners-poll.md`.
 
+## 2026-09-06 — A test that names one league as "the disabled one" expires
+
+Enabling the AFL broke four assertions across three suites, and none of them
+was a real behaviour change. All four had used the AFL as a stand-in for a
+property it merely happened to have:
+
+- `refuses a league whose poll is disabled` — the AFL was the disabled league;
+- `hides the Owners' Poll categories from a league that does not run it` — same;
+- `returns null for a league that does not run the poll` — same;
+- `refuses a commissioner of ANOTHER league` — the interesting one.
+
+That last was the only one that had been passing for the wrong reason.
+`resolveOwnersPollCaller` checks `?league=` against the session BEFORE it
+checks `ownersPoll.enabled`, but the test sent no `?league=` at all, so the
+request resolved the AFL commissioner's own league and was refused as
+`poll-disabled`. The cross-league guard the test was named for never ran. With
+the AFL enabled that same request became a legitimate AFL commissioner opening
+the AFL's own ballot — correct, and a 200. The test now sends
+`?league=theleague`, which is what every real client sends (BallotBuilder and
+LineupBallotStrip are both handed `leagueParam`), and refuses for the reason it
+always claimed.
+
+The mirror test — "a page never renders a ballot the API would refuse" — had
+the same shape of hole: it fed ONE request to both gates, but the two learn
+which league is being addressed differently (the page from its path, the API
+from `?league=`). Dropping the param does not make the API stricter, it asks it
+a different question.
+
+The lesson generalizes past this feature: a negative case pinned to a specific
+league is only a test for as long as that league stays on the wrong side of the
+flag. Where a genuinely-disabled example is needed now, use Best Ball — it is
+disabled for a reason that cannot expire (draft-only: no lineups, no weekly team
+story to rank), not because nobody has got to it yet.
+
+## 2026-09-06 — The AFL port was config plus two wrappers, because the poll was never TheLeague-shaped
+
+The port moved almost no code: `ownersPoll.enabled: true` plus two thin route
+wrappers and one island on the lineup page. Everything else — Redis keys, the
+open/nag/close passes, the GroupMe day claim, the three push categories, the
+cron — was already per-league and already invoking `--league afl-fantasy`.
+
+That is worth recording because it was a DESIGN choice made months earlier and
+it is invisible in the diff: the poll took `poll:<navSlug>:…` unconditionally
+rather than reusing `scopedKvKey`'s bare-key-for-TheLeague conditional, and it
+put slots/quorum/close in the registry rather than in constants. The reward for
+both showed up here as a port that could not silently write one league's
+ballots into the other's bucket.
+
+The two numbers that DID need thought are the ones the registry made explicit.
+Slots and quorum are not TheLeague's values reused — 10 and 12 re-apply
+TheLeague's *rules* (rank ~45% of the field; quorum at half) to a 24-team
+league. Copying 7/8 across would have ranked under a third of the AFL and set a
+quorum a third of the league could reach alone.
+
+And the AFL's conference split, which is load-bearing nearly everywhere else,
+is deliberately NOT applied here: one 24-team ballot, because the column the
+poll publishes inside already ranks all 24 in one list. A conference-scoped
+consensus beside a league-wide machine ranking would disagree with it about
+which teams are comparable at all. That is asserted in
+`tests/owners-poll-ballot.test.ts` rather than left in prose, because the
+default assumption in this repo — correctly, for the draft pages — is that
+anything AFL-facing must scope to a conference.
+
 ## 2026-09-04 — The ballot has to OPEN with the column, not close before it
 
 The obvious design — tally the ballot, then publish the column with the result

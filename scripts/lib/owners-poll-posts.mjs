@@ -282,7 +282,8 @@ export function buildRevealFeedPost({
     headline: `Owners' Poll, Week ${issue.week}: ${name(top[0].franchiseId)} on top`,
     body: sentences.join(' '),
     // Named franchises only, so the post surfaces on their pages. Never the
-    // whole league — a post tagged with all 16 is noise on every one of them.
+    // whole league — a post tagged with every franchise is noise on every one
+    // of them (16 of them in TheLeague, 24 in the AFL).
     franchiseIds: Array.from(
       new Set([...top.map((r) => r.franchiseId), biggest?.franchiseId, homer?.franchiseId].filter(Boolean)),
     ),

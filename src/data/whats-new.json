@@ -1,5 +1,27 @@
 [
   {
+    "id": "afl-owners-poll",
+    "date": "2026-09-06",
+    "category": "new-page",
+    "icon": "rank",
+    "leagues": [
+      "afl"
+    ],
+    "title": "Twenty-Four Teams. One Ballot. Your Call.",
+    "link": "/pecking-order/ballot",
+    "linkLabel": "Cast your ballot",
+    "summary": "The Owners' Poll comes to the AFL. Every Tuesday The Pecking Order ranks all 24 by the numbers; now you rank your top 10 — your own team included, if you think you belong there — and the room's answer runs in Thursday's column right beside the machine's.",
+    "description": [
+      "For a year now, <a href=\"/pecking-order\">The Pecking Order</a> has told you every Tuesday who the best team in this league is, and every Tuesday somebody in the chat has explained why it's wrong. Fine. Put it on the record. The Owners' Poll opens with the column each Tuesday and closes Thursday at the week's first kickoff, and what comes out of it publishes in that same issue, next to the algorithm, so the week's real story becomes the room versus the machine.",
+      "<strong>Rank your top 10.</strong> Not seven — this is a 24-team league, and ten is what it takes to actually say something about a field this size. Your own team is on the ballot like everybody else's; nobody is stopping you from putting Smokane first, and the Homer Index is going to notice if you do. Tap the teams in the order you rate them, shuffle them until it's right, and change your mind as often as you like until the ballot shuts.",
+      "<strong>One ballot, both conferences.</strong> The AL doesn't get its own poll and neither does the NL. The column already ranks all 24 in one list, and half the fun of this league is arguing whether an American League team that beats up on the American League would survive a month in the National. Now there's a table where that argument settles.",
+      "You'll find the ballot on <a href=\"/lineup\">your lineup page</a> too, sitting at the top of the one page everybody in this league visits anyway — same trip, same deadline, no second errand. Twelve of the 24 have to vote or the column runs the machine's numbers alone and says so, which would be a bleak look for a league that argues this much.",
+      "Ballots stay sealed until the poll closes, then every one of them publishes. There is a <a href=\"/pecking-order/voters\">voters page</a> keeping the receipts — who voted, how often, and how well they actually read the league, because every ballot gets scored against how the next week plays out. Being loudly wrong in Week 2 is now a thing that follows you to Week 15. Want a nudge when the ballot opens or a warning before it shuts? <a href=\"/notifications\">Notifications</a> has both, and they're yours to switch on."
+    ],
+    "image": "afl-owners-poll.webp",
+    "imageAlt": "The Owners' Poll ballot page on the AFL. A card headed \"Rank your top 10 · Week 1\" shows \"9 of 24 ballots in\" and \"Closes Thursday, 4:00 PM PDT\", with numbered slots filled — Ninjas, Balls Deep, Vitside, Titsburgh, Suh girls, Indians — each with its franchise crest, a team-colored accent bar, and up/down/remove controls."
+  },
+  {
     "id": "viewer-clock-everywhere",
     "date": "2026-09-06",
     "category": "enhancement",
@@ -877,28 +899,6 @@
     ],
     "image": "afl-schedule-constraints.webp",
     "imageAlt": "The AFL Schedule Release page. A row of fact tiles reads 204 games, doubleheaders in weeks 1, 2 and 12, 84 of 84 possible division games clear of NFL byes, and a new tile reading 36 of 120 (30%) division games on an NFL bye with the caption 'all 36 forced by the format — the floor, not a miss', then home games 8 to 9. Below it a section headed 'The rules this draw had to satisfy' lists ten numbered cards in priority order, each with a coloured left stripe and a tier label: two THE FORMAT rules, three HARD RULE, three MAXIMISED, one PREFERENCE and one SETTLED EXACTLY.",
-    "excludeFromHero": true,
-    "leagues": [
-      "theleague",
-      "afl"
-    ]
-  },
-  {
-    "id": "player-modals-wear-your-colors",
-    "date": "2026-08-23",
-    "category": "enhancement",
-    "icon": "football",
-    "title": "Your Crest, Not Cleveland's",
-    "summary": "Open a player from your roster and the modal header now wears the franchise that owns him — your colors in the gradient, your crest behind the headshot, instead of a wall of his NFL team's paint. The contract sheet picks up the same header, and on Throwback Week the whole thing goes vintage.",
-    "description": [
-      "The banner across the top of a player modal has always been a nice piece of work — team gradient, ghost wordmark, headshot cut out and floating. It just kept telling you something you already knew. You clicked a name on <a href=\"/rosters\">YOUR roster page</a>, under YOUR crest, on a row that already carries the little NFL logo, and the header answered with a wall of Ravens purple. Sixteen owners, one league, and every modal looked like the NFL app.",
-      "Now the band belongs to the fantasy team. The gradient runs off the franchise's own color and the crest sits behind the cutout as a watermark, so a Pigskins player opens in Pigskins red under the pigskin, and a Midwestside player opens in gold under the MWS ring. The pro team hasn't gone anywhere — the helmet logo and the city are still on the line under the name, and the ghost wordmark behind it all still reads QB RAVENS. Click into <a href=\"/players\">a free agent</a> and nothing changes at all: nobody owns him, so he keeps the NFL colors he's earned.",
-      "Two things here are The League only, because they are The League's furniture. The first is the contract sheet. Tapping the action button on a roster row used to open a plain white card with a small round headshot chip — a different-looking modal for the same player you were just looking at. It now opens with the exact same band, and it stays put at the top while the flow scrolls underneath. The three stat tiles — salary, years, designation — come with it, which matters more than it sounds: the old version hid them on the very step where you pick between Veteran Extension, Move to IR, Cut Player and Trade Player. You were being asked to choose without the three numbers the choice turns on. AFL owners have no contracts to declare, so there is no sheet there to match — the AFL's own action menu keeps the look it has.",
-      "The second is Throwback Week, which only The League runs. On that week the crest and the colors swap to whatever era your team is wearing — the one you picked in Throwback Settings, or the default the commissioner seeded — the same as <a href=\"/live-scoring\">the scoreboard</a> and <a href=\"/lineup\">the lineup faceoffs</a>. Open a player on Week 4 and he's under the 2013 mark in the 2013 red, and nobody had to remember to flip a switch.",
-      "One bit of housekeeping under the hood, and it applies in both leagues. A handful of franchise colors are far too bright to put white type on — Midwestside's gold sits at 1.5:1 — so the gradient anchor gets darkened just far enough to clear the readability floor. And where a team's primary is a flat grey or black, which several are in both leagues, the band reaches for their secondary instead; otherwise three different AFL teams opened to the same near-black header."
-    ],
-    "image": "player-modal-team-colors.webp",
-    "imageAlt": "The contract action modal for Lamar Jackson on the roster page. The header band is a deep-ink-to-red gradient in the Pacific Pigskins' colors with the Pigskins crest watermarked behind his cutout headshot, his name and age pill in white, the Ravens helmet logo beside “Baltimore · QB”, and “Louisville” below. Under the band sit a Step 1 of ? indicator and three stat tiles reading $5.00M salary, 3 years and Standard designation, then a Contract Action list with Veteran Extension, Move to IR and Cut Player.",
     "excludeFromHero": true,
     "leagues": [
       "theleague",

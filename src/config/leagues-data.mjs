@@ -151,13 +151,35 @@ export const LEAGUES = {
      */
     duplicatePlayers: true,
     /**
-     * The Owners' Poll is TheLeague-only for v1. The entry exists disabled so
-     * the shape is present everywhere and shared components always have
-     * something to read — enabling it here is the whole port, apart from
-     * deciding whether the AFL's two conferences want separate ballots
-     * (docs/plans/owners-poll.md, "Open questions").
+     * The Owners' Poll. See docs/plans/owners-poll.md; the shared machinery is
+     * the same as TheLeague's and only these numbers differ.
+     *
+     * ONE 24-team ballot, not two conference-scoped ones. That fork was left
+     * open when the poll shipped, and it is settled the way the column it
+     * publishes inside already is: the AFL Pecking Order ranks all 24
+     * franchises in a single list, so a conference-scoped poll would print a
+     * consensus that disagrees with the machine ranking beside it on which
+     * teams are even comparable. Duplicate players make cross-conference
+     * comparison awkward to argue about, which is the entertainment, not a
+     * defect.
+     *
+     * `slots` is 10, proportional to TheLeague's 7-of-16 rather than copied
+     * from it — 7 of 24 would rank under a third of the field and leave most
+     * of the league tied at zero. It stays well under the field size (the
+     * unranked block is the design; see the plan's "One tension worth
+     * naming").
+     *
+     * `quorum` is 12 — half the field, the same RULE as TheLeague's 8-of-16
+     * rather than the same number. Below it the column runs algorithm-only and
+     * says so.
      */
-    ownersPoll: { enabled: false, slots: 0, quorum: 0, closeWeekday: 4, closeHourPT: 16 },
+    ownersPoll: {
+      enabled: true,
+      slots: 10,
+      quorum: 12,
+      closeWeekday: 4,
+      closeHourPT: 16,
+    },
     features: {
       contracts: false,
       salaryCap: false,
@@ -250,11 +272,11 @@ export const LEAGUES = {
      */
     bestBall: true,
     /**
-     * The Owners' Poll is TheLeague-only for v1. The entry exists disabled so
-     * the shape is present everywhere and shared components always have
-     * something to read — enabling it here is the whole port, apart from
-     * deciding whether the AFL's two conferences want separate ballots
-     * (docs/plans/owners-poll.md, "Open questions").
+     * No Owners' Poll here, and not because nobody got to it: the poll ranks
+     * TEAMS week to week, and a best-ball league has no weekly team story to
+     * rank — no lineups, no in-season management, and it is draft-only
+     * (docs/claude/rules/best-ball.md). The entry exists disabled so the shape
+     * is present everywhere and shared components never branch on undefined.
      */
     ownersPoll: { enabled: false, slots: 0, quorum: 0, closeWeekday: 4, closeHourPT: 16 },
     features: {

@@ -235,20 +235,27 @@ describe('registry config', () => {
     }
   });
 
-  it('runs the poll in TheLeague only for v1', () => {
+  it('runs the poll in the two managed leagues, and not in best ball', () => {
+    // Best Ball is draft-only — no lineups, no weekly team story to rank — so
+    // its entry stays disabled by design, not by omission.
     const enabled = Object.entries(LEAGUES)
       .filter(([, l]) => l.ownersPoll.enabled)
-      .map(([slug]) => slug);
-    expect(enabled).toEqual(['theleague']);
+      .map(([slug]) => slug)
+      .sort();
+    expect(enabled).toEqual(['afl-fantasy', 'theleague']);
   });
 
   it('keeps ballot depth below the field size wherever the poll is enabled', () => {
     // slots >= field size makes "rank your top N" the whole league and the
     // unranked block a contradiction. This is the guard that catches a future
     // league being enabled with a copy-pasted depth.
+    const FIELD_SIZES: Record<string, number> = {
+      theleague: 16,
+      'afl-fantasy': 24,
+    };
     for (const [slug, league] of Object.entries(LEAGUES)) {
       if (!league.ownersPoll.enabled) continue;
-      const fieldSize = league.slug === 'theleague' ? 16 : null;
+      const fieldSize = FIELD_SIZES[league.slug] ?? null;
       expect(league.ownersPoll.slots).toBeGreaterThan(0);
       expect(league.ownersPoll.quorum).toBeGreaterThan(0);
       if (fieldSize) {
@@ -268,5 +275,33 @@ describe('registry config', () => {
       closeWeekday: 4,
       closeHourPT: 16,
     });
+  });
+
+  it('pins the AFL at 10 slots / 12 quorum — scaled to 24, not copied from 16', () => {
+    // The AFL's numbers are TheLeague's RULES re-applied to a 24-team field,
+    // not TheLeague's numbers reused: 10 keeps roughly the same share of the
+    // field ranked (7/16 ≈ 10/24), and 12 is the same "half the field" quorum
+    // that 8-of-16 is. Copying 7/8 across would have ranked under a third of
+    // the AFL and set a quorum a third of the league could hit alone.
+    expect(LEAGUES['afl-fantasy'].ownersPoll).toMatchObject({
+      enabled: true,
+      slots: 10,
+      quorum: 12,
+      closeWeekday: 4,
+      closeHourPT: 16,
+    });
+  });
+
+  it('gives the AFL ONE league-wide ballot, not one per conference', () => {
+    // The AFL is two conferences (AL/NL) with duplicate players, and the
+    // conference split is real everywhere else — the draft pages served every
+    // owner the AL's picks by not scoping. The poll is deliberately NOT
+    // scoped: the column it publishes inside ranks all 24 in one list, so a
+    // conference-scoped consensus would disagree with the machine ranking
+    // printed beside it about which teams are even comparable. If this ever
+    // changes it is a design fork with its own keys and windows, not a config
+    // edit — which is what this assertion is here to make loud.
+    expect(ownersPollBallotsKey(LEAGUES['afl-fantasy'].navSlug, 2026, 5)).toBe('poll:afl:2026-w5');
+    expect(ownersPollCurrentKey(LEAGUES['afl-fantasy'].navSlug)).toBe('poll:afl:current');
   });
 });
