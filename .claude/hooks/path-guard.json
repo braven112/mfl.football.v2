@@ -441,13 +441,22 @@
         "src/config/notification-categories.ts",
         "scripts/lib/ops-alert.mjs",
         "scripts/lib/job-failures.mjs",
-        "scripts/push-job-failures.mjs"
+        "scripts/push-job-failures.mjs",
+        "src/utils/pwa-install.ts",
+        "src/utils/app-badge.ts",
+        "src/utils/app-badge-cache.ts",
+        "src/utils/share-target.ts",
+        "src/pages/api/app-badge.ts",
+        "src/components/shared/pwa/*.astro"
       ],
       "tests": [
         "tests/push-notification-icons.test.ts",
         "tests/push-subscriptions.test.ts",
         "tests/notification-preferences.test.ts",
-        "tests/job-failures.test.ts"
+        "tests/job-failures.test.ts",
+        "tests/pwa-install.test.ts",
+        "tests/app-badge.test.ts",
+        "tests/share-target.test.ts"
       ]
     },
     {
