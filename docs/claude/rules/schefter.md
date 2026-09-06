@@ -474,6 +474,24 @@ chat by the day cap and never sent to a phone either, so a daily job published
 into the feed and reached nobody. It now rides the existing `rumor` category
 rather than adding a toggle of its own.
 
+**Every step that runs a scanner needs `CRON_SECRET`**, including BOTH league
+steps of `schefter-rumor-scan.yml`. The 2026-09-06 08:49 PT run is the worked
+example of what its absence costs, and why the two failures are worse together
+than apart:
+
+```
+[quality-gate] 8/10 ALLOW — Named franchise (Fire Ready Aim), named
+                player (Demond Claiborne), concrete trade assets (2027 3rd)
+Appended to feed: 2 new post(s) (total: 379)
+[push] CRON_SECRET not set — skipping rumor push.
+[groupme] Held: rumor is push-only — it never posts to chat.
+```
+
+Two posts the gate scored 8/10, written to the feed, held from chat AND
+skipped on push — delivered to nobody, with the run still green.
+`tests/reminder-push-first.test.ts` now pins the secret onto every scanner
+step by name.
+
 `tests/groupme-day-plan.test.ts` enforces that every GroupMe sender shows a
 real cap. Note its escape hatch matches a CALL with import lines stripped — a
 bare identifier regex is satisfied by the import statement alone, which let a

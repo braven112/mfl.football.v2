@@ -52,10 +52,23 @@ describe('the push lane is actually wired in CI', () => {
       workflow: '.github/workflows/schefter-scan.yml',
       step: 'node scripts/schefter-scan.mjs',
     },
+    // Both league steps. This workflow was missed on the first pass, and the
+    // 2026-09-06 08:49 PT run shows exactly what that costs: two posts that
+    // scored 8/10 at the quality gate, "Held: rumor is push-only" AND
+    // "CRON_SECRET not set — skipping rumor push" in the same run. Feed-only,
+    // reaching nobody.
+    {
+      workflow: '.github/workflows/schefter-rumor-scan.yml',
+      step: 'node scripts/schefter-rumor-scan.mjs --league theleague',
+    },
+    {
+      workflow: '.github/workflows/schefter-rumor-scan.yml',
+      step: 'node scripts/schefter-rumor-scan.mjs --league afl-fantasy',
+    },
   ];
 
   for (const { workflow, step } of cases) {
-    it(`${workflow} gives CRON_SECRET to the step that runs ${path.basename(step)}`, () => {
+    it(`${workflow} gives CRON_SECRET to the step running \`${step}\``, () => {
       const src = read(workflow);
       const runIndex = src.indexOf(step);
       expect(runIndex, `${workflow} no longer runs ${step}`).toBeGreaterThan(-1);
