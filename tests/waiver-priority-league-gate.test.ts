@@ -16,6 +16,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { readFileSync } from 'fs';
 import { resolve } from 'path';
 import { getWaiverSystem, leagueUsesWaiverPriority } from '../src/utils/waiver-system';
+import { readBidRules } from '../src/utils/waiver-claim';
 import { buildTransactionHubConfig } from '../src/utils/transaction-hub-config';
 
 const ROOT = resolve(__dirname, '..');
@@ -47,6 +48,18 @@ describe('waiver priority is gated on MFL settings', () => {
     expect(getWaiverSystem('best-ball-1', 2026)).toBeNull();
     expect(leagueUsesWaiverPriority('best-ball-1', 2026)).toBe(false);
     expect(leagueUsesWaiverPriority('not-a-league', 2026)).toBe(false);
+  });
+
+  it('a payload with no currentWaiverType is unreadable, NOT priority', () => {
+    // readBidRules looks for 'BBID' in the string, so a league object missing
+    // the field stringifies to '' and reads as priority — failing OPEN into a
+    // fabricated order. getWaiverSystem must not inherit that default.
+    expect(readBidRules({}).system).toBe('priority');
+    expect(readBidRules({ name: 'X' } as any).system).toBe('priority');
+    // …so the module-level answer has to be its own check, not a pass-through.
+    const src = read('src/utils/waiver-system.ts');
+    expect(src).toMatch(/currentWaiverType/);
+    expect(src).toMatch(/if \(!declared\) return null;/);
   });
 
   it('a year we hold no feed for falls back to the newest, not to "priority"', () => {
@@ -209,5 +222,29 @@ describe('/api/waiver-order refuses a league with no priority order', () => {
     if (res.status === 404) {
       expect((await res.json()).usesPriority).not.toBe(false);
     }
+  });
+});
+
+
+/**
+ * The live order is rolling — MFL renumbers it every time a claim is awarded —
+ * so a cache that outlives the page view hands an owner a stale queue position
+ * for as long as they keep browsing. `thmOrder` sits at module scope and the
+ * module survives a ClientRouter navigation, so the reset has to be explicit.
+ */
+describe('the hub does not cache the waiver order across navigations', () => {
+  const script = read('src/scripts/transaction-hub.ts');
+
+  it('drops the cached order on every astro:page-load', () => {
+    const poll = script.slice(script.indexOf('async function thmPoll'));
+    const body = poll.slice(0, poll.indexOf('\n}'));
+    expect(body).toMatch(/thmOrder = null/);
+    expect(body).toMatch(/thmOrderError = null/);
+    // Before the 60s debounce can return early, or the reset never runs.
+    expect(body.indexOf('thmOrder = null')).toBeLessThan(body.indexOf('THM_DEBOUNCE_MS'));
+  });
+
+  it('and thmPoll is what astro:page-load calls', () => {
+    expect(script).toMatch(/addEventListener\('astro:page-load', thmPoll\)/);
   });
 });

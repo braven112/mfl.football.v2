@@ -571,8 +571,10 @@ function thmRenderOrderView() {
   }
 }
 
-/** Fetched once per page view, not once per open — the order only moves when
- *  waivers process, so re-reading it on every toggle buys nothing. */
+/** Fetched once per page view — not once per open (an owner may toggle the
+ *  screen half a dozen times) and not once per SESSION (the cache is dropped
+ *  in thmPoll on every astro:page-load, or a rolling order goes stale for as
+ *  long as they keep browsing). */
 async function thmLoadOrder(): Promise<void> {
   const cfg = thmConfig();
   // A blind-bid league has no priority order to read. Bailing here (rather
@@ -1527,6 +1529,16 @@ function thmShowMockTrades(trades: any[], sentTrades: any[], mockCommish: boolea
 async function thmPoll() {
   // Always attach handlers so the bell click works (even with no trades)
   thmAttachHandlers();
+
+  // DROP THE CACHED ORDER ON EVERY PAGE LOAD. `thmOrder` lives at module
+  // scope and the module survives a ClientRouter navigation, so "fetched once
+  // per page view" was only true of a full reload — an owner browsing the site
+  // for an hour kept the order read on their first page, which is wrong for a
+  // number that moves every time a claim is awarded. WaiverPriorityModal
+  // resets the same way inside its own per-page-load init. Cheap: nothing is
+  // refetched until the hub is actually opened, and the route caches 60s.
+  thmOrder = null;
+  thmOrderError = null;
 
   // Mock mode: ?mockTrades=N and/or ?mockSent=N and/or ?mockCommish=1 (dev/preview only)
   // Mocks skip debounce so they always work on reload

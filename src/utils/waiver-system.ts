@@ -72,6 +72,18 @@ function readLeaguePayload(leagueSlug: string, year: number): Record<string, any
 export function getWaiverSystem(leagueSlug: string, year: number): WaiverSystem | null {
   const league = readLeaguePayload(leagueSlug, year);
   if (!league) return null;
+
+  // A PRESENT payload is not a READABLE one, and the difference decides the
+  // wrong way by default: `readBidRules` looks for "BBID" in the string, so a
+  // `league` object that is missing `currentWaiverType` stringifies to '' and
+  // comes back as `priority` — failing OPEN, into a fabricated order, which is
+  // the exact outcome this module exists to prevent. `readBidRules` is right
+  // to default that way for the claim builder (a league that does not bid is
+  // the safe assumption there); it is wrong here, so the check lives at this
+  // call site rather than changing a shared helper's contract.
+  const declared = String((league as any).currentWaiverType ?? '').trim();
+  if (!declared) return null;
+
   return readBidRules(league).system;
 }
 
