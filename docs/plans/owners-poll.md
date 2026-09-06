@@ -22,7 +22,7 @@ things this feature produces.
 | Ballot shape | **Rank a top N only**, not the full field [DECIDED] |
 | Home | **Merged into the Tuesday Pecking Order article** [DECIDED] |
 | Turnout levers in scope | **Results locked until you vote**, **GroupMe reminders with deep link**, **voter accountability + accuracy scoring** [DECIDED] |
-| Scope for v1 | **TheLeague only.** AFL is a follow-on [DECIDED] |
+| Scope for v1 | **TheLeague only.** AFL is a follow-on [DECIDED] — shipped 2026-09-06, see *The AFL port* below |
 | Ballot depth | **7 slots** (of TheLeague's 16) [DECIDED] |
 | Non-voter nag | **Count-only** — no @-mentions, no names in chat [DECIDED] |
 
@@ -575,8 +575,54 @@ the build order — the math and storage layer is identical either way.
    question, not a code one, so it needs a league decision before it could be
    built regardless.
 
-Deferred with the AFL, to revisit when it is enabled: the AFL's two conferences
-may want conference-scoped ballots rather than one 24-team poll. That is a
-design fork, not a config value — the draft pages hit the same split, where a
+The AFL question below is now settled.
+
+## The AFL port (2026-09-06)
+
+The deferred question was whether the AFL's two conferences want
+conference-scoped ballots rather than one 24-team poll. **Settled: one
+league-wide ballot.**
+
+The reason is the column, not the league structure. The poll publishes *inside*
+The Pecking Order, and the AFL Pecking Order already ranks all 24 franchises in
+a single list — it has since it shipped. A conference-scoped consensus printed
+beside a league-wide machine ranking would disagree with it about which teams
+are even comparable, which is not the "room vs. the machine" story this feature
+exists to tell; it is just two tables that cannot be read against each other.
+Duplicate players make cross-conference comparison awkward to *argue* about,
+and that argument is the entertainment.
+
+This is the one place the AFL's conference split does NOT apply, so it is
+asserted in `tests/owners-poll-ballot.test.ts` rather than left to be
+rediscovered — the draft pages are the cautionary case, where a
 conference-scoped feature that didn't scope its data source served everyone the
-AL's picks.
+AL's picks. If the call is ever reversed it is a design fork with its own
+windows, keys and tally, not a registry edit.
+
+**What the port actually was.** The machinery was already league-generic: keys
+are `poll:<navSlug>:…`, every pass reads `league.ownersPoll`, and the cron had
+been invoking both leagues since the feature shipped. So:
+
+| Piece | Change |
+|---|---|
+| `src/config/leagues-data.mjs` | `ownersPoll.enabled: true`, `slots: 10`, `quorum: 12` |
+| `src/pages/afl-fantasy/pecking-order/{ballot,voters}.astro` | Thin wrappers — auth gate and issue glob only, same shape as TheLeague's |
+| `src/pages/afl-fantasy/lineup.astro` | The `LineupBallotStrip` island, `client:idle` |
+| `src/data/page-directory.json` | Two entries, or the pages are invisible to search |
+| Notification toggles | None — the three poll categories gate on `ownersPoll.enabled`, so they appeared the moment the flag flipped |
+| Cron, GroupMe, push | None — already per-league, already invoking `--league afl-fantasy` |
+
+**The numbers are the rules re-applied, not the numbers reused.** 10 slots keeps
+roughly the share of the field TheLeague ranks (7/16 ≈ 10/24); copying 7 across
+would have ranked under a third of the AFL and left most of it tied at zero.
+12 is the same "half the field" quorum that 8-of-16 is.
+
+**Three tests had used the AFL as their negative case** — "a league whose poll
+is disabled", "a commissioner of ANOTHER league", "hides the poll categories
+from a league that does not run it". Enabling the AFL turned all three into
+tests of nothing. Two now use Best Ball, which is disabled by design (draft-only:
+no lineups, no weekly team story to rank). The third was really about the
+`?league=` check and had been passing for the wrong reason: with the AFL
+disabled, `poll-disabled` fired before the mismatch check ever ran. It now
+addresses TheLeague explicitly with an AFL commissioner's session, which is the
+guard it always claimed to be.

@@ -138,8 +138,9 @@ describe('openPoll', () => {
   });
 
   it('returns null for a league that does not run the poll', async () => {
+    // Best Ball, not the AFL — the AFL runs the poll as of Sep 2026.
     const block = await openPoll({
-      league: LEAGUES['afl-fantasy'],
+      league: LEAGUES['best-ball-1'],
       year: 2026,
       week: 5,
       eligibleFranchiseIds: FIELD,

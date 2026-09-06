@@ -65,6 +65,10 @@ import { resolveOwnersPollAccess } from '../src/utils/owners-poll-access';
 
 const THELEAGUE = LEAGUES.theleague;
 const AFL = LEAGUES['afl-fantasy'];
+// The league that does NOT run the poll. Best Ball, not the AFL: the AFL ran
+// the poll from Sep 2026, and a test that keeps using it as the disabled case
+// stops testing anything the moment it is enabled.
+const NO_POLL = LEAGUES['best-ball-1'];
 const FIELD = Array.from({ length: 16 }, (_, i) => String(i + 1).padStart(4, '0'));
 const OK = ['0001', '0002', '0003', '0004', '0005', '0006', '0007'];
 
@@ -100,10 +104,13 @@ function sessionCookie(
 const commishCookie = (franchiseId = '0003', leagueId: string = THELEAGUE.id) =>
   sessionCookie(franchiseId, leagueId, 'commissioner');
 
-function postWindow(body: unknown, cookie: string | null) {
+function postWindow(body: unknown, cookie: string | null, leagueParam?: string) {
+  const path = leagueParam
+    ? `/api/owners-poll/window?league=${leagueParam}`
+    : '/api/owners-poll/window';
   return windowPOST(
     makeContext(
-      authed('/api/owners-poll/window', cookie, {
+      authed(path, cookie, {
         method: 'POST',
         body: JSON.stringify(body),
       }),
@@ -176,9 +183,20 @@ describe('resolveOwnersPollCaller', () => {
 
   it('refuses a league whose poll is disabled', () => {
     const result = resolveOwnersPollCaller(
-      authed('/api/owners-poll/ballot', sessionCookie('0003', AFL.id)),
+      authed('/api/owners-poll/ballot', sessionCookie('0003', NO_POLL.id)),
     );
     expect(result).toEqual({ ok: false, reason: 'poll-disabled' });
+  });
+
+  it('admits an AFL owner to the AFL poll', () => {
+    // The AFL runs the poll as of Sep 2026, on its OWN scope. Two leagues both
+    // have a franchise 0001, so the scope is the thing that keeps their
+    // ballots apart.
+    const result = resolveOwnersPollCaller(
+      authed(`/api/owners-poll/ballot?league=${AFL.navSlug}`, sessionCookie('0003', AFL.id)),
+    );
+    expect(result.ok).toBe(true);
+    expect(result.ok && result.caller.scope).toBe('afl');
   });
 });
 
@@ -371,8 +389,10 @@ describe('GET /api/owners-poll/turnout', () => {
   });
 
   it('404s a league that does not run the poll, and an unknown one', async () => {
-    const afl = await turnoutGET(makeContext(req(`/api/owners-poll/turnout?league=${AFL.navSlug}`)));
-    expect(afl.status).toBe(404);
+    const noPoll = await turnoutGET(
+      makeContext(req(`/api/owners-poll/turnout?league=${NO_POLL.navSlug}`)),
+    );
+    expect(noPoll.status).toBe(404);
     const junk = await turnoutGET(makeContext(req('/api/owners-poll/turnout?league=nope')));
     expect(junk.status).toBe(404);
     const missing = await turnoutGET(makeContext(req('/api/owners-poll/turnout')));
@@ -491,6 +511,14 @@ describe('resolveOwnersPollAccess (page gate)', () => {
 
   it('mirrors the API: a page never renders a ballot the API would refuse', () => {
     // Same session, same verdict from both gates — for every case above.
+    //
+    // The two gates learn WHICH league is being addressed differently: the
+    // page from its own path, the API from `?league=`. So the API request has
+    // to carry the param, exactly as every client does (BallotBuilder and
+    // LineupBallotStrip are both handed `leagueParam`). Dropping it does not
+    // make this stricter — it makes the API resolve the session's own league
+    // and admit an AFL owner who was never asking about TheLeague, which is
+    // right for the API and simply not the same question the page answered.
     const cases: Array<[string | null, string]> = [
       [sessionCookie(), 'admit'],
       [null, 'refuse'],
@@ -499,12 +527,25 @@ describe('resolveOwnersPollAccess (page gate)', () => {
       [sessionCookie('0003', 'not-a-league'), 'refuse'],
     ];
     for (const [cookie, expected] of cases) {
-      const request = authed('/theleague/pecking-order/ballot', cookie);
-      const page = resolveOwnersPollAccess(request, url('/theleague/pecking-order/ballot'));
-      const api = resolveOwnersPollCaller(request);
+      const page = resolveOwnersPollAccess(
+        authed('/theleague/pecking-order/ballot', cookie),
+        url('/theleague/pecking-order/ballot'),
+      );
+      const api = resolveOwnersPollCaller(
+        authed(`/api/owners-poll/ballot?league=${THELEAGUE.navSlug}`, cookie),
+      );
       expect(Boolean(page), `page gate for ${expected}`).toBe(expected === 'admit');
       expect(api.ok, `api gate for ${expected}`).toBe(expected === 'admit');
     }
+  });
+
+  it('admits an AFL owner to the AFL ballot page, on the AFL scope', () => {
+    const access = resolveOwnersPollAccess(
+      authed('/afl-fantasy/pecking-order/ballot', sessionCookie('0003', AFL.id)),
+      url('/afl-fantasy/pecking-order/ballot'),
+    );
+    expect(access?.league.slug).toBe('afl-fantasy');
+    expect(access?.league.navSlug).toBe('afl');
   });
 });
 
@@ -536,10 +577,37 @@ describe('POST /api/owners-poll/window (commissioner control)', () => {
   });
 
   it('refuses a commissioner of ANOTHER league', async () => {
-    // isCommissionerOrAdmin is league-scoped; the ?league= check is too.
-    const res = await postWindow({ action: 'open', week: 3 }, commishCookie('0001', AFL.id));
+    // isCommissionerOrAdmin is league-scoped; the ?league= check is too, and
+    // it is the one doing the work here. Since Sep 2026 BOTH leagues run the
+    // poll, so an AFL commissioner is a real commissioner of a real poll —
+    // what makes this a refusal is that the request addresses TheLeague's.
+    const res = await postWindow(
+      { action: 'open', week: 3 },
+      commishCookie('0001', AFL.id),
+      THELEAGUE.navSlug,
+    );
     expect(res.status).toBe(403);
     expect(strings.size).toBe(0);
+  });
+
+  it('lets an AFL commissioner open the AFL ballot, on the AFL scope', async () => {
+    // The port's end-to-end check: the AFL's own numbers come back (10 slots,
+    // quorum 12, 24 eligible voters — one league-wide ballot, not one per
+    // conference), and the window lands under the AFL key, never TheLeague's.
+    const res = await postWindow(
+      { action: 'open', week: 3, hours: 48 },
+      commishCookie('0001', AFL.id),
+      AFL.navSlug,
+    );
+    expect(res.status).toBe(200);
+    expect(await res.json()).toMatchObject({
+      ok: true,
+      status: 'open',
+      quorum: 12,
+      eligibleVoters: 24,
+      window: { week: 3, slots: 10 },
+    });
+    expect([...strings.keys()]).toEqual(['poll:afl:current']);
   });
 
   it('validates the week and the hours rather than writing junk', async () => {
