@@ -98,16 +98,24 @@ const walk = (dir: string): string[] =>
   });
 
 /**
- * A `Cookie` object KEY, quoted or not.
+ * A `Cookie` object KEY — quoted or not, any case.
  *
- * `/Cookie\s*:/` — what this guard used until 2026-09-05 — does not match
- * `{ "Cookie": c }`, because what follows `Cookie` is a quote rather than
- * whitespace. That is a header written the way half of JavaScript writes
- * headers, and it slipped the guard silently in both the inline check and the
- * object-literal scan below. Found by running synthetic offender shapes through
- * the real guard rather than by reading the regex.
+ * `/Cookie\s*:/`, what this guard used until 2026-09-05, missed two shapes that
+ * are both ordinary JavaScript and both real offenders:
+ *
+ *   - `{ "Cookie": c }` — after `Cookie` comes a quote, not whitespace. This
+ *     one had been hiding `validateMFLSession` in `src/utils/mfl-login.ts` for
+ *     the whole life of this guard.
+ *   - `{ cookie: c }` — HTTP header names are case-insensitive and undici
+ *     normalizes them, so a lowercase key authenticates exactly as well and
+ *     gets stripped exactly as readily.
+ *
+ * The leading `(?:^|[^A-Za-z0-9_$])` is what keeps that case-insensitivity
+ * affordable: without it, `[Cc]ookie:` also matches the tail of
+ * `mflUserCookie:` — mflFetch's own option name — and the guard would flag
+ * every correct call site in the repo.
  */
-const COOKIE_KEY = /['"`]?Cookie['"`]?\s*:/;
+const COOKIE_KEY = /(?:^|[^A-Za-z0-9_$])['"`]?[Cc]ookie['"`]?\s*:/;
 
 /** Read the balanced `(...)` or `{...}` starting at `start`, cheaply. */
 function balanced(source: string, start: number, open: '(' | '{'): string {
@@ -137,8 +145,11 @@ function balanced(source: string, start: number, open: '(' | '{'): string {
 function cookieHeaderVars(source: string): Set<string> {
   const names = new Set<string>();
 
-  // headers['Cookie'] = ... / headers.Cookie = ... / headers.set('Cookie', ...)
-  const assign = /([A-Za-z_$][\w$]*)\s*(?:\[\s*['"`]Cookie['"`]\s*\]\s*=|\.\s*Cookie\s*=|\.\s*set\s*\(\s*['"`]Cookie['"`])/g;
+  // headers['Cookie'] = … / headers.Cookie = … / headers.set|append('Cookie', …)
+  // `append` counts: on a Headers object it sets the header just as `set` does.
+  // Case-insensitive throughout, for the reason COOKIE_KEY gives.
+  const assign =
+    /([A-Za-z_$][\w$]*)\s*(?:\[\s*['"`][Cc]ookie['"`]\s*\]\s*=|\.\s*[Cc]ookie\s*=|\.\s*(?:set|append)\s*\(\s*['"`][Cc]ookie['"`])/g;
   let m: RegExpExecArray | null;
   while ((m = assign.exec(source))) names.add(m[1]);
 
@@ -171,7 +182,25 @@ function cookieHeaderVars(source: string): Set<string> {
  * is a different bug, and not one about stripped cookies.
  */
 function isManualRedirect(call: string): boolean {
-  return /redirect\s*:\s*['"`]manual['"`]/.test(call);
+  // Must be a TOP-LEVEL key of the init object — depth 1 inside `fetch( … )`.
+  //
+  // A loose `.test(call)` is not symmetric with the detectors above, and the
+  // asymmetry is the whole point: loose matching on a DETECTOR over-flags,
+  // which is safe, while loose matching on an EXEMPTION under-flags, which
+  // ships the bug. `fetch(url, { headers: { Cookie: c }, body:
+  // JSON.stringify({ redirect: 'manual' }) })` is an auto-following offender
+  // that a whole-text scan would wave straight through.
+  const re = /redirect\s*:\s*['"`]manual['"`]/g;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(call))) {
+    let depth = 0;
+    for (let i = 0; i < m.index; i++) {
+      if (call[i] === '{') depth++;
+      else if (call[i] === '}') depth--;
+    }
+    if (depth === 1) return true;
+  }
+  return false;
 }
 
 /**
@@ -221,7 +250,9 @@ describe('MFL authenticated reads must survive the api → www49 redirect', () =
     .filter((f) => !f.endsWith(path.join('lib', 'mfl-api.mjs')))
     .flatMap((file) => {
       const source = fs.readFileSync(file, 'utf-8');
-      if (!source.includes('Cookie')) return [];
+      // Case-insensitive: a file that only ever writes `cookie:` is exactly
+      // as exposed, and this prescreen used to skip it entirely.
+      if (!/cookie/i.test(source)) return [];
       const vars = cookieHeaderVars(source);
       return bareFetchCalls(source)
         .filter((call) => COOKIE_KEY.test(call) || carriesCookieVar(call, vars))
