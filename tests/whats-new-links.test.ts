@@ -301,12 +301,47 @@ describe('rewriteDescriptionLinks — the render-time half', () => {
  * anywhere, because a missing `<use>` target renders as empty space. Pin it.
  */
 describe('inline sprite icons survive league link rewriting', () => {
-  const withIcons = (entries as unknown as WhatsNewEntry[]).filter((e) =>
+  // ACTIVE + ARCHIVE. An archived entry still renders its article page
+  // (src/utils/whats-new-all-entries.ts merges both), so its icon has exactly
+  // the same way to break — and the 40-entry retention cap guarantees every
+  // entry ends up there eventually.
+  const withIcons = allEntries.filter((e) =>
     e.description?.some((b) => typeof b === 'string' && b.includes('<use')),
   );
 
+  /**
+   * WHAT ACTUALLY PROTECTS THE ICON, which is not what it first looks like.
+   *
+   * The tempting answer is "HREF_PATTERN only matches `<a href>`, so `<use
+   * href>` is never touched". That is true today and it is NOT the guarantee:
+   * broadening the pattern to `<use>` leaves the icon working, because
+   * `isLeagueScopedPath` refuses the path twice over — `/assets/` is a
+   * STATIC_ROOT, and `sprite.svg` has a file extension. Either check alone is
+   * enough.
+   *
+   * So this pins the path rule, not the tag rule. A future change that keeps
+   * `<a>`-only matching but drops `/assets/` from STATIC_ROOTS would still
+   * break every inline icon, and only this assertion would catch it.
+   *
+   * Independent of whether any article currently embeds an icon: the
+   * data-driven checks below assert nothing when none does, and "no article
+   * uses an icon" is a legitimate state rather than a regression.
+   */
+  it('never league-prefixes a static asset path, whatever element carries it', () => {
+    expect(isLeagueScopedPath('/assets/icons/sprite.svg')).toBe(false);
+    expect(isLeagueScopedPath('/assets/icons/sprite.svg#icon-transactions-2')).toBe(false);
+    // …while a real page path still gets prefixed, or the rewriter is broken.
+    expect(isLeagueScopedPath('/players')).toBe(true);
+
+    const block =
+      '<a href="/players">Free Agents</a> and ' +
+      '<svg><use href="/assets/icons/sprite.svg#icon-transactions-2"></use></svg>';
+    const out = rewriteDescriptionLinks(block, (p: string) => `/theleague${p}`);
+    expect(out).toContain('<a href="/theleague/players"');
+    expect(out).toContain('href="/assets/icons/sprite.svg#icon-transactions-2"');
+  });
+
   it('rewrites the prose links but leaves the sprite reference alone', () => {
-    // Not vacuous: if no entry embeds an icon this simply does not apply.
     for (const entry of withIcons) {
       for (const block of entry.description) {
         if (typeof block !== 'string' || !block.includes('<use')) continue;
