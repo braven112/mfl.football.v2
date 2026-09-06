@@ -708,25 +708,36 @@ const tradeBuilderHref = resolveLeaguePath(
   :global(.thm-claim__body) {
     flex: 1;
     min-width: 0;
+    /* Avatar box and gap live here, not on the cell, so the drop line below can
+       indent by exactly their sum and sit under the player's name. */
+    --thm-claim-avatar: 28px;
+    --thm-claim-gap: 0.5rem;
   }
 
-  :global(.thm-claim__add) {
-    display: block;
-    font-size: 0.8125rem;
-    font-weight: 600;
-    color: var(--color-gray-900, #111827);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+  /* The claimed player is a PlayerCell (buildPlayerCellHTML), the same lockup
+     the trade screen and the Free Agents claims panel use. Two classes deep:
+     `.player-cell--compact` re-declares these same variables inside a media
+     query, and at equal specificity the winner would be whichever stylesheet
+     the bundler emitted last. */
+  :global(.thm-claim .thm-claim__cell) {
+    --player-avatar-size: var(--thm-claim-avatar);
+    --player-name-size: 0.8125rem;
+    --player-meta-size: 0.6875rem;
+    --player-logo-size: 12px;
+    --player-gap: var(--thm-claim-gap);
   }
 
-  :global(.thm-claim__meta) {
-    font-weight: 500;
-    color: var(--color-gray-400, #9ca3af);
+  /* The chip must occupy EXACTLY --thm-claim-avatar, because the drop line
+     indents by that number: this repo has no global border-box, the lockup's
+     chip carries a 1px ring, and a DEF chip (`border: 0`) does not — which
+     would indent a defense claim differently from the one beside it. */
+  :global(.thm-claim .thm-claim__cell .player-cell__avatar) {
+    box-sizing: border-box;
   }
 
   :global(.thm-claim__drop) {
     display: block;
+    padding-left: calc(var(--thm-claim-avatar) + var(--thm-claim-gap));
     font-size: 0.6875rem;
     color: var(--color-gray-500, #6b7280);
     margin-top: 0.0625rem;

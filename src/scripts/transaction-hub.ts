@@ -432,13 +432,29 @@ function thmRenderClaimsView() {
   // position shown is the array index, never a re-sort.
   listEl.innerHTML = thmClaims
     .map((c: any, i: number) => {
-      const add = thmEsc(thmClaimName(c.addName) || `Player ${c.addPlayerId}`);
-      const meta = [c.addPosition, c.addNflTeam].filter(Boolean).join(' \u00b7 ');
+      // The claimed player wears the SAME lockup as the trade assets two
+      // screens over, and as the claims panel on Free Agents — one builder, so
+      // the pattern cannot drift between the two places that render the same
+      // claim from the same endpoint. `addHeadshot`/`addEspnId` ride along in
+      // the API's response for exactly this.
+      const cell = buildPlayerCellHTML({
+        name: thmClaimName(c.addName) || `Player ${c.addPlayerId}`,
+        headshot: c.addHeadshot,
+        position: c.addPosition,
+        nflTeam: c.addNflTeam,
+        mflId: c.addPlayerId,
+        espnId: c.addEspnId || undefined,
+        size: 'compact',
+        className: 'thm-claim__cell',
+      });
       const drop = c.dropName
         ? `Dropping ${thmEsc(thmClaimName(c.dropName))}`
         : 'No drop';
       // A bid column only makes sense where the league bids — the claim itself
-      // says so, so this needs no separate league-system flag.
+      // says so, so this needs no separate league-system flag. It stays a
+      // right-hand column of its own here rather than riding inside the name:
+      // the lockup's name element ellipsizes, and a clipped bid is worse than
+      // no layout change at all.
       const bid =
         typeof c.bid === 'number'
           ? `<span class="thm-claim__bid">$${c.bid}</span>`
@@ -446,10 +462,10 @@ function thmRenderClaimsView() {
       return (
         `<li class="thm-claim">` +
         `<span class="thm-claim__pos">${i + 1}</span>` +
-        `<span class="thm-claim__body">` +
-        `<span class="thm-claim__add">${add}${meta ? ` <span class="thm-claim__meta">${thmEsc(meta)}</span>` : ''}</span>` +
+        `<div class="thm-claim__body">` +
+        cell +
         `<span class="thm-claim__drop">${drop}</span>` +
-        `</span>` +
+        `</div>` +
         bid +
         `</li>`
       );

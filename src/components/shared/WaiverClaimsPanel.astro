@@ -146,12 +146,6 @@ const { config } = Astro.props;
           // be a plain "TE · WSH" text line, which read as a different kind of
           // thing than the table it sits above.
           //
-          // The bid rides in `after-name` because the meta row is the player's
-          // identity, not the claim's terms; it is absent entirely in a
-          // priority league.
-          const bid = c.bid != null
-            ? `<span class="wcp__bid">$${Number(c.bid).toLocaleString()}</span>`
-            : '';
           const cell = buildPlayerCellHTML({
             name: c.addName ?? `Player ${c.addPlayerId}`,
             headshot: c.addHeadshot,
@@ -160,9 +154,19 @@ const { config } = Astro.props;
             mflId: c.addPlayerId,
             espnId: c.addEspnId || undefined,
             size: 'compact',
-            afterName: bid,
             className: 'wcp__cell',
           });
+          // The bid belongs on the TERMS line, not inside the lockup. The
+          // lockup's name element is `nowrap; overflow: hidden; text-overflow:
+          // ellipsis` by design — a long name on a phone would ellipsize a
+          // trailing badge clean out of view, and a bid the owner cannot see is
+          // the one number here they most need. Absent entirely in a priority
+          // league.
+          const terms = [
+            c.bid != null ? `<span class="wcp__bid">$${Number(c.bid).toLocaleString()}</span>` : '',
+            dropLabel,
+            `Round ${esc(c.round)}`,
+          ].filter(Boolean).join(' &middot; ');
           // The number is the priority MFL will honour, not a row count — say so
           // rather than leaving an unexplained ordinal. The name is carried as a
           // data attribute because the confirm prompt below must not pick up the
@@ -171,7 +175,7 @@ const { config } = Astro.props;
             <span class="wcp__rank" title="Priority within round ${esc(c.round)}">${i + 1}</span>
             <div class="wcp__who">
               ${cell}
-              <span class="wcp__drop">${dropLabel} &middot; Round ${esc(c.round)}</span>
+              <span class="wcp__drop">${terms}</span>
             </div>
             <span class="wcp__actions">
               <button type="button" class="wcp__btn" data-act="edit">Change drop</button>

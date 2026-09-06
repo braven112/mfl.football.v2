@@ -102,12 +102,15 @@ text-decoration: underline;
   --player-logo-size: 14px;
   --player-gap: var(--wcp-cell-gap);
 }
-/* Bid rides inside the name, so it needs its own spacing — the lockup's name
-   element is a plain <strong> with no gap of its own. Priority leagues never
-   render it. */
+/* The chip must occupy EXACTLY --wcp-avatar, because the drop line indents by
+   that number. This repo has no global border-box, and the lockup's chip carries
+   a 1px team-tinted ring — so its default box is 2px wider than the variable
+   says, and a DEF chip (`border: 0`) is not, which would indent a defense claim
+   differently from the player claim beside it. */
+.wcp .wcp__cell .player-cell__avatar { box-sizing: border-box; }
+/* The bid leads the terms line, in the league accent — it is the number an
+   owner scans for. Priority leagues never render it. */
 .wcp__bid {
-  margin-left: 0.35rem;
-  font-size: 0.72rem;
   font-weight: 700;
   color: var(--league-accent, var(--color-primary, #1c497c));
 }
