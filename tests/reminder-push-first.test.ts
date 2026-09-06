@@ -157,22 +157,75 @@ describe('the chat lanes ask who was unreached before they post', () => {
     }
   });
 
-  it('never marks an event league-audience that cannot reach the 7d touch', () => {
-    // The announce touch for a league-audience event is 7d, and 7d requires at
-    // least `standard` tier. Mark a `minor` event and the loop simply never
-    // reaches its announce touch: no post, no error, no way to tell from the
+  it("Throwback Week announces on the Tuesday that opens the NFL week", () => {
+    // The requirement is "Tuesday", but nothing in the code says Tuesday — it
+    // says '2d'. That only lands on Tuesday because an NFL week is anchored to
+    // its Thursday kickoff, which is a fact about getNflWeekStart, not about
+    // this event. So assert the DAY, from the real resolved dates: if the
+    // anchor ever moves, the post silently drifts to another weekday and no
+    // other test would notice.
+    for (const file of [
+      'src/data/theleague/resolved-events.json',
+      'data/afl-fantasy/resolved-events.json',
+    ]) {
+      const { events } = JSON.parse(read(file));
+      const throwback = events.filter((e: { id: string }) => e.id.startsWith('throwback-week-'));
+      expect(throwback.length, `${file} has no throwback event`).toBeGreaterThan(0);
+      for (const e of throwback) {
+        expect(e.audience, `${e.id} must post league-wide`).toBe('league');
+        expect(e.announceTouch, `${e.id} must announce two days out`).toBe('2d');
+        const fires = new Date(new Date(e.startDate).getTime() - 2 * 86_400_000);
+        expect(
+          fires.getUTCDay(),
+          `${e.id}: the 2d touch fires ${fires.toISOString().slice(0, 10)}, not a Tuesday`,
+        ).toBe(2);
+      }
+    }
+  });
+
+  it('honours a per-event announce touch, defaulting to a week out', () => {
+    const src = read('scripts/schefter-scan.mjs');
+    expect(src).toMatch(/event\.announceTouch \?\? LEAGUE_ANNOUNCE_TOUCH/);
+  });
+
+  it('the throwback tally reports both halves, from one Redis pass', () => {
+    const src = read('scripts/schefter-scan.mjs');
+    // picked AND total, not just the leftover count — the post goes to the
+    // whole room, so the outstanding group needs a denominator.
+    expect(src).toMatch(/return \{ total: franchiseIds\.length, picked: franchiseIds\.length - defaults, defaults \}/);
+    expect(src).toMatch(/pickedCount: counts\?\.picked/);
+    expect(src).toMatch(/totalCount: counts\?\.total/);
+  });
+
+  it('never marks an event league-audience that cannot reach its announce touch', () => {
+    // A touch only fires for events whose tier qualifies for it. Mark an event
+    // league-audience with an announce touch its tier cannot reach and the
+    // loop simply never gets there: no post, no error, no way to tell from the
     // log that the flag did nothing.
+    const RANK: Record<string, number> = { major: 3, standard: 2, minor: 1 };
+    const MIN_TIER: Record<string, string> = {
+      '14d': 'major',
+      '7d': 'standard',
+      '2d': 'major',
+      dayof: 'minor',
+    };
     for (const file of [
       'src/data/theleague/resolved-events.json',
       'data/afl-fantasy/resolved-events.json',
     ]) {
       const { events } = JSON.parse(read(file));
       const stranded = events
-        .filter((e: { audience?: string; tier: string }) => e.audience === 'league' && e.tier === 'minor')
-        .map((e: { id: string }) => e.id);
+        .filter((e: { audience?: string }) => e.audience === 'league')
+        .filter((e: { tier: string; announceTouch?: string }) => {
+          const touch = e.announceTouch ?? '7d';
+          return (RANK[e.tier] ?? 0) < (RANK[MIN_TIER[touch]] ?? 99);
+        })
+        .map((e: { id: string; tier: string; announceTouch?: string }) =>
+          `${e.id} (${e.tier} cannot reach ${e.announceTouch ?? '7d'})`,
+        );
       expect(
         stranded,
-        `${file}: a minor event cannot announce at 7d — raise its tier or drop the audience flag`,
+        `${file}: raise the tier or change the announce touch — this event can never announce`,
       ).toEqual([]);
     }
   });

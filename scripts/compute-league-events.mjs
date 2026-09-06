@@ -145,6 +145,13 @@ function throwbackEventsFor(weeks) {
     name: `Throwback Week (NFL Week ${week})`,
     startRule: { type: 'computed', rule: 'nfl-week-start', week },
     tier: 'major',
+    // A league-wide post, not a per-owner nag: the whole point of Throwback
+    // Week is that everybody sees everybody else's era. Announced at the 2-day
+    // touch because an NFL week starts on a Thursday, so 2 days out IS the
+    // Tuesday that opens the fantasy week — the natural moment to kick it off
+    // and to say how many owners have still not picked.
+    audience: 'league',
+    announceTouch: '2d',
   }));
 }
 
@@ -161,6 +168,13 @@ async function loadAflThrowbackEvents() {
     name: `Throwback Week (NFL Week ${week})`,
     startRule: { type: 'computed', rule: 'nfl-week-start', week },
     tier: 'major',
+    // A league-wide post, not a per-owner nag: the whole point of Throwback
+    // Week is that everybody sees everybody else's era. Announced at the 2-day
+    // touch because an NFL week starts on a Thursday, so 2 days out IS the
+    // Tuesday that opens the fantasy week — the natural moment to kick it off
+    // and to say how many owners have still not picked.
+    audience: 'league',
+    announceTouch: '2d',
   }));
 }
 
@@ -287,6 +301,10 @@ function resolveEvents(year, eventList = EVENTS) {
       // saying out loud even mid-season. See scripts/lib/reminder-fallback.mjs
       // and docs/claude/rules/roger.md.
       ...(event.audience ? { audience: event.audience } : {}),
+      // Which touch a league-audience event announces on. Omitted = 7d (a
+      // week out, which is what a deadline wants). Throwback Week overrides
+      // it to 2d so the post lands on the Tuesday that opens the NFL week.
+      ...(event.announceTouch ? { announceTouch: event.announceTouch } : {}),
       startDate: startDate.toISOString(),
       daysUntil,
       isPast,

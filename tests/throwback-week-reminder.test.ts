@@ -145,6 +145,58 @@ describe('buildThrowbackReminder copy', () => {
     expect(zero.body).not.toContain('still riding');
   });
 
+  it('reports both halves when picked and total are known', () => {
+    const r = buildThrowbackReminder('2d', {
+      week: 4,
+      days: 2,
+      pickedCount: 9,
+      totalCount: 16,
+      defaultCount: 7,
+    });
+    // The Tuesday kickoff post goes to the whole room, so it has to say how
+    // big the outstanding group is relative to the league — "7 on default"
+    // alone reads the same whether that is most of the league or a couple of
+    // stragglers.
+    expect(r.body).toContain('9 of 16 teams have locked an era in');
+    expect(r.body).toContain('7 still need to confirm');
+    // and it supersedes the older nag rather than printing both
+    expect(r.body).not.toContain('still riding');
+  });
+
+  it('keeps the tally grammatical at every boundary', () => {
+    const one = buildThrowbackReminder('2d', { week: 4, days: 2, pickedCount: 15, totalCount: 16 });
+    expect(one.body).toContain('One still needs to confirm');
+
+    const singlePick = buildThrowbackReminder('2d', { week: 4, days: 2, pickedCount: 1, totalCount: 24 });
+    expect(singlePick.body).toContain('One team of 24 has locked an era in');
+
+    // Everybody in: say so, rather than trailing off after a number.
+    const all = buildThrowbackReminder('2d', { week: 4, days: 2, pickedCount: 16, totalCount: 16 });
+    expect(all.body).toContain('That is everybody');
+    expect(all.body).not.toContain('still need');
+  });
+
+  it('falls back to the older nag when only the default count is known', () => {
+    const r = buildThrowbackReminder('2d', { week: 4, days: 2, defaultCount: 5 });
+    expect(r.body).toContain('5 teams are still riding');
+  });
+
+  it('degrades to generic copy when Redis gave us nothing', () => {
+    const r = buildThrowbackReminder('2d', { week: 4, days: 2 });
+    expect(r.body).not.toContain('locked an era in');
+    expect(r.body).not.toContain('still riding');
+  });
+
+  it('day-of never carries the tally either', () => {
+    const r = buildThrowbackReminder('dayof', {
+      week: 4,
+      days: 0,
+      pickedCount: 9,
+      totalCount: 16,
+    });
+    expect(r.body).not.toContain('locked an era in');
+  });
+
   it('day-of never carries the default-count nag even if passed one', () => {
     const r = buildThrowbackReminder('dayof', { week: 4, days: 0, defaultCount: 5 });
     expect(r.body).not.toContain('still riding');

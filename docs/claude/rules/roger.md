@@ -50,25 +50,40 @@ event dates in the past. Fixing one does not fix the other.
          formula that shipped wrong in five files). In season, nothing.
        - **`audience: 'league'`** (declared per event in
          `compute-league-events.mjs`, carried into `resolved-events.json`)
-         — the **7-day** touch, and it posts **in season too**. A trade
-         deadline is a signal to the room: get your offers in while there
-         is time. That is worthless as a private nudge to each owner
-         separately, and it is precisely what the chat is for. Using 7d as
-         the announce touch rather than adding a second rule on top of
-         first-touch is what stops such an event posting twice.
+         — posts **in season too**, on the `announceTouch` the event
+         declares, defaulting to **7d**. These are aimed at the room, not
+         at anybody in particular: a trade deadline is the signal to get
+         offers in while there is time, which is worthless as a private
+         nudge to each owner separately. Making the announce touch the
+         single source of "which touch posts" — rather than layering an
+         exception on top of first-touch — is what stops such an event
+         posting twice.
+
+         Two are marked today: **the trade deadlines** (default 7d) and
+         **Throwback Week** (`announceTouch: '2d'`). Throwback's is 2d
+         because an NFL week is anchored to its **Thursday** kickoff, so
+         two days out IS the Tuesday that opens the fantasy week. Nothing
+         in the code says "Tuesday" — `tests/reminder-push-first.test.ts`
+         asserts the actual weekday off the resolved dates, so a change to
+         the week anchor cannot silently drift the post to a Wednesday.
+         That post also reports BOTH halves of the era tally (locked in,
+         and still to confirm) from one Redis pass — `countThrowbackPicks`
+         returns `{ total, picked, defaults }`, because "7 on default"
+         alone reads the same whether that is most of the league or two
+         stragglers, and this post goes to everyone.
      * the `dayof` touch posts **only when the fan-out reports owners it
        could not reach**, names exactly those owners, and @-mentions them
        with a link to `/<league>/notifications`.
 
-     **A league-audience event must be `standard` tier or better.** The 7-day
-     touch requires it, so flagging a `minor` event strands the flag: the
-     loop never reaches its announce touch, and nothing in the log says the
-     flag did nothing. `tests/reminder-push-first.test.ts` fails on that
-     combination, and on a trade deadline that loses the flag in the
-     resolver — the scanner reads the JSON, not the source event list.
+     **A league-audience event's tier must reach its announce touch.** 7d
+     needs `standard` or better, 2d and 14d need `major`. Flag an event
+     whose tier falls short and the flag is stranded: the loop never reaches
+     the announce touch, and nothing in the log says it did nothing.
+     `tests/reminder-push-first.test.ts` fails on that combination, and on
+     an event that loses `audience`/`announceTouch` in the resolver — the
+     scanner reads the JSON, not the source event list.
 
-     The 14-day and 2-day touches never reach the chat, and neither does
-     the 7-day one unless the event is league-audience. `roger-fallback` is
+     Every touch that is not the announce touch is push-only. `roger-fallback` is
      the kind for the second case and is exempt from the daily cap, for the
      same reason `roger-reminder` is: it is already the narrowest message
      we can send, and holding it means those specific owners hear about the
