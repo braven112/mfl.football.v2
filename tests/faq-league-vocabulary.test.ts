@@ -21,11 +21,17 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const FAQ = path.resolve(__dirname, '../src/components/shared/faq/FaqPage.astro');
 
 /** Words that name a mechanic only SOME leagues have, and the flag that owns each. */
-const FEATURE_WORDS: Array<{ word: RegExp; feature: 'contracts' | 'salaryCap' | 'keepers' }> = [
+const FEATURE_WORDS: Array<{
+  word: RegExp;
+  feature: 'contracts' | 'salaryCap' | 'keepers' | 'taxiSquad';
+}> = [
   { word: /\bcontracts?\b/i, feature: 'contracts' },
   { word: /\bcontract year\b/i, feature: 'contracts' },
   { word: /\bsalary cap\b/i, feature: 'salaryCap' },
   { word: /\bkeepers?\b/i, feature: 'keepers' },
+  // The AFL has no practice squad; TheLeague's holds 3.
+  { word: /\btaxi\b/i, feature: 'taxiSquad' },
+  { word: /\bpractice squad\b/i, feature: 'taxiSquad' },
 ];
 
 /** The page body only — the frontmatter is where the conditionals legitimately live. */
@@ -57,7 +63,7 @@ describe('FAQ page — no league is told about another league’s mechanics', ()
 
   it('every league has at least one true thing to say about its own rules', () => {
     for (const league of ALL_LEAGUES) {
-      const owned = (['contracts', 'salaryCap', 'keepers'] as const).filter((f) =>
+      const owned = (['contracts', 'salaryCap', 'keepers', 'taxiSquad'] as const).filter((f) =>
         leagueHasFeature(league.slug, f),
       );
       // Not an assertion about the copy — a league with none of these still
