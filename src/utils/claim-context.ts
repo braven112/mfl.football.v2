@@ -35,6 +35,7 @@ import { mflFetch } from './mfl-fetch';
 import { createMFLApiClient } from './mfl-matchup-api';
 import { getLeagueById, type LeagueDefinition } from '../config/leagues';
 import { resolveWaiverWindow, describeWaiverWindow } from './waiver-window';
+import { DEFAULT_VIEWER_CLOCK, type ViewerClock } from './viewer-preferences';
 import { readBidRules, conferenceOfFranchise, freeAgencyIsLeagueWide } from './waiver-claim';
 import { claimVerb, type ClaimContext } from './claim-context-shape';
 import { isAuctionSeason } from './auction-window';
@@ -155,7 +156,7 @@ async function readPlayerNames(year: number, ids: string[]): Promise<Map<string,
  * Returns null only when the session names a league we don't know: with no
  * host and no year clock there is nothing safe to answer.
  */
-export async function resolveClaimContext(user: AuthUser): Promise<ClaimContext | null> {
+export async function resolveClaimContext(user: AuthUser, clock: ViewerClock = DEFAULT_VIEWER_CLOCK): Promise<ClaimContext | null> {
   const league = getLeagueById(user.leagueId);
   if (!league) return null;
 
@@ -188,7 +189,7 @@ export async function resolveClaimContext(user: AuthUser): Promise<ClaimContext 
     roster: [],
     year,
     windowMode: window.mode,
-    windowLabel: describeWaiverWindow(window),
+    windowLabel: describeWaiverWindow(window, clock),
     rosteredIds: [],
   };
 

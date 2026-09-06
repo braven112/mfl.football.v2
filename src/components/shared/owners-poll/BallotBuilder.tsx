@@ -19,6 +19,7 @@ import {
   slotOf,
   toggleTeam,
 } from '../../../utils/owners-poll-builder';
+import { clockZonesFromCookie, formatMomentOrDevice } from '../../../utils/viewer-clock';
 
 export interface BallotTeam {
   franchiseId: string;
@@ -388,20 +389,21 @@ function teamVars(team: BallotTeam): CSSProperties {
  * instant, and an owner in a different timezone reading a hardcoded "6pm PT"
  * has to do the math themselves at exactly the moment we want them not to
  * hesitate.
+ *
+ * Their CHOSEN clock outranks the device's when they have made one
+ * (`/preferences`): an owner who set Sydney and is reading from a hotel in
+ * Chicago asked for Sydney, and every other deadline on the site now says
+ * Sydney. Absent a choice, the device — exactly what this printed before.
  */
 function ClosesAt({ iso }: { iso: string }) {
   const [text, setText] = useState<string>('');
   useEffect(() => {
     const d = new Date(iso);
     if (Number.isNaN(d.getTime())) return;
-    setText(
-      d.toLocaleString(undefined, {
-        weekday: 'long',
-        hour: 'numeric',
-        minute: '2-digit',
-        timeZoneName: 'short',
-      }),
-    );
+    // The cookie is read inside the effect, not at module scope: under the
+    // ClientRouter this module outlives the page, and a preference the viewer
+    // changed in another tab must not be answered from a stale capture.
+    setText(formatMomentOrDevice(d, clockZonesFromCookie(document.cookie), { weekday: true }));
   }, [iso]);
   return <>{text || 'soon'}</>;
 }

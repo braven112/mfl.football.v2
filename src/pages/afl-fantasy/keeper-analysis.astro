@@ -28,6 +28,9 @@ import {
   type MflRostersFeed,
   type WeeklyResultsRaw,
 } from '../../utils/afl-keeper-analysis';
+import { getAuthUser } from '../../utils/auth';
+import { readViewerClock } from '../../utils/viewer-preferences-page';
+import { formatForViewer } from '../../utils/viewer-clock';
 
 export const prerender = false;
 
@@ -165,15 +168,12 @@ const teamConference = (fid: string) => {
 };
 
 const fetchMeta = feed<{ lastFetched?: string }>(selectedYear, 'fetch.meta.json');
+// "Data as of ..." answers "how stale is this?", which is a question about the
+// reader's own day — so it prints in the clock they chose, with the league's PT
+// beside it. PT alone until they choose one (`/preferences`).
+const viewerClock = await readViewerClock(Astro.cookies, getAuthUser(Astro.request));
 const lastFetched = fetchMeta?.lastFetched
-  ? new Date(fetchMeta.lastFetched).toLocaleString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      hour: 'numeric',
-      minute: '2-digit',
-      timeZone: 'America/Los_Angeles',
-      timeZoneName: 'short',
-    })
+  ? formatForViewer(new Date(fetchMeta.lastFetched), viewerClock, { date: true })
   : null;
 
 const best = analysis.franchises[0];

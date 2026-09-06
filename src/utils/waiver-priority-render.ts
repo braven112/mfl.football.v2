@@ -17,6 +17,7 @@
 
 import { rankWithinConference } from './waiver-order';
 import type { WaiverOrderEntry } from './waiver-order';
+import { clockZonesFromCookie, formatMomentOrDevice } from './viewer-clock';
 
 export interface WaiverPriorityRenderTeam {
   franchiseId: string;
@@ -85,15 +86,21 @@ export function renderWaiverPriorityRows(
 export const WAIVER_PRIORITY_NOTE =
   'Priority is rolling — win a claim and you drop to the back of the line.';
 
-export function waiverPriorityFootnote(asOf: string, live: boolean): string {
+/**
+ * `cookies` is the raw `document.cookie` string — this runs in the browser, and
+ * taking it as an argument is what keeps the function testable and keeps the
+ * read PER CALL rather than captured at module load (the ClientRouter keeps
+ * this module alive across navigations, so a capture would go stale).
+ */
+export function waiverPriorityFootnote(asOf: string, live: boolean, cookies = ''): string {
   const when = new Date(asOf);
+  // The viewer's chosen clock (`/preferences`) when they have one, else this
+  // device's — which is what the stamp used before the preference existed.
   const stamp = Number.isNaN(when.getTime())
     ? ''
-    : when.toLocaleString(undefined, {
-        month: 'short',
-        day: 'numeric',
-        hour: 'numeric',
-        minute: '2-digit',
+    : formatMomentOrDevice(when, clockZonesFromCookie(cookies), {
+        date: true,
+        deviceFormat: { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' },
       });
   const note = WAIVER_PRIORITY_NOTE;
   return live

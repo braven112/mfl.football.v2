@@ -47,6 +47,7 @@ import PlayoffRoundHero from './playoff-heroes/PlayoffRoundHero.astro';
 import BreakingStoryHero from './BreakingStoryHero.astro';
 import type { BreakingStory } from '../../utils/offseason-hero-data';
 import type { HeroFranchiseBackdrop } from '../../utils/hero-franchise-backdrop';
+import { DEFAULT_COUNTRY, type CountryCode } from '../../utils/broadcast-channels';
 
 export interface Props {
   /** Fully resolved hero state from the page frontmatter */
@@ -68,6 +69,12 @@ export interface Props {
   userFranchiseId?: string;
   /** Saturday-evening gate for the Sunday Ticket hero: the owner's lineup is in (true) / not (false) / unknown (null). Resolved by the page. */
   lineupSubmitted?: boolean | null;
+  /**
+   * Whose channels the game-day hero names (`/preferences`). Resolved by the
+   * ROUTE — this component is imported, and reading the preference is only
+   * side-effect free because the route never lets it write.
+   */
+  country?: CountryCode;
   /** Whether the user is authenticated */
   isAuthenticated?: boolean;
   /** Cast rookie model for the fresh What's New composite hero (page-resolved) */
@@ -105,7 +112,7 @@ export interface Props {
   heroBackdrop?: HeroFranchiseBackdrop | null;
 }
 
-const { state, resolveLeaguePath, spriteUrl, liveScoring, userFranchiseId, lineupSubmitted = null, isAuthenticated, featureModel, auctionModel, auctionClosingBid, cutWatchModel, udfaModels = [], showcasePanels = [], preseasonModel, preseasonModelIsOwn, kickoffGame, breakingModel, breakingStory, heroBackdrop = null } = Astro.props;
+const { state, resolveLeaguePath, spriteUrl, liveScoring, userFranchiseId, lineupSubmitted = null, country = DEFAULT_COUNTRY, isAuthenticated, featureModel, auctionModel, auctionClosingBid, cutWatchModel, udfaModels = [], showcasePanels = [], preseasonModel, preseasonModelIsOwn, kickoffGame, breakingModel, breakingStory, heroBackdrop = null } = Astro.props;
 
 // Fresh What's New (P2) always gets the composite treatment. The model is
 // category-cast in the page frontmatter (rookie for new pages/features,
@@ -217,7 +224,7 @@ const isFridayArticle = ptWeekday === 'Fri';
 {slot === 'waiver-wire' && <WaiverWireHero state={state} resolveLeaguePath={resolveLeaguePath} />}
 {slot === 'article' && isFridayArticle && <WeekendPreviewHero state={state} />}
 {slot === 'article' && !isFridayArticle && <ArticleHero state={state} articleType="waiver-pickup" />}
-{slot === 'game-day-preview' && <MatchupSplitHero state={state} resolveLeaguePath={resolveLeaguePath} userFranchiseId={userFranchiseId} lineupSubmitted={lineupSubmitted} />}
+{slot === 'game-day-preview' && <MatchupSplitHero state={state} resolveLeaguePath={resolveLeaguePath} userFranchiseId={userFranchiseId} lineupSubmitted={lineupSubmitted} country={country} />}
 
 {/* Off-season heroes: dedicated components */}
 {phase === 'champion-crowned' && state.championProps && (

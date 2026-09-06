@@ -21,6 +21,7 @@ import { getAuthUser, isCommissionerOrAdmin, franchiseIdForLeague } from '../../
 import { readBidRules } from '../../utils/waiver-claim';
 import { claimVerb as claimVerbFor } from '../../utils/claim-context';
 import { resolveWaiverWindow, describeWaiverWindow } from '../../utils/waiver-window';
+import { readViewerClock } from '../../utils/viewer-preferences-page';
 import WaiverClaimsPanel from '../../components/shared/WaiverClaimsPanel.astro';
 import SignInModal from '../../components/shared/SignInModal.astro';
 import WatchListBridge from '../../components/shared/WatchListBridge.astro';
@@ -720,7 +721,11 @@ const calendarModules = import.meta.glob(
 const calendarEvents =
   (Object.entries(calendarModules).find(([p]) => p.includes(`/${currentYear}/`))?.[1] as any)?.default ?? [];
 const waiverWindow = resolveWaiverWindow(calendarEvents);
-const waiverWindowLabel = describeWaiverWindow(waiverWindow);
+// The deadline in the header line, on the viewer's own clock when they have
+// named one (PT alone until then). Read-only: a page render must never write a
+// preference cookie, and only /preferences and the Sunday Ticket chips do.
+const viewerClock = await readViewerClock(Astro.cookies, authUser);
+const waiverWindowLabel = describeWaiverWindow(waiverWindow, viewerClock);
 const canClaim = !!claimFranchiseId && !isAuctionSeason;
 // The verb this league puts on an acquisition — 'Bid' here, because TheLeague
 // runs blind bids. One resolver for the table header, the ⋮ action sheet and

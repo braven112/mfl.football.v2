@@ -26,6 +26,7 @@ import HpQuickLinks from '../../components/theleague/hp-sections/HpQuickLinks.as
 import WhatsNewRow from '../../components/theleague/WhatsNewRow.astro';
 import PlayerDetailsModal from '../../components/theleague/PlayerDetailsModal.astro';
 import { getAuthUser } from '../../utils/auth';
+import { readViewerClock } from '../../utils/viewer-preferences-page';
 import { getLeagueBySlug } from '../../config/leagues';
 import { resolveHeroFranchiseBackdrop } from '../../utils/hero-franchise-backdrop';
 import { resolveHeroState, parseTestDate, isAuctionStripPeriod, isEntryInHeroWindow } from '../../utils/hero-resolver';
@@ -70,6 +71,10 @@ const THELEAGUE = getLeagueBySlug('theleague')!;
 const authUser = getAuthUser(Astro.request);
 const isAuthenticated = !!authUser;
 const userFranchiseId = authUser?.franchiseId;
+// Whose broadcast channels the game-day hero names. Read-only: the homepage
+// must never write a preference cookie, and `readViewerClock` never does —
+// only /preferences and the Sunday Ticket chips write one.
+const viewerCountry = (await readViewerClock(Astro.cookies, authUser)).prefs.country;
 
 const feed = feedData as FeedType;
 
@@ -771,6 +776,7 @@ if ((heroState.phase === 'playoffs' || heroState.phase === 'championship') && he
         liveScoring={liveScoring}
         userFranchiseId={heroFranchiseId}
         lineupSubmitted={lineupSubmitted}
+        country={viewerCountry}
         isAuthenticated={isAuthenticated}
         featureModel={featureModel}
         auctionModel={auctionModel}

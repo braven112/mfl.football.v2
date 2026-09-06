@@ -18,16 +18,25 @@ import {
 } from '../../../utils/hero-casting';
 import FaceoffComposite, { type FaceoffSide } from '../FaceoffComposite.astro';
 import GameDayPreviewHeroStub from '../hero-stubs/GameDayPreviewHeroStub.astro';
-import broadcastData from '../../../../data/theleague/broadcast-mappings.json';
-import { SUNDAY_TICKET_LOGO } from '../../../utils/broadcast-channels';
+import {
+  DEFAULT_COUNTRY,
+  resolveChannel,
+  sundayTicketProvider,
+  type CountryCode,
+} from '../../../utils/broadcast-channels';
 
 export interface Props {
   state: HeroState;
   resolveLeaguePath: (path: string) => string;
   userFranchiseId?: string;
+  /**
+   * Whose channels to name (`/preferences`), resolved by the ROUTE. Absent,
+   * the US — what this hero hardcoded before the preference reached it.
+   */
+  country?: CountryCode;
 }
 
-const { state, resolveLeaguePath: r, userFranchiseId } = Astro.props;
+const { state, resolveLeaguePath: r, userFranchiseId, country = DEFAULT_COUNTRY } = Astro.props;
 
 // No-arg season year (env-pinned, same for every request) — the arg form is
 // non-monotonic across the season boundary and resolves a ?testDate to the
@@ -143,7 +152,16 @@ function getTimeSlotLabel(kickoffEpoch: number): string {
   return '1:00 PM ET';
 }
 
-function getChannel(kickoffEpoch: number): string {
+/**
+ * The US network a slot belongs to, derived from its EASTERN kickoff — the
+ * NFL's own windows are defined in ET, whoever is watching.
+ *
+ * This is deliberately the US answer and nothing else: it is the INPUT to
+ * `resolveChannel`, which is the one place that knows a Thursday game is
+ * Prime Video in Seattle, DAZN in London and Kayo in Perth. Naming a local
+ * channel here would be a second, worse copy of that mapping.
+ */
+function usNetworkFor(kickoffEpoch: number): string {
   const d = new Date(kickoffEpoch * 1000);
   const etHour = parseInt(d.toLocaleString('en-US', { timeZone: 'America/New_York', hour: 'numeric', hour12: false }));
   const dow = d.toLocaleString('en-US', { timeZone: 'America/New_York', weekday: 'short' });
@@ -151,9 +169,16 @@ function getChannel(kickoffEpoch: number): string {
   if (dow === 'Thu') return 'Prime Video';
   if (dow === 'Mon') return 'ESPN';
   if (dow === 'Sun' && etHour >= 20) return 'NBC';
-  if (dow === 'Sun' && etHour >= 16) return 'CBS/FOX';
   if (dow === 'Sat') return 'NFL Network';
+  // The Sunday afternoon doubleheader is split between CBS and FOX per game;
+  // the schedule feed does not say which, so the slot names both.
   return 'CBS/FOX';
+}
+
+/** That slot's network as the VIEWER's country carries it. */
+function getChannel(kickoffEpoch: number): string {
+  const network = usNetworkFor(kickoffEpoch);
+  return resolveChannel(network, country)?.name ?? network;
 }
 
 const games: GameInfo[] = weekGames.map((m: any) => {
@@ -273,16 +298,20 @@ for (const g of displayGames) {
   if (faceoff) faceoffByGame.set(g, faceoff);
 }
 
-// US broadcast channels from mappings
-const usChannels = (broadcastData as any)?.countries?.US?.channels ?? {};
+// Where Sunday Ticket lives for this viewer — YouTube TV in the US, DAZN in
+// the UK and Mexico, Kayo in Australia. The mark and the name come from the
+// same catalog the Sunday Ticket board uses, so the two cannot disagree.
+const provider = sundayTicketProvider(country);
 ---
 
 {hasGames ? (
   <section class="matchup-hero" aria-label="Matchup Preview">
     <div class="matchup-hero__header">
       <div class="matchup-hero__title-group">
-        <img class="matchup-hero__mark" src={SUNDAY_TICKET_LOGO} alt="NFL Sunday Ticket" width="336" height="263" />
-        <h3 class="matchup-hero__section-title">Your Sunday Ticket</h3>
+        {provider?.logo && (
+          <img class="matchup-hero__mark" src={provider.logo} alt={provider.name} width="336" height="263" />
+        )}
+        <h3 class="matchup-hero__section-title" title={provider?.note || undefined}>Your Sunday Ticket</h3>
         {userFranchiseId && (
           <span class="matchup-hero__personalized">Personalized</span>
         )}

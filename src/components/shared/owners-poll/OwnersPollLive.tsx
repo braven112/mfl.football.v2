@@ -14,6 +14,7 @@
  */
 
 import { useEffect, useState } from 'react';
+import { clockZonesFromCookie, formatMomentOrDevice } from '../../../utils/viewer-clock';
 
 interface Props {
   ballotHref: string;
@@ -185,20 +186,13 @@ function Meter({
   );
 }
 
-/** Deadline in the viewer's own timezone — see BallotBuilder's ClosesAt. */
+/** Deadline in the viewer's chosen clock, else the device's — see BallotBuilder's ClosesAt. */
 function Closes({ iso }: { iso: string }) {
   const [text, setText] = useState('');
   useEffect(() => {
     const d = new Date(iso);
     if (Number.isNaN(d.getTime())) return;
-    setText(
-      d.toLocaleString(undefined, {
-        weekday: 'long',
-        hour: 'numeric',
-        minute: '2-digit',
-        timeZoneName: 'short',
-      }),
-    );
+    setText(formatMomentOrDevice(d, clockZonesFromCookie(document.cookie), { weekday: true }));
   }, [iso]);
   return <>closes {text || 'soon'}</>;
 }

@@ -25,6 +25,9 @@ import DraftNav from '../draft-nav/DraftNav.astro';
 import { resolveLeaguePath } from '../../../utils/nav-utils';
 import type { DraftLeagueSlug } from '../draft-nav/draft-pages';
 import '../../../styles/loading.css';
+import { getAuthUser } from '../../../utils/auth';
+import { readViewerClock } from '../../../utils/viewer-preferences-page';
+import { viewerClockZone } from '../../../utils/viewer-clock';
 
 /** One selectable board, when a league drafts in more than one. */
 export interface MockConference {
@@ -114,6 +117,14 @@ const {
   gate = null,
   showSessions = true,
 } = Astro.props as Props;
+
+// The clock the lobby's session times print in. READ here, not passed in: this
+// component IS the page body, and reading a preference is side-effect free —
+// only `resolveViewerPreferences`, which WRITES cookies, is route-only. Null
+// until the viewer picks one, which keeps the lobby on the device's own clock
+// exactly as it was before the preference existed.
+const viewerClockRead = await readViewerClock(Astro.cookies, getAuthUser(Astro.request));
+const viewerZone = viewerClockRead.explicit ? viewerClockZone(viewerClockRead) : null;
 
 // Every outbound href goes through resolveLeaguePath, INCLUDING the gate's.
 // A league-prefixed path still resolves on the apex host — vercel.json
@@ -291,7 +302,7 @@ const rankingSourcesJson = JSON.stringify(rankingSources);
   </div>
 </TheLeagueLayout>
 
-<script define:vars={{ userFranchiseId, teamMapJson, franchiseListJson, rankingSourcesJson, leagueYear, isAdmin, base, defaultRankingSource, rounds, roundCount: roundOptions.length, createExtras, scopeQuery, queueScope }}>
+<script define:vars={{ viewerZone: viewerZone?.zone ?? null, viewerZoneLabel: viewerZone?.label ?? null, userFranchiseId, teamMapJson, franchiseListJson, rankingSourcesJson, leagueYear, isAdmin, base, defaultRankingSource, rounds, roundCount: roundOptions.length, createExtras, scopeQuery, queueScope }}>
   // A session link MUST carry the board it belongs to. The list is
   // conference-scoped, but the session page resolves its conference from the
   // VIEWER when the URL says nothing — so an AL owner opening an NL session
@@ -616,7 +627,14 @@ const rankingSourcesJson = JSON.stringify(rankingSources);
     if (!iso) return '';
     const d = new Date(iso);
     if (Number.isNaN(d.getTime())) return '';
-    return d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+    // The viewer's chosen clock (/preferences) when they have set one, else
+    // this device's — which is what the lobby showed before the preference
+    // existed. The zone is resolved SERVER-side and handed down: this script
+    // carries `define:vars`, which makes it inline, so it cannot import the
+    // shared formatter.
+    if (!viewerZone) return d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+    const time = d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: viewerZone });
+    return viewerZoneLabel ? `${time} ${viewerZoneLabel}` : time;
   }
 
   function createSessionCard(s) {

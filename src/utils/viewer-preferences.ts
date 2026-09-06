@@ -150,6 +150,16 @@ export function zoneOptionsFor(country: CountryCode): readonly ZoneOption[] {
   return ZONE_OPTIONS[country] ?? ZONE_OPTIONS[DEFAULT_COUNTRY];
 }
 
+/**
+ * The cookie pair a choice is stored in. Declared HERE, in the pure module,
+ * because both halves need the same two strings: the route glue writes them
+ * (`viewer-preferences-page.ts`) and a client island reads them back
+ * (`clockZonesFromCookie`). Two spellings of a cookie name is a bug that only
+ * shows up as "my preference did not stick".
+ */
+export const COUNTRY_COOKIE = 'pref_country';
+export const ZONE_COOKIE = 'pref_zone';
+
 /** What a viewer has chosen: whose channels, and the one clock they live in. */
 export interface ViewerPreferences {
   country: CountryCode;
@@ -222,6 +232,48 @@ const toKickoffZone = ({ zone, label, locale }: ZoneOption): KickoffZone =>
 export function kickoffZonesFor(prefs: ViewerPreferences): KickoffZone[] {
   const own = chosenZone(prefs);
   return isLeagueClock(own) ? [toKickoffZone(own)] : [toKickoffZone(own), toKickoffZone(LEAGUE_CLOCK)];
+}
+
+/**
+ * A viewer's clocks PLUS whether they actually picked them.
+ *
+ * The distinction is load-bearing, and it exists because one default cannot
+ * serve both readers. Sunday Ticket has always printed the COUNTRY's pair
+ * (ET · PT in the US), so `DEFAULT_VIEWER_PREFERENCES` is US/ET precisely to
+ * leave that board unchanged. Every other surface — a waiver deadline, a draft
+ * start, a poll close — has always printed the league's PT alone. Handing
+ * those the same default would add an Eastern clock to every owner in the
+ * league on the strength of a fallback nobody chose.
+ *
+ * So `explicit` records where the answer came from. It is TRUE only for an
+ * answer the owner is responsible for:
+ *   - a cookie on this device (written ONLY by an explicit choice), or
+ *   - their account mirror (written ONLY by an explicit choice), or
+ *   - a SEEDED default, which is a fact we were told about that owner.
+ * It is FALSE for the bare catalog default, which is a guess.
+ */
+export interface ViewerClock {
+  prefs: ViewerPreferences;
+  explicit: boolean;
+}
+
+/** Nobody has chosen: the league's own clock, which is what these surfaces printed before preferences existed. */
+export const DEFAULT_VIEWER_CLOCK: ViewerClock = {
+  prefs: DEFAULT_VIEWER_PREFERENCES,
+  explicit: false,
+};
+
+/**
+ * The zones a LEAGUE EVENT prints in — a draft start, a waiver window, a poll
+ * deadline. The league's PT is the floor here, not a passenger: these events
+ * happen on the league's clock, and a viewer's own is added only once they
+ * have actually named one.
+ *
+ * Contrast `kickoffZonesFor`, which Sunday Ticket uses: an NFL kickoff is not
+ * the league's event, and that board's floor is the COUNTRY's default pair.
+ */
+export function eventZonesFor(clock: ViewerClock): KickoffZone[] {
+  return clock.explicit ? kickoffZonesFor(clock.prefs) : [toKickoffZone(LEAGUE_CLOCK)];
 }
 
 /**
