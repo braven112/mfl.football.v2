@@ -137,18 +137,28 @@ The consequences of that guard, all of them good:
 | **Any FG by a kicker**, whatever it scored | Explicitly asked for **[decided]** |
 | A **turnover** credited to a rostered starter | Free, and ScoreProTV confirms it belongs |
 | Never on a **negative** delta | That's a correction, not a moment |
-| Never on the **first poll after mount** | No baseline yet — see below |
+| Never without a **prior sample for that player** | No baseline ⇒ nothing to diff — see below |
 
 3.0 is one constant in one file, tunable after a real Sunday. PATs are excluded
 (they ride the TD's play text and would double-card the kicker).
 
 ### Baseline, and not replaying history
 
-The SSR props already carry a full snapshot of every starter's live points, so
-the first MFL poll after mount diffs against *that*, not against zero. Plug the
-TV in at 3pm and the board starts from where the day actually is — no dump of
-every touchdown since one o'clock. Same problem the draft board's warm-up
-solves, solved here for free by the page's own initial data.
+The SSR props already carry a full snapshot of every starter's live points
+(`initialPlayers`), so the first MFL poll after mount diffs against *that*, not
+against zero. Plug the TV in at 3pm and the board starts from where the day
+actually is — no dump of every touchdown since one o'clock. Same problem the
+draft board's warm-up solves, solved here for free by the page's own initial
+data.
+
+**The guard is per PLAYER, not per poll.** "Skip the first poll" is not enough:
+a row can appear mid-afternoon carrying points it scored before we ever saw it
+— a lineup correction, a franchise whose feed was incomplete, `initialPlayers`
+absent because the page was served without it (the prop is optional on
+`LiveScoringPageProps`). Diffing a first sighting against zero turns a player
+who is already on 12.4 into a 12.4-point "moment" that never happened. So: no
+prior sample for that player id ⇒ **record the baseline, fire nothing**, and
+diff from the next poll on. Same rule, applied at the right granularity.
 
 ### Multiple plays in one window
 
@@ -344,7 +354,8 @@ league-neutral links, since `new-page` requires both.)*
 
 - `tests/live-board-triggers.test.ts` — the two-source rule end to end: a delta
   with no ESPN play fires nothing; a play with no delta fires nothing; a
-  negative delta fires nothing; the first poll after mount fires nothing;
+  negative delta fires nothing; a player's FIRST sighting fires nothing however
+  many points he already has;
   TD/FG always fire; 3.0 is the gate otherwise; bench excluded; AFL dual-owner
   attribution carries per-franchise numbers.
 - `tests/live-board-queue.test.ts` — cap at 3, owner priority, a moment never
