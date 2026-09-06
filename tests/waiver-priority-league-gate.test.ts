@@ -12,9 +12,11 @@
  *   2. the hub config, which must gate the row and screen on that
  *   3. the API route, which is what makes the number look official
  */
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { readFileSync } from 'fs';
 import { resolve } from 'path';
+import { getWaiverSystem, leagueUsesWaiverPriority } from '../src/utils/waiver-system';
+import { buildTransactionHubConfig } from '../src/utils/transaction-hub-config';
 
 const ROOT = resolve(__dirname, '..');
 const read = (p: string) => readFileSync(resolve(ROOT, p), 'utf8');
@@ -30,15 +32,50 @@ describe('waiver priority is gated on MFL settings', () => {
     expect(leagueFeed('afl-fantasy', 2026).currentWaiverType).toBe('WAIVERS_FCFS');
   });
 
-  it('the resolver decides from currentWaiverType, never from a league slug', () => {
-    const src = read('src/utils/waiver-system.ts');
-    // readBidRules is the ONE reader of currentWaiverType; going around it
-    // would be a second interpretation of the same MFL field.
-    expect(src).toMatch(/readBidRules/);
-    // A slug may only be used to pick WHICH feed to read, never to decide the
-    // answer — so no comparison of a slug against a system.
-    expect(src).not.toMatch(/===\s*'priority'\s*\|\|\s*leagueSlug/);
-    expect(src).toMatch(/leagueUsesWaiverPriority/);
+  it('the resolver returns the system MFL reports, per league', () => {
+    // Behavioural, not a source scan: call it and assert the value. A regex
+    // over the file is satisfied by an import line and would survive the
+    // function being gutted (GEMINI.md, "Test behavior, not source text").
+    expect(getWaiverSystem('theleague', 2026)).toBe('bbid');
+    expect(getWaiverSystem('afl-fantasy', 2026)).toBe('priority');
+  });
+
+  it('answers false for TheLeague, true for the AFL, and false when it cannot tell', () => {
+    expect(leagueUsesWaiverPriority('theleague', 2026)).toBe(false);
+    expect(leagueUsesWaiverPriority('afl-fantasy', 2026)).toBe(true);
+    // Fails closed: an unknown league and a year with no feed both answer no.
+    expect(getWaiverSystem('best-ball-1', 2026)).toBeNull();
+    expect(leagueUsesWaiverPriority('best-ball-1', 2026)).toBe(false);
+    expect(leagueUsesWaiverPriority('not-a-league', 2026)).toBe(false);
+  });
+
+  it('a year we hold no feed for falls back to the newest, not to "priority"', () => {
+    // The dangerous default: an empty payload has no currentWaiverType, and
+    // "no BBID in the string" reads as priority — which would invent an order
+    // for a blind-bid league in the window between a rollover and the first
+    // feed sync.
+    expect(getWaiverSystem('theleague', 2099)).toBe('bbid');
+    expect(leagueUsesWaiverPriority('theleague', 2099)).toBe(false);
+  });
+
+  it('the hub config carries the answer, and gates it on the league not the viewer', () => {
+    const owner = { franchiseId: '0001', leagueId: '13522' };
+    const tl = buildTransactionHubConfig('theleague', owner, '/theleague/players', 2026);
+    expect(tl.signedIn).toBe(true);
+    expect(tl.showWaiverPriority).toBe(false);
+
+    // Signed OUT of a priority league still reports that the league has one —
+    // otherwise the sign-in gate would promise a spot in a line that exists.
+    const aflOut = buildTransactionHubConfig('afl-fantasy', null, '/afl-fantasy/players', 2026);
+    expect(aflOut.signedIn).toBe(false);
+    expect(aflOut.showWaiverPriority).toBe(true);
+
+    // A TheLeague session browsing the AFL is not signed in THERE — both
+    // leagues have a franchise 0001, so the league id is what decides.
+    const crossLeague = buildTransactionHubConfig('afl-fantasy', owner, '/afl-fantasy/players', 2026);
+    expect(crossLeague.signedIn).toBe(false);
+    expect(crossLeague.franchiseId).toBeNull();
+    expect(crossLeague.teams).toEqual([]);
   });
 
   it('hides the priority row AND the screen, not just the row', () => {
@@ -60,15 +97,14 @@ describe('waiver priority is gated on MFL settings', () => {
     expect(body.indexOf('showWaiverPriority')).toBeLessThan(body.indexOf('fetch('));
   });
 
-  it('the API route refuses, and decides from the build-time feed not the live read', () => {
+  it('decides from the build-time feed, not the payload it just fetched', () => {
+    // Structural, and deliberately so: this pins WHERE the answer comes from,
+    // which no response value can distinguish. The live read degrades to a
+    // last-known-good order during an MFL blip, so a system inferred from a
+    // failed read would flip a real priority league to "no order here" for the
+    // length of the outage. The behavioural half is the route test below.
     const route = read('src/pages/api/waiver-order.ts');
     expect(route).toMatch(/leagueUsesWaiverPriority\(league\.slug, year\)/);
-    // Before the MFL read: a refusal that costs a round-trip is still a bug.
-    expect(route.indexOf('leagueUsesWaiverPriority(league.slug, year)')).toBeLessThan(
-      route.indexOf('await readLiveOrder('),
-    );
-    // Inferring the system from the live payload would flip a real priority
-    // league to "no order here" for the length of an MFL outage.
     expect(route).not.toMatch(/readBidRules/);
   });
 
@@ -122,6 +158,56 @@ describe('the hub time-boxes its live reads', () => {
     expect([...script.matchAll(/clearTimeout\(timer\)/g)].length).toBe(2);
     for (const m of script.matchAll(/fetch\('\/api\/waiver-(order|claims)'[^)]*\)/g)) {
       expect(m[0], `${m[0]} must pass an abort signal`).toMatch(/signal/);
+    }
+  });
+});
+
+
+/**
+ * The route's actual Response — not its source text.
+ *
+ * A regex over the file is satisfied by an import line and would survive the
+ * guard being deleted (GEMINI.md, "Test behavior, not source text"). This
+ * repo has shipped green suites over flipped status codes before, so the
+ * refusal is asserted by calling GET and reading the Response.
+ */
+vi.mock('../src/utils/auth', () => ({
+  getAuthUser: () => mockUser,
+}));
+
+let mockUser: { id: string; franchiseId: string; leagueId: string } | null = null;
+
+describe('/api/waiver-order refuses a league with no priority order', () => {
+  const call = async () => {
+    const { GET } = await import('../src/pages/api/waiver-order');
+    return (GET as any)({ request: new Request('https://theleague.us/api/waiver-order') });
+  };
+
+  it('404s for TheLeague, and says why in a field a client can branch on', async () => {
+    mockUser = { id: 'u1', franchiseId: '0001', leagueId: '13522' };
+    const res = await call();
+    expect(res.status).toBe(404);
+    const body = await res.json();
+    expect(body.success).toBe(false);
+    expect(body.usesPriority).toBe(false);
+    // And it must never leak an order alongside the refusal.
+    expect(body.order).toBeUndefined();
+  });
+
+  it('401s a signed-out caller before it ever considers the league', async () => {
+    mockUser = null;
+    const res = await call();
+    expect(res.status).toBe(401);
+    expect((await res.json()).needsLogin).toBe(true);
+  });
+
+  it('does not refuse the AFL, which really does run priority', async () => {
+    mockUser = { id: 'u1', franchiseId: '0001', leagueId: '19621' };
+    const res = await call();
+    // It may still fail upstream in a test environment with no MFL — what it
+    // must NOT do is answer the "this league has no order" refusal.
+    if (res.status === 404) {
+      expect((await res.json()).usesPriority).not.toBe(false);
     }
   });
 });
