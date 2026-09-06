@@ -378,6 +378,17 @@ constraints, both pinned by `tests/push-notification-icons.test.ts`:
 Shortcut `icons` are deliberately omitted; platforms fall back to the app icon
 rather than requiring four more pieces of per-league art to keep in sync.
 
+**On a Vercel preview host these shortcuts 404, and that is correct.** A
+preview hostname is in no league's `domains`, so the middleware never rewrites
+`/lineup` → `/theleague/lineup` there — exactly as `/rosters` and every other
+apex path already 404s on a preview (verified on the #999 preview: `/rosters`
+404, `/theleague/rosters` 200). Do NOT "fix" it by prefixing the shortcut URLs.
+A manifest is installed from a league's own apex, where the bare paths are the
+only ones that work for both leagues from one shared shortcut list; prefixing
+them would hard-code TheLeague into the AFL's manifest. The guard asserts the
+route exists under `src/pages/<that manifest's league>/`, which is the
+invariant that actually matters.
+
 ### Share target (`src/utils/share-target.ts`)
 
 The installed app appears in the phone's share sheet, which a website cannot do
