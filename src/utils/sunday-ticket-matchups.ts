@@ -6,12 +6,20 @@
  * snapshot; this decides what the card says. Keeping it out of the component
  * is what lets the rules below be tested directly rather than through a
  * rendered page.
+ *
+ * Named `SundayTicket*` rather than the obvious `MatchupCard`, because
+ * `lineup-matchup-cards.ts` already owns that name for a DIFFERENT card: the
+ * Set Lineup game strip, which is faceoff composite art, name chips and
+ * projection totals off fourteen inputs. There is no behaviour to share — that
+ * one is about casting player art for a pre-game strip, this one is crests,
+ * live scores and who is still to play — so the two stay separate and the
+ * names say which is which.
  */
 
 import type { LiveSnapshot } from './live-scoring-snapshot';
 import type { TeamBrand } from './league-team-brands';
 
-export interface MatchupSide {
+export interface SundayTicketMatchupSide {
   franchiseId: string;
   name: string;
   /** LIGHT crest artwork; the layout's TeamIconDarkStyles handles dark mode. */
@@ -21,12 +29,12 @@ export interface MatchupSide {
   isYou: boolean;
 }
 
-export interface MatchupCard {
+export interface SundayTicketMatchupCard {
   leagueId: string;
   leagueSlug: string;
   leagueName: string;
-  you: MatchupSide;
-  opponent: MatchupSide;
+  you: SundayTicketMatchupSide;
+  opponent: SundayTicketMatchupSide;
   /** False for a league we cannot read live at all (an outside league). */
   liveSupported: boolean;
   /** True when a live read actually landed for this league. */
@@ -42,7 +50,7 @@ export interface MatchupCard {
   bestBall: boolean;
 }
 
-export interface BuildMatchupCardsInput {
+export interface BuildSundayTicketMatchupCardsInput {
   leagueId: string;
   leagueSlug: string;
   leagueName: string;
@@ -76,7 +84,7 @@ const nameOf = (brands: Record<string, TeamBrand>, fid: string): string =>
  * one payload, so a snapshot that names either side is a live read for the
  * card. A league with no snapshot keeps score 0 and renders '—', never 0.0.
  */
-export function buildMatchupCards(input: BuildMatchupCardsInput): MatchupCard[] {
+export function buildSundayTicketMatchupCards(input: BuildSundayTicketMatchupCardsInput): SundayTicketMatchupCard[] {
   const { leagueId, leagueSlug, leagueName, franchiseId, weekMatchups, brands, snapshot, liveSupported } = input;
   const bestBall = input.bestBall === true;
   if (!franchiseId) return [];
@@ -87,7 +95,7 @@ export function buildMatchupCards(input: BuildMatchupCardsInput): MatchupCard[] 
       snapshot && ids.some((id) => snapshot.scores[id] !== undefined),
     );
 
-    const sideFor = (fid: string, isYou: boolean): MatchupSide => ({
+    const sideFor = (fid: string, isYou: boolean): SundayTicketMatchupSide => ({
       franchiseId: fid,
       name: nameOf(brands, fid),
       icon: brands[fid]?.icon ?? '',
