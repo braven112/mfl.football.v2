@@ -90,10 +90,13 @@ describe('the actual policy', () => {
 
   it('scopes the PR query to this owner and branch', async () => {
     let seen = '';
-    await decide(previewEnv(), async (url: string) => {
-      seen = url;
+    // Signature must match lib.dom's fetch, not just the string we pass — a
+    // narrowed `url: string` is a ts(2345) against RequestInfo | URL.
+    const spy: typeof fetch = async (input) => {
+      seen = String(input);
       return stubFetch([])();
-    });
+    };
+    await decide(previewEnv(), spy);
     expect(seen).toContain('braven112%3Aclaude%2Fsome-branch');
     expect(seen).toContain('state=open');
   });
