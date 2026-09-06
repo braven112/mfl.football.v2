@@ -49,8 +49,14 @@ export type CreateIssueResult =
  * a message the caller can show, because the caller is a button in the UI and
  * "nothing happened" is the worst possible outcome there.
  *
- * Labels are passed as-is and a label that does not exist in the repo is
- * created by GitHub on the fly, so no pre-flight check is needed.
+ * Labels are BEST EFFORT and deliberately not verified. GitHub's own docs say
+ * only that they are "silently dropped" when the token lacks push access, and
+ * do not state whether a name that does not yet exist in the repo is created
+ * or ignored — so the one thing we can rely on is that a label problem does
+ * not cost us the issue. That is the right trade here: the labels are for
+ * triage convenience, the issue body is the actual handoff. If they turn out
+ * not to auto-create, creating the four by hand once fixes it permanently and
+ * nothing in this file changes.
  */
 export async function createGitHubIssue(
   input: CreateIssueInput,
