@@ -288,3 +288,51 @@ describe('rewriteDescriptionLinks — the render-time half', () => {
     );
   });
 });
+
+/**
+ * An article may embed a sprite icon so the reader can SEE the control it is
+ * describing — the Transaction Hub launch pointed at "the bell" when the real
+ * header control is a handshake, which no amount of prose fixes as well as the
+ * glyph itself.
+ *
+ * That works only because `rewriteDescriptionLinks` rewrites `<a href>` and
+ * nothing else. Broaden HREF_PATTERN to all elements and `<use href>` gets a
+ * league prefix, the sprite 404s, and the icon vanishes — with no error
+ * anywhere, because a missing `<use>` target renders as empty space. Pin it.
+ */
+describe('inline sprite icons survive league link rewriting', () => {
+  const withIcons = (entries as unknown as WhatsNewEntry[]).filter((e) =>
+    e.description?.some((b) => typeof b === 'string' && b.includes('<use')),
+  );
+
+  it('rewrites the prose links but leaves the sprite reference alone', () => {
+    // Not vacuous: if no entry embeds an icon this simply does not apply.
+    for (const entry of withIcons) {
+      for (const block of entry.description) {
+        if (typeof block !== 'string' || !block.includes('<use')) continue;
+        for (const league of ALL_LEAGUES) {
+          const out = rewriteDescriptionLinks(block, (p: string) => `/${league.slug}${p}`);
+          expect(
+            out,
+            `${entry.id}: the sprite href must stay root-relative for ${league.slug}`,
+          ).toContain('href="/assets/icons/sprite.svg#');
+          expect(out).not.toContain(`/${league.slug}/assets/icons/sprite.svg`);
+        }
+      }
+    }
+  });
+
+  it('the referenced symbols actually exist in the sprite', () => {
+    const sprite = readFileSync(resolve(__dirname, '../public/assets/icons/sprite.svg'), 'utf8');
+    for (const entry of withIcons) {
+      for (const block of entry.description) {
+        if (typeof block !== 'string') continue;
+        for (const m of block.matchAll(/sprite\.svg#(icon-[a-z0-9-]+)/g)) {
+          expect(sprite, `${entry.id} references a missing symbol: ${m[1]}`).toContain(
+            `id="${m[1]}"`,
+          );
+        }
+      }
+    }
+  });
+});
