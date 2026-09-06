@@ -13,7 +13,7 @@
       "sleeper": "cached",
       "nflverse": "https://github.com/nflverse/nflverse-data/releases/download/snap_counts/snap_counts_2026.csv.gz"
     },
-    "fetchedAt": "2026-09-06T09:42:47.281Z"
+    "fetchedAt": "2026-09-06T13:10:16.254Z"
   },
   "players": [
     {
@@ -2632,52 +2632,6 @@
       ]
     },
     {
-      "id": "16622",
-      "name": "Pearsall, Ricky",
-      "position": "WR",
-      "salary": 1089000,
-      "franchiseId": "0003",
-      "status": "ROSTER",
-      "contractYear": "3",
-      "points": 0,
-      "team": "SF",
-      "draftYear": 2024,
-      "draftTeam": "SFO",
-      "birthdate": 968475600,
-      "headshot": "https://www49.myfantasyleague.com/player_photos_2014/16622_thumb.jpg",
-      "externalIds": {
-        "mfl": "16622",
-        "sleeper": "11638",
-        "gsis": null
-      },
-      "sleeper": {
-        "id": "11638",
-        "fullName": "Ricky Pearsall",
-        "team": "SF",
-        "age": 25,
-        "height": "73",
-        "weight": "189",
-        "number": 1,
-        "college": "Florida",
-        "birthDate": "2000-09-09",
-        "status": "Inactive",
-        "active": true,
-        "position": "WR",
-        "depthChartPosition": null,
-        "depthChartOrder": 10,
-        "fantasyPositions": [
-          "WR"
-        ],
-        "experience": 2,
-        "injuryStatus": "IR",
-        "injuryBodyPart": "Knee - PCL",
-        "gsisId": null
-      },
-      "nflverse": null,
-      "gamesPlayed": null,
-      "depthChartAhead": null
-    },
-    {
       "id": "16619",
       "name": "Franklin, Troy",
       "position": "WR",
@@ -3329,63 +3283,50 @@
       ]
     },
     {
-      "id": "17498",
-      "name": "Tyson, Jordyn",
+      "id": "16622",
+      "name": "Pearsall, Ricky",
       "position": "WR",
-      "salary": 2300000,
+      "salary": 1089000,
       "franchiseId": "0003",
-      "status": "ROSTER",
-      "contractYear": "4",
+      "status": "INJURED_RESERVE",
+      "contractYear": "3",
       "points": 0,
-      "team": "NO",
-      "draftYear": 2026,
-      "draftTeam": "NOS",
-      "birthdate": 1092283200,
-      "headshot": "https://www49.myfantasyleague.com/player_photos_2014/17498_thumb.jpg",
+      "team": "SF",
+      "draftYear": 2024,
+      "draftTeam": "SFO",
+      "birthdate": 968475600,
+      "headshot": "https://www49.myfantasyleague.com/player_photos_2014/16622_thumb.jpg",
       "externalIds": {
-        "mfl": "17498",
-        "sleeper": "13281",
+        "mfl": "16622",
+        "sleeper": "11638",
         "gsis": null
       },
       "sleeper": {
-        "id": "13281",
-        "fullName": "Jordyn Tyson",
-        "team": "NO",
-        "age": 22,
-        "height": "74",
-        "weight": "203",
-        "number": 0,
-        "college": "Arizona State",
-        "birthDate": "2004-08-12",
+        "id": "11638",
+        "fullName": "Ricky Pearsall",
+        "team": "SF",
+        "age": 25,
+        "height": "73",
+        "weight": "189",
+        "number": 1,
+        "college": "Florida",
+        "birthDate": "2000-09-09",
         "status": "Inactive",
         "active": true,
         "position": "WR",
-        "depthChartPosition": "RWR",
+        "depthChartPosition": null,
         "depthChartOrder": 10,
         "fantasyPositions": [
           "WR"
         ],
-        "experience": 0,
+        "experience": 2,
         "injuryStatus": "IR",
-        "injuryBodyPart": "Hamstring",
+        "injuryBodyPart": "Knee - PCL",
         "gsisId": null
       },
       "nflverse": null,
       "gamesPlayed": null,
-      "depthChartAhead": [
-        {
-          "id": "15754",
-          "name": "Olave, Chris"
-        },
-        {
-          "id": "16788",
-          "name": "Vele, Devaughn"
-        },
-        {
-          "id": "17519",
-          "name": "Lance, Bryce"
-        }
-      ]
+      "depthChartAhead": null
     },
     {
       "id": "17591",
@@ -3490,6 +3431,65 @@
         {
           "id": "17107",
           "name": "Ferguson, Terrance"
+        }
+      ]
+    },
+    {
+      "id": "17498",
+      "name": "Tyson, Jordyn",
+      "position": "WR",
+      "salary": 2300000,
+      "franchiseId": "0003",
+      "status": "TAXI_SQUAD",
+      "contractYear": "4",
+      "points": 0,
+      "team": "NO",
+      "draftYear": 2026,
+      "draftTeam": "NOS",
+      "birthdate": 1092283200,
+      "headshot": "https://www49.myfantasyleague.com/player_photos_2014/17498_thumb.jpg",
+      "externalIds": {
+        "mfl": "17498",
+        "sleeper": "13281",
+        "gsis": null
+      },
+      "sleeper": {
+        "id": "13281",
+        "fullName": "Jordyn Tyson",
+        "team": "NO",
+        "age": 22,
+        "height": "74",
+        "weight": "203",
+        "number": 0,
+        "college": "Arizona State",
+        "birthDate": "2004-08-12",
+        "status": "Inactive",
+        "active": true,
+        "position": "WR",
+        "depthChartPosition": "RWR",
+        "depthChartOrder": 10,
+        "fantasyPositions": [
+          "WR"
+        ],
+        "experience": 0,
+        "injuryStatus": "IR",
+        "injuryBodyPart": "Hamstring",
+        "gsisId": null
+      },
+      "nflverse": null,
+      "gamesPlayed": null,
+      "depthChartAhead": [
+        {
+          "id": "15754",
+          "name": "Olave, Chris"
+        },
+        {
+          "id": "16788",
+          "name": "Vele, Devaughn"
+        },
+        {
+          "id": "17519",
+          "name": "Lance, Bryce"
         }
       ]
     },
