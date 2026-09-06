@@ -155,7 +155,25 @@ export const SYNTHETIC_POLL_SOURCE = 'synthetic';
  * @param {{ opensAt: string, closesAt: string, slots: number, eligibleFranchiseIds: string[] }} args.window
  * @param {number} args.quorum
  * @param {Map<string, number>|Record<string, number>} args.compositeRankByFid
- * @returns {{ block: object, tally: object }}
+ * @returns {{
+ *   block: {
+ *     status: 'closed',
+ *     opensAt: string,
+ *     closesAt: string,
+ *     slots: number,
+ *     quorum: number,
+ *     eligibleVoters: number,
+ *     ballotsIn: number,
+ *     hasQuorum: boolean,
+ *     methodology: string,
+ *     ranked: Array<Record<string, unknown>>|null,
+ *     unranked: Array<Record<string, unknown>>|null,
+ *     ballots: Array<Record<string, unknown>>,
+ *     nonVoterCount: number,
+ *     source?: string,
+ *   },
+ *   tally: Record<string, unknown>,
+ * }}
  */
 export function buildClosedPollBlock({ ballots, window, quorum, compositeRankByFid }) {
   const tally = tallyOwnersPoll({

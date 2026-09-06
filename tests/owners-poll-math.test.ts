@@ -248,15 +248,19 @@ describe('homerIndex', () => {
 
   it('does not move when the room changes its mind', () => {
     // Same ballot, same column rank, wildly different consensus around it.
-    // Scored against the consensus this owner would swing from modest to
-    // homer without touching their own ballot.
+    // Scored against the consensus this owner would swing from modest to homer
+    // without touching their own ballot; the consensus is not read at all.
+    // (Built as variables rather than inline literals so the deliberately
+    // ignored keys are not excess-property errors — see the typecheck ratchet.)
     const ballot = {
       franchiseId: '0001',
       ranking: ['0001', '0002', '0003'],
       compositeRankByFid: { '0001': 4 },
     };
-    expect(homerIndex({ ...ballot, consensusRankByFid: { '0001': 1 } })).toBe(3);
-    expect(homerIndex({ ...ballot, consensusRankByFid: { '0001': 16 } })).toBe(3);
+    const roomAdoresThem = { ...ballot, consensusRankByFid: { '0001': 1 } };
+    const roomWroteThemOff = { ...ballot, consensusRankByFid: { '0001': 16 } };
+    expect(homerIndex(roomAdoresThem)).toBe(3);
+    expect(homerIndex(roomWroteThemOff)).toBe(3);
   });
 
   it('is null when an owner omitted their own team — omission is not a rank', () => {
@@ -284,13 +288,17 @@ describe('homerIndex', () => {
   });
 
   it('does not depend on slots at all any more', () => {
+    // slots was the old omission cap's input. A caller still passing it — the
+    // close pass did until this change — must get the same answer.
     const args = {
       franchiseId: '0001',
       ranking: ['0002', '0001', '0003'],
       compositeRankByFid: { '0001': 6 },
     };
-    expect(homerIndex({ ...args, slots: 7 })).toBe(4);
-    expect(homerIndex({ ...args, slots: 10 })).toBe(4);
+    const withShallowBallot = { ...args, slots: 7 };
+    const withDeepBallot = { ...args, slots: 10 };
+    expect(homerIndex(withShallowBallot)).toBe(4);
+    expect(homerIndex(withDeepBallot)).toBe(4);
     expect(homerIndex(args)).toBe(4);
   });
 });
