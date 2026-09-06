@@ -400,6 +400,14 @@ const themePref = getThemePreference(Astro.cookies);
 		     fresh). -->
 		<script is:inline>
 			(function() {
+				// One registration per DOCUMENT, not per navigation. The ClientRouter
+				// re-executes body scripts on every page-load, so without this the
+				// three listeners below stack — and the serviceWorker 'message' path
+				// syncs with force=true, which BYPASSES the throttle, so N stacked
+				// handlers means N forced /api/app-badge fetches per push.
+				if (window.__mflBadgeSyncBound) return;
+				window.__mflBadgeSyncBound = true;
+
 				var THROTTLE_MS = 60000;
 				var KEY = 'mfl:lastBadgeSync';
 

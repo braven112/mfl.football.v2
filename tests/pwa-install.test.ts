@@ -14,6 +14,8 @@
  */
 
 import { describe, it, expect } from 'vitest';
+import fs from 'node:fs';
+import path from 'node:path';
 import {
   resolveInstallPitch,
   isIosSafari,
@@ -151,5 +153,45 @@ describe('isDismissalActive', () => {
     expect(isDismissalActive('not-a-number', now)).toBe(false);
     expect(isDismissalActive('0', now)).toBe(false);
     expect(isDismissalActive('-5', now)).toBe(false);
+  });
+});
+
+
+describe('layout PWA inline scripts register once per document', () => {
+  /**
+   * Both PWA scripts in TheLeagueLayout attach listeners to `document` or
+   * `window`, and the ClientRouter re-executes body scripts on EVERY
+   * navigation — so each one needs a one-time-per-document flag or its
+   * handlers stack for as long as the tab lives.
+   *
+   * This is a rule that already shipped a bug: the install-prompt capture was
+   * written with its guard and the badge sync was written without one, on the
+   * same day, in the same file. The badge case was the worse of the two,
+   * because its service-worker `message` handler syncs with `force = true`,
+   * bypassing the throttle — so N stacked handlers meant N forced
+   * /api/app-badge fetches for every single push.
+   */
+  const layout = fs.readFileSync(
+    path.resolve(__dirname, '../src/layouts/TheLeagueLayout.astro'),
+    'utf8',
+  );
+
+  it.each([
+    ['install prompt capture', '__mflInstallPromptBound'],
+    ['app badge sync', '__mflBadgeSyncBound'],
+  ])('%s bails out when already bound', (_label, flag) => {
+    // Both halves matter: the early return AND the set. A set with no return
+    // guards nothing, and a return with no set never stops re-binding.
+    expect(layout, `${flag} early return`).toContain(`if (window.${flag}) return;`);
+    expect(layout, `${flag} set`).toContain(`window.${flag} = true;`);
+  });
+
+  it('has no unguarded persistent listener registration in a PWA script', () => {
+    // A cheap structural check on the two blocks we own: every addEventListener
+    // on document/window inside them must sit after a bind guard. Counted
+    // rather than parsed — if a third PWA script appears without a flag, the
+    // flag count stops matching and this fails.
+    const pwaBlocks = layout.match(/window\.__mfl\w*Bound = true;/g) ?? [];
+    expect(pwaBlocks.length, 'one bind flag per guarded PWA script').toBe(2);
   });
 });
