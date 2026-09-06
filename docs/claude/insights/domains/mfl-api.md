@@ -49,23 +49,25 @@
   Season year is Labor Day for both. Read and write paths must share one clock.
 - **AFL is a duplicate-player league** — the same player is legitimately on two
   rosters. Never infer ownership from "he's on someone else's roster."
-- **Franchise ids collide across leagues.** Session `leagueId` selects config for
-  storage/rendering; the **route path** selects it for writes from league-scoped
-  pages (a dual-league owner's session lies about which league the page means).
+- **Franchise ids collide across leagues; PLAYER ids are identical, which is
+  worse.** Session `leagueId` selects config for storage/rendering; the **route
+  path** selects it for writes from league-scoped pages (a dual-league owner's
+  session lies about which league the page means). "Is he rostered?" answered
+  for the wrong league is a well-formed WRONG answer, never a miss — nothing
+  fails to match, so nothing errors. An endpoint answering a question ABOUT A
+  PAGE takes `?league=` from it and 401s a mismatch; the param is a CHECK.
 - **Pre-2016 years used different league ids.** `L=13522` on a pre-2016 year
   returns a real, valid-looking payload for *a different league*. Use
   `backfill-historical-feeds.mjs --force --year=YYYY`; plain runs no-op.
 - **`draftResults.draftUnit` is an OBJECT or an ARRAY depending on the league,
-  not on the result count.** A single-draft league (TheLeague, best-ball) gives
-  one object named `LEAGUE`; a conference-drafting one (the AFL) gives an array
-  of `CONFERENCE00` / `CONFERENCE01`. This is NOT the one-result-bare-object
-  rule above — the singular case is a differently-shaped object, so `asArray`
-  alone does not save you. Reading `.draftPick` off the raw value yielded
-  `undefined` for the AFL and every caller read that as "no picks": the board
-  rendered empty, with a 200 and no error, which is indistinguishable from a
-  draft that hasn't started. Go through `selectDraftUnit`
-  (`src/utils/draft-utils.ts`), which normalizes both and takes a unit name;
-  an unknown unit returns null rather than silently falling back to unit 0.
+  not on the result count.** A single-draft league gives one object named
+  `LEAGUE`; a conference-drafting one (the AFL) gives an array of
+  `CONFERENCE00`/`CONFERENCE01`. NOT the bare-object rule above — the singular
+  case is a differently-SHAPED object, so `asArray` does not save you. Reading
+  `.draftPick` off the raw value gave `undefined`, which every caller read as
+  "no picks": an empty board, 200, no error, indistinguishable from a draft
+  that hasn't started. Go through `selectDraftUnit` (`src/utils/draft-utils.ts`),
+  which takes a unit name; an unknown unit returns null rather than unit 0.
 - **`draftPick.comments` is a newline-separated LOG, not a sentence.** One
   `[…]` block holds several statements, some picks carry none, and the trade
   line can follow a closed block — so neither `\[…\]` nor a `^`-anchored line
@@ -83,19 +85,17 @@
   so its 1.01 is the 85th pick of a from-scratch board — comparing them
   directly labelled 90 of 108 picks a "reach".
 - **Owner-facing MFL PAGES are not the API, and each draft type has its own.**
-  The live draft room is `https://<www##>/<year>/ajax_ld?L=<id>`; MFL's other
-  owner pages are numbered options, `.../<year>/options?L=<id>&O=<n>` (the
-  email draft is `O=52`). Neither is served by `api.myfantasyleague.com` — they
-  are league-site pages, so they need the league's own host from the registry.
-  The AFL runs BOTH in one league id (AL live in the applet, NL a slow email
-  draft), so one "the draft page" link is wrong for one conference. Build both
-  with
-  `buildMflLiveDraftUrl` / `buildMflOptionUrl` (`src/utils/mfl-url.ts`), and
-  give every `O=` number a named constant — `O=52` reads as nothing.
-- **`espn_id` coverage differs BY SEASON in `players.json`.** Pitts, Pittman
-  and Likely are absent from the 2025 feed and present in 2026. Never conclude
-  "no ESPN id" from one season's feed, and never report a rehearsal year's gaps
-  as a property of a live feature.
+  The live draft room is `https://<www##>/<year>/ajax_ld?L=<id>`; other owner
+  pages are numbered options, `.../<year>/options?L=<id>&O=<n>` (email draft
+  `O=52`). Neither is on `api.myfantasyleague.com` — they are league-site pages
+  needing the league's own host from the registry. The AFL runs BOTH in one
+  league id (AL live, NL email), so one "the draft page" link is wrong for one
+  conference. Use `buildMflLiveDraftUrl` / `buildMflOptionUrl`
+  (`src/utils/mfl-url.ts`), and name every `O=` constant — `O=52` reads as
+  nothing.
+- **`espn_id` coverage differs BY SEASON in `players.json`.** Pitts, Pittman and
+  Likely are absent from 2025 and present in 2026. Never conclude "no ESPN id"
+  from one season, nor report a rehearsal year's gaps as a live feature's.
 
 ## Before you spend an hour
 
@@ -103,12 +103,11 @@
   faster than reading the docs, and it is the authoritative list. It lists
   ENDPOINTS, not fields — see the next bullet.
 - **Never conclude "MFL does not expose X" from an anonymous call.** A
-  commissioner cookie adds ~20 undocumented fields to every franchise in
-  `TYPE=league`, `lastVisit` (a real last-login timestamp) among them. That
-  one was written off as nonexistent on anonymous evidence in Aug 2026.
-  Probe with the cookie, and make the probe assert it actually authenticated
-  — an anonymous response is missing the field too, so the two look
-  identical. `scripts/probe-mfl-franchise-fields.ts` is the pattern.
+  commissioner cookie adds ~20 undocumented fields per franchise in
+  `TYPE=league` — `lastVisit` among them, written off as nonexistent on
+  anonymous evidence in Aug 2026. Probe WITH the cookie, and make the probe
+  assert it authenticated: an anonymous response is missing the field too, so
+  the two look identical. `scripts/probe-mfl-franchise-fields.ts` is the pattern.
 - **Don't ship inferred parameter names to a write endpoint.** Transaction-log
   fields are past-tense (`activated`); import params are verbs (`ACTIVATE`).
   That guess burned five PRs.
