@@ -127,3 +127,29 @@ comes out 0.0 on any week MFL hasn't recorded starters for.
   (`src/data/crest-dark-stroke-manifest.json`) and ten ship a hand-authored
   dark variant; taking the light crest unconditionally hid those behind a
   0.34-opacity watermark in light mode.
+
+
+## The Sunday lineup warning — push-first, and gated on real kickoff
+
+`scripts/schefter-lineup-check.mjs` is the pre-kickoff "your lineup is broken"
+alert. Two rules, both bugs that shipped:
+
+- **Web push is the channel; the GroupMe post is a fallback.** Every flagged
+  owner gets a private push. The chat post carries the warning only for the
+  flagged owners the fan-out could not reach, @-mentions them, and links
+  `/<league>/notifications`. Nobody unreached, no chat post. When push cannot
+  run at all the fan-out reports everyone unreached, so the chat gets the full
+  broadcast — the failure direction has to be a redundant message, never a
+  league that was not warned. `CRON_SECRET` is what makes the push half work;
+  `lineup-reminders.yml` did not pass it until Sep 2026, so that half had never
+  run once.
+
+- **"In season" is Labor Day + 3, not September 1.** The gate was
+  `month >= 9 || month === 1`, but week 1 kicks off the Thursday AFTER Labor
+  Day — up to nine days into September. On Sunday 2026-09-06, four days before
+  the opener, that gap posted a warning naming every team that had not yet set
+  a week 1 lineup: 4 of 16 in TheLeague and **17 of 24 in the AFL**, for a week
+  nobody could have set a lineup for. There is always at least one such Sunday.
+  Use `isSeasonWindowOpen` (`src/utils/pecking-order-season-window.mjs`), asked
+  about both candidate years so January stays correct without re-deriving the
+  rollover pivot.

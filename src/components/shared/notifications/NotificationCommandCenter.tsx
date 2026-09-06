@@ -166,8 +166,9 @@ export default function NotificationCommandCenter() {
         <div>
           <h2 id="ncc-title" className="ncc__title">Choose your alerts</h2>
           <p className="ncc__sub">
-            The group chat gets one post a day. Everything else lands here — turn
-            on as much or as little as you want.
+            Deadlines come here first now. The group chat still posts them, but
+            only for the owners we could not reach — and it names them. Turn the
+            ones you care about on and you stop being one of them.
           </p>
         </div>
         <p className="ncc__count" aria-live="polite">

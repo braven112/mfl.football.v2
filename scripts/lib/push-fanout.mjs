@@ -8,6 +8,16 @@
  * Never throws and never fails a job. Every caller here has already done its
  * real work (an article written, a scan committed) by the time it sends, so a
  * push outage must not turn a successful run into a failed one.
+ *
+ * RETURNS `delivered` and `undelivered` franchise-id arrays, which is what the
+ * deadline lanes use to decide whether the group chat needs to carry a message
+ * at all (see scripts/lib/reminder-fallback.mjs). The contract that matters:
+ * **a push that did not run counts as reaching nobody.** No CRON_SECRET, a dry
+ * run, an HTTP error, push not configured — every one of those puts the whole
+ * batch in `undelivered`, so the chat post goes out to everyone exactly as it
+ * did before this existed. The failure mode of the notification migration must
+ * be "the league gets a redundant group post", never "nobody is told the
+ * deadline".
  */
 
 import { leagueUrl } from '../../src/config/leagues-data.mjs';
@@ -45,18 +55,26 @@ const DEFAULT_LOG = {
  */
 export async function sendPushFanout({ league, category, notifications, dryRun = false, log = DEFAULT_LOG }) {
   if (!Array.isArray(notifications) || notifications.length === 0) {
-    return { sent: 0, skipped: 'nothing to send' };
+    return { sent: 0, skipped: 'nothing to send', delivered: [], undelivered: [] };
   }
   if (!category) throw new TypeError('sendPushFanout: a `category` is required.');
+
+  // Every franchise this call was asked to reach. The unreached set is derived
+  // by subtraction from this, so a lane that never sent anything reports the
+  // full roster as unreached rather than an empty list — an empty list would
+  // read as "everybody got it" and silence the chat fallback.
+  const requested = [...new Set(notifications.map((n) => n.franchiseId).filter(Boolean))];
+  const nobodyReached = (skipped) => ({ sent: 0, skipped, delivered: [], undelivered: requested });
+
   if (dryRun) {
     log.log?.(`  [dry-run] Would push ${category} to ${notifications.length} owner(s).`);
-    return { sent: 0, skipped: 'dry-run' };
+    return nobodyReached('dry-run');
   }
 
   const secret = process.env.CRON_SECRET;
   if (!secret) {
     log.warn?.(`  [push] CRON_SECRET not set — skipping ${category} push.`);
-    return { sent: 0, skipped: 'no secret' };
+    return nobodyReached('no secret');
   }
 
   // The origin comes from the league registry, which is the single source of
@@ -76,6 +94,7 @@ export async function sendPushFanout({ league, category, notifications, dryRun =
 
   let sent = 0;
   let recipients = 0;
+  const delivered = new Set();
   // Why nothing went out, for a caller (or a test) that needs to tell a push
   // outage apart from an empty batch. Chunking made this a per-batch fact, so
   // it records the LAST failure rather than the only one.
@@ -98,14 +117,29 @@ export async function sendPushFanout({ league, category, notifications, dryRun =
       const data = await res.json();
       sent += data.sent ?? 0;
       recipients += data.recipients ?? 0;
+      // Absent on a route that short-circuited (push not configured). Leaving
+      // the batch out of `delivered` is the right read: nothing was sent.
+      for (const id of data.delivered ?? []) delivered.add(id);
     } catch (err) {
       // Per batch, so one failed chunk cannot cost the others.
       log.warn?.(`  [push] ${category} fan-out failed: ${err.message}`);
       skipped = err.message;
     }
   }
-  log.log?.(`  [push] ${category} → ${recipients} owners (${sent} devices).`);
-  return { sent, recipients, batches: batches.length, ...(skipped ? { skipped } : {}) };
+  const undelivered = requested.filter((id) => !delivered.has(id));
+  log.log?.(
+    `  [push] ${category} → ${recipients} owners (${sent} devices)` +
+      (undelivered.length > 0 ? `, ${undelivered.length} unreached` : '') +
+      '.',
+  );
+  return {
+    sent,
+    recipients,
+    batches: batches.length,
+    delivered: [...delivered],
+    undelivered,
+    ...(skipped ? { skipped } : {}),
+  };
 }
 
 /**

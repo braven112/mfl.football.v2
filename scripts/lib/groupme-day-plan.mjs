@@ -29,6 +29,23 @@
  *     owner who misses one loses real value, which is a far worse outcome
  *     than an extra message.
  *
+ * DEADLINES ARE PUSH-FIRST AS OF SEP 2026, which is what keeps that last
+ * exemption from being a hole big enough to drive the whole season through.
+ * The exempt deadline kinds no longer mirror every reminder into the chat:
+ *
+ *   - `roger-reminder` now fires ONLY for an event's first touch, and only out
+ *     of season. In season it never posts — the chat has real football in it
+ *     and the phone already has the reminder.
+ *   - `roger-fallback` and `lineup-deadline` are FALLBACKS. They post only when
+ *     the push fan-out reports owners it could not reach, they name exactly
+ *     those owners, and they @-mention them with a link to turn notifications
+ *     on. Every owner who subscribes is one fewer name; a league where everyone
+ *     has subscribed gets no post at all.
+ *
+ * So these stay exempt not because deadlines get a free pass, but because what
+ * they now emit is already the minimum: a message to the specific people no
+ * other channel reaches. See scripts/lib/reminder-fallback.mjs.
+ *
  * The claim itself is atomic (Redis SET NX): the scanners run every 15 minutes
  * in parallel with the article crons, so "read then write" would let two posts
  * through on the same day.
@@ -53,9 +70,16 @@ export const EXEMPT_KINDS = new Set([
   'human',          // scripts/post-groupme-message.mjs
   'admin-announce', // the commissioner's broadcast panel
   'roger-reply',    // Roger answering an owner who spoke to him
-  'roger-reminder', // draft / lineup / cut deadlines
-  // Schefter's pre-kickoff "your lineup is broken" warning. Not Roger, but
-  // the same harm: miss it and you start an empty slot for real points.
+  // An event's FIRST touch, offseason only — the save-the-date. Later touches
+  // are push-only and never reach this file.
+  'roger-reminder',
+  // The day-of deadline post, sent only to the owners push could not reach and
+  // naming only them. Exempt because it is already the narrowest thing we can
+  // send: hold it and those specific owners hear about the deadline nowhere.
+  'roger-fallback',
+  // Schefter's pre-kickoff "your lineup is broken" warning, same shape — the
+  // flagged owners push did not reach, and nobody else. Miss it and you start
+  // an empty slot for real points.
   'lineup-deadline',
 ]);
 

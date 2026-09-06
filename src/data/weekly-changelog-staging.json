@@ -3,6 +3,14 @@
   "changes": [
     {
       "date": "2026-09-06",
+      "type": "bug-fix",
+      "summary": "The Sunday lineup check fired four days before the season started and told half the league their lineups were missing \u2014 for a Week 1 nobody could have set a lineup for yet. It was reading the calendar month, so September 1st counted as in-season even though Week 1 does not kick off until the Thursday after Labor Day. It now waits for actual kickoff.",
+      "impact": "user",
+      "area": "notifications",
+      "league": "both"
+    },
+    {
+      "date": "2026-09-06",
       "type": "style-tweak",
       "summary": "The Trade Builder now wears one mark everywhere. Search for it and you got a pair of swap arrows in the AFL and a handshake in The League \u2014 same tool, two icons, depending on which site you searched from. It is the handshake in both now, and the \u201cTrade Player\u201d action in a player's \u22ee menu wears it too, so the button and the tool it opens finally look like the same thing.",
       "impact": "user",

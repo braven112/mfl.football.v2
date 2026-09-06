@@ -1,5 +1,29 @@
 [
   {
+    "id": "deadline-reminders-push-first",
+    "date": "2026-09-06",
+    "category": "enhancement",
+    "icon": "bell",
+    "leagues": [
+      "theleague",
+      "afl"
+    ],
+    "excludeFromHero": true,
+    "title": "Roger Takes the Nagging to Your Phone",
+    "link": "/notifications",
+    "linkLabel": "Turn yours on",
+    "image": "deadline-reminders-push-first.webp",
+    "imageAlt": "The Notifications page, Choose your alerts section. The subtitle reads “Deadlines come here first now. The group chat still posts them, but only for the owners we could not reach — and it names them.” Below it the “Your team” group shows Trade offers, Lineup problems before kickoff, and League deadlines, all toggled on and tagged ON BY DEFAULT.",
+    "summary": "Deadline reminders move to your phone. The group chat keeps the trade talk — and now only carries a deadline for the owners we couldn't reach, tagged by name. Turn notifications on and you stop being one of them.",
+    "description": [
+      "Roger has spent two years announcing every deadline four separate times to a chat that mostly already knew. Fourteen days out. Seven. Two. Day of. Multiply that by every draft, auction, keeper date and cut deadline on the <a href=\"/calendar\">calendar</a> and you get a channel nobody reads, which is a problem on the one day the message actually matters.",
+      "<strong>So the nagging moved.</strong> Every deadline now goes to your phone through <a href=\"/notifications\">notifications</a>, where you control it one category at a time. Out of season the chat still gets a single save-the-date when something lands on the calendar. In season it gets nothing — you have real football to argue about.",
+      "<strong>Except on the day itself.</strong> If there are owners we could not reach on their phone, the chat gets one post naming exactly those owners and @-mentioning them. Not the whole league — the people who were about to miss it. Same for the Sunday <a href=\"/lineup\">lineup</a> check: everyone with a broken lineup gets a private heads-up, and only the ones we couldn't reach get read out in front of everybody. The tagging stops the moment you subscribe, and when everyone has, the posts stop happening on their own.",
+      "<strong>The trade talk is staying right where it is.</strong> Schefter's rumor mill, the trade-block listings and the daily speculation are not deadlines — they are the reason people start deals, and they belong in the room where deals get made. Still capped at three a day, still four hours apart, still with a <a href=\"/trade-builder\">Trade Builder</a> link on every one. Two league-wide announcements survive in season too: the trade deadline a week out, and a Throwback Week kickoff every Tuesday that reports how many teams have locked an era in and how many still need to pick.",
+      "Net effect: the bot says a lot less and the league says a lot more. <a href=\"/notifications\">Go pick your alerts.</a>"
+    ]
+  },
+  {
     "id": "trade-for-him",
     "date": "2026-09-06",
     "category": "enhancement",
@@ -893,28 +917,6 @@
       "On top of that the optimiser now scores rivalry games specifically: starters missing from a division game, both sides added together. The old fairness measure could not see this at all, because it only checked whether the two teams were EQUALLY hurt — two rivals both missing three starters scored perfectly, which is exactly the game nobody wants to play. Replayed on 2026 the AFL goes from 58 missing starters across its division games to 40, and from 94 to 99 rivalry games with both rosters whole.",
       "The 2026 schedules are untouched — locked, pasted and being played. This applies to the next one. Still to come: letting different teams play their division games in different weeks, which is a deeper rebuild of how rounds are constructed."
     ],
-    "excludeFromHero": true,
-    "leagues": [
-      "theleague",
-      "afl"
-    ]
-  },
-  {
-    "id": "schefter-article-links",
-    "date": "2026-08-23",
-    "category": "enhancement",
-    "icon": "link",
-    "title": "Schefter Learned to Point at Things",
-    "summary": "Every Schefter column now links to the page it's about, and works in the tool that answers whatever question the paragraph just raised. His schedule release article somehow never linked to the schedule release page. That's fixed, and so is the reason it happened.",
-    "description": [
-      "Claude Schefter filed eight paragraphs about the 2026 schedule — the four games to circle, the rivalry records, the bye-week math — and never once told you where to go read the thing. <a href=\"/schedule-release\">The schedule release page</a> was right there. The column existed to announce it. Not a link in sight.",
-      "It turned out not to be a slip in one article. Searching the entire published feed for a link — 396 posts, every column he has ever filed, both leagues — turned up exactly zero. He had never linked to anything. He would name a roster crunch and not point at <a href=\"/rosters\">the rosters</a>, call out dead weight and not point at the dead money report, and finish a cut-watch column three days from a deadline without once mentioning <a href=\"/calendar\">the calendar</a>.",
-      "Now every article type declares where it points before a word is written. The page the column is about gets linked near the top and again at the end, and the pages it touches on the way through get linked where they come up. Go back and read the 2026 schedule release now: the opening line is the link, Throwback Week goes to your throwback settings, the rivalry section goes to <a href=\"/rivalries\">the rivalry pages</a>, and the closer hands you the full week-by-week grid. The three cut-watch columns from August got the same treatment — over-the-limit rosters, dead weight, a bloated receiver room that <a href=\"/trade-builder\">the trade builder</a> has opinions about.",
-      "The second half of the job is new: Schefter is now expected to plug the site. Not with a paragraph of housekeeping bolted to the end — with the tool that answers the question he just raised. Grading your auction and pointing at the salary benchmarks. Naming the guy you're about to lose and pointing at <a href=\"/players\">the free agent board</a>. He picks the ones that fit the story and skips the rest, because a plug he had to wedge in reads like an ad, and nobody clicks a columnist who sounds like an ad.",
-      "Links he makes up don't survive. He writes from a list of real pages, and anything that isn't on it gets quietly unwrapped before publishing — the sentence still reads, it just stops promising a page that doesn't exist. And if he forgets the main link entirely, the way he did in August, it gets put back in for him. A Schefter column with nothing to click is no longer something that can happen."
-    ],
-    "image": "schefter-article-links.webp",
-    "imageAlt": "The 2026 schedule release article on The Schefter Report, headlined “The 2026 Schedule Is Here. Four Games Will Define It.” under Claude Schefter’s byline. Three phrases in the prose are blue underlined links: “The 2026 schedule for The League is official” in the opening line, “Throwback Week” inside the Week 4 paragraph about Bring the Pain at Vitside Mafia, and “The rivalry renewals are stacked this season” opening the rivalry section.",
     "excludeFromHero": true,
     "leagues": [
       "theleague",
