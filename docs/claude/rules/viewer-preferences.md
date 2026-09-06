@@ -1,8 +1,8 @@
 # Viewer preferences — country and clocks
 
 Two values a viewer sets once and every page can read: the **country** whose
-channels they see, and the **clocks** kickoff times print in. Shipped Sep 2026
-with `/preferences` in both leagues; Sunday Ticket is the first reader.
+channels they see, and the **one clock** kickoff times print in. Shipped Sep
+2026 with `/preferences` in both leagues; Sunday Ticket is the first reader.
 
 **Files.** `src/utils/viewer-preferences.ts` (pure: catalog, parsing, defaults)
 · `src/utils/viewer-preferences-page.ts` (cookies, precedence, the Redis
@@ -25,11 +25,35 @@ the laptop at home overwrite their choice on the next render. The mirror is
 read only when the device has no cookie at all — and is then written to the
 cookie, so it costs one Redis read per device rather than one per render.
 
+**The league's clock is PT, appended — never chosen.** The league keeps its own
+time in Pacific (lineup locks, auction windows, the 8:45 PT rollover), so it is
+the shared reference beside every viewer's own clock. A viewer picks ONE zone;
+`kickoffZonesFor` adds `LEAGUE_CLOCK` after it. The exception is a viewer
+already on Pacific — printing "1:00 PM PT · 1:00 PM PT" helps nobody, so it is
+dropped for them. `LEAGUE_CLOCK_EQUIVALENTS` is an identity list (Los Angeles,
+Vancouver, Tijuana keep the same wall clock year-round), NOT a snapshot of
+today's offsets — never compute that from a current offset.
+
 **Zone ids are parsed AGAINST a country, never on their own.** `ET` and `PT`
 exist in the US and Canada and nowhere else; Australia has none of them. A
-country switch leaves the old ticks in the form, and `parseZoneSelection`
-dropping them is what makes the zero-JS picker honest. It also guarantees a
-non-empty result — an empty zone list would render a board with no clock on it.
+country switch leaves the old pick in the form, and `parseZoneSelection`
+dropping it is what makes the zero-JS picker honest. It also guarantees a
+non-empty result — no zone would render a board with no clock on it.
+
+**Each country's radios need their OWN name** (`zone-US`, `zone-CA`, …). The
+picker renders all three groups and reveals one with `:has()`; a single shared
+radio name would let only one radio on the entire page be checked, so the
+group the viewer can actually see would render with nothing selected. The
+route reads `zone-<chosen country>` and ignores the rest — which is also what
+stops the two invisible groups from deciding someone's clock.
+
+**Seeded defaults are a FALLBACK, never a write.** `SEEDED_PREFERENCES` holds
+the owners we already know are off the league's clock, keyed
+`<registry slug>:<franchiseId>`. It is consulted only when the device has no
+cookie and the owner has stored nothing, and it is deliberately not persisted:
+that way a correction here still reaches them, and their own choice outranks it
+the moment they make one. Add one from the owner telling you or the franchise
+saying so itself — never inferred from a team name.
 
 **The defaults must equal the pre-preferences board.** `DEFAULT_ZONE_IDS` is
 pinned against `countryTimeZones()` (the mapping file's pair) per country, so

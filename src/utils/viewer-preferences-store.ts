@@ -24,7 +24,8 @@ export function viewerPreferencesKey(leagueSlug: string, franchiseId: string): s
 
 interface StoredViewerPreferences {
   country?: string;
-  zoneIds?: string[];
+  /** The viewer's own clock. Stored as one id; the league's PT is not stored — it is always beside it. */
+  zoneId?: string;
   savedAt?: string;
 }
 
@@ -37,7 +38,7 @@ export async function getStoredViewerPreferences(
   try {
     const raw = await redis.get<StoredViewerPreferences>(viewerPreferencesKey(leagueSlug, franchiseId));
     if (!raw || typeof raw !== 'object' || !raw.country) return null;
-    return parseViewerPreferences(raw.country, raw.zoneIds);
+    return parseViewerPreferences(raw.country, raw.zoneId);
   } catch (err) {
     console.error('Failed to load viewer preferences from KV:', err);
     return null;
@@ -55,7 +56,7 @@ export async function setStoredViewerPreferences(
   try {
     await redis.set(viewerPreferencesKey(leagueSlug, franchiseId), {
       country: prefs.country,
-      zoneIds: prefs.zoneIds,
+      zoneId: prefs.zoneId,
       savedAt: new Date().toISOString(),
     } satisfies StoredViewerPreferences);
     return true;

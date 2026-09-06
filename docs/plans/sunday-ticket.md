@@ -58,10 +58,12 @@ Status: BUILT 2026-09-04 on branch `claude/sunday-ticket-matchup-preview-3025b7`
 
 - **Sep 2026: the clocks became a PREFERENCE, not a derivation.** The country
   still picks the channel list, the carrier and which clocks are on offer, but
-  WHICH of them you read is now yours: `/preferences` (both leagues) lets an
-  owner pick up to two of their country's real zones — Central, Arizona,
-  Newfoundland, Brisbane — and the board's window headers, jump links, boxes
-  and "also this week" rows all print those. `src/utils/viewer-preferences.ts`
+  WHICH one you read is now yours: `/preferences` (both leagues) lets an owner
+  pick the ONE zone they live in — Central, Arizona, Newfoundland, Brisbane —
+  and the league's own PT rides along beside it (dropped for an owner already
+  on Pacific). The board's window headers, jump links, boxes and "also this
+  week" rows all print that pair. Three owners known to be off the league's
+  clock are seeded (`SEEDED_PREFERENCES`) so their first visit is right. `src/utils/viewer-preferences.ts`
   holds the catalog and the defaults (pinned by test against `countryTimeZones`
   so an owner who never opens the picker sees the board unchanged);
   `viewer-preferences-page.ts` owns the cookie/Redis precedence and is called

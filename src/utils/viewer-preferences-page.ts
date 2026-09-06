@@ -12,7 +12,10 @@
  *   2. The cookie on this device.
  *   3. The signed-in owner's Redis mirror (then written to the cookie, so the
  *      read happens once per device rather than once per render).
- *   4. The defaults — US, ET · PT — exactly what the board showed before
+ *   4. A SEEDED default for owners we already know are not on the league's
+ *      clock (`SEEDED_PREFERENCES`). Never written anywhere — it stays a live
+ *      fallback until the owner chooses for themselves.
+ *   5. The defaults — US, ET · PT — exactly what the board showed before
  *      preferences existed.
  *
  * The cookie beating the mirror is deliberate: a device is where "show me
@@ -30,12 +33,13 @@ import { getLeagueById } from '../config/leagues';
 import {
   DEFAULT_VIEWER_PREFERENCES,
   parseViewerPreferences,
+  seededPreferencesFor,
   type ViewerPreferences,
 } from './viewer-preferences';
 import { getStoredViewerPreferences, setStoredViewerPreferences } from './viewer-preferences-store';
 
 export const COUNTRY_COOKIE = 'pref_country';
-export const ZONES_COOKIE = 'pref_zones';
+export const ZONE_COOKIE = 'pref_zone';
 /**
  * The Sunday Ticket board's original country cookie. Read-only here: an owner
  * who picked Canada last week keeps Canada without touching anything, and the
@@ -65,28 +69,41 @@ function ownerBucket(user: PreferenceOwner | null | undefined): { slug: string; 
   return slug ? { slug, franchiseId: user.franchiseId } : null;
 }
 
+/**
+ * The form field holding a country's clock. Each country's radios carry their
+ * OWN name so the picker can pre-select one per group; a single shared name
+ * would leave only one radio on the page checked. See PreferencesPage.astro.
+ */
+export function zoneParamFor(country: string): string {
+  return `zone-${country}`;
+}
+
 /** True when this request carries an explicit choice. */
 export function hasPreferenceParams(url: URL): boolean {
-  return url.searchParams.has('country') || url.searchParams.has('zones');
+  if (url.searchParams.has('country') || url.searchParams.has('zone')) return true;
+  for (const key of url.searchParams.keys()) if (key.startsWith('zone-')) return true;
+  return false;
 }
 
 /** The preferences named by the URL, read against whatever is already stored. */
 export function preferencesFromParams(url: URL, current: ViewerPreferences): ViewerPreferences {
   const country = url.searchParams.get('country') ?? current.country;
-  // A country change with no zones named re-defaults the clocks, because the
-  // old ids belong to the old country (`parseZoneSelection` drops them).
-  const zones = url.searchParams.has('zones')
-    ? url.searchParams.getAll('zones').flatMap((v) => v.split(','))
-    : current.zoneIds;
-  return parseViewerPreferences(country, zones);
+  // A country change with no zone named re-defaults the clock, because the
+  // old id belongs to the old country (`parseZoneSelection` drops it).
+  // The picker submits every country's group; only the chosen country's
+  // counts. `?zone=` is the canonical single-param form for a link.
+  const grouped = url.searchParams.getAll(zoneParamFor(country));
+  const plain = url.searchParams.getAll('zone');
+  const zone = grouped.length > 0 ? grouped : plain.length > 0 ? plain : current.zoneId;
+  return parseViewerPreferences(country, zone);
 }
 
 /** What the cookies on this device say, or null when neither is set. */
 export function preferencesFromCookies(cookies: Pick<CookieJar, 'get'>): ViewerPreferences | null {
   const country = cookies.get(COUNTRY_COOKIE)?.value ?? cookies.get(LEGACY_COUNTRY_COOKIE)?.value;
-  const zones = cookies.get(ZONES_COOKIE)?.value;
-  if (!country && !zones) return null;
-  return parseViewerPreferences(country, zones);
+  const zone = cookies.get(ZONE_COOKIE)?.value;
+  if (!country && !zone) return null;
+  return parseViewerPreferences(country, zone);
 }
 
 /** What a route gets back: the preferences in force, and whether the account mirror took the write. */
@@ -132,7 +149,10 @@ export async function resolveViewerPreferences(
     }
   }
 
-  return { prefs: DEFAULT_VIEWER_PREFERENCES, savedToAccount: false };
+  // A seed is deliberately NOT written to the cookie: it is a better default,
+  // not a choice the owner made, so correcting it here still reaches them.
+  const seeded = bucket ? seededPreferencesFor(bucket.slug, bucket.franchiseId) : null;
+  return { prefs: seeded ?? DEFAULT_VIEWER_PREFERENCES, savedToAccount: false };
 }
 
 /**
@@ -149,6 +169,8 @@ export async function readViewerPreferences(
   if (bucket) {
     const stored = await getStoredViewerPreferences(bucket.slug, bucket.franchiseId);
     if (stored) return stored;
+    const seeded = seededPreferencesFor(bucket.slug, bucket.franchiseId);
+    if (seeded) return seeded;
   }
   return DEFAULT_VIEWER_PREFERENCES;
 }
@@ -156,5 +178,5 @@ export async function readViewerPreferences(
 /** Write both cookies. ROUTE-ONLY — see the module note. */
 export function writePreferenceCookies(cookies: CookieJar, prefs: ViewerPreferences): void {
   cookies.set(COUNTRY_COOKIE, prefs.country, COOKIE_OPTS);
-  cookies.set(ZONES_COOKIE, prefs.zoneIds.join(','), COOKIE_OPTS);
+  cookies.set(ZONE_COOKIE, prefs.zoneId, COOKIE_OPTS);
 }

@@ -24,8 +24,9 @@ import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
 import { formatKickoffZones } from '../../../utils/sunday-ticket-slate';
 import { countryOptions, sundayTicketProvider } from '../../../utils/broadcast-channels';
 import {
-  MAX_ZONES,
   DEFAULT_ZONE_IDS,
+  LEAGUE_CLOCK,
+  isLeagueClock,
   kickoffZonesFor,
   nextSundayKickoffEpoch,
   zoneOptionsFor,
@@ -67,6 +68,7 @@ const {
 const countries = countryOptions();
 const provider = sundayTicketProvider(prefs.country);
 const preview = formatKickoffZones(sampleKickoff, kickoffZonesFor(prefs));
+const leagueClockLabel = zoneShortName(LEAGUE_CLOCK);
 ---
 
 <TheLeagueLayout title={title}>
@@ -129,25 +131,29 @@ const preview = formatKickoffZones(sampleKickoff, kickoffZonesFor(prefs));
       <fieldset class="pf-field">
         <legend class="pf-field__legend">Your clock</legend>
         <p class="pf-field__hint">
-          Pick up to {MAX_ZONES}. Kickoff times print in this order, east to west — tick a second one to keep
-          the league's shared clock alongside your own.
+          Pick the one you live in. Every kickoff prints in your clock with the league's
+          <strong>{leagueClockLabel}</strong> beside it — the clock lineup locks and auction windows run on.
+          Already on {leagueClockLabel}? Then that's the only one you'll see.
         </p>
         {COUNTRY_CODES.map((code) => {
           // Every country's clocks are rendered; CSS `:has()` shows the one
-          // whose radio is checked. Ticks left behind in a hidden group are
-          // dropped server-side (`parseZoneSelection` filters by country), so
-          // no script is needed to keep them honest.
-          const selected = code === prefs.country ? prefs.zoneIds : DEFAULT_ZONE_IDS[code];
+          // whose country radio is checked. Each group has its OWN radio name
+          // (`zone-US`, `zone-CA`, …) — one shared name would let only a
+          // single radio on the whole page be checked, so the visible group
+          // would render with nothing selected. The route reads the group
+          // belonging to the chosen country and ignores the rest.
+          const selected = code === prefs.country ? prefs.zoneId : DEFAULT_ZONE_IDS[code];
           return (
             <div class="pf-zones" data-country={code}>
               <span class="pf-zones__country">{countries.find((c) => c.code === code)?.name ?? code} clocks</span>
               <div class="pf-options">
                 {zoneOptionsFor(code).map((z) => (
                   <label class="pf-option pf-option--zone">
-                    <input type="checkbox" name="zones" value={z.id} checked={selected.includes(z.id)} />
+                    <input type="radio" name={`zone-${code}`} value={z.id} checked={z.id === selected} />
                     <span class="pf-option__body">
                       <span class="pf-option__abbr">{zoneShortName(z)}</span>
                       <span class="pf-option__name">{z.name}</span>
+                      {isLeagueClock(z) && <span class="pf-option__tag">league clock</span>}
                     </span>
                   </label>
                 ))}
@@ -155,9 +161,6 @@ const preview = formatKickoffZones(sampleKickoff, kickoffZonesFor(prefs));
             </div>
           );
         })}
-        <p class="pf-field__note">
-          Ticked more than {MAX_ZONES}? The first {MAX_ZONES} going east to west are the ones you'll see.
-        </p>
       </fieldset>
 
       <div class="pf-actions">
@@ -271,6 +274,16 @@ const preview = formatKickoffZones(sampleKickoff, kickoffZonesFor(prefs));
   .pf-option__flag { font-size: 1.05rem; line-height: 1; }
   .pf-option__abbr { font-weight: var(--font-weight-bold); color: var(--page-text); }
   .pf-option__name { font-size: 0.8rem; }
+  .pf-option__tag {
+    padding: 0.05rem 0.4rem;
+    border-radius: var(--radius-full);
+    background: color-mix(in srgb, var(--league-accent) 20%, transparent);
+    color: var(--page-text);
+    font-size: 0.65rem;
+    font-weight: var(--font-weight-bold);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
 
   .pf-zones { margin-top: 0.4rem; }
   .pf-zones__country {

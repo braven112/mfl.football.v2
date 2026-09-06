@@ -86,89 +86,157 @@ export const ZONE_OPTIONS: Record<CountryCode, readonly ZoneOption[]> = {
 };
 
 /**
- * The pair a country starts with — byte-for-byte the clocks the board showed
- * before anyone could choose, so an owner who never opens the preferences
- * page sees exactly what they saw yesterday.
- * `tests/viewer-preferences.test.ts` pins each against `countryTimeZones`.
+ * THE LEAGUE'S CLOCK. Pacific — the clock the league keeps its own time in
+ * (lineup locks, auction windows, the 8:45 PT rollover), so it is the shared
+ * reference every kickoff is printed against no matter where the viewer is.
+ *
+ * It is appended automatically rather than chosen: a viewer picks the ONE
+ * clock they live in and gets this one beside it. The exception is a viewer
+ * who already lives on Pacific — printing "1:00 PM PT · 1:00 PM PT" helps
+ * nobody, so `kickoffZonesFor` drops it for them.
  */
-export const DEFAULT_ZONE_IDS: Record<CountryCode, readonly string[]> = {
-  US: ['ET', 'PT'],
-  CA: ['ET', 'PT'],
-  AU: ['SYD', 'PER'],
+export const LEAGUE_CLOCK: ZoneOption = {
+  id: 'PT',
+  zone: 'America/Los_Angeles',
+  label: 'PT',
+  name: "The league's clock (Pacific)",
 };
 
-/** How many clocks a viewer may print at once. Two fits the box; three wraps it. */
-export const MAX_ZONES = 2;
+/**
+ * Zones that ARE the league clock, so appending it would print the same time
+ * twice. Canada's Pacific and Baja keep the same wall clock as Los Angeles
+ * year-round, DST flips included — this is an identity list, not a snapshot
+ * of today's offsets.
+ */
+const LEAGUE_CLOCK_EQUIVALENTS = new Set([
+  LEAGUE_CLOCK.zone,
+  'America/Vancouver',
+  'America/Tijuana',
+]);
+
+/**
+ * The clock a country starts on. Chosen so the board an owner who never opens
+ * the picker sees is the one it showed before preferences existed: the US and
+ * Canada open on Eastern, which with the league clock beside it is the
+ * ET · PT the board has always printed.
+ * `tests/viewer-preferences.test.ts` pins each against `countryTimeZones`.
+ */
+export const DEFAULT_ZONE_IDS: Record<CountryCode, string> = {
+  US: 'ET',
+  CA: 'ET',
+  AU: 'SYD',
+};
 
 /** The country's options, or the default country's for anything unrecognized. */
 export function zoneOptionsFor(country: CountryCode): readonly ZoneOption[] {
   return ZONE_OPTIONS[country] ?? ZONE_OPTIONS[DEFAULT_COUNTRY];
 }
 
-/** What a viewer has chosen: whose channels, and which clocks. */
+/** What a viewer has chosen: whose channels, and the one clock they live in. */
 export interface ViewerPreferences {
   country: CountryCode;
-  /** 1..MAX_ZONES ids, valid for `country`, in catalog order. */
-  zoneIds: string[];
+  /** One id from `country`'s catalog. The league's PT is added at render time. */
+  zoneId: string;
 }
 
 export const DEFAULT_VIEWER_PREFERENCES: ViewerPreferences = {
   country: DEFAULT_COUNTRY,
-  zoneIds: [...DEFAULT_ZONE_IDS[DEFAULT_COUNTRY]],
+  zoneId: DEFAULT_ZONE_IDS[DEFAULT_COUNTRY],
 };
 
 /**
- * Parse a stored/submitted zone list against a COUNTRY. Ids the country does
- * not have are dropped, which is the whole reason this takes the country:
- * switching from the US to Australia leaves `ET,PT` behind, and falling back
- * to that country's default pair is the only sane reading — an empty list
- * would print no clock at all. Order follows the catalog, never the input, so
- * the two clocks never swap places between visits.
+ * Parse a stored/submitted zone against a COUNTRY. An id the country does not
+ * have is dropped, which is the whole reason this takes the country:
+ * switching from the US to Australia leaves `ET` behind, and falling back to
+ * that country's own default is the only sane reading — nothing would print
+ * no clock at all. Accepts a list (the picker submits one value, but a stored
+ * value from an earlier shape may carry two) and takes the first id that
+ * fits, in catalog order, so the answer never depends on input order.
  */
 export function parseZoneSelection(
   raw: string | readonly string[] | null | undefined,
   country: CountryCode,
-): string[] {
+): string {
   const parts = Array.isArray(raw) ? raw : `${raw ?? ''}`.split(',');
   const wanted = new Set(parts.map((p) => `${p}`.trim().toUpperCase()).filter(Boolean));
-  const picked = zoneOptionsFor(country)
-    .filter((z) => wanted.has(z.id))
-    .map((z) => z.id)
-    .slice(0, MAX_ZONES);
-  return picked.length > 0 ? picked : [...DEFAULT_ZONE_IDS[country]];
+  const picked = zoneOptionsFor(country).find((z) => wanted.has(z.id));
+  return picked ? picked.id : DEFAULT_ZONE_IDS[country];
 }
 
-/** Country + zones from any pair of raw values (cookie, URL param, Redis). */
+/** Country + clock from any pair of raw values (cookie, URL param, Redis). */
 export function parseViewerPreferences(
   rawCountry: string | null | undefined,
-  rawZones: string | readonly string[] | null | undefined,
+  rawZone: string | readonly string[] | null | undefined,
 ): ViewerPreferences {
   const country = parseCountry(rawCountry);
-  return { country, zoneIds: parseZoneSelection(rawZones, country) };
+  return { country, zoneId: parseZoneSelection(rawZone, country) };
 }
 
 /** True when these are the untouched defaults — used to keep cookies/URLs clean. */
 export function isDefaultViewerPreferences(prefs: ViewerPreferences): boolean {
-  const defaults = DEFAULT_ZONE_IDS[prefs.country];
+  return prefs.country === DEFAULT_COUNTRY && prefs.zoneId === DEFAULT_ZONE_IDS[DEFAULT_COUNTRY];
+}
+
+/** The chosen option, or the country's default when the id no longer exists. */
+export function chosenZone(prefs: ViewerPreferences): ZoneOption {
+  const options = zoneOptionsFor(prefs.country);
   return (
-    prefs.country === DEFAULT_COUNTRY &&
-    prefs.zoneIds.length === defaults.length &&
-    prefs.zoneIds.every((id, i) => id === defaults[i])
+    options.find((z) => z.id === prefs.zoneId) ??
+    options.find((z) => z.id === DEFAULT_ZONE_IDS[prefs.country]) ??
+    LEAGUE_CLOCK
   );
 }
 
+/** True when a viewer's own clock already IS the league's, so PT must not repeat. */
+export function isLeagueClock(opt: Pick<ZoneOption, 'zone'>): boolean {
+  return LEAGUE_CLOCK_EQUIVALENTS.has(opt.zone);
+}
+
+const toKickoffZone = ({ zone, label, locale }: ZoneOption): KickoffZone =>
+  locale ? { zone, label, locale } : { zone, label };
+
 /**
- * The zones `formatKickoffZones` prints, for these preferences. Falls back to
- * the mapping file's pair (`countryTimeZones`) if a catalog entry ever goes
- * missing, so a bad id can never yield a clockless board.
+ * The zones `formatKickoffZones` prints: the viewer's own clock, then the
+ * LEAGUE's PT beside it — dropped when the viewer already lives on Pacific,
+ * because "1:00 PM PT · 1:00 PM PT" is noise. Never returns an empty list, so
+ * a bad stored id can't yield a clockless board.
  */
 export function kickoffZonesFor(prefs: ViewerPreferences): KickoffZone[] {
-  const options = zoneOptionsFor(prefs.country);
-  const zones = prefs.zoneIds
-    .map((id) => options.find((z) => z.id === id))
-    .filter((z): z is ZoneOption => !!z)
-    .map(({ zone, label, locale }) => (locale ? { zone, label, locale } : { zone, label }));
-  return zones.length > 0 ? zones : countryTimeZones(prefs.country);
+  const own = chosenZone(prefs);
+  return isLeagueClock(own) ? [toKickoffZone(own)] : [toKickoffZone(own), toKickoffZone(LEAGUE_CLOCK)];
+}
+
+/**
+ * SEEDED DEFAULTS — the owners we already know don't live on the league's
+ * clock, so their first visit is right without them having to set anything.
+ *
+ * Keyed `<registry slug>:<franchiseId>` because both leagues have a franchise
+ * 0001. This is a FALLBACK, not a write: it is consulted only when the device
+ * has no cookie and the owner has stored nothing, and it is never persisted —
+ * so a correction here reaches the owner, and the moment they choose for
+ * themselves their choice outranks it forever.
+ *
+ * Adding one: the honest source is the owner telling you, or the franchise
+ * saying so itself (Maverick's own loader quips run on Sydney time). Do not
+ * infer a zone from a team name.
+ */
+export const SEEDED_PREFERENCES: Record<string, ViewerPreferences> = {
+  // Wascawy Wabbits — Canada, and already on the league's own clock, so the
+  // board prints PT alone for them.
+  'theleague:0009': { country: 'CA', zoneId: 'PT' },
+  // Running down the Dream — Canada, Eastern.
+  'theleague:0016': { country: 'CA', zoneId: 'ET' },
+  // Maverick — Australia, Sydney ("Operating on Sydney time again…").
+  'theleague:0003': { country: 'AU', zoneId: 'SYD' },
+};
+
+/** The seeded preference for an owner, or null. Both arguments are required — a bare franchise id is ambiguous across leagues. */
+export function seededPreferencesFor(leagueSlug: string | null | undefined, franchiseId: string | null | undefined): ViewerPreferences | null {
+  if (!leagueSlug || !franchiseId) return null;
+  const seed = SEEDED_PREFERENCES[`${leagueSlug}:${franchiseId}`];
+  // Re-parsed so a typo'd seed degrades to that country's default rather than
+  // rendering a zone the catalog does not have.
+  return seed ? parseViewerPreferences(seed.country, seed.zoneId) : null;
 }
 
 /** The chip-sized name for one option — "ET", "Sydney". */
@@ -176,15 +244,12 @@ export function zoneShortName(opt: ZoneOption): string {
   return opt.short ?? opt.label;
 }
 
-/** "ET · PT" / "Sydney · Perth" — the one-line summary the board and picker show. */
+/** "ET · PT" / "Sydney · PT" / "PT" — the one-line summary the board and picker show. */
 export function zoneSummary(prefs: ViewerPreferences): string {
-  const options = zoneOptionsFor(prefs.country);
-  return prefs.zoneIds
-    .map((id) => {
-      const opt = options.find((z) => z.id === id);
-      return opt ? zoneShortName(opt) : id;
-    })
-    .join(' · ');
+  const own = chosenZone(prefs);
+  return isLeagueClock(own)
+    ? zoneShortName(own)
+    : `${zoneShortName(own)} · ${zoneShortName(LEAGUE_CLOCK)}`;
 }
 
 export { COUNTRY_CODES };
