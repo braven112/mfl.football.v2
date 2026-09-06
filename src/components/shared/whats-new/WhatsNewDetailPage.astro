@@ -614,6 +614,33 @@ const imagePath = entry.image ? `/assets/whats-new/${entry.image}` : null;
     line-height: 1.7;
   }
 
+  /* An article naming a piece of UI can just SHOW it. The Transaction Hub
+     launch pointed at "the bell" when the actual header control is a
+     handshake, and no amount of prose fixes that as well as the glyph itself
+     sitting in the sentence.
+
+     :global() because description blocks are injected via `set:html` and carry
+     no scope attribute — a scoped rule would silently never match (the same
+     trap documented in docs/claude/rules/theming-and-assets.md). Sized in `em`
+     so it tracks the paragraph rather than pinning to one font size, and
+     `fill: currentColor` so it inherits the body text colour in both themes,
+     exactly as the header's own copy of this icon does. */
+  :global(.wn-detail__body .wn-inline-icon) {
+    /* NOT square. The transactions symbol's viewBox is 124×76, so a 1:1 box
+       letterboxes it — the glyph shrinks to fit the narrower axis and floats
+       in dead space, which reads as misaligned mid-sentence. Sized to the
+       symbol's own ~1.63 aspect so it fills the box. */
+    width: 2.25em;
+    height: 1.4em;
+    fill: currentColor;
+    /* Deliberately a shade larger than the surrounding text and dropped onto
+       the baseline: the whole point of putting it here is that the reader
+       RECOGNISES it in the top bar, and at text size the handshake reads as a
+       smudge. */
+    vertical-align: -0.4em;
+    margin: 0 0.2em;
+  }
+
   /* ── Inline images within article body ── */
   .wn-detail__inline-figure {
     margin: 0.5rem 0;
