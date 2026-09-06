@@ -148,7 +148,6 @@ const RAW_POST_ALLOWLIST: Record<string, string> = {
   'lib/groupme-groups.mjs': 'group membership helper — reads groups, never posts',
   'roger-improvement-notify.mjs': 'developer notification, not the league chat',
   'apply-august-cuts.mjs': 'announces roster cuts that already happened — an owner must know',
-  'gameday-health-check.mjs': 'infrastructure alert, spans every league, only fires on failure',
   'check-afl-waiver-order.ts': 'commissioner-facing waiver-order alert',
   'schefter-announce.mjs': 'a human composed the announcement',
 };

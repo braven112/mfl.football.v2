@@ -401,3 +401,26 @@ not a monitor, it is a scheduled false alarm — and the cost is not the noise,
 it is that the next real one gets ignored. When a health check fails on its
 first run, suspect the check. Both faults here were latent in the check's own
 source and neither was reachable from the code it probes.
+
+## 2026-09-06 - The gameday health check was removed. Its two lessons were not.
+
+**Context:** three days after the entry above, the pre-kickoff health check was
+deleted at the league's request — workflow, script, `scripts/lib/gameday-health.mjs`
+and its test. Nothing replaced it: there is no automated pre-kickoff probe of
+live scoring any more, so read the entry above as history, not as a description
+of something running.
+
+**Why the entry above still earns its place.** Both faults it records are
+properties of *any* scheduled prober of these routes, not of the file that is
+gone: a `host=<hostname>` param on a public URL is scored as SSRF by the WAF at
+the edge, and `getCurrentNFLWeek` returns 0 (not 1) until the Week 1 Thursday,
+so anything running year-round must read the raw week rather than a clamped one.
+Both survive in `docs/claude/rules/live-scoring.md`, rewritten to stop naming
+the deleted script.
+
+**The mechanical part of deleting a GroupMe sender.** `RAW_POST_ALLOWLIST` in
+`tests/groupme-day-plan.test.ts` has a *stale entry* guard — an allowlist name
+with no matching file under `scripts/` fails the suite. So removing any script
+that calls `postToGroupMe` is a two-file change, and the test tells you so
+rather than leaving a lie in the allowlist. Worth knowing before you assume a
+script deletion is self-contained.
