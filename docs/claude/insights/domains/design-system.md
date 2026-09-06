@@ -139,6 +139,50 @@ excludes stroke, and the halo on every `-dark` badge *is* a stroke.
 
 ---
 
+## 2026-09-06 - Every Band-Map Field Is Shaped for Ink, and Needs an Off-Band Twin
+
+**Context:** The player modal's "Rostered by" strip drew a black tile behind
+the franchise crest. Removing it looked like deleting one CSS declaration; it
+wasn't, because the strip was being handed `FranchiseBandBrand.crest`, which is
+deliberately the `iconDark` cut — art drawn to sit on ink, because the band
+above the strip is deep ink in BOTH themes. Take away the tile and that art
+washes out on the white card. The plate was not decoration, it was the thing
+making the wrong artwork legible.
+
+**Insight:** This is the second time a field on this map has been read off the
+band and been wrong there, in the same shape. In Aug 2026 it was `primary` — a
+gradient anchor for deep ink, correct on the band and grey as a 12% tint on a
+light card, which is why `franchiseTintHue` exists (head, "Franchise color has
+three separate roles"). Now it is `crest`. The map is built for ONE surface
+whose defining property is that it has no theme to resolve, so every field on
+it encodes a choice that a themed surface must make differently. A consumer
+reading straight from it inherits the band's assumption silently — nothing
+throws, the pixels are just wrong for half the audience, and in both cases the
+symptom appeared in the theme the author was not looking at.
+
+The tell is the surface, not the field: **ask whether the thing you are
+painting on follows `html.dark`.** If it does, the band's answer is the wrong
+one and there is (or needs to be) a counterpart — `crestLight` beside `crest`,
+`franchiseTintHue` beside `primary`.
+
+**Recommendation:** Reading `FranchiseBandBrand` from anything that is not the
+band? Check for the themed twin first. A themed surface takes the LIGHT crest
+src and lets the global `TeamIconDarkStyles` rules resolve it per theme (the
+`iconDark` swap, or the measured ring for a franchise without one) — which also
+means it must set **no inline `filter`**, since an inline filter outranks those
+rules and would draw the dark-mode ring in light mode too.
+
+Corollary worth keeping: an ink plate behind a logo is a *smell*. It is
+occasionally right (a genuinely dark-in-both-themes composite), but it is also
+exactly what you end up building when a themed surface was handed dark-surface
+artwork. Check which one you have before styling the plate.
+
+The rule and its call sites: `docs/claude/rules/theming-and-assets.md` §
+"The player modal band wears the FRANCHISE"; guards in
+`tests/player-modal-owner-strip.test.ts`.
+
+---
+
 ## 2026-09-03 - Un-deadening a Rule Can Ship a New Dark-Mode Bug in the Same Commit
 
 **Context:** The Schefter tip rail's Tip of the Week badges (`TipPage.astro`)
