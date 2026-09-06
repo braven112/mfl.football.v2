@@ -57,6 +57,7 @@ import {
   resolveAFLTeamSelection,
 } from '../../utils/team-preferences';
 import { getAuthUser } from '../../utils/auth';
+import InstallAppPrompt from '../../components/shared/pwa/InstallAppPrompt.astro';
 import { spriteUrl } from '../../utils/sprite-url';
 import { getLeagueBySlug } from '../../config/leagues';
 
@@ -296,6 +297,7 @@ const lastVisitDate = Astro.cookies.get('whats_new_last_visit')?.value ?? null;
 
 <TheLeagueLayout title="AFL — American Football League">
   <div class="afl-hp">
+    {!!authUser && <InstallAppPrompt variant="banner" leagueName="AFL Fantasy" />}
     <section class="afl-hp__main" aria-labelledby="afl-hp-hero-heading">
       <h2 id="afl-hp-hero-heading" class="visually-hidden">League Overview</h2>
 

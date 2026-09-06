@@ -1,0 +1,326 @@
+---
+/**
+ * InstallAppPrompt — the "put this on your Home Screen" pitch.
+ *
+ * Two variants, one component (the repo's sibling rule: a second copy of a
+ * surface is a component with a prop, never a second file):
+ *
+ *   variant="banner"  dismissible strip on the homepage
+ *   variant="card"    permanent explainer on /notifications
+ *
+ * The banner self-retires: once an owner is running the installed app,
+ * `resolveInstallPitch` returns 'installed' and nothing renders again on that
+ * device. The card stays, because the notifications page has to explain WHY
+ * an iPhone shows no Enable button until the app is installed.
+ *
+ * Rendered hidden and revealed by script. The decision needs `display-mode`,
+ * the user agent and whether the browser fired `beforeinstallprompt` — none of
+ * which exist during SSR, and a server-rendered banner that flashes and then
+ * removes itself is worse than one that fades in a beat late.
+ */
+import { INSTALL_DISMISS_KEY } from '../../../utils/pwa-install';
+
+interface Props {
+  variant?: 'banner' | 'card';
+  /** League display name, for copy that names the app being installed. */
+  leagueName: string;
+}
+
+const { variant = 'banner', leagueName } = Astro.props;
+const isBanner = variant === 'banner';
+---
+
+<section
+  class:list={['install-prompt', `install-prompt--${variant}`]}
+  data-install-prompt
+  data-variant={variant}
+  data-dismiss-key={INSTALL_DISMISS_KEY}
+  aria-labelledby={`install-prompt-title-${variant}`}
+  hidden
+>
+  <div class="install-prompt__icon" aria-hidden="true">
+    <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="5" y="2" width="14" height="20" rx="2.5"></rect>
+      <path d="M12 7v7"></path>
+      <path d="m9 11 3 3 3-3"></path>
+    </svg>
+  </div>
+
+  <div class="install-prompt__body">
+    <h2 class="install-prompt__title" id={`install-prompt-title-${variant}`}>
+      {isBanner ? `Put ${leagueName} on your Home Screen` : 'Install the app first'}
+    </h2>
+
+    <p class="install-prompt__copy" data-install-copy-prompt hidden>
+      {isBanner
+        ? 'Install the app and alerts reach your phone the moment a trade lands or your lineup breaks — no tab required.'
+        : `Install ${leagueName} as an app and it can buzz your phone directly, with a badge on the icon when something needs you.`}
+    </p>
+
+    <p class="install-prompt__copy" data-install-copy-ios hidden>
+      {isBanner
+        ? 'On iPhone, notifications only work once the app is on your Home Screen. Tap Share, then Add to Home Screen — takes about five seconds.'
+        : 'On iPhone and iPad, Apple only allows notifications for apps on the Home Screen. Until you add it, the Enable button below cannot do anything.'}
+    </p>
+
+    <ol class="install-prompt__steps" data-install-steps hidden>
+      <li>Tap the <strong>Share</strong> button in Safari's toolbar.</li>
+      <li>Scroll and choose <strong>Add to Home Screen</strong>.</li>
+      <li>Open {leagueName} from your Home Screen, then turn notifications on.</li>
+    </ol>
+  </div>
+
+  <div class="install-prompt__actions">
+    <button class="install-prompt__btn install-prompt__btn--primary" data-install-action hidden>
+      Install app
+    </button>
+    {isBanner && (
+      <button class="install-prompt__btn install-prompt__btn--ghost" data-install-dismiss>
+        Not now
+      </button>
+    )}
+  </div>
+</section>
+
+<script>
+  import {
+    resolveInstallPitch,
+    isDismissalActive,
+    INSTALL_DISMISS_KEY,
+  } from '../../../utils/pwa-install';
+
+  /**
+   * `beforeinstallprompt` fires once, early, and often BEFORE any island has
+   * hydrated — so the layout stashes it on `window` (see TheLeagueLayout) and
+   * we read it here. Reading a global rather than adding our own listener is
+   * also what keeps this safe under the ClientRouter: the layout registers
+   * exactly one listener for the life of the document, and this script may run
+   * on every navigation.
+   */
+  function capturedPrompt(): any {
+    return (window as any).__mflInstallPrompt ?? null;
+  }
+
+  function standalone(): boolean {
+    return (
+      window.matchMedia('(display-mode: standalone)').matches ||
+      !!(navigator as any).standalone
+    );
+  }
+
+  /**
+   * iPadOS 13+ reports a Mac user agent. Touch points are the only reliable
+   * tell, and they are a browser fact rather than a UA fact, so the swap
+   * happens here and `resolveInstallPitch` stays pure.
+   */
+  function effectiveUserAgent(): string {
+    const ua = navigator.userAgent || '';
+    const iPadOnMacUa = /Macintosh/.test(ua) && navigator.maxTouchPoints > 1;
+    return iPadOnMacUa ? ua.replace('Macintosh', 'iPad') : ua;
+  }
+
+  function readDismissal(): string | null {
+    // Private mode and "block site data" both throw on access rather than
+    // returning null, so every read is guarded — a storage error must never
+    // stop the banner rendering.
+    try {
+      return localStorage.getItem(INSTALL_DISMISS_KEY);
+    } catch {
+      return null;
+    }
+  }
+
+  function render(root: HTMLElement) {
+    const variant = root.dataset.variant ?? 'banner';
+    const pitch = resolveInstallPitch({
+      userAgent: effectiveUserAgent(),
+      standalone: standalone(),
+      promptAvailable: !!capturedPrompt(),
+    });
+
+    const promptCopy = root.querySelector<HTMLElement>('[data-install-copy-prompt]');
+    const iosCopy = root.querySelector<HTMLElement>('[data-install-copy-ios]');
+    const steps = root.querySelector<HTMLElement>('[data-install-steps]');
+    const action = root.querySelector<HTMLButtonElement>('[data-install-action]');
+
+    // The card on /notifications explains a constraint that is true whether or
+    // not we can offer a one-tap install, so it shows for anything but an
+    // already-installed app. The banner is an interruption and earns its place
+    // only when there is a real action behind it.
+    const visible =
+      variant === 'card'
+        ? pitch !== 'installed'
+        : (pitch === 'prompt' || pitch === 'ios-manual') && !isDismissalActive(readDismissal());
+
+    root.hidden = !visible;
+    if (!visible) return;
+
+    const manual = pitch === 'ios-manual' || (variant === 'card' && pitch === 'unsupported');
+    if (promptCopy) promptCopy.hidden = manual;
+    if (iosCopy) iosCopy.hidden = !manual;
+    if (steps) steps.hidden = !manual;
+    if (action) action.hidden = pitch !== 'prompt';
+  }
+
+  function bind(root: HTMLElement) {
+    const action = root.querySelector<HTMLButtonElement>('[data-install-action]');
+    const dismiss = root.querySelector<HTMLButtonElement>('[data-install-dismiss]');
+
+    action?.addEventListener('click', async () => {
+      const deferred = capturedPrompt();
+      if (!deferred) return;
+      action.disabled = true;
+      try {
+        deferred.prompt();
+        await deferred.userChoice;
+      } catch {
+        // A rejected or already-consumed prompt is not worth surfacing.
+      } finally {
+        // The event is single-use: once prompted it can never be re-fired, so
+        // clearing the global stops a second click resolving instantly and
+        // makes the next render fall through to the 'unsupported' branch.
+        (window as any).__mflInstallPrompt = null;
+        action.disabled = false;
+        render(root);
+      }
+    });
+
+    dismiss?.addEventListener('click', () => {
+      try {
+        localStorage.setItem(INSTALL_DISMISS_KEY, String(Date.now()));
+      } catch {
+        // Can't remember the dismissal — still hide it for this page view.
+      }
+      root.hidden = true;
+    });
+  }
+
+  function init() {
+    // Re-queried every page-load: the ClientRouter swaps the document, so a
+    // node captured at module scope belongs to a page that no longer exists.
+    for (const el of document.querySelectorAll<HTMLElement>('[data-install-prompt]')) {
+      if (el.dataset.installBound !== '1') {
+        el.dataset.installBound = '1';
+        bind(el);
+      }
+      render(el);
+    }
+  }
+
+  document.addEventListener('astro:page-load', init);
+  // The layout dispatches this when `beforeinstallprompt` arrives after the
+  // first render — without it, an owner whose browser decides late sees the
+  // manual steps (or nothing) until they navigate.
+  window.addEventListener('mfl:installpromptready', init);
+</script>
+
+<style>
+  .install-prompt {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.9rem;
+    border: 1px solid var(--card-border);
+    border-radius: var(--radius-lg);
+    background: var(--card-surface);
+    box-shadow: var(--shadow-sm);
+    padding: 1rem 1.1rem;
+  }
+
+  .install-prompt--banner {
+    margin: 0 0 1.25rem;
+  }
+
+  .install-prompt--card {
+    margin: 0 0 1rem;
+  }
+
+  .install-prompt__icon {
+    flex: none;
+    display: grid;
+    place-items: center;
+    width: 2.5rem;
+    height: 2.5rem;
+    border-radius: var(--radius-md);
+    background: var(--content-bg-muted);
+    color: var(--color-primary);
+  }
+
+  .install-prompt__body {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  .install-prompt__title {
+    margin: 0 0 0.3rem;
+    font-size: var(--font-size-base);
+    font-weight: 700;
+    line-height: 1.25;
+  }
+
+  .install-prompt__copy {
+    margin: 0;
+    font-size: var(--font-size-sm);
+    color: var(--content-text-muted);
+    max-width: 62ch;
+  }
+
+  .install-prompt__steps {
+    margin: 0.5rem 0 0;
+    padding-left: 1.1rem;
+    font-size: var(--font-size-sm);
+    color: var(--content-text-muted);
+    display: grid;
+    gap: 0.2rem;
+  }
+
+  .install-prompt__steps strong {
+    color: var(--content-text);
+    font-weight: 600;
+  }
+
+  .install-prompt__actions {
+    flex: none;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    flex-wrap: wrap;
+  }
+
+  .install-prompt__btn {
+    appearance: none;
+    border: none;
+    border-radius: var(--radius-md);
+    padding: 0.5rem 0.9rem;
+    font-family: inherit;
+    font-size: var(--font-size-sm);
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  .install-prompt__btn--primary {
+    background: var(--color-primary);
+    color: #fff;
+  }
+
+  .install-prompt__btn--ghost {
+    background: transparent;
+    color: var(--content-text-muted);
+    border: 1px solid var(--content-border);
+  }
+
+  .install-prompt__btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  @media (max-width: 640px) {
+    .install-prompt {
+      flex-wrap: wrap;
+    }
+
+    .install-prompt__actions {
+      width: 100%;
+      justify-content: flex-end;
+    }
+  }
+</style>
