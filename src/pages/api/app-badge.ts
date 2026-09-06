@@ -80,12 +80,37 @@ function readFeed(league: LeagueDefinition, year: number, filename: string): unk
   }
 }
 
-/** A live MFL export as JSON, or null. Never throws. */
-async function fetchExport(url: string, mflCookie?: string): Promise<any | null> {
+/** Parse an MFL export response, or null. Never throws. */
+async function parseExport(res: Response): Promise<any | null> {
   try {
-    const res = await mflFetch({ url, method: 'GET', mflUserCookie: mflCookie });
     if (!res.ok) return null;
     return JSON.parse(await res.text());
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * A public MFL export — league-wide or NFL-wide data with no owner scope.
+ *
+ * Plain fetch on purpose. `mflFetch` exists to carry an owner's MFL_USER_ID
+ * across MFL's cross-origin redirects, and its cookie is REQUIRED: passing it
+ * an absent one sends the literal header `MFL_USER_ID=undefined`. Bye weeks
+ * and a week's submitted lineups are the same for everyone, so there is no
+ * identity to carry here.
+ */
+async function fetchPublicExport(url: string): Promise<any | null> {
+  try {
+    return await parseExport(await fetch(url, { headers: { 'User-Agent': 'mfl-app-badge/1.0' } }));
+  } catch {
+    return null;
+  }
+}
+
+/** An export that only answers correctly for a signed-in owner. */
+async function fetchOwnerExport(url: string, mflUserCookie: string): Promise<any | null> {
+  try {
+    return await parseExport(await mflFetch({ url, method: 'GET', mflUserCookie }));
   } catch {
     return null;
   }
@@ -104,7 +129,7 @@ async function countTrades(
   franchiseId: string,
   mflCookie: string,
 ): Promise<number> {
-  const data = await fetchExport(
+  const data = await fetchOwnerExport(
     buildMflExportUrl({ type: 'pendingTrades', leagueId: league.id, year }),
     mflCookie,
   );
@@ -137,7 +162,7 @@ async function countLineup(
   const week = Number((nflSchedule as any)?.nflSchedule?.week);
   if (!Number.isInteger(week) || week < 1 || week > 18) return 0;
 
-  const weeklyResults = await fetchExport(
+  const weeklyResults = await fetchPublicExport(
     `https://${league.mflHost}/${year}/export?TYPE=weeklyResults&L=${league.id}&W=${week}&JSON=1`,
   );
   const lineups = parseStartingLineups(weeklyResults).filter(
@@ -154,7 +179,9 @@ async function countLineup(
   // one extra fetch. `parseByeTeams` reads an nflByeWeeks export specifically
   // — handing it the nflSchedule feed silently yields an empty bye set, which
   // reads as "every lineup is clean" rather than as a failure.
-  const byeWeeks = await fetchExport(`https://${MFL_API_HOST}/${year}/export?TYPE=nflByeWeeks&JSON=1`);
+  const byeWeeks = await fetchPublicExport(
+    `https://${MFL_API_HOST}/${year}/export?TYPE=nflByeWeeks&JSON=1`,
+  );
 
   const warnings = buildLineupWarnings({
     lineups,
