@@ -1988,14 +1988,19 @@ function pickRogerTemplate(touchId, eventId) {
 }
 
 /**
- * Throwback Week: count how many franchises are still on the commissioner's
- * default era (no stored pick in Redis — the same SCOPED keys
- * src/utils/throwback-store.ts writes: `throwback:{id}` in TheLeague,
- * `throwback:{navSlug}:{id}` everywhere else). Best-effort flavor for the pre-event
- * nudges: any failure (no creds, network, bad payload) returns null and the
- * copy degrades to the generic no-count version.
+ * Throwback Week: how many franchises have actually PICKED an era, and how
+ * many are still on the commissioner's default (no stored pick in Redis — the
+ * same SCOPED keys src/utils/throwback-store.ts writes: `throwback:{id}` in
+ * TheLeague, `throwback:{navSlug}:{id}` everywhere else).
+ *
+ * Returns `{ total, picked, defaults }`, because the Tuesday kickoff post
+ * reports BOTH halves — how many are locked in and how many still need to
+ * confirm — and "7 still on default" alone does not tell an owner whether that
+ * is most of the league or a straggler. Best-effort: any failure (no creds,
+ * network, bad payload) returns null and the copy degrades to the generic
+ * no-count version.
  */
-async function countThrowbackDefaults(league) {
+async function countThrowbackPicks(league) {
   try {
     const redis = await getRedis();
     if (!redis) return null;
@@ -2005,17 +2010,17 @@ async function countThrowbackDefaults(league) {
     const values = await redis.mget(
       ...franchiseIds.map(id => scopedThrowbackKeyForNavSlug(id, league.slug)),
     );
-    let count = 0;
+    let defaults = 0;
     for (const value of values) {
       let pref = value;
       if (typeof pref === 'string') {
         try { pref = JSON.parse(pref); } catch { pref = null; }
       }
-      if (!(pref && typeof pref.yearStart === 'number')) count++;
+      if (!(pref && typeof pref.yearStart === 'number')) defaults++;
     }
-    return count;
+    return { total: franchiseIds.length, picked: franchiseIds.length - defaults, defaults };
   } catch (err) {
-    console.warn(`  [throwback] default-count lookup failed: ${err.message} — using generic copy`);
+    console.warn(`  [throwback] pick-count lookup failed: ${err.message} — using generic copy`);
     return null;
   }
 }
@@ -2082,7 +2087,7 @@ async function scanEventReminders(league) {
   const groupMeUrlOverrides = new Map();
   // Lazily fetched at most once per league scan, and only when a throwback
   // pre-event touch is actually firing (undefined = not fetched yet).
-  let throwbackDefaultCount;
+  let throwbackPicks;
 
   // Which touch produced each post, so the delivery step below can route it.
   // Kept beside the posts rather than inside them for the same reason as
@@ -2108,10 +2113,14 @@ async function scanEventReminders(league) {
     // not four: the 14-day and 2-day touches stay push-only either way, and
     // using 7d as the announce touch rather than adding to the first-touch rule
     // is what keeps a league-audience event from posting twice.
+    // Default announce touch for a league-audience event, overridable per event
+    // via `announceTouch`. A deadline wants a week's warning; Throwback Week
+    // wants '2d', which on a Thursday-anchored NFL week IS the Tuesday that
+    // opens it.
     const LEAGUE_ANNOUNCE_TOUCH = '7d';
     const announceTouchId =
       event.audience === 'league'
-        ? LEAGUE_ANNOUNCE_TOUCH
+        ? event.announceTouch ?? LEAGUE_ANNOUNCE_TOUCH
         : REMINDER_TOUCHES.find(
             (t) => (TIER_RANK[event.tier] || 0) >= (TIER_RANK[t.minTier] || 0),
           )?.id;
@@ -2131,13 +2140,16 @@ async function scanEventReminders(league) {
       if (isThrowbackEventId(event.id)) {
         // Throwback Week — custom copy: pre-event touches nudge owners to
         // pick their era; day-of announces the legacy identities are live.
-        if (touch.id !== 'dayof' && throwbackDefaultCount === undefined) {
-          throwbackDefaultCount = await countThrowbackDefaults(league);
+        if (touch.id !== 'dayof' && throwbackPicks === undefined) {
+          throwbackPicks = await countThrowbackPicks(league);
         }
+        const counts = touch.id === 'dayof' ? null : throwbackPicks;
         const built = buildThrowbackReminder(touch.id, {
           week: throwbackWeekFromEventId(event.id),
           days: event.daysUntil,
-          defaultCount: touch.id === 'dayof' ? null : throwbackDefaultCount,
+          defaultCount: counts?.defaults ?? null,
+          pickedCount: counts?.picked ?? null,
+          totalCount: counts?.total ?? null,
         });
         if (!built) continue;
         ({ headline, body } = built);

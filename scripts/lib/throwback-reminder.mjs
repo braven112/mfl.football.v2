@@ -181,9 +181,21 @@ const THROWBACK_TEMPLATES = {
  * @param {number|null} [opts.defaultCount] - how many teams are still on the
  *   commissioner default. null/undefined = unknown (Redis unavailable) →
  *   generic copy. Only surfaced on pre-event touches; day-of never nags.
+ * @param {number|null} [opts.pickedCount] - how many teams HAVE locked an era.
+ * @param {number|null} [opts.totalCount] - teams in the league.
+ *
+ * When picked and total are both known, the copy reports BOTH halves — locked
+ * in, and still to confirm. That is the Tuesday kickoff post's job: "7 still on
+ * default" alone does not tell an owner whether that is most of the league or
+ * two stragglers, and this post goes to the whole room rather than to the
+ * people who have not picked. Without them it falls back to the older
+ * still-on-default nag, which is what every other touch gets.
  * @returns {{ headline: string, body: string } | null}
  */
-export function buildThrowbackReminder(touchId, { week, days, defaultCount = null } = {}) {
+export function buildThrowbackReminder(
+  touchId,
+  { week, days, defaultCount = null, pickedCount = null, totalCount = null } = {},
+) {
   const pool = THROWBACK_TEMPLATES[touchId];
   if (!pool) return null;
 
@@ -197,11 +209,31 @@ export function buildThrowbackReminder(touchId, { week, days, defaultCount = nul
     s.replace(/\{week\}/g, String(week)).replace(/\{days\}/g, String(days));
 
   let body = fill(template.b);
-  if (touchId !== 'dayof' && Number.isInteger(defaultCount) && defaultCount > 0) {
-    body +=
-      defaultCount === 1
-        ? ' As of this reminder, one team is still riding the commissioner\'s default pick. You know who you are.'
-        : ` As of this reminder, ${defaultCount} teams are still riding the commissioner's default pick. You know who you are.`;
+  if (touchId !== 'dayof') {
+    const haveTally =
+      Number.isInteger(pickedCount) && Number.isInteger(totalCount) && totalCount > 0;
+    if (haveTally) {
+      const remaining = totalCount - pickedCount;
+      const locked =
+        pickedCount === 1
+          ? `One team of ${totalCount} has locked an era in.`
+          : `${pickedCount} of ${totalCount} teams have locked an era in.`;
+      // The "everybody's in" case is worth saying out loud rather than
+      // trailing off — a post that names a number and then goes quiet reads
+      // like it got cut off.
+      const tail =
+        remaining <= 0
+          ? ' That is everybody. Nicely done.'
+          : remaining === 1
+            ? ' One still needs to confirm a choice, or the commissioner picks for them.'
+            : ` ${remaining} still need to confirm a choice, or the commissioner picks for them.`;
+      body += ` ${locked}${tail}`;
+    } else if (Number.isInteger(defaultCount) && defaultCount > 0) {
+      body +=
+        defaultCount === 1
+          ? ' As of this reminder, one team is still riding the commissioner\'s default pick. You know who you are.'
+          : ` As of this reminder, ${defaultCount} teams are still riding the commissioner's default pick. You know who you are.`;
+    }
   }
 
   return { headline: fill(template.h), body };
