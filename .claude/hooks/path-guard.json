@@ -114,10 +114,10 @@
         "src/utils/theme*",
         "src/utils/team-color*",
         "src/utils/team-icon*",
-   "src/utils/franchise-band-brand.ts",
-   "src/utils/crest-dark-stroke-css.ts",
-   "src/utils/dark-surface-crest.ts",
-   "src/components/theleague/PlayerDetailsModal.astro",
+        "src/utils/franchise-band-brand.ts",
+        "src/utils/crest-dark-stroke-css.ts",
+        "src/utils/dark-surface-crest.ts",
+        "src/components/theleague/PlayerDetailsModal.astro",
         "src/utils/*logo*",
         "public/sw.js",
         "src/data/tv-logo-stroke-manifest.json",
@@ -549,6 +549,32 @@
       "tests": [
         "tests/viewer-preferences.test.ts",
         "tests/viewer-clock.test.ts"
+      ]
+    },
+    {
+      "name": "owners-poll",
+      "rules": [
+        "docs/plans/owners-poll.md",
+        "docs/claude/insights/features/owners-poll.md"
+      ],
+      "paths": [
+        "src/utils/owners-poll-*",
+        "src/components/shared/owners-poll/*",
+        "src/pages/api/owners-poll/*",
+        "scripts/lib/owners-poll-*",
+        "scripts/owners-poll-window.mjs",
+        "scripts/generate-pecking-order.mjs",
+        "src/pages/*/pecking-order/ballot.astro",
+        "src/pages/*/pecking-order/voters.astro"
+      ],
+      "tests": [
+        "tests/owners-poll-ballot.test.ts",
+        "tests/owners-poll-api.test.ts",
+        "tests/owners-poll-pass.test.ts",
+        "tests/owners-poll-math.test.ts",
+        "tests/owners-poll-window.test.ts",
+        "tests/owners-poll-voters.test.ts",
+        "tests/owners-poll-posts.test.ts"
       ]
     }
   ]
