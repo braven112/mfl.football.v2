@@ -162,6 +162,24 @@ const t = (value?: string) => value ?? '\u2014';
             <span class="pdm-claim__desc" id="pdm-claim-desc">Free agent &mdash; claim in place</span>
           </span>
         </button>
+
+        <!-- Trade &mdash; the rostered player's counterpart to Claim, and
+             mutually exclusive with it: the server puts a player in exactly one
+             of `tradeTargets` (a rival in my scope holds him) or the claimable
+             remainder, and leaves out the viewer's own roster entirely. An <a>
+             rather than a <button> because it navigates to the Trade Builder,
+             so middle-click and open-in-new-tab work. Shares .pdm-claim's
+             styling outright &mdash; two cards that swap places in the same slot
+             must not drift apart visually. -->
+        <a class="pdm-claim pdm-trade" id="pdm-trade" href="#" hidden>
+          <span class="pdm-claim__icon" aria-hidden="true">
+            <svg aria-hidden="true"><use href="/assets/icons/sprite.svg#icon-transactions-2" /></svg>
+          </span>
+          <span class="pdm-claim__text">
+            <span class="pdm-claim__label">Trade for him</span>
+            <span class="pdm-claim__desc" id="pdm-trade-desc">Build a trade</span>
+          </span>
+        </a>
       </div>
 
       <!-- Key Metrics -->
@@ -660,6 +678,13 @@ const t = (value?: string) => value ?? '\u2014';
     white-space: nowrap;
   }
 
+  /* Trade reuses .pdm-claim wholesale — see the markup note. Only what an
+     anchor needs on top of it, plus a size bump: the handshake's symbol is a
+     wide 124x76 viewBox, so at the gavel's 15px it renders visibly shorter
+     than the icon it sits beside. */
+  .pdm-trade { text-decoration: none; }
+  .pdm-trade .pdm-claim__icon svg { width: 19px; height: 19px; }
+
   /* ================================================================
      Key Metrics Strip
      ================================================================ */
@@ -1024,7 +1049,10 @@ const t = (value?: string) => value ?? '\u2014';
   // reads the right bucket. A blanket reset on `astro:page-load` fired on the
   // same dispatch as WatchListBridge's warm-up and threw away a fetch that was
   // already in flight, whose late `.then` then repopulated what it had cleared.
-  import { loadClaimContext, offerFor, markClaimed } from '../../utils/player-claim-client';
+  import { loadClaimContext, offerFor, markClaimed, tradeTargetFor } from '../../utils/player-claim-client';
+  import { buildTradeBuilderPath } from '../../utils/trade-builder-link';
+  import { activeRankingsScope } from '../../utils/rankings-scope';
+  import { resolveLeaguePath, pathHasLeaguePrefix } from '../../utils/nav-utils';
   import { getDefSpotlightPlayer } from '../../data/theleague/def-spotlight-players';
   import {
     loadPlayerNews,
@@ -1198,8 +1226,12 @@ const t = (value?: string) => value ?? '\u2014';
     // player, a viewer with no franchise in this league, and a degraded MFL
     // read all land on the same quiet outcome — Watch alone.
     const claimBtn = document.getElementById('pdm-claim') as HTMLButtonElement | null;
+    const tradeLink = document.getElementById('pdm-trade') as HTMLAnchorElement | null;
     const actionsRow = document.getElementById('pdm-actions') as HTMLElement | null;
     let claimPlayer: any = null;
+    // The same player drives both affordances; kept as its own binding so the
+    // trade side does not inherit claim's null-on-missing-id narrowing.
+    let tradePlayer: any = null;
     const paintClaim = () => {
       const offer = claimPlayer?.id ? offerFor(claimPlayer.id) : null;
       if (claimBtn) {
@@ -1217,9 +1249,40 @@ const t = (value?: string) => value ?? '\u2014';
           }
         }
       }
+      // ── Trade ──
+      // Same paint pass as Claim, deliberately: the two are decided by one
+      // context and occupy one slot, so painting them apart is how a player
+      // ends up offered both or neither.
+      const target = tradeLink && tradePlayer?.id ? tradeTargetFor(tradePlayer.id) : null;
+      const href = target
+        ? buildTradeBuilderPath({
+            scope: activeRankingsScope(),
+            franchiseId: target.franchiseId,
+            playerId: target.playerId,
+          })
+        : null;
+      if (tradeLink) {
+        // No path means the league has no Trade Builder (Best Ball) — hide
+        // rather than link nowhere.
+        tradeLink.hidden = !href;
+        if (href) {
+          // The prefix comes off on an apex host (theleague.us serves
+          // /trade-builder, not /theleague/trade-builder). Derived from the
+          // path we are ON rather than a server flag, which the browser half
+          // of this component never receives.
+          const onApexHost = !pathHasLeaguePrefix(window.location.pathname);
+          tradeLink.setAttribute('href', resolveLeaguePath(href, onApexHost));
+          const desc = document.getElementById('pdm-trade-desc');
+          if (desc && target) desc.textContent = `Build a trade with ${target.teamName}`;
+        }
+      }
+
       // The row exists only for the buttons in it.
       if (actionsRow) {
-        actionsRow.hidden = (watchBtn?.hidden ?? true) && (claimBtn?.hidden ?? true);
+        actionsRow.hidden =
+          (watchBtn?.hidden ?? true) &&
+          (claimBtn?.hidden ?? true) &&
+          (tradeLink?.hidden ?? true);
       }
     };
     if (claimBtn && !claimBtn.dataset.pdmClaimWired) {
@@ -1254,6 +1317,7 @@ const t = (value?: string) => value ?? '\u2014';
     }
     renderClaimStrip = (player: any) => {
       claimPlayer = player?.id ? player : null;
+      tradePlayer = claimPlayer;
       paintClaim();
       // Paint again once the context lands — the first paint used the cache,
       // which on the first open of a page is empty.

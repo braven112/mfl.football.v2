@@ -191,6 +191,8 @@ export async function resolveClaimContext(user: AuthUser, clock: ViewerClock = D
     windowMode: window.mode,
     windowLabel: describeWaiverWindow(window, clock),
     rosteredIds: [],
+    tradeTargets: {},
+    franchiseNames: {},
   };
 
   // Every early return below is a DEGRADED MFL read, and each one leaves
@@ -230,9 +232,31 @@ export async function resolveClaimContext(user: AuthUser, clock: ViewerClock = D
     leagueWide || conferenceOfFranchise(leaguePayload, fid) === myConference;
 
   const rosteredIds = new Set<string>();
+  // Who the viewer could TRADE for each player with. Built in the same pass and
+  // under the same scoping as `rosteredIds`, which is the point: a player who
+  // is unavailable BECAUSE a rival holds him is exactly the player a trade is
+  // for, and deriving that from a separate roster read is how the two answers
+  // drift apart. The viewer's own franchise is skipped — nobody trades with
+  // themselves, and offering it is how the AFL builder ends up with the same
+  // club on both sides.
+  const tradeTargets: Record<string, string> = {};
   for (const [fid, list] of Object.entries(rosters)) {
     if (!countsAgainstMe(fid)) continue;
-    for (const p of list) rosteredIds.add(String((p as any)?.id ?? p));
+    const theirs = String(fid) !== String(user.franchiseId);
+    for (const p of list) {
+      const id = String((p as any)?.id ?? p);
+      rosteredIds.add(id);
+      if (theirs) tradeTargets[id] = String(fid);
+    }
+  }
+
+  // Names only for the franchises actually named above, so a league that
+  // scopes by conference does not ship the other conference's clubs.
+  const named = new Set(Object.values(tradeTargets));
+  const franchiseNames: Record<string, string> = {};
+  for (const f of franchises) {
+    const fid = String((f as any)?.id ?? '');
+    if (named.has(fid)) franchiseNames[fid] = String((f as any)?.name ?? fid);
   }
 
   const ownIds = (rosters[user.franchiseId] ?? []).map((p: any) => String(p?.id ?? p));
@@ -247,5 +271,7 @@ export async function resolveClaimContext(user: AuthUser, clock: ViewerClock = D
     roster,
     balance: rules.system === 'bbid' ? balance : undefined,
     rosteredIds: [...rosteredIds],
+    tradeTargets,
+    franchiseNames,
   };
 }

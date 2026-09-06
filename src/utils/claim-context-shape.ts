@@ -37,6 +37,33 @@ export interface ClaimContext {
    * round rather than as its complement.
    */
   rosteredIds: string[];
+  /**
+   * Player id → the franchise this viewer could TRADE for him with.
+   *
+   * A strict subset of `rosteredIds`, and deliberately not derivable from it:
+   * that set answers "can I add him", which is one bit, while a trade needs to
+   * know WHO to ask. The viewer's OWN franchise is excluded, so the three
+   * states an owner can be in read straight off these two fields with no
+   * fourth question:
+   *
+   *   in tradeTargets            → someone else in my scope has him → trade
+   *   in rosteredIds only        → I have him → nothing to offer
+   *   in neither                 → free agent → claim/bid
+   *
+   * Scoped exactly like `rosteredIds` (see claim-context.ts): in the AFL that
+   * means the viewer's OWN conference only. A rival conference's copy of the
+   * same player is not a trade this league can run, so it never appears here.
+   */
+  tradeTargets: Record<string, string>;
+  /**
+   * Display names for the franchises named in `tradeTargets`, so the button can
+   * say who to ask without the page it opened from having to know.
+   *
+   * Kept as a separate map rather than inlined per player because a roster's
+   * worth of ids share one name — inlining it repeats the same string ~25
+   * times per franchise for no gain.
+   */
+  franchiseNames: Record<string, string>;
 }
 
 /**

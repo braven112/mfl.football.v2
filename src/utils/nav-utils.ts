@@ -137,6 +137,22 @@ export function getLeaguePrefix(league: LeagueSlug): string {
  * @param hidePrefix - Whether to strip the prefix (true on a league apex host)
  * @returns Clean path (e.g. '/rosters') or original path if hidePrefix is false
  */
+/**
+ * Whether a path is already league-PREFIXED — i.e. we are not on an apex host.
+ *
+ * The inverse question to `resolveLeaguePath`'s, and here for the same reason
+ * that function is: `LEAGUE_PREFIXES` is the one list, and a caller that spells
+ * the slugs out itself stops learning about new leagues (and trips the league
+ * literal guard). Client scripts need this because `hideLeaguePrefix` is a
+ * server local — it reaches the layout, never the browser — so the only thing a
+ * script can read is the path it is standing on.
+ */
+export function pathHasLeaguePrefix(pathname: string): boolean {
+  return Object.values(LEAGUE_PREFIXES).some(
+    (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`)
+  );
+}
+
 export function resolveLeaguePath(path: string, hidePrefix: boolean): string {
   if (!hidePrefix) return path;
   for (const prefix of Object.values(LEAGUE_PREFIXES)) {
