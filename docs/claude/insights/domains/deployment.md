@@ -541,3 +541,121 @@ which no longer resolves (ENOTFOUND).
   reads `.vercel/output/config.json` when present, and main's stale build
   config fails it locally — a failure that exists nowhere but that worktree.
 
+
+## 2026-09-06 - "Running Out Of Bandwidth" Was 1.9% Of The Bill; Build CPU Was 91%
+
+**Context:** Asked to plan bandwidth cost reduction going into the season. Three
+parallel audits had already produced a ranked list of egress contributors — 65 MB
+of `public/assets`, 32.6 MB of unoptimized PNG, What's New rendering ~150
+full-resolution screenshots unpaginated, `rosters.astro` inlining ~1.5-2 MB of
+JSON per uncached request — and work was about to start on them.
+
+**Insight:** The usage breakdown named a completely different line. For the cycle
+ending 2026-09-07, of a $24.70 total:
+
+| Line | Cost | Share | Change |
+|---|---|---|---|
+| Build CPU Minutes | $22.36 | **91%** | +291% |
+| Fluid Active CPU | $1.01 | 4% | +181% |
+| **Fast Origin Transfer** (bandwidth) | **$0.46** | **1.9%** | +203% |
+| Function Invocations | $0.22 | <1% | +443% |
+
+Every item on the egress list was real and every one of them was working on 1.9%
+of the bill. A 10x traffic increase on Fast Origin Transfer adds ~$4; halving the
+build count saves ~$11.
+
+Worse, the percentages invite the wrong read: Function Invocations was the
+fastest-growing line at +443% and costs $0.22. Percentage change ranks
+*attention*, absolute dollars rank *work*.
+
+**Evidence:** `mcp__Vercel__get_web_analytics` 404s (Web Analytics is not enabled
+on this project), so route-level traffic is not available — but the billing
+breakdown alone was decisive. `mcp__Vercel__list_deployments` then located the
+cause: in one 7.9-hour window, 20 deployments, 14 of them preview builds from
+`claude/*` branches, one branch building four times in 19 minutes. A second
+1.9-hour window showed 19 deployments, 6 of them from a single branch with no PR
+open.
+
+Build *duration* was never the problem. A production build measured from
+`get_deployment_build_logs`: clone 8s, install 5s, prebuild 21s, astro build 55s,
+bundle/cache/deploy 37s — ~128s total. Build **count** was.
+
+**Recommendation:** Before optimizing anything for cost, read the actual usage
+breakdown and sort by **absolute dollars**, not by percentage change and not by
+the symptom's name. On Vercel the specific trap is that "bandwidth" is the
+intuitive symptom for a fantasy-football site in September, while Build CPU
+Minutes is the line that a repo with bot commits and agent branches actually
+runs up. `mcp__Vercel__list_deployments` over a few hours is the fastest way to
+tell count from duration.
+
+## 2026-09-06 - Vercel's Ignored Build Step Inverts Exit Codes, And A Skipped Build Reports As CANCELED
+
+**Context:** Adding `ignoreCommand` to `vercel.json` to skip preview builds for
+branches with no open PR.
+
+**Insight:** Three things that are easy to get backwards:
+
+1. **The exit codes are inverted.** `exit 0` **ignores** the build; `exit 1`
+   **proceeds** with it. This is the opposite of shell convention, and inverting
+   it does not fail loudly — it silently stops every deployment in the project.
+   Pin the numbers themselves in a test, not just the decisions.
+2. **A skipped build shows as `state: "CANCELED"`**, not as a distinct status.
+   The build log is the only place it says why:
+   `The deployment was canceled because the Ignored Build Step command returned exit code 0.`
+   Do not read CANCELED in the deployments list as a failure.
+3. **It runs before `pnpm install`**, so the script gets Node builtins only — no
+   `node_modules`, no dependencies.
+
+The script must **fail open**: any network error, non-200, malformed body or
+missing env has to proceed with the build. GitHub's unauthenticated API allows
+60 req/hr against a shared Vercel egress IP, so being rate limited there is a
+question of when, not if — and a cost optimization that can block a deploy is
+worse than the cost it saves.
+
+**Evidence:** `scripts/vercel-ignore-build.mjs`, pinned by
+`tests/vercel-ignore-build.test.ts` (16 cases, including the whole fail-open
+matrix and the literal values of `BUILD`/`SKIP`). Confirmed live on
+`dpl_9bX9KAaDP7ZdU2WoEZaqTNpiJvMX`: skipped in 9s against a ~128s build.
+
+**Recommendation:** Export the decision as a pure function taking `(env, fetchImpl)`
+so the real decision paths are testable without a network or a Vercel
+environment — the sandbox cannot reach `api.github.com`, so a stub is the only
+way to cover "PR open → build" and "no PR → skip" at all.
+
+## 2026-09-06 - Whether A Build Step Is Skippable Is An Empirical Question, And `generatedAt` Is The Only Honest Diff
+
+**Context:** Teaching `scripts/prebuild.mjs` a slim mode for preview builds —
+skipping the 8 network fetches and 10 recomputes whose outputs are already
+committed.
+
+**Insight:** "Its output is git-tracked" is necessary but not sufficient. The
+real test is whether re-running the step against a clean tree reproduces the
+committed bytes. Run the step, then `git status`:
+
+- **Clean** → the committed copy is what the step produces; skipping is a no-op.
+- **Only `generatedAt` moved** → same conclusion. Strip the stamp and `cmp`
+  before believing a diff, or every deterministic step looks like it changed.
+- **Real data moved** → the step's input is live, and skipping trades freshness.
+
+Of the 6 derived files touched here, 5 were byte-identical apart from
+`generatedAt`. The sixth, `data/afl-fantasy/derived/free-agents.json`, genuinely
+differed — its input is live MFL data. That is a fine trade for a *preview* and
+would not be for production.
+
+**A prefix list is the wrong way to detect "the PR changes the pipeline".** The
+first version matched `scripts/(lib/|compute-|fetch-|update-)` and therefore did
+not match `scripts/prebuild.mjs` — the orchestrator itself. Derive the watched
+set from the step commands instead: parse `pnpm run <task>` out of each step's
+`cmd`, resolve each through `package.json` to its `scripts/*.mjs` path, and add
+`scripts/lib/` plus the orchestrator. It came to 21 files and, unlike a prefix
+list, it follows automatically when a step is added.
+
+**Evidence:** Caught by an escape-hatch matrix that asserted "a diff touching the
+pipeline forces FULL" — the assertion failed, which is the only reason the gap
+was visible. Measured effect: prebuild 21s → 10s on a preview.
+
+**Recommendation:** Any "skip this on preview" optimization needs the clean-tree
+reproduction run *before* the step is marked skippable, and an escape hatch for
+the case where the PR is about the pipeline itself (otherwise it previews
+against the old derived file and looks like a no-op). Resolve every failure of
+the detector — unresolvable base ref, shallow clone, not a repo — to FULL.
