@@ -20,8 +20,8 @@ import { getFrozenSalaryAveragesYear } from '../../utils/salary-calculations';
 import { calculateAllSurplusValues } from '../../utils/surplus-value';
 import { getAuthUser, isCommissionerOrAdmin, franchiseIdForLeague } from '../../utils/auth';
 import { readBidRules } from '../../utils/waiver-claim';
+import { claimVerb as claimVerbFor } from '../../utils/claim-context';
 import { resolveWaiverWindow, describeWaiverWindow } from '../../utils/waiver-window';
-import WaiverClaimModal from '../../components/shared/WaiverClaimModal.astro';
 import WaiverClaimsPanel from '../../components/shared/WaiverClaimsPanel.astro';
 import SignInModal from '../../components/shared/SignInModal.astro';
 import WatchListBridge from '../../components/shared/WatchListBridge.astro';
@@ -720,16 +720,10 @@ const calendarEvents =
 const waiverWindow = resolveWaiverWindow(calendarEvents);
 const waiverWindowLabel = describeWaiverWindow(waiverWindow);
 const canClaim = !!claimFranchiseId && !isAuctionSeason;
-const claimConfig = {
-  canClaim,
-  system: bidRules.system,
-  franchiseId: claimFranchiseId,
-  rules: bidRules,
-  roster: myRoster,
-  windowMode: waiverWindow.mode,
-  windowLabel: waiverWindowLabel,
-  year: currentYear,
-};
+// The verb this league puts on an acquisition — 'Bid' here, because TheLeague
+// runs blind bids. One resolver for the table header, the ⋮ action sheet and
+// the player modal, so the three cannot disagree about what the button does.
+const claimVerb = claimVerbFor(bidRules.system);
 // Filed claims are managed by the SAME shared component in both leagues — see
 // tests/page-fork-ratchet.test.ts. `canManage` mirrors `canClaim`: an owner who
 // cannot file a claim has none to manage.
@@ -1018,12 +1012,14 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
             </th>
             <!-- Actions sit right after the name so they are reachable on a
                  phone without scrolling the table sideways (Sep 2026).
-                 Acquisition (default/rankings views): Add during in-season/FCFS, Bid during auction -->
-            <th class="col-fa-action" aria-label="Add or bid on this player">
-              <div class="th-content"></div>
-            </th>
-            <th class="col-player-actions" aria-label="Player actions">
-              <div class="th-content"></div>
+                 ONE column, not two: the Bid pill that used to sit beside the
+                 ⋮ has moved into the player modal, where it can be offered on
+                 every page rather than only on this one. The ⋮ still carries
+                 the acquisition (via the action sheet, which keeps the auction
+                 season's MFL deep link), so the column takes the league's verb
+                 as its header rather than staying nameless. -->
+            <th class="col-player-actions" aria-label={`${claimVerb} on or watch this player`}>
+              <div class="th-content">{claimVerb}</div>
             </th>
             <th class="sortable col-age" data-sort="age">
               <div class="th-content">Age</div>
@@ -1153,9 +1149,8 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
   ></script>
 </TheLeagueLayout>
 
-<WaiverClaimModal config={claimConfig} />
 {!claimFranchiseId && <SignInModal config={signInConfig} />}
-<WatchListBridge signedIn={watchSignedIn} />
+<WatchListBridge signedIn={watchSignedIn} claimVerb={claimVerb} promptSignIn={promptSignIn} />
 
 <script define:vars={{ canClaim, promptSignIn, playerDataJson, hasProjected, hasLastYrPts, hasSnapCounts, nflTeamsJson, hasSurplusData, hasAuctionData, isAuctionSeason, isAdmin, currentYear, mflHost, mflLeagueId, mflActionYear, franchiseNamesJson, franchiseBannersJson, defSpotlightJson, nflAvatarBgJson, nflAvatarBgFallback, nflAvatarBorderJson, nflAvatarBorderFallback, nflAvatarRingJson, nflAvatarRingFallback, nflAvatarRingDarkJson, nflAvatarRingDarkFallback, noHeadshot, logoOnerror: NFL_LOGO_ONERROR, collegeLogoOnerror: COLLEGE_LOGO_ONERROR, collegeLogoOnload: COLLEGE_LOGO_ONLOAD, rookieDraftComplete }}>
   // define:vars creates const — copy to let so polling can update at runtime
@@ -2102,33 +2097,25 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
       const watchMark = watched
         ? `<span class="pa-watch-mark" title="On your watch list"><svg aria-hidden="true"><use href="/assets/icons/sprite.svg#icon-eye"></use></svg></span>`
         : '';
-      const kebabCell = `<td class="col-player-actions"><button type="button" class="pa-kebab${watched ? ' is-watched' : ''}" data-pa-open data-pa-id="${escapeAttr(p.id)}" data-pa-name="${escapeAttr(p.name)}" data-pa-pos="${escapeAttr(p.position || '')}" data-pa-team="${escapeAttr(p.team || '')}" data-pa-espn="${escapeAttr(p.espnId || '')}" data-pa-headshot="${isDef ? '' : escapeAttr(headshot)}" data-pa-franchise="${escapeAttr(p.franchiseId || '')}" data-pa-sub="${escapeAttr(rosteredTeam ? 'Rostered by ' + rosteredTeam : (p.rostered ? 'Rostered' : 'Free agent'))}" aria-label="Actions for ${escapeAttr(p.name)}" title="Player actions"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg></button></td>`;
+      // Acquisition, now carried by the ⋮ button rather than a column of its
+      // own. Free agents only, and not an already-won auction player (mirrors
+      // the auction-view Bid cell).
+      //
+      // `data-pa-acq-*` is present ONLY when MFL's own flow is the intended
+      // path — during the offseason auction (its per-player Place Bid page)
+      // and for a visitor we can offer neither an in-place bid nor a sign-in.
+      // Its presence is what tells the sheet to prefer the deep link over the
+      // in-place form, which is how auction season keeps behaving as it did.
+      const acqOffered = !p.rostered && !(isAuctionSeason && p.auctionStatus === 'won');
+      const acqExternal = acqOffered && !canClaim && !promptSignIn;
+      const acqUrl = !acqExternal
+        ? ''
+        : isAuctionSeason
+          ? `https://${mflHost}/${mflActionYear}/options?L=${mflLeagueId}&O=43&P=${encodeURIComponent(p.id)}`
+          : `https://${mflHost}/${mflActionYear}/add_drop?L=${mflLeagueId}`;
+      const acqLabel = isAuctionSeason ? 'Bid' : 'Add';
+      const kebabCell = `<td class="col-player-actions"><button type="button" class="pa-kebab${watched ? ' is-watched' : ''}" data-pa-open data-pa-claimable="${acqOffered ? 'true' : 'false'}"${acqUrl ? ` data-pa-acq-url="${escapeAttr(acqUrl)}" data-pa-acq-label="${escapeAttr(acqLabel)}"` : ''} data-pa-id="${escapeAttr(p.id)}" data-pa-name="${escapeAttr(p.name)}" data-pa-pos="${escapeAttr(p.position || '')}" data-pa-team="${escapeAttr(p.team || '')}" data-pa-espn="${escapeAttr(p.espnId || '')}" data-pa-headshot="${isDef ? '' : escapeAttr(headshot)}" data-pa-franchise="${escapeAttr(p.franchiseId || '')}" data-pa-sub="${escapeAttr(rosteredTeam ? 'Rostered by ' + rosteredTeam : (p.rostered ? 'Rostered' : 'Free agent'))}" aria-label="Actions for ${escapeAttr(p.name)}" title="Player actions"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg></button></td>`;
 
-      // Acquisition action cell — free agents only, and not an already-won
-      // auction player (mirrors the auction-view Bid cell). During the offseason
-      // auction we deep-link to MFL's per-player Place Bid page; the rest of the
-      // year we deep-link to MFL's add/drop page, which itself auto-presents
-      // blind-bid (waiver) vs FCFS based on MFL's own in-season schedule. MFL is
-      // the final gatekeeper on timing/cap/roster, so no phase math is needed.
-      let faActionCell = `<td class="col-fa-action"></td>`;
-      if (!p.rostered && !(isAuctionSeason && p.auctionStatus === 'won')) {
-        if (canClaim) {
-          // Signed-in owner outside the auction window: bid in place. The
-          // server re-verifies everything this button implies.
-          faActionCell = `<td class="col-fa-action"><button type="button" class="place-bid-link claim-open" data-claim-id="${escapeAttr(p.id)}" data-claim-name="${escapeAttr(p.name)}" data-claim-pos="${escapeAttr(p.position || '')}" data-claim-team="${escapeAttr(p.nflTeam || '')}" data-claim-espn="${escapeAttr(p.espnId || '')}" data-claim-headshot="${escapeAttr(p.headshot || '')}" aria-label="Bid on ${escapeAttr(p.name)}">Bid</button></td>`;
-        } else if (promptSignIn) {
-          // Signed out, outside the auction: our own sign-in, not a one-way
-          // trip to MFL. The player id rides along so the claim form reopens
-          // on this player after the post-login reload.
-          faActionCell = `<td class="col-fa-action"><button type="button" class="place-bid-link" data-signin-open data-signin-player="${escapeAttr(p.id)}" aria-label="Sign in to bid on ${escapeAttr(p.name)}">Bid</button></td>`;
-        } else {
-          const acqUrl = isAuctionSeason
-            ? `https://${mflHost}/${mflActionYear}/options?L=${mflLeagueId}&O=43&P=${encodeURIComponent(p.id)}`
-            : `https://${mflHost}/${mflActionYear}/add_drop?L=${mflLeagueId}`;
-          const acqLabel = isAuctionSeason ? 'Bid' : 'Add';
-          faActionCell = `<td class="col-fa-action"><a href="${escapeAttr(acqUrl)}" target="_blank" rel="noopener" class="place-bid-link" aria-label="${acqLabel} ${escapeAttr(p.name)} on MyFantasyLeague (opens in new tab)">${acqLabel} &#8599;</a></td>`;
-        }
-      }
 
       html += `<tr class="${rosteredClass}" data-pos="${p.position.toLowerCase()}" data-player-id="${p.id}">
         <td class="cell-rank">${rank}</td>
@@ -2146,7 +2133,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
             </div>
           </div>
         </td>
-        ${faActionCell}${kebabCell}
+        ${kebabCell}
         <td class="cell-age">${p.age ?? '-'}</td>
         <td class="cell-sm col-always-profile">${p.exp != null ? p.exp : '-'}</td>`;
 

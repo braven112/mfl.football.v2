@@ -33,7 +33,6 @@ import { NFL_LOGO_ONERROR, NFL_LOGO_ONLOAD, COLLEGE_LOGO_ONERROR, COLLEGE_LOGO_O
 import { NO_HEADSHOT_SILHOUETTE, getPlayerAvatarBackground, getPlayerAvatarBorder, getPlayerAvatarRing, getPlayerAvatarRingDark, getPlayerAvatarStyleMaps } from '../../utils/nfl-team-colors';
 import '../../styles/player-cell.css';
 import '../../styles/ranking-columns.css';
-import '../../styles/fa-claim-button.css';
 // Build-time-derived free-agent snapshot. All the heavy multi-year feed reads +
 // row assembly live in scripts/compute-afl-free-agents.mjs (wired into prebuild);
 // this page imports only the finished ~400KB result. See the SSR note below.
@@ -41,10 +40,10 @@ import freeAgentsData from '../../../data/afl-fantasy/derived/free-agents.json';
 import { fetchLiveAflRosters, applyLiveRosters, conferenceScopedView, resolveConferenceSelection, type FaSnapshot } from '../../utils/afl-free-agents-live';
 import { getAuthUser, franchiseIdForLeague } from '../../utils/auth';
 import { readBidRules } from '../../utils/waiver-claim';
+import { claimVerb as claimVerbFor } from '../../utils/claim-context';
 import { readWaiverSortOrder } from '../../utils/waiver-order';
 import { resolveWaiverWindow, describeWaiverWindow } from '../../utils/waiver-window';
 import { getAflLeagueYear } from '../../utils/league-year';
-import WaiverClaimModal from '../../components/shared/WaiverClaimModal.astro';
 import WaiverClaimsPanel from '../../components/shared/WaiverClaimsPanel.astro';
 import WaiverPriorityModal from '../../components/shared/WaiverPriorityModal.astro';
 import SignInModal from '../../components/shared/SignInModal.astro';
@@ -188,16 +187,11 @@ const calendarEvents =
 const waiverWindow = resolveWaiverWindow(calendarEvents);
 const waiverWindowLabel = describeWaiverWindow(waiverWindow);
 const canClaim = !!claimFranchiseId && claimRoster.length > 0;
-const claimConfig = {
-  canClaim,
-  system: claimRules.system,
-  franchiseId: claimFranchiseId,
-  rules: claimRules,
-  roster: claimRoster,
-  windowMode: waiverWindow.mode,
-  windowLabel: waiverWindowLabel,
-  year: claimYear,
-};
+// The verb this league puts on an acquisition — 'Claim' for the AFL's rolling
+// priority, 'Bid' for a blind-bid league. One resolver for the table header,
+// the ⋮ action sheet and the player modal, so the three cannot disagree about
+// what the button does.
+const claimVerb = claimVerbFor(claimRules.system);
 // Filed claims are managed by the SAME shared component in both leagues — see
 // tests/page-fork-ratchet.test.ts. `canManage` mirrors `canClaim`: an owner who
 // cannot file a claim has none to manage.
@@ -238,9 +232,9 @@ const waiverPriorityConfig = {
 };
 
 // A visitor the priority modal would show its sign-in gate to — signed out, or
-// signed in against TheLeague. They get the action column too, but its button
-// opens the on-site sign-in instead of a claim form (it used to be nothing at
-// all, which left them with no way in from this page).
+// signed in against TheLeague. The ⋮ sheet offers them the claim anyway, wired
+// to the on-site sign-in rather than to a form they cannot use; the reload
+// afterwards reopens the claim on the player they were after (claim-resume).
 //
 // DERIVED FROM `waiverPriorityConfig.signedIn`, not re-computed. SignInModal
 // owns the `[data-signin-open]` handler that the gate's own Sign in button
@@ -562,11 +556,13 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
             <th class="sortable col-rank" data-sort="rank"><div class="th-content">#</div></th>
             <th class="sortable col-player" data-sort="name"><div class="th-content">Player</div></th>
             {/* Actions sit right after the name so they are reachable on a
-                phone without scrolling the table sideways (Sep 2026). */}
-            {(claimConfig.canClaim || promptSignIn) && (
-              <th class="col-fa-action" aria-label="Claim this player"><div class="th-content">Claim</div></th>
-            )}
-            <th class="col-player-actions" aria-label="Player actions"><div class="th-content"></div></th>
+                phone without scrolling the table sideways (Sep 2026).
+                ONE column, not two: the Claim pill that used to sit beside the
+                ⋮ has moved into the player modal, where it can be offered on
+                every page rather than only on this one. The ⋮ still carries
+                the claim (via the action sheet), so the column takes the
+                league's verb as its header rather than staying nameless. */}
+            <th class="col-player-actions" aria-label={`${claimVerb} or watch this player`}><div class="th-content">{claimVerb}</div></th>
             <th class="sortable col-age" data-sort="age"><div class="th-content">Age</div></th>
             <th class="sortable col-sm" data-sort="exp"><div class="th-content">Exp</div></th>
             <th class="sortable col-sm" data-sort="draftRd"><div class="th-content">Draft</div></th>
@@ -588,10 +584,9 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
       </table>
     </div>
 
-    <WaiverClaimModal config={claimConfig} />
     <WaiverPriorityModal config={waiverPriorityConfig} />
     {!claimFranchiseId && <SignInModal config={signInConfig} />}
-    <WatchListBridge signedIn={watchSignedIn} />
+    <WatchListBridge signedIn={watchSignedIn} claimVerb={claimVerb} promptSignIn={promptSignIn} />
 
     <!-- Show more -->
     <div class="show-more-wrapper" id="show-more-wrapper">
@@ -611,7 +606,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
   <PlayerDetailsModal hideContract={true} />
 </TheLeagueLayout>
 
-<script define:vars={{ canClaim, promptSignIn, playerDataJson, hasProjected, hasLastYrPts, hasAdp, defaultSort, defaultDir, mflHost, defSpotlightJson, conferenceMetaJson, activeConfIdJson, nflAvatarBgJson, nflAvatarBorderJson, nflAvatarBgFallback, nflAvatarBorderFallback, nflAvatarRingJson, nflAvatarRingFallback, nflAvatarRingDarkJson, nflAvatarRingDarkFallback, noHeadshot, logoOnerror: NFL_LOGO_ONERROR, collegeLogoOnerror: COLLEGE_LOGO_ONERROR, collegeLogoOnload: COLLEGE_LOGO_ONLOAD }}>
+<script define:vars={{ playerDataJson, hasProjected, hasLastYrPts, hasAdp, defaultSort, defaultDir, mflHost, defSpotlightJson, conferenceMetaJson, activeConfIdJson, nflAvatarBgJson, nflAvatarBorderJson, nflAvatarBgFallback, nflAvatarBorderFallback, nflAvatarRingJson, nflAvatarRingFallback, nflAvatarRingDarkJson, nflAvatarRingDarkFallback, noHeadshot, logoOnerror: NFL_LOGO_ONERROR, collegeLogoOnerror: COLLEGE_LOGO_ONERROR, collegeLogoOnload: COLLEGE_LOGO_ONLOAD }}>
   const players = JSON.parse(playerDataJson);
   // Duplicate-player conference metadata (null = single shared pool).
   const conferenceMeta = JSON.parse(conferenceMetaJson);
@@ -1191,32 +1186,17 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
       const watchMark = watched
         ? `<span class="pa-watch-mark" title="On your watch list"><svg aria-hidden="true"><use href="/assets/icons/sprite.svg#icon-eye"></use></svg></span>`
         : '';
-      const kebabCell = `<td class="col-player-actions"><button type="button" class="pa-kebab${watched ? ' is-watched' : ''}" data-pa-open data-pa-id="${escapeAttr(p.id)}" data-pa-name="${escapeAttr(p.name)}" data-pa-pos="${escapeAttr(p.position || '')}" data-pa-team="${escapeAttr(p.team || '')}" data-pa-espn="${escapeAttr(p.espnId || '')}" data-pa-headshot="${isDef ? '' : escapeAttr(headshot)}" data-pa-franchise="${escapeAttr(ownerForView(p) || '')}" data-pa-sub="${escapeAttr(rosteredForView ? (activeConf ? 'Rostered in the ' + confName(activeConf) : 'Rostered') : 'Free agent')}" aria-label="Actions for ${escapeAttr(p.name)}" title="Player actions"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg></button></td>`;
+      // `data-pa-claimable` is the PAGE's verdict, and only the page can give
+      // it here: `rosteredForView` is scoped to the conference being browsed,
+      // which is the only thing that decides availability in a duplicate-player
+      // league. The ⋮ sheet still checks the viewer's own claim context on top
+      // of it — this says "he is a free agent in this view", not "you may have
+      // him".
+      const kebabCell = `<td class="col-player-actions"><button type="button" class="pa-kebab${watched ? ' is-watched' : ''}" data-pa-open data-pa-claimable="${rosteredForView ? 'false' : 'true'}" data-pa-id="${escapeAttr(p.id)}" data-pa-name="${escapeAttr(p.name)}" data-pa-pos="${escapeAttr(p.position || '')}" data-pa-team="${escapeAttr(p.team || '')}" data-pa-espn="${escapeAttr(p.espnId || '')}" data-pa-headshot="${isDef ? '' : escapeAttr(headshot)}" data-pa-franchise="${escapeAttr(ownerForView(p) || '')}" data-pa-sub="${escapeAttr(rosteredForView ? (activeConf ? 'Rostered in the ' + confName(activeConf) : 'Rostered') : 'Free agent')}" aria-label="Actions for ${escapeAttr(p.name)}" title="Player actions"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg></button></td>`;
       const confTag = buildConfTag(p);
 
       const htDisplay = p.height ? Math.floor(p.height / 12) + "'" + (p.height % 12) + '"' : '-';
       const wtDisplay = p.weight ? p.weight + '' : '-';
-
-      // Claim cell. `rosteredForView`, NOT `p.rostered`: this is a
-      // duplicate-player league and only the ACTIVE conference decides
-      // whether you may claim someone. `p.rostered` means "held in EVERY
-      // conference" (afl-free-agents-live.ts: `confs.length === confCount`),
-      // so gating on it offered a Claim button — via "Include rostered" — on
-      // players already rostered in your own conference, and the server
-      // correctly 400s those with "that player is not a free agent."
-      let claimCell = '';
-      if (canClaim) {
-        claimCell = rosteredForView
-          ? `<td class="col-fa-action"></td>`
-          : `<td class="col-fa-action"><button type="button" class="place-bid-link claim-open" data-claim-id="${escapeAttr(p.id)}" data-claim-name="${escapeAttr(p.name)}" data-claim-pos="${escapeAttr(p.position || '')}" data-claim-team="${escapeAttr(p.nflTeam || p.team || '')}" data-claim-espn="${escapeAttr(p.espnId || '')}" data-claim-headshot="${escapeAttr(p.headshot || '')}" aria-label="Claim ${escapeAttr(p.name)}">Claim</button></td>`;
-      } else if (promptSignIn) {
-        // No AFL session: the same button, wired to the on-site sign-in. It
-        // carries the player id so that after the reload we reopen the claim
-        // form on the player they were actually after.
-        claimCell = rosteredForView
-          ? `<td class="col-fa-action"></td>`
-          : `<td class="col-fa-action"><button type="button" class="place-bid-link" data-signin-open data-signin-player="${escapeAttr(p.id)}" aria-label="Sign in to claim ${escapeAttr(p.name)}">Claim</button></td>`;
-      }
 
       html += `<tr class="${rosteredClass}" data-pos="${p.position.toLowerCase()}" data-player-id="${p.id}">
         <td class="cell-rank">${rank}</td>
@@ -1233,7 +1213,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
             </div>
           </div>
         </td>
-        ${claimCell}${kebabCell}
+        ${kebabCell}
         <td class="cell-age">${p.age ?? '-'}</td>
         <td class="cell-sm">${p.exp != null ? p.exp : '-'}</td>
         <td class="cell-sm">${p.draftRd != null ? 'Rd ' + p.draftRd : '<span class="na">-</span>'}</td>

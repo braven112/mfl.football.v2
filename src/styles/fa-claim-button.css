@@ -1,6 +1,12 @@
 /**
- * The free-agent action pill — TheLeague's `Bid`/`Add` links and the AFL's
- * `Claim` button.
+ * The free-agent action pill — TheLeague's auction-view `Bid` links.
+ *
+ * SCOPE, Sep 2026: the acquisition COLUMN both free-agent tables used to carry
+ * is gone (the claim moved into the player modal, so it could be offered on
+ * every page rather than only those two). What is left is TheLeague's
+ * auction-view Bid anchors. The stylesheet stays global anyway, and stays
+ * here, for the reasons below — they are about how the rows are rendered, not
+ * about which rows exist.
  *
  * GLOBAL, and imported from BOTH players pages' frontmatter, for two reasons:
  *
@@ -53,11 +59,4 @@ button.place-bid-link {
 button.place-bid-link:focus-visible {
   outline: 2px solid var(--league-accent, var(--color-primary, #1c497c));
   outline-offset: 2px;
-}
-
-.col-fa-action {
-  min-width: 60px;
-  text-align: center;
-  padding: 0.25rem 0.375rem;
-  width: 1%;
 }

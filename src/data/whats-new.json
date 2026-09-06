@@ -1,5 +1,28 @@
 [
   {
+    "id": "claim-from-player-modal",
+    "date": "2026-09-06",
+    "category": "new-feature",
+    "icon": "gavel",
+    "leagues": [
+      "theleague",
+      "afl"
+    ],
+    "excludeFromHero": true,
+    "title": "Claim Him From Wherever You Found Him",
+    "link": "/players",
+    "linkLabel": "Open the free-agent pool",
+    "summary": "The Bid / Claim button has left the Free Agents table and moved into the player card — so any free agent you turn up anywhere on the site, on any page, can be added right there, next to Watch.",
+    "description": [
+      "Until this week, adding a free agent meant being on one specific page. The button lived in a column on <a href=\"/players\">Free Agents</a> and nowhere else, so a name you stumbled across in a matchup, on someone's roster, or halfway down a <a href=\"/news\">Schefter Report</a> post was a name you had to go and look up again somewhere else before you could do anything about him.",
+      "Now it is wherever he is. Tap a player's name and the card that opens carries two buttons side by side: <strong>Watch player</strong>, and — if he is genuinely available to you — <strong>Claim player</strong> in the AFL, <strong>Bid player</strong> in TheLeague. Same claim form, same drop picker, same waiver window; it just comes to you instead of the other way round.",
+      "That last condition is doing real work. The button only appears when the player is actually unrostered <em>in your league, in your conference</em>, and you have a roster to drop from — the AFL holds the same man once in each conference, so \"free\" there is a per-conference question, not a league-wide one. Anyone already rostered, and anyone you could not file for anyway, simply gets Watch. Nothing about who may claim whom has changed: the same server checks run on submit as always, against MFL rather than against anything the page believed.",
+      "On the Free Agents table itself, the pill that used to sit beside the ⋮ is gone and the ⋮ column now says what it does — <strong>Claim</strong>, or <strong>Bid</strong> — with the claim, the sign-in for signed-out visitors, and Watch all inside it. One column instead of two, on a table that already scrolls sideways on a phone."
+    ],
+    "image": "claim-from-player-modal.webp",
+    "imageAlt": "The AFL player card open on free agent Jacoby Brissett, with Watch player and Claim player side by side above his projected points"
+  },
+  {
     "id": "fa-sheet-bid-claim",
     "date": "2026-09-05",
     "category": "enhancement",
@@ -879,28 +902,6 @@
     "leagues": [
       "theleague",
       "afl"
-    ]
-  },
-  {
-    "id": "rankings-on-the-decision-pages",
-    "date": "2026-08-21",
-    "category": "enhancement",
-    "icon": "rank",
-    "title": "Your Board Follows You to the Lineup Sheet",
-    "summary": "Every starter and every bench player now carries your rank, right on the lineup screen — and when you open a slot, each eligible replacement does too. Free Agents and Rosters carry the board as well, and you can re-weight it without leaving the page.",
-    "description": [
-      "Six sources loaded, weights tuned, a composite My Rank sitting there looking sharp — and then you opened the page where you actually pick someone, and none of it was there. That was most of a feature missing.",
-      "<a href=\"/lineup\">Set Lineup</a> changes the most, and it's the one built for a phone. Every starter and every bench player now wears a small rank chip next to their projection, so the whole screen is scannable in one pass — the point being to notice the #41 sitting on your bench under the #75 you're starting. Open a slot and the sheet of eligible replacements carries a rank next to each name, with your current starter's rank on the card above it. That little “by Projection” line at the top of the list is a switch: tap it and the candidates reorder by your board, tap it again and they go back. Unranked players stay at the bottom either way, so nobody's kicker jumps the queue.",
-      "Over in the AFL, <a href=\"/players\">Free Agents</a> and <a href=\"/rosters\">Rosters</a> finally caught up to what The League has had for a while. Free Agents gets a View switch above the table — Stats keeps the columns you know, Rankings swaps in your board: My Rank first, then the sources actually feeding it. Not every source you've ever loaded, just the ones you ticked, capped at five, because a source you left out is one you've already said shouldn't weigh on the call. The table opens sorted by My Rank, best first, because that's the order you were going to put it in anyway, and every column sorts. Rosters gets one column next to each player, labeled with whose opinion it is: My Rank when you've built a composite, otherwise whatever board sits at the top of your list.",
-      "And you can argue with the board while you're looking at it. There's a My Rank button next to Filters on Free Agents and Rosters now that opens the sources and their weights right there — tick one in, push another down to 10%, watch the columns re-sort underneath you. Untick a source and its column leaves with it. The percentages still always total 100, so what you type is what that source is actually worth. Adding new imports and hiding built-ins still lives on <a href=\"/import-rankings\">Import Rankings</a>; this is just the dial.",
-      "If you haven't loaded a board, none of this appears — no empty column, no dead button, no chips on your lineup. And the boards stay where you built them: your read on a player in one league is still a completely separate opinion from your read on him in the other."
-    ],
-    "image": "rankings-decision-pages.webp",
-    "imageAlt": "The AFL Free Agents table in Rankings view with the My Rank editor open over it — a modal listing six ranking sources, three of them ticked with editable percentage weights, above a table showing only My Rank and the three sources feeding it: MFL ADP, ESPN and FantasySharks.",
-    "excludeFromHero": true,
-    "leagues": [
-      "afl",
-      "theleague"
     ]
   }
 ]

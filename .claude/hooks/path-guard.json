@@ -1,5 +1,5 @@
 {
-  "$comment": "Path \u2192 guard-tests \u2192 rules-doc map consumed by .claude/hooks/path-guard.mjs on every Write/Edit. Globs use Node's path.matchesGlob against repo-relative paths. Keep each domain's tests FAST (scan-style guards, pure-function suites) \u2014 they run on every edit that matches. tests/path-guard-map.test.ts validates this file: every glob must match a real file, every test and rules doc must exist, and every docs/claude/rules/*.md must be routed by at least one domain.",
+  "$comment": "Path → guard-tests → rules-doc map consumed by .claude/hooks/path-guard.mjs on every Write/Edit. Globs use Node's path.matchesGlob against repo-relative paths. Keep each domain's tests FAST (scan-style guards, pure-function suites) — they run on every edit that matches. tests/path-guard-map.test.ts validates this file: every glob must match a real file, every test and rules doc must exist, and every docs/claude/rules/*.md must be routed by at least one domain.",
   "domains": [
     {
       "name": "roger",
@@ -263,7 +263,7 @@
     {
       "name": "rosters-page",
       "rules": "docs/plans/rosters-page-split.md",
-      "note": "Run `node scripts/roster-parity-check.mjs` before AND after editing \u2014 it is the only test of this 12k-line page's hydrated output.",
+      "note": "Run `node scripts/roster-parity-check.mjs` before AND after editing — it is the only test of this 12k-line page's hydrated output.",
       "paths": [
         "src/pages/*/rosters.astro",
         "scripts/roster-parity-check.mjs"
@@ -314,7 +314,7 @@
         "src/utils/league-year*",
         "src/utils/pecking-order-season-window.mjs"
       ],
-      "note": "Two independent clocks (Feb 14 \u2192 getCurrentLeagueYear, Labor Day \u2192 getCurrentSeasonYear); the base year is ALWAYS calendarYear - 1. See CLAUDE.md \"Year rollover \u2014 two independent clocks\".",
+      "note": "Two independent clocks (Feb 14 → getCurrentLeagueYear, Labor Day → getCurrentSeasonYear); the base year is ALWAYS calendarYear - 1. See CLAUDE.md \"Year rollover — two independent clocks\".",
       "tests": [
         "tests/league-year-rollover.test.ts",
         "tests/afl-league-year.test.ts",
@@ -363,7 +363,7 @@
         "src/utils/url-guard.ts",
         "src/middleware.ts"
       ],
-      "note": "Session JWT only \u2014 never re-add unsigned identity sources. See CLAUDE.md \"Auth \u2014 session JWT only\".",
+      "note": "Session JWT only — never re-add unsigned identity sources. See CLAUDE.md \"Auth — session JWT only\".",
       "tests": [
         "tests/url-guard.test.ts",
         "tests/mfl-cookie-redirect-guard.test.ts"
@@ -401,7 +401,7 @@
       "paths": [
         ".github/workflows/*.yml"
       ],
-      "note": "No new vars.* feature gates (comment out cron: to disable a job; gate with a const in the script); league ids/hosts come from the registry; a weekly job needs isSeasonWindowOpen, not \"the feeds have a completed week\". See CLAUDE.md \"Feature flags \u2014 code, not GitHub Actions variables\".",
+      "note": "No new vars.* feature gates (comment out cron: to disable a job; gate with a const in the script); league ids/hosts come from the registry; a weekly job needs isSeasonWindowOpen, not \"the feeds have a completed week\". See CLAUDE.md \"Feature flags — code, not GitHub Actions variables\".",
       "tests": [
         "tests/workflow-feature-flag-guard.test.ts",
         "tests/league-literal-guard.test.ts",
@@ -510,12 +510,20 @@
         "src/pages/afl-fantasy/players.astro",
         "src/components/shared/WatchListBridge.astro",
         "src/components/shared/WaiverPriorityModal.astro",
+        "src/components/shared/WaiverClaimModal.astro",
+        "src/components/theleague/PlayerDetailsModal.astro",
+        "src/utils/claim-context.ts",
+        "src/utils/claim-context-shape.ts",
+        "src/utils/player-claim-client.ts",
+        "src/utils/claim-resume.ts",
+        "src/pages/api/claim-context.ts",
         "src/pages/api/waiver-order.ts"
       ],
-      "note": "Bid/Claim and the ⋮ menu sit right after the Player column (they were nine columns off-screen on a phone, #974); the waiver priority dialog opens on the synced order and time-boxes the live read; and the page's signed-in verdict is computed ONCE (franchiseIdForLeague) and read back off #watch-list-bridge[data-signed-in], never a second copy. See docs/claude/insights/features/waiver-claims.md and watch-list.md.",
+      "note": "The ⋮ menu sits right after the Player column (it was nine columns off-screen on a phone, #974) and its header carries the league's own verb; the acquisition itself lives in PlayerDetailsModal, so it reaches every page the modal does — which means WaiverClaimModal is mounted by that modal and by no page, the offer is a SESSION verdict from /api/claim-context (both leagues have a franchise 0001), and the form must survive landing before or after the context does. The waiver priority dialog opens on the synced order and time-boxes the live read; the page's signed-in verdict is computed ONCE (franchiseIdForLeague) and read back off #watch-list-bridge[data-signed-in], never a second copy. See docs/claude/insights/features/waiver-claims.md and watch-list.md.",
       "tests": [
         "tests/free-agents-action-placement.test.ts",
-        "tests/free-agent-session.test.ts"
+        "tests/free-agent-session.test.ts",
+        "tests/player-claim-offer.test.ts"
       ]
     }
   ]

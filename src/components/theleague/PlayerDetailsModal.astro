@@ -13,6 +13,7 @@ import { NFL_LOGO_ONERROR, NFL_LOGO_ONLOAD, COLLEGE_LOGO_ONERROR, COLLEGE_LOGO_O
  */
 import '../../styles/player-modal-band.css';
 import '../../styles/player-news.css';
+import WaiverClaimModal from '../shared/WaiverClaimModal.astro';
 
 export interface Props {
   class?: string;
@@ -130,18 +131,38 @@ const t = (value?: string) => value ?? '\u2014';
         <span class="pdm-owner__name" id="pdm-owner-name">{preview?.ownerName}</span>
       </div>
 
-      <!-- My Watch List — one toggle, every page that opens this modal.
-           State comes from src/utils/watch-list-client.ts, so a change here
-           shows up on any row/modal on the same page that also reads it. -->
-      <button type="button" class="pdm-watch" id="pdm-watch" hidden>
-        <span class="pdm-watch__icon" aria-hidden="true">
-          <svg aria-hidden="true"><use id="pdm-watch-icon" href="/assets/icons/sprite.svg#icon-eye" /></svg>
-        </span>
-        <span class="pdm-watch__text">
-          <span class="pdm-watch__label" id="pdm-watch-label">Watch player</span>
-          <span class="pdm-watch__desc" id="pdm-watch-desc">His news lights up in the Schefter Report</span>
-        </span>
-      </button>
+      <!-- Watch + Claim. Both are per-player decisions the viewer makes from
+           wherever they met the player, so they live together above the
+           metrics rather than on the page that opened the modal. Each hides
+           itself independently (see the script), and the row hides when both
+           do — a bare 1rem gap is otherwise all that is left. -->
+      <div class="pdm-actions" id="pdm-actions" hidden>
+        <!-- My Watch List — one toggle, every page that opens this modal.
+             State comes from src/utils/watch-list-client.ts, so a change here
+             shows up on any row/modal on the same page that also reads it. -->
+        <button type="button" class="pdm-watch" id="pdm-watch" hidden>
+          <span class="pdm-watch__icon" aria-hidden="true">
+            <svg aria-hidden="true"><use id="pdm-watch-icon" href="/assets/icons/sprite.svg#icon-eye" /></svg>
+          </span>
+          <span class="pdm-watch__text">
+            <span class="pdm-watch__label" id="pdm-watch-label">Watch player</span>
+            <span class="pdm-watch__desc" id="pdm-watch-desc">His news lights up in the Schefter Report</span>
+          </span>
+        </button>
+
+        <!-- Claim / Bid — shown only when THIS viewer may actually add THIS
+             player (src/utils/player-claim-client.ts decides). The verb is the
+             league's own: TheLeague bids, the AFL claims. -->
+        <button type="button" class="pdm-claim" id="pdm-claim" hidden>
+          <span class="pdm-claim__icon" aria-hidden="true">
+            <svg aria-hidden="true"><use href="/assets/icons/sprite.svg#icon-gavel" /></svg>
+          </span>
+          <span class="pdm-claim__text">
+            <span class="pdm-claim__label" id="pdm-claim-label">Claim player</span>
+            <span class="pdm-claim__desc" id="pdm-claim-desc">Free agent &mdash; claim in place</span>
+          </span>
+        </button>
+      </div>
 
       <!-- Key Metrics -->
       <div class="pdm-metrics" id="pdm-metrics">
@@ -246,6 +267,16 @@ const t = (value?: string) => value ?? '\u2014';
     </div>
   </div>
 </div>
+
+<!-- The claim form, mounted wherever this modal is.
+     No config: it is configured at runtime from /api/claim-context, which is
+     also what decides whether the Claim button above renders at all. Mounting
+     it HERE rather than per page is the point — "any free agent can be added
+     from the modal" is only true if the form is present on every page the
+     modal is. The two free-agent pages therefore must NOT mount their own, or
+     the document carries two #waiver-claim-modal dialogs and getElementById
+     wires the first one it finds. -->
+<WaiverClaimModal />
 
 <style>
   /* ================================================================
@@ -514,14 +545,27 @@ const t = (value?: string) => value ?? '\u2014';
   }
 
   /* ================================================================
-     Watch List Strip
+     Watch / Claim action row
      ================================================================ */
+  /* One row, two equal cards. With only Watch showing it reads exactly as it
+     did before Claim existed — the flex basis makes the single child full
+     width, so no page loses its layout for a button it never shows. */
+  .pdm-actions {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+  }
+  .pdm-actions[hidden] { display: none; }
+  @media (max-width: 420px) {
+    .pdm-actions { flex-direction: column; }
+  }
+
   .pdm-watch {
     display: flex;
     align-items: center;
     gap: 0.625rem;
-    width: 100%;
-    margin-bottom: 1rem;
+    flex: 1 1 0;
+    min-width: 0;
     padding: 0.5rem 0.75rem;
     border-radius: var(--radius-md, 0.5rem);
     background: var(--content-bg-muted, #f3f4f6);
@@ -563,6 +607,52 @@ const t = (value?: string) => value ?? '\u2014';
   .pdm-watch__text { display: grid; gap: 0.05rem; min-width: 0; }
   .pdm-watch__label { font-size: 0.875rem; font-weight: 700; line-height: 1.3; }
   .pdm-watch__desc {
+    font-size: 0.75rem;
+    color: var(--color-gray-500, #6b7280);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .pdm-claim {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+    flex: 1 1 0;
+    min-width: 0;
+    padding: 0.5rem 0.75rem;
+    border-radius: var(--radius-md, 0.5rem);
+    background: color-mix(in srgb, var(--league-accent, var(--color-primary, #1c497c)) 10%, transparent);
+    border: 1px solid color-mix(in srgb, var(--league-accent, var(--color-primary, #1c497c)) 40%, transparent);
+    color: var(--color-gray-900, #111827);
+    text-align: left;
+    cursor: pointer;
+    transition: background-color 0.15s ease, border-color 0.15s ease;
+  }
+  .pdm-claim[hidden] { display: none; }
+  .pdm-claim:hover {
+    background: color-mix(in srgb, var(--league-accent, var(--color-primary, #1c497c)) 18%, transparent);
+    border-color: var(--league-accent, var(--color-primary, #1c497c));
+  }
+  .pdm-claim:focus-visible {
+    outline: 2px solid var(--league-accent, var(--color-primary, #1c497c));
+    outline-offset: 1px;
+  }
+  .pdm-claim__icon {
+    flex-shrink: 0;
+    width: 28px;
+    height: 28px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--radius-sm, 0.25rem);
+    background: var(--card-bg, #fff);
+    color: var(--league-accent, var(--color-primary, #1c497c));
+  }
+  .pdm-claim__icon svg { width: 15px; height: 15px; fill: currentColor; }
+  .pdm-claim__text { display: grid; gap: 0.05rem; min-width: 0; }
+  .pdm-claim__label { font-size: 0.875rem; font-weight: 700; line-height: 1.3; }
+  .pdm-claim__desc {
     font-size: 0.75rem;
     color: var(--color-gray-500, #6b7280);
     overflow: hidden;
@@ -929,6 +1019,9 @@ const t = (value?: string) => value ?? '\u2014';
   import { applyPlayerModalBand, franchiseTintHue, getFranchiseBandBrand } from '../../utils/player-modal-band';
   import { isWatched, loadWatchList, toggleWatch, getWatchListAuth, onWatchListChange } from '../../utils/watch-list-client';
   import { requestSignIn } from '../../utils/player-actions';
+  import {
+    loadClaimContext, offerFor, markClaimed, resetClaimContext,
+  } from '../../utils/player-claim-client';
   import { getDefSpotlightPlayer } from '../../data/theleague/def-spotlight-players';
   import {
     loadPlayerNews,
@@ -981,6 +1074,9 @@ const t = (value?: string) => value ?? '\u2014';
 
   // Set by initPlayerDetailsModal; openPlayerDetailsModal calls it per open.
   let renderWatchStrip: (playerId: unknown) => void = () => {};
+  /** Set by initPlayerDetailsModal; openPlayerDetailsModal calls it per open. */
+  let renderClaimStrip: (player: any) => void = () => {};
+  let claimChangeBound = false;
   // The store's change listener is a DOCUMENT listener, so it is bound once
   // per module and re-pointed at the current init's painter — the modal
   // markup is new after every navigation, so a guard on the button would
@@ -1082,6 +1178,75 @@ const t = (value?: string) => value ?? '\u2014';
       paintWatch();
       // Ask the server once per page session; the paint above used the cache.
       void loadWatchList().then(paintWatch);
+    };
+
+    // ── Claim / Bid ──
+    // The modal is the ONLY place this is offered now — the free-agent tables
+    // used to carry a Claim column, and it was the one surface that had it.
+    // Whether to show the button is not this component's decision: it asks
+    // player-claim-client, which asks the server once per page. So a rostered
+    // player, a viewer with no franchise in this league, and a degraded MFL
+    // read all land on the same quiet outcome — Watch alone.
+    const claimBtn = document.getElementById('pdm-claim') as HTMLButtonElement | null;
+    const actionsRow = document.getElementById('pdm-actions') as HTMLElement | null;
+    let claimPlayer: any = null;
+    const paintClaim = () => {
+      const offer = claimPlayer?.id ? offerFor(claimPlayer.id) : null;
+      if (claimBtn) {
+        claimBtn.hidden = !offer;
+        if (offer) {
+          const label = document.getElementById('pdm-claim-label');
+          const desc = document.getElementById('pdm-claim-desc');
+          // The league's own verb, never normalized — a blind-bid league that
+          // says "claim" is describing a different transaction than the one
+          // the form will run.
+          if (label) label.textContent = `${offer.verb} player`;
+          if (desc) {
+            // Short enough not to ellipsis in the card's one line.
+            desc.textContent = offer.verb === 'Bid' ? 'Free agent — bid in place' : 'Free agent — claim in place';
+          }
+        }
+      }
+      // The row exists only for the buttons in it.
+      if (actionsRow) {
+        actionsRow.hidden = (watchBtn?.hidden ?? true) && (claimBtn?.hidden ?? true);
+      }
+    };
+    if (claimBtn && !claimBtn.dataset.pdmClaimWired) {
+      claimBtn.dataset.pdmClaimWired = '1';
+      claimBtn.addEventListener('click', () => {
+        if (!claimPlayer?.id || !offerFor(claimPlayer.id)) return;
+        // Close this modal first: the claim form is a native <dialog> on the
+        // top layer, so leaving this one open stacks two player headers for
+        // the same player with no way back to the one underneath.
+        closeModal();
+        window.openWaiverClaim?.({
+          id: String(claimPlayer.id),
+          name: claimPlayer.name,
+          position: claimPlayer.position,
+          nflTeam: claimPlayer.nflTeam,
+          espnId: claimPlayer.espnId,
+          headshot: claimPlayer.headshot,
+        });
+      });
+    }
+    if (!claimChangeBound) {
+      claimChangeBound = true;
+      // A filed claim takes the player out of the pool for this viewer. The
+      // form announces it; re-fetching instead would be both slower and wrong,
+      // because MFL's rosters export lags its own writes.
+      document.addEventListener('waiver-claims:changed', (e) => {
+        const id = (e as CustomEvent)?.detail?.playerId;
+        if (id) markClaimed(String(id));
+        paintClaim();
+      });
+    }
+    renderClaimStrip = (player: any) => {
+      claimPlayer = player?.id ? player : null;
+      paintClaim();
+      // Paint again once the context lands — the first paint used the cache,
+      // which on the first open of a page is empty.
+      void loadClaimContext().then(paintClaim);
     };
 
     if (closeBtn) closeBtn.addEventListener('click', closeModal);
@@ -1322,8 +1487,9 @@ const t = (value?: string) => value ?? '\u2014';
         }
       }
 
-      // ── Watch list strip ──
+      // ── Watch list + claim strip ──
       renderWatchStrip(playerData.id);
+      renderClaimStrip(playerData);
 
       // ── Hero: Name ──
 
@@ -1659,4 +1825,12 @@ const t = (value?: string) => value ?? '\u2014';
 
   // Re-initialize after View Transitions (Astro page navigation)
   document.addEventListener('astro:page-load', initPlayerDetailsModal);
+
+  // Forget the cached claim context on every navigation. It is scoped to the
+  // viewer's LEAGUE and to a roster snapshot, and a single JS module instance
+  // survives a ClientRouter navigation — the same reason rankings-scope re-reads
+  // its scope per call rather than capturing it at module load. Nothing is
+  // re-fetched here: the next modal open asks, and pages where none is opened
+  // never do.
+  document.addEventListener('astro:page-load', () => resetClaimContext());
 </script>

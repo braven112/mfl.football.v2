@@ -242,7 +242,10 @@ describe('the panel refreshes when a claim is filed', () => {
     // The panel loaded once on page load and never heard about a claim filed
     // through the modal on the same page — an owner filed one, watched it land
     // on MFL, and saw nothing here.
-    expect(MODAL).toContain("new CustomEvent('waiver-claims:changed')");
+    // The event now carries `detail.playerId` so the player modal can drop him
+    // from its claimable set — assert the name, not the whole call.
+    expect(MODAL).toContain("new CustomEvent('waiver-claims:changed'");
+    expect(MODAL).toContain('detail: { playerId: activeId }');
     expect(PANEL).toContain("addEventListener('waiver-claims:changed'");
   });
 
@@ -278,18 +281,31 @@ describe('the panel refreshes when a claim is filed', () => {
     const initAt = MODAL.indexOf('function init()');
     expect(initAt, 'the wiring must live in an init() that re-runs per load').toBeGreaterThan(-1);
 
-    // The config blob goes stale exactly like the elements do, so it is re-read
-    // inside init() too — not captured alongside the import.
+    // init() delegates the element wiring to wire(), which it calls on every
+    // load — and which /api/claim-context can also call later, on the pages
+    // that have no SSR config. Both entry points run per document, so the
+    // requirement is unchanged: nothing is resolved at MODULE scope.
+    const wireAt = MODAL.indexOf('function wire(');
+    expect(wireAt, 'the element wiring lives in wire()').toBeGreaterThan(-1);
+    const wiring = MODAL.slice(wireAt);
     for (const read of [
-      "getElementById('waiver-claim-config')",
       "getElementById('waiver-claim-modal')",
       "getElementById('wcm-submit')",
     ]) {
-      expect(MODAL.indexOf(read), `${read} must be re-read inside init()`).toBeGreaterThan(initAt);
+      expect(wiring, `${read} must be re-read inside wire()`).toContain(read);
+      expect(
+        MODAL.slice(0, wireAt),
+        `${read} must not be resolved at module scope`,
+      ).not.toContain(read);
     }
+    // The config blob goes stale exactly like the elements do.
+    expect(MODAL.indexOf("getElementById('waiver-claim-config')")).toBeGreaterThan(initAt);
+    // Every wire() call is from init() or the late-binding entry point; a call
+    // at module scope would capture the first document's nodes forever.
+    expect(MODAL).not.toMatch(/^\s*wire\(/m);
 
-    // resumePendingClaim's first act is a synchronous click on the parked
-    // player's button, so it runs inside init() — after the handler is wired.
+    // resumePendingClaim's first act is a synchronous attempt on the parked
+    // player, so it runs inside init() — after the handler is wired.
     expect(MODAL.indexOf('resumePendingClaim()')).toBeGreaterThan(initAt);
 
     expect(MODAL).toContain("document.addEventListener('astro:page-load', init)");

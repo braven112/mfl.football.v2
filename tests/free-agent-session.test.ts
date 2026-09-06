@@ -80,7 +80,10 @@ describe('both free-agent pages derive their verdict through the resolver', () =
     });
 
     it(`${page}: the bridge is mounted with the page's own verdict`, () => {
-      expect(src).toMatch(/<WatchListBridge signedIn=\{watchSignedIn\} \/>/);
+      // Attribute-wise, not whole-tag: the bridge grew claimVerb/promptSignIn
+      // props when the acquisition moved into the ⋮ sheet, and pinning the tag
+      // verbatim made a prop addition look like a regression.
+      expect(src).toMatch(/<WatchListBridge[^>]*\ssignedIn=\{watchSignedIn\}/);
       expect(frontmatter).toContain('const watchSignedIn = !!claimFranchiseId;');
     });
   }
@@ -111,10 +114,15 @@ describe('WatchListBridge exposes the verdict on one element and reads it from t
   const src = read(BRIDGE);
 
   it('renders data-signed-in from the page prop', () => {
-    expect(src).toContain(`<div id="watch-list-bridge" data-signed-in={signedIn ? 'true' : 'false'} hidden></div>`);
+    expect(src).toMatch(/id="watch-list-bridge"/);
+    expect(src).toMatch(/data-signed-in=\{signedIn \? 'true' : 'false'\}/);
   });
 
   it('its own module reads the same attribute back', () => {
-    expect(src).toMatch(/document\.getElementById\('watch-list-bridge'\)\?\.dataset\.signedIn === 'true'/);
+    // Re-read per call, never captured at module scope: one module instance
+    // survives a ClientRouter navigation, so a captured verdict is the
+    // previous page's.
+    expect(src).toMatch(/document\.getElementById\('watch-list-bridge'\)/);
+    expect(src).toMatch(/\?\.dataset\.signedIn === 'true'/);
   });
 });
