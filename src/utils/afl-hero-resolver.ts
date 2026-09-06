@@ -34,6 +34,7 @@ import { getAllResolvedAflEvents } from './league-event-resolver';
 import { getDailySlot } from './hero-resolver';
 import { getCurrentNFLWeek } from './current-week';
 import { randomHeroPlayer } from './hero-players';
+import { resolveFeatureHeadline } from './whats-new-hero-headline';
 import { MFL_EMAIL_DRAFT_OPTION, buildMflLiveDraftUrl, buildMflOptionUrl } from './mfl-url';
 import { LEAGUES } from '../config/leagues';
 
@@ -679,10 +680,15 @@ const SLOT_VIEW: Record<SlotKey, (ctx: SlotContext) => EventHeroView> = {
 
   feature: ({ now, whatsNewEntry: entry }) => {
     const pillBase = entry ? WHATS_NEW_CATEGORY_LABELS[entry.category] : "WHAT'S NEW";
+    // The headline names the FEATURE, the way TheLeague's composite hero has
+    // always led with the entry title — a hardcoded "FRESH ON THE SITE."
+    // announced that something shipped without ever saying what. Authored
+    // `heroHeadline` copy wins; otherwise the entry's title is split.
+    const { headline, accentWord } = resolveFeatureHeadline(entry);
     return {
       pill: (pillBase ?? "WHAT'S NEW").toUpperCase(),
-      headline: 'FRESH ON THE',
-      accentWord: 'SITE.',
+      headline,
+      accentWord,
       summary: entry?.summary ?? 'New on the AFL site — take a look.',
       // No explicit link → CTA into the entry's own article, never the listing
       // (same rule as featureToHero — this view is what AflEventHero renders).

@@ -137,6 +137,17 @@ const shotFrameUrl = link
   ? `${aflLeague.domains[0]}${link.replace(`/${aflLeague.slug}`, '')}`
   : aflLeague.domains[0];
 
+// Display-type step-down. Every hand-written slot headline is a short shout
+// ("GAMES ARE LIVE."); a feature headline derived from a What's New title runs
+// two to three times that, and at the full clamp it wraps past the card. Two
+// buckets, measured on the rendered pair rather than guessed per caller, so a
+// long headline shrinks instead of overflowing.
+const titleLength = `${headline} ${accentWord}`.trim().length;
+const titleSizeClass =
+  titleLength > 46 ? ' afl-event-hero__title--xlong'
+  : titleLength > 26 ? ' afl-event-hero__title--long'
+  : '';
+
 const hasCount = countValue !== undefined && countValue !== null && countValue !== '';
 const hasFooter = hasCount || !!link || secondaryLinks.length > 0;
 // Compose an SR-friendly label for the count chip — value + label read as one phrase.
@@ -148,7 +159,7 @@ const countAriaLabel = hasCount
 ---
 
 <section
-  class:list={['afl-event-hero', { 'afl-event-hero--bordered': bordered, 'afl-event-hero--franchise': !!backdrop }]}
+  class:list={['afl-event-hero', { 'afl-event-hero--bordered': bordered, 'afl-event-hero--franchise': !!backdrop, 'afl-event-hero--has-shot': !model && !!shotSrc }]}
   style={`--ev-accent:${effectiveAccent};--ev-glow:${glow};${modelStyle}${backdrop?.style ?? ''}`}
   aria-label={regionLabel}
 >
@@ -265,7 +276,7 @@ const countAriaLabel = hasCount
       <span class="afl-event-hero__pill">{pill}</span>
     </div>
 
-    <h2 class="afl-event-hero__title">
+    <h2 class={`afl-event-hero__title${titleSizeClass}`}>
       {headline}{accentWord && (<Fragment> <span class="afl-event-hero__accent">{accentWord}</span></Fragment>)}
     </h2>
 
@@ -322,6 +333,11 @@ const countAriaLabel = hasCount
     --ev-divider: rgba(255, 255, 255, 0.16);
     --ev-glow-resolved: var(--ev-glow, rgba(196, 30, 58, 0.6));
     --ev-accent-ink: var(--ev-accent, #c9a94e);
+    /* Screenshot-frame geometry, read by BOTH the frame and the content
+       column that has to stop before it. Two copies of these clamps is how
+       the copy ends up under the frame again. */
+    --ev-shot-w: clamp(280px, 38%, 420px);
+    --ev-shot-right: clamp(1rem, 2.5vw, 2rem);
     /* Navy-on-navy photo wash: the cut-out contrasts softly, so a narrower
        fade than the old on-white version reads cleanly. */
     --ev-fade-left: linear-gradient(
@@ -569,10 +585,10 @@ const countAriaLabel = hasCount
   .afl-event-hero__shot {
     position: absolute;
     z-index: 1;
-    right: clamp(1rem, 2.5vw, 2rem);
+    right: var(--ev-shot-right);
     top: 50%;
     transform: translateY(-50%) rotate(-1.5deg);
-    width: clamp(280px, 38%, 420px);
+    width: var(--ev-shot-w);
     border-radius: 0.5rem;
     overflow: hidden;
     background: #e5e7eb;
@@ -664,6 +680,32 @@ const countAriaLabel = hasCount
     max-width: 640px;
   }
 
+  /* The screenshot frame is opaque and sits over the right ~38% of the card,
+     so the copy has to END where the frame begins — 640px of column runs
+     straight under it. Nothing caught this while every slot hand-wrote a
+     two-word shout and the summary's own 24rem cap mostly held; a headline
+     built from a What's New title is long enough to land under the frame.
+     Capped from the frame's own geometry, and only while the frame is on
+     screen — it is hidden below 640px, where the column goes full width. */
+  @media (min-width: 640.02px) {
+    /* :not(--no-shot) because a 404'd light capture drops the frame at runtime
+       (see the onerror above) while leaving --has-shot on the section. Keying
+       the cap off --has-shot alone would hold the column narrow with the right
+       38% of the card empty — and a placeholder filename is a documented
+       authoring state, not a rarity.
+       640.02px, not 641px: the frame is hidden at max-width 640px, and a
+       fractional viewport in between (ordinary under display scaling or zoom)
+       would match NEITHER query — frame drawn, column uncapped, copy back
+       under the frame. */
+    .afl-event-hero--has-shot:not(.afl-event-hero--no-shot) .afl-event-hero__content {
+      /* border-box so the cap is the column's OUTER edge — against the
+         default content-box the column's own padding pushes it back under
+         the frame, which is the bug this rule exists to fix. */
+      box-sizing: border-box;
+      max-width: min(640px, calc(100% - var(--ev-shot-w) - var(--ev-shot-right)));
+    }
+  }
+
   .afl-event-hero__eyebrow {
     display: flex;
     align-items: center;
@@ -720,6 +762,16 @@ const countAriaLabel = hasCount
     text-transform: uppercase;
     color: var(--ev-ink);
     text-wrap: balance;
+  }
+  /* Long feature headlines: the type steps down rather than the card growing
+     a third line into the summary. Kept as modifiers on the same element so
+     the accent, ink and wrap behaviour are shared. */
+  .afl-event-hero__title--long {
+    font-size: clamp(1.85rem, 3.5vw, 2.6rem);
+  }
+  .afl-event-hero__title--xlong {
+    font-size: clamp(1.6rem, 2.9vw, 2.15rem);
+    line-height: 0.98;
   }
   .afl-event-hero__accent {
     color: var(--ev-accent-ink);

@@ -442,6 +442,36 @@ hard-won facts (Aug 2026 "missing team images" saga):
   bumped, which is unbounded and worse than anything Cloudflare did.
 
 
+## Sprite icons carry meaning — bell is notifications, handshake is trades
+
+Two icons in `sprite.svg` look interchangeable and are not:
+
+| Icon | Means | Where it already is |
+|---|---|---|
+| `bell` | **notifications** — alerts, push, the settings page | `/theleague/notifications`, `/afl-fantasy/notifications`, the notification-command-center What's New entry |
+| `transactions-2` (handshake) | **trades and waivers** | the Transaction Hub button in `Header.astro`, both Trade Builder page-directory entries, the "Trade Player" action in `AFLActionModal` |
+| `exchange` (swap arrows) | a trade **event** or a roster move, not the trade tool | the Trading Deadline calendar event and hero in both leagues, the AFL next-opponent card |
+
+The site renders **no bell outside notifications**. `icon-bell` appears in
+`src/` only inside `icons.astro`, which is the catalogue page listing every
+symbol whether it is used or not — so "the codebase references it" is not
+evidence a surface uses it. The Transaction Hub button has always been the
+handshake; only its CSS class is named `breadcrumb-bell`, and that class name
+put a bell into a published What's New article that described a control the
+site never had (Sept 2026). **Read the `<use href>`, not the class name.**
+
+A page-directory `icon` is a real user-facing choice: site search draws it
+next to the result. `/trade-builder` and `/afl-fantasy/trade-builder` carried
+different icons for months — the same tool with two marks depending on which
+league you searched from, which no diff shows because neither file is wrong on
+its own.
+
+**Symbols carry their own `viewBox`, so the wrapping `<svg viewBox>` is
+decorative.** `icon-transactions-2` is `viewBox="2 26 124 76"` — a 1.6:1 mark
+that letterboxes to about 18×11 in an 18×18 slot. That is how it already
+renders in the header; it is not a bug, but do not expect it to fill a square
+next to icons that do.
+
 ## Overlays on a phone — size against `dvh`, never bare `vh`
 
 `vh` is the LARGE viewport: the page as it would be with the browser chrome

@@ -8845,9 +8845,11 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
       ));
 
       actionOptions.appendChild(makeCdmActionBtn(
+        // Handshake, not the swap arrows: trades and waivers wear the mark the
+        // Trade Builder does. Twin of the AFL modal's trade action.
         'trade', 'Trade Player', 'Simulate, add to trade block, or open trade builder',
         () => showTradeSubOptions(),
-        false, 'icon-exchange'
+        false, 'icon-transactions-2'
       ));
     };
 

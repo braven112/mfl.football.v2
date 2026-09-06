@@ -105,6 +105,23 @@ export interface WhatsNewEntry {
   heroPlayerId?: string;
   /** Caption qualifier for the featured player chip (default "Featured"). */
   heroPlayerDescriptor?: string;
+  /**
+   * Homepage-hero display headline. The AFL hero renders a two-part display
+   * line — a plain phrase plus a colour-accented closing word — so an entry
+   * can carry copy written for that shape instead of reusing its (usually
+   * much longer) article `title`. Written as authored: the hero's own CSS
+   * uppercases it.
+   *
+   * Omit both fields and the hero derives the pair from `title` (last word
+   * accented). Set `heroHeadline` alone for a single-colour line.
+   */
+  heroHeadline?: string;
+  /**
+   * The accented closing word of {@link heroHeadline} — include its own
+   * terminal punctuation (e.g. "SITE."). Ignored without `heroHeadline`,
+   * because half an authored pair is worse copy than the derived one.
+   */
+  heroAccentWord?: string;
   /** Audience restriction — defaults to "all" if omitted. "admin" hides the entry from non-admin users in both the listing and the detail route. */
   visibility?: 'all' | 'admin';
   /**

@@ -8,6 +8,8 @@
       "afl"
     ],
     "title": "Twenty-Four Teams. One Ballot. Your Call.",
+    "heroHeadline": "Now you do the",
+    "heroAccentWord": "Ranking.",
     "link": "/pecking-order/ballot",
     "linkLabel": "Cast your ballot",
     "summary": "The Owners' Poll comes to the AFL. Every Tuesday The Pecking Order ranks all 24 by the numbers; now you rank your top 10 — your own team included, if you think you belong there — and the room's answer runs in Thursday's column right beside the machine's.",
@@ -138,21 +140,23 @@
     "id": "transaction-hub",
     "date": "2026-09-05",
     "category": "new-feature",
-    "icon": "bell",
+    "icon": "transactions-2",
     "leagues": [
       "theleague",
       "afl"
     ],
-    "title": "The Bell Now Knows More Than One Thing",
+    "title": "The Handshake Now Knows More Than One Thing",
+    "heroHeadline": "One handshake, every",
+    "heroAccentWord": "Move.",
     "link": "/players",
     "linkLabel": "File a claim",
-    "summary": "That bell in the corner used to have exactly one job: tell you somebody offered you a trade. It now opens a Transaction Hub — trade offers and the waiver claims you have filed, plus, in a league that runs a priority order, your live spot in it. A number on the bell still means somebody is waiting on you. A quiet dot means there is something in there worth a look.",
+    "summary": "That handshake in the corner used to have exactly one job: tell you somebody offered you a trade. It now opens a Transaction Hub — trade offers and the waiver claims you have filed, plus, in a league that runs a priority order, your live spot in it. A number on the handshake still means somebody is waiting on you. A quiet dot means there is something in there worth a look.",
     "description": [
-      "The bell has been sitting up there for months doing one thing. Somebody offers you a trade, it lights up red, you go look. Useful, and also a strange amount of real estate for a single notification.",
+      "The handshake has been sitting up there for months doing one thing. Somebody offers you a trade, it lights up red, you go look. Useful, and also a strange amount of real estate for a single notification.",
       "So it got more rooms. Tap it now and you land on a hub: <strong>Trade Offers</strong> and <strong>Waiver Claims</strong>, each with its own count, each one tap deep — plus <strong>Waiver Priority</strong> in the leagues that actually have one. Trade offers work exactly as they did — accept, reject, dismiss, open it in the <a href=\"/trade-builder\">Trade Builder</a> to check the cap damage before you say yes.",
       "<strong>Waiver Claims</strong> shows what you have in, in the order MyFantasyLeague will actually process it — who you are adding, who you are dropping for him, what you bid. It is read-only on purpose. Deleting a claim or swapping the drop still lives on <a href=\"/players\">Free Agents</a>, next to the roster and the search you need to do either one, and there is a link straight there at the bottom of the screen. This is the answer to \"wait, did I actually put that claim in\" at 11pm on a Tuesday, which is a different question from \"let me redo my whole board\".",
       "<strong>Waiver Priority</strong> shows up in the AFL, and not in The League, and that is a feature rather than an oversight. The hub asks MyFantasyLeague which waiver system your league runs and believes the answer. The AFL runs rolling priority, so it gets the screen: the live order, read the moment you open it rather than off a nightly sync, your row badged, renumbered within your own conference — because sitting 13th league-wide while being first in the National is not 13th at anything. The League runs blind bidding with ties broken first come first served, so there is no order to stand in. MyFantasyLeague will still hand out a waiver number for it, which is exactly the trap: it is a default nobody set and nothing reads, and putting it on screen would have invented a queue for sixteen owners. If the commissioner ever flips that setting, the screen appears on its own.",
-      "One deliberate restraint: the red number on the bell still counts trade offers and nothing else. A trade is somebody waiting on you. A claim you filed yourself is not, so it gets a small quiet dot instead — the hub has something in it, no one is holding a stopwatch. Turning every claim into a red badge is how a bell stops meaning anything."
+      "One deliberate restraint: the red number on the handshake still counts trade offers and nothing else. A trade is somebody waiting on you. A claim you filed yourself is not, so it gets a small quiet dot instead — the hub has something in it, no one is holding a stopwatch. Turning every claim into a red badge is how the handshake stops meaning anything."
     ],
     "image": "transaction-hub.webp",
     "imageAlt": "The Transaction Hub modal open over the AFL standings page, headed \"Transaction Hub\" and \"Everything you have in flight\". Three rows: Trade Offers, 2 waiting on you, badged 2; Waiver Claims, 2 filed, badged 2; and Waiver Priority, American League, chipped #2."
@@ -167,6 +171,8 @@
       "afl"
     ],
     "title": "Four Boxes, Two Windows, Every League You're In",
+    "heroHeadline": "See what's worth",
+    "heroAccentWord": "Watching.",
     "link": "/sunday-ticket",
     "linkLabel": "Build your Sunday",
     "summary": "Sunday Ticket gives you four boxes per window and no opinion about which games belong in them. The new Sunday Ticket page has one: the games with the most of your starters on the field, ranked, with the real network on each, RedZone in any open box — and it counts your other leagues too.",
@@ -189,6 +195,8 @@
       "afl"
     ],
     "title": "Keep An Eye On Him. Literally.",
+    "heroHeadline": "Put him on",
+    "heroAccentWord": "Watch.",
     "link": "/players?view=watchlist",
     "linkLabel": "Start watching",
     "summary": "My Watch List is live, and it is the same list MFL keeps under your name. Watch anyone from a roster, the free-agent pool, or your rankings board, and every Schefter post about him lights up — with a Watching tab to see nothing else, and a push alert if you want one.",
@@ -254,6 +262,8 @@
       "afl"
     ],
     "title": "Fourteen Ways To Be Told, And You Pick",
+    "heroHeadline": "Pick how you get",
+    "heroAccentWord": "Notified.",
     "link": "/notifications",
     "linkLabel": "Choose your alerts",
     "summary": "The group chat now gets one automated post a day. Everything else moved to your phone — trade offers, a broken lineup before kickoff, injuries to your guys, the rumor mill, your final score. Fourteen alert types, four groups, four on by default, and every single one is a switch you own.",
@@ -411,6 +421,8 @@
       "afl"
     ],
     "title": "Your Waiver Claims, On Your Own Site",
+    "heroHeadline": "Claims you can",
+    "heroAccentWord": "See.",
     "link": "/players",
     "linkLabel": "See your claims",
     "summary": "File a claim and it used to vanish into MyFantasyLeague until Monday night told you how it went. Now the claims you have pending sit at the top of Free Agents in the order they'll be awarded, and you can change who you're dropping or scrap one entirely without leaving.",
@@ -477,6 +489,8 @@
       "afl"
     ],
     "title": "The AFL Gets a Throwback Week",
+    "heroHeadline": "All 24 go",
+    "heroAccentWord": "Vintage.",
     "link": "/throwback-settings",
     "linkLabel": "Pick your era",
     "summary": "On NFL Week 8, all 24 AFL franchises drop their current look and wear a legacy one — old name, old crest, old banner, old colors — across live scoring, matchups and Set Lineup. A hundred and seventeen eras going back to 2003 are on the table, and you pick which one is yours.",
