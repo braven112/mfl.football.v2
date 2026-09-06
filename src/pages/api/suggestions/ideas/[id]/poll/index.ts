@@ -9,6 +9,7 @@ import type { APIRoute } from 'astro';
 import { getAuthUser, isCommissionerOrAdmin } from '../../../../../../utils/auth';
 import type { CreatePollRequest, Poll, PollOption } from '../../../../../../types/suggestions';
 import { getIdeaById, saveIdea, generateId } from '../../../../../../utils/suggestions-storage';
+import { boardScope } from '../../../../../../utils/suggestions-scope';
 
 function json(data: unknown, status = 200): Response {
   return new Response(JSON.stringify(data), {
@@ -22,7 +23,7 @@ export const POST: APIRoute = async ({ params, request }) => {
   if (!user) return json({ error: 'Authentication required' }, 401);
   if (!isCommissionerOrAdmin(user)) return json({ error: 'Admin access required' }, 403);
 
-  const idea = await getIdeaById(params.id!);
+  const idea = await getIdeaById(boardScope(user), params.id!);
   if (!idea) return json({ error: 'Idea not found' }, 404);
 
   if (idea.poll) {
@@ -59,7 +60,7 @@ export const POST: APIRoute = async ({ params, request }) => {
   idea.poll = poll;
   idea.lastActivityAt = new Date().toISOString();
 
-  const ok = await saveIdea(idea);
+  const ok = await saveIdea(boardScope(user), idea);
   if (!ok) return json({ error: 'Failed to create poll' }, 500);
 
   return json({ idea }, 201);
@@ -70,7 +71,7 @@ export const DELETE: APIRoute = async ({ params, request }) => {
   if (!user) return json({ error: 'Authentication required' }, 401);
   if (!isCommissionerOrAdmin(user)) return json({ error: 'Admin access required' }, 403);
 
-  const idea = await getIdeaById(params.id!);
+  const idea = await getIdeaById(boardScope(user), params.id!);
   if (!idea) return json({ error: 'Idea not found' }, 404);
 
   if (!idea.poll) {
@@ -79,7 +80,7 @@ export const DELETE: APIRoute = async ({ params, request }) => {
 
   delete idea.poll;
 
-  const ok = await saveIdea(idea);
+  const ok = await saveIdea(boardScope(user), idea);
   if (!ok) return json({ error: 'Failed to remove poll' }, 500);
 
   return json({ idea });

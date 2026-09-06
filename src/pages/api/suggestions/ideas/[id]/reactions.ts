@@ -8,6 +8,7 @@ import type { APIRoute } from 'astro';
 import { getAuthUser } from '../../../../../utils/auth';
 import type { ToggleReactionRequest } from '../../../../../types/suggestions';
 import { getIdeaById, saveIdea } from '../../../../../utils/suggestions-storage';
+import { boardScope } from '../../../../../utils/suggestions-scope';
 
 function json(data: unknown, status = 200): Response {
   return new Response(JSON.stringify(data), {
@@ -20,7 +21,7 @@ export const POST: APIRoute = async ({ params, request }) => {
   const user = getAuthUser(request);
   if (!user?.franchiseId) return json({ error: 'Authentication required' }, 401);
 
-  const idea = await getIdeaById(params.id!);
+  const idea = await getIdeaById(boardScope(user), params.id!);
   if (!idea) return json({ error: 'Idea not found' }, 404);
 
   let body: ToggleReactionRequest;
@@ -51,7 +52,7 @@ export const POST: APIRoute = async ({ params, request }) => {
     idea.reactions[emoji] = [...existing, user.franchiseId];
   }
 
-  const ok = await saveIdea(idea);
+  const ok = await saveIdea(boardScope(user), idea);
   if (!ok) return json({ error: 'Failed to save reaction' }, 500);
 
   return json({ reactions: idea.reactions });

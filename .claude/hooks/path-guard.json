@@ -595,6 +595,23 @@
         "tests/owners-poll-posts.test.ts",
         "tests/owners-poll-lineup-styles.test.ts"
       ]
+    },
+    {
+      "name": "suggestion-box",
+      "rules": "docs/claude/rules/suggestion-box.md",
+      "paths": [
+        "src/utils/suggestions-*.ts",
+        "src/utils/suggestion-issue.ts",
+        "src/utils/github-issues.ts",
+        "src/pages/api/suggestions/**",
+        "src/components/shared/suggestions/**",
+        "src/components/theleague/suggestions/**",
+        "src/pages/*/suggestions.astro"
+      ],
+      "tests": [
+        "tests/suggestions-scope.test.ts",
+        "tests/suggestion-issue.test.ts"
+      ]
     }
   ]
 }

@@ -11,6 +11,7 @@ import type { APIRoute } from 'astro';
 import { getAuthUser } from '../../../utils/auth';
 import type { Idea, Comment } from '../../../types/suggestions';
 import { getAllIdeas, saveIdea, saveComment, generateId } from '../../../utils/suggestions-storage';
+import { boardScope } from '../../../utils/suggestions-scope';
 
 function json(data: unknown, status = 200): Response {
   return new Response(JSON.stringify(data), {
@@ -28,7 +29,7 @@ export const POST: APIRoute = async ({ request }) => {
   }
 
   // Don't seed if ideas already exist
-  const existing = await getAllIdeas();
+  const existing = await getAllIdeas(boardScope(user));
   if (existing.length > 0) {
     return json({ message: `Already have ${existing.length} ideas, skipping seed.` });
   }
@@ -144,12 +145,12 @@ export const POST: APIRoute = async ({ request }) => {
   const results: string[] = [];
 
   for (const { idea, comments } of seeds) {
-    const ok = await saveIdea(idea);
+    const ok = await saveIdea(boardScope(user), idea);
     if (ok) {
       results.push(`Idea: ${idea.title}`);
       for (const comment of comments) {
         comment.ideaId = idea.id;
-        await saveComment(idea.id, comment);
+        await saveComment(boardScope(user), comment);
       }
     }
   }

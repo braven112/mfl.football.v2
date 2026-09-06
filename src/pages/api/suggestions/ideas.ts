@@ -15,6 +15,7 @@ import {
   checkRateLimit,
   resolveTeamName,
 } from '../../../utils/suggestions-storage';
+import { boardScope } from '../../../utils/suggestions-scope';
 
 function json(data: unknown, status = 200): Response {
   return new Response(JSON.stringify(data), {
@@ -27,7 +28,7 @@ export const GET: APIRoute = async ({ request }) => {
   const user = getAuthUser(request);
   if (!user) return json({ error: 'Authentication required' }, 401);
 
-  const ideas = await getAllIdeas();
+  const ideas = await getAllIdeas(boardScope(user));
   // Exclude archived for non-admin (admin can see via query param)
   const url = new URL(request.url);
   const showArchived = url.searchParams.get('archived') === '1';
@@ -84,12 +85,12 @@ export const POST: APIRoute = async ({ request }) => {
   }
 
   // Rate limit
-  const { allowed } = await checkRateLimit(user.franchiseId);
+  const { allowed } = await checkRateLimit(boardScope(user), user.franchiseId);
   if (!allowed) {
     return json({ error: 'Slow down — you\'re limited to 10 posts per hour.' }, 429);
   }
 
-  const teamName = await resolveTeamName(user.franchiseId);
+  const teamName = await resolveTeamName(boardScope(user), user.franchiseId);
   const now = new Date().toISOString();
 
   const idea: Idea = {
@@ -117,7 +118,7 @@ export const POST: APIRoute = async ({ request }) => {
     createdAt: now,
   };
 
-  const ok = await saveIdea(idea);
+  const ok = await saveIdea(boardScope(user), idea);
   if (!ok) return json({ error: 'Failed to save idea' }, 500);
 
   return json({ idea }, 201);

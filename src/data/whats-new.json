@@ -1,5 +1,49 @@
 [
   {
+    "id": "site-vs-mfl-faq",
+    "date": "2026-09-06",
+    "category": "new-page",
+    "icon": "info",
+    "leagues": [
+      "theleague",
+      "afl"
+    ],
+    "title": "Wait — So Do I Still Use MyFantasyLeague?",
+    "link": "/faq",
+    "linkLabel": "Read the FAQ",
+    "image": "site-vs-mfl-faq.webp",
+    "imageAlt": "The new FAQ page, headlined “Wait — so do I still use MyFantasyLeague?”, with a short-version summary card underneath.",
+    "summary": "Short answer: yes. MFL still runs the league and isn't going anywhere. The new FAQ lays out exactly which site does what, why both exist, and — the part worth reading — how an idea you post here turns into something that actually gets built.",
+    "description": [
+      "It's a fair question and nobody had written the answer down. There's a URL you've used for twenty years and a newer one that keeps showing up in the group chat, and if you've been quietly wondering which of them is the real league, you weren't the only one. <a href=\"/faq\">The FAQ</a> settles it in one line: <strong>both</strong>, and neither is going away.",
+      "<strong>MyFantasyLeague is still the source of truth.</strong> It scores every game, stores the official rosters, and enforces the settings. That isn't a limitation we're routing around — a league this old needs a system of record that has already survived twenty seasons, and MFL has done that job the entire time without drama. The old site works. The MFL apps work. Your bookmarks work.",
+      "<strong>What's new is that the league also has its own app now.</strong> MFL has to serve every league on earth, so its screens are configurable rather than specific. Ours only has to serve this one, so it can be specific — which is how you get <a href=\"/live-scoring\">live scoring</a> built for a phone on the couch, <a href=\"/standings\">standings</a> with the playoff math already done, and two decades of <a href=\"/owners\">owner history</a> that MFL has the data for but no page to show. The FAQ carries a plain table of who handles what, so you never have to guess where to go.",
+      "And then the part that is genuinely different: <strong>the person who can build your idea is in your league.</strong> Everyone has fired a feature request into a suggestion form and watched it vanish — not out of rudeness, just arithmetic. Post it on <a href=\"/suggestions\">The Board</a> instead and it gets read, argued about by the rest of the league, and — if it's good — filed as real work, usually inside a week. Then it turns up right here in <a href=\"/whats-new\">What's New</a> with your name on the thread that started it.",
+      "Rule changes still need their 75% vote per the <a href=\"/rules\">constitution</a>; The Board is where they get pitched, not ratified. Anything about the site itself needs no vote at all — just somebody willing to type it."
+    ]
+  },
+  {
+    "id": "afl-the-board",
+    "date": "2026-09-06",
+    "category": "new-page",
+    "icon": "commenting",
+    "leagues": [
+      "afl"
+    ],
+    "title": "The AFL Gets a Suggestion Box",
+    "link": "/suggestions",
+    "linkLabel": "Open The Board",
+    "image": "afl-the-board.webp",
+    "imageAlt": "The Board on the AFL site — an empty idea feed reading “No ideas yet. Be the first to suggest something!” beside a sidebar explaining how it works.",
+    "summary": "The Board — post an idea, the league argues about it, the Commissioner rules on it — is now open in the AFL, with its own ideas, its own comments, and its own everything. It starts empty, so somebody gets to be first.",
+    "description": [
+      "<a href=\"/suggestions\">The Board</a> is the official place to pitch a rule change, report something broken on the site, or float an idea and see whether anyone else likes it. Post it, other owners comment and react, and the Commissioner sets a status on it — Under Review, Approved, Rejected, Implemented. Nothing disappears into a folder.",
+      "<strong>It's a board of the AFL's own.</strong> Every idea, comment, reaction and unread badge posted here lives in the AFL's own storage — nothing is shared with any other league, and nothing you post shows up anywhere else. It starts empty, which means somebody gets to be first.",
+      "The one thing that carries over from <a href=\"/rules\">the constitution</a>: a rule change still needs its 75% vote, 18 of 24. The Board is where the argument happens before the vote, not a replacement for it. Site suggestions have no such bar — the good ones just get built.",
+      "New to how any of this fits together? <a href=\"/faq\">The FAQ</a> explains what still lives on MyFantasyLeague, what lives here, and what happens to an idea after you post it."
+    ]
+  },
+  {
     "id": "trade-for-him",
     "date": "2026-09-06",
     "category": "enhancement",
@@ -873,48 +917,6 @@
       "The old builder had prevented that for free, by construction, which is exactly why nobody had ever written it down as a rule. So it is written down now: every franchise plays roughly half its division games after the midpoint, ranked just below keeping them off bye weeks.",
       "With that rule in place the arithmetic settles it. A 50/50 split needs 24 division games after Week 7, only one clean week remains that late, and it holds 16 — so at least eight must land on a bye week. Eight is exactly what the current schedule has. The schedule you are playing was already the right answer; we just proved it instead of assuming it."
     ],
-    "excludeFromHero": true,
-    "leagues": [
-      "theleague",
-      "afl"
-    ]
-  },
-  {
-    "id": "starter-aware-schedule-optimizer",
-    "date": "2026-08-23",
-    "category": "league-event",
-    "icon": "calendar-2",
-    "title": "The Scheduler Now Knows Who Is Actually Missing",
-    "summary": "Next year’s schedule is built against your projected starting nine instead of your whole roster, and it actively hunts for weeks where neither side of a rivalry game is missing anyone. Replayed on 2026 it cuts missing starters in division games by nearly a third.",
-    "description": [
-      "The old scheduler asked “does this week have NFL byes in it?” That question is nearly useless for a 24-man roster, because a 24-man roster almost always has somebody out. Measured on The League’s 2026 rosters, only 10% of team-week combinations were fully clean, and Weeks 8, 11 and 13 had none at all. Every week looked equally bad, so nothing could be optimised.",
-      "It now asks a better question: is either of THESE two teams missing a projected starter that week? Counting the starting nine instead of the whole roster takes The League from 10% usable weeks to 41%, and it unlocks Weeks 8, 11 and 13 entirely.",
-      "The AFL is unaffected, and that is the correct answer rather than an oversight. The AFL reveals its schedule before its draft, so a roster is seven keepers — fewer players than there are starting slots, which means everyone kept is a starter. Whole-roster and starter counts agree exactly there.",
-      "On top of that the optimiser now scores rivalry games specifically: starters missing from a division game, both sides added together. The old fairness measure could not see this at all, because it only checked whether the two teams were EQUALLY hurt — two rivals both missing three starters scored perfectly, which is exactly the game nobody wants to play. Replayed on 2026 the AFL goes from 58 missing starters across its division games to 40, and from 94 to 99 rivalry games with both rosters whole.",
-      "The 2026 schedules are untouched — locked, pasted and being played. This applies to the next one. Still to come: letting different teams play their division games in different weeks, which is a deeper rebuild of how rounds are constructed."
-    ],
-    "excludeFromHero": true,
-    "leagues": [
-      "theleague",
-      "afl"
-    ]
-  },
-  {
-    "id": "schefter-article-links",
-    "date": "2026-08-23",
-    "category": "enhancement",
-    "icon": "link",
-    "title": "Schefter Learned to Point at Things",
-    "summary": "Every Schefter column now links to the page it's about, and works in the tool that answers whatever question the paragraph just raised. His schedule release article somehow never linked to the schedule release page. That's fixed, and so is the reason it happened.",
-    "description": [
-      "Claude Schefter filed eight paragraphs about the 2026 schedule — the four games to circle, the rivalry records, the bye-week math — and never once told you where to go read the thing. <a href=\"/schedule-release\">The schedule release page</a> was right there. The column existed to announce it. Not a link in sight.",
-      "It turned out not to be a slip in one article. Searching the entire published feed for a link — 396 posts, every column he has ever filed, both leagues — turned up exactly zero. He had never linked to anything. He would name a roster crunch and not point at <a href=\"/rosters\">the rosters</a>, call out dead weight and not point at the dead money report, and finish a cut-watch column three days from a deadline without once mentioning <a href=\"/calendar\">the calendar</a>.",
-      "Now every article type declares where it points before a word is written. The page the column is about gets linked near the top and again at the end, and the pages it touches on the way through get linked where they come up. Go back and read the 2026 schedule release now: the opening line is the link, Throwback Week goes to your throwback settings, the rivalry section goes to <a href=\"/rivalries\">the rivalry pages</a>, and the closer hands you the full week-by-week grid. The three cut-watch columns from August got the same treatment — over-the-limit rosters, dead weight, a bloated receiver room that <a href=\"/trade-builder\">the trade builder</a> has opinions about.",
-      "The second half of the job is new: Schefter is now expected to plug the site. Not with a paragraph of housekeeping bolted to the end — with the tool that answers the question he just raised. Grading your auction and pointing at the salary benchmarks. Naming the guy you're about to lose and pointing at <a href=\"/players\">the free agent board</a>. He picks the ones that fit the story and skips the rest, because a plug he had to wedge in reads like an ad, and nobody clicks a columnist who sounds like an ad.",
-      "Links he makes up don't survive. He writes from a list of real pages, and anything that isn't on it gets quietly unwrapped before publishing — the sentence still reads, it just stops promising a page that doesn't exist. And if he forgets the main link entirely, the way he did in August, it gets put back in for him. A Schefter column with nothing to click is no longer something that can happen."
-    ],
-    "image": "schefter-article-links.webp",
-    "imageAlt": "The 2026 schedule release article on The Schefter Report, headlined “The 2026 Schedule Is Here. Four Games Will Define It.” under Claude Schefter’s byline. Three phrases in the prose are blue underlined links: “The 2026 schedule for The League is official” in the opening line, “Throwback Week” inside the Week 4 paragraph about Bring the Pain at Vitside Mafia, and “The rivalry renewals are stacked this season” opening the rivalry section.",
     "excludeFromHero": true,
     "leagues": [
       "theleague",

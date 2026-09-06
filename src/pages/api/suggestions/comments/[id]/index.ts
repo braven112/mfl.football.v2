@@ -13,6 +13,7 @@ import {
   getCommentById,
   saveComment,
 } from '../../../../../utils/suggestions-storage';
+import { boardScope, type SuggestionsScope } from '../../../../../utils/suggestions-scope';
 
 function json(data: unknown, status = 200): Response {
   return new Response(JSON.stringify(data), {
@@ -22,10 +23,10 @@ function json(data: unknown, status = 200): Response {
 }
 
 /** Find which idea a comment belongs to by scanning all ideas' comment hashes */
-async function findCommentAcrossIdeas(commentId: string) {
-  const ideas = await getAllIdeas();
+async function findCommentAcrossIdeas(scope: SuggestionsScope, commentId: string) {
+  const ideas = await getAllIdeas(scope);
   for (const idea of ideas) {
-    const comment = await getCommentById(idea.id, commentId);
+    const comment = await getCommentById(scope, idea.id, commentId);
     if (comment) return { idea, comment };
   }
   return null;
@@ -35,7 +36,7 @@ export const PATCH: APIRoute = async ({ params, request }) => {
   const user = getAuthUser(request);
   if (!user) return json({ error: 'Authentication required' }, 401);
 
-  const found = await findCommentAcrossIdeas(params.id!);
+  const found = await findCommentAcrossIdeas(boardScope(user), params.id!);
   if (!found) return json({ error: 'Comment not found' }, 404);
 
   const { comment } = found;
@@ -70,7 +71,7 @@ export const PATCH: APIRoute = async ({ params, request }) => {
   }
   comment.editedAt = new Date().toISOString();
 
-  const ok = await saveComment(comment);
+  const ok = await saveComment(boardScope(user), comment);
   if (!ok) return json({ error: 'Failed to update comment' }, 500);
 
   return json({ comment });
@@ -80,7 +81,7 @@ export const DELETE: APIRoute = async ({ params, request }) => {
   const user = getAuthUser(request);
   if (!user) return json({ error: 'Authentication required' }, 401);
 
-  const found = await findCommentAcrossIdeas(params.id!);
+  const found = await findCommentAcrossIdeas(boardScope(user), params.id!);
   if (!found) return json({ error: 'Comment not found' }, 404);
 
   const { comment } = found;
@@ -95,7 +96,7 @@ export const DELETE: APIRoute = async ({ params, request }) => {
   comment.images = [];
   comment.deletedAt = new Date().toISOString();
 
-  const ok = await saveComment(comment);
+  const ok = await saveComment(boardScope(user), comment);
   if (!ok) return json({ error: 'Failed to delete comment' }, 500);
 
   return json({ deleted: true, id: comment.id });

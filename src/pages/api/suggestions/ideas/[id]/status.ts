@@ -8,6 +8,7 @@ import type { APIRoute } from 'astro';
 import { getAuthUser, isCommissionerOrAdmin } from '../../../../../utils/auth';
 import type { IdeaStatus, SetIdeaStatusRequest } from '../../../../../types/suggestions';
 import { getIdeaById, saveIdea } from '../../../../../utils/suggestions-storage';
+import { boardScope } from '../../../../../utils/suggestions-scope';
 
 function json(data: unknown, status = 200): Response {
   return new Response(JSON.stringify(data), {
@@ -23,7 +24,7 @@ export const PATCH: APIRoute = async ({ params, request }) => {
   if (!user) return json({ error: 'Authentication required' }, 401);
   if (!isCommissionerOrAdmin(user)) return json({ error: 'Admin access required' }, 403);
 
-  const idea = await getIdeaById(params.id!);
+  const idea = await getIdeaById(boardScope(user), params.id!);
   if (!idea) return json({ error: 'Idea not found' }, 404);
 
   let body: SetIdeaStatusRequest;
@@ -40,7 +41,7 @@ export const PATCH: APIRoute = async ({ params, request }) => {
   idea.status = body.status;
   idea.lastActivityAt = new Date().toISOString();
 
-  const ok = await saveIdea(idea);
+  const ok = await saveIdea(boardScope(user), idea);
   if (!ok) return json({ error: 'Failed to update status' }, 500);
 
   return json({ idea });
