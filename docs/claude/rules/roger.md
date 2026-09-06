@@ -41,16 +41,34 @@ event dates in the past. Fixing one does not fix the other.
      Every touch fans out to `roster-deadline` push. The GroupMe lane is now
      two narrow cases and nothing else:
 
-     * an event's FIRST qualifying touch posts in full **only out of
-       season** (`isChatBusySeason` — which asks `isSeasonWindowOpen` about
-       both candidate years rather than deriving a base year, because the
-       rollover pivot is the formula that shipped wrong in five files).
-       In season it does not post at all.
+     * an event's ANNOUNCE touch posts in full. Which touch that is, and
+       whether it posts at all, depends on who the deadline is for:
+       - **default (an obligation on individual owners)** — the first
+         qualifying touch, and **only out of season** (`isChatBusySeason`,
+         which asks `isSeasonWindowOpen` about both candidate years rather
+         than deriving a base year, because the rollover pivot is the
+         formula that shipped wrong in five files). In season, nothing.
+       - **`audience: 'league'`** (declared per event in
+         `compute-league-events.mjs`, carried into `resolved-events.json`)
+         — the **7-day** touch, and it posts **in season too**. A trade
+         deadline is a signal to the room: get your offers in while there
+         is time. That is worthless as a private nudge to each owner
+         separately, and it is precisely what the chat is for. Using 7d as
+         the announce touch rather than adding a second rule on top of
+         first-touch is what stops such an event posting twice.
      * the `dayof` touch posts **only when the fan-out reports owners it
        could not reach**, names exactly those owners, and @-mentions them
        with a link to `/<league>/notifications`.
 
-     The 7-day and 2-day touches never reach the chat. `roger-fallback` is
+     **A league-audience event must be `standard` tier or better.** The 7-day
+     touch requires it, so flagging a `minor` event strands the flag: the
+     loop never reaches its announce touch, and nothing in the log says the
+     flag did nothing. `tests/reminder-push-first.test.ts` fails on that
+     combination, and on a trade deadline that loses the flag in the
+     resolver — the scanner reads the JSON, not the source event list.
+
+     The 14-day and 2-day touches never reach the chat, and neither does
+     the 7-day one unless the event is league-audience. `roger-fallback` is
      the kind for the second case and is exempt from the daily cap, for the
      same reason `roger-reminder` is: it is already the narrowest message
      we can send, and holding it means those specific owners hear about the

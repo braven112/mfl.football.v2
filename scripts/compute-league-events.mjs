@@ -119,7 +119,7 @@ const EVENTS = [
   { id: 'declare-rookie-contracts', name: 'Declare Contracts / Cut to 22', startRule: { type: 'computed', rule: 'third-sunday-august' }, tier: 'standard' },
   { id: 'offseason-fa-closes', name: 'Offseason FA Closes', startRule: { type: 'computed', rule: 'third-sunday-august' }, tier: 'standard' },
   { id: 'nfl-season-starts', name: 'NFL Season Starts', startRule: { type: 'computed', rule: 'nfl-kickoff' }, tier: 'standard' },
-  { id: 'trading-deadline', name: 'Trading Deadline', startRule: { type: 'computed', rule: 'friday-before-week-11' }, tier: 'major' },
+  { id: 'trading-deadline', name: 'Trading Deadline', startRule: { type: 'computed', rule: 'friday-before-week-11' }, tier: 'major', audience: 'league' },
   { id: 'in-season-fa-ends', name: 'In-Season FA Ends', startRule: { type: 'computed', rule: 'after-week-16' }, tier: 'minor' },
   { id: 'playoffs-start', name: 'Playoffs Begin', startRule: { type: 'computed', rule: 'playoffs-start' }, tier: 'major' },
   { id: 'league-championship', name: 'League Championship', startRule: { type: 'computed', rule: 'championship-week' }, tier: 'major' },
@@ -171,7 +171,7 @@ async function loadAflThrowbackEvents() {
 const AFL_EVENTS = [
   { id: 'afl-league-dues', name: 'AFL League Dues', startRule: { type: 'fixed', month: 4, day: 1 }, tier: 'major' },
   { id: 'afl-keeper-deadline', name: 'AFL Keeper Deadline', startRule: { type: 'fixed', month: 7, day: 15 }, tier: 'major' },
-  { id: 'afl-trade-deadline', name: 'AFL Trade Deadline', startRule: { type: 'computed', rule: 'afl-trade-deadline' }, tier: 'major' },
+  { id: 'afl-trade-deadline', name: 'AFL Trade Deadline', startRule: { type: 'computed', rule: 'afl-trade-deadline' }, tier: 'major', audience: 'league' },
   // The AFL drafts are NOT a fixed calendar date. Until Aug 2026 this list
   // carried an `afl-draft-window-opens` event pinned to a hardcoded Aug 20
   // (copied from the "Annual draft window: August 20 – August 25" line in
@@ -279,6 +279,14 @@ function resolveEvents(year, eventList = EVENTS) {
       id: event.id,
       name: event.name,
       tier: event.tier,
+      // Who the deadline is FOR, which decides how it reaches the league.
+      // Omitted (the default) means it is an obligation on individual owners:
+      // push tells each of them, and the chat only names the ones push could
+      // not reach. `audience: 'league'` means the opposite — a trade deadline
+      // is a market signal to the room, useless as a private nudge and worth
+      // saying out loud even mid-season. See scripts/lib/reminder-fallback.mjs
+      // and docs/claude/rules/roger.md.
+      ...(event.audience ? { audience: event.audience } : {}),
       startDate: startDate.toISOString(),
       daysUntil,
       isPast,
