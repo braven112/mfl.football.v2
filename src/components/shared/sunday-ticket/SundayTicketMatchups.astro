@@ -61,7 +61,10 @@ const { cards, week, linkFor } = Astro.props;
         </ol>
 
         <footer class="st-game__links">
-          <a href={linkFor(card.leagueSlug, 'lineup')}>Set lineup</a>
+          {/* Best ball has no lineups at all — the registry says UI offering
+              one "must be skipped" for that flag, and the route genuinely
+              does not exist, so this would 404. */}
+          {!card.bestBall && <a href={linkFor(card.leagueSlug, 'lineup')}>Set lineup</a>}
           <a href={linkFor(card.leagueSlug, 'live-scoring')}>Live scoring</a>
         </footer>
       </article>
