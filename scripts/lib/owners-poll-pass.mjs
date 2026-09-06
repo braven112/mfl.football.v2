@@ -130,6 +130,76 @@ export async function openPoll({
 }
 
 /**
+ * Assemble the `ownersPoll` block a closed week publishes.
+ *
+ * Pure — no Redis, no clock, no league lookup — so the close pass and
+ * scripts/seed-example-owners-poll.mjs produce the SAME shape from the same
+ * math. That matters more than the handful of lines it saves: the seeded
+ * example's whole claim is that it is the real pipeline over invented input,
+ * and a second copy of this assembly would quietly make that false the first
+ * time a field is added here.
+ *
+ * @param {object} args
+ * @param {Array<{ franchiseId: string, ranking: string[], submittedAt: string|null, updatedAt: string|null }>} args.ballots
+ * @param {{ opensAt: string, closesAt: string, slots: number, eligibleFranchiseIds: string[] }} args.window
+ * @param {number} args.quorum
+ * @param {Map<string, number>|Record<string, number>} args.compositeRankByFid
+ * @returns {{ block: object, tally: object }}
+ */
+export function buildClosedPollBlock({ ballots, window, quorum, compositeRankByFid }) {
+  const tally = tallyOwnersPoll({
+    ballots,
+    eligibleFranchiseIds: window.eligibleFranchiseIds,
+    slots: window.slots,
+    quorum,
+    compositeRankByFid,
+  });
+
+  const consensus = consensusRankMap(tally);
+  const voters = ballots.map((ballot) => ({
+    franchiseId: ballot.franchiseId,
+    ranking: ballot.ranking,
+    submittedAt: ballot.submittedAt,
+    updatedAt: ballot.updatedAt,
+    contrarianIndex: round2(contrarianIndex(ballot.ranking, consensus)),
+    homerIndex: homerIndex({
+      franchiseId: ballot.franchiseId,
+      ranking: ballot.ranking,
+      consensusRankByFid: consensus,
+      slots: window.slots,
+    }),
+  }));
+
+  const nonVoters = window.eligibleFranchiseIds.filter(
+    (fid) => !ballots.some((b) => b.franchiseId === fid),
+  );
+
+  const block = {
+    status: 'closed',
+    opensAt: window.opensAt,
+    closesAt: window.closesAt,
+    slots: window.slots,
+    quorum,
+    eligibleVoters: window.eligibleFranchiseIds.length,
+    ballotsIn: tally.ballotsIn,
+    hasQuorum: tally.hasQuorum,
+    methodology: describeScoring(window.slots, quorum, window.eligibleFranchiseIds.length),
+    ranked: tally.ranked,
+    unranked: tally.unranked,
+    // Published in full — every ballot becomes public once its week closes.
+    // That is the accountability half of the feature, and it is the reason
+    // voting is worth doing.
+    ballots: voters,
+    // A COUNT of who didn't vote, never a list. The count-only decision
+    // (docs/plans/owners-poll.md) is a product rule, not just chat copy: an
+    // issue file carrying names would route straight around it.
+    nonVoterCount: nonVoters.length,
+  };
+
+  return { block, tally };
+}
+
+/**
  * Close the ballot and tally it.
  *
  * @returns {{ block, ballotsIn, dropped, hasQuorum }} the `ownersPoll` block to
@@ -176,59 +246,17 @@ export async function closePoll({ league, issue, compositeRankByFid, now = new D
     log.warn?.(`  [poll] Dropped ${dropped} of ${stored} stored ballots (no longer valid).`);
   }
 
-  const tally = tallyOwnersPoll({
+  const { block, tally } = buildClosedPollBlock({
     ballots,
-    eligibleFranchiseIds: window.eligibleFranchiseIds,
-    slots: window.slots,
+    window,
     quorum: poll.quorum,
     compositeRankByFid,
   });
-
-  const consensus = consensusRankMap(tally);
-  const voters = ballots.map((ballot) => ({
-    franchiseId: ballot.franchiseId,
-    ranking: ballot.ranking,
-    submittedAt: ballot.submittedAt,
-    updatedAt: ballot.updatedAt,
-    contrarianIndex: round2(contrarianIndex(ballot.ranking, consensus)),
-    homerIndex: homerIndex({
-      franchiseId: ballot.franchiseId,
-      ranking: ballot.ranking,
-      consensusRankByFid: consensus,
-      slots: window.slots,
-    }),
-  }));
 
   // The pointer goes LAST, and only once the tally succeeded: clearing it
   // first would close voting on a run that then threw, leaving a week with no
   // ballot and no result.
   await clearWindow(redis, league.navSlug);
-
-  const nonVoters = window.eligibleFranchiseIds.filter(
-    (fid) => !ballots.some((b) => b.franchiseId === fid),
-  );
-
-  const block = {
-    status: 'closed',
-    opensAt: window.opensAt,
-    closesAt: window.closesAt,
-    slots: window.slots,
-    quorum: poll.quorum,
-    eligibleVoters: window.eligibleFranchiseIds.length,
-    ballotsIn: tally.ballotsIn,
-    hasQuorum: tally.hasQuorum,
-    methodology: describeScoring(window.slots, poll.quorum, window.eligibleFranchiseIds.length),
-    ranked: tally.ranked,
-    unranked: tally.unranked,
-    // Published in full — every ballot becomes public once its week closes.
-    // That is the accountability half of the feature, and it is the reason
-    // voting is worth doing.
-    ballots: voters,
-    // A COUNT of who didn't vote, never a list. The count-only decision
-    // (docs/plans/owners-poll.md) is a product rule, not just chat copy: an
-    // issue file carrying names would route straight around it.
-    nonVoterCount: nonVoters.length,
-  };
 
   log.log?.(
     `  [poll] Closed Week ${window.week}: ${tally.ballotsIn}/${window.eligibleFranchiseIds.length} ballots, ` +

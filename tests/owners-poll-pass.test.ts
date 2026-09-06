@@ -44,6 +44,7 @@ const { LEAGUES } = await import('../src/config/leagues-data.mjs');
 const {
   openPoll,
   closePoll,
+  buildClosedPollBlock,
   readTurnout,
   describeTurnoutFailure,
   buildRevealMessage,
@@ -276,6 +277,76 @@ describe('closePoll', () => {
       log: silent,
     });
     expect(result).toBeNull();
+  });
+});
+
+describe('buildClosedPollBlock — shared with the seeded example', () => {
+  // The worked example in the archive (scripts/seed-example-owners-poll.mjs)
+  // publishes through this same function. Its whole claim is that it is the
+  // real pipeline over invented input, so a key added to a closed poll must
+  // reach it too — which it does only while both callers share this builder.
+  const window = {
+    opensAt: '2026-09-08T14:00:00.000Z',
+    closesAt: '2026-09-10T01:00:00.000Z',
+    slots: SLOTS,
+    eligibleFranchiseIds: FIELD,
+  };
+  const ballots = Array.from({ length: 10 }, (_, i) => ({
+    franchiseId: FIELD[i],
+    ranking: Array.from({ length: SLOTS }, (_, k) => FIELD[(i + k) % FIELD.length]),
+    submittedAt: null,
+    updatedAt: null,
+  }));
+
+  it('publishes exactly the keys the archive and the pages read', () => {
+    const { block } = buildClosedPollBlock({
+      ballots,
+      window,
+      quorum: 8,
+      compositeRankByFid: composite,
+    });
+
+    expect(Object.keys(block).sort()).toEqual(
+      [
+        'ballots',
+        'ballotsIn',
+        'closesAt',
+        'eligibleVoters',
+        'hasQuorum',
+        'methodology',
+        'nonVoterCount',
+        'opensAt',
+        'quorum',
+        'ranked',
+        'slots',
+        'status',
+        'unranked',
+      ].sort(),
+    );
+    expect(block.status).toBe('closed');
+    expect(block.ballotsIn).toBe(10);
+    expect(block.hasQuorum).toBe(true);
+    expect(block.nonVoterCount).toBe(FIELD.length - 10);
+  });
+
+  it('is what closePoll returns, not a parallel implementation', async () => {
+    seedWindow();
+    seedBallots(10);
+    const viaClose = await closePoll({
+      league: LEAGUE,
+      issue: issue(),
+      compositeRankByFid: composite,
+      now: new Date('2026-09-10T02:00:00.000Z'),
+      log: silent,
+    });
+    const { block } = buildClosedPollBlock({
+      ballots,
+      window,
+      quorum: LEAGUE.ownersPoll.quorum,
+      compositeRankByFid: composite,
+    });
+
+    expect(viaClose?.block).toEqual(block);
   });
 });
 

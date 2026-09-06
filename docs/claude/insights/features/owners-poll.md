@@ -24,9 +24,11 @@ before the first run.** Either give the empty state something to say, or seed a
 worked example. Here it was the example —
 `scripts/seed-example-owners-poll.mjs`, seeded into each league's latest issue,
 described in `docs/plans/owners-poll.md`. Its ballots are fabricated but the
-tally is not: it calls the same `tallyOwnersPoll` / `consensusRankMap` /
-`contrarianIndex` / `homerIndex` that `closePoll` does, so the example
-exercises the real pipeline and cannot drift from it. Every seeded block
+tally is not, and the mechanism matters: the block is built by
+`buildClosedPollBlock`, extracted out of `closePoll` so both callers share ONE
+assembly rather than the seeder mirroring it. A demo that mirrors the pipeline
+is true on the day it is written and false at the first added field; a demo
+that CALLS the pipeline stays honest for free. Every seeded block
 carries `source: "synthetic"` and the seeder refuses to overwrite a block
 without it, so a real tally can never be clobbered by a demo re-run.
 

@@ -647,10 +647,12 @@ keep that honest:
 
 - Every seeded block carries `source: "synthetic"`, and the seeder **refuses to
   overwrite a block without it** — a real tally is never clobbered by a demo.
-- The tally is not faked. Ballots run through the same `tallyOwnersPoll` /
-  `consensusRankMap` / `contrarianIndex` / `homerIndex` that `closePoll` uses,
-  assembled key-for-key the same way. What renders is the real pipeline over
-  invented input, which is what makes the example worth looking at.
+- The tally is not faked. The block is assembled by `buildClosedPollBlock`
+  (`scripts/lib/owners-poll-pass.mjs`) — the SAME function the real close pass
+  calls, not a copy of it, which is why a field added to a closed poll cannot
+  silently skip the example. What renders is the real pipeline over invented
+  input, and `tests/owners-poll-pass.test.ts` pins both the published key set
+  and the fact that `closePoll` returns exactly what the builder produces.
 
 Ballots are built so the Δ column shows something: the room's shared base order
 blends the published composite with the pure recent-scoring order (owners chase

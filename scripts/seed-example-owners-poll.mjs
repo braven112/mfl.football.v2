@@ -14,10 +14,10 @@
  * seeded block carries `source: "synthetic"`, and this script REFUSES to
  * overwrite a block without it — a real tally is never clobbered by a demo.
  *
- * The tally itself is NOT faked. Ballots go through the same
- * `tallyOwnersPoll` / `consensusRankMap` / `contrarianIndex` / `homerIndex`
- * that `closePoll` uses, and the block is assembled key-for-key the same way,
- * so what renders is the real pipeline's output over invented input.
+ * The tally itself is NOT faked. The block is assembled by
+ * `buildClosedPollBlock` — the SAME function the real close pass calls, not a
+ * copy of it — so what renders is the real pipeline's output over invented
+ * input, and a field added to a closed poll cannot silently skip the example.
  *
  * How a plausible ballot is built (deterministic — same seed, same file):
  *
@@ -45,13 +45,7 @@ import { fileURLToPath } from 'node:url';
 import { getLeagueBySlug } from '../src/config/leagues-data.mjs';
 import { resolveOwnersPollWindow } from '../src/utils/owners-poll-window.mjs';
 import { normalizeFranchiseId } from '../src/utils/franchise-id.mjs';
-import {
-  tallyOwnersPoll,
-  consensusRankMap,
-  contrarianIndex,
-  homerIndex,
-  describeScoring,
-} from './lib/owners-poll-math.mjs';
+import { buildClosedPollBlock } from './lib/owners-poll-pass.mjs';
 
 const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -233,44 +227,16 @@ async function main() {
     };
   });
 
-  // From here down this mirrors closePoll — same functions, same key order.
-  const tally = tallyOwnersPoll({
+  // NOT a local reimplementation of the tally: this is the same function the
+  // close pass calls, so the example cannot drift from what a real week
+  // publishes. `source` is the only key this script adds.
+  const { block } = buildClosedPollBlock({
     ballots,
-    eligibleFranchiseIds,
-    slots: poll.slots,
+    window: { ...window, slots: poll.slots, eligibleFranchiseIds },
     quorum: poll.quorum,
     compositeRankByFid,
   });
-  const consensus = consensusRankMap(tally);
-
-  const block = {
-    status: 'closed',
-    opensAt: window.opensAt,
-    closesAt: window.closesAt,
-    slots: poll.slots,
-    quorum: poll.quorum,
-    eligibleVoters: eligibleFranchiseIds.length,
-    ballotsIn: tally.ballotsIn,
-    hasQuorum: tally.hasQuorum,
-    methodology: describeScoring(poll.slots, poll.quorum, eligibleFranchiseIds.length),
-    ranked: tally.ranked,
-    unranked: tally.unranked,
-    ballots: ballots.map((ballot) => ({
-      franchiseId: ballot.franchiseId,
-      ranking: ballot.ranking,
-      submittedAt: ballot.submittedAt,
-      updatedAt: ballot.updatedAt,
-      contrarianIndex: round2(contrarianIndex(ballot.ranking, consensus)),
-      homerIndex: homerIndex({
-        franchiseId: ballot.franchiseId,
-        ranking: ballot.ranking,
-        consensusRankByFid: consensus,
-        slots: poll.slots,
-      }),
-    })),
-    nonVoterCount: eligibleFranchiseIds.length - ballots.length,
-    source: SYNTHETIC,
-  };
+  block.source = SYNTHETIC;
 
   issue.ownersPoll = block;
 
@@ -288,10 +254,6 @@ async function main() {
   );
 }
 
-function round2(x) {
-  if (x == null || !Number.isFinite(x)) return null;
-  return Math.round(x * 100) / 100;
-}
 
 main().catch((err) => {
   console.error(err.message);
