@@ -299,7 +299,7 @@ Throwback Week-resolved. Four things there are load-bearing:
   and rings the crest in light mode too). `tests/player-modal-owner-strip.test.ts`
   pins both, plus that `crestLight` really is each franchise's `icon`.
 
-`tests/franchise-band-brand.test.ts` pins the first four, plus the requirement that
+`tests/franchise-band-brand.test.ts` pins the first three, plus the requirement that
 exactly one component emits the map.
 
 ## The draft broadcast picks its own crests, and it needs TWO of them

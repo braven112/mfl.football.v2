@@ -93,9 +93,17 @@ describe('PlayerDetailsModal → owner strip', () => {
     // The plate existed only to make the band's DARK artwork legible on the
     // white card. The strip now renders the LIGHT src instead, so a plate
     // would be a black box behind artwork drawn for the card it sits on.
-    const rule = modal.match(/\.pdm-owner__crest \{[^}]*\}/)?.[0] ?? '';
-    expect(rule, '.pdm-owner__crest rule').not.toBe('');
-    expect(rule).not.toMatch(/background/);
+    //
+    // EVERY block, not the first: a plate re-added in a media query, an
+    // `is:global` override or a duplicate selector is the same bug, and a
+    // non-global `.match()` would never see it. And every plate-shaped
+    // property, not just `background` — a solid `border` or `box-shadow` on a
+    // 26px crest draws the same box.
+    const rules = modal.match(/\.pdm-owner__crest[^{]*\{[^}]*\}/g) ?? [];
+    expect(rules.length, '.pdm-owner__crest rule').toBeGreaterThan(0);
+    for (const rule of rules) {
+      expect(rule, rule).not.toMatch(/background|border(?!-)|box-shadow/);
+    }
   });
 
   it('takes the LIGHT crest, so the theme rules can resolve it', () => {
@@ -122,7 +130,16 @@ describe('brand map → crestLight', () => {
       const map = buildFranchiseBandBrands(league);
       for (const team of config.teams ?? []) {
         const brand = map.teams[team.franchiseId];
-        if (!brand || !team.icon) continue;
+        if (!brand) continue;
+        if (!team.icon) {
+          // Not a skip: bb1's twelve franchises have no artwork at all, so
+          // this is the ONLY leg that exercises the crestless case. It must be
+          // `''` and not `undefined` — the strip tests it for truthiness to
+          // decide whether to hide the <img>, and `crest` is pinned the same
+          // way in franchise-band-brand.test.ts.
+          expect(brand.crestLight, `${league} ${team.franchiseId}`).toBe('');
+          continue;
+        }
         // The light `icon` is what both TeamIconDarkStyles mechanisms key on;
         // handing out `iconDark` here silently disables both.
         expect(brand.crestLight, `${league} ${team.franchiseId}`).toBe(
