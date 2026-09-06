@@ -25,6 +25,7 @@ import type { APIRoute } from 'astro';
 import { getAuthUser } from './auth';
 import { mflFetch } from './mfl-fetch';
 import { getLeagueYearForSlug } from './league-year';
+import { invalidateAppBadge } from './app-badge-cache';
 import { getCurrentWeekForYear } from './current-week';
 import { buildMflExportUrl } from './mfl-url';
 import { json } from './api-response';
@@ -78,6 +79,10 @@ export function createLineupRoute(slug: CanonicalLeagueSlug): { GET: APIRoute; P
       }
 
       if (text.includes('<status>OK</status>') || text.includes('>OK<')) {
+        // A lineup this owner had left broken or unsubmitted was one of the
+        // numbers on their app icon. Fire-and-forget: a stale badge must never
+        // fail a lineup MFL has already accepted.
+        void invalidateAppBadge(league.id, user.franchiseId);
         return json({ success: true, message: 'Lineup submitted successfully.' });
       }
 
