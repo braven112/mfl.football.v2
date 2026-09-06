@@ -58,6 +58,8 @@ const BASE_URL = process.env.BASE_URL || 'http://localhost:4321';
  * tests/whats-new-data.test.ts asserts every id here matches a real entry.
  */
 const MANUAL_CAPTURE_ONLY = {
+  'install-app':
+    'the banner only renders for a SIGNED-IN owner who is not already running the installed app, and its copy branches on the user agent — a blind capture shoots a homepage with no banner at all. Stage it by forging an owner session for TheLeague franchise 0001 and setting an iPhone Safari user agent on the context, which is the branch worth showing: iOS is the platform where notifications are impossible until the app is installed. Element screenshot of `[data-install-prompt][data-variant="banner"]`, not the full page.',
   'sunday-ticket':
     'the board is personalized for a signed-in owner (starters from the submitted lineup, league chips from myleagues) — a blind capture shoots the signed-out league-wide board. Needs a forged owner session for TheLeague franchise 0001 and the `.st-banner--note` removed (a dev session carries no live MFL cookie, so the page shows a re-sign-in note an owner would not see).',
   'transaction-hub':

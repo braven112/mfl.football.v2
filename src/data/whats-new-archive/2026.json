@@ -87,6 +87,26 @@
     ]
   },
   {
+    "id": "starter-aware-schedule-optimizer",
+    "date": "2026-08-23",
+    "category": "league-event",
+    "icon": "calendar-2",
+    "title": "The Scheduler Now Knows Who Is Actually Missing",
+    "summary": "Next year’s schedule is built against your projected starting nine instead of your whole roster, and it actively hunts for weeks where neither side of a rivalry game is missing anyone. Replayed on 2026 it cuts missing starters in division games by nearly a third.",
+    "description": [
+      "The old scheduler asked “does this week have NFL byes in it?” That question is nearly useless for a 24-man roster, because a 24-man roster almost always has somebody out. Measured on The League’s 2026 rosters, only 10% of team-week combinations were fully clean, and Weeks 8, 11 and 13 had none at all. Every week looked equally bad, so nothing could be optimised.",
+      "It now asks a better question: is either of THESE two teams missing a projected starter that week? Counting the starting nine instead of the whole roster takes The League from 10% usable weeks to 41%, and it unlocks Weeks 8, 11 and 13 entirely.",
+      "The AFL is unaffected, and that is the correct answer rather than an oversight. The AFL reveals its schedule before its draft, so a roster is seven keepers — fewer players than there are starting slots, which means everyone kept is a starter. Whole-roster and starter counts agree exactly there.",
+      "On top of that the optimiser now scores rivalry games specifically: starters missing from a division game, both sides added together. The old fairness measure could not see this at all, because it only checked whether the two teams were EQUALLY hurt — two rivals both missing three starters scored perfectly, which is exactly the game nobody wants to play. Replayed on 2026 the AFL goes from 58 missing starters across its division games to 40, and from 94 to 99 rivalry games with both rosters whole.",
+      "The 2026 schedules are untouched — locked, pasted and being played. This applies to the next one. Still to come: letting different teams play their division games in different weeks, which is a deeper rebuild of how rounds are constructed."
+    ],
+    "excludeFromHero": true,
+    "leagues": [
+      "theleague",
+      "afl"
+    ]
+  },
+  {
     "id": "lineup-double-header-carousel",
     "date": "2026-08-22",
     "category": "enhancement",
