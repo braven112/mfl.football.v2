@@ -439,3 +439,30 @@ export function parseScoringPlays(
 
   return out.sort(comparePlaysChronologically);
 }
+
+/**
+ * The national network carrying a game, off a scoreboard competition — CBS,
+ * FOX, NBC, ESPN, ABC, Prime Video, NFL Network. ESPN lists it two ways:
+ * `broadcasts[].names[]` (the short form the scoreboard UI shows) and
+ * `geoBroadcasts[].media.shortName` (per-market, with a `type`). The named
+ * list wins; a national TV geo-broadcast is the fallback; '' when neither is
+ * present, which is normal for a game more than a week out.
+ *
+ * Enrichment only. Kickoff and lock times stay MFL's — this decorates the
+ * Sunday Ticket board, it does not schedule anything.
+ */
+export function parseBroadcast(competition: any): string {
+  const list = (v: unknown): any[] => (Array.isArray(v) ? v : v ? [v] : []);
+  for (const b of list(competition?.broadcasts)) {
+    for (const name of list(b?.names)) {
+      if (typeof name === 'string' && name.trim()) return name.trim();
+    }
+  }
+  // National TV only: a local-market affiliate (`market.type === 'Home'`) would
+  // name the wrong network for everyone outside that market.
+  const national = list(competition?.geoBroadcasts).filter((g) => g?.market?.type === 'National');
+  const geo = national.find((g) => g?.type?.shortName === 'TV')
+    ?? national.find((g) => g?.type?.shortName !== 'Radio'); // a streaming carrier is a channel; Westwood One is not
+  const shortName = geo?.media?.shortName;
+  return typeof shortName === 'string' ? shortName.trim() : '';
+}

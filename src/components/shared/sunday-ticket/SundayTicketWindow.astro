@@ -1,0 +1,72 @@
+---
+/**
+ * SundayTicketWindow — one Sunday window (1pm ET or 4pm ET) as a 2×2 multiview
+ * grid, plus the ranked games that did not make the cut.
+ *
+ * Props-only. Both windows are always rendered on the page — the "tabs" above
+ * them are jump links, so nothing hydrates and no-JS still shows everything.
+ * The header carries the country's Sunday Ticket carrier (YouTube TV, DAZN,
+ * Kayo), because "which four boxes" is a question about that service.
+ */
+import { formatKickoffZones, type WindowSlate } from '../../../utils/sunday-ticket-slate';
+import { countryTimeZones, sundayTicketProvider, type CountryCode } from '../../../utils/broadcast-channels';
+import SundayTicketBox from './SundayTicketBox.astro';
+
+export interface Props {
+  window: WindowSlate;
+  country?: CountryCode;
+  multiLeague?: boolean;
+  personalized?: boolean;
+}
+
+const { window, country = 'US', multiLeague = false, personalized = false } = Astro.props;
+
+const TITLES = { early: 'Early window', late: 'Late window' } as const;
+const id = `st-${window.window}`;
+const gamesLabel = `${window.scheduled} game${window.scheduled === 1 ? '' : 's'} kick off`;
+const provider = sundayTicketProvider(country);
+// The window's clock, from its earliest kickoff, in the viewer's zones —
+// "1:00 PM ET · 10:00 AM PT" at home, "Mon 3:00 AM AEST · Mon 1:00 AM AWST" in Australia.
+const clocks = window.kickoff > 0 ? formatKickoffZones(window.kickoff, countryTimeZones(country)) : [];
+const clockLabel = clocks.length > 0
+  ? clocks.map((c) => `${c.dayDiffers ? `${c.day} ` : ''}${c.time} ${c.label}`).join(' · ')
+  : window.label;
+---
+
+<section class="st-window" id={id} aria-labelledby={`${id}-title`}>
+  <header class="st-window__head">
+    <h3 class="st-window__title" id={`${id}-title`}>{TITLES[window.window]}</h3>
+    <span class="st-window__label">{clockLabel}</span>
+    <span class="st-window__sched">{gamesLabel}</span>
+    {provider && (
+      <span class="st-provider" title={provider.note}>
+        {provider.logo ? (
+          <img class="st-provider__logo" src={provider.logo} alt={provider.name} loading="lazy" />
+        ) : (
+          <span class="st-provider__name">{provider.name}</span>
+        )}
+      </span>
+    )}
+  </header>
+
+  <div class="st-grid" role="list">
+    {window.boxes.map((box, i) => (
+      <div role="listitem" class="st-grid__cell">
+        <SundayTicketBox box={box} rank={i + 1} country={country} multiLeague={multiLeague} personalized={personalized} />
+      </div>
+    ))}
+  </div>
+
+  {window.overflow.length > 0 && (
+    <p class="st-window__overflow">
+      <span class="st-window__overflow-label">Also worth a flip:</span>
+      {window.overflow.map((b, i) => (
+        <span class="st-window__overflow-game">
+          {i > 0 && <span aria-hidden="true"> · </span>}
+          {b.game.away}@{b.game.home}
+          <span class="st-window__overflow-count"> ({b.starterCount})</span>
+        </span>
+      ))}
+    </p>
+  )}
+</section>

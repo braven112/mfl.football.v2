@@ -1,0 +1,19 @@
+---
+/**
+ * /theleague/sunday-ticket — thin route. The page body is the shared
+ * SundayTicketPage; it resolves the league from the URL and the owner from
+ * the session, so there is nothing league-specific to pass here.
+ */
+import SundayTicketPage from '../../components/shared/sunday-ticket/SundayTicketPage.astro';
+import { rememberSundayTicketChoices } from '../../utils/sunday-ticket-selection';
+
+// Per-request: the session, the cookie-remembered league selection, and a
+// live myleagues/ESPN read all change the answer.
+export const prerender = false;
+
+// Cookie writes belong to the route: a component's `Astro.cookies.set()` runs
+// after the response has started and throws (see rememberSundayTicketChoices).
+rememberSundayTicketChoices(Astro.url, Astro.cookies);
+---
+
+<SundayTicketPage />

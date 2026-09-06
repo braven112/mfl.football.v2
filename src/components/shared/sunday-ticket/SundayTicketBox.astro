@@ -1,0 +1,141 @@
+---
+/**
+ * SundayTicketBox — one of the four multiview boxes: a game with your players
+ * in it, or the RedZone box that fills an open slot.
+ *
+ * Props-only (no feeds, no auth, no clock) so it stories from a fixture. The
+ * NFL logos are the site's own `/assets/nfl-logos/<code>.svg`, swapped to the
+ * dark cut by `NflLogoDarkStyles` exactly as everywhere else. The network is
+ * the channel in the viewer's COUNTRY (`resolveChannel`): CBS at home, DAZN
+ * in Canada, Kayo in Australia — drawn as the channel's mark from
+ * `/assets/tv-logos/` when one exists, its name when not. Each player row is
+ * the site's standard PlayerCell (headshot on a team-color chip, DEF rows
+ * wearing the team logo, the MFL-photo fallback chain) with the league's
+ * projection beside it — the same lockup as rosters, lineups and free agents.
+ */
+import type { SlateBox } from '../../../utils/sunday-ticket-slate';
+import { formatKickoffZones } from '../../../utils/sunday-ticket-slate';
+import { REDZONE_LOGO, countryTimeZones, resolveChannel, type CountryCode } from '../../../utils/broadcast-channels';
+import PlayerCell from '../../theleague/PlayerCell.astro';
+
+export interface Props {
+  box: SlateBox;
+  /** 1-based position on the grid — the multiview's own numbering. (`slot` is Astro's reserved named-slot attribute, so not that.) */
+  rank: number;
+  /** Whose channels to show. */
+  country?: CountryCode;
+  /** Show the league + franchise line above each player group. */
+  multiLeague?: boolean;
+  /** An owner's board (counts read "starters"); false for the league-wide fallback. */
+  personalized?: boolean;
+}
+
+const { box, rank, country = 'US', multiLeague = false, personalized = false } = Astro.props;
+
+/** The league-wide list is every projected player on both teams; cap it. */
+const MAX_PLAYERS_LEAGUE_WIDE = 5;
+
+const logo = (code: string) => `/assets/nfl-logos/${code}.svg`;
+// The kickoff in the viewer's own clocks — ET/PT at home, AEST/AWST in
+// Australia, where a Sunday 1pm ET game is Monday morning and says so.
+const clocks = box.kind === 'game' ? formatKickoffZones(box.game.kickoff, countryTimeZones(country)) : [];
+const kickoff = clocks[0] ?? null;
+const channel = box.kind === 'game' ? resolveChannel(box.game.broadcast, country) : null;
+const channelTitle = channel
+  ? [channel.name, channel.note, channel.subscription].filter(Boolean).join(' · ')
+  : '';
+const starters = (n: number) => `${n} starter${n === 1 ? '' : 's'}`;
+// Starters rank the box; roster-only players (a league whose lineup could not
+// be read) are listed but say so, both here and in the league line below.
+---
+
+{box.kind === 'redzone' ? (
+  <article class="st-box st-box--redzone" aria-label={`Box ${rank}: NFL RedZone`}>
+    <span class="st-box__rank" aria-hidden="true">#{rank}</span>
+    <div class="st-box__rz">
+      <img class="st-box__rz-logo" src={REDZONE_LOGO} alt="NFL RedZone" width="180" height="60" loading="lazy" />
+      <p class="st-box__rz-copy">Every touchdown, every game. Takes the open box.</p>
+    </div>
+  </article>
+) : (
+  <article
+    class="st-box"
+    aria-label={`Box ${rank}: ${box.game.away} at ${box.game.home}${kickoff ? `, ${kickoff.day} ${kickoff.time} ${kickoff.label}` : ''}${channel ? `, on ${channel.name}` : ''}`}
+  >
+    <span class="st-box__rank" aria-hidden="true">#{rank}</span>
+    <header class="st-box__head">
+      <div class="st-box__teams">
+        <span class="st-box__team">
+          <img class="st-box__logo" src={logo(box.game.away)} alt="" width="44" height="44" loading="lazy" />
+          <span class="st-box__code">{box.game.away}</span>
+        </span>
+        <span class="st-box__at" aria-hidden="true">@</span>
+        <span class="st-box__team">
+          <img class="st-box__logo" src={logo(box.game.home)} alt="" width="44" height="44" loading="lazy" />
+          <span class="st-box__code">{box.game.home}</span>
+        </span>
+      </div>
+      <div class="st-box__meta">
+        {clocks.length > 0 && (
+          <span class="st-box__kick">
+            {clocks.map((c, i) => (
+              <span class:list={['st-box__kick-zone', i > 0 && 'st-box__kick-zone--alt']}>
+                {c.dayDiffers && <span class="st-box__kick-day">{c.day} </span>}{c.time} {c.label}
+              </span>
+            ))}
+          </span>
+        )}
+        {channel && (
+          channel.logo ? (
+            <span class="st-net st-net--mark" title={channelTitle}>
+              <img class="st-net__logo" src={channel.logo} alt={channel.name} loading="lazy" />
+            </span>
+          ) : (
+            <span class="st-net" title={channelTitle}>{channel.name}</span>
+          )
+        )}
+        <span class="st-box__count">
+          {personalized
+            ? (box.starterCount > 0
+                ? `${starters(box.starterCount)}${box.rosterCount > 0 ? ` + ${box.rosterCount} on roster` : ''}`
+                : `${box.rosterCount} on roster`)
+            : `${box.projTotal.toFixed(1)} proj`}
+        </span>
+      </div>
+    </header>
+
+    <div class="st-box__body">
+      {box.byLeague.map((group) => {
+        const shown = personalized ? group.players : group.players.slice(0, MAX_PLAYERS_LEAGUE_WIDE);
+        const hidden = group.players.length - shown.length;
+        return (
+          <div class="st-box__league">
+            {multiLeague && (
+              <h4 class="st-box__league-name">
+                {group.leagueName}
+                {group.franchiseName && <span class="st-box__franchise"> · {group.franchiseName}</span>}
+                {!group.lineupResolved && personalized && <span class="st-box__unset"> · roster, no lineup yet</span>}
+              </h4>
+            )}
+            <ul class="st-box__players">
+              {shown.map((p) => (
+                <li class="st-box__player">
+                  <PlayerCell
+                    name={p.name}
+                    headshot={p.headshot}
+                    position={p.position}
+                    nflTeam={p.nflTeam}
+                    mflId={p.playerId}
+                    size="compact"
+                  />
+                  <span class="st-box__proj">{p.proj > 0 ? p.proj.toFixed(1) : '—'}</span>
+                </li>
+              ))}
+              {hidden > 0 && <li class="st-box__more">+{hidden} more</li>}
+            </ul>
+          </div>
+        );
+      })}
+    </div>
+  </article>
+)}

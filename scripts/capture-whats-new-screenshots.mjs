@@ -58,6 +58,8 @@ const BASE_URL = process.env.BASE_URL || 'http://localhost:4321';
  * tests/whats-new-data.test.ts asserts every id here matches a real entry.
  */
 const MANUAL_CAPTURE_ONLY = {
+  'sunday-ticket':
+    'the board is personalized for a signed-in owner (starters from the submitted lineup, league chips from myleagues) — a blind capture shoots the signed-out league-wide board. Needs a forged owner session for TheLeague franchise 0001 and the `.st-banner--note` removed (a dev session carries no live MFL cookie, so the page shows a re-sign-in note an owner would not see).',
   'owners-poll':
     'auth-gated, and the ballot only renders when a window is OPEN in Redis — a blind capture shoots the sign-in redirect, and an authenticated one out of season shoots "No ballot is open right now". The staged shot forges an owner session and stubs an open window so the real builder renders a filled ballot.',
   'notification-command-center':

@@ -1,7 +1,7 @@
 import type { APIRoute } from 'astro';
 import type { NflGame, NflScoreboardResponse } from '../../types/live-scoring';
 import { getCurrentSeasonYear } from '../../utils/league-year';
-import { canonicalNflCode, parseGameSituation } from '../../utils/espn-game-detail';
+import { canonicalNflCode, parseBroadcast, parseGameSituation } from '../../utils/espn-game-detail';
 import { buildEspnScoreboardUrl, resolveEspnTarget } from '../../utils/espn-scoreboard-url';
 
 export const prerender = false;
@@ -76,6 +76,7 @@ export const GET: APIRoute = async ({ url }) => {
         possession: situation?.possession || null,
         date: String(event.date ?? ''),
         situation,
+        broadcast: parseBroadcast(comp),
       } satisfies NflGame;
     });
 

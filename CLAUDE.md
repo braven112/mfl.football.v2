@@ -276,6 +276,13 @@ instead of a bounce. The gate now lives in each thin route wrapper
 the shared decision; the pages own the redirect). Any auth gate being moved into
 a shared `.astro` component needs the same split.
 
+The same boundary holds for **`Astro.cookies.set()`**: called from an imported
+component it runs after the response headers are committed and throws
+`ResponseSentError`, blanking the page (the Sunday Ticket board's country and
+league-toggle cookies shipped this way on the first click). Read cookies
+anywhere; WRITE them only in the route's frontmatter — the shared component
+takes a helper the route calls (`rememberSundayTicketChoices`).
+
 Related: an admin link into a league-scoped page must be gated on
 `isAuthorizedForLeague` too, not just `isCommissionerOrAdmin` — a TheLeague
 admin browsing the AFL's Import Rankings page was otherwise shown a Custom

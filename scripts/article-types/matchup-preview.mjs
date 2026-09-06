@@ -207,6 +207,9 @@ export function relatedLinks(_enrichment, { league = 'theleague' } = {}) {
       cta: 'Follow every matchup live on the scoreboard.',
     }),
     articleLink(league, 'lineup', { label: 'your lineup' }),
+    // The broadcast guide's natural landing: the four games to put on the
+    // multiview each window, built from the reader's own rosters.
+    featureLink(league, 'sunday-ticket', { label: 'the Sunday Ticket board' }),
     featureLink(league, 'rivalries'),
     featureLink(league, 'standings'),
     featureLink(league, 'notifications'),

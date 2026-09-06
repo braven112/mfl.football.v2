@@ -21,6 +21,30 @@
     ]
   },
   {
+    "id": "built-in-rankings-2026-08-21",
+    "date": "2026-08-21",
+    "category": "new-feature",
+    "icon": "clipboard",
+    "title": "Your Draft Board, Already Built",
+    "summary": "Import Rankings now arrives with six ranking sources already loaded and weighted — no bookmarklets, no setup, nothing to click. Tune the mix to taste with a weight you set as a percentage, and every league keeps a board of its own.",
+    "description": [
+      "Open <a href=\"/import-rankings\">Import Rankings</a> and there is already a board waiting. Six sources come loaded: MFL's own ADP from hundreds of real drafts, FantasySharks expert ranks, FantasyCalc dynasty trade values, Sleeper, ESPN redraft and ESPN superflex. Nothing to install, nothing to drag to a bookmarks bar, and it works on your phone. They refresh themselves every morning.",
+      "Which ones start switched on depends on the league, because the right opening board is not the same everywhere. The AFL and Best Ball lead with redraft ADP — you are re-drafting most of the roster, so a dynasty trade value overrates a 22-year-old you will not keep. TheLeague leads with dynasty values, because you are signing players to contracts. Every source is available in every league either way; only the starting three differ.",
+      "The mix is yours. Each source has a weight you set as a percentage — put ESPN superflex at 5 if you just want it whispering in the background, push MFL ADP to 60 if that is the board you actually trust. The numbers always total 100, so what you type is genuinely what that source is worth. Don't want the defaults at all? Hide them and build the whole thing from <a href=\"/import-rankings\">your own imports</a> — the bookmarklets for FantasyPros, FootballGuys, DLF, KeepTradeCut, Yahoo and CBS are all still there.",
+      "One thing worth knowing if you play in more than one: every league now keeps its own board. What you build in the AFL stays in the AFL, TheLeague keeps exactly what you had, and Best Ball starts fresh instead of borrowing. Your own imports are untouched — the new sources simply sit alongside them."
+    ],
+    "image": "built-in-rankings.webp",
+    "imageAlt": "The Import Rankings page with a Saved Rankings table listing six built-in sources — MFL ADP, FantasySharks, FantasyCalc, Sleeper, ESPN and ESPN Superflex — each with a My Rank checkbox, an editable percentage weight, a player count and View and Hide buttons, above the Get Bookmarklets grid.",
+    "link": "/import-rankings",
+    "linkLabel": "Open your board",
+    "excludeFromHero": true,
+    "leagues": [
+      "afl",
+      "theleague",
+      "bb1"
+    ]
+  },
+  {
     "id": "afl-live-scoring",
     "date": "2026-08-20",
     "category": "new-page",

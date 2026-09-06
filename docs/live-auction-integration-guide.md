@@ -25,7 +25,7 @@ Add to `src/pages/theleague/auction-predictor.astro`:
 
 ```astro
 ---
-import LiveModeToggle from '@/components/theleague/LiveModeToggle.astro';
+// LiveModeToggle.astro was removed (unmounted, Sept 2026); build the toggle inline or extract a fresh one.  <!-- removed Sept 2026: unmounted; the Sunday Ticket board is src/components/shared/sunday-ticket/ -->
 import LiveAuctionPanel from '@/components/theleague/LiveAuctionPanel.astro';
 import AuctionNotificationSettings from '@/components/theleague/AuctionNotificationSettings.astro';
 ---
@@ -490,7 +490,7 @@ Before March 15, 2026:
 ## Files Created
 
 ### Components
-- `src/components/theleague/LiveModeToggle.astro` - Mode toggle button
+- `src/components/theleague/LiveModeToggle.astro` - Mode toggle button  <!-- removed Sept 2026: unmounted; the Sunday Ticket board is src/components/shared/sunday-ticket/ -->
 - `src/components/theleague/LiveAuctionPanel.astro` - Live mode UI
 - `src/components/theleague/AuctionNotificationSettings.astro` - Preferences panel
 

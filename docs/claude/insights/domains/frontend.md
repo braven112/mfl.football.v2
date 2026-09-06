@@ -133,6 +133,48 @@ hrefs to local copies, and open it in the bundled Chromium — it isolates
 
 ---
 
+## 2026-09-05 - `slot` Is Astro's Reserved Attribute: A `slot` Prop Types To `never` And Three More From The Sunday Ticket Build
+
+**Context:** The Sunday Ticket board (`src/components/shared/sunday-ticket/`)
+passed the type ratchet locally, then rose by five after the rebase. All five
+were the branch's, and none surfaced at runtime — the page rendered fine.
+
+**Insights:**
+
+1. **`slot` is a reserved attribute on every Astro component.** Astro's JSX
+   types give each component `slot?: string` for named slots, so a component
+   that declares `slot: number` in its own `Props` gets `string & number` —
+   `never` — and every caller reports `ts(2322): Type 'number' is not
+   assignable to type 'never'` at the CALL SITE, not the declaration. The
+   runtime is untouched (the attribute is just passed through), which is why it
+   only shows in `astro check`. Name the prop something else (`rank`).
+2. **Assemble a formatted time from `formatToParts`, never by joining
+   literals.** ICU 72+ separates the minutes from AM/PM with a NARROW no-break
+   space (U+202F). `parts.filter(literal === ' ')` drops the gap ("1:00PM");
+   `map(p => p.value).join('')` keeps the U+202F, which is invisible in a diff
+   and breaks `toEqual('1:00 PM')`. `formatKickoffZones` in
+   `sunday-ticket-slate.ts` builds `${hour}:${minute} ${dayPeriod}` from parts.
+3. **Chromatic's story-asset scan cannot see a path a component builds from
+   data.** `computeStoryAssetLiterals` greps stories and the closure for
+   `/assets/.../file.ext` literals. A component holding `/assets/tv-logos/` as a
+   directory prefix and appending a filename from JSON renders 18 marks the scan
+   never lists, so `chromatic-path-filter` passed while a logo swap could not
+   wake a build. List the directory glob in `STORY_ASSET_GLOBS` and say why in
+   the comment — the guard has a "deliberately excluded" list that named that
+   very directory as rendering nowhere, which stopped being true the day the
+   board shipped.
+4. **The Browser pane does not decode images while hidden.** Every `<img>`
+   reported `naturalWidth: 0, complete: false` with a 200 in the network log,
+   and screenshots came back as a solid color. The verification that works for
+   an image-heavy, owner-only page is a headless Playwright capture with a
+   session minted from the worktree's own `JWT_SECRET` (`createSessionToken`),
+   `theme_pref` set by cookie for the dark pass. `scripts/capture-whats-new-screenshots.mjs`
+   is the template.
+
+**Related:** `docs/plans/sunday-ticket.md` (deviations); the
+`Astro.cookies.set()`-from-a-component trap from the same build is in
+`CLAUDE.md` beside its `Astro.redirect()` sibling.
+
 ## 2026-09-04 - A Swap-Simulation Probe Invents Listener Stacking That Real Navigation Does Not
 
 A Playwright probe that simulated ClientRouter swaps by re-executing inline

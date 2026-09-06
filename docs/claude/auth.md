@@ -172,3 +172,26 @@ mflLogin(username: string, password: string): Promise<MflSession>
 ```
 
 Used for write operations that require MFL authentication.
+
+## The whole account's leagues — `myleagues`, and what an empty answer means
+
+`src/utils/my-leagues.ts#fetchMyLeagues(user.id, year)` lists every MFL
+league the signed-in account belongs to (id, name, franchise id/name, host),
+through the same `export?TYPE=myleagues&JSON=1` call the login flow makes and
+then discards. It is how a page signed into one league can act for the same
+person's franchises elsewhere (the Sunday Ticket board) without a second
+login — `user.id` IS the MFL cookie, and it is the same cookie in every league.
+
+Two rules, both learned the hard way:
+
+- **An empty list is a DEAD COOKIE, not "no leagues."** MFL answers an
+  expired MFL_USER_ID with a well-formed `{"leagues":{}}` and HTTP 200.
+  `api/autocut-list.ts` has used exactly that as its step-up liveness check
+  since it shipped; `isMflCookieLive` is that check, lifted, and it never
+  reads the cache. A page that treats the empty answer as "this owner has no
+  other leagues" silently downgrades every owner whose session outlived their
+  MFL cookie.
+- **The cookie is never a Redis key in the clear.** Results cache for an
+  hour under a sha256 of it, and only a non-empty answer is cached — a dead
+  cookie must not be remembered past the re-login that fixes it.
+

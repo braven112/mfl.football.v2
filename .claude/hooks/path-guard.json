@@ -115,13 +115,17 @@
         "src/utils/team-color*",
         "src/utils/team-icon*",
         "src/utils/*logo*",
-        "public/sw.js"
+        "public/sw.js",
+        "src/data/tv-logo-dark-stroke-manifest.json",
+        "public/assets/tv-logos/**",
+        "scripts/measure-tv-logo-contrast.mjs"
       ],
       "tests": [
         "tests/design-token-guard.test.ts",
         "tests/team-color-backdrop-guard.test.ts",
         "tests/afl-brand-green-guard.test.ts",
-        "tests/service-worker-cache.test.ts"
+        "tests/service-worker-cache.test.ts",
+        "tests/tv-logo-dark-stroke.test.ts"
       ]
     },
     {
