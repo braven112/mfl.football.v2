@@ -23,7 +23,7 @@ import { castBestScoredModel } from '../../../utils/hero-casting';
 import { getNFLTeamLogo } from '../../../utils/nfl-logo';
 import FaceoffComposite from '../FaceoffComposite.astro';
 import MatchupPreviewHero from './MatchupPreviewHero.astro';
-import { DEFAULT_COUNTRY, sundayTicketProvider, type CountryCode } from '../../../utils/broadcast-channels';
+import { DEFAULT_COUNTRY, SUNDAY_TICKET_LOGO, type CountryCode } from '../../../utils/broadcast-channels';
 import { crestStrokeFilter } from '../../../utils/crest-dark-stroke-css';
 import { showSundayTicketHero } from '../../../utils/sunday-ticket-window';
 
@@ -39,9 +39,6 @@ export interface Props {
 
 const { state, resolveLeaguePath: r, userFranchiseId, lineupSubmitted = null, country = DEFAULT_COUNTRY } = Astro.props;
 
-// The Sunday Ticket mark this viewer's country actually carries — YouTube TV,
-// DAZN, Kayo. One catalog with the board and the preview hero below.
-const provider = sundayTicketProvider(country);
 
 // No-arg season year (env-pinned to the last completed season); referenceDate
 // only steers which game of the current-week slate is "upcoming" in the live
@@ -78,9 +75,7 @@ const markFilter = crestStrokeFilter();
       <div class="msh__band-left">
         {isSunday ? (
           <p class="msh__eyebrow msh__eyebrow--st">
-            {provider?.logo && (
-              <img class="msh__mark" src={provider.logo} alt={provider.name} width="336" height="263" style={`filter: ${markFilter}`} />
-            )}
+            <img class="msh__mark" src={SUNDAY_TICKET_LOGO} alt="" width="336" height="263" style={`filter: ${markFilter}`} />
             Your Sunday Ticket
           </p>
         ) : (

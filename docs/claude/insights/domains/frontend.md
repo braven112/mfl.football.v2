@@ -2854,3 +2854,27 @@ test's minimal fixtures still satisfy it.
 **`grep -rn "verbatim" tests/` before refactoring anything.** A comment is not a
 binding. That grep currently returns three more live copies in the broadcast
 preflight file alone.
+
+## 2026-09-06 — The unit suite cannot see a broken `.astro` page
+
+A scripted import insertion landed a new `import` line *inside* an existing
+multi-line `import { … }` block in `src/pages/afl-fantasy/keeper-analysis.astro`
+and `src/components/shared/owners-poll/BallotBuilder.tsx`. Both files were
+syntactically dead. `pnpm test:unit` reported **370 files, 9,170 passing** while
+`/afl-fantasy/keeper-analysis` was returning a 404.
+
+Nothing imports a page component, so vitest never transforms it — a page can be
+unparseable and the entire suite stays green. The only things that caught it
+were `pnpm test:types` (`astro check`, which parses every `.astro`) and a plain
+`curl` against `astro dev`.
+
+Two habits follow:
+
+- **After editing any `.astro` page or `.tsx` island, hit it.** `astro dev` plus
+  a `curl -o /dev/null -w "%{http_code}"` loop over the touched routes takes
+  seconds and is the only fast check that a page still parses. A green unit
+  suite is not evidence that a page renders.
+- **Never insert an import by "after the last line starting with `import`".**
+  For a multi-line import that line is the `import {` opener and the insert
+  lands inside the braces. Anchor on the closing `} from '…';` of a known
+  import instead, or add the line at the top of the block.

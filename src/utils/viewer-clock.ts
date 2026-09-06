@@ -203,16 +203,38 @@ export function formatDateForViewer(
  * the page that read it (and, across a league boundary, the league too).
  */
 export function clockZonesFromCookie(cookieString: string): ClockZoneSpec[] | null {
-  const jar = new Map<string, string>();
+  const raw = new Map<string, string>();
   for (const part of cookieString.split(';')) {
     const eq = part.indexOf('=');
     if (eq < 0) continue;
-    jar.set(part.slice(0, eq).trim(), decodeURIComponent(part.slice(eq + 1).trim()));
+    const name = part.slice(0, eq).trim();
+    // Only OUR two are kept, and nothing is decoded on the way in. Decoding
+    // every cookie in the jar means one malformed value somewhere else on the
+    // origin — `%zz` from any script that ever set a cookie — throws URIError
+    // out of this function, and this runs inside a React effect and a footnote
+    // renderer. An unrelated cookie must not be able to blank a deadline.
+    if (name === COUNTRY_COOKIE || name === ZONE_COOKIE) raw.set(name, part.slice(eq + 1).trim());
   }
-  const country = jar.get(COUNTRY_COOKIE);
-  const zone = jar.get(ZONE_COOKIE);
+  const country = decodeCookie(raw.get(COUNTRY_COOKIE));
+  const zone = decodeCookie(raw.get(ZONE_COOKIE));
   if (!country && !zone) return null;
   return eventZonesFor({ prefs: parseViewerPreferences(country, zone), explicit: true });
+}
+
+/**
+ * Cookie values here are short uppercase ids (`AU`, `SYD`) that need no
+ * encoding, so a decode failure means the value is junk, not that it is
+ * encoded differently. Fall back to the raw text and let
+ * `parseViewerPreferences` reject it — that path already guarantees a usable
+ * clock, which is the outcome that matters.
+ */
+function decodeCookie(value: string | undefined): string | undefined {
+  if (value === undefined) return undefined;
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    return value;
+  }
 }
 
 /**

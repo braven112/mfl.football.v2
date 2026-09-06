@@ -20,8 +20,8 @@ import FaceoffComposite, { type FaceoffSide } from '../FaceoffComposite.astro';
 import GameDayPreviewHeroStub from '../hero-stubs/GameDayPreviewHeroStub.astro';
 import {
   DEFAULT_COUNTRY,
+  SUNDAY_TICKET_LOGO,
   resolveChannel,
-  sundayTicketProvider,
   type CountryCode,
 } from '../../../utils/broadcast-channels';
 
@@ -298,20 +298,28 @@ for (const g of displayGames) {
   if (faceoff) faceoffByGame.set(g, faceoff);
 }
 
-// Where Sunday Ticket lives for this viewer — YouTube TV in the US, DAZN in
-// the UK and Mexico, Kayo in Australia. The mark and the name come from the
-// same catalog the Sunday Ticket board uses, so the two cannot disagree.
-const provider = sundayTicketProvider(country);
+// The MARK stays the NFL Sunday Ticket product mark, matching the Sunday
+// Ticket page's own header (SundayTicketPage.astro): there, only the per-WINDOW
+// badge varies by carrier, and a section header titled "Your Sunday Ticket" is
+// the page-header position, not the window one.
+//
+// The CARRIER is deliberately not named here. It cannot be said in one line
+// without saying it wrongly: "Sunday Ticket via Kayo Sports" is not a product
+// that exists — outside the US the catalog's own notes never use the phrase
+// ("DAZN carries every game in Canada", "Kayo carries every game via ESPN"),
+// because Sunday Ticket is a US product and the rest of the world buys
+// something else. Naming the carrier honestly takes the note, and the note
+// belongs on the board, which has room for it. What this hero owes a viewer
+// abroad is the CHANNEL each game is actually on, and `getChannel` gives them
+// that in visible text — not a tooltip only a mouse can reach.
 ---
 
 {hasGames ? (
   <section class="matchup-hero" aria-label="Matchup Preview">
     <div class="matchup-hero__header">
       <div class="matchup-hero__title-group">
-        {provider?.logo && (
-          <img class="matchup-hero__mark" src={provider.logo} alt={provider.name} width="336" height="263" />
-        )}
-        <h3 class="matchup-hero__section-title" title={provider?.note || undefined}>Your Sunday Ticket</h3>
+        <img class="matchup-hero__mark" src={SUNDAY_TICKET_LOGO} alt="" width="336" height="263" />
+        <h3 class="matchup-hero__section-title">Your Sunday Ticket</h3>
         {userFranchiseId && (
           <span class="matchup-hero__personalized">Personalized</span>
         )}

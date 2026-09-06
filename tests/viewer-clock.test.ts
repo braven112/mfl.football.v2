@@ -141,6 +141,24 @@ describe('the client-side reader — cookie is the explicit signal', () => {
     expect(zones?.length).toBeGreaterThan(0);
   });
 
+  it('survives a malformed percent-escape in an UNRELATED cookie', () => {
+    // This runs inside a React effect and a footnote renderer. Decoding every
+    // cookie in the jar let one bad value anywhere on the origin throw URIError
+    // and blank a deadline; only our two are read now, and even those decode
+    // defensively. (Copilot, PR #989.)
+    expect(() => clockZonesFromCookie('analytics=%zz; other=100%')).not.toThrow();
+    expect(clockZonesFromCookie('analytics=%zz; other=100%')).toBeNull();
+    expect(() => clockZonesFromCookie(`analytics=%zz; ${COUNTRY_COOKIE}=AU; ${ZONE_COOKIE}=SYD`)).not.toThrow();
+    expect(
+      clockZonesFromCookie(`analytics=%zz; ${COUNTRY_COOKIE}=AU; ${ZONE_COOKIE}=SYD`)?.map((z) => z.zone),
+    ).toEqual(['Australia/Sydney', LEAGUE_CLOCK.zone]);
+  });
+
+  it('does not throw when OUR OWN cookie is the malformed one', () => {
+    expect(() => clockZonesFromCookie(`${COUNTRY_COOKIE}=%zz; ${ZONE_COOKIE}=%zz`)).not.toThrow();
+    expect(clockZonesFromCookie(`${COUNTRY_COOKIE}=%zz`)?.length).toBeGreaterThan(0);
+  });
+
   it('falls back to the device when there is no choice, and to the preference when there is', () => {
     const chosen = clockZonesFromCookie(`${COUNTRY_COOKIE}=AU; ${ZONE_COOKIE}=SYD`);
     expect(formatMomentOrDevice(WED_8PM_PT, chosen, { weekday: true }))
