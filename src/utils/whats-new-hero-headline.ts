@@ -70,6 +70,30 @@ function bareWord(word: string): string {
   return word.replace(/[^\p{L}\p{N}'\u2019]/gu, '').toLowerCase();
 }
 
+/** Openers that must not be left dangling on the headline half of the split. */
+const PAIRS: Record<string, string> = { '(': ')', '[': ']', '{': '}', '\u201c': '\u201d' };
+
+/**
+ * True when the text closes every bracket and smart quote it opens. A split
+ * that lands INSIDE a parenthetical strands its opener on the headline —
+ * "WEEKLY FIXES & POLISH (AUG" / "18-24)." — which reads as a rendering fault
+ * rather than a headline. Straight `"` is counted by parity; `'` is not
+ * checked at all, because apostrophes make it meaningless.
+ */
+function isBalanced(text: string): boolean {
+  const stack: string[] = [];
+  let straightQuotes = 0;
+  for (const ch of text) {
+    if (ch === '"') straightQuotes++;
+    else if (PAIRS[ch]) stack.push(PAIRS[ch]);
+    else if (Object.values(PAIRS).includes(ch)) {
+      if (stack[stack.length - 1] === ch) stack.pop();
+      else return false;
+    }
+  }
+  return stack.length === 0 && straightQuotes % 2 === 0;
+}
+
 /**
  * Split a plain title into the hero's two-part display line.
  *
@@ -93,7 +117,7 @@ export function splitTitleHeadline(title: string): HeroHeadline {
     const cut = lastBreak.index + lastBreak[0].length;
     const head = trimmed.slice(0, cut).trim();
     const tail = trimmed.slice(cut).trim();
-    if (head && tail && tail.length <= MAX_SENTENCE_ACCENT) {
+    if (head && tail && tail.length <= MAX_SENTENCE_ACCENT && isBalanced(head)) {
       return { headline: head, accentWord: terminate(tail) };
     }
   }
@@ -103,7 +127,13 @@ export function splitTitleHeadline(title: string): HeroHeadline {
   if (words.length === 1) return { headline: '', accentWord: terminate(words[0]) };
 
   const takeTwo = words.length >= 3 && WEAK_TAIL.has(bareWord(words[words.length - 1]));
-  const tailCount = takeTwo ? 2 : 1;
+  let tailCount = takeTwo ? 2 : 1;
+  // Widen the accent until the headline closes what it opens, so the split
+  // cannot land inside a parenthetical. Always leaves the headline at least
+  // one word — an unbalanced line still beats no line at all.
+  while (tailCount < words.length - 1 && !isBalanced(words.slice(0, -tailCount).join(' '))) {
+    tailCount++;
+  }
   return {
     headline: words.slice(0, -tailCount).join(' '),
     accentWord: terminate(words.slice(-tailCount).join(' ')),

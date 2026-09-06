@@ -687,8 +687,17 @@ const countAriaLabel = hasCount
      built from a What's New title is long enough to land under the frame.
      Capped from the frame's own geometry, and only while the frame is on
      screen — it is hidden below 640px, where the column goes full width. */
-  @media (min-width: 641px) {
-    .afl-event-hero--has-shot .afl-event-hero__content {
+  @media (min-width: 640.02px) {
+    /* :not(--no-shot) because a 404'd light capture drops the frame at runtime
+       (see the onerror above) while leaving --has-shot on the section. Keying
+       the cap off --has-shot alone would hold the column narrow with the right
+       38% of the card empty — and a placeholder filename is a documented
+       authoring state, not a rarity.
+       640.02px, not 641px: the frame is hidden at max-width 640px, and a
+       fractional viewport in between (ordinary under display scaling or zoom)
+       would match NEITHER query — frame drawn, column uncapped, copy back
+       under the frame. */
+    .afl-event-hero--has-shot:not(.afl-event-hero--no-shot) .afl-event-hero__content {
       /* border-box so the cap is the column's OUTER edge — against the
          default content-box the column's own padding pushes it back under
          the frame, which is the bug this rule exists to fix. */

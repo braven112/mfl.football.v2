@@ -83,6 +83,23 @@ describe('splitTitleHeadline', () => {
     });
   });
 
+  it('never strands an opening bracket on the headline', () => {
+    // The naive last-word split gives "WEEKLY FIXES & POLISH (AUG" /
+    // "18-24).", which reads as a rendering fault. The accent widens until
+    // the headline closes what it opens.
+    expect(splitTitleHeadline('Weekly Fixes & Polish (Aug 18-24)')).toEqual({
+      headline: 'Weekly Fixes & Polish',
+      accentWord: '(Aug 18-24).',
+    });
+  });
+
+  it('leaves an already-balanced quoted phrase where it is', () => {
+    expect(splitTitleHeadline('The "Big Board" Finally Talks')).toEqual({
+      headline: 'The "Big Board" Finally',
+      accentWord: 'Talks.',
+    });
+  });
+
   it('leaves a strong last word alone', () => {
     expect(splitTitleHeadline('Know Where You Are In Line')).toEqual({
       headline: 'Know Where You Are In',
