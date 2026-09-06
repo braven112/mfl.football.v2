@@ -79,13 +79,17 @@
         "src/utils/espn*",
         "scripts/fetch-live-*",
         "scripts/fetch-espn*",
-        "src/pages/*/live*"
+        "src/pages/*/live*",
+        "src/utils/sunday-ticket-*",
+        "src/components/shared/sunday-ticket/*"
       ],
       "tests": [
         "tests/live-scoring-host-resolution.test.ts",
         "tests/marquee-live-guard.test.ts",
         "tests/network-badge.test.ts",
-        "tests/nfl-live-routes.test.ts"
+        "tests/nfl-live-routes.test.ts",
+        "tests/live-scoring-snapshot.test.ts",
+        "tests/sunday-ticket-live.test.ts"
       ]
     },
     {

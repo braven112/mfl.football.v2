@@ -38,9 +38,10 @@ export const KICK = {
 const game = (away: string, home: string, kickoff: number, broadcast?: string): SlateGame =>
   broadcast ? { id: `${away}@${home}`, kickoff, away, home, broadcast } : { id: `${away}@${home}`, kickoff, away, home };
 
-const player = (name: string, position: string, nflTeam: string, proj: number, headshot = FACE) => ({
+const player = (name: string, position: string, nflTeam: string, proj: number, live?: number, headshot = FACE) => ({
   playerId: name.replace(/\W/g, '').toLowerCase(),
   name, position, nflTeam, proj, headshot,
+  ...(live === undefined ? {} : { live, secondsRemaining: 1800 }),
 });
 
 /** The two leagues this site runs plus one outside league, as the board sees them. */
@@ -61,6 +62,11 @@ const group = (
   lineupResolved,
   players: [...players].sort((a, b) => b.proj - a.proj),
   projTotal: Math.round(players.reduce((s, p) => s + p.proj, 0) * 10) / 10,
+  // Only a league in the registry can be read live; an outside league off
+  // `myleagues` shows projections and says so.
+  liveSupported: league.registered !== null,
+  liveResolved: players.some((p) => p.live !== undefined),
+  liveTotal: Math.round(players.reduce((s, p) => s + (p.live ?? 0), 0) * 10) / 10,
 });
 
 const box = (g: SlateGame, groups: ReturnType<typeof group>[]): GameBox => ({
@@ -78,15 +84,15 @@ const box = (g: SlateGame, groups: ReturnType<typeof group>[]): GameBox => ({
 const [TL, AFL, OUT] = leagues;
 
 const bufHou = box(game('BUF', 'HOU', KICK.early, 'CBS'), [
-  group(TL, [player('Josh Allen', 'QB', 'BUF', 24.8), player('James Cook', 'RB', 'BUF', 15.2)]),
-  group(AFL, [player('Josh Allen', 'QB', 'BUF', 22.1)]),
+  group(TL, [player('Josh Allen', 'QB', 'BUF', 24.8, 18.6), player('James Cook', 'RB', 'BUF', 15.2, 9.4)]),
+  group(AFL, [player('Josh Allen', 'QB', 'BUF', 22.1, 16.9)]),
 ]);
 const balInd = box(game('BAL', 'IND', KICK.early, 'CBS'), [
-  group(TL, [player('Lamar Jackson', 'QB', 'BAL', 26.8)]),
+  group(TL, [player('Lamar Jackson', 'QB', 'BAL', 26.8, 21.3)]),
   group(OUT, [player('Zay Flowers', 'WR', 'BAL', 13.4)]),
 ]);
 const chiCar = box(game('CHI', 'CAR', KICK.early, 'FOX'), [
-  group(TL, [player('Colston Loveland', 'TE', 'CHI', 11.4)]),
+  group(TL, [player('Colston Loveland', 'TE', 'CHI', 11.4, 4.2)]),
 ]);
 const atlPit = box(game('ATL', 'PIT', KICK.early, 'FOX'), [
   group(AFL, [player('Bijan Robinson', 'RB', 'ATL', 19.6)]),
@@ -95,7 +101,7 @@ const cleJax = box(game('CLE', 'JAX', KICK.early, 'CBS'), [
   group(OUT, [player('Brian Thomas Jr.', 'WR', 'JAX', 12.0)]),
 ]);
 const miaLv = box(game('MIA', 'LV', KICK.late, 'FOX'), [
-  group(TL, [player('Las Vegas Raiders', 'DEF', 'LV', 6.9, '')], false),
+  group(TL, [player('Las Vegas Raiders', 'DEF', 'LV', 6.9, 3.1, '')], false),
 ]);
 
 const early = (boxes: WindowSlate['boxes'], overflow: GameBox[] = [], scheduled = 8): WindowSlate => ({
@@ -140,7 +146,7 @@ export const leagueWide: SundayTicketSlate = {
         group(
           { ...TL, franchiseName: 'League-wide' },
           [
-            player('Josh Allen', 'QB', 'BUF', 24.8), player('James Cook', 'RB', 'BUF', 15.2),
+            player('Josh Allen', 'QB', 'BUF', 24.8, 18.6), player('James Cook', 'RB', 'BUF', 15.2, 9.4),
             player('Nico Collins', 'WR', 'HOU', 14.9), player('Joe Mixon', 'RB', 'HOU', 13.1),
             player('Khalil Shakir', 'WR', 'BUF', 9.8), player('Dalton Kincaid', 'TE', 'BUF', 8.7),
             player('Tank Dell', 'WR', 'HOU', 8.1),

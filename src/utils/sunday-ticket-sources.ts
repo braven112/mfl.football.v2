@@ -36,6 +36,7 @@ import { buildMflExportUrl } from './mfl-url';
 import { mflFetch } from './mfl-fetch';
 import { getRedis } from './redis-client';
 import type { ContributionPlayer, LeagueContribution } from './sunday-ticket-slate';
+import { hasLiveSignal, parseLiveScoringPayload, type LiveSnapshot } from './live-scoring-snapshot';
 
 /** Who is contributing: the league and the owner's franchise in it. */
 export interface ContributionSource {
@@ -45,6 +46,12 @@ export interface ContributionSource {
   franchiseName: string;
   /** Best-ball leagues have no lineups — every rostered player counts. */
   bestBall?: boolean;
+  /**
+   * Whether this league can be read LIVE. True only for registry leagues: the
+   * live route resolves their MFL host from `L` alone. An outside league off
+   * `myleagues` is false and renders projections, saying so.
+   */
+  liveSupported?: boolean;
 }
 
 export interface BuildContributionInput {
@@ -131,6 +138,7 @@ export function buildContribution(input: BuildContributionInput): LeagueContribu
     franchiseId: source.franchiseId,
     franchiseName: source.franchiseName,
     lineupResolved,
+    liveSupported: source.liveSupported === true,
     players,
   };
 }
@@ -173,6 +181,8 @@ export function loadRegisteredContribution(input: RegisteredContributionInput): 
       franchiseId: input.franchiseId,
       franchiseName: input.franchiseName,
       bestBall: league.bestBall === true,
+      // In the registry, so /api/live-scoring serves it from `L` alone.
+      liveSupported: true,
     },
     rostersPayload,
     weekEntry,
@@ -321,6 +331,101 @@ export function loadLeagueWideContribution(input: {
     franchiseId: '',
     franchiseName: 'League-wide',
     lineupResolved: false,
+    // Not a franchise, so there is nothing to read live FOR: this is a
+    // synthetic aggregate of the whole projections feed.
+    liveSupported: false,
     players,
   };
+}
+
+// ── Live scoring: this week's real points, per registered league ─────────
+
+/**
+ * Short by design. This is the SSR first paint only — the island takes over
+ * within a poll — so the window in which two viewers can see different
+ * numbers is one interval, and a longer TTL would just make the first paint
+ * staler than the second.
+ */
+const LIVE_TTL_SECONDS = 20;
+
+interface CachedLiveSnapshot extends LiveSnapshot {
+  fetchedAt: number;
+}
+
+export interface LiveSnapshotInput {
+  league: LeagueDefinition;
+  week: number;
+  /**
+   * The SEASON year, not the league year. Live scoring is results-shaped and
+   * `getCurrentSeasonYear()` is its clock; between Feb 14 and Labor Day the
+   * two differ and the league year names a season MFL is not scoring yet.
+   */
+  seasonYear: number;
+}
+
+/**
+ * One registered league's live scoring for the week, or `null`.
+ *
+ * `null` means "no live read" — an upstream failure, an offseason week, a
+ * league MFL has nothing for. It is deliberately NOT an empty snapshot:
+ * callers merge `null` as a no-op and keep their projections, whereas an
+ * empty snapshot would zero every number on the board. `res.ok` cannot make
+ * that distinction on its own (MFL answers a throttled read with a 200), so
+ * the gate is the parsed payload's own shape.
+ */
+export async function loadLiveSnapshot(input: LiveSnapshotInput): Promise<LiveSnapshot | null> {
+  const { league, week, seasonYear } = input;
+  // Both leagues have a franchise 0001; the league id is what makes this key
+  // unambiguous, exactly as it does for the outside-league bundle above.
+  const key = `st:live:${league.id}:${seasonYear}:${week}`;
+  const redis = await getRedis().catch(() => null);
+
+  if (redis) {
+    try {
+      const cached = await redis.get<CachedLiveSnapshot>(key);
+      if (cached && Date.now() - (cached.fetchedAt ?? 0) <= LIVE_TTL_SECONDS * 1000) {
+        return cached;
+      }
+    } catch (error) {
+      console.warn('[sunday-ticket] live cache read failed:', error);
+    }
+  }
+
+  let snapshot: LiveSnapshot | null = null;
+  try {
+    // `host` comes from the registry entry, never from a request param —
+    // there is nothing user-supplied in this URL.
+    const url = buildMflExportUrl({
+      type: 'liveScoring',
+      leagueId: league.id,
+      year: seasonYear,
+      params: { W: week, DETAILS: 1 },
+      host: `https://${league.mflHost}`,
+    });
+    const response = await fetch(url, {
+      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; FantasyLeague/1.0)' },
+      signal: AbortSignal.timeout(5000),
+    });
+    if (!response.ok) return null;
+    const parsed = parseLiveScoringPayload(await response.json().catch(() => null));
+    // MFL answers an UNPLAYED week with a full, well-formed payload of zeros —
+    // every franchise, every score 0.00, every player a nonstarter. Counting
+    // franchises does not catch that (there are 16 of them), and merging it
+    // would print `Final 0.0 - 0.0` over a game nobody has played. `null` is
+    // the honest answer: no live read, so the board keeps its projections.
+    if (!hasLiveSignal(parsed)) return null;
+    snapshot = parsed;
+  } catch {
+    return null;
+  }
+
+  if (redis && snapshot) {
+    try {
+      await redis.set(key, { ...snapshot, fetchedAt: Date.now() }, { ex: LIVE_TTL_SECONDS });
+    } catch (error) {
+      console.warn('[sunday-ticket] live cache write failed:', error);
+    }
+  }
+
+  return snapshot;
 }

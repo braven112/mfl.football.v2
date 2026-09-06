@@ -21,15 +21,16 @@ import SundayTicketBoard from './SundayTicketBoard.astro';
 import { getAuthUser } from '../../../utils/auth';
 import { getLeagueContext } from '../../../utils/league-context';
 import { getLeagueById, getLeagueBySlug } from '../../../config/leagues';
-import { getLeagueYearForSlug } from '../../../utils/league-year';
+import { getCurrentSeasonYear, getLeagueYearForSlug } from '../../../utils/league-year';
 import { getCurrentNFLWeek } from '../../../utils/current-week';
-import { getDailySlot } from '../../../utils/hero-resolver';
+import { getDailySlot, parseTestDate } from '../../../utils/hero-resolver';
 import { getPlayerMap } from '../../../utils/player-map';
 import { resolveLeaguePath } from '../../../utils/nav-utils';
 import { checkRateLimit } from '../../../utils/rate-limit';
 import { fetchMyLeagues, type MyLeague } from '../../../utils/my-leagues';
 import { findWeekMatchups } from '../../../utils/lineup-sources';
 import {
+  applyLiveToContribution,
   buildSlateGames,
   buildSundayTicketSlate,
   selectWeekMatchups,
@@ -37,10 +38,16 @@ import {
 } from '../../../utils/sunday-ticket-slate';
 import {
   loadLeagueWideContribution,
+  loadLiveSnapshot,
   loadOutsideContribution,
   loadRegisteredContribution,
   readLeagueFeed,
 } from '../../../utils/sunday-ticket-sources';
+import { buildMatchupCards, type MatchupCard } from '../../../utils/sunday-ticket-matchups';
+import { getLeagueTeamBrands } from '../../../utils/league-team-brands';
+import { isSeasonWindowOpen } from '../../../utils/pecking-order-season-window.mjs';
+import SundayTicketMatchups from './SundayTicketMatchups.astro';
+import SundayTicketLive from './SundayTicketLive.tsx';
 import { defaultLeagueSelection } from '../../../utils/sunday-ticket-selection';
 import { SUNDAY_TICKET_LOGO } from '../../../utils/broadcast-channels';
 import { kickoffZonesFor, zoneSummary, type ViewerPreferences } from '../../../utils/viewer-preferences';
@@ -72,16 +79,33 @@ const r = (p: string) => resolveLeaguePath(p, Astro.locals.hideLeaguePrefix ?? f
 const pathname = r(`/${pageLeague.slug}/sunday-ticket`);
 const preferencesPath = r(`/${pageLeague.slug}/preferences`);
 
-const now = new Date();
-const leagueYear = getLeagueYearForSlug(pageLeague.slug);
+// `?testDate=` is how this repo tests anything date-dependent, and this page
+// now has TWO clocks plus a season-window gate riding on the reference date —
+// so it has to be overridable, or none of that can be exercised before the
+// season it only fires in.
+const now = parseTestDate(Astro.url.searchParams.get('testDate')) ?? new Date();
+const leagueYear = getLeagueYearForSlug(pageLeague.slug, now);
 const weekParamRaw = parseInt(Astro.url.searchParams.get('week') ?? '', 10);
 const weekParam = Number.isFinite(weekParamRaw) && weekParamRaw > 0 && weekParamRaw <= 22 ? weekParamRaw : null;
 const week = weekParam ?? (getCurrentNFLWeek(now) ?? 1);
 
-// Once Sunday's games kick off the board's job is done — hand off to the
-// scoreboard rather than describe a slate that is already being played.
+// The board no longer expires at kickoff — it goes LIVE. `sundayLive` still
+// marks the game-day window, which is what tells the island to poll fast on
+// its very first load, before any data has arrived to look at.
 const daily = getDailySlot(now);
 const sundayLive = daily.slot === 'live-scoring' && (daily.gameWindow === 'sunday' || daily.gameWindow === 'snf');
+
+// Live scoring is RESULTS-shaped, so it runs on the season clock while the
+// slate runs on the league clock — the same split this file already draws for
+// ESPN below. Between Feb 14 and Labor Day the two differ, and asking MFL for
+// live scoring in the league year names a season it is not scoring yet.
+//
+// The season-window gate is what stops N live MFL reads firing every page view
+// in July: "the feeds have a completed week" is not an offseason guard,
+// because getCurrentSeasonYear() rolls at Labor Day and every pre-season month
+// resolves to LAST season, whose feeds are complete by definition.
+const seasonYear = getCurrentSeasonYear(now);
+const liveWindowOpen = isSeasonWindowOpen(seasonYear, now);
 
 const identity = getPlayerMap(leagueYear);
 
@@ -176,7 +200,7 @@ const loadOne = async (l: (typeof boardLeagues)[number]): Promise<{ c: LeagueCon
       franchiseId: l.franchiseId,
       franchiseName: l.franchiseName || franchiseNameFromConfig(l.registered, l.franchiseId),
       week,
-      leagueYear: getLeagueYearForSlug(l.registered.slug),
+      leagueYear: getLeagueYearForSlug(l.registered.slug, now),
       identity,
     }) };
   }
@@ -204,6 +228,33 @@ for (const r of loaded) {
   if (r?.notice) notices.push(r.notice);
 }
 
+// ── Live scoring, per registered league ─────────────────────────────────
+// One MFL read per enabled REGISTERED league, run together. Outside leagues
+// are `liveSupported: false` and are not read at all: /api/live-scoring
+// resolves a host from the registry, so a league we do not register has no
+// host to resolve and the island would poll it forever for nothing.
+//
+// `null` is the "no live read" answer and is merged as a NO-OP — the league
+// keeps its projections. That is deliberate and not the same as an empty
+// snapshot, which would zero every number on the board while the poll
+// reported itself healthy.
+const liveByLeague = new Map<string, Awaited<ReturnType<typeof loadLiveSnapshot>>>();
+const liveLeagues = liveWindowOpen
+  ? boardLeagues.filter((l) => l.registered && enabledIds.has(l.id))
+  : [];
+if (liveLeagues.length > 0) {
+  const snapshots = await Promise.all(
+    liveLeagues.map((l) => loadLiveSnapshot({ league: l.registered!, week, seasonYear })),
+  );
+  liveLeagues.forEach((l, i) => {
+    if (snapshots[i]) liveByLeague.set(l.id, snapshots[i]);
+  });
+}
+
+for (let i = 0; i < contributions.length; i++) {
+  contributions[i] = applyLiveToContribution(contributions[i], liveByLeague.get(contributions[i].leagueId) ?? null);
+}
+
 if (myLeaguesUnavailable) notices.push("Couldn't reach MFL for your other leagues just now — this is the board for the leagues this site runs.");
 const personalized = contributions.length > 0;
 if (!personalized) {
@@ -225,21 +276,47 @@ const slate = buildSundayTicketSlate({
   personalized,
 });
 
-// ── Your fantasy game(s) this week, for the session league ──────────────
-interface OwnGame { opponent: string; home: boolean }
-let ownGames: OwnGame[] = [];
-if (session) {
-  const scheduleWeeks = readLeagueFeed(session.league, getLeagueYearForSlug(session.league.slug), 'schedule.json')
+// ── Your fantasy game(s) this week, in EVERY registered league you're in ─
+// The pairing comes from the SCHEDULE feed, never from the live snapshot: the
+// schedule is known all week, so the band still names your opponent when the
+// live read is unavailable. Sourcing it from the snapshot would blank the
+// whole band on an MFL hiccup.
+const matchupCards: MatchupCard[] = [];
+for (const l of boardLeagues) {
+  if (!l.registered || !enabledIds.has(l.id) || !l.franchiseId) continue;
+  const scheduleWeeks = readLeagueFeed(l.registered, getLeagueYearForSlug(l.registered.slug, now), 'schedule.json')
     ?.schedule?.weeklySchedule;
   const weekEntry = Array.isArray(scheduleWeeks)
     ? scheduleWeeks.find((w: any) => parseInt(w?.week, 10) === week)
     : scheduleWeeks;
-  ownGames = findWeekMatchups(weekEntry, session.franchiseId).map((m) => ({
-    opponent: franchiseNameFromConfig(session!.league, m.opponentFranchiseId) || `Franchise ${m.opponentFranchiseId}`,
-    home: m.userIsHome,
+  const weekMatchups = findWeekMatchups(weekEntry, l.franchiseId);
+  if (weekMatchups.length === 0) continue;
+  let brands: Record<string, ReturnType<typeof getLeagueTeamBrands>[string]> = {};
+  try {
+    brands = getLeagueTeamBrands(l.registered.slug);
+  } catch {
+    // A league in the registry but not yet wired for brands renders without
+    // crests rather than throwing the page.
+  }
+  matchupCards.push(...buildMatchupCards({
+    leagueId: l.id,
+    leagueSlug: l.registered.slug,
+    leagueName: l.name,
+    franchiseId: l.franchiseId,
+    weekMatchups,
+    brands,
+    snapshot: liveByLeague.get(l.id) ?? null,
+    liveSupported: true,
   }));
 }
-const sessionSlug = session?.league.slug ?? pageLeague.slug;
+
+// Which leagues the island subscribes to: exactly the ones whose numbers are
+// on the page. A league with nothing rendered has nothing to poll for.
+const liveIslandLeagues = liveLeagues
+  .filter((l) => contributions.some((c) => c.leagueId === l.id) || matchupCards.some((m) => m.leagueId === l.id))
+  .map((l) => ({ leagueId: l.id, franchiseId: l.franchiseId }));
+
+const linkForLeague = (slug: string, path: string) => r(`/${slug}/${path}`);
 
 const title = `Sunday Ticket — Week ${week}`;
 ---
@@ -268,7 +345,7 @@ const title = `Sunday Ticket — Week ${week}`;
     {sundayLive && (
       <a class="st-banner st-banner--live" href={r(`/${pageLeague.slug}/live-scoring`)}>
         <span class="st-banner__dot" aria-hidden="true" />
-        Games are on. This was the plan — <strong>Live Scoring</strong> is where it's happening →
+        Games are on and this board is live. For box scores and the scoring ticker, <strong>Live Scoring</strong> has the deep cut →
       </a>
     )}
 
@@ -290,22 +367,22 @@ const title = `Sunday Ticket — Week ${week}`;
 
     {notices.map((n) => <p class="st-banner st-banner--note">{n}</p>)}
 
-    {session && ownGames.length > 0 && (
-      <section class="st-own" aria-label="Your fantasy matchup this week">
-        <span class="st-own__label">Your week {week}{ownGames.length > 1 ? ' — doubleheader' : ''}</span>
-        <span class="st-own__games">
-          {ownGames.map((g, i) => (
-            <span class="st-own__game">
-              {i > 0 && <span aria-hidden="true"> · </span>}
-              <strong>{session.franchiseName || 'You'}</strong> {g.home ? 'vs' : 'at'} {g.opponent}
-            </span>
-          ))}
-        </span>
-        <span class="st-own__links">
-          <a href={r(`/${sessionSlug}/lineup`)}>Set lineup</a>
-          <a href={r(`/${sessionSlug}/live-scoring`)}>Live scoring</a>
-        </span>
-      </section>
+    <SundayTicketMatchups cards={matchupCards} week={week} linkFor={linkForLeague} />
+
+    {/* Gated from OUTSIDE the island, not by its `enabled` prop: Astro emits
+        the <astro-island> wrapper and ships the hydration bundle for a
+        `client:` component even when it renders null, so an internal-only
+        guard still costs every offseason visitor the JS. Not rendering it is
+        what actually keeps the board at zero client JS out of season. */}
+    {liveWindowOpen && liveIslandLeagues.length > 0 && (
+      <SundayTicketLive
+        client:idle
+        leagues={liveIslandLeagues}
+        week={week}
+        year={seasonYear}
+        enabled={true}
+        live={sundayLive}
+      />
     )}
 
     <SundayTicketBoard
@@ -320,6 +397,7 @@ const title = `Sunday Ticket — Week ${week}`;
       clockLabel={clockLabel}
       preferencesPath={preferencesPath}
     />
+
 
     <footer class="st-page__foot">
       <p>
