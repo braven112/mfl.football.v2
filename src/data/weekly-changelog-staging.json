@@ -3,6 +3,14 @@
   "changes": [
     {
       "date": "2026-09-05",
+      "type": "bug-fix",
+      "summary": "Closing the waiver priority card on Free Agents left it sitting on the page — no dimmed background, just the whole twelve-team list painted over the player table like a sticker nobody could peel off. The card was told how to lay itself out whether it was open or not, and a closed card that still has a layout is a card that still shows. It now only lays itself out while open, so closing it actually closes it.",
+      "impact": "user",
+      "area": "free-agents",
+      "league": "afl"
+    },
+    {
+      "date": "2026-09-05",
       "type": "style-tweak",
       "summary": "The side menu has a new first stop: Notifications now sits at the very top of the drawer, above every section, in both leagues. It is the one page that decides what reaches your phone, and until now the only way to find it was site search or a link buried in a What's New post. It stays first year-round \u2014 the sections below it shuffle between the season and the offseason, but this one does not move. The Add/Drop link is gone in the same pass; it kicked you out to MFL's own screen, and adds and drops already live on the site's player pages.",
       "impact": "user",

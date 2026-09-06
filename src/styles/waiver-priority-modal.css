@@ -48,6 +48,13 @@
      where the owner asking this question usually sits, would be unreachable.
      Cap the shell and let the body scroll instead. */
   max-height: min(86vh, 34rem);
+}
+/* The column layout goes on the OPEN dialog only. The UA sheet hides a closed
+   <dialog> with `display: none`, and any author `display` on the bare element
+   overrides that — a closed panel then sits in normal flow, painted over the
+   table with no backdrop (Sep 2026, the night the SSR order made it 12 rows
+   tall). Never put `display` on `.wpm` itself. */
+.wpm[open] {
   display: flex;
   flex-direction: column;
 }
