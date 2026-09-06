@@ -37,6 +37,37 @@ event dates in the past. Fixing one does not fix the other.
      notification permanently. Skipping outright is safe because
      `shouldFireReminder` accepts the target day OR one day late.
 
+   - **Reminders are PUSH-FIRST, and the chat is a fallback (Sep 2026).**
+     Every touch fans out to `roster-deadline` push. The GroupMe lane is now
+     two narrow cases and nothing else:
+
+     * an event's FIRST qualifying touch posts in full **only out of
+       season** (`isChatBusySeason` — which asks `isSeasonWindowOpen` about
+       both candidate years rather than deriving a base year, because the
+       rollover pivot is the formula that shipped wrong in five files).
+       In season it does not post at all.
+     * the `dayof` touch posts **only when the fan-out reports owners it
+       could not reach**, names exactly those owners, and @-mentions them
+       with a link to `/<league>/notifications`.
+
+     The 7-day and 2-day touches never reach the chat. `roger-fallback` is
+     the kind for the second case and is exempt from the daily cap, for the
+     same reason `roger-reminder` is: it is already the narrowest message
+     we can send, and holding it means those specific owners hear about the
+     deadline nowhere. `scripts/lib/reminder-fallback.mjs` owns the shape.
+
+     **Unreached is a DELIVERY fact, not a subscription one.** It comes from
+     `push-fanout`'s per-franchise `undelivered`, so a muted category, a dead
+     endpoint and a browser that never granted permission all count alike —
+     they mean the same thing to someone about to miss a deadline. The
+     safety property that makes this acceptable at all: a push that could
+     not run reports EVERYONE unreached, so the chat still carries the full
+     broadcast. Degrading toward a redundant message is correct; degrading
+     toward silence is not. **`CRON_SECRET` must be on the step that runs
+     the scanner** — it was set only on schefter-scan.yml's watch-list step
+     until Sep 2026, so the deadline fan-out had never once sent anything
+     while the chat posts went out normally and hid it.
+
    - **The reminder event list is not a place to write a date.** The AFL
      events in `compute-league-events.mjs` must resolve from the same rules
      as `src/data/afl-fantasy/league-events.json` (which drives

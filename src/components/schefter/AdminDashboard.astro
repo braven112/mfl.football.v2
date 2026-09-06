@@ -217,6 +217,45 @@ const { base, navSlug } = Astro.props;
       <p class="ops-hero__zero-state" data-chx-zero hidden></p>
     </section>
 
+    <section class="ops-cluster" aria-labelledby="cluster-reach">
+      <h2 class="ops-cluster__title" id="cluster-reach">
+        Notification Reach
+        <span class="ops-cluster__sub">
+          How many owners a deadline alert actually lands on — and therefore how many
+          still get named in the group chat.
+        </span>
+      </h2>
+      <div class="ops-grid">
+        <article class="ops-card ops-card--wide" aria-labelledby="card-reach">
+          <h3 id="card-reach" class="ops-card__title">Who we can reach</h3>
+          <p class="ops-card__hint">
+            Deadline reminders go to push first; the GroupMe post carries them only for the
+            owners push could not reach, and @-mentions those owners by name. So this is the
+            migration's scoreboard — when <strong>reachable</strong> equals <strong>teams</strong>,
+            the chat posts stop on their own with nothing to switch off. "Reachable" means a
+            registered device AND the category left on: a muted category is not reached, because
+            it is not delivered. Source: <code>/api/admin/push-subscribers</code>.
+          </p>
+          <dl class="ops-dl ops-dl--cols">
+            <div><dt>Teams</dt><dd data-pushk="teams">—</dd></div>
+            <div><dt>With a device</dt><dd data-pushk="subscribed">—</dd></div>
+            <div><dt>No device at all</dt><dd data-pushk="unsubscribed">—</dd></div>
+            <div><dt>Registered devices</dt><dd data-pushk="devices">—</dd></div>
+            <div><dt>Reachable · league deadlines</dt><dd data-pushk="reachable.roster-deadline">—</dd></div>
+            <div><dt>Reachable · lineup warnings</dt><dd data-pushk="reachable.lineup-deadline">—</dd></div>
+          </dl>
+        </article>
+
+        <article class="ops-card ops-card--wide" aria-labelledby="card-reach-rows">
+          <h3 id="card-reach-rows" class="ops-card__title">Still getting tagged in chat</h3>
+          <p class="ops-card__hint">
+            Every owner a deadline post would name today. An empty list is the goal.
+          </p>
+          <div id="ops-push-rows"><p class="ops-empty">Loading…</p></div>
+        </article>
+      </div>
+    </section>
+
     <section class="ops-cluster" aria-labelledby="cluster-intake">
       <h2 class="ops-cluster__title" id="cluster-intake">
         Channel Intake
@@ -1281,17 +1320,68 @@ const { base, navSlug } = Astro.props;
     }
   }
 
+  // Notification reach. Its own endpoint because it reads per-franchise push
+  // storage, which schefter-stats has no business touching — and because a
+  // Redis hiccup here must not blank the rest of the dashboard.
+  async function loadPushSubscribers() {
+    const rowsEl = document.getElementById('ops-push-rows');
+    try {
+      const res = await fetch('/api/admin/push-subscribers', { credentials: 'same-origin' });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+
+      // Array.from, not for..of: this project's lib target does not give
+      // NodeListOf a [Symbol.iterator], so the direct loop is a type error.
+      for (const el of Array.from(document.querySelectorAll<HTMLElement>('[data-pushk]'))) {
+        const path = el.dataset.pushk!.split('.');
+        let value: any = data;
+        for (const part of path) value = value?.[part];
+        el.textContent = value == null ? '—' : String(value);
+      }
+
+      if (!rowsEl) return;
+      // Named here = named in the chat. Ordered worst-first so the owners to
+      // chase are at the top rather than sorted by franchise id.
+      const unreached = (data.rows ?? []).filter(
+        (r: any) => !r.reachable?.['roster-deadline'] || !r.reachable?.['lineup-deadline'],
+      );
+      if (unreached.length === 0) {
+        rowsEl.innerHTML = '<p class="ops-empty">Nobody — every owner is reachable on both deadline categories.</p>';
+        return;
+      }
+      unreached.sort((a: any, b: any) => a.devices - b.devices || String(a.name).localeCompare(String(b.name)));
+      rowsEl.innerHTML = `<ul class="ops-dl">${unreached
+        .map((r: any) => {
+          const why = r.devices === 0
+            ? 'no device'
+            : [
+                r.reachable?.['roster-deadline'] ? '' : 'league deadlines muted',
+                r.reachable?.['lineup-deadline'] ? '' : 'lineup warnings muted',
+              ].filter(Boolean).join(', ');
+          return `<li>${escapeHtml(r.name)} <span class="ops-cluster__sub">${escapeHtml(why)}</span></li>`;
+        })
+        .join('')}</ul>`;
+    } catch (err) {
+      if (rowsEl) {
+        rowsEl.innerHTML = `<p class="ops-empty">Could not load notification reach: ${escapeHtml((err as Error).message)}</p>`;
+      }
+    }
+  }
+
   document.getElementById('ops-refresh')?.addEventListener('click', () => {
     load();
     loadTradeProposals();
+    loadPushSubscribers();
   });
   load();
   loadTradeProposals();
+  loadPushSubscribers();
   // Auto-refresh both the stats endpoint and the live trades endpoint —
   // the footer text promises a 60s refresh, so both sources need to tick.
   setInterval(() => {
     load();
     loadTradeProposals();
+    loadPushSubscribers();
   }, 60_000);
 </script>
 

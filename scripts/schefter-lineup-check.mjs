@@ -1,14 +1,24 @@
 #!/usr/bin/env node
 
 /**
- * Schefter pre-kickoff lineup check — Sunday-morning GroupMe warnings.
+ * Schefter pre-kickoff lineup check — Sunday-morning warnings.
  *
  * Scans every franchise's submitted starting lineup in each lineup-playing
- * league (registry leagues without `bestBall: true`) and posts ONE GroupMe
- * message per league flagging teams starting players who cannot play — OUT,
- * on IR, suspended, retired, holding out, or on bye — plus teams with empty
- * starting slots or no submitted lineup at all. If every lineup in a
- * league is clean, that league gets no post — silence is the good outcome.
+ * league (registry leagues without `bestBall: true`) and flags teams starting
+ * players who cannot play — OUT, on IR, suspended, retired, holding out, or on
+ * bye — plus teams with empty starting slots or no submitted lineup at all. If
+ * every lineup in a league is clean, that league hears nothing — silence is the
+ * good outcome.
+ *
+ * DELIVERY IS PUSH-FIRST (Sep 2026). Every flagged owner gets a private web
+ * push about their own lineup. The GroupMe post is now a FALLBACK that carries
+ * the warning only for the owners push did not reach, @-mentions them, and
+ * links them to /<league>/notifications — see scripts/lib/reminder-fallback.mjs
+ * for why it is shaped that way. Every owner reached by push means one fewer
+ * name in the chat, and a league that has all subscribed gets no post at all.
+ * The safety property that makes this acceptable on a deadline-critical alert:
+ * a push that could not run reports EVERYONE unreached, so the chat still gets
+ * the full broadcast it always did.
  *
  * Flagging logic is pure and unit-tested in scripts/lib/lineup-warnings.mjs
  * (tests/lineup-warnings.test.ts); this script owns all I/O.
@@ -24,13 +34,21 @@
  *                                fallback when unset (dry runs still work)
  *   GROUPME_SCHEFTER_BOT_ID      TheLeague Schefter bot (absent = print only)
  *   GROUPME_AFL_SCHEFTER_BOT_ID  AFL Schefter bot (absent = print only)
+ *   CRON_SECRET                  push fan-out. Absent = nobody is reachable by
+ *                                push, so the chat fallback names everyone.
+ *   GROUPME_SERVICE_TOKEN        resolves the group's member list so unreached
+ *                                owners can be @-mentioned. Absent = they are
+ *                                named in plain text instead.
  *   UPSTASH_REDIS_REST_URL/_TOKEN (or KV_/STORAGE_ pairs) — once-per-day
- *                                guard + shared GroupMe daily budget. Absent
- *                                = no guard (warn, still posts: the cron
- *                                runs once per Sunday).
+ *                                guard, shared GroupMe daily budget, and the
+ *                                franchise↔GroupMe owner map. Absent = no
+ *                                guard (warn, still posts: the cron runs once
+ *                                per Sunday) and no @-mentions.
  *
  * Scheduling: .github/workflows/lineup-reminders.yml — Sundays ~9:15am PT,
- * September through January, plus workflow_dispatch.
+ * September through January, plus workflow_dispatch. The cron is deliberately
+ * wider than the season: the script's own isInSeason() gate is what keeps the
+ * Sundays between September 1st and the Thursday opener quiet.
  */
 
 import fs from 'node:fs';
@@ -43,13 +61,15 @@ import { getRedisConfig, createUpstashClient } from './lib/redis.mjs';
 import { postToGroupMe } from './lib/groupme.mjs';
 import { postToGroupMeCapped } from './lib/groupme-capped.mjs';
 import { sendPushFanout } from './lib/push-fanout.mjs';
+import { resolveFranchiseMentions } from './lib/groupme-mentions.mjs';
+import { buildFallbackPost } from './lib/reminder-fallback.mjs';
 import { fetchWithRetry } from './lib/fetch-retry.mjs';
 import { getPtDateString } from './lib/pt-date.mjs';
+import { isSeasonWindowOpen } from '../src/utils/pecking-order-season-window.mjs';
 import { isQuietHours, consumeDailyPost } from './lib/schefter-groupme-budget.mjs';
 import {
   buildLineupWarnings,
   buildPlayerIndex,
-  composePost,
   fallbackIntro,
   formatWarningLine,
   parseByeTeams,
@@ -92,9 +112,20 @@ const warn = (...a) => console.warn(...a);
  * workflow_dispatch a clean no-op instead of posting about Week 1 in July.
  */
 function isInSeason(now = new Date()) {
-  const pt = new Date(now.toLocaleString('en-US', { timeZone: 'America/Los_Angeles' }));
-  const month = pt.getMonth() + 1;
-  return month >= 9 || month === 1;
+  // Anchored to the actual opener, not the calendar month. A month check
+  // (`month >= 9`) calls September 1st "in season", but week 1 kicks off the
+  // Thursday AFTER Labor Day — up to nine days later. On 2026-09-06, a Sunday
+  // four days before the opener, that gap posted a lineup warning naming every
+  // team that had not yet set a week 1 lineup: 4 of 16 in TheLeague and 17 of
+  // 24 in the AFL, for a week nobody could have set a lineup for. There is
+  // always at least one such Sunday, and in some years two.
+  //
+  // isSeasonWindowOpen is the repo's designated season gate for exactly this
+  // reason. Asking it about both candidate years rather than deriving a base
+  // year keeps January correct without re-porting the rollover pivot — see
+  // the same note on isChatBusySeason in schefter-scan.mjs.
+  const year = now.getUTCFullYear();
+  return isSeasonWindowOpen(year, now) || isSeasonWindowOpen(year - 1, now);
 }
 
 // ── Fetch + feed helpers ────────────────────────────────────────────────────
@@ -241,8 +272,13 @@ async function checkLeague(league, now = new Date()) {
   // Per-league Schefter config (GroupMe bot). Leagues added to the registry
   // but not yet to SCHEFTER_LEAGUES simply run bot-less (print-only).
   let botId;
+  // Also the object that owns absolute-URL building and the GroupMe group
+  // lookup — its `slug` IS the navSlug, which is the scope both the mention
+  // keys and the group-id cache are written under.
+  let schefterLeague = null;
   try {
-    botId = getSchefterLeague(league.slug).groupMeSchefterBotId;
+    schefterLeague = getSchefterLeague(league.slug);
+    botId = schefterLeague.groupMeSchefterBotId;
   } catch {
     warn(`  [config] ${league.slug} has no Schefter league config — no GroupMe bot`);
     botId = undefined;
@@ -327,12 +363,22 @@ async function checkLeague(league, now = new Date()) {
   log(`  ⚠️  ${warnings.length}/${lineups.length} franchises flagged`);
   for (const w of warnings) log(`     ${formatWarningLine(w)}`);
 
-  // A push to each flagged owner, and ONLY to them. The chat post has to
-  // describe everyone's problems to everyone; this tells one owner about their
-  // own lineup, which is both more useful and less public. It is also the
-  // thing they can act on — the chat post is a broadcast about a private
-  // problem.
-  await sendPushFanout({
+  // Marks this league done for the day, whichever channel carried the warning.
+  const recordDelivery = async () => {
+    if (!redis) return;
+    try {
+      await redis.set(guardKey, todayPt);
+      await redis.expire(guardKey, GUARD_TTL_SECONDS);
+      await consumeDailyPost(redis, now, league.navSlug);
+    } catch (err) {
+      warn(`  [redis] failed to record delivery: ${err.message}`);
+    }
+  };
+
+  // PUSH FIRST, AND TO EVERY FLAGGED OWNER. This is the real channel now: it
+  // tells one owner about their own lineup, which is more useful and far less
+  // public than a broadcast describing everyone's problems to everyone.
+  const push = await sendPushFanout({
     league,
     dryRun: DRY_RUN,
     category: 'lineup-deadline',
@@ -347,17 +393,66 @@ async function checkLeague(league, now = new Date()) {
     log: { log, warn },
   });
 
-  // ── Compose + post ───────────────────────────────────────────────────────
+  // ── The chat post is now a FALLBACK, not the broadcast ───────────────────
+  // Only the flagged owners the push did not reach. Two things they get out of
+  // one message: the warning itself, which they would otherwise never see, and
+  // a public tag that stops the moment they turn notifications on. An owner
+  // whose push landed is deliberately NOT named here — their problem is their
+  // own business, and airing it after we already told them privately is the
+  // noise this migration exists to remove.
+  //
+  // Note the failure direction: when push cannot run at all (no CRON_SECRET,
+  // an outage, a dry run) the fan-out reports EVERYONE unreached, so this
+  // composes the same full broadcast the chat has always received. A push
+  // problem must never turn into a league that was not warned.
+  const unreachedIds = new Set(push.undelivered ?? warnings.map((w) => w.franchiseId));
+  const unreached = warnings.filter((w) => unreachedIds.has(w.franchiseId));
+
+  if (unreached.length === 0) {
+    log(`  ✅ All ${warnings.length} flagged owners reached by push — no chat post.`);
+    // The push IS the delivery now, so it consumes the once-per-day guard the
+    // chat post used to. Without this a second dispatch re-pushes an alert
+    // every owner has already acted on.
+    await recordDelivery();
+    return 'pushed';
+  }
+  log(`  ${unreached.length}/${warnings.length} flagged owners unreached by push — chat fallback`);
+
   const intro = await generateLineupWarningIntro({
     leagueName: league.name,
     week,
-    teamCount: warnings.length,
+    teamCount: unreached.length,
     personaExcerpt: readPersonaExcerpt(league.navSlug),
   });
-  const text = composePost(intro, warnings.map(formatWarningLine));
+
+  // Resolved even in a dry run — the whole point of the preview is to see who
+  // would actually be tagged, and a preview that silently drops the mentions
+  // is how a wrong tag ships. `getRedis()` is the same lookup the day guard
+  // does; it is null-safe and the resolver degrades to plain names.
+  const mentions = await resolveFranchiseMentions({
+    league: schefterLeague,
+    redis: redis ?? (await getRedis()),
+    log: { log, warn },
+  });
+
+  const post = buildFallbackPost({
+    headline: intro,
+    unreached: unreached.map((w) => ({
+      franchiseId: w.franchiseId,
+      name: w.franchiseName,
+      detail: formatWarningLine(w).replace(/^•\s*/, '').replace(`${w.franchiseName}: `, ''),
+    })),
+    mentions,
+    notificationsUrl: schefterLeague.url('/notifications'),
+  });
+  if (!post) return 'skipped';
+  const { text, attachments } = post;
 
   if (DRY_RUN) {
-    log(`  [dry-run] would post to GroupMe (${text.length} chars):\n---\n${text}\n---`);
+    log(
+      `  [dry-run] would post to GroupMe (${text.length} chars, ` +
+        `${attachments.length > 0 ? attachments[0].user_ids.length : 0} mention(s)):\n---\n${text}\n---`,
+    );
     return 'posted';
   }
 
@@ -380,6 +475,7 @@ async function checkLeague(league, now = new Date()) {
     kind: 'lineup-deadline',
     botId,
     text,
+    attachments,
     checkStatus: true,
     onMissingBotId: () => warn(`  [groupme] no Schefter bot id for ${league.slug} — printing instead:\n---\n${text}\n---`),
     onPosted: () => log('  [groupme] posted ✔'),
@@ -389,15 +485,7 @@ async function checkLeague(league, now = new Date()) {
 
   if (!result.posted) return 'skipped';
 
-  if (redis) {
-    try {
-      await redis.set(guardKey, todayPt);
-      await redis.expire(guardKey, GUARD_TTL_SECONDS);
-      await consumeDailyPost(redis, now, league.navSlug);
-    } catch (err) {
-      warn(`  [redis] failed to record post: ${err.message}`);
-    }
-  }
+  await recordDelivery();
   return 'posted';
 }
 
@@ -408,7 +496,7 @@ async function main() {
   log(`🏈 Schefter lineup check — ${now.toISOString()}${DRY_RUN ? ' (dry run)' : ''}`);
 
   if (!isInSeason(now) && !WEEK_OVERRIDE) {
-    log('Off-season (PT month outside Sep–Jan) — nothing to check.');
+    log('Outside the season window (week 1 kickoff → +20 weeks) — nothing to check.');
     return 0;
   }
 
