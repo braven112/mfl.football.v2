@@ -27,7 +27,7 @@
  *   GITHUB_TOKEN     required — reads the Actions runs API
  *   GITHUB_REPOSITORY  owner/repo (set by Actions)
  *   CRON_SECRET      required to push; unset logs and sends nothing
- *   UPSTASH_*        watermark storage; unset means every run is a first run
+ *   UPSTASH_*        watermark storage; unset degrades to a 3h lookback, never silence
  *
  * Usage:
  *   node scripts/push-job-failures.mjs
@@ -38,6 +38,7 @@ import { getLeagueBySlug, DEFAULT_LEAGUE_SLUG } from '../src/config/leagues-data
 import { getRedisConfig, redisCommand } from './lib/redis.mjs';
 import { sendOpsAlert } from './lib/ops-alert.mjs';
 import {
+  allDelivered,
   buildAlerts,
   isFirstRun,
   nextWatermark,
@@ -48,24 +49,40 @@ const TAG = '[job-failures]';
 const DRY_RUN = process.argv.includes('--dry-run');
 const WATERMARK_KEY = 'ops:job-failure:watermark';
 
+/**
+ * How far back to look when the watermark is unavailable.
+ *
+ * The watermark is an OPTIMIZATION, not the mechanism. Treating "no Redis" as
+ * a first run made the watcher permanently silent — indistinguishable from a
+ * healthy repo, which is the precise failure this job exists to prevent, now
+ * built into the job itself. Treating a read ERROR as the epoch was the
+ * opposite failure: weeks of already-fixed runs re-qualify at once and, past
+ * MAX_ALERTS, collapse into a false "several automations failed" alert.
+ *
+ * A bounded lookback answers both. Wider than the hourly cadence so a skipped
+ * run is still covered, narrow enough that a stale floor cannot resurrect old
+ * history. Per-workflow dedup keeps the worst case to one alert per workflow.
+ */
+const FALLBACK_LOOKBACK_MS = 3 * 60 * 60 * 1000;
+
+const lookbackFloor = () => new Date(Date.now() - FALLBACK_LOOKBACK_MS).toISOString();
+
 /** How many recent runs to consider. Comfortably more than an hour produces. */
 const RUNS_PER_PAGE = 60;
 
 async function readWatermark() {
   const config = getRedisConfig();
   if (!config) {
-    console.warn(`${TAG} no Redis config — treating this as a first run.`);
-    return null;
+    // NOT a first run — see FALLBACK_LOOKBACK_MS. Storage being absent must
+    // degrade the watch, never silence it.
+    console.warn(`${TAG} no Redis config — falling back to a ${FALLBACK_LOOKBACK_MS / 3600000}h lookback.`);
+    return lookbackFloor();
   }
   try {
     return await redisCommand(config, ['GET', WATERMARK_KEY]);
   } catch (err) {
-    console.warn(`${TAG} watermark read failed: ${err.message}`);
-    // Read failure is NOT a first run: seeding here would move the watermark
-    // forward past failures we never alerted on, losing them permanently.
-    // Returning the epoch instead means a transient Redis blip re-sends at
-    // worst, and the per-workflow dedup keeps that to one notification each.
-    return new Date(0).toISOString();
+    console.warn(`${TAG} watermark read failed: ${err.message} — using the lookback window.`);
+    return lookbackFloor();
   }
 }
 
@@ -105,14 +122,16 @@ async function main() {
 
   const runs = await fetchFailedRuns(repo, token);
   const watermark = await readWatermark();
-  const repoUrl = `https://github.com/${repo}`;
 
   // Seed and stay quiet. Everything on GitHub's retention window is "new" to a
   // watch that has never run, and opening with twenty alerts for failures that
   // were already dealt with teaches the reader to swipe the category away.
   if (isFirstRun(watermark)) {
-    const seed = nextWatermark(runs);
-    console.log(`${TAG} first run — seeding watermark at ${seed ?? 'nothing'} and staying quiet.`);
+    // `?? now` matters: with no failed runs at all, nextWatermark is null, the
+    // watermark stays unset, and the NEXT run is a first run too — so the
+    // first real failure would be consumed as a seed instead of alerted on.
+    const seed = nextWatermark(runs) ?? new Date().toISOString();
+    console.log(`${TAG} first run — seeding watermark at ${seed} and staying quiet.`);
     if (!DRY_RUN) await writeWatermark(seed);
     return;
   }
@@ -124,22 +143,31 @@ async function main() {
   }
 
   const league = getLeagueBySlug(DEFAULT_LEAGUE_SLUG);
-  const alerts = buildAlerts(failures, { repoUrl });
+  const alerts = buildAlerts(failures);
   console.log(`${TAG} ${failures.length} new failure(s) → ${alerts.length} alert(s):`);
   for (const run of failures) console.log(`  - ${run.name} (${run.html_url})`);
 
+  // `sendOpsAlert` never throws — a push outage comes back as `{ skipped }`
+  // (no secret, HTTP 5xx, no admin franchises). Advancing the watermark on
+  // that result would mark an UNDELIVERED failure as reported and lose it
+  // permanently, which is what the "advance only after the sends" comment
+  // claimed to prevent while actually ignoring the return value.
+  const results = [];
   for (const alert of alerts) {
-    await sendOpsAlert({
+    const result = await sendOpsAlert({
       league,
       category: 'ops-job-failure',
       dryRun: DRY_RUN,
       ...alert,
     });
+    if (result?.skipped) console.warn(`${TAG} alert not delivered (${result.skipped}).`);
+    results.push(result);
   }
+  const delivered = allDelivered(results);
 
-  // Advance only after the sends. A crash mid-send leaves the watermark where
-  // it was, so the next run re-reports rather than dropping the failure.
-  if (!DRY_RUN) await writeWatermark(nextWatermark(failures) ?? watermark);
+  // Held on a failed send, so the next run re-reports. Re-sending a failure is
+  // cheap and collapses on the device by tag; dropping one is silent.
+  if (!DRY_RUN && delivered) await writeWatermark(nextWatermark(failures) ?? watermark);
 }
 
 main().catch((err) => {

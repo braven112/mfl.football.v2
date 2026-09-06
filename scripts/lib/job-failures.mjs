@@ -93,18 +93,28 @@ export function nextWatermark(runs) {
 /**
  * One notification for one failed run.
  *
- * The tag is per workflow per run id, so a re-run of the same workflow does not
- * collapse into the notification for the failure it is retrying.
+ * NO `url`. The service worker takes `data.url` only when it startsWith('/')
+ * and rewrites anything else to '/' (public/sw.js) — a deliberate boundary, so
+ * a push payload cannot send a tap to an arbitrary site. An `html_url` on
+ * github.com therefore does not deep-link the run, it silently lands the admin
+ * on the league homepage: worse than no link, because the body promised one.
+ * The workflow NAME is the actionable part and it is in the title.
+ *
+ * The tag is per WORKFLOW, not per run. A cron that fails every hour keeps
+ * producing new run ids, and a per-run tag would stack a fresh notification
+ * for each — ~60 over a weekend for one broken thing. Sharing the tag means
+ * the newest failure REPLACES the previous one on the device, which is the
+ * "one broken thing, one notification" the dedupe promises but cannot deliver
+ * on its own: dedupe is per invocation, and the collapse has to hold across
+ * invocations too.
  */
-export function buildFailureNotification(run, { repoUrl } = {}) {
+export function buildFailureNotification(run) {
   const name = run?.name || 'A scheduled job';
   const attempt = Number(run?.run_attempt) > 1 ? ` (attempt ${run.run_attempt})` : '';
-  const url = run?.html_url || (repoUrl ? `${repoUrl}/actions` : undefined);
   return {
     title: `${name} failed`,
-    body: `The scheduled run failed${attempt}. Open the Actions log to see which step broke.`,
-    ...(url ? { url } : {}),
-    tag: `ops-job-failure-${run?.id ?? name}`,
+    body: `The scheduled run failed${attempt}. Check the workflow's Actions log for the step that broke.`,
+    tag: `ops-job-failure-${run?.workflow_id ?? name}`,
   };
 }
 
@@ -115,11 +125,10 @@ export function buildFailureNotification(run, { repoUrl } = {}) {
  * DIFFERENT fact — "the automation is broadly broken" — and reads as such on a
  * lock screen, rather than looking like one more individual failure.
  */
-export function buildOverflowNotification(count, { repoUrl } = {}) {
+export function buildOverflowNotification(count) {
   return {
     title: `${count} scheduled jobs failed`,
     body: 'Several automations failed at once — usually a shared credential or an upstream outage.',
-    ...(repoUrl ? { url: `${repoUrl}/actions?query=is%3Afailure` } : {}),
     tag: 'ops-job-failure-many',
   };
 }
@@ -128,9 +137,21 @@ export function buildOverflowNotification(count, { repoUrl } = {}) {
  * The alerts to send for a set of failures: either one per failure, or the
  * single overflow alert once past MAX_ALERTS.
  */
-export function buildAlerts(failures, { repoUrl } = {}) {
+export function buildAlerts(failures) {
   const list = Array.isArray(failures) ? failures : [];
   if (list.length === 0) return [];
-  if (list.length > MAX_ALERTS) return [buildOverflowNotification(list.length, { repoUrl })];
-  return list.map((run) => buildFailureNotification(run, { repoUrl }));
+  if (list.length > MAX_ALERTS) return [buildOverflowNotification(list.length)];
+  return list.map((run) => buildFailureNotification(run));
+}
+
+/**
+ * Did every alert actually go out?
+ *
+ * `sendOpsAlert` never throws — a push outage returns `{ skipped: 'no secret' |
+ * 'http 503' | 'no admins' }`. The caller uses this to decide whether to
+ * advance the watermark, because advancing on an undelivered alert marks the
+ * failure as reported and loses it for good.
+ */
+export function allDelivered(results) {
+  return (Array.isArray(results) ? results : []).every((r) => !r?.skipped);
 }

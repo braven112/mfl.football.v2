@@ -71,6 +71,52 @@ function collectSenderUrls(): Array<{ source: string; url: string }> {
   return found;
 }
 
+/**
+ * Every url literal in a push sender that does NOT start with `/`.
+ *
+ * The collector above only matches paths, so an ABSOLUTE url was invisible to
+ * it — and absolute is the tempting mistake, because the thing you want to
+ * link is often off-site. The service worker takes `data.url` only when it
+ * `startsWith('/')` and silently rewrites anything else to `/`, so such an
+ * alert lands the reader on the homepage while its body promises a deep link.
+ * That shipped in the first cut of the job-failure watcher, pointing at
+ * `run.html_url` on github.com.
+ */
+function collectNonRelativeSenderUrls(): Array<{ source: string; url: string }> {
+  const found: Array<{ source: string; url: string }> = [];
+  const walk = (dir: string) => {
+    for (const entry of readdirSync(dir, { withFileTypes: true })) {
+      if (entry.name === 'node_modules') continue;
+      const full = path.join(dir, entry.name);
+      if (entry.isDirectory()) {
+        walk(full);
+        continue;
+      }
+      if (!/\.(mjs|ts)$/.test(entry.name)) continue;
+      const src = readFileSync(full, 'utf8');
+      // Senders, AND the pure modules that BUILD payloads for them.
+      //
+      // Matching only on a sender call was how the first version of this guard
+      // passed while the bug was present: `scripts/lib/job-failures.mjs`
+      // composes the notification and `scripts/push-job-failures.mjs` sends
+      // it, so the file holding the bad url called no sender at all. The
+      // payload SHAPE is the reliable signal — title + body + tag together is
+      // a push notification and essentially nothing else.
+      const isSender = /sendPushToFranchise|sendPushFanout|sendOpsAlert|broadcast\(/.test(src);
+      const buildsPayload = /\btitle:/.test(src) && /\bbody:/.test(src) && /\btag:/.test(src);
+      if (!isSender && !buildsPayload) continue;
+      for (const m of src.matchAll(/\burl:\s*(?:'([^']*)'|`([^`]*)`)/g)) {
+        const value = m[1] ?? m[2] ?? '';
+        // A `${...}` at the very start is a computed path this cannot judge.
+        if (value.startsWith('/') || value.startsWith('${')) continue;
+        found.push({ source: path.relative(ROOT, full), url: value });
+      }
+    }
+  };
+  for (const dir of SEARCH_DIRS) walk(dir);
+  return found;
+}
+
 const senderUrls = collectSenderUrls();
 
 /**
@@ -92,6 +138,19 @@ describe('push notification target URLs', () => {
 
   it('finds the senders at all — a silent zero would pass every check below', () => {
     expect(senderUrls.length).toBeGreaterThan(4);
+  });
+
+  it('never attaches a url the service worker will throw away', () => {
+    // public/sw.js: `data.url.startsWith('/') ? data.url : '/'`. An absolute
+    // url is not a link, it is a promise of one that silently resolves to the
+    // homepage — so it must be caught here rather than on somebody's phone.
+    const offenders = collectNonRelativeSenderUrls();
+    expect(
+      offenders,
+      `These push urls do not start with '/', so the service worker rewrites ` +
+        `them to '/' and the notification opens the homepage instead:\n  ` +
+        offenders.map((o) => `${o.source}: ${o.url}`).join('\n  '),
+    ).toEqual([]);
   });
 
   it('every url resolves to a real route in EVERY league that can send it', () => {

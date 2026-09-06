@@ -16,7 +16,8 @@
  */
 
 import type { APIRoute } from 'astro';
-import { getAuthUser, isCommissionerOrAdmin } from '../../../utils/auth';
+import { getAuthUser } from '../../../utils/auth';
+import { isAdminFranchise } from '../../../config/nav-config';
 import { json, JSON_HEADERS_NO_STORE } from '../../../utils/api-response';
 import { checkRateLimit } from '../../../utils/rate-limit';
 import { getLeagueById } from '../../../config/leagues';
@@ -38,11 +39,18 @@ function resolveCaller(request: Request) {
   if (!user?.franchiseId || !user.leagueId) return null;
   const league = getLeagueById(user.leagueId);
   if (!league) return null;
-  // Admin-only categories are offered from the SESSION's admin bit, never from
-  // anything the request says. `isCommissionerOrAdmin` is already league-scoped
-  // (an AFL session for 0001 does not inherit TheLeague 0001's admin bit), which
-  // is exactly the scoping these preferences need.
-  const recipient = { isAdmin: isCommissionerOrAdmin(user) };
+  // Offer exactly what can be DELIVERED. The send door gates ops categories on
+  // `isAdminFranchise` (it has a franchise id and no session), so gating the
+  // settings page on the broader `isCommissionerOrAdmin` — which also passes
+  // anyone holding the commissioner JWT role — would show that person toggles
+  // defaulted ON for alerts they can never receive. That is precisely the
+  // "toggle that silently does nothing" the registry's `live` flag exists to
+  // prevent, arrived at from the other direction.
+  //
+  // Still league-scoped, and deliberately from the session's own league: both
+  // leagues have a franchise 0001, so the nav slug has to come from the league
+  // this session belongs to rather than a default.
+  const recipient = { isAdmin: isAdminFranchise(user.franchiseId, league.navSlug) };
   return { user, league, recipient };
 }
 
