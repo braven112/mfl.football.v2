@@ -1,4 +1,25 @@
 {
+  "ignoreCommand": "node scripts/vercel-ignore-build.mjs",
+  "headers": [
+    {
+      "source": "/assets/fonts/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, immutable"
+        }
+      ]
+    },
+    {
+      "source": "/assets/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=3600, s-maxage=31536000, stale-while-revalidate=604800"
+        }
+      ]
+    }
+  ],
   "redirects": [
     {
       "source": "/draft-predictor",

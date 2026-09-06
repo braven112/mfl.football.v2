@@ -1,0 +1,56 @@
+# Every page on this site is server-rendered (136 routes, no ISR), so a crawler
+# hit is a function invocation with no CDN reuse. Function Invocations were up
+# 443% cycle-over-cycle. The rules below fence off the routes that are
+# combinatorial or per-session — the ones where a crawler can generate
+# effectively unbounded work — while leaving real content indexable.
+#
+# Both apex domains (theleague.us, afl-fantasy.com) and the /theleague/ and
+# /afl-fantasy/ prefixed forms serve the same pages, so each rule is listed in
+# both shapes.
+
+User-agent: *
+
+# API surface — never useful to index, always a function invocation.
+Disallow: /api/
+
+# Rivalry pages are every ordered pair of franchises: ~496 per league, and a
+# crawler will happily walk all of them.
+Disallow: /rivalries/
+Disallow: /theleague/rivalries/
+Disallow: /afl-fantasy/rivalries/
+
+# Mock-draft sessions are ephemeral and per-user. Indexing them is meaningless
+# and each one renders a full draft board.
+Disallow: /draft/mock/
+Disallow: /theleague/draft/mock/
+Disallow: /afl-fantasy/draft/mock/
+Disallow: /mock-draft/
+Disallow: /best-ball-1/mock-draft/
+
+# Owner-scoped and account pages.
+Disallow: /preferences
+Disallow: /login
+Disallow: /logout
+
+# Everything else — standings, rosters, franchises, owners, Schefter, history,
+# the pecking order (which is prerendered and therefore cheap) — stays open.
+
+# The AI crawlers are the ones that sweep hardest. public/llms.txt already tells
+# them what this site is; they do not need to re-render every page to find out.
+User-agent: GPTBot
+Crawl-delay: 10
+
+User-agent: ClaudeBot
+Crawl-delay: 10
+
+User-agent: CCBot
+Crawl-delay: 10
+
+User-agent: Bytespider
+Crawl-delay: 30
+
+User-agent: PerplexityBot
+Crawl-delay: 10
+
+User-agent: Amazonbot
+Crawl-delay: 30
