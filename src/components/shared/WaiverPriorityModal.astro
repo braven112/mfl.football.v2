@@ -39,8 +39,6 @@ export interface WaiverPriorityConfig {
   conferenceName: string;
   /** The viewer's conference, in config order. Empty when signed out. */
   teams: WaiverPriorityTeam[];
-  /** Whether priority decides claims outright (FCFS) or only breaks tied bids. */
-  system: 'bbid' | 'priority';
   /**
    * The order from the committed league feed, rendered server-side so the
    * dialog opens WITH a list instead of a spinner. The live read replaces it;
@@ -117,7 +115,11 @@ const clientConfig = { ...config, initialOrder: undefined, hasInitialOrder: init
 </dialog>
 
 <script>
-  import { rankWithinConference } from '../../utils/waiver-order';
+  import {
+    renderWaiverPriorityRows,
+    waiverPriorityFootnote,
+    WAIVER_PRIORITY_NOTE,
+  } from '../../utils/waiver-priority-render';
 
   /**
    * CLIENTROUTER-SAFE INIT (frontend.md, "Interactive scripts must re-init on
@@ -147,9 +149,6 @@ const clientConfig = { ...config, initialOrder: undefined, hasInitialOrder: init
     loaded: boolean;
   } | null = null;
 
-  const esc = (s: unknown) =>
-    String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-
   const setStatus = (msg: string, kind: 'info' | 'error' = 'info') => {
     const el = ctx?.statusEl;
     if (!el) return;
@@ -165,27 +164,15 @@ const clientConfig = { ...config, initialOrder: undefined, hasInitialOrder: init
   ) => {
     if (!ctx?.listEl) return;
     const { cfg, listEl, footEl } = ctx;
-    const teams: Array<{ franchiseId: string; name: string; icon?: string }> = cfg.teams ?? [];
-    const byId = new Map(teams.map((t) => [t.franchiseId, t]));
-    const ranked = rankWithinConference(order, teams.map((t) => t.franchiseId));
 
-    listEl.innerHTML = ranked
-      .map(({ franchiseId, rank }) => {
-        const team = byId.get(franchiseId);
-        const isMe = franchiseId === cfg.franchiseId;
-        const icon = team?.icon
-          ? `<img class="wpm-row__icon" src="${esc(team.icon)}" alt="" loading="lazy" decoding="async" />`
-          : '<span class="wpm-row__icon wpm-row__icon--blank" aria-hidden="true"></span>';
-        return (
-          `<li class="wpm-row${isMe ? ' wpm-row--me' : ''}">` +
-            `<span class="wpm-row__rank">${rank}</span>` +
-            icon +
-            `<span class="wpm-row__name">${esc(team?.name ?? franchiseId)}</span>` +
-            (isMe ? '<span class="wpm-row__you">You</span>' : '') +
-          `</li>`
-        );
-      })
-      .join('');
+    // Rows come from the shared renderer the Transaction Hub also uses, so the
+    // two can never drift on ranking, the "You" badge, or icon handling.
+    listEl.innerHTML = renderWaiverPriorityRows(
+      order,
+      cfg.teams ?? [],
+      cfg.franchiseId ?? null,
+      'wpm-row',
+    );
     listEl.hidden = false;
 
     // Nothing to say once the list is up — the owner's own row, badged and
@@ -195,17 +182,7 @@ const clientConfig = { ...config, initialOrder: undefined, hasInitialOrder: init
     setStatus('');
 
     if (footEl) {
-      const when = new Date(asOf);
-      const stamp = Number.isNaN(when.getTime())
-        ? ''
-        : when.toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
-      const note =
-        ctx.cfg.system === 'bbid'
-          ? 'Priority breaks ties between equal bids.'
-          : 'Priority is rolling — win a claim and you drop to the back of the line.';
-      footEl.textContent = live
-        ? `${note} Live from MyFantasyLeague${stamp ? `, ${stamp}` : ''}.`
-        : `${note} MyFantasyLeague is not answering — showing the last order we read${stamp ? `, ${stamp}` : ''}.`;
+      footEl.textContent = waiverPriorityFootnote(asOf, live);
       footEl.hidden = false;
     }
   };
@@ -243,11 +220,12 @@ const clientConfig = { ...config, initialOrder: undefined, hasInitialOrder: init
         setStatus('');
         if (ctx?.listEl) ctx.listEl.hidden = false;
         if (ctx?.footEl) {
-          const note =
-            ctx.cfg.system === 'bbid'
-              ? 'Priority breaks ties between equal bids.'
-              : 'Priority is rolling — win a claim and you drop to the back of the line.';
-          ctx.footEl.textContent = `${note} ${message.replace(/[.!]*$/, '.')} Showing the order from our last sync.`;
+          // Same sentence the live foot carries, from the same constant — this
+          // used to branch on a `bbid` system and claim "priority breaks ties
+          // between equal bids", which is false for a BBID_FCFS league (ties
+          // go first come first served) and unreachable anyway: a league with
+          // no priority order never opens this dialog.
+          ctx.footEl.textContent = `${WAIVER_PRIORITY_NOTE} ${message.replace(/[.!]*$/, '.')} Showing the order from our last sync.`;
           ctx.footEl.hidden = false;
         }
       } else {

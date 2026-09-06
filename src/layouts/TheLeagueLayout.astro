@@ -30,18 +30,19 @@ import TeamAccentStyles from '../components/TeamAccentStyles.astro';
 import FranchiseBandBrands from '../components/FranchiseBandBrands.astro';
 import ThemeScript from '../components/ThemeScript.astro';
 import { getThemePreference } from '../utils/theme-preference';
-import TradeAlertModal from '../components/theleague/TradeAlertModal.astro';
+import TransactionHubModal from '../components/theleague/TransactionHubModal.astro';
 import RosterLoader from '../components/theleague/RosterLoader.astro';
 import { getLeagueContext } from '../utils/league-context';
 import { getLeagueYearForSlug } from '../utils/league-year';
 import { navConfig, getAdminFranchiseIds } from '../config/nav-config';
-import { getVisibleSections, getVisiblePinnedLinks, parseMyTeamFromUrl, buildNavTeamInfo } from '../utils/nav-utils';
+import { getVisibleSections, getVisiblePinnedLinks, parseMyTeamFromUrl, buildNavTeamInfo, resolveLeaguePath } from '../utils/nav-utils';
 import type { NavTeamInfo, LeagueSlug } from '../types/nav';
 import { NAV_COOKIES } from '../types/nav';
 import { getAFLPreference, getTheLeaguePreference, getBestBall1Preference } from '../utils/team-preferences';
 import { getAuthUser, isCommissionerOrAdmin } from '../utils/auth';
 import { getLeagueBySlug, getLeagueByNavSlug, SHARED_APP_ORIGIN } from '../config/leagues';
 import { HOST_TO_SLUG } from '../utils/league-host-map';
+import { buildTransactionHubConfig } from '../utils/transaction-hub-config';
 import leagueConfigData from '../data/theleague.config.json';
 
 export interface Props {
@@ -89,7 +90,7 @@ const currentYear = (year || getLeagueYearForSlug(leagueContext.slug)).toString(
 const league: LeagueSlug =
 	(getLeagueBySlug(leagueContext.slug)?.navSlug as LeagueSlug | undefined) ?? 'theleague';
 // Draft-only best-ball leagues have no trades — management chrome like the
-// trade-alert modal must not render (its links would point cross-league).
+// Transaction Hub must not render (its links would point cross-league).
 const isBestBallLeague = !!getLeagueBySlug(leagueContext.slug)?.bestBall;
 
 // Check for myteam in URL and set cookie if present
@@ -197,6 +198,21 @@ const currentPath = Astro.url.pathname + Astro.url.search;
 
 // Detect theleague.us domain to strip /theleague prefix from generated links
 const hideLeaguePrefix = Astro.locals.hideLeaguePrefix ?? false;
+
+// Transaction Hub — SSR half only (team names + icons). Both live reads happen
+// client-side, so this adds no MFL round-trip to a page render. See
+// src/utils/transaction-hub-config.ts.
+const transactionHubConfig = buildTransactionHubConfig(
+	leagueContext.slug,
+	layoutAuthUser,
+	resolveLeaguePath(
+		leagueContext.slug === 'afl-fantasy' ? '/afl-fantasy/players' : '/theleague/players',
+		hideLeaguePrefix,
+	),
+	// Roster-management clock: waivers are a roster action, so the waiver
+	// system is read off the LEAGUE year's feed, not the season year's.
+	Number(getLeagueYearForSlug(leagueContext.slug as LeagueSlug)),
+);
 
 // Get admin franchise IDs
 const adminFranchiseIds = getAdminFranchiseIds(league);
@@ -430,9 +446,11 @@ const themePref = getThemePreference(Astro.cookies);
 			isCommishMode={isCommishMode}
 		/>
 
-		<!-- Trade Alert Modal — global notification for pending received trades -->
-		{!isBestBallLeague && <TradeAlertModal hideLeaguePrefix={hideLeaguePrefix} />}
-		<script src="../scripts/trade-alert.ts"></script>
+		<!-- Transaction Hub — global bell: trade offers, waiver claims, waiver order -->
+		{!isBestBallLeague && (
+			<TransactionHubModal hideLeaguePrefix={hideLeaguePrefix} config={transactionHubConfig} />
+		)}
+		<script src="../scripts/transaction-hub.ts"></script>
 
 		<!-- Navigation progress bar trigger -->
 		<script is:inline>

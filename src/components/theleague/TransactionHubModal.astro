@@ -1,0 +1,1386 @@
+---
+/**
+ * TransactionHubModal — the global "what's in flight for me" modal.
+ *
+ * Opened by the header bell on every page, and auto-opened by a newly arrived
+ * trade offer. Screens, reached by drilling in from the hub home:
+ *
+ *   0. Hub home     — one row per section with its own count
+ *   1. Trades list  — received / sent / commissioner offers
+ *   2. Trade detail — full breakdown with Accept / Reject / Dismiss
+ *   3. Empty        — the Trades screen with nothing in it
+ *   4. Waiver claims — the claims you have filed, READ-ONLY
+ *   5. Waiver order  — where you sit in your conference's line
+ *
+ * WHY CLAIMS ARE READ-ONLY HERE. Delete and edit-drop already live in
+ * WaiverClaimsPanel on the Free Agents page, next to the roster picker that
+ * edit-drop needs and the search that refiling needs. A second set of write
+ * controls would be a second implementation of a destructive MFL action; this
+ * screen shows the claims and hands off to that panel.
+ *
+ * WHY THE TWO WAIVER SCREENS FETCH ON OPEN. This modal is mounted in the
+ * layout, so anything it did at SSR time would cost every page load for every
+ * visitor, most of whom never open the bell. Team names and icons come in via
+ * `config` (static, and the relative icon paths are what the dark-variant
+ * stylesheet keys on); only the live numbers are fetched, and only for the
+ * screen actually opened.
+ *
+ * Follows the CDM (ContractDeclarationModal) editorial design pattern.
+ * Static Astro shell populated entirely by client-side JS.
+ */
+import { getLeagueContext } from '../../utils/league-context';
+import { resolveLeaguePath } from '../../utils/nav-utils';
+import type { TransactionHubConfig } from '../../utils/transaction-hub-config';
+// Player lockup styles for the JS-rendered asset lists. Must be a frontmatter
+// import (global): an @import inside the scoped <style> below gets the
+// component's scope attribute appended to every selector when Vite inlines it,
+// so the .player-cell markup injected by transaction-hub.ts never matches and the
+// headshot <img> renders unconstrained.
+import '../../styles/player-cell.css';
+
+interface Props {
+  /** Strip the active league's path prefix from links — true on either
+   *  league apex domain (theleague.us / afl-fantasy.com). */
+  hideLeaguePrefix?: boolean;
+  /** SSR half of the waiver screens — see src/utils/transaction-hub-config.ts. */
+  config: TransactionHubConfig;
+}
+
+const { hideLeaguePrefix = false, config } = Astro.props;
+
+// Keep the "Trade Builder" links inside the current league.
+const isAFL = getLeagueContext(Astro.url).slug === 'afl-fantasy';
+const tradeBuilderHref = resolveLeaguePath(
+  isAFL ? '/afl-fantasy/trade-builder' : '/theleague/trade-builder',
+  hideLeaguePrefix
+);
+---
+
+<script type="application/json" id="transaction-hub-config" set:html={JSON.stringify(config)}></script>
+
+<div class="transaction-hub-modal" id="transaction-hub-modal" role="dialog" aria-modal="true" aria-label="Transaction hub">
+  <div class="thm-overlay" id="thm-overlay"></div>
+  <div class="thm-content">
+    <button class="thm-close" id="thm-close" aria-label="Close" title="Close (ESC)">
+      <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+        <path d="M14 4L4 14M4 4l10 10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+    </button>
+
+    <!-- ============================================================
+         VIEW 0: Hub Home — one row per section, counts filled by JS
+         ============================================================ -->
+    <div class="thm-view" id="thm-hub-view" style="display: none;">
+      <div class="thm-header">
+        <div class="thm-header__title-row">
+          <h3 class="thm-header__title">Transaction Hub</h3>
+        </div>
+        <p class="thm-header__sub">Everything you have in flight</p>
+      </div>
+      <div class="thm-hub-body">
+        <button type="button" class="thm-hub-row" id="thm-hub-trades" data-hub-target="trades">
+          <span class="thm-hub-row__icon" aria-hidden="true">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M7 16H3M3 16l3-3M3 16l3 3"/><path d="M17 8h4M21 8l-3-3M21 8l-3 3"/>
+            </svg>
+          </span>
+          <span class="thm-hub-row__body">
+            <span class="thm-hub-row__title">Trade Offers</span>
+            <span class="thm-hub-row__sub" id="thm-hub-trades-sub">Nothing pending</span>
+          </span>
+          <span class="thm-hub-row__count" id="thm-hub-trades-count" hidden>0</span>
+          <svg class="thm-hub-row__arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M9 18l6-6-6-6"/>
+          </svg>
+        </button>
+
+        <button type="button" class="thm-hub-row" id="thm-hub-claims" data-hub-target="claims">
+          <span class="thm-hub-row__icon" aria-hidden="true">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
+            </svg>
+          </span>
+          <span class="thm-hub-row__body">
+            <span class="thm-hub-row__title">Waiver Claims</span>
+            <span class="thm-hub-row__sub" id="thm-hub-claims-sub">See what you have filed</span>
+          </span>
+          <span class="thm-hub-row__count" id="thm-hub-claims-count" hidden>0</span>
+          <svg class="thm-hub-row__arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M9 18l6-6-6-6"/>
+          </svg>
+        </button>
+
+        {config.showWaiverPriority && (
+          <button type="button" class="thm-hub-row" id="thm-hub-order" data-hub-target="order">
+            <span class="thm-hub-row__icon" aria-hidden="true">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/>
+              </svg>
+            </span>
+            <span class="thm-hub-row__body">
+              <span class="thm-hub-row__title">Waiver Priority</span>
+              <span class="thm-hub-row__sub" id="thm-hub-order-sub">{config.conferenceName || 'Where you sit in line'}</span>
+            </span>
+            <span class="thm-hub-row__rank" id="thm-hub-order-rank" hidden></span>
+            <svg class="thm-hub-row__arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M9 18l6-6-6-6"/>
+            </svg>
+          </button>
+        )}
+      </div>
+    </div>
+
+    <!-- ============================================================
+         VIEW 1: Trade List (multiple offers)
+         ============================================================ -->
+    <div class="thm-view" id="thm-list-view">
+      <div class="thm-header thm-header--with-back">
+        <button class="thm-back" id="thm-list-back" aria-label="Back to the hub">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M19 12H5M12 19l-7-7 7-7"/>
+          </svg>
+        </button>
+        <div class="thm-header__text">
+          <div class="thm-header__title-row">
+            <h3 class="thm-header__title">Trade Offers</h3>
+            <span class="thm-badge" id="thm-badge">0</span>
+          </div>
+          <p class="thm-header__sub">Review each offer before accepting</p>
+        </div>
+      </div>
+      <div class="thm-list-body" id="thm-list-body">
+        <!-- Populated by JS: trade summary cards -->
+      </div>
+    </div>
+
+    <!-- ============================================================
+         VIEW 2: Trade Detail (single offer)
+         ============================================================ -->
+    <div class="thm-view" id="thm-detail-view" style="display: none;">
+      <div class="thm-detail-header" id="thm-detail-header">
+        <button class="thm-back" id="thm-back" aria-label="Back to trade list" style="display: none;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M19 12H5M12 19l-7-7 7-7"/>
+          </svg>
+        </button>
+        <div class="thm-detail-hero">
+          <img class="thm-detail-hero__icon" id="thm-counterparty-icon" src="" alt="" />
+          <div class="thm-detail-hero__info">
+            <span class="thm-detail-hero__label">Trade offer from</span>
+            <h3 class="thm-detail-hero__name" id="thm-counterparty-name">&mdash;</h3>
+          </div>
+        </div>
+      </div>
+
+      <div class="thm-detail-body" id="thm-detail-body">
+        <!-- Timestamp + expiry -->
+        <div class="thm-detail-meta" id="thm-detail-meta">
+          <span class="thm-detail-meta__time" id="thm-detail-time">&mdash;</span>
+          <span class="thm-detail-meta__expires" id="thm-detail-expires"></span>
+        </div>
+
+        <!-- Two-column asset grid -->
+        <div class="thm-assets-grid">
+          <div class="thm-assets-col">
+            <h4 class="thm-assets-col__title thm-assets-col__title--receive" id="thm-assets-receive-title">You Receive</h4>
+            <ul class="thm-asset-list" id="thm-assets-receive" role="list">
+              <!-- Populated by JS -->
+            </ul>
+          </div>
+          <div class="thm-assets-col">
+            <h4 class="thm-assets-col__title thm-assets-col__title--give" id="thm-assets-give-title">You Give</h4>
+            <ul class="thm-asset-list" id="thm-assets-give" role="list">
+              <!-- Populated by JS -->
+            </ul>
+          </div>
+        </div>
+
+        <!-- Comments -->
+        <div class="thm-comments" id="thm-comments" style="display: none;">
+          <h4 class="thm-section-title">Message</h4>
+          <p class="thm-comments__text" id="thm-comments-text"></p>
+        </div>
+      </div>
+
+      <!-- Footer actions -->
+      <div class="thm-footer" id="thm-footer">
+        <div class="thm-footer__messages">
+          <div class="thm-error" id="thm-error" role="alert" style="display: none;"></div>
+          <div class="thm-success" id="thm-success" role="status" style="display: none;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M20 6L9 17l-5-5"/>
+            </svg>
+            <span id="thm-success-text">Trade accepted</span>
+          </div>
+        </div>
+        <!-- Confirmation prompt (hidden by default) -->
+        <div class="thm-confirm" id="thm-confirm" style="display: none;" aria-live="polite">
+          <span class="thm-confirm__msg" id="thm-confirm-msg">Accept this trade?</span>
+          <div class="thm-confirm__btns">
+            <button class="thm-btn thm-btn--confirm-yes" id="thm-confirm-yes">Confirm</button>
+            <button class="thm-btn thm-btn--confirm-no" id="thm-confirm-no">Cancel</button>
+          </div>
+        </div>
+        <!-- Primary actions -->
+        <div class="thm-footer__actions" id="thm-actions">
+          <button class="thm-btn thm-btn--accept" id="thm-accept">Accept</button>
+          <button class="thm-btn thm-btn--reject" id="thm-reject">Reject</button>
+          <button class="thm-btn thm-btn--dismiss" id="thm-dismiss">Dismiss</button>
+        </div>
+        <a class="thm-builder-link" id="thm-builder-link" href={tradeBuilderHref}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6M15 3h6v6M10 14L21 3"/>
+          </svg>
+          View in Trade Builder
+        </a>
+      </div>
+    </div>
+
+    <!-- ============================================================
+         VIEW 3: Empty State (no pending trades)
+         ============================================================ -->
+    <div class="thm-view" id="thm-empty-view" style="display: none;">
+      <div class="thm-header thm-header--with-back thm-header--bare">
+        <button class="thm-back" id="thm-empty-back" aria-label="Back to the hub">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M19 12H5M12 19l-7-7 7-7"/>
+          </svg>
+        </button>
+        <div class="thm-header__text">
+          <div class="thm-header__title-row">
+            <h3 class="thm-header__title">Trade Offers</h3>
+          </div>
+        </div>
+      </div>
+      <div class="thm-empty">
+        <div class="thm-empty__icon">
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M20 6L9 17l-5-5"/>
+          </svg>
+        </div>
+        <h3 class="thm-empty__title">No Pending Trades</h3>
+        <p class="thm-empty__text">You don't have any open trade offers right now. Head to the Trade Builder to start one.</p>
+        <a class="thm-empty__cta" id="thm-empty-cta" href={tradeBuilderHref}>
+          Open Trade Builder
+        </a>
+      </div>
+    </div>
+
+    <!-- ============================================================
+         VIEW 4: Waiver Claims — READ-ONLY. Managing them lives on Free
+         Agents, next to the roster picker edit-drop needs.
+         ============================================================ -->
+    <div class="thm-view" id="thm-claims-view" style="display: none;">
+      <div class="thm-header thm-header--with-back">
+        <button class="thm-back" id="thm-claims-back" aria-label="Back to the hub">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M19 12H5M12 19l-7-7 7-7"/>
+          </svg>
+        </button>
+        <div class="thm-header__text">
+          <div class="thm-header__title-row">
+            <h3 class="thm-header__title">Waiver Claims</h3>
+            <span class="thm-badge" id="thm-claims-badge" hidden>0</span>
+          </div>
+          <p class="thm-header__sub">Claims you have filed, in priority order</p>
+        </div>
+      </div>
+      <div class="thm-scroll-body">
+        <div class="thm-status" id="thm-claims-status">Reading your claims from MyFantasyLeague&hellip;</div>
+        <ol class="thm-claim-list" id="thm-claims-list" hidden></ol>
+      </div>
+      <div class="thm-screen-foot" id="thm-claims-foot" hidden>
+        <a class="thm-screen-foot__link" id="thm-claims-manage" href={config.freeAgentsPath}>
+          Manage your claims on Free Agents
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M9 18l6-6-6-6"/>
+          </svg>
+        </a>
+      </div>
+    </div>
+
+    <!-- ============================================================
+         VIEW 5: Waiver Priority — the owner's OWN conference's line.
+         Rendered ONLY where MFL says a priority order exists: TheLeague is
+         BBID_FCFS and has none, so this whole screen is absent there.
+         Rows come from the shared renderer WaiverPriorityModal uses.
+         ============================================================ -->
+    {config.showWaiverPriority && (
+    <div class="thm-view" id="thm-order-view" style="display: none;">
+      <div class="thm-header thm-header--with-back">
+        <button class="thm-back" id="thm-order-back" aria-label="Back to the hub">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M19 12H5M12 19l-7-7 7-7"/>
+          </svg>
+        </button>
+        <div class="thm-header__text">
+          <div class="thm-header__title-row">
+            <h3 class="thm-header__title">Waiver Priority</h3>
+          </div>
+          <p class="thm-header__sub" id="thm-order-sub">{config.conferenceName || 'Live order from MyFantasyLeague'}</p>
+        </div>
+      </div>
+      <div class="thm-scroll-body">
+        <div class="thm-status" id="thm-order-status">Reading the live order from MyFantasyLeague&hellip;</div>
+        <ol class="thm-order-list" id="thm-order-list" hidden></ol>
+      </div>
+      <div class="thm-screen-foot" id="thm-order-footwrap" hidden>
+        <p class="thm-screen-foot__note" id="thm-order-foot"></p>
+      </div>
+    </div>
+    )}
+  </div>
+</div>
+
+<style>
+  /* ================================================================
+     Modal Shell — matches CDM pattern
+     ================================================================ */
+  .transaction-hub-modal {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 1001;
+    justify-content: center;
+    align-items: center;
+    padding: 1rem;
+  }
+
+  .transaction-hub-modal.active {
+    display: flex;
+  }
+
+  .thm-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.45);
+    backdrop-filter: blur(2px);
+    cursor: pointer;
+  }
+
+  /* Dark: page is already dark, so the mandated frosted scrim goes a touch
+     deeper (pure black, higher alpha) to separate the modal from the page.
+     Blur is preserved per the modal-backdrop standard. */
+  :global(html.dark) .thm-overlay {
+    background: rgba(0, 0, 0, 0.6);
+  }
+
+  .thm-content {
+    position: relative;
+    /* --card-bg resolves to --color-white (#fff) in light → pixel-identical;
+       becomes the dark card surface in dark mode. */
+    background: var(--card-bg, #fff);
+    border-radius: var(--radius-lg, 1rem);
+    box-shadow: var(--shadow-xl, 0 8px 32px rgba(0, 0, 0, 0.12));
+    width: 100%;
+    max-width: 440px;
+    max-height: 88vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    animation: thm-enter 0.22s ease-out;
+  }
+
+  /* Border is dark-only (added via box-shadow spread so it costs no layout
+     box — panel stays pixel-identical in light). Paired with --shadow-lg it
+     lifts the panel off the dark page as a raised surface. */
+  :global(html.dark) .thm-content {
+    box-shadow: 0 0 0 1px var(--content-border, #555), var(--shadow-lg);
+  }
+
+  @keyframes thm-enter {
+    from { opacity: 0; transform: scale(0.97) translateY(6px); }
+    to { opacity: 1; transform: scale(1) translateY(0); }
+  }
+
+  /* ================================================================
+     Close Button — matches CDM
+     ================================================================ */
+  .thm-close {
+    position: absolute;
+    top: 0.875rem;
+    right: 0.875rem;
+    z-index: 2;
+    background: var(--color-gray-100, #f3f4f6);
+    border: none;
+    border-radius: var(--radius-full, 9999px);
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--color-gray-500, #6b7280);
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease;
+  }
+
+  .thm-close:hover {
+    background: var(--color-gray-200, #dddedf);
+    color: var(--color-gray-800, #1f2937);
+  }
+
+  /* ================================================================
+     View transitions
+     ================================================================ */
+  .thm-view {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .thm-view.slide-in {
+    animation: thm-slide-in 0.2s ease-out;
+  }
+
+  @keyframes thm-slide-in {
+    from { opacity: 0; transform: translateX(24px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+
+  .thm-view.slide-back {
+    animation: thm-slide-back 0.2s ease-out;
+  }
+
+  @keyframes thm-slide-back {
+    from { opacity: 0; transform: translateX(-24px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+
+  /* ================================================================
+     LIST VIEW — Header
+     ================================================================ */
+  .thm-header {
+    padding: 1.5rem 1.75rem 1rem;
+    border-bottom: 1px solid var(--content-border, #e2e8f0);
+    flex-shrink: 0;
+  }
+
+  .thm-header__title-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .thm-header__title {
+    font-size: 1.125rem;
+    font-weight: 700;
+    color: var(--color-gray-900, #111827);
+    margin: 0;
+  }
+
+  .thm-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 22px;
+    height: 22px;
+    padding: 0 0.375rem;
+    border-radius: var(--radius-full, 9999px);
+    background: var(--color-primary, #1c497c);
+    color: #fff;
+    font-size: 0.6875rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .thm-header__sub {
+    margin: 0.25rem 0 0;
+    font-size: 0.8125rem;
+    color: var(--color-gray-400, #9ca3af);
+  }
+
+  /* A header that carries a back arrow puts the arrow beside the title
+     block rather than above it — same shape as the detail header. */
+  .thm-header--with-back {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+
+  .thm-header__text {
+    min-width: 0;
+    flex: 1;
+  }
+
+  /* The empty state paints its own centred block, so its header is a bare
+     back-arrow strip with no rule under it. */
+  .thm-header--bare {
+    border-bottom: none;
+    padding-bottom: 0.25rem;
+  }
+
+  /* ================================================================
+     HUB HOME — one row per section
+     ================================================================ */
+  .thm-hub-body {
+    overflow-y: auto;
+    padding: 0.75rem 1rem 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .thm-hub-row {
+    appearance: none;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.8125rem 0.875rem;
+    border: 1px solid var(--color-gray-100, #f3f4f6);
+    border-radius: var(--radius-md, 0.5rem);
+    background: var(--card-bg, #fff);
+    cursor: pointer;
+    text-align: left;
+    font: inherit;
+    transition: border-color 0.15s ease, background 0.15s ease;
+  }
+
+  .thm-hub-row:hover {
+    border-color: var(--color-gray-200, #e5e7eb);
+    background: var(--color-gray-50, #f9fafb);
+  }
+
+  .thm-hub-row:focus-visible {
+    outline: 2px solid var(--color-primary, #1c497c);
+    outline-offset: 2px;
+  }
+
+  .thm-hub-row__icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    flex-shrink: 0;
+    border-radius: var(--radius-full, 9999px);
+    background: var(--color-gray-100, #f3f4f6);
+    color: var(--color-gray-500, #6b7280);
+  }
+
+  .thm-hub-row__body {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .thm-hub-row__title {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--color-gray-900, #111827);
+  }
+
+  .thm-hub-row__sub {
+    font-size: 0.75rem;
+    color: var(--color-gray-500, #6b7280);
+    margin-top: 0.0625rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .thm-hub-row__count {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 22px;
+    height: 22px;
+    padding: 0 0.375rem;
+    flex-shrink: 0;
+    border-radius: var(--radius-full, 9999px);
+    background: var(--color-primary, #1c497c);
+    color: #fff;
+    font-size: 0.6875rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* The priority number is a fact, not an alert — it reads as a quiet chip
+     rather than borrowing the count badge's primary fill. */
+  .thm-hub-row__rank {
+    flex-shrink: 0;
+    padding: 0.125rem 0.4375rem;
+    border-radius: var(--radius-full, 9999px);
+    background: var(--color-gray-100, #f3f4f6);
+    color: var(--color-gray-600, #4b5563);
+    font-size: 0.6875rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .thm-hub-row__arrow {
+    flex-shrink: 0;
+    color: var(--color-gray-300, #d1d5db);
+  }
+
+  /* `hidden` loses to an explicit `display`, so every chip toggled by the
+     hidden attribute has to opt back out by name — otherwise a count of 0
+     stays on screen with the attribute dutifully set. */
+  .thm-hub-row__count[hidden],
+  .thm-hub-row__rank[hidden],
+  .thm-badge[hidden] {
+    display: none;
+  }
+
+  /* ================================================================
+     SHARED SCREEN CHROME — claims + priority
+     ================================================================ */
+  .thm-scroll-body {
+    overflow-y: auto;
+    padding: 0.875rem 1.25rem 1rem;
+    flex: 1;
+  }
+
+  .thm-status {
+    margin: 0.25rem 0;
+    font-size: 0.8125rem;
+    color: var(--color-gray-500, #6b7280);
+  }
+
+  .thm-status--error {
+    color: var(--color-error, #dc2626);
+  }
+
+  .thm-screen-foot {
+    flex-shrink: 0;
+    padding: 0.75rem 1.25rem 1rem;
+    border-top: 1px solid var(--content-border, #e2e8f0);
+  }
+
+  .thm-screen-foot__note {
+    margin: 0;
+    font-size: 0.6875rem;
+    line-height: 1.45;
+    color: var(--color-gray-400, #9ca3af);
+  }
+
+  .thm-screen-foot__link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--color-primary, #1c497c);
+    text-decoration: none;
+  }
+
+  .thm-screen-foot__link:hover {
+    text-decoration: underline;
+  }
+
+  /* ================================================================
+     WAIVER CLAIMS — read-only rows (JS-created, so :global())
+     ================================================================ */
+  .thm-claim-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  :global(.thm-claim) {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.625rem 0.75rem;
+    border: 1px solid var(--color-gray-100, #f3f4f6);
+    border-radius: var(--radius-md, 0.5rem);
+  }
+
+  :global(.thm-claim__pos) {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    flex-shrink: 0;
+    border-radius: var(--radius-full, 9999px);
+    background: var(--color-gray-100, #f3f4f6);
+    color: var(--color-gray-600, #4b5563);
+    font-size: 0.6875rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+
+  :global(.thm-claim__body) {
+    flex: 1;
+    min-width: 0;
+  }
+
+  :global(.thm-claim__add) {
+    display: block;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--color-gray-900, #111827);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  :global(.thm-claim__meta) {
+    font-weight: 500;
+    color: var(--color-gray-400, #9ca3af);
+  }
+
+  :global(.thm-claim__drop) {
+    display: block;
+    font-size: 0.6875rem;
+    color: var(--color-gray-500, #6b7280);
+    margin-top: 0.0625rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  :global(.thm-claim__bid) {
+    flex-shrink: 0;
+    font-size: 0.8125rem;
+    font-weight: 700;
+    color: var(--color-gray-700, #374151);
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ================================================================
+     WAIVER PRIORITY — rows built by renderWaiverPriorityRows()
+     ================================================================ */
+  .thm-order-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  :global(.thm-worow) {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+    padding: 0.4375rem 0.5rem;
+    border-radius: var(--radius-md, 0.5rem);
+  }
+
+  :global(.thm-worow--me) {
+    background: var(--color-gray-50, #f9fafb);
+    box-shadow: inset 0 0 0 1px var(--color-gray-200, #e5e7eb);
+  }
+
+  :global(.thm-worow__rank) {
+    width: 1.25rem;
+    flex-shrink: 0;
+    text-align: right;
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--color-gray-400, #9ca3af);
+    font-variant-numeric: tabular-nums;
+  }
+
+  :global(.thm-worow__icon) {
+    width: 24px;
+    height: 24px;
+    flex-shrink: 0;
+    border-radius: var(--radius-full, 9999px);
+    object-fit: cover;
+    background: var(--color-gray-100, #f3f4f6);
+  }
+
+  :global(.thm-worow__icon--blank) {
+    display: inline-block;
+  }
+
+  :global(.thm-worow__name) {
+    flex: 1;
+    min-width: 0;
+    font-size: 0.8125rem;
+    color: var(--color-gray-800, #1f2937);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  :global(.thm-worow--me .thm-worow__name) {
+    font-weight: 700;
+    color: var(--color-gray-900, #111827);
+  }
+
+  :global(.thm-worow__you) {
+    flex-shrink: 0;
+    padding: 0.0625rem 0.375rem;
+    border-radius: var(--radius-full, 9999px);
+    background: var(--color-primary, #1c497c);
+    color: #fff;
+    font-size: 0.625rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+  }
+
+  /* ================================================================
+     Waiver screen gate — signed out, or a session from the other league
+     ================================================================ */
+  :global(.thm-gate) {
+    padding: 0.5rem 0 0.25rem;
+  }
+
+  :global(.thm-gate__lead) {
+    margin: 0 0 0.375rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--color-gray-900, #111827);
+  }
+
+  :global(.thm-gate__note) {
+    margin: 0;
+    font-size: 0.75rem;
+    line-height: 1.5;
+    color: var(--color-gray-500, #6b7280);
+  }
+
+  /* ================================================================
+     LIST VIEW — Trade summary cards
+     NOTE: :global() required because these elements are created by JS
+     ================================================================ */
+  .thm-list-body {
+    overflow-y: auto;
+    padding: 0.75rem 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  :global(.thm-list-card) {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem;
+    border: 1px solid var(--color-gray-100, #f3f4f6);
+    border-radius: var(--radius-md, 0.5rem);
+    background: var(--card-bg, #fff);
+    cursor: pointer;
+    transition: border-color 0.15s ease, background 0.15s ease;
+  }
+
+  :global(.thm-list-card:hover) {
+    border-color: var(--color-gray-200, #e5e7eb);
+    background: var(--color-gray-50, #f9fafb);
+  }
+
+  :global(.thm-list-card__icon) {
+    width: 36px;
+    height: 36px;
+    border-radius: var(--radius-full, 9999px);
+    object-fit: cover;
+    flex-shrink: 0;
+    background: var(--color-gray-100, #f3f4f6);
+  }
+
+  :global(.thm-list-card__body) {
+    flex: 1;
+    min-width: 0;
+  }
+
+  :global(.thm-list-card__team) {
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--color-gray-900, #111827);
+    margin: 0;
+  }
+
+  :global(.thm-list-card__summary) {
+    font-size: 0.75rem;
+    color: var(--color-gray-500, #6b7280);
+    margin: 0.125rem 0 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  :global(.thm-list-card__time) {
+    font-size: 0.6875rem;
+    color: var(--color-gray-400, #9ca3af);
+    flex-shrink: 0;
+    font-variant-numeric: tabular-nums;
+  }
+
+  :global(.thm-list-card__arrow) {
+    flex-shrink: 0;
+    color: var(--color-gray-300, #d1d5db);
+  }
+
+  /* ================================================================
+     DETAIL VIEW — Header
+     ================================================================ */
+  .thm-detail-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 1.25rem 1.75rem 1rem;
+    border-bottom: 1px solid var(--content-border, #e2e8f0);
+    flex-shrink: 0;
+  }
+
+  .thm-back {
+    appearance: none;
+    background: transparent;
+    border: none;
+    color: var(--color-gray-400, #9ca3af);
+    cursor: pointer;
+    padding: 0.25rem;
+    border-radius: var(--radius-sm, 0.25rem);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: color 0.15s ease;
+    flex-shrink: 0;
+  }
+
+  .thm-back:hover {
+    color: var(--color-gray-700, #374151);
+  }
+
+  .thm-detail-hero {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .thm-detail-hero__icon {
+    width: 40px;
+    height: 40px;
+    border-radius: var(--radius-full, 9999px);
+    object-fit: cover;
+    background: var(--color-gray-100, #f3f4f6);
+  }
+
+  .thm-detail-hero__label {
+    font-size: 0.6875rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--color-gray-400, #9ca3af);
+  }
+
+  .thm-detail-hero__name {
+    font-size: 1.125rem;
+    font-weight: 700;
+    color: var(--color-gray-900, #111827);
+    margin: 0;
+    line-height: 1.2;
+  }
+
+  /* ================================================================
+     DETAIL VIEW — Body
+     ================================================================ */
+  .thm-detail-body {
+    overflow-y: auto;
+    padding: 1rem 1.75rem 1.25rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .thm-detail-meta {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-size: 0.75rem;
+    color: var(--color-gray-400, #9ca3af);
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ================================================================
+     DETAIL VIEW — Asset grid
+     ================================================================ */
+  .thm-assets-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.75rem;
+  }
+
+  .thm-assets-col__title {
+    font-size: 0.625rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--color-gray-400, #9ca3af);
+    margin: 0 0 0.5rem;
+    padding-bottom: 0.375rem;
+    border-bottom: 1px solid var(--color-gray-100, #f3f4f6);
+  }
+
+  .thm-assets-col__title--receive {
+    color: var(--color-success-dark, #059669);
+  }
+
+  .thm-assets-col__title--give {
+    color: var(--color-error, #dc2626);
+  }
+
+  /* NOTE: :global() required because asset list items are created by JS */
+  :global(.thm-asset-list) {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.375rem;
+  }
+
+  :global(.thm-asset-item) {
+    font-size: 0.8125rem;
+    color: var(--color-gray-800, #1f2937);
+    line-height: 1.3;
+  }
+
+  :global(.thm-asset-item__pos) {
+    font-size: 0.6875rem;
+    font-weight: 600;
+    color: var(--color-gray-400, #9ca3af);
+    margin-left: 0.25rem;
+  }
+
+  :global(.thm-asset-item--empty) {
+    color: var(--color-gray-400, #9ca3af);
+    font-style: italic;
+  }
+
+  :global(.thm-asset-item--pick) {
+    color: var(--color-gray-600, #4b5563);
+    font-style: italic;
+  }
+
+  :global(.thm-asset-item--bbid) {
+    color: var(--color-gray-600, #4b5563);
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ================================================================
+     DETAIL VIEW — Comments
+     ================================================================ */
+  .thm-section-title {
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    padding-left: 0.625rem;
+    border-left: 2px solid var(--color-primary, #1c497c);
+    color: var(--color-gray-700, #374151);
+    margin: 0 0 0.5rem;
+  }
+
+  .thm-comments__text {
+    font-size: 0.8125rem;
+    color: var(--color-gray-600, #4b5563);
+    margin: 0;
+    padding: 0.5rem 0.75rem;
+    background: var(--color-gray-50, #f9fafb);
+    border-radius: var(--radius-sm, 0.25rem);
+    font-style: italic;
+  }
+
+  /* ================================================================
+     Footer — matches CDM footer pattern
+     ================================================================ */
+  .thm-footer {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    padding: 1rem 1.75rem 1.25rem;
+    border-top: 1px solid var(--content-border, #e2e8f0);
+    background: var(--card-bg, #fff);
+    flex-shrink: 0;
+  }
+
+  .thm-footer__messages {
+    display: flex;
+    flex-direction: column;
+    gap: 0.375rem;
+  }
+
+  .thm-error {
+    font-size: 0.8125rem;
+    color: var(--color-error, #dc2626);
+    padding: 0.5rem 0.75rem;
+    background: color-mix(in srgb, var(--color-error, #dc2626) 5%, var(--content-bg, white));
+    border: 1px solid color-mix(in srgb, var(--color-error, #dc2626) 12%, var(--content-bg, white));
+    border-radius: var(--radius-sm, 0.25rem);
+  }
+
+  .thm-success {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.8125rem;
+    color: var(--color-success-dark, #059669);
+    padding: 0.5rem 0.75rem;
+    background: color-mix(in srgb, var(--color-success, #10b981) 6%, var(--content-bg, white));
+    border: 1px solid color-mix(in srgb, var(--color-success, #10b981) 15%, var(--content-bg, white));
+    border-radius: var(--radius-sm, 0.25rem);
+  }
+
+  /* ================================================================
+     Footer — Action buttons
+     ================================================================ */
+  .thm-footer__actions {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .thm-btn {
+    appearance: none;
+    border: none;
+    border-radius: var(--radius-md, 0.5rem);
+    padding: 0.625rem 1rem;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+    transition: background 0.15s ease, opacity 0.15s ease, color 0.15s ease;
+  }
+
+  .thm-btn:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+
+  .thm-btn--accept {
+    background: var(--color-primary, #1c497c);
+    color: #fff;
+    flex: 1;
+  }
+
+  .thm-btn--accept:hover:not(:disabled) {
+    background: var(--color-primary-dark, #164066);
+  }
+
+  .thm-btn--reject {
+    background: transparent;
+    border: 1px solid var(--color-error, #dc2626);
+    color: var(--color-error, #dc2626);
+  }
+
+  .thm-btn--reject:hover:not(:disabled) {
+    background: color-mix(in srgb, var(--color-error, #dc2626) 6%, var(--content-bg, white));
+  }
+
+  .thm-btn--dismiss {
+    background: transparent;
+    color: var(--color-gray-500, #6b7280);
+    padding: 0.625rem 0.5rem;
+  }
+
+  .thm-btn--dismiss:hover {
+    color: var(--color-gray-700, #374151);
+  }
+
+  /* Confirmation prompt */
+  .thm-confirm {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+    animation: thm-confirm-in 0.15s ease-out;
+  }
+
+  @keyframes thm-confirm-in {
+    from { opacity: 0; transform: translateY(4px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .thm-confirm__msg {
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--color-gray-700, #374151);
+    flex: 1;
+  }
+
+  .thm-confirm__btns {
+    display: flex;
+    gap: 0.375rem;
+    flex-shrink: 0;
+  }
+
+  .thm-btn--confirm-yes {
+    background: var(--color-primary, #1c497c);
+    color: #fff;
+    font-size: 0.75rem;
+    padding: 0.5rem 0.875rem;
+  }
+
+  .thm-btn--confirm-yes:hover {
+    background: var(--color-primary-dark, #164066);
+  }
+
+  .thm-btn--confirm-no {
+    background: var(--color-gray-100, #f3f4f6);
+    color: var(--color-gray-600, #4b5563);
+    font-size: 0.75rem;
+    padding: 0.5rem 0.875rem;
+  }
+
+  .thm-btn--confirm-no:hover {
+    background: var(--color-gray-200, #e5e7eb);
+  }
+
+  /* ================================================================
+     Empty state
+     ================================================================ */
+  .thm-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    padding: 2.5rem 1.75rem 2rem;
+    gap: 0.75rem;
+  }
+
+  .thm-empty__icon {
+    width: 56px;
+    height: 56px;
+    border-radius: var(--radius-full, 9999px);
+    background: color-mix(in srgb, var(--color-success, #10b981) 8%, var(--content-bg, white));
+    color: var(--color-success, #10b981);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 0.25rem;
+  }
+
+  .thm-empty__title {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--color-gray-900, #111827);
+    margin: 0;
+  }
+
+  .thm-empty__text {
+    font-size: 0.8125rem;
+    color: var(--color-gray-500, #6b7280);
+    margin: 0;
+    line-height: 1.5;
+    max-width: 280px;
+  }
+
+  .thm-empty__cta {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    margin-top: 0.5rem;
+    padding: 0.625rem 1.25rem;
+    background: var(--color-primary, #1c497c);
+    color: #fff;
+    border-radius: var(--radius-md, 0.5rem);
+    font-size: 0.8125rem;
+    font-weight: 600;
+    text-decoration: none;
+    transition: background 0.15s ease;
+  }
+
+  .thm-empty__cta:hover {
+    background: var(--color-primary-dark, #164066);
+  }
+
+  /* ================================================================
+     Builder link
+     ================================================================ */
+  .thm-builder-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--color-primary, #1c497c);
+    text-decoration: none;
+    transition: opacity 0.15s ease;
+    align-self: flex-start;
+  }
+
+  .thm-builder-link:hover {
+    opacity: 0.8;
+  }
+
+  /* Commissioner: "Review Cap Impact" as primary CTA */
+  :global(.thm-builder-link--primary) {
+    display: flex !important;
+    justify-content: center;
+    text-decoration: none;
+    flex: 1;
+  }
+
+  /* Commissioner: Approve as secondary outline button */
+  :global(.thm-btn--approve-secondary) {
+    background: transparent;
+    border: 1px solid var(--color-primary, #1c497c);
+    color: var(--color-primary, #1c497c);
+  }
+
+  :global(.thm-btn--approve-secondary:hover:not(:disabled)) {
+    background: color-mix(in srgb, var(--color-primary, #1c497c) 6%, var(--content-bg, white));
+  }
+
+  /* ================================================================
+     Mobile — bottom-sheet pattern
+     ================================================================ */
+  @media (max-width: 600px) {
+    .transaction-hub-modal {
+      align-items: flex-end;
+      padding: 0;
+    }
+
+    .thm-content {
+      max-height: 92vh;
+      border-radius: var(--radius-lg, 1rem) var(--radius-lg, 1rem) 0 0;
+      max-width: 100%;
+      animation: thm-slide-up 0.25s ease-out;
+    }
+
+    @keyframes thm-slide-up {
+      from { transform: translateY(100%); }
+      to { transform: translateY(0); }
+    }
+
+    .thm-header {
+      padding: 1.25rem 1.25rem 0.875rem;
+    }
+
+    .thm-detail-header {
+      padding: 1rem 1.25rem 0.875rem;
+    }
+
+    .thm-detail-body {
+      padding: 0.875rem 1.25rem 1rem;
+    }
+
+    .thm-list-body {
+      padding: 0.5rem 0.75rem;
+    }
+
+    .thm-footer {
+      padding: 0.875rem 1.25rem 1.25rem;
+    }
+
+    .thm-detail-hero__icon {
+      width: 36px;
+      height: 36px;
+    }
+
+    .thm-detail-hero__name {
+      font-size: 1rem;
+    }
+  }
+
+  /* ================================================================
+     Reduced motion
+     ================================================================ */
+  @media (prefers-reduced-motion: reduce) {
+    .thm-content,
+    .thm-view.slide-in,
+    .thm-view.slide-back,
+    .thm-confirm {
+      animation: none;
+    }
+  }
+</style>

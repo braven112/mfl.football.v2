@@ -61,7 +61,7 @@ export function leaguePushBadge(navSlug: string): string {
 /**
  * Build the trade-offer payload. Pure — unit-tested directly.
  * The click-through lands on the league home page, where the global
- * TradeAlertModal pops for pending received trades.
+ * the Transaction Hub pops for pending received trades.
  */
 export function buildTradeOfferPayload(opts: {
   leagueSlug: string;

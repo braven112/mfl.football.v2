@@ -31,6 +31,7 @@ import { buildMflExportUrl } from '../../utils/mfl-url';
 import { fetchWithTimeout } from '../../utils/fetch-with-timeout';
 import { JSON_HEADERS_NO_STORE as JSON_HEADERS } from '../../utils/api-response';
 import { readWaiverSortOrder, type WaiverOrderEntry } from '../../utils/waiver-order';
+import { leagueUsesWaiverPriority } from '../../utils/waiver-system';
 
 const fail = (message: string, status: number, extra: Record<string, unknown> = {}) =>
   new Response(JSON.stringify({ success: false, message, ...extra }), { status, headers: JSON_HEADERS });
@@ -106,6 +107,21 @@ export const GET: APIRoute = async ({ request }) => {
   const year = league.leagueYearRollover
     ? getRolloverLeagueYear(league.leagueYearRollover)
     : getCurrentLeagueYear();
+
+  // NOT EVERY LEAGUE HAS ONE. TheLeague is BBID_FCFS — blind bidding, ties
+  // broken first come first served — so its `waiverSortOrder` is a default
+  // nobody set and nothing reads. MFL serves that number anyway, which is
+  // exactly why this has to be refused here and not merely hidden in the UI:
+  // the route is what makes the number look authoritative.
+  //
+  // Read from the build-time feed rather than the live payload BY DESIGN. The
+  // live read degrades to a last-known-good order during an MFL blip, and a
+  // system inferred from a failed read would flip a real priority league to
+  // "no order here" for the length of the outage — turning a brief blip into
+  // a wrong answer about the league's rules.
+  if (!leagueUsesWaiverPriority(league.slug, year)) {
+    return fail('This league does not use a waiver priority order.', 404, { usesPriority: false });
+  }
 
   const { order, asOf, ok } = await readLiveOrder(league.id, year);
   if (order.length === 0) {

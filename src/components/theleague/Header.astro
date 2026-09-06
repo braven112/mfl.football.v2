@@ -89,12 +89,15 @@ const searchHref = searchPath
       </ul>
     </nav>
     <div class="breadcrumb-actions">
-      <!-- Trade Alert — badge count populated by trade-alert.ts -->
-      <button class="breadcrumb-bell" id="nav-trade-bell" aria-label="Trade offers" type="button">
+      <!-- Transaction Hub — badge (pending trades) and dot (something else in
+           the hub) are both populated by transaction-hub.ts, which also owns
+           the aria-label so the two never disagree. -->
+      <button class="breadcrumb-bell" id="nav-trade-bell" aria-label="Transaction hub" type="button">
         <svg viewBox="0 0 128 128" aria-hidden="true">
           <use href={`${spriteUrl}#icon-transactions-2`}></use>
         </svg>
         <span class="breadcrumb-bell__badge" id="nav-trade-bell-badge" style="display: none;">0</span>
+        <span class="breadcrumb-bell__dot" id="nav-trade-bell-dot" style="display: none;" aria-hidden="true"></span>
       </button>
       {searchHref && (
         <a href={searchHref} class="breadcrumb-search-link" aria-label="Search all pages">
@@ -782,6 +785,21 @@ const searchHref = searchPath
     align-items: center;
     justify-content: center;
     line-height: 1;
+    pointer-events: none;
+  }
+
+  /* The quiet marker: the hub has something in it, but nothing is waiting on
+     you. Deliberately NOT the badge's error red and deliberately not a number
+     — it says "look when you like", where the badge says "act". Never shown
+     alongside the badge; transaction-hub.ts owns that rule. */
+  .breadcrumb-bell__dot {
+    position: absolute;
+    top: 4px;
+    right: 3px;
+    width: 7px;
+    height: 7px;
+    border-radius: 9999px;
+    background: var(--color-primary, #1c497c);
     pointer-events: none;
   }
 

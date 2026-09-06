@@ -456,7 +456,7 @@ export default function TradeBuilder({
       const data = await res.json();
 
       if (data.success) {
-        // Invalidate the trade-alert modal's cached pending trades so the
+        // Invalidate the Transaction Hub's cached pending trades so the
         // bell on other pages shows the newly-submitted offer instead of
         // "No Pending Trades". The modal debounces API calls for 60s via
         // sessionStorage; clearing the key + dispatching the event forces

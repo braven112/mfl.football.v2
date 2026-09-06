@@ -222,7 +222,9 @@ const waiverPriorityConfig = {
         icon: t.icon,
       }))
     : [],
-  system: claimRules.system,
+  // No `system` here: the dialog only ever opens for a league that HAS a
+  // priority order, so a flag distinguishing bid-tiebreak from rolling
+  // priority had nothing left to decide (src/utils/waiver-system.ts).
   // The committed feed's order, so the dialog opens with a list; the live
   // read replaces it (see WaiverPriorityModal's initialOrder note).
   initialOrder: readWaiverSortOrder({ league: aflLeagueFeed }),
