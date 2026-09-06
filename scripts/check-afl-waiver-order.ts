@@ -25,8 +25,14 @@
  *     compare against, so it reports "not yet computable" and stops.
  * Neither is a failure. Only a genuine mismatch inside the pre-season window is.
  *
+ * WHO HEARS ABOUT IT: the league's admins, by push, under the `ops-league-setup`
+ * category — not the group chat. Re-entering the waiver order is a job exactly
+ * one person can do (it is a hand edit on MFL's csetup page), so posting it to
+ * everyone spent the chat's one daily automated post telling eleven owners
+ * about a task none of them can action.
+ *
  * Env:
- *   GROUPME_ROGER_BOT_ID   optional — posts the drift summary; skipped if unset
+ *   CRON_SECRET   required to push; unset logs the summary and sends nothing
  *
  * Usage:
  *   pnpm exec tsx scripts/check-afl-waiver-order.ts
@@ -37,7 +43,7 @@ import { getLeagueBySlug } from '../src/config/leagues-data.mjs';
 import { getAflLeagueYear } from '../src/utils/league-year';
 import { computeAflWaiverOrder } from '../src/utils/afl-waiver-order-source';
 import { compareAflWaiverOrder } from '../src/utils/afl-waiver-order';
-import { postToGroupMe } from './lib/groupme.mjs';
+import { sendOpsAlert } from './lib/ops-alert.mjs';
 
 const argv = process.argv.slice(2);
 const DRY_RUN = argv.includes('--dry-run');
@@ -104,6 +110,13 @@ if (waiverCount > 0) {
 // ── Compare rank WITHIN each conference ──────────────────────────────────────
 const results = compareAflWaiverOrder(expected, liveSlot);
 const problems: string[] = [];
+// Counted SEPARATELY from the problem lines, because they are not the same
+// number: `problems` carries a header per conference plus one line per bad
+// rank, so its length reported "26 franchises out of order" for a 24-team
+// league, while the missing-slot branch is one line naming several franchises
+// and under-reported the other way. The alert states a franchise count, so it
+// has to count franchises.
+const driftedFranchises = new Set<string>();
 for (const r of results) {
   const label = r.conference === '00' ? 'American' : 'National';
   if (r.ok) {
@@ -112,12 +125,14 @@ for (const r of results) {
   }
   if (r.missing.length) {
     problems.push(`${label} League: MFL has no waiver slot for ${r.missing.join(', ')}`);
+    for (const id of r.missing) driftedFranchises.add(id);
     continue;
   }
   problems.push(`${label} League order does not match the constitution:`);
   r.expected.forEach((id, i) => {
     if (id !== r.actual[i]) {
       problems.push(`  rank ${i + 1}: expected ${id} ${name(id)}, MFL has ${r.actual[i]} ${name(r.actual[i])}`);
+      driftedFranchises.add(id);
     }
   });
 }
@@ -134,12 +149,34 @@ const summary =
   `Fix by hand: ${league.mflHost}/${targetYear}/csetup?L=${league.id}&C=WAIVORD`;
 
 console.error(`\n${summary}`);
-await postToGroupMe({
-  botId: process.env.GROUPME_ROGER_BOT_ID,
-  text: summary,
+// The push carries the headline; the full per-franchise diff stays in the
+// Actions log above, which is where the fix gets made from anyway. A
+// notification body long enough to hold 24 rows is unreadable on a lock screen
+// and truncated by the OS regardless.
+const count = driftedFranchises.size;
+const alert = await sendOpsAlert({
+  league,
+  category: 'ops-league-setup',
+  title: 'AFL waiver order has drifted',
+  body:
+    `${count} franchise${count === 1 ? '' : 's'} out of constitutional order `
+    + `for ${targetYear}. MFL drops waiver priority at the rollover and no API can set it back — `
+    + 'it needs a hand fix on csetup.',
+  tag: `ops-waiver-order-${targetYear}`,
   dryRun: DRY_RUN,
-  checkStatus: true,
-  onDryRun: (t: string) => console.log(`\n[dry-run] would post to GroupMe:\n${t}`),
-  onMissingBotId: () => console.log('\nGROUPME_ROGER_BOT_ID unset — GroupMe post skipped.'),
 });
-process.exit(1);
+
+// Exit 0 when the alert actually went out. This used to exit 1 unconditionally,
+// which was right when the red X was the only durable signal — but the failure
+// watch now turns any failed scheduled run into its own push, so a deliberate
+// exit(1) here produced a SECOND, misleading alert ("AFL Waiver Order Check
+// failed") next to the accurate one, every week until the order was fixed.
+// A check that detected drift and reported it did its job.
+//
+// A failed SEND is the opposite case: then the red X is the only signal left,
+// and the watcher reporting it is exactly what should happen.
+if (alert?.skipped && !DRY_RUN) {
+  console.error(`\nDrift alert was NOT delivered (${alert.skipped}) — failing so the run is visible.`);
+  process.exit(1);
+}
+process.exit(0);

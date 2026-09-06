@@ -17,6 +17,7 @@
 
 import type { APIRoute } from 'astro';
 import { getAuthUser } from '../../../utils/auth';
+import { isAdminFranchise } from '../../../config/nav-config';
 import { json, JSON_HEADERS_NO_STORE } from '../../../utils/api-response';
 import { checkRateLimit } from '../../../utils/rate-limit';
 import { getLeagueById } from '../../../config/leagues';
@@ -38,15 +39,27 @@ function resolveCaller(request: Request) {
   if (!user?.franchiseId || !user.leagueId) return null;
   const league = getLeagueById(user.leagueId);
   if (!league) return null;
-  return { user, league };
+  // Offer exactly what can be DELIVERED. The send door gates ops categories on
+  // `isAdminFranchise` (it has a franchise id and no session), so gating the
+  // settings page on the broader `isCommissionerOrAdmin` — which also passes
+  // anyone holding the commissioner JWT role — would show that person toggles
+  // defaulted ON for alerts they can never receive. That is precisely the
+  // "toggle that silently does nothing" the registry's `live` flag exists to
+  // prevent, arrived at from the other direction.
+  //
+  // Still league-scoped, and deliberately from the session's own league: both
+  // leagues have a franchise 0001, so the nav slug has to come from the league
+  // this session belongs to rather than a default.
+  const recipient = { isAdmin: isAdminFranchise(user.franchiseId, league.navSlug) };
+  return { user, league, recipient };
 }
 
 export const GET: APIRoute = async ({ request }) => {
   const caller = resolveCaller(request);
   if (!caller) return json({ error: 'Authentication required' }, 401, headers);
-  const { user, league } = caller;
+  const { user, league, recipient } = caller;
 
-  const categories = visibleCategoriesForLeague(league);
+  const categories = visibleCategoriesForLeague(league, recipient);
   const stored = await readPreferences(league.id, user.franchiseId);
 
   return json(
@@ -61,7 +74,7 @@ export const GET: APIRoute = async ({ request }) => {
         defaultOn: c.defaultOn,
       })),
       // Effective values: the owner's explicit choice, or the default.
-      preferences: resolvePreferences(categories, stored, league),
+      preferences: resolvePreferences(categories, stored, league, recipient),
     },
     200,
     headers,
@@ -71,7 +84,7 @@ export const GET: APIRoute = async ({ request }) => {
 export const POST: APIRoute = async ({ request }) => {
   const caller = resolveCaller(request);
   if (!caller) return json({ error: 'Authentication required' }, 401, headers);
-  const { user, league } = caller;
+  const { user, league, recipient } = caller;
 
   const limit = await checkRateLimit(
     'push-preferences',
@@ -97,7 +110,10 @@ export const POST: APIRoute = async ({ request }) => {
   // Only categories this league actually offers. Without this, an owner in one
   // league could store a preference for a feature-gated category they do not
   // have, which would then apply if the feature were ever enabled.
-  const offered = new Set(visibleCategoriesForLeague(league).map((c) => c.id));
+  // Recipient-scoped too: a non-admin POSTing an admin-only id gets it dropped
+  // here rather than stored as a preference that would apply if they ever
+  // became an admin.
+  const offered = new Set(visibleCategoriesForLeague(league, recipient).map((c) => c.id));
   const next: Record<string, boolean> = {};
   for (const [id, value] of Object.entries(incoming)) {
     if (offered.has(id)) next[id] = value;
@@ -108,11 +124,11 @@ export const POST: APIRoute = async ({ request }) => {
     return json({ error: 'Could not save — storage unavailable' }, 503, headers);
   }
 
-  const categories = visibleCategoriesForLeague(league);
+  const categories = visibleCategoriesForLeague(league, recipient);
   return json(
     {
       success: true,
-      preferences: resolvePreferences(categories, next, league),
+      preferences: resolvePreferences(categories, next, league, recipient),
     },
     200,
     headers,

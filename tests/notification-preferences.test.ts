@@ -171,6 +171,71 @@ describe('isCategoryEnabled', () => {
   });
 });
 
+describe('admin-only ops categories', () => {
+  // The plumbing alerts (a cron died, an MFL setting drifted) moved off the
+  // group chat in Sep 2026, because they are an action item for one person and
+  // noise for the other eleven. The gate that makes that safe is `adminOnly`,
+  // and it has to hold in BOTH directions: invisible to owners, and actually
+  // reachable by an admin — a gate that fails closed for everyone would be a
+  // silent removal of the alerts rather than a re-routing of them.
+  const OPS_IDS = ['ops-job-failure', 'ops-league-setup'];
+  const ADMIN = { isAdmin: true };
+
+  it('marks every ops category adminOnly, so none can be added by accident', () => {
+    for (const c of NOTIFICATION_CATEGORIES) {
+      if (c.group === 'ops') expect(c.adminOnly, `${c.id}`).toBe(true);
+    }
+  });
+
+  it('hides them from an owner, and from a caller that never mentions a recipient', () => {
+    const shown = new Set(visibleCategoriesForLeague(FEATURES).map((c) => c.id));
+    const offered = new Set(categoriesForLeague(FEATURES).map((c) => c.id));
+    for (const id of OPS_IDS) {
+      expect(shown.has(id), `${id} shown to an owner`).toBe(false);
+      // The default matters as much as the explicit case: every existing call
+      // site passes no recipient, so an omitted argument must mean "not an
+      // admin" rather than "no opinion".
+      expect(offered.has(id), `${id} offered with no recipient given`).toBe(false);
+    }
+  });
+
+  it('offers them to an admin', () => {
+    const shown = new Set(visibleCategoriesForLeague(FEATURES, ADMIN).map((c) => c.id));
+    for (const id of OPS_IDS) expect(shown.has(id), `${id} hidden from an admin`).toBe(true);
+  });
+
+  it('refuses to send one to a non-admin even with the preference stored on', () => {
+    // The leak that would undo the whole point: a stored preference, or a
+    // fan-out payload naming the category, reaching all twelve owners.
+    for (const id of OPS_IDS) {
+      expect(isCategoryEnabled(id, { [id]: true }, FEATURES)).toBe(false);
+      expect(isCategoryEnabled(id, { [id]: true }, FEATURES, { isAdmin: false })).toBe(false);
+    }
+  });
+
+  it('sends to an admin by default — the point is not having to opt in', () => {
+    for (const id of OPS_IDS) {
+      expect(isCategoryEnabled(id, {}, FEATURES, ADMIN)).toBe(true);
+      // …and an admin can still turn one off.
+      expect(isCategoryEnabled(id, { [id]: false }, FEATURES, ADMIN)).toBe(false);
+    }
+  });
+
+  it('keeps the admin default-on set small too', () => {
+    // Same rule as the owner-facing set: an admin who never opens the page
+    // should hear only about things that are broken.
+    const on = visibleCategoriesForLeague(FEATURES, ADMIN).filter((c) => c.defaultOn);
+    expect(on.length).toBeLessThanOrEqual(7);
+  });
+
+  it('offers them in both leagues — admin-ness is about the person, not the league', () => {
+    for (const league of [FEATURES, AFL_FEATURES]) {
+      const shown = new Set(visibleCategoriesForLeague(league, ADMIN).map((c) => c.id));
+      for (const id of OPS_IDS) expect(shown.has(id)).toBe(true);
+    }
+  });
+});
+
 describe('preference storage', () => {
   it('keys per league AND franchise — the two leagues share franchise ids', () => {
     expect(preferencesKey('13522', '0001')).toBe('push:prefs:13522:0001');

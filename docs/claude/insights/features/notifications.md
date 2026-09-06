@@ -157,3 +157,58 @@ declared URL as members of that family.
 `start_url` are `/`, every badge has real transparency and no non-white pixels,
 no league reuses its icon as its badge, and the committed art matches the
 generator's `--check`.
+
+## 2026-09-06 — The league's plumbing got its own audience: `adminOnly` categories
+
+**Context:** the pre-kickoff gameday health check was deleted because it posted
+infrastructure failures to the group chat. Removing it exposed the real problem
+— the chat was the only channel the plumbing had, and it is the wrong one. A
+failed cron is an action item for one person and noise for the other eleven,
+and the chat is capped at one automated post a day: a budget spent telling
+owners a sync died is a budget not spent on owners.
+
+**The shape.** A fourth gate on the category registry, alongside
+`requiresFeature` and `requiresOwnersPoll`:
+
+```ts
+adminOnly?: true;   // gated on the RECIPIENT, not the league
+```
+
+That distinction is the whole design. The existing gates ask *what can this
+league send*; this one asks *who is being sent to*, so the same category is
+offered in both leagues, to different people. The gate functions take an
+optional `NotificationRecipient` and **default to not-an-admin** — an omitted
+argument can hide a category but can never reveal one, which is what let every
+existing call site stay untouched and still be correct.
+
+**Admin-ness is resolved at the send door, never passed to it.**
+`sendPushToFranchise` computes `isAdminFranchise(franchiseId, league.navSlug)`
+itself. This is not ceremony: `/api/cron/push-fanout` builds its recipient list
+from a request body, so a caller-supplied `isAdmin` would let one authenticated
+cron call address the plumbing alerts to all twelve owners — the group-chat
+problem again, through a worse channel. The settings API does the same from the
+session (`isCommissionerOrAdmin`, already league-scoped), so a non-admin cannot
+even store a preference for one.
+
+**Two senders moved in.** The AFL waiver-order drift check (was: GroupMe) and a
+new hourly job-failure watch. The second closes a gap nobody had noticed: 25
+workflows run on a cron and only three said anything when they broke. Within a
+minute of the watcher's first real-data run, it surfaced a `Sync Owner Last
+Visit` failure from that morning that had gone entirely unremarked.
+
+**Three rules the failure watcher encodes, each a way it could have failed:**
+- **Dedupe per workflow, not per run.** A 15-minute cron failing all day is one
+  broken thing; without this it is 96 notifications and the category gets muted
+  inside a week — the same dynamic as a default-on firehose costing push
+  permission outright.
+- **Advance the watermark to the newest run SEEN, not to `now`.** A run
+  finishing mid-flight would land before a `now` watermark and never be alerted
+  on: a silent miss by the job whose entire purpose is preventing silent misses.
+- **First run seeds and stays quiet.** Same rule as the player-news push. With
+  no watermark every failure in GitHub's retention window reads as new, and
+  opening with twenty alerts for failures already dealt with teaches the reader
+  to swipe the whole category away.
+
+**Scoping note for anyone adding one:** PR checks are deliberately out of
+scope. They already announce themselves on the pull request, and alerting on
+them would bury the one signal that has no other home.

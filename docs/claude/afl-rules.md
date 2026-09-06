@@ -174,7 +174,9 @@ form (`--dry-run` by default; success is judged by RE-READING the live order,
 never by MFL's response, because a silent no-op is this endpoint's real failure
 mode). **`scripts/check-afl-waiver-order.ts` (weekly, `AFL Waiver Order
 Check`) is the safety net**: it recomputes the order and compares it to the live
-league, alerting GroupMe on drift. It goes quiet once the season's first waiver
+league, pushing an `ops-league-setup` alert to the league's admins on drift
+(it posted to GroupMe until Sep 2026 — re-entering the order is a hand edit
+exactly one person can make, so it was noise for everyone else). It goes quiet once the season's first waiver
 transaction lands, because a rolling order is *supposed* to move after that —
 forgetting to set the order, not mistyping it, is what actually went wrong in
 2026. Unblocking it means replacing the transport with a replay of MFL's

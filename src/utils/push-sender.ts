@@ -18,6 +18,7 @@ import { getSubscriptions, pruneSubscriptions } from './push-subscriptions';
 import { readPreferences } from './push-preferences';
 import { isCategoryEnabled } from '../config/notification-categories';
 import { getLeagueById } from '../config/leagues';
+import { isAdminFranchise } from '../config/nav-config';
 
 export interface PushPayload {
   title: string;
@@ -82,7 +83,12 @@ export async function sendPushToFranchise(
     return result;
   }
   const stored = await readPreferences(leagueId, franchiseId);
-  if (!isCategoryEnabled(category, stored, league)) return result;
+  // Admin-ness is RESOLVED here from the franchise id, never passed in. Every
+  // push in the app comes through this door, including the cron fan-out route
+  // whose body is attacker-shaped input; a caller-supplied `isAdmin` would let
+  // one request address the league's plumbing alerts to all twelve owners.
+  const recipient = { isAdmin: isAdminFranchise(franchiseId, league.navSlug) };
+  if (!isCategoryEnabled(category, stored, league, recipient)) return result;
 
   let webpush: typeof import('web-push') | null = null;
   try {

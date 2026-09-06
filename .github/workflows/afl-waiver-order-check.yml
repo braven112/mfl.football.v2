@@ -23,7 +23,7 @@ on:
   workflow_dispatch:
     inputs:
       dry_run:
-        description: "Never post to GroupMe, just print"
+        description: "Never send the alert, just print"
         type: boolean
         required: false
         default: false
@@ -48,7 +48,7 @@ jobs:
 
       - name: Check waiver order
         env:
-          GROUPME_ROGER_BOT_ID: ${{ secrets.GROUPME_ROGER_BOT_ID }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
         run: |
           ARGS=""
           if [ "${{ inputs.dry_run }}" = "true" ]; then ARGS="--dry-run"; fi

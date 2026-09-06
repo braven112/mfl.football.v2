@@ -1,0 +1,67 @@
+name: Job Failure Watch
+
+# Pushes an alert to the league's admins when a SCHEDULED job fails.
+#
+# 25 workflows in this repo run on a cron. Three open a GitHub issue when they
+# break; the rest went red in a tab nobody has open, which is how a monitor
+# stops monitoring without anyone noticing (see the 2026-09-03 entry in
+# docs/claude/insights/features/live-scoring.md — the health check that was
+# removed had that failure mode built in).
+#
+# PR checks are deliberately out of scope: they already announce themselves on
+# the pull request. This watches `schedule` and `workflow_dispatch` runs only.
+#
+# Hourly at :41 — off the top of the hour so it does not join the cron
+# stampede it exists to watch, and an hour is well inside the window where a
+# failed sync still matters but a phone buzzing about it does not.
+#
+# To disable, comment out the cron line — no vars.* feature gates (CLAUDE.md).
+
+on:
+  schedule:
+    - cron: "41 * * * *"
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Print what would be sent, send nothing, move no watermark"
+        type: boolean
+        required: false
+        default: false
+
+concurrency:
+  group: job-failure-watch
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  watch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup pnpm + Node + install
+        uses: ./.github/actions/setup
+
+      - name: Push new scheduled-job failures
+        env:
+          # Reads the Actions runs API for this repo (permissions: actions: read).
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          # Both pairs, matching every other Redis-backed job here: the config
+          # resolver falls back UPSTASH_* → KV_* → STORAGE_*, and passing only
+          # one pair means the watermark silently vanishes if the other is what
+          # is actually set.
+          UPSTASH_REDIS_REST_URL: ${{ secrets.UPSTASH_REDIS_REST_URL }}
+          UPSTASH_REDIS_REST_TOKEN: ${{ secrets.UPSTASH_REDIS_REST_TOKEN }}
+          KV_REST_API_URL: ${{ secrets.KV_REST_API_URL }}
+          KV_REST_API_TOKEN: ${{ secrets.KV_REST_API_TOKEN }}
+          TZ: America/Los_Angeles
+        run: |
+          ARGS=""
+          if [ "${{ inputs.dry_run }}" = "true" ]; then ARGS="--dry-run"; fi
+          node scripts/push-job-failures.mjs $ARGS
