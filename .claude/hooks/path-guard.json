@@ -565,7 +565,8 @@
         "scripts/owners-poll-window.mjs",
         "scripts/generate-pecking-order.mjs",
         "src/pages/*/pecking-order/ballot.astro",
-        "src/pages/*/pecking-order/voters.astro"
+        "src/pages/*/pecking-order/voters.astro",
+        "src/pages/*/lineup.astro"
       ],
       "tests": [
         "tests/owners-poll-ballot.test.ts",
@@ -574,7 +575,8 @@
         "tests/owners-poll-math.test.ts",
         "tests/owners-poll-window.test.ts",
         "tests/owners-poll-voters.test.ts",
-        "tests/owners-poll-posts.test.ts"
+        "tests/owners-poll-posts.test.ts",
+        "tests/owners-poll-lineup-styles.test.ts"
       ]
     }
   ]

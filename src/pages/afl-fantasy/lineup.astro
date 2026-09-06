@@ -16,6 +16,13 @@ export const prerender = false;
 
 import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
 import LineupBallotStrip from '../../components/shared/owners-poll/LineupBallotStrip';
+// The strip and the BallotBuilder inside it are React islands, and React
+// components here import no CSS of their own — so the PAGE has to bring the
+// stylesheet or an open ballot renders as unstyled divs. The ballot and
+// voters pages are safe without this because their shared *Astro* component
+// imports it; a page rendering the island directly is the one case that must
+// remember. Pinned by tests/owners-poll-lineup-styles.test.ts.
+import '../../styles/owners-poll.css';
 import { getLeagueTeamBrands } from '../../utils/league-team-brands';
 import PlayerCell from '../../components/theleague/PlayerCell.astro';
 import { getAuthUser } from '../../utils/auth';
