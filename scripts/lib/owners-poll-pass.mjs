@@ -346,7 +346,7 @@ export function buildRevealMessage({ league, issue, teams, callback = null }) {
     .sort((a, b) => b.homerIndex - a.homerIndex)[0];
   if (homer && homer.homerIndex > 0) {
     lines.push(
-      `🏠 Homer of the week: ${name(homer.franchiseId)}, ${homer.homerIndex} spots above where the room has them.`,
+      `🏠 Homer of the week: ${name(homer.franchiseId)}, ${homer.homerIndex} spots above where the column has them.`,
     );
   }
 
