@@ -414,17 +414,68 @@ const themePref = getThemePreference(Astro.cookies);
 			</script>
 		)}
 
-		<!-- Owner visit tracker — fire-and-forget beacon for logged-in users -->
+		<!-- Visit tracker — fire-and-forget beacon.
+		     Signed in it records last-seen + page popularity; signed out the
+		     server keeps only the anonymous PWA-vs-browser count. -->
 		<script>
 			const DEBOUNCE_KEY = 'mfl:lastTrackVisit';
 			const DEBOUNCE_MS = 60_000;
+
+			/**
+			 * Installed app or browser tab? Only the CLIENT can answer this —
+			 * both send identical requests — so the beacon carries the answer.
+			 * `display-mode` covers Android/desktop installs and every display
+			 * mode a manifest can ask for (a manifest change to `fullscreen` or
+			 * `minimal-ui` must not silently start reporting "browser");
+			 * `navigator.standalone` is iOS Safari's older, non-standard flag,
+			 * still the only signal for a home-screen app there.
+			 */
+			function detectSurface() {
+				try {
+					const installed = ['standalone', 'fullscreen', 'minimal-ui'].some(
+						(mode) => window.matchMedia(`(display-mode: ${mode})`).matches,
+					);
+					return installed || (navigator as any).standalone === true ? 'pwa' : 'browser';
+				} catch (_) {
+					return 'browser';
+				}
+			}
+
+			/**
+			 * Coarse platform bucket. iPadOS reports itself as a Macintosh, so
+			 * the touch-point check is what keeps an installed iPad app out of
+			 * the desktop bucket.
+			 */
+			function detectPlatform() {
+				try {
+					const ua = navigator.userAgent || '';
+					if (/android/i.test(ua)) return 'android';
+					if (/iPhone|iPad|iPod/i.test(ua)) return 'ios';
+					if (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1) return 'ios';
+					if (/Windows|Macintosh|Linux|CrOS/i.test(ua)) return 'desktop';
+					return 'other';
+				} catch (_) {
+					return 'other';
+				}
+			}
+
 			function trackVisit() {
 				try {
 					const last = Number(sessionStorage.getItem(DEBOUNCE_KEY) || '0');
 					if (Date.now() - last < DEBOUNCE_MS) return;
 					sessionStorage.setItem(DEBOUNCE_KEY, Date.now().toString());
 					const page = location.pathname.replace(/^\/theleague/, '') || '/';
-					navigator.sendBeacon(`/api/track-visit?page=${encodeURIComponent(page)}`);
+					// `league` is only read on the logged-out path — the signed-in
+					// one takes the league from the session — and the server
+					// validates it against the registry either way.
+					const league = document.documentElement.dataset.league || '';
+					const params = new URLSearchParams({
+						page,
+						surface: detectSurface(),
+						platform: detectPlatform(),
+						league,
+					});
+					navigator.sendBeacon(`/api/track-visit?${params}`);
 				} catch (_) {}
 			}
 			document.addEventListener('astro:page-load', trackVisit);

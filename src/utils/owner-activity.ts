@@ -9,6 +9,16 @@
 
 import { getRedis } from './redis-client';
 import { describeMoveType, type MflMove } from './mfl-activity';
+import {
+	summarizeSurfaces,
+	surfaceField,
+	parseSurfaceField,
+	subtractSurfaces,
+	EMPTY_SURFACE_BREAKDOWN,
+	type SurfaceBreakdown,
+	type VisitContext,
+	type VisitPlatform,
+} from './visit-surface';
 
 export type ActivityLevel = 'active' | 'idle' | 'dormant' | 'unknown';
 
@@ -35,17 +45,58 @@ function ownerPageKey(leagueId: string, franchiseId: string): string {
 }
 
 /**
- * Lua script bundling the four writes recordVisit needs into a single
- * EVAL call. Upstash bills EVAL as one command regardless of how many
- * `redis.call(...)` lines the script contains, so this takes a ~5-command
- * operation (HSET + 3× HINCRBY + EXPIRE-on-every-call) down to 1 command
- * per visit. The EXPIRE guard uses TTL < 0 so it only fires the first
- * time we touch the pageview key each day.
+ * Surface counters (installed PWA vs browser tab, by platform).
  *
- * KEYS[1] activity hash        ARGV[1] franchiseId
- * KEYS[2] daily pageview hash  ARGV[2] now-ms timestamp string
- * KEYS[3] global pages hash    ARGV[3] pageview TTL seconds
- * KEYS[4] owner pages hash     ARGV[4] normalized page path
+ * Three keys, all plain hashes of `<surface>:<platform>` → count, all
+ * unexpiring: they are lifetime totals, and the report reads them as shares
+ * rather than as a time series.
+ *
+ * - `surface:{leagueId}`        every visit, signed in or not
+ * - `surface:{leagueId}:anon`   the logged-out subset of the same visits
+ * - `surface:{leagueId}:f:{id}` one owner's visits
+ *
+ * The anon hash is a SUBSET of the league-wide one rather than its complement,
+ * so an anonymous visit costs one extra HINCRBY instead of a second endpoint;
+ * signed-in traffic is the difference (`subtractSurfaces`). The `:f:` infix
+ * keeps an owner key from ever colliding with the literal `anon` suffix.
+ */
+function leagueSurfaceKey(leagueId: string): string {
+	return `surface:${leagueId}`;
+}
+
+function anonSurfaceKey(leagueId: string): string {
+	return `surface:${leagueId}:anon`;
+}
+
+function ownerSurfaceKey(leagueId: string, franchiseId: string): string {
+	return `surface:${leagueId}:f:${franchiseId}`;
+}
+
+/** Hash of franchiseId → the surface field their most recent visit came from. */
+function lastSurfaceKey(leagueId: string): string {
+	return `surface-last:${leagueId}`;
+}
+
+/**
+ * Lua script bundling the writes recordVisit needs into a single EVAL call.
+ * Upstash bills EVAL as one command regardless of how many `redis.call(...)`
+ * lines the script contains, so this takes a ~8-command operation (HSET +
+ * 3× HINCRBY + EXPIRE-on-every-call + 3 surface writes) down to 1 command per
+ * visit. The EXPIRE guard uses TTL < 0 so it only fires the first time we
+ * touch the pageview key each day.
+ *
+ * The surface writes are skipped when ARGV[5] is empty — a beacon from a
+ * client that reported no usable surface still records the visit itself, it
+ * just adds nothing to the PWA-vs-browser split. Guarding INSIDE the script
+ * keeps the KEYS list a fixed length in both cases.
+ *
+ * KEYS[1] activity hash          ARGV[1] franchiseId
+ * KEYS[2] daily pageview hash    ARGV[2] now-ms timestamp string
+ * KEYS[3] global pages hash      ARGV[3] pageview TTL seconds
+ * KEYS[4] owner pages hash       ARGV[4] normalized page path
+ * KEYS[5] league surface hash    ARGV[5] surface field, or '' to skip
+ * KEYS[6] owner surface hash
+ * KEYS[7] last-surface hash
  */
 const RECORD_VISIT_LUA = `
 redis.call('HSET', KEYS[1], ARGV[1], ARGV[2])
@@ -55,26 +106,49 @@ if redis.call('TTL', KEYS[2]) < 0 then
 end
 redis.call('HINCRBY', KEYS[3], ARGV[4], 1)
 redis.call('HINCRBY', KEYS[4], ARGV[4], 1)
+if ARGV[5] ~= '' then
+  redis.call('HINCRBY', KEYS[5], ARGV[5], 1)
+  redis.call('HINCRBY', KEYS[6], ARGV[5], 1)
+  redis.call('HSET', KEYS[7], ARGV[1], ARGV[5])
+end
 return 1
 `;
 
-/** Record a visit for a franchise (updates last-seen, daily page view count, and page popularity) */
-export async function recordVisit(leagueId: string, franchiseId: string, page = '/'): Promise<void> {
+/**
+ * Record a visit for a franchise: last-seen, daily page view count, page
+ * popularity, and — when the client reported one — which surface (installed
+ * PWA vs browser tab, and on what platform) the visit came from.
+ */
+export async function recordVisit(
+	leagueId: string,
+	franchiseId: string,
+	page = '/',
+	visit: VisitContext | null = null,
+): Promise<void> {
 	const redis = await getRedis();
 	if (!redis) return;
 	const today = todayISO();
 	const pvKey = pageviewKey(leagueId, today);
 	// Normalize page path: strip query params, trailing slashes
 	const normalizedPage = page.split('?')[0].replace(/\/+$/, '') || '/';
+	const field = visit ? surfaceField(visit) : '';
 
 	try {
 		await redis.eval(
 			RECORD_VISIT_LUA,
-			[redisKey(leagueId), pvKey, globalPageKey(leagueId), ownerPageKey(leagueId, franchiseId)],
-			[franchiseId, Date.now().toString(), PAGEVIEW_TTL_SECONDS, normalizedPage],
+			[
+				redisKey(leagueId),
+				pvKey,
+				globalPageKey(leagueId),
+				ownerPageKey(leagueId, franchiseId),
+				leagueSurfaceKey(leagueId),
+				ownerSurfaceKey(leagueId, franchiseId),
+				lastSurfaceKey(leagueId),
+			],
+			[franchiseId, Date.now().toString(), PAGEVIEW_TTL_SECONDS, normalizedPage, field],
 		);
 	} catch (err) {
-		// Older Redis/Upstash instances without EVAL fall back to the 5-command
+		// Older Redis/Upstash instances without EVAL fall back to the multi-command
 		// path so tracking keeps working even if the script layer is unavailable.
 		console.warn('[owner-activity] EVAL failed, falling back to pipelined writes:', err);
 		await Promise.all([
@@ -82,6 +156,48 @@ export async function recordVisit(leagueId: string, franchiseId: string, page = 
 			redis.hincrby(pvKey, franchiseId, 1).then(() => redis.expire(pvKey, PAGEVIEW_TTL_SECONDS)),
 			redis.hincrby(globalPageKey(leagueId), normalizedPage, 1),
 			redis.hincrby(ownerPageKey(leagueId, franchiseId), normalizedPage, 1),
+			...(field
+				? [
+						redis.hincrby(leagueSurfaceKey(leagueId), field, 1),
+						redis.hincrby(ownerSurfaceKey(leagueId, franchiseId), field, 1),
+						redis.hset(lastSurfaceKey(leagueId), { [franchiseId]: field }),
+					]
+				: []),
+		]);
+	}
+}
+
+/**
+ * Two HINCRBYs for a logged-out visit: the league-wide hash and its anon
+ * subset. Nothing identifying is written — there is no franchise, no page and
+ * no timestamp here, because a visitor we cannot name is only ever counted.
+ */
+const RECORD_ANON_SURFACE_LUA = `
+redis.call('HINCRBY', KEYS[1], ARGV[1], 1)
+redis.call('HINCRBY', KEYS[2], ARGV[1], 1)
+return 1
+`;
+
+/** Count one logged-out visit toward the league's PWA-vs-browser split. */
+export async function recordAnonymousSurface(
+	leagueId: string,
+	visit: VisitContext,
+): Promise<void> {
+	const redis = await getRedis();
+	if (!redis) return;
+	const field = surfaceField(visit);
+
+	try {
+		await redis.eval(
+			RECORD_ANON_SURFACE_LUA,
+			[leagueSurfaceKey(leagueId), anonSurfaceKey(leagueId)],
+			[field],
+		);
+	} catch (err) {
+		console.warn('[owner-activity] anon surface EVAL failed, falling back:', err);
+		await Promise.all([
+			redis.hincrby(leagueSurfaceKey(leagueId), field, 1),
+			redis.hincrby(anonSurfaceKey(leagueId), field, 1),
 		]);
 	}
 }
@@ -384,4 +500,140 @@ export async function getAllOwnerPagePopularity(
 		out[franchiseIds[i]] = parsePageCounts(results[i]);
 	}
 	return out;
+}
+
+/**
+ * Every surface counter a league has, in one round trip.
+ *
+ * `signedIn` is derived rather than stored (see the key comment above), so it
+ * is a plain total-and-share rather than a full breakdown — the per-platform
+ * split of signed-in traffic is already visible per owner below it.
+ */
+export interface LeagueSurfaceReport {
+	/** Every visit, signed in or not. */
+	all: SurfaceBreakdown;
+	/** The logged-out subset. */
+	anonymous: SurfaceBreakdown;
+	/** `all` minus `anonymous`. */
+	signedIn: { total: number; pwa: number; browser: number; pwaShare: number };
+}
+
+export async function getLeagueSurfaceReport(leagueId: string): Promise<LeagueSurfaceReport> {
+	const redis = await getRedis();
+	if (!redis) {
+		return {
+			all: EMPTY_SURFACE_BREAKDOWN,
+			anonymous: EMPTY_SURFACE_BREAKDOWN,
+			signedIn: { total: 0, pwa: 0, browser: 0, pwaShare: 0 },
+		};
+	}
+
+	const [allRaw, anonRaw] = await Promise.all([
+		redis.hgetall<string>(leagueSurfaceKey(leagueId)),
+		redis.hgetall<string>(anonSurfaceKey(leagueId)),
+	]);
+
+	const all = summarizeSurfaces(allRaw);
+	const anonymous = summarizeSurfaces(anonRaw);
+	return { all, anonymous, signedIn: subtractSurfaces(all, anonymous) };
+}
+
+/** Per-owner surface breakdowns for a whole league. */
+export async function getAllOwnerSurfaces(
+	leagueId: string,
+	franchiseIds: string[],
+): Promise<Record<string, SurfaceBreakdown>> {
+	const redis = await getRedis();
+	if (!redis) return {};
+	const results = await Promise.all(
+		franchiseIds.map((id) => redis.hgetall<string>(ownerSurfaceKey(leagueId, id))),
+	);
+	const out: Record<string, SurfaceBreakdown> = {};
+	for (let i = 0; i < franchiseIds.length; i++) {
+		out[franchiseIds[i]] = summarizeSurfaces(results[i]);
+	}
+	return out;
+}
+
+/** franchiseId → the surface their most recent visit came from. */
+export async function getLastSurfaces(
+	leagueId: string,
+): Promise<Record<string, VisitContext>> {
+	const redis = await getRedis();
+	if (!redis) return {};
+	const raw = await redis.hgetall<string>(lastSurfaceKey(leagueId));
+	if (!raw) return {};
+	const out: Record<string, VisitContext> = {};
+	for (const [franchiseId, field] of Object.entries(raw)) {
+		const ctx = parseSurfaceField(String(field));
+		if (ctx) out[franchiseId] = ctx;
+	}
+	return out;
+}
+
+/** Everything the Owner Activity report needs about visit surfaces. */
+export interface SurfaceSection {
+	surfaces: LeagueSurfaceReport;
+	ownerSurfaces: Record<string, SurfaceBreakdown>;
+	lastSurfaces: Record<string, VisitContext>;
+}
+
+/**
+ * One call for the whole App-vs-Browser section. Both league pages are forked
+ * siblings (`tests/page-fork-ratchet.test.ts`) — bundling the three reads here
+ * keeps the addition to two lines on each side instead of a block that can
+ * drift.
+ */
+export async function getSurfaceSection(
+	leagueId: string,
+	franchiseIds: string[],
+): Promise<SurfaceSection> {
+	const [surfaces, ownerSurfaces, lastSurfaces] = await Promise.all([
+		getLeagueSurfaceReport(leagueId),
+		getAllOwnerSurfaces(leagueId, franchiseIds),
+		getLastSurfaces(leagueId),
+	]);
+	return { surfaces, ownerSurfaces, lastSurfaces };
+}
+
+/**
+ * Deterministic stand-in for the `?mock=true` preview path, so the section can
+ * be designed and reviewed before any real visit has been recorded. The shape
+ * is the interesting part: a league where the app is the majority surface on
+ * phones and a rounding minority overall, plus owners on both sides of it.
+ */
+export function mockSurfaceSection(franchiseIds: string[]): SurfaceSection {
+	const perOwner: Record<string, SurfaceBreakdown> = {};
+	const lastSurfaces: Record<string, VisitContext> = {};
+	const platforms: VisitPlatform[] = ['ios', 'android', 'desktop'];
+	const raw: Record<string, number> = {};
+
+	franchiseIds.forEach((franchiseId, i) => {
+		const platform = platforms[i % platforms.length];
+		// Every third owner is a browser holdout; the rest lean on the app.
+		const pwa = i % 3 === 2 ? 4 + i : 40 + i * 6;
+		const browser = i % 3 === 2 ? 60 + i * 3 : 12 + i;
+		perOwner[franchiseId] = summarizeSurfaces({
+			[`pwa:${platform}`]: pwa,
+			[`browser:${platform}`]: browser,
+		});
+		lastSurfaces[franchiseId] = { surface: pwa >= browser ? 'pwa' : 'browser', platform };
+		raw[`pwa:${platform}`] = (raw[`pwa:${platform}`] ?? 0) + pwa;
+		raw[`browser:${platform}`] = (raw[`browser:${platform}`] ?? 0) + browser;
+	});
+
+	// Logged-out traffic is browser-heavy by nature — nobody installs a site
+	// they have not signed into — so the anon subset skews the other way.
+	const anonRaw = { 'browser:desktop': 180, 'browser:ios': 90, 'pwa:ios': 8 };
+	for (const [field, count] of Object.entries(anonRaw)) {
+		raw[field] = (raw[field] ?? 0) + count;
+	}
+
+	const all = summarizeSurfaces(raw);
+	const anonymous = summarizeSurfaces(anonRaw);
+	return {
+		surfaces: { all, anonymous, signedIn: subtractSurfaces(all, anonymous) },
+		ownerSurfaces: perOwner,
+		lastSurfaces,
+	};
 }

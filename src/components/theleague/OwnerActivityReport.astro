@@ -3,7 +3,13 @@
 // each page (theleague / afl-fantasy) does its own data fetching + color
 // resolution, then hands the prepared data to this component to render.
 import Breadcrumbs from './Breadcrumbs.astro';
-import { type OwnerActivityRow } from '../../utils/owner-activity';
+import { type OwnerActivityRow, type LeagueSurfaceReport } from '../../utils/owner-activity';
+import {
+	describePlatform,
+	describeSurface,
+	type SurfaceBreakdown,
+	type VisitContext,
+} from '../../utils/visit-surface';
 import pageDirectory from '../../data/page-directory.json';
 
 const PAGE_NAMES: Record<string, string> = Object.fromEntries(
@@ -53,6 +59,15 @@ interface Props {
 	// AFL (no auction) overrides these to surface waiver claims instead.
 	thirdStatLabel?: string;
 	txSubtitle?: string;
+	/**
+	 * PWA-vs-browser counters. Optional so a league (or a Redis outage) with
+	 * none simply drops the section rather than rendering an empty one.
+	 */
+	surfaces?: LeagueSurfaceReport;
+	/** franchiseId → that owner's own app/browser split. */
+	ownerSurfaces?: Record<string, SurfaceBreakdown>;
+	/** franchiseId → the surface their most recent visit came from. */
+	lastSurfaces?: Record<string, VisitContext>;
 }
 
 const {
@@ -66,9 +81,16 @@ const {
 	chartDates,
 	thirdStatLabel = 'Auctions',
 	txSubtitle = 'Trades, free agent moves, and auction wins this season',
+	surfaces,
+	ownerSurfaces = {},
+	lastSurfaces = {},
 } = Astro.props;
 
 const hasAnyData = teams.some((t) => t.lastSeen !== null);
+// The surface split only exists for visits recorded since it shipped, so an
+// empty total is the normal state on day one — show nothing rather than a row
+// of zeroes claiming everyone browses.
+const hasSurfaceData = (surfaces?.all.total ?? 0) > 0;
 const hasChartData = chartTeams.some((t) => t.values.some((v) => v > 0));
 ---
 
@@ -217,6 +239,77 @@ const hasChartData = chartTeams.some((t) => t.values.some((v) => v > 0));
 		</div>
 	)}
 
+	<!-- App vs Browser -->
+	{hasSurfaceData && surfaces && (
+		<div class="surface-split" style="margin-top:2rem">
+			<div class="section-header">
+				<h2 class="section-header__title">App vs Browser</h2>
+				<p class="section-header__sub">
+					How visitors get here — the installed app on a home screen, or a browser tab.
+					Counted for everyone, signed in or not, since {' '}
+					<abbr title="Progressive Web App — the site installed to a home screen or dock">PWA</abbr>
+					{' '} tracking began.
+				</p>
+			</div>
+
+			<div class="surface-split__cards">
+				<div class="surface-card" data-surface="pwa">
+					<span class="surface-card__label">Installed App</span>
+					<span class="surface-card__value">{surfaces.all.pwaShare}%</span>
+					<span class="surface-card__sub">{surfaces.all.pwa.toLocaleString()} visits</span>
+				</div>
+				<div class="surface-card" data-surface="browser">
+					<span class="surface-card__label">Browser</span>
+					<span class="surface-card__value">{100 - surfaces.all.pwaShare}%</span>
+					<span class="surface-card__sub">{surfaces.all.browser.toLocaleString()} visits</span>
+				</div>
+				<div class="surface-card">
+					<span class="surface-card__label">Signed In</span>
+					<span class="surface-card__value">{surfaces.signedIn.total.toLocaleString()}</span>
+					<span class="surface-card__sub">{surfaces.signedIn.pwaShare}% from the app</span>
+				</div>
+				<div class="surface-card">
+					<span class="surface-card__label">Signed Out</span>
+					<span class="surface-card__value">{surfaces.anonymous.total.toLocaleString()}</span>
+					<span class="surface-card__sub">{surfaces.anonymous.pwaShare}% from the app</span>
+				</div>
+			</div>
+
+			<div class="table-wrapper">
+			<table class="activity-table" aria-label="Visits by platform, split between the installed app and a browser">
+				<thead>
+					<tr>
+						<th scope="col" class="activity-table__th">Platform</th>
+						<th scope="col" class="activity-table__th activity-table__th--stat">App</th>
+						<th scope="col" class="activity-table__th activity-table__th--stat">Browser</th>
+						<th scope="col" class="activity-table__th activity-table__th--stat">Total</th>
+						<th scope="col" class="activity-table__th">Split</th>
+					</tr>
+				</thead>
+				<tbody>
+					{surfaces.all.platforms.map((row) => (
+						<tr class="activity-table__row">
+							<td class="activity-table__td">{row.label}</td>
+							<td class="activity-table__td activity-table__td--stat">{row.pwa.toLocaleString()}</td>
+							<td class="activity-table__td activity-table__td--stat">{row.browser.toLocaleString()}</td>
+							<td class="activity-table__td activity-table__td--stat">{row.total.toLocaleString()}</td>
+							<td class="activity-table__td">
+								<span
+									class="surface-bar"
+									role="img"
+									aria-label={`${Math.round((row.pwa / row.total) * 100)}% app, ${100 - Math.round((row.pwa / row.total) * 100)}% browser`}
+								>
+									<span class="surface-bar__pwa" style={`width:${Math.round((row.pwa / row.total) * 100)}%`}></span>
+								</span>
+							</td>
+						</tr>
+					))}
+				</tbody>
+			</table>
+			</div>
+		</div>
+	)}
+
 	<!-- Last Seen Table -->
 	<div class="section-header" style="margin-top:2rem">
 		<h2 class="section-header__title">Last Seen</h2>
@@ -272,6 +365,20 @@ const hasChartData = chartTeams.some((t) => t.values.some((v) => v > 0));
 								{team.lastSeen !== null && (
 									<span class="activity-seen__breakdown">
 										<span>Site: {team.siteTimeAgo || 'never'}</span>
+										{lastSurfaces[team.franchiseId] && (
+											<Fragment>
+												<span aria-hidden="true">·</span>
+												<span>
+													On {describeSurface(lastSurfaces[team.franchiseId].surface)}
+													{' '}({describePlatform(lastSurfaces[team.franchiseId].platform)})
+													{(ownerSurfaces[team.franchiseId]?.total ?? 0) > 0 && (
+														<Fragment>
+															{' '}— {ownerSurfaces[team.franchiseId].pwaShare}% app
+														</Fragment>
+													)}
+												</span>
+											</Fragment>
+										)}
 										{team.mflVisitTimeAgo && (
 											<Fragment>
 												<span aria-hidden="true">·</span>
@@ -835,6 +942,73 @@ const hasChartData = chartTeams.some((t) => t.values.some((v) => v > 0));
 	.activity-team__name {
 		font-weight: 500;
 		color: var(--color-gray-700, #374151);
+	}
+
+	/* ── App vs Browser ──
+	   Four stat cards over a per-platform table. Colors come from the same
+	   tokens the tables use (`--card-bg`, `--content-border`, the gray ramp),
+	   so the section follows the theme without its own dark-mode palette; the
+	   one thing that needs a dark rule is the hairline, which the cards carry
+	   as a box-shadow exactly like `.activity-table` does. */
+	.surface-split__cards {
+		display: grid;
+		grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+		gap: 0.75rem;
+		margin-bottom: 1rem;
+	}
+
+	.surface-card {
+		display: flex;
+		flex-direction: column;
+		gap: 0.125rem;
+		padding: 0.75rem 0.875rem;
+		border-radius: var(--radius-md, 0.375rem);
+		background: var(--card-bg, #fff);
+		box-shadow: 0 0 0 1px var(--content-border, var(--color-gray-200, #e5e7eb));
+	}
+
+	.surface-card__label {
+		font-size: 0.625rem;
+		font-weight: 700;
+		letter-spacing: 0.03em;
+		text-transform: uppercase;
+		color: var(--color-gray-500, #6b7280);
+	}
+
+	.surface-card__value {
+		font-size: 1.5rem;
+		font-weight: 700;
+		line-height: 1.1;
+		font-variant-numeric: tabular-nums;
+		color: var(--page-text, #111827);
+	}
+
+	.surface-card[data-surface='pwa'] .surface-card__value {
+		color: var(--color-primary, #1c497c);
+	}
+
+	.surface-card__sub {
+		font-size: 0.6875rem;
+		color: var(--color-gray-500, #6b7280);
+	}
+
+	/* Two-tone bar: the filled half is app traffic, the track is the browser
+	   remainder. The row's own numbers carry the values — this is a shape, so
+	   it takes an aria-label and nothing else. */
+	.surface-bar {
+		display: block;
+		width: 100%;
+		min-width: 4rem;
+		height: 0.5rem;
+		border-radius: 999px;
+		overflow: hidden;
+		background: color-mix(in srgb, var(--page-text, #111827) 12%, transparent);
+	}
+
+	.surface-bar__pwa {
+		display: block;
+		height: 100%;
+		background: var(--color-primary, #1c497c);
 	}
 
 	/* ── Last Seen cell ──
