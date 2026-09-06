@@ -114,13 +114,22 @@ const PARALLEL = [
  */
 export const pipelineScripts = () => {
   const { scripts = {} } = JSON.parse(readFileSync('package.json', 'utf8'));
-  const files = new Set(['scripts/prebuild.mjs']);
+
+  // package.json itself: this function READS it to resolve every task, so
+  // repointing a script or changing its flags changes what a skipped step
+  // would have produced without touching any file the set would otherwise
+  // name.
+  const files = new Set(['scripts/prebuild.mjs', 'package.json']);
 
   for (const step of [...SEQUENTIAL, ...PARALLEL]) {
     if (!step.previewSkip) continue;
     for (const [, task] of step.cmd.matchAll(/pnpm run ([\w:-]+)/g)) {
-      const path = scripts[task]?.match(/(scripts\/[\w./-]+)/)?.[1];
-      if (path) files.add(path);
+      // matchAll, not match: a package script may chain two commands
+      // (`fetch:schedule:current` and `sync:afl` already do), and taking only
+      // the first path would leave the second half unwatched.
+      for (const [path] of String(scripts[task] ?? '').matchAll(/scripts\/[\w./-]+/g)) {
+        files.add(path);
+      }
     }
   }
   return files;
@@ -130,7 +139,7 @@ export const pipelineScripts = () => {
  * True when a changed file could alter what a skipped step would have written.
  *
  * Three shapes, because the scripts are only the entry points:
- *   - the derived script set above, plus this orchestrator;
+ *   - the derived script set above, plus this orchestrator and package.json;
  *   - scripts/lib/, which they all import from;
  *   - any .mjs under src/. That is exactly the node-shared surface the compute
  *     scripts pull their real logic from — owner-tenures, division-strength,

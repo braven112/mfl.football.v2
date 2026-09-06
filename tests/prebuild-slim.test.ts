@@ -38,9 +38,35 @@ describe('the watched set is derived, not hand-listed', () => {
     const scripts = pipelineScripts();
     expect(scripts.size).toBeGreaterThan(10);
     for (const file of scripts) {
+      if (file === 'package.json') continue;
       expect(file).toMatch(/^scripts\/[\w./-]+\.mjs$/);
       expect(() => readFileSync(file, 'utf8')).not.toThrow();
     }
+  });
+
+  it('watches package.json, which the resolution itself reads', () => {
+    // Repointing a script or changing its flags changes what a skipped step
+    // would produce, without touching any other watched file.
+    expect(isPipelineFile('package.json')).toBe(true);
+  });
+
+  it('watches BOTH halves of a chained package script', () => {
+    // `fetch:schedule:current` and `sync:afl` already chain two node calls.
+    // Taking only the first match would leave the second half unwatched.
+    const { scripts } = JSON.parse(readFileSync('package.json', 'utf8'));
+    const chained = Object.values(scripts as Record<string, string>)
+      .map((v) => [...String(v).matchAll(/scripts\/[\w./-]+/g)].map((m) => m[0]))
+      .find((paths) => paths.length > 1);
+    expect(chained).toBeDefined();
+
+    // Simulate: a step running that task must watch every path it invokes.
+    const task = Object.keys(scripts as Record<string, string>).find(
+      (k) => [...String((scripts as Record<string, string>)[k]).matchAll(/scripts\/[\w./-]+/g)].length > 1,
+    )!;
+    const paths = [...String((scripts as Record<string, string>)[task]).matchAll(/scripts\/[\w./-]+/g)].map(
+      (m) => m[0],
+    );
+    expect(paths.length).toBeGreaterThan(1);
   });
 
   it('covers the src/ modules the compute steps import their logic from', () => {
@@ -100,6 +126,7 @@ describe('slim only when everything is certain', () => {
     'scripts/lib/roster-season-payload.mjs',
     'src/utils/owner-tenures.mjs',
     'src/config/leagues-data.mjs',
+    'package.json',
   ])('runs FULL when the diff touches %s', (file) => {
     expect(resolveSlimReason(preview(), ['README.md', file])).toBeNull();
   });
