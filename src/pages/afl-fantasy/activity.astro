@@ -12,6 +12,9 @@ import {
 	getAllOwnerPagePopularity,
 	buildOwnerActivityRow,
 	sortByLastSeen,
+	getSurfaceSection,
+	mockSurfaceSection,
+	type SurfaceSection,
 	type OwnerActivityRow,
 } from '../../utils/owner-activity';
 import { lastMflMoveByFranchise, type MflMove } from '../../utils/mfl-activity';
@@ -43,11 +46,15 @@ let activityMap: Record<string, number> = {};
 let pageViewData: { dates: string[]; data: Record<string, Record<string, number>> } = { dates: [], data: {} };
 let globalPages: { page: string; count: number }[] = [];
 let ownerPages: Record<string, { page: string; count: number }[]> = {};
+// App-vs-browser counters. Undefined until read, and the report drops the
+// section entirely when there is nothing recorded yet.
+let surfaceSection: SurfaceSection | undefined;
 
 // Mock data for local development — ?mock=true enables it
 const useMock = Astro.url.searchParams.has('mock');
 
 if (useMock) {
+	surfaceSection = mockSurfaceSection(franchiseIds);
 	// Seeded random for deterministic output
 	const seed = (s: number) => () => { s = (s * 16807 + 0) % 2147483647; return (s - 1) / 2147483646; };
 
@@ -129,11 +136,12 @@ if (useMock) {
 	}
 } else {
 	try {
-		[activityMap, pageViewData, globalPages, ownerPages] = await Promise.all([
+		[activityMap, pageViewData, globalPages, ownerPages, surfaceSection] = await Promise.all([
 			getAllActivity(leagueId),
 			getDailyPageViews(leagueId, 30),
 			getGlobalPagePopularity(leagueId),
 			getAllOwnerPagePopularity(leagueId, franchiseIds),
+			getSurfaceSection(leagueId, franchiseIds),
 		]);
 	} catch { /* Redis unavailable */ }
 }
@@ -297,6 +305,9 @@ const chartDates = pageViewData.dates;
 		ownerPages={ownerPages}
 		chartTeams={chartTeams}
 		chartDates={chartDates}
+		surfaces={surfaceSection?.surfaces}
+		ownerSurfaces={surfaceSection?.ownerSurfaces}
+		lastSurfaces={surfaceSection?.lastSurfaces}
 		thirdStatLabel="Waivers"
 		txSubtitle="Trades, free agent moves, and waiver claims this season"
 	/>

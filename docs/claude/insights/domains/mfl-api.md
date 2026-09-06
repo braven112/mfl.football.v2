@@ -52,10 +52,11 @@
 - **Franchise ids collide across leagues; PLAYER ids are identical, which is
   worse.** Session `leagueId` selects config for storage/rendering; the **route
   path** selects it for writes from league-scoped pages (a dual-league owner's
-  session lies about which league the page means). "Is he rostered?" answered
-  for the wrong league is a well-formed WRONG answer, never a miss — nothing
-  fails to match, so nothing errors. An endpoint answering a question ABOUT A
-  PAGE takes `?league=` from it and 401s a mismatch; the param is a CHECK.
+  session lies about the page's league). A wrong-league "is he
+  rostered?" is a well-formed WRONG answer, never a miss — nothing errors. An
+  endpoint answering a question ABOUT A PAGE takes `?league=` from it and 401s a
+  mismatch; the param is a CHECK. With no session it is the ONLY signal — check
+  it, DROP on a miss; `getLeagueByPath` on `/api/…` returns the DEFAULT.
 - **Pre-2016 years used different league ids.** `L=13522` on a pre-2016 year
   returns a real, valid-looking payload for *a different league*. Use
   `backfill-historical-feeds.mjs --force --year=YYYY`; plain runs no-op.
@@ -77,13 +78,13 @@
   match reads as never-traded, not as an error.
 - **`data/nfl/bye-weeks.json` speaks MFL's team codes, `PlayerIdentity.nflTeam`
   speaks ESPN's.** MFL says GBP/LVR/KCC/NEP; `getPlayerMap()` has already
-  resolved players to GB/LV/KC/NE. Joining the two raw silently produced "no
-  bye week" for eight teams, which looks exactly like a player who has none.
-  Run BOTH sides through `normalizeTeamCode` (`src/utils/nfl-logo.ts`).
+  resolved players to GB/LV/KC/NE. Joining the two raw gave "no bye week" for
+  eight teams, indistinguishable from a player who has none. Run BOTH sides
+  through `normalizeTeamCode` (`src/utils/nfl-logo.ts`).
 - **MFL ADP is a REDRAFT scale and means nothing against a keeper draft's pick
   numbers.** See `features/draft-broadcast.md`: the AFL keeps 7 per franchise,
-  so its 1.01 is the 85th pick of a from-scratch board — comparing them
-  directly labelled 90 of 108 picks a "reach".
+  so its 1.01 is the 85th pick of a from-scratch board — a direct comparison
+  called 90 of 108 picks a "reach".
 - **Owner-facing MFL PAGES are not the API, and each draft type has its own.**
   The live draft room is `https://<www##>/<year>/ajax_ld?L=<id>`; other owner
   pages are numbered options, `.../<year>/options?L=<id>&O=<n>` (email draft
@@ -100,8 +101,8 @@
 ## Before you spend an hour
 
 - `export?TYPE=bogus` prints every valid export type in its error message —
-  faster than reading the docs, and it is the authoritative list. It lists
-  ENDPOINTS, not fields — see the next bullet.
+  faster than the docs, and authoritative. It lists ENDPOINTS, not fields —
+  see the next bullet.
 - **Never conclude "MFL does not expose X" from an anonymous call.** A
   commissioner cookie adds ~20 undocumented fields per franchise in
   `TYPE=league` — `lastVisit` among them, written off as nonexistent on
