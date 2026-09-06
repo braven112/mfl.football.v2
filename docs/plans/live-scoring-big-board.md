@@ -298,8 +298,10 @@ a bug once:
   possible failure here.
 - Never fabricate a clock. No ESPN game → print the state, no numbers.
 - Never ship an ESPN athlete id to the client.
-- `host` never goes in a query string (a WAF 403'd exactly that pattern on
-  2026-09-03). Send `L`; the server resolves the host from the registry.
+- **In URLs this page builds**, `host` never goes in a query string (a WAF 403'd
+  exactly that pattern on 2026-09-03). Send `L` alone; `resolveHost` falls back
+  to the registry entry for `L`. The route still *accepts* `host` for existing
+  callers — that is the API's contract, not a licence for a new one.
 - Bench rows stay out of `players`.
 - No league literals — `getLeagueBySlug`, `leagueHasFeature`
   (`tests/league-literal-guard.test.ts`).
