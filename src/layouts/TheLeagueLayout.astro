@@ -388,6 +388,34 @@ const themePref = getThemePreference(Astro.cookies);
 			})();
 		</script>
 
+		<!-- Install prompt capture.
+		     `beforeinstallprompt` fires ONCE, early, and is the browser's only
+		     offer to install. Chrome fires it before any island hydrates, so if
+		     nothing is listening at that moment the offer is gone for the page —
+		     which is why it is captured here in the layout rather than inside
+		     InstallAppPrompt. preventDefault() suppresses Chrome's own mini-
+		     infobar so our banner is the single place the pitch appears.
+		     Registered once per document (the flag), because the ClientRouter
+		     re-executes body scripts on every navigation and a stacked listener
+		     would re-stash the same event N times. -->
+		<script is:inline>
+			(function() {
+				if (window.__mflInstallPromptBound) return;
+				window.__mflInstallPromptBound = true;
+				window.addEventListener('beforeinstallprompt', function(e) {
+					e.preventDefault();
+					window.__mflInstallPrompt = e;
+					// The banner may already have rendered and concluded there was no
+					// install path; tell it to re-decide.
+					window.dispatchEvent(new Event('mfl:installpromptready'));
+				});
+				window.addEventListener('appinstalled', function() {
+					window.__mflInstallPrompt = null;
+					window.dispatchEvent(new Event('mfl:installpromptready'));
+				});
+			})();
+		</script>
+
 		<!-- Service Worker Registration — PROD ONLY.
 		     sw.js uses cache-first for CSS/JS assets, which in dev serves stale
 		     Vite modules across server restarts and silently masks every style
