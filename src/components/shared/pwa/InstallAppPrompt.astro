@@ -198,7 +198,11 @@ const isBanner = variant === 'banner';
   function init() {
     // Re-queried every page-load: the ClientRouter swaps the document, so a
     // node captured at module scope belongs to a page that no longer exists.
-    for (const el of document.querySelectorAll<HTMLElement>('[data-install-prompt]')) {
+    // Array.from, not for..of over the NodeList: this repo's tsconfig target
+    // does not give NodeListOf a Symbol.iterator.
+    for (const el of Array.from(
+      document.querySelectorAll<HTMLElement>('[data-install-prompt]'),
+    )) {
       if (el.dataset.installBound !== '1') {
         el.dataset.installBound = '1';
         bind(el);
