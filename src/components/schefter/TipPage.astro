@@ -12,6 +12,7 @@
  * Anonymity contract unchanged: tips are hashed server-side; this page never
  * sees another owner's identity.
  */
+import { composeSharedTip, readSharedPayload } from '../../utils/share-target';
 import Breadcrumbs from '../theleague/Breadcrumbs.astro';
 import { chooseTeamName } from '../../utils/team-names';
 import { getAuthor, getAuthorAvatar } from '../../types/schefter';
@@ -116,6 +117,13 @@ const recentRumors = feed.posts
     })(),
   }));
 
+// A share from the phone's OS share sheet (see share_target in the manifests).
+// Prefill only — the tip API needs a topic no share sheet can supply, and it
+// rate-limits to 3 tips a day, so auto-filing would spend an owner's quota on
+// something they never confirmed. Rendered as a textarea VALUE, so Astro
+// escapes it like any other expression.
+const sharedDraft = composeSharedTip(readSharedPayload(Astro.url.searchParams));
+
 // Deep link ?whisper=<postId> preselects the reply target.
 const whisperParam = Astro.url.searchParams.get('whisper');
 
@@ -197,6 +205,13 @@ const preselectTeam = (() => {
         <p class="section-header__sub">500 characters. Make it count.</p>
       </div>
 
+      {sharedDraft && (
+        <p class="tip-shared-note" role="status">
+          Pulled in from what you shared. Edit it, pick a topic, then send —
+          nothing has been filed yet.
+        </p>
+      )}
+
       <div class="tip-field">
         <label class="tip-field__label" for="tip-text">Tip</label>
         <textarea
@@ -207,7 +222,7 @@ const preselectTeam = (() => {
           rows="6"
           placeholder="e.g. Hearing someone in the Northwest is shopping their 1st for a vet WR..."
           required
-        ></textarea>
+        >{sharedDraft}</textarea>
         <div class="tip-field__meta">
           <span class="tip-field__counter" id="tip-counter" aria-live="polite">0 / 500</span>
         </div>
@@ -771,6 +786,18 @@ const preselectTeam = (() => {
     width: 100%;
     box-sizing: border-box;
   }
+  /* Share-sheet prefill notice. Reassurance, not a warning: the owner just
+     shared something in and needs to know it has NOT been filed yet. */
+  .tip-shared-note {
+    margin: 0 0 0.75rem;
+    padding: 0.5rem 0.75rem;
+    border-left: 3px solid var(--color-accent);
+    border-radius: var(--radius-sm, 4px);
+    background: var(--content-bg-muted);
+    color: var(--content-text-muted);
+    font-size: var(--font-size-sm);
+  }
+
   .tip-field__textarea {
     resize: vertical;
     min-height: 6rem;
