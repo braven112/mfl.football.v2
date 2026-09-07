@@ -45,8 +45,6 @@
   --cmh-crest-opacity: 0.26;
   --cmh-crest-w-mobile: min(70%, 15rem);
   --cmh-crest-opacity-mobile: 0.14;
-  --cmh-backdrop-w: clamp(280px, 38vw, 460px);
-  --cmh-backdrop-opacity: 0.13;
   /* Mobile: the model shrinks to a faint watermark and the text reclaims the
      full width. The What's New card overrides this with `cmh--crop` — see the
      mobile block at the foot of this file. */
@@ -247,6 +245,52 @@ html.dark .cmh--gold {
   background-color: #2a2113;
 }
 
+/* ── FRANCHISE SKIN ───────────────────────────────────────────────────────
+   A hero about a TEAM wears that club's colours instead of the phase's. A
+   league event — a draft, the auction, kickoff, a site announcement — passes no
+   franchise and keeps its accent gradient above.
+
+   Deliberately the same tokens the branded event heroes use (`--hero-fb-*`,
+   set inline by `resolveHeroFranchiseBackdrop`), so one club renders
+   identically on both hero families. Two treatments for one franchise on one
+   homepage is the thing this fixes.
+
+   The accent tokens move to the club's too, and that is correctness rather
+   than taste: `--cmh-accent` is tuned to be legible on its own phase gradient,
+   and there is no reason a sky blue cleared against league navy also clears
+   against an arbitrary franchise's red. `resolveHeroFranchiseBackdrop` measures
+   `--hero-fb-accent` to 3:1 against the gradient it actually ships, and its
+   pill pair to 4.5:1 because that label is small text. Same swap, same tokens,
+   as `.afl-event-hero--franchise`.
+
+   The phase is still legible — it is the wordmark, the pill's TEXT and the
+   copy. Only the colours become the club's. */
+.cmh--franchise {
+  /* A deep-ink literal rather than a phase colour: if the franchise gradient
+     fails to resolve, the white copy still has a ground dark enough to sit on.
+     A var() cannot be relied on for that, which is the whole point. */
+  background-color: #10161f;
+  background-image: var(--hero-fb-gradient);
+  border-color: var(--hero-fb-border-light, var(--cmh-border));
+  --cmh-accent: var(--hero-fb-accent, #ffffff);
+  --cmh-pill-bg: var(--hero-fb-pill-bg, rgba(255, 255, 255, 0.16));
+  --cmh-pill-border: var(--hero-fb-accent, rgba(255, 255, 255, 0.4));
+  --cmh-pill-ink: var(--hero-fb-pill-ink, #ffffff);
+  --cmh-cta-ink: var(--hero-fb-cta-ink, #10161f);
+  --cmh-divider: rgba(255, 255, 255, 0.24);
+}
+
+html.dark .cmh--franchise {
+  border-color: var(--hero-fb-border-dark, var(--cmh-border));
+}
+
+/* The phase glow goes. `.hero-fb__wash` is the wash under a franchise skin, and
+   two washes over one gradient muddied every card that was not already red —
+   the same finding the event hero recorded when it took this treatment on. */
+.cmh--franchise .cmh__glow {
+  display: none;
+}
+
 /* ── TONE: red — urgency, applied ON TOP of an accent (a deadline today, the
       final-30-days cut watch). Deltas only, so the hero keeps its geometry. */
 .cmh--red {
@@ -318,17 +362,6 @@ html.dark .cmh--red {
   height: 100%;
   object-fit: contain;
   opacity: var(--cmh-crest-opacity);
-  pointer-events: none;
-  user-select: none;
-}
-
-.cmh__backdrop {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  transform: translate(-50%, -50%) rotate(-8deg);
-  width: var(--cmh-backdrop-w);
-  opacity: var(--cmh-backdrop-opacity);
   pointer-events: none;
   user-select: none;
 }

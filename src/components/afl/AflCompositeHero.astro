@@ -21,7 +21,7 @@
 import type { EventHeroView } from '../../utils/afl-hero-resolver';
 import { getNflTeamColors } from '../../utils/nfl-team-colors';
 import { normalizeTeamCode } from '../../utils/nfl-logo';
-import { resolveHeroCrest } from '../../utils/hero-crest';
+import { resolveHeroCrest, resolveHeroFranchiseSkin } from '../../utils/hero-crest';
 import CompositeHero from '../shared/CompositeHero.astro';
 
 interface Props {
@@ -47,6 +47,11 @@ const crest = resolveHeroCrest({
   nflTeam: model.nflTeam,
 });
 
+// A TEAM event wears the owning club's colours; a league event (both conference
+// drafts) keeps the AFL's own navy. See CompositeHeroTreatment.scope.
+const franchise =
+  treatment.scope === 'team' ? resolveHeroFranchiseSkin(view.modelFranchiseId, 'afl-fantasy') : null;
+
 // The AFL's crest stands in when the ESPN cutout 404s — same silhouette rule as
 // TheLeague's composites, different mark.
 const LOGO = '/assets/logos/afl-logo-dark.svg';
@@ -58,6 +63,7 @@ const LOGO = '/assets/logos/afl-logo-dark.svg';
   tone={treatment.tone ?? null}
   wordmark={treatment.wordmark}
   crest={crest}
+  franchise={franchise}
   model={model}
   glowColor={glowColor}
   logoArt={LOGO}

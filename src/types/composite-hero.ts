@@ -32,4 +32,15 @@ export interface CompositeHeroTreatment {
   accent: CompositeHeroAccent;
   /** Urgency overlay — a deadline today, a draft actually running. */
   tone?: 'red' | null;
+  /**
+   * WHOSE colours the card wears.
+   *
+   * `league` — a league event (a draft, the auction, kickoff, a site
+   * announcement). The card keeps `accent`'s gradient.
+   * `team` — a team event (your keeper class, your cuts, a club's week). The
+   * card is repainted in that franchise's colours, when one is resolved; with
+   * no franchise (a signed-out viewer) it falls back to `accent`, which is why
+   * nothing branches on auth.
+   */
+  scope?: 'league' | 'team';
 }

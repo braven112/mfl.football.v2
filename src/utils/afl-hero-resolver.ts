@@ -319,7 +319,9 @@ const EVENT_VIEW: Record<string, ViewBuilder> = {
       // Trophy gold is the keeper window's own colour — the AFL's answer to
       // TheLeague's tag/auction window — and it flips to the urgency red on
       // the day itself, the same tier flip the cut watch makes.
-      composite: { wordmark: 'KEEPERS', accent: 'gold', tone: days === 0 ? 'red' : null },
+      // A TEAM event — it is YOUR keeper class — so a signed-in owner's card is
+      // painted in their club's colours; gold is the fallback for everyone else.
+      composite: { wordmark: 'KEEPERS', accent: 'gold', tone: days === 0 ? 'red' : null, scope: 'team' },
       accent: ACCENT_GOLD,
       glow: GLOW_RED,
       player: randomHeroPlayer(now),
@@ -384,7 +386,9 @@ const EVENT_VIEW: Record<string, ViewBuilder> = {
       // the ghost wordmark — an NL owner glancing at the homepage must never
       // have to read the pill to know whose draft is on screen. Navy is the
       // AFL's ground; a draft actually running takes the urgency red.
-      composite: { wordmark: 'AL\u00a0DRAFT', accent: 'navy', tone: live ? 'red' : null },
+      // A LEAGUE event: the draft belongs to the conference, not to one club, so
+      // the card stays in the AFL's own navy.
+      composite: { wordmark: 'AL\u00a0DRAFT', accent: 'navy', tone: live ? 'red' : null, scope: 'league' },
       accent: ACCENT_STEEL,
       glow: 'rgba(59,107,154,.55)',
       player: randomHeroPlayer(now),
@@ -427,7 +431,8 @@ const EVENT_VIEW: Record<string, ViewBuilder> = {
           : undefined,
       icon: 'draft-podium',
       // @see the AL card above — the conference names itself in the wordmark.
-      composite: { wordmark: 'NL\u00a0DRAFT', accent: 'navy', tone: live ? 'red' : null },
+      // @see the AL card above — a league event, so league colours.
+      composite: { wordmark: 'NL\u00a0DRAFT', accent: 'navy', tone: live ? 'red' : null, scope: 'league' },
       accent: ACCENT_GOLD,
       glow: 'rgba(196,30,58,.55)',
       player: randomHeroPlayer(now),

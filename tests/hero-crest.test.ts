@@ -18,7 +18,7 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { resolveHeroCrest } from '../src/utils/hero-crest';
+import { resolveHeroCrest, resolveHeroFranchiseSkin } from '../src/utils/hero-crest';
 import { getLeagueTeamBrands } from '../src/utils/league-team-brands';
 
 const ROOT = join(__dirname, '..');
@@ -120,5 +120,72 @@ describe('hero crest rendering', () => {
     expect(page).toContain('heroState.view.modelAccent = heroAccent.color');
     expect(page).toContain('heroState.view.modelFranchiseId = heroAccent.franchiseId');
     expect(read('src/components/afl/AflCompositeHero.astro')).toContain('view.modelFranchiseId');
+  });
+});
+
+/**
+ * The colour rule, in one sentence: a LEAGUE event wears the league's phase
+ * colours, a TEAM event wears that club's.
+ *
+ * It matters because the AFL homepage already had a franchise treatment on its
+ * branded event hero, and the composites shipped without one — so a signed-in
+ * owner saw their colours on one hero and league navy on the next, depending
+ * only on which hero the calendar happened to pick that day.
+ */
+describe('league events vs team events', () => {
+  it('paints a team event in that club’s measured colours', () => {
+    const skin = resolveHeroFranchiseSkin('0001', 'theleague');
+    expect(skin, 'franchise 0001 should resolve a skin').toBeTruthy();
+    expect(skin!.gradient).toBeTruthy();
+    // The accent is MEASURED against the gradient that actually ships — a phase
+    // accent cleared against league navy has no claim to clear against an
+    // arbitrary club's red.
+    expect(skin!.accent).toMatch(/^#|^rgb/);
+    expect(skin!.style).toContain('--hero-fb-gradient:');
+    expect(skin!.style).toContain('--hero-fb-accent:');
+  });
+
+  it('returns nothing to paint when no club owns the hero', () => {
+    // A league event, and a signed-out viewer, both land here — and both keep
+    // the phase gradient, which is why no hero branches on auth itself.
+    expect(resolveHeroFranchiseSkin(null, 'theleague')).toBeNull();
+    expect(resolveHeroFranchiseSkin(undefined, 'afl-fantasy')).toBeNull();
+    expect(resolveHeroFranchiseSkin('9999', 'theleague')).toBeNull();
+  });
+
+  it('only TEAM events pass a franchise skin', () => {
+    const team = ['src/components/theleague/CutWatchCompositeHero.astro',
+                  'src/components/theleague/season-heroes/RecapCompositeHero.astro'];
+    const league = ['src/components/theleague/AuctionCompositeHero.astro',
+                    'src/components/theleague/PreseasonCompositeHero.astro',
+                    'src/components/theleague/FeatureCompositeHero.astro'];
+    for (const f of team) {
+      expect(read(f), `${f} is a team event and must wear the club's colours`).toContain('resolveHeroFranchiseSkin');
+    }
+    for (const f of league) {
+      expect(read(f), `${f} is a league event and must keep its phase gradient`).not.toContain('resolveHeroFranchiseSkin');
+    }
+  });
+
+  it('the AFL gates its skin on the treatment’s scope', () => {
+    const afl = read('src/components/afl/AflCompositeHero.astro');
+    expect(afl).toMatch(/treatment\.scope === 'team'/);
+  });
+
+  it('a franchise-skinned card takes the club’s accent, not the phase’s', () => {
+    const rule = css.slice(css.indexOf('.cmh--franchise {'));
+    const body = rule.slice(0, rule.indexOf('}'));
+    expect(body).toContain('--hero-fb-gradient');
+    for (const tok of ['--cmh-accent', '--cmh-pill-bg', '--cmh-pill-ink', '--cmh-cta-ink']) {
+      expect(body, `${tok} must follow the franchise`).toContain(`${tok}: var(--hero-fb`);
+    }
+    // A literal ground under the gradient, for the same reason every other
+    // surface in this file carries one.
+    expect(body).toMatch(/background-color:\s*#[0-9a-f]{6}/i);
+  });
+
+  it('drops the phase glow under a franchise skin', () => {
+    // Two washes over one gradient muddied every card that was not already red.
+    expect(css).toContain('.cmh--franchise .cmh__glow');
   });
 });

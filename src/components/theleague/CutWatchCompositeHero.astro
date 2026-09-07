@@ -22,7 +22,7 @@ import { normalizeTeamCode } from '../../utils/nfl-logo';
 import { formatCompactNumber } from '../../utils/formatters';
 import { TARGET_ACTIVE_COUNT } from '../../utils/salary-calculations';
 import { chooseTeamName } from '../../utils/team-names';
-import { resolveHeroCrest } from '../../utils/hero-crest';
+import { resolveHeroCrest, resolveHeroFranchiseSkin } from '../../utils/hero-crest';
 import CompositeHero from '../shared/CompositeHero.astro';
 
 interface Props {
@@ -80,6 +80,8 @@ const teamCode = normalizeTeamCode(model.nflTeam);
 // the limit gets the player's NFL mark.
 const crestFranchiseId = userTeam?.franchiseId ?? orderedTeams[0]?.franchiseId;
 const crest = resolveHeroCrest({ franchiseId: crestFranchiseId, league: 'theleague', nflTeam: model.nflTeam });
+// A TEAM event — these are somebody's cuts — so the card wears their colours.
+const franchise = resolveHeroFranchiseSkin(crestFranchiseId, 'theleague');
 ---
 
 <CompositeHero
@@ -88,6 +90,7 @@ const crest = resolveHeroCrest({ franchiseId: crestFranchiseId, league: 'theleag
   tone={urgent ? 'red' : null}
   wordmark={"CUT\u00a0WATCH"}
   crest={crest}
+  franchise={franchise}
   model={model}
   captionMeta={`${model.descriptor} ${model.position} · ${teamCode}`}
   glowColor={getNflTeamColors(teamCode).primary}

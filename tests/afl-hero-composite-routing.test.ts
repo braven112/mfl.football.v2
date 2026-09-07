@@ -29,7 +29,12 @@ describe('AFL composite hero routing', () => {
   it('dresses the keeper window in trophy gold, and flips it red on deadline day', () => {
     const lead = at('2026-07-10T18:00:00Z');
     expect(lead.eventId).toBe('afl-keeper-deadline');
-    expect(lead.view.composite).toEqual({ wordmark: 'KEEPERS', accent: 'gold', tone: null });
+    expect(lead.view.composite).toEqual({
+      wordmark: 'KEEPERS', accent: 'gold', tone: null,
+      // A team event: your keeper class, so a signed-in owner's card is painted
+      // in their club's colours rather than the league's gold.
+      scope: 'team',
+    });
 
     const dayOf = at('2026-07-15T18:00:00Z');
     expect(dayOf.eventId).toBe('afl-keeper-deadline');
@@ -43,11 +48,14 @@ describe('AFL composite hero routing', () => {
     expect(al.eventId).toBe('afl-al-draft');
     expect(al.view.composite.wordmark).toBe('AL DRAFT');
     expect(al.view.composite.accent).toBe('navy');
+    // A draft belongs to the conference, not to one club.
+    expect(al.view.composite.scope).toBe('league');
 
     const nl = at('2026-08-30T18:00:00Z');
     expect(nl.eventId).toBe('afl-nl-draft');
     expect(nl.view.composite.wordmark).toBe('NL DRAFT');
     expect(nl.view.composite.tone).toBe('red'); // drafting now
+    expect(nl.view.composite.scope).toBe('league');
   });
 
   it('uses a no-break space so a two-word wordmark cannot wrap', () => {

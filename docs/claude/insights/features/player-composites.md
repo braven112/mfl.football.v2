@@ -1979,3 +1979,59 @@ through, so a free agent's blank team or a junk code mints a doomed ESPN URL.
 caller treats null as "render no crest" rather than substituting a league logo —
 a hero with no mark reads as clean, one wearing the wrong club's mark reads as
 broken.
+
+## League events wear league colours; team events wear the club's (2026-09-07)
+
+Reported off a phone: "the colors look off when we add the teams — I see my team
+colors on the right but the league on the left."
+
+That was accurate. A composite painted its card in the PHASE's gradient (navy,
+gold, amber, blue) and then washed the team's colour in as a 440px radial from
+the top-right corner, so two colour systems met in one corner. Worse, the AFL
+homepage already had a franchise treatment on its BRANDED event hero — the full
+`hero-franchise-backdrop` gradient and crest — so a signed-in owner saw their
+colours on one hero and league navy on the next, depending only on which hero
+the calendar picked that day.
+
+**The rule now: a league event wears the league's phase colours, a team event
+wears that club's.**
+
+| Hero | Scope | Card |
+|---|---|---|
+| Cut watch | team — somebody's cuts | the club over the limit |
+| Recap | team — a club's week | the franchise that rostered the top scorer |
+| AFL keeper window | team — your keeper class | the signed-in owner's club |
+| AL / NL draft | league — belongs to the conference | AFL navy, red while live |
+| Auction, kickoff, What's New | league | the phase's gradient |
+
+The predicate is the one already used for the crest — "does a franchise own this
+story?" — so one answer drives the crest, the glow and now the field.
+
+**Reuse the event hero's treatment, do not build a second one.** The composite
+takes the same `HeroFranchiseBackdrop` object, sets the same `--hero-fb-*`
+tokens inline, renders the same `.hero-fb__wash`, and drops its own glow — the
+event hero already found that two washes over one gradient muddied every card
+that was not already red. Two looks for one franchise on one homepage is the
+bug being fixed; a second implementation would just re-create it.
+
+**The accent tokens follow the club, and that is correctness, not taste.**
+`--cmh-accent` is tuned to be legible on its own phase gradient; a sky blue
+cleared against league navy has no claim to clear against an arbitrary club's
+red. `resolveHeroFranchiseBackdrop` measures its accent to 3:1 against the
+gradient it actually ships, and its pill pair to 4.5:1 because that label is
+small text. Under `.cmh--franchise` the composite takes those instead.
+
+### Two things found while wiring it
+
+- **`resolveDarkSurfaceCrest` wants the CREST MANIFEST's league key, not the
+  route slug.** `hero-crest.ts` was passing `afl-fantasy` where the contract
+  says `afl`. No symptom today — no AFL crest is measured into
+  `crest-dark-stroke-manifest.json` yet — which is exactly why it would have
+  gone unnoticed until one was, and then a light crest would have shipped onto
+  ink with no ring. `CREST_LEAGUE_KEY` maps it in one place now.
+- **The ghost wordmark ran off the right edge**, so it read as a cut-off word
+  rather than a deliberate one, and it fought the newly-centred crest for the
+  middle of the card. It is right-anchored now and grows leftward, so the whole
+  word always renders (measured at 1280 and 390; the tightest is WHAT'S NEW at
+  333px on a 374px card), and faded by roughly half — it is decoration, and the
+  pill carries the same fact in readable type.

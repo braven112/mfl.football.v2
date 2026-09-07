@@ -23,7 +23,7 @@ import { getWeeklyTopScorerCandidates, getLatestScoredWeek } from '../../../util
 import { castBestScoredModel } from '../../../utils/hero-casting';
 import { normalizeTeamCode } from '../../../utils/nfl-logo';
 import { getFranchiseBrand } from '../../../utils/franchise-brand';
-import { resolveHeroCrest } from '../../../utils/hero-crest';
+import { resolveHeroCrest, resolveHeroFranchiseSkin } from '../../../utils/hero-crest';
 import CompositeHero from '../../shared/CompositeHero.astro';
 import RecapHero from './RecapHero.astro';
 
@@ -54,6 +54,8 @@ const franchiseColor = brand?.color ?? '#1c497c';
 // picks the dark-surface artwork server-side and falls back to the player's NFL
 // mark if that club ships none — see hero-crest.ts.
 const crest = resolveHeroCrest({ franchiseId: winner?.franchiseId, league: 'theleague', nflTeam: model?.nflTeam });
+// A TEAM event — it is this franchise's week — so the card wears their colours.
+const franchise = resolveHeroFranchiseSkin(winner?.franchiseId, 'theleague');
 
 const teamCode = model ? normalizeTeamCode(model.nflTeam) : '';
 const points = winner ? winner.score.toFixed(1) : '';
@@ -68,6 +70,7 @@ const summary = franchiseName
     accent="recap"
     wordmark={`WEEK ${week}`}
     crest={crest}
+    franchise={franchise}
     model={model}
     captionMeta={`${model.position} · ${teamCode}`}
     glowColor={franchiseColor}

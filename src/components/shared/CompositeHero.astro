@@ -26,7 +26,9 @@ import type { HeroModel } from '../../utils/hero-casting';
 import { normalizeTeamCode } from '../../utils/nfl-logo';
 import { hexToRgba } from '../../utils/nfl-team-colors';
 import type { CompositeHeroAccent } from '../../types/composite-hero';
+import type { HeroFranchiseBackdrop } from '../../utils/hero-franchise-backdrop';
 import '../../styles/composite-hero.css';
+import '../../styles/hero-franchise-backdrop.css';
 
 
 export interface Props {
@@ -64,10 +66,16 @@ export interface Props {
   /** Centred crest watermark — resolve it with `resolveHeroCrest`. */
   crest?: { src: string; filter?: string } | null;
   /**
-   * A full-bleed league mark, for a state with no crest to show. Suppressed
-   * when a crest is present: two centred watermarks on one card is a smear.
+   * The club's colours, for a hero that is about a TEAM rather than about the
+   * league — your cuts, your keeper class, the franchise that rostered the
+   * week's top scorer. A league event (a draft, the auction, kickoff, a site
+   * announcement) passes nothing and keeps its phase gradient.
+   *
+   * This is the SAME `HeroFranchiseBackdrop` the branded event heroes take, so
+   * a franchise is painted identically on both hero families rather than two
+   * looks appearing on one homepage.
    */
-  backdrop?: string | null;
+  franchise?: HeroFranchiseBackdrop | null;
   /**
    * Render the `art` slot in place of the model layer. Explicit rather than
    * sniffed from the slot: the What's New hero decides between four art
@@ -127,7 +135,7 @@ const {
   glowAlphaLight = 0.2,
   wordmark,
   crest = null,
-  backdrop = null,
+  franchise = null,
   artSlot = false,
   model = null,
   captionMeta,
@@ -175,10 +183,11 @@ const loading = eager ? 'eager' : 'lazy';
       'cmh--clamp-summary': clampSummary,
       'cmh--crop': crop,
       'cmh--has-crest': !!crest,
+      'cmh--franchise': !!franchise,
     },
     extraClass,
   ]}
-  style={`${glowVars}${styleVars}`}
+  style={`${glowVars}${styleVars}${franchise?.style ?? ''}`}
   aria-label={ariaLabel}
 >
   {/* The crest and the wordmark STACK — they are not alternatives. The crest
@@ -197,9 +206,11 @@ const loading = eager ? 'eager' : 'lazy';
       onerror="this.closest('.cmh').classList.add('cmh--no-crest')"
     />
   )}
-  {backdrop && !crest && (
-    <img class="cmh__backdrop" src={backdrop} alt="" aria-hidden="true" loading={loading} />
-  )}
+  {/* The wash goes OVER the crest, never under: its left-hand ramp is what buys
+      the copy its contrast, and a crest painted on top of that ramp puts a
+      bright mark straight back under the headline. Same order, same file, as
+      the branded event heroes. */}
+  {franchise && <span class="hero-fb__wash" aria-hidden="true"></span>}
   {wordmark && <span class="cmh__ghost" aria-hidden="true">{wordmark}</span>}
 
   <div class="cmh__glow" aria-hidden="true"></div>
