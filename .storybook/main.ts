@@ -38,7 +38,8 @@ const config: StorybookConfig = {
    * referenced by absolute path (/assets/...) exactly as the app serves them
    * from public/.
    *
-   * `static/fonts` carries the ONE font the app does not serve from public/:
+   * `static/nfl-dark` carries the dark NFL logo cuts, and `static/fonts` the
+   * ONE font the app does not serve from public/:
    * Vend Sans, which production gets from astro.config.ts's font integration
    * — config Storybook never loads (Trap 4). It is mapped to a distinct
    * /storybook-fonts prefix so it is obvious the file is Storybook's and not
@@ -46,7 +47,18 @@ const config: StorybookConfig = {
    * still byte-identical with or without Storybook. See
    * .storybook/preview-layout-globals.css.
    */
-  staticDirs: ['../public', { from: './static/fonts', to: '/storybook-fonts' }],
+  staticDirs: [
+    '../public',
+    { from: './static/fonts', to: '/storybook-fonts' },
+    /**
+     * ESPN's dark NFL logo cuts. Production mirrors these into public/ during
+     * prebuild (gitignored); `storybook build` never runs prebuild, so without
+     * this committed copy the dark-mode swap fell back to fetching them from
+     * a.espncdn.com at capture time and Chromatic failed on CDN weather.
+     * See .storybook/nfl-dark-mirror.ts.
+     */
+    { from: './static/nfl-dark', to: '/storybook-nfl-dark' },
+  ],
 
   framework: {
     name: '@storybook-astro/framework',

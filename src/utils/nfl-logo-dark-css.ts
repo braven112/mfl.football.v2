@@ -107,6 +107,39 @@ function swapRule(lightSrc: string, darkUrl: string): string {
 }
 
 /**
+ * Where the prebuild mirror (scripts/fetch-nfl-dark-logos.mjs) serves the
+ * self-hosted dark cuts from. Storybook overrides it — see the options below.
+ */
+const DEFAULT_DARK_BASE_PATH = '/assets/nfl-logos/dark';
+
+/**
+ * Overrides for callers that are not the shipped site.
+ *
+ * The only such caller today is `.storybook/preview.ts`, and every field
+ * exists because of one failure: `storybook build` never runs prebuild, so
+ * the mirror directory is absent and the committed manifest is its
+ * `{"codes": []}` default, which made this builder emit `content: url()`
+ * pointing at `a.espncdn.com` for all 32 teams. Chromatic then fetched the
+ * mark live at capture time on every DARK snapshot — a `content:` image has
+ * no error fallback and the 300ms settle does not cover a cross-origin round
+ * trip — and a CDN hiccup failed the build for a reason unrelated to the
+ * diff. See docs/claude/rules/storybook.md.
+ */
+export interface NflLogoDarkCssOptions {
+  /** Codes whose dark cut is self-hosted. Defaults to the prebuild manifest. */
+  manifestCodes?: readonly string[];
+  /** Path prefix the self-hosted cuts are served from, no trailing slash. */
+  darkBasePath?: string;
+  /**
+   * Drop any swap that would resolve to a cross-origin URL rather than
+   * falling back to it. The light logo then renders unswapped in dark mode —
+   * a visible, deterministic diff, instead of a network round trip that
+   * usually works.
+   */
+  sameOriginOnly?: boolean;
+}
+
+/**
  * Dark logo URL for a canonical team code: the self-hosted mirror when the
  * prebuild fetch produced it (same-origin, survives ESPN CDN unreachability),
  * otherwise ESPN's `500-dark` URL — or `null` for a code in `knownMissing`
@@ -122,9 +155,10 @@ export function resolveNflDarkLogoUrl(
   canonicalCode: string,
   manifestCodes: readonly string[] = darkLogoManifest.codes,
   knownMissing: readonly string[] = [],
+  darkBasePath: string = DEFAULT_DARK_BASE_PATH,
 ): string | null {
   if (manifestCodes.includes(canonicalCode)) {
-    return `/assets/nfl-logos/dark/${canonicalCode}.png`;
+    return `${darkBasePath}/${canonicalCode}.png`;
   }
   if (knownMissing.includes(canonicalCode)) return null;
   return getNFLTeamLogo(canonicalCode, 'dark');
@@ -149,8 +183,29 @@ export function resolveNflDarkLogoUrl(
  */
 let cachedCss: string | null = null;
 
-export function buildNflLogoDarkCss(): string {
-  if (cachedCss !== null) return cachedCss;
+export function buildNflLogoDarkCss(options: NflLogoDarkCssOptions = {}): string {
+  const {
+    manifestCodes = darkLogoManifest.codes,
+    darkBasePath = DEFAULT_DARK_BASE_PATH,
+    sameOriginOnly = false,
+  } = options;
+  // Only the shipped site's configuration is memoized; an overridden build is
+  // a one-off (Storybook boots once) and must never poison the cached CSS the
+  // SSR layout head reads on every request.
+  const isDefaultConfig =
+    manifestCodes === darkLogoManifest.codes &&
+    darkBasePath === DEFAULT_DARK_BASE_PATH &&
+    !sameOriginOnly;
+  if (isDefaultConfig && cachedCss !== null) return cachedCss;
+
+  const resolveDark = (canonical: string): string | null => {
+    const url = resolveNflDarkLogoUrl(canonical, manifestCodes, [], darkBasePath);
+    if (url === null) return null;
+    // A same-origin URL is a root-relative path; anything else is a CDN URL.
+    if (sameOriginOnly && !url.startsWith('/')) return null;
+    return url;
+  };
+
   const rules: string[] = [];
   const swappedSrcs: string[] = [];
   // Light srcs of NFL_DARK_STROKE_CODES teams, collected alongside the swap
@@ -164,7 +219,7 @@ export function buildNflLogoDarkCss(): string {
   for (const code of getAllNFLTeamCodes()) {
     const light = getNFLTeamLogo(code);
     if (isStroked(code)) strokeSrcs.push(light);
-    const dark = resolveNflDarkLogoUrl(code);
+    const dark = resolveDark(code);
     if (dark) {
       rules.push(swapRule(light, cssStringEscape(dark)));
       swappedSrcs.push(light);
@@ -178,7 +233,7 @@ export function buildNflLogoDarkCss(): string {
     if (!canonical || canonical === 'NFL') continue;
     const light = `/assets/nfl-logos/${code}.svg`;
     if (isStroked(canonical)) strokeSrcs.push(light);
-    const dark = resolveNflDarkLogoUrl(canonical);
+    const dark = resolveDark(canonical);
     if (dark) {
       rules.push(swapRule(light, cssStringEscape(dark)));
       swappedSrcs.push(light);
@@ -216,9 +271,15 @@ export function buildNflLogoDarkCss(): string {
   // dark surface that wants its own shadow AND the ring composes
   // `var(--nfl-logo-ring, opacity(1))` inline (the player-modal band and the
   // broadcast origin line do). Pinned by tests/nfl-logo-dark-css.test.ts.
+  // Both base paths, deduped: an override ADDS a selector rather than replacing
+  // the production one. draft-broadcast.ts and BroadcastFace.tsx call
+  // resolveNflDarkLogoUrl() with the default path and ship the result as `src`,
+  // so `/assets/nfl-logos/dark/CAR.png` must stay keyed even when Storybook
+  // points its own swaps elsewhere. Identical in production (the two collapse).
+  const darkBasePaths = [...new Set([DEFAULT_DARK_BASE_PATH, darkBasePath])];
   const darkSrcs = NFL_DARK_STROKE_CODES.flatMap((code) => [
     getNFLTeamLogo(code, 'dark'),
-    `/assets/nfl-logos/dark/${code}.png`,
+    ...darkBasePaths.map((base) => `${base}/${code}.png`),
   ]);
   const strokeFilter = crestStrokeFilter(undefined, NFL_DARK_STROKE_WIDTH);
   const strokeRule = (srcs: string[], guard: string): string | null =>
@@ -243,6 +304,7 @@ export function buildNflLogoDarkCss(): string {
     rules.push(`html.dark img.nfl-logo-failed:is(${selectors}) { visibility: visible; }`);
   }
 
-  cachedCss = rules.join('\n');
-  return cachedCss;
+  const css = rules.join('\n');
+  if (isDefaultConfig) cachedCss = css;
+  return css;
 }

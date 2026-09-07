@@ -98,6 +98,7 @@
     "measure:tv-logo-contrast": "node scripts/measure-tv-logo-contrast.mjs",
     "storybook": "storybook dev -p 6006 --no-open",
     "build:storybook": "storybook build",
+    "mirror:storybook-dark-logos": "node scripts/mirror-storybook-dark-logos.mjs",
     "build:storybook:stats": "storybook build --stats-json",
     "chromatic": "chromatic"
   },

@@ -4,6 +4,7 @@ import { buildTeamAccentCss } from '../src/utils/team-accent-css';
 import { buildNflLogoDarkCss } from '../src/utils/nfl-logo-dark-css';
 import { buildCollegeLogoDarkCss } from '../src/utils/college-logo-dark-css';
 import { buildAllTeamIconDarkCss } from '../src/utils/team-icon-dark-styles';
+import { STORYBOOK_NFL_DARK_BASE_PATH, STORYBOOK_NFL_DARK_CODES } from './nfl-dark-mirror';
 
 // Global stylesheets the real app loads from TheLeagueLayout. Tokens first —
 // everything else resolves var(--*) against them.
@@ -104,6 +105,23 @@ function applyGlobals(theme: string, league: string) {
  * script fills on open renders as a BROKEN IMAGE ICON — which would have been
  * baselined into the PlayerDetailsModal snapshots as permanent noise.
  *
+ * NO SNAPSHOT MAY TOUCH A CDN, and these two sheets are the one place that
+ * rule is not obvious, because the network request is in CSS rather than in
+ * any story's args. The dark-mode swap replaces every NFL/college logo <img>
+ * with `content: url(...)`, and both builders fall back to `a.espncdn.com`
+ * for anything their prebuild mirror did not produce. `storybook build` never
+ * runs prebuild, so in CI that was ALL 32 NFL teams and ALL 258 colleges:
+ * every dark snapshot of a component rendering a team mark fetched it live at
+ * capture time. `content:` images have no error fallback and Chromatic's
+ * 300ms settle does not cover a cross-origin round trip, so ESPN weather —
+ * not a code change — failed builds (the Bengals mark in Roster/PlayerCell,
+ * Sep 2026). `sameOriginOnly` makes each builder DROP such a rule instead of
+ * emitting it, and Storybook's committed NFL mirror (nfl-dark-mirror.ts)
+ * keeps all 32 swaps intact and same-origin. No college cut is mirrored, so
+ * those 258 rules simply do not exist here — correct today (no story renders
+ * a college logo) and safe tomorrow, since a story that starts to would get
+ * the light mark in dark mode rather than a flaky fetch.
+ *
  * `TeamIconDarkStyles` was the one gap here, and it is now closed the way the
  * gap note said it had to be. Its rules were not a zero-argument builder but a
  * COMPOSITION — four builder calls across both leagues' configs and two icon
@@ -123,8 +141,21 @@ function injectLayoutStyles() {
   el.id = 'sb-layout-styles';
   el.textContent = [
     buildTeamAccentCss(),
-    buildNflLogoDarkCss(),
-    buildCollegeLogoDarkCss(),
+    // `sameOriginOnly` is the load-bearing argument on both of these, not a
+    // tidiness flag — see the block comment above.
+    buildNflLogoDarkCss({
+      manifestCodes: STORYBOOK_NFL_DARK_CODES,
+      darkBasePath: STORYBOOK_NFL_DARK_BASE_PATH,
+      sameOriginOnly: true,
+    }),
+    // `manifestIds: []` is not redundant with `sameOriginOnly`. The tracked
+    // college manifest is `{"ids": []}` today, but prebuild REWRITES it, so a
+    // developer who runs a local build and commits the result would have
+    // Storybook emit ~250 same-origin swaps at `/assets/college-logos/dark/*`
+    // — a gitignored directory `storybook build` does not serve. sameOriginOnly
+    // proves origin, not existence; pinning the manifest is what proves
+    // existence, and the NFL call above pins its own for the same reason.
+    buildCollegeLogoDarkCss({ manifestIds: [], sameOriginOnly: true }),
     buildAllTeamIconDarkCss(),
   ].join('\n');
   document.head.appendChild(el);
@@ -188,10 +219,11 @@ const preview = definePreview({
       // for the snapshot-budget reasoning.
       modes: themeModes,
 
-      // A short settle beat before capture. The fixtures are fully offline
-      // (headshots are inline data URIs, crests come from staticDirs), so this
-      // is only covering font application and layout settle, not a network
-      // round trip.
+      // A short settle beat before capture. The fixtures are fully offline —
+      // headshots are inline data URIs, crests come from staticDirs, and the
+      // dark-mode logo swap is pinned to Storybook's committed mirror by
+      // `sameOriginOnly` above — so this is only covering font application and
+      // layout settle, not a network round trip.
       delay: 300,
     },
   },
