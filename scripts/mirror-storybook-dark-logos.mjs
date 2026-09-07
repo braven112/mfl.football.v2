@@ -59,9 +59,16 @@ async function main() {
   // manifest is the artifact that matters: extra PNGs are harmless (a re-run
   // completes them, and the manifest is derived from what is on disk), while a
   // manifest listing 31 codes is what preview.ts would trust.
-  const manifestBefore = fs.existsSync(MANIFEST_PATH)
-    ? fs.readFileSync(MANIFEST_PATH, 'utf8')
-    : null;
+  // Read-and-catch rather than existsSync-then-read: the check-then-use pair is
+  // a TOCTOU race (CodeQL js/file-system-race), and the shared mirror lib
+  // already reads this way. `null` means there is no manifest yet — a first
+  // run, with nothing to restore to.
+  let manifestBefore = null;
+  try {
+    manifestBefore = fs.readFileSync(MANIFEST_PATH, 'utf8');
+  } catch {
+    manifestBefore = null;
+  }
 
   await mirrorDarkLogos({
     label: 'mirror-storybook-dark-logos',

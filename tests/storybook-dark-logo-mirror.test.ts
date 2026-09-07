@@ -66,11 +66,20 @@ describe('Storybook NFL dark-logo mirror', () => {
     // into every dark snapshot, which is worse than the CDN it replaced.
     for (const code of STORYBOOK_NFL_DARK_CODES) {
       const file = path.join(MIRROR_DIR, `${code}.png`);
-      expect(fs.existsSync(file), `${code}.png missing from .storybook/static/nfl-dark`).toBe(true);
       // The mirror lib's OWN check (PNG magic + a 1KB floor against CDN edge
       // error pages served with a 200), not a copy of it — a copy can drift
-      // from what the mirror actually accepts.
-      expect(isValidPng(fs.readFileSync(file)), `${code}.png is not a valid logo PNG`).toBe(true);
+      // from what the mirror actually accepts. Read-and-catch rather than
+      // existsSync-then-read, for the same TOCTOU reason as the mirror script.
+      let buf: Buffer | null = null;
+      try {
+        buf = fs.readFileSync(file);
+      } catch {
+        buf = null;
+      }
+      expect(
+        buf !== null && isValidPng(buf),
+        `${code}.png is missing from .storybook/static/nfl-dark, or is not a valid logo PNG`,
+      ).toBe(true);
     }
   });
 
