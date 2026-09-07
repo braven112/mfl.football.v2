@@ -159,6 +159,49 @@ harvest it runs on is load-bearing, not bookkeeping:
   bare `tokens.join(' / ')` cannot express position and position is now
   load-bearing.
 
+### A named team must OWN the players named beside it
+
+The trade-offer lane's graduated reveal names one franchise and, from signal 2,
+one or more players. The playbook's wording asserts ownership — "Hearing the
+[team] have [Player] on the table" — so the pairing is a factual claim about a
+real owner's roster, not flavour.
+
+`buildExposure` (`scripts/lib/redact-trade-offer.mjs`) used to pick the team by
+hashing the offer id and the players from `allAssets`, BOTH sides of the offer
+merged, with no relationship between the two choices. Roughly half of every
+signal-2+ post therefore credited a team with a player it did not own. It
+shipped as "the Mavericks have had Colston Loveland on the table" — Loveland is
+a Pacific Pigskins player and Maverick was trying to ACQUIRE him (commissioner
+report, 2026-09-07). To the owner being described it reads as pure invention.
+
+Three rules hold it together:
+
+- **Sides stay attached to the franchise giving them up.** `franchise1_gave_up`
+  are fid1's players, `franchise2_gave_up` are fid2's; `playersByFid` keeps them
+  apart. Never merge them into one pool that a team name is then attached to.
+- **A team sending only picks cannot be described as shopping a player.** When
+  the coin-flip team has no players of its own, the other side is named
+  instead — still deterministic, so later signals about the same offer do not
+  flip teams.
+- **`escalatedPlayer` is scoped the same way once a team is named.** At tier
+  `named` the playbook lets the LLM print that player's name, and
+  `exposure.team` sits in the same payload — so an escalated player from the
+  other side reproduces the identical bug through a different field. With no
+  team named, nobody is being credited and the unscoped pick stands.
+
+`tests/redact-trade-offer-attribution.test.ts` runs the real Loveland offer
+through six offer ids so both sides of the coin flip are exercised. Note that
+`tests/redact-trade-offer-exposure.test.ts` previously PINNED the bug — its
+"caps at the number of players actually in the offer" case expected the
+opponent's player listed beside the named team. A guard test can encode a
+defect as an invariant; read the fixture before assuming a failing test means
+the fix is wrong.
+
+Retracting a post that already shipped is `scripts/schefter-retract-post.mjs`,
+never a hand edit — the feeds are cron-written, so a hand edit is invisible in
+review. It deliberately leaves the scanner's `posted`/exposure state alone, or
+the same offer regenerates the same wrong post on the next scan.
+
 ### Former-name callbacks — the bit is the pairing, and it expires
 
 Schefter nodding to a name a franchise just retired ("Dead Cap Walking, the

@@ -61,6 +61,39 @@ describe('For You is the in-season default, and only there', () => {
     expect((await view('/theleague/news?source=', owner, IN_SEASON)).activeSource).toBeNull();
   });
 
+  /**
+   * The All tab's own href has to survive a round trip. A bare `basePath`
+   * carries no ?source=, which is precisely the condition that triggers the
+   * in-season default — so clicking All handed a signed-in owner back to For
+   * You and the tab was unreachable. Feed the tab's href back in.
+   */
+  it('has an All tab whose own href actually reaches All', async () => {
+    const v = await view('/theleague/news', owner, IN_SEASON);
+    const allTab = v.tabs.find((t) => t.label === 'All')!;
+    expect(allTab.href).toContain('?source=');
+
+    const roundTrip = await view(allTab.href, owner, IN_SEASON);
+    expect(roundTrip.activeSource).toBeNull();
+    expect(roundTrip.tabs.find((t) => t.label === 'All')!.active).toBe(true);
+  });
+
+  /**
+   * ?post= deep links come from GroupMe and push and point at ONE post, usually
+   * about somebody else's team. Defaulting them to For You filtered the post
+   * out and left the #post-<id> anchor pointing at nothing.
+   */
+  it('does not default a ?post= deep link to For You', async () => {
+    const target = post({ id: 'sf_deep', type: 'transaction', franchiseIds: ['0007'] });
+    const v = await view('/theleague/news?post=sf_deep', owner, IN_SEASON, [target]);
+    expect(v.activeSource).toBeNull();
+    expect(v.posts.map((p) => p.id)).toContain('sf_deep');
+  });
+
+  it('still honours an explicit ?source= alongside ?post=', async () => {
+    const v = await view('/theleague/news?post=sf_deep&source=nfl', owner, IN_SEASON);
+    expect(v.activeSource).toBe('nfl');
+  });
+
   it('accepts ?source=foryou as an alias for the watching feed', async () => {
     expect((await view('/theleague/news?source=foryou', owner, IN_SEASON)).activeSource).toBe('watching');
   });

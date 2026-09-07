@@ -108,7 +108,7 @@ const testMode = !!testDateParam;
 // The Schefter rail IS the owner's Watching feed — their roster, their watch
 // list, their franchise, league deadlines. A visitor with no franchise here
 // gets the league feed, because they have no watch list to show.
-const rail = await resolveSchefterRail({ league: THELEAGUE, posts: railSource, authUser });
+const rail = await resolveSchefterRail({ league: THELEAGUE, posts: railSource, authUser, now: effectiveDate });
 
 // Check draft completion for early UDFA window transition
 const leagueYear = getCurrentLeagueYear();

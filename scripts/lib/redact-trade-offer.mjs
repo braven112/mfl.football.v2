@@ -262,24 +262,32 @@ export function redactTradeOffer({
   const division = offeringTeam?.division;
   const divisionHint = divisionOfferCount7d >= 2 && division ? division : undefined;
 
-  // Player escalation — find the highest-tier player in this offer
-  let escalatedPlayer;
-  let bestRank = -1;
-  for (const a of allAssets) {
-    if (a.kind !== 'player') continue;
-    const n = playerHistory.get(a.playerId) ?? 0;
-    const tier = tierForDistinctOfferers(n);
-    const rank = TIER_RANK[tier];
-    if (rank > bestRank && tier !== 'base') {
-      bestRank = rank;
-      escalatedPlayer = {
-        name: a.name,
-        position: a.position ?? 'UNK',
-        tier,
-        distinctOfferers: n,
-      };
+  /**
+   * Player escalation — the highest-tier player in this offer.
+   *
+   * `pool` is scoped to the named team's own side once a team is named (see
+   * below). At tier "named" the playbook lets the LLM print this player's name,
+   * and `exposure.team` is in the same payload — so an escalatedPlayer from the
+   * OTHER side reproduces exactly the wrong-team-plus-player pairing that
+   * constraining `exposure.players` was meant to end, just through a different
+   * field.
+   */
+  const pickEscalated = (pool) => {
+    let best;
+    let bestRank = -1;
+    for (const a of pool) {
+      if (a.kind !== 'player') continue;
+      const n = playerHistory.get(a.playerId) ?? 0;
+      const tier = tierForDistinctOfferers(n);
+      const rank = TIER_RANK[tier];
+      if (rank > bestRank && tier !== 'base') {
+        bestRank = rank;
+        best = { name: a.name, position: a.position ?? 'UNK', tier, distinctOfferers: n };
+      }
     }
-  }
+    return best;
+  };
+  let escalatedPlayer = pickEscalated(allAssets);
 
   // Anti-deanonymization: drop combinations that telegraph the trade
   const antiLeak = { dropped: [] };
@@ -329,6 +337,18 @@ export function redactTradeOffer({
     },
     adpRankByPlayerId,
   });
+
+  // A named team makes escalatedPlayer an ownership claim too — re-pick it from
+  // that team's own side. Without a named team nobody is being credited with
+  // the player, so the unscoped pick stands.
+  if (exposure?.team) {
+    const namedFid = [
+      String(rawOffer.franchise ?? offeringFid ?? ''),
+      String(rawOffer.franchise2 ?? ''),
+    ].find((f) => pickDisplayTeam(teamMap?.get?.(f))?.name === exposure.team.name);
+    const ownSide = namedFid === String(rawOffer.franchise ?? offeringFid ?? '') ? side1 : side2;
+    escalatedPlayer = pickEscalated(ownSide);
+  }
 
   // Partner franchise — the team being offered to. Used by the corroboration
   // matcher to detect when a web/groupme tip's franchiseHint is on either

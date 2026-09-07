@@ -284,7 +284,7 @@ if ('view' in heroState) {
 // 30 first and filtering after leaves almost nothing, because the newest posts
 // are overwhelmingly wire.
 const feed = feedData as FeedType;
-const rail = await resolveSchefterRail({ league: AFL, posts: feed.posts, authUser });
+const rail = await resolveSchefterRail({ league: AFL, posts: feed.posts, authUser, now: effectiveDate });
 
 // Hide the What's Next card that the hero already promotes — EXCEPT when the
 // hero is a conference draft. In the keeper→draft window the hero counts down
@@ -378,7 +378,8 @@ const lastVisitDate = Astro.cookies.get('whats_new_last_visit')?.value ?? null;
     <aside class="afl-hp__sidebar" aria-label="Schefter Report feed" tabindex="0">
       <SchefterFeedCompact
         posts={rail.posts}
-        isAuthenticated={false}
+        isAuthenticated={!!authUser}
+        userFranchiseId={authAflFranchiseId ?? undefined}
         personalized={rail.personalized}
         forYouIds={rail.forYouIds}
         watching={rail.watchingByPost}

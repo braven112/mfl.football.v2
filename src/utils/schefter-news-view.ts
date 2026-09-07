@@ -43,6 +43,17 @@ export const VALID_SOURCES = [
 export type SourceFilter = (typeof VALID_SOURCES)[number];
 
 /**
+ * Explicit "show me everything". NOT a member of VALID_SOURCES — it resolves
+ * to `activeSource: null`, the same unfiltered state a bare URL used to mean.
+ *
+ * It has to be a real value the All tab can carry, because "no ?source= at
+ * all" is exactly what triggers the in-season For You default: with a bare
+ * `href={basePath}` a signed-in owner clicking All was handed straight back to
+ * For You and the tab was unreachable.
+ */
+export const ALL_SOURCE = 'all';
+
+/**
  * Old query values that must keep resolving — these URLs are in GroupMe
  * history and in owners' bookmarks.
  */
@@ -176,7 +187,14 @@ export async function resolveSchefterNewsView(
   // An explicit ?source= always wins. Only when the URL says nothing does the
   // season decide: in season a signed-in owner opens on their own players,
   // everyone else opens on the full feed exactly as before.
-  const sourceParam = url.searchParams.get('source') ?? defaultSource(feedMode, canWatch);
+  //
+  // A `?post=` deep link is also explicit — those come from GroupMe and push
+  // (schefter-announce-core, speculation-groupme) and point at ONE post, which
+  // is usually about somebody else's team. Defaulting them to For You filters
+  // the post out and leaves the `#post-<id>` anchor pointing at nothing.
+  const deepLink = !!url.searchParams.get('post');
+  const sourceParam =
+    url.searchParams.get('source') ?? (deepLink ? null : defaultSource(feedMode, canWatch));
   const resolvedSource = LEGACY_ALIASES[sourceParam ?? ''] ?? sourceParam;
   const activeSource: SourceFilter | null =
     VALID_SOURCES.includes(resolvedSource as SourceFilter) &&
@@ -273,7 +291,13 @@ export async function resolveSchefterNewsView(
     active: isWatchingTab,
     watching: true,
   };
-  const allTab: NewsTab = { label: 'All', href: basePath, active: !activeSource };
+  // Carries ALL_SOURCE explicitly — a bare basePath would re-trigger the
+  // in-season default and bounce the reader back to For You.
+  const allTab: NewsTab = {
+    label: 'All',
+    href: `${basePath}?source=${ALL_SOURCE}`,
+    active: !activeSource,
+  };
 
   const tabs: NewsTab[] = [
     ...(canWatch && feedMode === 'in-season' ? [forYouTab, allTab] : [allTab]),
