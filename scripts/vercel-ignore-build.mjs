@@ -38,6 +38,23 @@ import { pathToFileURL } from 'url';
 export const BUILD = 1;
 export const SKIP = 0;
 
+/**
+ * The branch the per-league staging sites are aliased to in Vercel
+ * (staging.theleague.us, staging.afl-fantasy.com, staging.mfl.football).
+ *
+ * It is exempt from the no-PR gate on purpose, and it is the ONE exemption:
+ * those domains are pinned to this branch's latest deployment, so a skipped
+ * build leaves all three staging sites serving stale code with no signal that
+ * anything was skipped (a skip shows as CANCELED, and only the build log says
+ * why). That is a deliberate trade of a handful of builds for staging sites that
+ * are actually current — every other branch still needs its PR.
+ *
+ * A code constant rather than a Vercel env var, per CLAUDE.md "Feature flags —
+ * code, not GitHub Actions variables": editing a dashboard value is never
+ * easier than editing this line, and it would split the source of truth.
+ */
+export const STAGING_BRANCH = 'staging';
+
 const GITHUB_API = 'https://api.github.com';
 
 /**
@@ -68,6 +85,12 @@ export async function decide(env = process.env, fetchImpl = globalThis.fetch) {
 
   // Belt and braces: main reaching here would mean VERCEL_ENV lied.
   if (ref === 'main') return build('branch is main');
+
+  // The staging sites' branch — see STAGING_BRANCH. Checked before the network
+  // call so a GitHub outage can never stop a test-site deploy.
+  if (ref === STAGING_BRANCH) {
+    return build(`branch is ${STAGING_BRANCH} (test-site alias target)`);
+  }
 
   const base = env.GITHUB_API_BASE || GITHUB_API;
   const url =
