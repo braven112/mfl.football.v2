@@ -67,7 +67,7 @@ const crest = model ? resolveHeroCrest({ league: 'theleague', nflTeam: model.nfl
 // takes the `art` slot for the two treatments it does not own.
 const artMode = content.heroArt ? 'entry' : model ? 'model' : screenshot ? 'shot' : 'logo';
 const GEOMETRY =
-  '--cmh-min-h: clamp(230px, 23vw, 280px); --cmh-min-h-mobile: 250px; --cmh-ghost-left: 40%; ' +
+  '--cmh-min-h: clamp(230px, 23vw, 280px); --cmh-min-h-mobile: 250px; ' +
   '--cmh-model-w: clamp(250px, 33vw, 390px); --cmh-logo-w: clamp(180px, 24vw, 280px); ' +
   '--cmh-logo-opacity: 0.18; --cmh-title-max: 22ch;';
 ---

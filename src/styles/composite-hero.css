@@ -22,7 +22,7 @@
 .cmh {
   /* ── Per-adopter geometry. Defaults are FeatureCompositeHero's. ────────── */
   --cmh-min-h: clamp(230px, 23vw, 280px);
-  --cmh-ghost-left: 40%;
+  --cmh-ghost-right: clamp(1rem, 2.5vw, 1.9rem);
   --cmh-ghost-top: -1.1rem;
   --cmh-ghost-size: clamp(3.75rem, 8vw, 6.5rem);
   --cmh-ghost-style: normal;
@@ -61,7 +61,7 @@
   --cmh-ink: #ffffff;
   --cmh-body: rgba(255, 255, 255, 0.82);
   --cmh-date: rgba(255, 255, 255, 0.6);
-  --cmh-ghost: rgba(255, 255, 255, 0.06);
+  --cmh-ghost: rgba(255, 255, 255, 0.035);
   --cmh-glow: var(--cmh-glow-dark, rgba(96, 165, 250, 0.34));
   --cmh-shadow: rgba(9, 21, 38, 0.4);
   --cmh-accent: #a9ccff;
@@ -114,7 +114,7 @@ html.dark .cmh--feature,
   background-color: #16395e;
   --cmh-body: rgba(255, 255, 255, 0.78);
   --cmh-date: rgba(255, 255, 255, 0.55);
-  --cmh-ghost: rgba(255, 255, 255, 0.04);
+  --cmh-ghost: rgba(255, 255, 255, 0.025);
   --cmh-glow: var(--cmh-glow-dark, rgba(96, 165, 250, 0.3));
   --cmh-shadow: rgba(0, 0, 0, 0.5);
   --cmh-cta-ink: #0f1e2e;
@@ -134,7 +134,7 @@ html.dark .cmh--recap {
   --cmh-surface: linear-gradient(115deg, #0b1017 0%, #101a26 46%, #14263a 130%);
   background-color: #101a26;
   --cmh-body: rgba(255, 255, 255, 0.78);
-  --cmh-ghost: rgba(255, 255, 255, 0.045);
+  --cmh-ghost: rgba(255, 255, 255, 0.028);
   --cmh-glow: var(--cmh-glow-dark, rgba(28, 73, 124, 0.4));
   --cmh-shadow: rgba(0, 0, 0, 0.5);
   --cmh-accent: #7cb2ff;
@@ -148,7 +148,7 @@ html.dark .cmh--recap {
 /* ── kickoff — the countdown to Week 1. ─────────────────────────────────── */
 .cmh--kickoff {
   --cmh-body: rgba(255, 255, 255, 0.78);
-  --cmh-ghost: rgba(255, 255, 255, 0.045);
+  --cmh-ghost: rgba(255, 255, 255, 0.028);
   --cmh-glow: var(--cmh-glow-dark, rgba(96, 165, 250, 0.35));
   --cmh-shadow: rgba(0, 0, 0, 0.5);
   --cmh-accent: #a8cdf8;
@@ -168,7 +168,7 @@ html.dark .cmh--kickoff {
       the final 30 days, which is a TONE overlay, not a second accent. ────── */
 .cmh--roster {
   --cmh-body: rgba(255, 255, 255, 0.78);
-  --cmh-ghost: rgba(255, 255, 255, 0.045);
+  --cmh-ghost: rgba(255, 255, 255, 0.028);
   --cmh-glow: var(--cmh-glow-dark, rgba(59, 130, 246, 0.35));
   --cmh-shadow: rgba(0, 0, 0, 0.5);
   --cmh-accent: #93c5fd;
@@ -189,7 +189,7 @@ html.dark .cmh--roster {
   --cmh-surface: linear-gradient(115deg, #d97706 0%, #92400e 55%, #4a3410 100%);
   background-color: #92400e;
   --cmh-body: rgba(255, 255, 255, 0.78);
-  --cmh-ghost: rgba(255, 255, 255, 0.045);
+  --cmh-ghost: rgba(255, 255, 255, 0.028);
   --cmh-glow: var(--cmh-glow-dark, rgba(217, 119, 6, 0.35));
   --cmh-shadow: rgba(0, 0, 0, 0.5);
   --cmh-accent: #fbbf24;
@@ -210,7 +210,7 @@ html.dark .cmh--auction {
   --cmh-surface: linear-gradient(115deg, #16324a 0%, #12283c 55%, #0f1e2e 100%);
   background-color: #12283c;
   --cmh-body: rgba(255, 255, 255, 0.78);
-  --cmh-ghost: rgba(255, 255, 255, 0.05);
+  --cmh-ghost: rgba(255, 255, 255, 0.03);
   --cmh-glow: var(--cmh-glow-dark, rgba(201, 164, 76, 0.32));
   --cmh-shadow: rgba(0, 0, 0, 0.5);
   --cmh-accent: #e6c976;
@@ -231,7 +231,7 @@ html.dark .cmh--navy {
   --cmh-surface: linear-gradient(115deg, #8a6d2f 0%, #4a3a1a 55%, #16324a 100%);
   background-color: #4a3a1a;
   --cmh-body: rgba(255, 255, 255, 0.78);
-  --cmh-ghost: rgba(255, 255, 255, 0.05);
+  --cmh-ghost: rgba(255, 255, 255, 0.03);
   --cmh-glow: var(--cmh-glow-dark, rgba(201, 164, 76, 0.36));
   --cmh-shadow: rgba(0, 0, 0, 0.5);
   --cmh-accent: #e6c976;
@@ -252,7 +252,7 @@ html.dark .cmh--gold {
 .cmh--red {
   --cmh-surface: linear-gradient(115deg, #dc2626 0%, #991b1b 55%, #5f1414 100%);
   background-color: #991b1b;
-  --cmh-ghost: rgba(255, 255, 255, 0.05);
+  --cmh-ghost: rgba(255, 255, 255, 0.03);
   --cmh-accent: #fca5a5;
   --cmh-pill-bg: rgba(252, 165, 165, 0.14);
   --cmh-pill-border: rgba(252, 165, 165, 0.45);
@@ -270,7 +270,12 @@ html.dark .cmh--red {
       full-bleed league logo backdrop. ─────────────────────────────────── */
 .cmh__ghost {
   position: absolute;
-  left: var(--cmh-ghost-left);
+  /* RIGHT-anchored so the word grows leftward and is never clipped. It used to
+     be left-positioned and bled off the right edge, which read as a cut-off
+     word rather than a deliberate one — and once a centred crest arrived, the
+     two fought over the middle of the card. The word is decoration; the pill
+     carries the same fact in readable type. */
+  right: var(--cmh-ghost-right);
   top: var(--cmh-ghost-top);
   font-size: var(--cmh-ghost-size);
   font-style: var(--cmh-ghost-style);
