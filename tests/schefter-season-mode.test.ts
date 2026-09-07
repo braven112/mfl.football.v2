@@ -29,15 +29,28 @@ describe('resolveFeedMode', () => {
    */
   it('opens on the NL draft, over a week before Labor Day', () => {
     expect(resolveFeedMode(new Date('2026-08-29T12:00:00-07:00'))).toBe('offseason');
+    // 11pm PT the night BEFORE the draft is still offseason. This is the case
+    // the cron TZ drift broke: a `startDate` written under UTC parses to 5pm
+    // PT on the 29th, which would have flipped the whole site a day early.
+    expect(resolveFeedMode(new Date('2026-08-29T23:00:00-07:00'))).toBe('offseason');
     expect(resolveFeedMode(new Date('2026-08-31T12:00:00-07:00'))).toBe('in-season');
     // Labor Day (Sep 7) and kickoff (Sep 10) are both well inside it now.
     expect(resolveFeedMode(new Date('2026-09-06T12:00:00-07:00'))).toBe('in-season');
     expect(resolveFeedMode(new Date('2026-09-09T12:00:00-07:00'))).toBe('in-season');
   });
 
+  /**
+   * The instant is anchored to midnight PACIFIC on the event's calendar day,
+   * NOT to the `startDate` the feed happens to carry. That field is written by
+   * cron and its time component follows the generating process's TZ: the same
+   * NL draft appeared as `2026-08-30T00:00:00.000Z` (a run under UTC) and
+   * `2026-08-30T07:00:00.000Z` (one under the app's pinned Pacific). Reading
+   * the instant let a routine feed regeneration slide the season switch seven
+   * hours — under the UTC value, into the EVENING BEFORE the draft.
+   */
   it('reads the start from the league calendar, not a hardcoded date', () => {
-    expect(seasonStartEventDate(2026)?.toISOString()).toBe('2026-08-30T00:00:00.000Z');
-    expect(seasonModeStart(2026).toISOString()).toBe('2026-08-30T00:00:00.000Z');
+    expect(seasonStartEventDate(2026)?.toISOString()).toBe('2026-08-30T07:00:00.000Z');
+    expect(seasonModeStart(2026).toISOString()).toBe('2026-08-30T07:00:00.000Z');
   });
 
   /**

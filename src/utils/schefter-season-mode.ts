@@ -92,13 +92,34 @@ function readSeasonEvents() {
 }
 
 /** The NL draft instant for `seasonYear`, or null when the feed can't say. */
+/**
+ * Midnight PACIFIC on the calendar day `iso` names.
+ *
+ * The event feed is cron-written, and its `startDate` carries a time component
+ * that depends on the TZ of the process that generated it: the same NL draft
+ * was written as `2026-08-30T00:00:00.000Z` by a run under UTC and
+ * `2026-08-30T07:00:00.000Z` by one under the app's pinned
+ * `America/Los_Angeles`. Consuming the instant would let a re-generated feed
+ * slide the season switch seven hours — in the UTC case, into the evening of
+ * the day BEFORE the draft. The stable fact is the calendar date, so take the
+ * date portion and anchor it to the league's own clock.
+ *
+ * -07:00 is PDT, which is what late August/early September is in every year
+ * this switch can open in; the season never begins during PST.
+ */
+function startOfPacificDay(iso: string): Date | null {
+  const day = iso.slice(0, 10);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) return null;
+  const d = new Date(`${day}T00:00:00-07:00`);
+  return Number.isNaN(d.getTime()) ? null : d;
+}
+
 export function seasonStartEventDate(seasonYear: number): Date | null {
   const data = readSeasonEvents();
   if (!data || data.leagueYear !== seasonYear) return null;
   const iso = (data.events ?? []).find((e) => e.id === SEASON_START_EVENT_ID)?.startDate;
   if (!iso) return null;
-  const d = new Date(iso);
-  return Number.isNaN(d.getTime()) ? null : d;
+  return startOfPacificDay(iso);
 }
 
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
