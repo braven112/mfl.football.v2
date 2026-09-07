@@ -387,11 +387,13 @@ html.dark .dr-side-panel {
   color: var(--color-gray-400, #9ca3af);
   letter-spacing: 0.04em;
 }
+/* A franchise crest is not a portrait: square art with ink to its own
+   corners, so it must show whole rather than be cropped to a circle. */
 .dr-cell__trade-logo {
   width: 14px;
   height: 14px;
-  border-radius: var(--radius-full, 9999px);
-  object-fit: cover;
+  object-fit: contain;
+  object-position: center;
   display: block;
 }
 .dr-cell__trade-name {

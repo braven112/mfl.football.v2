@@ -496,11 +496,14 @@ const weekLabel = `Week ${previewWeek}`;
     border-bottom: 1px solid var(--card-border);
   }
 
+  /* Franchise crests are square art with ink to their own corners, not
+     portraits — a round frame with object-fit: cover clipped the edges off.
+     Contain in a square box so the whole crest shows. */
   .tbw-cg__team-icon {
     width: 28px;
     height: 28px;
-    border-radius: 50%;
-    object-fit: cover;
+    object-fit: contain;
+    object-position: center;
     flex-shrink: 0;
   }
 
