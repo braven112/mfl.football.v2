@@ -164,6 +164,49 @@ describe('tab list', () => {
   });
 });
 
+describe('assistant posts are private to the franchise they address', () => {
+  /**
+   * These are per-owner nudges — "no lineup submitted", "Nico Collins is OUT".
+   * #1000 made the group-chat post a FALLBACK so a problem already reported
+   * privately is not aired again; publishing them to the shared feed would undo
+   * that permanently, for the whole league, on the website. Raised by Copilot.
+   */
+  const theirs = () => post({ id: 'assist_other', type: 'assistant', franchiseIds: ['0007'] });
+  const mine = () => post({ id: 'assist_mine', type: 'assistant', franchiseIds: ['0001'] });
+
+  it('keeps another franchise’s nudge off the All tab', async () => {
+    const v = await view('/theleague/news?source=all', owner, IN_SEASON, [theirs(), post({})]);
+    expect(v.posts.map((p) => p.id)).not.toContain('assist_other');
+  });
+
+  it('shows the owner their own', async () => {
+    const v = await view('/theleague/news?source=all', owner, IN_SEASON, [mine(), post({})]);
+    expect(v.posts.map((p) => p.id)).toContain('assist_mine');
+  });
+
+  it('hides them all from a signed-out visitor', async () => {
+    const v = await view('/theleague/news?source=all', null, IN_SEASON, [mine(), theirs()]);
+    expect(v.posts).toHaveLength(0);
+  });
+
+  /**
+   * Copilot's suppressed comment, and the same root cause: tab derivation read
+   * the raw feed, so a tab could appear because of a post the reader may not
+   * see — and then render empty.
+   */
+  it('does not let an invisible post conjure a tab', async () => {
+    const v = await view('/theleague/news', owner, IN_SEASON, [
+      post({ id: 'x', type: 'assistant', authorId: 'claude', franchiseIds: ['0007'] }),
+    ]);
+    expect(v.tabs.map((t) => t.label)).not.toContain('The League');
+  });
+
+  it('never reaches another franchise’s For You either', async () => {
+    const v = await view('/theleague/news?source=watching', owner, IN_SEASON, [theirs()]);
+    expect(v.posts).toHaveLength(0);
+  });
+});
+
 describe('what lands in For You', () => {
   /**
    * The noise-removal guarantee, pinned. 68 of TheLeague's 351 wire posts name

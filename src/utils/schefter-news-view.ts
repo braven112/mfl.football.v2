@@ -28,7 +28,7 @@ import { franchiseIdForLeague } from './auth';
 import type { SchefterPost, SchefterFeed as FeedType, SchefterAuthor } from '../types/schefter';
 import { getAuthor, getAuthorAvatar, SCHEFTER_AUTHORS } from '../types/schefter';
 import { getLeagueYearForSlug, getTestDateFromSearchParams } from './league-year';
-import { resolveWatchingSets, matchPosts, postIsForViewer } from './schefter-watching';
+import { resolveWatchingSets, matchPosts, postIsForViewer, isPostVisibleTo } from './schefter-watching';
 import { buildSchefterPostOg, isValidSchefterPostId } from './schefter-feed';
 import { resolveFeedMode, defaultSource, type FeedMode } from './schefter-season-mode';
 
@@ -195,6 +195,11 @@ export async function resolveSchefterNewsView(
   const deepLink = !!url.searchParams.get('post');
   const sourceParam =
     url.searchParams.get('source') ?? (deepLink ? null : defaultSource(feedMode, canWatch));
+
+  // Drop anything addressed to another franchise BEFORE tabs are derived or
+  // any filter runs — a tab must never appear because of a post this reader
+  // cannot see, and no tab may surface one.
+  const readable = feed.posts.filter((p) => isPostVisibleTo(p, watchFranchiseId));
   const resolvedSource = LEGACY_ALIASES[sourceParam ?? ''] ?? sourceParam;
   const activeSource: SourceFilter | null =
     VALID_SOURCES.includes(resolvedSource as SourceFilter) &&
@@ -231,16 +236,16 @@ export async function resolveSchefterNewsView(
     if (activeSource === 'groupme') return groupMePosts;
     if (activeSource === 'watching') {
       if (!canWatch) return [];
-      return feed.posts.filter((p) => postIsForViewer(p, watchingSets, watchFranchiseId));
+      return readable.filter((p) => postIsForViewer(p, watchingSets, watchFranchiseId));
     }
-    if (activeSource) return feed.posts.filter(PREDICATES[activeSource]);
+    if (activeSource) return readable.filter(PREDICATES[activeSource]);
     // "All": merge Schefter + GroupMe (when signed in), newest first.
     if (isAuthenticated && groupMePosts.length > 0) {
-      return [...feed.posts, ...groupMePosts].sort(
+      return [...readable, ...groupMePosts].sort(
         (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime(),
       );
     }
-    return feed.posts;
+    return readable;
   })();
 
   /**
@@ -252,7 +257,7 @@ export async function resolveSchefterNewsView(
    * the AFL stops being a hardcoded two-tab special case.
    */
   const hasPostsFor = (source: keyof typeof PREDICATES): boolean =>
-    feed.posts.some(PREDICATES[source]);
+    readable.some(PREDICATES[source]);
 
   if (enrichPosts) await enrichPosts(posts);
 
@@ -264,7 +269,7 @@ export async function resolveSchefterNewsView(
 
   // Claude's own articles for the rail — always drawn from the WHOLE feed, not
   // the filtered list, so the rail does not empty out on a narrow tab.
-  const featuredArticles = feed.posts
+  const featuredArticles = readable
     .filter((p) => p.type === 'article' && (p.authorId === 'claude' || p.authorId === 'claude-schefter'))
     .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
     .slice(0, 5);
@@ -278,7 +283,7 @@ export async function resolveSchefterNewsView(
   const ogPostId = url.searchParams.get('post');
   const ogPost =
     ogPostId && isValidSchefterPostId(ogPostId)
-      ? feed.posts.find((p) => p.id === ogPostId)
+      ? readable.find((p) => p.id === ogPostId)
       : undefined;
 
   // In season the personal tab leads and is called "For You" — that is the

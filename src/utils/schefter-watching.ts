@@ -65,6 +65,34 @@ export function postConcernsFranchise(
 const ALWAYS_ACTIONABLE_TYPES = new Set<SchefterPost['type']>(['ask-roger']);
 
 /**
+ * Post types addressed to ONE franchise and nobody else.
+ *
+ * An `assistant` post is a private nudge — "no lineup submitted", "Nico Collins
+ * is OUT". The league already learns about a missed lineup only if the push
+ * failed to reach that owner: #1000 made the group-chat post a fallback
+ * precisely so a problem we already reported privately is not aired again, and
+ * its own comment is explicit that "their problem is their own business".
+ *
+ * Publishing these to the shared feed would undo that permanently — every
+ * owner's failure state, on the website, for the whole league, forever. So
+ * they are filtered to their addressee before any tab or filter sees them.
+ */
+const FRANCHISE_PRIVATE_TYPES = new Set<SchefterPost['type']>(['assistant']);
+
+/**
+ * Can this viewer see this post at all? Applies BEFORE any tab filtering, and
+ * before tab derivation — otherwise a tab can appear because of a post the
+ * viewer is not allowed to read.
+ */
+export function isPostVisibleTo(
+  post: SchefterPost,
+  franchiseId: string | null | undefined,
+): boolean {
+  if (!FRANCHISE_PRIVATE_TYPES.has(post.type)) return true;
+  return postConcernsFranchise(post, franchiseId);
+}
+
+/**
  * The For You test: a post about a player you roster or watch, about your
  * franchise, or a league-wide deadline you have to act on.
  *

@@ -38,7 +38,7 @@ import type { AuthUser } from './auth';
 import { franchiseIdForLeague } from './auth';
 import type { SchefterPost } from '../types/schefter';
 import { getLeagueYearForSlug } from './league-year';
-import { resolveWatchingSets, matchPosts, postIsForViewer } from './schefter-watching';
+import { resolveWatchingSets, matchPosts, postIsForViewer, isPostVisibleTo } from './schefter-watching';
 import { resolveFeedMode } from './schefter-season-mode';
 
 export interface SchefterRailView {
@@ -67,19 +67,24 @@ export interface ResolveRailOptions {
 export async function resolveSchefterRail(opts: ResolveRailOptions): Promise<SchefterRailView> {
   const { league, posts, authUser, limit = 30, now = new Date() } = opts;
 
+  const franchiseId = franchiseIdForLeague(authUser, league.id);
+  // Another franchise's assistant nudges are not this reader's business.
+  // Declared before `plain`, which reads it — the other order is a temporal
+  // dead zone that throws on the very first call.
+  const readable = posts.filter((p) => isPostVisibleTo(p, franchiseId));
+
   const plain: SchefterRailView = {
-    posts: posts.slice(0, limit),
+    posts: readable.slice(0, limit),
     forYouIds: [],
     watchingByPost: {},
     personalized: false,
   };
 
-  const franchiseId = franchiseIdForLeague(authUser, league.id);
   if (!franchiseId || resolveFeedMode(now) !== 'in-season') return plain;
 
   const year = getLeagueYearForSlug(league.slug);
   const sets = await resolveWatchingSets(league, year, franchiseId);
-  const mine = posts.filter((p) => postIsForViewer(p, sets, franchiseId)).slice(0, limit);
+  const mine = readable.filter((p) => postIsForViewer(p, sets, franchiseId)).slice(0, limit);
 
   // Nothing of yours has moved — offer no tab rather than an empty one.
   if (mine.length === 0) return plain;
@@ -87,7 +92,7 @@ export async function resolveSchefterRail(opts: ResolveRailOptions): Promise<Sch
   // Each tab gets a full `limit` of its own. Union them so All is genuinely the
   // league feed even when the owner's own posts would have filled the rail.
   const mineIds = new Set(mine.map((p) => p.id));
-  const leagueFill = posts.filter((p) => !mineIds.has(p.id)).slice(0, limit);
+  const leagueFill = readable.filter((p) => !mineIds.has(p.id)).slice(0, limit);
 
   return {
     posts: [...mine, ...leagueFill].sort(

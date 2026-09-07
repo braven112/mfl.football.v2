@@ -92,6 +92,25 @@ describe('the rail is the owner’s Watching feed', () => {
   });
 });
 
+describe('assistant posts are private to the franchise they address', () => {
+  it('keeps another franchise’s nudge out of the rail entirely', async () => {
+    const theirs = post({ id: 'assist_other', type: 'assistant', franchiseIds: ['0007'] });
+    const v = await rail([theirs, post({ franchiseIds: ['0001'] })], owner);
+    expect(v.posts.map((p) => p.id)).not.toContain('assist_other');
+  });
+
+  it('keeps the owner’s own', async () => {
+    const mine = post({ id: 'assist_mine', type: 'assistant', franchiseIds: ['0001'] });
+    const v = await rail([mine, post()], owner);
+    expect(v.forYouIds).toContain('assist_mine');
+  });
+
+  it('hides them from a signed-out visitor', async () => {
+    const v = await rail([post({ id: 'a', type: 'assistant', franchiseIds: ['0001'] })], null);
+    expect(v.posts).toHaveLength(0);
+  });
+});
+
 describe('a visitor with no franchise here gets the league feed', () => {
   it('falls back for a signed-out visitor', async () => {
     const v = await rail([post(), post()], null);
