@@ -4,6 +4,7 @@ import { resolveDateForYear } from '../src/utils/league-event-resolver';
 import { getSeasonStart, getCurrentYears } from '../scripts/lib/league-years.mjs';
 import { aflNationalLeagueDraft } from '../src/utils/schedule-release.mjs';
 import { getLeaguePhase } from '../src/utils/league-phase';
+import { execFileSync } from 'node:child_process';
 
 /**
  * Season-rollover regression suite for getLeagueYear.
@@ -216,5 +217,38 @@ describe('every derivation of the season start agrees', () => {
       expect(getLeaguePhase(dayBefore)).toBe('off-season');
       expect(getLeaguePhase(dayOf)).toBe('in-season');
     }
+  });
+});
+
+/**
+ * The cutoff must be the same INSTANT regardless of the process timezone.
+ *
+ * `new Date(y, m, d)` is midnight in whatever zone the process is in. The app
+ * pins TZ=America/Los_Angeles (ensure-pt-timezone.ts); bare node does NOT — it
+ * is UTC here — and Vercel's runtime presets TZ=:UTC. So a local-midnight
+ * cutoff resolves seven hours early in every build script and cron, flipping
+ * the season on the EVENING BEFORE the draft. That is the same failure the
+ * Schefter feed shipped once already by reading a cron-written timestamp.
+ *
+ * This spawns real child processes: reassigning `process.env.TZ` inside a
+ * running vitest worker does NOT reliably re-read the zone, so an in-process
+ * version of this test passes with the bug present. It was written that way
+ * first and had to be thrown out — the child process is the point.
+ */
+describe('the season start is timezone-independent', () => {
+  it('is the same instant under UTC, Pacific, Sydney and New York', () => {
+    const zones = ['UTC', 'America/Los_Angeles', 'Australia/Sydney', 'America/New_York'];
+    const results = zones.map((tz) =>
+      execFileSync(
+        process.execPath,
+        [
+          '-e',
+          `import('./scripts/lib/league-years.mjs').then(m => console.log(m.getSeasonStart(2026).toISOString()))`,
+        ],
+        { env: { ...process.env, TZ: tz }, encoding: 'utf8', cwd: process.cwd() },
+      ).trim(),
+    );
+    expect(new Set(results).size, `got ${JSON.stringify(results)} for ${zones}`).toBe(1);
+    expect(results[0]).toBe('2026-08-30T07:00:00.000Z');
   });
 });

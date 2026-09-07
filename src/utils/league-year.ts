@@ -76,7 +76,14 @@ function getLaborDay(year: number): Date {
  */
 export function getSeasonStartForYear(year: number): Date {
   const laborDay = getLaborDay(year);
-  return new Date(year, 8, laborDay.getDate() - 8, 0, 0, 0, 0);
+  // Midnight PACIFIC, anchored explicitly — NOT `new Date(y, m, d)`, whose
+  // numeric form is midnight in whatever zone the PROCESS is in. The app pins
+  // TZ=America/Los_Angeles (ensure-pt-timezone.ts) but bare node does not, and
+  // Vercel's runtime presets TZ=:UTC — so a local-midnight cutoff resolves
+  // seven hours early in every build script and cron, flipping the season on
+  // the EVENING BEFORE the draft. Late August is always PDT (UTC-7); the
+  // season can never open during PST.
+  return new Date(Date.UTC(year, 8, laborDay.getDate() - 8, 7, 0, 0, 0));
 }
 
 /**

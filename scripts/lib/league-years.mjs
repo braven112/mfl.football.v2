@@ -58,7 +58,11 @@ export const getLaborDay = (year) => {
  */
 export const getSeasonStart = (year) => {
   const laborDay = getLaborDay(year);
-  return new Date(year, 8, laborDay.getDate() - 8, 0, 0, 0, 0);
+  // Midnight PACIFIC, anchored explicitly. This file runs under bare node,
+  // which is UTC — a local-midnight cutoff here would sit seven hours before
+  // the app's, so the build and the site would disagree about the season for
+  // the evening before the draft. Late August is always PDT (UTC-7).
+  return new Date(Date.UTC(year, 8, laborDay.getDate() - 8, 7, 0, 0, 0));
 };
 
 export const getCurrentYears = (now = new Date(), env = process.env) => {
