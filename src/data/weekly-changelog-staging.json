@@ -928,6 +928,14 @@
       "impact": "user",
       "area": "homepage",
       "league": "afl"
+    },
+    {
+      "date": "2026-09-07",
+      "type": "bug-fix",
+      "summary": "The NFL games rail on Live Scoring now actually appears. It has been on the page the whole time and has never once rendered outside demo mode — the page only handed it a slate of games when you passed ?demo=1, and with nothing to draw it stayed empty, which in turn meant the browser never woke it up to go fetch the real ones. It waits for the rail to scroll into view, and an empty rail never does. Both leagues and Best Ball now load the day's games on the server, so the row of matchups is there the moment the page is, with the carrying network's logo on each card. While fixing it: the network logos were loading lazily, which meant each one took up no space at all until it arrived and then shoved the row sideways — they load with the card now.",
+      "impact": "user",
+      "area": "live-scoring",
+      "league": "both"
     }
   ]
 }

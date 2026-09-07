@@ -34,9 +34,9 @@
 - **A hydrating island must SSR something, and nothing time- or request-derived.**
   Clock: start `null`, tick in `useEffect`. Query string: take it as a prop
   (`Astro.url.search`) — `window.location` behind `typeof window !== 'undefined'`
-  *guarantees* the mismatch. Renders `null` until opened: `client:only`, else
-  Astro SSRs an EMPTY `<astro-island>`. Each is #418, which `reportError`
-  re-fires as an uncaught window error.
+  *guarantees* the mismatch. One that can render `null` is never
+  `client:visible`: that observes the island's CHILDREN, so an empty one
+  **never hydrates**. `client:idle`, or SSR content.
 - **`window` listeners outlive the page that added them:** ClientRouter swaps the
   DOM, not the window, so a page-scoped `error` handler blames later pages' faults
   on its own. Drop it on `astro:before-swap`, and mark that script
@@ -130,6 +130,72 @@ production-only CSS bug, `curl` the shipped HTML + stylesheets, rewrite the
 hrefs to local copies, and open it in the bundled Chromium — it isolates
 "wrong bytes" from "device failing to apply right bytes" in minutes.
 <!-- /CURATED-HEAD -->
+
+---
+
+## 2026-09-07 - `client:visible` on a Component That Can Render Null Never Hydrates — Silently, Forever
+
+**Context:** the NFL games rail (`NflGamesStrip`) sat on all three
+`/live-scoring` pages and had **never once rendered in production**. It was
+found only because someone asked where to look for a feature that had just
+shipped into it.
+
+**Insight:** three ordinary decisions compose into a permanent no-op.
+
+1. The component ends `if (games.length === 0) return null` — reasonable for a
+   decorative rail whose feed can be empty.
+2. The page assigned its `initialGames` only inside `if (useDemo)`, so a real
+   request server-rendered the island with no games.
+3. The mount was `client:visible`.
+
+Astro's visible directive compiles to `for (let e of o.children) n.observe(e)`
+— it observes the island's **CHILDREN**, not the island. A component that
+SSR'd `null` produces `<astro-island ... ssr client="visible">` with no
+children, so the IntersectionObserver is handed nothing, never fires, and the
+island never hydrates. No error, no warning, no #418 — the client fetch that
+would have filled the rail simply never runs. Not "until there are games":
+never, on every load, forever.
+
+The reason it survived review and manual QA is worth as much as the mechanism:
+`?demo=1` is the ONE path that populates `initialGames`, so every check anyone
+ran — including the screenshots taken to verify the feature — went through the
+single configuration in which the bug cannot appear.
+
+**Rule:** if a component can return `null`, it must not be `client:visible`.
+Use `client:idle` (hydrates regardless), `client:only` (no SSR pass at all), or
+guarantee real SSR content. And when a page has a demo/sample mode, verify the
+REAL path — a demo flag that supplies data is a bug detector you have disabled.
+
+**Diagnosis without a browser:** read the SSR HTML. An `<astro-island>` that
+still carries the `ssr` attribute and has no children between its tags has not
+hydrated and, under `client:visible`, never will. Its `props` attribute is
+HTML-escaped JSON in Astro's `[type, value]` pairs, so `"initialGames":[0]`
+(no second element) is a prop that arrived `undefined` — which is what named
+the cause here.
+
+Related: the head's "a hydrating island must SSR something" rule previously
+framed the cost as a hydration mismatch (#418). This is the worse sibling —
+same precondition, but nothing renders and nothing complains.
+
+## 2026-09-07 - A Lazy-Loaded Logo With `width: auto` Occupies Zero Width Until It Loads
+
+**Context:** the same rail's network marks (`.net-badge__logo`, `height: 100%;
+width: auto`) carried `loading="lazy"`. Off-screen they measured **0x15**;
+after scrolling, **44x15**.
+
+**Insight:** a lazy image has no intrinsic size until it is fetched, so
+`width: auto` resolves to 0. The element is in the DOM with the right `alt`
+and `title` and is genuinely invisible — Playwright's `toBeVisible()` times out
+on it while `$$eval` happily reports three elements, which is a confusing pair
+of signals until you measure the box. When the image finally arrives the row
+jumps sideways by the mark's full width.
+
+**Rule:** an image sized by aspect (`width: auto` off a fixed height) should not
+be lazy unless it also has reserved dimensions. For a handful of small
+same-origin marks, eager + `decoding="async"` costs less than the shift.
+`getBoundingClientRect()` on the img, before and after `scrollIntoView()`, is
+the measurement that distinguishes "not loaded" from "not rendered".
+
 
 ---
 
