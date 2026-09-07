@@ -2,12 +2,14 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { leagueHasFeature } from '../src/config/leagues';
+import { DEFAULT_VIEWER_PREFERENCES } from '../src/utils/viewer-preferences';
+import { countryOptions } from '../src/utils/broadcast-channels';
 
 /**
  * The nav drawer's account menu — the viewer's own settings, under their team
  * name.
  *
- * Three things about it are load-bearing rather than stylistic:
+ * Four things about it are load-bearing rather than stylistic:
  *
  * 1. **The clock is read from the COOKIE, never resolved.** `/preferences`
  *    calls `resolveViewerPreferences`, which WRITES cookies (illegal from a
@@ -25,6 +27,16 @@ import { leagueHasFeature } from '../src/config/leagues';
  * 3. **The disclosure re-initializes on `astro:page-load`.** The ClientRouter
  *    swaps the footer on every in-site navigation; a `DOMContentLoaded`-only
  *    binding leaves the chevron inert after the first page.
+ *
+ * 4. **The row's two halves sit on DIFFERENT floors, and that is deliberate.**
+ *    The FLAG always renders: the country has a real default
+ *    (`DEFAULT_VIEWER_PREFERENCES` is US) that Sunday Ticket and every network
+ *    badge already resolve on, so showing it reports what the site is doing
+ *    rather than guessing. The CLOCK does not follow — every league surface
+ *    prints PT alone until the viewer names a zone, so with no cookie the row
+ *    must still read "League time (PT)". Collapsing the two into one default
+ *    would put an Eastern clock on the menu for every viewer who never opened
+ *    the picker.
  */
 
 const REPO_ROOT = process.cwd();
@@ -42,6 +54,36 @@ describe('Nav account menu', () => {
     expect(
       /resolveViewerPreferences\s*\(/.test(source),
       'Resolving preferences is route-only; the nav renders on every page'
+    ).toBe(false);
+  });
+
+  it('always flies a country flag on the Preferences row, defaulting to the catalog country', () => {
+    // The AFL drawer showed no flag at all for anyone who had never opened
+    // /preferences on afl-fantasy.com — cookies are per apex domain, so a
+    // country picked on theleague.us never reaches it. The country has a
+    // default; the row now shows it.
+    expect(source).toMatch(/viewerPrefs\?\.country \?\? DEFAULT_VIEWER_PREFERENCES\.country/);
+    expect(
+      /const viewerCountry = viewerPrefs\s*\n?\s*\?/.test(source),
+      'A viewerPrefs-conditional viewerCountry renders no flag until the viewer picks one'
+    ).toBe(false);
+
+    // The default country must actually have a flag to fly, or the row renders
+    // an empty span and the fix is invisible.
+    const fallback = countryOptions().find((c) => c.code === DEFAULT_VIEWER_PREFERENCES.country);
+    expect(fallback, 'The default country must exist in the catalog').toBeTruthy();
+    expect(fallback?.flag, 'The default country needs a flag emoji').toBeTruthy();
+  });
+
+  it('leaves the clock on the league floor when the viewer has chosen nothing', () => {
+    // The flag defaults; the clock must not. `DEFAULT_ZONE_IDS` is US/ET, and
+    // printing it here would name an Eastern clock nobody picked.
+    expect(source).toMatch(
+      /const clockValue = viewerPrefs \? zoneSummary\(viewerPrefs\) : `League time \(\$\{zoneShortName\(LEAGUE_CLOCK\)\}\)`/
+    );
+    expect(
+      /DEFAULT_VIEWER_PREFERENCES\.zoneId|DEFAULT_ZONE_IDS/.test(source),
+      'The nav must never fall back to a default ZONE — every league surface prints PT alone until the viewer names one'
     ).toBe(false);
   });
 

@@ -57,6 +57,20 @@ explicit choice, so their presence is the same `explicit` signal — and no
 cookie means the menu says "League time (PT)", which is the honest pre-preference
 floor rather than a guess. `tests/nav-account-menu.test.ts` pins this.
 
+**In that one row the FLAG and the CLOCK sit on different floors.** The flag
+always renders, falling back to `DEFAULT_VIEWER_PREFERENCES.country`: the
+country HAS a real default, and Sunday Ticket, the network badges and the
+game-day heroes have all been resolving on it for anyone who never opened the
+picker — so the flag reports what the site is already doing for them rather
+than guessing. The clock must NOT follow, because there is no default clock to
+report: PT alone is what every league surface prints until the viewer names a
+zone. This is the two-floor rule below applied inside a single line of UI, and
+it is easy to "fix" wrongly — defaulting the zone here too would put an Eastern
+clock in the drawer for every viewer who never opened the picker. Cookies are
+per apex domain, which is also why a country chosen on theleague.us shows no
+choice of its own on afl-fantasy.com until it is chosen there: the nav reads
+the cookie by design, and the mirror is a route-only read.
+
 **Resolve it in the ROUTE, never in a component.** `resolveViewerPreferences`
 WRITES cookies, and `Astro.cookies.set()` from an imported component runs after
 the response headers are committed — it throws `ResponseSentError` and blanks

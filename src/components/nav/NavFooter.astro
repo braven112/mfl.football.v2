@@ -26,6 +26,7 @@ import { countryOptions } from '../../utils/broadcast-channels';
 import {
   COUNTRY_COOKIE,
   ZONE_COOKIE,
+  DEFAULT_VIEWER_PREFERENCES,
   LEAGUE_CLOCK,
   parseViewerPreferences,
   zoneShortName,
@@ -88,9 +89,22 @@ const rawCountry = Astro.cookies.get(COUNTRY_COOKIE)?.value ?? null;
 const rawZone = Astro.cookies.get(ZONE_COOKIE)?.value ?? null;
 const hasChosenClock = !!(rawCountry || rawZone);
 const viewerPrefs = hasChosenClock ? parseViewerPreferences(rawCountry, rawZone) : null;
-const viewerCountry = viewerPrefs
-  ? countryOptions().find((c) => c.code === viewerPrefs.country) ?? null
-  : null;
+/**
+ * The flag names the COUNTRY whose channels this viewer sees, and that has a
+ * real default: `DEFAULT_VIEWER_PREFERENCES` is US, and Sunday Ticket, the
+ * network badges and the game-day heroes have always resolved on it for a
+ * viewer who never opened the picker. So the row shows that flag rather than
+ * nothing — it reports what the site is already doing for them, which is the
+ * pre-preference floor, not a guess.
+ *
+ * The CLOCK beside it is the opposite case and must NOT follow: there is no
+ * default clock to report, because every league surface prints PT alone until
+ * the viewer names one. Hence "League time (PT)" here, and no default zone
+ * anywhere near it. Two floors, one row — see
+ * docs/claude/rules/viewer-preferences.md.
+ */
+const flagCountry = viewerPrefs?.country ?? DEFAULT_VIEWER_PREFERENCES.country;
+const viewerCountry = countryOptions().find((c) => c.code === flagCountry) ?? null;
 const clockValue = viewerPrefs ? zoneSummary(viewerPrefs) : `League time (${zoneShortName(LEAGUE_CLOCK)})`;
 
 /**
