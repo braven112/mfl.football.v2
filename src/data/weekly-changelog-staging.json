@@ -3,6 +3,14 @@
   "changes": [
     {
       "date": "2026-09-07",
+      "type": "bug-fix",
+      "summary": "The site used to call it the offseason until Labor Day, which meant that for eight days after both AFL drafts had run — rosters set, keepers declared, everybody's team built — standings, draft order, MVP tracking and the Schefter Report were all still showing you last season. The season now starts when the league's season actually starts: the Sunday of the NL draft, eight days earlier. Nothing changes for the season already underway; you'll notice it next August, when the site stops pretending nothing has happened yet.",
+      "impact": "user",
+      "area": "calendar",
+      "league": "both"
+    },
+    {
+      "date": "2026-09-07",
       "type": "style-tweak",
       "summary": "The Owners page has moved out of the side navigation. It was sitting in League Reports next to Franchises, doubling up on a link the site footer already carries under Record Book — so the drawer is one line shorter and Owners lives in exactly one place. Nothing about the pages themselves changed: every owner, every tenure, every trophy is still right where it was.",
       "impact": "user",

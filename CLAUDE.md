@@ -55,7 +55,7 @@ cross-cutting, add a line here. Keep this file short.
 | Roger (rules Q&A, GroupMe reminders, evals, draft dates) | `docs/claude/rules/roger.md` | Two independent "Roger" code paths; both have hallucinated dates. Fixing one doesn't fix the other. And deadline reminders are PUSH-FIRST now — the chat only carries the owners the fan-out could not reach, so any new reminder lane must ask `undelivered` before it posts, and must treat a push that could not run as reaching nobody. |
 | Standings, playoffs, brackets, draft order | `docs/claude/rules/standings-brackets-draft-order.md` | Never re-sort MFL's standings rows — its order already applies the constitution's tiebreakers, including h2h we can't reproduce. |
 | Live scoring / ESPN data | `docs/claude/rules/live-scoring.md` | A college athlete id and an NFL one are both plain digits, so a bad join resolves the wrong person instead of failing. |
-| Set Lineup pages, the Sunday lineup warning | `docs/claude/rules/lineups.md` | `res.ok` is not "the call worked" — MFL returns errors as HTTP 200, and "no lineup" vs "couldn't read it" must never merge. And "in season" is Labor Day + 3, never `month >= 9`: the Sunday before the opener once named 17 of 24 AFL teams for not setting a lineup nobody could set yet. |
+| Set Lineup pages, the Sunday lineup warning | `docs/claude/rules/lineups.md` | `res.ok` is not "the call worked" — MFL returns errors as HTTP 200, and "no lineup" vs "couldn't read it" must never merge. And "in season" is kickoff-derived, never `month >= 9`: the Sunday before the opener once named 17 of 24 AFL teams for not setting a lineup nobody could set yet. |
 | Franchise history, owner attribution, `ownerHistory`, owner pages | `docs/claude/insights/features/franchise-history.md` + `docs/plans/owners-feature.md` | Owner-scoping drops a third of all franchise-seasons off franchise pages; `/owners` is now where they live, so every such season must land on exactly one HOLDING — one owner, or a declared set of co-owners — or it vanishes again. `tests/owner-tenures-data.test.ts` pins that over sets, plus a separate check that only declared co-owners share a season. The ownership boundary has ONE implementation — `buildAttributor` in `src/utils/owner-tenures.mjs` — and `tests/owner-boundary-parity.test.ts` fails on any file that re-grows its own walk-back; five copies once existed and two silently disagreed, so never inline one "just for this page". |
 | Colors, tokens, logos, headshots, service worker | `docs/claude/rules/theming-and-assets.md` | A `var(--x)` with no definition renders its fallback in *both* themes — light looks perfect, dark ships white-on-black. |
 | Feed writers, globs, `.git` size, Astro 7 compiler | `docs/claude/rules/storage-and-build.md` | MFL returns arrays in nondeterministic order — a plain `writeFileSync` + byte diff regrows a 7 GB `.git`. |
@@ -107,7 +107,7 @@ Two dates drive year transitions and they are **not the same clock**:
 | Date | Event | Function |
 |------|-------|----------|
 | Feb 14 @ 8:45 PT | New MFL league created | `getCurrentLeagueYear()` |
-| Labor Day | NFL season starts | `getCurrentSeasonYear()` |
+| NL draft (Labor Day − 8, a Sunday) | Season starts | `getCurrentSeasonYear()` |
 
 Use `getCurrentLeagueYear()` (from `src/utils/league-year.ts`) for anything
 roster-management-shaped: rosters, contracts, salary cap, auctions, trade
@@ -116,18 +116,30 @@ playoffs, MVP tracking, draft order. Picking the wrong one for a new page
 silently shows last/next year's data for ~6 months of the calendar. Test
 date-dependent features with `?testDate=YYYY-MM-DD`, not the system clock.
 
+- **The season rolls on the NL DRAFT, not Labor Day.** `getSeasonStartForYear`
+  (`league-year.ts`) is the one definition: the Sunday before Labor Day weekend
+  (`laborDay - 8`), which is the AFL's NL email draft — the LAST draft to run,
+  so the first moment every roster in every league is real. It rolled on Labor
+  Day until Sep 2026, eight days too late: drafts done, rosters set, and
+  standings/draft order/MVP/the Schefter feed all still reporting last season.
+  It is DERIVED, not read from `resolved-events.json` — that feed is
+  cron-written and only ever carries the current league year, and a year
+  selector this load-bearing must answer for every year with no I/O. The
+  calendar spells the same day as `sunday-before-labor-day-weekend`;
+  `tests/league-year-rollover.test.ts` pins the two derivations against each
+  other so they cannot drift.
 - The auto-calculated base (pivot) year is ALWAYS `calendarYear - 1`; the
-  Feb 14 / Labor Day cutoff checks are what advance it. A base year that
-  itself advances at Labor Day gets +1'd twice (that bug shipped in five
+  Feb 14 / NL draft cutoff checks are what advance it. A base year that
+  itself advances at the season start gets +1'd twice (that bug shipped in five
   files). Copy the formula from `league-year.ts`, or don't re-port it.
 - `PUBLIC_BASE_YEAR` / `PUBLIC_MFL_YEAR` pins are floor-only: the code clamps
   to `max(pin, calendarYear - 1)`, so a stale pin self-heals and no manual bump
-  is needed at rollover — **never bump a pin at Labor Day** (a pin equal to the
-  current calendar year during the season double-advances the math).
+  is needed at rollover — **never bump a pin at the season start** (a pin equal
+  to the current calendar year during the season double-advances the math).
   `tests/league-year-rollover.test.ts` locks the timeline.
 - **"The feeds have a completed week" is NOT an offseason guard.** Because
-  `getCurrentSeasonYear()` / `currentSeasonYear()` roll at Labor Day, Feb →
-  Labor Day resolves to LAST season, whose feeds are complete by definition,
+  `getCurrentSeasonYear()` / `currentSeasonYear()` roll at the NL draft, Feb →
+  late August resolves to LAST season, whose feeds are complete by definition,
   so a year-round weekly job fires all preseason. Gate on the season actually
   being played: `isSeasonWindowOpen`
   (`src/utils/pecking-order-season-window.mjs`). Dedup-on-output-file is not a
