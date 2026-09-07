@@ -176,7 +176,14 @@ export type SchefterPostType =
   | 'ask-roger'
   | 'injury'
   | 'odds'
-  | 'groupme';
+  | 'groupme'
+  /**
+   * A nudge addressed to ONE franchise — lineup warnings, deadlines. Always
+   * carries `franchiseIds: [thatTeam]`, often names no player at all, and is
+   * how the For You feed surfaces things that used to live only in a push.
+   * Written by scripts/lib/schefter-assistant-post.mjs.
+   */
+  | 'assistant';
 
 /**
  * Transaction sub-types. UPPER_CASE values come straight from MFL's

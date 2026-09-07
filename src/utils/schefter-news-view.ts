@@ -27,9 +27,10 @@ import type { AuthUser } from './auth';
 import { franchiseIdForLeague } from './auth';
 import type { SchefterPost, SchefterFeed as FeedType, SchefterAuthor } from '../types/schefter';
 import { getAuthor, getAuthorAvatar, SCHEFTER_AUTHORS } from '../types/schefter';
-import { getLeagueYearForSlug } from './league-year';
-import { resolveWatchingSets, matchPosts, postMentionsAny } from './schefter-watching';
+import { getLeagueYearForSlug, getTestDateFromSearchParams } from './league-year';
+import { resolveWatchingSets, matchPosts, postIsForViewer } from './schefter-watching';
 import { buildSchefterPostOg, isValidSchefterPostId } from './schefter-feed';
+import { resolveFeedMode, defaultSource, type FeedMode } from './schefter-season-mode';
 
 export const VALID_SOURCES = [
   'theleague',
@@ -47,6 +48,9 @@ export type SourceFilter = (typeof VALID_SOURCES)[number];
  */
 const LEGACY_ALIASES: Record<string, SourceFilter> = {
   claude: 'theleague',
+  // The tab is labelled "For You" in season; the query value stays `watching`
+  // so links already shared in the group chat keep resolving.
+  foryou: 'watching',
   events: 'theleague',
   wire: 'nfl',
   injuries: 'insider',
@@ -82,6 +86,8 @@ export interface NewsTab {
 
 export interface SchefterNewsView {
   activeSource: SourceFilter | null;
+  /** Drives the tab label, the tab order, and the in-season noise filter. */
+  feedMode: FeedMode;
   tabs: NewsTab[];
   basePath: string;
   posts: SchefterPost[];
@@ -111,6 +117,11 @@ export interface ResolveNewsViewOptions {
   groupMePosts?: SchefterPost[];
   hasGroupChat?: boolean;
   /**
+   * Clock override for tests. Callers normally omit it: `?testDate=` in the
+   * URL is honoured automatically, which is what /rollover-check drives.
+   */
+  now?: Date;
+  /**
    * Optional post-filter hook (TheLeague uses it for Open Graph enrichment of
    * GroupMe links). Runs on the filtered list; failures are the caller's to
    * swallow.
@@ -118,10 +129,38 @@ export interface ResolveNewsViewOptions {
   enrichPosts?: (posts: SchefterPost[]) => Promise<void>;
 }
 
+/**
+ * Copy for an empty For You feed. This matters more now that the tab is the
+ * in-season default: a reader who has not built a watch list must be told what
+ * to do about it rather than shown a shrug.
+ */
+function forYouEmptyText(watchingCount: number, mode: FeedMode): string {
+  if (watchingCount === 0) {
+    return 'Nothing to watch yet. Use the ⋮ button on any player — free agents, rosters, custom rankings — to build your watch list, and your own roster comes along automatically.';
+  }
+  return mode === 'in-season'
+    ? 'Quiet on your guys right now. Nothing on your roster or your watch list has moved — check the All tab for the rest of the league.'
+    : 'No news on your players or your watch list yet. Schefter is on it.';
+}
+
 export async function resolveSchefterNewsView(
   opts: ResolveNewsViewOptions,
 ): Promise<SchefterNewsView> {
-  const { league, feed, authUser, url, groupMePosts = [], hasGroupChat = false, enrichPosts } = opts;
+  const {
+    league,
+    feed,
+    authUser,
+    url,
+    groupMePosts = [],
+    hasGroupChat = false,
+    enrichPosts,
+  } = opts;
+
+  // `?testDate=` is read here rather than in each route so both leagues get it
+  // for free and neither can forget it — this whole feature is date-switched,
+  // so it has to be renderable at a date other than today's.
+  const now = opts.now ?? getTestDateFromSearchParams(url.searchParams) ?? new Date();
+  const feedMode = resolveFeedMode(now);
 
   const isAuthenticated = !!authUser;
   const basePath = `/${league.slug}/news`;
@@ -134,7 +173,10 @@ export async function resolveSchefterNewsView(
   const watchYear = getLeagueYearForSlug(league.slug);
   const watchingSets = await resolveWatchingSets(league, watchYear, watchFranchiseId);
 
-  const sourceParam = url.searchParams.get('source');
+  // An explicit ?source= always wins. Only when the URL says nothing does the
+  // season decide: in season a signed-in owner opens on their own players,
+  // everyone else opens on the full feed exactly as before.
+  const sourceParam = url.searchParams.get('source') ?? defaultSource(feedMode, canWatch);
   const resolvedSource = LEGACY_ALIASES[sourceParam ?? ''] ?? sourceParam;
   const activeSource: SourceFilter | null =
     VALID_SOURCES.includes(resolvedSource as SourceFilter) &&
@@ -171,7 +213,7 @@ export async function resolveSchefterNewsView(
     if (activeSource === 'groupme') return groupMePosts;
     if (activeSource === 'watching') {
       if (!canWatch) return [];
-      return feed.posts.filter((p) => postMentionsAny(p, watchingSets.all));
+      return feed.posts.filter((p) => postIsForViewer(p, watchingSets, watchFranchiseId));
     }
     if (activeSource) return feed.posts.filter(PREDICATES[activeSource]);
     // "All": merge Schefter + GroupMe (when signed in), newest first.
@@ -221,18 +263,21 @@ export async function resolveSchefterNewsView(
       ? feed.posts.find((p) => p.id === ogPostId)
       : undefined;
 
+  // In season the personal tab leads and is called "For You" — that is the
+  // whole point of the mode. Out of season it drops back to second place and
+  // to "Watching", because with no games there is nothing personal to report
+  // and the league-wide feed is the interesting one.
+  const forYouTab: NewsTab = {
+    label: feedMode === 'in-season' ? 'For You' : 'Watching',
+    href: `${basePath}?source=watching`,
+    active: isWatchingTab,
+    watching: true,
+  };
+  const allTab: NewsTab = { label: 'All', href: basePath, active: !activeSource };
+
   const tabs: NewsTab[] = [
-    { label: 'All', href: basePath, active: !activeSource },
-    ...(canWatch
-      ? [
-          {
-            label: 'Watching',
-            href: `${basePath}?source=watching`,
-            active: isWatchingTab,
-            watching: true,
-          },
-        ]
-      : []),
+    ...(canWatch && feedMode === 'in-season' ? [forYouTab, allTab] : [allTab]),
+    ...(canWatch && feedMode !== 'in-season' ? [forYouTab] : []),
     ...(hasPostsFor('theleague')
       ? [{ label: 'The League', href: `${basePath}?source=theleague`, active: activeSource === 'theleague' }]
       : []),
@@ -252,16 +297,13 @@ export async function resolveSchefterNewsView(
 
   return {
     activeSource,
+    feedMode,
     tabs,
     basePath,
     posts,
     watchingByPost,
     featuredArticles,
-    emptyText: isWatchingTab
-      ? watchingSets.all.size === 0
-        ? 'Nothing to watch yet. Use the ⋮ button on any player — free agents, rosters, custom rankings — to build your watch list.'
-        : 'No news on your players or your watch list yet. Schefter is on it.'
-      : undefined,
+    emptyText: isWatchingTab ? forYouEmptyText(watchingSets.all.size, feedMode) : undefined,
     profileAuthor,
     profileAvatar: getAuthorAvatar(profileAuthor),
     isGroupMeTab,
