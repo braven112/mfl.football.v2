@@ -26,6 +26,7 @@ import { getDailySlot } from '../../utils/hero-resolver';
 import { assembleLiveScoringData, type ConfigTeam } from '../../utils/live-scoring-data';
 import LiveScoreboard from '../../components/shared/LiveScoreboard';
 import NflGamesStrip from '../../components/shared/NflGamesStrip';
+import { fetchInitialNflGames } from '../../utils/nfl-scoreboard-source';
 import type { LiveScoringPageProps } from '../../types/live-scoring';
 import '../../styles/live-scoring.css';
 import '../../styles/nfl-games-strip.css';
@@ -95,13 +96,27 @@ const islandProps: LiveScoringPageProps = {
   initialBench: data.bench,
   initialYetToPlay: data.playersYetToPlay,
 };
+
+// The rail's SERVER slate. A component that renders nothing server-side gets an
+// EMPTY <astro-island>, and `client:visible` observes that island's CHILDREN —
+// with none, it is never observed and never hydrates, so the rail was invisible
+// here on every load. Undefined on an ESPN outage, so the island still falls
+// back to its own poll.
+const nflGames = await fetchInitialNflGames({ week, year, params: Astro.url.searchParams });
 ---
 
 <TheLeagueLayout title="Live Scoring | Best Ball #1">
   <div class="ls-page">
     <LiveScoreboard client:load {...islandProps} />
+    <!-- `client:idle`, NOT `client:visible`. The strip renders null when it has
+         no games, and Astro's visible directive observes the island's CHILDREN —
+         an island that server-rendered nothing has none, so it is never observed
+         and never hydrates. The server slate above normally prevents that, but an
+         ESPN outage would put it right back; idle hydrates either way, so the
+         client poll can still recover the rail. -->
     <div class="ls-page-strip">
-      <NflGamesStrip client:visible week={week} year={year} isLive={isLive} country={viewerCountry} />
+      <NflGamesStrip client:idle week={week} year={year} isLive={isLive}
+                     initialGames={nflGames} country={viewerCountry} />
     </div>
   </div>
 </TheLeagueLayout>

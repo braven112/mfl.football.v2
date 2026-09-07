@@ -52,7 +52,7 @@ const title = channel
       title={title}
     >
       {/* Named, not decorative: this img IS the only statement of the channel. */}
-      <img class="net-badge__logo" src={channel.logo} alt={channel.name} loading="lazy" />
+      <img class="net-badge__logo" src={channel.logo} alt={channel.name} decoding="async" />
     </span>
   ) : (
     <span class:list={['net-badge', extraClass]} title={title}>{channel.name}</span>

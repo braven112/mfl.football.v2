@@ -41,6 +41,7 @@ import { resolveLeaguePath } from '../../utils/nav-utils';
 import { getCurrentRosterSample, getLiveScoringSample } from '../../data/live-scoring-sample';
 import LiveScoreboard from '../../components/shared/LiveScoreboard';
 import NflGamesStrip from '../../components/shared/NflGamesStrip';
+import { fetchInitialNflGames } from '../../utils/nfl-scoreboard-source';
 import type { LiveScoringPageProps, NflGame } from '../../types/live-scoring';
 import '../../styles/live-scoring.css';
 import '../../styles/nfl-games-strip.css';
@@ -184,6 +185,14 @@ if (useDemo) {
 } else {
   // data is always assigned in the non-demo branch above.
   const liveData = data!;
+
+  // The rail's SERVER slate. Not an optimisation — a component that renders
+  // nothing server-side gets an EMPTY <astro-island>, and `client:visible`
+  // observes that island's CHILDREN, so with none it is never observed and
+  // never hydrates. `nflGames` used to be set only under ?demo=1, which is why
+  // the rail worked in demo and was invisible everywhere else. Undefined on an
+  // ESPN outage, so the island still falls back to its own poll.
+  nflGames = await fetchInitialNflGames({ week, year, params: Astro.url.searchParams });
   islandProps = {
     week,
     year,
@@ -212,8 +221,14 @@ if (useDemo) {
       <ThrowbackPreviewBar preview={throwbackPreview} settingsPath={settingsPath} />
     )}
     <LiveScoreboard client:load {...islandProps} />
+    <!-- `client:idle`, NOT `client:visible`. The strip renders null when it has
+         no games, and Astro's visible directive observes the island's CHILDREN —
+         an island that server-rendered nothing has none, so it is never observed
+         and never hydrates. The server slate above normally prevents that, but an
+         ESPN outage would put it right back; idle hydrates either way, so the
+         client poll can still recover the rail. -->
     <div class="ls-page-strip">
-      <NflGamesStrip client:visible week={islandProps.week} year={year}
+      <NflGamesStrip client:idle week={islandProps.week} year={year}
                      isLive={useRosterDemo ? true : (useDemo ? false : isLive)}
                      demo={useDemo && !useRosterDemo} initialGames={nflGames}
                      country={viewerCountry} />

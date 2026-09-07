@@ -94,7 +94,7 @@ function GameCard({ game, country }: { game: NflGame; country: CountryCode }) {
         {channel && (
           channel.logo ? (
             <span className="net-badge net-badge--mark nfl-game__net" title={channelTitle}>
-              <img className="net-badge__logo" src={channel.logo} alt={channel.name} loading="lazy" />
+              <img className="net-badge__logo" src={channel.logo} alt={channel.name} decoding="async" />
             </span>
           ) : (
             <span className="net-badge nfl-game__net" title={channelTitle}>{channel.name}</span>

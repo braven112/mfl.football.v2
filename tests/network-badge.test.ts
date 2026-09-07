@@ -117,6 +117,48 @@ describe('network badge — country comes from the ROUTE', () => {
   });
 });
 
+describe('NFL games rail — it must survive its own empty server render', () => {
+  /**
+   * The rail was invisible in production for its whole life and nobody noticed,
+   * because the ONE path anyone checked (`?demo=1`) is the path that hides it.
+   *
+   * `NflGamesStrip` returns null when it has no games. Astro's `client:visible`
+   * hydration observes the island's CHILDREN — an island that server-rendered
+   * nothing has none, so the observer never fires, the island never hydrates,
+   * the client poll never runs, and the rail never appears. Not "until
+   * kickoff": never. Two independent things stop it, and both are pinned here.
+   */
+  it.each(STRIP_ROUTES)('%s hands the strip a server-rendered slate', (route) => {
+    const src = read(route);
+    expect(src, `${route}: no server fetch`).toMatch(/fetchInitialNflGames\(/);
+    expect(src, `${route}: fetched but not passed`).toMatch(/initialGames=\{nflGames\}/);
+  });
+
+  it.each(STRIP_ROUTES)('%s does not mount the strip with client:visible', (route) => {
+    const src = read(route);
+    const mount = src.slice(src.indexOf('<NflGamesStrip'));
+    const directive = mount.match(/client:(visible|idle|load|only)/)?.[1];
+    expect(directive, `${route}: no client directive on the strip`).toBeTruthy();
+    // `visible` is the one that cannot recover from an empty server render.
+    expect(directive, `${route}: client:visible cannot hydrate an empty island`).not.toBe('visible');
+  });
+
+  it('the server slate and the client poll parse through the SAME source', () => {
+    // Two copies of the parse rules is how the SSR rail and the polled rail
+    // would come to disagree about a team code or a network.
+    const route = read('src/pages/api/nfl-scoreboard.ts');
+    expect(route).toMatch(/from '\.\.\/\.\.\/utils\/nfl-scoreboard-source'/);
+    expect(route, 'the API route re-implements the parse').not.toMatch(/parseGameSituation|canonicalNflCode/);
+  });
+
+  it('an ESPN outage yields undefined, never an empty array', () => {
+    // `[]` would be indistinguishable from a real empty week and would render
+    // an empty rail; undefined lets the island fall back to its own poll.
+    const src = read('src/utils/nfl-scoreboard-source.ts');
+    expect(src).toMatch(/board\.ok && board\.games\.length > 0 \? board\.games : undefined/);
+  });
+});
+
 describe('network badge — the lineup slot renders twice and both must draw it', () => {
   // The page rebuilds a slot's innerHTML on every player swap. A badge present
   // only in the .astro branch disappears the first time the owner changes
@@ -179,6 +221,20 @@ describe('network badge — the lineup slot renders twice and both must draw it'
     for (const field of ['ch.title', 'ch.logo', 'ch.name']) {
       expect(src, `${page} — ${field}`).toContain(`esc(${field})`);
     }
+  });
+});
+
+describe('network badge — the mark must not collapse before it loads', () => {
+  // `loading="lazy"` plus `width: auto` gives an unloaded image NO intrinsic
+  // size, so the mark renders 0px wide — invisible, then popping the row wider
+  // when it arrives. Measured on the games rail: 0x15 before load, 44x15 after,
+  // which is why the rail looked badge-less on a page nobody had scrolled.
+  it.each(BADGE_SURFACES)('%s does not lazy-load the mark', (file) => {
+    const src = read(file);
+    const lazyMarks = src
+      .split('\n')
+      .filter((l) => l.includes('net-badge__logo') && l.includes('loading="lazy"'));
+    expect(lazyMarks, `${file}: ${lazyMarks.length} lazy mark(s)`).toEqual([]);
   });
 });
 
