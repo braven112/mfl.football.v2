@@ -640,6 +640,26 @@
         "tests/suggestion-issue.test.ts",
         "tests/faq-league-vocabulary.test.ts"
       ]
+    },
+    {
+      "name": "nav-and-footer",
+      "note": "Two independent link registries, and \"the footer\" names both. nav-config.json's `footerLinks` is the nav DRAWER's bottom strip (one link, \"Back to MFL\"); the site footer deck is footer-config.ts, which lists page-directory IDS rather than paths. A page can sit in one, the other, or both — so a link removed from the nav is still reachable, and `routeEquivalence` (keyed by path, unrelated to the drawer) is what keeps the league toggle crossing between the two leagues' copies. The trap is guard COVERAGE, not the link: TheLeague's bare paths are clean URLs rewritten at runtime, so those pages must never be prerendered — and nav-drawer-links.test.ts only asserts that for pages listed in nav-config.json. Tidying a duplicate nav entry away therefore silently takes the page's prerender guard with it (this happened to /owners in Sept 2026), which is why footer-links.test.ts now asserts the same rule over its own link set.",
+      "paths": [
+        "src/config/nav-config.json",
+        "src/config/nav-config.ts",
+        "src/config/footer-config.ts",
+        "src/components/nav/*",
+        "src/components/theleague/Footer.astro",
+        "src/utils/nav-utils.ts"
+      ],
+      "tests": [
+        "tests/nav-drawer-links.test.ts",
+        "tests/nav-config-icons.test.ts",
+        "tests/nav-pinned-links.test.ts",
+        "tests/nav-equivalent-route.test.ts",
+        "tests/footer-links.test.ts",
+        "tests/footer-config.test.ts"
+      ]
     }
   ]
 }

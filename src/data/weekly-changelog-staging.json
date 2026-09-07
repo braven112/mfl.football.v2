@@ -3,6 +3,14 @@
   "changes": [
     {
       "date": "2026-09-07",
+      "type": "style-tweak",
+      "summary": "The Owners page has moved out of the side navigation. It was sitting in League Reports next to Franchises, doubling up on a link the site footer already carries under Record Book — so the drawer is one line shorter and Owners lives in exactly one place. Nothing about the pages themselves changed: every owner, every tenure, every trophy is still right where it was.",
+      "impact": "user",
+      "area": "navigation",
+      "league": "both"
+    },
+    {
+      "date": "2026-09-07",
       "type": "bug-fix",
       "summary": "The “Put us on your Home Screen” banner was showing to everyone — including owners already using the installed app, and on Android, where it gave iPhone instructions for a Share menu Android does not have. The banner was correctly deciding to hide itself; its own styling was overriding the decision, so it rendered anyway. It now appears only where it can actually help: a browser that can install the app, and never inside the app.",
       "impact": "user",
