@@ -40,11 +40,16 @@ import { locateMentions } from './groupme-mentions.mjs';
 export const MAX_CHARS = 950;
 
 /**
- * Past this many named owners the post is a wall rather than a callout, and
- * the mention list stops reading as "you specifically". The remainder is
- * summarized instead.
+ * Hard ceiling on named owners, as a sanity bound rather than a style choice.
+ *
+ * It is deliberately ABOVE any league's size (the AFL is 24). A fixed cap of
+ * 10 was the first version and it was wrong: when push cannot run at all every
+ * franchise is unreached, and on the AFL's 17-of-24 flagged Sunday it would
+ * have named ten and left seven owners with no warning on either channel —
+ * the exact silence the fallback exists to prevent. Length, not a count, is
+ * what actually has to give; see the shrink loop below.
  */
-export const MAX_NAMED = 10;
+export const MAX_NAMED = 32;
 
 /**
  * The one place the "turn these on" ask is worded. Every reminder that reaches
@@ -91,14 +96,10 @@ export function buildFallbackPost({
   const rows = (unreached ?? []).filter((r) => r && r.franchiseId && r.name);
   if (rows.length === 0) return null;
 
-  const named = rows.slice(0, MAX_NAMED);
-  const overflow = rows.length - named.length;
-
-  // Built twice at most: once with each owner's specific problem, and — only
-  // if that overruns GroupMe's limit — once with bare names. Dropping the
-  // detail is the right thing to lose, because the push already carried it and
-  // the site has all of it; the mention is what this post is for.
-  const render = (withDetail) => {
+  // Render `count` owners, optionally with each one's specific problem.
+  const render = (count, withDetail) => {
+    const named = rows.slice(0, count);
+    const overflow = rows.length - named.length;
     const tokens = [];
     const lines = named.map((r) => {
       const mention = mentions.get(r.franchiseId);
@@ -107,18 +108,32 @@ export function buildFallbackPost({
       const detail = withDetail && r.detail ? `: ${r.detail}` : '';
       return `${token}${detail}`;
     });
-    if (overflow > 0) {
-      lines.push(`…and ${overflow} more`);
-    }
+    if (overflow > 0) lines.push(`…and ${overflow} more`);
     const parts = [headline];
     if (body) parts.push(body);
     parts.push(lines.join('\n'));
     parts.push(buildCta(notificationsUrl));
-    return { text: parts.join('\n\n'), tokens };
+    return { text: parts.join('\n\n'), tokens, named };
   };
 
-  let { text, tokens } = render(true);
-  if (text.length > MAX_CHARS) ({ text, tokens } = render(false));
+  // Shed detail first, then names — the same order composePost has always
+  // used, and for the same reason: the push already carried each owner's
+  // detail and the site has all of it, but a name dropped here is an owner who
+  // hears about the deadline nowhere.
+  //
+  // Shrinking by COUNT is what makes this loop able to terminate at all. The
+  // first version only re-rendered without detail, which is a no-op for the
+  // deadline lane (those rows carry no detail), so an over-long post shipped
+  // and GroupMe truncated it — cutting the CTA link and orphaning every
+  // mention locus past the cut.
+  let attempt = render(Math.min(rows.length, MAX_NAMED), true);
+  if (attempt.text.length > MAX_CHARS) {
+    attempt = render(Math.min(rows.length, MAX_NAMED), false);
+  }
+  for (let count = attempt.named.length - 1; attempt.text.length > MAX_CHARS && count >= 1; count--) {
+    attempt = render(count, false);
+  }
+  let { text, tokens } = attempt;
 
   // Loci are offsets into the FINAL bytes, so they are located after the text
   // is settled — computing them against a draft that later shrank would
@@ -132,6 +147,6 @@ export function buildFallbackPost({
   return {
     text,
     attachments: attachment ? [attachment] : [],
-    named: named.map((r) => r.franchiseId),
+    named: attempt.named.map((r) => r.franchiseId),
   };
 }

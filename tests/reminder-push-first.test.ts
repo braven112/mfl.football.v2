@@ -291,14 +291,20 @@ describe('the chat lanes ask who was unreached before they post', () => {
     );
   });
 
-  it('speculation asks the shared budget and consumes a slot', () => {
-    const src = read('scripts/lib/speculation-groupme.mjs');
-    // Two lanes, ONE budget. A post that does not consume its slot lets the
-    // rumor mill believe it still has the full three.
-    expect(src).toMatch(/evaluatePingWindow/);
-    expect(src).toMatch(/await verdict\.consume\?\.\(\)/);
-    // Fails closed: posting blind is how an uncapped lane happens.
-    expect(src).toMatch(/no Redis — cannot check the trade budget/);
+  it('speculation is budgeted ONCE, by the script, before the sender runs', () => {
+    // The gate and the consume must stay on the same side of the send. The
+    // script checks the shared 3/day + 4h budget at step 3 and increments
+    // posts_today at step 9; a second check inside the sender runs AFTER that
+    // increment, sees a millisecond-old last_post_ts, and refuses on spacing
+    // every time — which silently emptied this lane while looking gated.
+    const script = read('scripts/schefter-trade-speculation.mjs');
+    expect(script).toMatch(/checkGlobalBudgetGate\(/);
+    expect(script).toMatch(/incr\(RUMOR_POSTS_TODAY_KEY\)/);
+
+    const lib = read('scripts/lib/speculation-groupme.mjs');
+    expect(lib, 'the sender must not re-check the budget it was already charged for')
+      .not.toMatch(/evaluatePingWindow|consumeDailyPost/);
+    expect(lib).toMatch(/isPlannedToday\('trade-speculation'\)/);
   });
 
   it('speculation actually reaches phones now', () => {

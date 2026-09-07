@@ -278,3 +278,24 @@ mill as idle — "zero posts in 30 days" — after bucketing the feed by `type`.
 Rumor posts carry `type: 'transaction'` with `transactionSubType: 'rumor_mill'`,
 so they were hiding inside the count I called transactions. The real rate was
 3–4 a day. The owner's screenshots, not my query, caught it.
+
+**A gate placed after the thing it guards refuses forever, silently.** Review
+caught this one in the PR that introduced it. Trade speculation's script gates
+on the shared chat budget and then *consumes* a slot, both before it calls the
+sender; adding a second budget check inside the sender meant it read a
+timestamp its own caller had stamped milliseconds earlier and refused on 4-hour
+spacing on every live run. The lane would have posted nothing while every log
+line, every test and the reviewer's first read said "correctly gated". The
+generalisable rule: **a gate and the consume it guards belong on the same side
+of the send**, and when you add a check, grep for whether the caller already
+made one.
+
+**A cap that is a fixed count, on a list whose length is the failure signal.**
+The fallback named at most 10 owners. That reads fine until you remember the
+case it exists for: when push cannot run, EVERY franchise is unreached, so on
+the AFL's 17-of-24 flagged Sunday it would have named ten and left seven owners
+with no warning on either channel. The lineup lane's older `composePost` had
+always shrunk by LENGTH instead, which is why it did name all 17. Shrink by the
+dimension that is actually scarce, and check the cap against the scenario the
+feature was built for rather than the typical one.
+

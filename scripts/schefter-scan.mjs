@@ -610,6 +610,12 @@ async function postToGroupMe(text, { botIdOverride, kind, league, attachments = 
     kind,
     botId,
     text,
+    // Forwarded, NOT left to each call site. The older lanes guarded with
+    // `if (DRY_RUN) log else post` at the call site; the deadline lanes did
+    // not, and because a dry run reports every owner unreached, a
+    // `--dry-run` scan would have fired a live @-mention post at the league.
+    dryRun: DRY_RUN,
+    onDryRun: (sent) => console.log(`  [dry-run] would post to GroupMe:\n${sent}`),
     // Carries the @-mention loci on the deadline fallback. Dropping this
     // parameter would still post readable text, which is exactly why it is
     // easy to lose — the mentions would silently stop firing anyone's phone
@@ -2275,10 +2281,17 @@ async function scanEventReminders(league) {
     const fallbacks = [];
     for (const post of newPosts) {
       const meta = touchById.get(post.id) ?? {};
-      // The final touch takes precedence: on a minor event the announce touch
-      // IS the final one, and a callout naming the people who need it beats a
-      // broadcast naming nobody.
-      if (meta.touchId === 'dayof') fallbacks.push({ post, meta });
+      // The final touch takes precedence for a normal deadline: on a minor
+      // event the announce touch IS the final one, and a callout naming the
+      // people who need it beats a broadcast naming nobody.
+      //
+      // NOT for a league-audience event. Its day-of is not an obligation on
+      // anybody — routing "the throwbacks are live" into the unreached lane
+      // would wrap a league-wide announcement in a personal "your phone isn't
+      // working" scolding, and would drop it entirely once everyone has
+      // subscribed. Those events already said their piece on their announce
+      // touch; every other touch of theirs is push-only like anyone else's.
+      if (meta.touchId === 'dayof' && !meta.leagueAudience) fallbacks.push({ post, meta });
       // A league-audience deadline announces regardless of season; everything
       // else only out of season, where the chat is quiet enough for a
       // save-the-date to get read.

@@ -461,13 +461,18 @@ Three things that are load-bearing:
 - **`transaction` stays push-only.** Every add, drop and waiver claim, scanned
   every 15 minutes, is the firehose that got the chat muted. Trades are
   separable (`raw.type === 'TRADE'` → `breaking` tier) if that ever changes.
-- **Speculation must consume a budget slot after it posts.** Two lanes draw on
-  one counter; a post that does not consume its slot lets the rumor mill
-  believe it still has all three and the league gets double the cap.
-- **Speculation fails CLOSED** when the budget cannot be read. Deadline lanes
-  fail open on purpose — a missed deadline costs real value — but posting
-  speculation blind is how an uncapped lane happens, and it is never that
-  urgent.
+- **Speculation is budgeted ONCE, by its script, and the sender must not look
+  again.** `schefter-trade-speculation.mjs` checks the shared 3/day + 4h gate
+  at its step 3 (`checkGlobalBudgetGate`) and increments `posts_today` +
+  stamps `last_post_ts` at step 9 — both BEFORE it calls
+  `postSpeculationToGroupMe` at step 10. A second budget check inside the
+  sender therefore reads a millisecond-old timestamp and refuses on 4-hour
+  spacing every single time. That is not hypothetical: it was written that way
+  in this very PR, and it made the lane post nothing at all while every log
+  line and test read as correctly gated. **A gate and the consume it guards
+  must stay on the same side of the send.** The sender's only check is
+  `isPlannedToday`, the day-plan question, which is a different question.
+  `tests/reminder-push-first.test.ts` pins the split.
 
 Speculation also had **no push route at all** until Sep 2026: held out of the
 chat by the day cap and never sent to a phone either, so a daily job published

@@ -70,16 +70,18 @@ describe('buildFallbackPost — names only the unreached', () => {
   });
 
   it('summarizes past MAX_NAMED rather than posting a wall', () => {
+    // MAX_NAMED is a sanity ceiling ABOVE any league's size (24), so it only
+    // engages on absurd input — length is what shrinks a real post.
     const many = Array.from({ length: MAX_NAMED + 4 }, (_, i) =>
-      owner(String(i).padStart(4, '0'), `Team ${i}`),
+      owner(String(i).padStart(4, '0'), `T${i}`),
     );
     const post = buildFallbackPost({
       headline: 'Cut deadline',
       unreached: many,
       notificationsUrl: URL,
     })!;
-    expect(post.named).toHaveLength(MAX_NAMED);
-    expect(post.text).toContain('…and 4 more');
+    expect(post.named.length).toBeLessThanOrEqual(MAX_NAMED);
+    expect(post.text).toContain('more');
   });
 });
 
@@ -156,10 +158,10 @@ describe('buildFallbackPost — @-mentions', () => {
 });
 
 describe('buildFallbackPost — length', () => {
-  it('drops per-owner detail before it overruns GroupMe, keeping every name', () => {
+  it('sheds detail before names, and names only if length still demands it', () => {
     const long = 'starting a player who is OUT, plus two empty slots and a bye-week starter';
-    const rows = Array.from({ length: MAX_NAMED }, (_, i) =>
-      owner(String(i).padStart(4, '0'), `A Team With A Fairly Long Name ${i}`, long),
+    const rows = Array.from({ length: 10 }, (_, i) =>
+      owner(String(i).padStart(4, '0'), `Team ${i}`, long),
     );
     const post = buildFallbackPost({
       headline: 'Lineup check',
@@ -168,10 +170,48 @@ describe('buildFallbackPost — length', () => {
     })!;
 
     expect(post.text.length).toBeLessThanOrEqual(MAX_CHARS);
-    // The mention is what the post is FOR, so names survive and detail is what
-    // gets cut — the push already carried the detail and the site has all of it.
+    // Detail goes first — the push already carried it and the site has all of
+    // it — and at this size that alone is enough to keep every name.
     expect(post.text).not.toContain(long);
     for (const row of rows) expect(post.text).toContain(row.name);
+  });
+
+  it('names a whole unreachable league, because that is the failure case', () => {
+    // When push cannot run at all, EVERY franchise comes back unreached. A
+    // fixed cap of 10 here would have left 14 AFL owners with no warning on
+    // either channel — the exact silence the fallback exists to prevent.
+    const rows = Array.from({ length: 24 }, (_, i) =>
+      owner(String(i).padStart(4, '0'), `Team ${i}`),
+    );
+    const post = buildFallbackPost({
+      headline: 'Cut deadline',
+      unreached: rows,
+      notificationsUrl: URL,
+    })!;
+    expect(post.text.length).toBeLessThanOrEqual(MAX_CHARS);
+    expect(post.named).toHaveLength(24);
+    for (const row of rows) expect(post.text).toContain(row.name);
+  });
+
+  it('always fits, even when the names alone cannot', () => {
+    // The shrink loop must terminate on COUNT. Re-rendering without detail is
+    // a no-op for rows that carry none — the deadline lane's shape — so an
+    // over-long post would otherwise ship and GroupMe would truncate it,
+    // cutting the CTA link and orphaning every mention locus past the cut.
+    const rows = Array.from({ length: 24 }, (_, i) =>
+      owner(String(i).padStart(4, '0'), `An Extremely Long Franchise Name Number ${i}`),
+    );
+    const post = buildFallbackPost({
+      headline: 'Cut deadline',
+      unreached: rows,
+      notificationsUrl: URL,
+    })!;
+    expect(post.text.length).toBeLessThanOrEqual(MAX_CHARS);
+    expect(post.named.length).toBeLessThan(24);
+    expect(post.text).toContain('more');
+    // Whatever survived is still fully mentionable — the CTA and its link are
+    // the last thing in the message and must not be what got cut.
+    expect(post.text).toContain(URL);
   });
 
   it('keeps the detail when it fits', () => {

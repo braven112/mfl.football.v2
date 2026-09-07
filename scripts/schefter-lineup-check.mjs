@@ -364,12 +364,20 @@ async function checkLeague(league, now = new Date()) {
   for (const w of warnings) log(`     ${formatWarningLine(w)}`);
 
   // Marks this league done for the day, whichever channel carried the warning.
-  const recordDelivery = async () => {
+  //
+  // `consumedChatSlot` is the load-bearing argument. The once-per-day guard
+  // should advance either way — the owners were warned, and a re-run must not
+  // warn them twice. The SHARED Schefter chat budget must not: it counts chat
+  // posts, is spent by the rumor and speculation lanes too, and stamping it
+  // also starts their 4-hour spacing hold. Burning a slot for a warning that
+  // went out purely over push would silence a trade rumor for a post the chat
+  // never saw.
+  const recordDelivery = async ({ consumedChatSlot }) => {
     if (!redis) return;
     try {
       await redis.set(guardKey, todayPt);
       await redis.expire(guardKey, GUARD_TTL_SECONDS);
-      await consumeDailyPost(redis, now, league.navSlug);
+      if (consumedChatSlot) await consumeDailyPost(redis, now, league.navSlug);
     } catch (err) {
       warn(`  [redis] failed to record delivery: ${err.message}`);
     }
@@ -410,10 +418,10 @@ async function checkLeague(league, now = new Date()) {
 
   if (unreached.length === 0) {
     log(`  ✅ All ${warnings.length} flagged owners reached by push — no chat post.`);
-    // The push IS the delivery now, so it consumes the once-per-day guard the
+    // The push IS the delivery now, so it takes the once-per-day guard the
     // chat post used to. Without this a second dispatch re-pushes an alert
-    // every owner has already acted on.
-    await recordDelivery();
+    // every owner has already acted on. No chat slot is spent: nothing posted.
+    await recordDelivery({ consumedChatSlot: false });
     return 'pushed';
   }
   log(`  ${unreached.length}/${warnings.length} flagged owners unreached by push — chat fallback`);
@@ -485,7 +493,7 @@ async function checkLeague(league, now = new Date()) {
 
   if (!result.posted) return 'skipped';
 
-  await recordDelivery();
+  await recordDelivery({ consumedChatSlot: true });
   return 'posted';
 }
 

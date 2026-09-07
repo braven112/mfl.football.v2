@@ -26,13 +26,7 @@
 
 import { stripLinkAdjacentPunctuation } from '../../src/utils/link-punctuation.mjs';
 
-import { getRedisConfig, createUpstashClient } from './redis.mjs';
-import {
-  consumeDailyPost,
-  evaluatePingWindow,
-  isQuietHours,
-  MAX_POSTS_PER_DAY,
-} from './schefter-groupme-budget.mjs';
+import { isPlannedToday, describeRefusal } from './groupme-day-plan.mjs';
 
 const GROUPME_POST_URL = 'https://api.groupme.com/v3/bots/post';
 
@@ -118,12 +112,10 @@ export function buildSpeculationGroupMeText({ body, postId, publicBaseUrl }) {
  *                                              defaults to process.env
  * @param {typeof fetch} [args.fetcher]       - fetch override for tests
  * @param {boolean} [args.dryRun]             - skip the network call
- * @param {() => ({ok: boolean, why?: string, consume?: () => Promise<void>}
- *                    | Promise<{ok: boolean, why?: string, consume?: () => Promise<void>}>)}
- *          [args.allowPost] - budget gate. Returns a VERDICT, not a boolean:
- *          the caller needs the refusal reason for the log and the `consume`
- *          callback to burn a slot only once the send actually succeeded.
- *          Override in tests to exercise the send path.
+ * @param {() => boolean} [args.allowPost] - day-plan check; override in tests.
+ *          NOT the budget: `schefter-trade-speculation.mjs` owns that for this
+ *          lane — it gates on the shared 3/day + 4h spacing at its step 3 and
+ *          CONSUMES the slot at step 9, both before this is called.
  * @param {(...a:any[])=>void} [args.log]
  * @param {(...a:any[])=>void} [args.warn]
  */
@@ -133,12 +125,13 @@ export async function postSpeculationToGroupMe({
   env = process.env,
   fetcher = globalThis.fetch,
   dryRun = false,
-  // Injected like `fetcher` and `env` above. Production always uses the
-  // default, which asks the SHARED rumor budget rather than the weekday
-  // calendar: speculation is a trade lane, and those are governed by
-  // MAX_POSTS_PER_DAY (3) plus 4-hour spacing and quiet hours, not by a day
-  // of the week. See OWN_BUDGET_KINDS in groupme-day-plan.mjs.
-  allowPost = defaultAllowPost,
+  // Injected like `fetcher` and `env` above. The default asks the DAY PLAN
+  // only. It must not re-check the shared trade budget: the calling script
+  // increments posts_today and stamps last_post_ts at its step 9, BEFORE this
+  // runs, so a second look at those keys sees a millisecond-old timestamp and
+  // refuses on 4-hour spacing — every single time. That bug made this lane
+  // post nothing at all while looking correctly gated.
+  allowPost = () => isPlannedToday('trade-speculation'),
   log = () => {},
   warn = () => {},
 } = {}) {
@@ -157,14 +150,13 @@ export async function postSpeculationToGroupMe({
     return { posted: false, reason: 'dry-run', text };
   }
 
-  // The shared trade budget applies here too. This lane predates postToGroupMe
-  // and posts /v3/bots/post directly, so the gate has to be asked explicitly —
-  // a raw fetch is exactly how a sender ends up outside a cap nobody realises
-  // it is outside of. Awaited, because the real gate reads Redis.
-  const verdict = await allowPost();
-  if (!verdict?.ok) {
-    log(`  [speculation] Held: ${verdict?.why ?? 'budget'}`);
-    return { posted: false, reason: 'daily-cap', why: verdict?.why };
+  // This lane predates postToGroupMe and posts /v3/bots/post directly, so the
+  // day-plan check has to be asked explicitly — a raw fetch is exactly how a
+  // sender ends up outside a cap nobody realises it is outside of.
+  if (!allowPost()) {
+    const why = describeRefusal('trade-speculation', null);
+    log(`  [speculation] Held: ${why}`);
+    return { posted: false, reason: 'daily-cap', why };
   }
 
   const botId = env?.GROUPME_SCHEFTER_BOT_ID;
@@ -191,10 +183,6 @@ export async function postSpeculationToGroupMe({
     const status = typeof res?.status === 'number' ? res.status : 0;
     if (status >= 200 && status < 300) {
       log('  [GroupMe] Posted speculation');
-      // Consume a slot so the rumor mill sees this ping. Without it the two
-      // trade lanes each believe they have the full budget and the league
-      // gets double what the cap promises.
-      await verdict.consume?.();
       return { posted: true, text };
     }
     warn(`  [GroupMe] Speculation post failed: HTTP ${status}`);
@@ -205,39 +193,7 @@ export async function postSpeculationToGroupMe({
   }
 }
 
-/**
- * The production gate: quiet hours, then the shared rumor budget.
- *
- * Fails CLOSED on a Redis outage. The opposite choice — post anyway — would
- * let this lane run uncapped exactly when we cannot see how much it has
- * already sent, and a speculation post is never so urgent that it is worth
- * that. (Deadline lanes fail OPEN, deliberately; this is not one.)
- *
- * @returns {Promise<{ok: boolean, why?: string, consume?: () => Promise<void>}>}
- */
-async function defaultAllowPost(now = new Date()) {
-  if (isQuietHours(now)) return { ok: false, why: 'quiet hours (11pm-7am PT)' };
-
-  const config = getRedisConfig();
-  if (!config) return { ok: false, why: 'no Redis — cannot check the trade budget' };
-
-  try {
-    const redis = createUpstashClient(config);
-    const window = await evaluatePingWindow(redis, now);
-    if (window.atCap) {
-      return { ok: false, why: `trade budget spent (${window.postsToday}/${MAX_POSTS_PER_DAY} today)` };
-    }
-    if (window.spacingHeld) {
-      return { ok: false, why: 'too soon after the last trade post (4h spacing)' };
-    }
-    return { ok: true, consume: () => consumeDailyPost(redis, now) };
-  } catch (err) {
-    return { ok: false, why: `trade budget check failed (${err.message})` };
-  }
-}
-
 export const __testing__ = {
-  defaultAllowPost,
   GROUPME_POST_URL,
   SPECULATION_CTA_PREFIX,
 };

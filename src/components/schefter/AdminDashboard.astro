@@ -1381,7 +1381,11 @@ const { base, navSlug } = Astro.props;
   setInterval(() => {
     load();
     loadTradeProposals();
-    loadPushSubscribers();
+    // NOT loadPushSubscribers: it makes two sequential Upstash round trips per
+    // team (~48 for the AFL), and push subscriptions change on the timescale
+    // of someone installing the app, not of a dashboard tick. It loads once
+    // and on the explicit Refresh — which is what its own endpoint comment
+    // assumes when it justifies being sequential.
   }, 60_000);
 </script>
 

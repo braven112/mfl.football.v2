@@ -72,7 +72,7 @@ describe('postSpeculationToGroupMe — dry run', () => {
     const fetcher = vi.fn();
     const log = vi.fn();
     const result = await postSpeculationToGroupMe({
-      allowPost: () => ({ ok: true }),
+      allowPost: () => true,
       post: { id: 'sf_speculation_dry', body: '🟡 dry run body' },
       publicBaseUrl: 'https://theleague.us',
       env: { GROUPME_SCHEFTER_BOT_ID: 'BOT' },
@@ -91,7 +91,7 @@ describe('postSpeculationToGroupMe — dry run', () => {
     const fetcher = vi.fn();
     const log = vi.fn();
     const result = await postSpeculationToGroupMe({
-      allowPost: () => ({ ok: true }),
+      allowPost: () => true,
       post: { id: 'sf_speculation_noenv', body: '🟡 no env' },
       publicBaseUrl: 'https://theleague.us',
       env: {},
@@ -111,7 +111,7 @@ describe('postSpeculationToGroupMe — live', () => {
     const fetcher = vi.fn().mockResolvedValue({ status: 202 });
     const log = vi.fn();
     const result = await postSpeculationToGroupMe({
-      allowPost: () => ({ ok: true }),
+      allowPost: () => true,
       post: { id: 'sf_speculation_live', body: '🟡 live body' },
       publicBaseUrl: 'https://theleague.us',
       env: { GROUPME_SCHEFTER_BOT_ID: 'BOT_LIVE' },
@@ -133,7 +133,7 @@ describe('postSpeculationToGroupMe — live', () => {
     const fetcher = vi.fn();
     const warn = vi.fn();
     const result = await postSpeculationToGroupMe({
-      allowPost: () => ({ ok: true }),
+      allowPost: () => true,
       post: { id: 'sf_speculation_x', body: '🟡 …' },
       publicBaseUrl: 'https://theleague.us',
       env: {},
@@ -150,7 +150,7 @@ describe('postSpeculationToGroupMe — live', () => {
     const fetcher = vi.fn().mockResolvedValue({ status: 500 });
     const warn = vi.fn();
     const result = await postSpeculationToGroupMe({
-      allowPost: () => ({ ok: true }),
+      allowPost: () => true,
       post: { id: 'sf_speculation_500', body: '🟡 …' },
       publicBaseUrl: 'https://theleague.us',
       env: { GROUPME_SCHEFTER_BOT_ID: 'BOT' },
@@ -166,7 +166,7 @@ describe('postSpeculationToGroupMe — live', () => {
     const fetcher = vi.fn().mockRejectedValue(new Error('boom'));
     const warn = vi.fn();
     const result = await postSpeculationToGroupMe({
-      allowPost: () => ({ ok: true }),
+      allowPost: () => true,
       post: { id: 'sf_speculation_err', body: '🟡 …' },
       publicBaseUrl: 'https://theleague.us',
       env: { GROUPME_SCHEFTER_BOT_ID: 'BOT' },
@@ -181,7 +181,7 @@ describe('postSpeculationToGroupMe — live', () => {
   it('rejects malformed posts up-front rather than calling fetch', async () => {
     const fetcher = vi.fn();
     const result = await postSpeculationToGroupMe({
-      allowPost: () => ({ ok: true }),
+      allowPost: () => true,
       post: { id: 'x' } as any,
       publicBaseUrl: 'https://theleague.us',
       env: { GROUPME_SCHEFTER_BOT_ID: 'BOT' },
@@ -193,51 +193,33 @@ describe('postSpeculationToGroupMe — live', () => {
   });
 });
 
-describe('the shared trade budget', () => {
-  it('fails CLOSED when the budget cannot be read', async () => {
-    // Every other test in this file opts past the gate to exercise the send
-    // path. This one uses the real default with no Redis configured. Posting
-    // anyway would run this lane uncapped exactly when we cannot see how much
-    // it has already sent — and a speculation post is never worth that.
-    // (Deadline lanes fail OPEN on purpose; this is not one.)
+describe('the day-plan gate', () => {
+  it('is allowed by the calendar, because a trade lane skips it', async () => {
+    // trade-speculation is in OWN_BUDGET_KINDS, so isPlannedToday says yes on
+    // any weekday. The 3/day + 4h budget is NOT checked here: the calling
+    // script gates on it at step 3 and CONSUMES the slot at step 9, both
+    // before this runs. A second look at those keys from here sees a
+    // millisecond-old last_post_ts and refuses on spacing every single time.
     const result = await postSpeculationToGroupMe({
       post: { id: 'sp_1', body: 'Sources say something is brewing.' },
       publicBaseUrl: 'https://www.theleague.us',
       env: { GROUPME_SCHEFTER_BOT_ID: 'bot' },
+      fetcher: vi.fn().mockResolvedValue({ status: 202 }),
+    });
+    expect(result.posted).toBe(true);
+  });
+
+  it('holds when the day plan refuses', async () => {
+    const result = await postSpeculationToGroupMe({
+      post: { id: 'sp_2', body: 'Nothing doing.' },
+      publicBaseUrl: 'https://www.theleague.us',
+      env: { GROUPME_SCHEFTER_BOT_ID: 'bot' },
+      allowPost: () => false,
       fetcher: () => {
         throw new Error('must not reach GroupMe');
       },
     });
     expect(result.posted).toBe(false);
     expect(result.reason).toBe('daily-cap');
-  });
-
-  it('consumes a budget slot after a successful post', async () => {
-    // Both trade lanes draw on ONE budget. A post that does not consume its
-    // slot lets the rumor mill believe it still has the full three, and the
-    // league gets double what the cap promises.
-    let consumed = 0;
-    const result = await postSpeculationToGroupMe({
-      post: { id: 'sp_2', body: 'Two desks circling the same back.' },
-      publicBaseUrl: 'https://www.theleague.us',
-      env: { GROUPME_SCHEFTER_BOT_ID: 'bot' },
-      allowPost: () => ({ ok: true, consume: async () => { consumed += 1; } }),
-      fetcher: vi.fn().mockResolvedValue({ status: 202 }),
-    });
-    expect(result.posted).toBe(true);
-    expect(consumed).toBe(1);
-  });
-
-  it('does not consume a slot when the send failed', async () => {
-    let consumed = 0;
-    const result = await postSpeculationToGroupMe({
-      post: { id: 'sp_3', body: 'Nothing doing.' },
-      publicBaseUrl: 'https://www.theleague.us',
-      env: { GROUPME_SCHEFTER_BOT_ID: 'bot' },
-      allowPost: () => ({ ok: true, consume: async () => { consumed += 1; } }),
-      fetcher: vi.fn().mockResolvedValue({ status: 500 }),
-    });
-    expect(result.posted).toBe(false);
-    expect(consumed, 'a failed post must not burn a slot').toBe(0);
   });
 });
