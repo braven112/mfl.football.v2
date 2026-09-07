@@ -14,9 +14,18 @@
  * a card here is a static illustration with no cast model, no state machine and
  * no personalization behind it. Wiring it to the live shell would mean feeding
  * the shell fixture data and would couple an explanatory page to a hero's
- * runtime. `tests/hero-showcase-content.test.ts` pins the shapes instead.
+ * runtime.
+ *
+ * The price of that choice is DRIFT, and it has been paid twice: the gallery
+ * once showed the auction hero as a pale blue card when the shipped one is
+ * amber, and the AFL's once carried cards for two heroes ("CUT DOWN", "GAME
+ * DAY") the AFL does not have. So the reproduction is now pinned from both
+ * ends — `hero-showcase.css` names its card accents exactly as the live
+ * components name theirs and copies their tokens, and
+ * `tests/hero-showcase-content.test.ts` fails if a shipped accent or AFL
+ * treatment has no card, or if a card claims a wordmark nothing renders.
  */
-import { hexToRgba } from '../../../utils/nfl-team-colors';
+import { getNflTeamColors, hexToRgba } from '../../../utils/nfl-team-colors';
 import type { ShowcaseContent, ShowcaseBlock } from '../../../types/hero-showcase';
 import '../../../styles/hero-showcase.css';
 
@@ -43,6 +52,12 @@ const headshot = (espnId: string) =>
 // Same glow alphas as the shipped composites — 0.38 dark, 0.2 light.
 const cardVars = (primary: string) =>
   `--hc-glow-dark: ${hexToRgba(primary, 0.38)}; --hc-glow-light: ${hexToRgba(primary, 0.2)};`;
+
+/** A board panel wears its NFL club's primary, the way the shipped board does. */
+const panelVars = (code: string) => {
+  const { primary } = getNflTeamColors(code);
+  return `--hcx-panel-solid: ${hexToRgba(primary, 0.22)};`;
+};
 
 const cardLabel = (g: ShowcaseContent['gallery'][number]) =>
   g.model
@@ -76,8 +91,15 @@ const is = <K extends ShowcaseBlock['kind']>(b: ShowcaseBlock, k: K): b is Extra
 
   <section class="hc-gallery" aria-label="Composite hero gallery">
     {content.gallery.map((g) => (
-      <article class={`hcx hcx--${g.accent ?? 'blue'}`} style={cardVars(g.primary)} aria-label={cardLabel(g)}>
-        <span class="hcx__ghost" aria-hidden="true">{g.wordmark}</span>
+      <article
+        class:list={['hcx', `hcx--${g.accent}`, g.tone && `hcx--tone-${g.tone}`, g.shape === 'board' && 'hcx--board']}
+        style={cardVars(g.primary)}
+        aria-label={cardLabel(g)}
+      >
+        {/* An empty wordmark is a real state, not missing content: the live
+            auction hero drops its ghost entirely once bidding opens. Render
+            nothing rather than an empty span, so the card matches. */}
+        {g.wordmark && <span class="hcx__ghost" aria-hidden="true">{g.wordmark}</span>}
         <div class="hcx__glow" aria-hidden="true"></div>
         {g.model && (
           <>
@@ -103,6 +125,12 @@ const is = <K extends ShowcaseBlock['kind']>(b: ShowcaseBlock, k: K): b is Extra
         <div class="hcx__content">
           <p class="hcx__eyebrow">
             <span class="hcx__pill">{g.pill}</span>
+            {/* Which half of the colour rule this state is on. Stated rather
+                than implied: a team-coloured card and a league-coloured one
+                look equally deliberate in a screenshot. */}
+            <span class:list={['hcx__scope', `hcx__scope--${g.scope}`]}>
+              {g.scope === 'team' ? 'Team colours' : 'League colours'}
+            </span>
             <span class="hcx__component">{g.component}</span>
           </p>
           <h3 class="hcx__title">{g.title}</h3>
@@ -114,6 +142,27 @@ const is = <K extends ShowcaseBlock['kind']>(b: ShowcaseBlock, k: K): b is Extra
             ? <span class="hcx__cta">{g.franchise} colors <span aria-hidden="true">→</span></span>
             : <span class="hcx__cta">Check it out <span aria-hidden="true">→</span></span>}
         </div>
+        {/* The panel-board shape. Four faces rather than one, because the two
+            board heroes are a different hero SHAPE, not a repalette. */}
+        {g.shape === 'board' && g.panels && (
+          <div class="hcx__panels">
+            {g.panels.map((panel) => (
+              <div class="hcx__panel" style={panelVars(panel.code)}>
+                {panel.flag && <span class="hcx__panel-flag">{panel.flag}</span>}
+                <img
+                  class="hcx__panel-model"
+                  src={headshot(panel.espnId)}
+                  alt=""
+                  aria-hidden="true"
+                  loading="lazy"
+                  decoding="async"
+                  onerror="this.style.display='none'"
+                />
+                <span class="hcx__panel-badge">{panel.badge}</span>
+              </div>
+            ))}
+          </div>
+        )}
       </article>
     ))}
   </section>

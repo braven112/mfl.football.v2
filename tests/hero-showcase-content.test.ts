@@ -20,7 +20,7 @@
  *     swapped, which is the whole reason a content module exists per league.
  */
 import { describe, it, expect } from 'vitest';
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import theleague from '../src/data/hero-showcase/theleague';
 import afl from '../src/data/hero-showcase/afl-fantasy';
@@ -28,6 +28,21 @@ import type { ShowcaseContent } from '../src/types/hero-showcase';
 
 const ROOT = join(__dirname, '..');
 const read = (rel: string) => readFileSync(join(ROOT, rel), 'utf8');
+
+/** Every .astro under a directory, recursively — RecapCompositeHero sits in a
+    `season-heroes/` subfolder, so a flat readdir would miss an accent. */
+const globComponents = (rel: string): string[] => {
+  const out: string[] = [];
+  const walk = (dir: string) => {
+    for (const entry of readdirSync(join(ROOT, dir), { withFileTypes: true })) {
+      const next = `${dir}/${entry.name}`;
+      if (entry.isDirectory()) walk(next);
+      else if (entry.name.endsWith('.astro')) out.push(next);
+    }
+  };
+  walk(rel);
+  return out;
+};
 
 const css = read('src/styles/hero-showcase.css');
 const component = read('src/components/shared/hero-showcase/ShowcasePage.astro');
@@ -67,6 +82,124 @@ describe('hero showcase content', () => {
     expect(content.palette.accent).toMatch(/^#[0-9a-f]{6}$/i);
     expect(content.palette.accentDark).toMatch(/^#[0-9a-f]{6}$/i);
     expect(content.palette.accentDark).not.toBe(content.palette.accent);
+  });
+
+  // ── COVERAGE ────────────────────────────────────────────────────────────
+  // The gallery is an INVENTORY, and the failure mode is silent: a hero ships
+  // a new state, nobody remembers the showcase exists, and the portfolio page
+  // quietly starts describing a system that is one state smaller than the real
+  // one. Worse, it happened in the other direction too — the AFL gallery once
+  // carried a "CUT DOWN" and a "GAME DAY" card for heroes the AFL does not
+  // have, which is how a reviewer ends up expecting a hero that never renders.
+  // So coverage is checked BOTH ways, from the source of truth in each case.
+
+  it('every accent the live composites pass has a card in that league\'s gallery', () => {
+    // Source of truth: the `accent="…"` literals in the shipped components.
+    const shipped = (dir: string) => {
+      const accents = new Set<string>();
+      for (const file of globComponents(dir)) {
+        for (const m of read(file).matchAll(/accent="([a-z]+)"/g)) accents.add(m[1]);
+      }
+      return accents;
+    };
+
+    // TheLeague's composites live under src/components/theleague (RecapCompositeHero
+    // is one directory deeper, which is why the walk is recursive).
+    const tlAccents = shipped('src/components/theleague');
+    expect(tlAccents.size).toBeGreaterThan(0);
+    const tlCards = new Set(theleague.gallery.map((g) => g.accent));
+    for (const accent of tlAccents) {
+      expect(
+        tlCards.has(accent as never),
+        `TheLeague ships accent="${accent}" but /showcase has no card for it`,
+      ).toBe(true);
+    }
+  });
+
+  it('every AFL composite treatment has a card, and the gallery invents none', () => {
+    // Source of truth: the `composite: { … }` literals in the AFL resolver.
+    const resolver = read('src/utils/afl-hero-resolver.ts');
+    const treatments = [...resolver.matchAll(
+      /composite:\s*\{\s*wordmark:\s*'([^']+)',\s*accent:\s*'([a-z]+)'/g,
+    )].map(([, wordmark, accent]) => ({
+      // The source holds NBSP (U+00A0) escapes to keep two words together.
+      wordmark: wordmark.replace(/\\u00a0/g, ' '),
+      accent,
+    }));
+    expect(treatments.length).toBeGreaterThan(0);
+
+    const cards = afl.gallery.map((g) => ({ wordmark: g.wordmark, accent: g.accent }));
+
+    // Both directions. Every treatment appears…
+    for (const t of treatments) {
+      expect(
+        cards.some((c) => c.wordmark === t.wordmark && c.accent === t.accent),
+        `AFL resolves a "${t.wordmark}" / ${t.accent} composite with no /showcase card`,
+      ).toBe(true);
+    }
+    // …and no card claims a wordmark the AFL never renders.
+    const shippedWordmarks = new Set(treatments.map((t) => t.wordmark));
+    for (const card of afl.gallery) {
+      expect(
+        shippedWordmarks.has(card.wordmark),
+        `/showcase card "${card.key}" shows wordmark "${card.wordmark}", which no AFL hero renders`,
+      ).toBe(true);
+    }
+  });
+
+  it('a state with a red tone is shown for every accent that can take one', () => {
+    // `tone` is an overlay, not an accent, and it is the single most-missed
+    // state in a gallery because it renders on a handful of days a year.
+    for (const [name, mod] of MODULES) {
+      const toned = mod.gallery.filter((g) => g.tone === 'red');
+      expect(toned.length, `${name}/showcase shows no urgent (tone="red") state`).toBeGreaterThan(0);
+      // A toned card must sit beside its untoned sibling — the point is the
+      // comparison, and a lone red card reads as its own accent.
+      for (const card of toned) {
+        expect(
+          mod.gallery.some((g) => g.accent === card.accent && !g.tone),
+          `${name}: "${card.key}" is the only ${card.accent} card, so its red tone reads as an accent`,
+        ).toBe(true);
+      }
+    }
+  });
+
+  it('both halves of the colour rule are shown, and every card declares one', () => {
+    // "League events are league coloured, team events are team coloured" is the
+    // rule the whole system turns on. A gallery showing only one half teaches
+    // the reader the wrong rule.
+    for (const [name, mod] of MODULES) {
+      for (const card of mod.gallery) {
+        expect(['league', 'team'], `${name}: "${card.key}" has no scope`).toContain(card.scope);
+      }
+      for (const scope of ['league', 'team'] as const) {
+        expect(
+          mod.gallery.some((g) => g.scope === scope),
+          `${name}/showcase never shows a ${scope}-scoped hero`,
+        ).toBe(true);
+      }
+      // A card in a franchise's colours IS the team half — it may not claim to
+      // be a league event, which would state the rule backwards.
+      for (const card of mod.gallery.filter((g) => g.franchise)) {
+        expect(card.scope, `${name}: "${card.key}" names a franchise but claims league scope`).toBe('team');
+      }
+    }
+  });
+
+  it('board cards carry four panels, and spotlight cards carry none', () => {
+    // The two shapes are not interchangeable: a board with a `model` renders a
+    // cutout on top of its own panels, and a board with no panels renders an
+    // empty strip under the copy.
+    for (const [name, mod] of MODULES) {
+      for (const card of mod.gallery) {
+        if (card.shape === 'board') {
+          expect(card.panels?.length, `${name}: board "${card.key}" needs four panels`).toBe(4);
+          expect(card.model, `${name}: board "${card.key}" must not also cast a spotlight model`).toBeUndefined();
+        } else {
+          expect(card.panels, `${name}: spotlight "${card.key}" carries panels`).toBeUndefined();
+        }
+      }
+    }
   });
 
   it('gallery summaries are never clamped', () => {

@@ -14,6 +14,8 @@
  * shapes to style.
  */
 
+import type { CompositeHeroAccent } from './composite-hero';
+
 /** Page chrome + gallery-card palette. Set as inline custom properties on `.hc-page`. */
 export interface ShowcasePalette {
   /**
@@ -33,17 +35,53 @@ export interface ShowcasePalette {
   cardGlowDark: string;
 }
 
-/** One reproduced hero card in the opening gallery. */
+/**
+ * One reproduced hero state in the opening gallery.
+ *
+ * The gallery is an INVENTORY, not a highlight reel: every composite state the
+ * league can actually render gets a card, because the page's whole claim is
+ * "here is the system", and a system you only see the good half of is a mood
+ * board. `tests/hero-showcase-content.test.ts` fails if a shipped accent or an
+ * AFL treatment has no card.
+ */
 export interface ShowcaseGalleryCard {
   key: string;
-  /** Pill/CTA accent family — matches the shipped hero's own accent. */
-  accent?: 'blue' | 'amber' | 'red' | 'green' | 'gold';
+  /**
+   * The SHIPPED accent family this state renders in — the same names the live
+   * components pass to `CompositeHero`, so a card cannot advertise a palette
+   * the system does not have. The stylesheet defines one `.hcx--<accent>` per
+   * name, mirroring that accent's real tokens.
+   */
+  accent: CompositeHeroAccent;
+  /**
+   * The urgency overlay, when the state carries one. A TONE, not an accent —
+   * exactly as in the live shell: red flips the pill and CTA on top of
+   * whatever accent the phase already chose, rather than replacing it.
+   */
+  tone?: 'red';
+  /**
+   * Which half of the colour rule this state is on, printed on the card.
+   * `league` — a draft, the auction, kickoff, a site announcement: league
+   * colours, and any glow comes from the player's NFL club.
+   * `team` — a hero ABOUT a franchise: that club's colours.
+   * This is the rule the whole system turns on, so a card must declare it.
+   */
+  scope: 'league' | 'team';
   /** The component this card reproduces, printed beside the pill. */
   component: string;
   wordmark: string;
   pill: string;
   title: string;
   summary: string;
+  /**
+   * The spotlight shape is the default. `board` reproduces
+   * `CompositePanelBoard` instead — four player panels rather than one face,
+   * which is a genuinely different hero shape and cannot be faked with a
+   * single cutout.
+   */
+  shape?: 'spotlight' | 'board';
+  /** Board cards only: the four panels, left to right. */
+  panels?: Array<{ name: string; badge: string; espnId: string; code: string; flag?: string }>;
   /** The player modelling the card. Omit for a card with no face. */
   model?: {
     name: string;
@@ -54,9 +92,8 @@ export interface ShowcaseGalleryCard {
     espnId: string;
   };
   /**
-   * Hex driving the card's glow. An NFL team primary, or — this is the point of
-   * the AFL's version — a real franchise colour, when the card is demonstrating
-   * that a hero can belong to a fantasy team.
+   * Hex driving the card's glow. An NFL team primary on a `league` card, or —
+   * this is the point of the rule — a real franchise colour on a `team` one.
    */
   primary: string;
   /**

@@ -44,6 +44,10 @@ const ALLOWLIST: Record<string, string> = {
   // deliberately does NOT appear here: it takes a resolved hex and tints a
   // glow with it, so the decision of WHICH color stays with the caller.
   'src/components/shared/CompositePanelBoard.astro': 'shared composite panel board',
+  // /showcase reproduces that board's panels inline rather than importing it
+  // (see ShowcasePage's header for why), so it derives the same per-panel
+  // team tint the board does — same deep-ink family, same white text over it.
+  'src/components/shared/hero-showcase/ShowcasePage.astro': 'reproduces the composite panel board',
   'src/components/theleague/FeatureCompositeHero.astro': 'composite hero',
   'src/components/theleague/AuctionCompositeHero.astro': 'composite hero',
   'src/components/theleague/BreakingStoryHero.astro': 'composite hero',

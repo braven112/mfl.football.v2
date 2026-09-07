@@ -40,58 +40,97 @@ const content: ShowcaseContent = {
     stack: ['Astro SSR', 'Conference-aware casting', 'Franchise-colour accents', 'Shared composite shell', 'Light + dark'],
   },
 
+  // ── THE INVENTORY ───────────────────────────────────────────────────────
+  // The AFL ships exactly three composite treatments, and each of them has a
+  // live/urgent variant, so the honest inventory is six cards — plus the one
+  // case that is the whole reason this page exists: a player both of your
+  // conferences roster, where the franchise-colour rule declines to pick.
+  //
+  // Earlier drafts of this gallery invented a "CUT DOWN" and a "GAME DAY" card
+  // to demonstrate the colour rule. Neither is an AFL hero. The rule is now
+  // demonstrated inside the states that actually ship.
   gallery: [
     {
-      key: 'keepers', accent: 'gold', component: 'AflCompositeHero · keeper window', wordmark: 'KEEPERS',
+      key: 'keepers', accent: 'gold', scope: 'team',
+      component: 'AflCompositeHero · keeper window', wordmark: 'KEEPERS',
       pill: '2026 Keeper Deadline', title: 'Lock in your core.',
       summary:
-        'Trophy gold is the keeper window’s own colour, and the face is your keeper cornerstone. ' +
-        'On July 15 itself the whole card flips to urgency red.',
-      model: { name: 'Bijan Robinson', descriptor: 'Keeper Cornerstone', pos: 'RB', code: 'ATL', espnId: '4430807' },
-      primary: '#c9a44c',
-    },
-    {
-      key: 'al-draft', accent: 'blue', component: 'AflCompositeHero · AL draft', wordmark: 'AL DRAFT',
-      pill: 'AL · Live Draft', title: 'Build your empire.',
-      summary:
-        'The conferences draft on different days off different pages, so each names itself in the ' +
-        'wordmark. Navy is the AFL’s ground; a draft actually running takes the red.',
-      model: { name: "Ja'Marr Chase", descriptor: 'Best Available', pos: 'WR', code: 'CIN', espnId: '4362628' },
-      primary: '#fb4f14',
-    },
-    {
-      key: 'franchise-you', accent: 'gold', component: 'hero-franchise-accent · your club', wordmark: 'KEEPERS',
-      pill: 'Your keeper class', title: 'Your team, in your colours',
-      summary:
-        'You roster him, so the glow is <strong>Midwestside</strong> gold, not Detroit blue — the ' +
-        'caption still names his NFL club.',
+        'Trophy gold is the keeper window’s own colour, and the face is your keeper cornerstone. Keepers ' +
+        'are a <strong>team</strong> story, so signed in the glow becomes your club’s — ' +
+        '<strong>Midwestside Connection</strong> gold here, not Detroit blue.',
       model: { name: 'Jahmyr Gibbs', descriptor: 'Your keeper', pos: 'RB', code: 'DET', espnId: '4429795' },
       primary: '#ffcd00', franchise: 'Midwestside Connection',
     },
     {
-      key: 'franchise-rival', accent: 'red', component: 'hero-franchise-accent · a rival', wordmark: 'CUT DOWN',
-      pill: 'Roster deadline', title: 'The same player, someone else’s story',
+      key: 'keepers-deadline', accent: 'gold', tone: 'red', scope: 'team',
+      component: 'AflCompositeHero · keeper deadline day', wordmark: 'KEEPERS',
+      pill: 'Keepers due today', title: 'Last call on your keepers.',
       summary:
-        'Why the rule is conference-scoped: <strong>The Boondock Saints</strong> roster him too, in ' +
-        'the other conference. Neither owner sees a stranger’s colours.',
-      model: { name: 'Jahmyr Gibbs', descriptor: 'Their keeper', pos: 'RB', code: 'DET', espnId: '4429795' },
+        'On the deadline itself — and only then — the card takes the red <strong>tone</strong> over the ' +
+        'same gold accent, still in <strong>The Boondock Saints</strong>’ colours. One day a year renders ' +
+        'this, which is the kind of state a showcase never shows you.',
+      model: { name: 'Bijan Robinson', descriptor: 'Keeper Cornerstone', pos: 'RB', code: 'ATL', espnId: '4430807' },
       primary: '#db2424', franchise: 'The Boondock Saints',
     },
     {
-      key: 'franchise-navy', accent: 'blue', component: 'hero-franchise-backdrop', wordmark: 'GAME DAY',
-      pill: 'Sunday · pre-game', title: 'Signed in, the card is yours',
+      key: 'al-draft', accent: 'navy', scope: 'league',
+      component: 'AflCompositeHero · AL draft', wordmark: 'AL DRAFT',
+      pill: 'AL · Draft scheduled', title: 'Build your empire.',
       summary:
-        'Beyond the glow, the card can take your whole gradient and crest — ' +
-        '<strong>A Bruin Pegs Me</strong> here, floored for white-text contrast.',
-      model: { name: 'Lamar Jackson', descriptor: 'Your starter', pos: 'QB', code: 'BAL', espnId: '3916387' },
-      primary: '#002244', franchise: 'A Bruin Pegs Me',
+        'The conferences draft on different days off different pages, so each names itself in the ' +
+        'wordmark. A draft is a <strong>league</strong> event — navy, and the glow is the player’s NFL ' +
+        'club, never an owner’s.',
+      model: { name: "Ja'Marr Chase", descriptor: 'Best Available', pos: 'WR', code: 'CIN', espnId: '4362628' },
+      primary: '#fb4f14',
+    },
+    {
+      key: 'al-draft-live', accent: 'navy', tone: 'red', scope: 'league',
+      component: 'AflCompositeHero · AL draft live', wordmark: 'AL DRAFT',
+      pill: 'AL · On the clock', title: 'The AL is on the clock.',
+      summary:
+        'A draft actually running takes the red tone. The AL drafts live and the NL by email, which MFL’s ' +
+        'league-wide draft kind cannot express — so this state is resolved per conference, and so is the ' +
+        'poll URL behind it.',
+      model: { name: 'Ashton Jeanty', descriptor: 'Best Available', pos: 'RB', code: 'LV', espnId: '4890973' },
+      primary: '#101820',
+    },
+    {
+      key: 'nl-draft', accent: 'navy', scope: 'league',
+      component: 'AflCompositeHero · NL draft', wordmark: 'NL DRAFT',
+      pill: 'NL · Draft scheduled', title: 'The NL board opens Thursday.',
+      summary:
+        'Same treatment, its own wordmark and its own clock. An NL owner never sees the AL’s countdown ' +
+        'and vice versa — the whole state is scoped to the conference the viewer actually plays in.',
+      model: { name: 'Omarion Hampton', descriptor: 'Best Available', pos: 'RB', code: 'LAC', espnId: '4685382' },
+      primary: '#0080c6',
+    },
+    {
+      key: 'nl-draft-live', accent: 'navy', tone: 'red', scope: 'league',
+      component: 'AflCompositeHero · NL draft live', wordmark: 'NL DRAFT',
+      pill: 'NL · Drafting now', title: 'The NL is drafting.',
+      summary:
+        'The sixth and last composite state the AFL ships. Both conferences can be mid-draft on the same ' +
+        'weekend, in which case two owners on the same homepage see two different heroes.',
+      model: { name: 'Travis Hunter', descriptor: 'Best Available', pos: 'WR', code: 'JAC', espnId: '4685415' },
+      primary: '#006778',
+    },
+    {
+      key: 'franchise-ambiguous', accent: 'gold', scope: 'league',
+      component: 'hero-franchise-accent · declines', wordmark: 'KEEPERS',
+      pill: 'Rostered twice', title: 'When the rule refuses to guess',
+      summary:
+        'The hard case, and the reason this page exists. <strong>Two clubs in your own conference</strong> ' +
+        'roster him, so there is no “your colours” to use — the accent falls back to the league’s rather ' +
+        'than picking a side.',
+      model: { name: 'Trey McBride', descriptor: 'Rostered twice', pos: 'TE', code: 'ARI', espnId: '4361307' },
+      primary: '#97233f',
     },
   ],
   galleryNote:
-    'Reproductions of the shipped AFL hero treatment — real players, and real AFL franchise colours on ' +
-    'the cards that are about a fantasy team rather than an NFL one. Toggle your theme: the gradient, ' +
-    'glow and tokens re-resolve for dark mode.',
-
+    'All six composite states the AFL ships, plus the case where the colour rule declines to pick ' +
+    '— real players, and real AFL franchise colours on the cards that are about a fantasy team ' +
+    'rather than an NFL one. The badge on each card says which half of the colour rule it is on. ' +
+    'Toggle your theme: the gradient, glow and tokens re-resolve for dark mode.',
   sections: [
     {
       num: '01', title: 'The Premise',
