@@ -137,6 +137,29 @@ export interface TradeOfferTip extends Omit<Tip, 'source' | 'text'> {
    * bumps `signal` and unlocks more detail. See {@link TradeOfferExposure}.
    */
   exposure?: TradeOfferExposure;
+  /**
+   * Cumulative drip facts revealed about this proposal so far — deal shape,
+   * expiry clock, and public-trade-block cross references. Built by
+   * `scripts/lib/schefter-offer-beats.mjs`; carries no franchise name of its
+   * own and no player name outside {@link TradeOfferExposure.players}.
+   */
+  beats?: TradeOfferBeat[];
+  /**
+   * Which fact is NEW at this signal — `'team'`, `'player'`, or a beat kind.
+   * The playbook makes the LLM open on it, so consecutive posts about one
+   * proposal lead with different facts instead of a growing name list.
+   */
+  leadKind?: string;
+}
+
+/**
+ * One drip fact about a proposal. Deliberately loose: the beat builder owns
+ * the per-kind shape and the playbook documents each one, so adding a kind is
+ * a change in one module rather than three.
+ */
+export interface TradeOfferBeat {
+  kind: string;
+  [field: string]: unknown;
 }
 
 export interface Tip {

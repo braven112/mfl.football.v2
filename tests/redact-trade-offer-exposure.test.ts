@@ -3,9 +3,16 @@
  *
  * Each time the dice roll lands on the same offer, Schefter reveals more:
  *   signal 1 → name 1 team only
- *   signal 2 → team + 1 marquee player (highest ADP dynasty rank)
- *   signal 3 → team + 2 players
- *   signal N → team + (N-1) players in marquee order
+ *   signal 2 → team only; the post's new fact is a BEAT, not a name
+ *   signal 3 → team + 1 marquee player (highest ADP dynasty rank)
+ *   signal 4 → team + 1 player still; another beat carries this one
+ *   signal 5 → team + 2 players … a name every OTHER signal
+ *
+ * The cadence halved deliberately (Sep 2026). Under `signal - 1` the ladder
+ * had exactly one dimension — a longer name list every post — so six posts
+ * about one proposal read as the same post. `plannedPlayerCount` in
+ * scripts/lib/schefter-offer-beats.mjs owns the new cadence; the even signals
+ * carry deal shape, the expiry clock, or a trade-block cross reference.
  *
  * Tests exercise the redactor directly (not source-string grep) so the
  * ladder math is locked in even if the prompt text drifts.
@@ -69,22 +76,41 @@ describe('redactTradeOffer — exposure ladder', () => {
     expect(tip.exposure!.players).toEqual([]);
   });
 
-  it('signal 2 (priorExposure=1): team + marquee player (highest ADP)', () => {
+  it('signal 2 (priorExposure=1): still team-only — a beat carries this post', () => {
     const { tip } = redactTradeOffer(buildArgs({ exposureCount: 1 }));
     expect(tip.exposure!.signal).toBe(2);
+    expect(tip.exposure!.players).toEqual([]);
+    // The post is not empty-handed: the drip layer supplies the new fact.
+    expect(tip.leadKind).toBeDefined();
+    expect(tip.leadKind).not.toBe('player');
+  });
+
+  it('signal 3 (priorExposure=2): team + marquee player (highest ADP)', () => {
+    const { tip } = redactTradeOffer(buildArgs({ exposureCount: 2 }));
+    expect(tip.exposure!.signal).toBe(3);
     expect(tip.exposure!.players).toHaveLength(1);
     // Chase (rank 1) is the marquee piece.
     expect(tip.exposure!.players[0].name).toBe("Ja'Marr Chase");
     expect(tip.exposure!.players[0].position).toBe('WR');
   });
 
-  it('signal 3 (priorExposure=2): team + top 2 players in marquee order', () => {
-    const { tip } = redactTradeOffer(buildArgs({ exposureCount: 2 }));
-    expect(tip.exposure!.signal).toBe(3);
+  it('signal 5 (priorExposure=4): team + top 2 players in marquee order', () => {
+    const { tip } = redactTradeOffer(buildArgs({ exposureCount: 4 }));
+    expect(tip.exposure!.signal).toBe(5);
     expect(tip.exposure!.players.map((p: any) => p.name)).toEqual([
       "Ja'Marr Chase",
       'Breece Hall',
     ]);
+  });
+
+  it('never un-reveals: the name list only ever grows with the signal', () => {
+    let previous = 0;
+    for (let exposureCount = 0; exposureCount <= 12; exposureCount += 1) {
+      const { tip } = redactTradeOffer(buildArgs({ exposureCount }));
+      const count = tip.exposure!.players.length;
+      expect(count).toBeGreaterThanOrEqual(previous);
+      previous = count;
+    }
   });
 
   it('signal N: caps at the players the NAMED TEAM is giving up', () => {
@@ -142,7 +168,7 @@ describe('redactTradeOffer — exposure ladder', () => {
 
   it('falls back gracefully when ADP rank map is absent', () => {
     const { tip } = redactTradeOffer(
-      buildArgs({ exposureCount: 1, adpRankByPlayerId: undefined }),
+      buildArgs({ exposureCount: 2, adpRankByPlayerId: undefined }),
     );
     expect(tip.exposure!.players).toHaveLength(1);
     // Without ADP, ordering tie-breaks on playerId — exact pick doesn't matter,

@@ -19,8 +19,18 @@
  *                     offer (0 = no posts yet). The post about to ship is at
  *                     signal `exposureCount + 1`. Drives graduated disclosure:
  *                       signal 1 → name 1 team
- *                       signal 2 → team + 1 marquee player
- *                       signal 3 → team + 2 players, etc.
+ *                       signal 2 → team + the deal's shape, no new name
+ *                       signal 3 → team + 1 marquee player
+ *                       signal 4 → team + a market beat, no new name, etc.
+ *                     A name lands every OTHER signal now — see
+ *                     `plannedPlayerCount` in schefter-offer-beats.mjs.
+ *   blockByFid      — Map<franchiseId, Set<playerId>> of each franchise's
+ *                     PUBLIC trade block. Optional; a MISSING franchise and an
+ *                     EMPTY block mean different things, which is why it is a
+ *                     Map and not a plain object of arrays.
+ *   positionRuns    — Map<position, proposalCount> across the proposals this
+ *                     scan can see. A floor, never a total — the beats hedge.
+ *   nowMs           — clock, injectable for tests (expiry beat).
  *   adpRankByPlayerId — Map<playerId, number> for marquee ordering. Optional;
  *                     players without a rank sort last (least marquee).
  *
@@ -28,6 +38,14 @@
  * src/types/schefter-tips.ts and `debug` records escalation + anti-leak logic
  * for dry-run logging.
  */
+
+import {
+  buildDealShape,
+  buildExpiryBeat,
+  buildMarketBeats,
+  planBeats,
+  plannedPlayerCount,
+} from './schefter-offer-beats.mjs';
 
 const ROUND_ORDINALS = {
   1: '1st', 2: '2nd', 3: '3rd', 4: '4th', 5: '5th',
@@ -84,8 +102,9 @@ function pickDisplayTeam(team) {
  * Note on the off-by-one: callers pass the number of PRIOR posts. The post
  * we're building now is at `signal = exposureCount + 1`. So:
  *   exposureCount = 0 → signal 1 → name team only
- *   exposureCount = 1 → signal 2 → team + 1 player
- *   exposureCount = N → signal N+1 → team + N players
+ *   exposureCount = 1 → signal 2 → team only (the beat carries this post)
+ *   exposureCount = 2 → signal 3 → team + 1 player
+ * See `plannedPlayerCount` for the cadence and why it halved.
  */
 function buildExposure({
   signal,
@@ -140,13 +159,18 @@ function buildExposure({
     }))
     .sort((a, b) => (a.rank - b.rank) || (a.playerId < b.playerId ? -1 : 1));
 
-  // Signal 1 = 0 players, signal 2 = 1 player, …
-  const playerCount = Math.max(0, signal - 1);
-  const players = ranked
-    .slice(0, playerCount)
-    .map(({ name, position }) => ({ name, position }));
+  // A name every OTHER signal (see `plannedPlayerCount`): signals 1-2 name the
+  // team only, 3-4 add the marquee player, 5-6 the second. The even signals in
+  // between carry a beat instead, which is what turns the ladder into a drip.
+  const playerCount = plannedPlayerCount(signal);
+  const chosen = ranked.slice(0, playerCount);
+  const players = chosen.map(({ name, position }) => ({ name, position }));
 
-  return { signal, team, players };
+  // `playerIds` never reaches the tip — `redactTradeOffer` lifts it into the
+  // beat builder's nameable set and rebuilds `exposure` without it, so the
+  // block the playbook calls the authoritative name surface keeps exactly the
+  // three fields it has always had.
+  return { signal, team, players, playerIds: chosen.map((p) => p.playerId), chosenFid };
 }
 
 /**
@@ -225,6 +249,9 @@ export function redactTradeOffer({
   offerAgeMs = 0,
   exposureCount = 0,
   adpRankByPlayerId,
+  blockByFid,
+  positionRuns,
+  nowMs = Date.now(),
 }) {
   const {
     ownerOfferCount7d = 1,
@@ -322,33 +349,75 @@ export function redactTradeOffer({
   const exposureSignal = Number.isFinite(exposureCount)
     ? Math.max(0, Math.floor(exposureCount)) + 1
     : 1;
-  const exposure = buildExposure({
+  // Sides kept apart on purpose: `franchise1_gave_up` are fid1's players,
+  // `franchise2_gave_up` are fid2's. Merging them is what let a post name a
+  // team alongside the other side's player.
+  const sidesByFid = {
+    [String(rawOffer.franchise ?? offeringFid ?? '')]: side1,
+    [String(rawOffer.franchise2 ?? '')]: side2,
+  };
+
+  const exposureBuilt = buildExposure({
     signal: exposureSignal,
     offerId,
     offeringFid,
     rawOffer,
     teamMap,
-    // Sides kept apart on purpose: `franchise1_gave_up` are fid1's players,
-    // `franchise2_gave_up` are fid2's. Merging them is what let a post name a
-    // team alongside the other side's player.
-    playersByFid: {
-      [String(rawOffer.franchise ?? offeringFid ?? '')]: side1,
-      [String(rawOffer.franchise2 ?? '')]: side2,
-    },
+    playersByFid: sidesByFid,
     adpRankByPlayerId,
   });
+
+  // The named team, taken from the id `buildExposure` actually chose rather
+  // than by matching its display name back through `teamMap` — two franchises
+  // can carry the same display string, and the name lookup would then hand the
+  // beats the wrong side's roster.
+  const namedFid = exposureBuilt?.chosenFid ?? null;
+
+  const exposure = exposureBuilt
+    ? { signal: exposureBuilt.signal, team: exposureBuilt.team, players: exposureBuilt.players }
+    : null;
 
   // A named team makes escalatedPlayer an ownership claim too — re-pick it from
   // that team's own side. Without a named team nobody is being credited with
   // the player, so the unscoped pick stands.
-  if (exposure?.team) {
-    const namedFid = [
-      String(rawOffer.franchise ?? offeringFid ?? ''),
-      String(rawOffer.franchise2 ?? ''),
-    ].find((f) => pickDisplayTeam(teamMap?.get?.(f))?.name === exposure.team.name);
-    const ownSide = namedFid === String(rawOffer.franchise ?? offeringFid ?? '') ? side1 : side2;
-    escalatedPlayer = pickEscalated(ownSide);
+  if (exposure?.team && namedFid) {
+    escalatedPlayer = pickEscalated(sidesByFid[namedFid] ?? []);
   }
+
+  // ── Beats: the drip layer (see scripts/lib/schefter-offer-beats.mjs) ──
+  // Everything here is derived from data already on the row or already loaded
+  // by the scanner. Nothing widens the name surface: `nameablePlayerIds` is
+  // exactly what `exposure` already printed, plus the escalated player at the
+  // one tier that authorizes a name.
+  const nameablePlayerIds = new Set(exposureBuilt?.playerIds ?? []);
+  if (escalatedPlayer?.tier === 'named') {
+    const namedAsset = (sidesByFid[namedFid] ?? allAssets).find(
+      (a) => a.kind === 'player' && a.name === escalatedPlayer.name,
+    );
+    if (namedAsset?.playerId) nameablePlayerIds.add(namedAsset.playerId);
+  }
+
+  const dealShape = buildDealShape({ namedFid, sidesByFid });
+  const expiryBeat = buildExpiryBeat({ rawOffer, nowMs });
+  const marketBeats = buildMarketBeats({
+    namedFid,
+    sidesByFid,
+    blockByFid,
+    playerHistory,
+    positionRuns,
+    nameablePlayerIds,
+  });
+  const { beats, leadKind } = planBeats({
+    signal: exposureSignal,
+    dealShape,
+    expiryBeat,
+    marketBeats,
+    // Whether THIS signal actually printed a name the last one didn't. The
+    // named team's side is finite, so past the last player an odd signal would
+    // otherwise announce a new name that does not exist.
+    nameLanded:
+      (exposureBuilt?.players?.length ?? 0) > plannedPlayerCount(exposureSignal - 1),
+  });
 
   // Partner franchise — the team being offered to. Used by the corroboration
   // matcher to detect when a web/groupme tip's franchiseHint is on either
@@ -387,6 +456,10 @@ export function redactTradeOffer({
     playerNames,
   };
   if (exposure) tip.exposure = exposure;
+  if (beats.length > 0) {
+    tip.beats = beats;
+    tip.leadKind = leadKind;
+  }
 
   const debug = {
     offerId,
@@ -413,6 +486,9 @@ export function redactTradeOffer({
       escalatedPlayer,
     },
     exposure,
+    namedFid,
+    beats,
+    leadKind,
   };
 
   return { tip, debug };

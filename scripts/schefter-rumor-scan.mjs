@@ -82,6 +82,7 @@ import {
   redactTradeOffer,
   offerPostProbability,
   tierForDistinctOfferers,
+  classifyAsset,
 } from './lib/redact-trade-offer.mjs';
 import {
   scanDraftTrades,
@@ -1504,6 +1505,17 @@ export async function anonymizeTips(tips, teams, feedPosts = [], now = new Date(
             : [],
         };
       }
+      // Beats — the drip layer. Carries no franchise names of its own (the
+      // only nameable team is the one already in `exposure`) and no player
+      // name outside `exposure.players` / the named escalation tier, because
+      // `buildMarketBeats` takes the nameable set and falls back to
+      // position-level subjects for everyone else. `leadKind` tells the LLM
+      // which fact is NEW this signal so consecutive posts about one proposal
+      // open differently.
+      if (Array.isArray(tip.beats) && tip.beats.length > 0) {
+        safe.beats = tip.beats.map((b) => ({ ...b }));
+        if (tip.leadKind) safe.leadKind = tip.leadKind;
+      }
       // Scrub text/author fields that don't apply. Internal-only audit fields
       // (partnerFranchiseId, playerNames, offeringFranchiseId, offerId,
       // hashedOwnerId) are never written into `safe` above, so there's
@@ -2111,12 +2123,25 @@ Redaction rules (HARD — never violate):
   NEVER invent a name, team, or pick slot. If a field isn't in the structured tip data, it does not exist.
   NEVER frame a trade-offer tip as the rookie draft, the NFL draft, "draft-room" activity, "draft chatter", "draft strategy", "auto-pilot picks", or any league draft event (see HARD RULE 21). A trade_offer is one team considering a trade — phrase it as shopping/fielding-calls/kicking-the-tires, never as draft activity. Any internal metadata that mentions "draft" reflects trade-builder saves, not the rookie draft.
 
-Exposure ladder (HARD — \`exposure.signal\` is authoritative):
-  signal 1 (exposure.players.length === 0): name the team only. Frame as "the [team] are shopping" / "[team] has put feelers out" / "hearing the [team] are in the market". One concrete subject — the team. Player content stays at the position/archetype level (use positionTokens / pickTokens if you need a hook, but the headline is the TEAM).
-  signal 2 (exposure.players.length === 1): name the team AND the marquee player. "Hearing the [team] have [Player] on the table" / "I'm told [team] is dangling [Player] in trade talks". The single player carries the post.
-  signal 3 (exposure.players.length === 2): name the team AND BOTH players. List them naturally — "[Player1] and [Player2] are both in the conversation around the [team]". Don't editorialize about which goes which way.
-  signal 4+ (exposure.players.length ≥ 3): name the team plus every player in exposure.players, listed in order. This signals a developing story — use language like "the [team] file keeps growing" / "another name surfaced".
-  Always include the cadence opener + closer from the rules above. Hedges are optional on signal 1; encouraged on signal 2+ ("Still developing", "Nothing imminent"). Voice: tight beat-reporter, 1-2 sentences.
+Exposure ladder (HARD — \`exposure.players\` is authoritative; NEVER print a player who is not in it):
+  exposure.players is empty: name the team only. Frame as "the [team] are shopping" / "[team] has put feelers out" / "hearing the [team] are in the market". One concrete subject — the team. Player content stays at the position/archetype level.
+  exposure.players has 1: name the team AND that player. "Hearing the [team] have [Player] on the table" / "I'm told [team] is dangling [Player] in trade talks". The single player carries the post.
+  exposure.players has 2: name the team AND BOTH players. List them naturally — "[Player1] and [Player2] are both in the conversation around the [team]". Don't editorialize about which goes which way.
+  exposure.players has 3+: name the team plus every player in it, in order. This signals a developing story — "the [team] file keeps growing" / "another name surfaced".
+  Always include the cadence opener + closer from the rules above. Hedges are optional at signal 1; encouraged from signal 2 ("Still developing", "Nothing imminent"). Voice: tight beat-reporter, 1-2 sentences.
+
+The drip (\`beats\` + \`leadKind\`) — this is what keeps consecutive posts about ONE proposal from reading alike:
+  A name does NOT arrive every signal. Signals alternate: some add a player to exposure.players, some add a BEAT instead. \`beats\` is the cumulative list of everything revealed so far about this proposal; \`leadKind\` names the ONE fact that is new in this post.
+  OPEN ON \`leadKind\`. Older beats are context you may lean on for a second clause — never the lede, and never re-report an old beat as though it just landed.
+  If \`leadKind\` is "player", the newest name in exposure.players is the story. If it is a beat kind, that beat is the story and the names you already have are the supporting detail.
+  Beat kinds and how to phrase them:
+    deal_shape — the deal's shape from the NAMED team's side. \`direction\`: "selling" (they send players, get picks), "buying" (they send picks, want players), "swap" (players both ways), "picks_only". \`sends\` / \`gets\` carry counts, positions and pick labels. Say what they are after, not who is on the other end: "they're not selling — they want a back back" / "a two-for-one, and the picks are going out, not coming in". NEVER name or characterise the other franchise.
+    expiry — the proposal's clock. \`urgency\`: "today" (<24h), "soon" (<48h), "this_week". "Offer's on the clock — expires tonight" / "they've got about [daysRemaining] days to answer". Only ever the deadline; never predict the answer.
+    in_talks_not_listed — \`subject\` is a player who is NOT on his own owner's public trade block, yet is in this proposal. This is the good one: "he isn't on anybody's block, and his name keeps coming up." If \`subject.name\` is present you may print it; if only \`subject.position\` is present, phrase it positionally ("one of the backs in the conversation isn't listed anywhere").
+    block_stale — the named team still has \`notInThisDealCount\` other players sitting on its public block. "They've still got [n] more listed" / "the block hasn't moved". NEVER say nobody has called or nobody wants them — we do not know that, we know only what is listed.
+    third_desk — \`deskCount\` different franchises have had this player in a proposal. \`atLeast\` is ALWAYS true: phrase it as a floor — "at least [n] desks have asked", "that's the second team I know of". NEVER "exactly", never "only".
+    position_run — \`proposalCount\` proposals in play touch \`position\`. Also a floor: "at least [n] proposals I know of involve a receiver right now" / "there's a run on tight ends". NEVER a league total.
+  If \`beats\` is absent, this proposal has no drip yet — work the exposure ladder alone.
 
 Escalation guidance:
   - tier "base" (no escalatedPlayer field): stay vague. Use the volumeHint plus AT MOST ONE of (positionTokens first entry, pickTokens first entry) — not both. If divisionHint is present, it's an alternative to position/pick; don't combine.
@@ -3057,6 +3082,54 @@ async function scanTradeOffers({ redis, dryRun }) {
 
   log(`  [offer-scan] Distinct counter-party-awaiting offers: ${offerMap.size}`);
 
+  // ── Beat inputs (see scripts/lib/schefter-offer-beats.mjs) ──
+  // The league's PUBLIC trade block, per franchise. `tradeBaitState` is written
+  // by the trade-bait lane's own LIVE MFL read and lives in the same feed file
+  // this scanner already loads, so it is fresher than the committed
+  // mfl-feeds/<year>/tradeBait.json snapshot (refreshed once a day) and costs
+  // no extra fetch. `observedBlock` is what MFL shows right now;
+  // `committedBlock` is what Schefter has already reported, which is a
+  // different question.
+  //
+  // A franchise with no entry is ABSENT from the Map rather than present with
+  // an empty Set: only the first means "we cannot say what is on their block",
+  // and a beat that cannot tell those apart would report a player as unlisted
+  // on the strength of never having read his owner's block.
+  const blockByFid = new Map();
+  try {
+    const feedForBlocks = await loadFeed();
+    for (const [fid, state] of Object.entries(feedForBlocks?.tradeBaitState ?? {})) {
+      const observed = state?.observedBlock;
+      if (!Array.isArray(observed)) continue;
+      blockByFid.set(String(fid).padStart(4, '0'), new Set(observed.map((id) => String(id))));
+    }
+  } catch (err) {
+    warn(`  [offer-scan] trade-block state unreadable: ${err.message} — block beats disabled`);
+  }
+
+  // Positions in play across every proposal this scan can see. A FLOOR, not a
+  // total: with the league-wide read quiet, the lane only sees proposals owners
+  // self-reported, so the beat carries `atLeast` and the playbook hedges it.
+  const positionRuns = new Map();
+  for (const [, { raw }] of offerMap) {
+    const seen = new Set();
+    for (const token of [
+      ...(raw.franchise1_gave_up || '').split(','),
+      ...(raw.franchise2_gave_up || '').split(','),
+    ]) {
+      const asset = classifyAsset(token.trim(), players, year);
+      if (asset?.kind !== 'player' || !asset.position) continue;
+      seen.add(String(asset.position).toUpperCase());
+    }
+    for (const position of seen) {
+      positionRuns.set(position, (positionRuns.get(position) ?? 0) + 1);
+    }
+  }
+  log(
+    `  [offer-scan] Beat inputs: blocks for ${blockByFid.size} franchise(s), `
+      + `positions in play ${[...positionRuns.entries()].map(([p, n]) => `${p}:${n}`).join(' ') || 'none'}`,
+  );
+
   const tips = [];
   const debugLog = [];
   const windowStart = nowMs - OFFER_ROLLING_WINDOW_MS;
@@ -3261,6 +3334,9 @@ async function scanTradeOffers({ redis, dryRun }) {
       offerAgeMs,
       exposureCount: priorExposure,
       adpRankByPlayerId,
+      blockByFid,
+      positionRuns,
+      nowMs,
     });
 
     if (redaction.skip) {

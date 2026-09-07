@@ -31,6 +31,7 @@
       "rules": "docs/claude/rules/schefter.md",
       "paths": [
         "scripts/schefter-*.mjs",
+        "scripts/lib/redact-trade-offer.mjs",
         "scripts/lib/schefter*",
         "src/utils/schefter*",
         "src/pages/api/schefter/**",
@@ -44,7 +45,9 @@
         "tests/schefter-news-view.test.ts",
         "tests/schefter-assistant-post.test.ts",
         "tests/schefter-rail-view.test.ts",
-        "tests/redact-trade-offer-attribution.test.ts"
+        "tests/redact-trade-offer-attribution.test.ts",
+        "tests/redact-trade-offer-exposure.test.ts",
+        "tests/schefter-offer-beats.test.ts"
       ]
     },
     {

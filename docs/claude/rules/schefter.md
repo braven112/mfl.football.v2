@@ -202,6 +202,52 @@ never a hand edit — the feeds are cron-written, so a hand edit is invisible in
 review. It deliberately leaves the scanner's `posted`/exposure state alone, or
 the same offer regenerates the same wrong post on the next scan.
 
+### The drip — a beat may only assert what the feeds can see
+
+`scripts/lib/schefter-offer-beats.mjs` is the second dimension of the
+trade-proposal reveal. Before it, signal N named the hash-chosen team and `N-1`
+of that team's players in ADP order and nothing else, so post seven was post two
+with a longer list — a lane covering six live proposals read as if it reported
+every rumor in the league. Beats add the deal's shape, MFL's own expiry clock,
+and cross-references against the public trade block, and `leadKind` names the
+ONE fact that is new this signal so the prompt opens on it.
+
+- **A name now lands every OTHER signal** (`plannedPlayerCount`: 0,0,1,1,2,2,3…)
+  and a beat carries the signals in between. That is what makes it a drip rather
+  than a countdown, and it is why
+  `tests/redact-trade-offer-exposure.test.ts` reads `exposureCount: 2` where it
+  used to read `1`. Both ladders are monotone: a name or a beat that has shipped
+  is never withdrawn — the reader is assembling a picture.
+- **`blockByFid` is a `Map`, and a MISSING franchise must drop the beat.** "Not
+  on anybody's block" is exact only because a player can be listed on one block
+  — his own owner's. `feed.tradeBaitState` holds five of sixteen franchises
+  today, so an object-of-arrays that can't tell "no block read" from "empty
+  block" would report a player as unlisted on the strength of never having
+  looked.
+- **Every count over "all proposals" is a FLOOR, never a total.** The
+  league-wide `pendingTrades` read has returned nothing on every scan since the
+  lane went live (`commish sourced 0`); the six visible proposals are the ones
+  owners self-reported by loading the trades page. `third_desk` and
+  `position_run` therefore carry `atLeast: true` and the playbook forbids
+  "exactly" / "only" / a league total.
+- **`block_stale` says what is listed, never that nobody called.** Absence of a
+  proposal we can see is not absence of interest, and the beat has no field that
+  could express one — `tests/schefter-offer-beats.test.ts` pins its key set for
+  exactly that reason.
+- **Beats are not a second name surface.** `exposure.players` stays
+  authoritative; `buildMarketBeats` takes `nameablePlayerIds` and drops to
+  position-level phrasing for anyone outside it, so the other side's players are
+  never printable however far the ladder runs. `buildExposure` returns
+  `playerIds`/`chosenFid` for that purpose and `redactTradeOffer` rebuilds
+  `exposure` without them — the block the playbook calls the authoritative name
+  surface keeps exactly its three published fields.
+- **The named team comes from `chosenFid`, not from matching the display name
+  back through `teamMap`.** Two franchises can carry the same display string,
+  and the name lookup then hands the beats the wrong side's roster — the same
+  class of bug as the Loveland attribution above, one layer down.
+- At the end of both ladders (offer 1076 was on signal 7 the day this shipped)
+  `leadKind` rotates through the unlocked beats rather than parking on one.
+
 ### Former-name callbacks — the bit is the pairing, and it expires
 
 Schefter nodding to a name a franchise just retired ("Dead Cap Walking, the
