@@ -29,8 +29,11 @@ import path from 'path';
 import { describe, it, expect } from 'vitest';
 import { buildNflLogoDarkCss } from '../src/utils/nfl-logo-dark-css';
 import { buildCollegeLogoDarkCss } from '../src/utils/college-logo-dark-css';
+import { buildTeamAccentCss } from '../src/utils/team-accent-css';
+import { buildAllTeamIconDarkCss } from '../src/utils/team-icon-dark-styles';
 import { getAllNFLTeamCodes, getNFLTeamLogo } from '../src/utils/nfl-logo';
 import { STORYBOOK_NFL_TEAM_CODES } from '../scripts/mirror-storybook-dark-logos.mjs';
+import { isValidPng } from '../scripts/lib/dark-logo-mirror.mjs';
 import {
   STORYBOOK_NFL_DARK_BASE_PATH,
   STORYBOOK_NFL_DARK_CODES,
@@ -38,7 +41,6 @@ import {
 
 const ROOT = path.join(__dirname, '..');
 const MIRROR_DIR = path.join(ROOT, '.storybook', 'static', 'nfl-dark');
-const PNG_MAGIC = Buffer.from([0x89, 0x50, 0x4e, 0x47]);
 
 /** The Storybook configuration of the NFL builder, in one place. */
 const storybookNflCss = () =>
@@ -65,11 +67,10 @@ describe('Storybook NFL dark-logo mirror', () => {
     for (const code of STORYBOOK_NFL_DARK_CODES) {
       const file = path.join(MIRROR_DIR, `${code}.png`);
       expect(fs.existsSync(file), `${code}.png missing from .storybook/static/nfl-dark`).toBe(true);
-      const buf = fs.readFileSync(file);
-      // Same 1KB floor the mirror lib uses: CDN edge error pages served with a
-      // 200 are tiny, and every real 500px cut is tens of KB.
-      expect(buf.length, `${code}.png is too small to be a logo`).toBeGreaterThan(1024);
-      expect(buf.subarray(0, 4).equals(PNG_MAGIC), `${code}.png is not a PNG`).toBe(true);
+      // The mirror lib's OWN check (PNG magic + a 1KB floor against CDN edge
+      // error pages served with a 200), not a copy of it — a copy can drift
+      // from what the mirror actually accepts.
+      expect(isValidPng(fs.readFileSync(file)), `${code}.png is not a valid logo PNG`).toBe(true);
     }
   });
 
@@ -102,7 +103,7 @@ describe('Storybook dark-logo CSS is offline', () => {
   });
 
   it('emits no college swap at all — none is mirrored, so none may be remote', () => {
-    const css = buildCollegeLogoDarkCss({ sameOriginOnly: true });
+    const css = buildCollegeLogoDarkCss({ manifestIds: [], sameOriginOnly: true });
     expect(offOrigin(css)).toEqual([]);
     expect(swapTargets(css)).toEqual([]);
     // The failed-logo hide survives; it is what keeps a src="" placeholder
@@ -152,6 +153,24 @@ describe('Storybook dark-logo CSS is offline', () => {
   });
 });
 
+describe('every sheet preview.ts injects is offline', () => {
+  it('has no off-origin url() anywhere in the injected payload', () => {
+    // The rule generalizes past these two builders: `injectLayoutStyles()` is
+    // reviewed as layout PARITY, and nobody was asking what its rules resolve
+    // to. Any url() — content:, background-image, mask-image, @font-face src —
+    // is a fetch in every snapshot that matches. Assert the whole payload so a
+    // future addition cannot re-open the hole one sheet over.
+    const payload = [
+      buildTeamAccentCss(),
+      storybookNflCss(),
+      buildCollegeLogoDarkCss({ manifestIds: [], sameOriginOnly: true }),
+      buildAllTeamIconDarkCss(),
+    ].join('\n');
+    const urls = [...payload.matchAll(/url\(\s*["']?([^"')]+)/g)].map((m) => m[1]);
+    expect(urls.filter((u) => !u.startsWith('/') && !u.startsWith('data:'))).toEqual([]);
+  });
+});
+
 describe('.storybook wiring', () => {
   const read = (file: string) => fs.readFileSync(path.join(ROOT, '.storybook', file), 'utf8');
 
@@ -167,5 +186,13 @@ describe('.storybook wiring', () => {
     const preview = read('preview.ts');
     expect(preview).toMatch(/buildNflLogoDarkCss\(\{[^}]*sameOriginOnly:\s*true/s);
     expect(preview).toMatch(/buildCollegeLogoDarkCss\(\{[^}]*sameOriginOnly:\s*true/s);
+  });
+
+  it('pins the college manifest empty, so a committed prebuild manifest cannot 404 a snapshot', () => {
+    // sameOriginOnly proves ORIGIN; the pinned manifest proves EXISTENCE. The
+    // tracked manifest is prebuild-rewritten, and Storybook serves no college
+    // mirror, so a same-origin `/assets/college-logos/dark/*` swap would be a
+    // broken-image icon in every dark snapshot rendering a college logo.
+    expect(read('preview.ts')).toMatch(/buildCollegeLogoDarkCss\(\{[^}]*manifestIds:\s*\[\]/s);
   });
 });

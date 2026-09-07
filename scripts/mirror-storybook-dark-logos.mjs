@@ -38,23 +38,31 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { mirrorDarkLogos } from './lib/dark-logo-mirror.mjs';
+// The prebuild mirror's list, reused rather than re-declared — it is already
+// pinned to getAllNFLTeamCodes() by tests/nfl-logo-dark-css.test.ts, and a
+// third copy of the 32 codes is a third thing to keep in sync. Importing it is
+// side-effect free (that script guards its own entrypoint).
+import { NFL_TEAM_CODES } from './fetch-nfl-dark-logos.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.join(__dirname, '..');
 const OUT_DIR = path.join(ROOT, '.storybook', 'static', 'nfl-dark');
 const MANIFEST_PATH = path.join(ROOT, '.storybook', 'nfl-dark-manifest.json');
 
-// Canonical ESPN team codes — mirrors getAllNFLTeamCodes() in
-// src/utils/nfl-logo.ts (TS, not importable from a node script). The guard
-// test locks the two lists in sync.
-export const STORYBOOK_NFL_TEAM_CODES = [
-  'ARI', 'ATL', 'BAL', 'BUF', 'CAR', 'CHI', 'CIN', 'CLE',
-  'DAL', 'DEN', 'DET', 'GB', 'HOU', 'IND', 'JAX', 'KC',
-  'LAC', 'LAR', 'LV', 'MIA', 'MIN', 'NE', 'NO', 'NYG',
-  'NYJ', 'PHI', 'PIT', 'SEA', 'SF', 'TB', 'TEN', 'WSH',
-];
+/** Storybook mirrors exactly what production does — the same 32 canonical codes. */
+export const STORYBOOK_NFL_TEAM_CODES = NFL_TEAM_CODES;
 
 async function main() {
+  // Snapshot the manifest so an incomplete run can put it back. mirrorDarkLogos
+  // writes PNGs and the manifest before returning, so "refuses to write a
+  // partial mirror" is only true if we undo the manifest ourselves — and the
+  // manifest is the artifact that matters: extra PNGs are harmless (a re-run
+  // completes them, and the manifest is derived from what is on disk), while a
+  // manifest listing 31 codes is what preview.ts would trust.
+  const manifestBefore = fs.existsSync(MANIFEST_PATH)
+    ? fs.readFileSync(MANIFEST_PATH, 'utf8')
+    : null;
+
   await mirrorDarkLogos({
     label: 'mirror-storybook-dark-logos',
     items: STORYBOOK_NFL_TEAM_CODES.map((code) => ({
@@ -74,12 +82,15 @@ async function main() {
 
   // Unlike the prebuild mirrors, this one is NOT allowed to half-succeed: a
   // partial commit would bake a CDN dependency back into the exact snapshots
-  // it exists to make offline. Fail loudly and leave the previous commit's
-  // files in place.
+  // it exists to make offline. ESPN's edge answers a burst's first request with
+  // a spurious 404 often enough that this fires in practice — re-running is the
+  // fix, and the manifest goes back to what the last good run left.
   const written = JSON.parse(fs.readFileSync(MANIFEST_PATH, 'utf8')).codes;
   const missing = STORYBOOK_NFL_TEAM_CODES.filter((code) => !written.includes(code));
   if (missing.length) {
-    throw new Error(`incomplete mirror — missing ${missing.join(', ')}; do not commit, re-run`);
+    if (manifestBefore === null) fs.rmSync(MANIFEST_PATH, { force: true });
+    else fs.writeFileSync(MANIFEST_PATH, manifestBefore);
+    throw new Error(`incomplete mirror — missing ${missing.join(', ')}; manifest left unchanged, re-run`);
   }
   console.log(
     `[mirror-storybook-dark-logos] ${written.length}/${STORYBOOK_NFL_TEAM_CODES.length} mirrored into ${OUT_DIR}`,

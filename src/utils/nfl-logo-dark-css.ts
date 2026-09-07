@@ -271,9 +271,15 @@ export function buildNflLogoDarkCss(options: NflLogoDarkCssOptions = {}): string
   // dark surface that wants its own shadow AND the ring composes
   // `var(--nfl-logo-ring, opacity(1))` inline (the player-modal band and the
   // broadcast origin line do). Pinned by tests/nfl-logo-dark-css.test.ts.
+  // Both base paths, deduped: an override ADDS a selector rather than replacing
+  // the production one. draft-broadcast.ts and BroadcastFace.tsx call
+  // resolveNflDarkLogoUrl() with the default path and ship the result as `src`,
+  // so `/assets/nfl-logos/dark/CAR.png` must stay keyed even when Storybook
+  // points its own swaps elsewhere. Identical in production (the two collapse).
+  const darkBasePaths = [...new Set([DEFAULT_DARK_BASE_PATH, darkBasePath])];
   const darkSrcs = NFL_DARK_STROKE_CODES.flatMap((code) => [
     getNFLTeamLogo(code, 'dark'),
-    `${darkBasePath}/${code}.png`,
+    ...darkBasePaths.map((base) => `${base}/${code}.png`),
   ]);
   const strokeFilter = crestStrokeFilter(undefined, NFL_DARK_STROKE_WIDTH);
   const strokeRule = (srcs: string[], guard: string): string | null =>

@@ -304,13 +304,22 @@ The fix is two halves, both pinned by
   `/storybook-nfl-dark` — its own prefix, same reasoning as
   `/storybook-fonts`: obviously Storybook's, and it cannot collide with a
   `public/` mirror a local prebuild left behind. Refresh with
-  `pnpm mirror:storybook-dark-logos`, which refuses to write a partial mirror
-  (ESPN's edge answers a burst's first request with a spurious 404 often
-  enough that this matters — the script fans out at 3 and re-run means re-run). **Committed on purpose** — a visual baseline has to be
+  `pnpm mirror:storybook-dark-logos`, which restores the previous manifest and
+  exits non-zero rather than leaving a partial one behind (ESPN's edge answers
+  a burst's first request with a spurious 404 often enough that this fires in
+  practice — the script fans out at 3, and re-run means re-run). The manifest
+  is the artifact that has to be all-or-nothing: extra PNGs are harmless, a
+  manifest claiming 31 is what `preview.ts` would trust. **Committed on purpose** — a visual baseline has to be
   reproducible from a checkout alone, so re-fetching per CI run would move the
   same flake earlier rather than remove it.
-- **`sameOriginOnly: true` on both builders.** It DROPS a swap that would
-  point off-origin instead of emitting it. That is the backstop, and it is the
+- **`sameOriginOnly: true` on both builders, plus a pinned manifest.**
+  `sameOriginOnly` DROPS a swap that would point off-origin instead of emitting
+  it. It proves ORIGIN, not EXISTENCE — which is why the college call also pins
+  `manifestIds: []` and the NFL call pins Storybook's own: the tracked
+  `*-dark-logos-manifest.json` files are prebuild-REWRITTEN, so a developer who
+  runs a local build and commits the result would otherwise have Storybook emit
+  same-origin swaps at a gitignored directory it does not serve — a guaranteed
+  broken-image icon in place of an intermittent one. That is the backstop, and it is the
   half that generalizes: a missing mirror file degrades to the light mark in
   dark mode — a deterministic, visible diff a human accepts or rejects — never
   to a network request that usually works. No college cut is mirrored, so all

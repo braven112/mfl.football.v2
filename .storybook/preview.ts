@@ -148,7 +148,14 @@ function injectLayoutStyles() {
       darkBasePath: STORYBOOK_NFL_DARK_BASE_PATH,
       sameOriginOnly: true,
     }),
-    buildCollegeLogoDarkCss({ sameOriginOnly: true }),
+    // `manifestIds: []` is not redundant with `sameOriginOnly`. The tracked
+    // college manifest is `{"ids": []}` today, but prebuild REWRITES it, so a
+    // developer who runs a local build and commits the result would have
+    // Storybook emit ~250 same-origin swaps at `/assets/college-logos/dark/*`
+    // — a gitignored directory `storybook build` does not serve. sameOriginOnly
+    // proves origin, not existence; pinning the manifest is what proves
+    // existence, and the NFL call above pins its own for the same reason.
+    buildCollegeLogoDarkCss({ manifestIds: [], sameOriginOnly: true }),
     buildAllTeamIconDarkCss(),
   ].join('\n');
   document.head.appendChild(el);
