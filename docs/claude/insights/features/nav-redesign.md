@@ -941,3 +941,45 @@ Three things that are load-bearing:
 off to MFL's own `add_drop` screen, and adds and drops already live on the
 site's player pages. The same guard test fails if any nav link points at
 `add_drop` again.
+
+---
+
+## 2026-09-07 - "The Footer" Is Two Different Registries; Only One Is a Site Directory
+
+**Context:** Asked to drop the Owners link from the side nav because "the footer
+is good enough for it." Confirming that claim meant finding which footer, and
+the word points at two unrelated things in this repo.
+
+**The two footers:**
+
+| Thing | Rendered by | Fed by | Holds |
+|---|---|---|---|
+| The nav drawer's bottom strip | `src/components/nav/NavFooter.astro` | `nav-config.json` → `footerLinks` | The team chip / verify prompt, and one link: "Back to MFL" |
+| The site footer deck | `src/components/theleague/Footer.astro` | `src/config/footer-config.ts` → `THELEAGUE_COLUMNS` / `AFL_COLUMNS` | The five-column site directory (My Team, This Week, Front Office, Record Book, League Office) |
+
+A `footerLinks` array sitting right there in `nav-config.json` is the trap:
+it looks like the site directory and is not — it is the drawer's own footer, and
+has held exactly one external link since the redesign. Adding a page there puts
+it inside the drawer you were trying to take it out of.
+
+**They also disagree by design, which is the useful part.** The two registries
+are independent, so a page can live in one and not the other, and that is the
+lever for "de-duplicate this link" requests:
+
+- The nav lists **paths** inline (`"path": "/owners"`).
+- The footer lists **`page-directory.json` ids** (`'owners'`,
+  `{ id: 'afl-owners', label: 'Owners' }`), never paths — see the docblock at
+  the top of `footer-config.ts` for why (the old hardcoded-path footer drifted
+  and shipped two labels pointing at `/rules`).
+
+So removing a nav entry does **not** remove the footer entry, and neither one is
+what makes the page reachable: the route, the `page-directory.json` entry (site
+search), and `nav-config.json`'s `routeEquivalence` map all live separately.
+That map is the easy thing to over-delete — `"/owners": "/owners"` is what keeps
+the league toggle landing on the other league's owners page instead of bouncing
+home, and it is keyed by path with no relationship to whether the drawer still
+lists it.
+
+**Rule:** "put it in / take it out of the footer" means `footer-config.ts` plus a
+`page-directory.json` id. Touch `nav-config.json`'s `footerLinks` only when the
+thing genuinely belongs at the bottom of the open drawer.
