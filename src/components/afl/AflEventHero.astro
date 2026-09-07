@@ -57,6 +57,15 @@ interface Props {
   /** Cast composite model — transparent ESPN cutout over a team-color glow
       with a frosted caption. Takes precedence over `player` when set. */
   model?: HeroModel | null;
+  /**
+   * Overrides the glow tint with a FANTASY franchise's color — the viewer's
+   * own club, when their conference rosters the cast player. Resolved by the
+   * page (`resolveHeroFranchiseAccent`), because deciding WHOSE colors these
+   * are needs the rosters feed and the viewer's conference, and because the
+   * AFL rosters the same player in both conferences. Null → his NFL team,
+   * which is the behavior this hero always had.
+   */
+  modelAccent?: string | null;
   /** Big countdown value (number of days, or a short string like "LIVE"). */
   countValue?: string | number;
   /** Small caps label under the countdown number. */
@@ -104,6 +113,7 @@ const {
   playerAlt = '',
   screenshot,
   model = null,
+  modelAccent = null,
   countValue,
   countLabel,
   bordered = false,
@@ -111,12 +121,15 @@ const {
   backdrop = null,
 } = Astro.props;
 
-// Composite model treatment: the model's NFL team primary color tints the
-// glow behind the cutout (alpha differs per theme — white needs a lighter wash).
+// Composite model treatment: a color tints the glow behind the cutout (alpha
+// differs per theme — white needs a lighter wash). That color is the cast
+// player's NFL team primary by default, and the viewer's own franchise when
+// the page resolved one — the caption still reads his NFL team, because the
+// glow says whose story this is while the caption says who he plays for.
 const modelTeamCode = model ? normalizeTeamCode(model.nflTeam) : '';
-const modelColors = model ? getNflTeamColors(modelTeamCode) : null;
-const modelGlowLight = modelColors ? hexToRgba(modelColors.primary, 0.22) : '';
-const modelGlowDark = modelColors ? hexToRgba(modelColors.primary, 0.42) : '';
+const modelTint = model ? (modelAccent || getNflTeamColors(modelTeamCode).primary) : null;
+const modelGlowLight = modelTint ? hexToRgba(modelTint, 0.22) : '';
+const modelGlowDark = modelTint ? hexToRgba(modelTint, 0.42) : '';
 const modelStyle = model ? `--ev-model-glow-light:${modelGlowLight};--ev-model-glow-dark:${modelGlowDark};` : '';
 
 // The accent is the franchise's when one is painting, the league's otherwise.

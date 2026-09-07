@@ -25,17 +25,9 @@
 import type { HeroModel } from '../../utils/hero-casting';
 import { normalizeTeamCode } from '../../utils/nfl-logo';
 import { hexToRgba } from '../../utils/nfl-team-colors';
+import type { CompositeHeroAccent } from '../../types/composite-hero';
 import '../../styles/composite-hero.css';
 
-/** Accent families defined in composite-hero.css. */
-export type CompositeHeroAccent =
-  | 'feature'
-  | 'recap'
-  | 'kickoff'
-  | 'roster'
-  | 'auction'
-  | 'navy'
-  | 'gold';
 
 export interface Props {
   /** Landmark label — every hero is a labelled region. */

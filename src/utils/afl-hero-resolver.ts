@@ -36,6 +36,7 @@ import { getCurrentNFLWeek } from './current-week';
 import { randomHeroPlayer } from './hero-players';
 import { resolveFeatureHeadline } from './whats-new-hero-headline';
 import { MFL_EMAIL_DRAFT_OPTION, buildMflLiveDraftUrl, buildMflOptionUrl } from './mfl-url';
+import type { CompositeHeroTreatment } from '../types/composite-hero';
 import { LEAGUES } from '../config/leagues';
 
 /** How long a fresh What's New entry stays in the hero. */
@@ -96,6 +97,26 @@ export interface EventHeroView {
    * (data-wired, fs reads). When present it replaces the `player` webp art.
    */
   model?: HeroModel | null;
+  /**
+   * Hex the model's glow is tinted with, when the hero belongs to a FANTASY
+   * franchise rather than to the cast player's NFL team — the viewer's own
+   * club, when their conference rosters him. Attached post-resolve beside
+   * `model` for the same reason (it needs the rosters feed), and null
+   * everywhere the answer is "his NFL team", which is most of the time.
+   * See hero-franchise-accent.ts for why conference scoping is the rule.
+   */
+  modelAccent?: string | null;
+  /**
+   * Render this state as a COMPOSITE (the shared `CompositeHero` shell) rather
+   * than through the branded promo card, when a model resolves. Set here, not
+   * in the component, because whether a draft is live or a deadline is today is
+   * already known right here — and the wordmark is the phase's identity, which
+   * is a copy decision like every other field on this view.
+   *
+   * `AflHero` falls back to `AflEventHero` whenever this is absent OR no model
+   * was cast, so a missing feed degrades to the card that always worked.
+   */
+  composite?: CompositeHeroTreatment;
 }
 
 /** AFL hero state — discriminated by `kind`. */
@@ -287,6 +308,10 @@ const EVENT_VIEW: Record<string, ViewBuilder> = {
             : `${days} days until the keeper deadline. Lock in your 7 protected players before July 15 @ 8:45pm PT.`,
       link: '/afl-fantasy/rosters?view=planner',
       linkLabel: 'Manage Keepers',
+      // Trophy gold is the keeper window's own colour — the AFL's answer to
+      // TheLeague's tag/auction window — and it flips to the urgency red on
+      // the day itself, the same tier flip the cut watch makes.
+      composite: { wordmark: 'KEEPERS', accent: 'gold', tone: days === 0 ? 'red' : null },
       accent: ACCENT_GOLD,
       glow: GLOW_RED,
       player: randomHeroPlayer(now),
@@ -347,6 +372,11 @@ const EVENT_VIEW: Record<string, ViewBuilder> = {
           ? [{ label: 'View Draft Order', href: AFL_DRAFT_ORDER_PATH }]
           : undefined,
       icon: 'draft-podium',
+      // The two conferences draft as separate events, so each names itself in
+      // the ghost wordmark — an NL owner glancing at the homepage must never
+      // have to read the pill to know whose draft is on screen. Navy is the
+      // AFL's ground; a draft actually running takes the urgency red.
+      composite: { wordmark: 'AL\u00a0DRAFT', accent: 'navy', tone: live ? 'red' : null },
       accent: ACCENT_STEEL,
       glow: 'rgba(59,107,154,.55)',
       player: randomHeroPlayer(now),
@@ -388,6 +418,8 @@ const EVENT_VIEW: Record<string, ViewBuilder> = {
           ? [{ label: 'View Draft Order', href: AFL_DRAFT_ORDER_PATH }]
           : undefined,
       icon: 'draft-podium',
+      // @see the AL card above — the conference names itself in the wordmark.
+      composite: { wordmark: 'NL\u00a0DRAFT', accent: 'navy', tone: live ? 'red' : null },
       accent: ACCENT_GOLD,
       glow: 'rgba(196,30,58,.55)',
       player: randomHeroPlayer(now),
