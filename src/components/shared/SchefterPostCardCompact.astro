@@ -12,6 +12,8 @@ import type { GroupMePostMeta } from '../../utils/groupme-storage';
 import SchefterReactionBar from './SchefterReactionBar.tsx';
 import SchefterReplyThread from './SchefterReplyThread.tsx';
 
+type WatchHit = { id: string; name: string; kind: 'watch' | 'roster' };
+
 interface Props {
   post: SchefterPost;
   isAuthenticated?: boolean;
@@ -21,6 +23,8 @@ interface Props {
   now?: Date;
   /** Server-resolved reactions (avoids per-post client fetch) */
   reactions?: { reactions: Record<string, number>; userReaction: string | null };
+  /** Watched/rostered players this post names (src/utils/schefter-watching.ts). */
+  watching?: WatchHit[];
 }
 
 const {
@@ -31,7 +35,12 @@ const {
   userTeamIcon,
   now,
   reactions,
+  watching,
 } = Astro.props;
+
+// One name only in the rail — the card is ~300px wide and a second chip wraps
+// the header. The full /news card lists them all.
+const watchHit = watching?.[0];
 
 const relTime = formatRelativeTime(post.timestamp, now);
 const isGroupMe = post.type === 'groupme';
@@ -89,6 +98,15 @@ if (firstEmbedUrl) {
       <span class={`sfc-post__handle${isGroupMe ? ' sfc-post__handle--groupme' : ''}`}>{displayHandle}</span>
       <time class="sfc-post__time" datetime={post.timestamp}>{relTime}</time>
     </div>
+
+    {watchHit && (
+      <div class="sfc-post__watching" title={watching!.map((w) => w.name).join(', ')}>
+        <svg class="sfc-post__watching-icon" aria-hidden="true"><use href="/assets/icons/sprite.svg#icon-eye" /></svg>
+        <span class="sfc-post__watching-label">{watchHit.kind === 'watch' ? 'Watching' : 'Your player'}</span>
+        <span class="sfc-post__watching-name">{watchHit.name}</span>
+        {watching!.length > 1 && <span class="sfc-post__watching-more">+{watching!.length - 1}</span>}
+      </div>
+    )}
 
     {isGroupMe ? (
       <>

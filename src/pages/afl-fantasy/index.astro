@@ -60,6 +60,7 @@ import { getAuthUser } from '../../utils/auth';
 import InstallAppPrompt from '../../components/shared/pwa/InstallAppPrompt.astro';
 import { spriteUrl } from '../../utils/sprite-url';
 import { getLeagueBySlug } from '../../config/leagues';
+import { resolveSchefterRail } from '../../utils/schefter-rail-view';
 
 import '../../styles/schefter-feed.css';
 import '../../styles/schefter-feed-compact.css';
@@ -279,8 +280,17 @@ if ('view' in heroState) {
 }
 
 // ── Schefter feed ───────────────────────────────────────────────────────────
+// In season a signed-in AFL owner opens the rail on For You (their roster +
+// watch list + their franchise), with an All tab beside it. Out of season, or
+// signed out, this is the league feed exactly as before. The WHOLE feed goes
+// in: slicing to 30 first and filtering after leaves almost nothing.
 const feed = feedData as FeedType;
-const compactPosts = feed.posts.slice(0, 30);
+const rail = await resolveSchefterRail({
+  league: AFL,
+  posts: feed.posts,
+  authUser,
+  now: effectiveDate,
+});
 
 // Hide the What's Next card that the hero already promotes — EXCEPT when the
 // hero is a conference draft. In the keeper→draft window the hero counts down
@@ -372,7 +382,13 @@ const lastVisitDate = Astro.cookies.get('whats_new_last_visit')?.value ?? null;
     </section>
 
     <aside class="afl-hp__sidebar" aria-label="Schefter Report feed" tabindex="0">
-      <SchefterFeedCompact posts={compactPosts} isAuthenticated={false} />
+      <SchefterFeedCompact
+        posts={rail.posts}
+        isAuthenticated={false}
+        personalized={rail.personalized}
+        forYouIds={rail.forYouIds}
+        watching={rail.watchingByPost}
+      />
     </aside>
   </div>
 </TheLeagueLayout>

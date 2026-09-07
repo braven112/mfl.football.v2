@@ -793,3 +793,106 @@ html[data-league='afl'] .sfc-reply--roger .sfc-reply__content {
     animation: none;
   }
 }
+
+/* ── For You / All tabs, and the watching chip ───────────────────────────────
+   In-season personalization for the sidebar rail
+   (src/utils/schefter-rail-view.ts). Tokens mirror the full feed's
+   .sf-post__watching so the two surfaces read as one feature; nothing here
+   restates --color-gray-* under html.dark, because that ramp inverts itself
+   and "fixing" dark mode by overriding it ships near-black on near-black. */
+
+.sfc-tabs {
+  display: flex;
+  gap: 0.25rem;
+  padding: 0 var(--sfc-post-padding-x) 0.5rem;
+  border-bottom: 1px solid var(--sf-border, #e5e7eb);
+}
+
+.sfc-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.3rem 0.6rem;
+  border: 0;
+  border-radius: var(--radius-full, 9999px);
+  background: transparent;
+  font: inherit;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--sf-text-secondary, #6b7280);
+  cursor: pointer;
+  transition: background-color 0.15s, color 0.15s;
+}
+
+.sfc-tab:hover {
+  color: var(--sf-text-primary);
+  background: var(--sf-hover-bg, rgba(0, 0, 0, 0.04));
+}
+
+.sfc-tab--active,
+.sfc-tab--active:hover {
+  color: #fff;
+  background: var(--league-accent, var(--color-primary, #1c497c));
+}
+
+.sfc-tab__icon {
+  width: 12px;
+  height: 12px;
+  fill: currentColor;
+  flex-shrink: 0;
+}
+
+.sfc-tab:focus-visible {
+  outline: 2px solid var(--league-accent, var(--color-primary, #1c497c));
+  outline-offset: 2px;
+}
+
+/* The tab-empty note and the load-more wrapper are toggled with the `hidden`
+   attribute, which LOSES to any author `display` — restate it for both. */
+.sfc-empty--tab[hidden],
+.sfc-load-more[hidden] {
+  display: none !important;
+}
+
+.sfc-post__watching {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  max-width: 100%;
+  margin: 0.15rem 0 0.25rem;
+  padding: 0.05rem 0.45rem 0.05rem 0.35rem;
+  border-radius: var(--radius-full, 9999px);
+  font-size: 0.625rem;
+  font-weight: 700;
+  color: var(--league-accent, var(--color-primary, #1c497c));
+  /* Derived from the league accent, exactly as .sf-post__watching does — a
+     fixed rgba() fallback here would render the same tint in BOTH themes. */
+  background: color-mix(in srgb, var(--league-accent, var(--color-primary, #1c497c)) 12%, transparent);
+}
+
+.sfc-post__watching-icon {
+  width: 11px;
+  height: 11px;
+  fill: currentColor;
+  flex-shrink: 0;
+}
+
+.sfc-post__watching-label {
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  flex-shrink: 0;
+}
+
+.sfc-post__watching-name {
+  font-weight: 600;
+  color: var(--sf-text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sfc-post__watching-more {
+  font-weight: 600;
+  opacity: 0.75;
+  flex-shrink: 0;
+}

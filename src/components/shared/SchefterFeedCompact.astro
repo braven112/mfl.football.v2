@@ -11,6 +11,7 @@ import { getBatchReactions } from '../../utils/schefter-reactions';
 import { getLeagueContext } from '../../utils/league-context';
 import { resolveLeaguePath } from '../../utils/nav-utils';
 import SchefterPostCardCompact from './SchefterPostCardCompact.astro';
+import type { WatchHit } from '../../utils/schefter-watching';
 
 interface Props {
   posts: SchefterPost[];
@@ -19,6 +20,14 @@ interface Props {
   userTeamName?: string;
   userTeamIcon?: string;
   initialLimit?: number;
+  /**
+   * In-season personalization (src/utils/schefter-rail-view.ts). When
+   * `personalized` is true the rail shows For You / All tabs, defaulting to
+   * For You; `forYouIds` says which rendered posts that tab keeps.
+   */
+  personalized?: boolean;
+  forYouIds?: string[];
+  watching?: Record<string, WatchHit[]>;
 }
 
 const {
@@ -28,7 +37,14 @@ const {
   userTeamName,
   userTeamIcon,
   initialLimit = 10,
+  personalized = false,
+  forYouIds = [],
+  watching = {},
 } = Astro.props;
+
+const forYou = new Set(forYouIds);
+// The rail opens on For You in season — that is the whole point of the split.
+const activeTab = personalized ? 'foryou' : 'all';
 
 // Keep the "View all" link inside the current league's news page, honoring
 // clean-domain prefix stripping (e.g. /theleague/news → /news on theleague.us).
@@ -44,18 +60,32 @@ const postIds = posts.map(p => p.id);
 const allReactions = await getBatchReactions(postIds, userFranchiseId);
 ---
 
-<section class="sfc-feed" aria-label="Latest league news">
+<section class="sfc-feed" aria-label="Latest league news" data-sfc-active-tab={activeTab}>
   <div class="sfc-feed__header">
     <h2 class="sfc-feed__title">Schefter Report</h2>
     <a href={newsHref} class="sfc-feed__view-all">View all <span aria-hidden="true">→</span></a>
   </div>
+
+  {personalized && (
+    <div class="sfc-tabs" role="tablist" aria-label="Filter the feed">
+      <button class="sfc-tab sfc-tab--active" role="tab" aria-selected="true" data-sfc-tab="foryou">
+        <svg class="sfc-tab__icon" aria-hidden="true"><use href="/assets/icons/sprite.svg#icon-eye" /></svg>
+        For You
+      </button>
+      <button class="sfc-tab" role="tab" aria-selected="false" data-sfc-tab="all">All</button>
+    </div>
+  )}
 
   {posts.length === 0 ? (
     <div class="sfc-empty">No news yet. Schefter is on assignment.</div>
   ) : (
     <div class="sfc-feed__list" data-initial-limit={initialLimit}>
       {posts.map((post, i) => (
-        <div class:list={['sfc-feed__item', { 'sfc-feed__item--hidden': i >= initialLimit }]} data-feed-index={i}>
+        <div
+          class:list={['sfc-feed__item', { 'sfc-feed__item--hidden': i >= initialLimit }]}
+          data-feed-index={i}
+          data-foryou={forYou.has(post.id) ? 'true' : 'false'}
+        >
           <SchefterPostCardCompact
             post={post}
             isAuthenticated={isAuthenticated}
@@ -64,56 +94,89 @@ const allReactions = await getBatchReactions(postIds, userFranchiseId);
             userTeamIcon={userTeamIcon}
             now={now}
             reactions={allReactions[post.id]}
+            watching={watching[post.id]}
           />
         </div>
       ))}
     </div>
   )}
 
-  {posts.length > initialLimit && (
-    <div class="sfc-load-more">
-      <button class="sfc-load-more__btn" data-sfc-load-more>
-        Show more
-      </button>
-    </div>
-  )}
+  <div class="sfc-empty sfc-empty--tab" data-sfc-tab-empty hidden>
+    Quiet on your guys right now. Tap All for the rest of the league.
+  </div>
+
+  <div class="sfc-load-more" data-sfc-load-more-wrap hidden={posts.length <= initialLimit}>
+    <button class="sfc-load-more__btn" data-sfc-load-more>
+      Show more
+    </button>
+  </div>
 </section>
 
 <script>
-  function initCompactLoadMore() {
+  /**
+   * Rail pagination, tab-aware.
+   *
+   * The old version revealed items by INDEX, which cannot survive a filter —
+   * with a For You tab active, "the first 10 items" and "the first 10 matching
+   * items" are different sets. Everything below counts matches instead, and
+   * re-renders from scratch on every tab change, so the two features cannot
+   * disagree about what is on screen.
+   */
+  function initCompactFeed() {
     const feed = document.querySelector('.sfc-feed');
     if (!feed) return;
-
-    const btn = feed.querySelector('[data-sfc-load-more]') as HTMLButtonElement | null;
-    if (!btn) return;
 
     const list = feed.querySelector('.sfc-feed__list');
     if (!list) return;
 
     const PAGE_SIZE = 5;
     const initialLimit = parseInt(list.getAttribute('data-initial-limit') ?? '10', 10);
+    const items = Array.from(list.querySelectorAll('.sfc-feed__item')) as HTMLElement[];
+    const moreWrap = feed.querySelector('[data-sfc-load-more-wrap]') as HTMLElement | null;
+    const btn = feed.querySelector('[data-sfc-load-more]') as HTMLButtonElement | null;
+    const tabEmpty = feed.querySelector('[data-sfc-tab-empty]') as HTMLElement | null;
+    const tabs = Array.from(feed.querySelectorAll('[data-sfc-tab]')) as HTMLButtonElement[];
+
+    let mode = feed.getAttribute('data-sfc-active-tab') ?? 'all';
     let showing = initialLimit;
 
-    btn.addEventListener('click', () => {
-      const items = list.querySelectorAll('.sfc-feed__item');
-      const nextLimit = showing + PAGE_SIZE;
+    const matching = () =>
+      mode === 'foryou' ? items.filter((el) => el.dataset.foryou === 'true') : items;
 
-      items.forEach((item, i) => {
-        if (i < nextLimit) {
-          item.classList.remove('sfc-feed__item--hidden');
-        }
-      });
+    function render() {
+      const shown = matching();
+      for (const el of items) el.classList.add('sfc-feed__item--hidden');
+      for (const el of shown.slice(0, showing)) el.classList.remove('sfc-feed__item--hidden');
+      if (moreWrap) moreWrap.hidden = shown.length <= showing;
+      if (tabEmpty) tabEmpty.hidden = shown.length > 0;
+    }
 
-      showing = nextLimit;
-
-      if (showing >= items.length) {
-        // Focus the first newly-revealed item before removing button
-        const firstNew = items[nextLimit - PAGE_SIZE];
-        if (firstNew instanceof HTMLElement) firstNew.focus({ preventScroll: true });
-        btn.parentElement?.remove();
-      }
+    btn?.addEventListener('click', () => {
+      const before = showing;
+      showing += PAGE_SIZE;
+      render();
+      // Move focus to the first newly-revealed card, as the old version did.
+      const first = matching()[before];
+      if (first instanceof HTMLElement) first.focus({ preventScroll: true });
     });
+
+    for (const tab of tabs) {
+      tab.addEventListener('click', () => {
+        mode = tab.dataset.sfcTab ?? 'all';
+        // A tab switch is a fresh view — collapse back to one page.
+        showing = initialLimit;
+        for (const t of tabs) {
+          const active = t === tab;
+          t.classList.toggle('sfc-tab--active', active);
+          t.setAttribute('aria-selected', active ? 'true' : 'false');
+        }
+        feed.setAttribute('data-sfc-active-tab', mode);
+        render();
+      });
+    }
+
+    render();
   }
 
-  document.addEventListener('astro:page-load', initCompactLoadMore);
+  document.addEventListener('astro:page-load', initCompactFeed);
 </script>
