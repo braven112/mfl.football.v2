@@ -194,6 +194,19 @@ export function buildExpiryBeat({ rawOffer, nowMs }) {
 }
 
 /**
+ * MFL is not consistent about zero-padding franchise ids: the transactions
+ * feed carries "0007" while an owner-view proposal row can carry "7", and
+ * `owner-trade-reports.ts#normalizeRaw` pads `franchise` but passes
+ * `franchise2` through untouched. Every id that is compared, used as a map key
+ * or hashed goes through here, or a proposal and the trade it became stop
+ * hashing alike and accepted-closure detection silently never fires.
+ */
+export function padFid(value) {
+  const s = String(value ?? '').trim();
+  return s ? s.padStart(4, '0') : '';
+}
+
+/**
  * The signature that lets a proposal and the TRADE it became hash identically.
  *
  * Deliberately the same shape `schefter-scan.mjs#buildTradeSignature` builds —
@@ -206,8 +219,8 @@ export function buildExpiryBeat({ rawOffer, nowMs }) {
  */
 export function tradeSignatureOf(raw) {
   const pair = [
-    String(raw?.franchise || ''),
-    String(raw?.franchise2 || raw?.offeredto || ''),
+    padFid(raw?.franchise),
+    padFid(raw?.franchise2 || raw?.offeredto),
   ]
     .filter(Boolean)
     .sort()

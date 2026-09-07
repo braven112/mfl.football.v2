@@ -25,6 +25,7 @@ import {
   buildExpiryBeat,
   buildMarketBeats,
   buildReOfferBeat,
+  padFid,
   planBeats,
   tradeSignatureOf,
   plannedPlayerCount,
@@ -621,5 +622,62 @@ describe('review regressions — the named tier must not widen the name surface'
     const shape = (tip.beats ?? []).find((b: any) => b.kind === BEAT_KINDS.DEAL_SHAPE) as any;
     expect(shape?.gets?.picks ?? []).toEqual([]);
     expect(debug.antiLeak.dropped.join(' ')).toContain('dealShape picks');
+  });
+});
+
+describe('review regressions — MFL does not consistently zero-pad franchise ids', () => {
+  // The transactions feed carries "0007"; an owner-view proposal row can carry
+  // "7", and owner-trade-reports#normalizeRaw pads `franchise` while passing
+  // `franchise2` through untouched. Anything that compares, keys on, or hashes
+  // a franchise id has to normalize first.
+  const short = {
+    id: 'pad_1',
+    franchise: '0001',
+    franchise2: '7',
+    franchise1_gave_up: 'p1',
+    franchise2_gave_up: 'p2',
+  };
+  const padded = { ...short, franchise2: '0007' };
+
+  it('hashes a short and a padded id to the same signature', () => {
+    // Was: "0001:7|…" vs "0001:0007|…", so a proposal could never match the
+    // completed TRADE it became and accepted-closure detection never fired.
+    expect(tradeSignatureOf(short)).toBe(tradeSignatureOf(padded));
+    expect(padFid('7')).toBe('0007');
+    expect(padFid('0007')).toBe('0007');
+    expect(padFid('')).toBe('');
+    expect(padFid(undefined)).toBe('');
+  });
+
+  it('resolves the same team and beats whichever form the row carries', () => {
+    const playerMap = new Map([
+      ['p1', { name: 'Alpha One', position: 'WR' }],
+      ['p2', { name: 'Beta Two', position: 'RB' }],
+    ]);
+    const teamMap = new Map([
+      ['0001', { name: 'Pacific Pigskins', division: 'East' }],
+      ['0007', { name: 'Maverick', division: 'West' }],
+    ]);
+    const run = (rawOffer: any) => redactTradeOffer({
+      rawOffer,
+      offeringFid: '0001',
+      playerMap,
+      teamMap,
+      counts: { ownerOfferCount7d: 1, divisionOfferCount7d: 0, playerHistory: new Map() },
+      currentYear: 2026,
+      exposureCount: 4,
+      adpRankByPlayerId: new Map([['p1', 1], ['p2', 2]]),
+      blockByFid: new Map([['0001', new Set<string>()], ['0007', new Set<string>()]]),
+      positionRuns: new Map(),
+      nowMs: NOW,
+    } as any).tip;
+
+    const a = run(short);
+    const b = run(padded);
+    expect(a.exposure).toBeDefined();
+    expect(a.exposure!.team.name).toBe(b.exposure!.team.name);
+    expect(a.exposure!.players).toEqual(b.exposure!.players);
+    expect(a.beats).toEqual(b.beats);
+    expect(a.partnerFranchiseId).toBe(b.partnerFranchiseId);
   });
 });

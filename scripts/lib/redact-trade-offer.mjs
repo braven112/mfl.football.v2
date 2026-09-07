@@ -55,6 +55,7 @@ import {
   buildExpiryBeat,
   buildMarketBeats,
   buildReOfferBeat,
+  padFid,
   planBeats,
   plannedPlayerCount,
 } from './schefter-offer-beats.mjs';
@@ -370,9 +371,16 @@ export function redactTradeOffer({
   // Sides kept apart on purpose: `franchise1_gave_up` are fid1's players,
   // `franchise2_gave_up` are fid2's. Merging them is what let a post name a
   // team alongside the other side's player.
+  // Padded, because these strings are used as MAP KEYS against `teamMap` and
+  // `blockByFid`, both of which are keyed 4-digit. MFL hands back "7" on some
+  // rows and "0007" on others, and an unpadded key misses both maps: the team
+  // lookup returns undefined, `buildExposure` bails, and the post loses its
+  // whole name surface rather than failing loudly.
+  const fid1 = padFid(rawOffer.franchise ?? offeringFid);
+  const fid2 = padFid(rawOffer.franchise2 ?? rawOffer.offeredto);
   const sidesByFid = {
-    [String(rawOffer.franchise ?? offeringFid ?? '')]: side1,
-    [String(rawOffer.franchise2 ?? '')]: side2,
+    [fid1]: side1,
+    [fid2]: side2,
   };
 
   const exposureBuilt = buildExposure({
@@ -467,9 +475,7 @@ export function redactTradeOffer({
   // matcher to detect when a web/groupme tip's franchiseHint is on either
   // side of this offer. Internal-only metadata; never reaches the LLM (the
   // anonymizer drops it before the LLM sees the safe-shape tip).
-  const partnerFranchiseId = String(
-    offeringFid === String(rawOffer.franchise) ? rawOffer.franchise2 : rawOffer.franchise,
-  );
+  const partnerFranchiseId = padFid(offeringFid) === fid1 ? fid2 : fid1;
 
   // Lower-cased player names for substring matching against web tip text.
   // Internal-only — never surfaces to the LLM. Even at non-named tier where
