@@ -432,7 +432,13 @@ async function main() {
   // a deal that died. Only the PROPOSER's half is signal, and the franchise
   // they asked is excluded as a counterparty so a hypothetical can never land
   // back on the real proposal. Best effort: no seeds is the old behavior.
-  const seeds = await readActiveSeeds({ redis, navSlug: LEAGUE_SLUG, nowMs: now.getTime(), warn });
+  // navSlug, NOT the registry slug. They are the same string for TheLeague and
+  // differ for every other league ('afl-fantasy' vs 'afl'), and the WRITER
+  // side — schefter-rumor-scan.mjs — keys on navSlug. Passing the slug here
+  // works today and silently splits the seed store the moment this lane is
+  // pointed at a second league.
+  const seedNavSlug = getLeagueBySlug(LEAGUE_SLUG)?.navSlug ?? LEAGUE_SLUG;
+  const seeds = await readActiveSeeds({ redis, navSlug: seedNavSlug, nowMs: now.getTime(), warn });
   const signals = seeds.length > 0 ? seedSignals(seeds) : null;
   if (signals) {
     const offered = [...signals.availableByFid.values()].reduce((n, set) => n + set.size, 0);

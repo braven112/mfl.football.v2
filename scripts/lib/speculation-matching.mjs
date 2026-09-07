@@ -265,11 +265,15 @@ function scoreCandidate({ marquee, returnPkg, divisionsAreSame }) {
   const fit = Math.max(0, 100 - Math.abs(marquee.value - valuePack));
   const drama = divisionsAreSame ? 25 : 10;
   const baitBonus = marquee.onTradeBait ? 15 : 0;
-  // An owner who actually built and sent a proposal around this player has
-  // demonstrated more willingness than one who listed him, so this outranks
-  // the bait bonus — but it stacks rather than replaces, because a player who
-  // is BOTH listed and shopped is the most available player in the league.
-  const offeredBonus = marquee.wasOffered ? 20 : 0;
+  // A privately-offered player is deliberately worth LESS here than a publicly
+  // listed one, which inverts the obvious reading of the evidence on purpose.
+  // The seed's job is to widen the pool — a player his owner shopped is
+  // eligible at all only because of it — not to dominate the ranking. Set
+  // above the bait bonus, seeded players would reliably top the board, and
+  // "he appeared in a speculation post" would become a readable signal that a
+  // real offer was made, which the franchise that received it could decode.
+  // Mixed in below the public signal, an appearance stays ambiguous.
+  const offeredBonus = marquee.wasOffered ? 10 : 0;
   const surplusPenalty =
     !marquee.onTradeBait && !marquee.wasOffered && marquee.surplus ? -5 : 0;
   return Math.round(fit + drama + baitBonus + offeredBonus + surplusPenalty);

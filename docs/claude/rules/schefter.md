@@ -247,6 +247,35 @@ ONE fact that is new this signal so the prompt opens on it.
   class of bug as the Loveland attribution above, one layer down.
 - At the end of both ladders (offer 1076 was on signal 7 the day this shipped)
   `leadKind` rotates through the unlocked beats rather than parking on one.
+- **A beat leads only on the signal that UNLOCKED it.** Deriving "new" from
+  `unlockedBeatCount(signal)` alone is wrong the moment a proposal qualifies
+  for fewer beats than its signal number: with one beat available, every even
+  signal re-led on it and the rotation was unreachable — post seven reading
+  like post two, the exact failure the layer exists to remove. Compare against
+  what the PREVIOUS signal had unlocked, capped at the beats that exist.
+- **The named escalation tier must not reach the beats.** `nameablePlayerIds`
+  is `exposure.players` and nothing else. Admitting the named-tier
+  `escalatedPlayer` — on the reasoning that the ladder already authorizes his
+  name — let a beat print him at signal 4 while `exposure.players` still held
+  one other name, two signals before the drip meant it.
+- **Anti-leak Rule B has to cover `deal_shape` too.** It drops `pickTokens` at
+  the named tier because a name plus a pick round identifies the deal; the
+  shape beat reaches the prompt through a different field and was republishing
+  the same labels verbatim, with the playbook inviting the model to use them.
+- **The stored shape is the ask AS OF THE LAST REPORT, not the last scan.**
+  Written every scan, a changed ask was detectable for exactly one cycle — at
+  ~8 scans a day against a 5–35% roll, most changes were overwritten before
+  they could post. Anchored to the report, the beat means "changed since we
+  last told you", which survives until it is made.
+- **Counting beats must count only LIVE proposals.** `positionRuns` is built
+  before the expiry filter, so it has to apply the same check itself;
+  `owner_reports` keeps resolved proposals indefinitely, and `atLeast` does not
+  make a stale count true.
+- **The seed store is keyed on navSlug in BOTH lanes.** The writer uses
+  `NAV_SLUG`; the reader must resolve it through the registry rather than
+  passing the league slug. They are the same string for TheLeague and differ
+  everywhere else, so a slug works today and silently splits the store on the
+  second league.
 
 ### An expired proposal is a SEED, not a post
 

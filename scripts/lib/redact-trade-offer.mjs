@@ -407,15 +407,23 @@ export function redactTradeOffer({
   // by the scanner. Nothing widens the name surface: `nameablePlayerIds` is
   // exactly what `exposure` already printed, plus the escalated player at the
   // one tier that authorizes a name.
+  // EXACTLY what `exposure` has already printed, and nothing else.
+  //
+  // This used to also admit the `named`-tier `escalatedPlayer`, on the
+  // reasoning that the escalation ladder already authorizes his name. It does
+  // — through its own field, on its own terms. Letting the BEATS print him
+  // made the drip layer a second name surface: at signal 4 a beat carried
+  // "Gamma Three" while `exposure.players` still read `["Alpha One"]`, so a
+  // name arrived two signals before the ladder meant it to and the playbook's
+  // "never print a player who is not in exposure.players" became false.
   const nameablePlayerIds = new Set(exposureBuilt?.playerIds ?? []);
-  if (escalatedPlayer?.tier === 'named') {
-    const namedAsset = (sidesByFid[namedFid] ?? allAssets).find(
-      (a) => a.kind === 'player' && a.name === escalatedPlayer.name,
-    );
-    if (namedAsset?.playerId) nameablePlayerIds.add(namedAsset.playerId);
-  }
 
-  const dealShape = buildDealShape({ namedFid, sidesByFid });
+  // Rule B above drops `pickTokens` at the named tier because a name plus a
+  // pick round identifies the deal. `deal_shape` reaches the prompt through a
+  // different field and was re-publishing them verbatim.
+  const suppressShapePicks = escalatedPlayer?.tier === 'named';
+  if (suppressShapePicks) antiLeak.dropped.push('dealShape picks (named tier)');
+  const dealShape = buildDealShape({ namedFid, sidesByFid, suppressPicks: suppressShapePicks });
   const expiryBeat = buildExpiryBeat({ rawOffer, nowMs });
   const marketBeats = buildMarketBeats({
     namedFid,

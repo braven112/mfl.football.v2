@@ -75,8 +75,12 @@ export const CLOSURE_REASONS = Object.freeze(['accepted', 'expired']);
 const THIRD_DESK_FLOOR = 2;
 /** Below this many proposals in the window a "run on the position" beat is noise. */
 const POSITION_RUN_FLOOR = 3;
-/** An expiry further out than this is not a clock anyone feels. */
-const EXPIRY_HORIZON_HOURS = 14 * 24;
+/**
+ * An expiry further out than this is not a clock anyone feels — and, more
+ * concretely, the beat's furthest tier is labelled `this_week`, so a horizon
+ * wider than a week hands the prompt a 13-day deadline under the word "week".
+ */
+const EXPIRY_HORIZON_HOURS = 7 * 24;
 /** Inside this many hours the expiry beat jumps the queue — a deadline is news when it's near, not when its slot comes up. */
 const EXPIRY_URGENT_HOURS = 48;
 
@@ -130,7 +134,7 @@ function playerCountOf(assets) {
  * already merged into `positionTokens` before this existed, so which side a
  * position sat on was the one thing the LLM could never say.
  */
-export function buildDealShape({ namedFid, sidesByFid }) {
+export function buildDealShape({ namedFid, sidesByFid, suppressPicks = false }) {
   if (!namedFid) return null;
   const sends = sidesByFid?.[String(namedFid)];
   if (!Array.isArray(sends)) return null;
@@ -139,10 +143,16 @@ export function buildDealShape({ namedFid, sidesByFid }) {
 
   const sendsPlayers = playerCountOf(sends);
   const getsPlayers = playerCountOf(gets);
-  const sendsPicks = pickLabelsOf(sends);
-  const getsPicks = pickLabelsOf(gets);
+  // At the `named` escalation tier the redactor's anti-leak Rule B drops
+  // `pickTokens` because a name plus a specific pick round is enough to
+  // identify the deal. The shape beat reaches the prompt through a different
+  // field, so without this it re-published exactly what Rule B just removed —
+  // and the playbook tells the model it may use these labels.
+  const sendsPicks = suppressPicks ? [] : pickLabelsOf(sends);
+  const getsPicks = suppressPicks ? [] : pickLabelsOf(gets);
 
-  if (sendsPlayers + getsPlayers + sendsPicks.length + getsPicks.length === 0) return null;
+  const picksExist = pickLabelsOf(sends).length + pickLabelsOf(gets).length > 0;
+  if (sendsPlayers + getsPlayers === 0 && !picksExist) return null;
 
   let direction;
   if (sendsPlayers > 0 && getsPlayers > 0) direction = 'swap';
@@ -443,12 +453,20 @@ export function planBeats({
 
   // A changed ask forces its own slot open: without this it would be revealed
   // only if the signal happened to be even, and the change would age out.
-  const unlocked = ordered.slice(0, Math.max(askChangedBeat ? 1 : 0, unlockedBeatCount(signal)));
+  const unlockedFor = (n) => Math.min(
+    ordered.length,
+    Math.max(askChangedBeat ? 1 : 0, unlockedBeatCount(n)),
+  );
+  const unlocked = ordered.slice(0, unlockedFor(signal));
   const isPlayerSignal = signal >= 3 && signal % 2 === 1;
-  const newIndex = unlocked.length - 1;
-  const newlyUnlocked = (askChangedBeat || signal % 2 === 0) && newIndex >= 0
-    ? ordered[newIndex]
-    : null;
+  // A beat is NEW only if this signal revealed one the previous signal had
+  // not. Comparing against `unlockedBeatCount` alone was wrong the moment the
+  // beat list ran shorter than the signal: with a single beat available, every
+  // even signal re-led on it and the rotation below was unreachable — post
+  // seven reading like post two, which is the exact failure this module
+  // exists to remove.
+  const grew = unlocked.length > unlockedFor(signal - 1);
+  const newlyUnlocked = grew ? ordered[unlocked.length - 1] : null;
 
   let leadKind;
   if (askChangedBeat) {

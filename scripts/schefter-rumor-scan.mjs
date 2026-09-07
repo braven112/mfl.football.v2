@@ -3175,6 +3175,31 @@ async function scanTradeOffers({ redis, dryRun }) {
 
   log(`  [offer-scan] Distinct counter-party-awaiting offers: ${offerMap.size}`);
 
+  // ── Movement state ──
+  // One read each, before the loop: per-scan hgets inside a 6-offer loop would
+  // triple this lane's Redis round-trips for data that never changes mid-scan.
+  let shapeByOfferId = {};
+  let closedOfferIds = new Set();
+  try {
+    shapeByOfferId = (await redis.hgetall(OFFER_SHAPE_KEY)) ?? {};
+  } catch (err) {
+    warn(`  [offer-scan] hgetall(shape) failed: ${err.message} — ask-changed beats disabled`);
+  }
+  try {
+    closedOfferIds = new Set((await redis.smembers(OFFER_CLOSED_KEY)) ?? []);
+  } catch (err) {
+    warn(`  [offer-scan] smembers(closed) failed: ${err.message}`);
+  }
+
+  // Completed trades, by the same signature schefter-scan.mjs uses to let a
+  // finished TRADE supersede a pending-trade post: sorted franchise pair +
+  // sorted assets, so a proposal and the transaction it became hash alike
+  // whichever side MFL calls "franchise1".
+  const completedTradeSignatures = await loadCompletedTradeSignatures(year);
+
+  // Earlier proposals between the same franchise pair, from our own archive.
+  const priorPairCounts = await loadPriorPairCounts({ redis, nowMs });
+
   // ── Beat inputs (see scripts/lib/schefter-offer-beats.mjs) ──
   // The league's PUBLIC trade block, per franchise. `tradeBaitState` is written
   // by the trade-bait lane's own LIVE MFL read and lives in the same feed file
@@ -3203,8 +3228,18 @@ async function scanTradeOffers({ redis, dryRun }) {
   // Positions in play across every proposal this scan can see. A FLOOR, not a
   // total: with the league-wide read quiet, the lane only sees proposals owners
   // self-reported, so the beat carries `atLeast` and the playbook hedges it.
+  //
+  // "In play" means ALIVE. The same dead-proposal problem the expiry check
+  // fixes below applies here a level up: `owner_reports` keeps resolved
+  // proposals indefinitely, so counting the raw map would report a run on a
+  // position off deals MFL dropped weeks ago — a hedge of "at least" does not
+  // make a stale count true.
   const positionRuns = new Map();
   for (const [, { raw }] of offerMap) {
+    const expiresAt = parseInt(raw.expires ?? '0', 10);
+    if (Number.isFinite(expiresAt) && expiresAt > 0 && expiresAt * 1000 <= nowMs) continue;
+    const sig = tradeSignatureOf(raw);
+    if (sig && completedTradeSignatures.has(sig)) continue;
     const seen = new Set();
     for (const token of [
       ...(raw.franchise1_gave_up || '').split(','),
@@ -3222,31 +3257,6 @@ async function scanTradeOffers({ redis, dryRun }) {
     `  [offer-scan] Beat inputs: blocks for ${blockByFid.size} franchise(s), `
       + `positions in play ${[...positionRuns.entries()].map(([p, n]) => `${p}:${n}`).join(' ') || 'none'}`,
   );
-
-  // ── Movement state ──
-  // One read each, before the loop: per-scan hgets inside a 6-offer loop would
-  // triple this lane's Redis round-trips for data that never changes mid-scan.
-  let shapeByOfferId = {};
-  let closedOfferIds = new Set();
-  try {
-    shapeByOfferId = (await redis.hgetall(OFFER_SHAPE_KEY)) ?? {};
-  } catch (err) {
-    warn(`  [offer-scan] hgetall(shape) failed: ${err.message} — ask-changed beats disabled`);
-  }
-  try {
-    closedOfferIds = new Set((await redis.smembers(OFFER_CLOSED_KEY)) ?? []);
-  } catch (err) {
-    warn(`  [offer-scan] smembers(closed) failed: ${err.message}`);
-  }
-
-  // Completed trades, by the same signature schefter-scan.mjs uses to let a
-  // finished TRADE supersede a pending-trade post: sorted franchise pair +
-  // sorted assets, so a proposal and the transaction it became hash alike
-  // whichever side MFL calls "franchise1".
-  const completedTradeSignatures = await loadCompletedTradeSignatures(year);
-
-  // Earlier proposals between the same franchise pair, from our own archive.
-  const priorPairCounts = await loadPriorPairCounts({ redis, nowMs });
 
   const tips = [];
   const debugLog = [];
@@ -3373,12 +3383,17 @@ async function scanTradeOffers({ redis, dryRun }) {
           playerMap: players,
           expiredAtMs: expiresSecs * 1000,
         });
+        let seeded = true;
         if (!dryRun && seed) {
-          await writeSeed({ redis, navSlug: NAV_SLUG, seed, log, warn });
+          seeded = await writeSeed({ redis, navSlug: NAV_SLUG, seed, log, warn });
         } else if (seed) {
           log(`  [seed] dry-run: would seed speculation from expired proposal ${offerId}`);
         }
-        if (!dryRun) {
+        // Close it only once the seed is safely stored. Marking it closed on a
+        // failed write would drop the signal permanently — the next scan
+        // short-circuits on the closed set and never looks at this proposal
+        // again — for the sake of one retry we can simply take next cycle.
+        if (!dryRun && seeded) {
           try {
             await redis.sadd(OFFER_CLOSED_KEY, offerId);
             await redis.expire(OFFER_CLOSED_KEY, OFFER_STATE_TTL_SEC);
@@ -3386,6 +3401,8 @@ async function scanTradeOffers({ redis, dryRun }) {
           } catch (err) {
             warn(`  [offer-scan] closing expired ${offerId} failed: ${err.message}`);
           }
+        } else if (!dryRun) {
+          warn(`  [offer-scan] seed write failed for ${offerId} — leaving it open to retry next scan`);
         }
         debugLog.push({ offerId, offeringFid, expired: true, seeded: !!seed, priorExposure });
         continue;
@@ -3449,6 +3466,13 @@ async function scanTradeOffers({ redis, dryRun }) {
       // No dice roll: the closure is terminal, fires once, and reveals nothing
       // the ladder had not already revealed. The queue's own gates (daily cap,
       // spacing, quiet hours) still decide when it actually ships.
+      //
+      // The closed marker below is written before the tip has actually
+      // shipped, so a closure the queue later drops is lost rather than
+      // retried. That is the deliberate side to fail on: the alternative —
+      // marking it closed only on publication — reposts the same callback on
+      // every scan until one lands. This only applies to `accepted`, which is
+      // roughly a once-a-season event in this league.
       if (detectionOnly && !enabled) {
         log(`  [offer-scan] detection-only: would have queued closure ${closureRedaction.tip.id}`);
         continue;
@@ -3612,19 +3636,6 @@ async function scanTradeOffers({ redis, dryRun }) {
       nowMs,
     });
 
-    // Remember what the ask looks like NOW, so the next scan can tell a
-    // proposal that changed from one that has simply been sitting there.
-    // Written whether or not the dice land: the change is a fact about the
-    // proposal, not about whether we happened to report it.
-    if (!dryRun) {
-      try {
-        await redis.hset(OFFER_SHAPE_KEY, { [offerId]: JSON.stringify(assetShapeOf(raw)) });
-        await redis.expire(OFFER_SHAPE_KEY, OFFER_STATE_TTL_SEC);
-      } catch (err) {
-        warn(`  [offer-scan] hset(shape) failed for ${offerId}: ${err.message}`);
-      }
-    }
-
     if (redaction.skip) {
       debugLog.push({ offerId, offeringFid, skipped: redaction.reason });
       continue;
@@ -3715,6 +3726,18 @@ async function scanTradeOffers({ redis, dryRun }) {
     // so admin tooling and the legacy migration path stay accurate, but it's
     // no longer used as an absorbing gate.
     if (!dryRun) {
+      // The stored shape is the ask AS OF THE LAST REPORT, not as of the last
+      // scan. Writing it on every scan meant a changed ask was detectable for
+      // exactly one cycle: at ~8 scans a day and a 5–35% roll, most changes
+      // were overwritten before they could ever post. Anchored here, the beat
+      // means "changed since we last told you", which is the more useful claim
+      // and the one that survives until it is made.
+      try {
+        await redis.hset(OFFER_SHAPE_KEY, { [offerId]: JSON.stringify(assetShapeOf(raw)) });
+        await redis.expire(OFFER_SHAPE_KEY, OFFER_STATE_TTL_SEC);
+      } catch (err) {
+        warn(`  [offer-scan] hset(shape) failed for ${offerId}: ${err.message}`);
+      }
       try {
         await redis.hincrby(OFFER_EXPOSURE_KEY, offerId, 1);
         await redis.expire(OFFER_EXPOSURE_KEY, OFFER_STATE_TTL_SEC);

@@ -22,6 +22,8 @@ import {
   speculationSeedsKey,
 } from '../scripts/lib/speculation-seeds.mjs';
 import { buildHaves, findTwoTeamCandidates } from '../scripts/lib/speculation-matching.mjs';
+import { getLeagueBySlug } from '../src/config/leagues-data.mjs';
+import { readFileSync } from 'node:fs';
 
 const NOW = Date.UTC(2026, 8, 7, 12, 0, 0);
 
@@ -46,6 +48,22 @@ describe('speculationSeedsKey — both lanes must agree', () => {
   it('keeps TheLeague on its legacy unprefixed form and namespaces the rest', () => {
     expect(speculationSeedsKey('theleague')).toBe('schefter:trade_offers:seeds');
     expect(speculationSeedsKey('afl')).toBe('schefter:afl:trade_offers:seeds');
+  });
+
+  it('is keyed on navSlug, and the registry slug is not a substitute', () => {
+    // The writer (schefter-rumor-scan.mjs) keys on navSlug. The reader passes
+    // a league identifier of its own, and for TheLeague slug === navSlug, so a
+    // reader passing the SLUG works today and splits the store the moment this
+    // lane is pointed at a league where they differ.
+    const afl = getLeagueBySlug('afl-fantasy');
+    expect(afl!.navSlug).not.toBe(afl!.slug);
+    expect(() => speculationSeedsKey(afl!.slug)).toThrow();
+  });
+
+  it('the speculation lane resolves navSlug through the registry', () => {
+    const source = readFileSync('scripts/schefter-trade-speculation.mjs', 'utf8');
+    expect(source).toMatch(/readActiveSeeds\(\{[^}]*navSlug:\s*seedNavSlug/);
+    expect(source).toMatch(/seedNavSlug\s*=\s*getLeagueBySlug\(LEAGUE_SLUG\)\?\.navSlug/);
   });
 });
 

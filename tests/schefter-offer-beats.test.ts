@@ -508,3 +508,118 @@ describe('tradeSignatureOf — the proposal↔completed-trade round trip', () =>
     expect(tradeSignatureOf({ franchise1_gave_up: '13116' })).toBeNull();
   });
 });
+
+describe('review regressions — findings from the PR #1011 review pass', () => {
+  const dealShape = { direction: 'selling', sends: {}, gets: {} } as any;
+  const beat = (kind: string) => ({ kind }) as any;
+
+  it('a beat leads only on the signal that unlocked it, however few beats exist', () => {
+    // Was: `newlyUnlocked` compared against unlockedBeatCount rather than
+    // against what the PREVIOUS signal had, so once the beat list ran shorter
+    // than the signal, every even signal re-led on the same beat and the
+    // rotation fallback was unreachable. With one beat the leads read
+    // deal_shape at 2, 4, 6 and 8 — post seven reading like post two, which is
+    // the failure this module exists to remove.
+    for (const marketBeats of [[], [beat('in_talks_not_listed')], [beat('in_talks_not_listed'), beat('third_desk')]]) {
+      const leads = [1, 2, 3, 4, 5, 6, 7, 8].map(
+        (signal) => planBeats({ signal, dealShape, marketBeats, nameLanded: true }).leadKind,
+      );
+      for (let i = 1; i < leads.length; i += 1) {
+        expect(leads[i], `signal ${i + 1} repeated ${leads[i]} with ${marketBeats.length + 1} beat(s)`)
+          .not.toBe(leads[i - 1]);
+      }
+    }
+  });
+
+  it('with two beats, the second does not lead twice running out of rotation', () => {
+    const marketBeats = [beat('in_talks_not_listed')];
+    const lead = (signal: number) => planBeats({ signal, dealShape, marketBeats, nameLanded: true }).leadKind;
+    expect(lead(4)).toBe('in_talks_not_listed');
+    expect(lead(6)).not.toBe('in_talks_not_listed');
+  });
+
+  it('drops an expiry beyond a week — the furthest tier is labelled "this_week"', () => {
+    const at = (hours: number) => buildExpiryBeat({
+      rawOffer: { expires: String(Math.round((NOW + hours * HOUR) / 1000)) },
+      nowMs: NOW,
+    });
+    expect(at(6 * 24)!.urgency).toBe('this_week');
+    // 13 days out used to arrive as "this_week", which the prompt prints.
+    expect(at(13 * 24)).toBeNull();
+  });
+
+  it('suppresses deal_shape picks when asked, without dropping the beat', () => {
+    const sidesByFid = { '0001': [chase], '0003': [pick] };
+    expect(buildDealShape({ namedFid: '0001', sidesByFid })!.gets.picks).toEqual(['2027 3rd']);
+    const suppressed = buildDealShape({ namedFid: '0001', sidesByFid, suppressPicks: true });
+    expect(suppressed!.gets.picks).toEqual([]);
+    // A picks-only deal must still describe itself rather than vanishing.
+    const picksOnly = buildDealShape({
+      namedFid: '0001',
+      sidesByFid: { '0001': [pick], '0003': [pick] },
+      suppressPicks: true,
+    });
+    expect(picksOnly).not.toBeNull();
+    expect(picksOnly!.direction).toBe('picks_only');
+  });
+});
+
+describe('review regressions — the named tier must not widen the name surface', () => {
+  const playerMap = new Map([
+    ['p1', { name: 'Alpha One', position: 'WR' }],
+    ['p2', { name: 'Gamma Three', position: 'RB' }],
+    ['p3', { name: 'Delta Four', position: 'TE' }],
+  ]);
+  const teamMap = new Map([
+    ['0001', { name: 'Pacific Pigskins', division: 'East' }],
+    ['0003', { name: 'Maverick', division: 'West' }],
+  ]);
+  // p2 is at the `named` escalation tier (5 distinct desks) AND is listed
+  // FIRST, so his market beat is the first one to unlock. That ordering is
+  // what made the leak reachable.
+  const args = (exposureCount: number) => ({
+    rawOffer: {
+      id: 'named_tier_1',
+      franchise: '0001',
+      franchise2: '0003',
+      franchise1_gave_up: 'p2,p1,p3',
+      franchise2_gave_up: 'FP_0003_2027_3',
+    },
+    offeringFid: '0001',
+    playerMap,
+    teamMap,
+    counts: { ownerOfferCount7d: 1, divisionOfferCount7d: 0, playerHistory: new Map([['p2', 5]]) },
+    currentYear: 2026,
+    exposureCount,
+    adpRankByPlayerId: new Map([['p1', 1], ['p2', 50], ['p3', 80]]),
+    blockByFid: new Map([['0001', new Set<string>()], ['0003', new Set<string>()]]),
+    positionRuns: new Map(),
+    nowMs: NOW,
+  });
+
+  it('never lets a beat print a name the exposure ladder has not reached', () => {
+    // Was: the named-tier escalatedPlayer was added to the nameable set, so at
+    // signal 4 a beat carried "Gamma Three" while exposure.players still read
+    // ["Alpha One"] — a name two signals early, and the playbook's "never
+    // print a player who is not in exposure.players" made false.
+    for (let exposureCount = 0; exposureCount <= 10; exposureCount += 1) {
+      const { tip } = redactTradeOffer(args(exposureCount) as any);
+      const allowed = new Set((tip.exposure?.players ?? []).map((p: any) => p.name));
+      for (const b of tip.beats ?? []) {
+        const name = (b as any).subject?.name;
+        if (name) {
+          expect(allowed.has(name), `signal ${tip.exposure?.signal} beat named ${name}`).toBe(true);
+        }
+      }
+    }
+  });
+
+  it('does not re-publish through deal_shape the picks the named tier just dropped', () => {
+    const { tip, debug } = redactTradeOffer(args(3) as any);
+    expect(tip.escalatedPlayer?.tier).toBe('named');
+    expect(tip.pickTokens).toEqual([]);
+    const shape = (tip.beats ?? []).find((b: any) => b.kind === BEAT_KINDS.DEAL_SHAPE) as any;
+    expect(shape?.gets?.picks ?? []).toEqual([]);
+    expect(debug.antiLeak.dropped.join(' ')).toContain('dealShape picks');
+  });
+});
