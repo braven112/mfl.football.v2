@@ -22,7 +22,11 @@ per player.
 
 | File | Role |
 |------|------|
-| `src/components/theleague/*CompositeHero.astro` | Per-phase composite heroes; each owns its gradient + ghost wordmark + glow + headshot + chip. (An early single-banner prototype, `PlayerHeroComposite.astro`, was removed unused — the heroes don't share a base component.) |
+| `src/components/shared/CompositeHero.astro` + `src/styles/composite-hero.css` | **The** spotlight shell — gradient, ghost wordmark, glow, cutout, frosted caption, editorial column. Every per-hero dimension is a `--cmh-*` custom property; every palette is a named accent. |
+| `src/components/shared/CompositePanelBoard.astro` + `src/styles/composite-panel-board.css` | **The** four-panel board (UDFA, tag showcase). `fill="pad"` keeps it full, `fill="drop"` shows only real faces. |
+| `src/components/theleague/*CompositeHero.astro` | Per-phase configurations of those two shells — copy, casting, geometry. They no longer own any of the treatment. (An earlier note here said the heroes share no base component; that stopped being true in Sep 2026.) |
+| `src/components/afl/AflCompositeHero.astro` | The AFL's keeper + conference-draft composites, on the same shell. |
+| `src/utils/hero-franchise-accent.ts` | Which colour tints the glow — the player's NFL team, or the viewer's own franchise. |
 | `src/utils/nfl-team-colors.ts` | 32-team primary/secondary hex map (ESPN codes), nickname helper, `hexToRgba` |
 | `src/components/shared/SchefterPostCard.astro` | First integration — breaking-tier feed posts |
 | `scripts/schefter-scan.mjs` | Attaches `playerIds` on TRADE / AUCTION_WON / FREE_AGENT posts at generation time |
@@ -1813,3 +1817,111 @@ a Storybook story transitively, `tests/chromatic-path-filter.test.ts` fails
 until it is added to both `paths:` blocks in `.github/workflows/chromatic.yml`
 (regenerate with `node scripts/chromatic-story-deps.mjs`). Without it a visual
 regression there ships and is auto-accepted as the new baseline on main.
+
+## One shell, seven heroes — and the four regressions the parity gate caught (2026-09-07)
+
+**Context:** Seven composite heroes had been built by copying the last one:
+3,028 lines under seven CSS prefixes (`fch`/`ach`/`cwh`/`psh`/`rch` for the
+spotlight, `udh`/`tsh` for the panel board), saying the same two things seven
+times. They are now two shared components and ~800 lines.
+
+### Name accents per HERO, not per colour
+
+The obvious unification is wrong. Three of the five spotlights are "blue" and
+look interchangeable in a diff — but the What's New card, the cut watch and the
+kickoff hero differ in accent hex, pill tokens AND dark surface. Folding them
+into one `blue` silently restyled two live heroes; the DOM measurement caught it
+as a colour change, not a layout one. The accents are now named `feature`,
+`recap`, `kickoff`, `roster`, `auction`, `navy`, `gold`, and each block carries
+only its own deltas. `red` is a TONE applied on top, because urgency is
+something a hero enters, not a palette it belongs to.
+
+### The parity gate found four real regressions, none of them visible in review
+
+Rendering each hero before and after at two themes and two widths (40 renders
+via a throwaway harness route, plus 12 on the live homepage) and diffing pixels:
+
+1. **The What's New CTA disappeared.** The shell had no CTA of its own and the
+   adopter stopped rendering one. Nothing failed; the button was just gone.
+2. **A 404'd headshot left the browser's broken-image box.** The old inline
+   `onerror` set `display:none` on the img AND its caption; the new one only
+   added a class, and the CSS hid the caption but not the img. Visible only on
+   mobile, only when the cutout fails — which is exactly when it matters.
+3. **Per-hero mobile `min-height`s** (250/260/270/280px) lived in each
+   component's `@media` block and were missed on the first pass, so four heroes
+   got shorter on phones.
+4. **The eyebrow's display mode.** Only the What's New card needs `flex` (it
+   sits a date beside the pill); making it the default cost every other hero
+   ~4px of eyebrow height and moved all the copy.
+
+None of these would have failed a test or looked wrong in a code review. If you
+unify visual components here, render both versions and diff — the DOM
+measurement (boxes, computed colours, `display`) localizes a difference far
+faster than a pixel diff does, and the pixel diff is what proves you are done.
+
+### Extracting CSS out of a scoped `<style>` changes what its ancestor selectors match
+
+Astro scopes a component's styles to elements *that component* renders. A rule
+like `.fch--no-shot .fch__shot` breaks the moment `.fch--no-shot` moves onto a
+root the SHELL renders, because that root carries no scope hash. The What's New
+screenshot frame therefore ships as a plain stylesheet
+(`src/styles/whats-new-hero-shot.css`) with a namespaced prefix, rather than as
+a scoped block full of `:global()` escapes.
+
+### The guard only scanned `.astro`, so three live heroes had the bug it exists to prevent
+
+`tests/hero-gradient-surface-fallback.test.ts` enforces that a gradient held in
+a custom property always has a literal `background-color` under it. It walked
+`src/**/*.astro` only. Extending it to `.css` — necessary once the shells' CSS
+moved into stylesheets — immediately failed on `src/styles/playoff-round-hero.css`,
+where the wild-card, semifinal and championship heroes had all been painting
+`background: var(--prh-surface)` since that file was extracted. **When a rule
+moves to a new file type, check whether its guard can still see it.**
+
+The guard now also accepts a paired `--*-solid` literal in place of a
+`background-color`, for a rule that only defines a palette a descendant paints
+(the showcase page's `.hc-page`). The invariant it is really enforcing is that
+*the literal moves with the gradient*, in whichever rule redefines it.
+
+## The AFL's franchise accent — ownership is a list (2026-09-07)
+
+The AFL's registry says `duplicatePlayers: true`, and the consequence for heroes
+is sharper than for most surfaces: 60 of the AL's 84 keepers are kept in the NL
+too, so "the franchise that rosters this player" has two answers, and a hero
+that picks one paints a stranger's colours on your homepage.
+
+`hero-franchise-accent.ts` resolves it by **scoping ownership to the viewer's
+own conference** — inside one conference a player has at most one owner, so the
+ambiguity is removed rather than tie-broken. Anything else (a guest, a free
+agent, two owners somehow in one conference, an unusable brand colour) falls
+back to the NFL team colour, which is what every hero did before. Two details
+that are load-bearing:
+
+- The conference comes from the **signed-in franchise**, not `userConferenceId`
+  — that one follows the `?myteam=` / cookie preference, and a card painted in
+  someone's colours should rest on having signed in. Same rule as
+  `hero-franchise-backdrop`, for the same reason.
+- One AFL franchise ships `#e9e9e9`. A glow is not text, so it does not go
+  through the avatar luminance floor, but it still has to read as a tint —
+  `MIN_GLOW_CONTRAST` (2.2:1 vs white) floors it and is a no-op for every other
+  club.
+
+The composite and the franchise backdrop are mutually exclusive on the AFL
+homepage: both answer "whose story is this", and stacking them floats the cast
+player on a second team's gradient.
+
+## `/showcase` is a portfolio surface, so truncation is a bug (2026-09-07)
+
+The showcase gallery reproduces the shipped hero treatment, including its
+`-webkit-line-clamp: 2` summary. That clamp exists on the real hero because its
+summary is GENERATED and its length varies. On the showcase the copy is authored
+and explanatory — reproducing the clamp reproduced the wrong thing, and all five
+of TheLeague's cards had been shipping truncated mid-sentence on the page whose
+readers are evaluating the work. The clamp is gone there;
+`tests/hero-showcase-content.test.ts` fails if it returns.
+
+Both leagues' pages are one component driven by a per-league content module
+(`src/data/hero-showcase/*.ts`), because the routes would otherwise be a 1,400-line
+forked sibling. The blocks are a closed union rather than free HTML: a typo in a
+block's `kind` renders NOTHING, silently, so the guard pins that every kind used
+has a branch and every branch has a user.

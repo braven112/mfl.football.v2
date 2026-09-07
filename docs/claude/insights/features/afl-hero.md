@@ -5,6 +5,41 @@ Insights for the AFL homepage hero system (`src/utils/afl-hero-resolver.ts`,
 
 ---
 
+## 2026-09-07 - Composite heroes for the keeper window and both conference drafts
+
+The AFL funnelled every promo state through `AflEventHero`, so the phases with
+an identity of their own looked like every other week. Three now render as
+composites on the shared `CompositeHero` shell (see
+`docs/claude/insights/features/player-composites.md`):
+
+| Phase | Wordmark | Accent | Red tone when |
+|---|---|---|---|
+| `afl-keeper-deadline` | `KEEPERS` | `gold` | the deadline is today |
+| `afl-al-draft` | `AL DRAFT` | `navy` | the draft is live |
+| `afl-nl-draft` | `NL DRAFT` | `navy` | the draft is live |
+
+**Each conference names itself in the wordmark.** The AL and NL draft on
+different days, off different MFL pages, and the hero leads with the viewer's
+OWN conference — so a glance at the homepage must say whose draft is up without
+reading the pill.
+
+**The treatment is decided in the resolver, not the component.** `composite` is
+a field on `EventHeroView` beside the copy, because whether a draft is live or a
+deadline is today is already known in the view builder. That is the same shape
+as the dead-code trap recorded above, so it is guarded: the routing condition in
+`AflHero.astro` is pinned by `tests/afl-hero-composite-routing.test.ts`, which
+fails if the treatment stops reaching a screen.
+
+**Routing is conservative on purpose.** No `composite` treatment, or no cast
+model, falls through to `AflEventHero` exactly as before — a missing feed
+degrades to the card that always worked rather than to an empty flank. The
+composite deliberately does NOT take `backdrop`: the franchise backdrop repaints
+the whole card in the viewer's colours and the composite's glow already says
+whose story it is, so stacking them floats the cast player on a second team's
+gradient.
+
+---
+
 ## 2026-09-06 - The feature hero headlined a constant; and the copy ran under the screenshot
 
 **Context:** Every AFL feature launch arrived under the same display line —

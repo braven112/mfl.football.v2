@@ -1,23 +1,24 @@
 ---
 /**
- * Composite Hero System (The League) — thin route wrapper.
+ * Composite Hero System (AFL) — thin route wrapper.
  *
  * Shared implementation lives in components/shared/hero-showcase/ShowcasePage;
- * the prose is this league's own, in src/data/hero-showcase/theleague.ts.
+ * the prose is this league's own, in src/data/hero-showcase/afl-fantasy.ts —
+ * a separate document, not a translation of TheLeague's.
  *
  * The content module is imported HERE because a static import specifier can't
  * be a runtime variable, and importing both leagues' modules in the shared
  * component would ship the other league's essay on every render of either
  * route.
  *
- * SSR (not prerendered) — mirrors about.astro. The apex-host clean-URL rewrite
- * in src/middleware.ts (/showcase → /theleague/showcase) only runs for SSR
- * routes; a prerendered route can 404 on theleague.us. Content is fully static
- * so SSR is effectively free.
+ * SSR (not prerendered) — mirrors TheLeague's copy of this route. The apex-host
+ * clean-URL rewrite in src/middleware.ts (/showcase → /afl-fantasy/showcase)
+ * only runs for SSR routes; a prerendered route can 404 on afl-fantasy.com.
+ * Content is fully static so SSR is effectively free.
  */
 import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
 import ShowcasePage from '../../components/shared/hero-showcase/ShowcasePage.astro';
-import content from '../../data/hero-showcase/theleague';
+import content from '../../data/hero-showcase/afl-fantasy';
 
 export const prerender = false;
 ---

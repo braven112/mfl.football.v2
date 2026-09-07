@@ -341,7 +341,12 @@
         "src/components/theleague/season-heroes/RecapCompositeHero.astro",
         "src/styles/composite-hero.css",
         "src/styles/composite-panel-board.css",
-        "src/types/composite-hero.ts"
+        "src/types/composite-hero.ts",
+        "src/components/shared/hero-showcase/*.astro",
+        "src/data/hero-showcase/*.ts",
+        "src/styles/hero-showcase.css",
+        "src/types/hero-showcase.ts",
+        "src/pages/*/showcase.astro"
       ],
       "tests": [
         "tests/hero-casting.test.ts",
@@ -352,7 +357,8 @@
         "tests/hero-franchise-accent.test.ts",
         "tests/afl-hero-composite-routing.test.ts",
         "tests/hero-gradient-surface-fallback.test.ts",
-        "tests/team-color-backdrop-guard.test.ts"
+        "tests/team-color-backdrop-guard.test.ts",
+        "tests/hero-showcase-content.test.ts"
       ]
     },
     {
