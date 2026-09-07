@@ -18,6 +18,8 @@ Files, by layer:
 | Side loads | `src/utils/schefter-news-loaders.ts` |
 | "Is this mine?" | `src/utils/schefter-watching.ts` (`postIsForViewer`) |
 | Assistant posts | `scripts/lib/schefter-assistant-post.mjs`, `scripts/schefter-lineup-check.mjs` |
+| Homepage rail | `src/utils/schefter-rail-view.ts`, `src/components/shared/SchefterFeedCompact.astro` |
+| Retraction | `scripts/schefter-retract-post.mjs` |
 
 ---
 
@@ -98,3 +100,98 @@ would mean retuning that column silently moves the feed, and vice versa.
 
 Also rejected: `isInSeason()` from `current-week.ts`, which is table-driven off
 `SEASON_CONFIGS` (2024-2026) and expires. The Labor Day-derived math does not.
+
+## 2026-09-07 — The rail was the ask; /news was not
+
+The request was "the Schefter report **on the right**", repeated as "the **home
+page** link". Both times it was read as the standalone `/news` page and the
+correction was pushed back on. The compact sidebar
+(`SchefterFeedCompact.astro`, mounted from each homepage) is a different
+component from the news page and had none of the work applied to it.
+
+The tell was there twice in the user's own words and once in the artifact they
+sent — a screenshot of the homepage rail, not the news page. When someone
+supplies a location twice and a picture once, the location is not the
+ambiguous part.
+
+## 2026-09-07 — Two gates made a shipped feature indistinguishable from an unshipped one
+
+The rail personalizes only when the viewer is a signed-in owner AND the feed is
+in season. Both are correct. Together they meant that on any day before the
+switch, an owner looking at the homepage saw **exactly** the feed they saw
+before — no tab, no chip, no hint the work existed. It read as "you didn't
+build it", and there was no way to tell the two apart from the outside.
+
+Two things follow. First, when a feature is conditional, verify it in the
+condition the USER is in, not the one that makes it visible — every check that
+passed was run with `?testDate=` set to mid-October. Second, prefer a season
+boundary that is already true when you ship over one that is three days out.
+
+## 2026-09-07 — The season starts when the league says it does, not when the country does
+
+Labor Day is a national date; this league's season starts when its drafts are
+done. In 2026 the AFL's AL draft ran Aug 29 and the NL draft Aug 30, so for
+nine days the site served wire filler to owners whose rosters were built.
+
+`seasonModeStart` now READS the NL draft from the AFL's resolved-events feed
+(path derived from the registry, never a literal), falling back to three weeks
+before Labor Day when that feed cannot answer for the season being asked about
+— `resolved-events.json` only ever carries the current league year, so every
+future season hits the fallback and a naive read would return Invalid Date and
+leave the feed offseason forever.
+
+`resolveFeedMode` also has to check `seasonYear` AND `seasonYear + 1`, because
+`getCurrentSeasonYear` still rolls at Labor Day: in the stretch this change
+exists to cover it returns LAST season, whose window closed in February.
+
+Deliberately scoped to Schefter. `getCurrentSeasonYear` drives standings,
+playoffs, MVP and draft order across ~71 files; moving that clock as a side
+effect of a feed change is how last season's data ends up across the site.
+
+## 2026-09-07 — One capped list cannot serve two tabs
+
+The rail took `limit` personal posts and topped up with league news "if there
+was room". For an owner with `limit` or more of their own there never was, so
+All rendered exactly what For You rendered and the tabs looked broken. It
+showed up on the AFL first, where franchise 0001 matches 33 posts against a
+30-slot rail — the league where the owner has MORE of their own news is the
+league where the feature looks most broken, which is the opposite of intuition.
+
+Each tab now gets its own `limit` and the rail renders the union.
+
+## 2026-09-07 — A personal feed amplifies whatever is wrong upstream
+
+The commissioner reported a post claiming another franchise was shopping a
+player on HIS roster. It was not a hallucination: `buildExposure` chose the
+team to name by hashing the offer id and chose the players to name from
+`allAssets` — both sides of the offer merged at `redact-trade-offer.mjs:211` —
+with no relationship between the two choices. The prompt's signal-2 wording
+asserts ownership ("Hearing the [team] have [Player] on the table"), so roughly
+half of every signal-2+ post was a coin flip on whether the named team owned
+the named player.
+
+Two lessons, and the second is the general one:
+
+- **An existing test was pinning the bug.** `redact-trade-offer-exposure`'s
+  "caps at the number of players actually in the offer" expected all three
+  players beside the named team, one of which the OTHER franchise was sending.
+  A test can encode a bug as an invariant; when a fix breaks a test, read the
+  fixture before assuming the fix is wrong.
+- **Personalization is an amplifier.** That post sat in a 383-item firehose for
+  two days without complaint. The moment it appeared at the top of one owner's
+  feed with YOUR PLAYER on it, it was reported within minutes. Any feature that
+  narrows a feed to "things about you" raises the cost of every upstream
+  correctness bug, and should be shipped with that in mind.
+
+## 2026-09-07 — Retract published posts with a script, not an edit
+
+`scripts/schefter-retract-post.mjs` removes posts by id from a league's live
+feed and every archive shard. The feeds are cron-written, so a hand edit is
+invisible in review and cannot be repeated for the next league. It deliberately
+leaves the scanner's `posted`/exposure state alone: clearing that would let the
+same offer regenerate the same wrong post on the next scan.
+
+No shipped-feed guard test for misattribution — rosters move, so a post that
+was accurate when written reads as misattributed once the player is traded. The
+guard belongs on the redactor
+(`tests/redact-trade-offer-attribution.test.ts`), where it is deterministic.
