@@ -54,12 +54,15 @@ const {
   hideLeaguePrefix = false,
 } = Astro.props;
 
-// Build the roster GM page URL
+// Every internal link here goes through `resolveLeaguePath`, which drops the
+// league prefix on an apex host — exactly as NavLinks resolves its own. It is
+// not cosmetic: vercel.json 301s `/theleague/:path*` to `/:path*` on
+// theleague.us, so a prefixed href costs every apex visitor a redirect hop.
 const leagueBase = getLeaguePrefix(league);
-const rosterUrl = `${leagueBase}/rosters`;
+const rosterUrl = resolveLeaguePath(`${leagueBase}/rosters`, hideLeaguePrefix);
+const loginUrl = resolveLeaguePath(`${leagueBase}/login`, hideLeaguePrefix);
 
-// Account-menu destinations. `resolveLeaguePath` drops the prefix on an apex
-// domain (theleague.us/preferences), exactly as NavLinks resolves its own.
+// Account-menu destinations.
 // Both rows are registry-gated: best-ball publishes neither page, and a menu
 // row that 404s is worse than no row.
 const leagueFeatures = getLeagueByNavSlug(league).features;
@@ -120,10 +123,13 @@ const isAuthenticated = !!team;
 // Determine initial display state for commissioner toggle
 const showCommish = isCommissioner && isCommishMode;
 
-// The account menu hangs off the team row, so it needs a team to hang off.
+// The account menu hangs off the team row, so it needs a team to hang off —
+// and being signed in is the ONLY condition. Gating it on the two link rows
+// would leave a best-ball owner (both flags off, not a commissioner) with no
+// way to sign out, which is the one row every signed-in owner always has.
 // A signed-out visitor sees the verify prompt instead, with a standalone
 // Preferences row below it (that page has no auth gate).
-const showAccountMenu = isAuthenticated && (showPreferencesRow || showNotificationsRow || isCommissioner);
+const showAccountMenu = isAuthenticated;
 ---
 
 <footer
@@ -299,7 +305,7 @@ const showAccountMenu = isAuthenticated && (showPreferencesRow || showNotificati
   {/* Unauthenticated State: Verify Prompt */}
   {!isAuthenticated && (
     <a
-      href={`${leagueBase}/login`}
+      href={loginUrl}
       class="nav-footer__verify"
       aria-label="Log in to verify your team"
     >

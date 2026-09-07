@@ -58,6 +58,31 @@ describe('Nav account menu', () => {
     expect(leagueHasFeature('best-ball-1', 'pushNotifications')).toBe(false);
   });
 
+  it('offers the menu to every signed-in owner, so Sign out is never gated away', () => {
+    // Gating the disclosure on the two link rows left a best-ball owner (both
+    // flags off, not a commissioner) with no way to sign out — Sign out is the
+    // one row every signed-in owner always has.
+    expect(source).toMatch(/const showAccountMenu = isAuthenticated;/);
+    expect(
+      /showAccountMenu = isAuthenticated &&/.test(source),
+      'The account menu is gated on being signed in ALONE — extra conditions hide Sign out'
+    ).toBe(false);
+  });
+
+  it('resolves every internal link against the apex-domain prefix rule', () => {
+    // vercel.json 301s `/theleague/:path*` to `/:path*` on theleague.us, so a
+    // prefixed href costs every apex visitor a redirect hop.
+    for (const link of ['rosters', 'login', 'preferences', 'notifications']) {
+      const pattern = new RegExp(
+        `resolveLeaguePath\\(\`\\$\\{leagueBase\\}/${link}\`, hideLeaguePrefix\\)`
+      );
+      expect(
+        source,
+        `The ${link} link must go through resolveLeaguePath, or it is prefixed on an apex host`
+      ).toMatch(pattern);
+    }
+  });
+
   it('ships the panel closed, and opens it from the disclosure button', () => {
     expect(source).toMatch(/data-account-panel hidden/);
     expect(source).toMatch(/aria-expanded="false"/);
