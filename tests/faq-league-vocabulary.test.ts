@@ -41,6 +41,30 @@ function templateOf(src: string): string {
   return parts.slice(2).join('---');
 }
 
+/**
+ * Strip every HTML comment, re-running until a pass makes no change.
+ *
+ * A single `.replace(/<!--[\s\S]*?-->/g, '')` pass is CodeQL's textbook
+ * "incomplete multi-character sanitization" (js/incomplete-multi-character-
+ * sanitization): `<!--` and `-->` are multi-character delimiters, so a
+ * crafted input like `<!-<!-- -->- -->` has its inner `<!-- -->` removed in
+ * one pass and the leftover fragments `<!-` and `- -->` reassemble into a
+ * comment the next pass would have caught. There is no attacker-controlled
+ * input here — `template` is this repo's own FaqPage.astro, read from disk —
+ * so the class this rule guards against cannot fire in this call site. Fixed
+ * anyway: looping to a fixed point is the standard mitigation, costs nothing,
+ * and removes the alert rather than arguing it's unreachable.
+ */
+function stripHtmlComments(src: string): string {
+  let prev: string;
+  let next = src;
+  do {
+    prev = next;
+    next = prev.replace(/<!--[\s\S]*?-->/g, '');
+  } while (next !== prev);
+  return next;
+}
+
 describe('FAQ page — no league is told about another league’s mechanics', () => {
   const src = fs.readFileSync(FAQ, 'utf8');
   const template = templateOf(src);
@@ -54,9 +78,7 @@ describe('FAQ page — no league is told about another league’s mechanics', ()
     (_feature, word) => {
       // Strip HTML comments and the {expression} interpolations, which are the
       // sanctioned way to say these words — they resolve per league.
-      const prose = template
-        .replace(/<!--[\s\S]*?-->/g, '')
-        .replace(/\{[^{}]*\}/g, '');
+      const prose = stripHtmlComments(template).replace(/\{[^{}]*\}/g, '');
       expect(prose).not.toMatch(word);
     },
   );
