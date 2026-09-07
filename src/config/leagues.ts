@@ -194,6 +194,12 @@ export interface LeagueDefinition {
   /** Canonical host for absolute URLs to this league — see leagueOrigin(). */
   canonicalDomain?: string;
   /**
+   * Stable staging hostnames (e.g. staging.theleague.us). Feed buildHostToSlugMap
+   * ONLY — never leagueOrigin/leagueUrl, which must stay on production hosts.
+   * See the note above buildHostToSlugMap in leagues-data.mjs.
+   */
+  stagingDomains?: string[];
+  /**
    * Optional per-league year-rollover date. Present for leagues whose MFL
    * season is created on a different schedule than TheLeague's Feb 14 default
    * (e.g. AFL rolls over June 1). Consumed by getAflLeagueYear() in
