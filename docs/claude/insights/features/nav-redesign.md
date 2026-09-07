@@ -983,3 +983,111 @@ lists it.
 **Rule:** "put it in / take it out of the footer" means `footer-config.ts` plus a
 `page-directory.json` id. Touch `nav-config.json`'s `footerLinks` only when the
 thing genuinely belongs at the bottom of the open drawer.
+
+---
+
+## 2026-09-07 - The Footer Account Menu, and Why `pinnedLinks` Is Now Empty
+
+**Context:** the footer's team row carried a chevron that toggled commissioner
+mode and was rendered for commissioners only — no label, no `aria-expanded`
+target, nothing announcing what it did. Meanwhile the two settings that belong
+to the VIEWER rather than the league (Notifications, Preferences) sat pinned at
+the top of the drawer, ~700px above the block that already showed who you are.
+
+**The change.** That chevron became an account disclosure every signed-in owner
+gets, opening four labelled rows in the footer: Preferences (printing the
+viewer's chosen clock), Notifications, Commissioner mode (a labelled row with an
+ON/OFF pill), and Sign out — which the site had an endpoint for and no button.
+`pinnedLinks` is now `[]`.
+
+Four things worth carrying forward:
+
+- **The nav reads the clock cookie by hand.** `viewer-preferences-page.ts` is
+  route-only for two independent reasons and the footer trips both:
+  `resolveViewerPreferences` WRITES cookies (`ResponseSentError` from a
+  component — a blank page on every route), and `readViewerClock` reads Redis
+  whenever the device has no cookie, which in a component the whole site renders
+  is a round-trip per page view rather than the once-per-device the mirror was
+  designed for. `Astro.cookies.get(COUNTRY_COOKIE/ZONE_COOKIE)` +
+  `parseViewerPreferences` is side-effect free and exact: the cookies are only
+  ever written by an explicit choice, so their presence IS the `explicit`
+  signal, and their absence prints "League time (PT)" — the pre-preference floor.
+- **Removing a pinned link is only safe if something else carries it.**
+  `/notifications` bounces a signed-out visitor to login, so losing its pin
+  costs that visitor nothing. `/preferences` has NO auth gate and works
+  signed out by design — and a signed-out visitor has no team row, therefore no
+  account menu. It needs its own row beside the verify prompt, or the pin
+  removal quietly strands the one setting that was built to work without an
+  account. `tests/nav-pinned-links.test.ts` now pins that pairing.
+- **Menu rows are registry-gated, not league-literal'd.** Best-ball publishes
+  neither page; `viewerPreferences` / `pushNotifications` in `leagues-data.mjs`
+  decide, so adding a league can't accidentally ship it two rows that 404.
+- **`pinnedLinks` stays in the schema at zero entries.** The reason it exists
+  is unchanged — phase order means no section link can hold "first in the
+  drawer" — so a future must-be-first link goes there rather than into a
+  section. The guard suite kept its structural checks (never pinned AND
+  sectioned, pinned `<ul>` before `nav-links__list`) for exactly that day.
+
+---
+
+## 2026-09-07 - Feature Spotlights: A Pulse That Turns Itself Off
+
+**Context:** the account menu shipped behind a chevron. A chevron with no label
+is invisible to everyone who already knows the drawer — the same reason the
+commissioner-only version of it went unnoticed for a year. The ask was a subtle
+pulse marking the new thing, stopping "next week when it's not new".
+
+**The mechanism.** `src/utils/feature-spotlight.ts` holds a registry keyed by
+id and valued by SHIP DATE (`'nav-account-menu': '2026-09-07'`), plus a
+seven-day default. `src/styles/feature-spotlight.css` carries the
+`.spotlight-pulse` class — global, imported from component frontmatter the way
+`loading.css` is, so any control can wear it. Marking a new feature is two
+lines: a registry entry, and the class plus `data-spotlight="<id>"` on the
+control.
+
+Five things that are load-bearing:
+
+- **A DATE, not a flag.** A boolean someone has to remember to remove pulses
+  forever; a date expires whether or not anyone comes back. The registry entry
+  can be left in place after the week — it renders identically to being absent.
+  `tests/feature-spotlight.test.ts` asserts the expiry rather than trusting it.
+- **Two stop conditions, both needed.** The week is the guarantee; the owner
+  OPENING the thing is the courtesy. A pulse that keeps going after you have
+  used the feature is noise, and this one sits in a nav people open all day. The
+  second condition is a localStorage key per spotlight, and every access is
+  wrapped — the accessor itself throws in a private window, and the pulse must
+  never be the reason the nav fails to bind.
+- **The dismissal check runs BEFORE the "already bound" early return.** The
+  server renders the pulse for every device inside the week, so a returning
+  owner needs the class cleared on each page load, not just on the load where
+  the listener happens to be attached.
+- **The halo is a `::after` box-shadow, never a transform on the control.** A
+  button that changes size shifts its neighbours and reads as a glitch. And it
+  rests as a thin 2px ring rather than nothing, so the control still reads as
+  marked in a still frame — most of any given second is the rest state.
+- **A global class loses to a scoped one on specificity.** `.spotlight-pulse
+  { color }` in the shared file cannot beat `.nav-footer__account-toggle
+  { color }` compiled with its `data-astro-cid` attribute, so the tint is
+  re-stated inside the component and only the ring comes from the shared file.
+  The first cut shipped a grey chevron with a blue halo for exactly this reason.
+
+**Reduced motion keeps the ring and drops the animation.** Dropping the
+affordance entirely would hide a new feature from precisely the people who
+asked for less movement.
+
+**Generalized the same day.** A pulse that only one hand-written control can
+wear is a one-off, not a pattern, so `newSince` became a field on `NavLink`:
+put the ship date on a link in `nav-config.json` and the drawer marks it — a
+ring on its icon, plus a visually-hidden "New" for screen readers, since a
+pulse says nothing to a reader — for a week, then stops. No code change, no
+cleanup commit, and `tests/feature-spotlight.test.ts` fails on an unparseable
+date because a typo is otherwise silent: the link simply never pulses and
+nobody finds out.
+
+Dismissal moved with it. `NavDrawer.astro` now owns ONE delegated click
+handler for every `[data-spotlight]` in the drawer, in the capture phase (a
+nav link navigates away, so the write has to land first) and registered once
+per DOCUMENT rather than per `astro:page-load` — the ClientRouter keeps one
+document, so a per-load registration stacks a listener per page visited. The
+per-load pass is only the sweep that clears what this device already
+dismissed. `NavFooter` keeps no copy; the guard test fails if one grows back.

@@ -58,6 +58,8 @@ const BASE_URL = process.env.BASE_URL || 'http://localhost:4321';
  * tests/whats-new-data.test.ts asserts every id here matches a real entry.
  */
 const MANUAL_CAPTURE_ONLY = {
+  'nav-account-menu':
+    'the account menu lives in the nav drawer FOOTER and only renders for a signed-in owner — a blind capture shoots the drawer with a "Verify Your Team" prompt where the menu should be. Stage it by forging an owner session for TheLeague franchise 0001 (a commissioner, so the Commissioner mode row is in frame), setting the pref_country/pref_zone cookies so the Preferences row prints a real clock rather than "League time (PT)", opening the drawer, then clicking [data-account-toggle] — the panel ships closed. Both themes are committed: theme_pref=light for the base image, dark for the -dark twin.',
   'install-app':
     'the banner only renders for a SIGNED-IN owner who is not already running the installed app, and its copy branches on the user agent — a blind capture shoots a homepage with no banner at all. Stage it by forging an owner session for TheLeague franchise 0001 and setting an iPhone Safari user agent on the context, which is the branch worth showing: iOS is the platform where notifications are impossible until the app is installed. Element screenshot of `[data-install-prompt][data-variant="banner"]`, not the full page.',
   'sunday-ticket':

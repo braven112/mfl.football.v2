@@ -18,9 +18,26 @@ routes. Guards: `tests/viewer-preferences.test.ts`,
 time, the waiver window on both `/players` pages and in the claim modal, the
 owners-poll deadline, the mock-draft lobby, the AFL keeper-analysis freshness
 stamp, the waiver-priority footnote, and the game-day matchup heroes'
-channels. `/preferences` is pinned in the nav beside Notifications.
+channels. `/preferences` reaches the nav through the drawer's account menu
+(`NavFooter.astro`, under the team name), which also PRINTS the chosen clock —
+the one place a viewer sees what they picked without opening the page. It was
+pinned at the TOP of the drawer until Sep 2026; that pin is gone, so the footer
+is now the only nav route to it, and the signed-out row there is not optional
+(the page has no auth gate, and a signed-out visitor has no account menu).
 
 ## The rules
+
+**The nav reads the COOKIE, never the resolver.** `NavFooter` renders on every
+page, so it does the read by hand — `Astro.cookies.get(COUNTRY_COOKIE/ZONE_COOKIE)`
+into `parseViewerPreferences` — and never touches
+`viewer-preferences-page.ts`. Two reasons, and both bite: `resolveViewerPreferences`
+WRITES cookies, which from a component throws `ResponseSentError` and blanks
+every page on the site; and `readViewerClock` reads Redis whenever the device
+has no cookie, which in the nav is a round-trip per page view rather than the
+once-per-device the mirror was designed for. The cookies are written only by an
+explicit choice, so their presence is the same `explicit` signal — and no
+cookie means the menu says "League time (PT)", which is the honest pre-preference
+floor rather than a guess. `tests/nav-account-menu.test.ts` pins this.
 
 **Resolve it in the ROUTE, never in a component.** `resolveViewerPreferences`
 WRITES cookies, and `Astro.cookies.set()` from an imported component runs after

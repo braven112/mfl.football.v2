@@ -1,0 +1,62 @@
+/**
+ * Feature spotlight — the "this is new, click it" pulse.
+ *
+ * Global on purpose (imported from component frontmatter, the same way
+ * loading.css is): any control can wear `.spotlight-pulse` for its first week.
+ * The decision of WHEN it wears it lives in src/utils/feature-spotlight.ts.
+ *
+ * The animation is a halo expanding out of the control, not the control itself
+ * moving — a button that changes size shifts the layout around it and reads as
+ * a glitch rather than an invitation. The control only warms in colour.
+ *
+ * Both colours derive from `--color-primary`, which tokens.css and
+ * tokens-dark.css both define (#1c497c / #3b82f6), so the pulse follows the
+ * theme with no `html.dark` override and no literal that could render in the
+ * wrong one.
+ */
+
+.spotlight-pulse {
+  position: relative;
+  color: var(--color-primary);
+  --spotlight-ring: color-mix(in srgb, var(--color-primary) 30%, transparent);
+  --spotlight-ring-peak: color-mix(in srgb, var(--color-primary) 50%, transparent);
+}
+
+/* The ring. Sits behind the control and never takes a click. */
+.spotlight-pulse::after {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border-radius: inherit;
+  pointer-events: none;
+  box-shadow: 0 0 0 1.5px var(--spotlight-ring);
+  animation: spotlight-ring 3.4s ease-in-out infinite;
+}
+
+@keyframes spotlight-ring {
+  /* A BREATHE, not a ripple. The first cut expanded a halo out to fully
+     transparent and back, which meant the ring passed through invisible on the
+     return leg — it read as the mark blinking off the button and returning,
+     which is exactly the twitch a hint must not have. So the ring is present
+     at every frame and only its weight changes: ~1.5px to 3px, 30% to 50% of
+     the accent. Slow and symmetric (ease-in-out over 3.4s) so it reads as
+     breathing rather than blinking. */
+  0%, 100% {
+    box-shadow: 0 0 0 1.5px var(--spotlight-ring);
+  }
+  50% {
+    box-shadow: 0 0 0 3px var(--spotlight-ring-peak);
+  }
+}
+
+/**
+ * Reduced motion keeps the SIGNAL and drops the movement: a steady ring still
+ * says "look here", which is the whole job. Removing the affordance entirely
+ * would hide a new feature from exactly the people who asked for less motion.
+ */
+@media (prefers-reduced-motion: reduce) {
+  .spotlight-pulse::after {
+    animation: none;
+    box-shadow: 0 0 0 2px var(--spotlight-ring);
+  }
+}

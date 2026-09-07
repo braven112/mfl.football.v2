@@ -18,6 +18,19 @@ import type { NavFooterProps, NavFooterLink, LeagueSlug } from '../../types/nav'
 import { spriteUrl } from '../../utils/sprite-url';
 import leagueConfigData from '../../data/theleague.config.json';
 import ThemeToggle from '../ThemeToggle.astro';
+import { getLeaguePrefix, resolveLeaguePath } from '../../utils/nav-utils';
+import { getLeagueByNavSlug } from '../../config/leagues';
+import { isSpotlightActive, spotlightNow } from '../../utils/feature-spotlight';
+import '../../styles/feature-spotlight.css';
+import { countryOptions } from '../../utils/broadcast-channels';
+import {
+  COUNTRY_COOKIE,
+  ZONE_COOKIE,
+  LEAGUE_CLOCK,
+  parseViewerPreferences,
+  zoneShortName,
+  zoneSummary,
+} from '../../utils/viewer-preferences';
 
 interface Props extends NavFooterProps {
   /** Current league for constructing roster link */
@@ -40,11 +53,45 @@ const {
   league = 'theleague',
   isCommissioner = false,
   isCommishMode = false,
+  hideLeaguePrefix = false,
 } = Astro.props;
 
-// Build the roster GM page URL
-const leagueBase = league === 'afl' ? '/afl-fantasy' : league === 'bb1' ? '/best-ball-1' : '/theleague';
-const rosterUrl = `${leagueBase}/rosters`;
+// Every internal link here goes through `resolveLeaguePath`, which drops the
+// league prefix on an apex host — exactly as NavLinks resolves its own. It is
+// not cosmetic: vercel.json 301s `/theleague/:path*` to `/:path*` on
+// theleague.us, so a prefixed href costs every apex visitor a redirect hop.
+const leagueBase = getLeaguePrefix(league);
+const rosterUrl = resolveLeaguePath(`${leagueBase}/rosters`, hideLeaguePrefix);
+const loginUrl = resolveLeaguePath(`${leagueBase}/login`, hideLeaguePrefix);
+
+// Account-menu destinations.
+// Both rows are registry-gated: best-ball publishes neither page, and a menu
+// row that 404s is worse than no row.
+const leagueFeatures = getLeagueByNavSlug(league).features;
+const showPreferencesRow = leagueFeatures.viewerPreferences;
+const showNotificationsRow = leagueFeatures.pushNotifications;
+const preferencesUrl = resolveLeaguePath(`${leagueBase}/preferences`, hideLeaguePrefix);
+const notificationsUrl = resolveLeaguePath(`${leagueBase}/notifications`, hideLeaguePrefix);
+
+/**
+ * The viewer's clock, READ FROM THE COOKIE ONLY.
+ *
+ * The nav renders on every page, so it must not do what `/preferences` does:
+ * `resolveViewerPreferences` writes cookies (illegal from a component — the
+ * headers are already committed) and reads Redis when the device has no cookie,
+ * which here would be a Redis round-trip per page view. The cookies are written
+ * only by an explicit choice, so their PRESENCE is the same `explicit` signal
+ * `readViewerClock` returns — and their absence is the honest "you're on the
+ * league's clock, same as before preferences existed".
+ */
+const rawCountry = Astro.cookies.get(COUNTRY_COOKIE)?.value ?? null;
+const rawZone = Astro.cookies.get(ZONE_COOKIE)?.value ?? null;
+const hasChosenClock = !!(rawCountry || rawZone);
+const viewerPrefs = hasChosenClock ? parseViewerPreferences(rawCountry, rawZone) : null;
+const viewerCountry = viewerPrefs
+  ? countryOptions().find((c) => c.code === viewerPrefs.country) ?? null
+  : null;
+const clockValue = viewerPrefs ? zoneSummary(viewerPrefs) : `League time (${zoneShortName(LEAGUE_CLOCK)})`;
 
 /**
  * Build the MFL verify team URL
@@ -77,6 +124,21 @@ const isAuthenticated = !!team;
 
 // Determine initial display state for commissioner toggle
 const showCommish = isCommissioner && isCommishMode;
+
+// The account menu hangs off the team row, so it needs a team to hang off —
+// and being signed in is the ONLY condition. Gating it on the two link rows
+// would leave a best-ball owner (both flags off, not a commissioner) with no
+// way to sign out, which is the one row every signed-in owner always has.
+// A signed-out visitor sees the verify prompt instead, with a standalone
+// Preferences row below it (that page has no auth gate).
+const showAccountMenu = isAuthenticated;
+
+// The account menu is new, and a chevron nobody has a reason to press is a
+// feature nobody finds. It pulses for its first week (server-side expiry, so
+// it cleans itself up) and stops the moment this owner opens it (client-side,
+// below) — whichever comes first.
+const SPOTLIGHT_ID = 'nav-account-menu';
+const spotlightAccountMenu = showAccountMenu && isSpotlightActive(SPOTLIGHT_ID, spotlightNow(Astro.url));
 ---
 
 <footer
@@ -139,17 +201,15 @@ const showCommish = isCommissioner && isCommishMode;
           )}
         </div>
       </a>
-      {isCommissioner && (
+      {showAccountMenu && (
         <button
           type="button"
-          class="nav-footer__commish-toggle"
-          aria-label={showCommish ? 'Switch to owner mode' : 'Switch to commissioner mode'}
-          aria-pressed={showCommish ? 'true' : 'false'}
-          data-commish-toggle
-          data-commish-team-name={team.teamName}
-          data-commish-team-icon={team.iconUrl || ''}
-          data-commish-team-owner={team.ownerName || ''}
-          data-sprite-url={spriteUrl}
+          class:list={['nav-footer__account-toggle', { 'spotlight-pulse': spotlightAccountMenu }]}
+          aria-label={spotlightAccountMenu ? 'Account and settings — new' : 'Account and settings'}
+          aria-expanded="false"
+          aria-controls="nav-account-panel"
+          data-account-toggle
+          data-spotlight={spotlightAccountMenu ? SPOTLIGHT_ID : undefined}
         >
           <svg
             width="18"
@@ -170,6 +230,83 @@ const showCommish = isCommissioner && isCommishMode;
     </div>
   )}
 
+  {/* Account & settings panel — the one place a viewer's own settings live:
+      their clock, their alerts, commissioner mode, and the way out. */}
+  {showAccountMenu && (
+    <div class="nav-footer__account" id="nav-account-panel" data-account-panel hidden>
+      {showPreferencesRow && (
+        <a class="nav-footer__account-row" href={preferencesUrl}>
+          <svg class="nav-footer__account-icon" aria-hidden="true">
+            <use href={`${spriteUrl}#icon-wrench`}></use>
+          </svg>
+          <span class="nav-footer__account-label">
+            Preferences
+            <span class="nav-footer__account-value">
+              {viewerCountry && <span class="nav-footer__account-flag" aria-hidden="true">{viewerCountry.flag}</span>}
+              {clockValue}
+            </span>
+          </span>
+          <svg class="nav-footer__account-arrow" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M9 18l6-6-6-6" />
+          </svg>
+        </a>
+      )}
+
+      {showNotificationsRow && (
+        <a class="nav-footer__account-row" href={notificationsUrl}>
+          <svg class="nav-footer__account-icon" aria-hidden="true">
+            <use href={`${spriteUrl}#icon-bell`}></use>
+          </svg>
+          <span class="nav-footer__account-label">
+            Notifications
+            <span class="nav-footer__account-value">Which alerts reach your phone</span>
+          </span>
+          <svg class="nav-footer__account-arrow" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M9 18l6-6-6-6" />
+          </svg>
+        </a>
+      )}
+
+      {isCommissioner && (
+        <button
+          type="button"
+          class="nav-footer__account-row nav-footer__account-row--button"
+          aria-pressed={showCommish ? 'true' : 'false'}
+          data-commish-toggle
+          data-commish-team-name={team.teamName}
+          data-commish-team-icon={team.iconUrl || ''}
+          data-commish-team-owner={team.ownerName || ''}
+          data-sprite-url={spriteUrl}
+        >
+          <svg class="nav-footer__account-icon" aria-hidden="true">
+            <use href={`${spriteUrl}#icon-shield-2`}></use>
+          </svg>
+          <span class="nav-footer__account-label">
+            Commissioner mode
+            <span class="nav-footer__account-value">
+              {showCommish ? 'On — league office tools unlocked' : 'Off — browsing as your team'}
+            </span>
+          </span>
+          <span class="nav-footer__account-state" aria-hidden="true">{showCommish ? 'On' : 'Off'}</span>
+        </button>
+      )}
+
+      <button
+        type="button"
+        class="nav-footer__account-row nav-footer__account-row--button nav-footer__account-row--signout"
+        data-signout
+      >
+        <svg class="nav-footer__account-icon" aria-hidden="true">
+          <use href={`${spriteUrl}#icon-user`}></use>
+        </svg>
+        <span class="nav-footer__account-label">
+          Sign out
+          <span class="nav-footer__account-value">{team.ownerName || team.teamName}</span>
+        </span>
+      </button>
+    </div>
+  )}
+
   {/* Screen reader announcement region for commissioner toggle */}
   {isAuthenticated && isCommissioner && (
     <div class="visually-hidden" aria-live="polite" role="status" aria-atomic="true" data-commish-announce></div>
@@ -178,7 +315,7 @@ const showCommish = isCommissioner && isCommishMode;
   {/* Unauthenticated State: Verify Prompt */}
   {!isAuthenticated && (
     <a
-      href={`${leagueBase}/login`}
+      href={loginUrl}
       class="nav-footer__verify"
       aria-label="Log in to verify your team"
     >
@@ -195,6 +332,31 @@ const showCommish = isCommissioner && isCommishMode;
         <path d="M9 18l6-6-6-6" />
       </svg>
     </a>
+  )}
+
+  {/* Signed out, there is no team row to hang the account menu off — but
+      /preferences has no auth gate and is the one setting that works without
+      an account, so it keeps a home here now that it is no longer pinned at
+      the top of the drawer. Notifications is deliberately absent: that page
+      bounces a signed-out visitor to the login screen. */}
+  {!isAuthenticated && showPreferencesRow && (
+    <div class="nav-footer__account nav-footer__account--signed-out">
+      <a class="nav-footer__account-row" href={preferencesUrl}>
+        <svg class="nav-footer__account-icon" aria-hidden="true">
+          <use href={`${spriteUrl}#icon-wrench`}></use>
+        </svg>
+        <span class="nav-footer__account-label">
+          Preferences
+          <span class="nav-footer__account-value">
+            {viewerCountry && <span class="nav-footer__account-flag" aria-hidden="true">{viewerCountry.flag}</span>}
+            {clockValue}
+          </span>
+        </span>
+        <svg class="nav-footer__account-arrow" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M9 18l6-6-6-6" />
+        </svg>
+      </a>
+    </div>
   )}
 
   {/* Theme preference — compact row, own top border so it doesn't crowd team identity */}
@@ -222,6 +384,53 @@ const showCommish = isCommissioner && isCommishMode;
     </div>
   )}
 </footer>
+
+{/* Account panel disclosure + sign out. Re-queried on every astro:page-load
+    because the ClientRouter swaps this element; the dataset flag is what stops
+    a second listener stacking on the same node. */}
+<script>
+  /**
+   * The chevron's spotlight pulse is NOT handled here. `NavDrawer.astro` owns
+   * one delegated dismissal for every pulsing control in the drawer — this
+   * toggle and any nav link inside its `newSince` week — so a click here is
+   * already covered by that handler, and the class comes off without this
+   * component knowing anything about localStorage.
+   */
+  function initAccountPanel() {
+    const toggle = document.querySelector('[data-account-toggle]') as HTMLButtonElement | null;
+    const panel = document.querySelector('[data-account-panel]') as HTMLElement | null;
+    if (!toggle || !panel) return;
+    if (toggle.dataset.accountToggleBound === '1') return;
+    toggle.dataset.accountToggleBound = '1';
+
+    toggle.addEventListener('click', () => {
+      const open = toggle.getAttribute('aria-expanded') === 'true';
+      toggle.setAttribute('aria-expanded', open ? 'false' : 'true');
+      panel.hidden = open;
+    });
+  }
+
+  function initSignOut() {
+    const button = document.querySelector('[data-signout]') as HTMLButtonElement | null;
+    if (!button) return;
+    if (button.dataset.signoutBound === '1') return;
+    button.dataset.signoutBound = '1';
+
+    button.addEventListener('click', async () => {
+      button.disabled = true;
+      try {
+        await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
+      } catch {
+        // The cookie clear is the server's job; a failed call means we are
+        // still signed in, and reloading shows that honestly.
+      }
+      window.location.reload();
+    });
+  }
+
+  document.addEventListener('astro:page-load', initAccountPanel);
+  document.addEventListener('astro:page-load', initSignOut);
+</script>
 
 {/* Commissioner toggle client-side behavior — unconditional script, guarded by element check */}
 <script>
@@ -474,7 +683,7 @@ const showCommish = isCommissioner && isCommishMode;
   /* ==============================================
    * COMMISSIONER TOGGLE - Up/down chevron button
    * ============================================== */
-  .nav-footer__commish-toggle {
+  .nav-footer__account-toggle {
     display: flex;
     align-items: center;
     justify-content: center;
@@ -492,7 +701,7 @@ const showCommish = isCommissioner && isCommishMode;
   }
 
   /* Expand tap area to 44px minimum (WCAG 2.5.8) */
-  .nav-footer__commish-toggle::before {
+  .nav-footer__account-toggle::before {
     content: '';
     position: absolute;
     inset: -8px;
@@ -500,18 +709,18 @@ const showCommish = isCommissioner && isCommishMode;
     min-height: 44px;
   }
 
-  .nav-footer__commish-toggle:hover {
+  .nav-footer__account-toggle:hover {
     background: var(--nav-hover-bg, #f3f4f6);
     color: var(--nav-text, #333333);
   }
 
-  .nav-footer__commish-toggle:focus-visible {
+  .nav-footer__account-toggle:focus-visible {
     outline: none;
     box-shadow: var(--nav-focus-ring, 0 0 0 2px #1c497c);
   }
 
   /* Active pressed state — subtle primary tint */
-  .nav-footer__commish-toggle[aria-pressed="true"] {
+  .nav-footer__account-toggle[aria-pressed="true"] {
     background: rgba(28, 73, 124, 0.08);
     color: var(--color-primary, #1c497c);
   }
@@ -606,6 +815,146 @@ const showCommish = isCommissioner && isCommishMode;
   }
 
   /* ==============================================
+   * ACCOUNT PANEL - Settings that belong to the viewer
+   * ============================================== */
+  .nav-footer__account[hidden] {
+    display: none;
+  }
+
+  .nav-footer__account {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding-top: var(--nav-spacing-sm, 8px);
+    border-top: 1px solid var(--nav-border-subtle, #f3f4f6);
+  }
+
+  /* Signed out: one row, no disclosure — so it carries the divider itself. */
+  .nav-footer__account--signed-out {
+    padding-top: var(--nav-spacing-sm, 8px);
+  }
+
+  .nav-footer__account-row {
+    display: flex;
+    align-items: center;
+    gap: var(--nav-spacing-sm, 8px);
+    width: 100%;
+    min-height: var(--nav-touch-target-min, 44px);
+    padding: var(--nav-spacing-sm, 8px);
+    border: none;
+    border-radius: var(--nav-border-radius-md, 8px);
+    background: none;
+    color: var(--nav-footer-text, #333333);
+    text-align: left;
+    text-decoration: none;
+    font: inherit;
+    cursor: pointer;
+    transition: var(--nav-hover-transition, background-color 0.15s ease);
+  }
+
+  .nav-footer__account-row:hover,
+  .nav-footer__account-row:focus-visible {
+    background: var(--nav-hover-bg, #f3f4f6);
+  }
+
+  .nav-footer__account-row:focus-visible {
+    outline: none;
+    box-shadow: var(--nav-focus-ring, 0 0 0 2px #1c497c);
+  }
+
+  .nav-footer__account-icon {
+    flex-shrink: 0;
+    width: 18px;
+    height: 18px;
+    fill: var(--nav-footer-text-muted, #6b7280);
+  }
+
+  .nav-footer__account-label {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    flex: 1;
+    min-width: 0;
+    font-size: 0.875rem;
+    font-weight: 600;
+    line-height: 1.3;
+  }
+
+  .nav-footer__account-value {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.75rem;
+    font-weight: 400;
+    color: var(--nav-footer-text-muted, #6b7280);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .nav-footer__account-flag {
+    font-size: 0.8125rem;
+    line-height: 1;
+  }
+
+  .nav-footer__account-arrow {
+    flex-shrink: 0;
+    width: 16px;
+    height: 16px;
+    color: var(--nav-footer-text-muted, #9ca3af);
+  }
+
+  .nav-footer__account-state {
+    flex-shrink: 0;
+    font-size: 0.6875rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: var(--nav-hover-bg, #f3f4f6);
+    color: var(--nav-footer-text-muted, #6b7280);
+  }
+
+  .nav-footer__account-row[aria-pressed="true"] .nav-footer__account-state {
+    background: rgba(28, 73, 124, 0.12);
+    color: var(--color-primary, #1c497c);
+  }
+
+  .nav-footer__account-row[aria-pressed="true"] .nav-footer__account-icon {
+    fill: var(--color-primary, #1c497c);
+  }
+
+  .nav-footer__account-row--signout .nav-footer__account-label {
+    color: var(--color-error, #c33);
+  }
+
+  .nav-footer__account-row--signout .nav-footer__account-icon {
+    fill: var(--color-error, #c33);
+  }
+
+  /* The spotlight's accent has to be re-stated here: the shared stylesheet is
+     global, so its `.spotlight-pulse { color }` loses to this component's own
+     scoped `.nav-footer__account-toggle { color }` on specificity. The ring
+     comes from the shared file; only the tint needs saying twice. */
+  .nav-footer__account-toggle.spotlight-pulse {
+    color: var(--color-primary);
+  }
+
+  :global(.dark) .nav-footer__account-toggle.spotlight-pulse {
+    color: #60a5fa;
+  }
+
+  /* Chevron points up once the panel is open */
+  .nav-footer__account-toggle[aria-expanded="true"] svg {
+    transform: rotate(180deg);
+  }
+
+  .nav-footer__account-toggle svg {
+    transition: transform 0.15s ease;
+  }
+
+  /* ==============================================
    * THEME ROW - Compact theme preference control
    * ============================================== */
   .nav-footer__theme-row {
@@ -675,18 +1024,27 @@ const showCommish = isCommissioner && isCommishMode;
   /* ==============================================
    * DARK MODE
    * ============================================== */
-  :global(.dark) .nav-footer__commish-toggle {
+  :global(.dark) .nav-footer__account-toggle {
     color: var(--nav-text-muted);
   }
 
-  :global(.dark) .nav-footer__commish-toggle:hover {
+  :global(.dark) .nav-footer__account-toggle:hover {
     background: var(--nav-hover-bg);
     color: var(--nav-text);
   }
 
-  :global(.dark) .nav-footer__commish-toggle[aria-pressed="true"] {
+  :global(.dark) .nav-footer__account-toggle[aria-pressed="true"] {
     background: rgba(96, 165, 250, 0.12);
     color: #60a5fa;
+  }
+
+  :global(.dark) .nav-footer__account-row[aria-pressed="true"] .nav-footer__account-state {
+    background: rgba(96, 165, 250, 0.16);
+    color: #60a5fa;
+  }
+
+  :global(.dark) .nav-footer__account-row[aria-pressed="true"] .nav-footer__account-icon {
+    fill: #60a5fa;
   }
 
   /* ==============================================
@@ -696,7 +1054,9 @@ const showCommish = isCommissioner && isCommishMode;
     .nav-footer__verify,
     .nav-footer__verify-arrow,
     .nav-footer__link,
-    .nav-footer__commish-toggle,
+    .nav-footer__account-toggle,
+    .nav-footer__account-toggle svg,
+    .nav-footer__account-row,
     [data-commish-swap] {
       transition: none;
     }

@@ -163,6 +163,7 @@ const footerLinks = [
       league={league}
       isCommissioner={isCommissioner}
       isCommishMode={isCommishMode}
+      hideLeaguePrefix={hideLeaguePrefix}
     />
   </div>
 
@@ -175,6 +176,71 @@ const footerLinks = [
     id="nav-drawer-announcer"
   ></div>
 </aside>
+
+{/* Feature spotlights — one dismiss path for every pulsing control in the
+    drawer (the account chevron, any nav link inside its `newSince` week).
+    The SERVER decides who pulses and for how long; this only handles the
+    other stop condition: this owner has now seen it.
+
+    Delegated on the document and registered ONCE per document, not per
+    astro:page-load — the ClientRouter keeps one document across navigations,
+    so re-adding the listener each time would stack duplicates. The per-load
+    pass is the sweep that clears controls this device already dismissed,
+    because the server re-renders the pulse for everyone inside the window. */}
+<script>
+  function spotlightSeen(id: string): boolean {
+    try {
+      return localStorage.getItem(`spotlight.${id}.seen`) === '1';
+    } catch {
+      // Private windows and blocked site data make the accessor itself throw.
+      // A device that cannot remember still gets the server-side expiry.
+      return false;
+    }
+  }
+
+  function dismissSpotlight(host: HTMLElement): void {
+    const id = host.dataset.spotlight;
+    if (!id) return;
+    // The class may sit on the control itself (the account chevron) or on a
+    // child of it (a nav link's icon), so clear both.
+    host.classList.remove('spotlight-pulse');
+    host.querySelectorAll('.spotlight-pulse').forEach((el) => el.classList.remove('spotlight-pulse'));
+    delete host.dataset.spotlight;
+    try {
+      localStorage.setItem(`spotlight.${id}.seen`, '1');
+    } catch {
+      // Same as above — the week still expires server-side.
+    }
+  }
+
+  function sweepSeenSpotlights() {
+    document.querySelectorAll<HTMLElement>('[data-spotlight]').forEach((host) => {
+      const id = host.dataset.spotlight;
+      if (id && spotlightSeen(id)) dismissSpotlight(host);
+    });
+  }
+
+  function initSpotlightDismissal() {
+    sweepSeenSpotlights();
+
+    if ((window as any).__spotlightDismissBound) return;
+    (window as any).__spotlightDismissBound = true;
+
+    // Capture phase: a nav link navigates away on click, and the write has to
+    // land before anything else can cancel or redirect the event.
+    document.addEventListener(
+      'click',
+      (event) => {
+        const target = event.target as Element | null;
+        const host = target?.closest?.('[data-spotlight]') as HTMLElement | null;
+        if (host) dismissSpotlight(host);
+      },
+      true,
+    );
+  }
+
+  document.addEventListener('astro:page-load', initSpotlightDismissal);
+</script>
 
 <style>
   /* ==============================================
