@@ -356,7 +356,21 @@ Only do this when:
 - Every required status check is SUCCESS
 - The user has authorized the admin merge (either explicitly this session or via standing instruction)
 
-Never `--admin` merge with failing checks or unresolved Critical findings — that's the whole point of branch protection.
+**Brandon gave that standing instruction on 2026-09-07 (PR #1004).** So on this
+repo, do not stop and ask — admin-merge once the first two conditions above
+hold, and say in the report that you did. The authorization is for the *self-approval
+block only*: it buys you past `mergeable_state: "blocked"` when GitHub will not
+let you approve your own PR, and buys you nothing else.
+
+Never `--admin` merge with failing checks or unresolved Critical findings — that's the whole point of branch protection. The standing instruction does NOT relax that: a red check, a merge conflict, or a Critical you confirmed and did
+not fix still stops the merge and still goes back to the user. Nor does it
+authorize merging someone else's PR, or skipping the reviewers to get there
+faster.
+
+If `gh` is unavailable (the cloud sandbox has no `gh`), the same merge goes
+through the GitHub MCP tool: `mcp__github__merge_pull_request` with
+`merge_method: "squash"`. Pass `expectedHeadSha` — without it a commit that
+lands between your last check read and the merge is squashed in unreviewed.
 
 ### 10. Monitor until merged
 
