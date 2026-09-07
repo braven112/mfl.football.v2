@@ -7,6 +7,7 @@
  */
 
 import { getCurrentLeagueYear, getCurrentSeasonYear } from './league-year';
+import { parseBroadcast } from './espn-game-detail';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -31,6 +32,17 @@ export interface GameOddsRecord {
   weather: WeatherInfo | null;
   isHome: boolean;
   opponent: string;
+  /**
+   * The national network carrying the game ("CBS", "Prime Video"), off the
+   * same ESPN scoreboard payload the odds come from. '' when ESPN has not
+   * published one, which is normal for a game more than a week out.
+   *
+   * ENRICHMENT ONLY. This is the US network — the INPUT to `resolveChannel`,
+   * which is the one place that knows what a country actually carries. It
+   * decorates the matchup line and never touches a kickoff or a lock time,
+   * which stay MFL's.
+   */
+  broadcast: string;
 }
 
 /** Per-position FPA stats: rank 1–32 and average points allowed */
@@ -184,6 +196,9 @@ export function buildOddsMap(espnData: any): Record<string, GameOddsRecord> {
       homeScore: homeTeam.score || '0',
       awayScore: awayTeam.score || '0',
       weather,
+      // The same competition object through the same parser the live-scoring
+      // API uses, so one game's network is identical wherever the site says it.
+      broadcast: parseBroadcast(competition),
     };
 
     oddsData[homeCode] = { ...base, isHome: true, opponent: awayCode };
@@ -198,7 +213,7 @@ export function buildOddsMap(espnData: any): Record<string, GameOddsRecord> {
 // ---------------------------------------------------------------------------
 
 const LIVE_ODDS_TTL_MS = 5 * 60 * 1000;
-const CACHE_VERSION = 2;
+const CACHE_VERSION = 3;
 
 declare global {
   // eslint-disable-next-line no-var

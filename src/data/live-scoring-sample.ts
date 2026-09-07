@@ -146,14 +146,24 @@ interface RawGame {
   hash: number;
 }
 
+/**
+ * The networks the demo slate spreads its games across.
+ *
+ * Real US network names, because they are the INPUT to `resolveChannel` — the
+ * demo board resolves them per country exactly as a live one does, so a
+ * demo viewed from Australia names Kayo, not CBS.
+ */
+const DEMO_NETWORKS = ['CBS', 'FOX', 'NBC', 'ESPN', 'Prime Video', 'NFL Network'] as const;
+
 const game = (
   away: string, aScore: number, home: string, hScore: number,
   state: 'pre' | 'in' | 'post', shortDetail: string, period: number, clock: string,
   possession: string | null,
+  broadcast = '',
 ): NflGame => ({
   id: `${away}-${home}`, state, shortDetail, period, clock,
   away: { code: away, score: aScore }, home: { code: home, score: hScore },
-  possession, date: '',
+  possession, date: '', broadcast,
 });
 
 /** One franchise's real starter for the resolved week: MFL id + points scored. */
@@ -377,11 +387,13 @@ function buildGamePhases(dataPath: string, year: number, week: number): {
  * game live for a matchup whose starters have all been marked final (the
  * matchup-level "done" override decouples a starter's state from its NFL game).
  */
+const networkFor = (g: RawGame): string => DEMO_NETWORKS[g.hash % DEMO_NETWORKS.length];
+
 function buildStrip(rawGames: RawGame[], liveTeams: Set<string>): NflGame[] {
   return rawGames.map((g) => {
     const live = g.phase.state === 'in' && (liveTeams.has(g.aCode) || liveTeams.has(g.hCode));
     if (!live) {
-      return game(g.aCode, g.aFinal, g.hCode, g.hFinal, 'post', 'Final', 4, '0:00', null);
+      return game(g.aCode, g.aFinal, g.hCode, g.hFinal, 'post', 'Final', 4, '0:00', null, networkFor(g));
     }
     const { progress, sec } = g.phase;
     const elapsed = NFL_GAME_SECONDS - sec;
@@ -392,7 +404,7 @@ function buildStrip(rawGames: RawGame[], liveTeams: Set<string>): NflGame[] {
     return game(
       g.aCode, Math.round(g.aFinal * progress),
       g.hCode, Math.round(g.hFinal * progress),
-      'in', `${clock} - ${ordinal(quarter)}`, quarter, clock, poss,
+      'in', `${clock} - ${ordinal(quarter)}`, quarter, clock, poss, networkFor(g),
     );
   });
 }

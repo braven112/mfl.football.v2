@@ -1,0 +1,84 @@
+/*
+ * .net-badge — the TV network a real NFL game is carried on, in the viewer's
+ * own country.
+ *
+ * ONE primitive for every surface that names a broadcaster: the NFL games rail
+ * on the live-scoring pages, the game-day matchup hero, and the opponent line
+ * on both Set Lineup pages. The mark is always `/assets/tv-logos/<file>.png`
+ * resolved by `resolveChannel` (never a hardcoded network), so the global
+ * `TeamIconDarkStyles` rules in the layout <head> — which key on the exact
+ * `src` — give it the dark swap and the legibility ring with no markup here.
+ *
+ * Draw the MARK when the channel has one and the NAME when it doesn't: a
+ * channel with no artwork on disk (a country's local carrier, a slot the NFL
+ * has not split between CBS and FOX yet) still has to say who is carrying the
+ * game. That is why the text arm is not a fallback for a broken image but a
+ * first-class branch — see `resolveChannel`, which returns `logo: null`.
+ *
+ * Height is the one knob (`--net-badge-h`), because the surfaces differ: the
+ * hero can afford 1.5rem, a lineup slot cannot. Everything else is shared so
+ * the badge reads as the same object wherever it lands.
+ *
+ * Sunday Ticket's `.st-net` (src/styles/sunday-ticket.css) predates this and
+ * is the same idea at board scale; it is deliberately untouched here rather
+ * than folded in, so this change cannot regress that page.
+ */
+
+/*
+ * `--net-badge-h` is deliberately NOT declared here.
+ *
+ * Declaring the default on `.net-badge` puts it at the same specificity as a
+ * surface's own `.nfl-game__net { --net-badge-h: … }`, so which one wins comes
+ * down to stylesheet ORDER — and this file loads after the surface ones, so the
+ * default quietly beat every override and every mark rendered at 1.1rem. The
+ * fallback lives in the two places that READ the variable instead, where an
+ * override can never lose.
+ */
+.net-badge {
+  display: inline-flex;
+  align-items: center;
+  flex: none;
+  max-width: 100%;
+}
+
+/* The text arm: a channel with no mark on disk. `em`, not a fixed token — the
+   badge lands in a 0.72rem card footer and in a lineup row, and a name pinned
+   to one size shouts on the smaller of them. Sized as a quiet caption so it
+   never outweighs the mark on the next card. */
+.net-badge:not(.net-badge--mark) {
+  font-size: 0.9em;
+  font-weight: var(--font-weight-semibold);
+  line-height: 1;
+  letter-spacing: 0.01em;
+  color: var(--content-text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.net-badge--mark {
+  height: var(--net-badge-h, 1.1rem);
+}
+
+/*
+ * Sizing is OPTICAL, not geometric, and the max-width is what does it.
+ *
+ * Every mark in `/assets/tv-logos/` is trimmed to its own ink, so matching
+ * them on height alone matches their bounding boxes and nothing a reader
+ * actually sees: NBC's peacock is nearly square (aspect ~1.1) and ESPN's slab
+ * wordmark is ~4.0, so at one height the wordmark carries roughly four times
+ * the ink and reads enormous beside it. Capping the WIDTH at 3× the height
+ * makes the wide marks width-governed — `object-fit: contain` then draws ESPN
+ * at ~0.74 of the box height and Netflix at ~0.81, while anything at or below
+ * 3.0 (CBS 2.4, NFL Network 2.6, the square marks) is untouched.
+ *
+ * The BOX stays a full `--net-badge-h` either way, so rows never shift; only
+ * the ink inside it shrinks. Raise this number and the wordmarks grow back.
+ */
+.net-badge__logo {
+  height: 100%;
+  width: auto;
+  max-width: calc(var(--net-badge-h, 1.1rem) * 3);
+  object-fit: contain;
+  display: block;
+}

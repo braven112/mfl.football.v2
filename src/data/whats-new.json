@@ -1,5 +1,28 @@
 [
   {
+    "id": "nfl-game-networks",
+    "date": "2026-09-07",
+    "category": "enhancement",
+    "icon": "scoreboard",
+    "leagues": [
+      "theleague",
+      "afl"
+    ],
+    "title": "Every Game Now Tells You Where To Watch It",
+    "link": "/live-scoring",
+    "linkLabel": "Open Live Scoring",
+    "summary": "The NFL games rail on Live Scoring and the opponent line on Set Lineup now carry the network's logo — CBS, FOX, NBC, ESPN, Prime Video, NFL Network — and they carry YOUR network, not America's. Tell us you're in Canada and the same game says DAZN. Australia, Kayo. It reads the country you already set on your preferences page, so most of you had to do nothing at all.",
+    "description": [
+      "You have done this. It is Sunday, your flex is a coin flip, and you have three tabs open trying to work out whether the Bengals game is the one on CBS or the one you are not getting. The site knew the answer the whole time. It has known which network carries every game since the Sunday Ticket board launched — it just refused to mention it anywhere else.",
+      "<strong>So now it mentions it.</strong> The NFL games rail on <a href=\"/live-scoring\">Live Scoring</a> draws the network's actual mark beside the clock on every card, and the opponent line on <a href=\"/lineup\">Set Lineup</a> does the same thing next to the “@ BUF” — in the slots and on the bench, and it stays there when you swap a player instead of quietly disappearing on you. The game-day hero on your homepage was already naming the channel in plain text; it draws the logo now too.",
+      "<strong>Here is the part that matters if you don't live in America.</strong> It is not the American channel with a flag next to it. It is your channel. The site asks <a href=\"/sunday-ticket\">the Sunday Ticket board</a>'s mapping the same question it always has — what carries this game where this person is — and a Thursday night game reads Prime Video in Seattle, DAZN in Toronto and Kayo in Perth. It comes from the country on <a href=\"/preferences\">your preferences page</a>, which most of you set months ago and have not thought about since. If you never set one, you get the American answer, which is exactly what you were getting before, which is to say nothing has been taken away from anybody.",
+      "Two honest limits. A network with no logo on file gets its name in text instead of a broken image — that is deliberate, and it is why the Sunday afternoon doubleheader reads “CBS/FOX” until the league splits it. And a game more than a week out has no network yet, because the NFL has not assigned one; those cards simply don't show a badge rather than showing an empty one. Best Ball's Live Scoring page got the rail treatment too."
+    ],
+    "image": "nfl-game-networks.webp",
+    "imageAlt": "The NFL games rail on the Live Scoring page. Each game card shows the two teams with their logos and scores, the live clock along the bottom, and at the right of that same row the carrying network's logo — NBC's peacock, the ESPN wordmark, and the CBS NFL mark on separate cards.",
+    "excludeFromHero": true
+  },
+  {
     "id": "nav-account-menu",
     "date": "2026-09-07",
     "category": "enhancement",
@@ -896,30 +919,6 @@
     "linkLabel": "Meet the owners",
     "image": "owners-pages.webp",
     "imageAlt": "The Owners page for The League, headed “Every owner The League has had — 17 current, 22 former. Franchise pages only show the CURRENT owner’s record, which left 110 seasons — including 7 championships and 25 division titles — with nowhere to live. This is where they live.” Below it a highlighted panel, “Champions you’ve never seen — these owners won The League and then left. Their titles appear on no franchise page”, holding six crested cards: Devil Dogs 2012, 2013 with 89-105 and two trophies, Amish Rakefighters 2015 at 84-76, Las Vegas Elite 2009 at 76-118, LBer-DeCleaters 2016 at 140-70, Sabertooths 2011 at 42-48 and Under Siege 2018 at 24-26, each with one trophy. Under a “Current owners” heading badged 17 sits a grid of owner cards — Bring The Pain since 2007 on franchise 0008, 196-138 (.587) over 19 seasons and 34,852 points, with trophy, division, MVP and Jerry Jones chips; then Dark Magicians of Chaos, Pacific Pigskins, Fire Ready Aim, Vitside Mafia, Wascawy Wabbits, Midwestside Connection, Gridiron Geeks and Running Down The Dream.",
-    "excludeFromHero": true
-  },
-  {
-    "id": "owners-get-their-names",
-    "date": "2026-08-25",
-    "category": "enhancement",
-    "icon": "users",
-    "leagues": [
-      "theleague",
-      "afl"
-    ],
-    "title": "Putting Names to the Ghosts",
-    "summary": "Owners launched with eighty-five people on it who had no names — MFL never stored one for most tenures before about 2016, so their pages were headed by a team name and a blank where a person should be. Sixty-four of those blanks are now filled, including every owner who ever won a championship.",
-    "description": [
-      "The <a href=\"/owners\">Owners page</a> went live last week with a hole in the middle of it. The man who ran The Nukes for thirteen straight seasons — the longest single tenure in either league — had a page, a record, a division title and no name. Same for the owner of Las Vegas Elite, eleven seasons and a championship, filed under a team. MFL simply never kept a name against most tenures before about 2016, and there is no clever query that recovers one.",
-      "So it got done the slow way, from memory, one at a time. Eighty-five blanks are down to twenty-one. Every championship in the history of either league now has a person attached to it, which was not true on Monday — eight titles were sitting on pages headed only by a team name.",
-      "The better find was underneath. Thirteen of those “people” were not people at all: they were one owner sawn in half. The page works out who owned what by watching a <a href=\"/franchises\">franchise</a> slot change hands, so a slot reshuffle or a rebrand reads exactly like a handover. Tom Flanagan renamed NOSX to Brady's Bastards in 2009 and became two strangers, one of whom held the 2012 title. Shane Fitch became Level 3 Inception and lost eight seasons and a ring to his own alter ego. Jesse Schuffenhauer played 2003 and 2004, vanished for nineteen years, came back in 2023 and was greeted as a new arrival. They are all whole again, and their seasons moved with them: 320 and 576 franchise-seasons before, 320 and 576 after — a merge never invents a season or drops one.",
-      "Five people also turned out to be running teams in both leagues at once, Rick O'Keefe and Shane Fitch among them, and now read as the same person on both sites. One man is on the board as coinflip, because that is genuinely all anybody remembers about him, and his record says so rather than pretending otherwise.",
-      "The League is finished — every owner in its history, back to 2007, now has a name on <a href=\"/owners\">the page</a>. Nineteen AFL tenures are still blank: none of them lasted more than three seasons, none of them played past 2015, and ten of them are a single season by a team nobody has said out loud since. If Red Dawn, Vinegar Strokes or the Italian Stalions means something to you, the commissioner would like a word."
-    ],
-    "link": "/owners",
-    "linkLabel": "Meet the owners",
-    "image": "owners-get-their-names.webp",
-    "imageAlt": "The AFL Owners page scrolled to its “Former owners” section, badged 65, under the line “Sorted by seasons played, so one-season cameos sink to the bottom.” A filter box sits above a table with columns for identity, slot, years, seasons, record, trophies and division titles — and every row now leads with a person rather than a team: Lee Graves on slot 0023, 2005-2021, 17 seasons at 145-146 with a championship and three divisions; Tim Barlos on 0008, 2003-2015, 13 seasons at 88-128; Jim Shea on 0013, 2008-2019, 12 seasons at 132-77 with a title; Shane Fitch on 0003, 2003-2012, 10 seasons at 100-68 with a title and five divisions; then Nathan Clark, Leland Brasher, Brian Sevilla, Paul Post, Tom Flanagan, Paul Tarsney, David Stafford and Dan Winman. Two rows carry a pair of slot numbers — 0006, 0024 and 0012, 0017 — the tell for an owner whose franchise slot moved underneath him.",
     "excludeFromHero": true
   }
 ]

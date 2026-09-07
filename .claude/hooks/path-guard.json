@@ -78,6 +78,7 @@
       "tests": [
         "tests/live-scoring-host-resolution.test.ts",
         "tests/marquee-live-guard.test.ts",
+        "tests/network-badge.test.ts",
         "tests/nfl-live-routes.test.ts"
       ]
     },
@@ -96,6 +97,7 @@
         "tests/lineup-page-clientrouter.test.ts",
         "tests/lineup-route-merge.test.ts",
         "tests/lineup-sources.test.ts",
+        "tests/network-badge.test.ts",
         "tests/reminder-push-first.test.ts"
       ]
     },
@@ -140,7 +142,9 @@
         "public/assets/tv-logos/**",
         "scripts/measure-tv-logo-contrast.mjs",
         "data/theleague/broadcast-mappings.json",
-        "src/utils/broadcast-channels.ts"
+        "src/utils/broadcast-channels.ts",
+        "src/components/shared/NetworkBadge.astro",
+        "src/components/shared/NflGamesStrip.tsx"
       ],
       "tests": [
         "tests/design-token-guard.test.ts",
@@ -153,6 +157,7 @@
         "tests/franchise-band-brand.test.ts",
         "tests/dark-surface-crest.test.ts",
         "tests/broadcast-channels.test.ts",
+        "tests/network-badge.test.ts",
         "tests/storybook-dark-logo-mirror.test.ts"
       ]
     },

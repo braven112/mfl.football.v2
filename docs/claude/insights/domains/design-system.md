@@ -168,6 +168,76 @@ tier badges, wordmarks and TV-network logos go `object-fit: contain` in a
 square box with no border-radius — they must show whole. Grep a feature for
 `object-fit: cover` next to a team/logo class name before assuming its icons
 are consistent; a feature can carry both treatments for months.
+## 2026-09-07 - Declaring a Custom Property's Default on the Base Class Makes Every Consumer Override a Coin Flip
+
+**Context:** `.net-badge` (`src/styles/network-badge.css`) is a shared primitive
+for the TV-network mark, sized by `--net-badge-h` so each surface can pick its
+own height — 0.78rem in the live-scoring card footer, 0.85rem on a lineup slot,
+1.15rem in the game-day hero. It shipped with the default written the obvious
+way:
+
+```css
+.net-badge { --net-badge-h: 1.1rem; ... }        /* the primitive */
+.nfl-game__net { --net-badge-h: 0.78rem; }       /* the surface */
+```
+
+**Insight:** both selectors are `(0,1,0)` and both land on the *same element*,
+so the winner is whichever stylesheet the bundler emitted last. `network-badge.css`
+is imported by `NetworkBadge.astro`'s frontmatter and the page imports the
+surface stylesheet earlier, so the **primitive's default won every time** and
+every mark on every surface rendered at 1.1rem. Nothing errored, no override
+was "wrong", and the CSS reads correctly in both files — the only tell was
+measuring `getComputedStyle(el).getPropertyValue('--net-badge-h')` in the
+browser and seeing the default come back.
+
+This is the author-side mirror of the 2026-09-06 `.player-cell--compact` entry
+below. That one tells a **consumer** to add a class of specificity. This one
+says the consumer should never have needed to.
+
+**Rule:** a shared primitive must NOT declare the custom property it exposes for
+theming. Put the fallback where the property is *read*, where an override cannot
+lose regardless of import order:
+
+```css
+.net-badge--mark { height: var(--net-badge-h, 1.1rem); }
+.net-badge__logo { max-width: calc(var(--net-badge-h, 1.1rem) * 3); }
+```
+
+Repeat the fallback at each read site rather than declaring it once — that
+duplication is the price of the guarantee. If you must declare a default on the
+element, put it on `:root`, which every consumer selector outranks.
+
+## 2026-09-07 - Logo Marks Trimmed to Their Ink Are Not Comparable by Height
+
+**Context:** the same badge draws `/assets/tv-logos/*.png`, which are trimmed so
+the canvas *is* the artwork. Sizing them with a single `height` looked like the
+obviously correct normalization; ESPN then rendered visibly enormous beside NBC.
+
+**Insight:** two facts the bounding box hides.
+
+1. **Equal height is not equal weight.** Measured ink aspect ratios: NBC's
+   peacock 1.07, ABC 1.00, CBS-NFL 2.39, NFL Network 2.56, Prime Video 3.24,
+   Netflix 3.71, **ESPN 4.03**. At one height a 4.0 slab wordmark carries close
+   to four times the ink of a square mark and dominates the row.
+2. **A mark fills its box; a glyph fills about 60% of its line box.** Sizing a
+   mark to match the *line box* of the text beside it therefore makes the mark
+   look oversized and top-heavy even when the two boxes are perfectly concentric
+   — which is what "the logo is aligned too far to the top" turned out to mean.
+   `align-items`/`align-self` were already correct; the fix was size.
+
+**Rule:** normalize marks optically, with `max-width` rather than a per-mark
+table. Capping the image at `3 × height` makes anything wider than 3.0
+width-governed, so `object-fit: contain` draws ESPN at ~0.74 of the box and
+Netflix at ~0.81 while CBS, NFL Network and the square marks are untouched. The
+**box** stays a full height either way, so rows never shift — only the ink
+shrinks — and there is one number to tune instead of a manifest to maintain.
+Then size that box against the neighbouring text's *optical* size (~0.78rem
+beside 0.72rem type), not its line box.
+
+Measure before guessing: `sharp(f).trim().toBuffer({resolveWithObject:true})`
+gives the real inked box, and reading `naturalWidth/naturalHeight` against
+`getBoundingClientRect()` in the page gives the drawn height under
+`object-fit: contain`.
 
 ---
 

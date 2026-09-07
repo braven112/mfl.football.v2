@@ -1,0 +1,60 @@
+---
+/**
+ * NetworkBadge — the TV network carrying an NFL game, for the Astro surfaces.
+ *
+ * Props-only and pure: it takes the US network ESPN published for the game
+ * plus the viewer's country and asks `resolveChannel` — the ONE place that
+ * knows a Thursday game is Prime Video in Seattle, DAZN in London and Kayo in
+ * Perth. Never pass it a channel name you resolved yourself; that would be a
+ * second, worse copy of the mapping.
+ *
+ * Renders nothing at all when ESPN has not published a network (normal for a
+ * game more than a week out) — an empty badge is worse than no badge.
+ *
+ * The React island on the live-scoring pages (`NflGamesStrip`) cannot import
+ * an `.astro` component, so it emits these same `.net-badge` class names
+ * inline. `src/styles/network-badge.css` is the shared contract between them;
+ * a class rename here has to move there too.
+ */
+import { resolveChannel, type CountryCode } from '../../utils/broadcast-channels';
+// Imported here so every consumer is styled by rendering the component; the
+// React island on the live-scoring pages cannot, and imports it page-side.
+// Storybook does not see a component's own frontmatter import, so
+// `.storybook/preview.ts` carries it too.
+import '../../styles/network-badge.css';
+
+export interface Props {
+  /** The US network from ESPN ("CBS", "Prime Video"). '' / null renders nothing. */
+  network: string | null | undefined;
+  /** Whose channel lineup to answer for. Resolve this in the ROUTE, never a component. */
+  country?: CountryCode;
+  /** Height of the mark; the text arm ignores it. */
+  size?: string;
+  /** Extra class for surface-specific placement. */
+  class?: string;
+}
+
+const { network, country = 'US', size, class: extraClass } = Astro.props;
+
+const channel = resolveChannel(network, country);
+// The note ("Sunday Night Football") and subscription ("DAZN") are what turn a
+// mark into an answer for someone abroad, so they ride in the tooltip.
+const title = channel
+  ? [channel.name, channel.note, channel.subscription].filter(Boolean).join(' · ')
+  : '';
+---
+
+{channel && (
+  channel.logo ? (
+    <span
+      class:list={['net-badge', 'net-badge--mark', extraClass]}
+      style={size ? `--net-badge-h: ${size};` : undefined}
+      title={title}
+    >
+      {/* Named, not decorative: this img IS the only statement of the channel. */}
+      <img class="net-badge__logo" src={channel.logo} alt={channel.name} loading="lazy" />
+    </span>
+  ) : (
+    <span class:list={['net-badge', extraClass]} title={title}>{channel.name}</span>
+  )
+)}

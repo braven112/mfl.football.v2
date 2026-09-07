@@ -68,6 +68,28 @@
   letter-spacing: 0.05em;
 }
 .nfl-game__dd { color: var(--content-text-muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+/* ── the footer's two halves ──
+   State (and the live down & distance) on the left, the network mark on the
+   right. Grouping the first two is what keeps `space-between` honest once a
+   third child exists: without it a card with no down & distance would push the
+   network into the middle of the row. `min-width: 0` lets the group shrink so
+   a long "3rd & 12 at DAL 40" ellipses rather than shoving the mark off the
+   card, which is 172px wide and does not grow. */
+.nfl-game__status {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.4rem;
+  min-width: 0;
+  overflow: hidden;
+}
+
+/* Sized against the footer TEXT it sits beside (0.72rem), not against the card.
+   A mark's ink fills its whole box while a glyph fills about 60% of its line
+   box, so a badge matched to the line box reads noticeably taller than the
+   clock next to it — NBC's peacock, which is nearly square and fully inked,
+   made that obvious. 0.78rem puts the ink at the text's own optical size. */
+.nfl-game__net { --net-badge-h: 0.78rem; align-self: center; }
 .nfl-game__live { display: inline-flex; align-items: center; gap: 0.35rem; color: var(--color-success); font-weight: var(--font-weight-semibold); }
 .nfl-game__pre { color: var(--content-text-muted); }
 
