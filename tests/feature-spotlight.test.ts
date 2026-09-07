@@ -160,6 +160,26 @@ describe('Feature spotlight', () => {
     }
   });
 
+  it('never lets the ring reach zero — it breathes, it does not blink', () => {
+    // The first cut expanded a halo to fully transparent and back, so the mark
+    // vanished off the control on the return leg. Reported as "it disappears
+    // from the button briefly and then comes back", which is the whole reason
+    // this assertion exists: every keyframe must still paint a ring.
+    const keyframes = SPOTLIGHT_CSS.slice(
+      SPOTLIGHT_CSS.indexOf('@keyframes spotlight-ring'),
+      SPOTLIGHT_CSS.indexOf('prefers-reduced-motion')
+    );
+    const shadows = [...keyframes.matchAll(/box-shadow:\s*([^;]+);/g)].map((m) => m[1].trim());
+    expect(shadows.length).toBeGreaterThan(1);
+    for (const shadow of shadows) {
+      expect(
+        /\btransparent\b/.test(shadow),
+        `keyframe shadow "${shadow}" fades the ring to nothing — it must stay visible at every frame`
+      ).toBe(false);
+      expect(shadow).toMatch(/var\(--spotlight-ring(-peak)?\)/);
+    }
+  });
+
   it('keeps a visible ring under prefers-reduced-motion', () => {
     const reduced = SPOTLIGHT_CSS.slice(SPOTLIGHT_CSS.indexOf('prefers-reduced-motion'));
     expect(reduced).toMatch(/animation:\s*none/);
