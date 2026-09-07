@@ -82,6 +82,14 @@ export interface NavLink {
   /** Whether this link is currently active/selected */
   isActive?: boolean;
 
+  /**
+   * The day this link shipped, `YYYY-MM-DD`. Set it and the drawer marks the
+   * link as new for a week (a soft pulse on its icon), then stops on its own —
+   * see `src/utils/feature-spotlight.ts`. Leave the field in place afterwards
+   * or delete it; an expired date renders exactly like no date at all.
+   */
+  newSince?: string;
+
   /** Optional description for tooltips in collapsed mode */
   description?: string;
 }

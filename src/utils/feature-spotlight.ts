@@ -61,6 +61,32 @@ export function isSpotlightActive(id: string, now: Date = new Date()): boolean {
 }
 
 /**
+ * The same week, for a date carried by the thing itself rather than by the
+ * registry above — a nav link's `newSince` in `nav-config.json`.
+ *
+ * A new link is the common case of "this is new", and making it a config field
+ * means adding one is a data edit, not a code change: set `newSince` to the day
+ * it ships and the drawer marks it for a week, then stops. An absent, malformed
+ * or already-expired date simply does not pulse; there is no state to clean up
+ * and a typo cannot pulse forever.
+ */
+export function isNewSince(
+  since: string | null | undefined,
+  now: Date = new Date(),
+  days: number = SPOTLIGHT_DAYS,
+): boolean {
+  if (!since) return false;
+  const start = Date.parse(`${since}T12:00:00Z`);
+  if (Number.isNaN(start)) return false;
+  return now.getTime() < start + days * 24 * 60 * 60 * 1000;
+}
+
+/** The spotlight id for a nav link, namespaced so it cannot collide with a registry id. */
+export function navLinkSpotlightId(linkId: string): string {
+  return `nav-link:${linkId}`;
+}
+
+/**
  * `?testDate=YYYY-MM-DD` (or `YYYY-MM-DDTHH:MM`) support, so the pulse and its
  * expiry can be seen without touching the system clock — the same convention
  * every date-dependent surface here uses. Kept local rather than imported from

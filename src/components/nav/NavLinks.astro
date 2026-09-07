@@ -23,6 +23,8 @@
 import type { NavLinksProps, NavSection, NavLink, LeagueSlug, LeaguePhase, NavSectionDefaultOpen } from '../../types/nav';
 import { NAV_COOKIES } from '../../types/nav';
 import { getAFLPreference, getAFLTeamData } from '../../utils/team-preferences';
+import { isNewSince, navLinkSpotlightId, spotlightNow } from '../../utils/feature-spotlight';
+import '../../styles/feature-spotlight.css';
 import { resolveLeaguePath, getLeaguePrefix } from '../../utils/nav-utils';
 import { spriteUrl } from '../../utils/sprite-url';
 import { getLeaguePhase } from '../../utils/league-phase';
@@ -100,6 +102,17 @@ function resolveHref(link: NavLink, lg: LeagueSlug): string {
     return resolveLeaguePath(`${prefix}${link.path}`, hideLeaguePrefix);
   }
   return '#';
+}
+
+/**
+ * A link added in the last week wears the shared spotlight pulse, from its own
+ * `newSince` date in nav-config.json. Nothing has to be turned off later: the
+ * date expires, and `?testDate=` moves the clock for testing like everywhere
+ * else here.
+ */
+const spotlightClock = spotlightNow(Astro.url);
+function isLinkNew(link: NavLink): boolean {
+  return isNewSince(link.newSince, spotlightClock);
 }
 
 function getLabel(link: NavLink, lg: LeagueSlug): string {
@@ -237,13 +250,15 @@ const sectionRenderInfo = visibleSections.map((section) => {
               {...(isExternal && { target: '_blank', rel: 'noopener noreferrer' })}
               data-astro-reload
               aria-current={active ? 'page' : undefined}
+              data-spotlight={isLinkNew(link) ? navLinkSpotlightId(link.id) : undefined}
             >
-              <span class="nav-links__icon" aria-hidden="true">
+              <span class:list={['nav-links__icon', { 'spotlight-pulse': isLinkNew(link) }]} aria-hidden="true">
                 <svg width="24" height="24" viewBox="0 0 24 24">
                   <use href={`${spriteUrl}#icon-${getIcon(link, league)}`} />
                 </svg>
               </span>
               <span class="nav-links__label">{getLabel(link, league)}</span>
+              {isLinkNew(link) && <span class="visually-hidden">New</span>}
             </a>
           </li>
         );
@@ -314,8 +329,9 @@ const sectionRenderInfo = visibleSections.map((section) => {
                       {...(isExternal && { target: '_blank', rel: 'noopener noreferrer' })}
                       data-astro-reload
                       aria-current={active ? 'page' : undefined}
+                      data-spotlight={isLinkNew(link) ? navLinkSpotlightId(link.id) : undefined}
                     >
-                      <span class="nav-links__icon" aria-hidden="true">
+                      <span class:list={['nav-links__icon', { 'spotlight-pulse': isLinkNew(link) }]} aria-hidden="true">
                         {iconUrl && iconDarkUrl ? (
                           /* eager, not lazy: the inactive variant is display:none, and a
                              lazy hidden image is never fetched — so flipping the theme
@@ -340,6 +356,7 @@ const sectionRenderInfo = visibleSections.map((section) => {
                         )}
                       </span>
                       <span class="nav-links__label">{label}</span>
+                      {isLinkNew(link) && <span class="visually-hidden">New</span>}
                       {link.badge && link.badge > 0 && (
                         <span class="nav-links__badge" aria-label={`${link.badge} notifications`}>
                           {link.badge > 99 ? '99+' : link.badge}

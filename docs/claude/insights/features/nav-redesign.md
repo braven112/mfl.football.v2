@@ -1074,3 +1074,20 @@ Five things that are load-bearing:
 **Reduced motion keeps the ring and drops the animation.** Dropping the
 affordance entirely would hide a new feature from precisely the people who
 asked for less movement.
+
+**Generalized the same day.** A pulse that only one hand-written control can
+wear is a one-off, not a pattern, so `newSince` became a field on `NavLink`:
+put the ship date on a link in `nav-config.json` and the drawer marks it — a
+ring on its icon, plus a visually-hidden "New" for screen readers, since a
+pulse says nothing to a reader — for a week, then stops. No code change, no
+cleanup commit, and `tests/feature-spotlight.test.ts` fails on an unparseable
+date because a typo is otherwise silent: the link simply never pulses and
+nobody finds out.
+
+Dismissal moved with it. `NavDrawer.astro` now owns ONE delegated click
+handler for every `[data-spotlight]` in the drawer, in the capture phase (a
+nav link navigates away, so the write has to land first) and registered once
+per DOCUMENT rather than per `astro:page-load` — the ClientRouter keeps one
+document, so a per-load registration stacks a listener per page visited. The
+per-load pass is only the sweep that clears what this device already
+dismissed. `NavFooter` keeps no copy; the guard test fails if one grows back.

@@ -390,50 +390,20 @@ const spotlightAccountMenu = showAccountMenu && isSpotlightActive(SPOTLIGHT_ID, 
     a second listener stacking on the same node. */}
 <script>
   /**
-   * Stop a feature spotlight for this device. The server decides when the week
-   * is up; this is the other stop condition — the owner has now seen the thing,
-   * so the nudge has done its job.
-   *
-   * localStorage can throw outright (private windows, blocked site data), and
-   * the pulse must never be the reason a nav fails to bind, so every access is
-   * wrapped. Mirrors `spotlightStorageKey` in src/utils/feature-spotlight.ts.
+   * The chevron's spotlight pulse is NOT handled here. `NavDrawer.astro` owns
+   * one delegated dismissal for every pulsing control in the drawer — this
+   * toggle and any nav link inside its `newSince` week — so a click here is
+   * already covered by that handler, and the class comes off without this
+   * component knowing anything about localStorage.
    */
-  function spotlightSeen(id: string): boolean {
-    try {
-      return localStorage.getItem(`spotlight.${id}.seen`) === '1';
-    } catch {
-      return false;
-    }
-  }
-
-  function dismissSpotlight(el: HTMLElement): void {
-    const id = el.dataset.spotlight;
-    if (!id) return;
-    el.classList.remove('spotlight-pulse');
-    delete el.dataset.spotlight;
-    try {
-      localStorage.setItem(`spotlight.${id}.seen`, '1');
-    } catch {
-      // A device that cannot remember is one the week still expires for.
-    }
-  }
-
   function initAccountPanel() {
     const toggle = document.querySelector('[data-account-toggle]') as HTMLButtonElement | null;
     const panel = document.querySelector('[data-account-panel]') as HTMLElement | null;
     if (!toggle || !panel) return;
-
-    // Runs before the bound check: the server renders the pulse for everyone
-    // inside the week, so a returning owner needs it cleared on every page.
-    if (toggle.dataset.spotlight && spotlightSeen(toggle.dataset.spotlight)) {
-      dismissSpotlight(toggle);
-    }
-
     if (toggle.dataset.accountToggleBound === '1') return;
     toggle.dataset.accountToggleBound = '1';
 
     toggle.addEventListener('click', () => {
-      dismissSpotlight(toggle);
       const open = toggle.getAttribute('aria-expanded') === 'true';
       toggle.setAttribute('aria-expanded', open ? 'false' : 'true');
       panel.hidden = open;

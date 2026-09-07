@@ -1,10 +1,14 @@
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
+import navConfig from '../src/config/nav-config.json';
+import type { NavLink } from '../src/types/nav';
 import {
   FEATURE_SPOTLIGHTS,
   SPOTLIGHT_DAYS,
+  isNewSince,
   isSpotlightActive,
+  navLinkSpotlightId,
   spotlightExpiry,
   spotlightNow,
   spotlightStorageKey,
@@ -30,7 +34,14 @@ import {
 
 const REPO_ROOT = process.cwd();
 const NAV_FOOTER = readFileSync(path.join(REPO_ROOT, 'src/components/nav/NavFooter.astro'), 'utf8');
+const NAV_LINKS = readFileSync(path.join(REPO_ROOT, 'src/components/nav/NavLinks.astro'), 'utf8');
+const NAV_DRAWER = readFileSync(path.join(REPO_ROOT, 'src/components/nav/NavDrawer.astro'), 'utf8');
 const SPOTLIGHT_CSS = readFileSync(path.join(REPO_ROOT, 'src/styles/feature-spotlight.css'), 'utf8');
+
+const allNavLinks: NavLink[] = [
+  ...((navConfig as { pinnedLinks?: NavLink[] }).pinnedLinks ?? []),
+  ...(navConfig.sections as Array<{ links: NavLink[] }>).flatMap((section) => section.links),
+];
 
 describe('Feature spotlight', () => {
   it('expires on its own, a week after the feature shipped', () => {
@@ -74,19 +85,79 @@ describe('Feature spotlight', () => {
     expect(spotlightStorageKey('nav-account-menu')).toBe('spotlight.nav-account-menu.seen');
     // The script builds the key inline (it cannot import a module), so the
     // shape has to be pinned on both sides or a dismissal stops sticking.
-    expect(NAV_FOOTER).toMatch(/`spotlight\.\$\{id\}\.seen`/);
+    expect(NAV_DRAWER).toMatch(/`spotlight\.\$\{id\}\.seen`/);
   });
 
-  it('stops the pulse when the owner opens the menu, not only when the week ends', () => {
-    expect(NAV_FOOTER).toMatch(/dismissSpotlight\(toggle\);/);
-    expect(NAV_FOOTER).toMatch(/classList\.remove\('spotlight-pulse'\)/);
+  it('dismisses every pulsing control from ONE delegated handler', () => {
+    // A per-control copy is how the drawer would end up with two localStorage
+    // conventions and a link that pulses forever because nobody wired it up.
+    expect(NAV_DRAWER).toMatch(/document\.addEventListener\(\s*'click'/);
+    expect(NAV_DRAWER).toMatch(/closest\?\.\('\[data-spotlight\]'\)/);
+    expect(NAV_DRAWER).toMatch(/classList\.remove\('spotlight-pulse'\)/);
+    // The class can sit on the control (the chevron) or on a child (a link's
+    // icon), so the handler has to clear descendants too.
+    expect(NAV_DRAWER).toMatch(/querySelectorAll\('\.spotlight-pulse'\)/);
+    expect(
+      /dismissSpotlight/.test(NAV_FOOTER),
+      'NavFooter must not keep a private copy of the dismissal'
+    ).toBe(false);
+  });
+
+  it('registers the delegated listener once per DOCUMENT, not per navigation', () => {
+    // The ClientRouter keeps one document across navigations; re-adding on
+    // every astro:page-load stacks a duplicate listener per page visited.
+    expect(NAV_DRAWER).toMatch(/__spotlightDismissBound/);
+    expect(NAV_DRAWER).toMatch(/document\.addEventListener\('astro:page-load', initSpotlightDismissal\)/);
   });
 
   it('survives localStorage throwing, because the nav must bind regardless', () => {
     // Private windows and blocked site data make the accessor itself throw;
-    // an unguarded read would take the whole account menu down with it.
-    expect(NAV_FOOTER).toMatch(/try \{\s*return localStorage\.getItem/);
-    expect(NAV_FOOTER).toMatch(/try \{\s*localStorage\.setItem/);
+    // an unguarded read would take the whole drawer's scripts down with it.
+    expect(NAV_DRAWER).toMatch(/try \{\s*return localStorage\.getItem/);
+    expect(NAV_DRAWER).toMatch(/try \{\s*localStorage\.setItem/);
+  });
+
+  it('marks a nav link as new from its own newSince date, and only for a week', () => {
+    const shipped = '2026-10-01';
+    const dayAfter = new Date('2026-10-02T12:00:00Z');
+    const nextWeek = new Date('2026-10-09T12:00:00Z');
+    expect(isNewSince(shipped, dayAfter)).toBe(true);
+    expect(isNewSince(shipped, nextWeek)).toBe(false);
+
+    // No date, a typo'd date, or junk never pulses — a spotlight that cannot
+    // expire is worse than one that never starts.
+    expect(isNewSince(undefined, dayAfter)).toBe(false);
+    expect(isNewSince('', dayAfter)).toBe(false);
+    expect(isNewSince('not-a-date', dayAfter)).toBe(false);
+  });
+
+  it('wires newSince through NavLinks for both pinned and section links', () => {
+    const applications = NAV_LINKS.match(/'spotlight-pulse': isLinkNew\(link\)/g) ?? [];
+    expect(
+      applications.length,
+      'both the pinned list and the section list must mark a new link'
+    ).toBe(2);
+    expect(NAV_LINKS).toMatch(/data-spotlight=\{isLinkNew\(link\) \? navLinkSpotlightId\(link\.id\)/);
+    // The pulse is visual; a screen reader needs the word.
+    expect(NAV_LINKS).toMatch(/visually-hidden">New</);
+  });
+
+  it('namespaces link ids so they cannot collide with registry ids', () => {
+    expect(navLinkSpotlightId('owners')).toBe('nav-link:owners');
+    expect(Object.keys(FEATURE_SPOTLIGHTS).every((id) => !id.startsWith('nav-link:'))).toBe(true);
+  });
+
+  it('keeps every newSince in nav-config parseable', () => {
+    // A typo'd date is silent — the link just never pulses — so it is checked
+    // here rather than discovered by nobody noticing a launch.
+    for (const link of allNavLinks) {
+      if (!link.newSince) continue;
+      expect(
+        link.newSince,
+        `nav link "${link.id}" has an unparseable newSince`
+      ).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+      expect(Number.isNaN(Date.parse(`${link.newSince}T12:00:00Z`))).toBe(false);
+    }
   });
 
   it('keeps a visible ring under prefers-reduced-motion', () => {
