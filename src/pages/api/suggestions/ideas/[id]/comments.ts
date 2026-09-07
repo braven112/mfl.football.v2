@@ -14,6 +14,7 @@ import {
   getCommentById,
   generateId,
   checkRateLimit,
+  rateLimitMessage,
   resolveTeamName,
 } from '../../../../../utils/suggestions-storage';
 import { boardScope } from '../../../../../utils/suggestions-scope';
@@ -63,7 +64,7 @@ export const POST: APIRoute = async ({ params, request }) => {
   // Rate limit
   const { allowed } = await checkRateLimit(boardScope(user), user.franchiseId);
   if (!allowed) {
-    return json({ error: 'Slow down — you\'re limited to 10 posts per hour.' }, 429);
+    return json({ error: rateLimitMessage() }, 429);
   }
 
   const teamName = await resolveTeamName(boardScope(user), user.franchiseId);

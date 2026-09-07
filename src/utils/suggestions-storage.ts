@@ -185,8 +185,18 @@ export async function deleteComment(scope: SuggestionsScope, ideaId: string, com
 
 // ── Rate Limiting ──
 
-const RATE_LIMIT_MAX = 50;
+/**
+ * Exported because the 429 copy is built from it. Two routes told owners they
+ * were "limited to 10 posts per hour" while the real ceiling was 50 — a
+ * hardcoded number in a message drifts the moment the constant moves, and the
+ * person reading it has no way to know it is wrong.
+ */
+export const RATE_LIMIT_MAX = 50;
 const RATE_LIMIT_WINDOW = 3600; // 1 hour
+
+/** The 429 body, so both routes say the same true thing. */
+export const rateLimitMessage = () =>
+  `Slow down — you're limited to ${RATE_LIMIT_MAX} posts an hour.`;
 
 export async function checkRateLimit(scope: SuggestionsScope, franchiseId: string): Promise<{ allowed: boolean; count: number }> {
   const redis = await getRedis();

@@ -66,7 +66,13 @@ export async function createGitHubIssue(
     return {
       ok: false,
       status: 503,
-      error: 'No GitHub token configured on the server (set GH_TOKEN).',
+      // Name every variable the lookup checks, in order. A message naming
+      // only one sends whoever is fixing it to set that one — which loses to
+      // an earlier, wrongly-scoped variable that is already set.
+      error:
+        'No GitHub token configured on the server. Set one of ' +
+        'GITHUB_ADMIN_TOKEN, GH_ADMIN_TOKEN, GH_TOKEN or GITHUB_TOKEN ' +
+        '(checked in that order) with Issues: write on this repo.',
     };
   }
 
