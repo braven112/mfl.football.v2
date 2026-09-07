@@ -280,17 +280,11 @@ if ('view' in heroState) {
 }
 
 // ── Schefter feed ───────────────────────────────────────────────────────────
-// In season a signed-in AFL owner opens the rail on For You (their roster +
-// watch list + their franchise), with an All tab beside it. Out of season, or
-// signed out, this is the league feed exactly as before. The WHOLE feed goes
-// in: slicing to 30 first and filtering after leaves almost nothing.
+// The rail IS the owner's Watching feed. The WHOLE feed goes in: slicing to
+// 30 first and filtering after leaves almost nothing, because the newest posts
+// are overwhelmingly wire.
 const feed = feedData as FeedType;
-const rail = await resolveSchefterRail({
-  league: AFL,
-  posts: feed.posts,
-  authUser,
-  now: effectiveDate,
-});
+const rail = await resolveSchefterRail({ league: AFL, posts: feed.posts, authUser });
 
 // Hide the What's Next card that the hero already promotes — EXCEPT when the
 // hero is a conference draft. In the keeper→draft window the hero counts down
@@ -388,6 +382,7 @@ const lastVisitDate = Astro.cookies.get('whats_new_last_visit')?.value ?? null;
         personalized={rail.personalized}
         forYouIds={rail.forYouIds}
         watching={rail.watchingByPost}
+        emptyText={rail.emptyText}
       />
     </aside>
   </div>

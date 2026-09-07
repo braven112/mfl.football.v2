@@ -3,7 +3,10 @@ import {
   resolveFeedMode,
   defaultSource,
   seasonModeEnd,
+  seasonModeStart,
+  seasonStartEventDate,
   SEASON_END_WEEKS,
+  SEASON_START_WEEKS_BEFORE_LABOR_DAY,
 } from '../src/utils/schefter-season-mode';
 import { getCurrentSeasonYear } from '../src/utils/league-year';
 
@@ -13,16 +16,41 @@ import { getCurrentSeasonYear } from '../src/utils/league-year';
  */
 describe('resolveFeedMode', () => {
   it('is offseason through the summer', () => {
-    for (const iso of ['2026-02-20', '2026-04-15', '2026-06-30', '2026-08-30']) {
+    for (const iso of ['2026-02-20', '2026-04-15', '2026-06-30', '2026-08-20']) {
       expect(resolveFeedMode(new Date(`${iso}T12:00:00-07:00`))).toBe('offseason');
     }
   });
 
-  it('opens on Labor Day, not at kickoff', () => {
-    // Labor Day 2026 is Sep 7; the NFL opener is Sep 10. The gap is in season.
-    expect(resolveFeedMode(new Date('2026-09-06T12:00:00-07:00'))).toBe('offseason');
-    expect(resolveFeedMode(new Date('2026-09-07T12:00:00-07:00'))).toBe('in-season');
+  /**
+   * The season opens on the AFL NL draft — the commissioner's official start,
+   * once both conferences have drafted and rosters are set. Labor Day was the
+   * first cut and was over a week too late: it left the site serving wire
+   * filler to owners whose teams were already built.
+   */
+  it('opens on the NL draft, over a week before Labor Day', () => {
+    expect(resolveFeedMode(new Date('2026-08-29T12:00:00-07:00'))).toBe('offseason');
+    expect(resolveFeedMode(new Date('2026-08-31T12:00:00-07:00'))).toBe('in-season');
+    // Labor Day (Sep 7) and kickoff (Sep 10) are both well inside it now.
+    expect(resolveFeedMode(new Date('2026-09-06T12:00:00-07:00'))).toBe('in-season');
     expect(resolveFeedMode(new Date('2026-09-09T12:00:00-07:00'))).toBe('in-season');
+  });
+
+  it('reads the start from the league calendar, not a hardcoded date', () => {
+    expect(seasonStartEventDate(2026)?.toISOString()).toBe('2026-08-30T00:00:00.000Z');
+    expect(seasonModeStart(2026).toISOString()).toBe('2026-08-30T00:00:00.000Z');
+  });
+
+  /**
+   * resolved-events only ever carries the CURRENT league year, so every future
+   * season must still resolve — silently returning Invalid Date here would
+   * make the feed offseason forever.
+   */
+  it('falls back to a derived date for a season the calendar has not computed', () => {
+    expect(seasonStartEventDate(2030)).toBeNull();
+    const start = seasonModeStart(2030);
+    expect(Number.isNaN(start.getTime())).toBe(false);
+    expect(start.getTime()).toBeLessThan(seasonModeEnd(2030).getTime());
+    expect(SEASON_START_WEEKS_BEFORE_LABOR_DAY).toBe(3);
   });
 
   it('stays in season across the New Year', () => {

@@ -50,7 +50,7 @@ const avatarSrc = isGroupMe ? (gmMeta?.avatar ?? '') : getAuthorAvatar(author!);
 const displayName = isGroupMe ? (gmMeta?.name ?? 'Unknown') : author!.name;
 const displayHandle = isGroupMe ? 'via GroupMe' : author!.handle;
 const isExternal = post.type === 'external';
-const tierClass = `sfc-post${post.tier === 'breaking' ? ' sfc-post--breaking' : ''}${isGroupMe ? ' sfc-post--groupme' : ''}`;
+const tierClass = `sfc-post${post.tier === 'breaking' ? ' sfc-post--breaking' : ''}${isGroupMe ? ' sfc-post--groupme' : ''}${watchHit ? ' sfc-post--watching' : ''}`;
 
 // Franchise milestone posts carry badge metadata — surface it as a chip so
 // the body's flavor line has context ("what was this announcement for?").

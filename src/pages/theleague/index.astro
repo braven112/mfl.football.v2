@@ -105,15 +105,10 @@ const testDateParam = Astro.url.searchParams.get('testDate');
 const effectiveDate = parseTestDate(testDateParam);
 const testMode = !!testDateParam;
 
-// The Schefter rail: in season a signed-in owner opens on For You (their
-// roster + watch list + their franchise), with an All tab beside it. Out of
-// season, or signed out, this returns the league feed exactly as before.
-const rail = await resolveSchefterRail({
-  league: THELEAGUE,
-  posts: railSource,
-  authUser,
-  now: effectiveDate,
-});
+// The Schefter rail IS the owner's Watching feed — their roster, their watch
+// list, their franchise, league deadlines. A visitor with no franchise here
+// gets the league feed, because they have no watch list to show.
+const rail = await resolveSchefterRail({ league: THELEAGUE, posts: railSource, authUser });
 
 // Check draft completion for early UDFA window transition
 const leagueYear = getCurrentLeagueYear();
@@ -880,6 +875,7 @@ if ((heroState.phase === 'playoffs' || heroState.phase === 'championship') && he
         personalized={rail.personalized}
         forYouIds={rail.forYouIds}
         watching={rail.watchingByPost}
+        emptyText={rail.emptyText}
       />
     </aside>
   </div>

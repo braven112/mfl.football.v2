@@ -794,12 +794,20 @@ html[data-league='afl'] .sfc-reply--roger .sfc-reply__content {
   }
 }
 
-/* ── For You / All tabs, and the watching chip ───────────────────────────────
-   In-season personalization for the sidebar rail
-   (src/utils/schefter-rail-view.ts). Tokens mirror the full feed's
-   .sf-post__watching so the two surfaces read as one feature; nothing here
-   restates --color-gray-* under html.dark, because that ramp inverts itself
-   and "fixing" dark mode by overriding it ships near-black on near-black. */
+
+/* ── Watching chip ───────────────────────────────────────────────────────────
+   The sidebar rail is the owner's Watching feed (src/utils/schefter-rail-view.ts).
+   Tokens mirror the full feed's .sf-post__watching so the two surfaces read as
+   one feature; nothing here restates --color-gray-* under html.dark, because
+   that ramp inverts itself and "fixing" dark mode by overriding it ships
+   near-black text on a near-black card. */
+
+/* ── For You / All tabs, and the watching treatment ──────────────────────────
+   The sidebar rail's in-season split (src/utils/schefter-rail-view.ts). The
+   accent mirrors .sf-post--watching on the full feed so a watched post reads
+   the same on both surfaces; nothing here restates --color-gray-* under
+   html.dark, because that ramp inverts itself and "fixing" dark mode by
+   overriding it ships near-black text on a near-black card. */
 
 .sfc-tabs {
   display: flex;
@@ -847,11 +855,17 @@ html[data-league='afl'] .sfc-reply--roger .sfc-reply__content {
   outline-offset: 2px;
 }
 
-/* The tab-empty note and the load-more wrapper are toggled with the `hidden`
-   attribute, which LOSES to any author `display` — restate it for both. */
+/* Toggled with the `hidden` attribute, which LOSES to any author `display` —
+   restate it for both (docs/claude/rules/schefter.md). */
 .sfc-empty--tab[hidden],
 .sfc-load-more[hidden] {
   display: none !important;
+}
+
+/* The same left-rule + wash the full feed gives a watched post. */
+.sfc-post--watching {
+  border-left: 3px solid var(--league-accent, var(--color-primary, #1c497c));
+  background: color-mix(in srgb, var(--league-accent, var(--color-primary, #1c497c)) 4%, transparent);
 }
 
 .sfc-post__watching {

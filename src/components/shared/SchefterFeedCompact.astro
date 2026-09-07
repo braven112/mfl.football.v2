@@ -28,6 +28,8 @@ interface Props {
   personalized?: boolean;
   forYouIds?: string[];
   watching?: Record<string, WatchHit[]>;
+  /** Copy for the empty state when For You has nothing. */
+  emptyText?: string;
 }
 
 const {
@@ -40,6 +42,7 @@ const {
   personalized = false,
   forYouIds = [],
   watching = {},
+  emptyText = 'No news yet. Schefter is on assignment.',
 } = Astro.props;
 
 const forYou = new Set(forYouIds);
@@ -77,7 +80,7 @@ const allReactions = await getBatchReactions(postIds, userFranchiseId);
   )}
 
   {posts.length === 0 ? (
-    <div class="sfc-empty">No news yet. Schefter is on assignment.</div>
+    <div class="sfc-empty">{emptyText}</div>
   ) : (
     <div class="sfc-feed__list" data-initial-limit={initialLimit}>
       {posts.map((post, i) => (
@@ -101,9 +104,7 @@ const allReactions = await getBatchReactions(postIds, userFranchiseId);
     </div>
   )}
 
-  <div class="sfc-empty sfc-empty--tab" data-sfc-tab-empty hidden>
-    Quiet on your guys right now. Tap All for the rest of the league.
-  </div>
+  <div class="sfc-empty sfc-empty--tab" data-sfc-tab-empty hidden>{emptyText}</div>
 
   <div class="sfc-load-more" data-sfc-load-more-wrap hidden={posts.length <= initialLimit}>
     <button class="sfc-load-more__btn" data-sfc-load-more>
