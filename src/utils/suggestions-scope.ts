@@ -94,10 +94,14 @@ export function leagueSlugForSuggestionsScope(
  * key in the global keyspace root.
  */
 export function scopedBoardKey(base: string, scope: SuggestionsScope): string {
-  if (scope === DEFAULT_SUGGESTIONS_SCOPE) return base;
+  // Validated for EVERY scope, before the legacy early-return. Checking only
+  // the non-default path made the contract hold in the AFL and not in
+  // TheLeague, so a malformed key would sail through in the one league that
+  // has data — the reverse of where you want a guard to be strict.
   if (!base.startsWith('sb:')) {
     throw new Error(`scopedBoardKey: expected an "sb:" key, got "${base}"`);
   }
+  if (scope === DEFAULT_SUGGESTIONS_SCOPE) return base;
   return `sb:${scope}:${base.slice('sb:'.length)}`;
 }
 

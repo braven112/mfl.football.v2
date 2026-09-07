@@ -89,8 +89,11 @@ describe('suggestions scope — every other league gets its own board', () => {
     expect(leagueSlugForSuggestionsScope(DEFAULT_SUGGESTIONS_SCOPE)).toBe(LEAGUES.theleague.slug);
   });
 
-  it('refuses a key outside the sb: namespace rather than writing to the keyspace root', () => {
+  it('refuses a key outside the sb: namespace, in EVERY scope', () => {
+    // Legacy scope included: validating only the non-default path left the
+    // contract unenforced in the one league that actually has data.
     expect(() => scopedBoardKey('ideas', aflScope)).toThrow();
+    expect(() => scopedBoardKey('ideas', DEFAULT_SUGGESTIONS_SCOPE)).toThrow();
   });
 
   it('derives the board from a session’s leagueId', () => {
