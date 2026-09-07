@@ -1027,3 +1027,50 @@ Four things worth carrying forward:
   drawer" — so a future must-be-first link goes there rather than into a
   section. The guard suite kept its structural checks (never pinned AND
   sectioned, pinned `<ul>` before `nav-links__list`) for exactly that day.
+
+---
+
+## 2026-09-07 - Feature Spotlights: A Pulse That Turns Itself Off
+
+**Context:** the account menu shipped behind a chevron. A chevron with no label
+is invisible to everyone who already knows the drawer — the same reason the
+commissioner-only version of it went unnoticed for a year. The ask was a subtle
+pulse marking the new thing, stopping "next week when it's not new".
+
+**The mechanism.** `src/utils/feature-spotlight.ts` holds a registry keyed by
+id and valued by SHIP DATE (`'nav-account-menu': '2026-09-07'`), plus a
+seven-day default. `src/styles/feature-spotlight.css` carries the
+`.spotlight-pulse` class — global, imported from component frontmatter the way
+`loading.css` is, so any control can wear it. Marking a new feature is two
+lines: a registry entry, and the class plus `data-spotlight="<id>"` on the
+control.
+
+Five things that are load-bearing:
+
+- **A DATE, not a flag.** A boolean someone has to remember to remove pulses
+  forever; a date expires whether or not anyone comes back. The registry entry
+  can be left in place after the week — it renders identically to being absent.
+  `tests/feature-spotlight.test.ts` asserts the expiry rather than trusting it.
+- **Two stop conditions, both needed.** The week is the guarantee; the owner
+  OPENING the thing is the courtesy. A pulse that keeps going after you have
+  used the feature is noise, and this one sits in a nav people open all day. The
+  second condition is a localStorage key per spotlight, and every access is
+  wrapped — the accessor itself throws in a private window, and the pulse must
+  never be the reason the nav fails to bind.
+- **The dismissal check runs BEFORE the "already bound" early return.** The
+  server renders the pulse for every device inside the week, so a returning
+  owner needs the class cleared on each page load, not just on the load where
+  the listener happens to be attached.
+- **The halo is a `::after` box-shadow, never a transform on the control.** A
+  button that changes size shifts its neighbours and reads as a glitch. And it
+  rests as a thin 2px ring rather than nothing, so the control still reads as
+  marked in a still frame — most of any given second is the rest state.
+- **A global class loses to a scoped one on specificity.** `.spotlight-pulse
+  { color }` in the shared file cannot beat `.nav-footer__account-toggle
+  { color }` compiled with its `data-astro-cid` attribute, so the tint is
+  re-stated inside the component and only the ring comes from the shared file.
+  The first cut shipped a grey chevron with a blue halo for exactly this reason.
+
+**Reduced motion keeps the ring and drops the animation.** Dropping the
+affordance entirely would hide a new feature from precisely the people who
+asked for less movement.

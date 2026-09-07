@@ -1,0 +1,113 @@
+import { readFileSync } from 'node:fs';
+import path from 'node:path';
+import { describe, expect, it } from 'vitest';
+import {
+  FEATURE_SPOTLIGHTS,
+  SPOTLIGHT_DAYS,
+  isSpotlightActive,
+  spotlightExpiry,
+  spotlightNow,
+  spotlightStorageKey,
+} from '../src/utils/feature-spotlight';
+
+/**
+ * Feature spotlights — the one-week "this is new" pulse.
+ *
+ * The whole point of the mechanism is that it turns itself off. Two ways it
+ * could fail to, and both are pinned here:
+ *
+ * - **It never expires.** A pulse driven by a boolean flag someone has to
+ *   remember to remove pulses forever. The window is date math instead, so an
+ *   entry left in the registry is inert a week later.
+ * - **It expires and nobody notices the CSS is gone.** The class name is the
+ *   contract between the util, the stylesheet and the markup; a rename in one
+ *   place silently stops the pulse everywhere.
+ *
+ * Also pinned: reduced motion keeps the ring and drops the animation. Removing
+ * the affordance entirely would hide a new feature from exactly the people who
+ * asked for less movement.
+ */
+
+const REPO_ROOT = process.cwd();
+const NAV_FOOTER = readFileSync(path.join(REPO_ROOT, 'src/components/nav/NavFooter.astro'), 'utf8');
+const SPOTLIGHT_CSS = readFileSync(path.join(REPO_ROOT, 'src/styles/feature-spotlight.css'), 'utf8');
+
+describe('Feature spotlight', () => {
+  it('expires on its own, a week after the feature shipped', () => {
+    const id = 'nav-account-menu';
+    const shipped = FEATURE_SPOTLIGHTS[id];
+    expect(shipped, 'the account menu spotlight must carry a ship date').toBeTruthy();
+
+    const dayAfter = new Date(`${shipped}T12:00:00Z`);
+    dayAfter.setUTCDate(dayAfter.getUTCDate() + 1);
+    expect(isSpotlightActive(id, dayAfter), 'still new the next day').toBe(true);
+
+    const wellAfter = new Date(`${shipped}T12:00:00Z`);
+    wellAfter.setUTCDate(wellAfter.getUTCDate() + SPOTLIGHT_DAYS + 1);
+    expect(
+      isSpotlightActive(id, wellAfter),
+      `a spotlight must stop pulsing ${SPOTLIGHT_DAYS} days after it shipped, with no cleanup commit`
+    ).toBe(false);
+  });
+
+  it('never pulses for an id it does not know', () => {
+    expect(spotlightExpiry('not-a-feature')).toBeNull();
+    expect(isSpotlightActive('not-a-feature')).toBe(false);
+  });
+
+  it('honors ?testDate= so the expiry can be seen without the system clock', () => {
+    const url = new URL('https://theleague.us/standings?testDate=2027-01-15');
+    expect(spotlightNow(url).getUTCFullYear()).toBe(2027);
+    expect(isSpotlightActive('nav-account-menu', spotlightNow(url))).toBe(false);
+    // A junk value falls back to now rather than rendering an epoch date.
+    const junk = new URL('https://theleague.us/standings?testDate=nonsense');
+    expect(Number.isNaN(spotlightNow(junk).getTime())).toBe(false);
+  });
+
+  it('keeps one class name across the util, the stylesheet and the markup', () => {
+    expect(SPOTLIGHT_CSS).toMatch(/\.spotlight-pulse\b/);
+    expect(NAV_FOOTER).toMatch(/'spotlight-pulse':\s*spotlightAccountMenu/);
+    expect(NAV_FOOTER).toMatch(/data-spotlight=/);
+  });
+
+  it('agrees with the client script on the localStorage key', () => {
+    expect(spotlightStorageKey('nav-account-menu')).toBe('spotlight.nav-account-menu.seen');
+    // The script builds the key inline (it cannot import a module), so the
+    // shape has to be pinned on both sides or a dismissal stops sticking.
+    expect(NAV_FOOTER).toMatch(/`spotlight\.\$\{id\}\.seen`/);
+  });
+
+  it('stops the pulse when the owner opens the menu, not only when the week ends', () => {
+    expect(NAV_FOOTER).toMatch(/dismissSpotlight\(toggle\);/);
+    expect(NAV_FOOTER).toMatch(/classList\.remove\('spotlight-pulse'\)/);
+  });
+
+  it('survives localStorage throwing, because the nav must bind regardless', () => {
+    // Private windows and blocked site data make the accessor itself throw;
+    // an unguarded read would take the whole account menu down with it.
+    expect(NAV_FOOTER).toMatch(/try \{\s*return localStorage\.getItem/);
+    expect(NAV_FOOTER).toMatch(/try \{\s*localStorage\.setItem/);
+  });
+
+  it('keeps a visible ring under prefers-reduced-motion', () => {
+    const reduced = SPOTLIGHT_CSS.slice(SPOTLIGHT_CSS.indexOf('prefers-reduced-motion'));
+    expect(reduced).toMatch(/animation:\s*none/);
+    expect(
+      reduced,
+      'reduced motion drops the movement, not the signal — keep a static ring'
+    ).toMatch(/box-shadow:\s*0 0 0 2px/);
+  });
+
+  it('derives both colours from a token that exists in both themes', () => {
+    // A literal here would render the same in dark mode, which is the trap
+    // docs/claude/rules/theming-and-assets.md exists to stop. Comments may
+    // name hexes (the token's own values are worth writing down); the
+    // declarations may not.
+    const declarations = SPOTLIGHT_CSS.replace(/\/\*[\s\S]*?\*\//g, '');
+    expect(declarations).toMatch(/var\(--color-primary\)/);
+    expect(
+      /#[0-9a-f]{3,8}\b/i.test(declarations),
+      'no hex literals in declarations — --color-primary already flips between themes'
+    ).toBe(false);
+  });
+});

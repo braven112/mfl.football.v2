@@ -20,6 +20,8 @@ import leagueConfigData from '../../data/theleague.config.json';
 import ThemeToggle from '../ThemeToggle.astro';
 import { getLeaguePrefix, resolveLeaguePath } from '../../utils/nav-utils';
 import { getLeagueByNavSlug } from '../../config/leagues';
+import { isSpotlightActive, spotlightNow } from '../../utils/feature-spotlight';
+import '../../styles/feature-spotlight.css';
 import { countryOptions } from '../../utils/broadcast-channels';
 import {
   COUNTRY_COOKIE,
@@ -130,6 +132,13 @@ const showCommish = isCommissioner && isCommishMode;
 // A signed-out visitor sees the verify prompt instead, with a standalone
 // Preferences row below it (that page has no auth gate).
 const showAccountMenu = isAuthenticated;
+
+// The account menu is new, and a chevron nobody has a reason to press is a
+// feature nobody finds. It pulses for its first week (server-side expiry, so
+// it cleans itself up) and stops the moment this owner opens it (client-side,
+// below) — whichever comes first.
+const SPOTLIGHT_ID = 'nav-account-menu';
+const spotlightAccountMenu = showAccountMenu && isSpotlightActive(SPOTLIGHT_ID, spotlightNow(Astro.url));
 ---
 
 <footer
@@ -195,11 +204,12 @@ const showAccountMenu = isAuthenticated;
       {showAccountMenu && (
         <button
           type="button"
-          class="nav-footer__account-toggle"
-          aria-label="Account and settings"
+          class:list={['nav-footer__account-toggle', { 'spotlight-pulse': spotlightAccountMenu }]}
+          aria-label={spotlightAccountMenu ? 'Account and settings — new' : 'Account and settings'}
           aria-expanded="false"
           aria-controls="nav-account-panel"
           data-account-toggle
+          data-spotlight={spotlightAccountMenu ? SPOTLIGHT_ID : undefined}
         >
           <svg
             width="18"
@@ -379,14 +389,51 @@ const showAccountMenu = isAuthenticated;
     because the ClientRouter swaps this element; the dataset flag is what stops
     a second listener stacking on the same node. */}
 <script>
+  /**
+   * Stop a feature spotlight for this device. The server decides when the week
+   * is up; this is the other stop condition — the owner has now seen the thing,
+   * so the nudge has done its job.
+   *
+   * localStorage can throw outright (private windows, blocked site data), and
+   * the pulse must never be the reason a nav fails to bind, so every access is
+   * wrapped. Mirrors `spotlightStorageKey` in src/utils/feature-spotlight.ts.
+   */
+  function spotlightSeen(id: string): boolean {
+    try {
+      return localStorage.getItem(`spotlight.${id}.seen`) === '1';
+    } catch {
+      return false;
+    }
+  }
+
+  function dismissSpotlight(el: HTMLElement): void {
+    const id = el.dataset.spotlight;
+    if (!id) return;
+    el.classList.remove('spotlight-pulse');
+    delete el.dataset.spotlight;
+    try {
+      localStorage.setItem(`spotlight.${id}.seen`, '1');
+    } catch {
+      // A device that cannot remember is one the week still expires for.
+    }
+  }
+
   function initAccountPanel() {
     const toggle = document.querySelector('[data-account-toggle]') as HTMLButtonElement | null;
     const panel = document.querySelector('[data-account-panel]') as HTMLElement | null;
     if (!toggle || !panel) return;
+
+    // Runs before the bound check: the server renders the pulse for everyone
+    // inside the week, so a returning owner needs it cleared on every page.
+    if (toggle.dataset.spotlight && spotlightSeen(toggle.dataset.spotlight)) {
+      dismissSpotlight(toggle);
+    }
+
     if (toggle.dataset.accountToggleBound === '1') return;
     toggle.dataset.accountToggleBound = '1';
 
     toggle.addEventListener('click', () => {
+      dismissSpotlight(toggle);
       const open = toggle.getAttribute('aria-expanded') === 'true';
       toggle.setAttribute('aria-expanded', open ? 'false' : 'true');
       panel.hidden = open;
@@ -914,6 +961,18 @@ const showAccountMenu = isAuthenticated;
 
   .nav-footer__account-row--signout .nav-footer__account-icon {
     fill: var(--color-error, #c33);
+  }
+
+  /* The spotlight's accent has to be re-stated here: the shared stylesheet is
+     global, so its `.spotlight-pulse { color }` loses to this component's own
+     scoped `.nav-footer__account-toggle { color }` on specificity. The ring
+     comes from the shared file; only the tint needs saying twice. */
+  .nav-footer__account-toggle.spotlight-pulse {
+    color: var(--color-primary);
+  }
+
+  :global(.dark) .nav-footer__account-toggle.spotlight-pulse {
+    color: #60a5fa;
   }
 
   /* Chevron points up once the panel is open */

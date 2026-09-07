@@ -659,7 +659,9 @@
         "src/config/footer-config.ts",
         "src/components/nav/*",
         "src/components/theleague/Footer.astro",
-        "src/utils/nav-utils.ts"
+        "src/utils/nav-utils.ts",
+        "src/utils/feature-spotlight.ts",
+        "src/styles/feature-spotlight.css"
       ],
       "tests": [
         "tests/nav-drawer-links.test.ts",
@@ -667,7 +669,8 @@
         "tests/nav-pinned-links.test.ts",
         "tests/nav-equivalent-route.test.ts",
         "tests/footer-links.test.ts",
-        "tests/footer-config.test.ts"
+        "tests/footer-config.test.ts",
+        "tests/feature-spotlight.test.ts"
       ]
     }
   ]
