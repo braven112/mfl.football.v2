@@ -342,7 +342,7 @@ export function loadAflDraftSlot(
   }
 
   // The order for draft year Y is set by season Y-1. Deriving it that way
-  // rather than from getCurrentSeasonYear() keeps it off the Labor Day clock:
+  // rather than from getCurrentSeasonYear() keeps it off the season clock:
   // the two agree all offseason, but after kickoff getCurrentSeasonYear() names
   // a season whose standings are still all zeros.
   const standingsYear = draftYear - 1;

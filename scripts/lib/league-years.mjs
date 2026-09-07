@@ -44,6 +44,23 @@ export const getLaborDay = (year) => {
  * @param {NodeJS.ProcessEnv} [env]
  * @returns {{ currentLeagueYear: number, currentSeasonYear: number }}
  */
+/**
+ * The instant the NEW SEASON begins: the Sunday before Labor Day weekend
+ * (`laborDay - 8`) — the AFL's NL email draft, the LAST draft to run, so the
+ * first moment every roster in every league is real.
+ *
+ * MUST match `getSeasonStartForYear` in src/utils/league-year.ts. The season
+ * used to roll on Labor Day itself and this file is the node-side twin of that
+ * math: when the app moved and this did not, the site and the build disagreed
+ * about which season it was for eight days a year, and a prebuild in that
+ * window stamps the WRONG season into every roster payload.
+ * tests/league-year-rollover.test.ts pins the two implementations together.
+ */
+export const getSeasonStart = (year) => {
+  const laborDay = getLaborDay(year);
+  return new Date(year, 8, laborDay.getDate() - 8, 0, 0, 0, 0);
+};
+
 export const getCurrentYears = (now = new Date(), env = process.env) => {
   const envYear = getNonEmpty(env.PUBLIC_BASE_YEAR) ||
     getNonEmpty(env.MFL_YEAR) ||
@@ -60,8 +77,8 @@ export const getCurrentYears = (now = new Date(), env = process.env) => {
   // Feb 14th @ 8:45 PM PT cutoff (Feb 15 04:45 UTC in PST)
   const febCutoff = new Date(Date.UTC(now.getFullYear(), 1, 15, 4, 45, 0, 0));
 
-  // Labor Day cutoff (first Monday in September)
-  const laborDay = getLaborDay(now.getFullYear());
+  // Season cutoff — the NL draft (Sunday before Labor Day weekend), NOT Labor Day.
+  const seasonStart = getSeasonStart(now.getFullYear());
 
   let currentLeagueYear = baseYear;
   let currentSeasonYear = baseYear;
@@ -71,8 +88,8 @@ export const getCurrentYears = (now = new Date(), env = process.env) => {
     currentLeagueYear = baseYear + 1;
   }
 
-  // After Labor Day, season year advances (standings/playoffs show new season)
-  if (now >= laborDay) {
+  // After the NL draft, season year advances (standings/playoffs show new season)
+  if (now >= seasonStart) {
     currentSeasonYear = baseYear + 1;
   }
 

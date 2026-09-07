@@ -112,7 +112,7 @@ export async function fetchNflMatchups(
   options: { signal?: AbortSignal; year?: number } = {}
 ): Promise<OddsMap> {
   // Offseason short-circuit: leagueYear ahead of seasonYear means we're
-  // past Feb 14 but before Labor Day — no live NFL games to fetch.
+  // past Feb 14 but before the NL draft — no live NFL games to fetch.
   if (getCurrentLeagueYear() > getCurrentSeasonYear()) {
     return fallbackOddsMap();
   }

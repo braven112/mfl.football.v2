@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi, afterEach } from 'vitest';
 import {
   resolveFeedMode,
   defaultSource,
@@ -125,4 +125,27 @@ describe('defaultSource', () => {
     expect(defaultSource('in-season', false)).toBeNull();
     expect(defaultSource('offseason', false)).toBeNull();
   });
+});
+
+afterEach(() => {
+  vi.unstubAllEnvs();
+});
+
+/**
+ * A forward PUBLIC_BASE_YEAR pin is honored on purpose (see
+ * tests/league-year-rollover.test.ts, "a forward pin is still honored").
+ * resolveFeedMode used to derive its candidate seasons from
+ * getCurrentSeasonYear, which the pin floors — so with the pin set to the
+ * current calendar year it scanned the NEXT two seasons and reported offseason
+ * for the whole of the real one. Reading the calendar year cannot be skewed.
+ */
+describe('an env pin cannot move the feed mode', () => {
+  for (const pin of ['2026', '2027', '2025', 'not-a-year']) {
+    it(`stays in season mid-season with PUBLIC_BASE_YEAR=${pin}`, () => {
+      vi.stubEnv('PUBLIC_BASE_YEAR', pin);
+      expect(resolveFeedMode(new Date('2026-11-01T12:00:00-08:00'))).toBe('in-season');
+      expect(resolveFeedMode(new Date('2027-01-20T12:00:00-08:00'))).toBe('in-season');
+      expect(resolveFeedMode(new Date('2027-06-01T12:00:00-07:00'))).toBe('offseason');
+    });
+  }
 });

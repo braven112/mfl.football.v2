@@ -25,7 +25,7 @@
  * kickoff math is shared, because that part is a fact about the NFL.
  */
 
-import { getCurrentSeasonYear, getSeasonStartForYear } from './league-year';
+import { getSeasonStartForYear } from './league-year';
 import { nflWeekOneKickoff } from './pecking-order-season-window.mjs';
 
 export type FeedMode = 'in-season' | 'offseason';
@@ -62,20 +62,23 @@ export function seasonModeEnd(seasonYear: number): Date {
 /**
  * Which mode the feed is in at `now`.
  *
- * The season year comes from `getCurrentSeasonYear()` — the RESULTS clock,
- * never `getCurrentLeagueYear()` (Feb 14, roster-management shaped). Picking
- * the wrong one here would leave the feed in season mode for roughly six
- * months of the calendar.
+ * The candidate seasons come from the CALENDAR YEAR of `now`, not from
+ * `getCurrentSeasonYear()`. A season window spans August of year Y to February
+ * of Y+1, so exactly two seasons can contain any instant — `y` and `y - 1` —
+ * and testing both is complete.
+ *
+ * Deriving them from the season year instead was wrong in a way that shipped:
+ * the base year is floored by the `PUBLIC_BASE_YEAR` / `PUBLIC_MFL_YEAR` pin
+ * (`max(pin, calendarYear - 1)`), and a pin set to the CURRENT calendar year is
+ * honored deliberately (tests/league-year-rollover.test.ts pins that as a
+ * feature). With `PUBLIC_BASE_YEAR=2026` on 2026-11-01, `getCurrentSeasonYear`
+ * returns 2027, so the scan looked at 2027 and 2028 and reported `offseason`
+ * for the whole of the real 2026 season. Reading the calendar year cannot be
+ * skewed by a pin, because there is nothing to skew.
  */
 export function resolveFeedMode(now: Date = new Date()): FeedMode {
-  // `getCurrentSeasonYear` now rolls on the SAME instant this window opens, so
-  // in the ordinary case `seasonYear` already names the right season and the
-  // second iteration is a no-op. It stays because the season year is also
-  // floored by the PUBLIC_BASE_YEAR pin (`max(pin, calendarYear - 1)`), and a
-  // pin one year behind would otherwise resolve the whole season to offseason
-  // — a silent, site-wide wrong answer in exchange for one extra comparison.
-  const seasonYear = getCurrentSeasonYear(now);
-  for (const year of [seasonYear, seasonYear + 1]) {
+  const calendarYear = now.getFullYear();
+  for (const year of [calendarYear, calendarYear - 1]) {
     if (now >= seasonModeStart(year) && now <= seasonModeEnd(year)) return 'in-season';
   }
   return 'offseason';

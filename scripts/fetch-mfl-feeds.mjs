@@ -39,25 +39,11 @@ import { getNonEmpty } from './lib/env.mjs';
 import { getLeagueById, DEFAULT_LEAGUE_SLUG } from '../src/config/leagues-data.mjs';
 import { writeJsonIfChanged, jsonEquivalent } from './lib/canonical-json.mjs';
 import { isKeeperWindowDate } from './lib/retention-policy.mjs';
-
-/**
- * Calculate Labor Day for a given year (first Monday in September)
- */
-const getLaborDay = (year) => {
-  const septemberFirst = new Date(year, 8, 1); // Month 8 = September (0-indexed)
-  const dayOfWeek = septemberFirst.getDay(); // 0 = Sunday, 1 = Monday, etc.
-
-  let daysUntilMonday;
-  if (dayOfWeek === 1) {
-    daysUntilMonday = 0; // Sept 1st is already Monday
-  } else if (dayOfWeek === 0) {
-    daysUntilMonday = 1; // Sept 1st is Sunday, Labor Day is Sept 2nd
-  } else {
-    daysUntilMonday = 8 - dayOfWeek; // Days until next Monday
-  }
-
-  return new Date(year, 8, 1 + daysUntilMonday, 0, 0, 0, 0);
-};
+// The season cutoff comes from the shared node twin of src/utils/league-year.ts.
+// This file used to carry its own Labor Day copy; when the app's rollover moved
+// to the NL draft, a private copy here would have stamped the WRONG season into
+// every roster payload for the eight days between the two dates.
+import { getSeasonStart } from './lib/league-years.mjs';
 
 /**
  * Calculate base year automatically based on current date
@@ -97,8 +83,8 @@ const getYearsToFetch = () => {
   // Feb 14th @ 8:45 PM PT cutoff (Feb 15 04:45 UTC in PST)
   const febCutoff = new Date(Date.UTC(now.getFullYear(), 1, 15, 4, 45, 0, 0));
 
-  // Labor Day cutoff (first Monday in September)
-  const laborDay = getLaborDay(now.getFullYear());
+  // Season cutoff — the NL draft (Sunday before Labor Day weekend), NOT Labor Day.
+  const seasonStart = getSeasonStart(now.getFullYear());
 
   let currentLeagueYear = baseYear;
   let currentSeasonYear = baseYear;
@@ -108,12 +94,12 @@ const getYearsToFetch = () => {
     currentLeagueYear = baseYear + 1;
   }
 
-  // After Labor Day, season year advances (standings/playoffs show new season)
-  if (now >= laborDay) {
+  // After the NL draft, season year advances (standings/playoffs show new season)
+  if (now >= seasonStart) {
     currentSeasonYear = baseYear + 1;
   }
 
-  // During Feb 14 - Labor Day window, fetch BOTH years
+  // During the Feb 14 - NL draft window, fetch BOTH years
   const yearsToFetch = currentLeagueYear === currentSeasonYear
     ? [currentLeagueYear]
     : [currentLeagueYear, currentSeasonYear];

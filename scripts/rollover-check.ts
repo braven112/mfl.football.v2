@@ -3,10 +3,10 @@
  * each render says the year is.
  *
  * CLAUDE.md "Year rollover — two independent clocks": Feb 14 advances the
- * league year (rosters, contracts, cap); Labor Day advances the season year
+ * league year (rosters, contracts, cap); the NL draft advances the season year
  * (standings, playoffs, draft order). Picking the wrong clock for a page
  * silently shows the wrong year for ~6 months, and the double-advance bug
- * (base year that itself moves at Labor Day) has shipped in five files. The
+ * (base year that itself moves at the season start) has shipped in five files. The
  * check is mechanical and nobody runs it, so this runs it:
  *
  *   pnpm exec tsx scripts/rollover-check.ts /theleague/draft/order
@@ -20,13 +20,13 @@
  * how the double-advance shipped), the HTTP status, the <title>, and how many
  * times each candidate year appears in the visible text. Read the rows as a
  * pair: a page on the LEAGUE clock must change between Feb 13 and Feb 15 and
- * NOT across Labor Day; a page on the SEASON clock the reverse.
+ * NOT across the NL draft; a page on the SEASON clock the reverse.
  *
  * Exit 1 if any render is not a 2xx.
  */
 import {
   getCurrentSeasonYear,
-  getLaborDayForYear,
+  getSeasonStartForYear,
   getLeagueYearForSlug,
 } from '../src/utils/league-year';
 import { getLeagueByPath } from '../src/config/leagues';
@@ -61,7 +61,7 @@ const shift = (d: Date, days: number) => new Date(d.getTime() + days * 86_400_00
  * The dates that matter for `year`: either side of every league-year
  * rollover the page could be on (TheLeague's Feb 14; the league's own
  * `leagueYearRollover` from the registry when it differs, e.g. the AFL's
- * June 1), either side of Labor Day, and mid-season.
+ * June 1), either side of the NL draft, and mid-season.
  *
  * Rows sit at 20:00 UTC a full day either side of each boundary. The real
  * cutoffs are finer than that — TheLeague's is Feb 14 20:45 PT, which is
@@ -75,8 +75,15 @@ export function boundaryDates(
 ): Array<{ label: string; date: Date }> {
   const at20 = (m: number, d: number) => new Date(Date.UTC(year, m - 1, d, 20));
   const feb14 = at20(2, 14);
-  const laborDay = getLaborDayForYear(year);
-  const laborNoon = new Date(Date.UTC(laborDay.getFullYear(), laborDay.getMonth(), laborDay.getDate(), 20));
+  // The SEASON boundary is the NL draft (Sunday before Labor Day weekend), not
+  // Labor Day. Sampling Labor Day +/- 1 put every September row on the same
+  // side of the real cutoff, so this tool rendered one year at all four probes
+  // and returned a confident all-clear for a page on the wrong clock — the one
+  // failure it exists to catch.
+  const seasonStart = getSeasonStartForYear(year);
+  const seasonNoon = new Date(
+    Date.UTC(seasonStart.getFullYear(), seasonStart.getMonth(), seasonStart.getDate(), 20),
+  );
   const rows = [
     { label: 'day before Feb 14', date: shift(feb14, -1) },
     { label: 'day after Feb 14', date: shift(feb14, 1) },
@@ -87,10 +94,13 @@ export function boundaryDates(
     rows.push({ label: `day before ${name}`, date: shift(own, -1) }, { label: `day after ${name}`, date: shift(own, 1) });
   }
   rows.push(
-    { label: 'day before Labor Day', date: shift(laborNoon, -1) },
-    { label: 'Labor Day', date: laborNoon },
-    { label: 'day after Labor Day', date: shift(laborNoon, 1) },
-    { label: 'mid-season (+5 weeks)', date: shift(laborNoon, 35) },
+    { label: 'day before the NL draft', date: shift(seasonNoon, -1) },
+    { label: 'NL draft (season starts)', date: seasonNoon },
+    { label: 'day after the NL draft', date: shift(seasonNoon, 1) },
+    // Labor Day is now INSIDE the season. Kept as a probe precisely because it
+    // used to be the boundary: a page still keying off it shows up here.
+    { label: 'Labor Day (inside the season)', date: shift(seasonNoon, 8) },
+    { label: 'mid-season (+5 weeks)', date: shift(seasonNoon, 43) },
   );
   return rows.sort((a, b) => a.date.getTime() - b.date.getTime());
 }
@@ -153,7 +163,7 @@ async function main() {
     console.log(rows[rows.length - 1]);
   }
 
-  console.log(`\nRead as pairs: league-clock pages change across ${rollover ? `${rollover.month}/${rollover.day}` : 'Feb 14'} only; season-clock pages change across Labor Day only.`);
+  console.log(`\nRead as pairs: league-clock pages change across ${rollover ? `${rollover.month}/${rollover.day}` : 'Feb 14'} only; season-clock pages change across the NL draft only.`);
   console.log('A year column that jumps by 2 across one boundary is the double-advance bug (base year re-ported).');
   process.exit(failed ? 1 : 0);
 }

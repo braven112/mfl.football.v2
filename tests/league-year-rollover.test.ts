@@ -1,6 +1,9 @@
 import { describe, it, expect, afterEach, vi } from 'vitest';
 import { getLeagueYear, getSeasonStartForYear } from '../src/utils/league-year';
 import { resolveDateForYear } from '../src/utils/league-event-resolver';
+import { getSeasonStart, getCurrentYears } from '../scripts/lib/league-years.mjs';
+import { aflNationalLeagueDraft } from '../src/utils/schedule-release.mjs';
+import { getLeaguePhase } from '../src/utils/league-phase';
 
 /**
  * Season-rollover regression suite for getLeagueYear.
@@ -140,5 +143,78 @@ describe('getLeagueYear — stale PUBLIC_BASE_YEAR pin self-heals', () => {
     const config = getLeagueYear(new Date('2026-07-28T12:00:00'));
     expect(config.currentLeagueYear).toBe(2027);
     expect(config.currentSeasonYear).toBe(2026);
+  });
+});
+
+/**
+ * The node-side twin.
+ *
+ * scripts/lib/league-years.mjs re-implements this math for build scripts and
+ * crons (six scripts import it; fetch-mfl-feeds and compute-afl-free-agents
+ * take its cutoff too). When the app's rollover moved from Labor Day to the NL
+ * draft, nothing made the twin move with it — and a prebuild running in those
+ * eight days stamps the WRONG season into every roster payload, so the page
+ * renders last season's projections under this season's header.
+ *
+ * CLAUDE.md's warning that "that bug shipped in five files" is about exactly
+ * this. Prose did not stop it; this does.
+ */
+describe('the node twin rolls on the same instant as the app', () => {
+  it('agrees on the season start for every year', () => {
+    for (const year of [2024, 2025, 2026, 2027, 2028, 2029, 2030]) {
+      expect(getSeasonStart(year).getTime()).toBe(getSeasonStartForYear(year).getTime());
+    }
+  });
+
+  it('agrees on the season year across the boundary, including the eight days', () => {
+    const days = [
+      '2026-08-25', '2026-08-29', // before
+      '2026-08-30', '2026-08-31', '2026-09-03', '2026-09-06', // the eight days
+      '2026-09-07', '2026-10-15', '2027-01-20', // after
+      '2027-08-28', '2027-08-29', '2027-09-05', // next year's boundary
+    ];
+    for (const day of days) {
+      const now = new Date(`${day}T12:00:00`);
+      expect(getCurrentYears(now, {}).currentSeasonYear).toBe(
+        getLeagueYear(now).currentSeasonYear,
+      );
+    }
+  });
+});
+
+/**
+ * Every OTHER place this date is derived.
+ *
+ * `laborDay - 8` is computed in more than one module and they cannot all be
+ * collapsed: the year selector must answer offline for any year, the event
+ * resolver must render the calendar, and schedule-release works in UTC because
+ * it is compared against cron timestamps. What they CAN do is be pinned
+ * together, so a change to one that does not reach the others fails here
+ * instead of shipping as an eight-day disagreement.
+ */
+describe('every derivation of the season start agrees', () => {
+  it('schedule-release\'s AFL NL draft is the same calendar day', () => {
+    for (const year of [2026, 2027, 2028, 2029, 2030]) {
+      const utc = aflNationalLeagueDraft(year);
+      const local = getSeasonStartForYear(year);
+      expect(utc.getUTCFullYear()).toBe(local.getFullYear());
+      expect(utc.getUTCMonth()).toBe(local.getMonth());
+      expect(utc.getUTCDate()).toBe(local.getDate());
+    }
+  });
+
+  /**
+   * The nav's phase split drives section ordering and default open state. It
+   * carried its own Labor Day copy, so the nav reordered eight days after the
+   * season had already started everywhere else on the site.
+   */
+  it('the nav phase flips on the same day the season year does', () => {
+    for (const year of [2026, 2027, 2028]) {
+      const start = getSeasonStartForYear(year);
+      const dayBefore = new Date(start.getTime() - 12 * 60 * 60 * 1000);
+      const dayOf = new Date(start.getTime() + 12 * 60 * 60 * 1000);
+      expect(getLeaguePhase(dayBefore)).toBe('off-season');
+      expect(getLeaguePhase(dayOf)).toBe('in-season');
+    }
   });
 });
