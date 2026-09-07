@@ -20,6 +20,7 @@ import {
   toggleTeam,
 } from '../../../utils/owners-poll-builder';
 import { clockZonesFromCookie, formatMomentOrDevice } from '../../../utils/viewer-clock';
+import type { LeagueClock } from '../../../utils/viewer-preferences';
 
 export interface BallotTeam {
   franchiseId: string;
@@ -46,6 +47,12 @@ interface Props {
   columnHref: string;
   /** Empty when push isn't configured; the prompt then renders nothing. */
   vapidPublicKey?: string;
+  /**
+   * This league's official clock, from the registry. A browser has no
+   * registry to ask, so the page hands it down; absent, the deadline falls
+   * back to the site's own clock.
+   */
+  officialClock?: LeagueClock;
 }
 
 /**
@@ -71,6 +78,7 @@ export default function BallotBuilder({
   ownFranchiseId,
   columnHref,
   vapidPublicKey = '',
+  officialClock,
 }: Props) {
   const [load, setLoad] = useState<LoadState>('loading');
   const [status, setStatus] = useState<WindowStatus>('none');
@@ -214,7 +222,7 @@ export default function BallotBuilder({
 
       {window_ && (
         <p className="op-deadline">
-          Closes <ClosesAt iso={window_.closesAt} />
+          Closes <ClosesAt iso={window_.closesAt} league={officialClock} />
         </p>
       )}
 
@@ -395,7 +403,7 @@ function teamVars(team: BallotTeam): CSSProperties {
  * Chicago asked for Sydney, and every other deadline on the site now says
  * Sydney. Absent a choice, the device — exactly what this printed before.
  */
-function ClosesAt({ iso }: { iso: string }) {
+function ClosesAt({ iso, league }: { iso: string; league?: LeagueClock }) {
   const [text, setText] = useState<string>('');
   useEffect(() => {
     const d = new Date(iso);
@@ -403,8 +411,8 @@ function ClosesAt({ iso }: { iso: string }) {
     // The cookie is read inside the effect, not at module scope: under the
     // ClientRouter this module outlives the page, and a preference the viewer
     // changed in another tab must not be answered from a stale capture.
-    setText(formatMomentOrDevice(d, clockZonesFromCookie(document.cookie), { weekday: true }));
-  }, [iso]);
+    setText(formatMomentOrDevice(d, clockZonesFromCookie(document.cookie, league), { weekday: true }));
+  }, [iso, league]);
   return <>{text || 'soon'}</>;
 }
 

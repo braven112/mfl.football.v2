@@ -17,7 +17,7 @@ import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
 import BallotBuilder from './BallotBuilder';
 import PollWindowAdmin from './PollWindowAdmin';
 import { getLeagueTeamBrands } from '../../../utils/league-team-brands';
-import { ensureLeaguePrefix, type LeagueDefinition } from '../../../config/leagues';
+import { ensureLeaguePrefix, leagueClock, type LeagueDefinition } from '../../../config/leagues';
 import { isCommissionerOrAdmin } from '../../../utils/auth';
 import '../../../styles/owners-poll.css';
 import type { AuthUser } from '../../../utils/auth';
@@ -112,6 +112,7 @@ const vapidPublicKey = (import.meta.env.PUBLIC_VAPID_PUBLIC_KEY as string | unde
       ownFranchiseId={user.franchiseId}
       columnHref={columnHref}
       vapidPublicKey={vapidPublicKey}
+      officialClock={leagueClock(league.slug)}
     />
 
     <footer class="op-footnote">

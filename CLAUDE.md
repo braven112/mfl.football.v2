@@ -82,7 +82,9 @@ live in `docs/claude/`.
 
 `src/config/leagues-data.mjs` (data) + `src/config/leagues.ts` (types/helpers)
 are the single source of truth for per-league constants: MFL id, slug, name,
-MFL host, data path, apex domains, and feature flags. Do not write `'13522'`,
+MFL host, data path, apex domains, official clock (`officialClock` — the zone
+the league keeps its own time in, read with `leagueClock(slug)`), and feature
+flags. Do not write `'13522'`,
 `'19621'`, `'data/theleague'`, etc. inline — import from the registry.
 App code imports `../config/leagues`; node scripts import
 `src/config/leagues-data.mjs` directly. Gate league-specific UI with

@@ -98,21 +98,35 @@ describe('defaults match the board before preferences existed', () => {
     });
   }
 
-  for (const code of ['US', 'CA'] as const) {
-    it(`${code} still opens on the mapping file's own pair`, () => {
-      // North America opened on ET · PT before preferences existed, and the
-      // default clock + the league clock must still print exactly that.
-      const before = countryTimeZones(code);
-      const now = kickoffZonesFor({ country: code, zoneId: DEFAULT_ZONE_IDS[code] });
-      expect(now.map((z) => z.label)).toEqual(before.map((z) => z.label));
-    });
-  }
+  it("CA still opens on the mapping file's own pair", () => {
+    // Canada opened on ET · PT before preferences existed and still does. The
+    // US deliberately no longer does — see the next test.
+    const before = countryTimeZones('CA');
+    const now = kickoffZonesFor({ country: 'CA', zoneId: DEFAULT_ZONE_IDS.CA });
+    expect(now.map((z) => z.label)).toEqual(before.map((z) => z.label));
+  });
 
-  it('the untouched preference is US / ET, printed as ET · PT', () => {
-    expect(DEFAULT_VIEWER_PREFERENCES).toEqual({ country: 'US', zoneId: 'ET' });
+  it('the US departs from that pair ON PURPOSE, opening on PT alone', () => {
+    // A DELIBERATE break with "the defaults must equal the pre-preferences
+    // board": that board printed ET · PT, and most owners in both leagues are
+    // on the west coast, so Eastern led with the wrong clock for the majority.
+    // Because PT is also every league's official clock, the duplicate is
+    // dropped and the board shows PT alone. Changing this changes the board
+    // for every viewer who never opened the picker, which is why it is pinned
+    // here rather than left to read as an accident.
+    const before = countryTimeZones('US').map((z) => z.label);
+    expect(before, 'the mapping file still describes the OLD pair').toEqual(['ET', 'PT']);
+    expect(DEFAULT_ZONE_IDS.US).toBe('PT');
+    expect(kickoffZonesFor({ country: 'US', zoneId: DEFAULT_ZONE_IDS.US }).map((z) => z.label))
+      .toEqual(['PT']);
+  });
+
+  it('the untouched preference is US / PT, printed as PT alone', () => {
+    expect(DEFAULT_VIEWER_PREFERENCES).toEqual({ country: 'US', zoneId: 'PT' });
     expect(isDefaultViewerPreferences(DEFAULT_VIEWER_PREFERENCES)).toBe(true);
     expect(isDefaultViewerPreferences({ country: 'AU', zoneId: 'SYD' })).toBe(false);
-    expect(zoneSummary(DEFAULT_VIEWER_PREFERENCES)).toBe('ET · PT');
+    // Not "PT · PT": the viewer's clock IS the league's, so it prints once.
+    expect(zoneSummary(DEFAULT_VIEWER_PREFERENCES)).toBe('PT');
   });
 });
 

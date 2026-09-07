@@ -123,7 +123,7 @@ const {
 // only `resolveViewerPreferences`, which WRITES cookies, is route-only. Null
 // until the viewer picks one, which keeps the lobby on the device's own clock
 // exactly as it was before the preference existed.
-const viewerClockRead = await readViewerClock(Astro.cookies, getAuthUser(Astro.request));
+const viewerClockRead = await readViewerClock(Astro.cookies, getAuthUser(Astro.request), leagueSlug);
 const viewerZone = viewerClockRead.explicit ? viewerClockZone(viewerClockRead) : null;
 
 // Every outbound href goes through resolveLeaguePath, INCLUDING the gate's.

@@ -11,8 +11,10 @@ mirror — route-only) · `src/utils/viewer-preferences-store.ts` (the mirror) �
 `src/utils/viewer-clock.ts` (rendering a LEAGUE moment in those clocks) ·
 `src/utils/zone-label.ts` (the one `auto`-label resolver, a leaf module) ·
 `src/components/shared/preferences/PreferencesPage.astro` + the two thin
-routes. Guards: `tests/viewer-preferences.test.ts`,
-`tests/viewer-clock.test.ts`.
+routes · `src/config/leagues-data.mjs` (`officialClock`, per league) +
+`leagueClock(slug)` in `src/config/leagues.ts`. Guards:
+`tests/viewer-preferences.test.ts`, `tests/viewer-clock.test.ts`,
+`tests/league-official-clock.test.ts`, `tests/nav-account-menu.test.ts`.
 
 **Who reads it.** Sunday Ticket (channels + kickoffs), the draft hub's start
 time, the waiver window on both `/players` pages and in the claim modal, the
@@ -63,10 +65,12 @@ country HAS a real default, and Sunday Ticket, the network badges and the
 game-day heroes have all been resolving on it for anyone who never opened the
 picker — so the flag reports what the site is already doing for them rather
 than guessing. The clock must NOT follow, because there is no default clock to
-report: PT alone is what every league surface prints until the viewer names a
-zone. This is the two-floor rule below applied inside a single line of UI, and
-it is easy to "fix" wrongly — defaulting the zone here too would put an Eastern
-clock in the drawer for every viewer who never opened the picker. Cookies are
+report: the LEAGUE's own clock alone is what every league surface prints until
+the viewer names a zone, and it comes from `leagueClock(slug)`, not a constant.
+This is the two-floor rule below applied inside a single line of UI, and it is
+easy to "fix" wrongly — defaulting the zone here too would have put an Eastern
+clock in the drawer for every viewer who never opened the picker, back when the
+US default was Eastern. Cookies are
 per apex domain, which is also why a country chosen on theleague.us shows no
 choice of its own on afl-fantasy.com until it is chosen there: the nav reads
 the cookie by design, and the mirror is a route-only read.
@@ -84,16 +88,31 @@ the laptop at home overwrite their choice on the next render. The mirror is
 read only when the device has no cookie at all — and is then written to the
 cookie, so it costs one Redis read per device rather than one per render.
 
-**There are TWO floors, and the difference is the whole design.** One default
-cannot serve both readers. Sunday Ticket has always printed the COUNTRY's
-default pair (ET · PT in the US) — that is why `DEFAULT_VIEWER_PREFERENCES` is
-US/ET, and `kickoffZonesFor` starts there. Every league surface has always
-printed the league's PT alone; handing those the same default would put an
-Eastern clock on every waiver deadline in the league on the strength of a
-fallback nobody chose. So `eventZonesFor` starts from PT and adds the viewer's
-clock only once they have actually named one. The rule underneath both: **a
-viewer who has chosen nothing must see exactly what they saw before the
-preference existed** — per surface, not globally.
+**There are TWO floors, and they stay two even now that both answer PT.**
+Sunday Ticket prints the COUNTRY's default clock (`kickoffZonesFor`, starting
+from `DEFAULT_VIEWER_PREFERENCES`); every league surface prints the LEAGUE's
+official clock alone (`eventZonesFor`), adding the viewer's own only once they
+have named one. As of Sep 2026 both resolve to PT for a US viewer who has
+chosen nothing — but by coincidence, not by merger: a country default answers
+"where is this viewer", a league clock "where does this league keep its time",
+and either can move without the other. Collapsing them because today's answers
+match is how an Eastern clock comes back onto every waiver deadline in the
+league the next time a country is re-examined.
+`tests/viewer-clock.test.ts` pins the two paths as distinct by checking a
+country whose default is NOT the league clock (CA → `ET · PT`).
+
+**The US default is a DELIBERATE break with the pre-preferences board.**
+`DEFAULT_ZONE_IDS.US` was `ET`, so Sunday Ticket opened on `ET · PT` for anyone
+who never touched the picker — the board's own history. It is `PT` now, because
+most owners in both leagues are on the west coast and leading with Eastern led
+with the wrong clock for the majority. Since PT is also every league's official
+clock, `kickoffZonesFor` drops the duplicate and that viewer sees `PT` alone.
+CANADA deliberately did NOT follow: the argument is about where THIS league's
+owners live and does not transfer to a country nobody has re-examined. The
+older rule below — defaults must equal the pre-preferences board — still governs
+every other country; this is the one place it was overridden on purpose, and
+`tests/viewer-preferences.test.ts` pins the departure explicitly so it cannot
+read as an accident.
 
 **`explicit` is the signal, and it is not `isDefaultViewerPreferences`.** A
 stored `{US, ET}` is indistinguishable from the fallback, so the answer has to
@@ -124,14 +143,32 @@ timestamps, the custom-rankings save indicator and the playoffs "last updated"
 stamp stay on the device: they answer "how long ago", which is a question about
 the device you are holding.
 
-**The league's clock is PT, appended — never chosen.** The league keeps its own
-time in Pacific (lineup locks, auction windows, the 8:45 PT rollover), so it is
-the shared reference beside every viewer's own clock. A viewer picks ONE zone;
-`kickoffZonesFor` adds `LEAGUE_CLOCK` after it. The exception is a viewer
-already on Pacific — printing "1:00 PM PT · 1:00 PM PT" helps nobody, so it is
-dropped for them. `LEAGUE_CLOCK_EQUIVALENTS` is an identity list (Los Angeles,
-Vancouver, Tijuana keep the same wall clock year-round), NOT a snapshot of
-today's offsets — never compute that from a current offset.
+**The league's clock is a REGISTRY SETTING, appended — never chosen.** Each
+league declares `officialClock` in `src/config/leagues-data.mjs` (both are
+Pacific: lineup locks, auction windows, the 8:45 rollover), read with
+`leagueClock(slug)` from `src/config/leagues.ts`. A viewer picks ONE zone;
+`kickoffZonesFor` adds the league's after it. The exception is a viewer already
+on that clock — printing "1:00 PM PT · 1:00 PM PT" helps nobody — decided by
+`isLeagueClock`, which matches the clock's zone or one of its declared
+`equivalents`. That list is an IDENTITY list (Los Angeles, Vancouver, Tijuana
+keep the same wall clock year-round), NOT a snapshot of today's offsets — never
+compute it from a current offset.
+
+**`LEAGUE_CLOCK` is the FALLBACK, not the setting.** `viewer-preferences.ts`
+deliberately does not import the registry — it is in Storybook's rendering
+graph, and pulling the registry in would wake every Sunday Ticket snapshot on
+any registry edit — so the clock travels IN as a value and that constant is
+only what a caller with no league falls back to. Anything holding a slug must
+pass that league's clock: `readViewerClock(cookies, user, leagueSlug)` attaches
+it to the `ViewerClock`, which is what spares `formatForViewer`,
+`viewerClockZone` and `waiver-window` a signature apiece. A browser has no
+registry to ask, so client islands take it as a PROP
+(`clockZonesFromCookie(cookie, clock)`, the poll's `officialClock`) and the two
+JSON-blob scripts — the waiver-priority modal and the transaction hub — carry it
+in their config. `tests/league-official-clock.test.ts` pins every league having
+one, the two `LeagueClock` shapes agreeing, and the registry staying out of
+`viewer-preferences.ts`; `tests/nav-account-menu.test.ts` pins the drawer
+calling `leagueClock(slug)` rather than the fallback.
 
 **Zone ids are parsed AGAINST a country, never on their own.** `ET` and `PT`
 exist in the US and Canada and nowhere else; Australia has none of them. A
@@ -154,10 +191,14 @@ that way a correction here still reaches them, and their own choice outranks it
 the moment they make one. Add one from the owner telling you or the franchise
 saying so itself — never inferred from a team name.
 
-**The defaults must equal the pre-preferences board.** `DEFAULT_ZONE_IDS` is
-pinned against `countryTimeZones()` (the mapping file's pair) per country, so
-an owner who never opens the picker sees exactly what they saw before the
-feature existed. Changing a default is changing every such owner's board.
+**The defaults must equal the pre-preferences board — with ONE declared
+exception.** `DEFAULT_ZONE_IDS` is pinned against `countryTimeZones()` (the
+mapping file's pair) per country, so an owner who never opens the picker sees
+exactly what they saw before the feature existed. Changing a default is
+changing every such owner's board. The US was changed anyway, on purpose, in
+Sep 2026 (`ET` → `PT`, see above); its test asserts the departure rather than
+the pair. Every other country stays pinned, and a second exception needs the
+same treatment — a stated reason and a test that names it — not a quiet edit.
 
 **Both leagues have a franchise 0001.** The mirror key is
 `vprefs:<registry slug>:<franchiseId>` — the same rule as `watch-list-keys.mjs`

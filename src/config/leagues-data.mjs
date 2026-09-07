@@ -72,6 +72,31 @@ export const LEAGUES = {
       closeWeekday: 4,
       closeHourPT: 16,
     },
+    /**
+     * THE LEAGUE'S OFFICIAL CLOCK — the zone this league keeps its own time
+     * in. Lineup locks, auction windows, waiver deadlines and the 8:45
+     * rollover are all quoted in it, so it is the shared reference printed
+     * beside whatever clock a viewer has chosen for themselves.
+     *
+     * It is a SETTING, not a constant: `viewer-preferences.ts` deliberately
+     * does not import this registry (it is in Storybook's rendering graph —
+     * see docs/claude/rules/viewer-preferences.md), so the clock is READ here
+     * and passed in. `leagueClock(slug)` in src/config/leagues.ts is the
+     * accessor; nothing should reach for `LEAGUE_CLOCK` when it knows its
+     * league.
+     *
+     * `equivalents` is an IDENTITY list — zones that keep the same wall clock
+     * as `zone` year-round, DST flips included — NOT a snapshot of today's
+     * offsets. A viewer already on one of them is not shown the league clock
+     * a second time, because "1:00 PM PT · 1:00 PM PT" helps nobody.
+     */
+    officialClock: {
+      id: 'PT',
+      zone: 'America/Los_Angeles',
+      label: 'PT',
+      name: "The league's clock (Pacific)",
+      equivalents: ['America/Vancouver', 'America/Tijuana'],
+    },
     features: {
       contracts: true,
       salaryCap: true,
@@ -184,6 +209,31 @@ export const LEAGUES = {
       closeWeekday: 4,
       closeHourPT: 16,
     },
+    /**
+     * THE LEAGUE'S OFFICIAL CLOCK — the zone this league keeps its own time
+     * in. Lineup locks, auction windows, waiver deadlines and the 8:45
+     * rollover are all quoted in it, so it is the shared reference printed
+     * beside whatever clock a viewer has chosen for themselves.
+     *
+     * It is a SETTING, not a constant: `viewer-preferences.ts` deliberately
+     * does not import this registry (it is in Storybook's rendering graph —
+     * see docs/claude/rules/viewer-preferences.md), so the clock is READ here
+     * and passed in. `leagueClock(slug)` in src/config/leagues.ts is the
+     * accessor; nothing should reach for `LEAGUE_CLOCK` when it knows its
+     * league.
+     *
+     * `equivalents` is an IDENTITY list — zones that keep the same wall clock
+     * as `zone` year-round, DST flips included — NOT a snapshot of today's
+     * offsets. A viewer already on one of them is not shown the league clock
+     * a second time, because "1:00 PM PT · 1:00 PM PT" helps nobody.
+     */
+    officialClock: {
+      id: 'PT',
+      zone: 'America/Los_Angeles',
+      label: 'PT',
+      name: "The league's clock (Pacific)",
+      equivalents: ['America/Vancouver', 'America/Tijuana'],
+    },
     features: {
       contracts: false,
       salaryCap: false,
@@ -287,6 +337,31 @@ export const LEAGUES = {
      * is present everywhere and shared components never branch on undefined.
      */
     ownersPoll: { enabled: false, slots: 0, quorum: 0, closeWeekday: 4, closeHourPT: 16 },
+    /**
+     * THE LEAGUE'S OFFICIAL CLOCK — the zone this league keeps its own time
+     * in. Lineup locks, auction windows, waiver deadlines and the 8:45
+     * rollover are all quoted in it, so it is the shared reference printed
+     * beside whatever clock a viewer has chosen for themselves.
+     *
+     * It is a SETTING, not a constant: `viewer-preferences.ts` deliberately
+     * does not import this registry (it is in Storybook's rendering graph —
+     * see docs/claude/rules/viewer-preferences.md), so the clock is READ here
+     * and passed in. `leagueClock(slug)` in src/config/leagues.ts is the
+     * accessor; nothing should reach for `LEAGUE_CLOCK` when it knows its
+     * league.
+     *
+     * `equivalents` is an IDENTITY list — zones that keep the same wall clock
+     * as `zone` year-round, DST flips included — NOT a snapshot of today's
+     * offsets. A viewer already on one of them is not shown the league clock
+     * a second time, because "1:00 PM PT · 1:00 PM PT" helps nobody.
+     */
+    officialClock: {
+      id: 'PT',
+      zone: 'America/Los_Angeles',
+      label: 'PT',
+      name: "The league's clock (Pacific)",
+      equivalents: ['America/Vancouver', 'America/Tijuana'],
+    },
     features: {
       contracts: false,
       salaryCap: false,

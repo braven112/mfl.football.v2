@@ -22,6 +22,7 @@ import '../../styles/waiver-priority-modal.css';
  * trade.
  */
 import { rankWithinConference, type WaiverOrderEntry } from '../../utils/waiver-order';
+import type { LeagueClock } from '../../utils/viewer-preferences';
 
 export interface WaiverPriorityTeam {
   franchiseId: string;
@@ -47,6 +48,13 @@ export interface WaiverPriorityConfig {
    * upstream timeout expires reads as broken on a phone (Sep 2026).
    */
   initialOrder?: WaiverOrderEntry[];
+  /**
+   * This league's official clock, from the registry. It rides in the JSON
+   * config blob because the script below cannot import the registry — the
+   * browser has none — and the "as of" stamp appends the league's clock
+   * beside whatever the viewer chose.
+   */
+  officialClock?: LeagueClock;
 }
 
 interface Props {
@@ -182,7 +190,7 @@ const clientConfig = { ...config, initialOrder: undefined, hasInitialOrder: init
     setStatus('');
 
     if (footEl) {
-      footEl.textContent = waiverPriorityFootnote(asOf, live, document.cookie);
+      footEl.textContent = waiverPriorityFootnote(asOf, live, document.cookie, cfg.officialClock);
       footEl.hidden = false;
     }
   };

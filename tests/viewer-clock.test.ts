@@ -59,12 +59,17 @@ describe('the floor: nothing changes until the viewer chooses', () => {
     expect(formatForViewer(WED_8PM_PT, DEFAULT_VIEWER_CLOCK, { weekday: true })).toBe('Wed 8:00 PM PT');
   });
 
-  it('does NOT inherit Sunday Ticket\'s ET floor, even though the stored default is US/ET', () => {
-    // The two readers disagree ON PURPOSE. Sunday Ticket's default pair keeps
-    // that board byte-identical to its pre-preferences self; PT alone keeps
-    // these surfaces identical to THEIRS. One default cannot do both.
-    expect(kickoffZonesFor(DEFAULT_VIEWER_CLOCK.prefs).map((z) => z.label)).toEqual(['ET', 'PT']);
+  it('keeps the two floors SEPARATE even now that both answer PT', () => {
+    // They agree today because the US default was moved to Pacific, not
+    // because they were merged: Sunday Ticket reads the COUNTRY's default
+    // clock, these surfaces the LEAGUE's official one. Either can move without
+    // the other, so the day a country is re-examined this must still be two
+    // reads. Collapsing them because the answers match is the regression.
+    expect(kickoffZonesFor(DEFAULT_VIEWER_CLOCK.prefs).map((z) => z.label)).toEqual(['PT']);
     expect(eventZonesFor(DEFAULT_VIEWER_CLOCK).map((z) => z.label)).toEqual(['PT']);
+    // A country whose default is NOT the league clock still gets both, which
+    // is what proves the two paths are still distinct.
+    expect(kickoffZonesFor({ country: 'CA', zoneId: 'ET' }).map((z) => z.label)).toEqual(['ET', 'PT']);
   });
 
   it('adds the chosen clock in front of the league\'s once they have picked', () => {

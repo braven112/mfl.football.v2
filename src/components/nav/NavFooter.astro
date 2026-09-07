@@ -19,7 +19,7 @@ import { spriteUrl } from '../../utils/sprite-url';
 import leagueConfigData from '../../data/theleague.config.json';
 import ThemeToggle from '../ThemeToggle.astro';
 import { getLeaguePrefix, resolveLeaguePath } from '../../utils/nav-utils';
-import { getLeagueByNavSlug } from '../../config/leagues';
+import { getLeagueByNavSlug, leagueClock } from '../../config/leagues';
 import { isSpotlightActive, spotlightNow } from '../../utils/feature-spotlight';
 import '../../styles/feature-spotlight.css';
 import { countryOptions } from '../../utils/broadcast-channels';
@@ -27,7 +27,6 @@ import {
   COUNTRY_COOKIE,
   ZONE_COOKIE,
   DEFAULT_VIEWER_PREFERENCES,
-  LEAGUE_CLOCK,
   parseViewerPreferences,
   zoneShortName,
   zoneSummary,
@@ -68,7 +67,14 @@ const loginUrl = resolveLeaguePath(`${leagueBase}/login`, hideLeaguePrefix);
 // Account-menu destinations.
 // Both rows are registry-gated: best-ball publishes neither page, and a menu
 // row that 404s is worse than no row.
-const leagueFeatures = getLeagueByNavSlug(league).features;
+const leagueDef = getLeagueByNavSlug(league);
+const leagueFeatures = leagueDef.features;
+/**
+ * THIS league's official clock, from the registry — not the module fallback.
+ * The drawer renders on every page of every league, so it is the one place
+ * most likely to print another league's clock if it reaches for a constant.
+ */
+const officialClock = leagueClock(leagueDef.slug);
 const showPreferencesRow = leagueFeatures.viewerPreferences;
 const showNotificationsRow = leagueFeatures.pushNotifications;
 const preferencesUrl = resolveLeaguePath(`${leagueBase}/preferences`, hideLeaguePrefix);
@@ -105,7 +111,9 @@ const viewerPrefs = hasChosenClock ? parseViewerPreferences(rawCountry, rawZone)
  */
 const flagCountry = viewerPrefs?.country ?? DEFAULT_VIEWER_PREFERENCES.country;
 const viewerCountry = countryOptions().find((c) => c.code === flagCountry) ?? null;
-const clockValue = viewerPrefs ? zoneSummary(viewerPrefs) : `League time (${zoneShortName(LEAGUE_CLOCK)})`;
+const clockValue = viewerPrefs
+  ? zoneSummary(viewerPrefs, officialClock)
+  : `League time (${zoneShortName(officialClock)})`;
 
 /**
  * Build the MFL verify team URL

@@ -15,6 +15,7 @@
 
 import { useEffect, useState } from 'react';
 import { clockZonesFromCookie, formatMomentOrDevice } from '../../../utils/viewer-clock';
+import type { LeagueClock } from '../../../utils/viewer-preferences';
 
 interface Props {
   ballotHref: string;
@@ -24,6 +25,12 @@ interface Props {
   leagueParam: string;
   /** Week from the rendered issue — used only to detect a stale build. */
   issueWeek: number;
+  /**
+   * This league's official clock, from the registry. A browser has no
+   * registry to ask, so the page hands it down; absent, the deadline falls
+   * back to the site's own clock.
+   */
+  officialClock?: LeagueClock;
 }
 
 type Phase = 'loading' | 'open' | 'voted' | 'closed' | 'unavailable' | 'signed-out';
@@ -42,6 +49,7 @@ export default function OwnersPollLive({
   eligibleVoters,
   leagueParam,
   issueWeek,
+  officialClock,
 }: Props) {
   const [phase, setPhase] = useState<Phase>('loading');
   const [turnout, setTurnout] = useState<{ ballotsIn: number; eligible: number } | null>(null);
@@ -115,7 +123,7 @@ export default function OwnersPollLive({
         <p className="op-strip__cta">
           <strong>Your ballot is in.</strong>{' '}
           <a href={ballotHref}>Change it</a> until the poll closes
-          {closesAt ? <> · <Closes iso={closesAt} /></> : null}.
+          {closesAt ? <> · <Closes iso={closesAt} league={officialClock} /></> : null}.
         </p>
       ) : phase === 'signed-out' ? (
         <p className="op-strip__cta">
@@ -128,7 +136,7 @@ export default function OwnersPollLive({
           </a>{' '}
           <span className="op-strip__tease">
             Cast your ballot to see where the room has you
-            {closesAt ? <> · <Closes iso={closesAt} /></> : null}.
+            {closesAt ? <> · <Closes iso={closesAt} league={officialClock} /></> : null}.
           </span>
         </p>
       )}
@@ -187,13 +195,13 @@ function Meter({
 }
 
 /** Deadline in the viewer's chosen clock, else the device's — see BallotBuilder's ClosesAt. */
-function Closes({ iso }: { iso: string }) {
+function Closes({ iso, league }: { iso: string; league?: LeagueClock }) {
   const [text, setText] = useState('');
   useEffect(() => {
     const d = new Date(iso);
     if (Number.isNaN(d.getTime())) return;
-    setText(formatMomentOrDevice(d, clockZonesFromCookie(document.cookie), { weekday: true }));
-  }, [iso]);
+    setText(formatMomentOrDevice(d, clockZonesFromCookie(document.cookie, league), { weekday: true }));
+  }, [iso, league]);
   return <>closes {text || 'soon'}</>;
 }
 

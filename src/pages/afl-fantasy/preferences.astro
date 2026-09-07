@@ -8,6 +8,7 @@ import PreferencesPage from '../../components/shared/preferences/PreferencesPage
 import { getAuthUser } from '../../utils/auth';
 import { resolveViewerPreferences, hasPreferenceParams } from '../../utils/viewer-preferences-page';
 import { resolveLeaguePath } from '../../utils/nav-utils';
+import { leagueClock } from '../../config/leagues';
 
 export const prerender = false;
 
@@ -28,4 +29,5 @@ const { prefs, savedToAccount } = await resolveViewerPreferences(Astro.url, Astr
   justSaved={hasPreferenceParams(Astro.url)}
   syncedToAccount={savedToAccount}
   loginPath={user ? null : r(`/afl-fantasy/login?next=${encodeURIComponent(pathname)}`)}
+  officialClock={leagueClock('afl-fantasy')}
 />

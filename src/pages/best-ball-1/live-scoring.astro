@@ -60,7 +60,7 @@ const authUser = getAuthUser(Astro.request);
 // resolver writes preference cookies and this page has none of its own to set,
 // and a viewer who has chosen nothing gets the US default — exactly what this
 // rail showed before it named a channel at all.
-const viewerCountry = (await readViewerClock(Astro.cookies, authUser)).prefs.country;
+const viewerCountry = (await readViewerClock(Astro.cookies, authUser, league.slug)).prefs.country;
 
 const userFranchiseId =
   authUser?.leagueId === league.leagueId ? authUser.franchiseId : undefined;

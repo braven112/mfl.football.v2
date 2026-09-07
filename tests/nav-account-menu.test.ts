@@ -76,14 +76,26 @@ describe('Nav account menu', () => {
   });
 
   it('leaves the clock on the league floor when the viewer has chosen nothing', () => {
-    // The flag defaults; the clock must not. `DEFAULT_ZONE_IDS` is US/ET, and
-    // printing it here would name an Eastern clock nobody picked.
-    expect(source).toMatch(
-      /const clockValue = viewerPrefs \? zoneSummary\(viewerPrefs\) : `League time \(\$\{zoneShortName\(LEAGUE_CLOCK\)\}\)`/
-    );
+    // The flag defaults to a COUNTRY; the clock must come from the LEAGUE.
+    // "League time (PT)" is not a hardcoded PT — it is this league's own
+    // officialClock, so a league configured onto another zone says so here.
+    expect(source).toMatch(/League time \(\$\{zoneShortName\(officialClock\)\}\)/);
+    expect(source).toMatch(/zoneSummary\(viewerPrefs, officialClock\)/);
     expect(
       /DEFAULT_VIEWER_PREFERENCES\.zoneId|DEFAULT_ZONE_IDS/.test(source),
-      'The nav must never fall back to a default ZONE — every league surface prints PT alone until the viewer names one'
+      'The nav must never fall back to a default ZONE — the league names its own clock'
+    ).toBe(false);
+  });
+
+  it('takes the league clock from the registry, never from the module fallback', () => {
+    // `LEAGUE_CLOCK` is the answer for a caller that cannot name its league.
+    // The drawer renders on every page of every league and always knows which
+    // one it is, so reaching for the fallback here is how one league's clock
+    // ends up printed on another's page.
+    expect(source).toMatch(/leagueClock\(leagueDef\.slug\)/);
+    expect(
+      /\bLEAGUE_CLOCK\b/.test(source),
+      'NavFooter knows its league — it must call leagueClock(slug), not the fallback constant'
     ).toBe(false);
   });
 

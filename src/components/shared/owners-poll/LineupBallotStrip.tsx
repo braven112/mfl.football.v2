@@ -16,6 +16,7 @@
 
 import { useEffect, useState } from 'react';
 import BallotBuilder, { type BallotTeam } from './BallotBuilder';
+import type { LeagueClock } from '../../../utils/viewer-preferences';
 
 interface Props {
   teams: BallotTeam[];
@@ -26,6 +27,8 @@ interface Props {
   ballotHref: string;
   columnHref: string;
   vapidPublicKey?: string;
+  /** This league's official clock — forwarded to the ballot's deadline. */
+  officialClock?: LeagueClock;
 }
 
 interface Status {
@@ -35,7 +38,7 @@ interface Status {
 }
 
 export default function LineupBallotStrip(props: Props) {
-  const { teams, slots, quorum, leagueParam, ownFranchiseId, ballotHref, columnHref, vapidPublicKey = '' } = props;
+  const { teams, slots, quorum, leagueParam, ownFranchiseId, ballotHref, columnHref, vapidPublicKey = '', officialClock } = props;
   const [status, setStatus] = useState<Status | null>(null);
   const [expanded, setExpanded] = useState(false);
 
@@ -106,6 +109,7 @@ export default function LineupBallotStrip(props: Props) {
             ownFranchiseId={ownFranchiseId}
             columnHref={columnHref}
             vapidPublicKey={vapidPublicKey}
+            officialClock={officialClock}
           />
         </div>
       )}

@@ -20,7 +20,7 @@ import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
 import SundayTicketBoard from './SundayTicketBoard.astro';
 import { getAuthUser } from '../../../utils/auth';
 import { getLeagueContext } from '../../../utils/league-context';
-import { getLeagueById, getLeagueBySlug } from '../../../config/leagues';
+import { getLeagueById, getLeagueBySlug, leagueClock } from '../../../config/leagues';
 import { getCurrentSeasonYear, getLeagueYearForSlug } from '../../../utils/league-year';
 import { getCurrentNFLWeek } from '../../../utils/current-week';
 import { getDailySlot, parseTestDate } from '../../../utils/hero-resolver';
@@ -156,8 +156,11 @@ const enabledIds = new Set(selectedIds);
 // defaults) and wrote any `?country=` the chips carried; this file only reads,
 // because a component cannot set a cookie after the response has started.
 const country = prefs.country;
-const zones = kickoffZonesFor(prefs);
-const clockLabel = zoneSummary(prefs);
+// This board's league, from the registry — a kickoff still gets the league's
+// own clock beside the viewer's, and which league that is comes from the page.
+const officialClock = leagueClock(pageLeague.slug);
+const zones = kickoffZonesFor(prefs, officialClock);
+const clockLabel = zoneSummary(prefs, officialClock);
 
 // ── Contributions ───────────────────────────────────────────────────────
 const notices: string[] = [];

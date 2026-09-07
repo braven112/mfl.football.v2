@@ -16,6 +16,7 @@
  * the owners' order are shown side by side with a Δ, because the disagreement
  * is the story — averaging them would erase both signals.
  */
+import { getLeagueByNavSlug, leagueClock } from '../../../config/leagues';
 import OwnersPollLive from './OwnersPollLive';
 import { teamAccentVar } from '../../../utils/team-accent-css';
 
@@ -105,6 +106,7 @@ const biggestSplit = [...ranked].sort((a, b) => Math.abs(b.delta) - Math.abs(a.d
         eligibleVoters={poll.eligibleVoters}
         leagueParam={leagueParam}
         issueWeek={issueWeek}
+        officialClock={leagueClock(getLeagueByNavSlug(leagueParam).slug)}
       />
     )}
 

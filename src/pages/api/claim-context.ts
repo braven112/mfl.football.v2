@@ -34,6 +34,7 @@ import { rankingsScopeForLeagueId } from '../../utils/rankings-scope';
 import { checkRateLimit } from '../../utils/rate-limit';
 import { resolveClaimContext } from '../../utils/claim-context';
 import { readViewerClock } from '../../utils/viewer-preferences-page';
+import { getLeagueById } from '../../config/leagues';
 
 export const prerender = false;
 
@@ -68,9 +69,14 @@ export const GET: APIRoute = async ({ request, cookies }) => {
   }
 
   // The waiver deadline in the modal is a LEAGUE event; a viewer who has named
-  // their own clock reads it in that one, with PT beside it. Read-only — this
-  // route must not write a preference cookie onto a background fetch.
-  const clock = await readViewerClock(cookies, user);
+  // their own clock reads it in that one, with the league's own clock beside
+  // it. Read-only — this route must not write a preference cookie onto a
+  // background fetch.
+  //
+  // There is no page here to take the league from, and that is fine: the
+  // deadline this route answers about is `resolveClaimContext`'s, which is
+  // scoped to the SIGNED-IN owner's league. So the clock is that league's too.
+  const clock = await readViewerClock(cookies, user, getLeagueById(user.leagueId)?.slug);
   const context = await resolveClaimContext(user, clock);
   if (!context) return json(NO_CLAIMS, 200, JSON_HEADERS_NO_STORE);
 

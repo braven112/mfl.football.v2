@@ -76,7 +76,7 @@ const userFranchiseId = authUser?.franchiseId;
 // Whose broadcast channels the game-day hero names. Read-only: the homepage
 // must never write a preference cookie, and `readViewerClock` never does —
 // only /preferences and the Sunday Ticket chips write one.
-const viewerCountry = (await readViewerClock(Astro.cookies, authUser)).prefs.country;
+const viewerCountry = (await readViewerClock(Astro.cookies, authUser, THELEAGUE.slug)).prefs.country;
 
 const feed = feedData as FeedType;
 

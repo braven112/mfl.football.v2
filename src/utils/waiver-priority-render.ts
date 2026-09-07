@@ -18,6 +18,7 @@
 import { rankWithinConference } from './waiver-order';
 import type { WaiverOrderEntry } from './waiver-order';
 import { clockZonesFromCookie, formatMomentOrDevice } from './viewer-clock';
+import type { LeagueClock } from './viewer-preferences';
 
 export interface WaiverPriorityRenderTeam {
   franchiseId: string;
@@ -92,13 +93,13 @@ export const WAIVER_PRIORITY_NOTE =
  * read PER CALL rather than captured at module load (the ClientRouter keeps
  * this module alive across navigations, so a capture would go stale).
  */
-export function waiverPriorityFootnote(asOf: string, live: boolean, cookies = ''): string {
+export function waiverPriorityFootnote(asOf: string, live: boolean, cookies = '', league?: LeagueClock): string {
   const when = new Date(asOf);
   // The viewer's chosen clock (`/preferences`) when they have one, else this
   // device's — which is what the stamp used before the preference existed.
   const stamp = Number.isNaN(when.getTime())
     ? ''
-    : formatMomentOrDevice(when, clockZonesFromCookie(cookies), {
+    : formatMomentOrDevice(when, clockZonesFromCookie(cookies, league), {
         date: true,
         deviceFormat: { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' },
       });
