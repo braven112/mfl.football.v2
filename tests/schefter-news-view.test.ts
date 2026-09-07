@@ -101,6 +101,30 @@ describe('tab list', () => {
     expect(labels).not.toContain('NFL Insider');
   });
 
+  /**
+   * The AFL shipped a tab labelled "The League" the moment the unified tab
+   * list gave it that source. The query value is an internal id and must stay
+   * `theleague` for old links; the LABEL has to come from the registry.
+   */
+  it('labels the league tab with the league’s own name, not a literal', async () => {
+    const tl = await view('/theleague/news', owner, IN_SEASON, [post({ authorId: 'claude' })]);
+    expect(tl.tabs.map((t) => t.label)).toContain('The League');
+
+    const afl = getLeagueBySlug('afl-fantasy')!;
+    const aflView = await resolveSchefterNewsView({
+      league: afl,
+      feed: feed([post({ authorId: 'claude', league: 'afl' } as any)]),
+      authUser: null,
+      url: new URL('/afl-fantasy/news', 'https://x.test'),
+      now: IN_SEASON,
+    });
+    const labels = aflView.tabs.map((t) => t.label);
+    expect(labels).toContain('AFL');
+    expect(labels).not.toContain('The League');
+    // The source id itself is unchanged, so shared links keep resolving.
+    expect(aflView.tabs.find((t) => t.label === 'AFL')?.href).toContain('?source=theleague');
+  });
+
   it('shows a source tab as soon as that lane writes its first post', async () => {
     const v = await view('/theleague/news', owner, IN_SEASON, [post({ authorId: 'doc-rivers' })]);
     expect(v.tabs.map((t) => t.label)).toContain('NFL Insider');

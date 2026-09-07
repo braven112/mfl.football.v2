@@ -278,8 +278,12 @@ export async function resolveSchefterNewsView(
   const tabs: NewsTab[] = [
     ...(canWatch && feedMode === 'in-season' ? [forYouTab, allTab] : [allTab]),
     ...(canWatch && feedMode !== 'in-season' ? [forYouTab] : []),
+    // Label from the REGISTRY, never a literal. The query value stays
+    // `theleague` (it is an internal source id, and old links carry it), but
+    // the visible name is this league's own — the AFL rendered a tab called
+    // "The League" the moment the unified tab list gave it this source.
     ...(hasPostsFor('theleague')
-      ? [{ label: 'The League', href: `${basePath}?source=theleague`, active: activeSource === 'theleague' }]
+      ? [{ label: league.name, href: `${basePath}?source=theleague`, active: activeSource === 'theleague' }]
       : []),
     ...(hasGroupChat && isAuthenticated
       ? [{ label: 'Group Chat', href: `${basePath}?source=groupme`, active: isGroupMeTab }]
