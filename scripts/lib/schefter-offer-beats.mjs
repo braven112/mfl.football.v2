@@ -50,9 +50,16 @@ export const BEAT_KINDS = Object.freeze({
  * Why a proposal is over. Both are things MFL states, not things we infer:
  *
  *   accepted — a TRADE transaction matching this proposal's franchise pair and
- *              assets is in the committed transactions feed.
+ *              assets is in the committed transactions feed. This is the one
+ *              the scanner turns into a closure POST: the trade is public the
+ *              moment it processes, so closing the story reveals nothing.
  *   expired  — the row's own `expires` timestamp has passed, and MFL drops a
- *              proposal at its expiry.
+ *              proposal at its expiry. The scanner routes this to the
+ *              speculation lane as a seed rather than posting about it (see
+ *              scripts/lib/speculation-seeds.mjs) — a died-quietly proposal is
+ *              better used as evidence of who is willing to move whom than
+ *              announced as a deal that failed. The reason stays valid here
+ *              because it is provable; only its routing changed.
  *
  * There is deliberately no `withdrawn`. A proposal simply vanishing from the
  * scan is NOT evidence it was pulled: the lane is fed by owner self-reports

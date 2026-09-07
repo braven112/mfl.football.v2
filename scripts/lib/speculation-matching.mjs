@@ -170,8 +170,13 @@ export function computeLeagueMedians(playersByFranchise) {
  */
 const SURPLUS_THRESHOLD = { QB: 3, RB: 6, WR: 7, TE: 3 };
 
-export function buildHaves({ franchisePlayers, tradeBaitIds, adpRankById }) {
+export function buildHaves({ franchisePlayers, tradeBaitIds, adpRankById, seededIds }) {
   const baitSet = new Set((tradeBaitIds ?? []).map(String));
+  // Players this franchise itself offered in a proposal that has since expired
+  // (scripts/lib/speculation-seeds.mjs). A third availability signal alongside
+  // the public block and positional surplus — privately arrived at, but the
+  // same KIND of fact: their own owner put them on the table.
+  const seedSet = seededIds instanceof Set ? seededIds : new Set();
   const positionCounts = {};
   for (const p of franchisePlayers) {
     if (p.status !== 'ROSTER') continue;
@@ -181,10 +186,11 @@ export function buildHaves({ franchisePlayers, tradeBaitIds, adpRankById }) {
   for (const p of franchisePlayers) {
     if (p.status !== 'ROSTER') continue;
     const onBait = baitSet.has(String(p.id));
+    const wasOffered = seedSet.has(String(p.id));
     const isSurplus =
       SURPLUS_THRESHOLD[p.position] !== undefined &&
       positionCounts[p.position] > SURPLUS_THRESHOLD[p.position];
-    if (!onBait && !isSurplus) continue;
+    if (!onBait && !isSurplus && !wasOffered) continue;
     const value = valuePlayer({ player: p, adpRankById });
     if (value <= 0) continue;
     haves.push({
@@ -196,6 +202,7 @@ export function buildHaves({ franchisePlayers, tradeBaitIds, adpRankById }) {
       age: p.age,
       onTradeBait: onBait,
       surplus: isSurplus,
+      wasOffered,
       value,
     });
   }
@@ -258,8 +265,14 @@ function scoreCandidate({ marquee, returnPkg, divisionsAreSame }) {
   const fit = Math.max(0, 100 - Math.abs(marquee.value - valuePack));
   const drama = divisionsAreSame ? 25 : 10;
   const baitBonus = marquee.onTradeBait ? 15 : 0;
-  const surplusPenalty = !marquee.onTradeBait && marquee.surplus ? -5 : 0;
-  return Math.round(fit + drama + baitBonus + surplusPenalty);
+  // An owner who actually built and sent a proposal around this player has
+  // demonstrated more willingness than one who listed him, so this outranks
+  // the bait bonus — but it stacks rather than replaces, because a player who
+  // is BOTH listed and shopped is the most available player in the league.
+  const offeredBonus = marquee.wasOffered ? 20 : 0;
+  const surplusPenalty =
+    !marquee.onTradeBait && !marquee.wasOffered && marquee.surplus ? -5 : 0;
+  return Math.round(fit + drama + baitBonus + offeredBonus + surplusPenalty);
 }
 
 /**
@@ -286,12 +299,22 @@ export function findTwoTeamCandidates({
   teams,
   limit = 5,
   medians: medianOverride = null,
+  seedSignals = null,
 }) {
   const franchiseIds = Array.from(playersByFranchise.keys());
   const haves = new Map();
   const wants = new Map();
   const capRoom = new Map();
   const medians = medianOverride ?? computeLeagueMedians(playersByFranchise);
+
+  // Seeds from expired proposals (scripts/lib/speculation-seeds.mjs). Both maps
+  // are keyed by the PROPOSER — a franchise someone else asked about gains
+  // neither availability nor a want from that ask, because it never said
+  // anything. `excludedPairs` keeps the two franchises that actually talked
+  // from being paired here, so a hypothetical can't land on the real proposal.
+  const seededAvailable = seedSignals?.availableByFid ?? new Map();
+  const seededWants = seedSignals?.wantsByFid ?? new Map();
+  const excludedPairs = seedSignals?.excludedPairs ?? new Set();
 
   for (const fid of franchiseIds) {
     const players = playersByFranchise.get(fid) ?? [];
@@ -301,9 +324,15 @@ export function findTwoTeamCandidates({
         franchisePlayers: players,
         tradeBaitIds: tradeBaitByFranchise.get(fid) ?? [],
         adpRankById,
+        seededIds: seededAvailable.get(String(fid)),
       }),
     );
-    wants.set(fid, buildPositionalWantsRelative(players, medians));
+    // A position the franchise asked for in a real proposal is a stated need,
+    // and it stands even when the roster-count heuristic disagrees — the
+    // heuristic is a guess at what a GM wants, this is the GM saying it.
+    const relativeWants = buildPositionalWantsRelative(players, medians);
+    const stated = seededWants.get(String(fid));
+    wants.set(fid, stated ? [...new Set([...relativeWants, ...stated])] : relativeWants);
     capRoom.set(fid, franchiseCapSpace({ franchisePlayers: players }));
   }
 
@@ -316,6 +345,10 @@ export function findTwoTeamCandidates({
       if (marquee.value < MIN_MARQUEE_VALUE) continue;
       for (const buyerId of franchiseIds) {
         if (buyerId === sellerId) continue;
+        // Never republish a real proposal as a guess: if these two franchises
+        // are the pair from an expired proposal, they do not get speculated
+        // about together.
+        if (excludedPairs.has([String(sellerId), String(buyerId)].sort().join('::'))) continue;
         const buyerHaves = haves.get(buyerId) ?? [];
         const buyerWants = wants.get(buyerId) ?? [];
         // Buyer must have a stated need that the marquee piece fills,

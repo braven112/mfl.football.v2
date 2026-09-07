@@ -85,6 +85,7 @@ import {
   classifyAsset,
 } from './lib/redact-trade-offer.mjs';
 import { assetShapeOf, tradeSignatureOf } from './lib/schefter-offer-beats.mjs';
+import { buildSeedFromProposal, writeSeed } from './lib/speculation-seeds.mjs';
 import {
   scanDraftTrades,
   getDraftOfferersForPlayer,
@@ -3320,9 +3321,12 @@ async function scanTradeOffers({ redis, dryRun }) {
     }
 
     // ── Is this proposal over? ──
-    // Two closures, both stated by MFL rather than inferred by us:
+    // Two endings, both stated by MFL rather than inferred by us, and they are
+    // routed DIFFERENTLY:
     //   accepted — a TRADE transaction with this proposal's signature exists.
+    //              Gets a closure post; the trade is public anyway.
     //   expired  — the row's own `expires` has passed; MFL drops it at expiry.
+    //              Seeds the speculation lane instead of posting (see below).
     // There is deliberately no "withdrawn". This lane is fed by owner
     // self-reports, so a proposal leaving view means an owner stopped loading
     // the trades page just as often as it means the proposal died — and the
@@ -3344,6 +3348,46 @@ async function scanTradeOffers({ redis, dryRun }) {
       const reason = wasAccepted ? 'accepted' : 'expired';
       if (closedOfferIds.has(offerId)) {
         debugLog.push({ offerId, offeringFid, skipped: `already closed (${reason})` });
+        continue;
+      }
+
+      // ── An expiry is a SEED, not a post ──
+      // A proposal that ran out the clock is the strongest private evidence we
+      // have that a GM is willing to move the players they offered, and that
+      // they need what they asked for. That belongs to the speculation lane,
+      // which builds its own hypothetical pairings and publishes those — not
+      // to a Schefter post announcing that a specific real deal died.
+      //
+      // Only the proposer's half seeds anything: their offered players are an
+      // availability signal and the positions they asked for are a stated
+      // need. The franchise they asked never said a word, so it contributes
+      // nothing and is recorded solely to be EXCLUDED as a counterparty, which
+      // keeps speculation from wandering back onto the real pairing.
+      //
+      // `accepted` still gets its closure post: that trade is public the
+      // moment it processes, so closing the story reveals nothing.
+      if (hasExpired && !wasAccepted) {
+        const seed = buildSeedFromProposal({
+          rawOffer: raw,
+          offeringFid,
+          playerMap: players,
+          expiredAtMs: expiresSecs * 1000,
+        });
+        if (!dryRun && seed) {
+          await writeSeed({ redis, navSlug: NAV_SLUG, seed, log, warn });
+        } else if (seed) {
+          log(`  [seed] dry-run: would seed speculation from expired proposal ${offerId}`);
+        }
+        if (!dryRun) {
+          try {
+            await redis.sadd(OFFER_CLOSED_KEY, offerId);
+            await redis.expire(OFFER_CLOSED_KEY, OFFER_STATE_TTL_SEC);
+            await redis.hdel(OFFER_SHAPE_KEY, offerId);
+          } catch (err) {
+            warn(`  [offer-scan] closing expired ${offerId} failed: ${err.message}`);
+          }
+        }
+        debugLog.push({ offerId, offeringFid, expired: true, seeded: !!seed, priorExposure });
         continue;
       }
       // Nothing was ever reported about this proposal, so there is no story to

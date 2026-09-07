@@ -33,6 +33,8 @@
         "scripts/schefter-*.mjs",
         "scripts/lib/redact-trade-offer.mjs",
         "scripts/lib/schefter*",
+        "scripts/lib/speculation-*.mjs",
+        "scripts/schefter-trade-speculation.mjs",
         "src/utils/schefter*",
         "src/pages/api/schefter/**",
         "src/components/**/Schefter*"
@@ -47,7 +49,8 @@
         "tests/schefter-rail-view.test.ts",
         "tests/redact-trade-offer-attribution.test.ts",
         "tests/redact-trade-offer-exposure.test.ts",
-        "tests/schefter-offer-beats.test.ts"
+        "tests/schefter-offer-beats.test.ts",
+        "tests/speculation-seeds.test.ts"
       ]
     },
     {

@@ -248,6 +248,41 @@ ONE fact that is new this signal so the prompt opens on it.
 - At the end of both ladders (offer 1076 was on signal 7 the day this shipped)
   `leadKind` rotates through the unlocked beats rather than parking on one.
 
+### An expired proposal is a SEED, not a post
+
+`scripts/lib/speculation-seeds.mjs` routes an expiry into the daily speculation
+lane instead of the rumor feed. A proposal that ran out the clock is the
+strongest private evidence the site has about who will move whom; announcing
+that a specific real deal died spends that once, while seeding it lets the
+speculation matcher build its own pairings off it for 30 days.
+
+- **Only the PROPOSER's half is signal.** Their offered players are an
+  availability fact about their own roster — the same KIND of fact as a public
+  trade-block listing, arrived at privately — and the positions they asked for
+  are their own stated need. The RECIPIENT said nothing: someone else asked
+  about their player. Marking that player available would publish a willingness
+  its owner never expressed, which is the redaction bug arriving through a
+  different lane. `buildSeedFromProposal` reads the sides off the resolved
+  proposer (never off `franchise` alone — MFL's owner-view rows omit it), and
+  the asked-about player's ID never leaves the function; only his POSITION does.
+- **The pair that actually talked is excluded from being paired.** Otherwise a
+  "hypothetical" could reproduce the real proposal and publish it named, which
+  is worse than the closure post this replaced. `seedSignals().excludedPairs`
+  feeds a check inside `findTwoTeamCandidates`'s buyer loop.
+- **Seeds are Redis-only, and must stay that way.** Everything else this lane
+  writes (`speculation-history.json`) is committed; a seed holds an unpublished
+  proposal, so committing one would permanently publish exactly what the
+  trade-offer subsystem exists to meter out.
+- **A seeded player becomes an eligible marquee**, not merely a re-ranked one —
+  `buildHaves` takes `seededIds` as a third qualifier beside the block and
+  positional surplus, because a seed that only reordered already-eligible
+  players would do almost nothing. The pool stays mixed for that reason too: if
+  seeded players were the ONLY unlisted ones ever speculated about, an
+  appearance would itself signal that a real offer had been made.
+- **`accepted` still posts, `expired` never does.** A completed trade is public
+  the moment it processes, so the callback reveals nothing; an expiry is
+  private, so it only ever moves the matcher's inputs.
+
 ### Closing a proposal — only the two endings MFL states
 
 Movement beats (`ask_changed`, `re_offer`, `closure`) run off two new Redis
