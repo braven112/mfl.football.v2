@@ -33,6 +33,56 @@ export function postMentionsAny(post: SchefterPost, ids: Set<string>): boolean {
   return postPlayerIds(post).some((id) => ids.has(id));
 }
 
+/**
+ * Is this post about the viewer's own team, regardless of who it names?
+ *
+ * Player ids are not enough for the For You feed. "Your lineup has an OUT
+ * starter", a trade you are a party to, a waiver claim you won — these are
+ * addressed to a FRANCHISE, and some name no player at all. Posts carry
+ * `franchiseIds` for exactly this.
+ */
+export function postConcernsFranchise(
+  post: SchefterPost,
+  franchiseId: string | null | undefined,
+): boolean {
+  if (!franchiseId) return false;
+  return (post.franchiseIds ?? []).some((id) => String(id) === franchiseId);
+}
+
+/**
+ * Post types that are every owner's business regardless of who they name.
+ *
+ * `ask-roger` is the calendar-deadline lane — "TODAY: Declare Contracts / Cut
+ * to 22", "Offseason FA Closes". These carry `franchiseIds: []` because they
+ * genuinely apply league-wide, and stamping a franchise on them to force them
+ * into a personal feed would be a lie the rest of the code then believes.
+ * Including the TYPE instead says the true thing: a deadline is actionable for
+ * the reader even though it is not about them.
+ *
+ * Kept deliberately short. Every type added here is one more thing in a feed
+ * whose entire purpose is to be quiet.
+ */
+const ALWAYS_ACTIONABLE_TYPES = new Set<SchefterPost['type']>(['ask-roger']);
+
+/**
+ * The For You test: a post about a player you roster or watch, about your
+ * franchise, or a league-wide deadline you have to act on.
+ *
+ * This is the ONE definition — the feed filter and anything else that asks
+ * "is this mine?" must both call it, or they drift.
+ */
+export function postIsForViewer(
+  post: SchefterPost,
+  sets: WatchingSets,
+  franchiseId: string | null | undefined,
+): boolean {
+  return (
+    ALWAYS_ACTIONABLE_TYPES.has(post.type) ||
+    postMentionsAny(post, sets.all) ||
+    postConcernsFranchise(post, franchiseId)
+  );
+}
+
 export type WatchKind = 'watch' | 'roster';
 
 export interface WatchingSets {

@@ -27,14 +27,19 @@ concurrency:
   cancel-in-progress: true
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   check:
     runs-on: ubuntu-latest
     steps:
+      # ssh-key + full history so commit-feed-and-push can rebase onto the
+      # latest origin and push, same as the other feed-writing workflows.
       - name: Checkout
         uses: actions/checkout@v6
+        with:
+          ssh-key: ${{ secrets.DEPLOY_KEY }}
+          fetch-depth: 0
 
       - name: Use Node.js
         uses: actions/setup-node@v6
@@ -63,3 +68,20 @@ jobs:
           else
             node scripts/schefter-lineup-check.mjs
           fi
+
+      # The check now also leaves each flagged owner an `assistant` post on
+      # their own For You feed, so this job mutates the feed files and has to
+      # commit them. commit-feed-and-push reconciles by post id on top of the
+      # latest origin — the feeds are written by several workflows on
+      # overlapping crons and a plain rebase collides on them. The "nothing
+      # changed" guard lives inside the script, so a clean-lineups Sunday
+      # commits nothing.
+      - name: Commit and push feed updates
+        if: github.event.inputs.dry_run != 'true'
+        run: |
+          git config user.name "Schefter Bot"
+          git config user.email "actions@users.noreply.github.com"
+          node scripts/commit-feed-and-push.mjs \
+            --branch main \
+            --message "chore: schefter lineup check — assistant posts" \
+            --files "src/data/theleague/schefter-feed.json,data/afl-fantasy/schefter-feed.json"

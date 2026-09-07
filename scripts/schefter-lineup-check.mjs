@@ -43,6 +43,7 @@ import { getRedisConfig, createUpstashClient } from './lib/redis.mjs';
 import { postToGroupMe } from './lib/groupme.mjs';
 import { postToGroupMeCapped } from './lib/groupme-capped.mjs';
 import { sendPushFanout } from './lib/push-fanout.mjs';
+import { buildAssistantPost, publishAssistantPosts } from './lib/schefter-assistant-post.mjs';
 import { fetchWithRetry } from './lib/fetch-retry.mjs';
 import { getPtDateString } from './lib/pt-date.mjs';
 import { isQuietHours, consumeDailyPost } from './lib/schefter-groupme-budget.mjs';
@@ -238,15 +239,16 @@ async function checkLeague(league, now = new Date()) {
 
   const year = leagueYearFor(league, now);
 
-  // Per-league Schefter config (GroupMe bot). Leagues added to the registry
-  // but not yet to SCHEFTER_LEAGUES simply run bot-less (print-only).
-  let botId;
+  // Per-league Schefter config (GroupMe bot + feed path). Leagues added to the
+  // registry but not yet to SCHEFTER_LEAGUES simply run bot-less (print-only)
+  // and write no feed post.
+  let schefterLeague = null;
   try {
-    botId = getSchefterLeague(league.slug).groupMeSchefterBotId;
+    schefterLeague = getSchefterLeague(league.slug);
   } catch {
     warn(`  [config] ${league.slug} has no Schefter league config — no GroupMe bot`);
-    botId = undefined;
   }
+  const botId = schefterLeague?.groupMeSchefterBotId;
 
   // Resolve the current NFL week (MFL's own clock, not local math).
   let week = WEEK_OVERRIDE;
@@ -346,6 +348,36 @@ async function checkLeague(league, now = new Date()) {
     })),
     log: { log, warn },
   });
+
+  // The same warning, left on the site. The push is gone once dismissed and
+  // the chat post describes everyone's problem to everyone; this is the only
+  // copy the owner can come back to, and it is what the For You feed shows
+  // them. Scoped to their franchise, so it reaches nobody else's feed.
+  //
+  // Deliberately NOT another push: `lineup-deadline` already fired above.
+  if (schefterLeague) {
+    const written = await publishAssistantPosts({
+      league: schefterLeague,
+      posts: warnings.map((w) =>
+        buildAssistantPost({
+          league: schefterLeague,
+          franchiseId: w.franchiseId,
+          kind: 'lineup',
+          week,
+          headline: w.noLineup ? 'No lineup submitted' : 'Check your lineup',
+          body: formatWarningLine(w).replace(/^• /, ''),
+          link: `/${schefterLeague.registrySlug}/lineup`,
+          linkLabel: 'Set your lineup',
+          playerIds: w.problems.map((p) => p.playerId).filter(Boolean),
+          tier: w.noLineup ? 'breaking' : 'standard',
+          now,
+        }),
+      ),
+      dryRun: DRY_RUN,
+      log: { log, warn },
+    });
+    if (written) log(`  [feed] wrote ${written} assistant post(s)`);
+  }
 
   // ── Compose + post ───────────────────────────────────────────────────────
   const intro = await generateLineupWarningIntro({
