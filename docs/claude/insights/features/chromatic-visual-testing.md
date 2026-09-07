@@ -135,3 +135,61 @@ Both guards were verified by re-introducing each bug and watching the test name
 the offending path. Worth doing every time: a guard written against a bug you
 have already fixed is untested by construction, and this one shipped a version
 that passed while the bug was live.
+
+## 2026-09-07 — a production SAFETY fallback is a hazard in a determinism context
+
+`Roster/PlayerCell` failed Chromatic intermittently on the Bengals mark. The
+mechanics are Trap 7 in `docs/claude/rules/storybook.md`; three things about
+how it hid are worth keeping.
+
+**The offline-fixtures doctrine was checked one layer above where fetches are
+decided.** The rule was written down and taken seriously — `PlayerCell.stories.ts`'s
+own header says "Headshots are inline data URIs, never espncdn — Chromatic
+waits for network idle, so a live CDN would make every one of these flaky," and
+`preview.ts`'s `delay: 300` comment asserted "the fixtures are fully offline."
+Both were true *of story args*, and neither could see the actual dependency,
+because it came from a stylesheet `injectLayoutStyles()` builds. That function
+was reviewed as **layout parity** — does a story get the rules the layout emits?
+— and nobody asked the orthogonal question of what URLs those rules resolve to.
+A doctrine phrased about fixtures does not cover a shared preview injection, and
+CSS is where the phrasing stops applying: `content: url()`, `@font-face src`,
+`background-image` and `mask-image` are each a fetch with no story arg to audit.
+
+**The fallback that made production robust is what made Storybook flaky.**
+`resolveNflDarkLogoUrl` falls back to the ESPN CDN for any team missing from the
+prebuild mirror, and that is *correct* and deliberate — it exists so a failed
+prebuild fetch degrades to the remote dark cut instead of a stylesheet pointing
+at files the build doesn't have (the Aug 2026 AFL players-page bug). But
+`storybook build` never runs prebuild, so the mirror was absent, the committed
+manifest was its `{"codes": []}` default, and the safety path became the *only*
+path for all 32 teams. Generalizable: **a graceful-degradation fallback silently
+becomes the primary behavior in any context that doesn't run the step it is
+degrading from**, and a visual-regression build is exactly the context where
+"usually works" is the wrong property. Anything reading a prebuild-generated,
+gitignored artifact is in this class — the tell is a committed empty-default
+manifest.
+
+**Re-fetching in CI would have moved the flake, not removed it.** The obvious
+fix — run the mirror script before `storybook build` — leaves a network call on
+the critical path of the thing whose value is determinism, and its documented
+non-fatal behavior would have failed back to the CDN silently. So the mirror is
+COMMITTED (`.storybook/static/nfl-dark`, 32 PNGs, 2.3 MB, served at its own
+`/storybook-nfl-dark` prefix): a visual baseline has to be reproducible from a
+checkout alone. Worth paying bytes for.
+
+The half that generalizes is not the mirror, though — it is `sameOriginOnly` on
+both builders, which DROPS an off-origin swap rather than emitting it. The
+mirror fixes the 32 teams we know about; the flag decides what happens to the
+ones we don't. Its failure mode is a light mark in a dark snapshot: a
+deterministic, visible diff a human accepts or rejects, instead of a request
+that usually succeeds. That asymmetry is the whole point — **in a visual
+baseline, prefer a wrong render that always renders the same way over a correct
+render that sometimes doesn't**, because only the first one is reviewable. It
+also covers the case that has not happened yet: no college dark cut is mirrored,
+so all 258 college rules simply don't exist in Storybook, and the day a story
+sets `collegeLogo` it gets the light mark rather than a fresh flake.
+
+Verified by rendering the built Storybook in Chromium against a local server and
+asserting zero non-localhost requests across four stories — the check the guard
+test cannot make, since the builders' output is only a string until a browser
+resolves it.
