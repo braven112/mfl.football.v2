@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { mkdtempSync, writeFileSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { readFileSync } from 'node:fs';
 import {
   buildAssistantPost,
   publishAssistantPosts,
@@ -108,5 +109,36 @@ describe('publishAssistantPosts', () => {
       log: silent,
     });
     expect(written).toBe(0);
+  });
+});
+
+
+/**
+ * The lineup check sends a push, then falls back to a chat post naming only
+ * the owners the push did not reach — and RETURNS EARLY when it reached
+ * everyone, which is the common case. The feed write has to happen before that
+ * return, or the better the push performs the fewer owners get a durable copy:
+ * the feed would quietly stop filling exactly when the system is healthiest.
+ *
+ * This is pure statement ORDER, so no behavioural test can see it and a
+ * refactor that moves one block would ship the bug silently. Scanned instead.
+ */
+describe('schefter-lineup-check writes the feed post before the push-fallback return', () => {
+  const src = readFileSync('scripts/schefter-lineup-check.mjs', 'utf8');
+
+  it('still has both landmarks', () => {
+    expect(src).toContain('publishAssistantPosts({');
+    expect(src).toContain("return 'pushed';");
+  });
+
+  it('publishes to the feed above the early return', () => {
+    expect(src.indexOf('publishAssistantPosts({')).toBeLessThan(src.indexOf("return 'pushed';"));
+  });
+
+  it('writes one post per flagged owner, not per unreached owner', () => {
+    // `unreached` is main's push-fallback subset; the feed must map `warnings`.
+    const call = src.slice(src.indexOf('publishAssistantPosts({'), src.indexOf("return 'pushed';"));
+    expect(call).toContain('warnings.map(');
+    expect(call).not.toContain('unreached.map(');
   });
 });
