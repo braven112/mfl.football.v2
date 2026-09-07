@@ -18,10 +18,12 @@ routes. Guards: `tests/viewer-preferences.test.ts`,
 time, the waiver window on both `/players` pages and in the claim modal, the
 owners-poll deadline, the mock-draft lobby, the AFL keeper-analysis freshness
 stamp, the waiver-priority footnote, and the game-day matchup heroes'
-channels. `/preferences` is pinned in the nav beside Notifications, and the
-nav drawer's account menu (`NavFooter.astro`, under the team name) PRINTS the
-chosen clock — the one place a viewer can see what they picked without opening
-the page.
+channels. `/preferences` reaches the nav through the drawer's account menu
+(`NavFooter.astro`, under the team name), which also PRINTS the chosen clock —
+the one place a viewer sees what they picked without opening the page. It was
+pinned at the TOP of the drawer until Sep 2026; that pin is gone, so the footer
+is now the only nav route to it, and the signed-out row there is not optional
+(the page has no auth gate, and a signed-out visitor has no account menu).
 
 ## The rules
 

@@ -983,3 +983,47 @@ lists it.
 **Rule:** "put it in / take it out of the footer" means `footer-config.ts` plus a
 `page-directory.json` id. Touch `nav-config.json`'s `footerLinks` only when the
 thing genuinely belongs at the bottom of the open drawer.
+
+---
+
+## 2026-09-07 - The Footer Account Menu, and Why `pinnedLinks` Is Now Empty
+
+**Context:** the footer's team row carried a chevron that toggled commissioner
+mode and was rendered for commissioners only — no label, no `aria-expanded`
+target, nothing announcing what it did. Meanwhile the two settings that belong
+to the VIEWER rather than the league (Notifications, Preferences) sat pinned at
+the top of the drawer, ~700px above the block that already showed who you are.
+
+**The change.** That chevron became an account disclosure every signed-in owner
+gets, opening four labelled rows in the footer: Preferences (printing the
+viewer's chosen clock), Notifications, Commissioner mode (a labelled row with an
+ON/OFF pill), and Sign out — which the site had an endpoint for and no button.
+`pinnedLinks` is now `[]`.
+
+Four things worth carrying forward:
+
+- **The nav reads the clock cookie by hand.** `viewer-preferences-page.ts` is
+  route-only for two independent reasons and the footer trips both:
+  `resolveViewerPreferences` WRITES cookies (`ResponseSentError` from a
+  component — a blank page on every route), and `readViewerClock` reads Redis
+  whenever the device has no cookie, which in a component the whole site renders
+  is a round-trip per page view rather than the once-per-device the mirror was
+  designed for. `Astro.cookies.get(COUNTRY_COOKIE/ZONE_COOKIE)` +
+  `parseViewerPreferences` is side-effect free and exact: the cookies are only
+  ever written by an explicit choice, so their presence IS the `explicit`
+  signal, and their absence prints "League time (PT)" — the pre-preference floor.
+- **Removing a pinned link is only safe if something else carries it.**
+  `/notifications` bounces a signed-out visitor to login, so losing its pin
+  costs that visitor nothing. `/preferences` has NO auth gate and works
+  signed out by design — and a signed-out visitor has no team row, therefore no
+  account menu. It needs its own row beside the verify prompt, or the pin
+  removal quietly strands the one setting that was built to work without an
+  account. `tests/nav-pinned-links.test.ts` now pins that pairing.
+- **Menu rows are registry-gated, not league-literal'd.** Best-ball publishes
+  neither page; `viewerPreferences` / `pushNotifications` in `leagues-data.mjs`
+  decide, so adding a league can't accidentally ship it two rows that 404.
+- **`pinnedLinks` stays in the schema at zero entries.** The reason it exists
+  is unchanged — phase order means no section link can hold "first in the
+  drawer" — so a future must-be-first link goes there rather than into a
+  section. The guard suite kept its structural checks (never pinned AND
+  sectioned, pinned `<ul>` before `nav-links__list`) for exactly that day.

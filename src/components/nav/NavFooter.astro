@@ -121,8 +121,8 @@ const isAuthenticated = !!team;
 const showCommish = isCommissioner && isCommishMode;
 
 // The account menu hangs off the team row, so it needs a team to hang off.
-// A signed-out visitor sees the verify prompt and reaches the same pages from
-// the pinned nav links above.
+// A signed-out visitor sees the verify prompt instead, with a standalone
+// Preferences row below it (that page has no auth gate).
 const showAccountMenu = isAuthenticated && (showPreferencesRow || showNotificationsRow || isCommissioner);
 ---
 
@@ -316,6 +316,31 @@ const showAccountMenu = isAuthenticated && (showPreferencesRow || showNotificati
         <path d="M9 18l6-6-6-6" />
       </svg>
     </a>
+  )}
+
+  {/* Signed out, there is no team row to hang the account menu off — but
+      /preferences has no auth gate and is the one setting that works without
+      an account, so it keeps a home here now that it is no longer pinned at
+      the top of the drawer. Notifications is deliberately absent: that page
+      bounces a signed-out visitor to the login screen. */}
+  {!isAuthenticated && showPreferencesRow && (
+    <div class="nav-footer__account nav-footer__account--signed-out">
+      <a class="nav-footer__account-row" href={preferencesUrl}>
+        <svg class="nav-footer__account-icon" aria-hidden="true">
+          <use href={`${spriteUrl}#icon-wrench`}></use>
+        </svg>
+        <span class="nav-footer__account-label">
+          Preferences
+          <span class="nav-footer__account-value">
+            {viewerCountry && <span class="nav-footer__account-flag" aria-hidden="true">{viewerCountry.flag}</span>}
+            {clockValue}
+          </span>
+        </span>
+        <svg class="nav-footer__account-arrow" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M9 18l6-6-6-6" />
+        </svg>
+      </a>
+    </div>
   )}
 
   {/* Theme preference — compact row, own top border so it doesn't crowd team identity */}
@@ -779,6 +804,11 @@ const showAccountMenu = isAuthenticated && (showPreferencesRow || showNotificati
     gap: 2px;
     padding-top: var(--nav-spacing-sm, 8px);
     border-top: 1px solid var(--nav-border-subtle, #f3f4f6);
+  }
+
+  /* Signed out: one row, no disclosure — so it carries the divider itself. */
+  .nav-footer__account--signed-out {
+    padding-top: var(--nav-spacing-sm, 8px);
   }
 
   .nav-footer__account-row {
