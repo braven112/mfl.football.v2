@@ -17,14 +17,21 @@
 import { describe, it, expect } from 'vitest';
 import {
   BEAT_KINDS,
+  CLOSURE_REASONS,
+  assetShapeOf,
+  buildAskChangedBeat,
+  buildClosureBeat,
   buildDealShape,
   buildExpiryBeat,
   buildMarketBeats,
+  buildReOfferBeat,
   planBeats,
+  tradeSignatureOf,
   plannedPlayerCount,
   unlockedBeatCount,
 } from '../scripts/lib/schefter-offer-beats.mjs';
 import { redactTradeOffer } from '../scripts/lib/redact-trade-offer.mjs';
+import { readFileSync } from 'node:fs';
 
 const NOW = Date.UTC(2026, 8, 7, 12, 0, 0);
 const HOUR = 60 * 60 * 1000;
@@ -317,5 +324,187 @@ describe('redactTradeOffer — beats reach the tip without widening the names', 
   it('leaves the exposure block at exactly its three published fields', () => {
     const { tip } = redactTradeOffer(args(4) as any);
     expect(Object.keys(tip.exposure!).sort()).toEqual(['players', 'signal', 'team']);
+  });
+});
+
+describe('assetShapeOf — the fingerprint the next scan compares against', () => {
+  it('ignores MFL\'s asset ordering', () => {
+    const a = assetShapeOf({ franchise1_gave_up: '13116,14833', franchise2_gave_up: 'FP_0003_2027_3' });
+    const b = assetShapeOf({ franchise1_gave_up: '14833, 13116', franchise2_gave_up: 'FP_0003_2027_3' });
+    expect(a.h).toBe(b.h);
+  });
+
+  it('keeps the sides apart — the same assets moving the other way is a different deal', () => {
+    const a = assetShapeOf({ franchise1_gave_up: '13116', franchise2_gave_up: '14833' });
+    const b = assetShapeOf({ franchise1_gave_up: '14833', franchise2_gave_up: '13116' });
+    expect(a.h).not.toBe(b.h);
+  });
+});
+
+describe('buildAskChangedBeat', () => {
+  const raw = { franchise: '0001', franchise2: '0003' };
+
+  it('says nothing when the ask has not moved', () => {
+    const shape = assetShapeOf({ franchise1_gave_up: '13116', franchise2_gave_up: 'FP_0003_2027_3' });
+    expect(buildAskChangedBeat({
+      previousShape: shape, currentShape: shape, namedFid: '0001', rawOffer: raw,
+    })).toBeNull();
+  });
+
+  it('says nothing on first sight — no previous shape is not a change', () => {
+    expect(buildAskChangedBeat({
+      previousShape: null,
+      currentShape: assetShapeOf({ franchise1_gave_up: '13116' }),
+      namedFid: '0001',
+      rawOffer: raw,
+    })).toBeNull();
+  });
+
+  it('reads the direction from the NAMED team\'s side of the deal', () => {
+    const previousShape = assetShapeOf({ franchise1_gave_up: '13116', franchise2_gave_up: 'FP_0003_2027_3' });
+    const currentShape = assetShapeOf({ franchise1_gave_up: '13116,14833', franchise2_gave_up: 'FP_0003_2027_3' });
+    // 0001 is franchise1 and just added a player: from their side, sweetened.
+    expect(buildAskChangedBeat({ previousShape, currentShape, namedFid: '0001', rawOffer: raw })!.direction)
+      .toBe('sweetened');
+    // From 0003's side nothing on their own half moved — same assets, reshuffled.
+    expect(buildAskChangedBeat({ previousShape, currentShape, namedFid: '0003', rawOffer: raw })!.direction)
+      .toBe('reworked');
+  });
+});
+
+describe('buildReOfferBeat', () => {
+  it('needs a prior proposal between the pair', () => {
+    expect(buildReOfferBeat({ priorPairCount: 0 })).toBeNull();
+    expect(buildReOfferBeat({ priorPairCount: 1 })).toMatchObject({ priorProposals: 1, atLeast: true });
+  });
+});
+
+describe('buildClosureBeat — only closures MFL states', () => {
+  it('accepts the two provable reasons and nothing else', () => {
+    expect(CLOSURE_REASONS).toEqual(['accepted', 'expired']);
+    for (const reason of CLOSURE_REASONS) {
+      expect(buildClosureBeat({ reason, daysOpen: 11, priorPosts: 3 })!.kind).toBe(BEAT_KINDS.CLOSURE);
+    }
+    // A proposal leaving view is not evidence it was pulled — the lane is fed
+    // by owner self-reports, so "withdrawn" is unprovable and unsayable.
+    expect(buildClosureBeat({ reason: 'withdrawn', daysOpen: 3 })).toBeNull();
+    expect(buildClosureBeat({ reason: 'rejected', daysOpen: 3 })).toBeNull();
+  });
+});
+
+describe('planBeats — movement', () => {
+  const dealShape = { direction: 'selling', sends: {}, gets: {} } as any;
+  const marketBeats = [{ kind: BEAT_KINDS.IN_TALKS_NOT_LISTED, subject: { position: 'WR' } }];
+  const askChangedBeat = { kind: BEAT_KINDS.ASK_CHANGED, direction: 'sweetened' } as any;
+  const closureBeat = { kind: BEAT_KINDS.CLOSURE, reason: 'expired', daysOpen: 11 } as any;
+
+  it('a changed ask leads immediately — it does not wait for a rotation slot', () => {
+    for (const signal of [1, 2, 3, 4, 5]) {
+      const { beats, leadKind } = planBeats({ signal, dealShape, marketBeats, askChangedBeat });
+      expect(leadKind).toBe(BEAT_KINDS.ASK_CHANGED);
+      expect(beats[0]).toBe(askChangedBeat);
+    }
+  });
+
+  it('a closure always leads and never waits', () => {
+    const { beats, leadKind } = planBeats({ signal: 1, dealShape, marketBeats, closureBeat });
+    expect(leadKind).toBe(BEAT_KINDS.CLOSURE);
+    expect(beats[0]).toBe(closureBeat);
+  });
+});
+
+describe('redactTradeOffer — a closure post reveals nothing new', () => {
+  const playerMap = new Map([
+    ['13116', { name: "Ja'Marr Chase", position: 'WR' }],
+    ['14833', { name: 'Breece Hall', position: 'RB' }],
+  ]);
+  const teamMap = new Map([
+    ['0001', { name: 'Pacific Pigskins', division: 'East' }],
+    ['0003', { name: 'Maverick', division: 'West' }],
+  ]);
+  const base = {
+    rawOffer: {
+      id: 'closure_test_1',
+      franchise: '0001',
+      franchise2: '0003',
+      franchise1_gave_up: '13116,14833',
+      franchise2_gave_up: 'FP_0003_2027_3',
+    },
+    offeringFid: '0001',
+    playerMap,
+    teamMap,
+    counts: { ownerOfferCount7d: 1, divisionOfferCount7d: 0, playerHistory: new Map() },
+    currentYear: 2026,
+    adpRankByPlayerId: new Map([['13116', 1], ['14833', 8]]),
+    blockByFid: new Map(),
+    positionRuns: new Map(),
+    nowMs: NOW,
+  };
+
+  it('holds the signal instead of advancing it', () => {
+    // Same prior exposure, with and without the closure: the live post advances
+    // to the next signal, the closure stays on the one already published.
+    const live = redactTradeOffer({ ...base, exposureCount: 3 } as any).tip;
+    const closed = redactTradeOffer({
+      ...base,
+      exposureCount: 3,
+      closure: { reason: 'expired', daysOpen: 11, priorPosts: 3 },
+    } as any).tip;
+    expect(live.exposure!.signal).toBe(4);
+    expect(closed.exposure!.signal).toBe(3);
+    expect(closed.exposure!.players.length).toBeLessThanOrEqual(live.exposure!.players.length);
+  });
+
+  it('leads on the closure and carries the reason', () => {
+    const { tip } = redactTradeOffer({
+      ...base,
+      exposureCount: 2,
+      closure: { reason: 'accepted', daysOpen: 4, priorPosts: 2 },
+    } as any);
+    expect(tip.leadKind).toBe(BEAT_KINDS.CLOSURE);
+    expect(tip.beats![0]).toMatchObject({ kind: BEAT_KINDS.CLOSURE, reason: 'accepted', priorPosts: 2 });
+  });
+
+  it('never names on the way out what the ladder had not already named', () => {
+    // A proposal closed after a single team-only post must still be team-only.
+    const { tip } = redactTradeOffer({
+      ...base,
+      exposureCount: 1,
+      closure: { reason: 'expired', daysOpen: 2, priorPosts: 1 },
+    } as any);
+    expect(tip.exposure!.players).toEqual([]);
+    expect(JSON.stringify(tip.beats)).not.toContain("Ja'Marr Chase");
+  });
+});
+
+describe('tradeSignatureOf — the proposal↔completed-trade round trip', () => {
+  it('hashes a real completed TRADE and the proposal it came from alike', () => {
+    // The one thing "accepted" closures depend on: a proposal row and the
+    // transaction it becomes must produce the same signature. MFL swaps which
+    // side it calls franchise1 between exports, so this is not free.
+    const feed = JSON.parse(
+      readFileSync('data/theleague/mfl-feeds/2026/transactions.json', 'utf8'),
+    );
+    const list = feed?.transactions?.transaction ?? [];
+    const trade = (Array.isArray(list) ? list : [list]).find((t: any) => t.type === 'TRADE');
+    expect(trade, 'the 2026 feed should carry at least one completed TRADE').toBeDefined();
+
+    const fromTransaction = tradeSignatureOf(trade);
+    expect(fromTransaction).toBeTruthy();
+
+    // The same deal as MFL's owner-view proposal row: sides swapped, partner
+    // under `offeredto`, assets in the other order.
+    const asProposal = {
+      franchise: trade.franchise2,
+      offeredto: trade.franchise,
+      franchise1_gave_up: trade.franchise2_gave_up,
+      franchise2_gave_up: trade.franchise1_gave_up,
+    };
+    expect(tradeSignatureOf(asProposal)).toBe(fromTransaction);
+  });
+
+  it('refuses to sign a row with no assets or no pair', () => {
+    expect(tradeSignatureOf({ franchise: '0001', franchise2: '0003' })).toBeNull();
+    expect(tradeSignatureOf({ franchise1_gave_up: '13116' })).toBeNull();
   });
 });

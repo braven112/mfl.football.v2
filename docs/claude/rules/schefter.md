@@ -248,6 +248,47 @@ ONE fact that is new this signal so the prompt opens on it.
 - At the end of both ladders (offer 1076 was on signal 7 the day this shipped)
   `leadKind` rotates through the unlocked beats rather than parking on one.
 
+### Closing a proposal — only the two endings MFL states
+
+Movement beats (`ask_changed`, `re_offer`, `closure`) run off two new Redis
+keys: `trade_offers:shape` (a sorted, order-independent fingerprint of the ask,
+so the next scan can tell "changed" from "still sitting there") and
+`trade_offers:closed` (idempotency — a proposal reads as expired on every scan
+for the rest of its 30-day TTL).
+
+- **There is no `withdrawn` closure, and adding one would be a fabrication.**
+  A proposal leaving the scan is NOT evidence it was pulled: with `commish
+  sourced 0` the lane is fed by owner self-reports, and the `owner_reports`
+  hash has no per-row TTL, so a resolved proposal lingers in it while a live one
+  drops out the moment its owner stops loading the trades page. The two endings
+  we publish are the two MFL states outright — `accepted` (a TRADE in the
+  committed transactions feed with the same signature) and `expired` (the row's
+  own `expires` has passed). `CLOSURE_REASONS` is the allowlist and
+  `buildClosureBeat` returns null for anything else.
+- **`tradeSignatureOf` must keep hashing a proposal and the TRADE it became
+  alike.** MFL calls a different side "franchise1" depending on the export, so
+  the signature is the sorted franchise pair plus every asset from both sides
+  sorted together — the same shape
+  `schefter-scan.mjs#buildTradeSignature` builds for its supersede rule.
+  `tests/schefter-offer-beats.test.ts` runs the real 2026 TRADE row and the
+  owner-view proposal it would have come from through it and fails if they
+  diverge.
+- **A closure HOLDS the exposure signal instead of advancing it.** Ending a
+  story is not a licence to reveal one more name on the way out, so a proposal
+  closed after a single team-only post closes team-only.
+- **A proposal with `priorExposure < 1` closes silently.** Never having passed a
+  dice roll means the league was never told it existed; a closure post would be
+  the lane's first word on it, which is exactly what the roll exists to prevent.
+  It is marked closed and dropped.
+- **The expiry check also fixes a quieter bug:** before it, a proposal MFL
+  dropped weeks ago kept drawing dice rolls and shipping fresh rumors off a
+  stale owner report. That is where this lane's 26-to-56-day-old "live"
+  proposals came from.
+- **A changed ask jumps the rotation** rather than waiting for an even signal —
+  by the time its slot came up the ask may have changed again — and its shape
+  row is written on every scan, whether or not the dice landed, because the
+  change is a fact about the proposal rather than about whether we reported it.
+
 ### Former-name callbacks — the bit is the pairing, and it expires
 
 Schefter nodding to a name a franchise just retired ("Dead Cap Walking, the

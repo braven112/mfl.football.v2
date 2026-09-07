@@ -35,13 +35,34 @@
 
 /** Beat kinds, in the order they unlock when several are available. */
 export const BEAT_KINDS = Object.freeze({
+  CLOSURE: 'closure',
+  ASK_CHANGED: 'ask_changed',
   DEAL_SHAPE: 'deal_shape',
   EXPIRY: 'expiry',
   IN_TALKS_NOT_LISTED: 'in_talks_not_listed',
   BLOCK_STALE: 'block_stale',
   THIRD_DESK: 'third_desk',
+  RE_OFFER: 're_offer',
   POSITION_RUN: 'position_run',
 });
+
+/**
+ * Why a proposal is over. Both are things MFL states, not things we infer:
+ *
+ *   accepted — a TRADE transaction matching this proposal's franchise pair and
+ *              assets is in the committed transactions feed.
+ *   expired  — the row's own `expires` timestamp has passed, and MFL drops a
+ *              proposal at its expiry.
+ *
+ * There is deliberately no `withdrawn`. A proposal simply vanishing from the
+ * scan is NOT evidence it was pulled: the lane is fed by owner self-reports
+ * (`commish sourced 0`), so a proposal drops out of view when an owner stops
+ * loading the trades page just as surely as when it dies. Publishing "talks
+ * have gone cold" off that would be a claim about a live negotiation nobody
+ * withdrew. If the league-wide read is ever restored, its coverage — not a
+ * disappearance — is what would make that beat sayable.
+ */
+export const CLOSURE_REASONS = Object.freeze(['accepted', 'expired']);
 
 /** Below this many distinct desks a "more than one team is asking" beat is just the proposal itself. */
 const THIRD_DESK_FLOOR = 2;
@@ -156,6 +177,117 @@ export function buildExpiryBeat({ rawOffer, nowMs }) {
 }
 
 /**
+ * The signature that lets a proposal and the TRADE it became hash identically.
+ *
+ * Deliberately the same shape `schefter-scan.mjs#buildTradeSignature` builds —
+ * sorted franchise pair, then every asset from both sides sorted together —
+ * because MFL calls a different side "franchise1" depending on which export you
+ * ask, and the pair-and-assets form is the only one that survives that.
+ * Completed TRADE rows in the transactions feed carry the identical field
+ * names, which is what makes "the proposal I reported got done" provable rather
+ * than inferred.
+ */
+export function tradeSignatureOf(raw) {
+  const pair = [
+    String(raw?.franchise || ''),
+    String(raw?.franchise2 || raw?.offeredto || ''),
+  ]
+    .filter(Boolean)
+    .sort()
+    .join(':');
+  if (!pair) return null;
+  const assets = [raw?.franchise1_gave_up, raw?.franchise2_gave_up]
+    .flatMap((str) => String(str || '').split(','))
+    .map((t) => t.trim())
+    .filter(Boolean)
+    .sort();
+  if (assets.length === 0) return null;
+  return `${pair}|${assets.join(',')}`;
+}
+
+/**
+ * A compact, order-independent fingerprint of what a proposal is asking for.
+ *
+ * Stored per proposal so the NEXT scan can tell "the same offer, still sitting
+ * there" from "they changed the ask". Sorted because MFL does not promise a
+ * stable asset order, and per-side counts kept alongside the hash so the beat
+ * can say which way the deal moved instead of only that it moved.
+ */
+export function assetShapeOf(rawOffer) {
+  const side = (str) => String(str || '')
+    .split(',')
+    .map((t) => t.trim())
+    .filter(Boolean)
+    .sort();
+  const s1 = side(rawOffer?.franchise1_gave_up);
+  const s2 = side(rawOffer?.franchise2_gave_up);
+  return {
+    h: `${s1.join(',')}|${s2.join(',')}`,
+    c1: s1.length,
+    c2: s2.length,
+  };
+}
+
+/**
+ * The ask moved since we last looked.
+ *
+ * `direction` is from the NAMED team's side — the only franchise the post may
+ * characterise — so a sweetened offer reads as what that team did, not as an
+ * unattributed change. A pure reshuffle (same counts, different assets) is
+ * still news and says so as `reworked`.
+ */
+export function buildAskChangedBeat({ previousShape, currentShape, namedFid, rawOffer }) {
+  if (!previousShape?.h || !currentShape?.h) return null;
+  if (previousShape.h === currentShape.h) return null;
+
+  const namedIsSide1 = String(rawOffer?.franchise ?? '') === String(namedFid ?? '');
+  const before = namedIsSide1 ? previousShape.c1 : previousShape.c2;
+  const after = namedIsSide1 ? currentShape.c1 : currentShape.c2;
+
+  let direction;
+  if (after > before) direction = 'sweetened';
+  else if (after < before) direction = 'trimmed';
+  else direction = 'reworked';
+
+  return {
+    kind: BEAT_KINDS.ASK_CHANGED,
+    direction,
+    namedSideAssetsBefore: before,
+    namedSideAssetsAfter: after,
+  };
+}
+
+/**
+ * These two desks have talked before. `priorPairCount` counts earlier
+ * proposals between the same franchise pair in our own archive, which is a
+ * floor like every other count here — the archive holds the proposals this
+ * lane saw, not the proposals that happened.
+ */
+export function buildReOfferBeat({ priorPairCount, windowDays }) {
+  if (!Number.isFinite(priorPairCount) || priorPairCount < 1) return null;
+  return {
+    kind: BEAT_KINDS.RE_OFFER,
+    priorProposals: priorPairCount,
+    windowDays: windowDays ?? 30,
+    atLeast: true,
+  };
+}
+
+/**
+ * The story is over. Leads every closure post and reveals no new identity —
+ * `redactTradeOffer` holds the signal at its prior value for exactly that
+ * reason, so a proposal that was never named does not get named on its way
+ * out.
+ */
+export function buildClosureBeat({ reason, daysOpen, priorPosts }) {
+  if (!CLOSURE_REASONS.includes(reason)) return null;
+  const beat = { kind: BEAT_KINDS.CLOSURE, reason };
+  if (Number.isFinite(daysOpen)) beat.daysOpen = Math.max(0, Math.round(daysOpen));
+  if (Number.isFinite(priorPosts) && priorPosts > 0) beat.priorPosts = priorPosts;
+  return beat;
+}
+
+/**
  * Cross-references against the league's PUBLIC trade block
  * (`feed.tradeBaitState[fid].observedBlock`) and the proposal history.
  *
@@ -265,24 +397,56 @@ export function buildMarketBeats({
  * shipped stays shipped — the reader is assembling a picture, not watching it
  * get taken away).
  */
-export function planBeats({ signal, dealShape, expiryBeat, marketBeats, nameLanded = true }) {
+export function planBeats({
+  signal,
+  dealShape,
+  expiryBeat,
+  marketBeats,
+  askChangedBeat,
+  closureBeat,
+  nameLanded = true,
+}) {
+  // A finished proposal skips the rotation entirely: the closure IS the post,
+  // and `signal` is held at its prior value by the caller so nothing new is
+  // revealed on the way out. Everything already revealed rides along as
+  // context so the callback can say what it is closing.
+  if (closureBeat) {
+    const context = [];
+    if (dealShape) context.push({ kind: BEAT_KINDS.DEAL_SHAPE, ...dealShape });
+    context.push(...(marketBeats || []));
+    return {
+      beats: [closureBeat, ...context.slice(0, unlockedBeatCount(signal))],
+      leadKind: BEAT_KINDS.CLOSURE,
+    };
+  }
+
   const ordered = [];
+  // A changed ask is the freshest thing we know about a proposal, so it goes
+  // to the front rather than waiting for a rotation slot — by the time its
+  // slot came up the offer may have changed again.
+  if (askChangedBeat) ordered.push(askChangedBeat);
   if (dealShape) ordered.push({ kind: BEAT_KINDS.DEAL_SHAPE, ...dealShape });
-  // An expiry inside two days jumps the queue — a deadline is news when it is
-  // near, not when its rotation slot comes up.
+  // An expiry inside two days jumps the queue for the same reason — a deadline
+  // is news when it is near, not when its rotation slot comes up.
   if (expiryBeat && (expiryBeat.urgency === 'today' || expiryBeat.urgency === 'soon')) {
     ordered.push(expiryBeat);
   }
   ordered.push(...(marketBeats || []));
   if (expiryBeat && expiryBeat.urgency === 'this_week') ordered.push(expiryBeat);
 
-  const unlocked = ordered.slice(0, unlockedBeatCount(signal));
+  // A changed ask forces its own slot open: without this it would be revealed
+  // only if the signal happened to be even, and the change would age out.
+  const unlocked = ordered.slice(0, Math.max(askChangedBeat ? 1 : 0, unlockedBeatCount(signal)));
   const isPlayerSignal = signal >= 3 && signal % 2 === 1;
-  const newIndex = unlockedBeatCount(signal) - 1;
-  const newlyUnlocked = signal % 2 === 0 && newIndex >= 0 ? ordered[newIndex] : null;
+  const newIndex = unlocked.length - 1;
+  const newlyUnlocked = (askChangedBeat || signal % 2 === 0) && newIndex >= 0
+    ? ordered[newIndex]
+    : null;
 
   let leadKind;
-  if (signal === 1) {
+  if (askChangedBeat) {
+    leadKind = BEAT_KINDS.ASK_CHANGED;
+  } else if (signal === 1) {
     leadKind = 'team';
   } else if (newlyUnlocked) {
     leadKind = newlyUnlocked.kind;

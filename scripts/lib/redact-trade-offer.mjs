@@ -30,6 +30,14 @@
  *                     Map and not a plain object of arrays.
  *   positionRuns    — Map<position, proposalCount> across the proposals this
  *                     scan can see. A floor, never a total — the beats hedge.
+ *   previousShape   — `assetShapeOf` from the last scan that saw this proposal.
+ *                     Absent on first sight; a differing hash is the
+ *                     "they changed the ask" beat.
+ *   priorPairCount  — earlier proposals between the same franchise pair in our
+ *                     own archive. A floor, like every other count here.
+ *   closure         — { reason: 'accepted' | 'expired', daysOpen, priorPosts }
+ *                     when the proposal is OVER. Holds the exposure signal
+ *                     rather than advancing it, and the closure beat leads.
  *   nowMs           — clock, injectable for tests (expiry beat).
  *   adpRankByPlayerId — Map<playerId, number> for marquee ordering. Optional;
  *                     players without a rank sort last (least marquee).
@@ -40,9 +48,13 @@
  */
 
 import {
+  assetShapeOf,
+  buildAskChangedBeat,
+  buildClosureBeat,
   buildDealShape,
   buildExpiryBeat,
   buildMarketBeats,
+  buildReOfferBeat,
   planBeats,
   plannedPlayerCount,
 } from './schefter-offer-beats.mjs';
@@ -251,6 +263,9 @@ export function redactTradeOffer({
   adpRankByPlayerId,
   blockByFid,
   positionRuns,
+  previousShape,
+  priorPairCount = 0,
+  closure,
   nowMs = Date.now(),
 }) {
   const {
@@ -346,9 +361,12 @@ export function redactTradeOffer({
   // pass the number of PRIOR posts; the post we're building IS the next
   // signal. exposure stays undefined when exposureCount is negative (treat
   // as "no exposure yet" — the legacy redaction tokens carry the post).
-  const exposureSignal = Number.isFinite(exposureCount)
-    ? Math.max(0, Math.floor(exposureCount)) + 1
-    : 1;
+  // A closure post HOLDS the signal instead of advancing it. The proposal is
+  // over; a post that revealed one more name on its way out would be using the
+  // end of a story to leak something the story never earned.
+  const exposureSignal = closure
+    ? Math.max(1, Number.isFinite(exposureCount) ? Math.floor(exposureCount) : 1)
+    : (Number.isFinite(exposureCount) ? Math.max(0, Math.floor(exposureCount)) : 0) + 1;
   // Sides kept apart on purpose: `franchise1_gave_up` are fid1's players,
   // `franchise2_gave_up` are fid2's. Merging them is what let a post name a
   // team alongside the other side's player.
@@ -407,11 +425,29 @@ export function redactTradeOffer({
     positionRuns,
     nameablePlayerIds,
   });
+  const askChangedBeat = buildAskChangedBeat({
+    previousShape,
+    currentShape: assetShapeOf(rawOffer),
+    namedFid,
+    rawOffer,
+  });
+  const reOfferBeat = buildReOfferBeat({ priorPairCount });
+  if (reOfferBeat) marketBeats.push(reOfferBeat);
+  const closureBeat = closure
+    ? buildClosureBeat({
+      reason: closure.reason,
+      daysOpen: closure.daysOpen,
+      priorPosts: closure.priorPosts,
+    })
+    : null;
+
   const { beats, leadKind } = planBeats({
     signal: exposureSignal,
     dealShape,
     expiryBeat,
     marketBeats,
+    askChangedBeat,
+    closureBeat,
     // Whether THIS signal actually printed a name the last one didn't. The
     // named team's side is finite, so past the last player an odd signal would
     // otherwise announce a new name that does not exist.
