@@ -190,7 +190,12 @@ describe('hero components', () => {
       f.endsWith('.astro') && /import EventHeroShell from/.test(readFileSync(resolve(dir, f), 'utf8'))
     );
     // Guards the guard: a glob that silently matches nothing would pass.
-    expect(importers.length).toBeGreaterThanOrEqual(6);
+    // Retightened from 6 to 4 when CutWatchHero, AuctionHero and
+    // PreseasonCountdownHero were retired — their composites took over those
+    // phases outright. Ratchet rule, same as the repo's other baselines: this
+    // number may only come DOWN with a deletion, never be loosened to make a
+    // failure go away.
+    expect(importers.length).toBeGreaterThanOrEqual(4);
     for (const f of importers) {
       const src = readFileSync(resolve(dir, f), 'utf8');
       // Either forwarding shape counts: an explicit prop, or the whole-props
@@ -209,13 +214,18 @@ describe('hero components', () => {
     // panel's own link icon kept the copy one. Nothing about either rule
     // says which band it is in, so this pins them by name.
     const shell = read('src/components/theleague/EventHeroShell.astro');
-    const cutwatch = read('src/components/theleague/CutWatchHero.astro');
 
     // Every selector that paints INSIDE the slotted panel.
+    //
+    // CutWatchHero used to contribute a third sample (`.cw-team__count`) and was
+    // the only component outside the shell that ever set the panel accent. It
+    // was retired when the cut-watch composite took over the whole phase, so
+    // the shell's own pair is the set now — which still pins the bug that
+    // actually happened, since both selectors below are the shell's. If a hero
+    // grows its own panel-scoped rule again, add it here.
     const panelScoped = [
       ['shell', shell, '.tl-hero-panel__title'],
       ['shell', shell, '.tl-hero-panel__link-icon'],
-      ['cutwatch', cutwatch, '.cw-team__count'],
     ] as const;
     // Match the RULE, not the name: the comment on each rule names the other
     // one (they are a matched pair and the note is the point), so a plain

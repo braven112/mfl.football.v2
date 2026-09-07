@@ -8,7 +8,6 @@
  */
 import type { HeroState } from '../../types/hero-state';
 import type { MatchupPairing, TeamInfo } from '../../types/live-scoring';
-import AuctionHero from './AuctionHero.astro';
 import AuctionCompositeHero from './AuctionCompositeHero.astro';
 import DraftHero from './DraftHero.astro';
 import FeatureCompositeHero from './FeatureCompositeHero.astro';
@@ -28,12 +27,10 @@ import ChampionCrownedHero from './ChampionCrownedHero.astro';
 import TagExtensionHero from './TagExtensionHero.astro';
 import TaggedPlayerShowcaseHero from './TaggedPlayerShowcaseHero.astro';
 import TaggedShowcaseCompositeHero from './TaggedShowcaseCompositeHero.astro';
-import CutWatchHero from './CutWatchHero.astro';
 import CutWatchCompositeHero from './CutWatchCompositeHero.astro';
 import PreseasonCompositeHero from './PreseasonCompositeHero.astro';
 import UdfaCompositeHero from './UdfaCompositeHero.astro';
 import UDFAHero from './UDFAHero.astro';
-import PreseasonCountdownHero from './PreseasonCountdownHero.astro';
 import DraftCountdownHero from './DraftCountdownHero.astro';
 
 // Daily rotation — real components (Phase D)
@@ -52,9 +49,9 @@ import { DEFAULT_COUNTRY, type CountryCode } from '../../utils/broadcast-channel
 export interface Props {
   /** Fully resolved hero state from the page frontmatter */
   state: HeroState;
-  /** Path resolver from layout (needed by AuctionHero/DraftHero) */
+  /** Path resolver from layout (needed by DraftHero and the composites) */
   resolveLeaguePath: (path: string) => string;
-  /** Sprite URL (needed by AuctionHero/DraftHero) */
+  /** Sprite URL (needed by DraftHero and the other EventHeroShell heroes) */
   spriteUrl: string;
   /** Live scoring data (only when slot === 'live-scoring') */
   liveScoring?: {
@@ -132,10 +129,10 @@ const ptWeekday = slot === 'article'
 const isFridayArticle = ptWeekday === 'Fri';
 ---
 
-{/* P0: Auction hero — composite with the best available free agent when a
-    model was cast; legacy command-center shell as the defensive fallback */}
+{/* P0: Auction hero. No model/legacy fork any more: the composite renders the
+    whole phase, and a cast that comes back empty (a missing feed) simply drops
+    the cutout — the crest and the copy still carry the card. */}
 {(phase === 'auction-preview' || phase === 'auction-live') && state.auctionProps && (
-  auctionModel ? (
     <AuctionCompositeHero
       leagueYear={state.auctionProps.leagueYear}
       resolveLeaguePath={resolveLeaguePath}
@@ -144,16 +141,6 @@ const isFridayArticle = ptWeekday === 'Fri';
       closingBid={auctionClosingBid}
       referenceDate={state.metadata.referenceDate}
     />
-  ) : (
-    <AuctionHero
-      backdrop={heroBackdrop}
-      leagueYear={state.auctionProps.leagueYear}
-      resolveLeaguePath={resolveLeaguePath}
-      spriteUrl={spriteUrl}
-      live={state.auctionProps.live}
-      referenceDate={state.metadata.referenceDate}
-    />
-  )
 )}
 
 {/* P0: Draft hero — delegate to existing component */}
@@ -274,41 +261,27 @@ const isFridayArticle = ptWeekday === 'Fri';
   )
 )}
 
-{phase === 'cut-watch' && (
-  cutWatchModel && state.cutWatchProps ? (
-    <CutWatchCompositeHero
-      cutWatchProps={state.cutWatchProps}
-      model={cutWatchModel}
-      resolveLeaguePath={resolveLeaguePath}
-      userFranchiseId={userFranchiseId}
-    />
-  ) : (
-    <CutWatchHero
-      backdrop={heroBackdrop}
-      cutWatchProps={state.cutWatchProps}
-      resolveLeaguePath={resolveLeaguePath}
-      spriteUrl={spriteUrl}
-      userFranchiseId={userFranchiseId}
-    />
-  )
+{/* `enrichCutWatch` always returns cutWatchProps for this phase — the check
+    narrows the type, it is not a branch. The composite now covers the ALL-CLEAR
+    week too (nobody over the limit), which is most of this window and used to
+    fall back to the legacy card. */}
+{phase === 'cut-watch' && state.cutWatchProps && (
+  <CutWatchCompositeHero
+    cutWatchProps={state.cutWatchProps}
+    model={cutWatchModel}
+    resolveLeaguePath={resolveLeaguePath}
+    userFranchiseId={userFranchiseId}
+  />
 )}
 
-{phase === 'preseason-countdown' && (
-  preseasonModel && state.preseasonProps ? (
-    <PreseasonCompositeHero
-      preseasonProps={state.preseasonProps}
-      model={preseasonModel}
-      resolveLeaguePath={resolveLeaguePath}
-      isOwnHeadliner={preseasonModelIsOwn}
-      kickoffGame={kickoffGame}
-    />
-  ) : (
-    <PreseasonCountdownHero
-      preseasonProps={state.preseasonProps}
-      resolveLeaguePath={resolveLeaguePath}
-      referenceDate={state.metadata.referenceDate}
-    />
-  )
+{phase === 'preseason-countdown' && state.preseasonProps && (
+  <PreseasonCompositeHero
+    preseasonProps={state.preseasonProps}
+    model={preseasonModel}
+    resolveLeaguePath={resolveLeaguePath}
+    isOwnHeadliner={preseasonModelIsOwn}
+    kickoffGame={kickoffGame}
+  />
 )}
 
 {phase === 'draft-countdown' && (

@@ -13,7 +13,9 @@
  * to show: both are centred marks, and his club says more about the player on
  * screen than our own logo does.
  *
- * The router falls back to the legacy AuctionHero when no model resolves.
+ * This hero owns the whole auction phase. A cast that comes back empty (a
+ * missing feed) simply drops the cutout; the crest and the copy still carry
+ * the card, which is what retired the legacy AuctionHero.
  */
 import type { HeroModel } from '../../utils/hero-casting';
 import { getNflTeamColors } from '../../utils/nfl-team-colors';
@@ -27,7 +29,10 @@ import CompositeHero from '../shared/CompositeHero.astro';
 interface Props {
   leagueYear: number;
   live: boolean;
-  model: HeroModel;
+  /** Null when no free agent could be cast (a missing feed) — the card then
+      shows its crest and copy without a cutout, rather than falling back to a
+      second component. */
+  model?: HeroModel | null;
   /** Live only: the soonest-closing auction the model represents */
   closingBid?: { bid: number; franchiseName: string; endsAtMs: number } | null;
   resolveLeaguePath: (path: string) => string;
@@ -39,7 +44,7 @@ interface Props {
 const {
   leagueYear,
   live,
-  model,
+  model = null,
   closingBid = null,
   resolveLeaguePath: r,
   referenceDate,
@@ -65,13 +70,13 @@ const bidHoursLeft = closingBid
   ? Math.max(0, Math.floor((closingBid.endsAtMs - now.getTime()) / 3_600_000))
   : null;
 
-const teamCode = normalizeTeamCode(model.nflTeam);
+const teamCode = normalizeTeamCode(model?.nflTeam ?? '');
 
 // An auction player is by definition unrostered, so no franchise owns this
 // story and the mark is his NFL team's. It replaces the league-logo backdrop
 // the live state used to carry: both are centred watermarks, and his club says
 // more about the player on screen than our own logo does.
-const crest = resolveHeroCrest({ league: 'theleague', nflTeam: model.nflTeam });
+const crest = resolveHeroCrest({ league: 'theleague', nflTeam: model?.nflTeam });
 
 const chips = [
   { label: 'Auction summary', href: `${mflBase}&O=44`, external: true },
@@ -87,7 +92,7 @@ const chips = [
   wordmark={live ? undefined : 'AUCTION'}
   crest={crest}
   model={model}
-  captionMeta={`${model.descriptor} ${model.position} · ${teamCode}`}
+  captionMeta={model ? `${model.descriptor} ${model.position} · ${teamCode}` : undefined}
   glowColor={getNflTeamColors(teamCode).primary}
   logoArt={live ? undefined : '/assets/logos/theleague-logo-dark.svg'}
   pill={live ? 'Auction live' : 'Auction opens soon'}

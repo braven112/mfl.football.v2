@@ -9,7 +9,9 @@
  * Configuration of the shared CompositeHero shell; the geometry below is the
  * shipped `.psh` treatment expressed as the shell's custom properties.
  *
- * The router falls back to the legacy hero when no model resolves.
+ * This hero owns the whole preseason-countdown phase. With no slate to cast
+ * from it falls back to a top free agent, and failing even that it drops the
+ * cutout rather than handing off to a second component.
  */
 import type { HeroState } from '../../types/hero-state';
 import type { HeroModel } from '../../utils/hero-casting';
@@ -20,7 +22,8 @@ import CompositeHero from '../shared/CompositeHero.astro';
 
 interface Props {
   preseasonProps: NonNullable<HeroState['preseasonProps']>;
-  model: HeroModel;
+  /** Null when the week's slate is unavailable — see AuctionCompositeHero. */
+  model?: HeroModel | null;
   resolveLeaguePath: (path: string) => string;
   /** Whether the model is the signed-in owner's own player in the opener */
   isOwnHeadliner?: boolean;
@@ -28,7 +31,7 @@ interface Props {
   kickoffGame?: { awayName: string; homeName: string } | null;
 }
 
-const { preseasonProps, model, resolveLeaguePath: r, isOwnHeadliner = false, kickoffGame = null } = Astro.props;
+const { preseasonProps, model = null, resolveLeaguePath: r, isOwnHeadliner = false, kickoffGame = null } = Astro.props;
 
 const days = preseasonProps.daysUntilKickoff;
 const kickoffDate = preseasonProps.kickoffDate;
@@ -41,12 +44,14 @@ const summary = isKickoffDay
     ? `Week 1 kicks off ${kickoffDate}${openerLine}, and your guy is in the opener. Is the rest of your lineup ready?`
     : `Rosters are set and Week 1 kicks off ${kickoffDate}${openerLine}. Lock your lineup and get ready.`;
 
-const teamCode = normalizeTeamCode(model.nflTeam);
-const captionMeta = `${isOwnHeadliner ? 'Your Kickoff Starter' : model.descriptor} ${model.position} · ${teamCode}`;
+const teamCode = normalizeTeamCode(model?.nflTeam ?? '');
+const captionMeta = model
+  ? `${isOwnHeadliner ? 'Your Kickoff Starter' : model.descriptor} ${model.position} · ${teamCode}`
+  : undefined;
 
 // The opener is an NFL fixture, so the mark is his NFL team's even when he is
 // the signed-in owner's player — the hero is about the game, not the roster.
-const crest = resolveHeroCrest({ league: 'theleague', nflTeam: model.nflTeam });
+const crest = resolveHeroCrest({ league: 'theleague', nflTeam: model?.nflTeam });
 ---
 
 <CompositeHero

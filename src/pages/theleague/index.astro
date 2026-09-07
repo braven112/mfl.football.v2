@@ -511,6 +511,18 @@ if (heroState.phase === 'cut-watch' && heroState.cutWatchProps) {
     team.cutCandidates.map((c) => ({ playerId: c.playerId, franchiseId: team.franchiseId })),
   );
   cutWatchModel = castRosterModel(candidates, hpPlayerIdentityMap, heroFranchiseId, now, 'On the Bubble');
+  // Nobody over the limit is the COMMON case for most of this window, and it
+  // used to drop the hero back to the legacy card. There is no bubble player to
+  // cast then — so cast from the owner's own roster instead, which is the only
+  // semantically honest face for "your roster is already legal". Guests get a
+  // league-wide headliner, same widening rule as everywhere else.
+  cutWatchModel ??= castRosterModel(
+    getFranchiseCompositableHeadliners(leagueYear),
+    hpPlayerIdentityMap,
+    heroFranchiseId,
+    now,
+    'Your Roster',
+  );
 }
 let preseasonModel = null;
 let preseasonModelIsOwn = false;
@@ -539,6 +551,17 @@ if (heroState.phase === 'preseason-countdown' && heroState.preseasonProps) {
   // outside the starter tier, so keeping the base one IS the on-tier-opener
   // signal — an owner whose only opener player is a bench guy gets the honest
   // 'In the Opener' caption instead.
+  // No game data for the week (a feed gap, or the slate not published yet) used
+  // to drop the hero back to the legacy countdown. A top free agent is the
+  // honest stand-in: the card is about the season starting, and "best player
+  // nobody rosters" is a fact about that week regardless of the schedule.
+  preseasonModel ??= castTopFreeAgentModel(
+    hpPlayerIdentityMap,
+    now,
+    heroRosteredIds(),
+    getAdpRankedIds(leagueYear),
+  );
+
   const openerCodes = new Set(kickoffGame?.teamCodes ?? []);
   preseasonModelIsOwn =
     !!preseasonModel &&

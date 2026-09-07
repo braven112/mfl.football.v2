@@ -2035,3 +2035,50 @@ small text. Under `.cmh--franchise` the composite takes those instead.
   word always renders (measured at 1280 and 390; the tightest is WHAT'S NEW at
   333px on a 374px card), and faded by roughly half — it is decoration, and the
   pill carries the same fact in readable type.
+
+## Retiring the legacy heroes: a fallback is not a design (2026-09-07)
+
+Three phases rendered a composite only when a player could be cast, and the
+legacy `EventHeroShell` card otherwise. Asked why it needed to fall back at all,
+the honest answer turned out to be that only ONE of the two reasons was still
+real:
+
+- **"No player to composite"** had stopped being a reason. The shell renders a
+  null model fine — it drops the cutout and shows the crest and silhouette, the
+  same path the What's New hero has always used for a bug-fix rollup.
+- **"No content"** was the real one, and only for cut watch: its whole body is
+  metrics about over-limit teams, and the legacy card was the only one carrying
+  the ALL-CLEAR copy ("all teams are at or below the 22-player active limit").
+
+So the fix was to write the missing state, not to keep a second component:
+
+| Phase | Cast when the primary pool is empty |
+|---|---|
+| cut watch | the owner's own roster headliner — "your roster is legal" is about YOUR team, and a free agent would not be |
+| preseason | a top free agent — the card is about the season starting, and "best player nobody rosters" is true of that week regardless of the schedule |
+| auction | already a free agent by definition |
+
+Cut watch also gains an all-clear card that counts DAYS and the roster limit
+instead of violations, and takes the signed-in owner's colours, because on that
+week the hero is about their roster rather than about whoever is over.
+
+`CutWatchHero`, `AuctionHero` and `PreseasonCountdownHero` are gone. Two guards
+moved with them rather than being weakened:
+
+- `hero-franchise-backdrop.test.ts`'s panel-accent check lost its only
+  non-shell sample (`CutWatchHero`'s `.cw-team__count` was the one component
+  outside `EventHeroShell` that ever set `--hero-fb-accent-panel`). The shell's
+  own pair still pins the bug that actually happened, since both selectors in it
+  are the shell's.
+- Its "guards the guard" floor on EventHeroShell importers was **retightened**
+  6 → 4, ratchet-style: down with a deletion, never loosened to clear a failure.
+
+**The panel boards keep their fallback, and that is not an inconsistency.** UDFA
+and the tag showcase require two panels because a board of one is not a board —
+a structural minimum, not a missing cast.
+
+**Watch the prop types when a model becomes optional.** Declaring `model:
+HeroModel | null` while the router's own prop is `model?:` hands the component
+`undefined` and costs three `astro check` errors — the ratchet catches it, but
+only after a 3.5-minute run. `model?: HeroModel | null` with a `= null` default
+is the shape.
