@@ -15,6 +15,7 @@ import type { HeroState } from '../../types/hero-state';
 import type { HeroModel } from '../../utils/hero-casting';
 import { getNflTeamColors } from '../../utils/nfl-team-colors';
 import { normalizeTeamCode } from '../../utils/nfl-logo';
+import { resolveHeroCrest } from '../../utils/hero-crest';
 import CompositeHero from '../shared/CompositeHero.astro';
 
 interface Props {
@@ -42,12 +43,17 @@ const summary = isKickoffDay
 
 const teamCode = normalizeTeamCode(model.nflTeam);
 const captionMeta = `${isOwnHeadliner ? 'Your Kickoff Starter' : model.descriptor} ${model.position} · ${teamCode}`;
+
+// The opener is an NFL fixture, so the mark is his NFL team's even when he is
+// the signed-in owner's player — the hero is about the game, not the roster.
+const crest = resolveHeroCrest({ league: 'theleague', nflTeam: model.nflTeam });
 ---
 
 <CompositeHero
   ariaLabel="Preseason countdown to kickoff"
   accent="kickoff"
   wordmark="KICKOFF"
+  crest={crest}
   model={model}
   captionMeta={captionMeta}
   glowColor={getNflTeamColors(teamCode).primary}

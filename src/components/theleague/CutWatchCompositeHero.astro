@@ -22,6 +22,7 @@ import { normalizeTeamCode } from '../../utils/nfl-logo';
 import { formatCompactNumber } from '../../utils/formatters';
 import { TARGET_ACTIVE_COUNT } from '../../utils/salary-calculations';
 import { chooseTeamName } from '../../utils/team-names';
+import { resolveHeroCrest } from '../../utils/hero-crest';
 import CompositeHero from '../shared/CompositeHero.astro';
 
 interface Props {
@@ -72,6 +73,13 @@ const chipName = (t: (typeof overLimitTeams)[number]) =>
   chooseTeamName({ fullName: t.franchiseName, nameShort: t.franchiseNameShort }, 'short');
 
 const teamCode = normalizeTeamCode(model.nflTeam);
+
+// Whose story this is: YOUR club when you are the one over the limit (the model
+// is then your own bubble player), otherwise the team most over it — the one
+// the hero's metrics and lead chip are already about. A guest with nobody over
+// the limit gets the player's NFL mark.
+const crestFranchiseId = userTeam?.franchiseId ?? orderedTeams[0]?.franchiseId;
+const crest = resolveHeroCrest({ franchiseId: crestFranchiseId, league: 'theleague', nflTeam: model.nflTeam });
 ---
 
 <CompositeHero
@@ -79,6 +87,7 @@ const teamCode = normalizeTeamCode(model.nflTeam);
   accent="roster"
   tone={urgent ? 'red' : null}
   wordmark={"CUT\u00a0WATCH"}
+  crest={crest}
   model={model}
   captionMeta={`${model.descriptor} ${model.position} · ${teamCode}`}
   glowColor={getNflTeamColors(teamCode).primary}

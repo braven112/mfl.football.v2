@@ -23,7 +23,7 @@ import { getWeeklyTopScorerCandidates, getLatestScoredWeek } from '../../../util
 import { castBestScoredModel } from '../../../utils/hero-casting';
 import { normalizeTeamCode } from '../../../utils/nfl-logo';
 import { getFranchiseBrand } from '../../../utils/franchise-brand';
-import { resolveDarkSurfaceCrest } from '../../../utils/dark-surface-crest';
+import { resolveHeroCrest } from '../../../utils/hero-crest';
 import CompositeHero from '../../shared/CompositeHero.astro';
 import RecapHero from './RecapHero.astro';
 
@@ -49,16 +49,11 @@ const winner = model ? candidates.find((c) => c.playerId === model.mflId) ?? nul
 const brand = winner ? getFranchiseBrand(winner.franchiseId) : null;
 const franchiseName = brand?.name ?? '';
 const franchiseColor = brand?.color ?? '#1c497c';
-// The crest is picked SERVER-SIDE, and it is the dark artwork whenever the
-// franchise has any. This hero is a deep-ink composite in BOTH themes, so
-// `TeamIconDarkStyles`' swap and white stroke, which fire only under
-// `html.dark`, do nothing for a light-theme reader here. Taking `brand.groupMe`
-// shipped every franchise's LIGHT mark onto ink in both themes, and the
-// near-black crests dissolved into it at 0.12 opacity. See dark-surface-crest.ts.
-const crestArt = brand ? resolveDarkSurfaceCrest(brand, 'theleague') : null;
-// Inline, so it also beats the global `html.dark` stroke rule keyed on this
-// same src — a light crest can never end up wearing two rings.
-const crest = crestArt?.src ? { src: crestArt.src, filter: crestArt.filter } : null;
+// This hero IS a fantasy team's week, so the franchise that rostered the top
+// scorer owns the story and its crest is the watermark. `resolveHeroCrest`
+// picks the dark-surface artwork server-side and falls back to the player's NFL
+// mark if that club ships none — see hero-crest.ts.
+const crest = resolveHeroCrest({ franchiseId: winner?.franchiseId, league: 'theleague', nflTeam: model?.nflTeam });
 
 const teamCode = model ? normalizeTeamCode(model.nflTeam) : '';
 const points = winner ? winner.score.toFixed(1) : '';
@@ -71,7 +66,7 @@ const summary = franchiseName
   <CompositeHero
     ariaLabel={`Week ${week} recap — top scorer`}
     accent="recap"
-    wordmark={crest ? undefined : `WEEK ${week}`}
+    wordmark={`WEEK ${week}`}
     crest={crest}
     model={model}
     captionMeta={`${model.position} · ${teamCode}`}

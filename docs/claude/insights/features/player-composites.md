@@ -27,6 +27,7 @@ per player.
 | `src/components/theleague/*CompositeHero.astro` | Per-phase configurations of those two shells — copy, casting, geometry. They no longer own any of the treatment. (An earlier note here said the heroes share no base component; that stopped being true in Sep 2026.) |
 | `src/components/afl/AflCompositeHero.astro` | The AFL's keeper + conference-draft composites, on the same shell. |
 | `src/utils/hero-franchise-accent.ts` | Which colour tints the glow — the player's NFL team, or the viewer's own franchise. |
+| `src/utils/hero-crest.ts` | Which CREST sits behind the hero — the franchise's when one owns the story, the cast player's NFL team otherwise. |
 | `src/utils/nfl-team-colors.ts` | 32-team primary/secondary hex map (ESPN codes), nickname helper, `hexToRgba` |
 | `src/components/shared/SchefterPostCard.astro` | First integration — breaking-tier feed posts |
 | `scripts/schefter-scan.mjs` | Attaches `playerIds` on TRADE / AUCTION_WON / FREE_AGENT posts at generation time |
@@ -1925,3 +1926,56 @@ Both leagues' pages are one component driven by a per-league content module
 forked sibling. The blocks are a closed union rather than free HTML: a typo in a
 block's `kind` renders NOTHING, silently, so the guard pins that every kind used
 has a branch and every branch has a user.
+
+## The crest behind a composite hero (2026-09-07)
+
+Every composite hero now carries a centred crest watermark: the FANTASY club's
+when one owns the story (your bubble player on cut watch, your keeper
+cornerstone, the franchise that rostered the week's top scorer), the cast
+player's NFL team otherwise (the auction's best available, the opener's
+headliner). `hero-crest.ts` is the one place that decides.
+
+**"Owns the story" is the caller's answer, not the resolver's.** Only the hero
+knows whether its franchise is the viewer's own club, the team over the roster
+limit, or the one that rostered the top scorer — so the caller passes a
+`franchiseId` or omits it. In the AFL that id comes from
+`resolveHeroFranchiseAccent`, which already answers the harder question of WHICH
+franchise in a league that rosters the same player in both conferences. Taking
+it from there rather than re-deriving it is what stops the glow and the mark
+disagreeing about whose hero it is.
+
+**The numbers came from `hero-franchise-backdrop.css`, not from the broadcast.**
+The ask was "like the draft broadcast" — centred, faded so the text reads — and
+the broadcast's own reveal is `opacity: 0.42` at `68vh`. Neither transfers: a
+`vh`-sized crest is a different size on the same card at every window height,
+and 0.42 was tuned for two lines of TV-scale type read from ten feet, where a
+hero card carries a pill, a headline, a paragraph and a footer at reading size
+over the same mark. The backdrop file had already solved exactly this on a card
+this size — `min(90%, 26rem)`, `0.26`, stepping down to `min(70%, 15rem)` and
+`0.14` under 640px where the copy spans the full width — so the composite reuses
+those rather than deriving a third set.
+
+**The crest and the wordmark STACK.** They were mutually exclusive when only the
+recap hero used a crest, and a ternary would have silently dropped the phase
+name the moment every hero got one. On the AFL that name is load-bearing: it is
+the only thing that tells an owner whether the draft on screen is theirs without
+reading the pill.
+
+### Two failure modes, both already-known shapes
+
+- **A crest that 404s** is the cutout bug again. The NFL half comes from ESPN's
+  CDN, so it is a live network dependency, and an `<img>` with a broken `src`
+  paints the browser's broken-image box. `onerror` sets `cmh--no-crest`, the CSS
+  hides it, and the logo silhouette comes back — which is why the silhouette's
+  suppression is keyed on `--no-crest` rather than on `--has-crest` alone.
+- **Two marks on one card.** The silhouette exists to fill a dead right-hand
+  flank; a centred crest has already answered that. The auction's live state
+  lost its league-logo backdrop for the same reason — both are centred
+  watermarks, and the player's own club says more than our logo does.
+
+**`normalizeTeamCode` is not validation.** It uppercases and passes anything
+through, so a free agent's blank team or a junk code mints a doomed ESPN URL.
+`isValidTeamCode` is the check; the resolver returns null instead, and every
+caller treats null as "render no crest" rather than substituting a league logo —
+a hero with no mark reads as clean, one wearing the wrong club's mark reads as
+broken.

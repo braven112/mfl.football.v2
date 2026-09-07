@@ -7,8 +7,11 @@
  * the countdown and the command-center essentials as a compact chip row.
  *
  * Configuration of the shared CompositeHero shell. Once bidding is LIVE the
- * ghost wordmark gives way to a full-bleed league-logo backdrop — the word
- * "AUCTION" stops being news the moment the auction is the page.
+ * ghost wordmark drops away — the word "AUCTION" stops being news the moment
+ * the auction is the page — and the cast player's NFL crest carries the
+ * watermark alone. That crest replaced the league-logo backdrop this state used
+ * to show: both are centred marks, and his club says more about the player on
+ * screen than our own logo does.
  *
  * The router falls back to the legacy AuctionHero when no model resolves.
  */
@@ -18,6 +21,7 @@ import { normalizeTeamCode } from '../../utils/nfl-logo';
 import { getNthDayOfMonth } from '../../utils/league-event-resolver';
 import { formatCompactNumber } from '../../utils/formatters';
 import { DEFAULT_LEAGUE } from '../../config/leagues';
+import { resolveHeroCrest } from '../../utils/hero-crest';
 import CompositeHero from '../shared/CompositeHero.astro';
 
 interface Props {
@@ -63,6 +67,12 @@ const bidHoursLeft = closingBid
 
 const teamCode = normalizeTeamCode(model.nflTeam);
 
+// An auction player is by definition unrostered, so no franchise owns this
+// story and the mark is his NFL team's. It replaces the league-logo backdrop
+// the live state used to carry: both are centred watermarks, and his club says
+// more about the player on screen than our own logo does.
+const crest = resolveHeroCrest({ league: 'theleague', nflTeam: model.nflTeam });
+
 const chips = [
   { label: 'Auction summary', href: `${mflBase}&O=44`, external: true },
   { label: 'Completed auctions', href: `${mflBase}&O=43`, external: true },
@@ -75,7 +85,7 @@ const chips = [
   ariaLabel="Free agent auction command center"
   accent="auction"
   wordmark={live ? undefined : 'AUCTION'}
-  backdrop={live ? '/assets/logos/theleague-logo-dark.svg' : null}
+  crest={crest}
   model={model}
   captionMeta={`${model.descriptor} ${model.position} · ${teamCode}`}
   glowColor={getNflTeamColors(teamCode).primary}

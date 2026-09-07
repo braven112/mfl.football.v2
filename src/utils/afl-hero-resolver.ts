@@ -107,6 +107,14 @@ export interface EventHeroView {
    */
   modelAccent?: string | null;
   /**
+   * The franchise whose crest belongs behind this hero, when one owns the
+   * story — the same club `modelAccent` took its colour from. Attached
+   * post-resolve beside `model` for the same reason (it needs the rosters
+   * feed), and null when the answer is "his NFL team", which is most of the
+   * time. See hero-crest.ts.
+   */
+  modelFranchiseId?: string | null;
+  /**
    * Render this state as a COMPOSITE (the shared `CompositeHero` shell) rather
    * than through the branded promo card, when a model resolves. Set here, not
    * in the component, because whether a draft is live or a deadline is today is

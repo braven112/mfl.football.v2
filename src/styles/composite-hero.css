@@ -41,9 +41,10 @@
   --cmh-title-max: none;
   --cmh-summary-max: 44ch;
   --cmh-count-size: 1.35rem;
-  --cmh-crest-right: 24%;
-  --cmh-crest-w: clamp(180px, 24vw, 300px);
-  --cmh-crest-opacity: 0.12;
+  --cmh-crest-w: min(90%, 26rem);
+  --cmh-crest-opacity: 0.26;
+  --cmh-crest-w-mobile: min(70%, 15rem);
+  --cmh-crest-opacity-mobile: 0.14;
   --cmh-backdrop-w: clamp(280px, 38vw, 460px);
   --cmh-backdrop-opacity: 0.13;
   /* Mobile: the model shrinks to a faint watermark and the text reclaims the
@@ -282,23 +283,35 @@ html.dark .cmh--red {
   white-space: nowrap;
 }
 
-/* Full-bleed league mark, for a state whose own wordmark has stopped being
-   news (the auction, once bidding is live). The surface is dark in BOTH
-   themes, so the white artwork is correct in both. */
-/* The rostering franchise's crest, where the hero is about a fantasy team
-   rather than an NFL one. Always the DARK-surface artwork, resolved
-   server-side — see dark-surface-crest.ts. */
+/* ── Crest watermark: the franchise's mark, or the cast player's NFL team.
+      See hero-crest.ts for which applies.
+
+   The DRAFT BROADCAST's reveal treatment, at card scale — dead centre, large,
+   faded far enough that the copy still reads over it. Geometry and alphas are
+   taken from `hero-franchise-backdrop.css` rather than re-derived, because that
+   file already solved this exact problem on a card this size and wrote down
+   why: a `vh`-sized crest would be a different size on the same card at every
+   window height, and the broadcast's 0.42 was tuned for two lines of TV-scale
+   type read from ten feet, where this card carries a pill, a headline, a
+   paragraph and a footer at reading size over the same mark.
+
+   It sits UNDER the ghost wordmark and the copy, and both still render on top:
+   the wordmark is the phase's name and must stay readable across the room. */
+/* A crest that 404s must be REMOVED, not left as the browser's broken-image
+   box — same rule, same reason, as the cutout below. The NFL marks come from
+   ESPN's CDN, so this is a live network dependency, not a theoretical one. */
+.cmh--no-crest .cmh__crest {
+  display: none;
+}
+
 .cmh__crest {
   position: absolute;
-  right: var(--cmh-crest-right);
+  left: 50%;
   top: 50%;
-  transform: translateY(-50%);
+  transform: translate(-50%, -50%);
   width: var(--cmh-crest-w);
-  aspect-ratio: 1;
+  height: 100%;
   object-fit: contain;
-  /* The surface is dark in BOTH themes, which is exactly why the crest ARTWORK
-     is resolved server-side (dark-surface-crest.ts) rather than left to the
-     site's html.dark swap — that swap never fires for a light-theme reader. */
   opacity: var(--cmh-crest-opacity);
   pointer-events: none;
   user-select: none;
@@ -376,6 +389,14 @@ html.dark .cmh--red {
 
 .cmh--has-model.cmh--no-model .cmh__logo-art {
   display: block;
+}
+
+/* ...but not when a crest is already filling the card. The silhouette exists to
+   stop a dead right-hand flank; a centred crest has already answered that, and
+   showing both puts two marks on one card. A crest that ALSO 404s brings the
+   silhouette back, which is the whole point of keying this on `--no-crest`. */
+.cmh--has-crest:not(.cmh--no-crest) .cmh__logo-art {
+  display: none;
 }
 
 /* ── Caption (z-3): frosted pill naming the player. ────────────────────── */
@@ -637,6 +658,14 @@ html.dark .cmh--red {
     width: 140px;
     right: -1rem;
     opacity: 0.45;
+  }
+
+  /* On a phone the copy spans the card's full width, so there is no column for
+     the crest to sit beside — it shrinks out from behind the paragraph and
+     fades further. Same step-down, same reason, as hero-franchise-backdrop. */
+  .cmh__crest {
+    width: var(--cmh-crest-w-mobile);
+    opacity: var(--cmh-crest-opacity-mobile);
   }
 
   .cmh__caption {

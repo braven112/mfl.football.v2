@@ -355,7 +355,16 @@ describe('the call sites', () => {
   const stripComments = (src: string) =>
     src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:])\/\/.*$/gm, '$1');
 
+  /**
+   * `hero-crest.ts` leads the list deliberately: the composite heroes now
+   * delegate to it rather than calling the resolver each, so it is the one file
+   * that MUST keep calling the real thing. A surface below satisfies this guard
+   * either by resolving directly or by going through that delegate — and
+   * because the delegate is itself on the list, the chain cannot be broken by
+   * gutting it.
+   */
   const SURFACES = [
+    'src/utils/hero-crest.ts',
     'src/components/theleague/season-heroes/RecapCompositeHero.astro',
     'src/pages/theleague/lineup.astro',
     'src/pages/afl-fantasy/lineup.astro',
@@ -370,13 +379,13 @@ describe('the call sites', () => {
       // as a bare identifier also matches the import line, which survives a
       // deleted call just as happily as a comment does.
       expect(
-        /\bresolve(DarkSurfaceCrest|BroadcastCrest)\s*\(/.test(src),
-        `${file} never calls the resolver`
+        /\bresolve(DarkSurfaceCrest|BroadcastCrest|HeroCrest)\s*\(/.test(src),
+        `${file} never calls the resolver (directly or via resolveHeroCrest)`
       ).toBe(true);
     });
   }
 
-  for (const file of SURFACES.slice(0, 3)) {
+  for (const file of SURFACES.slice(0, 4)) {
     it(`${file} does not reach past it for light-only artwork`, () => {
       const src = stripComments(readFileSync(file, 'utf-8'));
       // The two ways the bug shipped: `brand.groupMe` on the hero, and

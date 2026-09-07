@@ -56,12 +56,17 @@ export interface Props {
   glowAlphaDark?: number;
   glowAlphaLight?: number;
   /**
-   * Watermark. At most one renders, in this order: crest → backdrop → wordmark.
-   * The wordmark is plain TEXT, never markup — use a literal no-break space
-   * (U+00A0) to hold a two-word mark on one line.
+   * Ghost wordmark bled off the top edge — the phase's name. Renders TOGETHER
+   * with the crest, over it. Plain TEXT, never markup; use a literal no-break
+   * space (U+00A0) to hold a two-word mark on one line.
    */
   wordmark?: string;
+  /** Centred crest watermark — resolve it with `resolveHeroCrest`. */
   crest?: { src: string; filter?: string } | null;
+  /**
+   * A full-bleed league mark, for a state with no crest to show. Suppressed
+   * when a crest is present: two centred watermarks on one card is a smear.
+   */
   backdrop?: string | null;
   /**
    * Render the `art` slot in place of the model layer. Explicit rather than
@@ -169,13 +174,19 @@ const loading = eager ? 'eager' : 'lazy';
       'cmh--has-model': !!model,
       'cmh--clamp-summary': clampSummary,
       'cmh--crop': crop,
+      'cmh--has-crest': !!crest,
     },
     extraClass,
   ]}
   style={`${glowVars}${styleVars}`}
   aria-label={ariaLabel}
 >
-  {crest ? (
+  {/* The crest and the wordmark STACK — they are not alternatives. The crest
+      says who the hero is about; the wordmark says what phase it is, and losing
+      it would cost the thing that lets an owner tell an AL draft from an NL one
+      across the room. The crest is centred and faded far enough underneath that
+      both the wordmark and the copy read over it. */}
+  {crest && (
     <img
       class="cmh__crest"
       src={crest.src}
@@ -183,12 +194,13 @@ const loading = eager ? 'eager' : 'lazy';
       alt=""
       aria-hidden="true"
       loading="lazy"
+      onerror="this.closest('.cmh').classList.add('cmh--no-crest')"
     />
-  ) : backdrop ? (
+  )}
+  {backdrop && !crest && (
     <img class="cmh__backdrop" src={backdrop} alt="" aria-hidden="true" loading={loading} />
-  ) : wordmark ? (
-    <span class="cmh__ghost" aria-hidden="true">{wordmark}</span>
-  ) : null}
+  )}
+  {wordmark && <span class="cmh__ghost" aria-hidden="true">{wordmark}</span>}
 
   <div class="cmh__glow" aria-hidden="true"></div>
 

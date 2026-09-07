@@ -21,6 +21,7 @@
 import type { EventHeroView } from '../../utils/afl-hero-resolver';
 import { getNflTeamColors } from '../../utils/nfl-team-colors';
 import { normalizeTeamCode } from '../../utils/nfl-logo';
+import { resolveHeroCrest } from '../../utils/hero-crest';
 import CompositeHero from '../shared/CompositeHero.astro';
 
 interface Props {
@@ -37,6 +38,15 @@ const teamCode = normalizeTeamCode(model.nflTeam);
 // rosters this player (see hero-franchise-accent.ts); otherwise his NFL team's.
 const glowColor = view.modelAccent || getNflTeamColors(teamCode).primary;
 
+// The watermark: the viewer's own club when their conference rosters this
+// player (the same franchise `modelAccent` took its colour from, so the glow
+// and the mark cannot disagree), otherwise his NFL team's.
+const crest = resolveHeroCrest({
+  franchiseId: view.modelFranchiseId,
+  league: 'afl-fantasy',
+  nflTeam: model.nflTeam,
+});
+
 // The AFL's crest stands in when the ESPN cutout 404s — same silhouette rule as
 // TheLeague's composites, different mark.
 const LOGO = '/assets/logos/afl-logo-dark.svg';
@@ -47,6 +57,7 @@ const LOGO = '/assets/logos/afl-logo-dark.svg';
   accent={treatment.accent}
   tone={treatment.tone ?? null}
   wordmark={treatment.wordmark}
+  crest={crest}
   model={model}
   glowColor={glowColor}
   logoArt={LOGO}

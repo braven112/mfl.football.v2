@@ -24,6 +24,7 @@ import type { HeroModel } from '../../utils/hero-casting';
 import { getNflTeamColors } from '../../utils/nfl-team-colors';
 import { normalizeTeamCode } from '../../utils/nfl-logo';
 import { LEAGUES } from '../../config/leagues';
+import { resolveHeroCrest } from '../../utils/hero-crest';
 import CompositeHero from '../shared/CompositeHero.astro';
 import '../../styles/whats-new-hero-shot.css';
 
@@ -57,6 +58,11 @@ const frameUrl = content.link
   : league.domains[0];
 
 const LOGO = '/assets/logos/theleague-logo-dark.svg';
+// Only a model-backed entry gets a crest. A screenshot entry's art IS the
+// browser frame, and a bug-fix rollup has no subject at all — a watermark
+// behind either would be decoration, which is the one thing the casting rule
+// forbids. No franchise: a feature announcement is nobody's team story.
+const crest = model ? resolveHeroCrest({ league: 'theleague', nflTeam: model.nflTeam }) : null;
 // Art precedence, decided once: the shell renders the model layer itself, and
 // takes the `art` slot for the two treatments it does not own.
 const artMode = content.heroArt ? 'entry' : model ? 'model' : screenshot ? 'shot' : 'logo';
@@ -77,6 +83,7 @@ const GEOMETRY =
   titleTag="h3"
   wordmark={"WHAT'S NEW"}
   artSlot={artMode === 'entry' || artMode === 'shot'}
+  crest={artMode === 'model' ? crest : null}
   model={artMode === 'model' ? model : null}
   glowColor={getNflTeamColors(teamCode).primary}
   logoArt={artMode === 'logo' ? LOGO : undefined}

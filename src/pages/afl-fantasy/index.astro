@@ -286,7 +286,7 @@ if ('view' in heroState) {
   // just about a player. Scoped to the viewer's conference because the AFL
   // rosters the same player twice; see hero-franchise-accent.ts. Resolved here
   // rather than in the component: it needs the rosters feed and the session.
-  heroState.view.modelAccent = resolveHeroFranchiseAccent({
+  const heroAccent = resolveHeroFranchiseAccent({
     playerId: heroState.view.model?.mflId,
     ownersByPlayer: heroState.view.model
       ? getOwnersByPlayer(heroLeagueYear, AFL.slug, { activeOnly: false })
@@ -301,7 +301,11 @@ if ('view' in heroState) {
     // Only an OVERRIDE is meaningful here — the hero already falls back to the
     // player's NFL team on its own, so an empty fallback means "don't override".
     fallback: '',
-  }).color || null;
+  });
+  heroState.view.modelAccent = heroAccent.color || null;
+  // The SAME franchise carries the crest, so the glow and the mark can never
+  // disagree about whose hero this is.
+  heroState.view.modelFranchiseId = heroAccent.franchiseId;
 }
 
 // ── Schefter feed ───────────────────────────────────────────────────────────
