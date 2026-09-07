@@ -130,9 +130,14 @@ function buildExposure({
 }) {
   if (!Number.isFinite(signal) || signal < 1) return null;
 
-  const fid1 = String(rawOffer.franchise ?? offeringFid ?? '');
-  const fid2 = String(
-    rawOffer.franchise2 ?? (fid1 === offeringFid ? '' : offeringFid) ?? '',
+  // Padded on the same terms as the caller's `sidesByFid` keys — this function
+  // looks players up in that object by these ids, so an unpadded id here finds
+  // nothing, the coin-flip decides the team has no players of its own, and it
+  // silently names the OTHER side. Padding in the caller alone left this half
+  // of the lookup on the old form.
+  const fid1 = padFid(rawOffer.franchise ?? offeringFid);
+  const fid2 = padFid(
+    rawOffer.franchise2 ?? rawOffer.offeredto ?? (fid1 === padFid(offeringFid) ? '' : offeringFid),
   );
   const candidates = [fid1, fid2].filter((f) => f);
   if (candidates.length === 0) return null;

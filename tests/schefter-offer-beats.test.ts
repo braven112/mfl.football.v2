@@ -675,6 +675,11 @@ describe('review regressions — MFL does not consistently zero-pad franchise id
     const a = run(short);
     const b = run(padded);
     expect(a.exposure).toBeDefined();
+    // buildExposure resolves its OWN franchise ids and looks players up in the
+    // caller's sidesByFid — padding one and not the other made the lookup miss,
+    // so the coin-flip concluded the chosen team had no players and quietly
+    // named the other side.
+    expect(a.exposure!.players.length).toBeGreaterThan(0);
     expect(a.exposure!.team.name).toBe(b.exposure!.team.name);
     expect(a.exposure!.players).toEqual(b.exposure!.players);
     expect(a.beats).toEqual(b.beats);
