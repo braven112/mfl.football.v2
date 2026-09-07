@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { existsSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import {
   getFooterColumns,
@@ -130,6 +130,75 @@ describe('every footer link resolves to a real route', () => {
       });
     });
   }
+});
+
+/**
+ * TheLeague's footer links must be server-rendered, for the same reason its
+ * nav links must be: the bare paths (`/owners`, `/salary`, `/mvp`) are clean
+ * URLs rewritten to `/theleague/...` at RUNTIME, so a prerendered page is
+ * never reached through the href the footer actually renders.
+ *
+ * `tests/nav-drawer-links.test.ts` has pinned that rule since the nav
+ * redesign — but only for pages listed in `nav-config.json`, which is a
+ * narrower set than "pages this site links to". 22 of TheLeague's 46 footer
+ * links were outside it, and the gap is silent in both directions: a page in
+ * both the nav and the footer is covered by accident, and it stops being
+ * covered the moment someone tidies the nav entry away. That is exactly what
+ * happened to `/owners` in Sept 2026 — removed from the drawer as a duplicate
+ * of the footer entry, correct in itself, and it took the page's prerender
+ * guard with it.
+ *
+ * So the footer asserts it for its own link set. The two guards overlap on
+ * purpose: neither registry is the authority on which pages exist, and a page
+ * should not lose a correctness check by moving between them.
+ */
+const PRERENDER_TRUE_EXPORT = /export\s+const\s+prerender\s*=\s*true/;
+
+describe('TheLeague footer links stay server-rendered for clean URL rewrites', () => {
+  const cols = getFooterColumns('theleague');
+  const links: Array<{ label: string; path: string }> = [];
+  for (const col of cols) {
+    for (const l of col.links) {
+      if (l.soon || !l.path) continue;
+      links.push({ label: `${col.title} \u203a ${l.label}`, path: l.path });
+    }
+  }
+  for (const cut of getDeepCuts('theleague', cols)) {
+    links.push({ label: `Deep Cuts \u203a ${cut.label}`, path: cut.path! });
+  }
+
+  it('covers every rendered footer link', () => {
+    expect(links.length).toBeGreaterThan(0);
+  });
+
+  it('never links to a prerendered page', () => {
+    const prerendered: string[] = [];
+
+    for (const { label, path: linkPath } of links) {
+      const rel = resolveDirectoryHref(linkPath, 'theleague')
+        .split('?')[0]
+        .split('#')[0]
+        .replace(/^\/+/, '')
+        .replace(/\/$/, '');
+
+      // A footer link with no backing page is the OTHER test's failure; do not
+      // double-report it here.
+      const sourceFile = [
+        path.join(PAGES, `${rel}.astro`),
+        path.join(PAGES, rel, 'index.astro'),
+      ].find((f) => existsSync(f));
+      if (!sourceFile) continue;
+
+      if (PRERENDER_TRUE_EXPORT.test(readFileSync(sourceFile, 'utf8'))) {
+        prerendered.push(`${label} -> ${sourceFile}`);
+      }
+    }
+
+    expect(
+      prerendered,
+      'These pages are prerendered, so TheLeague\'s clean-URL rewrite cannot reach them'
+    ).toEqual([]);
+  });
 });
 
 describe('pathBelongsToLeague', () => {
