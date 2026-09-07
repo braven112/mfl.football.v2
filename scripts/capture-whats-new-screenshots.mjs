@@ -58,6 +58,8 @@ const BASE_URL = process.env.BASE_URL || 'http://localhost:4321';
  * tests/whats-new-data.test.ts asserts every id here matches a real entry.
  */
 const MANUAL_CAPTURE_ONLY = {
+  'league-clock-setting':
+    'the frame has to show the drawer row and the picker AGREEING, which a blind capture cannot stage: the nav reads the pref cookies while /preferences also consults the account seed, so an unstaged shot puts "League time (PT)" in the drawer beside a Sydney-selected picker and reads as a bug. Stage it by forging an owner session for TheLeague franchise 0003 (Maverick), setting pref_country=AU and pref_zone=SYD so both halves say Sydney, loading /theleague/preferences, opening the drawer and clicking [data-account-toggle] — the panel ships closed. Both themes are committed via theme_pref.',
   'nav-account-menu':
     'the account menu lives in the nav drawer FOOTER and only renders for a signed-in owner — a blind capture shoots the drawer with a "Verify Your Team" prompt where the menu should be. Stage it by forging an owner session for TheLeague franchise 0001 (a commissioner, so the Commissioner mode row is in frame), setting the pref_country/pref_zone cookies so the Preferences row prints a real clock rather than "League time (PT)", opening the drawer, then clicking [data-account-toggle] — the panel ships closed. Both themes are committed: theme_pref=light for the base image, dark for the -dark twin.',
   'install-app':
