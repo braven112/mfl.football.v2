@@ -139,6 +139,38 @@ excludes stroke, and the halo on every `-dark` badge *is* a stroke.
 
 ---
 
+## 2026-09-07 - A Franchise Crest Is Not a Portrait — Never Round-Crop One
+
+**Context:** Two places in the Trade Builder framed the franchise icon as
+`width/height: 24-36px; border-radius: 9999px; object-fit: cover;
+object-position: top center` — the team picker in `TeamPanel.tsx` and the team
+header in `TradeConfirmationModal.tsx`. An owner reported the logo looking
+"cut off."
+
+**Insight:** `cover` + a round frame is the **headshot** treatment, and it is
+correct there: a player photo is a portrait, taller than wide, with the face
+near the top, so cropping to a circle anchored top-center is exactly what you
+want. A franchise crest is the opposite — square or wide art, with ink out to
+its own corners and no safe area to sacrifice. Circle-cropping one silently
+eats the corners; `object-position: top center` then shifts what survives.
+Nothing errors and nothing looks broken in isolation, which is why it sat there
+— you only see it against the crest drawn correctly somewhere else on the same
+screen.
+
+**Evidence:** The same feature already had six team icons drawn the right way
+(`marketplace__team-icon`, `ptc-team-icon`, `multiyear-cap__team-icon`,
+`tva__team-icon`, `trade-analysis__team-icon`, and the AFL page's
+`tb-block__team-icon`) — all `object-fit: contain`, square box, no radius. Only
+the two `cover` ones cropped. Fixed by matching the majority.
+
+**Recommendation:** Round frame + `cover` for headshots only. Team crests,
+tier badges, wordmarks and TV-network logos go `object-fit: contain` in a
+square box with no border-radius — they must show whole. Grep a feature for
+`object-fit: cover` next to a team/logo class name before assuming its icons
+are consistent; a feature can carry both treatments for months.
+
+---
+
 ## 2026-09-06 - A Component's Size Tokens Are Redeclared Inside a Media Query, So Overriding Them Is a Specificity Question
 
 **Context:** The filed-waiver-claims panel reuses the shared player lockup

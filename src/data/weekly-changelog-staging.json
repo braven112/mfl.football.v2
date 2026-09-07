@@ -4,6 +4,14 @@
     {
       "date": "2026-09-07",
       "type": "style-tweak",
+      "summary": "Two rough edges on the Trade Builder. The Trade Bait Marketplace was drawing its own player rows — a flat gray circle and a bare name — instead of the player lockup the rest of the site uses, so a player on the block looked nothing like the same player in the Available Players list two panels down. Marketplace rows and the trade confirmation screen now use the standard lockup: the team-color chip behind the headshot, the NFL logo beside the position. And franchise crests in the team picker and the confirmation screen were being cropped into a circle, which sliced the corners off logos that were never round to begin with. They now show whole.",
+      "impact": "user",
+      "area": "trade-builder",
+      "league": "theleague"
+    },
+    {
+      "date": "2026-09-07",
+      "type": "style-tweak",
       "summary": "The Owners page has moved out of the side navigation. It was sitting in League Reports next to Franchises, doubling up on a link the site footer already carries under Record Book — so the drawer is one line shorter and Owners lives in exactly one place. Nothing about the pages themselves changed: every owner, every tenure, every trophy is still right where it was.",
       "impact": "user",
       "area": "navigation",

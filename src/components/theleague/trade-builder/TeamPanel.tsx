@@ -171,15 +171,15 @@ export default function TeamPanel({
           align-items: center;
           gap: 0.5rem;
         }
+        /* Franchise crests are square/wordmark art, not portraits — a round
+           frame with object-fit: cover clipped the corners off every logo.
+           Contain in a square box so the whole crest shows. */
         .team-panel__team-icon {
           width: 36px;
           height: 36px;
-          object-fit: cover;
-          object-position: top center;
+          object-fit: contain;
+          object-position: center;
           flex-shrink: 0;
-          border-radius: var(--radius-full, 9999px);
-          border: 1px solid var(--content-border, #e2e8f0);
-          background: var(--color-gray-100, #f3f4f6);
         }
         .team-panel__select {
           width: 100%;
