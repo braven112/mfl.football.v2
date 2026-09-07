@@ -812,8 +812,16 @@ html[data-league='afl'] .sfc-reply--roger .sfc-reply__content {
 .sfc-tabs {
   display: flex;
   gap: 0.25rem;
-  padding: 0 var(--sfc-post-padding-x) 0.5rem;
+  /* Breathing room on BOTH sides of the row: the tabs sit directly under the
+     section header and directly above the first card, so with only bottom
+     padding the row reads as crowded against both. */
+  padding: 0.5rem var(--sfc-post-padding-x) 0.625rem;
   border-bottom: 1px solid var(--sf-border, #e5e7eb);
+}
+
+/* The first card should not butt against the tab rule. */
+.sfc-tabs + .sfc-feed__list > .sfc-feed__item:first-child {
+  padding-top: 0.25rem;
 }
 
 .sfc-tab {

@@ -17,11 +17,16 @@
  *    shared with /news, so the two surfaces turn on together, and it opens on
  *    the NL draft rather than Labor Day.
  *
- * Past both gates the rail carries For You / All tabs. ONE list backs both,
- * filtered by a `data-foryou` flag — rendering two would double the
- * server-side reactions pipeline and the DOM for a sidebar. The list is built
- * personal-first and topped up with league news, so every For You item is
- * present and the All tab still reads as the league feed.
+ * Past both gates the rail carries For You / All tabs. ONE rendered list backs
+ * both, filtered by a `data-foryou` flag — rendering two lists would mean two
+ * reactions pipelines for a sidebar.
+ *
+ * That list is the UNION of the two tabs' contents, not a single capped slice.
+ * The first cut took `limit` personal posts and topped up with league news
+ * "if there was room" — and for an owner with `limit` or more of their own,
+ * there never was, so All showed exactly what For You showed and the tabs
+ * looked broken. Each tab now gets its own `limit` worth, deduped; the rail
+ * renders at most `2 * limit` and each tab still fills.
  *
  * Filter first, THEN slice. The homepages used to hand the rail
  * `feed.posts.slice(0, 30)`; filtering that to one roster leaves almost
@@ -79,12 +84,13 @@ export async function resolveSchefterRail(opts: ResolveRailOptions): Promise<Sch
   // Nothing of yours has moved — offer no tab rather than an empty one.
   if (mine.length === 0) return plain;
 
-  // Personal first, then the newest league news fills the rest of the rail.
+  // Each tab gets a full `limit` of its own. Union them so All is genuinely the
+  // league feed even when the owner's own posts would have filled the rail.
   const mineIds = new Set(mine.map((p) => p.id));
-  const filler = posts.filter((p) => !mineIds.has(p.id)).slice(0, Math.max(0, limit - mine.length));
+  const leagueFill = posts.filter((p) => !mineIds.has(p.id)).slice(0, limit);
 
   return {
-    posts: [...mine, ...filler].sort(
+    posts: [...mine, ...leagueFill].sort(
       (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime(),
     ),
     forYouIds: [...mineIds],
