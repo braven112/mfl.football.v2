@@ -1,0 +1,255 @@
+/**
+ * Composite panel board — the "four trading cards + a band" hero.
+ *
+ * The UDFA board and the franchise-tag showcase shipped as two components
+ * whose CSS differed in nine declarations: a watermark that is square rather
+ * than free (a franchise crest vs an NFL logo), a second top-right badge, and
+ * a green border in dark mode. Everything else was byte-identical, including
+ * the panel-resilience script. One board, two configurations.
+ *
+ * The panels are always dark team-gradient cards in BOTH themes — only the
+ * info band and the frame follow the site theme. That is deliberate: a
+ * gradient floored for white text reads the same in light mode, and a player
+ * cutout has no light variant to swap to.
+ */
+
+.cpb {
+  --cpb-border: rgba(46, 135, 67, 0.3);
+  --cpb-band-bg: #ffffff;
+  --cpb-band-ink: var(--color-gray-900, #0f1419);
+  --cpb-accent: #15803d;
+  --cpb-cta-bg: var(--color-primary, #1c497c);
+  --cpb-cta-ink: #ffffff;
+  --cpb-panel-min-h: clamp(190px, 19vw, 230px);
+
+  overflow: hidden;
+  border-radius: var(--radius-lg, 0.75rem);
+  border: 1px solid var(--cpb-border);
+  display: flex;
+  flex-direction: column;
+}
+
+html.dark .cpb {
+  --cpb-border: rgba(255, 255, 255, 0.1);
+  --cpb-band-bg: #0b0e12;
+  --cpb-band-ink: #ffffff;
+  --cpb-accent: #4ade80;
+  --cpb-cta-bg: #ffffff;
+  --cpb-cta-ink: #0b0e12;
+}
+
+/* The tag board tints its dark frame green — a tag keeps a player claimable,
+   and green reads "still in play". */
+html.dark .cpb--green-frame {
+  --cpb-border: rgba(74, 222, 128, 0.22);
+}
+
+.cpb__panels {
+  display: flex;
+}
+
+.cpb__panel {
+  position: relative;
+  flex: 1;
+  min-height: var(--cpb-panel-min-h);
+  overflow: hidden;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.cpb__panel[hidden] {
+  display: none;
+}
+
+.cpb__panel-glow {
+  position: absolute;
+  inset: -40% -30% auto -30%;
+  height: 140%;
+  pointer-events: none;
+}
+
+/* Permanent watermark behind every player — the NFL team's logo when the board
+   is about NFL players, the tagging franchise's crest when it is about a
+   fantasy team. */
+.cpb__watermark {
+  position: absolute;
+  top: 46%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: clamp(120px, 15vw, 190px);
+  opacity: 0.16;
+  pointer-events: none;
+  user-select: none;
+}
+
+/* Franchise crests are authored on a square canvas and must not stretch. */
+.cpb__watermark--square {
+  width: clamp(120px, 15vw, 185px);
+  height: clamp(120px, 15vw, 185px);
+  object-fit: contain;
+}
+
+.cpb__badge {
+  position: absolute;
+  top: 0.625rem;
+  left: 0.625rem;
+  z-index: 3;
+  max-width: calc(100% - 5rem);
+  color: #fff;
+  font-size: 0.575rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  background: rgba(0, 0, 0, 0.45);
+  padding: 0.28rem 0.5rem;
+  border-radius: 4px;
+  backdrop-filter: blur(2px);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* A longer badge (a franchise name + position) needs the tighter tracking or
+   it ellipsises before the position ever shows. */
+.cpb__badge--long {
+  font-size: 0.55rem;
+  letter-spacing: 0.1em;
+}
+
+/* Top-right status flag — the tag board's green "Tagged". */
+.cpb__flag {
+  position: absolute;
+  top: 0.625rem;
+  right: 0.625rem;
+  z-index: 3;
+  color: #052e16;
+  font-size: 0.55rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  background: #4ade80;
+  padding: 0.28rem 0.5rem;
+  border-radius: 4px;
+}
+
+.cpb__cutout {
+  position: relative;
+  z-index: 1;
+  width: clamp(120px, 14vw, 175px);
+  filter: drop-shadow(0 10px 20px rgba(0, 0, 0, 0.5));
+}
+
+.cpb__player {
+  position: absolute;
+  z-index: 2;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  padding: 0.45rem 0.625rem;
+  color: #fff;
+  background: linear-gradient(transparent, rgba(6, 9, 13, 0.85));
+}
+
+.cpb__player strong {
+  font-size: 0.75rem;
+  font-weight: 800;
+  line-height: 1.15;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cpb__player-meta {
+  font-size: 0.55rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: rgba(255, 255, 255, 0.65);
+}
+
+.cpb__band {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.875rem 1.25rem;
+  background: var(--cpb-band-bg);
+  color: var(--cpb-band-ink);
+}
+
+.cpb__eyebrow {
+  font-size: 0.6rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  color: var(--cpb-accent);
+  margin: 0 0 0.2rem;
+}
+
+.cpb__title {
+  color: var(--cpb-band-ink);
+  font-size: clamp(0.95rem, 1.8vw, 1.15rem);
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  line-height: 1.15;
+  margin: 0;
+}
+
+.cpb__cta {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: var(--cpb-cta-bg);
+  color: var(--cpb-cta-ink);
+  font-size: 0.8125rem;
+  font-weight: 700;
+  padding: 0.6rem 1.05rem;
+  border-radius: var(--radius-md, 0.5rem);
+  text-decoration: none;
+  transition: transform 120ms ease;
+}
+
+.cpb__cta:hover {
+  transform: translateY(-1px);
+}
+
+.cpb__cta:focus-visible {
+  outline: 2px solid var(--cpb-accent);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cpb__cta {
+    transition: none;
+  }
+
+  .cpb__cta:hover {
+    transform: none;
+  }
+}
+
+@media (max-width: 640px) {
+  .cpb__panels {
+    flex-wrap: wrap;
+  }
+
+  .cpb__panel {
+    flex: 1 1 50%;
+    min-height: 160px;
+  }
+
+  .cpb__cutout {
+    width: 110px;
+  }
+
+  .cpb__band {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.625rem;
+  }
+}

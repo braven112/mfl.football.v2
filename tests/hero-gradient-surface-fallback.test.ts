@@ -28,11 +28,17 @@ import { join, relative } from 'node:path';
 const ROOT = join(__dirname, '..');
 const SRC = join(ROOT, 'src');
 
+/**
+ * Both file kinds carry composite-hero CSS. The shared shell's surfaces moved
+ * out of seven scoped <style> blocks and into src/styles/composite-hero.css
+ * when the heroes were unified — scanning `.astro` alone would have quietly
+ * stopped enforcing this rule for every hero on the site.
+ */
 function walk(dir: string, out: string[] = []): string[] {
   for (const entry of readdirSync(dir)) {
     const full = join(dir, entry);
     if (statSync(full).isDirectory()) walk(full, out);
-    else if (full.endsWith('.astro')) out.push(full);
+    else if (full.endsWith('.astro') || full.endsWith('.css')) out.push(full);
   }
   return out;
 }

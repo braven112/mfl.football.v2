@@ -1,0 +1,129 @@
+/**
+ * What's New hero — the browser-framed feature screenshot.
+ *
+ * The default art when the entry names no player. Light/dark captures are a
+ * theme pair (same convention as the logo silhouette); the whole frame is
+ * hidden on mobile — a phone-width screenshot thumbnail is decoration, not
+ * information — where the logo silhouette stands in.
+ *
+ * A stylesheet rather than a scoped <style> in FeatureCompositeHero, because
+ * every rule here keys off a class on the SHELL's root element (`.fch`,
+ * `.cmh--force-dark`) — a root the shell renders, so it never carries this
+ * component's scope hash and a scoped ancestor selector would silently never
+ * match. The `fch__` prefix is the namespace instead; no other composite
+ * renders browser chrome.
+ */
+.fch__shot {
+  position: absolute;
+  z-index: 1;
+  right: clamp(1rem, 2.5vw, 1.9rem);
+  top: 50%;
+  transform: translateY(-50%) rotate(-1.5deg);
+  width: clamp(260px, 38%, 400px);
+  border-radius: 0.5rem;
+  overflow: hidden;
+  background: #e5e7eb;
+  box-shadow: 0 12px 32px var(--cmh-shadow);
+  pointer-events: none;
+}
+
+.fch__shot-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  background: #e5e7eb;
+}
+
+.fch__shot-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.fch__shot-dot--red { background: #ff5f57; }
+.fch__shot-dot--yellow { background: #ffbd2e; }
+.fch__shot-dot--green { background: #28c840; }
+
+.fch__shot-url {
+  flex: 1;
+  margin-left: 6px;
+  background: #fff;
+  border-radius: 3px;
+  padding: 2px 8px;
+  font-size: 10px;
+  color: #6b7280;
+  font-family: ui-monospace, monospace;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.fch__shot-img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  object-position: top;
+}
+
+/* Theme pair: light capture by default, dark capture under html.dark. */
+.fch__shot-img--dark {
+  display: none;
+}
+
+.cmh--force-dark .fch__shot-img--light,
+html.dark .fch .fch__shot-img--light {
+  display: none;
+}
+
+.cmh--force-dark .fch__shot-img--dark,
+html.dark .fch .fch__shot-img--dark {
+  display: block;
+}
+
+/* Dark capture 404 (entry not re-captured yet) → keep the light capture. */
+.cmh--force-dark .fch__shot--no-dark .fch__shot-img--light,
+html.dark .fch .fch__shot--no-dark .fch__shot-img--light {
+  display: block;
+}
+
+.cmh--force-dark .fch__shot--no-dark .fch__shot-img--dark,
+html.dark .fch .fch__shot--no-dark .fch__shot-img--dark {
+  display: none;
+}
+
+/* Light capture 404 → drop the frame entirely, logo silhouette returns. */
+.fch--no-shot .fch__shot {
+  display: none;
+}
+
+/* Screenshot's logo stand-in: hidden while the frame is visible. Both themes
+   render on a dark surface, so the white mark is always the right one. */
+.fch__shot-logo {
+  display: none;
+  position: absolute;
+  right: clamp(1rem, 4vw, 3rem);
+  top: 50%;
+  transform: translateY(-50%) rotate(-6deg);
+  width: clamp(180px, 24vw, 280px);
+  opacity: 0.18;
+  pointer-events: none;
+}
+
+.fch--no-shot .fch__shot-logo {
+  display: block;
+}
+
+@media (max-width: 640px) {
+  /* Screenshot off on mobile (unreadable at phone width) — logo stands in. */
+  .fch__shot {
+    display: none;
+  }
+
+  .fch__shot-logo {
+    display: block;
+    width: 150px;
+    right: -1rem;
+  }
+}

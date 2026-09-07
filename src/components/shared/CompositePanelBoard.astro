@@ -1,0 +1,220 @@
+---
+/**
+ * CompositePanelBoard — the shared "four trading cards + a band" hero.
+ *
+ * One board behind the UDFA window, the franchise-tag showcase, and the AFL's
+ * keeper window. Each panel is a composite: a dark team-color gradient, a
+ * watermark behind the player (the NFL team's logo when the board is about NFL
+ * players, the franchise crest when it is about a fantasy team), his
+ * transparent ESPN cutout, and a name strip. A themed band underneath carries
+ * the pitch and the CTA.
+ *
+ * RESILIENCE — the reason the board takes more panels than it shows: deep
+ * rookies and deep keepers often have no ESPN photo, and a photoless panel
+ * next to real faces looks broken. Callers pass up to `maxPanels * 2`; the
+ * script below settles every cutout and keeps the ones that actually loaded.
+ * What happens when too few load is the one real difference between the
+ * boards, so it is a prop rather than a second component:
+ *
+ *   fill="pad"   the board is always full — photoless panels backfill, and the
+ *                permanent watermark carries them (UDFA: the board IS the
+ *                board, and a short board misstates how many are available).
+ *   fill="drop"  photoless panels are dropped, unless NOTHING loaded, in which
+ *                case the first few render anyway so the hero is never barren
+ *                (tags: a thin tag year is honest, an empty hero is not).
+ */
+import type { HeroModel } from '../../utils/hero-casting';
+import { normalizeTeamCode, getNFLTeamLogo } from '../../utils/nfl-logo';
+import { getNflTeamColors, hexToRgba } from '../../utils/nfl-team-colors';
+import '../../styles/composite-panel-board.css';
+
+export interface CompositePanel {
+  model: HeroModel;
+  /** Top-left badge — a board rank ("No. 1") or a franchise + position chip. */
+  badge?: string;
+  /** Top-right status flag ("Tagged"). */
+  flag?: string;
+  /**
+   * Watermark behind the player. Omit for his NFL team's logo; pass a
+   * franchise crest when the story belongs to a fantasy team; pass `null` for
+   * NO watermark — a board about fantasy teams must not silently fall back to
+   * an NFL mark when a crest is missing.
+   */
+  watermark?: string | null;
+  /** Crests are square-canvas artwork and must be contained, not stretched. */
+  watermarkSquare?: boolean;
+  /**
+   * Panel gradient base color. Defaults to the player's NFL team primary —
+   * pass a franchise color when the panel is about that franchise.
+   */
+  color?: string;
+}
+
+export interface Props {
+  ariaLabel: string;
+  /** In display order. Anything past `maxPanels` is a hidden spare. */
+  panels: CompositePanel[];
+  maxPanels?: number;
+  fill?: 'pad' | 'drop';
+  /**
+   * Renumber the visible panels' badges 1..n after spares swap in. Only a
+   * RANK badge may be renumbered — a franchise chip is not a position.
+   */
+  renumberBadges?: boolean;
+  /** Band copy. */
+  eyebrow: string;
+  title: string;
+  ctaLabel: string;
+  ctaHref: string;
+  /** Tints the dark-mode frame green (the tag board's treatment). */
+  greenFrame?: boolean;
+  class?: string;
+}
+
+const {
+  ariaLabel,
+  panels: rawPanels,
+  maxPanels = 4,
+  fill = 'drop',
+  renumberBadges = false,
+  eyebrow,
+  title,
+  ctaLabel,
+  ctaHref,
+  greenFrame = false,
+  class: extraClass = '',
+} = Astro.props;
+
+const panels = rawPanels.slice(0, maxPanels * 2).map((panel, index) => {
+  const teamCode = normalizeTeamCode(panel.model.nflTeam);
+  const color = panel.color ?? getNflTeamColors(teamCode).primary;
+  return {
+    ...panel,
+    teamCode,
+    spare: index >= maxPanels,
+    gradient: `linear-gradient(160deg, #0b0e12 0%, ${color} 150%)`,
+    glow: hexToRgba(color, 0.35),
+    watermark: panel.watermark === null ? '' : panel.watermark ?? getNFLTeamLogo(teamCode),
+  };
+});
+---
+
+<section
+  class:list={['cpb', { 'cpb--green-frame': greenFrame }, extraClass]}
+  aria-label={ariaLabel}
+  data-fill={fill}
+  data-max-panels={maxPanels}
+  data-renumber={renumberBadges ? 'true' : undefined}
+>
+  <div class="cpb__panels">
+    {panels.map((panel) => (
+      <div
+        class="cpb__panel"
+        style={`background: ${panel.gradient};`}
+        data-spare={panel.spare ? 'true' : undefined}
+        hidden={panel.spare}
+      >
+        <span
+          class="cpb__panel-glow"
+          style={`background: radial-gradient(circle, ${panel.glow} 0%, transparent 65%);`}
+          aria-hidden="true"
+        ></span>
+        {panel.watermark && (
+          <img
+            class:list={['cpb__watermark', { 'cpb__watermark--square': panel.watermarkSquare }]}
+            src={panel.watermark}
+            alt=""
+            aria-hidden="true"
+            loading="eager"
+            decoding="async"
+          />
+        )}
+        {panel.badge && (
+          <span class:list={['cpb__badge', { 'cpb__badge--long': !renumberBadges }]} aria-hidden="true">
+            {panel.badge}
+          </span>
+        )}
+        {panel.flag && <span class="cpb__flag" aria-hidden="true">{panel.flag}</span>}
+        <img
+          class="cpb__cutout"
+          src={panel.model.headshot}
+          alt=""
+          aria-hidden="true"
+          loading="eager"
+          decoding="async"
+          onerror="this.style.visibility='hidden'"
+        />
+        <span class="cpb__player">
+          <strong>{panel.model.name}</strong>
+          <span class="cpb__player-meta">
+            {[panel.model.position, panel.teamCode].filter(Boolean).join(' · ')}
+          </span>
+        </span>
+      </div>
+    ))}
+  </div>
+
+  <div class="cpb__band">
+    <div>
+      <p class="cpb__eyebrow">{eyebrow}</p>
+      <h2 class="cpb__title">{title}</h2>
+    </div>
+    <a class="cpb__cta" href={ctaHref}>
+      {ctaLabel}
+      <span aria-hidden="true">→</span>
+    </a>
+  </div>
+</section>
+
+<script>
+  // Keep the panels whose headshot actually loads, swapping in spares for any
+  // that 404. `data-fill` decides what happens when too few load — see the
+  // component doc comment; the watermark means a kept photoless panel still
+  // reads as complete.
+
+  function settle(img: HTMLImageElement): Promise<boolean> {
+    if (img.complete) return Promise.resolve(img.naturalWidth > 0);
+    return new Promise((resolve) => {
+      img.addEventListener('load', () => resolve(true), { once: true });
+      img.addEventListener('error', () => resolve(false), { once: true });
+    });
+  }
+
+  async function resolvePanels(board: HTMLElement) {
+    const max = Number(board.dataset.maxPanels) || 4;
+    const pad = board.dataset.fill === 'pad';
+    const renumber = board.dataset.renumber === 'true';
+    const panels = [...board.querySelectorAll<HTMLElement>('.cpb__panel')];
+    const settled = await Promise.all(
+      panels.map(async (panel) => {
+        const cutout = panel.querySelector<HTMLImageElement>('.cpb__cutout');
+        return { panel, ok: cutout ? await settle(cutout) : false };
+      }),
+    );
+
+    const loaded = settled.filter((s) => s.ok).map((s) => s.panel);
+    const rest = settled.filter((s) => !s.ok).map((s) => s.panel);
+    // `pad` always fills to `max`; `drop` shows only loaded panels, falling
+    // back to the raw order when nothing loaded so the hero is never barren.
+    const order = pad ? [...loaded, ...rest] : loaded.length > 0 ? loaded : panels;
+    const chosen = new Set(order.slice(0, max));
+
+    let rank = 0;
+    for (const panel of panels) {
+      const show = chosen.has(panel);
+      panel.hidden = !show;
+      if (!show || !renumber) continue;
+      rank += 1;
+      const badge = panel.querySelector('.cpb__badge');
+      if (badge) badge.textContent = `No. ${rank}`;
+    }
+  }
+
+  function run() {
+    document.querySelectorAll<HTMLElement>('.cpb').forEach((board) => resolvePanels(board));
+  }
+
+  run();
+  // Re-run after ClientRouter (view transitions) swaps in a fresh page.
+  document.addEventListener('astro:page-load', run);
+</script>

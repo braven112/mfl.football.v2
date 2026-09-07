@@ -1,0 +1,706 @@
+/**
+ * Composite hero shell — the ONE implementation of the `.fch` treatment.
+ *
+ * Seven components once carried their own copy of this CSS under seven
+ * prefixes (`fch`/`ach`/`cwh`/`psh`/`rch` here, plus the two panel boards in
+ * composite-panel-board.css). They were the same card: a team-color gradient,
+ * an oversized ghost wordmark bled off the top edge, a radial glow tinted by
+ * the cast player's team, his transparent ESPN cutout bottom-right under a
+ * frosted caption, and an editorial column on the left. 3,028 lines to say it
+ * five times, and a fix to one of them reached none of the others.
+ *
+ * Everything that genuinely differed between them is a custom property or an
+ * accent modifier, listed at the top of the base block. Adopters set those;
+ * nobody re-declares the geometry.
+ *
+ * GLOBAL, not an Astro scoped <style>: the shell is one component, so the
+ * selectors have exactly one author, and a plain stylesheet is what the two
+ * leagues' pages already import for shared hero chrome
+ * (hero-franchise-backdrop.css, trade-deadline-hero.css).
+ */
+
+.cmh {
+  /* ── Per-adopter geometry. Defaults are FeatureCompositeHero's. ────────── */
+  --cmh-min-h: clamp(230px, 23vw, 280px);
+  --cmh-ghost-left: 40%;
+  --cmh-ghost-top: -1.1rem;
+  --cmh-ghost-size: clamp(3.75rem, 8vw, 6.5rem);
+  --cmh-ghost-style: normal;
+  --cmh-model-w: clamp(250px, 33vw, 390px);
+  --cmh-model-right: clamp(0.25rem, 2vw, 1.75rem);
+  --cmh-logo-w: clamp(180px, 24vw, 280px);
+  --cmh-logo-opacity: 0.18;
+  --cmh-logo-w-mobile: 150px;
+  --cmh-logo-right-mobile: -1rem;
+  --cmh-content-max: min(30rem, 58%);
+  --cmh-eyebrow-mb: 0.75rem;
+  --cmh-footer-gap: 0.875rem;
+  --cmh-footer-wrap: nowrap;
+  --cmh-footer-mb: 0;
+  --cmh-title-mb: 0.5rem;
+  --cmh-title-max: none;
+  --cmh-summary-max: 44ch;
+  --cmh-count-size: 1.35rem;
+  --cmh-crest-right: 24%;
+  --cmh-crest-w: clamp(180px, 24vw, 300px);
+  --cmh-crest-opacity: 0.12;
+  --cmh-backdrop-w: clamp(280px, 38vw, 460px);
+  --cmh-backdrop-opacity: 0.13;
+  /* Mobile: the model shrinks to a faint watermark and the text reclaims the
+     full width. The What's New card overrides this with `cmh--crop` — see the
+     mobile block at the foot of this file. */
+  --cmh-min-h-mobile: var(--cmh-min-h);
+  --cmh-model-w-mobile: 170px;
+  --cmh-model-right-mobile: -1.5rem;
+  --cmh-model-opacity-mobile: 0.4;
+
+  /* ── Accent tokens. The `blue` family is the default; the modifiers below
+        override only what actually differs. ─────────────────────────────── */
+  --cmh-surface: linear-gradient(115deg, #2563eb 0%, #1c497c 55%, #0f3057 100%);
+  --cmh-ink: #ffffff;
+  --cmh-body: rgba(255, 255, 255, 0.82);
+  --cmh-date: rgba(255, 255, 255, 0.6);
+  --cmh-ghost: rgba(255, 255, 255, 0.06);
+  --cmh-glow: var(--cmh-glow-dark, rgba(96, 165, 250, 0.34));
+  --cmh-shadow: rgba(9, 21, 38, 0.4);
+  --cmh-accent: #a9ccff;
+  --cmh-cta-bg: #ffffff;
+  --cmh-cta-ink: #12325a;
+  --cmh-pill-bg: rgba(255, 255, 255, 0.16);
+  --cmh-pill-border: rgba(255, 255, 255, 0.4);
+  --cmh-pill-ink: #dcebff;
+  --cmh-chip-bg: rgba(255, 255, 255, 0.06);
+  --cmh-chip-border: rgba(255, 255, 255, 0.2);
+  --cmh-chip-ink: rgba(255, 255, 255, 0.8);
+  --cmh-divider: rgba(255, 255, 255, 0.2);
+  --cmh-border: rgba(255, 255, 255, 0.14);
+
+  position: relative;
+  overflow: hidden;
+  min-height: var(--cmh-min-h);
+  border-radius: var(--radius-lg, 0.75rem);
+  border: 1px solid var(--cmh-border);
+  /* Fail-safe base: a LITERAL solid under the gradient. A gradient held in a
+     custom property is a single point of failure — if `var(--cmh-surface)` is
+     ever dropped (the whole `background` is then invalid at computed-value
+     time), the hero goes transparent while the white ink stays, which is
+     unreadable in BOTH themes. A literal background-color cannot be dropped,
+     so EVERY block that redefines --cmh-surface below repeats the literal —
+     never a second custom property, which could be dropped the same way.
+     Pinned by tests/hero-gradient-surface-fallback.test.ts. */
+  background-color: #1c497c;
+  background-image: var(--cmh-surface);
+  color: var(--cmh-ink);
+  display: flex;
+  align-items: center;
+  padding: clamp(1.25rem, 2.5vw, 1.9rem);
+}
+
+/* ── ACCENT FAMILIES ──────────────────────────────────────────────────────
+   One per hero, not one per color: the five shipped composites each carried a
+   genuinely distinct palette (three of them shades of blue that differ in
+   accent, pill and dark surface), and folding them together silently restyled
+   live heroes. Each block below is that hero's original token set, deltas only
+   — the base above is the What's New card's, so `feature` adds nothing.
+
+   Light mode is a saturated card and dark mode a deep-ink one; both carry
+   white ink, which is why every accent redefines the surface in pairs. */
+
+/* ── feature — the What's New card (the base above). ─────────────────────── */
+html.dark .cmh--feature,
+.cmh--feature.cmh--force-dark {
+  --cmh-surface: linear-gradient(115deg, #0d1b2c 0%, #16395e 52%, var(--color-primary, #1c497c) 100%);
+  background-color: #16395e;
+  --cmh-body: rgba(255, 255, 255, 0.78);
+  --cmh-date: rgba(255, 255, 255, 0.55);
+  --cmh-ghost: rgba(255, 255, 255, 0.04);
+  --cmh-glow: var(--cmh-glow-dark, rgba(96, 165, 250, 0.3));
+  --cmh-shadow: rgba(0, 0, 0, 0.5);
+  --cmh-cta-ink: #0f1e2e;
+  --cmh-pill-bg: rgba(96, 165, 250, 0.18);
+  --cmh-pill-border: rgba(96, 165, 250, 0.45);
+  --cmh-pill-ink: #a8cdf8;
+  --cmh-border: rgba(255, 255, 255, 0.1);
+}
+
+/* ── recap — the Tuesday top-scorer card. Tinted by the ROSTERING FRANCHISE,
+      so its dark glow is the league navy rather than a sky blue. ─────────── */
+.cmh--recap {
+  --cmh-accent: #a9ccff;
+}
+
+html.dark .cmh--recap {
+  --cmh-surface: linear-gradient(115deg, #0b1017 0%, #101a26 46%, #14263a 130%);
+  background-color: #101a26;
+  --cmh-body: rgba(255, 255, 255, 0.78);
+  --cmh-ghost: rgba(255, 255, 255, 0.045);
+  --cmh-glow: var(--cmh-glow-dark, rgba(28, 73, 124, 0.4));
+  --cmh-shadow: rgba(0, 0, 0, 0.5);
+  --cmh-accent: #7cb2ff;
+  --cmh-pill-bg: rgba(124, 178, 255, 0.16);
+  --cmh-pill-border: rgba(124, 178, 255, 0.45);
+  --cmh-pill-ink: #a9ccff;
+  --cmh-cta-ink: #0b1017;
+  --cmh-border: rgba(255, 255, 255, 0.1);
+}
+
+/* ── kickoff — the countdown to Week 1. ─────────────────────────────────── */
+.cmh--kickoff {
+  --cmh-body: rgba(255, 255, 255, 0.78);
+  --cmh-ghost: rgba(255, 255, 255, 0.045);
+  --cmh-glow: var(--cmh-glow-dark, rgba(96, 165, 250, 0.35));
+  --cmh-shadow: rgba(0, 0, 0, 0.5);
+  --cmh-accent: #a8cdf8;
+  --cmh-cta-ink: #0f1e2e;
+  --cmh-pill-bg: rgba(96, 165, 250, 0.18);
+  --cmh-pill-border: rgba(96, 165, 250, 0.45);
+  --cmh-pill-ink: #a8cdf8;
+  --cmh-border: rgba(255, 255, 255, 0.1);
+}
+
+html.dark .cmh--kickoff {
+  --cmh-surface: linear-gradient(115deg, #0d1420 0%, #12233b 52%, #1c497c 130%);
+  background-color: #12233b;
+}
+
+/* ── roster — cut watch's early planning tier. Flips to `red` (below) inside
+      the final 30 days, which is a TONE overlay, not a second accent. ────── */
+.cmh--roster {
+  --cmh-body: rgba(255, 255, 255, 0.78);
+  --cmh-ghost: rgba(255, 255, 255, 0.045);
+  --cmh-glow: var(--cmh-glow-dark, rgba(59, 130, 246, 0.35));
+  --cmh-shadow: rgba(0, 0, 0, 0.5);
+  --cmh-accent: #93c5fd;
+  --cmh-cta-ink: #0f1e2e;
+  --cmh-pill-bg: rgba(147, 197, 253, 0.16);
+  --cmh-pill-border: rgba(147, 197, 253, 0.45);
+  --cmh-pill-ink: #bfdbfe;
+  --cmh-border: rgba(255, 255, 255, 0.1);
+}
+
+html.dark .cmh--roster {
+  --cmh-surface: linear-gradient(115deg, #0d1420 0%, #12233b 52%, #1a3a63 130%);
+  background-color: #12233b;
+}
+
+/* ── auction — the money accent. ────────────────────────────────────────── */
+.cmh--auction {
+  --cmh-surface: linear-gradient(115deg, #d97706 0%, #92400e 55%, #4a3410 100%);
+  background-color: #92400e;
+  --cmh-body: rgba(255, 255, 255, 0.78);
+  --cmh-ghost: rgba(255, 255, 255, 0.045);
+  --cmh-glow: var(--cmh-glow-dark, rgba(217, 119, 6, 0.35));
+  --cmh-shadow: rgba(0, 0, 0, 0.5);
+  --cmh-accent: #fbbf24;
+  --cmh-cta-ink: #1c1408;
+  --cmh-pill-bg: rgba(251, 191, 36, 0.16);
+  --cmh-pill-border: rgba(251, 191, 36, 0.45);
+  --cmh-pill-ink: #fcd34d;
+  --cmh-border: rgba(255, 255, 255, 0.1);
+}
+
+html.dark .cmh--auction {
+  --cmh-surface: linear-gradient(115deg, #12100b 0%, #221a10 46%, #4a3410 130%);
+  background-color: #221a10;
+}
+
+/* ── navy — the AFL's ground (--afl-navy), deep in both themes. ─────────── */
+.cmh--navy {
+  --cmh-surface: linear-gradient(115deg, #16324a 0%, #12283c 55%, #0f1e2e 100%);
+  background-color: #12283c;
+  --cmh-body: rgba(255, 255, 255, 0.78);
+  --cmh-ghost: rgba(255, 255, 255, 0.05);
+  --cmh-glow: var(--cmh-glow-dark, rgba(201, 164, 76, 0.32));
+  --cmh-shadow: rgba(0, 0, 0, 0.5);
+  --cmh-accent: #e6c976;
+  --cmh-cta-ink: #0f1e2e;
+  --cmh-pill-bg: rgba(201, 164, 76, 0.16);
+  --cmh-pill-border: rgba(201, 164, 76, 0.45);
+  --cmh-pill-ink: #e6c976;
+  --cmh-border: rgba(255, 255, 255, 0.12);
+}
+
+html.dark .cmh--navy {
+  --cmh-surface: linear-gradient(115deg, #0b1520 0%, #0f1e2e 52%, #16324a 130%);
+  background-color: #0f1e2e;
+}
+
+/* ── gold — the AFL keeper window (trophy gold over navy). ──────────────── */
+.cmh--gold {
+  --cmh-surface: linear-gradient(115deg, #8a6d2f 0%, #4a3a1a 55%, #16324a 100%);
+  background-color: #4a3a1a;
+  --cmh-body: rgba(255, 255, 255, 0.78);
+  --cmh-ghost: rgba(255, 255, 255, 0.05);
+  --cmh-glow: var(--cmh-glow-dark, rgba(201, 164, 76, 0.36));
+  --cmh-shadow: rgba(0, 0, 0, 0.5);
+  --cmh-accent: #e6c976;
+  --cmh-cta-ink: #1c1408;
+  --cmh-pill-bg: rgba(230, 201, 118, 0.16);
+  --cmh-pill-border: rgba(230, 201, 118, 0.45);
+  --cmh-pill-ink: #e6c976;
+  --cmh-border: rgba(255, 255, 255, 0.12);
+}
+
+html.dark .cmh--gold {
+  --cmh-surface: linear-gradient(115deg, #14100a 0%, #2a2113 46%, #16324a 130%);
+  background-color: #2a2113;
+}
+
+/* ── TONE: red — urgency, applied ON TOP of an accent (a deadline today, the
+      final-30-days cut watch). Deltas only, so the hero keeps its geometry. */
+.cmh--red {
+  --cmh-surface: linear-gradient(115deg, #dc2626 0%, #991b1b 55%, #5f1414 100%);
+  background-color: #991b1b;
+  --cmh-ghost: rgba(255, 255, 255, 0.05);
+  --cmh-accent: #fca5a5;
+  --cmh-pill-bg: rgba(252, 165, 165, 0.14);
+  --cmh-pill-border: rgba(252, 165, 165, 0.45);
+  --cmh-pill-ink: #fecaca;
+  --cmh-cta-ink: #2a0d12;
+  --cmh-border: rgba(255, 255, 255, 0.12);
+}
+
+html.dark .cmh--red {
+  --cmh-surface: linear-gradient(115deg, #170b0d 0%, #2a1216 46%, #6e1220 130%);
+  background-color: #2a1216;
+}
+
+/* ── Watermark layer (z-0): one of ghost wordmark, franchise crest, or a
+      full-bleed league logo backdrop. ─────────────────────────────────── */
+.cmh__ghost {
+  position: absolute;
+  left: var(--cmh-ghost-left);
+  top: var(--cmh-ghost-top);
+  font-size: var(--cmh-ghost-size);
+  font-style: var(--cmh-ghost-style);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1;
+  color: var(--cmh-ghost);
+  pointer-events: none;
+  user-select: none;
+  white-space: nowrap;
+}
+
+/* Full-bleed league mark, for a state whose own wordmark has stopped being
+   news (the auction, once bidding is live). The surface is dark in BOTH
+   themes, so the white artwork is correct in both. */
+/* The rostering franchise's crest, where the hero is about a fantasy team
+   rather than an NFL one. Always the DARK-surface artwork, resolved
+   server-side — see dark-surface-crest.ts. */
+.cmh__crest {
+  position: absolute;
+  right: var(--cmh-crest-right);
+  top: 50%;
+  transform: translateY(-50%);
+  width: var(--cmh-crest-w);
+  aspect-ratio: 1;
+  object-fit: contain;
+  /* The surface is dark in BOTH themes, which is exactly why the crest ARTWORK
+     is resolved server-side (dark-surface-crest.ts) rather than left to the
+     site's html.dark swap — that swap never fires for a light-theme reader. */
+  opacity: var(--cmh-crest-opacity);
+  pointer-events: none;
+  user-select: none;
+}
+
+.cmh__backdrop {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%) rotate(-8deg);
+  width: var(--cmh-backdrop-w);
+  opacity: var(--cmh-backdrop-opacity);
+  pointer-events: none;
+  user-select: none;
+}
+
+/* ── Glow (z-1): tinted by the cast player's NFL team, or by the franchise
+      that owns the story. ─────────────────────────────────────────────── */
+.cmh__glow {
+  position: absolute;
+  right: -70px;
+  top: -100px;
+  width: 440px;
+  height: 440px;
+  background: radial-gradient(circle, var(--cmh-glow) 0%, transparent 65%);
+  pointer-events: none;
+}
+
+/* ── Art (z-2): the transparent ESPN cutout, entry artwork, or a silhouette. */
+.cmh__model {
+  position: absolute;
+  right: var(--cmh-model-right);
+  bottom: 0;
+  width: var(--cmh-model-w);
+  filter: drop-shadow(0 16px 32px var(--cmh-shadow));
+}
+
+/* Entry-supplied artwork (heroArt override): the image IS the story, so it
+   renders at full opacity where the player would stand — not as a watermark.
+   Width is capped at ~2x the 100px vintage-button sources to limit upscale blur. */
+.cmh__art {
+  position: absolute;
+  right: clamp(1.5rem, 6vw, 4.5rem);
+  top: 50%;
+  transform: translateY(-50%);
+  width: clamp(150px, 18vw, 200px);
+  filter: drop-shadow(0 16px 32px var(--cmh-shadow));
+  pointer-events: none;
+}
+
+/* Player-less states: the league logo silhouette instead of an empty flank.
+   Both themes render on a dark surface, so the white mark is correct in both. */
+.cmh__logo-art {
+  position: absolute;
+  right: clamp(1rem, 4vw, 3rem);
+  top: 50%;
+  transform: translateY(-50%) rotate(-6deg);
+  width: var(--cmh-logo-w);
+  opacity: var(--cmh-logo-opacity);
+  pointer-events: none;
+}
+
+/* A cutout that 404s must be REMOVED, not just declassed: an <img> with a
+   broken src still paints the browser's broken-image box, which is worse than
+   the empty flank the silhouette exists to fill. */
+.cmh--no-model .cmh__model {
+  display: none;
+}
+
+/* When the shell renders a model, the silhouette is the 404 fallback only —
+   it appears when the cutout's onerror fires. */
+.cmh--has-model .cmh__logo-art {
+  display: none;
+}
+
+.cmh--has-model.cmh--no-model .cmh__logo-art {
+  display: block;
+}
+
+/* ── Caption (z-3): frosted pill naming the player. ────────────────────── */
+.cmh__caption {
+  position: absolute;
+  z-index: 2;
+  right: clamp(0.875rem, 2vw, 1.5rem);
+  bottom: 0.875rem;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.125rem;
+  text-align: right;
+  /* Always white — the caption sits on its own dark frosted pill in both themes */
+  color: #fff;
+  background: rgba(6, 9, 13, 0.55);
+  padding: 0.4rem 0.65rem;
+  border-radius: 6px;
+  backdrop-filter: blur(2px);
+}
+
+.cmh--no-model .cmh__caption {
+  display: none;
+}
+
+.cmh__caption strong {
+  font-size: 0.8125rem;
+  font-weight: 800;
+  line-height: 1.1;
+}
+
+.cmh__caption-meta {
+  font-size: 0.575rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: rgba(255, 255, 255, 0.65);
+}
+
+/* ── Editorial column (z-3). ───────────────────────────────────────────── */
+.cmh__content {
+  position: relative;
+  z-index: 2;
+  max-width: var(--cmh-content-max);
+}
+
+.cmh__eyebrow {
+  margin: 0 0 var(--cmh-eyebrow-mb);
+}
+
+/* Only the What's New card sits a date beside its pill, and only that layout
+   needs flex. Making it the default cost every other hero ~4px of eyebrow
+   height (a flex container has no line-box leading), which moved the copy. */
+.cmh__eyebrow--row {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+}
+
+.cmh__pill {
+  font-size: 0.65rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--cmh-pill-ink);
+  background: var(--cmh-pill-bg);
+  border: 1px solid var(--cmh-pill-border);
+  padding: 0.3rem 0.65rem;
+  border-radius: 999px;
+}
+
+.cmh__date {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--cmh-date);
+}
+
+.cmh__title {
+  /* Explicit — global heading rules (and html.dark accent overrides) must
+     never restyle text sitting on the composite gradient. */
+  color: var(--cmh-ink);
+  font-size: clamp(1.35rem, 2.6vw, 1.75rem);
+  font-weight: 800;
+  line-height: 1.1;
+  letter-spacing: -0.015em;
+  margin: 0 0 var(--cmh-title-mb);
+  max-width: var(--cmh-title-max);
+  text-wrap: balance;
+}
+
+.cmh__title-accent {
+  color: var(--cmh-accent);
+}
+
+.cmh__summary {
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: var(--cmh-body);
+  max-width: var(--cmh-summary-max);
+  margin: 0 0 0.875rem;
+}
+
+/* Feature entries clamp to two lines; everything else runs its natural height. */
+.cmh--clamp-summary .cmh__summary {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* ── Footer furniture, used by the adopters through the default slot. ──── */
+.cmh__footer {
+  display: flex;
+  align-items: center;
+  flex-wrap: var(--cmh-footer-wrap);
+  gap: var(--cmh-footer-gap);
+  margin: 0 0 var(--cmh-footer-mb);
+}
+
+.cmh__cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: var(--cmh-cta-bg);
+  color: var(--cmh-cta-ink);
+  font-size: 0.8125rem;
+  font-weight: 700;
+  padding: 0.6rem 1.05rem;
+  border-radius: var(--radius-md, 0.5rem);
+  text-decoration: none;
+  transition: transform 120ms ease;
+}
+
+.cmh__cta:hover {
+  transform: translateY(-1px);
+}
+
+.cmh__cta:focus-visible {
+  outline: 2px solid var(--cmh-pill-ink);
+  outline-offset: 2px;
+}
+
+.cmh__count,
+.cmh__stat {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.cmh__count-num,
+.cmh__stat-num {
+  font-size: var(--cmh-count-size);
+  font-weight: 800;
+  line-height: 1;
+  color: var(--cmh-accent);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+
+.cmh__count-label,
+.cmh__stat-label {
+  font-size: 0.575rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--cmh-body);
+}
+
+.cmh__divider {
+  width: 1px;
+  align-self: stretch;
+  background: var(--cmh-divider);
+}
+
+.cmh__metrics {
+  display: flex;
+  gap: 1.5rem;
+  margin: 0 0 0.875rem;
+}
+
+.cmh__metric b {
+  display: block;
+  font-size: 1.35rem;
+  font-weight: 800;
+  line-height: 1;
+  color: var(--cmh-accent);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+
+.cmh__metric span {
+  display: block;
+  font-size: 0.575rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--cmh-body);
+  margin-top: 0.2rem;
+}
+
+.cmh__chips {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+}
+
+/* A standalone quick-link row (the auction's) fills the copy column; the cut
+   watch's chips shrink-wrap because they share a line with the CTA. */
+.cmh__chips--block {
+  display: flex;
+}
+
+.cmh__chip {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: var(--cmh-chip-ink);
+  background: var(--cmh-chip-bg);
+  border: 1px solid var(--cmh-chip-border);
+  padding: 0.28rem 0.6rem;
+  border-radius: 999px;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+  text-decoration: none;
+}
+
+.cmh__chip--you {
+  border-color: var(--cmh-pill-border);
+  color: var(--cmh-pill-ink);
+  font-weight: 700;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cmh__cta {
+    transition: none;
+  }
+
+  .cmh__cta:hover {
+    transform: none;
+  }
+}
+
+@media (max-width: 640px) {
+  .cmh {
+    min-height: var(--cmh-min-h-mobile);
+  }
+
+  /* DEFAULT — fade: the cutout drops to a faint watermark behind the copy and
+     the text reclaims the full width. Four of the five spotlight heroes do
+     this; it is the safe treatment for a card whose copy runs long. */
+  .cmh__model {
+    width: var(--cmh-model-w-mobile);
+    right: var(--cmh-model-right-mobile);
+    opacity: var(--cmh-model-opacity-mobile);
+  }
+
+  .cmh__art {
+    width: 140px;
+    right: -1rem;
+    opacity: 0.45;
+  }
+
+  .cmh__caption {
+    display: none;
+  }
+
+  /* The corner silhouette shrinks; the full-bleed backdrop does not — it is
+     centred art, and pinning it to the right edge crops it to a sliver. */
+  .cmh__logo-art {
+    width: var(--cmh-logo-w-mobile);
+    right: var(--cmh-logo-right-mobile);
+  }
+
+  .cmh__content {
+    max-width: 100%;
+  }
+
+  .cmh__metrics {
+    gap: 1rem;
+  }
+
+  /* OPT-IN — crop: the cutout stays opaque and full-size, so the copy must
+     yield a column to it.
+
+     ESPN `full` cutouts are landscape frames (350x254) with the player
+     centered, so height-driven sizing alone would park the face mid-card under
+     the text. Instead: a portrait box anchored bottom-right with a cover crop —
+     the face keeps its full 90%-height size, the shoulders crop at the box
+     edges, and the left-edge mask fades the crop line into the gradient so no
+     hard rectangle shows. */
+  .cmh--crop .cmh__model {
+    width: 44%;
+    height: 90%;
+    right: 0;
+    bottom: 0;
+    opacity: 1;
+    object-fit: cover;
+    object-position: center top;
+    -webkit-mask-image: linear-gradient(90deg, transparent 0%, #000 22%);
+    mask-image: linear-gradient(90deg, transparent 0%, #000 22%);
+  }
+
+  /* The text cap exists only to dodge that opaque cutout. When the cutout 404s
+     at runtime (`cmh--no-model` from the img onerror), the copy reflows back to
+     full width instead of leaving a dead right column. */
+  .cmh--crop.cmh--has-model .cmh__content {
+    max-width: 62%;
+  }
+
+  .cmh--crop.cmh--has-model.cmh--no-model .cmh__content {
+    max-width: 100%;
+  }
+}
+
+/* Narrow phones: the constrained text column runs taller, so the cropped
+   headshot cedes a little width (the cover crop trims more shoulder, the face
+   keeps its size) rather than letting the two meet. */
+@media (max-width: 400px) {
+  .cmh--crop .cmh__model {
+    width: 38%;
+    height: 86%;
+  }
+
+  .cmh--crop.cmh--has-model .cmh__content {
+    max-width: 66%;
+  }
+}

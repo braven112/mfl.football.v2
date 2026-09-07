@@ -37,13 +37,18 @@ const ALLOWLIST: Record<string, string> = {
 
   // Deep-ink composite family: full-bleed dark panels, white text on the
   // colored area — the ink base (not a luminance floor) handles dark teams.
+  //
+  // The shared PANEL BOARD reads the palette itself — it derives each panel's
+  // gradient — so an adopter that only configures it (the UDFA board, the tag
+  // showcase) no longer touches team colors at all. The shared spotlight shell
+  // deliberately does NOT appear here: it takes a resolved hex and tints a
+  // glow with it, so the decision of WHICH color stays with the caller.
+  'src/components/shared/CompositePanelBoard.astro': 'shared composite panel board',
   'src/components/theleague/FeatureCompositeHero.astro': 'composite hero',
   'src/components/theleague/AuctionCompositeHero.astro': 'composite hero',
   'src/components/theleague/BreakingStoryHero.astro': 'composite hero',
   'src/components/theleague/CutWatchCompositeHero.astro': 'composite hero',
   'src/components/theleague/PreseasonCompositeHero.astro': 'composite hero',
-  'src/components/theleague/UdfaCompositeHero.astro': 'composite hero',
-  'src/components/theleague/TaggedShowcaseCompositeHero.astro': 'composite hero',
   'src/components/theleague/FaceoffComposite.astro': 'two-panel composite',
   'src/components/theleague/season-heroes/ArticleHero.astro': 'composite hero',
   'src/components/theleague/trade-builder/TradeCompositeStrip.tsx': 'composite strip',
