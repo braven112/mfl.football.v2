@@ -139,6 +139,55 @@ excludes stroke, and the halo on every `-dark` badge *is* a stroke.
 
 ---
 
+## 2026-09-07 - …But an ERA Crest Is a Circle Punched Out of a Banner, and Its Round Frame Is Load-Bearing
+
+**Context:** Sweeping the round-crop fix above across the rest of the site, the
+two `franchises/index.astro` `.identity-icon` rules looked like the same bug —
+historical rebrand crests, `border-radius: 50%` + `object-fit: cover`, exactly
+the shape just fixed in the Trade Builder. Un-rounding them would have been
+wrong in both leagues at once.
+
+**Insight:** `.identity-icon` renders `team.history[].icon` — **era art**, not
+the current crest — and era art is a separate system with the opposite default.
+`src/utils/era-crest-stroke-css.ts` states it outright: most of the 100+ era
+crests are *a circle punched out of the era's banner*, so they have no edge of
+their own and the round slot is what makes them read as a badge rather than a
+crop. Three mechanisms hang off that assumption, all injected globally by
+`TeamIconDarkStyles`:
+
+- **`iconStroke`** rings the box with `box-shadow` in the era's colour, and its
+  own comment says the ring lands on the art's edge *only because*
+  `border-radius: 50%` is there — "for non-circular art it would trace the box."
+  48 AFL eras carry one. Removing the radius squares 48 rings.
+- **`iconFreeform`** is the per-era opt-OUT for a genuinely free-standing mark,
+  emitting `border-radius: 0 !important; object-fit: contain !important`. Nine
+  AFL eras use it, and it already outranks the component's scoped class.
+- **`iconStrokeDark`** is a third, unrelated treatment (white silhouette in dark
+  mode only).
+
+So the fix for an era crest that IS being clipped is a config flag, never a CSS
+change — and a blanket sweep would break the 48 that are correct to fix the
+handful that aren't.
+
+**Evidence:** 35 of TheLeague's 40 and 78 of AFL's 113 era icons are literally
+named `*_icon_circle.png`. Measuring ink outside the inscribed circle across
+all 153: the long tail sits at 1.2–1.5%, which is just the antialiased rim of
+art that is already a circle. Only a handful are real — `fullybaked_2003`
+19.5%, `bukkake_warriors` 17.1%, `computer_jocks_2014` 8.6%,
+`c_p_bruisers` 6%, `gobblers` 2.1% — and none of those five carry
+`iconFreeform` yet. That is the real backlog, and it lives in the config.
+
+**Recommendation:** The entry below is right for a CURRENT franchise crest and
+does not extend to era art. Before un-rounding any crest slot, trace the `src`:
+`t.icon` / `team.icon` / `franchiseIcon` is current art → `contain`, no radius.
+`era.icon` / `history[].icon` (`buildHistoricalIdentities`,
+`getThrowbackFranchiseBrand`, the Throwback settings page's era rows) is era art
+→ leave the circle alone and add `iconFreeform` to the one era that needs it.
+Two classes on the SAME page can differ: `.tbw-cg__team-icon` is current and was
+fixed, `.tbw-cg__era-icon` and `.tbw-card__icon` sit beside it and were not.
+
+---
+
 ## 2026-09-07 - A Franchise Crest Is Not a Portrait — Never Round-Crop One
 
 **Context:** Two places in the Trade Builder framed the franchise icon as
