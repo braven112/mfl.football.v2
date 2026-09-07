@@ -322,7 +322,30 @@ body scripts on every navigation.
 ### The app icon badge (`src/utils/app-badge.ts`, `/api/app-badge`)
 
 `setAppBadge` paints a count on the Home Screen / dock icon — the only surface
-that reaches an owner who never opens the app. Three things count, and the
+that reaches an owner who never opens the app.
+
+**It does not work on Android, and that is not fixable here.** Chrome for
+Android has never shipped the Badging API; neither has Samsung Internet or
+Firefox for Android. Among mobile browsers only Safari on iOS 16.4+ implements
+it (verified against caniuse 2026-09-07, after an Android owner asked why
+their icon was bare).
+
+| Platform | Count on the icon? |
+|---|---|
+| iPhone / iPad, installed | yes (iOS 16.4+) |
+| Desktop Chrome / Edge, installed | yes |
+| **Android Chrome, installed** | **no — API absent** |
+| Any browser tab | no (no icon to badge) |
+
+Android compensates on its own: the OS adds a *dot* to a PWA's icon whenever a
+notification is unread, the same as a native app. So an Android owner gets icon
+signal from push, just not our to-do count.
+
+The client guards on `'setAppBadge' in navigator`, so Android is a silent
+no-op rather than an error — which is correct, but means the feature is
+invisible there. **Do not describe the badge to owners without naming the
+platform split**: the launch copy in `whats-new.json` originally promised "the
+icon carries a number" to everyone and had to be corrected. Three things count, and the
 choice of three IS the design: a badge promises that something is waiting for
 **you**, so it may only count what the owner can act on and clear.
 
