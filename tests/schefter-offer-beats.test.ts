@@ -34,6 +34,18 @@ import {
 import { redactTradeOffer } from '../scripts/lib/redact-trade-offer.mjs';
 import { readFileSync } from 'node:fs';
 
+/**
+ * `redactTradeOffer` can return `{ skip: true }`, so `tip` is optional on its
+ * result type. Every fixture here is built to produce a tip; narrowing once
+ * keeps the assertions readable and keeps a genuine skip loud rather than
+ * surfacing as a confusing property error twenty lines later.
+ */
+function mustRedact(args: unknown) {
+  const result = redactTradeOffer(args as never);
+  if (!result.tip) throw new Error(`redactTradeOffer skipped unexpectedly: ${result.reason}`);
+  return { tip: result.tip, debug: result.debug! };
+}
+
 const NOW = Date.UTC(2026, 8, 7, 12, 0, 0);
 const HOUR = 60 * 60 * 1000;
 
@@ -288,7 +300,7 @@ describe('redactTradeOffer — beats reach the tip without widening the names', 
   });
 
   it('ships a beat on the signal that ships no new name', () => {
-    const { tip } = redactTradeOffer(args(1) as any);
+    const { tip } = mustRedact(args(1));
     expect(tip.exposure!.players).toEqual([]);
     expect(tip.beats!.length).toBeGreaterThan(0);
     expect(tip.leadKind).not.toBe('player');
@@ -300,7 +312,7 @@ describe('redactTradeOffer — beats reach the tip without widening the names', 
     // franchise's players are never in it at any signal, so they must stay at
     // position level however far the ladder runs.
     for (let exposureCount = 0; exposureCount <= 10; exposureCount += 1) {
-      const { tip } = redactTradeOffer(args(exposureCount) as any);
+      const { tip } = mustRedact(args(exposureCount));
       const allowed = new Set((tip.exposure?.players ?? []).map((p: any) => p.name));
       for (const beat of tip.beats ?? []) {
         const name = (beat as any).subject?.name;
@@ -312,7 +324,7 @@ describe('redactTradeOffer — beats reach the tip without widening the names', 
   });
 
   it('lets a beat use a name once exposure has printed it', () => {
-    const { tip } = redactTradeOffer(args(5) as any);
+    const { tip } = mustRedact(args(5));
     const printed = (tip.exposure!.players ?? []).map((p: any) => p.name);
     expect(printed.length).toBeGreaterThan(0);
     const named = (tip.beats ?? [])
@@ -323,7 +335,7 @@ describe('redactTradeOffer — beats reach the tip without widening the names', 
   });
 
   it('leaves the exposure block at exactly its three published fields', () => {
-    const { tip } = redactTradeOffer(args(4) as any);
+    const { tip } = mustRedact(args(4));
     expect(Object.keys(tip.exposure!).sort()).toEqual(['players', 'signal', 'team']);
   });
 });
@@ -445,34 +457,34 @@ describe('redactTradeOffer — a closure post reveals nothing new', () => {
   it('holds the signal instead of advancing it', () => {
     // Same prior exposure, with and without the closure: the live post advances
     // to the next signal, the closure stays on the one already published.
-    const live = redactTradeOffer({ ...base, exposureCount: 3 } as any).tip;
-    const closed = redactTradeOffer({
+    const live = mustRedact({ ...base, exposureCount: 3 }).tip;
+    const closed = mustRedact({
       ...base,
       exposureCount: 3,
       closure: { reason: 'expired', daysOpen: 11, priorPosts: 3 },
-    } as any).tip;
+    }).tip;
     expect(live.exposure!.signal).toBe(4);
     expect(closed.exposure!.signal).toBe(3);
     expect(closed.exposure!.players.length).toBeLessThanOrEqual(live.exposure!.players.length);
   });
 
   it('leads on the closure and carries the reason', () => {
-    const { tip } = redactTradeOffer({
+    const { tip } = mustRedact({
       ...base,
       exposureCount: 2,
       closure: { reason: 'accepted', daysOpen: 4, priorPosts: 2 },
-    } as any);
+    });
     expect(tip.leadKind).toBe(BEAT_KINDS.CLOSURE);
     expect(tip.beats![0]).toMatchObject({ kind: BEAT_KINDS.CLOSURE, reason: 'accepted', priorPosts: 2 });
   });
 
   it('never names on the way out what the ladder had not already named', () => {
     // A proposal closed after a single team-only post must still be team-only.
-    const { tip } = redactTradeOffer({
+    const { tip } = mustRedact({
       ...base,
       exposureCount: 1,
       closure: { reason: 'expired', daysOpen: 2, priorPosts: 1 },
-    } as any);
+    });
     expect(tip.exposure!.players).toEqual([]);
     expect(JSON.stringify(tip.beats)).not.toContain("Ja'Marr Chase");
   });
@@ -604,7 +616,7 @@ describe('review regressions — the named tier must not widen the name surface'
     // ["Alpha One"] — a name two signals early, and the playbook's "never
     // print a player who is not in exposure.players" made false.
     for (let exposureCount = 0; exposureCount <= 10; exposureCount += 1) {
-      const { tip } = redactTradeOffer(args(exposureCount) as any);
+      const { tip } = mustRedact(args(exposureCount));
       const allowed = new Set((tip.exposure?.players ?? []).map((p: any) => p.name));
       for (const b of tip.beats ?? []) {
         const name = (b as any).subject?.name;
@@ -616,7 +628,7 @@ describe('review regressions — the named tier must not widen the name surface'
   });
 
   it('does not re-publish through deal_shape the picks the named tier just dropped', () => {
-    const { tip, debug } = redactTradeOffer(args(3) as any);
+    const { tip, debug } = mustRedact(args(3));
     expect(tip.escalatedPlayer?.tier).toBe('named');
     expect(tip.pickTokens).toEqual([]);
     const shape = (tip.beats ?? []).find((b: any) => b.kind === BEAT_KINDS.DEAL_SHAPE) as any;
@@ -658,7 +670,7 @@ describe('review regressions — MFL does not consistently zero-pad franchise id
       ['0001', { name: 'Pacific Pigskins', division: 'East' }],
       ['0007', { name: 'Maverick', division: 'West' }],
     ]);
-    const run = (rawOffer: any) => redactTradeOffer({
+    const run = (rawOffer: any) => mustRedact({
       rawOffer,
       offeringFid: '0001',
       playerMap,
@@ -670,7 +682,7 @@ describe('review regressions — MFL does not consistently zero-pad franchise id
       blockByFid: new Map([['0001', new Set<string>()], ['0007', new Set<string>()]]),
       positionRuns: new Map(),
       nowMs: NOW,
-    } as any).tip;
+    }).tip;
 
     const a = run(short);
     const b = run(padded);

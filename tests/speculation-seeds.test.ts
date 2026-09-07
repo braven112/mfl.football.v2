@@ -24,8 +24,36 @@ import {
 import { buildHaves, findTwoTeamCandidates } from '../scripts/lib/speculation-matching.mjs';
 import { getLeagueBySlug } from '../src/config/leagues-data.mjs';
 import { readFileSync } from 'node:fs';
-
 const NOW = Date.UTC(2026, 8, 7, 12, 0, 0);
+
+interface Seed {
+  offerId: string;
+  proposerFid: string;
+  excludedCounterpartyFid: string | null;
+  offeredPlayerIds: string[];
+  askedPositions: string[];
+  expiredAtMs: number;
+}
+interface Have { id: string; position: string; wasOffered?: boolean; onTradeBait?: boolean }
+interface Candidate { seller: string; buyer: string; marquee: Have; score: number }
+
+/**
+ * The modules under test are JSDoc-typed `.mjs`, so their inferred option
+ * shapes reject the stubs a test legitimately wants to pass (a two-method
+ * fake Redis, a roster literal). These shims put the cast in ONE place and
+ * give the assertions a real type, instead of `as any` at every call site
+ * where it would also hide a genuine shape change.
+ */
+const readSeeds = (args: { redis: unknown; navSlug: string; nowMs?: number }): Promise<Seed[]> =>
+  (readActiveSeeds as unknown as (a: unknown) => Promise<Seed[]>)(args);
+const makeHaves = (args: {
+  franchisePlayers: unknown[];
+  tradeBaitIds: string[];
+  adpRankById: Map<string, number>;
+  seededIds?: Set<string>;
+}): Have[] => (buildHaves as unknown as (a: unknown) => Have[])(args);
+const findCandidates = (args: unknown): Candidate[] =>
+  (findTwoTeamCandidates as unknown as (a: unknown) => Candidate[])(args);
 
 const playerMap = new Map([
   ['13116', { name: "Ja'Marr Chase", position: 'WR' }],
@@ -148,8 +176,8 @@ describe('readActiveSeeds', () => {
   it('drops seeds older than the TTL', async () => {
     const fresh = { offerId: 'a', proposerFid: '0001', offeredPlayerIds: [], askedPositions: [], expiredAtMs: NOW - 1000 };
     const stale = { offerId: 'b', proposerFid: '0002', offeredPlayerIds: [], askedPositions: [], expiredAtMs: NOW - SEED_TTL_MS - 1000 };
-    const seeds = await readActiveSeeds({
-      redis: fakeRedis({ a: JSON.stringify(fresh), b: JSON.stringify(stale) }) as any,
+    const seeds = await readSeeds({
+      redis: fakeRedis({ a: JSON.stringify(fresh), b: JSON.stringify(stale) }),
       navSlug: 'theleague',
       nowMs: NOW,
     });
@@ -157,9 +185,9 @@ describe('readActiveSeeds', () => {
   });
 
   it('survives a malformed row and a missing client', async () => {
-    expect(await readActiveSeeds({ redis: null as any, navSlug: 'theleague', nowMs: NOW })).toEqual([]);
-    const seeds = await readActiveSeeds({
-      redis: fakeRedis({ bad: '{not json' }) as any,
+    expect(await readSeeds({ redis: null, navSlug: 'theleague', nowMs: NOW })).toEqual([]);
+    const seeds = await readSeeds({
+      redis: fakeRedis({ bad: '{not json' }),
       navSlug: 'theleague',
       nowMs: NOW,
     });
@@ -174,16 +202,16 @@ describe('buildHaves — a seeded player is available like a listed one', () => 
   ];
 
   it('admits a player his owner offered, even off the block and not surplus', () => {
-    const without = buildHaves({ franchisePlayers: roster, tradeBaitIds: [], adpRankById: new Map() });
-    const withSeed = buildHaves({
+    const without = makeHaves({ franchisePlayers: roster, tradeBaitIds: [], adpRankById: new Map() });
+    const withSeed = makeHaves({
       franchisePlayers: roster,
       tradeBaitIds: [],
       adpRankById: new Map(),
       seededIds: new Set(['13116']),
     });
-    expect(without.map((h: any) => h.id)).not.toContain('13116');
-    expect(withSeed.map((h: any) => h.id)).toContain('13116');
-    expect(withSeed.find((h: any) => h.id === '13116').wasOffered).toBe(true);
+    expect(without.map((h) => h.id)).not.toContain('13116');
+    expect(withSeed.map((h) => h.id)).toContain('13116');
+    expect(withSeed.find((h) => h.id === '13116')?.wasOffered).toBe(true);
   });
 });
 
@@ -217,13 +245,13 @@ describe('findTwoTeamCandidates — the real pair is never speculated about', ()
     ['0005', []],
     ['0006', []],
   ]);
-  const run = (signals: unknown) => findTwoTeamCandidates({
+  const run = (signals: unknown) => findCandidates({
     playersByFranchise,
     tradeBaitByFranchise,
     adpRankById: new Map(),
     teams,
     limit: 50,
-    seedSignals: signals as any,
+    seedSignals: signals,
   });
 
   const signals = seedSignals([
@@ -238,17 +266,17 @@ describe('findTwoTeamCandidates — the real pair is never speculated about', ()
   });
 
   it('never pairs the two franchises that actually talked', () => {
-    const pairs = run(signals).map((c: any) => pairKey(c.seller, c.buyer));
+    const pairs = run(signals).map((c) => pairKey(c.seller, c.buyer));
     expect(pairs).not.toContain(pairKey('0001', '0003'));
   });
 
   it('leaves every other franchise a legitimate partner', () => {
-    const pairs = run(signals).map((c: any) => pairKey(c.seller, c.buyer));
+    const pairs = run(signals).map((c) => pairKey(c.seller, c.buyer));
     expect(pairs).toContain(pairKey('0001', '0004'));
   });
 
   it('scores a shopped player above a merely-listed one', () => {
-    const seeded = run(signals).find((c: any) => c.marquee.id === '13116');
-    expect(seeded!.marquee.wasOffered).toBe(true);
+    const seeded = run(signals).find((c) => c.marquee.id === '13116');
+    expect(seeded?.marquee.wasOffered).toBe(true);
   });
 });

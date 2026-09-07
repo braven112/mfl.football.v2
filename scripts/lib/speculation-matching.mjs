@@ -294,6 +294,16 @@ function scoreCandidate({ marquee, returnPkg, divisionsAreSame }) {
  *   league medians. This is the injection point that keeps the function IO-free
  *   for tests — it was destructured but never documented, so callers passing it
  *   were flagged.
+ * @param {{
+ *   availableByFid: Map<string, Set<string>>,
+ *   wantsByFid: Map<string, Set<string>>,
+ *   excludedPairs: Set<string>,
+ * }|null} [args.seedSignals] Signals from expired trade proposals
+ *   (`scripts/lib/speculation-seeds.mjs#seedSignals`). Keyed by the PROPOSER
+ *   only. Omit for the block-and-surplus behavior this lane had before seeds.
+ *   Documented as well as destructured, for the reason the line above records
+ *   — TypeScript infers this options object's type from these tags, so an
+ *   undocumented parameter makes every caller that passes it a ts(2353).
  * @returns {Array<{seller:string, buyer:string, marquee:object, returnPkg:Array, score:number, capRelief:boolean, scoreBreakdown?:string}>}
  */
 export function findTwoTeamCandidates({

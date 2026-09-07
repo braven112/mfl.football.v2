@@ -35,8 +35,8 @@ describe('redactTradeOffer — corroboration metadata', () => {
     // whichever form the row carries it in".
     expect(REDACT_SRC).toMatch(/partnerFranchiseId/);
 
-    const partnerFor = (rawOffer: Record<string, unknown>, offeringFid: string) =>
-      redactTradeOffer({
+    const partnerFor = (rawOffer: Record<string, unknown>, offeringFid: string) => {
+      const { tip } = redactTradeOffer({
         rawOffer,
         offeringFid,
         playerMap: new Map([['p1', { name: 'Alpha One', position: 'WR' }]]),
@@ -47,7 +47,10 @@ describe('redactTradeOffer — corroboration metadata', () => {
         counts: { ownerOfferCount7d: 1, divisionOfferCount7d: 0, playerHistory: new Map() },
         currentYear: 2026,
         exposureCount: 0,
-      } as never).tip.partnerFranchiseId;
+      } as never);
+      if (!tip) throw new Error('redactTradeOffer skipped an offer this fixture builds to survive');
+      return tip.partnerFranchiseId;
+    };
 
     const base = { id: 'c1', franchise1_gave_up: 'p1', franchise2_gave_up: 'FP_0007_2027_3' };
     // Proposer on either side resolves to the other franchise…
