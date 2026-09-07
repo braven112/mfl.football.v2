@@ -85,6 +85,8 @@ export const LEAGUES = {
       taxiSquad: true,
       offseasonAuction: true,
       accounting: true,
+      viewerPreferences: true,
+      pushNotifications: true,
     },
     /**
      * Prize table for the commissioner's accounting page, straight from the
@@ -195,6 +197,8 @@ export const LEAGUES = {
       taxiSquad: false,
       offseasonAuction: false,
       accounting: true,
+      viewerPreferences: true,
+      pushNotifications: true,
     },
     /**
      * AFL prize table (constitution PAYOUTS). The AFL pays for WINNING, and
@@ -307,6 +311,8 @@ export const LEAGUES = {
        * that separately.
        */
       accounting: false,
+      viewerPreferences: false,
+      pushNotifications: false,
     },
     // Redraft best-ball: one season, no keepers, no contracts — straight
     // redraft ADP is exactly the right opening board.

@@ -65,6 +65,17 @@ export interface LeagueFeatures {
    * the ledger, it just has no payouts to plan.
    */
   accounting: boolean;
+  /**
+   * The league publishes `/preferences` — the viewer's country and clock.
+   * The nav's account menu prints the chosen clock and links here, so a
+   * league without the page must not be offered the row.
+   */
+  viewerPreferences: boolean;
+  /**
+   * The league publishes `/notifications` — per-category push settings.
+   * Same reason: the account menu links it only where the page exists.
+   */
+  pushNotifications: boolean;
 }
 
 /**

@@ -324,6 +324,9 @@ export interface NavFooterProps {
 
   /** Whether commish mode is currently active (from cookie) */
   isCommishMode?: boolean;
+
+  /** Strip the league prefix from account-menu links (apex domains) */
+  hideLeaguePrefix?: boolean;
 }
 
 /**

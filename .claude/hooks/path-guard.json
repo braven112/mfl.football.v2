@@ -594,11 +594,13 @@
         "src/utils/zone-label.ts",
         "src/utils/waiver-window.ts",
         "src/components/shared/preferences/*",
-        "src/pages/*/preferences.astro"
+        "src/pages/*/preferences.astro",
+        "src/components/nav/NavFooter.astro"
       ],
       "tests": [
         "tests/viewer-preferences.test.ts",
-        "tests/viewer-clock.test.ts"
+        "tests/viewer-clock.test.ts",
+        "tests/nav-account-menu.test.ts"
       ]
     },
     {
