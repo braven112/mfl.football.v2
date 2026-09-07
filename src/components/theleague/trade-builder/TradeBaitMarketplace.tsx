@@ -1,8 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import type { TradeBuilderPlayer, TradeBuilderTeam } from '../../../types/trade-builder';
 import { formatCurrency } from '../../../utils/formatters';
-import { resolveHeadshotSrc } from '../../../constants/roster-constants';
-import { buildNoHeadshotPlaceholder } from '../../../utils/nfl-team-colors';
+import { PlayerCell } from '../PlayerCell';
 
 const POSITIONS = ['ALL', 'QB', 'RB', 'WR', 'TE', 'PK', 'DEF'];
 
@@ -148,44 +147,33 @@ export default function TradeBaitMarketplace({ teams, leagueYear, onStartTrade }
                   <span className="marketplace__team-name">{team.nameShort}</span>
                 </div>
                 <div className="marketplace__players">
-                  {players.map((player) => {
-                    const isDef = player.position.toUpperCase() === 'DEF';
-                    const avatarSrc = isDef && player.nflLogo ? player.nflLogo : resolveHeadshotSrc(player.headshot, player.nflTeam);
-                    return (
-                      <button
-                        key={player.id}
-                        className="marketplace__player"
-                        onClick={() => handleStartTrade(team.franchiseId, player.id)}
-                        title={`Start a trade for ${player.name}`}
-                      >
-                        <div className={`marketplace__player-avatar${isDef ? ' marketplace__player-avatar--def' : ''}`}>
-                          <img
-                            src={avatarSrc}
-                            alt=""
-                            loading="lazy"
-                            decoding="async"
-                            onError={(e) => { (e.target as HTMLImageElement).onerror = null; (e.target as HTMLImageElement).src = buildNoHeadshotPlaceholder(player.nflTeam ?? ''); }}
-                          />
-                        </div>
-                        <div className="marketplace__player-info">
-                          <span className="marketplace__player-name">{player.name}</span>
-                          <div className="marketplace__player-meta">
-                            {!isDef && player.nflLogo && (
-                              <img src={player.nflLogo} alt="" className="marketplace__player-nfl-logo" loading="lazy" decoding="async" />
-                            )}
-                            <span className="marketplace__player-pos">{player.position}</span>
-                            {player.isRookie && <span className="marketplace__badge marketplace__badge--rookie">R</span>}
-                            {player.isFranchiseTagged && <span className="marketplace__badge marketplace__badge--tag">F</span>}
-                          </div>
-                        </div>
-                        <div className="marketplace__player-contract">
-                          <span className="marketplace__player-salary">{formatCurrency(player.salary)}</span>
-                          <span className="marketplace__player-years">{player.contractYears}yr</span>
-                        </div>
-                        <span className="marketplace__trade-arrow" aria-hidden="true">→</span>
-                      </button>
-                    );
-                  })}
+                  {players.map((player) => (
+                    <button
+                      key={player.id}
+                      className="marketplace__player"
+                      onClick={() => handleStartTrade(team.franchiseId, player.id)}
+                      title={`Start a trade for ${player.name}`}
+                    >
+                      <PlayerCell
+                        className="marketplace__player-cell"
+                        size="compact"
+                        name={player.name}
+                        headshot={player.headshot}
+                        position={player.position}
+                        nflTeam={player.nflTeam}
+                        nflLogo={player.nflLogo}
+                        metaSlot={<>
+                          {player.isRookie && <span className="marketplace__badge marketplace__badge--rookie">R</span>}
+                          {player.isFranchiseTagged && <span className="marketplace__badge marketplace__badge--tag">F</span>}
+                        </>}
+                      />
+                      <div className="marketplace__player-contract">
+                        <span className="marketplace__player-salary">{formatCurrency(player.salary)}</span>
+                        <span className="marketplace__player-years">{player.contractYears}yr</span>
+                      </div>
+                      <span className="marketplace__trade-arrow" aria-hidden="true">→</span>
+                    </button>
+                  ))}
                 </div>
               </div>
             ))}
@@ -354,58 +342,9 @@ const marketplaceStyles = `
     opacity: 1;
     transform: translateX(0);
   }
-  .marketplace__player-avatar {
-    flex-shrink: 0;
-    width: 32px;
-    height: 32px;
-    border-radius: 50%;
-    overflow: hidden;
-    background: var(--content-bg-muted, #f3f4f6);
-    border: 1px solid var(--content-border, #e2e8f0);
-  }
-  .marketplace__player-avatar img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    object-position: top center;
-  }
-  .marketplace__player-avatar--def img {
-    object-fit: contain;
-    object-position: center;
-  }
-  .marketplace__player-info {
+  .marketplace__player-cell {
     flex: 1;
     min-width: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 0.125rem;
-  }
-  .marketplace__player-name {
-    font-weight: 600;
-    font-size: 0.8125rem;
-    color: var(--page-text, #1f2937);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    line-height: 1.3;
-  }
-  .marketplace__player-meta {
-    display: flex;
-    align-items: center;
-    gap: 0.25rem;
-    font-size: 0.75rem;
-    color: var(--content-text-muted, #64748b);
-  }
-  .marketplace__player-nfl-logo {
-    width: 14px;
-    height: 14px;
-    object-fit: contain;
-    flex-shrink: 0;
-  }
-  .marketplace__player-pos {
-    font-weight: 500;
-    text-transform: uppercase;
-    letter-spacing: 0.025em;
   }
   .marketplace__badge {
     font-size: 0.5625rem;
