@@ -37,6 +37,9 @@ import { getLeagueBySlug, ensureLeaguePrefix } from '../../config/leagues';
 import { findWeekMatchups, resolveRostersPayload, resolveLineupFillState, resolveWeekLineup, resolvePlayerName } from '../../utils/lineup-sources';
 import { resolveSubmitButtonState } from '../../utils/lineup-submit-state';
 import '../../styles/loading.css';
+import '../../styles/network-badge.css';
+import { resolveChannel } from '../../utils/broadcast-channels';
+import { readViewerClock } from '../../utils/viewer-preferences-page';
 import type { LineupPlayer } from '../../types/lineups';
 
 // ---------------------------------------------------------------------------
@@ -59,6 +62,14 @@ const requestedWeek = parseInt(Astro.url.searchParams.get('week') || '', 10) || 
 const week = Math.max(1, Math.min(22, requestedWeek));
 
 const MFL_LEAGUE_ID = getLeagueBySlug('theleague')!.id;
+// Whose channel lineup the opponent line names — CBS at home, DAZN in Canada,
+// Kayo in Australia. READ, never resolved: the resolver writes preference
+// cookies, which a page that has none of its own to set must not do, and this
+// page renders inside a layout whose headers are long since committed by the
+// time a component could try. A viewer who has chosen nothing gets the US
+// default, which is exactly what this line showed before it named a channel.
+const viewerCountry = (await readViewerClock(Astro.cookies, user)).prefs.country;
+
 const mflBase = `https://api.myfantasyleague.com/${leagueYear}/export`;
 
 // Parallel data fetches (all 9 run concurrently to avoid waterfall).
@@ -174,6 +185,38 @@ interface GameInfo {
   overUnder: number | null;
   fpaRanks: Record<string, Record<string, number>>;
   status: string;
+  /**
+   * The game's network, ALREADY resolved for this viewer's country.
+   *
+   * Pre-resolved server-side on purpose: the slot markup is rebuilt in the
+   * page's own client script every time the owner swaps a player, so the
+   * channel has to be a plain string the script can re-emit. Resolving it
+   * there instead would mean shipping the country mapping into the bundle and
+   * keeping a second copy of `resolveChannel`'s rules in sync with the first.
+   *
+   * null when ESPN has published no network yet — normal more than a week out,
+   * and the badge is then absent rather than empty.
+   */
+  channel: { name: string; logo: string | null; title: string } | null;
+}
+
+/**
+ * A game's US network as THIS viewer's country carries it, flattened to the
+ * strings both the server render and the client re-render need.
+ *
+ * `resolveChannel` is the one place that knows a Thursday game is Prime Video
+ * in Seattle and Kayo in Perth — never map a network by hand here. The note
+ * and subscription ride in the tooltip, which is what makes the mark an answer
+ * for someone watching from abroad.
+ */
+function channelFor(usNetwork: string | null | undefined) {
+  const ch = resolveChannel(usNetwork, viewerCountry);
+  if (!ch) return null;
+  return {
+    name: ch.name,
+    logo: ch.logo,
+    title: [ch.name, ch.note, ch.subscription].filter(Boolean).join(' · '),
+  };
 }
 
 // Build schedule from live odds
@@ -218,6 +261,7 @@ Object.values(liveOdds).forEach((odds) => {
     spread: spreadNum && favoredTeam ? (favoredTeam === odds.homeTeam ? -spreadNum : spreadNum) : null,
     overUnder: odds.overUnder !== 'N/A' ? parseFloat(String(odds.overUnder)) : null,
     fpaRanks,
+    channel: channelFor(odds.broadcast),
     status: odds.status?.toLowerCase().includes('final') ? 'final'
       : odds.status?.toLowerCase().includes('progress') || odds.status?.match(/^\d/) ? 'live'
       : 'pre',
@@ -687,6 +731,13 @@ const ownersPollTeams = Object.values(getLeagueTeamBrands(ownersPollLeague.slug)
                           <span class="lineup-slot__opp-prefix">{matchupPrefix}</span>
                           <img src={`/assets/nfl-logos/${oppTeam}.svg`} alt="" aria-hidden="true" class="lineup-slot__opp-logo" width="16" height="16" onerror={NFL_LOGO_ONERROR} onload={NFL_LOGO_ONLOAD} />
                           <span class="lineup-slot__opp-team">{oppTeam}</span>
+                          {game?.channel && (
+                            game.channel.logo
+                              ? <span class="net-badge net-badge--mark lineup-slot__net" title={game.channel.title}>
+                                  <img class="net-badge__logo" src={game.channel.logo} alt={game.channel.name} loading="lazy" />
+                                </span>
+                              : <span class="net-badge lineup-slot__net" title={game.channel.title}>{game.channel.name}</span>
+                          )}
                         </div>
                         {player.projection != null && (
                           <span class="lineup-slot__proj">{player.projection.toFixed(1)}</span>
@@ -745,6 +796,13 @@ const ownersPollTeams = Object.values(getLeagueTeamBrands(ownersPollLeague.slug)
                 <span class="lineup-bench-row__opp-team">{oppTeam}</span>
               </div>
             ) : null}
+            {oppTeam && game?.channel && (
+              game.channel.logo
+                ? <span class="net-badge net-badge--mark lineup-bench-row__net" title={game.channel.title}>
+                    <img class="net-badge__logo" src={game.channel.logo} alt={game.channel.name} loading="lazy" />
+                  </span>
+                : <span class="net-badge lineup-bench-row__net" title={game.channel.title}>{game.channel.name}</span>
+            )}
             {player.projection != null && (
               <span class="lineup-bench-row__proj">{player.projection.toFixed(1)}</span>
             )}
@@ -1142,6 +1200,17 @@ const ownersPollTeams = Object.values(getLeagueTeamBrands(ownersPollLeague.slug)
         });
 
         let gameHtml = '';
+        // The channel was resolved for this viewer's country SERVER-SIDE and
+        // rides on the schedule entry, so this re-render — which fires on every
+        // player swap — reproduces the badge the page shipped with instead of
+        // dropping it. Same markup as the .astro branch above; the two are a
+        // pair and have to move together.
+        const ch = game?.channel ?? null;
+        const netHtml = !ch
+          ? ''
+          : ch.logo
+            ? `<span class="net-badge net-badge--mark lineup-slot__net" title="${esc(ch.title)}"><img class="net-badge__logo" src="${esc(ch.logo)}" alt="${esc(ch.name)}" loading="lazy" /></span>`
+            : `<span class="net-badge lineup-slot__net" title="${esc(ch.title)}">${esc(ch.name)}</span>`;
         if (player.isBye) {
           gameHtml = `<span class="lineup-slot__bye">BYE</span>`;
         } else if (oppTeam) {
@@ -1152,6 +1221,7 @@ const ownersPollTeams = Object.values(getLeagueTeamBrands(ownersPollLeague.slug)
               <span class="lineup-slot__opp-prefix">${matchupPrefix}</span>
               <img src="/assets/nfl-logos/${esc(oppTeam)}.svg" alt="" aria-hidden="true" class="lineup-slot__opp-logo" width="16" height="16" onerror="${NFL_LOGO_ONERROR}" onload="${NFL_LOGO_ONLOAD}" />
               <span class="lineup-slot__opp-team">${esc(oppTeam)}</span>
+              ${netHtml}
             </div>
             ${player.projection != null ? `<span class="lineup-slot__proj">${player.projection.toFixed(1)}</span>` : ''}
           `;
@@ -2015,6 +2085,25 @@ const ownersPollTeams = Object.values(getLeagueTeamBrands(ownersPollLeague.slug)
   }
 
   .lineup-slot__opp-logo { width: 16px; height: 16px; }
+
+  /* ── network badge on the opponent line ──
+     `:global` is required rather than stylistic: `.net-badge` is defined in the
+     shared stylesheet, and the SLOT copy is also written by the page's client
+     script on every player swap — neither carries Astro's scoping hash, so a
+     scoped selector would style the first render and nothing after it.
+     Deliberately small: this is the tightest surface the mark appears on, and
+     it rides inside a row that already carries a prefix, a team logo and a
+     team code. */
+  :global(.lineup-slot__net) { --net-badge-h: 0.85rem; margin-left: 0.2rem; }
+  :global(.lineup-bench-row__net) { --net-badge-h: 0.8rem; margin-left: 0.2rem; }
+
+  /* The narrowest phones need the opponent and the projection more than the
+     channel; the tooltip and the Sunday Ticket board still carry it. */
+  @media (max-width: 380px) {
+    :global(.lineup-slot__net),
+    :global(.lineup-bench-row__net) { display: none; }
+  }
+
 
   /* The matchup reads as one phrase — prefix, crest, team code — at full
      text strength, matching the player-swap sheet. Rides the gray scale so

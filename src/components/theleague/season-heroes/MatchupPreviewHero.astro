@@ -21,9 +21,9 @@ import GameDayPreviewHeroStub from '../hero-stubs/GameDayPreviewHeroStub.astro';
 import {
   DEFAULT_COUNTRY,
   SUNDAY_TICKET_LOGO,
-  resolveChannel,
   type CountryCode,
 } from '../../../utils/broadcast-channels';
+import NetworkBadge from '../../shared/NetworkBadge.astro';
 
 export interface Props {
   state: HeroState;
@@ -132,7 +132,12 @@ interface GameInfo {
   awayTeam: string;
   homeScore: string;
   awayScore: string;
-  channel: string;
+  /**
+   * The US network for the slot — the INPUT to `resolveChannel`, not an answer.
+   * Resolving happens in `NetworkBadge` at render, which is what lets the hero
+   * draw the channel's MARK instead of only its name.
+   */
+  network: string;
   timeSlot: string;
   hasUserPlayers: boolean;
   userPlayerCount: number;
@@ -175,12 +180,6 @@ function usNetworkFor(kickoffEpoch: number): string {
   return 'CBS/FOX';
 }
 
-/** That slot's network as the VIEWER's country carries it. */
-function getChannel(kickoffEpoch: number): string {
-  const network = usNetworkFor(kickoffEpoch);
-  return resolveChannel(network, country)?.name ?? network;
-}
-
 const games: GameInfo[] = weekGames.map((m: any) => {
   const kickoff = parseInt(m.kickoff ?? '0');
   const teams = m.team ?? [];
@@ -218,7 +217,7 @@ const games: GameInfo[] = weekGames.map((m: any) => {
     awayTeam: awayId,
     homeScore: home?.score ?? '0',
     awayScore: away?.score ?? '0',
-    channel: getChannel(kickoff),
+    network: usNetworkFor(kickoff),
     timeSlot: getTimeSlotLabel(kickoff),
     hasUserPlayers,
     userPlayerCount,
@@ -376,7 +375,7 @@ for (const g of displayGames) {
                   </div>
                 )}
                 <div class="matchup-hero__game-meta">
-                  <span class="matchup-hero__channel">{game.channel}</span>
+                  <NetworkBadge network={game.network} country={country} class="matchup-hero__channel" size="1.15rem" />
                   {userFranchiseId && game.userPlayerCount > 0 && (
                     <span class="matchup-hero__player-count">{game.userPlayerCount} player{game.userPlayerCount !== 1 ? 's' : ''}</span>
                   )}
@@ -542,7 +541,11 @@ for (const g of displayGames) {
     letter-spacing: 0.04em;
   }
 
-  .matchup-hero__channel {
+  /* `:global` is required, not stylistic: the badge is rendered by
+     NetworkBadge, and Astro's scoping hash is not carried onto a child
+     component's root element — the scoped selector would never match. Scoped
+     to the TEXT arm, because tinting a network's MARK is not ours to do. */
+  :global(.matchup-hero__channel:not(.net-badge--mark)) {
     color: var(--color-gray-400, #9ca3af);
     font-weight: 600;
   }

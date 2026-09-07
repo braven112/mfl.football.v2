@@ -17,6 +17,7 @@
 import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
 import bb1Config from '../../../data/best-ball-1/bb1.config.json';
 import { getAuthUser } from '../../utils/auth';
+import { readViewerClock } from '../../utils/viewer-preferences-page';
 import { getLeagueContext } from '../../utils/league-context';
 import { leagueHasFeature } from '../../config/leagues';
 import { getCurrentSeasonYear } from '../../utils/league-year';
@@ -28,6 +29,7 @@ import NflGamesStrip from '../../components/shared/NflGamesStrip';
 import type { LiveScoringPageProps } from '../../types/live-scoring';
 import '../../styles/live-scoring.css';
 import '../../styles/nfl-games-strip.css';
+import '../../styles/network-badge.css';
 
 // Live-fetch on every request — scores must never be cached.
 export const prerender = false;
@@ -53,6 +55,12 @@ const daily = getDailySlot(now);
 const isLive = daily.slot === 'live-scoring';
 
 const authUser = getAuthUser(Astro.request);
+// The country whose channels the games rail names. READ, never resolve: the
+// resolver writes preference cookies and this page has none of its own to set,
+// and a viewer who has chosen nothing gets the US default — exactly what this
+// rail showed before it named a channel at all.
+const viewerCountry = (await readViewerClock(Astro.cookies, authUser)).prefs.country;
+
 const userFranchiseId =
   authUser?.leagueId === league.leagueId ? authUser.franchiseId : undefined;
 
@@ -93,7 +101,7 @@ const islandProps: LiveScoringPageProps = {
   <div class="ls-page">
     <LiveScoreboard client:load {...islandProps} />
     <div class="ls-page-strip">
-      <NflGamesStrip client:visible week={week} year={year} isLive={isLive} />
+      <NflGamesStrip client:visible week={week} year={year} isLive={isLive} country={viewerCountry} />
     </div>
   </div>
 </TheLeagueLayout>

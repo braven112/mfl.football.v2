@@ -48,6 +48,7 @@ import '../src/styles/player-modal-band.css';
 import '../src/styles/player-news.css';
 import '../src/styles/theme-image.css';
 import '../src/styles/sunday-ticket.css';
+import '../src/styles/network-badge.css';
 
 /**
  * Theme and league are BOTH pure CSS in this codebase:
