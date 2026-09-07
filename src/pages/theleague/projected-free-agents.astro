@@ -1142,11 +1142,14 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     gap: 0.375rem;
   }
 
+  /* A franchise crest is not a portrait: square art with ink to its own
+   corners, so it must show whole rather than be cropped to a circle.
+   Matches .pfa-team-icon in the column this control filters. */
   .pfa-team-dropdown__trigger-icon {
     width: 20px;
     height: 20px;
-    border-radius: 50%;
-    object-fit: cover;
+    object-fit: contain;
+    object-position: center;
     flex-shrink: 0;
   }
 
@@ -1207,8 +1210,8 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
   .pfa-team-dropdown__icon {
     width: 22px;
     height: 22px;
-    border-radius: 50%;
-    object-fit: cover;
+    object-fit: contain;
+    object-position: center;
     flex-shrink: 0;
   }
 
@@ -1326,11 +1329,13 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     gap: 0.375rem;
   }
 
+  /* A franchise crest is not a portrait: square art with ink to its own
+   corners, so it must show whole rather than be cropped to a circle. */
   .pfa-team-icon {
     width: 24px;
     height: 24px;
-    border-radius: 50%;
-    object-fit: cover;
+    object-fit: contain;
+    object-position: center;
     flex-shrink: 0;
   }
 

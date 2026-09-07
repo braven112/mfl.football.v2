@@ -146,11 +146,13 @@ const metrics: MetricDef[] = [
     gap: 0.5rem;
   }
 
+  /* A franchise crest is not a portrait: square art with ink to its own
+   corners, so it must show whole rather than be cropped to a circle. */
   .hp-snapshot__team-icon {
     width: 24px;
     height: 24px;
-    border-radius: 50%;
-    object-fit: cover;
+    object-fit: contain;
+    object-position: center;
   }
 
   .hp-snapshot__title {
