@@ -147,12 +147,19 @@ export default function TradeBaitMarketplace({ teams, leagueYear, onStartTrade }
                   <span className="marketplace__team-name">{team.nameShort}</span>
                 </div>
                 <div className="marketplace__players">
+                  {/* The lockup sits INSIDE the button here, unlike the
+                      player-selector row whose "+" button sits beside it — so
+                      each row needs an explicit aria-label. Without one the
+                      accessible name is the whole subtree, PlayerCell's alt
+                      text included: "Lamar Jackson headshot Lamar Jackson BAL
+                      logo QB". */}
                   {players.map((player) => (
                     <button
                       key={player.id}
                       className="marketplace__player"
                       onClick={() => handleStartTrade(team.franchiseId, player.id)}
                       title={`Start a trade for ${player.name}`}
+                      aria-label={`Start a trade for ${player.name}`}
                     >
                       <PlayerCell
                         className="marketplace__player-cell"

@@ -154,6 +154,18 @@ page SSRs itself, or DOM a string builder injects
 (`buildPlayerCellHTML`, `loading-html.ts`) — those live outside the island's
 module graph and still need the host page's frontmatter import.
 
+**The `client:only` carve-out — do NOT delete a wrapper's frontmatter import
+without checking the directive.** Astro never renders a `client:only` island on
+the server, so its module graph is not walked during SSR and its CSS is not
+collected the way a `client:load`/`visible`/`idle` island's is. The repo has
+exactly one such island and it is already built for this:
+`MyRankEditor.astro` mounts `<MyRankEditorIsland client:only="react">` and
+carries `import '../../../styles/my-rank-editor.css'` in its frontmatter, while
+`MyRankEditor.tsx` imports no CSS at all. That frontmatter line is load-bearing
+— removing it ships the My Rank editor unstyled, with no error, no console
+warning and no failing test. Check the hydration directive before deciding an
+import is redundant.
+
 **Evidence:** `trade-builder.astro` has no CSS import; grep for
 `player-cell.css` finds it in `PlayerCell.tsx`, `BroadcastFace.tsx`,
 `PlayerDetailModal.tsx` (all `.tsx`) alongside the `.astro` frontmatter
@@ -163,11 +175,12 @@ converted marketplace does the same. `TradeConfirmationModal.tsx` has been
 importing `loading.css` from the `.tsx` since it shipped.
 
 **Recommendation:** Put the stylesheet import next to the markup that needs it
-— in the `.tsx` when the island renders the markup, in the host page's
-frontmatter when the page or a string builder does. Do not add a frontmatter
-import "to be safe" for markup an island already renders; and when a shared
-lockup DOES look unstyled, check whether the offending rows are injected with
-`innerHTML` before you blame the import site.
+— in the `.tsx` when a server-rendered island renders the markup, in the host
+page's frontmatter when the page, a string builder, or a `client:only` island
+does. Do not add a frontmatter import "to be safe" for markup a hydrating
+island already renders, and do not remove one until you have checked the
+directive; and when a shared lockup DOES look unstyled, check whether the
+offending rows are injected with `innerHTML` before you blame the import site.
 
 ---
 
