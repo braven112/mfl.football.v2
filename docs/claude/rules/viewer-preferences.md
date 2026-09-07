@@ -17,13 +17,31 @@ routes. Guards: `tests/viewer-preferences.test.ts`,
 **Who reads it.** Sunday Ticket (channels + kickoffs), the draft hub's start
 time, the waiver window on both `/players` pages and in the claim modal, the
 owners-poll deadline, the mock-draft lobby, the AFL keeper-analysis freshness
-stamp, the waiver-priority footnote, and the game-day matchup heroes'
-channels. `/preferences` reaches the nav through the drawer's account menu
+stamp, the waiver-priority footnote, the game-day matchup heroes' channels,
+and — since Sep 2026 — the TV network on every NFL game surface: the games
+rail on all three `/live-scoring` pages and the opponent line on both
+`/lineup` pages (`.net-badge`, `src/styles/network-badge.css`).
+`/preferences` reaches the nav through the drawer's account menu
 (`NavFooter.astro`, under the team name), which also PRINTS the chosen clock —
 the one place a viewer sees what they picked without opening the page. It was
 pinned at the TOP of the drawer until Sep 2026; that pin is gone, so the footer
 is now the only nav route to it, and the signed-out row there is not optional
 (the page has no auth gate, and a signed-out visitor has no account menu).
+
+Two things the newest readers add to the pattern, because neither is a
+page that shows a clock:
+
+- **Only the COUNTRY is read**, via `readViewerClock(...).prefs.country`, and
+  it feeds `resolveChannel` rather than a time format. A viewer who has chosen
+  nothing gets the US default — which is what those surfaces showed before they
+  named a channel at all, so the "pre-preference floor" rule holds unchanged.
+- **A page that reads it inside a client island passes it as a PROP.** The
+  games rail is React; it cannot read the cookie itself without duplicating
+  the resolver, so all three routes resolve and hand it down
+  (`tests/network-badge.test.ts` pins that). And on the lineup pages the read
+  is STARTED before the page's nine MFL fetches and awaited after them — on a
+  device with no cookie this is an Upstash GET with no timeout of its own, and
+  awaiting it up front gated every one of those 8s-abort fetches behind it.
 
 ## The rules
 

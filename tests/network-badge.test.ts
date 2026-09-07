@@ -140,6 +140,30 @@ describe('network badge — the lineup slot renders twice and both must draw it'
     expect(oppRow![0], `${page}: netHtml is built but never rendered`).toContain('${netHtml}');
   });
 
+  it.each(LINEUP_PAGES)('%s announces the channel in the slot BUTTON label, both render paths', (page) => {
+    const src = read(page);
+    // The starter slot's button carries an explicit aria-label, which REPLACES
+    // its subtree for assistive tech — so the badge's own alt text is
+    // unreachable from inside it and the channel has to be in the label or it
+    // is not announced at all. The bench row has no such wrapper and is fine.
+    expect(src, `${page}: Astro branch label omits the channel`)
+      .toMatch(/game\?\.channel \? ` On \$\{game\.channel\.name\}\.` : ''/);
+    expect(src, `${page}: client branch label omits the channel`)
+      .toMatch(/ch \? ` On \$\{esc\(ch\.name\)\}\.` : ''/);
+  });
+
+  it.each(LINEUP_PAGES)('%s declares `ch` before the label that reads it', (page) => {
+    const src = read(page);
+    // `const` is not hoisted to a usable value: reading `ch` above its
+    // declaration is a TDZ ReferenceError that throws on EVERY slot re-render,
+    // which is exactly what happened when the label started using it.
+    const decl = src.indexOf('const ch = game?.channel');
+    const use = src.indexOf('btn.ariaLabel');
+    expect(decl, `${page}: no ch declaration`).toBeGreaterThan(-1);
+    expect(use, `${page}: no ariaLabel assignment`).toBeGreaterThan(-1);
+    expect(decl, `${page}: ch is declared after the label reads it`).toBeLessThan(use);
+  });
+
   it.each(LINEUP_PAGES)('%s resolves the channel server-side, never in the client script', (page) => {
     const src = read(page);
     expect(src).toMatch(/function channelFor\(/);

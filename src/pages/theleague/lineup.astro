@@ -38,7 +38,7 @@ import { findWeekMatchups, resolveRostersPayload, resolveLineupFillState, resolv
 import { resolveSubmitButtonState } from '../../utils/lineup-submit-state';
 import '../../styles/loading.css';
 import '../../styles/network-badge.css';
-import { resolveChannel } from '../../utils/broadcast-channels';
+import { resolveChannel, DEFAULT_COUNTRY } from '../../utils/broadcast-channels';
 import { readViewerClock } from '../../utils/viewer-preferences-page';
 import type { LineupPlayer } from '../../types/lineups';
 
@@ -68,7 +68,14 @@ const MFL_LEAGUE_ID = getLeagueBySlug('theleague')!.id;
 // page renders inside a layout whose headers are long since committed by the
 // time a component could try. A viewer who has chosen nothing gets the US
 // default, which is exactly what this line showed before it named a channel.
-const viewerCountry = (await readViewerClock(Astro.cookies, user)).prefs.country;
+// STARTED here, AWAITED after the fetches below. Not decoration: on a device
+// with no preference cookie this reads Upstash, which has no request timeout of
+// its own, and awaiting it here would gate all nine MFL calls — each of which
+// carries its own 8s abort — behind an unbounded one. Nothing until the
+// schedule build needs the answer.
+const viewerPrefs = readViewerClock(Astro.cookies, user)
+  .then((clock) => clock.prefs.country)
+  .catch(() => DEFAULT_COUNTRY);
 
 const mflBase = `https://api.myfantasyleague.com/${leagueYear}/export`;
 
@@ -209,6 +216,8 @@ interface GameInfo {
  * and subscription ride in the tooltip, which is what makes the mark an answer
  * for someone watching from abroad.
  */
+const viewerCountry = await viewerPrefs;
+
 function channelFor(usNetwork: string | null | undefined) {
   const ch = resolveChannel(usNetwork, viewerCountry);
   if (!ch) return null;
@@ -693,7 +702,7 @@ const ownersPollTeams = Object.values(getLeagueTeamBrands(ownersPollLeague.slug)
                 data-slot={slot.position} data-index={String(i)} data-player-id={player?.id || ''}>
               <button class="lineup-slot__card"
                       aria-label={player
-                        ? `${slot.position}: ${player.name}, ${player.nflTeam}. ${player.projection ? `Projected ${player.projection} points.` : ''} Tap to change.`
+                        ? `${slot.position}: ${player.name}, ${player.nflTeam}. ${player.projection ? `Projected ${player.projection} points.` : ''}${game?.channel ? ` On ${game.channel.name}.` : ''} Tap to change.`
                         : `${slot.position}: Empty slot. Tap to set.`}
                       aria-disabled={slot.locked ? 'true' : 'false'}
                       disabled={slot.locked}>
@@ -1159,6 +1168,7 @@ const ownersPollTeams = Object.values(getLeagueTeamBrands(ownersPollLeague.slug)
 
         const player = getPlayer(slot.playerId);
         const game = player ? getGame(player) : null;
+        const ch = game?.channel ?? null;
         const oppTeam = game ? (player!.nflTeam === game.home ? game.away : game.home) : null;
         const isHome = game ? player!.nflTeam === game.home : false;
         const isSwapped = slot.playerId !== originalSlots[slotIndex].playerId;
@@ -1170,7 +1180,7 @@ const ownersPollTeams = Object.values(getLeagueTeamBrands(ownersPollLeague.slug)
         if (!btn) return;
 
         btn.ariaLabel = player
-          ? `${esc(slot.position)}: ${esc(player.name)}, ${esc(player.nflTeam)}. ${player.projection ? `Projected ${player.projection.toFixed(1)} points.` : ''} Tap to change.`
+          ? `${esc(slot.position)}: ${esc(player.name)}, ${esc(player.nflTeam)}. ${player.projection ? `Projected ${player.projection.toFixed(1)} points.` : ''}${ch ? ` On ${esc(ch.name)}.` : ''} Tap to change.`
           : `${esc(slot.position)}: Empty slot. Tap to set.`;
         btn.ariaDisabled = slot.locked ? 'true' : 'false';
         btn.disabled = slot.locked;
@@ -1200,17 +1210,16 @@ const ownersPollTeams = Object.values(getLeagueTeamBrands(ownersPollLeague.slug)
         });
 
         let gameHtml = '';
-        // The channel was resolved for this viewer's country SERVER-SIDE and
-        // rides on the schedule entry, so this re-render — which fires on every
-        // player swap — reproduces the badge the page shipped with instead of
-        // dropping it. Same markup as the .astro branch above; the two are a
-        // pair and have to move together.
-        const ch = game?.channel ?? null;
         const netHtml = !ch
           ? ''
           : ch.logo
             ? `<span class="net-badge net-badge--mark lineup-slot__net" title="${esc(ch.title)}"><img class="net-badge__logo" src="${esc(ch.logo)}" alt="${esc(ch.name)}" loading="lazy" /></span>`
             : `<span class="net-badge lineup-slot__net" title="${esc(ch.title)}">${esc(ch.name)}</span>`;
+        // The channel was resolved for this viewer's country SERVER-SIDE and
+        // rides on the schedule entry, so this re-render — which fires on every
+        // player swap — reproduces the badge the page shipped with instead of
+        // dropping it. Same markup as the .astro branch above; the two are a
+        // pair and have to move together.
         if (player.isBye) {
           gameHtml = `<span class="lineup-slot__bye">BYE</span>`;
         } else if (oppTeam) {
