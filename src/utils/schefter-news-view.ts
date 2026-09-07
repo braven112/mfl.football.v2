@@ -1,0 +1,358 @@
+/**
+ * The Schefter Report news page, resolved.
+ *
+ * Both leagues render the same feed page. Before Sep 2026 they rendered it
+ * from two forked route files (663 lines vs 247) whose tab lists, watching
+ * logic and rail markup had already drifted apart — the AFL copy had lost
+ * five of the seven tabs and duplicated the rail CSS verbatim. Everything that
+ * is genuinely the same now lives here and in SchefterNewsPage.astro; the
+ * routes keep only what cannot move.
+ *
+ * What stays in the ROUTE, and why:
+ * - **The feed import.** The two feeds sit at different roots (one bundled
+ *   under src/data/, one at the repo-root data/), and a static import
+ *   specifier cannot be a runtime variable.
+ * - **Anything league-specific the page decorates itself with** — the GroupMe
+ *   chat lane and the hottest-desks rail widget are TheLeague's alone, so the
+ *   route fetches them and passes them in. That keeps league literals out of
+ *   shared code, which `tests/league-literal-guard.test.ts` enforces.
+ * - **Any auth redirect.** This page has none today (it renders for
+ *   logged-out visitors), but if one is ever added it belongs in the route:
+ *   `Astro.redirect()` from a component's frontmatter returns a blank 200
+ *   rather than a bounce.
+ */
+
+import type { LeagueDefinition } from '../config/leagues';
+import type { AuthUser } from './auth';
+import { franchiseIdForLeague } from './auth';
+import type { SchefterPost, SchefterFeed as FeedType, SchefterAuthor } from '../types/schefter';
+import { getAuthor, getAuthorAvatar, SCHEFTER_AUTHORS } from '../types/schefter';
+import { getLeagueYearForSlug, getTestDateFromSearchParams } from './league-year';
+import { resolveWatchingSets, matchPosts, postIsForViewer, isPostVisibleTo } from './schefter-watching';
+import { buildSchefterPostOg, isValidSchefterPostId } from './schefter-feed';
+import { resolveFeedMode, defaultSource, type FeedMode } from './schefter-season-mode';
+
+export const VALID_SOURCES = [
+  'theleague',
+  'nfl',
+  'draft',
+  'insider',
+  'groupme',
+  'watching',
+] as const;
+export type SourceFilter = (typeof VALID_SOURCES)[number];
+
+/**
+ * Explicit "show me everything". NOT a member of VALID_SOURCES — it resolves
+ * to `activeSource: null`, the same unfiltered state a bare URL used to mean.
+ *
+ * It has to be a real value the All tab can carry, because "no ?source= at
+ * all" is exactly what triggers the in-season For You default: with a bare
+ * `href={basePath}` a signed-in owner clicking All was handed straight back to
+ * For You and the tab was unreachable.
+ */
+export const ALL_SOURCE = 'all';
+
+/**
+ * Old query values that must keep resolving — these URLs are in GroupMe
+ * history and in owners' bookmarks.
+ */
+const LEGACY_ALIASES: Record<string, SourceFilter> = {
+  claude: 'theleague',
+  // The tab is labelled "For You" in season; the query value stays `watching`
+  // so links already shared in the group chat keep resolving.
+  foryou: 'watching',
+  events: 'theleague',
+  wire: 'nfl',
+  injuries: 'insider',
+  odds: 'insider',
+};
+
+const DRAFT_AUTHOR_IDS = new Set(['nfl-draft']);
+const INSIDER_AUTHOR_IDS = new Set(['doc-rivers', 'vegas-vic']);
+const NFL_EXCLUDE_IDS = new Set([...DRAFT_AUTHOR_IDS, ...INSIDER_AUTHOR_IDS]);
+
+/** ESPN contributors, minus the personas that have their own tab. */
+const ESPN_AUTHOR_IDS = new Set(
+  Object.values(SCHEFTER_AUTHORS)
+    .filter((a) => a.external && !NFL_EXCLUDE_IDS.has(a.id))
+    .map((a) => a.id),
+);
+
+/** Which persona heads each tab. "All" is Claude's page. */
+const SOURCE_AUTHOR_MAP: Record<string, string> = {
+  theleague: 'roger',
+  nfl: 'nfl-wire',
+  draft: 'nfl-draft',
+  insider: 'nfl-insider',
+};
+
+export interface NewsTab {
+  label: string;
+  href: string;
+  active: boolean;
+  /** Renders the eye icon and the accent treatment. */
+  watching?: boolean;
+}
+
+export interface SchefterNewsView {
+  activeSource: SourceFilter | null;
+  /** Drives the tab label, the tab order, and the in-season noise filter. */
+  feedMode: FeedMode;
+  tabs: NewsTab[];
+  basePath: string;
+  posts: SchefterPost[];
+  /** Post id → the watched players it names, for the card's chip. */
+  watchingByPost: ReturnType<typeof matchPosts>;
+  /** Claude's own articles, newest first, for the rail. */
+  featuredArticles: SchefterPost[];
+  emptyText?: string;
+  profileAuthor: SchefterAuthor;
+  profileAvatar: string;
+  isGroupMeTab: boolean;
+  isWatchingTab: boolean;
+  canWatch: boolean;
+  userFranchiseId: string | undefined;
+  og: ReturnType<typeof buildSchefterPostOg> | undefined;
+}
+
+export interface ResolveNewsViewOptions {
+  league: LeagueDefinition;
+  feed: FeedType;
+  authUser: AuthUser | null;
+  url: URL;
+  /**
+   * GroupMe posts, already fetched by the route. A league without a group
+   * chat passes nothing and gets no Group Chat tab.
+   */
+  groupMePosts?: SchefterPost[];
+  hasGroupChat?: boolean;
+  /**
+   * Clock override for tests. Callers normally omit it: `?testDate=` in the
+   * URL is honoured automatically, which is what /rollover-check drives.
+   */
+  now?: Date;
+  /**
+   * Optional post-filter hook (TheLeague uses it for Open Graph enrichment of
+   * GroupMe links). Runs on the filtered list; failures are the caller's to
+   * swallow.
+   */
+  enrichPosts?: (posts: SchefterPost[]) => Promise<void>;
+}
+
+/**
+ * Copy for an empty For You feed. This matters more now that the tab is the
+ * in-season default: a reader who has not built a watch list must be told what
+ * to do about it rather than shown a shrug.
+ */
+function forYouEmptyText(watchingCount: number, mode: FeedMode): string {
+  if (watchingCount === 0) {
+    return 'Nothing to watch yet. Use the ⋮ button on any player — free agents, rosters, custom rankings — to build your watch list, and your own roster comes along automatically.';
+  }
+  return mode === 'in-season'
+    ? 'Quiet on your guys right now. Nothing on your roster or your watch list has moved — check the All tab for the rest of the league.'
+    : 'No news on your players or your watch list yet. Schefter is on it.';
+}
+
+export async function resolveSchefterNewsView(
+  opts: ResolveNewsViewOptions,
+): Promise<SchefterNewsView> {
+  const {
+    league,
+    feed,
+    authUser,
+    url,
+    groupMePosts = [],
+    hasGroupChat = false,
+    enrichPosts,
+  } = opts;
+
+  // `?testDate=` is read here rather than in each route so both leagues get it
+  // for free and neither can forget it — this whole feature is date-switched,
+  // so it has to be renderable at a date other than today's.
+  const now = opts.now ?? getTestDateFromSearchParams(url.searchParams) ?? new Date();
+  const feedMode = resolveFeedMode(now);
+
+  const isAuthenticated = !!authUser;
+  const basePath = `/${league.slug}/news`;
+
+  // Watching is league-scoped like everything else here: a session from the
+  // other league has no list on this page. Both leagues have a franchise
+  // 0001, so this must go through franchiseIdForLeague, never a bare compare.
+  const watchFranchiseId = franchiseIdForLeague(authUser, league.id);
+  const canWatch = !!watchFranchiseId;
+  // `now`, not the system clock: this resolver is rendered at other dates by
+  // /rollover-check and by `?testDate=`, and a watch year taken from the real
+  // clock reads the WRONG league year's roster and watch list while the mode
+  // above renders the requested one. The failure is quiet — a plausible feed
+  // built from the wrong season — which is exactly what a rollover render is
+  // supposed to catch.
+  const watchYear = getLeagueYearForSlug(league.slug, now);
+  const watchingSets = await resolveWatchingSets(league, watchYear, watchFranchiseId);
+
+  // An explicit ?source= always wins. Only when the URL says nothing does the
+  // season decide: in season a signed-in owner opens on their own players,
+  // everyone else opens on the full feed exactly as before.
+  //
+  // A `?post=` deep link is also explicit — those come from GroupMe and push
+  // (schefter-announce-core, speculation-groupme) and point at ONE post, which
+  // is usually about somebody else's team. Defaulting them to For You filters
+  // the post out and leaves the `#post-<id>` anchor pointing at nothing.
+  const deepLink = !!url.searchParams.get('post');
+  const sourceParam =
+    url.searchParams.get('source') ?? (deepLink ? null : defaultSource(feedMode, canWatch));
+
+  // Drop anything addressed to another franchise BEFORE tabs are derived or
+  // any filter runs — a tab must never appear because of a post this reader
+  // cannot see, and no tab may surface one.
+  const readable = feed.posts.filter((p) => isPostVisibleTo(p, watchFranchiseId));
+  const resolvedSource = LEGACY_ALIASES[sourceParam ?? ''] ?? sourceParam;
+  const activeSource: SourceFilter | null =
+    VALID_SOURCES.includes(resolvedSource as SourceFilter) &&
+    // Watching is only a tab for a viewer with a list; anyone else following a
+    // shared ?source=watching link lands on All rather than on an empty feed.
+    !(resolvedSource === 'watching' && !canWatch) &&
+    !(resolvedSource === 'groupme' && !hasGroupChat)
+      ? (resolvedSource as SourceFilter)
+      : null;
+
+  // ONE predicate per source, shared by the filter and the tab list — so a tab
+  // can never disagree with what clicking it shows. `null` (the All tab) and
+  // the two account-scoped sources are handled outside the map.
+  const PREDICATES: Record<
+    Exclude<SourceFilter, 'groupme' | 'watching'>,
+    (p: SchefterPost) => boolean
+  > = {
+    theleague: (p) => {
+      const authorId = p.authorId ?? 'claude';
+      return authorId === 'claude' || authorId === 'roger';
+    },
+    nfl: (p) => {
+      const authorId = p.authorId ?? '';
+      return (
+        (ESPN_AUTHOR_IDS.has(authorId) || p.id.startsWith('wire_')) &&
+        !DRAFT_AUTHOR_IDS.has(authorId)
+      );
+    },
+    draft: (p) => p.authorId === 'nfl-draft',
+    insider: (p) => INSIDER_AUTHOR_IDS.has(p.authorId ?? ''),
+  };
+
+  const posts = ((): SchefterPost[] => {
+    if (activeSource === 'groupme') return groupMePosts;
+    if (activeSource === 'watching') {
+      if (!canWatch) return [];
+      return readable.filter((p) => postIsForViewer(p, watchingSets, watchFranchiseId));
+    }
+    if (activeSource) return readable.filter(PREDICATES[activeSource]);
+    // "All": merge Schefter + GroupMe (when signed in), newest first.
+    if (isAuthenticated && groupMePosts.length > 0) {
+      return [...readable, ...groupMePosts].sort(
+        (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime(),
+      );
+    }
+    return readable;
+  })();
+
+  /**
+   * A source earns a tab only when the feed actually carries a post for it.
+   * Both leagues shipped an always-empty "NFL Insider" tab for months because
+   * the tab list was hand-written next to the filter rather than derived from
+   * it; the injuries/odds lanes have produced nothing yet. Deriving it means
+   * the tab appears on its own the day that lane writes its first post, and
+   * the AFL stops being a hardcoded two-tab special case.
+   */
+  const hasPostsFor = (source: keyof typeof PREDICATES): boolean =>
+    readable.some(PREDICATES[source]);
+
+  if (enrichPosts) await enrichPosts(posts);
+
+  // Every tab highlights a post about a watched player; the Watching tab is
+  // that highlight applied as a filter.
+  const watchingByPost = matchPosts(posts, watchingSets, watchYear);
+  const isWatchingTab = activeSource === 'watching';
+  const isGroupMeTab = activeSource === 'groupme';
+
+  // Claude's own articles for the rail — always drawn from the WHOLE feed, not
+  // the filtered list, so the rail does not empty out on a narrow tab.
+  const featuredArticles = readable
+    .filter((p) => p.type === 'article' && (p.authorId === 'claude' || p.authorId === 'claude-schefter'))
+    .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+    .slice(0, 5);
+
+  const profileAuthorId =
+    activeSource && activeSource !== 'groupme' ? (SOURCE_AUTHOR_MAP[activeSource] ?? 'claude') : 'claude';
+  const profileAuthor = getAuthor(profileAuthorId);
+
+  // Per-post OG meta: deep links carry ?post=<id> so unfurlers (which strip
+  // the #post-<id> anchor) still resolve a per-post title + composite image.
+  const ogPostId = url.searchParams.get('post');
+  const ogPost =
+    ogPostId && isValidSchefterPostId(ogPostId)
+      ? readable.find((p) => p.id === ogPostId)
+      : undefined;
+
+  // In season the personal tab leads and is called "For You" — that is the
+  // whole point of the mode. Out of season it drops back to second place and
+  // to "Watching", because with no games there is nothing personal to report
+  // and the league-wide feed is the interesting one.
+  const forYouTab: NewsTab = {
+    label: feedMode === 'in-season' ? 'For You' : 'Watching',
+    href: `${basePath}?source=watching`,
+    active: isWatchingTab,
+    watching: true,
+  };
+  // Carries ALL_SOURCE explicitly — a bare basePath would re-trigger the
+  // in-season default and bounce the reader back to For You.
+  const allTab: NewsTab = {
+    label: 'All',
+    href: `${basePath}?source=${ALL_SOURCE}`,
+    active: !activeSource,
+  };
+
+  const tabs: NewsTab[] = [
+    ...(canWatch && feedMode === 'in-season' ? [forYouTab, allTab] : [allTab]),
+    ...(canWatch && feedMode !== 'in-season' ? [forYouTab] : []),
+    // Label from the REGISTRY, never a literal. The query value stays
+    // `theleague` (it is an internal source id, and old links carry it), but
+    // the visible name is this league's own — the AFL rendered a tab called
+    // "The League" the moment the unified tab list gave it this source.
+    ...(hasPostsFor('theleague')
+      ? [{ label: league.name, href: `${basePath}?source=theleague`, active: activeSource === 'theleague' }]
+      : []),
+    ...(hasGroupChat && isAuthenticated
+      ? [{ label: 'Group Chat', href: `${basePath}?source=groupme`, active: isGroupMeTab }]
+      : []),
+    ...(hasPostsFor('nfl')
+      ? [{ label: 'NFL', href: `${basePath}?source=nfl`, active: activeSource === 'nfl' }]
+      : []),
+    ...(hasPostsFor('draft')
+      ? [{ label: 'NFL Draft', href: `${basePath}?source=draft`, active: activeSource === 'draft' }]
+      : []),
+    ...(hasPostsFor('insider')
+      ? [{ label: 'NFL Insider', href: `${basePath}?source=insider`, active: activeSource === 'insider' }]
+      : []),
+  ];
+
+  return {
+    activeSource,
+    feedMode,
+    tabs,
+    basePath,
+    posts,
+    watchingByPost,
+    featuredArticles,
+    emptyText: isWatchingTab ? forYouEmptyText(watchingSets.all.size, feedMode) : undefined,
+    profileAuthor,
+    profileAvatar: getAuthorAvatar(profileAuthor),
+    isGroupMeTab,
+    isWatchingTab,
+    canWatch,
+    userFranchiseId: watchFranchiseId ?? undefined,
+    // Cast: buildSchefterPostOg only names the two leagues that HAVE a feed.
+    // best-ball-1 carries `schefterFeed: false`, so it never renders this page.
+    og: ogPost
+      ? buildSchefterPostOg(ogPost, url, league.slug as 'theleague' | 'afl-fantasy')
+      : undefined,
+  };
+}

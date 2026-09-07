@@ -87,13 +87,24 @@ describe('redactTradeOffer — exposure ladder', () => {
     ]);
   });
 
-  it('signal N: caps at the number of players actually in the offer', () => {
-    // Only 3 players in this offer; signal=10 should expose all 3, not synthesize.
+  it('signal N: caps at the players the NAMED TEAM is giving up', () => {
+    // This offer has 3 players, but only two of them (Chase, Hall) are on the
+    // named team's side — "Some Bench Guy" is what the OTHER franchise sends.
+    //
+    // This assertion used to expect all 3, which pinned a real bug: the prompt
+    // asserts the named team owns the named players ("the [team] have [Player]
+    // on the table"), so listing the opponent's player beside them published a
+    // false claim about someone's roster. It shipped as "the Mavericks have had
+    // Colston Loveland on the table" — a Pigskins player. Cap is the named
+    // team's own side; synthesizing is still forbidden.
     const { tip } = redactTradeOffer(buildArgs({ exposureCount: 9 }));
     expect(tip.exposure!.signal).toBe(10);
-    expect(tip.exposure!.players).toHaveLength(3);
-    expect(tip.exposure!.players[0].name).toBe("Ja'Marr Chase");
-    expect(tip.exposure!.players[2].name).toBe('Some Bench Guy');
+    expect(tip.exposure!.players.map((p: any) => p.name)).toEqual([
+      "Ja'Marr Chase",
+      'Breece Hall',
+    ]);
+    // The other franchise's player must never appear beside this team.
+    expect(tip.exposure!.players.some((p: any) => p.name === 'Some Bench Guy')).toBe(false);
   });
 
   it('team pick is deterministic across signal levels (same offerId → same team)', () => {

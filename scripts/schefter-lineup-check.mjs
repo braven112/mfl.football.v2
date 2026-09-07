@@ -63,6 +63,7 @@ import { postToGroupMeCapped } from './lib/groupme-capped.mjs';
 import { sendPushFanout } from './lib/push-fanout.mjs';
 import { resolveFranchiseMentions } from './lib/groupme-mentions.mjs';
 import { buildFallbackPost } from './lib/reminder-fallback.mjs';
+import { buildAssistantPost, publishAssistantPosts } from './lib/schefter-assistant-post.mjs';
 import { fetchWithRetry } from './lib/fetch-retry.mjs';
 import { getPtDateString } from './lib/pt-date.mjs';
 import { isSeasonWindowOpen } from '../src/utils/pecking-order-season-window.mjs';
@@ -269,8 +270,9 @@ async function checkLeague(league, now = new Date()) {
 
   const year = leagueYearFor(league, now);
 
-  // Per-league Schefter config (GroupMe bot). Leagues added to the registry
-  // but not yet to SCHEFTER_LEAGUES simply run bot-less (print-only).
+  // Per-league Schefter config (GroupMe bot, and the feed path the assistant
+  // post is written to). Leagues in the registry but not yet in
+  // SCHEFTER_LEAGUES run bot-less (print-only) and write no feed post.
   let botId;
   // Also the object that owns absolute-URL building and the GroupMe group
   // lookup — its `slug` IS the navSlug, which is the scope both the mention
@@ -281,7 +283,6 @@ async function checkLeague(league, now = new Date()) {
     botId = schefterLeague.groupMeSchefterBotId;
   } catch {
     warn(`  [config] ${league.slug} has no Schefter league config — no GroupMe bot`);
-    botId = undefined;
   }
 
   // Resolve the current NFL week (MFL's own clock, not local math).
@@ -400,6 +401,42 @@ async function checkLeague(league, now = new Date()) {
     })),
     log: { log, warn },
   });
+
+  // The same warning, left on the site, for EVERY flagged owner.
+  //
+  // Placed ahead of the push-fallback branch below on purpose: that branch
+  // returns early once the fan-out reached everyone, which is the common case
+  // now that reminders are push-first. Writing the feed post after it would
+  // mean the better the push works, the fewer owners get a durable copy — the
+  // feed would quietly stop filling exactly when the system is healthiest.
+  //
+  // A push is gone the moment it is dismissed; this is the copy an owner can
+  // come back to, and it is what their For You feed shows. Scoped to their
+  // franchise, so it reaches nobody else. Deliberately NOT another push:
+  // `lineup-deadline` already fired above.
+  if (schefterLeague) {
+    const written = await publishAssistantPosts({
+      league: schefterLeague,
+      posts: warnings.map((w) =>
+        buildAssistantPost({
+          league: schefterLeague,
+          franchiseId: w.franchiseId,
+          kind: 'lineup',
+          week,
+          headline: w.noLineup ? 'No lineup submitted' : 'Check your lineup',
+          body: formatWarningLine(w).replace(/^• /, ''),
+          link: `/${schefterLeague.registrySlug}/lineup`,
+          linkLabel: 'Set your lineup',
+          playerIds: w.problems.map((p) => p.playerId).filter(Boolean),
+          tier: w.noLineup ? 'breaking' : 'standard',
+          now,
+        }),
+      ),
+      dryRun: DRY_RUN,
+      log: { log, warn },
+    });
+    if (written) log(`  [feed] wrote ${written} assistant post(s)`);
+  }
 
   // ── The chat post is now a FALLBACK, not the broadcast ───────────────────
   // Only the flagged owners the push did not reach. Two things they get out of

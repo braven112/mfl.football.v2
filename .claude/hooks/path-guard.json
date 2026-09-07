@@ -39,7 +39,12 @@
       "tests": [
         "tests/schefter-franchise-name-redaction.test.ts",
         "tests/schefter-attack-detection-parity.test.ts",
-        "tests/schefter-output-sanitizer.test.ts"
+        "tests/schefter-output-sanitizer.test.ts",
+        "tests/schefter-season-mode.test.ts",
+        "tests/schefter-news-view.test.ts",
+        "tests/schefter-assistant-post.test.ts",
+        "tests/schefter-rail-view.test.ts",
+        "tests/redact-trade-offer-attribution.test.ts"
       ]
     },
     {
@@ -546,7 +551,9 @@
         "tests/mfl-watch-list.test.ts",
         "tests/watch-list-api.test.ts",
         "tests/watch-list-client.test.ts",
-        "tests/push-watch-list-news.test.ts"
+        "tests/push-watch-list-news.test.ts",
+        "tests/schefter-news-view.test.ts",
+        "tests/schefter-rail-view.test.ts"
       ]
     },
     {

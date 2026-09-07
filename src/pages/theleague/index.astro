@@ -29,6 +29,7 @@ import { getAuthUser } from '../../utils/auth';
 import InstallAppPrompt from '../../components/shared/pwa/InstallAppPrompt.astro';
 import { readViewerClock } from '../../utils/viewer-preferences-page';
 import { getLeagueBySlug } from '../../config/leagues';
+import { resolveSchefterRail } from '../../utils/schefter-rail-view';
 import { resolveHeroFranchiseBackdrop } from '../../utils/hero-franchise-backdrop';
 import { resolveHeroState, parseTestDate, isAuctionStripPeriod, isEntryInHeroWindow } from '../../utils/hero-resolver';
 import { getRelease } from '../../utils/schedule-release-store';
@@ -79,17 +80,20 @@ const viewerCountry = (await readViewerClock(Astro.cookies, authUser)).prefs.cou
 
 const feed = feedData as FeedType;
 
-// Merge GroupMe messages into the compact sidebar feed (auth-gated)
-let compactPosts = feed.posts.slice(0, 30);
+// Merge GroupMe messages into the sidebar feed (auth-gated). NOT sliced here —
+// resolveSchefterRail needs the whole list, because taking the newest 30 and
+// THEN filtering to one roster leaves almost nothing (the newest posts are
+// overwhelmingly wire).
+let railSource = feed.posts;
 if (isAuthenticated) {
   try {
     const gmMessages = await getRecentMessages(30);
     if (gmMessages.length > 0) {
       const teamConfig = await loadTeamConfig();
       const gmPosts = toSchefterPosts(gmMessages, teamConfig);
-      const merged = [...feed.posts.slice(0, 50), ...gmPosts];
-      merged.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
-      compactPosts = merged.slice(0, 30);
+      railSource = [...feed.posts, ...gmPosts].sort(
+        (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime(),
+      );
     }
   } catch (err) {
     console.warn('[homepage] Failed to load GroupMe messages:', err);
@@ -100,6 +104,11 @@ if (isAuthenticated) {
 const testDateParam = Astro.url.searchParams.get('testDate');
 const effectiveDate = parseTestDate(testDateParam);
 const testMode = !!testDateParam;
+
+// The Schefter rail IS the owner's Watching feed — their roster, their watch
+// list, their franchise, league deadlines. A visitor with no franchise here
+// gets the league feed, because they have no watch list to show.
+const rail = await resolveSchefterRail({ league: THELEAGUE, posts: railSource, authUser, now: effectiveDate });
 
 // Check draft completion for early UDFA window transition
 const leagueYear = getCurrentLeagueYear();
@@ -858,11 +867,15 @@ if ((heroState.phase === 'playoffs' || heroState.phase === 'championship') && he
 
     <aside class="hp2__sidebar" aria-label="Schefter Report feed" tabindex="0">
       <SchefterFeedCompact
-        posts={compactPosts}
+        posts={rail.posts}
         isAuthenticated={isAuthenticated}
         userFranchiseId={userFranchiseId}
         userTeamName={userTeamName}
         userTeamIcon={userTeamIcon}
+        personalized={rail.personalized}
+        forYouIds={rail.forYouIds}
+        watching={rail.watchingByPost}
+        emptyText={rail.emptyText}
       />
     </aside>
   </div>

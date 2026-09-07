@@ -1,0 +1,135 @@
+import { describe, it, expect } from 'vitest';
+import {
+  resolveFeedMode,
+  defaultSource,
+  seasonModeEnd,
+  seasonModeStart,
+  seasonStartEventDate,
+  SEASON_END_WEEKS,
+  SEASON_START_WEEKS_BEFORE_LABOR_DAY,
+} from '../src/utils/schefter-season-mode';
+import { getCurrentSeasonYear } from '../src/utils/league-year';
+
+/**
+ * The feed's in-season behaviour is entirely date-switched, so these dates ARE
+ * the feature. Every assertion below is a calendar claim someone can check.
+ */
+describe('resolveFeedMode', () => {
+  it('is offseason through the summer', () => {
+    for (const iso of ['2026-02-20', '2026-04-15', '2026-06-30', '2026-08-20']) {
+      expect(resolveFeedMode(new Date(`${iso}T12:00:00-07:00`))).toBe('offseason');
+    }
+  });
+
+  /**
+   * The season opens on the AFL NL draft — the commissioner's official start,
+   * once both conferences have drafted and rosters are set. Labor Day was the
+   * first cut and was over a week too late: it left the site serving wire
+   * filler to owners whose teams were already built.
+   */
+  it('opens on the NL draft, over a week before Labor Day', () => {
+    expect(resolveFeedMode(new Date('2026-08-29T12:00:00-07:00'))).toBe('offseason');
+    // 11pm PT the night BEFORE the draft is still offseason. This is the case
+    // the cron TZ drift broke: a `startDate` written under UTC parses to 5pm
+    // PT on the 29th, which would have flipped the whole site a day early.
+    expect(resolveFeedMode(new Date('2026-08-29T23:00:00-07:00'))).toBe('offseason');
+    expect(resolveFeedMode(new Date('2026-08-31T12:00:00-07:00'))).toBe('in-season');
+    // Labor Day (Sep 7) and kickoff (Sep 10) are both well inside it now.
+    expect(resolveFeedMode(new Date('2026-09-06T12:00:00-07:00'))).toBe('in-season');
+    expect(resolveFeedMode(new Date('2026-09-09T12:00:00-07:00'))).toBe('in-season');
+  });
+
+  /**
+   * The instant is anchored to midnight PACIFIC on the event's calendar day,
+   * NOT to the `startDate` the feed happens to carry. That field is written by
+   * cron and its time component follows the generating process's TZ: the same
+   * NL draft appeared as `2026-08-30T00:00:00.000Z` (a run under UTC) and
+   * `2026-08-30T07:00:00.000Z` (one under the app's pinned Pacific). Reading
+   * the instant let a routine feed regeneration slide the season switch seven
+   * hours — under the UTC value, into the EVENING BEFORE the draft.
+   */
+  it('reads the start from the league calendar, not a hardcoded date', () => {
+    expect(seasonStartEventDate(2026)?.toISOString()).toBe('2026-08-30T07:00:00.000Z');
+    expect(seasonModeStart(2026).toISOString()).toBe('2026-08-30T07:00:00.000Z');
+  });
+
+  /**
+   * resolved-events only ever carries the CURRENT league year, so every future
+   * season must still resolve — silently returning Invalid Date here would
+   * make the feed offseason forever.
+   */
+  it('falls back to a derived date for a season the calendar has not computed', () => {
+    expect(seasonStartEventDate(2030)).toBeNull();
+    const start = seasonModeStart(2030);
+    expect(Number.isNaN(start.getTime())).toBe(false);
+    expect(start.getTime()).toBeLessThan(seasonModeEnd(2030).getTime());
+    expect(SEASON_START_WEEKS_BEFORE_LABOR_DAY).toBe(3);
+  });
+
+  it('stays in season across the New Year', () => {
+    for (const iso of ['2026-10-15', '2026-12-25', '2027-01-20']) {
+      expect(resolveFeedMode(new Date(`${iso}T12:00:00-08:00`))).toBe('in-season');
+    }
+  });
+
+  it('closes after the Super Bowl', () => {
+    // Super Bowl LXI: 2027-02-14. Still in season that night.
+    expect(resolveFeedMode(new Date('2027-02-14T20:00:00-08:00'))).toBe('in-season');
+    expect(resolveFeedMode(new Date('2027-02-25T12:00:00-08:00'))).toBe('offseason');
+  });
+
+  /**
+   * The bug this guards: a base year that advances at Labor Day gets +1'd
+   * twice. If resolveFeedMode ever read getCurrentLeagueYear() (Feb 14) instead
+   * of getCurrentSeasonYear() (Labor Day), the whole spring would read as
+   * in-season.
+   */
+  it('rides the Labor Day clock, so spring resolves to a finished season', () => {
+    const spring = new Date('2027-04-01T12:00:00-07:00');
+    expect(getCurrentSeasonYear(spring)).toBe(2026);
+    expect(resolveFeedMode(spring)).toBe('offseason');
+  });
+});
+
+describe('seasonModeEnd', () => {
+  // The window must cover each season's Super Bowl. Openers are derived from
+  // Labor Day, so this also pins that the derivation has not drifted.
+  it.each([
+    [2024, '2025-02-09'],
+    [2025, '2026-02-08'],
+    [2026, '2027-02-14'],
+  ])('season %i still in season on Super Bowl Sunday (%s)', (year, superBowl) => {
+    expect(seasonModeEnd(year).getTime()).toBeGreaterThan(
+      new Date(`${superBowl}T23:59:00-05:00`).getTime(),
+    );
+  });
+
+  it('closes well before the next preseason', () => {
+    // A window that ran long would put the NEXT offseason into season mode.
+    expect(seasonModeEnd(2026).getTime()).toBeLessThan(new Date('2027-07-01').getTime());
+  });
+
+  it('is a whole number of weeks after kickoff', () => {
+    expect(SEASON_END_WEEKS).toBe(23);
+  });
+});
+
+describe('defaultSource', () => {
+  it('opens an owner on their own players in season', () => {
+    expect(defaultSource('in-season', true)).toBe('watching');
+  });
+
+  it('never personalizes the offseason feed', () => {
+    expect(defaultSource('offseason', true)).toBeNull();
+  });
+
+  /**
+   * Logged-out and team-less visitors must see exactly what they see today, in
+   * either mode — personalization is a signed-in upgrade, never a downgrade for
+   * everyone else.
+   */
+  it('leaves a visitor with no team on the full feed', () => {
+    expect(defaultSource('in-season', false)).toBeNull();
+    expect(defaultSource('offseason', false)).toBeNull();
+  });
+});
