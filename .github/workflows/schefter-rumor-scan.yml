@@ -60,6 +60,12 @@ jobs:
           GROUPME_SCHEFTER_BOT_SENDER_ID: ${{ secrets.GROUPME_SCHEFTER_BOT_SENDER_ID }}
           GROUPME_ROGER_BOT_SENDER_ID: ${{ secrets.GROUPME_ROGER_BOT_SENDER_ID }}
           SCHEFTER_TIPSTER_SALT: ${{ secrets.SCHEFTER_TIPSTER_SALT }}
+          # Without this the rumor push is skipped, and while `rumor` was
+          # push-only the two failures compounded: the 2026-09-06 08:49 PT run
+          # produced two 8/10 posts, logged "Held: rumor is push-only" AND
+          # "CRON_SECRET not set — skipping rumor push", and reached nobody at
+          # all. Both leagues' steps need it.
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
           MFL_USER_ID: ${{ secrets.MFL_USER_ID }}
           UPSTASH_REDIS_REST_URL: ${{ secrets.UPSTASH_REDIS_REST_URL }}
           UPSTASH_REDIS_REST_TOKEN: ${{ secrets.UPSTASH_REDIS_REST_TOKEN }}
@@ -82,6 +88,12 @@ jobs:
           GROUPME_SCHEFTER_BOT_ID: ${{ secrets.GROUPME_SCHEFTER_BOT_ID }}
           GROUPME_AFL_SCHEFTER_BOT_ID: ${{ secrets.GROUPME_AFL_SCHEFTER_BOT_ID }}
           SCHEFTER_TIPSTER_SALT: ${{ secrets.SCHEFTER_TIPSTER_SALT }}
+          # Without this the rumor push is skipped, and while `rumor` was
+          # push-only the two failures compounded: the 2026-09-06 08:49 PT run
+          # produced two 8/10 posts, logged "Held: rumor is push-only" AND
+          # "CRON_SECRET not set — skipping rumor push", and reached nobody at
+          # all. Both leagues' steps need it.
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
           MFL_USER_ID: ${{ secrets.MFL_USER_ID }}
           UPSTASH_REDIS_REST_URL: ${{ secrets.UPSTASH_REDIS_REST_URL }}
           UPSTASH_REDIS_REST_TOKEN: ${{ secrets.UPSTASH_REDIS_REST_TOKEN }}

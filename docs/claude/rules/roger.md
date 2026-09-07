@@ -37,6 +37,83 @@ event dates in the past. Fixing one does not fix the other.
      notification permanently. Skipping outright is safe because
      `shouldFireReminder` accepts the target day OR one day late.
 
+   - **Reminders are PUSH-FIRST, and the chat is a fallback (Sep 2026).**
+     Every touch fans out to `roster-deadline` push. The GroupMe lane is now
+     two narrow cases and nothing else:
+
+     * an event's ANNOUNCE touch posts in full. Which touch that is, and
+       whether it posts at all, depends on who the deadline is for:
+       - **default (an obligation on individual owners)** — the first
+         qualifying touch, and **only out of season** (`isChatBusySeason`,
+         which asks `isSeasonWindowOpen` about both candidate years rather
+         than deriving a base year, because the rollover pivot is the
+         formula that shipped wrong in five files). In season, nothing.
+       - **`audience: 'league'`** (declared per event in
+         `compute-league-events.mjs`, carried into `resolved-events.json`)
+         — posts **in season too**, on the `announceTouch` the event
+         declares, defaulting to **7d**. These are aimed at the room, not
+         at anybody in particular: a trade deadline is the signal to get
+         offers in while there is time, which is worthless as a private
+         nudge to each owner separately. Making the announce touch the
+         single source of "which touch posts" — rather than layering an
+         exception on top of first-touch — is what stops such an event
+         posting twice.
+
+         Two are marked today: **the trade deadlines** (default 7d) and
+         **Throwback Week** (`announceTouch: '2d'`). Throwback's is 2d
+         because an NFL week is anchored to its **Thursday** kickoff, so
+         two days out IS the Tuesday that opens the fantasy week. Nothing
+         in the code says "Tuesday" — `tests/reminder-push-first.test.ts`
+         asserts the actual weekday off the resolved dates, so a change to
+         the week anchor cannot silently drift the post to a Wednesday.
+         That post also reports BOTH halves of the era tally (locked in,
+         and still to confirm) from one Redis pass — `countThrowbackPicks`
+         returns `{ total, picked, defaults }`, because "7 on default"
+         alone reads the same whether that is most of the league or two
+         stragglers, and this post goes to everyone.
+     * the `dayof` touch posts **only when the fan-out reports owners it
+       could not reach**, names exactly those owners, and @-mentions them
+       with a link to `/<league>/notifications`.
+
+     **A league-audience event's tier must reach its announce touch.** 7d
+     needs `standard` or better, 2d and 14d need `major`. Flag an event
+     whose tier falls short and the flag is stranded: the loop never reaches
+     the announce touch, and nothing in the log says it did nothing.
+     `tests/reminder-push-first.test.ts` fails on that combination, and on
+     an event that loses `audience`/`announceTouch` in the resolver — the
+     scanner reads the JSON, not the source event list.
+
+     **Each lane sends at most ONE message per run**, however many deadlines
+     are due. TheLeague's "Declare Contracts / Cut to 22" and "Offseason FA
+     Closes" are both the third Sunday in August, so their 7-day touches fire
+     together and the chat got two back-to-back Roger monologues. The scanner
+     now sorts posts into lanes and sends once per lane;
+     `scripts/lib/reminder-digest.mjs` renders the merged copy (a list plus
+     the calendar link, deliberately terser than a single reminder — two full
+     monologues overrun GroupMe's cap). **The events themselves never merge**:
+     each keeps its own calendar row, feed entry, dedup id and push. Only the
+     chat message combines, because adjacency is a chat problem and nothing
+     else's. Merging matters most on the fallback lane, where two unmerged
+     posts would @-mention the same owners twice in a row.
+
+     Every touch that is not the announce touch is push-only. `roger-fallback` is
+     the kind for the second case and is exempt from the daily cap, for the
+     same reason `roger-reminder` is: it is already the narrowest message
+     we can send, and holding it means those specific owners hear about the
+     deadline nowhere. `scripts/lib/reminder-fallback.mjs` owns the shape.
+
+     **Unreached is a DELIVERY fact, not a subscription one.** It comes from
+     `push-fanout`'s per-franchise `undelivered`, so a muted category, a dead
+     endpoint and a browser that never granted permission all count alike —
+     they mean the same thing to someone about to miss a deadline. The
+     safety property that makes this acceptable at all: a push that could
+     not run reports EVERYONE unreached, so the chat still carries the full
+     broadcast. Degrading toward a redundant message is correct; degrading
+     toward silence is not. **`CRON_SECRET` must be on the step that runs
+     the scanner** — it was set only on schefter-scan.yml's watch-list step
+     until Sep 2026, so the deadline fan-out had never once sent anything
+     while the chat posts went out normally and hid it.
+
    - **The reminder event list is not a place to write a date.** The AFL
      events in `compute-league-events.mjs` must resolve from the same rules
      as `src/data/afl-fantasy/league-events.json` (which drives

@@ -52,6 +52,19 @@ jobs:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           GROUPME_SCHEFTER_BOT_ID: ${{ secrets.GROUPME_SCHEFTER_BOT_ID }}
           GROUPME_AFL_SCHEFTER_BOT_ID: ${{ secrets.GROUPME_AFL_SCHEFTER_BOT_ID }}
+          # Web push is the PRIMARY channel for this alert now — the chat post
+          # only carries the owners push could not reach. Without this secret
+          # the fan-out sends nothing, every flagged owner counts as unreached,
+          # and the chat gets the full broadcast: safe, but the migration never
+          # actually starts. It was missing from this workflow entirely until
+          # Sep 2026, so the push half had never once run.
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          # Resolves the group's member list so unreached owners can be
+          # @-mentioned rather than only named. Absent = plain-text names, which
+          # is a weaker callout but still a correct post.
+          GROUPME_SERVICE_TOKEN: ${{ secrets.GROUPME_SERVICE_TOKEN }}
+          GROUPME_GROUP_ID: ${{ secrets.GROUPME_GROUP_ID }}
+          GROUPME_AFL_GROUP_ID: ${{ secrets.GROUPME_AFL_GROUP_ID }}
           UPSTASH_REDIS_REST_URL: ${{ secrets.UPSTASH_REDIS_REST_URL }}
           UPSTASH_REDIS_REST_TOKEN: ${{ secrets.UPSTASH_REDIS_REST_TOKEN }}
           KV_REST_API_URL: ${{ secrets.KV_REST_API_URL }}

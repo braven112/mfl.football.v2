@@ -79,6 +79,15 @@ export const POST: APIRoute = async ({ request }) => {
 
   let sent = 0;
   let recipients = 0;
+  // Who the push actually LANDED on, and who it did not. The chat fallback for
+  // deadline reminders is filtered on this: an owner still named in the group
+  // post is exactly an owner no notification reached. Derived from the real
+  // send result rather than from "has a subscription", because those differ —
+  // a muted category, an expired endpoint and a browser that never granted
+  // permission all end here as `sent === 0`, and all three mean the same thing
+  // to the person who is about to miss a deadline.
+  const delivered: string[] = [];
+  const undelivered: string[] = [];
   for (const n of notifications) {
     const franchiseId = typeof n.franchiseId === 'string' ? n.franchiseId.trim() : '';
     const title = typeof n.title === 'string' ? n.title.slice(0, MAX_TITLE) : '';
@@ -107,8 +116,26 @@ export const POST: APIRoute = async ({ request }) => {
       badge: leaguePushBadge(league.navSlug),
     }, category);
     sent += result.sent;
-    if (result.sent > 0) recipients += 1;
+    if (result.sent > 0) {
+      recipients += 1;
+      delivered.push(franchiseId);
+    } else {
+      undelivered.push(franchiseId);
+    }
   }
 
-  return json({ ok: true, sent, recipients, attempted: notifications.length });
+  return json({
+    ok: true,
+    sent,
+    recipients,
+    attempted: notifications.length,
+    // Deduped: a caller may send one franchise several notifications in a
+    // batch (one per reminder post), and a fallback that named an owner twice
+    // would read as a bug to the owner it named.
+    delivered: [...new Set(delivered)],
+    // A franchise that got at least one push is NOT undelivered, even if
+    // another notification in the same batch missed it — the owner was
+    // reached, which is the whole question the fallback asks.
+    undelivered: [...new Set(undelivered)].filter((id) => !delivered.includes(id)),
+  });
 };

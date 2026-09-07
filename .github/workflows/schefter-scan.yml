@@ -78,6 +78,13 @@ jobs:
           GROUPME_AFL_ROGER_BOT_SENDER_ID: ${{ secrets.GROUPME_AFL_ROGER_BOT_SENDER_ID }}
           GROUPME_ROGER_BOT_SENDER_ID: ${{ secrets.GROUPME_ROGER_BOT_SENDER_ID }}
           SCHEFTER_RUMOR_MILL_ENABLED: ${{ vars.SCHEFTER_RUMOR_MILL_ENABLED }}
+          # The scanner's OWN pushes — Roger's deadline reminders, transactions,
+          # the rumor mill. Every one of those is push-only or push-first now,
+          # so without this the scanner delivers nothing to anybody's phone. It
+          # was set on the watch-list step below but never on this one, which
+          # meant `CRON_SECRET not set — skipping` on every run since the
+          # fan-out was added (fixed Sep 2026).
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
           UPSTASH_REDIS_REST_URL: ${{ secrets.UPSTASH_REDIS_REST_URL }}
           UPSTASH_REDIS_REST_TOKEN: ${{ secrets.UPSTASH_REDIS_REST_TOKEN }}
           KV_REST_API_URL: ${{ secrets.KV_REST_API_URL }}

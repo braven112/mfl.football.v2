@@ -193,22 +193,33 @@ describe('postSpeculationToGroupMe — live', () => {
   });
 });
 
-describe('the league-wide daily cap', () => {
-  it('holds a speculation post by DEFAULT — the lane is push-only now', () => {
-    // Every other test in this file opts past the cap to exercise the send
-    // path. This one uses the real default, which is what production runs:
-    // trade speculation has no day on the weekday calendar, so it never
-    // reaches the chat.
-    return postSpeculationToGroupMe({
+describe('the day-plan gate', () => {
+  it('is allowed by the calendar, because a trade lane skips it', async () => {
+    // trade-speculation is in OWN_BUDGET_KINDS, so isPlannedToday says yes on
+    // any weekday. The 3/day + 4h budget is NOT checked here: the calling
+    // script gates on it at step 3 and CONSUMES the slot at step 9, both
+    // before this runs. A second look at those keys from here sees a
+    // millisecond-old last_post_ts and refuses on spacing every single time.
+    const result = await postSpeculationToGroupMe({
       post: { id: 'sp_1', body: 'Sources say something is brewing.' },
       publicBaseUrl: 'https://www.theleague.us',
       env: { GROUPME_SCHEFTER_BOT_ID: 'bot' },
+      fetcher: vi.fn().mockResolvedValue({ status: 202 }),
+    });
+    expect(result.posted).toBe(true);
+  });
+
+  it('holds when the day plan refuses', async () => {
+    const result = await postSpeculationToGroupMe({
+      post: { id: 'sp_2', body: 'Nothing doing.' },
+      publicBaseUrl: 'https://www.theleague.us',
+      env: { GROUPME_SCHEFTER_BOT_ID: 'bot' },
+      allowPost: () => false,
       fetcher: () => {
         throw new Error('must not reach GroupMe');
       },
-    }).then((result: { posted: boolean; reason?: string }) => {
-      expect(result.posted).toBe(false);
-      expect(result.reason).toBe('daily-cap');
     });
+    expect(result.posted).toBe(false);
+    expect(result.reason).toBe('daily-cap');
   });
 });

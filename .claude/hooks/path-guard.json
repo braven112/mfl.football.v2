@@ -5,17 +5,25 @@
       "name": "roger",
       "rules": "docs/claude/rules/roger.md",
       "paths": [
-        "scripts/schefter-scan.mjs",
         "scripts/compute-league-events.mjs",
+        "scripts/lib/groupme-mentions.mjs",
+        "scripts/lib/push-fanout.mjs",
+        "scripts/lib/reminder-digest.mjs",
+        "scripts/lib/reminder-fallback.mjs",
         "scripts/lib/roger-*",
         "scripts/roger-*",
+        "scripts/schefter-scan.mjs",
         "src/data/theleague/league-year-config.ts",
         "src/data/theleague/nfl-draft-dates-fetched.json",
+        "src/pages/api/cron/push-fanout.ts",
         "tests/roger-reminder-window.test.ts"
       ],
       "tests": [
-        "tests/roger-reminder-window.test.ts",
-        "tests/roger-afl-mapping.test.ts"
+        "tests/reminder-digest.test.ts",
+        "tests/reminder-fallback.test.ts",
+        "tests/reminder-push-first.test.ts",
+        "tests/roger-afl-mapping.test.ts",
+        "tests/roger-reminder-window.test.ts"
       ]
     },
     {
@@ -72,15 +80,18 @@
       "name": "lineups",
       "rules": "docs/claude/rules/lineups.md",
       "paths": [
+        "scripts/lib/lineup-warnings.mjs",
+        "scripts/schefter-lineup-check.mjs",
         "src/pages/*/lineup.astro",
-        "src/utils/lineup*",
+        "src/pages/api/*/lineup*",
         "src/pages/api/lineup*",
-        "src/pages/api/*/lineup*"
+        "src/utils/lineup*"
       ],
       "tests": [
         "tests/lineup-page-clientrouter.test.ts",
+        "tests/lineup-route-merge.test.ts",
         "tests/lineup-sources.test.ts",
-        "tests/lineup-route-merge.test.ts"
+        "tests/reminder-push-first.test.ts"
       ]
     },
     {

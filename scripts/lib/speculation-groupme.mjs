@@ -112,8 +112,10 @@ export function buildSpeculationGroupMeText({ body, postId, publicBaseUrl }) {
  *                                              defaults to process.env
  * @param {typeof fetch} [args.fetcher]       - fetch override for tests
  * @param {boolean} [args.dryRun]             - skip the network call
- * @param {() => boolean} [args.allowPost]     - daily-cap check; override in
- *                                              tests to exercise the send path
+ * @param {() => boolean} [args.allowPost] - day-plan check; override in tests.
+ *          NOT the budget: `schefter-trade-speculation.mjs` owns that for this
+ *          lane — it gates on the shared 3/day + 4h spacing at its step 3 and
+ *          CONSUMES the slot at step 9, both before this is called.
  * @param {(...a:any[])=>void} [args.log]
  * @param {(...a:any[])=>void} [args.warn]
  */
@@ -123,9 +125,12 @@ export async function postSpeculationToGroupMe({
   env = process.env,
   fetcher = globalThis.fetch,
   dryRun = false,
-  // Injected like `fetcher` and `env` above, for the same reason: the send
-  // path still needs coverage even though the calendar holds this lane every
-  // day. Production always uses the default.
+  // Injected like `fetcher` and `env` above. The default asks the DAY PLAN
+  // only. It must not re-check the shared trade budget: the calling script
+  // increments posts_today and stamps last_post_ts at its step 9, BEFORE this
+  // runs, so a second look at those keys sees a millisecond-old timestamp and
+  // refuses on 4-hour spacing — every single time. That bug made this lane
+  // post nothing at all while looking correctly gated.
   allowPost = () => isPlannedToday('trade-speculation'),
   log = () => {},
   warn = () => {},
@@ -145,10 +150,9 @@ export async function postSpeculationToGroupMe({
     return { posted: false, reason: 'dry-run', text };
   }
 
-  // The league-wide daily cap applies here too. This lane predates
-  // postToGroupMe and posts /v3/bots/post directly, so the gate has to be
-  // asked explicitly — a raw fetch is exactly how a sender ends up outside a
-  // cap nobody realises it is outside of.
+  // This lane predates postToGroupMe and posts /v3/bots/post directly, so the
+  // day-plan check has to be asked explicitly — a raw fetch is exactly how a
+  // sender ends up outside a cap nobody realises it is outside of.
   if (!allowPost()) {
     const why = describeRefusal('trade-speculation', null);
     log(`  [speculation] Held: ${why}`);

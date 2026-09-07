@@ -434,3 +434,70 @@ checks (so we can detect "fresh voice"), but `getMemoryRecall`'s return
 value contains only counts. The hashes never reach the LLM prompt or
 the response payload. Don't change that without re-litigating the
 correlation argument from option B above.
+
+
+## The trade lanes post to chat — on their own budget, not the calendar
+
+The rumor mill (which carries **trade-bait** listings), and the daily trade
+**speculation** lane, are in `OWN_BUDGET_KINDS`, not `PUSH_ONLY_KINDS`. They
+exist to get owners trading, and that only works in the room where trades get
+talked about — they are not reminders competing with the league's chatter, they
+are the chatter, and every one of those posts already ends in a Trade Builder
+CTA.
+
+They skip the one-post-a-day weekday calendar because a rumor held until its
+assigned weekday is not a rumor any more. What governs them instead is the
+budget the rumor mill has always carried
+(`scripts/lib/schefter-groupme-budget.mjs`), which is tighter in practice and
+far better targeted:
+
+- `MAX_POSTS_PER_DAY` (3) per Pacific day, **shared across both lanes**
+- `MIN_SPACING_MS` (4 hours) between any two
+- a one-hour marinate window before a fresh tip may post
+- quiet hours (11pm–7am PT), plus an LLM quality gate
+
+Three things that are load-bearing:
+
+- **`transaction` stays push-only.** Every add, drop and waiver claim, scanned
+  every 15 minutes, is the firehose that got the chat muted. Trades are
+  separable (`raw.type === 'TRADE'` → `breaking` tier) if that ever changes.
+- **Speculation is budgeted ONCE, by its script, and the sender must not look
+  again.** `schefter-trade-speculation.mjs` checks the shared 3/day + 4h gate
+  at its step 3 (`checkGlobalBudgetGate`) and increments `posts_today` +
+  stamps `last_post_ts` at step 9 — both BEFORE it calls
+  `postSpeculationToGroupMe` at step 10. A second budget check inside the
+  sender therefore reads a millisecond-old timestamp and refuses on 4-hour
+  spacing every single time. That is not hypothetical: it was written that way
+  in this very PR, and it made the lane post nothing at all while every log
+  line and test read as correctly gated. **A gate and the consume it guards
+  must stay on the same side of the send.** The sender's only check is
+  `isPlannedToday`, the day-plan question, which is a different question.
+  `tests/reminder-push-first.test.ts` pins the split.
+
+Speculation also had **no push route at all** until Sep 2026: held out of the
+chat by the day cap and never sent to a phone either, so a daily job published
+into the feed and reached nobody. It now rides the existing `rumor` category
+rather than adding a toggle of its own.
+
+**Every step that runs a scanner needs `CRON_SECRET`**, including BOTH league
+steps of `schefter-rumor-scan.yml`. The 2026-09-06 08:49 PT run is the worked
+example of what its absence costs, and why the two failures are worse together
+than apart:
+
+```
+[quality-gate] 8/10 ALLOW — Named franchise (Fire Ready Aim), named
+                player (Demond Claiborne), concrete trade assets (2027 3rd)
+Appended to feed: 2 new post(s) (total: 379)
+[push] CRON_SECRET not set — skipping rumor push.
+[groupme] Held: rumor is push-only — it never posts to chat.
+```
+
+Two posts the gate scored 8/10, written to the feed, held from chat AND
+skipped on push — delivered to nobody, with the run still green.
+`tests/reminder-push-first.test.ts` now pins the secret onto every scanner
+step by name.
+
+`tests/groupme-day-plan.test.ts` enforces that every GroupMe sender shows a
+real cap. Note its escape hatch matches a CALL with import lines stripped — a
+bare identifier regex is satisfied by the import statement alone, which let a
+lane delete its gate and stay green.
