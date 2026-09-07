@@ -259,8 +259,8 @@ export const PLAYER_NEWS_WINDOW_DAYS_OFFSEASON = 90;
  *
  * "In season" is the season actually being PLAYED, via isSeasonWindowOpen —
  * not "the feeds have a completed week", which CLAUDE.md documents as the
- * non-guard it is: `getCurrentSeasonYear()` runs on the Labor Day clock, so
- * from February to Labor Day it resolves to a season that finished months ago
+ * non-guard it is: `getCurrentSeasonYear()` runs on the season clock, so
+ * from February to the NL draft it resolves to a season that finished months ago
  * and every completeness check answers yes. Composing the two is what makes
  * Feb-to-Labor-Day read as offseason (last season, long over) and the Labor
  * Day-to-kickoff gap read as offseason too (this season, not started).

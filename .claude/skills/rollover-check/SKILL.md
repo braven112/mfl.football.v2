@@ -1,12 +1,12 @@
 ---
 name: rollover-check
-description: Render a page at the six dates where the league-year (Feb 14) and season-year (Labor Day) clocks turn, and report which year each render shows, so a page on the wrong clock is caught before it ships. Use for any new or edited page that shows a year, standings, rosters, contracts, draft order or playoffs, and whenever getCurrentLeagueYear / getCurrentSeasonYear is touched. Trigger on /rollover-check, "check the rollover", "which clock is this page on", "test at Labor Day".
+description: Render a page at the six dates where the league-year (Feb 14) and season-year (NL draft) clocks turn, and report which year each render shows, so a page on the wrong clock is caught before it ships. Use for any new or edited page that shows a year, standings, rosters, contracts, draft order or playoffs, and whenever getCurrentLeagueYear / getCurrentSeasonYear is touched. Trigger on /rollover-check, "check the rollover", "which clock is this page on", "test at the season boundary".
 ---
 
 # /rollover-check — the six dates that matter
 
 CLAUDE.md "Year rollover — two independent clocks": Feb 14 advances the
-LEAGUE year (rosters, contracts, cap, auctions); Labor Day advances the
+LEAGUE year (rosters, contracts, cap, auctions); the NL draft advances the
 SEASON year (standings, playoffs, MVP, draft order). The wrong clock shows
 the wrong year for half the calendar and nothing errors.
 
@@ -36,10 +36,10 @@ prints the EXPECTED league and season years (imported from
    the expected season year, the HTTP status, the title, and how many times
    each candidate year appears in the visible text.
    - League-clock page: the dominant year column must shift between the
-     Feb 13 and Feb 15 rows and must NOT shift across the Labor Day rows.
+     Feb 13 and Feb 15 rows and must NOT shift across the NL draft rows.
    - Season-clock page: the reverse.
    - A column that jumps by TWO across one boundary is the double-advance
-     bug (a base year that itself moves at Labor Day). Fix by importing the
+     bug (a base year that itself moves at the season start). Fix by importing the
      year from `league-year.ts`, not by re-porting the formula.
    - Any non-2xx is a failure on its own (a 302 on a gated page means you
      need `--cookie`).
@@ -58,4 +58,4 @@ prints the EXPECTED league and season years (imported from
   never has to be right.
 - Don't bump `PUBLIC_BASE_YEAR` / `PUBLIC_MFL_YEAR` to "fix" a row — pins are
   floors and a pin equal to the calendar year double-advances the math.
-- Don't copy the Labor Day formula into the page; import `getLaborDayForYear`.
+- Don't copy the season-start formula into the page; import `getSeasonStartForYear`.

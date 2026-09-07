@@ -1,9 +1,9 @@
 # Schefter in-season mode — the feed as a personal assistant
 
-Built 2026-09-07. From Labor Day to the Super Bowl the Schefter Report opens on
+Built 2026-09-07. From the NL draft to the Super Bowl the Schefter Report opens on
 a **For You** tab (your roster, your watch list, your franchise, your
 deadlines); out of season it falls back to the league-wide feed, which is what
-keeps the page alive from February to Labor Day. Lineup warnings, which
+keeps the page alive from February to the drafts. Lineup warnings, which
 previously existed only as a push and a group-chat broadcast, now also land on
 the feed as `assistant` posts.
 
@@ -98,8 +98,9 @@ would mean retuning that column silently moves the feed, and vice versa.
 `schefter-season-mode.ts` defines its own end bound and shares only
 `nflWeekOneKickoff`, which is a fact about the NFL rather than a tuning knob.
 
-Also rejected: `isInSeason()` from `current-week.ts`, which is table-driven off
-`SEASON_CONFIGS` (2024-2026) and expires. The Labor Day-derived math does not.
+Also rejected: `isInSeason()` from `current-week.ts`, which was table-driven off
+`SEASON_CONFIGS` (2024-2026) and expired. That table has since been retired in
+favour of the derived math — see the 2026-09-07 entry below.
 
 ## 2026-09-07 — The rail was the ask; /news was not
 
@@ -133,20 +134,33 @@ Labor Day is a national date; this league's season starts when its drafts are
 done. In 2026 the AFL's AL draft ran Aug 29 and the NL draft Aug 30, so for
 nine days the site served wire filler to owners whose rosters were built.
 
-`seasonModeStart` now READS the NL draft from the AFL's resolved-events feed
-(path derived from the registry, never a literal), falling back to three weeks
-before Labor Day when that feed cannot answer for the season being asked about
-— `resolved-events.json` only ever carries the current league year, so every
-future season hits the fallback and a naive read would return Invalid Date and
-leave the feed offseason forever.
+The first cut READ the NL draft out of the AFL's resolved-events feed, with a
+Labor-Day-derived fallback for the seasons that feed cannot answer for. That
+was two mistakes stacked.
 
-`resolveFeedMode` also has to check `seasonYear` AND `seasonYear + 1`, because
-`getCurrentSeasonYear` still rolls at Labor Day: in the stretch this change
-exists to cover it returns LAST season, whose window closed in February.
+**It read a date that did not need reading.** The event is `computed` — the
+league calendar spells it `sunday-before-labor-day-weekend`, which is
+`laborDay - 8`, pure arithmetic. Reading the resolved feed bought a cron
+dependency, a `node:fs` import in a module 138 files reach, a cache, a
+fallback, and a TZ bug (the same draft was written `…T00:00:00Z` under UTC and
+`…T07:00:00Z` under the app's pinned Pacific, and consuming the instant slid
+the switch seven hours — backwards, into the evening before the draft).
+Deriving it removes all five.
 
-Deliberately scoped to Schefter. `getCurrentSeasonYear` drives standings,
-playoffs, MVP and draft order across ~71 files; moving that clock as a side
-effect of a feed change is how last season's data ends up across the site.
+**It was scoped to Schefter when the ask was site-wide.** The reasoning at the
+time — `getCurrentSeasonYear` drives standings, playoffs, MVP and draft order
+across ~71 files, so don't move it as a side effect of a feed change — is a
+real risk, but it was the wrong call: it answered a narrower question than the
+one asked, and it left the feed's idea of "the season" free to disagree with
+the rest of the site's.
+
+Both are now fixed. `getSeasonStartForYear` in `league-year.ts` is the ONE
+definition and `getCurrentSeasonYear` rolls on it; `seasonModeStart` delegates
+and owns no date. The feed keeps exactly one constant of its own,
+`SEASON_END_WEEKS`, because a year selector has no end and the feed needs one.
+
+The eight days this moved are not cosmetic: in that window standings, draft
+order and MVP tracking now name the season whose rosters actually exist.
 
 ## 2026-09-07 — One capped list cannot serve two tabs
 
@@ -195,3 +209,30 @@ No shipped-feed guard test for misattribution — rosters move, so a post that
 was accurate when written reads as misattributed once the player is traded. The
 guard belongs on the redactor
 (`tests/redact-trade-offer-attribution.test.ts`), where it is deterministic.
+
+## 2026-09-07 — Two derivations of one date, pinned against each other
+
+`getSeasonStartForYear` computes `laborDay - 8`. `league-event-resolver`
+resolves the same day from the `sunday-before-labor-day-weekend` rule in
+`league-events.json`. Neither can be deleted — the year selector must work with
+no I/O for any year, and the calendar must render the event — so there are
+genuinely two derivations of one date, and two derivations drift silently.
+
+`tests/league-year-rollover.test.ts` asserts they agree for 2026-2030 and that
+the result is a Sunday in every one. That is the cheap version of a single
+source of truth when a single source is not available.
+
+## 2026-09-07 — The expiring table nobody would have noticed
+
+`current-week.ts` carried `SEASON_CONFIGS`, a hand-maintained list of Week 1
+kickoffs for 2024, 2025 and 2026. Past the last row it fell through to a helper
+that placed kickoff on the FIRST Thursday of September — Sep 3 in 2026, a full
+week before the real Sep 10 opener — so from 2027 on, every week number and
+`isInSeason()` would have been quietly wrong rather than visibly broken.
+
+`nflWeekOneKickoff` reproduces all three retired rows to the minute, so the
+table was deletable with no behavior change in any year it covered. Verified
+before deleting, not after.
+
+A hardcoded table with a wrong fallback is worse than no table: the table hides
+the bug for exactly as long as someone keeps maintaining it.

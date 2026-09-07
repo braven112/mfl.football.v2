@@ -4,22 +4,18 @@
  * Splits the dynasty calendar into two phases that drive nav-section ordering
  * and default open state:
  *
- *   - 'in-season'   Labor Day  → Feb 14 cutoff   (reg season, playoffs, comp picks)
- *   - 'off-season'  Feb 14 cutoff → Labor Day    (auction, rookie draft, summer)
+ *   - 'in-season'   NL draft  → Feb 14 cutoff   (reg season, playoffs, comp picks)
+ *   - 'off-season'  Feb 14 cutoff → NL draft     (auction, rookie draft, summer)
  *
- * These boundaries match the existing league-year cutoffs in `league-year.ts`,
- * so a single calendar drives every season-aware behavior in the app.
+ * These boundaries match the league-year cutoffs in `league-year.ts`, so a
+ * single calendar drives every season-aware behavior in the app — which is why
+ * the season edge is IMPORTED rather than re-derived here. This file used to
+ * carry its own Labor Day copy, so when the season rollover moved, the nav
+ * still reordered eight days late.
  */
 
 import type { LeaguePhase } from '../types/nav';
-
-/** First Monday in September of the given year. */
-function getLaborDay(year: number): Date {
-  const septFirst = new Date(year, 8, 1);
-  const dow = septFirst.getDay(); // 0 = Sun
-  const offset = dow === 1 ? 0 : dow === 0 ? 1 : 8 - dow;
-  return new Date(year, 8, 1 + offset, 0, 0, 0, 0);
-}
+import { getSeasonStartForYear } from './league-year';
 
 /**
  * Feb 14 @ 8:45 PM PT cutoff (matches league-year.ts).
@@ -32,20 +28,20 @@ function getFebCutoff(year: number): Date {
 /**
  * Determine which calendar phase the league is in for a given date.
  *
- * In-season window:  Labor Day (this year) ≤ date < Feb 14 cutoff (next year)
- * Off-season window: Feb 14 cutoff (this year) ≤ date < Labor Day (this year)
+ * In-season window:  NL draft (this year) ≤ date < Feb 14 cutoff (next year)
+ * Off-season window: Feb 14 cutoff (this year) ≤ date < NL draft (this year)
  */
 export function getLeaguePhase(referenceDate: Date = new Date()): LeaguePhase {
   const year = referenceDate.getFullYear();
   const febCutoff = getFebCutoff(year);
-  const laborDay = getLaborDay(year);
+  const seasonStart = getSeasonStartForYear(year);
 
-  // Before Feb 14 cutoff this year → still in-season from last Labor Day's window.
+  // Before Feb 14 cutoff this year → still in-season from last season's window.
   if (referenceDate < febCutoff) return 'in-season';
 
-  // Feb 14 cutoff … Labor Day → off-season.
-  if (referenceDate < laborDay) return 'off-season';
+  // Feb 14 cutoff … NL draft → off-season.
+  if (referenceDate < seasonStart) return 'off-season';
 
-  // After Labor Day → new season starts.
+  // After the NL draft → new season starts.
   return 'in-season';
 }

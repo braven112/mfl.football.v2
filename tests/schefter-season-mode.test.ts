@@ -1,14 +1,12 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi, afterEach } from 'vitest';
 import {
   resolveFeedMode,
   defaultSource,
   seasonModeEnd,
   seasonModeStart,
-  seasonStartEventDate,
   SEASON_END_WEEKS,
-  SEASON_START_WEEKS_BEFORE_LABOR_DAY,
 } from '../src/utils/schefter-season-mode';
-import { getCurrentSeasonYear } from '../src/utils/league-year';
+import { getCurrentSeasonYear, getSeasonStartForYear } from '../src/utils/league-year';
 
 /**
  * The feed's in-season behaviour is entirely date-switched, so these dates ARE
@@ -29,9 +27,7 @@ describe('resolveFeedMode', () => {
    */
   it('opens on the NL draft, over a week before Labor Day', () => {
     expect(resolveFeedMode(new Date('2026-08-29T12:00:00-07:00'))).toBe('offseason');
-    // 11pm PT the night BEFORE the draft is still offseason. This is the case
-    // the cron TZ drift broke: a `startDate` written under UTC parses to 5pm
-    // PT on the 29th, which would have flipped the whole site a day early.
+    // 11pm PT the night BEFORE the draft is still offseason.
     expect(resolveFeedMode(new Date('2026-08-29T23:00:00-07:00'))).toBe('offseason');
     expect(resolveFeedMode(new Date('2026-08-31T12:00:00-07:00'))).toBe('in-season');
     // Labor Day (Sep 7) and kickoff (Sep 10) are both well inside it now.
@@ -40,30 +36,27 @@ describe('resolveFeedMode', () => {
   });
 
   /**
-   * The instant is anchored to midnight PACIFIC on the event's calendar day,
-   * NOT to the `startDate` the feed happens to carry. That field is written by
-   * cron and its time component follows the generating process's TZ: the same
-   * NL draft appeared as `2026-08-30T00:00:00.000Z` (a run under UTC) and
-   * `2026-08-30T07:00:00.000Z` (one under the app's pinned Pacific). Reading
-   * the instant let a routine feed regeneration slide the season switch seven
-   * hours — under the UTC value, into the EVENING BEFORE the draft.
+   * The feed does NOT own its start date — it is the same instant the season
+   * year rolls on, so the feed can never disagree with standings about whether
+   * it is the season. This module previously carried its own definition (read
+   * from the cron-written event feed, with a Labor-Day-derived fallback); that
+   * is exactly the second definition this assertion exists to prevent
+   * reappearing.
    */
-  it('reads the start from the league calendar, not a hardcoded date', () => {
-    expect(seasonStartEventDate(2026)?.toISOString()).toBe('2026-08-30T07:00:00.000Z');
-    expect(seasonModeStart(2026).toISOString()).toBe('2026-08-30T07:00:00.000Z');
+  it('opens on the season itself, owning no date of its own', () => {
+    for (const year of [2026, 2027, 2030]) {
+      expect(seasonModeStart(year).getTime()).toBe(getSeasonStartForYear(year).getTime());
+    }
   });
 
   /**
-   * resolved-events only ever carries the CURRENT league year, so every future
-   * season must still resolve — silently returning Invalid Date here would
-   * make the feed offseason forever.
+   * Every future season must resolve — a silent Invalid Date here would make
+   * the feed offseason forever.
    */
-  it('falls back to a derived date for a season the calendar has not computed', () => {
-    expect(seasonStartEventDate(2030)).toBeNull();
+  it('resolves a season far past any calendar the site has computed', () => {
     const start = seasonModeStart(2030);
     expect(Number.isNaN(start.getTime())).toBe(false);
     expect(start.getTime()).toBeLessThan(seasonModeEnd(2030).getTime());
-    expect(SEASON_START_WEEKS_BEFORE_LABOR_DAY).toBe(3);
   });
 
   it('stays in season across the New Year', () => {
@@ -132,4 +125,27 @@ describe('defaultSource', () => {
     expect(defaultSource('in-season', false)).toBeNull();
     expect(defaultSource('offseason', false)).toBeNull();
   });
+});
+
+afterEach(() => {
+  vi.unstubAllEnvs();
+});
+
+/**
+ * A forward PUBLIC_BASE_YEAR pin is honored on purpose (see
+ * tests/league-year-rollover.test.ts, "a forward pin is still honored").
+ * resolveFeedMode used to derive its candidate seasons from
+ * getCurrentSeasonYear, which the pin floors — so with the pin set to the
+ * current calendar year it scanned the NEXT two seasons and reported offseason
+ * for the whole of the real one. Reading the calendar year cannot be skewed.
+ */
+describe('an env pin cannot move the feed mode', () => {
+  for (const pin of ['2026', '2027', '2025', 'not-a-year']) {
+    it(`stays in season mid-season with PUBLIC_BASE_YEAR=${pin}`, () => {
+      vi.stubEnv('PUBLIC_BASE_YEAR', pin);
+      expect(resolveFeedMode(new Date('2026-11-01T12:00:00-08:00'))).toBe('in-season');
+      expect(resolveFeedMode(new Date('2027-01-20T12:00:00-08:00'))).toBe('in-season');
+      expect(resolveFeedMode(new Date('2027-06-01T12:00:00-07:00'))).toBe('offseason');
+    });
+  }
 });

@@ -47,7 +47,7 @@ export function buildEspnScoreboardUrl(slot: EspnSeasonSlot, year: number): stri
  *
  * WHY THIS EXISTS. The board can only ever ask ESPN for the regular season or
  * the playoffs (`espnSeasonSlot` emits seasonType 2 or 3, never 1), and `year`
- * comes from `getCurrentSeasonYear()`, which does not roll until Labor Day. So
+ * comes from `getCurrentSeasonYear()`, which does not roll until the NL draft. So
  * between February and kickoff there is no URL the page can construct that
  * reaches a game actually being played — which means the in-progress paths
  * (live clock, red zone, down & distance, possession) cannot be exercised on

@@ -36,6 +36,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { loadEnv } from 'vite';
 import { getLeagueBySlug } from '../src/config/leagues-data.mjs';
+import { getSeasonStart } from './lib/league-years.mjs';
 import {
   buildConferenceStructure,
   buildRosteredByConf,
@@ -68,22 +69,19 @@ const ESPN_COLLEGE_IDS_PATH = path.join(ROOT, getLeagueBySlug('theleague').dataP
 
 const mflHost = aflLeague.mflHost;
 
-// ── Season-year math (ported from src/utils/league-year.ts; keep in sync) ──
-// Labor Day = first Monday in September.
-function getLaborDay(year) {
-  const septemberFirst = new Date(year, 8, 1);
-  const dayOfWeek = septemberFirst.getDay();
-  const daysUntilMonday = dayOfWeek === 1 ? 0 : (8 - dayOfWeek) % 7;
-  return new Date(year, 8, 1 + daysUntilMonday);
-}
-// Base (pivot) year is ALWAYS the previous calendar year — the Labor Day check
+// ── Season-year math (node twin of src/utils/league-year.ts) ──
+// The season cutoff itself comes from scripts/lib/league-years.mjs so this file
+// cannot drift from the app: it is the NL draft (Sunday before Labor Day
+// weekend), NOT Labor Day, and a private copy here would put the build eight
+// days behind the site once a year.
+// Base (pivot) year is ALWAYS the previous calendar year — the season check
 // in getCurrentSeasonYear is what advances it. A base that itself advanced at
-// Labor Day would be +1'd twice from Labor Day through Dec 31. Mirrors
+// the season start would be +1'd twice from then through Dec 31. Mirrors
 // src/utils/league-year.ts; see tests/league-year-rollover.test.ts.
 function calculateBaseYear(date) {
   return date.getFullYear() - 1;
 }
-// getCurrentSeasonYear(): the last completed NFL season, advancing on Labor Day.
+// getCurrentSeasonYear(): the last completed NFL season, advancing on the NL draft.
 // Honors the same PUBLIC_BASE_YEAR / PUBLIC_MFL_YEAR overrides the app reads via
 // import.meta.env (Astro sources those from process.env at build), so the build
 // script and the page resolve the same year.
@@ -96,7 +94,7 @@ function getCurrentSeasonYear(date = new Date()) {
   const baseYear = Number.isFinite(parsedEnvYear)
     ? Math.max(parsedEnvYear, autoBaseYear)
     : autoBaseYear;
-  return date >= getLaborDay(date.getFullYear()) ? baseYear + 1 : baseYear;
+  return date >= getSeasonStart(date.getFullYear()) ? baseYear + 1 : baseYear;
 }
 
 // ── JSON helpers ──

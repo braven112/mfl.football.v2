@@ -3,7 +3,7 @@
  *
  * Manages year transitions for MFL Football v2 application with two critical dates:
  * - Feb 14th @ 8:45 PT: New MFL league created, rosters move to new year
- * - Labor Day (first Monday in September): NFL season starts, standings/playoffs update
+ * - The NL draft (Sunday before Labor Day weekend): season starts, standings/playoffs update
  *
  * This creates a "dual-year window" from Feb 14 - Labor Day where:
  * - Roster management uses currentLeagueYear (new MFL league)
@@ -16,7 +16,7 @@ export interface LeagueYearConfig {
   /** Current MFL league year (for rosters, contracts, live data) - Updates Feb 14th */
   currentLeagueYear: number;
 
-  /** Year for standings/playoffs (historical until Labor Day) - Updates Labor Day */
+  /** Year for standings/playoffs (historical until the NL draft) - Updates the Sunday before Labor Day weekend */
   currentSeasonYear: number;
 
   /** Year for draft predictor (always shows next year's draft) */
@@ -51,6 +51,39 @@ function getLaborDay(year: number): Date {
   }
 
   return new Date(year, 8, 1 + daysUntilMonday, 0, 0, 0, 0);
+}
+
+/**
+ * The instant the NEW SEASON begins: the Sunday before Labor Day weekend.
+ *
+ * This is the AFL's NL email draft — the LAST of the two AFL drafts to run, so
+ * it is the moment every team in every league has a real roster. It is the
+ * commissioner's official start of the season, and it is what
+ * `currentSeasonYear` rolls on.
+ *
+ * It used to roll on Labor Day itself, which was eight days too late: the
+ * drafts were done, rosters were set, and the site was still reporting the
+ * PREVIOUS season. TheLeague drafts earlier still, so no league is left
+ * waiting on the AFL by this date.
+ *
+ * Derived from Labor Day (`laborDay - 8`) rather than read from the league
+ * calendar, on purpose. The same rule is spelled
+ * `sunday-before-labor-day-weekend` in league-events.json and resolved by
+ * league-event-resolver, but the resolved feed is cron-written and only ever
+ * carries the CURRENT league year — a year selector this load-bearing must
+ * answer for every year, offline, with no I/O. Both derivations are pinned
+ * against each other in tests/league-year-rollover.test.ts.
+ */
+export function getSeasonStartForYear(year: number): Date {
+  const laborDay = getLaborDay(year);
+  // Midnight PACIFIC, anchored explicitly — NOT `new Date(y, m, d)`, whose
+  // numeric form is midnight in whatever zone the PROCESS is in. The app pins
+  // TZ=America/Los_Angeles (ensure-pt-timezone.ts) but bare node does not, and
+  // Vercel's runtime presets TZ=:UTC — so a local-midnight cutoff resolves
+  // seven hours early in every build script and cron, flipping the season on
+  // the EVENING BEFORE the draft. Late August is always PDT (UTC-7); the
+  // season can never open during PST.
+  return new Date(Date.UTC(year, 8, laborDay.getDate() - 8, 7, 0, 0, 0));
 }
 
 /**
@@ -153,8 +186,10 @@ export function getLeagueYear(referenceDate?: Date): LeagueYearConfig {
   // Feb 14th is always PST, so 8:45 PM PST = 4:45 AM UTC on Feb 15th
   const febCutoff = new Date(Date.UTC(date.getFullYear(), 1, 15, 4, 45, 0, 0)); // Feb 15 04:45 UTC = Feb 14 20:45 PST
 
-  // Labor Day cutoff (first Monday in September)
-  const laborDay = getLaborDay(date.getFullYear());
+  // Season cutoff — the NL draft (Sunday before Labor Day weekend), NOT Labor
+  // Day. See getSeasonStartForYear: by this date both AFL conferences have
+  // drafted and every roster is real.
+  const seasonStart = getSeasonStartForYear(date.getFullYear());
 
   let currentLeagueYear = baseYear;
   let currentSeasonYear = baseYear;
@@ -164,8 +199,8 @@ export function getLeagueYear(referenceDate?: Date): LeagueYearConfig {
     currentLeagueYear = baseYear + 1;
   }
 
-  // After Labor Day, season year advances (standings/playoffs show new season)
-  if (date >= laborDay) {
+  // After the NL draft, season year advances (standings/playoffs show new season)
+  if (date >= seasonStart) {
     currentSeasonYear = baseYear + 1;
   }
 
@@ -192,7 +227,7 @@ export function getCurrentLeagueYear(referenceDate?: Date): number {
 
 /**
  * Get current season year for standings/playoffs
- * Updates: Labor Day (first Monday in September)
+ * Updates: the NL draft (Sunday before Labor Day weekend) — see getSeasonStartForYear
  *
  * Use this for: Standings, Playoffs, MVP Tracking, Season Results, Draft Order
  *
@@ -210,7 +245,7 @@ export function getCurrentSeasonYear(referenceDate?: Date): number {
  * Use this for: Draft Predictor pages
  *
  * @param referenceDate - Optional date for testing
- * @returns Next draft year (e.g., 2026 before Labor Day, 2027 after)
+ * @returns Next draft year (e.g., 2026 before the NL draft, 2027 after)
  */
 export function getNextDraftYear(referenceDate?: Date): number {
   return getLeagueYear(referenceDate).nextDraftYear;
