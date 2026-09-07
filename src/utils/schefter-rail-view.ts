@@ -82,7 +82,11 @@ export async function resolveSchefterRail(opts: ResolveRailOptions): Promise<Sch
 
   if (!franchiseId || resolveFeedMode(now) !== 'in-season') return plain;
 
-  const year = getLeagueYearForSlug(league.slug);
+  // `now`, not the system clock — same reason as schefter-news-view: the rail
+  // is rendered at other dates by /rollover-check, and a watch year off the
+  // real clock silently pairs the requested season's mode with another
+  // season's roster.
+  const year = getLeagueYearForSlug(league.slug, now);
   const sets = await resolveWatchingSets(league, year, franchiseId);
   const mine = readable.filter((p) => postIsForViewer(p, sets, franchiseId)).slice(0, limit);
 

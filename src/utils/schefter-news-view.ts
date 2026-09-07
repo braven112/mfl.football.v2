@@ -181,7 +181,13 @@ export async function resolveSchefterNewsView(
   // 0001, so this must go through franchiseIdForLeague, never a bare compare.
   const watchFranchiseId = franchiseIdForLeague(authUser, league.id);
   const canWatch = !!watchFranchiseId;
-  const watchYear = getLeagueYearForSlug(league.slug);
+  // `now`, not the system clock: this resolver is rendered at other dates by
+  // /rollover-check and by `?testDate=`, and a watch year taken from the real
+  // clock reads the WRONG league year's roster and watch list while the mode
+  // above renders the requested one. The failure is quiet — a plausible feed
+  // built from the wrong season — which is exactly what a rollover render is
+  // supposed to catch.
+  const watchYear = getLeagueYearForSlug(league.slug, now);
   const watchingSets = await resolveWatchingSets(league, watchYear, watchFranchiseId);
 
   // An explicit ?source= always wins. Only when the URL says nothing does the

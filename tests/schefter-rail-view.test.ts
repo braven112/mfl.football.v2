@@ -1,4 +1,19 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
+
+// Records the reference date the rail asks for while delegating to the real
+// implementation — the assertion is about the ARGUMENT, nothing else.
+const leagueYearCalls: Array<Date | undefined> = [];
+vi.mock('../src/utils/league-year', async (importActual) => {
+  const actual = await importActual<typeof import('../src/utils/league-year')>();
+  return {
+    ...actual,
+    getLeagueYearForSlug: (slug: string, referenceDate?: Date) => {
+      leagueYearCalls.push(referenceDate);
+      return actual.getLeagueYearForSlug(slug, referenceDate);
+    },
+  };
+});
+
 import { resolveSchefterRail } from '../src/utils/schefter-rail-view';
 import { getLeagueBySlug } from '../src/config/leagues';
 import type { SchefterPost } from '../src/types/schefter';
@@ -124,5 +139,24 @@ describe('a visitor with no franchise here gets the league feed', () => {
     const afl = { ...owner, leagueId: getLeagueBySlug('afl-fantasy')!.id };
     const v = await rail([post({ franchiseIds: ['0001'] })], afl);
     expect(v.personalized).toBe(false);
+  });
+});
+
+/**
+ * The rail carries the same date-switch as /news, so it carries the same trap:
+ * a watch year off the system clock pairs the requested date's season mode
+ * with the current year's roster. Copilot caught this in schefter-news-view
+ * only — the rail is a second copy of the same read.
+ */
+describe('every date-dependent read uses the same clock', () => {
+  it('resolves the watch year from `now`, not the system clock', async () => {
+    leagueYearCalls.length = 0;
+    // Feb 16 2027 is deliberate: still in season (the window closes Feb 18) AND
+    // past the Feb 14 league-year rollover, so the reference date genuinely
+    // changes the answer rather than merely being passed along.
+    const now = new Date('2027-02-16T12:00:00-08:00');
+    await resolveSchefterRail({ league, posts: [], authUser: owner, now });
+    expect(leagueYearCalls.length).toBeGreaterThan(0);
+    expect(leagueYearCalls).toContainEqual(now);
   });
 });

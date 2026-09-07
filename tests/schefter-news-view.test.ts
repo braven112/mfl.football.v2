@@ -1,4 +1,19 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
+
+// Records what league year the resolver asks for while delegating to the real
+// implementation, so the assertion below is about the ARGUMENT and nothing else.
+const leagueYearCalls: Array<Date | undefined> = [];
+vi.mock('../src/utils/league-year', async (importActual) => {
+  const actual = await importActual<typeof import('../src/utils/league-year')>();
+  return {
+    ...actual,
+    getLeagueYearForSlug: (slug: string, referenceDate?: Date) => {
+      leagueYearCalls.push(referenceDate);
+      return actual.getLeagueYearForSlug(slug, referenceDate);
+    },
+  };
+});
+
 import { resolveSchefterNewsView } from '../src/utils/schefter-news-view';
 import { postIsForViewer, postConcernsFranchise } from '../src/utils/schefter-watching';
 import { getLeagueBySlug } from '../src/config/leagues';
@@ -251,5 +266,38 @@ describe('what lands in For You', () => {
   it('matches a player named only in prose (namedPlayerIds), not just structurally', () => {
     const sets = { watched: new Set(['16613']), roster: new Set<string>(), all: new Set(['16613']) };
     expect(postIsForViewer(post({ namedPlayerIds: ['16613'] }), sets, '0001')).toBe(true);
+  });
+});
+
+/**
+ * The mode and the watch sets have to be read at the SAME instant.
+ *
+ * `?testDate=` and /rollover-check exist because this whole feature is
+ * date-switched, but the watch year was taken from the real system clock while
+ * the mode came from `now`. A rollover render then paired the requested date's
+ * in-season/offseason answer with the CURRENT year's roster and watch list —
+ * a plausible-looking feed built from the wrong season, which is the exact
+ * class of bug a rollover render is supposed to surface.
+ */
+describe('every date-dependent read uses the same clock', () => {
+  it('resolves the watch year from `now`, not the system clock', async () => {
+    leagueYearCalls.length = 0;
+    await view('/theleague/news', owner, IN_SEASON);
+    expect(leagueYearCalls).toContainEqual(IN_SEASON);
+    expect(leagueYearCalls.every((d) => d !== undefined)).toBe(true);
+  });
+
+  it('follows ?testDate= as well as an explicit `now`', async () => {
+    leagueYearCalls.length = 0;
+    await resolveSchefterNewsView({
+      league,
+      feed: feed([]),
+      authUser: owner,
+      url: new URL('/theleague/news?testDate=2027-03-01', 'https://x.test'),
+    });
+    expect(leagueYearCalls.length).toBeGreaterThan(0);
+    for (const d of leagueYearCalls) {
+      expect(d?.getUTCFullYear()).toBe(2027);
+    }
   });
 });
