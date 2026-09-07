@@ -82,7 +82,10 @@ import {
   redactTradeOffer,
   offerPostProbability,
   tierForDistinctOfferers,
+  classifyAsset,
 } from './lib/redact-trade-offer.mjs';
+import { assetShapeOf, tradeSignatureOf } from './lib/schefter-offer-beats.mjs';
+import { buildSeedFromProposal, writeSeed } from './lib/speculation-seeds.mjs';
 import {
   scanDraftTrades,
   getDraftOfferersForPlayer,
@@ -243,8 +246,15 @@ const OFFER_ARCHIVE_KEY = schefterKey(NAV_SLUG, 'trade_offers:archive');
 // legacy-burned). Tells the commish how many GitHub Actions runs had a chance
 // to leak the rumor before MFL dropped the offer.
 const OFFER_ROLLS_KEY = schefterKey(NAV_SLUG, 'trade_offers:rolls');
+// Movement state. `shape` fingerprints what each proposal is asking for so the
+// next scan can tell "still sitting there" from "they changed the ask";
+// `closed` makes a closure post fire exactly once per proposal, because a
+// proposal can read as expired on every scan for the rest of its 30-day TTL.
+const OFFER_SHAPE_KEY = schefterKey(NAV_SLUG, 'trade_offers:shape');
+const OFFER_CLOSED_KEY = schefterKey(NAV_SLUG, 'trade_offers:closed');
 
 const OFFER_LINGERING_THRESHOLD_MS = 48 * 60 * 60 * 1000;   // 48h → framing flip
+const RE_OFFER_WINDOW_MS = 30 * 24 * 60 * 60 * 1000;        // 30d → "these two have talked before"
 
 const OFFER_OWNER_KEY_PREFIX = schefterKey(NAV_SLUG, 'trade_offers:owner:');
 const OFFER_DIV_KEY_PREFIX = schefterKey(NAV_SLUG, 'trade_offers:div:');
@@ -1504,6 +1514,17 @@ export async function anonymizeTips(tips, teams, feedPosts = [], now = new Date(
             : [],
         };
       }
+      // Beats — the drip layer. Carries no franchise names of its own (the
+      // only nameable team is the one already in `exposure`) and no player
+      // name outside `exposure.players` / the named escalation tier, because
+      // `buildMarketBeats` takes the nameable set and falls back to
+      // position-level subjects for everyone else. `leadKind` tells the LLM
+      // which fact is NEW this signal so consecutive posts about one proposal
+      // open differently.
+      if (Array.isArray(tip.beats) && tip.beats.length > 0) {
+        safe.beats = tip.beats.map((b) => ({ ...b }));
+        if (tip.leadKind) safe.leadKind = tip.leadKind;
+      }
       // Scrub text/author fields that don't apply. Internal-only audit fields
       // (partnerFranchiseId, playerNames, offeringFranchiseId, offerId,
       // hashedOwnerId) are never written into `safe` above, so there's
@@ -2111,12 +2132,28 @@ Redaction rules (HARD — never violate):
   NEVER invent a name, team, or pick slot. If a field isn't in the structured tip data, it does not exist.
   NEVER frame a trade-offer tip as the rookie draft, the NFL draft, "draft-room" activity, "draft chatter", "draft strategy", "auto-pilot picks", or any league draft event (see HARD RULE 21). A trade_offer is one team considering a trade — phrase it as shopping/fielding-calls/kicking-the-tires, never as draft activity. Any internal metadata that mentions "draft" reflects trade-builder saves, not the rookie draft.
 
-Exposure ladder (HARD — \`exposure.signal\` is authoritative):
-  signal 1 (exposure.players.length === 0): name the team only. Frame as "the [team] are shopping" / "[team] has put feelers out" / "hearing the [team] are in the market". One concrete subject — the team. Player content stays at the position/archetype level (use positionTokens / pickTokens if you need a hook, but the headline is the TEAM).
-  signal 2 (exposure.players.length === 1): name the team AND the marquee player. "Hearing the [team] have [Player] on the table" / "I'm told [team] is dangling [Player] in trade talks". The single player carries the post.
-  signal 3 (exposure.players.length === 2): name the team AND BOTH players. List them naturally — "[Player1] and [Player2] are both in the conversation around the [team]". Don't editorialize about which goes which way.
-  signal 4+ (exposure.players.length ≥ 3): name the team plus every player in exposure.players, listed in order. This signals a developing story — use language like "the [team] file keeps growing" / "another name surfaced".
-  Always include the cadence opener + closer from the rules above. Hedges are optional on signal 1; encouraged on signal 2+ ("Still developing", "Nothing imminent"). Voice: tight beat-reporter, 1-2 sentences.
+Exposure ladder (HARD — \`exposure.players\` is authoritative; NEVER print a player who is not in it):
+  exposure.players is empty: name the team only. Frame as "the [team] are shopping" / "[team] has put feelers out" / "hearing the [team] are in the market". One concrete subject — the team. Player content stays at the position/archetype level.
+  exposure.players has 1: name the team AND that player. "Hearing the [team] have [Player] on the table" / "I'm told [team] is dangling [Player] in trade talks". The single player carries the post.
+  exposure.players has 2: name the team AND BOTH players. List them naturally — "[Player1] and [Player2] are both in the conversation around the [team]". Don't editorialize about which goes which way.
+  exposure.players has 3+: name the team plus every player in it, in order. This signals a developing story — "the [team] file keeps growing" / "another name surfaced".
+  Always include the cadence opener + closer from the rules above. Hedges are optional at signal 1; encouraged from signal 2 ("Still developing", "Nothing imminent"). Voice: tight beat-reporter, 1-2 sentences.
+
+The drip (\`beats\` + \`leadKind\`) — this is what keeps consecutive posts about ONE proposal from reading alike:
+  A name does NOT arrive every signal. Signals alternate: some add a player to exposure.players, some add a BEAT instead. \`beats\` is the cumulative list of everything revealed so far about this proposal; \`leadKind\` names the ONE fact that is new in this post.
+  OPEN ON \`leadKind\`. Older beats are context you may lean on for a second clause — never the lede, and never re-report an old beat as though it just landed.
+  If \`leadKind\` is "player", the newest name in exposure.players is the story. If it is a beat kind, that beat is the story and the names you already have are the supporting detail.
+  Beat kinds and how to phrase them:
+    closure — the proposal is OVER, and this post is the CALLBACK that closes a story you have already filed on. It always leads, and it reveals nothing new: no name appears here that earlier posts did not already print. \`reason\` is "expired" (MFL's own deadline passed with no answer — "that offer I mentioned? Deadline came and went. Nobody blinked.") or "accepted" (it got done). On "accepted" the trade itself is reported elsewhere in the feed as its own breaking item — do NOT re-break it. Your job is the callback: "the one I flagged twice last week is done." \`daysOpen\` and \`priorPosts\` are there for that ("open eleven days, three separate reports"). NEVER speculate about why it died or who said no.
+    ask_changed — the proposal MOVED since the last look, from the named team's side. \`direction\`: "sweetened" (they added), "trimmed" (they took away), "reworked" (same weight, different pieces). "They've sweetened it since Tuesday" / "the ask got trimmed overnight". Say that it changed and which way; you do not know what was added, so never itemise it.
+    re_offer — these two desks have talked \`priorProposals\` time(s) before inside \`windowDays\`. \`atLeast\` is ALWAYS true: "at least the second run at the same desk this month". NEVER name or hint at the other franchise — the count is the story, the partner is not.
+    deal_shape — the deal's shape from the NAMED team's side. \`direction\`: "selling" (they send players, get picks), "buying" (they send picks, want players), "swap" (players both ways), "picks_only". \`sends\` / \`gets\` carry counts, positions and pick labels. Say what they are after, not who is on the other end: "they're not selling — they want a back back" / "a two-for-one, and the picks are going out, not coming in". NEVER name or characterise the other franchise.
+    expiry — the proposal's clock. \`urgency\`: "today" (<24h), "soon" (<48h), "this_week". "Offer's on the clock — expires tonight" / "they've got about [daysRemaining] days to answer". Only ever the deadline; never predict the answer.
+    in_talks_not_listed — \`subject\` is a player who is NOT on his own owner's public trade block, yet is in this proposal. This is the good one: "he isn't on anybody's block, and his name keeps coming up." If \`subject.name\` is present you may print it; if only \`subject.position\` is present, phrase it positionally ("one of the backs in the conversation isn't listed anywhere").
+    block_stale — the named team still has \`notInThisDealCount\` other players sitting on its public block. "They've still got [n] more listed" / "the block hasn't moved". NEVER say nobody has called or nobody wants them — we do not know that, we know only what is listed.
+    third_desk — \`deskCount\` different franchises have had this player in a proposal. \`atLeast\` is ALWAYS true: phrase it as a floor — "at least [n] desks have asked", "that's the second team I know of". NEVER "exactly", never "only".
+    position_run — \`proposalCount\` proposals in play touch \`position\`. Also a floor: "at least [n] proposals I know of involve a receiver right now" / "there's a run on tight ends". NEVER a league total.
+  If \`beats\` is absent, this proposal has no drip yet — work the exposure ladder alone.
 
 Escalation guidance:
   - tier "base" (no escalatedPlayer field): stay vague. Use the volumeHint plus AT MOST ONE of (positionTokens first entry, pickTokens first entry) — not both. If divisionHint is present, it's an alternative to position/pick; don't combine.
@@ -2860,14 +2897,10 @@ async function loadPlayers(year) {
  * ladder deterministic even without ADP data.
  */
 async function loadAdpDynastyRanks(year) {
-  const adpPath = path.join(
-    projectRoot,
-    'data',
-    'theleague',
-    'mfl-feeds',
-    String(year),
-    'adp-dynasty.json',
-  );
+  // Through the registry's resolver, never a hand-joined league directory —
+  // the league-literal guard forbids the literal and the registry is the only
+  // thing that knows where a league's feeds live.
+  const adpPath = SCHEFTER_LEAGUE.feedFilePath(year, 'adp-dynasty.json');
   try {
     const raw = JSON.parse(await fs.readFile(adpPath, 'utf8'));
     const list = raw?.adp?.player ?? [];
@@ -2883,6 +2916,91 @@ async function loadAdpDynastyRanks(year) {
     warn(`  [offer-scan] adp-dynasty file unreadable: ${err.message}`);
     return new Map();
   }
+}
+
+/**
+ * Signatures of trades that actually happened, read from the committed
+ * transactions feed.
+ *
+ * Deliberately the SAME signature `schefter-scan.mjs#buildTradeSignature`
+ * builds — sorted franchise pair + sorted asset ids — so a proposal and the
+ * TRADE it became hash identically whichever side MFL happens to call
+ * "franchise1". Rebuilt rather than imported because that module is a scan
+ * entry point with its own MFL fetches at import time.
+ */
+async function loadCompletedTradeSignatures(year) {
+  const txnPath = SCHEFTER_LEAGUE.feedFilePath(year, 'transactions.json');
+  try {
+    const raw = JSON.parse(await fs.readFile(txnPath, 'utf8'));
+    const list = raw?.transactions?.transaction ?? [];
+    const arr = Array.isArray(list) ? list : [list];
+    const signatures = new Set();
+    for (const txn of arr) {
+      if (txn?.type !== 'TRADE') continue;
+      const signature = tradeSignatureOf(txn);
+      if (signature) signatures.add(signature);
+    }
+    return signatures;
+  } catch (err) {
+    warn(`  [offer-scan] transactions feed unreadable: ${err.message} — accepted-closure detection off`);
+    return new Set();
+  }
+}
+
+/**
+ * How many EARLIER proposals each franchise pair has in our archive, within the
+ * re-offer window. A floor, not a total — the archive holds the proposals this
+ * lane saw, and the lane sees what owners self-reported.
+ */
+async function loadPriorPairCounts({ redis, nowMs }) {
+  const counts = new Map();
+  let archive;
+  try {
+    archive = await redis.hgetall(OFFER_ARCHIVE_KEY);
+  } catch (err) {
+    warn(`  [offer-scan] hgetall(archive) failed: ${err.message} — re-offer beats disabled`);
+    return counts;
+  }
+  const windowStart = nowMs - RE_OFFER_WINDOW_MS;
+  for (const entry of Object.values(archive ?? {})) {
+    try {
+      const parsed = typeof entry === 'string' ? JSON.parse(entry) : entry;
+      if (!parsed) continue;
+      const firstSeen = Number(parsed.firstSeenMs);
+      if (!Number.isFinite(firstSeen) || firstSeen < windowStart) continue;
+      const pair = [String(parsed.offeringFid || ''), String(parsed.partnerFid || '')]
+        .filter(Boolean)
+        .sort()
+        .join(':');
+      if (!pair) continue;
+      counts.set(pair, (counts.get(pair) ?? 0) + 1);
+    } catch {
+      // A malformed archive row is not worth failing a scan over.
+    }
+  }
+  return counts;
+}
+
+/**
+ * Upstash auto-deserializes JSON values, so a stored shape arrives as an object
+ * on one client and a string on another. Both are accepted; anything else is
+ * treated as "no previous shape", which drops the beat rather than inventing a
+ * change.
+ */
+function parseStoredShape(stored) {
+  if (!stored) return null;
+  try {
+    const parsed = typeof stored === 'string' ? JSON.parse(stored) : stored;
+    return parsed && typeof parsed.h === 'string' ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Pair key for `priorPairCounts`, built from a live proposal row. */
+function franchisePairKeyOf(raw, offeringFid) {
+  const partner = String(raw?.offeredto || raw?.franchise2 || '').padStart(4, '0');
+  return [String(offeringFid || ''), partner].filter(Boolean).sort().join(':');
 }
 
 /**
@@ -3057,6 +3175,89 @@ async function scanTradeOffers({ redis, dryRun }) {
 
   log(`  [offer-scan] Distinct counter-party-awaiting offers: ${offerMap.size}`);
 
+  // ── Movement state ──
+  // One read each, before the loop: per-scan hgets inside a 6-offer loop would
+  // triple this lane's Redis round-trips for data that never changes mid-scan.
+  let shapeByOfferId = {};
+  let closedOfferIds = new Set();
+  try {
+    shapeByOfferId = (await redis.hgetall(OFFER_SHAPE_KEY)) ?? {};
+  } catch (err) {
+    warn(`  [offer-scan] hgetall(shape) failed: ${err.message} — ask-changed beats disabled`);
+  }
+  try {
+    closedOfferIds = new Set((await redis.smembers(OFFER_CLOSED_KEY)) ?? []);
+  } catch (err) {
+    warn(`  [offer-scan] smembers(closed) failed: ${err.message}`);
+  }
+
+  // Completed trades, by the same signature schefter-scan.mjs uses to let a
+  // finished TRADE supersede a pending-trade post: sorted franchise pair +
+  // sorted assets, so a proposal and the transaction it became hash alike
+  // whichever side MFL calls "franchise1".
+  const completedTradeSignatures = await loadCompletedTradeSignatures(year);
+
+  // Earlier proposals between the same franchise pair, from our own archive.
+  const priorPairCounts = await loadPriorPairCounts({ redis, nowMs });
+
+  // ── Beat inputs (see scripts/lib/schefter-offer-beats.mjs) ──
+  // The league's PUBLIC trade block, per franchise. `tradeBaitState` is written
+  // by the trade-bait lane's own LIVE MFL read and lives in the same feed file
+  // this scanner already loads, so it is fresher than the committed
+  // mfl-feeds/<year>/tradeBait.json snapshot (refreshed once a day) and costs
+  // no extra fetch. `observedBlock` is what MFL shows right now;
+  // `committedBlock` is what Schefter has already reported, which is a
+  // different question.
+  //
+  // A franchise with no entry is ABSENT from the Map rather than present with
+  // an empty Set: only the first means "we cannot say what is on their block",
+  // and a beat that cannot tell those apart would report a player as unlisted
+  // on the strength of never having read his owner's block.
+  const blockByFid = new Map();
+  try {
+    const feedForBlocks = await loadFeed();
+    for (const [fid, state] of Object.entries(feedForBlocks?.tradeBaitState ?? {})) {
+      const observed = state?.observedBlock;
+      if (!Array.isArray(observed)) continue;
+      blockByFid.set(String(fid).padStart(4, '0'), new Set(observed.map((id) => String(id))));
+    }
+  } catch (err) {
+    warn(`  [offer-scan] trade-block state unreadable: ${err.message} — block beats disabled`);
+  }
+
+  // Positions in play across every proposal this scan can see. A FLOOR, not a
+  // total: with the league-wide read quiet, the lane only sees proposals owners
+  // self-reported, so the beat carries `atLeast` and the playbook hedges it.
+  //
+  // "In play" means ALIVE. The same dead-proposal problem the expiry check
+  // fixes below applies here a level up: `owner_reports` keeps resolved
+  // proposals indefinitely, so counting the raw map would report a run on a
+  // position off deals MFL dropped weeks ago — a hedge of "at least" does not
+  // make a stale count true.
+  const positionRuns = new Map();
+  for (const [, { raw }] of offerMap) {
+    const expiresAt = parseInt(raw.expires ?? '0', 10);
+    if (Number.isFinite(expiresAt) && expiresAt > 0 && expiresAt * 1000 <= nowMs) continue;
+    const sig = tradeSignatureOf(raw);
+    if (sig && completedTradeSignatures.has(sig)) continue;
+    const seen = new Set();
+    for (const token of [
+      ...(raw.franchise1_gave_up || '').split(','),
+      ...(raw.franchise2_gave_up || '').split(','),
+    ]) {
+      const asset = classifyAsset(token.trim(), players, year);
+      if (asset?.kind !== 'player' || !asset.position) continue;
+      seen.add(String(asset.position).toUpperCase());
+    }
+    for (const position of seen) {
+      positionRuns.set(position, (positionRuns.get(position) ?? 0) + 1);
+    }
+  }
+  log(
+    `  [offer-scan] Beat inputs: blocks for ${blockByFid.size} franchise(s), `
+      + `positions in play ${[...positionRuns.entries()].map(([p, n]) => `${p}:${n}`).join(' ') || 'none'}`,
+  );
+
   const tips = [];
   const debugLog = [];
   const windowStart = nowMs - OFFER_ROLLING_WINDOW_MS;
@@ -3127,6 +3328,170 @@ async function scanTradeOffers({ redis, dryRun }) {
       } catch (err) {
         warn(`  [offer-scan] hset(archive) failed: ${err.message}`);
       }
+    }
+
+    // ── Is this proposal over? ──
+    // Two endings, both stated by MFL rather than inferred by us, and they are
+    // routed DIFFERENTLY:
+    //   accepted — a TRADE transaction with this proposal's signature exists.
+    //              Gets a closure post; the trade is public anyway.
+    //   expired  — the row's own `expires` has passed; MFL drops it at expiry.
+    //              Seeds the speculation lane instead of posting (see below).
+    // There is deliberately no "withdrawn". This lane is fed by owner
+    // self-reports, so a proposal leaving view means an owner stopped loading
+    // the trades page just as often as it means the proposal died — and the
+    // owner-report hash has no per-row TTL, so a resolved proposal LINGERS in
+    // it either way. Guessing would put "talks have gone cold" on a live
+    // negotiation.
+    //
+    // The expiry check also fixes a quieter bug: without it a proposal MFL
+    // dropped weeks ago keeps drawing dice rolls and shipping fresh rumors off
+    // a stale owner report, which is where the 26-to-56-day-old "live"
+    // proposals in this lane came from.
+    const expiresSecs = parseInt(raw.expires ?? '0', 10);
+    const hasExpired = Number.isFinite(expiresSecs) && expiresSecs > 0
+      && expiresSecs * 1000 <= nowMs;
+    const signature = tradeSignatureOf(raw);
+    const wasAccepted = !!signature && completedTradeSignatures.has(signature);
+
+    if (hasExpired || wasAccepted) {
+      const reason = wasAccepted ? 'accepted' : 'expired';
+      if (closedOfferIds.has(offerId)) {
+        debugLog.push({ offerId, offeringFid, skipped: `already closed (${reason})` });
+        continue;
+      }
+
+      // ── An expiry is a SEED, not a post ──
+      // A proposal that ran out the clock is the strongest private evidence we
+      // have that a GM is willing to move the players they offered, and that
+      // they need what they asked for. That belongs to the speculation lane,
+      // which builds its own hypothetical pairings and publishes those — not
+      // to a Schefter post announcing that a specific real deal died.
+      //
+      // Only the proposer's half seeds anything: their offered players are an
+      // availability signal and the positions they asked for are a stated
+      // need. The franchise they asked never said a word, so it contributes
+      // nothing and is recorded solely to be EXCLUDED as a counterparty, which
+      // keeps speculation from wandering back onto the real pairing.
+      //
+      // `accepted` still gets its closure post: that trade is public the
+      // moment it processes, so closing the story reveals nothing.
+      if (hasExpired && !wasAccepted) {
+        const seed = buildSeedFromProposal({
+          rawOffer: raw,
+          offeringFid,
+          playerMap: players,
+          expiredAtMs: expiresSecs * 1000,
+        });
+        let seeded = true;
+        if (!dryRun && seed) {
+          seeded = await writeSeed({ redis, navSlug: NAV_SLUG, seed, log, warn });
+        } else if (seed) {
+          log(`  [seed] dry-run: would seed speculation from expired proposal ${offerId}`);
+        }
+        // Close it only once the seed is safely stored. Marking it closed on a
+        // failed write would drop the signal permanently — the next scan
+        // short-circuits on the closed set and never looks at this proposal
+        // again — for the sake of one retry we can simply take next cycle.
+        if (!dryRun && seeded) {
+          try {
+            await redis.sadd(OFFER_CLOSED_KEY, offerId);
+            await redis.expire(OFFER_CLOSED_KEY, OFFER_STATE_TTL_SEC);
+            await redis.hdel(OFFER_SHAPE_KEY, offerId);
+          } catch (err) {
+            warn(`  [offer-scan] closing expired ${offerId} failed: ${err.message}`);
+          }
+        } else if (!dryRun) {
+          warn(`  [offer-scan] seed write failed for ${offerId} — leaving it open to retry next scan`);
+        }
+        debugLog.push({ offerId, offeringFid, expired: true, seeded: !!seed, priorExposure });
+        continue;
+      }
+      // Nothing was ever reported about this proposal, so there is no story to
+      // close — a closure post would be the lane's FIRST word on a proposal
+      // that never passed a dice roll, which is the one thing the roll exists
+      // to prevent.
+      if (priorExposure < 1) {
+        if (!dryRun) {
+          try {
+            await redis.sadd(OFFER_CLOSED_KEY, offerId);
+            await redis.expire(OFFER_CLOSED_KEY, OFFER_STATE_TTL_SEC);
+          } catch (err) {
+            warn(`  [offer-scan] sadd(closed) failed: ${err.message}`);
+          }
+        }
+        debugLog.push({ offerId, offeringFid, skipped: `${reason}, never reported` });
+        continue;
+      }
+
+      const closureRedaction = redactTradeOffer({
+        rawOffer: raw,
+        offeringFid,
+        playerMap: players,
+        teamMap: teams,
+        counts: { ownerOfferCount7d: 1, divisionOfferCount7d: 0, playerHistory: new Map() },
+        currentYear: year,
+        framingHint,
+        offerAgeMs,
+        // Held, not advanced — see the `closure` branch in redactTradeOffer.
+        exposureCount: priorExposure,
+        adpRankByPlayerId,
+        blockByFid,
+        positionRuns,
+        closure: {
+          reason,
+          daysOpen: offerAgeMs / (24 * 60 * 60 * 1000),
+          priorPosts: priorExposure,
+        },
+        nowMs,
+      });
+
+      if (closureRedaction.skip) {
+        debugLog.push({ offerId, offeringFid, skipped: `closure: ${closureRedaction.reason}` });
+        continue;
+      }
+
+      log(
+        `  [offer-scan] offerId=${offerId} fid=${offeringFid} CLOSED (${reason}) `
+          + `after ${Math.round(offerAgeMs / (24 * 60 * 60 * 1000))}d and ${priorExposure} post(s) → filing closure`,
+      );
+      debugLog.push({
+        offerId,
+        offeringFid,
+        closure: reason,
+        priorExposure,
+        tipPreview: closureRedaction.tip,
+      });
+
+      // No dice roll: the closure is terminal, fires once, and reveals nothing
+      // the ladder had not already revealed. The queue's own gates (daily cap,
+      // spacing, quiet hours) still decide when it actually ships.
+      //
+      // The closed marker below is written before the tip has actually
+      // shipped, so a closure the queue later drops is lost rather than
+      // retried. That is the deliberate side to fail on: the alternative —
+      // marking it closed only on publication — reposts the same callback on
+      // every scan until one lands. This only applies to `accepted`, which is
+      // roughly a once-a-season event in this league.
+      if (detectionOnly && !enabled) {
+        log(`  [offer-scan] detection-only: would have queued closure ${closureRedaction.tip.id}`);
+        continue;
+      }
+      if (!dryRun) {
+        try {
+          await redis.sadd(OFFER_CLOSED_KEY, offerId);
+          await redis.expire(OFFER_CLOSED_KEY, OFFER_STATE_TTL_SEC);
+        } catch (err) {
+          warn(`  [offer-scan] sadd(closed) failed: ${err.message}`);
+        }
+        try {
+          await redis.hdel(OFFER_SHAPE_KEY, offerId);
+        } catch {
+          // Best effort — a stale shape row expires with the hash.
+        }
+      }
+      tips.push(closureRedaction.tip);
+      continue;
     }
 
     // Sorted-set bookkeeping: owner + division + per-player.
@@ -3261,6 +3626,14 @@ async function scanTradeOffers({ redis, dryRun }) {
       offerAgeMs,
       exposureCount: priorExposure,
       adpRankByPlayerId,
+      blockByFid,
+      positionRuns,
+      previousShape: parseStoredShape(shapeByOfferId[offerId]),
+      priorPairCount: Math.max(
+        0,
+        (priorPairCounts.get(franchisePairKeyOf(raw, offeringFid)) ?? 0) - 1,
+      ),
+      nowMs,
     });
 
     if (redaction.skip) {
@@ -3353,6 +3726,18 @@ async function scanTradeOffers({ redis, dryRun }) {
     // so admin tooling and the legacy migration path stay accurate, but it's
     // no longer used as an absorbing gate.
     if (!dryRun) {
+      // The stored shape is the ask AS OF THE LAST REPORT, not as of the last
+      // scan. Writing it on every scan meant a changed ask was detectable for
+      // exactly one cycle: at ~8 scans a day and a 5–35% roll, most changes
+      // were overwritten before they could ever post. Anchored here, the beat
+      // means "changed since we last told you", which is the more useful claim
+      // and the one that survives until it is made.
+      try {
+        await redis.hset(OFFER_SHAPE_KEY, { [offerId]: JSON.stringify(assetShapeOf(raw)) });
+        await redis.expire(OFFER_SHAPE_KEY, OFFER_STATE_TTL_SEC);
+      } catch (err) {
+        warn(`  [offer-scan] hset(shape) failed for ${offerId}: ${err.message}`);
+      }
       try {
         await redis.hincrby(OFFER_EXPOSURE_KEY, offerId, 1);
         await redis.expire(OFFER_EXPOSURE_KEY, OFFER_STATE_TTL_SEC);

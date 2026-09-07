@@ -15,6 +15,7 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
+import { redactTradeOffer } from '../scripts/lib/redact-trade-offer.mjs';
 
 function read(rel: string): string {
   return readFileSync(path.join(process.cwd(), rel), 'utf8');
@@ -25,10 +26,38 @@ const REDACT_SRC = read('scripts/lib/redact-trade-offer.mjs');
 
 describe('redactTradeOffer — corroboration metadata', () => {
   it('exposes partnerFranchiseId on the redacted tip', () => {
+    // Behavioral, not a source grep. This used to pin the literal expression
+    // `offeringFid === String(rawOffer.franchise) ? …`, which compared an
+    // already-padded `offeringFid` against a raw MFL field — and MFL is not
+    // consistent about zero-padding franchise ids. The guard was therefore
+    // holding the unpadded comparison in place as though it were the
+    // invariant; the invariant is "the partner is the OTHER side of the pair,
+    // whichever form the row carries it in".
     expect(REDACT_SRC).toMatch(/partnerFranchiseId/);
-    expect(REDACT_SRC).toMatch(
-      /offeringFid === String\(rawOffer\.franchise\)\s*\?\s*rawOffer\.franchise2\s*:\s*rawOffer\.franchise/,
-    );
+
+    const partnerFor = (rawOffer: Record<string, unknown>, offeringFid: string) => {
+      const { tip } = redactTradeOffer({
+        rawOffer,
+        offeringFid,
+        playerMap: new Map([['p1', { name: 'Alpha One', position: 'WR' }]]),
+        teamMap: new Map([
+          ['0001', { name: 'Pacific Pigskins' }],
+          ['0007', { name: 'Maverick' }],
+        ]),
+        counts: { ownerOfferCount7d: 1, divisionOfferCount7d: 0, playerHistory: new Map() },
+        currentYear: 2026,
+        exposureCount: 0,
+      } as never);
+      if (!tip) throw new Error('redactTradeOffer skipped an offer this fixture builds to survive');
+      return tip.partnerFranchiseId;
+    };
+
+    const base = { id: 'c1', franchise1_gave_up: 'p1', franchise2_gave_up: 'FP_0007_2027_3' };
+    // Proposer on either side resolves to the other franchise…
+    expect(partnerFor({ ...base, franchise: '0001', franchise2: '0007' }, '0001')).toBe('0007');
+    expect(partnerFor({ ...base, franchise: '0001', franchise2: '0007' }, '0007')).toBe('0001');
+    // …and a short id from MFL resolves identically to its padded form.
+    expect(partnerFor({ ...base, franchise: '0001', franchise2: '7' }, '0001')).toBe('0007');
   });
 
   it('exposes lower-cased playerNames for substring matching', () => {

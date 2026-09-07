@@ -132,11 +132,47 @@ export interface TradeOfferTip extends Omit<Tip, 'source' | 'text'> {
   /** Franchise who originated the offer — audit only, never to LLM */
   offeringFranchiseId: string;
   /**
+   * The franchise on the other side of the proposal. Internal only — the
+   * corroboration matcher uses it to spot web/groupme tips about the same
+   * deal, and the anonymizer never copies it into the payload the LLM sees.
+   */
+  partnerFranchiseId?: string;
+  /**
+   * Lower-cased names of every player in the proposal, for substring matching
+   * against tipster text. Internal only, and deliberately present even at
+   * tiers where no name may be printed — the matcher needs the name to
+   * recognise a tip about the same player.
+   */
+  playerNames?: string[];
+  /**
    * Per-offer graduated reveal. Present only when the offer has earned at
    * least one successful dice-roll signal. Each subsequent successful roll
    * bumps `signal` and unlocks more detail. See {@link TradeOfferExposure}.
    */
   exposure?: TradeOfferExposure;
+  /**
+   * Cumulative drip facts revealed about this proposal so far — deal shape,
+   * expiry clock, and public-trade-block cross references. Built by
+   * `scripts/lib/schefter-offer-beats.mjs`; carries no franchise name of its
+   * own and no player name outside {@link TradeOfferExposure.players}.
+   */
+  beats?: TradeOfferBeat[];
+  /**
+   * Which fact is NEW at this signal — `'team'`, `'player'`, or a beat kind.
+   * The playbook makes the LLM open on it, so consecutive posts about one
+   * proposal lead with different facts instead of a growing name list.
+   */
+  leadKind?: string;
+}
+
+/**
+ * One drip fact about a proposal. Deliberately loose: the beat builder owns
+ * the per-kind shape and the playbook documents each one, so adding a kind is
+ * a change in one module rather than three.
+ */
+export interface TradeOfferBeat {
+  kind: string;
+  [field: string]: unknown;
 }
 
 export interface Tip {

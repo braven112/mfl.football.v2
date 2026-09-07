@@ -67,6 +67,7 @@ import {
   RUMOR_LAST_POST_TS_KEY,
 } from './lib/speculation-budget.mjs';
 import { postSpeculationToGroupMe } from './lib/speculation-groupme.mjs';
+import { readActiveSeeds, seedSignals } from './lib/speculation-seeds.mjs';
 import { getRedisConfig, createUpstashClient } from './lib/redis.mjs';
 import { sendPushFanout, broadcast } from './lib/push-fanout.mjs';
 import { getLeagueBySlug } from '../src/config/leagues-data.mjs';
@@ -424,6 +425,30 @@ async function main() {
     return 0;
   }
 
+  // 4b. Seeds from expired trade proposals. A proposal that ran out the clock
+  // is the strongest private evidence available that a GM will move the players
+  // they offered and needs what they asked for — so it widens this lane's
+  // candidate pool and reweights it, rather than becoming a Schefter post about
+  // a deal that died. Only the PROPOSER's half is signal, and the franchise
+  // they asked is excluded as a counterparty so a hypothetical can never land
+  // back on the real proposal. Best effort: no seeds is the old behavior.
+  // navSlug, NOT the registry slug. They are the same string for TheLeague and
+  // differ for every other league ('afl-fantasy' vs 'afl'), and the WRITER
+  // side — schefter-rumor-scan.mjs — keys on navSlug. Passing the slug here
+  // works today and silently splits the seed store the moment this lane is
+  // pointed at a second league.
+  const seedNavSlug = getLeagueBySlug(LEAGUE_SLUG)?.navSlug ?? LEAGUE_SLUG;
+  const seeds = await readActiveSeeds({ redis, navSlug: seedNavSlug, nowMs: now.getTime(), warn });
+  const signals = seeds.length > 0 ? seedSignals(seeds) : null;
+  if (signals) {
+    const offered = [...signals.availableByFid.values()].reduce((n, set) => n + set.size, 0);
+    log(
+      `  Seeds: ${seeds.length} expired proposal(s) → ${offered} player(s) marked available, `
+        + `${signals.wantsByFid.size} franchise(s) with stated wants, `
+        + `${signals.excludedPairs.size} pair(s) excluded`,
+    );
+  }
+
   // 5. Find candidates.
   const rawCandidates = findTwoTeamCandidates({
     playersByFranchise,
@@ -431,6 +456,7 @@ async function main() {
     adpRankById,
     teams,
     limit: 10,
+    seedSignals: signals,
   });
   log(`  Raw candidate pool: ${rawCandidates.length}`);
   if (rawCandidates.length === 0) {

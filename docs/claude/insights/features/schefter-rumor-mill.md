@@ -3,6 +3,60 @@
 The load-bearing architecture rules live in CLAUDE.md ("Schefter multi-league").
 This file holds the finer operational learnings.
 
+## 2026-09-07 - A self-reported feed makes ABSENCE unusable, and repetition read as breadth
+
+**Context:** "Schefter seems to report on every trade rumor — is that
+accurate?" Auditing the trade-offer lane turned up three things that were not
+visible from the code, and one measurement that contradicts a comment in it.
+
+**1. The lane looked broad and was actually repetitive.** Six live proposals,
+all 26–56 days old, being re-reported up to seven times each because
+`buildExposure` had exactly one dimension: signal N named the hash-chosen team
+and `N-1` of its players. To diagnose this class, compare
+`schefter:trade_offers:exposure` (posts per offer) against the DISTINCT offer
+count — a high ratio is the signature. Do not compare exposure to the feed's
+post count and conclude the numbers disagree: **exposure increments on ENQUEUE,
+not on publish**, and the queue then produces one post from a batch of five, so
+roughly half of the passes never become their own post.
+
+**2. Owner-reported intake has no per-row TTL, so resolved proposals never
+leave.** `reportOwnerTrades` refreshes the whole `owner_reports` hash's expiry
+on every write, so an individual proposal stays in it until the entire hash
+expires — long after MFL resolved it. That is where the 26-to-56-day-old
+"live" proposals came from: dead deals drawing fresh dice rolls off a stale
+row. The row's own `expires` is the only reliable death signal, and nothing
+was reading it.
+
+**3. Therefore a DISAPPEARANCE from this lane means nothing.** When a feed is
+fed by owners loading a page, a record leaving view is equally consistent with
+"the thing ended" and "that owner stopped looking" — and per (2), the thing
+ending does not even reliably remove the row. Any beat of the form "talks have
+gone cold" built on absence would eventually land on a live negotiation. The
+generalizable rule: **on a self-reported source, only presence carries
+information.** We ship the two endings MFL states outright (`expires` passed;
+a matching TRADE in the transactions feed) and deliberately have no
+`withdrawn`.
+
+**4. Measured cadence, correcting a comment in
+`redact-trade-offer.mjs#offerPostProbability`.** That docblock reasons about
+"30–50 rolls/day" against a nominal 96 from the `*/15` cron. The workflow
+actually ran **20 times in 2.5 days (~8/day)** over Sep 5–7 — GitHub throttles
+scheduled runs hard on a busy repo, and the runs sit 2–5 hours apart, not 15
+minutes. Quiet hours are not the cause: `scanTradeOffers` runs before the
+posting gate, so the dice roll on every scan. Any future tuning of
+`OFFER_POST_PROBABILITY` should start from ~8 rolls/day, not 30–50 — at
+p=0.05 that is ~34%/day to first post, not the ~79%/24h the comment implies.
+
+**5. A private signal can be REUSED without being published.** An expired
+proposal is the strongest evidence the site holds about who will move whom.
+Announcing that it died spends it on one line; routing it into the speculation
+matcher's inputs (`scripts/lib/speculation-seeds.mjs`) lets it shape posts for
+30 days without ever naming the real deal. Two rules make that safe, and both
+generalize to any "use private data to inform public output" design: only the
+side that SPOKE is signal (the proposer offered their own players; the
+recipient merely got asked), and the pair that actually talked is excluded
+from the output space so the derived content cannot coincide with the source.
+
 ## 2026-09-05 - "Is it on for the AFL?" is three questions, not one
 
 **Context:** The trade-block lane (owner lists players on MFL's trade bait →

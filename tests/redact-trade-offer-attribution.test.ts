@@ -100,7 +100,9 @@ describe('a trade-offer post names only players the named team is giving up', ()
       teamMap,
       counts: { ownerOfferCount7d: 1, divisionOfferCount7d: 0, playerHistory: new Map() },
       currentYear: 2026,
-      exposureCount: 1,
+      // exposureCount 2 → signal 3, the first signal that prints a name under
+      // the every-other-signal cadence (see plannedPlayerCount).
+      exposureCount: 2,
       adpRankByPlayerId: new Map([['17104', 12], ['16613', 40]]),
     }).tip!;
     const { team, players } = tip.exposure!;

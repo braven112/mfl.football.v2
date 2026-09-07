@@ -202,6 +202,157 @@ never a hand edit — the feeds are cron-written, so a hand edit is invisible in
 review. It deliberately leaves the scanner's `posted`/exposure state alone, or
 the same offer regenerates the same wrong post on the next scan.
 
+### The drip — a beat may only assert what the feeds can see
+
+`scripts/lib/schefter-offer-beats.mjs` is the second dimension of the
+trade-proposal reveal. Before it, signal N named the hash-chosen team and `N-1`
+of that team's players in ADP order and nothing else, so post seven was post two
+with a longer list — a lane covering six live proposals read as if it reported
+every rumor in the league. Beats add the deal's shape, MFL's own expiry clock,
+and cross-references against the public trade block, and `leadKind` names the
+ONE fact that is new this signal so the prompt opens on it.
+
+- **A name now lands every OTHER signal** (`plannedPlayerCount`: 0,0,1,1,2,2,3…)
+  and a beat carries the signals in between. That is what makes it a drip rather
+  than a countdown, and it is why
+  `tests/redact-trade-offer-exposure.test.ts` reads `exposureCount: 2` where it
+  used to read `1`. Both ladders are monotone: a name or a beat that has shipped
+  is never withdrawn — the reader is assembling a picture.
+- **`blockByFid` is a `Map`, and a MISSING franchise must drop the beat.** "Not
+  on anybody's block" is exact only because a player can be listed on one block
+  — his own owner's. `feed.tradeBaitState` holds five of sixteen franchises
+  today, so an object-of-arrays that can't tell "no block read" from "empty
+  block" would report a player as unlisted on the strength of never having
+  looked.
+- **Every count over "all proposals" is a FLOOR, never a total.** The
+  league-wide `pendingTrades` read has returned nothing on every scan since the
+  lane went live (`commish sourced 0`); the six visible proposals are the ones
+  owners self-reported by loading the trades page. `third_desk` and
+  `position_run` therefore carry `atLeast: true` and the playbook forbids
+  "exactly" / "only" / a league total.
+- **`block_stale` says what is listed, never that nobody called.** Absence of a
+  proposal we can see is not absence of interest, and the beat has no field that
+  could express one — `tests/schefter-offer-beats.test.ts` pins its key set for
+  exactly that reason.
+- **Beats are not a second name surface.** `exposure.players` stays
+  authoritative; `buildMarketBeats` takes `nameablePlayerIds` and drops to
+  position-level phrasing for anyone outside it, so the other side's players are
+  never printable however far the ladder runs. `buildExposure` returns
+  `playerIds`/`chosenFid` for that purpose and `redactTradeOffer` rebuilds
+  `exposure` without them — the block the playbook calls the authoritative name
+  surface keeps exactly its three published fields.
+- **The named team comes from `chosenFid`, not from matching the display name
+  back through `teamMap`.** Two franchises can carry the same display string,
+  and the name lookup then hands the beats the wrong side's roster — the same
+  class of bug as the Loveland attribution above, one layer down.
+- At the end of both ladders (offer 1076 was on signal 7 the day this shipped)
+  `leadKind` rotates through the unlocked beats rather than parking on one.
+- **A beat leads only on the signal that UNLOCKED it.** Deriving "new" from
+  `unlockedBeatCount(signal)` alone is wrong the moment a proposal qualifies
+  for fewer beats than its signal number: with one beat available, every even
+  signal re-led on it and the rotation was unreachable — post seven reading
+  like post two, the exact failure the layer exists to remove. Compare against
+  what the PREVIOUS signal had unlocked, capped at the beats that exist.
+- **The named escalation tier must not reach the beats.** `nameablePlayerIds`
+  is `exposure.players` and nothing else. Admitting the named-tier
+  `escalatedPlayer` — on the reasoning that the ladder already authorizes his
+  name — let a beat print him at signal 4 while `exposure.players` still held
+  one other name, two signals before the drip meant it.
+- **Anti-leak Rule B has to cover `deal_shape` too.** It drops `pickTokens` at
+  the named tier because a name plus a pick round identifies the deal; the
+  shape beat reaches the prompt through a different field and was republishing
+  the same labels verbatim, with the playbook inviting the model to use them.
+- **The stored shape is the ask AS OF THE LAST REPORT, not the last scan.**
+  Written every scan, a changed ask was detectable for exactly one cycle — at
+  ~8 scans a day against a 5–35% roll, most changes were overwritten before
+  they could post. Anchored to the report, the beat means "changed since we
+  last told you", which survives until it is made.
+- **Counting beats must count only LIVE proposals.** `positionRuns` is built
+  before the expiry filter, so it has to apply the same check itself;
+  `owner_reports` keeps resolved proposals indefinitely, and `atLeast` does not
+  make a stale count true.
+- **The seed store is keyed on navSlug in BOTH lanes.** The writer uses
+  `NAV_SLUG`; the reader must resolve it through the registry rather than
+  passing the league slug. They are the same string for TheLeague and differ
+  everywhere else, so a slug works today and silently splits the store on the
+  second league.
+
+### An expired proposal is a SEED, not a post
+
+`scripts/lib/speculation-seeds.mjs` routes an expiry into the daily speculation
+lane instead of the rumor feed. A proposal that ran out the clock is the
+strongest private evidence the site has about who will move whom; announcing
+that a specific real deal died spends that once, while seeding it lets the
+speculation matcher build its own pairings off it for 30 days.
+
+- **Only the PROPOSER's half is signal.** Their offered players are an
+  availability fact about their own roster — the same KIND of fact as a public
+  trade-block listing, arrived at privately — and the positions they asked for
+  are their own stated need. The RECIPIENT said nothing: someone else asked
+  about their player. Marking that player available would publish a willingness
+  its owner never expressed, which is the redaction bug arriving through a
+  different lane. `buildSeedFromProposal` reads the sides off the resolved
+  proposer (never off `franchise` alone — MFL's owner-view rows omit it), and
+  the asked-about player's ID never leaves the function; only his POSITION does.
+- **The pair that actually talked is excluded from being paired.** Otherwise a
+  "hypothetical" could reproduce the real proposal and publish it named, which
+  is worse than the closure post this replaced. `seedSignals().excludedPairs`
+  feeds a check inside `findTwoTeamCandidates`'s buyer loop.
+- **Seeds are Redis-only, and must stay that way.** Everything else this lane
+  writes (`speculation-history.json`) is committed; a seed holds an unpublished
+  proposal, so committing one would permanently publish exactly what the
+  trade-offer subsystem exists to meter out.
+- **A seeded player becomes an eligible marquee**, not merely a re-ranked one —
+  `buildHaves` takes `seededIds` as a third qualifier beside the block and
+  positional surplus, because a seed that only reordered already-eligible
+  players would do almost nothing. The pool stays mixed for that reason too: if
+  seeded players were the ONLY unlisted ones ever speculated about, an
+  appearance would itself signal that a real offer had been made.
+- **`accepted` still posts, `expired` never does.** A completed trade is public
+  the moment it processes, so the callback reveals nothing; an expiry is
+  private, so it only ever moves the matcher's inputs.
+
+### Closing a proposal — only the two endings MFL states
+
+Movement beats (`ask_changed`, `re_offer`, `closure`) run off two new Redis
+keys: `trade_offers:shape` (a sorted, order-independent fingerprint of the ask,
+so the next scan can tell "changed" from "still sitting there") and
+`trade_offers:closed` (idempotency — a proposal reads as expired on every scan
+for the rest of its 30-day TTL).
+
+- **There is no `withdrawn` closure, and adding one would be a fabrication.**
+  A proposal leaving the scan is NOT evidence it was pulled: with `commish
+  sourced 0` the lane is fed by owner self-reports, and the `owner_reports`
+  hash has no per-row TTL, so a resolved proposal lingers in it while a live one
+  drops out the moment its owner stops loading the trades page. The two endings
+  we publish are the two MFL states outright — `accepted` (a TRADE in the
+  committed transactions feed with the same signature) and `expired` (the row's
+  own `expires` has passed). `CLOSURE_REASONS` is the allowlist and
+  `buildClosureBeat` returns null for anything else.
+- **`tradeSignatureOf` must keep hashing a proposal and the TRADE it became
+  alike.** MFL calls a different side "franchise1" depending on the export, so
+  the signature is the sorted franchise pair plus every asset from both sides
+  sorted together — the same shape
+  `schefter-scan.mjs#buildTradeSignature` builds for its supersede rule.
+  `tests/schefter-offer-beats.test.ts` runs the real 2026 TRADE row and the
+  owner-view proposal it would have come from through it and fails if they
+  diverge.
+- **A closure HOLDS the exposure signal instead of advancing it.** Ending a
+  story is not a licence to reveal one more name on the way out, so a proposal
+  closed after a single team-only post closes team-only.
+- **A proposal with `priorExposure < 1` closes silently.** Never having passed a
+  dice roll means the league was never told it existed; a closure post would be
+  the lane's first word on it, which is exactly what the roll exists to prevent.
+  It is marked closed and dropped.
+- **The expiry check also fixes a quieter bug:** before it, a proposal MFL
+  dropped weeks ago kept drawing dice rolls and shipping fresh rumors off a
+  stale owner report. That is where this lane's 26-to-56-day-old "live"
+  proposals came from.
+- **A changed ask jumps the rotation** rather than waiting for an even signal —
+  by the time its slot came up the ask may have changed again — and its shape
+  row is written on every scan, whether or not the dice landed, because the
+  change is a fact about the proposal rather than about whether we reported it.
+
 ### Former-name callbacks — the bit is the pairing, and it expires
 
 Schefter nodding to a name a franchise just retired ("Dead Cap Walking, the

@@ -3,9 +3,16 @@
  *
  * Each time the dice roll lands on the same offer, Schefter reveals more:
  *   signal 1 → name 1 team only
- *   signal 2 → team + 1 marquee player (highest ADP dynasty rank)
- *   signal 3 → team + 2 players
- *   signal N → team + (N-1) players in marquee order
+ *   signal 2 → team only; the post's new fact is a BEAT, not a name
+ *   signal 3 → team + 1 marquee player (highest ADP dynasty rank)
+ *   signal 4 → team + 1 player still; another beat carries this one
+ *   signal 5 → team + 2 players … a name every OTHER signal
+ *
+ * The cadence halved deliberately (Sep 2026). Under `signal - 1` the ladder
+ * had exactly one dimension — a longer name list every post — so six posts
+ * about one proposal read as the same post. `plannedPlayerCount` in
+ * scripts/lib/schefter-offer-beats.mjs owns the new cadence; the even signals
+ * carry deal shape, the expiry clock, or a trade-block cross reference.
  *
  * Tests exercise the redactor directly (not source-string grep) so the
  * ladder math is locked in even if the prompt text drifts.
@@ -14,6 +21,23 @@ import { describe, it, expect } from 'vitest';
 import { redactTradeOffer } from '../scripts/lib/redact-trade-offer.mjs';
 
 type RedactorArgs = Parameters<typeof redactTradeOffer>[0];
+
+/**
+ * `redactTradeOffer` can return `{ skip: true }`, so `tip` is optional on its
+ * result type, and its options object is inferred from JSDoc so a partial
+ * override is rejected outright. Both casts live here rather than at ~30 call
+ * sites, where they would also hide a real shape change. A genuine skip throws
+ * loudly instead of surfacing as a property error further down.
+ */
+function redactFrom(args: RedactorArgs) {
+  const result = redactTradeOffer(args as never);
+  if (!result.tip) throw new Error(`redactTradeOffer skipped unexpectedly: ${result.reason}`);
+  return result.tip;
+}
+
+function redact(overrides: Partial<RedactorArgs> = {}) {
+  return redactFrom(buildArgs(overrides));
+}
 
 function buildArgs(overrides: Partial<RedactorArgs> = {}): RedactorArgs {
   const rawOffer = {
@@ -62,29 +86,48 @@ function buildArgs(overrides: Partial<RedactorArgs> = {}): RedactorArgs {
 
 describe('redactTradeOffer — exposure ladder', () => {
   it('signal 1 (priorExposure=0): names exactly one team, zero players', () => {
-    const { tip } = redactTradeOffer(buildArgs({ exposureCount: 0 }));
+    const tip = redact({ exposureCount: 0 });
     expect(tip.exposure).toBeDefined();
     expect(tip.exposure!.signal).toBe(1);
     expect(tip.exposure!.team.name).toMatch(/Pigskins|Midwestside/);
     expect(tip.exposure!.players).toEqual([]);
   });
 
-  it('signal 2 (priorExposure=1): team + marquee player (highest ADP)', () => {
-    const { tip } = redactTradeOffer(buildArgs({ exposureCount: 1 }));
+  it('signal 2 (priorExposure=1): still team-only — a beat carries this post', () => {
+    const tip = redact({ exposureCount: 1 });
     expect(tip.exposure!.signal).toBe(2);
+    expect(tip.exposure!.players).toEqual([]);
+    // The post is not empty-handed: the drip layer supplies the new fact.
+    expect(tip.leadKind).toBeDefined();
+    expect(tip.leadKind).not.toBe('player');
+  });
+
+  it('signal 3 (priorExposure=2): team + marquee player (highest ADP)', () => {
+    const tip = redact({ exposureCount: 2 });
+    expect(tip.exposure!.signal).toBe(3);
     expect(tip.exposure!.players).toHaveLength(1);
     // Chase (rank 1) is the marquee piece.
     expect(tip.exposure!.players[0].name).toBe("Ja'Marr Chase");
     expect(tip.exposure!.players[0].position).toBe('WR');
   });
 
-  it('signal 3 (priorExposure=2): team + top 2 players in marquee order', () => {
-    const { tip } = redactTradeOffer(buildArgs({ exposureCount: 2 }));
-    expect(tip.exposure!.signal).toBe(3);
+  it('signal 5 (priorExposure=4): team + top 2 players in marquee order', () => {
+    const tip = redact({ exposureCount: 4 });
+    expect(tip.exposure!.signal).toBe(5);
     expect(tip.exposure!.players.map((p: any) => p.name)).toEqual([
       "Ja'Marr Chase",
       'Breece Hall',
     ]);
+  });
+
+  it('never un-reveals: the name list only ever grows with the signal', () => {
+    let previous = 0;
+    for (let exposureCount = 0; exposureCount <= 12; exposureCount += 1) {
+      const tip = redact({ exposureCount });
+      const count = tip.exposure!.players.length;
+      expect(count).toBeGreaterThanOrEqual(previous);
+      previous = count;
+    }
   });
 
   it('signal N: caps at the players the NAMED TEAM is giving up', () => {
@@ -97,7 +140,7 @@ describe('redactTradeOffer — exposure ladder', () => {
     // false claim about someone's roster. It shipped as "the Mavericks have had
     // Colston Loveland on the table" — a Pigskins player. Cap is the named
     // team's own side; synthesizing is still forbidden.
-    const { tip } = redactTradeOffer(buildArgs({ exposureCount: 9 }));
+    const tip = redact({ exposureCount: 9 });
     expect(tip.exposure!.signal).toBe(10);
     expect(tip.exposure!.players.map((p: any) => p.name)).toEqual([
       "Ja'Marr Chase",
@@ -111,9 +154,9 @@ describe('redactTradeOffer — exposure ladder', () => {
     const args1 = buildArgs({ exposureCount: 0 });
     const args2 = buildArgs({ exposureCount: 1 });
     const args3 = buildArgs({ exposureCount: 5 });
-    const t1 = redactTradeOffer(args1).tip.exposure!.team.name;
-    const t2 = redactTradeOffer(args2).tip.exposure!.team.name;
-    const t3 = redactTradeOffer(args3).tip.exposure!.team.name;
+    const t1 = redactFrom(args1).exposure!.team.name;
+    const t2 = redactFrom(args2).exposure!.team.name;
+    const t3 = redactFrom(args3).exposure!.team.name;
     expect(t1).toBe(t2);
     expect(t2).toBe(t3);
   });
@@ -135,15 +178,13 @@ describe('redactTradeOffer — exposure ladder', () => {
         } as RedactorArgs['rawOffer'],
         exposureCount: 0,
       });
-      teams.add(redactTradeOffer(args).tip.exposure!.team.name);
+      teams.add(redactFrom(args).exposure!.team.name);
     }
     expect(teams.size).toBe(2);
   });
 
   it('falls back gracefully when ADP rank map is absent', () => {
-    const { tip } = redactTradeOffer(
-      buildArgs({ exposureCount: 1, adpRankByPlayerId: undefined }),
-    );
+    const tip = redact({ exposureCount: 2, adpRankByPlayerId: undefined });
     expect(tip.exposure!.players).toHaveLength(1);
     // Without ADP, ordering tie-breaks on playerId — exact pick doesn't matter,
     // just that we got a valid named player from the offer.
@@ -151,12 +192,10 @@ describe('redactTradeOffer — exposure ladder', () => {
   });
 
   it('omits exposure block when both franchises are missing from teamMap', () => {
-    const { tip } = redactTradeOffer(
-      buildArgs({
+    const tip = redact({
         exposureCount: 0,
         teamMap: new Map(),
-      }),
-    );
+      });
     expect(tip.exposure).toBeUndefined();
   });
 });
