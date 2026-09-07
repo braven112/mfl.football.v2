@@ -266,6 +266,69 @@ args never constructed and every one of that component's stories rendered
 Symptom to recognize: a story that builds and appears in `index.json` but
 renders zero characters, while its siblings from another fixture are fine.
 
+## Trap 7 — a snapshot's network request can live in the CSS, not in the args
+
+**"Fixtures are offline" is checked at the wrong layer if you only check
+story args.** The whole suite's fixtures are already deliberately offline —
+headshots are inline data URIs, crests come from `staticDirs` — and
+`Roster/PlayerCell` still failed Chromatic intermittently on the Bengals mark
+(Sep 2026). No story named a URL. The fetch came from a stylesheet
+`preview.ts` injects.
+
+The mechanism, and why it is invisible from the story file:
+
+1. `buildNflLogoDarkCss()` swaps every NFL logo `<img>` in dark mode via
+   `content: url(...)`.
+2. It serves the self-hosted mirror for teams listed in
+   `src/data/nfl-dark-logos-manifest.json`, and **falls back to
+   `a.espncdn.com` for everything else**.
+3. That mirror is written by prebuild into `public/assets/nfl-logos/dark/`
+   and is **gitignored**. `storybook build` never runs prebuild.
+4. So in CI the manifest is its committed `{"codes": []}` default and ALL 32
+   teams fall back to the CDN. Same story for `buildCollegeLogoDarkCss()` and
+   its 258 rules.
+5. `content:` images have **no error fallback** — a failed load renders a
+   broken/blank mark, not the light SVG still sitting in `src` — and
+   Chromatic's `delay: 300` covers font and layout settle, not a cross-origin
+   round trip.
+
+Result: ESPN's weather failed builds that had nothing wrong with them, and on
+`main` (`--auto-accept-changes`) a bad capture would have been blessed as the
+baseline.
+
+The fix is two halves, both pinned by
+`tests/storybook-dark-logo-mirror.test.ts`:
+
+- **Storybook carries its own committed mirror.**
+  `.storybook/static/nfl-dark/` (32 PNGs, ~2.3 MB), served at
+  `/storybook-nfl-dark` — its own prefix, same reasoning as
+  `/storybook-fonts`: obviously Storybook's, and it cannot collide with a
+  `public/` mirror a local prebuild left behind. Refresh with
+  `pnpm mirror:storybook-dark-logos`, which refuses to write a partial mirror
+  (ESPN's edge answers a burst's first request with a spurious 404 often
+  enough that this matters — the script fans out at 3 and re-run means re-run). **Committed on purpose** — a visual baseline has to be
+  reproducible from a checkout alone, so re-fetching per CI run would move the
+  same flake earlier rather than remove it.
+- **`sameOriginOnly: true` on both builders.** It DROPS a swap that would
+  point off-origin instead of emitting it. That is the backstop, and it is the
+  half that generalizes: a missing mirror file degrades to the light mark in
+  dark mode — a deterministic, visible diff a human accepts or rejects — never
+  to a network request that usually works. No college cut is mirrored, so all
+  258 college rules simply do not exist in Storybook; correct today (no story
+  renders a college logo — `PlayerDetailsModal` leaves `#detail-college-logo`
+  at `src=""` because its client script never runs) and safe the day one does.
+
+`sameOriginOnly` is a **Storybook-only posture**. Production wants the CDN
+fallback: a failed prebuild fetch must degrade to the remote dark cut, never
+to no dark cut at all — that is the Aug 2026 AFL players-page bug in reverse.
+The builders memoize the default configuration only, so a Storybook build can
+never poison the CSS the SSR layout head reads.
+
+The generalizable rule: **before adding anything to `injectLayoutStyles()`,
+ask what URLs its rules resolve to in a build with no prebuild.** A `var()` or
+a color is free; a `content: url()`, a `@font-face src`, a `background-image`
+or a `mask-image` is a network request in every snapshot that matches it.
+
 ## Theme × league is pure CSS — which is why the matrix works
 
 Both axes are CSS-only in this codebase:

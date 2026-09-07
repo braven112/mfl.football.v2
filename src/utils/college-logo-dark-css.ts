@@ -121,8 +121,30 @@ export function resolveCollegeDarkLogoUrl(
  */
 let cachedCss: string | null = null;
 
-export function buildCollegeLogoDarkCss(): string {
-  if (cachedCss !== null) return cachedCss;
+/**
+ * Overrides for callers that are not the shipped site — the NFL twin of
+ * `NflLogoDarkCssOptions`, and here for the same reason: `.storybook/preview.ts`
+ * injects this stylesheet into a build that never ran prebuild, so every rule
+ * resolved to `a.espncdn.com`. No college dark cut is mirrored for Storybook
+ * (no story renders a college logo — `PlayerDetailsModal` leaves
+ * `#detail-college-logo` at `src=""` because its client script never runs),
+ * so `sameOriginOnly` here drops all 258 rules rather than swapping any. That
+ * is the point: it closes the trap before a story sets `collegeLogo` and
+ * silently reopens the CDN dependency. See docs/claude/rules/storybook.md.
+ */
+export interface CollegeLogoDarkCssOptions {
+  /** ESPN NCAA ids whose dark cut is self-hosted. Defaults to the prebuild manifest. */
+  manifestIds?: readonly string[];
+  /** Drop any swap that would resolve to a cross-origin URL rather than falling back to it. */
+  sameOriginOnly?: boolean;
+}
+
+export function buildCollegeLogoDarkCss(options: CollegeLogoDarkCssOptions = {}): string {
+  const { manifestIds = darkLogoManifest.ids, sameOriginOnly = false } = options;
+  // Only the shipped site's configuration is memoized — see the same note in
+  // nfl-logo-dark-css.ts.
+  const isDefaultConfig = manifestIds === darkLogoManifest.ids && !sameOriginOnly;
+  if (isDefaultConfig && cachedCss !== null) return cachedCss;
   const darkByLight = new Map<string, string>();
   for (const entry of Object.values(collegeLogos as Record<string, CollegeLogoEntry>)) {
     const light = entry?.logo;
@@ -141,8 +163,10 @@ export function buildCollegeLogoDarkCss(): string {
   const rules: string[] = [];
   const swappedSrcs: string[] = [];
   for (const [light, dark] of darkByLight) {
-    const resolved = resolveCollegeDarkLogoUrl(dark);
+    const resolved = resolveCollegeDarkLogoUrl(dark, manifestIds);
     if (!resolved) continue; // dark cut doesn't exist upstream — keep light logo
+    // A same-origin URL is a root-relative path; anything else is a CDN URL.
+    if (sameOriginOnly && !resolved.startsWith('/')) continue;
     rules.push(
       `html.dark img[src="${cssStringEscape(light)}"] { content: url("${cssStringEscape(resolved)}"); }`,
     );
@@ -158,6 +182,7 @@ export function buildCollegeLogoDarkCss(): string {
     const selectors = swappedSrcs.map((src) => `[src="${cssStringEscape(src)}"]`).join(', ');
     rules.push(`html.dark img.${COLLEGE_LOGO_FAILED_CLASS}:is(${selectors}) { visibility: visible; }`);
   }
-  cachedCss = rules.join('\n');
-  return cachedCss;
+  const css = rules.join('\n');
+  if (isDefaultConfig) cachedCss = css;
+  return css;
 }
