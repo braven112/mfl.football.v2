@@ -19,6 +19,20 @@ Push the current worktree branch to GitHub for a Vercel preview deployment, then
    - **Set `FORCE_PREVIEW_BUILD=1`** in the Vercel project's environment for a
      one-off preview without a PR.
 
+   **ORDER MATTERS: open the PR BEFORE the push, not after.** The ignore
+   command runs within seconds of the push and asks GitHub, right then,
+   whether an open PR exists — so push-then-open-PR loses the race and
+   cancels the build even though the PR is open moments later. Vercel still
+   stamps the deployment with the PR id afterwards, which makes the record
+   look like it should have built. It did not: read the build log, not the
+   metadata. Recovering costs a second push, because a cancelled build is
+   never resumed. (Observed 2026-09-07 on PR #1006: `[ignore-build] SKIP` at
+   16:00:43, PR opened at 16:00:5x.)
+
+   If the branch has no PR and you are about to push, open the PR first; if
+   it is already pushed, open the PR and then land a real commit — never an
+   empty one — to trigger the build.
+
    If step 4 finds a `CANCELED` deployment, do not retry — check the build log
    for `[ignore-build] SKIP` and say which of the two the user needs.
 
