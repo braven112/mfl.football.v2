@@ -133,3 +133,18 @@ Detecting "is this base URL my own apex host" must go through
 `https://theleague.us`, `https://WWW.THELEAGUE.US`, `http://...` and
 `...:443` are all the same host and must all strip.
 
+### Staging hosts live in `stagingDomains`, never in `domains`
+
+The per-league staging sites (`staging.theleague.us`, `staging.afl-fantasy.com`) need
+exactly one thing from the registry — the host→slug rewrite — and none of the
+rest. So they sit in a `stagingDomains` field that feeds `buildHostToSlugMap()`
+alone.
+
+Putting one in `domains` is the bug this guards: `leagueOrigin()` picks the
+canonical host out of `domains`, so a staging host could become the origin of a
+GroupMe link or an OG tag and send an owner to a host where they are not logged
+in — the same failure `canonicalDomain` exists to prevent, since session
+cookies are host-only.
+
+`tests/league-staging-domains.test.ts` pins it. Full runbook, including the DNS
+and Vercel steps that are not in code: `docs/claude/staging-sites.md`.
