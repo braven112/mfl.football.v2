@@ -67,6 +67,20 @@ function pickDisplayTeam(team) {
  * exposureCount is 0 (no prior posts → no exposure yet, which signals
  * "this is the first post — exposure starts at signal=1").
  *
+ * THE NAMED PLAYERS MUST BELONG TO THE NAMED TEAM. The prompt's signal-2
+ * wording is "Hearing the [team] have [Player] on the table" — an assertion
+ * that the team owns the player and is shopping him. This function used to
+ * pick the team by coin flip and the players from BOTH sides of the offer
+ * independently, so about half of all signal-2+ posts named a team that did
+ * not own the player. That shipped: "the Mavericks have had Colston Loveland
+ * on the table" when Loveland is a Pacific Pigskins player and Maverick was
+ * trying to ACQUIRE him (reported by the commissioner, 2026-09-07). A wrong
+ * trade attribution about a real owner's roster is the worst thing this lane
+ * can print, and it reads as pure invention to the owner it names.
+ *
+ * `playersByFid` therefore replaces the old flat `playerAssets`: each side's
+ * players stay attached to the franchise giving them up.
+ *
  * Note on the off-by-one: callers pass the number of PRIOR posts. The post
  * we're building now is at `signal = exposureCount + 1`. So:
  *   exposureCount = 0 → signal 1 → name team only
@@ -79,7 +93,7 @@ function buildExposure({
   offeringFid,
   rawOffer,
   teamMap,
-  playerAssets,
+  playersByFid,
   adpRankByPlayerId,
 }) {
   if (!Number.isFinite(signal) || signal < 1) return null;
@@ -91,18 +105,30 @@ function buildExposure({
   const candidates = [fid1, fid2].filter((f) => f);
   if (candidates.length === 0) return null;
 
+  const ownPlayers = (fid) => (playersByFid?.[fid] ?? []).filter((a) => a && a.kind === 'player' && a.name);
+
   // Deterministic single-team pick: hash the offerId so subsequent signals
   // about the same offer always reference the same team. "Either team but
   // only 1 initially" — the coin-flip is even between the two franchises.
   const bit = hashOfferIdToBit(offerId);
-  const chosenFid = candidates[bit % candidates.length];
+  let chosenFid = candidates[bit % candidates.length];
+
+  // …but a team that is giving up no players cannot be described as shopping
+  // one. When the coin-flip team is sending only picks, name the other side
+  // instead — still deterministic, and it keeps signal 2+ able to say
+  // something true rather than pairing a team with someone else's player.
+  if (ownPlayers(chosenFid).length === 0) {
+    const other = candidates.find((f) => f !== chosenFid);
+    if (other && ownPlayers(other).length > 0) chosenFid = other;
+  }
+
   const team = pickDisplayTeam(teamMap?.get?.(chosenFid));
   if (!team) return null;
 
   // Marquee ordering: ADP dynasty rank ascending (rank 1 = best). Players
   // without a rank sort to the end. Stable tie-break by playerId.
-  const ranked = playerAssets
-    .filter((a) => a && a.kind === 'player' && a.name)
+  // ONLY the chosen team's own side — see the header.
+  const ranked = ownPlayers(chosenFid)
     .map((a) => ({
       name: a.name,
       position: a.position ?? 'UNK',
@@ -294,7 +320,13 @@ export function redactTradeOffer({
     offeringFid,
     rawOffer,
     teamMap,
-    playerAssets: allAssets,
+    // Sides kept apart on purpose: `franchise1_gave_up` are fid1's players,
+    // `franchise2_gave_up` are fid2's. Merging them is what let a post name a
+    // team alongside the other side's player.
+    playersByFid: {
+      [String(rawOffer.franchise ?? offeringFid ?? '')]: side1,
+      [String(rawOffer.franchise2 ?? '')]: side2,
+    },
     adpRankByPlayerId,
   });
 
