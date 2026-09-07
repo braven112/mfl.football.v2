@@ -13,6 +13,7 @@ import {
   getIdeasWithActivitySince,
   getAllIdeas,
 } from '../../../utils/suggestions-storage';
+import { boardScope } from '../../../utils/suggestions-scope';
 
 function json(data: unknown, status = 200): Response {
   return new Response(JSON.stringify(data), {
@@ -25,14 +26,14 @@ export const GET: APIRoute = async ({ request }) => {
   const user = getAuthUser(request);
   if (!user?.franchiseId) return json({ error: 'Authentication required' }, 401);
 
-  const lastSeen = await getLastSeen(user.franchiseId);
+  const lastSeen = await getLastSeen(boardScope(user), user.franchiseId);
   if (!lastSeen) {
     // First visit — no new activity
     return json({ newIdeaCount: 0, ideaIdsWithNewActivity: [] });
   }
 
-  const ideaIds = await getIdeasWithActivitySince(lastSeen);
-  const ideas = await getAllIdeas();
+  const ideaIds = await getIdeasWithActivitySince(boardScope(user), lastSeen);
+  const ideas = await getAllIdeas(boardScope(user));
   const newIdeas = ideas.filter(i =>
     new Date(i.createdAt).getTime() > new Date(lastSeen).getTime() && !i.archived
   );
@@ -48,7 +49,7 @@ export const POST: APIRoute = async ({ request }) => {
   const user = getAuthUser(request);
   if (!user?.franchiseId) return json({ error: 'Authentication required' }, 401);
 
-  await setLastSeen(user.franchiseId);
+  await setLastSeen(boardScope(user), user.franchiseId);
 
   return json({ ok: true });
 };

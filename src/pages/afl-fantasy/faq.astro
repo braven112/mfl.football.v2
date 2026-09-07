@@ -1,0 +1,15 @@
+---
+/**
+ * FAQ (afl-fantasy) — thin route wrapper.
+ *
+ * Shared implementation lives in components/shared/faq/FaqPage.
+ * The redirect (if one is ever needed) must live HERE: 
+ * Astro.redirect() only redirects from a PAGE. Per-league static data imports
+ * also belong here — a static import specifier can't be a runtime variable.
+ */
+import FaqPage from '../../components/shared/faq/FaqPage.astro';
+
+export const prerender = false;
+---
+
+<FaqPage leagueSlug="afl-fantasy" />

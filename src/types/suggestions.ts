@@ -28,6 +28,25 @@ export interface WebsiteFields {
 /** Commissioner-set status labels */
 export type IdeaStatus = 'open' | 'under-review' | 'approved' | 'rejected' | 'implemented' | 'tabled';
 
+/**
+ * The GitHub issue an idea was filed as — the handoff from "an owner asked for
+ * this" to "an agent can work on it".
+ *
+ * Stored on the idea rather than derived, so the badge renders without a
+ * GitHub round-trip on every board load, and so filing is idempotent: the
+ * route refuses to file an idea that already carries one.
+ */
+export interface IdeaGithubIssue {
+  /** Issue number in the site repo. */
+  number: number;
+  /** Full html_url — what the badge links to. */
+  url: string;
+  /** ISO timestamp of the filing. */
+  filedAt: string;
+  /** franchiseId of the commissioner who filed it. */
+  filedBy: string;
+}
+
 /** Image uploaded to Vercel Blob */
 export interface ImageAttachment {
   url: string;
@@ -72,6 +91,8 @@ export interface Idea {
   locked: boolean;
   archived: boolean;
   poll?: Poll;
+  /** Set once a commissioner files this idea as a GitHub issue. */
+  githubIssue?: IdeaGithubIssue;
   commentCount: number;
   lastActivityAt: string;
   createdAt: string;

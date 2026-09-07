@@ -14,8 +14,10 @@ import {
   getCommentById,
   generateId,
   checkRateLimit,
+  rateLimitMessage,
   resolveTeamName,
 } from '../../../../../utils/suggestions-storage';
+import { boardScope } from '../../../../../utils/suggestions-scope';
 
 function json(data: unknown, status = 200): Response {
   return new Response(JSON.stringify(data), {
@@ -28,7 +30,7 @@ export const POST: APIRoute = async ({ params, request }) => {
   const user = getAuthUser(request);
   if (!user?.franchiseId) return json({ error: 'Authentication required' }, 401);
 
-  const idea = await getIdeaById(params.id!);
+  const idea = await getIdeaById(boardScope(user), params.id!);
   if (!idea) return json({ error: 'Idea not found' }, 404);
 
   if (idea.locked) {
@@ -53,19 +55,19 @@ export const POST: APIRoute = async ({ params, request }) => {
 
   // Validate parentId if provided
   if (body.parentId) {
-    const parent = await getCommentById(idea.id, body.parentId);
+    const parent = await getCommentById(boardScope(user), idea.id, body.parentId);
     if (!parent) {
       return json({ error: 'Parent comment not found' }, 400);
     }
   }
 
   // Rate limit
-  const { allowed } = await checkRateLimit(user.franchiseId);
+  const { allowed } = await checkRateLimit(boardScope(user), user.franchiseId);
   if (!allowed) {
-    return json({ error: 'Slow down — you\'re limited to 10 posts per hour.' }, 429);
+    return json({ error: rateLimitMessage() }, 429);
   }
 
-  const teamName = await resolveTeamName(user.franchiseId);
+  const teamName = await resolveTeamName(boardScope(user), user.franchiseId);
   const now = new Date().toISOString();
 
   const comment: Comment = {
@@ -79,13 +81,13 @@ export const POST: APIRoute = async ({ params, request }) => {
     createdAt: now,
   };
 
-  const ok = await saveComment(comment);
+  const ok = await saveComment(boardScope(user), comment);
   if (!ok) return json({ error: 'Failed to save comment' }, 500);
 
   // Update idea's comment count and last activity
   idea.commentCount = (idea.commentCount || 0) + 1;
   idea.lastActivityAt = now;
-  await saveIdea(idea);
+  await saveIdea(boardScope(user), idea);
 
   return json({ comment }, 201);
 };

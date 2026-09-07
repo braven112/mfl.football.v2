@@ -41,6 +41,16 @@ export interface LeagueFeatures {
   schefterTips: boolean;
   liveScoring: boolean;
   /**
+   * The league has a practice ("taxi") squad — rookies parked off the active
+   * roster. TheLeague's holds 3; the AFL has no such thing, so anything that
+   * names it must gate on this rather than assume every league has one.
+   *
+   * NOTE: `src/pages/api/move-to-practice.ts` predates this flag and still
+   * hardcodes TheLeague's cap without gating by league. Wiring it up is a
+   * separate change — this flag exists so UI copy can stop guessing today.
+   */
+  taxiSquad: boolean;
+  /**
    * The league replaces offseason free agency with a live auction on MFL.
    * While that window is open (src/utils/auction-window.ts) an in-place waiver
    * claim is the wrong mechanism, so the acquisition affordance deep-links to

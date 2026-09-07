@@ -114,7 +114,8 @@ export const DESTINATIONS = {
   stats: { path: '/stats', label: 'the stats hub', leagues: ['theleague'] },
   'league-summary': { path: '/league-summary', label: 'the league summary', leagues: ['theleague'] },
   'throwback-settings': { path: '/throwback-settings', label: 'your throwback era', leagues: ['theleague', 'afl-fantasy'] },
-  suggestions: { path: '/suggestions', label: 'the suggestion board', leagues: ['theleague'] },
+  suggestions: { path: '/suggestions', label: 'the suggestion board', leagues: ['theleague', 'afl-fantasy'] },
+  faq: { path: '/faq', label: 'the FAQ', leagues: ['theleague', 'afl-fantasy'] },
 
   // Same path, genuinely different pages: TheLeague's /activity tracks when
   // owners last visited the site, the AFL's is the transaction log. One label

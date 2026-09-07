@@ -8,9 +8,11 @@
  */
 
 import type { APIRoute } from 'astro';
-import { getAuthUser } from '../../../utils/auth';
+import { getAuthUser, isCommissionerOrAdmin } from '../../../utils/auth';
+import { LEAGUES } from '../../../config/leagues';
 import type { Idea, Comment } from '../../../types/suggestions';
 import { getAllIdeas, saveIdea, saveComment, generateId } from '../../../utils/suggestions-storage';
+import { boardScope } from '../../../utils/suggestions-scope';
 
 function json(data: unknown, status = 200): Response {
   return new Response(JSON.stringify(data), {
@@ -19,16 +21,28 @@ function json(data: unknown, status = 200): Response {
   });
 }
 
-const ADMIN_FRANCHISE_IDS = ['0001'];
-
 export const POST: APIRoute = async ({ request }) => {
   const user = getAuthUser(request);
-  if (!user?.franchiseId || !ADMIN_FRANCHISE_IDS.includes(user.franchiseId)) {
-    return json({ error: 'Admin only' }, 403);
+  if (!user?.franchiseId) return json({ error: 'Admin only' }, 403);
+
+  // The gate was a bare `['0001'].includes(franchiseId)`. That was merely
+  // sloppy while this endpoint could only reach TheLeague's board; scoping the
+  // board made it reachable for every league, and BOTH leagues have a
+  // franchise 0001 — so AFL 0001, a different person, passed a check written
+  // for TheLeague's commissioner. `isCommissionerOrAdmin` asks the question
+  // properly: it resolves the admin list for the session's OWN league.
+  if (!isCommissionerOrAdmin(user)) return json({ error: 'Admin only' }, 403);
+
+  // These fixtures are TheLeague's — its team names, its taxi squad, its rules
+  // debates. Seeding them onto another league's board would publish invented
+  // posts attributed to franchises that do not exist there, so this stays
+  // TheLeague-only until someone writes fixtures for the other league.
+  if (user.leagueId !== LEAGUES.theleague.id) {
+    return json({ error: 'Seed fixtures exist only for The League.' }, 400);
   }
 
   // Don't seed if ideas already exist
-  const existing = await getAllIdeas();
+  const existing = await getAllIdeas(boardScope(user));
   if (existing.length > 0) {
     return json({ message: `Already have ${existing.length} ideas, skipping seed.` });
   }
@@ -144,12 +158,12 @@ export const POST: APIRoute = async ({ request }) => {
   const results: string[] = [];
 
   for (const { idea, comments } of seeds) {
-    const ok = await saveIdea(idea);
+    const ok = await saveIdea(boardScope(user), idea);
     if (ok) {
       results.push(`Idea: ${idea.title}`);
       for (const comment of comments) {
         comment.ideaId = idea.id;
-        await saveComment(idea.id, comment);
+        await saveComment(boardScope(user), comment);
       }
     }
   }
