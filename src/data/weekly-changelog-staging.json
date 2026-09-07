@@ -2,9 +2,17 @@
   "weekOf": "2026-08-31",
   "changes": [
     {
+      "date": "2026-09-07",
+      "type": "bug-fix",
+      "summary": "The “Put us on your Home Screen” banner was showing to everyone — including owners already using the installed app, and on Android, where it gave iPhone instructions for a Share menu Android does not have. The banner was correctly deciding to hide itself; its own styling was overriding the decision, so it rendered anyway. It now appears only where it can actually help: a browser that can install the app, and never inside the app.",
+      "impact": "user",
+      "area": "notifications",
+      "league": "both"
+    },
+    {
       "date": "2026-09-06",
       "type": "bug-fix",
-      "summary": "The Sunday lineup check fired four days before the season started and told half the league their lineups were missing \u2014 for a Week 1 nobody could have set a lineup for yet. It was reading the calendar month, so September 1st counted as in-season even though Week 1 does not kick off until the Thursday after Labor Day. It now waits for actual kickoff.",
+      "summary": "The Sunday lineup check fired four days before the season started and told half the league their lineups were missing — for a Week 1 nobody could have set a lineup for yet. It was reading the calendar month, so September 1st counted as in-season even though Week 1 does not kick off until the Thursday after Labor Day. It now waits for actual kickoff.",
       "impact": "user",
       "area": "notifications",
       "league": "both"
@@ -12,7 +20,7 @@
     {
       "date": "2026-09-06",
       "type": "style-tweak",
-      "summary": "The Trade Builder now wears one mark everywhere. Search for it and you got a pair of swap arrows in the AFL and a handshake in The League \u2014 same tool, two icons, depending on which site you searched from. It is the handshake in both now, and the \u201cTrade Player\u201d action in a player's \u22ee menu wears it too, so the button and the tool it opens finally look like the same thing.",
+      "summary": "The Trade Builder now wears one mark everywhere. Search for it and you got a pair of swap arrows in the AFL and a handshake in The League — same tool, two icons, depending on which site you searched from. It is the handshake in both now, and the “Trade Player” action in a player's ⋮ menu wears it too, so the button and the tool it opens finally look like the same thing.",
       "impact": "user",
       "area": "trade-builder",
       "league": "afl"
@@ -20,7 +28,7 @@
     {
       "date": "2026-09-06",
       "type": "bug-fix",
-      "summary": "The Transaction Hub write-up described a bell. There has never been a bell \u2014 the button in the corner is, and always was, a handshake, which is the mark this site uses for trades and waivers. The article now says handshake in every place it said bell, and carries the handshake as its own icon, so the story matches the button you actually tap.",
+      "summary": "The Transaction Hub write-up described a bell. There has never been a bell — the button in the corner is, and always was, a handshake, which is the mark this site uses for trades and waivers. The article now says handshake in every place it said bell, and carries the handshake as its own icon, so the story matches the button you actually tap.",
       "impact": "user",
       "area": "whats-new",
       "league": "both"
@@ -28,7 +36,7 @@
     {
       "date": "2026-09-06",
       "type": "style-tweak",
-      "summary": "The AFL homepage hero now tells you what shipped. Every new feature used to arrive under the same headline \u2014 \u201cFRESH ON THE SITE.\u201d \u2014 no matter what it was, so the biggest type on the page said only that something had happened and left the actual news to the small print underneath. The hero now leads with the feature itself, the way the rest of the site's headlines already do, and a launch can carry its own hero-sized line written for that spot. Long headlines step the type down instead of spilling past the card.",
+      "summary": "The AFL homepage hero now tells you what shipped. Every new feature used to arrive under the same headline — “FRESH ON THE SITE.” — no matter what it was, so the biggest type on the page said only that something had happened and left the actual news to the small print underneath. The hero now leads with the feature itself, the way the rest of the site's headlines already do, and a launch can carry its own hero-sized line written for that spot. Long headlines step the type down instead of spilling past the card.",
       "impact": "user",
       "area": "homepage",
       "league": "afl"
@@ -36,7 +44,7 @@
     {
       "date": "2026-09-06",
       "type": "style-tweak",
-      "summary": "Your waiver claims now look like the players they are. The claim card used to spell out the player you'd claimed as a line of plain text \u2014 name, then \u201cTE \u00b7 WSH\u201d underneath \u2014 sitting directly above a table where every player wears a headshot, a team logo and a position. Same player, two different looks, one inch apart. The claim now uses the exact same player lockup as the rows below it, headshot and helmet included, and the drop line tucks in underneath it \u2014 same treatment on the Waiver Claims screen in the notifications hub, which lists those same claims. The priority number, Change Drop and Delete all work exactly as before.",
+      "summary": "Your waiver claims now look like the players they are. The claim card used to spell out the player you'd claimed as a line of plain text — name, then “TE · WSH” underneath — sitting directly above a table where every player wears a headshot, a team logo and a position. Same player, two different looks, one inch apart. The claim now uses the exact same player lockup as the rows below it, headshot and helmet included, and the drop line tucks in underneath it — same treatment on the Waiver Claims screen in the notifications hub, which lists those same claims. The priority number, Change Drop and Delete all work exactly as before.",
       "impact": "user",
       "area": "free-agents",
       "league": "both"
@@ -44,7 +52,7 @@
     {
       "date": "2026-09-06",
       "type": "style-tweak",
-      "summary": "The \u201cRostered by\u201d strip in a player's profile card had a little black tile sitting behind the team crest. It was there for a reason \u2014 the crest was the dark-mode cut of the logo, drawn to sit on ink, so it needed ink to sit on \u2014 but it read as a sticker slapped onto the card. The strip now takes each franchise's normal crest and lets it follow your theme like every other logo on the site, so the mark sits straight on the card in both light and dark mode with nothing boxed in behind it.",
+      "summary": "The “Rostered by” strip in a player's profile card had a little black tile sitting behind the team crest. It was there for a reason — the crest was the dark-mode cut of the logo, drawn to sit on ink, so it needed ink to sit on — but it read as a sticker slapped onto the card. The strip now takes each franchise's normal crest and lets it follow your theme like every other logo on the site, so the mark sits straight on the card in both light and dark mode with nothing boxed in behind it.",
       "impact": "user",
       "area": "rosters",
       "league": "both"
@@ -52,7 +60,7 @@
     {
       "date": "2026-09-06",
       "type": "style-tweak",
-      "summary": "The Free Agents header got tidier. The AL/NL switcher now wears the two conference crests instead of spelling out \u201cAmerican League\u201d and \u201cNational League\u201d \u2014 same two buttons, half the width, and you can tell at a glance which pool you're looking at. The \u201cView rosters\u201d button that sat off to the right is gone; rosters are one tap away in the menu, and the header is now about the players actually available.",
+      "summary": "The Free Agents header got tidier. The AL/NL switcher now wears the two conference crests instead of spelling out “American League” and “National League” — same two buttons, half the width, and you can tell at a glance which pool you're looking at. The “View rosters” button that sat off to the right is gone; rosters are one tap away in the menu, and the header is now about the players actually available.",
       "impact": "user",
       "area": "free-agents",
       "league": "afl"

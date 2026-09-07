@@ -195,3 +195,82 @@ describe('layout PWA inline scripts register once per document', () => {
     expect(pwaBlocks.length, 'one bind flag per guarded PWA script').toBe(2);
   });
 });
+
+
+describe('hidden elements are actually hidden', () => {
+  /**
+   * The bug this pins, in full, because it is the whole feature failing while
+   * every unit test passed:
+   *
+   * `hidden` is a USER-AGENT style. Any author `display` rule beats it. This
+   * component sets `display: flex` on its root and `display: grid` on the
+   * steps list, so on 2026-09-07 the banner rendered INSIDE the installed app,
+   * showing the iOS "tap Share" steps, on Android — three separate things it
+   * is explicitly built never to do.
+   *
+   * `resolveInstallPitch` was correct the whole time and every test above
+   * passed. The pure function returned 'installed'; the DOM ignored it.
+   *
+   * This repo has NO global [hidden] reset (src/styles/player-news.css
+   * carries its own `.pn-status[hidden]` rule for the same reason), so any
+   * component that toggles `hidden` on a flex or grid element has to neutralize
+   * it itself.
+   */
+  const component = fs.readFileSync(
+    path.resolve(__dirname, '../src/components/shared/pwa/InstallAppPrompt.astro'),
+    'utf8',
+  );
+
+  const styleBlock = component.slice(component.indexOf('<style>'));
+
+  /** Class selectors in the style block that set a `display` other than none. */
+  function classesWithDisplay(css: string): Set<string> {
+    const found = new Set<string>();
+    const ruleRe = /([^{}]+)\{([^}]*)\}/g;
+    let m: RegExpExecArray | null;
+    while ((m = ruleRe.exec(css))) {
+      const [, selector, body] = m;
+      const display = /display:\s*([\w-]+)/.exec(body)?.[1];
+      if (!display || display === 'none') continue;
+      if (selector.includes('[hidden]')) continue;
+      for (const cls of selector.match(/\.[\w-]+/g) ?? []) found.add(cls.slice(1));
+    }
+    return found;
+  }
+
+  it('neutralizes [hidden] on the root and on every descendant', () => {
+    // Two selectors, both load-bearing: the root carries `hidden` itself, and
+    // the steps/copy/button are descendants toggled independently.
+    const normalized = styleBlock.replace(/\s+/g, ' ');
+    expect(normalized, 'root [hidden] rule').toMatch(
+      /\.install-prompt\[hidden\][^{]*\{[^}]*display: none/,
+    );
+    expect(normalized, 'descendant [hidden] rule').toMatch(
+      /\.install-prompt \[hidden\][^{]*\{[^}]*display: none/,
+    );
+  });
+
+  it('gives every script-hidden element a display that [hidden] can beat', () => {
+    // The mechanical half: find each element the script toggles `hidden` on,
+    // and confirm its classes either carry no author `display` at all or are
+    // covered by the [hidden] rules above. Without the rules, this is the
+    // check that fails.
+    const toggled = [...component.matchAll(/data-install-(?:copy-\w+|steps|action)\b/g)].map(
+      (m) => m[0],
+    );
+    expect(toggled.length, 'script-hidden elements found in markup').toBeGreaterThan(3);
+
+    const hiddenRuleCoversDescendants = /\.install-prompt\s+\[hidden\]/.test(
+      styleBlock.replace(/\s+/g, ' '),
+    );
+    const displayed = classesWithDisplay(styleBlock);
+    // Root and steps are the two that actually collide today; assert the
+    // collision is known AND covered rather than asserting it away.
+    expect(displayed.has('install-prompt'), 'root still sets a display').toBe(true);
+    expect(displayed.has('install-prompt__steps'), 'steps still set a display').toBe(true);
+    expect(
+      hiddenRuleCoversDescendants,
+      'a flex/grid element is script-hidden with no [hidden] override — it will render anyway',
+    ).toBe(true);
+  });
+});

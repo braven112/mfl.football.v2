@@ -219,6 +219,27 @@ const isBanner = variant === 'banner';
 </script>
 
 <style>
+  /*
+   * `hidden` is a USER-AGENT style, so ANY author `display` rule beats it —
+   * and this component sets `display: flex` on the root and `display: grid` on
+   * the steps list. Without these two selectors every element the script
+   * hides renders anyway, which shipped on 2026-09-07 as: the banner showing
+   * INSIDE the installed app, with the iOS "tap Share" steps, on Android.
+   *
+   * The tell was that the explanatory paragraph between the title and the
+   * steps was missing while the steps rendered — a <p> has no author display
+   * rule, so `hidden` worked there and only there.
+   *
+   * This repo has no global [hidden] reset (src/styles/player-news.css
+   * carries its own `.pn-status[hidden]` for the same reason), so every
+   * component that toggles `hidden` on a flex/grid element must say so
+   * itself. Pinned by tests/pwa-install.test.ts.
+   */
+  .install-prompt[hidden],
+  .install-prompt [hidden] {
+    display: none !important;
+  }
+
   .install-prompt {
     display: flex;
     align-items: flex-start;
