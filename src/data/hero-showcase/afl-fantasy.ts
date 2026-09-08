@@ -171,6 +171,118 @@ const content: ShowcaseContent = {
       model: { name: 'Quinshon Judkins', descriptor: 'Featured', pos: 'RB', code: 'CLE', espnId: '4685702' },
     },
     {
+      key: 'trade-deadline', accent: 'gold', tone: 'red', scope: 'team',
+      component: 'AflCompositeHero \u00b7 trade deadline', wordmark: 'DEADLINE',
+      pill: 'Trade Deadline', title: 'Last call', titleAccent: 'to deal.',
+      summary:
+        'The face is a player actually on YOUR block, pulled from your trade bait \u2014 so the card wears ' +
+        'your club. Red because the window shuts tonight.',
+      ctaLabel: 'Open Trade Builder',
+      franchiseId: '0006',
+      model: { name: 'Garrett Wilson', descriptor: 'On the Block', pos: 'WR', code: 'NYJ', espnId: '4569618' },
+    },
+    {
+      key: 'standings', accent: 'navy', scope: 'team',
+      component: 'AflCompositeHero \u00b7 Monday standings', wordmark: 'STANDINGS',
+      pill: 'Monday standings', title: 'The race', titleAccent: 'tightens.',
+      summary:
+        'Cast from the headliner of whichever club is leading, so the card wears the team the race is ' +
+        'actually about \u2014 the same rule the recap follows for the week\u2019s top scorer.',
+      ctaLabel: 'See the race',
+      franchiseId: '0003',
+      model: { name: 'Malik Nabers', descriptor: 'Leading the Race', pos: 'WR', code: 'NYG', espnId: '4595348' },
+    },
+    {
+      key: 'waivers', accent: 'navy', scope: 'league',
+      component: 'AflCompositeHero \u00b7 waiver day', wordmark: 'WAIVERS',
+      pill: 'Waiver day', title: 'Claims run', titleAccent: 'tonight.',
+      summary:
+        'The face is a free agent \u2014 nobody rosters him, so there is no club whose colours this could ' +
+        'honestly wear. League navy, and his NFL crest behind him.',
+      ctaLabel: 'Set your claims',
+      model: { name: 'Rome Odunze', descriptor: 'Top Target', pos: 'WR', code: 'CHI', espnId: '4431299' },
+    },
+    {
+      key: 'news', accent: 'navy', scope: 'league',
+      component: 'AflCompositeHero \u00b7 around the AFL', wordmark: 'NEWS',
+      pill: 'Around the AFL', title: 'Around', titleAccent: 'the AFL.',
+      summary:
+        'Schefter\u2019s coverage of the moves and the matchups shaping both races. Coverage of the whole ' +
+        'league, not a dispatch from one clubhouse.',
+      ctaLabel: 'Read the latest',
+      model: { name: 'Brock Bowers', descriptor: 'Headliner', pos: 'TE', code: 'LV', espnId: '4432665' },
+    },
+    {
+      key: 'finale', accent: 'navy', scope: 'league',
+      component: 'AflCompositeHero \u00b7 season finale', wordmark: 'FINALE',
+      pill: 'Season finale', title: 'Seeds are', titleAccent: 'locking.',
+      summary:
+        'The last week before the bracket. Every club\u2019s seed moves on the same Sunday, so this one ' +
+        'belongs to the league rather than to any of them.',
+      ctaLabel: 'View standings',
+      model: { name: 'Saquon Barkley', descriptor: 'Headliner', pos: 'RB', code: 'PHI', espnId: '3929630' },
+    },
+    {
+      key: 'playoffs-incoming', accent: 'navy', scope: 'league',
+      component: 'AflCompositeHero \u00b7 playoffs incoming', wordmark: 'PLAYOFFS',
+      pill: 'Playoffs incoming', title: 'Bracket time', titleAccent: 'is here.',
+      summary:
+        'The countdown into the bracket. Once the games actually start, the bespoke bracket hero takes ' +
+        'over \u2014 a spotlight cannot hold sixteen seeds.',
+      ctaLabel: 'View bracket',
+      model: { name: 'Drake Maye', descriptor: 'Headliner', pos: 'QB', code: 'NE', espnId: '4431452' },
+    },
+    {
+      key: 'title-game', accent: 'gold', scope: 'league',
+      component: 'AflCompositeHero \u00b7 world championship', wordmark: 'TITLE\u00a0GAME',
+      pill: 'World Championship', title: 'One game for', titleAccent: 'the crown.',
+      summary:
+        'Trophy gold for the one game the whole league watches. Both finalists are somebody\u2019s club, ' +
+        'which is exactly why the card is not painted in either.',
+      ctaLabel: 'View bracket',
+      model: { name: 'Caleb Williams', descriptor: 'Headliner', pos: 'QB', code: 'CHI', espnId: '4431611' },
+    },
+    {
+      key: 'champion', accent: 'gold', scope: 'league',
+      component: 'AflCompositeHero \u00b7 champion crowned', wordmark: 'CHAMPION',
+      pill: 'Champion crowned', title: 'A new', titleAccent: 'champion.',
+      summary:
+        'League scope on purpose: the face here is a league-wide headliner, not the winner\u2019s own ' +
+        'player, so club colours would dress it in whoever happened to be cast.',
+      ctaLabel: 'View recap',
+      model: { name: 'Travis Etienne', descriptor: 'Headliner', pos: 'RB', code: 'NO', espnId: '4239996' },
+    },
+    {
+      key: 'new-year', accent: 'navy', scope: 'league',
+      component: 'AflCompositeHero \u00b7 new league year', wordmark: 'NEW\u00a0YEAR',
+      pill: 'New league year', title: 'The season', titleAccent: 'resets.',
+      summary:
+        'A rookie models the reset \u2014 the newest class is the one nobody has rostered yet, which is ' +
+        'the whole point of the phase.',
+      ctaLabel: 'Review rosters',
+      model: { name: 'Colston Loveland', descriptor: 'Rookie', pos: 'TE', code: 'CHI', espnId: '4723086' },
+    },
+    {
+      key: 'league-event', accent: 'gold', scope: 'league',
+      component: 'AflCompositeHero \u00b7 calendar event', wordmark: 'EVENT',
+      pill: 'Happening now', title: 'A dated league', titleAccent: 'event.',
+      summary:
+        'The catch-all for anything on the calendar without a phase of its own. It still gets a face and ' +
+        'a crest rather than the branded card it used to fall back to.',
+      ctaLabel: 'Learn more',
+      model: { name: 'Matthew Golden', descriptor: 'Headliner', pos: 'WR', code: 'GB', espnId: '4701936' },
+    },
+    {
+      key: 'default', accent: 'navy', scope: 'league',
+      component: 'AflCompositeHero \u00b7 default', wordmark: 'AFL',
+      pill: 'AFL', title: 'Two conferences.', titleAccent: 'One champion.',
+      summary:
+        'The league\u2019s own card, shown on a day no phase claims. Twenty-four teams, two conferences, ' +
+        'one champion.',
+      ctaLabel: 'View standings',
+      model: { name: 'Tetairoa McMillan', descriptor: 'Headliner', pos: 'WR', code: 'CAR', espnId: '4685472' },
+    },
+    {
       key: 'franchise-ambiguous', accent: 'gold', scope: 'league',
       component: 'hero-franchise-accent · declines', wordmark: 'KEEPERS',
       pill: 'Rostered twice', title: 'When the rule', titleAccent: 'refuses to guess.',
