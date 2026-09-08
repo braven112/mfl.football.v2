@@ -74,7 +74,7 @@ export function tradeDeadlineIsoDate(slug, year) {
     // Week N starts at kickoff + (N-1)*7. The Wednesday that closes Week 10 and
     // opens Week 11 is therefore kickoff + 10*7 - 1 days. Same derivation as
     // the `afl-trade-deadline` rule in league-event-resolver.ts, pinned against
-    // it by tests/trade-deadline-data.test.ts.
+    // it by tests/schefter-rumor-cadence.test.ts.
     return shiftIsoDate(nflKickoffIsoDate(year), 10 * 7 - 1);
   }
 

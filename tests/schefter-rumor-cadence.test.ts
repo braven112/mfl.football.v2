@@ -10,9 +10,10 @@ import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import {
+  allowsTwoPostCycle,
   IN_SEASON_MAX_RUMOR_POSTS_PER_DAY,
-  isBusyMorningAllowed,
   isLeagueSeasonOpen,
+  MAILBAG_EXEMPT_FROM_MILL_CAP,
   leagueSeasonWindow,
   rumorMillCapReason,
   rumorMillDailyCap,
@@ -50,16 +51,42 @@ describe('trade deadline — resolved from the registry, never inlined', () => {
   });
 
   it("computes the AFL's Wednesday between weeks 10 and 11", () => {
-    // Pinned against the AFL's own resolved event feed, which independently
-    // computes 2026-11-18 from the same rule in league-event-resolver.ts.
     expect(tradeDeadlineIsoDate('afl-fantasy', 2026)).toBe('2026-11-18');
+  });
+
+  it('agrees with the AFL event feed the site actually renders', () => {
+    // compute-league-events.mjs REGENERATES and commits this artifact, so its
+    // year advances on its own. Comparing it to a hardcoded date would pass
+    // today and fail on every CI run from Feb 2027 — read the year off the
+    // artifact and check the two derivations agree for whatever year it holds.
     const resolved = JSON.parse(
       readFileSync(path.join(process.cwd(), 'data/afl-fantasy/resolved-events.json'), 'utf8'),
     );
-    const found = JSON.stringify(resolved).match(
-      /"id":"afl-trade-deadline".*?"startDate":"(\d{4}-\d{2}-\d{2})/,
+    const event = resolved.events.find(
+      (e: { id: string }) => e.id === 'afl-trade-deadline',
     );
-    expect(found?.[1]).toBe('2026-11-18');
+    expect(event, 'afl-trade-deadline missing from resolved-events.json').toBeDefined();
+    expect(tradeDeadlineIsoDate('afl-fantasy', resolved.leagueYear)).toBe(
+      String(event.startDate).slice(0, 10),
+    );
+  });
+
+  it("pins TheLeague's registry date against the hero-resolver override", () => {
+    // hero-resolver.ts carries its own hardcoded `month === 11 && day === 13`
+    // for the trade-deadline-day hero. Nothing shares the two, so moving the
+    // registry date would silently desync the hero override from the rumor
+    // mill's deadline window — the hero would fire on a day the mill no longer
+    // treats as the deadline. This IS that pin.
+    const hero = readFileSync(
+      path.join(process.cwd(), 'src/utils/hero-resolver.ts'),
+      'utf8',
+    );
+    const m = hero.match(/return month === (\d+) && day === (\d+);/);
+    expect(m, 'isTradeDeadlineDay no longer matches the expected shape').toBeTruthy();
+    const [, month, day] = m!;
+    expect(tradeDeadlineIsoDate('theleague', 2026)).toBe(
+      `2026-${month.padStart(2, '0')}-${day.padStart(2, '0')}`,
+    );
   });
 
   it('returns null for a league with no deadline rather than inventing one', () => {
@@ -181,14 +208,67 @@ describe('rumorMillDailyCap', () => {
   });
 });
 
-describe('busy-morning catch-up follows the cap', () => {
-  it('is off in season — two posts off one slot defeats a 1/day cap', () => {
-    expect(isBusyMorningAllowed('theleague', atPT('2026-10-01'), SHARED)).toBe(false);
+describe('two-post cycles follow the cap', () => {
+  it('are off in season — two posts off one slot defeats a 1/day cap', () => {
+    expect(allowsTwoPostCycle('theleague', atPT('2026-10-01'), SHARED)).toBe(false);
   });
 
-  it('is on in the offseason and in the deadline window', () => {
-    expect(isBusyMorningAllowed('theleague', atPT('2026-07-01'), SHARED)).toBe(true);
-    expect(isBusyMorningAllowed('theleague', atPT('2026-11-10'), SHARED)).toBe(true);
+  it('are on in the offseason and in the deadline window', () => {
+    expect(allowsTwoPostCycle('theleague', atPT('2026-07-01'), SHARED)).toBe(true);
+    expect(allowsTwoPostCycle('theleague', atPT('2026-11-10'), SHARED)).toBe(true);
+  });
+
+  it('gate BOTH double-post paths, not just the busy-morning one', () => {
+    // The daily counter increments once per delivering CYCLE, so every path
+    // that ships two beats has to ask. Gating only busy-morning left the
+    // gossip secondary shipping two posts against a cap of one — and the
+    // tighter cap made it fire MORE often, since a 1/day mill drains the
+    // gossip queue slower and it crosses the pressure threshold sooner.
+    const src = readFileSync(
+      path.join(process.cwd(), 'scripts/schefter-rumor-scan.mjs'),
+      'utf8',
+    );
+    const calls = src.match(/allowsTwoPostCycle\(LEAGUE_SLUG, now, MAX_POSTS_PER_DAY\)/g) ?? [];
+    expect(calls.length).toBeGreaterThanOrEqual(2);
+    // One guards the gossip secondary, one the busy-morning trade split.
+    const gossipIdx = src.indexOf("postKind === 'gossip' && secondaryBucket");
+    const busyIdx = src.indexOf('BUSY_MORNING_TRADE_THRESHOLD &&');
+    expect(src.slice(gossipIdx, gossipIdx + 700)).toMatch(/allowsTwoPostCycle/);
+    expect(src.slice(busyIdx - 400, busyIdx + 400)).toMatch(/allowsTwoPostCycle/);
+  });
+});
+
+describe('the Friday mailbag is the one exemption from the cap', () => {
+  it('is declared as an exemption, not left implicit', () => {
+    expect(MAILBAG_EXEMPT_FROM_MILL_CAP).toBe(true);
+  });
+
+  it('is resolved BEFORE checkGates, which returns early', () => {
+    // checkGates returns on a failed gate, so asking about the mailbag after
+    // it is asking too late: in season one earlier rumor spends the only slot,
+    // the mailbag never runs, its done-key is never set, and the swept gossip
+    // tips age out unseen — the exact loss the mailbag exists to prevent.
+    const src = readFileSync(
+      path.join(process.cwd(), 'scripts/schefter-rumor-scan.mjs'),
+      'utf8',
+    );
+    const candidateIdx = src.indexOf('let mailbagCandidate = false;');
+    const gateIdx = src.indexOf('const gates = await checkGates(redis, now');
+    expect(candidateIdx).toBeGreaterThan(-1);
+    expect(gateIdx).toBeGreaterThan(candidateIdx);
+    expect(src).toMatch(/checkGates\(redis, now, \{ exemptFromMillCap: mailbagCandidate \}\)/);
+    expect(src).toMatch(/if \(exemptFromMillCap && millPostsToday >= millCap\)/);
+  });
+
+  it('still requires gossip tips to actually be waiting', () => {
+    // The exemption buys one extra post a week, not a standing licence: no
+    // gossip in the queue means no mailbag and no exemption.
+    const src = readFileSync(
+      path.join(process.cwd(), 'scripts/schefter-rumor-scan.mjs'),
+      'utf8',
+    );
+    const idx = src.indexOf('let mailbagCandidate = false;');
+    expect(src.slice(idx, idx + 900)).toMatch(/classifyTipKind\(t\) === 'gossip'/);
   });
 });
 
@@ -199,7 +279,7 @@ describe('scanner wiring', () => {
   );
 
   it('gates the busy-morning double-post on the cap', () => {
-    expect(src).toMatch(/isBusyMorningAllowed\(LEAGUE_SLUG, now, MAX_POSTS_PER_DAY\)/);
+    expect(src).toMatch(/allowsTwoPostCycle\(LEAGUE_SLUG, now, MAX_POSTS_PER_DAY\)/);
   });
 
   it('counts the mill on its OWN key, not the shared budget', () => {
@@ -240,7 +320,31 @@ describe('per-offer rarity gates', () => {
   it('holds a reported offer for a 7-day cooldown', () => {
     expect(src).toMatch(/const OFFER_REPOST_COOLDOWN_MS = 7 \* 24 \* 60 \* 60 \* 1000/);
     expect(src).toMatch(/nowMs - lastPostMs < OFFER_REPOST_COOLDOWN_MS/);
-    expect(src).toMatch(/hset\(OFFER_LAST_POST_KEY/);
+    expect(src).toMatch(/OFFER_LAST_POST_KEY,\s*Object\.fromEntries/);
+  });
+
+  it('stamps the cooldown on DELIVERY, never at enqueue', () => {
+    // scanTradeOffers only QUEUES a tip; the post ships later and may never
+    // ship at all (quality gate, daily cap, strike-out, expiry). Stamping at
+    // enqueue silenced an offer for 7 days over a post nobody read — and with
+    // TIP_EXPIRY_MS also 7 days, that usually means never. The write belongs
+    // beside the other delivery budgets, keyed off consumedBatch.
+    const scanFnIdx = src.indexOf('async function scanTradeOffers(');
+    const scanFnEnd = src.indexOf('// ── History subject heuristic ──');
+    expect(scanFnIdx).toBeGreaterThan(-1);
+    expect(scanFnEnd).toBeGreaterThan(scanFnIdx);
+    // No cooldown WRITE anywhere inside the enqueue function.
+    expect(src.slice(scanFnIdx, scanFnEnd)).not.toMatch(/hset\(\s*OFFER_LAST_POST_KEY/);
+    // ...and the delivery-side write reads the consumed batch.
+    const writeIdx = src.indexOf('const reportedOfferIds =');
+    expect(writeIdx).toBeGreaterThan(scanFnEnd);
+    expect(src.slice(writeIdx, writeIdx + 500)).toMatch(/consumedBatch/);
+  });
+
+  it('derives the offer id by stripping the prefix, not by offset', () => {
+    // A bare slice(3) silently yields a garbage key if the tip id shape ever
+    // changes, and a garbage key means no cooldown at all.
+    expect(src).toMatch(/startsWith\('to_'\) \? t\.id\.slice\('to_'\.length\) : ''/);
   });
 
   it('checks the cooldown BEFORE spending the offer’s daily roll', () => {

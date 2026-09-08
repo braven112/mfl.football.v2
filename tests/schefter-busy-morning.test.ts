@@ -174,6 +174,6 @@ describe('cap accounting — busy-morning posts share one slot', () => {
     // one — the pile-up the cap exists to prevent — so the catch-up runs only
     // in the offseason and in each league's trade-deadline run-up. See
     // tests/schefter-rumor-cadence.test.ts for the cap itself.
-    expect(SCANNER_SRC).toMatch(/isBusyMorningAllowed\(LEAGUE_SLUG, now, MAX_POSTS_PER_DAY\)/);
+    expect(SCANNER_SRC).toMatch(/allowsTwoPostCycle\(LEAGUE_SLUG, now, MAX_POSTS_PER_DAY\)/);
   });
 });

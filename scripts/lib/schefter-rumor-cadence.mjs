@@ -102,13 +102,37 @@ export function rumorMillCapReason(slug, now) {
 }
 
 /**
- * May the busy-morning catch-up ship TWO rumor beats in one cycle?
+ * May a single cycle ship TWO feed posts against one slot?
  *
- * Only where the cap is above one. Under a 1/day cap the double-post would
- * put two rumors in the chat back-to-back off a single slot — the exact
- * pile-up the in-season cap exists to prevent — so the overnight backlog just
- * clears a day slower instead.
+ * Both catch-up mechanisms do this — the busy-morning trade split and the
+ * gossip secondary — and BOTH must ask, because the counter increments once
+ * per delivering cycle regardless of how many beats shipped. Under a 1/day cap
+ * an ungated double-post puts two rumors in the chat back-to-back off a single
+ * slot, which is the exact pile-up the in-season cap exists to prevent.
+ *
+ * Gating only one of the two was a real bug in this feature's first draft: the
+ * gossip secondary stayed open, and the tighter cap made it fire MORE often,
+ * because a 1/day mill drains the gossip queue slower and it crosses
+ * SECONDARY_GOSSIP_POST_PRESSURE sooner. If a third double-post path is ever
+ * added, it asks here too.
  */
-export function isBusyMorningAllowed(slug, now, offseasonCap) {
+export function allowsTwoPostCycle(slug, now, offseasonCap) {
   return rumorMillDailyCap(slug, now, offseasonCap) > 1;
 }
+
+/**
+ * The Friday mailbag is the ONE thing exempt from the mill's daily cap.
+ *
+ * It is not discretionary chatter: it is the weekly sweep that stops
+ * owner-submitted gossip tips from aging out unseen, and it is already limited
+ * to once per Friday by its own `mailbag:done_date` key. Without the exemption
+ * one earlier rumor spends the day's only in-season slot, the mailbag never
+ * runs, and the swept tips are silently destroyed — the precise outcome the
+ * mailbag exists to prevent. Losing a tip an owner actually wrote is worse
+ * than one extra post a week.
+ *
+ * Kept as a named constant rather than an inline `true` so the exemption is
+ * greppable and has somewhere for its reasoning to live. Nothing else may be
+ * added to it without the same argument: the cap is the feature.
+ */
+export const MAILBAG_EXEMPT_FROM_MILL_CAP = true;

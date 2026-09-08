@@ -313,6 +313,15 @@ puts the lane back:
   counter stops meaning "chances this offer had to leak". The window sits just
   past the 7-day tip expiry, so nearly every proposal dies inside it and is
   reported exactly once.
+- **The cooldown is stamped on DELIVERY, never at enqueue** — off
+  `consumedBatch`, beside the other daily budgets, under the
+  BUDGET-ON-DELIVERY sentinel. `scanTradeOffers` only QUEUES a tip; the post
+  ships later and may never ship at all (quality gate, daily cap, strike-out,
+  expiry), and roughly half the offers that pass the roll never become their
+  own post. Stamping at enqueue silences an offer for 7 days over a post
+  nobody read — and because `TIP_EXPIRY_MS` is also 7 days, that usually means
+  never. Note this is exactly where `exposure` is wrong and has always been
+  wrong (it counts enqueues); do not copy it.
 - **The volume boost SURVIVES all of this.** A player three desks are calling
   about is the genuine breaking story; the gradient from 10%/day up to the
   0.35 ceiling is what separates it from a routine offer. Note the ceiling now
@@ -351,13 +360,25 @@ three trade rumors a day on top of it reads as spam.
   against a cap of one.
 - **The cap may only TIGHTEN the shared budget, never widen it** — the lane
   cannot outspend the budget it draws from. Pinned by test.
-- **Busy-morning catch-up is off wherever the cap is 1.** Two beats off a
-  single slot is exactly the back-to-back pile-up the cap exists to prevent, so
-  an overnight backlog just clears a day slower in season.
+- **EVERY double-post path is off wherever the cap is 1**, not just the one you
+  are looking at. The counter increments once per delivering CYCLE, so both the
+  busy-morning trade split AND the gossip secondary must ask
+  `allowsTwoPostCycle`. Gating only busy-morning was a real bug in the first
+  draft of this feature, and the tighter cap made the ungated path fire MORE
+  often — a 1/day mill drains the gossip queue slower, so it crosses
+  `SECONDARY_GOSSIP_POST_PRESSURE` sooner. A third such path asks too.
+- **The Friday mailbag is the ONE exemption from the cap**, and it is resolved
+  BEFORE `checkGates` because that function returns early. Otherwise one
+  earlier rumor spends the day's only in-season slot, the mailbag never runs,
+  `mailbag:done_date` is never set, and the swept gossip tips age out unseen —
+  the precise loss the mailbag exists to prevent. Losing a tip an owner
+  actually wrote is worse than one extra post a week, and its own done-key
+  still bounds the exemption to once per Friday. Nothing else gets added to
+  this exemption without the same argument: the cap is the feature.
 - **The deadline is PER LEAGUE and the two differ** — TheLeague's is a fixed
   Nov 13, the AFL's is the Wednesday between Weeks 10 and 11 (2026: Nov 18). A
   single shared window would be wrong in both leagues on both days. The data
-  lives in the registry (`leagues-data.mjs#tradeDeadline`); `tradeDeadlineFor`
+  lives in the registry (`leagues-data.mjs#tradeDeadline`); `tradeDeadlineIsoDate`
   in `src/utils/trade-deadline.mjs` is the only resolver, and Best Ball
   declares `null` rather than being omitted, because a substituted date would
   open a deadline window in a league that never trades.

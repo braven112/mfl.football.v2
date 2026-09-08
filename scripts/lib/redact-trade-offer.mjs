@@ -591,7 +591,7 @@ export function redactTradeOffer({
  * Effective count blends real submitted offerers (full weight) with saved
  * trade-builder drafts (0.4 weight, computed in the scanner).
  *
- * The exponential growth is intentional — it keeps the per-run probability
+ * The exponential growth is intentional — it keeps the per-day probability
  * vague at low volume (owner can't tell whether their move tipped Schefter)
  * while accelerating the pass on heavily-shopped players. Combined with the
  * tier-cap on draft-only contribution, this gives Schefter speed without

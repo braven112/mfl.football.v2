@@ -58,9 +58,10 @@ export type TradeOfferVolumeHint = 'first_offer' | 'repeat_offer' | 'serial';
  * - `fresh`    : first_seen less than 48h ago → rumor-mill voice (phones ringing)
  * - `lingering`: first_seen 48h+ ago → "offered but phones aren't picking up"
  *
- * No guaranteed post — the per-run dice roll (OFFER_POST_PROBABILITY in
- * scripts/lib/redact-trade-offer.mjs) still gates emission. Lingering offers
- * can still fail the roll forever; that's the design.
+ * No guaranteed post — the once-per-PT-day dice roll (OFFER_POST_PROBABILITY
+ * in scripts/lib/redact-trade-offer.mjs) still gates emission, and a reported
+ * offer then goes quiet for OFFER_REPOST_COOLDOWN_MS. Lingering offers can
+ * fail the roll forever; that's the design.
  */
 export type TradeOfferFramingHint = 'fresh' | 'lingering';
 
