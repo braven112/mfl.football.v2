@@ -1,5 +1,72 @@
 [
   {
+    "id": "theleague-draft-broadcast",
+    "date": "2026-08-28",
+    "category": "new-page",
+    "icon": "draft-podium",
+    "leagues": [
+      "theleague"
+    ],
+    "title": "Rookie Draft Night Gets A Television",
+    "link": "/draft/broadcast",
+    "linkLabel": "Open the big board",
+    "summary": "Plug a laptop into the TV and let the room watch the rookie draft happen. Keep making your picks in MFL exactly like always — this board just watches the same draft you are in, and puts every selection on screen seconds later: the player, the crest of the team that took him, and how far down the board he was when somebody reached.",
+    "description": [
+      "Three rounds, fifty-one picks, and for years the only way to know what went was to watch somebody's face change. The picks live inside MFL on sixteen separate laptops, which is fine for drafting and useless for a room. So here is <a href=\"/draft/broadcast\">the Draft Broadcast</a> — a page with exactly one job, which is to be plugged into a television and looked at.",
+      "Nothing about how you draft changes. Keep making picks in MFL. This board just watches the same draft you are in: a few seconds after a selection lands, the player takes over the whole screen in his new franchise's colors, crest behind him, position and college and bye week underneath. Between picks it tells the room who is on the clock and who is up next, and it keeps the screen awake so the TV does not go dark in the middle of round two.",
+      "The line that will start arguments is <strong>board rank</strong> — where the guy sat in the rookie class when his name got called. Taken well ahead of it and the screen says so. Still the top name available and it says <strong>Best Available</strong>, which is the polite way of announcing that everyone else left him there. It is ranked against the rookie class specifically, not against every free agent in the league, so 1.01 reads like 1.01 instead of like the 300th-best asset on the board.",
+      "It is live during the draft, and there is a rehearse mode that replays last year's draft pick by pick — worth running once before the night, if only to see the 1.01 land again. Once the picks are in, the <a href=\"/draft/room\">draft room</a> still holds the full board and the <a href=\"/draft/order\">draft order</a> still holds next year's."
+    ],
+    "image": "theleague-draft-broadcast.webp",
+    "imageAlt": "The Draft Broadcast page for The League, filling a widescreen display. A pick reveal is on screen: the eyebrow line reads “WITH THE 1.01, COWBOY UP SELECT” above the player name “Ashton Jeanty” in large condensed type, then a row giving his position RB, his college Boise State, and BYE 8. A green “BEST AVAILABLE” badge sits below, and under it “BOARD RANK” over a large “#1”. The drafting franchise’s crest is watermarked large behind the text over a deep red-to-navy gradient in that franchise’s colors, with a faint “1.01” numeral across the lower left.",
+    "excludeFromHero": true
+  },
+  {
+    "id": "my-draft-list",
+    "date": "2026-08-27",
+    "category": "new-feature",
+    "icon": "draft-podium",
+    "leagues": [
+      "theleague",
+      "afl"
+    ],
+    "title": "Your Board, On The Actual Draft Board",
+    "link": "/cr",
+    "linkLabel": "Build your board",
+    "summary": "The rankings board now talks to MFL. Build your order here, hit push, and it becomes the My Draft List your draft room reads off — the same list that sits there at 3am when the clock is running and you are not awake to defend yourself.",
+    "description": [
+      "There has always been a gap between the board you build and the board that drafts for you. You would spend an evening sorting players on <a href=\"/cr\">My Draft List</a>, then open MFL and hand-type the whole thing into a different list, in a different order, on a different screen. Most people did it once and then never again, which is how a carefully built board turns into an autopick taking the best available kicker.",
+      "That gap is closed. The board pulls your existing draft list down from MFL, and pushes your order back up to it — the real one, the one the Live Draft Room reads. Your previous list is saved before anything is overwritten, so an undo is one tap away, and the confirmation tells you exactly how many players are about to be written before you commit to anything. Seed it from the sources you already picked on <a href=\"/import-rankings\">Import Rankings</a>, drag it into the shape you want, push it, go to bed.",
+      "There is also a filter for the players you can actually draft, which is a shorter list than you think. In a rookie-draft league it is the rookies; in a league that drafts everyone it is anyone not already sitting on a roster in your conference — and it knows the difference, so a player another conference owns is still yours to take. Turn the filter on and it limits the push too: what you see is what gets written. No more discovering on draft night that a third of your board is on somebody else's <a href=\"/rosters\">roster</a>."
+    ],
+    "image": "my-draft-list.webp",
+    "imageAlt": "The My Draft List board with Pull from MFL and Push to MFL controls above a ranked player list",
+    "excludeFromHero": true
+  },
+  {
+    "id": "afl-draft-broadcast",
+    "date": "2026-08-27",
+    "category": "new-page",
+    "icon": "draft-podium",
+    "leagues": [
+      "afl"
+    ],
+    "title": "Put The Draft On The Big Screen",
+    "link": "/draft/broadcast",
+    "linkLabel": "Open the big board",
+    "summary": "Plug a laptop into the TV and let the room watch the draft happen. Every pick made in MFL lands on screen seconds later — the player, his new team's colors and crest, and exactly how far down the board he was when somebody grabbed him.",
+    "description": [
+      "Draft night has always had the same problem: the picks happen inside MFL, on twelve separate laptops, and the room has no idea what just went until somebody says it out loud. So here is <a href=\"/draft/broadcast\">the Draft Broadcast</a> — a page with one job, which is to be plugged into a TV and looked at.",
+      "Keep making your picks in MFL exactly like always. Nothing about that changes. This board just watches the same draft you're in and reacts to it: a few seconds after a selection lands, the player takes over the whole screen in the colors of the team that just took him, with his crest behind him. Position, pro team, bye week, what he's projected for. Take a team defense and the screen doesn't go empty where a man should be — two of that unit's actual stars turn up shoulder to shoulder, the same marquee defenders the <a href=\"/players\">free agent board</a> puts in front of you, and they get the pick. A helmet is not a face, and nobody should have to guess who Denver's pass rush is.",
+      "And the line the room is going to argue about: where he actually stood when his name got called. <strong>BEST AVAILABLE</strong> means nobody left on the board was rated higher — that one turns green. <strong>14th best available</strong> means thirteen better men were sitting right there. The board doesn't call it a steal and it doesn't call it a reach; it tells you the number and lets twelve people draw their own conclusions, loudly. The one thing it will not do is measure you against a draft you aren't in — with seven <a href=\"/keepers\">keepers</a> per team the good players are gone before 1.01 is even called, so this counts only the men who were genuinely available to you.",
+      "Between picks the board keeps the room oriented — who's on the clock, what just came off, who's warming up next, in the order <a href=\"/draft/order\">the draft order</a> set months ago. Because the AFL drafts by conference, there's a board for each: open the American League or the National League, whichever one is actually running that night, and flip between them at the bottom. Hit Full Screen and the site disappears entirely.",
+      "Built for Saturday. Everything on it comes off the same MFL draft you're already in, so there is nothing to set up — open it and it follows along."
+    ],
+    "excludeFromHero": true,
+    "image": "afl-draft-broadcast.webp",
+    "imageAlt": "The AFL Draft Broadcast board on a TV, showing which franchise is on the clock over its team colors and crest, with the last four picks and the next three teams up."
+  },
+  {
     "id": "free-agents-rostered-by",
     "date": "2026-08-26",
     "category": "enhancement",
