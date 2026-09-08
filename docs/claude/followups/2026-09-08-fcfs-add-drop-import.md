@@ -4,10 +4,10 @@ status: open
 severity: P0
 opened: 2026-09-08
 hotfix_pr: https://github.com/braven112/mfl.football.v2/pull/1018
-hotfix_sha:
-followup_issue:
+hotfix_sha: 759aee0
+followup_issue: 1020
 followup_pr:
-followup_session:
+followup_session: session_01LpDY8gHp8RpWCqLfb5rVi1
 ---
 
 # Follow-up: teams could not add free agents in the FCFS window
@@ -77,12 +77,19 @@ endpoint choice this route shipped with.
     above it, so the else branch cannot be reached. Harmless, but it reads as a
     live case and will mislead the next reader.
 
-- [ ] **F4 — Fold in any post-merge reviewer findings**
-  - Source: Gemini / Copilot / CodeQL, which land after the merge
-  - Where: PR #1018 comments
-  - Why deferred: `/hotfix` does not wait on the advisory reviewers. CodeQL
-    (`Analyze`) *was* waited on because this touches a server route handling
-    user-supplied input; the others were not.
+- [x] **F4 — Post-merge reviewer findings — DONE, folded in before this brief closed**
+  - Source: Copilot, `#1018` review at 02:43Z
+  - Where: `src/pages/api/waiver-claim.ts`, the write loop
+  - Finding: the loop never checked `res.ok`, so a non-2xx from MFL fell through
+    to the read-back rather than hard-failing. Correct, and it was a REGRESSION
+    from this hotfix: the old FCFS path scored a non-2xx as `refused` via
+    `readMflImportResult`, and retiring that reader took the status check out
+    with it. Left alone, a 502/503 write whose read-back also failed would have
+    been reported as "Submitted, but we could not confirm it" — the softest
+    possible wording for a write known never to have reached MFL.
+  - Resolution: `if (!res.ok) return fail(...)` restored inside the loop, with a
+    guard test. CodeQL was waited on pre-merge and passed clean; Gemini did not
+    post.
 
 ## Context to start cold
 
