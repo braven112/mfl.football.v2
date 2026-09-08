@@ -57,7 +57,11 @@ describe('the catalog covers every country, with no duplicate ids', () => {
       expect(options.length).toBeGreaterThan(0);
       expect(new Set(options.map((z) => z.id)).size).toBe(options.length);
       for (const z of options) {
-        expect(z.zone, `${code}/${z.id} needs an IANA zone`).toMatch(/^[A-Za-z_]+\/[A-Za-z_+-]+$/);
+        // Asked of the runtime, not a regex — the pattern this replaced rejected
+        // `America/Argentina/Buenos_Aires` and `Etc/GMT+10`, both legitimate.
+        let real = true;
+        try { new Intl.DateTimeFormat('en-US', { timeZone: z.zone }); } catch { real = false; }
+        expect(real, `${code}/${z.id} needs a real IANA zone`).toBe(true);
         // `auto` labels need a locale or Intl says "GMT+10" instead of AEST.
         if (z.label === 'auto') expect(z.locale, `${code}/${z.id}`).toBeTruthy();
       }

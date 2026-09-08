@@ -30,6 +30,26 @@ import { LEAGUE_CLOCK, zoneOptionsFor, isLeagueClock, COUNTRY_CODES } from '../s
 
 const REPO_ROOT = process.cwd();
 
+/**
+ * Is this a zone the runtime actually knows?
+ *
+ * Not a regex. The pattern this replaced (`^[A-Za-z_]+\/[A-Za-z_+-]+$`)
+ * rejected two whole shapes of legitimate IANA id — a third path segment
+ * (`America/Argentina/Buenos_Aires`) and digits (`Etc/GMT+10`) — so it would
+ * have failed on a correct registry value and sent someone looking for a bug
+ * in the data. `Intl` throws on an unknown zone and accepts every real one,
+ * which is the property these assertions actually want.
+ */
+function isRealZone(zone: string): boolean {
+  try {
+    new Intl.DateTimeFormat('en-US', { timeZone: zone });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+
 describe('league official clock', () => {
   it('is declared by every league in the registry', () => {
     expect(ALL_LEAGUES.length).toBeGreaterThan(0);
@@ -39,9 +59,7 @@ describe('league official clock', () => {
       expect(clock.id, `${league.slug}.officialClock.id`).toBeTruthy();
       expect(clock.label, `${league.slug}.officialClock.label`).toBeTruthy();
       expect(clock.name, `${league.slug}.officialClock.name`).toBeTruthy();
-      expect(clock.zone, `${league.slug}.officialClock.zone must be IANA`).toMatch(
-        /^[A-Za-z_]+\/[A-Za-z_+-]+$/
-      );
+      expect(isRealZone(clock.zone), `${league.slug}.officialClock.zone must be a real IANA zone`).toBe(true);
     }
   });
 
@@ -89,9 +107,7 @@ describe('league official clock', () => {
         equivalents.length
       );
       for (const eq of equivalents) {
-        expect(eq, `${league.slug} equivalent "${eq}" must be IANA`).toMatch(
-          /^[A-Za-z_]+\/[A-Za-z_+-]+$/
-        );
+        expect(isRealZone(eq), `${league.slug} equivalent "${eq}" must be a real IANA zone`).toBe(true);
         expect(isLeagueClock({ zone: eq }, league.officialClock)).toBe(true);
       }
     }
