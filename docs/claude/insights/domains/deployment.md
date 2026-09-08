@@ -24,6 +24,22 @@
 2. A verified public route known to resolve directly,
 instead of assuming the custom domain route is a valid benchmark target.
 
+> **CORRECTED 2026-09-08 — this was not a routing quirk. It was a crash.**
+> `/rosters` was 404ing because its SSR frontmatter *threw*, and Astro served
+> the styled 404 page with a 404 status because the site had no
+> `src/pages/500.astro` for the error lookup to find (see
+> `docs/claude/rules/error-pages.md`). The custom domain was healthy; the page
+> was broken. The same failure took TheLeague's roster page down for every
+> owner on 2026-09-08 and was misread the same way a second time, costing hours
+> on three wrong theories.
+>
+> The conclusion above — "prefer a route known to resolve" — is exactly the
+> wrong lesson, because it routes *around* a live outage instead of at it. The
+> right move on a 404 you did not expect is `get_runtime_logs` filtered to the
+> route: a `404 [error/serverless]` line, a 404 **with an error payload**, means
+> a throw rather than a missing route. Keep the preview-URL recovery half of
+> this entry; discard the benchmark-target advice.
+
 ## 2026-07-07 - An Invalid Workflow File Presents As "0 Jobs / event=push / conclusion=failure"
 
 **Context:** Debugging why Schefter went silent. The `schefter-scan.yml` scan step's `env:` map had defined `GROUPME_AFL_ROGER_BOT_ID` twice.

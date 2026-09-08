@@ -316,10 +316,22 @@
       ]
     },
     {
+      "name": "error-pages",
+      "rules": "docs/claude/rules/error-pages.md",
+      "paths": [
+        "src/pages/404.astro",
+        "src/pages/500.astro",
+        "src/pages/*path*.astro"
+      ],
+      "note": "Astro finds its error page by the EXACT route `/500`. Delete src/pages/500.astro and the lookup falls through to `[...path].astro`, which pins 404 — so every SSR crash on the site renders as a missing page, which is how a P0 outage got triaged as a deleted route on 2026-09-08.",
+      "tests": [
+        "tests/ssr-error-page-status.test.ts"
+      ]
+    },
+    {
       "name": "mfl-weekly-results",
       "paths": [
         "src/utils/coach-data.ts",
-        "src/utils/weekly-scores.ts",
         "src/utils/weekly-player-results.ts"
       ],
       "note": "MFL omits `matchup` on a week it has not paired up and lists the franchises on weeklyResults instead — array-wrapping that undefined 404'd the roster page. Prove every optional MFL node truthy before making a list of it.",
