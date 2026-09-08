@@ -51,7 +51,7 @@ const { leagueSlug, status, recap, recapYear, myTeam, myCapital, capitalYear } =
 // READ, never resolved: this component is the page body, and reading a
 // preference has no side effects — it is `resolveViewerPreferences`, which
 // WRITES cookies, that must stay in a route. PT alone until the viewer picks.
-const clock = await readViewerClock(Astro.cookies, getAuthUser(Astro.request));
+const clock = await readViewerClock(Astro.cookies, getAuthUser(Astro.request), leagueSlug);
 const league = getLeagueBySlug(leagueSlug)!;
 const hideLeaguePrefix = Astro.locals.hideLeaguePrefix ?? false;
 const r = (path: string) => resolveLeaguePath(`/${leagueSlug}${path}`, hideLeaguePrefix);

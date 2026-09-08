@@ -27,6 +27,7 @@ import {
   DEFAULT_ZONE_IDS,
   LEAGUE_CLOCK,
   isLeagueClock,
+  type LeagueClock,
   kickoffZonesFor,
   nextSundayKickoffEpoch,
   zoneOptionsFor,
@@ -52,6 +53,13 @@ export interface Props {
   loginPath?: string | null;
   /** Overridable so a story renders a fixed clock. */
   sampleKickoff?: number;
+  /**
+   * This league's official clock, from the registry. A PROP rather than a
+   * registry lookup because this component is deliberately props-only — the
+   * thin route knows its league and nothing here should have to guess. It
+   * defaults to the site's own clock so a story can render without one.
+   */
+  officialClock?: LeagueClock;
 }
 
 const {
@@ -63,12 +71,13 @@ const {
   syncedToAccount = false,
   loginPath = null,
   sampleKickoff = nextSundayKickoffEpoch(),
+  officialClock = LEAGUE_CLOCK,
 } = Astro.props;
 
 const countries = countryOptions();
 const provider = sundayTicketProvider(prefs.country);
-const preview = formatKickoffZones(sampleKickoff, kickoffZonesFor(prefs));
-const leagueClockLabel = zoneShortName(LEAGUE_CLOCK);
+const preview = formatKickoffZones(sampleKickoff, kickoffZonesFor(prefs, officialClock));
+const leagueClockLabel = zoneShortName(officialClock);
 ---
 
 <TheLeagueLayout title={title}>
@@ -154,7 +163,7 @@ const leagueClockLabel = zoneShortName(LEAGUE_CLOCK);
                     <span class="pf-option__body">
                       <span class="pf-option__abbr">{zoneShortName(z)}</span>
                       <span class="pf-option__name">{z.name}</span>
-                      {isLeagueClock(z) && <span class="pf-option__tag">league clock</span>}
+                      {isLeagueClock(z, officialClock) && <span class="pf-option__tag">league clock</span>}
                     </span>
                   </label>
                 ))}

@@ -724,7 +724,7 @@ const waiverWindow = resolveWaiverWindow(calendarEvents);
 // The deadline in the header line, on the viewer's own clock when they have
 // named one (PT alone until then). Read-only: a page render must never write a
 // preference cookie, and only /preferences and the Sunday Ticket chips do.
-const viewerClock = await readViewerClock(Astro.cookies, authUser);
+const viewerClock = await readViewerClock(Astro.cookies, authUser, 'theleague');
 const waiverWindowLabel = describeWaiverWindow(waiverWindow, viewerClock);
 const canClaim = !!claimFranchiseId && !isAuctionSeason;
 // The verb this league puts on an acquisition — 'Bid' here, because TheLeague

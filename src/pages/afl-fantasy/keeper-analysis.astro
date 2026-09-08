@@ -171,7 +171,7 @@ const fetchMeta = feed<{ lastFetched?: string }>(selectedYear, 'fetch.meta.json'
 // "Data as of ..." answers "how stale is this?", which is a question about the
 // reader's own day — so it prints in the clock they chose, with the league's PT
 // beside it. PT alone until they choose one (`/preferences`).
-const viewerClock = await readViewerClock(Astro.cookies, getAuthUser(Astro.request));
+const viewerClock = await readViewerClock(Astro.cookies, getAuthUser(Astro.request), league.slug);
 const lastFetched = fetchMeta?.lastFetched
   ? formatForViewer(new Date(fetchMeta.lastFetched), viewerClock, { date: true })
   : null;

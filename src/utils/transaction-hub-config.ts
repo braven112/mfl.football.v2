@@ -27,7 +27,7 @@
  * other conference still sees their own line.
  */
 
-import { getLeagueBySlug } from '../config/leagues';
+import { getLeagueBySlug, leagueClock } from '../config/leagues';
 import {
   getConferenceName,
   getConferenceTeams,
@@ -36,6 +36,7 @@ import {
 import theLeagueConfig from '../data/theleague.config.json';
 import { leagueUsesWaiverPriority } from './waiver-system';
 import type { WaiverPriorityRenderTeam } from './waiver-priority-render';
+import type { LeagueClock } from './viewer-preferences';
 
 export interface TransactionHubConfig {
   /** A session that belongs to THIS league and names a franchise. */
@@ -56,6 +57,12 @@ export interface TransactionHubConfig {
   showWaiverPriority: boolean;
   /** Where "manage your claims" sends an owner — claims are read-only here. */
   freeAgentsPath: string;
+  /**
+   * This league's official clock, from the registry. It travels in the config
+   * blob because the hub's client script has no registry to ask, and the "as
+   * of" stamp prints the league's clock beside the viewer's own.
+   */
+  officialClock?: LeagueClock;
 }
 
 /**
@@ -83,6 +90,9 @@ export function buildTransactionHubConfig(
 ): TransactionHubConfig {
   const league = getLeagueBySlug(leagueSlug);
   const franchiseId = authUser?.franchiseId || null;
+  // A property of the LEAGUE, so every return below carries it — including the
+  // signed-out shell, whose footnote stamp is rendered all the same.
+  const officialClock = leagueClock(leagueSlug);
 
   // Asked once, for signed-in and signed-out alike: whether the league runs a
   // priority order is a property of the LEAGUE, not of who is looking. A
@@ -93,13 +103,13 @@ export function buildTransactionHubConfig(
   // The session must name THIS league. A franchise id alone proves nothing —
   // both leagues have an 0001.
   const inThisLeague = !!league && !!franchiseId && authUser?.leagueId === league.id;
-  if (!inThisLeague) return { ...SIGNED_OUT, freeAgentsPath, showWaiverPriority };
+  if (!inThisLeague) return { ...SIGNED_OUT, freeAgentsPath, showWaiverPriority, officialClock };
 
   if (leagueSlug === 'afl-fantasy') {
     const conf = getFranchiseConference(franchiseId);
     // A franchise the AFL config does not place in a conference has no line to
     // stand in; gate rather than guess one.
-    if (!conf) return { ...SIGNED_OUT, freeAgentsPath, showWaiverPriority };
+    if (!conf) return { ...SIGNED_OUT, freeAgentsPath, showWaiverPriority, officialClock };
     return {
       signedIn: true,
       franchiseId,
@@ -111,6 +121,7 @@ export function buildTransactionHubConfig(
       })),
       freeAgentsPath,
       showWaiverPriority,
+      officialClock,
     };
   }
 
@@ -126,5 +137,6 @@ export function buildTransactionHubConfig(
     })),
     freeAgentsPath,
     showWaiverPriority,
+    officialClock,
   };
 }

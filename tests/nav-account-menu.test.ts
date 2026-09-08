@@ -2,12 +2,14 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { leagueHasFeature } from '../src/config/leagues';
+import { DEFAULT_VIEWER_PREFERENCES } from '../src/utils/viewer-preferences';
+import { countryOptions } from '../src/utils/broadcast-channels';
 
 /**
  * The nav drawer's account menu — the viewer's own settings, under their team
  * name.
  *
- * Three things about it are load-bearing rather than stylistic:
+ * Four things about it are load-bearing rather than stylistic:
  *
  * 1. **The clock is read from the COOKIE, never resolved.** `/preferences`
  *    calls `resolveViewerPreferences`, which WRITES cookies (illegal from a
@@ -25,6 +27,16 @@ import { leagueHasFeature } from '../src/config/leagues';
  * 3. **The disclosure re-initializes on `astro:page-load`.** The ClientRouter
  *    swaps the footer on every in-site navigation; a `DOMContentLoaded`-only
  *    binding leaves the chevron inert after the first page.
+ *
+ * 4. **The row's two halves sit on DIFFERENT floors, and that is deliberate.**
+ *    The FLAG always renders: the country has a real default
+ *    (`DEFAULT_VIEWER_PREFERENCES` is US) that Sunday Ticket and every network
+ *    badge already resolve on, so showing it reports what the site is doing
+ *    rather than guessing. The CLOCK does not follow — every league surface
+ *    prints PT alone until the viewer names a zone, so with no cookie the row
+ *    must still read "League time (PT)". Collapsing the two into one default
+ *    would put an Eastern clock on the menu for every viewer who never opened
+ *    the picker.
  */
 
 const REPO_ROOT = process.cwd();
@@ -43,6 +55,98 @@ describe('Nav account menu', () => {
       /resolveViewerPreferences\s*\(/.test(source),
       'Resolving preferences is route-only; the nav renders on every page'
     ).toBe(false);
+  });
+
+  it('always flies a country flag on the Preferences row, defaulting to the catalog country', () => {
+    // The AFL drawer showed no flag at all for anyone who had never opened
+    // /preferences on afl-fantasy.com — cookies are per apex domain, so a
+    // country picked on theleague.us never reaches it. The country has a
+    // default; the row now shows it.
+    expect(source).toMatch(/viewerPrefs\?\.country \?\? DEFAULT_VIEWER_PREFERENCES\.country/);
+    expect(
+      /const viewerCountry = viewerPrefs\s*\n?\s*\?/.test(source),
+      'A viewerPrefs-conditional viewerCountry renders no flag until the viewer picks one'
+    ).toBe(false);
+
+    // The default country must actually have a flag to fly, or the row renders
+    // an empty span and the fix is invisible.
+    const fallback = countryOptions().find((c) => c.code === DEFAULT_VIEWER_PREFERENCES.country);
+    expect(fallback, 'The default country must exist in the catalog').toBeTruthy();
+    expect(fallback?.flag, 'The default country needs a flag emoji').toBeTruthy();
+  });
+
+  it('leaves the clock on the league floor when the viewer has chosen nothing', () => {
+    // The flag defaults to a COUNTRY; the clock must come from the LEAGUE.
+    // "League time (PT)" is not a hardcoded PT — it is this league's own
+    // officialClock, so a league configured onto another zone says so here.
+    expect(source).toMatch(/League time \(\$\{leagueClockLabel\}\)/);
+    expect(source).toMatch(/const leagueClockLabel = zoneShortName\(officialClock\)/);
+    expect(source).toMatch(/zoneSummary\(viewerPrefs, officialClock\)/);
+    // A viewer already ON the league's clock reads "League time (PT)", not a
+    // bare "PT" — zoneSummary collapses to the label alone for them, and a
+    // one-word fragment under "Preferences" reads like a rendering bug.
+    expect(source).toMatch(/clockSummary && clockSummary !== leagueClockLabel/);
+    expect(
+      /DEFAULT_VIEWER_PREFERENCES\.zoneId|DEFAULT_ZONE_IDS/.test(source),
+      'The nav must never fall back to a default ZONE — the league names its own clock'
+    ).toBe(false);
+  });
+
+  it('takes the league clock from the registry, never from the module fallback', () => {
+    // `LEAGUE_CLOCK` is the answer for a caller that cannot name its league.
+    // The drawer renders on every page of every league and always knows which
+    // one it is, so reaching for the fallback here is how one league's clock
+    // ends up printed on another's page.
+    expect(source).toMatch(/leagueClock\(leagueDef\.slug\)/);
+    expect(
+      /\bLEAGUE_CLOCK\b/.test(source),
+      'NavFooter knows its league — it must call leagueClock(slug), not the fallback constant'
+    ).toBe(false);
+  });
+
+  it('pulses the Preferences row until the viewer has actually chosen a clock', () => {
+    // The hint is STATE-driven, and that is the whole design. It wears the
+    // shared `.spotlight-pulse` but must NOT go through `FEATURE_SPOTLIGHTS`:
+    // a feature spotlight answers "is this new", expires on a date and is
+    // dismissed into localStorage, which would leave a viewer who never set a
+    // clock un-nudged a week later and a viewer who DID set one still pulsing
+    // until they cleared storage. The cookie is the honest dismissal.
+    expect(source).toMatch(/const hintPreferences = !viewerPrefs;/);
+    expect(source).toMatch(/'spotlight-pulse': hintPreferences/);
+    // A SEED is an answer, so an owner who has one is never nudged. The nav
+    // may consult it because it is a pure map lookup — the rule above bans a
+    // Redis ROUND TRIP per render, not knowledge.
+    expect(source).toMatch(/seededPreferencesFor\(leagueDef\.slug, team\.franchiseId\)/);
+    expect(source).toMatch(/const viewerPrefs = cookiePrefs \?\? seededPrefs;/);
+    // Call shape, not the bare name — the frontmatter comments discuss
+    // `readViewerClock` by name precisely to explain why it is not called.
+    expect(
+      /readViewerClock\s*\(|getStoredViewerPreferences\s*\(/.test(source),
+      'The seed is a pure lookup; the account MIRROR is still out of reach here'
+    ).toBe(false);
+    expect(
+      /isSpotlightActive\([^)]*preferences/i.test(source),
+      'The preferences hint must not expire on a date — it ends when a clock is chosen'
+    ).toBe(false);
+
+    // Both rows: the signed-in menu and the standalone signed-out row. The
+    // page has no auth gate, so a signed-out visitor can set a clock too and
+    // must get the same nudge.
+    expect(source.match(/'spotlight-pulse': hintPreferences/g) ?? []).toHaveLength(2);
+
+    // Derived from the SAME resolved value the clock line prints, never a
+    // second read — two could disagree and glow at someone whose own clock is
+    // already on screen.
+    expect(source).toMatch(/const clockSummary = viewerPrefs \? zoneSummary/);
+  });
+
+  it('says the same thing to a screen reader that the pulse says visually', () => {
+    // A ring around a link is invisible to assistive tech; without this the
+    // hint reaches only sighted viewers.
+    expect(source).toMatch(
+      /hintPreferences && <span class="visually-hidden">[^<]*not set your clock/
+    );
+    expect(source.match(/hintPreferences && <span class="visually-hidden">/g) ?? []).toHaveLength(2);
   });
 
   it('gates the Preferences and Notifications rows on the registry, not on a league literal', () => {

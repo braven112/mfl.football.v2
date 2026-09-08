@@ -29,7 +29,7 @@ import '../../styles/owners-poll.css';
 import { getLeagueTeamBrands } from '../../utils/league-team-brands';
 import PlayerCell from '../../components/theleague/PlayerCell.astro';
 import { getAuthUser } from '../../utils/auth';
-import { getLeagueBySlug, ensureLeaguePrefix } from '../../config/leagues';
+import { getLeagueBySlug, ensureLeaguePrefix, leagueClock } from '../../config/leagues';
 import { findWeekMatchups, resolveRostersPayload, resolveLineupFillState, resolveWeekLineup, resolvePlayerName } from '../../utils/lineup-sources';
 import LineupGameStrip from '../../components/shared/LineupGameStrip.astro';
 import { buildMatchupCards } from '../../utils/lineup-matchup-cards';
@@ -85,7 +85,7 @@ const week = Math.max(1, Math.min(22, requestedWeek));
 // its own, and awaiting it here would gate all nine MFL calls — each of which
 // carries its own 8s abort — behind an unbounded one. Nothing until the
 // schedule build needs the answer.
-const viewerPrefs = readViewerClock(Astro.cookies, user)
+const viewerPrefs = readViewerClock(Astro.cookies, user, 'afl-fantasy')
   .then((clock) => clock.prefs.country)
   .catch(() => DEFAULT_COUNTRY);
 
@@ -655,6 +655,7 @@ const ownersPollTeams = Object.values(getLeagueTeamBrands(ownersPollLeague.slug)
         ballotHref={ensureLeaguePrefix(ownersPollLeague, '/pecking-order/ballot')}
         columnHref={ensureLeaguePrefix(ownersPollLeague, '/pecking-order')}
         vapidPublicKey={(import.meta.env.PUBLIC_VAPID_PUBLIC_KEY as string | undefined) ?? ''}
+        officialClock={leagueClock(ownersPollLeague.slug)}
       />
     )}
     <!-- Header -->

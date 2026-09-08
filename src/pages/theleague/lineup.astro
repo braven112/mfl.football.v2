@@ -33,7 +33,7 @@ import { isThrowbackWeek } from '../../data/theleague/throwback-config';
 import { getAllThrowbackPreferences } from '../../utils/throwback-store';
 import LineupGameStrip from '../../components/shared/LineupGameStrip.astro';
 import { buildMatchupCards } from '../../utils/lineup-matchup-cards';
-import { getLeagueBySlug, ensureLeaguePrefix } from '../../config/leagues';
+import { getLeagueBySlug, ensureLeaguePrefix, leagueClock } from '../../config/leagues';
 import { findWeekMatchups, resolveRostersPayload, resolveLineupFillState, resolveWeekLineup, resolvePlayerName } from '../../utils/lineup-sources';
 import { resolveSubmitButtonState } from '../../utils/lineup-submit-state';
 import '../../styles/loading.css';
@@ -73,7 +73,7 @@ const MFL_LEAGUE_ID = getLeagueBySlug('theleague')!.id;
 // its own, and awaiting it here would gate all nine MFL calls — each of which
 // carries its own 8s abort — behind an unbounded one. Nothing until the
 // schedule build needs the answer.
-const viewerPrefs = readViewerClock(Astro.cookies, user)
+const viewerPrefs = readViewerClock(Astro.cookies, user, 'theleague')
   .then((clock) => clock.prefs.country)
   .catch(() => DEFAULT_COUNTRY);
 
@@ -615,6 +615,7 @@ const ownersPollTeams = Object.values(getLeagueTeamBrands(ownersPollLeague.slug)
         ballotHref={ensureLeaguePrefix(ownersPollLeague, '/pecking-order/ballot')}
         columnHref={ensureLeaguePrefix(ownersPollLeague, '/pecking-order')}
         vapidPublicKey={(import.meta.env.PUBLIC_VAPID_PUBLIC_KEY as string | undefined) ?? ''}
+        officialClock={leagueClock(ownersPollLeague.slug)}
       />
     )}
     <!-- Header -->

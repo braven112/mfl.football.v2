@@ -154,6 +154,34 @@ export interface OwnersPollConfig {
   closeHourPT: number;
 }
 
+/**
+ * A league's official clock. Structurally a `ZoneOption` from
+ * `src/utils/viewer-preferences.ts` plus its identity list — declared HERE
+ * rather than imported from there because the dependency must not run in that
+ * direction: `viewer-preferences.ts` is in Storybook's rendering graph, and
+ * pulling the registry into it would wake every Sunday Ticket snapshot on any
+ * registry edit (docs/claude/rules/viewer-preferences.md). The clock travels
+ * as a value instead. `tests/league-official-clock.test.ts` pins the two
+ * shapes against each other so they cannot drift.
+ */
+export interface LeagueClock {
+  /** Stable id, unique within a country's catalog. */
+  id: string;
+  /** IANA zone. */
+  zone: string;
+  /** Fixed label ('PT') or 'auto' for Intl's short name. */
+  label: string;
+  /** Locale for an 'auto' label. */
+  locale?: string;
+  /** What the preferences picker calls it. */
+  name: string;
+  /**
+   * Zones that ARE this clock — same wall clock year-round, DST included.
+   * An identity list, never computed from a current offset.
+   */
+  equivalents?: readonly string[];
+}
+
 export interface LeagueDefinition {
   id: string;
   slug: CanonicalLeagueSlug;
@@ -203,6 +231,13 @@ export interface LeagueDefinition {
    * offering any poll UI or accepting a ballot.
    */
   ownersPoll: OwnersPollConfig;
+  /**
+   * The zone this league keeps its own time in — see `officialClock` in
+   * leagues-data.mjs. Always present; read it with `leagueClock(slug)` rather
+   * than reaching into the entry, and never fall back to a hardcoded Pacific
+   * when you have a slug in hand.
+   */
+  officialClock: LeagueClock;
   features: LeagueFeatures;
 }
 
@@ -237,6 +272,20 @@ export function getLeagueByPath(pathname: string): LeagueDefinition {
 /** Whether a feature is enabled for the given league slug. */
 export function leagueHasFeature(slug: string, feature: keyof LeagueFeatures): boolean {
   return getLeagueBySlug(slug)?.features[feature] ?? false;
+}
+
+/**
+ * THE ACCESSOR for a league's official clock. Every surface that prints a
+ * league moment — a waiver deadline, a draft start, a poll close, the clock
+ * line in the nav drawer — resolves it through here, so the zone is a
+ * registry setting rather than a constant compiled into the time code.
+ *
+ * An unknown slug falls back to the DEFAULT league's clock rather than
+ * inventing one: a caller that cannot name its league is a caller with no
+ * business choosing a different clock than the site's own.
+ */
+export function leagueClock(slug: string | null | undefined): LeagueClock {
+  return (getLeagueBySlug(slug ?? '') ?? LEAGUES[DEFAULT_LEAGUE_SLUG]).officialClock;
 }
 
 /**

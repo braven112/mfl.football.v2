@@ -57,7 +57,11 @@ describe('the catalog covers every country, with no duplicate ids', () => {
       expect(options.length).toBeGreaterThan(0);
       expect(new Set(options.map((z) => z.id)).size).toBe(options.length);
       for (const z of options) {
-        expect(z.zone, `${code}/${z.id} needs an IANA zone`).toMatch(/^[A-Za-z_]+\/[A-Za-z_+-]+$/);
+        // Asked of the runtime, not a regex — the pattern this replaced rejected
+        // `America/Argentina/Buenos_Aires` and `Etc/GMT+10`, both legitimate.
+        let real = true;
+        try { new Intl.DateTimeFormat('en-US', { timeZone: z.zone }); } catch { real = false; }
+        expect(real, `${code}/${z.id} needs a real IANA zone`).toBe(true);
         // `auto` labels need a locale or Intl says "GMT+10" instead of AEST.
         if (z.label === 'auto') expect(z.locale, `${code}/${z.id}`).toBeTruthy();
       }
@@ -98,21 +102,35 @@ describe('defaults match the board before preferences existed', () => {
     });
   }
 
-  for (const code of ['US', 'CA'] as const) {
-    it(`${code} still opens on the mapping file's own pair`, () => {
-      // North America opened on ET · PT before preferences existed, and the
-      // default clock + the league clock must still print exactly that.
-      const before = countryTimeZones(code);
-      const now = kickoffZonesFor({ country: code, zoneId: DEFAULT_ZONE_IDS[code] });
-      expect(now.map((z) => z.label)).toEqual(before.map((z) => z.label));
-    });
-  }
+  it("CA still opens on the mapping file's own pair", () => {
+    // Canada opened on ET · PT before preferences existed and still does. The
+    // US deliberately no longer does — see the next test.
+    const before = countryTimeZones('CA');
+    const now = kickoffZonesFor({ country: 'CA', zoneId: DEFAULT_ZONE_IDS.CA });
+    expect(now.map((z) => z.label)).toEqual(before.map((z) => z.label));
+  });
 
-  it('the untouched preference is US / ET, printed as ET · PT', () => {
-    expect(DEFAULT_VIEWER_PREFERENCES).toEqual({ country: 'US', zoneId: 'ET' });
+  it('the US departs from that pair ON PURPOSE, opening on PT alone', () => {
+    // A DELIBERATE break with "the defaults must equal the pre-preferences
+    // board": that board printed ET · PT, and most owners in both leagues are
+    // on the west coast, so Eastern led with the wrong clock for the majority.
+    // Because PT is also every league's official clock, the duplicate is
+    // dropped and the board shows PT alone. Changing this changes the board
+    // for every viewer who never opened the picker, which is why it is pinned
+    // here rather than left to read as an accident.
+    const before = countryTimeZones('US').map((z) => z.label);
+    expect(before, 'the mapping file still describes the OLD pair').toEqual(['ET', 'PT']);
+    expect(DEFAULT_ZONE_IDS.US).toBe('PT');
+    expect(kickoffZonesFor({ country: 'US', zoneId: DEFAULT_ZONE_IDS.US }).map((z) => z.label))
+      .toEqual(['PT']);
+  });
+
+  it('the untouched preference is US / PT, printed as PT alone', () => {
+    expect(DEFAULT_VIEWER_PREFERENCES).toEqual({ country: 'US', zoneId: 'PT' });
     expect(isDefaultViewerPreferences(DEFAULT_VIEWER_PREFERENCES)).toBe(true);
     expect(isDefaultViewerPreferences({ country: 'AU', zoneId: 'SYD' })).toBe(false);
-    expect(zoneSummary(DEFAULT_VIEWER_PREFERENCES)).toBe('ET · PT');
+    // Not "PT · PT": the viewer's clock IS the league's, so it prints once.
+    expect(zoneSummary(DEFAULT_VIEWER_PREFERENCES)).toBe('PT');
   });
 });
 
@@ -141,8 +159,37 @@ describe('seeded per-owner defaults', () => {
   it('needs BOTH a league and a franchise — a bare id is ambiguous across leagues', () => {
     expect(seededPreferencesFor(null, '0009')).toBeNull();
     expect(seededPreferencesFor('theleague', null)).toBeNull();
-    // The AFL's 0009 is a different team entirely.
-    expect(seededPreferencesFor('afl-fantasy', '0009')).toBeNull();
+
+    // The cross-league half is DERIVED, not a hardcoded pair. It named
+    // afl-fantasy:0009 as "a different team entirely" until that franchise was
+    // itself seeded, at which point the test failed for a reason that had
+    // nothing to do with the rule it guards. So: find any seeded key whose
+    // franchise id is NOT seeded in some other league, and assert the lookup
+    // there comes back null. Several owners now hold the SAME id in both
+    // leagues on purpose, which is exactly why the key cannot be the id alone.
+    const keys = Object.keys(SEEDED_PREFERENCES).map((k) => k.split(':') as [string, string]);
+    const slugs = [...new Set(keys.map(([slug]) => slug))];
+    const orphan = keys
+      .map(([slug, id]) => ({
+        id,
+        elsewhere: slugs.find((other) => other !== slug && !SEEDED_PREFERENCES[`${other}:${id}`]),
+      }))
+      .find((c) => c.elsewhere);
+    expect(orphan, 'every seeded id is seeded in every league — pick another shape for this check').toBeTruthy();
+    expect(seededPreferencesFor(orphan!.elsewhere!, orphan!.id)).toBeNull();
+  });
+
+  it('lets one owner hold the same franchise id in both leagues, separately', () => {
+    // Da Dangsters and Midwestside play both leagues under different ids, and
+    // Computer Jocks / Vitside do too — each side is its own entry, because a
+    // matching team name across leagues is not evidence of a shared owner and
+    // this map is only ever written from someone saying so.
+    expect(seededPreferencesFor('theleague', '0010')).toEqual({ country: 'US', zoneId: 'CT' });
+    expect(seededPreferencesFor('afl-fantasy', '0005')).toEqual({ country: 'US', zoneId: 'CT' });
+    // A Central owner reads their own clock first, with the league's beside it.
+    expect(zoneSummary(seededPreferencesFor('theleague', '0010')!)).toBe('CT · PT');
+    // A Pacific one is already on the league clock, so it prints once.
+    expect(zoneSummary(seededPreferencesFor('afl-fantasy', '0021')!)).toBe('PT');
   });
 });
 

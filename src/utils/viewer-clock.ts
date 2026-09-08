@@ -35,6 +35,7 @@ import {
   ZONE_COOKIE,
   eventZonesFor,
   parseViewerPreferences,
+  type LeagueClock,
   type ViewerClock,
 } from './viewer-preferences';
 
@@ -201,8 +202,16 @@ export function formatDateForViewer(
  * Reads the cookie ON EVERY CALL, never at module load: under the ClientRouter
  * one module instance survives a navigation, so a captured value would outlive
  * the page that read it (and, across a league boundary, the league too).
+ *
+ * `league` is the OFFICIAL clock of the league this island belongs to, handed
+ * down as a prop because a browser has no registry to ask. Omitting it falls
+ * back to the site's own clock — right for a device-only surface, wrong
+ * anywhere the host component knows its league.
  */
-export function clockZonesFromCookie(cookieString: string): ClockZoneSpec[] | null {
+export function clockZonesFromCookie(
+  cookieString: string,
+  league?: LeagueClock,
+): ClockZoneSpec[] | null {
   const raw = new Map<string, string>();
   for (const part of cookieString.split(';')) {
     const eq = part.indexOf('=');
@@ -218,7 +227,11 @@ export function clockZonesFromCookie(cookieString: string): ClockZoneSpec[] | nu
   const country = decodeCookie(raw.get(COUNTRY_COOKIE));
   const zone = decodeCookie(raw.get(ZONE_COOKIE));
   if (!country && !zone) return null;
-  return eventZonesFor({ prefs: parseViewerPreferences(country, zone), explicit: true });
+  return eventZonesFor({
+    prefs: parseViewerPreferences(country, zone),
+    explicit: true,
+    leagueClock: league,
+  });
 }
 
 /**

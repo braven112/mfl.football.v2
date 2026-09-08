@@ -1,5 +1,27 @@
 [
   {
+    "id": "free-agents-rostered-by",
+    "date": "2026-08-26",
+    "category": "enhancement",
+    "icon": "users",
+    "leagues": [
+      "theleague",
+      "afl"
+    ],
+    "title": "The Free Agent Who Wasn't",
+    "link": "/players",
+    "linkLabel": "See who's actually available",
+    "summary": "Tick \"Include rostered\" on Free Agents, open Josh Allen, and the card called him a free agent — a man under contract at $9M who has been on somebody's roster since the draft. A rostered player's card now wears the team that holds him, and says whose it is.",
+    "description": [
+      "The \"Include rostered\" switch on <a href=\"/players\">Free Agents</a> has always done exactly what it says: it puts the players somebody already owns back in the list, greyed out, so you can see where the talent went. Open one of them and the card had no idea. It painted him in his NFL colors and stamped FA · FREE AGENT across the contract — Josh Allen, thirty years old, three years left at nine million dollars, filed under available.",
+      "Now the card wears the team that has him. Their colors behind him, their crest over his shoulder, and — because a red header only helps if you already knew whose red that was — a <strong>Rostered by</strong> line underneath that simply says the name. Where the FA tag used to be, The League now shows the salary and the years actually left on the deal, the same numbers his owner is staring at on <a href=\"/rosters\">the roster page</a>.",
+      "The AFL needed a longer think. It runs two conferences off one player pool, so the same man is rostered twice by two different teams: Allen belongs to Fullybaked in the American League and to the Titsburgh Feelers in the National. There is no single right answer to \"whose is he\" — so the card names the team in the conference you are looking at. Your own if you are signed in, the American League if you are not, and it re-owns every row the moment you flip the conference switcher. Which means the honest version of this feature is that two AFL owners can open the same player and both be told the truth."
+    ],
+    "image": "free-agents-rostered-by.webp",
+    "imageAlt": "The Free Agents page for The League with a player card open over the table. The card's header band is Vitside Mafia's deep red rather than Buffalo's blue, with the Mafia's dragon crest behind a cut-out of Josh Allen, headed “Josh Allen” beside a 30 yrs pill over “Buffalo · QB · #17” and “Wyoming · 8 yrs · 2018 Round 1, Pick 07”. Directly beneath the band, a red-tinted strip carries the dragon crest on a dark chip, the label ROSTERED BY, and the name Vitside Mafia. Under it the three stat tiles read 414.6 over 17 GAMES, 24.4 PER GAME, and $9.0M over 3 YRS — where an unowned player's card shows FA over FREE AGENT. Latest News and a week-by-week Season Results table follow. Behind the card, the free agent table lists Josh Allen, Joe Burrow, Brock Purdy and the rest with a red left edge marking the rows that are already rostered.",
+    "excludeFromHero": true
+  },
+  {
     "id": "division-strength",
     "date": "2026-08-25",
     "category": "new-page",

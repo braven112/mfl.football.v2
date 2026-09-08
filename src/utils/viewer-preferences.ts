@@ -102,43 +102,61 @@ export const ZONE_OPTIONS: Record<CountryCode, readonly ZoneOption[]> = {
 };
 
 /**
- * THE LEAGUE'S CLOCK. Pacific — the clock the league keeps its own time in
- * (lineup locks, auction windows, the 8:45 PT rollover), so it is the shared
- * reference every kickoff is printed against no matter where the viewer is.
+ * A league's official clock: the zone it keeps its own time in (lineup locks,
+ * auction windows, the 8:45 rollover), printed beside whatever clock a viewer
+ * has chosen for themselves.
  *
- * It is appended automatically rather than chosen: a viewer picks the ONE
- * clock they live in and gets this one beside it. The exception is a viewer
- * who already lives on Pacific — printing "1:00 PM PT · 1:00 PM PT" helps
- * nobody, so `kickoffZonesFor` drops it for them.
+ * `equivalents` are zones that ARE this clock — the same wall clock all year,
+ * DST flips included. An IDENTITY list, never computed from a current offset.
  */
-export const LEAGUE_CLOCK: ZoneOption = {
+export interface LeagueClock extends ZoneOption {
+  equivalents?: readonly string[];
+}
+
+/**
+ * THE FALLBACK CLOCK, for a caller that cannot name its league. Pacific,
+ * which is what every league in the registry is set to.
+ *
+ * It is NOT the setting. The setting is `officialClock` in
+ * `src/config/leagues-data.mjs`, read with `leagueClock(slug)` — and this
+ * module deliberately does not import the registry to get it, because
+ * `viewer-preferences.ts` is in Storybook's rendering graph and pulling the
+ * registry in would wake every Sunday Ticket snapshot on any registry edit
+ * (docs/claude/rules/viewer-preferences.md). So the clock travels IN, as a
+ * value: every function below takes one, and this constant is only what they
+ * fall back to. Anything holding a league slug must pass that league's clock
+ * rather than letting the fallback answer for it.
+ *
+ * The clock is appended automatically rather than chosen: a viewer picks the
+ * ONE clock they live in and gets this one beside it — dropped when they
+ * already live on it, because "1:00 PM PT · 1:00 PM PT" helps nobody.
+ */
+export const LEAGUE_CLOCK: LeagueClock = {
   id: 'PT',
   zone: 'America/Los_Angeles',
   label: 'PT',
   name: "The league's clock (Pacific)",
+  equivalents: ['America/Vancouver', 'America/Tijuana'],
 };
 
 /**
- * Zones that ARE the league clock, so appending it would print the same time
- * twice. Canada's Pacific and Baja keep the same wall clock as Los Angeles
- * year-round, DST flips included — this is an identity list, not a snapshot
- * of today's offsets.
- */
-const LEAGUE_CLOCK_EQUIVALENTS = new Set([
-  LEAGUE_CLOCK.zone,
-  'America/Vancouver',
-  'America/Tijuana',
-]);
-
-/**
- * The clock a country starts on. Chosen so the board an owner who never opens
- * the picker sees is the one it showed before preferences existed: the US and
- * Canada open on Eastern, which with the league clock beside it is the
- * ET · PT the board has always printed.
- * `tests/viewer-preferences.test.ts` pins each against `countryTimeZones`.
+ * The clock a country starts on — the one a viewer who never opens the picker
+ * reads Sunday Ticket in.
+ *
+ * The US opens on PACIFIC, deliberately and against the pre-preferences board:
+ * it printed ET · PT, and most owners in both leagues are on the west coast,
+ * so leading with Eastern put the wrong clock first for the majority. Because
+ * PT is also every league's official clock, `kickoffZonesFor` drops the
+ * duplicate and the board shows PT alone for them. Changing this is changing
+ * every such viewer's board — the reason it is a single named constant.
+ *
+ * CANADA stays on Eastern: the argument above is about where THIS league's
+ * owners live, and it does not transfer to a country whose own default nobody
+ * has re-examined. `tests/viewer-preferences.test.ts` pins CA against
+ * `countryTimeZones` and pins the US departure explicitly.
  */
 export const DEFAULT_ZONE_IDS: Record<CountryCode, string> = {
-  US: 'ET',
+  US: 'PT',
   CA: 'ET',
   AU: 'SYD',
   GB: 'LON',
@@ -206,18 +224,24 @@ export function isDefaultViewerPreferences(prefs: ViewerPreferences): boolean {
 }
 
 /** The chosen option, or the country's default when the id no longer exists. */
-export function chosenZone(prefs: ViewerPreferences): ZoneOption {
+export function chosenZone(prefs: ViewerPreferences, league: LeagueClock = LEAGUE_CLOCK): ZoneOption {
   const options = zoneOptionsFor(prefs.country);
   return (
     options.find((z) => z.id === prefs.zoneId) ??
     options.find((z) => z.id === DEFAULT_ZONE_IDS[prefs.country]) ??
-    LEAGUE_CLOCK
+    league
   );
 }
 
-/** True when a viewer's own clock already IS the league's, so PT must not repeat. */
-export function isLeagueClock(opt: Pick<ZoneOption, 'zone'>): boolean {
-  return LEAGUE_CLOCK_EQUIVALENTS.has(opt.zone);
+/**
+ * True when a viewer's own clock already IS the league's, so it must not
+ * repeat. Matches the clock's zone or any of its declared equivalents.
+ */
+export function isLeagueClock(
+  opt: Pick<ZoneOption, 'zone'>,
+  league: LeagueClock = LEAGUE_CLOCK,
+): boolean {
+  return opt.zone === league.zone || !!league.equivalents?.includes(opt.zone);
 }
 
 const toKickoffZone = ({ zone, label, locale }: ZoneOption): KickoffZone =>
@@ -229,21 +253,28 @@ const toKickoffZone = ({ zone, label, locale }: ZoneOption): KickoffZone =>
  * because "1:00 PM PT · 1:00 PM PT" is noise. Never returns an empty list, so
  * a bad stored id can't yield a clockless board.
  */
-export function kickoffZonesFor(prefs: ViewerPreferences): KickoffZone[] {
-  const own = chosenZone(prefs);
-  return isLeagueClock(own) ? [toKickoffZone(own)] : [toKickoffZone(own), toKickoffZone(LEAGUE_CLOCK)];
+export function kickoffZonesFor(
+  prefs: ViewerPreferences,
+  league: LeagueClock = LEAGUE_CLOCK,
+): KickoffZone[] {
+  const own = chosenZone(prefs, league);
+  return isLeagueClock(own, league)
+    ? [toKickoffZone(own)]
+    : [toKickoffZone(own), toKickoffZone(league)];
 }
 
 /**
  * A viewer's clocks PLUS whether they actually picked them.
  *
- * The distinction is load-bearing, and it exists because one default cannot
- * serve both readers. Sunday Ticket has always printed the COUNTRY's pair
- * (ET · PT in the US), so `DEFAULT_VIEWER_PREFERENCES` is US/ET precisely to
- * leave that board unchanged. Every other surface — a waiver deadline, a draft
- * start, a poll close — has always printed the league's PT alone. Handing
- * those the same default would add an Eastern clock to every owner in the
- * league on the strength of a fallback nobody chose.
+ * The distinction is load-bearing, and it survives the two floors having
+ * converged. Sunday Ticket prints the COUNTRY's default clock; every other
+ * surface — a waiver deadline, a draft start, a poll close — prints the
+ * LEAGUE's official one alone. Both now resolve to PT for a US viewer who has
+ * chosen nothing, so the two paths currently agree by coincidence, not by
+ * design: a country default is about where the viewer is, a league clock about
+ * where the league keeps its time, and either can move without the other.
+ * Collapsing them because today's answers match is how the Eastern default
+ * would come back for every owner the next time a country is re-examined.
  *
  * So `explicit` records where the answer came from. It is TRUE only for an
  * answer the owner is responsible for:
@@ -255,6 +286,18 @@ export function kickoffZonesFor(prefs: ViewerPreferences): KickoffZone[] {
 export interface ViewerClock {
   prefs: ViewerPreferences;
   explicit: boolean;
+  /**
+   * The OFFICIAL clock of the league whose page is rendering — the registry's
+   * `officialClock`, attached by `readViewerClock` from the slug its caller
+   * passed. It rides along here rather than being threaded through every
+   * formatter because `eventZonesFor` is the single choke point every league
+   * moment goes through (`formatForViewer`, `viewerClockZone`,
+   * `waiver-window`), so one field spares all of them a signature.
+   *
+   * Absent means "no league was named", and the fallback answers. That is
+   * correct for a device-only read, and a bug anywhere a slug was available.
+   */
+  leagueClock?: LeagueClock;
 }
 
 /** Nobody has chosen: the league's own clock, which is what these surfaces printed before preferences existed. */
@@ -273,7 +316,8 @@ export const DEFAULT_VIEWER_CLOCK: ViewerClock = {
  * the league's event, and that board's floor is the COUNTRY's default pair.
  */
 export function eventZonesFor(clock: ViewerClock): KickoffZone[] {
-  return clock.explicit ? kickoffZonesFor(clock.prefs) : [toKickoffZone(LEAGUE_CLOCK)];
+  const league = clock.leagueClock ?? LEAGUE_CLOCK;
+  return clock.explicit ? kickoffZonesFor(clock.prefs, league) : [toKickoffZone(league)];
 }
 
 /**
@@ -298,6 +342,52 @@ export const SEEDED_PREFERENCES: Record<string, ViewerPreferences> = {
   'theleague:0016': { country: 'CA', zoneId: 'ET' },
   // Maverick — Australia, Sydney ("Operating on Sydney time again…").
   'theleague:0003': { country: 'AU', zoneId: 'SYD' },
+
+  // ---------------------------------------------------------------------
+  // AFL owners confirmed on US Pacific by the commissioner, Sep 2026.
+  //
+  // Seeding an owner onto the clock the site ALREADY defaults to looks
+  // redundant and is not: a seed is an ANSWER, and the absence of one is a
+  // question. The drawer nudges anyone it has no answer for to go and set a
+  // clock, so without these, seven owners who are exactly where the site
+  // assumes would be pulsed at forever about a preference they would only be
+  // re-typing. Nothing else about their site changes — US/PT resolves to the
+  // same PT-alone board the bare default gives them.
+  // ---------------------------------------------------------------------
+  /** Drunk Indians. */
+  'afl-fantasy:0002': { country: 'US', zoneId: 'PT' },
+  /** Da Dangsters (Monty Fresh). */
+  'afl-fantasy:0006': { country: 'US', zoneId: 'PT' },
+  /** Harambe. */
+  'afl-fantasy:0008': { country: 'US', zoneId: 'PT' },
+  /** Midwestside. */
+  'afl-fantasy:0011': { country: 'US', zoneId: 'PT' },
+  /** Suh girls. */
+  'afl-fantasy:0012': { country: 'US', zoneId: 'PT' },
+  /** Bruin Pegs Me. */
+  'afl-fantasy:0014': { country: 'US', zoneId: 'PT' },
+  /** Chatmaster. */
+  'afl-fantasy:0021': { country: 'US', zoneId: 'PT' },
+  // Two of them play BOTH leagues, and the key is <slug>:<franchiseId>, so
+  // each side needs its own entry — the same person is a different key here.
+  // Confirmed by the commissioner, not inferred from the matching team name:
+  // a shared name across leagues is not evidence of a shared owner, and this
+  // map is only ever written from someone saying so.
+  /** Da Dangsters (Monty Fresh) — same owner as afl-fantasy:0006. */
+  'theleague:0002': { country: 'US', zoneId: 'PT' },
+  /** Midwestside — same owner as afl-fantasy:0011. */
+  'theleague:0011': { country: 'US', zoneId: 'PT' },
+
+  // US CENTRAL, both leagues. Unlike the PT entries above these change what
+  // the owner SEES — every league moment prints "… CT · PT" for them instead
+  // of PT alone — which is the point: they were reading Pacific and doing the
+  // two-hour conversion in their head.
+  /** Computer Jocks. */
+  'theleague:0010': { country: 'US', zoneId: 'CT' },
+  'afl-fantasy:0005': { country: 'US', zoneId: 'CT' },
+  /** Vitside / Vitside Mafia. */
+  'theleague:0012': { country: 'US', zoneId: 'CT' },
+  'afl-fantasy:0009': { country: 'US', zoneId: 'CT' },
 };
 
 /** The seeded preference for an owner, or null. Both arguments are required — a bare franchise id is ambiguous across leagues. */
@@ -315,11 +405,11 @@ export function zoneShortName(opt: ZoneOption): string {
 }
 
 /** "ET · PT" / "Sydney · PT" / "PT" — the one-line summary the board and picker show. */
-export function zoneSummary(prefs: ViewerPreferences): string {
-  const own = chosenZone(prefs);
-  return isLeagueClock(own)
+export function zoneSummary(prefs: ViewerPreferences, league: LeagueClock = LEAGUE_CLOCK): string {
+  const own = chosenZone(prefs, league);
+  return isLeagueClock(own, league)
     ? zoneShortName(own)
-    : `${zoneShortName(own)} · ${zoneShortName(LEAGUE_CLOCK)}`;
+    : `${zoneShortName(own)} · ${zoneShortName(league)}`;
 }
 
 export { COUNTRY_CODES };

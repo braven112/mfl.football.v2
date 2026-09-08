@@ -41,7 +41,7 @@
  * frontmatter; components read the resolved value as a prop.
  */
 
-import { getLeagueById } from '../config/leagues';
+import { getLeagueById, leagueClock } from '../config/leagues';
 import {
   COUNTRY_COOKIE,
   DEFAULT_VIEWER_PREFERENCES,
@@ -187,24 +187,33 @@ export async function readViewerPreferences(
  * strength of a guess is a change nobody asked for. `explicit` is true only
  * for a cookie, an account mirror, or a seed — the three answers an owner is
  * actually responsible for. See `ViewerClock` and `eventZonesFor`.
+ *
+ * `leagueSlug` is THE PAGE'S league, not the viewer's. A TheLeague owner can
+ * browse the AFL, and the clock a waiver deadline prints belongs to the league
+ * publishing the deadline — so it comes from the route, never from
+ * `user.leagueId` (which is what `ownerBucket` uses, correctly, for the
+ * mirror). Omitting it falls back to the site's own clock, which is right for
+ * a device-only read and a bug anywhere a slug was in hand.
  */
 export async function readViewerClock(
   cookies: Pick<CookieJar, 'get'>,
   user: PreferenceOwner | null | undefined,
+  leagueSlug?: string | null,
 ): Promise<ViewerClock> {
+  const clock = leagueClock(leagueSlug);
   const fromCookies = preferencesFromCookies(cookies);
-  if (fromCookies) return { prefs: fromCookies, explicit: true };
+  if (fromCookies) return { prefs: fromCookies, explicit: true, leagueClock: clock };
   const bucket = ownerBucket(user);
   if (bucket) {
     const stored = await getStoredViewerPreferences(bucket.slug, bucket.franchiseId);
-    if (stored) return { prefs: stored, explicit: true };
+    if (stored) return { prefs: stored, explicit: true, leagueClock: clock };
     // A seed is something we were TOLD about this owner, not a fallback we
     // picked for them — so it speaks with the same authority as their own
     // choice, right up until they make one.
     const seeded = seededPreferencesFor(bucket.slug, bucket.franchiseId);
-    if (seeded) return { prefs: seeded, explicit: true };
+    if (seeded) return { prefs: seeded, explicit: true, leagueClock: clock };
   }
-  return { prefs: DEFAULT_VIEWER_PREFERENCES, explicit: false };
+  return { prefs: DEFAULT_VIEWER_PREFERENCES, explicit: false, leagueClock: clock };
 }
 
 /** Write both cookies. ROUTE-ONLY — see the module note. */

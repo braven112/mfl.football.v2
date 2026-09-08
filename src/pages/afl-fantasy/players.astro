@@ -28,7 +28,7 @@ import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
 import CollegeLogoDarkStyles from '../../components/CollegeLogoDarkStyles.astro';
 import PlayerDetailsModal from '../../components/theleague/PlayerDetailsModal.astro';
 import { resolveLeaguePath } from '../../utils/nav-utils';
-import { getLeagueBySlug } from '../../config/leagues';
+import { getLeagueBySlug, leagueClock } from '../../config/leagues';
 import { NFL_LOGO_ONERROR, NFL_LOGO_ONLOAD, COLLEGE_LOGO_ONERROR, COLLEGE_LOGO_ONLOAD, positionOrder } from '../../constants/roster-constants';
 import { NO_HEADSHOT_SILHOUETTE, getPlayerAvatarBackground, getPlayerAvatarBorder, getPlayerAvatarRing, getPlayerAvatarRingDark, getPlayerAvatarStyleMaps } from '../../utils/nfl-team-colors';
 import '../../styles/player-cell.css';
@@ -189,7 +189,7 @@ const waiverWindow = resolveWaiverWindow(calendarEvents);
 // The deadline in the header line, on the viewer's own clock when they have
 // named one (PT alone until then). Read-only: a page render must never write a
 // preference cookie, and only /preferences and the Sunday Ticket chips do.
-const viewerClock = await readViewerClock(Astro.cookies, authUser);
+const viewerClock = await readViewerClock(Astro.cookies, authUser, aflLeague.slug);
 const waiverWindowLabel = describeWaiverWindow(waiverWindow, viewerClock);
 const canClaim = !!claimFranchiseId && claimRoster.length > 0;
 // The verb this league puts on an acquisition — 'Claim' for the AFL's rolling
@@ -215,6 +215,9 @@ const claimsPanelConfig = {
 const priorityConfId =
   userConfId && isValidConferenceId(userConfId) ? userConfId : null;
 const waiverPriorityConfig = {
+  // From the registry, not a constant: the "as of" stamp in the dialog prints
+  // this league's own clock beside whatever the viewer chose.
+  officialClock: leagueClock(aflLeague.slug),
   signedIn: !!priorityConfId && !!claimFranchiseId,
   franchiseId: priorityConfId ? claimFranchiseId : null,
   conferenceName: priorityConfId ? getConferenceName(priorityConfId) : '',

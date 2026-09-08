@@ -615,12 +615,14 @@
         "src/utils/waiver-window.ts",
         "src/components/shared/preferences/*",
         "src/pages/*/preferences.astro",
-        "src/components/nav/NavFooter.astro"
+        "src/components/nav/NavFooter.astro",
+        "src/config/leagues-data.mjs"
       ],
       "tests": [
         "tests/viewer-preferences.test.ts",
         "tests/viewer-clock.test.ts",
-        "tests/nav-account-menu.test.ts"
+        "tests/nav-account-menu.test.ts",
+        "tests/league-official-clock.test.ts"
       ]
     },
     {
