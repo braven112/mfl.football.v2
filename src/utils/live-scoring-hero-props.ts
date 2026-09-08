@@ -69,7 +69,22 @@ export async function buildLiveScoringHeroProps(
       origin,
     );
     const res = await doFetch(url);
-    const data = res.ok ? await res.json() : null;
+    if (!res.ok) return undefined;
+
+    // `.json()` rejects on a non-JSON body, which is how a proxy or an error
+    // page arrives. Caught by the outer try — a rejection here is a failure to
+    // read the feed, not an empty one.
+    const data = await res.json();
+
+    // `res.ok` is NOT "the call worked". The endpoint answers 200 with
+    // `ok: false` when the UPSTREAM MFL request failed, precisely so callers
+    // can tell an outage from a healthy offseason feed (which is `ok: true`
+    // with empty collections). Merging the two is the trap
+    // docs/claude/rules/lineups.md names: "no games" and "couldn't read it"
+    // must never become the same value. Here they differ — an outage returns
+    // undefined so the homepage keeps its normal hero, while a genuinely empty
+    // week renders the hero with nothing in it, which is correct.
+    if (data?.ok === false || data?.error) return undefined;
 
     const teamsMap: Record<string, TeamInfo> = {};
     for (const t of teams) {

@@ -31,7 +31,7 @@ import { entryAppliesToLeague, WHATS_NEW_CATEGORY_LABELS } from '../types/whats-
 import type { WhatsNextTimeline, ResolvedLeagueEvent } from '../types/league-events';
 import type { DailySlot, GameWindow } from '../types/hero-state';
 import { getAllResolvedAflEvents } from './league-event-resolver';
-import { getDailySlot } from './hero-resolver';
+import { getDailySlot, isGameLive } from './hero-resolver';
 import { getCurrentNFLWeek } from './current-week';
 import { randomHeroPlayer } from './hero-players';
 import { resolveFeatureHeadline } from './whats-new-hero-headline';
@@ -161,7 +161,7 @@ export type AflHeroState =
     }
   | { kind: 'championship'; priority: 'P0'; content: HeroContent }
   | { kind: 'playoffs'; priority: 'P0'; content: HeroContent; slot?: DailySlot; gameWindow?: GameWindow; week?: number }
-  | { kind: 'regular-season'; priority: 'P0'; content: HeroContent; view: EventHeroView; slot: DailySlot; gameWindow: GameWindow; week?: number }
+  | { kind: 'regular-season'; priority: 'P0'; content: HeroContent; view: EventHeroView; slot: DailySlot; gameWindow: GameWindow; week?: number; isLive: boolean }
   | { kind: 'event'; priority: 'P3' | 'P4'; content: HeroContent; view: EventHeroView }
   | { kind: 'feature'; priority: 'P2'; content: HeroContent; view: EventHeroView }
   | { kind: 'default'; priority: 'P5'; content: HeroContent; view: EventHeroView };
@@ -1448,6 +1448,10 @@ export function resolveAflHeroState(input: AflHeroResolverInput): AflHeroState {
       slot,
       gameWindow,
       week,
+      // The SLOT is not the WINDOW: Sunday's live-scoring slot runs to 11pm PT
+      // and the games stop at 8:30. This is what stops the hero polling all
+      // evening and badging finished games LIVE.
+      isLive: isGameLive(now),
       content: buildRegularSeasonHero(slot, week, gameWindow, now, input.lineupSubmitted ?? null),
       view,
     };

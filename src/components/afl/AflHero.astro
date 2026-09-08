@@ -87,7 +87,7 @@ const { state, config, standings, userFranchiseId, backdrop = null, liveScoring}
     {...liveScoring}
     phase="regular-season"
     gameWindow={state.gameWindow}
-    isLive={true}
+    isLive={state.isLive}
   />
 ) : state.kind === 'trade-deadline' ? (
   <TradeDeadlineHero

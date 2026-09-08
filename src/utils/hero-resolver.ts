@@ -861,7 +861,17 @@ export function getDailySlot(referenceDate: Date): { slot: DailySlot; gameWindow
  * Determine if a game is currently live based on the game window.
  * Live = within a known game window time range.
  */
-function isGameLive(referenceDate: Date): boolean {
+/**
+ * Whether NFL games are actually being played right now.
+ *
+ * Exported because the live-scoring SLOT outlasts the live WINDOW — Sunday's
+ * slot runs to 11pm PT while the games stop at 8:30 — so "the hero is in the
+ * live-scoring slot" and "there are live games" are different questions. The
+ * AFL's resolver answers the second one with this, exactly as TheLeague's
+ * does; a hardcoded `true` polls all evening and puts a LIVE badge over
+ * finished games.
+ */
+export function isGameLive(referenceDate: Date): boolean {
   const { hour, minute, dayOfWeek } = getPTComponents(referenceDate);
   const mins = toMinutes(hour, minute);
 

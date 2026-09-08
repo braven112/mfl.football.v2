@@ -12,6 +12,7 @@ import { resolve } from 'node:path';
 import { selectSupportingMatchups } from '../src/utils/live-scoring-view';
 import { buildLiveScoringHeroProps } from '../src/utils/live-scoring-hero-props';
 import { getLeagueBySlug } from '../src/config/leagues';
+import { resolveAflHeroState } from '../src/utils/afl-hero-resolver';
 
 const THELEAGUE = getLeagueBySlug('theleague')!;
 const AFL = getLeagueBySlug('afl-fantasy')!;
@@ -19,6 +20,8 @@ const AFL = getLeagueBySlug('afl-fantasy')!;
 const read = (p: string) => readFileSync(resolve(process.cwd(), p), 'utf-8');
 
 const M = (home: string, away: string) => ({ home, away });
+
+type Slotted = { kind: string; slot?: string; isLive?: boolean };
 
 describe('selectSupportingMatchups', () => {
   const all = [M('0001', '0002'), M('0003', '0004'), M('0013', '0014'), M('0002', '0013')];
@@ -101,11 +104,39 @@ describe('buildLiveScoringHeroProps', () => {
     expect(props && 'scopeFranchiseIds' in props).toBe(false);
   });
 
-  it('returns undefined instead of a scoreboard with no scores in it', async () => {
-    const fetchImpl = (async () => { throw new Error('network'); }) as unknown as typeof fetch;
-    expect(await buildLiveScoringHeroProps({
+  // Every way the feed can fail must return undefined, so the homepage keeps
+  // its normal hero. Returning a props object renders a scoreboard with
+  // nothing in it — worse than not offering one, because it looks broken.
+  const failures: [string, () => typeof fetch][] = [
+    ['the request throws', () => (async () => { throw new Error('network'); }) as unknown as typeof fetch],
+    ['a non-2xx status', () => (async () => ({ ok: false, status: 500, json: async () => ({}) })) as unknown as typeof fetch],
+    ['a non-JSON body', () => (async () => ({ ok: true, json: async () => { throw new SyntaxError('<html>'); } })) as unknown as typeof fetch],
+    // 200 with ok:false is the UPSTREAM MFL failure. It is the one that looks
+    // exactly like a healthy empty week unless the flag is read.
+    ['200 with ok:false', () => (async () => ({ ok: true, json: async () => ({ ok: false, matchups: [], scores: {} }) })) as unknown as typeof fetch],
+    ['200 with an error key', () => (async () => ({ ok: true, json: async () => ({ error: 'Failed to fetch live scoring', matchups: [] }) })) as unknown as typeof fetch],
+  ];
+
+  for (const [label, make] of failures) {
+    it(`returns undefined when ${label}`, async () => {
+      expect(await buildLiveScoringHeroProps({
+        league: AFL.slug, week: 3, origin, teams, fetchImpl: make(),
+      })).toBeUndefined();
+    });
+  }
+
+  it('still builds for a HEALTHY but empty week', async () => {
+    // ok:true with no matchups is the offseason/bye shape. It must NOT be
+    // confused with the outage above — that merge is the trap in
+    // docs/claude/rules/lineups.md.
+    const fetchImpl = (async () => ({
+      ok: true, json: async () => ({ ok: true, matchups: [], scores: {}, remaining: {} }),
+    })) as unknown as typeof fetch;
+    const props = await buildLiveScoringHeroProps({
       league: AFL.slug, week: 3, origin, teams, fetchImpl,
-    })).toBeUndefined();
+    });
+    expect(props).toBeDefined();
+    expect(props?.matchups).toEqual([]);
   });
 });
 
@@ -154,4 +185,39 @@ describe('both homepages forward the built props whole', () => {
       expect(read(path)).toMatch(/liveScoring\??:\s*BuiltLiveScoringProps/);
     });
   }
+});
+
+describe('the AFL hero reads the live WINDOW, not the live SLOT', () => {
+  // The live-scoring slot outlasts the games: Sunday's slot runs to 11pm PT
+  // and the last game ends at 8:30. `isLive` drives both the poll and the
+  // LIVE/FINAL badge, so a hardcoded `true` polls all evening and badges
+  // finished games as live.
+  it('AflHero passes the resolved isLive, never a literal', () => {
+    const src = read('src/components/afl/AflHero.astro');
+    const tag = src.slice(src.indexOf('<LiveScoringHero'));
+    const open = tag.slice(0, tag.indexOf('/>'));
+    expect(open).toContain('isLive={state.isLive}');
+    expect(open).not.toMatch(/isLive=\{(true|false)\}/);
+  });
+
+  it('the AFL resolver derives isLive from the clock', () => {
+    const src = read('src/utils/afl-hero-resolver.ts');
+    expect(src).toContain('isLive: isGameLive(now)');
+  });
+
+  it('separates the slot from the window at the same slot', () => {
+    // Both of these are the live-scoring slot. Only the first has games on.
+    // That pairing IS the bug: keying the badge and the poll off the slot
+    // makes these two indistinguishable.
+    const afternoon = new Date('2026-09-13T20:00:00Z'); // Sun 1:00pm PT
+    const lateEvening = new Date('2026-09-14T04:30:00Z'); // Sun 9:30pm PT
+
+    const live = resolveAflHeroState({ referenceDate: afternoon }) as never as Slotted;
+    const after = resolveAflHeroState({ referenceDate: lateEvening }) as never as Slotted;
+
+    expect(live.slot).toBe('live-scoring');
+    expect(after.slot).toBe('live-scoring');
+    expect(live.isLive).toBe(true);
+    expect(after.isLive).toBe(false);
+  });
 });
