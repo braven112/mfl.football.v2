@@ -509,6 +509,13 @@ three times.
   `resolveCta` only reads `.tips`, so it takes the beat's batch. The parallel
   array survives for the recurrence fingerprint alone, which reads the bucket's
   key and kind.
+- **The Friday MAILBAG is the exception — it stays on the tip-page CTA.** It
+  never assigns `primaryBucket`, so it used to reach the generic link by
+  accident of `null`; its batch is the whole gossip pool, and
+  `classifyTipKind` puts everything that is not `source: 'trade_offer'` in
+  there, `trade_bait` and `topic: 'trade'` web tips included. Handing that to
+  `resolveCta` points a multi-topic roundup at one franchise's trade builder
+  and drops the whisper-back link, which is the one CTA a mailbag most needs.
 
 `tests/schefter-tip-queue-admission.test.ts` pins the dedupe behavior;
 `tests/schefter-busy-morning.test.ts` pins the distinct-id split and both

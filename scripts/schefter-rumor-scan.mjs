@@ -4759,7 +4759,17 @@ async function main() {
   // separate scoops rather than one story told twice. `resolveCta` only ever
   // reads `.tips`, so handing it the beat's own batch is both simpler and
   // correct for every lane.
-  const ctaSourceFor = (beat) => ({ tips: beat.batch ?? [] });
+  //
+  // The Friday MAILBAG stays on the tip-page CTA. It never assigns
+  // `primaryBucket`, so it used to reach the generic link by accident of
+  // `null` — and its batch is the whole gossip pool, which `classifyTipKind`
+  // fills with everything that is not `source: 'trade_offer'`, `trade_bait`
+  // tips and `topic: 'trade'` web tips included. Handing that batch to
+  // `resolveCta` would point a multi-topic roundup at one franchise's trade
+  // builder and drop the whisper-back CTA, which is the one link a mailbag
+  // most needs. Explicit now, rather than correct by accident.
+  const ctaSourceFor = (beat) =>
+    (postKind === 'mailbag' ? { tips: [] } : { tips: beat.batch ?? [] });
   // Still needed for the recurrence fingerprint below, which reads the
   // bucket's key/kind and not just its tips. Under busy-morning beat 2 has no
   // bucket of its own, so it gets no "fresh subject" threshold relaxation —

@@ -158,9 +158,21 @@ describe('both busy-morning beats get a TRADE cta', () => {
     // `undefined` — no trade-flavored tips, so it shipped the generic
     // "Got a tip?" link while beat 1 shipped the Trade Builder one. That is
     // why the 2026-09-08 pair read as two separate scoops.
-    expect(SCANNER_SRC).toMatch(/const ctaSourceFor = \(beat\) => \(\{ tips: beat\.batch \?\? \[\] \}\)/);
+    expect(SCANNER_SRC).toMatch(/const ctaSourceFor = \(beat\) =>/);
+    expect(SCANNER_SRC).toMatch(/\{ tips: beat\.batch \?\? \[\] \}/);
     expect(SCANNER_SRC).toMatch(/resolveCta\(ctaSourceFor\(beat\)\)/);
     expect(SCANNER_SRC).not.toMatch(/resolveCta\(beatBuckets\[i\]\)/);
+  });
+
+  it('keeps the Friday mailbag on the tip-page CTA', () => {
+    // Mailbag never assigns primaryBucket, so it reached the generic link by
+    // accident of `null`. Its batch is the whole gossip pool — which carries
+    // trade_bait and `topic: 'trade'` web tips — so routing it through the
+    // beat's own tips would point a multi-topic roundup at one franchise's
+    // trade builder and drop the whisper-back CTA.
+    expect(SCANNER_SRC).toMatch(
+      /postKind === 'mailbag' \? \{ tips: \[\] \} : \{ tips: beat\.batch \?\? \[\] \}/,
+    );
   });
 
   it('leaves the recurrence fingerprint on the real bucket', () => {
