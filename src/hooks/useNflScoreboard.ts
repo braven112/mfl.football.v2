@@ -89,30 +89,56 @@ export interface NflScoreboardState {
 const EMPTY_GAMES: NflGame[] = [];
 
 /**
+ * How close a kickoff has to be for the board to poll at the LIVE cadence.
+ * Comfortably larger than POLL_STALE so a board on the slow cadence gets at
+ * least two ticks inside the window and is never late to a kickoff.
+ */
+export const KICKOFF_SOON_MS = 15 * 60_000;
+
+/**
  * Should the scoreboard poll at the LIVE cadence?
  *
- * `hint` is the page's game-day window (`getDailySlot`), computed server-side
- * and fixed for the life of the page. It is what keeps the board responsive
- * before kickoff: a slate of `pre` games is not "in progress" but is about to
- * be, and without the hint the board would sit on POLL_STALE all Sunday
- * morning and notice kickoff up to five minutes late.
+ * The trap this exists to avoid: **ESPN's slate is a whole WEEK**, not a day.
+ * `buildEspnScoreboardUrl` asks for `?week=N`, so Thursday through Monday all
+ * come back together. That makes "some game is still `pre`" true from Thursday
+ * lunchtime until Monday night, and it means an `allFinal` test is false all
+ * Sunday evening because Monday's game has not kicked off yet. Neither can
+ * drive this on its own.
  *
- * What the hint must not do is outlive the slate. `getDailySlot` keeps the
- * live-scoring slot open long past the last whistle — Sunday 8:30pm+ and
- * Monday 11pm+ both still return it — so OR-ing it in unconditionally pinned
- * every subscriber to POLL_LIVE for hours after every game had gone final.
- * A finished slate therefore ends the fast cadence regardless of the hint,
- * the same rule LiveScoreboard already applies to its MFL half (`allDone`).
+ * So the rule reads the CLOCK, not just the states:
  *
- * An EMPTY slate is not "all final" — it is "nothing has loaded yet", and the
- * hint still governs there.
+ *  - A game actually in progress is the unambiguous yes.
+ *  - Otherwise, yes only while a kickoff is within `KICKOFF_SOON_MS` (or has
+ *    just passed and ESPN has not flipped the state yet). Sunday 12:50pm is
+ *    live; Sunday 9am and Sunday 11pm are not, even though Monday's game sits
+ *    `pre` in the payload at all three.
+ *  - With NOTHING loaded, the page's game-day `hint` is all there is to go on.
+ *    That is the only thing the hint is good for: it comes from `getDailySlot`
+ *    and is fixed for the life of the page, and that slot stays open long past
+ *    the last whistle (Sunday 8:30pm+ and Monday 11pm+ both still return it),
+ *    so trusting it once data exists is what pinned every subscriber to
+ *    POLL_LIVE for hours after the slate went final.
+ *
+ * An EMPTY slate is "nothing loaded yet", never "all final" — `[].every(…)` is
+ * `true`, and treating that as finished would drop the very first load to
+ * POLL_STALE.
  */
-export function shouldPollLive(games: ReadonlyArray<{ state: NflGame['state'] }>, hint: boolean): boolean {
-  const allFinal = games.length > 0 && games.every((g) => g.state === 'post');
-  if (allFinal) return false;
-  return hint || games.some((g) => g.state === 'in');
+export function shouldPollLive(
+  games: ReadonlyArray<{ state: NflGame['state']; date?: string }>,
+  hint: boolean,
+  now: number = Date.now(),
+): boolean {
+  if (games.length === 0) return hint;
+  if (games.some((g) => g.state === 'in')) return true;
+  return games.some((g) => {
+    if (g.state !== 'pre' || !g.date) return false;
+    const kickoff = Date.parse(g.date);
+    // `<=` with no lower bound on purpose: a `pre` game whose kickoff has
+    // already passed is either about to flip to `in` or ESPN is briefly stale,
+    // and polling fast is the right answer either way.
+    return Number.isFinite(kickoff) && kickoff - now <= KICKOFF_SOON_MS;
+  });
 }
-
 
 /**
  * @param enabled pass false in demo mode (bundled sample data) or when the
