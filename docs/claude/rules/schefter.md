@@ -204,6 +204,13 @@ the same offer regenerates the same wrong post on the next scan.
 
 ### The drip — a beat may only assert what the feeds can see
 
+**Read "The rumor mill is a beat, not an advertising feed" below first.** Since
+2026-09-08 a proposal must clear a 7-day repost cooldown and win a fresh daily
+roll to reach signal 2 at all, so the ladder below describes what a
+re-surfacing offer may REVEAL, not a sequence the lane works through. Most
+proposals now post once and never come back. The rules in this section still
+hold for the rare offer that does.
+
 `scripts/lib/schefter-offer-beats.mjs` is the second dimension of the
 trade-proposal reveal. Before it, signal N named the hash-chosen team and `N-1`
 of that team's players in ADP order and nothing else, so post seven was post two
@@ -276,6 +283,98 @@ ONE fact that is new this signal so the prompt opens on it.
   passing the league slug. They are the same string for TheLeague and differ
   everywhere else, so a slug works today and silently splits the store on the
   second league.
+
+### The rumor mill is a beat, not an advertising feed — three rarity gates
+
+Owner report, 2026-09-08: two rumors in one day about the SAME Fire Ready Aim
+offer, 7.5 hours apart — once inside a five-tip multi-desk bucket, once as its
+own dedicated story. Nothing had malfunctioned; every gate passed. The gates
+were simply far looser than the constants read.
+
+**The base probability was never a per-run probability in practice.**
+`OFFER_POST_PROBABILITY` was 0.05 and the offer scan ran on the 15-minute cron,
+so each live offer drew ~50 rolls a day and compounded to **~92% within 24
+hours**. Nominally a 5% chance; actually a near-certainty. Every offer leaked,
+almost immediately, which is what made the lane read as an advertisement for
+the trade block rather than as a reporter breaking the occasional story.
+Three gates now hold the line, and they are independent — removing any one
+puts the lane back:
+
+- **One roll per offer per Pacific day** (`trade_offers:last_roll_date`). This
+  is what makes the constant mean what it reads like. The base moved 0.05 →
+  **0.10 per DAY**, so an ordinary single-suitor offer is roughly a coin flip
+  across a week-long life. **Never re-tune the base without checking the roll
+  cadence first** — that is the exact mistake three prior bumps made
+  (0.0075 → 0.025 → 0.05, each chasing "proposals age out" while the real
+  cause was that the roll fired 50 times a day).
+- **A reported offer goes quiet for 7 days** (`trade_offers:last_post`,
+  `OFFER_REPOST_COOLDOWN_MS`). Checked BEFORE the daily roll, deliberately: a
+  cooling-down offer must not spend its roll, or the `trade_offers:rolls`
+  counter stops meaning "chances this offer had to leak". The window sits just
+  past the 7-day tip expiry, so nearly every proposal dies inside it and is
+  reported exactly once.
+- **The volume boost SURVIVES all of this.** A player three desks are calling
+  about is the genuine breaking story; the gradient from 10%/day up to the
+  0.35 ceiling is what separates it from a routine offer. Note the ceiling now
+  binds before `OFFER_VOLUME_BOOST_MAX` does (0.10 × 4 = 0.40 > 0.35), so any
+  test asserting the raw product pins a number the clamp never returns.
+
+**The exposure boost is GONE and must not come back.** Phase 6c multiplied the
+base by `OFFER_EXPOSURE_BOOST_FACTOR ^ priorExposure` so an already-reported
+offer raced through its reveal ladder. With a repost cooldown in place that
+dial points backwards — the offers it accelerates are precisely the ones the
+league has already heard about. `offerPostProbability` therefore takes ONE
+argument. `priorExposure` is still read and still threaded through the scanner,
+because it decides how much detail a re-surfacing offer may reveal — it just
+never touches the odds again. `tests/trade-builder-tip-source.test.ts` pins the
+signature and greps the scanner for a re-added second argument.
+
+### The rumor mill's cap inverts with the calendar — and it is the mill's ALONE
+
+`scripts/lib/schefter-rumor-cadence.mjs`. In the offseason the rumor mill IS
+the league's conversation; in season the league generates its own drama and
+three trade rumors a day on top of it reads as spam.
+
+| When | Cap |
+|---|---|
+| Offseason | `MAX_POSTS_PER_DAY` (3) |
+| Season being played | 1/day |
+| 10 days into each league's trade deadline, through deadline day | 3 again |
+
+- **It counts on its OWN key** (`rumor:mill_posts_today`), never on the shared
+  `rumor:posts_today`. That shared budget also carries the transaction
+  scanner's big-name-drop pings and the speculation lane, so gating the
+  in-season cap on it would let one real roster move silence the rumor mill for
+  the rest of the day — muting league news to quiet trade gossip, which is
+  backwards. The quiet-day post spends a mill slot too; it is a rumor-mill feed
+  entry, and leaving it out lets a quiet-day post and a real rumor both ship
+  against a cap of one.
+- **The cap may only TIGHTEN the shared budget, never widen it** — the lane
+  cannot outspend the budget it draws from. Pinned by test.
+- **Busy-morning catch-up is off wherever the cap is 1.** Two beats off a
+  single slot is exactly the back-to-back pile-up the cap exists to prevent, so
+  an overnight backlog just clears a day slower in season.
+- **The deadline is PER LEAGUE and the two differ** — TheLeague's is a fixed
+  Nov 13, the AFL's is the Wednesday between Weeks 10 and 11 (2026: Nov 18). A
+  single shared window would be wrong in both leagues on both days. The data
+  lives in the registry (`leagues-data.mjs#tradeDeadline`); `tradeDeadlineFor`
+  in `src/utils/trade-deadline.mjs` is the only resolver, and Best Ball
+  declares `null` rather than being omitted, because a substituted date would
+  open a deadline window in a league that never trades.
+- **Everything is compared as PT calendar-date strings, not instants.** The
+  deadlines sit in November (PT is UTC-8) while kickoff sits in September (PT
+  is UTC-7); an instant built from one offset lands on the wrong day under the
+  other. The questions are day-grained, so the answers are too.
+- **The season window runs kickoff → championship Monday**, i.e. Labor Day + 3
+  through kickoff + 16 weeks + 4 days, which lands in EARLY JANUARY. It checks
+  the current AND previous calendar year for exactly that reason. Do not
+  re-derive the season year from `getCurrentSeasonYear()` here — it runs on the
+  Labor Day clock and resolves to LAST season from February through Labor Day,
+  so an offseason date would test against a window that closed months ago and
+  read as "in season". Same trap as the Pecking Order's, one door down.
+
+`tests/schefter-rumor-cadence.test.ts` pins all of it, including the per-league
+deadline split and the gate ordering.
 
 ### An expired proposal is a SEED, not a post
 

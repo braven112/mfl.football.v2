@@ -162,7 +162,18 @@ describe('cap accounting — busy-morning posts share one slot', () => {
     // the incr lives inside the budget-on-delivery guard so a fully-
     // suppressed cycle consumes no slot at all (see
     // tests/schefter-gossip-budget.test.ts for that side).
-    expect(SCANNER_SRC).toMatch(/Would increment schefter:rumor:posts_today by 1/);
+    expect(SCANNER_SRC).toMatch(
+      /Would increment schefter:rumor:posts_today \+ schefter:rumor:mill_posts_today by 1/,
+    );
     expect(SCANNER_SRC).toMatch(/BUDGET-ON-DELIVERY SENTINEL/);
+  });
+
+  it('is gated on the rumor mill having a cap above one', () => {
+    // Since 2026-09-08 the mill's in-season cap is 1/day. Two beats off one
+    // slot would put two rumors in the chat back-to-back against a cap of
+    // one — the pile-up the cap exists to prevent — so the catch-up runs only
+    // in the offseason and in each league's trade-deadline run-up. See
+    // tests/schefter-rumor-cadence.test.ts for the cap itself.
+    expect(SCANNER_SRC).toMatch(/isBusyMorningAllowed\(LEAGUE_SLUG, now, MAX_POSTS_PER_DAY\)/);
   });
 });

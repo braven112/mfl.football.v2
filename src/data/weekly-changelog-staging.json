@@ -11,6 +11,14 @@
     },
     {
       "date": "2026-09-08",
+      "type": "bug-fix",
+      "summary": "Schefter's rumor mill has been dialled way back. It was reporting essentially every trade offer that crossed the desk, often within hours, and on one Monday it filed the same Fire Ready Aim offer twice — once buried in a multi-team story and again seven hours later as its own scoop. Under the hood the dice were being rolled roughly fifty times a day per offer, so a nominal five-percent chance of a leak compounded into a near-certainty. Offers are now rolled once a day, a reported offer goes quiet for a full week before it can resurface, and during the season the mill files at most one rumor a day instead of three — the league does its own talking once games are being played. The volume comes back for the offseason, and for the ten days into each league's trade deadline, which are the two stretches when a rumor is actually news.",
+      "impact": "user",
+      "area": "schefter",
+      "league": "both"
+    },
+    {
+      "date": "2026-09-08",
       "type": "style-tweak",
       "summary": "The Preferences row in the side menu now glows softly until you have actually picked a clock, so the setting stops being something you only find by accident. It is a slow breathing ring, not a badge or a nag — and it turns itself off the moment you save a preference, on every device that remembers it. Screen readers get the same hint in words rather than a ring they cannot see.",
       "impact": "user",

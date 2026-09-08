@@ -32,6 +32,7 @@
       "paths": [
         "scripts/schefter-*.mjs",
         "scripts/lib/redact-trade-offer.mjs",
+        "src/utils/trade-deadline.mjs",
         "scripts/lib/schefter*",
         "scripts/lib/speculation-*.mjs",
         "scripts/schefter-trade-speculation.mjs",
@@ -47,6 +48,7 @@
         "tests/schefter-news-view.test.ts",
         "tests/schefter-assistant-post.test.ts",
         "tests/schefter-rail-view.test.ts",
+        "tests/schefter-rumor-cadence.test.ts",
         "tests/redact-trade-offer-attribution.test.ts",
         "tests/redact-trade-offer-exposure.test.ts",
         "tests/schefter-offer-beats.test.ts",

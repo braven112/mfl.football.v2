@@ -97,6 +97,18 @@ export const LEAGUES = {
       name: "The league's clock (Pacific)",
       equivalents: ['America/Vancouver', 'America/Tijuana'],
     },
+    /**
+     * Trade deadline. A per-league constant, so it lives here rather than
+     * inline in the code that needs it — `tradeDeadlineFor(slug, year)` in
+     * `src/utils/trade-deadline.mjs` is the only resolver.
+     *
+     * TheLeague's deadline is a FIXED calendar date (Nov 13), which is why it
+     * carries no `rule`. It is duplicated today in `hero-resolver.ts`
+     * (`isTradeDeadlineDay`) and `src/types/hero-state.ts` as a bare Nov 13 —
+     * `tests/trade-deadline-data.test.ts` pins the registry against those so
+     * the two cannot silently disagree.
+     */
+    tradeDeadline: { kind: 'fixed', month: 11, day: 13 },
     features: {
       contracts: true,
       salaryCap: true,
@@ -234,6 +246,14 @@ export const LEAGUES = {
       name: "The league's clock (Pacific)",
       equivalents: ['America/Vancouver', 'America/Tijuana'],
     },
+    /**
+     * Trade deadline — the Wednesday between Week 10 and Week 11, i.e.
+     * kickoff + 10*7 - 1 days. Derived rather than fixed because it tracks
+     * the NFL calendar; the same rule backs the `afl-trade-deadline` event in
+     * `src/data/afl-fantasy/league-events.json`, and
+     * `tests/trade-deadline-data.test.ts` pins the two against each other.
+     */
+    tradeDeadline: { kind: 'computed', rule: 'wednesday-between-week-10-and-11' },
     features: {
       contracts: false,
       salaryCap: false,
@@ -362,6 +382,12 @@ export const LEAGUES = {
       name: "The league's clock (Pacific)",
       equivalents: ['America/Vancouver', 'America/Tijuana'],
     },
+    /**
+     * Best Ball is draft-only — no in-season roster management, so there is
+     * no trade deadline to keep. `null` is the honest answer and callers must
+     * handle it; `tradeDeadlineFor` returns null rather than inventing a date.
+     */
+    tradeDeadline: null,
     features: {
       contracts: false,
       salaryCap: false,
