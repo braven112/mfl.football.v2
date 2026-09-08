@@ -342,7 +342,14 @@ export function processWeeklyScores(
     if (!weekResults) return;
 
     const week = parseInt(weekResults.week, 10);
-    const matchups = Array.isArray(weekResults.matchup) ? weekResults.matchup : [weekResults.matchup];
+    // MFL omits `matchup` for a week it has not paired up and lists the
+    // franchises on weeklyResults instead; wrapping that undefined is what
+    // 404'd the roster page. Prove it truthy before making a list of it.
+    const matchups = Array.isArray(weekResults.matchup)
+      ? weekResults.matchup
+      : weekResults.matchup
+        ? [weekResults.matchup]
+        : [];
 
     matchups.forEach((matchup: any) => {
       if (!matchup) return;

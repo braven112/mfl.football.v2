@@ -378,11 +378,21 @@ const processWeeklyScores = (rawData, currentWeek) => {
     if (!weekResults) return;
 
     const week = parseInt(weekResults.week, 10);
-    const matchups = Array.isArray(weekResults.matchup) ? weekResults.matchup : [weekResults.matchup];
+    // A week MFL has not paired into matchups yet lists its franchises directly
+    // on weeklyResults with no `matchup` key at all (2026 weeks 15-17 arrived
+    // that way the moment the season rolled over). The bare
+    // `[weekResults.matchup]` fallback wrapped that undefined into an array and
+    // the whole page 404'd on `matchup.franchise`. Skip an absent entry the way
+    // utils/coach-data.ts already does.
+    const matchups = Array.isArray(weekResults.matchup)
+      ? weekResults.matchup
+      : (weekResults.matchup ? [weekResults.matchup] : []);
 
     matchups.forEach(matchup => {
+      if (!matchup) return;
       const franchises = Array.isArray(matchup.franchise) ? matchup.franchise : [matchup.franchise];
       franchises.forEach(franchise => {
+        if (!franchise) return;
         const players = Array.isArray(franchise.player) ? franchise.player : (franchise.player ? [franchise.player] : []);
         players.forEach(p => {
           if (!scoresByPlayer.has(p.id)) {

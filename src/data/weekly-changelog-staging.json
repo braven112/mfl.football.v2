@@ -10,6 +10,14 @@
       "league": "both"
     },
     {
+      "date": "2026-09-08",
+      "type": "bug-fix",
+      "summary": "Roster/Salary went dark on The League — every visit landed on the 404 page, which made it look like the page had been deleted rather than broken. It hadn't: the season rollover filled the schedule out to Week 17, and MFL hands back the last few weeks in a different shape because it has not paired those teams into matchups yet. The page read every week the same way, hit the unpaired ones, and fell over on the way to the screen. It now steps past a week that has no matchups instead of tripping on it, and the recent-score trend still reads every week that has actually been played.",
+      "impact": "user",
+      "area": "Roster/Salary",
+      "league": "theleague"
+    },
+    {
       "date": "2026-09-07",
       "type": "style-tweak",
       "summary": "Franchise crests are no longer cropped into a circle in six more places: the Throwback Week commissioner grid, mock draft results, the My Team panel on both homepages, the team column on Projected Free Agents and its filter, and the “via” tag on traded picks in the draft room. A round frame is the right treatment for a headshot and the wrong one for a logo — it quietly bit the corners off any crest that was not already a circle. Most crests were round enough that nothing changes; Chatmaster gets its AIM badge back, and Maverick, the Wascawy Wabbits, the Dark Magicians and the Computer Jocks stop losing their edges. Historical throwback marks are deliberately left round: that art is a circle cut out of an era banner, and it carries a coloured rim that only sits right on a round frame.",
