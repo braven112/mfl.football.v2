@@ -38,12 +38,16 @@ const ROUTE = fs.readFileSync(
  * against — so a naive `not.toContain` on the raw file matches the warning and
  * fails on a correct implementation. Assert structure against this.
  */
-const ROUTE_CODE = ROUTE.split('\n')
-  .filter((line) => {
-    const t = line.trim();
-    return t !== '' && !t.startsWith('//') && !t.startsWith('*') && !t.startsWith('/*');
-  })
-  .join('\n');
+const stripComments = (source: string) =>
+  source
+    .split('\n')
+    .filter((line) => {
+      const t = line.trim();
+      return t !== '' && !t.startsWith('//') && !t.startsWith('*') && !t.startsWith('/*');
+    })
+    .join('\n');
+
+const ROUTE_CODE = stripComments(ROUTE);
 
 describe('readMflImportResult — nothing is accepted unless MFL says OK', () => {
   it('accepts only an affirmative status', () => {
@@ -439,7 +443,11 @@ describe('the route still requires both proofs', () => {
   });
 
   it('reports whether the claim was verified, so the UI cannot show a false ✓', () => {
-    expect(ROUTE).toContain('verified:');
+    // `verified:` or the shorthand `verified,` — both payloads now derive the
+    // flag into a local first (follow-up F3) so it cannot disagree with the
+    // sentence beside it. What is pinned is that the field ships, not which
+    // spelling carries it.
+    expect(ROUTE_CODE).toMatch(/\bverified[,:]/);
     const modal = fs.readFileSync(
       path.join(process.cwd(), 'src/components/shared/WaiverClaimModal.astro'),
       'utf-8'
@@ -467,5 +475,70 @@ describe('the route still requires both proofs', () => {
     expect(branch, 'the FCFS read-back must not be scored against unsent claims').not.toMatch(
       /(landed|missing)\s*=\s*stored\s*\?\s*requestedAdds/
     );
+  });
+
+  it('offers the owner only outcomes that can actually happen', () => {
+    // Follow-up F3. Both success payloads carried a third message branch —
+    // "MFL accepted the … but your roster/pending waivers do not show it yet" —
+    // that the 502 guard immediately above them makes unreachable: a read-back
+    // that succeeded and came up short has already returned. Harmless to run,
+    // and a trap to read: it describes a state the owner cannot be in, so the
+    // next person to touch this reasons about a case that does not exist.
+    //
+    // Pinned as a SHAPE rather than as the absent sentence, because the third
+    // branch is exactly what a future edit would re-add by hand: after each
+    // guard there are two outcomes — confirmed, or unreadable — and `verified`
+    // is derived once so the flag and the sentence cannot drift apart.
+    for (const marker of ["mode: 'fcfs'", "mode: 'waiver'"]) {
+      const at = ROUTE_CODE.indexOf(marker);
+      expect(at, `${marker} payload must exist`).toBeGreaterThan(-1);
+      const payload = ROUTE_CODE.slice(ROUTE_CODE.lastIndexOf('const verified =', at), at);
+      expect(payload, `${marker}: verified must be derived once, not re-computed inline`)
+        .toMatch(/verified,\s*\n\s*message: verified\s*$|verified,\s*\n\s*message: verified\b/);
+      expect(payload, `${marker}: no third, unreachable outcome`).not.toMatch(
+        /do(es)? not show (it|them) yet/i
+      );
+    }
+  });
+
+  it('says when a failure did not come from the route at all', () => {
+    // Follow-up F2. The owner's screenshot of the 2026-09-07 outage read
+    // "Claim failed (HTTP 502)" — the generic fallback — while the route sends
+    // a `message` on every failure it produces. That fallback therefore only
+    // fires when the body is NOT the route's JSON (a platform error page, a
+    // proxy, an auth redirect), and the old code made the two indistinguishable
+    // twice over: `res.json().catch(() => ({}))` discarded the body that would
+    // have said which, and the message named only a status code.
+    //
+    // (The stale-service-worker theory in the brief is ruled out and must not
+    // be re-tested here: sw.js returns early on every non-GET, so it never sees
+    // this POST, and the `data.message ||` fallback has been in this component
+    // since #983 — two days before the outage and well past the SW's 12h HTML
+    // staleness bound — so no servable bundle ever lacked it.)
+    const modal = fs.readFileSync(
+      path.join(process.cwd(), 'src/components/shared/WaiverClaimModal.astro'),
+      'utf-8'
+    );
+    // Comment-stripped for the same reason ROUTE_CODE is: the prose below
+    // NAMES `res.json()` as the thing it warns against, so a raw scan matches
+    // the warning and fails on a correct implementation.
+    const branch = stripComments(
+      modal.slice(
+        modal.indexOf('const res = await fetch(\'/api/waiver-claim\''),
+        modal.indexOf('waiver-claims:changed')
+      )
+    );
+    // The raw body is kept, so the next incident has evidence on the client too.
+    expect(branch, 'res.json() throws away the one thing that says where a 502 came from')
+      .not.toContain('res.json()');
+    expect(branch).toMatch(/await res\.text\(\)/);
+    expect(branch).toMatch(/console\.error\([^)]*\[waiver-claim\]/);
+    // A non-object body must not become a truthy `data` and walk into the
+    // success path — JSON.parse('"ok"') and JSON.parse('null') both used to.
+    expect(branch).toMatch(/typeof parsed === 'object'/);
+    // And the owner is told the server said nothing, not just handed a number.
+    expect(branch, 'a bare status code is not a message an owner can act on')
+      .not.toMatch(/Claim failed \(HTTP \$\{res\.status\}\)/);
+    expect(branch).toMatch(/did not say why/);
   });
 });

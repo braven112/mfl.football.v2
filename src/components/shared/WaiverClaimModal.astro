@@ -352,9 +352,39 @@ const windowLabel = config?.windowLabel ?? '';
             year: cfg.year,
           }),
         });
-        const data = await res.json().catch(() => ({}));
+        // READ THE BODY AS TEXT AND PARSE IT HERE, not `res.json()`.
+        //
+        // The route's `fail()` carries a `message` on EVERY failure it
+        // produces, so an owner should never see a bare status code — and on
+        // 2026-09-07 three of them did ("Claim failed (HTTP 502)"), which means
+        // the body those responses carried was not the route's JSON at all. A
+        // 502 from in front of the function (an error page, a proxy, an auth
+        // redirect) reaches this line looking exactly like a route response
+        // with no message, and `res.json()` throws the evidence away on the
+        // way past. Keeping the raw text is the client-side equivalent of the
+        // rule the server already follows: never discard the body on a write.
+        const raw = await res.text().catch(() => '');
+        let data: any = {};
+        try {
+          const parsed = raw ? JSON.parse(raw) : null;
+          if (parsed && typeof parsed === 'object') data = parsed;
+        } catch {
+          // Not our JSON. Left as `{}` and reported as such below.
+        }
         if (!res.ok || !data.success) {
           reset();
+          // No `message` means this did not come from the route. Say so, and
+          // log what did arrive — an owner can relay a sentence, and without
+          // this the next incident is again a screenshot of a status code with
+          // nothing behind it.
+          if (!data.message) {
+            console.error(
+              '[waiver-claim] failure with no server message — status',
+              res.status,
+              'body:',
+              raw.slice(0, 500),
+            );
+          }
           // The link matters MOST here. A refused pickup in a first-come window
           // costs seconds, and the owner's next move is MFL's own add/drop page
           // — the server returns it on its failures too, so offer it rather than
@@ -365,7 +395,10 @@ const windowLabel = config?.windowLabel ?? '';
           // (it clears the previous attempt's state), so calling these the
           // intuitive way round renders the link and then immediately hides it
           // again — the whole addition, silently inert.
-          showError(data.message || `Claim failed (HTTP ${res.status}).`);
+          showError(
+            data.message ||
+              `The claim did not go through (HTTP ${res.status}) and the server did not say why. Nothing was recorded — try again, or do it on MyFantasyLeague.`,
+          );
           return showConfirmLink(data.confirmUrl);
         }
         // `success` only means MFL acknowledged the write; `verified` means the

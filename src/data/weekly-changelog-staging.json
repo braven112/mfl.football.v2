@@ -4,6 +4,14 @@
     {
       "date": "2026-09-08",
       "type": "bug-fix",
+      "summary": "When a free agent pickup goes wrong, the dialog now tells you what happened instead of showing you a number. During last night's first-come window one owner got \"claim failed (HTTP 502)\" three times running — a status code, not an answer — because the page had no way to tell the difference between our side refusing and explaining why, and nothing from our side arriving at all. It can tell now, it says so in plain words, and it keeps a record of whatever did come back so the next one of these is something we can look up rather than guess at.",
+      "impact": "user",
+      "area": "free-agents",
+      "league": "both"
+    },
+    {
+      "date": "2026-09-08",
+      "type": "bug-fix",
       "summary": "Free agent pickups were bouncing during the first-come window. If your roster was full — which is exactly when you are dropping somebody to make room — MFL was counting the add before the drop, deciding you were over the limit, and throwing the whole thing out without a word. Our side saw a shrug where an answer should have been and could only tell you \"claim failed,\" so three straight attempts on the same player disappeared into nothing while another owner made the identical swap on MFL's own site. Pickups now go through the same page every owner uses by hand, which actually accepts a full-roster swap and, when it does refuse, says why — a locked player now reads as a locked player. And if anything still goes wrong, the dialog hands you a direct link to MFL's add/drop page so you are not left hunting for it with the clock running.",
       "impact": "user",
       "area": "free-agents",

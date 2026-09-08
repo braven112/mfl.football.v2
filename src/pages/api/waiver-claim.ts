@@ -534,16 +534,20 @@ export const POST: APIRoute = async ({ request }) => {
           { confirmUrl }
         );
       }
+      // PAST THE GUARD ABOVE THERE ARE EXACTLY TWO OUTCOMES, and the payload
+      // must not pretend otherwise. A non-null read-back with anything missing
+      // already returned 502, so `stored !== null` now IMPLIES
+      // `missing.length === 0` — leaving a third "accepted but not showing yet"
+      // branch here reads as a live case the owner might see and is dead code.
+      // Derived once, so the flag and the sentence can never disagree.
+      const verified = stored !== null;
       return new Response(
         JSON.stringify({
           success: true,
-          verified: stored !== null && missing.length === 0,
-          message:
-            stored === null
-              ? 'Submitted, but we could not read your roster back to confirm it. Check your roster before retrying.'
-              : missing.length === 0
-                ? 'Added — the player is on your roster now.'
-                : 'MFL accepted the add but your roster does not show it yet. Check your roster before retrying.',
+          verified,
+          message: verified
+            ? 'Added — the player is on your roster now.'
+            : 'Submitted, but we could not read your roster back to confirm it. Check your roster before retrying.',
           mode: 'fcfs',
           confirmUrl,
           // `submitted`, not `requestedAdds`: an FCFS write resolves instantly,
@@ -595,17 +599,19 @@ export const POST: APIRoute = async ({ request }) => {
         { round, submitted: requestedAdds, confirmed: newlyPending, confirmUrl }
       );
     }
+    // TWO OUTCOMES HERE TOO, for the same reason as the FCFS payload above:
+    // `canDiff` with anything unconfirmed already returned 502, so reaching
+    // this line with `canDiff` true means the whole round read back. A third
+    // "accepted but not showing yet" branch is unreachable and reads as a live
+    // case. `verified` and the sentence come off one value so they cannot drift.
+    const verified = canDiff;
     return new Response(
       JSON.stringify({
         success: true,
-        verified: canDiff && unconfirmed.length === 0,
-        message: !canDiff
-          ? 'Submitted, but we could not read your pending waivers back to confirm it. Check them on MyFantasyLeague.'
-          : unconfirmed.length === 0
-            ? `Round ${round} submitted — ${claims!.length} claim${claims!.length === 1 ? '' : 's'}.`
-            : `MFL accepted the request but your pending waivers do not show ${
-                unconfirmed.length === 1 ? 'the claim' : `${unconfirmed.length} of the claims`
-              } as newly added yet. Check your pending waivers before retrying.`,
+        verified,
+        message: verified
+          ? `Round ${round} submitted — ${claims!.length} claim${claims!.length === 1 ? '' : 's'}.`
+          : 'Submitted, but we could not read your pending waivers back to confirm it. Check them on MyFantasyLeague.',
         mode: 'waiver',
         round,
         confirmUrl,

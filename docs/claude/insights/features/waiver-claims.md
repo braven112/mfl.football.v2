@@ -921,3 +921,67 @@ degraded branch is serving a last-good order or a 502. The next report is a
 grep, not a reproduction attempt. Keep the client time-box wider than the
 server budget plus a cold start, so a hang is attributed server-side with a
 line, not aborted blind by the browser.
+
+## 2026-09-08 - A Generic Client Fallback Is Evidence, And It Was Read As Noise
+
+**Context:** follow-up to the FCFS outage (#1018,
+`docs/claude/followups/2026-09-08-fcfs-add-drop-import.md`). The owner's
+screenshot of all three lost pickups said `Claim failed (HTTP 502)` — the
+modal's generic fallback — while the route attaches a specific `message` to
+every failure it produces. The incident write-up filed this as an unexplained
+detail with a leading theory: a stale service-worker copy of the modal script
+on the owner's phone.
+
+**The theory was wrong, and both halves of it are falsifiable without any
+logs.** `public/sw.js` returns early on every non-GET request, so it never sees
+this POST or its response. And a stale bundle would have changed nothing: the
+`data.message ||` fallback shipped in #983, two days earlier and well outside
+the 12-hour `HTML_STALE_MAX_AGE_MS` window that is the only way an old
+content-hashed bundle can be reached at all.
+
+**Insight: the generic fallback firing was itself a fact about the response,
+and nobody read it as one.** `fail()` always carries a `message`. So
+`data.message` being absent does not mean the copy was stale — it means the
+body the browser received was not this route's JSON. Something in front of the
+function answered, or the function never answered. That reframes the sentence
+in the brief that says the server sent a specific message on every one of those
+three 502s: it was inferred from `get_runtime_errors` being empty, and a
+gateway 502 is not a runtime error cluster. The runtime log agrees — it shows
+`MFL response: 200` **with nothing after it**, where the code of the day would
+have gone on to a roster read-back, a sleep, and a `console.warn` before its
+own `fail()`.
+
+**Rule: the client must not destroy the evidence either.** This route already
+follows "never discard MFL's body on a write" on the server, for exactly this
+reason, and the browser half of the same rule was missing.
+`res.json().catch(() => ({}))` is the shape to avoid: it collapses *"the route
+refused and said why"*, *"the route refused and said nothing"* and *"this never
+reached the route"* into one indistinguishable `{}`, and throws away the body
+that says which. Read the response as **text**, parse it yourself, keep the raw
+string, log it with the status when there is no `message`, and say *"the server
+did not say why"* rather than printing a status code at the owner. An owner can
+relay a sentence; a screenshot of `HTTP 502` costs a day.
+
+**Corollary for a JSON parse on any response you did not author:** guard the
+shape, not just the throw. `JSON.parse('null')` and `JSON.parse('"ok"')` do not
+throw, and `data.success` on the first of those throws instead — a non-object
+body has to be forced back to `{}` explicitly.
+
+Guard: `tests/waiver-claim-confirmation.test.ts` → "says when a failure did not
+come from the route at all", which also pins the service-worker theory as ruled
+out so it does not get re-litigated.
+
+**Second, smaller lesson from the same pass: a finding that names one site
+usually has a twin.** F3 reported one unreachable message branch in the FCFS
+success payload. The queued payload had the identical dead branch behind the
+identical guard, and the review named only the first. Both now derive
+`verified` once and choose between two sentences off it, so there is no third
+slot to fill back in and the flag cannot disagree with the prose beside it.
+
+**And a note on source-scan guards, since this route is guarded almost entirely
+by them:** `tests/waiver-filed-claims.test.ts` anchored a slice on
+`const data = await res.json()`. When that line changed, `indexOf` returned
+`-1` and the slice became the whole file — the assertion did not fail, it
+quietly changed meaning. It happened to fail here for an unrelated reason.
+Anchor a scan on the most stable landmark available (the request, not the
+parse), because a missing anchor in a `slice` is silent by construction.

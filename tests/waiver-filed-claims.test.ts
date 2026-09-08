@@ -253,7 +253,12 @@ describe('the panel refreshes when a claim is filed', () => {
     // A claim can land on MFL and still come back unverified — the read-back is
     // best-effort — and that is exactly when a stale list misleads most. So the
     // dispatch must not sit inside the verified-only path.
-    const submitBody = MODAL.slice(MODAL.indexOf('const data = await res.json()'));
+    // Anchored on the FETCH, not on how the body is parsed. The old anchor was
+    // `const data = await res.json()`, which vanished when the failure path
+    // moved to `res.text()` + `JSON.parse` (follow-up F2) — and a slice from a
+    // missing anchor is the whole file, so this assertion silently changed
+    // meaning rather than failing loudly. The request is the stable landmark.
+    const submitBody = MODAL.slice(MODAL.indexOf("await fetch('/api/waiver-claim'"));
     const dispatchAt = submitBody.indexOf("waiver-claims:changed");
     const verifiedAt = submitBody.indexOf('data.verified === false');
     expect(dispatchAt).toBeGreaterThan(-1);
