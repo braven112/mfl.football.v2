@@ -13,7 +13,7 @@
       "sleeper": "cached",
       "nflverse": "https://github.com/nflverse/nflverse-data/releases/download/snap_counts/snap_counts_2026.csv.gz"
     },
-    "fetchedAt": "2026-09-08T09:03:02.365Z"
+    "fetchedAt": "2026-09-08T17:24:47.416Z"
   },
   "players": [
     {
@@ -412,7 +412,7 @@
         "age": 27,
         "height": "70",
         "weight": "226",
-        "number": 27,
+        "number": 23,
         "college": "Fort Valley State",
         "birthDate": "1999-05-08",
         "status": "Active",
@@ -3090,7 +3090,7 @@
         "active": true,
         "position": "TE",
         "depthChartPosition": "TE",
-        "depthChartOrder": 1,
+        "depthChartOrder": 2,
         "fantasyPositions": [
           "TE"
         ],
@@ -3101,7 +3101,12 @@
       },
       "nflverse": null,
       "gamesPlayed": null,
-      "depthChartAhead": null
+      "depthChartAhead": [
+        {
+          "id": "17107",
+          "name": "Ferguson, Terrance"
+        }
+      ]
     },
     {
       "id": "13590",
@@ -3421,12 +3426,12 @@
       "gamesPlayed": null,
       "depthChartAhead": [
         {
-          "id": "14871",
-          "name": "Parkinson, Colby"
-        },
-        {
           "id": "17107",
           "name": "Ferguson, Terrance"
+        },
+        {
+          "id": "14871",
+          "name": "Parkinson, Colby"
         },
         {
           "id": "16219",
@@ -4355,12 +4360,12 @@
           "name": "Skattebo, Cam"
         },
         {
-          "id": "15254",
-          "name": "Harris, Najee"
-        },
-        {
           "id": "16747",
           "name": "Tracy, Tyrone"
+        },
+        {
+          "id": "15254",
+          "name": "Harris, Najee"
         }
       ]
     },
@@ -4380,32 +4385,10 @@
       "headshot": "https://www49.myfantasyleague.com/player_photos_2014/14122_thumb.jpg",
       "externalIds": {
         "mfl": "14122",
-        "sleeper": "6149",
-        "gsis": " 00-0035535"
+        "sleeper": null,
+        "gsis": null
       },
-      "sleeper": {
-        "id": "6149",
-        "fullName": "Darius Slayton",
-        "team": "NYG",
-        "age": 29,
-        "height": "73",
-        "weight": "198",
-        "number": 18,
-        "college": "Auburn",
-        "birthDate": "1997-01-12",
-        "status": "Active",
-        "active": true,
-        "position": "WR",
-        "depthChartPosition": null,
-        "depthChartOrder": null,
-        "fantasyPositions": [
-          "WR"
-        ],
-        "experience": 7,
-        "injuryStatus": null,
-        "injuryBodyPart": null,
-        "gsisId": " 00-0035535"
-      },
+      "sleeper": null,
       "nflverse": null,
       "gamesPlayed": null,
       "depthChartAhead": null
@@ -8763,7 +8746,7 @@
         "active": true,
         "position": "TE",
         "depthChartPosition": "TE",
-        "depthChartOrder": 2,
+        "depthChartOrder": 1,
         "fantasyPositions": [
           "TE"
         ],
@@ -8774,12 +8757,7 @@
       },
       "nflverse": null,
       "gamesPlayed": null,
-      "depthChartAhead": [
-        {
-          "id": "14871",
-          "name": "Parkinson, Colby"
-        }
-      ]
+      "depthChartAhead": null
     },
     {
       "id": "17076",
@@ -10437,7 +10415,7 @@
         "age": 23,
         "height": "74",
         "weight": "207",
-        "number": 15,
+        "number": 7,
         "college": "Ole Miss",
         "birthDate": "2002-12-18",
         "status": "Active",
@@ -10743,7 +10721,7 @@
         "active": true,
         "position": "RB",
         "depthChartPosition": "RB",
-        "depthChartOrder": 3,
+        "depthChartOrder": 2,
         "fantasyPositions": [
           "RB"
         ],
@@ -10758,10 +10736,6 @@
         {
           "id": "17045",
           "name": "Skattebo, Cam"
-        },
-        {
-          "id": "15254",
-          "name": "Harris, Najee"
         }
       ]
     },
@@ -14809,7 +14783,7 @@
         "active": true,
         "position": "RB",
         "depthChartPosition": "RB",
-        "depthChartOrder": 2,
+        "depthChartOrder": 3,
         "fantasyPositions": [
           "RB"
         ],
@@ -14824,6 +14798,10 @@
         {
           "id": "17045",
           "name": "Skattebo, Cam"
+        },
+        {
+          "id": "16747",
+          "name": "Tracy, Tyrone"
         }
       ]
     },
@@ -15584,7 +15562,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "SWR",
-        "depthChartOrder": 5,
+        "depthChartOrder": 6,
         "fantasyPositions": [
           "WR"
         ],
@@ -15794,12 +15772,12 @@
       "gamesPlayed": null,
       "depthChartAhead": [
         {
-          "id": "14871",
-          "name": "Parkinson, Colby"
-        },
-        {
           "id": "17107",
           "name": "Ferguson, Terrance"
+        },
+        {
+          "id": "14871",
+          "name": "Parkinson, Colby"
         }
       ]
     },
