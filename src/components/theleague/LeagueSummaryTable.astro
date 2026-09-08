@@ -122,6 +122,39 @@ const serializedData = JSON.stringify({ teams, years, categories });
       }
     } catch {}
 
+    // Read a deep link's preselected category / sort column (the homepage Cap
+    // Space Rankings card links here). Params are re-read on every
+    // astro:page-load, never captured at module scope.
+    try {
+      const params = new URLSearchParams(window.location.search);
+
+      const categoryParam = params.get('category');
+      if (categoryParam && categories.some((c: any) => c.id === categoryParam)) {
+        selectedCategory = categoryParam;
+      }
+
+      const sortParam = params.get('sort');
+      if (sortParam === 'team') {
+        sortColumn = 'team';
+      } else if (sortParam) {
+        // Accept a year ("2026") or a raw 0-based column index.
+        const byYear = years.findIndex((y: any) => String(y) === sortParam);
+        const index = byYear >= 0 ? byYear : Number(sortParam);
+        if (Number.isInteger(index) && index >= 0 && index < years.length) {
+          sortColumn = String(index);
+        }
+      }
+
+      const dirParam = params.get('dir');
+      if (dirParam === 'asc' || dirParam === 'desc') {
+        sortDirection = dirParam;
+      } else if (sortColumn !== 'team') {
+        // No explicit direction: match what a header click would do.
+        const cat = categories.find((c: any) => c.id === selectedCategory);
+        sortDirection = cat?.direction === 'asc' ? 'desc' : 'asc';
+      }
+    } catch {}
+
     // DOM references
     const categorySelect = document.getElementById('category-select') as HTMLSelectElement;
     const descriptionEl = document.getElementById('category-description');
@@ -327,6 +360,17 @@ const serializedData = JSON.stringify({ teams, years, categories });
         });
       }
     });
+
+    // Reflect a deep-linked category in the control before the first render
+    // (the markup ships with capSpace selected).
+    if (categorySelect && categorySelect.value !== selectedCategory) {
+      categorySelect.value = selectedCategory;
+      const cat = getCategory();
+      if (descriptionEl) descriptionEl.textContent = cat.description;
+      if (cat.subCategories && cat.subCategories.length > 0) {
+        selectedSubCategory = cat.subCategories[0].id;
+      }
+    }
 
     // Initial render
     renderSubCategories();
