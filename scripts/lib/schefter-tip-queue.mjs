@@ -140,16 +140,16 @@ export function dedupeTipsById(tips) {
     // each duplicate relaunder the clock and the ledger, so a closure the
     // quality gate kept suppressing would never age out at all — strictly
     // worse than the 7 days it had before any of this.
-    const fold = acc.folds.get(acc.payload?.leadKind === 'closure' ? 'closure' : 'live') ?? {
-      oldestAt: undefined,
-      strikes: 0,
-      firstSuppressedAt: undefined,
-    };
+    // storyOf, not a hand-copy of its logic: the accumulate and materialize
+    // sites must classify identically. Re-inlined, a second terminal class
+    // added to storyOf would leave the winner reading ANOTHER story's fold —
+    // reinstating exactly the cross-story inheritance this removed, and
+    // failing open rather than throwing. Always present: the winner's own
+    // class is folded on the pass that elected it.
+    const fold = acc.folds.get(storyOf(acc.payload)) ?? emptyFold();
     if (fold.strikes > 0) merged.suppressedStrikes = fold.strikes;
     if (typeof fold.firstSuppressedAt === 'number') merged.firstSuppressedAt = fold.firstSuppressedAt;
     if (typeof fold.oldestAt === 'number') merged.submittedAt = fold.oldestAt;
     return merged;
   });
 }
-
-

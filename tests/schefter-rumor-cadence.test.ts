@@ -29,6 +29,7 @@ import {
   TRADE_DEADLINE_WINDOW_DAYS,
 } from '../src/utils/trade-deadline.mjs';
 import { MAX_POSTS_PER_DAY } from '../scripts/lib/schefter-groupme-budget.mjs';
+import { resolveDateForYear } from '../src/utils/league-event-resolver';
 
 /** Noon PT on a PT calendar date — safely inside the day at either offset. */
 function atPT(iso: string): Date {
@@ -152,6 +153,23 @@ describe('awake window — draft weekend through the championship', () => {
     expect(startIso).toBe('2026-08-30');
     expect(startIso).toBe(shiftIsoDate(nflKickoffIsoDate(2026), -11));
     expect(AWAKE_START_OFFSET_FROM_KICKOFF_DAYS).toBe(-11);
+  });
+
+  it('tracks the resolver’s real NL-draft date, not just its own arithmetic', () => {
+    // The offset is a constant, so asserting it against `shiftIsoDate(kickoff,
+    // -11)` is very nearly a tautology — it would still pass if the AFL moved
+    // its draft and the loud 3/day cadence started running over draft weekend.
+    // Cross-check against the event resolver, which owns the date.
+    const nlDraft = { type: 'computed', rule: 'sunday-before-labor-day-weekend' } as const;
+    for (const year of [2026, 2027, 2028, 2029, 2030]) {
+      const resolved = resolveDateForYear(nlDraft as never, year);
+      const iso = [
+        resolved.getFullYear(),
+        String(resolved.getMonth() + 1).padStart(2, '0'),
+        String(resolved.getDate()).padStart(2, '0'),
+      ].join('-');
+      expect(leagueAwakeWindow(year).startIso, `NL draft anchor drifted for ${year}`).toBe(iso);
+    }
   });
 
   it('still closes on championship Monday — the start moving must not drag the end', () => {

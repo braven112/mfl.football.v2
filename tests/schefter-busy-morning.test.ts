@@ -102,9 +102,12 @@ describe('busy-morning split logic', () => {
       /const distinctTradeTipIds = new Set\(\s*\n?\s*primaryBucket\.tips\.map\(/,
     );
     expect(SCANNER_SRC).toMatch(/busyMorningBacklog = distinctTradeTipIds\.size/);
-    // The row count must not be what gates or reports the split.
-    const splitBlock =
-      SCANNER_SRC.match(/const distinctTradeTipIds[\s\S]*?\n    \}\n/)?.[0] ?? '';
+    // The row count must not be what gates or reports the split. Assert the
+    // block was actually FOUND before asserting a negative over it — an
+    // `?? ''` here would let a re-indent make the regex miss and the guard
+    // pass vacuously, with the suite still green.
+    const splitBlock = SCANNER_SRC.match(/const distinctTradeTipIds[\s\S]*?\n    \}\n/)?.[0];
+    expect(splitBlock, 'busy-morning split block not found — regex is stale').toBeTruthy();
     expect(splitBlock).not.toMatch(/busyMorningBacklog = primaryBucket\.tips\.length/);
   });
 
