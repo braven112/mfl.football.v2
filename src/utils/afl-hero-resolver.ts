@@ -478,6 +478,9 @@ const EVENT_VIEW: Record<string, ViewBuilder> = {
           : `${days} days until the trade deadline. Use the trade builder to line up your final moves of the season.`,
       link: '/afl-fantasy/trade-builder',
       linkLabel: 'Open Trade Builder',
+      // A player actually on YOUR block is the face, so this is a team story.
+      // Red on the day itself — the same urgency flip the keeper deadline makes.
+      composite: { wordmark: 'DEADLINE', accent: 'gold', tone: days === 0 ? 'red' : null, scope: 'team' },
       icon: 'exchange',
       accent: '#ff7a59',
       glow: 'rgba(220,38,38,.55)',
@@ -497,6 +500,8 @@ const EVENT_VIEW: Record<string, ViewBuilder> = {
       link: '/afl-fantasy/standings',
       linkLabel: 'View Standings',
       icon: 'gavel',
+      // Seeds locking is the whole league's week, not one club's.
+      composite: { wordmark: 'FINALE', accent: 'navy', tone: null, scope: 'league' },
       accent: ACCENT_GOLD,
       glow: GLOW_NAVY,
       player: randomHeroPlayer(now),
@@ -515,6 +520,7 @@ const EVENT_VIEW: Record<string, ViewBuilder> = {
       link: '/afl-fantasy/playoffs',
       linkLabel: 'View Bracket',
       icon: 'playoff',
+      composite: { wordmark: 'PLAYOFFS', accent: 'navy', tone: null, scope: 'league' },
       accent: ACCENT_GOLD,
       glow: 'rgba(196,30,58,.55)',
       player: randomHeroPlayer(now),
@@ -533,6 +539,8 @@ const EVENT_VIEW: Record<string, ViewBuilder> = {
       link: '/afl-fantasy/playoffs',
       linkLabel: 'View Bracket',
       icon: 'champ',
+      // Trophy gold for the one game the whole league is watching.
+      composite: { wordmark: 'TITLE\u00a0GAME', accent: 'gold', tone: null, scope: 'league' },
       accent: ACCENT_GOLD,
       glow: GLOW_GOLD,
       player: randomHeroPlayer(now),
@@ -551,6 +559,8 @@ const EVENT_VIEW: Record<string, ViewBuilder> = {
       link: '/afl-fantasy/rosters',
       linkLabel: 'Review Rosters',
       icon: 'star',
+      // The reset belongs to everyone; the face is a rookie, owned by nobody yet.
+      composite: { wordmark: 'NEW\u00a0YEAR', accent: 'navy', tone: null, scope: 'league' },
       accent: ACCENT_GOLD,
       glow: GLOW_NAVY,
       player: randomHeroPlayer(now),
@@ -687,6 +697,20 @@ const SLOT_VIEW: Record<SlotKey, (ctx: SlotContext) => EventHeroView> = {
     link: '/afl-fantasy/standings',
     linkLabel: 'SEE THE RACE',
     icon: 'trophy',
+    // LEAGUE, not team — and the reasoning that said otherwise was wrong.
+    //
+    // The face is the leader's headliner, so "the card wears the club the race
+    // is about" looks right. But `standingsLeaderId` is drawn from
+    // `leagueStandings.franchise` — all 24, league-wide — while the franchise
+    // accent resolves within the VIEWER's conference. The AFL rosters the same
+    // player in both, so for a viewer in the other conference the accent lands
+    // on whichever of THEIR clubs also rosters him: a card painted for a team
+    // that is not the one the copy is about.
+    //
+    // The recap survives the same scoping because it is about whoever rosters
+    // the top scorer, whoever that turns out to be. Standings names a specific
+    // franchise in its meaning, so the two can disagree. (Copilot, PR #1025.)
+    composite: { wordmark: 'STANDINGS', accent: 'navy', tone: null, scope: 'league' },
     accent: ACCENT_GOLD,
     glow: GLOW_NAVY,
     player: randomHeroPlayer(now),
@@ -717,6 +741,9 @@ const SLOT_VIEW: Record<SlotKey, (ctx: SlotContext) => EventHeroView> = {
     link: '/afl-fantasy/rosters',
     linkLabel: 'SET YOUR CLAIMS',
     icon: 'binoculars',
+    // The face is a FREE AGENT — nobody rosters him, so there is no club whose
+    // colours this could honestly wear. League event.
+    composite: { wordmark: 'WAIVERS', accent: 'navy', tone: null, scope: 'league' },
     accent: ACCENT_GREEN,
     glow: GLOW_GREEN,
     player: randomHeroPlayer(now),
@@ -734,6 +761,8 @@ const SLOT_VIEW: Record<SlotKey, (ctx: SlotContext) => EventHeroView> = {
     link: '/afl-fantasy/news',
     linkLabel: 'READ THE LATEST',
     icon: 'news',
+    // Coverage of the whole league, not a dispatch from one clubhouse.
+    composite: { wordmark: 'NEWS', accent: 'navy', tone: null, scope: 'league' },
     accent: ACCENT_GOLD,
     glow: GLOW_GOLD,
     player: randomHeroPlayer(now),
@@ -779,6 +808,8 @@ const SLOT_VIEW: Record<SlotKey, (ctx: SlotContext) => EventHeroView> = {
     link: '/afl-fantasy/standings',
     linkLabel: 'VIEW STANDINGS',
     icon: 'star',
+    // The league's own card, shown when no phase claims the day.
+    composite: { wordmark: 'AFL', accent: 'navy', tone: null, scope: 'league' },
     accent: ACCENT_GOLD,
     glow: GLOW_GOLD,
     player: randomHeroPlayer(now),
@@ -1276,6 +1307,11 @@ function buildChampionCrownedView(event: ResolvedLeagueEvent, now: Date): EventH
     link: '/afl-fantasy/playoffs',
     linkLabel: 'View Recap',
     icon: 'trophy',
+    // Deliberately LEAGUE, not team. The cast model here is a league-wide
+    // headliner rather than the champion's own player, so painting the card in
+    // a club's colours would dress it in whoever happened to be cast — the
+    // exact stranger's-colours trap the conference scoping exists to avoid.
+    composite: { wordmark: 'CHAMPION', accent: 'gold', tone: null, scope: 'league' },
     accent: ACCENT_GOLD,
     glow: GLOW_GOLD_SOFT,
     player: randomHeroPlayer(now),
@@ -1481,6 +1517,8 @@ export function resolveAflHeroState(input: AflHeroResolverInput): AflHeroState {
         link: e.actionLinks[0]?.url ?? e.resultLinks[0]?.url,
         linkLabel: (e.actionLinks[0]?.label ?? e.resultLinks[0]?.label ?? 'LEARN MORE').toUpperCase(),
         icon: e.definition.icon,
+        // The catch-all for a dated league event with no phase of its own.
+        composite: { wordmark: 'EVENT', accent: 'gold', tone: null, scope: 'league' },
         accent: ACCENT_GOLD,
         glow: GLOW_GOLD,
         player: randomHeroPlayer(now),
