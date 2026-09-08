@@ -560,6 +560,17 @@ html.dark .cmh--red {
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
+  /* A button label is not prose. "View Draft Order" broke across two lines on
+     a 390px phone — the footer is `nowrap` by default, so the metrics beside
+     it took the width and the CTA absorbed the squeeze by wrapping mid-phrase,
+     which reads as a layout bug rather than a button.
+     `flex-shrink: 0` is the half that matters: without it `nowrap` just moves
+     the failure from a wrapped label to an overflowing one. Together they make
+     the METRICS give up width instead — they are a stacked label that already
+     wraps gracefully — and, on the mobile footer below, let the CTA drop to
+     its own row when there is genuinely no room. */
+  white-space: nowrap;
+  flex-shrink: 0;
   background: var(--cmh-cta-bg);
   color: var(--cmh-cta-ink);
   font-size: 0.8125rem;
@@ -681,6 +692,16 @@ html.dark .cmh--red {
 @media (max-width: 640px) {
   .cmh {
     min-height: var(--cmh-min-h-mobile);
+  }
+
+  /* The escape hatch for the un-shrinkable CTA above. On a phone the metrics
+     and the button often cannot share a row at readable sizes, and a second
+     row is the honest answer — the alternative is a squeezed button or a
+     card that scrolls sideways. Overrides `--cmh-footer-wrap` deliberately:
+     an adopter's `nowrap` is a desktop composition choice, and cut watch
+     already asks for `wrap` at every width. */
+  .cmh__footer {
+    flex-wrap: wrap;
   }
 
   /* DEFAULT — fade: the cutout drops to a faint watermark behind the copy and
