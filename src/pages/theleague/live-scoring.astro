@@ -103,6 +103,13 @@ const starterRules = loadStarterRules(league.dataPath, rosterDemoYear);
 let useDemo = demoParam === '1' || useRosterDemo;
 let data: Awaited<ReturnType<typeof assembleLiveScoringData>> | undefined;
 
+// Started HERE, awaited in the live branch below, so ESPN overlaps the MFL
+// assembly instead of adding its timeout to every render. Skipped entirely when
+// the caller already asked for the sample.
+const nflGamesPromise = useDemo
+  ? undefined
+  : fetchInitialNflGames({ week, year, params: Astro.url.searchParams });
+
 if (!useDemo) {
   data = await assembleLiveScoringData({
     siteUrl: Astro.url,
@@ -162,13 +169,14 @@ if (useDemo) {
   // data is always assigned in the non-demo branch above.
   const liveData = data!;
 
-  // The rail's SERVER slate. Not an optimisation — a component that renders
-  // nothing server-side gets an EMPTY <astro-island>, and `client:visible`
-  // observes that island's CHILDREN, so with none it is never observed and
-  // never hydrates. `nflGames` used to be set only under ?demo=1, which is why
-  // the rail worked in demo and was invisible everywhere else. Undefined on an
-  // ESPN outage, so the island still falls back to its own poll.
-  nflGames = await fetchInitialNflGames({ week, year, params: Astro.url.searchParams });
+  // The rail's SERVER slate. Not an optimisation — the strip draws nothing
+  // without games, and an <astro-island> with no children is never observed by
+  // `client:visible`, so it never hydrates. It reaches the markup only because
+  // `useNflScoreboard` treats `fallbackGames` as the value until the first poll
+  // lands; it used to read that prop in demo mode ALONE, which is why this rail
+  // server-rendered nothing for its whole life. Undefined on an ESPN outage, so
+  // the island still falls back to its own poll.
+  nflGames = await nflGamesPromise;
   islandProps = {
     week,
     year,

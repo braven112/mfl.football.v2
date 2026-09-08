@@ -67,6 +67,9 @@ const userFranchiseId =
 
 const configTeams = ((bb1Config as { teams?: ConfigTeam[] }).teams ?? []) as ConfigTeam[];
 
+// Started before the MFL assembly so the two overlap; awaited below.
+const nflGamesPromise = fetchInitialNflGames({ week, year, params: Astro.url.searchParams });
+
 const data = await assembleLiveScoringData({
   siteUrl: Astro.url,
   week,
@@ -97,12 +100,12 @@ const islandProps: LiveScoringPageProps = {
   initialYetToPlay: data.playersYetToPlay,
 };
 
-// The rail's SERVER slate. A component that renders nothing server-side gets an
-// EMPTY <astro-island>, and `client:visible` observes that island's CHILDREN —
-// with none, it is never observed and never hydrates, so the rail was invisible
-// here on every load. Undefined on an ESPN outage, so the island still falls
-// back to its own poll.
-const nflGames = await fetchInitialNflGames({ week, year, params: Astro.url.searchParams });
+// The rail's SERVER slate. The strip draws nothing without games, and an
+// <astro-island> with no children is never observed by `client:visible`, so it
+// never hydrates — this rail was invisible here on every load. It reaches the
+// markup only because `useNflScoreboard` treats `fallbackGames` as the value
+// until the first poll lands.
+const nflGames = await nflGamesPromise;
 ---
 
 <TheLeagueLayout title="Live Scoring | Best Ball #1">

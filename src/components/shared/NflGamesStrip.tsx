@@ -17,7 +17,14 @@
  *   import NflGamesStrip from '../../components/shared/NflGamesStrip';
  *   import '../../styles/nfl-games-strip.css';
  *   import '../../styles/network-badge.css';
- *   <NflGamesStrip client:visible week={week} year={year} isLive={isLive} country={country} />
+ *   <NflGamesStrip client:idle week={week} year={year} isLive={isLive}
+ *                  initialGames={nflGames} country={country} />
+ *
+ * NEVER `client:visible`. This component renders null when it has no games, and
+ * Astro's visible directive observes the island's CHILDREN — an island that
+ * server-rendered nothing has none, so it is never observed and never hydrates,
+ * silently and permanently. Pass `initialGames` from the page as well: that is
+ * what gives it something to server-render in the first place.
  */
 
 import type { NflGame } from '../../types/live-scoring';

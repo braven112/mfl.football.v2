@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { buildOddsMap } from '../src/utils/coach-data';
 import { resolveChannel } from '../src/utils/broadcast-channels';
@@ -29,6 +29,26 @@ const BADGE_SURFACES = [
   'src/pages/theleague/lineup.astro',
   'src/pages/afl-fantasy/lineup.astro',
 ] as const;
+
+/**
+ * Every file that mounts the rail, DISCOVERED rather than listed. The hardcoded
+ * trio below is still asserted (they must all exist), but the directive and
+ * server-slate rules run over whatever the repo actually contains — a fourth
+ * page copied from the component's own example is precisely how the
+ * never-hydrating mount came back.
+ */
+function stripMountFiles(): string[] {
+  const out: string[] = [];
+  const walk = (dir: string) => {
+    for (const e of readdirSync(root(dir), { withFileTypes: true })) {
+      const rel = `${dir}/${e.name}`;
+      if (e.isDirectory()) walk(rel);
+      else if (/\.(astro|tsx)$/.test(e.name) && read(rel).includes('<NflGamesStrip')) out.push(rel);
+    }
+  };
+  walk('src/pages');
+  return out.sort();
+}
 
 /** Routes that mount the React island and therefore must hand it a country. */
 const STRIP_ROUTES = [
@@ -128,19 +148,33 @@ describe('NFL games rail — it must survive its own empty server render', () =>
    * the client poll never runs, and the rail never appears. Not "until
    * kickoff": never. Two independent things stop it, and both are pinned here.
    */
-  it.each(STRIP_ROUTES)('%s hands the strip a server-rendered slate', (route) => {
-    const src = read(route);
-    expect(src, `${route}: no server fetch`).toMatch(/fetchInitialNflGames\(/);
-    expect(src, `${route}: fetched but not passed`).toMatch(/initialGames=\{nflGames\}/);
+  it('every known route still mounts the rail', () => {
+    // Discovery must not silently find nothing, which would pass every check below.
+    expect(stripMountFiles()).toEqual(expect.arrayContaining([...STRIP_ROUTES]));
   });
 
-  it.each(STRIP_ROUTES)('%s does not mount the strip with client:visible', (route) => {
-    const src = read(route);
-    const mount = src.slice(src.indexOf('<NflGamesStrip'));
-    const directive = mount.match(/client:(visible|idle|load|only)/)?.[1];
-    expect(directive, `${route}: no client directive on the strip`).toBeTruthy();
-    // `visible` is the one that cannot recover from an empty server render.
-    expect(directive, `${route}: client:visible cannot hydrate an empty island`).not.toBe('visible');
+  it('every file mounting the rail hands it a server-rendered slate', () => {
+    const missing = stripMountFiles().filter((f) => {
+      const src = read(f);
+      return !/fetchInitialNflGames\(/.test(src) || !/initialGames=\{nflGames\}/.test(src);
+    });
+    expect(missing, 'these mount the rail with no server slate').toEqual([]);
+  });
+
+  it('no file mounts the rail with client:visible', () => {
+    const offenders = stripMountFiles().filter((f) => {
+      const mount = read(f).slice(read(f).indexOf('<NflGamesStrip'));
+      return /client:visible/.test(mount.slice(0, 400));
+    });
+    // `visible` is the one directive that cannot recover from an empty island.
+    expect(offenders, 'client:visible cannot hydrate an island with no children').toEqual([]);
+  });
+
+  it("the component's own example does not recommend client:visible", () => {
+    // The example is what a fourth page gets copied from.
+    const doc = read('src/components/shared/NflGamesStrip.tsx').split('*/')[0];
+    expect(doc).not.toMatch(/client:visible week/);
+    expect(doc).toMatch(/client:idle/);
   });
 
   it('the server slate and the client poll parse through the SAME source', () => {
