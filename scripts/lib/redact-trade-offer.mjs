@@ -563,11 +563,19 @@ export function redactTradeOffer({
  * Trade offers usually file within a day or two while keeping a real per-run
  * dice roll — unposted offers can still fail forever; that's the design.
  *
- * History: was 0.0075 (~20%/24h at realistic cadence). Bumped to 0.025 on
- * 2026-04-30 (PR #141): trade proposals are TheLeague's highest-engagement
- * Schefter content, so we'd rather report them quickly than have them age out.
- * Bumped again to 0.05 on 2026-05-02 — 0.025 still let some proposals age
- * out before posting; doubling the base lands most offers within 24h.
+ * THIS IS A PER-DAY PROBABILITY, NOT A PER-RUN ONE. The scanner rolls each
+ * offer at most once per Pacific day (`OFFER_LAST_ROLL_DATE_KEY` in
+ * schefter-rumor-scan.mjs). That throttle is what makes this constant mean
+ * what it reads like: 0.10 is a one-in-ten chance that this offer leaks today.
+ *
+ * History: 0.0075 → 0.025 (2026-04-30, PR #141) → 0.05 (2026-05-02), each
+ * bump chasing "proposals age out before they post" while the roll still fired
+ * on every cron tick. At ~50 rolls/day a 0.05 per-RUN base is ~92% within 24
+ * hours, so in practice nearly every offer leaked, nearly immediately — the
+ * lane read as an advertising feed for the trade block rather than as a beat
+ * reporter breaking the occasional story (owner report, 2026-09-08). Moved to
+ * one roll per day at 0.10 on 2026-09-08: an offer now has a ~50/50 chance of
+ * ever surfacing across a week-long life, and a rumor is news again.
  *
  * The 48h framing flip from "fresh" to "lingering" ("offered but phones aren't
  * picking up") is handled in scanTradeOffers, not here. The probability itself
@@ -576,59 +584,49 @@ export function redactTradeOffer({
  * Exponential scaling on shopping volume: when the *effective* distinct
  * offerers for the most-shopped player in this offer is ≥2, multiply the
  * base by `OFFER_VOLUME_BOOST_FACTOR ^ (effectiveOfferers - 1)` and cap at
- * `OFFER_VOLUME_BOOST_MAX` so the per-run probability never exceeds ~10%.
+ * `OFFER_VOLUME_BOOST_MAX`. This boost SURVIVES the slowdown on purpose: a
+ * player three desks are calling about is the genuine breaking story, and the
+ * gradient from 10%/day to the ceiling is what separates one from a routine
+ * offer nobody else wants.
  * Effective count blends real submitted offerers (full weight) with saved
  * trade-builder drafts (0.4 weight, computed in the scanner).
  *
- * The exponential growth is intentional — it keeps the per-run probability
+ * The exponential growth is intentional — it keeps the per-day probability
  * vague at low volume (owner can't tell whether their move tipped Schefter)
  * while accelerating the pass on heavily-shopped players. Combined with the
  * tier-cap on draft-only contribution, this gives Schefter speed without
  * letting him name names from soft signals.
  *
- * Exposure scaling (second arg, Phase 6c): a second multiplier of
- * `OFFER_EXPOSURE_BOOST_FACTOR ^ priorExposure` (capped at
- * `OFFER_EXPOSURE_BOOST_MAX`) accelerates the NEXT reveal once an offer has
- * already shipped at least one post. priorExposure=0 → ×1, so signal-1
- * timing/unpredictability is untouched. The combined product is clamped to
- * `OFFER_PROBABILITY_CEILING` so even a hot, multi-post offer can't post on
- * essentially every scan.
+ * NO EXPOSURE SCALING. Phase 6c multiplied the base by
+ * `OFFER_EXPOSURE_BOOST_FACTOR ^ priorExposure` so an already-reported offer
+ * raced through the rest of its reveal ladder. That ladder is gone — an offer
+ * that has posted is now on a cooldown (`OFFER_REPOST_COOLDOWN_MS`) rather
+ * than on an accelerator — and reinstating the boost would point the dial the
+ * wrong way: the offers it speeds up are exactly the ones the league has
+ * already heard about. `priorExposure` is still THREADED THROUGH the scanner
+ * (it picks how much detail a re-surfacing offer may reveal) but it no longer
+ * touches the odds, which is why this function takes one argument.
+ *
+ * The product is still clamped to `OFFER_PROBABILITY_CEILING`.
  *
  * Exported for tests & dry-run logging.
  */
-export const OFFER_POST_PROBABILITY = 0.05;
+export const OFFER_POST_PROBABILITY = 0.10;
 export const OFFER_VOLUME_BOOST_FACTOR = 1.5;
 export const OFFER_VOLUME_BOOST_MAX = 4;
 
-// Exposure boost (Phase 6c). Once an offer has already shipped a post (i.e.
-// it's a developing, already-public story), accelerate the *next* reveal so
-// signal 2 / signal 3 don't trail signal 1 by days. `priorExposure` is the
-// number of posts ALREADY shipped about this offer:
-//   priorExposure 0 (signal 1) → ×1  (no change — keeps signal-1 timing and
-//                                      its "owner can't tell what tipped it"
-//                                      unpredictability exactly as before)
-//   priorExposure 1 (signal 2) → ×2
-//   priorExposure 2 (signal 3) → ×4 (capped)
-//   priorExposure 3+           → ×4 (capped)
-// The boost stacks on top of the shopping-volume multiplier, but the combined
-// per-run probability is clamped to OFFER_PROBABILITY_CEILING so even the
-// hottest already-reported offer can't post on basically every scan (which
-// would dump the whole ladder in an hour).
-export const OFFER_EXPOSURE_BOOST_FACTOR = 2;
-export const OFFER_EXPOSURE_BOOST_MAX = 4;
+// Ceiling on the combined product. With one roll per day and a 0.10 base, this
+// is reachable only through the volume boost — a player several desks are
+// chasing tops out at roughly a one-in-three chance of leaking on any given
+// day. Nothing accelerates past it.
 export const OFFER_PROBABILITY_CEILING = 0.35;
 
-export function offerPostProbability(effectiveOfferers = 1, priorExposure = 0) {
+export function offerPostProbability(effectiveOfferers = 1) {
   const n = Number.isFinite(effectiveOfferers) ? Math.max(1, effectiveOfferers) : 1;
   const volumeRaw = Math.pow(OFFER_VOLUME_BOOST_FACTOR, n - 1);
   const volumeMult = Math.min(OFFER_VOLUME_BOOST_MAX, volumeRaw);
 
-  const e = Number.isFinite(priorExposure) ? Math.max(0, Math.floor(priorExposure)) : 0;
-  const exposureRaw = Math.pow(OFFER_EXPOSURE_BOOST_FACTOR, e);
-  const exposureMult = Math.min(OFFER_EXPOSURE_BOOST_MAX, exposureRaw);
-
-  const p = OFFER_POST_PROBABILITY * volumeMult * exposureMult;
-  return Math.min(OFFER_PROBABILITY_CEILING, p);
+  return Math.min(OFFER_PROBABILITY_CEILING, OFFER_POST_PROBABILITY * volumeMult);
 }
 
 export { bucketVolumeHint, tierForDistinctOfferers, classifyAsset, parseAssetString };

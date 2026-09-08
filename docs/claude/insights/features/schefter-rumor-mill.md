@@ -3,6 +3,54 @@
 The load-bearing architecture rules live in CLAUDE.md ("Schefter multi-league").
 This file holds the finer operational learnings.
 
+## 2026-09-08 - A per-RUN probability is meaningless until you count the runs
+
+**Context:** the fix for the 2026-09-07 entry below. Owner report: two rumors
+in one day about the same trade offer, 7.5 hours apart. Every gate had passed.
+
+**The constant said 5%; the behavior was 92%.** `OFFER_POST_PROBABILITY` was a
+per-RUN figure and `scanTradeOffers` runs on the rumor scanner's `*/15` cron
+with no throttle — ~50 rolls a day per live offer, compounding to ~92% within
+24 hours. Effectively every offer leaked, almost immediately.
+
+**The diagnostic move, worth reusing: never read a probability constant without
+locating its roll cadence in the same breath.** The two live in different files
+here — the number in `scripts/lib/redact-trade-offer.mjs`, the cadence in
+`.github/workflows/schefter-rumor-scan.yml` — so nothing forced them to be read
+together, and a cron that tightened under an existing constant silently
+re-tuned it. Three prior bumps (0.0075 → 0.025 → 0.05) each chased "proposals
+age out before posting" and each made the real problem worse, because the
+symptom they were reading was never about the base rate.
+
+Two artifacts had the answer written down and were still not enough:
+
+- The code comment said "at ~8 scans a day", stale by a factor of six. **A
+  cadence figure in a comment is a snapshot, not a fact** — it cannot track the
+  cron file. `AdminDashboard.astro` did better by importing the constant and
+  rendering the cumulative curve live, and it was still wrong, because its
+  `ROLLS_PER_DAY = 50` was a hand-maintained literal next to the imported
+  value. Importing one half of a calculation does not protect the other half.
+- `schefter:trade_offers:rolls` existed precisely to show "how many chances
+  each offer had to leak" and nobody had read it. The instrument was there;
+  the habit of consulting it was not.
+
+**The fix that makes the constant honest is a throttle, not a smaller number.**
+Rolling each offer once per PT day (`trade_offers:last_roll_date`) turns the
+base into a per-day probability that means what it reads like. Shrinking 0.05
+to ~0.0006 to land the same cumulative curve would have preserved the trap for
+the next person.
+
+**Order matters between a cooldown and a roll.** The 7-day repost cooldown is
+checked BEFORE the daily roll. Reversed, a cooling-down offer burns its one
+roll for the day and `trade_offers:rolls` stops meaning what its name says —
+the same instrument-corrupting mistake, one layer down.
+
+**And when you add a cooldown, audit every accelerator pointing the other
+way.** `OFFER_EXPOSURE_BOOST_FACTOR` doubled the odds for an offer that had
+already posted. Harmless-looking beside a ladder that wanted to advance; the
+exact wrong dial once "already reported" became a reason to go quiet. A new
+gate can invert the meaning of an old multiplier without touching it.
+
 ## 2026-09-07 - A self-reported feed makes ABSENCE unusable, and repetition read as breadth
 
 **Context:** "Schefter seems to report on every trade rumor — is that

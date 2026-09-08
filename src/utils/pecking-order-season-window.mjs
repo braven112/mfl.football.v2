@@ -40,8 +40,15 @@ export function nflWeekOneKickoff(year) {
   return new Date(Date.UTC(year, 8, laborDayDate(year) + 4, 0, 20));
 }
 
-/** Day-of-month of Labor Day (first Monday of September) in `year`. */
-function laborDayDate(year) {
+/**
+ * Day-of-month of Labor Day (first Monday of September) in `year`.
+ *
+ * Exported so nothing else in the repo re-derives it. CLAUDE.md's rollover
+ * rules exist because a re-ported date formula drifted in five files; the
+ * trade-deadline resolver (`src/utils/trade-deadline.mjs`) imports this one
+ * rather than growing a second copy.
+ */
+export function laborDayDate(year) {
   const sep1Day = new Date(Date.UTC(year, 8, 1)).getUTCDay();
   const offset = sep1Day === 1 ? 0 : sep1Day === 0 ? 1 : 8 - sep1Day;
   return 1 + offset;

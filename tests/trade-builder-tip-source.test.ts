@@ -21,8 +21,6 @@ import {
   OFFER_POST_PROBABILITY,
   OFFER_VOLUME_BOOST_FACTOR,
   OFFER_VOLUME_BOOST_MAX,
-  OFFER_EXPOSURE_BOOST_FACTOR,
-  OFFER_EXPOSURE_BOOST_MAX,
   OFFER_PROBABILITY_CEILING,
   tierForDistinctOfferers,
 } from '../scripts/lib/redact-trade-offer.mjs';
@@ -76,12 +74,17 @@ describe('offerPostProbability — exponential scaling on shopping volume', () =
     );
   });
 
-  it('caps the multiplier at OFFER_VOLUME_BOOST_MAX so a heavily-shopped player never auto-posts', () => {
-    const capped = OFFER_POST_PROBABILITY * OFFER_VOLUME_BOOST_MAX;
+  it('caps the multiplier so a heavily-shopped player never auto-posts', () => {
+    // Since the base moved to 0.10 the CEILING binds before the volume cap
+    // does (0.10 x 4 = 0.40 > 0.35), so the effective ceiling is whichever is
+    // lower. Asserting the product alone would pin a number the clamp never
+    // returns.
+    const capped = Math.min(
+      OFFER_POST_PROBABILITY * OFFER_VOLUME_BOOST_MAX,
+      OFFER_PROBABILITY_CEILING,
+    );
     expect(offerPostProbability(99)).toBeCloseTo(capped);
-    // Even capped, the per-run probability must remain a roll, not a guarantee.
-    // (Bound is 0.5 — leaves headroom for future base bumps without hardcoding
-    // the exact OFFER_VOLUME_BOOST_MAX × OFFER_POST_PROBABILITY product.)
+    // Even capped, the daily probability must remain a roll, not a guarantee.
     expect(offerPostProbability(99)).toBeLessThan(0.5);
   });
 
@@ -95,45 +98,62 @@ describe('offerPostProbability — exponential scaling on shopping volume', () =
   });
 });
 
-describe('offerPostProbability — exposure acceleration', () => {
-  it('priorExposure=0 leaves signal-1 odds untouched (back-compat)', () => {
-    // Default second arg AND explicit 0 both equal the pre-Phase-6c value.
-    expect(offerPostProbability(1)).toBeCloseTo(OFFER_POST_PROBABILITY);
-    expect(offerPostProbability(1, 0)).toBeCloseTo(OFFER_POST_PROBABILITY);
-  });
-
-  it('doubles per prior post for a one-team offer until the exposure cap', () => {
-    expect(offerPostProbability(1, 1)).toBeCloseTo(
-      OFFER_POST_PROBABILITY * OFFER_EXPOSURE_BOOST_FACTOR,
-    ); // signal 2 → 0.10
-    expect(offerPostProbability(1, 2)).toBeCloseTo(
-      OFFER_POST_PROBABILITY * OFFER_EXPOSURE_BOOST_FACTOR ** 2,
-    ); // signal 3 → 0.20
-  });
-
-  it('caps the exposure multiplier at OFFER_EXPOSURE_BOOST_MAX', () => {
-    const capped = OFFER_POST_PROBABILITY * OFFER_EXPOSURE_BOOST_MAX;
-    expect(offerPostProbability(1, 3)).toBeCloseTo(capped); // ×8 raw → ×4 capped
-    expect(offerPostProbability(1, 99)).toBeCloseTo(capped);
-  });
-
-  it('stacks with the volume multiplier but never exceeds the ceiling', () => {
-    // 3 teams chasing (volume ×2.25) at signal 3 (exposure ×4) = 0.45 raw,
-    // clamped to the 0.35 ceiling.
-    expect(offerPostProbability(3, 2)).toBeCloseTo(OFFER_PROBABILITY_CEILING);
-    // Nothing ever exceeds the ceiling no matter how hot.
-    for (let n = 1; n <= 20; n += 1) {
-      for (let e = 0; e <= 10; e += 1) {
-        expect(offerPostProbability(n, e)).toBeLessThanOrEqual(
-          OFFER_PROBABILITY_CEILING + 1e-9,
-        );
-      }
+describe('offerPostProbability — no exposure acceleration', () => {
+  // Phase 6c multiplied the base by OFFER_EXPOSURE_BOOST_FACTOR ^ priorExposure
+  // so an already-reported offer raced through its reveal ladder. That ladder
+  // is gone: a reported offer is now on OFFER_REPOST_COOLDOWN_MS, and speeding
+  // up the offers the league has already heard about is precisely backwards.
+  // These cases pin the removal so the boost cannot creep back through the
+  // second argument.
+  it('ignores any second argument — prior exposure cannot change the odds', () => {
+    for (const priorExposure of [0, 1, 2, 3, 99, NaN, -5]) {
+      expect((offerPostProbability as (n: number, e?: unknown) => number)(1, priorExposure))
+        .toBeCloseTo(OFFER_POST_PROBABILITY);
     }
   });
 
-  it('tolerates junk priorExposure (NaN / negative → treated as 0)', () => {
-    expect(offerPostProbability(1, NaN)).toBeCloseTo(OFFER_POST_PROBABILITY);
-    expect(offerPostProbability(1, -5)).toBeCloseTo(OFFER_POST_PROBABILITY);
+  it('declares one defaulted parameter, so a re-added exposure arg is a signature change', () => {
+    // Function.length counts params BEFORE the first default, and the sole
+    // parameter is `effectiveOfferers = 1` — hence 0, not 1. Reading the
+    // source is the check that actually means something.
+    expect(offerPostProbability.length).toBe(0);
+    const lib = readFileSync(
+      path.join(process.cwd(), 'scripts/lib/redact-trade-offer.mjs'),
+      'utf8',
+    );
+    expect(lib).toMatch(/export function offerPostProbability\(effectiveOfferers = 1\)/);
+    // The constants must be gone. The doc comment still NAMES them, on purpose
+    // — it explains why they were removed — so match the declaration, not the
+    // mention.
+    expect(lib).not.toMatch(/export const OFFER_EXPOSURE_BOOST/);
+  });
+
+  it('never exceeds the ceiling no matter how hot the offer', () => {
+    for (let n = 1; n <= 40; n += 1) {
+      expect(offerPostProbability(n)).toBeLessThanOrEqual(OFFER_PROBABILITY_CEILING + 1e-9);
+    }
+  });
+
+  it('is a per-DAY probability the scanner rolls once per PT day', () => {
+    // The constant only means what it reads like because of the
+    // trade_offers:last_roll_date throttle. Without it the 15-minute cron
+    // compounds this base ~50x a day and every offer leaks within hours,
+    // which is the bug this replaced (owner report, 2026-09-08).
+    const scanner = readFileSync(
+      path.join(process.cwd(), 'scripts/schefter-rumor-scan.mjs'),
+      'utf8',
+    );
+    expect(scanner).toMatch(/trade_offers:last_roll_date/);
+    expect(scanner).toMatch(/lastRollDate === todayPtForRoll/);
+  });
+
+  it('leaves an ordinary single-suitor offer a genuine long shot over a week', () => {
+    // One roll a day at the base rate: a week-long offer is closer to a coin
+    // flip than to a certainty. If this ever climbs back toward 1 the lane has
+    // silently become an advertising feed again.
+    const oneWeek = 1 - (1 - OFFER_POST_PROBABILITY) ** 7;
+    expect(oneWeek).toBeGreaterThan(0.3);
+    expect(oneWeek).toBeLessThan(0.7);
   });
 });
 
@@ -169,9 +189,12 @@ describe('rumor-scan: tier cap on draft-only contribution', () => {
     expect(src).toMatch(/effectiveCount\s*=\s*3\s*;/);
   });
 
-  it('passes the most-shopped player count + prior exposure into the probability roll', () => {
+  it('passes the most-shopped player count — and ONLY that — into the probability roll', () => {
     expect(src).toMatch(/maxEffectiveOfferers/);
-    expect(src).toMatch(/offerPostProbability\(\s*maxEffectiveOfferers\s*,\s*priorExposure\s*\)/);
+    expect(src).toMatch(/offerPostProbability\(\s*maxEffectiveOfferers\s*\)/);
+    // priorExposure still decides how much detail a re-surfacing offer reveals,
+    // but it must never reach the odds again.
+    expect(src).not.toMatch(/offerPostProbability\([^)]*priorExposure/);
   });
 
   it('runs the draft scan before iterating real offers (so player history reflects drafts on first pass)', () => {

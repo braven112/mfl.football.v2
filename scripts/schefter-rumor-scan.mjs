@@ -28,7 +28,11 @@
  * Gates (in order, all must pass):
  *   1. SCHEFTER_RUMOR_MILL_ENABLED truthy
  *   2. Not in quiet hours (23:00–07:00 PT) — tips held, scanner exits
- *   3. schefter:rumor:posts_today < MAX_POSTS_PER_DAY
+ *   3. schefter:rumor:posts_today < MAX_POSTS_PER_DAY (the SHARED budget)
+ *   3b. schefter:rumor:mill_posts_today < the rumor mill's own cap — 1/day
+ *       while a season is being played, MAX_POSTS_PER_DAY in the offseason
+ *       and in each league's trade-deadline run-up. See
+ *       scripts/lib/schefter-rumor-cadence.mjs.
  *   4. If posts_today >= 1, last post must be > MIN_SPACING_MS ago
  *   5. first_tip_ts must be >= MIN_MARINATE_MS old (marinate window)
  *   6. If chosen bucket is "gossip", schefter:rumor:gossip_posts_today < adaptive cap
@@ -84,6 +88,12 @@ import {
   tierForDistinctOfferers,
   classifyAsset,
 } from './lib/redact-trade-offer.mjs';
+import {
+  allowsTwoPostCycle,
+  MAILBAG_EXEMPT_FROM_MILL_CAP,
+  rumorMillCapReason,
+  rumorMillDailyCap,
+} from './lib/schefter-rumor-cadence.mjs';
 import { assetShapeOf, tradeSignatureOf } from './lib/schefter-offer-beats.mjs';
 import { buildSeedFromProposal, writeSeed } from './lib/speculation-seeds.mjs';
 import {
@@ -189,6 +199,13 @@ const PLAYERS_PATH = SCHEFTER_LEAGUE.playersPath;
 
 const RUMOR_POSTS_TODAY_KEY = schefterKey(NAV_SLUG, 'rumor:posts_today');
 const RUMOR_GOSSIP_POSTS_TODAY_KEY = schefterKey(NAV_SLUG, 'rumor:gossip_posts_today');
+// The rumor mill's OWN delivered-post counter, distinct from the shared
+// `rumor:posts_today` budget above. The shared one also carries the
+// transaction scanner's big-name-drop pings and the speculation lane, so
+// gating the in-season cap on it would let a real roster move silence the
+// rumor mill for the rest of the day (and vice versa). See
+// scripts/lib/schefter-rumor-cadence.mjs for why the cap is the lane's alone.
+const RUMOR_MILL_POSTS_TODAY_KEY = schefterKey(NAV_SLUG, 'rumor:mill_posts_today');
 // Counts GENERATION cycles (delivered or suppressed) — the aggregate
 // LLM-rate ceiling, NOT a posting budget. See checkGates and the
 // BUDGET-ON-DELIVERY sentinel for why the two are separate counters.
@@ -209,10 +226,12 @@ const HOTSEAT_TEAM_COOLDOWN_DAYS = 14;
 const hotseatCooldownKey = (fid) => `${schefterKey(NAV_SLUG, 'hotseat:last_post:')}${fid}`;
 
 // ── Phase 6: Trade-Offer Rumor Redis keys ──
-// Cumulative-probability model with graduated exposure. The base per-run
-// probability lives in `scripts/lib/redact-trade-offer.mjs#OFFER_POST_PROBABILITY`
-// (currently 0.05); see that file for the cumulative-curve breakdown by
-// realistic cadence. Each live offer gets:
+// Cumulative-probability model. The base PER-DAY probability lives in
+// `scripts/lib/redact-trade-offer.mjs#OFFER_POST_PROBABILITY` — deliberately
+// NOT restated here, because the stale "~8 scans a day" figure that used to
+// sit in this file is half of why the leak rate drifted unnoticed. Read the
+// constant, and read Gate B beside it for the roll cadence it assumes.
+// Each live offer gets:
 //   - an entry in `first_seen` HASH (offerId → epoch ms of first sighting)
 //     used to compute age → framingHint ('fresh' <48h, 'lingering' ≥48h)
 //   - an entry in `exposure` HASH (offerId → int N) incremented every time
@@ -221,9 +240,13 @@ const hotseatCooldownKey = (fid) => `${schefterKey(NAV_SLUG, 'hotseat:last_post:
 //       N=1 → first post named one team only
 //       N=2 → second post added the marquee player
 //       N=3+ → each later post added another player
-//     Schefter's primary job is to report on these — keeping a single offer
-//     in rotation across multiple posts is the *point*, not a bug to guard
-//     against. We do NOT seed exposure from the pre-2026-05 `posted` set:
+//     Since 2026-09-08 a second post is RARE rather than routine: the offer
+//     must survive OFFER_REPOST_COOLDOWN_MS (7d) and then win another daily
+//     roll, and most proposals die first. The ladder therefore describes what
+//     a re-surfacing offer may reveal, NOT a cadence to work through — the
+//     old "keeping one offer in rotation is the point" framing is what shipped
+//     the same offer twice in seven hours. We do NOT seed exposure from the
+//     pre-2026-05 `posted` set:
 //     every offer that predates the ladder is a closed/stale trade, so any
 //     still-live offer starts fresh at signal=1.
 //   - `posted` SET — still written on every post for admin tooling (the
@@ -233,6 +256,32 @@ const OFFER_FIRST_SEEN_KEY = schefterKey(NAV_SLUG, 'trade_offers:first_seen');
 const OFFER_EXPOSURE_KEY = schefterKey(NAV_SLUG, 'trade_offers:exposure');
 const OFFER_POSTED_KEY = schefterKey(NAV_SLUG, 'trade_offers:posted');
 const OFFER_STATE_TTL_SEC = 30 * 24 * 60 * 60;       // 30d on first_seen / exposure / posted
+
+// ── Rarity controls (2026-09-08) ──
+// Two keys that together turn the rumor mill from an advertising feed back
+// into a beat. Both are HASHes keyed by offerId, on the same 30d TTL as the
+// rest of the per-offer state.
+//
+// `last_roll_date` (PT date string) THROTTLES THE DICE to one roll per offer
+// per Pacific day. The cron ticks every 15 minutes, so an offer used to draw
+// ~50 rolls a day and OFFER_POST_PROBABILITY — nominally 5% — compounded to
+// ~92% within 24 hours. Every offer leaked, almost immediately. With one roll
+// a day the constant finally means what it reads like.
+//
+// `last_post` (epoch ms) enforces OFFER_REPOST_COOLDOWN_MS: the same proposal
+// may not be the subject of a second post inside the window. On 2026-09-08 one
+// offer was reported twice 7.5 hours apart — once inside a multi-desk bucket,
+// once as its own story — which reads to the league as the same advertisement
+// run twice, not as two pieces of news.
+const OFFER_LAST_ROLL_DATE_KEY = schefterKey(NAV_SLUG, 'trade_offers:last_roll_date');
+const OFFER_LAST_POST_KEY = schefterKey(NAV_SLUG, 'trade_offers:last_post');
+
+// An offer that has already been reported goes quiet for a week. Chosen to sit
+// just past the 7-day tip expiry: nearly every proposal dies inside the window,
+// so in practice a given offer is reported once. The ones that survive it are
+// genuinely still on the table a week later, and "this is somehow STILL
+// sitting there" is a new story rather than a repeat of the old one.
+const OFFER_REPOST_COOLDOWN_MS = 7 * 24 * 60 * 60 * 1000;
 
 // Permanent archive of every offer the scanner has ever ingested. Distinct
 // from `first_seen` because we want the running total to outlive the 30-day
@@ -3266,9 +3315,10 @@ async function scanTradeOffers({ redis, dryRun }) {
   for (const [offerId, { raw, offeringFid }] of offerMap) {
     // Read current exposure count — how many prior posts have shipped about
     // this offer under the graduated-disclosure model. The post we're about
-    // to consider is at signal=N+1. There is no absorbing state: Schefter's
-    // primary job is to report on these, so the same offer can recur with
-    // more detail as long as it's alive in MFL and the dice keep landing.
+    // to consider is at signal=N+1. Still no absorbing state, but a recurrence
+    // now has to clear the 7-day repost cooldown below AND win a fresh daily
+    // roll, so in practice an offer is reported once and signal 2 is reserved
+    // for a proposal genuinely still sitting there a week later.
     //
     // The exposure HASH is the SINGLE source of truth. We deliberately do
     // NOT seed it from the pre-2026-05 `posted` / `seen` sets — those entries
@@ -3643,17 +3693,68 @@ async function scanTradeOffers({ redis, dryRun }) {
 
     // Dice roll — base probability is OFFER_POST_PROBABILITY (see
     // `scripts/lib/redact-trade-offer.mjs`), scaled exponentially by the most-
-    // shopped player's effective distinct-offerer count (real + 0.4*draft) AND
-    // by priorExposure (an already-reported, developing offer accelerates its
-    // next reveal). Combined product is clamped to OFFER_PROBABILITY_CEILING.
-    // The signal-1 roll (priorExposure=0) is unchanged, so an owner still
-    // can't tell whether their submission or any particular other-team draft
-    // tipped the FIRST post — that's the point. Subsequent reveals on a
-    // public, developing offer come faster on purpose.
+    // shopped player's effective distinct-offerer count (real + 0.4*draft) and
+    // clamped to OFFER_PROBABILITY_CEILING. It is a PER-DAY figure, which is
+    // true only because of Gate B below.
+    //
+    // The roll stays unpredictable on purpose: an owner cannot tell whether
+    // their own submission, or any particular other-team draft, is what tipped
+    // Schefter. Two gates run first.
+    //
+    // Gate A — repost cooldown. An offer the mill has already reported goes
+    // quiet for OFFER_REPOST_COOLDOWN_MS. Checked BEFORE the roll so a
+    // cooling-down offer does not even consume its daily roll, which keeps the
+    // roll counter meaning "chances this offer had to leak".
+    let lastPostMs = 0;
+    try {
+      const raw = await redis.hget(OFFER_LAST_POST_KEY, offerId);
+      const n = Number(raw);
+      if (Number.isFinite(n) && n > 0) lastPostMs = n;
+    } catch (err) {
+      warn(`  [offer-scan] hget(last_post) failed for ${offerId}: ${err.message}`);
+    }
+    if (lastPostMs && nowMs - lastPostMs < OFFER_REPOST_COOLDOWN_MS) {
+      const hoursLeft = (OFFER_REPOST_COOLDOWN_MS - (nowMs - lastPostMs)) / 3600000;
+      log(
+        `  [offer-scan] offerId=${offerId} held — already reported ` +
+          `${((nowMs - lastPostMs) / 3600000).toFixed(1)}h ago, ` +
+          `${hoursLeft.toFixed(1)}h of cooldown left`,
+      );
+      debugLog.push({ offerId, offeringFid, skipped: 'repost-cooldown', lastPostMs });
+      continue;
+    }
+
+    // Gate B — one roll per offer per Pacific day. Without this the 15-minute
+    // cron compounds the base probability ~50× a day and every offer leaks
+    // within hours. Dry runs do not stamp the date, so a dry run never spends
+    // the real scanner's roll for the day.
+    const todayPtForRoll = getPtDateString(now);
+    let lastRollDate = null;
+    try {
+      lastRollDate = await redis.hget(OFFER_LAST_ROLL_DATE_KEY, offerId);
+    } catch (err) {
+      warn(`  [offer-scan] hget(last_roll_date) failed for ${offerId}: ${err.message}`);
+    }
+    if (lastRollDate === todayPtForRoll) {
+      debugLog.push({ offerId, offeringFid, skipped: 'already-rolled-today' });
+      continue;
+    }
+    if (!dryRun) {
+      try {
+        await redis.hset(OFFER_LAST_ROLL_DATE_KEY, { [offerId]: todayPtForRoll });
+        await redis.expire(OFFER_LAST_ROLL_DATE_KEY, OFFER_STATE_TTL_SEC);
+      } catch (err) {
+        warn(`  [offer-scan] hset(last_roll_date) failed for ${offerId}: ${err.message}`);
+      }
+    }
+
+    // `priorExposure` no longer scales the odds — see the "NO EXPOSURE
+    // SCALING" note in redact-trade-offer.mjs. It still decides how much
+    // detail a re-surfacing offer may reveal, which is why it is read above.
     const maxEffectiveOfferers = playerHistory.size > 0
       ? Math.max(1, ...Array.from(playerHistory.values()))
       : 1;
-    const probability = offerPostProbability(maxEffectiveOfferers, priorExposure);
+    const probability = offerPostProbability(maxEffectiveOfferers);
     const roll = Math.random();
     const passed = roll < probability;
 
@@ -3728,16 +3829,29 @@ async function scanTradeOffers({ redis, dryRun }) {
     if (!dryRun) {
       // The stored shape is the ask AS OF THE LAST REPORT, not as of the last
       // scan. Writing it on every scan meant a changed ask was detectable for
-      // exactly one cycle: at ~8 scans a day and a 5–35% roll, most changes
-      // were overwritten before they could ever post. Anchored here, the beat
-      // means "changed since we last told you", which is the more useful claim
-      // and the one that survives until it is made.
+      // exactly one cycle — most changes were overwritten before they could
+      // ever post. Anchored here, the beat means "changed since we last told
+      // you", which is the more useful claim and the one that survives until
+      // it is made. (The original note cited "~8 scans a day"; the cron had
+      // long since moved to */15. Cadence figures do not belong in comments.)
       try {
         await redis.hset(OFFER_SHAPE_KEY, { [offerId]: JSON.stringify(assetShapeOf(raw)) });
         await redis.expire(OFFER_SHAPE_KEY, OFFER_STATE_TTL_SEC);
       } catch (err) {
         warn(`  [offer-scan] hset(shape) failed for ${offerId}: ${err.message}`);
       }
+      // NOTE: the OFFER_LAST_POST_KEY cooldown anchor is deliberately NOT
+      // written here. This function ENQUEUES a tip; the post ships later, out
+      // of the queue, and may never ship at all — the quality gate can
+      // suppress it, the daily cap can block the cycle, the tip can strike out
+      // or expire. Stamping the cooldown here would lock an offer out for 7
+      // days for a post nobody ever read, and since TIP_EXPIRY_MS is also 7
+      // days that usually means forever. It is stamped on DELIVERY instead,
+      // off consumedBatch — see the BUDGET-ON-DELIVERY sentinel.
+      //
+      // `exposure` keeps incrementing here for back-compat: it has always
+      // counted enqueues (see the 2026-09-07 insight), and re-anchoring it is
+      // a separate change with its own blast radius.
       try {
         await redis.hincrby(OFFER_EXPOSURE_KEY, offerId, 1);
         await redis.expire(OFFER_EXPOSURE_KEY, OFFER_STATE_TTL_SEC);
@@ -3794,7 +3908,7 @@ function deriveHistorySubject(batch, anonymized) {
 
 // ── Gate checks ──
 
-async function checkGates(redis, now) {
+async function checkGates(redis, now, { exemptFromMillCap = false } = {}) {
   // 1. quiet hours
   if (isQuietHours(now)) {
     return { ok: false, reason: `quiet hours (PT ${getPtHour(now)}:00) — holding queue` };
@@ -3805,6 +3919,25 @@ async function checkGates(redis, now) {
   const postsToday = typeof postsTodayRaw === 'number' ? postsTodayRaw : parseInt(postsTodayRaw ?? '0', 10) || 0;
   if (postsToday >= MAX_POSTS_PER_DAY) {
     return { ok: false, reason: `posts_today=${postsToday} — daily cap reached` };
+  }
+
+  // 2a. the rumor mill's OWN daily cap. Tighter than the shared budget while
+  // a season is being played (1/day), back to the shared figure in the
+  // offseason and through the ten days into each league's trade deadline —
+  // see scripts/lib/schefter-rumor-cadence.mjs. Counted on its own key so a
+  // transaction ping cannot spend the mill's slot, or the mill a ping's.
+  const millCap = rumorMillDailyCap(LEAGUE_SLUG, now, MAX_POSTS_PER_DAY);
+  const millRaw = await redis.get(RUMOR_MILL_POSTS_TODAY_KEY);
+  const millPostsToday = typeof millRaw === 'number' ? millRaw : parseInt(millRaw ?? '0', 10) || 0;
+  if (exemptFromMillCap && millPostsToday >= millCap) {
+    log(`  [mailbag] Over the ${millCap}/day mill cap (${millPostsToday}) — exempt, the Friday sweep still runs`);
+  } else if (millPostsToday >= millCap) {
+    return {
+      ok: false,
+      reason:
+        `mill_posts_today=${millPostsToday} — rumor-mill cap ${millCap}/day ` +
+        `(${rumorMillCapReason(LEAGUE_SLUG, now)})`,
+    };
   }
 
   // 2b. generation-attempt safety valve. Posting budgets count DELIVERED
@@ -3845,7 +3978,7 @@ async function checkGates(redis, now) {
     };
   }
 
-  return { ok: true, postsToday };
+  return { ok: true, postsToday, millPostsToday, millCap };
 }
 
 // ── Main ──
@@ -4045,15 +4178,37 @@ async function main() {
     return 0;
   }
 
+  const todayPtDate = getPtDateString(now);
+
+  // Is THIS cycle a candidate Friday mailbag? Resolved before the gate because
+  // the mailbag is exempt from the mill's daily cap, and checkGates returns
+  // early — asking afterwards is asking too late. In season the cap is 1/day,
+  // so one earlier rumor would otherwise spend the slot, the mailbag would
+  // never run, its done-key would never be set, and the swept gossip tips
+  // would age out unseen. That is the exact loss the mailbag exists to
+  // prevent, so it gets the one exemption. Its own once-per-Friday done-key
+  // still bounds it to a single extra post a week.
+  let mailbagCandidate = false;
+  if (MAILBAG_EXEMPT_FROM_MILL_CAP && isFridayPt(now)) {
+    try {
+      mailbagCandidate = (await redis.get(FRIDAY_MAILBAG_DONE_KEY)) !== todayPtDate;
+    } catch {
+      // Unreadable done-key: assume not yet run. Over-claiming the exemption
+      // costs at most one post; under-claiming silently destroys tips.
+      mailbagCandidate = true;
+    }
+    if (mailbagCandidate) {
+      mailbagCandidate = freshTips.some((t) => classifyTipKind(t) === 'gossip');
+    }
+  }
+
   // Gate checks
-  const gates = await checkGates(redis, now);
+  const gates = await checkGates(redis, now, { exemptFromMillCap: mailbagCandidate });
   if (!gates.ok) {
     log(`  GATE FAIL: ${gates.reason}`);
     return 0;
   }
   log(`  Gates OK (posts_today=${gates.postsToday}, marinated enough)`);
-
-  const todayPtDate = getPtDateString(now);
 
   // Friday mailbag check — runs once per Friday PT, sweeps every gossip
   // tip (any non-trade-offer web/groupme tip) into one roundup so nothing
@@ -4270,6 +4425,13 @@ async function main() {
         if (newCount === 1) {
           await redis.expire(RUMOR_POSTS_TODAY_KEY, secondsUntilPtMidnight(now));
         }
+        // Also spends the mill's own slot. It is a rumor-mill feed entry, so
+        // leaving it out would let a quiet-day post and a real rumor both ship
+        // on a 1/day in-season cap — two posts from a lane capped at one.
+        const newMillCount = await redis.incr(RUMOR_MILL_POSTS_TODAY_KEY);
+        if (newMillCount === 1) {
+          await redis.expire(RUMOR_MILL_POSTS_TODAY_KEY, secondsUntilPtMidnight(now));
+        }
         await redis.set(RUMOR_LAST_POST_TS_KEY, now.getTime());
       } catch (err) {
         warn(`  [quiet-day] counter update failed: ${err.message} — post shipped, cooldown unset`);
@@ -4299,7 +4461,13 @@ async function main() {
     // not a default cadence.
     if (postKind === 'gossip' && secondaryBucket) {
       const gossipQueueDepth = freshTips.filter((t) => classifyTipKind(t) === 'gossip').length;
-      if (gossipQueueDepth >= SECONDARY_GOSSIP_POST_PRESSURE) {
+      if (!allowsTwoPostCycle(LEAGUE_SLUG, now, MAX_POSTS_PER_DAY)) {
+        // Same rule as the busy-morning split below: the daily counter
+        // increments once per delivering CYCLE, so two beats here would ship
+        // two posts against a cap of one. In season the secondary bucket waits
+        // for tomorrow's slot instead.
+        log(`  Holding ${secondaryBucket.key} for next cycle — rumor-mill cap is 1/day (${rumorMillCapReason(LEAGUE_SLUG, now)})`);
+      } else if (gossipQueueDepth >= SECONDARY_GOSSIP_POST_PRESSURE) {
         secondaryBatch = secondaryBucket.tips.slice(0, MAX_TIPS_PER_BATCH);
         log(`  Second post bucket ${secondaryBucket.key} (size=${secondaryBucket.tips.length}, using ${secondaryBatch.length} tip(s)) — pressure ${gossipQueueDepth}/${SECONDARY_GOSSIP_POST_PRESSURE}`);
       } else {
@@ -4313,10 +4481,15 @@ async function main() {
     // To ship 2 trade-offer posts in this cycle, we split the trade
     // bucket's tips: oldest tip → primary beat, next-oldest → secondary
     // beat. Each becomes its own post with its own anonymization pass.
+    // Under a 1/day cap the double-post would put two rumors in the chat
+    // back-to-back off one slot — the pile-up the in-season cap exists to
+    // prevent — so the catch-up is offseason/deadline-window only and an
+    // overnight backlog just clears a day slower in season.
     if (
       postKind === 'trade' &&
       primaryBucket.tips.length >= BUSY_MORNING_TRADE_THRESHOLD &&
-      isBusyMorningWindow(now)
+      isBusyMorningWindow(now) &&
+      allowsTwoPostCycle(LEAGUE_SLUG, now, MAX_POSTS_PER_DAY)
     ) {
       busyMorning = true;
       busyMorningBacklog = primaryBucket.tips.length;
@@ -4774,9 +4947,9 @@ async function main() {
     }
     log('  [dry-run] Would increment gen_attempts_today by 1 (LLM safety valve — counts every generation cycle)');
     if (allowedPosts.length > 0) {
-      log(`  [dry-run] Would increment schefter:rumor:posts_today by 1${postKind === 'gossip' ? ' + schefter:rumor:gossip_posts_today by 1' : ''}, set last_post_ts (budgets count delivered posts only)`);
+      log(`  [dry-run] Would increment schefter:rumor:posts_today + schefter:rumor:mill_posts_today by 1${postKind === 'gossip' ? ' + schefter:rumor:gossip_posts_today by 1' : ''}, set last_post_ts (budgets count delivered posts only)`);
     } else {
-      log('  [dry-run] Fully-suppressed cycle — would consume NO daily budget (posts_today, gossip cap, spacing all unchanged)');
+      log('  [dry-run] Fully-suppressed cycle — would consume NO daily budget (posts_today, mill_posts_today, gossip cap, spacing all unchanged)');
     }
     // Mirror the real path's delivery gating exactly — the riff/greeting
     // stamps only burn when beat 0 (their carrier) actually ships.
@@ -4958,6 +5131,50 @@ async function main() {
       if (newCount === 1) {
         await redis.expire(RUMOR_POSTS_TODAY_KEY, secondsUntilPtMidnight(now));
       }
+      // The mill's own counter, on the same BUDGET-ON-DELIVERY rule as the
+      // shared one above. Incremented once per delivering CYCLE, matching the
+      // shared budget: a busy-morning or gossip double-post is two feed
+      // entries against one slot by design, and that pairing only ever
+      // happens where the cap is above one.
+      const newMillCount = await redis.incr(RUMOR_MILL_POSTS_TODAY_KEY);
+      if (newMillCount === 1) {
+        await redis.expire(RUMOR_MILL_POSTS_TODAY_KEY, secondsUntilPtMidnight(now));
+      }
+      log(
+        `  Rumor-mill counter: now ${newMillCount}/` +
+          `${rumorMillDailyCap(LEAGUE_SLUG, now, MAX_POSTS_PER_DAY)} ` +
+          `(${rumorMillCapReason(LEAGUE_SLUG, now)})`,
+      );
+
+      // Trade-offer repost cooldown anchor — stamped HERE, on delivery, not
+      // where the tip was enqueued. scanTradeOffers only queues; roughly half
+      // of the offers that pass the dice roll never become their own post, and
+      // stamping at enqueue silences an offer for 7 days over a post nobody
+      // read. Tip ids are `to_<offerId>` (redact-trade-offer.mjs), so the
+      // consumed batch is the authoritative list of offers actually reported.
+      const reportedOfferIds = [
+        ...new Set(
+          consumedBatch
+            .filter((t) => t?.source === 'trade_offer' && typeof t.id === 'string')
+            // Strip the prefix EXPLICITLY rather than by offset: a bare
+            // slice(3) silently yields a garbage key if the id shape ever
+            // changes, and a garbage key means no cooldown at all.
+            .map((t) => (t.id.startsWith('to_') ? t.id.slice('to_'.length) : ''))
+            .filter(Boolean),
+        ),
+      ];
+      if (reportedOfferIds.length > 0) {
+        try {
+          await redis.hset(
+            OFFER_LAST_POST_KEY,
+            Object.fromEntries(reportedOfferIds.map((id) => [id, String(now.getTime())])),
+          );
+          await redis.expire(OFFER_LAST_POST_KEY, OFFER_STATE_TTL_SEC);
+          log(`  Repost cooldown stamped for offer(s): ${reportedOfferIds.join(', ')}`);
+        } catch (err) {
+          warn(`  hset(last_post) failed: ${err.message} — offer(s) may re-post tomorrow`);
+        }
+      }
       if (postKind === 'gossip') {
         const newGossipCount = await redis.incr(RUMOR_GOSSIP_POSTS_TODAY_KEY);
         if (newGossipCount === 1) {
@@ -4968,7 +5185,7 @@ async function main() {
       // Spacing anchor — starts the 4h chat-cadence clock from this delivery.
       await redis.set(RUMOR_LAST_POST_TS_KEY, now.getTime());
     } else {
-      log('  Suppressed cycle — no daily budget consumed (posts_today, gossip cap, spacing all unchanged)');
+      log('  Suppressed cycle — no daily budget consumed (posts_today, mill_posts_today, gossip cap, spacing all unchanged)');
     }
 
     // Remove consumed tips from the queue while preserving (a) tips in
