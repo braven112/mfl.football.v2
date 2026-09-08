@@ -10,9 +10,11 @@
  *
  * So the cadence inverts with the calendar:
  *
- *   offseason           → 3 posts/day (the shared MAX_POSTS_PER_DAY budget)
- *   in season           → 1 post/day
+ *   league asleep       → 3 posts/day (the shared MAX_POSTS_PER_DAY budget)
+ *   league awake        → 1 post/day
  *   deadline run-up     → 3 posts/day again, in BOTH leagues
+ *
+ * "Awake" starts at DRAFT WEEKEND, not at kickoff — see leagueAwakeWindow.
  *
  * The deadline exception is the one time in season when trade chatter is the
  * story, so the lane opens back up for the ten days leading into it.
@@ -32,8 +34,41 @@ import {
   shiftIsoDate,
 } from '../../src/utils/trade-deadline.mjs';
 
-/** Rumor-mill posts per Pacific day while the season is being played. */
+/** Rumor-mill posts per Pacific day while the league is awake. */
 export const IN_SEASON_MAX_RUMOR_POSTS_PER_DAY = 1;
+
+/**
+ * The league wakes up at its DRAFTS, not at kickoff.
+ *
+ * The AFL's live AL draft is the Saturday nine days before Labor Day and its
+ * NL email draft the Sunday eight days before (`saturday-` and
+ * `sunday-before-labor-day-weekend` in src/utils/league-event-resolver.ts).
+ * From that weekend on there are real rosters, real cuts and real trade talk —
+ * the league is generating its own conversation, which is the entire argument
+ * the quiet cap rests on. It just starts eleven days before kickoff does.
+ *
+ * Anchored to the NL draft (LD - 8) rather than the AL draft Saturday
+ * (LD - 9): a deliberate call, so the loud cadence gets AL draft morning and
+ * goes quiet once BOTH conferences have drafted. Move it to -12 to cover the
+ * whole weekend.
+ *
+ * This window is LEAGUE-AGNOSTIC, and the anchor is the AFL's calendar.
+ * TheLeague's own roster crunch is earlier — Declare Contracts / Cut to 22 and
+ * Offseason FA Closes are both `third-sunday-august` (2026-08-16), a fortnight
+ * before this opens — so its quiet period starts later than its own deadlines
+ * would suggest. That is a known gap, not a claim that the two leagues line
+ * up; a per-league window is the fix if it ever matters.
+ *
+ * Anchoring on kickoff (Labor Day + 3) left the LOUDEST cadence — 3 posts/day
+ * plus the busy-morning double — running through the busiest roster week of
+ * the year. Owner report, 2026-09-08: two beats about the same trade offer one
+ * second apart, 8:28am on the Tuesday after draft weekend.
+ *
+ * Held as an offset FROM KICKOFF rather than from Labor Day so both ends of
+ * the window keep sharing a single anchor and cannot drift apart:
+ * (Labor Day + 3) - 11 = Labor Day - 8, the NL draft Sunday.
+ */
+export const AWAKE_START_OFFSET_FROM_KICKOFF_DAYS = -11;
 
 /**
  * The fantasy season ends with the league championship in NFL week 17 — QF
@@ -49,31 +84,45 @@ export const CHAMPIONSHIP_WEEK = 17;
 const CHAMPIONSHIP_END_OFFSET_DAYS = (CHAMPIONSHIP_WEEK - 1) * 7 + 4;
 
 /**
- * `{ startIso, endIso }` for the season that KICKS OFF in `year` — inclusive
- * PT calendar dates. The window runs from week-1 kickoff (Labor Day + 3)
- * through championship Monday, which lands in early January of `year + 1`.
+ * `{ startIso, endIso }` for the stretch in which the league runs its own
+ * conversation, for the season that kicks off in `year` — inclusive PT
+ * calendar dates. It opens on draft weekend (Labor Day - 8) and closes on
+ * championship Monday, which lands in early January of `year + 1`.
+ *
+ * NOT called `leagueSeasonWindow`: the start is deliberately eleven days
+ * before week-1 kickoff, so a reader who took the name to mean "games are
+ * being played" would be wrong for the whole of draft-and-cuts week — the
+ * exact stretch that made this change necessary.
+ *
+ * Both ends measure from kickoff. Deriving `endIso` from `startIso` instead
+ * would drag championship Monday eleven days earlier every time the start
+ * moves, retiring the mill's quiet cap in the middle of the playoffs.
  */
-export function leagueSeasonWindow(year) {
-  const startIso = nflKickoffIsoDate(year);
-  return { startIso, endIso: shiftIsoDate(startIso, CHAMPIONSHIP_END_OFFSET_DAYS) };
+export function leagueAwakeWindow(year) {
+  const kickoffIso = nflKickoffIsoDate(year);
+  return {
+    startIso: shiftIsoDate(kickoffIso, AWAKE_START_OFFSET_FROM_KICKOFF_DAYS),
+    endIso: shiftIsoDate(kickoffIso, CHAMPIONSHIP_END_OFFSET_DAYS),
+  };
 }
 
 /**
- * Is a season actually being played right now?
+ * Is the league awake right now — drafting, cutting, playing or in the
+ * playoffs, as opposed to sitting in the long quiet?
  *
- * Checks the CURRENT calendar year's season and the PREVIOUS one, because a
+ * Checks the CURRENT calendar year's window and the PREVIOUS one, because a
  * season that kicks off in September ends in January — in the first days of a
  * year the live season is the one that started 16 weeks ago. Deriving the
  * season year from a rollover helper instead would reintroduce exactly the
  * Labor-Day-clock trap CLAUDE.md documents: `getCurrentSeasonYear()` resolves
- * to LAST season from February through Labor Day, so an offseason date would
- * test against a window that closed months earlier and read as "in season".
+ * to LAST season from February through Labor Day, so a quiet date would
+ * test against a window that closed months earlier and read as awake.
  */
-export function isLeagueSeasonOpen(now = new Date()) {
+export function isLeagueAwake(now = new Date()) {
   const today = ptDateString(now);
   const year = Number(today.slice(0, 4));
   return [year, year - 1].some((y) => {
-    const { startIso, endIso } = leagueSeasonWindow(y);
+    const { startIso, endIso } = leagueAwakeWindow(y);
     return today >= startIso && today <= endIso;
   });
 }
@@ -83,10 +132,12 @@ export function isLeagueSeasonOpen(now = new Date()) {
  *
  * `offseasonCap` is the shared daily budget (MAX_POSTS_PER_DAY) — passed in
  * rather than imported so the two constants cannot drift into disagreeing
- * about what "back to normal" means.
+ * about what "back to normal" means. It is the cap while the league is
+ * ASLEEP; `isLeagueAwake` (draft weekend → championship Monday) is what
+ * tightens it, not kickoff.
  */
 export function rumorMillDailyCap(slug, now, offseasonCap) {
-  if (!isLeagueSeasonOpen(now)) return offseasonCap;
+  if (!isLeagueAwake(now)) return offseasonCap;
   if (isTradeDeadlineWindow(slug, now)) return offseasonCap;
   return IN_SEASON_MAX_RUMOR_POSTS_PER_DAY;
 }
@@ -96,9 +147,9 @@ export function rumorMillDailyCap(slug, now, offseasonCap) {
  * a quiet day is self-explaining in the Actions output.
  */
 export function rumorMillCapReason(slug, now) {
-  if (!isLeagueSeasonOpen(now)) return 'offseason';
+  if (!isLeagueAwake(now)) return 'offseason';
   if (isTradeDeadlineWindow(slug, now)) return 'trade-deadline window';
-  return 'in season';
+  return 'league awake';
 }
 
 /**
@@ -108,7 +159,7 @@ export function rumorMillCapReason(slug, now) {
  * gossip secondary — and BOTH must ask, because the counter increments once
  * per delivering cycle regardless of how many beats shipped. Under a 1/day cap
  * an ungated double-post puts two rumors in the chat back-to-back off a single
- * slot, which is the exact pile-up the in-season cap exists to prevent.
+ * slot, which is the exact pile-up the quiet cap exists to prevent.
  *
  * Gating only one of the two was a real bug in this feature's first draft: the
  * gossip secondary stayed open, and the tighter cap made it fire MORE often,

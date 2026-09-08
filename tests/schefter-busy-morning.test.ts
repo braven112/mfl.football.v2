@@ -75,7 +75,7 @@ describe('busy-morning split logic', () => {
     // The block sits inside `if (postKind === 'trade' && ...)` — never
     // splits gossip or mailbag buckets.
     expect(SCANNER_SRC).toMatch(
-      /postKind === 'trade' &&\s*\n?\s*primaryBucket\.tips\.length >= BUSY_MORNING_TRADE_THRESHOLD/,
+      /postKind === 'trade' &&\s*\n?\s*distinctTradeTipIds\.size >= BUSY_MORNING_TRADE_THRESHOLD/,
     );
   });
 
@@ -93,9 +93,41 @@ describe('busy-morning split logic', () => {
     expect(SCANNER_SRC).toMatch(/a\.submittedAt\s*\?\?\s*0/);
   });
 
-  it('takes exactly the first two tips (one per beat, never more)', () => {
-    expect(SCANNER_SRC).toMatch(/sortedTips\.slice\(0,\s*1\)/);
-    expect(SCANNER_SRC).toMatch(/sortedTips\.slice\(1,\s*2\)/);
+  it('counts the backlog in DISTINCT tip ids, never in queue rows', () => {
+    // Owner report, 2026-09-08: two beats about offer to_1080 one second
+    // apart. The queue held the same offer twice (dedupeTipsById now stops
+    // that upstream) and `primaryBucket.tips.length` read it as a backlog of
+    // two, so the split handed one offer to two independent LLM passes.
+    expect(SCANNER_SRC).toMatch(
+      /const distinctTradeTipIds = new Set\(\s*\n?\s*primaryBucket\.tips\.map\(/,
+    );
+    expect(SCANNER_SRC).toMatch(/busyMorningBacklog = distinctTradeTipIds\.size/);
+    // The row count must not be what gates or reports the split. Assert the
+    // block was actually FOUND before asserting a negative over it — an
+    // `?? ''` here would let a re-indent make the regex miss and the guard
+    // pass vacuously, with the suite still green.
+    const splitBlock = SCANNER_SRC.match(/const distinctTradeTipIds[\s\S]*?\n    \}\n/)?.[0];
+    expect(splitBlock, 'busy-morning split block not found — regex is stale').toBeTruthy();
+    expect(splitBlock).not.toMatch(/busyMorningBacklog = primaryBucket\.tips\.length/);
+  });
+
+  it('picks a secondary beat with a DIFFERENT tip id, not just the next row', () => {
+    expect(SCANNER_SRC).toMatch(/const primaryTipId = String\(primaryTip\[0\]\?\.id \?\? ''\)/);
+    expect(SCANNER_SRC).toMatch(
+      /\.find\(\(t\) => String\(t\?\.id \?\? ''\) !== primaryTipId\)/,
+    );
+  });
+
+  it('guards the split on a secondary tip actually existing', () => {
+    // The guard is unreachable by construction — the gate already found 2+
+    // distinct ids in the array sortedTips is built from — so this pins it as
+    // a GUARD, not as a reachable single-beat behavior. It exists so "never
+    // the same offer twice" holds locally rather than only as a consequence
+    // of the gate above, which a future edit could loosen.
+    expect(SCANNER_SRC).toMatch(/if \(secondaryTip\) \{/);
+    // ...and with no else-log: a log line for a branch that cannot run reads
+    // as a real state in the workflow output.
+    expect(SCANNER_SRC).not.toMatch(/Backlog is one offer across/);
   });
 });
 
@@ -116,6 +148,37 @@ describe('beat-building permits the secondary trade beat', () => {
     )?.[0] ?? '';
     expect(beatPush).toMatch(/kind:\s*postKind/);
     expect(beatPush).not.toMatch(/kind:\s*['"]gossip['"]/);
+  });
+});
+
+describe('both busy-morning beats get a TRADE cta', () => {
+  it('resolves each beat\'s CTA from that beat\'s own tips, not a parallel bucket array', () => {
+    // pickPrimaryBucket hard-codes secondaryBucket to null for a trade
+    // primary, so indexing [primaryBucket, secondaryBucket] gave beat 2
+    // `undefined` — no trade-flavored tips, so it shipped the generic
+    // "Got a tip?" link while beat 1 shipped the Trade Builder one. That is
+    // why the 2026-09-08 pair read as two separate scoops.
+    expect(SCANNER_SRC).toMatch(/const ctaSourceFor = \(beat\) =>/);
+    expect(SCANNER_SRC).toMatch(/\{ tips: beat\.batch \?\? \[\] \}/);
+    expect(SCANNER_SRC).toMatch(/resolveCta\(ctaSourceFor\(beat\)\)/);
+    expect(SCANNER_SRC).not.toMatch(/resolveCta\(beatBuckets\[i\]\)/);
+  });
+
+  it('keeps the Friday mailbag on the tip-page CTA', () => {
+    // Mailbag never assigns primaryBucket, so it reached the generic link by
+    // accident of `null`. Its batch is the whole gossip pool — which carries
+    // trade_bait and `topic: 'trade'` web tips — so routing it through the
+    // beat's own tips would point a multi-topic roundup at one franchise's
+    // trade builder and drop the whisper-back CTA.
+    expect(SCANNER_SRC).toMatch(
+      /postKind === 'mailbag' \? \{ tips: \[\] \} : \{ tips: beat\.batch \?\? \[\] \}/,
+    );
+  });
+
+  it('leaves the recurrence fingerprint on the real bucket', () => {
+    // bucketFingerprint reads the bucket's key/kind, not its tips, so that
+    // consumer keeps the parallel array.
+    expect(SCANNER_SRC).toMatch(/const bucket = beatBuckets\[beatIndex\] \?\? null/);
   });
 });
 

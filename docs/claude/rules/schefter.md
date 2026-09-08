@@ -346,8 +346,8 @@ three trade rumors a day on top of it reads as spam.
 
 | When | Cap |
 |---|---|
-| Offseason | `MAX_POSTS_PER_DAY` (3) |
-| Season being played | 1/day |
+| League asleep | `MAX_POSTS_PER_DAY` (3) |
+| League awake — draft weekend through championship Monday | 1/day |
 | 10 days into each league's trade deadline, through deadline day | 3 again |
 
 - **It counts on its OWN key** (`rumor:mill_posts_today`), never on the shared
@@ -386,16 +386,144 @@ three trade rumors a day on top of it reads as spam.
   deadlines sit in November (PT is UTC-8) while kickoff sits in September (PT
   is UTC-7); an instant built from one offset lands on the wrong day under the
   other. The questions are day-grained, so the answers are too.
-- **The season window runs kickoff → championship Monday**, i.e. Labor Day + 3
-  through kickoff + 16 weeks + 4 days, which lands in EARLY JANUARY. It checks
-  the current AND previous calendar year for exactly that reason. Do not
-  re-derive the season year from `getCurrentSeasonYear()` here — it runs on the
-  Labor Day clock and resolves to LAST season from February through Labor Day,
-  so an offseason date would test against a window that closed months ago and
-  read as "in season". Same trap as the Pecking Order's, one door down.
+- **The window opens at DRAFT WEEKEND, not at kickoff** — Labor Day − 8, the
+  AFL's NL email draft Sunday. The league is awake the moment the drafts land:
+  real rosters, real cuts, real trade talk, which is the entire argument the
+  quiet cap rests on. It is anchored to the NL draft rather than the AL Live
+  Draft Saturday (LD − 9) on purpose, so the loud cadence still gets AL draft
+  morning; `-12` is the offset that would cover the whole weekend.
+- **The window is LEAGUE-AGNOSTIC and the anchor is the AFL's calendar.**
+  TheLeague's own roster crunch is a fortnight earlier — Declare Contracts /
+  Cut to 22 and Offseason FA Closes are both `third-sunday-august` (2026-08-16)
+  — so it stays loud through its own deadlines and goes quiet on the AFL's
+  draft weekend. Known gap, deliberately not papered over: `leagueAwakeWindow`
+  takes no slug, and a per-league window is the fix if it ever bites. Anchored at
+  kickoff (Labor Day + 3) it left the LOUDEST cadence — 3/day plus the
+  busy-morning double — running through the busiest roster week of the year,
+  and on 2026-09-08 the mill shipped two beats about one trade offer a second
+  apart, two days before kickoff. The helper is `isLeagueAwake`, deliberately
+  NOT named `isLeagueSeasonOpen`: a reader who takes it to mean "games are
+  being played" is wrong for eleven days a year, and those are the eleven that
+  matter here.
+- **Both ends of that window measure from KICKOFF.** `endIso` derived from
+  `startIso` instead would drag championship Monday back every time the start
+  moves, retiring the quiet cap mid-playoffs. Pinned by test.
+- **It still ends at championship Monday**, kickoff + 16 weeks + 4 days, which
+  lands in EARLY JANUARY. It checks the current AND previous calendar year for
+  exactly that reason. Do not re-derive the season year from
+  `getCurrentSeasonYear()` here — it runs on the Labor Day clock and resolves
+  to LAST season from February through Labor Day, so a quiet date would test
+  against a window that closed months ago and read as awake. Same trap as the
+  Pecking Order's, one door down.
 
 `tests/schefter-rumor-cadence.test.ts` pins all of it, including the per-league
 deadline split and the gate ordering.
+
+### One tip id, one row — the queue counts rows and the split counts stories
+
+`scanTradeOffers` enqueues a row every time an offer passes its dice roll, and
+a row that does not post is requeued for up to `TIP_EXPIRY_MS` (7 days). So one
+offer that rolled on two different days sat in the queue TWICE under the same
+`to_<offerId>` id, and nothing downstream noticed, because nothing downstream
+counted ids.
+
+The busy-morning split is where that became visible: it reads a trade bucket of
+two rows as a backlog of two OFFERS and hands `slice(0,1)` and `slice(1,2)` to
+two independent LLM passes. Owner report, 2026-09-08 — two GroupMe posts about
+offer `to_1080`, one second apart, one CTA pointing at the Trade Builder and the
+other at the tip page, so they read as two separate scoops. Duplicate ids had
+been landing inside ordinary batches for days first: one post's `tipIds` were
+`to_1076, to_1078, to_1081, to_1003, to_1081`, another's carried `to_1081`
+three times.
+
+- **`dedupeTipsById` runs on the queue READ**, before anything counts rows —
+  `scripts/lib/schefter-tip-queue.mjs`, beside `isUsableTip`. Deduping on
+  requeue alone would miss it: fresh offer tips are pushed at the START of the
+  run, so the read is the only point that sees every row.
+- **It keeps the NEWEST row's PAYLOAD under the EARLIEST row's `submittedAt`** —
+  two questions, not one. The payload must be newest because
+  `redactTradeOffer` stamps `to_<offerId>` on every tip it mints for an offer,
+  **the closure callback included**: keeping the earliest row wholesale let a
+  stale "still shopping" row swallow the "this one got done" tip behind it, and
+  `OFFER_CLOSED_KEY` is written at ENQUEUE, before the tip ships, so a dropped
+  closure is never retried. It also discarded the newer row's `framingHint`,
+  `offerAgeMs` and `exposure`, so an ask-changed beat never shipped and the
+  post understated the offer's age. The timestamp must be earliest because
+  `submittedAt` is the anchor the framing, the age-boost and `TIP_EXPIRY_MS`
+  all read; carrying the newest forward lets a re-rolled offer refresh its own
+  clock forever — the "dead proposals never leave" failure of the 2026-09-07
+  insight, wearing a plausible timestamp.
+- **Election is by story CLASS first, timestamp second — a closure outranks a
+  live row whatever the clock says.** On timestamp alone, a live row enqueued
+  AFTER a closure destroyed it: accepted-closure detection reads the
+  transactions feed and that read is warn-only, so when it fails `wasAccepted`
+  is false, the offer takes the live path again, and the fresh row wins on
+  recency. `OFFER_CLOSED_KEY` was written at enqueue, so the terminal tip never
+  comes back.
+- **Within a class the newest row wins, compared against the HELD ROW.** Comparing against the merged value —
+  which is the oldest — meant that once two rows had folded together, any third
+  row beat the accumulated payload on a timestamp it never had:
+  `[closure@9000, live@1000, changed@5000]` elected `changed` and dropped the
+  closure. Two rows behaved correctly and three did not, which is why the
+  two-row tests passed.
+- **A CLOSURE keeps its own clock and a clean strike ledger.** The
+  oldest-timestamp rule is there to stop a re-rolled duplicate of the SAME
+  story refreshing its clock; a closure is a different terminal story that
+  merely shares the id. Dedupe runs at the queue read and the expiry/strike
+  filter immediately after it, so a closure handed a 6d23h-old row's
+  `submittedAt` is dropped as `expired` within the hour — and `OFFER_CLOSED_KEY`
+  was written at enqueue, so it never returns.
+- **That exemption is CROSS-STORY, not blanket — two closures still fold.** A
+  second closure row under one id is reachable: the `sadd(OFFER_CLOSED_KEY)`
+  that guards re-detection is warn-only and the tip is pushed regardless, so a
+  failed write or a lapsed 30-day TTL re-enqueues one on the next scan.
+  Exempting those from the fold as well let each duplicate relaunder both the
+  clock and the ledger, so a closure the quality gate kept suppressing would
+  never age out at all — strictly worse than the 7 days it had before the
+  dedupe existed. Budget is inherited only from rows telling the SAME story.
+- **It merges into a COPY, never onto the input row.** Folding the fields onto
+  the kept row leaves two rows sharing one `submittedAt`, and the newest-wins
+  compare then breaks that tie by arrival order — so a second pass over the
+  same array answers differently. The scanner dedupes once per run; a function
+  whose result depends on whether it has already been called is a trap
+  regardless.
+- **Strike state folds FORWARD from every duplicate**, never inherited from the
+  kept row alone — otherwise a newly enqueued copy launders a tip out of
+  hold-and-strike by resetting its counter to zero.
+- **The busy-morning split counts DISTINCT ids and picks a secondary beat with
+  a DIFFERENT id**, not the next row along. That is belt-and-braces over the
+  dedupe on purpose: it is the one place in the scanner where "two tips" means
+  "two stories", and the cost of being wrong there is not a bad log line, it is
+  the same trade reported twice in the chat.
+- **The per-offer repost cooldown cannot cover this.** `trade_offers:last_post`
+  is stamped on DELIVERY, and duplicate rows deliver inside the SAME cycle. Any
+  future "don't repeat yourself" rule has to hold WITHIN a cycle as well as
+  across days.
+
+- **A beat's CTA comes from that BEAT'S OWN TIPS, never from a parallel bucket
+  array.** `pickPrimaryBucket` hard-codes `secondaryBucket` to `null` for a
+  trade primary, so `[primaryBucket, secondaryBucket][1]` handed beat 2
+  `undefined`: no trade-flavored tips, so it shipped the generic "Got a tip?"
+  link while beat 1 shipped the Trade Builder one. That is why the 2026-09-08
+  pair read as two separate scoops rather than one story told twice.
+  `resolveCta` only reads `.tips`, so it takes the beat's batch. The parallel
+  array survives for the recurrence fingerprint alone, which reads the bucket's
+  key and kind.
+- **The Friday MAILBAG is the exception — it stays on the tip-page CTA.** It
+  never assigns `primaryBucket`, so it used to reach the generic link by
+  accident of `null`; its batch is the whole gossip pool, and
+  `classifyTipKind` puts everything that is not `source: 'trade_offer'` in
+  there, `trade_bait` and `topic: 'trade'` web tips included. Handing that to
+  `resolveCta` points a multi-topic roundup at one franchise's trade builder
+  and drops the whisper-back link, which is the one CTA a mailbag most needs.
+  This governs the `resolveCta` path only: `buildDirectedCta` short-circuits
+  ahead of it, so a mailbag led by an explicit-pick tip still gets a directed
+  dare — which is still the TIP PAGE (`?target=<fid>`), so the whisper-back
+  affordance survives. Pre-existing, and left alone.
+
+`tests/schefter-tip-queue-admission.test.ts` pins the dedupe behavior;
+`tests/schefter-busy-morning.test.ts` pins the distinct-id split and both
+beats' CTA.
 
 ### An expired proposal is a SEED, not a post
 

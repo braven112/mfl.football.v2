@@ -12,9 +12,10 @@ import path from 'node:path';
 import {
   allowsTwoPostCycle,
   IN_SEASON_MAX_RUMOR_POSTS_PER_DAY,
-  isLeagueSeasonOpen,
+  AWAKE_START_OFFSET_FROM_KICKOFF_DAYS,
+  isLeagueAwake,
   MAILBAG_EXEMPT_FROM_MILL_CAP,
-  leagueSeasonWindow,
+  leagueAwakeWindow,
   rumorMillCapReason,
   rumorMillDailyCap,
 } from '../scripts/lib/schefter-rumor-cadence.mjs';
@@ -28,6 +29,7 @@ import {
   TRADE_DEADLINE_WINDOW_DAYS,
 } from '../src/utils/trade-deadline.mjs';
 import { MAX_POSTS_PER_DAY } from '../scripts/lib/schefter-groupme-budget.mjs';
+import { resolveDateForYear } from '../src/utils/league-event-resolver';
 
 /** Noon PT on a PT calendar date — safely inside the day at either offset. */
 function atPT(iso: string): Date {
@@ -140,34 +142,80 @@ describe('trade deadline — resolved from the registry, never inlined', () => {
   });
 });
 
-describe('season window — kickoff through the championship', () => {
-  it('runs from the kickoff Thursday to championship Monday', () => {
-    const { startIso, endIso } = leagueSeasonWindow(2026);
-    expect(startIso).toBe('2026-09-10');
-    // Week 17 starts at kickoff + 16*7 and closes on MNF four days later.
-    expect(endIso).toBe(shiftIsoDate(startIso, 16 * 7 + 4));
+describe('awake window — draft weekend through the championship', () => {
+  it('opens on draft weekend (Labor Day - 8), not at kickoff', () => {
+    const { startIso } = leagueAwakeWindow(2026);
+    // Labor Day 2026 is Sep 7; the AFL's NL email draft is the Sunday eight
+    // days before it. The anchor is the AFL's calendar and the window takes no
+    // slug — TheLeague's own Cut to 22 is `third-sunday-august` (2026-08-16),
+    // a fortnight earlier, so it stays loud through its own deadlines. A known
+    // gap, not a design goal: see AWAKE_START_OFFSET_FROM_KICKOFF_DAYS.
+    expect(startIso).toBe('2026-08-30');
+    expect(startIso).toBe(shiftIsoDate(nflKickoffIsoDate(2026), -11));
+    expect(AWAKE_START_OFFSET_FROM_KICKOFF_DAYS).toBe(-11);
   });
 
-  it('is closed in the offseason and open in the season', () => {
-    expect(isLeagueSeasonOpen(atPT('2026-08-01'))).toBe(false);
-    expect(isLeagueSeasonOpen(atPT('2026-09-09'))).toBe(false); // day before kickoff
-    expect(isLeagueSeasonOpen(atPT('2026-09-10'))).toBe(true);
-    expect(isLeagueSeasonOpen(atPT('2026-11-15'))).toBe(true);
+  it('tracks the resolver’s real NL-draft date, not just its own arithmetic', () => {
+    // The offset is a constant, so asserting it against `shiftIsoDate(kickoff,
+    // -11)` is very nearly a tautology — it would still pass if the AFL moved
+    // its draft and the loud 3/day cadence started running over draft weekend.
+    // Cross-check against the event resolver, which owns the date.
+    const nlDraft = { type: 'computed', rule: 'sunday-before-labor-day-weekend' } as const;
+    for (const year of [2026, 2027, 2028, 2029, 2030]) {
+      const resolved = resolveDateForYear(nlDraft as never, year);
+      const iso = [
+        resolved.getFullYear(),
+        String(resolved.getMonth() + 1).padStart(2, '0'),
+        String(resolved.getDate()).padStart(2, '0'),
+      ].join('-');
+      expect(leagueAwakeWindow(year).startIso, `NL draft anchor drifted for ${year}`).toBe(iso);
+    }
   });
 
-  it('still reads as in-season in early January, before the title is decided', () => {
+  it('still closes on championship Monday — the start moving must not drag the end', () => {
+    // Both ends measure from KICKOFF. Deriving endIso from startIso would
+    // retire the quiet cap eleven days early, i.e. mid-playoffs.
+    const { endIso } = leagueAwakeWindow(2026);
+    expect(endIso).toBe(shiftIsoDate(nflKickoffIsoDate(2026), 16 * 7 + 4));
+    expect(endIso).toBe('2027-01-04');
+  });
+
+  it('is closed in the quiet months and open from the drafts on', () => {
+    expect(isLeagueAwake(atPT('2026-08-01'))).toBe(false);
+    // 2026-08-29 is the AFL's AL Live Draft Saturday (Labor Day - 9). The
+    // window opens the NEXT day, at the NL email draft — a deliberate choice
+    // of anchor, not an oversight: see AWAKE_START_OFFSET_FROM_KICKOFF_DAYS.
+    expect(isLeagueAwake(atPT('2026-08-29'))).toBe(false);
+    expect(isLeagueAwake(atPT('2026-08-30'))).toBe(true);
+    expect(isLeagueAwake(atPT('2026-11-15'))).toBe(true);
+  });
+
+  it('covers the roster week between the drafts and kickoff', () => {
+    // The gap this window was widened to cover. On 2026-09-08 — drafts done,
+    // cuts landing, kickoff two days out — the mill still had the full
+    // offseason budget and shipped two beats about one offer, a second apart.
+    for (const d of ['2026-08-31', '2026-09-05', '2026-09-08', '2026-09-09']) {
+      expect(isLeagueAwake(atPT(d))).toBe(true);
+      expect(rumorMillDailyCap('theleague', atPT(d), SHARED)).toBe(
+        IN_SEASON_MAX_RUMOR_POSTS_PER_DAY,
+      );
+      expect(allowsTwoPostCycle('theleague', atPT(d), SHARED)).toBe(false);
+    }
+  });
+
+  it('still reads as awake in early January, before the title is decided', () => {
     // The season that kicked off in September ends in January. Resolving the
     // season year off a Labor-Day-clock helper would test January against a
     // window that closed months earlier and report "offseason" mid-playoffs.
-    const { endIso } = leagueSeasonWindow(2026);
+    const { endIso } = leagueAwakeWindow(2026);
     expect(endIso.startsWith('2027-01')).toBe(true);
-    expect(isLeagueSeasonOpen(atPT(endIso))).toBe(true);
-    expect(isLeagueSeasonOpen(atPT(shiftIsoDate(endIso, 1)))).toBe(false);
+    expect(isLeagueAwake(atPT(endIso))).toBe(true);
+    expect(isLeagueAwake(atPT(shiftIsoDate(endIso, 1)))).toBe(false);
   });
 
-  it('reopens for the whole offseason, not just for a month', () => {
-    for (const d of ['2027-01-05', '2027-03-01', '2027-06-15', '2027-09-01']) {
-      expect(isLeagueSeasonOpen(atPT(d))).toBe(false);
+  it('reopens for the whole quiet stretch, not just for a month', () => {
+    for (const d of ['2027-01-05', '2027-03-01', '2027-06-15', '2027-08-01']) {
+      expect(isLeagueAwake(atPT(d))).toBe(false);
     }
   });
 });
@@ -178,12 +226,12 @@ describe('rumorMillDailyCap', () => {
     expect(rumorMillCapReason('theleague', atPT('2026-07-01'))).toBe('offseason');
   });
 
-  it('drops to one per day once the season is being played', () => {
+  it('drops to one per day once the league is awake', () => {
     expect(rumorMillDailyCap('theleague', atPT('2026-10-01'), SHARED)).toBe(
       IN_SEASON_MAX_RUMOR_POSTS_PER_DAY,
     );
     expect(IN_SEASON_MAX_RUMOR_POSTS_PER_DAY).toBe(1);
-    expect(rumorMillCapReason('theleague', atPT('2026-10-01'))).toBe('in season');
+    expect(rumorMillCapReason('theleague', atPT('2026-10-01'))).toBe('league awake');
   });
 
   it('returns to the shared budget inside each league’s deadline run-up', () => {

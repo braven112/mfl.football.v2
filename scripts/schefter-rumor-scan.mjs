@@ -111,7 +111,7 @@ import {
 } from './lib/schefter-lore.mjs';
 import { incrementTipsterCounters, incrementTipsterTopicCounters } from './lib/schefter-tipster-counters.mjs';
 import { schefterKey, globalSchefterKey } from './lib/schefter-keys.mjs';
-import { isUsableTip } from './lib/schefter-tip-queue.mjs';
+import { dedupeTipsById, isUsableTip } from './lib/schefter-tip-queue.mjs';
 import { getTopicPolicy, DRAINABLE_TOPIC_IDS } from '../src/config/schefter-topics.mjs';
 import {
   classifyTipKind,
@@ -4137,7 +4137,13 @@ async function main() {
   if (unparseableCount > 0) {
     warn(`  ${unparseableCount} queue item(s) missing id/text or malformed — these will be DROPPED`);
   }
-  log(`  Queue depth: ${parsedTips.length}${unparseableCount > 0 ? ` (+${unparseableCount} unusable)` : ''}`);
+  // One row per tip, before anything downstream counts rows as stories.
+  const dedupedTips = dedupeTipsById(parsedTips);
+  const duplicateRows = parsedTips.length - dedupedTips.length;
+  if (duplicateRows > 0) {
+    log(`  Collapsed ${duplicateRows} duplicate queue row(s) — same tip id enqueued more than once`);
+  }
+  log(`  Queue depth: ${dedupedTips.length}${duplicateRows > 0 ? ` (+${duplicateRows} duplicate)` : ''}${unparseableCount > 0 ? ` (+${unparseableCount} unusable)` : ''}`);
 
   // Drop expired — by submitted age, by suppressed-strike count, or by
   // total time spent on hold. The strike/hold checks let Option A age out
@@ -4145,7 +4151,7 @@ async function main() {
   const now = new Date();
   const freshTips = [];
   const droppedTips = [];
-  for (const t of parsedTips) {
+  for (const t of dedupedTips) {
     const age = now.getTime() - (t.submittedAt ?? 0);
     const strikes = typeof t.suppressedStrikes === 'number' ? t.suppressedStrikes : 0;
     // A tip that struck out reached the LLM and lost on the merits; one that
@@ -4485,20 +4491,47 @@ async function main() {
     // back-to-back off one slot — the pile-up the in-season cap exists to
     // prevent — so the catch-up is offseason/deadline-window only and an
     // overnight backlog just clears a day slower in season.
+    //
+    // The backlog is counted in DISTINCT tip ids, and the second beat is the
+    // oldest tip whose id differs from the first's — never simply the next row
+    // along. dedupeTipsById already guarantees one row per tip upstream; this
+    // is the belt to that pair of braces, because this split is the single
+    // place in the scanner where "two tips" is read as "two stories", and the
+    // cost of being wrong here is not a bad log line, it is the same trade
+    // offer reported twice in the chat one second apart (owner report,
+    // 2026-09-08).
+    const distinctTradeTipIds = new Set(
+      primaryBucket.tips.map((t) => String(t?.id ?? '')),
+    );
     if (
       postKind === 'trade' &&
-      primaryBucket.tips.length >= BUSY_MORNING_TRADE_THRESHOLD &&
+      distinctTradeTipIds.size >= BUSY_MORNING_TRADE_THRESHOLD &&
       isBusyMorningWindow(now) &&
       allowsTwoPostCycle(LEAGUE_SLUG, now, MAX_POSTS_PER_DAY)
     ) {
-      busyMorning = true;
-      busyMorningBacklog = primaryBucket.tips.length;
       const sortedTips = [...primaryBucket.tips].sort(
         (a, b) => (a.submittedAt ?? 0) - (b.submittedAt ?? 0),
       );
-      batch = sortedTips.slice(0, 1);
-      secondaryBatch = sortedTips.slice(1, 2);
-      log(`  [busy-morning] Trade backlog ${busyMorningBacklog} — splitting into 2 beats (one slot)`);
+      const primaryTip = sortedTips.slice(0, 1);
+      const primaryTipId = String(primaryTip[0]?.id ?? '');
+      const secondaryTip = sortedTips
+        .slice(1)
+        .find((t) => String(t?.id ?? '') !== primaryTipId);
+      // Unreachable by construction — the gate above already found >= 2
+      // distinct ids in the very array `sortedTips` is sorted from, so some
+      // element of slice(1) must differ from the first. Kept as a guard, not
+      // as a branch: it costs one line, and it is what makes the "never the
+      // same offer twice" property hold locally rather than only as a
+      // consequence of a gate ten lines up that a future edit could loosen.
+      // Deliberately NOT logged in the else — a log line for a branch that
+      // cannot run reads as a real state in the workflow output.
+      if (secondaryTip) {
+        busyMorning = true;
+        busyMorningBacklog = distinctTradeTipIds.size;
+        batch = primaryTip;
+        secondaryBatch = [secondaryTip];
+        log(`  [busy-morning] Trade backlog ${busyMorningBacklog} distinct offer(s) — splitting into 2 beats (one slot)`);
+      }
     }
   }
 
@@ -4712,10 +4745,43 @@ async function main() {
   const builtPosts = [];
   const ctaByPostId = new Map();
   const parentIdByPostId = new Map();
-  // Each beat has its own bucket — primary uses primaryBucket, secondary
-  // (gossip-only) uses secondaryBucket. Resolve CTA per-beat so a gossip
-  // secondary attached to a trade_bait primary doesn't inherit the wrong
-  // Trade Builder link.
+  // CTA is resolved per-beat from THAT BEAT'S OWN TIPS, so a gossip secondary
+  // attached to a trade_bait primary cannot inherit the wrong Trade Builder
+  // link — and, since the busy-morning split, so the second TRADE beat gets
+  // the right one.
+  //
+  // This used to index a parallel [primaryBucket, secondaryBucket] array, and
+  // pickPrimaryBucket hard-codes secondaryBucket to null for a trade primary.
+  // Under the busy-morning split both beats are trade-offer reports drawn from
+  // ONE bucket, so beat 2 resolved its CTA from `undefined`, found no
+  // trade-flavored tips, and shipped the generic "Got a tip?" link while beat 1
+  // shipped the Trade Builder one. That is why the 2026-09-08 pair read as two
+  // separate scoops rather than one story told twice. `resolveCta` only ever
+  // reads `.tips`, so handing it the beat's own batch is both simpler and
+  // correct for every lane.
+  //
+  // The Friday MAILBAG stays on the tip-page CTA. It never assigns
+  // `primaryBucket`, so it used to reach the generic link by accident of
+  // `null` — and its batch is the whole gossip pool, which `classifyTipKind`
+  // fills with everything that is not `source: 'trade_offer'`, `trade_bait`
+  // tips and `topic: 'trade'` web tips included. Handing that batch to
+  // `resolveCta` would point a multi-topic roundup at one franchise's trade
+  // builder and drop the whisper-back CTA, which is the one link a mailbag
+  // most needs. Explicit now, rather than correct by accident.
+  //
+  // Scope note: this governs the resolveCta path only. `buildDirectedCta`
+  // short-circuits ahead of it, so a mailbag led by an explicit-pick tip still
+  // ships a DIRECTED dare. That stays as-is — the directed link is
+  // `TIP_PAGE_PATH?target=<fid>`, i.e. still the tip form with the
+  // whisper-back affordance, merely pre-selecting a franchise. Pre-existing
+  // behavior; whether a multi-topic roundup should be aimed at one desk is an
+  // editorial question, not this bug.
+  const ctaSourceFor = (beat) =>
+    (postKind === 'mailbag' ? { tips: [] } : { tips: beat.batch ?? [] });
+  // Still needed for the recurrence fingerprint below, which reads the
+  // bucket's key/kind and not just its tips. Under busy-morning beat 2 has no
+  // bucket of its own, so it gets no "fresh subject" threshold relaxation —
+  // the conservative pre-existing behavior, left alone deliberately.
   const beatBuckets = [primaryBucket, secondaryBucket];
   for (let i = 0; i < beats.length; i++) {
     const beat = beats[i];
@@ -4768,7 +4834,7 @@ async function main() {
     // that pre-selects the named franchise on the tip form, turning the
     // post into the start of a thread.
     const directedCta = buildDirectedCta(beat);
-    const cta = directedCta ?? resolveCta(beatBuckets[i]);
+    const cta = directedCta ?? resolveCta(ctaSourceFor(beat));
 
     const post = {
       id: generatePostId(),

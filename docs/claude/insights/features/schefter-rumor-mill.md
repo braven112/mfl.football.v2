@@ -3,6 +3,126 @@
 The load-bearing architecture rules live in CLAUDE.md ("Schefter multi-league").
 This file holds the finer operational learnings.
 
+## 2026-09-08 - Two beats one second apart: a count of ROWS standing in for a count of STORIES
+
+**Context:** the same owner, same day, a second report. Two GroupMe posts about
+the same trade offer — not 7.5 hours apart this time but **one second**, out of
+a single scanner run: `sf_rumor_1788881332066_eb183012` and `…_e83e63a4`, both
+carrying `tipIds: ["to_1080"]`, one CTA pointing at the Trade Builder and the
+other at the tip page, which is what made them read as two separate scoops.
+
+**The bug was a plural noun that was never checked.** The busy-morning
+catch-up splits a trade bucket of 2+ tips into two beats to clear an overnight
+backlog. `primaryBucket.tips.length >= 2` was standing in for "two offers", and
+`slice(0,1)` / `slice(1,2)` for "one each" — but `scanTradeOffers` enqueues a
+row per dice roll and requeues unposted rows for seven days, so the queue can
+hold one offer twice under one `to_<offerId>` id. **The generalizable shape:
+wherever a count of ROWS is read as a count of SUBJECTS, the dedupe is part of
+the feature, not hygiene.** Here the two halves lived in different functions
+several thousand lines apart, so nothing forced them to be read together —
+exactly the failure mode of the previous entry, in a different currency.
+
+**The published feed had been saying so for days, in a field nobody diffs.**
+`tipIds` is stored per post: `to_1076, to_1078, to_1081, to_1003, to_1081` on
+Sep 7, and `to_1081` three times in one Sep 6 post. Duplicate ids inside a
+single batch is a one-line check against shipped data, and it predates the
+visible symptom by two days. When a feed persists its own provenance, the
+cheapest audit of a "he repeats himself" report is `uniq` over that field
+before reading any code.
+
+**The existing cooldown could not have caught it, by construction.** The 7-day
+per-offer repost anchor is stamped on DELIVERY — deliberately, so a post nobody
+read cannot lock an offer out. Both beats delivered in the same cycle, so it
+never got a chance to fire. **A cooldown expressed in days cannot police a
+repeat measured in seconds:** any "don't repeat yourself" rule needs to hold
+WITHIN a cycle as well as across them, and those are two different mechanisms.
+
+**Which duplicate you keep is a real decision, and "a row" is the wrong unit to
+decide it in.** The first cut kept the earliest row wholesale, reasoning that
+`submittedAt` anchors the framing, the age-boost and the 7-day expiry, so a
+re-rolled offer keeping the newest would refresh its own clock forever (the
+2026-09-07 entry's failure, now with a plausible timestamp). All true — and it
+threw away the CLOSURE tip, because `redactTradeOffer` stamps `to_<offerId>` on
+every tip it mints for an offer, the "this one got done" callback included. A
+stale live row swallowed it, and `OFFER_CLOSED_KEY` is written at enqueue
+rather than on publication, so the closure was not merely delayed but lost.
+**The lesson is that "which row wins" was two questions wearing one answer:**
+the payload wants the newest (closure, changed ask, current age and exposure),
+the timestamp wants the oldest (so expiry still bites), and the strike ledger
+wants the max of both — otherwise a fresh copy launders a tip out of
+hold-and-strike. Merge the fields; do not elect a row.
+
+**Two rows is not a test of a merge; three is.** The corrected version compared
+each new row against the ACCUMULATED one — whose timestamp is by definition the
+oldest — so the moment a third row arrived it won on a timestamp the payload
+never had, and the closure was dropped exactly as before. Every two-row test
+passed. **The arity at which a fold breaks is almost never two**, and a
+review that re-ran the shipped function on three rows is what found it.
+
+**The exemption you need is usually the thing you defined the rule against.**
+Merging a fresh closure onto a stale live row hands it that row's remaining
+age and strike budget, and since dedupe runs at the queue read with the expiry
+filter immediately behind it, a closure minted seconds ago dies as `expired` in
+the same pass. The oldest-timestamp rule was written to stop a re-rolled copy
+of the SAME story refreshing its clock — a closure is a different story wearing
+the same id, so it keeps its own. Worth asking of any dedupe: does every row
+sharing this key tell the same story?
+
+**And then the exemption itself wants scoping.** Written as "a closure keeps
+its own clock", it also exempted a closure from folding with ANOTHER closure —
+reachable, because the `sadd` that stops re-detection is warn-only and the tip
+ships regardless. Each duplicate then relaundered the clock and the strike
+ledger, so a suppressed closure would never age out at all: strictly worse than
+the seven days it had before any dedupe existed. The rule that survives is
+narrower than either draft — **budget is inherited only from rows telling the
+same story** — and the shape generalizes: an exemption defined against a class
+("not from a live row") is safer than one defined by a property of the
+exempt thing ("closures are exempt"), because the second one silently covers
+the same-class case nobody pictured.
+
+**A tie-break is a policy, and ours was accidentally "whoever is newest".**
+Three rounds of review went into which duplicate wins and every one of them
+argued about timestamps, because the rows looked like copies. They are not: a
+closure and a live beat share an id and tell different stories, and the story
+that is TERMINAL has to win regardless of the clock — otherwise a live row
+enqueued after a closure destroys it, which is reachable the moment the
+transactions read that detects acceptance fails, since that read is warn-only.
+The rule that finally held is class first, timestamp second. **When two records
+share a key, ask what each one MEANS before deciding which is fresher.**
+
+**And the thing that made two posts read as two scoops was a parallel array.**
+`[primaryBucket, secondaryBucket]`, indexed by beat number, with
+`secondaryBucket` hard-coded to `null` for a trade primary — so the second
+trade beat resolved its call-to-action from `undefined` and shipped the generic
+"Got a tip?" link beside beat 1's Trade Builder one. The owner's screenshot
+shows exactly that, and it is the detail that made one story told twice look
+like two separate scoops. The CTA resolver only ever needed the beat's own
+tips; the parallel array was carrying a correlation the beats already had.
+**A lookup indexed by position into a structure built for a different purpose
+is a bug waiting for its second caller** — here, the busy-morning split.
+
+**A merge that writes onto its input makes the function answer differently the
+second time.** Folding the merged `submittedAt` onto the kept row leaves both
+duplicates sharing a timestamp, and the newest-wins comparison then resolves
+that tie by arrival order — so a second pass over the same array keeps the
+other row. Only one call site exists and it runs once per run, so nothing was
+broken; the test that reversed the argument order was what noticed. **A pure
+function is not a style preference when the function's own output is one of its
+inputs' fields.**
+
+**And the cadence boundary was measuring the wrong thing.** The mill's quiet
+1/day cap keyed on `isLeagueSeasonOpen` — kickoff, Labor Day + 3. The league
+actually wakes at its DRAFTS, eleven days earlier (the AFL's NL email draft is
+the Sunday eight days before Labor Day). The anchor is the AFL's calendar and
+the window takes no slug, so TheLeague — whose own Cut to 22 is the third
+Sunday in August — stays loud through its own deadlines; a known gap, written
+down rather than smoothed over. So the loudest possible cadence — 3/day plus the busy-morning double
+— was running through draft-and-cuts week, which is why this fired at 8:28am on
+Sep 8 and not in October. Renamed to `isLeagueAwake`: **a boundary named after
+one of its endpoints invites the reader to assume the other one.** Both ends of
+the window still measure from kickoff, so moving the start cannot drag
+championship Monday back with it.
+
 ## 2026-09-08 - A per-RUN probability is meaningless until you count the runs
 
 **Context:** the fix for the 2026-09-07 entry below. Owner report: two rumors
