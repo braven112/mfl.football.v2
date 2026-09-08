@@ -75,42 +75,66 @@ export function isUsableTip(obj) {
  *
  * Strike state folds FORWARD from every duplicate rather than coming from the
  * kept row alone, so a newly enqueued copy cannot launder a tip out of
- * hold-and-strike by resetting its counter to zero.
+ * hold-and-strike by resetting its counter to zero. The one exception is a
+ * closure, which is a NEW terminal story sharing an id rather than another
+ * copy of the live one — it keeps its own timestamp and a clean ledger. See
+ * the materialize step below.
  */
 export function dedupeTipsById(tips) {
+  const numeric = (v) => (typeof v === 'number' ? v : null);
+  const minDefined = (a, b) => {
+    const vals = [a, b].filter((v) => typeof v === 'number');
+    return vals.length > 0 ? Math.min(...vals) : undefined;
+  };
+  const strikesOf = (t) => (typeof t?.suppressedStrikes === 'number' ? t.suppressedStrikes : 0);
+
   const byId = new Map();
   for (const tip of tips) {
     const id = String(tip?.id ?? '');
-    const prev = byId.get(id);
-    if (!prev) {
-      byId.set(id, tip);
+    const at = numeric(tip?.submittedAt);
+    const acc = byId.get(id);
+    if (!acc) {
+      byId.set(id, {
+        payload: tip,
+        newestAt: at,
+        oldestAt: at,
+        strikes: strikesOf(tip),
+        firstSuppressedAt: numeric(tip?.firstSuppressedAt),
+      });
       continue;
     }
-    // Newest payload wins; see the closure case above.
-    const keep = (tip.submittedAt ?? 0) >= (prev.submittedAt ?? 0) ? tip : prev;
-    const drop = keep === tip ? prev : tip;
-    // Merged into a COPY rather than written onto `keep`. Folding the fields
-    // into the input row would leave two rows sharing one `submittedAt`, and
-    // the newest-wins comparison above then resolves a tie by arrival order —
-    // so a second pass over the same array could keep the other row. The
-    // scanner dedupes once per run, but a function whose answer depends on
-    // whether it has already been called is a trap left lying around.
-    const merged = { ...keep };
-    const strikes = Math.max(
-      typeof keep.suppressedStrikes === 'number' ? keep.suppressedStrikes : 0,
-      typeof drop.suppressedStrikes === 'number' ? drop.suppressedStrikes : 0,
-    );
-    if (strikes > 0) merged.suppressedStrikes = strikes;
-    const suppressedAts = [keep.firstSuppressedAt, drop.firstSuppressedAt].filter(
-      (v) => typeof v === 'number',
-    );
-    if (suppressedAts.length > 0) merged.firstSuppressedAt = Math.min(...suppressedAts);
-    // ...but the oldest timestamp, so the tip still ages out on schedule.
-    const submittedAts = [keep.submittedAt, drop.submittedAt].filter(
-      (v) => typeof v === 'number',
-    );
-    if (submittedAts.length > 0) merged.submittedAt = Math.min(...submittedAts);
-    byId.set(id, merged);
+    // Compared against the NEWEST ROW SEEN, which is tracked separately from
+    // the merged timestamp on purpose. Comparing against the merged value —
+    // which is the OLDEST — meant that once two rows had been folded together,
+    // any third row beat the accumulated one on a timestamp it never had:
+    // [closure@9000, live@1000, changed@5000] elected `changed` and dropped
+    // the closure. Two rows behaved correctly, three did not.
+    if ((at ?? 0) >= (acc.newestAt ?? 0)) {
+      acc.payload = tip;
+      acc.newestAt = at ?? acc.newestAt;
+    }
+    acc.oldestAt = minDefined(acc.oldestAt, at);
+    acc.strikes = Math.max(acc.strikes, strikesOf(tip));
+    acc.firstSuppressedAt = minDefined(acc.firstSuppressedAt, numeric(tip?.firstSuppressedAt));
   }
-  return [...byId.values()];
+
+  return [...byId.values()].map((acc) => {
+    const merged = { ...acc.payload };
+    // A CLOSURE keeps its own clock and a clean ledger.
+    //
+    // The oldest-timestamp rule exists to stop a re-rolled duplicate of the
+    // SAME story from refreshing its clock. A closure is not that: it is a
+    // different, terminal story that merely shares `to_<offerId>`. Handing it
+    // the live rows' age budget would let a callback minted seconds ago be
+    // dropped as `expired` in the same pass — dedupe runs at the queue read,
+    // the expiry filter immediately after it, so a live row at 6d23h kills the
+    // closure within the hour. Inherited strikes do the same via `spiked`.
+    // Either way OFFER_CLOSED_KEY was written at enqueue, so it never returns.
+    if (merged.leadKind === 'closure') return merged;
+    if (acc.strikes > 0) merged.suppressedStrikes = acc.strikes;
+    if (typeof acc.firstSuppressedAt === 'number') merged.firstSuppressedAt = acc.firstSuppressedAt;
+    if (typeof acc.oldestAt === 'number') merged.submittedAt = acc.oldestAt;
+    return merged;
+  });
 }
+

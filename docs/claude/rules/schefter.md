@@ -453,11 +453,27 @@ three times.
   all read; carrying the newest forward lets a re-rolled offer refresh its own
   clock forever — the "dead proposals never leave" failure of the 2026-09-07
   insight, wearing a plausible timestamp.
+- **The newest-wins compare tracks the newest ROW SEEN, in an accumulator
+  separate from the merged timestamp.** Comparing against the merged value —
+  which is the oldest — meant that once two rows had folded together, any third
+  row beat the accumulated payload on a timestamp it never had:
+  `[closure@9000, live@1000, changed@5000]` elected `changed` and dropped the
+  closure. Two rows behaved correctly and three did not, which is why the
+  two-row tests passed.
+- **A CLOSURE keeps its own clock and a clean strike ledger.** The
+  oldest-timestamp rule is there to stop a re-rolled duplicate of the SAME
+  story refreshing its clock; a closure is a different terminal story that
+  merely shares the id. Dedupe runs at the queue read and the expiry/strike
+  filter immediately after it, so a closure handed a 6d23h-old row's
+  `submittedAt` is dropped as `expired` within the hour — and `OFFER_CLOSED_KEY`
+  was written at enqueue, so it never returns. The exemption is keyed on
+  `leadKind === 'closure'` and applies to nothing else.
 - **It merges into a COPY, never onto the input row.** Folding the fields onto
-  `keep` leaves two rows sharing one `submittedAt`, and the newest-wins compare
-  then breaks that tie by arrival order — so a second pass over the same array
-  answers differently. The scanner dedupes once per run; a function whose
-  result depends on whether it has already been called is a trap regardless.
+  the kept row leaves two rows sharing one `submittedAt`, and the newest-wins
+  compare then breaks that tie by arrival order — so a second pass over the
+  same array answers differently. The scanner dedupes once per run; a function
+  whose result depends on whether it has already been called is a trap
+  regardless.
 - **Strike state folds FORWARD from every duplicate**, never inherited from the
   kept row alone — otherwise a newly enqueued copy launders a tip out of
   hold-and-strike by resetting its counter to zero.

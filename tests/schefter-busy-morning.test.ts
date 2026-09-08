@@ -115,11 +115,16 @@ describe('busy-morning split logic', () => {
     );
   });
 
-  it('ships a SINGLE beat when the backlog is one offer across several rows', () => {
-    // No distinct second tip → busyMorning stays false and secondaryBatch
-    // stays null, so the cycle posts once.
+  it('guards the split on a secondary tip actually existing', () => {
+    // The guard is unreachable by construction — the gate already found 2+
+    // distinct ids in the array sortedTips is built from — so this pins it as
+    // a GUARD, not as a reachable single-beat behavior. It exists so "never
+    // the same offer twice" holds locally rather than only as a consequence
+    // of the gate above, which a future edit could loosen.
     expect(SCANNER_SRC).toMatch(/if \(secondaryTip\) \{/);
-    expect(SCANNER_SRC).toMatch(/Backlog is one offer across .* row\(s\) — single beat/);
+    // ...and with no else-log: a log line for a branch that cannot run reads
+    // as a real state in the workflow output.
+    expect(SCANNER_SRC).not.toMatch(/Backlog is one offer across/);
   });
 });
 

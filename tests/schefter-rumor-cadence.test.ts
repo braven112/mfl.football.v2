@@ -145,7 +145,9 @@ describe('awake window — draft weekend through the championship', () => {
   it('opens on draft weekend (Labor Day - 8), not at kickoff', () => {
     const { startIso } = leagueAwakeWindow(2026);
     // Labor Day 2026 is Sep 7; the AFL's NL email draft is the Sunday eight
-    // days before it, and TheLeague's auction sits in the same stretch.
+    // days before it. The anchor is the AFL's calendar and the window takes no
+    // slug — TheLeague's own Cut to 22 is `third-sunday-august` (2026-08-16),
+    // a fortnight earlier, so it stays loud through its own deadlines.
     expect(startIso).toBe('2026-08-30');
     expect(startIso).toBe(shiftIsoDate(nflKickoffIsoDate(2026), -11));
     expect(AWAKE_START_OFFSET_FROM_KICKOFF_DAYS).toBe(-11);

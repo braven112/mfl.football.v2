@@ -199,6 +199,68 @@ describe('tip-queue dedupe — one row per tip id', () => {
     expect(dedupeTipsById([closure, live])[0].closure?.reason).toBe('accepted');
   });
 
+  it('holds the closure across THREE rows — the compare tracks the newest row seen', () => {
+    // Two rows behaved; three did not. Once a merge had happened the map held
+    // the OLDEST timestamp, so any later row beat the accumulated payload on a
+    // timestamp it never had, and the closure was dropped exactly as before.
+    const closure = {
+      id: 'to_1080',
+      source: 'trade_offer',
+      text: '',
+      submittedAt: 9_000,
+      leadKind: 'closure',
+      framingHint: 'closure',
+    };
+    const live = { id: 'to_1080', source: 'trade_offer', text: '', submittedAt: 1_000, framingHint: 'fresh' };
+    const changed = { id: 'to_1080', source: 'trade_offer', text: '', submittedAt: 5_000, framingHint: 'changed' };
+    for (const order of [
+      [closure, live, changed],
+      [live, changed, closure],
+      [changed, closure, live],
+    ]) {
+      const [kept] = dedupeTipsById(order);
+      expect(kept.leadKind).toBe('closure');
+    }
+  });
+
+  it('gives a closure its OWN clock and a clean ledger, not the live row\'s budget', () => {
+    // Dedupe runs at the queue read and the expiry/strike filter immediately
+    // after it, so a closure that inherited a 6d23h-old row's submittedAt is
+    // dropped as `expired` within the hour — and OFFER_CLOSED_KEY was written
+    // at enqueue, so it never comes back.
+    const SEVEN_DAYS = 7 * 24 * HOUR;
+    const nearlyExpired = {
+      id: 'to_1080',
+      source: 'trade_offer',
+      text: '',
+      submittedAt: Date.now() - (SEVEN_DAYS - HOUR),
+      suppressedStrikes: 2,
+      firstSuppressedAt: Date.now() - 40 * HOUR,
+    };
+    const closure = {
+      id: 'to_1080',
+      source: 'trade_offer',
+      text: '',
+      submittedAt: Date.now(),
+      leadKind: 'closure',
+    };
+    const [kept] = dedupeTipsById([nearlyExpired, closure]);
+    expect(kept.leadKind).toBe('closure');
+    expect(Date.now() - kept.submittedAt).toBeLessThan(HOUR);
+    expect(kept.suppressedStrikes).toBeUndefined();
+    expect(kept.firstSuppressedAt).toBeUndefined();
+  });
+
+  it('does NOT hand a live re-roll its own clock — only a closure is exempt', () => {
+    // The exemption is for a terminal story sharing an id, never for another
+    // copy of the same live one; otherwise the 7-day expiry stops biting.
+    const first = { id: 'to_1080', source: 'trade_offer', text: '', submittedAt: 1_000, framingHint: 'fresh' };
+    const reroll = { id: 'to_1080', source: 'trade_offer', text: '', submittedAt: 900_000, framingHint: 'changed' };
+    const [kept] = dedupeTipsById([first, reroll]);
+    expect(kept.framingHint).toBe('changed');
+    expect(kept.submittedAt).toBe(1_000);
+  });
+
   it('carries the NEWER row\'s framing and offer age, not the first sighting\'s', () => {
     // An ask-changed beat is enqueued as a later row; keeping the earlier one
     // wholesale shipped the old framing and understated how long the offer
@@ -292,5 +354,30 @@ describe('tip-queue dedupe — one row per tip id', () => {
     expect(dedupeTipsById([])).toEqual([]);
     const one = { id: 'to_1', source: 'trade_offer', text: '', submittedAt: 1 };
     expect(dedupeTipsById([one])).toEqual([one]);
+  });
+});
+
+describe('tip-queue dedupe — the function does not touch its inputs', () => {
+  it('leaves every input row byte-identical', () => {
+    const rows = [
+      { id: 'to_1080', source: 'trade_offer', text: '', submittedAt: 1_000, suppressedStrikes: 2 },
+      { id: 'to_1080', source: 'trade_offer', text: '', submittedAt: 900_000 },
+      { id: 'to_1076', source: 'trade_offer', text: '', submittedAt: 5_000 },
+    ];
+    const before = JSON.stringify(rows);
+    dedupeTipsById(rows);
+    expect(JSON.stringify(rows)).toBe(before);
+  });
+
+  it('answers the same on a second pass over the same array', () => {
+    // Writing the merged fields onto a kept input row left two duplicates
+    // sharing a timestamp, and the newest-wins compare then broke that tie by
+    // arrival order — so calling twice kept the other row.
+    const rows = [
+      { id: 'to_1080', source: 'trade_offer', text: '', submittedAt: 1_000, framingHint: 'fresh' },
+      { id: 'to_1080', source: 'trade_offer', text: '', submittedAt: 900_000, framingHint: 'changed' },
+    ];
+    expect(dedupeTipsById(rows)).toEqual(dedupeTipsById(rows));
+    expect(dedupeTipsById(rows)[0].framingHint).toBe('changed');
   });
 });

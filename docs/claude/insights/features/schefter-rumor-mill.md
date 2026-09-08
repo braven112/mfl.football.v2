@@ -52,6 +52,22 @@ the timestamp wants the oldest (so expiry still bites), and the strike ledger
 wants the max of both — otherwise a fresh copy launders a tip out of
 hold-and-strike. Merge the fields; do not elect a row.
 
+**Two rows is not a test of a merge; three is.** The corrected version compared
+each new row against the ACCUMULATED one — whose timestamp is by definition the
+oldest — so the moment a third row arrived it won on a timestamp the payload
+never had, and the closure was dropped exactly as before. Every two-row test
+passed. **The arity at which a fold breaks is almost never two**, and a
+review that re-ran the shipped function on three rows is what found it.
+
+**The exemption you need is usually the thing you defined the rule against.**
+Merging a fresh closure onto a stale live row hands it that row's remaining
+age and strike budget, and since dedupe runs at the queue read with the expiry
+filter immediately behind it, a closure minted seconds ago dies as `expired` in
+the same pass. The oldest-timestamp rule was written to stop a re-rolled copy
+of the SAME story refreshing its clock — a closure is a different story wearing
+the same id, so it keeps its own. Worth asking of any dedupe: does every row
+sharing this key tell the same story?
+
 **A merge that writes onto its input makes the function answer differently the
 second time.** Folding the merged `submittedAt` onto the kept row leaves both
 duplicates sharing a timestamp, and the newest-wins comparison then resolves

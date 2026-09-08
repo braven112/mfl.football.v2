@@ -4517,14 +4517,20 @@ async function main() {
       const secondaryTip = sortedTips
         .slice(1)
         .find((t) => String(t?.id ?? '') !== primaryTipId);
+      // Unreachable by construction — the gate above already found >= 2
+      // distinct ids in the very array `sortedTips` is sorted from, so some
+      // element of slice(1) must differ from the first. Kept as a guard, not
+      // as a branch: it costs one line, and it is what makes the "never the
+      // same offer twice" property hold locally rather than only as a
+      // consequence of a gate ten lines up that a future edit could loosen.
+      // Deliberately NOT logged in the else — a log line for a branch that
+      // cannot run reads as a real state in the workflow output.
       if (secondaryTip) {
         busyMorning = true;
         busyMorningBacklog = distinctTradeTipIds.size;
         batch = primaryTip;
         secondaryBatch = [secondaryTip];
         log(`  [busy-morning] Trade backlog ${busyMorningBacklog} distinct offer(s) — splitting into 2 beats (one slot)`);
-      } else {
-        log(`  [busy-morning] Backlog is one offer across ${primaryBucket.tips.length} row(s) — single beat`);
       }
     }
   }
