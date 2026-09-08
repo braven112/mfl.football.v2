@@ -4,10 +4,10 @@ status: open
 severity: P0
 opened: 2026-09-08
 hotfix_pr: https://github.com/braven112/mfl.football.v2/pull/1018
-hotfix_sha:
-followup_issue:
+hotfix_sha: 759aee0
+followup_issue: 1020
 followup_pr:
-followup_session:
+followup_session: session_01LpDY8gHp8RpWCqLfb5rVi1
 ---
 
 # Follow-up: teams could not add free agents in the FCFS window
