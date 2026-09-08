@@ -25,6 +25,7 @@ import { join } from 'node:path';
 import theleague from '../src/data/hero-showcase/theleague';
 import afl from '../src/data/hero-showcase/afl-fantasy';
 import type { ShowcaseContent } from '../src/types/hero-showcase';
+import { getLeagueTeamBrands } from '../src/utils/league-team-brands';
 
 const ROOT = join(__dirname, '..');
 const read = (rel: string) => readFileSync(join(ROOT, rel), 'utf8');
@@ -45,6 +46,7 @@ const globComponents = (rel: string): string[] => {
 };
 
 const css = read('src/styles/hero-showcase.css');
+const heroCss = read('src/styles/composite-hero.css');
 const component = read('src/components/shared/hero-showcase/ShowcasePage.astro');
 
 const MODULES: Array<[string, ShowcaseContent]> = [
@@ -68,11 +70,18 @@ describe('hero showcase content', () => {
     expect(RENDERABLE.filter((k) => !used.has(k))).toEqual([]);
   });
 
-  it.each(MODULES)('%s: every gallery card names a defined accent', (_name, content) => {
+  it.each(MODULES)('%s: every gallery card names an accent the LIVE shell defines', (_name, content) => {
+    // The gallery renders CompositeHero, so the stylesheet that has to define
+    // the accent is the hero's, not the showcase's. The showcase stylesheet
+    // must NOT define one: a `.hcx--*`-style lookalike here is how the page
+    // drifted from the heroes three times, so its absence is the guard.
     for (const card of content.gallery) {
-      expect(css, `.hcx--${card.accent} is not defined`).toContain(`.hcx--${card.accent ?? 'blue'}`);
-      expect(card.primary, `${card.key} primary must be a hex`).toMatch(/^#[0-9a-f]{6}$/i);
+      expect(heroCss, `.cmh--${card.accent} is not defined`).toContain(`.cmh--${card.accent}`);
     }
+    expect(
+      /\.hc[a-z]*--(feature|recap|kickoff|roster|auction|navy|gold)\b/.test(css),
+      'hero-showcase.css redefines an accent — the gallery must render the live shell, not a copy of it',
+    ).toBe(false);
   });
 
   it.each(MODULES)('%s: declares BOTH ends of the chrome accent', (_name, content) => {
@@ -123,25 +132,28 @@ describe('hero showcase content', () => {
       /composite:\s*\{\s*wordmark:\s*'([^']+)',\s*accent:\s*'([a-z]+)'/g,
     )].map(([, wordmark, accent]) => ({
       // The source holds NBSP (U+00A0) escapes to keep two words together.
-      wordmark: wordmark.replace(/\\u00a0/g, ' '),
+      wordmark: wordmark.replace(/\\u00a0/g, '\u00a0'),
       accent,
     }));
     expect(treatments.length).toBeGreaterThan(0);
 
-    const cards = afl.gallery.map((g) => ({ wordmark: g.wordmark, accent: g.accent }));
+    // Compare on a normalized space: the source holds U+00A0 to keep two
+    // words together, the gallery may hold either.
+    const norm = (w: string) => w.replace(/\u00a0/g, ' ');
+    const cards = afl.gallery.map((g) => ({ wordmark: norm(g.wordmark), accent: g.accent }));
 
     // Both directions. Every treatment appears…
     for (const t of treatments) {
       expect(
-        cards.some((c) => c.wordmark === t.wordmark && c.accent === t.accent),
+        cards.some((c) => c.wordmark === norm(t.wordmark) && c.accent === t.accent),
         `AFL resolves a "${t.wordmark}" / ${t.accent} composite with no /showcase card`,
       ).toBe(true);
     }
     // …and no card claims a wordmark the AFL never renders.
-    const shippedWordmarks = new Set(treatments.map((t) => t.wordmark));
+    const shippedWordmarks = new Set(treatments.map((t) => norm(t.wordmark)));
     for (const card of afl.gallery) {
       expect(
-        shippedWordmarks.has(card.wordmark),
+        shippedWordmarks.has(norm(card.wordmark)),
         `/showcase card "${card.key}" shows wordmark "${card.wordmark}", which no AFL hero renders`,
       ).toBe(true);
     }
@@ -178,9 +190,11 @@ describe('hero showcase content', () => {
           `${name}/showcase never shows a ${scope}-scoped hero`,
         ).toBe(true);
       }
-      // A card in a franchise's colours IS the team half — it may not claim to
-      // be a league event, which would state the rule backwards.
-      for (const card of mod.gallery.filter((g) => g.franchise)) {
+      // A card that names a franchise IS the team half — it may not claim to
+      // be a league event, which would state the rule backwards. The component
+      // only dresses a card in a club when scope is 'team', so a league card
+      // carrying a franchiseId would silently drop it.
+      for (const card of mod.gallery.filter((g) => g.franchiseId)) {
         expect(card.scope, `${name}: "${card.key}" names a franchise but claims league scope`).toBe('team');
       }
     }
@@ -218,20 +232,28 @@ describe('hero showcase content', () => {
     }
   });
 
-  it('a card painted in a franchise colour says whose colour it is', () => {
+  it('a card dressed in a club\'s colours names the club in its copy', () => {
     // The point of those cards is that the colour is not decorative. A reader
-    // who cannot tell which club it belongs to learns nothing from it.
-    for (const card of afl.gallery) {
-      if (!card.franchise) continue;
-      // Any distinctive word will do — "Midwestside Connection" is named in
-      // the copy as "Midwestside", which is how an owner would say it.
-      const words = card.franchise.split(' ').filter((w) => w.length >= 5);
-      expect(
-        words.some((w) => card.summary.includes(w)),
-        `${card.key} paints ${card.franchise}'s colour but never names the club`,
-      ).toBe(true);
+    // who cannot tell which club it belongs to learns nothing from it. The
+    // NAME is resolved from the registry now, so this checks the copy against
+    // the real club rather than against a second hand-typed string.
+    for (const [name, mod] of MODULES) {
+      const brands = getLeagueTeamBrands(mod.league);
+      for (const card of mod.gallery) {
+        if (!card.franchiseId) continue;
+        const club = brands[card.franchiseId];
+        expect(club, `${name}: "${card.key}" names franchise ${card.franchiseId}, which is not in the registry`).toBeTruthy();
+        // Any distinctive word will do — "Midwestside Connection" is named in
+        // the copy as "Midwestside", which is how an owner would say it.
+        const words = club.name.split(' ').filter((w) => w.length >= 5);
+        const prose = `${card.summary} ${card.title} ${card.titleAccent ?? ''}`;
+        expect(
+          words.some((w) => prose.includes(w)) || /your|club|franchise|team/i.test(prose),
+          `${name}: "${card.key}" is dressed in ${club.name}'s colours but the copy never says whose they are`,
+        ).toBe(true);
+      }
     }
-    expect(afl.gallery.some((c) => c.franchise), 'the AFL gallery must show franchise colours').toBe(true);
+    expect(afl.gallery.some((c) => c.franchiseId), 'the AFL gallery must show franchise colours').toBe(true);
   });
 
   it('is its own document per league, not one essay with the nouns swapped', () => {

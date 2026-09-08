@@ -9,6 +9,7 @@ import type { ShowcaseContent } from '../../types/hero-showcase';
 
 const content: ShowcaseContent = {
   pageTitle: 'Composite Hero System | The League',
+  league: 'theleague',
   palette: {
     accent: '#1c497c',
     // Matches the global --color-primary dark remap this page used to inherit.
@@ -35,139 +36,144 @@ const content: ShowcaseContent = {
 
   // ── THE INVENTORY ───────────────────────────────────────────────────────
   // Every composite state TheLeague can actually render, not a highlight reel.
-  // Two shapes ship (spotlight and panel board) and one accent carries a red
-  // TONE on top of it, so all three of those facts get a card. The `scope`
-  // field is the colour rule, printed on each card: a league event wears the
-  // league's colours, a hero about a franchise wears the club's.
+  // Each entry is fixture props for the LIVE shell, so what a reader sees here
+  // is what the homepage draws — crest, wordmark, glow and all.
+  //
+  // `scope` is load-bearing, not a label: a team card hands its franchise to
+  // the shell (skin + crest + glow), a league card hands it none. The badge
+  // therefore cannot disagree with the pixels.
   gallery: [
     {
       key: 'feature', accent: 'feature', scope: 'league',
       component: 'FeatureCompositeHero', wordmark: "WHAT'S NEW",
-      pill: 'New this week', title: 'Dynamic top-player spotlight on Free Agents',
+      pill: 'New this week', title: 'Dynamic top-player spotlight', titleAccent: 'on Free Agents',
       summary:
-        'The feature itself is the art — its screenshot in a browser frame. A player appears only if the ' +
-        'entry names one: an ESPN cutout over league blue. An announcement belongs to nobody, so his club’s ' +
-        'glow is the only team colour here.',
+        'A player appears only if the entry names one: an ESPN cutout over league blue, his NFL club’s ' +
+        'crest behind him. An announcement belongs to nobody, so that glow is the only team colour here.',
+      ctaLabel: 'Read the update',
       model: { name: 'Ashton Jeanty', descriptor: 'Featured', pos: 'RB', code: 'LV', espnId: '4890973' },
-      primary: '#101820',
     },
     {
       key: 'enhancement', accent: 'feature', scope: 'league',
       component: 'FeatureCompositeHero · enhancement', wordmark: "WHAT'S NEW",
-      pill: 'Improved this week', title: 'Trade Builder now shows live cap impact',
+      pill: 'Improved this week', title: 'Trade Builder now shows', titleAccent: 'live cap impact',
       summary:
-        '“Same guy, leveled up” — an enhancement casts a rostered player in his first five NFL ' +
-        'seasons. Strictly someone an owner invested in; the caption reads his year. Same accent as the ' +
-        'card above, a different casting rule.',
+        '“Same guy, leveled up” — an enhancement casts a rostered player in his first five NFL seasons. ' +
+        'Strictly someone an owner invested in; the caption reads his year.',
+      ctaLabel: 'See what changed',
       model: { name: 'Jahmyr Gibbs', descriptor: '4th Year', pos: 'RB', code: 'DET', espnId: '4429795' },
-      primary: '#0076b6',
     },
     {
       key: 'recap', accent: 'recap', scope: 'team',
       component: 'RecapCompositeHero', wordmark: 'WEEK 12',
-      pill: 'Tuesday · Week 12 recap', title: 'The week’s highest score has an owner',
+      pill: 'Tuesday · Week 12 recap', title: 'The week’s highest score', titleAccent: 'has an owner.',
       summary:
-        'Tuesday’s card is about a <strong>franchise</strong>, not a player — so the glow is the ' +
-        'rostering club’s colour rather than Minnesota purple, and the crest behind him is theirs. ' +
-        'The caption still names his NFL team.',
+        'Tuesday’s card is about a franchise, not a player — so the glow and the crest behind him are ' +
+        'the rostering club’s, not Minnesota’s. The caption still names his NFL team.',
+      ctaLabel: 'Read the recap',
+      franchiseId: '0001',
       model: { name: 'Justin Jefferson', descriptor: 'Week 12 high score', pos: 'WR', code: 'MIN', espnId: '4262921' },
-      primary: '#bd1f2b', franchise: 'Pacific Pigskins',
     },
     {
       key: 'auction-countdown', accent: 'auction', scope: 'league',
       component: 'AuctionCompositeHero · countdown', wordmark: 'AUCTION',
-      pill: 'Auction opens Friday', title: 'The money window is coming',
+      pill: 'Auction opens Friday', title: 'The money window', titleAccent: 'is coming.',
       summary:
-        'Before bidding opens the card counts down and keeps its wordmark. Best available by dynasty ' +
-        'ADP models the window — the pick rotates daily so one face doesn’t own the whole auction.',
+        'Before bidding opens the card counts down and keeps its wordmark. Best available by dynasty ADP ' +
+        'models the window — the pick rotates daily so one face doesn’t own the whole auction.',
+      ctaLabel: 'Prep your board',
       model: { name: "Ja'Marr Chase", descriptor: 'Best Available', pos: 'WR', code: 'CIN', espnId: '4362628' },
-      primary: '#fb4f14',
     },
     {
       key: 'auction-live', accent: 'auction', scope: 'league',
       component: 'AuctionCompositeHero · live', wordmark: '',
-      pill: 'Bidding open', title: 'The auction is live',
+      pill: 'Bidding open', title: 'The auction', titleAccent: 'is live.',
       summary:
-        'Once bidding is open the ghost wordmark <strong>drops entirely</strong> — the live board needs ' +
-        'the width, and decoration behind live money reads as clutter. Everything else about the state ' +
-        'is identical, which is why both belong in the inventory.',
+        'Once bidding opens the ghost wordmark drops entirely — the live board needs the width, and ' +
+        'decoration behind live money reads as clutter. The crest stays; it was never the noisy layer.',
+      ctaLabel: 'Go to the auction',
       model: { name: 'Saquon Barkley', descriptor: 'On the block', pos: 'RB', code: 'PHI', espnId: '3929630' },
-      primary: '#004c54',
     },
     {
       key: 'cut-planning', accent: 'roster', scope: 'team',
-      component: 'CutWatchCompositeHero · planning', wordmark: 'CUT WATCH',
-      pill: 'Cut watch · 44 days left', title: 'Roster planning ahead',
+      component: 'CutWatchCompositeHero · planning', wordmark: 'CUT WATCH',
+      pill: 'Cut watch · 44 days left', title: 'Roster planning', titleAccent: 'ahead.',
       summary:
-        'Outside the final 30 days the hero is calm blue and the copy is planning, not panic. Metrics ' +
-        'read teams over the limit, cuts still required, and the biggest contract at risk.',
+        'Outside the final 30 days the hero is calm blue and the copy is planning, not panic. Your club’s ' +
+        'crest sits behind your own bubble player.',
+      ctaLabel: 'See who’s on the bubble',
+      franchiseId: '0002',
       model: { name: 'Trey McBride', descriptor: 'Your bubble player', pos: 'TE', code: 'ARI', espnId: '4361307' },
-      primary: '#1b435f', franchise: 'Da Dangsters',
     },
     {
       key: 'cut-urgent', accent: 'roster', tone: 'red', scope: 'team',
-      component: 'CutWatchCompositeHero · urgent', wordmark: 'CUT WATCH',
-      pill: 'Cut watch · 6 days left', title: 'Roster deadline approaching',
+      component: 'CutWatchCompositeHero · urgent', wordmark: 'CUT WATCH',
+      pill: 'Cut watch · 6 days left', title: 'Roster deadline', titleAccent: 'approaching.',
       summary:
-        'Inside the final 30 days a <strong>tone</strong> — not a second accent — flips the surface, ' +
-        'pill and CTA to red over the same roster palette. Signed in, the chip reads “You +2” and the ' +
-        'CTA becomes <em>Plan your cuts</em>.',
+        'Inside the final 30 days a tone — not a second accent — flips the surface and pill to red over ' +
+        'the same roster palette. Signed in, the CTA becomes “Plan your cuts.”',
+      ctaLabel: 'Plan your cuts',
+      // Cowboy Up's brand runs navy → red, which is the urgent tone's own arc.
+      // Deliberately not the club used by the recap card above: a showcase that
+      // dresses two shots in the same crest wastes one of them.
+      franchiseId: '0014',
       model: { name: 'Bijan Robinson', descriptor: 'Your bubble player', pos: 'RB', code: 'ATL', espnId: '4430807' },
-      primary: '#bd1f2b', franchise: 'Pacific Pigskins',
     },
     {
       key: 'cut-clear', accent: 'roster', scope: 'team',
-      component: 'CutWatchCompositeHero · all clear', wordmark: 'CUT WATCH',
-      pill: 'Cut watch · 6 days left', title: 'Every roster is legal',
+      component: 'CutWatchCompositeHero · all clear', wordmark: 'CUT WATCH',
+      pill: 'Cut watch · 6 days left', title: 'Every roster is', titleAccent: 'legal.',
       summary:
         'The state most hero systems forget: nobody is over the limit. Rather than hide the hero, the ' +
-        'metrics become days-to-deadline and the roster cap, and the CTA softens to ' +
-        '<em>Review your roster</em>.',
+        'metrics become days-to-deadline and the cap, and it still wears your club’s crest.',
+      ctaLabel: 'Review your roster',
+      // Navy → green. The club dressed here was one whose brand runs navy →
+      // RED, which made the one state that means "nothing to do" the most
+      // alarming shot in the gallery. The skin is faithful either way; which
+      // club models which state is an editorial choice, so make it.
+      franchiseId: '0004',
       model: { name: 'Puka Nacua', descriptor: 'Your headliner', pos: 'WR', code: 'LAR', espnId: '4426515' },
-      primary: '#113469', franchise: 'Music City Mafia',
     },
     {
       key: 'kickoff', accent: 'kickoff', scope: 'league',
       component: 'PreseasonCompositeHero', wordmark: 'KICKOFF',
-      pill: 'Season opener', title: 'Football is back Thursday night',
+      pill: 'Season opener', title: 'Football is back', titleAccent: 'Thursday night.',
       summary:
         'The best projected starter in the week’s earliest game — and if you roster a player in that ' +
-        'opener, you see your own. Kickoff belongs to the whole league, so the card stays league-coloured ' +
-        'even when the face is yours.',
+        'opener, you see your own. Kickoff belongs to the league, so the card stays league-coloured.',
+      ctaLabel: 'See the opener',
       model: { name: 'Lamar Jackson', descriptor: 'Your Kickoff Starter', pos: 'QB', code: 'BAL', espnId: '3916387' },
-      primary: '#241773',
     },
     {
       key: 'udfa-board', accent: 'kickoff', scope: 'league', shape: 'board',
       component: 'UdfaCompositeHero · CompositePanelBoard', wordmark: 'UDFA',
-      pill: 'UDFA window', title: 'The draft is over. The bargains aren’t.',
+      pill: 'UDFA window · Best on the board', title: 'The draft is over. The bargains aren’t.',
       summary:
-        'The second shape the system ships: four rookies on their own NFL-team gradients instead of one ' +
-        'spotlight. <code>fill="pad"</code> — a short board would misstate what is available, so photoless ' +
-        'panels backfill and ranks renumber.',
+        'The second shape the system ships: four rookies on their own NFL-team gradients, each panel ' +
+        'watermarked with that club’s logo, instead of one spotlight.',
+      ctaLabel: 'Browse free agents',
       panels: [
-        { name: 'Omarion Hampton', badge: 'No. 1', espnId: '4685382', code: 'LAC' },
-        { name: 'Tetairoa McMillan', badge: 'No. 2', espnId: '4685472', code: 'CAR' },
-        { name: 'Colston Loveland', badge: 'No. 3', espnId: '4723086', code: 'CHI' },
-        { name: 'Matthew Golden', badge: 'No. 4', espnId: '4701936', code: 'GB' },
+        { name: 'Omarion Hampton', position: 'RB', nflTeam: 'LAC', espnId: '4685382', badge: 'No. 1' },
+        { name: 'Tetairoa McMillan', position: 'WR', nflTeam: 'CAR', espnId: '4685472', badge: 'No. 2' },
+        { name: 'Colston Loveland', position: 'TE', nflTeam: 'CHI', espnId: '4723086', badge: 'No. 3' },
+        { name: 'Matthew Golden', position: 'WR', nflTeam: 'GB', espnId: '4701936', badge: 'No. 4' },
       ],
-      primary: '#1c497c',
     },
     {
       key: 'tag-board', accent: 'recap', scope: 'team', shape: 'board',
       component: 'TaggedShowcaseCompositeHero · CompositePanelBoard', wordmark: 'TAGS',
       pill: 'Franchise tags · 2026', title: 'Four players just got the franchise tag',
       summary:
-        'The same board, watermarked with the <strong>tagging franchise’s crest</strong> rather than an ' +
-        'NFL logo — a tag is a fantasy-team story. <code>fill="drop"</code> here: a photoless panel beside ' +
-        'real faces looks broken, so the board shortens rather than padding.',
+        'The same board, watermarked with each TAGGING FRANCHISE’S crest rather than an NFL logo — a tag ' +
+        'is a fantasy-team story, so the club that spent the tag is the mark behind the player.',
+      ctaLabel: 'See every tag',
+      franchiseId: '0013',
       panels: [
-        { name: 'Brock Bowers', badge: 'Pigskins · TE', espnId: '4432665', code: 'LV', flag: 'Tagged' },
-        { name: 'Travis Hunter', badge: 'Geeks · WR', espnId: '4685415', code: 'JAC', flag: 'Tagged' },
-        { name: 'Jayden Daniels', badge: 'Dangsters · QB', espnId: '4426348', code: 'WAS', flag: 'Tagged' },
-        { name: 'Xavier Worthy', badge: 'Midwestside · WR', espnId: '4683062', code: 'KC', flag: 'Tagged' },
+        { name: 'Brock Bowers', position: 'TE', nflTeam: 'LV', espnId: '4432665', badge: 'Pigskins · TE', flag: 'Tagged', watermarkFranchiseId: '0001' },
+        { name: 'Travis Hunter', position: 'WR', nflTeam: 'JAC', espnId: '4685415', badge: 'Geeks · WR', flag: 'Tagged', watermarkFranchiseId: '0013' },
+        { name: 'Jayden Daniels', position: 'QB', nflTeam: 'WAS', espnId: '4426348', badge: 'Dangsters · QB', flag: 'Tagged', watermarkFranchiseId: '0002' },
+        { name: 'Xavier Worthy', position: 'WR', nflTeam: 'KC', espnId: '4683062', badge: 'Midwestside · WR', flag: 'Tagged', watermarkFranchiseId: '0011' },
       ],
-      primary: '#1274ba', franchise: 'Gridiron Geeks',
     },
   ],
   galleryNote:

@@ -117,438 +117,69 @@ html.dark .hc-page {
   margin: 0.5rem 0 0.75rem;
 }
 
-.hcx {
-  /* light theme defaults */
-  --hc-surface: var(--hcp-card-surface);
-  --hc-ink: var(--color-gray-900, #0f1419);
-  --hc-body: rgba(22, 32, 44, 0.72);
-  --hc-ghost: rgba(28, 73, 124, 0.06);
-  --hc-glow: var(--hc-glow-light, rgba(28, 73, 124, 0.2));
-  --hc-shadow: rgba(15, 30, 46, 0.3);
-  --hc-pill-bg: rgba(28, 73, 124, 0.08);
-  --hc-pill-border: rgba(28, 73, 124, 0.35);
-  --hc-pill-ink: var(--hcp-accent);
-  --hc-cta: var(--hcp-accent);
-  --hc-border: rgba(28, 73, 124, 0.18);
+/* ── GALLERY SHOTS ────────────────────────────────────────────────────────
+   Each entry is the REAL hero (CompositeHero / CompositePanelBoard) with an
+   annotation line above it. This file therefore styles the annotation and the
+   frame ONLY — every colour, gradient, glow, wordmark and crest below the
+   caption belongs to composite-hero.css and must stay there.
 
-  position: relative;
-  overflow: hidden;
-  /* Cap at the real homepage hero column width so these read at true scale,
-     not stretched across the wider showcase container. Mirrors the homepage
-     math exactly: main (1232px) − 2× inline padding − 380px sidebar − 1.5rem
-     grid gap. Uses the same units so it tracks any rem scaling. */
+   The ~250 lines that used to live here were a lookalike of that treatment,
+   and they drifted three times in one week (pale-blue auction card, centred
+   ghost wordmark, no crest at all). Do not reintroduce one: if a hero looks
+   wrong on this page, it looks wrong on the homepage too. */
+.hc-shot {
+  margin: 0;
+  /* Cap at the real homepage hero column so these read at true scale, not
+     stretched across the wider showcase container. Mirrors the homepage math:
+     main (1232px) − 2× inline padding − 380px sidebar − 1.5rem grid gap. */
   width: 100%;
   max-width: calc(1232px - 2 * var(--padding-md, 1rem) - 380px - 1.5rem);
-  min-height: clamp(230px, 22vw, 270px);
-  border-radius: var(--radius-lg, 0.75rem);
-  border: 1px solid var(--hc-border);
-  /* Fail-safe base: a LITERAL solid under the gradient — see the composite
-     heroes. A gradient carried in a custom property is the one declaration
-     that takes the whole `background` down with it if it fails to resolve. */
-  background-color: #e4eef8;
-  background-color: var(--hcp-card-solid, #e4eef8);
-  background-image: var(--hc-surface);
-  color: var(--hc-ink);
+}
+
+.hc-shot__meta {
   display: flex;
   align-items: center;
-  padding: clamp(1.25rem, 2.5vw, 1.9rem);
-}
-
-/* ── CARD ACCENTS ─────────────────────────────────────────────────────────
-   One block per SHIPPED accent family, named exactly as the live components
-   name them (`accent="roster"`, `accent="auction"`, …) rather than by colour.
-   Same reason as composite-hero.css: three of these are shades of blue that
-   differ only in pill and CTA, and a colour-named set invites the merge that
-   silently restyled two live heroes once already.
-
-   These cards are reproductions, so the numbers below are copied from that
-   accent's real tokens — the pill ink and CTA a reader sees here is the one
-   the homepage renders. */
-.hcx--feature { --hc-pill-ink: var(--hcp-accent); --hc-cta: var(--hcp-accent); }
-.hcx--recap   { --hc-pill-ink: #1d4ed8; --hc-pill-border: rgba(29, 78, 216, 0.35); --hc-pill-bg: rgba(29, 78, 216, 0.09); --hc-cta: #1d4ed8; }
-.hcx--kickoff { --hc-pill-ink: #15803d; --hc-pill-border: rgba(21, 128, 61, 0.4); --hc-pill-bg: rgba(22, 163, 74, 0.1); --hc-cta: #15803d; }
-.hcx--roster  { --hc-pill-ink: #1e40af; --hc-pill-border: rgba(30, 64, 175, 0.35); --hc-pill-bg: rgba(30, 64, 175, 0.09); --hc-cta: #1e40af; }
-/* auction, navy and gold ship a DARK card even in light mode, so their pill
-   and CTA tokens live with their ground in ACCENT SURFACES below — a
-   dark-on-dark pill here would be dead code that reads as the real value. */
-
-
-/* ── ACCENT SURFACES ──────────────────────────────────────────────────────
-   The card's GROUND, copied from each accent's real `--cmh-surface`. Without
-   this the cards differed only in pill colour, so the showcase rendered the
-   auction hero as a pale blue card when the shipped one is amber, and every
-   AFL card as light blue when the shipped ones are deep navy — a page whose
-   entire claim is "this is what it looks like" showing something else.
-
-   Three accents ship a DARK card even in light mode (auction, navy, gold), so
-   those flip the ink with the ground; the other four keep the page palette.
-
-   Every rule states a LITERAL `background-color` before anything that could
-   fail to resolve — a gradient carried in a custom property is the one
-   declaration that takes the whole background down with it. */
-.hcx--auction {
-  /* Dark ground in BOTH themes, so it takes the dark glow alpha in both. */
-  --hc-glow: var(--hc-glow-dark, var(--hcp-card-glow-dark));
-  background-color: #92400e;
-  --hc-surface: linear-gradient(115deg, #d97706 0%, #92400e 55%, #4a3410 100%);
-  --hc-ink: #ffffff;
-  --hc-body: rgba(255, 255, 255, 0.78);
-  --hc-ghost: rgba(255, 255, 255, 0.05);
-  --hc-border: rgba(255, 255, 255, 0.14);
-  --hc-pill-ink: #fcd34d;
-  --hc-pill-border: rgba(251, 191, 36, 0.45);
-  --hc-pill-bg: rgba(251, 191, 36, 0.16);
-  --hc-cta: #ffffff;
-}
-.hcx--navy {
-  /* Dark ground in BOTH themes, so it takes the dark glow alpha in both. */
-  --hc-glow: var(--hc-glow-dark, var(--hcp-card-glow-dark));
-  background-color: #12283c;
-  --hc-surface: linear-gradient(115deg, #16324a 0%, #12283c 55%, #0f1e2e 100%);
-  --hc-ink: #ffffff;
-  --hc-body: rgba(255, 255, 255, 0.78);
-  --hc-ghost: rgba(255, 255, 255, 0.05);
-  --hc-border: rgba(255, 255, 255, 0.14);
-  --hc-pill-ink: #e6c976;
-  --hc-pill-border: rgba(201, 164, 76, 0.45);
-  --hc-pill-bg: rgba(201, 164, 76, 0.16);
-  --hc-cta: #ffffff;
-}
-.hcx--gold {
-  /* Dark ground in BOTH themes, so it takes the dark glow alpha in both. */
-  --hc-glow: var(--hc-glow-dark, var(--hcp-card-glow-dark));
-  background-color: #4a3a1a;
-  --hc-surface: linear-gradient(115deg, #8a6d2f 0%, #4a3a1a 55%, #16324a 100%);
-  --hc-ink: #ffffff;
-  --hc-body: rgba(255, 255, 255, 0.78);
-  --hc-ghost: rgba(255, 255, 255, 0.05);
-  --hc-border: rgba(255, 255, 255, 0.14);
-  --hc-pill-ink: #e6c976;
-  --hc-pill-border: rgba(230, 201, 118, 0.45);
-  --hc-pill-bg: rgba(230, 201, 118, 0.16);
-  --hc-cta: #ffffff;
-}
-
-/* ── TONE ─────────────────────────────────────────────────────────────────
-   Urgency, layered ON TOP of whatever accent the phase already chose — the
-   same relationship `tone="red"` has to `accent` in the live shell. It comes
-   after every accent block so it wins at equal specificity, which is the
-   entire mechanism; moving it above them silently disables it. */
-.hcx--tone-red {
-  background-color: #991b1b;
-  --hc-surface: linear-gradient(115deg, #dc2626 0%, #991b1b 55%, #5f1414 100%);
-  --hc-ink: #ffffff;
-  --hc-body: rgba(255, 255, 255, 0.78);
-  --hc-ghost: rgba(255, 255, 255, 0.045);
-  --hc-border: rgba(255, 255, 255, 0.14);
-  --hc-glow: var(--hc-glow-dark, var(--hcp-card-glow-dark));
-  --hc-pill-ink: #fecaca;
-  --hc-pill-border: rgba(252, 165, 165, 0.45);
-  --hc-pill-bg: rgba(252, 165, 165, 0.14);
-  --hc-cta: #ffffff;
-}
-
-html.dark .hcx {
-  --hc-surface: var(--hcp-card-surface-dark);
-  background-color: #16395e;
-  background-color: var(--hcp-card-solid-dark, #16395e);
-  --hc-ink: #ffffff;
-  --hc-body: rgba(255, 255, 255, 0.78);
-  --hc-ghost: rgba(255, 255, 255, 0.05);
-  --hc-glow: var(--hc-glow-dark, var(--hcp-card-glow-dark));
-  --hc-shadow: rgba(0, 0, 0, 0.5);
-  --hc-pill-bg: rgba(96, 165, 250, 0.18);
-  --hc-pill-border: rgba(96, 165, 250, 0.45);
-  --hc-pill-ink: #a8cdf8;
-  --hc-cta: #ffffff;
-  --hc-border: rgba(255, 255, 255, 0.1);
-}
-
-/* Every dark rule below carries its own `html.dark` prefix. A comment between
-   the prefix and the first selector once made the SECOND selector in the list
-   a bare rule, so an amber card's dark pill ink (#fcd34d) also painted the
-   LIGHT card — pale yellow on near-white. Never lead a list with a bare
-   `html.dark` and a comment. */
-html.dark .hcx--feature { --hc-pill-ink: #a8cdf8; --hc-pill-border: rgba(96, 165, 250, 0.45); --hc-pill-bg: rgba(96, 165, 250, 0.18); --hc-cta: #ffffff; }
-html.dark .hcx--recap   { --hc-pill-ink: #a9ccff; --hc-pill-border: rgba(124, 178, 255, 0.45); --hc-pill-bg: rgba(124, 178, 255, 0.16); --hc-cta: #ffffff; }
-html.dark .hcx--kickoff { --hc-pill-ink: #86efac; --hc-pill-border: rgba(74, 222, 128, 0.5); --hc-pill-bg: rgba(22, 163, 74, 0.24); --hc-cta: #ffffff; }
-html.dark .hcx--roster  { --hc-pill-ink: #bfdbfe; --hc-pill-border: rgba(147, 197, 253, 0.45); --hc-pill-bg: rgba(147, 197, 253, 0.16); --hc-cta: #ffffff; }
-html.dark .hcx--auction { --hc-pill-ink: #fcd34d; --hc-pill-border: rgba(251, 191, 36, 0.5); --hc-pill-bg: rgba(217, 119, 6, 0.22); --hc-cta: #ffffff; }
-html.dark .hcx--navy    { --hc-pill-ink: #e6c976; --hc-pill-border: rgba(201, 164, 76, 0.45); --hc-pill-bg: rgba(201, 164, 76, 0.16); --hc-cta: #ffffff; }
-html.dark .hcx--gold    { --hc-pill-ink: #e6c976; --hc-pill-border: rgba(230, 201, 118, 0.5); --hc-pill-bg: rgba(201, 164, 76, 0.22); --hc-cta: #ffffff; }
-
-/* Each accent's own dark ground, again copied from `--cmh-surface` — in dark
-   mode all seven differ, which is where most of the palette actually lives. */
-html.dark .hcx--feature { background-color: #16395e; --hc-surface: linear-gradient(115deg, #0d1b2c 0%, #16395e 52%, #1c497c 100%); }
-html.dark .hcx--recap   { background-color: #101a26; --hc-surface: linear-gradient(115deg, #0b1017 0%, #101a26 46%, #14263a 130%); }
-html.dark .hcx--kickoff { background-color: #12233b; --hc-surface: linear-gradient(115deg, #0d1420 0%, #12233b 52%, #1c497c 130%); }
-html.dark .hcx--roster  { background-color: #12233b; --hc-surface: linear-gradient(115deg, #0d1420 0%, #12233b 52%, #1a3a63 130%); }
-html.dark .hcx--auction { background-color: #221a10; --hc-surface: linear-gradient(115deg, #12100b 0%, #221a10 46%, #4a3410 130%); }
-html.dark .hcx--navy    { background-color: #0f1e2e; --hc-surface: linear-gradient(115deg, #0b1520 0%, #0f1e2e 52%, #16324a 130%); }
-html.dark .hcx--gold    { background-color: #2a2113; --hc-surface: linear-gradient(115deg, #14100a 0%, #2a2113 46%, #16324a 130%); }
-
-/* The dark tone comes LAST on purpose. It sits at the same specificity as the
-   accent surfaces above, so ordering is the only thing making urgency win —
-   move it up and a red keeper deadline silently renders gold. */
-html.dark .hcx--tone-red {
-  background-color: #2a1216;
-  --hc-surface: linear-gradient(115deg, #170b0d 0%, #2a1216 46%, #6e1220 130%);
-  /* Restated, not inherited from the light rule: the dark ACCENT blocks above
-     set their own pill ink, so without these a red keeper deadline kept the
-     gold pill it was supposed to be overriding. */
-  --hc-pill-ink: #fecaca;
-  --hc-pill-border: rgba(252, 165, 165, 0.45);
-  --hc-pill-bg: rgba(252, 165, 165, 0.16);
-  --hc-cta: #ffffff;
-}
-
-.hcx__ghost {
-  position: absolute;
-  /* RIGHT-anchored, matching the shipped `.cmh__ghost`. It used to sit at
-     `left: 40%`, which put the word over the middle of the card — the exact
-     placement that was fixed on the live heroes because it fought the centred
-     crest and read as a cut-off word. A reproduction that keeps the old
-     placement teaches the reader a treatment that no longer ships. */
-  right: 1.25rem;
-  top: -1.1rem;
-  font-size: clamp(3.75rem, 8vw, 6.5rem);
-  font-weight: 800;
-  letter-spacing: -0.02em;
-  line-height: 1;
-  color: var(--hc-ghost);
-  pointer-events: none;
-  user-select: none;
-  white-space: nowrap;
-}
-
-.hcx__glow {
-  position: absolute;
-  right: -70px;
-  top: -100px;
-  width: 440px;
-  height: 440px;
-  background: radial-gradient(circle, var(--hc-glow) 0%, transparent 65%);
-  pointer-events: none;
-}
-
-.hcx__model {
-  position: absolute;
-  right: clamp(0.5rem, 3vw, 2.5rem);
-  bottom: 0;
-  width: clamp(280px, 36vw, 420px);
-  filter: drop-shadow(0 16px 32px var(--hc-shadow));
-  pointer-events: none;
-}
-
-/* League-logo silhouette — hidden until a headshot 404 sets .hcx--no-model. */
-.hcx__logo-art {
-  display: none;
-  position: absolute;
-  right: clamp(1rem, 4vw, 3rem);
-  top: 50%;
-  transform: translateY(-50%) rotate(-6deg);
-  width: clamp(150px, 20vw, 240px);
-  opacity: 0.16;
-  pointer-events: none;
-}
-.hcx--no-model .hcx__model,
-.hcx--no-model .hcx__caption {
-  display: none;
-}
-.hcx--no-model .hcx__logo-art--light {
-  display: block;
-}
-html.dark .hcx--no-model .hcx__logo-art--light {
-  display: none;
-}
-html.dark .hcx--no-model .hcx__logo-art--dark {
-  display: block;
-  opacity: 0.22;
-}
-
-.hcx__caption {
-  position: absolute;
-  z-index: 3;
-  right: 0.7rem;
-  bottom: 0.7rem;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 0.1rem;
-  text-align: right;
-  color: #fff;
-  background: rgba(6, 9, 13, 0.55);
-  padding: 0.35rem 0.55rem;
-  border-radius: 6px;
-  backdrop-filter: blur(2px);
-}
-
-.hcx__caption strong { font-size: 0.75rem; font-weight: 800; line-height: 1.1; }
-.hcx__caption-meta {
-  font-size: 0.5rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.11em;
-  color: rgba(255, 255, 255, 0.65);
-}
-
-.hcx__content { position: relative; z-index: 2; max-width: min(32rem, 60%); }
-
-.hcx__eyebrow { display: flex; align-items: center; flex-wrap: wrap; gap: 0.5rem; margin: 0 0 0.7rem; }
-.hcx__pill {
-  font-size: 0.65rem;
-  font-weight: 800;
-  text-transform: uppercase;
-  letter-spacing: 0.14em;
-  color: var(--hc-pill-ink);
-  background: var(--hc-pill-bg);
-  border: 1px solid var(--hc-pill-border);
-  padding: 0.3rem 0.65rem;
-  border-radius: 999px;
-}
-.hcx__component {
-  font-size: 0.625rem;
-  font-weight: 600;
-  letter-spacing: 0.02em;
-  color: var(--hc-body);
-  font-family: ui-monospace, 'Cascadia Code', monospace;
-  opacity: 0.8;
-}
-
-.hcx__title {
-  color: var(--hc-ink);
-  font-size: clamp(1.2rem, 2.4vw, 1.6rem);
-  font-weight: 800;
-  line-height: 1.12;
-  letter-spacing: -0.015em;
+  flex-wrap: wrap;
+  gap: 0.5rem;
   margin: 0 0 0.5rem;
-  max-width: 22ch;
-  text-wrap: balance;
+  padding: 0 0.15rem;
 }
 
-/* Deliberately NOT line-clamped, unlike the hero it reproduces.
-   The live hero clamps to two lines because its summary is generated and its
-   length varies at runtime. Here the copy is AUTHORED and explanatory — its
-   whole job is to be read — so reproducing the clamp reproduced the wrong
-   thing: all five of these cards shipped truncated mid-sentence on a page
-   whose audience is people evaluating the work. The card's min-height and
-   centred layout absorb a third line without moving anything else. */
-.hcx__summary {
-  font-size: 0.8125rem;
-  line-height: 1.5;
-  color: var(--hc-body);
-  max-width: 46ch;
-  margin: 0 0 0.85rem;
-}
-
-.hcx__cta {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-  font-size: 0.75rem;
-  font-weight: 700;
-  color: var(--hc-cta);
-}
-
-/* ── SCOPE BADGE ──────────────────────────────────────────────────────────
-   "league" or "team", on every card. The colour rule is the one thing about
-   this system that is easy to get wrong and impossible to see in a static
-   screenshot — a team-coloured card and a league-coloured one look equally
-   deliberate — so each card states which half of the rule it is on rather
-   than leaving the reader to infer it from the palette. */
-.hcx__scope {
+/* "League colours" / "Team colours". The rule is the one thing about this
+   system that is impossible to see in a still — a team-coloured hero and a
+   league-coloured one look equally deliberate — so each shot states which half
+   it is on. Outline vs. filled so the column is scannable without reading. */
+.hc-shot__scope {
   font-size: 0.575rem;
   font-weight: 800;
   text-transform: uppercase;
   letter-spacing: 0.12em;
   padding: 0.22rem 0.45rem;
   border-radius: 0.25rem;
-  /* The card ink, not the accent: this badge is a LABEL about the card, and
-     tinting it with the same accent it is describing made it the palest thing
-     on the card in every gold and amber treatment. `currentColor` at 55% keeps
-     the border quieter than the type without dropping the type itself. */
-  color: var(--hc-ink);
-  border: 1px solid color-mix(in srgb, currentColor 55%, transparent);
-  opacity: 0.85;
+  color: var(--color-gray-700, #374151);
+  border: 1px solid color-mix(in srgb, currentColor 45%, transparent);
 }
-/* Outline vs. filled, so the two halves of the rule are scannable down the
-   column without reading a word — which is the badge's whole job. */
-.hcx__scope--league { background: transparent; }
-.hcx__scope--team { background: color-mix(in srgb, currentColor 12%, transparent); }
+html.dark .hc-shot__scope { color: var(--color-gray-300, #d1d5db); }
+.hc-shot__scope--league { background: transparent; }
+.hc-shot__scope--team { background: color-mix(in srgb, currentColor 12%, transparent); }
 
-/* ── BOARD SHAPE ──────────────────────────────────────────────────────────
-   The panel-board heroes (UDFA, the franchise-tag showcase) are not a
-   spotlight with a different palette — they are four player panels in a row,
-   which no amount of accent tinting on a one-cutout card can stand in for. A
-   gallery that only showed spotlights would be claiming the system has one
-   shape when it ships two. */
-.hcx--board { flex-direction: column; align-items: stretch; gap: 0.9rem; }
-.hcx--board .hcx__content { max-width: 100%; }
-.hcx__panels {
-  position: relative;
-  z-index: 2;
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 0.5rem;
-}
-.hcx__panel {
-  position: relative;
-  overflow: hidden;
-  border-radius: 0.5rem;
-  border: 1px solid var(--hc-border);
-  /* Literal solid first — same fail-safe as the card itself. */
-  background-color: rgba(15, 30, 46, 0.06);
-  background-color: var(--hcx-panel-solid, rgba(15, 30, 46, 0.06));
-  min-height: 96px;
-  display: flex;
-  flex-direction: column;
-  justify-content: flex-end;
-  padding: 0.4rem;
-}
-html.dark .hcx__panel { background-color: rgba(255, 255, 255, 0.05); background-color: var(--hcx-panel-solid, rgba(255, 255, 255, 0.05)); }
-.hcx__panel-model {
-  position: absolute;
-  right: -8%;
-  bottom: 0;
-  width: 108%;
-  pointer-events: none;
-  filter: drop-shadow(0 8px 16px var(--hc-shadow));
-}
-.hcx__panel-badge {
-  position: relative;
-  z-index: 2;
-  align-self: flex-start;
-  font-size: 0.55rem;
-  font-weight: 800;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--hc-ink);
-  background: var(--hc-pill-bg);
-  border: 1px solid var(--hc-pill-border);
-  border-radius: 999px;
-  padding: 0.15rem 0.4rem;
-}
-.hcx__panel-flag {
-  position: absolute;
-  top: 0.35rem;
-  left: 0.35rem;
-  z-index: 2;
-  font-size: 0.5rem;
-  font-weight: 800;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--hc-cta);
-}
-@media (max-width: 560px) {
-  .hcx__panels { grid-template-columns: repeat(2, 1fr); }
-  .hcx--board { min-height: 0; }
+.hc-shot__component {
+  font-size: 0.625rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  font-family: ui-monospace, 'Cascadia Code', monospace;
+  color: var(--color-gray-500, #6b7280);
+  background: none;
+  padding: 0;
 }
 
-@media (max-width: 560px) {
-  .hcx { min-height: 240px; }
-  .hcx__content { max-width: 100%; }
-  .hcx__model { width: 170px; right: -1.25rem; opacity: 0.45; }
-  .hcx__caption { display: none; }
+/* The club a team-scoped shot is dressed in. Derived from the registry, never
+   authored — a rebrand should move this text without anyone editing the page. */
+.hc-shot__club {
+  font-size: 0.625rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--hcp-accent);
 }
 
 .hc-gallery__note {

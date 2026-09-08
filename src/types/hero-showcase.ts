@@ -14,6 +14,7 @@
  * shapes to style.
  */
 
+import type { CanonicalLeagueSlug } from '../config/leagues';
 import type { CompositeHeroAccent } from './composite-hero';
 
 /** Page chrome + gallery-card palette. Set as inline custom properties on `.hc-page`. */
@@ -36,71 +37,88 @@ export interface ShowcasePalette {
 }
 
 /**
- * One reproduced hero state in the opening gallery.
+ * One hero state in the opening gallery.
  *
- * The gallery is an INVENTORY, not a highlight reel: every composite state the
- * league can actually render gets a card, because the page's whole claim is
- * "here is the system", and a system you only see the good half of is a mood
- * board. `tests/hero-showcase-content.test.ts` fails if a shipped accent or an
- * AFL treatment has no card.
+ * These are not reproductions any more. Each card renders the REAL
+ * `CompositeHero` / `CompositePanelBoard` with fixture props, because a
+ * lookalike drifted three separate times in one week — it showed the auction
+ * hero as a pale blue card when the shipped one is amber, it kept the centred
+ * ghost wordmark after the live heroes moved to a right-anchored one, and it
+ * never grew the crest watermark at all, which is one of the treatment's
+ * defining layers. A page whose entire claim is "this is what it looks like"
+ * has to be showing the thing itself.
+ *
+ * What stays showcase-owned is the ANNOTATION above each hero: which component
+ * this is, and which half of the colour rule it is on. That sits outside the
+ * card, so nothing the showcase says about a hero can change how the hero
+ * renders.
+ *
+ * The gallery is also an INVENTORY, not a highlight reel — every state the
+ * league can render gets a card. `tests/hero-showcase-content.test.ts` fails if
+ * a shipped accent or an AFL treatment has none.
  */
 export interface ShowcaseGalleryCard {
   key: string;
-  /**
-   * The SHIPPED accent family this state renders in — the same names the live
-   * components pass to `CompositeHero`, so a card cannot advertise a palette
-   * the system does not have. The stylesheet defines one `.hcx--<accent>` per
-   * name, mirroring that accent's real tokens.
-   */
+  /** The shipped accent family, passed straight to the live shell. */
   accent: CompositeHeroAccent;
-  /**
-   * The urgency overlay, when the state carries one. A TONE, not an accent —
-   * exactly as in the live shell: red flips the pill and CTA on top of
-   * whatever accent the phase already chose, rather than replacing it.
-   */
+  /** Urgency overlay, passed straight through. A tone, never a second accent. */
   tone?: 'red';
   /**
-   * Which half of the colour rule this state is on, printed on the card.
+   * Which half of the colour rule this state is on, printed in the annotation.
    * `league` — a draft, the auction, kickoff, a site announcement: league
-   * colours, and any glow comes from the player's NFL club.
-   * `team` — a hero ABOUT a franchise: that club's colours.
-   * This is the rule the whole system turns on, so a card must declare it.
+   * colours, and the glow comes from the player's NFL club.
+   * `team` — a hero ABOUT a franchise: that club's colours and crest.
+   *
+   * It also DRIVES the render: a `team` card passes its franchise to the shell
+   * (skin + crest), a `league` card passes none. So the badge cannot disagree
+   * with what the reader is looking at.
    */
   scope: 'league' | 'team';
-  /** The component this card reproduces, printed beside the pill. */
+  /** The component this card renders, printed in the annotation. */
   component: string;
+  /** Ghost wordmark. Empty string is a real state — the live auction hero drops it. */
   wordmark: string;
   pill: string;
   title: string;
+  /** Accent-coloured tail of the title, as the live heroes split it. */
+  titleAccent?: string;
   summary: string;
+  ctaLabel: string;
   /**
-   * The spotlight shape is the default. `board` reproduces
-   * `CompositePanelBoard` instead — four player panels rather than one face,
-   * which is a genuinely different hero shape and cannot be faked with a
-   * single cutout.
+   * The franchise this hero is about, when one is. Drives the crest, the skin
+   * and the glow through `resolveHeroCrest` / `resolveHeroFranchiseSkin` — the
+   * same calls the live heroes make, so the mark behind the player is resolved
+   * rather than authored and cannot go stale when a club rebrands.
+   * Required on a `team` card; must be absent on a `league` one.
+   */
+  franchiseId?: string;
+  /**
+   * The spotlight shape is the default. `board` renders `CompositePanelBoard`
+   * instead — four player panels rather than one face, a genuinely different
+   * hero shape that no amount of tinting on a one-cutout card stands in for.
    */
   shape?: 'spotlight' | 'board';
   /** Board cards only: the four panels, left to right. */
-  panels?: Array<{ name: string; badge: string; espnId: string; code: string; flag?: string }>;
-  /** The player modelling the card. Omit for a card with no face. */
+  panels?: Array<{
+    name: string;
+    position: string;
+    nflTeam: string;
+    espnId: string;
+    badge: string;
+    flag?: string;
+    /** Franchise whose crest watermarks this panel — the tag board's behaviour. */
+    watermarkFranchiseId?: string;
+  }>;
+  /** The player modelling the card. Omit for a board, or for a card with no face. */
   model?: {
     name: string;
     descriptor: string;
+    /** POS, as the caption prints it. */
     pos: string;
-    /** NFL team code, printed in the caption. */
+    /** NFL team code — the caption, the glow, and the fallback crest. */
     code: string;
     espnId: string;
   };
-  /**
-   * Hex driving the card's glow. An NFL team primary on a `league` card, or —
-   * this is the point of the rule — a real franchise colour on a `team` one.
-   */
-  primary: string;
-  /**
-   * Names the franchise whose colour `primary` is, when it is one. Printed as
-   * a footnote on the card so the reader knows the colour is not decorative.
-   */
-  franchise?: string;
 }
 
 export type ShowcaseBlock =
@@ -142,6 +160,12 @@ export interface ShowcaseSection {
 export interface ShowcaseContent {
   /** Browser title. */
   pageTitle: string;
+  /**
+   * Whose heroes these are. Not decoration: the gallery renders the LIVE
+   * shell, so crests and franchise skins are resolved through the registry
+   * for this league rather than authored as paths that go stale.
+   */
+  league: CanonicalLeagueSlug;
   palette: ShowcasePalette;
   /** League logo pair for the gallery's 404 silhouette. */
   logo: { light: string; dark: string };

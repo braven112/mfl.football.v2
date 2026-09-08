@@ -12,6 +12,7 @@ import type { ShowcaseContent } from '../../types/hero-showcase';
 
 const content: ShowcaseContent = {
   pageTitle: 'Composite Hero System | AFL Fantasy',
+  league: 'afl-fantasy',
   palette: {
     // AFL navy as the chrome, its lighter step so section numbers and inline
     // code read as navy rather than as near-black body text.
@@ -41,89 +42,90 @@ const content: ShowcaseContent = {
   },
 
   // ── THE INVENTORY ───────────────────────────────────────────────────────
-  // The AFL ships exactly three composite treatments, and each of them has a
-  // live/urgent variant, so the honest inventory is six cards — plus the one
-  // case that is the whole reason this page exists: a player both of your
+  // The AFL ships exactly three composite treatments, and each has a
+  // live/urgent variant, so the honest inventory is six — plus the one case
+  // that is the whole reason this page exists: a player both of your
   // conferences roster, where the franchise-colour rule declines to pick.
   //
-  // Earlier drafts of this gallery invented a "CUT DOWN" and a "GAME DAY" card
-  // to demonstrate the colour rule. Neither is an AFL hero. The rule is now
-  // demonstrated inside the states that actually ship.
+  // Earlier drafts invented a "CUT DOWN" and a "GAME DAY" card to demonstrate
+  // the colour rule. Neither is an AFL hero. The rule is now demonstrated
+  // inside the states that actually ship — and, since these render the live
+  // shell, a card cannot show a treatment the components cannot produce.
   gallery: [
     {
       key: 'keepers', accent: 'gold', scope: 'team',
       component: 'AflCompositeHero · keeper window', wordmark: 'KEEPERS',
-      pill: '2026 Keeper Deadline', title: 'Lock in your core.',
+      pill: '2026 Keeper Deadline', title: 'Lock in', titleAccent: 'your core.',
       summary:
-        'Trophy gold is the keeper window’s own colour, and the face is your keeper cornerstone. Keepers ' +
-        'are a <strong>team</strong> story, so signed in the glow becomes your club’s — ' +
-        '<strong>Midwestside Connection</strong> gold here, not Detroit blue.',
+        'Trophy gold is the keeper window’s colour, and the face is your keeper cornerstone. Keepers are ' +
+        'a team story, so the crest behind him is your club’s and the glow is theirs — not Detroit’s.',
+      ctaLabel: 'Set your keepers',
+      franchiseId: '0011',
       model: { name: 'Jahmyr Gibbs', descriptor: 'Your keeper', pos: 'RB', code: 'DET', espnId: '4429795' },
-      primary: '#ffcd00', franchise: 'Midwestside Connection',
     },
     {
       key: 'keepers-deadline', accent: 'gold', tone: 'red', scope: 'team',
       component: 'AflCompositeHero · keeper deadline day', wordmark: 'KEEPERS',
-      pill: 'Keepers due today', title: 'Last call on your keepers.',
+      pill: 'Keepers due today', title: 'Last call', titleAccent: 'on your keepers.',
       summary:
-        'On the deadline itself — and only then — the card takes the red <strong>tone</strong> over the ' +
-        'same gold accent, still in <strong>The Boondock Saints</strong>’ colours. One day a year renders ' +
-        'this, which is the kind of state a showcase never shows you.',
+        'On the deadline itself — and only then — the card takes the red tone over the same gold accent, ' +
+        'still wearing its club’s crest. One day a year renders this.',
+      ctaLabel: 'Submit your keepers',
+      franchiseId: '0020',
       model: { name: 'Bijan Robinson', descriptor: 'Keeper Cornerstone', pos: 'RB', code: 'ATL', espnId: '4430807' },
-      primary: '#db2424', franchise: 'The Boondock Saints',
     },
     {
       key: 'al-draft', accent: 'navy', scope: 'league',
-      component: 'AflCompositeHero · AL draft', wordmark: 'AL DRAFT',
-      pill: 'AL · Draft scheduled', title: 'Build your empire.',
+      component: 'AflCompositeHero · AL draft', wordmark: 'AL DRAFT',
+      pill: 'AL · Draft scheduled', title: 'Build', titleAccent: 'your empire.',
       summary:
         'The conferences draft on different days off different pages, so each names itself in the ' +
-        'wordmark. A draft is a <strong>league</strong> event — navy, and the glow is the player’s NFL ' +
-        'club, never an owner’s.',
+        'wordmark. A draft is a league event — navy, and the crest is the player’s NFL club.',
+      ctaLabel: 'Open the draft room',
       model: { name: "Ja'Marr Chase", descriptor: 'Best Available', pos: 'WR', code: 'CIN', espnId: '4362628' },
-      primary: '#fb4f14',
     },
     {
       key: 'al-draft-live', accent: 'navy', tone: 'red', scope: 'league',
-      component: 'AflCompositeHero · AL draft live', wordmark: 'AL DRAFT',
-      pill: 'AL · On the clock', title: 'The AL is on the clock.',
+      component: 'AflCompositeHero · AL draft live', wordmark: 'AL DRAFT',
+      pill: 'AL · On the clock', title: 'The AL is', titleAccent: 'on the clock.',
       summary:
         'A draft actually running takes the red tone. The AL drafts live and the NL by email, which MFL’s ' +
-        'league-wide draft kind cannot express — so this state is resolved per conference, and so is the ' +
-        'poll URL behind it.',
+        'league-wide draft kind cannot express — so this state is resolved per conference.',
+      ctaLabel: 'Watch the board',
       model: { name: 'Ashton Jeanty', descriptor: 'Best Available', pos: 'RB', code: 'LV', espnId: '4890973' },
-      primary: '#101820',
     },
     {
       key: 'nl-draft', accent: 'navy', scope: 'league',
-      component: 'AflCompositeHero · NL draft', wordmark: 'NL DRAFT',
-      pill: 'NL · Draft scheduled', title: 'The NL board opens Thursday.',
+      component: 'AflCompositeHero · NL draft', wordmark: 'NL DRAFT',
+      pill: 'NL · Draft scheduled', title: 'The NL board', titleAccent: 'opens Thursday.',
       summary:
         'Same treatment, its own wordmark and its own clock. An NL owner never sees the AL’s countdown ' +
-        'and vice versa — the whole state is scoped to the conference the viewer actually plays in.',
+        'and vice versa — the whole state is scoped to the conference the viewer plays in.',
+      ctaLabel: 'Open the draft room',
       model: { name: 'Omarion Hampton', descriptor: 'Best Available', pos: 'RB', code: 'LAC', espnId: '4685382' },
-      primary: '#0080c6',
     },
     {
       key: 'nl-draft-live', accent: 'navy', tone: 'red', scope: 'league',
-      component: 'AflCompositeHero · NL draft live', wordmark: 'NL DRAFT',
-      pill: 'NL · Drafting now', title: 'The NL is drafting.',
+      component: 'AflCompositeHero · NL draft live', wordmark: 'NL DRAFT',
+      pill: 'NL · Drafting now', title: 'The NL', titleAccent: 'is drafting.',
       summary:
         'The sixth and last composite state the AFL ships. Both conferences can be mid-draft on the same ' +
         'weekend, in which case two owners on the same homepage see two different heroes.',
-      model: { name: 'Travis Hunter', descriptor: 'Best Available', pos: 'WR', code: 'JAC', espnId: '4685415' },
-      primary: '#006778',
+      ctaLabel: 'Watch the board',
+      // A warm NFL club on the red tone. The glow is the player's club even on
+      // a league card, so a cool one (Jacksonville teal) turned this shot muddy
+      // — faithful, but not the best example of the state.
+      model: { name: 'Bo Nix', descriptor: 'Best Available', pos: 'QB', code: 'DEN', espnId: '4426338' },
     },
     {
       key: 'franchise-ambiguous', accent: 'gold', scope: 'league',
       component: 'hero-franchise-accent · declines', wordmark: 'KEEPERS',
-      pill: 'Rostered twice', title: 'When the rule refuses to guess',
+      pill: 'Rostered twice', title: 'When the rule', titleAccent: 'refuses to guess.',
       summary:
-        'The hard case, and the reason this page exists. <strong>Two clubs in your own conference</strong> ' +
-        'roster him, so there is no “your colours” to use — the accent falls back to the league’s rather ' +
-        'than picking a side.',
+        'The hard case, and the reason this page exists. Two clubs in your own conference roster him, so ' +
+        'there is no “your colours” to use — the card falls back to the league’s, and to his NFL crest.',
+      ctaLabel: 'How casting works',
       model: { name: 'Trey McBride', descriptor: 'Rostered twice', pos: 'TE', code: 'ARI', espnId: '4361307' },
-      primary: '#97233f',
     },
   ],
   galleryNote:
