@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { buildOddsMap } from '../src/utils/coach-data';
 import { resolveChannel } from '../src/utils/broadcast-channels';
@@ -29,6 +29,33 @@ const BADGE_SURFACES = [
   'src/pages/theleague/lineup.astro',
   'src/pages/afl-fantasy/lineup.astro',
 ] as const;
+
+/**
+ * Every file that mounts the rail, DISCOVERED rather than listed. The hardcoded
+ * trio below is still asserted (they must all exist), but the directive and
+ * server-slate rules run over whatever the repo actually contains — a fourth
+ * page copied from the component's own example is precisely how the
+ * never-hydrating mount came back.
+ */
+const STRIP_COMPONENT = 'src/components/shared/NflGamesStrip.tsx';
+
+function stripMountFiles(): string[] {
+  const out: string[] = [];
+  const walk = (dir: string) => {
+    for (const e of readdirSync(root(dir), { withFileTypes: true })) {
+      const rel = `${dir}/${e.name}`;
+      if (e.isDirectory()) walk(rel);
+      else if (
+        /\.(astro|tsx)$/.test(e.name) &&
+        rel !== STRIP_COMPONENT &&
+        read(rel).includes('<NflGamesStrip')
+      ) out.push(rel);
+    }
+  };
+  walk('src/pages');
+  walk('src/components');
+  return out.sort();
+}
 
 /** Routes that mount the React island and therefore must hand it a country. */
 const STRIP_ROUTES = [
@@ -117,6 +144,90 @@ describe('network badge — country comes from the ROUTE', () => {
   });
 });
 
+describe('NFL games rail — it must survive its own empty server render', () => {
+  /**
+   * The rail was invisible in production for its whole life and nobody noticed,
+   * because the ONE path anyone checked (`?demo=1`) is the path that hides it.
+   *
+   * `NflGamesStrip` returns null when it has no games. Astro's `client:visible`
+   * hydration observes the island's CHILDREN — an island that server-rendered
+   * nothing has none, so the observer never fires, the island never hydrates,
+   * the client poll never runs, and the rail never appears. Not "until
+   * kickoff": never. Two independent things stop it, and both are pinned here.
+   */
+  it('every known route still mounts the rail', () => {
+    // Discovery must not silently find nothing, which would pass every check below.
+    expect(stripMountFiles()).toEqual(expect.arrayContaining([...STRIP_ROUTES]));
+  });
+
+  it('every file mounting the rail hands it a server-rendered slate', () => {
+    const missing = stripMountFiles().filter((f) => {
+      const src = read(f);
+      return !/fetchInitialNflGames\(/.test(src) || !/initialGames=\{nflGames\}/.test(src);
+    });
+    expect(missing, 'these mount the rail with no server slate').toEqual([]);
+  });
+
+  it('no file mounts the rail with client:visible', () => {
+    // EVERY mount in a file, not just the first — a page may render the rail
+    // more than once, and only checking mount[0] would miss the second.
+    const offenders = stripMountFiles().filter((f) =>
+      [...read(f).matchAll(/<NflGamesStrip[\s\S]{0,400}?\/>/g)]
+        .some((m) => /client:visible/.test(m[0])),
+    );
+    // `visible` is the one directive that cannot recover from an empty island.
+    expect(offenders, 'client:visible cannot hydrate an island with no children').toEqual([]);
+  });
+
+  it.each(['src/pages/theleague/live-scoring.astro', 'src/pages/afl-fantasy/live-scoring.astro'])(
+    '%s does not seed the NFL side from the sample under ?demo=live',
+    (route) => {
+      const src = read(route);
+      // ?demo=live is "sampled fantasy, REAL live NFL". The hook serves
+      // `fallbackGames` until the first poll lands, so handing it the bundled
+      // slate there would show last season's games as the live ones — and
+      // permanently, because the store holds no data while ESPN is unreachable.
+      expect(src, `${route}: rail seeded from the sample under ?demo=live`)
+        .toMatch(/nflGames = useRosterDemo \? undefined : sample\.nflGames/);
+      expect(src, `${route}: scoreboard seeded from the sample under ?demo=live`)
+        .toMatch(/initialNflGames: useRosterDemo \? undefined : sample\.nflGames/);
+    },
+  );
+
+  it.each(['src/pages/theleague/live-scoring.astro', 'src/pages/afl-fantasy/live-scoring.astro'])(
+    '%s abandons the parallel ESPN fetch when it falls back to the sample',
+    (route) => {
+      const src = read(route);
+      // The fetch starts before the MFL feed can say it is empty — which it is
+      // for the whole offseason — so the flip has to drop it rather than leave
+      // a request and its timer running on every such view.
+      expect(src).toMatch(/nflGamesAbort\.abort\(\)/);
+    },
+  );
+
+  it("the component's own example does not recommend client:visible", () => {
+    // The example is what a fourth page gets copied from.
+    const doc = read('src/components/shared/NflGamesStrip.tsx').split('*/')[0];
+    expect(doc).not.toMatch(/client:visible week/);
+    expect(doc).toMatch(/client:idle/);
+  });
+
+  it('the server slate and the client poll parse through the SAME source', () => {
+    // Two copies of the parse rules is how the SSR rail and the polled rail
+    // would come to disagree about a team code or a network.
+    const route = read('src/pages/api/nfl-scoreboard.ts');
+    expect(route).toMatch(/from '\.\.\/\.\.\/utils\/nfl-scoreboard-source'/);
+    expect(route, 'the API route re-implements the parse').not.toMatch(/parseGameSituation|canonicalNflCode/);
+  });
+
+  it('an ESPN outage yields undefined, never an empty array', () => {
+    // `[]` would be indistinguishable from a real empty week and would render
+    // an empty rail; undefined lets the island fall back to its own poll.
+    const src = read('src/utils/nfl-scoreboard-source.ts');
+    expect(src).toMatch(/board\.ok && board\.games\.length > 0 \? board\.games : undefined/);
+  });
+});
+
 describe('network badge — the lineup slot renders twice and both must draw it', () => {
   // The page rebuilds a slot's innerHTML on every player swap. A badge present
   // only in the .astro branch disappears the first time the owner changes
@@ -179,6 +290,20 @@ describe('network badge — the lineup slot renders twice and both must draw it'
     for (const field of ['ch.title', 'ch.logo', 'ch.name']) {
       expect(src, `${page} — ${field}`).toContain(`esc(${field})`);
     }
+  });
+});
+
+describe('network badge — the mark must not collapse before it loads', () => {
+  // `loading="lazy"` plus `width: auto` gives an unloaded image NO intrinsic
+  // size, so the mark renders 0px wide — invisible, then popping the row wider
+  // when it arrives. Measured on the games rail: 0x15 before load, 44x15 after,
+  // which is why the rail looked badge-less on a page nobody had scrolled.
+  it.each(BADGE_SURFACES)('%s does not lazy-load the mark', (file) => {
+    const src = read(file);
+    const lazyMarks = src
+      .split('\n')
+      .filter((l) => l.includes('net-badge__logo') && l.includes('loading="lazy"'));
+    expect(lazyMarks, `${file}: ${lazyMarks.length} lazy mark(s)`).toEqual([]);
   });
 });
 

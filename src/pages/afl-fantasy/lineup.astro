@@ -783,7 +783,7 @@ const ownersPollTeams = Object.values(getLeagueTeamBrands(ownersPollLeague.slug)
                           {game?.channel && (
                             game.channel.logo
                               ? <span class="net-badge net-badge--mark lineup-slot__net" title={game.channel.title}>
-                                  <img class="net-badge__logo" src={game.channel.logo} alt={game.channel.name} loading="lazy" />
+                                  <img class="net-badge__logo" src={game.channel.logo} alt={game.channel.name} decoding="async" />
                                 </span>
                               : <span class="net-badge lineup-slot__net" title={game.channel.title}>{game.channel.name}</span>
                           )}
@@ -848,7 +848,7 @@ const ownersPollTeams = Object.values(getLeagueTeamBrands(ownersPollLeague.slug)
             {oppTeam && game?.channel && (
               game.channel.logo
                 ? <span class="net-badge net-badge--mark lineup-bench-row__net" title={game.channel.title}>
-                    <img class="net-badge__logo" src={game.channel.logo} alt={game.channel.name} loading="lazy" />
+                    <img class="net-badge__logo" src={game.channel.logo} alt={game.channel.name} decoding="async" />
                   </span>
                 : <span class="net-badge lineup-bench-row__net" title={game.channel.title}>{game.channel.name}</span>
             )}
@@ -1253,7 +1253,7 @@ const ownersPollTeams = Object.values(getLeagueTeamBrands(ownersPollLeague.slug)
         const netHtml = !ch
           ? ''
           : ch.logo
-            ? `<span class="net-badge net-badge--mark lineup-slot__net" title="${esc(ch.title)}"><img class="net-badge__logo" src="${esc(ch.logo)}" alt="${esc(ch.name)}" loading="lazy" /></span>`
+            ? `<span class="net-badge net-badge--mark lineup-slot__net" title="${esc(ch.title)}"><img class="net-badge__logo" src="${esc(ch.logo)}" alt="${esc(ch.name)}" decoding="async" /></span>`
             : `<span class="net-badge lineup-slot__net" title="${esc(ch.title)}">${esc(ch.name)}</span>`;
         // The channel was resolved for this viewer's country SERVER-SIDE and
         // rides on the schedule entry, so this re-render — which fires on every

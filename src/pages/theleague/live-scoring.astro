@@ -15,6 +15,7 @@ import { resolveLeaguePath } from '../../utils/nav-utils';
 import { getCurrentRosterSample, getLiveScoringSample } from '../../data/live-scoring-sample';
 import LiveScoreboard from '../../components/shared/LiveScoreboard';
 import NflGamesStrip from '../../components/shared/NflGamesStrip';
+import { fetchInitialNflGames } from '../../utils/nfl-scoreboard-source';
 import type { LiveScoringPageProps, NflGame } from '../../types/live-scoring';
 import '../../styles/live-scoring.css';
 import '../../styles/nfl-games-strip.css';
@@ -102,6 +103,14 @@ const starterRules = loadStarterRules(league.dataPath, rosterDemoYear);
 let useDemo = demoParam === '1' || useRosterDemo;
 let data: Awaited<ReturnType<typeof assembleLiveScoringData>> | undefined;
 
+// Started HERE, awaited in the live branch below, so ESPN overlaps the MFL
+// assembly instead of adding its timeout to every render. Skipped entirely when
+// the caller already asked for the sample.
+const nflGamesAbort = new AbortController();
+const nflGamesPromise = useDemo
+  ? undefined
+  : fetchInitialNflGames({ week, year, params: Astro.url.searchParams, signal: nflGamesAbort.signal });
+
 if (!useDemo) {
   data = await assembleLiveScoringData({
     siteUrl: Astro.url,
@@ -120,6 +129,11 @@ if (!useDemo) {
   // sample — that case falls through to the island's empty/error state.
   if (demoParam !== '0' && data.ok && data.matchups.length === 0) {
     useDemo = true;
+    // The slate was started in parallel before we could know the feed was
+    // empty. It is worthless now — the sample supplies the rail — so drop it
+    // rather than leave a request and its 5s timer running on every offseason
+    // view.
+    nflGamesAbort.abort();
   }
 }
 
@@ -130,7 +144,11 @@ if (useDemo) {
   const sample = useRosterDemo
     ? getCurrentRosterSample({ slug: league.slug, year: rosterDemoYear })
     : getLiveScoringSample({ doubleheader: demoDoubleheader });
-  nflGames = sample.nflGames;
+  // ?demo=live means REAL NFL alongside sampled fantasy, so it must not seed the
+  // rail from last season's bundle: the hook now serves `fallbackGames` until
+  // the first poll lands, which would show the sample slate as the live one —
+  // and permanently, since the store keeps no data when ESPN is unreachable.
+  nflGames = useRosterDemo ? undefined : sample.nflGames;
   islandProps = {
     week: sample.week,
     year,
@@ -154,12 +172,21 @@ if (useDemo) {
     demo: true,
     demoLiveNfl: useRosterDemo,
     demoLabel: useRosterDemo ? `Live NFL · ${rosterDemoYear} rosters · no fantasy scoring yet` : undefined,
-    initialNflGames: sample.nflGames,
+    initialNflGames: useRosterDemo ? undefined : sample.nflGames,
     initialDetail: sample.detail,
   };
 } else {
   // data is always assigned in the non-demo branch above.
   const liveData = data!;
+
+  // The rail's SERVER slate. Not an optimisation — the strip draws nothing
+  // without games, and an <astro-island> with no children is never observed by
+  // `client:visible`, so it never hydrates. It reaches the markup only because
+  // `useNflScoreboard` treats `fallbackGames` as the value until the first poll
+  // lands; it used to read that prop in demo mode ALONE, which is why this rail
+  // server-rendered nothing for its whole life. Undefined on an ESPN outage, so
+  // the island still falls back to its own poll.
+  nflGames = await nflGamesPromise;
   islandProps = {
     week,
     year,
@@ -188,8 +215,14 @@ if (useDemo) {
       <ThrowbackPreviewBar preview={throwbackPreview} settingsPath={settingsPath} />
     )}
     <LiveScoreboard client:load {...islandProps} />
+    <!-- `client:idle`, NOT `client:visible`. The strip renders null when it has
+         no games, and Astro's visible directive observes the island's CHILDREN —
+         an island that server-rendered nothing has none, so it is never observed
+         and never hydrates. The server slate above normally prevents that, but an
+         ESPN outage would put it right back; idle hydrates either way, so the
+         client poll can still recover the rail. -->
     <div class="ls-page-strip">
-      <NflGamesStrip client:visible week={islandProps.week} year={year}
+      <NflGamesStrip client:idle week={islandProps.week} year={year}
                      isLive={useRosterDemo ? true : (useDemo ? false : isLive)}
                      demo={useDemo && !useRosterDemo} initialGames={nflGames}
                      country={viewerCountry} />

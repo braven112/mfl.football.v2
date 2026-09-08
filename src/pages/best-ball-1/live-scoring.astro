@@ -26,6 +26,7 @@ import { getDailySlot } from '../../utils/hero-resolver';
 import { assembleLiveScoringData, type ConfigTeam } from '../../utils/live-scoring-data';
 import LiveScoreboard from '../../components/shared/LiveScoreboard';
 import NflGamesStrip from '../../components/shared/NflGamesStrip';
+import { fetchInitialNflGames } from '../../utils/nfl-scoreboard-source';
 import type { LiveScoringPageProps } from '../../types/live-scoring';
 import '../../styles/live-scoring.css';
 import '../../styles/nfl-games-strip.css';
@@ -66,6 +67,9 @@ const userFranchiseId =
 
 const configTeams = ((bb1Config as { teams?: ConfigTeam[] }).teams ?? []) as ConfigTeam[];
 
+// Started before the MFL assembly so the two overlap; awaited below.
+const nflGamesPromise = fetchInitialNflGames({ week, year, params: Astro.url.searchParams });
+
 const data = await assembleLiveScoringData({
   siteUrl: Astro.url,
   week,
@@ -95,13 +99,27 @@ const islandProps: LiveScoringPageProps = {
   initialBench: data.bench,
   initialYetToPlay: data.playersYetToPlay,
 };
+
+// The rail's SERVER slate. The strip draws nothing without games, and an
+// <astro-island> with no children is never observed by `client:visible`, so it
+// never hydrates — this rail was invisible here on every load. It reaches the
+// markup only because `useNflScoreboard` treats `fallbackGames` as the value
+// until the first poll lands.
+const nflGames = await nflGamesPromise;
 ---
 
 <TheLeagueLayout title="Live Scoring | Best Ball #1">
   <div class="ls-page">
     <LiveScoreboard client:load {...islandProps} />
+    <!-- `client:idle`, NOT `client:visible`. The strip renders null when it has
+         no games, and Astro's visible directive observes the island's CHILDREN —
+         an island that server-rendered nothing has none, so it is never observed
+         and never hydrates. The server slate above normally prevents that, but an
+         ESPN outage would put it right back; idle hydrates either way, so the
+         client poll can still recover the rail. -->
     <div class="ls-page-strip">
-      <NflGamesStrip client:visible week={week} year={year} isLive={isLive} country={viewerCountry} />
+      <NflGamesStrip client:idle week={week} year={year} isLive={isLive}
+                     initialGames={nflGames} country={viewerCountry} />
     </div>
   </div>
 </TheLeagueLayout>

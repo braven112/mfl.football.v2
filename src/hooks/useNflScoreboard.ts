@@ -91,6 +91,12 @@ const EMPTY_GAMES: NflGame[] = [];
 /**
  * @param enabled pass false in demo mode (bundled sample data) or when the
  *   caller supplies its own games — the hook then does no network at all.
+ * @param fallbackGames the caller's own slate. With `enabled` false it is the
+ *   ONLY source. With `enabled` true it is the value until the first poll
+ *   lands, which is what makes a SERVER-rendered slate reach the markup: the
+ *   store is empty during SSR, so without this an island whose only content is
+ *   these games renders nothing — and one mounted `client:visible` then never
+ *   hydrates at all, because that directive observes children it does not have.
  */
 export function useNflScoreboard(
   week: number,
@@ -129,7 +135,10 @@ export function useNflScoreboard(
   );
 
   return useMemo(() => {
-    const games = enabled ? snapshot.data?.games ?? EMPTY_GAMES : fallbackGames ?? EMPTY_GAMES;
+    // The poll wins once it has answered — including with a legitimately empty
+    // slate, which is why this tests the SNAPSHOT for nullish rather than the
+    // array for length. Before then, the caller's server-rendered games stand.
+    const games = (enabled ? snapshot.data?.games : undefined) ?? fallbackGames ?? EMPTY_GAMES;
     const byTeam = new Map<string, NflGame>();
     for (const g of games) {
       if (g.home.code) byTeam.set(g.home.code, g);

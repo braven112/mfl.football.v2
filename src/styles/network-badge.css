@@ -76,6 +76,10 @@
  * the ink inside it shrinks. Raise this number and the wordmarks grow back.
  */
 .net-badge__logo {
+  /* NOT `loading="lazy"` at the call sites, and this is why: with `width: auto`
+     an unloaded image has no intrinsic size, so the mark is 0px wide until it
+     arrives — invisible, then popping the row wider. Measured on the games
+     rail: 0x15 before load, 44x15 after. These are 2-6KB same-origin PNGs. */
   height: 100%;
   width: auto;
   max-width: calc(var(--net-badge-h, 1.1rem) * 3);
