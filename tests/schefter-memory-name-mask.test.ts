@@ -31,7 +31,11 @@ import {
   collectFranchiseNameTokens,
   maskFranchiseNames,
   memoryNameMasker,
+  resolveTeamTokens,
+  tokenizedTeam,
   MASKED_TEAM,
+  TEAM_TOKEN,
+  TEAM_SHORT_TOKEN,
 } from '../scripts/lib/schefter-name-mask.mjs';
 import { buildRecentPostsPromptBlock } from '../scripts/lib/schefter-lore.mjs';
 
@@ -185,5 +189,115 @@ describe('both scanners mask — one history file feeds both', () => {
       expect(src).not.toMatch(/^function\s+collectFranchiseNameTokens\(/m);
     }
     expect(collectFranchiseNameTokens(incidentTeams())).toContain('Fire Ready Aim');
+  });
+});
+
+/**
+ * Step 2: the model is never handed a franchise name at all.
+ *
+ * Masking the memory block (above) closed the leak PATH for the 2026-09-07
+ * incident. Tokens close the CAPABILITY: `exposure.team` reaches the LLM as
+ * `{{TEAM}}` / `{{TEAM_SHORT}}`, and the real franchise is substituted in code
+ * afterwards. Naming the wrong team stops being forbidden and becomes
+ * unwritable — the model cannot substitute a name it was never given.
+ *
+ * This is only sound because exactly ONE team is nameable per post (HARD RULE
+ * 26, "You may NOT name a second team"), so one token needs no franchise id
+ * and there is exactly one substitution target.
+ */
+describe('team tokens — the wrong franchise becomes unwritable', () => {
+  const RUMOR_SRC = read('scripts/schefter-rumor-scan.mjs');
+
+  it('the payload hands over a token, never the real name', () => {
+    expect(tokenizedTeam()).toEqual({ name: TEAM_TOKEN, nameShort: TEAM_SHORT_TOKEN });
+    // The spread of the real team is gone from the LLM-facing payload.
+    expect(RUMOR_SRC).toMatch(/team: tokenizedTeam\(\),/);
+    expect(RUMOR_SRC).not.toMatch(/team: \{ \.\.\.tip\.exposure\.team \}/);
+  });
+
+  it('substitutes both registers, so the voice keeps its short form', () => {
+    // Real cadence: "Pain's been shopping", not "Bring the Pain's been shopping".
+    const team = { name: 'Bring the Pain', nameShort: 'Pain' };
+    const { text, unresolved } = resolveTeamTokens(
+      `${TEAM_SHORT_TOKEN}'s been shopping a tight end. The ${TEAM_TOKEN} aren't done.`,
+      team,
+    );
+    expect(text).toBe("Pain's been shopping a tight end. The Bring the Pain aren't done.");
+    expect(unresolved).toBe(false);
+  });
+
+  it('falls back to the long name when nameShort is absent', () => {
+    // pickDisplayTeam only guarantees `name`; nameShort is optional in config.
+    const { text } = resolveTeamTokens(`The ${TEAM_SHORT_TOKEN} called.`, { name: 'Fire Ready Aim' });
+    expect(text).toBe('The Fire Ready Aim called.');
+  });
+
+  it('flags an invented placeholder as unresolved rather than shipping it', () => {
+    const { unresolved } = resolveTeamTokens(
+      `The {{TEAM_NICKNAME}} are shopping.`,
+      { name: 'Bring the Pain', nameShort: 'Pain' },
+    );
+    expect(unresolved).toBe(true);
+  });
+
+  it('flags a token with no team to fill it', () => {
+    const { text, unresolved } = resolveTeamTokens(`The ${TEAM_TOKEN} are shopping.`, null);
+    expect(unresolved).toBe(true);
+    expect(text).toContain(TEAM_TOKEN);
+  });
+
+  it('the scanner falls back to the template on an unresolved token', () => {
+    // A literal {{TEAM}} in the group chat would be worse than the
+    // misattribution this replaces, so an unresolved token is treated as a
+    // failed generation — not a body to patch.
+    expect(RUMOR_SRC).toMatch(/if \(resolvedBody\.unresolved && aiBody\) \{/);
+    expect(RUMOR_SRC).toMatch(/falling back to template/);
+    // ...and a survivor past the template is scrubbed to prose, never shipped.
+    expect(RUMOR_SRC).toMatch(/body\.replace\(\/\\\{\\\{\[\^\}\]\*\\\}\\\}\/g, MASKED_TEAM\)/);
+  });
+
+  it('resolves from the ORIGINAL tip, not the anonymized copy', () => {
+    // The anonymized copy is the one carrying tokens; reading the team off it
+    // would substitute "{{TEAM}}" for "{{TEAM}}" and resolve nothing.
+    expect(RUMOR_SRC).toMatch(/beat\.batch\?\.find\(\(t\) => t\?\.exposure\?\.team\)/);
+  });
+
+  it('teaches the token in the rules AND the exposure examples', () => {
+    // Examples teach by demonstration — an exposure example still showing a
+    // franchise name would model the exact behavior the rule forbids.
+    expect(RUMOR_SRC).toMatch(/is a PLACEHOLDER, not a name/);
+    // Examples G-J are the exposure ladder; J is the last of them.
+    const examples = RUMOR_SRC.match(/Example G —[\s\S]*?Example J —[\s\S]*?\n\n/)?.[0] ?? '';
+    expect(examples, 'exposure ladder examples not found — regex is stale').toBeTruthy();
+    expect(examples).not.toMatch(/Gaslamp Griffins/);
+    expect(examples).not.toMatch(/Harbor City Kraken/);
+    // Source, so the tokens appear as the interpolation, not the literal.
+    expect(examples).toContain('${TEAM_SHORT_TOKEN}');
+  });
+
+  it('documents formerName as the remaining real-name surface', () => {
+    // HARD RULE 30's callback is deliberately NOT tokenized. The joke needs
+    // both names, and its `formerName` is built for `scope.franchise` at two
+    // of its three call sites — which is not necessarily `exposure.team`, so
+    // reusing {{TEAM}} there would invent a NEW misattribution rather than
+    // close one. Left as a named gap, not an oversight.
+    expect(RUMOR_SRC).toMatch(/safe\.formerName = formerNameFor\(/);
+    const rules = read('docs/claude/rules/schefter.md');
+    expect(rules).toMatch(/formerName/);
+  });
+
+  it('end to end: a model that copies a name from memory cannot succeed', () => {
+    // The failure being closed. Memory says "[a team]" (masked), the payload
+    // says "{{TEAM}}", and the substitution only ever writes the offer's own
+    // franchise — so the Fire Ready Aim / Cyrus Allen pairing is unreachable.
+    const real = { name: 'Bring the Pain', nameShort: 'Pain' };
+    const memory = maskFranchiseNames('Fire Ready Aim has a wideout on the table.', incidentTeams());
+    expect(memory).not.toContain('Fire Ready Aim');
+
+    const generated = `Per multiple sources: the ${TEAM_SHORT_TOKEN} have Cyrus Allen on the table.`;
+    const { text, unresolved } = resolveTeamTokens(generated, real);
+    expect(unresolved).toBe(false);
+    expect(text).toBe('Per multiple sources: the Pain have Cyrus Allen on the table.');
+    expect(text).not.toContain('Fire Ready Aim');
   });
 });

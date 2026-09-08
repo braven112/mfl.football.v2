@@ -112,7 +112,15 @@ import {
 import { incrementTipsterCounters, incrementTipsterTopicCounters } from './lib/schefter-tipster-counters.mjs';
 import { schefterKey, globalSchefterKey } from './lib/schefter-keys.mjs';
 import { dedupeTipsById, isUsableTip } from './lib/schefter-tip-queue.mjs';
-import { collectFranchiseNameTokens, memoryNameMasker } from './lib/schefter-name-mask.mjs';
+import {
+  collectFranchiseNameTokens,
+  memoryNameMasker,
+  resolveTeamTokens,
+  tokenizedTeam,
+  MASKED_TEAM,
+  TEAM_SHORT_TOKEN,
+  TEAM_TOKEN,
+} from './lib/schefter-name-mask.mjs';
 import { getTopicPolicy, DRAINABLE_TOPIC_IDS } from '../src/config/schefter-topics.mjs';
 import {
   classifyTipKind,
@@ -1518,7 +1526,11 @@ export async function anonymizeTips(tips, teams, feedPosts = [], now = new Date(
       if (tip.exposure && tip.exposure.team) {
         safe.exposure = {
           signal: tip.exposure.signal,
-          team: { ...tip.exposure.team },
+          // TOKEN, not the name. The model cannot substitute a franchise it
+          // was never given, which is what "never name a second team" had been
+          // relying on it to choose not to do. The real name goes in after
+          // generation — see resolveTeamTokens at the body choke point.
+          team: tokenizedTeam(),
           players: Array.isArray(tip.exposure.players)
             ? tip.exposure.players.map((p) => ({ ...p }))
             : [],
@@ -2137,16 +2149,16 @@ Cadence rules (Schefter-specific):
 
 Redaction rules (HARD — never violate):
   Reporting on trade offers IS Schefter's primary job. The exposure block (when present) is the AUTHORITATIVE allowlist of names you may print. Use it.
-  You MAY name the franchise in \`exposure.team\` using its \`name\` (or \`nameShort\` if shorter and natural). You MAY name any player in \`exposure.players\`, in the order given. You may NOT name a second team, NEVER invent a name, NEVER substitute a different team or player, NEVER cross-reference multiple trade_offer tips in a way that lets the reader triangulate who's trading with whom.
+  The franchise in \`exposure.team\` is a PLACEHOLDER, not a name: \`name\` is the literal string \`${TEAM_TOKEN}\` and \`nameShort\` is \`${TEAM_SHORT_TOKEN}\`. Write the placeholder through into your post EXACTLY as given — \`${TEAM_TOKEN}\` where the full name belongs, \`${TEAM_SHORT_TOKEN}\` where the short form scans better ("${TEAM_SHORT_TOKEN}'s been shopping a tight end"). The real franchise is substituted after you write. Do NOT guess what it is, do NOT invent your own placeholder, and do NOT copy a franchise name out of the RECENT POSTS block — those are masked to \`[a team]\` precisely because they are not yours to reuse. You MAY name any player in \`exposure.players\`, in the order given. You may NOT name a second team, NEVER invent a name, NEVER substitute a different team or player, NEVER cross-reference multiple trade_offer tips in a way that lets the reader triangulate who's trading with whom.
   When \`exposure\` is ABSENT (no qualifying signal yet — should not happen in normal scan flow, but defensive): fall back to the escalatedPlayer ladder below. NEVER surface franchise names, owner names, raw draft pick slot numbers, or player names EXCEPT when escalatedPlayer.tier === "named".
   NEVER invent a name, team, or pick slot. If a field isn't in the structured tip data, it does not exist.
   NEVER frame a trade-offer tip as the rookie draft, the NFL draft, "draft-room" activity, "draft chatter", "draft strategy", "auto-pilot picks", or any league draft event (see HARD RULE 21). A trade_offer is one team considering a trade — phrase it as shopping/fielding-calls/kicking-the-tires, never as draft activity. Any internal metadata that mentions "draft" reflects trade-builder saves, not the rookie draft.
 
 Exposure ladder (HARD — \`exposure.players\` is authoritative; NEVER print a player who is not in it):
-  exposure.players is empty: name the team only. Frame as "the [team] are shopping" / "[team] has put feelers out" / "hearing the [team] are in the market". One concrete subject — the team. Player content stays at the position/archetype level.
-  exposure.players has 1: name the team AND that player. "Hearing the [team] have [Player] on the table" / "I'm told [team] is dangling [Player] in trade talks". The single player carries the post.
-  exposure.players has 2: name the team AND BOTH players. List them naturally — "[Player1] and [Player2] are both in the conversation around the [team]". Don't editorialize about which goes which way.
-  exposure.players has 3+: name the team plus every player in it, in order. This signals a developing story — "the [team] file keeps growing" / "another name surfaced".
+  exposure.players is empty: name the team only. Frame as "the ${TEAM_SHORT_TOKEN} are shopping" / "${TEAM_TOKEN} has put feelers out" / "hearing the ${TEAM_SHORT_TOKEN} are in the market". One concrete subject — the team. Player content stays at the position/archetype level.
+  exposure.players has 1: name the team AND that player. "Hearing the ${TEAM_SHORT_TOKEN} have [Player] on the table" / "I'm told ${TEAM_TOKEN} is dangling [Player] in trade talks". The single player carries the post.
+  exposure.players has 2: name the team AND BOTH players. List them naturally — "[Player1] and [Player2] are both in the conversation around the ${TEAM_SHORT_TOKEN}". Don't editorialize about which goes which way.
+  exposure.players has 3+: name the team plus every player in it, in order. This signals a developing story — "the ${TEAM_SHORT_TOKEN} file keeps growing" / "another name surfaced".
   Always include the cadence opener + closer from the rules above. Hedges are optional at signal 1; encouraged from signal 2 ("Still developing", "Nothing imminent"). Voice: tight beat-reporter, 1-2 sentences.
 
 The drip (\`beats\` + \`leadKind\`) — this is what keeps consecutive posts about ONE proposal from reading alike:
@@ -2213,17 +2225,17 @@ Example E — lingering base (framingHint=lingering, volumeHint=first_offer, pos
 Example F — lingering named (framingHint=lingering, escalatedPlayer.tier=named, name="Some Player"):
   "I'm told Some Player's name has been floated for days. Still just smoke — and the rest of the league is letting it age. We'll see."
 
-Example G — exposure signal 1 (team only) (exposure={signal:1, team:{name:"Gaslamp Griffins", nameShort:"Griffins"}, players:[]}, positionTokens=["WR"]):
-  "Hearing the Griffins are kicking tires on a wideout. Early window-shopping or the start of something? Developing."
+Example G — exposure signal 1 (team only) (exposure={signal:1, team:{name:"${TEAM_TOKEN}", nameShort:"${TEAM_SHORT_TOKEN}"}, players:[]}, positionTokens=["WR"]):
+  "Hearing the ${TEAM_SHORT_TOKEN} are kicking tires on a wideout. Early window-shopping or the start of something? Developing."
 
-Example H — exposure signal 2 (team + marquee player) (exposure={signal:2, team:{name:"Gaslamp Griffins", nameShort:"Griffins"}, players:[{name:"Ja'Marr Chase", position:"WR"}]}):
-  "I'm told the Griffins have Ja'Marr Chase on the table in trade talks. Still just smoke. Developing."
+Example H — exposure signal 2 (team + marquee player) (exposure={signal:2, team:{name:"${TEAM_TOKEN}", nameShort:"${TEAM_SHORT_TOKEN}"}, players:[{name:"Ja'Marr Chase", position:"WR"}]}):
+  "I'm told the ${TEAM_SHORT_TOKEN} have Ja'Marr Chase on the table in trade talks. Still just smoke. Developing."
 
-Example I — exposure signal 3 (team + two players) (exposure={signal:3, team:{name:"Gaslamp Griffins", nameShort:"Griffins"}, players:[{name:"Ja'Marr Chase", position:"WR"}, {name:"Breece Hall", position:"RB"}]}):
-  "Ja'Marr Chase AND Breece Hall both in the Griffins conversation now. Nothing imminent. More to come."
+Example I — exposure signal 3 (team + two players) (exposure={signal:3, team:{name:"${TEAM_TOKEN}", nameShort:"${TEAM_SHORT_TOKEN}"}, players:[{name:"Ja'Marr Chase", position:"WR"}, {name:"Breece Hall", position:"RB"}]}):
+  "Ja'Marr Chase AND Breece Hall both in the ${TEAM_SHORT_TOKEN} conversation now. Nothing imminent. More to come."
 
-Example J — exposure signal 2 lingering (framingHint=lingering, exposure={signal:2, team:{name:"Harbor City Kraken"}, players:[{name:"Some Player", position:"RB"}]}):
-  "The Harbor City Kraken have been shopping Some Player since the weekend. Phones on the other end aren't picking up. We'll see."
+Example J — exposure signal 2 lingering (framingHint=lingering, exposure={signal:2, team:{name:"${TEAM_TOKEN}", nameShort:"${TEAM_SHORT_TOKEN}"}, players:[{name:"Some Player", position:"RB"}]}):
+  "The ${TEAM_TOKEN} have been shopping Some Player since the weekend. Phones on the other end aren't picking up. We'll see."
 `;
 }
 
@@ -4757,8 +4769,35 @@ async function main() {
   for (let i = 0; i < beats.length; i++) {
     const beat = beats[i];
     const aiBody = aiBodies[i];
-    const body = aiBody || templateBody(beat.anonymized);
-    log(`  [beat ${i + 1}/${beats.length}] (${aiBody ? 'AI' : 'template'})${i === 0 && hadRogerRiff ? ' [with Roger riff]' : ''}:\n    ${body.replace(/\n/g, '\n    ')}`);
+
+    // ── Team tokens resolve HERE, the single point every body passes ──
+    //
+    // The LLM was handed `{{TEAM}}` rather than a franchise name, so it could
+    // not have named the wrong one; this puts the real name back. The team
+    // comes off the ORIGINAL tip (`beat.batch`), never the anonymized copy —
+    // the anonymized copy is the one carrying tokens.
+    //
+    // An unresolved token means the model invented its own placeholder, or
+    // wrote one on a beat with no team to fill. That is a failed generation,
+    // not a body to patch: fall back to the template, which is code-built and
+    // has no tokens in it. A literal `{{TEAM}}` in the group chat would be
+    // worse than the misattribution this replaces.
+    const beatTeam = beat.batch?.find((t) => t?.exposure?.team)?.exposure?.team ?? null;
+    let resolvedBody = resolveTeamTokens(aiBody || templateBody(beat.anonymized), beatTeam);
+    let usedTemplate = !aiBody;
+    if (resolvedBody.unresolved && aiBody) {
+      warn(`  [beat ${i + 1}] unresolved team token in AI body — falling back to template`);
+      resolvedBody = resolveTeamTokens(templateBody(beat.anonymized), beatTeam);
+      usedTemplate = true;
+    }
+    let body = resolvedBody.text;
+    if (resolvedBody.unresolved) {
+      // Belt to the braces above: templateBody does not emit tokens, so this
+      // is unreachable today. If it ever fires, ship prose rather than markup.
+      warn(`  [beat ${i + 1}] token survived the template fallback — scrubbing to a generic placeholder`);
+      body = body.replace(/\{\{[^}]*\}\}/g, MASKED_TEAM);
+    }
+    log(`  [beat ${i + 1}/${beats.length}] (${usedTemplate ? 'template' : 'AI'})${i === 0 && hadRogerRiff ? ' [with Roger riff]' : ''}:\n    ${body.replace(/\n/g, '\n    ')}`);
 
     const tipIds = beat.batch.map((t) => t.id);
 

@@ -236,18 +236,57 @@ three previous trade posts had all named Fire Ready Aim.
   `herd`, `chat`, `swift`), and the memory block is prose rather than a tip, so
   an unanchored match shreds it. Longest-first stops "Nashville Geeks" becoming
   "[a team] Geeks".
-- **Masking is not the whole fix.** Nothing yet checks which franchise a
-  generated post actually names — `sanitizeAiPost` only looks for
-  meta-commentary. Until the name is replaced by a token the model fills in
-  (see below), the prompt rule at HARD RULE 26 is the only thing between the
-  model and the wrong team.
+- **Masking was half the fix.** It closed the leak PATH; the tokens below
+  closed the CAPABILITY.
 
-Known gap: PLAYER names in the memory block are still unmasked. Same mechanism,
-different noun — nothing stops the model copying a player out of a recalled
-post into an unrelated one.
+### The model is never handed a franchise name — `{{TEAM}}`
+
+`exposure.team` reaches the LLM as `{ name: '{{TEAM}}', nameShort:
+'{{TEAM_SHORT}}' }`, and the real franchise is substituted in code after
+generation. Naming the wrong team is no longer forbidden, it is unwritable —
+the model cannot substitute a name it was never given, which is what "never
+name a second team" had been trusting it to choose not to do.
+
+- **One token needs no franchise id, because exactly ONE team is nameable per
+  post** (HARD RULE 26). There is a single substitution target, so the token
+  cannot point at the wrong franchise.
+- **Two registers, not one.** `{{TEAM_SHORT}}` exists because the voice needs
+  it — real posts read "Pain's been shopping a tight end", not "Bring the
+  Pain's been shopping a tight end". One token would flatten the cadence.
+- **The examples are tokenized too.** They teach by demonstration, so an
+  exposure example still showing "Gaslamp Griffins" would model exactly the
+  behavior the rule forbids. Pinned by test.
+- **Resolution happens at ONE choke point** — the `const body =` line in the
+  beat loop, which every body passes through before the feed, GroupMe and the
+  post record. The team comes off the ORIGINAL tip (`beat.batch`), never the
+  anonymized copy, which is the one carrying the tokens.
+- **An unresolved `{{...}}` is a FAILED GENERATION, not a body to patch.** The
+  model inventing `{{TEAM_NICKNAME}}`, or writing a token on a beat with no
+  team, falls back to the template — which is code-built and token-free. A
+  literal `{{TEAM}}` in the group chat would be worse than the misattribution
+  this replaces. A survivor past the fallback is scrubbed to `[a team]`.
+- **Verification is now exact.** Checking for a leftover `{{...}}` is a string
+  match. Checking whether prose names the right franchise means fuzzy-matching
+  every name form, alias and retired name against text where `balls`,
+  `feelers`, `herd`, `chat` and `swift` are all somebody's real short name —
+  reliable versus a guess.
+
+Two gaps, named rather than implied:
+
+- **`formerName` is NOT tokenized** and still carries real names. HARD RULE
+  30's callback needs both names for the joke to land, and two of its three
+  call sites build it for `scope.franchise` — which is not necessarily
+  `exposure.team`, so reusing `{{TEAM}}` there would invent a NEW
+  misattribution rather than close one. It needs its own token pair and a
+  substitution that knows which franchise it refers to.
+- **PLAYER names in the memory block are still unmasked.** Same mechanism as
+  the franchise leak, different noun — nothing stops the model copying a player
+  out of a recalled post into an unrelated one. `exposure.players` controls
+  what is in the PAYLOAD, not what the model can read in its own memory.
 
 `tests/schefter-memory-name-mask.test.ts` pins the mask, the fail-safe drop,
-and that both scanners pass a masker.
+that both scanners pass a masker, the token substitution, and the
+unresolved-token fallback.
 
 ### The drip — a beat may only assert what the feeds can see
 

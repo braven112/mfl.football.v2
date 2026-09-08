@@ -110,3 +110,65 @@ export function maskFranchiseNames(text, teams) {
 export function memoryNameMasker(teams) {
   return (text) => maskFranchiseNames(text, teams);
 }
+
+// ── Team tokens: the model never sees a franchise name ──
+//
+// Masking the memory block removed the leak PATH for the 2026-09-07 incident.
+// This removes the CAPABILITY. The payload hands the model `{{TEAM}}` instead
+// of "Bring the Pain", and the real name is substituted in code after
+// generation — so naming the wrong franchise stops being forbidden and becomes
+// unwritable. It cannot substitute a name it was never given.
+//
+// This works here because exactly ONE team is ever nameable per post (see
+// HARD RULE 26 — "You may NOT name a second team"), so a single token needs no
+// franchise id to disambiguate and there is exactly one substitution target.
+//
+// It also makes verification exact. Checking for a leftover `{{...}}` is a
+// string match; checking whether prose names the right franchise means
+// fuzzy-matching every name form, alias and retired name against text where
+// `balls`, `feelers`, `herd`, `chat` and `swift` are all somebody's real short
+// name. The first is reliable and the second is a guess.
+
+export const TEAM_TOKEN = '{{TEAM}}';
+export const TEAM_SHORT_TOKEN = '{{TEAM_SHORT}}';
+
+/**
+ * What `exposure.team` becomes in the LLM-facing payload.
+ *
+ * Two tokens rather than one because the voice needs both registers — real
+ * posts read "Pain's been shopping a tight end", not "Bring the Pain's been
+ * shopping a tight end". Collapsing to a single token would force one form and
+ * flatten the cadence.
+ */
+export function tokenizedTeam() {
+  return { name: TEAM_TOKEN, nameShort: TEAM_SHORT_TOKEN };
+}
+
+/**
+ * Substitute the real franchise into a generated body.
+ *
+ * Returns `{ text, unresolved }`. `unresolved` is true when any `{{...}}`
+ * survives — the model inventing `{{TEAM_NICKNAME}}`, or a token appearing on
+ * a beat that has no team to fill it. The caller MUST treat that as a failed
+ * generation: a literal `{{TEAM}}` reaching the group chat is worse than the
+ * bug this replaces.
+ *
+ * `nameShort` falls back to `name` because it is optional in the config —
+ * `pickDisplayTeam` only guarantees `name`.
+ */
+export function resolveTeamTokens(text, team) {
+  if (typeof text !== 'string' || text.length === 0) {
+    return { text, unresolved: false };
+  }
+  const name = typeof team?.name === 'string' && team.name.trim() ? team.name.trim() : null;
+  let out = text;
+  if (name) {
+    const short = typeof team?.nameShort === 'string' && team.nameShort.trim()
+      ? team.nameShort.trim()
+      : name;
+    // SHORT first for legibility; the tokens cannot nest either way, since
+    // `{{TEAM}}` needs its closing braces immediately after TEAM.
+    out = out.split(TEAM_SHORT_TOKEN).join(short).split(TEAM_TOKEN).join(name);
+  }
+  return { text: out, unresolved: /\{\{[^}]*\}\}/.test(out) };
+}
