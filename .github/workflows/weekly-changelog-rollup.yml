@@ -27,7 +27,15 @@ jobs:
       - name: Commit and push updates
         uses: ./.github/actions/commit-push
         with:
-          add-paths: 'src/data/whats-new.json src/data/weekly-changelog-staging.json'
+          # The archive directory is NOT optional. `enforceWhatsNewCap` moves
+          # every entry past the 40-item cap into whats-new-archive/<year>.json,
+          # and that write happens on the runner — leaving it out of add-paths
+          # means the eviction is committed and the rescue is discarded, so an
+          # entry with a live permalink and a screenshot on disk simply ceases
+          # to exist. The first rollup to overflow the cap destroyed three
+          # (theleague-draft-broadcast, my-draft-list, afl-draft-broadcast),
+          # recovered from git history in the same commit as this fix.
+          add-paths: 'src/data/whats-new.json src/data/weekly-changelog-staging.json src/data/whats-new-archive'
           commit-message: 'chore: weekly changelog rollup'
           no-changes-message: 'No changelog changes to commit.'
           git-user-name: 'Changelog Bot'

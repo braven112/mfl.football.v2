@@ -27,7 +27,7 @@
  */
 import { describe, it, expect } from 'vitest';
 import path from 'node:path';
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { findValueBasedAutoCutClaims, findValueBasedAutoCutClaimsInPost, stripHtml } from '../scripts/lib/cut-watch-graders.mjs';
 import { buildFactSheet, getUserPrompt } from '../scripts/article-types/cut-watch.mjs';
@@ -135,12 +135,31 @@ describe('value-based auto-cut detector (Layer 1)', () => {
 
 describe('shipped feed stays clean (regression gate)', () => {
   it('no cut-watch article in schefter-feed.json describes auto-cuts as value-based', () => {
-    const feed = JSON.parse(
-      readFileSync(path.join(repoRoot, 'src/data/theleague/schefter-feed.json'), 'utf8')
-    );
-    const posts: any[] = Array.isArray(feed) ? feed : feed.posts ?? [];
+    // The ARCHIVE counts. Posts rotate out of schefter-feed.json into
+    // schefter-archive/<year>.json and keep serving on their permalinks, so a
+    // claim that "no shipped article says this" has to follow them there.
+    // Reading only the live feed made this guard fail the day the last six
+    // cut-watch posts rotated out — and the tempting fix, relaxing the
+    // greater-than-zero check, would have left the guard passing over six
+    // articles it had stopped reading.
+    const readPosts = (file: string): any[] => {
+      const raw = JSON.parse(readFileSync(file, 'utf8'));
+      return Array.isArray(raw) ? raw : raw.posts ?? [];
+    };
+    const archiveDir = path.join(repoRoot, 'src/data/theleague/schefter-archive');
+    const posts: any[] = [
+      ...readPosts(path.join(repoRoot, 'src/data/theleague/schefter-feed.json')),
+      ...(existsSync(archiveDir)
+        ? readdirSync(archiveDir)
+            .filter((f) => f.endsWith('.json'))
+            .flatMap((f) => readPosts(path.join(archiveDir, f)))
+        : []),
+    ];
     const cutWatch = posts.filter((p) => `${p.id}`.includes('cut_watch'));
-    expect(cutWatch.length).toBeGreaterThan(0);
+    expect(
+      cutWatch.length,
+      'no cut-watch articles found in the feed OR the archive — this guard is reading nothing',
+    ).toBeGreaterThan(0);
     for (const post of cutWatch) {
       const violations = findValueBasedAutoCutClaimsInPost(post);
       expect(
