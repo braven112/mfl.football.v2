@@ -368,6 +368,26 @@ export const SEEDED_PREFERENCES: Record<string, ViewerPreferences> = {
   'afl-fantasy:0014': { country: 'US', zoneId: 'PT' },
   /** Chatmaster. */
   'afl-fantasy:0021': { country: 'US', zoneId: 'PT' },
+  // Two of them play BOTH leagues, and the key is <slug>:<franchiseId>, so
+  // each side needs its own entry — the same person is a different key here.
+  // Confirmed by the commissioner, not inferred from the matching team name:
+  // a shared name across leagues is not evidence of a shared owner, and this
+  // map is only ever written from someone saying so.
+  /** Da Dangsters (Monty Fresh) — same owner as afl-fantasy:0006. */
+  'theleague:0002': { country: 'US', zoneId: 'PT' },
+  /** Midwestside — same owner as afl-fantasy:0011. */
+  'theleague:0011': { country: 'US', zoneId: 'PT' },
+
+  // US CENTRAL, both leagues. Unlike the PT entries above these change what
+  // the owner SEES — every league moment prints "… CT · PT" for them instead
+  // of PT alone — which is the point: they were reading Pacific and doing the
+  // two-hour conversion in their head.
+  /** Computer Jocks. */
+  'theleague:0010': { country: 'US', zoneId: 'CT' },
+  'afl-fantasy:0005': { country: 'US', zoneId: 'CT' },
+  /** Vitside / Vitside Mafia. */
+  'theleague:0012': { country: 'US', zoneId: 'CT' },
+  'afl-fantasy:0009': { country: 'US', zoneId: 'CT' },
 };
 
 /** The seeded preference for an owner, or null. Both arguments are required — a bare franchise id is ambiguous across leagues. */

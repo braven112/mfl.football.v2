@@ -155,8 +155,37 @@ describe('seeded per-owner defaults', () => {
   it('needs BOTH a league and a franchise — a bare id is ambiguous across leagues', () => {
     expect(seededPreferencesFor(null, '0009')).toBeNull();
     expect(seededPreferencesFor('theleague', null)).toBeNull();
-    // The AFL's 0009 is a different team entirely.
-    expect(seededPreferencesFor('afl-fantasy', '0009')).toBeNull();
+
+    // The cross-league half is DERIVED, not a hardcoded pair. It named
+    // afl-fantasy:0009 as "a different team entirely" until that franchise was
+    // itself seeded, at which point the test failed for a reason that had
+    // nothing to do with the rule it guards. So: find any seeded key whose
+    // franchise id is NOT seeded in some other league, and assert the lookup
+    // there comes back null. Several owners now hold the SAME id in both
+    // leagues on purpose, which is exactly why the key cannot be the id alone.
+    const keys = Object.keys(SEEDED_PREFERENCES).map((k) => k.split(':') as [string, string]);
+    const slugs = [...new Set(keys.map(([slug]) => slug))];
+    const orphan = keys
+      .map(([slug, id]) => ({
+        id,
+        elsewhere: slugs.find((other) => other !== slug && !SEEDED_PREFERENCES[`${other}:${id}`]),
+      }))
+      .find((c) => c.elsewhere);
+    expect(orphan, 'every seeded id is seeded in every league — pick another shape for this check').toBeTruthy();
+    expect(seededPreferencesFor(orphan!.elsewhere!, orphan!.id)).toBeNull();
+  });
+
+  it('lets one owner hold the same franchise id in both leagues, separately', () => {
+    // Da Dangsters and Midwestside play both leagues under different ids, and
+    // Computer Jocks / Vitside do too — each side is its own entry, because a
+    // matching team name across leagues is not evidence of a shared owner and
+    // this map is only ever written from someone saying so.
+    expect(seededPreferencesFor('theleague', '0010')).toEqual({ country: 'US', zoneId: 'CT' });
+    expect(seededPreferencesFor('afl-fantasy', '0005')).toEqual({ country: 'US', zoneId: 'CT' });
+    // A Central owner reads their own clock first, with the league's beside it.
+    expect(zoneSummary(seededPreferencesFor('theleague', '0010')!)).toBe('CT · PT');
+    // A Pacific one is already on the league clock, so it prints once.
+    expect(zoneSummary(seededPreferencesFor('afl-fantasy', '0021')!)).toBe('PT');
   });
 });
 
