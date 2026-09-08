@@ -118,6 +118,59 @@ const content: ShowcaseContent = {
       model: { name: 'Bo Nix', descriptor: 'Best Available', pos: 'QB', code: 'DEN', espnId: '4426338' },
     },
     {
+      key: 'kickoff', accent: 'navy', scope: 'league',
+      component: 'AflCompositeHero \u00b7 NFL kickoff', wordmark: 'KICKOFF',
+      pill: 'Season opener', title: 'Football is', titleAccent: 'back.',
+      summary:
+        'Your likely starter in the first game you play in \u2014 so the face is personal even though the ' +
+        'card is not. Everyone\u2019s season starts at the same whistle, so kickoff keeps the league\u2019s navy.',
+      ctaLabel: 'Set your lineup',
+      model: { name: 'Lamar Jackson', descriptor: 'Kickoff Starter', pos: 'QB', code: 'BAL', espnId: '3916387' },
+    },
+    {
+      key: 'game-day', accent: 'gold', scope: 'team',
+      component: 'AflCompositeHero \u00b7 game day', wordmark: 'GAME\u00a0DAY',
+      pill: 'Game day', title: 'Lineups lock at', titleAccent: 'kickoff.',
+      summary:
+        'Last call to set starters. Your lineup and your deadline, so the card wears your club\u2019s colours ' +
+        'and crest rather than the league\u2019s.',
+      ctaLabel: 'Set lineup',
+      franchiseId: '0001',
+      model: { name: 'De\u2019Von Achane', descriptor: 'Your First Starter', pos: 'RB', code: 'MIA', espnId: '4429160' },
+    },
+    {
+      key: 'sunday-ticket', accent: 'navy', scope: 'team',
+      component: 'AflCompositeHero \u00b7 Sunday Ticket', wordmark: 'SUNDAY\u00a0TICKET',
+      pill: 'Sunday Ticket', title: 'Build your', titleAccent: 'multiview.',
+      summary:
+        'Once your lineup is in, the same slot flips to the multiview board \u2014 four boxes a window, ranked ' +
+        'by how many of your starters are on the field. Still your team, still your colours.',
+      ctaLabel: 'Build your Sunday',
+      franchiseId: '0014',
+      model: { name: 'Emeka Egbuka', descriptor: 'Your Starter', pos: 'WR', code: 'TB', espnId: '4567750' },
+    },
+    {
+      key: 'recap', accent: 'recap', scope: 'team',
+      component: 'AflCompositeHero \u00b7 Tuesday recap', wordmark: 'RECAP',
+      pill: 'Tuesday recap', title: 'The week in', titleAccent: 'review.',
+      summary:
+        'The week\u2019s top scorer is cast deterministically \u2014 he IS the headline \u2014 so the card belongs to ' +
+        'the club that rosters him, not to his NFL team.',
+      ctaLabel: 'Read the recap',
+      franchiseId: '0013',
+      model: { name: 'Justin Jefferson', descriptor: 'Top Scorer', pos: 'WR', code: 'MIN', espnId: '4262921' },
+    },
+    {
+      key: 'whats-new', accent: 'navy', scope: 'league',
+      component: 'AflCompositeHero \u00b7 feature', wordmark: "WHAT'S\u00a0NEW",
+      pill: 'New this week', title: 'A feature just', titleAccent: 'shipped.',
+      summary:
+        'The only state that renders with no player at all: the entry\u2019s own screenshot is the art, framed ' +
+        'like a browser. A player joins it only when the entry names one.',
+      ctaLabel: 'Read the full story',
+      model: { name: 'Quinshon Judkins', descriptor: 'Featured', pos: 'RB', code: 'CLE', espnId: '4685702' },
+    },
+    {
       key: 'franchise-ambiguous', accent: 'gold', scope: 'league',
       component: 'hero-franchise-accent · declines', wordmark: 'KEEPERS',
       pill: 'Rostered twice', title: 'When the rule', titleAccent: 'refuses to guess.',

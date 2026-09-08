@@ -128,11 +128,20 @@ describe('hero showcase content', () => {
   it('every AFL composite treatment has a card, and the gallery invents none', () => {
     // Source of truth: the `composite: { … }` literals in the AFL resolver.
     const resolver = read('src/utils/afl-hero-resolver.ts');
+    // EITHER quote style. The wordmark that broke this was "WHAT'S NEW" —
+    // double-quoted because it contains an apostrophe — and a single-quote-only
+    // pattern did not merely miss it: it made the treatment invisible to the
+    // "every treatment has a card" half as well, so the guard would have gone
+    // quiet on a whole hero rather than failing. A scanner that under-reads its
+    // source fails silently in the safe-looking direction.
     const treatments = [...resolver.matchAll(
-      /composite:\s*\{\s*wordmark:\s*'([^']+)',\s*accent:\s*'([a-z]+)'/g,
-    )].map(([, wordmark, accent]) => ({
+      /composite:\s*\{\s*wordmark:\s*(?:'([^']+)'|"([^"]+)"),\s*accent:\s*'([a-z]+)'/g,
+    )].map(([, single, double, accent]) => ({
+      wordmarkRaw: single ?? double,
+      accent,
+    })).map(({ wordmarkRaw, accent }) => ({
       // The source holds NBSP (U+00A0) escapes to keep two words together.
-      wordmark: wordmark.replace(/\\u00a0/g, '\u00a0'),
+      wordmark: wordmarkRaw.replace(/\\u00a0/g, '\u00a0'),
       accent,
     }));
     expect(treatments.length).toBeGreaterThan(0);

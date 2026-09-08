@@ -18,7 +18,8 @@
  * conference drafts — render as COMPOSITES instead (`AflCompositeHero`), on
  * the shared shell TheLeague's heroes use. That routing is deliberately
  * conservative and lives here rather than in the resolver: a state whose view
- * carries no `composite` treatment, or for which no player could be cast,
+ * carries no `composite` treatment, or for which neither a player nor a
+ * feature screenshot could be found,
  * falls through to `AflEventHero` exactly as before. A missing feed therefore
  * degrades to the card that always worked.
  *
@@ -87,7 +88,7 @@ const { state, config, standings, userFranchiseId, backdrop = null } = Astro.pro
     config={config}
     userFranchiseId={userFranchiseId}
   />
-) : 'view' in state && state.view.composite && state.view.model ? (
+) : 'view' in state && state.view.composite && (state.view.model || state.view.screenshot) ? (
   <AflCompositeHero
     view={state.view}
     regionLabel={REGION_LABEL[state.kind] ?? 'AFL hero'}
