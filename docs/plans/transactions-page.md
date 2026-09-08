@@ -19,6 +19,8 @@ against the full committed archive so it works year-round.
 | Default rows | **Signings**: free agents, waivers (both flavours), auction wins |
 | Excluded outright | **IR and practice-squad (TAXI) moves** — not signings, high volume, low interest |
 | Behind a filter | **Trades** (off by default) |
+| Standalone drops | **Shown inline** — a cut with no add is its own row; releases are league news |
+| Auction bidding | **Excluded.** `AUCTION_WON` only; the 555 `AUCTION_BID` and 107 `AUCTION_INIT` rows are dropped, not collapsed behind a detail view |
 | Filters | Team, player search, week / date range, "just my team" |
 | Row detail | Headshot + franchise logo, position + NFL team, salary / bid amount |
 | Layout | Dense table, grouped by day |
@@ -57,10 +59,18 @@ Five traps worth writing down before anyone starts:
    site. This is the single strongest argument for a normalizer module rather
    than parsing inline in the component.
 
-2. **A row is not a player.** One `FREE_AGENT` row can drop seven players:
-   `"|16342,14823,13299,13595,7836,10413,16757,"` (a cutdown-day batch). The
-   table must render one row per *transaction* with a list of player chips, not
-   assume `added`/`dropped` are scalars.
+2. **A row is not a player — `dropped` is a LIST.** A cut made alongside a
+   pickup is its own individual row, which is what an owner sees day to day.
+   But a *drop-only* row can carry many players at once:
+   `"|12611,12141,13138,15282,14861,15329,"` — six, one row, `by_commish` unset,
+   so a real owner action. Across 2022–2026 there are 99 such rows, and it is
+   **not** purely a rollover artifact: 41 of them land in-season (Sep–Jan),
+   clustered on Week 17–playoff-exit roster purges, with the rest on the Feb 14
+   league-year rollover and August cutdown. Every one of them has `adds=0`.
+
+   So: parse `dropped` as a list or those rows render one name and silently
+   swallow five. No special UI is needed — list every name in the row — but a
+   parser that reads `split(',')[0]` is wrong on 99 rows of real history.
 
 3. **The comma is not consistent across types.** `FREE_AGENT` and the waiver
    types terminate every id with a comma (`"17048,|"`); the auction types do
@@ -148,18 +158,30 @@ re-implemented. Franchise crest and accent come from
 `src/utils/league-team-brands.ts` (`TeamBrand`), which already covers both
 leagues.
 
-### Salary / bid column — be honest about what we know
+### Salary / bid column — exact, from the feed
 
-| Move | Cost source | Confidence |
-|---|---|---|
-| `BBID_WAIVER` | bid is in the transaction string | exact |
-| `AUCTION_WON` | winning bid in the string; cross-checkable against `auctionResults.json` | exact |
-| `FREE_AGENT` (FCFS) | **not in the feed** — fall back to the player's current roster salary, and only when they're still rostered by that franchise | partial |
-| AFL, any type | no salary cap in the league | column hidden |
+Every signing in TheLeague has a knowable price, and none of it needs to be
+hardcoded:
+
+| Move | Cost source |
+|---|---|
+| `BBID_WAIVER` | the bid, in the transaction string |
+| `AUCTION_WON` | the winning bid in the string; cross-checkable against `auctionResults.json` |
+| `FREE_AGENT` (FCFS) | **always the league minimum** — read `bbidMinimum` off `league.json` |
+| AFL, any type | no salary cap in the league — column hidden |
+
+FCFS pickups in TheLeague go for league minimum, full stop. The number lives in
+the feed as `league.bbidMinimum` (`"425000"` for 2023–2026), which is the
+source to read: it is per-season, it self-updates if the minimum ever moves,
+and it keeps a `425000` literal out of `src/` where
+`tests/league-literal-guard.test.ts` would object. Do **not** try to infer an
+FCFS price from the player's current roster salary — that drifts with contract
+escalation and is wrong the moment the player is re-signed.
 
 The column renders only for leagues with the `salaryCap` feature
-(`leagueHasFeature(slug, 'salaryCap')`), and an unknown FCFS cost shows as `—`,
-never as `$0`. Do not invent a number here.
+(`leagueHasFeature(slug, 'salaryCap')`). The AFL's `league.json` carries no
+`bbidMinimum` at all, which is consistent — the column is hidden there anyway,
+but a normalizer that assumes the field exists would emit `NaN`.
 
 ## Filters
 
@@ -248,18 +270,27 @@ Day headers (`Sunday, September 7`) with compact rows beneath:
 - `tests/transactions-view.test.ts` — filters compose, `?mine=1` is inert when
   logged out, unknown year falls back rather than 500s.
 - `tests/transactions-clientrouter.test.ts` — init on `astro:page-load`.
-- Salary column absent for the AFL, present for TheLeague.
+- Salary column absent for the AFL (no `bbidMinimum` in its `league.json`),
+  present for TheLeague, and an FCFS row prices at `league.bbidMinimum` rather
+  than at the player's roster salary.
 - Run the `sibling-drift-checker` agent before the PR: two routes land at once,
   and they must stay thin.
 
-## Open questions
+## Resolved during planning
 
-- **Auction bids.** `AUCTION_WON` is in the ledger; the 555 `AUCTION_BID` rows
-  and 107 `AUCTION_INIT` nominations are not. If the bidding history is wanted,
-  it belongs as an expandable detail on the winning row, not as ledger rows.
-- **Mass drops.** A seven-player cutdown row is technically one transaction but
-  reads as an event. Possibly collapse to "dropped 7 players" with a expander.
+- **Auction bids — dropped.** Only `AUCTION_WON` reaches the ledger. The
+  bidding history is not surfaced anywhere on this page; it stays on MFL and
+  the existing auction pages.
+- **Mass drops — no collapse.** Render every dropped name. See trap 2.
+- **FCFS price — league minimum from `league.bbidMinimum`.** No partial
+  confidence, no roster-salary fallback.
+- **Standalone drops — in the ledger.** A release with no corresponding add
+  gets its own row. This makes the page slightly broader than "signings": it is
+  a roster-move ledger whose *default filters* favour signings.
+
+## Still open
+
 - **Dead money.** A drop in TheLeague generates a `salaryAdjustments` entry.
   Showing the cap hit next to the drop would make the page genuinely useful for
   cap planning, but it's a second join and a second source of wrongness.
-  Deferred.
+  Deferred — raise again once the ledger itself is shipped and trusted.
