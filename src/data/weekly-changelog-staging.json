@@ -3,6 +3,14 @@
   "changes": [
     {
       "date": "2026-09-08",
+      "type": "bug-fix",
+      "summary": "Free agent pickups were bouncing during the first-come window. If your roster was full — which is exactly when you are dropping somebody to make room — MFL was counting the add before the drop, deciding you were over the limit, and throwing the whole thing out without a word. Our side saw a shrug where an answer should have been and could only tell you \"claim failed,\" so three straight attempts on the same player disappeared into nothing while another owner made the identical swap on MFL's own site. Pickups now go through the same page every owner uses by hand, which actually accepts a full-roster swap and, when it does refuse, says why — a locked player now reads as a locked player. And if anything still goes wrong, the dialog hands you a direct link to MFL's add/drop page so you are not left hunting for it with the clock running.",
+      "impact": "user",
+      "area": "free-agents",
+      "league": "both"
+    },
+    {
+      "date": "2026-09-08",
       "type": "style-tweak",
       "summary": "The Preferences row in the side menu now glows softly until you have actually picked a clock, so the setting stops being something you only find by accident. It is a slow breathing ring, not a badge or a nag — and it turns itself off the moment you save a preference, on every device that remembers it. Screen readers get the same hint in words rather than a ring they cannot see.",
       "impact": "user",

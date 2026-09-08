@@ -9,6 +9,84 @@ found in it the day after.
 The MFL-side auth story (why `calendar.json` had never synced) is in
 `domains/mfl-api.md`, 2026-09-02.
 
+## 2026-09-07 - `import?TYPE=fcfsWaiver` Refuses A Full Roster, And Says Nothing At All
+
+**Context:** the AFL's first FCFS window of the season opened at 7:00 PM PT when
+`WAIVER_UNLOCK` fired. Between 7:08 and 7:19 an owner tried three times to add
+Tampa Bay's DEF (`0525`) while dropping Cyrus Allen (`17518`), and each attempt
+came back `Claim failed (HTTP 502)`. Nothing reached MFL: `export?TYPE=transactions`
+for the whole day carries no row for `0525`. In the same window a different
+franchise made an identical full-roster swap on MFL's own site and it landed.
+
+### The import scored the ADD before the DROP, on a roster already at the limit
+
+`fcfsWaiver` applies a strict "the resulting roster must be inside the in-season
+limit" validation. The AFL's `rosterSize` is 16 and the owner was at 16/16 —
+which is the normal state of a roster you are about to make a swap on. The
+import evaluates the add first, sees 17, and refuses.
+
+It refuses by answering **HTTP 200 with an empty body**. No `<error>`, no
+`<status>`, nothing. So every downstream signal the route had was indistinguishable
+from a successful write, and the only thing that eventually caught it was the
+roster read-back — which can only say "he isn't there", never why.
+
+This is the SAME validation `cut-player.ts` documented in the other direction:
+
+> the fcfsWaiver API applies a strict "resulting roster must be within the
+> in-season limit" validation, even for a pure drop, so it refuses any cut while
+> a roster is over the limit
+
+That note was written for the offseason cutdown, so it read as an over-limit
+edge case. It is not — at 16/16 the ADD is over the limit *by itself*, and the
+DROP that would fix it is never considered. Every in-season add/drop from a full
+roster hits it.
+
+**The fix:** the FCFS write replays MFL's own `add_drop` page, exactly as the
+queued claim already did and for exactly the same reason. The two modes differ
+only in the pair of fields that tells the page what to do:
+
+| | queued claim | immediate add |
+|---|---|---|
+| `FORCE_WAIVER` | `on` | *absent* |
+| `SUBMIT` | `Submit Request` | `Perform Add/Drop` |
+
+MFL's own `picker.js` swaps the button between those two strings when the box is
+ticked, so the pair is the request — sending half of it asks for the other thing.
+`import?TYPE=…` now appears nowhere in this route, and `readMflImportResult` is
+banned from it: with both writes returning an HTML page, that classifier would
+call every one of them a refusal.
+
+### The lesson that keeps recurring here
+
+Three separate outages in this route now, all the same shape: **MFL's import API
+answers a refusal and a success identically.** `waiverRequest` stored nothing and
+said OK. `blindBidWaiverRequest` the same. `fcfsWaiver` refuses a full roster and
+says nothing. The page handler every owner clicks has never done this — it
+re-renders itself carrying the complaint in prose. Prefer it for writes, and read
+the page.
+
+### An instant add has refusals a queued claim does not
+
+The complaint scanner only knew `Cannot Save Request:`, `Transaction Would Create`
+and `Exceeds League Limit` — all claim-shaped. An instant add can also be refused
+for a locked player, which MFL states with the player's name in front of it:
+
+```
+Okonkwo, Chigoziem WAS TE Cannot Be Added Because Is Locked.
+```
+
+`Cannot Be (Added|Dropped)` is now scanned too, with the leading characters
+captured — without them the sentence loses its subject and reads as being about
+nobody.
+
+### A failed pickup needs the link more than a successful one does
+
+`confirmUrl` (MFL's own add/drop page, built from the registry) was returned only
+on success. On the night this bug surfaced, the fix in the moment was a text
+message telling the owner to go to MFL and get the player by hand. That link now
+rides on the failures too, and the modal shows it next to the error — a lost
+first-come pickup is worth seconds, and re-deriving the URL is not free.
+
 ## 2026-09-06 - The Rostered Half Of The Card, And What The Claim Context Was Quietly Assuming
 
 **Context:** the Claim button answered the free agents. The other ~85% of the
