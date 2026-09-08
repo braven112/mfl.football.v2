@@ -936,6 +936,14 @@
       "impact": "user",
       "area": "live-scoring",
       "league": "both"
+    },
+    {
+      "date": "2026-09-08",
+      "type": "bug-fix",
+      "summary": "Leave Live Scoring open on your phone and it kept asking ESPN for the scoreboard every sixty seconds all evening, long after the last game had gone final. It was going by the page's \"it's game day\" flag, which stays switched on until midnight, rather than by whether football was actually being played. It now watches the clock: it eases off once the day's games are done — even with Monday night still sitting on the schedule — and wakes back up a quarter of an hour before the next kickoff. Nothing looks any different. Your battery just stops paying for scores that finished hours ago.",
+      "impact": "user",
+      "area": "live-scoring",
+      "league": "both"
     }
   ]
 }

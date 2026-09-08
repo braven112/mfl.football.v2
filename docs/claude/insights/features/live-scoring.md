@@ -424,3 +424,41 @@ with no matching file under `scripts/` fails the suite. So removing any script
 that calls `postToGroupMe` is a two-file change, and the test tells you so
 rather than leaving a lie in the allowlist. Worth knowing before you assume a
 script deletion is self-contained.
+
+## 2026-09-08 - The game-day hint is a floor, not the answer (PR #1014)
+
+`useNflScoreboard` had `liveNow = live || games.some(g => g.state === 'in')`
+since it was written, and `/live` only caught it because #987 fixed the same
+shape one file over and the cross-cutting pass went looking for the twin.
+
+- **A server-computed "is it live" flag is fixed for the life of the page, so
+  it can only ever raise the cadence, never lower it.** `getDailySlot`'s
+  live-scoring slot is the hint here, and it stays open long past the last
+  whistle — Sunday 8:30pm+ and Monday 11pm+ both still return it. OR-ing it
+  into a poll interval made `POLL_STALE` unreachable on a game day, so every
+  subscriber sat at 60s for hours after the slate went final. Any hint of this
+  shape needs a data-derived condition that can switch it back off.
+- **The right condition is "the slate is finished", not "data has arrived".**
+  The obvious fix — honour the hint only until the first poll lands — is a
+  regression here, and the reason is that the two feeds disagree about what
+  "not started" looks like. MFL's `gameSecondsRemaining` is 3600 for a
+  scheduled game, so "some remaining > 0" is already true pre-kickoff and
+  `useLiveScoringFeed` can lean on it. ESPN's `state` is strictly
+  `'pre' | 'in' | 'post'`, so a slate of `pre` games is not "in progress" —
+  dropping the hint would have parked the board on the 5-minute cadence all
+  Sunday morning and made it that late noticing kickoff. Don't port a cadence
+  rule between the two feeds without re-checking what each says before kickoff.
+- **One pinned subscriber pins the page.** `createSharedPoller` runs at the
+  MINIMUM interval any subscriber asks, and `LiveScoreboard` and
+  `NflGamesStrip` subscribe to the same key — so this was never fixable at a
+  call site, only in the hook. The flip side of the store's best property.
+- **An EMPTY slate is "nothing loaded yet", never "all final".**
+  `[].every(...)` is `true`, so a naive `games.every(g => g.state === 'post')`
+  drops the very first load to `POLL_STALE`. The length check is load-bearing.
+- **Extracting the decision is what makes it testable at all.** vitest runs
+  `environment: 'node'` with no jsdom and no testing-library, so a rule living
+  inside a hook can only be guarded by scanning source text — which is what
+  #987's client-side guards had to settle for. `shouldPollLive(games, hint)` as
+  a pure export gets a real behavioural test instead. When a client-side rule
+  matters, lift the decision out of the component rather than reaching for a
+  DOM harness the repo does not have.

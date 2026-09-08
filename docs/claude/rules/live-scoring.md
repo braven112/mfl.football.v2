@@ -108,6 +108,25 @@ which is exactly why the split exists — verify parsing offline against
   asks, and a failed poll KEEPS the last good data while flipping `status` to
   `'error'` — "the feed says nothing" and "we couldn't reach the feed" stay
   separate all the way to the UI.
+- **A server-computed "is it live" hint can only RAISE a poll cadence, never
+  lower it.** `getDailySlot`'s live-scoring slot is fixed for the life of the
+  page and stays open long past the last whistle (Sunday 8:30pm+ and Monday
+  11pm+ both still return it), so `liveNow = hint || …` made `POLL_STALE`
+  unreachable on a game day — and because the store runs at the MINIMUM
+  interval any subscriber asks, one pinned subscriber pinned the whole page.
+  The hint is only good for the first load, before any data exists.
+  `shouldPollLive` (`src/hooks/useNflScoreboard.ts`) owns the decision and
+  `tests/nfl-scoreboard-cadence.test.ts` pins it.
+- **ESPN's slate is a WEEK, not a day**, so no state test alone can end the
+  fast cadence. `buildEspnScoreboardUrl` asks for `?week=N`: Thursday through
+  Monday arrive together, "some game is `pre`" is true from Thursday lunchtime
+  to Monday night, and `every(state === 'post')` is FALSE all Sunday evening
+  because Monday's game has not kicked off. Read the CLOCK — a game in
+  progress, or a kickoff within `KICKOFF_SOON_MS` (which must stay larger than
+  `POLL_STALE`, or a slow board starts a game late). And note the MFL feed
+  does NOT work this way: `gameSecondsRemaining` is 3600 before kickoff, so
+  `useLiveScoringFeed` can lean on "some remaining > 0" where this cannot.
+  Don't port a cadence rule between the two feeds unchecked.
 - **Fan-out is bounded and partial results are the point.** `mapWithConcurrency`
   (`src/utils/fan-out.ts`) + `Promise.allSettled` + a per-event TTL cache
   (25s live / 5min final, and a PARTIAL read is never cached). Both routes are

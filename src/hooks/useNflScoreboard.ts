@@ -89,6 +89,58 @@ export interface NflScoreboardState {
 const EMPTY_GAMES: NflGame[] = [];
 
 /**
+ * How close a kickoff has to be for the board to poll at the LIVE cadence.
+ * Comfortably larger than POLL_STALE so a board on the slow cadence gets at
+ * least two ticks inside the window and is never late to a kickoff.
+ */
+export const KICKOFF_SOON_MS = 15 * 60_000;
+
+/**
+ * Should the scoreboard poll at the LIVE cadence?
+ *
+ * The trap this exists to avoid: **ESPN's slate is a whole WEEK**, not a day.
+ * `buildEspnScoreboardUrl` asks for `?week=N`, so Thursday through Monday all
+ * come back together. That makes "some game is still `pre`" true from Thursday
+ * lunchtime until Monday night, and it means an `allFinal` test is false all
+ * Sunday evening because Monday's game has not kicked off yet. Neither can
+ * drive this on its own.
+ *
+ * So the rule reads the CLOCK, not just the states:
+ *
+ *  - A game actually in progress is the unambiguous yes.
+ *  - Otherwise, yes only while a kickoff is within `KICKOFF_SOON_MS` (or has
+ *    just passed and ESPN has not flipped the state yet). Sunday 12:50pm is
+ *    live; Sunday 9am and Sunday 11pm are not, even though Monday's game sits
+ *    `pre` in the payload at all three.
+ *  - With NOTHING loaded, the page's game-day `hint` is all there is to go on.
+ *    That is the only thing the hint is good for: it comes from `getDailySlot`
+ *    and is fixed for the life of the page, and that slot stays open long past
+ *    the last whistle (Sunday 8:30pm+ and Monday 11pm+ both still return it),
+ *    so trusting it once data exists is what pinned every subscriber to
+ *    POLL_LIVE for hours after the slate went final.
+ *
+ * An EMPTY slate is "nothing loaded yet", never "all final" — `[].every(…)` is
+ * `true`, and treating that as finished would drop the very first load to
+ * POLL_STALE.
+ */
+export function shouldPollLive(
+  games: ReadonlyArray<{ state: NflGame['state']; date?: string }>,
+  hint: boolean,
+  now: number = Date.now(),
+): boolean {
+  if (games.length === 0) return hint;
+  if (games.some((g) => g.state === 'in')) return true;
+  return games.some((g) => {
+    if (g.state !== 'pre' || !g.date) return false;
+    const kickoff = Date.parse(g.date);
+    // `<=` with no lower bound on purpose: a `pre` game whose kickoff has
+    // already passed is either about to flip to `in` or ESPN is briefly stale,
+    // and polling fast is the right answer either way.
+    return Number.isFinite(kickoff) && kickoff - now <= KICKOFF_SOON_MS;
+  });
+}
+
+/**
  * @param enabled pass false in demo mode (bundled sample data) or when the
  *   caller supplies its own games — the hook then does no network at all.
  * @param fallbackGames the caller's own slate. With `enabled` false it is the
@@ -118,9 +170,18 @@ export function useNflScoreboard(
   // would freeze the cadence at whatever was true when the island mounted, so
   // a board that went all-final would keep polling every 60s forever.
   // The caller's `live` hint (the page's game-day window) covers the first
-  // load, before any games have arrived to look at.
-  const liveNow =
-    live || (poller.getState(params).data?.games ?? []).some((g) => g.state === 'in');
+  // load, before any games have arrived to look at — and it stays useful after
+  // that, because a slate of `pre` games is not "in progress" but IS about to
+  // be: dropping the hint once data lands would put the board on POLL_STALE
+  // all Sunday morning and leave it up to five minutes late noticing kickoff.
+  //
+  // What the hint must NOT do is outlive the slate. `getDailySlot` keeps the
+  // live-scoring slot open long past the last whistle (Sunday 8:30pm+ and
+  // Monday 11pm+ both still return it), so OR-ing it in unconditionally pinned
+  // every subscriber to POLL_LIVE for hours after every game had gone final.
+  // A finished slate ends the fast cadence regardless of the hint — the same
+  // rule LiveScoreboard already applies to its MFL half via `allDone`.
+  const liveNow = shouldPollLive(poller.getState(params).data?.games ?? [], live);
 
   const snapshot = useSyncExternalStore(
     useCallback(
