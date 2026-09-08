@@ -182,14 +182,13 @@ const content: ShowcaseContent = {
       model: { name: 'Garrett Wilson', descriptor: 'On the Block', pos: 'WR', code: 'NYJ', espnId: '4569618' },
     },
     {
-      key: 'standings', accent: 'navy', scope: 'team',
+      key: 'standings', accent: 'navy', scope: 'league',
       component: 'AflCompositeHero \u00b7 Monday standings', wordmark: 'STANDINGS',
       pill: 'Monday standings', title: 'The race', titleAccent: 'tightens.',
       summary:
-        'Cast from the headliner of whichever club is leading, so the card wears the team the race is ' +
-        'actually about \u2014 the same rule the recap follows for the week\u2019s top scorer.',
+        'Cast from the leader\u2019s headliner \u2014 but league-coloured, because the leader may be in the ' +
+        'other conference and the franchise accent resolves within yours. Two different clubs.',
       ctaLabel: 'See the race',
-      franchiseId: '0003',
       model: { name: 'Malik Nabers', descriptor: 'Leading the Race', pos: 'WR', code: 'NYG', espnId: '4595348' },
     },
     {

@@ -697,9 +697,20 @@ const SLOT_VIEW: Record<SlotKey, (ctx: SlotContext) => EventHeroView> = {
     link: '/afl-fantasy/standings',
     linkLabel: 'SEE THE RACE',
     icon: 'trophy',
-    // The face is the LEADER's headliner, so the card wears the club the race
-    // is about — the same rule the recap follows for the week's top scorer.
-    composite: { wordmark: 'STANDINGS', accent: 'navy', tone: null, scope: 'team' },
+    // LEAGUE, not team — and the reasoning that said otherwise was wrong.
+    //
+    // The face is the leader's headliner, so "the card wears the club the race
+    // is about" looks right. But `standingsLeaderId` is drawn from
+    // `leagueStandings.franchise` — all 24, league-wide — while the franchise
+    // accent resolves within the VIEWER's conference. The AFL rosters the same
+    // player in both, so for a viewer in the other conference the accent lands
+    // on whichever of THEIR clubs also rosters him: a card painted for a team
+    // that is not the one the copy is about.
+    //
+    // The recap survives the same scoping because it is about whoever rosters
+    // the top scorer, whoever that turns out to be. Standings names a specific
+    // franchise in its meaning, so the two can disagree. (Copilot, PR #1025.)
+    composite: { wordmark: 'STANDINGS', accent: 'navy', tone: null, scope: 'league' },
     accent: ACCENT_GOLD,
     glow: GLOW_NAVY,
     player: randomHeroPlayer(now),
