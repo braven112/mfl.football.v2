@@ -466,8 +466,15 @@ three times.
   merely shares the id. Dedupe runs at the queue read and the expiry/strike
   filter immediately after it, so a closure handed a 6d23h-old row's
   `submittedAt` is dropped as `expired` within the hour — and `OFFER_CLOSED_KEY`
-  was written at enqueue, so it never returns. The exemption is keyed on
-  `leadKind === 'closure'` and applies to nothing else.
+  was written at enqueue, so it never returns.
+- **That exemption is CROSS-STORY, not blanket — two closures still fold.** A
+  second closure row under one id is reachable: the `sadd(OFFER_CLOSED_KEY)`
+  that guards re-detection is warn-only and the tip is pushed regardless, so a
+  failed write or a lapsed 30-day TTL re-enqueues one on the next scan.
+  Exempting those from the fold as well let each duplicate relaunder both the
+  clock and the ledger, so a closure the quality gate kept suppressing would
+  never age out at all — strictly worse than the 7 days it had before the
+  dedupe existed. Budget is inherited only from rows telling the SAME story.
 - **It merges into a COPY, never onto the input row.** Folding the fields onto
   the kept row leaves two rows sharing one `submittedAt`, and the newest-wins
   compare then breaks that tie by arrival order — so a second pass over the

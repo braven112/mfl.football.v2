@@ -77,8 +77,9 @@ export function isUsableTip(obj) {
  * kept row alone, so a newly enqueued copy cannot launder a tip out of
  * hold-and-strike by resetting its counter to zero. The one exception is a
  * closure, which is a NEW terminal story sharing an id rather than another
- * copy of the live one — it keeps its own timestamp and a clean ledger. See
- * the materialize step below.
+ * copy of the live one — it does not inherit the LIVE rows' timestamp or
+ * ledger. It does still fold with other CLOSURE rows, which are reachable and
+ * are the same story. See the materialize step below.
  */
 export function dedupeTipsById(tips) {
   const numeric = (v) => (typeof v === 'number' ? v : null);
@@ -87,54 +88,68 @@ export function dedupeTipsById(tips) {
     return vals.length > 0 ? Math.min(...vals) : undefined;
   };
   const strikesOf = (t) => (typeof t?.suppressedStrikes === 'number' ? t.suppressedStrikes : 0);
+  // Which STORY a row tells. A closure and a live beat share `to_<offerId>`
+  // but are not two copies of one thing, and budget may only be inherited
+  // within a class — see the materialize step.
+  const storyOf = (t) => (t?.leadKind === 'closure' ? 'closure' : 'live');
+  const emptyFold = () => ({ oldestAt: undefined, strikes: 0, firstSuppressedAt: undefined });
 
   const byId = new Map();
   for (const tip of tips) {
     const id = String(tip?.id ?? '');
     const at = numeric(tip?.submittedAt);
-    const acc = byId.get(id);
+    let acc = byId.get(id);
     if (!acc) {
-      byId.set(id, {
-        payload: tip,
-        newestAt: at,
-        oldestAt: at,
-        strikes: strikesOf(tip),
-        firstSuppressedAt: numeric(tip?.firstSuppressedAt),
-      });
-      continue;
-    }
-    // Compared against the NEWEST ROW SEEN, which is tracked separately from
-    // the merged timestamp on purpose. Comparing against the merged value —
-    // which is the OLDEST — meant that once two rows had been folded together,
-    // any third row beat the accumulated one on a timestamp it never had:
-    // [closure@9000, live@1000, changed@5000] elected `changed` and dropped
-    // the closure. Two rows behaved correctly, three did not.
-    if ((at ?? 0) >= (acc.newestAt ?? 0)) {
+      acc = { payload: tip, newestAt: at, folds: new Map() };
+      byId.set(id, acc);
+    } else if ((at ?? 0) >= (acc.newestAt ?? 0)) {
+      // Compared against the NEWEST ROW SEEN, tracked separately from any
+      // merged timestamp on purpose. Comparing against the accumulated value —
+      // which is the OLDEST — meant that once two rows had folded together,
+      // any third row beat the accumulator on a timestamp it never had:
+      // [closure@9000, live@1000, changed@5000] elected `changed` and dropped
+      // the closure. Two rows behaved correctly; three did not.
       acc.payload = tip;
       acc.newestAt = at ?? acc.newestAt;
     }
-    acc.oldestAt = minDefined(acc.oldestAt, at);
-    acc.strikes = Math.max(acc.strikes, strikesOf(tip));
-    acc.firstSuppressedAt = minDefined(acc.firstSuppressedAt, numeric(tip?.firstSuppressedAt));
+    const story = storyOf(tip);
+    const fold = acc.folds.get(story) ?? emptyFold();
+    fold.oldestAt = minDefined(fold.oldestAt, at);
+    fold.strikes = Math.max(fold.strikes, strikesOf(tip));
+    fold.firstSuppressedAt = minDefined(fold.firstSuppressedAt, numeric(tip?.firstSuppressedAt));
+    acc.folds.set(story, fold);
   }
 
   return [...byId.values()].map((acc) => {
     const merged = { ...acc.payload };
-    // A CLOSURE keeps its own clock and a clean ledger.
+    // Budget — the age anchor and the strike ledger — is inherited only from
+    // rows telling the SAME story as the winning payload.
     //
-    // The oldest-timestamp rule exists to stop a re-rolled duplicate of the
-    // SAME story from refreshing its clock. A closure is not that: it is a
-    // different, terminal story that merely shares `to_<offerId>`. Handing it
-    // the live rows' age budget would let a callback minted seconds ago be
-    // dropped as `expired` in the same pass — dedupe runs at the queue read,
-    // the expiry filter immediately after it, so a live row at 6d23h kills the
-    // closure within the hour. Inherited strikes do the same via `spiked`.
-    // Either way OFFER_CLOSED_KEY was written at enqueue, so it never returns.
-    if (merged.leadKind === 'closure') return merged;
-    if (acc.strikes > 0) merged.suppressedStrikes = acc.strikes;
-    if (typeof acc.firstSuppressedAt === 'number') merged.firstSuppressedAt = acc.firstSuppressedAt;
-    if (typeof acc.oldestAt === 'number') merged.submittedAt = acc.oldestAt;
+    // The oldest-timestamp rule exists to stop a re-rolled duplicate of one
+    // story refreshing its clock, so a fresh CLOSURE must not inherit the live
+    // rows' remaining budget: dedupe runs at the queue read with the expiry
+    // and strike filter immediately behind it, so a closure merged onto a row
+    // at 6d23h is dropped as `expired` within the hour, or as `spiked` at two
+    // inherited strikes, and OFFER_CLOSED_KEY was written at enqueue so it
+    // never returns.
+    //
+    // But two CLOSURES under one id ARE the same story, and they are reachable
+    // — the `sadd(OFFER_CLOSED_KEY)` guarding re-detection is warn-only and
+    // the tip is pushed regardless, so a failed write (or a lapsed 30-day TTL)
+    // re-enqueues one on the next scan. Exempting those from the fold too let
+    // each duplicate relaunder the clock and the ledger, so a closure the
+    // quality gate kept suppressing would never age out at all — strictly
+    // worse than the 7 days it had before any of this.
+    const fold = acc.folds.get(acc.payload?.leadKind === 'closure' ? 'closure' : 'live') ?? {
+      oldestAt: undefined,
+      strikes: 0,
+      firstSuppressedAt: undefined,
+    };
+    if (fold.strikes > 0) merged.suppressedStrikes = fold.strikes;
+    if (typeof fold.firstSuppressedAt === 'number') merged.firstSuppressedAt = fold.firstSuppressedAt;
+    if (typeof fold.oldestAt === 'number') merged.submittedAt = fold.oldestAt;
     return merged;
   });
 }
+
 

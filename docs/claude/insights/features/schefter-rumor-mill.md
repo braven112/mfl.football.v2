@@ -68,6 +68,18 @@ of the SAME story refreshing its clock — a closure is a different story wearin
 the same id, so it keeps its own. Worth asking of any dedupe: does every row
 sharing this key tell the same story?
 
+**And then the exemption itself wants scoping.** Written as "a closure keeps
+its own clock", it also exempted a closure from folding with ANOTHER closure —
+reachable, because the `sadd` that stops re-detection is warn-only and the tip
+ships regardless. Each duplicate then relaundered the clock and the strike
+ledger, so a suppressed closure would never age out at all: strictly worse than
+the seven days it had before any dedupe existed. The rule that survives is
+narrower than either draft — **budget is inherited only from rows telling the
+same story** — and the shape generalizes: an exemption defined against a class
+("not from a live row") is safer than one defined by a property of the
+exempt thing ("closures are exempt"), because the second one silently covers
+the same-class case nobody pictured.
+
 **A merge that writes onto its input makes the function answer differently the
 second time.** Folding the merged `submittedAt` onto the kept row leaves both
 duplicates sharing a timestamp, and the newest-wins comparison then resolves

@@ -251,6 +251,36 @@ describe('tip-queue dedupe — one row per tip id', () => {
     expect(kept.firstSuppressedAt).toBeUndefined();
   });
 
+  it('folds TWO closures together — the exemption is cross-story, not blanket', () => {
+    // Two closure rows under one id are reachable: the sadd(OFFER_CLOSED_KEY)
+    // guarding re-detection is warn-only and the tip is pushed regardless, so
+    // a failed write (or a lapsed 30-day TTL) re-enqueues one next scan.
+    // Exempting those from the fold too let each duplicate relaunder the clock
+    // and the ledger, so a closure the quality gate kept suppressing would
+    // never age out — strictly worse than the 7 days it had before any of this.
+    const older = {
+      id: 'to_1080',
+      source: 'trade_offer',
+      text: '',
+      submittedAt: 1_000,
+      leadKind: 'closure',
+      suppressedStrikes: 2,
+      firstSuppressedAt: 50,
+    };
+    const requeued = {
+      id: 'to_1080',
+      source: 'trade_offer',
+      text: '',
+      submittedAt: 900_000,
+      leadKind: 'closure',
+    };
+    const [kept] = dedupeTipsById([older, requeued]);
+    expect(kept.leadKind).toBe('closure');
+    expect(kept.submittedAt).toBe(1_000);
+    expect(kept.suppressedStrikes).toBe(2);
+    expect(kept.firstSuppressedAt).toBe(50);
+  });
+
   it('does NOT hand a live re-roll its own clock — only a closure is exempt', () => {
     // The exemption is for a terminal story sharing an id, never for another
     // copy of the same live one; otherwise the 7-day expiry stops biting.
