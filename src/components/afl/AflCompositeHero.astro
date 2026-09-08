@@ -19,10 +19,12 @@
  * always worked rather than to an empty flank.
  */
 import type { EventHeroView } from '../../utils/afl-hero-resolver';
+import { LEAGUES } from '../../config/leagues';
 import { getNflTeamColors } from '../../utils/nfl-team-colors';
 import { normalizeTeamCode } from '../../utils/nfl-logo';
 import { resolveHeroCrest, resolveHeroFranchiseSkin } from '../../utils/hero-crest';
 import CompositeHero from '../shared/CompositeHero.astro';
+import '../../styles/whats-new-hero-shot.css';
 
 interface Props {
   view: EventHeroView;
@@ -31,12 +33,34 @@ interface Props {
 
 const { view, regionLabel } = Astro.props;
 const treatment = view.composite!;
-const model = view.model!;
+const model = view.model ?? null;
 
-const teamCode = normalizeTeamCode(model.nflTeam);
+/**
+ * A What's New entry's own screenshot is the art, exactly as it is on
+ * TheLeague's feature composite — the feature IS the picture, and a player
+ * cutout over it would cover the thing being announced. So this is the one
+ * state that can render with no cast model at all: `castAflHeroModel` casts a
+ * player for a feature ONLY when the entry names one, and an entry that names
+ * nobody still has a screenshot worth showing.
+ *
+ * Theme pair and frame URL follow AflEventHero's rules rather than a second
+ * set: same `-dark` filename convention from capture-whats-new-screenshots.mjs,
+ * same registry-derived domain (never a hardcoded one).
+ */
+const shotSrc = view.screenshot ? `/assets/whats-new/${view.screenshot}` : null;
+const shotDarkSrc = shotSrc ? shotSrc.replace(/\.(\w+)$/, '-dark.$1') : null;
+const aflLeague = LEAGUES['afl-fantasy'];
+const shotFrameUrl = view.link
+  ? `${aflLeague.domains[0]}${view.link.replace(`/${aflLeague.slug}`, '')}`
+  : aflLeague.domains[0];
+// The model wins when there is one: a named player is a deliberate casting
+// choice by whoever wrote the entry, and the screenshot is the fallback art.
+const artMode: 'model' | 'shot' | 'logo' = model ? 'model' : shotSrc ? 'shot' : 'logo';
+
+const teamCode = model ? normalizeTeamCode(model.nflTeam) : '';
 // `modelAccent` is the viewer's own franchise colour when their conference
 // rosters this player (see hero-franchise-accent.ts); otherwise his NFL team's.
-const glowColor = view.modelAccent || getNflTeamColors(teamCode).primary;
+const glowColor = view.modelAccent || (model ? getNflTeamColors(teamCode).primary : undefined);
 
 // The watermark: the viewer's own club when their conference rosters this
 // player (the same franchise `modelAccent` took its colour from, so the glow
@@ -44,7 +68,7 @@ const glowColor = view.modelAccent || getNflTeamColors(teamCode).primary;
 const crest = resolveHeroCrest({
   franchiseId: view.modelFranchiseId,
   league: 'afl-fantasy',
-  nflTeam: model.nflTeam,
+  nflTeam: model?.nflTeam ?? null,
 });
 
 // A TEAM event wears the owning club's colours; a league event (both conference
@@ -55,18 +79,23 @@ const franchise =
 // The AFL's crest stands in when the ESPN cutout 404s — same silhouette rule as
 // TheLeague's composites, different mark.
 const LOGO = '/assets/logos/afl-logo-dark.svg';
+
+// `crest` is passed only in model mode: behind a browser-framed screenshot a
+// watermark reads as smudge rather than as a mark.
 ---
 
 <CompositeHero
+  class="fch"
   ariaLabel={regionLabel}
   accent={treatment.accent}
   tone={treatment.tone ?? null}
   wordmark={treatment.wordmark}
-  crest={crest}
+  crest={artMode === 'model' ? crest : null}
   franchise={franchise}
-  model={model}
+  artSlot={artMode === 'shot'}
+  model={artMode === 'model' ? model : null}
   glowColor={glowColor}
-  logoArt={LOGO}
+  logoArt={artMode === 'logo' ? LOGO : undefined}
   pill={view.pill}
   title={view.headline}
   titleAccent={view.accentWord}
@@ -95,6 +124,48 @@ const LOGO = '/assets/logos/afl-logo-dark.svg';
       </a>
     )}
   </div>
+
+  {artMode === 'shot' && shotSrc && (
+    <Fragment slot="art">
+      <div class="fch__shot" aria-hidden="true">
+        <div class="fch__shot-bar">
+          <span class="fch__shot-dot fch__shot-dot--red"></span>
+          <span class="fch__shot-dot fch__shot-dot--yellow"></span>
+          <span class="fch__shot-dot fch__shot-dot--green"></span>
+          <span class="fch__shot-url">{shotFrameUrl}</span>
+        </div>
+        {/* Both halves ship lazy and CSS shows the one matching the theme —
+            SSR cannot know which that is.
+
+            The two failures are NOT the same and must not share a handler.
+            A missing LIGHT capture means there is no screenshot at all, so
+            `fch--no-shot` drops the frame and reveals the league mark. A
+            missing DARK one is only a missing VARIANT — the light capture is
+            still perfectly readable — so `fch__shot--no-dark` tells the
+            stylesheet to show the light half in dark mode instead. Wiring both
+            to the light handler (as this first shipped) throws away a good
+            screenshot because its optional sibling is absent.
+            Pinned by tests/feature-shot-fallback.test.ts, across both leagues. */}
+        <img
+          class="fch__shot-img fch__shot-img--light"
+          src={shotSrc}
+          alt=""
+          loading="lazy"
+          decoding="async"
+          onerror="this.closest('.fch').classList.add('fch--no-shot')"
+        />
+        <img
+          class="fch__shot-img fch__shot-img--dark"
+          src={shotDarkSrc}
+          alt=""
+          loading="lazy"
+          decoding="async"
+          onerror="this.closest('.fch__shot').classList.add('fch__shot--no-dark')"
+        />
+      </div>
+      <img class="fch__shot-logo" src={LOGO} alt="" aria-hidden="true" loading="lazy" />
+    </Fragment>
+  )}
 
   {/* The conference drafts carry these: the sibling conference's live board
       while it is actually drafting, and the draft order once the CTA has been

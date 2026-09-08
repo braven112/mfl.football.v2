@@ -451,6 +451,13 @@ const EVENT_VIEW: Record<string, ViewBuilder> = {
       link: '/afl-fantasy/lineup',
       linkLabel: 'Set Lineup',
       icon: 'nfl',
+      // Kickoff belongs to the whole league — everyone's season starts at the
+      // same whistle — so it keeps the AFL's navy rather than any one club's,
+      // and takes the urgency tone on the night itself. The face is still
+      // YOURS (see afl-hero-casting: your likely starter in the first game you
+      // play in); a league event can cast a personal player without becoming
+      // a team event, which is the whole point of `scope`.
+      composite: { wordmark: 'KICKOFF', accent: 'navy', tone: days === 0 ? 'red' : null, scope: 'league' },
       accent: ACCENT_GOLD,
       glow: 'rgba(196,30,58,.5)',
       player: randomHeroPlayer(now),
@@ -614,6 +621,9 @@ export function gameDayPreviewSlotView({ now, week, lineupSubmitted }: SlotConte
       link: '/afl-fantasy/sunday-ticket',
       linkLabel: 'BUILD YOUR SUNDAY',
       icon: 'nfl',
+      // YOUR starters on YOUR multiview — a team story, so a signed-in owner's
+      // card takes their club's colours and crest.
+      composite: { wordmark: 'SUNDAY\u00a0TICKET', accent: 'navy', tone: null, scope: 'team' },
       accent: ACCENT_GREEN,
       glow: GLOW_GREEN,
       player: randomHeroPlayer(now),
@@ -629,6 +639,8 @@ export function gameDayPreviewSlotView({ now, week, lineupSubmitted }: SlotConte
     link: '/afl-fantasy/lineup',
     linkLabel: 'SET LINEUP',
     icon: 'clipboard',
+    // Your lineup, your deadline: a team event.
+    composite: { wordmark: 'GAME\u00a0DAY', accent: 'gold', tone: null, scope: 'team' },
     accent: ACCENT_AMBER,
     glow: GLOW_AMBER,
     player: randomHeroPlayer(now),
@@ -688,6 +700,10 @@ const SLOT_VIEW: Record<SlotKey, (ctx: SlotContext) => EventHeroView> = {
     link: '/afl-fantasy/news',
     linkLabel: 'READ THE RECAP',
     icon: 'commenting',
+    // The recap's headline IS a franchise's week — the top scorer is cast
+    // deterministically and the card wears the club that rosters him, exactly
+    // as TheLeague's recap composite does.
+    composite: { wordmark: 'RECAP', accent: 'recap', tone: null, scope: 'team' },
     accent: ACCENT_GOLD,
     glow: GLOW_NAVY,
     player: randomHeroPlayer(now),
@@ -740,6 +756,12 @@ const SLOT_VIEW: Record<SlotKey, (ctx: SlotContext) => EventHeroView> = {
       link: entry ? (entry.link ?? `/afl-fantasy/whats-new/${entry.id}`) : undefined,
       linkLabel: (entry?.linkLabel ?? (entry?.link ? 'CHECK IT OUT' : 'READ THE FULL STORY')).toUpperCase(),
       icon: entry?.icon ?? 'news',
+      // A site announcement belongs to nobody, so it stays in the league's own
+      // navy however it is cast — a feature that names a player still is not
+      // that player's team's story. The screenshot is the art when there is
+      // one (see AflCompositeHero), which is why this state is the only one
+      // allowed through the router without a cast model.
+      composite: { wordmark: "WHAT'S\u00a0NEW", accent: 'navy', tone: null, scope: 'league' },
       accent: ACCENT_GOLD,
       glow: GLOW_GOLD,
       // The feature's own screenshot is the art; the random player webp is

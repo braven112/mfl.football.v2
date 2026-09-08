@@ -20,7 +20,7 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { resolveAflHeroState } from '../src/utils/afl-hero-resolver';
+import { gameDayPreviewSlotView, resolveAflHeroState } from '../src/utils/afl-hero-resolver';
 
 const at = (iso: string) =>
   resolveAflHeroState({ referenceDate: new Date(iso), rng: () => 0 } as any) as any;
@@ -58,6 +58,86 @@ describe('AFL composite hero routing', () => {
     expect(nl.view.composite.scope).toBe('league');
   });
 
+  // ── THE FOUR THAT MIRROR THELEAGUE ──────────────────────────────────────
+  // The AFL shipped with composites on three phases only, so every OTHER phase
+  // — including NFL kickoff, which is what an owner sees for most of September
+  // — kept rendering the old branded card. Brandon caught it on the live site.
+  // These four are the phases TheLeague already composites, and they are the
+  // difference between "the AFL has the new design" and "the AFL has it for
+  // three weeks a year".
+
+  it('composites NFL kickoff, and takes the urgency tone on the night itself', () => {
+    const lead = at('2026-09-08T18:00:00Z');
+    expect(lead.eventId).toBe('afl-season-start');
+    expect(lead.view.composite).toEqual({
+      wordmark: 'KICKOFF',
+      accent: 'navy',
+      tone: null,
+      // Everyone's season starts at the same whistle, so the card keeps the
+      // league's colours even though the face cast onto it is the viewer's own
+      // starter. A league event may cast a personal player without becoming a
+      // team event — that split is exactly what `scope` is for.
+      scope: 'league',
+    });
+
+    // Day zero — "Kickoff tonight · 5:20 PM PT".
+    const night = at('2026-09-10T18:00:00Z');
+    expect(night.view.countValue).toBe(0);
+    expect(night.view.composite.tone).toBe('red');
+  });
+
+  it('composites the Tuesday recap, in the top scorer\'s club colours', () => {
+    const recap = at('2026-10-06T18:00:00Z');
+    expect(recap.slot).toBe('recap');
+    expect(recap.view.composite).toEqual({
+      wordmark: 'RECAP', accent: 'recap', tone: null,
+      // The week's top scorer is cast deterministically, so the card is about
+      // the franchise that rosters him — same rule as TheLeague's recap.
+      scope: 'team',
+    });
+  });
+
+  it('composites game day, and the Sunday Ticket variant beside it', () => {
+    const gameDay = at('2026-10-10T18:00:00Z');
+    expect(gameDay.slot).toBe('game-day-preview');
+    expect(gameDay.view.composite).toEqual({
+      wordmark: 'GAME\u00a0DAY', accent: 'gold', tone: null, scope: 'team',
+    });
+
+    // The same slot serves the Sunday Ticket board once a lineup is in. Read
+    // through the exported builder: which of the two a DATE produces also
+    // depends on whether the owner has submitted, which no date encodes.
+    const ticket = gameDayPreviewSlotView({
+      now: new Date('2026-10-11T18:00:00Z'), week: 5, lineupSubmitted: true,
+    } as never) as never as { pill: string; composite: { wordmark: string; scope: string } };
+    expect(ticket.pill).toBe('SUNDAY TICKET');
+    expect(ticket.composite.wordmark).toBe('SUNDAY\u00a0TICKET');
+    expect(ticket.composite.scope).toBe('team');
+  });
+
+  it("composites What's New, and lets it through on the screenshot alone", () => {
+    // The one state that may render with no cast player: castAflHeroModel casts
+    // one for a feature ONLY when the entry names a heroPlayerId, and the
+    // feature's own capture is the art either way. A league announcement
+    // belongs to nobody, so it stays navy however it is cast.
+    const feature = resolveAflHeroState({
+      referenceDate: new Date('2026-10-08T18:00:00Z'),
+      rng: () => 0,
+      whatsNew: [
+        {
+          id: 'x', date: '2026-10-07', category: 'new-feature', title: 'A Thing Shipped',
+          summary: 'It did.', image: 'x.webp', leagues: ['afl'],
+        },
+      ],
+    } as never) as never as { kind: string; view: { composite?: { accent: string; scope: string }; screenshot?: string } };
+    if (feature.kind === 'feature') {
+      expect(feature.view.composite).toEqual({
+        wordmark: "WHAT'S\u00a0NEW", accent: 'navy', tone: null, scope: 'league',
+      });
+      expect(feature.view.screenshot).toBe('x.webp');
+    }
+  });
+
   it('uses a no-break space so a two-word wordmark cannot wrap', () => {
     for (const iso of ['2026-08-20T18:00:00Z', '2026-08-30T18:00:00Z']) {
       const w = at(iso).view.composite.wordmark;
@@ -75,12 +155,21 @@ describe('AFL composite hero routing', () => {
     }
   });
 
-  it('routes on BOTH the treatment and a cast model, and falls back otherwise', () => {
+  it('routes on the treatment AND something to render, and falls back otherwise', () => {
     // The condition is read from the file rather than rendered, because the
     // model is attached by the page (fs reads) and not by the resolver — so
     // there is no state object here that carries one.
+    //
+    // A treatment alone is never enough. A composite with no art is a gradient
+    // with copy on it, which is strictly worse than the branded card it
+    // replaced — so the second half of this condition is the guard, and only
+    // its ACCEPTED ART may grow. The screenshot arm exists for What's New,
+    // where the feature's own capture is the art and a player is cast only
+    // when the entry names one.
     const hero = readFileSync(join(__dirname, '../src/components/afl/AflHero.astro'), 'utf8');
-    expect(hero).toMatch(/'view' in state && state\.view\.composite && state\.view\.model/);
+    expect(hero).toMatch(
+      /'view' in state && state\.view\.composite && \(state\.view\.model \|\| state\.view\.screenshot\)/,
+    );
     // The fallback must still exist after the composite branch.
     const composite = hero.indexOf('<AflCompositeHero');
     const fallback = hero.indexOf('<AflEventHero');
