@@ -258,9 +258,15 @@ describe('readPendingWaiverPlayerIds — "could not verify" is not "nothing ther
     // Without this pattern the page classified as "no complaint", the roster
     // read-back then reported the player missing, and the owner got the generic
     // "MFL did not add the player" for a cause MFL had named outright.
-    expect(ROUTE_CODE).toMatch(/Cannot Be \(\?:Added\|Dropped\)/);
+    expect(ROUTE_CODE).toMatch(/Cannot Be \(\?:Added\|Dropped\) Because/);
     // Captured with the leading characters, or the sentence loses its subject.
     expect(ROUTE_CODE).toMatch(/\[\^<>\]\{0,\d+\}Cannot Be/);
+    // SCOPED TO THE IMMEDIATE PATH. The queued path posts one request per claim
+    // in a loop, and any complaint match aborts the rest of the board — so a
+    // pattern that false-positives on the re-rendered page (which carries the
+    // whole free agent listing, not just MFL's prose) would strand claims 2..n
+    // after claim 1 was already filed. FCFS sends one write and has no board.
+    expect(ROUTE_CODE).toMatch(/immediate\s*\n?\s*\?\s*\[\.\.\.text\.matchAll\(\/\[\^<>\]/);
   });
 
   it('sends the BID with a blind-bid claim, and only for a blind-bid league', () => {
@@ -333,6 +339,44 @@ describe('readPendingWaiverPlayerIds — "could not verify" is not "nothing ther
     // But an unaffirmed write whose read-back shows nothing is still a failure.
     expect(ROUTE_CODE).toMatch(/canDiff && unconfirmed\.length > 0/);
     expect(ROUTE_CODE).toMatch(/stored !== null && missing\.length > 0/);
+  });
+
+  it('reads the roster back CACHE-BUSTED, and twice before calling a pickup a miss', () => {
+    // Every other MFL read in this route carries `_=Date.now()`. `getRosters()`
+    // is the one that does not — its URL is byte-identical on every call, so
+    // anything between the route and MFL may answer from a copy taken before
+    // the write. That was harmless while the FCFS write never landed. Once it
+    // does, a stale or lagging read turns a SUCCESSFUL pickup into "Nothing was
+    // recorded — try again", in the one window where the owner will try again.
+    const fcfs = ROUTE_CODE.slice(
+      ROUTE_CODE.indexOf('if (immediate) {', ROUTE_CODE.indexOf('let stored')),
+      ROUTE_CODE.indexOf("mode: 'fcfs'")
+    );
+    expect(fcfs).toMatch(/TYPE=rosters[^`]*_=\$\{Date\.now\(\)\}/);
+    expect(fcfs, 'the read-back must not go through the un-busted client')
+      .not.toContain('getRosters()');
+    // One retry, on the failure path only, for MFL trailing its own write.
+    expect(fcfs).toMatch(/setTimeout/);
+  });
+
+  it('shows the confirm link AFTER the error, because showError re-hides it', () => {
+    // `showError` clears the previous attempt by setting `confirmBox.hidden =
+    // true`, so calling showConfirmLink first renders the link and then hides it
+    // again — the whole "hand them MFL's page on a failure" addition, silently
+    // inert. Ordering is the feature here.
+    const modal = fs.readFileSync(
+      path.join(process.cwd(), 'src/components/shared/WaiverClaimModal.astro'),
+      'utf-8'
+    );
+    const branch = modal.slice(
+      modal.indexOf('if (!res.ok || !data.success)'),
+      modal.indexOf('waiver-claims:changed')
+    );
+    expect(branch).toContain('showConfirmLink(data.confirmUrl)');
+    expect(
+      branch.indexOf('showError('),
+      'showError must run BEFORE showConfirmLink on the failure path'
+    ).toBeLessThan(branch.indexOf('showConfirmLink('));
   });
 
   it('hands the owner MFL\'s own page on a FAILED write, not only a successful one', () => {

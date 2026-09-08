@@ -408,15 +408,25 @@ export const POST: APIRoute = async ({ request }) => {
       // EVERY occurrence is collected, not the first: MFL emits one line per
       // problem and the second line is usually the actionable one.
       //
-      // `Cannot Be Added/Dropped` joins them for the FCFS path. An INSTANT add
-      // has refusals a queued claim does not — the headline one being a locked
-      // player, which MFL states with the player's own name in front of it:
+      // `Cannot Be Added/Dropped` joins them ON THE IMMEDIATE PATH ONLY. An
+      // INSTANT add has refusals a queued claim does not — the headline one
+      // being a locked player, which MFL states with the player's own name in
+      // front of it:
       //   "Okonkwo, Chigoziem WAS TE Cannot Be Added Because Is Locked."
       // so the leading characters are captured too, or the sentence loses the
       // subject and reads as being about nobody.
+      //
+      // Scoped, because the queued path posts ONE REQUEST PER CLAIM in a loop
+      // and any match here aborts the rest of the board. A new pattern that
+      // false-positives on the re-rendered page — which carries the whole free
+      // agent listing, not just MFL's complaint — would strand claims 2..n
+      // after claim 1 had already been filed. The FCFS path sends exactly one
+      // write, so it has no board to strand.
       const complaints = [
         ...[...text.matchAll(/Cannot Save Request:[^<]*/gi)].map((m) => m[0]),
-        ...[...text.matchAll(/[^<>]{0,60}Cannot Be (?:Added|Dropped)[^<]*/gi)].map((m) => m[0]),
+        ...(immediate
+          ? [...text.matchAll(/[^<>]{0,60}Cannot Be (?:Added|Dropped) Because[^<]*/gi)].map((m) => m[0])
+          : []),
         ...[...text.matchAll(/Transaction Would Create[^<]*/gi)].map((m) => m[0]),
         ...[...text.matchAll(/Exceeds League Limit[^<]*/gi)].map((m) => m[0]),
       ]
@@ -463,13 +473,43 @@ export const POST: APIRoute = async ({ request }) => {
     if (immediate) {
       // An FCFS add lands on the ROSTER, not in pendingWaivers — checking the
       // wrong list would report every successful pickup as unconfirmed.
-      try {
-        const fresh = await createMFLApiClient({ leagueId, year: String(year), mflUserId: user.id }).getRosters();
-        stored = user.franchiseId in fresh
-          ? ((fresh[user.franchiseId] as any[]) ?? []).map((p: any) => String(p.id ?? p))
-          : null;
-      } catch {
-        stored = null;
+      //
+      // READ IT CACHE-BUSTED, AND READ IT TWICE BEFORE CALLING IT A MISS. Every
+      // other MFL read in this route carries `_=Date.now()`; `getRosters()` is
+      // the one that does not, so its URL is byte-identical on every call and
+      // anything between here and MFL is free to answer from a copy taken
+      // before the write. That did not matter while the write never landed. It
+      // matters now: a stale or lagging read turns a SUCCESSFUL pickup into
+      // "Nothing was recorded — try again", in the one window where the owner
+      // will absolutely try again.
+      const readMyRoster = async (): Promise<string[] | null> => {
+        try {
+          const res = await mflFetch({
+            url: `https://api.myfantasyleague.com/${year}/export?TYPE=rosters&L=${leagueId}&FRANCHISE=${user.franchiseId}&JSON=1&_=${Date.now()}`,
+            method: 'GET',
+            mflUserCookie: user.id,
+          });
+          const franchises = (await res.json())?.rosters?.franchise;
+          const list = Array.isArray(franchises) ? franchises : franchises ? [franchises] : [];
+          const mineNow = list.find((f: any) => String(f?.id) === String(user.franchiseId));
+          if (!mineNow) return null;
+          const players = Array.isArray(mineNow.player)
+            ? mineNow.player
+            : mineNow.player
+              ? [mineNow.player]
+              : [];
+          return players.map((p: any) => String(p?.id ?? p));
+        } catch {
+          return null;
+        }
+      };
+      stored = await readMyRoster();
+      // One retry, and only when the answer would be a hard failure — MFL's
+      // export can trail its own write by a beat. Bounded and on the failure
+      // path only, so a normal pickup pays nothing for it.
+      if (stored !== null && !stored.includes(String(claims![0].addPlayerId))) {
+        await new Promise((r) => setTimeout(r, 900));
+        stored = (await readMyRoster()) ?? stored;
       }
       await bustRosterCaches(String(year), leagueId);
       // Verify ONLY what was actually written. The FCFS branch above sends a
