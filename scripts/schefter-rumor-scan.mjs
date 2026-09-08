@@ -31,6 +31,12 @@
  *   3. schefter:rumor:posts_today < MAX_POSTS_PER_DAY (the SHARED budget)
  *   3b. schefter:rumor:mill_posts_today < the rumor mill's own cap — 1/day
  *       while a season is being played, MAX_POSTS_PER_DAY in the offseason
+ *
+ *   Gates 3, 3b and 4 are CHAT budgets. Since 2026-09-08 a cycle whose tips
+ *   are all from the trade lanes (trade_offer / trade_bait) continues past
+ *   them as a FEED-ONLY cycle: it writes the report and pushes, and reaches
+ *   GroupMe only a few times a week via resolveTradeChatPing. See
+ *   scripts/lib/schefter-trade-distribution.mjs.
  *       and in each league's trade-deadline run-up. See
  *       scripts/lib/schefter-rumor-cadence.mjs.
  *   4. If posts_today >= 1, last post must be > MIN_SPACING_MS ago
@@ -94,6 +100,16 @@ import {
   rumorMillCapReason,
   rumorMillDailyCap,
 } from './lib/schefter-rumor-cadence.mjs';
+import {
+  isTradeLaneBatch,
+  isTradeLaneTip,
+  resolveTradeChatPing,
+  tradeChatAllowanceReason,
+  tradeChatWeeklyAllowance,
+  tradeLaneMayBypass,
+  recentChatPings,
+  TRADE_CHAT_WINDOW_MS,
+} from './lib/schefter-trade-distribution.mjs';
 import { assetShapeOf, tradeSignatureOf } from './lib/schefter-offer-beats.mjs';
 import { buildSeedFromProposal, writeSeed } from './lib/speculation-seeds.mjs';
 import {
@@ -211,6 +227,19 @@ const RUMOR_MILL_POSTS_TODAY_KEY = schefterKey(NAV_SLUG, 'rumor:mill_posts_today
 // BUDGET-ON-DELIVERY sentinel for why the two are separate counters.
 const RUMOR_GEN_ATTEMPTS_TODAY_KEY = schefterKey(NAV_SLUG, 'rumor:gen_attempts_today');
 const RUMOR_LAST_POST_TS_KEY = schefterKey(NAV_SLUG, 'rumor:last_post_ts');
+// The trade lane's own two keys, added with the feed/chat split (2026-09-08).
+//
+// `trade_chat_log` is a JSON array of the epoch-ms timestamps of past trade
+// CHAT pings — a rolling 7-day window rather than a midnight-reset counter,
+// because "a few a week" has to mean the last seven days and not "whatever
+// fits before Sunday". Trimmed on every write.
+//
+// `trade_feed_posts_today` counts feed-only trade beats. It is pure
+// observability: nothing reads it as a gate, and that is the point — the
+// trade feed lane deliberately has no daily ceiling, so the only way to know
+// how loud it actually got is to count it.
+const RUMOR_TRADE_CHAT_LOG_KEY = schefterKey(NAV_SLUG, 'rumor:trade_chat_log');
+const RUMOR_TRADE_FEED_POSTS_TODAY_KEY = schefterKey(NAV_SLUG, 'rumor:trade_feed_posts_today');
 const FIRST_TIP_TS_KEY = schefterKey(NAV_SLUG, 'tips:first_tip_ts');
 const TIPS_QUEUE_KEY = schefterKey(NAV_SLUG, 'tips:queue');
 const TIPS_PROCESSED_KEY = schefterKey(NAV_SLUG, 'tips:processed');
@@ -276,12 +305,22 @@ const OFFER_STATE_TTL_SEC = 30 * 24 * 60 * 60;       // 30d on first_seen / expo
 const OFFER_LAST_ROLL_DATE_KEY = schefterKey(NAV_SLUG, 'trade_offers:last_roll_date');
 const OFFER_LAST_POST_KEY = schefterKey(NAV_SLUG, 'trade_offers:last_post');
 
-// An offer that has already been reported goes quiet for a week. Chosen to sit
-// just past the 7-day tip expiry: nearly every proposal dies inside the window,
-// so in practice a given offer is reported once. The ones that survive it are
-// genuinely still on the table a week later, and "this is somehow STILL
-// sitting there" is a new story rather than a repeat of the old one.
-const OFFER_REPOST_COOLDOWN_MS = 7 * 24 * 60 * 60 * 1000;
+// An offer that has already been reported goes quiet for three days.
+//
+// It sat just PAST the 7-day tip expiry until 2026-09-08, which meant nearly
+// every proposal died inside the window and was reported exactly once. That is
+// the right shape for a lane that pings the whole group chat; it is the wrong
+// shape for a report page, where a live negotiation is a story owners want to
+// follow — the ask changing, a third desk calling, the thing still sitting
+// there — and one post per proposal per lifetime cannot tell it. Three days
+// gives a week-long proposal room for a second and maybe a third beat while
+// still making a same-day repeat impossible, which is the failure that
+// started all of this (the same offer twice, 7.5 hours apart).
+//
+// The drip in scripts/lib/schefter-offer-beats.mjs is what keeps those later
+// beats from being the same post again: every signal leads on the ONE fact
+// that is new. If that layer is ever removed, this constant goes back to 7d.
+const OFFER_REPOST_COOLDOWN_MS = 3 * 24 * 60 * 60 * 1000;
 
 // Permanent archive of every offer the scanner has ever ingested. Distinct
 // from `first_seen` because we want the running total to outlive the 30-day
@@ -326,9 +365,15 @@ const MAX_POSTS_PER_DAY = 3;
 // LLM safety valve: max generation cycles per day, counted whether the
 // beat ships or gets suppressed. Posting budgets count delivered posts
 // only, so without this an all-suppressed day would re-generate on every
-// 15-min cron tick (~64 LLM rounds). Generous by design — 4× the posting
-// cap — because it exists to stop runaway spend, not to shape cadence.
-const MAX_GEN_ATTEMPTS_PER_DAY = 12;
+// 15-min cron tick (~64 LLM rounds). Generous by design, because it exists
+// to stop runaway spend, not to shape cadence — and it has to stay generous
+// now that it is the ONLY per-day ceiling the trade lane meets. Before the
+// feed/chat split a cycle over the posting cap returned at gate 2 without
+// generating; a feed-only trade cycle runs past that gate, so attempts it
+// never used to spend land here. Raised 12 -> 20 for exactly that, and it
+// must not be re-read as a cadence dial: tightening it does not quiet the
+// chat, it just truncates the day at an arbitrary hour.
+const MAX_GEN_ATTEMPTS_PER_DAY = 20;
 const MAX_GOSSIP_POSTS_PER_DAY = 1;
 const MAX_GOSSIP_POSTS_PER_DAY_ADAPTIVE = 2;
 const GOSSIP_BOOST_QUEUE_DEPTH = 6;
@@ -1350,11 +1395,21 @@ async function pushRumor(post) {
  *
  * Takes the POST as well as the composed chat text: the group chat gets a
  * single blob of body copy, but a push needs a headline, a link and a stable
- * tag. Rumors are held out of the chat entirely by the daily cap, so in
- * practice this function's real job is now the push.
+ * tag.
+ *
+ * THE PUSH IS UNCONDITIONAL, the chat is not. Push is opt-in per owner and
+ * per category (/<league>/notifications), so the owner who wants every trade
+ * rumor already has a switch that says so and the owner who does not has
+ * already used it. The group chat has no such switch — it is one room
+ * everybody is in — which is why `chat` is a decision the caller makes per
+ * beat rather than a default. See scripts/lib/schefter-trade-distribution.mjs.
  */
-async function postToGroupMe(text, post = null) {
+async function postToGroupMe(text, post = null, { chat = true } = {}) {
   await pushRumor(post);
+  if (!chat) {
+    log('  [GroupMe] Skipped — feed + push only for this beat');
+    return;
+  }
   const botId = SCHEFTER_LEAGUE.groupMeSchefterBotId;
   if (!botId) {
     warn('[rumor-scan] GROUPME_SCHEFTER_BOT_ID not set — skipping GroupMe (Roger is reserved for deadlines)');
@@ -1811,8 +1866,10 @@ export async function anonymizeTips(tips, teams, feedPosts = [], now = new Date(
 function pickPrimaryBucket(buckets, { gossipAllowedToday, now = new Date(), tipsterContext = null } = {}) {
   const tradeBuckets = buckets.filter((b) => b.kind === 'trade');
   if (tradeBuckets.length > 0) {
-    // Only one bucket key (trade:offer) maps to kind === 'trade' under the
-    // new classification, but sort defensively in case that ever changes.
+    // TWO bucket shapes now map to kind === 'trade': the single `trade:offer`
+    // bucket every live proposal shares, and one `topic:trade_bait:<fid>`
+    // bucket per franchise with something on the block. The sort is what picks
+    // between them, so it is load-bearing rather than defensive.
     tradeBuckets.sort((a, b) => bucketPriorityScore(b, now, tipsterContext) - bucketPriorityScore(a, now, tipsterContext));
     return { primary: tradeBuckets[0], secondary: null };
   }
@@ -3908,17 +3965,26 @@ function deriveHistorySubject(batch, anonymized) {
 
 // ── Gate checks ──
 
+/**
+ * Every refusal carries a `blockedBy` CODE as well as its prose reason.
+ *
+ * Three of these codes are chat budgets the trade lane is allowed to walk
+ * past as a feed-only cycle (see schefter-trade-distribution.mjs); the rest
+ * stop every lane. Matching on the prose instead would make the bypass list a
+ * function of log wording, so a copy-edit could silently open or close the
+ * trade lane.
+ */
 async function checkGates(redis, now, { exemptFromMillCap = false } = {}) {
   // 1. quiet hours
   if (isQuietHours(now)) {
-    return { ok: false, reason: `quiet hours (PT ${getPtHour(now)}:00) — holding queue` };
+    return { ok: false, blockedBy: 'quiet-hours', reason: `quiet hours (PT ${getPtHour(now)}:00) — holding queue` };
   }
 
   // 2. posts_today cap
   const postsTodayRaw = await redis.get(RUMOR_POSTS_TODAY_KEY);
   const postsToday = typeof postsTodayRaw === 'number' ? postsTodayRaw : parseInt(postsTodayRaw ?? '0', 10) || 0;
   if (postsToday >= MAX_POSTS_PER_DAY) {
-    return { ok: false, reason: `posts_today=${postsToday} — daily cap reached` };
+    return { ok: false, blockedBy: 'shared-budget', reason: `posts_today=${postsToday} — daily cap reached` };
   }
 
   // 2a. the rumor mill's OWN daily cap. Tighter than the shared budget while
@@ -3934,6 +4000,7 @@ async function checkGates(redis, now, { exemptFromMillCap = false } = {}) {
   } else if (millPostsToday >= millCap) {
     return {
       ok: false,
+      blockedBy: 'mill-cap',
       reason:
         `mill_posts_today=${millPostsToday} — rumor-mill cap ${millCap}/day ` +
         `(${rumorMillCapReason(LEAGUE_SLUG, now)})`,
@@ -3948,7 +4015,7 @@ async function checkGates(redis, now, { exemptFromMillCap = false } = {}) {
   const genAttemptsRaw = await redis.get(RUMOR_GEN_ATTEMPTS_TODAY_KEY);
   const genAttempts = typeof genAttemptsRaw === 'number' ? genAttemptsRaw : parseInt(genAttemptsRaw ?? '0', 10) || 0;
   if (genAttempts >= MAX_GEN_ATTEMPTS_PER_DAY) {
-    return { ok: false, reason: `gen_attempts_today=${genAttempts} — LLM safety valve (max ${MAX_GEN_ATTEMPTS_PER_DAY}/day)` };
+    return { ok: false, blockedBy: 'gen-attempts', reason: `gen_attempts_today=${genAttempts} — LLM safety valve (max ${MAX_GEN_ATTEMPTS_PER_DAY}/day)` };
   }
 
   // 3. spacing (only enforced once there has been a post today)
@@ -3959,6 +4026,7 @@ async function checkGates(redis, now, { exemptFromMillCap = false } = {}) {
     if (last && age < MIN_SPACING_MS) {
       return {
         ok: false,
+        blockedBy: 'spacing',
         reason: `last post was ${(age / 60000).toFixed(0)}m ago; need ${MIN_SPACING_MS / 60000}m spacing`,
       };
     }
@@ -3968,12 +4036,13 @@ async function checkGates(redis, now, { exemptFromMillCap = false } = {}) {
   const firstTipRaw = await redis.get(FIRST_TIP_TS_KEY);
   const firstTip = typeof firstTipRaw === 'number' ? firstTipRaw : parseInt(firstTipRaw ?? '0', 10) || 0;
   if (!firstTip) {
-    return { ok: false, reason: 'no first_tip_ts anchor — queue may be stale or API never pushed' };
+    return { ok: false, blockedBy: 'no-anchor', reason: 'no first_tip_ts anchor — queue may be stale or API never pushed' };
   }
   const marinated = now.getTime() - firstTip;
   if (marinated < MIN_MARINATE_MS) {
     return {
       ok: false,
+      blockedBy: 'marinate',
       reason: `tip marinated ${(marinated / 60000).toFixed(0)}m, needs ${MIN_MARINATE_MS / 60000}m`,
     };
   }
@@ -4143,7 +4212,7 @@ async function main() {
   // total time spent on hold. The strike/hold checks let Option A age out
   // a tip that the gate keeps rejecting without an LLM call ever firing.
   const now = new Date();
-  const freshTips = [];
+  let freshTips = [];
   const droppedTips = [];
   for (const t of parsedTips) {
     const age = now.getTime() - (t.submittedAt ?? 0);
@@ -4189,6 +4258,10 @@ async function main() {
   // prevent, so it gets the one exemption. Its own once-per-Friday done-key
   // still bounds it to a single extra post a week.
   let mailbagCandidate = false;
+  // Cleared by the feed-only trade fallback below: the mailbag is a sweep of
+  // owner-written GOSSIP tips, and those are exactly what a narrowed cycle
+  // just handed back to the queue.
+  let mailbagBatchAllowed = true;
   if (MAILBAG_EXEMPT_FROM_MILL_CAP && isFridayPt(now)) {
     try {
       mailbagCandidate = (await redis.get(FRIDAY_MAILBAG_DONE_KEY)) !== todayPtDate;
@@ -4203,19 +4276,52 @@ async function main() {
   }
 
   // Gate checks
-  const gates = await checkGates(redis, now, { exemptFromMillCap: mailbagCandidate });
+  let gates = await checkGates(redis, now, { exemptFromMillCap: mailbagCandidate });
+
+  // FEED-ONLY TRADE FALLBACK. Three of the gates above are CHAT budgets — the
+  // shared daily ping allowance, the mill's own daily cap, and the four-hour
+  // spacing. A trade beat no longer spends any of them (see
+  // scripts/lib/schefter-trade-distribution.mjs), so being blocked by one is
+  // not a reason to hold the story; it is a reason to publish it to the report
+  // without the ping. Quiet hours, the LLM valve and the marinate window still
+  // stop every lane, trade included.
+  //
+  // The cycle NARROWS to the trade lane when it takes this path: the gossip
+  // tips are the ones the chat budget was protecting, so they wait for a real
+  // slot rather than riding in on the trade lane's exemption. They must be
+  // handed back to the queue explicitly — `unusedTips` is computed off
+  // `freshTips` further down, and the queue is rewritten wholesale from it, so
+  // narrowing without this list DELETES every gossip tip in the queue.
+  let laneExcludedTips = [];
+  let feedOnlyTradeCycle = false;
+  if (!gates.ok && tradeLaneMayBypass(gates.blockedBy)) {
+    const tradeTips = freshTips.filter(isTradeLaneTip);
+    if (tradeTips.length > 0) {
+      feedOnlyTradeCycle = true;
+      laneExcludedTips = freshTips.filter((t) => !isTradeLaneTip(t));
+      freshTips = tradeTips;
+      mailbagCandidate = false;
+      mailbagBatchAllowed = false;
+      log(
+        `  Gate ${gates.blockedBy} (${gates.reason}) — that is a CHAT budget; ` +
+          `continuing FEED-ONLY with ${tradeTips.length} trade-lane tip(s), ` +
+          `${laneExcludedTips.length} non-trade tip(s) held for a chat slot`,
+      );
+      gates = { ok: true, blockedBy: null, feedOnly: true, postsToday: gates.postsToday ?? 0 };
+    }
+  }
   if (!gates.ok) {
     log(`  GATE FAIL: ${gates.reason}`);
     return 0;
   }
-  log(`  Gates OK (posts_today=${gates.postsToday}, marinated enough)`);
+  log(`  Gates OK (posts_today=${gates.postsToday}, marinated enough)${feedOnlyTradeCycle ? ' [feed-only trade lane]' : ''}`);
 
   // Friday mailbag check — runs once per Friday PT, sweeps every gossip
   // tip (any non-trade-offer web/groupme tip) into one roundup so nothing
   // expires unseen. Trade-offer tips still go through their own path on
   // non-Friday cycles; mailbag only takes the gossip pile.
   let mailbagBatch = null;
-  if (isFridayPt(now)) {
+  if (isFridayPt(now) && mailbagBatchAllowed) {
     let mailbagDoneDate = null;
     try {
       mailbagDoneDate = await redis.get(FRIDAY_MAILBAG_DONE_KEY);
@@ -4357,6 +4463,17 @@ async function main() {
       // we're not mid-mailbag, Schefter optionally files ONE candid
       // acknowledgment instead of going silent. Cooldown enforced via a
       // PT-date key so this fires at most once per QUIET_DAY_COOLDOWN_DAYS.
+      // A feed-only trade cycle never files one. The quiet-day post is a
+      // rumor-mill CHAT beat — it spends the shared budget and the mill's own
+      // slot — and this cycle is only here because one of those budgets
+      // already refused it. Filing it anyway would spend, on an
+      // "it's quiet out there" note, the exact slot the league was being
+      // protected from spending.
+      if (feedOnlyTradeCycle) {
+        log('  [quiet-day] Skipped — feed-only trade cycle has no chat slot to spend');
+        return 0;
+      }
+
       const quietEval = evaluateQuietDayConditions({
         pick,
         mailbagBatch,
@@ -4481,15 +4598,23 @@ async function main() {
     // To ship 2 trade-offer posts in this cycle, we split the trade
     // bucket's tips: oldest tip → primary beat, next-oldest → secondary
     // beat. Each becomes its own post with its own anonymization pass.
-    // Under a 1/day cap the double-post would put two rumors in the chat
-    // back-to-back off one slot — the pile-up the in-season cap exists to
-    // prevent — so the catch-up is offseason/deadline-window only and an
-    // overnight backlog just clears a day slower in season.
+    //
+    // It no longer asks `allowsTwoPostCycle`. That question — "may one slot
+    // ship two posts?" — was about the CHAT: two rumors landing back to back
+    // off a single slot is the pile-up the in-season cap exists to prevent.
+    // Trade beats no longer spend a slot and a cycle sends at most ONE chat
+    // ping however many beats it ships (`resolveTradeChatPing` picks one), so
+    // the pile-up it guarded against cannot happen here. The gossip secondary
+    // above still asks, and still must — that lane does ping per post.
+    //
+    // Restricted to the `trade:offer` bucket: a trade-block bucket is one
+    // franchise's listings, and splitting it yields two posts about the same
+    // team's block rather than two stories.
     if (
       postKind === 'trade' &&
+      primaryBucket.key === 'trade:offer' &&
       primaryBucket.tips.length >= BUSY_MORNING_TRADE_THRESHOLD &&
-      isBusyMorningWindow(now) &&
-      allowsTwoPostCycle(LEAGUE_SLUG, now, MAX_POSTS_PER_DAY)
+      isBusyMorningWindow(now)
     ) {
       busyMorning = true;
       busyMorningBacklog = primaryBucket.tips.length;
@@ -4516,7 +4641,11 @@ async function main() {
   // count flows through anonymization to the LLM, which upgrades to
   // direct-knowledge voice. Mutates the tip objects in place — the
   // anonymizer reads the count off the tip and surfaces it to the LLM.
-  const corroborationCandidates = freshTips; // include batch + leftovers
+  // Include the batch, the leftovers, AND anything a feed-only trade cycle
+  // narrowed out: an owner's web tip naming the same players is corroboration
+  // whether or not it is eligible to be its own post today, and dropping it
+  // here would quietly downgrade the voice of the very beat that is shipping.
+  const corroborationCandidates = [...freshTips, ...laneExcludedTips];
   for (const tipBatch of [batch, secondaryBatch].filter(Boolean)) {
     for (const tip of tipBatch) {
       if (tip.source !== 'trade_offer') continue;
@@ -4930,6 +5059,74 @@ async function main() {
     }
   }
 
+  // ── Which channel does this cycle go to? ──
+  //
+  // A TRADE cycle (every consumed tip from `trade_offer` / `trade_bait`) is
+  // feed-first: it always writes the report and always pushes, and it reaches
+  // the group chat only a few times a week, for a beat that scored high
+  // enough to be worth interrupting sixteen people. Every other lane ships to
+  // chat on every delivery exactly as before — one owner-written tip a day is
+  // the chat's business.
+  const tradeCycle = isTradeLaneBatch(consumedBatch);
+  const allowedGateResults = gateResults.filter((_, i) => allowedIndexSet.has(i));
+  const chatIndexes = new Set();
+  let chatDecision = null;
+  if (allowedPosts.length > 0 && !tradeCycle) {
+    for (let i = 0; i < allowedPosts.length; i++) chatIndexes.add(i);
+  } else if (allowedPosts.length > 0) {
+    const chatAllowance = tradeChatWeeklyAllowance(LEAGUE_SLUG, now);
+    // Re-read the two shared chat clocks rather than reusing the gate's copy:
+    // a feed-only cycle got here THROUGH a failing budget gate, so the gate
+    // result it carries is the failure, not a reading.
+    let chatLog = [];
+    let chatPostsToday = 0;
+    let chatLastPostTs = 0;
+    try {
+      const raw = await redis.get(RUMOR_TRADE_CHAT_LOG_KEY);
+      const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
+      if (Array.isArray(parsed)) chatLog = parsed;
+    } catch (err) {
+      // An unreadable log reads as EMPTY, so a Redis blip can cost one extra
+      // chat post in a week rather than muting the lane until somebody
+      // notices. That is the right side of this particular trade — but note
+      // it is the opposite call from the null-score rule in
+      // resolveTradeChatPing, which refuses to ping when it cannot tell. The
+      // difference is what the unknown is: a missing SCORE means we do not
+      // know whether the beat deserves the chat, and a missing LOG means we
+      // do not know whether the week's ping is spent. Only the first is a
+      // question about the message itself.
+      warn(`  [trade-chat] chat log unreadable (${err.message}) — treating as empty`);
+    }
+    try {
+      const raw = await redis.get(RUMOR_POSTS_TODAY_KEY);
+      chatPostsToday = typeof raw === 'number' ? raw : parseInt(raw ?? '0', 10) || 0;
+      const rawTs = await redis.get(RUMOR_LAST_POST_TS_KEY);
+      chatLastPostTs = typeof rawTs === 'number' ? rawTs : parseInt(rawTs ?? '0', 10) || 0;
+    } catch (err) {
+      warn(`  [trade-chat] budget read failed (${err.message}) — assuming unspent`);
+    }
+    chatDecision = resolveTradeChatPing({
+      candidates: allowedPosts.map((_, i) => ({ index: i, score: allowedGateResults[i]?.score ?? null })),
+      nowMs: now.getTime(),
+      chatLog,
+      allowance: chatAllowance,
+      postsToday: chatPostsToday,
+      maxPostsPerDay: MAX_POSTS_PER_DAY,
+      lastPostTs: chatLastPostTs,
+      minSpacingMs: MIN_SPACING_MS,
+    });
+    log(
+      `  [trade-chat] ${chatDecision.reason} — allowance ${chatAllowance}/week ` +
+        `(${tradeChatAllowanceReason(LEAGUE_SLUG, now)}), ` +
+        `${recentChatPings(chatLog, now.getTime()).length} ping(s) in the last ` +
+        `${TRADE_CHAT_WINDOW_MS / (24 * 60 * 60 * 1000)}d`,
+    );
+    if (chatDecision.index >= 0) chatIndexes.add(chatDecision.index);
+  }
+  // Every daily CHAT budget below keys off this, not off `allowedPosts` — the
+  // budgets exist to ration pings, and a feed-only beat sends none.
+  const chatDelivered = chatIndexes.size > 0;
+
   if (DRY_RUN) {
     log(`\n  [dry-run] Gate verdict: ${allowedPosts.length} allow / ${builtPosts.length - allowedPosts.length} suppress`);
     log(`\n  [dry-run] Would append ${allowedPosts.length} post(s) to feed:`);
@@ -4946,8 +5143,10 @@ async function main() {
       log(`  [dry-run] Would hold ${unusedTips.length} unchosen-bucket tip(s) for the next cycle: ${unusedTips.map((t) => t.id).join(', ')}`);
     }
     log('  [dry-run] Would increment gen_attempts_today by 1 (LLM safety valve — counts every generation cycle)');
-    if (allowedPosts.length > 0) {
-      log(`  [dry-run] Would increment schefter:rumor:posts_today + schefter:rumor:mill_posts_today by 1${postKind === 'gossip' ? ' + schefter:rumor:gossip_posts_today by 1' : ''}, set last_post_ts (budgets count delivered posts only)`);
+    if (allowedPosts.length > 0 && chatDelivered) {
+      log(`  [dry-run] Would increment schefter:rumor:posts_today + schefter:rumor:mill_posts_today by 1${postKind === 'gossip' && !tradeCycle ? ' + schefter:rumor:gossip_posts_today by 1' : ''}, set last_post_ts (chat budgets count delivered PINGS only)`);
+    } else if (allowedPosts.length > 0) {
+      log(`  [dry-run] Feed-only cycle — would increment schefter:rumor:trade_feed_posts_today by ${allowedPosts.length} and NO chat budget`);
     } else {
       log('  [dry-run] Fully-suppressed cycle — would consume NO daily budget (posts_today, mill_posts_today, gossip cap, spacing all unchanged)');
     }
@@ -4963,8 +5162,11 @@ async function main() {
         ? `Would set ${MORNING_GREETING_DATE_KEY}=${todayPt} (ex=48h)`
         : 'Greeting beat suppressed — would NOT set morning-greeting date'}`);
     }
-    for (const p of allowedPosts) {
-      await postToGroupMe(groupMeTextFor(p), p);
+    if (laneExcludedTips.length > 0) {
+      log(`  [dry-run] Would hand ${laneExcludedTips.length} non-trade tip(s) straight back to the queue (feed-only trade cycle): ${laneExcludedTips.map((t) => t.id).join(', ')}`);
+    }
+    for (let i = 0; i < allowedPosts.length; i++) {
+      await postToGroupMe(groupMeTextFor(allowedPosts[i]), allowedPosts[i], { chat: chatIndexes.has(i) });
     }
     return 0;
   }
@@ -4982,12 +5184,12 @@ async function main() {
     log('  All beats suppressed — skipping feed write; tips held for re-evaluation');
   }
 
-  // GroupMe — one message per allowed post so each shows up as an independent
-  // reply target in the group chat. Small stagger between to avoid
-  // rate-limiting surprises.
+  // Delivery — push always, chat per `chatIndexes`. One message per chatted
+  // post so each shows up as an independent reply target in the group chat.
+  // Small stagger between to avoid rate-limiting surprises.
   for (let i = 0; i < allowedPosts.length; i++) {
     if (i > 0) await new Promise((r) => setTimeout(r, 250));
-    await postToGroupMe(groupMeTextFor(allowedPosts[i]), allowedPosts[i]);
+    await postToGroupMe(groupMeTextFor(allowedPosts[i]), allowedPosts[i], { chat: chatIndexes.has(i) });
   }
 
   // Per-team name counter: every ALLOWED post that named a franchise
@@ -5125,8 +5327,22 @@ async function main() {
       log(`  [mailbag] Marked done for ${todayPtDate}${allowedPosts.length === 0 ? ' (suppressed — attempt still consumed to protect the swept tips)' : ''}`);
     }
 
+    // BUDGETS FOLLOW THE CHAT PING, NOT THE FEED POST (2026-09-08).
+    //
+    // Every counter in this block rations GroupMe: the shared daily ping
+    // allowance, the mill's own daily cap, and the 4h spacing anchor. Before
+    // the feed/chat split a delivered post and a chat ping were the same
+    // event, so incrementing on delivery was incrementing on the ping. They
+    // are different events now, and keying these off `allowedPosts` instead
+    // would put the trade lane's feed volume back in charge of how loud the
+    // chat is allowed to be — which is precisely the coupling this change
+    // exists to break, only inverted: the report would go quiet again the
+    // moment it got busy.
+    //
+    // For every non-trade lane `chatDelivered` is true whenever anything
+    // shipped, so this is byte-for-byte the old behaviour there.
     let newCount = null;
-    if (allowedPosts.length > 0) {
+    if (chatDelivered) {
       newCount = await redis.incr(RUMOR_POSTS_TODAY_KEY);
       if (newCount === 1) {
         await redis.expire(RUMOR_POSTS_TODAY_KEY, secondsUntilPtMidnight(now));
@@ -5134,8 +5350,7 @@ async function main() {
       // The mill's own counter, on the same BUDGET-ON-DELIVERY rule as the
       // shared one above. Incremented once per delivering CYCLE, matching the
       // shared budget: a busy-morning or gossip double-post is two feed
-      // entries against one slot by design, and that pairing only ever
-      // happens where the cap is above one.
+      // entries against one slot by design.
       const newMillCount = await redis.incr(RUMOR_MILL_POSTS_TODAY_KEY);
       if (newMillCount === 1) {
         await redis.expire(RUMOR_MILL_POSTS_TODAY_KEY, secondsUntilPtMidnight(now));
@@ -5145,6 +5360,25 @@ async function main() {
           `${rumorMillDailyCap(LEAGUE_SLUG, now, MAX_POSTS_PER_DAY)} ` +
           `(${rumorMillCapReason(LEAGUE_SLUG, now)})`,
       );
+      // Stamp the trade lane's rolling chat log, trimmed to the window. The
+      // trim happens on WRITE so the key can never grow without bound, and
+      // the reader stays a pure function of what it finds.
+      if (tradeCycle) {
+        try {
+          const raw = await redis.get(RUMOR_TRADE_CHAT_LOG_KEY);
+          const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
+          const kept = recentChatPings(Array.isArray(parsed) ? parsed : [], now.getTime());
+          const next = [now.getTime(), ...kept];
+          await redis.set(RUMOR_TRADE_CHAT_LOG_KEY, JSON.stringify(next), {
+            ex: Math.ceil(TRADE_CHAT_WINDOW_MS / 1000),
+          });
+          log(`  [trade-chat] Ping logged — ${next.length} in the rolling window`);
+        } catch (err) {
+          warn(`  [trade-chat] chat-log write failed: ${err.message} — the lane may ping again sooner than it should`);
+        }
+      }
+    }
+    if (allowedPosts.length > 0) {
 
       // Trade-offer repost cooldown anchor — stamped HERE, on delivery, not
       // where the tip was enqueued. scanTradeOffers only queues; roughly half
@@ -5175,17 +5409,44 @@ async function main() {
           warn(`  hset(last_post) failed: ${err.message} — offer(s) may re-post tomorrow`);
         }
       }
-      if (postKind === 'gossip') {
+      // The gossip slot is a CHAT ration too, and `tradeCycle` guards it for
+      // the same reason as the counters above. Both trade lanes classify as
+      // 'trade' now, so the guard is belt-and-braces rather than reachable —
+      // and it stays, because the day a third trade source lands in a bucket
+      // that happens to read as gossip, a trade beat silently eating the
+      // league's one gossip slot is not a failure anyone would notice.
+      if (postKind === 'gossip' && !tradeCycle) {
         const newGossipCount = await redis.incr(RUMOR_GOSSIP_POSTS_TODAY_KEY);
         if (newGossipCount === 1) {
           await redis.expire(RUMOR_GOSSIP_POSTS_TODAY_KEY, secondsUntilPtMidnight(now));
         }
         log(`  Gossip counter: now ${newGossipCount}/${adaptiveGossipCap}`);
       }
-      // Spacing anchor — starts the 4h chat-cadence clock from this delivery.
+      // Feed-only observability. Counted, never read as a gate — the trade
+      // feed lane has no daily ceiling by design, and this is the only way to
+      // find out after the fact how loud a day actually got.
+      if (!chatDelivered) {
+        try {
+          const feedOnlyCount = await redis.incrby(RUMOR_TRADE_FEED_POSTS_TODAY_KEY, allowedPosts.length);
+          if (feedOnlyCount === allowedPosts.length) {
+            await redis.expire(RUMOR_TRADE_FEED_POSTS_TODAY_KEY, secondsUntilPtMidnight(now));
+          }
+          log(`  Feed-only rumor posts today: ${feedOnlyCount} (no cap — report lane)`);
+        } catch (err) {
+          warn(`  feed-only counter update failed: ${err.message}`);
+        }
+      }
+    }
+    if (chatDelivered) {
+      // Spacing anchor — starts the 4h chat-cadence clock. It anchors on the
+      // PING, not on the feed post: it exists to space out messages in the
+      // chat, and a feed-only beat put nothing there to space out from.
       await redis.set(RUMOR_LAST_POST_TS_KEY, now.getTime());
-    } else {
+    }
+    if (allowedPosts.length === 0) {
       log('  Suppressed cycle — no daily budget consumed (posts_today, mill_posts_today, gossip cap, spacing all unchanged)');
+    } else if (!chatDelivered) {
+      log('  Feed-only cycle — no CHAT budget consumed (posts_today, mill_posts_today, spacing all unchanged)');
     }
 
     // Remove consumed tips from the queue while preserving (a) tips in
@@ -5194,7 +5455,10 @@ async function main() {
     // atomically: DEL then RPUSH each surviving JSON string back. Any tip
     // that arrived between LRANGE and now would be lost — acceptable at
     // our 15 min cadence.
-    const requeueTips = [...unusedTips, ...heldTipsForRequeue];
+    // `laneExcludedTips` is non-empty only on a feed-only trade cycle, where
+    // the gossip tips were narrowed out before bucketing. They never reached a
+    // beat, so they carry no strike — they go straight back.
+    const requeueTips = [...unusedTips, ...heldTipsForRequeue, ...laneExcludedTips];
     await redis.del(TIPS_QUEUE_KEY);
     if (requeueTips.length > 0) {
       const serialized = requeueTips.map((t) => JSON.stringify(t));

@@ -14,7 +14,19 @@ import { tipsterScoreDelta } from './schefter-tipster-context.mjs';
 
 export function classifyTipKind(tip) {
   if (!tip) return 'gossip';
-  if (tip.source === 'trade_offer') return 'trade';
+  // Both TRADE lanes classify as trade: a live proposal and an owner's
+  // trade-block listing are the same kind of news and, since the feed/chat
+  // split (scripts/lib/schefter-trade-distribution.mjs), the same kind of
+  // DELIVERY — feed-first, chat rarely.
+  //
+  // A listing used to come back 'gossip' because it buckets per franchise the
+  // way a topic tip does. That shape similarity cost it three things it should
+  // never have had: it spent the one-a-day gossip slot, it was excluded from
+  // the lane entirely once that slot was gone (pickPrimaryBucket returns null
+  // for gossip when the budget is spent), and it got swept into the Friday
+  // mailbag — a roundup of tips OWNERS wrote, where a machine-read block
+  // listing does not belong.
+  if (tip.source === 'trade_offer' || tip.source === 'trade_bait') return 'trade';
   return 'gossip';
 }
 
@@ -115,10 +127,18 @@ export function rankBuckets(buckets, now = new Date(), tipsterContext = null) {
 }
 
 /**
- * A bucket's recurrence fingerprint = its bucket key, with two carve-outs:
+ * A bucket's recurrence fingerprint = its bucket key, with three carve-outs:
  *   - trade-offer buckets (`trade:offer`) have their own dedup mechanism
  *     (per-offer cumulative probability) so the recurrence ledger doesn't
  *     apply.
+ *   - trade-block buckets (`topic:trade_bait:<fid>`) have theirs too: the
+ *     scanner diffs each franchise's block against stored state and only ever
+ *     enqueues a NEW listing, so the same bucket key recurring week after week
+ *     means a franchise that keeps listing different players — which is news
+ *     every time, not a repeat. Exempted when both trade lanes became
+ *     feed-first (2026-09-08): the ledger would otherwise relegate the bucket
+ *     to the Friday mailbag, and the mailbag sweeps GOSSIP only, so those
+ *     listings would have sat in the queue until they expired unseen.
  *   - whisper-back threads (`thread:<id>`) are reply chains, not recurring
  *     news — they should never be marked stale.
  *
@@ -127,6 +147,7 @@ export function rankBuckets(buckets, now = new Date(), tipsterContext = null) {
 export function bucketFingerprint(bucket) {
   if (!bucket || typeof bucket.key !== 'string') return null;
   if (bucket.key === 'trade:offer') return null;
+  if (bucket.key.startsWith('topic:trade_bait:')) return null;
   if (bucket.key.startsWith('thread:')) return null;
   return bucket.key;
 }

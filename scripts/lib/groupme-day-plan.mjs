@@ -118,6 +118,13 @@ export const PUSH_ONLY_KINDS = new Set([
  * the weekday calendar instead would have meant a trade rumor waiting until
  * its assigned weekday, which is worthless — a rumor is news or it is nothing.
  *
+ * Since 2026-09-08 the `rumor` kind is stricter again, and stricter than
+ * anything this calendar could express: a beat built purely from the TRADE
+ * lanes reaches chat a few times a WEEK — once in season, three times in the
+ * offseason and at the deadline — and only when the quality gate scores it 8+.
+ * Everything else it has to say goes to the Schefter Report and to web push,
+ * neither of which is capped. See scripts/lib/schefter-trade-distribution.mjs.
+ *
  * The bar for adding a kind here is a real, enforced budget somewhere else.
  * Absent that, this set is just a hole in the cap.
  */

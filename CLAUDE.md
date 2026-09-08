@@ -51,7 +51,7 @@ cross-cutting, add a line here. Keep this file short.
 
 | Working on… | Read first | The trap, in one line |
 |---|---|---|
-| Schefter (tips, rumor mill, redaction, tipster context, article links) | `docs/claude/rules/schefter.md` | Redaction must cover retired names + aliases, or a post names a team it may not; and every article type must declare `relatedLinks` or it publishes prose with nothing to click. |
+| Schefter (tips, rumor mill, redaction, tipster context, article links) | `docs/claude/rules/schefter.md` | Redaction must cover retired names + aliases, or a post names a team it may not; every article type must declare `relatedLinks` or it publishes prose with nothing to click; and the trade lanes are FEED-FIRST — the daily budgets ration GroupMe, not the report, so a counter keyed on "a post shipped" instead of "a ping shipped" quietly puts the report's volume back in charge of how loud the chat may be. |
 | Roger (rules Q&A, GroupMe reminders, evals, draft dates) | `docs/claude/rules/roger.md` | Two independent "Roger" code paths; both have hallucinated dates. Fixing one doesn't fix the other. And deadline reminders are PUSH-FIRST now — the chat only carries the owners the fan-out could not reach, so any new reminder lane must ask `undelivered` before it posts, and must treat a push that could not run as reaching nobody. |
 | Standings, playoffs, brackets, draft order | `docs/claude/rules/standings-brackets-draft-order.md` | Never re-sort MFL's standings rows — its order already applies the constitution's tiebreakers, including h2h we can't reproduce. |
 | Live scoring / ESPN data | `docs/claude/rules/live-scoring.md` | A college athlete id and an NFL one are both plain digits, so a bad join resolves the wrong person instead of failing. |

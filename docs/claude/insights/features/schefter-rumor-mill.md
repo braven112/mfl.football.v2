@@ -3,6 +3,60 @@
 The load-bearing architecture rules live in CLAUDE.md ("Schefter multi-league").
 This file holds the finer operational learnings.
 
+## 2026-09-08 (evening) - Rationing the message rationed the news with it
+
+**Context:** the fix above worked. It cut the rumor mill to 1/day in season and
+put three independent rarity gates on the trade lane, and the chat did go quiet.
+So did the Schefter Report — which is what the owner actually noticed next.
+
+**The bug was in the unit, not in the numbers.** A rumor-mill beat had always
+been one indivisible thing: a feed post AND a GroupMe ping, delivered together,
+budgeted together, suppressed together. Every dial in the system therefore
+priced BOTH at once. There was no setting for "more to read, less to be pinged
+about", because there was nothing you could turn that moved only one of them.
+
+Two rounds of tuning had been spent chasing that missing setting from opposite
+ends — three probability bumps to get more posts, then three rarity gates to get
+fewer — and both rounds were right about their own channel and wrong about the
+other. The report and the chat want opposite things, and no single number can
+serve two constituencies that disagree.
+
+**The move: split the unit before touching any dial again.** Once delivery took
+a per-beat `chat` flag, the constants that had been fought over twice became
+uncontroversial. The per-offer probability went 0.10 -> 0.35/day and the repost
+cooldown 7d -> 3d, both in the direction the earlier round had just reversed,
+and neither is a regression — they are now pricing the report, and the chat is
+priced separately at a few pings a week.
+
+**What generalizes:** when tuning a parameter keeps oscillating, check whether
+one knob is being asked to serve two audiences. The oscillation is the symptom;
+the shared unit is the cause. And the tell was in the artifacts — the doc for
+this feature had a table of caps but no column for "which channel".
+
+**Three implementation traps, each of which would have shipped silently:**
+
+- **Budgets have to follow the thing they ration.** Every daily counter here
+  rations GroupMe. Leaving them keyed on "a post was delivered" would have
+  re-created the coupling in reverse: a busy report day would spend the chat's
+  budget and the report would go quiet again. They key on `chatDelivered` now,
+  which for every non-trade lane is the same boolean as before.
+- **Narrowing a working set can silently DELETE the part you removed.** The
+  feed-only path filters the tip queue down to the trade lane — and the queue is
+  rewritten wholesale from a list computed off that same filtered set, so every
+  gossip tip in it would have been dropped rather than held. Whenever you
+  narrow a collection mid-pipeline, find the write that consumes it before you
+  find the read.
+- **A clamp that does not move with its base is a silent removal.** The volume
+  boost (a player several desks are chasing gets better odds) sat under a 0.35
+  ceiling. Raising the base to 0.35 without the ceiling would have left the
+  boost mathematically present, tested, documented, and completely inert.
+
+**Also worth knowing:** the quality gate already returned a 1-10 score that
+nothing downstream read — the code used only `allow`. That score turned out to
+be exactly the missing input for "which one beat this week earns the chat".
+Before adding a signal, check whether one is already being computed and thrown
+away.
+
 ## 2026-09-08 - A per-RUN probability is meaningless until you count the runs
 
 **Context:** the fix for the 2026-09-07 entry below. Owner report: two rumors

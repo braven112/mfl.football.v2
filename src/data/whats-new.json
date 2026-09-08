@@ -1,5 +1,28 @@
 [
   {
+    "id": "trade-rumors-feed-first",
+    "date": "2026-09-08",
+    "category": "enhancement",
+    "icon": "news",
+    "leagues": [
+      "theleague",
+      "afl"
+    ],
+    "title": "Schefter Files More, Texts Less",
+    "link": "/news",
+    "linkLabel": "Read the Schefter Report",
+    "summary": "Trade rumors used to arrive one way: a buzz in the group chat. So keeping the chat livable meant keeping Schefter quiet, and the Schefter Report went weeks at a time with barely a headline in it. The two have been unbundled. Every trade rumor he has now goes straight to the report — no daily limit, no waiting his turn — while the group chat gets one a week, and only when he has something genuinely worth interrupting sixteen people about.",
+    "description": [
+      "Here was the problem with the old setup: a rumor was one thing, not two. Schefter could not file a story to <a href=\"/news\">the Report</a> without also buzzing every phone in the league, so every dial we had priced both at once. Turn it down and the chat calmed but the Report emptied out. Turn it up and the Report filled while everyone reached for mute. We spent two rounds of tuning discovering that a single knob cannot serve two audiences who want opposite things.",
+      "<strong>So the beat and the broadcast are now separate jobs.</strong> A live trade proposal or a new listing on the block gets written up and posted the moment it clears the desk — several a week, sometimes several a day, with no ceiling at all. The odds of any given offer surfacing went from a coin flip across its whole life to near-certain, and an offer still sitting there three days later can get a follow-up instead of dying unreported. Open <a href=\"/news\">the Report</a> and there should be something new in it.",
+      "<strong>The group chat, meanwhile, is down to a trickle.</strong> One trade rumor a week during the season. Three a week in the offseason and through the run-up to the deadline, when trade talk actually is the story. And it only goes out at all if the post clears a high bar — a named team, a real development, something you would want to be interrupted for. Everything else stays on the page, waiting for you.",
+      "If you want the firehose anyway, it is still available and it is still yours to control: turn the rumor category on under <a href=\"/notifications\">your notification settings</a> and every filing lands on your phone as it happens. Nobody else gets buzzed for it. And <a href=\"/schefter/tip\">the tip line</a> works exactly as before — a tip you write by hand is league business, and it still reaches the chat the day it runs."
+    ],
+    "image": "trade-rumors-feed-first.webp",
+    "imageAlt": "The Schefter Report feed on The League, with a trade-proposal filing sitting among the NFL wire items — Claude Schefter reporting that Fire Ready Aim has a receiver on the table in a two-for-one swap, with an Open in Trade Builder link and a reaction row beneath it.",
+    "excludeFromHero": true
+  },
+  {
     "id": "afl-phase-heroes",
     "date": "2026-09-07",
     "category": "enhancement",
@@ -897,28 +920,5 @@
     "image": "my-draft-list.webp",
     "imageAlt": "The My Draft List board with Pull from MFL and Push to MFL controls above a ranked player list",
     "excludeFromHero": true
-  },
-  {
-    "id": "afl-draft-broadcast",
-    "date": "2026-08-27",
-    "category": "new-page",
-    "icon": "draft-podium",
-    "leagues": [
-      "afl"
-    ],
-    "title": "Put The Draft On The Big Screen",
-    "link": "/draft/broadcast",
-    "linkLabel": "Open the big board",
-    "summary": "Plug a laptop into the TV and let the room watch the draft happen. Every pick made in MFL lands on screen seconds later — the player, his new team's colors and crest, and exactly how far down the board he was when somebody grabbed him.",
-    "description": [
-      "Draft night has always had the same problem: the picks happen inside MFL, on twelve separate laptops, and the room has no idea what just went until somebody says it out loud. So here is <a href=\"/draft/broadcast\">the Draft Broadcast</a> — a page with one job, which is to be plugged into a TV and looked at.",
-      "Keep making your picks in MFL exactly like always. Nothing about that changes. This board just watches the same draft you're in and reacts to it: a few seconds after a selection lands, the player takes over the whole screen in the colors of the team that just took him, with his crest behind him. Position, pro team, bye week, what he's projected for. Take a team defense and the screen doesn't go empty where a man should be — two of that unit's actual stars turn up shoulder to shoulder, the same marquee defenders the <a href=\"/players\">free agent board</a> puts in front of you, and they get the pick. A helmet is not a face, and nobody should have to guess who Denver's pass rush is.",
-      "And the line the room is going to argue about: where he actually stood when his name got called. <strong>BEST AVAILABLE</strong> means nobody left on the board was rated higher — that one turns green. <strong>14th best available</strong> means thirteen better men were sitting right there. The board doesn't call it a steal and it doesn't call it a reach; it tells you the number and lets twelve people draw their own conclusions, loudly. The one thing it will not do is measure you against a draft you aren't in — with seven <a href=\"/keepers\">keepers</a> per team the good players are gone before 1.01 is even called, so this counts only the men who were genuinely available to you.",
-      "Between picks the board keeps the room oriented — who's on the clock, what just came off, who's warming up next, in the order <a href=\"/draft/order\">the draft order</a> set months ago. Because the AFL drafts by conference, there's a board for each: open the American League or the National League, whichever one is actually running that night, and flip between them at the bottom. Hit Full Screen and the site disappears entirely.",
-      "Built for Saturday. Everything on it comes off the same MFL draft you're already in, so there is nothing to set up — open it and it follows along."
-    ],
-    "excludeFromHero": true,
-    "image": "afl-draft-broadcast.webp",
-    "imageAlt": "The AFL Draft Broadcast board on a TV, showing which franchise is on the clock over its team colors and crest, with the last four picks and the next three teams up."
   }
 ]

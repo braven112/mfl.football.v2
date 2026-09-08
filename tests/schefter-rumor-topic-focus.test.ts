@@ -34,8 +34,14 @@ describe('rumor-scan daily caps — trade-heavy, gossip-rationed', () => {
     expect(src).toMatch(/const\s+RUMOR_GOSSIP_POSTS_TODAY_KEY\s*=\s*schefterKey\(NAV_SLUG, 'rumor:gossip_posts_today'\)/);
   });
 
-  it('increments the gossip counter only when postKind === "gossip"', () => {
-    expect(src).toMatch(/if\s*\(\s*postKind\s*===\s*['"]gossip['"]\s*\)\s*\{[\s\S]*?redis\.incr\(RUMOR_GOSSIP_POSTS_TODAY_KEY\)/);
+  it('increments the gossip counter only for a gossip post that is not a trade beat', () => {
+    // The gossip slot is a CHAT ration. `!tradeCycle` is belt-and-braces today
+    // (both trade lanes classify as 'trade'), and it stays: a trade beat
+    // silently eating the league's one gossip slot is not a failure anyone
+    // would notice.
+    expect(src).toMatch(
+      /if\s*\(\s*postKind\s*===\s*['"]gossip['"]\s*&&\s*!tradeCycle\s*\)\s*\{[\s\S]*?redis\.incr\(RUMOR_GOSSIP_POSTS_TODAY_KEY\)/,
+    );
   });
 
   it('sets a TTL on the gossip counter so it resets at PT midnight', () => {
@@ -61,14 +67,18 @@ describe('rumor-scan bucketing — one topic per post', () => {
     expect(src).toMatch(/function\s+pickPrimaryBucket\(\s*buckets\s*,\s*\{\s*gossipAllowedToday[^}]*\}/);
   });
 
-  it('classifies ONLY trade_offer tips as the trade kind (web/groupme trade rumors are gossip)', () => {
-    // Real MFL pending offers are the trade-rumor headline material.
-    // Web/groupme tips with topic === 'trade' are speculation and ride
-    // the gossip lane subject to the gossip cap.
+  it('classifies ONLY the two trade SOURCES as the trade kind (web/groupme trade talk is gossip)', () => {
+    // Real MFL pending offers and owner trade-block listings are the
+    // trade-rumor headline material, and since the feed/chat split they share
+    // a delivery route as well as a subject. Web/groupme tips with
+    // topic === 'trade' are speculation: they ride the gossip lane, subject to
+    // the gossip cap and pinging the chat like any other owner-written tip.
     const fn = bucketSrc.match(/function\s+classifyTipKind[\s\S]+?\n\}/);
     expect(fn).not.toBeNull();
     const body = fn![0];
-    expect(body).toMatch(/source\s*===\s*['"]trade_offer['"]\)\s*return\s+['"]trade['"]/);
+    expect(body).toMatch(/source\s*===\s*['"]trade_offer['"]/);
+    expect(body).toMatch(/source\s*===\s*['"]trade_bait['"]/);
+    expect(body).toMatch(/return\s+['"]trade['"]/);
     // No fall-through that promotes topic === 'trade' to 'trade' kind.
     expect(body).not.toMatch(/topic\s*===\s*['"]trade['"]\)\s*return\s+['"]trade['"]/);
   });
@@ -473,7 +483,10 @@ describe('rumor-scan Friday mailbag — once-a-week sweep of pending gossip', ()
   });
 
   it('main() runs the mailbag at most once per Friday PT (short-circuits on stored date)', () => {
-    expect(src).toMatch(/if\s*\(isFridayPt\(now\)\)/);
+    // `mailbagBatchAllowed` is cleared by the feed-only trade fallback: that
+    // path hands the gossip tips back to the queue, and the mailbag is a sweep
+    // of exactly those.
+    expect(src).toMatch(/if\s*\(isFridayPt\(now\)\s*&&\s*mailbagBatchAllowed\)/);
     expect(src).toMatch(/mailbagDoneDate\s*===\s*todayPtDate/);
   });
 

@@ -255,8 +255,23 @@ describe('hold-and-strike — publish loop classifies allowed vs held beats', ()
     expect(SCANNER_SRC).toMatch(/strikes >= MAX_SUPPRESSED_STRIKES[\s\S]{0,200}heldTipsExhausted\.push/);
   });
 
-  it('queue rewrite combines unusedTips and heldTipsForRequeue into one rpush', () => {
-    expect(SCANNER_SRC).toMatch(/const requeueTips\s*=\s*\[\.\.\.unusedTips,\s*\.\.\.heldTipsForRequeue\]/);
+  it('queue rewrite combines every surviving tip into one rpush', () => {
+    // Three lists, and all three are load-bearing: tips in unchosen buckets,
+    // tips the quality gate held, and — since the feed/chat split — tips a
+    // feed-only trade cycle narrowed out before bucketing. The queue is
+    // rewritten wholesale from this array, so a list left out of it is not
+    // held, it is DELETED.
+    expect(SCANNER_SRC).toMatch(
+      /const requeueTips\s*=\s*\[\.\.\.unusedTips,\s*\.\.\.heldTipsForRequeue,\s*\.\.\.laneExcludedTips\]/,
+    );
+  });
+
+  it('hands a narrowed cycle\'s non-trade tips back to the queue', () => {
+    // The feed-only trade fallback replaces `freshTips` with the trade-lane
+    // subset, and `unusedTips` is computed off `freshTips`. Without the
+    // explicit hold-out list every gossip tip in the queue would be silently
+    // destroyed by the very next rewrite.
+    expect(SCANNER_SRC).toMatch(/laneExcludedTips = freshTips\.filter\(\(t\) => !isTradeLaneTip\(t\)\)/);
   });
 
   it('archive only consumes allowed batch tip ids + strike-exhausted ids', () => {

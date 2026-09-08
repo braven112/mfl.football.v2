@@ -27,20 +27,28 @@ describe('daily budgets count delivered posts only', () => {
     expect(SRC).toMatch(/BUDGET-ON-DELIVERY SENTINEL/);
   });
 
-  it('increments posts_today and the gossip counter exactly once, inside the delivered guard', () => {
-    // The guarded body between `if (allowedPosts.length > 0) {` and its
-    // `} else {` (after the sentinel) must contain exactly one incr of each
-    // posting budget — one slot per delivering cycle, regardless of how
-    // many beats shipped, and zero slots on a fully-suppressed cycle.
+  it('increments each chat budget exactly once, inside the chat-delivered guard', () => {
+    // One slot per delivering cycle, regardless of how many beats shipped, and
+    // zero slots on a fully-suppressed cycle.
+    //
+    // The guard is `chatDelivered`, not `allowedPosts.length > 0`, since
+    // 2026-09-08: every counter here rations GROUPME, and a feed-only trade
+    // beat sends nothing there. Keying them off the feed instead would put the
+    // report's volume back in charge of how loud the chat may be — the same
+    // coupling the split removed, only inverted, so the report would go quiet
+    // again the moment it got busy.
     const guarded = SRC.match(
-      /BUDGET-ON-DELIVERY SENTINEL[\s\S]*?if \(allowedPosts\.length > 0\) \{([\s\S]*?)\n\s*\} else \{/,
+      /BUDGET-ON-DELIVERY SENTINEL[\s\S]*?if \(chatDelivered\) \{([\s\S]*?)\n\s*\}\n\s*if \(allowedPosts\.length > 0\) \{/,
     );
     expect(guarded).not.toBeNull();
     expect(guarded![1].match(/redis\.incr\(RUMOR_POSTS_TODAY_KEY\)/g)).toHaveLength(1);
-    expect(guarded![1].match(/redis\.incr\(RUMOR_GOSSIP_POSTS_TODAY_KEY\)/g)).toHaveLength(1);
-    expect(guarded![1]).toContain('redis.set(RUMOR_LAST_POST_TS_KEY');
-    // The gossip cap has no other incr site anywhere in the scanner.
+    expect(guarded![1].match(/redis\.incr\(RUMOR_MILL_POSTS_TODAY_KEY\)/g)).toHaveLength(1);
+    // The spacing anchor is a chat clock too — it anchors on the PING.
+    const spacing = SRC.match(/if \(chatDelivered\) \{[^}]*redis\.set\(RUMOR_LAST_POST_TS_KEY/);
+    expect(spacing).not.toBeNull();
+    // The gossip cap increments once, and never for a trade beat.
     expect(SRC.match(/redis\.incr\(RUMOR_GOSSIP_POSTS_TODAY_KEY\)/g)).toHaveLength(1);
+    expect(SRC).toMatch(/postKind === 'gossip' && !tradeCycle/);
   });
 
   it('dropped the old attempt-counting design ("regardless of suppression")', () => {

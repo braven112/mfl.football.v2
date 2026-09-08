@@ -294,7 +294,10 @@ const { base, navSlug } = Astro.props;
         <p class="ops-card__hint">
           Cumulative-probability model: <code>p={offerProbStr}</code>/day (~{offerCum24h} by 24h, ~{offerCum48h} by 48h
           at {ROLLS_PER_DAY} roll/day &mdash; each offer is rolled once per PT day, not once per cron tick).
-          A reported offer then goes quiet for 7 days before it may surface again.
+          A reported offer then goes quiet for 3 days before it may surface again.
+          These odds govern the <strong>report</strong>, which has no daily cap; the group chat sees a trade
+          rumor a few times a week at most (once in season, three times in the offseason and at the deadline,
+          and only for a beat the quality gate scores 8+).
           Value is read live from <code>OFFER_POST_PROBABILITY</code> in <code>scripts/lib/redact-trade-offer.mjs</code>,
           so this hint never drifts from the scanner. In-flight = offers still eligible to post.
           Posted = offers the rumor mill has already announced.

@@ -574,8 +574,18 @@ export function redactTradeOffer({
  * hours, so in practice nearly every offer leaked, nearly immediately — the
  * lane read as an advertising feed for the trade block rather than as a beat
  * reporter breaking the occasional story (owner report, 2026-09-08). Moved to
- * one roll per day at 0.10 on 2026-09-08: an offer now has a ~50/50 chance of
- * ever surfacing across a week-long life, and a rumor is news again.
+ * one roll per day the same day, which is what finally made the constant mean
+ * what it reads like.
+ *
+ * The base then moved 0.10 -> 0.35 on 2026-09-08 (evening), once the trade
+ * lane stopped pinging the group chat on every post. At 0.10 an offer was a
+ * coin flip to EVER surface, which is the right rarity for a message that
+ * buzzes sixteen phones and the wrong rarity for a report page an owner opens
+ * on purpose and expects to find something in. The roll cadence did not move
+ * with it -- still one roll per offer per Pacific day -- so read the roll
+ * cadence, not the constant, before touching this again: three earlier bumps
+ * (0.0075 -> 0.025 -> 0.05) each chased "proposals age out" while the real
+ * cause was that the roll fired ~50 times a day.
  *
  * The 48h framing flip from "fresh" to "lingering" ("offered but phones aren't
  * picking up") is handled in scanTradeOffers, not here. The probability itself
@@ -584,10 +594,13 @@ export function redactTradeOffer({
  * Exponential scaling on shopping volume: when the *effective* distinct
  * offerers for the most-shopped player in this offer is ≥2, multiply the
  * base by `OFFER_VOLUME_BOOST_FACTOR ^ (effectiveOfferers - 1)` and cap at
- * `OFFER_VOLUME_BOOST_MAX`. This boost SURVIVES the slowdown on purpose: a
+ * `OFFER_VOLUME_BOOST_MAX`. This boost SURVIVES every retune on purpose: a
  * player three desks are calling about is the genuine breaking story, and the
- * gradient from 10%/day to the ceiling is what separates one from a routine
- * offer nobody else wants.
+ * gradient from the base up to the ceiling is what separates one from a
+ * routine offer nobody else wants. The ceiling moved with the base so the
+ * gradient kept its room -- pinning one without the other flattens the boost
+ * into a no-op, which is a silent loss of the only signal the lane has for
+ * "this one actually matters".
  * Effective count blends real submitted offerers (full weight) with saved
  * trade-builder drafts (0.4 weight, computed in the scanner).
  *
@@ -611,15 +624,17 @@ export function redactTradeOffer({
  *
  * Exported for tests & dry-run logging.
  */
-export const OFFER_POST_PROBABILITY = 0.10;
+export const OFFER_POST_PROBABILITY = 0.35;
 export const OFFER_VOLUME_BOOST_FACTOR = 1.5;
 export const OFFER_VOLUME_BOOST_MAX = 4;
 
-// Ceiling on the combined product. With one roll per day and a 0.10 base, this
+// Ceiling on the combined product. With one roll per day and a 0.35 base, this
 // is reachable only through the volume boost — a player several desks are
-// chasing tops out at roughly a one-in-three chance of leaking on any given
-// day. Nothing accelerates past it.
-export const OFFER_PROBABILITY_CEILING = 0.35;
+// chasing tops out at roughly a three-in-four chance of surfacing on any given
+// day. Nothing accelerates past it, and it stays BELOW 1 deliberately: a
+// certainty would let an owner read the feed backwards and work out that his
+// own submission is what tipped Schefter.
+export const OFFER_PROBABILITY_CEILING = 0.75;
 
 export function offerPostProbability(effectiveOfferers = 1) {
   const n = Number.isFinite(effectiveOfferers) ? Math.max(1, effectiveOfferers) : 1;

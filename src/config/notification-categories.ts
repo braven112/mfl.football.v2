@@ -238,8 +238,11 @@ export const NOTIFICATION_CATEGORIES: NotificationCategory[] = [
     id: 'rumor',
     group: 'league-news',
     label: 'The rumor mill',
-    description: 'Anonymous tips and whispers from the Schefter Report.',
-    cadence: 'A few a week',
+    description:
+      'Anonymous tips and whispers from the Schefter Report. Since the trade lanes went ' +
+      'feed-first this is the FULL firehose — every trade rumor Schefter files, which the ' +
+      'group chat now only sees a handful of times a week.',
+    cadence: 'Up to a few a day',
     defaultOn: false,
     requiresFeature: 'schefterTips',
     live: true,

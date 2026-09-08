@@ -218,23 +218,32 @@ describe('two-post cycles follow the cap', () => {
     expect(allowsTwoPostCycle('theleague', atPT('2026-11-10'), SHARED)).toBe(true);
   });
 
-  it('gate BOTH double-post paths, not just the busy-morning one', () => {
-    // The daily counter increments once per delivering CYCLE, so every path
-    // that ships two beats has to ask. Gating only busy-morning left the
-    // gossip secondary shipping two posts against a cap of one — and the
-    // tighter cap made it fire MORE often, since a 1/day mill drains the
+  it('gates every double-post path that still spends a chat slot', () => {
+    // The daily counter increments once per delivering CYCLE, so a path that
+    // ships two beats against one slot has to ask. Gating only busy-morning
+    // left the gossip secondary shipping two posts against a cap of one — and
+    // the tighter cap made it fire MORE often, since a 1/day mill drains the
     // gossip queue slower and it crosses the pressure threshold sooner.
+    //
+    // The busy-morning TRADE split stopped asking on 2026-09-08, when the
+    // trade lanes went feed-first: a trade beat spends no slot, and a cycle
+    // sends at most ONE chat ping however many beats it ships, so the pile-up
+    // the question guards against cannot happen there. The gossip secondary
+    // still pings per post and still asks. Anything ADDED here asks again.
     const src = readFileSync(
       path.join(process.cwd(), 'scripts/schefter-rumor-scan.mjs'),
       'utf8',
     );
-    const calls = src.match(/allowsTwoPostCycle\(LEAGUE_SLUG, now, MAX_POSTS_PER_DAY\)/g) ?? [];
-    expect(calls.length).toBeGreaterThanOrEqual(2);
-    // One guards the gossip secondary, one the busy-morning trade split.
     const gossipIdx = src.indexOf("postKind === 'gossip' && secondaryBucket");
+    expect(gossipIdx).toBeGreaterThan(-1);
+    expect(src.slice(gossipIdx, gossipIdx + 900)).toMatch(/allowsTwoPostCycle/);
+
+    // The trade split's exemption is only sound while a cycle can ping at
+    // most once. That is `resolveTradeChatPing` returning a single index.
     const busyIdx = src.indexOf('BUSY_MORNING_TRADE_THRESHOLD &&');
-    expect(src.slice(gossipIdx, gossipIdx + 700)).toMatch(/allowsTwoPostCycle/);
-    expect(src.slice(busyIdx - 400, busyIdx + 400)).toMatch(/allowsTwoPostCycle/);
+    expect(busyIdx).toBeGreaterThan(-1);
+    expect(src.slice(busyIdx - 700, busyIdx + 400)).not.toMatch(/allowsTwoPostCycle/);
+    expect(src).toMatch(/if \(chatDecision\.index >= 0\) chatIndexes\.add\(chatDecision\.index\)/);
   });
 });
 
@@ -253,7 +262,7 @@ describe('the Friday mailbag is the one exemption from the cap', () => {
       'utf8',
     );
     const candidateIdx = src.indexOf('let mailbagCandidate = false;');
-    const gateIdx = src.indexOf('const gates = await checkGates(redis, now');
+    const gateIdx = src.indexOf('let gates = await checkGates(redis, now');
     expect(candidateIdx).toBeGreaterThan(-1);
     expect(gateIdx).toBeGreaterThan(candidateIdx);
     expect(src).toMatch(/checkGates\(redis, now, \{ exemptFromMillCap: mailbagCandidate \}\)/);
@@ -317,8 +326,14 @@ describe('per-offer rarity gates', () => {
     expect(src).toMatch(/if \(lastRollDate === todayPtForRoll\) \{/);
   });
 
-  it('holds a reported offer for a 7-day cooldown', () => {
-    expect(src).toMatch(/const OFFER_REPOST_COOLDOWN_MS = 7 \* 24 \* 60 \* 60 \* 1000/);
+  it('holds a reported offer for a multi-day cooldown', () => {
+    // Was 7d — just past the tip expiry, so nearly every proposal was reported
+    // exactly once. Cut to 3d on 2026-09-08 when the lane went feed-first: a
+    // live negotiation is a story a REPORT can follow across a few beats, and
+    // the drip in schefter-offer-beats.mjs is what stops those beats from
+    // being the same post twice. It must never fall below a day — a same-day
+    // repeat of one offer is the failure that started all of this.
+    expect(src).toMatch(/const OFFER_REPOST_COOLDOWN_MS = 3 \* 24 \* 60 \* 60 \* 1000/);
     expect(src).toMatch(/nowMs - lastPostMs < OFFER_REPOST_COOLDOWN_MS/);
     expect(src).toMatch(/OFFER_LAST_POST_KEY,\s*Object\.fromEntries/);
   });

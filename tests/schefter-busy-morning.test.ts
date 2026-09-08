@@ -75,8 +75,19 @@ describe('busy-morning split logic', () => {
     // The block sits inside `if (postKind === 'trade' && ...)` — never
     // splits gossip or mailbag buckets.
     expect(SCANNER_SRC).toMatch(
-      /postKind === 'trade' &&\s*\n?\s*primaryBucket\.tips\.length >= BUSY_MORNING_TRADE_THRESHOLD/,
+      /postKind === 'trade' &&\s*\n?\s*primaryBucket\.key === 'trade:offer' &&/,
     );
+    expect(SCANNER_SRC).toMatch(
+      /primaryBucket\.tips\.length >= BUSY_MORNING_TRADE_THRESHOLD/,
+    );
+  });
+
+  it('splits only the shared trade:offer bucket, never a trade-block bucket', () => {
+    // `trade_bait` tips classify as 'trade' since the feed/chat split, so
+    // postKind alone no longer identifies the proposal bucket. A trade-block
+    // bucket is ONE franchise's listings — splitting it yields two posts about
+    // the same team's block rather than two stories.
+    expect(SCANNER_SRC).toMatch(/primaryBucket\.key === 'trade:offer'/);
   });
 
   it('requires the morning window AND backlog threshold simultaneously', () => {

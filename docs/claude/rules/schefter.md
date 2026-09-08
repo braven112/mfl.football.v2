@@ -284,6 +284,108 @@ ONE fact that is new this signal so the prompt opens on it.
   everywhere else, so a slug works today and silently splits the store on the
   second league.
 
+### The trade lanes are FEED-FIRST — the report is unlimited, the chat is rare
+
+`scripts/lib/schefter-trade-distribution.mjs`. Owner report, 2026-09-08
+(evening): the rarity gates above worked, and that was the problem. Making the
+CHAT quiet had meant making the REPORT quiet, because a rumor-mill beat was one
+indivisible thing — a feed post and a GroupMe ping, delivered together, gated
+together. At 1/day in season the Schefter Report had almost nothing in it and
+the chat still got every one of them.
+
+The two channels now split. For the TRADE LANES ONLY — `trade_offer` proposals
+and `trade_bait` block listings:
+
+| Channel | Budget |
+|---|---|
+| Schefter Report (feed) | none — no daily cap, no spacing |
+| Web push | none — opt-in per owner, per category |
+| GroupMe | 1 per rolling week in season; 3 in the offseason and the deadline window; 8+/10 on the quality gate |
+
+- **The split is by tip SOURCE, never by bucket kind.** `classifyTipKind`
+  called a block listing 'gossip' because it buckets per franchise the way a
+  topic tip does; keying the split off the bucket would have left half the
+  trade lane in the chat. Both lanes classify as `'trade'` now, which also
+  stopped a listing from spending the one-a-day gossip slot, from being
+  excluded from the lane entirely once that slot was gone (`pickPrimaryBucket`
+  returns null for gossip on a spent budget), and from being swept into the
+  Friday mailbag — a roundup of tips OWNERS wrote, where a machine-read block
+  listing does not belong. `bucketFingerprint` exempts `topic:trade_bait:*`
+  from the recurrence ledger for the same reason: the scanner only ever
+  enqueues a NEW listing, so a recurring bucket key is a franchise listing
+  different players, and relegating it to a mailbag that no longer sweeps it
+  would have left those tips to expire unseen.
+- **A cycle is a trade beat only if EVERY consumed tip is one.** Under-claiming
+  costs one extra chat post; over-claiming mutes a tip an owner wrote by hand,
+  which is the entire reason the chat lane still exists.
+- **Budgets follow the CHAT PING, not the feed post.** `posts_today`,
+  `mill_posts_today`, the gossip slot and the 4h spacing anchor all ration
+  GroupMe, and they increment on `chatDelivered`. For every non-trade lane
+  that is true whenever anything shipped, so their behaviour is byte-identical
+  to before. Keying them off `allowedPosts` instead puts the report's volume
+  back in charge of how loud the chat may be — the same coupling this change
+  removed, only inverted: the report would go quiet again the moment it got
+  busy.
+- **Three gate failures are survivable, and only three.** `checkGates` returns
+  a `blockedBy` CODE beside its prose (matching on the prose would make the
+  bypass list a function of log wording). `shared-budget`, `mill-cap` and
+  `spacing` are chat budgets, so a trade cycle continues past them as
+  feed-only. `quiet-hours` (a 3am beat reads as a bot in any channel),
+  `gen-attempts` (spend, not cadence) and `marinate`/`no-anchor` (the tip is
+  not ready) still stop every lane.
+- **A narrowed cycle must HAND BACK the tips it narrowed out.** The fallback
+  replaces `freshTips` with the trade-lane subset, and `unusedTips` — the list
+  the queue is rewritten wholesale from — is computed off `freshTips`. Without
+  the explicit `laneExcludedTips` hold-out, taking the feed-only path would
+  DELETE every gossip tip in the queue. Same list also feeds cross-corroboration,
+  so an owner's tip about the same players still lifts the beat that is shipping.
+- **No quiet-day post on a feed-only cycle.** "It's quiet out there" spends the
+  shared budget and the mill's own slot — the exact slots the cycle was just
+  refused.
+- **The chat bar is a different question from the publish bar.** Publishing
+  asks whether a post is worth READING (6/10, or 3 on a quiet week). The ping
+  asks whether it is worth INTERRUPTING sixteen people for, and 8 is the
+  scorer's own band for a concrete, named, genuinely new development. A NULL
+  score never pings: the scorer returns null when it could not run, the feed
+  fails open on that and costs a mediocre post, and the chat fails closed and
+  costs nothing.
+- **The weekly allowance is a rolling 7 days, and it is spread.** A
+  midnight-reset counter would mean "whatever fits before Sunday". And the
+  allowance alone would let all three of an offseason week's pings land in one
+  afternoon, which reads as a spam burst rather than three stories — hence a
+  minimum gap of `window / allowance` on top. The log is trimmed on WRITE so
+  the key cannot grow.
+- **PUSH IS NOT PART OF THE SPLIT.** Every delivered beat still pushes, trade
+  included. Push is opt-in per owner and per category
+  (`/<league>/notifications`); the group chat is one room everybody is in.
+  Only the second one needs rationing.
+- **The per-offer odds moved with it, and had to.** `OFFER_POST_PROBABILITY`
+  0.10 → 0.35/day and `OFFER_REPOST_COOLDOWN_MS` 7d → 3d. At 0.10 an offer was
+  a coin flip to EVER surface — right for a message that buzzes sixteen phones,
+  wrong for a page an owner opens on purpose. The roll cadence did NOT move
+  (still one roll per offer per PT day), which is the thing to check before
+  touching the base again. `OFFER_PROBABILITY_CEILING` moved 0.35 → 0.75 in
+  step: pinning it while the base rises flattens the volume boost into a no-op
+  and silently removes the only signal the lane has for "this one actually
+  matters". It stays below 1 so an owner cannot read the timing backwards to
+  his own submission.
+- **`MAX_GEN_ATTEMPTS_PER_DAY` 12 → 20.** It is now the ONLY per-day ceiling
+  the trade lane meets. A cycle over the posting cap used to return at gate 2
+  without generating; a feed-only cycle runs past that gate, so attempts it
+  never used to spend land here. It is a spend ceiling, not a cadence dial —
+  tightening it does not quiet the chat, it truncates the day at an arbitrary
+  hour.
+- **The busy-morning trade split no longer asks `allowsTwoPostCycle`,** and it
+  is the ONE exception to the "every double-post path asks" rule below. That
+  question is about the chat — two rumors landing back to back off one slot —
+  and a trade cycle spends no slot and sends at most ONE ping however many
+  beats it ships (`resolveTradeChatPing` returns a single index). It is also
+  now restricted to the `trade:offer` bucket: a block bucket is one franchise's
+  listings, and splitting it yields two posts about the same team's block
+  rather than two stories. The gossip secondary still asks, and must.
+
+`tests/schefter-trade-distribution.test.ts` pins all of it.
+
 ### The rumor mill is a beat, not an advertising feed — three rarity gates
 
 Owner report, 2026-09-08: two rumors in one day about the SAME Fire Ready Aim
@@ -323,10 +425,12 @@ puts the lane back:
   never. Note this is exactly where `exposure` is wrong and has always been
   wrong (it counts enqueues); do not copy it.
 - **The volume boost SURVIVES all of this.** A player three desks are calling
-  about is the genuine breaking story; the gradient from 10%/day up to the
-  0.35 ceiling is what separates it from a routine offer. Note the ceiling now
-  binds before `OFFER_VOLUME_BOOST_MAX` does (0.10 × 4 = 0.40 > 0.35), so any
-  test asserting the raw product pins a number the clamp never returns.
+  about is the genuine breaking story; the gradient from the base up to the
+  ceiling is what separates it from a routine offer. The ceiling binds before
+  `OFFER_VOLUME_BOOST_MAX` does (0.35 × 4 = 1.4 > 0.75), so any test asserting
+  the raw product pins a number the clamp never returns — and the ceiling MUST
+  move whenever the base does, or the boost flattens into a no-op and the lane
+  loses its only signal for "this one actually matters".
 
 **The exposure boost is GONE and must not come back.** Phase 6c multiplied the
 base by `OFFER_EXPOSURE_BOOST_FACTOR ^ priorExposure` so an already-reported
@@ -350,6 +454,11 @@ three trade rumors a day on top of it reads as spam.
 | Season being played | 1/day |
 | 10 days into each league's trade deadline, through deadline day | 3 again |
 
+Since the feed/chat split this cap governs the GOSSIP lane and the quiet-day
+post — the two things that still ping the chat on every delivery. A trade beat
+neither counts against it nor is stopped by it; its own weekly chat allowance
+runs the same calendar inversion, one rung quieter.
+
 - **It counts on its OWN key** (`rumor:mill_posts_today`), never on the shared
   `rumor:posts_today`. That shared budget also carries the transaction
   scanner's big-name-drop pings and the speculation lane, so gating the
@@ -360,13 +469,15 @@ three trade rumors a day on top of it reads as spam.
   against a cap of one.
 - **The cap may only TIGHTEN the shared budget, never widen it** — the lane
   cannot outspend the budget it draws from. Pinned by test.
-- **EVERY double-post path is off wherever the cap is 1**, not just the one you
-  are looking at. The counter increments once per delivering CYCLE, so both the
-  busy-morning trade split AND the gossip secondary must ask
-  `allowsTwoPostCycle`. Gating only busy-morning was a real bug in the first
-  draft of this feature, and the tighter cap made the ungated path fire MORE
-  often — a 1/day mill drains the gossip queue slower, so it crosses
-  `SECONDARY_GOSSIP_POST_PRESSURE` sooner. A third such path asks too.
+- **EVERY double-post path that still spends a chat slot asks**, not just the
+  one you are looking at. The counter increments once per delivering CYCLE, so
+  the gossip secondary must ask `allowsTwoPostCycle`. Gating only busy-morning
+  was a real bug in the first draft of this feature, and the tighter cap made
+  the ungated path fire MORE often — a 1/day mill drains the gossip queue
+  slower, so it crosses `SECONDARY_GOSSIP_POST_PRESSURE` sooner. A third such
+  path asks too. The busy-morning TRADE split is the one exemption and it is
+  argued in "The trade lanes are FEED-FIRST" above: a trade cycle spends no
+  slot and pings the chat at most once however many beats it ships.
 - **The Friday mailbag is the ONE exemption from the cap**, and it is resolved
   BEFORE `checkGates` because that function returns early. Otherwise one
   earlier rumor spends the day's only in-season slot, the mailbag never runs,

@@ -65,27 +65,34 @@ describe('offerPostProbability — exponential scaling on shopping volume', () =
   });
 
   it('scales exponentially with effective offerer count', () => {
-    expect(offerPostProbability(2)).toBeCloseTo(OFFER_POST_PROBABILITY * OFFER_VOLUME_BOOST_FACTOR);
-    expect(offerPostProbability(3)).toBeCloseTo(
-      OFFER_POST_PROBABILITY * OFFER_VOLUME_BOOST_FACTOR ** 2,
-    );
-    expect(offerPostProbability(4)).toBeCloseTo(
-      OFFER_POST_PROBABILITY * OFFER_VOLUME_BOOST_FACTOR ** 3,
-    );
+    // Each step is the raw product CLAMPED — the ceiling binds partway up the
+    // ladder, so asserting the bare product pins numbers the function never
+    // returns. What must hold is that the gradient exists below the clamp.
+    const stepped = (n: number) =>
+      Math.min(OFFER_PROBABILITY_CEILING, OFFER_POST_PROBABILITY * OFFER_VOLUME_BOOST_FACTOR ** (n - 1));
+    expect(offerPostProbability(2)).toBeCloseTo(stepped(2));
+    expect(offerPostProbability(3)).toBeCloseTo(stepped(3));
+    expect(offerPostProbability(4)).toBeCloseTo(stepped(4));
+    // The volume boost must not be flattened into a no-op by a ceiling that
+    // did not move with the base — a bump that pins them together silently
+    // removes the only signal the lane has for "this one actually matters".
+    expect(offerPostProbability(2)).toBeGreaterThan(offerPostProbability(1));
   });
 
   it('caps the multiplier so a heavily-shopped player never auto-posts', () => {
-    // Since the base moved to 0.10 the CEILING binds before the volume cap
-    // does (0.10 x 4 = 0.40 > 0.35), so the effective ceiling is whichever is
-    // lower. Asserting the product alone would pin a number the clamp never
-    // returns.
+    // The CEILING binds before the volume cap does (0.35 x 4 = 1.4 > 0.75), so
+    // the effective ceiling is whichever is lower. Asserting the product alone
+    // would pin a number the clamp never returns.
     const capped = Math.min(
       OFFER_POST_PROBABILITY * OFFER_VOLUME_BOOST_MAX,
       OFFER_PROBABILITY_CEILING,
     );
     expect(offerPostProbability(99)).toBeCloseTo(capped);
     // Even capped, the daily probability must remain a roll, not a guarantee.
-    expect(offerPostProbability(99)).toBeLessThan(0.5);
+    // A certainty would let an owner read the feed backwards and work out that
+    // his own submission is what tipped Schefter.
+    expect(offerPostProbability(99)).toBeLessThan(1);
+    expect(offerPostProbability(99)).toBeLessThanOrEqual(OFFER_PROBABILITY_CEILING);
   });
 
   it('is monotonically non-decreasing in effective offerer count', () => {
@@ -147,13 +154,21 @@ describe('offerPostProbability — no exposure acceleration', () => {
     expect(scanner).toMatch(/lastRollDate === todayPtForRoll/);
   });
 
-  it('leaves an ordinary single-suitor offer a genuine long shot over a week', () => {
-    // One roll a day at the base rate: a week-long offer is closer to a coin
-    // flip than to a certainty. If this ever climbs back toward 1 the lane has
-    // silently become an advertising feed again.
+  it('is a real roll on any given DAY, and near-certain across a week', () => {
+    // The two halves are the whole design, and they used to be in tension:
+    // one roll a day at 0.10 made a week-long offer a coin flip to EVER
+    // surface, which is the right rarity for a message that buzzes sixteen
+    // phones and the wrong rarity for a report page an owner opens on purpose.
+    //
+    // Since the trade lane went feed-first (2026-09-08) the chat rarity lives
+    // in schefter-trade-distribution.mjs instead, and this constant is free to
+    // do its actual job: get the story onto the report. A live proposal should
+    // almost always show up there before it dies.
     const oneWeek = 1 - (1 - OFFER_POST_PROBABILITY) ** 7;
-    expect(oneWeek).toBeGreaterThan(0.3);
-    expect(oneWeek).toBeLessThan(0.7);
+    expect(oneWeek).toBeGreaterThan(0.9);
+    // A single day still has to be a coin toss at best, or an owner can read
+    // the timing backwards to his own submission.
+    expect(OFFER_POST_PROBABILITY).toBeLessThan(0.5);
   });
 });
 

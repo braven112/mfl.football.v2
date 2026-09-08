@@ -144,6 +144,11 @@ const CAPTURE_PATHS = {
   // send AFL owners across the fence). The links themselves are the subject,
   // so the shot has to be of an article, not a feature page.
   'schefter-article-links': '/theleague/news/sf_2026_schedule_release_theleague',
+  // Both-league entry on the bare `/news`, which only routes on a league's own
+  // apex host — locally it falls through to the 404 catch-all. Shot against
+  // TheLeague because the trade-PROPOSAL lane runs there and nowhere else; the
+  // AFL's half of this change is trade-block listings only.
+  'trade-rumors-feed-first': '/theleague/news',
   // Both-league entry on the bare `/players`, which only routes on a league's
   // own apex host. Shot against TheLeague because its card carries the
   // contract half of the change (salary + years) as well as the owner strip;
