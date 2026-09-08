@@ -111,8 +111,21 @@ const cookiePrefs = hasChosenClock ? parseViewerPreferences(rawCountry, rawZone)
  * "League time (PT)" at them. It also means an owner we have been TOLD is on
  * US/PT is not nudged to set a preference they would only be re-typing.
  *
- * The mirror is still out of reach here, so an owner who saved on another
- * device and not this one still sees the floor. That one is real and stays.
+ * PRECEDENCE, and its one sharp edge. `readViewerClock` ranks cookie → mirror
+ * → seed; this ranks cookie → seed, because rank 3 is the Redis read the rule
+ * above forbids here. So on a device with no cookie, a seeded owner who has
+ * since SAVED a different clock gets the seed in this drawer while the page
+ * around it prints the mirror — the seed's own contract says a stored choice
+ * outranks it, and here it does not.
+ *
+ * Kept anyway, because it is not a regression: before the drawer read seeds it
+ * showed the league floor to that same owner, which disagreed with the page
+ * just as much and was no more correct. This trades a floor for a slightly
+ * stale fact and fixes the far commoner case — a seeded owner who has never
+ * saved — outright. It self-heals on the first visit to `/preferences`, which
+ * resolves the mirror and writes it to the cookie. Closing it properly means
+ * handing the nav an already-resolved clock from the route (Astro.locals), not
+ * a Redis read from here.
  */
 const seededPrefs = !cookiePrefs && team?.franchiseId
   ? seededPreferencesFor(leagueDef.slug, team.franchiseId)
@@ -159,10 +172,8 @@ const clockValue = clockSummary && clockSummary !== leagueClockLabel
  *
  * It rides the same `!viewerPrefs` read as the clock line above rather than a
  * second one, so the row can never glow while printing a clock the viewer
- * chose. Note the known blind spot: a SEEDED owner has no cookie either, so
- * they are nudged despite already reading their own clock elsewhere on the
- * page — which is the right outcome, because saving it for real is exactly
- * what settles the drawer-versus-page disagreement seeds leave them with
+ * chose. A SEEDED owner therefore is NOT nudged: the seed resolves into
+ * `viewerPrefs`, which is the whole reason this component consults it
  * (docs/claude/rules/viewer-preferences.md).
  */
 const hintPreferences = !viewerPrefs;

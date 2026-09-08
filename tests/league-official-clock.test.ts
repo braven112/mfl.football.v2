@@ -55,6 +55,20 @@ describe('league official clock', () => {
     expect(leagueClock('not-a-league').zone).toBeTruthy();
   });
 
+  it('takes CANONICAL slugs — a nav slug silently resolves to the wrong league', () => {
+    // `leagueClock` is total by design (a caller with no league gets the
+    // site's own clock), and totality here means a WRONG answer rather than a
+    // throw. The AFL's nav slug is 'afl' and its canonical slug is
+    // 'afl-fantasy', so passing the nav slug hands back TheLeague's clock.
+    // Invisible today because every league is PT — which is exactly why it is
+    // pinned rather than left for the first league that isn't.
+    const afl = ALL_LEAGUES.find((l) => l.navSlug !== l.slug);
+    expect(afl, 'no league has a nav slug distinct from its canonical slug').toBeTruthy();
+    expect(leagueClock(afl!.navSlug)).toEqual(leagueClock(null));
+    expect(leagueClock(afl!.slug)).toEqual(afl!.officialClock);
+    // Convert with getLeagueByNavSlug(nav).slug before calling.
+  });
+
   it('names a zone the preferences catalog can actually offer', () => {
     // The picker tags an option "league clock" via `isLeagueClock`. A league
     // clock no country's catalog contains would render that tag nowhere, and

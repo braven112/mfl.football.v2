@@ -56,9 +56,18 @@ page it sits on — before this, Maverick read "League time (PT)" in the drawer
 beside a waiver deadline printed in Sydney. And an owner we have been TOLD is
 on US/PT is not pulsed at to set a preference they would only be re-typing,
 which is why seeding someone onto the clock the site already defaults to is not
-redundant: a seed is an ANSWER, and the absence of one is a question. An owner
-who saved on another device and not this one still sees the floor here — that
-gap is the mirror's, and it stays.
+redundant: a seed is an ANSWER, and the absence of one is a question. The PRECEDENCE here is cookie → seed, not
+`readViewerClock`'s cookie → mirror → seed, because the middle rank is the
+Redis read this rule forbids. That has one sharp edge worth knowing: a seeded
+owner who has since SAVED a different clock sees the seed in the drawer, on a
+device with no cookie, while the page prints the mirror — the seed's own
+contract ("their own choice outranks it the moment they make one") does not
+hold in the nav. It is kept because it is not a regression: that owner
+previously saw the league floor there, which disagreed with the page just as
+much and was no more correct. It self-heals on their first visit to
+`/preferences`, which resolves the mirror and writes it to the cookie. Closing
+it properly means handing the nav an already-resolved clock from the ROUTE
+(`Astro.locals`), never a Redis read from the component.
 
 **The nav reads the COOKIE, never the resolver.** `NavFooter` renders on every
 page, so it does the read by hand — `Astro.cookies.get(COUNTRY_COOKIE/ZONE_COOKIE)`

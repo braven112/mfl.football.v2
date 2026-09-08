@@ -30,6 +30,7 @@ import {
   waiverPriorityFootnote,
 } from '../utils/waiver-priority-render';
 import { rankWithinConference } from '../utils/waiver-order';
+import type { LeagueClock } from '../utils/viewer-preferences';
 
 // THE OLD NAMES ARE DELIBERATE. These two keys predate the Transaction Hub and
 // are NOT renamed with the file: `dismissed` holds the trade ids every owner
@@ -208,6 +209,14 @@ function thmConfig(): {
   teams: Array<{ franchiseId: string; name: string; icon?: string }>;
   freeAgentsPath: string;
   showWaiverPriority: boolean;
+  /**
+   * This league's official clock, from the registry — see
+   * `TransactionHubConfig`, which this shape mirrors by hand. It is read in
+   * `renderWaiverPriority` for the "as of" stamp; a field added there and not
+   * here type-errors at the READ, which is the only reason this duplicate is
+   * survivable at all.
+   */
+  officialClock?: LeagueClock;
 } | null {
   try {
     const raw = document.getElementById('transaction-hub-config')?.textContent;

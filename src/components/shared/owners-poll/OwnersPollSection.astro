@@ -17,6 +17,7 @@
  * is the story — averaging them would erase both signals.
  */
 import { getLeagueByNavSlug, leagueClock } from '../../../config/leagues';
+import type { LeagueSlug } from '../../../types/nav';
 import OwnersPollLive from './OwnersPollLive';
 import { teamAccentVar } from '../../../utils/team-accent-css';
 
@@ -66,8 +67,14 @@ export interface OwnersPollBlock {
 interface Props {
   poll: OwnersPollBlock | null | undefined;
   teams: Map<string, any>;
-  /** Nav slug — the `?league=` the island sends as a session check. */
-  leagueParam: string;
+  /**
+   * NAV slug — the `?league=` the island sends as a session check. Typed as
+   * the union rather than `string` because it is also converted to a CANONICAL
+   * slug for `leagueClock`, and that lookup falls back to the default league
+   * on anything it does not recognise: a loose `string` here would let 'afl'
+   * reach it directly and quietly hand the AFL TheLeague's clock.
+   */
+  leagueParam: LeagueSlug;
   ballotHref: string;
   issueWeek: number;
 }
