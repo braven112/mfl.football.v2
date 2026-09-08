@@ -387,9 +387,17 @@ three trade rumors a day on top of it reads as spam.
   is UTC-7); an instant built from one offset lands on the wrong day under the
   other. The questions are day-grained, so the answers are too.
 - **The window opens at DRAFT WEEKEND, not at kickoff** — Labor Day − 8, the
-  AFL's NL email draft Sunday, with TheLeague's auction in the same stretch.
-  The league is awake the moment the drafts land: real rosters, real cuts, real
-  trade talk, which is the entire argument the quiet cap rests on. Anchored at
+  AFL's NL email draft Sunday. The league is awake the moment the drafts land:
+  real rosters, real cuts, real trade talk, which is the entire argument the
+  quiet cap rests on. It is anchored to the NL draft rather than the AL Live
+  Draft Saturday (LD − 9) on purpose, so the loud cadence still gets AL draft
+  morning; `-12` is the offset that would cover the whole weekend.
+- **The window is LEAGUE-AGNOSTIC and the anchor is the AFL's calendar.**
+  TheLeague's own roster crunch is a fortnight earlier — Declare Contracts /
+  Cut to 22 and Offseason FA Closes are both `third-sunday-august` (2026-08-16)
+  — so it stays loud through its own deadlines and goes quiet on the AFL's
+  draft weekend. Known gap, deliberately not papered over: `leagueAwakeWindow`
+  takes no slug, and a per-league window is the fix if it ever bites. Anchored at
   kickoff (Labor Day + 3) it left the LOUDEST cadence — 3/day plus the
   busy-morning double — running through the busiest roster week of the year,
   and on 2026-09-08 the mill shipped two beats about one trade offer a second
@@ -432,10 +440,24 @@ three times.
   `scripts/lib/schefter-tip-queue.mjs`, beside `isUsableTip`. Deduping on
   requeue alone would miss it: fresh offer tips are pushed at the START of the
   run, so the read is the only point that sees every row.
-- **It keeps the EARLIEST row.** `submittedAt` is the anchor the framing, the
-  age-boost and `TIP_EXPIRY_MS` all read; keeping the newest lets a re-rolled
-  offer refresh its own clock forever, which is the "dead proposals never
-  leave" failure of the 2026-09-07 insight with a fresh timestamp each day.
+- **It keeps the NEWEST row's PAYLOAD under the EARLIEST row's `submittedAt`** —
+  two questions, not one. The payload must be newest because
+  `redactTradeOffer` stamps `to_<offerId>` on every tip it mints for an offer,
+  **the closure callback included**: keeping the earliest row wholesale let a
+  stale "still shopping" row swallow the "this one got done" tip behind it, and
+  `OFFER_CLOSED_KEY` is written at ENQUEUE, before the tip ships, so a dropped
+  closure is never retried. It also discarded the newer row's `framingHint`,
+  `offerAgeMs` and `exposure`, so an ask-changed beat never shipped and the
+  post understated the offer's age. The timestamp must be earliest because
+  `submittedAt` is the anchor the framing, the age-boost and `TIP_EXPIRY_MS`
+  all read; carrying the newest forward lets a re-rolled offer refresh its own
+  clock forever — the "dead proposals never leave" failure of the 2026-09-07
+  insight, wearing a plausible timestamp.
+- **It merges into a COPY, never onto the input row.** Folding the fields onto
+  `keep` leaves two rows sharing one `submittedAt`, and the newest-wins compare
+  then breaks that tie by arrival order — so a second pass over the same array
+  answers differently. The scanner dedupes once per run; a function whose
+  result depends on whether it has already been called is a trap regardless.
 - **Strike state folds FORWARD from every duplicate**, never inherited from the
   kept row alone — otherwise a newly enqueued copy launders a tip out of
   hold-and-strike by resetting its counter to zero.

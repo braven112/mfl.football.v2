@@ -161,7 +161,10 @@ describe('awake window — draft weekend through the championship', () => {
 
   it('is closed in the quiet months and open from the drafts on', () => {
     expect(isLeagueAwake(atPT('2026-08-01'))).toBe(false);
-    expect(isLeagueAwake(atPT('2026-08-29'))).toBe(false); // day before the drafts
+    // 2026-08-29 is the AFL's AL Live Draft Saturday (Labor Day - 9). The
+    // window opens the NEXT day, at the NL email draft — a deliberate choice
+    // of anchor, not an oversight: see AWAKE_START_OFFSET_FROM_KICKOFF_DAYS.
+    expect(isLeagueAwake(atPT('2026-08-29'))).toBe(false);
     expect(isLeagueAwake(atPT('2026-08-30'))).toBe(true);
     expect(isLeagueAwake(atPT('2026-11-15'))).toBe(true);
   });

@@ -169,11 +169,70 @@ describe('tip-queue dedupe — one row per tip id', () => {
     expect(dedupeTipsById(rows).map((t) => t.id)).toEqual(['to_1076', 'to_1078', 'to_1081']);
   });
 
-  it('keeps the EARLIEST row so the tip still ages out', () => {
+  it('keeps the NEWEST payload — a closure tip must not be swallowed by a stale live row', () => {
+    // redactTradeOffer stamps `to_<offerId>` on EVERY tip for an offer, the
+    // closure callback included, so a closure lands on the same id as the
+    // live rows already queued. OFFER_CLOSED_KEY is written at enqueue,
+    // before the tip ships, so a dropped closure is never retried — the stale
+    // "still shopping" beat would ship in its place, permanently.
+    const live = {
+      id: 'to_1080',
+      source: 'trade_offer',
+      text: '',
+      submittedAt: 1_000,
+      framingHint: 'fresh',
+      offerAgeMs: 3 * HOUR,
+    };
+    const closure = {
+      id: 'to_1080',
+      source: 'trade_offer',
+      text: '',
+      submittedAt: 900_000,
+      framingHint: 'closure',
+      offerAgeMs: 11 * 24 * HOUR,
+      closure: { reason: 'accepted', daysOpen: 11, priorPosts: 3 },
+    };
+    const [kept] = dedupeTipsById([live, closure]);
+    expect(kept.closure).toEqual({ reason: 'accepted', daysOpen: 11, priorPosts: 3 });
+    expect(kept.framingHint).toBe('closure');
+    // Arrival order must not decide it either.
+    expect(dedupeTipsById([closure, live])[0].closure?.reason).toBe('accepted');
+  });
+
+  it('carries the NEWER row\'s framing and offer age, not the first sighting\'s', () => {
+    // An ask-changed beat is enqueued as a later row; keeping the earlier one
+    // wholesale shipped the old framing and understated how long the offer
+    // had been sitting.
+    const first = {
+      id: 'to_1080',
+      source: 'trade_offer',
+      text: '',
+      submittedAt: 1_000,
+      framingHint: 'fresh',
+      offerAgeMs: 3 * HOUR,
+      exposure: 1,
+    };
+    const changed = {
+      id: 'to_1080',
+      source: 'trade_offer',
+      text: '',
+      submittedAt: 900_000,
+      framingHint: 'changed',
+      offerAgeMs: 50 * HOUR,
+      exposure: 2,
+    };
+    const [kept] = dedupeTipsById([first, changed]);
+    expect(kept.framingHint).toBe('changed');
+    expect(kept.offerAgeMs).toBe(50 * HOUR);
+    expect(kept.exposure).toBe(2);
+  });
+
+  it('keeps the EARLIEST submittedAt so the tip still ages out', () => {
     // submittedAt is the anchor for the framing, the age-boost and
-    // TIP_EXPIRY_MS alike. Keeping the newest would let a re-rolled offer
-    // refresh its own clock forever — the "dead proposals never leave"
-    // failure of the 2026-09-07 insight, with a fresh timestamp each day.
+    // TIP_EXPIRY_MS alike. Carrying the newest forward would let a re-rolled
+    // offer refresh its own clock forever — the "dead proposals never leave"
+    // failure of the 2026-09-07 insight, with a fresh timestamp each day. So
+    // the payload comes from the newest row and the timestamp from the oldest.
     const older = { id: 'to_1080', source: 'trade_offer', text: '', submittedAt: 1_000 };
     const newer = { id: 'to_1080', source: 'trade_offer', text: '', submittedAt: 900_000 };
     expect(dedupeTipsById([older, newer])[0].submittedAt).toBe(1_000);

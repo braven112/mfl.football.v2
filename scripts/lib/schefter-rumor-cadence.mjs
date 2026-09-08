@@ -41,12 +41,23 @@ export const IN_SEASON_MAX_RUMOR_POSTS_PER_DAY = 1;
  * The league wakes up at its DRAFTS, not at kickoff.
  *
  * The AFL's live AL draft is the Saturday nine days before Labor Day and its
- * NL email draft the Sunday eight days before (`sunday-before-labor-day-
- * weekend` in src/utils/league-event-resolver.ts); TheLeague's auction sits in
- * the same stretch. From that weekend on there are real rosters, real cuts and
- * real trade talk — the league is generating its own conversation, which is
- * the entire argument the quiet cap rests on. It just starts eleven days
- * before kickoff does.
+ * NL email draft the Sunday eight days before (`saturday-` and
+ * `sunday-before-labor-day-weekend` in src/utils/league-event-resolver.ts).
+ * From that weekend on there are real rosters, real cuts and real trade talk —
+ * the league is generating its own conversation, which is the entire argument
+ * the quiet cap rests on. It just starts eleven days before kickoff does.
+ *
+ * Anchored to the NL draft (LD - 8) rather than the AL draft Saturday
+ * (LD - 9): a deliberate call, so the loud cadence gets AL draft morning and
+ * goes quiet once BOTH conferences have drafted. Move it to -12 to cover the
+ * whole weekend.
+ *
+ * This window is LEAGUE-AGNOSTIC, and the anchor is the AFL's calendar.
+ * TheLeague's own roster crunch is earlier — Declare Contracts / Cut to 22 and
+ * Offseason FA Closes are both `third-sunday-august` (2026-08-16), a fortnight
+ * before this opens — so its quiet period starts later than its own deadlines
+ * would suggest. That is a known gap, not a claim that the two leagues line
+ * up; a per-league window is the fix if it ever matters.
  *
  * Anchoring on kickoff (Labor Day + 3) left the LOUDEST cadence — 3 posts/day
  * plus the busy-morning double — running through the busiest roster week of

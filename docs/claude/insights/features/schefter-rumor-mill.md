@@ -37,20 +37,37 @@ never got a chance to fire. **A cooldown expressed in days cannot police a
 repeat measured in seconds:** any "don't repeat yourself" rule needs to hold
 WITHIN a cycle as well as across them, and those are two different mechanisms.
 
-**Which duplicate you keep is a real decision.** Keeping the newest row is the
-obvious reflex and is wrong twice: `submittedAt` is the anchor for the framing,
-the age-boost and the 7-day expiry, so a re-rolled offer would refresh its own
-clock forever (the "dead proposals never leave" failure of the 2026-09-07
-entry, now with a plausible timestamp), and the fresh copy carries no
-`suppressedStrikes`, so a tip could launder itself out of hold-and-strike by
-being enqueued again. Keep the earliest row; fold the strike ledger forward
-from every copy.
+**Which duplicate you keep is a real decision, and "a row" is the wrong unit to
+decide it in.** The first cut kept the earliest row wholesale, reasoning that
+`submittedAt` anchors the framing, the age-boost and the 7-day expiry, so a
+re-rolled offer keeping the newest would refresh its own clock forever (the
+2026-09-07 entry's failure, now with a plausible timestamp). All true — and it
+threw away the CLOSURE tip, because `redactTradeOffer` stamps `to_<offerId>` on
+every tip it mints for an offer, the "this one got done" callback included. A
+stale live row swallowed it, and `OFFER_CLOSED_KEY` is written at enqueue
+rather than on publication, so the closure was not merely delayed but lost.
+**The lesson is that "which row wins" was two questions wearing one answer:**
+the payload wants the newest (closure, changed ask, current age and exposure),
+the timestamp wants the oldest (so expiry still bites), and the strike ledger
+wants the max of both — otherwise a fresh copy launders a tip out of
+hold-and-strike. Merge the fields; do not elect a row.
+
+**A merge that writes onto its input makes the function answer differently the
+second time.** Folding the merged `submittedAt` onto the kept row leaves both
+duplicates sharing a timestamp, and the newest-wins comparison then resolves
+that tie by arrival order — so a second pass over the same array keeps the
+other row. Only one call site exists and it runs once per run, so nothing was
+broken; the test that reversed the argument order was what noticed. **A pure
+function is not a style preference when the function's own output is one of its
+inputs' fields.**
 
 **And the cadence boundary was measuring the wrong thing.** The mill's quiet
 1/day cap keyed on `isLeagueSeasonOpen` — kickoff, Labor Day + 3. The league
 actually wakes at its DRAFTS, eleven days earlier (the AFL's NL email draft is
-the Sunday eight days before Labor Day; TheLeague's auction is the same
-weekend). So the loudest possible cadence — 3/day plus the busy-morning double
+the Sunday eight days before Labor Day). The anchor is the AFL's calendar and
+the window takes no slug, so TheLeague — whose own Cut to 22 is the third
+Sunday in August — stays loud through its own deadlines; a known gap, written
+down rather than smoothed over. So the loudest possible cadence — 3/day plus the busy-morning double
 — was running through draft-and-cuts week, which is why this fired at 8:28am on
 Sep 8 and not in October. Renamed to `isLeagueAwake`: **a boundary named after
 one of its endpoints invites the reader to assume the other one.** Both ends of

@@ -56,12 +56,25 @@ export function isUsableTip(obj) {
  * The per-offer repost cooldown cannot catch this. That anchor is stamped on
  * DELIVERY, and duplicate rows deliver inside the SAME cycle.
  *
- * Keeps the EARLIEST row. `submittedAt` is the age anchor that the framing,
- * the age-boost and TIP_EXPIRY_MS all read, so keeping the newest would let a
- * re-rolled offer outlive its expiry indefinitely — the "dead proposals never
- * leave" failure of the 2026-09-07 insight, with a fresh timestamp each time.
- * Strike state is folded FORWARD from every duplicate rather than taken from
- * the kept row alone, so a newly enqueued copy cannot launder a tip out of
+ * Keeps the NEWEST row's PAYLOAD under the EARLIEST row's `submittedAt`, which
+ * are two different questions and were briefly answered with one row:
+ *
+ * - The payload must be the newest because `redactTradeOffer` stamps
+ *   `id: to_<offerId>` on EVERY tip it mints for an offer, the CLOSURE tip
+ *   included. Keeping the earliest row wholesale meant a stale "still
+ *   shopping" row swallowed the "this one got done" callback behind it — and
+ *   `OFFER_CLOSED_KEY` is written at enqueue, before the tip ships, so a
+ *   dropped closure is never retried. It also discarded the newer row's
+ *   `framingHint`, `offerAgeMs`, `exposure` and planned beats, so an
+ *   ask-changed beat never shipped and the post reported a stale offer age.
+ * - The timestamp must be the earliest because `submittedAt` is the age anchor
+ *   the framing, the age-boost and `TIP_EXPIRY_MS` all read. Carrying the
+ *   newest forward would let a re-rolled offer refresh its own clock every
+ *   day — the "dead proposals never leave" failure of the 2026-09-07 insight,
+ *   wearing a plausible timestamp.
+ *
+ * Strike state folds FORWARD from every duplicate rather than coming from the
+ * kept row alone, so a newly enqueued copy cannot launder a tip out of
  * hold-and-strike by resetting its counter to zero.
  */
 export function dedupeTipsById(tips) {
@@ -73,18 +86,31 @@ export function dedupeTipsById(tips) {
       byId.set(id, tip);
       continue;
     }
-    const keep = (tip.submittedAt ?? 0) < (prev.submittedAt ?? 0) ? tip : prev;
+    // Newest payload wins; see the closure case above.
+    const keep = (tip.submittedAt ?? 0) >= (prev.submittedAt ?? 0) ? tip : prev;
     const drop = keep === tip ? prev : tip;
+    // Merged into a COPY rather than written onto `keep`. Folding the fields
+    // into the input row would leave two rows sharing one `submittedAt`, and
+    // the newest-wins comparison above then resolves a tie by arrival order —
+    // so a second pass over the same array could keep the other row. The
+    // scanner dedupes once per run, but a function whose answer depends on
+    // whether it has already been called is a trap left lying around.
+    const merged = { ...keep };
     const strikes = Math.max(
       typeof keep.suppressedStrikes === 'number' ? keep.suppressedStrikes : 0,
       typeof drop.suppressedStrikes === 'number' ? drop.suppressedStrikes : 0,
     );
-    if (strikes > 0) keep.suppressedStrikes = strikes;
+    if (strikes > 0) merged.suppressedStrikes = strikes;
     const suppressedAts = [keep.firstSuppressedAt, drop.firstSuppressedAt].filter(
       (v) => typeof v === 'number',
     );
-    if (suppressedAts.length > 0) keep.firstSuppressedAt = Math.min(...suppressedAts);
-    byId.set(id, keep);
+    if (suppressedAts.length > 0) merged.firstSuppressedAt = Math.min(...suppressedAts);
+    // ...but the oldest timestamp, so the tip still ages out on schedule.
+    const submittedAts = [keep.submittedAt, drop.submittedAt].filter(
+      (v) => typeof v === 'number',
+    );
+    if (submittedAts.length > 0) merged.submittedAt = Math.min(...submittedAts);
+    byId.set(id, merged);
   }
   return [...byId.values()];
 }
