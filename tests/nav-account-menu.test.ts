@@ -79,8 +79,13 @@ describe('Nav account menu', () => {
     // The flag defaults to a COUNTRY; the clock must come from the LEAGUE.
     // "League time (PT)" is not a hardcoded PT — it is this league's own
     // officialClock, so a league configured onto another zone says so here.
-    expect(source).toMatch(/League time \(\$\{zoneShortName\(officialClock\)\}\)/);
+    expect(source).toMatch(/League time \(\$\{leagueClockLabel\}\)/);
+    expect(source).toMatch(/const leagueClockLabel = zoneShortName\(officialClock\)/);
     expect(source).toMatch(/zoneSummary\(viewerPrefs, officialClock\)/);
+    // A viewer already ON the league's clock reads "League time (PT)", not a
+    // bare "PT" — zoneSummary collapses to the label alone for them, and a
+    // one-word fragment under "Preferences" reads like a rendering bug.
+    expect(source).toMatch(/clockSummary && clockSummary !== leagueClockLabel/);
     expect(
       /DEFAULT_VIEWER_PREFERENCES\.zoneId|DEFAULT_ZONE_IDS/.test(source),
       'The nav must never fall back to a default ZONE — the league names its own clock'
@@ -97,6 +102,51 @@ describe('Nav account menu', () => {
       /\bLEAGUE_CLOCK\b/.test(source),
       'NavFooter knows its league — it must call leagueClock(slug), not the fallback constant'
     ).toBe(false);
+  });
+
+  it('pulses the Preferences row until the viewer has actually chosen a clock', () => {
+    // The hint is STATE-driven, and that is the whole design. It wears the
+    // shared `.spotlight-pulse` but must NOT go through `FEATURE_SPOTLIGHTS`:
+    // a feature spotlight answers "is this new", expires on a date and is
+    // dismissed into localStorage, which would leave a viewer who never set a
+    // clock un-nudged a week later and a viewer who DID set one still pulsing
+    // until they cleared storage. The cookie is the honest dismissal.
+    expect(source).toMatch(/const hintPreferences = !viewerPrefs;/);
+    expect(source).toMatch(/'spotlight-pulse': hintPreferences/);
+    // A SEED is an answer, so an owner who has one is never nudged. The nav
+    // may consult it because it is a pure map lookup — the rule above bans a
+    // Redis ROUND TRIP per render, not knowledge.
+    expect(source).toMatch(/seededPreferencesFor\(leagueDef\.slug, team\.franchiseId\)/);
+    expect(source).toMatch(/const viewerPrefs = cookiePrefs \?\? seededPrefs;/);
+    // Call shape, not the bare name — the frontmatter comments discuss
+    // `readViewerClock` by name precisely to explain why it is not called.
+    expect(
+      /readViewerClock\s*\(|getStoredViewerPreferences\s*\(/.test(source),
+      'The seed is a pure lookup; the account MIRROR is still out of reach here'
+    ).toBe(false);
+    expect(
+      /isSpotlightActive\([^)]*preferences/i.test(source),
+      'The preferences hint must not expire on a date — it ends when a clock is chosen'
+    ).toBe(false);
+
+    // Both rows: the signed-in menu and the standalone signed-out row. The
+    // page has no auth gate, so a signed-out visitor can set a clock too and
+    // must get the same nudge.
+    expect(source.match(/'spotlight-pulse': hintPreferences/g) ?? []).toHaveLength(2);
+
+    // Derived from the SAME resolved value the clock line prints, never a
+    // second read — two could disagree and glow at someone whose own clock is
+    // already on screen.
+    expect(source).toMatch(/const clockSummary = viewerPrefs \? zoneSummary/);
+  });
+
+  it('says the same thing to a screen reader that the pulse says visually', () => {
+    // A ring around a link is invisible to assistive tech; without this the
+    // hint reaches only sighted viewers.
+    expect(source).toMatch(
+      /hintPreferences && <span class="visually-hidden">[^<]*not set your clock/
+    );
+    expect(source.match(/hintPreferences && <span class="visually-hidden">/g) ?? []).toHaveLength(2);
   });
 
   it('gates the Preferences and Notifications rows on the registry, not on a league literal', () => {

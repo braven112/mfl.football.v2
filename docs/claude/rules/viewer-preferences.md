@@ -47,6 +47,19 @@ page that shows a clock:
 
 ## The rules
 
+**The nav may read the SEED — it is the MIRROR that is out of reach.** The rule
+below bans a Redis round-trip on every page view, not knowledge:
+`seededPreferencesFor` is a pure lookup in a static map and costs nothing, so
+`NavFooter` consults it when the device has no cookie (`cookiePrefs ??
+seededPrefs`). Two things follow. A seeded owner's drawer now AGREES with the
+page it sits on — before this, Maverick read "League time (PT)" in the drawer
+beside a waiver deadline printed in Sydney. And an owner we have been TOLD is
+on US/PT is not pulsed at to set a preference they would only be re-typing,
+which is why seeding someone onto the clock the site already defaults to is not
+redundant: a seed is an ANSWER, and the absence of one is a question. An owner
+who saved on another device and not this one still sees the floor here — that
+gap is the mirror's, and it stays.
+
 **The nav reads the COOKIE, never the resolver.** `NavFooter` renders on every
 page, so it does the read by hand — `Astro.cookies.get(COUNTRY_COOKIE/ZONE_COOKIE)`
 into `parseViewerPreferences` — and never touches
@@ -74,6 +87,20 @@ US default was Eastern. Cookies are
 per apex domain, which is also why a country chosen on theleague.us shows no
 choice of its own on afl-fantasy.com until it is chosen there: the nav reads
 the cookie by design, and the mirror is a route-only read.
+
+**The preferences hint is STATE-driven, not a feature spotlight.** The drawer's
+Preferences row wears `.spotlight-pulse` (`src/styles/feature-spotlight.css`)
+whenever `!viewerPrefs` — the same read the clock line uses, so it can never
+glow at someone whose own clock it is printing. It deliberately does NOT go
+through `FEATURE_SPOTLIGHTS`: that mechanism answers "is this new", expires on
+a date and is dismissed into localStorage, which here would un-nudge a viewer
+who still has not set a clock a week later AND keep pulsing at one who had.
+The cookie is the honest dismissal. Both rows carry it (the signed-out row too
+— that page has no auth gate), and each pairs it with a `.visually-hidden`
+sentence, because a ring around a link says nothing to a screen reader.
+A SEEDED owner is NOT nudged, and that is why the nav consults the seed at all
+(below). `tests/nav-account-menu.test.ts` pins the condition, both rows, and
+the spoken half.
 
 **Resolve it in the ROUTE, never in a component.** `resolveViewerPreferences`
 WRITES cookies, and `Astro.cookies.set()` from an imported component runs after
@@ -192,14 +219,13 @@ stops the two invisible groups from deciding someone's clock.
 
 **Seeded defaults are a FALLBACK, never a write — and they are KEPT.** They are
 the only exception to "everyone starts US/PT", re-confirmed Sep 2026 when the
-default moved to Pacific: three owners land on their real clock on a first
+default moved to Pacific: a seeded owner lands on their real clock on a first
 visit instead of converting from PT, and every other owner in both leagues
-starts US/PT. The known cost of keeping them is that the NAV disagrees with the
-rest of the page for exactly those owners — the drawer reads cookies only, so a
-seeded owner sees "League time (PT)" beside a waiver deadline in their own
-clock, until they save a preference for real. That is accepted, not overlooked;
-closing it means letting the nav read the mirror, which is the round-trip-per-
-page-view the first rule in this doc rejects. `SEEDED_PREFERENCES` holds
+starts US/PT. Since the nav consults them (above), a seed ALSO silences the
+preferences hint — which is why seven AFL owners are seeded to US/PT, the very
+clock the site already defaults to. That looks redundant and is not: without a
+seed the site has no answer for them, so it asks, forever, about a preference
+they would only be re-typing. `SEEDED_PREFERENCES` holds
 the owners we already know are off the league's clock, keyed
 `<registry slug>:<franchiseId>`. It is consulted only when the device has no
 cookie and the owner has stored nothing, and it is deliberately not persisted:

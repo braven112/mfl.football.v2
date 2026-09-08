@@ -28,6 +28,7 @@ import {
   ZONE_COOKIE,
   DEFAULT_VIEWER_PREFERENCES,
   parseViewerPreferences,
+  seededPreferencesFor,
   zoneShortName,
   zoneSummary,
 } from '../../utils/viewer-preferences';
@@ -94,7 +95,29 @@ const notificationsUrl = resolveLeaguePath(`${leagueBase}/notifications`, hideLe
 const rawCountry = Astro.cookies.get(COUNTRY_COOKIE)?.value ?? null;
 const rawZone = Astro.cookies.get(ZONE_COOKIE)?.value ?? null;
 const hasChosenClock = !!(rawCountry || rawZone);
-const viewerPrefs = hasChosenClock ? parseViewerPreferences(rawCountry, rawZone) : null;
+const cookiePrefs = hasChosenClock ? parseViewerPreferences(rawCountry, rawZone) : null;
+
+/**
+ * The SEED, when this device carries no cookie — and it is free to ask.
+ *
+ * The rule this component obeys bans a ROUND TRIP in the nav, not knowledge:
+ * `readViewerClock` is out because it reaches Redis for the account mirror on
+ * every render. `seededPreferencesFor` is a pure lookup in a static map, so
+ * consulting it costs nothing and is not the thing that rule was protecting.
+ *
+ * Reading it here is what stops the drawer from disagreeing with the page it
+ * sits on. A seeded owner's waiver deadline already prints in their own clock
+ * (the route resolves seeds); without this the drawer three inches away said
+ * "League time (PT)" at them. It also means an owner we have been TOLD is on
+ * US/PT is not nudged to set a preference they would only be re-typing.
+ *
+ * The mirror is still out of reach here, so an owner who saved on another
+ * device and not this one still sees the floor. That one is real and stays.
+ */
+const seededPrefs = !cookiePrefs && team?.franchiseId
+  ? seededPreferencesFor(leagueDef.slug, team.franchiseId)
+  : null;
+const viewerPrefs = cookiePrefs ?? seededPrefs;
 /**
  * The flag names the COUNTRY whose channels this viewer sees, and that has a
  * real default: `DEFAULT_VIEWER_PREFERENCES` is US, and Sunday Ticket, the
@@ -111,9 +134,38 @@ const viewerPrefs = hasChosenClock ? parseViewerPreferences(rawCountry, rawZone)
  */
 const flagCountry = viewerPrefs?.country ?? DEFAULT_VIEWER_PREFERENCES.country;
 const viewerCountry = countryOptions().find((c) => c.code === flagCountry) ?? null;
-const clockValue = viewerPrefs
-  ? zoneSummary(viewerPrefs, officialClock)
-  : `League time (${zoneShortName(officialClock)})`;
+/**
+ * "League time (PT)" covers BOTH ways of being on the league's clock — having
+ * chosen it and never having said. `zoneSummary` collapses to the bare label
+ * for a viewer whose own clock is the league's (it refuses to print
+ * "PT · PT"), and a bare "PT" under Preferences reads like a fragment. Anyone
+ * on a different clock still gets their own first: "Sydney · PT".
+ */
+const leagueClockLabel = zoneShortName(officialClock);
+const clockSummary = viewerPrefs ? zoneSummary(viewerPrefs, officialClock) : null;
+const clockValue = clockSummary && clockSummary !== leagueClockLabel
+  ? clockSummary
+  : `League time (${leagueClockLabel})`;
+
+/**
+ * Nudge a viewer who has never picked a clock.
+ *
+ * STATE-driven, not time-boxed — which is why it does not go through
+ * `FEATURE_SPOTLIGHTS` even though it wears that stylesheet's pulse. A feature
+ * spotlight answers "is this new", expires on a date, and is dismissed into
+ * localStorage; this answers "have you told us where you are", and the honest
+ * dismissal is the preference cookie itself. Set a clock and the hint is gone
+ * on the next render, for good, on every device that carries the cookie.
+ *
+ * It rides the same `!viewerPrefs` read as the clock line above rather than a
+ * second one, so the row can never glow while printing a clock the viewer
+ * chose. Note the known blind spot: a SEEDED owner has no cookie either, so
+ * they are nudged despite already reading their own clock elsewhere on the
+ * page — which is the right outcome, because saving it for real is exactly
+ * what settles the drawer-versus-page disagreement seeds leave them with
+ * (docs/claude/rules/viewer-preferences.md).
+ */
+const hintPreferences = !viewerPrefs;
 
 /**
  * Build the MFL verify team URL
@@ -257,7 +309,10 @@ const spotlightAccountMenu = showAccountMenu && isSpotlightActive(SPOTLIGHT_ID, 
   {showAccountMenu && (
     <div class="nav-footer__account" id="nav-account-panel" data-account-panel hidden>
       {showPreferencesRow && (
-        <a class="nav-footer__account-row" href={preferencesUrl}>
+        <a
+          class:list={['nav-footer__account-row', { 'spotlight-pulse': hintPreferences }]}
+          href={preferencesUrl}
+        >
           <svg class="nav-footer__account-icon" aria-hidden="true">
             <use href={`${spriteUrl}#icon-wrench`}></use>
           </svg>
@@ -266,6 +321,7 @@ const spotlightAccountMenu = showAccountMenu && isSpotlightActive(SPOTLIGHT_ID, 
             <span class="nav-footer__account-value">
               {viewerCountry && <span class="nav-footer__account-flag" aria-hidden="true">{viewerCountry.flag}</span>}
               {clockValue}
+              {hintPreferences && <span class="visually-hidden"> — you have not set your clock yet</span>}
             </span>
           </span>
           <svg class="nav-footer__account-arrow" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -363,7 +419,10 @@ const spotlightAccountMenu = showAccountMenu && isSpotlightActive(SPOTLIGHT_ID, 
       bounces a signed-out visitor to the login screen. */}
   {!isAuthenticated && showPreferencesRow && (
     <div class="nav-footer__account nav-footer__account--signed-out">
-      <a class="nav-footer__account-row" href={preferencesUrl}>
+      <a
+        class:list={['nav-footer__account-row', { 'spotlight-pulse': hintPreferences }]}
+        href={preferencesUrl}
+      >
         <svg class="nav-footer__account-icon" aria-hidden="true">
           <use href={`${spriteUrl}#icon-wrench`}></use>
         </svg>
@@ -372,6 +431,7 @@ const spotlightAccountMenu = showAccountMenu && isSpotlightActive(SPOTLIGHT_ID, 
           <span class="nav-footer__account-value">
             {viewerCountry && <span class="nav-footer__account-flag" aria-hidden="true">{viewerCountry.flag}</span>}
             {clockValue}
+            {hintPreferences && <span class="visually-hidden"> — you have not set your clock yet</span>}
           </span>
         </span>
         <svg class="nav-footer__account-arrow" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -877,6 +937,17 @@ const spotlightAccountMenu = showAccountMenu && isSpotlightActive(SPOTLIGHT_ID, 
   .nav-footer__account-row:hover,
   .nav-footer__account-row:focus-visible {
     background: var(--nav-hover-bg, #f3f4f6);
+  }
+
+  /* The pulse's RING comes free from the shared stylesheet — it inherits this
+     row's border-radius and needs nothing here. Its colour does not: these
+     scoped rules carry Astro's cid attribute, so they out-specify the global
+     `.spotlight-pulse { color }` exactly as the account toggle's override
+     below does. Only the LABEL warms; the value line underneath stays muted so
+     the flag and the clock still read as data rather than as part of the
+     nudge. */
+  .nav-footer__account-row.spotlight-pulse .nav-footer__account-label {
+    color: var(--color-primary);
   }
 
   .nav-footer__account-row:focus-visible {

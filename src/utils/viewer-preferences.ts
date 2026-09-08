@@ -342,6 +342,32 @@ export const SEEDED_PREFERENCES: Record<string, ViewerPreferences> = {
   'theleague:0016': { country: 'CA', zoneId: 'ET' },
   // Maverick — Australia, Sydney ("Operating on Sydney time again…").
   'theleague:0003': { country: 'AU', zoneId: 'SYD' },
+
+  // ---------------------------------------------------------------------
+  // AFL owners confirmed on US Pacific by the commissioner, Sep 2026.
+  //
+  // Seeding an owner onto the clock the site ALREADY defaults to looks
+  // redundant and is not: a seed is an ANSWER, and the absence of one is a
+  // question. The drawer nudges anyone it has no answer for to go and set a
+  // clock, so without these, seven owners who are exactly where the site
+  // assumes would be pulsed at forever about a preference they would only be
+  // re-typing. Nothing else about their site changes — US/PT resolves to the
+  // same PT-alone board the bare default gives them.
+  // ---------------------------------------------------------------------
+  /** Drunk Indians. */
+  'afl-fantasy:0002': { country: 'US', zoneId: 'PT' },
+  /** Da Dangsters (Monty Fresh). */
+  'afl-fantasy:0006': { country: 'US', zoneId: 'PT' },
+  /** Harambe. */
+  'afl-fantasy:0008': { country: 'US', zoneId: 'PT' },
+  /** Midwestside. */
+  'afl-fantasy:0011': { country: 'US', zoneId: 'PT' },
+  /** Suh girls. */
+  'afl-fantasy:0012': { country: 'US', zoneId: 'PT' },
+  /** Bruin Pegs Me. */
+  'afl-fantasy:0014': { country: 'US', zoneId: 'PT' },
+  /** Chatmaster. */
+  'afl-fantasy:0021': { country: 'US', zoneId: 'PT' },
 };
 
 /** The seeded preference for an owner, or null. Both arguments are required — a bare franchise id is ambiguous across leagues. */
