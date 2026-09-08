@@ -26,8 +26,8 @@
  * light-theme reader looking at one. `resolveDarkSurfaceCrest` is the same call
  * the recap hero already made for the same reason; see dark-surface-crest.ts.
  */
-import { getLeagueTeamBrands, getLeagueTeamConfig } from './league-team-brands';
-import { resolveDarkSurfaceCrest } from './dark-surface-crest';
+import { getLeagueTeamConfig } from './league-team-brands';
+import { resolveLargeSurfaceCrest } from './dark-surface-crest';
 import { resolveHeroFranchiseBackdrop, type HeroFranchiseBackdrop } from './hero-franchise-backdrop';
 import { getNFLTeamLogo, isValidTeamCode } from './nfl-logo';
 import type { CanonicalLeagueSlug } from '../config/leagues';
@@ -71,9 +71,27 @@ export interface HeroCrestInput {
  */
 export function resolveHeroCrest({ franchiseId, league, nflTeam }: HeroCrestInput): HeroCrest | null {
   if (franchiseId) {
-    const brand = getLeagueTeamBrands(league)[franchiseId];
-    if (brand) {
-      const art = resolveDarkSurfaceCrest(brand, CREST_LEAGUE_KEY[league] ?? league);
+    // The RAW config entry, not the trimmed `TeamBrand`. `TeamBrand` carries
+    // only `icon`, so handing it to the crest resolver starved the artwork
+    // order of `groupMeDark`/`iconDark`/`groupMe` and it collapsed to the one
+    // field present — the 100x100 light cut — every single time. Three things
+    // broke at once and none of them looked like a bug in this file: the
+    // watermark was a 4x upscale of a 100px source (visibly pixelated at the
+    // hero's ~416px), a franchise's hand-authored dark cut never rendered, and
+    // `iconStrokeDark` — a human's explicit in/out on the outline — was
+    // invisible, so the stroke was decided on missing data.
+    //
+    // It also voided the guarantee dark-surface-crest.ts calls load-bearing:
+    // rendering the light `icon` of a franchise that HAS an `iconDark` means
+    // the site-wide `TeamIconDarkStyles` swap (keyed on exactly that src) fires
+    // under `html.dark`, so the crest changed with the viewer's theme on a card
+    // that has no theme.
+    const team = getLeagueTeamConfig(league, franchiseId);
+    if (team) {
+      // LARGE, not the default order: the hero's crest is `min(90%, 26rem)`
+      // (~416px desktop, ~240px mobile), past the ~300px the theme-first order
+      // is tuned for. Same call the draft broadcast's big crest makes.
+      const art = resolveLargeSurfaceCrest(team, CREST_LEAGUE_KEY[league] ?? league);
       if (art?.src) {
         return { src: art.src, ...(art.filter ? { filter: art.filter } : {}), kind: 'franchise' };
       }

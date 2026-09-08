@@ -20,6 +20,14 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { resolveHeroCrest, resolveHeroFranchiseSkin } from '../src/utils/hero-crest';
 import { getLeagueTeamBrands } from '../src/utils/league-team-brands';
+import theLeagueConfig from '../src/data/theleague.config.json';
+import aflConfig from '../data/afl-fantasy/afl.config.json';
+
+/** Raw config teams per league — the shape the crest resolver must read. */
+const LEAGUE_TEAMS: Record<string, unknown[]> = {
+  theleague: (theLeagueConfig as { teams?: unknown[] }).teams ?? [],
+  'afl-fantasy': (aflConfig as { teams?: unknown[] }).teams ?? [],
+};
 
 const ROOT = join(__dirname, '..');
 const read = (rel: string) => readFileSync(join(ROOT, rel), 'utf8');
@@ -65,6 +73,47 @@ describe('hero crest resolution', () => {
     expect(read('src/utils/hero-crest.ts')).toContain('getNFLTeamLogo(nflTeam)');
   });
 });
+
+  // ── RESOLUTION ──────────────────────────────────────────────────────────
+  // The hero paints its crest at `min(90%, 26rem)` — ~416px desktop, ~240px
+  // mobile. The 100x100 `icon` is a NAV asset; upscaled that far it is visibly
+  // pixel mush, which is how this shipped and how it was caught. Every league
+  // config carries a 400x400 counterpart for every crest, so there is never a
+  // reason for a hero to be showing the small one.
+  it('never paints the 100x100 nav icon when a 400x400 crest exists', () => {
+    for (const league of ['theleague', 'afl-fantasy'] as const) {
+      const teams = (LEAGUE_TEAMS[league] ?? []) as Array<Record<string, string>>;
+      expect(teams.length, `${league} has no teams to check`).toBeGreaterThan(0);
+      for (const team of teams) {
+        if (!team.groupMe && !team.groupMeDark) continue;
+        const crest = resolveHeroCrest({ franchiseId: team.franchiseId, league, nflTeam: null });
+        expect(crest?.src, `${league}/${team.franchiseId} has 400x400 art`).toBeTruthy();
+        expect(
+          crest!.src.includes('/icons/'),
+          `${league}/${team.franchiseId}: hero crest is the 100x100 nav icon (${crest!.src}) ` +
+            'though the config carries 400x400 art — the resolver is being fed a trimmed record',
+        ).toBe(false);
+      }
+    }
+  });
+
+  // The ROOT CAUSE, pinned separately from its symptom. `TeamBrand` carries
+  // only `icon`, so passing one to a crest resolver silently collapses the
+  // artwork order to that single field — no hi-res art, no hand-authored dark
+  // cut, and no `iconStrokeDark` opt-out. The fix is to read the raw config
+  // entry; this fails if anyone reaches for the trimmed shape again.
+  it('reads the RAW config entry, never the trimmed TeamBrand', () => {
+    const src = read('src/utils/hero-crest.ts');
+    const crestFn = src.slice(src.indexOf('export function resolveHeroCrest'), src.indexOf('export function resolveHeroFranchiseSkin'));
+    expect(
+      /getLeagueTeamBrands/.test(crestFn),
+      'resolveHeroCrest reads getLeagueTeamBrands — TeamBrand has only `icon`, ' +
+        'so the crest order collapses to the 100x100 nav icon. Use getLeagueTeamConfig.',
+    ).toBe(false);
+    expect(crestFn).toContain('getLeagueTeamConfig');
+    // And the LARGE order, not the default one tuned for ~40-300px.
+    expect(crestFn).toContain('resolveLargeSurfaceCrest');
+  });
 
 describe('hero crest rendering', () => {
   it('survives a 404 instead of painting a broken-image box', () => {

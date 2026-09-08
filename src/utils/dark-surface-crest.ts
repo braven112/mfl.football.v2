@@ -169,6 +169,41 @@ export function crestStrokeIndex(
 }
 
 /**
+ * Resolve one franchise's crest for a surface that renders it LARGE.
+ *
+ * Same inputs, same stroke rules, one difference: **resolution first, then
+ * theme** (`groupMeDark → groupMe → iconDark → icon`). The order below is
+ * tuned for ~40-300px, where a 100x100 source upscales at most ~3x and, at
+ * watermark opacity, nothing shows. Past that it does show, as pixel mush.
+ *
+ * The draft broadcast's 68vh reveal crest was the first surface over that line
+ * and had this order inlined; the composite hero is the second — its watermark
+ * is `min(90%, 26rem)` ≈ 416px desktop and ~240px mobile, a 4x upscale of a
+ * 100px cut. Both now call this, because a third private copy of an ordering
+ * rule is how the two would drift.
+ *
+ * The trade this makes is deliberate: a 400x400 LIGHT cut beats a 100x100 dark
+ * one, and the legibility is bought back with the outline (`filter`), exactly
+ * as the broadcast buys it. `groupMeDark` still leads, so any 400x400 dark cut
+ * added to a league config takes over on its own and drops that outline.
+ */
+export function resolveLargeSurfaceCrest(
+  team: DarkSurfaceCrestTeam,
+  league: string,
+  index?: Map<string, string | false | undefined>
+): DarkSurfaceCrest {
+  const measured = index ?? crestStrokeIndex(league, [team]);
+  const src = team.groupMeDark || team.groupMe || team.iconDark || team.icon || '';
+  if (!src) return { src: '' };
+
+  const stroke = isDarkCut(team, src) ? undefined : resolveCrestStroke(team, measured);
+  return {
+    src: preferredIconSrc(src),
+    ...(stroke ? { filter: crestStrokeFilter(stroke), strokeColor: stroke } : {}),
+  };
+}
+
+/**
  * Resolve one franchise's crest for a surface that is dark in both themes.
  *
  * Pass `index` when resolving a whole league in a loop; it is built on demand
