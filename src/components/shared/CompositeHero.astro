@@ -1,0 +1,262 @@
+---
+/**
+ * CompositeHero — the shared spotlight shell behind every composite hero.
+ *
+ * ONE implementation of the treatment described in
+ * docs/claude/insights/features/player-composites.md: a team-color gradient
+ * ground, an oversized ghost wordmark bled off the top edge, a radial glow
+ * tinted by whoever the hero is about, a transparent ESPN cutout anchored
+ * bottom-right under a frosted caption, and an editorial column on the left.
+ *
+ * Adopters supply copy, an accent family, and their footer furniture through
+ * the default slot. They do NOT re-declare the geometry — every dimension that
+ * used to differ between the seven forked copies is a custom property on
+ * `.cmh` (see composite-hero.css), overridden via `styleVars`.
+ *
+ * The three art layers are mutually exclusive and resolve in this order:
+ *   1. the `art` slot     — an adopter-owned layer (the What's New screenshot
+ *                           frame), which owns its own fallback behavior
+ *   2. `model`            — the cast player's cutout + caption
+ *   3. `logoArt`          — the league logo silhouette
+ * A model whose headshot 404s adds `cmh--no-model`, which hides the caption
+ * and reveals the silhouette. That is CSS, not inline style juggling, so the
+ * fallback survives a re-render.
+ */
+import type { HeroModel } from '../../utils/hero-casting';
+import { normalizeTeamCode } from '../../utils/nfl-logo';
+import { hexToRgba } from '../../utils/nfl-team-colors';
+import type { CompositeHeroAccent } from '../../types/composite-hero';
+import type { HeroFranchiseBackdrop } from '../../utils/hero-franchise-backdrop';
+import '../../styles/composite-hero.css';
+import '../../styles/hero-franchise-backdrop.css';
+
+
+export interface Props {
+  /** Landmark label — every hero is a labelled region. */
+  ariaLabel: string;
+  /** `section` for a standing league surface, `article` for a news item. */
+  tag?: 'section' | 'article';
+  /**
+   * Palette. Named per HERO, not per color — three of the shipped composites
+   * are shades of blue that differ in accent, pill and dark surface, and
+   * folding them together restyled live heroes. See composite-hero.css.
+   */
+  accent?: CompositeHeroAccent;
+  /**
+   * Urgency overlay applied ON TOP of `accent` (the cut watch's blue → red
+   * flip inside the final 30 days). Carries only the deltas, so the adopter
+   * keeps its own geometry.
+   */
+  tone?: 'red' | null;
+  /**
+   * Forces the dark treatment in a light-theme browser, for an entry whose
+   * dark card IS the story. Only the `royal` accent defines a forced pair.
+   */
+  forceDark?: boolean;
+  /** Hex the radial glow is tinted with — an NFL team primary, or a franchise color. */
+  glowColor?: string;
+  glowAlphaDark?: number;
+  glowAlphaLight?: number;
+  /**
+   * Ghost wordmark bled off the top edge — the phase's name. Renders TOGETHER
+   * with the crest, over it. Plain TEXT, never markup; use a literal no-break
+   * space (U+00A0) to hold a two-word mark on one line.
+   */
+  wordmark?: string;
+  /** Centred crest watermark — resolve it with `resolveHeroCrest`. */
+  crest?: { src: string; filter?: string } | null;
+  /**
+   * The club's colours, for a hero that is about a TEAM rather than about the
+   * league — your cuts, your keeper class, the franchise that rostered the
+   * week's top scorer. A league event (a draft, the auction, kickoff, a site
+   * announcement) passes nothing and keeps its phase gradient.
+   *
+   * This is the SAME `HeroFranchiseBackdrop` the branded event heroes take, so
+   * a franchise is painted identically on both hero families rather than two
+   * looks appearing on one homepage.
+   */
+  franchise?: HeroFranchiseBackdrop | null;
+  /**
+   * Render the `art` slot in place of the model layer. Explicit rather than
+   * sniffed from the slot: the What's New hero decides between four art
+   * treatments at runtime, and a conditionally-rendered slot is not a reliable
+   * signal of which one won.
+   */
+  artSlot?: boolean;
+  /** The cast player. Null renders the silhouette instead. */
+  model?: HeroModel | null;
+  /**
+   * Caption meta line under the player's name. Defaults to
+   * "<descriptor> <POS> · <TEAM>" — the shape every forked copy built by hand.
+   */
+  captionMeta?: string;
+  /** League logo silhouette — the fallback flank. */
+  logoArt?: string;
+  /** Above-the-fold heroes load the cutout eagerly; a gallery lazy-loads. */
+  eager?: boolean;
+  /** Copy. */
+  pill?: string;
+  pillDate?: string;
+  title?: string;
+  titleAccent?: string;
+  /**
+   * Heading level for the title. The What's New card sits under the page's own
+   * h2, so it renders an h3; a standing hero owns its region and renders an h2.
+   * Never restyle by level — `.cmh__title` sets its own type.
+   */
+  titleTag?: 'h2' | 'h3';
+  summary?: string;
+  /** Primary call to action rendered under the summary. */
+  ctaLabel?: string;
+  ctaHref?: string;
+  /** Clamp the summary to two lines (the What's New card's behavior). */
+  clampSummary?: boolean;
+  /**
+   * Mobile art treatment. Default fades the cutout to a watermark and lets the
+   * copy run full width. `crop` keeps it opaque and full-size in a bottom-right
+   * portrait box, which means the copy yields a column — only worth it for a
+   * card whose summary is short enough to survive the narrower measure.
+   */
+  crop?: boolean;
+  /** Per-adopter geometry overrides — the `--cmh-*` custom properties. */
+  styleVars?: string;
+  /** Extra class names for adopter-owned sub-elements. */
+  class?: string;
+}
+
+const {
+  ariaLabel,
+  tag: Tag = 'section',
+  accent = 'feature',
+  tone = null,
+  forceDark = false,
+  glowColor,
+  glowAlphaDark = 0.38,
+  glowAlphaLight = 0.2,
+  wordmark,
+  crest = null,
+  franchise = null,
+  artSlot = false,
+  model = null,
+  captionMeta,
+  logoArt,
+  eager = true,
+  pill,
+  pillDate,
+  title,
+  titleAccent,
+  titleTag: TitleTag = 'h2',
+  summary,
+  ctaLabel,
+  ctaHref,
+  clampSummary = false,
+  crop = false,
+  styleVars = '',
+  class: extraClass = '',
+} = Astro.props;
+
+// `hexToRgba` is total — a malformed hex returns the neutral ink tint rather
+// than an invalid color that would drop the whole custom property.
+const glowDark = glowColor ? hexToRgba(glowColor, glowAlphaDark) : '';
+const glowLight = glowColor ? hexToRgba(glowColor, glowAlphaLight) : '';
+const glowVars = glowColor
+  ? `--cmh-glow-dark: ${glowDark}; --cmh-glow-light: ${glowLight};`
+  : '';
+
+const teamCode = model ? normalizeTeamCode(model.nflTeam) : '';
+const meta =
+  captionMeta ??
+  [model?.descriptor, model?.position].filter(Boolean).join(' ') +
+    (teamCode ? ` · ${teamCode}` : '');
+
+const loading = eager ? 'eager' : 'lazy';
+---
+
+<Tag
+  class:list={[
+    'cmh',
+    `cmh--${accent}`,
+    tone ? `cmh--${tone}` : null,
+    {
+      'cmh--force-dark': forceDark,
+      'cmh--has-model': !!model,
+      'cmh--clamp-summary': clampSummary,
+      'cmh--crop': crop,
+      'cmh--has-crest': !!crest,
+      'cmh--franchise': !!franchise,
+    },
+    extraClass,
+  ]}
+  style={`${glowVars}${styleVars}${franchise?.style ?? ''}`}
+  aria-label={ariaLabel}
+>
+  {/* The crest and the wordmark STACK — they are not alternatives. The crest
+      says who the hero is about; the wordmark says what phase it is, and losing
+      it would cost the thing that lets an owner tell an AL draft from an NL one
+      across the room. The crest is centred and faded far enough underneath that
+      both the wordmark and the copy read over it. */}
+  {crest && (
+    <img
+      class="cmh__crest"
+      src={crest.src}
+      style={crest.filter ? `filter: ${crest.filter};` : undefined}
+      alt=""
+      aria-hidden="true"
+      loading="lazy"
+      onerror="this.closest('.cmh').classList.add('cmh--no-crest')"
+    />
+  )}
+  {/* The wash goes OVER the crest, never under: its left-hand ramp is what buys
+      the copy its contrast, and a crest painted on top of that ramp puts a
+      bright mark straight back under the headline. Same order, same file, as
+      the branded event heroes. */}
+  {franchise && <span class="hero-fb__wash" aria-hidden="true"></span>}
+  {wordmark && <span class="cmh__ghost" aria-hidden="true">{wordmark}</span>}
+
+  <div class="cmh__glow" aria-hidden="true"></div>
+
+  {artSlot ? (
+    <slot name="art" />
+  ) : model ? (
+    <>
+      <img
+        class="cmh__model"
+        src={model.headshot}
+        alt=""
+        aria-hidden="true"
+        loading={loading}
+        decoding="async"
+        onerror="this.closest('.cmh').classList.add('cmh--no-model')"
+      />
+      <span class="cmh__caption">
+        <strong>{model.name}</strong>
+        <span class="cmh__caption-meta">{meta}</span>
+        <slot name="caption" />
+      </span>
+    </>
+  ) : null}
+
+  {logoArt && <img class="cmh__logo-art" src={logoArt} alt="" aria-hidden="true" loading="lazy" />}
+
+  <div class="cmh__content">
+    {(pill || pillDate) && (
+      <p class:list={['cmh__eyebrow', { 'cmh__eyebrow--row': !!pillDate }]}>
+        {pill && <span class="cmh__pill">{pill}</span>}
+        {pillDate && <span class="cmh__date">{pillDate}</span>}
+      </p>
+    )}
+    {title && (
+      <TitleTag class="cmh__title">
+        {title}{titleAccent && <> <span class="cmh__title-accent">{titleAccent}</span></>}
+      </TitleTag>
+    )}
+    {summary && <p class="cmh__summary">{summary}</p>}
+    {ctaLabel && ctaHref && (
+      <a class="cmh__cta" href={ctaHref}>
+        {ctaLabel}
+        <span class="cmh__cta-arrow" aria-hidden="true">→</span>
+      </a>
+    )}
+    <slot />
+  </div>
+</Tag>

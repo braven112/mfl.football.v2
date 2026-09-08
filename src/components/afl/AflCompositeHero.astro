@@ -1,0 +1,123 @@
+---
+/**
+ * AflCompositeHero — an AFL hero state rendered as a composite.
+ *
+ * The AFL's answer to TheLeague's per-phase composites: instead of one branded
+ * promo card for every state, the phases with a real identity get the spotlight
+ * treatment — a navy or trophy-gold gradient, the phase's own ghost wordmark,
+ * a glow tinted by whoever the hero is about, and the cast player's cutout.
+ *
+ * All copy comes from the resolved `EventHeroView`, so nothing is written
+ * twice: the keeper deadline's summary, the conference drafts' conference-aware
+ * headline and CTA, the countdown and its label all still live in
+ * `afl-hero-resolver.ts`. This component only decides how they LOOK, and even
+ * that is handed to it (`view.composite`) for the same reason.
+ *
+ * Which states arrive here is `AflHero`'s call, and it is conservative: a state
+ * without a `composite` treatment, or without a cast model, renders the branded
+ * `AflEventHero` exactly as before. A missing feed degrades to the card that
+ * always worked rather than to an empty flank.
+ */
+import type { EventHeroView } from '../../utils/afl-hero-resolver';
+import { getNflTeamColors } from '../../utils/nfl-team-colors';
+import { normalizeTeamCode } from '../../utils/nfl-logo';
+import { resolveHeroCrest, resolveHeroFranchiseSkin } from '../../utils/hero-crest';
+import CompositeHero from '../shared/CompositeHero.astro';
+
+interface Props {
+  view: EventHeroView;
+  regionLabel: string;
+}
+
+const { view, regionLabel } = Astro.props;
+const treatment = view.composite!;
+const model = view.model!;
+
+const teamCode = normalizeTeamCode(model.nflTeam);
+// `modelAccent` is the viewer's own franchise colour when their conference
+// rosters this player (see hero-franchise-accent.ts); otherwise his NFL team's.
+const glowColor = view.modelAccent || getNflTeamColors(teamCode).primary;
+
+// The watermark: the viewer's own club when their conference rosters this
+// player (the same franchise `modelAccent` took its colour from, so the glow
+// and the mark cannot disagree), otherwise his NFL team's.
+const crest = resolveHeroCrest({
+  franchiseId: view.modelFranchiseId,
+  league: 'afl-fantasy',
+  nflTeam: model.nflTeam,
+});
+
+// A TEAM event wears the owning club's colours; a league event (both conference
+// drafts) keeps the AFL's own navy. See CompositeHeroTreatment.scope.
+const franchise =
+  treatment.scope === 'team' ? resolveHeroFranchiseSkin(view.modelFranchiseId, 'afl-fantasy') : null;
+
+// The AFL's crest stands in when the ESPN cutout 404s — same silhouette rule as
+// TheLeague's composites, different mark.
+const LOGO = '/assets/logos/afl-logo-dark.svg';
+---
+
+<CompositeHero
+  ariaLabel={regionLabel}
+  accent={treatment.accent}
+  tone={treatment.tone ?? null}
+  wordmark={treatment.wordmark}
+  crest={crest}
+  franchise={franchise}
+  model={model}
+  glowColor={glowColor}
+  logoArt={LOGO}
+  pill={view.pill}
+  title={view.headline}
+  titleAccent={view.accentWord}
+  summary={view.summary}
+  styleVars="--cmh-min-h: clamp(250px, 25vw, 300px); --cmh-min-h-mobile: 270px; --cmh-ghost-size: clamp(4rem, 9vw, 7rem); --cmh-ghost-style: italic; --cmh-model-w: clamp(230px, 30vw, 350px); --cmh-logo-w: clamp(170px, 22vw, 250px); --cmh-logo-opacity: 0.2; --cmh-eyebrow-mb: 0.625rem; --cmh-content-max: min(32rem, 62%); --cmh-title-mb: 0.45rem; --cmh-summary-max: 46ch; --cmh-model-w-mobile: 175px;"
+>
+  <div class="cmh__footer">
+    {view.countValue !== undefined && (
+      <>
+        <div class="cmh__count" role="group" aria-label={view.countLabel ?? String(view.countValue)}>
+          <span class="cmh__count-num" aria-hidden="true">{view.countValue}</span>
+          {view.countLabel && <span class="cmh__count-label" aria-hidden="true">{view.countLabel}</span>}
+        </div>
+        <span class="cmh__divider" aria-hidden="true"></span>
+      </>
+    )}
+    {view.link && (
+      <a
+        class="cmh__cta"
+        href={view.link}
+        target={view.isExternal ? '_blank' : undefined}
+        rel={view.isExternal ? 'noopener noreferrer' : undefined}
+      >
+        {view.linkLabel ?? 'Learn more'}
+        <span aria-hidden="true">→</span>
+      </a>
+    )}
+  </div>
+
+  {/* The conference drafts carry these: the sibling conference's live board
+      while it is actually drafting, and the draft order once the CTA has been
+      taken over by the room you draft from. Dropping them would leave an NL
+      owner no route to the AL board on AL draft day. */}
+  {view.secondaryLinks && view.secondaryLinks.length > 0 && (
+    <nav class="cmh__chips cmh__chips--block afl-cmh__links" aria-label="Related links">
+      {view.secondaryLinks.map((l) => (
+        <a
+          class="cmh__chip"
+          href={l.href}
+          target={l.isExternal ? '_blank' : undefined}
+          rel={l.isExternal ? 'noopener noreferrer' : undefined}
+        >
+          {l.label}
+        </a>
+      ))}
+    </nav>
+  )}
+</CompositeHero>
+
+<style>
+  .afl-cmh__links {
+    margin-top: 0.75rem;
+  }
+</style>

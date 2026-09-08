@@ -1,0 +1,379 @@
+---
+/**
+ * ShowcasePage — the composite-hero deep-dive, rendered from a content module.
+ *
+ * Both leagues' `/showcase` routes are thin wrappers around this. What they
+ * pass is genuinely different prose, not a few swapped strings: see
+ * `src/types/hero-showcase.ts` for why the block list is a closed union rather
+ * than free HTML.
+ *
+ * THE GALLERY RENDERS THE LIVE COMPONENTS. It used to reproduce the treatment
+ * inline — cheaper, and defensible on the grounds that a portfolio page should
+ * not be coupled to a hero's runtime. It drifted three times in one week: the
+ * auction card was pale blue when the shipped hero is amber, the ghost wordmark
+ * stayed centred after the live heroes moved to right-anchored, and the crest
+ * watermark — one of the treatment's defining layers — never appeared at all.
+ * Coupling to `CompositeHero` costs a fixture per card and makes every one of
+ * those bugs impossible to write.
+ *
+ * What the showcase still owns is the ANNOTATION: the component name and the
+ * colour-rule badge, rendered ABOVE each hero rather than inside it. Nothing
+ * the page says about a hero can change how that hero draws.
+ */
+import CompositeHero from '../CompositeHero.astro';
+import CompositePanelBoard from '../CompositePanelBoard.astro';
+import { resolveHeroCrest, resolveHeroFranchiseSkin } from '../../../utils/hero-crest';
+import { getLeagueTeamBrands } from '../../../utils/league-team-brands';
+import { getNflTeamColors } from '../../../utils/nfl-team-colors';
+import type { HeroModel } from '../../../utils/hero-casting';
+import type { ShowcaseContent, ShowcaseBlock, ShowcaseGalleryCard } from '../../../types/hero-showcase';
+import '../../../styles/hero-showcase.css';
+
+interface Props {
+  content: ShowcaseContent;
+}
+
+const { content } = Astro.props;
+const { palette: p, league } = content;
+
+const paletteVars = [
+  `--hcp-accent-light: ${p.accent}`,
+  `--hcp-accent-dark: ${p.accentDark}`,
+  `--hcp-card-surface: ${p.cardSurface}`,
+  `--hcp-card-solid: ${p.cardSolid}`,
+  `--hcp-card-surface-dark: ${p.cardSurfaceDark}`,
+  `--hcp-card-solid-dark: ${p.cardSolidDark}`,
+  `--hcp-card-glow-dark: ${p.cardGlowDark}`,
+].join('; ');
+
+const headshot = (espnId: string) =>
+  `https://a.espncdn.com/i/headshots/nfl/players/full/${espnId}.png`;
+
+/** A gallery model in the shape the live shell consumes. */
+const toModel = (m: NonNullable<ShowcaseGalleryCard['model']>): HeroModel => ({
+  mflId: m.espnId,
+  name: m.name,
+  position: m.pos,
+  nflTeam: m.code,
+  headshot: headshot(m.espnId),
+  descriptor: m.descriptor,
+});
+
+const brands = getLeagueTeamBrands(league);
+
+/**
+ * Everything the live shell needs for one card, resolved the way the live
+ * heroes resolve it. `scope` is the switch: a team card hands the shell its
+ * franchise (skin, crest, glow), a league card hands it none and the glow
+ * falls to the cast player's NFL club. That is the colour rule, expressed
+ * once, so the badge the card prints and the pixels it renders cannot
+ * disagree.
+ */
+const dress = (g: ShowcaseGalleryCard) => {
+  const franchiseId = g.scope === 'team' ? g.franchiseId : undefined;
+  const nflTeam = g.model?.code ?? g.panels?.[0]?.nflTeam ?? null;
+  return {
+    crest: resolveHeroCrest({ franchiseId, league, nflTeam }),
+    franchise: resolveHeroFranchiseSkin(franchiseId, league),
+    glowColor: franchiseId
+      ? brands[franchiseId]?.colorPrimary
+      : nflTeam
+        ? getNflTeamColors(nflTeam).primary
+        : undefined,
+    franchiseName: franchiseId ? brands[franchiseId]?.name : undefined,
+  };
+};
+
+/** Board panels in the shape `CompositePanelBoard` consumes. */
+const toPanels = (g: ShowcaseGalleryCard) =>
+  (g.panels ?? []).map((panel) => ({
+    model: {
+      mflId: panel.espnId,
+      name: panel.name,
+      position: panel.position,
+      nflTeam: panel.nflTeam,
+      headshot: headshot(panel.espnId),
+      descriptor: panel.badge,
+    } satisfies HeroModel,
+    badge: panel.badge,
+    ...(panel.flag ? { flag: panel.flag } : {}),
+    // `null` means "no watermark"; `undefined` keeps the board's NFL-logo
+    // default. The tag board watermarks the tagging club's crest instead.
+    ...(panel.watermarkFranchiseId
+      ? {
+          watermark:
+            resolveHeroCrest({ franchiseId: panel.watermarkFranchiseId, league, nflTeam: null })?.src ?? null,
+          watermarkSquare: true,
+        }
+      : {}),
+  }));
+
+/** Narrow a block for the template — Astro has no `switch` in JSX. */
+const is = <K extends ShowcaseBlock['kind']>(b: ShowcaseBlock, k: K): b is Extract<ShowcaseBlock, { kind: K }> =>
+  b.kind === k;
+---
+
+<div class="hc-page" style={paletteVars}>
+
+  <header class="hc-hero">
+    <div class="hc-hero__eyebrow">
+      <span class="hc-tag">{content.hero.tag}</span>
+      <span class="hc-dot">·</span>
+      <span class="hc-hero__date">{content.hero.kicker}</span>
+    </div>
+    <h1 class="hc-hero__title">{content.hero.title[0]}<br />{content.hero.title[1]}</h1>
+    <p class="hc-hero__deck" set:html={content.hero.deckHtml} />
+    <div class="hc-hero__stack">
+      {content.hero.stack.map((item, i) => (
+        <>
+          {i > 0 && <span class="hc-stack-dot">·</span>}
+          <span class="hc-stack-item">{item}</span>
+        </>
+      ))}
+    </div>
+  </header>
+
+  <section class="hc-gallery" aria-label="Composite hero gallery">
+    {content.gallery.map((g) => {
+      const { crest, franchise, glowColor, franchiseName } = dress(g);
+      return (
+        <figure class="hc-shot">
+          {/* Annotation, OUTSIDE the hero. Everything below this line is the
+              real component; nothing here can reach into it. */}
+          <figcaption class="hc-shot__meta">
+            <span class:list={['hc-shot__scope', `hc-shot__scope--${g.scope}`]}>
+              {g.scope === 'team' ? 'Team colours' : 'League colours'}
+            </span>
+            <code class="hc-shot__component">{g.component}</code>
+            {franchiseName && <span class="hc-shot__club">{franchiseName}</span>}
+          </figcaption>
+
+          {g.shape === 'board' ? (
+            <CompositePanelBoard
+              ariaLabel={g.title}
+              panels={toPanels(g)}
+              fill={g.key === 'tag-board' ? 'drop' : 'pad'}
+              eyebrow={g.pill}
+              title={g.title}
+              ctaLabel={g.ctaLabel}
+              ctaHref="#"
+            />
+          ) : (
+            /* `logoArt` takes the DARK logo, as every live hero passes: a
+               composite is a deep-ink card in BOTH themes, so the light cut
+               would be a white mark on a white flank for half the readers. */
+            <CompositeHero
+              ariaLabel={g.title}
+              accent={g.accent}
+              tone={g.tone ?? null}
+              crest={crest}
+              franchise={franchise}
+              glowColor={glowColor}
+              wordmark={g.wordmark || undefined}
+              model={g.model ? toModel(g.model) : null}
+              logoArt={content.logo.dark}
+              pill={g.pill}
+              title={g.title}
+              titleAccent={g.titleAccent}
+              summary={g.summary}
+              ctaLabel={g.ctaLabel}
+              ctaHref="#"
+              titleTag="h3"
+            />
+          )}
+        </figure>
+      );
+    })}
+  </section>
+  <p class="hc-gallery__note">{content.galleryNote}</p>
+
+  <div class="hc-body">
+    {content.sections.map((section) => (
+      <section class="hc-section">
+        <div class="hc-section-header">
+          <span class="hc-section-num">{section.num}</span>
+          <div>
+            <h2 class="hc-section-title" set:html={section.title} />
+            <p class="hc-section-sub" set:html={section.sub} />
+          </div>
+        </div>
+
+        {section.blocks.map((b) => (
+          <>
+            {is(b, 'prose') && (
+              <div class="hc-prose">{b.html.map((h) => <p set:html={h} />)}</div>
+            )}
+
+            {is(b, 'prose-quote') && (
+              <div class="hc-two-col">
+                <div class="hc-prose">{b.html.map((h) => <p set:html={h} />)}</div>
+                <blockquote class="hc-quote hc-quote--binding">
+                  <div class="hc-quote__label">{b.quote.label}</div>
+                  <span set:html={b.quote.html} />
+                </blockquote>
+              </div>
+            )}
+
+            {is(b, 'prose-code') && (
+              <div class:list={['hc-two-col', { 'hc-two-col--code-left': b.codeSide === 'left', 'hc-two-col--wide-text': b.wideText }]}>
+                {b.codeSide === 'left' && (
+                  <figure class="hc-code">
+                    <figcaption class="hc-code__cap">{b.code.caption}</figcaption>
+                    <pre class="hc-code__pre"><code>{b.code.body}</code></pre>
+                  </figure>
+                )}
+                <div class="hc-prose">{b.html.map((h) => <p set:html={h} />)}</div>
+                {b.codeSide !== 'left' && (
+                  <figure class="hc-code">
+                    <figcaption class="hc-code__cap">{b.code.caption}</figcaption>
+                    <pre class="hc-code__pre"><code>{b.code.body}</code></pre>
+                  </figure>
+                )}
+              </div>
+            )}
+
+            {is(b, 'layers') && (
+              <div class="hc-layers">
+                {b.layers.map((l) => (
+                  <div class="hc-layer">
+                    <div class="hc-layer__z">{l.z}</div>
+                    <div class="hc-layer__body">
+                      <div class="hc-layer__name">{l.name}</div>
+                      <div class="hc-layer__desc" set:html={l.html} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {is(b, 'cards') && (
+              <div class="hc-brand-grid">
+                {b.cards.map((c) => (
+                  <div class="hc-brand-card">
+                    <div class="hc-brand-card__head">{c.head}</div>
+                    <p class="hc-brand-card__body" set:html={c.html} />
+                    <div class="hc-brand-card__tag">{c.tag}</div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {is(b, 'swatches') && (
+              <div class="hc-swatches" role="list" aria-label={b.label}>
+                {b.swatches.map((s) => (
+                  <div class="hc-swatch" role="listitem" style={`--sw: ${s.hex}`}>
+                    <span class="hc-swatch__dot"></span>{s.label} <code>{s.hex}</code>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {is(b, 'persona') && (
+              <div class="hc-persona">
+                {b.columns.map((col) => (
+                  <div class="hc-persona__col">
+                    <div class={`hc-persona__who hc-persona__who--${col.tone}`}>{col.who}</div>
+                    {col.lines.map((line) => <div class="hc-persona__line" set:html={line} />)}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {is(b, 'categories') && (
+              <div class="hc-cat-grid">
+                {b.items.map((c) => (
+                  <div class="hc-cat">
+                    <div class="hc-cat__type">{c.type}</div>
+                    <div class="hc-cat__cast">{c.cast}</div>
+                    <div class="hc-cat__desc" set:html={c.desc} />
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {is(b, 'table') && (
+              <div class="hc-table-wrap">
+                <table class="hc-table">
+                  <thead><tr>{b.headers.map((h) => <th>{h}</th>)}</tr></thead>
+                  <tbody>
+                    {b.rows.map(([a, c, d]) => (
+                      <tr><td><code>{a}</code></td><td>{c}</td><td set:html={d} /></tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            {is(b, 'chips') && (
+              <div class="hc-chips">
+                {b.chips.map((c) => <span class="hc-chip">{c}</span>)}
+              </div>
+            )}
+
+            {is(b, 'phases') && (
+              <>
+                <div class="hc-phase-grid" aria-label="Season phases">
+                  {b.phases.map(([name, window], i) => (
+                    <div class:list={['hc-phase', { 'hc-phase--shipped': b.shipped.includes(name) }]}>
+                      <span class="hc-phase__i">{String(i + 1).padStart(2, '0')}</span>
+                      <div>
+                        <div class="hc-phase__name">{name}</div>
+                        <div class="hc-phase__window">{window}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <p class="hc-phase-legend"><span class="hc-legend-swatch"></span> {b.legend}</p>
+              </>
+            )}
+
+            {is(b, 'slots') && (
+              <div class="hc-slots">
+                <div class="hc-slots__label">{b.label}</div>
+                <div class="hc-slots__row">
+                  {b.slots.map(([name, when]) => (
+                    <div class="hc-slot"><span class="hc-slot__name">{name}</span><span class="hc-slot__when">{when}</span></div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {is(b, 'shipped') && (
+              <div class="hc-ship-grid">
+                {b.items.map((s) => (
+                  <div class:list={['hc-ship', { 'hc-ship--muted': s.muted }]}>
+                    <div class="hc-ship__name">{s.name}</div>
+                    <div class="hc-ship__cast">{s.cast}</div>
+                    <p class="hc-ship__desc" set:html={s.desc} />
+                  </div>
+                ))}
+              </div>
+            )}
+          </>
+        ))}
+      </section>
+    ))}
+
+    <section class="hc-closing">
+      <div class="hc-closing__inner">
+        <div class="hc-closing__text">
+          <h2 class="hc-closing__title">{content.closing.title}</h2>
+          {content.closing.paragraphs.map((h) => <p set:html={h} />)}
+        </div>
+        <div class="hc-closing__meta">
+          <div class="hc-closing__meta-label">{content.closing.filesLabel}</div>
+          <ul class="hc-closing__files">
+            {content.closing.files.map((f) => <li>{f}</li>)}
+          </ul>
+        </div>
+        <div class="hc-closing__ctas">
+          {content.closing.ctas.map((c) => (
+            <a href={c.href} class:list={['hc-btn', c.primary ? 'hc-btn--primary' : 'hc-btn--ghost']}>
+              {c.label} <span class="hc-btn__arrow">→</span>
+            </a>
+          ))}
+        </div>
+      </div>
+    </section>
+  </div>
+</div>

@@ -28,11 +28,17 @@ import { join, relative } from 'node:path';
 const ROOT = join(__dirname, '..');
 const SRC = join(ROOT, 'src');
 
+/**
+ * Both file kinds carry composite-hero CSS. The shared shell's surfaces moved
+ * out of seven scoped <style> blocks and into src/styles/composite-hero.css
+ * when the heroes were unified — scanning `.astro` alone would have quietly
+ * stopped enforcing this rule for every hero on the site.
+ */
 function walk(dir: string, out: string[] = []): string[] {
   for (const entry of readdirSync(dir)) {
     const full = join(dir, entry);
     if (statSync(full).isDirectory()) walk(full, out);
-    else if (full.endsWith('.astro')) out.push(full);
+    else if (full.endsWith('.astro') || full.endsWith('.css')) out.push(full);
   }
   return out;
 }
@@ -60,6 +66,17 @@ function ruleBodies(text: string): string[] {
 
 const GRADIENT_SURFACE = /--([a-z0-9-]+-surface)\s*:\s*[^;]*gradient\(/i;
 const LITERAL_BG_COLOR = /background-color\s*:\s*#[0-9a-f]{3,8}\b/i;
+/**
+ * The same fail-safe, carried as a paired token instead of a paint.
+ *
+ * A rule that only DEFINES a palette for a descendant to paint (the hero
+ * showcase's `.hc-page` sets the gallery card's gradient; `.hcx` paints it)
+ * has no `background` of its own to put a literal beside. What it must still
+ * do is move the literal WITH the gradient — a `--*-solid` hex declared in the
+ * same rule — or a theme block that redefines only the gradient leaves the
+ * other theme's solid underneath it, which is the same bug one level up.
+ */
+const LITERAL_SOLID_TOKEN = /--[a-z0-9-]+-solid[a-z0-9-]*\s*:\s*#[0-9a-f]{3,8}\b/i;
 
 const files = walk(SRC);
 
@@ -91,15 +108,19 @@ describe('gradient surfaces keep a literal background-color under them', () => {
       for (const body of ruleBodies(text)) {
         const match = body.match(GRADIENT_SURFACE);
         if (!match) continue;
-        if (!LITERAL_BG_COLOR.test(body)) {
-          offenders.push(`${relative(ROOT, file)} → --${match[1]} has no literal background-color in the same rule`);
+        if (!LITERAL_BG_COLOR.test(body) && !LITERAL_SOLID_TOKEN.test(body)) {
+          offenders.push(
+            `${relative(ROOT, file)} → --${match[1]} has no literal background-color `
+              + 'or paired --*-solid hex in the same rule',
+          );
         }
       }
     }
     expect(
       offenders,
       'Every theme/variant block that redefines a gradient surface needs its own '
-        + 'literal background-color, or that theme loses the fail-safe:\n'
+        + 'literal background-color (or a paired --*-solid hex, when the rule only '
+        + 'defines a palette a descendant paints), or that theme loses the fail-safe:\n'
         + offenders.join('\n'),
     ).toEqual([]);
   });

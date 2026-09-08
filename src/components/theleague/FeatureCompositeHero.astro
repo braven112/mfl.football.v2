@@ -2,24 +2,31 @@
 /**
  * FeatureCompositeHero — the fresh What's New hero, composite edition.
  *
- * Replaces the branded event shell for P2 fresh-feature states. The art IS
- * the feature: the entry's screenshot in a browser frame over the
- * league-blue gradient with the ghost WHAT'S NEW wordmark. A player models
- * the announcement ONLY when the entry names one (`heroPlayerId` → cast via
- * castFeaturedModel) — players show up when they're being talked about,
- * never as stand-ins (see hero casting rules in
- * docs/claude/insights/features/player-composites.md).
+ * The art IS the feature: the entry's screenshot in a browser frame over the
+ * league-blue gradient with the ghost WHAT'S NEW wordmark. A player models the
+ * announcement ONLY when the entry names one (`heroPlayerId` → cast via
+ * castFeaturedModel) — players show up when they're being talked about, never
+ * as stand-ins (see docs/claude/insights/features/player-composites.md).
  *
  * Art precedence: heroArt (entry-supplied artwork, e.g. a recovered vintage
  * logo) → cast model → screenshot (light/dark pair, swapped by html.dark;
  * hidden on mobile where the frame would be an unreadable thumbnail — the
  * logo silhouette stands in) → league logo silhouette.
+ *
+ * Configuration of the shared CompositeHero shell. The two art treatments the
+ * shell does NOT own — entry artwork and the browser frame — ride its `art`
+ * slot and keep their CSS local under the `fch__` prefix, because the frame
+ * (chrome bar, theme-paired captures, the eager-promotion script) is this
+ * hero's alone. Everything else is the shell.
  */
 import type { HeroContent } from '../../types/whats-new';
 import type { HeroModel } from '../../utils/hero-casting';
-import { getNflTeamColors, hexToRgba } from '../../utils/nfl-team-colors';
+import { getNflTeamColors } from '../../utils/nfl-team-colors';
 import { normalizeTeamCode } from '../../utils/nfl-logo';
 import { LEAGUES } from '../../config/leagues';
+import { resolveHeroCrest } from '../../utils/hero-crest';
+import CompositeHero from '../shared/CompositeHero.astro';
+import '../../styles/whats-new-hero-shot.css';
 
 interface Props {
   content: HeroContent;
@@ -32,9 +39,6 @@ interface Props {
 const { content, model = null, resolveLeaguePath } = Astro.props;
 
 const teamCode = model ? normalizeTeamCode(model.nflTeam) : '';
-const { primary } = getNflTeamColors(teamCode);
-const glowDark = hexToRgba(primary, 0.38);
-const glowLight = hexToRgba(primary, 0.2);
 const ctaHref = content.link ? resolveLeaguePath(content.link) : resolveLeaguePath('/theleague/whats-new');
 
 // The hero follows the site theme, but an entry can force the dark treatment
@@ -52,51 +56,67 @@ const league = LEAGUES.theleague;
 const frameUrl = content.link
   ? `${league.domains[0]}${content.link.replace(`/${league.slug}`, '')}`
   : league.domains[0];
+
+const LOGO = '/assets/logos/theleague-logo-dark.svg';
+// Only a model-backed entry gets a crest. A screenshot entry's art IS the
+// browser frame, and a bug-fix rollup has no subject at all — a watermark
+// behind either would be decoration, which is the one thing the casting rule
+// forbids. No franchise: a feature announcement is nobody's team story.
+const crest = model ? resolveHeroCrest({ league: 'theleague', nflTeam: model.nflTeam }) : null;
+// Art precedence, decided once: the shell renders the model layer itself, and
+// takes the `art` slot for the two treatments it does not own.
+const artMode = content.heroArt ? 'entry' : model ? 'model' : screenshot ? 'shot' : 'logo';
+const GEOMETRY =
+  '--cmh-min-h: clamp(230px, 23vw, 280px); --cmh-min-h-mobile: 250px; ' +
+  '--cmh-model-w: clamp(250px, 33vw, 390px); --cmh-logo-w: clamp(180px, 24vw, 280px); ' +
+  '--cmh-logo-opacity: 0.18; --cmh-title-max: 22ch;';
 ---
 
-<article
-  class={`fch${forceDark ? ' fch--dark' : ''}${!content.heroArt && model ? ' fch--has-model' : ''}`}
-  style={`--fch-glow-dark: ${glowDark}; --fch-glow-light: ${glowLight};`}
-  aria-label={`What's new: ${content.title}`}
+<CompositeHero
+  tag="article"
+  class="fch"
+  ariaLabel={`What's new: ${content.title}`}
+  accent="feature"
+  forceDark={forceDark}
+  crop
+  clampSummary
+  titleTag="h3"
+  wordmark={"WHAT'S NEW"}
+  artSlot={artMode === 'entry' || artMode === 'shot'}
+  crest={artMode === 'model' ? crest : null}
+  model={artMode === 'model' ? model : null}
+  glowColor={getNflTeamColors(teamCode).primary}
+  logoArt={artMode === 'logo' ? LOGO : undefined}
+  pill={content.kicker ?? 'New this week'}
+  pillDate={content.kickerDate}
+  title={content.title}
+  summary={content.summary}
+  ctaLabel={content.linkLabel ?? 'Check it out'}
+  ctaHref={ctaHref}
+  styleVars={GEOMETRY}
 >
-  <span class="fch__ghost" aria-hidden="true">WHAT'S&nbsp;NEW</span>
-  <div class="fch__glow" aria-hidden="true"></div>
-  {content.heroArt ? (
-    <>
+  {artMode === 'entry' && content.heroArt && (
+    <Fragment slot="art">
       <img
-        class="fch__art"
+        class="cmh__art"
         src={content.heroArt.src}
         alt=""
         aria-hidden="true"
         loading="eager"
         decoding="async"
-        onerror="this.style.display='none'; var s=this.nextElementSibling; if (s) { if (s.classList.contains('fch__caption')) s.style.display='none'; }"
+        onerror="this.style.display='none'; var s=this.nextElementSibling; if (s) { if (s.classList.contains('cmh__caption')) s.style.display='none'; }"
       />
       {content.heroArt.caption && (
-        <span class="fch__caption">
+        <span class="cmh__caption">
           <strong>{content.heroArt.caption}</strong>
-          {content.heroArt.captionMeta && <span class="fch__caption-meta">{content.heroArt.captionMeta}</span>}
+          {content.heroArt.captionMeta && <span class="cmh__caption-meta">{content.heroArt.captionMeta}</span>}
         </span>
       )}
-    </>
-  ) : model ? (
-    <>
-      <img
-        class="fch__model"
-        src={model.headshot}
-        alt=""
-        aria-hidden="true"
-        loading="eager"
-        decoding="async"
-        onerror="this.style.display='none'; this.nextElementSibling.style.display='none'; this.closest('.fch').classList.add('fch--no-model')"
-      />
-      <span class="fch__caption">
-        <strong>{model.name}</strong>
-        <span class="fch__caption-meta">{model.descriptor ? `${model.descriptor} ` : ''}{model.position} · {teamCode}</span>
-      </span>
-    </>
-  ) : screenshot ? (
-    <>
+    </Fragment>
+  )}
+
+  {artMode === 'shot' && (
+    <Fragment slot="art">
       <div class="fch__shot" aria-hidden="true">
         <div class="fch__shot-bar">
           <span class="fch__shot-dot fch__shot-dot--red"></span>
@@ -132,16 +152,14 @@ const frameUrl = content.link
             var s = document.currentScript;
             // Mobile hides the whole frame — leave both halves lazy so
             // neither downloads (eager fetches even inside display:none).
-            // Scoped styles land in <head> before the body parses, so the
-            // computed display is already reliable here.
             if (getComputedStyle(s.parentElement).display === 'none') return;
-            // Forced-dark heroes (.fch--dark from heroTheme) show the dark
-            // capture even in light site theme — promote the variant the
-            // CSS actually displays, not just the html.dark one.
+            // Forced-dark heroes show the dark capture even in light site
+            // theme — promote the variant the CSS actually displays, not
+            // just the html.dark one.
             var fch = s.closest('.fch');
             var dark =
               document.documentElement.classList.contains('dark') ||
-              (fch && fch.classList.contains('fch--dark'));
+              (fch && fch.classList.contains('cmh--force-dark'));
             var img = s.parentElement.querySelector(
               dark ? '.fch__shot-img--dark' : '.fch__shot-img--light',
             );
@@ -150,462 +168,7 @@ const frameUrl = content.link
         </script>
       </div>
       {/* Mobile (and light-capture 404) stand-in — the frame is hidden there */}
-      <img class="fch__shot-logo fch__shot-logo--dark" src="/assets/logos/theleague-logo-dark.svg" alt="" aria-hidden="true" loading="lazy" />
-    </>
-  ) : (
-    <>
-      <img class="fch__logo-art fch__logo-art--dark" src="/assets/logos/theleague-logo-dark.svg" alt="" aria-hidden="true" loading="eager" />
-    </>
+      <img class="fch__shot-logo" src={LOGO} alt="" aria-hidden="true" loading="lazy" />
+    </Fragment>
   )}
-
-  <div class="fch__content">
-    <p class="fch__eyebrow">
-      <span class="fch__pill">{content.kicker ?? 'New this week'}</span>
-      {content.kickerDate && <span class="fch__date">{content.kickerDate}</span>}
-    </p>
-    <h3 class="fch__title">{content.title}</h3>
-    <p class="fch__summary">{content.summary}</p>
-    <a class="fch__cta" href={ctaHref}>
-      {content.linkLabel ?? 'Check it out'}
-      <span class="fch__cta-arrow" aria-hidden="true">→</span>
-    </a>
-  </div>
-</article>
-
-<style>
-  .fch {
-    /* Light theme (default) is a saturated blue card — white ink over a vivid
-       league-blue gradient, mirroring what makes the dark treatment land.
-       Deeper navy surface applied by html.dark AND .fch--dark. Because both
-       themes now render on a dark surface, the foreground (ink, pill, CTA,
-       logo silhouette) is the white variant in both. */
-    --fch-surface: linear-gradient(115deg, #2563eb 0%, #1c497c 55%, #0f3057 100%);
-    --fch-ink: #ffffff;
-    --fch-body: rgba(255, 255, 255, 0.82);
-    --fch-date: rgba(255, 255, 255, 0.6);
-    --fch-ghost: rgba(255, 255, 255, 0.06);
-    --fch-glow: var(--fch-glow-dark, rgba(96, 165, 250, 0.34));
-    --fch-shadow: rgba(9, 21, 38, 0.4);
-    --fch-cta-bg: #ffffff;
-    --fch-cta-ink: #12325a;
-    --fch-pill-bg: rgba(255, 255, 255, 0.16);
-    --fch-pill-border: rgba(255, 255, 255, 0.4);
-    --fch-pill-ink: #dcebff;
-    --fch-border: rgba(255, 255, 255, 0.14);
-
-    position: relative;
-    overflow: hidden;
-    min-height: clamp(230px, 23vw, 280px);
-    border-radius: var(--radius-lg, 0.75rem);
-    border: 1px solid var(--fch-border);
-    /* Fail-safe base: a LITERAL solid under the gradient. A gradient held in a
-       custom property is a single point of failure — if `var(--fch-surface)` is
-       ever dropped (the whole `background` is then invalid at computed-value
-       time), the hero goes transparent while the white ink stays, which is
-       unreadable in BOTH themes. A literal background-color cannot be dropped. */
-    background-color: #1c497c;
-    background-image: var(--fch-surface);
-    color: var(--fch-ink);
-    display: flex;
-    align-items: center;
-    padding: clamp(1.25rem, 2.5vw, 1.9rem);
-  }
-
-  .fch--dark,
-  :global(html.dark) .fch {
-    --fch-surface: linear-gradient(115deg, #0d1b2c 0%, #16395e 52%, var(--color-primary, #1c497c) 100%);
-    background-color: #16395e;
-    --fch-ink: #ffffff;
-    --fch-body: rgba(255, 255, 255, 0.78);
-    --fch-date: rgba(255, 255, 255, 0.55);
-    --fch-ghost: rgba(255, 255, 255, 0.04);
-    --fch-glow: var(--fch-glow-dark, rgba(96, 165, 250, 0.3));
-    --fch-shadow: rgba(0, 0, 0, 0.5);
-    --fch-cta-bg: #ffffff;
-    --fch-cta-ink: #0f1e2e;
-    --fch-pill-bg: rgba(96, 165, 250, 0.18);
-    --fch-pill-border: rgba(96, 165, 250, 0.45);
-    --fch-pill-ink: #a8cdf8;
-    --fch-border: rgba(255, 255, 255, 0.1);
-  }
-
-  .fch__ghost {
-    position: absolute;
-    left: 40%;
-    top: -1.1rem;
-    font-size: clamp(3.75rem, 8vw, 6.5rem);
-    font-weight: 800;
-    letter-spacing: -0.02em;
-    line-height: 1;
-    color: var(--fch-ghost);
-    pointer-events: none;
-    user-select: none;
-    white-space: nowrap;
-  }
-
-  .fch__glow {
-    position: absolute;
-    right: -70px;
-    top: -100px;
-    width: 440px;
-    height: 440px;
-    background: radial-gradient(circle, var(--fch-glow) 0%, transparent 65%);
-    pointer-events: none;
-  }
-
-  .fch__model {
-    position: absolute;
-    right: clamp(0.25rem, 2vw, 1.75rem);
-    bottom: 0;
-    width: clamp(250px, 33vw, 390px);
-    filter: drop-shadow(0 16px 32px var(--fch-shadow));
-  }
-
-  /* Entry-supplied artwork (heroArt override): the image IS the story, so it
-     renders at full opacity where the player would stand — not as a watermark.
-     Width is capped at ~2x the 100px vintage-button sources to limit upscale blur. */
-  .fch__art {
-    position: absolute;
-    right: clamp(1.5rem, 6vw, 4.5rem);
-    top: 50%;
-    transform: translateY(-50%);
-    width: clamp(150px, 18vw, 200px);
-    filter: drop-shadow(0 16px 32px var(--fch-shadow));
-    pointer-events: none;
-  }
-
-  /* Player-less entries (bug-fix rollups): league logo silhouette instead */
-  .fch__logo-art {
-    position: absolute;
-    right: clamp(1rem, 4vw, 3rem);
-    top: 50%;
-    transform: translateY(-50%) rotate(-6deg);
-    width: clamp(180px, 24vw, 280px);
-    opacity: 0.16;
-    pointer-events: none;
-  }
-
-  /* Both themes render on a dark surface, so the white logo silhouette is
-     correct in both — the dark-colored (--light) variant is retired. */
-  .fch__logo-art--dark {
-    display: block;
-    opacity: 0.18;
-  }
-
-  /* ── Feature screenshot (browser-framed) ──
-     The default art when the entry names no player. Light/dark captures are
-     a theme pair (same convention as the logo silhouette); the whole frame
-     is hidden on mobile — a phone-width screenshot thumbnail is decoration,
-     not information — where the logo silhouette stands in. */
-  .fch__shot {
-    position: absolute;
-    z-index: 1;
-    right: clamp(1rem, 2.5vw, 1.9rem);
-    top: 50%;
-    transform: translateY(-50%) rotate(-1.5deg);
-    width: clamp(260px, 38%, 400px);
-    border-radius: 0.5rem;
-    overflow: hidden;
-    background: #e5e7eb;
-    box-shadow: 0 12px 32px var(--fch-shadow);
-    pointer-events: none;
-  }
-
-  .fch__shot-bar {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    padding: 6px 10px;
-    background: #e5e7eb;
-  }
-
-  .fch__shot-dot {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-  }
-
-  .fch__shot-dot--red { background: #ff5f57; }
-  .fch__shot-dot--yellow { background: #ffbd2e; }
-  .fch__shot-dot--green { background: #28c840; }
-
-  .fch__shot-url {
-    flex: 1;
-    margin-left: 6px;
-    background: #fff;
-    border-radius: 3px;
-    padding: 2px 8px;
-    font-size: 10px;
-    color: #6b7280;
-    font-family: ui-monospace, monospace;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-
-  .fch__shot-img {
-    display: block;
-    width: 100%;
-    aspect-ratio: 16 / 9;
-    object-fit: cover;
-    object-position: top;
-  }
-
-  /* Theme pair: light capture by default, dark capture under html.dark. */
-  .fch__shot-img--dark {
-    display: none;
-  }
-
-  .fch--dark .fch__shot-img--light,
-  :global(html.dark) .fch .fch__shot-img--light {
-    display: none;
-  }
-
-  .fch--dark .fch__shot-img--dark,
-  :global(html.dark) .fch .fch__shot-img--dark {
-    display: block;
-  }
-
-  /* Dark capture 404 (entry not re-captured yet) → keep the light capture. */
-  .fch--dark .fch__shot--no-dark .fch__shot-img--light,
-  :global(html.dark) .fch .fch__shot--no-dark .fch__shot-img--light {
-    display: block;
-  }
-
-  .fch--dark .fch__shot--no-dark .fch__shot-img--dark,
-  :global(html.dark) .fch .fch__shot--no-dark .fch__shot-img--dark {
-    display: none;
-  }
-
-  /* Light capture 404 → drop the frame entirely, logo silhouette returns. */
-  .fch--no-shot .fch__shot {
-    display: none;
-  }
-
-  /* Screenshot's logo stand-in: hidden while the frame is visible. */
-  .fch__shot-logo {
-    display: none;
-    position: absolute;
-    right: clamp(1rem, 4vw, 3rem);
-    top: 50%;
-    transform: translateY(-50%) rotate(-6deg);
-    width: clamp(180px, 24vw, 280px);
-    opacity: 0.16;
-    pointer-events: none;
-  }
-
-  /* Dark surface in both themes → the white logo stand-in is always correct. */
-  .fch--no-shot .fch__shot-logo--dark {
-    display: block;
-    opacity: 0.18;
-  }
-
-  .fch__caption {
-    position: absolute;
-    z-index: 2;
-    right: clamp(0.875rem, 2vw, 1.5rem);
-    bottom: 0.875rem;
-    display: flex;
-    flex-direction: column;
-    align-items: flex-end;
-    gap: 0.125rem;
-    text-align: right;
-    /* Always white — the caption sits on its own dark frosted pill in both themes */
-    color: #fff;
-    background: rgba(6, 9, 13, 0.55);
-    padding: 0.4rem 0.65rem;
-    border-radius: 6px;
-    backdrop-filter: blur(2px);
-  }
-
-  .fch__caption strong {
-    font-size: 0.8125rem;
-    font-weight: 800;
-    line-height: 1.1;
-  }
-
-  .fch__caption-meta {
-    font-size: 0.575rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.12em;
-    color: rgba(255, 255, 255, 0.65);
-  }
-
-  .fch__content {
-    position: relative;
-    z-index: 2;
-    max-width: min(30rem, 58%);
-  }
-
-  .fch__eyebrow {
-    display: flex;
-    align-items: center;
-    gap: 0.625rem;
-    margin: 0 0 0.75rem;
-  }
-
-  .fch__pill {
-    font-size: 0.65rem;
-    font-weight: 800;
-    text-transform: uppercase;
-    letter-spacing: 0.14em;
-    color: var(--fch-pill-ink);
-    background: var(--fch-pill-bg);
-    border: 1px solid var(--fch-pill-border);
-    padding: 0.3rem 0.65rem;
-    border-radius: 999px;
-  }
-
-  .fch__date {
-    font-size: 0.6875rem;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
-    color: var(--fch-date);
-  }
-
-  .fch__title {
-    /* Explicit — global heading rules (and html.dark accent overrides) must
-       never restyle text sitting on the composite gradient */
-    color: var(--fch-ink);
-    font-size: clamp(1.35rem, 2.6vw, 1.75rem);
-    font-weight: 800;
-    line-height: 1.1;
-    letter-spacing: -0.015em;
-    margin: 0 0 0.5rem;
-    max-width: 22ch;
-    text-wrap: balance;
-  }
-
-  .fch__summary {
-    font-size: 0.875rem;
-    line-height: 1.5;
-    color: var(--fch-body);
-    max-width: 44ch;
-    margin: 0 0 0.875rem;
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-  }
-
-  .fch__cta {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
-    background: var(--fch-cta-bg);
-    color: var(--fch-cta-ink);
-    font-size: 0.8125rem;
-    font-weight: 700;
-    padding: 0.6rem 1.05rem;
-    border-radius: var(--radius-md, 0.5rem);
-    text-decoration: none;
-    transition: transform 120ms ease;
-  }
-
-  .fch__cta:hover {
-    transform: translateY(-1px);
-  }
-
-  .fch__cta:focus-visible {
-    outline: 2px solid var(--fch-pill-ink);
-    outline-offset: 2px;
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    .fch__cta {
-      transition: none;
-    }
-
-    .fch__cta:hover {
-      transform: none;
-    }
-  }
-
-  @media (max-width: 640px) {
-    .fch {
-      min-height: 250px;
-    }
-
-    /* ESPN `full` cutouts are landscape frames (350×254) with the player
-       centered, so height-driven sizing alone would park the face mid-card
-       under the text. Instead: a portrait box anchored bottom-right with a
-       cover crop — the face keeps its full 90%-height size, the shoulders
-       crop at the box edges, and the left-edge mask fades the crop line
-       into the gradient so no hard rectangle shows. */
-    .fch__model {
-      width: 44%;
-      height: 90%;
-      right: 0;
-      bottom: 0;
-      object-fit: cover;
-      object-position: center top;
-      opacity: 1;
-      -webkit-mask-image: linear-gradient(90deg, transparent 0%, #000 22%);
-      mask-image: linear-gradient(90deg, transparent 0%, #000 22%);
-    }
-
-    .fch__art {
-      width: 140px;
-      right: -1rem;
-      opacity: 0.45;
-    }
-
-    .fch__caption {
-      display: none;
-    }
-
-    .fch__logo-art {
-      width: 150px;
-      right: -1rem;
-    }
-
-    /* Screenshot off on mobile (unreadable at phone width) — logo stands in. */
-    .fch__shot {
-      display: none;
-    }
-
-    .fch__shot-logo {
-      width: 150px;
-      right: -1rem;
-    }
-
-    /* Dark surface in both themes → the white logo stand-in is always correct. */
-    .fch__shot-logo--dark {
-      display: block;
-      opacity: 0.18;
-    }
-
-    /* The text cap only exists to dodge the opaque bottom-right cutout —
-       the heroArt / logo-art / screenshot variants are faint watermarks or
-       hidden on mobile, so they keep the full-width reflow. When the cutout
-       404s at runtime (`fch--no-model` from the img onerror), the text
-       reflows back to full width too instead of leaving a dead right column. */
-    .fch__content {
-      max-width: 100%;
-    }
-
-    .fch--has-model .fch__content {
-      max-width: 62%;
-    }
-
-    .fch--has-model.fch--no-model .fch__content {
-      max-width: 100%;
-    }
-  }
-
-  /* Narrow phones: the constrained text column runs taller, so the headshot
-     cedes a little width (the cover crop trims more shoulder, the face keeps
-     its size) rather than letting the two meet. */
-  @media (max-width: 400px) {
-    .fch__model {
-      width: 38%;
-      height: 86%;
-    }
-
-    .fch--has-model .fch__content {
-      max-width: 66%;
-    }
-  }
-</style>
+</CompositeHero>

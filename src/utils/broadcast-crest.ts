@@ -49,6 +49,7 @@ import {
   crestStrokeIndex,
   isDarkCut,
   resolveCrestStroke,
+  resolveLargeSurfaceCrest,
   type DarkSurfaceCrestTeam,
 } from './dark-surface-crest';
 import { preferredIconSrc } from './team-icon-dark-css';
@@ -98,21 +99,21 @@ export function resolveBroadcastCrest(
 ): BroadcastCrest {
   const measured = index ?? crestStrokeIndex(league, [team]);
 
-  // Resolution first, then theme. See the header for why this order and the
-  // small one below disagree.
-  const large = team.groupMeDark || team.groupMe || team.iconDark || team.icon || '';
+  // Resolution first, then theme — now shared with the composite hero, the
+  // second surface to cross the ~300px line this order exists for.
+  const big = resolveLargeSurfaceCrest(team, league, measured);
   // Theme first: nothing here is big enough for 100px to show.
   const small = team.groupMeDark || team.iconDark || team.groupMe || team.icon || '';
 
   const stroke = resolveCrestStroke(team, measured);
 
   return {
+    icon: big.src,
     // AFL configs carry absolute production URLs on some `icon` fields — take
     // the same-origin form so the crest rides the page's own connection and
     // does not 404 against a live site that has not deployed the asset yet.
-    icon: large ? preferredIconSrc(large) : '',
     iconSmall: small ? preferredIconSrc(small) : '',
-    ...(large && !isDarkCut(team, large) && stroke ? { iconStroke: stroke } : {}),
+    ...(big.strokeColor ? { iconStroke: big.strokeColor } : {}),
     ...(small && !isDarkCut(team, small) && stroke ? { iconSmallStroke: stroke } : {}),
   };
 }

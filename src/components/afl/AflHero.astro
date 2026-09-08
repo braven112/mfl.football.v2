@@ -14,12 +14,26 @@
  *   - conference playoffs     → AflPlayoffsHero (bracket)
  * In the LEAD-UP to each of those, AflEventHero takes over.
  *
+ * Phases with an identity of their own — the keeper window and the two
+ * conference drafts — render as COMPOSITES instead (`AflCompositeHero`), on
+ * the shared shell TheLeague's heroes use. That routing is deliberately
+ * conservative and lives here rather than in the resolver: a state whose view
+ * carries no `composite` treatment, or for which no player could be cast,
+ * falls through to `AflEventHero` exactly as before. A missing feed therefore
+ * degrades to the card that always worked.
+ *
+ * The composite deliberately does NOT take `backdrop`. The franchise backdrop
+ * paints the viewer's colours behind the whole card; a composite already says
+ * whose story it is through its glow (see hero-franchise-accent.ts), and
+ * stacking both leaves the cast player floating on a second team's gradient.
+ *
  * HeroBanner is no longer used on the AFL homepage.
  */
 import TradeDeadlineHero from '../theleague/TradeDeadlineHero';
 import AflPlayoffsHero from './AflPlayoffsHero.astro';
 import AflChampionshipHero from './AflChampionshipHero.astro';
 import AflEventHero from './AflEventHero.astro';
+import AflCompositeHero from './AflCompositeHero.astro';
 import '../../styles/trade-deadline-hero.css';
 import type { AflHeroState } from '../../utils/afl-hero-resolver';
 import type { HeroFranchiseBackdrop } from '../../utils/hero-franchise-backdrop';
@@ -72,6 +86,11 @@ const { state, config, standings, userFranchiseId, backdrop = null } = Astro.pro
     standings={standings}
     config={config}
     userFranchiseId={userFranchiseId}
+  />
+) : 'view' in state && state.view.composite && state.view.model ? (
+  <AflCompositeHero
+    view={state.view}
+    regionLabel={REGION_LABEL[state.kind] ?? 'AFL hero'}
   />
 ) : (
   <AflEventHero

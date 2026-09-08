@@ -4,19 +4,26 @@
  *
  * The model is a franchise headliner (hero casting rules): the signed-in
  * owner's own top-projected player — the guy they're locking in for Week 1 —
- * or a league-wide headliner for guests, rotating daily. Replaces the legacy
- * PreseasonCountdownHero's randomHeroPlayer decoration.
+ * or a league-wide headliner for guests, rotating daily.
  *
- * The router falls back to the legacy hero when no model resolves.
+ * Configuration of the shared CompositeHero shell; the geometry below is the
+ * shipped `.psh` treatment expressed as the shell's custom properties.
+ *
+ * This hero owns the whole preseason-countdown phase. With no slate to cast
+ * from it falls back to a top free agent, and failing even that it drops the
+ * cutout rather than handing off to a second component.
  */
 import type { HeroState } from '../../types/hero-state';
 import type { HeroModel } from '../../utils/hero-casting';
-import { getNflTeamColors, hexToRgba } from '../../utils/nfl-team-colors';
+import { getNflTeamColors } from '../../utils/nfl-team-colors';
 import { normalizeTeamCode } from '../../utils/nfl-logo';
+import { resolveHeroCrest } from '../../utils/hero-crest';
+import CompositeHero from '../shared/CompositeHero.astro';
 
 interface Props {
   preseasonProps: NonNullable<HeroState['preseasonProps']>;
-  model: HeroModel;
+  /** Null when the week's slate is unavailable — see AuctionCompositeHero. */
+  model?: HeroModel | null;
   resolveLeaguePath: (path: string) => string;
   /** Whether the model is the signed-in owner's own player in the opener */
   isOwnHeadliner?: boolean;
@@ -24,7 +31,7 @@ interface Props {
   kickoffGame?: { awayName: string; homeName: string } | null;
 }
 
-const { preseasonProps, model, resolveLeaguePath: r, isOwnHeadliner = false, kickoffGame = null } = Astro.props;
+const { preseasonProps, model = null, resolveLeaguePath: r, isOwnHeadliner = false, kickoffGame = null } = Astro.props;
 
 const days = preseasonProps.daysUntilKickoff;
 const kickoffDate = preseasonProps.kickoffDate;
@@ -37,327 +44,40 @@ const summary = isKickoffDay
     ? `Week 1 kicks off ${kickoffDate}${openerLine}, and your guy is in the opener. Is the rest of your lineup ready?`
     : `Rosters are set and Week 1 kicks off ${kickoffDate}${openerLine}. Lock your lineup and get ready.`;
 
-const teamCode = normalizeTeamCode(model.nflTeam);
-const { primary } = getNflTeamColors(teamCode);
-const glowDark = hexToRgba(primary, 0.38);
-const glowLight = hexToRgba(primary, 0.2);
+const teamCode = normalizeTeamCode(model?.nflTeam ?? '');
+const captionMeta = model
+  ? `${isOwnHeadliner ? 'Your Kickoff Starter' : model.descriptor} ${model.position} · ${teamCode}`
+  : undefined;
+
+// The opener is an NFL fixture, so the mark is his NFL team's even when he is
+// the signed-in owner's player — the hero is about the game, not the roster.
+const crest = resolveHeroCrest({ league: 'theleague', nflTeam: model?.nflTeam });
 ---
 
-<section
-  class="psh"
-  style={`--psh-glow-dark: ${glowDark}; --psh-glow-light: ${glowLight};`}
-  aria-label="Preseason countdown to kickoff"
+<CompositeHero
+  ariaLabel="Preseason countdown to kickoff"
+  accent="kickoff"
+  wordmark="KICKOFF"
+  crest={crest}
+  model={model}
+  captionMeta={captionMeta}
+  glowColor={getNflTeamColors(teamCode).primary}
+  logoArt="/assets/logos/theleague-logo-dark.svg"
+  pill="Preseason"
+  title="Kickoff is"
+  titleAccent={isKickoffDay ? 'here.' : 'coming.'}
+  summary={summary}
+  styleVars="--cmh-min-h: clamp(240px, 24vw, 290px); --cmh-min-h-mobile: 260px; --cmh-ghost-size: clamp(4rem, 9vw, 7rem); --cmh-ghost-style: italic; --cmh-model-w: clamp(230px, 30vw, 350px); --cmh-logo-w: clamp(170px, 22vw, 250px); --cmh-logo-opacity: 0.2; --cmh-eyebrow-mb: 0.625rem; --cmh-content-max: min(32rem, 62%); --cmh-title-mb: 0.45rem; --cmh-summary-max: 46ch; --cmh-model-w-mobile: 175px;"
 >
-  <span class="psh__ghost" aria-hidden="true">KICKOFF</span>
-  <div class="psh__glow" aria-hidden="true"></div>
-  <img
-    class="psh__model"
-    src={model.headshot}
-    alt=""
-    aria-hidden="true"
-    loading="eager"
-    decoding="async"
-    onerror="this.style.display='none'; this.nextElementSibling.style.display='none'; this.closest('.psh').classList.add('psh--no-model')"
-  />
-  <span class="psh__caption">
-    <strong>{model.name}</strong>
-    <span class="psh__caption-meta">{isOwnHeadliner ? 'Your Kickoff Starter' : model.descriptor} {model.position} · {teamCode}</span>
-  </span>
-  <img class="psh__logo-art psh__logo-art--dark" src="/assets/logos/theleague-logo-dark.svg" alt="" aria-hidden="true" loading="lazy" />
-
-  <div class="psh__content">
-    <p class="psh__eyebrow">
-      <span class="psh__pill">Preseason</span>
-    </p>
-    <h2 class="psh__title">Kickoff is <span class="psh__title-accent">{isKickoffDay ? 'here.' : 'coming.'}</span></h2>
-    <p class="psh__summary">{summary}</p>
-
-    <div class="psh__footer">
-      <div class="psh__count" role="group" aria-label={isKickoffDay ? 'Kicks off today' : `${days} days to kickoff`}>
-        <span class="psh__count-num" aria-hidden="true">{days}</span>
-        <span class="psh__count-label" aria-hidden="true">{isKickoffDay ? 'Kicks off today' : 'Days to kickoff'}</span>
-      </div>
-      <span class="psh__divider" aria-hidden="true"></span>
-      <a class="psh__cta" href={r('/theleague/standings')}>
-        View standings
-        <span aria-hidden="true">→</span>
-      </a>
+  <div class="cmh__footer">
+    <div class="cmh__count" role="group" aria-label={isKickoffDay ? 'Kicks off today' : `${days} days to kickoff`}>
+      <span class="cmh__count-num" aria-hidden="true">{days}</span>
+      <span class="cmh__count-label" aria-hidden="true">{isKickoffDay ? 'Kicks off today' : 'Days to kickoff'}</span>
     </div>
+    <span class="cmh__divider" aria-hidden="true"></span>
+    <a class="cmh__cta" href={r('/theleague/standings')}>
+      View standings
+      <span aria-hidden="true">→</span>
+    </a>
   </div>
-</section>
-
-<style>
-  .psh {
-    /* Light theme (default) is a saturated blue card — white ink over a vivid
-       league-blue gradient, mirroring the dark treatment. html.dark keeps its
-       own deeper-navy surface below. Because both themes now render on a dark
-       surface, the foreground tokens are the dark block's values. */
-    --psh-surface: linear-gradient(115deg, #2563eb 0%, #1c497c 55%, #0f3057 100%);
-    --psh-ink: #ffffff;
-    --psh-body: rgba(255, 255, 255, 0.78);
-    --psh-ghost: rgba(255, 255, 255, 0.045);
-    --psh-glow: var(--psh-glow-dark, rgba(96, 165, 250, 0.35));
-    --psh-shadow: rgba(0, 0, 0, 0.5);
-    --psh-accent: #a8cdf8;
-    --psh-cta-bg: #ffffff;
-    --psh-cta-ink: #0f1e2e;
-    --psh-pill-bg: rgba(96, 165, 250, 0.18);
-    --psh-pill-border: rgba(96, 165, 250, 0.45);
-    --psh-pill-ink: #a8cdf8;
-    --psh-divider: rgba(255, 255, 255, 0.2);
-    --psh-border: rgba(255, 255, 255, 0.1);
-
-    position: relative;
-    overflow: hidden;
-    min-height: clamp(240px, 24vw, 290px);
-    border-radius: var(--radius-lg, 0.75rem);
-    border: 1px solid var(--psh-border);
-    /* Fail-safe base: a LITERAL solid under the gradient. A gradient held in a
-       custom property is a single point of failure — if `var(--psh-surface)` is
-       ever dropped (the whole `background` is then invalid at computed-value
-       time), the hero goes transparent while the white ink stays, which is
-       unreadable in BOTH themes. A literal background-color cannot be dropped. */
-    background-color: #1c497c;
-    background-image: var(--psh-surface);
-    color: var(--psh-ink);
-    display: flex;
-    align-items: center;
-    padding: clamp(1.25rem, 2.5vw, 1.9rem);
-  }
-
-  :global(html.dark) .psh {
-    --psh-surface: linear-gradient(115deg, #0d1420 0%, #12233b 52%, #1c497c 130%);
-    background-color: #12233b;
-    --psh-ink: #ffffff;
-    --psh-body: rgba(255, 255, 255, 0.78);
-    --psh-ghost: rgba(255, 255, 255, 0.045);
-    --psh-glow: var(--psh-glow-dark, rgba(96, 165, 250, 0.35));
-    --psh-shadow: rgba(0, 0, 0, 0.5);
-    --psh-accent: #a8cdf8;
-    --psh-cta-bg: #ffffff;
-    --psh-cta-ink: #0f1e2e;
-    --psh-pill-bg: rgba(96, 165, 250, 0.18);
-    --psh-pill-border: rgba(96, 165, 250, 0.45);
-    --psh-pill-ink: #a8cdf8;
-    --psh-divider: rgba(255, 255, 255, 0.2);
-    --psh-border: rgba(255, 255, 255, 0.1);
-  }
-
-  .psh__ghost {
-    position: absolute;
-    left: 38%;
-    top: -1.1rem;
-    font-size: clamp(4rem, 9vw, 7rem);
-    font-weight: 800;
-    font-style: italic;
-    letter-spacing: -0.02em;
-    line-height: 1;
-    color: var(--psh-ghost);
-    pointer-events: none;
-    user-select: none;
-    white-space: nowrap;
-  }
-
-  .psh__glow {
-    position: absolute;
-    right: -70px;
-    top: -100px;
-    width: 440px;
-    height: 440px;
-    background: radial-gradient(circle, var(--psh-glow) 0%, transparent 65%);
-    pointer-events: none;
-  }
-
-  .psh__model {
-    position: absolute;
-    right: clamp(0.25rem, 2vw, 1.75rem);
-    bottom: 0;
-    width: clamp(230px, 30vw, 350px);
-    filter: drop-shadow(0 16px 32px var(--psh-shadow));
-  }
-
-  .psh__logo-art {
-    display: none;
-    position: absolute;
-    right: clamp(1rem, 4vw, 3rem);
-    top: 50%;
-    transform: translateY(-50%) rotate(-6deg);
-    width: clamp(170px, 22vw, 250px);
-    opacity: 0.14;
-    pointer-events: none;
-  }
-
-  /* Both themes render on a dark surface, so the white logo silhouette is
-     correct in both — the dark-colored (--light) variant stays hidden. */
-  .psh--no-model .psh__logo-art--dark {
-    display: block;
-    opacity: 0.2;
-  }
-
-  .psh__caption {
-    position: absolute;
-    z-index: 2;
-    right: clamp(0.875rem, 2vw, 1.5rem);
-    bottom: 0.875rem;
-    display: flex;
-    flex-direction: column;
-    align-items: flex-end;
-    gap: 0.125rem;
-    text-align: right;
-    color: #fff;
-    background: rgba(6, 9, 13, 0.55);
-    padding: 0.4rem 0.65rem;
-    border-radius: 6px;
-    backdrop-filter: blur(2px);
-  }
-
-  .psh__caption strong {
-    font-size: 0.8125rem;
-    font-weight: 800;
-    line-height: 1.1;
-  }
-
-  .psh__caption-meta {
-    font-size: 0.575rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.12em;
-    color: rgba(255, 255, 255, 0.65);
-  }
-
-  .psh__content {
-    position: relative;
-    z-index: 2;
-    max-width: min(32rem, 62%);
-  }
-
-  .psh__eyebrow {
-    margin: 0 0 0.625rem;
-  }
-
-  .psh__pill {
-    font-size: 0.65rem;
-    font-weight: 800;
-    text-transform: uppercase;
-    letter-spacing: 0.14em;
-    color: var(--psh-pill-ink);
-    background: var(--psh-pill-bg);
-    border: 1px solid var(--psh-pill-border);
-    padding: 0.3rem 0.65rem;
-    border-radius: 999px;
-  }
-
-  .psh__title {
-    color: var(--psh-ink);
-    font-size: clamp(1.35rem, 2.6vw, 1.75rem);
-    font-weight: 800;
-    line-height: 1.1;
-    letter-spacing: -0.015em;
-    margin: 0 0 0.45rem;
-  }
-
-  .psh__title-accent {
-    color: var(--psh-accent);
-  }
-
-  .psh__summary {
-    font-size: 0.875rem;
-    line-height: 1.5;
-    color: var(--psh-body);
-    max-width: 46ch;
-    margin: 0 0 0.875rem;
-  }
-
-  .psh__footer {
-    display: flex;
-    align-items: center;
-    gap: 0.875rem;
-  }
-
-  .psh__count {
-    display: flex;
-    flex-direction: column;
-    gap: 0.1rem;
-  }
-
-  .psh__count-num {
-    font-size: 1.35rem;
-    font-weight: 800;
-    line-height: 1;
-    color: var(--psh-accent);
-    font-variant-numeric: tabular-nums;
-    letter-spacing: -0.01em;
-  }
-
-  .psh__count-label {
-    font-size: 0.575rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.12em;
-    color: var(--psh-body);
-  }
-
-  .psh__divider {
-    width: 1px;
-    align-self: stretch;
-    background: var(--psh-divider);
-  }
-
-  .psh__cta {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
-    background: var(--psh-cta-bg);
-    color: var(--psh-cta-ink);
-    font-size: 0.8125rem;
-    font-weight: 700;
-    padding: 0.6rem 1.05rem;
-    border-radius: var(--radius-md, 0.5rem);
-    text-decoration: none;
-    transition: transform 120ms ease;
-  }
-
-  .psh__cta:hover {
-    transform: translateY(-1px);
-  }
-
-  .psh__cta:focus-visible {
-    outline: 2px solid var(--psh-pill-ink);
-    outline-offset: 2px;
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    .psh__cta {
-      transition: none;
-    }
-
-    .psh__cta:hover {
-      transform: none;
-    }
-  }
-
-  @media (max-width: 640px) {
-    .psh {
-      min-height: 260px;
-    }
-
-    .psh__model {
-      width: 175px;
-      right: -1.5rem;
-      opacity: 0.4;
-    }
-
-    .psh__caption {
-      display: none;
-    }
-
-    .psh__logo-art {
-      width: 150px;
-      right: -1rem;
-    }
-
-    .psh__content {
-      max-width: 100%;
-    }
-  }
-</style>
+</CompositeHero>

@@ -1,0 +1,613 @@
+/**
+ * Hero showcase page — the composite-hero deep-dive, both leagues.
+ *
+ * A stylesheet rather than a scoped <style>, because the page body is a shared
+ * component (`ShowcasePage.astro`) rendering blocks whose markup is generated
+ * from a content module — a scoped sheet would have to travel with the markup
+ * and would still miss any element the shell renders. The `hc-` prefix is the
+ * namespace.
+ *
+ * Per-league colour is entirely in tokens set on `.hc-page` by the component
+ * from the content module's `palette`, so nothing here names a league.
+ */
+/* ===========================
+   Shell
+=========================== */
+.hc-page {
+  /* PALETTE — the only per-league surface on this page. Defaults are
+     TheLeague's; a content module overrides them inline on this element, which
+     is why nothing below names a league. `--color-primary` is deliberately not
+     used: it is a GLOBAL token (TheLeague blue) that the AFL pages inherit
+     unchanged, so reading it here would paint the AFL page blue. */
+  --hcp-accent: var(--hcp-accent-light);
+  --hcp-accent-light: #1c497c;
+  --hcp-accent-dark: #3b82f6;
+  --hcp-card-surface: linear-gradient(115deg, #f4f8fc 0%, #e4eef8 52%, #d2e2f2 100%);
+  --hcp-card-solid: #e4eef8;
+  --hcp-card-surface-dark: linear-gradient(115deg, #0d1b2c 0%, #16395e 52%, #1c497c 100%);
+  --hcp-card-solid-dark: #16395e;
+  --hcp-card-glow-dark: rgba(96, 165, 250, 0.3);
+
+  max-width: 76rem;
+  margin: 0 auto;
+  padding: 0 1.5rem 5rem;
+}
+
+/* The chrome accent has to BRIGHTEN in dark mode or it disappears into the
+   page. TheLeague's page used to get this free, because it read the global
+   `--color-primary`, which tokens-dark.css remaps — a dependency that only
+   showed up when the palette was made per-league and the AFL page inherited
+   TheLeague blue in both themes. Now it is explicit, and each league declares
+   both ends of the pair. */
+html.dark .hc-page {
+  --hcp-accent: var(--hcp-accent-dark);
+}
+
+/* ===========================
+   Hero
+=========================== */
+.hc-hero {
+  padding: 2.75rem 0 2rem;
+  max-width: 68rem;
+}
+
+.hc-hero__eyebrow {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 1.25rem;
+}
+
+.hc-tag {
+  display: inline-block;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--hcp-accent);
+  background: color-mix(in srgb, var(--hcp-accent) 10%, transparent);
+  padding: 0.2rem 0.65rem;
+  border-radius: 9999px;
+}
+
+.hc-dot { color: var(--color-gray-400, #9ca3af); font-size: 0.75rem; }
+
+.hc-hero__date {
+  font-size: 0.75rem;
+  color: var(--color-gray-500, #6b7280);
+  font-weight: 500;
+}
+
+.hc-hero__title {
+  font-size: clamp(1.875rem, 5vw, 3rem);
+  font-weight: 800;
+  line-height: 1.12;
+  letter-spacing: -0.025em;
+  color: var(--color-gray-900, #111827);
+  margin: 0 0 1.125rem;
+}
+
+.hc-hero__deck {
+  font-size: 1.0625rem;
+  line-height: 1.7;
+  color: var(--color-gray-600, #4b5563);
+  max-width: 66ch;
+  margin: 0 0 1.5rem;
+}
+
+.hc-hero__deck em { font-style: italic; color: var(--color-gray-800, #1f2937); }
+
+.hc-hero__stack {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.hc-stack-item { font-size: 0.8125rem; font-weight: 500; color: var(--color-gray-600, #4b5563); }
+.hc-stack-dot { color: var(--color-gray-300, #d1d5db); font-size: 0.75rem; }
+
+/* ===========================
+   Gallery — reproduced .fch treatment
+=========================== */
+.hc-gallery {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin: 0.5rem 0 0.75rem;
+}
+
+/* ── GALLERY SHOTS ────────────────────────────────────────────────────────
+   Each entry is the REAL hero (CompositeHero / CompositePanelBoard) with an
+   annotation line above it. This file therefore styles the annotation and the
+   frame ONLY — every colour, gradient, glow, wordmark and crest below the
+   caption belongs to composite-hero.css and must stay there.
+
+   The ~250 lines that used to live here were a lookalike of that treatment,
+   and they drifted three times in one week (pale-blue auction card, centred
+   ghost wordmark, no crest at all). Do not reintroduce one: if a hero looks
+   wrong on this page, it looks wrong on the homepage too. */
+.hc-shot {
+  margin: 0;
+  /* Cap at the real homepage hero column so these read at true scale, not
+     stretched across the wider showcase container. Mirrors the homepage math:
+     main (1232px) − 2× inline padding − 380px sidebar − 1.5rem grid gap. */
+  width: 100%;
+  max-width: calc(1232px - 2 * var(--padding-md, 1rem) - 380px - 1.5rem);
+}
+
+.hc-shot__meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: 0 0 0.5rem;
+  padding: 0 0.15rem;
+}
+
+/* "League colours" / "Team colours". The rule is the one thing about this
+   system that is impossible to see in a still — a team-coloured hero and a
+   league-coloured one look equally deliberate — so each shot states which half
+   it is on. Outline vs. filled so the column is scannable without reading. */
+.hc-shot__scope {
+  font-size: 0.575rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  padding: 0.22rem 0.45rem;
+  border-radius: 0.25rem;
+  color: var(--color-gray-700, #374151);
+  border: 1px solid color-mix(in srgb, currentColor 45%, transparent);
+}
+html.dark .hc-shot__scope { color: var(--color-gray-300, #d1d5db); }
+.hc-shot__scope--league { background: transparent; }
+.hc-shot__scope--team { background: color-mix(in srgb, currentColor 12%, transparent); }
+
+.hc-shot__component {
+  font-size: 0.625rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  font-family: ui-monospace, 'Cascadia Code', monospace;
+  color: var(--color-gray-500, #6b7280);
+  background: none;
+  padding: 0;
+}
+
+/* The club a team-scoped shot is dressed in. Derived from the registry, never
+   authored — a rebrand should move this text without anyone editing the page. */
+.hc-shot__club {
+  font-size: 0.625rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--hcp-accent);
+}
+
+.hc-gallery__note {
+  font-size: 0.75rem;
+  line-height: 1.55;
+  color: var(--color-gray-500, #6b7280);
+  max-width: 62ch;
+  margin: 0 0 2.75rem;
+}
+
+/* ===========================
+   Body / sections (mirrors about.astro)
+=========================== */
+.hc-body { display: flex; flex-direction: column; gap: 4rem; }
+.hc-section { display: flex; flex-direction: column; gap: 1.75rem; }
+
+.hc-section-header { display: flex; gap: 1.125rem; align-items: flex-start; }
+
+.hc-section-num {
+  flex-shrink: 0;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  color: var(--hcp-accent);
+  opacity: 0.5;
+  letter-spacing: 0.06em;
+  padding-top: 0.05rem;
+  min-width: 1.75rem;
+}
+
+.hc-section-title {
+  margin: 0;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-gray-900, #111827);
+  padding-left: 0.75rem;
+  border-left: 2px solid var(--hcp-accent);
+  line-height: 1;
+}
+
+.hc-section-sub {
+  margin: 0.3rem 0 0 0.75rem;
+  font-size: 0.8125rem;
+  color: var(--color-gray-500, #6b7280);
+  line-height: 1.4;
+}
+.hc-section-sub code, .hc-section-title code { font-family: ui-monospace, 'Cascadia Code', monospace; font-size: 0.9em; }
+
+.hc-prose { display: flex; flex-direction: column; gap: 1rem; }
+.hc-prose p {
+  margin: 0;
+  font-size: 0.9375rem;
+  line-height: 1.75;
+  color: var(--color-gray-700, #374151);
+  max-width: 68ch;
+}
+.hc-prose strong { font-weight: 600; color: var(--color-gray-900, #111827); }
+.hc-prose em { font-style: italic; }
+.hc-prose code, .hc-layer__desc code, .hc-brand-card__body code {
+  font-family: ui-monospace, 'Cascadia Code', monospace;
+  font-size: 0.8em;
+  background: var(--color-gray-100, #f3f4f6);
+  padding: 0.1rem 0.3rem;
+  border-radius: 3px;
+  color: var(--color-gray-700, #374151);
+}
+
+.hc-two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; align-items: start; }
+.hc-two-col--wide-text { grid-template-columns: 1.2fr 1fr; }
+.hc-two-col--code-left { grid-template-columns: 1fr 1fr; }
+
+/* Quote */
+.hc-quote {
+  margin: 0;
+  padding: 1.25rem 1.5rem;
+  background: var(--color-gray-50, #f0f5fa);
+  border: 1px solid var(--content-border, #cddaea);
+  border-left: 3px solid var(--hcp-accent);
+  border-radius: var(--radius-md, 0.5rem);
+  font-size: 0.9375rem;
+  font-style: italic;
+  line-height: 1.7;
+  color: var(--color-gray-700, #374151);
+}
+.hc-quote strong { font-style: normal; }
+.hc-quote__label {
+  font-size: 0.625rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-style: normal;
+  color: var(--hcp-accent);
+  margin-bottom: 0.6rem;
+}
+
+/* Layers */
+.hc-layers {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.75rem;
+  max-width: 56rem;
+}
+.hc-layer {
+  background: var(--color-gray-50, #f9fafb);
+  border: 1px solid var(--content-border, #e2e8f0);
+  border-radius: var(--radius-md, 0.5rem);
+  padding: 0.9rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.hc-layer__z {
+  font-size: 0.625rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: var(--hcp-accent);
+  font-family: ui-monospace, 'Cascadia Code', monospace;
+  opacity: 0.8;
+}
+.hc-layer__name { font-size: 0.8125rem; font-weight: 700; color: var(--color-gray-900, #111827); line-height: 1.25; }
+.hc-layer__desc { font-size: 0.75rem; line-height: 1.5; color: var(--color-gray-600, #4b5563); }
+
+/* Code blocks */
+.hc-code {
+  margin: 0;
+  border: 1px solid var(--content-border, #e2e8f0);
+  border-radius: var(--radius-md, 0.5rem);
+  overflow: hidden;
+  background: var(--color-gray-50, #f9fafb);
+}
+.hc-code__cap {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-gray-500, #6b7280);
+  padding: 0.6rem 1rem;
+  border-bottom: 1px solid var(--content-border, #e2e8f0);
+  font-family: ui-monospace, 'Cascadia Code', monospace;
+}
+.hc-code__pre {
+  margin: 0;
+  padding: 1rem;
+  overflow-x: auto;
+}
+.hc-code__pre code {
+  font-family: ui-monospace, 'Cascadia Code', monospace;
+  font-size: 0.75rem;
+  line-height: 1.6;
+  color: var(--color-gray-800, #1f2937);
+  white-space: pre;
+}
+
+/* Chips */
+.hc-chips { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.hc-chip {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: var(--color-gray-700, #374151);
+  background: var(--color-gray-100, #f3f4f6);
+  border: 1px solid var(--content-border, #e2e8f0);
+  padding: 0.3rem 0.65rem;
+  border-radius: 9999px;
+  font-family: ui-monospace, 'Cascadia Code', monospace;
+}
+
+/* Brand grid */
+.hc-brand-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; max-width: 56rem; }
+.hc-brand-card {
+  background: var(--color-gray-50, #f9fafb);
+  border: 1px solid var(--content-border, #e2e8f0);
+  border-top: 3px solid var(--hcp-accent);
+  border-radius: var(--radius-md, 0.5rem);
+  padding: 1.1rem 1.2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+.hc-brand-card__head { font-size: 0.875rem; font-weight: 700; color: var(--color-gray-900, #111827); }
+.hc-brand-card__body { margin: 0; font-size: 0.8125rem; line-height: 1.6; color: var(--color-gray-600, #4b5563); }
+.hc-brand-card__tag {
+  font-size: 0.6875rem;
+  font-family: ui-monospace, 'Cascadia Code', monospace;
+  color: var(--hcp-accent);
+  opacity: 0.8;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--content-border, #e2e8f0);
+}
+
+/* Swatches */
+.hc-swatches { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.hc-swatch {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--color-gray-700, #374151);
+  background: var(--color-gray-50, #f9fafb);
+  border: 1px solid var(--content-border, #e2e8f0);
+  padding: 0.3rem 0.6rem;
+  border-radius: 9999px;
+}
+.hc-swatch code { font-family: ui-monospace, 'Cascadia Code', monospace; font-size: 0.9em; color: var(--color-gray-500, #6b7280); }
+.hc-swatch__dot { width: 0.85rem; height: 0.85rem; border-radius: 50%; background: var(--sw); box-shadow: inset 0 0 0 1px rgba(0,0,0,0.15); }
+
+/* Persona */
+.hc-persona { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; max-width: 56rem; }
+.hc-persona__col {
+  background: var(--color-gray-50, #f9fafb);
+  border: 1px solid var(--content-border, #e2e8f0);
+  border-radius: var(--radius-md, 0.5rem);
+  padding: 1rem 1.2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.hc-persona__who {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 0.2rem 0.6rem;
+  border-radius: 9999px;
+  align-self: flex-start;
+}
+.hc-persona__who--owner { background: color-mix(in srgb, var(--hcp-accent) 15%, transparent); color: var(--hcp-accent); }
+.hc-persona__who--guest { background: var(--color-gray-200, #e5e7eb); color: var(--color-gray-600, #4b5563); }
+.hc-persona__line { font-size: 0.8125rem; line-height: 1.5; color: var(--color-gray-700, #374151); }
+.hc-persona__line code { font-family: ui-monospace, 'Cascadia Code', monospace; font-size: 0.8em; background: var(--color-gray-100, #f3f4f6); padding: 0.05rem 0.25rem; border-radius: 3px; }
+
+/* Category grid */
+.hc-cat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.75rem; max-width: 56rem; }
+.hc-cat {
+  background: var(--color-gray-50, #f9fafb);
+  border: 1px solid var(--content-border, #e2e8f0);
+  border-radius: var(--radius-md, 0.5rem);
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.hc-cat__type { font-size: 0.6875rem; font-family: ui-monospace, 'Cascadia Code', monospace; color: var(--color-gray-500, #6b7280); }
+.hc-cat__cast {
+  font-size: 0.9375rem;
+  font-weight: 800;
+  color: var(--hcp-accent);
+  line-height: 1.1;
+}
+.hc-cat__desc { font-size: 0.75rem; line-height: 1.5; color: var(--color-gray-600, #4b5563); }
+
+/* Table */
+.hc-table-wrap { overflow-x: auto; border: 1px solid var(--content-border, #e2e8f0); border-radius: var(--radius-md, 0.5rem); max-width: 56rem; }
+.hc-table { width: 100%; border-collapse: collapse; font-size: 0.8125rem; }
+.hc-table thead th {
+  position: sticky;
+  top: 0;
+  text-align: left;
+  font-size: 0.625rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-gray-400, #9ca3af);
+  background: var(--color-gray-50, #f9fafb);
+  padding: 0.6rem 0.9rem;
+  border-bottom: 1px solid var(--content-border, #e2e8f0);
+}
+.hc-table td {
+  padding: 0.7rem 0.9rem;
+  border-bottom: 1px solid var(--content-border, #e2e8f0);
+  color: var(--color-gray-700, #374151);
+  line-height: 1.45;
+  vertical-align: top;
+}
+.hc-table tr:last-child td { border-bottom: none; }
+.hc-table tbody tr:hover { background: var(--color-gray-50, #f9fafb); }
+.hc-table td code { font-family: ui-monospace, 'Cascadia Code', monospace; font-size: 0.85em; color: var(--hcp-accent); font-weight: 600; white-space: nowrap; }
+.hc-table td:nth-child(2) { color: var(--color-gray-500, #6b7280); white-space: nowrap; }
+
+/* Phase grid */
+.hc-phase-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.5rem; max-width: 56rem; }
+.hc-phase {
+  display: flex;
+  gap: 0.6rem;
+  align-items: baseline;
+  background: var(--color-gray-50, #f9fafb);
+  border: 1px solid var(--content-border, #e2e8f0);
+  border-radius: 6px;
+  padding: 0.6rem 0.7rem;
+}
+.hc-phase--shipped {
+  background: color-mix(in srgb, var(--hcp-accent) 6%, var(--content-bg, white));
+  border-color: color-mix(in srgb, var(--hcp-accent) 30%, transparent);
+}
+.hc-phase__i {
+  font-size: 0.625rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--hcp-accent);
+  opacity: 0.6;
+  font-family: ui-monospace, 'Cascadia Code', monospace;
+}
+.hc-phase__name { font-size: 0.75rem; font-weight: 700; color: var(--color-gray-900, #111827); font-family: ui-monospace, 'Cascadia Code', monospace; }
+.hc-phase__window { font-size: 0.6875rem; color: var(--color-gray-500, #6b7280); line-height: 1.35; margin-top: 0.15rem; }
+
+.hc-slots { margin-top: 0.25rem; max-width: 56rem; }
+.hc-slots__label {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-gray-500, #6b7280);
+  margin-bottom: 0.5rem;
+}
+.hc-slots__row { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.hc-slot {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  background: var(--color-gray-100, #f3f4f6);
+  border: 1px solid var(--content-border, #e2e8f0);
+  border-radius: 6px;
+  padding: 0.45rem 0.7rem;
+}
+.hc-slot__name { font-size: 0.6875rem; font-weight: 700; color: var(--color-gray-800, #1f2937); font-family: ui-monospace, 'Cascadia Code', monospace; }
+.hc-slot__when { font-size: 0.625rem; color: var(--color-gray-500, #6b7280); }
+
+.hc-phase-legend { display: flex; align-items: center; gap: 0.5rem; font-size: 0.75rem; color: var(--color-gray-500, #6b7280); margin: 0; }
+.hc-legend-swatch {
+  width: 0.85rem; height: 0.85rem; border-radius: 3px;
+  background: color-mix(in srgb, var(--hcp-accent) 6%, var(--content-bg, white));
+  border: 1px solid color-mix(in srgb, var(--hcp-accent) 30%, transparent);
+}
+
+/* Shipped grid */
+.hc-ship-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.75rem; }
+.hc-ship {
+  background: var(--color-gray-50, #f9fafb);
+  border: 1px solid var(--content-border, #e2e8f0);
+  border-top: 3px solid var(--hcp-accent);
+  border-radius: var(--radius-md, 0.5rem);
+  padding: 1rem 1.1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+.hc-ship--muted { border-top-color: var(--color-gray-300, #d1d5db); }
+.hc-ship__name { font-size: 0.8125rem; font-weight: 700; color: var(--color-gray-900, #111827); font-family: ui-monospace, 'Cascadia Code', monospace; }
+.hc-ship__cast { font-size: 0.6875rem; color: var(--hcp-accent); font-family: ui-monospace, 'Cascadia Code', monospace; opacity: 0.85; }
+.hc-ship--muted .hc-ship__cast { color: var(--color-gray-500, #6b7280); }
+.hc-ship__desc { margin: 0.15rem 0 0; font-size: 0.8125rem; line-height: 1.6; color: var(--color-gray-600, #4b5563); }
+.hc-ship__desc em { font-style: italic; }
+
+/* Closing */
+.hc-closing { margin-top: 1rem; padding-top: 3rem; border-top: 2px solid var(--color-gray-200, #e5e7eb); }
+.hc-closing__inner { display: grid; grid-template-columns: 1.4fr 1fr; gap: 2rem 3rem; align-items: start; }
+.hc-closing__title {
+  grid-column: 1 / -1;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-gray-900, #111827);
+  padding-left: 0.75rem;
+  border-left: 2px solid var(--hcp-accent);
+  margin: 0 0 0.5rem;
+}
+.hc-closing__text { max-width: 62ch; }
+.hc-closing__text p { margin: 0 0 0.875rem; font-size: 0.9375rem; line-height: 1.75; color: var(--color-gray-700, #374151); }
+.hc-closing__text p:last-child { margin-bottom: 0; }
+.hc-closing__meta {
+  background: var(--color-gray-50, #f9fafb);
+  border: 1px solid var(--content-border, #e2e8f0);
+  border-radius: var(--radius-md, 0.5rem);
+  padding: 1rem 1.2rem;
+}
+.hc-closing__meta-label {
+  font-size: 0.625rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--hcp-accent);
+  margin-bottom: 0.6rem;
+}
+.hc-closing__files { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.35rem; }
+.hc-closing__files li { font-size: 0.75rem; font-family: ui-monospace, 'Cascadia Code', monospace; color: var(--color-gray-600, #4b5563); }
+.hc-closing__ctas { grid-column: 1 / -1; display: flex; gap: 0.75rem; flex-wrap: wrap; margin-top: 0.5rem; }
+
+.hc-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  padding: 0.625rem 1.25rem;
+  border-radius: 8px;
+  text-decoration: none;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+.hc-btn--primary { background: var(--btn-primary-bg, #1c497c); color: #fff; border: 1px solid transparent; }
+.hc-btn--primary:hover { background: var(--btn-primary-bg-hover, #164066); }
+.hc-btn--ghost { background: transparent; color: var(--hcp-accent); border: 1px solid color-mix(in srgb, var(--hcp-accent) 35%, transparent); }
+.hc-btn--ghost:hover { background: color-mix(in srgb, var(--hcp-accent) 6%, transparent); }
+.hc-btn__arrow { transition: transform 0.15s ease; }
+.hc-btn:hover .hc-btn__arrow { transform: translateX(3px); }
+
+/* ===========================
+   Responsive
+=========================== */
+@media (max-width: 1000px) {
+  .hc-layers, .hc-cat-grid, .hc-phase-grid { grid-template-columns: repeat(2, 1fr); }
+  .hc-ship-grid { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media (max-width: 820px) {
+  .hc-two-col, .hc-two-col--wide-text, .hc-two-col--code-left,
+  .hc-brand-grid, .hc-persona, .hc-closing__inner { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 640px) {
+  .hc-page { padding: 0 1rem 3.5rem; }
+  .hc-hero__title { font-size: 1.75rem; }
+  .hc-hero__deck { font-size: 0.9375rem; }
+  .hc-layers, .hc-cat-grid, .hc-phase-grid, .hc-ship-grid { grid-template-columns: 1fr; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hc-btn, .hc-btn__arrow { transition: none; }
+  .hc-btn:hover .hc-btn__arrow { transform: none; }
+}

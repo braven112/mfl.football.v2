@@ -22,7 +22,12 @@ per player.
 
 | File | Role |
 |------|------|
-| `src/components/theleague/*CompositeHero.astro` | Per-phase composite heroes; each owns its gradient + ghost wordmark + glow + headshot + chip. (An early single-banner prototype, `PlayerHeroComposite.astro`, was removed unused — the heroes don't share a base component.) |
+| `src/components/shared/CompositeHero.astro` + `src/styles/composite-hero.css` | **The** spotlight shell — gradient, ghost wordmark, glow, cutout, frosted caption, editorial column. Every per-hero dimension is a `--cmh-*` custom property; every palette is a named accent. |
+| `src/components/shared/CompositePanelBoard.astro` + `src/styles/composite-panel-board.css` | **The** four-panel board (UDFA, tag showcase). `fill="pad"` keeps it full, `fill="drop"` shows only real faces. |
+| `src/components/theleague/*CompositeHero.astro` | Per-phase configurations of those two shells — copy, casting, geometry. They no longer own any of the treatment. (An earlier note here said the heroes share no base component; that stopped being true in Sep 2026.) |
+| `src/components/afl/AflCompositeHero.astro` | The AFL's keeper + conference-draft composites, on the same shell. |
+| `src/utils/hero-franchise-accent.ts` | Which colour tints the glow — the player's NFL team, or the viewer's own franchise. |
+| `src/utils/hero-crest.ts` | Which CREST sits behind the hero — the franchise's when one owns the story, the cast player's NFL team otherwise. |
 | `src/utils/nfl-team-colors.ts` | 32-team primary/secondary hex map (ESPN codes), nickname helper, `hexToRgba` |
 | `src/components/shared/SchefterPostCard.astro` | First integration — breaking-tier feed posts |
 | `scripts/schefter-scan.mjs` | Attaches `playerIds` on TRADE / AUCTION_WON / FREE_AGENT posts at generation time |
@@ -1813,3 +1818,267 @@ a Storybook story transitively, `tests/chromatic-path-filter.test.ts` fails
 until it is added to both `paths:` blocks in `.github/workflows/chromatic.yml`
 (regenerate with `node scripts/chromatic-story-deps.mjs`). Without it a visual
 regression there ships and is auto-accepted as the new baseline on main.
+
+## One shell, seven heroes — and the four regressions the parity gate caught (2026-09-07)
+
+**Context:** Seven composite heroes had been built by copying the last one:
+3,028 lines under seven CSS prefixes (`fch`/`ach`/`cwh`/`psh`/`rch` for the
+spotlight, `udh`/`tsh` for the panel board), saying the same two things seven
+times. They are now two shared components and ~800 lines.
+
+### Name accents per HERO, not per colour
+
+The obvious unification is wrong. Three of the five spotlights are "blue" and
+look interchangeable in a diff — but the What's New card, the cut watch and the
+kickoff hero differ in accent hex, pill tokens AND dark surface. Folding them
+into one `blue` silently restyled two live heroes; the DOM measurement caught it
+as a colour change, not a layout one. The accents are now named `feature`,
+`recap`, `kickoff`, `roster`, `auction`, `navy`, `gold`, and each block carries
+only its own deltas. `red` is a TONE applied on top, because urgency is
+something a hero enters, not a palette it belongs to.
+
+### The parity gate found four real regressions, none of them visible in review
+
+Rendering each hero before and after at two themes and two widths (40 renders
+via a throwaway harness route, plus 12 on the live homepage) and diffing pixels:
+
+1. **The What's New CTA disappeared.** The shell had no CTA of its own and the
+   adopter stopped rendering one. Nothing failed; the button was just gone.
+2. **A 404'd headshot left the browser's broken-image box.** The old inline
+   `onerror` set `display:none` on the img AND its caption; the new one only
+   added a class, and the CSS hid the caption but not the img. Visible only on
+   mobile, only when the cutout fails — which is exactly when it matters.
+3. **Per-hero mobile `min-height`s** (250/260/270/280px) lived in each
+   component's `@media` block and were missed on the first pass, so four heroes
+   got shorter on phones.
+4. **The eyebrow's display mode.** Only the What's New card needs `flex` (it
+   sits a date beside the pill); making it the default cost every other hero
+   ~4px of eyebrow height and moved all the copy.
+
+None of these would have failed a test or looked wrong in a code review. If you
+unify visual components here, render both versions and diff — the DOM
+measurement (boxes, computed colours, `display`) localizes a difference far
+faster than a pixel diff does, and the pixel diff is what proves you are done.
+
+### Extracting CSS out of a scoped `<style>` changes what its ancestor selectors match
+
+Astro scopes a component's styles to elements *that component* renders. A rule
+like `.fch--no-shot .fch__shot` breaks the moment `.fch--no-shot` moves onto a
+root the SHELL renders, because that root carries no scope hash. The What's New
+screenshot frame therefore ships as a plain stylesheet
+(`src/styles/whats-new-hero-shot.css`) with a namespaced prefix, rather than as
+a scoped block full of `:global()` escapes.
+
+### The guard only scanned `.astro`, so three live heroes had the bug it exists to prevent
+
+`tests/hero-gradient-surface-fallback.test.ts` enforces that a gradient held in
+a custom property always has a literal `background-color` under it. It walked
+`src/**/*.astro` only. Extending it to `.css` — necessary once the shells' CSS
+moved into stylesheets — immediately failed on `src/styles/playoff-round-hero.css`,
+where the wild-card, semifinal and championship heroes had all been painting
+`background: var(--prh-surface)` since that file was extracted. **When a rule
+moves to a new file type, check whether its guard can still see it.**
+
+The guard now also accepts a paired `--*-solid` literal in place of a
+`background-color`, for a rule that only defines a palette a descendant paints
+(the showcase page's `.hc-page`). The invariant it is really enforcing is that
+*the literal moves with the gradient*, in whichever rule redefines it.
+
+## The AFL's franchise accent — ownership is a list (2026-09-07)
+
+The AFL's registry says `duplicatePlayers: true`, and the consequence for heroes
+is sharper than for most surfaces: 60 of the AL's 84 keepers are kept in the NL
+too, so "the franchise that rosters this player" has two answers, and a hero
+that picks one paints a stranger's colours on your homepage.
+
+`hero-franchise-accent.ts` resolves it by **scoping ownership to the viewer's
+own conference** — inside one conference a player has at most one owner, so the
+ambiguity is removed rather than tie-broken. Anything else (a guest, a free
+agent, two owners somehow in one conference, an unusable brand colour) falls
+back to the NFL team colour, which is what every hero did before. Two details
+that are load-bearing:
+
+- The conference comes from the **signed-in franchise**, not `userConferenceId`
+  — that one follows the `?myteam=` / cookie preference, and a card painted in
+  someone's colours should rest on having signed in. Same rule as
+  `hero-franchise-backdrop`, for the same reason.
+- One AFL franchise ships `#e9e9e9`. A glow is not text, so it does not go
+  through the avatar luminance floor, but it still has to read as a tint —
+  `MIN_GLOW_CONTRAST` (2.2:1 vs white) floors it and is a no-op for every other
+  club.
+
+The composite and the franchise backdrop are mutually exclusive on the AFL
+homepage: both answer "whose story is this", and stacking them floats the cast
+player on a second team's gradient.
+
+## `/showcase` is a portfolio surface, so truncation is a bug (2026-09-07)
+
+The showcase gallery reproduces the shipped hero treatment, including its
+`-webkit-line-clamp: 2` summary. That clamp exists on the real hero because its
+summary is GENERATED and its length varies. On the showcase the copy is authored
+and explanatory — reproducing the clamp reproduced the wrong thing, and all five
+of TheLeague's cards had been shipping truncated mid-sentence on the page whose
+readers are evaluating the work. The clamp is gone there;
+`tests/hero-showcase-content.test.ts` fails if it returns.
+
+Both leagues' pages are one component driven by a per-league content module
+(`src/data/hero-showcase/*.ts`), because the routes would otherwise be a 1,400-line
+forked sibling. The blocks are a closed union rather than free HTML: a typo in a
+block's `kind` renders NOTHING, silently, so the guard pins that every kind used
+has a branch and every branch has a user.
+
+## The crest behind a composite hero (2026-09-07)
+
+Every composite hero now carries a centred crest watermark: the FANTASY club's
+when one owns the story (your bubble player on cut watch, your keeper
+cornerstone, the franchise that rostered the week's top scorer), the cast
+player's NFL team otherwise (the auction's best available, the opener's
+headliner). `hero-crest.ts` is the one place that decides.
+
+**"Owns the story" is the caller's answer, not the resolver's.** Only the hero
+knows whether its franchise is the viewer's own club, the team over the roster
+limit, or the one that rostered the top scorer — so the caller passes a
+`franchiseId` or omits it. In the AFL that id comes from
+`resolveHeroFranchiseAccent`, which already answers the harder question of WHICH
+franchise in a league that rosters the same player in both conferences. Taking
+it from there rather than re-deriving it is what stops the glow and the mark
+disagreeing about whose hero it is.
+
+**The numbers came from `hero-franchise-backdrop.css`, not from the broadcast.**
+The ask was "like the draft broadcast" — centred, faded so the text reads — and
+the broadcast's own reveal is `opacity: 0.42` at `68vh`. Neither transfers: a
+`vh`-sized crest is a different size on the same card at every window height,
+and 0.42 was tuned for two lines of TV-scale type read from ten feet, where a
+hero card carries a pill, a headline, a paragraph and a footer at reading size
+over the same mark. The backdrop file had already solved exactly this on a card
+this size — `min(90%, 26rem)`, `0.26`, stepping down to `min(70%, 15rem)` and
+`0.14` under 640px where the copy spans the full width — so the composite reuses
+those rather than deriving a third set.
+
+**The crest and the wordmark STACK.** They were mutually exclusive when only the
+recap hero used a crest, and a ternary would have silently dropped the phase
+name the moment every hero got one. On the AFL that name is load-bearing: it is
+the only thing that tells an owner whether the draft on screen is theirs without
+reading the pill.
+
+### Two failure modes, both already-known shapes
+
+- **A crest that 404s** is the cutout bug again. The NFL half comes from ESPN's
+  CDN, so it is a live network dependency, and an `<img>` with a broken `src`
+  paints the browser's broken-image box. `onerror` sets `cmh--no-crest`, the CSS
+  hides it, and the logo silhouette comes back — which is why the silhouette's
+  suppression is keyed on `--no-crest` rather than on `--has-crest` alone.
+- **Two marks on one card.** The silhouette exists to fill a dead right-hand
+  flank; a centred crest has already answered that. The auction's live state
+  lost its league-logo backdrop for the same reason — both are centred
+  watermarks, and the player's own club says more than our logo does.
+
+**`normalizeTeamCode` is not validation.** It uppercases and passes anything
+through, so a free agent's blank team or a junk code mints a doomed ESPN URL.
+`isValidTeamCode` is the check; the resolver returns null instead, and every
+caller treats null as "render no crest" rather than substituting a league logo —
+a hero with no mark reads as clean, one wearing the wrong club's mark reads as
+broken.
+
+## League events wear league colours; team events wear the club's (2026-09-07)
+
+Reported off a phone: "the colors look off when we add the teams — I see my team
+colors on the right but the league on the left."
+
+That was accurate. A composite painted its card in the PHASE's gradient (navy,
+gold, amber, blue) and then washed the team's colour in as a 440px radial from
+the top-right corner, so two colour systems met in one corner. Worse, the AFL
+homepage already had a franchise treatment on its BRANDED event hero — the full
+`hero-franchise-backdrop` gradient and crest — so a signed-in owner saw their
+colours on one hero and league navy on the next, depending only on which hero
+the calendar picked that day.
+
+**The rule now: a league event wears the league's phase colours, a team event
+wears that club's.**
+
+| Hero | Scope | Card |
+|---|---|---|
+| Cut watch | team — somebody's cuts | the club over the limit |
+| Recap | team — a club's week | the franchise that rostered the top scorer |
+| AFL keeper window | team — your keeper class | the signed-in owner's club |
+| AL / NL draft | league — belongs to the conference | AFL navy, red while live |
+| Auction, kickoff, What's New | league | the phase's gradient |
+
+The predicate is the one already used for the crest — "does a franchise own this
+story?" — so one answer drives the crest, the glow and now the field.
+
+**Reuse the event hero's treatment, do not build a second one.** The composite
+takes the same `HeroFranchiseBackdrop` object, sets the same `--hero-fb-*`
+tokens inline, renders the same `.hero-fb__wash`, and drops its own glow — the
+event hero already found that two washes over one gradient muddied every card
+that was not already red. Two looks for one franchise on one homepage is the
+bug being fixed; a second implementation would just re-create it.
+
+**The accent tokens follow the club, and that is correctness, not taste.**
+`--cmh-accent` is tuned to be legible on its own phase gradient; a sky blue
+cleared against league navy has no claim to clear against an arbitrary club's
+red. `resolveHeroFranchiseBackdrop` measures its accent to 3:1 against the
+gradient it actually ships, and its pill pair to 4.5:1 because that label is
+small text. Under `.cmh--franchise` the composite takes those instead.
+
+### Two things found while wiring it
+
+- **`resolveDarkSurfaceCrest` wants the CREST MANIFEST's league key, not the
+  route slug.** `hero-crest.ts` was passing `afl-fantasy` where the contract
+  says `afl`. No symptom today — no AFL crest is measured into
+  `crest-dark-stroke-manifest.json` yet — which is exactly why it would have
+  gone unnoticed until one was, and then a light crest would have shipped onto
+  ink with no ring. `CREST_LEAGUE_KEY` maps it in one place now.
+- **The ghost wordmark ran off the right edge**, so it read as a cut-off word
+  rather than a deliberate one, and it fought the newly-centred crest for the
+  middle of the card. It is right-anchored now and grows leftward, so the whole
+  word always renders (measured at 1280 and 390; the tightest is WHAT'S NEW at
+  333px on a 374px card), and faded by roughly half — it is decoration, and the
+  pill carries the same fact in readable type.
+
+## Retiring the legacy heroes: a fallback is not a design (2026-09-07)
+
+Three phases rendered a composite only when a player could be cast, and the
+legacy `EventHeroShell` card otherwise. Asked why it needed to fall back at all,
+the honest answer turned out to be that only ONE of the two reasons was still
+real:
+
+- **"No player to composite"** had stopped being a reason. The shell renders a
+  null model fine — it drops the cutout and shows the crest and silhouette, the
+  same path the What's New hero has always used for a bug-fix rollup.
+- **"No content"** was the real one, and only for cut watch: its whole body is
+  metrics about over-limit teams, and the legacy card was the only one carrying
+  the ALL-CLEAR copy ("all teams are at or below the 22-player active limit").
+
+So the fix was to write the missing state, not to keep a second component:
+
+| Phase | Cast when the primary pool is empty |
+|---|---|
+| cut watch | the owner's own roster headliner — "your roster is legal" is about YOUR team, and a free agent would not be |
+| preseason | a top free agent — the card is about the season starting, and "best player nobody rosters" is true of that week regardless of the schedule |
+| auction | already a free agent by definition |
+
+Cut watch also gains an all-clear card that counts DAYS and the roster limit
+instead of violations, and takes the signed-in owner's colours, because on that
+week the hero is about their roster rather than about whoever is over.
+
+`CutWatchHero`, `AuctionHero` and `PreseasonCountdownHero` are gone. Two guards
+moved with them rather than being weakened:
+
+- `hero-franchise-backdrop.test.ts`'s panel-accent check lost its only
+  non-shell sample (`CutWatchHero`'s `.cw-team__count` was the one component
+  outside `EventHeroShell` that ever set `--hero-fb-accent-panel`). The shell's
+  own pair still pins the bug that actually happened, since both selectors in it
+  are the shell's.
+- Its "guards the guard" floor on EventHeroShell importers was **retightened**
+  6 → 4, ratchet-style: down with a deletion, never loosened to clear a failure.
+
+**The panel boards keep their fallback, and that is not an inconsistency.** UDFA
+and the tag showcase require two panels because a board of one is not a board —
+a structural minimum, not a missing cast.
+
+**Watch the prop types when a model becomes optional.** Declaring `model:
+HeroModel | null` while the router's own prop is `model?:` hands the component
+`undefined` and costs three `astro check` errors — the ratchet catches it, but
+only after a 3.5-minute run. `model?: HeroModel | null` with a `= null` default
+is the shape.

@@ -63,6 +63,21 @@ const brandOf = (t: any): TeamBrand => ({
 });
 
 /**
+ * One franchise's RAW config entry — every field the config carries, not the
+ * `TeamBrand` slice above.
+ *
+ * `resolveHeroFranchiseBackdrop` needs `colorSecondary`, `broadcastGradient`
+ * and the crest fields that `TeamBrand` deliberately drops, and the alternative
+ * was a third call site re-importing both league configs by hand. Returns
+ * undefined for an unknown league or franchise rather than throwing: every
+ * caller is a hero deciding whether it can paint itself in a club's colours,
+ * and "no" is a normal answer there.
+ */
+export function getLeagueTeamConfig(slug: string, franchiseId: string): any | undefined {
+  return CONFIGS[slug]?.teams?.find((t) => t?.franchiseId === franchiseId);
+}
+
+/**
  * Every franchise's brand in this league, keyed by MFL franchise id.
  * Throws on a league this module doesn't know.
  */
