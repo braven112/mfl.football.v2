@@ -37,6 +37,14 @@ export interface ScoreboardQuery {
   year?: number | string | null;
   /** The request's query string, for the ?espnSeason/?espnWeek/?espnYear override. */
   params?: URLSearchParams;
+  /**
+   * Caller's abort. A page may start this in parallel with its own data load
+   * and only afterwards learn it does not need the answer (the live-scoring
+   * pages fall back to the bundled sample whenever the MFL feed is empty, which
+   * is the whole offseason) — aborting drops the request and its timer instead
+   * of leaving both running on every such view.
+   */
+  signal?: AbortSignal;
 }
 
 export function parseScoreboardWeek(raw: number | string | null | undefined): number {
@@ -92,14 +100,20 @@ export async function fetchNflScoreboard(query: ScoreboardQuery): Promise<NflSco
   const espnUrl = buildEspnScoreboardUrl(target.slot, target.year);
   const espnSlot = { ...target.slot, year: target.year, overridden: target.overridden };
 
+  // The caller's abort and our own timeout both have to be able to end this.
+  const signal = query.signal
+    ? AbortSignal.any([query.signal, AbortSignal.timeout(ESPN_TIMEOUT_MS)])
+    : AbortSignal.timeout(ESPN_TIMEOUT_MS);
+
   try {
-    const res = await fetch(espnUrl, { signal: AbortSignal.timeout(ESPN_TIMEOUT_MS) });
+    const res = await fetch(espnUrl, { signal });
     if (!res.ok) return { ok: false, week, games: [], espnSlot };
     const data = await res.json();
     const events: any[] = data?.events ?? [];
     return { ok: true, week, games: events.map(parseScoreboardEvent), espnSlot };
   } catch (error) {
-    console.error('Error fetching NFL scoreboard:', error);
+    // A caller that aborted is not an outage and must not be logged as one.
+    if (!query.signal?.aborted) console.error('Error fetching NFL scoreboard:', error);
     return { ok: false, week, games: [], espnSlot };
   }
 }

@@ -132,9 +132,10 @@ let data: Awaited<ReturnType<typeof assembleLiveScoringData>> | undefined;
 // Started HERE, awaited in the live branch below, so ESPN overlaps the MFL
 // assembly instead of adding its timeout to every render. Skipped entirely when
 // the caller already asked for the sample.
+const nflGamesAbort = new AbortController();
 const nflGamesPromise = useDemo
   ? undefined
-  : fetchInitialNflGames({ week, year, params: Astro.url.searchParams });
+  : fetchInitialNflGames({ week, year, params: Astro.url.searchParams, signal: nflGamesAbort.signal });
 
 if (!useDemo) {
   data = await assembleLiveScoringData({
@@ -152,6 +153,11 @@ if (!useDemo) {
   // season's replay is worse than showing the island's empty/error state.
   if (demoParam !== '0' && data.ok && data.matchups.length === 0) {
     useDemo = true;
+    // The slate was started in parallel before we could know the feed was
+    // empty. It is worthless now — the sample supplies the rail — so drop it
+    // rather than leave a request and its 5s timer running on every offseason
+    // view.
+    nflGamesAbort.abort();
   }
 }
 
@@ -162,7 +168,11 @@ if (useDemo) {
   const sample = useRosterDemo
     ? getCurrentRosterSample({ slug: league.slug, year: rosterDemoYear })
     : getLiveScoringSample({ slug: league.slug });
-  nflGames = sample.nflGames;
+  // ?demo=live means REAL NFL alongside sampled fantasy, so it must not seed the
+  // rail from last season's bundle: the hook now serves `fallbackGames` until
+  // the first poll lands, which would show the sample slate as the live one —
+  // and permanently, since the store keeps no data when ESPN is unreachable.
+  nflGames = useRosterDemo ? undefined : sample.nflGames;
   islandProps = {
     week: sample.week,
     year,
@@ -186,7 +196,7 @@ if (useDemo) {
     demo: true,
     demoLiveNfl: useRosterDemo,
     demoLabel: useRosterDemo ? `Live NFL · ${rosterDemoYear} rosters · no fantasy scoring yet` : undefined,
-    initialNflGames: sample.nflGames,
+    initialNflGames: useRosterDemo ? undefined : sample.nflGames,
     initialDetail: sample.detail,
   };
 } else {
