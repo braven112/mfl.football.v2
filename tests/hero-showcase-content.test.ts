@@ -221,14 +221,56 @@ describe('hero showcase content', () => {
     // copy is authored and explanatory, and clamping it truncated all five of
     // TheLeague's cards mid-sentence on a page whose readers are evaluating the
     // work. If the clamp comes back, the copy silently loses its endings again.
-    const rule = css.slice(css.indexOf('.hcx__summary {'));
-    expect(rule.slice(0, rule.indexOf('}'))).not.toContain('line-clamp');
+    // Checked at the SOURCE of the clamp, not at a copy of it. This used to
+    // read `.hcx__summary` out of hero-showcase.css — a lookalike rule that no
+    // longer exists, so `indexOf` returned -1, `slice(-1)` handed back one
+    // character, and the assertion passed against an empty string. A guard that
+    // cannot fail is worse than no guard: it reports the rule is covered.
+    //
+    // The clamp is now a PROP on the live shell (`clampSummary` → the
+    // `cmh--clamp-summary` class), so the thing to assert is that the gallery
+    // never passes it.
+    const gallery = component.slice(component.indexOf('<section class="hc-gallery"'));
+    const heroCall = gallery.slice(0, gallery.indexOf('</section>'));
+    expect(heroCall, 'the gallery renders CompositeHero').toContain('<CompositeHero');
+    expect(heroCall, 'a showcase summary must never be clamped').not.toContain('clampSummary');
+    // And the clamp itself must stay opt-in, so an adopter that passes nothing
+    // cannot inherit it.
+    expect(heroCss).toContain('.cmh--clamp-summary .cmh__summary {');
+    const base = heroCss.slice(heroCss.indexOf('\n.cmh__summary {'));
+    expect(base.slice(0, base.indexOf('}')), 'the BASE summary rule must not clamp').not.toContain('line-clamp');
   });
+
+  /**
+   * Length of the text a READER sees, ignoring the markup around it.
+   *
+   * Deliberately a scanner rather than `html.replace(/<[^>]+>/g, '')`. That
+   * one-pass strip is the `js/incomplete-multi-character-sanitization` pattern
+   * and CodeQL flagged it high, correctly: on nested or malformed markup a
+   * single pass can SYNTHESISE a tag it was meant to remove — `<<a>script`
+   * loses `<a>` and becomes `<script`. Nothing here renders the result, so it
+   * was not a live vulnerability; the problem is that the line READS as a
+   * sanitizer, and the next person to want "the plain text of a summary" would
+   * have reached for it.
+   *
+   * Counting sidesteps the whole category: there is no stripped string to
+   * reuse, and the number is what this test actually wanted.
+   */
+  const visibleLength = (html: string): number => {
+    let count = 0;
+    let inTag = false;
+    for (const ch of html) {
+      if (ch === '<') inTag = true;
+      else if (ch === '>') inTag = false;
+      else if (!inTag) count += 1;
+    }
+    return count;
+  };
 
   it.each(MODULES)('%s: gallery summaries stay card-sized', (_name, content) => {
     for (const card of content.gallery) {
-      const plain = card.summary.replace(/<[^>]+>/g, '');
-      expect(plain.length, `${card.key} summary is ${plain.length} chars`).toBeLessThanOrEqual(230);
+      const len = visibleLength(card.summary);
+      expect(len, `${card.key} summary is ${len} chars`).toBeLessThanOrEqual(230);
     }
   });
 
