@@ -114,3 +114,61 @@ game-day heroes turned up four things the original build could not have known.
   it added enough lines to trip `tests/page-fork-ratchet.test.ts`, which is how
   the ceremony got noticed. Page components read for themselves; nested display
   components (the heroes) take a prop, because they are not the page.
+
+## 2026-09-08 — Making the league clock a setting, and moving the default to PT
+
+- **"No Redis" and "no knowledge" are different bans, and conflating them cost
+  a whole feature.** The nav's rule reads "read the COOKIE, never the
+  resolver", and both the doc and I took that to mean the drawer simply cannot
+  know a stored preference — so the drawer printing "League time (PT)" beside a
+  waiver deadline rendered in Sydney got written up twice as an accepted cost.
+  It was not. The rule exists to stop a Redis round-trip on every page view;
+  `seededPreferencesFor` is a pure lookup in a static map and costs nothing.
+  One line (`cookiePrefs ?? seededPrefs`) closed a disagreement two rounds of
+  documentation had already rationalised. When a rule forbids a *mechanism*,
+  separate the cost it is guarding from the capability it appears to deny —
+  they are rarely the same set.
+
+- **Once absence is a signal, seeding someone onto the default stops being a
+  no-op.** Nine of the thirteen seeds added here are `{US, PT}` — the exact
+  value the site already falls back to, so nothing those owners see changes.
+  They are still load-bearing, because the new hint pulses at anyone the site
+  has no answer for: a seed is an ANSWER, and the absence of one is a QUESTION.
+  Before this feature, "seed an owner onto the default" would have been dead
+  config. Adding any UI that keys on "we don't know" retroactively gives every
+  redundant-looking default a job.
+
+- **Look for a value already being threaded before adding a parameter to N
+  functions.** Making the league clock configurable looked like a signature
+  change across `eventZonesFor` → `formatForViewer` → `viewerClockZone` →
+  `waiver-window` → their callers. But `ViewerClock` was already flowing
+  through all of them, so the clock rode along as a field on it and only
+  `readViewerClock` grew an argument. The prefs-only entry points
+  (`kickoffZonesFor`, `zoneSummary`) took an optional second parameter, and the
+  three client islands took a prop because a browser has no registry to ask.
+  Two signatures instead of six.
+
+- **A time-boxed spotlight and a state hint share a stylesheet, not a
+  mechanism.** `FEATURE_SPOTLIGHTS` answers "is this new" — it expires on a
+  date and dismisses into localStorage. The preferences nudge answers "have you
+  told us where you are", and wiring it through the spotlight registry would
+  have un-nudged someone who still had not set a clock a week later while
+  pulsing at someone who had. Reuse `.spotlight-pulse` (it is global on purpose);
+  drive it from the state. The cookie is the honest dismissal.
+
+- **A guard test that hardcodes an example rots when the example becomes real
+  data.** `tests/viewer-preferences.test.ts` proved the seed lookup keys on
+  league AND franchise by asserting `afl-fantasy:0009` was null — "a different
+  team entirely". Then 0009 (Vitside Mafia) got seeded, and the test failed for
+  a reason with nothing to do with the rule it guards. It now DERIVES an
+  unseeded twin from the map itself. Any guard whose fixture is a real id from
+  live config should compute its counter-example rather than name one.
+
+- **Two defaults converging on the same value is not a reason to merge them.**
+  Sunday Ticket's floor (the COUNTRY's default clock) and every league
+  surface's floor (the LEAGUE's official clock) both answer PT now that the US
+  default moved. They stay two reads: one asks where the viewer is, the other
+  where the league keeps its time, and either can move without the other. The
+  test pins the distinction by checking a country whose default is NOT the
+  league clock (CA → `ET · PT`), because an assertion that only exercises the
+  converged case would pass just as happily against a merged implementation.
