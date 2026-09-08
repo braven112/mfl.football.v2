@@ -341,6 +341,26 @@ describe('readPendingWaiverPlayerIds — "could not verify" is not "nothing ther
     expect(ROUTE_CODE).toMatch(/stored !== null && missing\.length > 0/);
   });
 
+  it('hard-fails a non-2xx from MFL instead of letting the read-back soften it', () => {
+    // Copilot, post-merge on #1018, and correct. Everything after the write is
+    // written for MFL's own 200-with-a-page answer: the complaint scan finds
+    // nothing in a gateway error page, so a 502/503 fell through to the
+    // read-back — which reports "Submitted, but we could not confirm it" when it
+    // cannot read the roster. That is the softest possible wording for a write
+    // known never to have reached MFL. The old FCFS path got this for free
+    // (`readMflImportResult` scored a non-2xx as `refused`); retiring that
+    // reader took the status check out with it.
+    const loop = ROUTE_CODE.slice(
+      ROUTE_CODE.indexOf('for (const write of writes)'),
+      ROUTE_CODE.indexOf('NOTHING IS AFFIRMED') > 0
+        ? ROUTE_CODE.indexOf('let stored')
+        : ROUTE_CODE.length
+    );
+    expect(loop).toMatch(/if \(!res\.ok\) \{/);
+    expect(loop.slice(loop.indexOf('if (!res.ok)'), loop.indexOf('if (!res.ok)') + 300))
+      .toContain('return fail(');
+  });
+
   it('reads the roster back CACHE-BUSTED, and twice before calling a pickup a miss', () => {
     // Every other MFL read in this route carries `_=Date.now()`. `getRosters()`
     // is the one that does not — its URL is byte-identical on every call, so

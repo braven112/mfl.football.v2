@@ -390,6 +390,22 @@ export const POST: APIRoute = async ({ request }) => {
         `[waiver-claim] add_drop (${immediate ? 'fcfs' : 'waiver'}) → ${res.status} | title=${JSON.stringify(page.title)} | submits=${JSON.stringify(page.submits)}`
       );
       console.log(`[waiver-claim] add_drop text: ${page.text}`);
+      // A NON-2xx IS A KNOWN MISS, and it must not fall through to the
+      // read-back. Everything below is written for MFL's own 200-with-a-page
+      // answer: the complaint scan finds nothing in a 502 gateway page, and the
+      // read-back then decides — which is right when it can read the roster,
+      // but reports "Submitted, but we could not confirm it" when it cannot.
+      // That is the softest possible wording for a write we know never reached
+      // MFL. The old FCFS path got this for free (`readMflImportResult` scored
+      // a non-2xx as `refused`); retiring that reader took the status check out
+      // with it. cut-player.ts keeps the same guard on the same page handler.
+      if (!res.ok) {
+        return fail(
+          `MFL did not accept the request (HTTP ${res.status}). Nothing was recorded — try again, or use MyFantasyLeague.`,
+          502,
+          { confirmUrl }
+        );
+      }
       // MFL re-renders the page carrying its own complaint. Stop on the first
       // one rather than firing the rest of the board at a refusing endpoint.
       //
