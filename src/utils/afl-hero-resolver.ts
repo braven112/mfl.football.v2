@@ -74,6 +74,15 @@ export interface EventHeroView {
    */
   secondaryLinks?: HeroSecondaryLink[];
   icon?: string;
+  /**
+   * Which casting rule this view wants, when the state's KIND is not specific
+   * enough to say. Two different heroes resolve to `kind: 'event'` — the
+   * schedule-release tease and the generic dated-event card — and they want
+   * different faces, so the RESOLVER says which rather than the caster
+   * re-deriving it from a link string. Same division of labour as `composite`:
+   * the resolver already knows what the state is about.
+   */
+  cast?: 'top-ranked';
   badge?: string;
   /** Dark-mode variant of `badge` — required whenever `badge` is set. */
   badgeDark?: string;
@@ -1480,6 +1489,12 @@ export function resolveAflHeroState(input: AflHeroResolverInput): AflHeroState {
           link: '/afl-fantasy/schedule-release',
           linkLabel: (tease.phase === 'out' ? 'See the schedule' : 'See the countdown').toUpperCase(),
           icon: 'calendar',
+          // The schedule drop is a LEAGUE moment, showcased by one of the
+          // league's best players rather than by a franchise headliner — a
+          // marquee face for a marquee announcement. Nobody owns the schedule,
+          // so the card keeps the AFL's own navy.
+          cast: 'top-ranked',
+          composite: { wordmark: 'SCHEDULE', accent: 'navy', tone: null, scope: 'league' },
           accent: ACCENT_GOLD,
           glow: GLOW_GOLD,
           player: randomHeroPlayer(now),
