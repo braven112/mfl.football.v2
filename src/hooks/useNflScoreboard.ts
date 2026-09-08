@@ -89,6 +89,32 @@ export interface NflScoreboardState {
 const EMPTY_GAMES: NflGame[] = [];
 
 /**
+ * Should the scoreboard poll at the LIVE cadence?
+ *
+ * `hint` is the page's game-day window (`getDailySlot`), computed server-side
+ * and fixed for the life of the page. It is what keeps the board responsive
+ * before kickoff: a slate of `pre` games is not "in progress" but is about to
+ * be, and without the hint the board would sit on POLL_STALE all Sunday
+ * morning and notice kickoff up to five minutes late.
+ *
+ * What the hint must not do is outlive the slate. `getDailySlot` keeps the
+ * live-scoring slot open long past the last whistle — Sunday 8:30pm+ and
+ * Monday 11pm+ both still return it — so OR-ing it in unconditionally pinned
+ * every subscriber to POLL_LIVE for hours after every game had gone final.
+ * A finished slate therefore ends the fast cadence regardless of the hint,
+ * the same rule LiveScoreboard already applies to its MFL half (`allDone`).
+ *
+ * An EMPTY slate is not "all final" — it is "nothing has loaded yet", and the
+ * hint still governs there.
+ */
+export function shouldPollLive(games: ReadonlyArray<{ state: NflGame['state'] }>, hint: boolean): boolean {
+  const allFinal = games.length > 0 && games.every((g) => g.state === 'post');
+  if (allFinal) return false;
+  return hint || games.some((g) => g.state === 'in');
+}
+
+
+/**
  * @param enabled pass false in demo mode (bundled sample data) or when the
  *   caller supplies its own games — the hook then does no network at all.
  * @param fallbackGames the caller's own slate. With `enabled` false it is the
@@ -118,9 +144,18 @@ export function useNflScoreboard(
   // would freeze the cadence at whatever was true when the island mounted, so
   // a board that went all-final would keep polling every 60s forever.
   // The caller's `live` hint (the page's game-day window) covers the first
-  // load, before any games have arrived to look at.
-  const liveNow =
-    live || (poller.getState(params).data?.games ?? []).some((g) => g.state === 'in');
+  // load, before any games have arrived to look at — and it stays useful after
+  // that, because a slate of `pre` games is not "in progress" but IS about to
+  // be: dropping the hint once data lands would put the board on POLL_STALE
+  // all Sunday morning and leave it up to five minutes late noticing kickoff.
+  //
+  // What the hint must NOT do is outlive the slate. `getDailySlot` keeps the
+  // live-scoring slot open long past the last whistle (Sunday 8:30pm+ and
+  // Monday 11pm+ both still return it), so OR-ing it in unconditionally pinned
+  // every subscriber to POLL_LIVE for hours after every game had gone final.
+  // A finished slate ends the fast cadence regardless of the hint — the same
+  // rule LiveScoreboard already applies to its MFL half via `allDone`.
+  const liveNow = shouldPollLive(poller.getState(params).data?.games ?? [], live);
 
   const snapshot = useSyncExternalStore(
     useCallback(
