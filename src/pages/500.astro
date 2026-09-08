@@ -1,0 +1,403 @@
+---
+/**
+ * Server-error page — and the reason a crash is finally *legible*.
+ *
+ * Astro looks up its error page by exact route: `matchRoute('/500', …)` first
+ * scans for a route whose path IS `/500`, and only if that finds nothing does
+ * it fall through to a generic pattern match. Until this file existed the
+ * fall-through hit `[...path].astro`, the shared-host router, which sets
+ * `Astro.response.status = 404` — so every SSR throw on this site rendered the
+ * styled 404 page with a 404 status.
+ *
+ * That is not a cosmetic difference. On 2026-09-08 `theleague.us/rosters`
+ * threw a TypeError in frontmatter for every owner on TheLeague, and because
+ * the throw came back as a 404 the outage looked like a deleted route: three
+ * separate wrong theories (dropped from the build, a Vercel rewrite problem, a
+ * stale deployment) were chased before Vercel's runtime logs showed the real
+ * stack. `astro dev` had reported an honest 500 the whole time; only
+ * production lied. See docs/claude/followups/2026-09-08-roster-page-unpaired-week-404.md.
+ *
+ * With this route in the manifest a frontmatter throw surfaces as a 500 with
+ * this page, and the handler hands us the error in `Astro.props.error` so it
+ * gets one greppable server-side log line.
+ *
+ * Keep this frontmatter boring. It runs on the path where something has
+ * already failed, and if it throws too, Astro gives up and serves a bodiless
+ * 500.
+ */
+export const prerender = false;
+
+import TheLeagueLayout from '../layouts/TheLeagueLayout.astro';
+import { getLeagueBySlug, getLeagueByPath } from '../config/leagues';
+import { HOST_TO_SLUG } from '../utils/league-host-map';
+import { resolveLeaguePath } from '../utils/nav-utils';
+
+// Astro's error handler renders this route with `initialProps = { error }`.
+// A direct visit to /500 has no props, so treat it as optional.
+const { error } = Astro.props as { error?: unknown };
+
+// The one line that makes the next outage a single filtered log query instead
+// of an afternoon. Server-side only — the stack never reaches the browser,
+// which is the whole reason production hid it in the first place.
+const failedPath = Astro.url.pathname + Astro.url.search;
+console.error(
+  `[ssr-500] ${Astro.request.method} ${failedPath} —`,
+  error instanceof Error ? (error.stack ?? error.message) : (error ?? 'no error provided'),
+);
+
+// Set explicitly rather than inherited: it makes a direct GET /500 honest too,
+// and it is the assignment `[...path].astro` uses to pin 404, so the two error
+// routes state their status the same way.
+Astro.response.status = 500;
+
+// Same league resolution as 404.astro — apex host is authoritative, path
+// prefix is the off-apex fallback (localhost, previews).
+const hostSlug = HOST_TO_SLUG[Astro.url.hostname];
+const league =
+  (hostSlug && getLeagueBySlug(hostSlug)) || getLeagueByPath(Astro.url.pathname);
+const hideLeaguePrefix = Astro.locals.hideLeaguePrefix ?? false;
+const homeHref = resolveLeaguePath(`/${league.slug}`, hideLeaguePrefix);
+const homeLabel = `Back to ${league.name}`;
+
+// "Try again" points at the path that just failed — a reload is genuinely the
+// right move for a transient upstream blip. A pathname is attacker-influenced,
+// though, and `//evil.com` is a protocol-relative URL that would leave the
+// site, so anything that is not a single-slash-rooted path falls back home.
+const retryHref =
+  failedPath.startsWith('/') && !failedPath.startsWith('//') ? failedPath : homeHref;
+
+// Chyron ticker lines — Schefter voice, pointed at ourselves. Duplicated in
+// the markup below so the marquee loops seamlessly.
+const tickerLines = [
+  '500: INTERNAL SERVER ERROR',
+  'Sources: the snap never reached the quarterback',
+  'Developing: our own servers listed as questionable',
+  'Per league sources, this one is on us — not you',
+  'BREAKING: engineering has the tape under review',
+];
+---
+
+<TheLeagueLayout title="Something Went Wrong - 500">
+  <section class="error-500">
+    <article class="bn-card" aria-labelledby="bn-headline">
+      <!-- Alert strip -->
+      <header class="bn-card__strip">
+        <span class="bn-badge">
+          <span class="bn-badge__dot" aria-hidden="true"></span>
+          BREAKING
+        </span>
+        <span class="bn-card__slug">SCHEFTER REPORT</span>
+      </header>
+
+      <div class="bn-card__body">
+        <!-- Byline -->
+        <div class="bn-byline">
+          <img
+            class="bn-byline__avatar"
+            src="/assets/claude-schefter-avatar.webp"
+            alt="Claude Schefter"
+            width="48"
+            height="48"
+            loading="eager"
+          />
+          <div class="bn-byline__meta">
+            <span class="bn-byline__name">Claude Schefter</span>
+            <span class="bn-byline__role">Senior League Insider · moments ago</span>
+          </div>
+        </div>
+
+        <p class="bn-code">500</p>
+        <h1 id="bn-headline" class="bn-headline">
+          Sources say this one&rsquo;s on us.
+        </h1>
+        <p class="bn-lede">
+          The page you wanted blew up in our own backfield &mdash; the link is
+          fine, the server fumbled it. Engineering has the tape. Run the play
+          again, or head back to the front page while we sort it out.
+        </p>
+
+        <div class="bn-links">
+          <a href={retryHref} class="btn btn--primary">Try that again</a>
+          <a href={homeHref} class="btn btn--ghost">{homeLabel}</a>
+        </div>
+      </div>
+
+      <!-- Chyron ticker -->
+      <div class="bn-ticker" aria-hidden="true">
+        <div class="bn-ticker__label">LIVE</div>
+        <div class="bn-ticker__viewport">
+          <div class="bn-ticker__track">
+            {tickerLines.map((line) => <span class="bn-ticker__item">{line}</span>)}
+            {tickerLines.map((line) => <span class="bn-ticker__item">{line}</span>)}
+          </div>
+        </div>
+      </div>
+    </article>
+  </section>
+</TheLeagueLayout>
+
+<style>
+  /* Local breaking-news palette, matching 404.astro. --bn-red reads well on
+     both light and dark surfaces; --bn-ink/--bn-paper keep the chyron ticker a
+     constant dark bar in both themes (a real news ticker never flips to a
+     bright band). */
+  .error-500 {
+    --bn-red: #d50a0a;
+    --bn-ink: #14181f;
+    --bn-paper: #eef1f5;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 60vh;
+    padding: 2rem;
+  }
+
+  .bn-card {
+    width: 100%;
+    max-width: 620px;
+    background: var(--content-bg);
+    border: 1px solid var(--card-border, var(--color-gray-200));
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-xl);
+    overflow: hidden;
+  }
+
+  /* --- alert strip --- */
+  .bn-card__strip {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.6rem 1rem;
+    background: var(--bn-red);
+    color: #fff;
+  }
+
+  .bn-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    font-weight: 800;
+    font-size: 0.8rem;
+    letter-spacing: 0.12em;
+  }
+
+  .bn-badge__dot {
+    width: 0.55rem;
+    height: 0.55rem;
+    border-radius: var(--radius-full);
+    background: #fff;
+    animation: bn-pulse 1.4s ease-in-out infinite;
+  }
+
+  .bn-card__slug {
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.18em;
+    opacity: 0.85;
+  }
+
+  /* --- body --- */
+  .bn-card__body {
+    padding: 1.5rem 1.75rem 2rem;
+    text-align: center;
+  }
+
+  .bn-byline {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.7rem;
+    margin-bottom: 1.25rem;
+  }
+
+  .bn-byline__avatar {
+    width: 48px;
+    height: 48px;
+    border-radius: var(--radius-full);
+    border: 2px solid var(--bn-red);
+    object-fit: cover;
+    background: var(--content-bg-muted);
+  }
+
+  .bn-byline__meta {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    line-height: 1.25;
+  }
+
+  .bn-byline__name {
+    font-weight: 700;
+    color: var(--color-gray-900);
+  }
+
+  .bn-byline__role {
+    font-size: 0.8rem;
+    color: var(--color-gray-500);
+  }
+
+  .bn-code {
+    font-size: clamp(3.5rem, 11vw, 6.5rem);
+    font-weight: 800;
+    color: var(--primary-color);
+    margin: 0;
+    line-height: 1;
+    letter-spacing: -0.02em;
+  }
+
+  .bn-headline {
+    font-size: clamp(1.4rem, 4vw, 2.1rem);
+    font-weight: 700;
+    margin: 0.5rem 0 0;
+    color: var(--color-gray-900);
+  }
+
+  .bn-lede {
+    font-size: 1.05rem;
+    color: var(--color-gray-600);
+    margin: 1rem auto 2rem;
+    line-height: 1.6;
+    max-width: 46ch;
+  }
+
+  .bn-links {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  .btn {
+    display: inline-block;
+    padding: 0.75rem 1.25rem;
+    font-size: 1rem;
+    font-weight: 600;
+    text-decoration: none;
+    border-radius: var(--radius-md);
+    transition: all 0.2s ease;
+    border: 2px solid transparent;
+  }
+
+  .btn--primary {
+    background: var(--primary-color);
+    color: #fff;
+  }
+
+  .btn--primary:hover {
+    background: var(--secondary-color);
+    transform: translateY(-2px);
+  }
+
+  .btn--ghost {
+    border-color: var(--card-border, var(--color-gray-200));
+    color: var(--color-gray-900);
+  }
+
+  .btn--ghost:hover {
+    border-color: var(--primary-color);
+    color: var(--primary-color);
+    transform: translateY(-2px);
+  }
+
+  /* --- chyron ticker (constant dark bar in both themes) --- */
+  .bn-ticker {
+    display: flex;
+    align-items: stretch;
+    border-top: 1px solid var(--bn-ink);
+    background: var(--bn-ink);
+    color: var(--bn-paper);
+  }
+
+  .bn-ticker__label {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    padding: 0 0.85rem;
+    background: var(--bn-red);
+    color: #fff;
+    font-weight: 800;
+    font-size: 0.72rem;
+    letter-spacing: 0.14em;
+  }
+
+  .bn-ticker__viewport {
+    flex: 1 1 auto;
+    overflow: hidden;
+    position: relative;
+  }
+
+  .bn-ticker__track {
+    display: inline-flex;
+    align-items: center;
+    white-space: nowrap;
+    padding: 0.55rem 0;
+    animation: bn-scroll 26s linear infinite;
+    will-change: transform;
+  }
+
+  .bn-ticker__item {
+    font-size: 0.82rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    padding: 0 1.25rem;
+    position: relative;
+  }
+
+  .bn-ticker__item::before {
+    content: '•';
+    position: absolute;
+    left: -0.15rem;
+    color: var(--bn-red);
+  }
+
+  @keyframes bn-pulse {
+    0%,
+    100% {
+      opacity: 1;
+      transform: scale(1);
+    }
+    50% {
+      opacity: 0.35;
+      transform: scale(0.7);
+    }
+  }
+
+  @keyframes bn-scroll {
+    from {
+      transform: translateX(0);
+    }
+    to {
+      /* Track holds two identical copies of the list; shifting by half
+         loops seamlessly. */
+      transform: translateX(-50%);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .bn-badge__dot {
+      animation: none;
+    }
+    .bn-ticker__track {
+      animation: none;
+    }
+    /* With the scroll animation off, let the reader reach the clipped
+       bulletins by scrolling instead of leaving them cut off. */
+    .bn-ticker__viewport {
+      overflow-x: auto;
+    }
+  }
+
+  @media (max-width: 640px) {
+    .error-500 {
+      padding: 1rem;
+    }
+    .bn-links {
+      flex-direction: column;
+    }
+    .btn {
+      width: 100%;
+    }
+  }
+</style>
