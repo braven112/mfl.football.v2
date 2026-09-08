@@ -1,4 +1,21 @@
 {
   "weekOf": "2026-09-14",
-  "changes": []
+  "changes": [
+    {
+      "date": "2026-09-08",
+      "type": "bug-fix",
+      "summary": "Schefter no longer files the same trade rumor twice. One offer could sit in his tip queue as two separate slips, and his morning catch-up read that as two stories — so the same deal went out to the chat twice, a second apart, with two different links under it.",
+      "impact": "user",
+      "area": "schefter",
+      "league": "theleague"
+    },
+    {
+      "date": "2026-09-08",
+      "type": "bug-fix",
+      "summary": "Schefter now goes quiet from draft weekend, not from kickoff. He was still running on his full offseason volume through the busiest roster week of the year — drafts done, cuts landing — when the league already has plenty to talk about without him.",
+      "impact": "user",
+      "area": "schefter",
+      "league": "both"
+    }
+  ]
 }

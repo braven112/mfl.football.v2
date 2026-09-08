@@ -39,3 +39,52 @@ export function isUsableTip(obj) {
   if (!tip.id) return false;
   return Boolean(tip.text) || TEXTLESS_TIP_SOURCES.has(/** @type {string} */ (tip.source));
 }
+
+/**
+ * Collapse queue rows that describe the SAME tip.
+ *
+ * `scanTradeOffers` enqueues a fresh row every time an offer passes its dice
+ * roll, and a row that does not post is requeued for up to TIP_EXPIRY_MS — so
+ * one trade offer that rolls on two different days sits in the queue twice
+ * under the same `to_<offerId>` id. Nothing downstream noticed, because
+ * nothing downstream counts ids: the busy-morning split reads a bucket of two
+ * rows as a backlog of two OFFERS and hands the same offer to two independent
+ * LLM passes. Owner report, 2026-09-08: two beats about offer to_1080, one
+ * second apart, out of a single run. It also showed up inside single batches —
+ * `to_1081` three times in one post's tipIds.
+ *
+ * The per-offer repost cooldown cannot catch this. That anchor is stamped on
+ * DELIVERY, and duplicate rows deliver inside the SAME cycle.
+ *
+ * Keeps the EARLIEST row. `submittedAt` is the age anchor that the framing,
+ * the age-boost and TIP_EXPIRY_MS all read, so keeping the newest would let a
+ * re-rolled offer outlive its expiry indefinitely — the "dead proposals never
+ * leave" failure of the 2026-09-07 insight, with a fresh timestamp each time.
+ * Strike state is folded FORWARD from every duplicate rather than taken from
+ * the kept row alone, so a newly enqueued copy cannot launder a tip out of
+ * hold-and-strike by resetting its counter to zero.
+ */
+export function dedupeTipsById(tips) {
+  const byId = new Map();
+  for (const tip of tips) {
+    const id = String(tip?.id ?? '');
+    const prev = byId.get(id);
+    if (!prev) {
+      byId.set(id, tip);
+      continue;
+    }
+    const keep = (tip.submittedAt ?? 0) < (prev.submittedAt ?? 0) ? tip : prev;
+    const drop = keep === tip ? prev : tip;
+    const strikes = Math.max(
+      typeof keep.suppressedStrikes === 'number' ? keep.suppressedStrikes : 0,
+      typeof drop.suppressedStrikes === 'number' ? drop.suppressedStrikes : 0,
+    );
+    if (strikes > 0) keep.suppressedStrikes = strikes;
+    const suppressedAts = [keep.firstSuppressedAt, drop.firstSuppressedAt].filter(
+      (v) => typeof v === 'number',
+    );
+    if (suppressedAts.length > 0) keep.firstSuppressedAt = Math.min(...suppressedAts);
+    byId.set(id, keep);
+  }
+  return [...byId.values()];
+}

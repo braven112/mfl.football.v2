@@ -3,6 +3,60 @@
 The load-bearing architecture rules live in CLAUDE.md ("Schefter multi-league").
 This file holds the finer operational learnings.
 
+## 2026-09-08 - Two beats one second apart: a count of ROWS standing in for a count of STORIES
+
+**Context:** the same owner, same day, a second report. Two GroupMe posts about
+the same trade offer — not 7.5 hours apart this time but **one second**, out of
+a single scanner run: `sf_rumor_1788881332066_eb183012` and `…_e83e63a4`, both
+carrying `tipIds: ["to_1080"]`, one CTA pointing at the Trade Builder and the
+other at the tip page, which is what made them read as two separate scoops.
+
+**The bug was a plural noun that was never checked.** The busy-morning
+catch-up splits a trade bucket of 2+ tips into two beats to clear an overnight
+backlog. `primaryBucket.tips.length >= 2` was standing in for "two offers", and
+`slice(0,1)` / `slice(1,2)` for "one each" — but `scanTradeOffers` enqueues a
+row per dice roll and requeues unposted rows for seven days, so the queue can
+hold one offer twice under one `to_<offerId>` id. **The generalizable shape:
+wherever a count of ROWS is read as a count of SUBJECTS, the dedupe is part of
+the feature, not hygiene.** Here the two halves lived in different functions
+several thousand lines apart, so nothing forced them to be read together —
+exactly the failure mode of the previous entry, in a different currency.
+
+**The published feed had been saying so for days, in a field nobody diffs.**
+`tipIds` is stored per post: `to_1076, to_1078, to_1081, to_1003, to_1081` on
+Sep 7, and `to_1081` three times in one Sep 6 post. Duplicate ids inside a
+single batch is a one-line check against shipped data, and it predates the
+visible symptom by two days. When a feed persists its own provenance, the
+cheapest audit of a "he repeats himself" report is `uniq` over that field
+before reading any code.
+
+**The existing cooldown could not have caught it, by construction.** The 7-day
+per-offer repost anchor is stamped on DELIVERY — deliberately, so a post nobody
+read cannot lock an offer out. Both beats delivered in the same cycle, so it
+never got a chance to fire. **A cooldown expressed in days cannot police a
+repeat measured in seconds:** any "don't repeat yourself" rule needs to hold
+WITHIN a cycle as well as across them, and those are two different mechanisms.
+
+**Which duplicate you keep is a real decision.** Keeping the newest row is the
+obvious reflex and is wrong twice: `submittedAt` is the anchor for the framing,
+the age-boost and the 7-day expiry, so a re-rolled offer would refresh its own
+clock forever (the "dead proposals never leave" failure of the 2026-09-07
+entry, now with a plausible timestamp), and the fresh copy carries no
+`suppressedStrikes`, so a tip could launder itself out of hold-and-strike by
+being enqueued again. Keep the earliest row; fold the strike ledger forward
+from every copy.
+
+**And the cadence boundary was measuring the wrong thing.** The mill's quiet
+1/day cap keyed on `isLeagueSeasonOpen` — kickoff, Labor Day + 3. The league
+actually wakes at its DRAFTS, eleven days earlier (the AFL's NL email draft is
+the Sunday eight days before Labor Day; TheLeague's auction is the same
+weekend). So the loudest possible cadence — 3/day plus the busy-morning double
+— was running through draft-and-cuts week, which is why this fired at 8:28am on
+Sep 8 and not in October. Renamed to `isLeagueAwake`: **a boundary named after
+one of its endpoints invites the reader to assume the other one.** Both ends of
+the window still measure from kickoff, so moving the start cannot drag
+championship Monday back with it.
+
 ## 2026-09-08 - A per-RUN probability is meaningless until you count the runs
 
 **Context:** the fix for the 2026-09-07 entry below. Owner report: two rumors

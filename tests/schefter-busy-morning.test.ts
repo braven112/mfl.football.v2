@@ -75,7 +75,7 @@ describe('busy-morning split logic', () => {
     // The block sits inside `if (postKind === 'trade' && ...)` — never
     // splits gossip or mailbag buckets.
     expect(SCANNER_SRC).toMatch(
-      /postKind === 'trade' &&\s*\n?\s*primaryBucket\.tips\.length >= BUSY_MORNING_TRADE_THRESHOLD/,
+      /postKind === 'trade' &&\s*\n?\s*distinctTradeTipIds\.size >= BUSY_MORNING_TRADE_THRESHOLD/,
     );
   });
 
@@ -93,9 +93,33 @@ describe('busy-morning split logic', () => {
     expect(SCANNER_SRC).toMatch(/a\.submittedAt\s*\?\?\s*0/);
   });
 
-  it('takes exactly the first two tips (one per beat, never more)', () => {
-    expect(SCANNER_SRC).toMatch(/sortedTips\.slice\(0,\s*1\)/);
-    expect(SCANNER_SRC).toMatch(/sortedTips\.slice\(1,\s*2\)/);
+  it('counts the backlog in DISTINCT tip ids, never in queue rows', () => {
+    // Owner report, 2026-09-08: two beats about offer to_1080 one second
+    // apart. The queue held the same offer twice (dedupeTipsById now stops
+    // that upstream) and `primaryBucket.tips.length` read it as a backlog of
+    // two, so the split handed one offer to two independent LLM passes.
+    expect(SCANNER_SRC).toMatch(
+      /const distinctTradeTipIds = new Set\(\s*\n?\s*primaryBucket\.tips\.map\(/,
+    );
+    expect(SCANNER_SRC).toMatch(/busyMorningBacklog = distinctTradeTipIds\.size/);
+    // The row count must not be what gates or reports the split.
+    const splitBlock =
+      SCANNER_SRC.match(/const distinctTradeTipIds[\s\S]*?\n    \}\n/)?.[0] ?? '';
+    expect(splitBlock).not.toMatch(/busyMorningBacklog = primaryBucket\.tips\.length/);
+  });
+
+  it('picks a secondary beat with a DIFFERENT tip id, not just the next row', () => {
+    expect(SCANNER_SRC).toMatch(/const primaryTipId = String\(primaryTip\[0\]\?\.id \?\? ''\)/);
+    expect(SCANNER_SRC).toMatch(
+      /\.find\(\(t\) => String\(t\?\.id \?\? ''\) !== primaryTipId\)/,
+    );
+  });
+
+  it('ships a SINGLE beat when the backlog is one offer across several rows', () => {
+    // No distinct second tip → busyMorning stays false and secondaryBatch
+    // stays null, so the cycle posts once.
+    expect(SCANNER_SRC).toMatch(/if \(secondaryTip\) \{/);
+    expect(SCANNER_SRC).toMatch(/Backlog is one offer across .* row\(s\) — single beat/);
   });
 });
 

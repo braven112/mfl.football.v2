@@ -16,7 +16,11 @@
  * who wrote the consumer agrees with it by construction.
  */
 import { describe, it, expect } from 'vitest';
-import { isUsableTip, TEXTLESS_TIP_SOURCES } from '../scripts/lib/schefter-tip-queue.mjs';
+import {
+  dedupeTipsById,
+  isUsableTip,
+  TEXTLESS_TIP_SOURCES,
+} from '../scripts/lib/schefter-tip-queue.mjs';
 import { redactTradeOffer } from '../scripts/lib/redact-trade-offer.mjs';
 
 type RedactorArgs = Parameters<typeof redactTradeOffer>[0];
@@ -129,5 +133,105 @@ describe('tip-queue admission — structural rejects', () => {
 
   it('rejects an unknown textless source — the allowlist is closed', () => {
     expect(isUsableTip({ id: 'x', source: 'some_future_lane', text: '' })).toBe(false);
+  });
+});
+
+/**
+ * Duplicate queue rows — the 2026-09-08 owner report.
+ *
+ * `scanTradeOffers` enqueues a row every time an offer passes its dice roll,
+ * and an unposted row is requeued for up to seven days, so one offer that
+ * rolled on two different days sat in the queue twice under the same
+ * `to_<offerId>` id. The busy-morning split read two rows as two OFFERS and
+ * shipped two beats about offer `to_1080` a second apart. Duplicate ids had
+ * also been landing inside single batches — one published post's tipIds read
+ * `to_1081, to_1078, to_1081, to_1078, to_1081, to_1076`.
+ *
+ * The per-offer repost cooldown could never have caught it: that anchor is
+ * stamped on DELIVERY, and duplicate rows deliver in the same cycle.
+ */
+describe('tip-queue dedupe — one row per tip id', () => {
+  const HOUR = 60 * 60 * 1000;
+
+  it('collapses two rows for the same offer into one', () => {
+    const day1 = { id: 'to_1080', source: 'trade_offer', text: '', submittedAt: 1_000 };
+    const day2 = { id: 'to_1080', source: 'trade_offer', text: '', submittedAt: 90_000 };
+    expect(dedupeTipsById([day1, day2])).toHaveLength(1);
+  });
+
+  it('leaves genuinely distinct offers alone, in queue order', () => {
+    const rows = ['to_1076', 'to_1078', 'to_1081'].map((id, i) => ({
+      id,
+      source: 'trade_offer',
+      text: '',
+      submittedAt: i * HOUR,
+    }));
+    expect(dedupeTipsById(rows).map((t) => t.id)).toEqual(['to_1076', 'to_1078', 'to_1081']);
+  });
+
+  it('keeps the EARLIEST row so the tip still ages out', () => {
+    // submittedAt is the anchor for the framing, the age-boost and
+    // TIP_EXPIRY_MS alike. Keeping the newest would let a re-rolled offer
+    // refresh its own clock forever — the "dead proposals never leave"
+    // failure of the 2026-09-07 insight, with a fresh timestamp each day.
+    const older = { id: 'to_1080', source: 'trade_offer', text: '', submittedAt: 1_000 };
+    const newer = { id: 'to_1080', source: 'trade_offer', text: '', submittedAt: 900_000 };
+    expect(dedupeTipsById([older, newer])[0].submittedAt).toBe(1_000);
+    // Order of arrival must not decide it.
+    expect(dedupeTipsById([newer, older])[0].submittedAt).toBe(1_000);
+  });
+
+  it('folds strike state forward — a fresh copy cannot reset hold-and-strike', () => {
+    const struck = {
+      id: 'to_1080',
+      source: 'trade_offer',
+      text: '',
+      submittedAt: 1_000,
+      suppressedStrikes: 2,
+      firstSuppressedAt: 50_000,
+    };
+    const fresh = { id: 'to_1080', source: 'trade_offer', text: '', submittedAt: 900_000 };
+    const [kept] = dedupeTipsById([struck, fresh]);
+    expect(kept.suppressedStrikes).toBe(2);
+    expect(kept.firstSuppressedAt).toBe(50_000);
+
+    // ...including when the STRUCK row is the newer of the two, so the kept
+    // row is the one that never carried the counter.
+    const oldClean = { id: 'to_1080', source: 'trade_offer', text: '', submittedAt: 1_000 };
+    const newStruck = {
+      id: 'to_1080',
+      source: 'trade_offer',
+      text: '',
+      submittedAt: 900_000,
+      suppressedStrikes: 3,
+      firstSuppressedAt: 950_000,
+    };
+    const [merged] = dedupeTipsById([oldClean, newStruck]);
+    expect(merged.submittedAt).toBe(1_000);
+    expect(merged.suppressedStrikes).toBe(3);
+    expect(merged.firstSuppressedAt).toBe(950_000);
+  });
+
+  it('does not invent a strike counter on a tip that never had one', () => {
+    const a = { id: 'to_1080', source: 'trade_offer', text: '', submittedAt: 1_000 };
+    const b = { id: 'to_1080', source: 'trade_offer', text: '', submittedAt: 2_000 };
+    expect(dedupeTipsById([a, b])[0]).not.toHaveProperty('suppressedStrikes');
+  });
+
+  it('survives the JSON round trip a real producer tip takes', () => {
+    const tip = redactTradeOffer(buildOfferArgs()).tip;
+    if (!tip) throw new Error('redactTradeOffer skipped a well-formed offer');
+    const rowA = JSON.parse(JSON.stringify(tip));
+    const rowB = JSON.parse(JSON.stringify(tip));
+    rowB.submittedAt = (rowA.submittedAt ?? 0) + 24 * HOUR;
+    const deduped = dedupeTipsById([rowA, rowB]);
+    expect(deduped).toHaveLength(1);
+    expect(isUsableTip(deduped[0])).toBe(true);
+  });
+
+  it('handles an empty queue and a single row', () => {
+    expect(dedupeTipsById([])).toEqual([]);
+    const one = { id: 'to_1', source: 'trade_offer', text: '', submittedAt: 1 };
+    expect(dedupeTipsById([one])).toEqual([one]);
   });
 });

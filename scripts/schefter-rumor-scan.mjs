@@ -111,7 +111,7 @@ import {
 } from './lib/schefter-lore.mjs';
 import { incrementTipsterCounters, incrementTipsterTopicCounters } from './lib/schefter-tipster-counters.mjs';
 import { schefterKey, globalSchefterKey } from './lib/schefter-keys.mjs';
-import { isUsableTip } from './lib/schefter-tip-queue.mjs';
+import { dedupeTipsById, isUsableTip } from './lib/schefter-tip-queue.mjs';
 import { getTopicPolicy, DRAINABLE_TOPIC_IDS } from '../src/config/schefter-topics.mjs';
 import {
   classifyTipKind,
@@ -4137,7 +4137,13 @@ async function main() {
   if (unparseableCount > 0) {
     warn(`  ${unparseableCount} queue item(s) missing id/text or malformed — these will be DROPPED`);
   }
-  log(`  Queue depth: ${parsedTips.length}${unparseableCount > 0 ? ` (+${unparseableCount} unusable)` : ''}`);
+  // One row per tip, before anything downstream counts rows as stories.
+  const dedupedTips = dedupeTipsById(parsedTips);
+  const duplicateRows = parsedTips.length - dedupedTips.length;
+  if (duplicateRows > 0) {
+    log(`  Collapsed ${duplicateRows} duplicate queue row(s) — same tip id enqueued more than once`);
+  }
+  log(`  Queue depth: ${dedupedTips.length}${duplicateRows > 0 ? ` (+${duplicateRows} duplicate)` : ''}${unparseableCount > 0 ? ` (+${unparseableCount} unusable)` : ''}`);
 
   // Drop expired — by submitted age, by suppressed-strike count, or by
   // total time spent on hold. The strike/hold checks let Option A age out
@@ -4145,7 +4151,7 @@ async function main() {
   const now = new Date();
   const freshTips = [];
   const droppedTips = [];
-  for (const t of parsedTips) {
+  for (const t of dedupedTips) {
     const age = now.getTime() - (t.submittedAt ?? 0);
     const strikes = typeof t.suppressedStrikes === 'number' ? t.suppressedStrikes : 0;
     // A tip that struck out reached the LLM and lost on the merits; one that
@@ -4485,20 +4491,41 @@ async function main() {
     // back-to-back off one slot — the pile-up the in-season cap exists to
     // prevent — so the catch-up is offseason/deadline-window only and an
     // overnight backlog just clears a day slower in season.
+    //
+    // The backlog is counted in DISTINCT tip ids, and the second beat is the
+    // oldest tip whose id differs from the first's — never simply the next row
+    // along. dedupeTipsById already guarantees one row per tip upstream; this
+    // is the belt to that pair of braces, because this split is the single
+    // place in the scanner where "two tips" is read as "two stories", and the
+    // cost of being wrong here is not a bad log line, it is the same trade
+    // offer reported twice in the chat one second apart (owner report,
+    // 2026-09-08).
+    const distinctTradeTipIds = new Set(
+      primaryBucket.tips.map((t) => String(t?.id ?? '')),
+    );
     if (
       postKind === 'trade' &&
-      primaryBucket.tips.length >= BUSY_MORNING_TRADE_THRESHOLD &&
+      distinctTradeTipIds.size >= BUSY_MORNING_TRADE_THRESHOLD &&
       isBusyMorningWindow(now) &&
       allowsTwoPostCycle(LEAGUE_SLUG, now, MAX_POSTS_PER_DAY)
     ) {
-      busyMorning = true;
-      busyMorningBacklog = primaryBucket.tips.length;
       const sortedTips = [...primaryBucket.tips].sort(
         (a, b) => (a.submittedAt ?? 0) - (b.submittedAt ?? 0),
       );
-      batch = sortedTips.slice(0, 1);
-      secondaryBatch = sortedTips.slice(1, 2);
-      log(`  [busy-morning] Trade backlog ${busyMorningBacklog} — splitting into 2 beats (one slot)`);
+      const primaryTip = sortedTips.slice(0, 1);
+      const primaryTipId = String(primaryTip[0]?.id ?? '');
+      const secondaryTip = sortedTips
+        .slice(1)
+        .find((t) => String(t?.id ?? '') !== primaryTipId);
+      if (secondaryTip) {
+        busyMorning = true;
+        busyMorningBacklog = distinctTradeTipIds.size;
+        batch = primaryTip;
+        secondaryBatch = [secondaryTip];
+        log(`  [busy-morning] Trade backlog ${busyMorningBacklog} distinct offer(s) — splitting into 2 beats (one slot)`);
+      } else {
+        log(`  [busy-morning] Backlog is one offer across ${primaryBucket.tips.length} row(s) — single beat`);
+      }
     }
   }
 
