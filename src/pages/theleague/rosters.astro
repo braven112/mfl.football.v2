@@ -48,6 +48,13 @@ import {
 import type { PositionNeed } from '../../utils/free-agent-needs';
 import type { ChartSlice } from '../../scripts/chart-utils';
 import { getCurrentWeek } from '../../utils/current-week';
+// Weekly-score trends read the canonical processWeeklyScores rather than a
+// fourth copy. This page carried its own inline one until 2026-09-08, when the
+// copy here — and only here — was missing the guard for a week MFL has not
+// paired into matchups, and the roster page 404'd for every owner. Three
+// copies existed; two of them were wrong. See
+// docs/claude/followups/2026-09-08-roster-page-unpaired-week-404.md (F2).
+import { processWeeklyScores } from '../../utils/coach-data';
 import {
   parseNumber,
   currencyFormatter,
@@ -364,51 +371,6 @@ const loadLiveOddsData = async (week: number) => {
     // Only use fallback during off-season for testing
     return {};
   }
-};
-
-// Process Weekly Scores for Trend
-const processWeeklyScores = (rawData, currentWeek) => {
-  const scoresByPlayer = new Map(); // playerId -> { week: score }
-
-  // Ensure rawData is an array
-  const weeks = Array.isArray(rawData) ? rawData : (rawData?.weeklyResults ? [rawData] : []);
-
-  weeks.forEach(weekItem => {
-    const weekResults = weekItem.weeklyResults;
-    if (!weekResults) return;
-
-    const week = parseInt(weekResults.week, 10);
-    // A week MFL has not paired into matchups yet lists its franchises directly
-    // on weeklyResults with no `matchup` key at all (2026 weeks 15-17 arrived
-    // that way the moment the season rolled over). The bare
-    // `[weekResults.matchup]` fallback wrapped that undefined into an array and
-    // the whole page 404'd on `matchup.franchise`. Skip an absent entry the way
-    // utils/coach-data.ts already does.
-    const matchups = Array.isArray(weekResults.matchup)
-      ? weekResults.matchup
-      : (weekResults.matchup ? [weekResults.matchup] : []);
-
-    matchups.forEach(matchup => {
-      if (!matchup) return;
-      const franchises = Array.isArray(matchup.franchise) ? matchup.franchise : [matchup.franchise];
-      franchises.forEach(franchise => {
-        if (!franchise) return;
-        const players = Array.isArray(franchise.player) ? franchise.player : (franchise.player ? [franchise.player] : []);
-        players.forEach(p => {
-          if (!scoresByPlayer.has(p.id)) {
-            scoresByPlayer.set(p.id, {});
-          }
-          // Only store numeric scores
-          const score = parseFloat(p.score);
-          if (!isNaN(score)) {
-            scoresByPlayer.get(p.id)[week] = score;
-          }
-        });
-      });
-    });
-  });
-
-  return scoresByPlayer;
 };
 
 // Demo mode: ?demo=true populates coach mode with mock data

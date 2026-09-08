@@ -1,13 +1,14 @@
 ---
 slug: roster-page-unpaired-week-404
-status: open
+status: shipped
 severity: P0
 opened: 2026-09-08
+shipped: 2026-09-08
 hotfix_pr: https://github.com/braven112/mfl.football.v2/pull/1016
-hotfix_sha:
-followup_issue:
-followup_pr:
-followup_session:
+hotfix_sha: b04d8d04d5351749d6fdedefa6a5dce65e34c58f
+followup_issue: https://github.com/braven112/mfl.football.v2/issues/1017
+followup_pr: PLACEHOLDER_FOLLOWUP_PR
+followup_session: https://claude.ai/code/session_01BtjyWxbxBjnznjKBG35KkH
 ---
 
 # Follow-up: the roster page 404'd on a week MFL had not paired up
@@ -46,7 +47,7 @@ and a new `mfl-weekly-results` domain.
 
 ## Deferred items
 
-- [ ] **F1 — An SSR throw renders as a 404, not a 500**
+- [x] **F1 — An SSR throw renders as a 404, not a 500**
   - Source: deferred at implementation (root-cause observation, step 1)
   - Where: `src/pages/404.astro`, and the Astro/Vercel error path that reaches
     it; reproduce with any page that throws in frontmatter
@@ -60,8 +61,33 @@ and a new `mfl-weekly-results` domain.
     would conclude the route had been deleted. Worth deciding whether a
     frontmatter throw should surface as a 500 page, and whether an SSR
     exception should page someone.
+  - **Verdict: STILL TRUE — and not the wide behavior change it looked like.**
+    Astro resolves its error page by EXACT route
+    (`astro/dist/core/routing/match.js`): `matchRoute('/500', …)` first looks
+    for a route whose path IS `/500`, and only on a miss falls through to a
+    generic pattern match. There was no `src/pages/500.astro`, so the
+    fall-through hit `[...path].astro` — the shared-host router added in July
+    2026 — which pins `Astro.response.status = 404`. Astro returns that page's
+    own status. The "error boundary across every route" the hotfix was right
+    not to touch turned out to be one missing file.
+  - **Fixed:** added `src/pages/500.astro` — Schefter-voiced, mirroring
+    `404.astro`, with the league-aware home CTA plus a retry link guarded
+    against a protocol-relative `//host` pathname. Server-rendered, so Astro's
+    handler hands it the error in `Astro.props.error`, and it emits one
+    greppable line — `[ssr-500] GET <path> — <stack>` — making the next outage
+    a single filtered `get_runtime_logs` query rather than an afternoon. The
+    stack is never rendered into the response body.
+  - **Paging on an SSR exception: deliberately NOT built.** No alerting
+    mechanism exists in the repo, and a naive one would fire on every bot crawl
+    of a bad route. The log line is the cheap 90%; real paging is its own
+    `/feature`, not a follow-up line item.
+  - **Guard:** `tests/ssr-error-page-status.test.ts` (7 tests), wired into
+    `.claude/hooks/path-guard.json` under a new `error-pages` domain. Verified
+    to FAIL when `500.astro` is deleted — the only way this regresses, since
+    nothing else about the site breaks without it.
+  - **Rule:** `docs/claude/rules/error-pages.md` + the `CLAUDE.md` router row.
 
-- [ ] **F2 — `processWeeklyScores` exists in three copies**
+- [x] **F2 — `processWeeklyScores` exists in three copies**
   - Source: cross-cutting lens, step 5
   - Where: `src/pages/theleague/rosters.astro:370`,
     `src/utils/weekly-scores.ts:19`, `src/utils/coach-data.ts:332`
@@ -74,11 +100,30 @@ and a new `mfl-weekly-results` domain.
     `rosters.astro` import `coach-data.ts`'s copy, which is now the canonical
     one. `tests/weekly-results-matchup-guard.test.ts` pins all three today and
     should shrink to one file when they merge.
+  - **Verdict: STILL TRUE, with one correction to this brief.** "No importers
+    at all" was true when written but not by the time it was worked:
+    `tests/weekly-results-matchup-guard.test.ts` imported it (line 6). It was
+    *test-only* dead code — the guard test was the only thing keeping it alive.
+  - **Fixed:** deleted `src/utils/weekly-scores.ts` outright (its other three
+    exports — `calculateTrendWeeks`, `getPlayerTrendScores`,
+    `getPlayerAverageScore` — had no importers either) and pointed
+    `rosters.astro` at `coach-data.ts`'s canonical copy instead of its own
+    45-line inline one. One implementation now, three consumers.
+  - **Guard:** the test shrank from three pinned files to one and GREW an
+    anti-drift check — every consumer (`theleague/rosters.astro`,
+    `theleague/lineup.astro`, `afl-fantasy/lineup.astro`) must IMPORT
+    `processWeeklyScores` and must not declare its own. Both halves verified
+    to fail against the pre-fix `rosters.astro`. Pinning the guards *inside*
+    the function was never enough: the defect shipped because a copy DRIFTED,
+    so the shape is what gets pinned now.
+  - **Verified:** `scripts/roster-parity-check.mjs` before and after —
+    `PARITY: 12 (season, team) renders identical`, config payload 1.03MB →
+    1.03MB, dev server serving `/theleague/rosters` at 200. Type baseline
+    retightened 1743 → 1738.
 
-- [ ] **F3 — The pre-push full-suite gate silently did not run**
+- [x] **F3 — The pre-push full-suite gate silently did not run**
   - Source: deferred at implementation (noticed at step 4)
-  - Where: `.claude/hooks/pre-push-check.sh` exists and is executable, but this
-    cloud clone had no `.git/hooks/pre-push` and no `core.hooksPath`
+  - Where: `.claude/hooks/pre-push-check.sh`
   - Why deferred: infrastructure, not this outage
   - Detail: `git push` exited 0 with no test output. CLAUDE.md already warns
     the hook exits 0 silently when vitest is missing; this is a second silent
@@ -86,12 +131,65 @@ and a new `mfl-weekly-results` domain.
     exactly what a cloud session always is. The full suite was run manually
     instead and found one real failure (see Context). Worth installing the hook
     from the session-start hook, or having it fail loudly when absent.
+  - **CORRECTION — this brief misdiagnosed it, and the evidence it cited was a
+    red herring.** `.claude/hooks/pre-push-check.sh` is a **Claude Code
+    PreToolUse hook**, wired in `.claude/settings.json` with matcher `Bash`,
+    which reads the tool payload from stdin. It is NOT a git hook and never
+    lives at `.git/hooks/pre-push`, so "no `.git/hooks/pre-push` and no
+    `core.hooksPath`" is expected, irrelevant, and not the cause — and the
+    proposed fix (install it from the session-start hook) aimed at the wrong
+    mechanism entirely. `jq` was present too.
+  - **Real cause:** a fresh cloud clone has no `node_modules` at all, so
+    `node_modules/.bin/vitest` was missing and the hook took its `exit 0` path,
+    warning on stderr and allowing the push.
+  - **A SECOND, worse bug, found while fixing it.** In Claude Code hooks only
+    **exit 2** blocks a tool call; every other non-zero code is a *non-blocking*
+    error. The hook ended `vitest run || exit 1` — so even when the suite ran
+    and FAILED, the push went through. Its headline promise ("Blocks the push
+    if tests fail so broken code never leaves the machine") had never been true.
+  - **A THIRD, found by being bitten by it.** The trigger was
+    `case "$bash_command" in *<the phrase>*`, a substring match on the whole
+    payload — so any command that merely MENTIONED it fired the gate, including
+    the heredoc writing this very brief. Harmless while the gate exited 0
+    silently; a blocked command and a wasted full suite run once it blocks.
+  - **Fixed:**
+    1. Fails closed — a missing vitest **blocks** (exit 2) with instructions,
+       and a failing suite blocks (exit 2) instead of exit 1.
+    2. `SKIP_PRE_PUSH_TESTS=1` is the deliberate, visible escape hatch, and is
+       read from the **command text**, not only the environment: hooks are
+       spawned by Claude Code rather than by the shell running the command, so
+       an inline `VAR=1 <cmd>` never reaches the hook process. That is what
+       makes the hatch usable from inside a session at all, and it is how
+       CLAUDE.md's "pre-existing failures are OK" policy is honored without the
+       gate being silently off.
+    3. Detection is anchored to a real invocation (line start or after a shell
+       separator), not a substring of the payload.
+    4. Falls back to `node` when `jq` is absent, so one missing tool no longer
+       ungates the push. Only "neither jq nor node" still exits 0 — blocking
+       every Bash call over a missing parser is worse than the gap.
+    5. New `.claude/hooks/session-start.sh` (a `SessionStart` hook) installs
+       dependencies when `node_modules/.bin/vitest` is absent, so cloud sessions
+       have a working gate at all. This also closes the ONE silent-skip case
+       CLAUDE.md documents for the `path-guard` edit hook — both mechanical
+       memories were off in exactly the same sessions.
+    6. PreToolUse timeout 120s → 300s. The suite is ~88s; a gate that times out
+       is one more way for it not to run.
+  - **Verified** against synthetic payloads across seven cases: a plain
+    command, prose merely mentioning the phrase, and `git status` all skip; a
+    real invocation, one after `&&`, and one at the start of a script line all
+    block; the escape hatch skips. Removing vitest blocks; shadowing `jq` still
+    blocks through the node fallback.
 
-- [ ] **F4 — Post-merge reviewer findings**
+- [x] **F4 — Post-merge reviewer findings**
   - Source: Copilot / CodeQL, which land after the merge
   - Where: PR #1016 comments
   - Why deferred: `/hotfix` does not wait on external reviewers
-  - Note: re-read the PR comments and fold anything real in here.
+  - **Verdict: nothing to work — closed empty, not deferred.** Read via the
+    GitHub API this session. Copilot posted one **Approval recommended** review
+    with **0 comments generated** (6/6 files, "Lite" effort). There are **zero**
+    review threads on the PR. CodeQL and Analyze both completed green. The only
+    two issue comments are the Vercel deploy bot and the hotfix's own "shipped
+    and verified" note. Nothing arrived late.
 
 ## Context to start cold
 
@@ -136,3 +234,29 @@ needs that same server on 4399 and renders 12 franchise/season combinations.
 `AREA_LABELS` slugs; `"Roster/Salary"` is the page's display name and `rosters`
 is the slug. Fixed in `addfeb2`. Worth knowing that the full suite is 400 files
 / 9,819 tests and takes ~88s.
+
+
+## Follow-up outcome (2026-09-08)
+
+All four items worked; none dropped. Route: **direct**, not `/feature`. F1 was
+flagged architectural in this brief, and would have been if it really meant
+redesigning the error boundary — tracing it to `matchRoute` in Astro's own
+source showed it was one absent route file, so the design gate had nothing to
+decide. F2 was a delete plus an import swap, verified by the parity harness the
+brief asked for.
+
+Two things this follow-up found that the brief did not know:
+
+1. **The `[ssr-500]` log line is the durable half of F1.** The 500 page makes
+   the status honest, but what actually shortens the *next* outage is a fixed
+   prefix in the runtime logs. Production telemetry beat every amount of
+   reading on 2026-09-08 and would again.
+2. **F3 was three bugs, not one**, and the two the brief did not see were worse
+   than the one it did: a gate that exited 1 on failure never blocked anything,
+   and a substring trigger fired on any command that mentioned the phrase. The
+   silent no-op the brief identified was the least of them.
+
+Also corrected: the **2026-03-08** entry in
+`docs/claude/insights/domains/deployment.md`, which recorded this same
+`/rosters` 404 as a custom-domain routing quirk. It was this crash, six months
+earlier.

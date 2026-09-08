@@ -4,6 +4,14 @@
     {
       "date": "2026-09-08",
       "type": "bug-fix",
+      "summary": "When a page on this site breaks, it now says so. Until this week a page that crashed served the same “Page Not Found” card as a mistyped URL — same 404, same Schefter mugshot — so the only honest read available to you was that somebody had deleted it. That is exactly what happened to Roster/Salary on Monday, and it is why the outage took hours to place instead of minutes. There is a proper error page now: a broken page returns a real error, tells you the fumble is on our end rather than in your link, and gives you a button to run the play again. It also files a report on its way out, so the next one gets found a lot faster.",
+      "impact": "user",
+      "area": "navigation",
+      "league": "both"
+    },
+    {
+      "date": "2026-09-08",
+      "type": "bug-fix",
       "summary": "Free agent pickups were bouncing during the first-come window. If your roster was full — which is exactly when you are dropping somebody to make room — MFL was counting the add before the drop, deciding you were over the limit, and throwing the whole thing out without a word. Our side saw a shrug where an answer should have been and could only tell you \"claim failed,\" so three straight attempts on the same player disappeared into nothing while another owner made the identical swap on MFL's own site. Pickups now go through the same page every owner uses by hand, which actually accepts a full-roster swap and, when it does refuse, says why — a locked player now reads as a locked player. And if anything still goes wrong, the dialog hands you a direct link to MFL's add/drop page so you are not left hunting for it with the clock running.",
       "impact": "user",
       "area": "free-agents",
