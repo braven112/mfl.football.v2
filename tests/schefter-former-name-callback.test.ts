@@ -26,6 +26,7 @@ import {
 } from '../scripts/lib/schefter-former-name.mjs';
 // @ts-ignore — sibling .mjs module, no .d.ts
 import { anonymizeTips } from '../scripts/schefter-rumor-scan.mjs';
+import { resolveTeamTokens } from '../scripts/lib/schefter-name-mask.mjs';
 
 const at = (d: string) => new Date(`${d}T18:00:00Z`);
 /** Labor Day 2026 is Sept 7, so weeks 1–3 run Sept 7 → Sept 27. */
@@ -285,7 +286,26 @@ describe('callback containment — naming-allowed scopes only', () => {
       PRESEASON_2026,
     );
     expect(out[0].scope.kind).toBe('franchise-multi-source');
-    expect(out[0].formerName).toMatchObject({ former: 'Heavy Chevy', current: 'Dead Cap' });
+    // Both names are TOKENS now (2026-09-08). A franchise identity is
+    // (franchiseId, year), so the callback's two printable fields carry that
+    // key and are substituted after generation — the model never sees either
+    // name. `lastSeason`/`punitive`/`phase` stay real: they are facts it
+    // reasons about, not names it prints.
+    expect(out[0].formerName).toMatchObject({
+      // SHORT token: the scope label the caller passed was "Dead Cap", the
+      // franchise's nameShort, and the token preserves that register rather
+      // than silently promoting it to "Dead Cap Walking".
+      current: '{{TEAM_SHORT:0004}}',
+      former: '{{TEAM_FORMER:0004:2025}}',
+    });
+    // The assertion that matters is what they RESOLVE to — tokens that expand
+    // to the wrong names would satisfy the shape check above.
+    const rendered = resolveTeamTokens(
+      `${out[0].formerName.current} — the former ${out[0].formerName.former}`,
+      teams,
+    );
+    expect(rendered.unresolved).toBe(false);
+    expect(rendered.text).toBe('Dead Cap — the former Heavy Chevy');
   });
 
   it('withholds it on scopes that must stay anonymous', async () => {

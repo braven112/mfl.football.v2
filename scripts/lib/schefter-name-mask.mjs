@@ -114,61 +114,123 @@ export function memoryNameMasker(teams) {
 // ── Team tokens: the model never sees a franchise name ──
 //
 // Masking the memory block removed the leak PATH for the 2026-09-07 incident.
-// This removes the CAPABILITY. The payload hands the model `{{TEAM}}` instead
-// of "Bring the Pain", and the real name is substituted in code after
-// generation — so naming the wrong franchise stops being forbidden and becomes
+// This removes the CAPABILITY. The payload hands the model a token instead of
+// "Bring the Pain", and the real name is substituted in code after generation
+// — so naming the wrong franchise stops being forbidden and becomes
 // unwritable. It cannot substitute a name it was never given.
 //
-// This works here because exactly ONE team is ever nameable per post (see
-// HARD RULE 26 — "You may NOT name a second team"), so a single token needs no
-// franchise id to disambiguate and there is exactly one substitution target.
+// EVERY TOKEN CARRIES ITS FRANCHISE ID, and a former name carries a year as
+// well. That is not decoration: a franchise identity in this league IS
+// (franchiseId, year). Franchise 0003 is "Maverick" now, was "Generals" in
+// 2014 and "Poker in the Rear" in 2012 and again in 2015 — the config's
+// `history[]` entries are keyed by `yearStart`/`yearEnd` precisely so that
+// pair resolves to exactly one name.
 //
-// It also makes verification exact. Checking for a leftover `{{...}}` is a
-// string match; checking whether prose names the right franchise means
-// fuzzy-matching every name form, alias and retired name against text where
-// `balls`, `feelers`, `herd`, `chat` and `swift` are all somebody's real short
-// name. The first is reliable and the second is a guess.
+// The first cut used a bare `{{TEAM}}`, reasoning that only one team is ever
+// nameable per post (HARD RULE 26) so there was only one substitution target.
+// True for `exposure.team`, and it made the former-name callback impossible to
+// tokenize: `formerName` is built for `scope.franchise` at two of its three
+// call sites, which is not necessarily the exposure team, so a bare token
+// there would have resolved to the WRONG franchise — inventing a fresh
+// misattribution while closing an old one. Self-identifying tokens dissolve
+// that: the token says which franchise it means, so correctness no longer
+// rests on an invariant holding somewhere else in the file.
+//
+// Verification stays exact either way. A leftover `{{...}}` is a string match;
+// checking whether prose names the right franchise means fuzzy-matching every
+// name form, alias and retired name against text where `balls`, `feelers`,
+// `herd`, `chat` and `swift` are all somebody's real short name.
 
-export const TEAM_TOKEN = '{{TEAM}}';
-export const TEAM_SHORT_TOKEN = '{{TEAM_SHORT}}';
+/** `{{TEAM:0008}}` → that franchise's current full name. */
+export const teamToken = (fid) => `{{TEAM:${fid}}}`;
+/** `{{TEAM_SHORT:0008}}` → its short form, falling back to the full name. */
+export const teamShortToken = (fid) => `{{TEAM_SHORT:${fid}}}`;
+/** `{{TEAM_FORMER:0003:2014}}` → the name that franchise wore in that year. */
+export const formerTeamToken = (fid, year) => `{{TEAM_FORMER:${fid}:${year}}}`;
 
 /**
  * What `exposure.team` becomes in the LLM-facing payload.
  *
- * Two tokens rather than one because the voice needs both registers — real
- * posts read "Pain's been shopping a tight end", not "Bring the Pain's been
- * shopping a tight end". Collapsing to a single token would force one form and
- * flatten the cadence.
+ * Two registers because the voice needs both — real posts read "Pain's been
+ * shopping a tight end", not "Bring the Pain's been shopping a tight end".
+ * One token would force a single form and flatten the cadence.
  */
-export function tokenizedTeam() {
-  return { name: TEAM_TOKEN, nameShort: TEAM_SHORT_TOKEN };
+export function tokenizedTeam(fid) {
+  return { name: teamToken(fid), nameShort: teamShortToken(fid) };
 }
 
 /**
- * Substitute the real franchise into a generated body.
+ * Tokenize a `buildFormerNameCallback` result in place, keeping `lastSeason`,
+ * `punitive` and `phase` — those are facts the model reasons about, not names
+ * it prints. `current` and `former` are the two it prints, so they become
+ * tokens keyed to the franchise and (for the old name) the season it wore it.
+ */
+export function tokenizedFormerName(callback, fid, team) {
+  if (!callback || fid == null) return callback;
+  // Preserve the REGISTER the caller chose. `buildFormerNameCallback` takes
+  // `currentName` as a parameter, and its call sites pass different forms —
+  // the scope's franchise label is often the short one. Always emitting the
+  // full-name token would silently rewrite "Dead Cap — the former Heavy Chevy"
+  // into "Dead Cap Walking — the former Heavy Chevy": still the right
+  // franchise, but not the words the caller picked.
+  const current = String(callback.current ?? '').trim().toLowerCase();
+  const short = String(team?.nameShort ?? '').trim().toLowerCase();
+  const useShort = short.length > 0 && current === short;
+  return {
+    ...callback,
+    current: useShort ? teamShortToken(fid) : teamToken(fid),
+    former: formerTeamToken(fid, callback.lastSeason),
+  };
+}
+
+/** The name a franchise wore in `year`, from its `history[]` era rows. */
+function historicalName(team, year) {
+  const history = Array.isArray(team?.history) ? team.history : [];
+  const era = history.find((h) => {
+    const start = Number(h?.yearStart);
+    const end = Number(h?.yearEnd);
+    return Number.isFinite(start) && Number.isFinite(end) && year >= start && year <= end;
+  });
+  const name = era?.name;
+  return typeof name === 'string' && name.trim() ? name.trim() : null;
+}
+
+/**
+ * Substitute real franchise names into a generated body.
+ *
+ * Takes the TEAMS MAP, not one team — every token names its own franchise, so
+ * resolution is a lookup rather than an assumption about which team the post
+ * is about.
  *
  * Returns `{ text, unresolved }`. `unresolved` is true when any `{{...}}`
- * survives — the model inventing `{{TEAM_NICKNAME}}`, or a token appearing on
- * a beat that has no team to fill it. The caller MUST treat that as a failed
- * generation: a literal `{{TEAM}}` reaching the group chat is worse than the
- * bug this replaces.
- *
- * `nameShort` falls back to `name` because it is optional in the config —
- * `pickDisplayTeam` only guarantees `name`.
+ * survives: the model inventing `{{TEAM_NICKNAME}}`, a franchise id not in the
+ * map, or a year no era row covers. The caller MUST treat that as a failed
+ * generation — a literal `{{TEAM:0008}}` reaching the group chat is worse than
+ * the bug this replaces.
  */
-export function resolveTeamTokens(text, team) {
+export function resolveTeamTokens(text, teams) {
   if (typeof text !== 'string' || text.length === 0) {
     return { text, unresolved: false };
   }
-  const name = typeof team?.name === 'string' && team.name.trim() ? team.name.trim() : null;
-  let out = text;
-  if (name) {
-    const short = typeof team?.nameShort === 'string' && team.nameShort.trim()
+  const get = (fid) => (teams && typeof teams.get === 'function' ? teams.get(fid) : null);
+
+  // FORMER first: `{{TEAM_FORMER:...}}` would otherwise be left half-eaten by
+  // a looser current-name pattern. Fresh regexes per call — a shared /g regex
+  // carries `lastIndex` between calls.
+  let out = text.replace(/\{\{TEAM_FORMER:(\d{4}):(\d{4})\}\}/g, (m, fid, year) => (
+    historicalName(get(fid), Number(year)) ?? m
+  ));
+
+  out = out.replace(/\{\{TEAM(_SHORT)?:(\d{4})\}\}/g, (m, short, fid) => {
+    const team = get(fid);
+    const name = typeof team?.name === 'string' && team.name.trim() ? team.name.trim() : null;
+    if (!name) return m;
+    if (!short) return name;
+    const nameShort = typeof team?.nameShort === 'string' && team.nameShort.trim()
       ? team.nameShort.trim()
       : name;
-    // SHORT first for legibility; the tokens cannot nest either way, since
-    // `{{TEAM}}` needs its closing braces immediately after TEAM.
-    out = out.split(TEAM_SHORT_TOKEN).join(short).split(TEAM_TOKEN).join(name);
-  }
+    return nameShort;
+  });
+
   return { text: out, unresolved: /\{\{[^}]*\}\}/.test(out) };
 }

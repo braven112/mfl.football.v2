@@ -33,9 +33,11 @@ import {
   memoryNameMasker,
   resolveTeamTokens,
   tokenizedTeam,
+  tokenizedFormerName,
+  teamToken,
+  teamShortToken,
+  formerTeamToken,
   MASKED_TEAM,
-  TEAM_TOKEN,
-  TEAM_SHORT_TOKEN,
 } from '../scripts/lib/schefter-name-mask.mjs';
 import { buildRecentPostsPromptBlock } from '../scripts/lib/schefter-lore.mjs';
 
@@ -208,94 +210,115 @@ describe('both scanners mask — one history file feeds both', () => {
 describe('team tokens — the wrong franchise becomes unwritable', () => {
   const RUMOR_SRC = read('scripts/schefter-rumor-scan.mjs');
 
+  /** Franchise 0003 really did wear three names; the config keys them by year. */
+  function historyTeams() {
+    return new Map<string, any>([
+      ['0003', {
+        name: 'Maverick',
+        nameShort: 'Mavs',
+        history: [
+          { name: 'Poker in the Rear', yearStart: 2012, yearEnd: 2013 },
+          { name: 'Generals', yearStart: 2014, yearEnd: 2014 },
+          { name: 'Maverick', yearStart: 2016, yearEnd: 2024 },
+        ],
+      }],
+      ['0008', { name: 'Bring the Pain', nameShort: 'Pain' }],
+    ]);
+  }
+
+  it('every token carries its franchise id', () => {
+    expect(tokenizedTeam('0008')).toEqual({
+      name: '{{TEAM:0008}}',
+      nameShort: '{{TEAM_SHORT:0008}}',
+    });
+    expect(formerTeamToken('0003', 2014)).toBe('{{TEAM_FORMER:0003:2014}}');
+  });
+
   it('the payload hands over a token, never the real name', () => {
-    expect(tokenizedTeam()).toEqual({ name: TEAM_TOKEN, nameShort: TEAM_SHORT_TOKEN });
-    // The spread of the real team is gone from the LLM-facing payload.
-    expect(RUMOR_SRC).toMatch(/team: tokenizedTeam\(\),/);
+    expect(RUMOR_SRC).toMatch(/team: tokenizedTeam\(tip\.exposure\.fid\),/);
     expect(RUMOR_SRC).not.toMatch(/team: \{ \.\.\.tip\.exposure\.team \}/);
   });
 
-  it('substitutes both registers, so the voice keeps its short form', () => {
-    // Real cadence: "Pain's been shopping", not "Bring the Pain's been shopping".
-    const team = { name: 'Bring the Pain', nameShort: 'Pain' };
-    const { text, unresolved } = resolveTeamTokens(
-      `${TEAM_SHORT_TOKEN}'s been shopping a tight end. The ${TEAM_TOKEN} aren't done.`,
-      team,
-    );
-    expect(text).toBe("Pain's been shopping a tight end. The Bring the Pain aren't done.");
+  it('resolves each token against ITS OWN franchise, not one assumed team', () => {
+    // The property that lets formerName be tokenized at all: two different
+    // franchises can appear in one body and each resolves correctly.
+    const body = `${teamShortToken('0008')}'s been shopping, and the ${teamToken('0003')} are listening.`;
+    const { text, unresolved } = resolveTeamTokens(body, historyTeams());
+    expect(text).toBe("Pain's been shopping, and the Maverick are listening.");
     expect(unresolved).toBe(false);
   });
 
+  it('resolves a former name by (franchise, year)', () => {
+    const teams = historyTeams();
+    expect(resolveTeamTokens(formerTeamToken('0003', 2014), teams).text).toBe('Generals');
+    expect(resolveTeamTokens(formerTeamToken('0003', 2012), teams).text).toBe('Poker in the Rear');
+    // Same franchise, different year, different name — which is exactly why a
+    // bare {{TEAM}} could not have carried this.
+    expect(resolveTeamTokens(formerTeamToken('0003', 2013), teams).text).toBe('Poker in the Rear');
+  });
+
+  it('renders the full callback the way HARD RULE 30 requires — old name AND new', () => {
+    const callback = { current: 'Maverick', former: 'Generals', lastSeason: 2014, punitive: false, phase: 'early' };
+    const tokenized = tokenizedFormerName(callback, '0003');
+    expect(tokenized.current).toBe('{{TEAM:0003}}');
+    expect(tokenized.former).toBe('{{TEAM_FORMER:0003:2014}}');
+    // Facts the model reasons about stay real — they are not names it prints.
+    expect(tokenized.lastSeason).toBe(2014);
+    expect(tokenized.punitive).toBe(false);
+    expect(tokenized.phase).toBe('early');
+
+    const body = `${tokenized.current} — the former ${tokenized.former} — are fielding calls.`;
+    expect(resolveTeamTokens(body, historyTeams()).text)
+      .toBe('Maverick — the former Generals — are fielding calls.');
+  });
+
   it('falls back to the long name when nameShort is absent', () => {
-    // pickDisplayTeam only guarantees `name`; nameShort is optional in config.
-    const { text } = resolveTeamTokens(`The ${TEAM_SHORT_TOKEN} called.`, { name: 'Fire Ready Aim' });
-    expect(text).toBe('The Fire Ready Aim called.');
+    const teams = new Map<string, any>([['0007', { name: 'Fire Ready Aim' }]]);
+    expect(resolveTeamTokens(`The ${teamShortToken('0007')} called.`, teams).text)
+      .toBe('The Fire Ready Aim called.');
   });
 
-  it('flags an invented placeholder as unresolved rather than shipping it', () => {
-    const { unresolved } = resolveTeamTokens(
-      `The {{TEAM_NICKNAME}} are shopping.`,
-      { name: 'Bring the Pain', nameShort: 'Pain' },
-    );
-    expect(unresolved).toBe(true);
-  });
-
-  it('flags a token with no team to fill it', () => {
-    const { text, unresolved } = resolveTeamTokens(`The ${TEAM_TOKEN} are shopping.`, null);
-    expect(unresolved).toBe(true);
-    expect(text).toContain(TEAM_TOKEN);
+  it('flags an unknown franchise, an uncovered year, and an invented placeholder', () => {
+    const teams = historyTeams();
+    expect(resolveTeamTokens(teamToken('9999'), teams).unresolved).toBe(true);
+    // 2015 sits in the gap between the Generals and Maverick era rows.
+    expect(resolveTeamTokens(formerTeamToken('0003', 2015), teams).unresolved).toBe(true);
+    expect(resolveTeamTokens('The {{TEAM_NICKNAME}} are shopping.', teams).unresolved).toBe(true);
+    expect(resolveTeamTokens('nothing to do here', teams).unresolved).toBe(false);
   });
 
   it('the scanner falls back to the template on an unresolved token', () => {
-    // A literal {{TEAM}} in the group chat would be worse than the
-    // misattribution this replaces, so an unresolved token is treated as a
-    // failed generation — not a body to patch.
     expect(RUMOR_SRC).toMatch(/if \(resolvedBody\.unresolved && aiBody\) \{/);
     expect(RUMOR_SRC).toMatch(/falling back to template/);
-    // ...and a survivor past the template is scrubbed to prose, never shipped.
     expect(RUMOR_SRC).toMatch(/body\.replace\(\/\\\{\\\{\[\^\}\]\*\\\}\\\}\/g, MASKED_TEAM\)/);
   });
 
-  it('resolves from the ORIGINAL tip, not the anonymized copy', () => {
-    // The anonymized copy is the one carrying tokens; reading the team off it
-    // would substitute "{{TEAM}}" for "{{TEAM}}" and resolve nothing.
-    expect(RUMOR_SRC).toMatch(/beat\.batch\?\.find\(\(t\) => t\?\.exposure\?\.team\)/);
+  it('resolves against the whole team map, not a single beat team', () => {
+    // Every token names its own franchise, so resolution is a lookup — which
+    // is what allows a former-name callback for a DIFFERENT franchise than the
+    // exposure team to appear in the same body.
+    expect(RUMOR_SRC).toMatch(/resolveTeamTokens\(aiBody \|\| templateBody\(beat\.anonymized\), teams\)/);
   });
 
   it('teaches the token in the rules AND the exposure examples', () => {
-    // Examples teach by demonstration — an exposure example still showing a
-    // franchise name would model the exact behavior the rule forbids.
     expect(RUMOR_SRC).toMatch(/is a PLACEHOLDER, not a name/);
-    // Examples G-J are the exposure ladder; J is the last of them.
+    expect(RUMOR_SRC).toMatch(/COPY THE TOKEN THROUGH/);
     const examples = RUMOR_SRC.match(/Example G —[\s\S]*?Example J —[\s\S]*?\n\n/)?.[0] ?? '';
     expect(examples, 'exposure ladder examples not found — regex is stale').toBeTruthy();
     expect(examples).not.toMatch(/Gaslamp Griffins/);
     expect(examples).not.toMatch(/Harbor City Kraken/);
-    // Source, so the tokens appear as the interpolation, not the literal.
-    expect(examples).toContain('${TEAM_SHORT_TOKEN}');
-  });
-
-  it('documents formerName as the remaining real-name surface', () => {
-    // HARD RULE 30's callback is deliberately NOT tokenized. The joke needs
-    // both names, and its `formerName` is built for `scope.franchise` at two
-    // of its three call sites — which is not necessarily `exposure.team`, so
-    // reusing {{TEAM}} there would invent a NEW misattribution rather than
-    // close one. Left as a named gap, not an oversight.
-    expect(RUMOR_SRC).toMatch(/safe\.formerName = formerNameFor\(/);
-    const rules = read('docs/claude/rules/schefter.md');
-    expect(rules).toMatch(/formerName/);
+    expect(examples).toContain('{{TEAM_SHORT:');
   });
 
   it('end to end: a model that copies a name from memory cannot succeed', () => {
-    // The failure being closed. Memory says "[a team]" (masked), the payload
-    // says "{{TEAM}}", and the substitution only ever writes the offer's own
-    // franchise — so the Fire Ready Aim / Cyrus Allen pairing is unreachable.
-    const real = { name: 'Bring the Pain', nameShort: 'Pain' };
+    // Memory says "[a team]" (masked), the payload says "{{TEAM:0008}}", and
+    // substitution only ever writes the franchise the token names — so the
+    // Fire Ready Aim / Cyrus Allen pairing is unreachable.
     const memory = maskFranchiseNames('Fire Ready Aim has a wideout on the table.', incidentTeams());
     expect(memory).not.toContain('Fire Ready Aim');
 
-    const generated = `Per multiple sources: the ${TEAM_SHORT_TOKEN} have Cyrus Allen on the table.`;
-    const { text, unresolved } = resolveTeamTokens(generated, real);
+    const generated = `Per multiple sources: the ${teamShortToken('0008')} have Cyrus Allen on the table.`;
+    const { text, unresolved } = resolveTeamTokens(generated, historyTeams());
     expect(unresolved).toBe(false);
     expect(text).toBe('Per multiple sources: the Pain have Cyrus Allen on the table.');
     expect(text).not.toContain('Fire Ready Aim');

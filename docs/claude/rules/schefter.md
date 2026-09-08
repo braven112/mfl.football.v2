@@ -247,9 +247,26 @@ generation. Naming the wrong team is no longer forbidden, it is unwritable —
 the model cannot substitute a name it was never given, which is what "never
 name a second team" had been trusting it to choose not to do.
 
-- **One token needs no franchise id, because exactly ONE team is nameable per
-  post** (HARD RULE 26). There is a single substitution target, so the token
-  cannot point at the wrong franchise.
+- **Every token CARRIES its franchise id, and a former name carries a year.**
+  A franchise identity in this league IS `(franchiseId, year)` — 0003 is
+  Maverick now, was Generals in 2014 and Poker in the Rear in 2012 — and the
+  config's `history[]` rows are keyed by `yearStart`/`yearEnd` precisely so
+  that pair resolves to exactly one name. `{{TEAM:0008}}`,
+  `{{TEAM_SHORT:0008}}`, `{{TEAM_FORMER:0003:2014}}`.
+- **Do NOT use a bare `{{TEAM}}`.** The first cut did, reasoning that only one
+  team is nameable per post (HARD RULE 26) so there was one substitution
+  target. True for `exposure.team`, and it made the former-name callback
+  impossible to tokenize: `formerName` is built for `scope.franchise` at two of
+  its three call sites, which is NOT necessarily the exposure team, so a bare
+  token there resolves to the wrong franchise — inventing a fresh
+  misattribution while closing an old one. Self-identifying tokens dissolve
+  that: correctness stops resting on an invariant holding elsewhere in the
+  file.
+- **The token preserves the caller's REGISTER.** `buildFormerNameCallback`
+  takes `currentName` as a parameter and its call sites pass different forms —
+  the scope label is often the short one. Always emitting the full-name token
+  silently rewrites "Dead Cap — the former Heavy Chevy" into "Dead Cap Walking
+  — the former Heavy Chevy": right franchise, wrong words.
 - **Two registers, not one.** `{{TEAM_SHORT}}` exists because the voice needs
   it — real posts read "Pain's been shopping a tight end", not "Bring the
   Pain's been shopping a tight end". One token would flatten the cadence.
@@ -271,14 +288,16 @@ name a second team" had been trusting it to choose not to do.
   `feelers`, `herd`, `chat` and `swift` are all somebody's real short name —
   reliable versus a guess.
 
-Two gaps, named rather than implied:
+- **`formerName` IS tokenized**, and its `lastSeason` is the year in the
+  token. `current` and `former` are the two fields the model prints, so they
+  become tokens; `lastSeason`, `punitive` and `phase` stay real, because those
+  are facts it reasons about rather than names it prints. `exposure.fid` was
+  added to the tip's exposure block to carry the named franchise — an opaque
+  id, never copied into the safe payload, and the exact-match guard in
+  `tests/schefter-offer-beats.test.ts` still fails on any OTHER new key.
 
-- **`formerName` is NOT tokenized** and still carries real names. HARD RULE
-  30's callback needs both names for the joke to land, and two of its three
-  call sites build it for `scope.franchise` — which is not necessarily
-  `exposure.team`, so reusing `{{TEAM}}` there would invent a NEW
-  misattribution rather than close one. It needs its own token pair and a
-  substitution that knows which franchise it refers to.
+One gap, named rather than implied:
+
 - **PLAYER names in the memory block are still unmasked.** Same mechanism as
   the franchise leak, different noun — nothing stops the model copying a player
   out of a recalled post into an unrelated one. `exposure.players` controls
