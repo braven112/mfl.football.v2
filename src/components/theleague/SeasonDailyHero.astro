@@ -7,7 +7,7 @@
  * logic and zero business logic about which slot to show.
  */
 import type { HeroState } from '../../types/hero-state';
-import type { MatchupPairing, TeamInfo } from '../../types/live-scoring';
+import type { BuiltLiveScoringProps } from '../../utils/live-scoring-hero-props';
 import AuctionCompositeHero from './AuctionCompositeHero.astro';
 import DraftHero from './DraftHero.astro';
 import FeatureCompositeHero from './FeatureCompositeHero.astro';
@@ -53,15 +53,16 @@ export interface Props {
   resolveLeaguePath: (path: string) => string;
   /** Sprite URL (needed by DraftHero and the other EventHeroShell heroes) */
   spriteUrl: string;
-  /** Live scoring data (only when slot === 'live-scoring') */
-  liveScoring?: {
-    week: number;
-    userFranchiseId?: string;
-    matchups: MatchupPairing[];
-    teams: Record<string, TeamInfo>;
-    initialScores?: Record<string, number>;
-    initialRemaining?: Record<string, number>;
-  };
+  /**
+   * Live scoring data (only when slot === 'live-scoring').
+   *
+   * This is the BUILDER'S type, deliberately not a structural copy of the
+   * fields this file forwards. A hand-written copy is how `leagueId` — which
+   * the island REQUIRES, and without which its poll falls back to TheLeague —
+   * went missing on the way through here with no type error: the local shape
+   * simply did not have the field, so nothing was wrong to forget it.
+   */
+  liveScoring?: BuiltLiveScoringProps;
   /** Logged-in user's franchise ID (for personalized heroes) */
   userFranchiseId?: string;
   /** Saturday-evening gate for the Sunday Ticket hero: the owner's lineup is in (true) / not (false) / unknown (null). Resolved by the page. */
@@ -179,15 +180,10 @@ const isFridayArticle = ptWeekday === 'Fri';
 {slot === 'live-scoring' && liveScoring && (
   <LiveScoringHero
     client:load
-    week={liveScoring.week}
+    {...liveScoring}
     phase={state.phase as 'regular-season' | 'playoffs' | 'championship'}
     gameWindow={state.metadata.gameWindow}
     isLive={state.metadata.isLive}
-    userFranchiseId={liveScoring.userFranchiseId}
-    matchups={liveScoring.matchups}
-    teams={liveScoring.teams}
-    initialScores={liveScoring.initialScores}
-    initialRemaining={liveScoring.initialRemaining}
   />
 )}
 {/* Playoff round hero (wild card / semifinals / championship) — the composite

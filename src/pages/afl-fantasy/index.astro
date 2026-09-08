@@ -48,6 +48,10 @@ import { castAflHeroModel } from '../../utils/afl-hero-casting';
 import { resolveHeroFranchiseAccent } from '../../utils/hero-franchise-accent';
 import { getOwnersByPlayer } from '../../utils/offseason-hero-data';
 import { getFranchiseConference } from '../../utils/afl-conference';
+import {
+  buildLiveScoringHeroProps,
+  type BuiltLiveScoringProps,
+} from '../../utils/live-scoring-hero-props';
 import { getAflWhatsNextTimeline } from '../../utils/league-event-resolver';
 import { getAflLeagueYear, getCurrentSeasonYear } from '../../utils/league-year';
 import { loadAflDraftSlot } from '../../utils/afl-draft-slot';
@@ -326,6 +330,37 @@ const heroIsDraft = heroEventId === 'afl-al-draft' || heroEventId === 'afl-nl-dr
 // the last-visit cookie so "NEW" badges light up for unseen entries.
 const heroWhatsNewId = heroState.content.heroEntryId;
 const lastVisitDate = Astro.cookies.get('whats_new_last_visit')?.value ?? null;
+// ── Live scoring hero ───────────────────────────────────────────────────────
+// The same shared builder TheLeague's homepage uses. The AFL differs in one
+// way: it narrows the SUPPORTING matchups to the viewer's own conference.
+// Twenty-four teams across two conferences means "the three closest games in
+// the league" is mostly games against people this owner will never play.
+//
+// Scoping needs a conference, and a conference needs a signed-in franchise —
+// so `authAflFranchiseId`, deliberately not the `?myteam=` preference (a hero
+// scoped to someone's colours should rest on having signed in, the same rule
+// the franchise backdrop and the composite accent already follow). A viewer
+// with no conference gets the league-wide cast rather than an arbitrary half.
+let aflLiveScoring: BuiltLiveScoringProps | undefined;
+
+if (heroState.kind === 'regular-season' && heroState.slot === 'live-scoring' && heroState.week) {
+  const viewerConference = authAflFranchiseId ? getFranchiseConference(authAflFranchiseId) : null;
+  aflLiveScoring = await buildLiveScoringHeroProps({
+    league: AFL.slug,
+    week: heroState.week,
+    origin: Astro.url,
+    teams: aflConfig.teams,
+    userFranchiseId: authAflFranchiseId ?? undefined,
+    ...(viewerConference
+      ? {
+          scopeFranchiseIds: aflConfig.teams
+            .filter((t: { franchiseId: string }) => getFranchiseConference(t.franchiseId) === viewerConference)
+            .map((t: { franchiseId: string }) => t.franchiseId),
+        }
+      : {}),
+  });
+}
+
 ---
 
 <TheLeagueLayout title="AFL — American Football League">
@@ -339,6 +374,7 @@ const lastVisitDate = Astro.cookies.get('whats_new_last_visit')?.value ?? null;
       ) : (
         <AflHero
           state={heroState}
+          liveScoring={aflLiveScoring}
           config={aflConfig}
           standings={standingsFranchises}
           userFranchiseId={userFranchiseId}

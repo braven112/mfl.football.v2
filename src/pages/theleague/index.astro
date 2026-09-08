@@ -59,7 +59,10 @@ import { getDeclarationsByFranchise } from '../../utils/contract-storage';
 import { loadActiveAuctions, type MflPlayerExtras } from '../../utils/homepage-auctions';
 import { getCachedRosters } from '../../utils/mfl-roster-cache';
 import type { SchefterFeed as FeedType } from '../../types/schefter';
-import type { MatchupPairing, TeamInfo } from '../../types/live-scoring';
+import {
+  buildLiveScoringHeroProps,
+  type BuiltLiveScoringProps,
+} from '../../utils/live-scoring-hero-props';
 import type { MFLPlayerInfo, MFLRawTransaction, RosterPlayer } from '../../types/contract-eligibility';
 import feedData from '../../data/theleague/schefter-feed.json';
 import { getWhatsNewEntriesForLeague } from '../../utils/whats-new-entries';
@@ -673,45 +676,21 @@ if (isAuctionHeroActive && activeAuctions.length > 0) {
 }
 
 // Fetch live scoring data when slot is 'live-scoring'
-let liveScoring: {
-  week: number;
-  userFranchiseId?: string;
-  matchups: MatchupPairing[];
-  teams: Record<string, TeamInfo>;
-  initialScores?: Record<string, number>;
-  initialRemaining?: Record<string, number>;
-} | undefined;
+// Shared with the AFL's homepage — see live-scoring-hero-props.ts for why the
+// assembly does not live in either route.
+let liveScoring: BuiltLiveScoringProps | undefined;
 
 if (heroState.slot === 'live-scoring' && heroState.metadata.week) {
-  try {
-    const liveUrl = new URL(`/api/live-scoring?week=${heroState.metadata.week}`, Astro.url);
-    const liveRes = await fetch(liveUrl);
-    const liveData = liveRes.ok ? await liveRes.json() : null;
-
-    // Build teams map from config
-    const teamsMap: Record<string, TeamInfo> = {};
-    for (const t of allTeams) {
-      teamsMap[t.franchiseId] = {
-        franchiseId: t.franchiseId,
-        name: t.name,
-        nameMedium: t.nameMedium,
-        nameShort: t.nameShort,
-        abbrev: t.abbrev,
-        color: t.color ?? '',
-        icon: t.icon,
-      };
-    }
-
-    liveScoring = {
-      week: heroState.metadata.week,
-      // Scoped: the live hero marks "your" matchup with it (see heroFranchiseId).
-      userFranchiseId: heroFranchiseId,
-      matchups: liveData?.matchups ?? [],
-      teams: teamsMap,
-      initialScores: liveData?.scores,
-      initialRemaining: liveData?.remaining,
-    };
-  } catch { /* live scoring is best-effort */ }
+  liveScoring = await buildLiveScoringHeroProps({
+    league: THELEAGUE.slug,
+    week: heroState.metadata.week,
+    origin: Astro.url,
+    teams: allTeams,
+    // Scoped: the live hero marks "your" matchup with it (see heroFranchiseId).
+    userFranchiseId: heroFranchiseId,
+    // No scope — TheLeague is one 16-team pool, so the whole league is the
+    // right supporting cast. (The AFL narrows to the viewer's conference.)
+  });
 }
 
 // Fetch playoff bracket data when slot is 'standings' during the playoff rounds

@@ -72,6 +72,24 @@ export interface PlayerMeta {
 /** Props passed from Astro to the LiveScoringHero React island */
 export interface LiveScoringHeroProps {
   week: number;
+  /**
+   * MFL league id, forwarded to `/api/live-scoring?L=`. REQUIRED, and not
+   * merely for tidiness: the endpoint falls back to `DEFAULT_LEAGUE_ID` when
+   * `L` is absent, so a hero that omits it renders its own league's scores
+   * server-side and then, 60 seconds later, silently replaces them with
+   * TheLeague's. That is the same wrong-league-answer failure the endpoint's
+   * own header warns about, arriving through the client instead of the host.
+   */
+  leagueId: string;
+  /** The league's display name, for the championship label. Never a literal. */
+  leagueName: string;
+  /**
+   * Franchise ids the compact grid may draw from, when the league wants it
+   * narrowed. The AFL passes its viewer's CONFERENCE; TheLeague passes
+   * nothing and the whole league is in scope. Never a filter on the viewer's
+   * OWN matchup — that is always shown.
+   */
+  scopeFranchiseIds?: string[];
   phase: Extract<SeasonPhase, 'regular-season' | 'playoffs' | 'championship'>;
   gameWindow: GameWindow;
   isLive: boolean;
