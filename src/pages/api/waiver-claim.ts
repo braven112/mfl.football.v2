@@ -5,10 +5,14 @@
  * Owner-mode only — never commissioner credentials, never FRANCHISE_ID (MFL
  * treats that as commissioner impersonation).
  *
- * A QUEUED CLAIM REPLAYS MFL'S OWN `add_drop` PAGE, not `import?TYPE=…`. The
- * import API answers an authenticated, correctly-hosted waiver request with an
- * empty 200 and stores nothing — proven twice against a live owner session. An
- * immediate (FCFS) add still uses `import?TYPE=fcfsWaiver`, which does work.
+ * EVERY WRITE HERE REPLAYS MFL'S OWN `add_drop` PAGE, not `import?TYPE=…`, in
+ * both the queued and the first-come windows. The import API has now failed
+ * this route from both directions: `waiverRequest` answers an authenticated,
+ * correctly-hosted claim with an empty 200 and stores nothing (proven twice
+ * against a live owner session), and `fcfsWaiver` refuses an add/drop from a
+ * roster already at the limit — scoring the ADD before the DROP — and refuses it
+ * the same silent way (proven live on 2026-09-07, three pickups lost). The page
+ * every owner uses works in both windows and says why when it doesn't.
  *
  * Body: {
  *   claims: [{ addPlayerId, bid, dropPlayerId? }],   // in priority order
@@ -39,7 +43,6 @@ import { getLeagueById, getLeagueBySlug, DEFAULT_LEAGUE_ID, DEFAULT_LEAGUE_SLUG 
 import { bustRosterCaches } from '../../utils/mfl-roster-cache';
 import { JSON_HEADERS_NO_STORE as JSON_HEADERS } from '../../utils/api-response';
 import { resolveWaiverWindow } from '../../utils/waiver-window';
-import { readMflImportResult } from '../../utils/mfl-import-result';
 import { summarizeMflPage } from '../../utils/mfl-page-summary';
 import {
   readBidRules,
@@ -132,10 +135,11 @@ export const POST: APIRoute = async ({ request }) => {
     // a priority league would make MFL read the amount as the drop id.
     //
     // ...AND each league alternates between that WAIVER window and an FCFS
-    // window where the add happens immediately (`fcfsWaiver`). Which one is
-    // live comes from MFL's own calendar — `currentWaiverType` is the league's
-    // SYSTEM, not the current state. Re-derived HERE rather than trusted from
-    // the client, because it decides which endpoint the write goes to.
+    // window where the add happens immediately. Which one is live comes from
+    // MFL's own calendar — `currentWaiverType` is the league's SYSTEM, not the
+    // current state. Re-derived HERE rather than trusted from the client,
+    // because it decides which form fields the write carries, and with them
+    // whether the owner ends up with a queued claim or the player.
     // mflFetch, NOT fetch: the calendar export is owner-gated, and Node's
     // undici strips the Cookie header on MFL's api → www49 redirect. A bare
     // fetch here reads back "API requires a logged in user", which parses as an
@@ -204,17 +208,11 @@ export const POST: APIRoute = async ({ request }) => {
     if (errors.length > 0) return fail(errors[0], 400, { errors });
 
     // ── Write, owner mode ───────────────────────────────────────────────────
-    // FCFS is a different call entirely: a single immediate add/drop against the
-    // import API, no round. Only the FIRST claim is meaningful — an ordered
-    // board of alternatives has no meaning when the add resolves instantly.
-    const params = new URLSearchParams({ L: leagueId });
-    if (immediate) {
-      const first = claims![0];
-      params.set('ADD', String(first.addPlayerId));
-      if (first.dropPlayerId && first.dropPlayerId !== '0000') {
-        params.set('DROP', String(first.dropPlayerId));
-      }
-    }
+    // FCFS is still a different REQUEST — a single immediate add/drop, no round,
+    // and only the FIRST claim is meaningful, because an ordered board of
+    // alternatives has no meaning when the add resolves instantly — but it is no
+    // longer a different ENDPOINT. Both modes replay MFL's own `add_drop` page
+    // now; see the writes below for what separates them.
 
     // ── Snapshot the pending round BEFORE the write ─────────────────────────
     // "The player is in my pending waivers" is NOT proof this request stored
@@ -252,10 +250,46 @@ export const POST: APIRoute = async ({ request }) => {
     // right reader for it (that would classify every response as a refusal).
     // Errors are recognized from the page the way cut-player does it, and
     // success is settled by the pendingWaivers delta below.
+    //
+    // AND THE FCFS ADD REPLAYS THE SAME PAGE — that is the bug fixed on
+    // 2026-09-07, live, in the AFL's first FCFS window of the season. It used to
+    // POST `import?TYPE=fcfsWaiver`, and that import applies a strict "the
+    // resulting roster must be inside the in-season limit" validation which
+    // scores the ADD before the DROP. So an owner at 16/16 — which is every
+    // owner who needs to drop somebody to make room, i.e. the whole point of an
+    // add/drop — is refused. It refuses by answering HTTP 200 with an EMPTY
+    // BODY: no error, no transaction, nothing in MFL's log. Three consecutive
+    // pickups vanished that way in eleven minutes while another owner made the
+    // identical full-roster swap on MFL's own page in the same window.
+    // cut-player.ts hit this exact validation from the DROP side and moved to
+    // `add_drop` for it; this is the same wall from the ADD side.
+    //
+    // The two modes differ only in the pair of fields that tells the page what
+    // to do: FORCE_WAIVER + `Submit Request` file a CLAIM, and their absence +
+    // `Perform Add/Drop` execute the add NOW (MFL's picker.js swaps the button
+    // value between exactly those two strings).
     const writes: Array<{ url: string; body: string }> = immediate
       ? [{
-          url: `https://${writeHost}/${year}/import?TYPE=fcfsWaiver&L=${leagueId}`,
-          body: params.toString(),
+          url: `https://${writeHost}/${year}/add_drop`,
+          body: new URLSearchParams({
+            L: leagueId,
+            add_settings: '',
+            PROJSRC: 'mfl',
+            add_pid: String(claims![0].addPlayerId),
+            drop_pid:
+              claims![0].dropPlayerId && claims![0].dropPlayerId !== '0000'
+                ? String(claims![0].dropPlayerId)
+                : '',
+            // Inert on an instant add — the page only reads ROUND for a claim —
+            // but MFL's form posts it either way, and cut-player.ts sends the
+            // same '1' for the same reason: replay the form, don't edit it.
+            ROUND: '1',
+            COMMENTS: '',
+            // NO FORCE_WAIVER, and the unticked button value. This is the one
+            // combination that performs the add immediately, which is what an
+            // FCFS window is.
+            SUBMIT: 'Perform Add/Drop',
+          }).toString(),
         }]
       : claims!.map((c) => ({
           url: `https://${writeHost}/${year}/add_drop`,
@@ -347,19 +381,15 @@ export const POST: APIRoute = async ({ request }) => {
         body: write.body,
       })) as Response;
       text = (await res.text()).trim();
-      if (immediate) {
-        console.log(`[waiver-claim] MFL response: ${res.status} ${text.slice(0, 300)}`);
-      } else {
-        // add_drop answers with a full page, so a raw slice is doctype and
-        // <head> and nothing else — three rounds of logs proved only that a
-        // page came back. The SUBMIT controls are the payload here: a
-        // re-rendered form is MFL stating the action it expects right now.
-        const page = summarizeMflPage(text);
-        console.log(
-          `[waiver-claim] add_drop → ${res.status} | title=${JSON.stringify(page.title)} | submits=${JSON.stringify(page.submits)}`
-        );
-        console.log(`[waiver-claim] add_drop text: ${page.text}`);
-      }
+      // add_drop answers with a full page, so a raw slice is doctype and
+      // <head> and nothing else — three rounds of logs proved only that a
+      // page came back. The SUBMIT controls are the payload here: a
+      // re-rendered form is MFL stating the action it expects right now.
+      const page = summarizeMflPage(text);
+      console.log(
+        `[waiver-claim] add_drop (${immediate ? 'fcfs' : 'waiver'}) → ${res.status} | title=${JSON.stringify(page.title)} | submits=${JSON.stringify(page.submits)}`
+      );
+      console.log(`[waiver-claim] add_drop text: ${page.text}`);
       // MFL re-renders the page carrying its own complaint. Stop on the first
       // one rather than firing the rest of the board at a refusing endpoint.
       //
@@ -377,54 +407,47 @@ export const POST: APIRoute = async ({ request }) => {
       // named the cause in as many words. That cost an afternoon on 2026-09-03.
       // EVERY occurrence is collected, not the first: MFL emits one line per
       // problem and the second line is usually the actionable one.
-      const complaints = [...text.matchAll(/Cannot Save Request:[^<]*/gi)].map((m) => m[0].trim());
-      const pageError =
-        text.match(/Transaction Would Create[^<]*/i) ||
-        text.match(/Exceeds League Limit[^<]*/i) ||
-        text.match(/<error[^>]*>([\s\S]*?)<\/error>/i);
+      //
+      // `Cannot Be Added/Dropped` joins them for the FCFS path. An INSTANT add
+      // has refusals a queued claim does not — the headline one being a locked
+      // player, which MFL states with the player's own name in front of it:
+      //   "Okonkwo, Chigoziem WAS TE Cannot Be Added Because Is Locked."
+      // so the leading characters are captured too, or the sentence loses the
+      // subject and reads as being about nobody.
+      const complaints = [
+        ...[...text.matchAll(/Cannot Save Request:[^<]*/gi)].map((m) => m[0]),
+        ...[...text.matchAll(/[^<>]{0,60}Cannot Be (?:Added|Dropped)[^<]*/gi)].map((m) => m[0]),
+        ...[...text.matchAll(/Transaction Would Create[^<]*/gi)].map((m) => m[0]),
+        ...[...text.matchAll(/Exceeds League Limit[^<]*/gi)].map((m) => m[0]),
+      ]
+        .map((s) => s.replace(/\s+/g, ' ').trim())
+        .filter(Boolean);
+      const errorTag = text.match(/<error[^>]*>([\s\S]*?)<\/error>/i);
+      if (errorTag?.[1]?.trim()) complaints.push(errorTag[1].trim());
       if (complaints.length > 0) {
-        return fail(`MFL rejected the claim: ${[...new Set(complaints)].join(' ')}`, 502);
-      }
-      if (pageError) {
         return fail(
-          `MFL rejected the claim: ${(pageError[1] || pageError[0] || '').trim()}`,
-          502
+          `MFL rejected the ${immediate ? 'add' : 'claim'}: ${[...new Set(complaints)].join(' ')}`,
+          502,
+          { confirmUrl }
         );
       }
     }
-    // Require an AFFIRMATIVE `<status>OK</status>`. `!res.ok || /<error/` was
-    // not a success check: MFL answers a refused import with HTTP 200 and a
-    // body carrying no `<error>` at all (a login page, a permission notice),
-    // and this route reported "Round 1 submitted" for exactly that. See
-    // src/utils/mfl-import-result.ts.
-    // Only the FCFS path talks to the import API and can be read this way. The
-    // queued path replayed an HTML page above, which this classifier would call
-    // a refusal — its errors were already handled there, and its success is the
-    // delta.
-    const outcome = immediate
-      ? readMflImportResult(text, res.status)
-      : { accepted: false, refused: false, error: null, reason: 'add_drop returns a page; the delta decides.' };
+    // NOTHING IS AFFIRMED BY THE BODY ON EITHER PATH, and no code here should
+    // ever go looking for an affirmation again. `add_drop` answers a success and
+    // a refusal with the same 200 and the same page furniture — the difference
+    // is the complaint sentence handled above, and after that the read-back is
+    // the only evidence there is.
+    //
+    // The rule this replaces is worth keeping in view, because it cost a live
+    // waiver window: the route once demanded `<status>OK</status>` from the
+    // import API and 502'd a real claim, since MFL answers EVERY import type
+    // with an empty body whether it stored the write or not. `readMflImportResult`
+    // still exists for routes that do talk to `import?TYPE=…`; it must not come
+    // back here, where it would classify each of these HTML pages as a refusal.
+    //
     // Never discard MFL's body on a write — a silent no-op is invisible without
     // it and it is the whole diagnosis.
-    if (!outcome.accepted) {
-      console.warn('[waiver-claim] MFL did not affirm the write:', outcome.reason ?? outcome.error, text.slice(0, 300));
-    }
-    // Hard-fail ONLY on an affirmative refusal. `refused`, not `!accepted`:
-    // MFL answers `import?TYPE=waiverRequest` with a completely EMPTY body
-    // whether it stored the claim or not (probed live — every import type does,
-    // including a bogus one), so demanding `<status>OK</status>` here rejects
-    // every good claim. That shipped, and it 502'd a real claim during a live
-    // waiver window. The read-back below is the only thing that can tell the two
-    // apart, so an indeterminate answer goes THROUGH to it rather than stopping
-    // here.
-    if (outcome.refused) {
-      return fail(
-        outcome.error
-          ? `MFL rejected the claim: ${outcome.error}`
-          : 'MFL rejected the claim, so nothing was recorded. Try again, or file it on MyFantasyLeague.',
-        502
-      );
-    }
+    console.warn('[waiver-claim] MFL affirms nothing on add_drop; the read-back decides.', text.slice(0, 300));
 
     // ── Verify by reading the round back ────────────────────────────────────
     // An acknowledged write is a FLOOR, not proof: MFL answers OK and quietly
@@ -457,14 +480,18 @@ export const POST: APIRoute = async ({ request }) => {
       const fcfsAdds = [String(claims![0].addPlayerId)];
       const landed = stored ? fcfsAdds.filter((id) => stored!.includes(id)) : [];
       const missing = stored ? fcfsAdds.filter((id) => !stored!.includes(id)) : fcfsAdds;
-      // KNOWN-not-there is a failure; UNKNOWN is not. MFL affirmed nothing (an
-      // empty body is its normal answer either way), and the roster says the
-      // player is not on it — between them that is a definite miss, and calling
-      // it "submitted" is the bug this route exists to prevent.
-      if (stored !== null && missing.length > 0 && !outcome.accepted) {
+      // KNOWN-not-there is a failure; UNKNOWN is not. MFL affirmed nothing (the
+      // page is the same either way) and named no complaint, and the roster says
+      // the player is not on it — between them that is a definite miss, and
+      // calling it "submitted" is the bug this route exists to prevent.
+      // `confirmUrl` rides along so the owner is handed MFL's own add/drop page
+      // in the same breath: a failed pickup in a first-come window is worth
+      // seconds, and re-deriving that link by hand is how one got lost.
+      if (stored !== null && missing.length > 0) {
         return fail(
           'MFL did not add the player and your roster does not show them. Nothing was recorded — try again, or add them on MyFantasyLeague.',
-          502
+          502,
+          { confirmUrl }
         );
       }
       return new Response(
@@ -513,19 +540,19 @@ export const POST: APIRoute = async ({ request }) => {
       );
     }
 
-    // KNOWN-not-there is a failure; UNKNOWN is not. `waiverRequest` affirms
-    // nothing on success OR failure, so when the read-back succeeded and the
-    // claim is NOT newly pending, the delta is the whole evidence and it says
-    // the write did not land. Reporting that as "Round N submitted" is exactly
-    // the bug this route was rewritten to stop — so it is a hard failure the
-    // owner can act on, not a caveat under a checkmark.
-    if (canDiff && unconfirmed.length > 0 && !outcome.accepted) {
+    // KNOWN-not-there is a failure; UNKNOWN is not. `add_drop` affirms nothing
+    // on success OR failure, so when the read-back succeeded and the claim is
+    // NOT newly pending, the delta is the whole evidence and it says the write
+    // did not land. Reporting that as "Round N submitted" is exactly the bug
+    // this route was rewritten to stop — so it is a hard failure the owner can
+    // act on, not a caveat under a checkmark.
+    if (canDiff && unconfirmed.length > 0) {
       return fail(
         `MFL did not record ${
           unconfirmed.length === 1 ? 'the claim' : `${unconfirmed.length} of your claims`
         } — your pending waivers do not show ${unconfirmed.length === 1 ? 'it' : 'them'}. Nothing was filed; try again, or file on MyFantasyLeague.`,
         502,
-        { round, submitted: requestedAdds, confirmed: newlyPending }
+        { round, submitted: requestedAdds, confirmed: newlyPending, confirmUrl }
       );
     }
     return new Response(

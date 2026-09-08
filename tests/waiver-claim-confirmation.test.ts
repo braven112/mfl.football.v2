@@ -216,7 +216,6 @@ describe('readPendingWaiverPlayerIds — "could not verify" is not "nothing ther
     // "Submit Request" when FORCE_WAIVER is ticked. Sending the unticked value
     // asks for an instant add, which a locked pool refuses.
     expect(ROUTE_CODE).toContain("SUBMIT: 'Submit Request'");
-    expect(ROUTE_CODE, 'the instant-add button value files no claim').not.toContain("SUBMIT: 'Perform Add/Drop'");
     expect(ROUTE_CODE).toContain('add_pid');
     // FORCE_WAIVER is what makes it a CLAIM rather than an instant add. Without
     // it, a locked free-agent pool refuses the add by silently re-rendering the
@@ -224,9 +223,44 @@ describe('readPendingWaiverPlayerIds — "could not verify" is not "nothing ther
     // where it is a checkbox with no `value` attribute (so: 'on').
     expect(ROUTE_CODE).toMatch(/FORCE_WAIVER: 'on'/);
     expect(ROUTE_CODE).toMatch(/ROUND: String\(round\)/);
-    // The FCFS path still uses the import API, which does work.
-    expect(ROUTE_CODE).toContain('TYPE=fcfsWaiver');
     expect(ROUTE_CODE, 'the dead waiverRequest import must be gone').not.toContain('TYPE=waiverRequest');
+  });
+
+  it('performs an FCFS add through add_drop too — the import API drops it silently', () => {
+    // THE BUG THIS PINS (2026-09-07, live, in the AFL's first FCFS window of the
+    // season). The immediate path posted `import?TYPE=fcfsWaiver`, and that
+    // import applies the same strict "resulting roster must be inside the
+    // in-season limit" validation cut-player.ts documents — scoring the ADD
+    // before the DROP. An owner at 16/16 dropping someone to make room is
+    // therefore refused, which is every add/drop that matters. MFL refuses it
+    // with HTTP 200 and an EMPTY BODY: no error, no transaction, nothing in the
+    // league log. Three pickups vanished in eleven minutes while another owner
+    // made the identical full-roster swap on MFL's own page in the same window.
+    expect(ROUTE_CODE, 'the fcfsWaiver import cannot come back').not.toContain('TYPE=fcfsWaiver');
+    // The instant-add pair: NO FORCE_WAIVER, and the button value MFL's
+    // picker.js shows when the box is unticked. Both halves, or the page files a
+    // claim instead of making the pickup.
+    expect(ROUTE_CODE).toContain("SUBMIT: 'Perform Add/Drop'");
+    const fcfsWrite = ROUTE_CODE.slice(
+      ROUTE_CODE.indexOf('const writes'),
+      ROUTE_CODE.indexOf('SUBMIT: \'Perform Add/Drop\'')
+    );
+    expect(fcfsWrite, 'FORCE_WAIVER on the immediate write would queue it').not.toContain('FORCE_WAIVER');
+    // The add/drop is the FIRST claim only — the rest of an ordered board has no
+    // meaning once the add resolves instantly.
+    expect(ROUTE_CODE).toMatch(/add_pid: String\(claims!\[0\]\.addPlayerId\)/);
+  });
+
+  it('surfaces the refusals an INSTANT add has and a queued claim does not', () => {
+    // A locked player is the headline one, and MFL states it with the player's
+    // own name in front:
+    //   "Okonkwo, Chigoziem WAS TE Cannot Be Added Because Is Locked."
+    // Without this pattern the page classified as "no complaint", the roster
+    // read-back then reported the player missing, and the owner got the generic
+    // "MFL did not add the player" for a cause MFL had named outright.
+    expect(ROUTE_CODE).toMatch(/Cannot Be \(\?:Added\|Dropped\)/);
+    // Captured with the leading characters, or the sentence loses its subject.
+    expect(ROUTE_CODE).toMatch(/\[\^<>\]\{0,\d+\}Cannot Be/);
   });
 
   it('sends the BID with a blind-bid claim, and only for a blind-bid league', () => {
@@ -278,21 +312,39 @@ describe('readPendingWaiverPlayerIds — "could not verify" is not "nothing ther
   it('reads add_drop\'s HTML page for MFL\'s own complaint', () => {
     // add_drop re-renders the page carrying its error rather than returning XML,
     // so readMflImportResult (which would call any HTML a refusal) must not be
-    // the reader for that path.
+    // the reader for either path — and now that BOTH writes are add_drop, it has
+    // no business in this route at all.
     expect(ROUTE).toMatch(/Transaction Would Create/);
     expect(ROUTE).toMatch(/Exceeds League Limit/);
-    expect(ROUTE).toMatch(/immediate\s*\n?\s*\?\s*readMflImportResult/);
+    expect(ROUTE_CODE, 'an import-API classifier would call every add_drop page a refusal')
+      .not.toContain('readMflImportResult(');
   });
 
-  it('the route hard-fails on a refusal, not on a missing OK', () => {
+  it('the route hard-fails on what MFL SAID, never on a missing OK', () => {
     // Gating the write on `!outcome.accepted` 502'd a real claim during a live
-    // waiver window, because MFL affirms nothing on this endpoint.
-    expect(ROUTE).toContain('if (outcome.refused)');
-    expect(ROUTE, 'must not block the write on the absence of an affirmative OK').not.toMatch(
-      /if \(!outcome\.accepted\) \{\s*\n\s*return fail/
+    // waiver window, because MFL affirms nothing on either endpoint. Now that
+    // both writes replay a page there is no affirmation to look for at all, and
+    // reintroducing one would repeat the same outage.
+    expect(ROUTE_CODE, 'must not block the write on the absence of an affirmative OK').not.toMatch(
+      /if \(!\w*[Oo]utcome\.accepted\) \{\s*\n\s*return fail/
     );
+    expect(ROUTE_CODE, 'the only hard stop before the read-back is MFL\'s own complaint')
+      .toMatch(/if \(complaints\.length > 0\) \{/);
     // But an unaffirmed write whose read-back shows nothing is still a failure.
-    expect(ROUTE).toMatch(/unconfirmed\.length > 0 && !outcome\.accepted/);
+    expect(ROUTE_CODE).toMatch(/canDiff && unconfirmed\.length > 0/);
+    expect(ROUTE_CODE).toMatch(/stored !== null && missing\.length > 0/);
+  });
+
+  it('hands the owner MFL\'s own page on a FAILED write, not only a successful one', () => {
+    // A pickup lost in a first-come window is worth seconds. When the route
+    // refuses, the owner's next move is MFL's add/drop page — the same link the
+    // success path already returns — so it rides on the failures too rather than
+    // being re-derived by hand (which is how one got lost on 2026-09-07).
+    for (const marker of ['MFL rejected the ${immediate', 'MFL did not add the player']) {
+      const at = ROUTE_CODE.indexOf(marker);
+      expect(at, `${marker} must exist`).toBeGreaterThan(-1);
+      expect(ROUTE_CODE.slice(at, at + 400)).toContain('confirmUrl');
+    }
   });
 
   it('an object payload it cannot read is null, NOT a verified-empty list', () => {

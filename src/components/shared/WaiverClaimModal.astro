@@ -355,6 +355,12 @@ const windowLabel = config?.windowLabel ?? '';
         const data = await res.json().catch(() => ({}));
         if (!res.ok || !data.success) {
           reset();
+          // The link matters MOST here. A refused pickup in a first-come window
+          // costs seconds, and the owner's next move is MFL's own add/drop page
+          // — the server returns it on its failures too, so offer it rather than
+          // leaving them to find it. `showConfirmLink` no-ops without a url, so
+          // the error-only case is unchanged.
+          showConfirmLink(data.confirmUrl);
           return showError(data.message || `Claim failed (HTTP ${res.status}).`);
         }
         // `success` only means MFL acknowledged the write; `verified` means the
