@@ -4768,6 +4768,14 @@ async function main() {
   // `resolveCta` would point a multi-topic roundup at one franchise's trade
   // builder and drop the whisper-back CTA, which is the one link a mailbag
   // most needs. Explicit now, rather than correct by accident.
+  //
+  // Scope note: this governs the resolveCta path only. `buildDirectedCta`
+  // short-circuits ahead of it, so a mailbag led by an explicit-pick tip still
+  // ships a DIRECTED dare. That stays as-is — the directed link is
+  // `TIP_PAGE_PATH?target=<fid>`, i.e. still the tip form with the
+  // whisper-back affordance, merely pre-selecting a franchise. Pre-existing
+  // behavior; whether a multi-topic roundup should be aimed at one desk is an
+  // editorial question, not this bug.
   const ctaSourceFor = (beat) =>
     (postKind === 'mailbag' ? { tips: [] } : { tips: beat.batch ?? [] });
   // Still needed for the recurrence fingerprint below, which reads the

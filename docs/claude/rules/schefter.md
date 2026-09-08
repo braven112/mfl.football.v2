@@ -516,6 +516,10 @@ three times.
   there, `trade_bait` and `topic: 'trade'` web tips included. Handing that to
   `resolveCta` points a multi-topic roundup at one franchise's trade builder
   and drops the whisper-back link, which is the one CTA a mailbag most needs.
+  This governs the `resolveCta` path only: `buildDirectedCta` short-circuits
+  ahead of it, so a mailbag led by an explicit-pick tip still gets a directed
+  dare — which is still the TIP PAGE (`?target=<fid>`), so the whisper-back
+  affordance survives. Pre-existing, and left alone.
 
 `tests/schefter-tip-queue-admission.test.ts` pins the dedupe behavior;
 `tests/schefter-busy-morning.test.ts` pins the distinct-id split and both
