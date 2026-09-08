@@ -27,8 +27,18 @@ import { getCurrentSeasonYear } from './league-year';
 import { canonicalNflCode, parseBroadcast, parseGameSituation } from './espn-game-detail';
 import { buildEspnScoreboardUrl, resolveEspnTarget } from './espn-scoreboard-url';
 
-/** ESPN is intermittently slow; the page render must not wait on it. */
+/**
+ * ESPN is intermittently slow, and the two callers can afford very different
+ * amounts of that.
+ *
+ * The API route is a client poll: nobody is staring at a blank page while it
+ * runs, so it gets the full budget. A page render is the opposite — it holds
+ * TTFB on three `prerender = false` routes, for a DECORATIVE rail — so the SSR
+ * helper takes a much tighter one and gives up early, leaving the island to
+ * fill the rail from its own poll.
+ */
 const ESPN_TIMEOUT_MS = 5000;
+const ESPN_SSR_TIMEOUT_MS = 1500;
 
 export interface ScoreboardQuery {
   /** 1-based NFL week. Falls back to 1 when absent or unparseable. */
@@ -37,6 +47,8 @@ export interface ScoreboardQuery {
   year?: number | string | null;
   /** The request's query string, for the ?espnSeason/?espnWeek/?espnYear override. */
   params?: URLSearchParams;
+  /** Overrides the default timeout; the SSR helper uses a tighter one. */
+  timeoutMs?: number;
   /**
    * Caller's abort. A page may start this in parallel with its own data load
    * and only afterwards learn it does not need the answer (the live-scoring
@@ -101,9 +113,8 @@ export async function fetchNflScoreboard(query: ScoreboardQuery): Promise<NflSco
   const espnSlot = { ...target.slot, year: target.year, overridden: target.overridden };
 
   // The caller's abort and our own timeout both have to be able to end this.
-  const signal = query.signal
-    ? AbortSignal.any([query.signal, AbortSignal.timeout(ESPN_TIMEOUT_MS)])
-    : AbortSignal.timeout(ESPN_TIMEOUT_MS);
+  const timeout = AbortSignal.timeout(query.timeoutMs ?? ESPN_TIMEOUT_MS);
+  const signal = query.signal ? AbortSignal.any([query.signal, timeout]) : timeout;
 
   try {
     const res = await fetch(espnUrl, { signal });
@@ -126,6 +137,7 @@ export async function fetchNflScoreboard(query: ScoreboardQuery): Promise<NflSco
  * so an ESPN outage is never mistaken for a real empty week.
  */
 export async function fetchInitialNflGames(query: ScoreboardQuery): Promise<NflGame[] | undefined> {
-  const board = await fetchNflScoreboard(query);
+  // A rail nobody has scrolled to must not hold the first byte.
+  const board = await fetchNflScoreboard({ timeoutMs: ESPN_SSR_TIMEOUT_MS, ...query });
   return board.ok && board.games.length > 0 ? board.games : undefined;
 }

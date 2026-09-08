@@ -58,6 +58,21 @@ describe('NflGamesStrip — server render', () => {
     expect(au).not.toContain('cbs-nfl-us.png');
   });
 
+  it('withholds the live dot while the slate is unconfirmed by any poll', () => {
+    // A server slate with a live game renders its score and clock, but not the
+    // pulsing dot: no poll has landed, so the clock is frozen. "Wrong while
+    // looking live" is the state this whole feature's no-store/ok discipline
+    // exists to prevent.
+    const html = ssr({ initialGames: [game({ state: 'in', shortDetail: 'Q2 8:45' })], demo: false });
+    expect(html).toContain('Q2 8:45');
+    expect(html, 'a frozen clock must not pulse').not.toContain('nfl-dot');
+  });
+
+  it('keeps the live dot in demo mode, where the bundled slate is authoritative', () => {
+    const html = ssr({ initialGames: [game({ state: 'in', shortDetail: 'Q2 8:45' })], demo: true });
+    expect(html).toContain('nfl-dot');
+  });
+
   it('still renders in demo mode', () => {
     // The one path that always worked; pinned so a fix here cannot break it.
     expect(ssr({ initialGames: [game()], demo: true })).toContain('nfl-strip');

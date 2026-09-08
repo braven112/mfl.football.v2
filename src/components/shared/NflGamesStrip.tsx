@@ -53,8 +53,15 @@ export interface NflGamesStripProps {
   country?: CountryCode;
 }
 
-function GameCard({ game, country }: { game: NflGame; country: CountryCode }) {
-  const live = game.state === 'in';
+function GameCard(
+  { game, country, unconfirmed }: { game: NflGame; country: CountryCode; unconfirmed: boolean },
+) {
+  // `unconfirmed` = these games came from the SERVER slate and no poll has ever
+  // succeeded. The scores and clock are real but frozen, so the live treatment
+  // is withheld: a pulsing dot beside a clock that will never tick again is
+  // wrong while looking live, which is the state `no-store` and the `ok` flag
+  // exist to prevent everywhere else in this feature.
+  const live = game.state === 'in' && !unconfirmed;
   const pre = game.state === 'pre';
   // ESPN publishes the US network on the scoreboard payload; `resolveChannel`
   // turns it into what THIS viewer's country actually carries. null when ESPN
@@ -94,7 +101,9 @@ function GameCard({ game, country }: { game: NflGame; country: CountryCode }) {
           {live ? (
             <span className="nfl-game__live"><span className="nfl-dot" />{game.shortDetail || `Q${game.period} ${game.clock}`}</span>
           ) : (
-            <span className="nfl-game__pre">{game.state === 'post' ? 'Final' : game.shortDetail}</span>
+            <span className="nfl-game__pre" title={unconfirmed && game.state === 'in' ? 'Live scores are not updating right now' : undefined}>
+              {game.state === 'post' ? 'Final' : game.shortDetail}
+            </span>
           )}
           {downDistance && <span className="nfl-game__dd">{downDistance}</span>}
         </span>
@@ -115,11 +124,15 @@ function GameCard({ game, country }: { game: NflGame; country: CountryCode }) {
 export default function NflGamesStrip({ week, year, isLive, label = 'NFL Games', demo, initialGames, country = 'US' }: NflGamesStripProps) {
   // Demo mode renders the bundled sample and does no network at all, so the
   // live feed can't overwrite it.
-  const { games } = useNflScoreboard(week, year, {
+  const { games, status, fetchedAt } = useNflScoreboard(week, year, {
     enabled: !demo,
     live: !!isLive,
     fallbackGames: initialGames,
   });
+
+  // The server slate is showing and no poll has ever landed. In demo there is
+  // no poll by design, so the bundled slate is authoritative and not stale.
+  const unconfirmed = !demo && fetchedAt === 0 && status !== 'ok';
 
   // Nothing to show and nothing to explain — this is a decorative rail, and a
   // failed scoreboard fetch is reported by the page's own status, not here.
@@ -133,7 +146,7 @@ export default function NflGamesStrip({ week, year, isLive, label = 'NFL Games',
     <section className="nfl-strip" aria-label={label ?? 'NFL games'}>
       {label && <span className="nfl-strip__label">{label}</span>}
       <div className="nfl-strip__rail">
-        {sorted.map((g) => <GameCard key={g.id} game={g} country={country} />)}
+        {sorted.map((g) => <GameCard key={g.id} game={g} country={country} unconfirmed={unconfirmed} />)}
       </div>
     </section>
   );
