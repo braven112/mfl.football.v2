@@ -251,6 +251,19 @@ describe('tip-queue dedupe — one row per tip id', () => {
     expect(kept.firstSuppressedAt).toBeUndefined();
   });
 
+  it('holds the closure against a LIVE row enqueued AFTER it', () => {
+    // Election is by story CLASS first, timestamp second. On timestamp alone a
+    // later live row destroyed the closure — reachable, because
+    // accepted-closure detection reads the transactions feed and that read is
+    // warn-only: when it fails, wasAccepted is false, the offer takes the live
+    // path again, and the fresh row outranks the queued closure on recency.
+    // OFFER_CLOSED_KEY was written at enqueue, so it never comes back.
+    const closure = { id: 'to_1080', source: 'trade_offer', text: '', submittedAt: 1_000, leadKind: 'closure' };
+    const laterLive = { id: 'to_1080', source: 'trade_offer', text: '', submittedAt: 9_000_000, framingHint: 'fresh' };
+    expect(dedupeTipsById([closure, laterLive])[0].leadKind).toBe('closure');
+    expect(dedupeTipsById([laterLive, closure])[0].leadKind).toBe('closure');
+  });
+
   it('folds TWO closures together — the exemption is cross-story, not blanket', () => {
     // Two closure rows under one id are reachable: the sadd(OFFER_CLOSED_KEY)
     // guarding re-detection is warn-only and the tip is pushed regardless, so

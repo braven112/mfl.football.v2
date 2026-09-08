@@ -151,6 +151,25 @@ describe('beat-building permits the secondary trade beat', () => {
   });
 });
 
+describe('both busy-morning beats get a TRADE cta', () => {
+  it('resolves each beat\'s CTA from that beat\'s own tips, not a parallel bucket array', () => {
+    // pickPrimaryBucket hard-codes secondaryBucket to null for a trade
+    // primary, so indexing [primaryBucket, secondaryBucket] gave beat 2
+    // `undefined` — no trade-flavored tips, so it shipped the generic
+    // "Got a tip?" link while beat 1 shipped the Trade Builder one. That is
+    // why the 2026-09-08 pair read as two separate scoops.
+    expect(SCANNER_SRC).toMatch(/const ctaSourceFor = \(beat\) => \(\{ tips: beat\.batch \?\? \[\] \}\)/);
+    expect(SCANNER_SRC).toMatch(/resolveCta\(ctaSourceFor\(beat\)\)/);
+    expect(SCANNER_SRC).not.toMatch(/resolveCta\(beatBuckets\[i\]\)/);
+  });
+
+  it('leaves the recurrence fingerprint on the real bucket', () => {
+    // bucketFingerprint reads the bucket's key/kind, not its tips, so that
+    // consumer keeps the parallel array.
+    expect(SCANNER_SRC).toMatch(/const bucket = beatBuckets\[beatIndex\] \?\? null/);
+  });
+});
+
 describe('busy-morning directive in the LLM prompt', () => {
   it('generateAiBody accepts busyMorning + busyMorningBacklog options', () => {
     expect(SCANNER_SRC).toMatch(

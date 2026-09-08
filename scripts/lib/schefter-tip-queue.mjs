@@ -94,23 +94,39 @@ export function dedupeTipsById(tips) {
   const storyOf = (t) => (t?.leadKind === 'closure' ? 'closure' : 'live');
   const emptyFold = () => ({ oldestAt: undefined, strikes: 0, firstSuppressedAt: undefined });
 
+  /**
+   * Does `candidate` outrank the row currently held?
+   *
+   * CLASS FIRST, timestamp second. Electing on timestamp alone let a LIVE row
+   * enqueued after a closure destroy it — reachable, because accepted-closure
+   * detection reads the transactions feed and that read is warn-only: when it
+   * fails, `wasAccepted` is false, the offer takes the live path again, and
+   * the fresh live row outranks the queued closure on recency. OFFER_CLOSED_KEY
+   * was written at enqueue, so the terminal tip never comes back.
+   *
+   * Note this compares against the HELD ROW, not against any accumulated
+   * value. An earlier cut compared against a merged timestamp — which is the
+   * oldest — so once two rows had folded, a third beat the accumulator on a
+   * timestamp it never had: [closure@9000, live@1000, changed@5000] elected
+   * `changed`. The merge now builds a copy at materialize time and leaves
+   * `payload` an untouched input row, which is what makes this compare honest.
+   */
+  const outranks = (candidate, held) => {
+    const candidateStory = storyOf(candidate);
+    if (candidateStory !== storyOf(held)) return candidateStory === 'closure';
+    return (numeric(candidate?.submittedAt) ?? 0) >= (numeric(held?.submittedAt) ?? 0);
+  };
+
   const byId = new Map();
   for (const tip of tips) {
     const id = String(tip?.id ?? '');
     const at = numeric(tip?.submittedAt);
     let acc = byId.get(id);
     if (!acc) {
-      acc = { payload: tip, newestAt: at, folds: new Map() };
+      acc = { payload: tip, folds: new Map() };
       byId.set(id, acc);
-    } else if ((at ?? 0) >= (acc.newestAt ?? 0)) {
-      // Compared against the NEWEST ROW SEEN, tracked separately from any
-      // merged timestamp on purpose. Comparing against the accumulated value —
-      // which is the OLDEST — meant that once two rows had folded together,
-      // any third row beat the accumulator on a timestamp it never had:
-      // [closure@9000, live@1000, changed@5000] elected `changed` and dropped
-      // the closure. Two rows behaved correctly; three did not.
+    } else if (outranks(tip, acc.payload)) {
       acc.payload = tip;
-      acc.newestAt = at ?? acc.newestAt;
     }
     const story = storyOf(tip);
     const fold = acc.folds.get(story) ?? emptyFold();

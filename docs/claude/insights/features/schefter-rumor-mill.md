@@ -80,6 +80,27 @@ same story** — and the shape generalizes: an exemption defined against a class
 exempt thing ("closures are exempt"), because the second one silently covers
 the same-class case nobody pictured.
 
+**A tie-break is a policy, and ours was accidentally "whoever is newest".**
+Three rounds of review went into which duplicate wins and every one of them
+argued about timestamps, because the rows looked like copies. They are not: a
+closure and a live beat share an id and tell different stories, and the story
+that is TERMINAL has to win regardless of the clock — otherwise a live row
+enqueued after a closure destroys it, which is reachable the moment the
+transactions read that detects acceptance fails, since that read is warn-only.
+The rule that finally held is class first, timestamp second. **When two records
+share a key, ask what each one MEANS before deciding which is fresher.**
+
+**And the thing that made two posts read as two scoops was a parallel array.**
+`[primaryBucket, secondaryBucket]`, indexed by beat number, with
+`secondaryBucket` hard-coded to `null` for a trade primary — so the second
+trade beat resolved its call-to-action from `undefined` and shipped the generic
+"Got a tip?" link beside beat 1's Trade Builder one. The owner's screenshot
+shows exactly that, and it is the detail that made one story told twice look
+like two separate scoops. The CTA resolver only ever needed the beat's own
+tips; the parallel array was carrying a correlation the beats already had.
+**A lookup indexed by position into a structure built for a different purpose
+is a bug waiting for its second caller** — here, the busy-morning split.
+
 **A merge that writes onto its input makes the function answer differently the
 second time.** Folding the merged `submittedAt` onto the kept row leaves both
 duplicates sharing a timestamp, and the newest-wins comparison then resolves

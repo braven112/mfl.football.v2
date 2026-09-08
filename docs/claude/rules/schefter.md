@@ -453,8 +453,14 @@ three times.
   all read; carrying the newest forward lets a re-rolled offer refresh its own
   clock forever — the "dead proposals never leave" failure of the 2026-09-07
   insight, wearing a plausible timestamp.
-- **The newest-wins compare tracks the newest ROW SEEN, in an accumulator
-  separate from the merged timestamp.** Comparing against the merged value —
+- **Election is by story CLASS first, timestamp second — a closure outranks a
+  live row whatever the clock says.** On timestamp alone, a live row enqueued
+  AFTER a closure destroyed it: accepted-closure detection reads the
+  transactions feed and that read is warn-only, so when it fails `wasAccepted`
+  is false, the offer takes the live path again, and the fresh row wins on
+  recency. `OFFER_CLOSED_KEY` was written at enqueue, so the terminal tip never
+  comes back.
+- **Within a class the newest row wins, compared against the HELD ROW.** Comparing against the merged value —
   which is the oldest — meant that once two rows had folded together, any third
   row beat the accumulated payload on a timestamp it never had:
   `[closure@9000, live@1000, changed@5000]` elected `changed` and dropped the
@@ -494,8 +500,19 @@ three times.
   future "don't repeat yourself" rule has to hold WITHIN a cycle as well as
   across days.
 
+- **A beat's CTA comes from that BEAT'S OWN TIPS, never from a parallel bucket
+  array.** `pickPrimaryBucket` hard-codes `secondaryBucket` to `null` for a
+  trade primary, so `[primaryBucket, secondaryBucket][1]` handed beat 2
+  `undefined`: no trade-flavored tips, so it shipped the generic "Got a tip?"
+  link while beat 1 shipped the Trade Builder one. That is why the 2026-09-08
+  pair read as two separate scoops rather than one story told twice.
+  `resolveCta` only reads `.tips`, so it takes the beat's batch. The parallel
+  array survives for the recurrence fingerprint alone, which reads the bucket's
+  key and kind.
+
 `tests/schefter-tip-queue-admission.test.ts` pins the dedupe behavior;
-`tests/schefter-busy-morning.test.ts` pins the distinct-id split.
+`tests/schefter-busy-morning.test.ts` pins the distinct-id split and both
+beats' CTA.
 
 ### An expired proposal is a SEED, not a post
 

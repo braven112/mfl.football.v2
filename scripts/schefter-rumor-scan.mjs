@@ -4745,10 +4745,25 @@ async function main() {
   const builtPosts = [];
   const ctaByPostId = new Map();
   const parentIdByPostId = new Map();
-  // Each beat has its own bucket — primary uses primaryBucket, secondary
-  // (gossip-only) uses secondaryBucket. Resolve CTA per-beat so a gossip
-  // secondary attached to a trade_bait primary doesn't inherit the wrong
-  // Trade Builder link.
+  // CTA is resolved per-beat from THAT BEAT'S OWN TIPS, so a gossip secondary
+  // attached to a trade_bait primary cannot inherit the wrong Trade Builder
+  // link — and, since the busy-morning split, so the second TRADE beat gets
+  // the right one.
+  //
+  // This used to index a parallel [primaryBucket, secondaryBucket] array, and
+  // pickPrimaryBucket hard-codes secondaryBucket to null for a trade primary.
+  // Under the busy-morning split both beats are trade-offer reports drawn from
+  // ONE bucket, so beat 2 resolved its CTA from `undefined`, found no
+  // trade-flavored tips, and shipped the generic "Got a tip?" link while beat 1
+  // shipped the Trade Builder one. That is why the 2026-09-08 pair read as two
+  // separate scoops rather than one story told twice. `resolveCta` only ever
+  // reads `.tips`, so handing it the beat's own batch is both simpler and
+  // correct for every lane.
+  const ctaSourceFor = (beat) => ({ tips: beat.batch ?? [] });
+  // Still needed for the recurrence fingerprint below, which reads the
+  // bucket's key/kind and not just its tips. Under busy-morning beat 2 has no
+  // bucket of its own, so it gets no "fresh subject" threshold relaxation —
+  // the conservative pre-existing behavior, left alone deliberately.
   const beatBuckets = [primaryBucket, secondaryBucket];
   for (let i = 0; i < beats.length; i++) {
     const beat = beats[i];
@@ -4801,7 +4816,7 @@ async function main() {
     // that pre-selects the named franchise on the tip form, turning the
     // post into the start of a thread.
     const directedCta = buildDirectedCta(beat);
-    const cta = directedCta ?? resolveCta(beatBuckets[i]);
+    const cta = directedCta ?? resolveCta(ctaSourceFor(beat));
 
     const post = {
       id: generatePostId(),
