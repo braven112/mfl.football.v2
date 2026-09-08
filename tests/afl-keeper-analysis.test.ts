@@ -760,14 +760,35 @@ describe.runIf(hasLiveFeeds)('integration: 2025→2026 live cycle (real feeds)',
     });
     expect(analysis.franchises).toHaveLength(24);
     expect(analysis.keeperSource).toBe('reconstructed');
-    // Pre-week-1 the cycle is a preview and every class is its declared keeps.
-    // Once the 2026 season starts this assertion naturally relaxes: preview
-    // flips off and keep counts come from the real week-1 rosters.
-    if (analysis.previewMode) {
-      for (const f of analysis.franchises) {
-        expect(f.keptCount).toBeGreaterThanOrEqual(6);
-        expect(f.keptCount).toBeLessThanOrEqual(7);
-      }
+
+    // WHAT THIS TEST IS ACTUALLY FOR: the reconstruction must not collapse to
+    // nothing. The bug it was written after is quoted in the module itself —
+    // 21 of 24 franchises reconstructed ZERO keepers, "i.e. the keeper page
+    // told seven eighths of the league it kept nobody". That is the regression
+    // worth pinning, and it is the only one this path can produce silently.
+    for (const f of analysis.franchises) {
+      expect(f.keptCount, `${f.franchiseId} reconstructed no keepers at all`).toBeGreaterThan(0);
+    }
+
+    // It used to also require every class to land on 6-7, which encoded two
+    // things the league does not say:
+    //
+    //   - that a franchise must keep SEVEN. Seven is a MAXIMUM. Keeping fewer
+    //     is a legal, ordinary choice, so a floor of 6 was never a rule.
+    //   - that no franchise can exceed it. A team that has not declared yet is
+    //     simply OVER THE LIMIT until it does — a real state, not bad data.
+    //     Two franchises sat there the day this assertion started failing.
+    //
+    // So the count carries no invariant of its own pre-declaration. What does
+    // hold is that a reconstructed class is drawn from last season's roster,
+    // which is the sanity check that replaces it.
+    const prevSizes = new Map<string, number>(
+      (load('2025/rosters.json').rosters.franchise as Array<{ id: string; player: unknown[] }>).map(
+        (f) => [f.id, (Array.isArray(f.player) ? f.player : [f.player]).length],
+      ),
+    );
+    for (const f of analysis.franchises) {
+      expect(f.keptCount).toBeLessThanOrEqual(prevSizes.get(f.franchiseId) ?? 0);
     }
   });
 
