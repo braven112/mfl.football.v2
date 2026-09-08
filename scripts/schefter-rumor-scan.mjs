@@ -112,6 +112,7 @@ import {
 import { incrementTipsterCounters, incrementTipsterTopicCounters } from './lib/schefter-tipster-counters.mjs';
 import { schefterKey, globalSchefterKey } from './lib/schefter-keys.mjs';
 import { dedupeTipsById, isUsableTip } from './lib/schefter-tip-queue.mjs';
+import { collectFranchiseNameTokens, memoryNameMasker } from './lib/schefter-name-mask.mjs';
 import { getTopicPolicy, DRAINABLE_TOPIC_IDS } from '../src/config/schefter-topics.mjs';
 import {
   classifyTipKind,
@@ -732,49 +733,9 @@ function pickTeamName(team) {
   return team.nameShort || team.nameMedium || team.name || null;
 }
 
-/**
- * Build a list of EVERY name a franchise answers to — current forms
- * (long/medium/short/abbrev), config `aliases`, and the same four forms on
- * each retired name in `history[]`. Used to redact franchise mentions from
- * tip text when the tip's scope has been fuzzed away from naming a specific
- * franchise.
- *
- * Retired names count because a reader identifies a team by them just as
- * well as by the current name — and in the AFL better, since the punitive
- * last-place rebrands are recent and memorable. Harvesting only the current
- * four fields is what let a tipster's "Cock Gobbler" (The Show's 2025
- * rebrand) survive redaction and land in a post that was not allowed to name
- * a second team.
- *
- * Over-matching is the safe direction here: a stray hit fuzzes a word to
- * "[a team]", while a miss leaks a franchise identity.
- *
- * Keeps tokens length-sorted descending so a regex alternation matches the
- * longest form first (e.g. "Nashville Geeks" wins over "Geeks").
- */
-function collectFranchiseNameTokens(teams) {
-  const tokens = new Set();
-  const add = (v) => {
-    if (typeof v === 'string' && v.trim().length >= 2) tokens.add(v.trim());
-  };
-  for (const team of teams.values()) {
-    const history = Array.isArray(team?.history) ? team.history : [];
-    // A history entry carries its own aliases — "Heavy Chevy" retired with
-    // aliases ["Heavy", "Chevy"], and a nickname for a retired name identifies
-    // the franchise exactly as well as the retired name itself. Reading them
-    // off `team` only (the original shape) left those invisible to the
-    // redactor, so a tip saying "Chevy" reached the prompt intact.
-    for (const form of [team, ...history]) {
-      for (const field of ['name', 'nameMedium', 'nameShort', 'abbrev']) {
-        add(form?.[field]);
-      }
-      for (const alias of Array.isArray(form?.aliases) ? form.aliases : []) {
-        add(alias);
-      }
-    }
-  }
-  return [...tokens].sort((a, b) => b.length - a.length);
-}
+// `collectFranchiseNameTokens` moved to scripts/lib/schefter-name-mask.mjs so
+// the rumor scanner, the transaction scanner and the memory-block masker all
+// harvest franchise names — retired forms and aliases included — the same way.
 
 /**
  * Who CURRENTLY answers to each name form or alias, as `lowerName → Set<fid>`.
@@ -4011,8 +3972,18 @@ async function main() {
   // back to the legacy inline prompt inside generateAiBody.
   const lore = await loadLore({ log, warn, navSlug: NAV_SLUG });
   const history = await loadPostHistory({ log, warn, navSlug: NAV_SLUG });
-  const recentPostsBlock = buildRecentPostsPromptBlock(history.posts);
-  log(`  [memory] last ${Math.min(history.posts.length, 5)} posts passed to LLM`);
+  // Loaded HERE, before the memory block, not at the anonymize step below —
+  // the block needs the team map to mask franchise names out of the recalled
+  // post bodies, and an unmasked block is how another team's name reached a
+  // post its payload never authorized (2026-09-07, Fire Ready Aim / Cyrus
+  // Allen). Same map is reused for anonymize further down; loading it twice
+  // would read the same config file twice for no reason.
+  const teams = await loadTeams();
+  const recentPostsBlock = buildRecentPostsPromptBlock(history.posts, {
+    maskNames: memoryNameMasker(teams),
+    warn,
+  });
+  log(`  [memory] last ${Math.min(history.posts.length, 5)} posts passed to LLM (franchise names masked)`);
 
   // ── Phase 6: Trade-Offer Rumor source ──
   // Runs BEFORE the queue read so fresh redacted tips land in this cycle.
@@ -4563,8 +4534,8 @@ async function main() {
   }
 
   // Anonymize — load the feed early so whisper-back tips can pull parent
-  // headline snippets into their scope.
-  const teams = await loadTeams();
+  // headline snippets into their scope. `teams` was loaded up front for the
+  // memory-block masker; reused rather than re-read.
   const feedForAnonymize = await loadFeed();
   const anonymized = await anonymizeTips(batch, teams, feedForAnonymize.posts ?? [], now, redis, tipsterContext);
   const secondaryAnonymized = secondaryBatch

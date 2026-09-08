@@ -24,6 +24,7 @@ import {
   appendPostHistory,
   buildHistoryEntry,
 } from './lib/schefter-lore.mjs';
+import { memoryNameMasker } from './lib/schefter-name-mask.mjs';
 import { shouldFireReminder } from './lib/roger-reminder-window.mjs';
 import {
   buildThrowbackReminder,
@@ -689,7 +690,21 @@ async function loadTeams(configPath) {
     const teams = raw.teams ?? [];
     const map = new Map();
     for (const t of teams) {
-      map.set(t.franchiseId, { name: t.name, abbrev: t.abbrev });
+      // name/abbrev are what this scanner's own post templates print. The
+      // other four fields are for the memory-block masker: it has to catch
+      // every form a franchise answers to — medium/short, config aliases, and
+      // retired names in `history[]` (each of which carries its own aliases) —
+      // or a name it missed goes into the prompt both scanners share. Cheap to
+      // carry, and dropping them here is invisible until a post names the
+      // wrong team.
+      map.set(t.franchiseId, {
+        name: t.name,
+        nameMedium: t.nameMedium,
+        nameShort: t.nameShort,
+        abbrev: t.abbrev,
+        aliases: Array.isArray(t.aliases) ? t.aliases : [],
+        history: Array.isArray(t.history) ? t.history : [],
+      });
     }
     return map;
   } catch {
@@ -1329,7 +1344,13 @@ async function scanPendingTrades(league) {
   // recentPostsBlock is an empty string when history is empty.
   const lore = await loadLore({ log: console.log, warn: console.warn, navSlug: league.slug });
   const history = await loadPostHistory({ log: console.log, warn: console.warn, navSlug: league.slug });
-  const recentPostsBlock = buildRecentPostsPromptBlock(history.posts);
+  // Masked for the same reason the rumor scanner masks it: ONE
+  // post-history.json feeds both lanes, so an unmasked body written here is a
+  // franchise name in front of the rumor lane's model on its next run.
+  const recentPostsBlock = buildRecentPostsPromptBlock(history.posts, {
+    maskNames: memoryNameMasker(await loadTeams(league.configPath)),
+    warn: console.warn,
+  });
   console.log(`  [memory] last ${Math.min(history.posts.length, 5)} posts passed to LLM`);
 
   // Feed-first, GroupMe-second per trade. Previously the whole loop built up a

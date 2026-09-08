@@ -202,6 +202,53 @@ never a hand edit — the feeds are cron-written, so a hand edit is invisible in
 review. It deliberately leaves the scanner's `posted`/exposure state alone, or
 the same offer regenerates the same wrong post on the next scan.
 
+### The MEMORY block is a name surface — mask it
+
+`buildRecentPostsPromptBlock` recalls the last few posts verbatim so Schefter
+does not reuse an opener, closer or bit. It never needed the NAMES in those
+posts, and carrying them leaked one.
+
+2026-09-07: a trade post read "Fire Ready Aim has Cyrus Allen on the table."
+Cyrus Allen (17518) is a Bring the Pain (0008) player and has been since the
+May 9 auction — no trade, every roster snapshot agrees; Fire Ready Aim is 0007.
+The `exposure` payload **could not** have produced that pairing (that is the
+section above, and it works). The name came from the memory block, where the
+three previous trade posts had all named Fire Ready Aim.
+
+- **Both scanners read ONE `post-history.json`.** The transaction scanner names
+  teams legitimately — a completed trade is public — and the rumor scanner then
+  reads those bodies back as memory. So the mask belongs in the shared block
+  builder, not in either lane; masking one side leaves the leak open.
+- **`maskNames` is required to include bodies at all.** Without one the bodies
+  are DROPPED, not passed through raw, and it warns. The block's actual job —
+  the opener/closer bans — still gets done; the bodies are the nice-to-have,
+  and degrading a nice-to-have beats putting a name in front of the model that
+  its payload never authorized.
+- **One harvest, in `scripts/lib/schefter-name-mask.mjs`.** Both scanners and
+  the masker call the same `collectFranchiseNameTokens`, so retired names and
+  per-history aliases are caught identically everywhere. The transaction
+  scanner's own templates only print `name`/`abbrev`, which makes the other
+  four fields look droppable in its `loadTeams` — dropping them is invisible
+  until a name the harvest missed reaches the shared prompt, so a guard pins
+  them.
+- **The mask is word-boundary anchored and prefers the LONGEST form.** The
+  config contains short names that are ordinary words (`balls`, `feelers`,
+  `herd`, `chat`, `swift`), and the memory block is prose rather than a tip, so
+  an unanchored match shreds it. Longest-first stops "Nashville Geeks" becoming
+  "[a team] Geeks".
+- **Masking is not the whole fix.** Nothing yet checks which franchise a
+  generated post actually names — `sanitizeAiPost` only looks for
+  meta-commentary. Until the name is replaced by a token the model fills in
+  (see below), the prompt rule at HARD RULE 26 is the only thing between the
+  model and the wrong team.
+
+Known gap: PLAYER names in the memory block are still unmasked. Same mechanism,
+different noun — nothing stops the model copying a player out of a recalled
+post into an unrelated one.
+
+`tests/schefter-memory-name-mask.test.ts` pins the mask, the fail-safe drop,
+and that both scanners pass a masker.
+
 ### The drip — a beat may only assert what the feeds can see
 
 **Read "The rumor mill is a beat, not an advertising feed" below first.** Since

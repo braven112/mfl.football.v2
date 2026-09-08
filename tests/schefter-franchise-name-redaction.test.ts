@@ -490,7 +490,14 @@ describe('franchise-name redaction — source guards', () => {
     // where the old `team?.aliases` covered only the team). The behavioral
     // proof is the "Sabers" case above; this guard exists so a refactor that
     // stops walking history at all can't pass on the behavioral tests alone.
-    const fn = SCANNER_SRC.match(/function collectFranchiseNameTokens[\s\S]+?\n\}\n/);
+    // Harvest moved to scripts/lib/schefter-name-mask.mjs (2026-09-08) so the
+    // rumor scanner, the transaction scanner and the memory-block masker share
+    // one implementation. Same assertions, re-pointed at its new home.
+    const MASK_SRC = readFileSync(
+      path.join(process.cwd(), 'scripts/lib/schefter-name-mask.mjs'),
+      'utf8',
+    );
+    const fn = MASK_SRC.match(/export function collectFranchiseNameTokens[\s\S]+?\n\}\n/);
     expect(fn).not.toBeNull();
     expect(fn![0]).toMatch(/team\?\.history/);
     expect(fn![0]).toMatch(/form\?\.aliases/);
