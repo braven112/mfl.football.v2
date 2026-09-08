@@ -1,5 +1,28 @@
 [
   {
+    "id": "draft-broadcast-clock-timer",
+    "date": "2026-08-30",
+    "category": "enhancement",
+    "icon": "draft-podium",
+    "leagues": [
+      "theleague",
+      "afl"
+    ],
+    "title": "The Room Can Now See Exactly How Long You've Been Thinking",
+    "link": "/draft/broadcast",
+    "linkLabel": "Open the big board",
+    "summary": "The big board told the room who was on the clock and said it in precisely the same way at eight seconds and at eight minutes. It now counts up from the last pick, so everybody watching the TV knows exactly how long a man has been sitting there.",
+    "description": [
+      "Between picks, <a href=\"/draft/broadcast\">the Draft Broadcast</a> has always answered one question very well and refused to answer the other one at all. Whose turn it is: crest the size of a dinner plate, name above it, ON THE CLOCK underneath, unmissable from the far end of the room. How long it has been his turn: nothing. The screen looked identical eight seconds after a pick and eight minutes after it, which meant the only instrument the room had was somebody eventually saying “is he even here?”",
+      "So the board now runs a clock. Under the pick number there is an <strong>ELAPSED</strong> chip counting up from the moment the previous selection landed — <strong>0:09</strong>, <strong>4:12</strong>, and if a round genuinely goes that way, <strong>1:05:07</strong>. It snaps back to 0:00 the instant the next team comes up, so the number on screen is always this team's, never the last one's.",
+      "It counts from MFL's own timestamp on the previous pick, not from whenever this page happened to open, and that distinction is the whole feature. Somebody's laptop dying and getting reloaded in round four does not hand the man on the clock a fresh three minutes — the board comes back up already knowing he has been thinking for six. Before the first pick of the night it stays away entirely, because “First on the clock” has nothing to count from, and once the last pick is in it leaves with the rest of the furniture.",
+      "Nothing else about draft night changes. Keep making your picks in MFL, keep the board plugged into the TV, and keep <a href=\"/draft/order\">the predictor</a> open on a second screen if you like being told what is about to happen to you. The clock is simply the room's answer to a question it was already asking out loud."
+    ],
+    "image": "draft-broadcast-clock-timer.webp",
+    "imageAlt": "The Draft Broadcast board for The League in full screen, painted in the Pacific Pigskins' deep red. The Pigskins' boar crest fills the left half of the stage, and to its right the copy reads “Pacific Pigskins” in small type over a large “On the clock”, then “Pick 1.10”, and beneath that a dark rounded chip labelled ELAPSED showing 0:08 in fixed-width digits. The header runs “THE LEAGUE” on the left and “PICK 10 OF 51 · 3 ROUNDS × 17” on the right. Along the bottom, JUST OFF THE BOARD lists 1.09 KC Concepcion (WR · CLE), 1.08 Eli Stowers (TE · PHI), 1.07 Fernando Mendoza (QB · LV) and 1.06 Makai Lemon (WR · PHI), each with the player's headshot and the drafting franchise's crest, while UP NEXT lists 1.11 Dark Magicians, 1.12 Vitside and 1.13 Da Dangsters.",
+    "excludeFromHero": true
+  },
+  {
     "id": "theleague-draft-broadcast",
     "date": "2026-08-28",
     "category": "new-page",
