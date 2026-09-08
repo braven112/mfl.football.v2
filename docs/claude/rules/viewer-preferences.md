@@ -108,7 +108,14 @@ most owners in both leagues are on the west coast and leading with Eastern led
 with the wrong clock for the majority. Since PT is also every league's official
 clock, `kickoffZonesFor` drops the duplicate and that viewer sees `PT` alone.
 CANADA deliberately did NOT follow: the argument is about where THIS league's
-owners live and does not transfer to a country nobody has re-examined. The
+owners live and does not transfer to a country nobody has re-examined.
+
+Do not read `CA: 'ET'` as a second landing default — **it is not one.** A
+viewer who has chosen nothing lands on `DEFAULT_VIEWER_PREFERENCES`, which is
+US/PT and nothing else; the other `DEFAULT_ZONE_IDS` entries are only reached
+once someone has actively picked that country and needs a zone within it. The
+one thing that CAN put an owner somewhere other than US/PT on a first visit is
+a SEED (below), which is deliberate and is kept. The
 older rule below — defaults must equal the pre-preferences board — still governs
 every other country; this is the one place it was overridden on purpose, and
 `tests/viewer-preferences.test.ts` pins the departure explicitly so it cannot
@@ -183,7 +190,16 @@ group the viewer can actually see would render with nothing selected. The
 route reads `zone-<chosen country>` and ignores the rest — which is also what
 stops the two invisible groups from deciding someone's clock.
 
-**Seeded defaults are a FALLBACK, never a write.** `SEEDED_PREFERENCES` holds
+**Seeded defaults are a FALLBACK, never a write — and they are KEPT.** They are
+the only exception to "everyone starts US/PT", re-confirmed Sep 2026 when the
+default moved to Pacific: three owners land on their real clock on a first
+visit instead of converting from PT, and every other owner in both leagues
+starts US/PT. The known cost of keeping them is that the NAV disagrees with the
+rest of the page for exactly those owners — the drawer reads cookies only, so a
+seeded owner sees "League time (PT)" beside a waiver deadline in their own
+clock, until they save a preference for real. That is accepted, not overlooked;
+closing it means letting the nav read the mirror, which is the round-trip-per-
+page-view the first rule in this doc rejects. `SEEDED_PREFERENCES` holds
 the owners we already know are off the league's clock, keyed
 `<registry slug>:<franchiseId>`. It is consulted only when the device has no
 cookie and the owner has stored nothing, and it is deliberately not persisted:
