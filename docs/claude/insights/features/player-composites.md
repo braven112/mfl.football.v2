@@ -2082,3 +2082,39 @@ HeroModel | null` while the router's own prop is `model?:` hands the component
 `undefined` and costs three `astro check` errors — the ratchet catches it, but
 only after a 3.5-minute run. `model?: HeroModel | null` with a `= null` default
 is the shape.
+
+## The copy column must reserve an OPAQUE art layer (2026-09-09)
+
+The shell's `--cmh-content-max` is the ONLY thing holding the copy off the art —
+every art layer is absolutely positioned, so none of them exert width pressure.
+That number is per-adopter and was tuned for the transparent ESPN cutout, where
+a line running over a shoulder is fine and an ~81px box overlap is normal. The
+What's New frame is opaque, and both adopters had drifted into a guaranteed
+collision with it: 62% + 38% on the AFL card (27px of overlap at 786px), 58% +
+38% on TheLeague's (1px of clearance).
+
+**The reservation is derived, not tuned** (`src/styles/whats-new-hero-shot.css`):
+the frame publishes `--fch-shot-w` / `--fch-shot-right` on `.fch`, and
+`.fch__shot ~ .cmh__content` takes
+`calc(100cqi - var(--fch-shot-w) - var(--fch-shot-gutter))`. Both halves are in
+`cqi` on purpose — percentages resolve against the PADDING box for the absolute
+frame and the CONTENT box for the max-width, ~24px apart, which is exactly
+enough to eat the gutter while the CSS reads as correct. See
+`docs/claude/insights/domains/frontend.md`, 2026-09-09.
+
+Three things to keep if this is touched again:
+
+- **Sibling-keyed, not root-keyed.** The frame is in the DOM only in `shot` art
+  mode, so the selector disables itself for the model / `heroArt` / silhouette
+  states rather than overriding an adopter's tuned column. The shell renders its
+  `art` slot before `.cmh__content`, which is what makes `~` reach it.
+- **Release it wherever the frame is hidden** — the ≤640px block and
+  `.fch--no-shot` (light-capture 404). The sibling selector outranks
+  `.cmh__content`, so a missing reset holds a column open for absent art.
+- **`clampSummary` is the router's call, not the component's.**
+  `FeatureCompositeHero` is What's New-only and clamps unconditionally;
+  `AflCompositeHero` serves every AFL phase, so `AflHero` passes
+  `clampSummary={state.kind === 'feature'}`. Not derived from
+  `view.screenshot` — an image-less bug-fix rollup is still an article-length
+  description — and not always-on, because the keeper and conference-draft
+  summaries are resolver-written instructions that must not stop mid-sentence.

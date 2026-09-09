@@ -133,6 +133,51 @@ hrefs to local copies, and open it in the bundled Chromium — it isolates
 
 ---
 
+## 2026-09-09 - Two Percentages, Two Boxes: Why "58% + 38%" Overlapped
+
+**Context:** the What's New hero ran its paragraph underneath the browser-framed
+screenshot on both homepages — 27px of overlap on the AFL card at a 786px width,
+1px of clearance on TheLeague's, which is the same bug one wrap away. Both cards
+looked arithmetically safe: the copy column is capped at `--cmh-content-max`
+(58%/62%) and the frame takes 38% plus a right offset.
+
+**The trap:** a `%` in `max-width` resolves against the element's containing
+block CONTENT box; a `%` on an absolutely positioned element resolves against
+the nearest positioned ancestor's PADDING box. Same card, two rulers, `2 ×
+padding` apart — ~24px at this hero's clamped 32px. So `58% + 38%` is not 96%
+of one thing, and any reservation written in percentages silently under-reserves
+by most of its gutter while READING as if it reserved the column.
+
+**The fix shape — derive, don't tune.** `container-type: inline-size` on the
+card, the art's geometry published as tokens on the root (`--fch-shot-w`,
+`--fch-shot-right`), and the copy column's
+`max-width: calc(100cqi - var(--fch-shot-w) - var(--fch-shot-gutter))`. `cqi` is
+one base for both halves, so the gutter you write is the gutter you measure.
+Re-tuning the two percentages would have fixed one width and one card.
+
+**Two second-order rules that came out of it:**
+
+- **Key the reservation on the ART's presence** (`.fch__shot ~ .cmh__content`),
+  not on the card's root. The frame is only in the DOM for the screenshot art
+  mode, so the selector switches itself off for the model/artwork/silhouette
+  states and leaves their tuned `--cmh-content-max` alone. The shell renders
+  its art slot BEFORE `.cmh__content`, which is what lets `~` reach it.
+- **A reservation must RELEASE wherever the art is hidden** — the ≤640px block
+  and the `--no-shot` 404 fallback. The sibling selector outranks the shell's
+  own `.cmh__content` rules, so without an explicit reset it holds a column open
+  for art that is `display: none`.
+
+**An absolute-position box overlap is not automatically a bug.** The ESPN
+cutout heroes measure an ~81px overlap between the copy column and
+`.cmh__model` and look correct: that is transparent PNG margin, and the copy
+clears the visible player. What made this one real is that a browser frame is
+OPAQUE. Measure the art, not the box.
+
+Guard: `tests/whats-new-hero-shot-reservation.test.ts` (scan-style — a render
+test at one width passes at 1280 and misses the collision at 1024).
+
+---
+
 ## 2026-09-09 - A Module-Scope IIFE Is a ClientRouter Bug the Ratchet Cannot See
 
 **Context:** the roster page's team-nav chevron — the control that drops down

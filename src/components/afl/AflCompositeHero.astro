@@ -29,9 +29,22 @@ import '../../styles/whats-new-hero-shot.css';
 interface Props {
   view: EventHeroView;
   regionLabel: string;
+  /**
+   * Two-line cap on the summary. The What's New state alone asks for it: its
+   * copy is an ENTRY DESCRIPTION written for an article page, and at the width
+   * the copy column keeps beside the screenshot frame it ran eight lines and
+   * pushed the card to 366px. TheLeague's feature composite has always clamped
+   * for the same reason.
+   *
+   * Not the default, and not derived from `view.screenshot` here: every other
+   * state's summary is resolver-written and short, and the one thing worse
+   * than a tall card is a keeper deadline whose instruction stops mid-sentence.
+   * The router knows the state's kind; this component does not.
+   */
+  clampSummary?: boolean;
 }
 
-const { view, regionLabel } = Astro.props;
+const { view, regionLabel, clampSummary = false } = Astro.props;
 const treatment = view.composite!;
 const model = view.model ?? null;
 
@@ -100,6 +113,7 @@ const LOGO = '/assets/logos/afl-logo-dark.svg';
   title={view.headline}
   titleAccent={view.accentWord}
   summary={view.summary}
+  clampSummary={clampSummary}
   styleVars="--cmh-min-h: clamp(250px, 25vw, 300px); --cmh-min-h-mobile: 270px; --cmh-ghost-size: clamp(4rem, 9vw, 7rem); --cmh-ghost-style: italic; --cmh-model-w: clamp(230px, 30vw, 350px); --cmh-logo-w: clamp(170px, 22vw, 250px); --cmh-logo-opacity: 0.2; --cmh-eyebrow-mb: 0.625rem; --cmh-content-max: min(32rem, 62%); --cmh-title-mb: 0.45rem; --cmh-summary-max: 46ch; --cmh-model-w-mobile: 175px;"
 >
   <div class="cmh__footer">

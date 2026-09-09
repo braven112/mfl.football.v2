@@ -23,6 +23,13 @@
  * falls through to `AflEventHero` exactly as before. A missing feed therefore
  * degrades to the card that always worked.
  *
+ * Only the What's New state passes `clampSummary`, and the decision lives here
+ * because this is the one place that knows which state is being rendered: that
+ * card's copy is an ENTRY DESCRIPTION written for an article page, and beside
+ * the screenshot frame it ran eight lines. Every other composite's summary is
+ * resolver-written and short — clamping those would cut an instruction rather
+ * than trim a paragraph.
+ *
  * The composite deliberately does NOT take `backdrop`. The franchise backdrop
  * paints the viewer's colours behind the whole card; a composite already says
  * whose story it is through its glow (see hero-franchise-accent.ts), and
@@ -119,6 +126,7 @@ const AFL_TRADE_BUILDER = ensureLeaguePrefix(getLeagueBySlug('afl-fantasy')!, '/
   <AflCompositeHero
     view={state.view}
     regionLabel={REGION_LABEL[state.kind] ?? 'AFL hero'}
+    clampSummary={state.kind === 'feature'}
   />
 ) : (
   <AflEventHero
