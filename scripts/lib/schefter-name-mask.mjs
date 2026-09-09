@@ -215,33 +215,38 @@ function historicalName(team, year) {
  * generation — a literal `{{TEAM:0008}}` reaching the group chat is worse than
  * the bug this replaces.
  */
-export function resolveTeamTokens(text, teams, { allowedFids } = {}) {
+export function resolveTeamTokens(text, teams, { allowedTokens } = {}) {
   if (typeof text !== 'string' || text.length === 0) {
     return { text, unresolved: false };
   }
-  // An id the payload never offered is NOT resolvable, even though the team
-  // map knows it. Without this, a one-digit slip — `{{TEAM_SHORT:0008}}` typed
-  // as `0018`, both live AFL franchises — substitutes cleanly, `unresolved`
-  // stays false, and the post ships naming a franchise nobody authorized. That
-  // is the same misattribution class tokens exist to prevent, and it would be
-  // invisible: the fallback and the scrub both key off `unresolved`.
+  // ONLY a token we actually minted resolves — matched whole, not by its
+  // parts. Gating on the franchise id alone left the YEAR unchecked, and a
+  // former-name token carries one: with 0004 authorized,
+  // `{{TEAM_FORMER:0004:2019}}` resolved to "Drunk Indians" and
+  // `{{TEAM_FORMER:0004:2010}}` to "Las Vegas Elite", both with
+  // `unresolved: false` — an out-of-window retired name shipped asserted as
+  // last season's, which is exactly what HARD RULE 30 forbids. Gating on the
+  // id alone had the same shape one level up: it let a one-digit slip
+  // (`0008` → `0018`, both live AFL franchises) through.
   //
-  // The authorized set is exactly the ids WE minted into the prompt, so the
-  // caller derives it from the anonymized payload rather than tracking it.
-  const permitted = allowedFids instanceof Set ? allowedFids : null;
-  const authorized = (fid) => !permitted || permitted.has(fid);
-  const get = (fid) => (
-    authorized(fid) && teams && typeof teams.get === 'function' ? teams.get(fid) : null
-  );
+  // Whole-token matching subsumes both, and needs nothing tracked separately:
+  // the authorized set is the tokens the caller put in the prompt. Anything
+  // else the model writes — wrong id, wrong year, invented, half-mangled —
+  // fails to substitute and trips `unresolved`, which is what drives the
+  // template fallback and the scrub.
+  const permitted = allowedTokens instanceof Set ? allowedTokens : null;
+  const authorized = (token) => !permitted || permitted.has(token);
+  const get = (fid) => (teams && typeof teams.get === 'function' ? teams.get(fid) : null);
 
   // FORMER first: `{{TEAM_FORMER:...}}` would otherwise be left half-eaten by
   // a looser current-name pattern. Fresh regexes per call — a shared /g regex
   // carries `lastIndex` between calls.
   let out = text.replace(/\{\{TEAM_FORMER:(\d{4}):(\d{4})\}\}/g, (m, fid, year) => (
-    historicalName(get(fid), Number(year)) ?? m
+    authorized(m) ? (historicalName(get(fid), Number(year)) ?? m) : m
   ));
 
   out = out.replace(/\{\{TEAM(_SHORT)?:(\d{4})\}\}/g, (m, short, fid) => {
+    if (!authorized(m)) return m;
     const team = get(fid);
     const name = typeof team?.name === 'string' && team.name.trim() ? team.name.trim() : null;
     if (!name) return m;

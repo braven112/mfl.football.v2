@@ -4804,17 +4804,17 @@ async function main() {
     // not a body to patch: fall back to the template, which is code-built and
     // has no tokens in it. A literal `{{TEAM}}` in the group chat would be
     // worse than the misattribution this replaces.
-    // The ids this beat is ALLOWED to name: exactly the ones we minted into
-    // its payload. Resolving any id the team map happens to know would let a
-    // one-digit slip (0008 → 0018, both live AFL franchises) substitute
-    // cleanly and ship a franchise the payload never authorized.
-    const allowedFids = new Set();
+    // The exact tokens this beat is ALLOWED to expand: the ones we minted into
+    // its own payload, matched whole. Gating on the franchise id alone left a
+    // former-name token's YEAR unchecked, so an out-of-window retired name
+    // resolved cleanly and shipped asserted as last season's.
+    const allowedTokens = new Set();
     for (const t of beat.anonymized ?? []) {
-      for (const m of JSON.stringify(t).matchAll(/\{\{TEAM(?:_SHORT|_FORMER)?:(\d{4})/g)) {
-        allowedFids.add(m[1]);
+      for (const m of JSON.stringify(t).matchAll(/\{\{TEAM(?:_SHORT|_FORMER)?:[\d:]+\}\}/g)) {
+        allowedTokens.add(m[0]);
       }
     }
-    const resolveOpts = { allowedFids };
+    const resolveOpts = { allowedTokens };
     let resolvedBody = resolveTeamTokens(aiBody || templateBody(beat.anonymized), teams, resolveOpts);
     let usedTemplate = !aiBody;
     if (resolvedBody.unresolved && aiBody) {

@@ -312,24 +312,35 @@ describe('team tokens — the wrong franchise becomes unwritable', () => {
       .toBe('The Fire Ready Aim called.');
   });
 
-  it('refuses an id the payload never authorized', () => {
-    // The last hole in "unwritable": resolution against the whole team map
-    // meant a one-digit slip — {{TEAM_SHORT:0008}} typed as 0018, both live
-    // AFL franchises — substituted cleanly with unresolved:false, so the
-    // fallback and the scrub (which both key off it) were bypassed and the
-    // post shipped naming a franchise nobody authorized. The allow-list is
-    // exactly the ids we minted into that beat's payload.
+  it('expands ONLY the exact tokens the payload minted', () => {
+    // Two holes, one shape. Gating on the franchise id let a one-digit slip
+    // through ({{TEAM_SHORT:0008}} typed as 0018, both live AFL franchises);
+    // gating on the id but not the YEAR let an out-of-window retired name
+    // through ({{TEAM_FORMER:0004:2019}} → "Drunk Indians", asserted as last
+    // season's, which HARD RULE 30 forbids). Both resolved with
+    // unresolved:false, so the fallback and the scrub were bypassed.
+    // Whole-token matching subsumes both.
     const teams = historyTeams();
-    const allowedFids = new Set(['0008']);
-    expect(resolveTeamTokens(teamShortToken('0008'), teams, { allowedFids }))
-      .toMatchObject({ text: 'Pain', unresolved: false });
-    const slipped = resolveTeamTokens(teamShortToken('0003'), teams, { allowedFids });
-    expect(slipped.unresolved).toBe(true);
-    expect(slipped.text).toContain('{{TEAM_SHORT:0003}}');
+    const allowedTokens = new Set([teamShortToken('0003'), formerTeamToken('0003', 2014)]);
+    expect(resolveTeamTokens(teamShortToken('0003'), teams, { allowedTokens }))
+      .toMatchObject({ text: 'Mavs', unresolved: false });
+    expect(resolveTeamTokens(formerTeamToken('0003', 2014), teams, { allowedTokens }))
+      .toMatchObject({ text: 'Generals', unresolved: false });
+
+    for (const forged of [
+      teamShortToken('0008'),            // wrong franchise
+      formerTeamToken('0003', 2012),     // right franchise, UNAUTHORIZED year
+      teamToken('0003'),                 // right franchise, register never minted
+    ]) {
+      const r = resolveTeamTokens(forged, teams, { allowedTokens });
+      expect(r.unresolved, forged).toBe(true);
+      expect(r.text, forged).toBe(forged);
+    }
   });
 
   it('derives the allow-list from the minted payload, in the scanner', () => {
-    expect(RUMOR_SRC).toMatch(/const allowedFids = new Set\(\);/);
+    expect(RUMOR_SRC).toMatch(/const allowedTokens = new Set\(\);/);
+    expect(RUMOR_SRC).toMatch(/allowedTokens\.add\(m\[0\]\)/);
     expect(RUMOR_SRC).toMatch(/resolveTeamTokens\(aiBody \|\| templateBody\(beat\.anonymized\), teams, resolveOpts\)/);
   });
 
@@ -339,11 +350,11 @@ describe('team tokens — the wrong franchise becomes unwritable', () => {
     // rename year could ship "X — the former X". Latent in both live configs
     // today — refused rather than relied upon.
     const teams = historyTeams();
-    const allowedFids = new Set(['0003']);
+    const allowedTokens = new Set([formerTeamToken('0003', 2020), formerTeamToken('0003', 2014)]);
     // 2020 falls in the Maverick era row, whose name IS the current name.
-    expect(resolveTeamTokens(formerTeamToken('0003', 2020), teams, { allowedFids }).unresolved).toBe(true);
+    expect(resolveTeamTokens(formerTeamToken('0003', 2020), teams, { allowedTokens }).unresolved).toBe(true);
     // A genuine former era still resolves.
-    expect(resolveTeamTokens(formerTeamToken('0003', 2014), teams, { allowedFids }).text).toBe('Generals');
+    expect(resolveTeamTokens(formerTeamToken('0003', 2014), teams, { allowedTokens }).text).toBe('Generals');
   });
 
   it('scrubs half-mangled markup, matching the widened detection', () => {

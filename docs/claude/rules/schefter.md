@@ -242,7 +242,11 @@ three previous trade posts had all named Fire Ready Aim.
   live post-history already holds the first — so masking only `p.body` left the
   leak open, and in the transaction lane (which drops bodies) the
   two-franchise subject would have been the ONLY thing left in the block.
-- **A token only resolves for an id the payload AUTHORIZED.** Resolution
+- **A token only resolves if the payload MINTED IT, matched whole.** Gating on
+  the franchise id alone left a former-name token's YEAR unchecked, so
+  `{{TEAM_FORMER:0004:2019}}` resolved to "Drunk Indians" — an out-of-window
+  retired name shipped asserted as last season's, which HARD RULE 30 forbids.
+  Gating on the id had the same shape one level up: Resolution
   against the whole team map meant a one-digit slip — `{{TEAM_SHORT:0008}}`
   typed as `0018`, both live AFL franchises — substituted cleanly with
   `unresolved: false`, bypassing both the template fallback and the scrub,
@@ -321,8 +325,8 @@ name a second team" had been trusting it to choose not to do.
   drains inside a week.
 - **Resolution happens at ONE choke point** — the `const body =` line in the
   beat loop, which every body passes through before the feed, GroupMe and the
-  post record. The team comes off the ORIGINAL tip (`beat.batch`), never the
-  anonymized copy, which is the one carrying the tokens.
+  post record. Resolution reads the team map, and the ALLOW-LIST comes off
+  `beat.anonymized` — the tokens we actually minted into that beat's prompt.
 - **An unresolved `{{...}}` is a FAILED GENERATION, not a body to patch.** The
   model inventing `{{TEAM_NICKNAME}}`, or writing a token on a beat with no
   team, falls back to the template — which is code-built and token-free. A
