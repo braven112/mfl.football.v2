@@ -40,6 +40,13 @@
   right: var(--fch-shot-right);
   top: 50%;
   transform: translateY(-50%) rotate(-1.5deg);
+  /* Pre-container-query fallback, paired with the copy column's. A dropped
+     `cqi` leaves `width` at its initial `auto`, and an absolutely positioned
+     box with `right` but no width shrink-wraps its content — so without this
+     line an old browser renders a broken frame rather than an overlapping one.
+     Both halves fall back to the same percentages, which is the geometry that
+     shipped before this file learned to reserve. */
+  width: clamp(260px, 38%, 400px);
   width: var(--fch-shot-w);
   border-radius: 0.5rem;
   overflow: hidden;
@@ -125,7 +132,20 @@ html.dark .fch .fch__shot--no-dark .fch__shot-img--dark {
    subtracts cleanly; the frame's right offset and the card's own padding are
    the same clamp, so they cancel and the gutter is what's left between them. */
 .fch__shot ~ .cmh__content {
-  max-width: calc(100cqi - var(--fch-shot-w) - var(--fch-shot-gutter));
+  /* Pre-container-query fallback, and the reason this is two declarations: a
+     `calc()` the browser cannot resolve is invalid at COMPUTED-VALUE time, and
+     `max-width` then falls back to its initial value — `none`, an unbounded
+     column, which is worse than the bug being fixed. A browser that drops the
+     second line keeps exactly today's behaviour instead. */
+  max-width: var(--cmh-content-max);
+  /* `min()`, not a bare calc: the reservation is a CEILING the frame imposes,
+     not a replacement for the adopter's own column cap. On a card wide enough
+     that `100cqi - frame` exceeds `--cmh-content-max` the copy would otherwise
+     widen past the measure the hero was composed at. */
+  max-width: min(
+    var(--cmh-content-max),
+    calc(100cqi - var(--fch-shot-w) - var(--fch-shot-gutter))
+  );
 }
 
 /* Light capture 404 → drop the frame entirely, logo silhouette returns. */
@@ -165,8 +185,15 @@ html.dark .fch .fch__shot--no-dark .fch__shot-img--dark {
   /* No frame, no reserved column: the copy runs the card's full width, the
      same as the shell's own mobile rule. Repeated here because the sibling
      selector above outranks `.cmh__content` and would otherwise hold a
-     column open for art that is display:none. */
-  .fch__shot ~ .cmh__content {
+     column open for art that is display:none.
+
+     BOTH selectors, and that is not belt-and-braces: a media query adds no
+     specificity, so the `.fch--no-shot` reservation-release above (0,3,0)
+     beats a bare `.fch__shot ~ .cmh__content` (0,2,0) even here. Without the
+     second selector a phone whose light capture 404s caps its copy at the
+     desktop column — 206px of a 374px card, measured. */
+  .fch__shot ~ .cmh__content,
+  .fch--no-shot .fch__shot ~ .cmh__content {
     max-width: 100%;
   }
 

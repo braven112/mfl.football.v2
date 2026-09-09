@@ -57,6 +57,13 @@ describe("What's New hero screenshot frame", () => {
       'width: var(--fch-shot-w)',
     );
     expect(shot).toContain('right: var(--fch-shot-right)');
+    // Both halves must degrade together. Without this the dropped `cqi` leaves
+    // the frame at `auto`, and an abspos box with `right` and no width
+    // shrink-wraps — a broken frame, not merely an overlapping one.
+    expect(
+      shot,
+      'the frame needs its own pre-container-query width fallback',
+    ).toContain('width: clamp(260px, 38%, 400px)');
   });
 
   it('measures itself in container units, not percentages', () => {
@@ -78,6 +85,23 @@ describe("What's New hero screenshot frame", () => {
     expect(reservation, 'and leave a gutter between the two').toContain('var(--fch-shot-gutter)');
   });
 
+  it('caps rather than replaces the adopter column, and survives a dropped calc', () => {
+    const reservation = ruleBody('.fch__shot ~ .cmh__content');
+    // A bare calc REPLACES `--cmh-content-max`, so on a card wide enough that
+    // `100cqi - frame` exceeds it the copy widens past the measure the hero was
+    // composed at. min() makes the reservation a ceiling, not a substitute.
+    expect(reservation, 'the reservation must be a min() against the adopter cap').toMatch(
+      /max-width:\s*min\(/,
+    );
+    // And the plain fallback ahead of it: an unresolvable calc is invalid at
+    // computed-value time, which lands max-width on `none` — an unbounded
+    // column, worse than the overlap this file exists to fix.
+    expect(
+      reservation.indexOf('max-width: var(--cmh-content-max)'),
+      'a pre-container-query fallback must precede the min()',
+    ).toBeGreaterThan(-1);
+  });
+
   it('releases the column when the capture 404s', () => {
     expect(ruleBody('.fch--no-shot .fch__shot ~ .cmh__content')).toContain(
       'max-width: var(--cmh-content-max)',
@@ -85,11 +109,24 @@ describe("What's New hero screenshot frame", () => {
   });
 
   it('releases the column on mobile, where the frame is hidden', () => {
-    const at = MOBILE.indexOf('.fch__shot ~ .cmh__content {');
+    const at = MOBILE.indexOf('.fch__shot ~ .cmh__content');
     expect(
       at,
       'the mobile block must reset the reservation — the sibling selector outranks .cmh__content',
     ).toBeGreaterThan(-1);
     expect(MOBILE.slice(at, MOBILE.indexOf('}', at))).toContain('max-width: 100%');
+  });
+
+  it('releases it on mobile for the 404 case too, which needs the specificity', () => {
+    // A media query adds NO specificity, so the `.fch--no-shot` release above
+    // (0,3,0) beats a bare `.fch__shot ~ .cmh__content` (0,2,0) even inside the
+    // mobile block. Measured before this selector existed: a 374px phone card
+    // whose light capture 404s held its copy to 206px, the desktop column.
+    const at = MOBILE.indexOf('.fch__shot ~ .cmh__content');
+    const rule = MOBILE.slice(at, MOBILE.indexOf('}', at));
+    expect(
+      rule,
+      'the mobile reset must also carry the .fch--no-shot selector, or it loses on specificity',
+    ).toContain('.fch--no-shot .fch__shot ~ .cmh__content');
   });
 });

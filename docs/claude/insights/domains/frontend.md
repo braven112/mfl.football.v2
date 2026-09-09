@@ -173,6 +173,29 @@ cutout heroes measure an ~81px overlap between the copy column and
 clears the visible player. What made this one real is that a browser frame is
 OPAQUE. Measure the art, not the box.
 
+**Why the SIBLING got this right with plain percentages.** `AflEventHero`
+already reserves its frame the same way (`--ev-shot-w` / `--ev-shot-right`,
+`max-width: min(640px, calc(100% - …))`) and has no mismatch — because
+`.afl-event-hero` carries **no padding**; the copy column carries it, with
+`box-sizing: border-box`. Padding box == content box, so both `38%`s mean the
+same number. The composite shell puts the padding on the CARD instead, and that
+one structural difference is the whole bug. So: **before trusting a reservation
+written in `%`, check where the padding lives.** Same-looking CSS, correct in
+one file and wrong in the other.
+
+Two more the sibling had already learned, worth copying rather than rediscovering:
+
+- **Make the reservation a `min()` against the column's own cap**, never a bare
+  `calc()` that replaces it — otherwise a wide enough card widens the copy past
+  the measure the hero was composed at.
+- **A media query adds NO specificity.** A `.fch--no-shot …` release (0,3,0)
+  outside a media block beats a bare `.fch__shot ~ …` (0,2,0) *inside* one, so
+  a mobile reset must repeat the more specific selector. Measured: a 374px
+  phone card whose light capture 404s held its copy to the 206px desktop
+  column. (`AflEventHero` dodges this by gating on `min-width: 640.02px` — note
+  the `.02`: `max-width: 640px` and `min-width: 641px` leave a fractional gap
+  that matches neither, ordinary under display scaling.)
+
 Guard: `tests/whats-new-hero-shot-reservation.test.ts` (scan-style — a render
 test at one width passes at 1280 and misses the collision at 1024).
 
