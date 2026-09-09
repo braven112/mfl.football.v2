@@ -73,12 +73,17 @@ html.dark {
    8.9:1 on the navy card, and the same ratio for the badge's navy ink on it.
 
    Defining only the light value would render the fallback in both themes —
-   light perfect, dark a navy score on a navy card. */
+   light perfect, dark a navy score on a navy card.
+
+   Selector order is `html.dark[data-league=...]`, matching tokens-dark.css
+   rather than the reverse — both are valid CSS at identical specificity, but
+   the repo has settled on this one and a lone outlier is what makes a scan
+   guard brittle. */
 html[data-league="afl"] {
   --lsh-accent: #16324a;
 }
 
-html[data-league="afl"].dark {
+html.dark[data-league="afl"] {
   --lsh-accent: #9dc0dd;
 }
 
