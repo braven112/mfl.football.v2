@@ -46,6 +46,14 @@ export interface TransactionFilters {
   from: number | null;
   to: number | null;
   kinds: Set<TransactionKind>;
+  /**
+   * True when `?types=` named the kinds, false when they are the defaults.
+   *
+   * The distinction matters for which checkboxes get OFFERED: the default set
+   * includes auction and blind-bid, so treating it as an explicit choice would
+   * re-add exactly the two dead controls `kindsPresentIn` exists to drop.
+   */
+  kindsExplicit: boolean;
   /** True when `?mine=1` resolved to a real franchise for the signed-in user. */
   mine: boolean;
 }
@@ -79,13 +87,19 @@ export interface ParseFiltersInput {
 export function parseFilters(input: ParseFiltersInput): TransactionFilters {
   const { params, year, myFranchiseId } = input;
 
-  const requestedKinds = (params.get('types') ?? '')
-    .split(',')
+  // BOTH shapes, because both occur. A checkbox group posts one `types=` param
+  // PER BOX (`?types=free-agent&types=auction`), so `params.get` would read the
+  // first and silently drop the rest — every box ticked would filter to free
+  // agents alone. A hand-written or shortened link uses the comma form
+  // (`?types=free-agent,auction`). Reading getAll and splitting each covers
+  // them together.
+  const requestedKinds = params
+    .getAll('types')
+    .flatMap((value) => value.split(','))
     .map((s) => s.trim())
     .filter(isKind);
-  const kinds = new Set<TransactionKind>(
-    requestedKinds.length > 0 ? requestedKinds : DEFAULT_KINDS
-  );
+  const kindsExplicit = requestedKinds.length > 0;
+  const kinds = new Set<TransactionKind>(kindsExplicit ? requestedKinds : DEFAULT_KINDS);
 
   const weekRaw = Number(params.get('week'));
   const week = Number.isInteger(weekRaw) && weekRaw >= 1 && weekRaw <= 22 ? weekRaw : null;
@@ -103,8 +117,31 @@ export function parseFilters(input: ParseFiltersInput): TransactionFilters {
     from: parseDate(params.get('from')),
     to: parseDate(params.get('to'), true),
     kinds,
+    kindsExplicit,
     mine,
   };
+}
+
+/**
+ * Which kind filters are worth OFFERING for this season.
+ *
+ * The AFL has never run an auction or a blind bid — not once in 24 years of
+ * archive — so rendering those two checkboxes on its page gives every AFL
+ * owner two controls that can only ever return nothing. Deriving the list from
+ * the season's own rows keeps each league (and each season) honest about what
+ * it actually has.
+ *
+ * `keep` is unioned in so a shared link's active filter always has a visible
+ * checkbox: land on `?types=trade` in a season with no trades and the box must
+ * still render, checked, or there is no way to switch it back off.
+ */
+export function kindsPresentIn(
+  rows: TransactionRow[],
+  keep: Iterable<TransactionKind> = []
+): TransactionKind[] {
+  const present = new Set<TransactionKind>(keep);
+  for (const row of rows) present.add(row.kind);
+  return ALL_KINDS.filter((kind) => present.has(kind));
 }
 
 /** True when no filter is narrowing the ledger beyond the default kinds. */
@@ -170,6 +207,16 @@ export function applyFilters(input: ApplyFiltersInput): TransactionRow[] {
   });
 }
 
+/** Whether Intl will accept this string as a time zone. */
+export function isUsableTimeZone(timeZone: string): boolean {
+  try {
+    new Intl.DateTimeFormat('en-US', { timeZone });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export interface DayGroup {
   /** `YYYY-MM-DD` in the grouping zone — a stable key, not a display string. */
   key: string;
@@ -189,14 +236,21 @@ export interface DayGroup {
  * Rows must already be sorted newest-first; the normalizer guarantees that.
  */
 export function groupByDay(rows: TransactionRow[], timeZone: string): DayGroup[] {
+  // An unusable zone falls back to UTC rather than throwing. Intl rejects
+  // anything that is not a real IANA id, and the zone reaching here comes from
+  // a stored viewer preference — where "PT" is a zone ID, not a zone, and
+  // handing it straight to Intl took the whole page down with "Invalid time
+  // zone specified: PT". A ledger grouped in the wrong zone is a small bug; a
+  // ledger that 500s is a broken page.
+  const safeZone = isUsableTimeZone(timeZone) ? timeZone : 'UTC';
   const keyFmt = new Intl.DateTimeFormat('en-CA', {
-    timeZone,
+    timeZone: safeZone,
     year: 'numeric',
     month: '2-digit',
     day: '2-digit',
   });
   const labelFmt = new Intl.DateTimeFormat('en-US', {
-    timeZone,
+    timeZone: safeZone,
     weekday: 'long',
     month: 'long',
     day: 'numeric',

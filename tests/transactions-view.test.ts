@@ -15,6 +15,7 @@ import {
   weekOf,
   DEFAULT_KINDS,
   ALL_KINDS,
+  kindsPresentIn,
 } from '../src/utils/transactions-view';
 import type { TransactionRow, TransactionKind } from '../src/utils/mfl-transactions';
 
@@ -219,5 +220,69 @@ describe('kind coverage', () => {
     // becomes unfilterable and silently invisible.
     const kinds: TransactionKind[] = ['free-agent', 'waiver', 'blind-bid', 'auction', 'trade'];
     expect([...ALL_KINDS].sort()).toEqual([...kinds].sort());
+  });
+});
+
+describe('which kind filters get offered', () => {
+  const mk = (kind: TransactionKind): TransactionRow => ({
+    id: kind, at: 1, kind, rawType: kind, franchiseId: '0001',
+    added: ['1'], dropped: [], trade: null, amount: null, byCommish: false,
+  });
+
+  it('offers only the kinds the season actually contains', () => {
+    // The AFL has never run an auction or a blind bid in 24 years of archive;
+    // rendering those checkboxes gives its owners two dead controls.
+    expect(kindsPresentIn([mk('free-agent'), mk('waiver')])).toEqual(['free-agent', 'waiver']);
+  });
+
+  it('keeps an active filter visible even with no matching rows', () => {
+    // Landing on ?types=trade in a tradeless season must still render the
+    // checked box, or there is no way to switch it back off.
+    expect(kindsPresentIn([mk('free-agent')], ['trade'])).toEqual(['free-agent', 'trade']);
+  });
+
+  it('returns them in a stable order, not first-seen order', () => {
+    expect(kindsPresentIn([mk('trade'), mk('auction'), mk('free-agent')])).toEqual([
+      'free-agent', 'auction', 'trade',
+    ]);
+  });
+
+  it('offers nothing for an empty season', () => {
+    expect(kindsPresentIn([])).toEqual([]);
+  });
+});
+
+describe('explicit vs default kinds', () => {
+  it('marks the default set as not explicit', () => {
+    // Otherwise the defaults (which include auction and blind-bid) are treated
+    // as a deliberate choice and kindsPresentIn re-offers the dead controls.
+    expect(filters('').kindsExplicit).toBe(false);
+  });
+
+  it('marks a ?types= list as explicit', () => {
+    expect(filters('types=trade').kindsExplicit).toBe(true);
+  });
+
+  it('marks an all-bogus ?types= list as NOT explicit', () => {
+    expect(filters('types=nonsense').kindsExplicit).toBe(false);
+  });
+});
+
+describe('the types param arrives in two shapes', () => {
+  it('reads a REPEATED types param, as a checkbox group posts it', () => {
+    // `params.get` returns only the first value, so every box ticked would
+    // filter to free agents alone — the whole ledger silently narrowed.
+    const f = filters('types=free-agent&types=blind-bid&types=auction');
+    expect([...f.kinds].sort()).toEqual(['auction', 'blind-bid', 'free-agent']);
+  });
+
+  it('reads the comma shape a hand-written link uses', () => {
+    const f = filters('types=free-agent,auction');
+    expect([...f.kinds].sort()).toEqual(['auction', 'free-agent']);
+  });
+
+  it('reads a mix of both', () => {
+    const f = filters('types=free-agent,auction&types=trade');
+    expect([...f.kinds].sort()).toEqual(['auction', 'free-agent', 'trade']);
   });
 });

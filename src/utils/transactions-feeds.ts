@@ -39,9 +39,9 @@ export async function loadLeagueMinimum(
 }
 
 export interface LoadSeasonInput {
-  /** `import.meta.glob` over this league's `*/transactions.json`, lazy. */
+  /** Lazy `import.meta.glob` over this league's per-season transactions feeds. */
   transactionFeeds: LazyFeedGlob;
-  /** The same over `*/league.json`, for the season's minimum salary. */
+  /** The same over the per-season league feeds, for the minimum salary. */
   leagueFeeds: LazyFeedGlob;
   year: number;
   /**
