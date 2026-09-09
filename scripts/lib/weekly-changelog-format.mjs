@@ -11,7 +11,47 @@
  * filesystem. The date-sensitive helpers (which Monday is it, when does
  * staging reset) deliberately stayed in the script — a function that reads
  * `new Date()` is not one a test can pin.
+ *
+ * It also owns the scope rule (which league articles a staged change lands in)
+ * for the same reason: the rollup and the PR-time data test both need it, and
+ * two copies of that answer is how Best Ball ended up with an article about
+ * Schefter, which Best Ball does not have.
  */
+
+import { ALL_LEAGUES } from '../../src/config/leagues-data.mjs';
+
+/**
+ * The league tag meaning "the whole site", not one league.
+ */
+export const BOTH_TAG = 'both';
+
+/**
+ * What `both` expands to: every FULL-MANAGEMENT league.
+ *
+ * It used to expand to every league in the registry, which quietly included
+ * Best Ball — a draft-only league with no lineups, no in-season management,
+ * no Schefter feed and no /notifications route. A `both`-tagged line about any
+ * of those shipped to bb1's article describing a feature it does not have, and
+ * one of them shipped a link that 404s there (the link guard caught the href;
+ * nothing was checking the audience).
+ *
+ * Derived from the registry's own `bestBall` flag rather than a list of slugs:
+ * the flag already means "draft-only, skip UI that assumes roster management"
+ * (see its docblock in leagues-data.mjs), which is exactly the question being
+ * asked here, and a fourth league joins the right side of it automatically.
+ */
+export const BOTH_LEAGUES = ALL_LEAGUES.filter((l) => !l.bestBall).map((l) => l.navSlug);
+
+/**
+ * Which league articles a staged change lands in.
+ *
+ * A change may still be tagged with a single league by name — including a
+ * best-ball one, for a fix that genuinely only affects it. `both` is the only
+ * tag that fans out.
+ */
+export function leaguesForStagedChange(change) {
+  return change?.league === BOTH_TAG ? [...BOTH_LEAGUES] : [String(change?.league)];
+}
 
 /** Map area slugs to display names */
 export const AREA_LABELS = {

@@ -9,7 +9,11 @@ import stagingFile from '../src/data/weekly-changelog-staging.json';
 import { describeSpriteIconValidation } from './helpers/sprite-icons';
 import { astroRouteExists } from './helpers/astro-routes';
 import { WHATS_NEW_ACTIVE_MAX } from '../scripts/lib/retention-policy.mjs';
-import { AREA_LABELS } from '../scripts/lib/weekly-changelog-format.mjs';
+import {
+  AREA_LABELS,
+  BOTH_TAG,
+  leaguesForStagedChange,
+} from '../scripts/lib/weekly-changelog-format.mjs';
 
 /**
  * What's New Data Validation
@@ -398,7 +402,7 @@ describe('whats-new.json league scoping', () => {
 
 // Derived from the same registry-backed list the display code uses, so the
 // PR-time gate and the Monday cron can never validate different vocabularies.
-const VALID_STAGING_LEAGUES = [...VALID_LEAGUE_SLUGS, 'both'];
+const VALID_STAGING_LEAGUES = [...VALID_LEAGUE_SLUGS, BOTH_TAG];
 
 describe('weekly-changelog-staging.json league scoping', () => {
   interface StagingChange {
@@ -550,9 +554,15 @@ describe('weekly-changelog-staging.json league scoping', () => {
 
   const FEATURE_TYPES = ['new-page', 'new-feature', 'enhancement'];
 
-  /** Which league articles a staged change lands in ("both" lands in each). */
+  /**
+   * Which league articles a staged change lands in.
+   *
+   * The rollup's own helper, imported rather than restated: a second copy of
+   * this answer is what let `both` mean "every league in the registry" here
+   * while the reader saw something else on the site.
+   */
   const leaguesFor = (change: StagingChange): string[] =>
-    change.league === 'both' ? [...VALID_LEAGUE_SLUGS] : [String(change.league)];
+    leaguesForStagedChange(change);
 
   it('at most one staged change per league is flagged "featured"', () => {
     const byLeague = new Map<string, StagingChange[]>();

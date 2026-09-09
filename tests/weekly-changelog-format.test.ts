@@ -1,6 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import {
   AREA_LABELS,
+  BOTH_LEAGUES,
+  BOTH_TAG,
   FEATURE_TYPES,
   FIX_TYPES,
   buildChangeLine,
@@ -9,6 +11,7 @@ import {
   buildSummary,
   groupByArea,
   joinPhrases,
+  leaguesForStagedChange,
 } from '../scripts/lib/weekly-changelog-format.mjs';
 import {
   countAnchorOpenTags,
@@ -17,6 +20,9 @@ import {
   isLeagueScopedPath,
 } from '../src/utils/whats-new-links';
 import type { DescriptionBlock, DescriptionListBlock } from '../src/types/whats-new';
+import { readFileSync } from 'fs';
+import { resolve } from 'path';
+import { ALL_LEAGUES } from '../src/config/leagues';
 
 /**
  * The rollup builds the ONE article a week anybody reads, unattended, at 8pm
@@ -308,5 +314,60 @@ describe('helpers', () => {
       expect(label, `${slug} has no display label`).toBeTruthy();
       expect(label).not.toBe(slug === 'other' ? '' : slug);
     }
+  });
+});
+
+describe('`both` means the full-management leagues, not every league', () => {
+  /**
+   * `both` used to expand to every league in the registry, Best Ball included.
+   * Best Ball is draft-only: no lineups, no in-season management, no Schefter
+   * feed, no /notifications route. It shipped an article whose only line was a
+   * Schefter fix, for a league with no Schefter — and a `both` line linking
+   * /notifications, which the link guard caught only because the href 404s.
+   * The wrong AUDIENCE had nothing checking it at all.
+   */
+  it('excludes every best-ball league', () => {
+    const draftOnly = ALL_LEAGUES.filter((l) => l.bestBall).map((l) => l.navSlug);
+    expect(draftOnly.length, 'no best-ball league in the registry — has the flag moved?')
+      .toBeGreaterThan(0);
+    for (const slug of draftOnly) {
+      expect(BOTH_LEAGUES, `"${BOTH_TAG}" must not fan out to draft-only ${slug}`).not.toContain(slug);
+    }
+  });
+
+  it('still covers more than one league, or the tag means nothing', () => {
+    expect(BOTH_LEAGUES.length).toBeGreaterThan(1);
+  });
+
+  it('includes every league that is not draft-only', () => {
+    const expected = ALL_LEAGUES.filter((l) => !l.bestBall).map((l) => l.navSlug);
+    expect([...BOTH_LEAGUES].sort()).toEqual([...expected].sort());
+  });
+
+  it('fans out only the both tag — a named league stays itself', () => {
+    expect(leaguesForStagedChange({ league: BOTH_TAG })).toEqual([...BOTH_LEAGUES]);
+    for (const league of ALL_LEAGUES) {
+      expect(leaguesForStagedChange({ league: league.navSlug })).toEqual([league.navSlug]);
+    }
+  });
+
+  /**
+   * The rollup and the PR-time data test must apply the SAME expansion. Both
+   * import the helper above; an inline `=== 'both'` in the rollup would be a
+   * second copy of the rule, which is exactly how the two drifted before.
+   */
+  it('the rollup routes through the helper rather than comparing inline', () => {
+    const source = readFileSync(
+      resolve(__dirname, '../scripts/weekly-changelog-rollup.mjs'),
+      'utf-8',
+    );
+    expect(source).toContain('leaguesForStagedChange');
+    const inlineCompare = /\.league\s*===\s*['"]both['"]/.test(source);
+    expect(
+      inlineCompare,
+      'weekly-changelog-rollup.mjs compares the "both" tag inline. Use ' +
+        'leaguesForStagedChange() so the script and tests/whats-new-data.test.ts ' +
+        'cannot answer this differently.',
+    ).toBe(false);
   });
 });

@@ -365,9 +365,19 @@ read. Depth now lives behind a link, not in a longer announcement.
 - **A staged `summary` is ONE LINE — 200 visible characters**, enforced by
   `tests/whats-new-data.test.ts`. Needing more than a line is the signal the
   feature needs a `/guides` page, not a longer bullet. `league` is mandatory
-  (`theleague | afl | both`); the rollup exits 1 on an untagged change, and
-  `changes` is the only array it reads — an entry under any other key is
-  silently dropped when staging resets.
+  (`theleague | afl | both`, or a single league by name); the rollup exits 1 on
+  an untagged change, and `changes` is the only array it reads — an entry under
+  any other key is silently dropped when staging resets.
+- **`both` means the FULL-MANAGEMENT leagues, not every league in the
+  registry.** It expands via `BOTH_LEAGUES`
+  (`scripts/lib/weekly-changelog-format.mjs`), derived from the registry's own
+  `bestBall` flag, so a draft-only league is excluded automatically. It used to
+  fan out to every league, which gave Best Ball an article whose only line was
+  a Schefter fix — for a league with no Schefter — and a line linking
+  `/notifications`, a route it does not have. A best-ball-specific fix is still
+  taggable by naming that league. The rollup and the PR-time data test both
+  import `leaguesForStagedChange()`; an inline `=== 'both'` is a second copy of
+  the rule and `tests/weekly-changelog-format.test.ts` fails on one.
 - **Exactly one staged change per league carries `featured: true`**, supplying
   the article's `headline`, `lede` and screenshot (`image`/`imageAlt`, webp in
   `public/assets/whats-new/`). Required whenever the week ships a `new-page`,

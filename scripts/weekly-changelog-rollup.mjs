@@ -37,8 +37,10 @@ import { fileURLToPath } from 'node:url';
 import { ALL_LEAGUES, DEFAULT_LEAGUE_SLUG } from '../src/config/leagues-data.mjs';
 import { WHATS_NEW_ACTIVE_MAX, WHATS_NEW_ARCHIVE_DIR } from './lib/retention-policy.mjs';
 import {
+  BOTH_TAG,
   FEATURE_TYPES,
   FIX_TYPES,
+  leaguesForStagedChange,
   buildDateRange,
   buildDescription,
   buildSummary,
@@ -97,7 +99,7 @@ const LEAGUE_ROLLUPS = Object.fromEntries(
   ]),
 );
 
-const VALID_CHANGE_LEAGUES = [...Object.keys(LEAGUE_ROLLUPS), 'both'];
+const VALID_CHANGE_LEAGUES = [...Object.keys(LEAGUE_ROLLUPS), BOTH_TAG];
 
 // ── Main ──
 
@@ -222,8 +224,11 @@ const existingIds = new Set(whatsNew.map((e) => e.id));
 const newEntries = [];
 
 for (const [leagueSlug, config] of Object.entries(LEAGUE_ROLLUPS)) {
-  const leagueChanges = changes.filter(
-    (c) => c.league === leagueSlug || c.league === 'both',
+  // Routed through the shared helper, never an inline `=== 'both'`: the
+  // expansion is a rule (see BOTH_LEAGUES) and the PR-time data test has to
+  // apply the identical one.
+  const leagueChanges = changes.filter((c) =>
+    leaguesForStagedChange(c).includes(leagueSlug),
   );
   if (leagueChanges.length === 0) continue;
 

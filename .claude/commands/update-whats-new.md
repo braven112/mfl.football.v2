@@ -45,6 +45,13 @@ Display code fails closed (an untagged entry shows nowhere) and the rollup
 exits 1 on an untagged change. Valid slugs are `theleague` and `afl` — never
 `afl-fantasy`.
 
+**`both` means the two full-management leagues, NOT every league.** Best Ball
+is draft-only and is excluded automatically (via the registry's `bestBall`
+flag). Before checking `both`, ask whether the change is real for a league with
+no lineups, no in-season roster management, no Schefter feed and no
+`/notifications` route — if it is best-ball-only, tag that league by name
+instead.
+
 ## Step 4: Write the staged change
 
 Append to the `changes` array of `src/data/weekly-changelog-staging.json`:
