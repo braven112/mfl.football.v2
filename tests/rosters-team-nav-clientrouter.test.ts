@@ -26,7 +26,7 @@ const PAGE = fs.readFileSync(
   'utf-8',
 );
 
-describe('the roster team-nav accordion re-binds on every page load', () => {
+describe('the roster page binds its controls per page load, not per session', () => {
   it('is not wired by a module-scope IIFE', () => {
     expect(
       PAGE,
@@ -56,5 +56,27 @@ describe('the roster team-nav accordion re-binds on every page load', () => {
     expect(PAGE).toContain('toggleButton.onclick = toggleAccordion;');
     expect(PAGE, 'a stacked click listener toggles twice per click')
       .not.toMatch(/toggleButton\.addEventListener\(/);
+  });
+
+  it('wires the contract-action buttons the same way', () => {
+    // Same bundled script, same trap, and a worse symptom: updateClearAllButton()
+    // re-queries both buttons by id to show them, so a module-scope binding left
+    // a VISIBLE Submit button with no handler on a return visit — a franchise
+    // tag or veteran extension that never reached the commissioner.
+    for (const id of ['clearAllTagsBtn', 'submitFranchiseTagsBtn']) {
+      expect(
+        PAGE,
+        `#${id} must not be bound with addEventListener at module scope`,
+      ).not.toMatch(new RegExp(`getElementById\\('${id}'\\);\\n\\s*\\w+\\?\\.addEventListener`));
+    }
+
+    const initAt = PAGE.indexOf('const initRosterPage = ');
+    const callAt = PAGE.indexOf('initContractActionButtons();');
+    expect(callAt, 'initContractActionButtons() must be called from initRosterPage')
+      .toBeGreaterThan(initAt);
+
+    // Assigned, not added — a stacked submit handler POSTs every declaration twice.
+    expect(PAGE).toContain('submitBtn.onclick = handleSubmitFranchiseTagsClick;');
+    expect(PAGE).toContain('clearAllBtn.onclick = handleClearAllTagsClick;');
   });
 });
