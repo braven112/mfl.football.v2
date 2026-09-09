@@ -14,6 +14,9 @@ import type {
   RosterPlayer,
   MFLPlayerInfo,
 } from '../src/types/contract-eligibility';
+import { ACQUISITION_TYPES } from '../src/utils/contract-eligibility';
+import { parseRosterMove } from '../scripts/lib/roster-move-parse.mjs';
+import corpus from './fixtures/mfl-transaction-strings.json';
 
 // Helper: create a date in a specific contract window
 function offseasonDate(year = 2026): Date {
@@ -62,11 +65,31 @@ describe('parseTransactionString', () => {
     expect(result.bbidAmount).toBe(425000);
   });
 
-  it('parses BBID add-only format', () => {
+  // THE REGRESSION. A winning waiver claim that needed no corresponding cut
+  // ends at the pipe. MFL has never emitted the "14867,|500000|," this test
+  // used to assert -- that trailing comma was written by hand, so the suite
+  // passed while every drop-free claim in production parsed to zero adds,
+  // was discarded by parseTransactions(), and never opened its owner's
+  // declaration window. Ryan Flournoy (16778) was claimed as
+  // "16778,|500000|" and showed no contract-length control at all.
+  it('parses a BBID claim with NO drop (real MFL shape, trailing pipe)', () => {
+    const result = parseTransactionString('16778,|500000|');
+    expect(result.addedPlayerIds).toEqual(['16778']);
+    expect(result.droppedPlayerIds).toEqual([]);
+    expect(result.bbidAmount).toBe(500000);
+  });
+
+  it('still parses a BBID claim with no drop when a trailing comma is present', () => {
     const result = parseTransactionString('14867,|500000|,');
     expect(result.addedPlayerIds).toEqual(['14867']);
     expect(result.droppedPlayerIds).toEqual([]);
     expect(result.bbidAmount).toBe(500000);
+  });
+
+  it('parses a multi-player drop (both ids, not one concatenated id)', () => {
+    const result = parseTransactionString('|17064,16191,');
+    expect(result.addedPlayerIds).toEqual([]);
+    expect(result.droppedPlayerIds).toEqual(['17064', '16191']);
   });
 
   it('parses drop-only format (pipe prefix)', () => {
@@ -632,5 +655,125 @@ describe('getTeamEligibility', () => {
     expect(result.franchiseId).toBe('0009');
     expect(result.players).toHaveLength(3);
     expect(result.eligibleCount).toBeGreaterThanOrEqual(2); // At least BBID player + RC rookie
+  });
+});
+
+// --- Recorded MFL corpus ---
+//
+// tests/fixtures/mfl-transaction-strings.json holds one entry per DISTINCT
+// (type, string shape) in TheLeague's full 2026 transactions export. It exists
+// because the shape this parser got wrong was one nobody had ever looked at:
+// the add-only BBID case was asserted against a hand-written string with a
+// trailing comma MFL does not send. Real strings, or the test proves nothing.
+
+describe('recorded MFL transaction strings', () => {
+  const acquisitionShapes = corpus.shapes.filter(s => ACQUISITION_TYPES.includes(s.type));
+
+  it('covers both BBID claim shapes — with a drop and without one', () => {
+    const bbid = corpus.shapes.filter(s => s.type === 'BBID_WAIVER').map(s => s.shape);
+    expect(bbid).toContain('N,|N|');    // claim, nothing cut
+    expect(bbid).toContain('N,|N|N,');  // claim + cut
+  });
+
+  it('extracts an added player from every acquisition string that has one', () => {
+    for (const entry of acquisitionShapes) {
+      const parsed = parseTransactionString(entry.example);
+      // A leading pipe is a pure drop and legitimately adds nobody.
+      const expectsAdd = !entry.example.startsWith('|') && entry.example !== '';
+      expect(
+        parsed.addedPlayerIds.length > 0,
+        `${entry.type} ${JSON.stringify(entry.example)} (${entry.occurrences} in the export) parsed to ${JSON.stringify(parsed.addedPlayerIds)}`,
+      ).toBe(expectsAdd);
+    }
+  });
+
+  it('never silently drops an acquisition that adds a player', () => {
+    // The end state of the bug: parseTransactions() discards any acquisition
+    // whose string yielded no adds, so a parse miss is invisible downstream.
+    const raw: MFLRawTransaction[] = acquisitionShapes
+      .filter(entry => !entry.example.startsWith('|') && entry.example !== '')
+      .map((entry, i) => ({
+        type: entry.type,
+        franchise: '0008',
+        timestamp: String(1788919200 + i),
+        transaction: entry.example,
+      }));
+    expect(parseTransactions(raw)).toHaveLength(raw.length);
+  });
+
+  it('agrees with the Schefter scanner on every roster-move string', () => {
+    // scripts/lib/roster-move-parse.mjs parses the same MFL field and already
+    // carried the tolerant BBID pattern; this parser did not, and the drift
+    // was the bug. Scoped to the roster-move types the scanner is fed —
+    // AUCTION_* strings are a different grammar (the leading segment of an
+    // AUCTION_BID is a FRANCHISE id) and that parser never sees them.
+    const rosterMoveTypes = ['FREE_AGENT', 'WAIVER', 'BBID_WAIVER'];
+    for (const entry of corpus.shapes.filter(s => rosterMoveTypes.includes(s.type))) {
+      const mine = parseTransactionString(entry.example);
+      const theirs = parseRosterMove(entry.example);
+      expect(mine.addedPlayerIds, `adds for ${JSON.stringify(entry.example)}`).toEqual(theirs.addedIds);
+      expect(mine.droppedPlayerIds, `drops for ${JSON.stringify(entry.example)}`).toEqual(theirs.droppedIds);
+      expect(mine.bbidAmount, `bid for ${JSON.stringify(entry.example)}`).toEqual(theirs.bbidAmount);
+    }
+  });
+
+  it('ignores AUCTION_BID, whose leading segment is a franchise id', () => {
+    // "0511|2525000|" is franchise 0511 bidding, not player 0511 being added.
+    // ACQUISITION_TYPES is what keeps it out; this pins that it stays out.
+    const raw: MFLRawTransaction[] = [
+      { type: 'AUCTION_BID', franchise: '0005', timestamp: '1788919200', transaction: '0511|2525000|' },
+    ];
+    expect(parseTransactions(raw)).toHaveLength(0);
+  });
+});
+
+// --- Regression: the drop-free waiver claim, end to end ---
+
+describe('drop-free BBID claim opens the declaration window', () => {
+  it('makes a claim with no corresponding cut new-acquisition eligible', () => {
+    // Ryan Flournoy (16778), claimed by franchise 0008 for $500K at
+    // 2026-09-09T02:00:00Z with nothing cut alongside him. Before the parse
+    // fix this returned eligible:false, so rosters.astro rendered the years
+    // as plain text and the action sheet offered no "Declare Contract".
+    const now = new Date('2026-09-09T03:00:00Z');
+    const rawTxns: MFLRawTransaction[] = [
+      {
+        type: 'BBID_WAIVER',
+        franchise: '0008',
+        timestamp: '1788919200', // 2026-09-09T02:00:00Z
+        transaction: '16778,|500000|',
+      },
+    ];
+    const transactions = parseTransactions(rawTxns);
+    const roster = makeRosterPlayer({ id: '16778', salary: '500000.00', contractYear: '1', contractInfo: '' });
+    const playerInfo = makePlayerInfo({ id: '16778', name: 'Flournoy, Ryan', draft_year: '2024' });
+
+    const result = getPlayerEligibility('16778', '0008', roster, transactions, playerInfo, 2026, now);
+    expect(result.eligible).toBe(true);
+    expect(result.declarationType).toBe('new-acquisition');
+    expect(result.yearOptions).toEqual([1, 2, 3, 4, 5]);
+    expect(result.isExpired).toBe(false);
+    // In-season: 24 hours from the claim, not 48.
+    expect(result.deadlineTimestamp).toBe(1788919200 + 24 * 60 * 60);
+  });
+
+  it('expires that window 24 hours after the claim', () => {
+    const rawTxns: MFLRawTransaction[] = [
+      {
+        type: 'BBID_WAIVER',
+        franchise: '0008',
+        timestamp: '1788919200',
+        transaction: '16778,|500000|',
+      },
+    ];
+    const transactions = parseTransactions(rawTxns);
+    const roster = makeRosterPlayer({ id: '16778', contractYear: '1', contractInfo: '' });
+    const playerInfo = makePlayerInfo({ id: '16778', draft_year: '2024' });
+
+    const result = getPlayerEligibility(
+      '16778', '0008', roster, transactions, playerInfo, 2026,
+      new Date('2026-09-10T03:00:00Z'),
+    );
+    expect(result.eligible).toBe(false);
   });
 });

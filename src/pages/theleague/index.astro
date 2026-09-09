@@ -58,6 +58,7 @@ import { resolveUnsignedFaAlerts, type DashboardPlayerContext, type DeclaredYear
 import { getDeclarationsByFranchise } from '../../utils/contract-storage';
 import { loadActiveAuctions, type MflPlayerExtras } from '../../utils/homepage-auctions';
 import { getCachedRosters } from '../../utils/mfl-roster-cache';
+import { getCachedRecentTransactions, mergeTransactionRows } from '../../utils/mfl-transactions-cache';
 import type { SchefterFeed as FeedType } from '../../types/schefter';
 import {
   buildLiveScoringHeroProps,
@@ -308,11 +309,17 @@ const rawPlayerFeed = playerFeedEntries[0]?.data?.players?.player ?? [];
 const transactionEntries = Object.entries(transactionFeeds)
   .map(([path, mod]) => ({ season: extractFeedSeason(path), data: getModuleData(mod) }))
   .filter((item) => item.season === currentSalaryYear && item.data);
-const rawTransactions: MFLRawTransaction[] = transactionEntries[0]?.data?.transactions?.transaction
+const staticTransactions: MFLRawTransaction[] = transactionEntries[0]?.data?.transactions?.transaction
   ? Array.isArray(transactionEntries[0].data.transactions.transaction)
     ? transactionEntries[0].data.transactions.transaction
     : [transactionEntries[0].data.transactions.transaction]
   : [];
+
+// The Unsigned FA card counts down a 24-hour declaration window, so it cannot
+// run on the build-time feed alone — see mfl-transactions-cache.ts. Same
+// layering as the rosters page; null (no Redis) leaves the static feed.
+const liveTransactions = await getCachedRecentTransactions(currentSalaryYear, THELEAGUE.id);
+const rawTransactions: MFLRawTransaction[] = mergeTransactionRows(staticTransactions, liveTransactions);
 
 const hpPlayerIdentityMap = getPlayerMap(parseInt(currentSalaryYear) || getCurrentLeagueYear());
 const playerMetaById = new Map<string, { name: string; position: string }>();
