@@ -142,8 +142,43 @@ const enforceWhatsNewCap = (entries) => {
 // doesn't, and used to fall straight through to the real rollup — consuming
 // every staged change (including other people's) on what the caller believed
 // was a preview.
-const KNOWN_FLAGS = new Set(['--cap-only']);
-const unknownFlags = process.argv.slice(2).filter((a) => !KNOWN_FLAGS.has(a));
+const KNOWN_FLAGS = new Set(['--cap-only', '--week']);
+const argv = process.argv.slice(2);
+
+/**
+ * `--week YYYY-MM-DD` — publish under a named week instead of the current one.
+ *
+ * The article's id and date come from `getCurrentMonday()`, which makes the
+ * script unable to build any week but the one the clock is standing in: a
+ * Monday job that died cannot be re-run on Tuesday, and next week's article
+ * cannot be produced early to look at. Both are real needs and neither is
+ * served by editing the published JSON afterwards.
+ *
+ * It must name a MONDAY. Every id in the file is `weekly-rollup-<monday>`, and
+ * a Wednesday here would mint an id no other run can ever collide with — which
+ * sounds harmless and is the opposite: the real Monday run would then publish a
+ * SECOND article for the same week's changes.
+ */
+const weekIndex = argv.indexOf('--week');
+const weekOverride = weekIndex === -1 ? null : argv[weekIndex + 1];
+if (weekIndex !== -1) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(weekOverride ?? '')) {
+    console.error(`ERROR: --week wants a YYYY-MM-DD date, got ${JSON.stringify(weekOverride)}.`);
+    process.exit(1);
+  }
+  if (new Date(`${weekOverride}T12:00:00`).getDay() !== 1) {
+    console.error(
+      `ERROR: --week ${weekOverride} is not a Monday. Article ids are keyed to the week's ` +
+        `Monday; any other day mints an id the real Monday run cannot collide with, so the ` +
+        `week would publish twice.`,
+    );
+    process.exit(1);
+  }
+}
+
+const unknownFlags = argv.filter(
+  (a, i) => !KNOWN_FLAGS.has(a) && !(weekIndex !== -1 && i === weekIndex + 1),
+);
 if (unknownFlags.length > 0) {
   console.error(`ERROR: unknown argument(s): ${unknownFlags.join(' ')}`);
   console.error(`Supported flags: ${[...KNOWN_FLAGS].join(', ')} (no arguments = publish the staging queue).`);
@@ -153,7 +188,7 @@ if (unknownFlags.length > 0) {
 
 // --cap-only: enforce the active-file cap without publishing staging (used
 // for the initial migration and safe to re-run any time).
-if (process.argv.includes('--cap-only')) {
+if (argv.includes('--cap-only')) {
   const entries = JSON.parse(readFileSync(WHATS_NEW_PATH, 'utf-8'));
   const { active, archived } = enforceWhatsNewCap(entries);
   if (archived > 0) writeFileSync(WHATS_NEW_PATH, JSON.stringify(active, null, 2) + '\n');
@@ -180,7 +215,7 @@ if (untagged.length > 0) {
   process.exit(1);
 }
 
-const today = formatDate(getCurrentMonday());
+const today = weekOverride ?? formatDate(getCurrentMonday());
 const whatsNew = JSON.parse(readFileSync(WHATS_NEW_PATH, 'utf-8'));
 const existingIds = new Set(whatsNew.map((e) => e.id));
 

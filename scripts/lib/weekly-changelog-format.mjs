@@ -32,6 +32,7 @@ export const AREA_LABELS = {
   'rules': 'Rules',
   'import-rankings': 'Import Rankings',
   'whats-new': "What's New",
+  'guides': 'Guides',
   'admin': 'Admin',
   'schefter': 'Schefter Report',
   'draft': 'Draft',
