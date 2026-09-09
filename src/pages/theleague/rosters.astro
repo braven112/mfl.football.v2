@@ -5752,10 +5752,19 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
   /**
    * Team Navigation Accordion
    * Manages collapse/expand state with localStorage persistence
+   *
+   * Called from initRosterPage(), NOT at module scope. This bundled script is
+   * evaluated ONCE per browser session — ClientRouter keys `scriptsAlreadyRan`
+   * on it and swaps the DOM underneath — so as a module-scope IIFE this bound
+   * the chevron on the first rosters visit and never again: every later arrival
+   * got a fresh button with no handler and the team list would not open until
+   * the owner hard-refreshed. Handlers are ASSIGNED (onclick/onkeydown) rather
+   * than added, because initRosterPage runs twice on initial load (see
+   * "Initial-Load Double-Init" in docs/claude/insights/domains/frontend.md).
    */
-  (function initTeamNavAccordion() {
+  const initTeamNavAccordion = () => {
     const STORAGE_KEY = 'roster-team-nav-collapsed';
-    const toggleButton = document.querySelector('[data-accordion-toggle="team-nav"]');
+    const toggleButton = document.querySelector<HTMLElement>('[data-accordion-toggle="team-nav"]');
     const accordionContent = document.getElementById('team-nav-content');
 
     if (!toggleButton || !accordionContent) return;
@@ -5800,15 +5809,16 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
       setAccordionState(!isExpanded);
     };
 
-    // Event listeners
-    toggleButton.addEventListener('click', toggleAccordion);
-    toggleButton.addEventListener('keydown', (e) => {
+    // Event handlers — assigned, not added, so a re-init replaces rather than
+    // stacks them.
+    toggleButton.onclick = toggleAccordion;
+    toggleButton.onkeydown = (e: KeyboardEvent) => {
       if (e.key === 'Enter' || e.key === ' ') {
         e.preventDefault();
         toggleAccordion();
       }
-    });
-  })();
+    };
+  };
 
   let selectedPlayer = null;
 
@@ -5961,15 +5971,22 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
     if (submitBtn) submitBtn.style.display = (hasFranchiseTags || hasVeteranExtensions) && isInSubmitWindow() ? 'inline-flex' : 'none';
   };
 
-  // Clear all tags button event listener
-  const clearAllBtn = document.getElementById('clearAllTagsBtn');
-  clearAllBtn?.addEventListener('click', () => {
+  // Clear all tags / Submit tags & extensions.
+  //
+  // Wired from initRosterPage for the same reason the team-nav accordion is
+  // (see initTeamNavAccordion above): this bundled script is evaluated once per
+  // SESSION, so a module-scope binding held the FIRST visit's buttons. Worse
+  // here than there — updateClearAllButton() re-queries both by id to show
+  // them, so on a return visit Submit appeared, looked live, and did nothing:
+  // a franchise-tag or veteran-extension declaration that never reached the
+  // commissioner, inside a window that closes Feb 15.
+  const handleClearAllTagsClick = () => {
     clearAllContractActions();
-  });
+  };
 
-  // Submit tags/extensions handler
-  const submitFranchiseTagsBtn = document.getElementById('submitFranchiseTagsBtn');
-  submitFranchiseTagsBtn?.addEventListener('click', async () => {
+  const handleSubmitFranchiseTagsClick = async () => {
+    const submitFranchiseTagsBtn = document.getElementById('submitFranchiseTagsBtn');
+    if (!submitFranchiseTagsBtn) return;
     const actionsToSubmit = Object.values(contractActions).filter(
       a => a.type === 'franchise' || a.type === 'extension'
     );
@@ -6053,7 +6070,16 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
         submitFranchiseTagsBtn.style.borderColor = '';
       }, 3000);
     }
-  });
+  };
+
+  const initContractActionButtons = () => {
+    const clearAllBtn = document.getElementById('clearAllTagsBtn');
+    const submitBtn = document.getElementById('submitFranchiseTagsBtn');
+    // Assigned, not added: initRosterPage runs twice on the initial load, and a
+    // stacked submit handler would POST every declaration twice.
+    if (clearAllBtn) clearAllBtn.onclick = handleClearAllTagsClick;
+    if (submitBtn) submitBtn.onclick = handleSubmitFranchiseTagsClick;
+  };
 
   const initRosterPage = () => {
     // Guard: only run on the rosters page (skip after ViewTransitions navigates away)
@@ -6092,6 +6118,12 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
     // nothing and preserves those chains exactly as they were written.
     const initialSeasonDataConfig = seasons[defaultSeason];
     const initialTeamDataConfig = initialSeasonDataConfig?.teams?.[defaultTeamId];
+
+    // Team navigation accordion (the chevron that reveals every team), and the
+    // contract-action buttons. Wired here so they re-bind on every
+    // astro:page-load, not once per session.
+    initTeamNavAccordion();
+    initContractActionButtons();
 
     // Initialize view tabs
     document.querySelectorAll<HTMLElement>('.view-tab').forEach(tab => {
