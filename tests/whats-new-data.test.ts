@@ -9,6 +9,7 @@ import stagingFile from '../src/data/weekly-changelog-staging.json';
 import { describeSpriteIconValidation } from './helpers/sprite-icons';
 import { astroRouteExists } from './helpers/astro-routes';
 import { WHATS_NEW_ACTIVE_MAX } from '../scripts/lib/retention-policy.mjs';
+import { AREA_LABELS } from '../scripts/lib/weekly-changelog-format.mjs';
 
 /**
  * What's New Data Validation
@@ -454,21 +455,17 @@ describe('weekly-changelog-staging.json league scoping', () => {
   // The rollup groups changes by `area` and prints `AREA_LABELS[area] || area`
   // as a section heading. That fallback means a typo'd slug does NOT fail the
   // Monday job — it ships the raw slug as a heading in the article owners read
-  // ("free-agent — ..." instead of "Free Agents — ..."). Read the vocabulary
-  // out of the script's own source rather than restating it, for the same
-  // reason VALID_STAGING_LEAGUES is derived: a second copy of the list is a
-  // second thing to forget to update.
-  const ROLLUP_SCRIPT = resolve(__dirname, '../scripts/weekly-changelog-rollup.mjs');
-  const VALID_AREAS = (() => {
-    const src = readFileSync(ROLLUP_SCRIPT, 'utf-8');
-    const block = src.match(/const AREA_LABELS = \{([\s\S]*?)\n\};/);
-    if (!block) throw new Error('Could not find AREA_LABELS in weekly-changelog-rollup.mjs');
-    return [...block[1].matchAll(/^\s*'([^']+)'\s*:/gm)].map((m) => m[1]);
-  })();
+  // ("free-agent — ..." instead of "Free Agents — ..."). Imported from the
+  // rollup's own module rather than restated here, for the same reason
+  // VALID_STAGING_LEAGUES is derived: a second copy of the list is a second
+  // thing to forget to update. (This used to regex the script's source,
+  // because the script could not be imported without running the rollup —
+  // extracting the formatting half made a real import possible.)
+  const VALID_AREAS = Object.keys(AREA_LABELS);
 
-  it('parses a non-trivial area vocabulary out of the rollup script', () => {
-    // Guards the regex above: if the script is reformatted so the match breaks,
-    // fail here rather than silently validating every change against [].
+  it('imports a non-trivial area vocabulary from the rollup module', () => {
+    // Guards the import: an empty or renamed AREA_LABELS would validate every
+    // staged change against [] and still report green.
     expect(VALID_AREAS.length).toBeGreaterThan(5);
     expect(VALID_AREAS).toContain('other');
   });
@@ -480,7 +477,7 @@ describe('weekly-changelog-staging.json league scoping', () => {
     expect(
       bad,
       `Staged changes must use an area slug defined in AREA_LABELS ` +
-        `(scripts/weekly-changelog-rollup.mjs). Unknown slugs don't fail the rollup — ` +
+        `(scripts/lib/weekly-changelog-format.mjs). Unknown slugs don't fail the rollup — ` +
         `they render raw as a section heading in the published entry. ` +
         `Valid: ${VALID_AREAS.join(' | ')}`,
     ).toEqual([]);
