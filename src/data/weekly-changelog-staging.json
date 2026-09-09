@@ -4,6 +4,22 @@
     {
       "date": "2026-09-09",
       "type": "bug-fix",
+      "summary": "The What's New card on the homepage stops running its story underneath the screenshot. The write-up and the framed screenshot beside it were each sized as if the other were not there, so on a lot of window widths the last words of every line disappeared behind the picture. The text column now reserves the frame's space at every width, on both sites.",
+      "impact": "user",
+      "area": "homepage",
+      "league": "both"
+    },
+    {
+      "date": "2026-09-09",
+      "type": "style-tweak",
+      "summary": "The What's New card on the AFL homepage now shows the first two lines of the write-up and sends you to the full story, the way TheLeague's does. Longer announcements were printing in full and stretching the card down the page.",
+      "impact": "user",
+      "area": "homepage",
+      "league": "afl"
+    },
+    {
+      "date": "2026-09-09",
+      "type": "bug-fix",
       "summary": "The chevron that drops down every team on the Roster & Salary Cap page works on every visit now. Click into rosters from somewhere else on the site and that arrow was dead — nothing opened, no other teams to jump to — until you reloaded the page. It only ever wired itself up once, on the first roster page you opened all session.",
       "impact": "user",
       "area": "rosters",
