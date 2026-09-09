@@ -21,11 +21,22 @@
  * the player-id branch and rendered as "Player DP_0_11" in a published post.
  */
 
-const ROUND_ORDINALS = { 1: '1st', 2: '2nd', 3: '3rd', 4: '4th', 5: '5th' };
-
-/** 1 → "1st". Beyond the table, "6th", "7th" … which is correct for rounds. */
+/**
+ * 1 → "1st", 2 → "2nd", 21 → "21st".
+ *
+ * A real suffix rule rather than a five-entry table with a `th` fallback. The
+ * table was not WRONG for any round the archive holds — the deepest draft on
+ * record is 9 rounds, and 11-13 take "th" anyway — but "21th" was one deeper
+ * draft away, and the rule costs the same as the lookup.
+ */
 export function roundOrdinal(round) {
-  return ROUND_ORDINALS[round] ?? `${round}th`;
+  const n = Number(round);
+  if (!Number.isFinite(n)) return String(round);
+  const mod100 = Math.abs(n) % 100;
+  // 11, 12 and 13 take "th" despite ending in 1, 2, 3.
+  if (mod100 >= 11 && mod100 <= 13) return `${n}th`;
+  const suffix = { 1: 'st', 2: 'nd', 3: 'rd' }[Math.abs(n) % 10] ?? 'th';
+  return `${n}${suffix}`;
 }
 
 /**

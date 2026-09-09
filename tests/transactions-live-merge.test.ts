@@ -101,3 +101,17 @@ describe('both Schefter pick parsers read DP_ tokens', () => {
     expect(out.players.map((p) => p.playerId)).toEqual(['13630']);
   });
 });
+
+describe('round ordinals', () => {
+  it.each([
+    [1, '1st'], [2, '2nd'], [3, '3rd'], [4, '4th'], [9, '9th'],
+    // The teens take "th" despite their last digit — the case a naive
+    // last-digit rule gets wrong.
+    [11, '11th'], [12, '12th'], [13, '13th'],
+    // And the case the old five-entry table got wrong: "21th".
+    [21, '21st'], [22, '22nd'], [23, '23rd'], [24, '24th'],
+  ])('%i → %s', async (round, expected) => {
+    const { roundOrdinal } = await import('../src/utils/mfl-pick-tokens.mjs');
+    expect(roundOrdinal(round)).toBe(expected);
+  });
+});

@@ -24,6 +24,7 @@ import { resolveLeaguePath } from '../../../utils/nav-utils';
 import { getLeagueBySlug, leagueHasFeature } from '../../../config/leagues';
 import type { CanonicalLeagueSlug } from '../../../config/leagues';
 import { getLeagueTeamBrands } from '../../../utils/league-team-brands';
+import { teamAccentVar } from '../../../utils/team-accent-css';
 import { getGlobalPlayerMap, type PlayerIdentity } from '../../../utils/player-map';
 import { getAuthUser, franchiseIdForLeague } from '../../../utils/auth';
 import { readViewerClock } from '../../../utils/viewer-preferences-page';
@@ -150,7 +151,14 @@ for (const row of visible) {
     time: timeFmt.format(new Date(row.at)),
     teamName: nameForFranchise(row.franchiseId),
     crest: brands[row.franchiseId]?.icon,
-    accent: brands[row.franchiseId]?.colorPrimary || 'var(--tx-accent)',
+    // `teamAccentVar`, NOT the raw brand colour. The token layer
+    // (TeamAccentStyles, already in this layout) does three things a raw
+    // `colorPrimary` cannot: it carries an `html.dark` override — 15 of
+    // TheLeague's 16 franchises have a distinct dark accent, and the
+    // Mavericks' #181818 is invisible on a dark page — it enforces a 3:1
+    // contrast floor against each theme's card surface, and it is scoped by
+    // `data-league`, which matters because both leagues have a franchise 0001.
+    accent: teamAccentVar(row.franchiseId, 'var(--tx-accent)'),
     added: cellsFor(row.added),
     dropped: cellsFor(row.dropped),
     amount: row.amount === null ? null : moneyFmt.format(row.amount),
