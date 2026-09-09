@@ -67,6 +67,7 @@ import { getAuthUser } from '../../utils/auth';
 import InstallAppPrompt from '../../components/shared/pwa/InstallAppPrompt.astro';
 import { spriteUrl } from '../../utils/sprite-url';
 import { getLeagueBySlug } from '../../config/leagues';
+import { readInstallState } from '../../utils/app-install-state';
 import { resolveSchefterRail } from '../../utils/schefter-rail-view';
 
 import '../../styles/schefter-feed.css';
@@ -92,6 +93,23 @@ const authAflFranchiseId =
   authUser?.leagueId === AFL.id && authUser.franchiseId
     ? authUser.franchiseId
     : null;
+// The install banner is an interruption, so it never shows to an owner who
+// already has the app — a fact only the ACCOUNT can hold. `display-mode:
+// standalone` is false in the desktop browser of someone whose phone has had
+// the app since August, and Chrome keeps offering the install there because on
+// that device it genuinely is installable. See src/utils/app-install-state.ts.
+//
+// It takes an AFL SESSION, not merely a signed-in one. The banner exists to
+// make notifications reachable, and those are franchise-scoped — a TheLeague
+// owner browsing here cannot receive a single AFL alert (/notifications
+// redirects them), so installing the AFL app buys them nothing. They are also
+// the one viewer whose "I already have it" can never be recorded: the report
+// carries this page's league and the server, correctly, refuses to file it
+// against their own. Pitching an app to someone who can neither use it nor
+// dismiss it for good is the "toggle that silently does nothing" again.
+const showInstallBanner =
+  !!authAflFranchiseId && !(await readInstallState(AFL.id, authAflFranchiseId));
+
 const hasExplicitTeam = !!(myTeamParam || franchiseParam || cookiePref || authAflFranchiseId);
 const resolvedFranchiseId = resolveAFLTeamSelection({
   myTeamParam,
@@ -365,7 +383,7 @@ if (heroState.kind === 'regular-season' && heroState.slot === 'live-scoring' && 
 
 <TheLeagueLayout title="AFL — American Football League">
   <div class="afl-hp">
-    {!!authUser && <InstallAppPrompt variant="banner" leagueName="AFL Fantasy" />}
+    {showInstallBanner && <InstallAppPrompt variant="banner" leagueName="AFL Fantasy" leagueSlug="afl-fantasy" />}
     <section class="afl-hp__main" aria-labelledby="afl-hp-hero-heading">
       <h2 id="afl-hp-hero-heading" class="visually-hidden">League Overview</h2>
 

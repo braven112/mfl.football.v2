@@ -4,6 +4,50 @@ Web push, the category registry, and the cron senders behind it. Reference:
 `docs/features/web-push.md`. The registry is
 `src/config/notification-categories.ts`.
 
+## 2026-09-08 — "Do you have the app?" is not a question the DEVICE can answer
+
+The install banner decided everything from three client facts: `display-mode:
+standalone`, the user agent, and whether the browser had fired
+`beforeinstallprompt`. All three are correct, and together they still cannot
+answer the question owners actually complained about — *I already have this,
+stop asking me.*
+
+An owner with the app on their Home Screen since August, sitting in desktop
+Chrome, is **not** standalone, and Chrome **does** fire `beforeinstallprompt`
+there, because on that machine the app genuinely is installable. Every signal
+says "pitch it" and every signal is right. The pitch is still wrong.
+
+`getInstalledRelatedApps()` does not rescue it either — it only ever reports
+apps installed on the SAME device, which is the fact we already had.
+
+So the local dismissal (`INSTALL_DISMISS_KEY`, 60 days, `localStorage`) was
+never the wrong mechanism, it was answering a smaller question: *not in this
+browser, not this month*. "I have the app" is an ACCOUNT fact, and it had to
+leave the device to be useful — `src/utils/app-install-state.ts`, one record
+per league + franchise, read during SSR so the banner is never rendered rather
+than rendered and hidden.
+
+Three things that fell out of it, worth keeping:
+
+- **The strongest proof arrives on a different device than the one being
+  fixed.** A single page view from inside the installed app reports
+  `standalone` and retires the banner on the owner's laptop. That inversion —
+  phone teaches desktop — is the whole reason the record is account-level, and
+  it means the fix works with no button pressed at all.
+- **Scope the report to the PAGE's league, and check it against the SESSION's.**
+  An owner signed into one league can browse the other's homepage, where the
+  banner is for the other app entirely. Same idiom as `rankings-scope.ts`: the
+  client sends its league, the server compares it to `user.leagueId` and 403s a
+  mismatch. The record is always written from the session.
+- **First-write-wins, and an unknown `source` still counts as installed.** Every
+  page load inside the app would otherwise rewrite the date, and a record
+  written by a newer deploy must never parse as "never installed" and put the
+  banner back in front of the one person we know has the app.
+
+The way back is deliberate rather than absent: there is no un-record, because
+this gates only the homepage BANNER. `/notifications` still carries the same
+pitch as a card, which is where an owner who deleted the app would go anyway.
+
 ## 2026-09-04 — A push `url` is unverifiable at send time, and only fails on a phone
 
 The service worker resolves a notification's `url` against the origin the

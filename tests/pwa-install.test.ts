@@ -17,6 +17,11 @@ import { describe, it, expect } from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
 import {
+  parseInstallState,
+  isInstallSource,
+  installStateKey,
+} from '../src/utils/app-install-state';
+import {
   resolveInstallPitch,
   isIosSafari,
   isInAppBrowser,
@@ -272,5 +277,201 @@ describe('hidden elements are actually hidden', () => {
       hiddenRuleCoversDescendants,
       'a flex/grid element is script-hidden with no [hidden] override — it will render anyway',
     ).toBe(true);
+  });
+});
+
+
+describe('the banner is a strip, not a column', () => {
+  /**
+   * Both homepages hang <InstallAppPrompt variant="banner"> as a DIRECT CHILD
+   * of their two-column grid (`.hp2`, `.afl-hp`). Grid auto-placement put it
+   * in the first cell and pushed the main column into the 380px sidebar
+   * track — the page rendered as an empty left column beside a squeezed one,
+   * every paragraph wrapping at about six words. Spanning every track is what
+   * makes it a strip ABOVE both columns instead of a third item competing for
+   * one; it is inert when the parent is flex or block.
+   */
+  const component = fs.readFileSync(
+    path.resolve(__dirname, '../src/components/shared/pwa/InstallAppPrompt.astro'),
+    'utf8',
+  );
+
+  it('spans every track of a grid parent', () => {
+    const banner = /\.install-prompt--banner\s*\{([^}]*)\}/.exec(component)?.[1] ?? '';
+    expect(banner, '.install-prompt--banner rule').not.toBe('');
+    expect(banner.replace(/\s+/g, ' ')).toMatch(/grid-column: 1 \/ -1/);
+  });
+
+  it.each([
+    ['src/pages/theleague/index.astro', '.hp2'],
+    ['src/pages/afl-fantasy/index.astro', '.afl-hp'],
+  ])('%s still places it inside a multi-column grid', (file, container) => {
+    // If a homepage ever stops being a grid the rule above is harmless, but
+    // while it IS one, this is the arrangement the rule exists for.
+    const page = fs.readFileSync(path.resolve(__dirname, '..', file), 'utf8');
+    const rule = new RegExp(`\\${container}\\s*\\{([^}]*)\\}`).exec(page)?.[1] ?? '';
+    expect(rule, `${container} rule`).toMatch(/display: grid/);
+    expect(rule, `${container} columns`).toMatch(/grid-template-columns:\s*1fr\s+\d+px/);
+  });
+});
+
+describe('owners who already have the app are not pitched it', () => {
+  /**
+   * The device cannot answer this question. `display-mode: standalone` is
+   * false in the desktop browser of an owner whose phone has had the app on
+   * its Home Screen for a month, and Chrome keeps firing
+   * `beforeinstallprompt` there because on THAT device it genuinely is
+   * installable — so the local 60-day dismissal is a banner to swipe away
+   * again in every browser, forever. The fact belongs to the account.
+   */
+  const pages = [
+    'src/pages/theleague/index.astro',
+    'src/pages/afl-fantasy/index.astro',
+  ] as const;
+
+  it.each(pages)('%s gates the banner on the stored record, not just auth', (file) => {
+    const page = fs.readFileSync(path.resolve(__dirname, '..', file), 'utf8');
+    const banner = /\{([^}]*)<InstallAppPrompt variant="banner"/.exec(page)?.[1] ?? '';
+    expect(banner, 'banner render guard').toContain('showInstallBanner');
+    expect(page, 'reads the account record').toContain('readInstallState');
+  });
+
+  it.each(pages)('%s scopes the record to its own league', (file) => {
+    const page = fs.readFileSync(path.resolve(__dirname, '..', file), 'utf8');
+    // Both leagues have a franchise 0001, so an unscoped read answers for the
+    // wrong app — and a session from the OTHER league has no record here at
+    // all, which must read as "not installed" rather than as someone else's.
+    const guard = /const showInstallBanner =([\s\S]*?);\n/.exec(page)?.[1] ?? '';
+    expect(guard, 'showInstallBanner').not.toBe('');
+    expect(guard).toMatch(/theLeagueFranchiseId|authAflFranchiseId/);
+  });
+
+  it.each(pages)('%s takes a SAME-LEAGUE session, not merely a signed-in one', (file) => {
+    // The banner is a route to notifications and those are franchise-scoped,
+    // so an owner signed into the other league can neither receive an alert
+    // from this one nor have their "I already have it" recorded — the server
+    // refuses to file this page's league against their session. Pitching an
+    // app that can be neither used nor permanently dismissed is the "toggle
+    // that silently does nothing" this repo already has a rule about.
+    const page = fs.readFileSync(path.resolve(__dirname, '..', file), 'utf8');
+    const guard = /const showInstallBanner =([\s\S]*?);\n/.exec(page)?.[1] ?? '';
+    expect(guard, 'no bare signed-in check').not.toMatch(/!!authUser|isAuthenticated/);
+  });
+
+  it('only remembers a report the server confirmed', () => {
+    // The flag was originally written BEFORE the fetch, which meant one
+    // offline visit inside the installed app — the normal case for a PWA —
+    // permanently retired that device's ability to report. The account record
+    // was never written, nothing could clear the flag, and the banner this
+    // whole feature exists to retire stayed up on every other device. A 403
+    // from reading the other league's homepage did the same.
+    const component = fs.readFileSync(
+      path.resolve(__dirname, '../src/components/shared/pwa/InstallAppPrompt.astro'),
+      'utf8',
+    );
+    const fetchAt = component.indexOf("fetch('/api/app-install'");
+    const okAt = component.indexOf('if (!res.ok) return;');
+    const rememberAt = component.indexOf('localStorage.setItem(reportedKey(root)');
+
+    expect(fetchAt, 'reports to /api/app-install').toBeGreaterThan(-1);
+    expect(okAt, 'checks the response before remembering').toBeGreaterThan(fetchAt);
+    expect(rememberAt, 'remembers only after the ok check').toBeGreaterThan(okAt);
+  });
+
+  it('keys the per-device report flag by league', () => {
+    // Production splits the leagues across apex domains, so separate origins
+    // already separate localStorage — but the Vercel preview and `pnpm dev`
+    // serve both leagues from ONE origin, and there an unscoped flag means a
+    // successful TheLeague report silently retires the AFL banner's ability
+    // to report at all. Same rule as rankings-scope.ts's local keys.
+    const component = fs.readFileSync(
+      path.resolve(__dirname, '../src/components/shared/pwa/InstallAppPrompt.astro'),
+      'utf8',
+    );
+    expect(component, 'flag carries the league').toMatch(
+      /mfl:appInstallReported:\$\{root\.dataset\.league/,
+    );
+  });
+
+  it('requires the league rather than checking it when present', () => {
+    // A guard that only fires `typeof league === "string" && league` fails
+    // OPEN on a caller that forgot to send one — which is precisely the case
+    // it exists to catch. One extra banner is the safe answer; a record
+    // written for the wrong app is not.
+    const route = fs.readFileSync(
+      path.resolve(__dirname, '../src/pages/api/app-install.ts'),
+      'utf8',
+    );
+    expect(route).toMatch(/if \(payload\.league !== league\.slug\) \{/);
+    expect(route, 'no fail-open presence check').not.toMatch(
+      /typeof payload\.league === 'string' &&/,
+    );
+  });
+
+  it('claims the install record atomically, so first-write-wins is true', () => {
+    // A phone opening the installed app while a laptop tab is still open is
+    // the ordinary case here, not a contrived race — get-then-set lets the
+    // later write clobber the earlier installedAt.
+    const util = fs.readFileSync(
+      path.resolve(__dirname, '../src/utils/app-install-state.ts'),
+      'utf8',
+    );
+    expect(util, 'SET NX').toMatch(/redis\.set\([\s\S]*?\{ nx: true \}\)/);
+    expect(util, 'reads the winner when it loses the race').toMatch(
+      /wrote === 'OK' \|\| wrote === true/,
+    );
+  });
+
+  it('sends the page league so the server can reject a mismatch', () => {
+    const component = fs.readFileSync(
+      path.resolve(__dirname, '../src/components/shared/pwa/InstallAppPrompt.astro'),
+      'utf8',
+    );
+    expect(component, 'league travels with the report').toContain('data-league={leagueSlug}');
+    expect(component, 'report body').toMatch(/league: root\.dataset\.league/);
+
+    const route = fs.readFileSync(
+      path.resolve(__dirname, '../src/pages/api/app-install.ts'),
+      'utf8',
+    );
+    // The session picks the record; the body is only ever a check on it.
+    expect(route, 'identity from the session').toContain('getAuthUser(request)');
+    expect(route, 'mismatch rejected').toMatch(/payload\.league !== league\.slug/);
+  });
+});
+
+
+describe('parseInstallState', () => {
+  it('keys the record per league, because both leagues have a franchise 0001', () => {
+    expect(installStateKey('13522', '0001')).not.toBe(installStateKey('19621', '0001'));
+  });
+
+  it('reads a record whether storage hands back JSON or an object', () => {
+    const record = { installedAt: '2026-09-01T00:00:00.000Z', source: 'standalone' };
+    expect(parseInstallState(record)?.source).toBe('standalone');
+    expect(parseInstallState(JSON.stringify(record))?.installedAt).toBe(record.installedAt);
+  });
+
+  it('treats an unknown source as a real report', () => {
+    // A record written by a newer deploy must not read as "never installed"
+    // and put the banner back in front of someone who already has the app.
+    const parsed = parseInstallState({ installedAt: '2026-09-01T00:00:00.000Z', source: 'nope' });
+    expect(parsed).not.toBeNull();
+    expect(parsed?.source).toBe('declared');
+  });
+
+  it('rejects anything without a real timestamp', () => {
+    expect(parseInstallState(null)).toBeNull();
+    expect(parseInstallState('not json')).toBeNull();
+    expect(parseInstallState({ source: 'standalone' })).toBeNull();
+    expect(parseInstallState({ installedAt: 'whenever' })).toBeNull();
+  });
+
+  it('only accepts the sources the client can actually report', () => {
+    expect(isInstallSource('standalone')).toBe(true);
+    expect(isInstallSource('declared')).toBe(true);
+    expect(isInstallSource('appinstalled')).toBe(true);
+    expect(isInstallSource('installed')).toBe(false);
+    expect(isInstallSource(1)).toBe(false);
   });
 });

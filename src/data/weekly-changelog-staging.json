@@ -64,6 +64,22 @@
       "impact": "user",
       "area": "homepage",
       "league": "afl"
+    },
+    {
+      "date": "2026-09-08",
+      "type": "bug-fix",
+      "summary": "The \"put this on your Home Screen\" banner no longer flattens the homepage. It was landing in the first column of the two-column layout and shoving everything else — hero, your team, standings, What's New — into the narrow sidebar track, where the paragraphs wrapped six words at a time next to an empty left half. It now runs across the top as a strip, the way it was always meant to.",
+      "impact": "user",
+      "area": "homepage",
+      "league": "both"
+    },
+    {
+      "date": "2026-09-08",
+      "type": "bug-fix",
+      "summary": "Already have the app? Stop being asked to install it. The banner could only see the browser it was in, so an owner with the app on their phone still got pitched it on every desktop — and \"Not now\" only quieted that one browser for a while. There's now an \"I already have it\" option that settles it for good on every device you sign in on, and opening the installed app once does the same thing without you clicking anything.",
+      "impact": "user",
+      "area": "notifications",
+      "league": "both"
     }
   ]
 }

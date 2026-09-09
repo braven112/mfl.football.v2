@@ -29,6 +29,7 @@ import { getAuthUser } from '../../utils/auth';
 import InstallAppPrompt from '../../components/shared/pwa/InstallAppPrompt.astro';
 import { readViewerClock } from '../../utils/viewer-preferences-page';
 import { getLeagueBySlug } from '../../config/leagues';
+import { readInstallState } from '../../utils/app-install-state';
 import { resolveSchefterRail } from '../../utils/schefter-rail-view';
 import { resolveHeroFranchiseBackdrop } from '../../utils/hero-franchise-backdrop';
 import { resolveHeroState, parseTestDate, isAuctionStripPeriod, isEntryInHeroWindow } from '../../utils/hero-resolver';
@@ -77,6 +78,22 @@ const THELEAGUE = getLeagueBySlug('theleague')!;
 const authUser = getAuthUser(Astro.request);
 const isAuthenticated = !!authUser;
 const userFranchiseId = authUser?.franchiseId;
+
+// The install banner is an interruption, so it never shows to an owner who
+// already has the app — a fact only the ACCOUNT can hold. `display-mode:
+// standalone` is false in the desktop browser of someone whose phone has had
+// the app since August, and Chrome keeps offering the install there because on
+// that device it genuinely is installable. See src/utils/app-install-state.ts.
+//
+// It takes a TheLeague SESSION, not merely a signed-in one — same reasoning as
+// the AFL homepage. The banner is a route to notifications, and those are
+// franchise-scoped, so an AFL owner browsing here can neither receive one nor
+// have their "I already have it" recorded (the server refuses to file this
+// page's league against their session, correctly).
+const theLeagueFranchiseId =
+  authUser?.leagueId === THELEAGUE.id ? (authUser.franchiseId ?? null) : null;
+const showInstallBanner =
+  !!theLeagueFranchiseId && !(await readInstallState(THELEAGUE.id, theLeagueFranchiseId));
 // Whose broadcast channels the game-day hero names. Read-only: the homepage
 // must never write a preference cookie, and `readViewerClock` never does —
 // only /preferences and the Sunday Ticket chips write one.
@@ -790,7 +807,7 @@ if ((heroState.phase === 'playoffs' || heroState.phase === 'championship') && he
 
 <TheLeagueLayout title="Home">
   <div class="hp2">
-    {isAuthenticated && <InstallAppPrompt variant="banner" leagueName="The League" />}
+    {showInstallBanner && <InstallAppPrompt variant="banner" leagueName="The League" leagueSlug="theleague" />}
     <section class="hp2__main" aria-labelledby="hp2-hero-heading">
       <h2 id="hp2-hero-heading" class="visually-hidden">League Overview</h2>
       {testDriveHero ? (

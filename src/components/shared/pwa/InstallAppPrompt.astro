@@ -24,9 +24,16 @@ interface Props {
   variant?: 'banner' | 'card';
   /** League display name, for copy that names the app being installed. */
   leagueName: string;
+  /**
+   * Canonical slug of the league whose PAGE this is. Sent with the "I have
+   * the app" report and checked against the session's league server-side —
+   * an owner signed into one league can browse the other's homepage, and
+   * without the check their click would file the other league's record.
+   */
+  leagueSlug: string;
 }
 
-const { variant = 'banner', leagueName } = Astro.props;
+const { variant = 'banner', leagueName, leagueSlug } = Astro.props;
 const isBanner = variant === 'banner';
 ---
 
@@ -34,6 +41,7 @@ const isBanner = variant === 'banner';
   class:list={['install-prompt', `install-prompt--${variant}`]}
   data-install-prompt
   data-variant={variant}
+  data-league={leagueSlug}
   data-dismiss-key={INSTALL_DISMISS_KEY}
   aria-labelledby={`install-prompt-title-${variant}`}
   hidden
@@ -79,6 +87,11 @@ const isBanner = variant === 'banner';
         Not now
       </button>
     )}
+    {isBanner && (
+      <button class="install-prompt__link" data-install-have-it>
+        I already have it
+      </button>
+    )}
   </div>
 </section>
 
@@ -119,6 +132,66 @@ const isBanner = variant === 'banner';
     return iPadOnMacUa ? ua.replace('Macintosh', 'iPad') : ua;
   }
 
+  /**
+   * Per-device note that we've already told the server. The record itself is
+   * account-level (see src/utils/app-install-state.ts); this only stops a POST
+   * on every single page load from inside the installed app.
+   *
+   * Keyed by LEAGUE, because the two leagues are two different apps with two
+   * different records. Production keeps them on separate apex domains, so
+   * separate origins already separate the storage — but the preview
+   * deployment and `pnpm dev` serve both from one, and there an unscoped flag
+   * means reporting TheLeague silently retires the AFL banner's ability to
+   * report at all. Same reason `rankings-scope.ts` scopes its local keys.
+   */
+  function reportedKey(root: HTMLElement): string {
+    return `mfl:appInstallReported:${root.dataset.league ?? ''}`;
+  }
+
+  function alreadyReported(root: HTMLElement): boolean {
+    try {
+      return localStorage.getItem(reportedKey(root)) === '1';
+    } catch {
+      return false;
+    }
+  }
+
+  /**
+   * Tell the account "this owner has the app", so every OTHER browser they
+   * sign in on stops pitching it. `display-mode: standalone` is false in
+   * desktop Chrome for someone whose phone has had the app since August, and
+   * Chrome keeps offering the install there because on that device it is
+   * genuinely installable — no client-side signal can know better, which is
+   * why the fact has to leave the device at all.
+   *
+   * Fire-and-forget: a failed report costs one unnecessary banner, so it must
+   * never block the click that triggered it or surface an error.
+   */
+  function reportInstalled(root: HTMLElement, source: 'standalone' | 'appinstalled' | 'declared') {
+    if (alreadyReported(root)) return;
+    void fetch('/api/app-install', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ source, league: root.dataset.league ?? '' }),
+      keepalive: true,
+    })
+      .then((res) => {
+        // Remember only what the SERVER confirmed. Setting the flag before the
+        // fetch meant one OFFLINE visit — the normal case for an installed
+        // app — permanently retired this device's ability to report, leaving
+        // the banner up on every other one with nothing able to clear it. A
+        // 403 did the same to an owner reading the other league's homepage.
+        if (!res.ok) return;
+        try {
+          localStorage.setItem(reportedKey(root), '1');
+        } catch {
+          // Nothing to remember it with; the POST is idempotent server-side,
+          // so the cost is one more of them on the next visit.
+        }
+      })
+      .catch(() => {});
+  }
+
   function readDismissal(): string | null {
     // Private mode and "block site data" both throw on access rather than
     // returning null, so every read is guarded — a storage error must never
@@ -137,6 +210,11 @@ const isBanner = variant === 'banner';
       standalone: standalone(),
       promptAvailable: !!capturedPrompt(),
     });
+
+    // Running INSIDE the installed app is the strongest proof there is, and
+    // it is the one moment a phone can speak for the account. One visit to
+    // any page carrying this component retires the banner everywhere else.
+    if (pitch === 'installed') reportInstalled(root, 'standalone');
 
     const promptCopy = root.querySelector<HTMLElement>('[data-install-copy-prompt]');
     const iosCopy = root.querySelector<HTMLElement>('[data-install-copy-ios]');
@@ -172,7 +250,8 @@ const isBanner = variant === 'banner';
       action.disabled = true;
       try {
         deferred.prompt();
-        await deferred.userChoice;
+        const choice = await deferred.userChoice;
+        if (choice?.outcome === 'accepted') reportInstalled(root, 'appinstalled');
       } catch {
         // A rejected or already-consumed prompt is not worth surfacing.
       } finally {
@@ -183,6 +262,21 @@ const isBanner = variant === 'banner';
         action.disabled = false;
         render(root);
       }
+    });
+
+    const haveIt = root.querySelector<HTMLButtonElement>('[data-install-have-it]');
+    haveIt?.addEventListener('click', () => {
+      reportInstalled(root, 'declared');
+      // Belt and braces: the local dismissal keeps the banner down on this
+      // device even if the report never lands (storage down, offline), and the
+      // account record keeps it down on every other one.
+      try {
+        localStorage.setItem(INSTALL_DISMISS_KEY, String(Date.now()));
+      } catch {
+        // Nothing to remember it with — hiding it for this page view is all
+        // we can offer.
+      }
+      root.hidden = true;
     });
 
     dismiss?.addEventListener('click', () => {
@@ -253,6 +347,17 @@ const isBanner = variant === 'banner';
 
   .install-prompt--banner {
     margin: 0 0 1.25rem;
+    /*
+     * Both homepages hang the banner as a DIRECT CHILD of their two-column
+     * grid (`.hp2`, `.afl-hp`), which auto-places it into the first cell and
+     * pushes the main column into the 380px sidebar track — the whole page
+     * rendered as an empty left column beside a squeezed one on 2026-09-08.
+     * Spanning every track is what makes it a strip above both columns
+     * instead of a third item competing for one. Inert when the parent is
+     * flex or block, so it costs nothing anywhere else.
+     * Pinned by tests/pwa-install.test.ts.
+     */
+    grid-column: 1 / -1;
   }
 
   .install-prompt--card {
@@ -331,6 +436,28 @@ const isBanner = variant === 'banner';
     background: transparent;
     color: var(--content-text-muted);
     border: 1px solid var(--content-border);
+  }
+
+  /*
+   * A third BUTTON in the row would read as a third equal choice; this is the
+   * quiet exit for someone the banner should never have interrupted, so it
+   * carries a link's weight and not a button's.
+   */
+  .install-prompt__link {
+    appearance: none;
+    border: none;
+    background: none;
+    padding: 0.25rem;
+    font-family: inherit;
+    font-size: var(--font-size-sm);
+    color: var(--content-text-muted);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    cursor: pointer;
+  }
+
+  .install-prompt__link:hover {
+    color: var(--content-text);
   }
 
   .install-prompt__btn:disabled {

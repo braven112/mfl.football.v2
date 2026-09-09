@@ -133,6 +133,55 @@ hrefs to local copies, and open it in the bundled Chromium — it isolates
 
 ---
 
+## 2026-09-08 - A Component Dropped Into a Grid Becomes a Grid ITEM, and Takes a Column With It
+
+**Context:** The PWA install banner was added to both homepages as the first
+child of their two-column shell:
+
+```astro
+<div class="afl-hp">          <!-- grid-template-columns: 1fr 380px -->
+  <InstallAppPrompt variant="banner" ... />
+  <section class="afl-hp__main"> … </section>
+  <aside class="afl-hp__sidebar"> … </aside>
+</div>
+```
+
+Auto-placement gave the banner cell 1, `__main` cell 2 and `__sidebar` the next
+row. The homepage rendered as an **empty left half beside a 380px main column**
+— hero, team card, standings and What's New all wrapping about six words per
+line — with the sidebar pushed 4,000px down the page. Measured:
+
+| | banner | `__main` | sidebar top |
+|---|---|---|---|
+| broken | 786px | **380px @ x=850** | y=4192 |
+| fixed | 1194px | 786px @ x=35 | y=326 |
+
+**Why it was easy to ship and hard to see.** Three things hid it:
+
+- The **component's own diff is innocent** — it is a `<section>` with `display:
+  flex`, correct in isolation. The bug lives in the one line of the *page* that
+  renders it, and neither file looks wrong alone.
+- It was **invisible in dev for whoever added it.** The banner is script-hidden
+  and only reveals itself on a browser that fires `beforeinstallprompt`; while
+  it is `hidden` (`display: none`) it occupies no cell and the page is perfect.
+  The layout only folds for the owners who were going to see the banner.
+- The **grid parent is two files away** from the component being written.
+
+**Rules:**
+
+- A shared component that may be dropped into a grid should declare
+  `grid-column: 1 / -1` if it is meant to be a full-width strip. It is inert
+  under a flex or block parent, so it costs nothing and travels with the
+  component instead of relying on every future host page to remember.
+- When adding anything to a page whose shell is `display: grid`, count the
+  children against `grid-template-columns` before and after. A container built
+  for exactly two items has no spare cell.
+- **Verify a script-hidden element by forcing it visible.** `el.hidden = false`
+  in the console, then measure — a screenshot of the default state proves
+  nothing about the state the user is in.
+
+---
+
 ## 2026-09-09 - A Direction Flag Consumed Twice Cancels Itself Out — Six of Fourteen Reports Coloured Backwards for Months
 
 **Context:** `LeagueSummaryTable.astro` colours each cell by quartile: green
