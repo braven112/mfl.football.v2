@@ -32,6 +32,14 @@
       "impact": "user",
       "area": "live-scoring",
       "league": "afl"
+    },
+    {
+      "date": "2026-09-09",
+      "type": "bug-fix",
+      "summary": "League Summary was coloring six of its fourteen categories backwards. On Dead Money, Average Age, Expiring Contracts, Committed Salary %, Roster Holes and Salary-Weighted Age, the teams in the best shape were painted red and the teams in the worst shape green — so the team carrying $6.0M in dead money looked like the league's healthiest and the one carrying $213K looked like its sickest. Green now means good on every category.",
+      "impact": "user",
+      "area": "league-summary",
+      "league": "theleague"
     }
   ]
 }
