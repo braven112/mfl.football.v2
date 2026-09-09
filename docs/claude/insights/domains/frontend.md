@@ -133,6 +133,50 @@ hrefs to local copies, and open it in the bundled Chromium — it isolates
 
 ---
 
+## 2026-09-09 - A Direction Flag Consumed Twice Cancels Itself Out — Six of Fourteen Reports Coloured Backwards for Months
+
+**Context:** `LeagueSummaryTable.astro` colours each cell by quartile: green
+for the best teams, red for the worst. Two helpers cooperate, and both took
+`cat.direction`:
+
+- `rankTeamsForColumn(values, direction)` sorts descending for an `'asc'`
+  category and ascending for a `'desc'` one, so **rank 1 is already the BEST
+  team** — the flag is fully consumed here.
+- `getCellColor(rank, total, direction)` then branched on it again:
+  `direction === 'asc' ? rank <= quartile : rank > total - quartile`.
+
+For every `'desc'` category the two cancelled and the green quartile landed
+back on the highest RAW value. Dead Money painted **$6.0M green and $213K
+red**; same for Average Age, Expiring Contracts, Committed Salary %, Roster
+Holes and Salary-Weighted Age — six of fourteen categories, on a page in the
+Stats & Reports nav, telling every owner the opposite of the truth.
+
+**Insight:** neither function is wrong on its own, and that is the whole
+problem. Read either one in isolation and it looks like careful,
+direction-aware code; the bug lives only in the composition. A reviewer
+checking "does this handle both directions?" gets a yes from each half.
+
+The generalisable rule: **once a value encodes an ordering, the flag that
+produced it is spent.** A rank, a sorted array, a normalised score — anything
+downstream consumes the ORDER, never the original direction. So the fix was to
+delete the branch, not invert it, and to drop the parameter from
+`getCellColor` entirely: a function that cannot see `direction` cannot
+re-apply it, which is a stronger guard than any test asserting it doesn't.
+
+**How to catch the next one:** when two helpers take the same flag, ask which
+one *consumes* it. If the answer is "both", one of them is wrong. Grep the
+flag's name in the file — `cat.direction` appeared at four sites here, and the
+two in the sort were legitimate while the two in the colouring were not.
+
+**How to verify a colour bug at all** — the assertion that actually works is
+order-independent and reads computed style off the rendered page: for every
+category, *every* green cell must hold a better value than *every* red cell
+(`dir === 'asc' ? min(green) >= max(red) : max(green) <= min(red)`). Spot-
+checking one category is how five of the six stayed hidden after the first was
+found; sweeping all fourteen turned up the full set in one run.
+
+---
+
 ## 2026-09-09 - A Card That Swaps Its Own Mode Must Swap Its CTA Too — the Heading Changed and the Link Did Not
 
 **Context:** `HpStandingsCompact.astro` is one homepage card wearing two hats.
