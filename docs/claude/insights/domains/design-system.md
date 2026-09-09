@@ -3021,3 +3021,40 @@ browser (`getComputedStyle(document.body).fontFamily` plus
 totally-unstyled type system looks like, which is why this survived a whole
 spike. The Storybook case, its self-hosting reasoning and its guard test are in
 `docs/claude/rules/storybook.md` (Trap 4b).
+
+## 2026-09-09 - "That Logo Isn't Centered" — Measure Before You Nudge
+
+**Context:** the Set Lineup game line was reordered so the TV mark leads and the
+opponent crest closes it (`mark → vs/@ → crest`, three-letter code dropped).
+With the mark at 0.625rem beside a 20px crest, the next report was that it "isn't
+vertically centered like the NFL logos are."
+
+**Insight:** it was centered — the 2026-09-07 entry above predicts exactly this,
+and the two-step measurement settles it in one pass with no CSS changed:
+
+1. **Box centers, in the browser.** For each item in the lockup, compare
+   `(rect.top + rect.bottom) / 2`:
+   `document.querySelectorAll('.lineup-slot__opp').forEach(op => …)`. Mark, text
+   and crest came back identical to 0.00px on all six rows. If those agree,
+   `align-items` / `align-self` are not your problem and no amount of nudging
+   them will change what the reader sees.
+2. **Ink centers, in the asset.** A trimmed-looking PNG can still carry
+   asymmetric transparent padding, which moves the ink inside a perfectly
+   centered box. Pillow answers it for the whole directory at once:
+   `Image.open(f).convert('RGBA').getchannel('A').getbbox()` → all 23
+   `/assets/tv-logos/*.png` are ink-centered within 0.3%; `youtube-tv-black.png`
+   is the only one with real padding (24.7% top / 25.0% bottom) and it is
+   symmetric.
+
+Both agreeing means the complaint is **relative size**, not alignment: a 10px
+mark next to a 20px crest reads as floating high. The fix was to size the mark
+to the row's own text (0.6875rem = 11px), not to move it.
+
+**Recommendation:** on any "this logo sits too high/low" report against a
+`.net-badge`-style lockup, run those two measurements *first* and paste the
+numbers into the reply. They take a minute, they are checkable, and they stop
+the reflex fix — an `align-self`, a `position: relative; top: -1px`, a
+`vertical-align` — that hard-codes an optical nudge into a component whose real
+problem was a size ratio. Keep `align-self: center` on an item whose height is a
+`var()` as a *guard* (a surface can override `--net-badge-h` and must not be able
+to knock it off the line), but write it down as a guard, not as the fix.
