@@ -153,6 +153,10 @@ for (const host of hosts) {
 console.log('── Verdict ───────────────────────────────────────────────');
 for (const [k, v] of Object.entries(results)) console.log(`   ${v ? 'ACCEPTED' : 'refused '}  ${k}`);
 const userOnlyWorked = Object.entries(results).some(([k, v]) => v && k.includes('user cookie only'));
+// The GATE is narrower than the report: it must be the host the writers
+// actually target. `some()` over every host would green-light "the stored
+// cookies are not load-bearing" on the strength of a host nothing writes to.
+const writeHostUserOnly = results[`${registryHost} | user cookie only`] === true;
 console.log(
   userOnlyWorked
     ? '\nMFL_IS_COMMISH is NOT required for this write. The accounting gate that\ndemands it is the thing blocking the console, and it can come out.'
@@ -164,10 +168,10 @@ console.log(
 // tick means only "the script ran" and would be cited as proof that the stored
 // cookies can be deleted. Opt in, so the exploratory dispatch keeps its old
 // behaviour and only the scheduled proof is load-bearing.
-if (process.env.PROBE_REQUIRE_USER_ONLY === '1' && !userOnlyWorked) {
+if (process.env.PROBE_REQUIRE_USER_ONLY === '1' && !writeHostUserOnly) {
   console.error(
-    '\n::error::Credentials-only proof FAILED — the login cookie alone was not '
-      + 'accepted for the write. The stored cookie secrets are still load-bearing; '
+    `\n::error::Credentials-only proof FAILED — the login cookie alone was not `
+      + `accepted for a write to ${registryHost}. The stored cookie secrets are still load-bearing; `
       + 'do not delete them.',
   );
   process.exit(1);

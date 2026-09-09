@@ -31,8 +31,8 @@
 - **Never send `FRANCHISE_ID` on an owner-authenticated write.** It is
   commissioner-only and silently switches MFL to a stricter validation path.
 - **Writes need the `www##` host, NOT `MFL_IS_COMMISH`** — `MFL_USER_ID` alone
-  is accepted, and NOTHING issues that cookie, so code awaiting one hangs.
-  Proof: `probe-write-auth.mjs` (2026-09-05).
+  is accepted for salaries; nothing issues `MFL_IS_COMMISH`, so code awaiting
+  one hangs. `probe-write-auth.mjs` (2026-09).
 - **Normalize every filtered export.** A one-result query returns a bare object,
   not a one-element array. Use `asArray` (`src/utils/mfl-normalize.ts`) *inside
   shared utils*, not at call sites. Offseason feeds ship a truthy object with

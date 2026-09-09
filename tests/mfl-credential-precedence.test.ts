@@ -28,7 +28,6 @@ const REPO_ROOT = process.cwd();
 /** Scripts that resolve MFL credentials from BOTH a login pair and a stored cookie. */
 const CREDENTIAL_CONSUMERS = [
   'scripts/apply-pending-contracts.mjs',
-  'scripts/export-best-ball-draft.mjs',
   'scripts/sync-draft-pick-contracts.mjs',
 ];
 
@@ -55,6 +54,12 @@ const EXEMPT = new Map([
   // an inversion). Enforced by unit tests instead, and the test below asserts
   // those tests still exist, so this exemption cannot become a hole.
   ['scripts/mint-mfl-session.mjs', 'ordering lives in the pure pickMflSession(); covered by unit tests, not a text scan'],
+  // Writes import?TYPE=draftResults. The 2026-09-05 probe measured
+  // TYPE=salaries ONLY, so "the commissioner flag is not required" is not
+  // established for this endpoint — and preferring a login there would drop
+  // the flag from a write that currently works. Unproven is not the same as
+  // safe, so it keeps the cookie-first ordering until its own probe run.
+  ['scripts/export-best-ball-draft.mjs', 'writes TYPE=draftResults, which no probe has measured; needs its own proof before the rule applies'],
 ]);
 
 const read = (rel: string) => readFileSync(path.join(REPO_ROOT, rel), 'utf8');
@@ -93,27 +98,33 @@ describe('MFL credential precedence', () => {
     const offenders: string[] = [];
     const unscanned: string[] = [];
     for (const rel of CREDENTIAL_CONSUMERS) {
-      const lines = read(rel).split('\n');
-      // The first line that BRANCHES on each source — comments and env reads
-      // don't count, only the conditional that decides which one is used.
-      // Two real shapes in this repo: `if (username && password)` (use the
-      // login) and `if (!username || !password)` (bail out of it) — the second
-      // is mint-mfl-session's, and matching only the first is what let it slip.
-      const loginAt = lines.findIndex((l) => /^\s*(\}\s*else\s+)?if\s*\(.*\busername\b.*[&|]{2}.*\bpassword\b/.test(l));
-      const cookieAt = lines.findIndex((l) => /^\s*(\}\s*else\s+)?if\s*\(\s*!?\s*(env|stored)/i.test(l) && /userId|UserId|USER_ID/.test(l));
+      const src = read(rel);
+      // Compare the two things that actually decide it — the login CALL and the
+      // first point the stored cookie is USED as a value. The earlier version
+      // matched on the shape of the `if (…)` line, and both files this PR fixed
+      // ended up as `if (!mflUserId && envUserId)`, which that pattern missed:
+      // the assertion passed vacuously for exactly the code it exists to pin.
+      const loginAt = src.indexOf('loginToMFL(');
+      const cookieUseAt = Math.min(
+        ...[
+          /\bmflUserId\s*=\s*envUserId\b/,
+          /MFL_USER_ID:\s*envUserId\b/,
+          /\breturn\s+envUserId\b/,
+        ]
+          .map((re) => src.search(re))
+          .filter((i) => i !== -1)
+          .concat([Number.MAX_SAFE_INTEGER]),
+      );
       if (loginAt === -1) {
-        // NEVER skip silently. mint-mfl-session.mjs gates its login on
-        // `if (!username || !password)` rather than `&&`, so the pattern above
-        // missed it and the file dropped out of the scan while the suite stayed
-        // green — a guard that quietly checks three of four files is worse than
-        // one that checks none, because it is cited as coverage.
-        unscanned.push(`${rel}: no login branch matched — the scan is not covering this file`);
+        unscanned.push(`${rel}: no loginToMFL() call — the scan is not covering this file`);
         continue;
       }
-      if (cookieAt !== -1 && cookieAt < loginAt) {
-        offenders.push(
-          `${rel}:${cookieAt + 1} branches on the stored cookie before the login at :${loginAt + 1}`,
-        );
+      if (cookieUseAt === Number.MAX_SAFE_INTEGER) {
+        unscanned.push(`${rel}: no stored-cookie use matched — widen the patterns or EXEMPT it`);
+        continue;
+      }
+      if (cookieUseAt < loginAt) {
+        offenders.push(`${rel}: uses the stored cookie at index ${cookieUseAt}, before loginToMFL() at ${loginAt}`);
       }
     }
     expect(
@@ -124,8 +135,8 @@ describe('MFL credential precedence', () => {
     ).toEqual([]);
     expect(
       unscanned,
-      'A listed consumer whose login branch this scan cannot find is UNGUARDED. Widen the '
-        + 'pattern or move the file to EXEMPT with a reason — do not leave it silently skipped.\n'
+      'A listed consumer this scan cannot read is UNGUARDED. Widen the patterns or move it '
+        + 'to EXEMPT with a reason — do not leave it silently skipped.\n'
         + unscanned.join('\n'),
     ).toEqual([]);
   });

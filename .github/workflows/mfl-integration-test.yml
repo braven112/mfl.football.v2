@@ -80,6 +80,13 @@ jobs:
   # It is also free of the mint step's $GITHUB_ENV, so no stored cookie can leak
   # into scope and turn the proof into a tautology.
   credentials-proof:
+    # SEQUENCED, not parallel: both this job and the integration test write to
+    # league 36189, and the test reads its value back ~3s after writing. A
+    # concurrent proof write lands inside that window and fails the test — with
+    # cookie_ok still true, which is the auto-revert path. `always()` keeps it
+    # an independent signal when the tests themselves fail.
+    needs: integration-test
+    if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -101,7 +108,10 @@ jobs:
       #
       # Writes each value back UNCHANGED to the TEST league, with APPEND=1, so
       # success is a no-op by construction and nothing is erased.
+      # Skips green without credentials, the way check-owner-cookie-replay.mjs
+      # does — a fork or Dependabot PR has no secrets and must not fail for it.
       - name: Credentials-only write proof (test league, no stored cookie in scope)
+        if: ${{ secrets.MFL_USERNAME != '' && secrets.MFL_PASSWORD != '' }}
         env:
           MFL_USERNAME: ${{ secrets.MFL_USERNAME }}
           MFL_PASSWORD: ${{ secrets.MFL_PASSWORD }}
