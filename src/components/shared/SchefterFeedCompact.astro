@@ -22,13 +22,15 @@ interface Props {
   initialLimit?: number;
   /**
    * In-season personalization (src/utils/schefter-rail-view.ts). When
-   * `personalized` is true the rail shows For You / All tabs, defaulting to
-   * For You; `forYouIds` says which rendered posts that tab keeps.
+   * `personalized` is true the rail shows My News / All tabs, defaulting to
+   * My News; `forYouIds` says which rendered posts that tab keeps — this
+   * league's own desk, the whole group chat, and anything naming a player the
+   * reader rosters or watches. All adds the NFL wire and NFL Draft lanes.
    */
   personalized?: boolean;
   forYouIds?: string[];
   watching?: Record<string, WatchHit[]>;
-  /** Copy for the empty state when For You has nothing. */
+  /** Copy for the empty state when My News has nothing. */
   emptyText?: string;
 }
 
@@ -46,7 +48,7 @@ const {
 } = Astro.props;
 
 const forYou = new Set(forYouIds);
-// The rail opens on For You in season — that is the whole point of the split.
+// The rail opens on My News in season — that is the whole point of the split.
 const activeTab = personalized ? 'foryou' : 'all';
 
 // Keep the "View all" link inside the current league's news page, honoring
@@ -73,7 +75,7 @@ const allReactions = await getBatchReactions(postIds, userFranchiseId);
     <div class="sfc-tabs" role="tablist" aria-label="Filter the feed">
       <button class="sfc-tab sfc-tab--active" role="tab" aria-selected="true" data-sfc-tab="foryou">
         <svg class="sfc-tab__icon" aria-hidden="true"><use href="/assets/icons/sprite.svg#icon-eye" /></svg>
-        For You
+        My News
       </button>
       <button class="sfc-tab" role="tab" aria-selected="false" data-sfc-tab="all">All</button>
     </div>
@@ -118,7 +120,7 @@ const allReactions = await getBatchReactions(postIds, userFranchiseId);
    * Rail pagination, tab-aware.
    *
    * The old version revealed items by INDEX, which cannot survive a filter —
-   * with a For You tab active, "the first 10 items" and "the first 10 matching
+   * with a My News tab active, "the first 10 items" and "the first 10 matching
    * items" are different sets. Everything below counts matches instead, and
    * re-renders from scratch on every tab change, so the two features cannot
    * disagree about what is on screen.
