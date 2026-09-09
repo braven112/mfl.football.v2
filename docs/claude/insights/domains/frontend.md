@@ -133,6 +133,63 @@ hrefs to local copies, and open it in the bundled Chromium — it isolates
 
 ---
 
+## 2026-09-09 - A Card That Swaps Its Own Mode Must Swap Its CTA Too — the Heading Changed and the Link Did Not
+
+**Context:** `HpStandingsCompact.astro` is one homepage card wearing two hats.
+When the season's feeds carry no points yet (`hasGamesPlayed === false`) it
+retitles itself "Cap Space Rankings", drops the Record and PF columns, re-ranks
+every team by cap space and rewrites its own subtitle — five mode-conditional
+expressions in one frontmatter block. Its CTA was not one of them: the href
+stayed hardcoded to `/theleague/standings?view=league` and the label to "Full
+standings" in both modes, so from Labor Day back to the first real box score
+the arrow under "Cap Space Rankings" opened the playoff standings. So did the
+`aria-label` on the `<section>`, which read "League standings" to a screen
+reader looking at a cap table.
+
+**Insight:** the bug class is *partial* mode-switching, and it is invisible in
+review precisely because the switching is so thorough everywhere else. Nobody
+reading that file thinks "this component forgot about its offseason mode" — it
+plainly did not. The CTA was simply written before the second mode existed and
+never joined the set.
+
+The mechanical version of the check: when a component branches on a mode flag,
+grep every *user-visible string and href in the file* and ask which of them the
+flag should reach — the title, the subtitle, the column set, the CTA label, the
+CTA href, the `aria-label`, the empty state. The ones that don't branch should
+be ones that genuinely read correctly in both modes, not ones nobody revisited.
+Here, three of seven had been missed and they were the three that are not
+inside the table.
+
+**Second insight — deep-link a sortable table by COLUMN INDEX, not by year.**
+The fix points the offseason CTA at `/league-summary`, whose table already
+defaults to the Projected Cap Space category but opens sorted alphabetically by
+team. `LeagueSummaryTable.astro` now reads `?category=`/`?sort=`/`?dir=`, and
+the tempting param to send was the literal year (`sort=2026`). The card sends
+`sort=0` instead: it reads `capSpace[0]` and column 0 of the summary table is
+`SALARY_YEARS[0]`, so the index is the invariant that survives Feb 14 while a
+hardcoded year is a link that quietly points at last year's column for the rest
+of the calendar. The param handler accepts both (a 4-digit year is looked up in
+`years`, anything else treated as an index and range-checked), but the index is
+what the caller should send.
+
+Three things that made the param handling safe rather than a new bug surface,
+all of them repo rules rather than invention: the params are parsed inside the
+`astro:page-load` handler (module scope survives a ClientRouter navigation, so
+a captured value serves the previous page's URL); `category` is validated
+against the real `categories` array and `sort` range-checked against `years`
+before either is applied; and a deep-linked category is mirrored into the
+`<select>` *and* seeds its first subcategory pill before the initial render —
+without that last step `?category=positionalSpend` renders every cell as 0,
+because `selectedSubCategory` starts null and `getTeamValue` needs it.
+
+**Recommendation:** the AFL's `AflStandingsCompact.astro` is this card's twin
+for header/CTA/mobile work (see 2026-06 entry below) but NOT for this — the AFL
+has keepers, not contracts, so it has no cap-space mode and nothing to port.
+That asymmetry is worth knowing before running the sibling check on this pair
+and concluding the AFL is missing a fix.
+
+---
+
 ## 2026-09-07 - `client:visible` on a Component That Can Render Null Never Hydrates — Silently, Forever
 
 **Context:** the NFL games rail (`NflGamesStrip`) sat on all three

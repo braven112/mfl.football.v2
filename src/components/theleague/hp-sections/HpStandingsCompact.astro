@@ -161,13 +161,23 @@ const subtitle = userRow
     ? 'Showing the teams nearest the top of the current race.'
     : 'Showing the current cap-space leaders.';
 
+// The CTA follows whichever table the card is showing. In cap-space mode the
+// full ranking lives on League Summary, whose table already defaults to the
+// Projected Cap Space category. `sort=0` is the FIRST display year column —
+// the same year this card reads from `capSpace[0]` — so the index, not a
+// literal year, is what keeps the two sides aligned across a rollover.
+const ctaHref = hasGamesPlayed
+  ? '/theleague/standings?view=league'
+  : '/theleague/league-summary?category=capSpace&sort=0&dir=desc';
+const ctaLabel = hasGamesPlayed ? 'Full standings' : 'Full cap rankings';
+
 const formatCap = (v: number) => {
   const prefix = v < 0 ? '-' : '';
   return `${prefix}$${formatCompactNumber(Math.abs(v))}`;
 };
 ---
 
-<section class="hp-standings" aria-label="League standings">
+<section class="hp-standings" aria-label={hasGamesPlayed ? 'League standings' : 'Cap space rankings'}>
   <div class="hp-standings__header">
     <div class="hp-standings__section-header">
       <h3 class="hp-standings__section-title">
@@ -175,8 +185,8 @@ const formatCap = (v: number) => {
       </h3>
       <p class="hp-standings__sub">{subtitle}</p>
     </div>
-    <a href={r('/theleague/standings?view=league')} class="hp-standings__cta">
-      Full standings
+    <a href={r(ctaHref)} class="hp-standings__cta">
+      {ctaLabel}
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true">
         <path d="M5 12h14M12 5l7 7-7 7"/>
       </svg>
