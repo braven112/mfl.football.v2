@@ -253,6 +253,15 @@ export const NOTIFICATION_CATEGORIES: NotificationCategory[] = [
     defaultOn: false,
     live: true,
   },
+  {
+    id: 'site-update',
+    group: 'league-news',
+    label: "What's new on the site",
+    description: "Monday's roundup of what changed — new features first, fixes under them.",
+    cadence: 'One a week',
+    defaultOn: false,
+    live: true,
+  },
 
   // ── Game day ─────────────────────────────────────────────────────
   {

@@ -15,7 +15,7 @@
 import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
 import Breadcrumbs from '../../theleague/Breadcrumbs.astro';
 import { spriteUrl } from '../../../utils/sprite-url';
-import type { DescriptionImageBlock, WhatsNewEntry } from '../../../types/whats-new';
+import type { DescriptionImageBlock, DescriptionListBlock, WhatsNewEntry } from '../../../types/whats-new';
 import { WHATS_NEW_CATEGORY_LABELS } from '../../../types/whats-new';
 import { formatEntryDate } from '../../../utils/whats-new-helpers';
 import { resolveDirectoryHref, resolveLeaguePath } from '../../../utils/nav-utils';
@@ -176,6 +176,17 @@ const imagePath = entry.image ? `/assets/whats-new/${entry.image}` : null;
                       <figcaption class="wn-detail__caption">{(block as DescriptionImageBlock).caption}</figcaption>
                     )}
                   </figure>
+                ) : (block as DescriptionListBlock).type === 'list' ? (
+                  <div class="wn-detail__changes">
+                    {(block as DescriptionListBlock).heading && (
+                      <h3 class="wn-detail__changes-heading">{(block as DescriptionListBlock).heading}</h3>
+                    )}
+                    <ul class="wn-detail__changes-list">
+                      {((block as DescriptionListBlock).items ?? []).map((item) => (
+                        <li class="wn-detail__change" set:html={rewriteDescriptionLinks(item, r)} />
+                      ))}
+                    </ul>
+                  </div>
                 ) : null
               ))}
             </div>
@@ -639,6 +650,51 @@ const imagePath = entry.image ? `/assets/whats-new/${entry.image}` : null;
        smudge. */
     vertical-align: -0.4em;
     margin: 0 0.2em;
+  }
+
+  /* ── Change list (the weekly rollup's body) ── */
+  .wn-detail__changes {
+    margin: 0.25rem 0 0;
+  }
+
+  .wn-detail__changes-heading {
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--color-primary, #1c497c);
+    margin: 0 0 0.625rem;
+    padding-bottom: 0.4375rem;
+    border-bottom: 1px solid var(--color-gray-200, #e5e7eb);
+  }
+
+  .wn-detail__changes-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.625rem;
+  }
+
+  .wn-detail__change {
+    position: relative;
+    padding-left: 1rem;
+    font-size: 0.9375rem;
+    line-height: 1.6;
+    color: var(--color-gray-700, #374151);
+  }
+
+  /* A dot rather than a marker so the hanging indent survives a wrapped line. */
+  .wn-detail__change::before {
+    content: '';
+    position: absolute;
+    left: 0.1875rem;
+    top: 0.6875rem;
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: var(--color-secondary, #2e8743);
   }
 
   /* ── Inline images within article body ── */

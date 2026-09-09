@@ -7,6 +7,7 @@ import { ALL_LEAGUES } from '../src/config/leagues';
 import entries from '../src/data/whats-new.json';
 import stagingFile from '../src/data/weekly-changelog-staging.json';
 import { describeSpriteIconValidation } from './helpers/sprite-icons';
+import { astroRouteExists } from './helpers/astro-routes';
 import { WHATS_NEW_ACTIVE_MAX } from '../scripts/lib/retention-policy.mjs';
 
 /**
@@ -406,11 +407,19 @@ describe('weekly-changelog-staging.json league scoping', () => {
     impact: string;
     area: string;
     league?: string;
+    featured?: boolean;
+    image?: string;
+    imageAlt?: string;
+    headline?: string;
+    lede?: string;
+    heroWorthy?: boolean;
+    guide?: string;
+    entryId?: string;
+    heroHeadline?: string;
+    heroAccentWord?: string;
   }
   interface StagingFile {
     changes?: StagingChange[];
-    featuredImage?: string;
-    featuredImageLeague?: string;
   }
   const staging = stagingFile as StagingFile;
   const changes = Array.isArray(staging.changes) ? staging.changes : [];
@@ -478,7 +487,13 @@ describe('weekly-changelog-staging.json league scoping', () => {
   });
 
   it('every staged change has a valid date, type, and impact', () => {
-    const VALID_TYPES = ['bug-fix', 'style-tweak'];
+    const VALID_TYPES = [
+      'new-page',
+      'new-feature',
+      'enhancement',
+      'bug-fix',
+      'style-tweak',
+    ];
     const VALID_IMPACTS = ['user', 'admin'];
     const problems: string[] = [];
     for (const c of changes) {
@@ -498,19 +513,160 @@ describe('weekly-changelog-staging.json league scoping', () => {
     expect(
       problems,
       'Staged changelog entries must carry the fields CLAUDE.md specifies. ' +
-        'Anything bigger than a bug-fix or style-tweak belongs in whats-new.json ' +
-        'as its own entry, not in the weekly rollup.',
+        'Since Sept 2026 staging is the default path for ALL user-facing work — ' +
+        'only a marquee launch gets its own whats-new.json entry.',
     ).toEqual([]);
   });
 
-  it('featuredImage (when set) declares which league the screenshot belongs to', () => {
-    if (!staging.featuredImage) return;
+  // ── The weekly article's shape ──────────────────────────────────────────
+  //
+  // The rollup is one scannable list, one line per change, with the depth
+  // behind a link. Every guard below protects that shape at PR time rather
+  // than at 8pm Monday, because the rollup PUBLISHES AND EMPTIES the queue —
+  // a failure there costs the week's changes, a failure here costs a rerun.
+
+  /** How the reader sees a line: markup stripped, since anchors aren't read. */
+  const visibleLength = (summary: string): number =>
+    String(summary ?? '')
+      .replace(/<[^>]*>/g, '')
+      .trim().length;
+
+  /**
+   * One line means one line. Staged summaries used to be 250-430 character
+   * paragraphs, which the old rollup concatenated into a wall of prose nobody
+   * read — the reason this format exists. Detail belongs in a /guides page or
+   * in the marquee article, both of which the line can link to.
+   */
+  const MAX_SUMMARY_LENGTH = 200;
+
+  it(`every staged summary reads as one line (<= ${MAX_SUMMARY_LENGTH} visible chars)`, () => {
+    const tooLong = changes
+      .filter((c) => visibleLength(c.summary) > MAX_SUMMARY_LENGTH)
+      .map((c) => `${visibleLength(c.summary)} chars — "${String(c.summary).slice(0, 60)}..."`);
     expect(
-      staging.featuredImageLeague,
-      `staging "featuredImage" is set, so "featuredImageLeague" must name the league the ` +
-        `screenshot depicts (${VALID_LEAGUE_SLUGS.join(' | ')}) — otherwise one league's ` +
-        `screenshot could ship on the other league's What's New entry.`,
-    ).toBeTruthy();
-    expect(VALID_LEAGUE_SLUGS as readonly string[]).toContain(staging.featuredImageLeague!);
+      tooLong,
+      `The weekly article renders one bullet per staged change. Anything longer than ` +
+        `${MAX_SUMMARY_LENGTH} characters is an article, not a bullet — write the line, ` +
+        `then put the detail in a /guides page and point the change's "guide" field at it.`,
+    ).toEqual([]);
+  });
+
+  const FEATURE_TYPES = ['new-page', 'new-feature', 'enhancement'];
+
+  /** Which league articles a staged change lands in ("both" lands in each). */
+  const leaguesFor = (change: StagingChange): string[] =>
+    change.league === 'both' ? [...VALID_LEAGUE_SLUGS] : [String(change.league)];
+
+  it('at most one staged change per league is flagged "featured"', () => {
+    const byLeague = new Map<string, StagingChange[]>();
+    for (const change of changes.filter((c) => c.featured === true)) {
+      for (const league of leaguesFor(change)) {
+        byLeague.set(league, [...(byLeague.get(league) ?? []), change]);
+      }
+    }
+    const clashes = [...byLeague.entries()]
+      .filter(([, list]) => list.length > 1)
+      .map(([league, list]) => `${league}: ${list.length} featured changes`);
+    expect(
+      clashes,
+      `Exactly one change per league supplies the week's headline, lede and screenshot. ` +
+        `More than one and the rollup exits 1 on Monday night without publishing.`,
+    ).toEqual([]);
+  });
+
+  it('a week that ships a feature flags one change as "featured"', () => {
+    const missing: string[] = [];
+    for (const league of VALID_LEAGUE_SLUGS) {
+      const forLeague = changes.filter((c) => leaguesFor(c).includes(league));
+      const hasFeature = forLeague.some((c) => FEATURE_TYPES.includes(c.type));
+      const hasFeatured = forLeague.some((c) => c.featured === true);
+      if (hasFeature && !hasFeatured) missing.push(league);
+    }
+    expect(
+      missing,
+      `A week with a new page or feature needs a "featured": true change to supply the ` +
+        `article's headline, lede and top screenshot. A fixes-only week does not.`,
+    ).toEqual([]);
+  });
+
+  it('every featured change carries a headline, a lede and a screenshot', () => {
+    const problems: string[] = [];
+    for (const change of changes.filter((c) => c.featured === true)) {
+      const label = `"${String(change.summary ?? '').slice(0, 40)}..."`;
+      if (!change.headline) problems.push(`${label} is missing "headline" (the article title)`);
+      if (!change.lede) problems.push(`${label} is missing "lede" (the card/hero summary)`);
+      if (!change.image) problems.push(`${label} is missing "image" (the week's screenshot)`);
+      if (change.image && !change.imageAlt) problems.push(`${label} has "image" but no "imageAlt"`);
+    }
+    expect(problems, 'The featured change IS the article\'s face.').toEqual([]);
+  });
+
+  it('every featured screenshot exists in public/assets/whats-new/', () => {
+    const missing = changes
+      .filter((c) => c.featured === true && c.image)
+      .map((c) => String(c.image).split('/').pop()!)
+      .filter((file) => !existsSync(resolve(WHATS_NEW_ASSETS_DIR, file)));
+    expect(
+      missing,
+      `Capture it before Monday: node scripts/capture-whats-new-screenshots.mjs <id>. ` +
+        `The rollup copies the filename through verbatim, so a missing file publishes a ` +
+        `broken image AND reds the screenshot test for everyone.`,
+    ).toEqual([]);
+  });
+
+  it('a staged heroAccentWord is never set without a heroHeadline', () => {
+    const orphans = changes
+      .filter((c) => (c as { heroAccentWord?: string }).heroAccentWord && !(c as { heroHeadline?: string }).heroHeadline)
+      .map((c) => `"${String(c.summary).slice(0, 50)}..."`);
+    expect(
+      orphans,
+      `The AFL hero renders a two-part display line. Half an authored pair is ignored, ` +
+        `leaving copy that reads worse than the line derived from the title — write both ` +
+        `or neither.`,
+    ).toEqual([]);
+  });
+
+  it('a change never carries both a guide and a marquee entryId', () => {
+    const both = changes
+      .filter((c) => c.guide && c.entryId)
+      .map((c) => `"${String(c.summary).slice(0, 50)}..."`);
+    expect(
+      both,
+      `A line gets ONE trailing link. "entryId" points at the marquee article that already ` +
+        `published; "guide" points at the evergreen how-to. Pick the fuller read.`,
+    ).toEqual([]);
+  });
+
+  it('every staged "guide" points at a real /guides page', () => {
+    const broken: string[] = [];
+    for (const change of changes.filter((c) => c.guide)) {
+      const href = String(change.guide).startsWith('/')
+        ? String(change.guide)
+        : `/guides/${change.guide}`;
+      for (const league of leaguesFor(change)) {
+        const prefix = ALL_LEAGUES.find((l) => l.navSlug === league)?.slug;
+        if (!prefix) continue;
+        if (!astroRouteExists(`/${prefix}${href}`)) {
+          broken.push(`${href} does not resolve for ${league}`);
+        }
+      }
+    }
+    expect(
+      broken,
+      `A staged "guide" becomes a link in Monday's article. Write the guide page first.`,
+    ).toEqual([]);
+  });
+
+  it('every staged "entryId" names a published What\'s New entry', () => {
+    const known = new Set(typedEntries.map((e) => e.id));
+    const missing = changes
+      .filter((c) => c.entryId)
+      .map((c) => String(c.entryId))
+      .filter((id) => !known.has(id));
+    expect(
+      missing,
+      `"entryId" links the Monday article back to a marquee entry that already published. ` +
+        `An id with no entry ships a dead link in the one article everybody reads.`,
+    ).toEqual([]);
   });
 });

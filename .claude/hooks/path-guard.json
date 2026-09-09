@@ -407,15 +407,28 @@
         "src/data/page-directory.json",
         "src/data/whats-new.json",
         "src/data/weekly-changelog-staging.json",
-        "src/utils/whats-new*"
+        "src/utils/whats-new*",
+        "src/data/guides.json",
+        "src/types/guides.ts",
+        "src/utils/guides.ts",
+        "src/components/shared/guides/*.astro",
+        "src/pages/*/guides/*.astro",
+        "scripts/weekly-changelog-rollup.mjs",
+        "scripts/push-weekly-changelog.mjs",
+        "scripts/lib/weekly-changelog-format.mjs",
+        "src/components/shared/whats-new/*.astro",
+        "src/components/theleague/WhatsNewRow.astro"
       ],
-      "note": "See CLAUDE.md \"Page directory registry\" and \"What's New changelog\".",
+      "note": "See CLAUDE.md \"Changelog — one article a week, everything else stages\". Everything user-facing STAGES; the Monday rollup publishes one article per league. A staged summary is one line (200 visible chars) because it renders as a bullet — depth belongs in a /guides page the line links to. Guide screenshots live in public/assets/guides/, never the changelog's directory. `both` means the full-management leagues only (registry `bestBall` flag), and both the rollup and the data test must route through leaguesForStagedChange(). And a link inside a description LIST item must stay reachable from whats-new-links.ts#htmlFragments: a fragment the guards cannot see is league-prefixed by the renderer anyway and ships pointing at the wrong league.",
       "tests": [
         "tests/page-directory-data.test.ts",
         "tests/afl-hero-feature-headline.test.ts",
         "tests/whats-new-data.test.ts",
         "tests/whats-new-links.test.ts",
-        "tests/whats-new-cross-league.test.ts"
+        "tests/whats-new-cross-league.test.ts",
+        "tests/guides-data.test.ts",
+        "tests/weekly-changelog-format.test.ts",
+        "tests/whats-new-category-styles.test.ts"
       ]
     },
     {
