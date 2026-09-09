@@ -1,0 +1,30 @@
+---
+/**
+ * Transactions (afl-fantasy) — thin route wrapper.
+ *
+ * Shared implementation lives in components/shared/transactions/TransactionsPage.
+ *
+ * The GLOBS live HERE and cannot move into the shared component, for two
+ * separate reasons that happen to point the same way:
+ *   - a static import specifier can't be a runtime variable, and
+ *   - globbing both leagues in the shared component would put the other
+ *     league's 20 seasons of feeds in the chunk that renders either route.
+ *
+ * LAZY (`eager: false`), which is the whole point: the glob's KEYS answer
+ * "which seasons exist" at build time for free, while only the season being
+ * viewed is actually read. TheLeague's transactions archive is ~2.6 MB.
+ *
+ * A glob rather than a static import is also what keeps the build alive for a
+ * league whose feed a workflow has not written yet — a static import of a
+ * cron-generated file hard-fails the build for EVERY league until it exists
+ * (docs/claude/rules/storage-and-build.md).
+ */
+import TransactionsPage from '../../components/shared/transactions/TransactionsPage.astro';
+
+export const prerender = false;
+
+const transactionFeeds = import.meta.glob('../../../data/afl-fantasy/mfl-feeds/*/transactions.json');
+const leagueFeeds = import.meta.glob('../../../data/afl-fantasy/mfl-feeds/*/league.json');
+---
+
+<TransactionsPage leagueSlug="afl-fantasy" transactionFeeds={transactionFeeds} leagueFeeds={leagueFeeds} />

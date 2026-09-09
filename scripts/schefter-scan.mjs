@@ -55,6 +55,7 @@ import { buildReminderDigest } from './lib/reminder-digest.mjs';
 import { isSeasonWindowOpen } from '../src/utils/pecking-order-season-window.mjs';
 import { sendPushFanout, broadcast } from './lib/push-fanout.mjs';
 import { scanRogerReplies } from './roger-groupme-reply.mjs';
+import { parsePickToken, formatPickLabel } from '../src/utils/mfl-pick-tokens.mjs';
 
 const projectRoot = path.resolve(fileURLToPath(new URL('..', import.meta.url)));
 const MFL_HOST = process.env.MFL_HOST || 'api.myfantasyleague.com';
@@ -85,7 +86,6 @@ const BIG_DROP_THRESHOLD = 1_000_000;
 const BIG_DROP_MAX_AGE_MS = 48 * 60 * 60 * 1000;
 // Redis list of big-drop GroupMe pings waiting on the quiet-hours/spacing gate.
 const BIG_DROP_PENDING_KEY = schefterKey('theleague', 'bigdrop:pending_groupme');
-const ROUND_ORDINALS = { 1: '1st', 2: '2nd', 3: '3rd', 4: '4th', 5: '5th' };
 
 // ── Helpers ──
 
@@ -101,13 +101,21 @@ function generatePostId(timestamp) {
   return `sf_${timestamp}_${hash}`;
 }
 
+/**
+ * Describe a traded draft pick.
+ *
+ * Delegates to the shared token parser so this script and the Transactions
+ * page cannot disagree about what an asset token means. That sharing FIXED a
+ * bug: the previous implementation matched only `FP_`, so every `DP_` token —
+ * the current-draft notation, and the MORE common of the two at 683 archive
+ * tokens against 543 — fell through to the player branch below and published
+ * as "Player DP_0_11". `FP_` wording is unchanged, so existing posts and new
+ * ones still read "Rebels' 2026 3rd".
+ */
 function parseDraftPick(pickId, teams) {
-  const m = pickId.match(/^FP_(\d{4})_(\d{4})_(\d+)$/);
-  if (!m) return null;
-  const team = teams.get(m[1]);
-  const round = parseInt(m[3]);
-  const ordinal = ROUND_ORDINALS[round] ?? `${round}th`;
-  return { display: `${team?.name ?? `Team ${m[1]}`}'s ${m[2]} ${ordinal}` };
+  const pick = parsePickToken(pickId);
+  if (!pick) return null;
+  return { display: formatPickLabel(pick, (id) => teams.get(id)?.name) };
 }
 
 /**
@@ -136,9 +144,10 @@ function parseTradeAssets(str, players, teams) {
   const playerNames = [];
   const pickNames = [];
   for (const part of parts) {
-    if (part.startsWith('FP_')) {
-      const pick = parseDraftPick(part, teams);
-      if (pick) pickNames.push(pick.display);
+    // Ask the parser, don't prefix-match: `DP_` is a pick too.
+    const pick = parseDraftPick(part, teams);
+    if (pick) {
+      pickNames.push(pick.display);
     } else {
       const p = players.get(part);
       playerNames.push(p ? formatPlayerDisplay(p) : `Player ${part}`);

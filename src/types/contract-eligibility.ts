@@ -62,12 +62,26 @@ export interface MFLRawTransaction {
   franchise: string;
   franchise2?: string;
   timestamp: string;
+  /**
+   * Present for FREE_AGENT, the BBID types and the AUCTION types. ABSENT on
+   * WAIVER, IR and TAXI rows, which carry their payload in the pairs below —
+   * which is why `transaction` alone cannot identify a row.
+   */
   transaction: string;
   by_commish?: string;
   franchise1_gave_up?: string;
   franchise2_gave_up?: string;
   comments?: string;
   expires?: string;
+  /** WAIVER (the AFL's rolling-priority system). Comma-delimited player ids. */
+  added?: string;
+  dropped?: string;
+  /** IR. */
+  activated?: string;
+  deactivated?: string;
+  /** TAXI (practice squad). */
+  promoted?: string;
+  demoted?: string;
 }
 
 /** Player data from rosters.json */

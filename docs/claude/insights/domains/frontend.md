@@ -3281,3 +3281,41 @@ Two habits follow:
   For a multi-line import that line is the `import {` opener and the insert
   lands inside the braces. Anchor on the closing `} from '…';` of a known
   import instead, or add the line at the top of the block.
+
+## 2026-09-09 - A `*/` inside a block comment deletes an Astro route, silently
+
+Writing a glob path in a doc comment — `/** Lazy import.meta.glob over
+`*/transactions.json`. */` — **terminates the comment at the `*/`**. The rest of
+the line becomes code, the file no longer parses, and Astro's response is not an
+error: it drops the route from the manifest and the request falls through to the
+root catch-all (`src/pages/[...path].astro`), which renders a styled 404.
+
+What makes this expensive is the silence. There is no compiler error, nothing in
+`astro dev logs`, and no 500 — a brand-new page just 404s as though the file were
+never created. It cost a full bisect (minimal file → globs only → component
+import) to find, because every other hypothesis (stale route manifest, middleware
+rewrite, trailing-slash config, a name collision) looks more likely than "the
+comment ate the code".
+
+- **Never write `*/` inside a comment.** Say "per-season transactions feeds"
+  rather than pasting the glob. The same trap exists in `.ts` and `.astro`.
+- **A new page that 404s while a trivial probe page in the same directory
+  returns 200 is a parse failure, not a routing problem.** That two-file
+  comparison is the fastest way to split the two, and it is worth doing FIRST:
+  `printf -- '---\nexport const prerender = false;\n---\n<p>ok</p>\n' >
+  src/pages/theleague/zzprobe.astro` and curl it.
+- Bisect the file itself from there (frontmatter only → add imports one at a
+  time), rather than bisecting the routing config.
+
+Two smaller traps found in the same page, both also silent:
+
+- **`prefs.zoneId` is an ID (`"PT"`), NOT an IANA zone.** Passing it to
+  `Intl.DateTimeFormat` throws `Invalid time zone specified: PT` and blanks the
+  page. `chosenZone(prefs, leagueClock).zone` is the accessor that resolves the
+  pair. Anything formatting a date for a viewer should also fall back to UTC on
+  an unusable zone — a page grouped in the wrong zone is a small bug, a page
+  that 500s is a broken page.
+- **A checkbox group posts one param PER BOX** (`?types=a&types=b`), so
+  `params.get()` reads only the first and silently narrows the filter to one
+  value. Use `getAll()`, and split on commas too if hand-written links are also
+  supported.

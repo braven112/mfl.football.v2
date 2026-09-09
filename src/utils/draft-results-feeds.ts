@@ -14,11 +14,16 @@
  * written to undo.
  */
 
+import { loadSeasonFeed, seasonsFromGlob } from './mfl-feed-glob';
+import type { LazyFeedGlob } from './mfl-feed-glob';
 import type { RawDraftUnit } from './draft-utils';
 import type { RawDraftResultPick } from './draft-results-view';
 
-/** What Vite hands back for a lazy glob. */
-export type LazyFeedGlob = Record<string, () => Promise<unknown>>;
+// The glob mechanics moved to `mfl-feed-glob.ts` when the Transactions page
+// needed the same season-picking. Re-exported here so this module's existing
+// callers keep the names they already import.
+export type { LazyFeedGlob };
+export { seasonsFromGlob };
 
 export interface DraftResultsSeason {
   year: number;
@@ -35,25 +40,8 @@ export interface DraftResultsSeason {
   made: number;
 }
 
-const seasonOf = (path: string): number | null => {
-  const m = path.match(/mfl-feeds\/(\d{4})\//);
-  return m ? parseInt(m[1], 10) : null;
-};
-
 const asArray = <T,>(v: T | T[] | undefined): T[] =>
   v == null ? [] : Array.isArray(v) ? v : [v];
-
-/** Every season the glob matched, ascending. */
-export function seasonsFromGlob(feeds: LazyFeedGlob): number[] {
-  return Object.keys(feeds)
-    .map(seasonOf)
-    .filter((y): y is number => y !== null)
-    .sort((a, b) => a - b);
-}
-
-/** A module may be the JSON itself or a `{ default }` wrapper. */
-const unwrap = (mod: unknown): any =>
-  mod && typeof mod === 'object' && 'default' in (mod as any) ? (mod as any).default : mod;
 
 /**
  * Read one season. Returns an empty season rather than throwing — a missing or
@@ -63,16 +51,9 @@ export async function loadDraftResultsSeason(
   feeds: LazyFeedGlob,
   year: number
 ): Promise<DraftResultsSeason> {
-  const key = Object.keys(feeds).find((p) => seasonOf(p) === year);
   const empty: DraftResultsSeason = { year, rawUnit: undefined, rounds: 0, units: 0, made: 0 };
-  if (!key) return empty;
-
-  let raw: any;
-  try {
-    raw = unwrap(await feeds[key]());
-  } catch {
-    return empty;
-  }
+  const raw: any = await loadSeasonFeed(feeds, year);
+  if (raw === null) return empty;
 
   const rawUnit = raw?.draftResults?.draftUnit;
   const populated = asArray<any>(rawUnit).filter(
