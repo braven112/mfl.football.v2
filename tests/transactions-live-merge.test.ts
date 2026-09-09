@@ -76,3 +76,28 @@ describe('merging live rows over the static feed', () => {
     expect(rows).toHaveLength(1);
   });
 });
+
+describe('both Schefter pick parsers read DP_ tokens', () => {
+  it('the TS parser resolves a current-draft pick instead of calling it a player', async () => {
+    // Two Schefter parsers exist — scripts/schefter-scan.mjs (the scanner) and
+    // src/utils/schefter-transaction-parser.ts (SchefterPostCard). Both matched
+    // FP_ only, so every DP_ token published as "Player DP_0_11". Fixing one
+    // and not the other is the drift this pins.
+    const { parseDraftPickId } = await import('../src/utils/schefter-transaction-parser');
+    const teams = new Map([['0005', { name: 'Rebels' } as never]]);
+    expect(parseDraftPickId('DP_2_10', teams)?.display).toBe('3rd round, pick 11');
+    // "Rebels's", with the possessive appended verbatim, is the wording this
+    // parser has always produced — most franchise names here end in s
+    // ("Pigskins's 2026 3rd"). Asserted as-is to pin that the DP_ fix changed
+    // nothing about the FP_ path; the awkward possessive predates this work.
+    expect(parseDraftPickId('FP_0005_2026_3', teams)?.display).toBe("Rebels's 2026 3rd");
+    expect(parseDraftPickId('13630', teams)).toBeNull();
+  });
+
+  it('its parseTradeAssets sorts a DP_ token into picks, not players', async () => {
+    const { parseTradeAssets } = await import('../src/utils/schefter-transaction-parser');
+    const out = parseTradeAssets('13630,DP_0_11,', new Map(), new Map());
+    expect(out.picks).toHaveLength(1);
+    expect(out.players.map((p) => p.playerId)).toEqual(['13630']);
+  });
+});

@@ -119,7 +119,11 @@ const KIND_LABEL: Record<string, string> = {
 // Only offer a filter the season can actually answer — see kindsPresentIn.
 const offeredKinds = kindsPresentIn(rows, filters.kindsExplicit ? filters.kinds : []);
 const showingDefault = isDefaultView(filters);
-const weekOptions = Array.from({ length: 18 }, (_, i) => i + 1);
+// 22, not 18: a league year outlives its regular season, so the January and
+// February rows it carries bucket into the playoff weeks. `parseFilters`
+// already accepts 1-22, so stopping the dropdown at 18 made those weeks
+// reachable only by hand-editing the URL.
+const weekOptions = Array.from({ length: 22 }, (_, i) => i + 1);
 
 /** Pre-resolve a row's players so the template stays declarative. */
 function cellsFor(ids: string[]) {
@@ -348,7 +352,15 @@ const totalLabel = visible.length === 1 ? '1 move' : `${visible.length.toLocaleS
                       <span class="tx__amount">{r.amount ?? <span class="tx__dash" title="Not recorded in the feed">—</span>}</span>
                     )}
 
-                    {row.byCommish && <span class="tx__commish" title="Executed by the commissioner">COMM</span>}
+                    {/* Trades are excluded: MFL stamps by_commish on everything its
+                        trade system processes, so the badge fires on 485 of 502
+                        TheLeague trades and 207 of 213 AFL ones — noise that says
+                        nothing. On the signing types it is genuinely rare and
+                        therefore worth seeing: 0 of 1301 blind bids, 0 of 2934
+                        auctions, 46 of 1477 waivers. */}
+                    {row.byCommish && row.kind !== 'trade' && (
+                      <span class="tx__commish" title="Executed by the commissioner">COMM</span>
+                    )}
                   </li>
                 );
               })}

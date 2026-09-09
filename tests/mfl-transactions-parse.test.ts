@@ -14,6 +14,7 @@ import {
   normalizeTransactions,
   parsePickToken,
   extractTransactionRows,
+  playerIdsInRow,
   type TransactionRow,
 } from '../src/utils/mfl-transactions';
 import { ALL_LEAGUES } from '../src/config/leagues-data.mjs';
@@ -240,6 +241,47 @@ describe('pricing', () => {
   });
 });
 
+describe('prices MFL writes in exponent notation', () => {
+  it.each([
+    ['1.525e+06', 1525000],
+    ['5e+06', 5000000],
+    ['7.825e+06', 7825000],
+  ])('reads %s as %i', (raw, expected) => {
+    // 334 AUCTION_WON rows across 2007-2011 are this shape. Sanitizing with
+    // /[^0-9.]/ first eats the `e` and the `+` and turns $1,525,000 into $2.
+    const row = one({ type: 'AUCTION_WON', franchise: '0001', timestamp: '1200000000', transaction: `12345|${raw}|` });
+    expect(row?.amount).toBe(expected);
+  });
+
+  it('still reads a plain integer price', () => {
+    const row = one({ type: 'BBID_WAIVER', franchise: '0008', timestamp: '1788400800', transaction: '14063,|425000|' });
+    expect(row?.amount).toBe(425000);
+  });
+});
+
+describe("MFL's 0000 'nothing on this side' sentinel", () => {
+  it('is not treated as a dropped player', () => {
+    // 404 rows carry it in the drop slot of a claim that needed no cut. It is
+    // in neither identity union, so it renders as a phantom "Player 0000".
+    const row = one({ type: 'BBID_WAIVER', franchise: '0008', timestamp: '1788400800', transaction: '8838|425000|0000' });
+    expect(row?.added).toEqual(['8838']);
+    expect(row?.dropped).toEqual([]);
+  });
+
+  it('is dropped from an AFL waiver field too', () => {
+    const row = one({ type: 'WAIVER', franchise: '0008', timestamp: '1788400800', added: '0501,', dropped: '0000,' });
+    expect(row?.dropped).toEqual([]);
+  });
+
+  it('does NOT eat a real zero-padded player id', () => {
+    // 0511 and 0518 are live players; anything looser than an exact match
+    // silently deletes them.
+    const row = one({ type: 'FREE_AGENT', franchise: '0008', timestamp: '1788400800', transaction: '0511,|0518,' });
+    expect(row?.added).toEqual(['0511']);
+    expect(row?.dropped).toEqual(['0518']);
+  });
+});
+
 describe('feed envelope and ordering', () => {
   it('accepts the full export, the inner object, and a bare array alike', () => {
     const row = { type: 'FREE_AGENT', franchise: '0011', timestamp: '1786938819', transaction: '17048,|' };
@@ -322,7 +364,13 @@ describe('the committed archive', () => {
         if (!row.franchiseId) problems.push(`${where}: empty franchiseId`);
         if (!Number.isFinite(row.at) || row.at <= 0) problems.push(`${where}: bad timestamp`);
         if (!Array.isArray(row.added) || !Array.isArray(row.dropped)) problems.push(`${where}: added/dropped not arrays`);
-        if (row.amount !== null && (!Number.isFinite(row.amount) || row.amount <= 0)) problems.push(`${where}: bad amount ${row.amount}`);
+        // NOT `> 0`: that is exactly what let the exponent-notation bug through,
+        // because 1.525e+06 mis-parsed to 2 and 2 is a positive number. Every
+        // priced move in either league is at or above the league minimum, and
+        // the smallest minimum the archive has ever carried is 100k — so a
+        // three-figure price is a parse failure, not a bargain.
+        if (row.amount !== null && (!Number.isFinite(row.amount) || row.amount < 1000)) problems.push(`${where}: implausible amount ${row.amount}`);
+        if (playerIdsInRow(row).includes('0000')) problems.push(`${where}: 0000 sentinel leaked as a player id`);
         if (row.kind === 'trade' && row.trade === null) problems.push(`${where}: trade row with no trade detail`);
         if (row.kind !== 'trade' && row.trade !== null) problems.push(`${where}: non-trade row carrying trade detail`);
         if (row.kind !== 'trade' && row.added.length === 0 && row.dropped.length === 0) problems.push(`${where}: row moves nobody`);

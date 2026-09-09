@@ -14,6 +14,7 @@ import type {
   TransactionSubType,
   SchefterPost,
 } from '../types/schefter';
+import { parsePickToken, formatPickLabel } from './mfl-pick-tokens.mjs';
 
 /** Transaction types we skip entirely (noise) */
 const SKIP_TYPES = new Set(['AUCTION_BID', 'AUCTION_INIT', 'IR', 'TAXI']);
@@ -28,10 +29,6 @@ const BREAKING_AUCTION_THRESHOLD = 3_000_000;
 const STANDARD_AUCTION_THRESHOLD = 1_000_000;
 
 /** Ordinal suffixes for draft rounds */
-const ROUND_ORDINALS: Record<number, string> = {
-  1: '1st', 2: '2nd', 3: '3rd', 4: '4th', 5: '5th',
-  6: '6th', 7: '7th', 8: '8th', 9: '9th', 10: '10th',
-};
 
 // ── Formatting Helpers ──
 
@@ -134,9 +131,10 @@ export function parseTradeAssets(
   const parts = assetsStr.split(',').map(s => s.trim()).filter(Boolean);
 
   for (const part of parts) {
-    if (part.startsWith('FP_')) {
-      const pick = parseDraftPickId(part, teams);
-      if (pick) result.picks.push(pick);
+    // Ask the parser rather than prefix-matching: `DP_` is a pick too.
+    const parsedPick = parseDraftPickId(part, teams);
+    if (parsedPick) {
+      result.picks.push(parsedPick);
     } else {
       const player = players.get(part);
       result.players.push({
@@ -159,17 +157,34 @@ export function parseDraftPickId(
   pickId: string,
   teams: Map<string, TeamInfo>,
 ): ParsedDraftPick | null {
-  const match = pickId.match(/^FP_(\d{4})_(\d{4})_(\d+)$/);
-  if (!match) return null;
+  // Delegates to the shared token parser so this module and
+  // scripts/schefter-scan.mjs cannot disagree about what an asset token means.
+  // Both used to match ONLY `FP_`, which sent every `DP_` token — the
+  // current-draft notation, and the more common of the two at 683 archive
+  // tokens against 543 — down the player branch in `parseTradeAssets` below,
+  // where it published as "Player DP_0_11".
+  const pick = parsePickToken(pickId) as {
+    raw: string;
+    scope: 'future' | 'current';
+    franchiseId: string | null;
+    year: number | null;
+    round: number;
+    pick: number | null;
+  } | null;
+  if (!pick) return null;
 
-  const originalFranchiseId = match[1];
-  const year = parseInt(match[2], 10);
-  const round = parseInt(match[3], 10);
-  const team = teams.get(originalFranchiseId);
-  const roundStr = ROUND_ORDINALS[round] ?? `${round}th`;
-  const display = `${team?.name ?? `Team ${originalFranchiseId}`}'s ${year} ${roundStr}`;
+  const display = formatPickLabel(pick, (id: string) => teams.get(id)?.name);
 
-  return { originalFranchiseId, year, round, display };
+  // A `DP_` token encodes only round and pick — MFL does not say whose pick it
+  // is or what year, so those come back empty rather than invented. Only
+  // `display` is read downstream (SchefterPostCard), which is what makes that
+  // safe; widen this if a consumer starts needing the origin.
+  return {
+    originalFranchiseId: pick.franchiseId ?? '',
+    year: pick.year ?? 0,
+    round: pick.round,
+    display,
+  };
 }
 
 /** Parse a raw MFL transaction into structured data */

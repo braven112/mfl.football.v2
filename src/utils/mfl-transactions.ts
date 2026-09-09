@@ -163,7 +163,14 @@ function splitIds(value: unknown): string[] {
   return str(value)
     .split(',')
     .map((s) => s.trim())
-    .filter(Boolean);
+    .filter(Boolean)
+    // `0000` is MFL's "nothing on this side" sentinel, not a player: it fills
+    // the drop slot of a claim that needed no corresponding cut
+    // (`"8838|425000|0000"`), and appears in 404 rows across both leagues. It
+    // resolves to nobody in either identity union, so leaving it in renders a
+    // phantom "Player 0000". Matched EXACTLY — zero-padded ids are real
+    // (`0511` and `0518` are both live players), so anything looser eats them.
+    .filter((id) => id !== '0000');
 }
 
 /** Epoch seconds (as a string) → epoch ms, or null when unusable. */
@@ -173,9 +180,18 @@ function toMillis(value: unknown): number | null {
   return seconds * 1000;
 }
 
-/** A dollar figure from the feed, or null. Zero is a real "no bid", not a price. */
+/**
+ * A dollar figure from the feed, or null. Zero is a real "no bid", not a price.
+ *
+ * MFL WRITES SOME PRICES IN EXPONENT NOTATION — `"6616|1.525e+06"` — and 334
+ * `AUCTION_WON` rows across 2007-2011 are that shape. Stripping non-digits
+ * first (the obvious sanitizer) eats the `e` and the `+` and silently turns
+ * $1,525,000 into `1.52506` -> **$2**. So strip only the characters that are
+ * genuinely decoration and let `Number` do the parsing, since it understands
+ * exponent form natively.
+ */
 function toAmount(value: unknown): number | null {
-  const n = Number(str(value).replace(/[^0-9.]/g, ''));
+  const n = Number(str(value).trim().replace(/[$,\s]/g, ''));
   return Number.isFinite(n) && n > 0 ? Math.round(n) : null;
 }
 

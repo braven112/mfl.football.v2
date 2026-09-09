@@ -317,6 +317,18 @@ if the script grows past its current single init.
 
 ## Still open
 
+- **Four modules now parse `FP_`/`DP_` asset tokens**, and this work added the
+  fourth. They are `src/utils/trade-asset-parsing.ts` (trade builder, pending
+  trade cards), `src/utils/franchise-trade-asset.ts` (which carries regexes
+  character-identical to ours), the Schefter pair — `schefter-scan.mjs` and
+  `schefter-transaction-parser.ts`, both of which now delegate to
+  `mfl-pick-tokens.mjs` — and `mfl-pick-tokens.mjs` itself. The Schefter half is
+  consolidated; the two trade-builder modules are not, and they are the reason
+  the `DP_` bug could exist in two Schefter parsers at once without anyone
+  noticing. Consolidating them is a real cleanup and deliberately NOT done here:
+  it touches the trade builder in both leagues, which this PR otherwise does not.
+
+
 - **Dead money.** A drop in TheLeague generates a `salaryAdjustments` entry.
   Showing the cap hit next to the drop would make the page genuinely useful for
   cap planning, but it's a second join and a second source of wrongness.
