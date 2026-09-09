@@ -187,6 +187,45 @@ export function castTopFreeAgentModel(
 }
 
 /**
+ * Cast one of the league's BEST players — the marquee face for a hero that is
+ * about the league itself rather than about a transaction.
+ *
+ * The mirror image of `castTopFreeAgentModel`: that one walks dynasty-ADP
+ * order and keeps the players nobody rosters, this one keeps the players
+ * somebody does. A schedule release is showcased by a star, not by whoever
+ * happens to be unclaimed.
+ *
+ * Rotates daily through the top `poolSize` for the same reason the auction's
+ * pick does — one face should not own an entire phase — and `dailyPick` keeps
+ * that stable for a full Pacific day rather than changing on every refresh.
+ */
+export function castTopRosteredModel(
+  players: Map<string, PlayerIdentity>,
+  referenceDate: Date,
+  rosteredIds: Set<string>,
+  rankedIds: string[],
+  descriptor: string,
+  poolSize: number = 5,
+): HeroModel | null {
+  // An empty roster set means the rosters feed is missing, not that the league
+  // rosters nobody — casting "the league's best" off that would silently pick
+  // from free agents. Callers fall back rather than lie.
+  if (rosteredIds.size === 0) return null;
+
+  const pool: PlayerIdentity[] = [];
+  for (const id of rankedIds) {
+    if (!rosteredIds.has(id)) continue;
+    const p = players.get(id);
+    if (!p || !isCompositable(p)) continue;
+    pool.push(p);
+    if (pool.length >= poolSize) break;
+  }
+
+  const pick = dailyPick(pool, referenceDate, 'top-rostered', (p) => p.mflId);
+  return pick ? toModel(pick, descriptor) : null;
+}
+
+/**
  * Cast the best rookies still on the board — for the UDFA window hero.
  *
  * Walks the ranked list (dynasty ADP order) and returns the top `count`

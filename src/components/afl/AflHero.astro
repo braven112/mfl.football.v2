@@ -35,9 +35,12 @@ import AflPlayoffsHero from './AflPlayoffsHero.astro';
 import AflChampionshipHero from './AflChampionshipHero.astro';
 import AflEventHero from './AflEventHero.astro';
 import AflCompositeHero from './AflCompositeHero.astro';
+import LiveScoringHero from '../shared/LiveScoringHero';
+import '../../styles/live-scoring-hero.css';
 import '../../styles/trade-deadline-hero.css';
 import type { AflHeroState } from '../../utils/afl-hero-resolver';
 import type { HeroFranchiseBackdrop } from '../../utils/hero-franchise-backdrop';
+import type { BuiltLiveScoringProps } from '../../utils/live-scoring-hero-props';
 
 /** Region label per state — gives screen-reader users a meaningful landmark cue. */
 const REGION_LABEL: Record<string, string> = {
@@ -63,12 +66,30 @@ interface Props {
    * belongs to whoever is in it.
    */
   backdrop?: HeroFranchiseBackdrop | null;
+  /**
+   * Live scores, when the page could read them. Absent means the feed did not
+   * answer, and the branded event card takes the slot — a scoreboard with no
+   * scores is worse than the card it replaced.
+   */
+  liveScoring?: BuiltLiveScoringProps;
 }
 
-const { state, config, standings, userFranchiseId, backdrop = null } = Astro.props;
+const { state, config, standings, userFranchiseId, backdrop = null, liveScoring} = Astro.props;
 ---
 
-{state.kind === 'trade-deadline' ? (
+{/* Live scoring outranks the composite during game windows: while games are
+    being played the hero's job is a SCOREBOARD, not a portrait. Same call
+    TheLeague's SeasonDailyHero makes, and the reason `slot:live-scoring`
+    deliberately carries no composite treatment. */}
+{state.kind === 'regular-season' && state.slot === 'live-scoring' && liveScoring ? (
+  <LiveScoringHero
+    client:load
+    {...liveScoring}
+    phase="regular-season"
+    gameWindow={state.gameWindow}
+    isLive={state.isLive}
+  />
+) : state.kind === 'trade-deadline' ? (
   <TradeDeadlineHero
     client:idle
     deadlineMidnightPT={state.deadlineMidnightPT}

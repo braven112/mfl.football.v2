@@ -9,6 +9,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import type { LiveScoringHeroProps, LiveScoringResponse, MatchupPairing, TeamInfo } from '../../types/live-scoring';
 import type { GameWindow } from '../../types/hero-state';
 import { chooseTeamName } from '../../utils/team-names';
+import { selectSupportingMatchups } from '../../utils/live-scoring-view';
 
 // ── Polling ──
 
@@ -17,6 +18,7 @@ const POLL_INTERVAL_STALE = 300_000;  // 5min when all games finished
 
 function useLiveScoring(
   week: number,
+  leagueId: string,
   isLive: boolean,
   initialScores?: Record<string, number>,
   initialRemaining?: Record<string, number>,
@@ -29,7 +31,11 @@ function useLiveScoring(
 
   const poll = useCallback(async () => {
     try {
-      const res = await fetch(`/api/live-scoring?week=${week}`);
+      // `L` is not optional. Without it the endpoint answers for
+      // DEFAULT_LEAGUE_ID, so a second league's card would poll TheLeague's
+      // scores over its own correct server-rendered ones — invisibly, and only
+      // after the first 60-second tick.
+      const res = await fetch(`/api/live-scoring?week=${week}&L=${encodeURIComponent(leagueId)}`);
       if (!res.ok) return;
       const data: LiveScoringResponse = await res.json();
       setScores(data.scores);
@@ -38,7 +44,7 @@ function useLiveScoring(
     } catch {
       // Silently fail — will retry on next interval
     }
-  }, [week]);
+  }, [week, leagueId]);
 
   useEffect(() => {
     if (!isLive) return;
@@ -261,17 +267,20 @@ function ChampionshipLayout({ matchup, teams, scores }: {
 export default function LiveScoringHero(props: LiveScoringHeroProps) {
   const {
     week,
+    leagueId,
+    leagueName,
     phase,
     gameWindow,
     isLive,
     userFranchiseId,
+    scopeFranchiseIds,
     teams,
     initialScores,
     initialRemaining,
   } = props;
 
   const { scores, remaining, matchups } = useLiveScoring(
-    week, isLive, initialScores, initialRemaining, props.matchups,
+    week, leagueId, isLive, initialScores, initialRemaining, props.matchups,
   );
 
   const isChampionship = phase === 'championship';
@@ -283,9 +292,18 @@ export default function LiveScoringHero(props: LiveScoringHeroProps) {
     ? matchups.filter(m => m.home === userFranchiseId || m.away === userFranchiseId)
     : [];
 
-  // Other matchups (excluding all of the user's games)
-  const userMatchupSet = new Set(userMatchups);
-  const otherMatchups = matchups.filter(m => !userMatchupSet.has(m));
+  // Other matchups (excluding all of the user's games).
+  //
+  // `scopeFranchiseIds` narrows the SUPPORTING cast, never the viewer's own
+  // game above. The AFL passes its viewer's conference: 24 teams across two
+  // conferences means "the three closest games in the league" is mostly games
+  // against people you will never play. TheLeague passes nothing, so the whole
+  // league stays in scope and its behaviour is unchanged.
+  //
+  // Scoping needs a conference, and a conference needs a signed-in franchise —
+  // so a signed-out viewer is deliberately league-wide rather than scoped to
+  // an arbitrary half.
+  const otherMatchups = selectSupportingMatchups(matchups, new Set(userMatchups), scopeFranchiseIds);
 
   // Sort others by interest and take enough to fill the compact grid
   const maxCompact = Math.max(0, 3 - (userMatchups.length > 0 ? userMatchups.length - 1 : 0));
@@ -328,7 +346,11 @@ export default function LiveScoringHero(props: LiveScoringHeroProps) {
         {/* Championship: single head-to-head */}
         {isChampionship && featured.length > 0 && (
           <>
-            <span className="lsh__champ-label">The League Championship — Week {week}</span>
+            {/* The league's own name, never a literal. This read "The League
+                Championship" while only one league rendered the component,
+                which would have printed the wrong league's name the moment a
+                second one did. */}
+            <span className="lsh__champ-label">{leagueName} Championship — Week {week}</span>
             <ChampionshipLayout
               matchup={featured[0]}
               teams={teams}

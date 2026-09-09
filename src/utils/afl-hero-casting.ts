@@ -33,6 +33,7 @@ import {
   castRookieModel,
   castRosterModel,
   castTopFreeAgentModel,
+  castTopRosteredModel,
 } from './hero-casting';
 import { getPlayerMap } from './player-map';
 import {
@@ -230,6 +231,23 @@ export function castAflHeroModel(state: AflHeroState, input: AflCastingInput): H
       );
 
     case 'event':
+      // Two heroes land on `event`. The schedule-release tease asks for one of
+      // the league's best players (see EventHeroView.cast); everything else
+      // takes a franchise headliner. The intent comes from the resolver rather
+      // than from sniffing the view's link.
+      if (state.view.cast === 'top-ranked') {
+        return (
+          castTopRosteredModel(
+            players,
+            referenceDate,
+            rostered(),
+            getAdpRankedIds(leagueYear, AFL),
+            'Top 5 Overall',
+          ) ?? headliner('Headliner')
+        );
+      }
+      return headliner('Headliner');
+
     case 'default':
     default:
       return headliner('Headliner');

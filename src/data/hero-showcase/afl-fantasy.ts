@@ -282,6 +282,16 @@ const content: ShowcaseContent = {
       model: { name: 'Tetairoa McMillan', descriptor: 'Headliner', pos: 'WR', code: 'CAR', espnId: '4685472' },
     },
     {
+      key: 'schedule-release', accent: 'navy', scope: 'league',
+      component: 'AflCompositeHero \u00b7 schedule release', wordmark: 'SCHEDULE',
+      pill: 'Just dropped', title: 'The schedule', titleAccent: 'is out.',
+      summary:
+        'The one hero cast from the league\u2019s BEST players rather than a franchise headliner \u2014 a ' +
+        'marquee face for a marquee drop, rotating daily through the top five so one player does not own it.',
+      ctaLabel: 'See the schedule',
+      model: { name: 'Ja\u2019Marr Chase', descriptor: 'Top 5 Overall', pos: 'WR', code: 'CIN', espnId: '4362628' },
+    },
+    {
       key: 'franchise-ambiguous', accent: 'gold', scope: 'league',
       component: 'hero-franchise-accent · declines', wordmark: 'KEEPERS',
       pill: 'Rostered twice', title: 'When the rule', titleAccent: 'refuses to guess.',

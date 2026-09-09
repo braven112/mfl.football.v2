@@ -31,7 +31,7 @@ import { entryAppliesToLeague, WHATS_NEW_CATEGORY_LABELS } from '../types/whats-
 import type { WhatsNextTimeline, ResolvedLeagueEvent } from '../types/league-events';
 import type { DailySlot, GameWindow } from '../types/hero-state';
 import { getAllResolvedAflEvents } from './league-event-resolver';
-import { getDailySlot } from './hero-resolver';
+import { getDailySlot, isGameLive } from './hero-resolver';
 import { getCurrentNFLWeek } from './current-week';
 import { randomHeroPlayer } from './hero-players';
 import { resolveFeatureHeadline } from './whats-new-hero-headline';
@@ -74,6 +74,15 @@ export interface EventHeroView {
    */
   secondaryLinks?: HeroSecondaryLink[];
   icon?: string;
+  /**
+   * Which casting rule this view wants, when the state's KIND is not specific
+   * enough to say. Two different heroes resolve to `kind: 'event'` — the
+   * schedule-release tease and the generic dated-event card — and they want
+   * different faces, so the RESOLVER says which rather than the caster
+   * re-deriving it from a link string. Same division of labour as `composite`:
+   * the resolver already knows what the state is about.
+   */
+  cast?: 'top-ranked';
   badge?: string;
   /** Dark-mode variant of `badge` — required whenever `badge` is set. */
   badgeDark?: string;
@@ -152,7 +161,7 @@ export type AflHeroState =
     }
   | { kind: 'championship'; priority: 'P0'; content: HeroContent }
   | { kind: 'playoffs'; priority: 'P0'; content: HeroContent; slot?: DailySlot; gameWindow?: GameWindow; week?: number }
-  | { kind: 'regular-season'; priority: 'P0'; content: HeroContent; view: EventHeroView; slot: DailySlot; gameWindow: GameWindow; week?: number }
+  | { kind: 'regular-season'; priority: 'P0'; content: HeroContent; view: EventHeroView; slot: DailySlot; gameWindow: GameWindow; week?: number; isLive: boolean }
   | { kind: 'event'; priority: 'P3' | 'P4'; content: HeroContent; view: EventHeroView }
   | { kind: 'feature'; priority: 'P2'; content: HeroContent; view: EventHeroView }
   | { kind: 'default'; priority: 'P5'; content: HeroContent; view: EventHeroView };
@@ -1439,6 +1448,10 @@ export function resolveAflHeroState(input: AflHeroResolverInput): AflHeroState {
       slot,
       gameWindow,
       week,
+      // The SLOT is not the WINDOW: Sunday's live-scoring slot runs to 11pm PT
+      // and the games stop at 8:30. This is what stops the hero polling all
+      // evening and badging finished games LIVE.
+      isLive: isGameLive(now),
       content: buildRegularSeasonHero(slot, week, gameWindow, now, input.lineupSubmitted ?? null),
       view,
     };
@@ -1480,6 +1493,12 @@ export function resolveAflHeroState(input: AflHeroResolverInput): AflHeroState {
           link: '/afl-fantasy/schedule-release',
           linkLabel: (tease.phase === 'out' ? 'See the schedule' : 'See the countdown').toUpperCase(),
           icon: 'calendar',
+          // The schedule drop is a LEAGUE moment, showcased by one of the
+          // league's best players rather than by a franchise headliner — a
+          // marquee face for a marquee announcement. Nobody owns the schedule,
+          // so the card keeps the AFL's own navy.
+          cast: 'top-ranked',
+          composite: { wordmark: 'SCHEDULE', accent: 'navy', tone: null, scope: 'league' },
           accent: ACCENT_GOLD,
           glow: GLOW_GOLD,
           player: randomHeroPlayer(now),

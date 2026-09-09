@@ -477,3 +477,31 @@ export function describeFeedFreshness(
     ? { tone: 'live', label: 'Live', age, ageMs }
     : { tone: 'idle', label: 'Tracking', age, ageMs };
 }
+
+/**
+ * The matchups the compact grid may draw from: everything that is not one of
+ * the viewer's own games, narrowed to `scopeFranchiseIds` when one is given.
+ *
+ * Scoping exists because the AFL is 24 teams across two conferences, so "the
+ * three closest games in the league" is mostly games against owners this
+ * viewer will never play. TheLeague is a single 16-team pool and passes no
+ * scope, which is why an ABSENT or EMPTY scope means league-wide rather than
+ * nothing — a signed-out AFL viewer has no conference, and showing them an
+ * arbitrary half would be worse than showing them all of it.
+ *
+ * A matchup is in scope if EITHER side is: a cross-conference game involving
+ * the viewer's conference is still a game they have a reason to watch.
+ *
+ * The viewer's own games are excluded here and re-attached by the caller, so
+ * scoping can never hide the one matchup the hero exists to show.
+ */
+export function selectSupportingMatchups<T extends { home: string; away: string }>(
+  matchups: readonly T[],
+  ownMatchups: ReadonlySet<T>,
+  scopeFranchiseIds?: readonly string[],
+): T[] {
+  const inScope = scopeFranchiseIds?.length ? new Set(scopeFranchiseIds) : null;
+  return matchups.filter(
+    (m) => !ownMatchups.has(m) && (!inScope || inScope.has(m.home) || inScope.has(m.away)),
+  );
+}
