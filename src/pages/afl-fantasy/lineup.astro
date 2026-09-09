@@ -2138,16 +2138,23 @@ const ownersPollTeams = Object.values(getLeagueTeamBrands(ownersPollLeague.slug)
   .lineup-slot__opp-logo { width: 20px; height: 20px; }
 
   /* ── network badge on the opponent line ──
-     `:global` is required rather than stylistic: `.net-badge` is defined in the
-     shared stylesheet, and the SLOT copy is also written by the page's client
-     script on every player swap — neither carries Astro's scoping hash, so a
-     scoped selector would style the first render and nothing after it.
+     PLAIN selectors, no `:global()`. This whole block is `<style is:global>`,
+     where `:global()` is not a directive the compiler strips — it ships to the
+     browser verbatim as an invalid selector and the rule is dropped. These two
+     rules carried it and were therefore DEAD from the day they shipped: every
+     mark on this page rendered at `.net-badge--mark`'s 1.1rem fallback, which
+     is why NETFLIX and ESPN looked enormous next to 11px text. Verified
+     against @astrojs/compiler, and called out in
+     docs/claude/rules/storage-and-build.md § Astro 7. The reason the block is
+     global at all still holds: `.net-badge` comes from a shared stylesheet and
+     the slot's copy is rebuilt by the client script on every player swap, so
+     neither carries a scoping hash.
      Sized TO the row's text, never above it: the mark leads the lockup, and
      the opponent — the crest that follows it — is the more important half.
      A badge taller than the text beside it reads as the subject of the row,
      which is how NETFLIX came to outweigh the Rams. */
-  :global(.lineup-slot__net),
-  :global(.lineup-bench-row__net) {
+  .lineup-slot__net,
+  .lineup-bench-row__net {
     /* 11px — the starter row's own text size, so the mark reads as a word in
        the line rather than an object beside it. The bench row's text is 10px
        and deliberately takes the same 11px mark: one mark size across the page
@@ -2165,12 +2172,13 @@ const ownersPollTeams = Object.values(getLeagueTeamBrands(ownersPollLeague.slug)
     margin-right: 0.1rem;
   }
 
-  /* The narrowest phones need the opponent and the projection more than the
-     channel; the tooltip and the Sunday Ticket board still carry it. */
-  @media (max-width: 380px) {
-    :global(.lineup-slot__net),
-    :global(.lineup-bench-row__net) { display: none; }
-  }
+  /* No narrow-phone hide. One lived here — `:global()`-wrapped, so it never
+     once ran — written when the row carried a prefix, a crest, a three-letter
+     code and a mark drawing at 1.1rem. The code is gone and the mark is 11px,
+     so the crowding it was reaching for is gone with them; activating it now
+     would delete the channel from the phones this page is mostly read on,
+     which is the opposite of what this lockup is for. Measured at 320px: the
+     row still fits. */
 
 
   /* The matchup reads as one phrase — channel, prefix, crest — at full text
