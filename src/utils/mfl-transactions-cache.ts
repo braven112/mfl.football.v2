@@ -46,9 +46,46 @@ interface CachedTransactionsPayload {
   fetchedAt: number;
 }
 
-/** Identity of a transaction row, for de-duplicating the live and static lists. */
+/**
+ * Identity of a transaction row, for de-duplicating the live and static lists.
+ *
+ * KEYED ON THE WHOLE ROW, because `transaction` is not where every type keeps
+ * its payload. MFL uses a different field set per type, verified against a
+ * live export:
+ *
+ *   FREE_AGENT / BBID_WAIVER / AUCTION_*   `transaction`
+ *   WAIVER (the AFL's rolling-priority)    `added` / `dropped`
+ *   IR                                     `activated` / `deactivated`
+ *   TAXI                                   `promoted` / `demoted`
+ *   TRADE                                  `franchise2` + the two gave_up lists
+ *
+ * The original key was `type|franchise|timestamp|transaction`, which is blind
+ * to all four of the non-`transaction` shapes. A franchise winning two waiver
+ * claims in one batch produces two rows with the same type, franchise and
+ * batch timestamp and no `transaction` at all — identical keys, so one was
+ * silently dropped. 566 rows in the AFL's archive are that shape, plus a
+ * 2008 pair of distinct TheLeague trades executed in the same second.
+ *
+ * Sorted keys, not raw JSON, because MFL's key ORDER is nondeterministic: the
+ * same row comes back with its fields in a different order between fetches,
+ * and ordering-sensitive serialization would read that as two rows. Empty and
+ * absent are also folded together — a field carrying no value carries no
+ * identity — so a row is not duplicated by `transaction: ''` on one side and
+ * the key omitted on the other.
+ *
+ * Safe against false SPLITS because the two sources agree field-for-field:
+ * every row present in both the committed feed and a live `DAYS=3` fetch is
+ * byte-identical once key order is normalized (verified, 11/11).
+ */
 function rowKey(row: MFLRawTransaction): string {
-  return [row.type, row.franchise, row.timestamp, row.transaction ?? ''].join('|');
+  const fields = row as unknown as Record<string, unknown>;
+  const canonical: Record<string, unknown> = {};
+  for (const key of Object.keys(fields).sort()) {
+    const value = fields[key];
+    if (value === undefined || value === null || value === '') continue;
+    canonical[key] = value;
+  }
+  return JSON.stringify(canonical);
 }
 
 /**
@@ -59,8 +96,9 @@ function rowKey(row: MFLRawTransaction): string {
  * recent acquisition. MFL's own array order is not guaranteed, so this sorts
  * rather than trusting it.
  *
- * Live rows win on a tie: same key means the same row, and the live copy is
- * the one MFL is serving right now.
+ * Live rows win on a tie: same key means the same row — the key covers every
+ * field the row carries (see `rowKey`) — and the live copy is the one MFL is
+ * serving right now.
  */
 export function mergeTransactionRows(
   staticRows: MFLRawTransaction[] | null | undefined,

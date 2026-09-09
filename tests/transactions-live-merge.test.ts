@@ -14,17 +14,20 @@ import { mergeTransactionRows } from '../src/utils/mfl-transactions-cache';
 const aflWaiver = (franchise: string, timestamp: string, added: string, dropped: string) =>
   ({ type: 'WAIVER', franchise, timestamp, added, dropped }) as never;
 
-describe('why the live rows are not merged with mergeTransactionRows', () => {
-  it('that helper collapses two DISTINCT AFL waiver rows into one', () => {
-    // Its key is type|franchise|timestamp|transaction, and an AFL WAIVER row
-    // has no `transaction` — so a franchise winning two claims in the same
-    // batch keys identically. 566 archived AFL rows are this shape.
+describe('the shared merge helper and this page', () => {
+  it('mergeTransactionRows now keeps two DISTINCT AFL waiver rows', () => {
+    // It used to collapse them: its key was type|franchise|timestamp|transaction
+    // and an AFL WAIVER row has no `transaction`, so a franchise winning two
+    // claims in one batch keyed identically. Fixed to key on the whole row.
     const a = aflWaiver('0019', '1198731601', '1757', '8252');
     const b = aflWaiver('0019', '1198731601', '6786', '5429');
-    expect(mergeTransactionRows([a], [b])).toHaveLength(1);
+    expect(mergeTransactionRows([a], [b])).toHaveLength(2);
   });
 
-  it('the normalizer keeps both, because its id covers the players', () => {
+  it('the normalizer reaches the same answer independently', () => {
+    // This page concatenates and lets the normalizer dedupe rather than
+    // running a second pass through the helper — its ids are content-addressed
+    // over the parsed players and amount, so the extra pass would add nothing.
     const rows = normalizeTransactions([
       { type: 'WAIVER', franchise: '0019', timestamp: '1198731601', added: '1757,', dropped: '8252,' },
       { type: 'WAIVER', franchise: '0019', timestamp: '1198731601', added: '6786,', dropped: '5429,' },

@@ -77,13 +77,12 @@ export interface LoadSeasonInput {
  * header documents it; this page had it too.
  *
  * The live rows are CONCATENATED and handed to `normalizeTransactions` rather
- * than run through `mergeTransactionRows`. That helper keys a row on
- * `type|franchise|timestamp|transaction`, and the AFL's plain `WAIVER` rows
- * carry no `transaction` field at all — the players are in `added`/`dropped` —
- * so a franchise winning two claims in one batch produces two rows with the
- * same key and one is silently dropped. 566 archived AFL rows are that shape.
- * The normalizer's own ids are content-addressed over the players and the
- * amount, so it collapses genuine duplicates and keeps genuinely distinct rows.
+ * than run through `mergeTransactionRows`. Not because that helper is wrong —
+ * it keyed on `transaction` alone and lost AFL waiver rows, and that is fixed —
+ * but because a second dedup pass would add nothing here: the normalizer's own
+ * ids are content-addressed over the parsed players and amount, so it already
+ * collapses genuine duplicates, keeps genuinely distinct rows, and sorts
+ * newest-first on the way out.
  *
  * A null from the cache (no Redis, MFL erroring, past season) is not an error:
  * the page falls back to the static feed, which is stale but never wrong.

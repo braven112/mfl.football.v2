@@ -45,6 +45,55 @@ describe('mergeTransactionRows', () => {
     expect(merged).toHaveLength(2);
   });
 
+  it('keeps two AFL waiver rows that differ only in added/dropped', () => {
+    // The bug this replaced: an AFL WAIVER row has NO `transaction` field —
+    // the players are in added/dropped — so a franchise winning two claims in
+    // one batch shares type, franchise and the batch timestamp. Keyed on
+    // `transaction` alone those were identical and one vanished. 566 rows in
+    // the AFL archive are this shape.
+    const merged = mergeTransactionRows(
+      [{ type: 'WAIVER', franchise: '0019', timestamp: '1198731601', added: '1757', dropped: '8252' } as never],
+      [{ type: 'WAIVER', franchise: '0019', timestamp: '1198731601', added: '6786', dropped: '5429' } as never],
+    );
+    expect(merged).toHaveLength(2);
+  });
+
+  it('keeps two trades executed in the same second', () => {
+    // Real: TheLeague 2008, franchise 0008 traded with 0012 and 0009 at
+    // timestamp 1209846541. Neither row carries `transaction`.
+    const merged = mergeTransactionRows(
+      [{ type: 'TRADE', franchise: '0008', timestamp: '1209846541', franchise2: '0012', franchise1_gave_up: '7816,', franchise2_gave_up: '5724,' } as never],
+      [{ type: 'TRADE', franchise: '0008', timestamp: '1209846541', franchise2: '0009', franchise1_gave_up: '3494,', franchise2_gave_up: '4883,' } as never],
+    );
+    expect(merged).toHaveLength(2);
+  });
+
+  it.each([
+    ['IR', { activated: '', deactivated: '16594,' }, { activated: '13146,', deactivated: '' }],
+    ['TAXI', { promoted: '16613,', demoted: '' }, { promoted: '', demoted: '15254,' }],
+  ])('keeps two %s rows that differ only in their own field pair', (type, a, b) => {
+    const base = { type, franchise: '0002', timestamp: '1788833640' };
+    expect(
+      mergeTransactionRows([{ ...base, ...a } as never], [{ ...base, ...b } as never]),
+    ).toHaveLength(2);
+  });
+
+  it('still collapses one row whose fields arrive in a different ORDER', () => {
+    // MFL's key order is nondeterministic between fetches, so an
+    // order-sensitive key would read the same row as two.
+    const a = { type: 'AUCTION_WON', franchise: '0012', timestamp: '1341920133', transaction: '10960|1300000' };
+    const b = { transaction: '10960|1300000', timestamp: '1341920133', franchise: '0012', type: 'AUCTION_WON' };
+    expect(mergeTransactionRows([a as never], [b as never])).toHaveLength(1);
+  });
+
+  it('treats an empty field and an absent one as the same row', () => {
+    // A field carrying no value carries no identity; splitting on it would
+    // duplicate a row across the two sources.
+    const withEmpty = { type: 'LOCK_ALL_PLAYERS', franchise: '0001', timestamp: '1788400800', transaction: '' };
+    const without = { type: 'LOCK_ALL_PLAYERS', franchise: '0001', timestamp: '1788400800' };
+    expect(mergeTransactionRows([withEmpty as never], [without as never])).toHaveLength(1);
+  });
+
   it('survives a null or empty side (no Redis, or a quiet few days)', () => {
     expect(mergeTransactionRows(null, null)).toEqual([]);
     expect(mergeTransactionRows([row()], null)).toHaveLength(1);
