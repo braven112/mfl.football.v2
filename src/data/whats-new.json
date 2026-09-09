@@ -1,5 +1,28 @@
 [
   {
+    "id": "transactions-page",
+    "date": "2026-09-09",
+    "category": "new-page",
+    "icon": "transactions-2",
+    "leagues": [
+      "theleague",
+      "afl"
+    ],
+    "excludeFromHero": true,
+    "title": "Who Got Picked Up? Now There's One Place To Look",
+    "link": "/transactions",
+    "linkLabel": "See every move",
+    "image": "transactions-page.webp",
+    "imageAlt": "The new Transactions page, showing blind bid and free agent moves grouped under a Wednesday date header, each row with the team, the players in and out, and what the pickup cost.",
+    "summary": "Every signing, waiver claim and free agent pickup in the league, on one page, grouped by day. Filter by team, by player, by week, or down to just your own moves — and if you want to know what happened in 2011, that is a click away too.",
+    "description": [
+      "MFL has a transactions page. You have probably never enjoyed reading it. Ours groups the day's moves under the day they happened, puts the team's crest next to its name, shows you the player who came in and the player who went out with faces and positions attached, and — this being <strong>The League</strong> — tells you exactly what the pickup cost.",
+      "The filters are the point. Type a name into the search box to see every move a player has been part of this season. Narrow to one <a href=\"/franchises\">franchise</a>, or one week, or tick <em>Just my team</em> and watch the noise disappear. Every filter lives in the address bar, so the view you are looking at is a link you can paste into the group chat and have somebody else land on exactly what you saw.",
+      "Trades are there too, off by default — tick the box and the deals join the ledger, both sides expanded into the players and the draft picks that actually changed hands. Practice squad shuffling and injured reserve moves are left out on purpose; this page is about who joined the roster, not who slid sideways on it.",
+      "And the archive goes all the way back. TheLeague's ledger reaches 2007, the AFL's reaches 2003 — a year picker at the top, and every season we have ever synced sitting behind it. Go find out who you dropped in 2014. It was probably a mistake."
+    ]
+  },
+  {
     "id": "afl-live-scoring-hero",
     "date": "2026-09-08",
     "category": "enhancement",
@@ -931,30 +954,6 @@
     ],
     "image": "owner-activity-mfl-blend.webp",
     "imageAlt": "The Owner Activity page's Last Seen table. Each row gives a team, a blended last-seen time with a small badge reading SITE or MFL, and a smaller line underneath breaking out all three signals — for example Cowboy Up, ranked seventh at \"4 hours ago\" with an MFL badge, over \"Site: never · MFL: 4h ago · Last move: 9h ago (taxi squad move)\". A green Active status dot sits at the right of each row.",
-    "excludeFromHero": true
-  },
-  {
-    "id": "draft-broadcast-rewind",
-    "date": "2026-08-31",
-    "category": "enhancement",
-    "icon": "draft-podium",
-    "leagues": [
-      "theleague",
-      "afl"
-    ],
-    "title": "Ten Quiet Minutes And The Big Board Starts Talking To Itself",
-    "link": "/draft/broadcast",
-    "linkLabel": "Open the big board",
-    "summary": "An email draft can leave one crest on the TV for six hours. Now, after ten minutes with nothing picked, the board runs a highlight cycle — the roster of whoever is on the clock, then the team on deck, then every position that is off the board, then the whole draft replayed from 1.01. The second somebody actually picks, it drops everything and cuts to the live reveal.",
-    "description": [
-      "<a href=\"/draft/broadcast\">The Draft Broadcast</a> was built for a room: a pick lands, the player takes the whole screen over his franchise's colors, everybody looks up. That works beautifully on a night where the picks are ninety seconds apart. It works considerably less beautifully on an email draft, where the rules allow eight hours per selection and the television spends the entire evening showing one crest, one name, and an ELAPSED clock climbing past 2:41:19 like a hostage video.",
-      "So the board now entertains itself. Ten minutes with nothing picked and it starts a cycle, and it leads with the two things the room is actually arguing about while it waits. <strong>What has the man on the clock already got?</strong> — his whole roster, keepers and tonight's picks together, laid out by position with the faces, so the four running backs and the empty tight end row are visible from the back of the room. Then the same for <strong>whoever is on deck</strong>, because the next argument starts before the current one ends.",
-      "Then <strong>what is off the board</strong>: every position taken tonight, counted, ranked and drawn with the faces of the men who went there. That is the fact nobody can reconstruct in a draft that runs over days — the run on running backs happened on Tuesday and the only record of it is a group chat nobody is going to scroll on a television.",
-      "And then the <strong>rewind</strong>: the draft replayed from <strong>1.01</strong>, every selection in order, eight seconds each, the same full-screen reveal it got when it was news. A chip in the corner reads <strong>REWIND · PICK 12 OF 47</strong> so nobody mistakes history for a pick that just landed, and it carries who is actually on the clock the whole way through.",
-      "When the cycle runs out, the on-the-clock board comes back. Ten more quiet minutes and it goes again. And the instant a real selection lands on MFL, all of it is over mid-card — the live reveal wins, always, which is the only rule this thing has. A draft that is actually moving will never see it at all. It runs on both boards with nothing to turn on; if you want the old behavior for a night, <code>?screensaver=off</code> pins the board to the on-the-clock screen and nothing else."
-    ],
-    "image": "draft-broadcast-rewind.webp",
-    "imageAlt": "The Draft Broadcast in full screen showing a franchise roster panel, painted in the Boondock Saints' deep red. The header reads ON DECK over a large “Boondock Saints”, with the franchise crest to its left and “7 on the roster” underneath. Three rows follow, each a position label and a count beside a line of player headshots in team-colored circles: QB 1 (Daniels), RB 4 (Achane, Henry, Skattebo, Walker III) and WR 2 (Brown, Egbuka).",
     "excludeFromHero": true
   }
 ]

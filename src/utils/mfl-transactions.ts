@@ -203,7 +203,9 @@ export const parsePickToken = parsePickTokenImpl as (token: string) => DraftPick
 
 /** Split one side of a trade into the players and the picks it gave up. */
 export function parseTradeSide(franchiseId: string, raw: unknown): TradeSide {
-  const { players, picks } = splitTradeAssetsImpl(raw) as {
+  // `str()` first: the shared .mjs declares a string parameter, and `raw` here
+  // is whatever the feed had in that field.
+  const { players, picks } = splitTradeAssetsImpl(str(raw)) as {
     players: string[];
     picks: DraftPickRef[];
   };

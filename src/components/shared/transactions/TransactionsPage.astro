@@ -374,14 +374,15 @@ const totalLabel = visible.length === 1 ? '1 move' : `${visible.length.toLocaleS
     // view is mostly noise. Re-enabled immediately so the form still works if
     // the navigation is cancelled.
     const submit = () => {
-      const emptied = [...form.querySelectorAll<HTMLInputElement | HTMLSelectElement>('input, select')]
-        .filter((el) => el.name && el.type !== 'checkbox' && el.value === '');
+      const emptied = Array.from(
+        form.querySelectorAll<HTMLInputElement | HTMLSelectElement>('input, select')
+      ).filter((el) => el.name && el.type !== 'checkbox' && el.value === '');
       for (const el of emptied) el.disabled = true;
       form.requestSubmit();
       for (const el of emptied) el.disabled = false;
     };
 
-    for (const el of form.querySelectorAll<HTMLElement>('select, input[type="checkbox"]')) {
+    for (const el of Array.from(form.querySelectorAll<HTMLElement>('select, input[type="checkbox"]'))) {
       el.addEventListener('change', submit);
     }
 
