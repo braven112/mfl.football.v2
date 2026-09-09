@@ -1,5 +1,5 @@
 {
-  "snapshot": "2026-09-03T05-06-51.670Z",
+  "snapshot": "2026-09-09T05-06-48.339Z",
   "week": 1,
   "metadata": {
     "leagueId": "13522",
@@ -15,21 +15,21 @@
       "sleeper": "cached",
       "nflverse": "https://github.com/nflverse/nflverse-data/releases/download/snap_counts/snap_counts_2026.csv.gz"
     },
-    "fetchedAt": "2026-09-03T05:06:51.641Z",
+    "fetchedAt": "2026-09-09T05:06:48.309Z",
     "description": "Top salary averages calculated for franchise tag (top 3) and extension (top 5).",
-    "generatedAt": "2026-09-03T05:06:51.668Z"
+    "generatedAt": "2026-09-09T05:06:48.338Z"
   },
   "positions": {
     "WR": {
-      "totalPlayers": 130,
+      "totalPlayers": 133,
       "top3Average": 9933333.33,
       "top5Average": 9660000,
       "top10Average": 8274954.37,
       "starterAverage": 4024238.15,
       "starterMedian": 3135500,
       "starterCount": 48,
-      "averageSalary": 1942004.89,
-      "medianSalary": 915832.5,
+      "averageSalary": 1914553.66,
+      "medianSalary": 880000,
       "topPlayers": [
         {
           "id": "15287",
@@ -360,6 +360,12 @@
           "name": "Golden, Matthew",
           "salary": 1265000,
           "franchiseId": "0012"
+        },
+        {
+          "id": "15293",
+          "name": "Bateman, Rashod",
+          "salary": 1250000,
+          "franchiseId": "0007"
         },
         {
           "id": "17502",
@@ -704,6 +710,12 @@
           "franchiseId": "0007"
         },
         {
+          "id": "16778",
+          "name": "Flournoy, Ryan",
+          "salary": 500000,
+          "franchiseId": "0008"
+        },
+        {
           "id": "16626",
           "name": "Mitchell, Adonai",
           "salary": 495000,
@@ -806,6 +818,12 @@
           "franchiseId": "0008"
         },
         {
+          "id": "16195",
+          "name": "Wicks, Dontayvion",
+          "salary": 425000,
+          "franchiseId": "0015"
+        },
+        {
           "id": "17523",
           "name": "Caldwell, Jeff",
           "salary": 425000,
@@ -814,14 +832,14 @@
       ]
     },
     "RB": {
-      "totalPlayers": 90,
+      "totalPlayers": 91,
       "top3Average": 9100000,
       "top5Average": 8198000,
       "top10Average": 6748956.45,
       "starterAverage": 4154739.15,
       "starterMedian": 3773330,
       "starterCount": 30,
-      "averageSalary": 1781527.63,
+      "averageSalary": 1767719.64,
       "medianSalary": 632225,
       "topPlayers": [
         {
@@ -1185,6 +1203,12 @@
           "franchiseId": "0016"
         },
         {
+          "id": "17475",
+          "name": "McGowan, Seth",
+          "salary": 525000,
+          "franchiseId": "0010"
+        },
+        {
           "id": "17069",
           "name": "Blue, Jaydon",
           "salary": 522500,
@@ -1367,15 +1391,15 @@
       ]
     },
     "PK": {
-      "totalPlayers": 25,
+      "totalPlayers": 26,
       "top3Average": 1094440,
       "top5Average": 920664,
       "top10Average": 761556.25,
       "starterAverage": 675811.72,
       "starterMedian": 605000,
       "starterCount": 16,
-      "averageSalary": 593319.5,
-      "medianSalary": 550000,
+      "averageSalary": 586845.67,
+      "medianSalary": 537500,
       "topPlayers": [
         {
           "id": "16414",
@@ -1518,6 +1542,12 @@
         {
           "id": "13832",
           "name": "Sanders, Jason",
+          "salary": 425000,
+          "franchiseId": "0006"
+        },
+        {
+          "id": "8851",
+          "name": "Folk, Nick",
           "salary": 425000,
           "franchiseId": "0006"
         },
@@ -1735,14 +1765,14 @@
       ]
     },
     "TE": {
-      "totalPlayers": 59,
+      "totalPlayers": 60,
       "top3Average": 5583333.33,
       "top5Average": 5142672,
       "top10Average": 4266237.25,
       "starterAverage": 3126490.14,
       "starterMedian": 2637500,
       "starterCount": 18,
-      "averageSalary": 1380379.36,
+      "averageSalary": 1364456.38,
       "medianSalary": 658845,
       "topPlayers": [
         {
@@ -2098,6 +2128,12 @@
           "name": "Koziol, Tanner",
           "salary": 425000,
           "franchiseId": "0015"
+        },
+        {
+          "id": "15332",
+          "name": "Tremble, Tommy",
+          "salary": 425000,
+          "franchiseId": "0016"
         }
       ]
     },
