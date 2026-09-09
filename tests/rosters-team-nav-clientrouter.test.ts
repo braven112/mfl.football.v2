@@ -26,6 +26,33 @@ const PAGE = fs.readFileSync(
   'utf-8',
 );
 
+/**
+ * The body of initRosterPage, from its declaration to the astro:page-load
+ * registration that follows it.
+ *
+ * "the call appears after `const initRosterPage`" is NOT enough on its own —
+ * a module-scope call placed below the function satisfies that while being
+ * exactly the bug (thanks, Copilot). A call is only re-run per navigation if
+ * it is INSIDE the function, so the guards below check the region and the
+ * indentation, and separately reject a call at module scope (two spaces).
+ */
+const INIT_BODY = (() => {
+  const start = PAGE.indexOf('const initRosterPage = ');
+  const end = PAGE.indexOf("document.addEventListener('astro:page-load', initRosterPage)");
+  expect(start, 'initRosterPage must exist').toBeGreaterThan(-1);
+  expect(end, 'initRosterPage must be registered on astro:page-load').toBeGreaterThan(start);
+  return PAGE.slice(start, end);
+})();
+
+/** Asserts `fn()` is called from inside initRosterPage, not at module scope. */
+const expectCalledFromInit = (fn: string) => {
+  expect(INIT_BODY, `${fn}() must be called from inside initRosterPage`).toMatch(
+    new RegExp(`^ {4,}${fn}\\(\\);$`, 'm'),
+  );
+  expect(PAGE, `${fn}() at module scope runs once per SESSION, not per page load`)
+    .not.toMatch(new RegExp(`^ {0,2}${fn}\\(\\);$`, 'm'));
+};
+
 describe('the roster page binds its controls per page load, not per session', () => {
   it('is not wired by a module-scope IIFE', () => {
     expect(
@@ -38,13 +65,7 @@ describe('the roster page binds its controls per page load, not per session', ()
     const defineAt = PAGE.indexOf('const initTeamNavAccordion =');
     expect(defineAt, 'the accordion wiring must be a callable function').toBeGreaterThan(-1);
 
-    const initAt = PAGE.indexOf('const initRosterPage = ');
-    expect(initAt).toBeGreaterThan(-1);
-
-    const callAt = PAGE.indexOf('initTeamNavAccordion();');
-    expect(callAt, 'initTeamNavAccordion() must be called from inside initRosterPage')
-      .toBeGreaterThan(initAt);
-
+    expectCalledFromInit('initTeamNavAccordion');
     expect(PAGE).toContain("document.addEventListener('astro:page-load', initRosterPage)");
   });
 
@@ -70,10 +91,7 @@ describe('the roster page binds its controls per page load, not per session', ()
       ).not.toMatch(new RegExp(`getElementById\\('${id}'\\);\\n\\s*\\w+\\?\\.addEventListener`));
     }
 
-    const initAt = PAGE.indexOf('const initRosterPage = ');
-    const callAt = PAGE.indexOf('initContractActionButtons();');
-    expect(callAt, 'initContractActionButtons() must be called from initRosterPage')
-      .toBeGreaterThan(initAt);
+    expectCalledFromInit('initContractActionButtons');
 
     // Assigned, not added — a stacked submit handler POSTs every declaration twice.
     expect(PAGE).toContain('submitBtn.onclick = handleSubmitFranchiseTagsClick;');
