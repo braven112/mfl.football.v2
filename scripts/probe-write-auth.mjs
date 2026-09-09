@@ -112,7 +112,13 @@ const body = new URLSearchParams({ DATA: xml }).toString();
 
 // ── Step 4: the matrix ────────────────────────────────────────────────────
 async function attempt(label, { host, cookies }) {
-  const url = `https://${host}/${year}/import?TYPE=salaries&L=${leagueId}`;
+  // APPEND=1 IS NOT OPTIONAL. src/utils/mfl-contract-writer.ts marks it
+  // CRITICAL: without it MFL treats the payload as the WHOLE salary table and
+  // erases every player not named in it. This probe posts ONE player, so a
+  // non-APPEND write would reduce the league to that single row. It was
+  // missing here while the script was a one-off manual experiment; it must not
+  // be missing now that the write runs on a schedule.
+  const url = `https://${host}/${year}/import?TYPE=salaries&L=${leagueId}&APPEND=1`;
   try {
     const res = await mflFetch({ url, method: 'POST', cookies, body });
     const text = (await res.text()).trim();
@@ -152,3 +158,17 @@ console.log(
     ? '\nMFL_IS_COMMISH is NOT required for this write. The accounting gate that\ndemands it is the thing blocking the console, and it can come out.'
     : '\nNo configuration was accepted with the session cookie alone.'
 );
+
+// As an EXPERIMENT this script reports its matrix and exits 0 — a refusal is a
+// result, not a failure. As a CI GATE it has to be able to fail, or the green
+// tick means only "the script ran" and would be cited as proof that the stored
+// cookies can be deleted. Opt in, so the exploratory dispatch keeps its old
+// behaviour and only the scheduled proof is load-bearing.
+if (process.env.PROBE_REQUIRE_USER_ONLY === '1' && !userOnlyWorked) {
+  console.error(
+    '\n::error::Credentials-only proof FAILED — the login cookie alone was not '
+      + 'accepted for the write. The stored cookie secrets are still load-bearing; '
+      + 'do not delete them.',
+  );
+  process.exit(1);
+}

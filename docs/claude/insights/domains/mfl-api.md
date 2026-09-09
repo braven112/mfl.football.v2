@@ -32,7 +32,7 @@
   commissioner-only and silently switches MFL to a stricter validation path.
 - **Writes need the `www##` host, NOT `MFL_IS_COMMISH`** — `MFL_USER_ID` alone
   is accepted, and NOTHING issues that cookie, so code awaiting one hangs.
-  Proof: `probe-commish-cookie.mjs` (2026-09-05).
+  Proof: `probe-write-auth.mjs` (2026-09-05).
 - **Normalize every filtered export.** A one-result query returns a bare object,
   not a one-element array. Use `asArray` (`src/utils/mfl-normalize.ts`) *inside
   shared utils*, not at call sites. Offseason feeds ship a truthy object with

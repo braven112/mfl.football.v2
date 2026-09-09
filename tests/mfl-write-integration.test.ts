@@ -4,7 +4,15 @@
  * Validates that writeContractToMFL() can write salary/contract data
  * to MFL test league 36189 and read it back correctly.
  *
- * Run with: MFL_USER_ID=xxx MFL_IS_COMMISH=xxx MFL_LEAGUE_ID=36189 pnpm test:mfl-integration
+ * Run with: MFL_USER_ID=xxx MFL_LEAGUE_ID=36189 pnpm test:mfl-integration
+ *
+ * MFL_IS_COMMISH is NOT required and is no longer checked. This file used to
+ * exit 1 without it, which was never about the write — the variable was read
+ * and never sent, and mfl-contract-writer defaults it to ''. The 2026-09-05
+ * probe measured a commissioner's session cookie ALONE being ACCEPTED for this
+ * write, and no MFL request issues the commissioner cookie at all, so a
+ * precondition demanding one fails every run the moment the session comes from
+ * a login instead of a hand-pasted secret.
  *
  * Safety:
  * - Hardcodes league 36189 (never touches production 13522)
@@ -16,7 +24,6 @@ import { writeContractToMFL } from '../src/utils/mfl-contract-writer.js';
 
 const MFL_READ_HOST = process.env.MFL_HOST || 'https://api.myfantasyleague.com';
 const MFL_USER_ID = process.env.MFL_USER_ID;
-const MFL_IS_COMMISH = process.env.MFL_IS_COMMISH;
 const LEAGUE_ID = '36189';
 const FETCH_TIMEOUT_MS = 30_000;
 // MFL write propagation is typically 1-3s but can spike under load
@@ -153,10 +160,6 @@ async function runTests(): Promise<boolean> {
   // Pre-flight checks
   if (!MFL_USER_ID) {
     console.error(`${c.red}MFL_USER_ID env var is required${c.reset}`);
-    process.exit(1);
-  }
-  if (!MFL_IS_COMMISH) {
-    console.error(`${c.red}MFL_IS_COMMISH env var is required${c.reset}`);
     process.exit(1);
   }
 

@@ -28,7 +28,6 @@ const REPO_ROOT = process.cwd();
 /** Scripts that resolve MFL credentials from BOTH a login pair and a stored cookie. */
 const CREDENTIAL_CONSUMERS = [
   'scripts/apply-pending-contracts.mjs',
-  'scripts/mint-mfl-session.mjs',
   'scripts/export-best-ball-draft.mjs',
   'scripts/sync-draft-pick-contracts.mjs',
 ];
@@ -50,6 +49,12 @@ const CREDENTIAL_CONSUMERS = [
  */
 const EXEMPT = new Map([
   ['scripts/fetch-owner-names.mjs', 'owner names require a commissioner session; only the stored pair carries MFL_IS_COMMISH'],
+  // Its decision is not an if/else in main() — it is the pure pickMflSession(),
+  // whose internal order a line scan cannot read (the scan sees `stored.userId`
+  // inside the helper and the login gate 60 lines later in main() and calls it
+  // an inversion). Enforced by unit tests instead, and the test below asserts
+  // those tests still exist, so this exemption cannot become a hole.
+  ['scripts/mint-mfl-session.mjs', 'ordering lives in the pure pickMflSession(); covered by unit tests, not a text scan'],
 ]);
 
 const read = (rel: string) => readFileSync(path.join(REPO_ROOT, rel), 'utf8');
@@ -73,15 +78,38 @@ describe('MFL credential precedence', () => {
     }
   });
 
+  it('the mint-mfl-session exemption is backed by real coverage, not just a sentence', () => {
+    // The exemption is only honest while those unit tests exist. If they are
+    // deleted or renamed, this fails and the exemption has to be re-earned.
+    const unit = read('tests/mfl-integration-rollback-guard.test.ts');
+    expect(unit, 'no pickMflSession coverage').toContain('pickMflSession');
+    expect(
+      unit,
+      'no test pins that a bare fresh login still WINS — the exact regression the exemption assumes is covered',
+    ).toContain('uses a fresh login even when it carries NO commissioner flag');
+  });
+
   it('reaches for the login BEFORE the stored cookie', () => {
     const offenders: string[] = [];
+    const unscanned: string[] = [];
     for (const rel of CREDENTIAL_CONSUMERS) {
       const lines = read(rel).split('\n');
       // The first line that BRANCHES on each source — comments and env reads
       // don't count, only the conditional that decides which one is used.
-      const loginAt = lines.findIndex((l) => /^\s*(\}\s*else\s+)?if\s*\(.*\busername\b.*&&.*\bpassword\b/.test(l));
+      // Two real shapes in this repo: `if (username && password)` (use the
+      // login) and `if (!username || !password)` (bail out of it) — the second
+      // is mint-mfl-session's, and matching only the first is what let it slip.
+      const loginAt = lines.findIndex((l) => /^\s*(\}\s*else\s+)?if\s*\(.*\busername\b.*[&|]{2}.*\bpassword\b/.test(l));
       const cookieAt = lines.findIndex((l) => /^\s*(\}\s*else\s+)?if\s*\(\s*!?\s*(env|stored)/i.test(l) && /userId|UserId|USER_ID/.test(l));
-      if (loginAt === -1) continue; // covered by the shape test above
+      if (loginAt === -1) {
+        // NEVER skip silently. mint-mfl-session.mjs gates its login on
+        // `if (!username || !password)` rather than `&&`, so the pattern above
+        // missed it and the file dropped out of the scan while the suite stayed
+        // green — a guard that quietly checks three of four files is worse than
+        // one that checks none, because it is cited as coverage.
+        unscanned.push(`${rel}: no login branch matched — the scan is not covering this file`);
+        continue;
+      }
       if (cookieAt !== -1 && cookieAt < loginAt) {
         offenders.push(
           `${rel}:${cookieAt + 1} branches on the stored cookie before the login at :${loginAt + 1}`,
@@ -93,6 +121,12 @@ describe('MFL credential precedence', () => {
       'A stored MFL cookie fails by being present and EXPIRED, so a login gated behind '
         + '"no cookie set" never runs. Prefer the login; keep the cookie as the fallback.\n'
         + offenders.join('\n'),
+    ).toEqual([]);
+    expect(
+      unscanned,
+      'A listed consumer whose login branch this scan cannot find is UNGUARDED. Widen the '
+        + 'pattern or move the file to EXEMPT with a reason — do not leave it silently skipped.\n'
+        + unscanned.join('\n'),
     ).toEqual([]);
   });
 
@@ -179,10 +213,39 @@ describe('credentials-only write proof runs in CI', () => {
     expect(step, 'the proof step reads a stored cookie secret').not.toContain('secrets.MFL_USER_ID');
   });
 
-  it('runs even when the write tests above failed (independent signal)', () => {
+  it('lives in a job the rollback does NOT depend on', () => {
+    // As a step inside integration-test, a transient MFL failure here exits 1
+    // while cookie_ok is still true, and the rollback job reverts an innocent
+    // commit — the loop that put a deploy on main every 75 seconds on
+    // 2026-09-05. Its own job makes a failure loud and harmless.
+    expect(wf, 'the proof is not in its own job').toContain('  credentials-proof:');
+    const proofJob = wf.indexOf('  credentials-proof:');
+    const rollbackJob = wf.indexOf('  rollback:');
+    expect(wf.indexOf(STEP)).toBeGreaterThan(proofJob);
+    expect(wf.indexOf(STEP), 'the proof step is not inside credentials-proof').toBeLessThan(rollbackJob);
+    const needs = wf.slice(rollbackJob).match(/needs:\s*(.+)/)?.[1] ?? '';
+    expect(needs, 'rollback depends on the proof job — a flaky proof would revert a commit')
+      .not.toContain('credentials-proof');
+  });
+
+  it('can actually FAIL, or the green tick means only that the script ran', () => {
     const start = wf.indexOf(STEP);
     const step = wf.slice(start, wf.indexOf('run:', start));
-    expect(step, 'a failing write test would skip the proof and hide the answer')
-      .toContain('if: always()');
+    expect(step, 'without PROBE_REQUIRE_USER_ONLY the probe reports its matrix and exits 0')
+      .toContain("PROBE_REQUIRE_USER_ONLY: '1'");
+  });
+
+  it('the probe writes with APPEND=1', () => {
+    // Without it MFL treats the payload as the WHOLE salary table and erases
+    // every player not named in it. This posts one player, on a schedule.
+    // Assert the URL, not the file: the comment above it explains APPEND=1, so
+    // a file-wide toContain() passes on the prose after the parameter is gone.
+    const probe = read('scripts/probe-write-auth.mjs');
+    const importUrl = probe
+      .split('\n')
+      .find((l) => l.includes('import?TYPE=salaries') && l.includes('${leagueId}'));
+    expect(importUrl, 'could not find the salaries import URL — re-point this guard').toBeTruthy();
+    expect(importUrl, 'a non-APPEND salaries import would reduce the league to one row')
+      .toContain('APPEND=1');
   });
 });
