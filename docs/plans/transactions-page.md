@@ -1,6 +1,7 @@
 # Transactions Page — plan
 
-**Status:** planning (nothing built yet)
+**Status:** SHIPPED (PR #1040). This doc is now the record of what was built
+and why, and is the rules doc the `transactions` path-guard domain injects.
 **Routes:** `/theleague/transactions`, `/afl-fantasy/transactions`
 **Branch:** `claude/transactions-page-planning-p2olrs`
 
@@ -226,55 +227,81 @@ Day headers (`Sunday, September 7`) with compact rows beneath:
   scroll horizontally on mobile.
 - A stacked card layout under ~640px rather than a squeezed table.
 
-## Build phases
+## What shipped
 
-1. **Normalizer + tests.** `mfl-transactions.ts` against recorded fixtures from
-   both leagues and at least two seasons. No UI. Use the `mfl-fixture-recorder`
-   agent so the fixtures are sorted and provenance-stamped — MFL returns arrays
-   in nondeterministic order and a hand-pasted fixture bakes that in.
-2. **Extract the shared asset parser** from `scripts/schefter-scan.mjs` and
-   point the scanner at it. Verify the Schefter feed output is byte-identical
-   before and after.
-3. **Feed loader + view model.** `transactions-feeds.ts`, `transactions-view.ts`,
-   filters, year list. Still no UI.
-4. **Shared component + both thin routes.** Table, day grouping, player cells,
-   crests, salary column gated on the league feature.
-5. **Filter UI**, `astro:page-load` wiring, mobile layout.
-6. **Registration** (below) and a What's New entry.
+All six phases landed. The files, and which is the one to read first:
 
-## Registration checklist — none of this is optional
+| File | Role |
+|---|---|
+| `src/utils/mfl-transactions.ts` | The normalizer. **Read this one first** — its header documents every feed trap with the archive row count that proves it. |
+| `src/utils/mfl-pick-tokens.mjs` | Draft-pick tokens. Plain `.mjs` because `schefter-scan.mjs` runs as bare `node` and cannot import TypeScript. |
+| `src/utils/mfl-feed-glob.ts` | Lazy-glob season mechanics, shared with `draft-results-feeds.ts`. |
+| `src/utils/transactions-feeds.ts` | Loads one season and prices it from that season's `league.json`. |
+| `src/utils/transactions-view.ts` | Filters, day grouping, offered-kind derivation. |
+| `src/components/shared/transactions/TransactionsPage.astro` | The whole render. |
+| `src/pages/{theleague,afl-fantasy}/transactions.astro` | Thin wrappers; they own the globs and nothing else. |
 
-- [ ] `src/data/page-directory.json` — one entry per league (`id`,
+Confirmed against real data on a dev server: TheLeague 142 moves in 2026 (143
+with trades on), the AFL 223, both filtered, grouped and priced correctly.
+
+## Four bugs the unit tests could not see
+
+Worth keeping, because all four were invisible to a green test suite and three
+of them are general traps rather than facts about this page.
+
+1. **A JSDoc line reading `*/transactions.json` terminated the block comment.**
+   Astro dropped the route and served the 404 catch-all *with no error logged
+   anywhere* — not in the dev log, not in the response. It was found by
+   bisecting the file. Never write a glob path inside a block comment.
+2. **`prefs.zoneId` is an ID (`"PT"`), not an IANA zone.** Handing it to
+   `Intl.DateTimeFormat` throws and blanks the page; `chosenZone()` is the
+   accessor that resolves it. `groupByDay` now falls back to UTC on an
+   unusable zone.
+3. **A checkbox group posts one `types=` param PER BOX**, and `params.get()`
+   reads only the first — so every box ticked filtered to free agents alone.
+   Read `getAll()` and split commas.
+4. **The AFL was offering filters it has never been able to answer.** Offered
+   kinds now come from the season's own rows, with an explicitly-requested
+   kind kept visible so a shared link's filter can still be switched off.
+
+## Registration checklist — all done
+
+- [x] `src/data/page-directory.json` — one entry per league (`id`,
       `title`, `description`, `path`, `icon`, `category: 'reports'`,
       `visibility: 'all'`, `popularity`, **10+ tags**). Nothing tells you to add
       this; without it the page is invisible to site search.
       `tests/page-directory-data.test.ts` enforces the tag minimum only once the
       entry exists.
-- [ ] `src/config/footer-config.ts` — both leagues.
-- [ ] `src/data/whats-new.json` — a `new-page` entry at the top, in the
+- [x] `src/config/footer-config.ts` — both leagues.
+- [x] `src/data/whats-new.json` — a `new-page` entry at the top, in the
       league's editorial voice, with a webp screenshot in
       `public/assets/whats-new/`. **Inline links in the prose written
       league-neutral** (`/transactions`, never `/theleague/transactions`) —
       `rewriteDescriptionLinks` prefixes per reader and a pre-prefixed href
       sends half the audience to the other league's site.
-- [ ] **Ask Brandon whether it's hero-worthy** before setting
-      `excludeFromHero`. Don't decide silently.
-- [ ] `.claude/hooks/path-guard.json` — route the new files to a guard suite.
+- [x] **Asked Brandon about hero eligibility** rather than deciding silently.
+      His call was changelog-only, so `excludeFromHero: true` is set.
+- [x] `.claude/hooks/path-guard.json` — route the new files to a guard suite.
 
 ## Tests
 
-- `tests/mfl-transactions-parse.test.ts` — the five traps above, one case each:
-  AFL `WAIVER` fields vs TheLeague `BBID_WAIVER` string; a multi-drop
-  `FREE_AGENT`; the auction types' missing trailing comma; system rows with an
-  empty franchise excluded; `by_commish` surfaced.
-- `tests/transactions-view.test.ts` — filters compose, `?mine=1` is inert when
-  logged out, unknown year falls back rather than 500s.
-- `tests/transactions-clientrouter.test.ts` — init on `astro:page-load`.
-- Salary column absent for the AFL (no `bbidMinimum` in its `league.json`),
-  present for TheLeague, and an FCFS row prices at `league.bbidMinimum` rather
-  than at the player's roster salary.
-- Run the `sibling-drift-checker` agent before the PR: two routes land at once,
-  and they must stay thin.
+- `tests/mfl-transactions-parse.test.ts` (42) — one case per feed trap, plus a
+  SWEEP that runs every committed season of both leagues through the
+  normalizer and asserts the invariants. The sweep is what caught the
+  duplicate-row case; no hand-written fixture would have.
+- `tests/transactions-view.test.ts` (40) — filters compose, every bad param
+  degrades to "no filter" rather than erroring, day grouping honours the
+  viewer's zone, and both `types=` link shapes parse.
+
+Both are wired into the `transactions` path-guard domain, so they run on every
+edit to these files.
+
+NOT written, deliberately: a `transactions-clientrouter.test.ts`. The
+mechanical half is already a ratchet (`tests/clientrouter-init-ratchet.test.ts`
+pins that the script inits on `astro:page-load`), and the behavioural half was
+verified in a real browser — navigating in via the ClientRouter, then
+exercising the filters — which is the part a scan test cannot assert. Add one
+if the script grows past its current single init.
 
 ## Resolved during planning
 
