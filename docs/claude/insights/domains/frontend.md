@@ -168,12 +168,28 @@ one *consumes* it. If the answer is "both", one of them is wrong. Grep the
 flag's name in the file — `cat.direction` appeared at four sites here, and the
 two in the sort were legitimate while the two in the colouring were not.
 
+**The same fix surfaced a second one in the helper next door.**
+`rankTeamsForColumn` ranked by sorted POSITION, so equal values got
+consecutive distinct ranks and a tie straddling the quartile boundary was
+painted two ways — the out-year Roster Holes column is mostly zeros, and four
+of those 0s went green while the rest went red. Worse, its input is `sorted`,
+so which members of a tie went green changed on every header click. Rank drives
+colour here, so ranking must be COMPETITION ranking (1,1,1,4): equal values
+share a rank. And a column with no variation at all gets no colour rather than
+a uniform wash of green — there is no best or worst in it.
+
 **How to verify a colour bug at all** — the assertion that actually works is
 order-independent and reads computed style off the rendered page: for every
 category, *every* green cell must hold a better value than *every* red cell
 (`dir === 'asc' ? min(green) >= max(red) : max(green) <= min(red)`). Spot-
 checking one category is how five of the six stayed hidden after the first was
 found; sweeping all fourteen turned up the full set in one run.
+
+Read the RAW values out of the island's `data-config`, never the rendered text.
+Compact currency prints 2,240,000 and 2,160,000 both as "$2.2M", so a
+text-based tie check reported seven violations that were not violations — two
+genuinely different numbers, correctly coloured differently. Against raw values
+the same sweep was clean: 56 columns, 29 containing a real tie, 0 violations.
 
 ---
 
