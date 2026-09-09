@@ -21,6 +21,21 @@
 import { ALL_LEAGUES } from '../../src/config/leagues-data.mjs';
 
 /**
+ * @typedef {import('../../src/types/whats-new').DescriptionBlock} DescriptionBlock
+ *
+ * @typedef {object} StagedChange
+ * @property {string} date
+ * @property {string} type
+ * @property {string} summary
+ * @property {string} [impact]
+ * @property {string} [area]
+ * @property {string} [league]
+ * @property {boolean} [featured]
+ * @property {string} [guide]
+ * @property {string} [entryId]
+ */
+
+/**
  * The league tag meaning "the whole site", not one league.
  */
 export const BOTH_TAG = 'both';
@@ -49,7 +64,8 @@ export const BOTH_LEAGUES = ALL_LEAGUES.filter((l) => !l.bestBall).map((l) => l.
  * best-ball one, for a fix that genuinely only affects it. `both` is the only
  * tag that fans out.
  */
-export function leaguesForStagedChange(change) {
+export /** @param {Partial<StagedChange>} change @returns {string[]} */
+function leaguesForStagedChange(change) {
   return change?.league === BOTH_TAG ? [...BOTH_LEAGUES] : [String(change?.league)];
 }
 
@@ -89,7 +105,8 @@ export const AREA_LABELS = {
 /**
  * Group changes by area, preserving insertion order.
  */
-export function groupByArea(changes) {
+export /** @param {StagedChange[]} changes @returns {Map<string, StagedChange[]>} */
+function groupByArea(changes) {
   const groups = new Map();
   for (const change of changes) {
     const area = change.area || 'other';
@@ -133,7 +150,8 @@ export function joinPhrases(parts) {
  * but `rewriteDescriptionLinks` still prefixes each href for the reader and
  * the apex hosts serve them bare. See src/utils/whats-new-links.ts.
  */
-export function buildChangeLine(change) {
+export /** @param {StagedChange} change @returns {string} */
+function buildChangeLine(change) {
   const summary = String(change.summary ?? '').trim().replace(/\s+$/, '');
   const body = /[.!?)]$/.test(summary) ? summary : `${summary}.`;
 
@@ -158,6 +176,13 @@ export function buildChangeLine(change) {
  * and a heading per area would be more chrome than content.
  */
 export function buildDescription({ features, fixes, dateRange }) {
+  /**
+   * Annotated rather than inferred: without it TypeScript widens the list
+   * blocks' `type` to `string`, which is not the literal `'list'` that
+   * `DescriptionBlock` requires — so every consumer sees an unassignable type
+   * and has to cast. Ten call sites in the test suite did exactly that.
+   * @type {DescriptionBlock[]}
+   */
   const blocks = [];
 
   if (features.length > 0) {
@@ -209,7 +234,8 @@ export function buildSummary({ features, fixes }) {
 /**
  * Compute the date range string for the title (e.g., "Feb 16-22").
  */
-export function buildDateRange(changes) {
+export /** @param {StagedChange[]} changes @returns {string} */
+function buildDateRange(changes) {
   const dates = changes.map((c) => c.date).sort();
   const earliest = dates[0];
   const latest = dates[dates.length - 1];
