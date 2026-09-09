@@ -2,6 +2,14 @@
   "weekOf": "2026-09-14",
   "changes": [
     {
+      "date": "2026-09-09",
+      "type": "bug-fix",
+      "summary": "Win a player on waivers with nothing cut alongside him and you can set his contract length again. Any claim that did not come paired with a drop was landing on your roster with no way to declare years — no chip on the Yrs column, no Declare Contract in his action sheet — so the 24-hour window quietly ran out on a deal you never got to make. Fixed, and the acquisition now shows up within a couple of minutes instead of waiting on the next data sync.",
+      "impact": "user",
+      "area": "rosters",
+      "league": "theleague"
+    },
+    {
       "date": "2026-09-08",
       "type": "bug-fix",
       "summary": "Schefter no longer files the same trade rumor twice. One offer could sit in his tip queue as two separate slips, and his morning catch-up read that as two stories — so the same deal went out to the chat twice, a second apart, with two different links under it.",

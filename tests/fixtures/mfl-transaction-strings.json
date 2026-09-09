@@ -1,0 +1,69 @@
+{
+  "_provenance": {
+    "source": "MFL export TYPE=transactions, league 13522 (TheLeague), year 2026",
+    "recordedAt": "2026-09-09T03:09:00Z",
+    "note": "One entry per DISTINCT (type, string shape) observed in the full-season export. These are real MFL strings, not hand-written ones: the add-only BBID shape was fabricated by hand as \"N,|N|,\" in an earlier test and MFL has never emitted that, which is how the drop-free waiver claim went unparsed. Re-record with scripts/record-mfl-fixture.mjs rather than editing by hand."
+  },
+  "shapes": [
+    {
+      "type": "AUCTION_BID",
+      "shape": "N|N|",
+      "example": "0511|2525000|",
+      "occurrences": 555
+    },
+    {
+      "type": "AUCTION_INIT",
+      "shape": "N|N|",
+      "example": "8851|425000|",
+      "occurrences": 107
+    },
+    {
+      "type": "AUCTION_WON",
+      "shape": "N|N|",
+      "example": "12140|425000|",
+      "occurrences": 106
+    },
+    {
+      "type": "BBID_AUTO_PROCESS_WAIVERS",
+      "shape": "",
+      "example": "",
+      "occurrences": 2
+    },
+    {
+      "type": "BBID_WAIVER",
+      "shape": "N,|N|",
+      "example": "8851,|425000|",
+      "occurrences": 6
+    },
+    {
+      "type": "BBID_WAIVER",
+      "shape": "N,|N|N,",
+      "example": "14063,|425000|15777,",
+      "occurrences": 2
+    },
+    {
+      "type": "FREE_AGENT",
+      "shape": "|N,",
+      "example": "|16775,",
+      "occurrences": 29
+    },
+    {
+      "type": "FREE_AGENT",
+      "shape": "|N,N,",
+      "example": "|17064,16191,",
+      "occurrences": 3
+    },
+    {
+      "type": "FREE_AGENT",
+      "shape": "N,|",
+      "example": "16195,|",
+      "occurrences": 2
+    },
+    {
+      "type": "LOCK_ALL_PLAYERS",
+      "shape": "",
+      "example": "",
+      "occurrences": 3
+    }
+  ]
+}

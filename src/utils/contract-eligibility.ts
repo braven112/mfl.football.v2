@@ -28,16 +28,35 @@ const OFFSEASON_DEADLINE_MS = 48 * 60 * 60 * 1000;   // 48 hours
 // instead of re-declaring it.
 export const ACQUISITION_TYPES = ['BBID_WAIVER', 'FREE_AGENT', 'AUCTION_WON'];
 
+/** Extract numeric player ids from one comma-delimited transaction segment. */
+function idsIn(segment: string | undefined): string[] {
+  return (segment ?? '')
+    .split(',')
+    .map(part => part.trim())
+    .filter(part => /^\d+$/.test(part));
+}
+
 /**
  * Parse the MFL transaction string format into added/dropped player IDs.
  *
  * MFL formats:
  *   "|playerId,"          -> drop only
  *   "addId|dropId,"       -> add/drop swap
- *   "addId|,"             -> add only (no drop)
+ *   "addId|"              -> add only (no drop)
  *   "addId,|bbid|dropId," -> BBID add/drop with bid amount
- *   "playerId|amount|"    -> auction won (AUCTION_WON)
+ *   "addId,|bbid|"        -> BBID add with NO drop (winning claim, nothing cut)
+ *   "addId,|bbid|a,b,"    -> BBID add with more than one cut
+ *   "playerId|amount|"    -> auction won (AUCTION_WON), with or without a cut
  *   ""                    -> empty (batch marker like BBID_AUTO_PROCESS_WAIVERS)
+ *
+ * The segments are POSITIONAL and an empty segment is meaningful: a claim that
+ * needed no corresponding cut ends at the pipe ("16778,|500000|"), it does not
+ * carry a placeholder comma after it. Reading these shapes strictly is what
+ * broke this parser once already -- see the BBID branch below.
+ *
+ * scripts/lib/roster-move-parse.mjs parses the same MFL field for the Schefter
+ * scanner. The two must agree; tests/contract-eligibility.test.ts runs both
+ * over a shared corpus of real strings recorded off MFL.
  */
 export function parseTransactionString(txnString: string): {
   addedPlayerIds: string[];
@@ -52,50 +71,54 @@ export function parseTransactionString(txnString: string): {
     return { addedPlayerIds, droppedPlayerIds };
   }
 
-  // BBID format: "addId,|bbidAmount|dropId,"
-  const bbidMatch = txnString.match(/^(\d+),\|(\d+)\|(\d+),$/);
+  // BBID format: "addId,|bbidAmount|dropId," -- the MIDDLE segment is the bid,
+  // not a player, and the DROP SEGMENT MAY BE EMPTY when the winning claim
+  // needed no corresponding cut. MFL writes that as "16778,|500000|": a
+  // trailing pipe with nothing after it, NOT the "16778,|500000|," this
+  // parser used to require. Under the strict pattern every drop-free claim
+  // fell through to the generic swap branch, split into THREE segments there,
+  // and returned zero adds -- so parseTransactions() discarded it and the
+  // owner's 24-hour declaration window never opened. Keep both the drop id
+  // and the trailing comma optional.
+  // The drop segment is comma-delimited like every other one, so read it with
+  // idsIn rather than enumerating "one id" and "no id" as separate shapes —
+  // enumerating shapes is what left the no-drop case out in the first place.
+  const bbidMatch = txnString.match(/^(\d+),\|(\d+)\|(.*)$/);
   if (bbidMatch) {
     addedPlayerIds.push(bbidMatch[1]);
     bbidAmount = parseInt(bbidMatch[2], 10);
-    droppedPlayerIds.push(bbidMatch[3]);
+    droppedPlayerIds.push(...idsIn(bbidMatch[3]));
     return { addedPlayerIds, droppedPlayerIds, bbidAmount };
   }
 
-  // BBID add-only: "addId,|bbidAmount|,"
-  const bbidAddOnlyMatch = txnString.match(/^(\d+),\|(\d+)\|,$/);
-  if (bbidAddOnlyMatch) {
-    addedPlayerIds.push(bbidAddOnlyMatch[1]);
-    bbidAmount = parseInt(bbidAddOnlyMatch[2], 10);
-    return { addedPlayerIds, droppedPlayerIds, bbidAmount };
-  }
-
-  // Drop-only: "|playerId,"
+  // Drop-only: "|playerId," -- and MFL cuts more than one player in a single
+  // move ("|17064,16191,"), so the segment is comma-delimited, not one id.
+  // Stripping only the first comma turned that into "1706416191," and lost
+  // both ids.
   if (txnString.startsWith('|')) {
-    const dropIds = txnString.split('|').filter(s => s.replace(',', '').trim());
-    for (const id of dropIds) {
-      const cleanId = id.replace(',', '').trim();
-      if (cleanId && /^\d+$/.test(cleanId)) {
-        droppedPlayerIds.push(cleanId);
-      }
+    for (const segment of txnString.split('|')) {
+      droppedPlayerIds.push(...idsIn(segment));
     }
     return { addedPlayerIds, droppedPlayerIds };
   }
 
-  // Auction format: "playerId|amount|" (no commas, trailing pipe)
-  const auctionMatch = txnString.match(/^(\d+)\|(\d+)\|$/);
+  // Auction format: "playerId|amount|" — no comma after the id, which is what
+  // separates it from the BBID shape above. The trailing segment is a drop
+  // when the won player needed room made for him.
+  const auctionMatch = txnString.match(/^(\d+)\|(\d+)\|(.*)$/);
   if (auctionMatch) {
     addedPlayerIds.push(auctionMatch[1]);
     bbidAmount = parseInt(auctionMatch[2], 10);
+    droppedPlayerIds.push(...idsIn(auctionMatch[3]));
     return { addedPlayerIds, droppedPlayerIds, bbidAmount };
   }
 
-  // Add/drop swap: "addId|dropId," or "addId|,"
+  // Add/drop swap: "addId|dropId,", "addId|," or "addId|" -- positional, and
+  // either side may be empty or carry more than one comma-delimited id.
   const parts = txnString.split('|');
   if (parts.length === 2) {
-    const addId = parts[0].replace(',', '').trim();
-    const dropId = parts[1].replace(',', '').trim();
-    if (addId && /^\d+$/.test(addId)) addedPlayerIds.push(addId);
-    if (dropId && /^\d+$/.test(dropId)) droppedPlayerIds.push(dropId);
+    addedPlayerIds.push(...idsIn(parts[0]));
+    droppedPlayerIds.push(...idsIn(parts[1]));
   }
 
   return { addedPlayerIds, droppedPlayerIds, bbidAmount };

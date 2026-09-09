@@ -24,6 +24,7 @@ import espnCollegeIds from '../../../data/theleague/espn-college-ids.json';
 import { getPlannerPhase } from '../../utils/planner-phase';
 import { analyzeFreeAgentNeeds } from '../../utils/free-agent-needs';
 import { getTeamEligibility, getAugustCutdownDate, parseTransactions } from '../../utils/contract-eligibility';
+import { getCachedRecentTransactions, mergeTransactionRows } from '../../utils/mfl-transactions-cache';
 import { buildRookiePriorityFromFeeds } from '../../utils/august-cut-selection-core.mjs';
 import { getDeclarations } from '../../utils/contract-storage';
 import { getCutList, getCredentialCapturedAt } from '../../utils/autocut-storage';
@@ -1396,11 +1397,21 @@ const eligTxFeed = transactionsFeeds[Object.keys(transactionsFeeds).find(
   (path) => extractFeedSeason(path) === eligibilityYearStr
 ) ?? ''];
 const eligTxData = eligTxFeed ? getModuleData(eligTxFeed) : null;
-const eligRawTransactions = eligTxData?.transactions?.transaction
+const eligStaticTransactions = eligTxData?.transactions?.transaction
   ? (Array.isArray(eligTxData.transactions.transaction)
       ? eligTxData.transactions.transaction
       : [eligTxData.transactions.transaction])
   : [];
+
+// The bundled feed is written by the roster-sync cron and baked in at BUILD
+// time, so a waiver claim processed an hour ago is not in it — and a
+// declaration window is only 24 hours in season. Layer the last few days of
+// live transactions over it (Redis, 2-min TTL) the way the roster data above
+// already does; on no Redis this returns null and the static feed stands.
+const eligLiveTransactions = eligibilityYearStr === currentLeagueYearStr
+  ? await getCachedRecentTransactions(eligibilityYearStr, THELEAGUE_ID)
+  : null;
+const eligRawTransactions = mergeTransactionRows(eligStaticTransactions, eligLiveTransactions);
 
 // Build players map for eligibility engine
 const eligPlayersMap = new Map<string, MFLPlayerInfo>();
