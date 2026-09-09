@@ -346,6 +346,26 @@ describe('owners who already have the app are not pitched it', () => {
     expect(guard).toMatch(/leagueId === \w+\.id|authAflFranchiseId/);
   });
 
+  it('only remembers a report the server confirmed', () => {
+    // The flag was originally written BEFORE the fetch, which meant one
+    // offline visit inside the installed app — the normal case for a PWA —
+    // permanently retired that device's ability to report. The account record
+    // was never written, nothing could clear the flag, and the banner this
+    // whole feature exists to retire stayed up on every other device. A 403
+    // from reading the other league's homepage did the same.
+    const component = fs.readFileSync(
+      path.resolve(__dirname, '../src/components/shared/pwa/InstallAppPrompt.astro'),
+      'utf8',
+    );
+    const fetchAt = component.indexOf("fetch('/api/app-install'");
+    const okAt = component.indexOf('if (!res.ok) return;');
+    const rememberAt = component.indexOf('localStorage.setItem(REPORTED_KEY');
+
+    expect(fetchAt, 'reports to /api/app-install').toBeGreaterThan(-1);
+    expect(okAt, 'checks the response before remembering').toBeGreaterThan(fetchAt);
+    expect(rememberAt, 'remembers only after the ok check').toBeGreaterThan(okAt);
+  });
+
   it('sends the page league so the server can reject a mismatch', () => {
     const component = fs.readFileSync(
       path.resolve(__dirname, '../src/components/shared/pwa/InstallAppPrompt.astro'),

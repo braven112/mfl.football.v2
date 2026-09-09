@@ -160,17 +160,27 @@ const isBanner = variant === 'banner';
    */
   function reportInstalled(root: HTMLElement, source: 'standalone' | 'appinstalled' | 'declared') {
     if (alreadyReported()) return;
-    try {
-      localStorage.setItem(REPORTED_KEY, '1');
-    } catch {
-      // Can't remember it here — the POST below is idempotent server-side.
-    }
     void fetch('/api/app-install', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ source, league: root.dataset.league ?? '' }),
       keepalive: true,
-    }).catch(() => {});
+    })
+      .then((res) => {
+        // Remember only what the SERVER confirmed. Setting the flag before the
+        // fetch meant one OFFLINE visit — the normal case for an installed
+        // app — permanently retired this device's ability to report, leaving
+        // the banner up on every other one with nothing able to clear it. A
+        // 403 did the same to an owner reading the other league's homepage.
+        if (!res.ok) return;
+        try {
+          localStorage.setItem(REPORTED_KEY, '1');
+        } catch {
+          // Nothing to remember it with; the POST is idempotent server-side,
+          // so the cost is one more of them on the next visit.
+        }
+      })
+      .catch(() => {});
   }
 
   function readDismissal(): string | null {
