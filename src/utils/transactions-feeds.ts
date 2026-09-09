@@ -9,7 +9,12 @@
 
 import { loadSeasonFeed, seasonsFromGlob } from './mfl-feed-glob';
 import type { LazyFeedGlob } from './mfl-feed-glob';
-import { normalizeTransactions, type TransactionRow } from './mfl-transactions';
+import {
+  extractTransactionRows,
+  normalizeTransactions,
+  type TransactionRow,
+} from './mfl-transactions';
+import { getCachedRecentTransactions } from './mfl-transactions-cache';
 
 export type { LazyFeedGlob };
 export { seasonsFromGlob };
@@ -50,14 +55,51 @@ export interface LoadSeasonInput {
    * relying on the AFL's export happening to omit the field.
    */
   hasSalaryCap: boolean;
+  /** MFL league id, for the live recent-transactions lookup. */
+  leagueId: string;
+  /**
+   * True when `year` is the CURRENT league year. Only then is a live merge
+   * worth doing — a past season cannot gain rows.
+   */
+  isCurrentSeason: boolean;
 }
 
-/** One season's rows, newest first. An absent season yields an empty list. */
+/**
+ * One season's rows, newest first, with the last few days merged in live.
+ *
+ * WHY THE LIVE MERGE. The committed feed is read through `import.meta.glob`,
+ * which means BUNDLED AT BUILD TIME: the page cannot see a move until the
+ * roster-sync cron has committed it AND a deploy has shipped. GitHub throttles
+ * that five-minute cron to a run every few hours in practice, so a ledger built
+ * on the static feed alone is missing exactly the rows an owner opens the page
+ * to check — today's waiver run and today's FCFS pickups. This is the same trap
+ * `mfl-transactions-cache.ts` was written for on the contracts side, and its
+ * header documents it; this page had it too.
+ *
+ * The live rows are CONCATENATED and handed to `normalizeTransactions` rather
+ * than run through `mergeTransactionRows`. That helper keys a row on
+ * `type|franchise|timestamp|transaction`, and the AFL's plain `WAIVER` rows
+ * carry no `transaction` field at all — the players are in `added`/`dropped` —
+ * so a franchise winning two claims in one batch produces two rows with the
+ * same key and one is silently dropped. 566 archived AFL rows are that shape.
+ * The normalizer's own ids are content-addressed over the players and the
+ * amount, so it collapses genuine duplicates and keeps genuinely distinct rows.
+ *
+ * A null from the cache (no Redis, MFL erroring, past season) is not an error:
+ * the page falls back to the static feed, which is stale but never wrong.
+ */
 export async function loadTransactionsSeason(input: LoadSeasonInput): Promise<TransactionRow[]> {
-  const [feed, freeAgentPrice] = await Promise.all([
+  const [feed, freeAgentPrice, live] = await Promise.all([
     loadSeasonFeed(input.transactionFeeds, input.year),
     input.hasSalaryCap ? loadLeagueMinimum(input.leagueFeeds, input.year) : Promise.resolve(null),
+    input.isCurrentSeason
+      ? getCachedRecentTransactions(String(input.year), input.leagueId).catch(() => null)
+      : Promise.resolve(null),
   ]);
-  if (feed === null) return [];
-  return normalizeTransactions(feed, { freeAgentPrice });
+
+  const staticRows = feed === null ? [] : extractTransactionRows(feed);
+  const liveRows = (live ?? []) as unknown as Record<string, unknown>[];
+  if (staticRows.length === 0 && liveRows.length === 0) return [];
+
+  return normalizeTransactions([...staticRows, ...liveRows], { freeAgentPrice });
 }

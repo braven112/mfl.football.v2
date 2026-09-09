@@ -64,7 +64,15 @@ const availableYears = seasonsFromGlob(transactionFeeds);
 const year = resolveSeason(params.get('year'), availableYears, getCurrentLeagueYear()) ?? getCurrentLeagueYear();
 
 const hasSalaryCap = leagueHasFeature(leagueSlug, 'salaryCap');
-const rows = await loadTransactionsSeason({ transactionFeeds, leagueFeeds, year, hasSalaryCap });
+const rows = await loadTransactionsSeason({
+  transactionFeeds,
+  leagueFeeds,
+  year,
+  hasSalaryCap,
+  leagueId: league.id,
+  // Only the current league year can gain rows since the last sync.
+  isCurrentSeason: year === getCurrentLeagueYear(),
+});
 
 // READ-ONLY. Resolving a preference WRITES a cookie and belongs to the route —
 // from a component it throws ResponseSentError after the headers commit
