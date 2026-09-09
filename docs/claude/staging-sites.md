@@ -83,6 +83,43 @@ and Trusted IPs are all disabled project-wide. (The `401` in
 `docs/claude/insights/domains/deployment.md` from 2026-03-08 predates that.)
 Re-enabling SSO protection later would 401 all three staging sites.
 
+## Cloudflare challenges `/` on a new staging host
+
+Every one of these hosts is proxied through Cloudflare (they resolve to the
+same Cloudflare IPs as production), and on first setup all three answered the
+ROOT path with a `403` + `cf-mitigated: challenge` — the "Verify you are human"
+interstitial — while production's `/` served normally.
+
+It is scoped to `/` alone. Measured on `staging.theleague.us` with a real
+Chrome user-agent:
+
+| Path | Result |
+|---|---|
+| `/` | 403, `cf-mitigated: challenge` |
+| `/rosters` | 200 |
+| `/favicon.ico`, `/manifest.json` | 200 |
+| `/api/draft/status` | 200 |
+
+So it is not bot detection — a browser UA is challenged identically — and it is
+not the app. It is a zone rule keyed on hostname + path whose exception list
+names the production hosts and not the new ones. Diagnose it in **Cloudflare →
+Security → Events**, filtered to the staging hostname: the event names the
+exact service and rule.
+
+Fix by adding a **Skip** rule at the TOP of the WAF custom rules list:
+
+```
+(http.host in {"staging.theleague.us" "staging.afl-fantasy.com" "staging.mfl.football"})
+```
+
+Do NOT reach for the other obvious fix — setting the staging DNS records to
+DNS-only (grey cloud). It works, but it takes Cloudflare out of the path and
+production keeps it, so staging stops reproducing edge behavior that has
+already caused a production bug here: the edge replaces an origin 5xx with its
+own HTML page, discarding the JSON body (see
+`docs/claude/insights/domains/deployment.md`, 2026-07-07). A staging site that
+cannot reproduce that is worth less than one behind an annoying rule.
+
 ## What the staging sites are NOT
 
 - **Not isolated.** They share production's Upstash, so a click on test moves
