@@ -29,7 +29,28 @@ const REPO_ROOT = process.cwd();
 const CREDENTIAL_CONSUMERS = [
   'scripts/apply-pending-contracts.mjs',
   'scripts/mint-mfl-session.mjs',
+  'scripts/export-best-ball-draft.mjs',
+  'scripts/sync-draft-pick-contracts.mjs',
 ];
+
+/**
+ * Deliberately NOT subject to the ordering rule, with the reason.
+ *
+ * fetch-owner-names.mjs reads owner names, which MFL returns only to a
+ * COMMISSIONER session — a request carrying MFL_USER_ID alone authenticates
+ * fine and comes back anonymous, which is a silent wrong answer rather than an
+ * error. Since no MFL request issues MFL_IS_COMMISH (2026-09-05 probe), only
+ * the STORED pair can carry that flag, so preferring a login there would
+ * downgrade the script to the anonymous payload. The write path has no such
+ * constraint — the write does not need the flag — which is why the rule applies
+ * to the others and not this one.
+ *
+ * Consequence worth knowing: this script depends on a hand-rotated cookie and
+ * cannot be freed by the login the way the write jobs were.
+ */
+const EXEMPT = new Map([
+  ['scripts/fetch-owner-names.mjs', 'owner names require a commissioner session; only the stored pair carries MFL_IS_COMMISH'],
+]);
 
 const read = (rel: string) => readFileSync(path.join(REPO_ROOT, rel), 'utf8');
 
@@ -41,6 +62,14 @@ describe('MFL credential precedence', () => {
       const src = read(rel);
       expect(src, `${rel}: no MFL_USERNAME`).toContain('MFL_USERNAME');
       expect(src, `${rel}: no MFL_USER_ID`).toContain('MFL_USER_ID');
+    }
+  });
+
+  it('every exemption is still a real credential consumer (a stale exemption widens the guard)', () => {
+    for (const [rel, reason] of EXEMPT) {
+      const src = read(rel);
+      expect(src, `${rel} no longer reads a login pair — drop the exemption (${reason})`).toContain('MFL_USERNAME');
+      expect(src, `${rel} no longer reads a stored cookie — drop the exemption (${reason})`).toContain('MFL_USER_ID');
     }
   });
 
