@@ -2140,12 +2140,25 @@ const ownersPollTeams = Object.values(getLeagueTeamBrands(ownersPollLeague.slug)
      shared stylesheet, and the SLOT copy is also written by the page's client
      script on every player swap — neither carries Astro's scoping hash, so a
      scoped selector would style the first render and nothing after it.
-     Deliberately UNDER the row's text height: the mark leads the lockup, and
+     Sized TO the row's text, never above it: the mark leads the lockup, and
      the opponent — the crest that follows it — is the more important half.
-     A badge taller than the cap height of the `vs`/`@` beside it reads as the
-     subject of the row, which is how NETFLIX came to outweigh the Rams. */
-  :global(.lineup-slot__net) { --net-badge-h: 0.625rem; margin-right: 0.1rem; }
-  :global(.lineup-bench-row__net) { --net-badge-h: 0.5625rem; margin-right: 0.1rem; }
+     A badge taller than the text beside it reads as the subject of the row,
+     which is how NETFLIX came to outweigh the Rams. */
+  :global(.lineup-slot__net),
+  :global(.lineup-bench-row__net) {
+    /* 11px — the row's own text size, so the mark reads as a word in the line
+       rather than an object beside it. `align-self` is belt-and-braces: the
+       opponent group already centers its items, and the badge box, the `vs`
+       and the crest measure to the same center Y — but the badge is the one
+       item whose height is a variable, so a surface that overrides it must not
+       be able to knock it off the line. Wordmarks stay width-governed by
+       `--net-badge-h * 3` in network-badge.css and so draw shorter than 11px;
+       that cap is optical parity between a peacock and a slab wordmark, and
+       raising it here would undo it. */
+    --net-badge-h: 0.6875rem;
+    align-self: center;
+    margin-right: 0.1rem;
+  }
 
   /* The narrowest phones need the opponent and the projection more than the
      channel; the tooltip and the Sunday Ticket board still carry it. */
