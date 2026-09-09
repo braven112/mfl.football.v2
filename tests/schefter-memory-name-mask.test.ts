@@ -29,7 +29,6 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import {
   collectFranchiseNameTokens,
-  maskFranchiseNames,
   memoryNameMasker,
   resolveTeamTokens,
   tokenizedTeam,
@@ -40,10 +39,16 @@ import {
   MASKED_TEAM,
 } from '../scripts/lib/schefter-name-mask.mjs';
 import { buildRecentPostsPromptBlock } from '../scripts/lib/schefter-lore.mjs';
+// The REAL redactor — the one the rumor scanner injects. Tests exercise the
+// same code path production uses, not a simplified stand-in.
+import { redactFranchiseNamesInText } from '../scripts/schefter-rumor-scan.mjs';
 
 function read(rel: string): string {
   return readFileSync(path.join(process.cwd(), rel), 'utf8');
 }
+
+const mask = (text: string, teams: Map<string, any>) =>
+  memoryNameMasker(teams, redactFranchiseNamesInText)!(text);
 
 /** The two franchises from the incident, in the config's real shape. */
 function incidentTeams() {
@@ -58,7 +63,7 @@ describe('memory-block masking — the 2026-09-07 leak', () => {
     const body =
       'Per multiple sources with direct knowledge: Fire Ready Aim has a wideout '
       + 'on the table in a two-for-one swap.';
-    const masked = maskFranchiseNames(body, incidentTeams());
+    const masked = mask(body, incidentTeams());
     expect(masked).not.toMatch(/Fire Ready Aim/);
     expect(masked).toContain(MASKED_TEAM);
   });
@@ -78,7 +83,7 @@ describe('memory-block masking — the 2026-09-07 leak', () => {
       }],
     ]);
     for (const form of ['Bring the Pain', 'Pain', 'BTP', 'The Pain Train', 'Heavy Chevy', 'Chevy', 'Heavy']) {
-      expect(maskFranchiseNames(`Hearing ${form} is shopping a tight end.`, teams))
+      expect(mask(`Hearing ${form} is shopping a tight end.`, teams))
         .not.toContain(form);
     }
   });
@@ -87,7 +92,7 @@ describe('memory-block masking — the 2026-09-07 leak', () => {
     const teams = new Map<string, any>([
       ['0011', { name: 'Nashville Geeks', nameShort: 'Geeks' }],
     ]);
-    const masked = maskFranchiseNames('The Nashville Geeks called twice.', teams);
+    const masked = mask('The Nashville Geeks called twice.', teams);
     expect(masked).toBe(`The ${MASKED_TEAM} called twice.`);
     // Not "The [a team] Geeks" — the short form must not win the alternation.
     expect(masked).not.toContain('Geeks');
@@ -95,7 +100,7 @@ describe('memory-block masking — the 2026-09-07 leak', () => {
 
   it('survives the possessive, which is how these posts actually read', () => {
     // Real body, 2026-09-08: "Pain's been shopping a tight end since yesterday".
-    const masked = maskFranchiseNames("Pain's been shopping a tight end.", incidentTeams());
+    const masked = mask("Pain's been shopping a tight end.", incidentTeams());
     expect(masked).toBe(`${MASKED_TEAM}'s been shopping a tight end.`);
   });
 
@@ -104,14 +109,21 @@ describe('memory-block masking — the 2026-09-07 leak', () => {
     // `balls`, `feelers`, `herd`, `chat`, `swift` are each somebody's short
     // name. The memory block is prose, so an unanchored match would shred it.
     const teams = new Map<string, any>([['0008', { name: 'Bring the Pain', nameShort: 'Pain' }]]);
-    const masked = maskFranchiseNames('A painful week, and painstaking work.', teams);
+    const masked = mask('A painful week, and painstaking work.', teams);
     expect(masked).toBe('A painful week, and painstaking work.');
   });
 
-  it('degrades to the input when there is nothing to mask', () => {
-    expect(maskFranchiseNames('text', new Map())).toBe('text');
-    expect(maskFranchiseNames('text', null as never)).toBe('text');
-    expect(maskFranchiseNames('', incidentTeams())).toBe('');
+  it('refuses to mask rather than failing OPEN on an empty team map', () => {
+    // schefter-scan's loadTeams returns an empty Map on any config read error.
+    // An identity masker there would ship unmasked bodies — the exact opposite
+    // of the fail-safe — so no masker is produced and the bodies get dropped.
+    expect(memoryNameMasker(new Map(), redactFranchiseNamesInText)).toBeUndefined();
+    expect(memoryNameMasker(null as never, redactFranchiseNamesInText)).toBeUndefined();
+    expect(memoryNameMasker(incidentTeams(), undefined as never)).toBeUndefined();
+  });
+
+  it('passes an empty body through', () => {
+    expect(mask('', incidentTeams())).toBe('');
   });
 });
 
@@ -122,7 +134,7 @@ describe('buildRecentPostsPromptBlock — bodies are masked or absent, never raw
 
   it('masks franchise names out of recalled bodies', () => {
     const block = buildRecentPostsPromptBlock(posts, {
-      maskNames: memoryNameMasker(incidentTeams()),
+      maskNames: memoryNameMasker(incidentTeams(), redactFranchiseNamesInText),
     });
     expect(block).toContain('RECENT POSTS');
     expect(block).not.toMatch(/Fire Ready Aim/);
@@ -162,11 +174,16 @@ describe('both scanners mask — one history file feeds both', () => {
   const SCAN_SRC = read('scripts/schefter-scan.mjs');
 
   it('the rumor scanner passes a masker', () => {
-    expect(RUMOR_SRC).toMatch(/buildRecentPostsPromptBlock\(history\.posts,\s*\{[\s\S]*?maskNames: memoryNameMasker\(teams\)/);
+    expect(RUMOR_SRC).toMatch(/maskNames: memoryNameMasker\(teams, redactFranchiseNamesInText\)/);
   });
 
-  it('the transaction scanner passes a masker', () => {
-    expect(SCAN_SRC).toMatch(/maskNames: memoryNameMasker\(/);
+  it('the transaction scanner DROPS bodies rather than masking them bluntly', () => {
+    // No redactor of its own, and the only correct one lives in the rumor
+    // scanner. A simpler one for this lane was wrong in BOTH directions
+    // against the real config — "a fire sale" → "a [a team] sale", while "The
+    // Blunt Bros." passed through untouched — so it takes the safe
+    // degradation: no masker, no bodies, opener/closer bans intact.
+    expect(SCAN_SRC).not.toMatch(/maskNames:/);
   });
 
   it('no caller builds the block without options', () => {
@@ -175,15 +192,13 @@ describe('both scanners mask — one history file feeds both', () => {
     }
   });
 
-  it('the transaction scanner loads the fields the masker needs', () => {
-    // Its own templates only print name/abbrev, so nameMedium/nameShort/
-    // aliases/history look droppable — and dropping them is invisible until a
-    // name the harvest missed reaches the shared prompt.
-    const loader = SCAN_SRC.match(/async function loadTeams\([\s\S]+?\n\}/)?.[0] ?? '';
-    expect(loader).toMatch(/nameMedium/);
-    expect(loader).toMatch(/nameShort/);
-    expect(loader).toMatch(/aliases/);
-    expect(loader).toMatch(/history/);
+  it('there is exactly ONE name-matching implementation', () => {
+    // The finding behind this: a second, blunter matcher in the mask lib was
+    // wrong in both directions against the real config. Name matching has one
+    // home now, and callers inject it.
+    const MASK_SRC = read('scripts/lib/schefter-name-mask.mjs');
+    expect(MASK_SRC).not.toMatch(/new RegExp\(/);
+    expect(RUMOR_SRC).toMatch(/export function redactFranchiseNamesInText\(/);
   });
 
   it('the harvest has ONE home — neither scanner keeps a private copy', () => {
@@ -235,8 +250,12 @@ describe('team tokens — the wrong franchise becomes unwritable', () => {
   });
 
   it('the payload hands over a token, never the real name', () => {
-    expect(RUMOR_SRC).toMatch(/team: tokenizedTeam\(tip\.exposure\.fid\),/);
-    expect(RUMOR_SRC).not.toMatch(/team: \{ \.\.\.tip\.exposure\.team \}/);
+    expect(RUMOR_SRC).toMatch(/tokenizedTeam\(tip\.exposure\.fid\)/);
+    // Legacy tips queued before this shipped carry no fid. They fall back to
+    // the pre-token shape rather than minting {{TEAM:undefined}}, which would
+    // spend the offer's already-advanced exposure counter on a nameless
+    // template. Self-healing: the queue drains inside a week.
+    expect(RUMOR_SRC).toMatch(/tip\.exposure\.fid\s*\n?\s*\?\s*tokenizedTeam/);
   });
 
   it('resolves each token against ITS OWN franchise, not one assumed team', () => {
@@ -314,7 +333,7 @@ describe('team tokens — the wrong franchise becomes unwritable', () => {
     // Memory says "[a team]" (masked), the payload says "{{TEAM:0008}}", and
     // substitution only ever writes the franchise the token names — so the
     // Fire Ready Aim / Cyrus Allen pairing is unreachable.
-    const memory = maskFranchiseNames('Fire Ready Aim has a wideout on the table.', incidentTeams());
+    const memory = mask('Fire Ready Aim has a wideout on the table.', incidentTeams());
     expect(memory).not.toContain('Fire Ready Aim');
 
     const generated = `Per multiple sources: the ${teamShortToken('0008')} have Cyrus Allen on the table.`;

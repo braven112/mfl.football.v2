@@ -75,40 +75,38 @@ export function collectFranchiseNameTokens(teams) {
 /** What a masked franchise name becomes. Matches the scanner's redactor. */
 export const MASKED_TEAM = '[a team]';
 
-function escapeRegExp(s) {
-  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-}
-
 /**
- * Replace every franchise name form in `text` with `[a team]`.
+ * A masker for `buildRecentPostsPromptBlock`'s `maskNames` option, or
+ * `undefined` when this caller cannot mask safely.
  *
- * Word-boundary anchored so "Pain" does not fire inside "painful" — the config
- * genuinely contains short nameShorts that are also ordinary words (`balls`,
- * `feelers`, `herd`, `chat`, `swift` are all somebody's short name), and the
- * memory block is prose, not a tip. A possessive survives the boundary
- * (`Pain's` → `[a team]'s`) because \b sits between "n" and "'".
+ * `redact` is INJECTED rather than implemented here, and that is the whole
+ * point. The first cut of this file carried its own `\b`-anchored alternation,
+ * which was wrong in both directions against the real config:
  *
- * Returns `text` unchanged when there is nothing to mask, so a caller with an
- * empty team map degrades to today's behavior rather than throwing.
+ *   - It over-fired on ordinary prose, because it dropped the scanner's
+ *     ambiguous-token relaxation. "Dead cap hell" became "[a team] hell",
+ *     "a fire sale" became "a [a team] sale", "plenty of pain" became "plenty
+ *     of [a team]" — turning the anti-repetition memory into noise and showing
+ *     the model its own posts full of placeholders.
+ *   - It under-fired on names with punctuation edges, because a plain `\b`
+ *     cannot anchor against them. "The Blunt Bros." and "Lucky Buck$" — both
+ *     real AFL history names — passed through unmasked, which is the leak this
+ *     file exists to stop.
+ *
+ * `redactFranchiseNamesInText` already handles both (conditional edge guards,
+ * flexible separators, `readsAsOrdinaryProse`, and a per-map cache). A second
+ * implementation of name-matching is exactly the "five copies, two silently
+ * disagreed" failure this repo already learned once.
+ *
+ * Returns `undefined` on an empty team map so the block builder DROPS the
+ * bodies. `schefter-scan`'s `loadTeams` returns an empty Map on any config
+ * read error, and an identity masker there would ship unmasked bodies — the
+ * exact opposite of the fail-safe.
  */
-export function maskFranchiseNames(text, teams) {
-  if (typeof text !== 'string' || text.length === 0) return text;
-  if (!teams || typeof teams.values !== 'function') return text;
-  const tokens = collectFranchiseNameTokens(teams);
-  if (tokens.length === 0) return text;
-  // Length-descending already, so the alternation prefers "Nashville Geeks"
-  // over "Geeks" and a long form is never left half-masked.
-  const pattern = new RegExp(`\\b(?:${tokens.map(escapeRegExp).join('|')})\\b`, 'gi');
-  return text.replace(pattern, MASKED_TEAM);
-}
-
-/**
- * A masker bound to a team map, shaped for `buildRecentPostsPromptBlock`'s
- * `maskNames` option. Kept as its own export so both scanners pass the SAME
- * function rather than each writing an inline arrow that could drift.
- */
-export function memoryNameMasker(teams) {
-  return (text) => maskFranchiseNames(text, teams);
+export function memoryNameMasker(teams, redact) {
+  if (!teams || typeof teams.size !== 'number' || teams.size === 0) return undefined;
+  if (typeof redact !== 'function') return undefined;
+  return (text) => redact(text, teams);
 }
 
 // ── Team tokens: the model never sees a franchise name ──

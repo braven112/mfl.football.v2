@@ -24,7 +24,6 @@ import {
   appendPostHistory,
   buildHistoryEntry,
 } from './lib/schefter-lore.mjs';
-import { memoryNameMasker } from './lib/schefter-name-mask.mjs';
 import { shouldFireReminder } from './lib/roger-reminder-window.mjs';
 import {
   buildThrowbackReminder,
@@ -690,21 +689,7 @@ async function loadTeams(configPath) {
     const teams = raw.teams ?? [];
     const map = new Map();
     for (const t of teams) {
-      // name/abbrev are what this scanner's own post templates print. The
-      // other four fields are for the memory-block masker: it has to catch
-      // every form a franchise answers to — medium/short, config aliases, and
-      // retired names in `history[]` (each of which carries its own aliases) —
-      // or a name it missed goes into the prompt both scanners share. Cheap to
-      // carry, and dropping them here is invisible until a post names the
-      // wrong team.
-      map.set(t.franchiseId, {
-        name: t.name,
-        nameMedium: t.nameMedium,
-        nameShort: t.nameShort,
-        abbrev: t.abbrev,
-        aliases: Array.isArray(t.aliases) ? t.aliases : [],
-        history: Array.isArray(t.history) ? t.history : [],
-      });
+      map.set(t.franchiseId, { name: t.name, abbrev: t.abbrev });
     }
     return map;
   } catch {
@@ -1344,11 +1329,19 @@ async function scanPendingTrades(league) {
   // recentPostsBlock is an empty string when history is empty.
   const lore = await loadLore({ log: console.log, warn: console.warn, navSlug: league.slug });
   const history = await loadPostHistory({ log: console.log, warn: console.warn, navSlug: league.slug });
-  // Masked for the same reason the rumor scanner masks it: ONE
-  // post-history.json feeds both lanes, so an unmasked body written here is a
-  // franchise name in front of the rumor lane's model on its next run.
+  // NO masker here, so the block builder drops the post BODIES and keeps only
+  // the opener/closer bans. Deliberate: the only correct masker is
+  // `redactFranchiseNamesInText`, which lives in the rumor scanner with its
+  // edge guards, separator handling and ambiguous-token relaxation. Writing a
+  // simpler one for this lane is what produced both an over-masking bug
+  // ("a fire sale" → "a [a team] sale") and an under-masking one ("The Blunt
+  // Bros." untouched), so this lane takes the safe degradation instead.
+  //
+  // Cost is small and bounded: this scanner's posts are largely template-built
+  // from hard transaction data, and its anti-repetition still works on openers
+  // and closers. Wiring the real redactor in — by sharing it rather than
+  // copying it — is the way to get the bodies back.
   const recentPostsBlock = buildRecentPostsPromptBlock(history.posts, {
-    maskNames: memoryNameMasker(await loadTeams(league.configPath)),
     warn: console.warn,
   });
   console.log(`  [memory] last ${Math.min(history.posts.length, 5)} posts passed to LLM`);

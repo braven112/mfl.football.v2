@@ -224,18 +224,23 @@ three previous trade posts had all named Fire Ready Aim.
   the opener/closer bans — still gets done; the bodies are the nice-to-have,
   and degrading a nice-to-have beats putting a name in front of the model that
   its payload never authorized.
-- **One harvest, in `scripts/lib/schefter-name-mask.mjs`.** Both scanners and
-  the masker call the same `collectFranchiseNameTokens`, so retired names and
-  per-history aliases are caught identically everywhere. The transaction
-  scanner's own templates only print `name`/`abbrev`, which makes the other
-  four fields look droppable in its `loadTeams` — dropping them is invisible
-  until a name the harvest missed reaches the shared prompt, so a guard pins
-  them.
-- **The mask is word-boundary anchored and prefers the LONGEST form.** The
-  config contains short names that are ordinary words (`balls`, `feelers`,
-  `herd`, `chat`, `swift`), and the memory block is prose rather than a tip, so
-  an unanchored match shreds it. Longest-first stops "Nashville Geeks" becoming
-  "[a team] Geeks".
+- **The masker is INJECTED, never reimplemented.** `memoryNameMasker(teams,
+  redact)` delegates to the scanner's `redactFranchiseNamesInText`. A second,
+  `\b`-anchored matcher written for this lane was wrong in BOTH directions
+  against the real config: it under-fired on names with punctuation edges
+  (`Lucky Buck$`, `The Blunt Bros.` — a plain `\b` cannot anchor after `$` or
+  `.`, so both passed through UNMASKED, which is the leak this exists to stop),
+  and it over-fired elsewhere by dropping the ambiguous-token relaxation. Name
+  matching has one home; callers inject it.
+- **The transaction scanner therefore DROPS its bodies.** It has no redactor of
+  its own, and writing it a simpler one is the mistake above. Its posts are
+  largely template-built from hard transaction data and its opener/closer bans
+  still work, so the safe degradation is cheap. Sharing the real redactor is
+  how to get the bodies back — copying it is not.
+- **An empty team map produces NO masker, not an identity one.**
+  `schefter-scan`'s `loadTeams` returns an empty Map on any config read error,
+  and a masker that fails open there ships unmasked bodies — the exact opposite
+  of the fail-safe.
 - **Masking was half the fix.** It closed the leak PATH; the tokens below
   closed the CAPABILITY.
 
@@ -270,9 +275,26 @@ name a second team" had been trusting it to choose not to do.
 - **Two registers, not one.** `{{TEAM_SHORT}}` exists because the voice needs
   it — real posts read "Pain's been shopping a tight end", not "Bring the
   Pain's been shopping a tight end". One token would flatten the cadence.
-- **The examples are tokenized too.** They teach by demonstration, so an
-  exposure example still showing "Gaslamp Griffins" would model exactly the
-  behavior the rule forbids. Pinned by test.
+- **The examples are tokenized too, with an UNRESOLVABLE franchise id.** They
+  teach by demonstration, so an example showing a real franchise name models
+  the behavior the rule forbids. Worse, an example id that is a LIVE franchise
+  resolves cleanly when the model copies the token out of the examples instead
+  of the payload: `unresolved` stays false and the post confidently names the
+  wrong team — the exact misattribution tokens exist to prevent, now
+  undetectable. Every example uses `9999`, which is not a franchise in either
+  league, so a copied token fails loudly. Pinned by test.
+- **Token instructions live in the BASE prompt, not the trade-offer playbook.**
+  That playbook is appended only when the batch contains a `trade_offer` tip,
+  but `formerName` attaches to trade-bait and web scopes, which never mix with
+  trade_offer tips — so tokenizing the callback while leaving its only
+  explanation in the playbook sent the model tokens with zero instructions on
+  every post that could carry one.
+- **Legacy tips have no `fid`.** Tips queued before tokenization shipped, and
+  held tips requeued, carry an exposure block without one. Those fall back to
+  the pre-token shape rather than minting `{{TEAM:undefined}}` — which resolves
+  to nothing, discards the AI body, and spends the offer's already-advanced
+  exposure counter on a template that names no team. Self-healing: the queue
+  drains inside a week.
 - **Resolution happens at ONE choke point** — the `const body =` line in the
   beat loop, which every body passes through before the feed, GroupMe and the
   post record. The team comes off the ORIGINAL tip (`beat.batch`), never the

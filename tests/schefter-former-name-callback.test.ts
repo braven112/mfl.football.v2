@@ -423,7 +423,22 @@ describe('the prompt rule requires the pairing', () => {
   it('states rule 30 and forbids the bare former name', () => {
     expect(src).toMatch(/30\. FORMER-NAME CALLBACK/);
     expect(src).toMatch(/MUST appear alongside it/);
-    expect(src).toMatch(/FORBIDDEN: "Dockside Dynamos are fielding calls\."/);
+    // The examples are TOKENS now (2026-09-08), not invented franchise names.
+    // The FORBIDDEN case still demonstrates the bare former name — it just
+    // demonstrates it in the form the model actually writes.
+    expect(src).toMatch(/FORBIDDEN: "\{\{TEAM_FORMER:\d{4}:\d{4}\}\} are fielding calls\."/);
+  });
+
+  it('uses an UNRESOLVABLE franchise id in every prompt example', () => {
+    // The sharpest edge of tokenizing: an example id that is a live franchise
+    // resolves cleanly when copied out of the examples instead of the payload,
+    // `unresolved` stays false, and the post names the wrong team — the exact
+    // misattribution tokens exist to prevent, now undetectable. 9999 is not a
+    // franchise in either league, so a copied token fails loudly instead.
+    const exampleIds = [...src.matchAll(/\{\{TEAM(?:_SHORT|_FORMER)?:(\d{4})/g)]
+      .map((m) => m[1]);
+    expect(exampleIds.length).toBeGreaterThan(0);
+    expect([...new Set(exampleIds)]).toEqual(['9999']);
   });
 
   /**
