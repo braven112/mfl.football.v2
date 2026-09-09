@@ -9,8 +9,11 @@
  * while the rail's personal tab carried only the ones that named a player the
  * reader watches. Both now read from here.
  *
- * The lanes are mutually exclusive by construction — `nfl` excludes the draft
- * and insider personas explicitly — so a post lands in at most one of them.
+ * The lanes are mutually exclusive by construction — `nfl` excludes every
+ * persona that has a tab of its own — so a post lands in at most one of them.
+ * `tests/schefter-sources.test.ts` asserts the partition rather than mere
+ * membership, which is what caught the two overlaps this file was extracted
+ * to fix.
  */
 
 import type { SchefterPost } from '../types/schefter';
@@ -31,11 +34,21 @@ export const ESPN_AUTHOR_IDS = new Set(
  * account-scoped and live outside this map. */
 export type FeedSource = 'theleague' | 'nfl' | 'draft' | 'insider';
 
-/** ESPN's wire, minus the two personas that have their own tab. */
+/**
+ * ESPN's wire, minus the personas that have their own tab.
+ *
+ * The exclusion has to be `NFL_EXCLUDE_IDS`, not just the draft ids: the
+ * `wire_` prefix branch bypasses `ESPN_AUTHOR_IDS` entirely, so an insider
+ * post carrying a wire id would otherwise satisfy `nfl` AND `insider` and
+ * render under both tabs. It cannot happen today only because
+ * `scripts/schefter-scan.mjs` gives those posts `inj_`/`odds_` ids — which
+ * puts the guarantee in the producer's id prefixes rather than here, where
+ * the lanes are actually defined.
+ */
 function isWirePost(p: SchefterPost): boolean {
   const authorId = p.authorId ?? '';
   return (
-    (ESPN_AUTHOR_IDS.has(authorId) || p.id.startsWith('wire_')) && !DRAFT_AUTHOR_IDS.has(authorId)
+    (ESPN_AUTHOR_IDS.has(authorId) || p.id.startsWith('wire_')) && !NFL_EXCLUDE_IDS.has(authorId)
   );
 }
 

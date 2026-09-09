@@ -117,7 +117,7 @@ export async function resolveSchefterRail(opts: ResolveRailOptions): Promise<Sch
 
   const mine = readable.filter(isMine).slice(0, limit);
 
-  // Nothing at all in the league lane — offer no tab rather than an empty one.
+  // My News is empty — every lane of it — so offer no tab rather than an empty one.
   if (mine.length === 0) return plain;
 
   // Each tab gets a full `limit` of its own. Union them so All is genuinely the
@@ -137,11 +137,15 @@ export async function resolveSchefterRail(opts: ResolveRailOptions): Promise<Sch
     // tab that carries the wire.
     watchingByPost: matchPosts(rendered, sets, year),
     personalized: true,
-    // Say what to do about it. Silently showing the league feed instead would
-    // put the wire noise back, which is the thing this rail exists to remove.
+    // Fallback copy only. My News cannot actually be empty here — the guard
+    // above returns `plain` when it is — so this exists for the client-side
+    // tab-empty block and for any future caller that renders the view without
+    // that guard. Worded for what the tab now IS (the league, not just your
+    // guys), because the old "quiet on your guys" line described the tab this
+    // one replaced.
     emptyText:
       sets.all.size === 0
-        ? 'Nothing to watch yet. Use the ⋮ button on any player to build your watch list — your own roster comes along automatically.'
-        : 'Quiet on your guys right now. Tap View all for the rest of the league.',
+        ? 'Nothing here yet. Use the ⋮ button on any player to build your watch list — your own roster comes along automatically.'
+        : 'Quiet across the league right now. Tap All for the rest of football.',
   };
 }

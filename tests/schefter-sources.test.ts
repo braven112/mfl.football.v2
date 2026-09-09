@@ -61,6 +61,27 @@ describe('a post lands in at most one lane', () => {
     expect(SOURCE_PREDICATES.nfl(post({ authorId: 'nfl-draft' }))).toBe(false);
   });
 
+  /**
+   * The `wire_` prefix branch bypasses ESPN_AUTHOR_IDS, so the exclusion after
+   * it has to cover the insider personas too — otherwise an insider post with
+   * a wire id renders under NFL *and* NFL Insider. It cannot arise from
+   * today's producers (schefter-scan gives them `inj_`/`odds_` ids), which is
+   * exactly why only a partition assertion catches it.
+   */
+  it('keeps an insider post out of NFL even when it carries a wire id', () => {
+    const p = post({ id: 'wire_9001', authorId: 'vegas-vic' });
+    expect(SOURCE_PREDICATES.nfl(p)).toBe(false);
+    expect(SOURCE_PREDICATES.insider(p)).toBe(true);
+    expect(SOURCE_PREDICATES.theleague(p)).toBe(false);
+    expect(SOURCE_PREDICATES.draft(p)).toBe(false);
+  });
+
+  it('keeps a draft post out of NFL even when it carries a wire id', () => {
+    const p = post({ id: 'wire_9002', authorId: 'nfl-draft' });
+    expect(SOURCE_PREDICATES.nfl(p)).toBe(false);
+    expect(SOURCE_PREDICATES.draft(p)).toBe(true);
+  });
+
   it('recognises a group chat message by type', () => {
     expect(isGroupMePost(post({ type: 'groupme', authorId: 'groupme-0007' }))).toBe(true);
     expect(isGroupMePost(post({ authorId: 'claude' }))).toBe(false);
