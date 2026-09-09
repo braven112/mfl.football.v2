@@ -45,7 +45,8 @@ function idsIn(segment: string | undefined): string[] {
  *   "addId|"              -> add only (no drop)
  *   "addId,|bbid|dropId," -> BBID add/drop with bid amount
  *   "addId,|bbid|"        -> BBID add with NO drop (winning claim, nothing cut)
- *   "playerId|amount|"    -> auction won (AUCTION_WON)
+ *   "addId,|bbid|a,b,"    -> BBID add with more than one cut
+ *   "playerId|amount|"    -> auction won (AUCTION_WON), with or without a cut
  *   ""                    -> empty (batch marker like BBID_AUTO_PROCESS_WAIVERS)
  *
  * The segments are POSITIONAL and an empty segment is meaningful: a claim that
@@ -79,11 +80,14 @@ export function parseTransactionString(txnString: string): {
   // and returned zero adds -- so parseTransactions() discarded it and the
   // owner's 24-hour declaration window never opened. Keep both the drop id
   // and the trailing comma optional.
-  const bbidMatch = txnString.match(/^(\d+),\|(\d+)\|(\d*),?$/);
+  // The drop segment is comma-delimited like every other one, so read it with
+  // idsIn rather than enumerating "one id" and "no id" as separate shapes —
+  // enumerating shapes is what left the no-drop case out in the first place.
+  const bbidMatch = txnString.match(/^(\d+),\|(\d+)\|(.*)$/);
   if (bbidMatch) {
     addedPlayerIds.push(bbidMatch[1]);
     bbidAmount = parseInt(bbidMatch[2], 10);
-    if (bbidMatch[3]) droppedPlayerIds.push(bbidMatch[3]);
+    droppedPlayerIds.push(...idsIn(bbidMatch[3]));
     return { addedPlayerIds, droppedPlayerIds, bbidAmount };
   }
 
@@ -98,11 +102,14 @@ export function parseTransactionString(txnString: string): {
     return { addedPlayerIds, droppedPlayerIds };
   }
 
-  // Auction format: "playerId|amount|" (no commas, trailing pipe)
-  const auctionMatch = txnString.match(/^(\d+)\|(\d+)\|$/);
+  // Auction format: "playerId|amount|" — no comma after the id, which is what
+  // separates it from the BBID shape above. The trailing segment is a drop
+  // when the won player needed room made for him.
+  const auctionMatch = txnString.match(/^(\d+)\|(\d+)\|(.*)$/);
   if (auctionMatch) {
     addedPlayerIds.push(auctionMatch[1]);
     bbidAmount = parseInt(auctionMatch[2], 10);
+    droppedPlayerIds.push(...idsIn(auctionMatch[3]));
     return { addedPlayerIds, droppedPlayerIds, bbidAmount };
   }
 

@@ -156,16 +156,32 @@ async function fetchAndCacheTransactions(
     signal: AbortSignal.timeout(10_000),
   });
 
-  // MFL answers errors with HTTP 200 often enough that res.ok is not "the
-  // call worked" — but a non-200 is still definitively a failure.
   if (!response.ok) {
     throw new Error(`MFL transactions API returned ${response.status}`);
   }
 
   const data = await response.json();
-  const raw = data?.transactions?.transaction;
-  // A quiet 3 days is a legitimately EMPTY list, and MFL collapses a
-  // single-row response to an object. Neither is an error; anything else is.
+
+  // res.ok is NOT "the call worked". MFL answers an error with HTTP 200 and an
+  // `error` body ({"error": "An error has occurred …"}, sometimes {$t}), so a
+  // status check alone reads a throttle or a bad parameter as a quiet three
+  // days. Throwing here is what makes the caller keep serving the last good
+  // list instead of caching [] over it for the whole TTL — "nothing happened"
+  // and "couldn't read it" must not merge.
+  const mflError = data?.error;
+  if (mflError) {
+    const detail = typeof mflError === 'string' ? mflError : mflError?.$t ?? 'unknown error';
+    throw new Error(`MFL transactions export returned an error body: ${detail}`);
+  }
+  // Same reason: a response with no `transactions` key at all is unreadable,
+  // not empty. Only a present-but-rowless one is a genuinely quiet stretch.
+  if (!data || typeof data.transactions !== 'object' || data.transactions === null) {
+    throw new Error('Unexpected MFL transactions response shape');
+  }
+
+  // MFL collapses a single-row response to an object rather than a 1-element
+  // array, and omits the key entirely when nothing happened.
+  const raw = data.transactions.transaction;
   const transactions: MFLRawTransaction[] = raw === undefined || raw === null || raw === ''
     ? []
     : Array.isArray(raw) ? raw : [raw];

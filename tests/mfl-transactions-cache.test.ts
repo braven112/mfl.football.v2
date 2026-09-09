@@ -175,3 +175,72 @@ describe('a live acquisition missing from the static feed', () => {
     expect(withLive.deadlineTimestamp).toBe(1788922745 + 24 * 60 * 60);
   });
 });
+
+// --- MFL answers errors with HTTP 200 ---
+//
+// The repo rule (CLAUDE.md, lineups): res.ok is not "the call worked", and
+// "nothing happened" must never merge with "couldn't read it". Here the two
+// merging has a specific cost — an error body read as a quiet three days is
+// cached as [] with a fresh timestamp, and because [] is truthy the
+// `fresh ?? cached` fallback never fires, so a good list is evicted for the
+// whole TTL exactly when MFL is already struggling.
+
+describe('an MFL error body served as HTTP 200', () => {
+  const errorBody = { error: 'An error has occurred - probably caused by one or more invalid parameters.' };
+
+  beforeEach(() => {
+    getRedis.mockReset();
+    vi.unstubAllGlobals();
+  });
+
+  it('keeps serving the last good list instead of caching an empty one over it', async () => {
+    const set = vi.fn().mockResolvedValue('OK');
+    getRedis.mockResolvedValue({
+      get: async () => ({ transactions: [row()], fetchedAt: Date.now() - 10 * 60 * 1000 }),
+      set,
+    });
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => errorBody }));
+
+    expect(await getCachedRecentTransactions('2026', '13522')).toEqual([row()]);
+    expect(set, 'an error body must never be written to the cache').not.toHaveBeenCalled();
+  });
+
+  it('handles the {$t} error shape too', async () => {
+    const set = vi.fn().mockResolvedValue('OK');
+    getRedis.mockResolvedValue({
+      get: async () => ({ transactions: [row()], fetchedAt: Date.now() - 10 * 60 * 1000 }),
+      set,
+    });
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ error: { $t: 'Invalid league' } }),
+    }));
+
+    expect(await getCachedRecentTransactions('2026', '13522')).toEqual([row()]);
+    expect(set).not.toHaveBeenCalled();
+  });
+
+  it('treats a response with no transactions key as unreadable, not empty', async () => {
+    const set = vi.fn().mockResolvedValue('OK');
+    getRedis.mockResolvedValue({
+      get: async () => ({ transactions: [row()], fetchedAt: Date.now() - 10 * 60 * 1000 }),
+      set,
+    });
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => ({}) }));
+
+    expect(await getCachedRecentTransactions('2026', '13522')).toEqual([row()]);
+    expect(set).not.toHaveBeenCalled();
+  });
+
+  it('still caches a genuinely quiet stretch — transactions present, no rows', async () => {
+    const set = vi.fn().mockResolvedValue('OK');
+    getRedis.mockResolvedValue({ get: async () => null, set });
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ transactions: {} }),
+    }));
+
+    expect(await getCachedRecentTransactions('2026', '13522')).toEqual([]);
+    expect(set, 'a real empty stretch is cacheable').toHaveBeenCalled();
+  });
+});

@@ -318,7 +318,14 @@ const staticTransactions: MFLRawTransaction[] = transactionEntries[0]?.data?.tra
 // The Unsigned FA card counts down a 24-hour declaration window, so it cannot
 // run on the build-time feed alone — see mfl-transactions-cache.ts. Same
 // layering as the rosters page; null (no Redis) leaves the static feed.
-const liveTransactions = await getCachedRecentTransactions(currentSalaryYear, THELEAGUE.id);
+//
+// Gated on the viewer having a franchise because resolveUnsignedFaAlerts
+// returns [] without one: an anonymous render would otherwise pay a Redis GET
+// and, once per TTL, a blocking MFL fetch in front of TTFB for a card it is
+// not going to draw.
+const liveTransactions = userFranchiseId
+  ? await getCachedRecentTransactions(currentSalaryYear, THELEAGUE.id)
+  : null;
 const rawTransactions: MFLRawTransaction[] = mergeTransactionRows(staticTransactions, liveTransactions);
 
 const hpPlayerIdentityMap = getPlayerMap(parseInt(currentSalaryYear) || getCurrentLeagueYear());

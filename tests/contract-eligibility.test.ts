@@ -92,6 +92,23 @@ describe('parseTransactionString', () => {
     expect(result.droppedPlayerIds).toEqual(['17064', '16191']);
   });
 
+  // Every segment MFL writes is comma-delimited, so "one id" and "no id" were
+  // never the only two cases. Enumerating shapes instead of reading segments
+  // is what left the no-drop claim out; these are the same class one step out.
+  it('parses a BBID claim that cut more than one player', () => {
+    const result = parseTransactionString('14063,|425000|15777,16191,');
+    expect(result.addedPlayerIds).toEqual(['14063']);
+    expect(result.droppedPlayerIds).toEqual(['15777', '16191']);
+    expect(result.bbidAmount).toBe(425000);
+  });
+
+  it('parses an auction win that cut a player to make room', () => {
+    const result = parseTransactionString('12140|425000|13000,');
+    expect(result.addedPlayerIds).toEqual(['12140']);
+    expect(result.droppedPlayerIds).toEqual(['13000']);
+    expect(result.bbidAmount).toBe(425000);
+  });
+
   it('parses drop-only format (pipe prefix)', () => {
     const result = parseTransactionString('|16608,');
     expect(result.addedPlayerIds).toEqual([]);
