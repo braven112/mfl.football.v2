@@ -12,6 +12,7 @@ Files, by layer:
 | Layer | Files |
 |---|---|
 | Date switch | `src/utils/schefter-season-mode.ts` (`resolveFeedMode`, `defaultSource`) |
+| Lane predicates | `src/utils/schefter-sources.ts` (`SOURCE_PREDICATES`, `isGroupMePost`) — shared by the page AND the rail |
 | Page resolver | `src/utils/schefter-news-view.ts` (tabs, filtering, OG — shared by both leagues) |
 | Shared body | `src/components/shared/SchefterNewsPage.astro` |
 | Routes | `src/pages/theleague/news.astro` (72 lines), `src/pages/afl-fantasy/news.astro` (50) |
@@ -195,3 +196,49 @@ No shipped-feed guard test for misattribution — rosters move, so a post that
 was accurate when written reads as misattributed once the player is traded. The
 guard belongs on the redactor
 (`tests/redact-trade-offer-attribution.test.ts`), where it is deterministic.
+
+## 2026-09-09 — Sharing a predicate inside one file does not stop a second file re-deriving it
+
+The 2026-09-07 entry above ("a hand-written tab list beside a filter will
+drift") fixed the drift *within* `schefter-news-view.ts` by making ONE
+`PREDICATES` map back both the filter and `hasPostsFor`. It looked complete. It
+was not: `schefter-rail-view.ts` — the homepage column, a different file
+entirely — had its own idea of "league news" (`postIsForViewer`: watched
+players + your franchise + deadlines), so `/news?source=theleague` carried every
+transaction post while the homepage's personal tab carried only the ones naming
+somebody you watch. A trade between two other franchises, which is the most
+league-news thing the feed produces, showed on one surface and not the other.
+
+Both now import `SOURCE_PREDICATES` from `src/utils/schefter-sources.ts`, and
+`tests/schefter-sources.test.ts` pins the containment directly: whatever
+`/news?source=theleague` returns, the rail's My News ids must be a superset.
+
+Generalizable: "one definition, shared by the filter and the tab list" is a
+same-file invariant. The moment a SECOND surface renders the same concept, the
+predicate has to leave the file — a doc comment claiming the two agree
+(this one said "Same predicate as the /news Watching tab … so the two can never
+disagree") is not a mechanism, and here it was actively false.
+
+## 2026-09-09 — A default-if-absent and a prefix rule can silently claim the same post
+
+`theleague` treated an untagged post as Schefter's (`p.authorId ?? 'claude'` —
+correct; 13 transaction posts predate `authorId`). `nfl` treated any
+`wire_`-prefixed id as wire (also correct; ESPN items carry no byline in some
+lanes). Together they meant an untagged `wire_` post matched BOTH lanes.
+
+Nothing surfaced it for months because the two conditions have never co-occurred
+in the committed feed — every one of the 217 real wire posts carries
+`nfl-wire`. It only appeared when the predicates were extracted into their own
+module and a test asserted the obvious-sounding property that a post lands in at
+most one lane. That property had never been written down, so it had never been
+false in a way anyone could see.
+
+It mattered the moment the rail started filing the `theleague` lane into its
+quiet tab: the overlap would have put wire noise in the exact tab built to
+exclude it. `theleague` now returns false for anything the wire predicate
+claims.
+
+Generalizable: when lanes are meant to partition a set, assert the partition,
+not just the membership. "Is X in lane A?" passes happily while two lanes
+overlap; only "is X in exactly one lane?" catches it.
+

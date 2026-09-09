@@ -26,11 +26,12 @@ import type { LeagueDefinition } from '../config/leagues';
 import type { AuthUser } from './auth';
 import { franchiseIdForLeague } from './auth';
 import type { SchefterPost, SchefterFeed as FeedType, SchefterAuthor } from '../types/schefter';
-import { getAuthor, getAuthorAvatar, SCHEFTER_AUTHORS } from '../types/schefter';
+import { getAuthor, getAuthorAvatar } from '../types/schefter';
 import { getLeagueYearForSlug, getTestDateFromSearchParams } from './league-year';
 import { resolveWatchingSets, matchPosts, postIsForViewer, isPostVisibleTo } from './schefter-watching';
 import { buildSchefterPostOg, isValidSchefterPostId } from './schefter-feed';
 import { resolveFeedMode, defaultSource, type FeedMode } from './schefter-season-mode';
+import { SOURCE_PREDICATES } from './schefter-sources';
 
 export const VALID_SOURCES = [
   'theleague',
@@ -67,17 +68,6 @@ const LEGACY_ALIASES: Record<string, SourceFilter> = {
   injuries: 'insider',
   odds: 'insider',
 };
-
-const DRAFT_AUTHOR_IDS = new Set(['nfl-draft']);
-const INSIDER_AUTHOR_IDS = new Set(['doc-rivers', 'vegas-vic']);
-const NFL_EXCLUDE_IDS = new Set([...DRAFT_AUTHOR_IDS, ...INSIDER_AUTHOR_IDS]);
-
-/** ESPN contributors, minus the personas that have their own tab. */
-const ESPN_AUTHOR_IDS = new Set(
-  Object.values(SCHEFTER_AUTHORS)
-    .filter((a) => a.external && !NFL_EXCLUDE_IDS.has(a.id))
-    .map((a) => a.id),
-);
 
 /** Which persona heads each tab. "All" is Claude's page. */
 const SOURCE_AUTHOR_MAP: Record<string, string> = {
@@ -216,27 +206,12 @@ export async function resolveSchefterNewsView(
       ? (resolvedSource as SourceFilter)
       : null;
 
-  // ONE predicate per source, shared by the filter and the tab list — so a tab
-  // can never disagree with what clicking it shows. `null` (the All tab) and
-  // the two account-scoped sources are handled outside the map.
-  const PREDICATES: Record<
-    Exclude<SourceFilter, 'groupme' | 'watching'>,
-    (p: SchefterPost) => boolean
-  > = {
-    theleague: (p) => {
-      const authorId = p.authorId ?? 'claude';
-      return authorId === 'claude' || authorId === 'roger';
-    },
-    nfl: (p) => {
-      const authorId = p.authorId ?? '';
-      return (
-        (ESPN_AUTHOR_IDS.has(authorId) || p.id.startsWith('wire_')) &&
-        !DRAFT_AUTHOR_IDS.has(authorId)
-      );
-    },
-    draft: (p) => p.authorId === 'nfl-draft',
-    insider: (p) => INSIDER_AUTHOR_IDS.has(p.authorId ?? ''),
-  };
+  // ONE predicate per source, shared by the filter, the tab list AND the
+  // homepage rail (src/utils/schefter-sources.ts) — so a tab can never
+  // disagree with what clicking it shows, and the rail can never disagree with
+  // the tab. `null` (the All tab) and the two account-scoped sources are
+  // handled outside the map.
+  const PREDICATES = SOURCE_PREDICATES;
 
   const posts = ((): SchefterPost[] => {
     if (activeSource === 'groupme') return groupMePosts;

@@ -1,30 +1,40 @@
 /**
  * The Schefter Report rail — the compact feed in the homepage sidebar.
  *
- * For a signed-in owner the rail IS their Watching feed: news about players
- * they roster or watch, posts about their franchise, and league deadlines.
- * Same predicate as the /news Watching tab (`postIsForViewer`), so the two can
- * never disagree about what counts as yours.
+ * TWO tabs, and the split is about NOISE, not about ownership:
  *
- * TWO gates:
+ * - **My News** — everything that comes out of this league: every Schefter
+ *   transaction post, recap and article, Roger's deadline reminders, the whole
+ *   group chat, and anything naming a player the reader rosters or watches.
+ *   It is the same content as `/news?source=theleague` plus the Group Chat
+ *   tab, with the reader's own players flagged by the card's watch chip.
+ * - **All** — that, plus the NFL wire and the NFL Draft lane.
+ *
+ * It used to be narrower: My News was the /news Watching tab exactly
+ * (`postIsForViewer`), so a trade between two other franchises — the most
+ * league-news thing there is — was filed under "All" next to an ESPN injury
+ * blurb, and the group chat only surfaced the reader's OWN messages. The lane
+ * predicates now come from `schefter-sources.ts`, shared with /news, so "what
+ * counts as league news" has one definition across both surfaces.
+ *
+ * TWO gates before the tabs appear at all:
  *
  * 1. **Signed in as an owner of THIS league.** A visitor with no franchise here
- *    has no watch list, so they get the league feed. Both leagues have a
- *    franchise 0001, so this goes through `franchiseIdForLeague`, never a bare
- *    id compare.
+ *    gets the league feed unsplit. Both leagues have a franchise 0001, so this
+ *    goes through `franchiseIdForLeague`, never a bare id compare.
  * 2. **In season**, so the offseason keeps its league-wide filler. The window
  *    is `resolveFeedMode` (src/utils/schefter-season-mode.ts) — one definition
  *    shared with /news, so the two surfaces turn on together, and it opens on
  *    the NL draft rather than Labor Day.
  *
- * Past both gates the rail carries For You / All tabs. ONE rendered list backs
- * both, filtered by a `data-foryou` flag — rendering two lists would mean two
+ * Past both gates the rail carries the tabs. ONE rendered list backs both,
+ * filtered by a `data-foryou` flag — rendering two lists would mean two
  * reactions pipelines for a sidebar.
  *
  * That list is the UNION of the two tabs' contents, not a single capped slice.
  * The first cut took `limit` personal posts and topped up with league news
  * "if there was room" — and for an owner with `limit` or more of their own,
- * there never was, so All showed exactly what For You showed and the tabs
+ * there never was, so All showed exactly what My News showed and the tabs
  * looked broken. Each tab now gets its own `limit` worth, deduped; the rail
  * renders at most `2 * limit` and each tab still fills.
  *
@@ -40,16 +50,17 @@ import type { SchefterPost } from '../types/schefter';
 import { getLeagueYearForSlug } from './league-year';
 import { resolveWatchingSets, matchPosts, postIsForViewer, isPostVisibleTo } from './schefter-watching';
 import { resolveFeedMode } from './schefter-season-mode';
+import { SOURCE_PREDICATES, isGroupMePost } from './schefter-sources';
 
 export interface SchefterRailView {
   posts: SchefterPost[];
-  /** Ids the For You tab keeps. Empty when the rail is not personalized. */
+  /** Ids the My News tab keeps. Empty when the rail is not personalized. */
   forYouIds: string[];
   /** Post id → the watched players it names, for the card's chip. */
   watchingByPost: ReturnType<typeof matchPosts>;
-  /** True when the rail should offer the For You / All tabs. */
+  /** True when the rail should offer the My News / All tabs. */
   personalized: boolean;
-  /** Empty-state copy for the For You tab. */
+  /** Empty-state copy for the My News tab. */
   emptyText?: string;
 }
 
@@ -88,22 +99,43 @@ export async function resolveSchefterRail(opts: ResolveRailOptions): Promise<Sch
   // season's roster.
   const year = getLeagueYearForSlug(league.slug, now);
   const sets = await resolveWatchingSets(league, year, franchiseId);
-  const mine = readable.filter((p) => postIsForViewer(p, sets, franchiseId)).slice(0, limit);
 
-  // Nothing of yours has moved — offer no tab rather than an empty one.
+  /**
+   * What My News keeps. Three lanes, deliberately in this order:
+   *
+   * 1. The league's own desk — the same predicate `/news?source=theleague`
+   *    filters on, so every transaction post lands here whoever it is about.
+   * 2. The group chat, whole. Filtering it to the reader's own messages left
+   *    them reading themselves talk.
+   * 3. Anything personal that the first two miss: a wire item naming a player
+   *    they roster or watch, and their own franchise-addressed nudges.
+   *
+   * What is left over for All is exactly the NFL wire and the NFL Draft lane.
+   */
+  const isMine = (p: SchefterPost): boolean =>
+    SOURCE_PREDICATES.theleague(p) || isGroupMePost(p) || postIsForViewer(p, sets, franchiseId);
+
+  const mine = readable.filter(isMine).slice(0, limit);
+
+  // Nothing at all in the league lane — offer no tab rather than an empty one.
   if (mine.length === 0) return plain;
 
   // Each tab gets a full `limit` of its own. Union them so All is genuinely the
-  // league feed even when the owner's own posts would have filled the rail.
+  // league feed even when My News would have filled the rail on its own.
   const mineIds = new Set(mine.map((p) => p.id));
   const leagueFill = readable.filter((p) => !mineIds.has(p.id)).slice(0, limit);
 
+  const rendered = [...mine, ...leagueFill].sort(
+    (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime(),
+  );
+
   return {
-    posts: [...mine, ...leagueFill].sort(
-      (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime(),
-    ),
+    posts: rendered,
     forYouIds: [...mineIds],
-    watchingByPost: matchPosts(mine, sets, year),
+    // Every rendered post, not just My News: the watch chip is how a reader
+    // spots one of their guys in the wire noise on the All tab, which is the
+    // tab that carries the wire.
+    watchingByPost: matchPosts(rendered, sets, year),
     personalized: true,
     // Say what to do about it. Silently showing the league feed instead would
     // put the wire noise back, which is the thing this rail exists to remove.

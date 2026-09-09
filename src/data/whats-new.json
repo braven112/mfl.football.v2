@@ -1,5 +1,28 @@
 [
   {
+    "id": "homepage-my-news-rail",
+    "date": "2026-09-09",
+    "category": "enhancement",
+    "icon": "eye",
+    "leagues": [
+      "theleague",
+      "afl"
+    ],
+    "excludeFromHero": true,
+    "title": "Your Homepage Feed Finally Has The Whole Desk In It",
+    "link": "/news",
+    "linkLabel": "Open the Schefter Report",
+    "image": "homepage-my-news-rail.webp",
+    "imageAlt": "The Schefter Report column on the homepage, with a My News tab selected next to an All tab. Underneath it, four Claude Schefter posts about other franchises' waiver claims and roster moves.",
+    "summary": "The Schefter Report column on the homepage used to hide every move that wasn't yours. Now the first tab — renamed My News — carries the whole beat: every claim, every add, every drop, whoever made it, plus the group chat. The All tab is where the NFL wire and the draft coverage live.",
+    "description": [
+      "The homepage column had a quiet problem. Its first tab only kept posts that named a player you roster or watch, which sounds sensible right up until you notice what it was throwing away: <strong>a trade between two other franchises</strong>. A waiver claim that cost somebody real money. The pickup that just took the last decent running back off the board. The most league-news thing the feed carries, filed under \"All\" next to an ESPN blurb about a quarterback in a different sport as far as your season is concerned.",
+      "That tab is now called <strong>My News</strong>, and it means what it says. Every post off the league desk lands in it — claims, adds, drops, trades, Schefter's morning column, Roger's deadline reminders — no matter whose name is on the transaction. It is the same set of posts the Schefter Report's own league tab shows you on the <a href=\"/news\">news page</a>, so the two finally agree with each other.",
+      "The group chat comes along too, whole. It used to surface only your own messages, which is a strange thing to build: a feed of you, talking to yourself. If your league has a chat wired in, all of it is there now, in order, next to the moves it is arguing about.",
+      "<strong>All</strong> is still there and is still everything — My News plus the NFL wire and the draft coverage — and if one of those wire posts names a player you roster, it keeps the watch chip that says so. That is the whole split: your league in one tab, the rest of football in the other. Want the ledger version instead of the feed version? The <a href=\"/transactions\">transactions page</a> has every move grouped by day, and the <a href=\"/standings\">standings</a> will tell you whether any of it worked."
+    ]
+  },
+  {
     "id": "transactions-page",
     "date": "2026-09-09",
     "category": "new-page",
@@ -932,28 +955,5 @@
     "image": "afl-throwback-week.webp",
     "imageAlt": "The AFL live scoring board during Throwback Week. Every franchise wears a legacy identity instead of its current one: No Frills against Way More Funner in the featured matchup, then Gamecocks over TD Pants, Smokane over Drunk Indians, Fullybaked over The Dude, More Cowbell against Pubes, MWC over The Nukes, and Your Team Sucks over Zephyr. Each team shows its era crest and every matchup card is edged in that era's own colors.",
     "heroRotationDays": 14
-  },
-  {
-    "id": "owner-activity-mfl-blend",
-    "date": "2026-09-01",
-    "category": "enhancement",
-    "icon": "activity",
-    "leagues": [
-      "theleague",
-      "afl"
-    ],
-    "title": "Last Seen Now Knows When You Were On MFL",
-    "link": "/activity",
-    "linkLabel": "See who's actually around",
-    "summary": "The Owner Activity page used to know one thing about you: whether you had loaded a page on this site. It now also knows when you last logged into MFL — an actual timestamp, straight from MFL — and ranks everybody by whichever happened more recently. Owners who live inside MFL and rarely come here stop showing up as ghosts.",
-    "description": [
-      "There has always been a hole in <a href=\"/activity\">Owner Activity</a>. It measured exactly one thing — whether you had opened a page on this site — and then cheerfully labeled anyone who hadn't as Dormant. Which was fine, except that half this league does its business inside MFL and only wanders over here to look at <a href=\"/rosters\">rosters</a> or check <a href=\"/standings\">the standings</a> once a month. Those owners were logging in, setting lineups and working the wire, and getting a red dot for it.",
-      "So Last Seen now watches both. MFL keeps its own last-login timestamp for every franchise, and the page reads it: your row is ranked by whichever came later, your last visit here or your last time on MFL. Each row shows its work — the blended time up top with a small badge saying which one won, then both raw numbers underneath, plus what your most recent roster move was and when. An owner sitting at \"Site: never\" and \"MFL: 4h ago\" is exactly the person this was built to stop mislabeling.",
-      "There is a nice bit of trivia buried in this one. That last-login number is not in MFL's documentation. It is not in any of their fifty-nine published data feeds, and it is not in the franchise record everybody else can see — we checked sixty other leagues to be sure. It turns up only when the request comes from a commissioner, which is how it sat there unnoticed for years. It syncs over every six hours now.",
-      "For the leagues and moments where that number isn't available, the page falls back to your last roster move — a trade, a free agent pickup, a waiver claim, an auction bid, an IR or taxi shuffle. Two things it deliberately never counts: moves the commissioner made on your behalf, because the commish fixing your lineup is not evidence you were awake, and the league-wide automatic stuff like the kickoff lock and the scheduled waiver run, which fires for every team in the league every week and would have made everybody look permanently active."
-    ],
-    "image": "owner-activity-mfl-blend.webp",
-    "imageAlt": "The Owner Activity page's Last Seen table. Each row gives a team, a blended last-seen time with a small badge reading SITE or MFL, and a smaller line underneath breaking out all three signals — for example Cowboy Up, ranked seventh at \"4 hours ago\" with an MFL badge, over \"Site: never · MFL: 4h ago · Last move: 9h ago (taxi squad move)\". A green Active status dot sits at the right of each row.",
-    "excludeFromHero": true
   }
 ]
