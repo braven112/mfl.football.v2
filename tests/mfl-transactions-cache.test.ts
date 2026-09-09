@@ -135,3 +135,43 @@ describe('getCachedRecentTransactions', () => {
     expect(await getCachedRecentTransactions('2026', '13522')).toBeNull();
   });
 });
+
+// --- The composition, which is what the pages actually rely on ---
+//
+// The cache and the merge are each correct in isolation above; this pins the
+// thing an owner sees. Dontayvion Wicks (16195) was signed as a plain free
+// agent at 2026-09-09T02:59:05Z — a string the parser has always read
+// correctly — and still had no contract-length control, because the acquisition
+// was not in the build-time feed and there was no live path to find it in.
+// Parsing and freshness are separate halves of the same bug.
+
+describe('a live acquisition missing from the static feed', () => {
+  it('becomes new-acquisition eligible once merged in', async () => {
+    const { parseTransactions, getPlayerEligibility } = await import('../src/utils/contract-eligibility');
+
+    const staticFeed: MFLRawTransaction[] = [
+      // The feed as the cron last committed it: everything predates the signing.
+      { type: 'FREE_AGENT', franchise: '0015', timestamp: '1788700000', transaction: '15332,|' },
+    ];
+    const live: MFLRawTransaction[] = [
+      { type: 'FREE_AGENT', franchise: '0015', timestamp: '1788922745', transaction: '16195,|' },
+    ];
+    const roster = { id: '16195', salary: '500000.00', contractYear: '1', contractInfo: '', status: 'ROSTER' };
+    const info = { id: '16195', name: 'Wicks, Dontayvion', position: 'WR', team: 'PHI', draft_year: '2023' };
+    const now = new Date('2026-09-09T04:00:00Z');
+
+    const withoutLive = getPlayerEligibility(
+      '16195', '0015', roster, parseTransactions(staticFeed), info, 2026, now,
+    );
+    expect(withoutLive.eligible).toBe(false);
+
+    const withLive = getPlayerEligibility(
+      '16195', '0015', roster,
+      parseTransactions(mergeTransactionRows(staticFeed, live)),
+      info, 2026, now,
+    );
+    expect(withLive.eligible).toBe(true);
+    expect(withLive.declarationType).toBe('new-acquisition');
+    expect(withLive.deadlineTimestamp).toBe(1788922745 + 24 * 60 * 60);
+  });
+});
