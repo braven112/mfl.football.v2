@@ -18,14 +18,9 @@
  * shared block builder rather than in either lane, or the rumor lane keeps
  * seeing names the transaction lane wrote.
  *
- * This masker is deliberately BLUNTER than the scanner's
- * `redactFranchiseNamesInText`. That one is scope-aware and has a
- * `keepFranchise` escape hatch, because a post is sometimes allowed to name
- * one team. The memory block is allowed to name NONE, so there is no keep
- * parameter here and nothing to get wrong at a call site.
- *
- * Over-matching is the safe direction: a false hit costs one word of an
- * anti-repetition hint, a miss puts another team's name in front of the model.
+ * The masking itself is the scanner's `redactFranchiseNamesInText`, INJECTED
+ * rather than reimplemented — see `memoryNameMasker`. This file owns which
+ * names exist and which tokens are legal; it does not own matching.
  */
 
 /**
@@ -97,6 +92,11 @@ export const MASKED_TEAM = '[a team]';
  * flexible separators, `readsAsOrdinaryProse`, and a per-map cache). A second
  * implementation of name-matching is exactly the "five copies, two silently
  * disagreed" failure this repo already learned once.
+ *
+ * Call it as `memoryNameMasker(teams, redactFranchiseNamesInText)`. BOTH
+ * arguments are required: one-arg returns `undefined`, which silently takes
+ * the body-dropping path — safe, but not what a caller who thinks names are
+ * being masked expects.
  *
  * Returns `undefined` on an empty team map so the block builder DROPS the
  * bodies. `schefter-scan`'s `loadTeams` returns an empty Map on any config
@@ -179,6 +179,49 @@ export function tokenizedFormerName(callback, fid, team) {
     current: useShort ? teamShortToken(fid) : teamToken(fid),
     former: formerTeamToken(fid, callback.lastSeason),
   };
+}
+
+/** Every `{{TEAM…}}` token shape, for harvesting a minted field. */
+const TOKEN_PATTERN = /\{\{TEAM(?:_SHORT|_FORMER)?:[\d:]+\}\}/g;
+
+/**
+ * The tokens a beat is allowed to expand: exactly the ones WE minted into its
+ * payload, read from the FIELDS that mint them.
+ *
+ * Harvesting the whole tip with `JSON.stringify` looked equivalent and was a
+ * privilege-escalation bug. `safe.text` is tipster-controlled — and
+ * `redactSafePayload` skips GroupMe text entirely — so a tipster typing
+ * `{{TEAM:0008}}` into a tip AUTHORIZED that token. The prompt tells the model
+ * to copy tokens through verbatim, so it would, and it then resolved to the
+ * real franchise with `unresolved: false`, bypassing both the template
+ * fallback and the scrub — on a `league-wide` or `division` scope that forbids
+ * naming anyone at all. Only these four fields are ever minted.
+ *
+ * Both REGISTERS of an authorized franchise are allowed. `tokenizedFormerName`
+ * mints whichever register the caller passed (usually the short one, since
+ * `pickTeamName` prefers `nameShort`), while HARD RULE 30's examples all model
+ * the long form — so a model following the examples wrote an unauthorized
+ * token and lost its whole body to the template on EVERY callback post.
+ * Allowing the sibling register is harmless: same franchise, same authority,
+ * just the other spelling.
+ */
+export function authorizedTokensFor(anonymized) {
+  const tokens = new Set();
+  const harvest = (value) => {
+    if (typeof value !== 'string') return;
+    for (const m of value.matchAll(TOKEN_PATTERN)) tokens.add(m[0]);
+  };
+  for (const tip of Array.isArray(anonymized) ? anonymized : []) {
+    harvest(tip?.exposure?.team?.name);
+    harvest(tip?.exposure?.team?.nameShort);
+    harvest(tip?.formerName?.current);
+    harvest(tip?.formerName?.former);
+  }
+  for (const token of [...tokens]) {
+    const m = /^\{\{TEAM(_SHORT)?:(\d{4})\}\}$/.exec(token);
+    if (m) tokens.add(m[1] ? teamToken(m[2]) : teamShortToken(m[2]));
+  }
+  return tokens;
 }
 
 /** The name a franchise wore in `year`, from its `history[]` era rows. */

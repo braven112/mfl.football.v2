@@ -118,6 +118,7 @@ import {
   resolveTeamTokens,
   tokenizedTeam,
   tokenizedFormerName,
+  authorizedTokensFor,
   MASKED_TEAM,
 } from './lib/schefter-name-mask.mjs';
 import { getTopicPolicy, DRAINABLE_TOPIC_IDS } from '../src/config/schefter-topics.mjs';
@@ -4804,17 +4805,10 @@ async function main() {
     // not a body to patch: fall back to the template, which is code-built and
     // has no tokens in it. A literal `{{TEAM}}` in the group chat would be
     // worse than the misattribution this replaces.
-    // The exact tokens this beat is ALLOWED to expand: the ones we minted into
-    // its own payload, matched whole. Gating on the franchise id alone left a
-    // former-name token's YEAR unchecked, so an out-of-window retired name
-    // resolved cleanly and shipped asserted as last season's.
-    const allowedTokens = new Set();
-    for (const t of beat.anonymized ?? []) {
-      for (const m of JSON.stringify(t).matchAll(/\{\{TEAM(?:_SHORT|_FORMER)?:[\d:]+\}\}/g)) {
-        allowedTokens.add(m[0]);
-      }
-    }
-    const resolveOpts = { allowedTokens };
+    // The exact tokens this beat may expand, read from the FIELDS that mint
+    // them — never scraped off the whole tip, which carries tipster-controlled
+    // text and would let a tipster authorize their own token.
+    const resolveOpts = { allowedTokens: authorizedTokensFor(beat.anonymized) };
     let resolvedBody = resolveTeamTokens(aiBody || templateBody(beat.anonymized), teams, resolveOpts);
     let usedTemplate = !aiBody;
     if (resolvedBody.unresolved && aiBody) {

@@ -242,6 +242,22 @@ three previous trade posts had all named Fire Ready Aim.
   live post-history already holds the first — so masking only `p.body` left the
   leak open, and in the transaction lane (which drops bodies) the
   two-franchise subject would have been the ONLY thing left in the block.
+- **The allow-list is read from the MINTED FIELDS, never scraped off the tip.**
+  Harvesting `JSON.stringify(tip)` looked equivalent and was privilege
+  escalation: `safe.text` is tipster-controlled and `redactSafePayload` skips
+  GroupMe text entirely, so a tipster typing `{{TEAM:0008}}` into a tip
+  authorized that token — and the prompt tells the model to copy tokens through
+  verbatim. It then resolved to the real franchise with `unresolved: false`,
+  bypassing the fallback and the scrub, on a `league-wide` scope that forbids
+  naming anyone. `authorizedTokensFor` reads only `exposure.team.name`,
+  `exposure.team.nameShort`, `formerName.current` and `formerName.former`.
+- **Both REGISTERS of an authorized franchise are allowed.**
+  `tokenizedFormerName` mints whichever register the caller passed — usually
+  the short one, since `pickTeamName` prefers `nameShort` — while HARD RULE
+  30's examples all model the long form. Without the sibling, a model following
+  the examples wrote an unauthorized token and lost its whole body to the
+  template on EVERY callback post. Same franchise, same authority, other
+  spelling.
 - **A token only resolves if the payload MINTED IT, matched whole.** Gating on
   the franchise id alone left a former-name token's YEAR unchecked, so
   `{{TEAM_FORMER:0004:2019}}` resolved to "Drunk Indians" — an out-of-window
