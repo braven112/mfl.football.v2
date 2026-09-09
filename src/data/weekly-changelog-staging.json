@@ -4,6 +4,14 @@
     {
       "date": "2026-09-09",
       "type": "bug-fix",
+      "summary": "The chevron that drops down every team on the Roster & Salary Cap page works on every visit now. Click into rosters from somewhere else on the site and that arrow was dead — nothing opened, no other teams to jump to — until you reloaded the page. It only ever wired itself up once, on the first roster page you opened all session.",
+      "impact": "user",
+      "area": "rosters",
+      "league": "theleague"
+    },
+    {
+      "date": "2026-09-09",
+      "type": "bug-fix",
       "summary": "Win a player on waivers with nothing cut alongside him and you can set his contract length again. Any claim that did not come paired with a drop was landing on your roster with no way to declare years — no chip on the Yrs column, no Declare Contract in his action sheet — so the 24-hour window quietly ran out on a deal you never got to make. Fixed, and the acquisition now shows up within a couple of minutes instead of waiting on the next data sync.",
       "impact": "user",
       "area": "rosters",
