@@ -202,6 +202,178 @@ never a hand edit — the feeds are cron-written, so a hand edit is invisible in
 review. It deliberately leaves the scanner's `posted`/exposure state alone, or
 the same offer regenerates the same wrong post on the next scan.
 
+### The MEMORY block is a name surface — mask it
+
+`buildRecentPostsPromptBlock` recalls the last few posts verbatim so Schefter
+does not reuse an opener, closer or bit. It never needed the NAMES in those
+posts, and carrying them leaked one.
+
+2026-09-07: a trade post read "Fire Ready Aim has Cyrus Allen on the table."
+Cyrus Allen (17518) is a Bring the Pain (0008) player and has been since the
+May 9 auction — no trade, every roster snapshot agrees; Fire Ready Aim is 0007.
+The `exposure` payload **could not** have produced that pairing (that is the
+section above, and it works). The name came from the memory block, where the
+three previous trade posts had all named Fire Ready Aim.
+
+- **Both scanners read ONE `post-history.json`.** The transaction scanner names
+  teams legitimately — a completed trade is public — and the rumor scanner then
+  reads those bodies back as memory. So the mask belongs in the shared block
+  builder, not in either lane; masking one side leaves the leak open.
+- **`maskNames` is required to include bodies at all.** Without one the bodies
+  are DROPPED, not passed through raw, and it warns. The block's actual job —
+  the opener/closer bans — still gets done; the bodies are the nice-to-have,
+  and degrading a nice-to-have beats putting a name in front of the model that
+  its payload never authorized.
+- **The masker is INJECTED, never reimplemented.** `memoryNameMasker(teams,
+  redact)` delegates to the scanner's `redactFranchiseNamesInText`. A second,
+  `\b`-anchored matcher written for this lane was wrong in BOTH directions
+  against the real config: it under-fired on names with punctuation edges
+  (`Lucky Buck$`, `The Blunt Bros.` — a plain `\b` cannot anchor after `$` or
+  `.`, so both passed through UNMASKED, which is the leak this exists to stop),
+  and it over-fired elsewhere by dropping the ambiguous-token relaxation. Name
+  matching has one home; callers inject it.
+- **The transaction scanner therefore DROPS its bodies.** It has no redactor of
+  its own, and writing it a simpler one is the mistake above. Its posts are
+  largely template-built from hard transaction data and its opener/closer bans
+  still work, so the safe degradation is cheap. Sharing the real redactor is
+  how to get the bodies back — copying it is not.
+- **The SUBJECT is masked too, not just the body.** `deriveHistorySubject`
+  builds `franchise (Vitside)` and `trade-pending (Team A ↔ Team B)`, and the
+  live post-history already holds the first — so masking only `p.body` left the
+  leak open, and in the transaction lane (which drops bodies) the
+  two-franchise subject would have been the ONLY thing left in the block.
+- **The allow-list is read from the MINTED FIELDS, never scraped off the tip.**
+  Harvesting `JSON.stringify(tip)` looked equivalent and was privilege
+  escalation: `safe.text` is tipster-controlled and `redactSafePayload` skips
+  GroupMe text entirely, so a tipster typing `{{TEAM:0008}}` into a tip
+  authorized that token — and the prompt tells the model to copy tokens through
+  verbatim. It then resolved to the real franchise with `unresolved: false`,
+  bypassing the fallback and the scrub, on a `league-wide` scope that forbids
+  naming anyone. `authorizedTokensFor` reads only `exposure.team.name`,
+  `exposure.team.nameShort`, `formerName.current` and `formerName.former`.
+- **Both REGISTERS of an authorized franchise are allowed.**
+  `tokenizedFormerName` mints whichever register the caller passed — usually
+  the short one, since `pickTeamName` prefers `nameShort` — while HARD RULE
+  30's examples all model the long form. Without the sibling, a model following
+  the examples wrote an unauthorized token and lost its whole body to the
+  template on EVERY callback post. Same franchise, same authority, other
+  spelling.
+- **A token only resolves if the payload MINTED IT, matched whole.** Gating on
+  the franchise id alone left a former-name token's YEAR unchecked, so
+  `{{TEAM_FORMER:0004:2019}}` resolved to "Drunk Indians" — an out-of-window
+  retired name shipped asserted as last season's, which HARD RULE 30 forbids.
+  Gating on the id had the same shape one level up: Resolution
+  against the whole team map meant a one-digit slip — `{{TEAM_SHORT:0008}}`
+  typed as `0018`, both live AFL franchises — substituted cleanly with
+  `unresolved: false`, bypassing both the template fallback and the scrub,
+  and shipped a franchise nobody authorized. The allow-list is exactly the ids
+  minted into that beat's payload, so the caller derives it from the
+  anonymized tips rather than tracking it separately.
+- **A former-name token that resolves to the CURRENT name is refused.**
+  `pickFormerName` filters re-skin and other-owner rows before offering one;
+  `historicalName` walks raw `history[]`, so two rows covering the rename year
+  would ship "X — the former X". Latent in both live configs — refused rather
+  than relied upon.
+- **An unresolved token is ANY stray `{{` or `}}`, not a balanced pair**, and
+  the last-resort scrub matches that same widened test — a balanced-only scrub
+  leaves exactly the half-mangled markup it exists to remove. The
+  model mangling one edge — `{{TEAM_SHORT:0008}` — passed a `\{\{[^}]*\}\}`
+  test as resolved and shipped the literal markup to the feed and GroupMe.
+  Schefter prose never legitimately contains either brace pair, and erring
+  toward "unresolved" costs only a template fallback.
+- **An empty team map produces NO masker, not an identity one.**
+  `schefter-scan`'s `loadTeams` returns an empty Map on any config read error,
+  and a masker that fails open there ships unmasked bodies — the exact opposite
+  of the fail-safe.
+- **Masking was half the fix.** It closed the leak PATH; the tokens below
+  closed the CAPABILITY.
+
+### The model is never handed a franchise name — `{{TEAM}}`
+
+`exposure.team` reaches the LLM as `{ name: '{{TEAM:<fid>}}', nameShort:
+'{{TEAM_SHORT:<fid>}}' }`, and the real franchise is substituted in code after
+generation. Naming the wrong team is no longer forbidden, it is unwritable —
+the model cannot substitute a name it was never given, which is what "never
+name a second team" had been trusting it to choose not to do.
+
+- **Every token CARRIES its franchise id, and a former name carries a year.**
+  A franchise identity in this league IS `(franchiseId, year)` — 0003 is
+  Maverick now, was Generals in 2014 and Poker in the Rear in 2012 — and the
+  config's `history[]` rows are keyed by `yearStart`/`yearEnd` precisely so
+  that pair resolves to exactly one name. `{{TEAM:0008}}`,
+  `{{TEAM_SHORT:0008}}`, `{{TEAM_FORMER:0003:2014}}`.
+- **Do NOT use a bare `{{TEAM}}`.** The first cut did, reasoning that only one
+  team is nameable per post (HARD RULE 26) so there was one substitution
+  target. True for `exposure.team`, and it made the former-name callback
+  impossible to tokenize: `formerName` is built for `scope.franchise` at two of
+  its three call sites, which is NOT necessarily the exposure team, so a bare
+  token there resolves to the wrong franchise — inventing a fresh
+  misattribution while closing an old one. Self-identifying tokens dissolve
+  that: correctness stops resting on an invariant holding elsewhere in the
+  file.
+- **The token preserves the caller's REGISTER.** `buildFormerNameCallback`
+  takes `currentName` as a parameter and its call sites pass different forms —
+  the scope label is often the short one. Always emitting the full-name token
+  silently rewrites "Dead Cap — the former Heavy Chevy" into "Dead Cap Walking
+  — the former Heavy Chevy": right franchise, wrong words.
+- **Two registers, not one.** `{{TEAM_SHORT}}` exists because the voice needs
+  it — real posts read "Pain's been shopping a tight end", not "Bring the
+  Pain's been shopping a tight end". One token would flatten the cadence.
+- **The examples are tokenized too, with an UNRESOLVABLE franchise id.** They
+  teach by demonstration, so an example showing a real franchise name models
+  the behavior the rule forbids. Worse, an example id that is a LIVE franchise
+  resolves cleanly when the model copies the token out of the examples instead
+  of the payload: `unresolved` stays false and the post confidently names the
+  wrong team — the exact misattribution tokens exist to prevent, now
+  undetectable. Every example uses `9999`, which is not a franchise in either
+  league, so a copied token fails loudly. Pinned by test.
+- **Token instructions live in the BASE prompt, not the trade-offer playbook.**
+  That playbook is appended only when the batch contains a `trade_offer` tip,
+  but `formerName` attaches to trade-bait and web scopes, which never mix with
+  trade_offer tips — so tokenizing the callback while leaving its only
+  explanation in the playbook sent the model tokens with zero instructions on
+  every post that could carry one.
+- **Legacy tips have no `fid`.** Tips queued before tokenization shipped, and
+  held tips requeued, carry an exposure block without one. Those fall back to
+  the pre-token shape rather than minting `{{TEAM:undefined}}` — which resolves
+  to nothing, discards the AI body, and spends the offer's already-advanced
+  exposure counter on a template that names no team. Self-healing: the queue
+  drains inside a week.
+- **Resolution happens at ONE choke point** — the `const body =` line in the
+  beat loop, which every body passes through before the feed, GroupMe and the
+  post record. Resolution reads the team map, and the ALLOW-LIST comes off
+  `beat.anonymized` — the tokens we actually minted into that beat's prompt.
+- **An unresolved `{{...}}` is a FAILED GENERATION, not a body to patch.** The
+  model inventing `{{TEAM_NICKNAME}}`, or writing a token on a beat with no
+  team, falls back to the template — which is code-built and token-free. A
+  literal `{{TEAM}}` in the group chat would be worse than the misattribution
+  this replaces. A survivor past the fallback is scrubbed to `[a team]`.
+- **Verification is now exact.** Checking for a leftover `{{...}}` is a string
+  match. Checking whether prose names the right franchise means fuzzy-matching
+  every name form, alias and retired name against text where `balls`,
+  `feelers`, `herd`, `chat` and `swift` are all somebody's real short name —
+  reliable versus a guess.
+
+- **`formerName` IS tokenized**, and its `lastSeason` is the year in the
+  token. `current` and `former` are the two fields the model prints, so they
+  become tokens; `lastSeason`, `punitive` and `phase` stay real, because those
+  are facts it reasons about rather than names it prints. `exposure.fid` was
+  added to the tip's exposure block to carry the named franchise — an opaque
+  id, never copied into the safe payload, and the exact-match guard in
+  `tests/schefter-offer-beats.test.ts` still fails on any OTHER new key.
+
+One gap, named rather than implied:
+
+- **PLAYER names in the memory block are still unmasked.** Same mechanism as
+  the franchise leak, different noun — nothing stops the model copying a player
+  out of a recalled post into an unrelated one. `exposure.players` controls
+  what is in the PAYLOAD, not what the model can read in its own memory.
+
+`tests/schefter-memory-name-mask.test.ts` pins the mask, the fail-safe drop,
+that the rumor scanner injects the real redactor while the transaction
+scanner passes none, the token substitution, and the unresolved-token
+fallback.
+
 ### The drip — a beat may only assert what the feeds can see
 
 **Read "The rumor mill is a beat, not an advertising feed" below first.** Since

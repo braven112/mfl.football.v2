@@ -26,6 +26,7 @@ import {
 } from '../scripts/lib/schefter-former-name.mjs';
 // @ts-ignore — sibling .mjs module, no .d.ts
 import { anonymizeTips } from '../scripts/schefter-rumor-scan.mjs';
+import { resolveTeamTokens } from '../scripts/lib/schefter-name-mask.mjs';
 
 const at = (d: string) => new Date(`${d}T18:00:00Z`);
 /** Labor Day 2026 is Sept 7, so weeks 1–3 run Sept 7 → Sept 27. */
@@ -285,7 +286,26 @@ describe('callback containment — naming-allowed scopes only', () => {
       PRESEASON_2026,
     );
     expect(out[0].scope.kind).toBe('franchise-multi-source');
-    expect(out[0].formerName).toMatchObject({ former: 'Heavy Chevy', current: 'Dead Cap' });
+    // Both names are TOKENS now (2026-09-08). A franchise identity is
+    // (franchiseId, year), so the callback's two printable fields carry that
+    // key and are substituted after generation — the model never sees either
+    // name. `lastSeason`/`punitive`/`phase` stay real: they are facts it
+    // reasons about, not names it prints.
+    expect(out[0].formerName).toMatchObject({
+      // SHORT token: the scope label the caller passed was "Dead Cap", the
+      // franchise's nameShort, and the token preserves that register rather
+      // than silently promoting it to "Dead Cap Walking".
+      current: '{{TEAM_SHORT:0004}}',
+      former: '{{TEAM_FORMER:0004:2025}}',
+    });
+    // The assertion that matters is what they RESOLVE to — tokens that expand
+    // to the wrong names would satisfy the shape check above.
+    const rendered = resolveTeamTokens(
+      `${out[0].formerName.current} — the former ${out[0].formerName.former}`,
+      teams,
+    );
+    expect(rendered.unresolved).toBe(false);
+    expect(rendered.text).toBe('Dead Cap — the former Heavy Chevy');
   });
 
   it('withholds it on scopes that must stay anonymous', async () => {
@@ -403,7 +423,22 @@ describe('the prompt rule requires the pairing', () => {
   it('states rule 30 and forbids the bare former name', () => {
     expect(src).toMatch(/30\. FORMER-NAME CALLBACK/);
     expect(src).toMatch(/MUST appear alongside it/);
-    expect(src).toMatch(/FORBIDDEN: "Dockside Dynamos are fielding calls\."/);
+    // The examples are TOKENS now (2026-09-08), not invented franchise names.
+    // The FORBIDDEN case still demonstrates the bare former name — it just
+    // demonstrates it in the form the model actually writes.
+    expect(src).toMatch(/FORBIDDEN: "\{\{TEAM_FORMER:\d{4}:\d{4}\}\} are fielding calls\."/);
+  });
+
+  it('uses an UNRESOLVABLE franchise id in every prompt example', () => {
+    // The sharpest edge of tokenizing: an example id that is a live franchise
+    // resolves cleanly when copied out of the examples instead of the payload,
+    // `unresolved` stays false, and the post names the wrong team — the exact
+    // misattribution tokens exist to prevent, now undetectable. 9999 is not a
+    // franchise in either league, so a copied token fails loudly instead.
+    const exampleIds = [...src.matchAll(/\{\{TEAM(?:_SHORT|_FORMER)?:(\d{4})/g)]
+      .map((m) => m[1]);
+    expect(exampleIds.length).toBeGreaterThan(0);
+    expect([...new Set(exampleIds)]).toEqual(['9999']);
   });
 
   /**

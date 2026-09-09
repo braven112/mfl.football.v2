@@ -351,8 +351,41 @@ export async function loadPostHistory({ log = console.log, warn = console.warn, 
  * Build the "RECENT POSTS" block for the user prompt. Returns a string
  * suitable for concatenation into the user message. Empty string when history
  * is empty.
+ *
+ * `maskNames` is REQUIRED to include post bodies, and the reason is a shipped
+ * bug: this block carries the last few posts verbatim, both scanners read the
+ * SAME post-history.json, and a franchise name sitting in it is a name in
+ * front of the model that its own payload never authorized. On 2026-09-07 a
+ * trade post named "Fire Ready Aim" beside a Bring the Pain player — the
+ * `exposure` payload structurally could not have paired them, but the three
+ * previous posts in this block all named Fire Ready Aim. Pass
+ * `memoryNameMasker(teams)` from scripts/lib/schefter-name-mask.mjs.
+ *
+ * Without a masker the bodies are DROPPED rather than passed through raw.
+ * The block's whole job is "do not reuse these openers, closers and bits",
+ * which the opener/closer lists below still do; the bodies are the nice-to-
+ * have, and degrading a nice-to-have beats leaking a name the caller was
+ * never allowed to print. It warns, because a silently thinner prompt is the
+ * kind of regression nobody notices for months.
+ *
+ * The options are declared rather than inferred: `maskNames` carries no
+ * default (its absence is the meaningful case), so inference alone leaves it
+ * out of the parameter type entirely and every caller passing one is a
+ * ts(2353). That class is pinned at zero by the type ratchet, which is what
+ * caught it.
+ *
+ * @param {Array<Record<string, any>> | null | undefined} posts
+ * @param {{
+ *   limit?: number,
+ *   maskNames?: (text: string) => string,
+ *   warn?: (...args: any[]) => void,
+ * }} [options]
+ * @returns {string}
  */
-export function buildRecentPostsPromptBlock(posts, { limit = RECENT_POSTS_FOR_PROMPT } = {}) {
+export function buildRecentPostsPromptBlock(
+  posts,
+  { limit = RECENT_POSTS_FOR_PROMPT, maskNames, warn = console.warn } = {},
+) {
   if (!posts || posts.length === 0) return '';
 
   const recent = posts.slice(-limit);
@@ -360,19 +393,36 @@ export function buildRecentPostsPromptBlock(posts, { limit = RECENT_POSTS_FOR_PR
   const closers = new Set();
   const bodies = [];
 
+  const canMask = typeof maskNames === 'function';
+  if (!canMask) {
+    warn('[schefter-lore] buildRecentPostsPromptBlock called without maskNames — dropping post bodies from the memory block');
+  }
+
   for (const p of recent) {
     if (p.openerUsed) openers.add(p.openerUsed);
     if (p.closerUsed) closers.add(p.closerUsed);
-    if (p.body) bodies.push(`- (${p.subject ?? 'post'}) ${p.body.replace(/\s+/g, ' ').trim()}`);
+    if (p.body && canMask) {
+      // The SUBJECT is masked too. It is not a label — `deriveHistorySubject`
+      // builds `franchise (Vitside)` and `trade-pending (Team A ↔ Team B)`, and
+      // the live post-history already holds the first. Masking the body while
+      // interpolating the subject raw left the leak wide open, and in the
+      // transaction lane — which drops bodies — the two-franchise subject would
+      // have been the ONLY thing left in the block.
+      const subject = maskNames(String(p.subject ?? 'post'));
+      const masked = maskNames(p.body.replace(/\s+/g, ' ').trim());
+      bodies.push(`- (${subject}) ${masked}`);
+    }
   }
 
   const forbiddenOpeners = Array.from(openers).filter(Boolean);
   const forbiddenClosers = Array.from(closers).filter(Boolean);
 
   const sections = [];
-  sections.push(
-    `RECENT POSTS (do not repeat these openers, closers, or bits):\n${bodies.join('\n')}`,
-  );
+  if (bodies.length > 0) {
+    sections.push(
+      `RECENT POSTS (do not repeat these openers, closers, or bits):\n${bodies.join('\n')}`,
+    );
+  }
   if (forbiddenOpeners.length > 0) {
     sections.push(
       `Do not use these openers (recently used): ${forbiddenOpeners.map((o) => `"${o}"`).join(', ')}`,

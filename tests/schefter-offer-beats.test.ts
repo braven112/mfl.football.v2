@@ -334,9 +334,17 @@ describe('redactTradeOffer — beats reach the tip without widening the names', 
     expect(named.every((n: string) => printed.includes(n))).toBe(true);
   });
 
-  it('leaves the exposure block at exactly its three published fields', () => {
+  it('leaves the exposure block at its published fields — plus the id, which is not a name', () => {
+    // `fid` joined the block on 2026-09-08 so the LLM-facing payload can hand
+    // over `{{TEAM:<fid>}}` instead of the franchise name. It does not widen
+    // the NAME surface this suite guards: it is an opaque id, the safe payload
+    // picks its fields explicitly and never copies it, and it is substituted
+    // out before anything ships. Any OTHER new key here does widen the
+    // surface, which is why this stays an exact-match assertion.
     const { tip } = mustRedact(args(4));
-    expect(Object.keys(tip.exposure!).sort()).toEqual(['players', 'signal', 'team']);
+    expect(Object.keys(tip.exposure!).sort()).toEqual(['fid', 'players', 'signal', 'team']);
+    expect(typeof tip.exposure!.fid).toBe('string');
+    expect(tip.exposure!.fid).toMatch(/^\d{4}$/);
   });
 });
 

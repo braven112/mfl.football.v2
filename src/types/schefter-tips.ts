@@ -90,8 +90,21 @@ export interface EscalatedPlayer {
 export interface TradeOfferExposure {
   /** 1-indexed signal count for this offer (1 = first reveal). */
   signal: number;
-  /** The single franchise the post may name at this signal level. */
+  /**
+   * The single franchise the post may name at this signal level.
+   *
+   * In the LLM-facing payload these are TOKENS — `{{TEAM:<fid>}}` and
+   * `{{TEAM_SHORT:<fid>}}` — not names, and the real franchise is substituted
+   * after generation. See scripts/lib/schefter-name-mask.mjs.
+   */
   team: { name: string; nameShort?: string };
+  /**
+   * The named franchise's id, so the payload builder can mint a token that
+   * says which team it means. INTERNAL: `redactSafePayload` picks the
+   * exposure fields it forwards explicitly and never copies this, so the id
+   * does not reach the model.
+   */
+  fid?: string | null;
   /**
    * Ordered list of players the post may name (signal 1 = empty,
    * signal 2 = 1 player, signal 3 = 2 players, etc.). Sorted by descending

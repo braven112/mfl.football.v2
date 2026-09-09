@@ -1329,7 +1329,21 @@ async function scanPendingTrades(league) {
   // recentPostsBlock is an empty string when history is empty.
   const lore = await loadLore({ log: console.log, warn: console.warn, navSlug: league.slug });
   const history = await loadPostHistory({ log: console.log, warn: console.warn, navSlug: league.slug });
-  const recentPostsBlock = buildRecentPostsPromptBlock(history.posts);
+  // NO masker here, so the block builder drops the post BODIES and keeps only
+  // the opener/closer bans. Deliberate: the only correct masker is
+  // `redactFranchiseNamesInText`, which lives in the rumor scanner with its
+  // edge guards, separator handling and ambiguous-token relaxation. Writing a
+  // simpler one for this lane is what produced both an over-masking bug
+  // ("a fire sale" → "a [a team] sale") and an under-masking one ("The Blunt
+  // Bros." untouched), so this lane takes the safe degradation instead.
+  //
+  // Cost is small and bounded: this scanner's posts are largely template-built
+  // from hard transaction data, and its anti-repetition still works on openers
+  // and closers. Wiring the real redactor in — by sharing it rather than
+  // copying it — is the way to get the bodies back.
+  const recentPostsBlock = buildRecentPostsPromptBlock(history.posts, {
+    warn: console.warn,
+  });
   console.log(`  [memory] last ${Math.min(history.posts.length, 5)} posts passed to LLM`);
 
   // Feed-first, GroupMe-second per trade. Previously the whole loop built up a

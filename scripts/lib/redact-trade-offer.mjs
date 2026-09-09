@@ -405,7 +405,15 @@ export function redactTradeOffer({
   const namedFid = exposureBuilt?.chosenFid ?? null;
 
   const exposure = exposureBuilt
-    ? { signal: exposureBuilt.signal, team: exposureBuilt.team, players: exposureBuilt.players }
+    ? {
+      signal: exposureBuilt.signal,
+      team: exposureBuilt.team,
+      players: exposureBuilt.players,
+      // The named franchise, carried so the LLM-facing payload can hand over
+      // `{{TEAM:<fid>}}` instead of the name. Internal: the safe payload picks
+      // its fields explicitly, so this never reaches the model as an id.
+      fid: exposureBuilt.chosenFid ?? null,
+    }
     : null;
 
   // A named team makes escalatedPlayer an ownership claim too — re-pick it from

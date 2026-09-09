@@ -204,10 +204,15 @@ describe('rumor-scan text redaction — franchise names cannot leak through tip 
   });
 
   it('collects every franchise name form (long/medium/short/abbrev) for matching', () => {
-    expect(src).toMatch(/function\s+collectFranchiseNameTokens\(/);
-    const fn = src.match(/function\s+collectFranchiseNameTokens[\s\S]+?\n\}/);
+    // Harvest moved to scripts/lib/schefter-name-mask.mjs (2026-09-08) — one
+    // implementation shared by both scanners and the memory-block masker.
+    const maskSrc = read('scripts/lib/schefter-name-mask.mjs');
+    expect(maskSrc).toMatch(/export function\s+collectFranchiseNameTokens\(/);
+    const fn = maskSrc.match(/export function\s+collectFranchiseNameTokens[\s\S]+?\n\}/);
     expect(fn).not.toBeNull();
     expect(fn![0]).toMatch(/['"]name['"],\s*['"]nameMedium['"],\s*['"]nameShort['"],\s*['"]abbrev['"]/);
+    // The scanner must not regrow a private copy.
+    expect(src).not.toMatch(/^function\s+collectFranchiseNameTokens\(/m);
   });
 
   it('replaces matched franchise names with a generic "[a team]" placeholder', () => {

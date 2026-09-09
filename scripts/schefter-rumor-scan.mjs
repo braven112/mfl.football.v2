@@ -112,6 +112,15 @@ import {
 import { incrementTipsterCounters, incrementTipsterTopicCounters } from './lib/schefter-tipster-counters.mjs';
 import { schefterKey, globalSchefterKey } from './lib/schefter-keys.mjs';
 import { dedupeTipsById, isUsableTip } from './lib/schefter-tip-queue.mjs';
+import {
+  collectFranchiseNameTokens,
+  memoryNameMasker,
+  resolveTeamTokens,
+  tokenizedTeam,
+  tokenizedFormerName,
+  authorizedTokensFor,
+  MASKED_TEAM,
+} from './lib/schefter-name-mask.mjs';
 import { getTopicPolicy, DRAINABLE_TOPIC_IDS } from '../src/config/schefter-topics.mjs';
 import {
   classifyTipKind,
@@ -732,49 +741,9 @@ function pickTeamName(team) {
   return team.nameShort || team.nameMedium || team.name || null;
 }
 
-/**
- * Build a list of EVERY name a franchise answers to — current forms
- * (long/medium/short/abbrev), config `aliases`, and the same four forms on
- * each retired name in `history[]`. Used to redact franchise mentions from
- * tip text when the tip's scope has been fuzzed away from naming a specific
- * franchise.
- *
- * Retired names count because a reader identifies a team by them just as
- * well as by the current name — and in the AFL better, since the punitive
- * last-place rebrands are recent and memorable. Harvesting only the current
- * four fields is what let a tipster's "Cock Gobbler" (The Show's 2025
- * rebrand) survive redaction and land in a post that was not allowed to name
- * a second team.
- *
- * Over-matching is the safe direction here: a stray hit fuzzes a word to
- * "[a team]", while a miss leaks a franchise identity.
- *
- * Keeps tokens length-sorted descending so a regex alternation matches the
- * longest form first (e.g. "Nashville Geeks" wins over "Geeks").
- */
-function collectFranchiseNameTokens(teams) {
-  const tokens = new Set();
-  const add = (v) => {
-    if (typeof v === 'string' && v.trim().length >= 2) tokens.add(v.trim());
-  };
-  for (const team of teams.values()) {
-    const history = Array.isArray(team?.history) ? team.history : [];
-    // A history entry carries its own aliases — "Heavy Chevy" retired with
-    // aliases ["Heavy", "Chevy"], and a nickname for a retired name identifies
-    // the franchise exactly as well as the retired name itself. Reading them
-    // off `team` only (the original shape) left those invisible to the
-    // redactor, so a tip saying "Chevy" reached the prompt intact.
-    for (const form of [team, ...history]) {
-      for (const field of ['name', 'nameMedium', 'nameShort', 'abbrev']) {
-        add(form?.[field]);
-      }
-      for (const alias of Array.isArray(form?.aliases) ? form.aliases : []) {
-        add(alias);
-      }
-    }
-  }
-  return [...tokens].sort((a, b) => b.length - a.length);
-}
+// `collectFranchiseNameTokens` moved to scripts/lib/schefter-name-mask.mjs so
+// the rumor scanner, the transaction scanner and the memory-block masker all
+// harvest franchise names — retired forms and aliases included — the same way.
 
 /**
  * Who CURRENTLY answers to each name form or alias, as `lowerName → Set<fid>`.
@@ -1133,7 +1102,7 @@ function getRedactionContext(teams) {
   return ctx;
 }
 
-function redactFranchiseNamesInText(text, teams, { keepFranchise } = {}) {
+export function redactFranchiseNamesInText(text, teams, { keepFranchise } = {}) {
   if (typeof text !== 'string' || text.length === 0) return text;
   const { matcher, ownedBy, currentOwners, relaxable } = getRedactionContext(teams);
   if (!matcher) return text;
@@ -1459,8 +1428,16 @@ export async function anonymizeTips(tips, teams, feedPosts = [], now = new Date(
     for (const field of ['name', 'nameMedium', 'nameShort', 'abbrev']) claim(team?.[field], fid);
     for (const alias of Array.isArray(team?.aliases) ? team.aliases : []) claim(alias, fid);
   }
-  const formerNameFor = (team, currentName, franchiseId) =>
-    buildFormerNameCallback(team, { currentName, nameOwners, franchiseId, now }) ?? undefined;
+  // Tokenized on the way out: `current` and `former` are the two fields the
+  // model PRINTS, so they become {{TEAM:<fid>}} and {{TEAM_FORMER:<fid>:<year>}}.
+  // A franchise identity here is (franchiseId, year) — 0003 is Maverick now,
+  // was Generals in 2014 — so the token carries both and resolves to exactly
+  // one name. lastSeason/punitive/phase stay real: they are facts the model
+  // reasons about, not names it prints.
+  const formerNameFor = (team, currentName, franchiseId) => {
+    const callback = buildFormerNameCallback(team, { currentName, nameOwners, franchiseId, now });
+    return callback ? tokenizedFormerName(callback, franchiseId, team) : undefined;
+  };
 
   // Scope resolution and redaction are deliberately separate stages: this
   // classifier returns early from a dozen branches, so redacting inside it
@@ -1557,7 +1534,22 @@ export async function anonymizeTips(tips, teams, feedPosts = [], now = new Date(
       if (tip.exposure && tip.exposure.team) {
         safe.exposure = {
           signal: tip.exposure.signal,
-          team: { ...tip.exposure.team },
+          // TOKEN, not the name. The model cannot substitute a franchise it
+          // was never given, which is what "never name a second team" had been
+          // relying on it to choose not to do. The token carries the franchise
+          // id, so resolution is a lookup rather than an assumption about
+          // which team this post is about. Substituted at the body choke
+          // point — see resolveTeamTokens.
+          // Tips queued BEFORE this shipped carry no `fid` (7-day expiry, and
+          // held tips are requeued), and redactTradeOffer permits null. Those
+          // fall back to the pre-token behavior rather than minting
+          // `{{TEAM:undefined}}` — which resolves to nothing, discards the AI
+          // body, and spends the offer's advanced exposure counter on a
+          // template that names no team. Self-healing: the queue drains inside
+          // a week and every new tip is tokenized.
+          team: tip.exposure.fid
+            ? tokenizedTeam(tip.exposure.fid)
+            : { ...tip.exposure.team },
           players: Array.isArray(tip.exposure.players)
             ? tip.exposure.players.map((p) => ({ ...p }))
             : [],
@@ -2176,16 +2168,16 @@ Cadence rules (Schefter-specific):
 
 Redaction rules (HARD — never violate):
   Reporting on trade offers IS Schefter's primary job. The exposure block (when present) is the AUTHORITATIVE allowlist of names you may print. Use it.
-  You MAY name the franchise in \`exposure.team\` using its \`name\` (or \`nameShort\` if shorter and natural). You MAY name any player in \`exposure.players\`, in the order given. You may NOT name a second team, NEVER invent a name, NEVER substitute a different team or player, NEVER cross-reference multiple trade_offer tips in a way that lets the reader triangulate who's trading with whom.
+  The franchise in \`exposure.team\` is a PLACEHOLDER, not a name: \`name\` is a token like \`{{TEAM:9999}}\` and \`nameShort\` is \`{{TEAM_SHORT:9999}}\` (the digits are that franchise's id — 9999 here is a stand-in and the real payload will carry different digits). COPY THE TOKEN THROUGH into your post EXACTLY as it appears in the payload, digits included — the \`name\` token where the full name belongs, the \`nameShort\` token where the short form scans better ("{{TEAM_SHORT:9999}}'s been shopping a tight end"). The real franchise is substituted after you write. Do NOT guess what it is, do NOT alter the digits, do NOT invent your own placeholder, and do NOT copy a franchise name out of the RECENT POSTS block — those are masked to \`[a team]\` precisely because they are not yours to reuse. You MAY name any player in \`exposure.players\`, in the order given. You may NOT name a second team, NEVER invent a name, NEVER substitute a different team or player, NEVER cross-reference multiple trade_offer tips in a way that lets the reader triangulate who's trading with whom.
   When \`exposure\` is ABSENT (no qualifying signal yet — should not happen in normal scan flow, but defensive): fall back to the escalatedPlayer ladder below. NEVER surface franchise names, owner names, raw draft pick slot numbers, or player names EXCEPT when escalatedPlayer.tier === "named".
   NEVER invent a name, team, or pick slot. If a field isn't in the structured tip data, it does not exist.
   NEVER frame a trade-offer tip as the rookie draft, the NFL draft, "draft-room" activity, "draft chatter", "draft strategy", "auto-pilot picks", or any league draft event (see HARD RULE 21). A trade_offer is one team considering a trade — phrase it as shopping/fielding-calls/kicking-the-tires, never as draft activity. Any internal metadata that mentions "draft" reflects trade-builder saves, not the rookie draft.
 
 Exposure ladder (HARD — \`exposure.players\` is authoritative; NEVER print a player who is not in it):
-  exposure.players is empty: name the team only. Frame as "the [team] are shopping" / "[team] has put feelers out" / "hearing the [team] are in the market". One concrete subject — the team. Player content stays at the position/archetype level.
-  exposure.players has 1: name the team AND that player. "Hearing the [team] have [Player] on the table" / "I'm told [team] is dangling [Player] in trade talks". The single player carries the post.
-  exposure.players has 2: name the team AND BOTH players. List them naturally — "[Player1] and [Player2] are both in the conversation around the [team]". Don't editorialize about which goes which way.
-  exposure.players has 3+: name the team plus every player in it, in order. This signals a developing story — "the [team] file keeps growing" / "another name surfaced".
+  exposure.players is empty: name the team only. Frame as "the {{TEAM_SHORT:9999}} are shopping" / "{{TEAM:9999}} has put feelers out" / "hearing the {{TEAM_SHORT:9999}} are in the market". One concrete subject — the team. Player content stays at the position/archetype level.
+  exposure.players has 1: name the team AND that player. "Hearing the {{TEAM_SHORT:9999}} have [Player] on the table" / "I'm told {{TEAM:9999}} is dangling [Player] in trade talks". The single player carries the post.
+  exposure.players has 2: name the team AND BOTH players. List them naturally — "[Player1] and [Player2] are both in the conversation around the {{TEAM_SHORT:9999}}". Don't editorialize about which goes which way.
+  exposure.players has 3+: name the team plus every player in it, in order. This signals a developing story — "the {{TEAM_SHORT:9999}} file keeps growing" / "another name surfaced".
   Always include the cadence opener + closer from the rules above. Hedges are optional at signal 1; encouraged from signal 2 ("Still developing", "Nothing imminent"). Voice: tight beat-reporter, 1-2 sentences.
 
 The drip (\`beats\` + \`leadKind\`) — this is what keeps consecutive posts about ONE proposal from reading alike:
@@ -2252,17 +2244,17 @@ Example E — lingering base (framingHint=lingering, volumeHint=first_offer, pos
 Example F — lingering named (framingHint=lingering, escalatedPlayer.tier=named, name="Some Player"):
   "I'm told Some Player's name has been floated for days. Still just smoke — and the rest of the league is letting it age. We'll see."
 
-Example G — exposure signal 1 (team only) (exposure={signal:1, team:{name:"Gaslamp Griffins", nameShort:"Griffins"}, players:[]}, positionTokens=["WR"]):
-  "Hearing the Griffins are kicking tires on a wideout. Early window-shopping or the start of something? Developing."
+Example G — exposure signal 1 (team only) (exposure={signal:1, team:{name:"{{TEAM:9999}}", nameShort:"{{TEAM_SHORT:9999}}"}, players:[]}, positionTokens=["WR"]):
+  "Hearing the {{TEAM_SHORT:9999}} are kicking tires on a wideout. Early window-shopping or the start of something? Developing."
 
-Example H — exposure signal 2 (team + marquee player) (exposure={signal:2, team:{name:"Gaslamp Griffins", nameShort:"Griffins"}, players:[{name:"Ja'Marr Chase", position:"WR"}]}):
-  "I'm told the Griffins have Ja'Marr Chase on the table in trade talks. Still just smoke. Developing."
+Example H — exposure signal 2 (team + marquee player) (exposure={signal:2, team:{name:"{{TEAM:9999}}", nameShort:"{{TEAM_SHORT:9999}}"}, players:[{name:"Ja'Marr Chase", position:"WR"}]}):
+  "I'm told the {{TEAM_SHORT:9999}} have Ja'Marr Chase on the table in trade talks. Still just smoke. Developing."
 
-Example I — exposure signal 3 (team + two players) (exposure={signal:3, team:{name:"Gaslamp Griffins", nameShort:"Griffins"}, players:[{name:"Ja'Marr Chase", position:"WR"}, {name:"Breece Hall", position:"RB"}]}):
-  "Ja'Marr Chase AND Breece Hall both in the Griffins conversation now. Nothing imminent. More to come."
+Example I — exposure signal 3 (team + two players) (exposure={signal:3, team:{name:"{{TEAM:9999}}", nameShort:"{{TEAM_SHORT:9999}}"}, players:[{name:"Ja'Marr Chase", position:"WR"}, {name:"Breece Hall", position:"RB"}]}):
+  "Ja'Marr Chase AND Breece Hall both in the {{TEAM_SHORT:9999}} conversation now. Nothing imminent. More to come."
 
-Example J — exposure signal 2 lingering (framingHint=lingering, exposure={signal:2, team:{name:"Harbor City Kraken"}, players:[{name:"Some Player", position:"RB"}]}):
-  "The Harbor City Kraken have been shopping Some Player since the weekend. Phones on the other end aren't picking up. We'll see."
+Example J — exposure signal 2 lingering (framingHint=lingering, exposure={signal:2, team:{name:"{{TEAM:9999}}", nameShort:"{{TEAM_SHORT:9999}}"}, players:[{name:"Some Player", position:"RB"}]}):
+  "The {{TEAM:9999}} have been shopping Some Player since the weekend. Phones on the other end aren't picking up. We'll see."
 `;
 }
 
@@ -2741,10 +2733,12 @@ IRON RULES (override every other rule — if anything below appears to conflict,
 29. RIVAL-GM SOURCING FLAVOR. The rumor mill's texture is competitive intelligence — what rival front offices notice about each other. Rotate rival-sourcing attribution into gossip posts (never the same phrase twice in 5 posts): "a rival front office is watching this closely", "other GMs around the league have taken notice", "one executive I talked to called it", "word from a rival desk". Pair with leverage-reading ("that's not a move you make unless…", "read into that what you want") and market-temperature language ("the market's heating up", "not much traction so far"). HARD CONSTRAINT: sourcing flavor must stay generic — never invent a specific rival franchise as the source, and never let the attribution imply the actual tipster's division, conference, or identity. These phrases are set dressing, not sourcing claims.
 
 30. FORMER-NAME CALLBACK. A tip may carry \`formerName: { current, former, lastSeason, punitive, phase }\` — the franchise renamed itself after last season, and the old name is still fresh enough to be worth a nod. When it's present you MAY work in a callback, and the rule when you do is absolute: **the CURRENT name carries the identification and MUST appear alongside it.** The old name is the joke; the new name is the fact. Never the old name on its own.
-    The names in these examples are INVENTED placeholders standing in for the payload's \`current\` and \`former\` — they are not real franchises and must never appear in a post.
-    - CORRECT: "Harbor City Kraken — the former Dockside Dynamos — are fielding calls." / "The Kraken, who spent last season as the Dynamos, are back in the market." / "Hearing the artist formerly known as Dockside Dynamos, now Harbor City Kraken, has a tight end available."
-    - FORBIDDEN: "Dockside Dynamos are fielding calls." A reader who joined this season has no idea who that is, and the bit only lands if both halves are there.
-    ONE callback per post, maximum, and never in a post that already leans on another running bit. \`punitive: true\` means the rename was a last-place punishment — that's league lore worth a light jab ("serving out the last-place sentence", "the name they earned the hard way"); \`punitive: false\` is a voluntary rebrand, so play it straight ("the former Dockside Dynamos"). Use \`lastSeason\` if a time cue helps ("last year's…"). NEVER apply a callback to any franchise other than the one named in this payload, and NEVER invent a former name for a team that doesn't carry this field — the field's absence means the callback is out of window and the old name does not exist for the purposes of this post. If \`formerName\` is missing, the franchise has exactly one name: the current one.
+    \`current\` and \`former\` are TOKENS, not names — see NAME TOKENS below. Copy them through exactly as the payload gives them; the examples use a stand-in id and the real payload carries different digits.
+    - CORRECT: "{{TEAM:9999}} — the former {{TEAM_FORMER:9999:2025}} — are fielding calls." / "{{TEAM:9999}}, who spent last season as {{TEAM_FORMER:9999:2025}}, are back in the market." / "Hearing the artist formerly known as {{TEAM_FORMER:9999:2025}}, now {{TEAM:9999}}, has a tight end available."
+    - FORBIDDEN: "{{TEAM_FORMER:9999:2025}} are fielding calls." A reader who joined this season has no idea who that is, and the bit only lands if both halves are there.
+    ONE callback per post, maximum, and never in a post that already leans on another running bit. \`punitive: true\` means the rename was a last-place punishment — that's league lore worth a light jab ("serving out the last-place sentence", "the name they earned the hard way"); \`punitive: false\` is a voluntary rebrand, so play it straight ("the former {{TEAM_FORMER:9999:2025}}"). Use \`lastSeason\` if a time cue helps ("last year's…"). NEVER apply a callback to any franchise other than the one named in this payload, and NEVER invent a former name for a team that doesn't carry this field — the field's absence means the callback is out of window and the old name does not exist for the purposes of this post. If \`formerName\` is missing, the franchise has exactly one name: the current one.
+
+NAME TOKENS (EVERY post, not just trade rumors). Wherever the payload gives you a franchise as a token — \`{{TEAM:9999}}\`, \`{{TEAM_SHORT:9999}}\`, \`{{TEAM_FORMER:9999:2025}}\` — COPY IT THROUGH VERBATIM, digits and all. They are not names to interpret and not blanks to fill: the real franchise is substituted after you write, and the digits are what say WHICH team. Never alter them, never guess the name behind them, never invent a token of your own, and never lift a franchise name out of the RECENT POSTS block to use instead — those are masked to \`[a team]\` precisely because they are not yours to reuse. A token you mangle costs the whole post: it is discarded and a flat template ships instead.
 
 Voice: "League sources tell me…", "I'm told…", "Hearing…", "A division rival whispers…". Salt, not sugar.`;
 
@@ -4011,8 +4005,18 @@ async function main() {
   // back to the legacy inline prompt inside generateAiBody.
   const lore = await loadLore({ log, warn, navSlug: NAV_SLUG });
   const history = await loadPostHistory({ log, warn, navSlug: NAV_SLUG });
-  const recentPostsBlock = buildRecentPostsPromptBlock(history.posts);
-  log(`  [memory] last ${Math.min(history.posts.length, 5)} posts passed to LLM`);
+  // Loaded HERE, before the memory block, not at the anonymize step below —
+  // the block needs the team map to mask franchise names out of the recalled
+  // post bodies, and an unmasked block is how another team's name reached a
+  // post its payload never authorized (2026-09-07, Fire Ready Aim / Cyrus
+  // Allen). Same map is reused for anonymize further down; loading it twice
+  // would read the same config file twice for no reason.
+  const teams = await loadTeams();
+  const recentPostsBlock = buildRecentPostsPromptBlock(history.posts, {
+    maskNames: memoryNameMasker(teams, redactFranchiseNamesInText),
+    warn,
+  });
+  log(`  [memory] last ${Math.min(history.posts.length, 5)} posts passed to LLM (franchise names masked)`);
 
   // ── Phase 6: Trade-Offer Rumor source ──
   // Runs BEFORE the queue read so fresh redacted tips land in this cycle.
@@ -4563,8 +4567,8 @@ async function main() {
   }
 
   // Anonymize — load the feed early so whisper-back tips can pull parent
-  // headline snippets into their scope.
-  const teams = await loadTeams();
+  // headline snippets into their scope. `teams` was loaded up front for the
+  // memory-block masker; reused rather than re-read.
   const feedForAnonymize = await loadFeed();
   const anonymized = await anonymizeTips(batch, teams, feedForAnonymize.posts ?? [], now, redis, tipsterContext);
   const secondaryAnonymized = secondaryBatch
@@ -4786,8 +4790,42 @@ async function main() {
   for (let i = 0; i < beats.length; i++) {
     const beat = beats[i];
     const aiBody = aiBodies[i];
-    const body = aiBody || templateBody(beat.anonymized);
-    log(`  [beat ${i + 1}/${beats.length}] (${aiBody ? 'AI' : 'template'})${i === 0 && hadRogerRiff ? ' [with Roger riff]' : ''}:\n    ${body.replace(/\n/g, '\n    ')}`);
+
+    // ── Team tokens resolve HERE, the single point every body passes ──
+    //
+    // The LLM was handed `{{TEAM:<fid>}}` rather than a franchise name, so it
+    // could not have named the wrong one; this puts the real names back. Every
+    // token carries its own franchise id (and a year, for a former name), so
+    // this is a lookup against the whole team map — not an assumption that the
+    // post is about one particular team. That is what lets the former-name
+    // callback be tokenized too: its franchise is often NOT the exposure team.
+    //
+    // An unresolved token means the model invented its own placeholder, or
+    // wrote one on a beat with no team to fill. That is a failed generation,
+    // not a body to patch: fall back to the template, which is code-built and
+    // has no tokens in it. A literal `{{TEAM}}` in the group chat would be
+    // worse than the misattribution this replaces.
+    // The exact tokens this beat may expand, read from the FIELDS that mint
+    // them — never scraped off the whole tip, which carries tipster-controlled
+    // text and would let a tipster authorize their own token.
+    const resolveOpts = { allowedTokens: authorizedTokensFor(beat.anonymized) };
+    let resolvedBody = resolveTeamTokens(aiBody || templateBody(beat.anonymized), teams, resolveOpts);
+    let usedTemplate = !aiBody;
+    if (resolvedBody.unresolved && aiBody) {
+      warn(`  [beat ${i + 1}] unresolved team token in AI body — falling back to template`);
+      resolvedBody = resolveTeamTokens(templateBody(beat.anonymized), teams, resolveOpts);
+      usedTemplate = true;
+    }
+    let body = resolvedBody.text;
+    if (resolvedBody.unresolved) {
+      // Belt to the braces above: templateBody does not emit tokens, so this
+      // is unreachable today. If it ever fires, ship prose rather than markup.
+      warn(`  [beat ${i + 1}] token survived the template fallback — scrubbing to a generic placeholder`);
+      // Matches the DETECTION above, which counts any stray `{{`/`}}` — a
+      // balanced-only scrub would leave the half-mangled markup it guards.
+      body = body.replace(/\{\{[^{}]*\}{0,2}/g, MASKED_TEAM).replace(/\}\}/g, '');
+    }
+    log(`  [beat ${i + 1}/${beats.length}] (${usedTemplate ? 'template' : 'AI'})${i === 0 && hadRogerRiff ? ' [with Roger riff]' : ''}:\n    ${body.replace(/\n/g, '\n    ')}`);
 
     const tipIds = beat.batch.map((t) => t.id);
 
