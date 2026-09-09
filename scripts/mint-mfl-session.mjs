@@ -30,8 +30,9 @@
  * therefore never mixes the login's cookies with the stored ones.
  *
  * Degrades in order, never fails the job by itself:
- *   1. login yields both cookies      → fresh pair exported
- *   2. login fails / incomplete / no creds → the stored pair (if any) exported
+ *   1. login yields a session         → the login's own cookies exported,
+ *      with or without a commissioner flag (the write does not need one)
+ *   2. login fails / no creds         → the stored pair (if any) exported
  *      unchanged, with a ::warning:: so the run shows why
  *
  * Later steps must NOT re-declare the stored cookie secrets in their own
@@ -96,16 +97,31 @@ export function parseSessionCookies(setCookies, body) {
 /**
  * Decide which pair to export. Pure, so the fallback order is testable.
  *
- * The login's cookies are used only as a COMPLETE pair — or, when the stored
- * secrets carry no commissioner flag either, as a plain user session. A
- * fresh identity is never paired with a stored privilege flag (see header).
+ * A LOGIN THAT PRODUCED A SESSION ALWAYS WINS. Each source is used as its own
+ * whole set — the login's cookies, or the stored ones, never a mix — so a
+ * fresh identity is still never paired with a stored privilege flag, which is
+ * the rule the header describes and MFL refuses.
+ *
+ * The extra `(login.mflIsCommish || !stored.isCommish)` guard this used to
+ * carry made the login unreachable. No MFL request issues MFL_IS_COMMISH —
+ * the 2026-09-05 probe (.github/workflows/probe-commish-cookie.yml) walked
+ * every candidate and none did — so `login.mflIsCommish` is always undefined,
+ * and `!stored.isCommish` is false whenever the secret is set. The condition
+ * could therefore never be true in the configuration this script actually
+ * runs in: it logged in successfully on every run and threw the result away,
+ * exporting the very stored pair whose expiry it exists to survive. When
+ * those cookies died on 2026-09-08 every contract write failed for a day.
+ *
+ * Discarding the flag costs nothing: the same probe showed a commissioner's
+ * freshly-logged-in MFL_USER_ID ALONE is ACCEPTED for the contract write on
+ * the write host, with no MFL_IS_COMMISH sent.
  *
  * @param {{ mflUserId?: string, mflIsCommish?: string } | null} login
  * @param {{ userId?: string, isCommish?: string }} stored
  * @returns {{ source: 'login' | 'stored' | 'none', userId?: string, isCommish?: string }}
  */
 export function pickMflSession(login, stored) {
-  if (login?.mflUserId && (login.mflIsCommish || !stored.isCommish)) {
+  if (login?.mflUserId) {
     return { source: 'login', userId: login.mflUserId, isCommish: login.mflIsCommish };
   }
   if (stored.userId) {
@@ -189,7 +205,11 @@ async function main() {
       if (login.mflUserId && login.mflIsCommish) {
         console.log(`[mint-mfl-session] Commissioner session for league ${leagueId} minted on ${host}.`);
       } else if (login.mflUserId) {
-        console.log(`::warning::[mint-mfl-session] ${host} logged in but issued no MFL_IS_COMMISH for league ${leagueId} — this account is not its commissioner, or the credentials are wrong.`);
+        // NOT a misconfiguration: no MFL request issues this cookie (see
+        // pickMflSession). Said as a warning about the ACCOUNT, this line sent
+        // an investigation after the commissioner's league access when the
+        // real fault was an expired stored cookie. The session is still good.
+        console.log(`::notice::[mint-mfl-session] ${host} issued a session for league ${leagueId} with no MFL_IS_COMMISH — expected; the contract write does not require it.`);
       } else {
         console.log(`::warning::[mint-mfl-session] ${host} issued no session cookie for league ${leagueId}.`);
       }

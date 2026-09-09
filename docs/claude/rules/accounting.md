@@ -469,8 +469,17 @@ two of them exist:
 |---|---|---|
 | `MFL_USER_ID` | yes | the stored session cookie — **expires** |
 | `MFL_IS_COMMISH` | yes | the stored commissioner cookie — **expires** |
-| `MFL_USERNAME` | **no** | login fallback, referenced by five workflows, never set |
-| `MFL_PASSWORD` | **no** | ditto |
+| `MFL_USERNAME` | yes | commissioner login name — does not expire |
+| `MFL_PASSWORD` | yes | commissioner password — does not expire |
+
+**Corrected 2026-09-09.** This table listed the username/password pair as
+never set, and described the durable fix as unbuilt. Both have been set since
+`scripts/mint-mfl-session.mjs` shipped (2026-09-05), and the login works. The
+stale row is not a footnote: read during an incident it produced a confident
+wrong diagnosis — "the credentials do not exist, rotate the cookie" — while
+the actual fault was a login whose result was being discarded. If you find
+this table disagreeing with a run log again, believe the log and fix the
+table.
 
 Do not infer a secret exists because a workflow references it — an unset
 secret interpolates to an empty string and the step runs anyway. Run #4's env

@@ -32,6 +32,11 @@ on:
         required: false
         type: boolean
         default: false
+      withhold_stored_cookies:
+        description: "PROOF RUN: run the write test with username/password ONLY (no stored cookie in the environment)"
+        required: false
+        type: boolean
+        default: false
 
 concurrency:
   group: probe-commish-cookie
@@ -70,11 +75,33 @@ jobs:
       # so MFL's answer is real and there is nothing to revert. It settles
       # whether MFL_IS_COMMISH is required at all, or whether the host was the
       # only variable that ever mattered.
-      - name: No-op write test (test league)
-        if: inputs.write_test
+      #
+      # TWO STEPS, NOT ONE STEP WITH A CONDITIONAL env. A GitHub expression
+      # like `inputs.x && '' || secrets.Y` does NOT withhold the secret: the
+      # empty string is falsy, so the `||` falls through and the secret is
+      # passed anyway — the run would look like a proof and prove nothing.
+      # Splitting it also puts the answer in the STEP NAME, so the run's own
+      # log records which credentials were in scope rather than asking a
+      # reader to reconstruct it from the inputs.
+      - name: No-op write test (test league) — with the stored commissioner cookie
+        if: inputs.write_test && !inputs.withhold_stored_cookies
         env:
           MFL_USERNAME: ${{ secrets.MFL_USERNAME }}
           MFL_PASSWORD: ${{ secrets.MFL_PASSWORD }}
           MFL_IS_COMMISH: ${{ secrets.MFL_IS_COMMISH }}
+          MFL_YEAR: ${{ inputs.year }}
+        run: node scripts/probe-write-auth.mjs
+
+      # THE PROOF RUN. Neither stored cookie is in scope: no MFL_IS_COMMISH,
+      # and probe-write-auth.mjs never reads MFL_USER_ID at all — it logs in
+      # and uses the cookie MFL hands back. So the only credential that can
+      # explain an ACCEPTED write here is MFL_USERNAME + MFL_PASSWORD. If this
+      # step passes, the stored cookie secrets are not load-bearing for a
+      # commissioner contract write, and the jobs that replay them can stop.
+      - name: No-op write test (test league) — username/password ONLY
+        if: inputs.write_test && inputs.withhold_stored_cookies
+        env:
+          MFL_USERNAME: ${{ secrets.MFL_USERNAME }}
+          MFL_PASSWORD: ${{ secrets.MFL_PASSWORD }}
           MFL_YEAR: ${{ inputs.year }}
         run: node scripts/probe-write-auth.mjs
