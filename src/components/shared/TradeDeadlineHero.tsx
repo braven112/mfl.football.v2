@@ -1,7 +1,11 @@
 /**
  * TradeDeadlineHero — React island for the 24-hour trade deadline countdown.
  *
- * Rendered by SeasonDailyHero when phase === 'trade-deadline' on Nov 13.
+ * SHARED by both leagues' homepages on their own deadline day (TheLeague's
+ * Nov 13, the AFL's own date from its event feed). It lived under theleague/
+ * while the AFL imported it across directories, which is how the CTA below
+ * came to send AFL owners to TheLeague's trade builder.
+ *
  * Displays a live countdown to midnight PT with urgency messaging.
  * Uses client:idle hydration — the countdown isn't critical until the user sees it.
  */
@@ -17,6 +21,16 @@ interface TradeDeadlineHeroProps {
    * in production: the real deadline must be measured on the real clock.
    */
   referenceNowISO?: string;
+  /**
+   * Where "Open Trade Builder" goes, resolved by the CALLER.
+   *
+   * REQUIRED, not optional with a default. This was hardcoded to
+   * `/theleague/trade-builder`, so the AFL's deadline hero — the one card in
+   * the league whose whole job is "go make a trade, now" — sent AFL owners
+   * into another league's trade builder. A default would have preserved that
+   * bug for the next league; a required prop makes omitting it a type error.
+   */
+  tradeBuilderHref: string;
 }
 
 /**
@@ -61,7 +75,7 @@ function formatCountdown(ms: number | null): { hours: string; minutes: string; s
   return { hours, minutes, seconds };
 }
 
-export default function TradeDeadlineHero({ deadlineMidnightPT, referenceNowISO }: TradeDeadlineHeroProps) {
+export default function TradeDeadlineHero({ deadlineMidnightPT, referenceNowISO, tradeBuilderHref }: TradeDeadlineHeroProps) {
   const remaining = useCountdown(deadlineMidnightPT, referenceNowISO);
   // Pre-mount (remaining === null) renders the not-expired layout with
   // placeholder digits — identical on server and client, so hydration is stable.
@@ -127,7 +141,7 @@ export default function TradeDeadlineHero({ deadlineMidnightPT, referenceNowISO 
       )}
 
       {!isExpired && (
-        <a href="/theleague/trade-builder" className="tdhero__cta">
+        <a href={tradeBuilderHref} className="tdhero__cta">
           Open Trade Builder
         </a>
       )}

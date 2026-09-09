@@ -40,6 +40,22 @@
       "impact": "user",
       "area": "league-summary",
       "league": "theleague"
+    },
+    {
+      "date": "2026-09-09",
+      "type": "bug-fix",
+      "summary": "On AFL trade deadline day, the Open Trade Builder button now opens the AFL trade builder. It was pointed at The League's — on the one card in the league whose entire job is telling you to go make a trade before midnight.",
+      "impact": "user",
+      "area": "trade-builder",
+      "league": "afl"
+    },
+    {
+      "date": "2026-09-09",
+      "type": "style-tweak",
+      "summary": "The AFL trade deadline countdown now wears the AFL's own red rather than a generic alert red — same crimson as the nav and the breadcrumb bar. Still red, because it is still a deadline.",
+      "impact": "user",
+      "area": "homepage",
+      "league": "afl"
     }
   ]
 }

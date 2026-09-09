@@ -35,6 +35,32 @@ html.dark {
   --tdhero-glow: rgba(220, 38, 38, 0.3);
 }
 
+/* ── AFL: the league's own red, not the generic error red. ────────────────
+   The accent stays RED for both leagues on purpose. It is an urgency signal,
+   not a brand flourish — this card only renders ON deadline day — and the
+   AFL's own resolver already says so: its DEADLINE treatment is gold until
+   `days === 0`, then flips to `tone: 'red'`. So the league colour for this
+   card is the AFL's red (--league-accent, #c41e3a light / #ef5350 dark),
+   the same one the nav and breadcrumb bar wear.
+
+   NOT `var(--league-accent)` unscoped: TheLeague's resolves to
+   --color-primary #1c497c, so a "use the league accent" rule would paint its
+   deadline hero BLUE and quietly delete the urgency this component exists to
+   convey.
+
+   The glow is set alongside each accent because it is a hardcoded rgba, not
+   derived from the accent — changing one without the other leaves a red wash
+   behind a crimson border. */
+html[data-league="afl"] {
+  --tdhero-accent: #c41e3a;
+  --tdhero-glow: rgba(196, 30, 58, 0.2);
+}
+
+html.dark[data-league="afl"] {
+  --tdhero-accent: #ef5350;
+  --tdhero-glow: rgba(239, 83, 80, 0.3);
+}
+
 /* ── Container ── */
 .tdhero {
   position: relative;
