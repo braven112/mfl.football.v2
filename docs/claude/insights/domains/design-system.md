@@ -221,7 +221,7 @@ are consistent; a feature can carry both treatments for months.
 
 **Context:** `.net-badge` (`src/styles/network-badge.css`) is a shared primitive
 for the TV-network mark, sized by `--net-badge-h` so each surface can pick its
-own height — 0.78rem in the live-scoring card footer, 0.85rem on a lineup slot,
+own height — 0.78rem in the live-scoring card footer, 0.6875rem on a lineup slot,
 1.15rem in the game-day hero. It shipped with the default written the obvious
 way:
 
@@ -3021,3 +3021,61 @@ browser (`getComputedStyle(document.body).fontFamily` plus
 totally-unstyled type system looks like, which is why this survived a whole
 spike. The Storybook case, its self-hosting reasoning and its guard test are in
 `docs/claude/rules/storybook.md` (Trap 4b).
+
+## 2026-09-09 - "That Logo Isn't Centered" — Measure Before You Nudge
+
+**Context:** the Set Lineup game line was reordered so the TV mark leads and the
+opponent crest closes it (`mark → vs/@ → crest`, three-letter code dropped).
+With the mark at 0.625rem beside a 20px crest, the next report was that it "isn't
+vertically centered like the NFL logos are."
+
+**Insight:** it was centered — the 2026-09-07 entry above predicts exactly this,
+and the two-step measurement settles it in one pass with no CSS changed:
+
+1. **Box centers, in the browser.** For each item in the lockup, compare
+   `(rect.top + rect.bottom) / 2`:
+   `document.querySelectorAll('.lineup-slot__opp').forEach(op => …)`. Mark, text
+   and crest came back identical to 0.00px on all six rows. If those agree,
+   `align-items` / `align-self` are not your problem and no amount of nudging
+   them will change what the reader sees.
+2. **Ink centers, in the asset.** A trimmed-looking PNG can still carry
+   asymmetric transparent padding, which moves the ink inside a perfectly
+   centered box. Pillow answers it for the whole directory at once:
+   `Image.open(f).convert('RGBA').getchannel('A').getbbox()` → all 23
+   `/assets/tv-logos/*.png` are ink-centered within 0.3%; `youtube-tv-black.png`
+   is the only one with real padding (24.7% top / 25.0% bottom) and it is
+   symmetric.
+
+Both agreeing means the complaint is **relative size**, not alignment: a 10px
+mark next to a 20px crest reads as floating high. The fix was to size the mark
+to the row's own text (0.6875rem = 11px), not to move it.
+
+**And then check that your size rule is alive at all.** The reason these marks
+looked oversized in the first place was not the 0.85rem the file appeared to
+set — it was that `:global(.lineup-slot__net) { --net-badge-h: 0.85rem }` sits
+inside a `<style is:global>` block, where `:global()` is not stripped by the
+compiler and the browser drops the rule. Every mark had been drawing at
+`.net-badge--mark`'s 1.1rem *fallback* since the day it shipped. The tell is
+that the CSS in the file and the pixels on screen disagree by a value you can
+find declared somewhere else — here, the read-site fallback. Confirm it in
+seconds with the repo's own compiler rather than by reasoning about it:
+
+```js
+import { transform } from '@astrojs/compiler';
+const out = await transform(readFileSync('src/pages/theleague/lineup.astro', 'utf8'),
+                            { filename: 'lineup.astro' });
+out.css.join('\n').includes(':global(.lineup-slot__net)')  // true ⇒ the rule is dead
+```
+
+`docs/claude/rules/storage-and-build.md` § Astro 7 lists the known-dead sites.
+A rule on that list is not a harmless curiosity: it is silently setting the
+value you are about to spend an afternoon tuning.
+
+**Recommendation:** on any "this logo sits too high/low" report against a
+`.net-badge`-style lockup, run those two measurements *first* and paste the
+numbers into the reply. They take a minute, they are checkable, and they stop
+the reflex fix — an `align-self`, a `position: relative; top: -1px`, a
+`vertical-align` — that hard-codes an optical nudge into a component whose real
+problem was a size ratio. Keep `align-self: center` on an item whose height is a
+`var()` as a *guard* (a surface can override `--net-badge-h` and must not be able
+to knock it off the line), but write it down as a guard, not as the fix.
