@@ -8,6 +8,7 @@
  */
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
+import { componentOpeningTag } from './helpers/scan-guard';
 import { resolve } from 'node:path';
 import { selectSupportingMatchups } from '../src/utils/live-scoring-view';
 import { buildLiveScoringHeroProps } from '../src/utils/live-scoring-hero-props';
@@ -176,9 +177,9 @@ describe('both homepages forward the built props whole', () => {
     ['AflHero', 'src/components/afl/AflHero.astro'],
   ] as const) {
     it(`${name} spreads liveScoring rather than listing its fields`, () => {
-      const src = read(path);
-      const tag = src.slice(src.indexOf('<LiveScoringHero'));
-      expect(tag.slice(0, tag.indexOf('/>'))).toContain('{...liveScoring}');
+      const tag = componentOpeningTag(read(path), 'LiveScoringHero');
+      expect(tag, `${name} does not render <LiveScoringHero>`).not.toBeNull();
+      expect(tag!).toContain('{...liveScoring}');
     });
 
     it(`${name} does not re-declare the props shape`, () => {
@@ -193,11 +194,10 @@ describe('the AFL hero reads the live WINDOW, not the live SLOT', () => {
   // LIVE/FINAL badge, so a hardcoded `true` polls all evening and badges
   // finished games as live.
   it('AflHero passes the resolved isLive, never a literal', () => {
-    const src = read('src/components/afl/AflHero.astro');
-    const tag = src.slice(src.indexOf('<LiveScoringHero'));
-    const open = tag.slice(0, tag.indexOf('/>'));
-    expect(open).toContain('isLive={state.isLive}');
-    expect(open).not.toMatch(/isLive=\{(true|false)\}/);
+    const open = componentOpeningTag(read('src/components/afl/AflHero.astro'), 'LiveScoringHero');
+    expect(open, 'AflHero does not render <LiveScoringHero>').not.toBeNull();
+    expect(open!).toContain('isLive={state.isLive}');
+    expect(open!).not.toMatch(/isLive=\{(true|false)\}/);
   });
 
   it('the AFL resolver derives isLive from the clock', () => {

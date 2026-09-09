@@ -15,7 +15,7 @@ import HeroBanner from './HeroBanner.astro';
 import LeagueEventHero from './LeagueEventHero.astro';
 import type { HeroModel } from '../../utils/hero-casting';
 import LiveScoringHero from '../shared/LiveScoringHero';
-import TradeDeadlineHero from './TradeDeadlineHero';
+import TradeDeadlineHero from '../shared/TradeDeadlineHero';
 import PlayoffBracketHero from './PlayoffBracketHero';
 import '../../styles/live-scoring-hero.css';
 import '../../styles/trade-deadline-hero.css';
@@ -163,6 +163,7 @@ const isFridayArticle = ptWeekday === 'Fri';
     client:load
     deadlineMidnightPT={state.tradeDeadlineProps.deadlineMidnightPT}
     referenceNowISO={state.metadata.testMode ? state.metadata.referenceDate.toISOString() : undefined}
+    tradeBuilderHref={resolveLeaguePath('/theleague/trade-builder')}
   />
 )}
 
