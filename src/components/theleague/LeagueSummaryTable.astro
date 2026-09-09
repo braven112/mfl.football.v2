@@ -202,20 +202,43 @@ const serializedData = JSON.stringify({ teams, years, categories });
       }
     }
 
+    /**
+     * Competition ranking (1,1,1,4) — equal values MUST share a rank, because
+     * rank is what drives the cell colour. Ranking purely by sorted position
+     * split ties across the quartile boundary: the out-year Roster Holes
+     * column is mostly zeros, and four of those identical 0s went green while
+     * the rest went red, which is the same value painted "best" and "worst" in
+     * one column. Worse, the input here is `sorted`, so WHICH members of a tie
+     * landed green changed every time the user clicked a header.
+     */
     function rankTeamsForColumn(values: number[], direction: string): number[] {
       const indexed = values.map((v, i) => ({ i, v }));
       indexed.sort((a, b) => direction === 'asc' ? b.v - a.v : a.v - b.v);
       const ranks = new Array(values.length);
-      indexed.forEach((item, rank) => { ranks[item.i] = rank + 1; });
+      let tieRank = 1;
+      indexed.forEach((item, idx) => {
+        if (idx > 0 && item.v !== indexed[idx - 1].v) tieRank = idx + 1;
+        ranks[item.i] = tieRank;
+      });
       return ranks;
     }
 
-    function getCellColor(rank: number, total: number, direction: string): string {
+    /**
+     * Rank 1 is ALWAYS the best team for the selected category —
+     * `rankTeamsForColumn` has already folded `cat.direction` into the sort
+     * (descending for 'asc' categories, ascending for 'desc' ones). So the
+     * colouring keys off rank alone.
+     *
+     * Applying `direction` a second time here is what shipped the inversion:
+     * for every 'desc' category the two cancelled out and the green quartile
+     * landed back on the highest RAW value, so Dead Money painted $6.0M green
+     * and $213K red. Same for Average Age, Expiring Contracts, Committed
+     * Salary %, Roster Holes and Salary-Weighted Age.
+     */
+    function getCellColor(rank: number, total: number): string {
       const quartile = Math.ceil(total / 4);
-      const isTop = direction === 'asc' ? rank <= quartile : rank > total - quartile;
-      const isBottom = direction === 'asc' ? rank > total - quartile : rank <= quartile;
-      if (isTop) return rankTopColor;
-      if (isBottom) return rankBottomColor;
+      if (rank <= quartile) return rankTopColor;
+      if (rank > total - quartile) return rankBottomColor;
       return '';
     }
 
@@ -243,6 +266,13 @@ const serializedData = JSON.stringify({ teams, years, categories });
         return rankTeamsForColumn(values, cat.direction);
       });
 
+      // A column where every team shares one value has no best and no worst,
+      // so it gets no colour at all rather than a uniform wash of green.
+      const flatColumn = years.map((_: any, yi: number) => {
+        const values = sorted.map((t: any) => getTeamValue(t, yi));
+        return values.every((v: number) => v === values[0]);
+      });
+
       // Reorder rows
       sorted.forEach((team: any) => {
         const row = tbody.querySelector(`[data-franchise-id="${team.franchiseId}"]`);
@@ -263,7 +293,7 @@ const serializedData = JSON.stringify({ teams, years, categories });
           const value = getTeamValue(team, yi);
           (cell as HTMLElement).textContent = formatValue(value, cat.format);
           const rank = ranksByYear[yi][teamIndex];
-          const color = getCellColor(rank, teams.length, cat.direction);
+          const color = flatColumn[yi] ? '' : getCellColor(rank, teams.length);
           (cell as HTMLElement).style.color = color;
           (cell as HTMLElement).style.fontWeight = color ? '600' : '';
           (cell as HTMLElement).style.backgroundColor = '';
