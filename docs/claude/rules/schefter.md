@@ -237,6 +237,16 @@ three previous trade posts had all named Fire Ready Aim.
   largely template-built from hard transaction data and its opener/closer bans
   still work, so the safe degradation is cheap. Sharing the real redactor is
   how to get the bodies back — copying it is not.
+- **The SUBJECT is masked too, not just the body.** `deriveHistorySubject`
+  builds `franchise (Vitside)` and `trade-pending (Team A ↔ Team B)`, and the
+  live post-history already holds the first — so masking only `p.body` left the
+  leak open, and in the transaction lane (which drops bodies) the
+  two-franchise subject would have been the ONLY thing left in the block.
+- **An unresolved token is ANY stray `{{` or `}}`, not a balanced pair.** The
+  model mangling one edge — `{{TEAM_SHORT:0008}` — passed a `\{\{[^}]*\}\}`
+  test as resolved and shipped the literal markup to the feed and GroupMe.
+  Schefter prose never legitimately contains either brace pair, and erring
+  toward "unresolved" costs only a template fallback.
 - **An empty team map produces NO masker, not an identity one.**
   `schefter-scan`'s `loadTeams` returns an empty Map on any config read error,
   and a masker that fails open there ships unmasked bodies — the exact opposite
@@ -246,8 +256,8 @@ three previous trade posts had all named Fire Ready Aim.
 
 ### The model is never handed a franchise name — `{{TEAM}}`
 
-`exposure.team` reaches the LLM as `{ name: '{{TEAM}}', nameShort:
-'{{TEAM_SHORT}}' }`, and the real franchise is substituted in code after
+`exposure.team` reaches the LLM as `{ name: '{{TEAM:<fid>}}', nameShort:
+'{{TEAM_SHORT:<fid>}}' }`, and the real franchise is substituted in code after
 generation. Naming the wrong team is no longer forbidden, it is unwritable —
 the model cannot substitute a name it was never given, which is what "never
 name a second team" had been trusting it to choose not to do.
@@ -326,8 +336,9 @@ One gap, named rather than implied:
   what is in the PAYLOAD, not what the model can read in its own memory.
 
 `tests/schefter-memory-name-mask.test.ts` pins the mask, the fail-safe drop,
-that both scanners pass a masker, the token substitution, and the
-unresolved-token fallback.
+that the rumor scanner injects the real redactor while the transaction
+scanner passes none, the token substitution, and the unresolved-token
+fallback.
 
 ### The drip — a beat may only assert what the feeds can see
 

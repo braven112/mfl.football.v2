@@ -230,5 +230,11 @@ export function resolveTeamTokens(text, teams) {
     return nameShort;
   });
 
-  return { text: out, unresolved: /\{\{[^}]*\}\}/.test(out) };
+  // ANY stray brace pair, not just a well-formed `{{...}}`. The model
+  // mangling one edge — `{{TEAM_SHORT:0008}` — left a balanced-pair test
+  // reporting unresolved:false, so the literal markup shipped to the feed and
+  // GroupMe: the outcome the beat loop calls worse than the bug this replaces.
+  // Schefter prose never legitimately contains `{{` or `}}`, and erring toward
+  // "unresolved" only costs a template fallback.
+  return { text: out, unresolved: /\{\{|\}\}/.test(out) };
 }

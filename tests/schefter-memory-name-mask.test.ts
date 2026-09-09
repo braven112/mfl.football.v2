@@ -154,6 +154,21 @@ describe('buildRecentPostsPromptBlock — bodies are masked or absent, never raw
     expect(String(warn.mock.calls[0][0])).toMatch(/maskNames/);
   });
 
+  it('masks the SUBJECT as well as the body', () => {
+    // Subjects are not labels: deriveHistorySubject builds `franchise
+    // (Vitside)` and `trade-pending (Team A ↔ Team B)`, and the live
+    // post-history already holds the first. Masking only the body left the
+    // leak wide open — and in the transaction lane, which drops bodies, the
+    // two-franchise subject is the only thing that would have been left.
+    const block = buildRecentPostsPromptBlock(
+      [{ subject: 'trade-pending (Fire Ready Aim ↔ Bring the Pain)', body: 'A wideout is on the table.' }],
+      { maskNames: memoryNameMasker(incidentTeams(), redactFranchiseNamesInText) },
+    );
+    expect(block).not.toMatch(/Fire Ready Aim/);
+    expect(block).not.toMatch(/Bring the Pain/);
+    expect(block).toContain(`(trade-pending (${MASKED_TEAM} ↔ ${MASKED_TEAM}))`);
+  });
+
   it('still carries the opener and closer bans with no masker', () => {
     const block = buildRecentPostsPromptBlock(posts, { warn: vi.fn() });
     expect(block).toContain('Pour yourself a cup');
@@ -295,6 +310,18 @@ describe('team tokens — the wrong franchise becomes unwritable', () => {
     const teams = new Map<string, any>([['0007', { name: 'Fire Ready Aim' }]]);
     expect(resolveTeamTokens(`The ${teamShortToken('0007')} called.`, teams).text)
       .toBe('The Fire Ready Aim called.');
+  });
+
+  it('flags a token the model mangled at ONE edge', () => {
+    // A balanced-pair test (`\\{\\{[^}]*\\}\\}`) called these resolved and let the
+    // literal markup ship to the feed and GroupMe — which the beat loop calls
+    // worse than the bug being replaced.
+    const teams = historyTeams();
+    for (const broken of ['the {{TEAM_SHORT:0008} are shopping', 'the {TEAM:0008}} are shopping']) {
+      expect(resolveTeamTokens(broken, teams).unresolved, broken).toBe(true);
+    }
+    // A well-formed token still resolves cleanly.
+    expect(resolveTeamTokens(`the ${teamShortToken('0008')} are shopping`, teams).unresolved).toBe(false);
   });
 
   it('flags an unknown franchise, an uncovered year, and an invented placeholder', () => {

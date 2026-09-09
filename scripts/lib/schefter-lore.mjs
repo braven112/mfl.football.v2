@@ -402,8 +402,15 @@ export function buildRecentPostsPromptBlock(
     if (p.openerUsed) openers.add(p.openerUsed);
     if (p.closerUsed) closers.add(p.closerUsed);
     if (p.body && canMask) {
+      // The SUBJECT is masked too. It is not a label — `deriveHistorySubject`
+      // builds `franchise (Vitside)` and `trade-pending (Team A ↔ Team B)`, and
+      // the live post-history already holds the first. Masking the body while
+      // interpolating the subject raw left the leak wide open, and in the
+      // transaction lane — which drops bodies — the two-franchise subject would
+      // have been the ONLY thing left in the block.
+      const subject = maskNames(String(p.subject ?? 'post'));
       const masked = maskNames(p.body.replace(/\s+/g, ' ').trim());
-      bodies.push(`- (${p.subject ?? 'post'}) ${masked}`);
+      bodies.push(`- (${subject}) ${masked}`);
     }
   }
 
