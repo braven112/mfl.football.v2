@@ -1,0 +1,186 @@
+---
+/**
+ * Recent moves for ONE franchise — a compact panel for a team-scoped page.
+ *
+ * A summary, deliberately not a second ledger: a handful of rows and a link
+ * into `/transactions?team=<id>` for the rest. The full page owns filtering,
+ * the year picker and the archive; duplicating any of that here would be two
+ * things to keep in step.
+ *
+ * SHARED even though only the AFL roster page renders it today. TheLeague's
+ * roster page is excluded on purpose — it already carries dead money in the
+ * same region and does not need a second block of roster churn — and that is
+ * a product decision, not drift. Keeping the panel shared means adopting it
+ * there later is one import and one tag, rather than the copy-paste that
+ * `tests/page-fork-ratchet.test.ts` exists to catch.
+ */
+import PlayerCell from '../../theleague/PlayerCell.astro';
+import type { TransactionRow } from '../../../utils/mfl-transactions';
+import type { PlayerIdentity } from '../../../utils/player-map';
+
+interface Props {
+  /** Already filtered to the franchise and sorted newest-first. */
+  rows: TransactionRow[];
+  /** Resolves an MFL player id to a name, position and headshot. */
+  playerOf: (id: string) => PlayerIdentity | undefined;
+  /** Href for the "see everything" link — the caller builds it league-correctly. */
+  seeAllHref: string;
+  /** IANA zone for the date column, from the viewer's preference. */
+  timeZone: string;
+  /** How many rows to show before deferring to the full page. */
+  limit?: number;
+  /** Whether this league prices moves at all (`leagueHasFeature('salaryCap')`). */
+  showAmount?: boolean;
+  teamName: string;
+}
+
+const { rows, playerOf, seeAllHref, timeZone, limit = 8, showAmount = false, teamName } = Astro.props;
+
+const shown = rows.slice(0, limit);
+const dateFmt = new Intl.DateTimeFormat('en-US', { timeZone, month: 'short', day: 'numeric' });
+const moneyFmt = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 });
+
+const KIND_LABEL: Record<string, string> = {
+  'free-agent': 'FA',
+  waiver: 'Waiver',
+  'blind-bid': 'Bid',
+  auction: 'Auction',
+  trade: 'Trade',
+};
+
+const cells = (ids: string[]) => ids.map((id) => ({ id, player: playerOf(id) }));
+---
+
+<section class="rtp" aria-labelledby="rtp-head">
+  <div class="rtp__head">
+    <h2 id="rtp-head">Recent Moves</h2>
+    <a class="rtp__all" href={seeAllHref}>All {teamName} transactions →</a>
+  </div>
+
+  {shown.length === 0 ? (
+    <p class="rtp__empty">No moves recorded for {teamName} this season.</p>
+  ) : (
+    <ul class="rtp__rows">
+      {shown.map((row) => (
+        <li class="rtp__row">
+          <span class="rtp__date">{dateFmt.format(new Date(row.at))}</span>
+          <span class="rtp__badge">{KIND_LABEL[row.kind] ?? row.kind}</span>
+          <div class="rtp__move">
+            {cells(row.added).map((p) => (
+              <span class="rtp__side rtp__side--in">
+                <span class="rtp__sign" aria-hidden="true">+</span>
+                <PlayerCell
+                  name={p.player?.name ?? `Player ${p.id}`}
+                  headshot={p.player?.headshot}
+                  position={p.player?.position}
+                  nflTeam={p.player?.nflTeam}
+                  mflId={p.id}
+                  espnId={p.player?.espnId ?? undefined}
+                  size="compact"
+                />
+              </span>
+            ))}
+            {cells(row.dropped).map((p) => (
+              <span class="rtp__side rtp__side--out">
+                <span class="rtp__sign" aria-hidden="true">−</span>
+                <PlayerCell
+                  name={p.player?.name ?? `Player ${p.id}`}
+                  headshot={p.player?.headshot}
+                  position={p.player?.position}
+                  nflTeam={p.player?.nflTeam}
+                  mflId={p.id}
+                  espnId={p.player?.espnId ?? undefined}
+                  size="compact"
+                />
+              </span>
+            ))}
+          </div>
+          {showAmount && <span class="rtp__amount">{row.amount === null ? '—' : moneyFmt.format(row.amount)}</span>}
+        </li>
+      ))}
+    </ul>
+  )}
+</section>
+
+<style>
+  /* Local vocabulary over the global tokens, matching the Transactions page.
+     Every fallback points at a token that exists in tokens.css — an undefined
+     var() renders its fallback in BOTH themes and ships broken dark mode
+     (tests/design-token-guard.test.ts). */
+  .rtp {
+    --rtp-border: var(--content-border, #e5e5e5);
+    --rtp-ink: var(--page-text, #1a1a1a);
+    --rtp-ink-muted: var(--content-text-muted, #666);
+    --rtp-surface-muted: var(--content-bg-muted, #f7f7f8);
+
+    margin-top: var(--spacing-xl, 2rem);
+    padding-top: var(--spacing-md, 1rem);
+    border-top: 1px solid var(--rtp-border);
+    color: var(--rtp-ink);
+  }
+  .rtp__head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.5rem;
+    margin-bottom: var(--spacing-sm, 0.75rem);
+  }
+  .rtp__head h2 {
+    margin: 0;
+    font-size: var(--font-size-sm, 0.875rem);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--rtp-ink-muted);
+  }
+  .rtp__all { font-size: var(--font-size-sm, 0.875rem); white-space: nowrap; }
+  .rtp__empty { color: var(--rtp-ink-muted); margin: 0; }
+
+  .rtp__rows { list-style: none; margin: 0; padding: 0; }
+  .rtp__row {
+    display: grid;
+    grid-template-columns: 3.5rem 4.5rem minmax(0, 1fr) auto;
+    align-items: center;
+    gap: var(--spacing-sm, 0.75rem);
+    padding: 0.4rem 0;
+    border-bottom: 1px solid var(--rtp-border);
+  }
+  .rtp__row:last-child { border-bottom: 0; }
+  .rtp__date {
+    font-size: var(--font-size-xs, 0.75rem);
+    color: var(--rtp-ink-muted);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+  .rtp__badge {
+    justify-self: start;
+    padding: 0.05rem 0.4rem;
+    border: 1px solid var(--rtp-border);
+    border-radius: var(--radius-full, 999px);
+    font-size: var(--font-size-xs, 0.75rem);
+    color: var(--rtp-ink-muted);
+    white-space: nowrap;
+  }
+  .rtp__move { display: flex; flex-wrap: wrap; gap: 0.2rem 0.75rem; min-width: 0; }
+  .rtp__side { display: inline-flex; align-items: center; gap: 0.3rem; min-width: 0; }
+  .rtp__sign { font-weight: 700; color: var(--alert-success-text, #157347); }
+  .rtp__side--out .rtp__sign { color: var(--alert-warning-text, #8a6100); }
+  .rtp__amount {
+    justify-self: end;
+    font-variant-numeric: tabular-nums;
+    font-size: var(--font-size-sm, 0.875rem);
+    white-space: nowrap;
+  }
+
+  @media (max-width: 640px) {
+    .rtp__row {
+      grid-template-columns: auto 1fr auto;
+      grid-template-areas: 'date badge amount' 'move move move';
+      row-gap: 0.3rem;
+    }
+    .rtp__date { grid-area: date; }
+    .rtp__badge { grid-area: badge; }
+    .rtp__move { grid-area: move; }
+    .rtp__amount { grid-area: amount; }
+  }
+</style>

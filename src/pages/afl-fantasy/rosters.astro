@@ -5,6 +5,15 @@ import PlayerCell from '../../components/theleague/PlayerCell.astro';
 import PlayerDetailsModal from '../../components/theleague/PlayerDetailsModal.astro';
 import AFLActionModal from '../../components/afl-fantasy/AFLActionModal.astro';
 import SignInModal from '../../components/shared/SignInModal.astro';
+import RecentTransactionsPanel from '../../components/shared/transactions/RecentTransactionsPanel.astro';
+import { loadTransactionsSeason } from '../../utils/transactions-feeds';
+import { applyFilters, parseFilters } from '../../utils/transactions-view';
+import { getGlobalPlayerMap } from '../../utils/player-map';
+import { readViewerClock } from '../../utils/viewer-preferences-page';
+import { chosenZone } from '../../utils/viewer-preferences';
+import { leagueHasFeature } from '../../config/leagues';
+import { resolveLeaguePath } from '../../utils/nav-utils';
+import { getCurrentLeagueYear } from '../../utils/league-year';
 import KeeperPlanner, {
   type KeeperPlannerPlayer,
   type KeeperPlannerDraftPick,
@@ -60,6 +69,12 @@ if (myTeamParam) {
     setAFLPreference(Astro.cookies, myTeamParam, teamData.conference, teamData.tier);
   }
 }
+
+// Lazy, like the feed globs below: only the season being viewed is read, and
+// a glob rather than a static import keeps the build alive for a season whose
+// feed a workflow has not written yet (docs/claude/rules/storage-and-build.md).
+const transactionFeeds = import.meta.glob('../../../data/afl-fantasy/mfl-feeds/*/transactions.json');
+const leagueJsonFeeds = import.meta.glob('../../../data/afl-fantasy/mfl-feeds/*/league.json');
 
 const rostersFeeds = import.meta.glob('../../../data/afl-fantasy/mfl-feeds/*/rosters.json', {
   eager: true,
@@ -220,6 +235,51 @@ if (isValidFranchiseId(queryFranchiseId)) {
 
 const selectedTeam: AFLTeam = getTeam(selectedFranchiseId) ?? allTeams[0]!;
 const conferenceName = getConferenceName(selectedTeam.conference);
+
+// ── Recent moves for the selected team ──────────────────────────────────────
+// Team-scoped, not league-wide: this is one franchise's roster page, so the
+// question it answers is "what has THIS team done lately". The full ledger,
+// filters and archive live at /transactions; this is a summary that links there.
+//
+// The league-year clock, not the season one — signings run all offseason and
+// "this year" means the current MFL league, which turns over Feb 14
+// (CLAUDE.md "Year rollover — two independent clocks").
+const txYear = getCurrentLeagueYear();
+const txRowsAll = await loadTransactionsSeason({
+  transactionFeeds,
+  leagueFeeds: leagueJsonFeeds,
+  year: txYear,
+  hasSalaryCap: leagueHasFeature('afl-fantasy', 'salaryCap'),
+  leagueId: AFL_LEAGUE_ID,
+  isCurrentSeason: true,
+});
+// READ-ONLY: resolving a preference WRITES a cookie and belongs to a route's
+// own frontmatter, which this is — but `readViewerClock` is the side-effect-free
+// read either way (docs/claude/rules/viewer-preferences.md).
+const txViewerClock = await readViewerClock(Astro.cookies, authUser, 'afl-fantasy');
+const txZone = chosenZone(txViewerClock.prefs, txViewerClock.leagueClock).zone;
+
+// The AFL's own identity union first, TheLeague's as the fallback — MFL player
+// ids are global so the two compose, and the AFL archive reaches back further.
+const txPrimaryPlayers = getGlobalPlayerMap('afl-fantasy');
+const txFallbackPlayers = getGlobalPlayerMap('theleague');
+const txPlayerOf = (id: string) => txPrimaryPlayers.get(id) ?? txFallbackPlayers.get(id);
+
+// Reuse the page's own filter layer rather than hand-rolling a team match:
+// it already knows that a trade has to match on EITHER side, which a plain
+// `row.franchiseId === id` comparison would miss.
+const txRows = applyFilters({
+  rows: txRowsAll,
+  filters: {
+    ...parseFilters({ params: new URLSearchParams(), year: txYear, myFranchiseId: null }),
+    team: selectedFranchiseId,
+  },
+  nameOf: (id) => txPlayerOf(id)?.name,
+});
+const txSeeAllHref = resolveLeaguePath(
+  `/afl-fantasy/transactions?team=${selectedFranchiseId}`,
+  Astro.locals.hideLeaguePrefix ?? false
+);
 
 // Owner detection: only AFL users on their own team see write actions
 const isOwner =
@@ -1276,6 +1336,16 @@ const pageConfig = {
         </div>
       )}
     </section>
+
+    {/* Below the view containers so it reads as the page's footer rather than
+        belonging to any one tab. Team-scoped — see the frontmatter. */}
+    <RecentTransactionsPanel
+      rows={txRows}
+      playerOf={txPlayerOf}
+      seeAllHref={txSeeAllHref}
+      timeZone={txZone}
+      teamName={selectedTeam.name}
+    />
   </section>
 
   <PlayerDetailsModal hideContract />

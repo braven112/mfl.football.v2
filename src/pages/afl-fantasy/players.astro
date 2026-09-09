@@ -363,6 +363,14 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
             </svg>
             Waiver priority
           </button>
+          {/* This page answers "who is available"; the ledger answers "who just
+              went", which is the other half of the same decision. */}
+          <a href={r('/afl-fantasy/transactions')} class="hero-cross-link">
+            Recent moves
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true">
+              <path d="M5 12h14M12 5l7 7-7 7"/>
+            </svg>
+          </a>
         </div>
       </div>
 
@@ -2514,7 +2522,39 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
 
   /* ── Responsive ── */
   @media (max-width: 767px) {
-    .players-hero {
+    /* Matches TheLeague's Free Agents hero link. Duplicated rather than shared
+      because these two pages are already forked siblings (110 KB vs 177 KB)
+      with no shared stylesheet to hang it on — unifying them is a far larger
+      job than this one link. */
+   .hero-cross-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.375rem;
+      font-size: 0.8125rem;
+      font-weight: 600;
+      color: var(--color-primary, #1c497c);
+      background: transparent;
+      border: 1px solid var(--color-primary, #1c497c);
+      padding: 0.4rem 0.8rem;
+      border-radius: var(--radius-full, 999px);
+      text-decoration: none;
+      transition: gap 0.15s ease, background 0.15s ease, color 0.15s ease;
+   }
+   .hero-cross-link:hover {
+      gap: 0.5rem;
+      background: var(--color-primary, #1c497c);
+      color: #fff;
+      text-decoration: none;
+   }
+   :global(html.dark) .hero-cross-link {
+      color: #fff;
+      border-color: #fff;
+   }
+   :global(html.dark) .hero-cross-link:hover {
+      background: #fff;
+      color: var(--color-primary, #1c497c);
+   }
+   .players-hero {
       padding: 1.25rem 1rem 1.25rem;
       margin: 0.75rem 0 0 0;
     }

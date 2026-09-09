@@ -801,6 +801,14 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
             <path d="M5 12h14M12 5l7 7-7 7"/>
           </svg>
         </a>
+        {/* This page answers "who is available"; the ledger answers "who just
+            went", which is the other half of the same decision. */}
+        <a href={r('/theleague/transactions')} class="hero-cross-link hero-cross-link--ghost">
+          Recent moves
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true">
+            <path d="M5 12h14M12 5l7 7-7 7"/>
+          </svg>
+        </a>
       </div>
 
       <!-- Search -->
@@ -3291,6 +3299,23 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
     transition: gap 0.15s ease, background 0.15s ease, transform 0.15s ease;
     white-space: nowrap;
+  }
+  /* Secondary of the two hero links — same shape, no fill, so "See projected
+     FAs" keeps its emphasis rather than the pair competing. */
+  .hero-cross-link--ghost {
+    background: transparent;
+    color: var(--color-primary, #1c497c);
+    border: 1px solid var(--color-primary, #1c497c);
+    box-shadow: none;
+  }
+  .hero-cross-link--ghost:hover {
+    background: var(--color-primary, #1c497c);
+    color: #fff;
+  }
+  :global(html.dark) .hero-cross-link--ghost {
+    background: transparent;
+    color: #fff;
+    border-color: #fff;
   }
   .hero-cross-link:hover {
     gap: 0.5rem;

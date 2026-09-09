@@ -315,6 +315,32 @@ if the script grows past its current single init.
   gets its own row. This makes the page slightly broader than "signings": it is
   a roster-move ledger whose *default filters* favour signings.
 
+## Where the page is linked from
+
+Deliberately few. The ledger is a destination, and a link on every surface that
+touches a roster move would be noise.
+
+| Surface | What it gets | Why |
+|---|---|---|
+| Free Agents (`/players`), both leagues | A "Recent moves" hero link | The page answers "who is available"; the ledger answers "who just went". Same decision, two halves. |
+| AFL roster page, bottom | `RecentTransactionsPanel`, scoped to the selected team | A team page should say what that team has done lately. Links on to `?team=<id>` for the rest. |
+
+**TheLeague's roster page is deliberately excluded**, and this is the note that
+says so rather than leaving it to look like drift: that page already carries
+dead money in the same region, and a second block of roster churn underneath it
+is repetition, not information. `scripts/sibling-drift.mjs` will keep reporting
+`theleague/rosters.astro` as an UNCHANGED twin — that is the correct answer, not
+a gap to close. Best Ball is excluded for a harder reason: it has no
+`mfl-feeds` directory at all, so there is nothing to render.
+
+The panel is a SHARED component even though one page renders it, so adopting it
+on TheLeague later is an import and a tag rather than the copy-paste
+`tests/page-fork-ratchet.test.ts` exists to catch.
+
+Considered and not built: a link in the player detail modal (the search filter
+is per-season, so it could not show a career history), and one on the Owner
+Activity rows. Both are easy to add later if the page proves itself.
+
 ## Still open
 
 - **Four modules now parse `FP_`/`DP_` asset tokens**, and this work added the
