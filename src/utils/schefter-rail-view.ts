@@ -122,8 +122,17 @@ export async function resolveSchefterRail(opts: ResolveRailOptions): Promise<Sch
 
   // Each tab gets a full `limit` of its own. Union them so All is genuinely the
   // league feed even when My News would have filled the rail on its own.
+  //
+  // The fill excludes anything `isMine` claims, NOT merely the ids that
+  // survived the slice above. Excluding `mineIds` let My News matches beyond
+  // `limit` fall into the fill, where they render WITHOUT `data-foryou` — so a
+  // post that qualifies for My News showed up on All only, which is a lie the
+  // flag tells about a post the reader asked to see. With 31 league-desk posts
+  // in TheLeague's feed against a limit of 30, that was happening today, not
+  // hypothetically. Truncating My News at its limit is correct; mislabelling
+  // the overflow is not.
   const mineIds = new Set(mine.map((p) => p.id));
-  const leagueFill = readable.filter((p) => !mineIds.has(p.id)).slice(0, limit);
+  const leagueFill = readable.filter((p) => !isMine(p)).slice(0, limit);
 
   const rendered = [...mine, ...leagueFill].sort(
     (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime(),

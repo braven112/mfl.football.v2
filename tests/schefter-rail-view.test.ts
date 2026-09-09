@@ -151,6 +151,25 @@ describe('My News is the league’s desk, the group chat, and your guys', () => 
     expect(v.posts.map((p) => p.id)).toContain(mine.id);
   });
 
+  /**
+   * The converse of the test below, and the one that was false: the fill used
+   * to exclude only the ids that survived My News's slice, so match number
+   * `limit + 1` landed in the fill and rendered WITHOUT `data-foryou` —
+   * present on All, absent from the tab it qualifies for. Truncating is fine;
+   * mislabelling is not.
+   */
+  it('never renders a My News post as All-only', async () => {
+    const desk = Array.from({ length: 5 }, () => leagueDesk());
+    const wire = Array.from({ length: 5 }, () => post());
+    const v = await rail([...desk, ...wire], owner, 2);
+    const myNews = new Set(v.forYouIds);
+    const deskIds = new Set(desk.map((p) => p.id));
+    const rendered = v.posts.map((p) => p.id);
+    for (const id of rendered) {
+      if (deskIds.has(id)) expect(myNews.has(id)).toBe(true);
+    }
+  });
+
   it('never lists a My News id it did not render', async () => {
     const mine = Array.from({ length: 3 }, () => post({ franchiseIds: ['0001'] }));
     const v = await rail([...mine, ...Array.from({ length: 20 }, () => post())], owner, 10);
