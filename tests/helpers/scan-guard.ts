@@ -244,3 +244,31 @@ export function assertRatchet(opts: RatchetOptions): void {
     );
   }
 }
+
+/**
+ * The opening tag of a component usage, props included, whatever its closing
+ * style — `<Foo … />` and `<Foo …></Foo>` both yield `<Foo … >`.
+ *
+ * Four guards had hand-rolled this as `src.slice(src.indexOf('<Foo'))` then
+ * `.slice(0, tag.indexOf('/>'))`, which has two failure modes and the bad one
+ * is silent:
+ *
+ *   - An explicit closing tag has no `/>`, so the slice runs to some LATER
+ *     element's self-close and asserts against a region that is not this tag.
+ *   - With no `/>` anywhere after, `indexOf` returns -1 and `slice(0, -1)`
+ *     yields nearly the whole rest of the FILE. An assertion like
+ *     `toContain('someProp')` then passes on unrelated content — the guard
+ *     reads as coverage while enforcing nothing. A sibling guard in this repo
+ *     was silently doing exactly that until it was noticed by accident.
+ *
+ * Returns null when the component is not used at all, so callers can assert
+ * presence explicitly rather than matching against an empty string.
+ */
+export function componentOpeningTag(source: string, component: string): string | null {
+  // `[^>]*` stops at the first `>`, which is the end of the opening tag for
+  // both closing styles. Props here are simple enough that no `>` appears
+  // inside an expression; a guard that needed those would need a parser, not
+  // a regex, and should say so rather than widening this.
+  const m = source.match(new RegExp(`<${component}\\b[^>]*>`));
+  return m ? m[0] : null;
+}

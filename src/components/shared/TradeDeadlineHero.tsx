@@ -7,7 +7,12 @@
  * came to send AFL owners to TheLeague's trade builder.
  *
  * Displays a live countdown to midnight PT with urgency messaging.
- * Uses client:idle hydration — the countdown isn't critical until the user sees it.
+ *
+ * Hydration is the CALLER's choice, not this file's — AflHero mounts it
+ * `client:idle`, SeasonDailyHero `client:load`. This comment used to assert
+ * `client:idle` as though the component decided, which was merely stale when
+ * it lived under one league and is actively wrong now that two call sites
+ * disagree.
  */
 
 import { useState, useEffect, useRef } from 'react';

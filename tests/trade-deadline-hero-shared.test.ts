@@ -11,6 +11,7 @@
  */
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
+import { componentOpeningTag } from './helpers/scan-guard';
 import { resolve } from 'node:path';
 
 const read = (p: string) => readFileSync(resolve(process.cwd(), p), 'utf-8');
@@ -51,8 +52,9 @@ describe('the shared trade deadline hero', () => {
     it(`${name} imports it from shared/ and passes an href`, () => {
       const src = read(path);
       expect(src).toMatch(/from ['"][^'"]*shared\/TradeDeadlineHero['"]/);
-      const tag = src.slice(src.indexOf('<TradeDeadlineHero'));
-      expect(tag.slice(0, tag.indexOf('/>'))).toMatch(/tradeBuilderHref=\{/);
+      const tag = componentOpeningTag(src, 'TradeDeadlineHero');
+      expect(tag, `${name} does not render <TradeDeadlineHero>`).not.toBeNull();
+      expect(tag!).toMatch(/tradeBuilderHref=\{/);
     });
   }
 

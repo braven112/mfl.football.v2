@@ -36,7 +36,13 @@ function handlerFor(src: string, cls: string): string {
   const at = src.indexOf(cls);
   expect(at, `${cls} not found`).toBeGreaterThan(-1);
   const tail = src.slice(at);
-  const m = tail.slice(0, tail.indexOf('/>')).match(/onerror="([^"]+)"/);
+  // Stop at THIS tag's end, not at the next `/>` in the file: with an explicit
+  // closing tag (or none after) the old bound ran into a later element and
+  // could return ITS onerror — and this suite exists to catch exactly a
+  // wrong-handler wiring, so a wrong extraction here reads as a pass.
+  const tagEnd = tail.indexOf('>');
+  expect(tagEnd, `unterminated tag around ${cls}`).toBeGreaterThan(-1);
+  const m = tail.slice(0, tagEnd).match(/onerror="([^"]+)"/);
   expect(m, `no onerror beside ${cls}`).toBeTruthy();
   return m![1];
 }
