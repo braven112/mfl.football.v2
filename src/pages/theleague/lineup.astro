@@ -2108,8 +2108,11 @@ const ownersPollTeams = Object.values(getLeagueTeamBrands(ownersPollLeague.slug)
      which is how NETFLIX came to outweigh the Rams. */
   :global(.lineup-slot__net),
   :global(.lineup-bench-row__net) {
-    /* 11px — the row's own text size, so the mark reads as a word in the line
-       rather than an object beside it. `align-self` is belt-and-braces: the
+    /* 11px — the starter row's own text size, so the mark reads as a word in
+       the line rather than an object beside it. The bench row's text is 10px
+       and deliberately takes the same 11px mark: one mark size across the page
+       beats a second value nobody can tell apart at 1px.
+       `align-self` is belt-and-braces: the
        opponent group already centers its items, and the badge box, the `vs`
        and the crest measure to the same center Y — but the badge is the one
        item whose height is a variable, so a surface that overrides it must not
