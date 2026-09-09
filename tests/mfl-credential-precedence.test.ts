@@ -119,3 +119,41 @@ describe('probe-commish-cookie proof run', () => {
     ).toEqual([]);
   });
 });
+
+/**
+ * The proof runs in CI, not by hand.
+ *
+ * A one-off dispatch answers "did it work once". The question that matters is
+ * "is it still true" — before stages 3-4 delete the stored cookies, and after.
+ * mfl-integration-test.yml runs on every push to main and daily at 7am PT, so
+ * the proof belongs there.
+ */
+describe('credentials-only write proof runs in CI', () => {
+  const wf = read('.github/workflows/mfl-integration-test.yml');
+  const STEP = '- name: Credentials-only write proof';
+
+  it('exists as a step in the integration test', () => {
+    expect(wf.indexOf(STEP), 'no credentials-only proof step').toBeGreaterThan(-1);
+  });
+
+  it('runs with no stored cookie in scope', () => {
+    const start = wf.indexOf(STEP);
+    const step = wf.slice(start, wf.indexOf('run:', start));
+    expect(step).toContain('MFL_USERNAME');
+    expect(step).toContain('MFL_PASSWORD');
+    // The mint step exports MFL_IS_COMMISH via $GITHUB_ENV, so the proof step
+    // must blank it explicitly or the run is not a clean proof.
+    expect(step, 'MFL_IS_COMMISH is not blanked, so the minted one is in scope')
+      .toMatch(/MFL_IS_COMMISH:\s*''/);
+    // Blanked with a literal — never by reaching for the secret.
+    expect(step, 'the proof step reads a stored cookie secret').not.toContain('secrets.MFL_IS_COMMISH');
+    expect(step, 'the proof step reads a stored cookie secret').not.toContain('secrets.MFL_USER_ID');
+  });
+
+  it('runs even when the write tests above failed (independent signal)', () => {
+    const start = wf.indexOf(STEP);
+    const step = wf.slice(start, wf.indexOf('run:', start));
+    expect(step, 'a failing write test would skip the proof and hide the answer')
+      .toContain('if: always()');
+  });
+});

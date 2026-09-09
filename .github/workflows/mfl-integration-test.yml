@@ -59,6 +59,32 @@ jobs:
           MFL_LEAGUE_ID: '36189'
         run: pnpm test:mfl-integration
 
+      # THE CREDENTIALS-ONLY PROOF. Runs a real (no-op) commissioner write with
+      # MFL_USERNAME + MFL_PASSWORD and NOTHING else in scope, so an ACCEPTED
+      # write here has exactly one possible explanation. It is CI rather than a
+      # manual dispatch on purpose: the question is not "did it work once" but
+      # "is it still true", and this job already runs on every push to main and
+      # daily at 7am PT.
+      #
+      # probe-write-auth.mjs never reads MFL_USER_ID at all — it logs in and
+      # uses the cookie MFL returns. MFL_IS_COMMISH is blanked deliberately:
+      # the mint step exports one via $GITHUB_ENV, and without this override it
+      # would be in scope and the run would no longer be a clean proof. This is
+      # a literal empty value, not `secrets.X` — nothing stored can reach it.
+      #
+      # It writes each value back UNCHANGED to the TEST league, so success is a
+      # no-op by construction and there is nothing to revert. Failing here means
+      # the stored cookies are still load-bearing and stages 3-4 (removing them)
+      # must not proceed.
+      - name: Credentials-only write proof (test league, no stored cookie in scope)
+        if: always()
+        env:
+          MFL_USERNAME: ${{ secrets.MFL_USERNAME }}
+          MFL_PASSWORD: ${{ secrets.MFL_PASSWORD }}
+          MFL_IS_COMMISH: ''
+          MFL_LEAGUE_ID: '36189'
+        run: node scripts/probe-write-auth.mjs
+
       - name: Owner cookie replay check (read-only)
         # Continuous verification for the August cuts automation: the deadline
         # job replays stored owner cookies from an Actions runner, so this
