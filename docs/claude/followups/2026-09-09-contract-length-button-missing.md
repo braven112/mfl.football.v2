@@ -7,7 +7,7 @@ hotfix_pr: https://github.com/braven112/mfl.football.v2/pull/1034
 hotfix_sha: c3f5cc5
 followup_issue: 1035
 followup_pr:
-followup_session:
+followup_session: session_01P8mtV8jzABSsCD9uzoSAek
 ---
 
 # Follow-up: newly acquired players had no contract-length control
