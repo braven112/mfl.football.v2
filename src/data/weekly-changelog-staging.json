@@ -3,6 +3,14 @@
   "changes": [
     {
       "date": "2026-09-09",
+      "type": "style-tweak",
+      "summary": "The game line on Set Lineup now leads with the network's mark, small, and closes on the opponent's helmet, bigger — the three-letter team code is gone. NETFLIX and ESPN were rendering taller than the text beside them, so the channel read as the headline and the team you are actually playing came second.",
+      "impact": "user",
+      "area": "rosters",
+      "league": "both"
+    },
+    {
+      "date": "2026-09-09",
       "type": "bug-fix",
       "summary": "The What's New card on the homepage stops running its story underneath the screenshot. The write-up and the framed screenshot beside it were each sized as if the other were not there, so on a lot of window widths the last words of every line disappeared behind the picture. The text column now reserves the frame's space at every width, on both sites.",
       "impact": "user",

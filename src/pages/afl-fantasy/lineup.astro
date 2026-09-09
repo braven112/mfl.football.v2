@@ -778,9 +778,6 @@ const ownersPollTeams = Object.values(getLeagueTeamBrands(ownersPollLeague.slug)
                     ) : oppTeam ? (
                       <>
                         <div class="lineup-slot__opp" aria-label={matchupLabel}>
-                          <span class="lineup-slot__opp-prefix">{matchupPrefix}</span>
-                          <img src={`/assets/nfl-logos/${oppTeam}.svg`} alt="" aria-hidden="true" class="lineup-slot__opp-logo" width="16" height="16" onerror={NFL_LOGO_ONERROR} onload={NFL_LOGO_ONLOAD} />
-                          <span class="lineup-slot__opp-team">{oppTeam}</span>
                           {game?.channel && (
                             game.channel.logo
                               ? <span class="net-badge net-badge--mark lineup-slot__net" title={game.channel.title}>
@@ -788,6 +785,8 @@ const ownersPollTeams = Object.values(getLeagueTeamBrands(ownersPollLeague.slug)
                                 </span>
                               : <span class="net-badge lineup-slot__net" title={game.channel.title}>{game.channel.name}</span>
                           )}
+                          <span class="lineup-slot__opp-prefix">{matchupPrefix}</span>
+                          <img src={`/assets/nfl-logos/${oppTeam}.svg`} alt="" aria-hidden="true" class="lineup-slot__opp-logo" width="20" height="20" onerror={NFL_LOGO_ONERROR} onload={NFL_LOGO_ONLOAD} />
                         </div>
                         {player.projection != null && (
                           <span class="lineup-slot__proj">{player.projection.toFixed(1)}</span>
@@ -841,18 +840,17 @@ const ownersPollTeams = Object.values(getLeagueTeamBrands(ownersPollLeague.slug)
               <span class="lineup-bench-row__bye">BYE</span>
             ) : oppTeam ? (
               <div class="lineup-bench-row__opp" aria-label={matchupLabel}>
+                {game?.channel && (
+                  game.channel.logo
+                    ? <span class="net-badge net-badge--mark lineup-bench-row__net" title={game.channel.title}>
+                        <img class="net-badge__logo" src={game.channel.logo} alt={game.channel.name} decoding="async" />
+                      </span>
+                    : <span class="net-badge lineup-bench-row__net" title={game.channel.title}>{game.channel.name}</span>
+                )}
                 <span class="lineup-bench-row__opp-prefix">{matchupPrefix}</span>
-                <img src={`/assets/nfl-logos/${oppTeam}.svg`} alt="" aria-hidden="true" class="lineup-bench-row__opp-logo" width="14" height="14" onerror={NFL_LOGO_ONERROR} onload={NFL_LOGO_ONLOAD} />
-                <span class="lineup-bench-row__opp-team">{oppTeam}</span>
+                <img src={`/assets/nfl-logos/${oppTeam}.svg`} alt="" aria-hidden="true" class="lineup-bench-row__opp-logo" width="18" height="18" onerror={NFL_LOGO_ONERROR} onload={NFL_LOGO_ONLOAD} />
               </div>
             ) : null}
-            {oppTeam && game?.channel && (
-              game.channel.logo
-                ? <span class="net-badge net-badge--mark lineup-bench-row__net" title={game.channel.title}>
-                    <img class="net-badge__logo" src={game.channel.logo} alt={game.channel.name} decoding="async" />
-                  </span>
-                : <span class="net-badge lineup-bench-row__net" title={game.channel.title}>{game.channel.name}</span>
-            )}
             {player.projection != null && (
               <span class="lineup-bench-row__proj">{player.projection.toFixed(1)}</span>
             )}
@@ -1268,10 +1266,9 @@ const ownersPollTeams = Object.values(getLeagueTeamBrands(ownersPollLeague.slug)
           const matchupLabel = isHome ? `vs ${oppTeam}` : `at ${oppTeam}`;
           gameHtml = `
             <div class="lineup-slot__opp" aria-label="${esc(matchupLabel)}">
-              <span class="lineup-slot__opp-prefix">${matchupPrefix}</span>
-              <img src="/assets/nfl-logos/${esc(oppTeam)}.svg" alt="" aria-hidden="true" class="lineup-slot__opp-logo" width="16" height="16" onerror="${NFL_LOGO_ONERROR}" onload="${NFL_LOGO_ONLOAD}" />
-              <span class="lineup-slot__opp-team">${esc(oppTeam)}</span>
               ${netHtml}
+              <span class="lineup-slot__opp-prefix">${matchupPrefix}</span>
+              <img src="/assets/nfl-logos/${esc(oppTeam)}.svg" alt="" aria-hidden="true" class="lineup-slot__opp-logo" width="20" height="20" onerror="${NFL_LOGO_ONERROR}" onload="${NFL_LOGO_ONLOAD}" />
             </div>
             ${player.projection != null ? `<span class="lineup-slot__proj">${player.projection.toFixed(1)}</span>` : ''}
           `;
@@ -2134,18 +2131,21 @@ const ownersPollTeams = Object.values(getLeagueTeamBrands(ownersPollLeague.slug)
     gap: 0.25rem;
   }
 
-  .lineup-slot__opp-logo { width: 16px; height: 16px; }
+  /* The crest IS the opponent now that the three-letter code is gone, so it
+     outsizes the row's text rather than matching it. */
+  .lineup-slot__opp-logo { width: 20px; height: 20px; }
 
   /* ── network badge on the opponent line ──
      `:global` is required rather than stylistic: `.net-badge` is defined in the
      shared stylesheet, and the SLOT copy is also written by the page's client
      script on every player swap — neither carries Astro's scoping hash, so a
      scoped selector would style the first render and nothing after it.
-     Deliberately small: this is the tightest surface the mark appears on, and
-     it rides inside a row that already carries a prefix, a team logo and a
-     team code. */
-  :global(.lineup-slot__net) { --net-badge-h: 0.85rem; margin-left: 0.2rem; }
-  :global(.lineup-bench-row__net) { --net-badge-h: 0.8rem; margin-left: 0.2rem; }
+     Deliberately UNDER the row's text height: the mark leads the lockup, and
+     the opponent — the crest that follows it — is the more important half.
+     A badge taller than the cap height of the `vs`/`@` beside it reads as the
+     subject of the row, which is how NETFLIX came to outweigh the Rams. */
+  :global(.lineup-slot__net) { --net-badge-h: 0.625rem; margin-right: 0.1rem; }
+  :global(.lineup-bench-row__net) { --net-badge-h: 0.5625rem; margin-right: 0.1rem; }
 
   /* The narrowest phones need the opponent and the projection more than the
      channel; the tooltip and the Sunday Ticket board still carry it. */
@@ -2155,21 +2155,14 @@ const ownersPollTeams = Object.values(getLeagueTeamBrands(ownersPollLeague.slug)
   }
 
 
-  /* The matchup reads as one phrase — prefix, crest, team code — at full
-     text strength, matching the player-swap sheet. Rides the gray scale so
-     it is near-white in dark mode and near-black in light. */
+  /* The matchup reads as one phrase — channel, prefix, crest — at full text
+     strength, matching the player-swap sheet. Rides the gray scale so it is
+     near-white in dark mode and near-black in light. */
   .lineup-slot__opp-prefix {
     font-size: 0.6875rem;
     text-transform: lowercase;
     font-weight: 600;
     color: var(--color-gray-900, #111827);
-  }
-
-  .lineup-slot__opp-team {
-    font-size: 0.6875rem;
-    font-weight: 600;
-    color: var(--color-gray-900, #111827);
-    font-variant-numeric: tabular-nums;
   }
 
   .lineup-slot__opp-prefix + .lineup-slot__opp-logo {
@@ -2299,20 +2292,14 @@ const ownersPollTeams = Object.values(getLeagueTeamBrands(ownersPollLeague.slug)
   }
 
   .lineup-bench-row__opp-logo {
-    width: 14px;
-    height: 14px;
+    width: 18px;
+    height: 18px;
     flex-shrink: 0;
   }
 
-  .lineup-bench-row__opp-prefix,
-  .lineup-bench-row__opp-team {
+  .lineup-bench-row__opp-prefix {
     font-size: 0.625rem;
     color: var(--color-gray-900, #111827);
-  }
-
-  .lineup-bench-row__opp-team {
-    font-weight: 600;
-    font-variant-numeric: tabular-nums;
   }
 
   .lineup-bench-row--locked { opacity: 0.6; }
