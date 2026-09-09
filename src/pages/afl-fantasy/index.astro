@@ -98,10 +98,17 @@ const authAflFranchiseId =
 // standalone` is false in the desktop browser of someone whose phone has had
 // the app since August, and Chrome keeps offering the install there because on
 // that device it genuinely is installable. See src/utils/app-install-state.ts.
-// Scoped to an AFL session: a TheLeague owner browsing here has no AFL record,
-// and reading one under their own franchise id would answer for the wrong app.
+//
+// It takes an AFL SESSION, not merely a signed-in one. The banner exists to
+// make notifications reachable, and those are franchise-scoped — a TheLeague
+// owner browsing here cannot receive a single AFL alert (/notifications
+// redirects them), so installing the AFL app buys them nothing. They are also
+// the one viewer whose "I already have it" can never be recorded: the report
+// carries this page's league and the server, correctly, refuses to file it
+// against their own. Pitching an app to someone who can neither use it nor
+// dismiss it for good is the "toggle that silently does nothing" again.
 const showInstallBanner =
-  !!authUser && !(authAflFranchiseId ? await readInstallState(AFL.id, authAflFranchiseId) : null);
+  !!authAflFranchiseId && !(await readInstallState(AFL.id, authAflFranchiseId));
 
 const hasExplicitTeam = !!(myTeamParam || franchiseParam || cookiePref || authAflFranchiseId);
 const resolvedFranchiseId = resolveAFLTeamSelection({

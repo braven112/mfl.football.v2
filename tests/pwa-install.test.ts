@@ -343,7 +343,19 @@ describe('owners who already have the app are not pitched it', () => {
     // all, which must read as "not installed" rather than as someone else's.
     const guard = /const showInstallBanner =([\s\S]*?);\n/.exec(page)?.[1] ?? '';
     expect(guard, 'showInstallBanner').not.toBe('');
-    expect(guard).toMatch(/leagueId === \w+\.id|authAflFranchiseId/);
+    expect(guard).toMatch(/theLeagueFranchiseId|authAflFranchiseId/);
+  });
+
+  it.each(pages)('%s takes a SAME-LEAGUE session, not merely a signed-in one', (file) => {
+    // The banner is a route to notifications and those are franchise-scoped,
+    // so an owner signed into the other league can neither receive an alert
+    // from this one nor have their "I already have it" recorded — the server
+    // refuses to file this page's league against their session. Pitching an
+    // app that can be neither used nor permanently dismissed is the "toggle
+    // that silently does nothing" this repo already has a rule about.
+    const page = fs.readFileSync(path.resolve(__dirname, '..', file), 'utf8');
+    const guard = /const showInstallBanner =([\s\S]*?);\n/.exec(page)?.[1] ?? '';
+    expect(guard, 'no bare signed-in check').not.toMatch(/!!authUser|isAuthenticated/);
   });
 
   it('only remembers a report the server confirmed', () => {
@@ -359,11 +371,55 @@ describe('owners who already have the app are not pitched it', () => {
     );
     const fetchAt = component.indexOf("fetch('/api/app-install'");
     const okAt = component.indexOf('if (!res.ok) return;');
-    const rememberAt = component.indexOf('localStorage.setItem(REPORTED_KEY');
+    const rememberAt = component.indexOf('localStorage.setItem(reportedKey(root)');
 
     expect(fetchAt, 'reports to /api/app-install').toBeGreaterThan(-1);
     expect(okAt, 'checks the response before remembering').toBeGreaterThan(fetchAt);
     expect(rememberAt, 'remembers only after the ok check').toBeGreaterThan(okAt);
+  });
+
+  it('keys the per-device report flag by league', () => {
+    // Production splits the leagues across apex domains, so separate origins
+    // already separate localStorage — but the Vercel preview and `pnpm dev`
+    // serve both leagues from ONE origin, and there an unscoped flag means a
+    // successful TheLeague report silently retires the AFL banner's ability
+    // to report at all. Same rule as rankings-scope.ts's local keys.
+    const component = fs.readFileSync(
+      path.resolve(__dirname, '../src/components/shared/pwa/InstallAppPrompt.astro'),
+      'utf8',
+    );
+    expect(component, 'flag carries the league').toMatch(
+      /mfl:appInstallReported:\$\{root\.dataset\.league/,
+    );
+  });
+
+  it('requires the league rather than checking it when present', () => {
+    // A guard that only fires `typeof league === "string" && league` fails
+    // OPEN on a caller that forgot to send one — which is precisely the case
+    // it exists to catch. One extra banner is the safe answer; a record
+    // written for the wrong app is not.
+    const route = fs.readFileSync(
+      path.resolve(__dirname, '../src/pages/api/app-install.ts'),
+      'utf8',
+    );
+    expect(route).toMatch(/if \(payload\.league !== league\.slug\) \{/);
+    expect(route, 'no fail-open presence check').not.toMatch(
+      /typeof payload\.league === 'string' &&/,
+    );
+  });
+
+  it('claims the install record atomically, so first-write-wins is true', () => {
+    // A phone opening the installed app while a laptop tab is still open is
+    // the ordinary case here, not a contrived race — get-then-set lets the
+    // later write clobber the earlier installedAt.
+    const util = fs.readFileSync(
+      path.resolve(__dirname, '../src/utils/app-install-state.ts'),
+      'utf8',
+    );
+    expect(util, 'SET NX').toMatch(/redis\.set\([\s\S]*?\{ nx: true \}\)/);
+    expect(util, 'reads the winner when it loses the race').toMatch(
+      /wrote === 'OK' \|\| wrote === true/,
+    );
   });
 
   it('sends the page league so the server can reject a mismatch', () => {

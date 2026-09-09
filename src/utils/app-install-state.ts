@@ -94,6 +94,14 @@ export async function readInstallState(
  * Record that the owner has the app. Idempotent and first-write-wins: the
  * FIRST report is the interesting date, and every later page load in the
  * installed app would otherwise rewrite it. Returns the effective record.
+ *
+ * The write is `SET NX` rather than get-then-set, because an owner reports
+ * from more than one place at once by design — a phone opening the installed
+ * app while a laptop tab is still open is the ordinary case here, not a
+ * contrived race. Both would read no record and the later write would win,
+ * which quietly makes "first-write-wins" untrue in exactly the situation it
+ * was written for. Same shape as `claimCodename` in schefter-codenames.ts:
+ * try to own the key, and read the winner's value when someone else did.
  */
 export async function recordInstalled(
   leagueId: string,
@@ -104,12 +112,14 @@ export async function recordInstalled(
   const redis = await getRedis();
   if (!redis) return null;
   const key = installStateKey(leagueId, franchiseId);
+  const next: InstallState = { installedAt: now.toISOString(), source };
   try {
-    const existing = parseInstallState(await redis.get<InstallState | string>(key));
-    if (existing) return existing;
-    const next: InstallState = { installedAt: now.toISOString(), source };
-    await redis.set(key, JSON.stringify(next));
-    return next;
+    const wrote = await redis.set(key, JSON.stringify(next), { nx: true });
+    if (wrote === 'OK' || wrote === true) return next;
+    // Someone got there first — theirs is the record, and it is the one the
+    // caller must be told about. A read that comes back unusable still means
+    // a record exists, so report ours rather than a false "storage down".
+    return parseInstallState(await redis.get<InstallState | string>(key)) ?? next;
   } catch (err) {
     console.error('[app-install-state] write failed:', err);
     return null;

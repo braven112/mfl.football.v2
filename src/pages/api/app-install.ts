@@ -49,7 +49,13 @@ export const POST: APIRoute = async ({ request }) => {
   // other's homepage, and filing that click against their own league would
   // silence a banner they never saw. A mismatch is not an error worth showing
   // — the banner already hid itself locally — so it 403s and stops there.
-  if (typeof payload.league === 'string' && payload.league && payload.league !== league.slug) {
+  //
+  // REQUIRED, not "checked when present": a missing league would fail the
+  // guard open, which is the whole failure it exists to stop. Every caller
+  // sends it (`leagueSlug` is a required prop on InstallAppPrompt), so an
+  // absent one means a page that forgot — and the safe answer there is one
+  // more banner, never a record written for the wrong app.
+  if (payload.league !== league.slug) {
     return json({ error: 'League mismatch' }, 403, headers);
   }
 

@@ -84,11 +84,16 @@ const userFranchiseId = authUser?.franchiseId;
 // standalone` is false in the desktop browser of someone whose phone has had
 // the app since August, and Chrome keeps offering the install there because on
 // that device it genuinely is installable. See src/utils/app-install-state.ts.
+//
+// It takes a TheLeague SESSION, not merely a signed-in one — same reasoning as
+// the AFL homepage. The banner is a route to notifications, and those are
+// franchise-scoped, so an AFL owner browsing here can neither receive one nor
+// have their "I already have it" recorded (the server refuses to file this
+// page's league against their session, correctly).
+const theLeagueFranchiseId =
+  authUser?.leagueId === THELEAGUE.id ? (authUser.franchiseId ?? null) : null;
 const showInstallBanner =
-  isAuthenticated &&
-  !(authUser?.leagueId === THELEAGUE.id && authUser.franchiseId
-    ? await readInstallState(THELEAGUE.id, authUser.franchiseId)
-    : null);
+  !!theLeagueFranchiseId && !(await readInstallState(THELEAGUE.id, theLeagueFranchiseId));
 // Whose broadcast channels the game-day hero names. Read-only: the homepage
 // must never write a preference cookie, and `readViewerClock` never does —
 // only /preferences and the Sunday Ticket chips write one.

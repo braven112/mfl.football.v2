@@ -136,12 +136,21 @@ const isBanner = variant === 'banner';
    * Per-device note that we've already told the server. The record itself is
    * account-level (see src/utils/app-install-state.ts); this only stops a POST
    * on every single page load from inside the installed app.
+   *
+   * Keyed by LEAGUE, because the two leagues are two different apps with two
+   * different records. Production keeps them on separate apex domains, so
+   * separate origins already separate the storage — but the preview
+   * deployment and `pnpm dev` serve both from one, and there an unscoped flag
+   * means reporting TheLeague silently retires the AFL banner's ability to
+   * report at all. Same reason `rankings-scope.ts` scopes its local keys.
    */
-  const REPORTED_KEY = 'mfl:appInstallReported';
+  function reportedKey(root: HTMLElement): string {
+    return `mfl:appInstallReported:${root.dataset.league ?? ''}`;
+  }
 
-  function alreadyReported(): boolean {
+  function alreadyReported(root: HTMLElement): boolean {
     try {
-      return localStorage.getItem(REPORTED_KEY) === '1';
+      return localStorage.getItem(reportedKey(root)) === '1';
     } catch {
       return false;
     }
@@ -159,7 +168,7 @@ const isBanner = variant === 'banner';
    * never block the click that triggered it or surface an error.
    */
   function reportInstalled(root: HTMLElement, source: 'standalone' | 'appinstalled' | 'declared') {
-    if (alreadyReported()) return;
+    if (alreadyReported(root)) return;
     void fetch('/api/app-install', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -174,7 +183,7 @@ const isBanner = variant === 'banner';
         // 403 did the same to an owner reading the other league's homepage.
         if (!res.ok) return;
         try {
-          localStorage.setItem(REPORTED_KEY, '1');
+          localStorage.setItem(reportedKey(root), '1');
         } catch {
           // Nothing to remember it with; the POST is idempotent server-side,
           // so the cost is one more of them on the next visit.
