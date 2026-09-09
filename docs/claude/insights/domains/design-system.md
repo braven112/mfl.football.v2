@@ -221,7 +221,7 @@ are consistent; a feature can carry both treatments for months.
 
 **Context:** `.net-badge` (`src/styles/network-badge.css`) is a shared primitive
 for the TV-network mark, sized by `--net-badge-h` so each surface can pick its
-own height — 0.78rem in the live-scoring card footer, 0.85rem on a lineup slot,
+own height — 0.78rem in the live-scoring card footer, 0.6875rem on a lineup slot,
 1.15rem in the game-day hero. It shipped with the default written the obvious
 way:
 

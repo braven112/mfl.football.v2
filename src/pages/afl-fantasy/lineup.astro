@@ -743,7 +743,7 @@ const ownersPollTeams = Object.values(getLeagueTeamBrands(ownersPollLeague.slug)
                 data-slot={slot.position} data-index={String(i)} data-player-id={player?.id || ''}>
               <button class="lineup-slot__card"
                       aria-label={player
-                        ? `${slot.position}: ${player.name}, ${player.nflTeam}. ${player.projection ? `Projected ${player.projection} points.` : ''}${game?.channel ? ` On ${game.channel.name}.` : ''} Tap to change.`
+                        ? `${slot.position}: ${player.name}, ${player.nflTeam}. ${player.isBye ? 'On bye. ' : oppTeam ? `${matchupLabel}. ` : ''}${player.projection ? `Projected ${player.projection} points.` : ''}${game?.channel ? ` On ${game.channel.name}.` : ''} Tap to change.`
                         : `${slot.position}: Empty slot. Tap to set.`}
                       aria-disabled={slot.locked ? 'true' : 'false'}
                       disabled={slot.locked}>
@@ -1210,6 +1210,9 @@ const ownersPollTeams = Object.values(getLeagueTeamBrands(ownersPollLeague.slug)
         const ch = game?.channel ?? null;
         const oppTeam = game ? (player!.nflTeam === game.home ? game.away : game.home) : null;
         const isHome = game ? player!.nflTeam === game.home : false;
+        // Declared here, not in the opponent branch below: the BUTTON's label —
+        // which replaces its whole subtree for assistive tech — needs it too.
+        const matchupLabel = isHome ? `vs ${oppTeam}` : `at ${oppTeam}`;
         const isSwapped = slot.playerId !== originalSlots[slotIndex].playerId;
 
         li.dataset.playerId = player?.id || '';
@@ -1219,7 +1222,7 @@ const ownersPollTeams = Object.values(getLeagueTeamBrands(ownersPollLeague.slug)
         if (!btn) return;
 
         btn.ariaLabel = player
-          ? `${esc(slot.position)}: ${esc(player.name)}, ${esc(player.nflTeam)}. ${player.projection ? `Projected ${player.projection.toFixed(1)} points.` : ''}${ch ? ` On ${esc(ch.name)}.` : ''} Tap to change.`
+          ? `${esc(slot.position)}: ${esc(player.name)}, ${esc(player.nflTeam)}. ${player.isBye ? 'On bye. ' : oppTeam ? `${esc(matchupLabel)}. ` : ''}${player.projection ? `Projected ${player.projection.toFixed(1)} points.` : ''}${ch ? ` On ${esc(ch.name)}.` : ''} Tap to change.`
           : `${esc(slot.position)}: Empty slot. Tap to set.`;
         btn.ariaDisabled = slot.locked ? 'true' : 'false';
         btn.disabled = slot.locked;
@@ -1263,7 +1266,6 @@ const ownersPollTeams = Object.values(getLeagueTeamBrands(ownersPollLeague.slug)
           gameHtml = `<span class="lineup-slot__bye">BYE</span>`;
         } else if (oppTeam) {
           const matchupPrefix = isHome ? 'vs' : '@';
-          const matchupLabel = isHome ? `vs ${oppTeam}` : `at ${oppTeam}`;
           gameHtml = `
             <div class="lineup-slot__opp" aria-label="${esc(matchupLabel)}">
               ${netHtml}
