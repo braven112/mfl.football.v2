@@ -31,8 +31,8 @@
 - **Never send `FRANCHISE_ID` on an owner-authenticated write.** It is
   commissioner-only and silently switches MFL to a stricter validation path.
 - **Writes need the `www##` host, NOT `MFL_IS_COMMISH`** — `MFL_USER_ID` alone
-  is accepted, as MFL's own sample sends. Measured, not assumed:
-  `scripts/probe-write-auth.mjs` (2026-09-05).
+  is accepted for salaries; nothing issues `MFL_IS_COMMISH`, so code awaiting
+  one hangs. `probe-write-auth.mjs` (2026-09).
 - **Normalize every filtered export.** A one-result query returns a bare object,
   not a one-element array. Use `asArray` (`src/utils/mfl-normalize.ts`) *inside
   shared utils*, not at call sites. Offseason feeds ship a truthy object with
@@ -3047,3 +3047,55 @@ case, whose assertion is the inverse of what it was) and
 `scripts/probe-write-auth.mjs`, which is re-runnable whenever someone doubts
 this.
 
+---
+
+## 2026-09-09 - The commissioner cookie cannot be obtained, and two jobs waited for it anyway
+
+**Context:** Every approved contract declaration stopped reaching MFL when the
+stored `MFL_USER_ID` secret expired, and the MFL Integration Test went red on
+nine consecutive runs on main.
+
+**Insight:** Three separate facts, and the third only bites because of the first
+two.
+
+1. **No MFL request issues `MFL_IS_COMMISH`.** The 2026-09-05 probe
+   (`.github/workflows/probe-commish-cookie.yml`) walked every candidate — the
+   api login, the league login with `XML=1`, the same login *without* `XML=1`,
+   a commissioner-only `csetup` page, and the league home as a control — and
+   none of them set it. It appears to come only from MFL's interactive browser
+   flow, which is why every copy in this repo traces back to a manual paste.
+2. **The write does not need it.** A commissioner's freshly-logged-in
+   `MFL_USER_ID` **alone** is ACCEPTED for `import?TYPE=salaries` on the write
+   host. The cookie the code was waiting for is neither obtainable nor required.
+3. **So a condition that requires it is unreachable.**
+   `mint-mfl-session.mjs`'s `pickMflSession` gated the fresh login on
+   `login.mflUserId && (login.mflIsCommish || !stored.isCommish)`. The middle
+   term is always undefined by (1); the right term is false whenever the secret
+   is set. The script logged in successfully on every run and threw the session
+   away, exporting the very expiring pair its own header says it exists to
+   survive.
+
+**The reusable shape, and it is not MFL-specific:** *a credential that fails by
+being PRESENT AND EXPIRED defeats every fallback written as "use the login only
+if the cookie is missing".* A present cookie is a non-empty string forever.
+`apply-pending-contracts.mjs` had the plain version of this
+(`if (envUserId) … else if (username && password)`); `mint-mfl-session.mjs` had
+it behind a condition subtle enough that nobody noticed for four days.
+`docs/claude/rules/accounting.md` had already recorded the lesson from the
+accounting job — it was simply never ported, which is the real failure.
+`tests/mfl-credential-precedence.test.ts` now scans for the ordering, because
+the rule is about ORDER IN A FILE and the next script to grow a credential
+block is the one nobody thinks to check.
+
+**A diagnostic that names the wrong cause is worse than none.** The mint
+script's warning read *"this account is not its commissioner, or the
+credentials are wrong"* — and it sent an incident investigation after the
+commissioner's league access, which was fine the whole time. It was reporting
+(1), a normal condition, as a misconfiguration. It is now a notice.
+
+**Verification note:** the live path here cannot be proven locally — it needs
+real Redis and real MFL, which no clone or cloud session has. The Vercel
+PREVIEW deployment is the first environment where it runs for real. The proof
+that credentials alone suffice now runs in CI on every push to main rather than
+as a manual dispatch, because the question is not "did it work once" but "is it
+still true".

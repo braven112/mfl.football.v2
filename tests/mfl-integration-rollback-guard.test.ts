@@ -96,7 +96,7 @@ describe('mfl-integration-test fresh-session step', () => {
 });
 
 describe('mint-mfl-session', () => {
-  it('prefers a complete fresh pair, falls back to the stored pair, then to nothing', async () => {
+  it('prefers a fresh login, falls back to the stored pair, then to nothing', async () => {
     const { pickMflSession } = await import('../scripts/mint-mfl-session.mjs');
     const stored = { userId: 'old', isCommish: 'old-c' };
     expect(pickMflSession({ mflUserId: 'new', mflIsCommish: 'new-c' }, stored)).toEqual({
@@ -108,21 +108,45 @@ describe('mint-mfl-session', () => {
     expect(pickMflSession(null, {})).toEqual({ source: 'none' });
   });
 
-  it('never pairs a fresh identity with the STORED commissioner flag (MFL refuses the mismatch)', async () => {
+  // THE REGRESSION THIS FILE NOW EXISTS FOR.
+  //
+  // This case used to assert the opposite — a login without a commissioner
+  // cookie lost to the stored pair. That looked like conservatism and was
+  // actually an unreachable login: no MFL request issues MFL_IS_COMMISH (the
+  // 2026-09-05 probe walked every candidate), so `login.mflIsCommish` is
+  // always undefined, and the stored secret is always set. The script logged
+  // in on every run, discarded the result, and exported the expiring pair it
+  // was written to stop depending on. It expired on 2026-09-08 and every
+  // contract write failed until the cookies were rotated by hand.
+  it('uses a fresh login even when it carries NO commissioner flag', async () => {
     const { pickMflSession } = await import('../scripts/mint-mfl-session.mjs');
     const stored = { userId: 'old', isCommish: 'old-c' };
-    // Login came back without the commissioner cookie: keep the stored pair whole.
     expect(pickMflSession({ mflUserId: 'new' }, stored)).toEqual({
-      source: 'stored',
-      userId: 'old',
-      isCommish: 'old-c',
+      source: 'login',
+      userId: 'new',
+      isCommish: undefined,
     });
-    // No commissioner flag anywhere: a plain fresh session is fine.
+    // …and with no stored flag either, unchanged.
     expect(pickMflSession({ mflUserId: 'new' }, { userId: 'old' })).toEqual({
       source: 'login',
       userId: 'new',
       isCommish: undefined,
     });
+  });
+
+  it('never pairs a fresh identity with the STORED commissioner flag (MFL refuses the mismatch)', async () => {
+    const { pickMflSession } = await import('../scripts/mint-mfl-session.mjs');
+    // The rule that survives: each source is used WHOLE. Whatever comes back,
+    // it is never {login identity + stored flag}.
+    for (const [login, stored] of [
+      [{ mflUserId: 'new' }, { userId: 'old', isCommish: 'old-c' }],
+      [{ mflUserId: 'new', mflIsCommish: 'new-c' }, { userId: 'old', isCommish: 'old-c' }],
+      [null, { userId: 'old', isCommish: 'old-c' }],
+    ] as const) {
+      const picked = pickMflSession(login, stored);
+      const mixed = picked.userId === 'new' && picked.isCommish === 'old-c';
+      expect(mixed, `mixed a fresh identity with the stored flag: ${JSON.stringify(picked)}`).toBe(false);
+    }
   });
 
   it('reads both cookies from one response, taking MFL_USER_ID from the body when only the flag is a header', async () => {

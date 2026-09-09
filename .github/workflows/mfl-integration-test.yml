@@ -70,6 +70,56 @@ jobs:
         if: always()
         run: node scripts/check-owner-cookie-replay.mjs
 
+  # SEPARATE JOB ON PURPOSE. As a step inside integration-test it would feed the
+  # rollback gate: a transient MFL login failure exits 1, `cookie_ok` is still
+  # true (the stored cookie is alive), and the rollback job would revert an
+  # innocent commit — the exact loop that put a deploy on main every 75 seconds
+  # on 2026-09-05. `rollback` needs: integration-test only, so a failure here is
+  # loud and harmless.
+  #
+  # It is also free of the mint step's $GITHUB_ENV, so no stored cookie can leak
+  # into scope and turn the proof into a tautology.
+  credentials-proof:
+    # SEQUENCED, not parallel: both this job and the integration test write to
+    # league 36189, and the test reads its value back ~3s after writing. A
+    # concurrent proof write lands inside that window and fails the test — with
+    # cookie_ok still true, which is the auto-revert path. `always()` keeps it
+    # an independent signal when the tests themselves fail.
+    needs: integration-test
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup pnpm + Node + install
+        uses: ./.github/actions/setup
+
+      # A real (no-op) commissioner write with MFL_USERNAME + MFL_PASSWORD and
+      # NOTHING else in scope, so an ACCEPTED write has exactly one possible
+      # explanation. CI rather than a manual dispatch because the question is
+      # not "did it work once" but "is it still true" — before and after the
+      # stored cookies are eventually deleted.
+      #
+      # PROBE_REQUIRE_USER_ONLY makes a refusal exit 1; without it the script
+      # reports its matrix and exits 0, which would be a green tick that proves
+      # only that the script ran.
+      #
+      # Writes each value back UNCHANGED to the TEST league, with APPEND=1, so
+      # success is a no-op by construction and nothing is erased.
+      # Skips green without credentials, the way check-owner-cookie-replay.mjs
+      # does — a fork or Dependabot PR has no secrets and must not fail for it.
+      - name: Credentials-only write proof (test league, no stored cookie in scope)
+        if: ${{ secrets.MFL_USERNAME != '' && secrets.MFL_PASSWORD != '' }}
+        env:
+          MFL_USERNAME: ${{ secrets.MFL_USERNAME }}
+          MFL_PASSWORD: ${{ secrets.MFL_PASSWORD }}
+          MFL_IS_COMMISH: ''
+          MFL_LEAGUE_ID: '36189'
+          PROBE_REQUIRE_USER_ONLY: '1'
+        run: node scripts/probe-write-auth.mjs
+
   rollback:
     needs: integration-test
     runs-on: ubuntu-latest

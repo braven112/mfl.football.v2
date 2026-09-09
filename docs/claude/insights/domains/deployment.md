@@ -659,3 +659,51 @@ reproduction run *before* the step is marked skippable, and an escape hatch for
 the case where the PR is about the pipeline itself (otherwise it previews
 against the old derived file and looks like a no-op). Resolve every failure of
 the detector — unresolvable base ref, shallow clone, not a repo — to FULL.
+
+---
+
+## 2026-09-09 - `cond && '' || secrets.X` does not withhold a secret
+
+**Context:** Building a proof run that had to execute with *only*
+`MFL_USERNAME`/`MFL_PASSWORD` in scope — no stored cookie — so that an
+ACCEPTED write had exactly one possible explanation.
+
+**Insight:** The obvious way to make a secret conditional in a workflow is the
+ternary idiom:
+
+```yaml
+env:
+  MFL_IS_COMMISH: ${{ inputs.withhold && '' || secrets.MFL_IS_COMMISH }}
+```
+
+**It passes the secret anyway.** GitHub expressions use JavaScript truthiness,
+and `''` is falsy, so when `inputs.withhold` is true the `&&` yields `''`, the
+`||` sees a falsy left side, and it falls through to the secret. The run looks
+like a proof and proves nothing — which is worse than not running it, because
+the green result gets cited later.
+
+**Do this instead:** two steps with `if:` conditions, one that passes the secret
+and one that does not.
+
+```yaml
+- name: … — with the stored cookie
+  if: inputs.write_test && !inputs.withhold_stored_cookies
+  env: { MFL_IS_COMMISH: '${{ secrets.MFL_IS_COMMISH }}' }
+- name: … — username/password ONLY
+  if: inputs.write_test && inputs.withhold_stored_cookies
+  env: {}   # deliberately absent
+```
+
+The second benefit is bigger than the first: **the step NAME lands in the log**,
+so the run records which credentials were in scope instead of asking a future
+reader to reconstruct it from the inputs. A proof whose conditions you cannot
+read afterwards is not evidence.
+
+**Related, and the reason a blank override is sometimes still needed:** a
+value exported to `$GITHUB_ENV` by an earlier step is in scope for every later
+step in the job. To exclude one, set it to a literal empty value at step level
+(`MFL_IS_COMMISH: ''`) — that is an override, not a conditional secret read,
+and it is the one case where re-declaring the name is correct rather than the
+trap `tests/mfl-integration-rollback-guard.test.ts` pins.
+
+`tests/mfl-credential-precedence.test.ts` fails on the ternary shape.

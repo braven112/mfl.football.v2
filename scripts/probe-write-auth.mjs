@@ -112,7 +112,13 @@ const body = new URLSearchParams({ DATA: xml }).toString();
 
 // ── Step 4: the matrix ────────────────────────────────────────────────────
 async function attempt(label, { host, cookies }) {
-  const url = `https://${host}/${year}/import?TYPE=salaries&L=${leagueId}`;
+  // APPEND=1 IS NOT OPTIONAL. src/utils/mfl-contract-writer.ts marks it
+  // CRITICAL: without it MFL treats the payload as the WHOLE salary table and
+  // erases every player not named in it. This probe posts ONE player, so a
+  // non-APPEND write would reduce the league to that single row. It was
+  // missing here while the script was a one-off manual experiment; it must not
+  // be missing now that the write runs on a schedule.
+  const url = `https://${host}/${year}/import?TYPE=salaries&L=${leagueId}&APPEND=1`;
   try {
     const res = await mflFetch({ url, method: 'POST', cookies, body });
     const text = (await res.text()).trim();
@@ -147,8 +153,26 @@ for (const host of hosts) {
 console.log('── Verdict ───────────────────────────────────────────────');
 for (const [k, v] of Object.entries(results)) console.log(`   ${v ? 'ACCEPTED' : 'refused '}  ${k}`);
 const userOnlyWorked = Object.entries(results).some(([k, v]) => v && k.includes('user cookie only'));
+// The GATE is narrower than the report: it must be the host the writers
+// actually target. `some()` over every host would green-light "the stored
+// cookies are not load-bearing" on the strength of a host nothing writes to.
+const writeHostUserOnly = results[`${registryHost} | user cookie only`] === true;
 console.log(
   userOnlyWorked
     ? '\nMFL_IS_COMMISH is NOT required for this write. The accounting gate that\ndemands it is the thing blocking the console, and it can come out.'
     : '\nNo configuration was accepted with the session cookie alone.'
 );
+
+// As an EXPERIMENT this script reports its matrix and exits 0 — a refusal is a
+// result, not a failure. As a CI GATE it has to be able to fail, or the green
+// tick means only "the script ran" and would be cited as proof that the stored
+// cookies can be deleted. Opt in, so the exploratory dispatch keeps its old
+// behaviour and only the scheduled proof is load-bearing.
+if (process.env.PROBE_REQUIRE_USER_ONLY === '1' && !writeHostUserOnly) {
+  console.error(
+    `\n::error::Credentials-only proof FAILED — the login cookie alone was not `
+      + `accepted for a write to ${registryHost}. The stored cookie secrets are still load-bearing; `
+      + 'do not delete them.',
+  );
+  process.exit(1);
+}

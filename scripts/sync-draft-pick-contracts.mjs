@@ -47,8 +47,8 @@
  *   node scripts/sync-draft-pick-contracts.mjs --league afl --year 2026
  *
  * Env:
- *   MFL_USER_ID + (optional) MFL_IS_COMMISH  preferred (cookie-based, no login)
- *   MFL_USERNAME + MFL_PASSWORD              fallback (logs in to get cookie)
+ *   MFL_USERNAME + MFL_PASSWORD              PREFERRED (logs in; does not expire)
+ *   MFL_USER_ID + (optional) MFL_IS_COMMISH  fallback, for when MFL's login is down
  *   MFL_LEAGUE_ID                  defaults to '13522'
  *   MFL_LEAGUE_SLUG                defaults to 'theleague'
  *   MFL_YEAR / PUBLIC_BASE_YEAR    optional explicit year override
@@ -350,22 +350,31 @@ async function main() {
   const username = process.env.MFL_USERNAME;
   const password = process.env.MFL_PASSWORD;
 
+  // Login first — a stored cookie fails by being PRESENT AND EXPIRED, so a
+  // login gated behind "no cookie set" never runs. See
+  // tests/mfl-credential-precedence.test.ts.
   let mflUserId;
   let mflIsCommish;
-  if (envUserId) {
+  if (username && password) {
+    try {
+      ({ mflUserId, mflIsCommish } = await loginToMFL(username, password));
+      console.log(
+        `[draft-pick-sync] Logged into MFL via MFL_USERNAME/MFL_PASSWORD${mflIsCommish ? ' (commish cookie present)' : ''}.`,
+      );
+    } catch (err) {
+      console.warn(`[draft-pick-sync] MFL login failed, falling back to the stored cookie: ${err.message}`);
+    }
+  }
+  if (!mflUserId && envUserId) {
     mflUserId = envUserId;
     mflIsCommish = envCommish;
     console.log(
       `[draft-pick-sync] Using MFL_USER_ID cookie from env${envCommish ? ' (commish cookie present)' : ''}.`,
     );
-  } else if (username && password) {
-    ({ mflUserId, mflIsCommish } = await loginToMFL(username, password));
-    console.log(
-      `[draft-pick-sync] Logged into MFL via MFL_USERNAME/MFL_PASSWORD${mflIsCommish ? ' (commish cookie present)' : ''}.`,
-    );
-  } else {
+  }
+  if (!mflUserId) {
     throw new Error(
-      'No MFL credentials available. Set MFL_USER_ID (preferred) or MFL_USERNAME + MFL_PASSWORD.',
+      'No MFL credentials available. Set MFL_USERNAME + MFL_PASSWORD (preferred) or MFL_USER_ID.',
     );
   }
   const cookies = { MFL_USER_ID: mflUserId, MFL_IS_COMMISH: mflIsCommish };

@@ -286,7 +286,7 @@
     },
     {
       "name": "contracts-eligibility",
-      "note": "The contract-declaration window is derived, not stored: eligibility is reconstructed by PARSING MFL's transaction strings, so a shape this parser reads wrong is indistinguishable downstream from a player who was never acquired. parseTransactions() discards any acquisition that yielded no added ids, and rosters.astro then renders the years as plain text with no \"Declare Contract\" action \u2014 a silent no-op, never an error. That shipped: the add-only BBID claim (\"16778,|500000|\", a winning claim with nothing cut) was asserted against a hand-written \"16778,|500000|,\" that MFL has never emitted, so the suite passed while every drop-free waiver claim in the league went undeclarable. Assert transaction parsing against tests/fixtures/mfl-transaction-strings.json \u2014 real recorded shapes \u2014 and keep it in parity with scripts/lib/roster-move-parse.mjs, which parses the same MFL field for Schefter. Freshness is part of correctness here for the same reason: the committed transactions feed is bundled at BUILD time, so mfl-transactions-cache.ts layers the last few days live over it \u2014 a page that reads only the static feed cannot see a claim inside its own 24-hour window.",
+      "note": "The contract-declaration window is derived, not stored: eligibility is reconstructed by PARSING MFL's transaction strings, so a shape this parser reads wrong is indistinguishable downstream from a player who was never acquired. parseTransactions() discards any acquisition that yielded no added ids, and rosters.astro then renders the years as plain text with no \"Declare Contract\" action \u2014 a silent no-op, never an error. That shipped: the add-only BBID claim (\"16778,|500000|\", a winning claim with nothing cut) was asserted against a hand-written \"16778,|500000|,\" that MFL has never emitted, so the suite passed while every drop-free waiver claim in the league went undeclarable. Assert transaction parsing against tests/fixtures/mfl-transaction-strings.json \u2014 real recorded shapes \u2014 and keep it in parity with scripts/lib/roster-move-parse.mjs, which parses the same MFL field for Schefter. Freshness is part of correctness here for the same reason: the committed transactions feed is bundled at BUILD time, so mfl-transactions-cache.ts layers the last few days live over it \u2014 a page that reads only the static feed cannot see a claim inside its own 24-hour window. The write side has its own trap: an MFL cookie secret fails by being PRESENT AND EXPIRED, so a login gated behind \"no cookie set\" never runs \u2014 apply-pending-contracts.mjs carried that ordering until 2026-09-09 and silently stopped delivering approved declarations when the cookie died. Prefer the login; keep the cookie as the fallback.",
       "paths": [
         "src/utils/contract-eligibility.ts",
         "src/utils/contract-validation.ts",
@@ -294,7 +294,9 @@
         "src/utils/mfl-transactions-cache.ts",
         "src/pages/api/contracts/*",
         "src/components/theleague/ContractDeclarationModal.astro",
-        "tests/fixtures/mfl-transaction-strings.json"
+        "tests/fixtures/mfl-transaction-strings.json",
+        "scripts/apply-pending-contracts.mjs",
+        "scripts/mint-mfl-session.mjs"
       ],
       "tests": [
         "tests/contract-eligibility.test.ts",
@@ -302,7 +304,8 @@
         "tests/contract-validation.test.ts",
         "tests/contract-declaration-api.test.ts",
         "tests/august-cut-selection.test.ts",
-        "tests/august-cutdown-date.test.ts"
+        "tests/august-cutdown-date.test.ts",
+        "tests/mfl-credential-precedence.test.ts"
       ]
     },
     {
@@ -506,7 +509,8 @@
       "tests": [
         "tests/workflow-feature-flag-guard.test.ts",
         "tests/league-literal-guard.test.ts",
-        "tests/mfl-integration-rollback-guard.test.ts"
+        "tests/mfl-integration-rollback-guard.test.ts",
+        "tests/mfl-credential-precedence.test.ts"
       ]
     },
     {
