@@ -88,6 +88,14 @@
       "impact": "user",
       "area": "notifications",
       "league": "both"
+    },
+    {
+      "date": "2026-09-09",
+      "type": "bug-fix",
+      "summary": "Contract declaration windows are a little harder to miss. When MFL processed two moves of the same kind for one team in the same second — which is exactly what a waiver run does, stamping every claim in the league with one timestamp — the site could quietly discard one of them while working out who you had just acquired. Rare, but the cost when it hit was a declaration window you never got told about. It now tells the two moves apart properly.",
+      "impact": "user",
+      "area": "rosters",
+      "league": "theleague"
     }
   ]
 }

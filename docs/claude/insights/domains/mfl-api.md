@@ -3047,3 +3047,43 @@ case, whose assertion is the inverse of what it was) and
 `scripts/probe-write-auth.mjs`, which is re-runnable whenever someone doubts
 this.
 
+
+## 2026-09-09 - `transaction` is absent on most transaction types, so it cannot identify a row
+
+The `TYPE=transactions` export keeps each type's payload in a DIFFERENT field.
+Verified against a live export plus the full committed archive (36,392 rows,
+TheLeague 2007+ / AFL 2003+):
+
+| Type | payload field | has `transaction`? |
+|---|---|---|
+| `FREE_AGENT`, `BBID_WAIVER`, `AUCTION_*` | `transaction` | yes |
+| `WAIVER` (the AFL's rolling priority) | `added` / `dropped` | **no** |
+| `IR` | `activated` / `deactivated` | **no** |
+| `TAXI` | `promoted` / `demoted` | **no** |
+| `TRADE` | `franchise2` + the two `gave_up` lists | **no** |
+
+Four of the five shapes carry no `transaction` at all. So a row identity of
+`type|franchise|timestamp|transaction` — which reads as complete — collapses
+distinct rows: a waiver run stamps EVERY claim in the league with one timestamp,
+so a franchise winning two claims produces two rows with an identical key.
+Measured cost of that key across the archive: **572 rows silently dropped**,
+566 of them AFL waiver rows, plus a 2008 pair of distinct TheLeague trades
+executed in the same second. Key on the whole row instead.
+
+Two more properties of this export, both of which a naive identity gets wrong
+in the opposite direction:
+
+- **MFL's key ORDER is nondeterministic between fetches.** The same row comes
+  back with its fields ordered differently, so `JSON.stringify(row)` reads one
+  row as two. Sort the keys first.
+- **MFL genuinely emits some rows twice.** TheLeague's archive holds two
+  byte-identical `AUCTION_WON` pairs (2012-07-10, 2017-05-27) — one auction win
+  written as two records. A content-addressed key collapses them correctly;
+  a uniquifying counter would render the signing twice.
+
+Also worth knowing: `W=YTD`, `TRANS_TYPE=*` and the bare export all return
+IDENTICAL data for this type (863 rows, checked live) — the default is already
+the full year, so a missing row is never explained by the parameters. And rows
+present in BOTH the committed feed and a live `DAYS=3` fetch are byte-identical
+once key order is normalized (11/11), which is what makes a whole-row key safe
+against false splits when merging the two sources.
