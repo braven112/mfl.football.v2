@@ -361,11 +361,15 @@ const serializedData = JSON.stringify({ teams, years, categories });
       }
     });
 
-    // Reflect a deep-linked category in the control before the first render
-    // (the markup ships with capSpace selected).
-    if (categorySelect && categorySelect.value !== selectedCategory) {
-      categorySelect.value = selectedCategory;
+    // Reflect the resolved category in the control before the first render (the
+    // markup ships with capSpace selected). Driven by `selectedCategory`, NOT
+    // by comparing against the control's own value: a browser restores <select>
+    // state across a reload, so on a refresh of ?category=positionalSpend the
+    // control already reads positionalSpend, a value-compare guard is false,
+    // selectedSubCategory stays null and getTeamValue renders every cell 0.
+    {
       const cat = getCategory();
+      if (categorySelect) categorySelect.value = selectedCategory;
       if (descriptionEl) descriptionEl.textContent = cat.description;
       if (cat.subCategories && cat.subCategories.length > 0) {
         selectedSubCategory = cat.subCategories[0].id;
