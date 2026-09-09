@@ -55,6 +55,38 @@ html.dark {
   --lsh-featured-badge-ink: #0f1e2e;
 }
 
+/* ── AFL: the accent is the league's navy, not TheLeague's blue. ──────────
+   The accent is not decoration here — it is the leading score's TEXT color,
+   the featured card's border, and the "YOUR GAME" badge's FILL (whose ink is
+   --lsh-featured-badge-ink). So it has to clear contrast against the card in
+   BOTH themes, and the two themes need opposite answers:
+
+   LIGHT — white card, white badge ink, so the accent must be dark. It is the
+   lifted navy from the composite hero's own ramp (.cmh--navy's top stop),
+   NOT the flat --afl-navy #0f1e2e: that value sits a hair off --lsh-ink
+   (#111827), so a border painted in it reads as black rather than as navy.
+   13.2:1 on white.
+
+   DARK — the card IS --afl-navy (--lsh-bg: #0f1e2e) and the badge ink is
+   navy too, so a navy accent would be invisible against both. It lifts to a
+   pale tint of the same hue, keeping the navy family while staying legible:
+   8.9:1 on the navy card, and the same ratio for the badge's navy ink on it.
+
+   Defining only the light value would render the fallback in both themes —
+   light perfect, dark a navy score on a navy card.
+
+   Selector order is `html.dark[data-league=...]`, matching tokens-dark.css
+   rather than the reverse — both are valid CSS at identical specificity, but
+   the repo has settled on this one and a lone outlier is what makes a scan
+   guard brittle. */
+html[data-league="afl"] {
+  --lsh-accent: #16324a;
+}
+
+html.dark[data-league="afl"] {
+  --lsh-accent: #9dc0dd;
+}
+
 /* ── Container ── */
 .lsh {
   /* Derived on the element (not :root) so variant accent overrides
