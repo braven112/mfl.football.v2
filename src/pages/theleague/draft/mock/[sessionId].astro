@@ -11,10 +11,11 @@ import leagueConfigData from '../../../../data/theleague.config.json';
 import { getCurrentLeagueYear } from '../../../../utils/league-year';
 import { getTheLeaguePreference, resolveTeamSelection } from '../../../../utils/team-preferences';
 import { getAuthUser } from '../../../../utils/auth';
+import { loginUrlForRequest } from '../../../../utils/login-redirect';
 import { buildDraftPlayers } from '../../../../utils/build-draft-players';
 import { getFranchiseBrand } from '../../../../utils/franchise-brand';
 import type { DraftRoomPageData, DraftRoomTeam } from '../../../../types/draft-room';
-import { DEFAULT_LEAGUE_ID } from '../../../../config/leagues';
+import { DEFAULT_LEAGUE_ID, getLeagueBySlug } from '../../../../config/leagues';
 
 export const prerender = false;
 
@@ -22,7 +23,7 @@ const { sessionId } = Astro.params;
 if (!sessionId) return Astro.redirect('/theleague/draft/mock');
 
 const user = getAuthUser(Astro.request);
-if (!user) return Astro.redirect('/theleague/login');
+if (!user) return Astro.redirect(loginUrlForRequest(Astro, getLeagueBySlug('theleague')!));
 
 const leagueYear = getCurrentLeagueYear();
 

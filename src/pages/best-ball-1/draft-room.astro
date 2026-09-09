@@ -22,6 +22,7 @@ import bb1Config from '../../../data/best-ball-1/bb1.config.json';
 import { getLeagueBySlug } from '../../config/leagues';
 import { getLeagueYearForSlug, getCurrentLeagueYear } from '../../utils/league-year';
 import { getAuthUser } from '../../utils/auth';
+import { loginUrlForRequest } from '../../utils/login-redirect';
 import { isAdminFranchise } from '../../config/nav-config';
 import { getBestBall1Preference } from '../../utils/team-preferences';
 import { buildDraftPlayers } from '../../utils/build-draft-players';
@@ -35,9 +36,7 @@ const leagueYear = getLeagueYearForSlug(BB1.slug);
 
 // ── Auth ──
 const user = getAuthUser(Astro.request);
-if (!user) {
-  return Astro.redirect('/best-ball-1/login?next=/best-ball-1/draft-room');
-}
+if (!user) return Astro.redirect(loginUrlForRequest(Astro, getLeagueBySlug('best-ball-1')!));
 
 const isBb1User = user.leagueId === BB1.id;
 const isCommissioner =

@@ -14,12 +14,11 @@ import InstallAppPrompt from '../../components/shared/pwa/InstallAppPrompt.astro
 import NotificationCommandCenter from '../../components/shared/notifications/NotificationCommandCenter';
 import '../../styles/notification-command-center.css';
 import { getAuthUser } from '../../utils/auth';
+import { loginUrlForRequest } from '../../utils/login-redirect';
 import { getLeagueBySlug } from '../../config/leagues';
 
 const user = getAuthUser(Astro.request);
-if (!user?.franchiseId) {
-  return Astro.redirect('/afl-fantasy/login?next=/afl-fantasy/notifications');
-}
+if (!user?.franchiseId) return Astro.redirect(loginUrlForRequest(Astro, getLeagueBySlug('afl-fantasy')!));
 
 // League scoping: franchise ids overlap between leagues — only an AFL
 // session may manage subscriptions under this path.

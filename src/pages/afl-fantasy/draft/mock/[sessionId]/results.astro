@@ -8,6 +8,8 @@
  */
 import DraftMockResultsPage from '../../../../../components/shared/draft-mock/DraftMockResultsPage.astro';
 import { getAuthUser } from '../../../../../utils/auth';
+import { loginUrlForRequest } from '../../../../../utils/login-redirect';
+import { getLeagueBySlug } from '../../../../../config/leagues';
 import { getAllTeams } from '../../../../../utils/afl-conference';
 import { AFL_MOCK_BASE_PATH } from '../../../../../utils/afl-mock-page';
 import { fetchMockSession } from '../../../../../utils/mock-draft-session';
@@ -16,7 +18,9 @@ export const prerender = false;
 
 const { sessionId } = Astro.params;
 if (!sessionId) return Astro.redirect(AFL_MOCK_BASE_PATH);
-if (!getAuthUser(Astro.request)) return Astro.redirect('/afl-fantasy/login');
+if (!getAuthUser(Astro.request)) {
+  return Astro.redirect(loginUrlForRequest(Astro, getLeagueBySlug('afl-fantasy')!));
+}
 
 // Fetched HERE, not in the shared component: a missing session has to bounce,
 // and Astro.redirect() from a component only blanks the body. See CLAUDE.md.

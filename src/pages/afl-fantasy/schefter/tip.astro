@@ -14,6 +14,7 @@ export const prerender = false;
 import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
 import TipPage from '../../../components/schefter/TipPage.astro';
 import { getAuthUser, isAuthorizedForLeague } from '../../../utils/auth';
+import { loginUrlForRequest } from '../../../utils/login-redirect';
 import { getLeagueBySlug } from '../../../config/leagues';
 import { getSchefterFeed, getSchefterLeagueConfig } from '../../../utils/schefter-league-data';
 import { getConferenceShort, isValidConferenceId } from '../../../utils/afl-conference';
@@ -31,8 +32,7 @@ if (
   !user?.franchiseId ||
   !isAuthorizedForLeague(user, getLeagueBySlug('afl-fantasy')!.id)
 ) {
-  const next = encodeURIComponent(`/afl-fantasy/schefter/tip${Astro.url.search}`);
-  return Astro.redirect(`/afl-fantasy/login?next=${next}`);
+  return Astro.redirect(loginUrlForRequest(Astro, getLeagueBySlug('afl-fantasy')!));
 }
 
 const league = getLeagueBySlug('afl-fantasy')!;

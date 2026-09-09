@@ -29,6 +29,7 @@ import '../../styles/owners-poll.css';
 import { getLeagueTeamBrands } from '../../utils/league-team-brands';
 import PlayerCell from '../../components/theleague/PlayerCell.astro';
 import { getAuthUser } from '../../utils/auth';
+import { loginUrlForRequest } from '../../utils/login-redirect';
 import { getLeagueBySlug, ensureLeaguePrefix, leagueClock } from '../../config/leagues';
 import { findWeekMatchups, resolveRostersPayload, resolveLineupFillState, resolveWeekLineup, resolvePlayerName } from '../../utils/lineup-sources';
 import LineupGameStrip from '../../components/shared/LineupGameStrip.astro';
@@ -61,8 +62,7 @@ import type { LineupPlayer } from '../../types/lineups';
 const MFL_LEAGUE_ID = getLeagueBySlug('afl-fantasy')!.id;
 const user = getAuthUser(Astro.request);
 if (!user?.franchiseId || user.leagueId !== MFL_LEAGUE_ID) {
-  const next = encodeURIComponent(Astro.url.pathname + Astro.url.search);
-  return Astro.redirect(`/afl-fantasy/login?next=${next}`);
+  return Astro.redirect(loginUrlForRequest(Astro, getLeagueBySlug('afl-fantasy')!));
 }
 
 // ---------------------------------------------------------------------------

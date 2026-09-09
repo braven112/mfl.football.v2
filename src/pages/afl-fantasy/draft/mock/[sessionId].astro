@@ -9,6 +9,7 @@
 import DraftMockSessionPage from '../../../../components/shared/draft-mock/DraftMockSessionPage.astro';
 import aflConfigData from '../../../../../data/afl-fantasy/afl.config.json';
 import { getAuthUser, isAuthorizedForLeague } from '../../../../utils/auth';
+import { loginUrlForRequest } from '../../../../utils/login-redirect';
 import { getLeagueBySlug } from '../../../../config/leagues';
 import { getLeagueYearForSlug } from '../../../../utils/league-year';
 import { fetchMockSession } from '../../../../utils/mock-draft-session';
@@ -26,7 +27,7 @@ if (!sessionId) return Astro.redirect(AFL_MOCK_BASE_PATH);
 
 const league = getLeagueBySlug('afl-fantasy')!;
 const user = getAuthUser(Astro.request);
-if (!user) return Astro.redirect('/afl-fantasy/login');
+if (!user) return Astro.redirect(loginUrlForRequest(Astro, getLeagueBySlug('afl-fantasy')!));
 
 // The session's own picks, so a board reopened after the window closed still
 // renders the players it drafted. Best-effort: a failed read just means the

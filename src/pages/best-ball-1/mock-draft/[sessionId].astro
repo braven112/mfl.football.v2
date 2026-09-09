@@ -14,6 +14,7 @@ import bb1Config from '../../../../data/best-ball-1/bb1.config.json';
 import { getLeagueBySlug } from '../../../config/leagues';
 import { getLeagueYearForSlug, getCurrentLeagueYear } from '../../../utils/league-year';
 import { getAuthUser } from '../../../utils/auth';
+import { loginUrlForRequest } from '../../../utils/login-redirect';
 import { getBestBall1Preference } from '../../../utils/team-preferences';
 import { buildDraftPlayers } from '../../../utils/build-draft-players';
 import type { DraftRoomPageData, DraftRoomTeam } from '../../../types/draft-room';
@@ -29,9 +30,7 @@ if (!sessionId) {
 
 // ── Auth & team preference ──
 const user = getAuthUser(Astro.request);
-if (!user) {
-  return Astro.redirect(`/best-ball-1/login?next=/best-ball-1/mock-draft/${sessionId}`);
-}
+if (!user) return Astro.redirect(loginUrlForRequest(Astro, getLeagueBySlug('best-ball-1')!));
 
 // No franchise fallback: a visitor with no bb1 identity spectates rather
 // than silently occupying franchise 0001's seat.

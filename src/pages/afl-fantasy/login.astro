@@ -12,6 +12,7 @@
 import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
 import LoginForm from '../../components/theleague/LoginForm.astro';
 import { getAuthUser } from '../../utils/auth';
+import { resolveLoginDestination } from '../../utils/login-redirect';
 import { getAflLeagueYear } from '../../utils/league-year';
 import { getLeagueBySlug } from '../../config/leagues';
 
@@ -24,12 +25,12 @@ const AFL_LEAGUE_ID = getLeagueBySlug('afl-fantasy')!.id;
 // not be determined".
 const AFL_LOGIN_YEAR = getAflLeagueYear();
 
-// Where to redirect on successful login — honor ?next= (and ?redirect= for
-// symmetry with TheLeague's login) for deep links, otherwise drop them on
-// the AFL home. Must stay inside the AFL path space.
-const next =
-  Astro.url.searchParams.get('next') || Astro.url.searchParams.get('redirect');
-const safeNext = next && next.startsWith('/afl-fantasy') ? next : '/afl-fantasy';
+// Where to redirect on successful login — the requested page, else the AFL
+// home. `resolveLoginDestination` honors the emitted `?next=` AND the legacy
+// `?redirect=`, and validates the path against THIS league (not merely
+// same-origin), which is what keeps a dual-league owner's TheLeague deep link
+// from surviving an AFL sign-in. See src/utils/login-redirect.ts.
+const safeNext = resolveLoginDestination(Astro.url, getLeagueBySlug('afl-fantasy')!);
 
 // If already authenticated as an AFL owner, follow the deep link (or land on
 // the AFL home). If authenticated against a different league, fall through so

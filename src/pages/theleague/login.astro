@@ -10,16 +10,15 @@ import LoginForm from '../../components/theleague/LoginForm.astro';
 import { getCurrentLeagueYear } from '../../utils/league-year';
 import { getAuthUser } from '../../utils/auth';
 import { getLeagueBySlug } from '../../config/leagues';
+import { resolveLoginDestination } from '../../utils/login-redirect';
 
-const THELEAGUE_ID = getLeagueBySlug('theleague')!.id;
+const THELEAGUE = getLeagueBySlug('theleague')!;
 
-// Deep-link return path — honor ?redirect= (and ?next= for symmetry with the
-// AFL login page). Validated server-side, mirroring AFL's safeNext: only
-// same-league paths, so a crafted param can't send a fresh session off-site.
-const requested =
-  Astro.url.searchParams.get('redirect') || Astro.url.searchParams.get('next');
-const safeRedirect =
-  requested && requested.startsWith('/theleague') ? requested : null;
+// Where a successful sign-in lands: the requested page, else this league's
+// home. `resolveLoginDestination` honors the emitted `?next=` AND the legacy
+// `?redirect=`, and validates against THIS league rather than merely
+// same-origin — see src/utils/login-redirect.ts.
+const destination = resolveLoginDestination(Astro.url, THELEAGUE);
 
 // Only short-circuit for a session already scoped to THIS league — dual-league
 // owners are real, and an AFL-scoped session must fall through so the user can
@@ -27,8 +26,8 @@ const safeRedirect =
 // franchiseId check keeps franchise-less JWTs on the form instead of bouncing
 // them between here and pages that require a franchise.
 const authUser = getAuthUser(Astro.request);
-if (authUser?.leagueId === THELEAGUE_ID && authUser.franchiseId) {
-  return Astro.redirect(safeRedirect ?? '/theleague');
+if (authUser?.leagueId === THELEAGUE.id && authUser.franchiseId) {
+  return Astro.redirect(destination);
 }
 
 const envHost = (import.meta.env.PUBLIC_MFL_HOST as string | undefined) || 'https://api.myfantasyleague.com';
@@ -39,7 +38,7 @@ const envStaticHost = (import.meta.env.PUBLIC_STATIC_HOST as string | undefined)
 
 <TheLeagueLayout title="Sign In - The League" host={envHost} leagueId={envLeagueId} year={envYear} staticHost={envStaticHost}>
   <div class="login-page">
-    <LoginForm />
+    <LoginForm redirectUrl={destination} />
   </div>
 </TheLeagueLayout>
 

@@ -9,7 +9,8 @@
  * Does NOT include any modal overlay, backdrop, or page layout.
  */
 
-import { DEFAULT_LEAGUE_ID } from '../../config/leagues';
+import { ALL_LEAGUES, DEFAULT_LEAGUE_ID, getLeagueById } from '../../config/leagues';
+import { loginFallbackPath, safeReturnPath } from '../../utils/login-redirect';
 import '../../styles/loading.css';
 
 export interface Props {
@@ -48,11 +49,35 @@ const {
   subtitle = 'Enter your MFL credentials',
   class: className,
 } = Astro.props;
+
+// The league THIS form authenticates against, resolved from the leagueId prop
+// rather than assumed. Everything league-shaped below follows from it.
+//
+// The old client-side chain ended in a hardcoded `'/theleague'`, which is the
+// wrong league on two of the three login pages: an AFL owner whose redirect
+// failed validation was dropped into TheLeague. And its sanitiser checked
+// same-ORIGIN only, so a stale parked path could survive a sign-in to a
+// DIFFERENT league. Both are decided here now, per league.
+const formLeague = getLeagueById(leagueId) ?? getLeagueById(DEFAULT_LEAGUE_ID)!;
+const fallbackPath = loginFallbackPath(formLeague);
+// Server-validate the prop too: every caller passes a server-computed value
+// today, but this component is public API and the client must not be the only
+// thing standing between a crafted prop and a redirect.
+const safeRedirectUrl = safeReturnPath(redirectUrl, formLeague) ?? undefined;
+// Every league's path prefix, so the client can tell "another league's page"
+// from "this league's page on an apex host, where paths carry no prefix at
+// all". Derived from the registry — a slug list retyped into the client
+// script would stop learning about new leagues (and trip
+// tests/league-literal-guard.test.ts).
+const allLeaguePrefixes = ALL_LEAGUES.map((l) => `/${l.slug}`).join(' ');
 ---
 
 <div
   class:list={['login-form', { 'login-form--compact': compact }, className]}
-  data-redirect-url={redirectUrl}
+  data-redirect-url={safeRedirectUrl}
+  data-fallback-path={fallbackPath}
+  data-league-prefix={`/${formLeague.slug}`}
+  data-league-prefixes={allLeaguePrefixes}
   data-league-id={leagueId}
   data-season-year={seasonYear != null ? String(seasonYear) : ''}
 >
@@ -157,20 +182,57 @@ const {
     if (!form) return;
 
     // ── Redirect resolution ──────────────────────────────────────
-    const params = new URLSearchParams(window.location.search);
-    let redirectUrl = params.get('redirect') || params.get('next');
-
-    if (!redirectUrl) {
-      redirectUrl = sessionStorage.getItem('loginRedirectUrl') || document.referrer;
-    }
-
-    if (redirectUrl && redirectUrl !== document.location.href) {
-      sessionStorage.setItem('loginRedirectUrl', redirectUrl);
-    }
-
-    // Server-rendered redirect from component prop (highest priority)
+    // The SERVER decides where a sign-in lands. Every caller — all three login
+    // pages and SignInModal — passes a `redirectUrl` computed by
+    // resolveLoginDestination/safeReturnPath, which validates against this
+    // league. The client only re-checks it and falls back.
+    //
+    // WHAT USED TO BE HERE, AND WHY IT IS GONE: the chain fell back to
+    // `sessionStorage.loginRedirectUrl || document.referrer`. The referrer put
+    // an arbitrary off-site page's PATHNAME in the redirect, and the parked
+    // sessionStorage value was unscoped — so a `/theleague/...` path parked on
+    // one visit could be used after signing into the AFL, landing the owner on
+    // a page their fresh session cannot read. Nothing else read that key.
     const componentRedirect = formWrapper.dataset.redirectUrl;
+    const fallbackPath = formWrapper.dataset.fallbackPath || '/';
+    const leaguePrefix = formWrapper.dataset.leaguePrefix || '';
+    const allPrefixes = (formWrapper.dataset.leaguePrefixes || '').split(' ').filter(Boolean);
     const leagueId = formWrapper.dataset.leagueId || DEFAULT_LEAGUE_ID;
+
+    /**
+     * Same-origin AND same-league, or the league home. Mirrors
+     * safeReturnPath() in src/utils/login-redirect.ts — kept as a few inline
+     * lines rather than an import so the league registry does not get pulled
+     * into this bundle.
+     */
+    function resolveFinalUrl(candidate: string | null | undefined): string {
+      if (!candidate) return fallbackPath;
+      let value = candidate;
+      // Absolute URL → keep only the path, and only if it is OUR origin.
+      if (value.includes('://')) {
+        try {
+          const parsed = new URL(value);
+          if (parsed.origin !== window.location.origin) return fallbackPath;
+          value = parsed.pathname + parsed.search + parsed.hash;
+        } catch {
+          return fallbackPath;
+        }
+      }
+      // `javascript:`/`data:` carry no `://`; `//evil.com` and backslash
+      // variants are protocol-relative and pass a naive startsWith('/').
+      if (/^[a-z][a-z0-9+.-]*:/i.test(value)) return fallbackPath;
+      if (value.includes('\\')) return fallbackPath;
+      if (!value.startsWith('/') || value.startsWith('//')) return fallbackPath;
+      // Same league only. An apex host serves clean paths (no prefix), so a
+      // path without ANY league prefix is this league's by definition.
+      const path = value.split(/[?#]/)[0];
+      const inThisLeague = path === leaguePrefix || path.startsWith(leaguePrefix + '/');
+      const inSomeLeague = allPrefixes.some(
+        (p) => path === p || path.startsWith(p + '/'),
+      );
+      if (!inThisLeague && inSomeLeague) return fallbackPath;
+      return value;
+    }
     const seasonYearAttr = formWrapper.dataset.seasonYear || '';
     const seasonYear = /^\d{4}$/.test(seasonYearAttr) ? Number(seasonYearAttr) : null;
 
@@ -220,24 +282,9 @@ const {
         // Success — redirect
         if (btnText) btnText.textContent = 'Redirecting\u2026';
 
-        let finalUrl = componentRedirect
-          || sessionStorage.getItem('loginRedirectUrl')
-          || '/theleague';
-
-        if (finalUrl.includes('://')) {
-          try { finalUrl = new URL(finalUrl).pathname; }
-          catch { finalUrl = '/theleague'; }
-        }
-
-        // Same-origin paths only: protocol-relative (`//evil.com`) and
-        // scheme-only (`javascript:…`) values slip past the '://' check
-        // above but both fail this one.
-        if (!finalUrl.startsWith('/') || finalUrl.startsWith('//')) {
-          finalUrl = '/theleague';
-        }
-
-        sessionStorage.removeItem('loginRedirectUrl');
-        window.location.href = finalUrl;
+        // Same-origin AND same-league, else THIS league's home — never a
+        // hardcoded one. See resolveFinalUrl above.
+        window.location.href = resolveFinalUrl(componentRedirect);
 
       } catch (error) {
         const msg = error instanceof Error ? error.message : 'Login failed';
