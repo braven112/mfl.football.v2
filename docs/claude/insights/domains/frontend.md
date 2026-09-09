@@ -133,6 +133,58 @@ hrefs to local copies, and open it in the bundled Chromium — it isolates
 
 ---
 
+## 2026-09-09 - A Module-Scope IIFE Is a ClientRouter Bug the Ratchet Cannot See
+
+**Context:** the roster page's team-nav chevron — the control that drops down
+all 16 teams — opened on the first visit and was dead on every visit after,
+until the owner hard-refreshed. `src/pages/theleague/rosters.astro` is
+otherwise correctly wired: `initRosterPage` is bound to `astro:page-load` and
+everything inside it re-binds per navigation. The chevron was not inside it.
+It was a module-scope IIFE (`(function initTeamNavAccordion() { … })()`)
+sitting in the same **bundled** `<script>`.
+
+**Why once-per-session, not once-per-load.** ClientRouter keys
+`scriptsAlreadyRan` on the script (astro/dist/transitions/swap-functions.js)
+and skips one it has already run, so a bundled module is evaluated ONCE per
+browser session while the DOM under it is swapped on every navigation. Module
+scope therefore means *first page you happened to open this session* — the
+handler was bound to a button that no longer exists. Nothing throws, and the
+rest of the page keeps working, which is why it read to the owner as "the arrow
+just doesn't do anything".
+
+**The part worth carrying forward: no scanner had a chance at this.**
+`tests/clientrouter-init-ratchet.test.ts` finds files that init on
+`DOMContentLoaded` *without* `astro:page-load`. This file has
+`astro:page-load` — twice — so it is clean by that measure, and the offending
+code never mentions `DOMContentLoaded` at all. The DOMContentLoaded shape is
+just the most common way to write the bug, not the bug. **A bundled script has
+exactly one correct place for DOM wiring: inside the function bound to
+`astro:page-load`.** Anything at module scope is once-per-session by
+construction, whatever it is called.
+
+**Two corollaries when moving code into the init function:**
+
+- Handlers must be **assigned** (`el.onclick = fn`), not added. `initRosterPage`
+  runs twice on the initial load ("Initial-Load Double-Init", below), so an
+  `addEventListener` moved into it stacks and a toggle fires twice per click —
+  the accordion would open and immediately close. The page already uses `onclick`
+  for its demo controls for this exact reason.
+- The `is:inline` scripts on the same page are NOT affected and must not be
+  "fixed" the same way — they run per document. The page's diagnostic error
+  banner carries `data-astro-rerun` for the mirror-image reason.
+
+**Reproducing this class at all requires navigating, not loading.** A Playwright
+check that only `goto()`s the page passes on the broken code. The shape that
+catches it: load the page, click and assert; navigate away in-site and back
+(`document.querySelector('a').click()` — ClientRouter needs a real bubbling
+click, and Playwright's `page.click` refuses an invisible anchor); then click
+and assert again. Pre-fix that second assertion left `aria-expanded="false"`.
+
+**Guard:** `tests/rosters-team-nav-clientrouter.test.ts`, wired into the
+`rosters-page` domain of `.claude/hooks/path-guard.json`.
+
+---
+
 ## 2026-09-08 - A Component Dropped Into a Grid Becomes a Grid ITEM, and Takes a Column With It
 
 **Context:** The PWA install banner was added to both homepages as the first
