@@ -1,6 +1,6 @@
 # Sign-in return paths — plan
 
-**Status:** awaiting approval. No code written yet.
+**Status:** stages 1-4 SHIPPED (the core). Stages 5-9 not started.
 **Branch:** `claude/login-redirect-feature-v2049a`
 
 ## Goal
@@ -26,6 +26,7 @@ mechanism.
 | Cross-league | Honor the return path as long as it is inside the league just signed into |
 | 401 recovery | Reuse the existing `SignInModal` + `requestSignIn()` + sessionStorage-park pattern, generalized |
 | Context message | Sign-in page says *why*, derived from the return path via `page-directory.json` |
+| Roger 403 copy | The joke stays the HEADLINE; the real reason sits underneath it |
 
 ---
 
@@ -224,17 +225,30 @@ this end-to-end for waiver claims (`src/utils/claim-resume.ts`). The work is
 
 | # | Stage | Touches |
 |---|---|---|
-| 1 | `login-redirect.ts` + its unit tests | 1 new file, 1 new test |
-| 2 | Rewrite all ~20 page gates onto `loginUrlFor`; standardize on `?next=` | ~20 files |
-| 3 | All three login pages read via `safeReturnPath`, all pass `redirectUrl` | 3 files |
-| 4 | Fix `LoginForm`'s referrer fallback + `'/theleague'` default | 1 file |
+| 1 | ✅ `login-redirect.ts` + its unit tests | 1 new file, 1 new test (51 cases) |
+| 2 | ✅ All 15 page gates on `loginUrlForRequest`; every emitter now writes `?next=` | 15 files |
+| 3 | ✅ All three login pages read via `resolveLoginDestination`, all pass `redirectUrl` | 3 files |
+| 4 | ✅ `LoginForm`: referrer/sessionStorage chain removed, league-aware fallback | 1 file |
 | 5 | "Log in" links and buttons carry `?next=` | 7 files |
 | 6 | PWA gate becomes registry-driven | `TheLeagueLayout.astro` |
 | 7 | Roger 403 page + split the admin gates | 1 component, ~6 wrappers, ~9 gates |
 | 8 | Generalized resume + `handle401` | ~8 files |
 | 9 | Guard tests, page-directory entries, What's New | tests + data |
 
-Stages 1–4 are the core and are independently shippable.
+Stages 1-4 are the core and shipped together. Verified against a running dev
+server: all 15 gates 302 with the right `?next=`, all three login pages render
+the destination into the form, query strings survive, cross-league and
+`//evil.com` return paths fall back to the CORRECT league home.
+
+**Two things stage 2 did NOT cover, deliberately** — they are stage 5 (links
+and buttons), and both still work because `?redirect=` stays readable:
+
+- `src/utils/player-actions.ts:145` builds its login URL by string
+  concatenation and emits `?redirect=`.
+- `afl-fantasy/trade-builder.astro:294` and `afl-fantasy/rosters.astro:1271`
+  hardcode `?next=` links rather than going through the helper.
+
+The stage-9 emitter guard cannot land until those three move over.
 
 ## Guard tests
 
@@ -254,14 +268,38 @@ Wire all three into `.claude/hooks/path-guard.json` under a new `auth` domain
 pointing at a new `docs/claude/rules/auth-redirects.md`, so the next person
 editing a gate gets the rules doc injected automatically.
 
+## What shipping stages 1-4 turned up
+
+Three things worth recording, because they will bite the later stages too:
+
+1. **A four-line gate is a page-size regression.** Spelling the gate out as an
+   object literal pushed `theleague/draft/mock/[sessionId].astro` from 73 to 81
+   lines, crossing the 80-line fork threshold in
+   `tests/page-fork-ratchet.test.ts` — the ratchet correctly reading "this page
+   grew" as "this page is forking". Hence `loginUrlForRequest(Astro, league)`,
+   which keeps every gate to ONE line. Net cost per page is now the import
+   alone.
+2. **`astro check` does not catch a missing import in `.astro` frontmatter
+   reliably.** A dropped `getLeagueBySlug` import in
+   `theleague/draft/mock/[sessionId].astro` passed the type baseline and 10,301
+   unit tests, and only showed up as a **500** when the page was actually
+   requested. Curl every touched route before believing a green suite.
+3. **The type baseline is a real signal, not a formality.** It caught a missing
+   import in `afl-fantasy/login.astro` as +1 (1741 → 1742). Fixed rather than
+   absorbed; the baseline is unchanged at 1741.
+
 ## Risks / things to get right
 
-1. **Apex hosts.** On `theleague.us` the middleware rewrites `/lineup` →
-   `/theleague/lineup` and sets `locals.hideLeaguePrefix`. The return path and
-   the login URL must both go through `resolveLeaguePath`, or a signed-out
-   visitor on the apex domain gets bounced to a prefixed URL that Vercel 301s
-   back — a redirect loop on the *production* domain and not on previews. This
-   is the single highest-risk item in the plan and gets its own test.
+1. **Apex hosts — handled, but NOT verified live.** `safeReturnPath` normalizes
+   both shapes to the prefixed form and `loginUrlFor` re-applies the host's
+   visibility, so the gate is correct whether `Astro.url.pathname` arrives
+   prefixed or clean. Six unit tests pin that round-trip in both directions.
+   What could NOT be exercised locally: Vite's dev server answers **403** to an
+   unrecognized `Host:` header, so the real `theleague.us` path was never
+   driven end-to-end. The middleware wiring that sets `hideLeaguePrefix` is
+   untouched by this change, and `throwback-settings.astro` already depends on
+   it the same way — but this is the one claim resting on tests rather than on
+   a live request. Check it on the preview deployment's apex alias.
 2. **`Astro.redirect()` only redirects from a page.** The 403 must be returned
    by each thin route wrapper, never from the shared component — CLAUDE.md's
    `/cr` note; the same mistake shipped a blank page once already.

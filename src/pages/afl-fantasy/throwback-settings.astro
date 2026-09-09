@@ -16,6 +16,7 @@ export const prerender = false;
 
 import ThrowbackSettingsPage from '../../components/shared/ThrowbackSettingsPage.astro';
 import { getAuthUser } from '../../utils/auth';
+import { loginUrlForRequest } from '../../utils/login-redirect';
 import { buildThrowbackSettingsView } from '../../utils/throwback-settings-view';
 import { getLeagueBySlug } from '../../config/leagues';
 import { resolveLeaguePath } from '../../utils/nav-utils';
@@ -23,9 +24,7 @@ import type { TeamConfig } from '../../utils/team-names';
 import aflConfig from '../../../data/afl-fantasy/afl.config.json';
 
 const user = getAuthUser(Astro.request);
-if (!user?.franchiseId) {
-  return Astro.redirect('/afl-fantasy/login?redirect=/afl-fantasy/throwback-settings');
-}
+if (!user?.franchiseId) return Astro.redirect(loginUrlForRequest(Astro, getLeagueBySlug('afl-fantasy')!));
 
 // League scoping, and it is not decoration: TheLeague's franchiseIds fully
 // overlap the AFL's, so a TheLeague session would otherwise resolve to a
