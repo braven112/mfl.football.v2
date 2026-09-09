@@ -312,6 +312,47 @@ describe('team tokens — the wrong franchise becomes unwritable', () => {
       .toBe('The Fire Ready Aim called.');
   });
 
+  it('refuses an id the payload never authorized', () => {
+    // The last hole in "unwritable": resolution against the whole team map
+    // meant a one-digit slip — {{TEAM_SHORT:0008}} typed as 0018, both live
+    // AFL franchises — substituted cleanly with unresolved:false, so the
+    // fallback and the scrub (which both key off it) were bypassed and the
+    // post shipped naming a franchise nobody authorized. The allow-list is
+    // exactly the ids we minted into that beat's payload.
+    const teams = historyTeams();
+    const allowedFids = new Set(['0008']);
+    expect(resolveTeamTokens(teamShortToken('0008'), teams, { allowedFids }))
+      .toMatchObject({ text: 'Pain', unresolved: false });
+    const slipped = resolveTeamTokens(teamShortToken('0003'), teams, { allowedFids });
+    expect(slipped.unresolved).toBe(true);
+    expect(slipped.text).toContain('{{TEAM_SHORT:0003}}');
+  });
+
+  it('derives the allow-list from the minted payload, in the scanner', () => {
+    expect(RUMOR_SRC).toMatch(/const allowedFids = new Set\(\);/);
+    expect(RUMOR_SRC).toMatch(/resolveTeamTokens\(aiBody \|\| templateBody\(beat\.anonymized\), teams, resolveOpts\)/);
+  });
+
+  it('refuses a former-name token that resolves to the CURRENT name', () => {
+    // pickFormerName filters re-skin and other-owner rows before offering a
+    // former name; this lookup walks raw history[], so two rows covering the
+    // rename year could ship "X — the former X". Latent in both live configs
+    // today — refused rather than relied upon.
+    const teams = historyTeams();
+    const allowedFids = new Set(['0003']);
+    // 2020 falls in the Maverick era row, whose name IS the current name.
+    expect(resolveTeamTokens(formerTeamToken('0003', 2020), teams, { allowedFids }).unresolved).toBe(true);
+    // A genuine former era still resolves.
+    expect(resolveTeamTokens(formerTeamToken('0003', 2014), teams, { allowedFids }).text).toBe('Generals');
+  });
+
+  it('scrubs half-mangled markup, matching the widened detection', () => {
+    // Detection counts any stray brace pair; a balanced-only scrub would leave
+    // exactly the markup it exists to remove.
+    expect(RUMOR_SRC).toMatch(/\{0,2\}/);
+    expect(RUMOR_SRC).not.toMatch(/body\.replace\(\/\\\{\\\{\[\^\}\]\*\\\}\\\}\/g, MASKED_TEAM\);/);
+  });
+
   it('flags a token the model mangled at ONE edge', () => {
     // A balanced-pair test (`\\{\\{[^}]*\\}\\}`) called these resolved and let the
     // literal markup ship to the feed and GroupMe — which the beat loop calls
@@ -336,14 +377,15 @@ describe('team tokens — the wrong franchise becomes unwritable', () => {
   it('the scanner falls back to the template on an unresolved token', () => {
     expect(RUMOR_SRC).toMatch(/if \(resolvedBody\.unresolved && aiBody\) \{/);
     expect(RUMOR_SRC).toMatch(/falling back to template/);
-    expect(RUMOR_SRC).toMatch(/body\.replace\(\/\\\{\\\{\[\^\}\]\*\\\}\\\}\/g, MASKED_TEAM\)/);
+    // The scrub matches the widened detection — see the half-mangled test.
+    expect(RUMOR_SRC).toMatch(/body\.replace\([\s\S]{0,40}MASKED_TEAM\)/);
   });
 
   it('resolves against the whole team map, not a single beat team', () => {
     // Every token names its own franchise, so resolution is a lookup — which
     // is what allows a former-name callback for a DIFFERENT franchise than the
     // exposure team to appear in the same body.
-    expect(RUMOR_SRC).toMatch(/resolveTeamTokens\(aiBody \|\| templateBody\(beat\.anonymized\), teams\)/);
+    expect(RUMOR_SRC).toMatch(/resolveTeamTokens\(aiBody \|\| templateBody\(beat\.anonymized\), teams, resolveOpts\)/);
   });
 
   it('teaches the token in the rules AND the exposure examples', () => {

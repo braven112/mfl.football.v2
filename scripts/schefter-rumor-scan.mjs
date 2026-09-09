@@ -4804,11 +4804,22 @@ async function main() {
     // not a body to patch: fall back to the template, which is code-built and
     // has no tokens in it. A literal `{{TEAM}}` in the group chat would be
     // worse than the misattribution this replaces.
-    let resolvedBody = resolveTeamTokens(aiBody || templateBody(beat.anonymized), teams);
+    // The ids this beat is ALLOWED to name: exactly the ones we minted into
+    // its payload. Resolving any id the team map happens to know would let a
+    // one-digit slip (0008 → 0018, both live AFL franchises) substitute
+    // cleanly and ship a franchise the payload never authorized.
+    const allowedFids = new Set();
+    for (const t of beat.anonymized ?? []) {
+      for (const m of JSON.stringify(t).matchAll(/\{\{TEAM(?:_SHORT|_FORMER)?:(\d{4})/g)) {
+        allowedFids.add(m[1]);
+      }
+    }
+    const resolveOpts = { allowedFids };
+    let resolvedBody = resolveTeamTokens(aiBody || templateBody(beat.anonymized), teams, resolveOpts);
     let usedTemplate = !aiBody;
     if (resolvedBody.unresolved && aiBody) {
       warn(`  [beat ${i + 1}] unresolved team token in AI body — falling back to template`);
-      resolvedBody = resolveTeamTokens(templateBody(beat.anonymized), teams);
+      resolvedBody = resolveTeamTokens(templateBody(beat.anonymized), teams, resolveOpts);
       usedTemplate = true;
     }
     let body = resolvedBody.text;
@@ -4816,7 +4827,9 @@ async function main() {
       // Belt to the braces above: templateBody does not emit tokens, so this
       // is unreachable today. If it ever fires, ship prose rather than markup.
       warn(`  [beat ${i + 1}] token survived the template fallback — scrubbing to a generic placeholder`);
-      body = body.replace(/\{\{[^}]*\}\}/g, MASKED_TEAM);
+      // Matches the DETECTION above, which counts any stray `{{`/`}}` — a
+      // balanced-only scrub would leave the half-mangled markup it guards.
+      body = body.replace(/\{\{[^{}]*\}{0,2}/g, MASKED_TEAM).replace(/\}\}/g, '');
     }
     log(`  [beat ${i + 1}/${beats.length}] (${usedTemplate ? 'template' : 'AI'})${i === 0 && hadRogerRiff ? ' [with Roger riff]' : ''}:\n    ${body.replace(/\n/g, '\n    ')}`);
 

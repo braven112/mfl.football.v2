@@ -242,7 +242,21 @@ three previous trade posts had all named Fire Ready Aim.
   live post-history already holds the first — so masking only `p.body` left the
   leak open, and in the transaction lane (which drops bodies) the
   two-franchise subject would have been the ONLY thing left in the block.
-- **An unresolved token is ANY stray `{{` or `}}`, not a balanced pair.** The
+- **A token only resolves for an id the payload AUTHORIZED.** Resolution
+  against the whole team map meant a one-digit slip — `{{TEAM_SHORT:0008}}`
+  typed as `0018`, both live AFL franchises — substituted cleanly with
+  `unresolved: false`, bypassing both the template fallback and the scrub,
+  and shipped a franchise nobody authorized. The allow-list is exactly the ids
+  minted into that beat's payload, so the caller derives it from the
+  anonymized tips rather than tracking it separately.
+- **A former-name token that resolves to the CURRENT name is refused.**
+  `pickFormerName` filters re-skin and other-owner rows before offering one;
+  `historicalName` walks raw `history[]`, so two rows covering the rename year
+  would ship "X — the former X". Latent in both live configs — refused rather
+  than relied upon.
+- **An unresolved token is ANY stray `{{` or `}}`, not a balanced pair**, and
+  the last-resort scrub matches that same widened test — a balanced-only scrub
+  leaves exactly the half-mangled markup it exists to remove. The
   model mangling one edge — `{{TEAM_SHORT:0008}` — passed a `\{\{[^}]*\}\}`
   test as resolved and shipped the literal markup to the feed and GroupMe.
   Schefter prose never legitimately contains either brace pair, and erring

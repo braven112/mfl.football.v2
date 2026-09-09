@@ -190,7 +190,16 @@ function historicalName(team, year) {
     return Number.isFinite(start) && Number.isFinite(end) && year >= start && year <= end;
   });
   const name = era?.name;
-  return typeof name === 'string' && name.trim() ? name.trim() : null;
+  if (typeof name !== 'string' || !name.trim()) return null;
+  // `pickFormerName` filters re-skin rows and other-owner names before it ever
+  // offers a former name; this lookup walks the raw `history[]`, so a config
+  // with two rows covering the rename year could hand back the CURRENT name
+  // and ship "X — the former X" with unresolved:false. Both live configs have
+  // no overlapping era ranges today, so this is a latent case — refuse it
+  // rather than rely on that staying true.
+  const current = typeof team?.name === 'string' ? team.name.trim() : '';
+  if (current && name.trim().toLowerCase() === current.toLowerCase()) return null;
+  return name.trim();
 }
 
 /**
@@ -206,11 +215,24 @@ function historicalName(team, year) {
  * generation — a literal `{{TEAM:0008}}` reaching the group chat is worse than
  * the bug this replaces.
  */
-export function resolveTeamTokens(text, teams) {
+export function resolveTeamTokens(text, teams, { allowedFids } = {}) {
   if (typeof text !== 'string' || text.length === 0) {
     return { text, unresolved: false };
   }
-  const get = (fid) => (teams && typeof teams.get === 'function' ? teams.get(fid) : null);
+  // An id the payload never offered is NOT resolvable, even though the team
+  // map knows it. Without this, a one-digit slip — `{{TEAM_SHORT:0008}}` typed
+  // as `0018`, both live AFL franchises — substitutes cleanly, `unresolved`
+  // stays false, and the post ships naming a franchise nobody authorized. That
+  // is the same misattribution class tokens exist to prevent, and it would be
+  // invisible: the fallback and the scrub both key off `unresolved`.
+  //
+  // The authorized set is exactly the ids WE minted into the prompt, so the
+  // caller derives it from the anonymized payload rather than tracking it.
+  const permitted = allowedFids instanceof Set ? allowedFids : null;
+  const authorized = (fid) => !permitted || permitted.has(fid);
+  const get = (fid) => (
+    authorized(fid) && teams && typeof teams.get === 'function' ? teams.get(fid) : null
+  );
 
   // FORMER first: `{{TEAM_FORMER:...}}` would otherwise be left half-eaten by
   // a looser current-name pattern. Fresh regexes per call — a shared /g regex
