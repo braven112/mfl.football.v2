@@ -73,6 +73,7 @@ export const AREA_LABELS = {
   'import-rankings': 'Import Rankings',
   'whats-new': "What's New",
   'guides': 'Guides',
+  'transactions': 'Transactions',
   'admin': 'Admin',
   'schefter': 'Schefter Report',
   'draft': 'Draft',

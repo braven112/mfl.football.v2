@@ -1,5 +1,54 @@
 [
   {
+    "id": "draft-section",
+    "date": "2026-09-02",
+    "category": "new-page",
+    "icon": "draft-podium",
+    "leagues": [
+      "theleague",
+      "afl"
+    ],
+    "title": "Every Draft We've Ever Held",
+    "link": "/draft/results",
+    "linkLabel": "Open the archive",
+    "summary": "The draft tools have been scattered across the menu for years, each one unaware the others existed. There is now a front door at /draft that ties them together — and behind it, every draft either league has ever held, pick by pick, back to the startup drafts nobody has been able to look at since the day they happened.",
+    "description": [
+      "You could always find the draft order. You could always find the broadcast board. What you could not do was get from one to the other without going back out to the menu and hunting — and if you wanted to know who somebody took in the third round of 2014, you were out of luck entirely, unless you enjoy reading MyFantasyLeague's archive pages on a phone.",
+      "So: <a href=\"/draft\">a draft hub</a>. It counts down to the next draft when there is one to count down to, tells you how many picks you are holding, replays the opening picks of the last draft, and links every draft tool we have. And on every one of those pages there is now a strip across the top that gets you to all the others in one click — the <a href=\"/draft/order\">draft order</a>, the <a href=\"/draft/broadcast\">broadcast board</a>, <a href=\"/import-rankings\">your imported rankings</a>, <a href=\"/cr\">your own board</a>. No more going back out to the menu.",
+      "The new page is <a href=\"/draft/results\">Draft Results</a>, and it is the whole archive. Pick a season, pick a team, and read the board: who went where, who traded up to get there, and what the pick was actually worth in hindsight now that you know how it turned out. The League goes back to the 320-pick startup draft in 2007. The AFL goes back to 2003, and its two conferences each get their own board, the way they actually draft.",
+      "The old seasons are a genuinely strange place to visit. The AFL's 2003 draft has all 360 slots recorded and not one player attached to any of them — MFL kept the order and lost the picks, and the page says so rather than showing you a wall of blanks and letting you assume it is broken. 2004 turns out to be two entirely separate drafts stacked into one board, which is why the same players get taken twice and the rounds run to sixteen. And a fair number of players from the mid-2000s simply cannot be named any more, because the league's player archive does not start until 2011.",
+      "One thing quietly moved: the Draft Order page used to hide a third tab called History, which did a worse version of all this and which almost nobody knew about. It is gone, and any link to it now lands on the new page with your season and your team still selected."
+    ],
+    "image": "draft-section.webp",
+    "imageAlt": "The Draft Results page for The League showing the 2015 draft. A row of tabs across the top reads Draft, Order, Results, Broadcast, Room, Mock, Rankings and My List, with Results selected. The heading “2015 Draft Results” sits above “51 picks over 3 rounds”, then a scrollable row of season chips from 2026 back through 2012 with 2015 highlighted, and below it a row of franchise chips beginning with “All teams”. The board itself is a table headed #, PICK, TEAM, PLAYER and VIA: pick 1.01 is Melvin Gordon to the Amish Rakefighters, 1.02 Todd Gurley to the Gridiron Geeks, 1.03 Amari Cooper to The Executioners, and on down through Jameis Winston and Marcus Mariota at 1.11 and 1.12, each row carrying the drafting franchise’s crest and the player’s headshot and position.",
+    "excludeFromHero": true
+  },
+  {
+    "id": "afl-throwback-week",
+    "date": "2026-09-02",
+    "category": "new-feature",
+    "icon": "history",
+    "leagues": [
+      "afl"
+    ],
+    "title": "The AFL Gets a Throwback Week",
+    "heroHeadline": "All 24 go",
+    "heroAccentWord": "Vintage.",
+    "link": "/throwback-settings",
+    "linkLabel": "Pick your era",
+    "summary": "On NFL Week 8, all 24 AFL franchises drop their current look and wear a legacy one — old name, old crest, old banner, old colors — across live scoring, matchups and Set Lineup. A hundred and seventeen eras going back to 2003 are on the table, and you pick which one is yours.",
+    "description": [
+      "The AFL has been keeping receipts since 2003. Every name this league has ever worn is sitting in the config — <strong>117 of them</strong>, across 24 franchises — and until now they only ever surfaced on <a href=\"/franchises\">franchise pages</a> as history. On NFL Week 8 they come out of the drawer. <a href=\"/live-scoring\">Live scoring</a>, the matchup cards and <a href=\"/lineup\">Set Lineup</a> all swap to whatever era you picked, and everybody else's too.",
+      "Swiftie 4 Life has thirteen identities to choose between, which is its own kind of confession. Get off my Ditka has nine. Nobody has to settle — <a href=\"/throwback-settings\">pick your era</a> and it sticks until you change it, and there's a Preview link on every card so you can see the scoreboard wearing it before you commit. Skip the whole thing and you still play: every team already has a default, and it's the identity you wore the LONGEST. The Show spent seventeen seasons as No Frills, so that's what The Show wears.",
+      "One rule about the defaults, because it matters. A last-place rebrand is never picked for you. Finishing last in this league gets you renamed, and the site is not going to turn around and make that your throwback too — Cock Gobbler, Jesus Killers, Vit's Brother and the rest are all still there in the picker if you want to own it, but you have to reach for them yourself.",
+      "Two teams nearly missed the party. Drunk Indians and Fullybaked have never once changed their names in twenty-two years, so their history was empty and they had nothing to throw back to. Turned out MFL never deleted anything: the original art was still sitting on the same servers it was uploaded to in 2003, down to a Half Baked movie poster tiled four across at exactly the width of a league banner, because that is how you made a banner in 2003. Both are in, wearing the real thing.",
+      "A word of warning about the names. This league was not tasteful in 2004 and nobody has asked it to be now, so the Week 8 scoreboard is going to say some things. Every era is eligible. That was the point."
+    ],
+    "image": "afl-throwback-week.webp",
+    "imageAlt": "The AFL live scoring board during Throwback Week. Every franchise wears a legacy identity instead of its current one: No Frills against Way More Funner in the featured matchup, then Gamecocks over TD Pants, Smokane over Drunk Indians, Fullybaked over The Dude, More Cowbell against Pubes, MWC over The Nukes, and Your Team Sucks over Zephyr. Each team shows its era crest and every matchup card is edged in that era's own colors.",
+    "heroRotationDays": 14
+  },
+  {
     "id": "owner-activity-mfl-blend",
     "date": "2026-09-01",
     "category": "enhancement",
