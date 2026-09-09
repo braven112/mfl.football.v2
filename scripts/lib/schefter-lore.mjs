@@ -367,6 +367,20 @@ export async function loadPostHistory({ log = console.log, warn = console.warn, 
  * have, and degrading a nice-to-have beats leaking a name the caller was
  * never allowed to print. It warns, because a silently thinner prompt is the
  * kind of regression nobody notices for months.
+ *
+ * The options are declared rather than inferred: `maskNames` carries no
+ * default (its absence is the meaningful case), so inference alone leaves it
+ * out of the parameter type entirely and every caller passing one is a
+ * ts(2353). That class is pinned at zero by the type ratchet, which is what
+ * caught it.
+ *
+ * @param {Array<Record<string, any>> | null | undefined} posts
+ * @param {{
+ *   limit?: number,
+ *   maskNames?: (text: string) => string,
+ *   warn?: (...args: any[]) => void,
+ * }} [options]
+ * @returns {string}
  */
 export function buildRecentPostsPromptBlock(
   posts,
