@@ -13,8 +13,16 @@ name: CodeQL
 # read them the same way it reads Copilot and the external reviewers.
 
 on:
+  # `staging` gates like `main` does — it is production-level (real owners on
+  # staging.theleague.us, production's database, `main` fast-forwards to it), so
+  # a feature PR must clear the security scan before it lands there rather than
+  # a week later at the promotion.
   pull_request:
-    branches: [main]
+    branches: [main, staging]
+  # Push stays main-only on purpose: this run populates the Security tab's
+  # baseline for the default branch, and a second branch scanning into the same
+  # tab produces duplicate alerts for code that is about to fast-forward into
+  # main anyway. The PR trigger above is what actually gates a merge.
   push:
     branches: [main]
   schedule:

@@ -1,8 +1,15 @@
 name: CI
 
 on:
+  # `staging` is a production-level branch, not a staging area — real owners use
+  # staging.theleague.us, it writes production's database, and `main`
+  # fast-forwards to it on release day. So a PR into `staging` gets exactly the
+  # gate a PR into `main` gets. Omitting it here was the one change that would
+  # have made the release train strictly worse than no train: every feature PR
+  # would have merged with no unit tests at all.
+  # See docs/plans/staging-release-process.md.
   pull_request:
-    branches: [main]
+    branches: [main, staging]
   workflow_dispatch:
 
 concurrency:
