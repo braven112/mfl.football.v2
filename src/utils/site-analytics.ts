@@ -363,13 +363,15 @@ export function buildPageInsights(input: {
 	const navSlug = navSlugFor(league);
 	const entries = directoryFor(league);
 
+	// Two passes, because a `?view=` variant canonicalizes to the same route as
+	// its parent: the PLAIN entry must win the title, whatever order the
+	// directory happens to list them in. The second pass only fills routes that
+	// exist solely as a variant.
 	const titles = new Map<string, DirectoryEntry>();
 	for (const entry of entries) {
-		// A `?view=` variant names the same route; the first plain entry wins so
-		// the title is the page's own, not the variant's.
+		if (entry.path.includes('?')) continue;
 		const key = canonicalPath(entry.path, league);
-		if (!titles.has(key) || entry.path.includes('?')) continue;
-		titles.set(key, entry);
+		if (!titles.has(key)) titles.set(key, entry);
 	}
 	for (const entry of entries) {
 		const key = canonicalPath(entry.path, league);
@@ -446,10 +448,20 @@ export function buildPageInsights(input: {
 		.sort((a, b) => b.views - a.views);
 
 	// The quiet list is the league's own directory minus everything with a
-	// view. `?view=` variants are dropped: they share a route with their parent
-	// and can never be recorded separately, so they would sit there forever.
-	const quiet: QuietPage[] = entries
-		.filter((entry) => !entry.path.includes('?'))
+	// view. Two exclusions, for different reasons:
+	//
+	// - `visibility: admin` entries, because this page has NO auth gate. The
+	//   admin pages themselves do, but a public "never been opened" list is
+	//   still a published index of them — the same reason QuickLinks renders
+	//   only `visibility === 'all'`. (Titles above are resolved from the whole
+	//   directory: a page that was actually VISITED is already in the counts,
+	//   and naming it correctly reveals nothing the count does not.)
+	// - `?view=` variants, because they share a route with their parent and can
+	//   never be recorded separately, so they would sit there forever.
+	const listable = entries.filter(
+		(entry) => entry.visibility === 'all' && !entry.path.includes('?'),
+	);
+	const quiet: QuietPage[] = listable
 		.filter((entry) => !rows.get(canonicalPath(entry.path, league))?.views)
 		.map((entry) => ({
 			href: resolveDirectoryHref(entry.path, navSlug),
@@ -458,12 +470,12 @@ export function buildPageInsights(input: {
 		}))
 		.sort((a, b) => a.title.localeCompare(b.title));
 
-	const trackable = entries.filter((entry) => !entry.path.includes('?'));
 	return {
 		pages,
 		quiet,
-		visitedPages: trackable.length - quiet.length,
-		directoryPages: trackable.length,
+		// Same denominator the quiet list came out of, so "N of M" adds up.
+		visitedPages: listable.length - quiet.length,
+		directoryPages: listable.length,
 		categories,
 		ownerPages,
 	};

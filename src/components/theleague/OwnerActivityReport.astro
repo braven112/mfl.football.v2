@@ -1072,7 +1072,8 @@ const busiestDayLabel = traffic.busiest
 	      On any off-palette chip the guarantee doesn't hold — the old dark
 	      chip already swallowed the near-black franchise accents in LIGHT
 	      mode for the same reason. */
-	.chart-container :global(.chart-tooltip) {
+	.chart-container :global(.chart-tooltip),
+	.traffic-chart :global(.chart-tooltip) {
 		position: absolute;
 		top: 0.5rem;
 		right: 0.75rem;
@@ -1089,13 +1090,15 @@ const busiestDayLabel = traffic.busiest
 		min-width: 8rem;
 	}
 
-	.chart-container :global(.chart-tooltip__date) {
+	.chart-container :global(.chart-tooltip__date),
+	.traffic-chart :global(.chart-tooltip__date) {
 		font-weight: 600;
 		margin-bottom: 0.25rem;
 		font-variant-numeric: tabular-nums;
 	}
 
-	.chart-container :global(.chart-tooltip__row) {
+	.chart-container :global(.chart-tooltip__row),
+	.traffic-chart :global(.chart-tooltip__row) {
 		display: flex;
 		align-items: center;
 		gap: 0.375rem;
@@ -1117,7 +1120,8 @@ const busiestDayLabel = traffic.busiest
 	   hairline ring in the surface's own ink keeps the mark's SHAPE readable at
 	   any fill contrast, in both themes and both leagues, with the team name
 	   sitting right beside it to carry the meaning. */
-	.chart-container :global(.chart-tooltip__dot) {
+	.chart-container :global(.chart-tooltip__dot),
+	.traffic-chart :global(.chart-tooltip__dot) {
 		width: 0.5rem;
 		height: 0.5rem;
 		border-radius: 50%;

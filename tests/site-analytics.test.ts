@@ -9,6 +9,7 @@ import {
 	summarizeTraffic,
 	type DailyPageViews,
 } from '../src/utils/site-analytics';
+import pageDirectory from '../src/data/page-directory.json';
 
 /**
  * The Owner Activity page's analytics half.
@@ -194,6 +195,33 @@ describe('buildPageInsights', () => {
 		expect(quiet.length).toBeGreaterThan(0);
 		expect(quiet.some((q) => q.href.includes('/afl-fantasy/'))).toBe(false);
 		expect(visitedPages).toBe(directoryPages - quiet.length);
+	});
+
+	it('never publishes an admin-only page in the quiet list', () => {
+		// /activity has no auth gate, so this list is public. The admin pages
+		// themselves are gated, but enumerating them here is still an index of
+		// them — the same reason QuickLinks renders only visibility === 'all'.
+		const adminPaths = (pageDirectory as { path: string; visibility: string }[])
+			.filter((entry) => entry.visibility !== 'all')
+			.map((entry) => canonicalPath(entry.path, 'theleague'));
+		const listed = insights().quiet.filter((q) => adminPaths.includes(q.href));
+		expect(listed.map((q) => q.href)).toEqual([]);
+	});
+
+	it('counts the same pages it lists, so "N of M" adds up', () => {
+		const { quiet, visitedPages, directoryPages } = insights();
+		expect(visitedPages + quiet.length).toBe(directoryPages);
+	});
+
+	it('gives a route its PLAIN entry\'s title, not a ?view= variant\'s', () => {
+		// Directory order decides nothing here: /rosters and /rosters?view=planner
+		// canonicalize to the same key, and the page's own name must win whichever
+		// the JSON happens to list first.
+		const rosters = insights().pages.find((p) => p.path.endsWith('/rosters'));
+		const plain = (pageDirectory as { path: string; title: string }[]).find(
+			(entry) => entry.path === '/rosters',
+		);
+		expect(rosters?.title).toBe(plain?.title);
 	});
 
 	it('never calls a page quiet just because a ?view= variant exists', () => {

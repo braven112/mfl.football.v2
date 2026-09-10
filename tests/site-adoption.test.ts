@@ -100,6 +100,24 @@ describe('getAdoptionSection', () => {
 		expect(redis.commands).toHaveLength(2 + FRANCHISES.length);
 	});
 
+	it('survives one unparseable preferences record without hiding the section', async () => {
+		const redis = new FakeRedis();
+		redis.hashLengths.set('push:subs:13522:0001', 1);
+		redis.hashLengths.set('push:subs:13522:0002', 1);
+		redis.strings.set('push:prefs:13522:0001', '{not json');
+		redis.strings.set(
+			'app:install:13522:0001',
+			JSON.stringify({ installedAt: '2026-08-01T00:00:00.000Z', source: 'standalone' }),
+		);
+
+		const mod = await loadWithRedis(redis);
+		const out = await mod.getAdoptionSection('13522', FRANCHISES, LEAGUE);
+
+		// The bad row falls back to category defaults; everything else survives.
+		expect(out.push.reachable).toBe(2);
+		expect(out.install.installed).toBe(1);
+	});
+
 	it('degrades to zeroes rather than throwing when storage is down', async () => {
 		const redis = new FakeRedis();
 		redis.mget = async () => {

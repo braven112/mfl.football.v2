@@ -65,6 +65,16 @@ export interface AdoptionSection {
 	push: PushAdoption;
 }
 
+/** A stored preferences record, or nothing when it cannot be read. */
+function parseStoredPreferences(raw: unknown): unknown {
+	if (typeof raw !== 'string') return raw;
+	try {
+		return JSON.parse(raw);
+	} catch {
+		return null;
+	}
+}
+
 function share(part: number, whole: number): number {
 	return whole > 0 ? Math.round((part / whole) * 100) : 0;
 }
@@ -124,8 +134,11 @@ export async function getAdoptionSection(
 			// see the alert.
 			if (deviceCount === 0) return;
 			reachable += 1;
-			const raw = prefsRaw?.[i];
-			const stored = sanitize(typeof raw === 'string' ? JSON.parse(raw) : raw);
+			// Parsed per row, not per section: a single unparseable preferences
+			// value would otherwise throw to the catch below and hide the whole
+			// section — install numbers included, which were already correct.
+			// `readPreferences` and `parseInstallState` both guard the same way.
+			const stored = sanitize(parseStoredPreferences(prefsRaw?.[i]));
 			for (const category of categories) {
 				if (isCategoryEnabled(category.id, stored, league)) {
 					categoryCounts.set(category.id, (categoryCounts.get(category.id) ?? 0) + 1);
