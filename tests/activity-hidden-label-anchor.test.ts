@@ -19,26 +19,46 @@ import path from 'node:path';
  * later cleanup deletes as dead weight.
  */
 
+/**
+ * Source with CSS comments stripped, so a `{` inside a comment cannot throw
+ * off the brace walk below. (This file's comments are prose about braces.)
+ */
 const SOURCE = readFileSync(
 	path.join(process.cwd(), 'src/components/theleague/OwnerActivityReport.astro'),
 	'utf8',
-);
+).replace(/\/\*[\s\S]*?\*\//g, '');
 
-/** The `@media (max-width: 639px)` block that hides the status label. */
+/**
+ * The mobile media query that holds the status-label rules.
+ *
+ * Found by CONTENT, not by position: keyed on the block that mentions
+ * `.activity-label` rather than on the first `@media` that happens to match a
+ * string. A guard that fails when someone adds an earlier breakpoint, or
+ * writes `max-width:639px` without the space, is a guard that gets deleted
+ * with the bug still in place.
+ */
 function mobileBlock(): string {
-	const start = SOURCE.indexOf('@media (max-width: 639px)');
-	expect(start, 'the mobile media query that hides the status label').toBeGreaterThan(-1);
-	// Walk braces from the query's opening brace to its matching close.
-	const open = SOURCE.indexOf('{', start);
-	let depth = 0;
-	for (let i = open; i < SOURCE.length; i++) {
-		if (SOURCE[i] === '{') depth += 1;
-		else if (SOURCE[i] === '}') {
-			depth -= 1;
-			if (depth === 0) return SOURCE.slice(open, i + 1);
+	const query = /@media[^{]*max-width:\s*639px[^{]*\{/g;
+	for (let m = query.exec(SOURCE); m !== null; m = query.exec(SOURCE)) {
+		const open = m.index + m[0].length - 1;
+		let depth = 0;
+		for (let i = open; i < SOURCE.length; i++) {
+			if (SOURCE[i] === '{') depth += 1;
+			else if (SOURCE[i] === '}') {
+				depth -= 1;
+				if (depth === 0) {
+					const block = SOURCE.slice(open, i + 1);
+					if (block.includes('.activity-label')) return block;
+					break;
+				}
+			}
 		}
 	}
-	throw new Error('unbalanced braces in the mobile media query');
+	throw new Error(
+		'No `@media (max-width: 639px)` block containing `.activity-label` — if the ' +
+			'status label stopped being hidden on mobile, delete this suite; if it just ' +
+			'moved, point this helper at its new home.',
+	);
 }
 
 describe('Owner Activity — the visually-hidden status label', () => {
