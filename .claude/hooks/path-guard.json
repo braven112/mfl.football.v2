@@ -91,7 +91,8 @@
       ],
       "note": "Bundled <script> blocks run ONCE per session under the ClientRouter: init on astro:page-load (never DOMContentLoaded), re-read elements inside init(), replace document/window listeners rather than stacking them. See docs/claude/insights/domains/frontend.md \"Astro and ClientRouter\".",
       "tests": [
-        "tests/clientrouter-init-ratchet.test.ts"
+        "tests/clientrouter-init-ratchet.test.ts",
+        "tests/activity-hidden-label-anchor.test.ts"
       ]
     },
     {
