@@ -1175,11 +1175,20 @@ const busiestDayLabel = traffic.busiest
 		box-shadow: 0 0 0 1px color-mix(in srgb, var(--page-text, #111827) 40%, transparent);
 	}
 
+	/* ── Franchise marks: CONTAIN, never crop ──
+	   A franchise icon is a logo, not an avatar. `border-radius: 50%` shaves
+	   the corners off a square mark and `object-fit: cover` throws away the
+	   edges of a wide one, so a club whose art fills its canvas came out
+	   clipped while a club with built-in padding looked untouched — which
+	   reads as some teams having circle crops and others not. `contain` fits
+	   the whole mark in the box, the same treatment `.activity-team__icon`
+	   already used in the tables below. The round DOTS in this component
+	   (`.chart-legend__swatch`, `.activity-dot`) are marks of our own making
+	   and stay circular. */
 	.chart-legend__icon {
 		width: 1rem;
 		height: 1rem;
-		border-radius: 50%;
-		object-fit: cover;
+		object-fit: contain;
 	}
 
 	.chart-legend__name {
@@ -1830,11 +1839,11 @@ const busiestDayLabel = traffic.busiest
 		transform: rotate(90deg);
 	}
 
+	/* Contain, not cover — see `.chart-legend__icon`. */
 	.owner-pages-icon {
 		width: 1.25rem;
 		height: 1.25rem;
-		border-radius: 50%;
-		object-fit: cover;
+		object-fit: contain;
 	}
 
 	.owner-pages-total {

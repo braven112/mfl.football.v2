@@ -3079,3 +3079,47 @@ the reflex fix — an `align-self`, a `position: relative; top: -1px`, a
 problem was a size ratio. Keep `align-self: center` on an item whose height is a
 `var()` as a *guard* (a surface can override `--net-badge-h` and must not be able
 to knock it off the line), but write it down as a guard, not as the fix.
+
+---
+
+## 2026-09-11 - A franchise mark is a LOGO, not an avatar — `contain`, never `cover`
+
+**Context:** An owner reported that "some of the team icons" on Owner Activity
+had circle crops. Some did and some did not, which is what made it look like a
+data problem rather than a CSS one.
+
+**Insight:** Two rules in `OwnerActivityReport.astro` styled franchise icons the
+way an avatar is styled — `border-radius: 50%` with `object-fit: cover`
+(`.chart-legend__icon`, `.owner-pages-icon`). Both halves damage a logo, and
+they damage it UNEVENLY, which is the reason the bug reads as random:
+
+- `border-radius: 50%` shaves the corners off a square mark. A club whose art
+  already sits inside a circle (a skull in a ring) is untouched; a club whose
+  art fills its canvas to the corners loses them.
+- `object-fit: cover` scales to FILL and crops the overflow, so a wide
+  rectangular mark loses its left and right edges entirely.
+
+So the clubs with padding in their artwork looked fine and the clubs without it
+looked clipped — same CSS, different outcome per team. `object-fit: contain`
+with no radius fits the whole mark inside the box and leaves the letterboxing
+transparent, which is what the same component's `.activity-team__icon` had been
+doing correctly all along.
+
+**The distinction to keep:** a circle is right for an AVATAR (a person, a
+byline, Roger, a Schefter author) and wrong for a CLUB MARK, which someone
+designed with its own silhouette. Round marks OF OUR OWN making — status dots,
+chart legend swatches — stay circular; they carry no artwork to crop.
+
+**Scope note, unfixed:** a repo scan found 22 rules pairing a full radius with
+`object-fit: cover` on something icon-shaped. Most are genuine avatars. The
+ones that are franchise marks and would benefit from the same fix:
+`.thm-detail-hero__icon` (TransactionHubModal), `.identity-icon` (both
+`franchises/index.astro`), `.afl-champ-hero__icon`, `.afl-playoffs-hero__icon`,
+`.sf-rail-hottest__icon`, `.tbw-card__icon` / `.tbw-cg__era-icon`, and
+`.award-avatar` / `.section-avatar` (dead-money). Left alone because the report
+was scoped to one page and several of those are shared by many.
+
+(This rule belongs in the curated head, which is at 8,163 of its 8,192-byte
+budget — adding it means trimming something else, which is a deliberate
+editorial call rather than a drive-by.)
+
