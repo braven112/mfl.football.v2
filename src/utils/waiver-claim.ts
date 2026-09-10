@@ -52,12 +52,63 @@ export interface ClaimValidationContext {
   rules: WaiverBidRules;
   /** The franchise's remaining blind-bid dollars. */
   availableBalance: number;
-  /** Player ids currently on the franchise's roster. */
+  /**
+   * EVERY player id the franchise holds, IR and taxi squad included — this is
+   * the DROP-eligibility set, and an injured player is every bit as droppable
+   * as a starter.
+   */
   rosterPlayerIds: Set<string>;
   /** Player ids that are unrostered league-wide. */
   freeAgentIds: Set<string>;
+  /**
+   * The `ROSTER`-status subset of {@link rosterPlayerIds} — the players who
+   * actually occupy one of `rosterLimit`'s slots.
+   *
+   * THIS IS NOT A REFINEMENT, it is the whole check. MFL keeps IR and taxi
+   * squad under their own limits (`injuredReserve`, `taxiSquad` on the league
+   * export), so a 16-man AFL roster carrying two injured players is 14/16 and
+   * may add without dropping. Measuring the full set against `rosterSize` told
+   * every such owner their roster was full and refused a legal pickup
+   * (2026-09-09, the AFL's FCFS window).
+   *
+   * Omitted falls back to the full roster, which is the pre-fix behaviour —
+   * callers with real MFL statuses in hand must pass it.
+   */
+  activeRosterIds?: Set<string>;
   /** Roster limit, so a no-drop claim that would overfill is caught here. */
   rosterLimit?: number;
+}
+
+/**
+ * MFL roster statuses that do NOT consume one of `rosterSize`'s active slots.
+ *
+ * Both have their own separate limit on the league export, which is precisely
+ * why they cannot be counted against the roster: `injuredReserve` is 10 in the
+ * AFL against a `rosterSize` of 16.
+ */
+const NON_ACTIVE_STATUSES = new Set(['INJURED_RESERVE', 'TAXI_SQUAD']);
+
+/**
+ * Whether an MFL roster status occupies an active roster slot.
+ *
+ * An absent or unrecognised status reads as ACTIVE. MFL omits the field for
+ * ordinary roster players in some exports, and a future bucket we have not
+ * seen is far more likely to be a kind of roster than a kind of IR — guessing
+ * the other way under-counts the roster and waves through an add that really
+ * does overfill it.
+ */
+export function isActiveRosterStatus(status: unknown): boolean {
+  const s = String(status ?? '').trim().toUpperCase();
+  return s === '' || !NON_ACTIVE_STATUSES.has(s);
+}
+
+/** The active-roster subset of an MFL roster list, as ids. */
+export function activeRosterIdsOf(
+  players: Array<{ id?: unknown; status?: unknown }> = []
+): Set<string> {
+  return new Set(
+    players.filter((p) => isActiveRosterStatus(p?.status)).map((p) => String(p?.id ?? p))
+  );
 }
 
 /** MFL's sentinel for "adding without dropping anyone". */
@@ -133,15 +184,29 @@ export function validateClaims(claims: WaiverClaim[], ctx: ClaimValidationContex
       }
     }
 
+    // Only ACTIVE players occupy a roster slot; IR and taxi squad have their
+    // own MFL limits. See ClaimValidationContext#activeRosterIds.
+    const active = ctx.activeRosterIds ?? ctx.rosterPlayerIds;
+    const rosterFull = ctx.rosterLimit !== undefined && active.size >= ctx.rosterLimit;
+
     if (c.dropPlayerId !== undefined && c.dropPlayerId !== NO_DROP) {
       if (!/^\d+$/.test(String(c.dropPlayerId))) {
         errors.push(`${label}: invalid player to drop.`);
       } else if (!ctx.rosterPlayerIds.has(c.dropPlayerId)) {
         errors.push(`${label}: you can only drop a player on your own roster.`);
+      } else if (rosterFull && !active.has(c.dropPlayerId)) {
+        // The mirror image of the bug above, and just as invisible: the add
+        // lands on the ACTIVE roster, so dropping an injured-reserve or
+        // taxi-squad player frees a slot the add never wanted. MFL scores the
+        // resulting active roster as over the limit and refuses — silently, by
+        // re-rendering its own form.
+        errors.push(
+          `${label}: your active roster is full (${active.size}/${ctx.rosterLimit}) and dropping an injured-reserve or taxi-squad player doesn't open an active spot — pick someone off your active roster.`
+        );
       }
-    } else if (ctx.rosterLimit !== undefined && ctx.rosterPlayerIds.size >= ctx.rosterLimit) {
+    } else if (rosterFull) {
       errors.push(
-        `${label}: your roster is full (${ctx.rosterPlayerIds.size}/${ctx.rosterLimit}) — pick someone to drop.`
+        `${label}: your roster is full (${active.size}/${ctx.rosterLimit}) — pick someone to drop.`
       );
     }
   }

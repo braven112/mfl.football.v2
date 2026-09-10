@@ -16,6 +16,8 @@ import {
   waiverImportType,
   conferenceOfFranchise,
   freeAgencyIsLeagueWide,
+  isActiveRosterStatus,
+  activeRosterIdsOf,
   NO_DROP,
   type ClaimValidationContext,
 } from '../src/utils/waiver-claim';
@@ -106,7 +108,11 @@ describe('validateClaims', () => {
   });
 
   it('requires a drop when the roster is already full', () => {
-    const full = ctx({ rosterPlayerIds: new Set(['1111', '2222']), rosterLimit: 2 });
+    const full = ctx({
+      rosterPlayerIds: new Set(['1111', '2222']),
+      activeRosterIds: new Set(['1111', '2222']),
+      rosterLimit: 2,
+    });
     expect(validateClaims([{ addPlayerId: '9001', bid: 425000 }], full).join()).toMatch(/roster is full \(2\/2\)/);
     expect(validateClaims([{ addPlayerId: '9001', bid: 425000, dropPlayerId: '1111' }], full)).toEqual([]);
   });
@@ -118,6 +124,123 @@ describe('validateClaims', () => {
 
   it('rejects an empty board', () => {
     expect(validateClaims([], ctx())).toEqual(['Submit at least one claim.']);
+  });
+});
+
+describe('roster capacity — IR and taxi squad do NOT occupy a roster slot', () => {
+  /**
+   * MFL keeps ROSTER, INJURED_RESERVE and TAXI_SQUAD in ONE `<player>` list and
+   * separates them only by `status`. Only ROSTER counts against `rosterSize`;
+   * IR and taxi have their own limits on the league export (the AFL's
+   * `injuredReserve` is 10 against a `rosterSize` of 16).
+   *
+   * Counting the whole list is what refused a legal AFL pickup on 2026-09-09:
+   * franchise 0005 held 14 active + 2 on IR and was told "your roster is full
+   * (16/16)" with two active slots genuinely open.
+   */
+  it('reads MFL statuses', () => {
+    expect(isActiveRosterStatus('ROSTER')).toBe(true);
+    expect(isActiveRosterStatus('INJURED_RESERVE')).toBe(false);
+    expect(isActiveRosterStatus('TAXI_SQUAD')).toBe(false);
+    // Absent or unknown reads as ACTIVE — under-counting would wave through an
+    // add that really does overfill the roster.
+    expect(isActiveRosterStatus(undefined)).toBe(true);
+    expect(isActiveRosterStatus('')).toBe(true);
+    expect(isActiveRosterStatus('SOMETHING_NEW')).toBe(true);
+  });
+
+  it('extracts the active subset of an MFL roster list', () => {
+    const ids = activeRosterIdsOf([
+      { id: '1111', status: 'ROSTER' },
+      { id: '2222', status: 'INJURED_RESERVE' },
+      { id: '3333', status: 'TAXI_SQUAD' },
+      { id: '4444' },
+    ]);
+    expect([...ids].sort()).toEqual(['1111', '4444']);
+  });
+
+  it('lets a 16-man roster with two on IR add without dropping (the AFL bug)', () => {
+    const roster = [
+      ...Array.from({ length: 14 }, (_, i) => ({ id: `10${i}`, status: 'ROSTER' })),
+      { id: '17043', status: 'INJURED_RESERVE' },
+      { id: '15818', status: 'INJURED_RESERVE' },
+    ];
+    const injured = ctx({
+      rosterPlayerIds: new Set(roster.map((p) => p.id)),
+      activeRosterIds: activeRosterIdsOf(roster),
+      rosterLimit: 16,
+    });
+    expect(validateClaims([{ addPlayerId: '9001', bid: 425000 }], injured)).toEqual([]);
+  });
+
+  it('still refuses a no-drop add when the ACTIVE roster is full', () => {
+    const roster = [
+      ...Array.from({ length: 16 }, (_, i) => ({ id: `10${i}`, status: 'ROSTER' })),
+      { id: '17043', status: 'INJURED_RESERVE' },
+    ];
+    const full = ctx({
+      rosterPlayerIds: new Set(roster.map((p) => p.id)),
+      activeRosterIds: activeRosterIdsOf(roster),
+      rosterLimit: 16,
+    });
+    // 16/16, NOT 17/16 — the count the owner is shown must be the one the limit
+    // is measured against, or the message reads as a bug of its own.
+    expect(validateClaims([{ addPlayerId: '9001', bid: 425000 }], full).join())
+      .toMatch(/roster is full \(16\/16\)/);
+  });
+
+  it('refuses to free an active slot by dropping an IR player', () => {
+    const roster = [
+      ...Array.from({ length: 16 }, (_, i) => ({ id: `10${i}`, status: 'ROSTER' })),
+      { id: '17043', status: 'INJURED_RESERVE' },
+    ];
+    const full = ctx({
+      rosterPlayerIds: new Set(roster.map((p) => p.id)),
+      activeRosterIds: activeRosterIdsOf(roster),
+      rosterLimit: 16,
+    });
+    // The add lands on the ACTIVE roster, so dropping from IR leaves it at 17.
+    // MFL refuses that by silently re-rendering its own form.
+    expect(validateClaims([{ addPlayerId: '9001', bid: 425000, dropPlayerId: '17043' }], full).join())
+      .toMatch(/doesn't open an active spot/);
+    // …and dropping an active player is still fine.
+    expect(validateClaims([{ addPlayerId: '9001', bid: 425000, dropPlayerId: '100' }], full)).toEqual([]);
+  });
+
+  it('lets an IR player be dropped when the active roster has room', () => {
+    const roster = [
+      ...Array.from({ length: 15 }, (_, i) => ({ id: `10${i}`, status: 'ROSTER' })),
+      { id: '17043', status: 'INJURED_RESERVE' },
+    ];
+    const room = ctx({
+      rosterPlayerIds: new Set(roster.map((p) => p.id)),
+      activeRosterIds: activeRosterIdsOf(roster),
+      rosterLimit: 16,
+    });
+    expect(validateClaims([{ addPlayerId: '9001', bid: 425000, dropPlayerId: '17043' }], room)).toEqual([]);
+  });
+});
+
+describe('the write endpoint counts the ACTIVE roster, not the whole list', () => {
+  /**
+   * A scan guard, not a unit test: the rule above is only worth anything if the
+   * one production caller actually hands `validateClaims` MFL's statuses.
+   * `getRosters()` throws `status` away, and reaching for it here is exactly
+   * how the false "roster is full (16/16)" shipped.
+   */
+  const source = fs.readFileSync(
+    path.join(process.cwd(), 'src/pages/api/waiver-claim.ts'),
+    'utf-8'
+  );
+
+  it('reads rosters with their statuses', () => {
+    expect(source).toMatch(/getRosterEntries\(\)/);
+    expect(source).not.toMatch(/mflClient\.getRosters\(\)/);
+  });
+
+  it('passes the active subset into validateClaims', () => {
+    expect(source).toMatch(/activeRosterIds/);
+    expect(source).toMatch(/activeRosterIdsOf\(/);
   });
 });
 

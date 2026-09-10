@@ -22,6 +22,18 @@ export interface MFLApiConfig {
 /**
  * Raw MFL roster response
  */
+/**
+ * One roster slot as MFL reports it: a player id plus the bucket he sits in.
+ *
+ * `status` is `ROSTER`, `INJURED_RESERVE` or `TAXI_SQUAD`. Only `ROSTER`
+ * consumes one of the league's `rosterSize` slots — IR and taxi have their own
+ * limits (`injuredReserve`, `taxiSquad` on the league export).
+ */
+export interface RosterEntry {
+  id: string;
+  status: string;
+}
+
 interface MFLRosterResponse {
   rosters: {
     franchise: Array<{
@@ -234,7 +246,15 @@ export class MFLMatchupApiClient {
   }
 
   /**
-   * Fetch roster data for all teams.
+   * Fetch roster data for all teams, KEEPING MFL's per-player `status`.
+   *
+   * Prefer this over {@link getRosters} for anything that counts a roster
+   * against a limit. `status` is the only thing that separates the three
+   * buckets MFL keeps under one `<player>` list — `ROSTER`, `INJURED_RESERVE`
+   * and `TAXI_SQUAD` — and only the first consumes one of the league's
+   * `rosterSize` slots. Flattening them to ids reads a legal 14-of-16 roster
+   * with two players on IR as 16/16 full, which is exactly how the AFL's
+   * free-agent add refused every owner holding an injured player (2026-09-09).
    *
    * When an MFL_USER_ID cookie is configured, route through mflFetch() so the
    * Cookie header survives the api → www49 redirect (Node's undici strips
@@ -242,7 +262,7 @@ export class MFLMatchupApiClient {
    * that uses the result for auth-gated decisions like roster-membership
    * preflight on write endpoints.
    */
-  async getRosters(week?: number): Promise<Record<string, string[]>> {
+  async getRosterEntries(week?: number): Promise<Record<string, RosterEntry[]>> {
     const params: Record<string, string> = week ? { W: week.toString() } : {};
     const url = this.buildUrl('rosters', params);
 
@@ -266,16 +286,39 @@ export class MFLMatchupApiClient {
     const isFranchise = (x: unknown): x is RosterFranchise =>
       !!x && typeof x === 'object' && typeof (x as { id?: unknown }).id === 'string';
 
-    const rosters: Record<string, string[]> = {};
+    const rosters: Record<string, RosterEntry[]> = {};
     const raw: unknown = response.rosters?.franchise;
     const list: unknown[] = Array.isArray(raw) ? raw : raw ? [raw] : [];
     for (const item of list) {
       if (!isFranchise(item)) continue;
       // asArray: MFL collapses single-element arrays to a bare object, so a
       // one-player franchise anywhere in the league would otherwise throw.
-      rosters[item.id] = asArray(item.player).map((p) => p.id);
+      rosters[item.id] = asArray(item.player).map((p) => ({
+        id: String(p.id),
+        // MFL omits `status` for ordinary roster players in some exports, so
+        // absent means ACTIVE. Guessing the other way would under-count the
+        // roster and wave through an add that genuinely overfills it.
+        status: p.status ? String(p.status) : 'ROSTER',
+      }));
     }
 
+    return rosters;
+  }
+
+  /**
+   * Fetch roster data for all teams as bare player ids.
+   *
+   * OWNERSHIP ONLY — "who holds this player", where an IR or taxi-squad player
+   * counts exactly as much as a starter. Anything that measures a roster
+   * AGAINST A LIMIT must use {@link getRosterEntries} instead and filter on
+   * `status`; see that method for what flattening costs.
+   */
+  async getRosters(week?: number): Promise<Record<string, string[]>> {
+    const entries = await this.getRosterEntries(week);
+    const rosters: Record<string, string[]> = {};
+    for (const [id, players] of Object.entries(entries)) {
+      rosters[id] = players.map((p) => p.id);
+    }
     return rosters;
   }
 

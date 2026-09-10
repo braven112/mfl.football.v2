@@ -2,6 +2,14 @@
   "weekOf": "2026-09-21",
   "changes": [
     {
+      "date": "2026-09-10",
+      "type": "bug-fix",
+      "summary": "Anybody you have stashed on injured reserve no longer counts against your 16 active roster spots when you go to add a free agent. Owners carrying an injured player were being told \"your roster is full (16/16) — pick someone to drop\" with one or two active slots genuinely open, and the only way through was cutting somebody they did not need to cut. Roster space is now read the way MyFantasyLeague itself keeps it: IR and practice squad sit in their own slots, and only your active roster counts.",
+      "impact": "user",
+      "area": "free-agents",
+      "league": "both"
+    },
+    {
       "date": "2026-09-09",
       "type": "style-tweak",
       "summary": "The game line on <a href=\"/lineup\">Set Lineup</a> now leads with the network's logo at text size and closes on a bigger opponent helmet — the channel was reading as the headline.",
