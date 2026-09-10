@@ -330,7 +330,9 @@
         "src/utils/sunday-ticket-*",
         "src/components/shared/sunday-ticket/*",
         "src/hooks/useNfl*",
-        "src/hooks/useLiveScoring*"
+        "src/hooks/useLiveScoring*",
+        "src/components/shared/LiveScore*",
+        "src/pages/api/live-scoring.ts"
       ],
       "tests": [
         "tests/live-scoring-host-resolution.test.ts",
@@ -339,7 +341,8 @@
         "tests/nfl-live-routes.test.ts",
         "tests/live-scoring-snapshot.test.ts",
         "tests/sunday-ticket-live.test.ts",
-        "tests/nfl-scoreboard-cadence.test.ts"
+        "tests/nfl-scoreboard-cadence.test.ts",
+        "tests/live-scoring-self-fetch-guard.test.ts"
       ]
     },
     {
