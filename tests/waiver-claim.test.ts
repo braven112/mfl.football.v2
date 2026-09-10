@@ -244,6 +244,48 @@ describe('the write endpoint counts the ACTIVE roster, not the whole list', () =
   });
 });
 
+describe('the claim form says how much room there is BEFORE the owner submits', () => {
+  /**
+   * The server-side fix stops a legal add being refused; this stops the owner
+   * having to submit to find out. `/api/claim-context` is the ONLY source for
+   * the form — WaiverClaimModal is always mounted without an SSR config and
+   * configured at runtime — so the numbers have to travel on that payload.
+   */
+  const read = (rel: string) => fs.readFileSync(path.join(process.cwd(), rel), 'utf-8');
+  const context = read('src/utils/claim-context.ts');
+  const modal = read('src/components/shared/WaiverClaimModal.astro');
+
+  it('resolves the roster with statuses, not as bare ids', () => {
+    expect(context).toMatch(/getRosterEntries\(\)/);
+    expect(context).not.toMatch(/\}\)\.getRosters\(\)/);
+  });
+
+  it('ships the active count, the limit, and per-player active flags', () => {
+    expect(context).toMatch(/activeRosterCount:/);
+    expect(context).toMatch(/rosterLimit,/);
+    expect(context).toMatch(/active: activeIds\.has\(/);
+  });
+
+  it('renders an open-slot line off those numbers', () => {
+    expect(modal).toMatch(/wcm-drop-hint/);
+    expect(modal).toMatch(/open active/);
+    expect(modal).toMatch(/cfg\.activeRosterCount/);
+    expect(modal).toMatch(/cfg\.rosterLimit/);
+  });
+
+  it('marks injured-reserve players in the drop picker', () => {
+    // Droppable, but dropping one does not open an active spot — the picker
+    // has to make that visible or the label is a trap.
+    expect(modal).toMatch(/\(IR\)/);
+  });
+
+  it('never invents a limit the server could not resolve', () => {
+    // Both numbers optional, and the line goes BLANK rather than guessing —
+    // a made-up "16" reads as authoritative.
+    expect(modal).toMatch(/slotsKnown/);
+  });
+});
+
 describe('priority waivers (AFL) — no bidding', () => {
   const PRIORITY = { ...RULES, system: 'priority' as const, blindBid: false, minimum: 0, increment: 1 };
 

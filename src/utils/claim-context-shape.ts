@@ -26,8 +26,28 @@ export interface ClaimContext {
   system: 'bbid' | 'priority';
   franchiseId: string | null;
   rules: WaiverBidRules;
-  roster: Array<{ id: string; name: string }>;
+  /**
+   * The viewer's own players, drop-picker order.
+   *
+   * `active` is MFL's `status === 'ROSTER'`. It rides along per player rather
+   * than as a second list because the picker offers ALL of them — an injured
+   * player is perfectly droppable — but only the active ones free a slot, and
+   * the form has to be able to say which is which.
+   */
+  roster: Array<{ id: string; name: string; active: boolean }>;
   year: number;
+  /**
+   * How many of the viewer's players occupy a league roster slot, and how many
+   * slots there are (`rosterSize`).
+   *
+   * IR and taxi squad are NOT counted — they sit under their own MFL limits.
+   * Together these are what lets the form say "1 open active spot" before the
+   * owner submits, instead of leaving them to discover it from a rejection.
+   * Absent when the MFL read degraded; the form then says nothing rather than
+   * guessing.
+   */
+  activeRosterCount?: number;
+  rosterLimit?: number;
   balance?: number;
   windowMode: WaiverMode;
   windowLabel: string;

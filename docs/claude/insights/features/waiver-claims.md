@@ -964,3 +964,13 @@ Guards: `tests/waiver-claim.test.ts` — the unit rules plus a scan asserting th
 write endpoint actually calls `getRosterEntries()` and passes the active subset,
 because the rule is worthless if the one production caller reaches for the
 flattened list again.
+
+**And the form now says it before the owner submits.** `/api/claim-context`
+carries `activeRosterCount` + `rosterLimit` (and `active` per roster player),
+so the modal opens on "1 open active spot (15/16) — you can add without
+dropping", marks IR players `(IR)` in the drop picker, and warns the moment a
+full-roster owner selects one. Both numbers are optional and the line renders
+BLANK when the MFL read degraded — a made-up limit reads as authoritative.
+WaiverClaimModal is always mounted with NO SSR config (only PlayerDetailsModal
+mounts it, bare) and configured at runtime, so `/api/claim-context` is the one
+place these can come from.

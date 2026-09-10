@@ -26,8 +26,16 @@ export interface WaiverClaimConfig {
   system: 'bbid' | 'priority';
   franchiseId: string | null;
   rules: { minimum: number; increment: number; conditional: boolean; maxRounds: number };
-  roster: Array<{ id: string; name: string }>;
+  /** `active` is MFL's `status === 'ROSTER'` — see ClaimContext#roster. */
+  roster: Array<{ id: string; name: string; active?: boolean }>;
   year: number;
+  /**
+   * Active players / league `rosterSize`, so the form can say how much room
+   * there is BEFORE the owner submits. Both absent on a degraded MFL read, and
+   * the slot line then renders empty rather than guessing.
+   */
+  activeRosterCount?: number;
+  rosterLimit?: number;
   /** Remaining blind-bid budget, for the hint line. Omitted on priority leagues. */
   balance?: number;
   /** Live waiver window from MFL's calendar: 'waiver' | 'fcfs' | 'unknown'. */
@@ -95,6 +103,7 @@ const windowLabel = config?.windowLabel ?? '';
       <select id="wcm-drop">
         <option value="0000">Nobody &mdash; add without dropping</option>
       </select>
+      <p class="wcm-hint" id="wcm-drop-hint"></p>
     </div>
 
     <div class="wcm-field">
@@ -171,6 +180,7 @@ const windowLabel = config?.windowLabel ?? '';
     const bidInput = document.getElementById('wcm-bid') as HTMLInputElement;
     const bidHint = document.getElementById('wcm-bid-hint')!;
     const dropSel = document.getElementById('wcm-drop') as HTMLSelectElement;
+    const dropHint = document.getElementById('wcm-drop-hint');
     const roundSel = document.getElementById('wcm-round') as HTMLSelectElement;
     const roundHint = document.getElementById('wcm-round-hint')!;
     const errBox = document.getElementById('wcm-error')!;
@@ -229,12 +239,53 @@ const windowLabel = config?.windowLabel ?? '';
     // doubled drop list is a silent, awful bug and the reset costs nothing.
     dropSel.querySelectorAll('option[value]:not([value="0000"])').forEach((o) => o.remove());
     roundSel.replaceChildren();
-    for (const p of cfg.roster) {
+    // Who is droppable is EVERYONE; who frees an active slot is only the
+    // active. The picker offers both and marks the difference, because a
+    // roster at the limit is not helped by dropping from IR — the add lands on
+    // the ACTIVE roster, so the result is still over. See the same rule,
+    // server-side, in validateClaims.
+    const rosterOptions = cfg.roster as Array<{ id: string; name: string; active?: boolean }>;
+    const irIds = new Set(rosterOptions.filter((p) => p.active === false).map((p) => p.id));
+    for (const p of rosterOptions) {
       const opt = document.createElement('option');
       opt.value = p.id;
-      opt.textContent = p.name;
+      opt.textContent = irIds.has(p.id) ? `${p.name} (IR)` : p.name;
       dropSel.appendChild(opt);
     }
+
+    /**
+     * How much room the viewer actually has, said BEFORE they submit.
+     *
+     * Silent when the server could not resolve either number — a made-up
+     * limit reads as authoritative and is worse than nothing.
+     */
+    const activeCount = cfg.activeRosterCount;
+    const rosterLimit = cfg.rosterLimit;
+    const slotsKnown = typeof activeCount === 'number' && typeof rosterLimit === 'number';
+    const openSlots = slotsKnown ? Math.max(0, rosterLimit! - activeCount!) : null;
+    const updateDropHint = () => {
+      if (!dropHint) return;
+      if (!slotsKnown) {
+        dropHint.textContent = '';
+        return;
+      }
+      if (openSlots === 0 && irIds.has(dropSel.value)) {
+        dropHint.textContent =
+          `Dropping from injured reserve doesn't open an active spot — your active roster is ${activeCount}/${rosterLimit}. Pick someone off it.`;
+        dropHint.classList.add('wcm-hint--warn');
+        return;
+      }
+      dropHint.classList.remove('wcm-hint--warn');
+      dropHint.textContent =
+        openSlots === 0
+          ? `Active roster full (${activeCount}/${rosterLimit}) — pick someone to drop.`
+          : `${openSlots} open active ${openSlots === 1 ? 'spot' : 'spots'} (${activeCount}/${rosterLimit}) — you can add without dropping.`;
+    };
+    updateDropHint();
+    // Assigned, not addEventListener: this block is defensively re-runnable
+    // (see the drop-list reset above), and a stacked handler is the same class
+    // of bug as a doubled option list.
+    dropSel.onchange = updateDropHint;
     for (let r = 1; r <= cfg.rules.maxRounds; r++) {
       const opt = document.createElement('option');
       opt.value = String(r);
@@ -295,6 +346,9 @@ const windowLabel = config?.windowLabel ?? '';
 
       if (isBid) bidInput.value = String(cfg.rules.minimum);
       dropSel.value = '0000';
+      // The picker resets to "nobody", so the slot line has to reset with it —
+      // otherwise the last player's IR warning greets the next one.
+      updateDropHint();
       showError('');
       reset();
       dlg.showModal();
@@ -563,6 +617,7 @@ const windowLabel = config?.windowLabel ?? '';
      is defined in BOTH tokens.css (#d97706) and tokens-dark.css (#fcd34d), so
      it reads correctly in each theme. */
   .wcm-error--warn { color: var(--color-warning-dark, #b45309); }
+  .wcm-hint--warn { color: var(--color-warning-dark, #b45309); }
   .wcm-confirm { margin: 0.6rem 0 0; font-size: 0.8rem; }
   .wcm-confirm a {
     color: var(--league-accent, var(--color-primary, #1c497c));
