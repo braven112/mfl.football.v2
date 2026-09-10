@@ -30,6 +30,7 @@ which no per-PR review can see by construction.
 | Staging infra | **Same Vercel project, staging subdomains** [DECIDED — built in #1047] |
 | Chromatic | **Runs on the promotion to prod, not on feature builds** [DECIDED] |
 | Weekly review | **A code-efficiency and reuse pass over the whole week's diff** [DECIDED] |
+| Staging database | **Shared with production — no separate Upstash DB** [DECIDED] |
 
 ## What #1047 already gives us
 
@@ -246,20 +247,55 @@ production's secrets can:
 
 None of that is hypothetical: the app has working write paths for all four.
 
-Vercel scopes environment variables per environment, so the lever exists —
-Preview-scoped values differ from Production-scoped ones. What needs deciding:
+Vercel scopes environment variables per environment, so the lever exists for
+each of these independently.
 
-**[OPEN]** Separate Upstash database for Preview, or shared? Separate is safer
-and means staging can't corrupt the Board; shared means staging shows real data,
-which is most of what makes staging useful for a data-heavy site. A middle path
-is a shared *read* connection and a code-level refusal to write.
+### The database is shared [DECIDED]
 
-**[OPEN, strongly recommended regardless]** A single `isStagingDeploy()`
-predicate in the registry or a util, derived from the request host matching a
+Staging reads and writes **production's Upstash**. No separate DB. That is the
+right call for a data-heavy site — a staging environment showing empty rosters
+and an empty Board tests almost nothing — but it has one consequence that
+reshapes several other decisions in this plan, so it needs stating outright:
+
+> **Staging code runs up to a week ahead of production code, against the same
+> data.** Every release cycle, staging writes shapes that production code must
+> be able to read.
+
+That makes **expand/contract mandatory, not advisory**. Any change to a stored
+shape must: write both old and new, read the new, and drop the old *a release
+later*. A staging feature that writes a shape only staging understands corrupts
+production for a week — and it will look like a production bug, because it is
+one, in code that didn't change.
+
+Three consequences worth carrying forward:
+
+1. **Rollback gets more fragile, not less.** Reverting production code to last
+   Tuesday's deployment lands it on data written by this Tuesday's code. Under
+   expand/contract that's survivable; without it, rollback breaks the site.
+2. **The weekly review needs a stored-shape lens.** Any new or changed Redis key
+   shape in the week's diff is a release-blocking question: can current
+   production code read this? Worth adding explicitly to `/release-review`.
+3. **Owner-visible writes from staging are real.** A test post on the Board, a
+   test poll ballot, a test watch-list entry — owners see them in production.
+   Discipline, not tooling, unless a specific surface proves it needs a guard.
+
+### Outbound writes must be blocked [OPEN — recommended]
+
+Reads and Redis writes are the accepted trade above. Everything that leaves the
+system is not, because none of it can be undone:
+
+- **MFL writes** — lineups, contracts, waivers, in the real league.
+- **Push notifications** — production VAPID keys, real owners' devices.
+- **GroupMe posts.**
+- **Suggestion-box GitHub issue filing.**
+
+One `isStagingDeploy()` predicate, derived from the request host matching a
 `stagingDomains` entry — **not** from `VERCEL_ENV`, since every PR preview is
-also `preview`. Everything that reaches the outside world checks it and refuses:
-MFL writes, GroupMe posts, push sends. One predicate, one guard test that fails
-if a new outbound path skips it. This is the `/guard-test` shape exactly.
+also `preview`. Each of the four paths checks it and refuses. One guard test
+that fails when a new outbound path skips the check; this is the `/guard-test`
+shape exactly.
+
+This is the one item that should block inviting anyone onto staging.
 
 Also needed, smaller:
 
@@ -303,10 +339,10 @@ one named procedure, not rediscovered under pressure.
 
 What rollback does **not** undo, and what therefore needs forward-fix planning:
 
-- **Redis writes.** A release that changes a stored shape leaves the new shape
-  behind. Any such change should be expand/contract — write both shapes, read
-  the new one, drop the old a release later — so that a rollback lands on data
-  the old code can still read.
+- **Redis writes.** Sharpened by the shared-database decision above: a rollback
+  lands production code on data that a week of staging code has already been
+  writing. Expand/contract is what makes rollback survivable, which is why it is
+  a requirement here rather than a recommendation.
 - **MFL writes.** Irreversible by definition. This is an argument for gating any
   new MFL write path behind a code-level flag that ships off and is turned on in
   a separate release.
@@ -354,9 +390,11 @@ Ranked by what this repo specifically lacks, not by general merit.
    promoted, the review findings deferred, and what to watch. Cheap, and it is
    what makes a post-incident "what shipped Tuesday?" answerable in a minute.
 
-7. **Expand/contract for every stored-shape change.** Stated under Rollback, but
-   it deserves to be a rule rather than a reminder — it is the difference
-   between rollback working and rollback making things worse.
+7. **Expand/contract for every stored-shape change.** No longer in this list as
+   a suggestion — the shared-database decision promotes it to a hard
+   requirement, and `/release-review` step 1b is where it gets enforced. Listed
+   here only so the reason travels with the other practices: it is the
+   difference between rollback working and rollback making things worse.
 
 8. **A staleness rule for `staging`.** A feature that sits unmerged on staging
    for three weeks is a merge conflict factory and a review blind spot.
