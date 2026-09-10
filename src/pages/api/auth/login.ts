@@ -5,10 +5,24 @@ import { setTheLeaguePreference, setAFLPreference, setBestBall1Preference, getAF
 import { json } from '../../../utils/api-response';
 import { getLeagueBySlug } from '../../../config/leagues';
 import { captureCredential } from '../../../utils/autocut-storage';
+import { checkRateLimit } from '../../../utils/rate-limit';
+import { getClientIp } from '../../../utils/client-ip';
 
 const AFL_LEAGUE_ID = getLeagueBySlug('afl-fantasy')!.id;
 const THELEAGUE_ID = getLeagueBySlug('theleague')!.id;
 const BB1_LEAGUE_ID = getLeagueBySlug('best-ball-1')!.id;
+
+/**
+ * Per-IP login throttle. This is the ONE endpoint an unauthenticated caller
+ * can use to make us relay credential guesses to MFL, so the limit is keyed
+ * on the client IP rather than a franchiseId — there is no session yet.
+ *
+ * Generous on purpose: a real owner mistyping a password a few times must
+ * never be locked out, while 10 tries per quarter hour makes stuffing a list
+ * of any size impractical.
+ */
+const LOGIN_MAX_ATTEMPTS = 10;
+const LOGIN_WINDOW_SECONDS = 15 * 60;
 
 export const POST: APIRoute = async ({ request, cookies }) => {
   try {
@@ -18,6 +32,37 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     // Validate inputs
     if (!username || !password) {
       return json({ success: false, message: 'Username and password are required' }, 400);
+    }
+
+    // Throttle BEFORE the MFL call, not after. The point is to stop an
+    // unauthenticated caller relaying unlimited guesses through us to MFL;
+    // checking afterwards would still hand MFL every attempt.
+    //
+    // Counts every attempt, not just failures, because a failure is only
+    // known after the call we are trying to avoid making.
+    //
+    // FAILS OPEN (checkRateLimit returns allowed on a Redis error), and no IP
+    // means no key to count against, so both degrade to today's behaviour
+    // rather than locking every owner out of the site when Upstash hiccups.
+    // The un-spoofable, dependency-free layer is the Cloudflare rate-limiting
+    // rule at the edge; this is defence in depth behind it.
+    const clientIp = getClientIp(request);
+    if (clientIp) {
+      const { allowed } = await checkRateLimit(
+        'login',
+        clientIp,
+        LOGIN_MAX_ATTEMPTS,
+        LOGIN_WINDOW_SECONDS,
+      );
+      if (!allowed) {
+        return json(
+          {
+            success: false,
+            message: 'Too many login attempts. Wait a few minutes and try again.',
+          },
+          429,
+        );
+      }
     }
 
     // Authenticate with MFL — year override lets AFL pass 2025 because
