@@ -3082,7 +3082,7 @@ to knock it off the line), but write it down as a guard, not as the fix.
 
 ---
 
-## 2026-09-11 - A franchise mark is a LOGO, not an avatar — `contain`, never `cover`
+## 2026-09-10 - A franchise mark is a LOGO, not an avatar — `contain`, never `cover`
 
 **Context:** An owner reported that "some of the team icons" on Owner Activity
 had circle crops. Some did and some did not, which is what made it look like a
