@@ -2765,7 +2765,10 @@ const grandTotal = allPrizes.reduce((sum, p) => sum + p.amount, 0);
         const controller = new AbortController();
         const timer = setTimeout(() => controller.abort(), 5000);
         try {
-          const url = `/api/live-scoring?week=${week}&year=${year}&L=${leagueId}&host=${encodeURIComponent(host)}`;
+          // `L` ALONE — never a `host` param. The route resolves a known
+          // league id to its registry host outright, and a `host=<hostname>`
+          // param on a public URL reads like SSRF to a WAF (2026-09-03).
+          const url = `/api/live-scoring?week=${week}&year=${year}&L=${leagueId}`;
           const res = await fetch(url, { signal: controller.signal });
           if (!res.ok) throw new Error(`liveScoring ${week} ${res.status}`);
           const data = await res.json();

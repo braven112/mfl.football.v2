@@ -23,7 +23,7 @@
  * couldn't reach ESPN". The first is silence; the second says so out loud.
  */
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import type {
   LivePlayerRow,
   LiveScoringPageProps,
@@ -57,7 +57,7 @@ import {
   type LineupSlotRules,
   type LiveMoment,
 } from '../../utils/live-scoring-view';
-import { useNflScoreboard } from '../../hooks/useNflScoreboard';
+import { POLL_LIVE, POLL_STALE, shouldPollLive, useNflScoreboard } from '../../hooks/useNflScoreboard';
 import { useNflGameDetail } from '../../hooks/useNflGameDetail';
 import type { PollStatus } from '../../utils/live-poll-store';
 import { normalizeTeamCode } from '../../utils/nfl-logo';
@@ -65,15 +65,34 @@ import { nflLogoErrorHandler, nflLogoLoadHandler, nflLogoRefCallback } from '../
 import { getPlayerAvatarBackground, getPlayerAvatarBorder, getPlayerAvatarRing, getPlayerAvatarRingDark } from '../../utils/nfl-team-colors';
 import { resolveTeamColorPair } from '../../utils/team-color-contrast';
 
-const POLL_LIVE = 60_000;
-const POLL_STALE = 300_000;
 /** Weeks offered in the week selector (regular season 1–18). */
 const MAX_WEEK = 18;
 
 // ── polling ──
 
-function useLiveScoring(props: LiveScoringPageProps) {
-  const { week, year, leagueId, host, isLive } = props;
+/**
+ * The MFL half of the board.
+ *
+ * `enabled` / `live` are SEPARATE on purpose, and that separation is the bug
+ * this signature was rewritten for. Polling used to be gated on `props.isLive`
+ * alone — `getDailySlot(now).slot === 'live-scoring'`, a HERO schedule that
+ * knows about Thursday, Sunday and Monday and nothing else. On the 2026 season
+ * opener, a WEDNESDAY night game, that flag was false, so the board never
+ * polled MFL once: it rendered whatever the server handed it and froze there
+ * for the whole game.
+ *
+ * A day-of-week schedule can say "probably fast" or "probably slow". It can
+ * never say "there is nothing to poll" — only the NFL slate and the demo flag
+ * can (docs/claude/rules/live-scoring.md: a server-computed live hint may only
+ * RAISE a cadence, never lower it). So `enabled` follows the DATA (off only in
+ * bundled-sample mode, where a live fetch would overwrite the replay) and
+ * `live` is cadence alone: fast while a real game is being played, slow
+ * otherwise. A page opened at the wrong hour is now at worst five minutes
+ * behind, never permanently blank.
+ */
+function useLiveScoring(props: LiveScoringPageProps, opts: { enabled: boolean; live: boolean }) {
+  const { week, year, leagueId } = props;
+  const { enabled, live } = opts;
   const [scores, setScores] = useState<Record<string, number>>(props.initialScores ?? {});
   const [remaining, setRemaining] = useState<Record<string, number>>(props.initialRemaining ?? {});
   const [matchups, setMatchups] = useState<MatchupPairing[]>(props.matchups ?? []);
@@ -84,15 +103,17 @@ function useLiveScoring(props: LiveScoringPageProps) {
   // ESPN store uses: `fetchedAt` only ever advances on a SUCCESSFUL poll, and
   // a failure flips `status` without touching the data we already hold.
   const [feed, setFeed] = useState<FeedSnapshot>({ status: 'idle', fetchedAt: 0 });
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const poll = useCallback(async () => {
     try {
       const url = new URL('/api/live-scoring', window.location.origin);
       url.searchParams.set('week', String(week));
       url.searchParams.set('year', String(year));
+      // `L` ALONE — never a `host` param. The route resolves a known league id
+      // to its registry host outright, and a `host=<hostname>` param on a
+      // public URL reads like SSRF to a WAF: the gameday health check's probes
+      // were 403'd at the EDGE and never reached the route (2026-09-03).
       url.searchParams.set('L', leagueId);
-      url.searchParams.set('host', `https://${host}`);
       const res = await fetch(url.toString());
       if (!res.ok) {
         setFeed((f) => ({ ...f, status: 'error' }));
@@ -134,23 +155,21 @@ function useLiveScoring(props: LiveScoringPageProps) {
       /* retry next tick — keep the last good scores, say we're reconnecting */
       setFeed((f) => ({ ...f, status: 'error' }));
     }
-  }, [week, year, leagueId, host]);
+  }, [week, year, leagueId]);
+
+  // A finished slate ends the fast cadence even while the caller still says
+  // live — the same rule the ESPN half applies. `remaining` is MFL's own
+  // game-seconds, so this is the feed's word, not the clock's.
+  const allFinal = Object.keys(remaining).length > 0
+    && Object.values(remaining).every((r) => r === 0);
+  const interval = live && !allFinal ? POLL_LIVE : POLL_STALE;
 
   useEffect(() => {
-    if (!isLive) return;
+    if (!enabled) return;
     poll();
-    intervalRef.current = setInterval(poll, POLL_LIVE);
-    return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
-  }, [isLive, poll]);
-
-  useEffect(() => {
-    if (!isLive) return;
-    const allDone = Object.keys(remaining).length > 0 && Object.values(remaining).every((r) => r === 0);
-    if (allDone && intervalRef.current) {
-      clearInterval(intervalRef.current);
-      intervalRef.current = setInterval(poll, POLL_STALE);
-    }
-  }, [remaining, isLive, poll]);
+    const id = setInterval(poll, interval);
+    return () => clearInterval(id);
+  }, [enabled, poll, interval]);
 
   return { scores, remaining, matchups, players, bench, ytp, feed };
 }
@@ -834,7 +853,6 @@ export default function LiveScoreboard(props: LiveScoringPageProps) {
     required: { QB: 1, RB: 1, WR: 1, TE: 1, PK: 1, DEF: 1 },
     total: 9,
   };
-  const { scores, remaining, matchups, players, bench, ytp, feed: mflFeed } = useLiveScoring(props);
   const [selected, setSelected] = useState<MatchupPairing | null>(null);
 
   // ── real NFL context (ESPN) ──
@@ -844,12 +862,25 @@ export default function LiveScoreboard(props: LiveScoringPageProps) {
   // pollers running so the real slate drives clocks, red zone and box scores.
   const espnEnabled = !props.demo || !!props.demoLiveNfl;
   const {
-    byTeam: gamesByTeam, anyLive: anyNflGameLive, espnSlot,
+    games: nflSlate, byTeam: gamesByTeam, anyLive: anyNflGameLive, espnSlot,
     status: nflStatus, fetchedAt: nflFetchedAt, liveCount: nflLiveCount,
   } = useNflScoreboard(props.week, props.year, {
     enabled: espnEnabled,
     live: props.isLive,
     fallbackGames: props.initialNflGames,
+  });
+
+  // The MFL half runs whenever there is anything real to poll — every mode
+  // except the bundled sample, whose replay a live fetch would overwrite
+  // (?demo=live included: MFL serves nothing before the season starts). Its
+  // CADENCE comes from the NFL slate, not from the page's game-day window:
+  // `shouldPollLive` reads the real clock, so a Wednesday opener, a flexed
+  // kickoff or any other game the hero schedule has never heard of still puts
+  // the board on the fast loop.
+  const mflEnabled = !props.demo;
+  const { scores, remaining, matchups, players, bench, ytp, feed: mflFeed } = useLiveScoring(props, {
+    enabled: mflEnabled,
+    live: shouldPollLive(nflSlate, props.isLive),
   });
   const detail = useNflGameDetail(props.week, props.year, {
     enabled: espnEnabled,
@@ -863,13 +894,13 @@ export default function LiveScoreboard(props: LiveScoringPageProps) {
   // one off, because MFL serves nothing before the season starts).
   const feeds = useMemo<FeedSnapshot[]>(() => {
     const out: FeedSnapshot[] = [];
-    if (props.isLive) out.push(mflFeed);
+    if (mflEnabled) out.push(mflFeed);
     if (espnEnabled) {
       out.push({ status: nflStatus, fetchedAt: nflFetchedAt });
       out.push({ status: detail.status, fetchedAt: detail.fetchedAt });
     }
     return out;
-  }, [props.isLive, mflFeed, espnEnabled, nflStatus, nflFetchedAt, detail.status, detail.fetchedAt]);
+  }, [mflEnabled, mflFeed, espnEnabled, nflStatus, nflFetchedAt, detail.status, detail.fetchedAt]);
 
   // Scoring plays, DERIVED rather than accumulated: /api/nfl-game-detail
   // returns the whole slate's scoring plays on every poll, so recomputing is

@@ -15,6 +15,7 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { getPlayer } from './player-map';
+import { loadLiveScoringPayload } from './live-scoring-source';
 import { resolveThrowbackIdentity, type ThrowbackPick } from './throwback-identity';
 import { DEFAULT_THROWBACK_SCOPE, type ThrowbackScope } from './throwback-scope';
 import type { FranchiseHistoryEntry } from './team-names';
@@ -120,8 +121,11 @@ export interface LiveScoringData {
 }
 
 export interface AssembleOpts {
-  /** Astro.url — provides the origin for the internal API fetch. */
-  siteUrl: URL;
+  /**
+   * Astro.url. No longer used to fetch anything — the snapshot is read from
+   * MFL in-process — but kept optional so the page routes need not change.
+   */
+  siteUrl?: URL;
   week: number;
   year: number;
   leagueId: string;
@@ -231,16 +235,23 @@ export function buildPlayerMeta(
   return meta;
 }
 
-/** Fetch the initial live snapshot from our own API (server-side). */
+/**
+ * The initial live snapshot, read from MFL IN-PROCESS.
+ *
+ * This used to fetch our OWN `/api/live-scoring` over the public internet
+ * during SSR, which put our edge in the path of the page's first paint — and
+ * on 2026-09-09 that hop started failing silently, so the board rendered with
+ * no matchups at all while the same route answered every external caller
+ * correctly. `loadLiveScoringPayload` is the route's own body, so this is the
+ * same payload with one hop instead of three.
+ */
 async function fetchInitialSnapshot(opts: AssembleOpts) {
-  const api = new URL('/api/live-scoring', opts.siteUrl);
-  api.searchParams.set('week', String(opts.week));
-  api.searchParams.set('year', String(opts.year));
-  api.searchParams.set('L', opts.leagueId);
-  api.searchParams.set('host', `https://${opts.host}`);
-  const res = await fetch(api);
-  if (!res.ok) throw new Error(`live-scoring api ${res.status}`);
-  return res.json();
+  return loadLiveScoringPayload({
+    leagueId: opts.leagueId,
+    year: opts.year,
+    week: opts.week,
+    host: `https://${opts.host}`,
+  });
 }
 
 /** Assemble the full page dataset. Best-effort: never throws to the page. */

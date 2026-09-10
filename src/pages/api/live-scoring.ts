@@ -1,8 +1,7 @@
 import type { APIRoute } from 'astro';
 import { getCurrentSeasonYear } from '../../utils/league-year';
 import { ALL_LEAGUES, getLeagueById, getLeagueBySlug, DEFAULT_LEAGUE_SLUG } from '../../config/leagues';
-import { buildMflExportUrl } from '../../utils/mfl-url';
-import { emptyLiveSnapshot, parseLiveScoringPayload } from '../../utils/live-scoring-snapshot';
+import { loadLiveScoringPayload } from '../../utils/live-scoring-source';
 
 export const prerender = false;
 
@@ -87,102 +86,14 @@ export const GET: APIRoute = async ({ url }) => {
   const host = resolveHost(url.searchParams.get('host'), leagueId);
 
   try {
-    // Fetch both live scoring AND playoff brackets to get all scores
-    const [liveScoreResponse, playoffBracketsResponse] = await Promise.all([
-      // DETAILS=1 so each franchise carries its per-player breakdown
-      // (players.player[] with id, score, gameSecondsRemaining, status).
-      fetch(buildMflExportUrl({ type: 'liveScoring', leagueId, year, params: { W: week, DETAILS: 1 }, host }), {
-        headers: { 'User-Agent': 'Mozilla/5.0 (compatible; FantasyLeague/1.0)' },
-      }),
-      fetch(buildMflExportUrl({ type: 'playoffBrackets', leagueId, year, host }), {
-        headers: { 'User-Agent': 'Mozilla/5.0 (compatible; FantasyLeague/1.0)' },
-      }),
-    ]);
-
-    // `.json()` REJECTS on a non-JSON body, and MFL answers a throttled or
-    // errored request with an HTML page under a 200 often enough that this is
-    // a real path, not a hypothetical. Without the catch it escapes to the
-    // outer handler and the route 500s — turning a condition the whole design
-    // degrades gracefully from ("no live data, keep what you have") into a
-    // hard failure. `parseLiveScoringPayload` takes null and yields an empty
-    // snapshot, which is the honest answer.
-    const snapshot = liveScoreResponse.ok
-      ? parseLiveScoringPayload(await liveScoreResponse.json().catch(() => null))
-      : emptyLiveSnapshot();
-    const { scores, remaining, matchups, players, bench, playersYetToPlay } = snapshot;
-
-    // Process playoff bracket data (playoff games)
-    if (playoffBracketsResponse.ok) {
-      const playoffData = await playoffBracketsResponse.json();
-      const bracketIds = playoffData?.playoffBrackets?.playoffBracket;
-
-      if (bracketIds) {
-        const brackets = Array.isArray(bracketIds) ? bracketIds : [bracketIds];
-
-        // Fetch each bracket's detailed data
-        const bracketPromises = brackets.map((bracket: any) =>
-          fetch(
-            buildMflExportUrl({ type: 'playoffBracket', leagueId, year, params: { BRACKET_ID: bracket.id }, host }),
-            { headers: { 'User-Agent': 'Mozilla/5.0 (compatible; FantasyLeague/1.0)' } }
-          )
-        );
-
-        const bracketResponses = await Promise.all(bracketPromises);
-
-        for (const response of bracketResponses) {
-          if (!response.ok) continue;
-
-          const bracketData = await response.json();
-          const rounds = bracketData?.playoffBracket?.playoffRound;
-          if (!rounds) continue;
-
-          const roundsArray = Array.isArray(rounds) ? rounds : [rounds];
-
-          // Find the round for the requested week
-          const weekRound = roundsArray.find((r: any) => r.week === String(week));
-          if (!weekRound) continue;
-
-          const games = weekRound.playoffGame;
-          const gamesArray = Array.isArray(games) ? games : [games];
-
-          // Extract scores and pairings from playoff games
-          gamesArray.forEach((game: any) => {
-            const homeId = game.home?.franchise_id ? String(game.home.franchise_id) : null;
-            const awayId = game.away?.franchise_id ? String(game.away.franchise_id) : null;
-
-            if (homeId && game.home?.points) {
-              scores[homeId] = Number(game.home.points) || 0;
-              remaining[homeId] = 0;
-            }
-            if (awayId && game.away?.points) {
-              scores[awayId] = Number(game.away.points) || 0;
-              remaining[awayId] = 0;
-            }
-
-            // Extract playoff matchup pairing
-            if (homeId && awayId) {
-              matchups.push({ home: homeId, away: awayId });
-            }
-          });
-        }
-      }
-    }
+    // Read MFL DIRECTLY through the shared loader. This route and the
+    // live-scoring page both call it, so the fetch + playoff-bracket merge has
+    // one implementation and the page no longer fetches this route over the
+    // public internet to render itself (see live-scoring-source.ts).
+    const payload = await loadLiveScoringPayload({ leagueId, year, week, host });
 
     return new Response(
-      JSON.stringify({
-        // Whether the upstream MFL liveScoring request itself succeeded. An
-        // offseason feed is a healthy 200 with empty collections (ok:true);
-        // an upstream outage is skipped above but must not read as "no games"
-        // — callers (the offseason auto-demo) use this to tell the two apart.
-        ok: liveScoreResponse.ok,
-        week: Number(week),
-        scores,
-        remaining,
-        matchups,
-        players,
-        bench,
-        playersYetToPlay,
-      }),
+      JSON.stringify(payload),
       {
         status: 200,
         headers: {
