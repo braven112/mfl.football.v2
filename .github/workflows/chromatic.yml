@@ -229,7 +229,23 @@ on:
   #
   # The `visual-check` label forces a run on demand (remove and re-add to
   # re-run) for a diff the paths list does not match.
+  #
+  # `branches: [main]` — DELIBERATELY not `[main, staging]`, unlike ci.yml and
+  # codeql.yml. Every other check gates a merge into `staging` because that
+  # branch is production-level; visual review is the one exception, and it is a
+  # cost decision, not an oversight. Snapshots are the scarce resource here (see
+  # the burn numbers above, against a 5,000/month plan), so the whole week's
+  # diffs are reviewed once on the promotion PR — `staging` → `main`, which
+  # matches this filter — instead of per feature PR.
+  #
+  # The accepted cost: a visual regression can sit on the staging hosts, which
+  # real owners use, until Tuesday. `/release-review` step 6c compensates by
+  # naming which commits in the range touched the story import closure, so the
+  # promotion's batch of diffs can be attributed to features rather than
+  # guessed at. Use the `visual-check` label on any feature PR where an earlier
+  # look is worth a build.
   pull_request:
+    branches: [main]
     types: [opened, ready_for_review, labeled, synchronize]
     paths:
       # Components a story renders.

@@ -160,19 +160,33 @@ a month.
 
 Concrete, and none of them are optional — several are silent failures.
 
-### CI does not currently run on `staging` PRs
+### CI on `staging` PRs — **done**
 
-`ci.yml` and `codeql.yml` both declare `pull_request: branches: [main]`. A PR
-targeting `staging` runs **neither**. Both need `[main, staging]`. Until that
-lands, every feature PR ships with no unit tests and no security scan — strictly
-worse than today.
+`ci.yml` and `codeql.yml` both declared `pull_request: branches: [main]`, so a
+PR targeting `staging` would have run **neither** — every feature PR merging
+with no unit tests and no security scan, which is strictly worse than no train
+at all. Both are now `[main, staging]`.
 
-`mfl-integration-test.yml` and `pr-external-review.yml` need the same audit.
+CodeQL's `push` trigger stays main-only on purpose: that run populates the
+Security tab baseline for the default branch, and a second branch scanning into
+the same tab duplicates alerts for code about to fast-forward into main anyway.
+The PR trigger is what gates the merge.
 
-### Chromatic moves to the promotion
+Audited and needing no change: `mfl-integration-test.yml` and
+`pr-external-review.yml` both declare `pull_request` with no `branches` filter
+(path-filtered and label-triggered respectively), so they already cover
+`staging` PRs.
 
-Currently: path-filtered on PRs into any branch, plus `push` to `main` with
-`--auto-accept-changes`. Under the train, per Brandon's call:
+**Branch protection is the other half.** Required status checks only work once
+the workflow actually triggers on the branch — a check required but never
+reported leaves the PR blocked forever rather than protected. Wire the required
+checks for `staging` only now that these triggers exist.
+
+### Chromatic moves to the promotion — **done**
+
+Its `pull_request` trigger had no `branches` filter, so it would have fired on
+feature PRs into `staging`. Now `branches: [main]`, which means the only PR it
+runs on is the promotion (`staging` → `main`). Per Brandon's call:
 
 - **Feature PRs into `staging`:** no Chromatic run.
 - **The promotion PR (`staging` → `main`):** Chromatic runs, diffs pending, a
@@ -469,16 +483,16 @@ Ranked by what this repo specifically lacks, not by general merit.
 2. ~~`/live` step 5c (per-PR quality review) and its `staging` default~~ —
    **done**.
 3. Land #1047.
-4. CI branch filters (`ci.yml`, `codeql.yml`, and the audit of the other two).
-   **Highest priority of what remains** — without it, a PR into `staging` runs
-   neither unit tests nor CodeQL, which is strictly worse than today.
-5. `isStagingDeploy()` + outbound-write guards + guard test. **Before** anyone
-   is invited to use staging.
-6. `noindex` + staging banner.
-7. `staging` branch, merge-down automation, branch protection.
-8. Promotion workflow (fast-forward check, CI-green check, the `/release-review`
+4. ~~CI branch filters (`ci.yml`, `codeql.yml`) and the audit of the other
+   two~~ — **done**.
+5. ~~Chromatic retarget~~ — **done**.
+6. `isStagingDeploy()` + outbound-write guards + guard test. **Before** anyone
+   is invited to use staging — this is the highest priority of what remains.
+7. `noindex` + staging banner.
+8. `staging` branch, merge-down automation, branch protection (required checks
+   for `staging`, now that the workflows report on it).
+9. Promotion workflow (fast-forward check, CI-green check, the `/release-review`
    GO gate); move the What's New rollup behind it.
-9. Chromatic retarget.
 10. Smoke tests, version stamp, error monitoring.
 
-Steps 1–6 are worth doing regardless of whether the weekly cadence sticks.
+Steps 1–7 are worth doing regardless of whether the weekly cadence sticks.
