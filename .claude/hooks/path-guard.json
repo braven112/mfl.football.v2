@@ -39,15 +39,18 @@
     {
       "name": "auth-and-url-safety",
       "paths": [
+        "src/middleware.ts",
+        "src/pages/api/auth/login.ts",
         "src/utils/auth.ts",
+        "src/utils/client-ip.ts",
         "src/utils/rate-limit.ts",
-        "src/utils/url-guard.ts",
-        "src/middleware.ts"
+        "src/utils/url-guard.ts"
       ],
       "note": "Session JWT only — never re-add unsigned identity sources. See CLAUDE.md \"Auth — session JWT only\".",
       "tests": [
         "tests/url-guard.test.ts",
-        "tests/mfl-cookie-redirect-guard.test.ts"
+        "tests/mfl-cookie-redirect-guard.test.ts",
+        "tests/login-rate-limit.test.ts"
       ]
     },
     {
