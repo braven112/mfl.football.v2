@@ -65,6 +65,9 @@ import {
   checkGlobalBudgetGate,
   RUMOR_POSTS_TODAY_KEY,
   RUMOR_LAST_POST_TS_KEY,
+  TRADE_POSTS_TODAY_KEY,
+  MAX_TRADE_POSTS_PER_DAY,
+  tradeSlotsRemaining,
 } from './lib/speculation-budget.mjs';
 import { postSpeculationToGroupMe } from './lib/speculation-groupme.mjs';
 import { readActiveSeeds, seedSignals } from './lib/speculation-seeds.mjs';
@@ -409,6 +412,34 @@ async function main() {
   }
   log(`  Global budget OK (posts_today=${globalPostsToday}, ceiling=${budgetGate.ceiling})`);
 
+  // 3b. The day's TRADE budget, shared with the rumor mill.
+  //
+  // Everything above counts POSTS. This lane is trade-flavored by definition —
+  // a hypothetical two-team trade is the only thing it publishes — so it
+  // spends a trade slot even when the post budget has room. Without this a
+  // morning trade-offer rumor and an afternoon speculation piece are both
+  // legal, four hours apart, and the league reads two trade stories in a day
+  // from a feed that is supposed to run one (owner report, 2026-09-10).
+  //
+  // Deliberately NOT covered by `reservesGlobalSlot`: the peak-week
+  // reservation lets a marquee speculation exceed the POST ceiling, which is a
+  // different question from whether the league has already heard a trade story
+  // today. A reserved slot is worth nothing if the piece is the day's second
+  // trade item.
+  let tradePostsToday = 0;
+  if (redis) {
+    const rawTrade = await redis.get(TRADE_POSTS_TODAY_KEY);
+    tradePostsToday = typeof rawTrade === 'number' ? rawTrade : parseInt(rawTrade ?? '0', 10) || 0;
+  }
+  if (tradeSlotsRemaining(tradePostsToday, MAX_TRADE_POSTS_PER_DAY) === 0) {
+    log(
+      `  Trade budget spent (${tradePostsToday}/${MAX_TRADE_POSTS_PER_DAY} trade post(s) today) `
+        + '— exiting',
+    );
+    return 0;
+  }
+  log(`  Trade budget OK (${tradePostsToday}/${MAX_TRADE_POSTS_PER_DAY} used today)`);
+
   // 4. Load league state.
   const season = detectCurrentSeason(now);
   const teams = await loadTeams();
@@ -564,6 +595,13 @@ async function main() {
       if (newCount === 1) {
         await redis.expire(RUMOR_POSTS_TODAY_KEY, secondsUntilPtMidnight(now));
       }
+      // Every post from this lane is a trade story, so every one of them
+      // spends the day's trade slot.
+      const newTradeCount = await redis.incr(TRADE_POSTS_TODAY_KEY);
+      if (newTradeCount === 1) {
+        await redis.expire(TRADE_POSTS_TODAY_KEY, secondsUntilPtMidnight(now));
+      }
+      log(`  trade_posts_today incremented → ${newTradeCount}/${MAX_TRADE_POSTS_PER_DAY}`);
       await redis.set(RUMOR_LAST_POST_TS_KEY, now.getTime());
       await redis.expire(RUMOR_LAST_POST_TS_KEY, secondsUntilPtMidnight(now));
       log(`  posts_today incremented → ${newCount}`);

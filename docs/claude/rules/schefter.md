@@ -275,6 +275,73 @@ never a hand edit — the feeds are cron-written, so a hand edit is invisible in
 review. It deliberately leaves the scanner's `posted`/exposure state alone, or
 the same offer regenerates the same wrong post on the next scan.
 
+### Every cap counts POSTS; one has to count TOPICS
+
+Schefter's rate limiting was thorough and measured the wrong thing. A shared
+3/day post ceiling, a 4-hour spacing rule, per-lane caps, a gossip sub-cap, a
+per-offer daily dice roll — all of them answering "have we posted too much
+today". The complaint that arrived was "is this all he talks about" (owner
+report, 2026-09-10), and nothing in the system could see it: **13 of 16 posts
+across Sept 4-10 2026 were trade stories, with Sept 6, 7 and 8 running at
+100%**, every gate reporting itself satisfied throughout.
+
+THREE lanes are trade-flavored and none of them knew about the others — the
+trade-offer rumor lane, the trade-bait lane, and the speculation scanner. So:
+
+- **One trade story a day, league-wide.** `MAX_TRADE_POSTS_PER_DAY`
+  (`scripts/lib/speculation-budget.mjs`) over a shared
+  `schefter:<navSlug>:rumor:trade_posts_today` counter, on the same
+  incr-and-expire-at-PT-midnight idiom as every other daily counter here. It is
+  a TOPIC ceiling layered on the post budget, not a smaller post budget — the
+  other slots stay open for non-trade beats, so a quiet trade day is not a
+  quiet feed.
+- **`classifyTipKind` is NOT the topic test.** It answers "which posting lane
+  owns this tip", where only `trade_offer` gets its own lane, so a trade-BAIT
+  tip classifies as `gossip` — and "Pain's had Cyrus Allen on the block for
+  days now" is unmistakably a trade story to a reader. `isTradeFlavoredTip`
+  (`scripts/lib/schefter-bucket-logic.mjs`) is the wider test: `trade_offer`,
+  `trade_bait`, or `topic: 'trade'`. Reading the narrow one as the budget test
+  is a bypass that looks correct.
+- **A losing trade bucket is HELD, never dropped.** The rumor mill filters
+  trade buckets out of the pick when the slot is spent; their tips stay in the
+  queue and the age boost in `bucketPriorityScore` floats them up tomorrow —
+  the same partial-drain path any unchosen bucket takes.
+- **The filter must not `return` early.** `pickPrimaryBucket([])` already
+  yields null and lands on the "no bucket qualifies" path, which can still file
+  a quiet-day post. And the Friday mailbag resolves ABOVE the filter off its
+  own gossip pool: it is the weekly sweep that stops owner-submitted tips
+  ageing out unseen, it is deliberately exempt from the mill cap, and a trade
+  ceiling must not become the thing that finally blocks it.
+- **The trade counter increments per delivered BEAT, not per cycle.** The two
+  counters beside it are post budgets, and a double-post is two feed entries
+  against one slot by design; this one is a topic ceiling and a reader counts
+  stories. The busy-morning trade split — two trade posts a second apart
+  against a single slot — therefore also asks `tradeSlots > 1` before it fires.
+- **The speculation lane runs ONCE A WEEK**, `SPECULATION_CEILING_PER_DAY`
+  (= 1/7) applied as a `Math.min` over `CADENCE_LADDER` in `resolveCadence`.
+  The ladder scales with the trade deadline and wanted 2/day at peak; it still
+  records that, because what the calendar WANTS is the part worth reading a
+  year from now, and the ceiling is one line to move. A tier already rarer
+  (the 1/14 offseason tick) keeps its own number and a tier of 0 stays banned.
+  This is the lane that gets the hard ceiling because it is the one whose posts
+  are INVENTED — a hypothetical nobody proposed, dressed as talk-radio chatter
+  — so unlike the other two it can never run out of material.
+- **The clamped label says so.** `resolveCadence` appends "held to 1/week by
+  the speculation ceiling" when the ceiling bites. The label is what a quiet
+  run prints in the Actions log, and one that keeps announcing "Peak week
+  (2/day)" while shipping one a week is a log that actively misleads.
+- **Speculation is not exempt via `reservesGlobalSlot`.** That reservation
+  lets a marquee deadline-week piece exceed the POST ceiling, which is a
+  different question from whether the league has already heard a trade story
+  today. A reserved slot is worth nothing if the piece is the day's second
+  trade item.
+
+`tests/schefter-trade-budget.test.ts` pins all of it. Note its calendar
+fixtures: `resolveCadence({ events: [] })` falls through to the 1/14 offseason
+fallback, which is ALREADY under the ceiling, so a case written that way
+asserts the ceiling by never engaging it — the cases use real deadline and
+in-season calendars so the 2/day and 1/5 tiers are the ones being clamped.
+
 ### The MEMORY block is a name surface — mask it
 
 `buildRecentPostsPromptBlock` recalls the last few posts verbatim so Schefter

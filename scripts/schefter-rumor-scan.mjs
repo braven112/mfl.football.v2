@@ -124,12 +124,18 @@ import {
 import { getTopicPolicy, DRAINABLE_TOPIC_IDS } from '../src/config/schefter-topics.mjs';
 import {
   classifyTipKind,
+  isTradeFlavoredBatch,
   buildTopicBuckets,
   bucketPriorityScore,
   bucketFingerprint,
   isBucketStale,
   bucketStreakLength,
 } from './lib/schefter-bucket-logic.mjs';
+import {
+  MAX_TRADE_POSTS_PER_DAY,
+  tradePostsTodayKey,
+  tradeSlotsRemaining,
+} from './lib/speculation-budget.mjs';
 import { buildTipsterContext } from './lib/schefter-tipster-context.mjs';
 import {
   loadLedger,
@@ -215,6 +221,9 @@ const RUMOR_GOSSIP_POSTS_TODAY_KEY = schefterKey(NAV_SLUG, 'rumor:gossip_posts_t
 // rumor mill for the rest of the day (and vice versa). See
 // scripts/lib/schefter-rumor-cadence.mjs for why the cap is the lane's alone.
 const RUMOR_MILL_POSTS_TODAY_KEY = schefterKey(NAV_SLUG, 'rumor:mill_posts_today');
+// The day's TRADE-story count, shared with scripts/schefter-trade-speculation.mjs.
+// A topic ceiling rather than a post budget — see MAX_TRADE_POSTS_PER_DAY.
+const RUMOR_TRADE_POSTS_TODAY_KEY = tradePostsTodayKey(NAV_SLUG);
 // Counts GENERATION cycles (delivered or suppressed) — the aggregate
 // LLM-rate ceiling, NOT a posting budget. See checkGates and the
 // BUDGET-ON-DELIVERY sentinel for why the two are separate counters.
@@ -4291,11 +4300,50 @@ async function main() {
   // optional second gossip beat stitched into the same post. Tips in
   // other buckets stay in the queue — slow-news leftovers bubble up on
   // the next cycle thanks to the age boost in bucketPriorityScore.
-  const buckets = buildTopicBuckets(freshTips);
+  const allBuckets = buildTopicBuckets(freshTips);
   log(
-    `  Buckets (${buckets.length}): ` +
-      buckets.map((b) => `${b.key}[${b.kind}×${b.tips.length}]`).join(', '),
+    `  Buckets (${allBuckets.length}): ` +
+      allBuckets.map((b) => `${b.key}[${b.kind}×${b.tips.length}]`).join(', '),
   );
+
+  // ── The day's TRADE budget ──
+  //
+  // Three lanes are trade-flavored (offers, trade-bait, and the speculation
+  // scanner) and every cap in this file counts POSTS, so trade could take the
+  // whole daily budget — 13 of 16 posts across Sept 4-10 2026, with three days
+  // running at 100%. This is a topic ceiling on top of the post budget: one
+  // trade story a day, league-wide, and the other slots stay open for
+  // non-trade beats so a quiet trade day is not a quiet feed.
+  //
+  // A losing trade bucket is HELD, never dropped. Its tips stay in the queue
+  // and the age boost in `bucketPriorityScore` floats them up tomorrow, which
+  // is the same partial-drain path an unchosen bucket already takes.
+  let tradePostsToday = 0;
+  try {
+    const raw = await redis.get(RUMOR_TRADE_POSTS_TODAY_KEY);
+    tradePostsToday = typeof raw === 'number' ? raw : parseInt(raw ?? '0', 10) || 0;
+  } catch (err) {
+    warn(`  [trade-budget] read failed: ${err.message} — treating today as unspent`);
+  }
+  let tradeSlots = tradeSlotsRemaining(tradePostsToday, MAX_TRADE_POSTS_PER_DAY);
+  const buckets = tradeSlots > 0
+    ? allBuckets
+    : allBuckets.filter((b) => !isTradeFlavoredBatch(b.tips));
+  if (buckets.length !== allBuckets.length) {
+    const held = allBuckets.filter((b) => !buckets.includes(b)).map((b) => b.key);
+    log(
+      `  [trade-budget] ${tradePostsToday}/${MAX_TRADE_POSTS_PER_DAY} trade post(s) today — `
+        + `holding ${held.length} trade bucket(s) for tomorrow: ${held.join(', ')}`,
+    );
+  } else {
+    log(`  [trade-budget] ${tradePostsToday}/${MAX_TRADE_POSTS_PER_DAY} used, ${tradeSlots} slot(s) open`);
+  }
+  // No `return` when the filter empties the list. `pickPrimaryBucket([])`
+  // already yields null, which lands on the existing "no bucket qualifies"
+  // path — the one that can still file a quiet-day post. And the Friday
+  // mailbag is resolved ABOVE this, off its own gossip pool, so the sweep that
+  // stops owner-submitted tips aging out is never blocked by a trade ceiling
+  // it was deliberately exempted from.
 
   // Per-tipster context — lifts a first-time voice over same-sized noise
   // from the league's chatty regulars, and discounts a burst-tipping
@@ -4550,11 +4598,17 @@ async function main() {
     const distinctTradeTipIds = new Set(
       primaryBucket.tips.map((t) => String(t?.id ?? '')),
     );
+    // `tradeSlots > 1` is the topic ceiling asserting itself INSIDE a cycle.
+    // The two gates above it both count posts against MAX_POSTS_PER_DAY, and
+    // this split deliberately ships two feed entries against ONE of those
+    // slots — which under a one-trade-story-a-day ceiling is one trade post
+    // too many. The second beat waits for tomorrow's trade slot.
     if (
       postKind === 'trade' &&
       distinctTradeTipIds.size >= BUSY_MORNING_TRADE_THRESHOLD &&
       isBusyMorningWindow(now) &&
-      allowsTwoPostCycle(LEAGUE_SLUG, now, MAX_POSTS_PER_DAY)
+      allowsTwoPostCycle(LEAGUE_SLUG, now, MAX_POSTS_PER_DAY) &&
+      tradeSlots > 1
     ) {
       const sortedTips = [...primaryBucket.tips].sort(
         (a, b) => (a.submittedAt ?? 0) - (b.submittedAt ?? 0),
@@ -5292,6 +5346,20 @@ async function main() {
           `${rumorMillDailyCap(LEAGUE_SLUG, now, MAX_POSTS_PER_DAY)} ` +
           `(${rumorMillCapReason(LEAGUE_SLUG, now)})`,
       );
+
+      // The TRADE counter, shared with the speculation lane. Incremented per
+      // delivered trade BEAT, not once per cycle like the two counters above:
+      // those two are post budgets and a double-post is two entries against
+      // one slot by design, whereas this is a topic ceiling and a reader
+      // counts stories, not cycles.
+      const deliveredTradeBeats = allowedBeats.filter((b) => isTradeFlavoredBatch(b.batch)).length;
+      if (deliveredTradeBeats > 0) {
+        const newTradeCount = await redis.incrby(RUMOR_TRADE_POSTS_TODAY_KEY, deliveredTradeBeats);
+        if (newTradeCount === deliveredTradeBeats) {
+          await redis.expire(RUMOR_TRADE_POSTS_TODAY_KEY, secondsUntilPtMidnight(now));
+        }
+        log(`  Trade-story counter: now ${newTradeCount}/${MAX_TRADE_POSTS_PER_DAY} for the PT day`);
+      }
 
       // Trade-offer repost cooldown anchor — stamped HERE, on delivery, not
       // where the tip was enqueued. scanTradeOffers only queues; roughly half
