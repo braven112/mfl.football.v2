@@ -1124,7 +1124,7 @@ const pausedMetaLine = pausedState.paused
 
   .cdr-card__cols {
     display: grid; gap: 1rem;
-    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(min(240px, 100%), 1fr));
   }
 
   /* Editorial section-title standard: uppercase + primary left border. */

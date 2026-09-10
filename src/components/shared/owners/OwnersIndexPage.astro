@@ -361,7 +361,7 @@ const generatedLabel = Number.isNaN(generatedDate.getTime())
     margin: 0;
     padding: 0;
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(min(260px, 100%), 1fr));
     gap: 0.5rem;
   }
   .forgotten-card {
@@ -407,7 +407,7 @@ const generatedLabel = Number.isNaN(generatedDate.getTime())
   .owner-grid {
     margin-top: 0.875rem;
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(min(280px, 100%), 1fr));
     gap: 0.875rem;
   }
   .franchise-card {

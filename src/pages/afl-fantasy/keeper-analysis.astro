@@ -441,7 +441,7 @@ const fmtEff = (n: number) => `${Math.round(n * 100)}%`;
 
   .ka-summary__tiles {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(min(220px, 100%), 1fr));
     gap: 0.75rem;
   }
 
@@ -499,7 +499,7 @@ const fmtEff = (n: number) => `${Math.round(n * 100)}%`;
 
   .ka-cards {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(min(380px, 100%), 1fr));
     gap: 1rem;
     align-items: start;
   }

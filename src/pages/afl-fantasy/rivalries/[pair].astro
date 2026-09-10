@@ -427,7 +427,7 @@ const shortB = frB.currentNameShort || nameB;
 
   .rivalry-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(min(160px, 100%), 1fr));
     gap: var(--spacing-sm, 8px);
   }
 
@@ -537,7 +537,7 @@ const shortB = frB.currentNameShort || nameB;
 
   .rivalry-trade__sides {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(min(160px, 100%), 1fr));
     gap: 0.5rem;
   }
 

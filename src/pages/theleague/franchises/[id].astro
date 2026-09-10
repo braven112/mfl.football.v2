@@ -864,7 +864,7 @@ const formatBid = (n: number): string => {
 
   .quick-stats {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(min(150px, 100%), 1fr));
     gap: 0.75rem;
     margin: 0 0 2rem;
     padding: 1rem;
@@ -906,7 +906,7 @@ const formatBid = (n: number): string => {
 
   .highlight-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(min(180px, 100%), 1fr));
     gap: 0.75rem;
   }
   .highlight {
@@ -1001,7 +1001,7 @@ const formatBid = (n: number): string => {
 
   .awards-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(min(280px, 100%), 1fr));
     gap: 0.875rem;
   }
   .award-card {
@@ -1067,7 +1067,7 @@ const formatBid = (n: number): string => {
     margin: 0;
     padding: 0;
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(min(220px, 100%), 1fr));
     gap: 0.625rem;
   }
   .badge-card {
@@ -1134,7 +1134,7 @@ const formatBid = (n: number): string => {
     margin: 0 0 0.625rem;
     padding: 0;
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(min(180px, 100%), 1fr));
     gap: 0.625rem;
   }
   .rival-card {

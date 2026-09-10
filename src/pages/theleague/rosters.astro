@@ -3375,7 +3375,7 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
 
   .roster-summary {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(min(160px, 100%), 1fr));
     gap: var(--padding-md);
   }
 
@@ -3536,7 +3536,7 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
 
   .chart-metrics {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(min(200px, 100%), 1fr));
     gap: 0.75rem;
   }
 

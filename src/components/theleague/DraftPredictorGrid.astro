@@ -323,7 +323,7 @@ const specialPicksAssigned = hasCompensatoryPicks ? {
 
   .draft-round__picks {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(min(100px, 100%), 1fr));
     gap: 0.75rem;
   }
 
@@ -572,7 +572,7 @@ const specialPicksAssigned = hasCompensatoryPicks ? {
 
   @media (max-width: 1024px) {
     .draft-round__picks {
-      grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+      grid-template-columns: repeat(auto-fill, minmax(min(90px, 100%), 1fr));
     }
 
     .draft-pick {
@@ -615,7 +615,7 @@ const specialPicksAssigned = hasCompensatoryPicks ? {
     }
 
     .draft-round__picks {
-      grid-template-columns: repeat(auto-fill, minmax(70px, 1fr));
+      grid-template-columns: repeat(auto-fill, minmax(min(70px, 100%), 1fr));
       gap: 0.5rem;
     }
 

@@ -1768,7 +1768,7 @@ const { base, navSlug } = Astro.props;
     .ops-diag__chev { transition: none; }
   }
 
-  .ops-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1rem; }
+  .ops-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(280px, 100%), 1fr)); gap: 1rem; }
   .ops-card {
     background: var(--content-bg, #fff); border: 1px solid var(--content-border, #e2e8f0);
     border-radius: 12px; padding: 1rem 1.1rem;
@@ -1781,7 +1781,7 @@ const { base, navSlug } = Astro.props;
   .ops-card__hint code { font-size: 0.75rem; background: var(--content-bg-muted, #f1f5f9); padding: 0.05rem 0.3rem; border-radius: 4px; }
 
   .ops-dl { margin: 0; display: grid; gap: 0.35rem; }
-  .ops-dl--cols { grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 0.5rem 1rem; }
+  .ops-dl--cols { grid-template-columns: repeat(auto-fill, minmax(min(180px, 100%), 1fr)); gap: 0.5rem 1rem; }
   .ops-dl > div { display: flex; justify-content: space-between; gap: 0.5rem; border-bottom: 1px dashed var(--content-border, #e2e8f0); padding-bottom: 0.25rem; }
   .ops-dl dt { font-size: 0.82rem; color: var(--content-text-muted, #64748b); }
   .ops-dl dd { margin: 0; font-size: 0.9rem; font-weight: 600; color: var(--page-text, #0f172a); font-variant-numeric: tabular-nums; text-align: right; }

@@ -1039,7 +1039,7 @@ for (const [season, rankings] of jerryJonesStartersBySeason) {
   /* Card internals live in DeadMoneyPlayerCard.astro (scoped). */
   .mvp-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(min(300px, 100%), 1fr));
     gap: 1rem;
   }
 
@@ -1120,7 +1120,7 @@ for (const [season, rankings] of jerryJonesStartersBySeason) {
 
   .shame-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(min(280px, 100%), 1fr));
     gap: 0.5rem;
   }
 

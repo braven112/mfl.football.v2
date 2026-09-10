@@ -253,7 +253,7 @@ export function PlayerDetailModal({
         <div
           style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(110px, 1fr))',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(min(110px, 100%), 1fr))',
             gap: '0.5rem',
             padding: '0.75rem 1rem',
             borderBottom: '1px solid var(--content-border, #e2e8f0)',

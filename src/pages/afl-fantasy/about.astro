@@ -264,7 +264,7 @@ const yearsRecorded = championships.length;
 
   .about-stats {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(min(160px, 100%), 1fr));
     gap: var(--spacing-md, 16px);
     padding: var(--spacing-lg, 24px) 0;
     border-top: 1px solid var(--content-border, #e5e7eb);

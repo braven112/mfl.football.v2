@@ -145,7 +145,7 @@
 .sched__grid {
   display: grid;
   gap: 1rem;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(280px, 100%), 1fr));
 }
 
 .sched__card {
@@ -269,7 +269,7 @@
   font-size: 0.875rem;
   color: var(--color-text-primary, #0f172a);
   list-style: none;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(260px, 100%), 1fr));
 }
 
 /* The builder's plan is generated with a reduced search so the request fits its

@@ -327,7 +327,7 @@ const createdDate = new Date(session.createdAt).toLocaleDateString('en-US', {
 
   .results__round-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(min(180px, 100%), 1fr));
     gap: 0.5rem;
   }
 
@@ -412,7 +412,7 @@ const createdDate = new Date(session.createdAt).toLocaleDateString('en-US', {
 
   .results__teams-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(min(240px, 100%), 1fr));
     gap: 0.75rem;
   }
 

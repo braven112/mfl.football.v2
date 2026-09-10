@@ -71,7 +71,7 @@
 .opv-badges {
   display: grid;
   gap: 0.6rem;
-  grid-template-columns: repeat(auto-fit, minmax(17rem, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(17rem, 100%), 1fr));
   margin-bottom: 1.25rem;
 }
 .opv-badge {

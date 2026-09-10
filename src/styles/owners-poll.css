@@ -188,7 +188,7 @@
   padding: 0;
   display: grid;
   gap: 0.5rem;
-  grid-template-columns: repeat(auto-fill, minmax(13rem, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(13rem, 100%), 1fr));
 }
 
 .op-card {
@@ -455,7 +455,7 @@
    lineup they came for. Tighter columns plus a bounded, self-scrolling pool
    keeps the strip a panel rather than a page. */
 .op-lineup__body .op-pool {
-  grid-template-columns: repeat(auto-fill, minmax(10rem, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(10rem, 100%), 1fr));
   max-height: 20rem;
   overflow-y: auto;
   /* Room for the focus ring on the last row inside the scroll container. */

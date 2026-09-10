@@ -1601,7 +1601,7 @@ const rosteredCount = showcaseCards.filter(c => c.rosteredBy).length;
   }
   .affinity-panel__grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(min(15rem, 100%), 1fr));
     gap: 0.5rem;
   }
   .affinity-card {
@@ -1707,7 +1707,7 @@ const rosteredCount = showcaseCards.filter(c => c.rosteredBy).length;
      follows the theme tokens. */
   .rookie-showcase {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(min(170px, 100%), 1fr));
     gap: 0.75rem;
   }
   .rookie-showcase[hidden] { display: none; }
@@ -1926,7 +1926,7 @@ const rosteredCount = showcaseCards.filter(c => c.rosteredBy).length;
   /* ─── Mobile: table → stacked cards ─────────────────────────── */
   @media (max-width: 640px) {
     .rookie-showcase {
-      grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+      grid-template-columns: repeat(auto-fill, minmax(min(150px, 100%), 1fr));
       gap: 0.5rem;
     }
     .rcc__stage { min-height: 185px; }
@@ -1936,6 +1936,16 @@ const rosteredCount = showcaseCards.filter(c => c.rosteredBy).length;
       gap: 0.5rem;
     }
     .rsp-metrics__value { font-size: 1.125rem; }
+
+    /* 11rem + 6rem + gaps + padding leaves the description ~26px on a phone,
+       so its longest word set a row min-content wider than the viewport.
+       Grade and range share a line; the description gets its own. */
+    .grade-legend__item {
+      grid-template-columns: auto auto;
+      justify-content: start;
+      column-gap: 0.5rem;
+    }
+    .grade-legend__desc { grid-column: 1 / -1; }
 
     .rsp-table-scroll { border: none; border-radius: 0; background: transparent; }
     .rsp-table, .rsp-table thead, .rsp-table tbody, .rsp-table th, .rsp-table td, .rsp-table tr {

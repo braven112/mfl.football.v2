@@ -694,7 +694,7 @@ const getNflLogo = (team: string) => getNflLogoUrl(team);
 
   .position-cards-multi {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(min(300px, 100%), 1fr));
     gap: 1.25rem;
   }
 
@@ -753,7 +753,7 @@ const getNflLogo = (team: string) => getNflLogoUrl(team);
 
   .mvp-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(330px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(min(330px, 100%), 1fr));
     gap: 1.5rem;
   }
 

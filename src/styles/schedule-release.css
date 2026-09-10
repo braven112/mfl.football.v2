@@ -152,7 +152,7 @@
   margin: 0;
   padding: 0;
   list-style: none;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(260px, 100%), 1fr));
 }
 
 .rel__game {
@@ -282,7 +282,7 @@
 .rel__facts {
   display: grid;
   gap: 0.75rem;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(180px, 100%), 1fr));
 }
 
 .rel__facts div {
@@ -356,7 +356,7 @@
   font-size: 0.8125rem;
   color: var(--color-text-primary, #0f172a);
   list-style: none;
-  grid-template-columns: repeat(auto-fill, minmax(14rem, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(14rem, 100%), 1fr));
 }
 
 .rel__tag {

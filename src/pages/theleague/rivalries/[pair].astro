@@ -633,7 +633,7 @@ const titleB = frB.currentNameMedium || frB.currentName;
    * ============================================ */
   .quick-stats {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(min(160px, 100%), 1fr));
     gap: 0.75rem;
     margin: 0 0 2rem;
   }
@@ -675,7 +675,7 @@ const titleB = frB.currentNameMedium || frB.currentName;
   }
   .highlight-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(min(180px, 100%), 1fr));
     gap: 0.75rem;
   }
   .highlight {
