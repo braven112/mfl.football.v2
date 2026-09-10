@@ -349,47 +349,70 @@ component. Note **why** the redirect and the data import stay in the route — a
 static import specifier can't be a runtime variable, and `Astro.redirect()` only
 redirects from a page (see the `/cr` note above).
 
-## What's New changelog — required after user-facing work
+## Changelog — one article a week, everything else stages
 
-A new page, new user-facing feature, or an enhancement that changes how
-something works requires an entry at the **top** of `src/data/whats-new.json`.
-Skip it for style tweaks, data syncs, refactors, docs-only changes, and
-admin-only/unreleased features.
+**Every user-facing change stages; the Monday rollup publishes.** Append to the
+`changes` array of `src/data/weekly-changelog-staging.json` and
+`scripts/weekly-changelog-rollup.mjs` compiles ONE What's New article per
+league on Mondays at 8pm PT: a screenshot, a lede, then one line per change
+under **New this week** and **Fixes & polish**. `/update-whats-new` (and
+therefore `/live`) writes it. Skip only refactors, data syncs, tests and
+docs-only work.
 
-- Write in the league's editorial voice — conversational, witty sports
-  columnist, never dry corporate release notes.
-- `new-page`, `new-feature`, and `enhancement` require a screenshot
-  (`image`/`imageAlt`, webp in `public/assets/whats-new/`);
-  `tests/whats-new-data.test.ts` fails the build without one. `bug-fix` and
-  `league-event` are exempt.
-- **Those same three categories require INLINE LINKS in the prose**, not just
-  the CTA button underneath — the launch article for Strength of Division named
-  the standings, the franchise pages and the division page itself and the reader
-  could not click one of them. `description` blocks render through `set:html`,
-  so they take real anchors. Write every href LEAGUE-NEUTRAL (`/standings`, not
-  `/theleague/standings`): one body is rendered to every league the entry is
-  tagged for, and `rewriteDescriptionLinks`
-  (`src/utils/whats-new-links.ts`) prefixes it per reader — a prefixed href
-  sends half the audience to the other league's site. Only link a page every
-  tagged league HAS (`/contracts` and `/salary` are TheLeague-only, `/keepers`
-  and `/records` AFL-only); name the rest without a link.
-  `tests/whats-new-links.test.ts` enforces all of it.
-- **Hero eligibility is for marquee launches only.** Set
-  `excludeFromHero: true` on every `enhancement`; for `new-page` /
-  `new-feature`, **ask the user** whether it's major enough for the homepage
-  hero. The gate is the `excludeFromHero: true` flag, honored by
-  `resolveHeroState` (`src/utils/hero-resolver.ts`). `/update-whats-new` (and
-  therefore `/live`) prompts for this — don't decide silently.
-- Smaller fixes go to the **`changes`** array of
-  `src/data/weekly-changelog-staging.json` (`date`, `type`: `bug-fix |
-  style-tweak`, user-facing `summary`, `impact`: `user | admin`, `area`,
-  `league`: `theleague | afl | both`). `league` is mandatory — the rollup
-  builds one entry per league from it and exits 1 on an untagged change; and
-  `changes` is the only array it reads, so an entry parked under any other key
-  is silently dropped when staging resets.
-  `scripts/weekly-changelog-rollup.mjs` compiles them Mondays 8pm PT and needs
-  a top-level `featuredImage`/`featuredImageAlt` set before it runs. It has no
-  dry-run mode — it always publishes and empties the queue.
+This replaced writing an article per change: 40 landed in 12 days, none of them
+read. Depth now lives behind a link, not in a longer announcement.
+
+- **A staged `summary` is ONE LINE — 200 visible characters**, enforced by
+  `tests/whats-new-data.test.ts`. Needing more than a line is the signal the
+  feature needs a `/guides` page, not a longer bullet. `league` is mandatory
+  (`theleague | afl | both`, or a single league by name); the rollup exits 1 on
+  an untagged change, and `changes` is the only array it reads — an entry under
+  any other key is silently dropped when staging resets.
+- **`both` means the FULL-MANAGEMENT leagues, not every league in the
+  registry.** It expands via `BOTH_LEAGUES`
+  (`scripts/lib/weekly-changelog-format.mjs`), derived from the registry's own
+  `bestBall` flag, so a draft-only league is excluded automatically. It used to
+  fan out to every league, which gave Best Ball an article whose only line was
+  a Schefter fix — for a league with no Schefter — and a line linking
+  `/notifications`, a route it does not have. A best-ball-specific fix is still
+  taggable by naming that league. The rollup and the PR-time data test both
+  import `leaguesForStagedChange()`; an inline `=== 'both'` is a second copy of
+  the rule and `tests/weekly-changelog-format.test.ts` fails on one.
+- **Exactly one staged change per league carries `featured: true`**, supplying
+  the article's `headline`, `lede` and screenshot (`image`/`imageAlt`, webp in
+  `public/assets/whats-new/`). Required whenever the week ships a `new-page`,
+  `new-feature` or `enhancement`; a fixes-only week gets a templated title. Two
+  featured changes for one league fails the Monday job.
+- **Hero eligibility is a per-change human call**: `"heroWorthy": true` on a
+  staged change clears `excludeFromHero` on that week's article. ASK the user
+  for any `new-page` / `new-feature` — never decide silently. Enhancements and
+  fixes are never hero-worthy, and P0/P1 league events still outrank the
+  article in `resolveHeroState`.
+- **`/guides` is where the how-to lives.** One page per feature in
+  `src/data/guides.json`, screenshots in `public/assets/guides/` (NOT the
+  changelog's directory), links league-neutral and resolving in every tagged
+  league — `tests/guides-data.test.ts` blocks the build otherwise. Propose one
+  when a bullet cannot carry the feature; point the staged change at it with
+  `"guide": "/guides/<slug>"`. The page must exist before the change references
+  it.
+- **The marquee exception**: a new page or top-level feature worth announcing
+  the day it ships — roughly one a month, never an enhancement — still gets its
+  own `whats-new.json` entry, with the user's yes. Those entries keep every old
+  rule: editorial voice, mandatory screenshot, and mandatory league-neutral
+  INLINE links in the prose, not just the CTA button
+  (`tests/whats-new-links.test.ts`; `rewriteDescriptionLinks` prefixes each
+  href per reader, so a prefixed href in the data sends half the audience to
+  the other league's site, and only link a page every tagged league HAS).
+  Also stage a one-line change carrying `"entryId"` so Monday's article names
+  and links it.
+- **Inline links are read out of list items too.** `DescriptionBlock` now has a
+  `list` variant, and `whats-new-links.ts#htmlFragments` returns every list
+  item alongside the text blocks. Anything that renders through `set:html` must
+  be reachable from there — a fragment the guards cannot see is a link that
+  ships unprefixed into the wrong league.
+- The rollup has **no dry-run mode**: it always publishes and empties the
+  queue. It pushes the `site-update` notification (opt-in, one a week) via
+  `scripts/push-weekly-changelog.mjs` after the commit.
 
 ## Merge conflicts — always rebase, resolve autonomously
 
