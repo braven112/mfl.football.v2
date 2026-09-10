@@ -73,8 +73,13 @@ function resolveDate(rule, year) {
       // src/utils/league-event-resolver.ts — same name on both sides on purpose.
       return weekStart(year, 11, -1);
     }
+    case 'after-week-14':
+      // The AFL's regular season is Weeks 1-14, so it ends when week 15 opens.
+      // Mirrors the same-named rule in src/utils/league-event-resolver.ts.
+      return weekStart(year, 15);
     case 'after-week-16':
-      // In-season FA closes when week 17 opens — the day after week 16's last game.
+      // TheLeague's in-season FA closes "After the conclusion of Week 16",
+      // which is the moment week 17 opens.
       return weekStart(year, 17);
     case 'playoffs-start':
       // Fantasy playoffs begin with NFL week 15.

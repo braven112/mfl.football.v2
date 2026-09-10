@@ -1,5 +1,5 @@
 {
-  "$comment": "AFL league calendar events. Mirrors TheLeague's shape (see src/data/theleague/league-events.ts and src/types/league-events.ts). Custom computed rules used here: 'saturday-before-labor-day-weekend' (AL Live Draft — the Saturday a week before Labor Day, NOT on the holiday weekend), 'sunday-before-labor-day-weekend' (NL Email Draft, 9am PT — the next day). Keeper deadline is fixed July 15.",
+  "$comment": "AFL league calendar events. Mirrors TheLeague's shape (see src/data/theleague/league-events.ts and src/types/league-events.ts). Custom computed rules used here: 'saturday-before-labor-day-weekend' (AL Live Draft \u2014 the Saturday a week before Labor Day, NOT on the holiday weekend), 'sunday-before-labor-day-weekend' (NL Email Draft, 9am PT \u2014 the next day). Keeper deadline is fixed July 15.",
   "events": [
     {
       "id": "afl-new-season-starts",
@@ -7,7 +7,11 @@
       "description": "AFL league year rolls over and rosters lock for the new season.",
       "category": "preseason",
       "icon": "star",
-      "startDate": { "type": "fixed", "month": 6, "day": 1 },
+      "startDate": {
+        "type": "fixed",
+        "month": 6,
+        "day": 1
+      },
       "sortOrder": 1
     },
     {
@@ -16,9 +20,18 @@
       "description": "Final day to declare your 7 keepers. Anyone not protected enters the draft pool.",
       "category": "preseason",
       "icon": "bookmark",
-      "startDate": { "type": "fixed", "month": 7, "day": 15, "time": "20:45" },
+      "startDate": {
+        "type": "fixed",
+        "month": 7,
+        "day": 15,
+        "time": "20:45"
+      },
       "actionLinks": [
-        { "label": "Manage Keepers", "url": "/afl-fantasy/rosters?view=planner", "external": false }
+        {
+          "label": "Manage Keepers",
+          "url": "/afl-fantasy/rosters?view=planner",
+          "external": false
+        }
       ],
       "urgencyDays": 7,
       "sortOrder": 3
@@ -26,10 +39,14 @@
     {
       "id": "afl-al-draft",
       "name": "American League Draft",
-      "description": "AL teams meet live for the conference draft — veterans and rookies on the same board.",
+      "description": "AL teams meet live for the conference draft \u2014 veterans and rookies on the same board.",
       "category": "draft",
       "icon": "draft-podium",
-      "startDate": { "type": "computed", "rule": "saturday-before-labor-day-weekend", "time": "12:30" },
+      "startDate": {
+        "type": "computed",
+        "rule": "saturday-before-labor-day-weekend",
+        "time": "12:30"
+      },
       "urgencyDays": 7,
       "sortOrder": 4
     },
@@ -39,7 +56,11 @@
       "description": "NL teams begin the email draft at 9am PT Sunday. Slow draft, but the clock matters.",
       "category": "draft",
       "icon": "draft-podium",
-      "startDate": { "type": "computed", "rule": "sunday-before-labor-day-weekend", "time": "09:00" },
+      "startDate": {
+        "type": "computed",
+        "rule": "sunday-before-labor-day-weekend",
+        "time": "09:00"
+      },
       "urgencyDays": 7,
       "sortOrder": 5
     },
@@ -49,7 +70,10 @@
       "description": "NFL kickoff and the start of weekly fantasy matchups across both conferences.",
       "category": "regular-season",
       "icon": "nfl",
-      "startDate": { "type": "computed", "rule": "nfl-kickoff" },
+      "startDate": {
+        "type": "computed",
+        "rule": "nfl-kickoff"
+      },
       "sortOrder": 6
     },
     {
@@ -58,37 +82,49 @@
       "description": "Final day to submit trades. Deadline is the Wednesday between Week 10 and Week 11.",
       "category": "regular-season",
       "icon": "exchange",
-      "startDate": { "type": "computed", "rule": "afl-trade-deadline" },
+      "startDate": {
+        "type": "computed",
+        "rule": "afl-trade-deadline"
+      },
       "urgencyDays": 7,
       "sortOrder": 7
     },
     {
       "id": "afl-regular-season-ends",
       "name": "Regular Season Ends",
-      "description": "Week 13 closes the regular season. Premier/D-League cutoff and conference seeds lock.",
+      "description": "Week 14 closes the regular season. Premier/D-League cutoff and conference seeds lock.",
       "category": "regular-season",
       "icon": "gavel",
-      "startDate": { "type": "computed", "rule": "after-week-16" },
+      "startDate": {
+        "type": "computed",
+        "rule": "after-week-14"
+      },
       "urgencyDays": 7,
       "sortOrder": 8
     },
     {
       "id": "afl-conference-playoffs",
       "name": "Conference Playoffs",
-      "description": "Week 15 — conference seeds 1-4 begin head-to-head playoffs.",
+      "description": "Week 15 \u2014 conference seeds 1-4 begin head-to-head playoffs.",
       "category": "regular-season",
       "icon": "playoff",
-      "startDate": { "type": "computed", "rule": "afl-playoffs-start" },
+      "startDate": {
+        "type": "computed",
+        "rule": "afl-playoffs-start"
+      },
       "urgencyDays": 7,
       "sortOrder": 9
     },
     {
       "id": "afl-championship-week",
       "name": "World Championship",
-      "description": "Week 17 — AL champion vs. NL champion in the World Championship.",
+      "description": "Week 17 \u2014 AL champion vs. NL champion in the World Championship.",
       "category": "regular-season",
       "icon": "champ",
-      "startDate": { "type": "computed", "rule": "afl-championship-week" },
+      "startDate": {
+        "type": "computed",
+        "rule": "afl-championship-week"
+      },
       "urgencyDays": 7,
       "sortOrder": 10
     }

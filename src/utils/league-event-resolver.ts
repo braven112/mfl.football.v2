@@ -135,14 +135,27 @@ function resolveComputedDate(rule: string, year: number): Date {
       // TheLeague's trading deadline: the Friday of the week BEFORE week 11.
       return weekStart(year, 11, -6);
 
+    case 'after-week-14':
+      // The AFL's regular season is Weeks 1-14 (afl-constitution.ts, SCHEDULE),
+      // so it ends when week 15 — its conference playoffs — opens.
+      //
+      // This event used to share TheLeague's `after-week-16`, which put "Regular
+      // Season Ends" on Dec 31 2026: two weeks AFTER the AFL's playoffs had
+      // started and a week after its World Championship week began. The AFL has
+      // no week 16 or 17 regular season to be after.
+      return weekStart(year, 15);
+
     case 'after-week-16':
-      // In-season FA closes when week 17 opens.
+      // TheLeague's in-season FA closes "After the conclusion of Week 16"
+      // (league-constitution.ts, IMPORTANT DATES — REGULAR SEASON), which is
+      // the moment week 17 opens.
       //
       // This used to be `kickoff + 15*7 + 4` here and `kickoff + 16*7` in
       // scripts/compute-league-events.mjs — a three-day disagreement between
       // the date the calendar page showed (Mon Dec 28 2026) and the date Roger
-      // announced to the league (Thu Dec 31 2026). Roger's is the one owners
-      // have been acting on, so both now resolve to it.
+      // announced (Thu Dec 31 2026). Dec 28 is INSIDE week 16, so the calendar
+      // was closing free agency before week 16 had concluded, which is the one
+      // thing the constitution's wording rules out. Both now resolve to Dec 31.
       return weekStart(year, 17);
 
     case 'playoffs-start':
