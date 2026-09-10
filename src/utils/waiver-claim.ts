@@ -115,13 +115,31 @@ export function rosterSlotOf(status: unknown): 'active' | 'ir' | 'taxi' {
   return 'active';
 }
 
-/** The active-roster subset of an MFL roster list, as ids. */
+/**
+ * The active-roster subset of an MFL roster list, as ids.
+ *
+ * Takes entries (`{ id, status }`) or a bare id list — a list of plain ids
+ * carries no status, so every id in it counts as active. An entry with NO
+ * usable id is dropped rather than stringified: `String(someObject)` yields
+ * "[object Object]", which would sit in the set as a phantom player and
+ * inflate the very count this exists to get right.
+ */
 export function activeRosterIdsOf(
-  players: Array<{ id?: unknown; status?: unknown }> = []
+  players: Array<{ id?: unknown; status?: unknown } | string> = []
 ): Set<string> {
-  return new Set(
-    players.filter((p) => isActiveRosterStatus(p?.status)).map((p) => String(p?.id ?? p))
-  );
+  const ids = new Set<string>();
+  for (const p of players) {
+    if (typeof p === 'string' || typeof p === 'number') {
+      const id = String(p).trim();
+      if (id) ids.add(id);
+      continue;
+    }
+    if (!p || typeof p !== 'object') continue;
+    if (!isActiveRosterStatus(p.status)) continue;
+    const id = p.id == null ? '' : String(p.id).trim();
+    if (id) ids.add(id);
+  }
+  return ids;
 }
 
 /** MFL's sentinel for "adding without dropping anyone". */

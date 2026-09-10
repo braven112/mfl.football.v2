@@ -159,6 +159,24 @@ describe('roster capacity — IR and taxi squad do NOT occupy a roster slot', ()
     expect([...ids].sort()).toEqual(['1111', '4444']);
   });
 
+  it('drops an entry with no usable id rather than stringifying the object', () => {
+    // `String({})` is "[object Object]", which would sit in the set as a
+    // phantom player and inflate the count this exists to get right.
+    const ids = activeRosterIdsOf([
+      { id: '1111', status: 'ROSTER' },
+      { status: 'ROSTER' } as { id?: unknown; status?: unknown },
+      { id: null, status: 'ROSTER' },
+      { id: '  ', status: 'ROSTER' },
+    ]);
+    expect([...ids]).toEqual(['1111']);
+  });
+
+  it('accepts a bare id list, where every id counts as active', () => {
+    // A plain id array carries no status at all — treating those as inactive
+    // would under-count and wave through an add that overfills.
+    expect([...activeRosterIdsOf(['1111', '2222'])].sort()).toEqual(['1111', '2222']);
+  });
+
   it('lets a 16-man roster with two on IR add without dropping (the AFL bug)', () => {
     const roster = [
       ...Array.from({ length: 14 }, (_, i) => ({ id: `10${i}`, status: 'ROSTER' })),

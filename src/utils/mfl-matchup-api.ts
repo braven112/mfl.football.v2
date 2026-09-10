@@ -20,27 +20,32 @@ export interface MFLApiConfig {
 }
 
 /**
- * Raw MFL roster response
- */
-/**
  * One roster slot as MFL reports it: a player id plus the bucket he sits in.
  *
  * `status` is `ROSTER`, `INJURED_RESERVE` or `TAXI_SQUAD`. Only `ROSTER`
  * consumes one of the league's `rosterSize` slots — IR and taxi have their own
- * limits (`injuredReserve`, `taxiSquad` on the league export).
+ * limits (`injuredReserve`, `taxiSquad` on the league export). Normalised, so
+ * it is always present here even though the raw payload can omit it.
  */
 export interface RosterEntry {
   id: string;
   status: string;
 }
 
+/**
+ * Raw MFL roster response
+ */
 interface MFLRosterResponse {
   rosters: {
     franchise: Array<{
       id: string;
       player: Array<{
         id: string;
-        status: string;
+        // OPTIONAL, matching the real payload: MFL omits `status` for ordinary
+        // roster players in some exports. Typing it required told every reader
+        // it was guaranteed while getRosterEntries() defaulted it, which is
+        // the kind of gap that gets "simplified" back out.
+        status?: string;
         salary?: string;
         contractYear?: string;
       }>;
