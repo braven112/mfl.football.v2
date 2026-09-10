@@ -14,10 +14,11 @@ serve from the staging hosts for up to a week, and promote to production in one
 batch every Tuesday. Bugs, cron data and pipeline fixes keep going straight to
 prod exactly as they do today.
 
-The point is not ceremony. It is that a week of accumulated features gets one
-review pass that can see *across* features — the duplicate helper two PRs each
-wrote, the second forked sibling page, the util three features re-implemented —
-which no per-PR review can see by construction.
+The point is not ceremony, and it is not that quality gets reviewed later —
+quality is settled on each PR, before it reaches `staging`. It is that a week of
+accumulated features then gets one pass that can see *across* features — the
+duplicate helper two PRs each wrote, the second forked sibling page, the util
+three features re-implemented — which no per-PR review can see by construction.
 
 ## Decisions already made
 
@@ -31,6 +32,10 @@ which no per-PR review can see by construction.
 | Chromatic | **Runs on the promotion to prod, not on feature builds** [DECIDED] |
 | Weekly review | **A code-efficiency and reuse pass over the whole week's diff** [DECIDED] |
 | Staging database | **Shared with production — no separate Upstash DB** [DECIDED] |
+| Staging's standard | **Production-level. Full CI, full review, full quality pass on every PR into it** [DECIDED] |
+| Per-PR review | **Code review AND code-quality review, on every individual PR** [DECIDED] |
+| The weekly pass | **Blocking — a clean `/release-review` gates the promotion** [DECIDED] |
+| Staging prebuild | **Slim during the week; one full rehearsal before promotion** [DECIDED] |
 
 ## What #1047 already gives us
 
@@ -115,6 +120,42 @@ The bar is **"is this new surface area?"**, not "how big is the diff."
 The judgment call worth naming: a *fix* that requires new surface area to
 deliver is a feature. It rides.
 
+## Staging is production-level
+
+`staging` is not a lower-standards branch that gets cleaned up on Tuesday. Real
+owners use `staging.theleague.us`, it writes to production's database, and
+`main` fast-forwards to it — so whatever is wrong there is wrong in production a
+week later, at the latest.
+
+Everything that gates a merge to `main` today gates a merge to `staging`:
+
+- **Full CI** — unit tests and CodeQL, which currently do not run on `staging`
+  PRs at all (see below; this is the one item that would make the train worse
+  than no train).
+- **Full review on every PR** — `/live`'s correctness (5), cross-cutting (5b)
+  and quality (5c) passes.
+- **Code-quality review per PR, not deferred.** Reuse, simplification,
+  efficiency, altitude. Safe findings — swapping in an existing util, deleting
+  dead code — get applied in the PR; anything touching behavior or a stored
+  shape is reported for Brandon's call; a real refactor becomes a follow-up
+  rather than growing the PR.
+
+**So what is the weekly pass for?** Two things a per-PR pass structurally
+cannot do:
+
+1. **See across features** — the same helper written twice by two PRs that did
+   not know about each other, three features each adding a special case to one
+   function, drift that only reads as a pattern in aggregate.
+2. **Rehearse the release** — the full prebuild, the week's visual diffs, the
+   ratchets, and the stored-shape compatibility question that only exists
+   because staging runs a week ahead of production against shared data.
+
+It is **blocking**: the promotion does not run without a GO from
+`/release-review`. The one caveat, recorded so the gate does not quietly
+degenerate: filing a follow-up is a deliberate GO decision, not a deferred
+NO-GO. If every unfixed finding blocked, the gate would be waved through within
+a month.
+
 ## Workflow changes required
 
 Concrete, and none of them are optional — several are silent failures.
@@ -153,9 +194,13 @@ Two things to hold onto, both from the long comment block in `chromatic.yml`:
    keep it, and use it on any feature PR that touches a component in the story
    closure so its diff is reviewed in isolation while the context is fresh.
 
-**[OPEN]** Whether the snapshot budget prefers this. Batching should *reduce*
-total snapshots (one run a week instead of one per feature PR), which is the
-right direction against the 5,000/month plan.
+**The accepted cost, stated plainly** [DECIDED]: `staging` is otherwise held to
+production standards, but visual regressions are the one class that can sit
+there unreviewed for a week — real owners are on those hosts. This was chosen
+knowing that, for the snapshot budget: one run a week instead of one per feature
+PR is the right direction against a 5,000/month plan. `/release-review` step 6c
+compensates by naming which commits touched the story closure, so Tuesday's
+batch can be attributed to features rather than guessed at.
 
 ### The What's New rollup fires before the release
 
@@ -221,17 +266,29 @@ survives is only visible at week scale:
 | **Efficiency** | N+1 fetches, work done per-request that could be prebuild, client bundles that grew | `pnpm check:bundle` delta, `astro-performance-expert` agent |
 | **Altitude** | Six features that each added a special case to the same function, where the right answer is one abstraction | Judgment. No tool. This is the one that most needs a human or a careful agent pass |
 
-**Output:** a written report, not auto-applied fixes. Findings split into
-*blocks the release* (rare — correctness or a security regression), *fix before
-promotion*, and *file as follow-up*. The last bucket is important: a reuse
-opportunity found on Tuesday should not hold a working feature, but it should
-also not evaporate.
+Two lenses beyond the table, both consequences of decisions elsewhere in this
+plan:
+
+| Lens | What it looks for | Tooling |
+|---|---|---|
+| **Stored-shape compatibility** | A key shape staging writes that current production cannot read — the shared-database consequence, and the one lens that reliably blocks | `git diff` grep over storage calls; expand/contract is the test |
+| **Release readiness** | Does the whole thing build — the `PREBUILD_FULL=1` rehearsal that closes the slim-preview hole, plus the week's Chromatic batch | `pnpm prebuild`, the three ratchet baselines |
+
+**Output:** a **GO or NO-GO**, then a written report to
+`docs/claude/releases/YYYY-MM-DD-release-review.md`. Findings split into *blocks
+promotion*, *fix before promotion* (applied on `staging`), and *file as
+follow-up*. The last bucket matters: a reuse opportunity found on Monday should
+not hold a working feature, but it should also not evaporate.
+
+A NO-GO must name the specific item, the change that clears it, and whether
+fixing or pulling the feature off the train is the shorter path. "Needs more
+review" is not a NO-GO.
 
 **When:** Monday, so there is a day to act on it before Tuesday's promotion.
 
-**Shape:** a `/release-review` skill. It is runnable today against
-`main...<any branch>` — it does not need staging to exist, which makes it the
-sensible first thing to build.
+**Shape:** the `/release-review` skill — **built**,
+`.claude/commands/release-review.md`. Runnable today against
+`main...<any branch>`; it does not need staging to exist.
 
 ## Staging safety — the sharp edge of a same-project staging
 
@@ -304,11 +361,12 @@ Also needed, smaller:
   genuine SEO problem for `theleague.us`.
 - **A visible staging banner.** Owners will end up on these hosts. They should
   never wonder which site they're on.
-- **Staging runs the slim prebuild** (`VERCEL_ENV=preview`), so it reads
-  committed data artifacts and skips 19 of 21 steps. Worth knowing: a feature
-  that changes a compute script is *not* exercised end-to-end on staging unless
-  `PREBUILD_FULL=1` is set for that branch. The diff-touches-`scripts/` escape
-  hatch covers most of it automatically.
+- **Staging runs the slim prebuild** (`VERCEL_ENV=preview`), reading committed
+  data artifacts and skipping 19 of 21 steps — kept, for cost. The hole it
+  leaves is that a compute-script change is never exercised on staging, so its
+  first real run would be Tuesday's production deploy. Closed by a single
+  `PREBUILD_FULL=1` rehearsal in `/release-review` step 6b, before the
+  promotion. [DECIDED]
 
 ## Release day mechanics
 
@@ -407,15 +465,20 @@ Ranked by what this repo specifically lacks, not by general merit.
 
 ## Build order
 
-1. `/release-review` skill — useful immediately, needs nothing else.
-2. Land #1047.
-3. CI branch filters (`ci.yml`, `codeql.yml`, and the audit of the other two).
-4. `isStagingDeploy()` + outbound-write guards + guard test. **Before** anyone
+1. ~~`/release-review` skill~~ — **done**.
+2. ~~`/live` step 5c (per-PR quality review) and its `staging` default~~ —
+   **done**.
+3. Land #1047.
+4. CI branch filters (`ci.yml`, `codeql.yml`, and the audit of the other two).
+   **Highest priority of what remains** — without it, a PR into `staging` runs
+   neither unit tests nor CodeQL, which is strictly worse than today.
+5. `isStagingDeploy()` + outbound-write guards + guard test. **Before** anyone
    is invited to use staging.
-5. `noindex` + staging banner.
-6. `staging` branch, merge-down automation, branch protection.
-7. Promotion workflow; move the What's New rollup behind it.
-8. Chromatic retarget.
-9. Smoke tests, version stamp, error monitoring.
+6. `noindex` + staging banner.
+7. `staging` branch, merge-down automation, branch protection.
+8. Promotion workflow (fast-forward check, CI-green check, the `/release-review`
+   GO gate); move the What's New rollup behind it.
+9. Chromatic retarget.
+10. Smoke tests, version stamp, error monitoring.
 
-Steps 1–5 are worth doing regardless of whether the weekly cadence sticks.
+Steps 1–6 are worth doing regardless of whether the weekly cadence sticks.
