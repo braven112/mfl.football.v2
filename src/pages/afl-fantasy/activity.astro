@@ -9,6 +9,7 @@ import {
 	getAllActivity,
 	getDailyPageViews,
 	getGlobalPagePopularity,
+	getAnonPagePopularity,
 	getAllOwnerPagePopularity,
 	buildOwnerActivityRow,
 	sortByLastSeen,
@@ -17,13 +18,33 @@ import {
 	type SurfaceSection,
 	type OwnerActivityRow,
 } from '../../utils/owner-activity';
+import {
+	ANON_PAGEVIEW_FIELD,
+	buildEngagementRows,
+	buildPageInsights,
+	sortEngagement,
+	summarizeTraffic,
+} from '../../utils/site-analytics';
+import {
+	getAdoptionSection,
+	mockAdoptionSection,
+	type AdoptionSection,
+} from '../../utils/site-adoption';
 import { lastMflMoveByFranchise, type MflMove } from '../../utils/mfl-activity';
 import { getLeagueContext, getLeagueBaseUrl } from '../../utils/league-context';
+import { getLeagueBySlug } from '../../config/leagues';
 
 // League resolved from URL via the registry — never hardcode the id/slug.
 const league = getLeagueContext(Astro.url);
 const baseUrl = getLeagueBaseUrl(league);
 const leagueId = league.leagueId;
+const leagueDef = getLeagueBySlug(league.slug)!;
+// The shape notification-categories.ts gates on: which alerts this league can
+// even offer. Registry-derived, never a second copy of the flags.
+const notificationLeague = {
+	features: leagueDef.features,
+	ownersPoll: leagueDef.ownersPoll,
+};
 
 const franchiseIds = aflConfig.teams.map((t: any) => t.franchiseId);
 
@@ -45,16 +66,20 @@ function aflChartColor(franchiseId: string, index: number): string {
 let activityMap: Record<string, number> = {};
 let pageViewData: { dates: string[]; data: Record<string, Record<string, number>> } = { dates: [], data: {} };
 let globalPages: { page: string; count: number }[] = [];
+let anonPages: { page: string; count: number }[] = [];
 let ownerPages: Record<string, { page: string; count: number }[]> = {};
 // App-vs-browser counters. Undefined until read, and the report drops the
 // section entirely when there is nothing recorded yet.
 let surfaceSection: SurfaceSection | undefined;
+// Install + notification adoption. Undefined until read, same contract.
+let adoption: AdoptionSection | undefined;
 
 // Mock data for local development — ?mock=true enables it
 const useMock = Astro.url.searchParams.has('mock');
 
 if (useMock) {
 	surfaceSection = mockSurfaceSection(franchiseIds);
+	adoption = mockAdoptionSection(franchiseIds, notificationLeague);
 	// Seeded random for deterministic output
 	const seed = (s: number) => () => { s = (s * 16807 + 0) % 2147483647; return (s - 1) / 2147483646; };
 
@@ -101,6 +126,10 @@ if (useMock) {
 			const views = Math.max(0, Math.round(profile.baseViews * recencyBoost * weekendBoost * (0.3 + rng() * 1.4)));
 			if (views > 0) pvData[date][fid] = views;
 		}
+		// Signed-out traffic rides in the same daily hash under a reserved field.
+		const anonRng = seed(parseInt(date.replace(/-/g, ''), 10));
+		const signedIn = Object.values(pvData[date]).reduce((sum, n) => sum + n, 0);
+		pvData[date][ANON_PAGEVIEW_FIELD] = Math.round(signedIn * (0.3 + anonRng() * 0.4));
 	}
 	pageViewData = { dates, data: pvData };
 
@@ -119,6 +148,13 @@ if (useMock) {
 		{ page: '/rules', weight: 14 },
 	];
 	globalPages = pageWeights.map(({ page, weight }) => ({ page, count: weight }));
+	// Signed-out visitors only ever reach the public pages.
+	anonPages = [
+		{ page: '/standings', count: 88 },
+		{ page: '/', count: 65 },
+		{ page: '/playoffs', count: 37 },
+		{ page: '/rules', count: 21 },
+	];
 
 	// Per-owner page popularity
 	ownerPages = {};
@@ -136,13 +172,16 @@ if (useMock) {
 	}
 } else {
 	try {
-		[activityMap, pageViewData, globalPages, ownerPages, surfaceSection] = await Promise.all([
-			getAllActivity(leagueId),
-			getDailyPageViews(leagueId, 30),
-			getGlobalPagePopularity(leagueId),
-			getAllOwnerPagePopularity(leagueId, franchiseIds),
-			getSurfaceSection(leagueId, franchiseIds),
-		]);
+		[activityMap, pageViewData, globalPages, anonPages, ownerPages, surfaceSection, adoption] =
+			await Promise.all([
+				getAllActivity(leagueId),
+				getDailyPageViews(leagueId, 30),
+				getGlobalPagePopularity(leagueId),
+				getAnonPagePopularity(leagueId),
+				getAllOwnerPagePopularity(leagueId, franchiseIds),
+				getSurfaceSection(leagueId, franchiseIds),
+				getAdoptionSection(leagueId, franchiseIds, notificationLeague),
+			]);
 	} catch { /* Redis unavailable */ }
 }
 
@@ -261,6 +300,31 @@ const chartTeams = aflConfig.teams.map((team: any, idx: number) => ({
 	values: pageViewData.dates.map((d) => pageViewData.data[d]?.[team.franchiseId] ?? 0),
 }));
 const chartDates = pageViewData.dates;
+
+// ── Derived analytics ──
+// All of it pure, all of it shared with TheLeague's copy of this page.
+const traffic = summarizeTraffic(pageViewData);
+const engagement = sortEngagement(
+	buildEngagementRows(
+		aflConfig.teams.map((team: any) => ({
+			franchiseId: team.franchiseId,
+			name: chooseTeamName({
+				fullName: team.name,
+				nameMedium: team.nameMedium,
+				nameShort: team.nameShort,
+				abbrev: team.abbrev,
+			}),
+			icon: team.icon,
+		})),
+		pageViewData,
+	),
+);
+const pageInsights = buildPageInsights({
+	league: leagueDef.slug,
+	globalPages,
+	anonPages,
+	ownerPages,
+});
 ---
 
 <TheLeagueLayout title="Owner Activity">
@@ -268,12 +332,14 @@ const chartDates = pageViewData.dates;
 		leagueName={league.name}
 		leagueHref={baseUrl}
 		teams={teams}
-		globalPages={globalPages}
-		ownerPages={ownerPages}
+		pages={pageInsights}
+		traffic={traffic}
+		engagement={engagement}
 		chartTeams={chartTeams}
 		chartDates={chartDates}
 		surfaces={surfaceSection?.surfaces}
 		ownerSurfaces={surfaceSection?.ownerSurfaces}
 		lastSurfaces={surfaceSection?.lastSurfaces}
+		adoption={adoption}
 	/>
 </TheLeagueLayout>

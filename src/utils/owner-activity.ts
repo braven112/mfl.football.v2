@@ -9,6 +9,7 @@
 
 import { getRedis } from './redis-client';
 import { describeMoveType, type MflMove } from './mfl-activity';
+import { ANON_PAGEVIEW_FIELD } from './site-analytics';
 import {
 	summarizeSurfaces,
 	surfaceField,
@@ -42,6 +43,24 @@ function globalPageKey(leagueId: string): string {
 
 function ownerPageKey(leagueId: string, franchiseId: string): string {
 	return `pages:${leagueId}:${franchiseId}`;
+}
+
+/**
+ * Page popularity for visitors who were NOT signed in.
+ *
+ * A separate hash rather than a field on the global one, because the two
+ * answer different questions and the anonymous one is written by an
+ * unauthenticated endpoint — keeping it apart means a flood there can never
+ * distort the owners' own numbers, and the report can show either alone.
+ *
+ * The FIELDS are the reason this is safe at all: `track-visit` counts an
+ * anonymous page only if the path is one the page directory knows about, so
+ * the hash is capped by the size of that directory rather than by whatever a
+ * caller cares to send. Same reasoning as the surface allowlist in
+ * visit-surface.ts.
+ */
+function anonPageKey(leagueId: string): string {
+	return `pages:${leagueId}:anon`;
 }
 
 /**
@@ -170,8 +189,16 @@ export async function recordVisit(
 /**
  * A logged-out visit, rate limit included, in ONE command.
  *
- * The counters are the only thing kept — no franchise, no page, no timestamp,
- * because a visitor we cannot name is only ever counted.
+ * What is kept is still deliberately thin — no franchise, no timestamp, no
+ * identity of any kind, because a visitor we cannot name is only ever
+ * counted. What it counts, since Sep 2026, is three things rather than one:
+ * the PWA-vs-browser split, the day's signed-out visit total (a reserved
+ * field in the same daily hash the owners are counted in), and the page — but
+ * only when the caller's path is one the page directory already knows about.
+ * That last condition is what keeps a public write endpoint from growing an
+ * unbounded hash one invented path at a time; `track-visit` resolves it, and
+ * an unknown path still counts toward the day's total, just not against any
+ * page.
  *
  * The limit lives INSIDE the script rather than in a preceding
  * `checkRateLimit` call for two reasons: an anonymous beacon would otherwise
@@ -181,11 +208,14 @@ export async function recordVisit(
  * counters are never touched. Like `checkRateLimit` it fails open on a Redis
  * error — analytics must not start rejecting because Redis blinked.
  *
- * KEYS[1] rate-limit counter   ARGV[1] surface field
+ * KEYS[1] rate-limit counter   ARGV[1] surface field, or '' to skip
  * KEYS[2] league surface hash  ARGV[2] max requests per window
  * KEYS[3] anon surface hash    ARGV[3] window seconds
+ * KEYS[4] anon pages hash      ARGV[4] directory-known page, or '' to skip
+ * KEYS[5] daily pageview hash  ARGV[5] pageview TTL seconds
+ *                              ARGV[6] daily anon field name
  */
-const RECORD_ANON_SURFACE_LUA = `
+const RECORD_ANON_VISIT_LUA = `
 local n = redis.call('INCR', KEYS[1])
 if n == 1 then
   redis.call('EXPIRE', KEYS[1], ARGV[3])
@@ -193,8 +223,17 @@ end
 if n > tonumber(ARGV[2]) then
   return 0
 end
-redis.call('HINCRBY', KEYS[2], ARGV[1], 1)
-redis.call('HINCRBY', KEYS[3], ARGV[1], 1)
+if ARGV[1] ~= '' then
+  redis.call('HINCRBY', KEYS[2], ARGV[1], 1)
+  redis.call('HINCRBY', KEYS[3], ARGV[1], 1)
+end
+redis.call('HINCRBY', KEYS[5], ARGV[6], 1)
+if redis.call('TTL', KEYS[5]) < 0 then
+  redis.call('EXPIRE', KEYS[5], ARGV[5])
+end
+if ARGV[4] ~= '' then
+  redis.call('HINCRBY', KEYS[4], ARGV[4], 1)
+end
 return 1
 `;
 
@@ -212,35 +251,73 @@ export interface AnonymousVisitResult {
 	limited: boolean;
 }
 
-/** Count one logged-out visit toward the league's PWA-vs-browser split. */
-export async function recordAnonymousSurface(
+/** What a logged-out beacon managed to tell us. Both halves are optional. */
+export interface AnonymousVisit {
+	/** Installed app vs browser tab, when the client could report it. */
+	visit?: VisitContext | null;
+	/**
+	 * The page, ALREADY canonicalized and already checked against the page
+	 * directory by the caller. Anything else must arrive as null — this is the
+	 * bound on the hash, not a hint.
+	 */
+	page?: string | null;
+}
+
+/**
+ * Count one logged-out visit: the surface split, the day's signed-out total,
+ * and the page when it is one we recognize.
+ */
+export async function recordAnonymousVisit(
 	leagueId: string,
-	visit: VisitContext,
+	anon: AnonymousVisit,
 	limit: AnonymousVisitLimit,
 ): Promise<AnonymousVisitResult> {
 	const redis = await getRedis();
 	if (!redis) return { recorded: false, limited: false };
-	const field = surfaceField(visit);
+	const field = anon.visit ? surfaceField(anon.visit) : '';
+	const page = anon.page ?? '';
 	const rateKey = `rate:track-visit-anon:${limit.callerKey}`;
+	const pvKey = pageviewKey(leagueId, todayISO());
 
 	try {
 		const allowed = await redis.eval(
-			RECORD_ANON_SURFACE_LUA,
-			[rateKey, leagueSurfaceKey(leagueId), anonSurfaceKey(leagueId)],
-			[field, limit.max.toString(), limit.windowSeconds.toString()],
+			RECORD_ANON_VISIT_LUA,
+			[
+				rateKey,
+				leagueSurfaceKey(leagueId),
+				anonSurfaceKey(leagueId),
+				anonPageKey(leagueId),
+				pvKey,
+			],
+			[
+				field,
+				limit.max.toString(),
+				limit.windowSeconds.toString(),
+				page,
+				PAGEVIEW_TTL_SECONDS.toString(),
+				ANON_PAGEVIEW_FIELD,
+			],
 		);
 		const recorded = Number(allowed) === 1;
 		return { recorded, limited: !recorded };
 	} catch (err) {
 		// Older Redis/Upstash instances without EVAL: the limit degrades to a
 		// separate INCR rather than being dropped.
-		console.warn('[owner-activity] anon surface EVAL failed, falling back:', err);
+		console.warn('[owner-activity] anon visit EVAL failed, falling back:', err);
 		const count = await redis.incr(rateKey);
 		if (count === 1) await redis.expire(rateKey, limit.windowSeconds);
 		if (count > limit.max) return { recorded: false, limited: true };
 		await Promise.all([
-			redis.hincrby(leagueSurfaceKey(leagueId), field, 1),
-			redis.hincrby(anonSurfaceKey(leagueId), field, 1),
+			redis
+				.hincrby(pvKey, ANON_PAGEVIEW_FIELD, 1)
+				.then(() => redis.expire(pvKey, PAGEVIEW_TTL_SECONDS)),
+			...(field
+				? [
+						redis.hincrby(leagueSurfaceKey(leagueId), field, 1),
+						redis.hincrby(anonSurfaceKey(leagueId), field, 1),
+					]
+				: []),
+			...(page ? [redis.hincrby(anonPageKey(leagueId), page, 1)] : []),
 		]);
 		return { recorded: true, limited: false };
 	}
@@ -515,6 +592,22 @@ export async function getGlobalPagePopularity(
 	const redis = await getRedis();
 	if (!redis) return [];
 	const raw = await redis.hgetall<string>(globalPageKey(leagueId));
+	return parsePageCounts(raw);
+}
+
+/**
+ * Page popularity for signed-out visitors.
+ *
+ * Sparse by design: only paths the page directory knows about are ever
+ * counted (see `anonPageKey`), so this is a view of which PUBLIC pages people
+ * who never sign in actually read, not a mirror of the owners' list.
+ */
+export async function getAnonPagePopularity(
+	leagueId: string,
+): Promise<{ page: string; count: number }[]> {
+	const redis = await getRedis();
+	if (!redis) return [];
+	const raw = await redis.hgetall<string>(anonPageKey(leagueId));
 	return parsePageCounts(raw);
 }
 

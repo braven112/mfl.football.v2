@@ -1,7 +1,7 @@
 /**
  * Guards for the Redis command-count reductions applied to
  *   - src/utils/owner-activity.ts recordVisit (5 cmds → 1 via EVAL)
- *   - src/utils/owner-activity.ts recordAnonymousSurface (3 cmds → 1 via EVAL,
+ *   - src/utils/owner-activity.ts recordAnonymousVisit (6 cmds → 1 via EVAL,
  *     rate limit included, and 1 even when the caller is REJECTED)
  *   - src/pages/api/schefter/cooker-status.ts GET (3 cmds → cached for 15s)
  *
@@ -87,21 +87,32 @@ class CountingRedis {
   async eval<T = unknown>(_script: string, keys: string[], args: (string | number)[]): Promise<T> {
     this.record('EVAL', [keys, args]);
 
-    // The anonymous-surface script: INCR a rate counter, bail over the cap,
-    // otherwise bump the league-wide and anon hashes. Dispatched on the
-    // script body so a future third script cannot silently land here.
+    // The anonymous-visit script: INCR a rate counter, bail over the cap,
+    // otherwise bump the surface hashes (when the client reported one), the
+    // day's signed-out total, and the page (only when the caller passed one
+    // the directory knows). Dispatched on the script body so a future third
+    // script cannot silently land here.
     if (_script.includes("redis.call('INCR', KEYS[1])")) {
-      const [rateKey, leagueKey, anonKey] = keys;
-      const [field, max, windowSeconds] = args;
+      const [rateKey, leagueKey, anonKey, anonPagesKey, dailyKey] = keys;
+      const [field, max, windowSeconds, page, pvTtl, anonField] = args;
       const n = (this.counters.get(rateKey) ?? 0) + 1;
       this.counters.set(rateKey, n);
       if (n === 1) this.ttls.set(rateKey, Date.now() + Number(windowSeconds) * 1000);
       if (n > Number(max)) return 0 as T;
-      for (const key of [leagueKey, anonKey]) {
+      const bump = (key: string, hashField: string) => {
         const h = this.hashes.get(key) ?? new Map();
-        h.set(String(field), String(Number(h.get(String(field)) ?? 0) + 1));
+        h.set(hashField, String(Number(h.get(hashField) ?? 0) + 1));
         this.hashes.set(key, h);
+      };
+      if (String(field)) {
+        bump(leagueKey, String(field));
+        bump(anonKey, String(field));
       }
+      bump(dailyKey, String(anonField));
+      if (!this.ttls.has(dailyKey)) {
+        this.ttls.set(dailyKey, Date.now() + Number(pvTtl) * 1000);
+      }
+      if (String(page)) bump(anonPagesKey, String(page));
       return 1 as T;
     }
 
@@ -228,7 +239,7 @@ describe('owner-activity recordVisit — command budget', () => {
   });
 });
 
-// ── owner-activity recordAnonymousSurface ────────────────────────────────
+// ── owner-activity recordAnonymousVisit ──────────────────────────────────
 
 /**
  * The anonymous path is the one place this app writes to Redis with no
@@ -236,7 +247,7 @@ describe('owner-activity recordVisit — command budget', () => {
  * unbounded and a rejected caller must not be able to spend commands. Both
  * halves — the limit and the counters — live in a single EVAL for that reason.
  */
-describe('owner-activity recordAnonymousSurface — command budget', () => {
+describe('owner-activity recordAnonymousVisit — command budget', () => {
   beforeEach(async () => {
     const { vi } = await import('vitest');
     vi.resetModules();
@@ -258,25 +269,48 @@ describe('owner-activity recordAnonymousSurface — command budget', () => {
 
   const LIMIT = { callerKey: 'abc123', max: 2, windowSeconds: 60 };
   const VISIT = { surface: 'pwa', platform: 'ios' } as const;
+  const ANON = { visit: VISIT, page: '/theleague/rosters' };
+  const today = () => new Date().toISOString().slice(0, 10);
 
   it('issues exactly ONE Redis command per anonymous visit, rate limit included', async () => {
     const redis = new CountingRedis();
     const mod = await loadModuleWithRedis(redis);
-    const result = await mod.recordAnonymousSurface('13522', VISIT, LIMIT);
+    const result = await mod.recordAnonymousVisit('13522', ANON, LIMIT);
     expect(result).toEqual({ recorded: true, limited: false });
     expect(redis.count()).toBe(1);
     expect(redis.count('EVAL')).toBe(1);
     expect(redis.count('INCR')).toBe(0);
     expect(redis.hashes.get('surface:13522')?.get('pwa:ios')).toBe('1');
     expect(redis.hashes.get('surface:13522:anon')?.get('pwa:ios')).toBe('1');
+    // The page and the day's signed-out total ride along in the same command.
+    expect(redis.hashes.get('pages:13522:anon')?.get('/theleague/rosters')).toBe('1');
+    expect(redis.hashes.get(`pageviews:13522:${today()}`)?.get('anon')).toBe('1');
+  });
+
+  it('counts the day without naming a page when the caller sent one we do not know', async () => {
+    const redis = new CountingRedis();
+    const mod = await loadModuleWithRedis(redis);
+    // track-visit passes page: null for anything outside the page directory.
+    await mod.recordAnonymousVisit('13522', { visit: VISIT, page: null }, LIMIT);
+    expect(redis.hashes.get('pages:13522:anon')).toBeUndefined();
+    expect(redis.hashes.get(`pageviews:13522:${today()}`)?.get('anon')).toBe('1');
+  });
+
+  it('still counts a visit whose client could not report a surface', async () => {
+    const redis = new CountingRedis();
+    const mod = await loadModuleWithRedis(redis);
+    await mod.recordAnonymousVisit('13522', { page: '/theleague/rosters' }, LIMIT);
+    expect(redis.count()).toBe(1);
+    expect(redis.hashes.get('surface:13522')).toBeUndefined();
+    expect(redis.hashes.get(`pageviews:13522:${today()}`)?.get('anon')).toBe('1');
   });
 
   it('costs the same ONE command when the caller is over the limit, and counts nothing', async () => {
     const redis = new CountingRedis();
     const mod = await loadModuleWithRedis(redis);
-    await mod.recordAnonymousSurface('13522', VISIT, LIMIT);
-    await mod.recordAnonymousSurface('13522', VISIT, LIMIT);
-    const third = await mod.recordAnonymousSurface('13522', VISIT, LIMIT);
+    await mod.recordAnonymousVisit('13522', ANON, LIMIT);
+    await mod.recordAnonymousVisit('13522', ANON, LIMIT);
+    const third = await mod.recordAnonymousVisit('13522', ANON, LIMIT);
 
     expect(third).toEqual({ recorded: false, limited: true });
     expect(redis.count()).toBe(3);
@@ -290,9 +324,9 @@ describe('owner-activity recordAnonymousSurface — command budget', () => {
       throw new Error('NOSCRIPT fake');
     };
     const mod = await loadModuleWithRedis(redis);
-    await mod.recordAnonymousSurface('13522', VISIT, LIMIT);
-    await mod.recordAnonymousSurface('13522', VISIT, LIMIT);
-    const third = await mod.recordAnonymousSurface('13522', VISIT, LIMIT);
+    await mod.recordAnonymousVisit('13522', ANON, LIMIT);
+    await mod.recordAnonymousVisit('13522', ANON, LIMIT);
+    const third = await mod.recordAnonymousVisit('13522', ANON, LIMIT);
 
     expect(third.limited).toBe(true);
     expect(redis.count('INCR')).toBe(3);
