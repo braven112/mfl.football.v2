@@ -147,7 +147,7 @@ maintenance list nobody had.
 
 ---
 
-## 2026-09-11 — `clip: rect(...)` hides the PAINT, not the LAYOUT — and a hidden label in a scrolling table scrolls the whole page
+## 2026-09-10 — `clip: rect(...)` hides the PAINT, not the LAYOUT — and a hidden label in a scrolling table scrolls the whole page
 
 **Context:** An owner reported that Owner Activity slid sideways on a phone and
 that no other page did. A sweep of every public page at 390px confirmed it:
