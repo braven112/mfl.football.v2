@@ -66,16 +66,22 @@ Not doable from code — Vercel's MCP surface has no domain or env-var tool.
 
 1. **Branch:** `git fetch origin main && git checkout -B staging origin/main &&
    git push -u origin staging`.
-2. **DNS:** at each registrar, `CNAME test → cname.vercel-dns.com` for
+2. **DNS:** at each registrar, `CNAME staging → cname.vercel-dns.com` for
    `theleague.us`, `afl-fantasy.com`, `mfl.football`.
 3. **Vercel → project `mfl.football.v2` → Settings → Domains:** add all three
-   `test.*` hosts, and on each set **Git Branch = `staging`** (REST equivalent:
+   `staging.*` hosts, and on each set **Git Branch = `staging`** (REST equivalent:
    `PATCH /v9/projects/{id}/domains/{domain}` with `{"gitBranch":"staging"}`).
    That pins the domain to the newest `staging` deployment.
 4. **Preview env vars:** confirm the **Preview** scope carries `JWT_SECRET` and
-   the Upstash credentials. `JWT_SECRET` is the one that must be set — without
-   it `getJwtSecret()` falls back to a random per-cold-start secret, so logins
-   appear to work and then evaporate.
+   the Upstash credentials (Production and Preview are separate scopes; a new
+   environment inherits nothing). `JWT_SECRET` is the one that must be set —
+   and the symptom is **login failing**, not sessions quietly expiring.
+   `getJWTSecret()` (`src/utils/session.ts`) does have a random-secret
+   fallback, but it is gated behind `process.env.VERCEL`, which is always set
+   there, so on Vercel a missing secret THROWS. `validateSessionToken` calls it
+   inside its own try/catch, so every page merely renders signed-out and the
+   failure is invisible until someone tries to log in. `pnpm dlx vercel env ls`
+   shows which environments each variable targets.
 
 **Deployment Protection needs nothing.** Checked 2026-09-07 on
 `prj_Ab677jUnJXlKpHmVLaAYeJIbdG9E`: password protection, Vercel Authentication
