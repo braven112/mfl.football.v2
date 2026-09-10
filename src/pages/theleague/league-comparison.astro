@@ -186,6 +186,10 @@ const totalLeagueSalary = franchiseMetrics.reduce((sum, f) => sum + f.totalSalar
     width: 100%;
     max-width: 1400px;
     margin: 0 auto;
+    /* There is no global border-box reset in this repo — without this the
+       2rem/1rem padding is added OUTSIDE width:100% and the page scrolls
+       sideways by 32px at every viewport. */
+    box-sizing: border-box;
     padding: 2rem 1rem;
   }
 

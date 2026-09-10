@@ -582,7 +582,10 @@ const copyIcons = `
 
   .team-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(420px, 1fr));
+    /* min() clamps the track floor to the container: a bare minmax(420px, 1fr)
+       track does NOT shrink below its min, so a 374px-wide phone got a 420px
+       column and the page scrolled sideways. */
+    grid-template-columns: repeat(auto-fit, minmax(min(420px, 100%), 1fr));
     gap: 1.5rem;
   }
 
@@ -643,7 +646,7 @@ const copyIcons = `
 
   .asset-list--extras {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(min(220px, 100%), 1fr));
     gap: 0.75rem;
   }
 
@@ -716,7 +719,7 @@ const copyIcons = `
   /* AFL-only: master (PSD) files section. */
   .master-list {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(min(320px, 100%), 1fr));
     gap: 0.75rem;
   }
 
@@ -810,7 +813,7 @@ const copyIcons = `
 
   .asset-list {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(min(220px, 100%), 1fr));
     gap: 0.75rem;
   }
 

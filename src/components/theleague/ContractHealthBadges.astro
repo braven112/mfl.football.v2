@@ -113,7 +113,7 @@ const sortedMetrics = [...metrics].sort((a, b) => {
 
   .badges-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(min(320px, 100%), 1fr));
     gap: 1.5rem;
   }
 
@@ -151,6 +151,10 @@ const sortedMetrics = [...metrics].sort((a, b) => {
     align-items: flex-start;
     margin-bottom: 1rem;
     gap: 1rem;
+    /* .health-badge is nowrap + flex-shrink: 0, so on a 320px phone the
+       name and badge together set a card min-content wider than the grid
+       track. Let the badge drop to its own line instead. */
+    flex-wrap: wrap;
   }
 
   .team-name {

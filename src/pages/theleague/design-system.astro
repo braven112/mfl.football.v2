@@ -1542,7 +1542,9 @@ const defPlayer = { name: 'Bills, Buffalo', position: 'DEF', nflTeam: 'BUF', hea
   }
 
   .ds-code-hint--multi {
-    overflow-x: hidden;
+    /* `auto`, not `hidden`: the keyframe blocks are wider than a phone and
+       clipping them silently truncates the rule the page exists to document. */
+    overflow-x: auto;
   }
 
   .ds-code-hint--multi pre {
@@ -2316,6 +2318,12 @@ const defPlayer = { name: 'Bills, Buffalo', position: 'DEF', nflTeam: 'BUF', hea
     display: flex;
     flex-direction: column;
     gap: 0.375rem;
+    /* Stacked on mobile the row is a COLUMN with align-items: flex-start, so
+       this item is sized fit-content and the widest keyframe block pushed it
+       to 442px inside a 324px row. Cap it at the row width; the code block's
+       own overflow-x handles the rest. */
+    min-width: 0;
+    max-width: 100%;
   }
 
   .ds-anim-name {
