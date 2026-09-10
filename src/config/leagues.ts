@@ -21,6 +21,7 @@ import {
   buildHostToSlugMap,
   defaultMflWriteHost,
   SHARED_APP_ORIGIN,
+  isSharedAppHost,
 } from './leagues-data.mjs';
 
 /** Canonical slug: the path segment under src/pages/ */
@@ -347,4 +348,4 @@ export function ensureLeaguePrefix(league: LeagueDefinition, path: string): stri
   return rawEnsureLeaguePrefix(league, path) as string;
 }
 
-export { buildHostToSlugMap, defaultMflWriteHost, SHARED_APP_ORIGIN };
+export { buildHostToSlugMap, defaultMflWriteHost, SHARED_APP_ORIGIN, isSharedAppHost };

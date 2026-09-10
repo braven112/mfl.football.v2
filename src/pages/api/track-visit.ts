@@ -31,6 +31,7 @@ import { createHmac, createHash } from 'node:crypto';
 import { recordVisit, recordAnonymousSurface } from '../../utils/owner-activity';
 import { parseVisitContext } from '../../utils/visit-surface';
 import { getLeagueBySlug, ALL_LEAGUES } from '../../config/leagues';
+import { getClientIdentity } from '../../utils/client-ip';
 
 /**
  * Per-caller cap on the anonymous path. The client debounces to one beacon per
@@ -43,10 +44,13 @@ import { getLeagueBySlug, ALL_LEAGUES } from '../../config/leagues';
 const ANON_MAX_PER_MINUTE = 30;
 const ANON_WINDOW_SECONDS = 60;
 
+/**
+ * Shared helper rather than another private reader: three copies of this had
+ * grown and they disagreed on header precedence and fallback. The value is
+ * still hashed below — see the note on the rate-limit key.
+ */
 function clientIp(request: Request): string {
-	const forwarded = request.headers.get('x-forwarded-for');
-	if (forwarded) return forwarded.split(',')[0].trim();
-	return request.headers.get('x-real-ip')?.trim() || 'unknown';
+	return getClientIdentity(request).client ?? 'unknown';
 }
 
 /**

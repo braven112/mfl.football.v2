@@ -1,5 +1,6 @@
 import type { APIRoute } from 'astro';
 import { checkRateLimit } from '../../utils/rate-limit';
+import { getClientIdentity } from '../../utils/client-ip';
 import { getPlayer, getGlobalPlayerMap } from '../../utils/player-map';
 import { getCurrentLeagueYear, getTestDateFromSearchParams } from '../../utils/league-year';
 import {
@@ -46,10 +47,13 @@ function json(body: unknown, status: number, cacheControl: string): Response {
 }
 
 /** Client IP for rate limiting. This route is unauthenticated, so there is no
- *  franchiseId to key on the way the LLM-backed endpoints do. */
+ *  franchiseId to key on the way the LLM-backed endpoints do.
+ *
+ *  Sources the address through the shared getClientIdentity rather than
+ *  re-reading x-forwarded-for here — three private copies of this helper had
+ *  grown, and they did not agree on header precedence or on the fallback. */
 function clientIp(request: Request): string {
-  const forwarded = request.headers.get('x-forwarded-for') ?? '';
-  return forwarded.split(',')[0]?.trim() || 'anon';
+  return getClientIdentity(request).client ?? 'anon';
 }
 
 /**

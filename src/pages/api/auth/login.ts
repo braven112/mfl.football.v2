@@ -6,23 +6,38 @@ import { json } from '../../../utils/api-response';
 import { getLeagueBySlug } from '../../../config/leagues';
 import { captureCredential } from '../../../utils/autocut-storage';
 import { checkRateLimit } from '../../../utils/rate-limit';
-import { getClientIp } from '../../../utils/client-ip';
+import { getClientIdentity } from '../../../utils/client-ip';
 
 const AFL_LEAGUE_ID = getLeagueBySlug('afl-fantasy')!.id;
 const THELEAGUE_ID = getLeagueBySlug('theleague')!.id;
 const BB1_LEAGUE_ID = getLeagueBySlug('best-ball-1')!.id;
 
 /**
- * Per-IP login throttle. This is the ONE endpoint an unauthenticated caller
- * can use to make us relay credential guesses to MFL, so the limit is keyed
- * on the client IP rather than a franchiseId — there is no session yet.
+ * Login throttle. This is the ONE endpoint an unauthenticated caller can use
+ * to make us relay credential guesses to MFL, and there is no session yet, so
+ * the shared limiter's franchiseId key is unavailable. Two tiers, because
+ * neither identifier alone is both fine-grained and trustworthy — see
+ * getClientIdentity.
  *
- * Generous on purpose: a real owner mistyping a password a few times must
- * never be locked out, while 10 tries per quarter hour makes stuffing a list
- * of any size impractical.
+ * PER CALLER+USERNAME. Keyed on the caller's apparent address AND the account
+ * being attempted, NOT the address alone: a whole league on one office,
+ * stadium or CGNAT address would otherwise share a single budget and lock
+ * each other out having typed nothing wrong. 10 per quarter hour is generous
+ * for an owner mistyping a password and useless for guessing one.
+ *
+ * PER NEAREST HOP. A ceiling on the hop our own infrastructure saw, which a
+ * caller cannot forge. It is what still bites when someone reaches the origin
+ * directly on a *.vercel.app URL and rotates a spoofed CF-Connecting-IP (or
+ * sprays usernames) to give every request a fresh fine-grained key. It has to
+ * be loose, because behind Cloudflare this key is an edge address shared by
+ * many real owners at once — so it is a flood ceiling, not a per-user limit.
  */
 const LOGIN_MAX_ATTEMPTS = 10;
+const LOGIN_MAX_PER_HOP = 100;
 const LOGIN_WINDOW_SECONDS = 15 * 60;
+
+/** Bound the key: the username is caller-supplied and otherwise unbounded. */
+const USERNAME_KEY_MAX = 64;
 
 export const POST: APIRoute = async ({ request, cookies }) => {
   try {
@@ -39,30 +54,45 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     // checking afterwards would still hand MFL every attempt.
     //
     // Counts every attempt, not just failures, because a failure is only
-    // known after the call we are trying to avoid making.
+    // known after the call we are trying to avoid making. Including the
+    // username in the fine key is what keeps that from punishing an owner who
+    // simply signs in a few times from a shared address.
     //
-    // FAILS OPEN (checkRateLimit returns allowed on a Redis error), and no IP
-    // means no key to count against, so both degrade to today's behaviour
-    // rather than locking every owner out of the site when Upstash hiccups.
-    // The un-spoofable, dependency-free layer is the Cloudflare rate-limiting
-    // rule at the edge; this is defence in depth behind it.
-    const clientIp = getClientIp(request);
-    if (clientIp) {
+    // FAILS OPEN (checkRateLimit returns allowed on a Redis error), and an
+    // absent identifier means no key to count against, so both degrade to the
+    // previous behaviour rather than locking every owner out of the site when
+    // Upstash hiccups. The dependency-free layer is the Cloudflare
+    // rate-limiting rule at the edge; this is defence in depth behind it, and
+    // covers the *.vercel.app URLs that never pass through that edge at all.
+    const identity = getClientIdentity(request);
+    const tooManyAttempts = () =>
+      json(
+        {
+          success: false,
+          message: 'Too many login attempts. Wait a few minutes and try again.',
+        },
+        429,
+      );
+
+    if (identity.nearestHop) {
+      const { allowed } = await checkRateLimit(
+        'login-hop',
+        identity.nearestHop,
+        LOGIN_MAX_PER_HOP,
+        LOGIN_WINDOW_SECONDS,
+      );
+      if (!allowed) return tooManyAttempts();
+    }
+
+    if (identity.client) {
+      const account = String(username).toLowerCase().slice(0, USERNAME_KEY_MAX);
       const { allowed } = await checkRateLimit(
         'login',
-        clientIp,
+        `${identity.client}|${account}`,
         LOGIN_MAX_ATTEMPTS,
         LOGIN_WINDOW_SECONDS,
       );
-      if (!allowed) {
-        return json(
-          {
-            success: false,
-            message: 'Too many login attempts. Wait a few minutes and try again.',
-          },
-          429,
-        );
-      }
+      if (!allowed) return tooManyAttempts();
     }
 
     // Authenticate with MFL — year override lets AFL pass 2025 because

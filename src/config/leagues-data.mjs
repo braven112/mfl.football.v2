@@ -488,6 +488,29 @@ export function defaultMflWriteHost(env = process.env) {
 export const SHARED_APP_ORIGIN = 'https://mfl.football';
 
 /**
+ * Every hostname that serves the shared app — production and its staging
+ * twin. These belong to NO league: they serve all of them by path prefix, so
+ * no single league's identity (PWA manifest, canonical origin) belongs on
+ * one, and they must never appear in HOST_TO_SLUG or they would rewrite every
+ * other league's paths under whichever slug they mapped to.
+ *
+ * A list rather than a comparison against SHARED_APP_ORIGIN alone: an exact
+ * compare recognises production and silently misses staging.mfl.football,
+ * which then behaves like a league's own host on the one site whose whole job
+ * is to reproduce production.
+ */
+const SHARED_APP_HOSTS = ['mfl.football', 'staging.mfl.football'];
+
+/**
+ * Is this hostname the shared multi-league app host (either environment)?
+ *
+ * @param {string} hostname
+ */
+export function isSharedAppHost(hostname) {
+  return SHARED_APP_HOSTS.includes(hostname);
+}
+
+/**
  * Canonical absolute origin for a league (e.g. 'https://www.theleague.us'),
  * or null when the league has no apex domain. THE way to build absolute
  * URLs to a league — session cookies are host-only, so every producer of
