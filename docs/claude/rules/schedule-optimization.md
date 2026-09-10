@@ -546,6 +546,54 @@ goals (0 to 0.01 of total score, seed-dependent).
 encroachment on the four-week target rather than failing on it, matching the
 ranking.
 
+## The NFL kickoff is not a derivation
+
+**Anything asking when an NFL week starts reads
+`src/utils/nfl-week-starts.mjs`.** It answers from MFL's published schedule
+(`src/data/nfl/week-starts.mjs`, refreshed by
+`node scripts/fetch-nfl-week-starts.mjs`) and keeps the old Labor Day rule as
+its ONLY fallback, for seasons the NFL has not released yet.
+
+The retired rule was "kickoff is the Thursday after Labor Day, and week N
+starts kickoff + (N-1)\*7". It was inlined in eight places and hardcoded as a
+Week 1 map in six more, and it is wrong three times in 2026 alone:
+
+| Week | The rule says | The NFL played |
+|---|---|---|
+| 1 | Thu Sep 10 | **Wed Sep 9** |
+| 12 | Thu Nov 26 | **Wed Nov 25** (Thanksgiving) |
+| 18 | Thu Jan 7 | **Sun Jan 10** (all-Sunday finale) |
+
+Owners saw the first one: Roger posted "TODAY: NFL Season Starts" to GroupMe
+on the morning of Thursday Sep 10 2026, the day after the season had already
+kicked off. 2024 and 2025 had their own misses (a Christmas Day week 17, and
+week 18 shifted both years) that nothing caught, because nothing was comparing.
+
+Three things that are load-bearing:
+
+- **Express a date as a WEEK, not as days from kickoff.** `weekStart(year, 11,
+  -1)` survives the NFL moving week 11; `kickoff + 10*7 - 1` does not. Both
+  trade deadlines, both playoff starts and both championship weeks are written
+  this way now, in `scripts/compute-league-events.mjs` and
+  `src/utils/league-event-resolver.ts` — the two files must stay in lockstep,
+  and `tests/roger-afl-draft-reminder.test.ts` reads both sources to check it.
+- **An offset whose real anchor is Labor Day must SAY Labor Day.** The rumor
+  mill's awake window opened at `kickoff - 11` and meant "the AFL's NL draft
+  Sunday, Labor Day - 8". Those coincide only while kickoff is Labor Day + 3,
+  so the Wednesday opener slid the loud 3-posts-a-day cadence onto AL draft
+  Saturday. It is `laborDayIsoDate(year) - 8` now.
+- **The fallback must not be deleted.** MFL 404s a season's schedule until the
+  NFL publishes it (checked 2026-09-10: 2027 is Not Found), so February
+  through May the next season has no official answer at all.
+
+Kickoff is a calendar landmark, not a deadline, so it carries `remind: false`
+and generates no Roger touch — the date still resolves and still shows on
+`/calendar` (owner call, 2026-09-10). Any event that is an obligation on owners
+must NOT set that flag.
+
+Guard: `tests/nfl-kickoff-anchor-guard.test.ts`, plus
+`tests/nfl-week-starts.test.ts` for the module itself.
+
 ## The trap: bye weeks move, week numbers don't
 
 **The late doubleheader week is not a constant.** It is whichever of Week 12 or

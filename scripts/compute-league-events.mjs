@@ -18,6 +18,7 @@ import {
   throwbackEventId,
   DEFAULT_THROWBACK_WEEKS,
 } from './lib/throwback-reminder.mjs';
+import { laborDay } from '../src/utils/labor-day.mjs';
 import { THROWBACK_WEEKS } from '../src/data/theleague/throwback-weeks.mjs';
 import { AFL_THROWBACK_WEEKS } from '../src/data/afl-fantasy/throwback-weeks.mjs';
 
@@ -35,23 +36,29 @@ function getNthDayOfMonth(year, month, dayOfWeek, nth) {
   return new Date(year, month, 1 + diff + (nth - 1) * 7);
 }
 
-function getLaborDay(year) {
-  return getNthDayOfMonth(year, 8, 1, 1); // September, Monday, 1st
+/**
+ * Start of NFL week `week`, shifted by `offsetDays`.
+ *
+ * Every in-season rule below is expressed this way. It used to be
+ * `LaborDay + 3 + (N-1)*7` inlined nine times, which assumes the NFL opens on
+ * the Thursday after Labor Day and never moves a week. It does both: 2026
+ * opened Wednesday Sep 9 and moved week 12 to Wednesday for Thanksgiving, so
+ * Roger told the league the season started a day after it had.
+ */
+function weekStart(year, week, offsetDays = 0) {
+  const d = getNflWeekStart(year, week);
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate() + offsetDays);
 }
 
 function resolveDate(rule, year) {
   switch (rule) {
     case 'third-thursday-march': return getNthDayOfMonth(year, 2, 4, 3);
     case 'third-sunday-august': return getNthDayOfMonth(year, 7, 0, 3);
-    case 'nfl-kickoff': {
-      const ld = getLaborDay(year);
-      return new Date(ld.getFullYear(), ld.getMonth(), ld.getDate() + 3);
-    }
-    case 'friday-before-week-11': {
-      const ld = getLaborDay(year);
-      const kickoff = new Date(ld.getFullYear(), ld.getMonth(), ld.getDate() + 3);
-      return new Date(kickoff.getFullYear(), kickoff.getMonth(), kickoff.getDate() + 10 * 7 - 6);
-    }
+    case 'nfl-kickoff':
+      return weekStart(year, 1);
+    case 'friday-before-week-11':
+      // TheLeague's trading deadline: the Friday of the week BEFORE week 11.
+      return weekStart(year, 11, -6);
     case 'afl-trade-deadline': {
       // AFL trade deadline: the Wednesday between Week 10 and Week 11 — i.e.
       // the day before Week 11's Thursday, kickoff + 10*7 - 1.
@@ -64,25 +71,17 @@ function resolveDate(rule, year) {
       // window bug, on a major-tier event, so all four touches fired early.
       // Mirrors the `afl-trade-deadline` rule in
       // src/utils/league-event-resolver.ts — same name on both sides on purpose.
-      const ld = getLaborDay(year);
-      const kickoff = new Date(ld.getFullYear(), ld.getMonth(), ld.getDate() + 3);
-      return new Date(kickoff.getFullYear(), kickoff.getMonth(), kickoff.getDate() + 10 * 7 - 1);
+      return weekStart(year, 11, -1);
     }
-    case 'after-week-16': {
-      const ld = getLaborDay(year);
-      const kickoff = new Date(ld.getFullYear(), ld.getMonth(), ld.getDate() + 3);
-      return new Date(kickoff.getFullYear(), kickoff.getMonth(), kickoff.getDate() + 16 * 7);
-    }
-    case 'playoffs-start': {
-      const ld = getLaborDay(year);
-      const kickoff = new Date(ld.getFullYear(), ld.getMonth(), ld.getDate() + 3);
-      return new Date(kickoff.getFullYear(), kickoff.getMonth(), kickoff.getDate() + 14 * 7);
-    }
-    case 'championship-week': {
-      const ld = getLaborDay(year);
-      const kickoff = new Date(ld.getFullYear(), ld.getMonth(), ld.getDate() + 3);
-      return new Date(kickoff.getFullYear(), kickoff.getMonth(), kickoff.getDate() + 16 * 7);
-    }
+    case 'after-week-16':
+      // In-season FA closes when week 17 opens — the day after week 16's last game.
+      return weekStart(year, 17);
+    case 'playoffs-start':
+      // Fantasy playoffs begin with NFL week 15.
+      return weekStart(year, 15);
+    case 'championship-week':
+      // Fantasy championship is NFL week 17.
+      return weekStart(year, 17);
     case 'second-sunday-february':
       // Super Bowl Sunday (AFL IR-to-active deadline). NFL moved to 2nd Sunday in Feb starting 2022.
       return getNthDayOfMonth(year, 1, 0, 2);
@@ -91,13 +90,13 @@ function resolveDate(rule, year) {
       // Labor Day (laborDay - 9), not the Saturday of the holiday weekend.
       // Must stay in lockstep with the same-named rule in
       // src/utils/league-event-resolver.ts, which drives /afl-fantasy/calendar.
-      const ld = getLaborDay(year);
+      const ld = laborDay(year);
       return new Date(ld.getFullYear(), ld.getMonth(), ld.getDate() - 9);
     }
     case 'sunday-before-labor-day-weekend': {
       // AFL National League email draft — the Sunday right after the AL
       // draft Saturday above (laborDay - 8). Mirrors league-event-resolver.ts.
-      const ld = getLaborDay(year);
+      const ld = laborDay(year);
       return new Date(ld.getFullYear(), ld.getMonth(), ld.getDate() - 8);
     }
     default: return new Date(year, 0, 1);
@@ -118,7 +117,11 @@ const EVENTS = [
   { id: 'rookie-draft', name: 'Rookie Draft', startRule: { type: 'computed', rule: 'rookie-draft' }, tier: 'major' },
   { id: 'declare-rookie-contracts', name: 'Declare Contracts / Cut to 22', startRule: { type: 'computed', rule: 'third-sunday-august' }, tier: 'standard' },
   { id: 'offseason-fa-closes', name: 'Offseason FA Closes', startRule: { type: 'computed', rule: 'third-sunday-august' }, tier: 'standard' },
-  { id: 'nfl-season-starts', name: 'NFL Season Starts', startRule: { type: 'computed', rule: 'nfl-kickoff' }, tier: 'standard' },
+  // Kickoff still resolves — it anchors every in-season rule below and shows
+  // on /calendar — but it no longer generates a Roger touch. It is not a
+  // deadline: nothing is owed, nobody can miss it, and the league finds out
+  // from the NFL. Owner call, 2026-09-10, after Roger announced it a day late.
+  { id: 'nfl-season-starts', name: 'NFL Season Starts', startRule: { type: 'computed', rule: 'nfl-kickoff' }, tier: 'standard', remind: false },
   { id: 'trading-deadline', name: 'Trading Deadline', startRule: { type: 'computed', rule: 'friday-before-week-11' }, tier: 'major', audience: 'league' },
   { id: 'in-season-fa-ends', name: 'In-Season FA Ends', startRule: { type: 'computed', rule: 'after-week-16' }, tier: 'minor' },
   { id: 'playoffs-start', name: 'Playoffs Begin', startRule: { type: 'computed', rule: 'playoffs-start' }, tier: 'major' },
@@ -200,7 +203,7 @@ const AFL_EVENTS = [
   // full major ramp would double every touch into the same GroupMe thread.
   { id: 'afl-nl-draft', name: 'AFL National League Draft', startRule: { type: 'computed', rule: 'sunday-before-labor-day-weekend' }, tier: 'standard' },
   { id: 'afl-ir-deadline', name: 'AFL IR-to-Active Deadline', startRule: { type: 'computed', rule: 'second-sunday-february' }, tier: 'standard' },
-  { id: 'afl-nfl-season-starts', name: 'NFL Season Starts', startRule: { type: 'computed', rule: 'nfl-kickoff' }, tier: 'standard' },
+  { id: 'afl-nfl-season-starts', name: 'NFL Season Starts', startRule: { type: 'computed', rule: 'nfl-kickoff' }, tier: 'standard', remind: false },
 ];
 
 // ── NFL Draft date resolution (mirrors league-year-config.ts) ──
@@ -301,6 +304,12 @@ function resolveEvents(year, eventList = EVENTS) {
       // saying out loud even mid-season. See scripts/lib/reminder-fallback.mjs
       // and docs/claude/rules/roger.md.
       ...(event.audience ? { audience: event.audience } : {}),
+      // `remind: false` — resolve the date, announce nothing. For events that
+      // are calendar landmarks rather than deadlines (NFL kickoff): the anchor
+      // other rules count from, and a row on /calendar, but no push and no
+      // GroupMe post. Only ever written explicitly; a missing flag means the
+      // event reminds, so nothing goes quiet by accident.
+      ...(event.remind === false ? { remind: false } : {}),
       // Which touch a league-audience event announces on. Omitted = 7d (a
       // week out, which is what a deadline wants). Throwback Week overrides
       // it to 2d so the post lands on the Tuesday that opens the NFL week.

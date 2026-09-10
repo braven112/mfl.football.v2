@@ -11,6 +11,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { formatTimePT } from './lib/pt-date.mjs';
+import { getCurrentNFLWeek as resolveCurrentNFLWeek } from './article-utils/week-resolver.mjs';
 import { getLeagueBySlug } from '../src/config/leagues-data.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -18,30 +19,16 @@ const __dirname = path.dirname(__filename);
 const root = path.resolve(__dirname, '..');
 
 /**
- * Calculate current NFL week based on season start
+ * Current NFL week, from the published NFL schedule.
+ *
+ * Was a three-entry `seasonConfigs` map plus a "first Thursday of September"
+ * fallback — two more hand-maintained kickoff tables, and its 2026 entry had
+ * the same off-by-one (Sep 10) that made Roger announce the season a day late.
+ * Both are gone; week-resolver walks the real week starts.
  */
-function getCurrentNFLWeek(seasonYear = 2025) {
-  const seasonConfigs = {
-    2024: new Date('2024-09-05T20:20:00-04:00'),
-    2025: new Date('2025-09-04T20:20:00-04:00'),
-    2026: new Date('2026-09-10T20:20:00-04:00'),
-  };
-
-  let week1Start = seasonConfigs[seasonYear];
-  if (!week1Start) {
-    // Fallback: assume first Thursday of September
-    const sept1 = new Date(seasonYear, 8, 1);
-    const dayOfWeek = sept1.getDay();
-    const daysUntilThursday = dayOfWeek <= 4 ? 4 - dayOfWeek : 11 - dayOfWeek;
-    week1Start = new Date(seasonYear, 8, 1 + daysUntilThursday, 20, 20);
-  }
-
-  const now = new Date();
-  if (now < week1Start) return 1; // Default to week 1 if before season
-
-  const msSinceStart = now.getTime() - week1Start.getTime();
-  const weeksSinceStart = Math.floor(msSinceStart / (7 * 24 * 60 * 60 * 1000));
-  return Math.min(weeksSinceStart + 1, 22); // Cap at 22 weeks
+function getCurrentNFLWeek(seasonYear) {
+  // Before the season opens, preview week 1 rather than reporting "no week".
+  return resolveCurrentNFLWeek(seasonYear) || 1;
 }
 
 function getCurrentSeasonYear() {

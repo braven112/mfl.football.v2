@@ -24,35 +24,32 @@
  * Tuesday after week 1.
  */
 
+import { laborDayDate } from './labor-day.mjs';
+import { nflWeekStartInstant } from './nfl-week-starts.mjs';
+
 /**
- * NFL week 1 kickoff (Thursday night, 20:20 ET) for a season year.
+ * NFL week 1 kickoff for a season year, as a UTC instant.
  *
- * DERIVED from Labor Day rather than table-driven on purpose: a hardcoded map
- * silently expires, and this column is meant to keep working without an annual
- * edit. The NFL opener is the Thursday after Labor Day (first Monday of
- * September + 3 days), which reproduces every entry in week-resolver's
- * KICKOFF_DATES map for 2024-2027 exactly.
- *
- * Returned as a UTC instant: 20:20 ET in September is 00:20 UTC the next day,
- * hence the +4 days.
+ * The published schedule when we hold it, the Labor Day derivation (Thursday
+ * after Labor Day, 20:20 ET) when we do not — see
+ * src/utils/nfl-week-starts.mjs. This function used to BE that derivation, and
+ * the short "Labor Day → kickoff" gap it exists to close is exactly where the
+ * derivation goes wrong: 2026 opened on Wednesday Sep 9, so a window that
+ * waited for Thursday Sep 10 sat closed through the season's first game.
  */
 export function nflWeekOneKickoff(year) {
-  return new Date(Date.UTC(year, 8, laborDayDate(year) + 4, 0, 20));
+  return nflWeekStartInstant(year, 1);
 }
 
 /**
  * Day-of-month of Labor Day (first Monday of September) in `year`.
  *
- * Exported so nothing else in the repo re-derives it. CLAUDE.md's rollover
- * rules exist because a re-ported date formula drifted in five files; the
- * trade-deadline resolver (`src/utils/trade-deadline.mjs`) imports this one
- * rather than growing a second copy.
+ * Re-exported from ./labor-day.mjs, which now owns the one implementation —
+ * every existing importer (trade-deadline.mjs, tests) keeps this path. The
+ * split exists to break the cycle with nfl-week-starts.mjs, which needs Labor
+ * Day for its own fallback.
  */
-export function laborDayDate(year) {
-  const sep1Day = new Date(Date.UTC(year, 8, 1)).getUTCDay();
-  const offset = sep1Day === 1 ? 0 : sep1Day === 0 ? 1 : 8 - sep1Day;
-  return 1 + offset;
-}
+export { laborDayDate } from './labor-day.mjs';
 
 /**
  * Weeks after kickoff that the column stays eligible. Both leagues wrap their

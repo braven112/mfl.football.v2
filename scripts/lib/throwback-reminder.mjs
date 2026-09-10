@@ -5,10 +5,12 @@
  * can lock the behavior in tests/throwback-week-reminder.test.ts without
  * importing schefter-scan.mjs, which runs the full scan at import time.
  *
- * Date derivation is COMPUTED, never hardcoded to a calendar date:
- *   Labor Day (1st Monday of September)
- *     → NFL kickoff (Thursday after Labor Day, Labor Day + 3)
- *     → NFL Week N starts kickoff Thursday + (N - 1) * 7 days.
+ * Dates come from the PUBLISHED NFL schedule via src/utils/nfl-week-starts.mjs,
+ * which falls back to the old Labor-Day derivation only for seasons the NFL has
+ * not published yet. This module used to do that derivation itself and assume
+ * every week opens on a Thursday; 2026 opened on a Wednesday and moved week 12
+ * to Wednesday as well, so an announce touch counted back from a hardcoded
+ * Thursday lands on the wrong day.
  *
  * The week number itself comes from THROWBACK_WEEKS in
  * src/data/theleague/throwback-config.ts (single source of truth) —
@@ -17,36 +19,20 @@
  * the parse fails.
  */
 
-/** First Monday of September. */
-export function getLaborDay(year) {
-  const first = new Date(year, 8, 1);
-  const firstDow = first.getDay();
-  let diff = 1 - firstDow;
-  if (diff < 0) diff += 7;
-  return new Date(year, 8, 1 + diff);
-}
-
-/** NFL kickoff: the Thursday after Labor Day. */
-export function getNflKickoff(year) {
-  const ld = getLaborDay(year);
-  return new Date(ld.getFullYear(), ld.getMonth(), ld.getDate() + 3);
-}
+/** First Monday of September. Re-exported from the one shared implementation. */
+export { laborDay as getLaborDay } from '../../src/utils/labor-day.mjs';
 
 /**
- * Start of NFL week `week` (1-based): kickoff Thursday + (week - 1) * 7 days.
- * Week 1 starts on kickoff Thursday itself; Week 4 = kickoff + 21 days.
+ * Season kickoff, and the start of any NFL week — the published date when we
+ * hold the schedule, the Labor-Day derivation when we don't.
+ *
+ * Thin re-exports rather than local copies: a second derivation here is how
+ * the AFL draft reminder drifted sixteen days in Aug 2026.
  */
-export function getNflWeekStart(year, week) {
-  if (!Number.isInteger(week) || week < 1) {
-    throw new Error(`Invalid NFL week: ${week}`);
-  }
-  const kickoff = getNflKickoff(year);
-  return new Date(
-    kickoff.getFullYear(),
-    kickoff.getMonth(),
-    kickoff.getDate() + (week - 1) * 7,
-  );
-}
+export {
+  nflKickoff as getNflKickoff,
+  nflWeekStart as getNflWeekStart,
+} from '../../src/utils/nfl-week-starts.mjs';
 
 /**
  * Fallback if parsing throwback-config.ts ever fails. Mirrors the config the

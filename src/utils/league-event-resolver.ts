@@ -16,6 +16,7 @@ import type {
 import { THE_LEAGUE_EVENTS } from '../data/theleague/league-events';
 import { LEAGUE_YEAR_OVERRIDES } from '../data/theleague/league-year-config';
 import { getCurrentLeagueYear, getLaborDayForYear } from './league-year';
+import { nflWeekStart } from './nfl-week-starts.mjs';
 import { getLeagueBySlug, DEFAULT_LEAGUE_SLUG } from '../config/leagues';
 import aflEventsConfig from '../data/afl-fantasy/league-events.json';
 
@@ -51,6 +52,25 @@ export function getNthDayOfMonth(
 /**
  * Resolve a computed date rule to a concrete Date.
  */
+/**
+ * Start of NFL week `week`, shifted by `offsetDays`.
+ *
+ * The in-season rules below all hang off this. They used to inline
+ * `LaborDay + 3 + (N-1)*7`, which assumes the season opens on the Thursday
+ * after Labor Day and that no week ever moves — the NFL does both. 2026 opened
+ * on Wednesday Sep 9 and shifted week 12 to Wednesday for Thanksgiving.
+ * `nflWeekStart` reads the published schedule and only falls back to that
+ * derivation for seasons the NFL has not released yet.
+ *
+ * Kept in lockstep with the identically-named helper in
+ * scripts/compute-league-events.mjs, which resolves the same rule ids for
+ * Roger's reminders. tests/league-event-resolver.test.ts pins the pair.
+ */
+function weekStart(year: number, week: number, offsetDays = 0): Date {
+  const d = nflWeekStart(year, week);
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate() + offsetDays);
+}
+
 function resolveComputedDate(rule: string, year: number): Date {
   switch (rule) {
     case 'labor-day':
@@ -83,97 +103,55 @@ function resolveComputedDate(rule: string, year: number): Date {
     }
 
     case 'afl-trade-deadline': {
-      // AFL Trade Deadline — Wednesday between Week 10 and Week 11.
-      // Week 1 Tuesday is kickoff+5 (NFL kickoff is Thursday); Week N Wed is
-      // kickoff + (N-1)*7 + 6 days. We want the Wed AFTER Week 10's Mon-Tue
-      // closes, i.e. start of Week 11 → kickoff + 10*7 - 1 days.
-      const laborDay = getLaborDayForYear(year);
-      const kickoff = new Date(laborDay);
-      kickoff.setDate(kickoff.getDate() + 3); // Thursday kickoff
-      const wed = new Date(kickoff);
-      wed.setDate(wed.getDate() + 10 * 7 - 1); // Wednesday between W10 and W11
-      return wed;
+      // AFL Trade Deadline — the day before week 11 opens, i.e. the Wednesday
+      // between weeks 10 and 11 in a normal Thursday-anchored season. Anchored
+      // to week 11's real start rather than counted forward from kickoff, so a
+      // moved week carries the deadline with it.
+      return weekStart(year, 11, -1);
     }
 
     case 'afl-playoffs-start': {
-      // AFL playoffs begin NFL Week 15 (Thursday, 14 weeks after kickoff).
-      // The bracket shifted +1 with the 2021 move to a 17-game / 18-week NFL
-      // season: QF Week 15, SF Week 16, World Championship Week 17.
-      const laborDay = getLaborDayForYear(year);
-      const kickoff = new Date(laborDay);
-      kickoff.setDate(kickoff.getDate() + 3);
-      const week15 = new Date(kickoff);
-      week15.setDate(week15.getDate() + 14 * 7);
-      return week15;
+      // AFL playoffs begin NFL week 15. The bracket shifted +1 with the 2021
+      // move to a 17-game / 18-week NFL season: QF Week 15, SF Week 16, World
+      // Championship Week 17.
+      return weekStart(year, 15);
     }
 
     case 'afl-championship-week': {
-      // AFL World Championship (MFL "AFL Super Bowl") is NFL Week 17
-      // (Thursday, 16 weeks after kickoff). Verified against MFL's calendar:
-      // 2026 → Thu Dec 31. Was Week 16 (Dec 24) — a week early.
-      const laborDay = getLaborDayForYear(year);
-      const kickoff = new Date(laborDay);
-      kickoff.setDate(kickoff.getDate() + 3);
-      const week17 = new Date(kickoff);
-      week17.setDate(week17.getDate() + 16 * 7);
-      return week17;
+      // AFL World Championship (MFL "AFL Super Bowl") is NFL week 17.
+      // Verified against MFL's calendar: 2026 → Thu Dec 31. Was Week 16
+      // (Dec 24) — a week early.
+      return weekStart(year, 17);
     }
 
-    case 'nfl-kickoff': {
-      // NFL kickoff is the Thursday after Labor Day
-      const laborDay = getLaborDayForYear(year);
-      const kickoff = new Date(laborDay);
-      kickoff.setDate(kickoff.getDate() + 3);
-      return kickoff;
-    }
+    case 'nfl-kickoff':
+      // The season's first game — NOT assumed to be a Thursday.
+      return weekStart(year, 1);
 
-    case 'day-before-nfl-kickoff': {
-      const laborDay = getLaborDayForYear(year);
-      const dayBefore = new Date(laborDay);
-      dayBefore.setDate(dayBefore.getDate() + 2); // Wednesday before Thursday kickoff
-      return dayBefore;
-    }
+    case 'day-before-nfl-kickoff':
+      return weekStart(year, 1, -1);
 
-    case 'friday-before-week-11': {
-      // Week 1 starts the Thursday after Labor Day
-      // Week 11 is 10 weeks later; the Friday before is 10*7 - 6 days after kickoff
-      const laborDay = getLaborDayForYear(year);
-      const kickoff = new Date(laborDay);
-      kickoff.setDate(kickoff.getDate() + 3); // Thursday kickoff
-      const friday = new Date(kickoff);
-      friday.setDate(friday.getDate() + 10 * 7 - 6); // Friday of Week 11
-      return friday;
-    }
+    case 'friday-before-week-11':
+      // TheLeague's trading deadline: the Friday of the week BEFORE week 11.
+      return weekStart(year, 11, -6);
 
-    case 'after-week-16': {
-      // Week 16 ends on Monday, ~15 weeks after kickoff
-      const laborDay = getLaborDayForYear(year);
-      const kickoff = new Date(laborDay);
-      kickoff.setDate(kickoff.getDate() + 3); // Thursday kickoff
-      const week16End = new Date(kickoff);
-      week16End.setDate(week16End.getDate() + 15 * 7 + 4); // Tuesday after Week 16 Monday
-      return week16End;
-    }
+    case 'after-week-16':
+      // In-season FA closes when week 17 opens.
+      //
+      // This used to be `kickoff + 15*7 + 4` here and `kickoff + 16*7` in
+      // scripts/compute-league-events.mjs — a three-day disagreement between
+      // the date the calendar page showed (Mon Dec 28 2026) and the date Roger
+      // announced to the league (Thu Dec 31 2026). Roger's is the one owners
+      // have been acting on, so both now resolve to it.
+      return weekStart(year, 17);
 
-    case 'playoffs-start': {
-      // Fantasy playoffs begin NFL Week 15 (Thursday, 14 weeks after kickoff)
-      const laborDay = getLaborDayForYear(year);
-      const kickoff = new Date(laborDay);
-      kickoff.setDate(kickoff.getDate() + 3); // Thursday kickoff
-      const week15 = new Date(kickoff);
-      week15.setDate(week15.getDate() + 14 * 7); // Thursday of Week 15
-      return week15;
-    }
+    case 'playoffs-start':
+      // Fantasy playoffs begin with NFL week 15.
+      return weekStart(year, 15);
 
-    case 'championship-week': {
-      // Fantasy championship is NFL Week 17 (Thursday, 16 weeks after kickoff)
-      const laborDay = getLaborDayForYear(year);
-      const kickoff = new Date(laborDay);
-      kickoff.setDate(kickoff.getDate() + 3); // Thursday kickoff
-      const week17 = new Date(kickoff);
-      week17.setDate(week17.getDate() + 16 * 7); // Thursday of Week 17
-      return week17;
-    }
+    case 'championship-week':
+      // Fantasy championship is NFL week 17.
+      return weekStart(year, 17);
 
     default:
       return new Date(year, 0, 1);

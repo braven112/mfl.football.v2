@@ -11,11 +11,13 @@ import { resolveSeasonGate } from '../scripts/generate-pecking-order.mjs';
  * blasted a GroupMe announcement ranking a season that ended in December.
  */
 describe('nflWeekOneKickoff', () => {
-  // Derived from Labor Day; must reproduce week-resolver's hardcoded map.
+  // From MFL's published schedule where we hold it (2024-2026), derived from
+  // Labor Day where we do not (2027+). Note 2026: a WEDNESDAY opener, which
+  // the derivation this used to be got wrong by a day.
   it.each([
     [2024, '2024-09-05T20:20:00-04:00'],
     [2025, '2025-09-04T20:20:00-04:00'],
-    [2026, '2026-09-10T20:20:00-04:00'],
+    [2026, '2026-09-09T20:20:00-04:00'],
     [2027, '2027-09-09T20:20:00-04:00'],
   ])('matches the known NFL opener for %i', (year, iso) => {
     expect(nflWeekOneKickoff(year as number).toISOString()).toBe(
@@ -23,7 +25,7 @@ describe('nflWeekOneKickoff', () => {
     );
   });
 
-  it('keeps deriving past the end of the hardcoded map', () => {
+  it('keeps deriving past the end of the published schedule', () => {
     // 2030: Labor Day is Sep 2, opener Sep 5.
     expect(nflWeekOneKickoff(2030).toISOString()).toBe(
       new Date('2030-09-05T20:20:00-04:00').toISOString()
@@ -33,7 +35,7 @@ describe('nflWeekOneKickoff', () => {
 
 describe('isSeasonWindowOpen', () => {
   it('is closed before the season it would rank kicks off', () => {
-    // Labor Day 2026 is Sep 7; the opener is Sep 10. The clock has already
+    // Labor Day 2026 is Sep 7; the opener is Wed Sep 9. The clock has already
     // rolled to the 2026 season but no game has been played.
     expect(isSeasonWindowOpen(2026, new Date('2026-09-08T14:00:00Z'))).toBe(false);
   });

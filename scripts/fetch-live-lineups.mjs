@@ -19,36 +19,23 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { getLeagueById, LEAGUES, DEFAULT_LEAGUE_SLUG, DEFAULT_LEAGUE_ID } from '../src/config/leagues-data.mjs';
+import { getCurrentNFLWeek as resolveCurrentNFLWeek } from './article-utils/week-resolver.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const root = path.resolve(__dirname, '..');
 
 /**
- * Calculate current NFL week based on season start
+ * Current NFL week, from the published NFL schedule.
+ *
+ * Was a local `seasonConfigs` map of Week 1 Thursdays plus a "first Thursday of
+ * September" fallback — one of six such tables in this repo, all of which had
+ * 2026 opening Thursday Sep 10 when it actually opened Wednesday Sep 9.
+ * week-resolver walks the real week starts (see src/utils/nfl-week-starts.mjs).
  */
-function getCurrentNFLWeek(seasonYear = 2025) {
-  const seasonConfigs = {
-    2024: new Date('2024-09-05T20:20:00-04:00'),
-    2025: new Date('2025-09-04T20:20:00-04:00'),
-    2026: new Date('2026-09-10T20:20:00-04:00'),
-  };
-
-  const week1Start = seasonConfigs[seasonYear];
-  if (!week1Start) {
-    // Fallback: assume first Thursday of September
-    const sept1 = new Date(seasonYear, 8, 1);
-    const dayOfWeek = sept1.getDay();
-    const daysUntilThursday = dayOfWeek <= 4 ? 4 - dayOfWeek : 11 - dayOfWeek;
-    week1Start = new Date(seasonYear, 8, 1 + daysUntilThursday, 20, 20);
-  }
-
-  const now = new Date();
-  if (now < week1Start) return 1; // Default to week 1 if before season
-
-  const msSinceStart = now.getTime() - week1Start.getTime();
-  const weeksSinceStart = Math.floor(msSinceStart / (7 * 24 * 60 * 60 * 1000));
-  return Math.min(weeksSinceStart + 1, 22); // Cap at 22 weeks
+function getCurrentNFLWeek(seasonYear = new Date().getFullYear()) {
+  // Before the season opens, preview week 1 rather than reporting no week.
+  return resolveCurrentNFLWeek(seasonYear) || 1;
 }
 
 const leagueId = process.env.MFL_LEAGUE_ID || DEFAULT_LEAGUE_ID;

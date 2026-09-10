@@ -1,119 +1,58 @@
 /**
  * Current NFL Week Calculator
- * Automatically determines the current NFL week based on the season schedule
- */
-
-/**
- * NFL season structure for 2024-2025
- * - Regular season: Weeks 1-18 (17 games per team)
- * - Playoffs: Weeks 19-22
  *
- * Season start dates (Week 1 Thursday kickoff):
- * - 2024: September 5, 2024
- * - 2025: September 4, 2025 (estimated)
- * - 2026: September 10, 2026 (estimated)
+ * Determines the current NFL week from the PUBLISHED NFL schedule
+ * (src/utils/nfl-week-starts.mjs), which falls back to the Labor Day
+ * derivation only for seasons the NFL has not released yet.
+ *
+ * This file used to carry its own `SEASON_CONFIGS` table of Week 1 Thursdays,
+ * two of them marked "estimated", plus a "first Thursday of September"
+ * fallback. Its 2026 entry said Sep 10; the season opened Wednesday Sep 9. It
+ * was one of six such tables in the repo, and they disagreed.
+ *
+ * Regular season is weeks 1-18; weeks 19-22 are the NFL playoffs, which we do
+ * not hold start dates for and which run on a strict weekly cadence anyway.
  */
 
-interface SeasonConfig {
-  year: number;
-  week1Start: Date;
-  regularSeasonWeeks: number;
-  playoffWeeks: number;
-}
+import {
+  REGULAR_SEASON_WEEKS,
+  nflWeekStartInstant,
+} from './nfl-week-starts.mjs';
 
-const SEASON_CONFIGS: SeasonConfig[] = [
-  {
-    year: 2024,
-    week1Start: new Date('2024-09-05T20:20:00-04:00'), // Thursday Night Football
-    regularSeasonWeeks: 18,
-    playoffWeeks: 4,
-  },
-  {
-    year: 2025,
-    week1Start: new Date('2025-09-04T20:20:00-04:00'), // Thursday Night Football (Sept 4, 2025)
-    regularSeasonWeeks: 18,
-    playoffWeeks: 4,
-  },
-  {
-    year: 2026,
-    week1Start: new Date('2026-09-10T20:20:00-04:00'), // Estimated
-    regularSeasonWeeks: 18,
-    playoffWeeks: 4,
-  },
-];
+/** NFL playoff rounds after week 18: wild card, divisional, conference, SB. */
+const PLAYOFF_WEEKS = 4;
+const MAX_WEEK = REGULAR_SEASON_WEEKS + PLAYOFF_WEEKS;
+const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 
 /**
- * Get season configuration for a given year
- */
-function getSeasonConfig(year: number): SeasonConfig | undefined {
-  return SEASON_CONFIGS.find(config => config.year === year);
-}
-
-/**
- * Calculate the NFL week number for a given date
+ * Calculate the NFL week number for a given date.
  *
  * @param date - The date to calculate the week for (defaults to now)
  * @param year - The NFL season year (defaults to current year if before September, otherwise next year)
- * @returns The NFL week number (1-22), or null if date is before season starts
+ * @returns The NFL week number (1-22), or null if date is before the season's first game
  */
 export function getCurrentNFLWeek(date: Date = new Date(), year?: number): number | null {
-  // Determine the season year if not provided
-  // NFL season runs Sep-Feb, so Jan-Aug uses previous year's season
+  // NFL season runs Sep-Feb, so Jan-Aug uses the previous year's season.
   const seasonYear = year ?? (date.getMonth() < 8 ? date.getFullYear() - 1 : date.getFullYear());
 
-  const config = getSeasonConfig(seasonYear);
+  const seasonStart = nflWeekStartInstant(seasonYear, 1);
+  if (date < seasonStart) return null;
 
-  // If no config for this year, fall back to calculation based on September start
-  if (!config) {
-    return calculateWeekFromSeptemberStart(date, seasonYear);
+  // Walk the real week starts backwards — the NFL moves weeks (2026 opened on
+  // a Wednesday and put week 12 on Thanksgiving Wednesday), so a fixed 7-day
+  // stride misnames every week after the first shift.
+  for (let week = REGULAR_SEASON_WEEKS; week >= 1; week -= 1) {
+    if (date >= nflWeekStartInstant(seasonYear, week)) {
+      if (week < REGULAR_SEASON_WEEKS) return week;
+      // Past week 18's kickoff: playoff weeks run on a strict weekly cadence
+      // from there, and we hold no published start dates for them.
+      const weeksPast = Math.floor(
+        (date.getTime() - nflWeekStartInstant(seasonYear, REGULAR_SEASON_WEEKS).getTime()) / WEEK_MS,
+      );
+      return Math.min(REGULAR_SEASON_WEEKS + weeksPast, MAX_WEEK);
+    }
   }
-
-  const { week1Start, regularSeasonWeeks, playoffWeeks } = config;
-
-  // Check if date is before season starts
-  if (date < week1Start) {
-    return null;
-  }
-
-  // Calculate milliseconds since week 1 start
-  const msSinceStart = date.getTime() - week1Start.getTime();
-
-  // Convert to weeks (7 days = 1 week)
-  const weeksSinceStart = Math.floor(msSinceStart / (7 * 24 * 60 * 60 * 1000));
-
-  // Week number is weeks since start + 1
-  const weekNumber = weeksSinceStart + 1;
-
-  // Cap at max week number (regular season + playoffs)
-  const maxWeek = regularSeasonWeeks + playoffWeeks;
-
-  return Math.min(weekNumber, maxWeek);
-}
-
-/**
- * Fallback calculation for years without explicit config
- * Assumes season starts first Thursday of September
- */
-function calculateWeekFromSeptemberStart(date: Date, year: number): number | null {
-  // Find first Thursday of September
-  const september1 = new Date(year, 8, 1); // Month is 0-indexed
-  const dayOfWeek = september1.getDay(); // 0 = Sunday, 4 = Thursday
-
-  // Calculate days until Thursday
-  const daysUntilThursday = dayOfWeek <= 4 ? 4 - dayOfWeek : 11 - dayOfWeek;
-
-  const week1Start = new Date(year, 8, 1 + daysUntilThursday, 20, 20); // 8:20 PM
-
-  if (date < week1Start) {
-    return null;
-  }
-
-  const msSinceStart = date.getTime() - week1Start.getTime();
-  const weeksSinceStart = Math.floor(msSinceStart / (7 * 24 * 60 * 60 * 1000));
-  const weekNumber = weeksSinceStart + 1;
-
-  // Cap at 22 weeks (18 regular + 4 playoffs)
-  return Math.min(weekNumber, 22);
+  return null;
 }
 
 /**
