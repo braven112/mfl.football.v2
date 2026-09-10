@@ -36,7 +36,7 @@ import { createMFLApiClient, type RosterEntry } from './mfl-matchup-api';
 import { getLeagueById, type LeagueDefinition } from '../config/leagues';
 import { resolveWaiverWindow, describeWaiverWindow } from './waiver-window';
 import { DEFAULT_VIEWER_CLOCK, type ViewerClock } from './viewer-preferences';
-import { readBidRules, conferenceOfFranchise, freeAgencyIsLeagueWide, activeRosterIdsOf } from './waiver-claim';
+import { readBidRules, conferenceOfFranchise, freeAgencyIsLeagueWide, activeRosterIdsOf, rosterSlotOf } from './waiver-claim';
 import { claimVerb, type ClaimContext } from './claim-context-shape';
 import { isAuctionSeason } from './auction-window';
 import type { AuthUser } from './auth';
@@ -287,7 +287,11 @@ export async function resolveClaimContext(user: AuthUser, clock: ViewerClock = D
   const names = await readPlayerNames(year, ownIds);
   const activeIds = activeRosterIdsOf(own);
   const roster = own
-    .map((p) => ({ id: String(p.id), name: names.get(String(p.id)) ?? String(p.id), active: activeIds.has(String(p.id)) }))
+    .map((p) => ({
+      id: String(p.id),
+      name: names.get(String(p.id)) ?? String(p.id),
+      slot: rosterSlotOf(p.status),
+    }))
     .sort((a, b) => a.name.localeCompare(b.name));
 
   // `rosterSize` is the ACTIVE limit. A payload without one leaves both fields

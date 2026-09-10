@@ -260,10 +260,10 @@ describe('the claim form says how much room there is BEFORE the owner submits', 
     expect(context).not.toMatch(/\}\)\.getRosters\(\)/);
   });
 
-  it('ships the active count, the limit, and per-player active flags', () => {
+  it('ships the active count, the limit, and per-player slots', () => {
     expect(context).toMatch(/activeRosterCount:/);
     expect(context).toMatch(/rosterLimit,/);
-    expect(context).toMatch(/active: activeIds\.has\(/);
+    expect(context).toMatch(/slot: rosterSlotOf\(/);
   });
 
   it('renders an open-slot line off those numbers', () => {
@@ -273,16 +273,32 @@ describe('the claim form says how much room there is BEFORE the owner submits', 
     expect(modal).toMatch(/cfg\.rosterLimit/);
   });
 
-  it('marks injured-reserve players in the drop picker', () => {
+  it('marks injured-reserve AND taxi-squad players distinctly in the drop picker', () => {
     // Droppable, but dropping one does not open an active spot — the picker
-    // has to make that visible or the label is a trap.
-    expect(modal).toMatch(/\(IR\)/);
+    // has to make that visible or the label is a trap. TheLeague runs a taxi
+    // squad too, so one shared "(IR)" label would mislabel every practice
+    // squad rookie.
+    expect(modal).toMatch(/ir: ' \(IR\)'/);
+    expect(modal).toMatch(/taxi: ' \(TS\)'/);
+  });
+
+  it('re-reads the counts on every render rather than capturing them', () => {
+    // A captured count survives a successful first-come add and leaves the
+    // form promising an open spot into a roster that just filled — the same
+    // wrong answer this PR removes, one click later.
+    expect(modal).toMatch(/const activeCount = cfg\.activeRosterCount;/);
+    expect(modal).toMatch(/recordCompletedAdd/);
+  });
+
+  it('stops calling the roster full once an active player is picked to drop', () => {
+    expect(modal).toMatch(/makes room/);
   });
 
   it('never invents a limit the server could not resolve', () => {
     // Both numbers optional, and the line goes BLANK rather than guessing —
     // a made-up "16" reads as authoritative.
-    expect(modal).toMatch(/slotsKnown/);
+    expect(modal).toMatch(/typeof activeCount !== 'number' \|\| typeof rosterLimit !== 'number'/);
+    expect(modal).toMatch(/dropHint\.textContent = '';/);
   });
 });
 

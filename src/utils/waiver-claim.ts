@@ -102,6 +102,19 @@ export function isActiveRosterStatus(status: unknown): boolean {
   return s === '' || !NON_ACTIVE_STATUSES.has(s);
 }
 
+/**
+ * Which bucket an MFL roster status names.
+ *
+ * `active` is everything that occupies a `rosterSize` slot — see
+ * {@link isActiveRosterStatus} for why an unknown status lands there.
+ */
+export function rosterSlotOf(status: unknown): 'active' | 'ir' | 'taxi' {
+  const s = String(status ?? '').trim().toUpperCase();
+  if (s === 'INJURED_RESERVE') return 'ir';
+  if (s === 'TAXI_SQUAD') return 'taxi';
+  return 'active';
+}
+
 /** The active-roster subset of an MFL roster list, as ids. */
 export function activeRosterIdsOf(
   players: Array<{ id?: unknown; status?: unknown }> = []

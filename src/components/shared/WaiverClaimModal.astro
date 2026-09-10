@@ -26,8 +26,8 @@ export interface WaiverClaimConfig {
   system: 'bbid' | 'priority';
   franchiseId: string | null;
   rules: { minimum: number; increment: number; conditional: boolean; maxRounds: number };
-  /** `active` is MFL's `status === 'ROSTER'` — see ClaimContext#roster. */
-  roster: Array<{ id: string; name: string; active?: boolean }>;
+  /** `slot` is which MFL bucket the player sits in — see ClaimContext#roster. */
+  roster: Array<{ id: string; name: string; slot?: 'active' | 'ir' | 'taxi' }>;
   year: number;
   /**
    * Active players / league `rosterSize`, so the form can say how much room
@@ -237,55 +237,103 @@ const windowLabel = config?.windowLabel ?? '';
 
     // Replace, never append: wire() is guarded to one call per dialog, but a
     // doubled drop list is a silent, awful bug and the reset costs nothing.
-    dropSel.querySelectorAll('option[value]:not([value="0000"])').forEach((o) => o.remove());
+    // renderDropOptions() below does the reset for the drop picker.
     roundSel.replaceChildren();
     // Who is droppable is EVERYONE; who frees an active slot is only the
     // active. The picker offers both and marks the difference, because a
     // roster at the limit is not helped by dropping from IR — the add lands on
     // the ACTIVE roster, so the result is still over. See the same rule,
     // server-side, in validateClaims.
-    const rosterOptions = cfg.roster as Array<{ id: string; name: string; active?: boolean }>;
-    const irIds = new Set(rosterOptions.filter((p) => p.active === false).map((p) => p.id));
-    for (const p of rosterOptions) {
-      const opt = document.createElement('option');
-      opt.value = p.id;
-      opt.textContent = irIds.has(p.id) ? `${p.name} (IR)` : p.name;
-      dropSel.appendChild(opt);
-    }
+    const rosterOptions = cfg.roster as Array<{
+      id: string;
+      name: string;
+      slot?: 'active' | 'ir' | 'taxi';
+    }>;
+    /** THREE buckets, not two: TheLeague runs a taxi squad as well as IR. */
+    const slotOf = (id: string) => rosterOptions.find((p) => p.id === id)?.slot ?? 'active';
+    const slotLabel = { active: '', ir: ' (IR)', taxi: ' (TS)' } as const;
+    const slotName = { active: '', ir: 'injured reserve', taxi: 'the practice squad' } as const;
+    const renderDropOptions = () => {
+      dropSel.querySelectorAll('option[value]:not([value="0000"])').forEach((o) => o.remove());
+      for (const p of rosterOptions) {
+        const opt = document.createElement('option');
+        opt.value = p.id;
+        opt.textContent = `${p.name}${slotLabel[p.slot ?? 'active']}`;
+        dropSel.appendChild(opt);
+      }
+    };
+    renderDropOptions();
 
     /**
      * How much room the viewer actually has, said BEFORE they submit.
      *
-     * Silent when the server could not resolve either number — a made-up
-     * limit reads as authoritative and is worse than nothing.
+     * Both numbers are read off `cfg` ON EVERY CALL, never captured — a
+     * successful first-come add changes them, and a captured count leaves the
+     * form saying "1 open active spot" into a roster that is now full, which
+     * is the same wrong answer this PR exists to remove, just one click later.
+     *
+     * Silent when the server could not resolve either number: a made-up limit
+     * reads as authoritative and is worse than nothing.
      */
-    const activeCount = cfg.activeRosterCount;
-    const rosterLimit = cfg.rosterLimit;
-    const slotsKnown = typeof activeCount === 'number' && typeof rosterLimit === 'number';
-    const openSlots = slotsKnown ? Math.max(0, rosterLimit! - activeCount!) : null;
     const updateDropHint = () => {
       if (!dropHint) return;
-      if (!slotsKnown) {
+      const activeCount = cfg.activeRosterCount;
+      const rosterLimit = cfg.rosterLimit;
+      if (typeof activeCount !== 'number' || typeof rosterLimit !== 'number') {
         dropHint.textContent = '';
         return;
       }
-      if (openSlots === 0 && irIds.has(dropSel.value)) {
+      const openSlots = Math.max(0, rosterLimit - activeCount);
+      const dropId = dropSel.value;
+      const dropping = dropId && dropId !== '0000' ? slotOf(dropId) : null;
+      dropHint.classList.remove('wcm-hint--warn');
+
+      if (openSlots > 0) {
         dropHint.textContent =
-          `Dropping from injured reserve doesn't open an active spot — your active roster is ${activeCount}/${rosterLimit}. Pick someone off it.`;
+          `${openSlots} open active ${openSlots === 1 ? 'spot' : 'spots'} (${activeCount}/${rosterLimit}) — you can add without dropping.`;
+        return;
+      }
+      // Full. What the owner has picked decides whether that is still a problem.
+      if (dropping === 'active') {
+        dropHint.textContent = `Active roster full (${activeCount}/${rosterLimit}) — dropping ${dropSel.selectedOptions[0]?.textContent ?? 'them'} makes room.`;
+        return;
+      }
+      if (dropping) {
+        dropHint.textContent =
+          `Dropping from ${slotName[dropping]} doesn't open an active spot — your active roster is ${activeCount}/${rosterLimit}. Pick someone off it.`;
         dropHint.classList.add('wcm-hint--warn');
         return;
       }
-      dropHint.classList.remove('wcm-hint--warn');
-      dropHint.textContent =
-        openSlots === 0
-          ? `Active roster full (${activeCount}/${rosterLimit}) — pick someone to drop.`
-          : `${openSlots} open active ${openSlots === 1 ? 'spot' : 'spots'} (${activeCount}/${rosterLimit}) — you can add without dropping.`;
+      dropHint.textContent = `Active roster full (${activeCount}/${rosterLimit}) — pick someone to drop.`;
     };
     updateDropHint();
     // Assigned, not addEventListener: this block is defensively re-runnable
     // (see the drop-list reset above), and a stacked handler is the same class
     // of bug as a doubled option list.
     dropSel.onchange = updateDropHint;
+
+    /**
+     * Fold a COMPLETED first-come add back into the counts the form shows.
+     *
+     * Only on a verified success, and only for an immediate add. An unverified
+     * write is genuinely unknown, and guessing it landed is the harmful
+     * direction: it would tell an owner their roster is full and send them to
+     * cut somebody they did not need to cut. Guessing it did not land is
+     * merely a stale hint the server will correct.
+     */
+    const recordCompletedAdd = (droppedId: string) => {
+      if (!immediate || typeof cfg.activeRosterCount !== 'number') return;
+      cfg.activeRosterCount += 1;
+      const dropped = droppedId && droppedId !== '0000' ? droppedId : null;
+      if (dropped) {
+        if (slotOf(dropped) === 'active') cfg.activeRosterCount -= 1;
+        const i = rosterOptions.findIndex((p) => p.id === dropped);
+        if (i >= 0) rosterOptions.splice(i, 1);
+        renderDropOptions();
+        dropSel.value = '0000';
+      }
+      updateDropHint();
+    };
     for (let r = 1; r <= cfg.rules.maxRounds; r++) {
       const opt = document.createElement('option');
       opt.value = String(r);
@@ -448,6 +496,9 @@ const windowLabel = config?.windowLabel ?? '';
           return showConfirmLink(data.confirmUrl);
         }
         submitBtn.textContent = immediate ? 'Added ✓' : 'Submitted ✓';
+        // The roster just changed under the form. Nothing re-fetches the claim
+        // context on this page, so the slot line has to be told.
+        recordCompletedAdd(dropSel.value);
         showConfirmLink(data.confirmUrl);
         // Long enough to read the confirmation and click through if they want
         // to; a filed claim is invisible on our side until waivers process.
