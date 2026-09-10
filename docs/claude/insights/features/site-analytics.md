@@ -144,3 +144,51 @@ views from twelve owners is the league's front door. Ranked by count alone
 those two are indistinguishable, and the second one is the one worth investing
 in. The same read also yields the pages with no views at all, which is the
 maintenance list nobody had.
+
+---
+
+## 2026-09-11 — `clip: rect(...)` hides the PAINT, not the LAYOUT — and a hidden label in a scrolling table scrolls the whole page
+
+**Context:** An owner reported that Owner Activity slid sideways on a phone and
+that no other page did. A sweep of every public page at 390px confirmed it:
+`document.scrollWidth` was 448 against a 390 viewport, and only there.
+
+**Insight:** The cause was the standard visually-hidden box, in the Last Seen
+table's mobile rule:
+
+```css
+@media (max-width: 639px) {
+  .activity-label { position: absolute; width: 1px; height: 1px; clip: rect(0,0,0,0); }
+}
+```
+
+Three facts compound into a page-level bug:
+
+1. `clip` (and `clip-path`) suppress PAINTING. The box is still laid out and
+   still contributes to scrollable overflow.
+2. An absolutely positioned box with no `left`/`top` sits at its **static
+   position** — where it would have been in flow. Here that is the last column
+   of a table deliberately wider than the phone.
+3. `overflow-x: auto` on the `.table-wrapper` does NOT clip an absolutely
+   positioned descendant unless that wrapper is itself a containing block. It
+   was `position: static`, so the label's containing block was the page, and
+   sixteen 1px boxes landed ~58px past the right edge.
+
+The fix is one declaration — `position: relative` on the status CELL — which
+makes the scroll container the label's clipping ancestor. It has no visible
+effect, which is why `tests/activity-hidden-label-anchor.test.ts` pins it: a
+later cleanup reads it as dead weight.
+
+**Two things worth carrying:**
+
+- **Bisect, do not read.** Hiding candidate subtrees and re-measuring
+  `document.documentElement.scrollWidth` found it in one pass; reading the page
+  for it produced the wrong answer twice — the nav drawer sits at x=710 and
+  contributes nothing, because a `position: fixed` subtree does not extend the
+  document's scroll area.
+- **Sweep the whole site, it is cheap.** Loading every `visibility: all` page
+  from `page-directory.json` at 390px and comparing `scrollWidth` to
+  `clientWidth` takes two minutes and answers "is it only this page?" with
+  evidence. It also found three others that still overflow:
+  `/league-comparison`, `/design-system`, and `/assets` in both leagues.
+

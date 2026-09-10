@@ -1653,6 +1653,25 @@ const busiestDayLabel = traffic.busiest
 
 	/* ── Mobile: hide status text label, keep dot ── */
 	@media (max-width: 639px) {
+		/*
+		 * ANCHOR THE CELL, or this screen-reader label scrolls the whole PAGE.
+		 *
+		 * `.activity-label` below is the standard visually-hidden box: absolute,
+		 * 1px, clipped. `clip` hides what is PAINTED, not what is laid out, and
+		 * with no `left`/`top` the box sits at its STATIC position — which here
+		 * is the last column of a table wider than the phone. Its containing
+		 * block was the page, not the `.table-wrapper` that scrolls, so those
+		 * 1px boxes landed ~58px past the right edge and gave the whole document
+		 * a horizontal scrollbar. (Reported on a phone: every other page sat
+		 * still, this one slid.)
+		 *
+		 * Positioning the cell makes the scroll container the label's clipping
+		 * ancestor, so it stays inside the table it belongs to.
+		 */
+		.activity-table__td--status {
+			position: relative;
+		}
+
 		.activity-label {
 			position: absolute;
 			width: 1px;
@@ -1661,6 +1680,7 @@ const busiestDayLabel = traffic.busiest
 			margin: -1px;
 			overflow: hidden;
 			clip: rect(0, 0, 0, 0);
+			clip-path: inset(50%);
 			white-space: nowrap;
 			border: 0;
 		}
