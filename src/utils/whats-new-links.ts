@@ -152,8 +152,12 @@ export function extractDescriptionHrefs(
  * incomplete multi-character sanitizer. Nothing here is rendered — this feeds
  * the "anchor text is not a bare URL" guard — but a stripper that silently
  * leaves markup behind would make that guard read the wrong string.
+ *
+ * Exported because the staged-summary length guard needs the same hardening:
+ * it grew its own single-pass `.replace()` and CodeQL flagged the copy, which
+ * is the argument for one implementation rather than two.
  */
-function stripTags(html: string): string {
+export function stripTags(html: string): string {
   let text = html;
   for (let previous = ''; previous !== text; ) {
     previous = text;

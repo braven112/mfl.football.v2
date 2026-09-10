@@ -8,6 +8,7 @@ import entries from '../src/data/whats-new.json';
 import stagingFile from '../src/data/weekly-changelog-staging.json';
 import { describeSpriteIconValidation } from './helpers/sprite-icons';
 import { astroRouteExists } from './helpers/astro-routes';
+import { stripTags } from '../src/utils/whats-new-links';
 import { WHATS_NEW_ACTIVE_MAX } from '../scripts/lib/retention-policy.mjs';
 import {
   AREA_LABELS,
@@ -568,11 +569,30 @@ describe('weekly-changelog-staging.json league scoping', () => {
   // than at 8pm Monday, because the rollup PUBLISHES AND EMPTIES the queue —
   // a failure there costs the week's changes, a failure here costs a rerun.
 
-  /** How the reader sees a line: markup stripped, since anchors aren't read. */
-  const visibleLength = (summary: string): number =>
-    String(summary ?? '')
-      .replace(/<[^>]*>/g, '')
-      .trim().length;
+  /**
+   * How the reader sees a line: markup stripped and entities resolved.
+   *
+   * Both halves matter. The strip uses the shared `stripTags`, which loops
+   * until stable — the single-pass `.replace()` this used to do leaves
+   * `<script>` behind on input like `<scr<x>ipt>` and CodeQL flags it as an
+   * incomplete multi-character sanitizer, the same finding that hardened the
+   * original. And an entity is ONE glyph to the reader but five or six
+   * characters here, so counting them raw makes the cap quietly stricter than
+   * it claims and pushes authors away from writing `&amp;` at all — a live
+   * case, since one shipped line reads "Roster & Salary Cap".
+   */
+  const ENTITIES: Record<string, string> = {
+    '&amp;': '&', '&lt;': '<', '&gt;': '>', '&quot;': '"', '&#39;': "'",
+    '&apos;': "'", '&nbsp;': ' ', '&mdash;': '—', '&ndash;': '–', '&hellip;': '…',
+  };
+  const visibleLength = (summary: string): number => {
+    let text = stripTags(String(summary ?? ''));
+    for (const [entity, glyph] of Object.entries(ENTITIES)) {
+      text = text.split(entity).join(glyph);
+    }
+    text = text.replace(/&#(\d+);/g, (_m, code) => String.fromCodePoint(Number(code)));
+    return text.trim().length;
+  };
 
   /**
    * One line means one line. Staged summaries used to be 250-430 character
