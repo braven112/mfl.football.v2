@@ -4,7 +4,7 @@
     {
       "date": "2026-09-10",
       "type": "bug-fix",
-      "summary": "Anybody you have stashed on injured reserve no longer counts against your 16 active roster spots when you go to add a free agent. Owners carrying an injured player were being told \"your roster is full (16/16) — pick someone to drop\" with one or two active slots genuinely open, and the only way through was cutting somebody they did not need to cut. Roster space is now read the way MyFantasyLeague itself keeps it: IR and practice squad sit in their own slots, and only your active roster counts. The add form now tells you up front how many active spots you have, and marks your IR players in the drop list — dropping one of them does not open a spot for the guy you are adding.",
+      "summary": "Players on injured reserve no longer count against your active roster when you add a <a href=\"/players\">free agent</a> — the form now shows how many active spots you actually have.",
       "impact": "user",
       "area": "free-agents",
       "league": "both"
