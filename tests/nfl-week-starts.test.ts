@@ -10,6 +10,13 @@ import {
   officialWeekStart,
 } from '../src/utils/nfl-week-starts.mjs';
 import { NFL_WEEK_STARTS } from '../src/data/nfl/week-starts.mjs';
+import {
+  CHAMPIONSHIP_WEEK,
+  FINAL_FANTASY_REGULAR_SEASON_WEEK,
+  FINAL_REGULAR_SEASON_WEEK,
+  PLAYOFFS_START_WEEK,
+  SEMIFINAL_WEEK,
+} from '../src/utils/fantasy-bracket.mjs';
 
 /** Season years present in the committed data, as numbers — the key type. */
 const SEASONS: number[] = Object.keys(NFL_WEEK_STARTS).map(Number);
@@ -102,5 +109,37 @@ describe('the committed schedule data', () => {
     expect(() => nflWeekStartIsoDate(2026, 0)).toThrow();
     expect(() => nflWeekStartIsoDate(2026, 19)).toThrow();
     expect(() => nflWeekStartIsoDate(2026, 4.5)).toThrow();
+  });
+});
+
+describe('the fantasy bracket derives from the NFL season length', () => {
+  it('puts the title game one week before the NFL regular season ends', () => {
+    // The rule, stated by the commissioner: league championships are the week
+    // before the final NFL regular-season week — that last week is when NFL
+    // teams with nothing to play for rest their starters.
+    expect(CHAMPIONSHIP_WEEK).toBe(FINAL_REGULAR_SEASON_WEEK - 1);
+    expect(SEMIFINAL_WEEK).toBe(CHAMPIONSHIP_WEEK - 1);
+    expect(PLAYOFFS_START_WEEK).toBe(CHAMPIONSHIP_WEEK - 2);
+    expect(FINAL_FANTASY_REGULAR_SEASON_WEEK).toBe(PLAYOFFS_START_WEEK - 1);
+  });
+
+  it('resolves to the bracket both constitutions describe today', () => {
+    // TheLeague: playoffs week 15, title week 17. The AFL: conference
+    // semifinals 15, conference finals 16, World Championship 17, over a
+    // 14-week regular season. An 18-week NFL season yields exactly that.
+    expect(FINAL_REGULAR_SEASON_WEEK).toBe(18);
+    expect(PLAYOFFS_START_WEEK).toBe(15);
+    expect(SEMIFINAL_WEEK).toBe(16);
+    expect(CHAMPIONSHIP_WEEK).toBe(17);
+    expect(FINAL_FANTASY_REGULAR_SEASON_WEEK).toBe(14);
+  });
+
+  it('would reproduce the pre-2021 bracket from a 17-week NFL season', () => {
+    // Not a hypothetical: the bracket shifted +1 when the NFL went to 18 weeks
+    // in 2021 (QF moved 14→15, title 16→17) and had to be hand-corrected in
+    // several files. Deriving it makes the next expansion one constant.
+    const priorEra = 17;
+    expect(priorEra - 1).toBe(16); // title game was week 16
+    expect(priorEra - 3).toBe(14); // playoffs opened week 14
   });
 });

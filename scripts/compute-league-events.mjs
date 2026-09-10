@@ -19,6 +19,7 @@ import {
   DEFAULT_THROWBACK_WEEKS,
 } from './lib/throwback-reminder.mjs';
 import { laborDay } from '../src/utils/labor-day.mjs';
+import { CHAMPIONSHIP_WEEK, PLAYOFFS_START_WEEK } from '../src/utils/fantasy-bracket.mjs';
 import { THROWBACK_WEEKS } from '../src/data/theleague/throwback-weeks.mjs';
 import { AFL_THROWBACK_WEEKS } from '../src/data/afl-fantasy/throwback-weeks.mjs';
 
@@ -73,20 +74,18 @@ function resolveDate(rule, year) {
       // src/utils/league-event-resolver.ts — same name on both sides on purpose.
       return weekStart(year, 11, -1);
     }
-    case 'after-week-14':
-      // The AFL's regular season is Weeks 1-14, so it ends when week 15 opens.
+    case 'afl-regular-season-ends':
+      // The AFL's regular season ends when its bracket opens.
       // Mirrors the same-named rule in src/utils/league-event-resolver.ts.
-      return weekStart(year, 15);
+      return weekStart(year, PLAYOFFS_START_WEEK);
     case 'after-week-16':
       // TheLeague's in-season FA closes "After the conclusion of Week 16",
-      // which is the moment week 17 opens.
-      return weekStart(year, 17);
+      // i.e. when championship week opens. Derived, not the literal 17.
+      return weekStart(year, CHAMPIONSHIP_WEEK);
     case 'playoffs-start':
-      // Fantasy playoffs begin with NFL week 15.
-      return weekStart(year, 15);
+      return weekStart(year, PLAYOFFS_START_WEEK);
     case 'championship-week':
-      // Fantasy championship is NFL week 17.
-      return weekStart(year, 17);
+      return weekStart(year, CHAMPIONSHIP_WEEK);
     case 'second-sunday-february':
       // Super Bowl Sunday (AFL IR-to-active deadline). NFL moved to 2nd Sunday in Feb starting 2022.
       return getNthDayOfMonth(year, 1, 0, 2);

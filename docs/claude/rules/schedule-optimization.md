@@ -591,8 +591,33 @@ and generates no Roger touch — the date still resolves and still shows on
 `/calendar` (owner call, 2026-09-10). Any event that is an obligation on owners
 must NOT set that flag.
 
+### The bracket is derived from the NFL's season length
+
+**Never write 15/16/17 for the fantasy bracket.** `src/utils/fantasy-bracket.mjs`
+derives it: the title game is the week BEFORE the NFL's final regular-season
+week, because that last week is when NFL teams with nothing to play for rest
+their starters.
+
+    FINAL_REGULAR_SEASON_WEEK          18   (the NFL's, from nfl-week-starts)
+    CHAMPIONSHIP_WEEK                  17   = final - 1
+    SEMIFINAL_WEEK                     16
+    PLAYOFFS_START_WEEK                15
+    FINAL_FANTASY_REGULAR_SEASON_WEEK  14
+
+This has already moved once. The AFL resolver carried the note: "The bracket
+shifted +1 with the 2021 move to a 17-game / 18-week NFL season: QF Week 15,
+SF Week 16, World Championship Week 17." Before 2021 the NFL played 17 weeks
+and the title game was week 16; the formula reproduces both eras, so the next
+expansion is one constant rather than a hunt through four files (it was
+hardcoded in `league-event-resolver.ts`, `compute-league-events.mjs`,
+`schefter-rumor-cadence.mjs` and `championship-recap.mjs`).
+
+Note the two "regular seasons" are different and must not be conflated: the
+NFL's is 18 weeks, the fantasy one ends at `PLAYOFFS_START_WEEK - 1` (14 —
+which is exactly what the AFL constitution states independently).
+
 Guard: `tests/nfl-kickoff-anchor-guard.test.ts`, plus
-`tests/nfl-week-starts.test.ts` for the module itself.
+`tests/nfl-week-starts.test.ts` for the module and the bracket derivation.
 
 ## The trap: bye weeks move, week numbers don't
 

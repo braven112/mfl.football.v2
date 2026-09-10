@@ -12,7 +12,10 @@ import { isChampionshipComplete } from '../article-utils/season-guards.mjs';
 import { primaryLink, articleLink, featureLink, linkList } from '../article-utils/article-links.mjs';
 import { franchiseRecord } from '../article-utils/franchise-record.mjs';
 
-const CHAMPIONSHIP_WEEK = 17;
+// Derived from the NFL's season length, not written as 17: the title game is
+// the week before the NFL's last regular-season week, and that moved once
+// already when the NFL went to 18 weeks in 2021.
+import { CHAMPIONSHIP_WEEK } from '../../src/utils/fantasy-bracket.mjs';
 
 export const config = {
   id: (year) => `sf_${year}_championship_recap`,

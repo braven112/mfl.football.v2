@@ -24,6 +24,11 @@ import type { HeroState, SeasonPhase, DailySlot, GameWindow, HeroPriority } from
 import { formatEventDate, formatEventDateRange, getStatusText } from './event-date-formatter';
 import { getNthDayOfMonth, getNflDraftDate, getRookieDraftDate } from './league-event-resolver';
 import { nflKickoff, nflWeekStart } from './nfl-week-starts.mjs';
+import {
+  CHAMPIONSHIP_WEEK,
+  FINAL_FANTASY_REGULAR_SEASON_WEEK,
+  PLAYOFFS_START_WEEK,
+} from './fantasy-bracket.mjs';
 import { getCurrentNFLWeek } from './current-week';
 import { buildLeagueEventView } from './league-event-hero-view';
 import { dailyPick } from './hero-casting';
@@ -556,7 +561,7 @@ export function isRegularSeason(referenceDate: Date): boolean {
 
   // End of regular season: week 14's Monday night, i.e. four days after week
   // 14 opens.
-  const regularSeasonEnd = weekStartMidnight(year, 14);
+  const regularSeasonEnd = weekStartMidnight(year, FINAL_FANTASY_REGULAR_SEASON_WEEK);
   regularSeasonEnd.setDate(regularSeasonEnd.getDate() + 4);
   regularSeasonEnd.setHours(23, 59, 59, 999);
 
@@ -571,10 +576,10 @@ export function isRegularSeason(referenceDate: Date): boolean {
 export function isPlayoffPeriod(referenceDate: Date): boolean {
   const { year } = getPTComponents(referenceDate);
 
-  const playoffStart = weekStartMidnight(year, 15);
+  const playoffStart = weekStartMidnight(year, PLAYOFFS_START_WEEK);
   // Ends on the day week 17 opens; championship week takes over from there and
   // is resolved at a higher priority, same as before this read real week starts.
-  const playoffEnd = weekStartMidnight(year, 17);
+  const playoffEnd = weekStartMidnight(year, CHAMPIONSHIP_WEEK);
   playoffEnd.setHours(23, 59, 59, 999);
 
   return referenceDate >= playoffStart && referenceDate <= playoffEnd;
@@ -598,7 +603,7 @@ export function isChampionshipWeek(referenceDate: Date): boolean {
 /** Internal helper: check if referenceDate falls in the championship week for a given season year */
 function checkChampionshipForYear(seasonYear: number, referenceDate: Date): boolean {
   // Championship = NFL week 17, ending on its Monday night (+4 days).
-  const champStart = weekStartMidnight(seasonYear, 17);
+  const champStart = weekStartMidnight(seasonYear, CHAMPIONSHIP_WEEK);
 
   const champEnd = new Date(champStart);
   champEnd.setDate(champEnd.getDate() + 4);
@@ -623,7 +628,7 @@ export function isTradeDeadlineDay(referenceDate: Date): boolean {
 function isChampionCrownedPeriod(referenceDate: Date): boolean {
   const { year } = getPTComponents(referenceDate);
   // Championship Monday night end
-  const champStart = weekStartMidnight(year, 17);
+  const champStart = weekStartMidnight(year, CHAMPIONSHIP_WEEK);
   const champMondayEnd = new Date(champStart);
   champMondayEnd.setDate(champMondayEnd.getDate() + 4);
   champMondayEnd.setHours(23, 59, 59, 999);
@@ -638,7 +643,7 @@ function isChampionCrownedPeriod(referenceDate: Date): boolean {
   crownedEnd.setHours(23, 59, 59, 999);
 
   // Also check previous year's championship (for early January dates)
-  const prevChampStart = weekStartMidnight(year - 1, 17);
+  const prevChampStart = weekStartMidnight(year - 1, CHAMPIONSHIP_WEEK);
   const prevChampMondayEnd = new Date(prevChampStart);
   prevChampMondayEnd.setDate(prevChampMondayEnd.getDate() + 4);
   prevChampMondayEnd.setHours(23, 59, 59, 999);

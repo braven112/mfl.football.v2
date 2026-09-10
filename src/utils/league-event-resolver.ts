@@ -17,6 +17,10 @@ import { THE_LEAGUE_EVENTS } from '../data/theleague/league-events';
 import { LEAGUE_YEAR_OVERRIDES } from '../data/theleague/league-year-config';
 import { getCurrentLeagueYear, getLaborDayForYear } from './league-year';
 import { nflWeekStart } from './nfl-week-starts.mjs';
+import {
+  CHAMPIONSHIP_WEEK,
+  PLAYOFFS_START_WEEK,
+} from './fantasy-bracket.mjs';
 import { getLeagueBySlug, DEFAULT_LEAGUE_SLUG } from '../config/leagues';
 import aflEventsConfig from '../data/afl-fantasy/league-events.json';
 
@@ -111,17 +115,17 @@ function resolveComputedDate(rule: string, year: number): Date {
     }
 
     case 'afl-playoffs-start': {
-      // AFL playoffs begin NFL week 15. The bracket shifted +1 with the 2021
-      // move to a 17-game / 18-week NFL season: QF Week 15, SF Week 16, World
-      // Championship Week 17.
-      return weekStart(year, 15);
+      // Conference semifinals — round one of the bracket. The week number is
+      // derived from the NFL's season length, which is what moved it last time
+      // (see fantasy-bracket.mjs).
+      return weekStart(year, PLAYOFFS_START_WEEK);
     }
 
     case 'afl-championship-week': {
-      // AFL World Championship (MFL "AFL Super Bowl") is NFL week 17.
-      // Verified against MFL's calendar: 2026 → Thu Dec 31. Was Week 16
-      // (Dec 24) — a week early.
-      return weekStart(year, 17);
+      // AFL World Championship (MFL "AFL Super Bowl") — the week before the
+      // NFL's last regular-season week. Verified against MFL's calendar:
+      // 2026 → Thu Dec 31. Was Week 16 (Dec 24) — a week early.
+      return weekStart(year, CHAMPIONSHIP_WEEK);
     }
 
     case 'nfl-kickoff':
@@ -135,20 +139,23 @@ function resolveComputedDate(rule: string, year: number): Date {
       // TheLeague's trading deadline: the Friday of the week BEFORE week 11.
       return weekStart(year, 11, -6);
 
-    case 'after-week-14':
-      // The AFL's regular season is Weeks 1-14 (afl-constitution.ts, SCHEDULE),
-      // so it ends when week 15 — its conference playoffs — opens.
+    case 'afl-regular-season-ends':
+      // The AFL's regular season ends when its bracket opens — the constitution
+      // calls that a 14-week regular season (Weeks 1-14), which is the same
+      // week PLAYOFFS_START_WEEK - 1 derives.
       //
       // This event used to share TheLeague's `after-week-16`, which put "Regular
       // Season Ends" on Dec 31 2026: two weeks AFTER the AFL's playoffs had
       // started and a week after its World Championship week began. The AFL has
       // no week 16 or 17 regular season to be after.
-      return weekStart(year, 15);
+      return weekStart(year, PLAYOFFS_START_WEEK);
 
     case 'after-week-16':
       // TheLeague's in-season FA closes "After the conclusion of Week 16"
       // (league-constitution.ts, IMPORTANT DATES — REGULAR SEASON), which is
-      // the moment week 17 opens.
+      // the moment championship week opens. The rule id records the
+      // constitution's wording; the week itself is derived, so an NFL season
+      // that grows carries the FA deadline with the bracket.
       //
       // This used to be `kickoff + 15*7 + 4` here and `kickoff + 16*7` in
       // scripts/compute-league-events.mjs — a three-day disagreement between
@@ -156,15 +163,13 @@ function resolveComputedDate(rule: string, year: number): Date {
       // announced (Thu Dec 31 2026). Dec 28 is INSIDE week 16, so the calendar
       // was closing free agency before week 16 had concluded, which is the one
       // thing the constitution's wording rules out. Both now resolve to Dec 31.
-      return weekStart(year, 17);
+      return weekStart(year, CHAMPIONSHIP_WEEK);
 
     case 'playoffs-start':
-      // Fantasy playoffs begin with NFL week 15.
-      return weekStart(year, 15);
+      return weekStart(year, PLAYOFFS_START_WEEK);
 
     case 'championship-week':
-      // Fantasy championship is NFL week 17.
-      return weekStart(year, 17);
+      return weekStart(year, CHAMPIONSHIP_WEEK);
 
     default:
       return new Date(year, 0, 1);

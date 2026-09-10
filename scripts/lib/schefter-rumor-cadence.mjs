@@ -34,6 +34,7 @@ import {
 } from '../../src/utils/trade-deadline.mjs';
 import { laborDayIsoDate } from '../../src/utils/labor-day.mjs';
 import { nflWeekStartIsoDate } from '../../src/utils/nfl-week-starts.mjs';
+import { CHAMPIONSHIP_WEEK } from '../../src/utils/fantasy-bracket.mjs';
 
 /** Rumor-mill posts per Pacific day while the league is awake. */
 export const IN_SEASON_MAX_RUMOR_POSTS_PER_DAY = 1;
@@ -75,8 +76,9 @@ export const IN_SEASON_MAX_RUMOR_POSTS_PER_DAY = 1;
 export const AWAKE_START_OFFSET_FROM_LABOR_DAY_DAYS = -8;
 
 /**
- * The fantasy season ends with the league championship in NFL week 17 — QF
- * week 15, SF week 16, final week 17 in both leagues. The week closes on
+ * The fantasy season ends with the league championship — the week before the
+ * NFL's last regular-season week, derived in fantasy-bracket.mjs rather than
+ * written as 17 (it was 16 before the NFL went to 18 weeks in 2021). The week closes on
  * Monday Night Football four days after it opens, so the season's last day is
  * week 17's real start + 4. Taken from the published start of week 17 rather
  * than counted forward from kickoff, so a moved week carries the end of the
@@ -86,7 +88,6 @@ export const AWAKE_START_OFFSET_FROM_LABOR_DAY_DAYS = -8;
  * the day the title is decided is the day the offseason conversation starts,
  * and that is when the league wants its rumor mill back.
  */
-export const CHAMPIONSHIP_WEEK = 17;
 const CHAMPIONSHIP_END_OFFSET_DAYS = 4;
 
 /**
