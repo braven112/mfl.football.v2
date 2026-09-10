@@ -302,7 +302,11 @@ function navSlugFor(league: CanonicalLeagueSlug): LeagueSlug {
 	return getLeagueBySlug(league)?.navSlug ?? 'theleague';
 }
 
-/** The directory entries that belong to one league, minus view-variant paths. */
+/**
+ * The directory entries that belong to one league. `?view=` variants are kept
+ * — they carry a usable title for their route — and dropped at the call sites
+ * that cannot represent them (see the quiet list).
+ */
 function directoryFor(league: CanonicalLeagueSlug): DirectoryEntry[] {
 	return directory.filter((entry) => pathBelongsToLeague(entry.path, league));
 }

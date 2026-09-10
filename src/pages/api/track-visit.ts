@@ -116,8 +116,13 @@ export const POST: APIRoute = async ({ request, url }) => {
 		if (!league) return new Response(null, { status: 204 });
 
 		// Only a path the directory recognizes may name a page (see the header).
-		const canonical = rawPage ? canonicalPath(rawPage, league.slug) : null;
-		const page = canonical && isDirectoryPath(canonical, league.slug) ? canonical : null;
+		// Checked BEFORE canonicalizing — `isDirectoryPath` canonicalizes to
+		// answer, so an unknown path on this unauthenticated, uncapped route
+		// costs one pass instead of two.
+		const page =
+			rawPage && isDirectoryPath(rawPage, league.slug)
+				? canonicalPath(rawPage, league.slug)
+				: null;
 
 		const { limited } = await recordAnonymousVisit(league.id, { visit, page }, {
 			callerKey: callerKey(request),
