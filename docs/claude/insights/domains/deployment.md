@@ -659,3 +659,42 @@ reproduction run *before* the step is marked skippable, and an escape hatch for
 the case where the PR is about the pipeline itself (otherwise it previews
 against the old derived file and looks like a no-op). Resolve every failure of
 the detector — unresolvable base ref, shallow clone, not a repo — to FULL.
+
+## 2026-09-10 - Cloudflare Bot Fight Mode Challenges Real Browsers On A New Hostname, And No WAF Rule Can Skip It
+
+**Context:** three new staging hostnames (`staging.theleague.us`,
+`staging.afl-fantasy.com`, `staging.mfl.football`) came up answering with a
+`403` + `cf-mitigated: challenge` — the "Verify you are human" interstitial —
+while the production hosts in the same zones served normally.
+
+**The finding:** it was **Bot Fight Mode**. Two things made that take far
+longer to establish than it should have:
+
+- **The symptom looked path-scoped, and wasn't.** Only `/` was challenged;
+  `/rosters`, `/favicon.ico`, `/manifest.json` and `/api/*` all returned 200.
+  That reads exactly like a rule keyed on hostname + path, and it is not one —
+  BFM scores each request independently, hits datacenter IPs hardest (every
+  challenged IP in the event log was an AWS/cloud range), and challenges real
+  browsers on a hostname where they hold no `cf_clearance` cookie yet. The
+  owner's own phone on residential 5G was challenged.
+- **Bot Fight Mode cannot be skipped by a WAF custom rule.** It runs outside
+  the custom-rules pipeline, so the obvious fix — a `Skip` rule naming the
+  hostnames — does nothing whatsoever. (Super Bot Fight Mode, Pro and above,
+  CAN be skipped that way. The free single-toggle version cannot.)
+
+**Recommendation:** go to **Security → Analytics** FIRST and read the event —
+it states `Service: Bot fight mode` outright, and no configuration screen in
+the dashboard will tell you that. Fix is Security → Settings → Bot Fight Mode →
+off, **per zone** (three domains here = three separate toggles). Turning it off
+does not touch DDoS protection: the HTTP DDoS managed ruleset is always-on and
+cannot be disabled on any plan, and the network-layer/SSL-TLS rulesets are
+separate again. Full runbook: `docs/claude/staging-sites.md`.
+
+Related, from the same session: Cloudflare **rate limiting rules** enforce
+their cap *approximately*. A 30-request burst against a rule-protected path
+came back with 429s interleaved among requests that still reached the origin
+(4 of 30 blocked on one host, 21 of 30 on another), because counters are
+per-colo and propagate asynchronously. That is normal and not a
+misconfiguration — the rule crushes sustained volume but will not give a clean
+cutoff at request N, so never test one by asserting "request 11 is the first
+429".

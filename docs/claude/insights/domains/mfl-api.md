@@ -3087,3 +3087,69 @@ the full year, so a missing row is never explained by the parameters. And rows
 present in BOTH the committed feed and a live `DAYS=3` fetch are byte-identical
 once key order is normalized (11/11), which is what makes a whole-row key safe
 against false splits when merging the two sources.
+
+---
+
+## 2026-09-10 - Astro's CSRF Guard Makes An UNAUTHENTICATED Endpoint Look Protected — Until You Send JSON
+
+**Context:** auditing which `src/pages/api/` write routes an anonymous caller
+can reach. `POST /api/groupme/sync` had no auth check of any kind — its handler
+was `export const POST: APIRoute = async () => {`, which does not even receive
+the request, so it could not have checked one.
+
+**The finding:** probing it with `curl -X POST` (no `Content-Type`) came back
+`403 Cross-site POST form submissions are forbidden`. That is **Astro's
+built-in CSRF guard** (`security.checkOrigin`), not the route, and reading it
+as "the endpoint is protected" is the trap. `checkOrigin` only covers the
+content types a browser can send cross-origin *without a CORS preflight* —
+`application/x-www-form-urlencoded`, `multipart/form-data`, `text/plain`. A
+POST carrying `Content-Type: application/json` is not a "form submission" and
+sails straight past it.
+
+**Evidence (production, no credentials):**
+- `curl -X POST …/api/groupme/sync` → `403 Cross-site POST form submissions are forbidden`
+- same URL, `-H 'Content-Type: application/json' --data '{}'` → **`200
+  {"synced":0,"message":"No new messages"}`** — a real GroupMe poll, triggered
+  anonymously.
+
+**Recommendation:** never conclude a route is authenticated because a curl
+probe returned 403 — re-probe with `Content-Type: application/json` before
+believing it. `checkOrigin` defends against a *browser* being tricked into
+posting on a logged-in user's behalf; it is not, and cannot be, an
+authorization check on a route anything server-side can reach. Every route
+that acts on the world needs its own gate: a session check
+(`getAuthUser` + `isCommissionerOrAdmin`), a `CRON_SECRET` bearer that fails
+CLOSED when the secret is unset, or both — see
+`src/pages/api/groupme/sync.ts` and `src/pages/api/cron/push-fanout.ts`.
+Watch for the second-order leak too: that route's `catch` reports
+`upstashUrlPrefix`/`kvUrlPrefix` for debugging, so an anonymous caller who
+could force an error also read back the Redis hostname.
+
+---
+
+## 2026-09-10 - A Missing `JWT_SECRET` On Vercel Throws; The Random-Secret Fallback Is Local-Dev ONLY
+
+**Context:** bringing up per-league staging hosts and needing to know whether
+`JWT_SECRET` was present in Vercel's **Preview** environment scope (production
+and preview are separate scopes; a new environment does not inherit).
+
+**The finding:** `getJWTSecret()` (`src/utils/session.ts`) looks like it
+degrades gracefully — there is a `console.warn` and a `randomBytes(32)`
+fallback. It does not, on Vercel. The fallback is gated behind
+`if (process.env.NODE_ENV === 'production' || process.env.VERCEL) throw`, and
+`VERCEL` is always set there, so a missing secret **throws**. The random
+secret is reachable only in local dev.
+
+What makes it hard to observe: `validateSessionToken` calls `getJWTSecret()`
+*inside* its own `try/catch`, so on any page load the throw is swallowed and
+returns `null` — indistinguishable from "not signed in". `createSessionToken`
+calls it OUTSIDE a try, so **login** is the only place the real failure
+surfaces.
+
+**Recommendation:** the symptom of a missing `JWT_SECRET` on a new Vercel
+environment is *login failing*, NOT sessions silently rotating or expiring —
+do not go looking for cookie problems. It cannot be detected from outside by
+loading pages, because every page just renders signed-out; attempt a login, or
+run `pnpm dlx vercel env ls` and read which environments each variable targets
+(Vercel's UI ticks Production/Preview/Development by default, so a variable
+added that way is usually already there).
