@@ -141,6 +141,15 @@ which is exactly why the split exists — verify parsing offline against
   now falls back to the registry entry for `L`, and only to the default league
   when `L` names nothing known. Callers may therefore send `L` alone.
   `tests/live-scoring-host-resolution.test.ts` pins all four cases.
+- **`res.ok` cannot decide `ok` — a body you could not READ is a failed read.**
+  MFL answers a throttled request with an HTML page under a 200. That parses to
+  an empty snapshot, and `ok: true` + no matchups is exactly the OFFSEASON
+  shape, so the live-scoring page swapped in last season's sample replay —
+  "Sample data" badge and all — in the middle of an in-season outage, which is
+  the one thing its own comment promises not to do. `loadLiveScoringPayload`
+  parses once and sets `ok: false` when the body is not JSON or carries an
+  `error` key; only a readable payload can be `ok: true`. (Caught by Copilot on
+  PR #1046; it had been true since the logic lived in the route.)
 - **A page must never fetch its OWN API to render itself.** The live-scoring
   page's SSR first paint called `https://<our domain>/api/live-scoring?…` —
   our own edge, over the public internet, from inside the render. On

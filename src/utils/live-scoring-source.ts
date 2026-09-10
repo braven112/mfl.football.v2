@@ -132,15 +132,30 @@ export async function loadLiveScoringPayload(
 
   // `.json()` REJECTS on a non-JSON body, and MFL answers a throttled or
   // errored request with an HTML page under a 200 often enough that this is a
-  // real path, not a hypothetical. `parseLiveScoringPayload` takes null and
-  // yields an empty snapshot, which is the honest answer.
-  const snapshot = liveScoreResponse?.ok
-    ? parseLiveScoringPayload(await liveScoreResponse.json().catch(() => null))
-    : emptyLiveSnapshot();
+  // real path, not a hypothetical.
+  //
+  // The status alone therefore cannot decide `ok`. A 200 carrying HTML parses
+  // to an EMPTY snapshot, and `ok: true` + no matchups is precisely the
+  // offseason shape — so the live-scoring page would swap in last season's
+  // sample replay, badge and all, in the middle of an in-season MFL outage.
+  // Its own comment promises the opposite ("we must not paper over an
+  // in-season outage with last season's sample"), and `res.ok` was quietly
+  // not enough to keep that promise. A body we could not read is a FAILED
+  // read, not an empty week — the same "no games" / "couldn't read it" merge
+  // this whole file exists to prevent.
+  let ok = !!liveScoreResponse?.ok;
+  let snapshot = emptyLiveSnapshot();
+  if (liveScoreResponse?.ok) {
+    const body = await liveScoreResponse.json().catch(() => null);
+    // MFL also reports some failures as well-formed JSON with an `error` key
+    // rather than a status — same conclusion, same reason.
+    if (body === null || body?.error) ok = false;
+    else snapshot = parseLiveScoringPayload(body);
+  }
 
   await mergePlayoffBrackets(snapshot, playoffBracketsResponse, { leagueId, year, week, host });
 
-  return { ok: !!liveScoreResponse?.ok, week: Number(week), ...snapshot };
+  return { ok, week: Number(week), ...snapshot };
 }
 
 /** A failed MFL read is `null`, never a throw — every caller treats it as "not ok". */

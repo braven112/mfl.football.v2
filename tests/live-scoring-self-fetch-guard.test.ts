@@ -162,3 +162,64 @@ describe('the game-day hint sets cadence, it does not gate polling', () => {
       .toEqual([]);
   });
 });
+
+describe('a body we could not read is a failed read, not an empty week', () => {
+  // MFL answers a throttled request with an HTML page under a 200. That parses
+  // to an empty snapshot, and `ok: true` + no matchups is the OFFSEASON shape —
+  // so the live-scoring page would swap in last season's sample replay, "Sample
+  // data" badge and all, during an in-season outage. Copilot caught this on
+  // PR #1046; it had been true since the logic lived in the route.
+  it('reports ok:false for a 200 carrying a non-JSON body', async () => {
+    const { loadLiveScoringPayload } = await import('../src/utils/live-scoring-source');
+    const html = () => ({
+      ok: true,
+      status: 200,
+      json: async () => { throw new SyntaxError('Unexpected token <'); },
+    }) as unknown as Response;
+
+    const original = globalThis.fetch;
+    globalThis.fetch = (async () => html()) as typeof fetch;
+    try {
+      const payload = await loadLiveScoringPayload({ leagueId: '13522', year: 2026, week: 1 });
+      expect(payload.ok, 'HTML under a 200 is an upstream failure, not a quiet week').toBe(false);
+      expect(payload.matchups).toEqual([]);
+    } finally {
+      globalThis.fetch = original;
+    }
+  });
+
+  it('reports ok:false for a JSON body carrying an error key', async () => {
+    const { loadLiveScoringPayload } = await import('../src/utils/live-scoring-source');
+    const original = globalThis.fetch;
+    globalThis.fetch = (async () => ({
+      ok: true,
+      status: 200,
+      json: async () => ({ error: 'Live scoring is not available' }),
+    })) as unknown as typeof fetch;
+    try {
+      const payload = await loadLiveScoringPayload({ leagueId: '13522', year: 2026, week: 1 });
+      expect(payload.ok).toBe(false);
+    } finally {
+      globalThis.fetch = original;
+    }
+  });
+
+  it('still reports ok:true for a HEALTHY but empty week', async () => {
+    // The offseason feed really is a well-formed 200 with nothing in it, and
+    // that is what the sample fallback is FOR. The two must stay distinct.
+    const { loadLiveScoringPayload } = await import('../src/utils/live-scoring-source');
+    const original = globalThis.fetch;
+    globalThis.fetch = (async () => ({
+      ok: true,
+      status: 200,
+      json: async () => ({ liveScoring: { week: '1' } }),
+    })) as unknown as typeof fetch;
+    try {
+      const payload = await loadLiveScoringPayload({ leagueId: '13522', year: 2026, week: 1 });
+      expect(payload.ok).toBe(true);
+      expect(payload.matchups).toEqual([]);
+    } finally {
+      globalThis.fetch = original;
+    }
+  });
+});
