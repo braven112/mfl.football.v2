@@ -13,6 +13,8 @@
  * that has plenty else to show.
  */
 import { getLeagueBySlug, type CanonicalLeagueSlug } from '../config/leagues';
+import { getCurrentSeasonYear } from './league-year';
+import { loadLiveScoringPayload } from './live-scoring-source';
 import type { LiveScoringHeroProps, MatchupPairing, TeamInfo } from '../types/live-scoring';
 
 /** The brand fields a teams map needs, as both leagues' configs already carry them. */
@@ -29,8 +31,11 @@ export interface LiveScoringTeamSource {
 export interface BuildLiveScoringHeroPropsInput {
   league: CanonicalLeagueSlug;
   week: number;
-  /** The page's own origin — `Astro.url` — so the API call resolves. */
-  origin: URL;
+  /**
+   * The page's own origin. No longer used to fetch anything — the feed is read
+   * from MFL in-process — but kept optional so both homepages need no change.
+   */
+  origin?: URL;
   teams: LiveScoringTeamSource[];
   /** The SIGNED-IN franchise. Marks "your" matchup and drives the scope below. */
   userFranchiseId?: string;
@@ -40,8 +45,8 @@ export interface BuildLiveScoringHeroPropsInput {
    * signed-out viewer, who has no conference to be scoped to.
    */
   scopeFranchiseIds?: string[];
-  /** Injectable for tests; defaults to global fetch. */
-  fetchImpl?: typeof fetch;
+  /** Injectable for tests; defaults to the real MFL read. */
+  loadImpl?: typeof loadLiveScoringPayload;
 }
 
 /** Everything the island needs, or `undefined` when the feed could not be read. */
@@ -50,41 +55,35 @@ export type BuiltLiveScoringProps = Omit<LiveScoringHeroProps, 'phase' | 'gameWi
 export async function buildLiveScoringHeroProps(
   input: BuildLiveScoringHeroPropsInput,
 ): Promise<BuiltLiveScoringProps | undefined> {
-  const { league, week, origin, teams, userFranchiseId, scopeFranchiseIds } = input;
+  const { league, week, teams, userFranchiseId, scopeFranchiseIds } = input;
   const registry = getLeagueBySlug(league);
   if (!registry) return undefined;
 
-  const doFetch = input.fetchImpl ?? fetch;
+  const load = input.loadImpl ?? loadLiveScoringPayload;
 
   try {
-    // `L` is mandatory — see LiveScoringHeroProps.leagueId. The endpoint
-    // answers for TheLeague without it, on the server exactly as in the client.
-    // `registry.id`, NOT `registry.leagueId` — the registry entry names it
-    // `id`, and only `getLeagueContext` renames it. Reading the wrong one
-    // yields `undefined`, which fails the endpoint's `/^\d+$/` check and falls
-    // back to TheLeague: the precise bug this parameter exists to prevent,
-    // silently, with no type error to catch it.
-    const url = new URL(
-      `/api/live-scoring?week=${week}&L=${encodeURIComponent(registry.id)}`,
-      origin,
-    );
-    const res = await doFetch(url);
-    if (!res.ok) return undefined;
+    // Read MFL IN-PROCESS, not by fetching our own `/api/live-scoring` over the
+    // public internet. The self-fetch this replaces is the same one that broke
+    // the live-scoring PAGE on 2026-09-09 — our own edge in the path of an SSR
+    // render, failing in a way that leaves no log entry because the request
+    // never reaches the route. It degraded more quietly here (the homepage just
+    // drops back to its normal hero) which is exactly why it could sit unnoticed.
+    //
+    // `registry.id`, NOT `registry.leagueId` — the registry entry names it `id`
+    // and only `getLeagueContext` renames it. The loader resolves the MFL host
+    // from that id, so the league and its server cannot disagree.
+    //
+    // The SEASON year — live scoring is results-shaped. The route defaulted to
+    // this when the old URL omitted `year`; reading MFL directly means saying
+    // so, and the league year would name a season MFL is not scoring for the
+    // six months between Feb 14 and Labor Day.
+    const data = await load({ leagueId: registry.id, year: getCurrentSeasonYear(), week });
 
-    // `.json()` rejects on a non-JSON body, which is how a proxy or an error
-    // page arrives. Caught by the outer try — a rejection here is a failure to
-    // read the feed, not an empty one.
-    const data = await res.json();
-
-    // `res.ok` is NOT "the call worked". The endpoint answers 200 with
-    // `ok: false` when the UPSTREAM MFL request failed, precisely so callers
-    // can tell an outage from a healthy offseason feed (which is `ok: true`
-    // with empty collections). Merging the two is the trap
-    // docs/claude/rules/lineups.md names: "no games" and "couldn't read it"
-    // must never become the same value. Here they differ — an outage returns
-    // undefined so the homepage keeps its normal hero, while a genuinely empty
-    // week renders the hero with nothing in it, which is correct.
-    if (data?.ok === false || data?.error) return undefined;
+    // `ok: false` is the UPSTREAM MFL failure, and it is the one that looks
+    // exactly like a healthy empty week unless the flag is read. An outage
+    // returns undefined so the homepage keeps its normal hero; a genuinely
+    // empty week renders the hero with nothing in it, which is correct.
+    if (data.ok === false) return undefined;
 
     const teamsMap: Record<string, TeamInfo> = {};
     for (const t of teams) {

@@ -25,6 +25,7 @@
  * merge that used to live in the route.
  */
 
+import { ALL_LEAGUES, getLeagueById, getLeagueBySlug, DEFAULT_LEAGUE_SLUG } from '../config/leagues';
 import { buildMflExportUrl } from './mfl-url';
 import {
   emptyLiveSnapshot,
@@ -51,8 +52,49 @@ export interface LoadLiveScoringOptions {
   year: string | number;
   /** Week number, already validated by the caller. */
   week: string | number;
-  /** Full origin of the league's MFL host, e.g. `https://www49.myfantasyleague.com`. */
-  host: string;
+  /**
+   * A host HINT, consulted only when `leagueId` names no league in the
+   * registry. Never trusted for a known league — see `resolveHost`.
+   */
+  hostHint?: string | null;
+}
+
+const DEFAULT_HOST = `https://${getLeagueBySlug(DEFAULT_LEAGUE_SLUG)!.mflHost}`;
+
+/**
+ * The MFL hosts we are willing to fetch from. A hint is interpolated into a
+ * server-side fetch, so an unconstrained value is SSRF.
+ */
+const ALLOWED_HOSTS = new Set(ALL_LEAGUES.map((l) => l.mflHost.toLowerCase()));
+
+/**
+ * `L` and the host are ONE composite key and MFL validates neither against the
+ * other: every league lives on a different `www##` server, and a server asked
+ * for a league id it does not host answers with its OWN league rather than
+ * erroring. The wrong pairing is a 200, well-formed, right schema, wrong
+ * league — invisible to `res.ok` and to any shape check.
+ *
+ * So a `leagueId` in the registry resolves to THAT league's host outright and
+ * the hint is not consulted at all. This lives here, not in the route, because
+ * the page reads MFL through this module too: `getLeagueContext` applies a
+ * global `PUBLIC_MFL_HOST` override to EVERY league, so a page handing its own
+ * `league.host` straight to the fetch is exactly how one league's page ends up
+ * SSR'ing another league's scores. One implementation, both callers.
+ */
+export function resolveHost(hint: string | null | undefined, leagueId: string): string {
+  const league = getLeagueById(leagueId);
+  if (league) return `https://${league.mflHost}`;
+  if (hint) {
+    try {
+      const u = new URL(hint.includes('://') ? hint : `https://${hint}`);
+      if (u.protocol === 'https:' && ALLOWED_HOSTS.has(u.hostname.toLowerCase())) {
+        return `https://${u.hostname}`;
+      }
+    } catch {
+      /* fall through to the default league */
+    }
+  }
+  return DEFAULT_HOST;
 }
 
 const MFL_HEADERS = { 'User-Agent': 'Mozilla/5.0 (compatible; FantasyLeague/1.0)' };
@@ -76,7 +118,8 @@ const MFL_TIMEOUT_MS = 8000;
 export async function loadLiveScoringPayload(
   opts: LoadLiveScoringOptions
 ): Promise<LiveScoringPayload> {
-  const { leagueId, host } = opts;
+  const { leagueId } = opts;
+  const host = resolveHost(opts.hostHint, leagueId);
   const year = String(opts.year);
   const week = String(opts.week);
 

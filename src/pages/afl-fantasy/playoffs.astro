@@ -2772,6 +2772,14 @@ const grandTotal = allPrizes.reduce((sum, p) => sum + p.amount, 0);
           const res = await fetch(url, { signal: controller.signal });
           if (!res.ok) throw new Error(`liveScoring ${week} ${res.status}`);
           const data = await res.json();
+          // `res.ok` is not "the data is good": the route answers 200 with
+          // `ok: false` and EMPTY collections when the upstream MFL read
+          // failed. Returning that as a result is worse than returning
+          // nothing — with no scores and no game seconds it reads as "all
+          // games are final" and `run()` below permanently clears the
+          // refresh interval, so one blip during a live playoff week kills
+          // auto-refresh until the page is reloaded. A failed read is null.
+          if (data.ok === false || data.error) throw new Error(`liveScoring ${week} upstream`);
           return { week: data.week, scores: data.scores, remaining: data.remaining || {} };
         } catch (_err) {
           return null;

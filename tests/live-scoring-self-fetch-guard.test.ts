@@ -78,40 +78,87 @@ describe('/api/live-scoring callers send `L` alone', () => {
   });
 });
 
-describe('the live-scoring page reads MFL directly, not its own origin', () => {
-  const assembler = FILES.find((f) => f.path === 'src/utils/live-scoring-data.ts')!;
+describe('server-side live-scoring reads MFL directly, not our own origin', () => {
+  // Both SSR assemblers, not just the one the outage was reported against.
+  // The first version of this guard named `live-scoring-data.ts` alone, and
+  // `live-scoring-hero-props.ts` — the homepage's copy of the same self-fetch —
+  // sailed straight past it. A guard scoped to the file you happened to edit
+  // is how a half-applied fix looks green.
+  const SSR_ASSEMBLERS = [
+    'src/utils/live-scoring-data.ts',
+    'src/utils/live-scoring-hero-props.ts',
+  ];
 
-  it('assembleLiveScoringData does not fetch our own /api route', () => {
-    expect(assembler).toBeDefined();
-    // A self-fetch is spelled `new URL('/api/…', siteUrl)` — an absolute
-    // pathname resolved against our own origin, then handed to fetch().
-    const selfFetch = /new URL\(\s*'\/api\//.test(assembler.text);
+  it.each(SSR_ASSEMBLERS)('%s does not fetch our own /api route', (path) => {
+    const file = FILES.find((f) => f.path === path);
+    expect(file, `${path} not found`).toBeDefined();
+    // A self-fetch is an absolute /api pathname resolved against our own
+    // origin, then handed to fetch() — in either the URL-object or the
+    // template-literal spelling.
+    const selfFetch = /new URL\(\s*['`]\/api\//.test(file!.text)
+      || /['`]\/api\/live-scoring\?/.test(file!.text);
     expect(
       selfFetch,
-      'live-scoring-data.ts must read MFL through loadLiveScoringPayload, not by fetching our own /api/live-scoring during SSR',
+      `${path} must read MFL through loadLiveScoringPayload, not by fetching our own /api/live-scoring during SSR`,
     ).toBe(false);
+    expect(file!.text).toContain('loadLiveScoringPayload');
   });
 
-  it('it goes through the shared loader, so route and page cannot drift', () => {
-    expect(assembler.text).toContain('loadLiveScoringPayload');
+  it('routes both the API and the assemblers through the one loader', () => {
     const route = FILES.find((f) => f.path === 'src/pages/api/live-scoring.ts')!;
     expect(route.text).toContain('loadLiveScoringPayload');
+    // And the loader owns host resolution, so a caller cannot pair one
+    // league's `L` with another league's MFL server.
+    const source = FILES.find((f) => f.path === 'src/utils/live-scoring-source.ts')!;
+    expect(source.text).toContain('export function resolveHost');
+    for (const path of SSR_ASSEMBLERS) {
+      const file = FILES.find((f) => f.path === path)!;
+      expect(
+        /host:\s*`https:\/\//.test(file.text),
+        `${path} must not hand its own host to the loader — PUBLIC_MFL_HOST overrides every league`,
+      ).toBe(false);
+    }
   });
 });
 
-describe('the MFL poller is not gated on the game-day hero schedule', () => {
-  const board = FILES.find((f) => f.path === 'src/components/shared/LiveScoreboard.tsx')!;
+describe('the game-day hint sets cadence, it does not gate polling', () => {
+  // Every island that polls MFL, not only the board. `LiveScoringHero` had the
+  // identical `if (!isLive) return;` one file over and froze the HOMEPAGE for
+  // the same Wednesday game.
+  const POLLING_ISLANDS = [
+    'src/components/shared/LiveScoreboard.tsx',
+    'src/components/shared/LiveScoringHero.tsx',
+  ];
 
-  it('LiveScoreboard polls on the data, not on getDailySlot', () => {
+  it.each(POLLING_ISLANDS)('%s polls on the data, not on getDailySlot', (path) => {
+    const file = FILES.find((f) => f.path === path);
+    expect(file, `${path} not found`).toBeDefined();
     // `props.isLive` is `getDailySlot(now).slot === 'live-scoring'` — a hero
-    // schedule that knows Thursday, Sunday and Monday and nothing else. It was
-    // false for the 2026 Wednesday-night opener, and because it gated the poll
-    // ENTIRELY the board never asked MFL for a score all game. It may set the
-    // cadence; it may not decide whether to poll at all.
+    // schedule that knows Thursday, Sunday and Monday and nothing else. It may
+    // set the interval; it may not decide whether to poll at all.
     expect(
-      /if \(!isLive\) return;/.test(board.text),
-      'LiveScoreboard must not skip polling because the hero schedule says it is not a game day',
+      /if \(!(props\.)?isLive\) return;/.test(file!.text),
+      `${path} must not skip polling because the hero schedule says it is not a game day`,
     ).toBe(false);
-    expect(board.text).toContain('shouldPollLive(');
+  });
+
+  it('every /api/live-scoring consumer gates on the ok flag', () => {
+    // 200 + `ok: false` is the upstream-MFL failure, and its empty collections
+    // are indistinguishable from a healthy quiet week unless the flag is read.
+    // A consumer that writes it through paints `0.0 - 0.0` over a real game or,
+    // on the playoffs page, reads as "all final" and kills its own refresh.
+    const CONSUMERS = [
+      'src/components/shared/LiveScoreboard.tsx',
+      'src/components/shared/LiveScoringHero.tsx',
+      'src/hooks/useLiveScoringFeed.ts',
+      'src/pages/theleague/playoffs.astro',
+      'src/pages/afl-fantasy/playoffs.astro',
+    ];
+    const missing = CONSUMERS.filter((path) => {
+      const file = FILES.find((f) => f.path === path);
+      return !file || !/\bok === false\b/.test(file.text);
+    });
+    expect(missing, `these read /api/live-scoring without checking ok:\n${missing.join('\n')}`)
+      .toEqual([]);
   });
 });

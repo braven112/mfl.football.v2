@@ -246,11 +246,15 @@ export function buildPlayerMeta(
  * same payload with one hop instead of three.
  */
 async function fetchInitialSnapshot(opts: AssembleOpts) {
+  // No host: the loader resolves it from the REGISTRY by league id. The
+  // page's own `opts.host` comes from `getLeagueContext`, which applies a
+  // global `PUBLIC_MFL_HOST` override to every league — handing that to the
+  // fetch alongside this league's `L` is how one league's page SSRs another
+  // league's scores, as a well-formed 200 no shape check can catch.
   return loadLiveScoringPayload({
     leagueId: opts.leagueId,
     year: opts.year,
     week: opts.week,
-    host: `https://${opts.host}`,
   });
 }
 
