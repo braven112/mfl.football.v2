@@ -83,34 +83,37 @@ and Trusted IPs are all disabled project-wide. (The `401` in
 `docs/claude/insights/domains/deployment.md` from 2026-03-08 predates that.)
 Re-enabling SSO protection later would 401 all three staging sites.
 
-## Cloudflare challenges `/` on a new staging host
+## Cloudflare Bot Fight Mode challenges a new staging host
 
-Every one of these hosts is proxied through Cloudflare (they resolve to the
-same Cloudflare IPs as production), and on first setup all three answered the
-ROOT path with a `403` + `cf-mitigated: challenge` — the "Verify you are human"
-interstitial — while production's `/` served normally.
+All of these hosts are proxied through Cloudflare (they resolve to the same
+Cloudflare IPs as production), and on first setup every one of them answered
+with a `403` + `cf-mitigated: challenge` — the "Verify you are human"
+interstitial — while production served normally.
 
-It is scoped to `/` alone. Measured on `staging.theleague.us` with a real
-Chrome user-agent:
+**It is Bot Fight Mode.** Confirmed in Cloudflare → Security → Analytics,
+filtered to the staging hostname: the event reads `Action taken: Managed
+Challenge`, `Service: Bot fight mode`.
 
-| Path | Result |
-|---|---|
-| `/` | 403, `cf-mitigated: challenge` |
-| `/rosters` | 200 |
-| `/favicon.ico`, `/manifest.json` | 200 |
-| `/api/draft/status` | 200 |
+**Fix: Security → Settings → Bot Fight Mode → off, in EACH zone.**
+`theleague.us`, `afl-fantasy.com` and `mfl.football` are three separate zones
+with three separate toggles.
 
-So it is not bot detection — a browser UA is challenged identically — and it is
-not the app. It is a zone rule keyed on hostname + path whose exception list
-names the production hosts and not the new ones. Diagnose it in **Cloudflare →
-Security → Events**, filtered to the staging hostname: the event names the
-exact service and rule.
+Two things that cost an hour of misdiagnosis, recorded so they don't again:
 
-Fix by adding a **Skip** rule at the TOP of the WAF custom rules list:
-
-```
-(http.host in {"staging.theleague.us" "staging.afl-fantasy.com" "staging.mfl.football"})
-```
+- **Bot Fight Mode cannot be skipped by a WAF custom rule.** It runs outside
+  the custom-rules pipeline, so the obvious fix — a `Skip` rule listing the
+  staging hostnames — does nothing at all. (Super Bot Fight Mode, on Pro and
+  above, CAN be skipped that way. Plain Bot Fight Mode cannot.) On Pro, prefer
+  turning plain BFM off and enabling Super Bot Fight Mode with "definitely
+  automated → Managed Challenge" and "likely automated → Allow".
+- **Do not rule it out because only some paths are challenged.** The symptom
+  looked path-scoped — `/` challenged while `/rosters`, `/favicon.ico`,
+  `/manifest.json` and `/api/*` all returned 200 — which reads like a rule
+  keyed on hostname + path. It is not. BFM scores each request independently
+  and is erratic; it challenges datacenter IPs hard (every challenged IP in the
+  log was an AWS/cloud range) and challenges real browsers on a hostname where
+  they have no `cf_clearance` cookie yet. Go to the events log FIRST; it names
+  the service outright and no config screen will.
 
 Do NOT reach for the other obvious fix — setting the staging DNS records to
 DNS-only (grey cloud). It works, but it takes Cloudflare out of the path and
