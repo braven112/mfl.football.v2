@@ -11,6 +11,9 @@ import {
 } from '../src/utils/nfl-week-starts.mjs';
 import { NFL_WEEK_STARTS } from '../src/data/nfl/week-starts.mjs';
 
+/** Season years present in the committed data, as numbers — the key type. */
+const SEASONS: number[] = Object.keys(NFL_WEEK_STARTS).map(Number);
+
 /**
  * The NFL week anchor: published schedule first, Labor Day derivation second.
  *
@@ -70,9 +73,8 @@ describe('the Labor Day fallback', () => {
 
 describe('the committed schedule data', () => {
   it('holds all 18 regular-season weeks for every season it lists', () => {
-    const years = Object.keys(NFL_WEEK_STARTS);
-    expect(years.length).toBeGreaterThan(0);
-    for (const year of years) {
+    expect(SEASONS.length).toBeGreaterThan(0);
+    for (const year of SEASONS) {
       for (let week = 1; week <= REGULAR_SEASON_WEEKS; week += 1) {
         expect(NFL_WEEK_STARTS[year][week], `${year} week ${week}`).toMatch(
           /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}-0[78]:00$/,
@@ -85,7 +87,7 @@ describe('the committed schedule data', () => {
     // The shape check the fetcher refuses to commit past. A season that fails
     // it means MFL served a partial schedule, which must never overwrite a
     // good one.
-    for (const year of Object.keys(NFL_WEEK_STARTS)) {
+    for (const year of SEASONS) {
       for (let week = 2; week <= REGULAR_SEASON_WEEKS; week += 1) {
         const gap =
           (Date.parse(NFL_WEEK_STARTS[year][week]) - Date.parse(NFL_WEEK_STARTS[year][week - 1])) /
