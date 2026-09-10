@@ -2932,6 +2932,45 @@ async function loadPlayers(year) {
 }
 
 /**
+ * Who currently rosters each player, from the league's own rosters feed.
+ *
+ * This is the ground truth under every ownership claim the trade-offer lane
+ * makes. A PENDING proposal has not executed, so a player being given up in it
+ * is still on the roster of the franchise giving him up — which turns "does
+ * this team own this player" from a thing we infer off MFL's field names into
+ * a thing we look up. `attributeSides` uses it to validate (and, on a garbled
+ * row, to repair) the side/franchise binding, and `buildExposure` uses it as
+ * the per-player floor under the name it prints.
+ *
+ * Read through the registry's `feedFilePath`, never a joined league directory
+ * — `tests/league-literal-guard.test.ts` forbids the literal and the registry
+ * is the only thing that knows where a league's feeds live.
+ *
+ * A missing or unreadable file returns an EMPTY map, which the redactor treats
+ * as "no evidence" and falls back to taking the row at its word. That is the
+ * pre-2026-09-10 behaviour: a stale feed degrades the check, it does not
+ * silence the lane.
+ */
+async function loadRosterOwners(year) {
+  const map = new Map();
+  try {
+    const raw = JSON.parse(await fs.readFile(SCHEFTER_LEAGUE.feedFilePath(year, 'rosters.json'), 'utf8'));
+    const list = raw?.rosters?.franchise ?? [];
+    for (const franchise of Array.isArray(list) ? list : [list]) {
+      const fid = String(franchise?.id ?? '').padStart(4, '0');
+      if (!fid.trim()) continue;
+      const players = franchise?.player ?? [];
+      for (const player of Array.isArray(players) ? players : [players]) {
+        if (player?.id) map.set(String(player.id), fid);
+      }
+    }
+  } catch (err) {
+    warn(`  [offer-scan] rosters file unreadable: ${err.message} — ownership checks degraded`);
+  }
+  return map;
+}
+
+/**
  * Load the league's ADP dynasty rank map. Used by the trade-offer redactor
  * to pick the marquee (highest-value) player for the graduated exposure
  * ladder — at signal=2+ we name players in best-first order, and ADP
@@ -3147,6 +3186,8 @@ async function scanTradeOffers({ redis, dryRun }) {
   const teams = await loadTeamsWithDivisions();
   const players = await loadPlayers(year);
   const adpRankByPlayerId = await loadAdpDynastyRanks(year);
+  const rosterOwnerByPlayerId = await loadRosterOwners(year);
+  log(`  [offer-scan] Roster ownership loaded for ${rosterOwnerByPlayerId.size} player(s)`);
 
   // Step 0: fold each franchise's saved trade-builder drafts into the
   // shopping-signal sorted sets. Drafts feed the player-escalation tier
@@ -3480,6 +3521,7 @@ async function scanTradeOffers({ redis, dryRun }) {
         // Held, not advanced — see the `closure` branch in redactTradeOffer.
         exposureCount: priorExposure,
         adpRankByPlayerId,
+        rosterOwnerByPlayerId,
         blockByFid,
         positionRuns,
         closure: {
@@ -3670,6 +3712,7 @@ async function scanTradeOffers({ redis, dryRun }) {
       offerAgeMs,
       exposureCount: priorExposure,
       adpRankByPlayerId,
+      rosterOwnerByPlayerId,
       blockByFid,
       positionRuns,
       previousShape: parseStoredShape(shapeByOfferId[offerId]),

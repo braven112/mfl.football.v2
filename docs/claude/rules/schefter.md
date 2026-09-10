@@ -197,6 +197,79 @@ opponent's player listed beside the named team. A guard test can encode a
 defect as an invariant; read the fixture before assuming a failing test means
 the fix is wrong.
 
+A guard test can also encode NOTHING. Those attribution cases ran at
+`exposureCount: 1` → signal 2, and `plannedPlayerCount` names a player every
+OTHER signal, so `exposure.players` was empty on every one of them and every
+assertion sat behind an `if (players.length > 0)` that never fired. The suite
+was green through the recurrence below. Any case asserting a NAME needs
+`exposureCount: 2` (signal 3) or later.
+
+### …and the side it is named from must actually be its own
+
+The rules above are all downstream of one assumption: that
+`franchise1_gave_up` holds fid1's players and `franchise2_gave_up` holds
+fid2's. The field names say so, and when the row is well-formed the trade
+really does tell us who owns whom with nothing else consulted. **Rows are not
+always well-formed.** They reach this lane from three sources — the commish's
+league-wide read, a per-franchise read, and an owner self-report normalized by
+`src/utils/owner-trade-reports.ts#normalizeRaw` — and only the first carries
+MFL's commish-view semantics natively. The other two derive `franchise` (the
+ORIGINATOR) *separately* from the two asset strings, so a row can arrive with
+its ids right and its SIDES INVERTED.
+
+2026-09-10, three days after the fix above and one day after the memory-mask
+fix below: "Fire have been shopping Cyrus Allen and a 2027 second — looking for
+a running back that isn't on anybody's block." Cyrus Allen (17518) is a Bring
+The Pain (0008) player; Fire Ready Aim (0007) was the team being ASKED.
+`buildExposure` was correct throughout — it named the chosen franchise's own
+side; the row had made someone else's players into that franchise's own side.
+Replaying the real offer through the four plausible row shapes reproduced the
+published sentence from exactly one: ids correct, sides swapped.
+
+`attributeSides` (`scripts/lib/redact-trade-offer.mjs`) is now the only place
+a side is bound to a franchise, and the roster is what proves the binding. A
+PENDING proposal has not executed, so every player in it is still rostered by
+the franchise giving him up — that makes roster ownership an exact check here,
+not a heuristic.
+
+- **Two DISTINCT, non-empty ids or nothing.** `sidesByFid` is an object literal
+  with two computed keys: `fid1 === fid2` drops one side silently on top of the
+  other and hands BOTH teams' players to one franchise, and an empty id parks a
+  side under `''`, where `buildDealShape`'s `getsFid` scan skips it and the deal
+  loses its other half (the post then describes a one-way giveaway). Both are
+  reachable — `normalizeRaw` falls back to `offeredto` for `franchise2` and can
+  leave `franchise` empty when the description-parse misses.
+- **A bad id is asked of the rosters before the row is dropped.** "Who is
+  giving this side up" is exactly what the ids were standing in for, and the
+  rosters answer it directly. Only a pair of distinct, confident answers is
+  accepted; a picks-only side has nothing to look up, so it refuses.
+- **Score BOTH orientations and take the winner.** A swapped row is repaired,
+  not discarded — the deal is entirely recoverable, and the post ships with the
+  right player and the right direction.
+- **"No evidence" and "the evidence cancels out" are different answers.** Both
+  score zero. Reading the second as the first took a row whose two sides
+  claimed the SAME franchise's player and shipped it on the row's word, so the
+  known-player count is tracked separately from the score.
+- **A missing rosters feed degrades the check, it does not silence the lane.**
+  No roster evidence at all → take the row at its word, which is exactly the
+  pre-2026-09-10 behaviour.
+- **The franchise ORDER is the row's, never the orientation's.** Correcting a
+  swapped row must not move `buildExposure`'s coin flip, or a later signal
+  about the same offer names the other team and the drip reads as two stories.
+- **`buildExposure` no longer re-derives the ids.** It took `rawOffer` and
+  computed `fid1`/`fid2` itself, in parallel with `redactTradeOffer` doing the
+  same — two derivations of one fact, which is the shape every bug in this file
+  has had. It takes the ids from `attributeSides` now, so the coin flip and the
+  roster lookup cannot disagree about which franchise is which.
+- **The per-player floor stays underneath all of it.** `ownPlayers` filters to
+  players the rosters place on that franchise, and `escalatedPlayer` is
+  re-picked through the same filter — it prints a name beside `exposure.team`
+  through a different field, so an unchecked pick there rebuilds the same bug.
+
+`tests/redact-trade-offer-side-binding.test.ts` runs the real 1078 offer
+through all four row shapes and asserts the published sentence is unwritable
+from any of them.
+
 Retracting a post that already shipped is `scripts/schefter-retract-post.mjs`,
 never a hand edit — the feeds are cron-written, so a hand edit is invisible in
 review. It deliberately leaves the scanner's `posted`/exposure state alone, or
@@ -281,6 +354,24 @@ three previous trade posts had all named Fire Ready Aim.
   test as resolved and shipped the literal markup to the feed and GroupMe.
   Schefter prose never legitimately contains either brace pair, and erring
   toward "unresolved" costs only a template fallback.
+- **The block was reading the file BACKWARDS the whole time.**
+  `post-history.json` has two writers with opposite conventions:
+  `appendPostHistory` pushed onto the end and pruned `slice(-30)`
+  (oldest-first), while `mergeHistory` in `scripts/lib/merge-schefter-feed.mjs`
+  sorts newest-first and caps `slice(0, cap)`. The merge runs on every commit —
+  both lanes share the file on overlapping crons — so the merge's direction is
+  what the file keeps, and `buildRecentPostsPromptBlock`'s `posts.slice(-5)`
+  was handing the model the five OLDEST entries. On 2026-09-10 the live file
+  spanned May to September and the block recalled posts from May 5-7: the
+  anti-repetition memory had been pointed at four-month-old output for as long
+  as both writers existed. It has no symptom — a thinner prompt just reads as
+  Schefter being repetitive. The same inversion made every append prune the
+  NEWEST entry off the top before writing, and only the next merge put it back.
+  `postsNewestFirst` now sorts on the timestamp rather than trusting either
+  order, both writers agree on newest-first, and
+  `tests/schefter-post-history-ordering.test.ts` pins the contract from BOTH
+  storage directions — the point being that no reader may assume a writer's
+  order.
 - **An empty team map produces NO masker, not an identity one.**
   `schefter-scan`'s `loadTeams` returns an empty Map on any config read error,
   and a masker that fails open there ships unmasked bodies — the exact opposite

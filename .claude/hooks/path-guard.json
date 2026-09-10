@@ -571,6 +571,8 @@
       "paths": [
         "scripts/schefter-*.mjs",
         "scripts/lib/redact-trade-offer.mjs",
+        "scripts/lib/merge-schefter-feed.mjs",
+        "src/utils/owner-trade-reports.ts",
         "src/utils/trade-deadline.mjs",
         "scripts/lib/schefter*",
         "scripts/lib/speculation-*.mjs",
@@ -592,6 +594,8 @@
         "tests/schefter-rumor-cadence.test.ts",
         "tests/redact-trade-offer-attribution.test.ts",
         "tests/redact-trade-offer-exposure.test.ts",
+        "tests/redact-trade-offer-side-binding.test.ts",
+        "tests/schefter-post-history-ordering.test.ts",
         "tests/schefter-offer-beats.test.ts",
         "tests/speculation-seeds.test.ts"
       ]
