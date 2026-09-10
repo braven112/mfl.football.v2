@@ -462,3 +462,46 @@ shape one file over and the cross-cutting pass went looking for the twin.
   a pure export gets a real behavioural test instead. When a client-side rule
   matters, lift the decision out of the component rather than reaching for a
   DOM harness the repo does not have.
+
+## 2026-09-09 - The board went blank on a Wednesday opener. Two bugs, one symptom.
+
+The empty state ("Scores will appear here when games begin") over a live slate,
+on the 2026 season opener. Two independent faults, either of which alone was
+enough — worth recording because the *diagnosis* is the reusable part, not the
+fix.
+
+- **The runtime-log signature of an edge block is an absence, not an error.**
+  The page SSR'd by fetching its own `/api/live-scoring` over the public
+  internet. When that stopped landing there was no failing log entry to find,
+  because a request blocked at the edge never reaches the route — what you see
+  is a `/live-scoring` page render with **no `/api/live-scoring` entry beside
+  it**, while the same route answers external callers perfectly. So the tell is
+  a missing sibling line, not a 4xx. Compare the timestamps of the page hits
+  against the API hits; a page render that produced no subrequest is the whole
+  finding. (Same signature the removed gameday health check hit, 2026-09-03.)
+- **Read the island's props off the deployed HTML before theorising.** The
+  `<astro-island props="…">` attribute is HTML-escaped JSON in Astro's
+  `[type, value]` encoding, so a dozen lines of Python answer "what did the
+  server actually hand the client" exactly. Here it said `matchups: []`,
+  `initialScores: {}`, `isLive: false`, and no `demo` key — which pinned all
+  three facts at once: the fetch failed (not the feed being empty, or the
+  sample would have fired, since that path requires `ok`), and the client was
+  never going to poll either. Guessing from the screenshot would have found at
+  most one of the two bugs.
+- **The 2026-09-08 entry above was half the story, and the missed half was one
+  file away.** PR #1014 fixed `getDailySlot`'s hint where it set a *cadence*
+  (`liveNow = live || …` in `useNflScoreboard`). The same hint was also a hard
+  *on/off gate* in `LiveScoreboard`'s own MFL poller — `if (!isLive) return;` —
+  so on a Wednesday the board never asked MFL for a score at all. The two uses
+  do not grep alike, which is why the twin survived a cross-cutting pass that
+  was explicitly looking for it. **When a hint turns out to be untrustworthy,
+  grep for every USE of it, not for the shape of the bug you just fixed.**
+- **And the hero schedule really cannot be trusted for this.** `getDailySlot`
+  knows Thursday, Sunday and Monday. The NFL does not: a Wednesday opener, a
+  Friday game, a flexed kickoff. `shouldPollLive(nflSlate, hint)` reads the
+  real clock and is the only thing that should decide the MFL cadence — the
+  hint is now purely its pre-data fallback.
+
+**Evidence:** `src/utils/live-scoring-source.ts` (the loader both the route and
+the page call), `tests/live-scoring-self-fetch-guard.test.ts`,
+`docs/claude/rules/live-scoring.md`.
