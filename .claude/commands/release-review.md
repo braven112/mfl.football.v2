@@ -1,17 +1,19 @@
-Review a whole release's worth of code at once — everything queued for the next
-promotion to production — hunting the things a per-PR review cannot see:
-duplication across features, reuse that was missed, sibling drift that
-accumulated, and abstractions six special cases are asking for.
+Stabilize `main` for the week's promotion: review everything queued on `staging`
+at once for the things a per-PR review cannot see, rehearse the production
+build, and return a **GO or NO-GO**. This is the gate — the promotion does not
+run without a GO.
 
 Run it Monday, so there is a day to act before Tuesday's promotion.
 `/release-review`, or `/release-review --base main --head staging`.
 
 ## What this is, and what it is not
 
-**Not a second correctness review.** Every commit in range already passed
-`/live`'s five-reviewer pass and CI, and ~228 guard suites still gate the
-promotion. Re-running that lens finds nothing and costs a lot. If you want
-correctness on a specific diff, that is `/code-review`.
+**Not a second correctness review, and not where quality gets decided.** Every
+commit in range already passed `/live`'s full pass on its own PR — correctness
+(5), cross-cutting (5b) and **quality (5c)** — plus CI, and ~228 guard suites
+still gate the promotion. `staging` is held to production standards on the way
+in; this pass is not the safety net for anything skipped there. Re-running those
+lenses finds little and costs a lot.
 
 **This is the week-scale lens**, and it exists because of one structural blind
 spot: a reviewer handed a single PR cannot see the *other* PR from Tuesday that
@@ -22,7 +24,7 @@ So every finding here should be of a kind that is **invisible in any single
 commit in the range**. If a finding would have been caught by reviewing one PR
 in isolation, it is out of scope — note it and move on, don't pad the report.
 
-Five things qualify:
+Six things qualify:
 
 | Lens | The shape of the finding |
 |---|---|
@@ -32,6 +34,7 @@ Five things qualify:
 | **Altitude** | Several features each bolted a special case onto the same function, and the right answer is one abstraction |
 | **Efficiency at scale** | The week's changes together grew the client bundle, added per-request work that belongs in prebuild, or introduced an N+1 |
 | **Stored-shape compatibility** | Staging shares production's database while running a week ahead of it, so a changed key shape breaks production before it ships (step 1b — the one blocking lens) |
+| **Release readiness** | Does the whole thing build and deploy — the full-prebuild rehearsal, the week's visual diffs, the ratchets (steps 6b, 6c) |
 
 ---
 
@@ -232,16 +235,75 @@ re-ship. Rank by how badly the rule has already bitten. Closing one is
 
 Do not open gaps that predate the range — they are not this release's findings.
 
+## Step 6b: The production build rehearsal
+
+Staging runs the **slim** prebuild all week (`VERCEL_ENV=preview` — 19 of 21
+steps skipped, committed data artifacts read instead). That is the right default
+for cost, and it leaves one real hole: **a change to a compute or fetch script
+is never exercised on staging.** Its first real run would be on production,
+during Tuesday's deploy.
+
+So the rehearsal happens here, once, before the promotion:
+
+```bash
+PREBUILD_FULL=1 pnpm prebuild
+```
+
+What you are looking for:
+
+- **A step that fails.** Blocking, obviously.
+- **A derived file whose content changed beyond its `generatedAt` stamp.** That
+  means a compute script in this range genuinely changes its output — check
+  that every reader of that file expects the new shape, and that the committed
+  copy gets regenerated as part of the promotion rather than drifting.
+- **A step that got noticeably slower**, or a new network fetch with no timeout.
+
+If the range touches nothing under `scripts/` or `src/**/*.mjs`, the pipeline
+cannot have changed — say so in one line and skip the run rather than spending
+the network fetches.
+
+## Step 6c: Visual diffs land at the promotion
+
+Chromatic does not run on staging PRs — it runs on the promotion, where the
+whole week's snapshots are reviewed at once and a human accepts or rejects in
+the Chromatic UI. Two consequences for this pass:
+
+- **Expect a batch, and help with attribution.** Fifteen changed snapshots with
+  no context is the known cost of this placement. If the range touched anything
+  in the story import closure (`.github/workflows/chromatic.yml` lists it, and
+  `scripts/chromatic-story-deps.mjs` generates it), name those commits in the
+  report so the diffs can be matched to features rather than guessed at.
+- **A visual regression has been live on staging all week.** Real owners use
+  those hosts. If anything in the range looks like it could have changed
+  rendering and nobody mentioned it, that is worth a direct look rather than
+  waiting for the Chromatic run.
+
 ## Step 7: Adjudicate
 
-Every candidate finding gets sorted into exactly one bucket. Be strict; a report
+**This pass gates the promotion**, so it ends in a verdict, not a list. Every
+candidate finding gets sorted into exactly one bucket first. Be strict; a report
 where everything is urgent gets read once.
 
 | Bucket | Bar | What happens |
 |---|---|---|
-| **Blocks promotion** | A correctness or security regression, or a ratchet that moved in the wrong direction and can't be explained | Fix before Tuesday, or pull the feature off the train |
-| **Fix before promotion** | Cheap and local — a duplicate helper collapsed, a missed util swapped in, a drifted twin updated | Do it now, in one commit, this branch |
+| **Blocks promotion** | A stored-shape incompatibility (step 1b), a correctness or security regression, a failed build rehearsal, or a ratchet that moved the wrong way and can't be explained | Fix before Tuesday, or pull the feature off the train |
+| **Fix before promotion** | Cheap and local — a duplicate helper collapsed, a missed util swapped in, a drifted twin updated | Do it now, in one commit, on `staging` |
 | **Follow-up** | Real, but a refactor with its own blast radius — unify a page pair, extract an abstraction, close a guard gap | File it. Do **not** hold a working feature for it |
+
+### The verdict
+
+**GO** — no unresolved *blocks promotion* findings, and the *fix before
+promotion* bucket has been applied and is green.
+
+**NO-GO** — anything in the blocking bucket still stands. A NO-GO must name the
+specific item, the specific change that would clear it, and whether the fix or
+pulling the feature is the shorter path. "Needs more review" is not a NO-GO.
+
+Filing a follow-up is a deliberate **GO** decision, not a deferred NO-GO. That
+distinction is what keeps this gate from degenerating: if every unfixed finding
+blocked, the gate would be waved through within a month. The reviewer's judgment
+about which findings must clear before Tuesday *is* the gate — say it out loud,
+with reasons, so the call is reviewable.
 
 The follow-up bucket matters most. A reuse opportunity found on Monday should
 not delay a finished feature, and it should also not evaporate — that is the
@@ -258,11 +320,20 @@ the truth — it will be, some weeks, and it is a real result.
 ```markdown
 # Release review — <date>
 
+**Verdict: GO** (or **NO-GO** — and what must change)
+
 **Range:** `<base>..<head>` — N commits, N files, +N/-N
 **Features on the train:** one line each, linking the PR
 
 ## Blocks promotion
 (or "None.")
+
+## Stored-shape compatibility
+<Every storage write in the range, and whether current production can read it.
+"Nothing in range touches storage" is a valid, and common, answer.>
+
+## Build rehearsal
+<PREBUILD_FULL result, or why it was skipped.>
 
 ## Fix before promotion
 - **<finding>** — `path:line` and `path:line`. <Why it is one thing, not two.>
@@ -291,5 +362,7 @@ simplification). Run the affected guard suites, plus `pnpm test:unit`.
 File the **follow-up** bucket — `docs/claude/followups/` is where `/hotfix`
 already puts deferred work, so it is the same shelf.
 
-Report to the user: the three buckets, what you fixed, what you filed, and a
-clear go / no-go for Tuesday's promotion.
+Report to the user: the verdict first, then the three buckets, what you fixed
+and what you filed. On a NO-GO, lead with the one thing that must change and the
+shorter of the two paths to clearing it — fix, or pull the feature off the
+train.
