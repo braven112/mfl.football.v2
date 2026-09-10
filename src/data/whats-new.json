@@ -303,30 +303,6 @@
     "excludeFromHero": true
   },
   {
-    "id": "sunday-ticket-live-scoring",
-    "date": "2026-09-06",
-    "category": "enhancement",
-    "icon": "goals",
-    "leagues": [
-      "theleague",
-      "afl"
-    ],
-    "excludeFromHero": true,
-    "title": "Sunday Ticket Stopped Clocking Out At Kickoff",
-    "link": "/sunday-ticket",
-    "linkLabel": "Open Sunday Ticket",
-    "summary": "The multiview board now keeps going once the games start: every player on it shows his live fantasy points instead of a projection, and your own matchup sits up top with both crests and both scores — in every league you play in, on one page.",
-    "description": [
-      "<a href=\"/sunday-ticket\">Sunday Ticket</a> had one job and it did it beautifully for about four hours a week. It read every league you're in, worked out which four games had the most of your starters on the field, and told you what to put on the multiview. Then at 10:00 AM Pacific it put up a banner pointing at <a href=\"/live-scoring\">Live Scoring</a> and effectively closed for the afternoon — right at the moment anybody actually cared.",
-      "It doesn't do that any more. Every player row on the board now carries his <strong>live fantasy points</strong> in that league's scoring, and each league's running total sits above its own group. Sit a guy in TheLeague and start him in the AFL and you'll see both numbers, side by side, counting differently — because they are different leagues and they always were.",
-      "Above the board, your own game. One card per league, your crest against your opponent's, both live scores, and how many starters each of you still has to play. If you're in both leagues you're watching two matchups on one page instead of two tabs. Doubleheader week gets two cards, because of course it does.",
-      "The numbers refresh themselves about once a minute while games are being played and then back off once everything's final, and the little <em>Updated</em> pill tells you when the board last actually heard from MFL — a board that says \"live\" and hasn't been confirmed since noon is not live, and now it says so. Lose your connection mid-afternoon and the scores you already have stay put rather than blanking out.",
-      "One deliberate omission: leagues from outside this site still show projections only. We can read your rosters there, but not their live scoring — those cards say <em>Projections only</em> rather than quietly showing you zeroes. TheLeague, the AFL and Best Ball are all live. And <a href=\"/live-scoring\">Live Scoring</a> is still the deep cut when you want box scores and the scoring ticker; Sunday Ticket is now the wide shot."
-    ],
-    "image": "sunday-ticket-live.webp",
-    "imageAlt": "The Sunday Ticket board mid-season: a matchup card showing Pacific Pigskins 76.6 against Gridiron Geeks 109.2 with both team crests, an Updated pill beneath it, and the early-window game boxes below showing live fantasy points beside each player."
-  },
-  {
     "id": "nfl-game-networks",
     "date": "2026-09-07",
     "category": "enhancement",
@@ -372,6 +348,30 @@
     ],
     "image": "nav-account-menu.webp",
     "imageAlt": "The League's navigation drawer in dark mode with the account menu open under the team name Pacific Pigskins. The drawer opens straight onto the This Week section — Set Lineup, Coach Tab — with no pinned links above it. The menu lists Preferences with a US flag and \"ET · PT\" beneath it, Notifications with \"Which alerts reach your phone\", Commissioner mode showing an OFF pill and \"Off — browsing as your team\", and a red Sign out row. A Theme row with light, auto and dark buttons sits below the menu."
+  },
+  {
+    "id": "sunday-ticket-live-scoring",
+    "date": "2026-09-06",
+    "category": "enhancement",
+    "icon": "goals",
+    "leagues": [
+      "theleague",
+      "afl"
+    ],
+    "excludeFromHero": true,
+    "title": "Sunday Ticket Stopped Clocking Out At Kickoff",
+    "link": "/sunday-ticket",
+    "linkLabel": "Open Sunday Ticket",
+    "summary": "The multiview board now keeps going once the games start: every player on it shows his live fantasy points instead of a projection, and your own matchup sits up top with both crests and both scores — in every league you play in, on one page.",
+    "description": [
+      "<a href=\"/sunday-ticket\">Sunday Ticket</a> had one job and it did it beautifully for about four hours a week. It read every league you're in, worked out which four games had the most of your starters on the field, and told you what to put on the multiview. Then at 10:00 AM Pacific it put up a banner pointing at <a href=\"/live-scoring\">Live Scoring</a> and effectively closed for the afternoon — right at the moment anybody actually cared.",
+      "It doesn't do that any more. Every player row on the board now carries his <strong>live fantasy points</strong> in that league's scoring, and each league's running total sits above its own group. Sit a guy in TheLeague and start him in the AFL and you'll see both numbers, side by side, counting differently — because they are different leagues and they always were.",
+      "Above the board, your own game. One card per league, your crest against your opponent's, both live scores, and how many starters each of you still has to play. If you're in both leagues you're watching two matchups on one page instead of two tabs. Doubleheader week gets two cards, because of course it does.",
+      "The numbers refresh themselves about once a minute while games are being played and then back off once everything's final, and the little <em>Updated</em> pill tells you when the board last actually heard from MFL — a board that says \"live\" and hasn't been confirmed since noon is not live, and now it says so. Lose your connection mid-afternoon and the scores you already have stay put rather than blanking out.",
+      "One deliberate omission: leagues from outside this site still show projections only. We can read your rosters there, but not their live scoring — those cards say <em>Projections only</em> rather than quietly showing you zeroes. TheLeague, the AFL and Best Ball are all live. And <a href=\"/live-scoring\">Live Scoring</a> is still the deep cut when you want box scores and the scoring ticker; Sunday Ticket is now the wide shot."
+    ],
+    "image": "sunday-ticket-live.webp",
+    "imageAlt": "The Sunday Ticket board mid-season: a matchup card showing Pacific Pigskins 76.6 against Gridiron Geeks 109.2 with both team crests, an Updated pill beneath it, and the early-window game boxes below showing live fantasy points beside each player."
   },
   {
     "id": "schefter-for-you",
@@ -699,30 +699,6 @@
     "imageAlt": "The Transaction Hub modal open over the AFL standings page, headed \"Transaction Hub\" and \"Everything you have in flight\". Three rows: Trade Offers, 2 waiting on you, badged 2; Waiver Claims, 2 filed, badged 2; and Waiver Priority, American League, chipped #2."
   },
   {
-    "id": "sunday-ticket",
-    "date": "2026-09-04",
-    "category": "new-page",
-    "icon": "goals",
-    "leagues": [
-      "theleague",
-      "afl"
-    ],
-    "title": "Four Boxes, Two Windows, Every League You're In",
-    "heroHeadline": "See what's worth",
-    "heroAccentWord": "Watching.",
-    "link": "/sunday-ticket",
-    "linkLabel": "Build your Sunday",
-    "summary": "Sunday Ticket gives you four boxes per window and no opinion about which games belong in them. The new Sunday Ticket page has one: the games with the most of your starters on the field, ranked, with the real network on each, RedZone in any open box — and it counts your other leagues too.",
-    "description": [
-      "There is a version of Sunday afternoon where you have the multiview up, four boxes lit, and you are watching the one game that has none of your guys in it because you set it up at 9:58 with a coffee in one hand. The <a href=\"/sunday-ticket\">Sunday Ticket page</a> is the fix. It looks at every game kicking off in the 1 PM ET window and again in the 4 PM ET window, counts how many of your starters are in each one, and hands you the four to put on. Fewer than four? RedZone takes the open box, which is what you were going to do anyway.",
-      "It reads your <a href=\"/lineup\">submitted lineup</a>, so a bench player does not get a box a starter should have — and if you haven't set one yet it says so and works from the roster. Each box lists your players with that league's projection, and the network chip is the real one from the broadcast schedule, not a guess: CBS is CBS, FOX is FOX, and the Thursday, Sunday night and Monday night games sit in their own row underneath, because those are not on the package and pretending otherwise is how you end up flipping to a channel you don't have.",
-      "The part that took the longest is the part you'll notice second. If you're in both of our leagues — or in three others somewhere else on MFL — the board counts all of them. Sign in once and every league your account belongs to shows up as a chip across the top; toggle any of them off and the four boxes re-rank. A quarterback you start in two leagues is two reasons to watch that game, and the board says so.",
-      "Once the early games kick off the page hands you a link to <a href=\"/live-scoring\">Live Scoring</a>, which is where Sunday actually happens. Saturday morning and Sunday before 10 is when this one earns its keep. The homepage's “Your Sunday Ticket” panel now points here too — its “Full Preview” button has been a dead link for longer than anyone wants to admit."
-    ],
-    "image": "sunday-ticket.webp",
-    "imageAlt": "The Sunday Ticket page: a 2×2 multiview grid for the early window with four games, each listing the owner's starters, projections and the network, and a RedZone box filling the late window"
-  },
-  {
     "id": "my-watch-list",
     "date": "2026-09-05",
     "category": "new-feature",
@@ -766,6 +742,30 @@
     ],
     "image": "afl-owner-award-badges.webp",
     "imageAlt": "Jim Shea's AFL owner page showing the career record alongside a row of award badge chips: AFL Champion, NL Champion ×3, NL West ×2 and NL Pacific"
+  },
+  {
+    "id": "sunday-ticket",
+    "date": "2026-09-04",
+    "category": "new-page",
+    "icon": "goals",
+    "leagues": [
+      "theleague",
+      "afl"
+    ],
+    "title": "Four Boxes, Two Windows, Every League You're In",
+    "heroHeadline": "See what's worth",
+    "heroAccentWord": "Watching.",
+    "link": "/sunday-ticket",
+    "linkLabel": "Build your Sunday",
+    "summary": "Sunday Ticket gives you four boxes per window and no opinion about which games belong in them. The new Sunday Ticket page has one: the games with the most of your starters on the field, ranked, with the real network on each, RedZone in any open box — and it counts your other leagues too.",
+    "description": [
+      "There is a version of Sunday afternoon where you have the multiview up, four boxes lit, and you are watching the one game that has none of your guys in it because you set it up at 9:58 with a coffee in one hand. The <a href=\"/sunday-ticket\">Sunday Ticket page</a> is the fix. It looks at every game kicking off in the 1 PM ET window and again in the 4 PM ET window, counts how many of your starters are in each one, and hands you the four to put on. Fewer than four? RedZone takes the open box, which is what you were going to do anyway.",
+      "It reads your <a href=\"/lineup\">submitted lineup</a>, so a bench player does not get a box a starter should have — and if you haven't set one yet it says so and works from the roster. Each box lists your players with that league's projection, and the network chip is the real one from the broadcast schedule, not a guess: CBS is CBS, FOX is FOX, and the Thursday, Sunday night and Monday night games sit in their own row underneath, because those are not on the package and pretending otherwise is how you end up flipping to a channel you don't have.",
+      "The part that took the longest is the part you'll notice second. If you're in both of our leagues — or in three others somewhere else on MFL — the board counts all of them. Sign in once and every league your account belongs to shows up as a chip across the top; toggle any of them off and the four boxes re-rank. A quarterback you start in two leagues is two reasons to watch that game, and the board says so.",
+      "Once the early games kick off the page hands you a link to <a href=\"/live-scoring\">Live Scoring</a>, which is where Sunday actually happens. Saturday morning and Sunday before 10 is when this one earns its keep. The homepage's “Your Sunday Ticket” panel now points here too — its “Full Preview” button has been a dead link for longer than anyone wants to admit."
+    ],
+    "image": "sunday-ticket.webp",
+    "imageAlt": "The Sunday Ticket page: a 2×2 multiview grid for the early window with four games, each listing the owner's starters, projections and the network, and a RedZone box filling the late window"
   },
   {
     "id": "owners-poll",
@@ -992,5 +992,30 @@
       "theleague",
       "afl"
     ]
+  },
+  {
+    "id": "afl-throwback-week",
+    "date": "2026-09-02",
+    "category": "new-feature",
+    "icon": "history",
+    "leagues": [
+      "afl"
+    ],
+    "title": "The AFL Gets a Throwback Week",
+    "heroHeadline": "All 24 go",
+    "heroAccentWord": "Vintage.",
+    "link": "/throwback-settings",
+    "linkLabel": "Pick your era",
+    "summary": "On NFL Week 8, all 24 AFL franchises drop their current look and wear a legacy one — old name, old crest, old banner, old colors — across live scoring, matchups and Set Lineup. A hundred and seventeen eras going back to 2003 are on the table, and you pick which one is yours.",
+    "description": [
+      "The AFL has been keeping receipts since 2003. Every name this league has ever worn is sitting in the config — <strong>117 of them</strong>, across 24 franchises — and until now they only ever surfaced on <a href=\"/franchises\">franchise pages</a> as history. On NFL Week 8 they come out of the drawer. <a href=\"/live-scoring\">Live scoring</a>, the matchup cards and <a href=\"/lineup\">Set Lineup</a> all swap to whatever era you picked, and everybody else's too.",
+      "Swiftie 4 Life has thirteen identities to choose between, which is its own kind of confession. Get off my Ditka has nine. Nobody has to settle — <a href=\"/throwback-settings\">pick your era</a> and it sticks until you change it, and there's a Preview link on every card so you can see the scoreboard wearing it before you commit. Skip the whole thing and you still play: every team already has a default, and it's the identity you wore the LONGEST. The Show spent seventeen seasons as No Frills, so that's what The Show wears.",
+      "One rule about the defaults, because it matters. A last-place rebrand is never picked for you. Finishing last in this league gets you renamed, and the site is not going to turn around and make that your throwback too — Cock Gobbler, Jesus Killers, Vit's Brother and the rest are all still there in the picker if you want to own it, but you have to reach for them yourself.",
+      "Two teams nearly missed the party. Drunk Indians and Fullybaked have never once changed their names in twenty-two years, so their history was empty and they had nothing to throw back to. Turned out MFL never deleted anything: the original art was still sitting on the same servers it was uploaded to in 2003, down to a Half Baked movie poster tiled four across at exactly the width of a league banner, because that is how you made a banner in 2003. Both are in, wearing the real thing.",
+      "A word of warning about the names. This league was not tasteful in 2004 and nobody has asked it to be now, so the Week 8 scoreboard is going to say some things. Every era is eligible. That was the point."
+    ],
+    "image": "afl-throwback-week.webp",
+    "imageAlt": "The AFL live scoring board during Throwback Week. Every franchise wears a legacy identity instead of its current one: No Frills against Way More Funner in the featured matchup, then Gamecocks over TD Pants, Smokane over Drunk Indians, Fullybaked over The Dude, More Cowbell against Pubes, MWC over The Nukes, and Your Team Sucks over Zephyr. Each team shows its era crest and every matchup card is edged in that era's own colors.",
+    "heroRotationDays": 14
   }
 ]

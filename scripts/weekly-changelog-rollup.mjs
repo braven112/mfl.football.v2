@@ -53,6 +53,10 @@ const STAGING_PATH = resolve(ROOT, 'src/data/weekly-changelog-staging.json');
 const WHATS_NEW_PATH = resolve(ROOT, 'src/data/whats-new.json');
 const ARCHIVE_DIR = resolve(ROOT, WHATS_NEW_ARCHIVE_DIR);
 
+/** Mirrors FEATURE_HERO_DAYS in src/utils/hero-resolver.ts — the default
+ *  rotation window an entry gets when it declares no `heroRotationDays`. */
+const FEATURE_HERO_DAYS = 7;
+
 /**
  * Get the Monday of the current week.
  */
@@ -80,7 +84,14 @@ function getNextMonday(from) {
  * Format a date as YYYY-MM-DD.
  */
 function formatDate(d) {
-  return d.toISOString().split('T')[0];
+  // Local parts, NOT toISOString(): getCurrentMonday() picks the day with
+  // local getters, so pairing it with a UTC serialiser makes the two disagree
+  // west of Greenwich — a Monday-evening run in PT would stamp Tuesday's date
+  // and mint an id no other run can collide with, publishing the week twice.
+  // That is the failure the `--week` Monday check refuses by hand; the default
+  // path should not be able to reach it either.
+  const pad = (n) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 }
 
 /**
@@ -113,8 +124,32 @@ const VALID_CHANGE_LEAGUES = [...Object.keys(LEAGUE_ROLLUPS), BOTH_TAG];
  */
 const enforceWhatsNewCap = (entries) => {
   if (entries.length <= WHATS_NEW_ACTIVE_MAX) return { active: entries, archived: 0 };
+  // An entry still inside its hero rotation window must stay in the ACTIVE
+  // file whatever its position: the hero resolver and the homepage row read
+  // whats-new-entries.ts, which imports the active file only, so archiving one
+  // pulls a live promo off the homepage early. Publishing two entries into a
+  // full 40/40 file did exactly that to the AFL's Throwback Week promo —
+  // `heroRotationDays: 14`, six days still to run, evicted the moment the
+  // cap was enforced. The cap is there to bound the bundle, not to end a
+  // campaign, so a handful of retained entries is the correct trade.
+  const stillPromoting = (entry) => {
+    if (entry?.excludeFromHero === true) return false;
+    const at = Date.parse(`${entry?.date}T12:00:00Z`);
+    if (Number.isNaN(at)) return false;
+    const days = (Date.now() - at) / 86_400_000;
+    return days >= 0 && days <= (entry.heroRotationDays ?? FEATURE_HERO_DAYS);
+  };
+
   const active = entries.slice(0, WHATS_NEW_ACTIVE_MAX);
-  const overflow = entries.slice(WHATS_NEW_ACTIVE_MAX);
+  const overflow = [];
+  for (const entry of entries.slice(WHATS_NEW_ACTIVE_MAX)) {
+    if (stillPromoting(entry)) {
+      console.log(`Retained past the cap (hero window still open): ${entry.id}`);
+      active.push(entry);
+    } else {
+      overflow.push(entry);
+    }
+  }
   const byYear = new Map();
   for (const entry of overflow) {
     const year = String(entry.date ?? '').slice(0, 4) || 'undated';
@@ -210,6 +245,24 @@ const changes = staging.changes;
 // Refuse to run with untagged changes — a guessed league is how cross-league
 // leaks happen. tests/whats-new-data.test.ts catches this at PR time; this
 // check makes the Monday cron fail loudly instead of publishing a mistag.
+// A change whose `type` is in neither bucket renders in NO section, and the
+// staging reset then destroys it — a silent loss of somebody's work, which is
+// exactly what the `league` check below already refuses to allow. Same
+// treatment: fail before publishing, preserve the queue.
+const VALID_CHANGE_TYPES = [...FEATURE_TYPES, ...FIX_TYPES];
+const mistyped = changes.filter((c) => !VALID_CHANGE_TYPES.includes(c.type));
+if (mistyped.length > 0) {
+  console.error(
+    `ERROR: staged changes with a type the article cannot render ` +
+      `(want ${VALID_CHANGE_TYPES.join(' | ')}):`,
+  );
+  for (const c of mistyped) {
+    console.error(`  - [${c.date}] type=${JSON.stringify(c.type)} ${(c.summary ?? '').slice(0, 60)}`);
+  }
+  console.error('Nothing was published; staging is preserved.');
+  process.exit(1);
+}
+
 const untagged = changes.filter((c) => !VALID_CHANGE_LEAGUES.includes(c.league));
 if (untagged.length > 0) {
   console.error(`ERROR: staged changes missing a valid "league" (${VALID_CHANGE_LEAGUES.join(' | ')}):`);
@@ -222,6 +275,8 @@ const whatsNew = JSON.parse(readFileSync(WHATS_NEW_PATH, 'utf-8'));
 const existingIds = new Set(whatsNew.map((e) => e.id));
 
 const newEntries = [];
+/** Leagues whose article for this week was already out — see the guard below. */
+const alreadyPublished = [];
 
 for (const [leagueSlug, config] of Object.entries(LEAGUE_ROLLUPS)) {
   // Routed through the shared helper, never an inline `=== 'both'`: the
@@ -238,11 +293,19 @@ for (const [leagueSlug, config] of Object.entries(LEAGUE_ROLLUPS)) {
   // whats-new.json or resetting staging — a duplicate id breaks the uniqueness
   // test and getStaticPaths; the staged changes roll into next Monday instead.
   if (existingIds.has(id)) {
-    console.error(
-      `ERROR: "${id}" already exists in whats-new.json — this week's rollup was already published. ` +
-        `Staged changes are preserved for next Monday's run.`,
+    // NOT an error, and specifically not `exit 1`. `--week` exists so a week
+    // can be published early (to look at) or re-run after a failure, which
+    // makes "this week is already out" a state the scheduled job will
+    // genuinely meet — and a red Monday job with no article is a worse
+    // outcome than a skipped one. Staging is PRESERVED, so nothing staged
+    // since is lost: it rolls into the next run and appears a week later
+    // under that week's heading.
+    console.log(
+      `"${id}" already exists — this week was already published (see --week). ` +
+        `Skipping ${leagueSlug}; its staged changes are preserved for the next run.`,
     );
-    process.exit(1);
+    alreadyPublished.push(leagueSlug);
+    continue;
   }
 
   const features = leagueChanges.filter((c) => FEATURE_TYPES.has(c.type));
@@ -297,7 +360,12 @@ for (const [leagueSlug, config] of Object.entries(LEAGUE_ROLLUPS)) {
     // article in the rotation — where P0/P1 league events still outrank it
     // (see resolveHeroState), which is the point: in season, the auction
     // beats the changelog.
-    excludeFromHero: !leagueChanges.some((c) => c.heroWorthy === true),
+    // Hero eligibility needs BOTH the human call and the art: the composite
+    // hero renders the entry's screenshot, and only a `featured` change
+    // supplies one. A fixes-only week is not required to have a featured
+    // change, so `heroWorthy` alone could put an imageless, generically-titled
+    // "The Week in Review" card in the hero.
+    excludeFromHero: !(featured?.image && leagueChanges.some((c) => c.heroWorthy === true)),
     leagues: config.leagues,
   };
 
@@ -333,6 +401,20 @@ for (const [leagueSlug, config] of Object.entries(LEAGUE_ROLLUPS)) {
 whatsNew.unshift(...newEntries.map((n) => n.entry));
 const { active } = enforceWhatsNewCap(whatsNew);
 writeFileSync(WHATS_NEW_PATH, JSON.stringify(active, null, 2) + '\n');
+
+// Reset staging file for next week — but ONLY if everything was published.
+// A league skipped above still needs its changes, and emptying the queue here
+// would destroy exactly the work the skip was protecting.
+if (alreadyPublished.length > 0) {
+  console.log(
+    `Staging PRESERVED: ${alreadyPublished.join(', ')} already had this week's article. ` +
+      `Those changes roll into the next run.`,
+  );
+  for (const { entry } of newEntries) {
+    console.log(`Rollup complete: "${entry.title}" [${entry.leagues.join(', ')}] (${entry.id})`);
+  }
+  process.exit(0);
+}
 
 // Reset staging file for next week
 const nextMonday = getNextMonday(new Date());

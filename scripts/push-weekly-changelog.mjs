@@ -47,7 +47,12 @@ function currentMonday() {
   const diff = day === 0 ? -6 : 1 - day;
   const monday = new Date(now);
   monday.setDate(now.getDate() + diff);
-  return monday.toISOString().split('T')[0];
+  // Local parts, not toISOString(): the day above is chosen with local
+  // getters, so a UTC serialiser disagrees west of Greenwich and a Monday
+  // evening run in PT would look for Tuesday's article, find none, and report
+  // "nothing to push" for a week that did publish.
+  const pad = (n) => String(n).padStart(2, '0');
+  return `${monday.getFullYear()}-${pad(monday.getMonth() + 1)}-${pad(monday.getDate())}`;
 }
 
 /** Every franchise id in a league, read from its registry-declared config. */

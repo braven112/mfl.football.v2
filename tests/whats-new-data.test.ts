@@ -50,11 +50,37 @@ const archiveEntries: WhatsNewEntry[] = existsSync(ARCHIVE_DIR)
 const typedEntries: WhatsNewEntry[] = [...activeEntries, ...archiveEntries];
 
 describe('whats-new.json retention cap', () => {
-  it(`active file stays within WHATS_NEW_ACTIVE_MAX (${WHATS_NEW_ACTIVE_MAX})`, () => {
+  /**
+   * An entry still inside its hero rotation window, which the cap deliberately
+   * retains past WHATS_NEW_ACTIVE_MAX.
+   *
+   * The hero resolver and the homepage row read whats-new-entries.ts, which
+   * imports the ACTIVE file only — so archiving a live promo pulls it off the
+   * homepage before its campaign ends. Publishing two entries into a full
+   * 40/40 file did that to the AFL's Throwback Week promo (14-day window, six
+   * days still to run). The cap bounds the bundle; it does not end campaigns.
+   */
+  const FEATURE_HERO_DAYS = 7;
+  const stillPromoting = (entry: WhatsNewEntry): boolean => {
+    if (entry.excludeFromHero === true) return false;
+    const at = Date.parse(`${entry.date}T12:00:00Z`);
+    if (Number.isNaN(at)) return false;
+    const days = (Date.now() - at) / 86_400_000;
+    return days >= 0 && days <= (entry.heroRotationDays ?? FEATURE_HERO_DAYS);
+  };
+
+  it(`active file stays within WHATS_NEW_ACTIVE_MAX (${WHATS_NEW_ACTIVE_MAX}), plus open hero windows`, () => {
     // The weekly rollup enforces this (and `--cap-only` re-enforces it), so a
     // failure here means an entry was hand-prepended without running the cap —
     // run: node scripts/weekly-changelog-rollup.mjs --cap-only
-    expect(activeEntries.length).toBeLessThanOrEqual(WHATS_NEW_ACTIVE_MAX);
+    const retained = activeEntries.filter(stillPromoting);
+    const capped = activeEntries.length - retained.length;
+    expect(
+      capped,
+      `${activeEntries.length} active entries, of which ${retained.length} are held past the ` +
+        `cap for an open hero window (${retained.map((e) => e.id).join(', ')}). ` +
+        `The rest must fit WHATS_NEW_ACTIVE_MAX.`,
+    ).toBeLessThanOrEqual(WHATS_NEW_ACTIVE_MAX);
   });
 
   it('archive files only ever contain entries older than the newest active entry', () => {
@@ -237,6 +263,22 @@ describe('whats-new.json data integrity', () => {
     expect(
       missing.map((e) => `${e.id} -> ${e.heroArt!.src}`),
       `Missing heroArt files`,
+    ).toEqual([]);
+  });
+
+  it('a hero-eligible entry always has the art the hero renders', () => {
+    // The composite hero renders the entry's screenshot. An entry that is
+    // hero-eligible with no image puts a blank frame on the homepage — which
+    // the weekly rollup could produce, because `heroWorthy` is a per-change
+    // flag while the image only ever arrives via a `featured` change, and a
+    // fixes-only week is not required to have one.
+    const artless = typedEntries
+      .filter((e) => e.excludeFromHero !== true)
+      .filter((e) => !e.image && !e.heroArt && !e.heroPlayerId)
+      .map((e) => `${e.id} (${e.category}, ${e.date})`);
+    expect(
+      artless,
+      'Hero-eligible entries need an image, heroArt, or a heroPlayerId to cast.',
     ).toEqual([]);
   });
 
@@ -674,6 +716,32 @@ describe('weekly-changelog-staging.json league scoping', () => {
       missing,
       `"entryId" links the Monday article back to a marquee entry that already published. ` +
         `An id with no entry ships a dead link in the one article everybody reads.`,
+    ).toEqual([]);
+  });
+
+  it('every staged "entryId" is visible in each league the change lands in', () => {
+    // Existing-and-visible are different questions. The [id] route redirects an
+    // entry the reader's league is not tagged for straight back to the listing,
+    // so a `both`-tagged line pointing at a single-league entry ships a "Read
+    // the full story" link that goes nowhere for half the audience. The
+    // sibling `guide` check already resolves per league; this closes the same
+    // gap for the marquee link.
+    const byId = new Map(typedEntries.map((e) => [e.id, e]));
+    const broken: string[] = [];
+    for (const change of changes.filter((c) => c.entryId)) {
+      const entry = byId.get(String(change.entryId));
+      if (!entry) continue; // covered above
+      const visibleIn = Array.isArray(entry.leagues) ? entry.leagues : [];
+      for (const league of leaguesFor(change)) {
+        if (!visibleIn.includes(league as (typeof visibleIn)[number])) {
+          broken.push(`${change.entryId} is not visible in ${league}`);
+        }
+      }
+    }
+    expect(
+      broken,
+      `Tag the staged change to the leagues the entry is actually visible in, or widen the ` +
+        `entry's own \`leagues\`.`,
     ).toEqual([]);
   });
 });
