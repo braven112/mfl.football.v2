@@ -32,11 +32,11 @@
 
 import { getCurrentLeagueYear, getRolloverLeagueYear } from './league-year';
 import { mflFetch } from './mfl-fetch';
-import { createMFLApiClient } from './mfl-matchup-api';
+import { createMFLApiClient, type RosterEntry } from './mfl-matchup-api';
 import { getLeagueById, type LeagueDefinition } from '../config/leagues';
 import { resolveWaiverWindow, describeWaiverWindow } from './waiver-window';
 import { DEFAULT_VIEWER_CLOCK, type ViewerClock } from './viewer-preferences';
-import { readBidRules, conferenceOfFranchise, freeAgencyIsLeagueWide } from './waiver-claim';
+import { readBidRules, conferenceOfFranchise, freeAgencyIsLeagueWide, activeRosterIdsOf, rosterSlotOf } from './waiver-claim';
 import { claimVerb, type ClaimContext } from './claim-context-shape';
 import { isAuctionSeason } from './auction-window';
 import type { AuthUser } from './auth';
@@ -208,13 +208,17 @@ export async function resolveClaimContext(user: AuthUser, clock: ViewerClock = D
   const mine = franchises.find((f: any) => String(f.id) === String(user.franchiseId));
   const balance = Math.floor(Number(mine?.bbidAvailableBalance ?? 0));
 
-  let rosters: Record<string, string[]>;
+  // getRosterEntries, NOT getRosters: the form's open-slot line and the write
+  // endpoint's roster-limit check both turn on MFL's per-player `status`, and
+  // the two must agree. Flattening it to ids is what counted an injured player
+  // against `rosterSize` (see waiver-claim.ts).
+  let rosters: Record<string, RosterEntry[]>;
   try {
     rosters = await createMFLApiClient({
       leagueId,
       year: String(year),
       mflUserId: user.id,
-    }).getRosters();
+    }).getRosterEntries();
   } catch {
     return base;
   }
@@ -262,7 +266,8 @@ export async function resolveClaimContext(user: AuthUser, clock: ViewerClock = D
     if (!countsAgainstMe(fid)) continue;
     const theirs = canPlaceViewer && String(fid) !== String(user.franchiseId);
     for (const p of list) {
-      const id = String((p as any)?.id ?? p);
+      // Ownership counts EVERY status — an injured player is still held.
+      const id = String(p.id);
       rosteredIds.add(id);
       if (theirs) tradeTargets[id] = String(fid);
     }
@@ -277,16 +282,29 @@ export async function resolveClaimContext(user: AuthUser, clock: ViewerClock = D
     if (named.has(fid)) franchiseNames[fid] = String((f as any)?.name ?? fid);
   }
 
-  const ownIds = (rosters[user.franchiseId] ?? []).map((p: any) => String(p?.id ?? p));
+  const own = rosters[user.franchiseId] ?? [];
+  const ownIds = own.map((p) => String(p.id));
   const names = await readPlayerNames(year, ownIds);
-  const roster = ownIds
-    .map((id) => ({ id, name: names.get(id) ?? id }))
+  const activeIds = activeRosterIdsOf(own);
+  const roster = own
+    .map((p) => ({
+      id: String(p.id),
+      name: names.get(String(p.id)) ?? String(p.id),
+      slot: rosterSlotOf(p.status),
+    }))
     .sort((a, b) => a.name.localeCompare(b.name));
+
+  // `rosterSize` is the ACTIVE limit. A payload without one leaves both fields
+  // undefined and the form simply says nothing about slots — a made-up limit
+  // would be worse than silence.
+  const rosterLimit = Number(leaguePayload.rosterSize) || undefined;
 
   return {
     ...base,
     canClaim: roster.length > 0 && !auctionOpen,
     roster,
+    activeRosterCount: activeIds.size,
+    rosterLimit,
     balance: rules.system === 'bbid' ? balance : undefined,
     rosteredIds: [...rosteredIds],
     tradeTargets,

@@ -26,11 +26,14 @@
         "src/components/theleague/TransactionHubModal.astro",
         "src/pages/api/waiver-order.ts",
         "src/scripts/transaction-hub.ts",
+        "src/pages/api/waiver-claim.ts",
         "src/utils/*waiver*",
+        "src/utils/mfl-matchup-api.ts",
         "src/utils/waiver-system.ts"
       ],
       "tests": [
         "tests/afl-waiver-order.test.ts",
+        "tests/waiver-claim.test.ts",
         "tests/waiver-order-display.test.ts",
         "tests/waiver-priority-league-gate.test.ts",
         "tests/waiver-window.test.ts"
@@ -222,6 +225,7 @@
         "tests/free-agent-session.test.ts",
         "tests/player-claim-offer.test.ts",
         "tests/players-injected-styles.test.ts",
+        "tests/waiver-claim.test.ts",
         "tests/waiver-filed-claims.test.ts"
       ]
     },
@@ -456,7 +460,8 @@
       "note": "The player card offers exactly one acquisition per player, decided by the SERVER: free agent -> Claim/Bid, held by a rival in the viewer's scope -> Trade for him, on the viewer's own roster -> neither. The scope is conference-aware (the AFL rosters the same player once per conference), and the two Trade Builders take different query params. Never gate the trade affordance on `canClaim` — that goes false for the whole auction season.",
       "tests": [
         "tests/player-claim-offer.test.ts",
-        "tests/player-trade-offer.test.ts"
+        "tests/player-trade-offer.test.ts",
+        "tests/waiver-claim.test.ts"
       ]
     },
     {
