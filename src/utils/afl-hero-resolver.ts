@@ -515,7 +515,7 @@ const EVENT_VIEW: Record<string, ViewBuilder> = {
       glow: GLOW_NAVY,
       player: randomHeroPlayer(now),
       countValue: days,
-      countLabel: 'Days to Week 13 finale',
+      countLabel: 'Days to Week 14 finale',
     };
   },
 

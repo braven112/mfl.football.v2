@@ -539,6 +539,33 @@
       ]
     },
     {
+      "name": "nfl-week-starts",
+      "rules": "docs/claude/rules/schedule-optimization.md",
+      "note": "Anything asking when an NFL week starts reads src/utils/nfl-week-starts.mjs. Never re-derive kickoff from Labor Day and never hardcode a Week 1 Thursday — 2026 opened on a WEDNESDAY. Refresh the data with `node scripts/fetch-nfl-week-starts.mjs`.",
+      "paths": [
+        "src/utils/nfl-week-starts.mjs",
+        "src/utils/labor-day.mjs",
+        "src/utils/fantasy-bracket.mjs",
+        "src/utils/current-week.ts",
+        "src/utils/league-event-resolver.ts",
+        "src/utils/hero-resolver.ts",
+        "scripts/compute-league-events.mjs",
+        "scripts/lib/schefter-rumor-cadence.mjs",
+        "src/utils/pecking-order-season-window.mjs",
+        "src/utils/trade-deadline.mjs",
+        "src/data/nfl/week-starts.mjs",
+        "scripts/fetch-nfl-week-starts.mjs",
+        "scripts/article-utils/week-resolver.mjs",
+        "scripts/lib/throwback-reminder.mjs"
+      ],
+      "tests": [
+        "tests/nfl-kickoff-anchor-guard.test.ts",
+        "tests/nfl-week-starts.test.ts",
+        "tests/pecking-order-season-window.test.ts",
+        "tests/throwback-week-reminder.test.ts"
+      ]
+    },
+    {
       "name": "schefter",
       "rules": "docs/claude/rules/schefter.md",
       "paths": [

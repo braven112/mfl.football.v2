@@ -23,6 +23,12 @@ import type { WhatsNextTimeline, ResolvedLeagueEvent } from '../types/league-eve
 import type { HeroState, SeasonPhase, DailySlot, GameWindow, HeroPriority } from '../types/hero-state';
 import { formatEventDate, formatEventDateRange, getStatusText } from './event-date-formatter';
 import { getNthDayOfMonth, getNflDraftDate, getRookieDraftDate } from './league-event-resolver';
+import { nflKickoff, nflWeekStart, nflWeekEndIsoDate } from './nfl-week-starts.mjs';
+import {
+  CHAMPIONSHIP_WEEK,
+  FINAL_FANTASY_REGULAR_SEASON_WEEK,
+  PLAYOFFS_START_WEEK,
+} from './fantasy-bracket.mjs';
 import { getCurrentNFLWeek } from './current-week';
 import { buildLeagueEventView } from './league-event-hero-view';
 import { dailyPick } from './hero-casting';
@@ -524,27 +530,51 @@ function toMinutes(hour: number, minute: number): number {
 
 /** Get the NFL kickoff date (Thursday after Labor Day) for a given season year */
 function getKickoffDate(year: number): Date {
-  const laborDay = getNthDayOfMonth(year, 8, 1, 1); // 1st Monday of September
-  const kickoff = new Date(laborDay);
-  kickoff.setDate(kickoff.getDate() + 3); // Thursday = Monday + 3
-  kickoff.setHours(0, 0, 0, 0);
-  return kickoff;
+  // The season's first game from the published NFL schedule — NOT "the
+  // Thursday after Labor Day". 2026 opened on Wednesday Sep 9, so the old
+  // derivation held the preseason hero up for a day after kickoff.
+  return weekStartMidnight(year, 1);
+}
+
+/**
+ * Midnight (local) on the day NFL week `week` opens.
+ *
+ * The season-phase windows below used to count 7-day blocks from kickoff
+ * (`kickoff + 16*7` for championship week, and so on). That is only right while
+ * every week opens on the same weekday, which the NFL does not guarantee: 2026
+ * opened Wednesday Sep 9 and moved week 12 to Thanksgiving Wednesday, so
+ * counting from kickoff put championship week on the wrong day.
+ */
+function weekStartMidnight(year: number, week: number): Date {
+  const d = nflWeekStart(year, week);
+  d.setHours(0, 0, 0, 0);
+  return d;
+}
+
+/**
+ * The final instant of NFL week `week` — the end of the day its Monday night
+ * game is played.
+ *
+ * Never `start + 4`: a week that opens on a Wednesday runs five days to its
+ * Monday, and 2024's week 17 opened on Christmas Wednesday, so a fixed +4 shut
+ * the championship hero off before the title game's own Monday nighter.
+ */
+function weekEndOfDay(year: number, week: number): Date {
+  const [y, m, d] = nflWeekEndIsoDate(year, week).split('-').map(Number);
+  return new Date(y, m - 1, d, 23, 59, 59, 999);
 }
 
 /**
  * Check if the reference date is during the NFL regular season.
- * Regular season: NFL kickoff Thursday → end of Week 14 (~Dec 13).
- * NFL kickoff is the Thursday after Labor Day (1st Mon of Sep).
+ * Regular season: the season's first game → end of Week 14 (~Dec 13).
  */
 export function isRegularSeason(referenceDate: Date): boolean {
   const { year } = getPTComponents(referenceDate);
   const kickoff = getKickoffDate(year);
 
-  // End of regular season (Week 14) ≈ 13 weeks after kickoff + 3 days (through Monday)
-  // That's approximately the 2nd Sunday of December + 1 day (through Monday night)
-  const regularSeasonEnd = new Date(kickoff);
-  regularSeasonEnd.setDate(regularSeasonEnd.getDate() + (13 * 7) + 4); // 13 weeks + through Monday
-  regularSeasonEnd.setHours(23, 59, 59, 999);
+  // End of regular season: week 14's Monday night, i.e. four days after week
+  // 14 opens.
+  const regularSeasonEnd = weekEndOfDay(year, FINAL_FANTASY_REGULAR_SEASON_WEEK);
 
   // Also check: must not be trade deadline day (that overrides)
   return referenceDate >= kickoff && referenceDate <= regularSeasonEnd;
@@ -552,20 +582,15 @@ export function isRegularSeason(referenceDate: Date): boolean {
 
 /**
  * Check if the reference date is during the playoff period.
- * Playoffs: Week 15 Thursday → Week 16 Monday night.
+ * Playoffs: week 15 opens → end of the day week 17 opens.
  */
 export function isPlayoffPeriod(referenceDate: Date): boolean {
   const { year } = getPTComponents(referenceDate);
-  const kickoff = getKickoffDate(year);
 
-  // Playoffs start = Week 15 Thursday = kickoff + 14 weeks
-  const playoffStart = new Date(kickoff);
-  playoffStart.setDate(playoffStart.getDate() + (14 * 7));
-  playoffStart.setHours(0, 0, 0, 0);
-
-  // Playoffs end = Week 16 Monday night (2 weeks of playoffs)
-  const playoffEnd = new Date(playoffStart);
-  playoffEnd.setDate(playoffEnd.getDate() + (2 * 7)); // Through end of Week 16 Thursday + games
+  const playoffStart = weekStartMidnight(year, PLAYOFFS_START_WEEK);
+  // Ends on the day week 17 opens; championship week takes over from there and
+  // is resolved at a higher priority, same as before this read real week starts.
+  const playoffEnd = weekStartMidnight(year, CHAMPIONSHIP_WEEK);
   playoffEnd.setHours(23, 59, 59, 999);
 
   return referenceDate >= playoffStart && referenceDate <= playoffEnd;
@@ -573,7 +598,7 @@ export function isPlayoffPeriod(referenceDate: Date): boolean {
 
 /**
  * Check if the reference date is during championship week.
- * Championship: Week 17 Thursday → Monday night final.
+ * Championship: the title week's first game → its Monday night final.
  */
 export function isChampionshipWeek(referenceDate: Date): boolean {
   const { year } = getPTComponents(referenceDate);
@@ -588,17 +613,9 @@ export function isChampionshipWeek(referenceDate: Date): boolean {
 
 /** Internal helper: check if referenceDate falls in the championship week for a given season year */
 function checkChampionshipForYear(seasonYear: number, referenceDate: Date): boolean {
-  const kickoff = getKickoffDate(seasonYear);
-
-  // Championship = Week 17 Thursday = kickoff + 16 weeks
-  const champStart = new Date(kickoff);
-  champStart.setDate(champStart.getDate() + (16 * 7));
-  champStart.setHours(0, 0, 0, 0);
-
-  // Championship ends Monday night (+4 days from Thursday, end of day)
-  const champEnd = new Date(champStart);
-  champEnd.setDate(champEnd.getDate() + 4);
-  champEnd.setHours(23, 59, 59, 999);
+  // Championship week, start of its first game day to the end of its Monday.
+  const champStart = weekStartMidnight(seasonYear, CHAMPIONSHIP_WEEK);
+  const champEnd = weekEndOfDay(seasonYear, CHAMPIONSHIP_WEEK);
 
   return referenceDate >= champStart && referenceDate <= champEnd;
 }
@@ -618,14 +635,8 @@ export function isTradeDeadlineDay(referenceDate: Date): boolean {
  */
 function isChampionCrownedPeriod(referenceDate: Date): boolean {
   const { year } = getPTComponents(referenceDate);
-  const kickoff = getKickoffDate(year);
-
   // Championship Monday night end
-  const champStart = new Date(kickoff);
-  champStart.setDate(champStart.getDate() + (16 * 7));
-  const champMondayEnd = new Date(champStart);
-  champMondayEnd.setDate(champMondayEnd.getDate() + 4);
-  champMondayEnd.setHours(23, 59, 59, 999);
+  const champMondayEnd = weekEndOfDay(year, CHAMPIONSHIP_WEEK);
 
   // Champion crowned period: day after championship → +7 days
   const crownedStart = new Date(champMondayEnd);
@@ -637,12 +648,7 @@ function isChampionCrownedPeriod(referenceDate: Date): boolean {
   crownedEnd.setHours(23, 59, 59, 999);
 
   // Also check previous year's championship (for early January dates)
-  const prevKickoff = getKickoffDate(year - 1);
-  const prevChampStart = new Date(prevKickoff);
-  prevChampStart.setDate(prevChampStart.getDate() + (16 * 7));
-  const prevChampMondayEnd = new Date(prevChampStart);
-  prevChampMondayEnd.setDate(prevChampMondayEnd.getDate() + 4);
-  prevChampMondayEnd.setHours(23, 59, 59, 999);
+  const prevChampMondayEnd = weekEndOfDay(year - 1, CHAMPIONSHIP_WEEK);
 
   const prevCrownedStart = new Date(prevChampMondayEnd);
   prevCrownedStart.setDate(prevCrownedStart.getDate() + 1);
@@ -780,7 +786,7 @@ export function isPreseasonCountdown(referenceDate: Date): boolean {
   const start = new Date(getFaCloseDate(year));
   start.setDate(start.getDate() + 1); // day after FA close
   start.setHours(0, 0, 0, 0);
-  const kickoff = getKickoffDate(year); // Thursday after Labor Day, midnight
+  const kickoff = getKickoffDate(year); // the season's first game, midnight
   return referenceDate >= start && referenceDate < kickoff;
 }
 

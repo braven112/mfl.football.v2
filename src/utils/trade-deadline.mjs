@@ -17,7 +17,7 @@
  */
 
 import { LEAGUES } from '../config/leagues-data.mjs';
-import { laborDayDate } from './pecking-order-season-window.mjs';
+import { nflWeekStartIsoDate } from './nfl-week-starts.mjs';
 
 /** `Date` → `YYYY-MM-DD` as read on the Pacific clock. */
 export function ptDateString(now = new Date()) {
@@ -47,16 +47,18 @@ export function shiftIsoDate(iso, days) {
 }
 
 /**
- * The NFL week-1 kickoff DATE (the Thursday after Labor Day) for `year`.
+ * The NFL week-1 kickoff DATE for `year`, on the Pacific clock.
  *
- * Distinct from `nflWeekOneKickoff`, which returns the 20:20 ET kickoff as a
- * UTC instant — already the NEXT calendar day in UTC. Week arithmetic off that
+ * Distinct from `nflWeekOneKickoff`, which returns the kickoff as a UTC
+ * instant — already the NEXT calendar day in UTC. Day arithmetic off that
  * instant slides a day, which is what the pecking-order module's own comment
- * warns about, so day-grained callers start here instead. Labor Day itself
- * still comes from the one shared implementation.
+ * warns about, so day-grained callers start here instead.
+ *
+ * No longer "the Thursday after Labor Day": that derivation is now only the
+ * fallback inside nfl-week-starts.mjs, behind MFL's published schedule.
  */
 export function nflKickoffIsoDate(year) {
-  return shiftIsoDate(isoDate(year, 9, laborDayDate(year)), 3);
+  return nflWeekStartIsoDate(year, 1);
 }
 
 /**
@@ -71,11 +73,13 @@ export function tradeDeadlineIsoDate(slug, year) {
   if (spec.kind === 'fixed') return isoDate(year, spec.month, spec.day);
 
   if (spec.kind === 'computed' && spec.rule === 'wednesday-between-week-10-and-11') {
-    // Week N starts at kickoff + (N-1)*7. The Wednesday that closes Week 10 and
-    // opens Week 11 is therefore kickoff + 10*7 - 1 days. Same derivation as
-    // the `afl-trade-deadline` rule in league-event-resolver.ts, pinned against
-    // it by tests/schefter-rumor-cadence.test.ts.
-    return shiftIsoDate(nflKickoffIsoDate(year), 10 * 7 - 1);
+    // The day before NFL week 11 opens — the Wednesday that closes week 10 in a
+    // normal Thursday-anchored season. Taken from week 11's own published start
+    // rather than counted forward from kickoff, so a moved week carries the
+    // deadline with it. Same rule as `afl-trade-deadline` in
+    // league-event-resolver.ts, pinned against it by
+    // tests/schefter-rumor-cadence.test.ts.
+    return shiftIsoDate(nflWeekStartIsoDate(year, 11), -1);
   }
 
   // An unrecognized spec is a registry edit that outran this resolver. Null is

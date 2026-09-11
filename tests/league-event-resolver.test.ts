@@ -75,12 +75,23 @@ describe('resolveDateForYear', () => {
     expect(date.getDay()).toBe(0); // Sunday
   });
 
-  it('should resolve computed nfl-kickoff as Thursday after Labor Day', () => {
+  it('should resolve computed nfl-kickoff from the published schedule, not Labor Day + 3', () => {
     const date = resolveDateForYear({ type: 'computed', rule: 'nfl-kickoff' }, 2026);
-    expect(date.getDay()).toBe(4); // Thursday
+    // The 2026 season opened on WEDNESDAY Sep 9. Labor Day 2026 is Sep 7, so
+    // the old "Thursday after Labor Day" derivation said Sep 10 — and Roger
+    // announced the season a day after it had started. The date now comes from
+    // MFL's published schedule (src/data/nfl/week-starts.mjs).
     expect(date.getMonth()).toBe(8); // September
-    // Labor Day 2026 is Sep 7, so kickoff = Sep 10
-    expect(date.getDate()).toBe(10);
+    expect(date.getDate()).toBe(9);
+    expect(date.getDay()).toBe(3); // Wednesday — kickoff is not always Thursday
+  });
+
+  it('falls back to Labor Day + 3 for a season the NFL has not published', () => {
+    // 2031 is far enough out that no schedule exists; the derivation still
+    // answers rather than the resolver throwing or returning a placeholder.
+    const date = resolveDateForYear({ type: 'computed', rule: 'nfl-kickoff' }, 2031);
+    expect(date.getMonth()).toBe(8);
+    expect(date.getDay()).toBe(4); // Thursday after Labor Day
   });
 
   it('should resolve AL draft to the Saturday a week before Labor Day weekend', () => {
@@ -107,9 +118,11 @@ describe('resolveDateForYear', () => {
 
   it('should resolve computed day-before-nfl-kickoff', () => {
     const date = resolveDateForYear({ type: 'computed', rule: 'day-before-nfl-kickoff' }, 2026);
-    expect(date.getDay()).toBe(3); // Wednesday
+    // The day before the season's real first game (Wed Sep 9 2026), not the
+    // day before a presumed Thursday.
     expect(date.getMonth()).toBe(8); // September
-    expect(date.getDate()).toBe(9);
+    expect(date.getDate()).toBe(8);
+    expect(date.getDay()).toBe(2); // Tuesday
   });
 
   it('should resolve computed friday-before-week-11', () => {

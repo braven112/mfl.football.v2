@@ -38,10 +38,10 @@ const NL_RULE = 'sunday-before-labor-day-weekend';
  * engines can be compared without executing either (the .mjs writes files on
  * import; the .ts builds Dates in the test runner's own timezone).
  */
-function aflDeadlineOffset(src: string): number | null {
-  // Comment lines are stripped first. Both cases explain the offset in prose
-  // ("kickoff + 10*7 - 1"), and scanning the raw text matched the COMMENT
-  // instead of the code — a mutation of the real offset left this green.
+function aflDeadlineAnchor(src: string): { week: number; offset: number } | null {
+  // Comment lines are stripped first. Both cases explain the anchor in prose,
+  // and scanning the raw text matched the COMMENT instead of the code — a
+  // mutation of the real offset left this green.
   const code = src
     .split('\n')
     .filter(line => !line.trim().startsWith('//') && !line.trim().startsWith('*'))
@@ -49,8 +49,10 @@ function aflDeadlineOffset(src: string): number | null {
   const caseStart = code.indexOf(`case 'afl-trade-deadline'`);
   if (caseStart === -1) return null;
   const body = code.slice(caseStart, caseStart + 600);
-  const match = body.match(/getDate\(\)\s*\+\s*10\s*\*\s*7\s*-\s*(\d+)/);
-  return match ? 10 * 7 - Number(match[1]) : null;
+  // Both engines now express this as `weekStart(year, <week>, <offsetDays>)`
+  // against the PUBLISHED week start, rather than counting days from kickoff.
+  const match = body.match(/weekStart\(\s*year\s*,\s*(\d+)\s*,\s*(-?\d+)\s*\)/);
+  return match ? { week: Number(match[1]), offset: Number(match[2]) } : null;
 }
 
 describe('AFL draft reminders — date source', () => {
@@ -128,14 +130,15 @@ describe('AFL draft reminders — date source', () => {
   });
 
   it('resolves the AFL trade deadline to the day before Week 11 kicks off', () => {
-    // Week N Thursday is kickoff + (N-1)*7, so the Wednesday between Weeks 10
-    // and 11 is kickoff + 10*7 - 1. The old math used -8, which is the
-    // Wednesday between Weeks 9 and 10.
-    expect(aflDeadlineOffset(computeSrc)).toBe(10 * 7 - 1);
-    // …and that the calendar's resolver computes the identical offset.
-    expect(aflDeadlineOffset(read('src/utils/league-event-resolver.ts'))).toBe(
-      10 * 7 - 1,
-    );
+    // The day before week 11 opens — the Wednesday between weeks 10 and 11 in
+    // a normal Thursday-anchored season. The old math counted days from
+    // kickoff (`kickoff + 10*7 - 1`, and before that -8, which landed a week
+    // early); it now reads week 11's PUBLISHED start, so a week the NFL moves
+    // carries the deadline with it instead of leaving it behind.
+    const expected = { week: 11, offset: -1 };
+    expect(aflDeadlineAnchor(computeSrc)).toEqual(expected);
+    // …and that the calendar's resolver computes the identical anchor.
+    expect(aflDeadlineAnchor(read('src/utils/league-event-resolver.ts'))).toEqual(expected);
   });
 });
 

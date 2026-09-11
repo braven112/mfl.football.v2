@@ -4,7 +4,7 @@
     {
       "date": "2026-09-10",
       "type": "enhancement",
-      "summary": "<a href=\"/activity\">Owner Activity</a> is now site analytics: league traffic, per-owner engagement, page reach and app installs — and no transaction leaderboard.",
+      "summary": "<a href=\"/activity\">Owner Activity</a> is now site analytics: league traffic, per-owner engagement, page reach and app installs \u2014 and no transaction leaderboard.",
       "impact": "user",
       "area": "other",
       "league": "theleague",
@@ -17,7 +17,7 @@
     {
       "date": "2026-09-10",
       "type": "enhancement",
-      "summary": "<a href=\"/activity\">Owner Activity</a> is now site analytics: league traffic, per-owner engagement, page reach and app installs — and no transaction leaderboard.",
+      "summary": "<a href=\"/activity\">Owner Activity</a> is now site analytics: league traffic, per-owner engagement, page reach and app installs \u2014 and no transaction leaderboard.",
       "impact": "user",
       "area": "other",
       "league": "afl",
@@ -30,7 +30,7 @@
     {
       "date": "2026-09-10",
       "type": "enhancement",
-      "summary": "Signed-out visits are counted now — <a href=\"/activity\">Owner Activity</a> shows how much of the traffic comes from people who never sign in, and which public pages they read.",
+      "summary": "Signed-out visits are counted now \u2014 <a href=\"/activity\">Owner Activity</a> shows how much of the traffic comes from people who never sign in, and which public pages they read.",
       "impact": "user",
       "area": "other",
       "league": "both"
@@ -38,7 +38,7 @@
     {
       "date": "2026-09-10",
       "type": "bug-fix",
-      "summary": "Players on injured reserve no longer count against your active roster when you add a <a href=\"/players\">free agent</a> — the form now shows how many active spots you actually have.",
+      "summary": "Players on injured reserve no longer count against your active roster when you add a <a href=\"/players\">free agent</a> \u2014 the form now shows how many active spots you actually have.",
       "impact": "user",
       "area": "free-agents",
       "league": "both"
@@ -46,7 +46,7 @@
     {
       "date": "2026-09-09",
       "type": "style-tweak",
-      "summary": "The game line on <a href=\"/lineup\">Set Lineup</a> now leads with the network's logo at text size and closes on a bigger opponent helmet — the channel was reading as the headline.",
+      "summary": "The game line on <a href=\"/lineup\">Set Lineup</a> now leads with the network's logo at text size and closes on a bigger opponent helmet \u2014 the channel was reading as the headline.",
       "impact": "user",
       "area": "rosters",
       "league": "both"
@@ -54,7 +54,7 @@
     {
       "date": "2026-09-09",
       "type": "bug-fix",
-      "summary": "<a href=\"/live-scoring\">Live Scoring</a> showed no fantasy matchups during the Wednesday opener — the board now loads its scores directly and keeps polling on any game night.",
+      "summary": "<a href=\"/live-scoring\">Live Scoring</a> showed no fantasy matchups during the Wednesday opener \u2014 the board now loads its scores directly and keeps polling on any game night.",
       "impact": "user",
       "area": "live-scoring",
       "league": "both"
@@ -62,7 +62,7 @@
     {
       "date": "2026-09-10",
       "type": "bug-fix",
-      "summary": "<a href=\"/activity\">Owner Activity</a> no longer slides sideways on a phone — the Last Seen table scrolls on its own now, instead of dragging the page with it.",
+      "summary": "<a href=\"/activity\">Owner Activity</a> no longer slides sideways on a phone \u2014 the Last Seen table scrolls on its own now, instead of dragging the page with it.",
       "impact": "user",
       "area": "other",
       "league": "both"
@@ -70,10 +70,26 @@
     {
       "date": "2026-09-10",
       "type": "style-tweak",
-      "summary": "Team logos on <a href=\"/activity\">Owner Activity</a> are no longer circle-cropped — every club's mark shows in full, corners and all.",
+      "summary": "Team logos on <a href=\"/activity\">Owner Activity</a> are no longer circle-cropped \u2014 every club's mark shows in full, corners and all.",
       "impact": "user",
       "area": "design-system",
       "league": "both"
+    },
+    {
+      "date": "2026-09-10",
+      "type": "bug-fix",
+      "summary": "League dates now follow the official NFL schedule \u2014 2026 opened on a Wednesday, so Roger no longer announces the season a day late, and deadlines and playoff weeks track the real calendar.",
+      "impact": "user",
+      "area": "calendar",
+      "league": "both"
+    },
+    {
+      "date": "2026-09-11",
+      "type": "bug-fix",
+      "summary": "The AFL <a href=\"/calendar\">calendar</a> had Regular Season Ends on Dec 31 \u2014 two weeks after the playoffs start. It now reads Dec 17, when Week 14 closes and the bracket opens.",
+      "impact": "user",
+      "area": "calendar",
+      "league": "afl"
     }
   ]
 }
