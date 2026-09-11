@@ -82,6 +82,7 @@ export const AREA_LABELS = {
   'league-summary': 'League Summary',
   'calendar': 'Calendar',
   'standings': 'Standings',
+  'schedule': 'Schedule',
   'live-scoring': 'Live Scoring',
   'playoffs': 'Playoffs',
   'mvp': 'MVPs',

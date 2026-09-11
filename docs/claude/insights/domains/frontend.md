@@ -3401,3 +3401,13 @@ driven by event delegation, first find where the listener is actually bound
 the button back inside that container, widen the listener to a shared
 ancestor, or add a dedicated listener — do not assume "it's still `.col-group-btn`,
 so it still works."**
+- **A new page that calls `getLeagueBySlug(slug)` without `!` fails
+  `pnpm test:types` even though it only adds ~3 errors.** The helper returns
+  `League | null`, and the null-safety class outside `rosters.astro` is pinned
+  at ZERO in `tests/fixtures/typecheck-baseline.json` (`clearedClasses`), so
+  three `'league' is possibly 'null'` errors fail the "cleared classes stay at
+  zero" assertion as well as the total. The repo's convention for a prop already
+  typed `CanonicalLeagueSlug` is the non-null assertion —
+  `const league = getLeagueBySlug(leagueSlug)!;` — which is what every shared
+  page component does (division-strength, draft-hub, guides, custom-rankings).
+  Worth knowing before the 2.5-minute type run, not after it.

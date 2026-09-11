@@ -864,6 +864,34 @@ simple repair. `balanceHomeAway` only exists on the constructive path.
 Method selector — for a minimal in-season repair where re-drawing everyone's
 calendar is not acceptable.
 
+## Reading the schedule back out, for display
+
+Everything above builds a schedule. `src/utils/schedule-data.mjs` READS one,
+and it is the only thing that should: `/schedule` and the AFL homepage's Next
+Up tile both go through it. Three rules, each of which has a test in
+`tests/schedule-data.test.ts`:
+
+- **Read the committed feed, never the plan or the reveal lock.**
+  `data/<league>/mfl-feeds/<year>/schedule.json` is what is being played; the
+  plan is what was generated, and the commissioner pastes by hand, so the two
+  can legitimately disagree.
+- **`result` does not tell you whether a game happened.** MFL stamps
+  `result: "T"` on a matchup the moment it is created, so an unplayed week is
+  indistinguishable from a tie by that field alone — reading it without a score
+  check reports the whole remaining season as ties. A game is played when BOTH
+  sides carry a `score`; `result` is authoritative only after that (it applies
+  the league's tie rules, which comparing two numbers does not).
+- **A week with no `matchup` is not a week.** MFL creates the playoff weeks
+  before it draws them — the live 2026 feeds carry a bare `{"week":"15"}` for
+  TheLeague 15-17 and the AFL 15-18 — and rendering those produces a grid
+  column where every club shows a bye dash.
+
+Records and ranks on those surfaces come from `standings.json`, not from
+summing the schedule: the feed runs through the playoff and consolation weeks,
+so a season total computed from it disagrees with the standings table on the
+same page. The AFL seeds by CONFERENCE, so a rank there is an index into MFL's
+order filtered to that conference — filtered, never re-sorted.
+
 ## MFL has no schedule write API
 
 The full import list (`api_info?STATE=details`) is lineup, franchises,
