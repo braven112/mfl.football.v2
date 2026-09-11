@@ -439,7 +439,15 @@ html.dark .ls-detail {
   align-items: stretch;
   border-bottom: 1px solid var(--content-border);
 }
-.ls-mx-row:last-child { border-bottom: 0; }
+/* `:last-of-TYPE`, not `:last-child`. The last element in `.ls-mx-body` is the
+   bench `<details>`, not the last starter row, so `:last-child` matched no row
+   at all unless BOTH benches were empty and `BenchSection` rendered nothing —
+   and the lineup kept a rule under its last player, hanging over the bench
+   disclosure. `.ls-mx-row` is the only `div` type among those siblings once
+   rows exist (`.ls-empty` renders only when there are none), so this selects
+   the real last row. `.ls-bench-row:last-child` below is genuinely last in its
+   own grid and stays as it is. */
+.ls-mx-row:last-of-type { border-bottom: 0; }
 .ls-mx-pos {
   /* NOT stretched, even though its siblings are. `.ls-mx-row` switched to
      `align-items: stretch` so the two player cells share a bottom edge; that
@@ -806,28 +814,48 @@ html.dark .ls-headshot.def { box-shadow: none; }
      not need. The card reads as a card because it has a surface and a header,
      not because it is inset from an edge it cannot use.
 
-     The viewport-width trick rather than a negative margin summing the two
-     ancestor paddings: this stylesheet would then have to KNOW them, and the
-     day either one changes it silently leaves a gap or overflows into a
-     horizontal scrollbar. `50% - 50vw` needs only that the column is centred,
-     which `main` and `.ls-page` both guarantee with `margin-inline: auto`.
+     Cancel the two gutters by NAME, not with the `100vw` centring trick. That
+     trick is tempting because it needs no knowledge of the ancestors — but
+     `100vw` resolves against the initial containing block, which INCLUDES a
+     classic space-consuming scrollbar, while both `documentElement.clientWidth`
+     and this `max-width` query exclude it. A desktop window under 760px on any
+     platform with classic scrollbars (Windows, most Linux) therefore gets a
+     card ~15px wider than the viewport and a horizontal scrollbar off the whole
+     page, with nothing up the chain to clip it — `main`'s `container-type:
+     inline-size` is layout containment, not paint. It does not reproduce in a
+     mobile emulator, which is exactly why it would have shipped.
+
+     Both tokens below are what all three leagues' `live-scoring.astro` declare
+     `.ls-page` with, and `main`'s inline padding only leaves `--padding-sm` at
+     `min-width: 768px` — above this query, never inside it. If either moves,
+     this leaves a small symmetric gap, which is visible and harmless; the
+     `100vw` failure is a scrollbar on a phone, which is neither.
+
+     No `width` needed: `.ls-root` is a column flex container, so the stretched
+     item grows by exactly the margins it is given.
      Bottom border stays — it is the seam against the games rail below. */
   .ls-detail {
-    width: 100vw;
-    margin-inline: calc(50% - 50vw);
+    margin-inline: calc((var(--padding-sm) + var(--spacing-md)) * -1);
     border-left: 0;
     border-right: 0;
     border-radius: 0;
     box-shadow: none;
-    /* Cancels `.ls-page`'s own `padding-top: var(--spacing-lg)` — the SAME
-       token it is declared with, so the two cannot drift apart. Behind a
-       rounded, inset card that padding read as the margin around it; behind a
-       full-bleed one only the top edge of it survives, as a band of page
-       background with nothing on either side of it to explain what it is
-       (plain in light mode, where page and card are different colors). It is
-       also 24px of the lineup on a screen this view is trying to give back.
-       `.ls-detail` is the ONLY child `.ls-root` renders in this mode, so
-       there is nothing above it this could collide with. */
+  }
+  /* Cancels `.ls-page`'s own `padding-top: var(--spacing-lg)` — the SAME token
+     it is declared with, so the two cannot drift apart. Behind a rounded, inset
+     card that padding read as the margin around it; behind a full-bleed one only
+     its top edge survives, as a band of page background with nothing beside it
+     to explain what it is (plain in light mode, invisible in dark). It is also
+     24px of the lineup on a screen this view is trying to give back.
+
+     Gated on the Throwback preview bar's ABSENCE. `.ls-detail` is the only child
+     `.ls-root` renders here, but `.ls-root` is not what the margin is cancelling
+     — `.ls-tb-preview` is a sibling of the island inside `.ls-page`, and carries
+     a `margin-bottom` of this very token, so during Throwback Week the pull-up
+     would eat the gap under the bar and sit the card flush against it instead.
+     Written as `:not(:has(…))` so a browser without `:has()` drops the rule and
+     keeps the band — the harmless half of the two outcomes. */
+  .ls-page:not(:has(.ls-tb-preview)) .ls-detail {
     margin-top: calc(var(--spacing-lg) * -1);
   }
 
@@ -891,7 +919,10 @@ html.dark .ls-headshot.def { box-shadow: none; }
     border-top: 1px solid color-mix(in srgb, var(--content-border) 45%, transparent);
   }
   .ls-bench-row::after { border-top-style: dashed; }
-  .ls-mx-row:last-child::after,
+  /* `:last-of-type` for the starter rows, for the reason on the base rule: the
+     bench `<details>` is `.ls-mx-body`'s last child, so `:last-child` never
+     reaches the last row. The bench's own rows ARE last in their grid. */
+  .ls-mx-row:last-of-type::after,
   .ls-bench-row:last-child::after { content: none; }
 
   /* ── The two sides of a pair SHARE their row tracks ──
@@ -1172,6 +1203,11 @@ html.dark .ls-headshot.def { box-shadow: none; }
      state, which `.ls-bench-row > div { display: contents }` promotes to a
      grid item of its own. */
   .ls-bench-cap { font-size: 0.78rem; gap: 0.3rem; padding: 0.2rem 0.55rem 0.3rem; }
+  /* Same weight as the row dividers above it. Left at full strength it was the
+     one hard rule left on the screen, sitting directly on top of the rows this
+     block just softened — which is the thing the divider comment above is
+     about, one element further down. */
+  .ls-bench-cap { border-bottom-color: color-mix(in srgb, var(--content-border) 45%, transparent); }
   .ls-bench-cap img { width: 24px; height: 24px; }
   .ls-bench-none { padding-left: 0.55rem; padding-right: 0.55rem; }
   .ls-bench-note { font-size: 0.62rem; padding: 0 0.5rem 0.35rem; }
