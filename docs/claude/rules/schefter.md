@@ -342,6 +342,40 @@ fallback, which is ALREADY under the ceiling, so a case written that way
 asserts the ceiling by never engaging it — the cases use real deadline and
 in-season calendars so the 2/day and 1/5 tiers are the ones being clamped.
 
+### A speculation post's CTA goes to the Trade Builder
+
+The lane's GroupMe CTA read "Read the speculation → /news?post=<id>" — a link,
+sent in the chat, to the thing the reader had just finished reading in the
+chat. The post is a HYPOTHETICAL TRADE, so the one useful next click is the
+place an owner can actually build it, which is where every other
+trade-flavored Schefter post already points; this lane was the odd one out
+(owner report, 2026-09-11). `?b=<seller>` pre-loads the team holding the
+player, the same convention the rumor mill's trade CTA uses, and
+`trade-builder-initial-state.ts` puts the viewer's own team on the other side.
+
+Two things came out of it that are not about copy:
+
+- **`post.link` / `post.linkLabel` existed on every rumor post and NOT on a
+  speculation post.** The feed card renders that pair as its CTA button, so
+  speculation cards had no next click at all. They carry the Trade Builder
+  pair now. PREFIXED, like every feed link — it is persisted and rendered raw,
+  and the bare form 404s on the shared host.
+- **The prefix-aware builder is now ONE implementation**,
+  `scripts/lib/schefter-public-url.mjs`. It lived inside
+  `schefter-rumor-scan.mjs` and the speculation lane needed the identical
+  answer, so it moved rather than being copied — and the copy would have been
+  the naive `${base}${path}` concatenation the speculation lane was already
+  doing for its `/news` link, which on a prefixed route ships
+  `theleague.us/theleague/trade-builder`. `docs/claude/rules/league-urls.md`
+  records that exact link as having already shipped from Schefter's Trade
+  Builder CTAs once. `buildSpeculationGroupMeText` therefore TAKES a `ctaUrl`
+  instead of composing one: only the caller knows the registry entry and the
+  operator's base, and those two together decide strip-vs-keep.
+
+The push notification still goes to `/news`, in BOTH lanes. That is the
+convention and not an oversight — the push takes you to the feed, the CTA
+takes you to the action — so changing one lane's push would split them.
+
 ### The MEMORY block is a name surface — mask it
 
 `buildRecentPostsPromptBlock` recalls the last few posts verbatim so Schefter

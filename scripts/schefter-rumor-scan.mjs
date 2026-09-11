@@ -168,6 +168,7 @@ import {
   stripLeaguePrefix,
   ensureLeaguePrefix,
 } from '../src/config/leagues-data.mjs';
+import { createPublicUrl, normalizeBaseUrl } from './lib/schefter-public-url.mjs';
 import { getSchefterLeague } from './lib/schefter-leagues.mjs';
 import {
   getPtHour,
@@ -419,79 +420,18 @@ const FRIDAY_WEEKDAY_INDEX = 5; // 0=Sun … 5=Fri
 // absolute form, so the GroupMe CTA still reads `.../schefter/tip`.
 const TIP_PAGE_PATH = `/${LEAGUE_SLUG}/schefter/tip`;
 const TIP_PAGE_LINK_LABEL = 'Got a tip? Whisper to Schefter →';
-/**
- * Origin (+ optional path prefix) a route can be appended to. A base URL is
- * not a place to carry a query or fragment: concatenating a route after one
- * yields `https://www.theleague.us?x=1/theleague/schefter/tip`, which is
- * simply a broken link. Drop them, along with any trailing slash, so the
- * concatenation below is always well-formed.
- *
- * Throws on an unparseable value rather than limping on: this base is pasted
- * into the CTA of every post the run ships, so a typo'd override would quietly
- * poison a whole slate of GroupMe messages. Better to die at startup.
- */
-function normalizeBaseUrl(raw) {
-  const trimmed = String(raw).replace(/\/+$/, '');
-  let u;
-  try {
-    u = new URL(trimmed);
-  } catch {
-    throw new Error(
-      `SCHEFTER_PUBLIC_BASE_URL is not a valid absolute URL: ${JSON.stringify(raw)}`,
-    );
-  }
-  return `${u.origin}${u.pathname}`.replace(/\/+$/, '');
-}
-
+// The prefix-aware CTA builder now lives in scripts/lib/schefter-public-url.mjs
+// — the speculation lane needs the identical answer for its own GroupMe CTA,
+// and a second copy of "does this base strip or keep the league prefix" is the
+// shape this repo has already paid for once.
 const PUBLIC_BASE_URL = normalizeBaseUrl(
   process.env.SCHEFTER_PUBLIC_BASE_URL || SCHEFTER_LEAGUE.baseUrl,
 );
-
-/**
- * Is `PUBLIC_BASE_URL` the ROOT of one of THIS league's own apex hosts — i.e.
- * a base where the middleware rewrite actually runs, so the bare path resolves?
- *
- * Registry-derived (buildHostToSlugMap), not a string compare against the
- * canonical origin: an operator can spell the same host a dozen equivalent
- * ways — bare apex, uppercase, http://, an explicit :443 — and every one of
- * them must still strip.
- *
- * But hostname alone is not enough. The rewrite is served at the domain root
- * on the standard port, so a non-default port (`:444`) or a path-suffixed base
- * (`https://www.theleague.us/preview`) is NOT the apex even though it shares a
- * hostname — stripping there produces a path nothing serves. Those, like
- * mfl.football and *.vercel.app previews, need the prefix kept.
- *
- * `new URL()` normalizes a scheme's default port to '', so any port left over
- * is by definition non-default.
- */
-const HOST_TO_LEAGUE_SLUG = buildHostToSlugMap();
-function isOwnApexBase(baseUrl) {
-  let u;
-  try {
-    u = new URL(baseUrl);
-  } catch {
-    return false;
-  }
-  if (u.port !== '') return false;
-  if (u.pathname !== '/') return false;
-  return HOST_TO_LEAGUE_SLUG[u.hostname.toLowerCase()] === LEAGUE_SLUG;
-}
-const PUBLIC_BASE_IS_OWN_APEX = isOwnApexBase(PUBLIC_BASE_URL);
-
-/**
- * Absolute URL for a GroupMe CTA, from the PREFIXED internal path every feed
- * link carries. Symmetric, and it keeps the operator's chosen origin rather
- * than substituting the canonical one:
- *   - own apex host  → STRIP the prefix (redundant; the prefixed form only
- *     resolves via a 301, so pasting it ships `theleague.us/theleague/...`)
- *   - anything else  → ENSURE the prefix (shared host / preview deploys have
- *     no rewrite, so the bare path 404s)
- */
-const publicUrl = (p) =>
-  PUBLIC_BASE_IS_OWN_APEX
-    ? `${PUBLIC_BASE_URL}${stripLeaguePrefix(SCHEFTER_LEAGUE_REGISTRY, p)}`
-    : `${PUBLIC_BASE_URL}${ensureLeaguePrefix(SCHEFTER_LEAGUE_REGISTRY, p)}`;
+const publicUrl = createPublicUrl({
+  baseUrl: PUBLIC_BASE_URL,
+  leagueSlug: LEAGUE_SLUG,
+  registryLeague: SCHEFTER_LEAGUE_REGISTRY,
+});
 
 const TIP_PAGE_ABSOLUTE_URL = publicUrl(TIP_PAGE_PATH);
 
