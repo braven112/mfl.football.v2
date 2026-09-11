@@ -2,12 +2,10 @@ import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import {
-  doubleheaderWeeks,
   findNextGame,
   franchiseSchedule,
   opponentsByWeek,
   parseWeeklySchedule,
-  summarizeSchedule,
 } from '../src/utils/schedule-data.mjs';
 import { LEAGUES } from '../src/config/leagues-data.mjs';
 
@@ -50,9 +48,9 @@ describe('an unplayed game is not a tie', () => {
     expect(games[0].outcome).toBeNull();
   });
 
-  it('counts no tie in the record', () => {
-    const summary = summarizeSchedule(franchiseSchedule(parseWeeklySchedule(unplayed), '0001'));
-    expect(summary).toMatchObject({ wins: 0, losses: 0, ties: 0, played: 0 });
+  it('is still the next game to play', () => {
+    const next = findNextGame(franchiseSchedule(parseWeeklySchedule(unplayed), '0001'), 1);
+    expect(next).toMatchObject({ week: 5, played: false });
   });
 });
 
@@ -88,10 +86,10 @@ describe('doubleheaders stay plural', () => {
     expect(schedule[0].games.map((g) => g.opponentId)).toEqual(['0002', '0003']);
   });
 
-  it('counts both results and both scores', () => {
-    const summary = summarizeSchedule(franchiseSchedule(weeks, '0001'));
-    expect(summary).toMatchObject({ wins: 1, losses: 1, played: 2 });
-    expect(summary.pointsFor).toBeCloseTo(230.75, 2);
+  it('keeps both outcomes and both scores', () => {
+    const [{ games }] = franchiseSchedule(weeks, '0001');
+    expect(games.map((g: any) => g.outcome)).toEqual(['W', 'L']);
+    expect(games.map((g: any) => g.score)).toEqual([120.5, 110.25]);
   });
 
   it('reports both opponents in the grid cell', () => {
@@ -99,8 +97,9 @@ describe('doubleheaders stay plural', () => {
     expect(cell?.map((entry) => entry.opponentId)).toEqual(['0002', '0003']);
   });
 
-  it('names the doubleheader week from the data, not a constant', () => {
-    expect(doubleheaderWeeks(weeks)).toEqual([1]);
+  it('reports the week once, with both games under it', () => {
+    expect(weeks.map((w: any) => w.week)).toEqual([1]);
+    expect(franchiseSchedule(weeks, '0001')[0].games).toHaveLength(2);
   });
 });
 
@@ -158,11 +157,71 @@ describe.each(['theleague', 'afl-fantasy'])('the committed %s feed parses', (slu
     }
   });
 
-  it('gives franchise 0001 a full season whose record adds up', () => {
-    const schedule = franchiseSchedule(weeks, '0001');
-    const summary = summarizeSchedule(schedule);
-    expect(summary.played).toBeGreaterThan(10);
-    expect(summary.wins + summary.losses + summary.ties).toBe(summary.played);
-    expect(summary.pointsFor).toBeGreaterThan(0);
+  it('gives franchise 0001 a full season of played games with outcomes', () => {
+    const games = franchiseSchedule(weeks, '0001').flatMap((entry: any) => entry.games);
+    const played = games.filter((g: any) => g.played);
+    expect(played.length).toBeGreaterThan(10);
+    for (const game of played) {
+      expect(['W', 'L', 'T']).toContain(game.outcome);
+      expect(game.score).toBeGreaterThan(0);
+    }
+  });
+});
+
+/**
+ * MFL creates the playoff weeks before it draws them: the live 2026 feeds
+ * carry `{"week":"15"}` with no `matchup` for TheLeague 15-17 and the AFL
+ * 15-18. Rendering those weeks puts a column in the grid where every club
+ * shows the bye dash, which reads as a real bye.
+ */
+describe('a week with no matchups is not a scheduled week', () => {
+  it('drops the undrawn week', () => {
+    const weeks = parseWeeklySchedule({
+      schedule: {
+        weeklySchedule: [
+          {
+            week: '14',
+            matchup: {
+              franchise: [
+                { id: '0001', isHome: '1', result: 'T' },
+                { id: '0002', isHome: '0', result: 'T' },
+              ],
+            },
+          },
+          { week: '15' },
+        ],
+      },
+    });
+    expect(weeks.map((w) => w.week)).toEqual([14]);
+  });
+
+  it('drops them in the committed 2026 feeds too', () => {
+    for (const slug of ['theleague', 'afl-fantasy']) {
+      const weeks = parseWeeklySchedule(feedFor(slug, 2026));
+      expect(weeks.every((w) => w.matchups.length > 0)).toBe(true);
+      expect(weeks.some((w) => w.week >= 15)).toBe(false);
+    }
+  });
+});
+
+describe('a played game MFL left unlabelled falls back to the score', () => {
+  it('resolves W/L from the scores when result is missing', () => {
+    const weeks = parseWeeklySchedule({
+      schedule: {
+        weeklySchedule: [
+          {
+            week: '3',
+            matchup: {
+              franchise: [
+                { id: '0001', isHome: '1', score: '101.0' },
+                { id: '0002', isHome: '0', score: '99.5' },
+              ],
+            },
+          },
+        ],
+      },
+    });
+    expect(franchiseSchedule(weeks, '0001')[0].games[0].outcome).toBe('W');
+    expect(franchiseSchedule(weeks, '0002')[0].games[0].outcome).toBe('L');
   });
 });

@@ -56,6 +56,7 @@ import { getAflWhatsNextTimeline } from '../../utils/league-event-resolver';
 import { getAflLeagueYear, getCurrentSeasonYear } from '../../utils/league-year';
 import { getCurrentNFLWeek } from '../../utils/current-week';
 import { findNextGame, franchiseSchedule, parseWeeklySchedule } from '../../utils/schedule-data.mjs';
+import { chooseTeamName } from '../../utils/team-names';
 import { loadAflDraftSlot } from '../../utils/afl-draft-slot';
 import { resolveAflTeamSpotlight } from '../../utils/afl-team-spotlight';
 import { resolveHeroFranchiseBackdrop } from '../../utils/hero-franchise-backdrop';
@@ -269,7 +270,19 @@ const nextOpponentTeam = nextGame
   ? aflConfig.teams.find((t: { franchiseId: string }) => t.franchiseId === nextGame.opponentId)
   : undefined;
 const nextOpponent = nextOpponentTeam
-  ? { name: nextOpponentTeam.nameMedium ?? nextOpponentTeam.name, icon: nextOpponentTeam.icon }
+  ? {
+      name: chooseTeamName(
+        {
+          fullName: nextOpponentTeam.name,
+          nameMedium: nextOpponentTeam.nameMedium,
+          nameShort: nextOpponentTeam.nameShort,
+          abbrev: nextOpponentTeam.abbrev,
+        },
+        'default',
+      ),
+      icon: nextOpponentTeam.icon,
+      isHome: nextGame?.isHome,
+    }
   : undefined;
 
 // Record from standings feed

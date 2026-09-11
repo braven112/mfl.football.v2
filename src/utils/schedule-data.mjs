@@ -55,7 +55,12 @@ export function parseWeeklySchedule(feed) {
         }))
         .filter((matchup) => matchup.franchises.length === 2),
     }))
-    .filter((entry) => Number.isFinite(entry.week))
+    // A week MFL has created but not drawn yet carries a `week` and no
+    // `matchup` — the live 2026 feeds do exactly that for the playoff weeks
+    // (TheLeague 15-17, the AFL 15-18). Keeping those weeks renders a grid
+    // column in which every club shows the bye dash, which is indistinguishable
+    // from a real bye. An undrawn week is not a scheduled week.
+    .filter((entry) => Number.isFinite(entry.week) && entry.matchups.length > 0)
     .sort((a, b) => a.week - b.week);
 }
 
@@ -88,7 +93,7 @@ export function franchiseSchedule(weeks, franchiseId) {
         played,
         score: mine.score,
         opponentScore: opponent.score,
-        outcome: played ? resolveOutcome(mine) : null,
+        outcome: played ? resolveOutcome(mine, opponent) : null,
       });
     }
     if (games.length > 0) out.push({ week, games });
@@ -101,35 +106,13 @@ export function franchiseSchedule(weeks, franchiseId) {
  * tie rules, which a score comparison does not. The score comparison is only
  * the fallback for a played game MFL left unlabelled.
  */
-function resolveOutcome(side) {
+function resolveOutcome(side, opponent) {
   const result = (side.result ?? '').toUpperCase();
   if (result === 'W' || result === 'L' || result === 'T') return result;
-  return null;
-}
-
-/**
- * Record and points from a franchise's own games. Unplayed weeks contribute
- * nothing, so this is safe to call on a season that has not started.
- */
-export function summarizeSchedule(schedule) {
-  let wins = 0;
-  let losses = 0;
-  let ties = 0;
-  let pointsFor = 0;
-  let pointsAgainst = 0;
-  let played = 0;
-  for (const { games } of schedule) {
-    for (const game of games) {
-      if (!game.played) continue;
-      played += 1;
-      pointsFor += game.score ?? 0;
-      pointsAgainst += game.opponentScore ?? 0;
-      if (game.outcome === 'W') wins += 1;
-      else if (game.outcome === 'L') losses += 1;
-      else if (game.outcome === 'T') ties += 1;
-    }
-  }
-  return { wins, losses, ties, pointsFor, pointsAgainst, played };
+  if (side.score == null || opponent?.score == null) return null;
+  if (side.score > opponent.score) return 'W';
+  if (side.score < opponent.score) return 'L';
+  return 'T';
 }
 
 /**
@@ -167,42 +150,10 @@ export function opponentsByWeek(weeks) {
           opponentId: opponent.id,
           isHome: side.isHome,
           played,
-          outcome: played ? resolveOutcome(side) : null,
+          outcome: played ? resolveOutcome(side, opponent) : null,
         });
       }
     }
   }
   return byFranchise;
-}
-
-/** Week numbers present in the feed, ascending. The season's real length. */
-export function scheduleWeekNumbers(weeks) {
-  return weeks.map((entry) => entry.week);
-}
-
-/**
- * Weeks in which any franchise plays more than once.
- *
- * Derived from the feed rather than from a constant on purpose: the late
- * doubleheader week is whichever of Week 12/13 is bye-free that season, and
- * copying last year's numbers has shipped a doubleheader onto a bye twice.
- */
-export function doubleheaderWeeks(weeks) {
-  const out = [];
-  for (const { week, matchups } of weeks) {
-    const seen = new Set();
-    let repeated = false;
-    for (const { franchises } of matchups) {
-      for (const side of franchises) {
-        if (seen.has(side.id)) {
-          repeated = true;
-          break;
-        }
-        seen.add(side.id);
-      }
-      if (repeated) break;
-    }
-    if (repeated) out.push(week);
-  }
-  return out;
 }

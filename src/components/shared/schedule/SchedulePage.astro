@@ -35,13 +35,12 @@ import { getCurrentSeasonYear } from '../../../utils/league-year';
 import { getCurrentNFLWeek } from '../../../utils/current-week';
 import { nflWeekStartIsoDate } from '../../../utils/nfl-week-starts.mjs';
 import { PLAYOFFS_START_WEEK } from '../../../utils/fantasy-bracket.mjs';
-import { resolveConfigForYear } from '../../../utils/team-names';
+import { chooseTeamName, resolveConfigForYear } from '../../../utils/team-names';
 import {
   findNextGame,
   franchiseSchedule,
   opponentsByWeek,
   parseWeeklySchedule,
-  summarizeSchedule,
 } from '../../../utils/schedule-data.mjs';
 
 interface Props {
@@ -80,14 +79,28 @@ const standingsByYear = byYear(standingsFeeds);
 // rather than rendering an empty page for six months of the calendar.
 const requested = getCurrentSeasonYear();
 const availableYears = [...schedulesByYear.keys()].sort((a, b) => b - a);
-const year = schedulesByYear.has(requested) ? requested : (availableYears[0] ?? requested);
+// Existence is not enough: MFL creates the new season's feed before it draws
+// the schedule, so `has(requested)` can be true with nothing in it. Fall back
+// to the newest season that actually carries matchups.
+const parsedByYear = new Map(availableYears.map((y) => [y, parseWeeklySchedule(schedulesByYear.get(y))]));
+const hasGames = (y: number) => (parsedByYear.get(y)?.length ?? 0) > 0;
+const year = hasGames(requested)
+  ? requested
+  : (availableYears.find(hasGames) ?? requested);
 
-const weeks = parseWeeklySchedule(schedulesByYear.get(year));
+const weeks = parsedByYear.get(year) ?? [];
 const currentWeek = getCurrentNFLWeek(new Date(), year) ?? 1;
 
 const teams = resolveConfigForYear(config as { teams: any[] }, year).teams ?? [];
 const teamById = new Map(teams.map((team: any) => [team.franchiseId, team]));
-const nameOf = (id: string) => teamById.get(id)?.nameMedium ?? teamById.get(id)?.name ?? `Franchise ${id}`;
+const nameOf = (id: string) => {
+  const team = teamById.get(id);
+  if (!team) return `Franchise ${id}`;
+  return chooseTeamName(
+    { fullName: team.name, nameMedium: team.nameMedium, nameShort: team.nameShort, abbrev: team.abbrev },
+    'default',
+  );
+};
 const abbrevOf = (id: string) => teamById.get(id)?.abbrev ?? id;
 const iconOf = (id: string) => teamById.get(id)?.icon ?? null;
 
@@ -98,8 +111,8 @@ const standingsRows: any[] = (() => {
   return Array.isArray(rows) ? rows : rows ? [rows] : [];
 })();
 const recordOf = new Map<string, string>();
-const rankOf = new Map<string, number>();
-standingsRows.forEach((row: any, index: number) => {
+const pointsForOf = new Map<string, number>();
+standingsRows.forEach((row: any) => {
   const id = String(row?.id ?? '');
   if (!id) return;
   // MFL writes W-L-T; the tie segment is noise in a league that rarely ties,
@@ -108,8 +121,42 @@ standingsRows.forEach((row: any, index: number) => {
     const [w = '0', l = '0', t = '0'] = String(row.h2hwlt).split('-');
     recordOf.set(id, Number(t) > 0 ? `${w}-${l}-${t}` : `${w}-${l}`);
   }
-  rankOf.set(id, index + 1);
+  const pf = Number(row?.pf);
+  if (Number.isFinite(pf)) pointsForOf.set(id, pf);
 });
+
+const conferences: { name: string; code: string }[] = Array.isArray(config.conferences) ? config.conferences : [];
+const conferenceOf = (id: string) => String(teamById.get(id)?.conference ?? '');
+
+/**
+ * Rank within the group this page actually shows, taken by FILTERING MFL's
+ * order rather than re-sorting it — the order already carries the
+ * constitution's tiebreakers.
+ *
+ * The AFL seeds by conference, and this page groups its grid the same way, so
+ * a league-wide index is the wrong number twice over: franchise 0008 finished
+ * 1st in the American League and reads 3rd of 24 against the full list, and
+ * the AL block's rank column would run 3, 5, 6, 7, 9. TheLeague has one table
+ * and keeps the league-wide index.
+ */
+const rankOf = new Map<string, number>();
+const groupSizeOf = new Map<string, number>();
+if (conferences.length > 1) {
+  for (const conference of conferences) {
+    const inConference = standingsRows.filter((row: any) => conferenceOf(String(row?.id ?? '')) === conference.code);
+    inConference.forEach((row: any, index: number) => {
+      const id = String(row?.id ?? '');
+      rankOf.set(id, index + 1);
+      groupSizeOf.set(id, inConference.length);
+    });
+  }
+} else {
+  standingsRows.forEach((row: any, index: number) => {
+    const id = String(row?.id ?? '');
+    rankOf.set(id, index + 1);
+    groupSizeOf.set(id, standingsRows.length);
+  });
+}
 
 const viewParam = Astro.url.searchParams.get('view');
 const canSeeMine = Boolean(viewerFranchiseId);
@@ -134,9 +181,14 @@ function weekDate(week: number) {
 
 // ── My schedule ────────────────────────────────────────────────────────────
 const mySchedule = viewerFranchiseId ? franchiseSchedule(weeks, viewerFranchiseId) : [];
-const summary = summarizeSchedule(mySchedule);
 const nextGame = findNextGame(mySchedule, currentWeek);
 const myRank = viewerFranchiseId ? rankOf.get(viewerFranchiseId) ?? null : null;
+// Record and points come from standings, not from summing this page's own
+// rows: the feed runs through the playoff and consolation weeks, so summing it
+// gave the hero 13-8 / 1927.4 beside a grid printing MFL's 11-7 / 1613.30 for
+// the same club. One number, one source.
+const myRecord = viewerFranchiseId ? recordOf.get(viewerFranchiseId) ?? null : null;
+const myPointsFor = viewerFranchiseId ? pointsForOf.get(viewerFranchiseId) ?? null : null;
 const ordinal = (n: number) => {
   const mod = n % 100;
   if (mod >= 11 && mod <= 13) return `${n}th`;
@@ -164,8 +216,6 @@ for (const row of myRows) {
 
 // ── League grid ────────────────────────────────────────────────────────────
 const gridByFranchise = opponentsByWeek(weeks);
-const conferences: { name: string; code: string }[] = Array.isArray(config.conferences) ? config.conferences : [];
-const conferenceOf = (team: any) => String(team?.conference ?? '');
 /** Standings order where MFL gave us one, config order otherwise. */
 const orderedTeams = [...teams].sort((a: any, b: any) => {
   const ra = rankOf.get(a.franchiseId) ?? Number.MAX_SAFE_INTEGER;
@@ -175,7 +225,7 @@ const orderedTeams = [...teams].sort((a: any, b: any) => {
 const gridGroups = conferences.length > 1
   ? conferences.map((conference) => ({
       label: conference.name,
-      teams: orderedTeams.filter((team: any) => conferenceOf(team) === conference.code),
+      teams: orderedTeams.filter((team: any) => conferenceOf(team.franchiseId) === conference.code),
     })).filter((group) => group.teams.length > 0)
   : [{ label: '', teams: orderedTeams }];
 
@@ -237,9 +287,7 @@ const title = view === 'my' ? 'My Schedule' : 'Schedule';
           {viewerFranchiseId ? (
             <div class="sch-stats">
               <div class="sch-stat">
-                <span class="sch-stat__value">
-                  {summary.wins}-{summary.losses}{summary.ties ? `-${summary.ties}` : ''}
-                </span>
+                <span class="sch-stat__value">{myRecord ?? '0-0'}</span>
                 <span class="sch-stat__label">Record</span>
               </div>
               {myRank && (
@@ -247,15 +295,22 @@ const title = view === 'my' ? 'My Schedule' : 'Schedule';
                   <span class="sch-stat__rule" aria-hidden="true"></span>
                   <div class="sch-stat">
                     <span class="sch-stat__value sch-stat__value--sm">{ordinal(myRank)}</span>
-                    <span class="sch-stat__label">of {standingsRows.length || teams.length}</span>
+                    <span class="sch-stat__label">
+                      of {groupSizeOf.get(viewerFranchiseId) || standingsRows.length || teams.length}
+                      {conferences.length > 1 ? ` in the ${conferences.find((c) => c.code === conferenceOf(viewerFranchiseId))?.name ?? 'conference'}` : ''}
+                    </span>
                   </div>
                 </>
               )}
-              <span class="sch-stat__rule" aria-hidden="true"></span>
-              <div class="sch-stat">
-                <span class="sch-stat__value sch-stat__value--sm">{summary.pointsFor.toFixed(0)}</span>
-                <span class="sch-stat__label">Points for</span>
-              </div>
+              {myPointsFor != null && (
+                <>
+                  <span class="sch-stat__rule" aria-hidden="true"></span>
+                  <div class="sch-stat">
+                    <span class="sch-stat__value sch-stat__value--sm">{myPointsFor.toFixed(0)}</span>
+                    <span class="sch-stat__label">Points for</span>
+                  </div>
+                </>
+              )}
             </div>
           ) : (
             <p class="sch-hero__lede">
@@ -424,15 +479,32 @@ const title = view === 'my' ? 'My Schedule' : 'Schedule';
                                 {games.length === 0 ? (
                                   <span class="sch-tile sch-tile--bye">—</span>
                                 ) : (
-                                  games.map((game: any) => (
-                                    <span
-                                      class:list={[
-                                        'sch-tile',
-                                        game.played ? (game.outcome === 'W' ? 'is-win' : game.outcome === 'L' ? 'is-loss' : 'is-tie') : 'is-pending',
-                                      ]}
-                                      title={`Week ${week} · ${game.isHome ? 'vs' : 'at'} ${nameOf(game.opponentId)}`}
-                                    >{abbrevOf(game.opponentId)}</span>
-                                  ))
+                                  games.map((game: any) => {
+                                    // The result is carried by tint and an
+                                    // edge bar, which a screen reader cannot
+                                    // see, and the legend is not associated
+                                    // with the cell — so each tile states its
+                                    // own outcome.
+                                    const outcomeWord = !game.played
+                                      ? 'still to play'
+                                      : game.outcome === 'W'
+                                        ? 'won'
+                                        : game.outcome === 'L'
+                                          ? 'lost'
+                                          : 'tied';
+                                    const label = `Week ${week}, ${game.isHome ? 'vs' : 'at'} ${nameOf(game.opponentId)}, ${outcomeWord}`;
+                                    return (
+                                      <span
+                                        class:list={[
+                                          'sch-tile',
+                                          game.played ? (game.outcome === 'W' ? 'is-win' : game.outcome === 'L' ? 'is-loss' : 'is-tie') : 'is-pending',
+                                        ]}
+                                        role="img"
+                                        aria-label={label}
+                                        title={label}
+                                      >{abbrevOf(game.opponentId)}</span>
+                                    );
+                                  })
                                 )}
                               </td>
                             );
@@ -468,7 +540,10 @@ const title = view === 'my' ? 'My Schedule' : 'Schedule';
      these ARE the brand chrome, not the page surface. */
   .sch {
     --sch-hero: #1c497c;
-    --sch-accent: #3b82f6;
+    /* AA at 13px in both directions: white on this is 6.4:1 (the pill, the
+       CTA) and this on the page ground is 6.0:1 (the active tab). #3b82f6 was
+       3.7:1 and 3.0:1 — the reason this is a darker blue than the hero's. */
+    --sch-accent: #1d4ed8;
     --sch-accent-ink: #93bbfd;
     --sch-glow: rgba(28, 73, 124, 0.55);
     --sch-accent-soft: rgba(59, 130, 246, 0.08);
