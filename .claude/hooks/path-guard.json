@@ -288,6 +288,7 @@
       "rules": "docs/claude/rules/league-urls.md",
       "paths": [
         "src/config/leagues*",
+        "scripts/lib/schefter-public-url.mjs",
         "src/utils/link-punctuation.mjs",
         "src/utils/mfl-url.ts",
         "scripts/lib/groupme*",
@@ -571,10 +572,15 @@
       "paths": [
         "scripts/schefter-*.mjs",
         "scripts/lib/redact-trade-offer.mjs",
+        "scripts/lib/merge-schefter-feed.mjs",
+        "scripts/lib/speculation-budget.mjs",
+        "scripts/lib/speculation-cadence.mjs",
+        "src/utils/owner-trade-reports.ts",
         "src/utils/trade-deadline.mjs",
         "scripts/lib/schefter*",
         "scripts/lib/speculation-*.mjs",
         "scripts/schefter-trade-speculation.mjs",
+        "scripts/resend-speculation-groupme.mjs",
         "src/utils/schefter*",
         "src/pages/api/schefter/**",
         "src/components/**/Schefter*"
@@ -592,6 +598,11 @@
         "tests/schefter-rumor-cadence.test.ts",
         "tests/redact-trade-offer-attribution.test.ts",
         "tests/redact-trade-offer-exposure.test.ts",
+        "tests/redact-trade-offer-side-binding.test.ts",
+        "tests/schefter-post-history-ordering.test.ts",
+        "tests/schefter-trade-budget.test.ts",
+        "tests/speculation-groupme.test.ts",
+        "tests/league-url-prefix.test.ts",
         "tests/schefter-offer-beats.test.ts",
         "tests/speculation-seeds.test.ts"
       ]

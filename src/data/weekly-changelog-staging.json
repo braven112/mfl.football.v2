@@ -90,6 +90,30 @@
       "impact": "user",
       "area": "calendar",
       "league": "afl"
+    },
+    {
+      "date": "2026-09-10",
+      "type": "bug-fix",
+"summary": "Schefter can no longer pair a team with a player it doesn't roster — trade-rumor posts now check ownership against the rosters before naming anyone.",
+      "impact": "user",
+      "area": "schefter",
+      "league": "theleague"
+    },
+    {
+      "date": "2026-09-10",
+      "type": "bug-fix",
+      "summary": "Schefter runs at most one trade story a day now, across every lane — and the invented trade-speculation pieces drop to one a week.",
+      "impact": "user",
+      "area": "schefter",
+      "league": "theleague"
+    },
+    {
+      "date": "2026-09-11",
+      "type": "enhancement",
+      "summary": "Schefter's trade-speculation posts now open the <a href=\"/trade-builder\">Trade Builder</a> with the named team loaded, instead of linking back to the post you just read.",
+      "impact": "user",
+      "area": "schefter",
+      "league": "theleague"
     }
   ]
 }

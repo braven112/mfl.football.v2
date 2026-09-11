@@ -158,6 +158,32 @@ function ruleMatches(rule, events, now) {
 }
 
 /**
+ * One speculation post a WEEK, whatever the ladder below says.
+ *
+ * The ladder scales with the trade deadline — peak week wanted 2/day — and
+ * that was written when this lane was the only thing on the feed it had to
+ * share with. It is not: the trade-offer lane and the trade-bait lane are both
+ * trade-flavored too, and across Sept 4-10 2026 the three of them together
+ * made 13 of 16 Schefter posts trade stories.
+ *
+ * This lane is also the one whose posts are INVENTED. It publishes a
+ * hypothetical nobody proposed, dressed as talk-radio chatter — which is fine
+ * occasionally and grating as a daily feature, because unlike the other two it
+ * cannot run out of material. So it is the one that gets the hard weekly
+ * ceiling.
+ *
+ * Applied as a `Math.min` over the ladder rather than by rewriting each rule's
+ * number: the ladder still records what the deadline calendar WANTS, which is
+ * the thing worth reading a year from now, and the ceiling is one line to
+ * raise or lower. A rule already rarer than weekly (the 1/14 offseason tick)
+ * keeps its own number, and a rule of 0 stays banned.
+ *
+ * `permitsPost` reads a fractional cap as "wait round(1/rate) - 1 full
+ * calendar days", so 1/7 is a six-day gap — one post a week.
+ */
+export const SPECULATION_CEILING_PER_DAY = 1 / 7;
+
+/**
  * Resolve today's speculation cadence based on the league calendar.
  *
  * @param {object} args
@@ -169,11 +195,18 @@ export function resolveCadence({ events, now = new Date() }) {
   const list = Array.isArray(events) ? events : [];
   for (const rule of CADENCE_LADDER) {
     if (ruleMatches(rule, list, now)) {
+      const capped = Math.min(rule.maxPerDay, SPECULATION_CEILING_PER_DAY);
       return {
         tag: rule.id,
         ladderId: rule.id,
-        label: rule.label,
-        maxPerDay: rule.maxPerDay,
+        // The label is logged on every run and is how a quiet lane explains
+        // itself in the Actions output, so it must not keep announcing a
+        // cadence the ceiling has overridden — "Peak week (2/day)" while
+        // shipping one a week is a log that actively misleads.
+        label: capped < rule.maxPerDay
+          ? `${rule.label} — held to 1/week by the speculation ceiling`
+          : rule.label,
+        maxPerDay: capped,
         reservesGlobalSlot: rule.reservesGlobalSlot,
       };
     }
