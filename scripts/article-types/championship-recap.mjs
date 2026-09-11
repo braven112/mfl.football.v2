@@ -62,7 +62,7 @@ export async function buildFactSheet(data, week, year, projectRoot) {
   // Find the championship matchup (typically the first matchup in week 17)
   const matchups = weekData.weeklyResults.matchup;
 
-  lines.push('=== CHAMPIONSHIP GAME (Week 17) ===');
+  lines.push(`=== CHAMPIONSHIP GAME (Week ${CHAMPIONSHIP_WEEK}) ===`);
   for (const matchup of matchups) {
     const [f1, f2] = matchup.franchise || [];
     if (!f1 || !f2) continue;

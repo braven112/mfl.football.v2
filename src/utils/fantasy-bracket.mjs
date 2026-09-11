@@ -15,6 +15,16 @@
  * title game was week 16; after it, 18 weeks and week 17. The formula below
  * reproduces both eras, so the next expansion is one constant, not a hunt.
  *
+ * NOT year-parameterised, deliberately. A reviewer will reasonably ask whether
+ * a 2020 lookup gets week 17 when that season's title game was week 16 — it
+ * would. Nothing asks: every caller resolves the CURRENT season (event
+ * resolution off `getCurrentLeagueYear`, the hero windows off this year and
+ * last, the recap and the rumor mill off the season being played). Making it
+ * year-aware would take a per-season length table, which is the hand-maintained
+ * artifact this whole change exists to delete, and the published schedule only
+ * reaches back to 2024 (all 18-week) anyway. If something ever does need a
+ * pre-2021 bracket, add the parameter then — with real data behind it.
+ *
  * Both leagues run the same three-round shape (TheLeague: playoffs open week
  * 15, title week 17; the AFL: conference semifinals 15, conference finals 16,
  * World Championship 17), which is why this is one module and not two.

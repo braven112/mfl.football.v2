@@ -61,15 +61,16 @@ function resolveDate(rule, year) {
       // TheLeague's trading deadline: the Friday of the week BEFORE week 11.
       return weekStart(year, 11, -6);
     case 'afl-trade-deadline': {
-      // AFL trade deadline: the Wednesday between Week 10 and Week 11 — i.e.
-      // the day before Week 11's Thursday, kickoff + 10*7 - 1.
+      // AFL trade deadline: the day before NFL week 11 opens — the Wednesday
+      // between weeks 10 and 11 in a normal Thursday-anchored season. Read off
+      // week 11's PUBLISHED start, never counted forward from kickoff, so a
+      // week the NFL moves carries the deadline with it.
       //
       // This was `kickoff + 10*7 - 8` until Aug 2026, derived as "TheLeague's
       // friday-before-week-11 minus 2 days". That anchor belongs to a
-      // different league's rule and lands a full week early: for 2026 it gave
+      // different league's rule and landed a full week early: for 2026 it gave
       // Wed Nov 11 (the Wednesday between Weeks 9 and 10) while
-      // /afl-fantasy/calendar rendered Wed Nov 18. Same drift as the draft
-      // window bug, on a major-tier event, so all four touches fired early.
+      // /afl-fantasy/calendar rendered Wed Nov 18.
       // Mirrors the `afl-trade-deadline` rule in
       // src/utils/league-event-resolver.ts — same name on both sides on purpose.
       return weekStart(year, 11, -1);

@@ -19,7 +19,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { writeJsonIfChanged } from './lib/canonical-json.mjs';
-import { getCurrentNFLWeek as resolveCurrentNFLWeek } from './article-utils/week-resolver.mjs';
+import { nflWeekFor } from '../src/utils/nfl-week-starts.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -33,12 +33,14 @@ const ESPN_API = 'https://site.api.espn.com/apis/site/v2/sports/football/nfl/sco
  * Was a local `seasonConfigs` map of Week 1 Thursdays plus a "first Thursday of
  * September" fallback — one of six such tables in this repo, all of which had
  * 2026 opening Thursday Sep 10 when it actually opened Wednesday Sep 9.
- * week-resolver walks the real week starts (see src/utils/nfl-week-starts.mjs).
+ * nflWeekFor walks the real week starts. It is read directly rather than
+ * through week-resolver's wrapper, which caps at the regular season — these
+ * fetchers pull NFL data through the postseason (weeks 19-22) and always have.
  */
 function getCurrentNFLWeek() {
   const seasonYear = new Date().getFullYear();
   // Before the season opens, preview week 1 rather than reporting no week.
-  return resolveCurrentNFLWeek(seasonYear) || 1;
+  return nflWeekFor(seasonYear, new Date()) || 1;
 }
 
 /**

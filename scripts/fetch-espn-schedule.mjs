@@ -11,7 +11,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { formatTimePT } from './lib/pt-date.mjs';
-import { getCurrentNFLWeek as resolveCurrentNFLWeek } from './article-utils/week-resolver.mjs';
+import { nflWeekFor } from '../src/utils/nfl-week-starts.mjs';
 import { getLeagueBySlug } from '../src/config/leagues-data.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -28,7 +28,7 @@ const root = path.resolve(__dirname, '..');
  */
 function getCurrentNFLWeek(seasonYear) {
   // Before the season opens, preview week 1 rather than reporting "no week".
-  return resolveCurrentNFLWeek(seasonYear) || 1;
+  return nflWeekFor(seasonYear, new Date()) || 1;
 }
 
 function getCurrentSeasonYear() {

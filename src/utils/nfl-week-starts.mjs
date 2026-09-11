@@ -212,6 +212,25 @@ function weekBecomesCurrentAt(year, week) {
 }
 
 /**
+ * The last calendar day of NFL week `week`, as `YYYY-MM-DD` on the Pacific
+ * clock — the day its Monday night game is played.
+ *
+ * NOT `start + 4`. That assumes every week opens on a Thursday, and a week
+ * that opens Wednesday runs five days to its Monday, not four: 2024's week 17
+ * opened on Christmas Wednesday, so `+4` ended the championship window on the
+ * Sunday and cut the title game's own Monday nighter out of it.
+ *
+ * Derived as the day before the NEXT week takes over, which is the same
+ * boundary `nflWeekFor` uses — so a window built from this can never disagree
+ * with the week number reported for a date inside it.
+ */
+export function nflWeekEndIsoDate(year, week) {
+  const nextStart = weekBecomesCurrentAt(year, Math.min(week + 1, MAX_WEEK));
+  const { year: y, month, day } = ptParts(new Date(nextStart.getTime() - 1));
+  return isoDate(y, month, day);
+}
+
+/**
  * Which NFL week `instant` falls in (1-22), or 0 before the season's first
  * game. THE function for "what week is it" — both the app and the node
  * scripts read it, so the boundary rule lives in one place.

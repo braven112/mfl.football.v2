@@ -1219,7 +1219,11 @@ function enrichDraftCountdown(state: HeroState): HeroState {
   return { ...state, draftCountdownProps: { nflDraftDate, daysUntilDraft } };
 }
 
-/** NFL kickoff = Thursday after Labor Day (1st Monday of September). */
+/**
+ * NFL kickoff — the season's first game from the published schedule, with the
+ * Labor Day derivation only as a fallback (src/utils/nfl-week-starts.mjs).
+ * NOT "the Thursday after Labor Day": 2026 opened on Wednesday Sep 9.
+ */
 function getKickoffDate(year: number): Date {
   // The season's first game from the published NFL schedule — NOT "the
   // Thursday after Labor Day". 2026 opened on Wednesday Sep 9, so the old

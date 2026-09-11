@@ -55,19 +55,28 @@ describe('nflWeekStartIsoDate — published schedule wins', () => {
 });
 
 describe('the Labor Day fallback', () => {
+  // Derived, not hardcoded: the daily refresh adds seasons to NFL_WEEK_STARTS
+  // as the NFL publishes them, so any fixed "unpublished" year eventually
+  // becomes published and turns this suite red for no reason. Five past the
+  // newest season we hold is always beyond what the fetcher reaches (it asks
+  // for this year and next).
+  const UNPUBLISHED = Math.max(...SEASONS) + 5;
+
   it('answers for a season the NFL has not published', () => {
-    expect(hasOfficialSchedule(2031)).toBe(false);
-    expect(officialWeekStart(2031, 1)).toBeNull();
-    // Labor Day 2031 is Sep 1, so the derived opener is Thursday Sep 4.
-    expect(nflKickoffIsoDate(2031)).toBe('2031-09-04');
-    expect(nflWeekStart(2031, 1).getDay()).toBe(4);
+    expect(hasOfficialSchedule(UNPUBLISHED)).toBe(false);
+    expect(officialWeekStart(UNPUBLISHED, 1)).toBeNull();
+    // Falls through to the derivation: the Thursday after Labor Day.
+    expect(nflKickoffIsoDate(UNPUBLISHED)).toBe(derivedWeekStartIsoDate(UNPUBLISHED, 1));
+    expect(nflWeekStart(UNPUBLISHED, 1).getDay()).toBe(4);
+    expect(nflWeekStart(UNPUBLISHED, 1).getMonth()).toBe(8); // September
   });
 
   it('gives a derived week the nominal 20:20 ET kickoff instant', () => {
     // The value the retired hardcoded maps carried, so nothing that reads an
     // instant changes behavior for an unpublished season.
-    expect(nflWeekStartInstant(2031, 1).toISOString()).toBe(
-      new Date('2031-09-04T20:20:00-04:00').toISOString(),
+    const iso = derivedWeekStartIsoDate(UNPUBLISHED, 1);
+    expect(nflWeekStartInstant(UNPUBLISHED, 1).toISOString()).toBe(
+      new Date(`${iso}T20:20:00-04:00`).toISOString(),
     );
   });
 
