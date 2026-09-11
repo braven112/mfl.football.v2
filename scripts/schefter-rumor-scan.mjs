@@ -162,12 +162,10 @@ import { postToGroupMe as sharedPostToGroupMe } from './lib/groupme.mjs';
 import { postToGroupMeCapped } from './lib/groupme-capped.mjs';
 import { sendPushFanout, broadcast } from './lib/push-fanout.mjs';
 import { LEAGUES as REGISTRY_LEAGUES } from '../src/config/leagues-data.mjs';
-import {
-  getLeagueBySlug,
-  buildHostToSlugMap,
-  stripLeaguePrefix,
-  ensureLeaguePrefix,
-} from '../src/config/leagues-data.mjs';
+// buildHostToSlugMap / stripLeaguePrefix / ensureLeaguePrefix moved out with
+// the CTA builder — see scripts/lib/schefter-public-url.mjs. Left imported here
+// they would read as dependencies this file still has.
+import { getLeagueBySlug } from '../src/config/leagues-data.mjs';
 import { createPublicUrl, normalizeBaseUrl } from './lib/schefter-public-url.mjs';
 import { getSchefterLeague } from './lib/schefter-leagues.mjs';
 import {
@@ -2906,8 +2904,15 @@ async function loadRosterOwners(year) {
     const raw = JSON.parse(await fs.readFile(SCHEFTER_LEAGUE.feedFilePath(year, 'rosters.json'), 'utf8'));
     const list = raw?.rosters?.franchise ?? [];
     for (const franchise of Array.isArray(list) ? list : [list]) {
-      const fid = String(franchise?.id ?? '').padStart(4, '0');
-      if (!fid.trim()) continue;
+      // Validate BEFORE padding. `''.padStart(4, '0')` is `'0000'` — truthy,
+      // and a real franchise id — so the emptiness check below never fired and
+      // a malformed row's players were attributed to a franchise that does not
+      // exist. That is not inert: `attributeSides` scores orientations off this
+      // map, so a phantom `0000` owner is false evidence in the one check the
+      // whole binding now rests on.
+      const rawFid = String(franchise?.id ?? '').trim();
+      if (!rawFid) continue;
+      const fid = rawFid.padStart(4, '0');
       const players = franchise?.player ?? [];
       for (const player of Array.isArray(players) ? players : [players]) {
         if (player?.id) map.set(String(player.id), fid);

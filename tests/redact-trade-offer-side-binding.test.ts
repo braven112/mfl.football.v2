@@ -90,17 +90,33 @@ function redact(row: Record<string, string>, opts: { rosters?: boolean } = {}) {
 }
 
 describe('a named player is one the named franchise actually rosters', () => {
+  /**
+   * NOT guarded by `if (!exposure?.team) return`. Naming nobody IS a safe
+   * outcome, but an early return on it converts "this row was dropped" into
+   * "this case passed" — and all four shapes are supposed to be REPAIRED into
+   * a true pairing, not dropped. The safe-drop path has its own explicit case
+   * in the `attributeSides` block below, so it does not need covering by an
+   * escape hatch here.
+   *
+   * This is the exact failure the attribution guard fell into (see its header)
+   * and it was reintroduced in this very file on the first draft. Assert the
+   * precondition, then the conclusion.
+   */
   it.each(Object.keys(ROW_SHAPES))(
-    'holds for a row shaped "%s"',
+    'repairs a row shaped "%s" into a pairing the rosters agree with',
     (shape) => {
       const { tip } = redact(ROW_SHAPES[shape]);
       const exposure = tip?.exposure;
-      if (!exposure?.team) return; // naming nobody is always a safe outcome
 
-      const namedFid = exposure.fid as string;
-      for (const player of exposure.players) {
+      expect(exposure?.team, `row shape: ${shape} should still name a team`).toBeTruthy();
+      expect(exposure!.players.length, `row shape: ${shape} should name a player`)
+        .toBeGreaterThan(0);
+
+      const namedFid = exposure!.fid as string;
+      for (const player of exposure!.players) {
         const playerId = player.name === 'Cyrus Allen' ? CYRUS : CLAIBORNE;
-        expect(rosterOwnerByPlayerId.get(playerId)).toBe(namedFid);
+        expect(rosterOwnerByPlayerId.get(playerId), `${player.name} beside ${namedFid}`)
+          .toBe(namedFid);
       }
     },
   );
@@ -108,9 +124,9 @@ describe('a named player is one the named franchise actually rosters', () => {
   it('never reprints the 2026-09-10 sentence: Fire beside Cyrus Allen', () => {
     for (const [shape, row] of Object.entries(ROW_SHAPES)) {
       const exposure = redact(row).tip?.exposure;
-      if (!exposure?.team) continue;
-      const namesFire = exposure.team.name === 'Fire Ready Aim';
-      const namesCyrus = exposure.players.some((p: { name: string }) => p.name === 'Cyrus Allen');
+      expect(exposure?.team, `row shape: ${shape}`).toBeTruthy();
+      const namesFire = exposure!.team.name === 'Fire Ready Aim';
+      const namesCyrus = exposure!.players.some((p: { name: string }) => p.name === 'Cyrus Allen');
       expect(namesFire && namesCyrus, `row shape: ${shape}`).toBe(false);
     }
   });
@@ -126,6 +142,63 @@ describe('a named player is one the named franchise actually rosters', () => {
     expect(dealShape.sends.positions).toEqual(['RB']);      // Fire sends Claiborne
     expect(dealShape.gets.positions).toEqual(['WR']);       // and gets Cyrus Allen
     expect(dealShape.gets.picks).toEqual(['2027 2nd']);
+  });
+});
+
+describe('the escalated player is scoped to the named team too', () => {
+  /**
+   * `escalatedPlayer` is a SECOND ownership-sensitive name surface: at tier
+   * `named` the playbook prints that player's name, and `exposure.team` sits in
+   * the same payload — so an unscoped pick reproduces the wrong-team-plus-player
+   * pairing through a different field.
+   *
+   * It had no coverage at all. Every other fixture in the trade-offer suites
+   * passes an empty `playerHistory`, so `pickEscalated` returns undefined and
+   * the re-filter under it is never reached — the fix could have regressed
+   * silently while the side-binding cases above stayed green. A tier reaches
+   * `named` at 4+ distinct offerers (`tierForDistinctOfferers`).
+   */
+  const escalated = (row: Record<string, string>) => redactTradeOffer({
+    rawOffer: { id: '1078', timestamp: '1788624000', ...row },
+    offeringFid: row.franchise || '0008',
+    playerMap,
+    teamMap,
+    counts: {
+      ownerOfferCount7d: 1,
+      divisionOfferCount7d: 0,
+      // BOTH players are hot enough to reach `named`, so the pick is decided by
+      // scoping alone rather than by one of them being the only candidate.
+      playerHistory: new Map([[CYRUS, 5], [CLAIBORNE, 5]]),
+    },
+    currentYear: 2026,
+    exposureCount: 2,
+    adpRankByPlayerId: new Map([[CYRUS, 40], [CLAIBORNE, 90]]),
+    rosterOwnerByPlayerId,
+  }).tip;
+
+  it.each(Object.keys(ROW_SHAPES))(
+    'names an escalated player the named team rosters, for a row shaped "%s"',
+    (shape) => {
+      const tip = escalated(ROW_SHAPES[shape]);
+      const namedFid = tip!.exposure!.fid as string;
+      const player = tip!.escalatedPlayer;
+
+      expect(player, `row shape: ${shape} should reach the named tier`).toBeTruthy();
+      expect(player!.tier).toBe('named');
+
+      const playerId = player!.name === 'Cyrus Allen' ? CYRUS : CLAIBORNE;
+      expect(rosterOwnerByPlayerId.get(playerId), `${player!.name} beside ${namedFid}`)
+        .toBe(namedFid);
+    },
+  );
+
+  it('never escalates Cyrus Allen while naming Fire', () => {
+    for (const [shape, row] of Object.entries(ROW_SHAPES)) {
+      const tip = escalated(row);
+      const namesFire = tip!.exposure!.team.name === 'Fire Ready Aim';
+      expect(namesFire && tip!.escalatedPlayer?.name === 'Cyrus Allen', `row shape: ${shape}`)
+        .toBe(false);
+    }
   });
 });
 

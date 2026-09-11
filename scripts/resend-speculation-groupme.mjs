@@ -41,9 +41,18 @@ const publicUrl = createPublicUrl({
   leagueSlug: LEAGUE_SLUG,
   registryLeague: LEAGUE_REGISTRY_ENTRY,
 });
-// Older speculation posts predate `post.link`; fall back to the bare builder
-// so a resend of one still lands somewhere useful rather than on an empty CTA.
-const ctaPathFor = (p) => p?.link || `/${LEAGUE_SLUG}/trade-builder`;
+// Older speculation posts predate `post.link`, but they are not information-
+// free: every one carries `speculation.seller`, which is the same id
+// `buildTradeBuilderPath` would have used. Rebuild the preload from it rather
+// than dropping a resent reader on the bare builder — only a post with neither
+// falls all the way back.
+const ctaPathFor = (p) => {
+  if (p?.link) return p.link;
+  const seller = String(p?.speculation?.seller ?? '').trim();
+  return seller
+    ? `/${LEAGUE_SLUG}/trade-builder?b=${encodeURIComponent(seller)}`
+    : `/${LEAGUE_SLUG}/trade-builder`;
+};
 
 const args = process.argv.slice(2);
 const DRY_RUN = args.includes('--dry-run');
