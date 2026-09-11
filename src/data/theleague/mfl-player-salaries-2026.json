@@ -13,7 +13,7 @@
       "sleeper": "cached",
       "nflverse": "https://github.com/nflverse/nflverse-data/releases/download/snap_counts/snap_counts_2026.csv.gz"
     },
-    "fetchedAt": "2026-09-11T15:16:32.076Z"
+    "fetchedAt": "2026-09-11T18:38:29.562Z"
   },
   "players": [
     {
@@ -721,8 +721,25 @@
         "injuryBodyPart": null,
         "gsisId": "00-0031381"
       },
-      "nflverse": null,
-      "gamesPlayed": null,
+      "nflverse": {
+        "week": 1,
+        "season": "2026",
+        "player": "Davante Adams",
+        "team": "LAR",
+        "position": "WR",
+        "offenseSnaps": 33,
+        "offenseSnapPct": 0.54,
+        "defenseSnaps": 0,
+        "defenseSnapPct": 0,
+        "stSnaps": 0,
+        "stSnapPct": 0,
+        "pfrPlayerId": "AdamDa01",
+        "gamesPlayed": 1,
+        "gamesPlayedWeeks": [
+          1
+        ]
+      },
+      "gamesPlayed": 1,
       "depthChartAhead": [
         {
           "id": "16211",
@@ -1498,8 +1515,8 @@
           "RB"
         ],
         "experience": 3,
-        "injuryStatus": "Questionable",
-        "injuryBodyPart": "Undisclosed",
+        "injuryStatus": "Doubtful",
+        "injuryBodyPart": "Hamstring",
         "gsisId": null
       },
       "nflverse": null,
@@ -1645,8 +1662,25 @@
         "injuryBodyPart": null,
         "gsisId": " 00-0035719"
       },
-      "nflverse": null,
-      "gamesPlayed": null,
+      "nflverse": {
+        "week": 1,
+        "season": "2026",
+        "player": "Deebo Samuel",
+        "team": "SF",
+        "position": "WR",
+        "offenseSnaps": 27,
+        "offenseSnapPct": 0.42,
+        "defenseSnaps": 0,
+        "defenseSnapPct": 0,
+        "stSnaps": 2,
+        "stSnapPct": 0.1,
+        "pfrPlayerId": "SamuDe00",
+        "gamesPlayed": 1,
+        "gamesPlayedWeeks": [
+          1
+        ]
+      },
+      "gamesPlayed": 1,
       "depthChartAhead": [
         {
           "id": "11671",
@@ -3200,8 +3234,25 @@
         "injuryBodyPart": null,
         "gsisId": null
       },
-      "nflverse": null,
-      "gamesPlayed": null,
+      "nflverse": {
+        "week": 1,
+        "season": "2026",
+        "player": "Colby Parkinson",
+        "team": "LAR",
+        "position": "TE",
+        "offenseSnaps": 47,
+        "offenseSnapPct": 0.77,
+        "defenseSnaps": 0,
+        "defenseSnapPct": 0,
+        "stSnaps": 1,
+        "stSnapPct": 0.05,
+        "pfrPlayerId": "ParkCo02",
+        "gamesPlayed": 1,
+        "gamesPlayedWeeks": [
+          1
+        ]
+      },
+      "gamesPlayed": 1,
       "depthChartAhead": [
         {
           "id": "17107",
@@ -4148,8 +4199,25 @@
         "injuryBodyPart": null,
         "gsisId": null
       },
-      "nflverse": null,
-      "gamesPlayed": null,
+      "nflverse": {
+        "week": 1,
+        "season": "2026",
+        "player": "Harrison Mevis",
+        "team": "LAR",
+        "position": "K",
+        "offenseSnaps": 0,
+        "offenseSnapPct": 0,
+        "defenseSnaps": 0,
+        "defenseSnapPct": 0,
+        "stSnaps": 3,
+        "stSnapPct": 0.15,
+        "pfrPlayerId": "MeviHa00",
+        "gamesPlayed": 1,
+        "gamesPlayedWeeks": [
+          1
+        ]
+      },
+      "gamesPlayed": 1,
       "depthChartAhead": null
     },
     {
@@ -5847,8 +5915,8 @@
           "QB"
         ],
         "experience": 6,
-        "injuryStatus": "Questionable",
-        "injuryBodyPart": "Back",
+        "injuryStatus": "Out",
+        "injuryBodyPart": "Oblique",
         "gsisId": null
       },
       "nflverse": null,
@@ -7618,8 +7686,8 @@
           "RB"
         ],
         "experience": 1,
-        "injuryStatus": "Questionable",
-        "injuryBodyPart": "Undisclosed",
+        "injuryStatus": null,
+        "injuryBodyPart": null,
         "gsisId": null
       },
       "nflverse": null,
@@ -8033,8 +8101,25 @@
         "injuryBodyPart": null,
         "gsisId": "00-0031408"
       },
-      "nflverse": null,
-      "gamesPlayed": null,
+      "nflverse": {
+        "week": 1,
+        "season": "2026",
+        "player": "Mike Evans",
+        "team": "SF",
+        "position": "WR",
+        "offenseSnaps": 49,
+        "offenseSnapPct": 0.75,
+        "defenseSnaps": 0,
+        "defenseSnapPct": 0,
+        "stSnaps": 0,
+        "stSnapPct": 0,
+        "pfrPlayerId": "EvanMi00",
+        "gamesPlayed": 1,
+        "gamesPlayedWeeks": [
+          1
+        ]
+      },
+      "gamesPlayed": 1,
       "depthChartAhead": null
     },
     {
@@ -8646,7 +8731,7 @@
         "number": 1,
         "college": "Ole Miss",
         "birthDate": "1997-06-30",
-        "status": "Active",
+        "status": "Inactive",
         "active": true,
         "position": "WR",
         "depthChartPosition": "LWR",
@@ -8655,7 +8740,7 @@
           "WR"
         ],
         "experience": 7,
-        "injuryStatus": "Out",
+        "injuryStatus": "IR",
         "injuryBodyPart": "Ankle",
         "gsisId": " 00-0035676"
       },
@@ -8958,8 +9043,8 @@
           "WR"
         ],
         "experience": 2,
-        "injuryStatus": "Questionable",
-        "injuryBodyPart": "Calf",
+        "injuryStatus": "Doubtful",
+        "injuryBodyPart": "Knee",
         "gsisId": null
       },
       "nflverse": null,
@@ -9072,8 +9157,25 @@
         "injuryBodyPart": null,
         "gsisId": null
       },
-      "nflverse": null,
-      "gamesPlayed": null,
+      "nflverse": {
+        "week": 1,
+        "season": "2026",
+        "player": "Terrance Ferguson",
+        "team": "LAR",
+        "position": "TE",
+        "offenseSnaps": 31,
+        "offenseSnapPct": 0.51,
+        "defenseSnaps": 0,
+        "defenseSnapPct": 0,
+        "stSnaps": 6,
+        "stSnapPct": 0.3,
+        "pfrPlayerId": "FergTe00",
+        "gamesPlayed": 1,
+        "gamesPlayedWeeks": [
+          1
+        ]
+      },
+      "gamesPlayed": 1,
       "depthChartAhead": null
     },
     {
@@ -10186,8 +10288,8 @@
           "RB"
         ],
         "experience": 2,
-        "injuryStatus": "Questionable",
-        "injuryBodyPart": "Undisclosed",
+        "injuryStatus": null,
+        "injuryBodyPart": null,
         "gsisId": null
       },
       "nflverse": null,
@@ -10910,8 +11012,25 @@
         "injuryBodyPart": "Ankle",
         "gsisId": null
       },
-      "nflverse": null,
-      "gamesPlayed": null,
+      "nflverse": {
+        "week": 1,
+        "season": "2026",
+        "player": "De'Zhaun Stribling",
+        "team": "SF",
+        "position": "WR",
+        "offenseSnaps": 21,
+        "offenseSnapPct": 0.32,
+        "defenseSnaps": 0,
+        "defenseSnapPct": 0,
+        "stSnaps": 0,
+        "stSnapPct": 0,
+        "pfrPlayerId": "StriDe01",
+        "gamesPlayed": 1,
+        "gamesPlayedWeeks": [
+          1
+        ]
+      },
+      "gamesPlayed": 1,
       "depthChartAhead": [
         {
           "id": "11671",
@@ -10965,8 +11084,25 @@
         "injuryBodyPart": null,
         "gsisId": null
       },
-      "nflverse": null,
-      "gamesPlayed": null,
+      "nflverse": {
+        "week": 1,
+        "season": "2026",
+        "player": "Kaelon Black",
+        "team": "SF",
+        "position": "RB",
+        "offenseSnaps": 28,
+        "offenseSnapPct": 0.43,
+        "defenseSnaps": 0,
+        "defenseSnapPct": 0,
+        "stSnaps": 0,
+        "stSnapPct": 0,
+        "pfrPlayerId": "BlacKa00",
+        "gamesPlayed": 1,
+        "gamesPlayedWeeks": [
+          1
+        ]
+      },
+      "gamesPlayed": 1,
       "depthChartAhead": [
         {
           "id": "13130",
@@ -13042,8 +13178,8 @@
           "WR"
         ],
         "experience": 0,
-        "injuryStatus": "Questionable",
-        "injuryBodyPart": "Hamstring",
+        "injuryStatus": null,
+        "injuryBodyPart": null,
         "gsisId": null
       },
       "nflverse": null,
@@ -13633,8 +13769,25 @@
         "injuryBodyPart": null,
         "gsisId": null
       },
-      "nflverse": null,
-      "gamesPlayed": null,
+      "nflverse": {
+        "week": 1,
+        "season": "2026",
+        "player": "Kyren Williams",
+        "team": "LAR",
+        "position": "RB",
+        "offenseSnaps": 39,
+        "offenseSnapPct": 0.64,
+        "defenseSnaps": 0,
+        "defenseSnapPct": 0,
+        "stSnaps": 0,
+        "stSnapPct": 0,
+        "pfrPlayerId": "WillKy02",
+        "gamesPlayed": 1,
+        "gamesPlayedWeeks": [
+          1
+        ]
+      },
+      "gamesPlayed": 1,
       "depthChartAhead": null
     },
     {
@@ -14141,8 +14294,25 @@
         "injuryBodyPart": "Knee",
         "gsisId": null
       },
-      "nflverse": null,
-      "gamesPlayed": null,
+      "nflverse": {
+        "week": 1,
+        "season": "2026",
+        "player": "Jake Tonges",
+        "team": "SF",
+        "position": "TE",
+        "offenseSnaps": 8,
+        "offenseSnapPct": 0.12,
+        "defenseSnaps": 0,
+        "defenseSnapPct": 0,
+        "stSnaps": 4,
+        "stSnapPct": 0.2,
+        "pfrPlayerId": "TongJa00",
+        "gamesPlayed": 1,
+        "gamesPlayedWeeks": [
+          1
+        ]
+      },
+      "gamesPlayed": 1,
       "depthChartAhead": [
         {
           "id": "13299",
@@ -14284,8 +14454,25 @@
         "injuryBodyPart": null,
         "gsisId": "00-0026498"
       },
-      "nflverse": null,
-      "gamesPlayed": null,
+      "nflverse": {
+        "week": 1,
+        "season": "2026",
+        "player": "Matthew Stafford",
+        "team": "LAR",
+        "position": "QB",
+        "offenseSnaps": 51,
+        "offenseSnapPct": 0.84,
+        "defenseSnaps": 0,
+        "defenseSnapPct": 0,
+        "stSnaps": 0,
+        "stSnapPct": 0,
+        "pfrPlayerId": "StafMa00",
+        "gamesPlayed": 1,
+        "gamesPlayedWeeks": [
+          1
+        ]
+      },
+      "gamesPlayed": 1,
       "depthChartAhead": null
     },
     {
@@ -14330,8 +14517,25 @@
         "injuryBodyPart": null,
         "gsisId": "00-0033288"
       },
-      "nflverse": null,
-      "gamesPlayed": null,
+      "nflverse": {
+        "week": 1,
+        "season": "2026",
+        "player": "George Kittle",
+        "team": "SF",
+        "position": "TE",
+        "offenseSnaps": 30,
+        "offenseSnapPct": 0.46,
+        "defenseSnaps": 0,
+        "defenseSnapPct": 0,
+        "stSnaps": 0,
+        "stSnapPct": 0,
+        "pfrPlayerId": "KittGe00",
+        "gamesPlayed": 1,
+        "gamesPlayedWeeks": [
+          1
+        ]
+      },
+      "gamesPlayed": 1,
       "depthChartAhead": null
     },
     {
@@ -15751,8 +15955,25 @@
         "injuryBodyPart": null,
         "gsisId": null
       },
-      "nflverse": null,
-      "gamesPlayed": null,
+      "nflverse": {
+        "week": 1,
+        "season": "2026",
+        "player": "Stetson Bennett",
+        "team": "LAR",
+        "position": "QB",
+        "offenseSnaps": 10,
+        "offenseSnapPct": 0.16,
+        "defenseSnaps": 0,
+        "defenseSnapPct": 0,
+        "stSnaps": 0,
+        "stSnapPct": 0,
+        "pfrPlayerId": "BennSt00",
+        "gamesPlayed": 1,
+        "gamesPlayedWeeks": [
+          1
+        ]
+      },
+      "gamesPlayed": 1,
       "depthChartAhead": [
         {
           "id": "9431",
@@ -15929,8 +16150,25 @@
         "injuryBodyPart": null,
         "gsisId": null
       },
-      "nflverse": null,
-      "gamesPlayed": null,
+      "nflverse": {
+        "week": 1,
+        "season": "2026",
+        "player": "Blake Corum",
+        "team": "LAR",
+        "position": "RB",
+        "offenseSnaps": 14,
+        "offenseSnapPct": 0.23,
+        "defenseSnaps": 0,
+        "defenseSnapPct": 0,
+        "stSnaps": 0,
+        "stSnapPct": 0,
+        "pfrPlayerId": "CoruBl00",
+        "gamesPlayed": 1,
+        "gamesPlayedWeeks": [
+          1
+        ]
+      },
+      "gamesPlayed": 1,
       "depthChartAhead": [
         {
           "id": "15710",
@@ -16190,8 +16428,25 @@
         "injuryBodyPart": null,
         "gsisId": null
       },
-      "nflverse": null,
-      "gamesPlayed": null,
+      "nflverse": {
+        "week": 1,
+        "season": "2026",
+        "player": "Jordan Whittington",
+        "team": "LAR",
+        "position": "WR",
+        "offenseSnaps": 25,
+        "offenseSnapPct": 0.41,
+        "defenseSnaps": 0,
+        "defenseSnapPct": 0,
+        "stSnaps": 13,
+        "stSnapPct": 0.65,
+        "pfrPlayerId": "WhitJo04",
+        "gamesPlayed": 1,
+        "gamesPlayedWeeks": [
+          1
+        ]
+      },
+      "gamesPlayed": 1,
       "depthChartAhead": [
         {
           "id": "16211",
@@ -16383,8 +16638,25 @@
         "injuryBodyPart": "Head",
         "gsisId": null
       },
-      "nflverse": null,
-      "gamesPlayed": null,
+      "nflverse": {
+        "week": 1,
+        "season": "2026",
+        "player": "Davis Allen",
+        "team": "LAR",
+        "position": "TE",
+        "offenseSnaps": 21,
+        "offenseSnapPct": 0.34,
+        "defenseSnaps": 0,
+        "defenseSnapPct": 0,
+        "stSnaps": 9,
+        "stSnapPct": 0.45,
+        "pfrPlayerId": "AlleDa02",
+        "gamesPlayed": 1,
+        "gamesPlayedWeeks": [
+          1
+        ]
+      },
+      "gamesPlayed": 1,
       "depthChartAhead": [
         {
           "id": "17107",
@@ -17023,8 +17295,25 @@
         "injuryBodyPart": null,
         "gsisId": null
       },
-      "nflverse": null,
-      "gamesPlayed": null,
+      "nflverse": {
+        "week": 1,
+        "season": "2026",
+        "player": "Puka Nacua",
+        "team": "LAR",
+        "position": "WR",
+        "offenseSnaps": 43,
+        "offenseSnapPct": 0.7,
+        "defenseSnaps": 0,
+        "defenseSnapPct": 0,
+        "stSnaps": 0,
+        "stSnapPct": 0,
+        "pfrPlayerId": "NacuPu00",
+        "gamesPlayed": 1,
+        "gamesPlayedWeeks": [
+          1
+        ]
+      },
+      "gamesPlayed": 1,
       "depthChartAhead": null
     },
     {
@@ -17463,8 +17752,25 @@
         "injuryBodyPart": null,
         "gsisId": "00-0033280"
       },
-      "nflverse": null,
-      "gamesPlayed": null,
+      "nflverse": {
+        "week": 1,
+        "season": "2026",
+        "player": "Christian McCaffrey",
+        "team": "SF",
+        "position": "RB",
+        "offenseSnaps": 36,
+        "offenseSnapPct": 0.55,
+        "defenseSnaps": 0,
+        "defenseSnapPct": 0,
+        "stSnaps": 0,
+        "stSnapPct": 0,
+        "pfrPlayerId": "McCaCh01",
+        "gamesPlayed": 1,
+        "gamesPlayedWeeks": [
+          1
+        ]
+      },
+      "gamesPlayed": 1,
       "depthChartAhead": null
     },
     {
@@ -18162,8 +18468,25 @@
         "injuryBodyPart": null,
         "gsisId": null
       },
-      "nflverse": null,
-      "gamesPlayed": null,
+      "nflverse": {
+        "week": 1,
+        "season": "2026",
+        "player": "Brock Purdy",
+        "team": "SF",
+        "position": "QB",
+        "offenseSnaps": 65,
+        "offenseSnapPct": 1,
+        "defenseSnaps": 0,
+        "defenseSnapPct": 0,
+        "stSnaps": 0,
+        "stSnapPct": 0,
+        "pfrPlayerId": "PurdBr00",
+        "gamesPlayed": 1,
+        "gamesPlayedWeeks": [
+          1
+        ]
+      },
+      "gamesPlayed": 1,
       "depthChartAhead": null
     },
     {
