@@ -80,8 +80,16 @@
       "type": "bug-fix",
       "summary": "League dates now follow the official NFL schedule \u2014 2026 opened on a Wednesday, so Roger no longer announces the season a day late, and deadlines and playoff weeks track the real calendar.",
       "impact": "user",
-      "area": "other",
+      "area": "calendar",
       "league": "both"
+    },
+    {
+      "date": "2026-09-11",
+      "type": "bug-fix",
+      "summary": "The AFL <a href=\"/calendar\">calendar</a> had Regular Season Ends on Dec 31 \u2014 two weeks after the playoffs start. It now reads Dec 17, when Week 14 closes and the bracket opens.",
+      "impact": "user",
+      "area": "calendar",
+      "league": "afl"
     }
   ]
 }
