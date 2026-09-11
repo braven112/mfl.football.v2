@@ -159,8 +159,21 @@ function rosterAgrees(rosterOwnerByPlayerId, asset, fid) {
 export function attributeSides({ fid1, fid2, side1, side2, rosterOwnerByPlayerId }) {
   let a = padFid(fid1);
   let b = padFid(fid2);
+  /**
+   * Annotated because the refuse path returns a bare `{}`, which unions with
+   * the success path's `{ [fid]: side }` to `{} | { [x: string]: any }` — and
+   * indexing the `{}` half is an implicit any at every call site and in every
+   * test. The empty map is a real value here (it is what makes an
+   * unattributable row name nobody), so the fix is to say its type once.
+   * @type {(reason: string) => { sidesByFid: Record<string, any[]>, fids: string[], attributable: boolean, verified: boolean, corrected: boolean, reason: string }}
+   */
   const refuse = (reason) => ({
-    sidesByFid: {}, fids: [], attributable: false, verified: false, corrected: false, reason,
+    sidesByFid: /** @type {Record<string, any[]>} */ ({}),
+    fids: [],
+    attributable: false,
+    verified: false,
+    corrected: false,
+    reason,
   });
 
   // The one franchise the rosters put EVERY known player on this side with.
@@ -421,6 +434,33 @@ const TIER_RANK = { base: 0, tightened_circle: 1, named: 2 };
 /**
  * Core redactor. Returns { tip, debug } or { skip: true, reason } if the
  * offer shouldn't be tipped (e.g. no resolvable assets).
+ *
+ * The `@param` block is load-bearing, not decoration. Destructured options in
+ * a .mjs are inferred from the destructuring alone: a bare name is REQUIRED
+ * (so every honest caller omitting an optional one is a ts(2345) — two of
+ * those were sitting in the type baseline), and `= undefined` is inferred as
+ * the type `undefined` (so passing a real value is a ts(2322)). Only a
+ * declared signature says "optional, and of this type", which is what the
+ * header above has claimed since it was written.
+ *
+ * @param {object} args
+ * @param {Record<string, any>} args.rawOffer
+ * @param {string} args.offeringFid
+ * @param {Map<string, any>} args.playerMap
+ * @param {Map<string, any>} args.teamMap
+ * @param {Record<string, any>} args.counts
+ * @param {number} args.currentYear
+ * @param {string} [args.framingHint]
+ * @param {number} [args.offerAgeMs]
+ * @param {number} [args.exposureCount]
+ * @param {Map<string, number>} [args.adpRankByPlayerId]
+ * @param {Map<string, string>} [args.rosterOwnerByPlayerId]
+ * @param {Map<string, Set<string>>} [args.blockByFid]
+ * @param {Map<string, number>} [args.positionRuns]
+ * @param {Record<string, any> | null} [args.previousShape]
+ * @param {number} [args.priorPairCount]
+ * @param {Record<string, any> | null} [args.closure]
+ * @param {number} [args.nowMs]
  */
 export function redactTradeOffer({
   rawOffer,
