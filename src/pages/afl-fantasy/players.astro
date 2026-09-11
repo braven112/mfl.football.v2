@@ -42,7 +42,7 @@ import { getAuthUser, franchiseIdForLeague } from '../../utils/auth';
 import { readBidRules } from '../../utils/waiver-claim';
 import { claimVerb as claimVerbFor } from '../../utils/claim-context';
 import { readWaiverSortOrder } from '../../utils/waiver-order';
-import { resolveWaiverWindow, describeWaiverWindow } from '../../utils/waiver-window';
+import { resolveWaiverWindow, describeWaiverWindow, waiverWindowShortLabel } from '../../utils/waiver-window';
 import { readViewerClock } from '../../utils/viewer-preferences-page';
 import { getAflLeagueYear } from '../../utils/league-year';
 import WaiverClaimsPanel from '../../components/shared/WaiverClaimsPanel.astro';
@@ -191,6 +191,7 @@ const waiverWindow = resolveWaiverWindow(calendarEvents);
 // preference cookie, and only /preferences and the Sunday Ticket chips do.
 const viewerClock = await readViewerClock(Astro.cookies, authUser, aflLeague.slug);
 const waiverWindowLabel = describeWaiverWindow(waiverWindow, viewerClock);
+const waiverWindowShort = waiverWindowShortLabel(waiverWindow);
 const canClaim = !!claimFranchiseId && claimRoster.length > 0;
 // The verb this league puts on an acquisition — 'Claim' for the AFL's rolling
 // priority, 'Bid' for a blind-bid league. One resolver for the table header,
@@ -354,7 +355,16 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
           <h1 class="hero-title">Free Agents</h1>
           <span class="hero-count"><span id="hero-count-num">{freeAgentsCount}</span> available players</span>
           {canClaim && (
-            <span class="waiver-window-line" data-window={waiverWindow.mode}>{waiverWindowLabel}</span>
+            <details class="waiver-window-line" data-window={waiverWindow.mode}>
+              <summary class="waiver-window-line__summary">
+                <span class="waiver-window-line__dot" aria-hidden="true"></span>
+                {waiverWindowShort}
+                <svg class="waiver-window-line__chevron" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M6 9l6 6 6-6"/>
+                </svg>
+              </summary>
+              <p class="waiver-window-line__detail">{waiverWindowLabel}</p>
+            </details>
           )}
           <button type="button" class="wpm-trigger" data-waiver-priority-open>
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -2521,22 +2531,8 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     .hero-spotlight,
     .hero-spotlight-caption { display: none; }
     .hero-title { font-size: 1.15rem; }
-    /* Stack title/count/badge/CTA in one clean column instead of letting the
-       badge's long, dynamic label (waiverWindowLabel) force a wide nowrap
-       flex item that pushes the page into horizontal scroll. */
     .hero-top {
-      flex-direction: column;
-      align-items: flex-start;
       margin-bottom: 0.75rem;
-      gap: 0.5rem;
-    }
-    .hero-title-group {
-      flex-wrap: wrap;
-      row-gap: 0.35rem;
-    }
-    .hero-cross-link {
-      font-size: 0.75rem;
-      padding: 0.35rem 0.7rem;
     }
     .hero-search {
       margin-bottom: 0.75rem;
@@ -2578,17 +2574,16 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     }
   }
 
+  /* A native <details>/<summary> disclosure: the badge itself only ever
+     carries a short label ("Open now" / "Waivers open" / "Unknown"), so it
+     never needs the wide-nowrap-vs-wrap fight a full sentence forced on
+     mobile. Tapping/clicking reveals the full sentence from
+     describeWaiverWindow() — no JS required, keyboard-operable for free. */
   .waiver-window-line {
     display: inline-block;
     margin-left: 0.6rem;
-    padding: 0.2rem 0.55rem;
-    border-radius: var(--radius-full, 999px);
+    border-radius: var(--radius-md, 0.5rem);
     border: 1px solid currentColor;
-    font-size: 0.6875rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.03em;
-    white-space: nowrap;
     /* Colour carries the meaning: green = you can add right now. */
     color: var(--color-primary, #1c497c);
   }
@@ -2598,20 +2593,44 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
   .waiver-window-line[data-window='fcfs'] { color: var(--color-success, #16a34a); }
   .waiver-window-line[data-window='unknown'] { color: var(--content-text-muted, #6b7280); }
 
-  /* Placed after the base rule above (not inside the earlier mobile block) so
-     it actually wins the cascade at equal specificity — the badge's label is
-     dynamic and can be long, so on mobile it must wrap instead of forcing a
-     nowrap flex item off the edge of the screen. */
-  @media (max-width: 767px) {
-    .waiver-window-line {
-      display: inline-block;
-      flex-basis: 100%;
-      white-space: normal;
-      /* Balances line lengths so wrapping doesn't strand one short word
-         ("AM PT") alone on its own line. */
-      text-wrap: balance;
-      max-width: 100%;
-      margin-left: 0;
-    }
+  .waiver-window-line__summary {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.2rem 0.55rem;
+    font-size: 0.6875rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    white-space: nowrap;
+    cursor: pointer;
+    list-style: none;
+  }
+  .waiver-window-line__summary::-webkit-details-marker { display: none; }
+  .waiver-window-line__summary::marker { content: ''; }
+  .waiver-window-line__dot {
+    width: 6px;
+    height: 6px;
+    flex: none;
+    border-radius: 50%;
+    background: currentColor;
+  }
+  .waiver-window-line__chevron {
+    flex: none;
+    transition: transform 0.15s ease;
+  }
+  .waiver-window-line[open] .waiver-window-line__chevron {
+    transform: rotate(180deg);
+  }
+  .waiver-window-line__detail {
+    margin: 0;
+    padding: 0 0.6rem 0.5rem;
+    max-width: 260px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    text-transform: none;
+    letter-spacing: normal;
+    white-space: normal;
+    color: var(--color-gray-700, #374151);
   }
 </style>
