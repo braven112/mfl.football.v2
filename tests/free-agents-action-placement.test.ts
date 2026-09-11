@@ -97,9 +97,17 @@ describe('theleague players.astro: My Watch List stays wired to the delegated cl
 
   it('renders #col-group-btn-watchlist inside #col-group-toggles', () => {
     const containerStart = src.indexOf('id="col-group-toggles"');
-    const containerEnd = src.indexOf('<div class="toolbar-right">');
-    const watchBtn = src.indexOf('id="col-group-btn-watchlist"');
     expect(containerStart).toBeGreaterThan(-1);
+    // #col-group-toggles has no nested <div> of its own (only <span>/<button>/
+    // <svg> children), so its own closing tag is the FIRST </div> after the
+    // opening tag. Using ".toolbar-right"'s opening tag as the boundary
+    // instead (an earlier version of this test did) would also pass for a
+    // button moved to a SIBLING div — e.g. .watch-scope, which also sits
+    // between this container and .toolbar-right — while the delegated
+    // listener, scoped to #col-group-toggles itself, would no longer see its
+    // clicks. Caught by Copilot review on PR #1057.
+    const containerEnd = src.indexOf('</div>', containerStart);
+    const watchBtn = src.indexOf('id="col-group-btn-watchlist"');
     expect(containerEnd).toBeGreaterThan(containerStart);
     expect(watchBtn).toBeGreaterThan(containerStart);
     expect(watchBtn).toBeLessThan(containerEnd);
