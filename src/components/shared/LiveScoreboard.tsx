@@ -263,8 +263,15 @@ function computeTeam(
 
 // ── win-probability bar ──
 
-function WinProbBar({ home, mini, homeLabel, awayLabel }: {
+/* `awayYetToPlay` / `homeYetToPlay` are rendered INSIDE the percentage labels,
+   but only the detail view passes them and only the phone shows them — see
+   `.ls-wp-ytp`, which is `display: none` until the 760px block. The counts also
+   still render on their own `.ls-ytp` line; that line is what desktop reads and
+   what carries them when this bar is absent (it is not drawn once a matchup is
+   final), so the two are not interchangeable and neither can be dropped. */
+function WinProbBar({ home, mini, homeLabel, awayLabel, awayYetToPlay, homeYetToPlay }: {
   home: number; mini?: boolean; homeLabel?: string; awayLabel?: string;
+  awayYetToPlay?: number; homeYetToPlay?: number;
 }) {
   const homePct = Math.round(home * 100);
   const awayPct = 100 - homePct;
@@ -278,9 +285,19 @@ function WinProbBar({ home, mini, homeLabel, awayLabel }: {
       </div>
       {!mini && (
         <div className="ls-wp-labels">
-          <span className="ls-wp-l">{awayPct}%</span>
+          <span className="ls-wp-l">
+            {awayPct}%
+            {awayYetToPlay !== undefined && (
+              <em className="ls-wp-ytp"> · {awayYetToPlay} to play</em>
+            )}
+          </span>
           <span className="ls-wp-tag">WIN PROBABILITY</span>
-          <span className="ls-wp-r">{homePct}%</span>
+          <span className="ls-wp-r">
+            {homeYetToPlay !== undefined && (
+              <em className="ls-wp-ytp">{homeYetToPlay} to play · </em>
+            )}
+            {homePct}%
+          </span>
         </div>
       )}
     </div>
@@ -772,8 +789,15 @@ function MatchupDetail({
         </div>
       </div>
 
-      {!calc.isFinal && <WinProbBar home={calc.homeWinProb} homeLabel={H?.name} awayLabel={A?.name} />}
-      <div className="ls-ytp">
+      {!calc.isFinal && (
+        <WinProbBar home={calc.homeWinProb} homeLabel={H?.name} awayLabel={A?.name}
+                    awayYetToPlay={calc.away.yetToPlay} homeYetToPlay={calc.home.yetToPlay} />
+      )}
+      {/* `folded` says this line's counts ALSO appear inside the bar above, so
+          the phone can hide one of the two without guessing. It cannot be a
+          `:has()` on the bar: a final matchup draws no bar, and then this line
+          is the only place the counts exist. */}
+      <div className={`ls-ytp${calc.isFinal ? '' : ' folded'}`}>
         <span>{calc.away.yetToPlay} yet to play</span>
         <span>{calc.home.yetToPlay} yet to play</span>
       </div>
