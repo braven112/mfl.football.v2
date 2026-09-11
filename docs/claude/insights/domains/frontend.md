@@ -3374,3 +3374,30 @@ Two smaller traps found in the same page, both also silent:
   `params.get()` reads only the first and silently narrows the filter to one
   value. Use `getAll()`, and split on commas too if hand-written links are also
   supported.
+
+## 2026-09-11 - Moving a Button Out of Its Delegated-Click Container Silently Kills the Click
+
+**Context:** `theleague/players.astro`'s Free Agents toolbar reorganizes which
+row each button sits in for mobile ("My Watch List" with the view toggles vs.
+"My Rank" with the action buttons) across two follow-up passes in the same PR.
+`#col-group-toggles` has ONE delegated listener (`colGroupToggles.addEventListener('click', …)`
+matching `.col-group-btn` via `e.target.closest`) that drives every view-toggle
+button, including the Watch List button — because Watch List is also a
+`.col-group-btn`, just visually relocated.
+
+**Insight:** Moving an element to a new DOM parent does not move the
+listeners bound to its OLD parent — a delegated click handler is scoped to
+the container it was attached to, not to "wherever this class of button
+lives now." Relocating "My Watch List" button out of `#col-group-toggles`
+into `.toolbar-right` (first pass) silently broke its click, because the
+delegated listener never sees clicks outside its own subtree; it had to grow
+a second, standalone listener on the button by id. Moving it back into
+`#col-group-toggles` (second pass, this same PR) made that standalone
+listener redundant — worth deleting, not just leaving as harmless dead code,
+since a stray reference to a removed id is exactly the kind of thing that
+looks intentional to the next reader. **When relocating a button that's
+driven by event delegation, first find where the listener is actually bound
+(`grep` the id/class inside `<script>`, not just the markup) and either move
+the button back inside that container, widen the listener to a shared
+ancestor, or add a dedicated listener — do not assume "it's still `.col-group-btn`,
+so it still works."**
