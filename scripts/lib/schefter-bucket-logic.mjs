@@ -38,6 +38,13 @@ export function classifyTipKind(tip) {
 export function isTradeFlavoredTip(tip) {
   if (!tip) return false;
   if (tip.source === 'trade_offer' || tip.source === 'trade_bait') return true;
+  // Whisper-backs are excluded on the SAME terms the CTA predicate uses
+  // (`schefter-rumor-scan.mjs#isTradeFlavoredTip`): a reply to a non-trade
+  // rumor is routed to the tip page, not the Trade Builder, so it does not
+  // read as a trade story — and letting it spend the day's trade slot would
+  // let a reply suppress the actual trade story. Two predicates answering
+  // "is this about trades" must not disagree.
+  if (tip.repliesToPostId) return false;
   return tip.topic === 'trade';
 }
 

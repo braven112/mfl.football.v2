@@ -167,6 +167,7 @@ import { LEAGUES as REGISTRY_LEAGUES } from '../src/config/leagues-data.mjs';
 // they would read as dependencies this file still has.
 import { getLeagueBySlug } from '../src/config/leagues-data.mjs';
 import { createPublicUrl, normalizeBaseUrl } from './lib/schefter-public-url.mjs';
+import { leagueYearFor } from './lib/schefter-league-year.mjs';
 import { getSchefterLeague } from './lib/schefter-leagues.mjs';
 import {
   getPtHour,
@@ -3140,7 +3141,14 @@ async function scanTradeOffers({ redis, dryRun }) {
   const teams = await loadTeamsWithDivisions();
   const players = await loadPlayers(year);
   const adpRankByPlayerId = await loadAdpDynastyRanks(year);
-  const rosterOwnerByPlayerId = await loadRosterOwners(year);
+  // NOT `year`. The heuristic above advances on Feb 1 while TheLeague's MFL
+  // rollover is Feb 14 PT, so for those 13 days it names a league year MFL has
+  // not created — the rosters file is absent, the map comes back empty, and the
+  // ownership check silently degrades to trusting the row's own sides, which is
+  // the exact failure this whole branch exists to stop. `leagueYearFor` is the
+  // registry-aware clock and already carries each league's own rollover.
+  const rosterYear = leagueYearFor(SCHEFTER_LEAGUE, now);
+  const rosterOwnerByPlayerId = await loadRosterOwners(rosterYear);
   log(`  [offer-scan] Roster ownership loaded for ${rosterOwnerByPlayerId.size} player(s)`);
 
   // Step 0: fold each franchise's saved trade-builder drafts into the
@@ -4513,6 +4521,17 @@ async function main() {
         // two posts against a cap of one. In season the secondary bucket waits
         // for tomorrow's slot instead.
         log(`  Holding ${secondaryBucket.key} for next cycle — rumor-mill cap is 1/day (${rumorMillCapReason(LEAGUE_SLUG, now)})`);
+      } else if (
+        isTradeFlavoredBatch(secondaryBucket.tips)
+        && tradeSlots <= (isTradeFlavoredBatch(batch) ? 1 : 0)
+      ) {
+        // The trade ceiling reaches the GOSSIP secondary too, not just the
+        // busy-morning trade split below. `trade_bait` classifies as gossip,
+        // so two franchises' block listings are two gossip buckets and two
+        // trade stories — the ceiling would be spent to 2/1 after the fact,
+        // with both posts already shipped. Gate on what this cycle is already
+        // spending: a trade primary leaves room only if two slots exist.
+        log(`  Holding ${secondaryBucket.key} for tomorrow — it is a trade story and the day's trade slot is spoken for`);
       } else if (gossipQueueDepth >= SECONDARY_GOSSIP_POST_PRESSURE) {
         secondaryBatch = secondaryBucket.tips.slice(0, MAX_TIPS_PER_BATCH);
         log(`  Second post bucket ${secondaryBucket.key} (size=${secondaryBucket.tips.length}, using ${secondaryBatch.length} tip(s)) — pressure ${gossipQueueDepth}/${SECONDARY_GOSSIP_POST_PRESSURE}`);

@@ -38,9 +38,18 @@ export const MIN_SPACING_MS = 4 * 60 * 60 * 1000;
  * itself satisfied the entire time, because each one was answering "have we
  * posted too much today" and the complaint was "is this all he talks about".
  *
- * ONE trade story a day, across every lane. The remaining slots stay open for
- * non-trade beats — this is a topic ceiling, not a smaller post budget, so a
+ * ONE trade story a day, across every RUMOR lane. The remaining slots stay open
+ * for non-trade beats — this is a topic ceiling, not a smaller post budget, so a
  * quiet trade day does not become a quiet feed.
+ *
+ * "Rumor lane" is the scope, and it is deliberate. `schefter-scan.mjs` also
+ * publishes `trade_pending_rumor` posts — a trade sitting on the commissioner's
+ * desk — and those are NOT capped here. They are tier `breaking`: a real,
+ * imminent, already-submitted transaction, which is the one thing a beat
+ * reporter should never sit on. Capping it would mean withholding news of an
+ * actual trade because a rumor or an invented hypothetical spent the slot
+ * first, which inverts the whole point. The lanes this governs are the
+ * discretionary ones: trade offers, trade bait, and speculation.
  *
  * A trade-flavored bucket that loses to this ceiling is HELD, not dropped: the
  * rumor mill leaves its tips in the queue and the age boost in

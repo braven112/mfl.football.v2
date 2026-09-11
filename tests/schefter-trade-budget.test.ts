@@ -1,4 +1,9 @@
 import { describe, it, expect } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { resolve, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
 import {
   MAX_TRADE_POSTS_PER_DAY,
   TRADE_POSTS_TODAY_KEY,
@@ -39,6 +44,36 @@ describe('what counts as a trade story', () => {
   it('counts a trade offer and a web tip topic-tagged trade', () => {
     expect(isTradeFlavoredTip({ source: 'trade_offer' })).toBe(true);
     expect(isTradeFlavoredTip({ source: 'web', topic: 'trade' })).toBe(true);
+  });
+
+  it('does not count a whisper-back reply, matching the CTA predicate', () => {
+    // The scanner's own isTradeFlavoredTip (the CTA router) excludes a reply
+    // before checking topic, on the grounds that the owner chose to reply to a
+    // NON-trade rumor. If the budget predicate disagreed, that reply would be
+    // routed to the tip page yet still spend the day's trade slot — a non-trade
+    // post suppressing the actual trade story.
+    expect(isTradeFlavoredTip({ source: 'web', topic: 'trade', repliesToPostId: 'sf_x' }))
+      .toBe(false);
+    // ...but a real trade tip with no parent still counts.
+    expect(isTradeFlavoredTip({ source: 'web', topic: 'trade' })).toBe(true);
+  });
+
+  it('keeps the two predicates aligned in the source', () => {
+    // Two copies of "is this about trades" is the shape this repo has paid for
+    // before; until they are one function, they must at least carry the same
+    // exclusion. A scan guard, because the scanner's copy is not exported.
+    const scanner = readFileSync(
+      resolve(__dirname, '../scripts/schefter-rumor-scan.mjs'),
+      'utf8',
+    );
+    const shared = readFileSync(
+      resolve(__dirname, '../scripts/lib/schefter-bucket-logic.mjs'),
+      'utf8',
+    );
+    for (const [label, src] of [['scanner', scanner], ['shared', shared]] as const) {
+      expect(src, `${label} predicate must exclude whisper-backs`)
+        .toMatch(/if \(tip\.repliesToPostId\) return false;/);
+    }
   });
 
   it('does not count an unrelated tip', () => {

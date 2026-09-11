@@ -295,6 +295,32 @@ trade-offer rumor lane, the trade-bait lane, and the speculation scanner. So:
   a TOPIC ceiling layered on the post budget, not a smaller post budget — the
   other slots stay open for non-trade beats, so a quiet trade day is not a
   quiet feed.
+- **The ceiling governs the DISCRETIONARY lanes, not every trade post.**
+  `schefter-scan.mjs` also publishes `trade_pending_rumor` — a trade sitting on
+  the commissioner's desk — and that is deliberately outside the budget. It is
+  tier `breaking`: a real, already-submitted transaction, the one thing a beat
+  reporter should never sit on. Capping it would mean withholding news of an
+  actual trade because a rumor or an invented hypothetical spent the slot
+  first. The three lanes this governs are trade offers, trade bait and
+  speculation.
+- **The whisper-back exclusion is shared with the CTA predicate.** The
+  scanner's `isTradeFlavoredTip` (the CTA router) drops a tip with
+  `repliesToPostId` before checking `topic`, because the owner chose to reply
+  to a NON-trade rumor. The budget predicate must drop it on the same terms, or
+  that reply routes to the tip page while spending the day's trade slot — a
+  non-trade post suppressing the actual trade story.
+- **The ceiling reaches the GOSSIP secondary, not just the busy-morning
+  split.** `trade_bait` classifies as gossip, so two franchises' block listings
+  are two gossip buckets and two trade stories; without the check the day ends
+  at 2/1 with both already shipped.
+- **The roster snapshot is on the LEAGUE-YEAR clock, not the lane's calendar
+  heuristic.** `scanTradeOffers` derives its MFL year with
+  `now.getMonth() >= 1`, which advances Feb 1 while TheLeague's MFL rollover is
+  Feb 14 PT. For those 13 days that names a league year MFL has not created —
+  the rosters file is absent, the map comes back empty, and the ownership check
+  degrades silently to trusting the row's own sides, which is the exact failure
+  the binding exists to stop. `leagueYearFor` carries each league's own
+  rollover; the rest of the lane's calendar heuristic is a documented follow-up.
 - **`classifyTipKind` is NOT the topic test.** It answers "which posting lane
   owns this tip", where only `trade_offer` gets its own lane, so a trade-BAIT
   tip classifies as `gossip` — and "Pain's had Cyrus Allen on the block for
