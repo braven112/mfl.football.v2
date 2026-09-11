@@ -20,7 +20,7 @@ import { calculateAllSurplusValues } from '../../utils/surplus-value';
 import { getAuthUser, isCommissionerOrAdmin, franchiseIdForLeague } from '../../utils/auth';
 import { readBidRules } from '../../utils/waiver-claim';
 import { claimVerb as claimVerbFor } from '../../utils/claim-context';
-import { resolveWaiverWindow, describeWaiverWindow } from '../../utils/waiver-window';
+import { resolveWaiverWindow, describeWaiverWindow, waiverWindowShortLabel } from '../../utils/waiver-window';
 import { readViewerClock } from '../../utils/viewer-preferences-page';
 import WaiverClaimsPanel from '../../components/shared/WaiverClaimsPanel.astro';
 import SignInModal from '../../components/shared/SignInModal.astro';
@@ -726,6 +726,7 @@ const waiverWindow = resolveWaiverWindow(calendarEvents);
 // preference cookie, and only /preferences and the Sunday Ticket chips do.
 const viewerClock = await readViewerClock(Astro.cookies, authUser, 'theleague');
 const waiverWindowLabel = describeWaiverWindow(waiverWindow, viewerClock);
+const waiverWindowShort = waiverWindowShortLabel(waiverWindow);
 const canClaim = !!claimFranchiseId && !isAuctionSeason;
 // The verb this league puts on an acquisition — 'Bid' here, because TheLeague
 // runs blind bids. One resolver for the table header, the ⋮ action sheet and
@@ -792,15 +793,25 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
           <h1 class="hero-title">Free Agents</h1>
           <span class="hero-count">{freeAgents.length} available players</span>
           {canClaim && (
-            <span class="waiver-window-line" data-window={waiverWindow.mode}>{waiverWindowLabel}</span>
+            <>
+              {/* Desktop keeps the original always-visible one-liner — only
+                  mobile asked for (and got) the compact tap-to-reveal badge
+                  below. Two elements, CSS picks one per breakpoint, so
+                  neither loses the other's behavior. */}
+              <span class="waiver-window-line-full" data-window={waiverWindow.mode}>{waiverWindowLabel}</span>
+              <details class="waiver-window-line" data-window={waiverWindow.mode}>
+                <summary class="waiver-window-line__summary">
+                  <span class="waiver-window-line__dot" aria-hidden="true"></span>
+                  {waiverWindowShort}
+                  <svg class="waiver-window-line__chevron" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M6 9l6 6 6-6"/>
+                  </svg>
+                </summary>
+                <p class="waiver-window-line__detail">{waiverWindowLabel}</p>
+              </details>
+            </>
           )}
         </div>
-        <a href={r('/theleague/projected-free-agents')} class="hero-cross-link">
-          See projected FAs
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true">
-            <path d="M5 12h14M12 5l7 7-7 7"/>
-          </svg>
-        </a>
       </div>
 
       <!-- Search -->
@@ -869,6 +880,12 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
       </div>
       <div class="toolbar-center"></div>
       <div class="toolbar-right">
+        <a href={r('/theleague/projected-free-agents')} class="hero-cross-link">
+          See projected FAs
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true">
+            <path d="M5 12h14M12 5l7 7-7 7"/>
+          </svg>
+        </a>
         <MyRankEditor league="theleague" />
         <button class="filter-toggle-btn" id="filter-toggle-btn" type="button" aria-expanded="false" aria-controls="filters-panel">
           <svg class="filter-toggle-btn__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -3276,31 +3293,29 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     gap: 1rem;
     flex-wrap: wrap;
   }
-  /* Filled pill so the link stays legible over the dark spotlight panel it sits on */
+  /* Lives in the toolbar now (next to My Rank / Filters), not the hero — a
+     filled full-width pill in the hero ate a whole row on mobile for a
+     secondary, occasional-use link. Styled like .filter-toggle-btn so it
+     reads as one more toolbar action, not the page's primary CTA. */
   .hero-cross-link {
     display: inline-flex;
     align-items: center;
-    gap: 0.375rem;
+    gap: 0.35rem;
     font-size: 0.8125rem;
     font-weight: 600;
-    color: #fff;
-    background: var(--color-primary, #1c497c);
-    padding: 0.4rem 0.8rem;
-    border-radius: var(--radius-full, 999px);
+    color: var(--color-primary, #1c497c);
+    background: var(--content-bg, #fff);
+    border: 1px solid var(--content-border, #d1d5db);
+    padding: 0.4rem 0.85rem;
+    border-radius: var(--radius-md, 0.5rem);
     text-decoration: none;
-    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
-    transition: gap 0.15s ease, background 0.15s ease, transform 0.15s ease;
+    transition: all 0.15s;
     white-space: nowrap;
   }
   .hero-cross-link:hover {
-    gap: 0.5rem;
-    background: var(--color-primary-dark, #163a63);
-    transform: translateY(-1px);
+    border-color: var(--color-primary, #1c497c);
+    background: color-mix(in srgb, var(--color-primary, #1c497c) 8%, var(--content-bg, white));
     text-decoration: none;
-  }
-  :global(html.dark) .hero-cross-link {
-    background: var(--color-primary, #1c497c);
-    color: #fff;
   }
   .hero-title-group {
     display: flex;
@@ -4037,8 +4052,8 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
   /* ── Responsive ── */
   @media (max-width: 767px) {
     .players-hero {
-      padding: 1.25rem 1rem 1.25rem;
-      margin: 0.75rem 0 0 0;
+      padding: 0.875rem 0.875rem 0.75rem;
+      margin: 0.5rem 0 0 0;
     }
     .hero-spotlight,
     .hero-spotlight-caption {
@@ -4046,6 +4061,12 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     }
     .hero-title {
       font-size: 1.15rem;
+    }
+    .hero-top {
+      margin-bottom: 0.75rem;
+    }
+    .hero-search {
+      margin-bottom: 0.75rem;
     }
     .hero-positions {
       overflow-x: auto;
@@ -4068,7 +4089,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
       flex-wrap: wrap;
       gap: 0.5rem;
     }
-    .toolbar-right { order: 3; justify-content: flex-end; }
+    .toolbar-right { order: 3; justify-content: flex-end; flex-wrap: wrap; }
     .filters-grid {
       grid-template-columns: 1fr 1fr;
     }
@@ -4507,7 +4528,10 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
   /* The Bid <button>'s reset moved to src/styles/fa-claim-button.css with the
      rest of the pill — see the note there for why it must not be scoped. */
 
-  .waiver-window-line {
+  /* Desktop's original always-visible one-liner. Plenty of width there for the
+     full sentence, so only mobile (where it once ran off-screen) trades it for
+     the compact disclosure below. */
+  .waiver-window-line-full {
     display: inline-block;
     margin-left: 0.6rem;
     padding: 0.2rem 0.55rem;
@@ -4518,6 +4542,26 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     text-transform: uppercase;
     letter-spacing: 0.03em;
     white-space: nowrap;
+    color: var(--color-primary, #1c497c);
+  }
+  .waiver-window-line-full[data-window='fcfs'] { color: var(--color-success, #16a34a); }
+  .waiver-window-line-full[data-window='unknown'] { color: var(--content-text-muted, #6b7280); }
+
+  /* A native <details>/<summary> disclosure: the badge itself only ever
+     carries a short label ("Open now" / "Waivers open" / "Unknown"), so it
+     never needs the wide-nowrap-vs-wrap fight a full sentence forced on
+     mobile. Tapping/clicking reveals the full sentence from
+     describeWaiverWindow() — no JS required, keyboard-operable for free.
+     Mobile-only (see the 767px block below) — hidden by default so it never
+     replaces the desktop one-liner above. */
+  .waiver-window-line {
+    display: none;
+    margin-left: 0.6rem;
+    /* Full-pill radius, matching .wpm-trigger's "Same chip idiom as
+       .waiver-window-line beside it" (src/styles/waiver-priority-modal.css)
+       on the AFL hero — a mismatched shape there is a visible regression. */
+    border-radius: var(--radius-full, 999px);
+    border: 1px solid currentColor;
     /* Colour carries the meaning: green = you can add right now. */
     color: var(--color-primary, #1c497c);
   }
@@ -4526,4 +4570,59 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
      on AFL pages (tests/afl-brand-green-guard.test.ts). */
   .waiver-window-line[data-window='fcfs'] { color: var(--color-success, #16a34a); }
   .waiver-window-line[data-window='unknown'] { color: var(--content-text-muted, #6b7280); }
+
+  .waiver-window-line__summary {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.2rem 0.55rem;
+    font-size: 0.6875rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    white-space: nowrap;
+    cursor: pointer;
+    list-style: none;
+  }
+  .waiver-window-line__summary::-webkit-details-marker { display: none; }
+  .waiver-window-line__summary::marker { content: ''; }
+  .waiver-window-line__dot {
+    width: 6px;
+    height: 6px;
+    flex: none;
+    border-radius: 50%;
+    background: currentColor;
+  }
+  .waiver-window-line__chevron {
+    flex: none;
+    transition: transform 0.15s ease;
+  }
+  .waiver-window-line[open] .waiver-window-line__chevron {
+    transform: rotate(180deg);
+  }
+  .waiver-window-line__detail {
+    margin: 0;
+    padding: 0 0.6rem 0.5rem;
+    max-width: 260px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    text-transform: none;
+    letter-spacing: normal;
+    white-space: normal;
+    color: var(--color-gray-700, #374151);
+  }
+
+  /* Placed AFTER both base rules above (not inside the earlier 767px block)
+     so this swap actually wins the cascade at equal specificity — a media
+     query adds no specificity, so a same-specificity unconditional rule
+     declared later in the file always wins regardless of viewport. This bit
+     the badge itself earlier in this same PR; same fix here. */
+  @media (max-width: 767px) {
+    .waiver-window-line-full {
+      display: none;
+    }
+    .waiver-window-line {
+      display: inline-block;
+    }
+  }
 </style>
