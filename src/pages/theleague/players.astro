@@ -4139,6 +4139,17 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
       padding: 0.2rem 0.5rem;
       font-size: 0.72rem;
     }
+    /* Safety net: an admin with 2+ personal ranking imports also gets the
+       Rankings pill (client-side, independent of the server-computed Value
+       pill), so the row can carry Stats+Rankings+Auction+Value+Watch List —
+       5 pills, 340px, over the 304px budget even at the tightened size above
+       (Copilot review on PR #1057). Letting the row wrap here keeps it off
+       the page's horizontal scroll in that combination; the common 4-pill
+       case still fits on one line unwrapped. */
+    .col-group-toggles {
+      flex-wrap: wrap;
+      row-gap: 0.35rem;
+    }
     /* space-between so the row fills edge-to-edge instead of clustering
        right with dead space on the left — matches AFL's own mobile
        .toolbar-right, which already uses space-between. */
