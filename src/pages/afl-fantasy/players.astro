@@ -2607,6 +2607,9 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
       display: inline-block;
       flex-basis: 100%;
       white-space: normal;
+      /* Balances line lengths so wrapping doesn't strand one short word
+         ("AM PT") alone on its own line. */
+      text-wrap: balance;
       max-width: 100%;
       margin-left: 0;
     }
