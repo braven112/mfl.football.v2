@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   REGULAR_SEASON_WEEKS,
+  nflWeekFor,
   derivedWeekStartIsoDate,
   hasOfficialSchedule,
   nflKickoffIsoDate,
@@ -141,5 +142,39 @@ describe('the fantasy bracket derives from the NFL season length', () => {
     const priorEra = 17;
     expect(priorEra - 1).toBe(16); // title game was week 16
     expect(priorEra - 3).toBe(14); // playoffs opened week 14
+  });
+});
+
+describe('nflWeekFor — a week begins when the PREVIOUS one ends', () => {
+  const at = (iso: string) => nflWeekFor(2026, new Date(`${iso}T20:00:00Z`));
+
+  it('does not lag when the next week opens late', () => {
+    // The regression this rule exists to prevent. 2026's week 18 is all-Sunday
+    // (Jan 10), so anchoring purely on each week's first kickoff left Jan 5-9
+    // reporting week 17 while MFL had already advanced — /live-scoring and the
+    // lineup API would have defaulted a week behind.
+    expect(at('2027-01-04')).toBe(17); // Monday — week 17 still running
+    expect(at('2027-01-05')).toBe(18); // Tuesday — week 17 is over
+    expect(at('2027-01-10')).toBe(18); // week 18's only game day
+  });
+
+  it('keeps Monday night inside its own week, after a Wednesday opener', () => {
+    // Week 1 opened Wed Sep 9, so its Monday nighter is Sep 14 and the
+    // rollover is Sep 15 — a +6 shift where a Thursday opener gives +5.
+    expect(at('2026-09-14')).toBe(1);
+    expect(at('2026-09-15')).toBe(2);
+  });
+
+  it('advances into a Wednesday week on the Tuesday before it', () => {
+    // Week 12 moved to Thanksgiving Wednesday (Nov 25). Week 11 ended Mon
+    // Nov 23, so Nov 24 is already week 12 even though no game has kicked off.
+    expect(at('2026-11-23')).toBe(11);
+    expect(at('2026-11-24')).toBe(12);
+  });
+
+  it('is 0 before the season and strides weekly through the playoffs', () => {
+    expect(at('2026-09-08')).toBe(0); // day before the Wednesday opener
+    expect(at('2027-01-12')).toBe(19); // wild card
+    expect(at('2027-03-01')).toBe(22); // capped
   });
 });

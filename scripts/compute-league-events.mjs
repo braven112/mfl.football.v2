@@ -76,7 +76,12 @@ function resolveDate(rule, year) {
     }
     case 'afl-regular-season-ends':
       // The AFL's regular season ends when its bracket opens.
-      // Mirrors the same-named rule in src/utils/league-event-resolver.ts.
+      //
+      // No entry in AFL_EVENTS uses this today — the event lives only in
+      // src/data/afl-fantasy/league-events.json, which the calendar page
+      // resolves. It is carried here anyway because the two resolvers are
+      // meant to answer every rule id identically; a rule that exists in one
+      // and not the other is how the AFL trade deadline drifted a week.
       return weekStart(year, PLAYOFFS_START_WEEK);
     case 'after-week-16':
       // TheLeague's in-season FA closes "After the conclusion of Week 16",
@@ -285,8 +290,9 @@ function resolveEvents(year, eventList = EVENTS) {
         const daysUntilNextSaturday = (6 - dayOfWeek + 7) % 7 + 7;
         startDate = new Date(nflDraftDate.getFullYear(), nflDraftDate.getMonth(), nflDraftDate.getDate() + daysUntilNextSaturday);
       } else if (event.startRule.rule === 'nfl-week-start') {
-        // Computed NFL week start (e.g. Throwback Week): kickoff Thursday
-        // + (week-1)*7 — never a hardcoded calendar date.
+        // Computed NFL week start (e.g. Throwback Week): the week's real
+        // first kickoff from the published schedule — never a hardcoded
+        // calendar date, and never counted forward from kickoff.
         startDate = getNflWeekStart(year, event.startRule.week);
       } else {
         startDate = resolveDate(event.startRule.rule, year);

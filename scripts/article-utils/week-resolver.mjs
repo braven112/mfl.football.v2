@@ -7,6 +7,7 @@
 
 import {
   REGULAR_SEASON_WEEKS,
+  nflWeekFor,
   nflWeekStartInstant,
 } from '../../src/utils/nfl-week-starts.mjs';
 
@@ -28,20 +29,17 @@ export function getKickoffDate(year) {
 }
 
 /**
- * Get the current NFL week number (1-18) for a given season year.
- * Returns 0 before the season's first game; caps at 18 after.
+ * Get the current NFL week number for a given season year, capped at the
+ * regular season. Returns 0 before the season's first game.
  *
- * Walks the real week starts rather than counting 7-day blocks off kickoff.
- * The NFL moves weeks — 2026 put week 12 on the Wednesday of Thanksgiving and
- * ran week 18 on a Sunday — and a fixed stride misnames every week after the
- * first shift.
+ * The boundary rule lives in nflWeekFor: a week becomes current when the
+ * PREVIOUS week ends (the Tuesday after it opened), not when its own first
+ * game kicks off. Anchoring on the kickoff alone makes the week lag whenever
+ * the next one opens late — 2026's week 18 is all-Sunday, so Jan 5-9 would
+ * still report week 17 while MFL had long since advanced.
  */
 export function getCurrentNFLWeek(year, now = new Date()) {
-  if (now < nflWeekStartInstant(year, 1)) return 0;
-  for (let week = REGULAR_SEASON_WEEKS; week >= 1; week -= 1) {
-    if (now >= nflWeekStartInstant(year, week)) return week;
-  }
-  return 0;
+  return Math.min(nflWeekFor(year, now), REGULAR_SEASON_WEEKS);
 }
 
 /**

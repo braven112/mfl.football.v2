@@ -14,15 +14,7 @@
  * not hold start dates for and which run on a strict weekly cadence anyway.
  */
 
-import {
-  REGULAR_SEASON_WEEKS,
-  nflWeekStartInstant,
-} from './nfl-week-starts.mjs';
-
-/** NFL playoff rounds after week 18: wild card, divisional, conference, SB. */
-const PLAYOFF_WEEKS = 4;
-const MAX_WEEK = REGULAR_SEASON_WEEKS + PLAYOFF_WEEKS;
-const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
+import { nflWeekFor } from './nfl-week-starts.mjs';
 
 /**
  * Calculate the NFL week number for a given date.
@@ -34,25 +26,7 @@ const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 export function getCurrentNFLWeek(date: Date = new Date(), year?: number): number | null {
   // NFL season runs Sep-Feb, so Jan-Aug uses the previous year's season.
   const seasonYear = year ?? (date.getMonth() < 8 ? date.getFullYear() - 1 : date.getFullYear());
-
-  const seasonStart = nflWeekStartInstant(seasonYear, 1);
-  if (date < seasonStart) return null;
-
-  // Walk the real week starts backwards — the NFL moves weeks (2026 opened on
-  // a Wednesday and put week 12 on Thanksgiving Wednesday), so a fixed 7-day
-  // stride misnames every week after the first shift.
-  for (let week = REGULAR_SEASON_WEEKS; week >= 1; week -= 1) {
-    if (date >= nflWeekStartInstant(seasonYear, week)) {
-      if (week < REGULAR_SEASON_WEEKS) return week;
-      // Past week 18's kickoff: playoff weeks run on a strict weekly cadence
-      // from there, and we hold no published start dates for them.
-      const weeksPast = Math.floor(
-        (date.getTime() - nflWeekStartInstant(seasonYear, REGULAR_SEASON_WEEKS).getTime()) / WEEK_MS,
-      );
-      return Math.min(REGULAR_SEASON_WEEKS + weeksPast, MAX_WEEK);
-    }
-  }
-  return null;
+  return nflWeekFor(seasonYear, date) || null;
 }
 
 /**

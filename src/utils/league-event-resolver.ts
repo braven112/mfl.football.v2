@@ -140,9 +140,11 @@ function resolveComputedDate(rule: string, year: number): Date {
       return weekStart(year, 11, -6);
 
     case 'afl-regular-season-ends':
-      // The AFL's regular season ends when its bracket opens — the constitution
-      // calls that a 14-week regular season (Weeks 1-14), which is the same
-      // week PLAYOFFS_START_WEEK - 1 derives.
+      // The AFL plays a 14-week regular season (afl-constitution.ts, SCHEDULE),
+      // so week 14 is the last one PLAYED and the season is over the moment the
+      // bracket opens in week 15 — which is the date this returns. Do not read
+      // `PLAYOFFS_START_WEEK` here as "week 14"; it is 15, and the event marks
+      // the boundary rather than the final week itself.
       //
       // This event used to share TheLeague's `after-week-16`, which put "Regular
       // Season Ends" on Dec 31 2026: two weeks AFTER the AFL's playoffs had

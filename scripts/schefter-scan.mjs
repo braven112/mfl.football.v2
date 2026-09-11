@@ -56,7 +56,7 @@ import { isSeasonWindowOpen } from '../src/utils/pecking-order-season-window.mjs
 import { sendPushFanout, broadcast } from './lib/push-fanout.mjs';
 import { scanRogerReplies } from './roger-groupme-reply.mjs';
 import { parsePickToken, formatPickLabel } from '../src/utils/mfl-pick-tokens.mjs';
-import { getCurrentNFLWeek as resolveCurrentNFLWeek } from './article-utils/week-resolver.mjs';
+import { nflWeekFor } from '../src/utils/nfl-week-starts.mjs';
 
 const projectRoot = path.resolve(fileURLToPath(new URL('..', import.meta.url)));
 const MFL_HOST = process.env.MFL_HOST || 'api.myfantasyleague.com';
@@ -2780,6 +2780,157 @@ async function loadRosteredPlayerIds(league) {
   }
 }
 
+/** Load MFL players to map ESPN names → MFL player IDs */
+async function loadPlayerNameIndex(league) {
+  const year = new Date().getFullYear();
+  const players = await loadPlayers(league.playersPath(year));
+  const nameIndex = new Map();
+  for (const [id, p] of players) {
+    // MFL names are "LastName, FirstName" — normalize to "FirstName LastName"
+    const parts = p.name.split(', ');
+    const normalized = parts.length === 2 ? `${parts[1]} ${parts[0]}` : p.name;
+    nameIndex.set(normalized.toLowerCase(), { id, ...p });
+  }
+  return nameIndex;
+}
+
+async function scanInjuries(league) {
+  console.log(`\n=== Scanning Injuries (Doc Rivers) for ${league.slug} ===`);
+
+  // Season guard: check if there are upcoming NFL games
+  try {
+    const sbRes = await fetch('https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard');
+    if (sbRes.ok) {
+      const sbData = await sbRes.json();
+      if (!sbData.events || sbData.events.length === 0) {
+        console.log('  No upcoming NFL games — skipping injury scan (offseason)');
+        return 0;
+      }
+    }
+  } catch {
+    // If scoreboard check fails, proceed with scan anyway
+  }
+
+  const feed = await loadFeed(league.feedPath);
+  const previousSnapshot = feed.lastInjurySnapshot ?? {};
+  const leagueSlug = league.slug === 'afl' ? 'afl' : 'theleague';
+
+  // Fetch current injury data from ESPN
+  const currentInjuries = await fetchEspnInjuries();
+  console.log(`  ESPN injuries: ${currentInjuries.size} players`);
+
+  if (currentInjuries.size === 0) {
+    console.log('  No injury data returned — skipping');
+    return 0;
+  }
+
+  // Load roster data for fantasy relevance
+  const rosteredPlayers = await loadRosteredPlayerIds(league);
+  const nameIndex = await loadPlayerNameIndex(league);
+
+  // Diff against previous snapshot
+  const statusChanges = [];
+  for (const [espnId, inj] of currentInjuries) {
+    const prevStatus = previousSnapshot[espnId];
+    if (prevStatus !== inj.status) {
+      // Find MFL player by name match
+      const mflPlayer = nameIndex.get(inj.name.toLowerCase());
+      const franchiseId = mflPlayer ? rosteredPlayers.get(mflPlayer.id) : null;
+
+      statusChanges.push({
+        ...inj,
+        mflId: mflPlayer?.id,
+        franchiseId,
+        isRostered: !!franchiseId,
+        prevStatus: prevStatus ?? null,
+      });
+    }
+  }
+
+  console.log(`  Status changes detected: ${statusChanges.length}`);
+  if (statusChanges.length === 0) {
+    // Update snapshot even with no changes (capture new players)
+    const newSnapshot = {};
+    for (const [espnId, inj] of currentInjuries) {
+      newSnapshot[espnId] = inj.status;
+    }
+    feed.lastInjurySnapshot = newSnapshot;
+    await fs.writeFile(league.feedPath, JSON.stringify(feed, null, 2) + '\n');
+    return 0;
+  }
+
+  // Classify tiers and generate posts
+  const HIGH_VALUE_STATUSES = new Set(['Out', 'Injured Reserve', 'IR', 'Suspended']);
+  const MEDIUM_STATUSES = new Set(['Questionable', 'Doubtful']);
+  const newPosts = [];
+
+  for (const change of statusChanges) {
+    let tier = 'minor';
+    let templates = INJURY_TEMPLATES_MINOR;
+
+    if (change.isRostered && HIGH_VALUE_STATUSES.has(change.status)) {
+      tier = 'breaking';
+      templates = INJURY_TEMPLATES_BREAKING;
+    } else if (change.isRostered && MEDIUM_STATUSES.has(change.status)) {
+      tier = 'standard';
+      templates = INJURY_TEMPLATES_STANDARD;
+    } else if (HIGH_VALUE_STATUSES.has(change.status)) {
+      tier = 'standard';
+      templates = INJURY_TEMPLATES_STANDARD;
+    }
+
+    // Skip minor non-rostered injuries to avoid feed spam
+    if (tier === 'minor' && !change.isRostered) continue;
+
+    const template = pickTemplate(templates, change.espnId);
+    const body = template(change);
+    const headline = `${change.name} (${change.nflTeam}) → ${change.status}`;
+
+    const post = {
+      id: `inj_${change.espnId}_${Date.now()}`,
+      timestamp: new Date().toISOString(),
+      type: 'injury',
+      tier,
+      headline,
+      body,
+      authorId: 'doc-rivers',
+      franchiseIds: change.franchiseId ? [change.franchiseId] : [],
+      playerIds: change.mflId ? [change.mflId] : [],
+      league: leagueSlug,
+    };
+
+    newPosts.push(post);
+    console.log(`  [${tier}] ${headline}`);
+  }
+
+  if (newPosts.length > 0) {
+    feed.posts = [...newPosts.reverse(), ...feed.posts];
+  }
+
+  // Update snapshot
+  const newSnapshot = {};
+  for (const [espnId, inj] of currentInjuries) {
+    newSnapshot[espnId] = inj.status;
+  }
+  feed.lastInjurySnapshot = newSnapshot;
+
+  await fs.writeFile(league.feedPath, JSON.stringify(feed, null, 2) + '\n');
+  console.log(`  Wrote ${newPosts.length} injury posts. Feed total: ${feed.posts.length}`);
+  return newPosts.length;
+}
+
+// ── Vegas Vic: Odds & Lines ──
+// Fetches weekly opening lines from ESPN Scoreboard API.
+// Posts once per NFL week when lines first appear. Season-only.
+
+// Vegas Vic template pools — confident, numbers-focused, slightly cocky
+const ODDS_TEMPLATES = [
+  (g) => `${g.away} at ${g.home}: ${g.spread}, O/U ${g.overUnder}. The book is talking.`,
+  (g) => `Opening number: ${g.home} ${g.spread} vs ${g.away}. Over/under sits at ${g.overUnder}.`,
+  (g) => `${g.away} at ${g.home} — line opens at ${g.spread}, total ${g.overUnder}. Market will move. Get in early.`,
+  (g) => `${g.home} ${g.spread} hosting ${g.away}. O/U: ${g.overUnder}. Sharp money hasn't spoken yet.`,
+];
+
 /**
  * Current NFL week, from the published NFL schedule.
  *
@@ -2790,8 +2941,10 @@ async function loadRosteredPlayerIds(league) {
  */
 function getCurrentNFLWeekForOdds() {
   const seasonYear = new Date().getFullYear();
-  // 0 = offseason.
-  return resolveCurrentNFLWeek(seasonYear) || 0;
+  // 0 = offseason. Reads nflWeekFor directly rather than week-resolver's
+  // wrapper, which caps at the regular season — Vegas Vic prices the NFL
+  // playoff weeks too, as it always has.
+  return nflWeekFor(seasonYear, new Date());
 }
 
 async function scanOdds(league) {
