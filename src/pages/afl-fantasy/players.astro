@@ -355,16 +355,23 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
           <h1 class="hero-title">Free Agents</h1>
           <span class="hero-count"><span id="hero-count-num">{freeAgentsCount}</span> available players</span>
           {canClaim && (
-            <details class="waiver-window-line" data-window={waiverWindow.mode}>
-              <summary class="waiver-window-line__summary">
-                <span class="waiver-window-line__dot" aria-hidden="true"></span>
-                {waiverWindowShort}
-                <svg class="waiver-window-line__chevron" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                  <path d="M6 9l6 6 6-6"/>
-                </svg>
-              </summary>
-              <p class="waiver-window-line__detail">{waiverWindowLabel}</p>
-            </details>
+            <>
+              {/* Desktop keeps the original always-visible one-liner — only
+                  mobile asked for (and got) the compact tap-to-reveal badge
+                  below. Two elements, CSS picks one per breakpoint, so
+                  neither loses the other's behavior. */}
+              <span class="waiver-window-line-full" data-window={waiverWindow.mode}>{waiverWindowLabel}</span>
+              <details class="waiver-window-line" data-window={waiverWindow.mode}>
+                <summary class="waiver-window-line__summary">
+                  <span class="waiver-window-line__dot" aria-hidden="true"></span>
+                  {waiverWindowShort}
+                  <svg class="waiver-window-line__chevron" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M6 9l6 6 6-6"/>
+                  </svg>
+                </summary>
+                <p class="waiver-window-line__detail">{waiverWindowLabel}</p>
+              </details>
+            </>
           )}
           <button type="button" class="wpm-trigger" data-waiver-priority-open>
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -2574,15 +2581,40 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     }
   }
 
+  /* Desktop's original always-visible one-liner. Plenty of width there for the
+     full sentence, so only mobile (where it once ran off-screen) trades it for
+     the compact disclosure below. */
+  .waiver-window-line-full {
+    display: inline-block;
+    margin-left: 0.6rem;
+    padding: 0.2rem 0.55rem;
+    border-radius: var(--radius-full, 999px);
+    border: 1px solid currentColor;
+    font-size: 0.6875rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    white-space: nowrap;
+    color: var(--color-primary, #1c497c);
+  }
+  .waiver-window-line-full[data-window='fcfs'] { color: var(--color-success, #16a34a); }
+  .waiver-window-line-full[data-window='unknown'] { color: var(--content-text-muted, #6b7280); }
+
   /* A native <details>/<summary> disclosure: the badge itself only ever
      carries a short label ("Open now" / "Waivers open" / "Unknown"), so it
      never needs the wide-nowrap-vs-wrap fight a full sentence forced on
      mobile. Tapping/clicking reveals the full sentence from
-     describeWaiverWindow() — no JS required, keyboard-operable for free. */
+     describeWaiverWindow() — no JS required, keyboard-operable for free.
+     Mobile-only (see the 767px block below) — hidden by default so it never
+     replaces the desktop one-liner above. */
   .waiver-window-line {
-    display: inline-block;
+    display: none;
     margin-left: 0.6rem;
-    border-radius: var(--radius-md, 0.5rem);
+    /* Full-pill radius, matching .wpm-trigger's "Same chip idiom as
+       .waiver-window-line beside it" (src/styles/waiver-priority-modal.css)
+       right next to it in this hero — a mismatched shape there is a visible
+       regression. */
+    border-radius: var(--radius-full, 999px);
     border: 1px solid currentColor;
     /* Colour carries the meaning: green = you can add right now. */
     color: var(--color-primary, #1c497c);
@@ -2632,5 +2664,19 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     letter-spacing: normal;
     white-space: normal;
     color: var(--color-gray-700, #374151);
+  }
+
+  /* Placed AFTER both base rules above (not inside the earlier 767px block)
+     so this swap actually wins the cascade at equal specificity — a media
+     query adds no specificity, so a same-specificity unconditional rule
+     declared later in the file always wins regardless of viewport. This bit
+     the badge itself earlier in this same PR; same fix here. */
+  @media (max-width: 767px) {
+    .waiver-window-line-full {
+      display: none;
+    }
+    .waiver-window-line {
+      display: inline-block;
+    }
   }
 </style>
