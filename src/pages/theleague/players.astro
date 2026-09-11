@@ -861,7 +861,9 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
           {isAdmin && (hasSurplusData || hasAuctionData) && <button class="col-group-btn" data-group="value" id="col-group-btn-value" type="button" aria-pressed="false">Value</button>}
           <button class="col-group-btn col-group-btn--watch" data-group="watchlist" id="col-group-btn-watchlist" type="button" aria-pressed="false">
             <svg class="col-group-btn__icon" aria-hidden="true"><use href="/assets/icons/sprite.svg#icon-eye" /></svg>
-            My Watch List
+            {/* "My " drops at narrow widths — same overflow class as
+                hero-cross-link's "See ", found the same way (320px render). */}
+            <span class="col-group-btn__my">My </span>Watch List
           </button>
         </div>
         <div class="watch-scope" id="watch-scope" role="group" aria-label="Watch list scope" style="display: none;">
@@ -884,7 +886,11 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
             FAs / Filters, not the Stats/Auction/Value toggles. */}
         <MyRankEditor league="theleague" />
         <a href={r('/theleague/projected-free-agents')} class="hero-cross-link">
-          See projected FAs
+          {/* "See " drops on mobile (767px block below) — at 320px it's the
+              difference between three buttons fitting on one line and a
+              third row (found by Copilot review on PR #1057; verified with
+              a real 320px render, not just reasoned about). */}
+          <span class="hero-cross-link__see">See </span>projected FAs
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true">
             <path d="M5 12h14M12 5l7 7-7 7"/>
           </svg>
@@ -3514,6 +3520,12 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     cursor: pointer;
     transition: all 0.15s;
     line-height: 1.4;
+    /* "My Watch List" mid-wrapping into a 3-line pill (found alongside the
+       320px toolbar-right overflow — same class of bug, same width budget)
+       is worse than the row it sits in overflowing, which the outer
+       .toolbar-left flex-wrap already handles by dropping this whole block
+       to its own line. */
+    white-space: nowrap;
   }
   .col-group-btn:hover {
     border-color: var(--color-primary, #1c497c);
@@ -4100,16 +4112,47 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
       order: 2;
       flex-wrap: wrap;
       gap: 0.5rem;
+      /* align-items: stretch on the column parent should size this to the
+         parent's content width on its own, but empirically it doesn't —
+         toolbar-left and toolbar-right both measured ~335px (their own
+         content's fit-content width) inside a 304px-wide parent at 320px,
+         overflowing the page. Forcing it explicitly is the fix. */
+      width: 100%;
     }
-    .toolbar-right { order: 3; justify-content: flex-end; flex-wrap: wrap; gap: 0.4rem; }
-    /* Tightened just enough so My Rank + See projected FAs + Filters share
-       one line at 375-390px. My Rank is hidden until 2+ imports; when it
-       isn't shown the other two still fit with room to spare. */
+    /* #col-group-toggles has no flex-wrap of its own (its buttons are meant
+       to read as one row), so at 320px "View: Stats Auction Value Watch
+       List" needed 335px against a 304px-wide .toolbar-left and overflowed
+       the page — the same "unbreakable nowrap child" shape as the toolbar-
+       right overflow below, just one level up. Drop the redundant label
+       (position under "Available Players" already says what these are) and
+       tighten the pills themselves for room to spare. */
+    .col-group-toggles__label {
+      display: none;
+    }
+    .col-group-btn {
+      padding: 0.2rem 0.5rem;
+      font-size: 0.72rem;
+    }
+    /* space-between so the row fills edge-to-edge instead of clustering
+       right with dead space on the left — matches AFL's own mobile
+       .toolbar-right, which already uses space-between. */
+    .toolbar-right { order: 3; justify-content: space-between; flex-wrap: wrap; gap: 0.3rem; width: 100%; }
+    /* Tightened so My Rank + See projected FAs + Filters share one line down
+       to 320px (a plain 375-390px fit wrapped Filters to a third row on a
+       320px phone — Copilot review on PR #1057, confirmed with a real
+       render). My Rank is hidden until 2+ imports; when it isn't shown the
+       other two fit with room to spare. */
     .toolbar-right :global(.mre-trigger),
     .toolbar-right .hero-cross-link,
     .toolbar-right .filter-toggle-btn {
-      padding: 0.35rem 0.6rem;
-      font-size: 0.75rem;
+      padding: 0.3rem 0.5rem;
+      font-size: 0.7rem;
+    }
+    .hero-cross-link__see {
+      display: none;
+    }
+    .col-group-btn__my {
+      display: none;
     }
     .filters-grid {
       grid-template-columns: 1fr 1fr;
