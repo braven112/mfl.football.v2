@@ -4037,8 +4037,8 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
   /* ── Responsive ── */
   @media (max-width: 767px) {
     .players-hero {
-      padding: 1.25rem 1rem 1.25rem;
-      margin: 0.75rem 0 0 0;
+      padding: 0.875rem 0.875rem 0.75rem;
+      margin: 0.5rem 0 0 0;
     }
     .hero-spotlight,
     .hero-spotlight-caption {
@@ -4046,6 +4046,32 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     }
     .hero-title {
       font-size: 1.15rem;
+    }
+    /* Stack title/count/badge/CTA in one clean column instead of letting the
+       badge's long, dynamic label (waiverWindowLabel) force a wide nowrap
+       flex item that pushes the page into horizontal scroll. */
+    .hero-top {
+      flex-direction: column;
+      align-items: flex-start;
+      margin-bottom: 0.75rem;
+      gap: 0.5rem;
+    }
+    .hero-title-group {
+      flex-wrap: wrap;
+      row-gap: 0.35rem;
+    }
+    .waiver-window-line {
+      flex-basis: 100%;
+      white-space: normal;
+      max-width: 100%;
+      margin-left: 0;
+    }
+    .hero-cross-link {
+      font-size: 0.75rem;
+      padding: 0.35rem 0.7rem;
+    }
+    .hero-search {
+      margin-bottom: 0.75rem;
     }
     .hero-positions {
       overflow-x: auto;
