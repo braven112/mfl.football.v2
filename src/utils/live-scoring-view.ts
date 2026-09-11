@@ -282,7 +282,7 @@ export interface LineupSlotRules {
 }
 
 /** Display order for a lineup, matching how owners read their own roster. */
-const SLOT_ORDER = ['QB', 'RB', 'WR', 'TE', 'PK', 'DEF', 'FLEX'];
+const SLOT_ORDER = ['QB', 'RB', 'WR', 'TE', 'FLEX', 'PK', 'DEF'];
 
 export const FLEX_SLOT = 'FLEX';
 
