@@ -505,3 +505,55 @@ fix.
 **Evidence:** `src/utils/live-scoring-source.ts` (the loader both the route and
 the page call), `tests/live-scoring-self-fetch-guard.test.ts`,
 `docs/claude/rules/live-scoring.md`.
+
+## 2026-09-11 - The Detail Header Was the First Screen — Reclaiming It Beat Reclaiming the Padding
+
+**Context:** An owner's screenshot of the matchup detail on a phone: "a little
+crowded... getting rid of the card padding would help."
+
+**Insight:** The horizontal diagnosis was right but was the smaller half. At
+390px the detail view spent:
+
+- **~30px a side** on three stacked gutters (`main`'s `--padding-sm`,
+  `.ls-page`'s `--spacing-md`, the card border) plus `.ls-mx-body` 0.25rem and
+  `.ls-prow` 0.1rem — 16% of the width;
+- **~230px of vertical** before the first starter, on an 844px viewport: back
+  row, score row, win-prob track, its labels line, and the yet-to-play line.
+
+Four starters fit. Fixing only the gutters would have widened the rows without
+changing that count.
+
+**Recommendation:** Below 760px, treat the detail as a full-screen view rather
+than a card in a page (the full-bleed mechanics are in
+`domains/frontend.md#2026-09-11`), and attack the header as its own budget:
+
+- **Fold the yet-to-play counts into the win-probability labels.** That line
+  existed to carry two percentages and had room for both. Guard the fold in the
+  MARKUP, not with `:has()` — a FINAL matchup renders no `WinProbBar` at all
+  (`{!calc.isFinal && <WinProbBar …/>}`), and then `.ls-ytp` is the only place
+  the counts exist. `.ls-ytp.folded` is set from the same `calc.isFinal` the bar
+  is gated on, so the two can never disagree. See
+  `domains/accessibility.md#2026-09-11` for why `.folded` must be visually
+  hidden rather than `display: none`.
+- **Move the card's one gutter onto `.ls-prow`**, not `.ls-mx-body`. It is then
+  also the inset the new row dividers measure against, so content and rule share
+  one edge by construction. Anything that used the old body inset has to follow
+  it — `.ls-bench-cap` and `.ls-bench-none` both did, and both are promoted to
+  grid items by `.ls-bench-row > div { display: contents }`.
+
+Result, measured on the real page at 390px: first row 515px → 431px from the
+top, name column 96px → 111px, five starters fully visible instead of four.
+
+**What is NOT free to move:** `.ls-detail-top`'s 0.6rem inline inset. It exists
+so the back label and the WRAPPED freshness pill start at the same x as
+`.ls-scorehead`'s content below, and `tests/live-scoring-layout-css.test.ts`
+pins it at both breakpoints along with `.ls-back`'s padding netting to zero
+against its negative margin. Retuning it to match the new row gutter looked
+tidier in isolation and broke that alignment; the guard caught it. Only the
+BLOCK padding was the header's to give back — and on `.ls-back` it has to stay a
+longhand, since the `padding` shorthand would reset the inline padding the
+negative margin depends on.
+
+**Evidence:** `src/styles/live-scoring.css` (760px block),
+`src/components/shared/LiveScoreboard.tsx` (`WinProbBar`, `MatchupDetail`),
+`tests/live-scoring-layout-css.test.ts`.

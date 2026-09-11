@@ -133,6 +133,61 @@ hrefs to local copies, and open it in the bundled Chromium — it isolates
 
 ---
 
+## 2026-09-11 - A Page Has TWO Ancestor Gutters, Not One — Full-Bleed by Viewport, Never by Summing Them
+
+**Context:** Making Live Scoring's matchup detail run edge-to-edge on a phone.
+
+**Insight:** Content on a TheLeague page is inset by **two** independent paddings
+before its own box starts, and the second is easy to miss:
+
+| Where | Declaration | Phone value |
+|---|---|---|
+| `TheLeagueLayout`'s `main` | `padding-inline: var(--padding-sm)` | 8px |
+| the page wrapper (e.g. `.ls-page`) | `padding: … var(--spacing-md) …` | 16px |
+
+Plus a card border, that is ~30px a side — 16% of a 390px screen. A negative
+margin written against the gutter you happened to notice (`calc(var(--spacing-md)
+* -1)`) leaves the other 8px behind, and the mistake reads as "nearly right",
+which is worse than obviously wrong.
+
+**Recommendation:** Go full bleed against the VIEWPORT, so the rule does not have
+to know either ancestor:
+
+```css
+.ls-detail {                        /* inside @media (max-width: 760px) */
+  width: 100vw;
+  margin-inline: calc(50% - 50vw);
+  border-left: 0; border-right: 0; border-radius: 0; box-shadow: none;
+}
+```
+
+`50% - 50vw` resolves the percentage against the parent's inline size, so it
+lands on the viewport edge for any centred column — which `main`
+(`margin-inline: auto` + `max-width`) and the page wrapper (`margin: 0 auto`)
+both are. It survives either padding changing. Verified at 320/390/430/760px:
+`documentElement.scrollWidth === innerWidth` at every width, so no horizontal
+scrollbar — the failure mode this technique is usually blamed for, and which
+only bites when the element is NOT centred or a desktop scrollbar is in play.
+
+Two consequences worth planning for rather than discovering:
+
+- **The page wrapper's `padding-top` becomes a visible band.** Behind an inset,
+  rounded card it read as the margin around it; behind a full-bleed one only its
+  top edge survives, as a stripe of page background with nothing beside it
+  (obvious in light mode, invisible in dark — check both). Cancel it with the
+  same token it is declared with: `margin-top: calc(var(--spacing-lg) * -1)`.
+- **Full-width row rules get much louder** once the card's frame is gone. Insetting
+  them to the row's own gutter needs a pseudo-element rather than a
+  `border-bottom` when the row is a grid with no inline padding — and an
+  absolutely positioned `::after` is out of flow, so it does **not** become a
+  grid item among `display: contents` / `subgrid` children.
+
+**Evidence:** `src/styles/live-scoring.css` 760px block;
+`src/layouts/TheLeagueLayout.astro` `main`; `src/pages/theleague/live-scoring.astro`
+`.ls-page`.
+
+---
+
 ## 2026-09-09 - Two Percentages, Two Boxes: Why "58% + 38%" Overlapped
 
 **Context:** the What's New hero ran its paragraph underneath the browser-framed
