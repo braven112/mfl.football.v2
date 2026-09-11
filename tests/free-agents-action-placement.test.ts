@@ -82,6 +82,45 @@ describe('free-agent action controls sit beside the player column', () => {
   }
 });
 
+describe('theleague players.astro: My Watch List stays wired to the delegated click handler', () => {
+  // 2026-09-11: moved out of #col-group-toggles into .toolbar-right and back
+  // twice inside one PR, chasing a mobile row-count layout. The first move
+  // silently broke the click — the container's delegated listener
+  // (`colGroupToggles.addEventListener('click', …)`) is scoped to
+  // #col-group-toggles, and relocating a button out of it does not carry the
+  // listener along. See docs/claude/insights/domains/frontend.md,
+  // "Moving a Button Out of Its Delegated-Click Container Silently Kills the
+  // Click". Pin the button inside the container so a future "widen the
+  // mobile toolbar" edit fails a test instead of shipping a dead click.
+  const page = 'src/pages/theleague/players.astro';
+  const src = read(page);
+
+  it('renders #col-group-btn-watchlist inside #col-group-toggles', () => {
+    const containerStart = src.indexOf('id="col-group-toggles"');
+    expect(containerStart).toBeGreaterThan(-1);
+    // #col-group-toggles has no nested <div> of its own (only <span>/<button>/
+    // <svg> children), so its own closing tag is the FIRST </div> after the
+    // opening tag. Using ".toolbar-right"'s opening tag as the boundary
+    // instead (an earlier version of this test did) would also pass for a
+    // button moved to a SIBLING div — e.g. .watch-scope, which also sits
+    // between this container and .toolbar-right — while the delegated
+    // listener, scoped to #col-group-toggles itself, would no longer see its
+    // clicks. Caught by Copilot review on PR #1057.
+    const containerEnd = src.indexOf('</div>', containerStart);
+    const watchBtn = src.indexOf('id="col-group-btn-watchlist"');
+    expect(containerEnd).toBeGreaterThan(containerStart);
+    expect(watchBtn).toBeGreaterThan(containerStart);
+    expect(watchBtn).toBeLessThan(containerEnd);
+  });
+
+  it('has no standalone click listener duplicating the delegated one', () => {
+    // A standalone listener here means either the button left
+    // #col-group-toggles again without the workaround this test exists to
+    // catch, or it is back inside the container AND still double-bound.
+    expect(src).not.toMatch(/getElementById\('col-group-btn-watchlist'\)[\s\S]{0,120}addEventListener/);
+  });
+});
+
 describe('waiver priority dialog opens with an order on screen', () => {
   const src = read('src/components/shared/WaiverPriorityModal.astro');
   const frontmatter = src.slice(0, src.indexOf('\n---', 4));

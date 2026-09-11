@@ -859,9 +859,13 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
           <button class="col-group-btn" data-group="rankings" id="col-group-btn-rankings" type="button" aria-pressed="false">Rankings</button>
           <button class="col-group-btn" data-group="auction" id="col-group-btn-auction" type="button" aria-pressed="false">Auction</button>
           {isAdmin && (hasSurplusData || hasAuctionData) && <button class="col-group-btn" data-group="value" id="col-group-btn-value" type="button" aria-pressed="false">Value</button>}
-          <button class="col-group-btn col-group-btn--watch" data-group="watchlist" id="col-group-btn-watchlist" type="button" aria-pressed="false">
+          {/* aria-label carries the full "My Watch List" regardless of
+              breakpoint — "My " visually dropping via CSS at narrow widths
+              would otherwise drop it from the accessible name too, since
+              display: none removes text from the accessibility tree. */}
+          <button class="col-group-btn col-group-btn--watch" data-group="watchlist" id="col-group-btn-watchlist" type="button" aria-pressed="false" aria-label="My Watch List">
             <svg class="col-group-btn__icon" aria-hidden="true"><use href="/assets/icons/sprite.svg#icon-eye" /></svg>
-            My Watch List
+            <span aria-hidden="true"><span class="col-group-btn__my">My </span>Watch List</span>
           </button>
         </div>
         <div class="watch-scope" id="watch-scope" role="group" aria-label="Watch list scope" style="display: none;">
@@ -880,13 +884,23 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
       </div>
       <div class="toolbar-center"></div>
       <div class="toolbar-right">
-        <a href={r('/theleague/projected-free-agents')} class="hero-cross-link">
-          See projected FAs
+        {/* An action, not a view like Watch List — belongs with Projected
+            FAs / Filters, not the Stats/Auction/Value toggles. */}
+        <MyRankEditor league="theleague" />
+        {/* aria-label carries the full "See projected FAs" regardless of
+            breakpoint — "See " visually dropping via CSS at narrow widths
+            would otherwise drop it from the accessible name too, since
+            display: none removes text from the accessibility tree. */}
+        <a href={r('/theleague/projected-free-agents')} class="hero-cross-link" aria-label="See projected FAs">
+          {/* "See " drops on mobile (767px block below) — at 320px it's the
+              difference between three buttons fitting on one line and a
+              third row (found by Copilot review on PR #1057; verified with
+              a real 320px render, not just reasoned about). */}
+          <span aria-hidden="true"><span class="hero-cross-link__see">See </span>projected FAs</span>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true">
             <path d="M5 12h14M12 5l7 7-7 7"/>
           </svg>
         </a>
-        <MyRankEditor league="theleague" />
         <button class="filter-toggle-btn" id="filter-toggle-btn" type="button" aria-expanded="false" aria-controls="filters-panel">
           <svg class="filter-toggle-btn__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <line x1="4" y1="6" x2="20" y2="6" /><line x1="8" y1="12" x2="16" y2="12" /><line x1="11" y1="18" x2="13" y2="18" />
@@ -3512,6 +3526,12 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     cursor: pointer;
     transition: all 0.15s;
     line-height: 1.4;
+    /* "My Watch List" mid-wrapping into a 3-line pill (found alongside the
+       320px toolbar-right overflow — same class of bug, same width budget)
+       is worse than the row it sits in overflowing, which the outer
+       .toolbar-left flex-wrap already handles by dropping this whole block
+       to its own line. */
+    white-space: nowrap;
   }
   .col-group-btn:hover {
     border-color: var(--color-primary, #1c497c);
@@ -3526,6 +3546,16 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     display: inline-flex;
     align-items: center;
     gap: 0.3rem;
+  }
+  /* MyRankEditor's .mre-trigger is rendered by a child component, so a
+     scoped selector alone never reaches it — needs :global(). Matches
+     .hero-cross-link / .filter-toggle-btn's size, which .toolbar-right now
+     sits it beside, instead of the smaller pill chips its default style
+     was designed to match in #col-group-toggles. */
+  .toolbar-right :global(.mre-trigger) {
+    padding: 0.4rem 0.85rem;
+    border-radius: var(--radius-md, 0.5rem);
+    font-size: 0.8125rem;
   }
   .col-group-btn__icon {
     width: 12px;
@@ -4088,8 +4118,59 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
       order: 2;
       flex-wrap: wrap;
       gap: 0.5rem;
+      /* align-items: stretch on the column parent should size this to the
+         parent's content width on its own, but empirically it doesn't —
+         toolbar-left and toolbar-right both measured ~335px (their own
+         content's fit-content width) inside a 304px-wide parent at 320px,
+         overflowing the page. Forcing it explicitly is the fix. */
+      width: 100%;
     }
-    .toolbar-right { order: 3; justify-content: flex-end; flex-wrap: wrap; }
+    /* #col-group-toggles has no flex-wrap of its own (its buttons are meant
+       to read as one row), so at 320px "View: Stats Auction Value Watch
+       List" needed 335px against a 304px-wide .toolbar-left and overflowed
+       the page — the same "unbreakable nowrap child" shape as the toolbar-
+       right overflow below, just one level up. Drop the redundant label
+       (position under "Available Players" already says what these are) and
+       tighten the pills themselves for room to spare. */
+    .col-group-toggles__label {
+      display: none;
+    }
+    .col-group-btn {
+      padding: 0.2rem 0.5rem;
+      font-size: 0.72rem;
+    }
+    /* Safety net: an admin with 2+ personal ranking imports also gets the
+       Rankings pill (client-side, independent of the server-computed Value
+       pill), so the row can carry Stats+Rankings+Auction+Value+Watch List —
+       5 pills, 340px, over the 304px budget even at the tightened size above
+       (Copilot review on PR #1057). Letting the row wrap here keeps it off
+       the page's horizontal scroll in that combination; the common 4-pill
+       case still fits on one line unwrapped. */
+    .col-group-toggles {
+      flex-wrap: wrap;
+      row-gap: 0.35rem;
+    }
+    /* space-between so the row fills edge-to-edge instead of clustering
+       right with dead space on the left — matches AFL's own mobile
+       .toolbar-right, which already uses space-between. */
+    .toolbar-right { order: 3; justify-content: space-between; flex-wrap: wrap; gap: 0.3rem; width: 100%; }
+    /* Tightened so My Rank + See projected FAs + Filters share one line down
+       to 320px (a plain 375-390px fit wrapped Filters to a third row on a
+       320px phone — Copilot review on PR #1057, confirmed with a real
+       render). My Rank is hidden until 2+ imports; when it isn't shown the
+       other two fit with room to spare. */
+    .toolbar-right :global(.mre-trigger),
+    .toolbar-right .hero-cross-link,
+    .toolbar-right .filter-toggle-btn {
+      padding: 0.3rem 0.5rem;
+      font-size: 0.7rem;
+    }
+    .hero-cross-link__see {
+      display: none;
+    }
+    .col-group-btn__my {
+      display: none;
+    }
     .filters-grid {
       grid-template-columns: 1fr 1fr;
     }
