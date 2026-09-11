@@ -2534,12 +2534,6 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
       flex-wrap: wrap;
       row-gap: 0.35rem;
     }
-    .waiver-window-line {
-      flex-basis: 100%;
-      white-space: normal;
-      max-width: 100%;
-      margin-left: 0;
-    }
     .hero-cross-link {
       font-size: 0.75rem;
       padding: 0.35rem 0.7rem;
@@ -2603,4 +2597,18 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
      on AFL pages (tests/afl-brand-green-guard.test.ts). */
   .waiver-window-line[data-window='fcfs'] { color: var(--color-success, #16a34a); }
   .waiver-window-line[data-window='unknown'] { color: var(--content-text-muted, #6b7280); }
+
+  /* Placed after the base rule above (not inside the earlier mobile block) so
+     it actually wins the cascade at equal specificity — the badge's label is
+     dynamic and can be long, so on mobile it must wrap instead of forcing a
+     nowrap flex item off the edge of the screen. */
+  @media (max-width: 767px) {
+    .waiver-window-line {
+      display: inline-block;
+      flex-basis: 100%;
+      white-space: normal;
+      max-width: 100%;
+      margin-left: 0;
+    }
+  }
 </style>
