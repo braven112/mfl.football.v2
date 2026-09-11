@@ -859,10 +859,12 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
           <button class="col-group-btn" data-group="rankings" id="col-group-btn-rankings" type="button" aria-pressed="false">Rankings</button>
           <button class="col-group-btn" data-group="auction" id="col-group-btn-auction" type="button" aria-pressed="false">Auction</button>
           {isAdmin && (hasSurplusData || hasAuctionData) && <button class="col-group-btn" data-group="value" id="col-group-btn-value" type="button" aria-pressed="false">Value</button>}
-          <button class="col-group-btn col-group-btn--watch" data-group="watchlist" id="col-group-btn-watchlist" type="button" aria-pressed="false">
-            <svg class="col-group-btn__icon" aria-hidden="true"><use href="/assets/icons/sprite.svg#icon-eye" /></svg>
-            My Watch List
-          </button>
+          {/* Rides along with the view toggles, not the action buttons in
+              .toolbar-right — that row (Watch List / Projected FAs / Filters)
+              is already full-width on mobile; this row has the spare room.
+              Keeps the toolbar to two button rows on a phone instead of
+              three. */}
+          <MyRankEditor league="theleague" />
         </div>
         <div class="watch-scope" id="watch-scope" role="group" aria-label="Watch list scope" style="display: none;">
           <button class="watch-scope-btn active" data-scope="all" type="button" aria-pressed="true">All</button>
@@ -880,13 +882,16 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
       </div>
       <div class="toolbar-center"></div>
       <div class="toolbar-right">
+        <button class="col-group-btn col-group-btn--watch" data-group="watchlist" id="col-group-btn-watchlist" type="button" aria-pressed="false">
+          <svg class="col-group-btn__icon" aria-hidden="true"><use href="/assets/icons/sprite.svg#icon-eye" /></svg>
+          My Watch List
+        </button>
         <a href={r('/theleague/projected-free-agents')} class="hero-cross-link">
           See projected FAs
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true">
             <path d="M5 12h14M12 5l7 7-7 7"/>
           </svg>
         </a>
-        <MyRankEditor league="theleague" />
         <button class="filter-toggle-btn" id="filter-toggle-btn" type="button" aria-expanded="false" aria-controls="filters-panel">
           <svg class="filter-toggle-btn__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <line x1="4" y1="6" x2="20" y2="6" /><line x1="8" y1="12" x2="16" y2="12" /><line x1="11" y1="18" x2="13" y2="18" />
@@ -2707,6 +2712,13 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
         setActiveView(group);
       });
     }
+    // My Watch List lives in the toolbar (next to See projected FAs /
+    // Filters) so the three fit on one line on mobile, not inside
+    // #col-group-toggles with the other view buttons — its own listener.
+    const watchListBtn = document.getElementById('col-group-btn-watchlist');
+    if (watchListBtn) {
+      watchListBtn.addEventListener('click', () => setActiveView('watchlist'));
+    }
 
     // Show More
     const showMoreBtn = document.getElementById('show-more-btn');
@@ -3527,6 +3539,14 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     align-items: center;
     gap: 0.3rem;
   }
+  /* Lives in .toolbar-right now, beside .hero-cross-link / .filter-toggle-btn
+     — match their size/shape instead of the smaller pill chips it used to
+     sit among in #col-group-toggles. */
+  .toolbar-right .col-group-btn--watch {
+    padding: 0.4rem 0.85rem;
+    border-radius: var(--radius-md, 0.5rem);
+    font-size: 0.8125rem;
+  }
   .col-group-btn__icon {
     width: 12px;
     height: 12px;
@@ -4089,7 +4109,16 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
       flex-wrap: wrap;
       gap: 0.5rem;
     }
-    .toolbar-right { order: 3; justify-content: flex-end; flex-wrap: wrap; }
+    .toolbar-right { order: 3; justify-content: flex-end; flex-wrap: wrap; gap: 0.4rem; }
+    /* Tightened just enough so Watch List + See projected FAs + Filters share
+       one line at 375-390px; My Rank (hidden until 2+ imports, and last in
+       source order) wraps to its own line under them rather than crowd. */
+    .toolbar-right .col-group-btn--watch,
+    .toolbar-right .hero-cross-link,
+    .toolbar-right .filter-toggle-btn {
+      padding: 0.35rem 0.6rem;
+      font-size: 0.75rem;
+    }
     .filters-grid {
       grid-template-columns: 1fr 1fr;
     }
