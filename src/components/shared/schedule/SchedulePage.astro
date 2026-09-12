@@ -35,7 +35,11 @@ import { getCurrentSeasonYear } from '../../../utils/league-year';
 import { getCurrentNFLWeek } from '../../../utils/current-week';
 import { nflWeekStartIsoDate } from '../../../utils/nfl-week-starts.mjs';
 import { PLAYOFFS_START_WEEK } from '../../../utils/fantasy-bracket.mjs';
-import { chooseTeamName, resolveConfigForYear } from '../../../utils/team-names';
+import {
+  chooseTeamName,
+  resolveConfigForYear,
+  resolvePreferredTeamIdForYear,
+} from '../../../utils/team-names';
 import {
   findNextGame,
   franchiseSchedule,
@@ -105,6 +109,23 @@ const weeks = parsedByYear.get(year) ?? [];
 const currentWeek = isLiveSeason ? (getCurrentNFLWeek(new Date(), year) ?? 1) : -1;
 
 const teams = resolveConfigForYear(config as { teams: any[] }, year).teams ?? [];
+
+/**
+ * The viewer's franchise IN THE SEASON BEING SHOWN — not the slot they hold
+ * today.
+ *
+ * MFL franchise ids get REASSIGNED. TheLeague's 0011 was franchise 0010 from
+ * 2011-2015 and has been 0011 only since 2019, so reading `?year=2013` off the
+ * raw id presents ANOTHER owner's 2013 season as "My Schedule", and 2016-2018
+ * is a gap year that must resolve to nothing rather than to someone else.
+ * `/standings` and `/playoffs` already do this for their own season pickers
+ * (both call the same helper); this page needed it the moment it grew one.
+ */
+const viewerTeamIdForYear = resolvePreferredTeamIdForYear(
+  config as { teams: any[] },
+  viewerFranchiseId,
+  year,
+) ?? null;
 const teamById = new Map(teams.map((team: any) => [team.franchiseId, team]));
 const nameOf = (id: string) => {
   const team = teamById.get(id);
@@ -125,7 +146,12 @@ const nameOf = (id: string) => {
 const abbrevOf = (id: string) => {
   const team = teamById.get(id);
   if (team?.abbrev) return team.abbrev;
-  const name = team ? nameOf(id) : '';
+  // A franchise with NO config entry keeps its raw id. `nameOf` answers
+  // "Franchise 0034" for one, and deriving initials from that placeholder
+  // renders every defunct club as "F0" — the AFL's 2003-2005 schedules carry
+  // ten ids their standings never listed, so this path is reached.
+  if (!team) return id;
+  const name = nameOf(id);
   if (!name) return id;
   const words = name.replace(/[^A-Za-z0-9 ]/g, ' ').split(/\s+/).filter(Boolean);
   if (words.length === 0) return id;
@@ -229,15 +255,15 @@ function weekDate(week: number) {
 }
 
 // ── My schedule ────────────────────────────────────────────────────────────
-const mySchedule = viewerFranchiseId ? franchiseSchedule(weeks, viewerFranchiseId) : [];
+const mySchedule = viewerTeamIdForYear ? franchiseSchedule(weeks, viewerTeamIdForYear) : [];
 const nextGame = findNextGame(mySchedule, currentWeek);
-const myRank = viewerFranchiseId ? rankOf.get(viewerFranchiseId) ?? null : null;
+const myRank = viewerTeamIdForYear ? rankOf.get(viewerTeamIdForYear) ?? null : null;
 // Record and points come from standings, not from summing this page's own
 // rows: the feed runs through the playoff and consolation weeks, so summing it
 // gave the hero 13-8 / 1927.4 beside a grid printing MFL's 11-7 / 1613.30 for
 // the same club. One number, one source.
-const myRecord = viewerFranchiseId ? recordOf.get(viewerFranchiseId) ?? null : null;
-const myPointsFor = viewerFranchiseId ? pointsForOf.get(viewerFranchiseId) ?? null : null;
+const myRecord = viewerTeamIdForYear ? recordOf.get(viewerTeamIdForYear) ?? null : null;
+const myPointsFor = viewerTeamIdForYear ? pointsForOf.get(viewerTeamIdForYear) ?? null : null;
 const ordinal = (n: number) => {
   const mod = n % 100;
   if (mod >= 11 && mod <= 13) return `${n}th`;
@@ -294,7 +320,16 @@ const title = view === 'my' ? 'My Schedule' : 'Schedule';
  * Null for the league view, a signed-out visitor, and a club whose config
  * carries no colours — each of which correctly falls back to league chrome.
  */
-const heroSkin = view === 'my' ? resolveHeroFranchiseSkin(viewerFranchiseId, leagueSlug) : null;
+// Gated on the owner still holding the SAME slot that season, because the
+// resolver looks a franchise up in TODAY'S config: for a season where they
+// held a different id, that id's current colours belong to whoever holds it
+// now — a rival's palette on your own page. Always true for the live season,
+// so the common case is unaffected and a reassigned season falls back to
+// league chrome rather than to the wrong club.
+const heroSkin =
+  view === 'my' && viewerTeamIdForYear === viewerFranchiseId
+    ? resolveHeroFranchiseSkin(viewerFranchiseId, leagueSlug)
+    : null;
 ---
 
 <TheLeagueLayout title={`${title} | ${league.name}`}>
@@ -325,8 +360,8 @@ const heroSkin = view === 'my' ? resolveHeroFranchiseSkin(viewerFranchiseId, lea
           )}
           <span class="hero-fb__wash" aria-hidden="true"></span>
         </>
-      ) : viewerFranchiseId && iconOf(viewerFranchiseId) ? (
-        <img src={iconOf(viewerFranchiseId)!} alt="" class="sch-hero__watermark" aria-hidden="true" />
+      ) : viewerTeamIdForYear && iconOf(viewerTeamIdForYear) ? (
+        <img src={iconOf(viewerTeamIdForYear)!} alt="" class="sch-hero__watermark" aria-hidden="true" />
       ) : null}
 
       <div class="sch-hero__inner">
@@ -336,18 +371,21 @@ const heroSkin = view === 'my' ? resolveHeroFranchiseSkin(viewerFranchiseId, lea
             <span class="sch-hero__meta">{year} season · weeks {firstWeek}–{lastWeek}</span>
           </div>
 
-          {viewerFranchiseId ? (
+          {viewerTeamIdForYear ? (
             <div class="sch-hero__identity">
-              {iconOf(viewerFranchiseId) && (
-                <img src={iconOf(viewerFranchiseId)!} alt="" class="sch-hero__crest" width="54" height="54" />
+              {/* One crest source per hero: with a franchise skin the big
+                  watermark is the resolver's dark cut, so the small mark takes
+                  the same art rather than pairing an era crest with it. */}
+              {(heroSkin?.crest || iconOf(viewerTeamIdForYear)) && (
+                <img src={heroSkin?.crest || iconOf(viewerTeamIdForYear)!} alt="" class="sch-hero__crest" width="54" height="54" />
               )}
-              <h1 class="sch-hero__title">{nameOf(viewerFranchiseId)}</h1>
+              <h1 class="sch-hero__title">{nameOf(viewerTeamIdForYear)}</h1>
             </div>
           ) : (
             <h1 class="sch-hero__title">{league.name}</h1>
           )}
 
-          {viewerFranchiseId && myRows.length > 0 && (
+          {viewerTeamIdForYear && myRows.length > 0 && (
             <div class="sch-rail">
               <div class="sch-rail__bars">
                 {myRows.map((row) => (
@@ -370,7 +408,7 @@ const heroSkin = view === 'my' ? resolveHeroFranchiseSkin(viewerFranchiseId, lea
             </div>
           )}
 
-          {viewerFranchiseId ? (
+          {viewerTeamIdForYear ? (
             <div class="sch-stats">
               <div class="sch-stat">
                 <span class="sch-stat__value">{myRecord ?? '0-0'}</span>
@@ -382,8 +420,8 @@ const heroSkin = view === 'my' ? resolveHeroFranchiseSkin(viewerFranchiseId, lea
                   <div class="sch-stat">
                     <span class="sch-stat__value sch-stat__value--sm">{ordinal(myRank)}</span>
                     <span class="sch-stat__label">
-                      of {groupSizeOf.get(viewerFranchiseId) || standingsRows.length || teams.length}
-                      {conferences.length > 1 ? ` in the ${conferences.find((c) => c.code === conferenceOf(viewerFranchiseId))?.name ?? 'conference'}` : ''}
+                      of {groupSizeOf.get(viewerTeamIdForYear) || standingsRows.length || teams.length}
+                      {conferences.length > 1 ? ` in the ${conferences.find((c) => c.code === conferenceOf(viewerTeamIdForYear))?.name ?? 'conference'}` : ''}
                     </span>
                   </div>
                 </>
@@ -406,7 +444,7 @@ const heroSkin = view === 'my' ? resolveHeroFranchiseSkin(viewerFranchiseId, lea
           )}
         </div>
 
-        {viewerFranchiseId && nextGame ? (
+        {viewerTeamIdForYear && nextGame ? (
           <aside class="sch-next" aria-label="Next matchup">
             <div class="sch-next__head">
               <span class="sch-next__dot" aria-hidden="true"></span>
@@ -472,7 +510,11 @@ const heroSkin = view === 'my' ? resolveHeroFranchiseSkin(viewerFranchiseId, lea
 
     {view === 'my' ? (
       myRows.length === 0 ? (
-        <p class="sch-empty">No schedule has been published for {year} yet.</p>
+        <p class="sch-empty">
+          {viewerFranchiseId && !viewerTeamIdForYear
+            ? `You did not have a team in ${year}.`
+            : `No schedule has been published for ${year} yet.`}
+        </p>
       ) : (
         <div class="sch-card">
           {myMonths.map((group) => (
@@ -565,7 +607,7 @@ const heroSkin = view === 'my' ? resolveHeroFranchiseSkin(viewerFranchiseId, lea
                     {group.teams.map((team: any) => {
                       const id = team.franchiseId;
                       const row = gridByFranchise.get(id);
-                      const mine = id === viewerFranchiseId;
+                      const mine = id === viewerTeamIdForYear;
                       return (
                         <tr class:list={['sch-grid__row', { 'is-mine': mine }]}>
                           <th scope="row" class:list={['sch-grid__club', { 'is-mine': mine }]}>
@@ -596,13 +638,21 @@ const heroSkin = view === 'my' ? resolveHeroFranchiseSkin(viewerFranchiseId, lea
                                         : game.outcome === 'L'
                                           ? 'lost'
                                           : 'tied';
-                                    // The printed score is rounded to keep 17
-                                    // columns legible, so the full one lives in
-                                    // the label a screen reader and a hover
-                                    // both get.
-                                    const scoreLine = game.played
-                                      ? `${Math.round(game.score ?? 0)}–${Math.round(game.opponentScore ?? 0)}`
-                                      : '';
+                                    // Rounded to keep 17 columns legible, with
+                                    // the exact score in the label a screen
+                                    // reader and a hover both get — EXCEPT
+                                    // where rounding would print a decided
+                                    // game as a tie. 97 of the archive's 8,413
+                                    // decided games are sub-point, and
+                                    // "115–115" inside a green WIN tile reads
+                                    // as a bug in the tile, not as rounding.
+                                    const mine = game.score ?? 0;
+                                    const theirs = game.opponentScore ?? 0;
+                                    const roundsToATie =
+                                      Math.round(mine) === Math.round(theirs) && mine !== theirs;
+                                    const fmt = (n: number) =>
+                                      roundsToATie ? n.toFixed(1) : String(Math.round(n));
+                                    const scoreLine = game.played ? `${fmt(mine)}–${fmt(theirs)}` : '';
                                     const exact = game.played
                                       ? `, ${(game.score ?? 0).toFixed(1)} to ${(game.opponentScore ?? 0).toFixed(1)}`
                                       : '';
@@ -727,13 +777,16 @@ const heroSkin = view === 'my' ? resolveHeroFranchiseSkin(viewerFranchiseId, lea
      The league glow goes: it is a radial of --sch-glow, the league's own
      colour, and leaving it on lights the franchise gradient's top-left
      corner with the wrong brand. */
-  .sch-hero--franchise { background: var(--hero-fb-gradient); }
+  /* Literal fallback like both sibling heroes carry: an undefined custom
+     property here would paint the card transparent in BOTH themes. */
+  .sch-hero--franchise { background: var(--hero-fb-gradient, #10161f); }
   .sch-hero--franchise .sch-hero__glow { display: none; }
   .sch-hero--franchise .sch-pill {
     background: var(--hero-fb-pill-bg);
     color: var(--hero-fb-pill-ink);
   }
   .sch-hero--franchise .sch-rail__bar.is-now { background: var(--hero-fb-accent); }
+  .sch-hero--franchise .sch-rail__now { color: var(--hero-fb-accent); }
   .sch-hero--franchise .sch-next__dot { background: var(--hero-fb-accent-panel); }
   .sch-hero--franchise .sch-next__kicker { color: var(--hero-fb-accent-panel); }
   .sch-hero--franchise .sch-btn {
