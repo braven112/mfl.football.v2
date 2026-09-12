@@ -30,6 +30,9 @@ const team = (id: string, name: string) => ({
   crestStroke: 0,
   primary: '#123456',
   secondary: '#654321',
+  // The MARK colour, judged against the header panel — a different question
+  // from `primary`, which is the takeover's full-screen field.
+  swatch: '#4a90d9',
   gradient: '',
 });
 
