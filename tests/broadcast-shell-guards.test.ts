@@ -12,6 +12,9 @@ import { join } from 'node:path';
 import { getLeagueTeamConfigs } from '../src/utils/league-team-brands';
 import { broadcastStrokeIndex, resolveBroadcastCrest } from '../src/utils/broadcast-crest';
 import { crestLeagueKey } from '../src/utils/dark-surface-crest';
+import { buildBroadcastDefenseFaces } from '../src/utils/broadcast-board';
+import { isEspnCdnUrl } from '../src/utils/espn-cdn';
+import { normalizeTeamCode } from '../src/utils/nfl';
 
 const read = (p: string) => readFileSync(join(process.cwd(), p), 'utf8');
 
@@ -558,5 +561,117 @@ describe('fullscreen shows the board and nothing else', () => {
     for (const ev of ['pointermove', 'pointerdown', 'touchstart', 'keydown']) {
       expect(ISLAND_CODE).toContain(`'${ev}'`);
     }
+  });
+});
+
+describe('the reveal features the scorer, not a chip', () => {
+  const TAKEOVER = code(read('src/components/shared/live-broadcast/MomentTakeover.tsx'));
+
+  it('no ESPN athlete id reaches the client', () => {
+    // The headline rule in src/types/live-broadcast.ts: a college athlete id
+    // and an NFL one are both plain digits, so every join is server-side and
+    // only MFL ids cross. The draft board's equivalent ships `espnId` on
+    // `BroadcastDefenseFace` and builds the URL in its island — the shape this
+    // surface must not copy.
+    expect(TAKEOVER).not.toMatch(/espnId/);
+    expect(TAKEOVER).not.toMatch(/getPlayerHeadshot/);
+    expect(ISLAND_CODE).not.toMatch(/espnId/);
+  });
+
+  it('ships resolved URLs, three fields, nothing else', () => {
+    const faces = buildBroadcastDefenseFaces({
+      d1: { id: 'd1', name: 'Bills, Buffalo', position: 'DEF', nflTeam: 'BUF', headshot: '', espnId: null, projected: 8 },
+    });
+    const list = faces['BUF'];
+    expect(list?.length).toBeGreaterThanOrEqual(2);
+    for (const f of list) {
+      expect(Object.keys(f).sort()).toEqual(['headshot', 'name', 'position']);
+      expect(isEspnCdnUrl(f.headshot)).toBe(true);
+    }
+  });
+
+  it('resolves every one of the 32 clubs — the WSH/WAS trap, mechanically', () => {
+    // A DEF's team code arrives already `normalizeTeamCode`d, so `WSH`, while
+    // the spotlight table is keyed `WAS`; MFL's own dialect (GBP/KCC/NEP…)
+    // misses eight more. Indexing the table instead of calling the accessor
+    // silently drops nine defenses, and nothing downstream says so.
+    const MFL = ['BUF','IND','MIA','NEP','NYJ','CIN','CLE','PIT','BAL','HOU','JAC','TEN','DEN','KCC','LVR','LAC',
+                 'DAL','NYG','PHI','WAS','CHI','DET','GBP','MIN','ATL','CAR','NOS','TBB','ARI','LAR','SFO','SEA'];
+    const meta: Record<string, any> = {};
+    MFL.forEach((mfl, i) => {
+      meta[`d${i}`] = { id: `d${i}`, name: `${mfl} D`, position: 'DEF',
+        nflTeam: normalizeTeamCode(mfl), headshot: '', espnId: null, projected: 7 };
+    });
+    const faces = buildBroadcastDefenseFaces(meta);
+    const missing = MFL.filter((m) => !faces[normalizeTeamCode(m)]);
+    expect(missing).toEqual([]);
+    expect(Object.values(faces).every((v) => v.length >= 2)).toBe(true);
+  });
+
+  it('ships at most three faces per club', () => {
+    // Two shown, one spare for a 404. More is payload nobody sees, and the
+    // draft board's 101 KB came from hanging a pool off each player.
+    const faces = buildBroadcastDefenseFaces({
+      d1: { id: 'd1', name: 'x', position: 'DEF', nflTeam: 'KC', headshot: '', espnId: null, projected: 8 },
+    });
+    expect(Object.values(faces).every((v) => v.length <= 3)).toBe(true);
+  });
+
+  it('sizes the stand on the cutout’s own ratio, and never caps the man', () => {
+    // An ESPN headshot is LANDSCAPE (600x436). This layer is 64% of the board
+    // tall, so the draft board's `width: 120%` of the column renders him taller
+    // than the layer and — bottom-anchored, with `.lbc-reveal` clipping — takes
+    // his head off.
+    const stand = CSS_CODE.slice(CSS_CODE.indexOf('.lbc-reveal__stand'));
+    expect(stand.slice(0, stand.indexOf('}'))).toMatch(/aspect-ratio:\s*600\s*\/\s*436/);
+    const model = CSS_CODE.slice(CSS_CODE.indexOf('.lbc-reveal__model {'));
+    expect(model.slice(0, model.indexOf('}'))).not.toMatch(/max-height:\s*\d+%/);
+  });
+
+  it('keeps the pair’s seat arithmetic self-consistent', () => {
+    // Spacing is the COMPOSITION and follows head size; the midpoint is taste.
+    // Converted from the draft board's column percentages by /1.2.
+    const seat = (sel: string) => {
+      const at = CSS_CODE.indexOf(sel);
+      const block = CSS_CODE.slice(at, CSS_CODE.indexOf('}', at));
+      return parseFloat(block.match(/right:\s*(-?[\d.]+)%/)![1]);
+    };
+    const one = seat('.lbc-reveal__model--def:nth-of-type(1)');
+    const two = seat('.lbc-reveal__model--def:nth-of-type(2)');
+    const solo = seat('.lbc-reveal__model--def:only-of-type');
+    expect(one - two).toBeCloseTo(40.83, 1);
+    expect(solo).toBeCloseTo((one + two) / 2, 1);
+  });
+
+  it('gives the figure’s space back when there is nothing to show', () => {
+    // A 404, or the one player with no cutout, otherwise leaves a column of
+    // bare gradient. Sound ONLY because the error handlers remove the <img>:
+    // a `display: none` fallback is still there as far as `:has()` is concerned.
+    expect(CSS_CODE).toMatch(/\.lbc-reveal:not\(:has\(\.lbc-reveal__model\)\)/);
+    expect(TAKEOVER).toMatch(/onError=\{\(\) => setCutout\(null\)\}/);
+    expect(TAKEOVER).not.toMatch(/style\.display/);
+  });
+
+  it('never hides the subject to resolve a collision', () => {
+    // The fix this repo made once and had to undo. `display: none` may only
+    // ever fall on the empty BOX, never on a rule targeting a man.
+    // Strip `:has(...)` first: the collapse rule legitimately NAMES a model
+    // inside its guard while its SUBJECT is the empty figure. Without this the
+    // guard fires on the very rule that implements the correct behaviour.
+    const withoutGuards = CSS_CODE.replace(/:has\([^)]*\)/g, '');
+    const badRule = /\.lbc-reveal__(model|stand)[^{;]*\{[^}]*display:\s*none/;
+    expect(withoutGuards).not.toMatch(badRule);
+  });
+
+  it('drops the circular chip it replaced', () => {
+    expect(TAKEOVER).not.toMatch(/BroadcastFace/);
+    expect(CSS_CODE).not.toMatch(/\.lbc-reveal__nameline/);
+  });
+
+  it('passes the defenders by reference, or memo() dies on every tick', () => {
+    // A `.slice()`/`.map()` here mints a new array each render and defeats
+    // MomentTakeover's memo() on the 1 Hz heartbeat — ~28,800 re-renders of
+    // the reveal over a Sunday, on set-top hardware.
+    expect(ISLAND_CODE).toMatch(/return data\.defenseFaces\[who\?\.nflTeam \?\? ''\];/);
   });
 });

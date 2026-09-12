@@ -314,6 +314,28 @@ export default function LiveBroadcast({ pageData }: Props) {
     [poll.games, poll.leagues],
   );
 
+  /**
+   * The marquee defenders for a team-defense moment, or undefined.
+   *
+   * Returned BY REFERENCE off the page data — no `.slice()`, no `.map()` here.
+   * Either would mint a new array every render and defeat `MomentTakeover`'s
+   * `memo()` on every one-second heartbeat, which is ~28,800 re-renders of the
+   * reveal over a Sunday. The component does its own slicing.
+   *
+   * Gated on position HERE rather than inside the component: without it a
+   * Kansas City wide receiver would resolve the Chiefs' defenders.
+   *
+   * Declared after `meta`, deliberately — it closes over it.
+   */
+  const defendersFor = useCallback(
+    (m: BroadcastMoment) => {
+      const who = meta[m.playerId];
+      if ((who?.position ?? '').toUpperCase() !== 'DEF') return undefined;
+      return data.defenseFaces[who?.nflTeam ?? ''];
+    },
+    [meta, data.defenseFaces],
+  );
+
   /** How long the board has had nothing to say. Drives the screensaver. */
   const quietSinceRef = useRef<number>(anyLive ? 0 : Date.now());
   useEffect(() => {
@@ -609,6 +631,7 @@ export default function LiveBroadcast({ pageData }: Props) {
               position={meta[stage.moment.playerId]?.position ?? ''}
               nflTeam={meta[stage.moment.playerId]?.nflTeam ?? stage.moment.team}
               headshot={meta[stage.moment.playerId]?.headshot ?? ''}
+              defenders={defendersFor(stage.moment)}
             />
           )}
           {stage.kind === 'lower-third' && (

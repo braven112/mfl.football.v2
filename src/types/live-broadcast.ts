@@ -16,6 +16,27 @@
 import type { LivePlayerRow, NflGame, PlayerMeta } from './live-scoring';
 import type { BroadcastMoment, RedZoneAlert } from '../utils/broadcast-moments';
 
+/**
+ * One marquee defender standing in for a team defense on the takeover.
+ *
+ * A team defense is a CLUB, not a person, so it has no cutout of its own — the
+ * reveal shows two of its stars instead, the way the draft board does. One man
+ * reads as an ordinary player card with the wrong name over it.
+ *
+ * Carries a RESOLVED URL and never an `espnId`, which is this file's headline
+ * rule three paragraphs up. The draft board's equivalent
+ * (`BroadcastDefenseFace`) ships the id and builds the URL in its island; that
+ * is deliberately not copied here — the join stays server-side, exactly as it
+ * does for `PlayerMeta.headshot`.
+ */
+export interface BroadcastDefenderFace {
+  name: string;
+  /** Real NFL position (DT/LB/CB/S…), shown beside the name. */
+  position: string;
+  /** `a.espncdn.com` cutout, resolved server-side and gated on `isEspnCdnUrl`. */
+  headshot: string;
+}
+
 /** One franchise as the board draws it. */
 export interface BroadcastTeam {
   franchiseId: string;
@@ -170,6 +191,14 @@ export interface LiveBroadcastPageData {
    * badges itself on screen and the real poller does not run while it is on.
    */
   demo: boolean;
+  /**
+   * NFL club → its marquee defenders, for a team-defense takeover.
+   *
+   * Keyed by the code `PlayerMeta.nflTeam` carries, so the island needs no
+   * normalizer. PAGE DATA, never the poll: it cannot change during a Sunday,
+   * and re-shipping it every eight seconds for eight hours would be absurd.
+   */
+  defenseFaces: Record<string, BroadcastDefenderFace[]>;
   /** Every league the owner is in, for the picker. */
   available: { id: string; name: string; registered: boolean; enabled: boolean }[];
   /** Where the picker's links point. */
