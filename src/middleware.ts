@@ -32,6 +32,7 @@ import {
   PUNCTUATION_REDIRECT_STATUS,
   resolvePunctuationRedirect,
 } from './utils/link-punctuation.mjs';
+import { shouldBlockIndexing } from './utils/deploy-environment';
 
 export const onRequest = defineMiddleware(async (context, next) => {
   // Runs before the league-host rewrite so the trimmed path goes through the
@@ -58,11 +59,37 @@ export const onRequest = defineMiddleware(async (context, next) => {
 
   context.locals.hideLeaguePrefix = isLeagueHost;
 
-  if (!isLeagueHost) return next();
+  // Keep staging and preview deployments out of search indexes.
+  //
+  // A HEADER rather than a <meta> tag, and set here rather than in the
+  // layouts, because it has to cover what a layout cannot: API routes, the OG
+  // image endpoints, redirects, and any route that renders without going
+  // through TheLeagueLayout. `staging.theleague.us` is a real subdomain of a
+  // real domain, so left alone it gets crawled and becomes duplicate content
+  // competing with theleague.us.
+  //
+  // public/robots.txt cannot do this job: one file ships with the deployment
+  // and would have to serve every host the same answer.
+  const blockIndexing = shouldBlockIndexing(context.url);
+  const stamp = (response: Response): Response => {
+    // Header sets can throw on an immutable Response (one constructed from a
+    // fetch, say). Not indexing is worth less than serving the page, so a
+    // failure here must never take the request down with it.
+    if (blockIndexing) {
+      try {
+        response.headers.set('X-Robots-Tag', 'noindex, nofollow');
+      } catch {
+        /* immutable response — nothing to do */
+      }
+    }
+    return response;
+  };
+
+  if (!isLeagueHost) return stamp(await next());
 
   const rewrite = resolveLeagueRewrite(hostname, context.url.pathname);
-  if (!rewrite) return next();
+  if (!rewrite) return stamp(await next());
 
   const newUrl = new URL(rewrite.newPath + context.url.search, context.url);
-  return context.rewrite(newUrl);
+  return stamp(await context.rewrite(newUrl));
 });

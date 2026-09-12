@@ -10,6 +10,22 @@
  * the Location URL, and re-sends the request with the Cookie header intact.
  */
 
+import { assertOutboundAllowed } from './deploy-environment';
+
+/**
+ * Is this call a WRITE rather than an export read?
+ *
+ * Two signals, because neither alone is complete: MFL's mutating endpoint is
+ * `/import`, and every write is a POST. An export is a GET to `/export`. The
+ * OR is deliberate — a future write shape that is POSTed to something other
+ * than `/import`, or an `/import` issued as a GET, should still be caught.
+ * Over-matching here costs a blocked read on staging; under-matching costs a
+ * real mutation in the real league.
+ */
+export function isMflWrite(method: string, url: string): boolean {
+  return method.toUpperCase() === 'POST' || /\/import(\?|$)/.test(url);
+}
+
 interface MflFetchOptions {
   /** Full URL to the MFL endpoint (api.myfantasyleague.com or www49) */
   url: string;
@@ -50,6 +66,21 @@ export async function mflFetch(opts: MflFetchOptions): Promise<Response | MflFet
   let url = opts.url;
   let method = opts.method;
   let body: string | undefined = opts.body;
+
+  // Every authenticated MFL write in the app funnels through here — five of
+  // the six writer utils call mflFetch, each building its own `import?TYPE=`
+  // URL — which makes this the one place a staging or preview deployment can
+  // be stopped from mutating the real league. Deliberately NOT at the route
+  // layer: there are a dozen routes and the one that forgot would fail open.
+  //
+  // Throws rather than returning a synthetic Response on purpose. MFL reports
+  // its own errors as HTTP 200 (docs/claude/rules/lineups.md), so callers here
+  // are already in the habit of reading a body to decide whether a write
+  // worked — a fake 403 Response would be read as "MFL said no" instead of
+  // "we never asked".
+  if (isMflWrite(method, url)) {
+    assertOutboundAllowed('MFL write');
+  }
 
   // Build cookie header with both MFL_USER_ID and MFL_IS_COMMISH (if available)
   const cookieParts = [`MFL_USER_ID=${mflUserCookie}`];
