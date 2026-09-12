@@ -133,9 +133,14 @@ export function findNextGame(schedule, fromWeek = 1) {
  *
  * The inner value is an array for the same doubleheader reason; a grid cell
  * renders every entry rather than the first.
+ *
+ * `score` / `opponentScore` are this club's own and its opponent's, in that
+ * order — the grid prints the final score in the cell, so the pair must read
+ * from the perspective of the ROW, not of whichever side the feed listed
+ * first. They are null for a game that has not been played.
  */
 export function opponentsByWeek(weeks) {
-  /** @type {Map<string, Map<number, {opponentId: string, isHome: boolean, played: boolean, outcome: 'W'|'L'|'T'|null}[]>>} */
+  /** @type {Map<string, Map<number, {opponentId: string, isHome: boolean, played: boolean, score: number|null, opponentScore: number|null, outcome: 'W'|'L'|'T'|null}[]>>} */
   const byFranchise = new Map();
   for (const { week, matchups } of weeks) {
     for (const { franchises } of matchups) {
@@ -150,6 +155,12 @@ export function opponentsByWeek(weeks) {
           opponentId: opponent.id,
           isHome: side.isHome,
           played,
+          // Null unless the game is PLAYED, which is stricter than "copy what
+          // the feed had": MFL publishes a half-filled matchup mid-scoring, so
+          // one side can carry a score while `played` is false. Passing that
+          // through lets a consumer print a partial result as a final one.
+          score: played ? side.score : null,
+          opponentScore: played ? opponent.score : null,
           outcome: played ? resolveOutcome(side, opponent) : null,
         });
       }

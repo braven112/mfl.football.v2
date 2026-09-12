@@ -133,6 +133,77 @@ hrefs to local copies, and open it in the bundled Chromium — it isolates
 
 ---
 
+## 2026-09-12 - `flex-wrap: wrap` on a COLUMN Container Makes a Multi-COLUMN Box, and an Inner Scroller Stops Scrolling
+
+**Context:** The schedule page's controls row (view tabs + a 20-season picker)
+is `display: flex; flex-wrap: wrap` on desktop. The mobile rule stacked it with
+`flex-direction: column; align-items: stretch` so the tabs would stop wrapping
+onto two lines. That change alone pushed the page to **1156px wide at a 390px
+viewport** — the season list, an `overflow-x: auto` scroll box, stopped
+scrolling and grew to its content.
+
+**Insight:** `flex-wrap: wrap` is not "wrap if needed" — it makes a
+**multi-line** flex container, and on `flex-direction: column` the lines are
+COLUMNS. Each line's cross size (here, width) is sized to its own content, so
+the container is free to be wider than its parent and `align-items: stretch` is
+measured against that content width rather than the parent's. Every
+containment trick applied inside is then inert: `min-width: 0` and `flex: 1`
+on the scroller were both already set and both did nothing, because the box
+they were shrinking into was itself content-sized.
+
+The symptom is the misleading part. It reads as an overflow bug in the scroll
+box — which is where you go looking — while the cause is a wrap declaration
+three rules up that was correct for the row layout it was written for.
+
+**Evidence:** Computed styles at 390px with the column rule but no
+`flex-wrap` reset: `.sch-controls` width 350 (correct), `.sch-seasons` width
+**1156**, `.sch-seasons__scroller` width **1100** — the parent was 350 and the
+child 1156, which is only possible because the flex line, not the parent, was
+doing the sizing. Adding `flex-wrap: nowrap` to the same mobile rule gave
+`.sch-seasons` 350 and the scroller 294.
+
+**Recommendation:** Any breakpoint that flips a wrapping flex row to
+`flex-direction: column` must reset `flex-wrap: nowrap` in the same rule —
+`wrap` almost never means what you want on a column. Catch it mechanically
+rather than by eye: assert `document.documentElement.scrollWidth <=
+clientWidth` in the mobile screenshot script. A 1156px page at 390px does not
+necessarily *look* wrong in a screenshot (the visible column renders fine); it
+shows up only as a sideways scroll the reader finds later.
+
+## 2026-09-12 - A Named Import That No Longer Exists Survives `astro dev` and Only Fails the Bundled Build
+
+**Context:** A scoreboard view was drafted, then simplified away before the
+first commit. The two helpers it needed (`weekMatchups`, `lastPlayedWeek`) were
+reverted out of `src/utils/schedule-data.mjs`, but `SchedulePage.astro` kept
+importing them by name. The page rendered correctly in `pnpm dev`, all 436 test
+files passed, and the branch was committed and pushed in that state.
+
+**Insight:** `astro dev` transforms modules with esbuild and does not link them,
+so a named import with no matching export is simply `undefined` at runtime —
+and stays invisible as long as nothing calls it. A production build bundles
+through Rollup, which *does* resolve named exports and errors on a missing one.
+So the whole local signal set — the page renders, the unit suite is green — can
+be clean while the build is broken.
+
+This makes the usual "I verified it in the browser" evidence worthless for this
+specific bug class, and it is an easy state to reach: any revert of a helper
+that leaves its import behind.
+
+**Evidence:** `grep -c` on the page found 2 references to the two names;
+`grep -c 'export function'` on the util found 0. `pnpm test:unit` (436 files)
+and a live render both passed with the mismatch in place. `pnpm test:types`
+(the `astro check` baseline) is the check that catches it — a missing export is
+a `ts(2305)` and moves the ratcheted total, which is exactly what the baseline
+exists to detect.
+
+**Recommendation:** After reverting or renaming anything exported from a
+`.mjs`/`.ts` util, grep its importers before committing — the dev server will
+not tell you. Treat `pnpm test:types` as the gate for any diff that removed an
+export, not just for type work: it is the cheapest thing in the repo that links
+modules. This is the same family as the `ts(2307) Cannot find module` rule in
+CLAUDE.md (an erased `import type` voiding a file's types with no runtime
+symptom) — a broken import edge that no runtime check can see.
+
 ## 2026-09-11 - A Page Has TWO Ancestor Gutters, Not One — Full-Bleed by Viewport, Never by Summing Them
 
 **Context:** Making Live Scoring's matchup detail run edge-to-edge on a phone.
