@@ -269,4 +269,35 @@ describe('opponentsByWeek carries the score from the row club\'s side', () => {
       outcome: null,
     });
   });
+
+  /**
+   * MFL publishes a half-filled matchup mid-scoring. `played` is already false
+   * for one, but passing the one score it DOES carry through would let a grid
+   * cell print a partial result as a final score.
+   */
+  it('hides the one score a half-filled matchup carries', () => {
+    const half = parseWeeklySchedule({
+      schedule: {
+        weeklySchedule: [
+          {
+            week: '1',
+            matchup: {
+              franchise: [
+                { id: '0001', isHome: '1', result: 'T', score: '61.4' },
+                { id: '0002', isHome: '0', result: 'T' },
+              ],
+            },
+          },
+        ],
+      },
+    });
+    const cell = opponentsByWeek(half);
+    expect(cell.get('0001')?.get(1)?.[0]).toMatchObject({
+      played: false,
+      score: null,
+      opponentScore: null,
+      outcome: null,
+    });
+    expect(cell.get('0002')?.get(1)?.[0]).toMatchObject({ played: false, score: null, opponentScore: null });
+  });
 });

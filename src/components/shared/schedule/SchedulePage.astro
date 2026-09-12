@@ -31,7 +31,7 @@ import Breadcrumbs from '../../theleague/Breadcrumbs.astro';
 import { getLeagueBySlug } from '../../../config/leagues';
 import type { CanonicalLeagueSlug } from '../../../config/leagues';
 import { resolveLeaguePath } from '../../../utils/nav-utils';
-import { getCurrentSeasonYear } from '../../../utils/league-year';
+import { getCurrentSeasonYear, getTestDateFromSearchParams } from '../../../utils/league-year';
 import { getCurrentNFLWeek } from '../../../utils/current-week';
 import { nflWeekStartIsoDate } from '../../../utils/nfl-week-starts.mjs';
 import { PLAYOFFS_START_WEEK } from '../../../utils/fantasy-bracket.mjs';
@@ -83,7 +83,12 @@ const standingsByYear = byYear(standingsFeeds);
 // getCurrentSeasonYear() is the results-shaped clock (rolls at Labor Day).
 // A season MFL has not created yet falls back to the newest feed on disk
 // rather than rendering an empty page for six months of the calendar.
-const liveYear = getCurrentSeasonYear();
+// ?testDate= drives BOTH clocks on this page, so /rollover-check can render
+// the Labor Day boundary — and the "Now" column with it — without touching the
+// system clock. A page that reads the wall clock directly cannot be tested at
+// the two dates where its year actually turns.
+const testDate = getTestDateFromSearchParams(Astro.url.searchParams) ?? undefined;
+const liveYear = getCurrentSeasonYear(testDate);
 const availableYears = [...schedulesByYear.keys()].sort((a, b) => b - a);
 // Existence is not enough: MFL creates the new season's feed before it draws
 // the schedule, so `has(liveYear)` can be true with nothing in it. Fall back
@@ -106,7 +111,7 @@ const weeks = parsedByYear.get(year) ?? [];
 // "Now" only means something in the season being played. Asking
 // getCurrentNFLWeek for a season that ended years ago returns a week number
 // that would highlight an arbitrary column of a finished grid as live.
-const currentWeek = isLiveSeason ? (getCurrentNFLWeek(new Date(), year) ?? 1) : -1;
+const currentWeek = isLiveSeason ? (getCurrentNFLWeek(testDate ?? new Date(), year) ?? 1) : -1;
 
 const teams = resolveConfigForYear(config as { teams: any[] }, year).teams ?? [];
 
@@ -377,7 +382,14 @@ const heroSkin =
                   watermark is the resolver's dark cut, so the small mark takes
                   the same art rather than pairing an era crest with it. */}
               {(heroSkin?.crest || iconOf(viewerTeamIdForYear)) && (
-                <img src={heroSkin?.crest || iconOf(viewerTeamIdForYear)!} alt="" class="sch-hero__crest" width="54" height="54" />
+                <img
+                  src={heroSkin?.crest || iconOf(viewerTeamIdForYear)!}
+                  alt=""
+                  class="sch-hero__crest"
+                  width="54"
+                  height="54"
+                  style={heroSkin?.crestFilter ? `filter: ${heroSkin.crestFilter};` : undefined}
+                />
               )}
               <h1 class="sch-hero__title">{nameOf(viewerTeamIdForYear)}</h1>
             </div>
@@ -653,9 +665,12 @@ const heroSkin =
                                     const fmt = (n: number) =>
                                       roundsToATie ? n.toFixed(1) : String(Math.round(n));
                                     const scoreLine = game.played ? `${fmt(mine)}–${fmt(theirs)}` : '';
-                                    const exact = game.played
-                                      ? `, ${(game.score ?? 0).toFixed(1)} to ${(game.opponentScore ?? 0).toFixed(1)}`
-                                      : '';
+                                    // The feed's own value, unformatted: 15,333
+                                    // archived scores carry hundredths, and
+                                    // toFixed(1) here silently restated 82.54
+                                    // as 82.5 in the one place this UI promises
+                                    // the exact score.
+                                    const exact = game.played ? `, ${mine} to ${theirs}` : '';
                                     const label = `Week ${week}, ${game.isHome ? 'vs' : 'at'} ${nameOf(game.opponentId)}, ${outcomeWord}${exact}`;
                                     return (
                                       <span

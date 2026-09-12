@@ -155,8 +155,12 @@ export function opponentsByWeek(weeks) {
           opponentId: opponent.id,
           isHome: side.isHome,
           played,
-          score: side.score,
-          opponentScore: opponent.score,
+          // Null unless the game is PLAYED, which is stricter than "copy what
+          // the feed had": MFL publishes a half-filled matchup mid-scoring, so
+          // one side can carry a score while `played` is false. Passing that
+          // through lets a consumer print a partial result as a final one.
+          score: played ? side.score : null,
+          opponentScore: played ? opponent.score : null,
           outcome: played ? resolveOutcome(side, opponent) : null,
         });
       }
