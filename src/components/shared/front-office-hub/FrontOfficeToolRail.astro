@@ -1,0 +1,159 @@
+---
+/**
+ * The Front Office hub's "other tools" sidebar — a vertical list of every
+ * Front Office page this league has, minus whichever one is the hub's own
+ * primary content (League Planner / Keeper Planner, which are no longer
+ * entries in the registry at all — see front-office-pages.ts's header).
+ *
+ * Both leagues get the SAME rail treatment (not a count-driven rail-vs-strip
+ * split) — the PO asked for visual consistency between TheLeague's 10-item
+ * list and the AFL's 3-item one, over a size-based rule that would have put
+ * the AFL on a bottom strip instead.
+ *
+ * A <nav>, not an <aside>: this is a list of links to sibling pages, which is
+ * exactly what a navigation landmark is for. There's no other <nav> on the
+ * hub page (FrontOfficeNav's pill strip is deliberately NOT rendered here —
+ * see FrontOfficeHubPage.astro), so the aria-labelledby is a nicety for the
+ * landmark list rather than a disambiguation necessity.
+ */
+import { spriteUrl } from '../../../utils/sprite-url';
+import { resolveLeaguePath } from '../../../utils/nav-utils';
+import { frontOfficePagesFor, type FrontOfficeLeagueSlug } from '../front-office-nav/front-office-pages';
+
+interface Props {
+  leagueSlug: FrontOfficeLeagueSlug;
+}
+
+const { leagueSlug } = Astro.props;
+const hideLeaguePrefix = Astro.locals.hideLeaguePrefix ?? false;
+const r = (path: string) => resolveLeaguePath(`/${leagueSlug}${path}`, hideLeaguePrefix);
+const pages = frontOfficePagesFor(leagueSlug);
+---
+
+<nav class="fo-rail" aria-labelledby="fo-rail-title">
+  <h2 class="fo-rail__title" id="fo-rail-title">Front Office Tools</h2>
+  <ul class="fo-rail__list">
+    {pages.map((p) => (
+      <li>
+        <a class="fo-rail__row" href={r(p.path)} title={p.blurb}>
+          <svg class="fo-rail__icon" viewBox="0 0 512 512" aria-hidden="true">
+            <use href={`${spriteUrl}#${p.icon}`} />
+          </svg>
+          <span class="fo-rail__label">{p.label}</span>
+          <span class="fo-rail__chevron" aria-hidden="true">›</span>
+        </a>
+      </li>
+    ))}
+  </ul>
+</nav>
+
+<style>
+  .fo-rail {
+    --fo-accent: var(--league-accent, #1c497c);
+    --fo-surface: var(--content-bg, #fff);
+    --fo-border: var(--content-border, #e2e8f0);
+    --fo-ink: var(--page-text, #1a1a1a);
+    --fo-ink-muted: var(--content-text-muted, #6b7280);
+
+    position: static;
+  }
+
+  :global(html.dark) .fo-rail {
+    --fo-ink-muted: var(--color-gray-700, #c0c0c0);
+  }
+
+  @media (min-width: 900px) {
+    .fo-rail {
+      position: sticky;
+      top: 1rem;
+      max-height: calc(100vh - 2rem);
+      overflow-y: auto;
+      overscroll-behavior: contain;
+    }
+  }
+
+  .fo-rail__title {
+    margin: 0 0 0.6rem;
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--fo-ink-muted);
+  }
+
+  .fo-rail__list {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .fo-rail__list > li {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  @media (min-width: 900px) {
+    .fo-rail__list {
+      flex-direction: column;
+      flex-wrap: nowrap;
+    }
+
+    .fo-rail__list > li {
+      flex: none;
+    }
+
+    .fo-rail__chevron {
+      display: none;
+    }
+  }
+
+  .fo-rail__row {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    min-height: 44px;
+    padding: 0.6rem 0.7rem;
+    border-radius: var(--radius-md, 0.5rem);
+    border: 1px solid var(--fo-border);
+    background: var(--fo-surface);
+    color: var(--fo-ink);
+    text-decoration: none;
+    font-size: 0.82rem;
+    font-weight: 600;
+  }
+
+  .fo-rail__row:hover {
+    border-color: var(--fo-accent);
+  }
+
+  .fo-rail__row:focus-visible {
+    outline: 2px solid var(--fo-accent);
+    outline-offset: 2px;
+  }
+
+  .fo-rail__icon {
+    width: 18px;
+    height: 18px;
+    flex: 0 0 auto;
+    fill: var(--fo-accent);
+    color: var(--fo-accent);
+  }
+
+  .fo-rail__label {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .fo-rail__chevron {
+    flex: 0 0 auto;
+    color: var(--fo-ink-muted);
+    font-weight: 400;
+  }
+</style>

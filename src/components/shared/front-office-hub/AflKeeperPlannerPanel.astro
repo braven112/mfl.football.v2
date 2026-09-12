@@ -1,0 +1,99 @@
+---
+/**
+ * The AFL's Keeper Planner — the Front Office hub's primary content.
+ * Duplicated usage of the already-shared `<KeeperPlanner>` component (see
+ * src/components/afl-fantasy/KeeperPlanner.astro) exactly as
+ * `src/pages/afl-fantasy/rosters.astro`'s `?view=planner` tab renders it
+ * (its lines ~1258-1280) — including the "private to each team owner"
+ * fallback for non-owners / signed-out visitors.
+ *
+ * No team switcher here at all: the Keeper Planner is owner-private by
+ * design (KeeperPlanner.astro's own header comment — "the roster page gates
+ * inclusion on isOwner, so unauthorized owners never see this UI"), so
+ * there's nothing to switch between.
+ */
+import KeeperPlanner, {
+  type KeeperPlannerPlayer,
+  type KeeperPlannerDraftPick,
+} from '../../afl-fantasy/KeeperPlanner.astro';
+
+interface Props {
+  isOwner: boolean;
+  signedIn: boolean;
+  franchiseId: string;
+  year: number;
+  roster: KeeperPlannerPlayer[];
+  draftPicks: KeeperPlannerDraftPick[];
+}
+
+const { isOwner, signedIn, franchiseId, year, roster, draftPicks } = Astro.props;
+---
+
+{isOwner ? (
+  <KeeperPlanner franchiseId={franchiseId} year={year} roster={roster} draftPicks={draftPicks} />
+) : (
+  <div class="fo-afl-coming-soon">
+    <h2>Keeper Planner</h2>
+    <p>The keeper planner is private to each team owner.</p>
+    {!signedIn && (
+      <p>
+        <a
+          class="fo-afl-coming-soon__cta"
+          href={`/afl-fantasy/login?next=${encodeURIComponent(`/afl-fantasy/front-office?franchise=${franchiseId}`)}`}
+        >
+          Sign in to AFL →
+        </a>
+      </p>
+    )}
+  </div>
+)}
+
+<style>
+  .fo-afl-coming-soon {
+    background: var(--content-bg, #fff);
+    border-radius: 0.75rem;
+    padding: 3rem 1.5rem;
+    text-align: center;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+    color: var(--content-text-muted, #6b7280);
+  }
+
+  :global(html.dark) .fo-afl-coming-soon {
+    box-shadow:
+      0 0 0 1px var(--content-border, #555555),
+      0 4px 12px rgba(0, 0, 0, 0.06);
+  }
+
+  .fo-afl-coming-soon h2 {
+    margin: 0 0 0.5rem;
+    color: var(--color-gray-900, #111827);
+    font-size: 1.25rem;
+  }
+
+  :global(html.dark) .fo-afl-coming-soon h2 {
+    color: var(--page-text, #ededed);
+  }
+
+  .fo-afl-coming-soon__cta {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    margin-top: 0.5rem;
+    padding: 0.5rem 1rem;
+    background: var(--league-accent, #c41e3a);
+    color: #fff;
+    font-weight: 600;
+    font-size: 0.9375rem;
+    border-radius: 8px;
+    text-decoration: none;
+  }
+
+  .fo-afl-coming-soon__cta:hover {
+    filter: brightness(0.92);
+  }
+
+  .fo-afl-coming-soon__cta:focus-visible {
+    outline: 2px solid var(--league-accent, #c41e3a);
+    outline-offset: 2px;
+  }
+</style>

@@ -1,7 +1,8 @@
 ---
-import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
-import PlayerCell from '../../components/theleague/PlayerCell.astro';
-import { getAuthUser } from '../../utils/auth';
+import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
+import FrontOfficeNav from '../../../components/shared/front-office-nav/FrontOfficeNav.astro';
+import PlayerCell from '../../../components/theleague/PlayerCell.astro';
+import { getAuthUser } from '../../../utils/auth';
 import {
   getAllTeams,
   getTeam,
@@ -9,27 +10,27 @@ import {
   getConferenceShort,
   type AFLTeam,
   type ConferenceId,
-} from '../../utils/afl-conference';
-import { getLeagueBySlug } from '../../config/leagues';
-import { parseTradeBaitPlayerIds, parseTradeBaitByFranchise } from '../../utils/trade-bait';
-import { getCachedTradeBait } from '../../utils/mfl-trade-bait-cache';
-import { getAflLeagueYear, getTestDateFromSearchParams } from '../../utils/league-year';
+} from '../../../utils/afl-conference';
+import { getLeagueBySlug } from '../../../config/leagues';
+import { parseTradeBaitPlayerIds, parseTradeBaitByFranchise } from '../../../utils/trade-bait';
+import { getCachedTradeBait } from '../../../utils/mfl-trade-bait-cache';
+import { getAflLeagueYear, getTestDateFromSearchParams } from '../../../utils/league-year';
 
 export const prerender = false;
 
 const FALLBACK_YEAR = 2025;
 
 // Data — pull rosters + players + ADP for the current AFL season
-const rostersFeeds = import.meta.glob('../../../data/afl-fantasy/mfl-feeds/*/rosters.json', { eager: true });
+const rostersFeeds = import.meta.glob('../../../../data/afl-fantasy/mfl-feeds/*/rosters.json', { eager: true });
 // Year-filtered (2025+): selectedYear is always the newest season with real
 // rosters (FALLBACK_YEAR 2025); the bare glob baked ~22 MB of historical
 // players.json into the server chunk. tests/current-era-feed-globs.test.ts
 // guards it.
-const playersFeeds = import.meta.glob('../../../data/afl-fantasy/mfl-feeds/20{2[5-9],[3-9][0-9]}/players.json', { eager: true });
-const adpFeeds = import.meta.glob('../../../data/afl-fantasy/mfl-feeds/*/adp-dynasty.json', { eager: true });
-const picksFeeds = import.meta.glob('../../../data/afl-fantasy/mfl-feeds/*/futureDraftPicks.json', { eager: true });
-const tradeBaitFeeds = import.meta.glob('../../../data/afl-fantasy/mfl-feeds/*/tradeBait.json', { eager: true });
-const tradeBaitByFranchiseFeeds = import.meta.glob('../../../data/afl-fantasy/mfl-feeds/*/tradeBait-by-franchise.json', { eager: true });
+const playersFeeds = import.meta.glob('../../../../data/afl-fantasy/mfl-feeds/20{2[5-9],[3-9][0-9]}/players.json', { eager: true });
+const adpFeeds = import.meta.glob('../../../../data/afl-fantasy/mfl-feeds/*/adp-dynasty.json', { eager: true });
+const picksFeeds = import.meta.glob('../../../../data/afl-fantasy/mfl-feeds/*/futureDraftPicks.json', { eager: true });
+const tradeBaitFeeds = import.meta.glob('../../../../data/afl-fantasy/mfl-feeds/*/tradeBait.json', { eager: true });
+const tradeBaitByFranchiseFeeds = import.meta.glob('../../../../data/afl-fantasy/mfl-feeds/*/tradeBait-by-franchise.json', { eager: true });
 
 const getModuleData = (mod: any) => (mod && typeof mod === 'object' && 'default' in mod ? mod.default : mod);
 
@@ -286,6 +287,7 @@ const pageConfig = {
 ---
 
 <TheLeagueLayout title="AFL Trade Builder">
+  <FrontOfficeNav leagueSlug="afl-fantasy" current="trade-builder" crumb="Trade Builder" />
   <div class="trade-builder">
     {!isAflOwner ? (
       <section class="tb-gate">

@@ -64,9 +64,9 @@ describe('the shared trade deadline hero', () => {
     // path silently yields a 404 link); the AFL builds its path from the
     // registry rather than writing the directory into the component.
     expect(read('src/components/theleague/SeasonDailyHero.astro'))
-      .toMatch(/tradeBuilderHref=\{resolveLeaguePath\('\/theleague\/trade-builder'\)\}/);
+      .toMatch(/tradeBuilderHref=\{resolveLeaguePath\('\/theleague\/front-office\/trade-builder'\)\}/);
     const afl = read('src/components/afl/AflHero.astro');
-    expect(afl).toMatch(/ensureLeaguePrefix\(getLeagueBySlug\('afl-fantasy'\)!?, '\/trade-builder'\)/);
+    expect(afl).toMatch(/ensureLeaguePrefix\(getLeagueBySlug\('afl-fantasy'\)!?, '\/front-office\/trade-builder'\)/);
   });
 });
 

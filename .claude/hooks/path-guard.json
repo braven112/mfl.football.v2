@@ -104,8 +104,8 @@
       "name": "clientrouter-pages",
       "paths": [
         "src/pages/*/assets.astro",
-        "src/pages/*/salary.astro",
-        "src/pages/*/trade-builder.astro"
+        "src/pages/*/front-office/salary-analytics.astro",
+        "src/pages/*/front-office/trade-builder.astro"
       ],
       "note": "These pages have each shipped a 'goes dead after in-site navigation' bug: init must re-run on astro:page-load, and module-level state must not capture the previous page's DOM.",
       "tests": [

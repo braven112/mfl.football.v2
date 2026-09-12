@@ -50,8 +50,8 @@ const ctaPathFor = (p) => {
   if (p?.link) return p.link;
   const seller = String(p?.speculation?.seller ?? '').trim();
   return seller
-    ? `/${LEAGUE_SLUG}/trade-builder?b=${encodeURIComponent(seller)}`
-    : `/${LEAGUE_SLUG}/trade-builder`;
+    ? `/${LEAGUE_SLUG}/front-office/trade-builder?b=${encodeURIComponent(seller)}`
+    : `/${LEAGUE_SLUG}/front-office/trade-builder`;
 };
 
 const args = process.argv.slice(2);

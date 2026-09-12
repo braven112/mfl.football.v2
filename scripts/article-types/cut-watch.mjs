@@ -596,7 +596,6 @@ export function relatedLinks(_enrichment, { league = 'theleague' } = {}) {
     articleLink(league, 'players', { label: 'the free agent board' }),
     featureLink(league, 'trade-builder'),
     featureLink(league, 'dead-money'),
-    featureLink(league, 'calculator'),
     featureLink(league, 'calendar'),
   );
 }

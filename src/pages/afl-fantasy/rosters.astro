@@ -1,5 +1,6 @@
 ---
 import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
+import FrontOfficeNav from '../../components/shared/front-office-nav/FrontOfficeNav.astro';
 import CollegeLogoDarkStyles from '../../components/CollegeLogoDarkStyles.astro';
 import PlayerCell from '../../components/theleague/PlayerCell.astro';
 import PlayerDetailsModal from '../../components/theleague/PlayerDetailsModal.astro';
@@ -45,6 +46,7 @@ import { getLeagueBySlug } from '../../config/leagues';
 import { parseTradeBaitPlayerIds, parseTradeBaitByFranchise } from '../../utils/trade-bait';
 import { getCachedTradeBait } from '../../utils/mfl-trade-bait-cache';
 import MyRankEditor from '../../components/shared/rankings/MyRankEditor.astro';
+import { buildKeeperPlannerStats } from '../../utils/afl-keeper-planner-stats';
 
 export const prerender = false;
 
@@ -274,7 +276,12 @@ const roster: RosterEntry[] = rosterPlayers.map((p) => {
     name: info?.name || `Player ${p.id}`,
     position: info?.position || 'N/A',
     team: info?.team || 'FA',
-    age: info?.age || 'N/A',
+    // MFL's players feed has no `age` field at all, only `birthdate` (Unix
+    // seconds) — `info?.age` was always undefined here, silently shipping
+    // 'N/A' everywhere this field is read. calculateAgeFromBirthdate is
+    // defined below (hoisted; already this file's own convention for the
+    // Analytics view's age buckets).
+    age: String(calculateAgeFromBirthdate(info?.birthdate) ?? 'N/A'),
     college: info?.college || 'N/A',
     birthdate: info?.birthdate,
     height: info?.height,
@@ -385,15 +392,24 @@ const injuredReserve = roster.filter((p) => p.status === 'INJURED_RESERVE').leng
 const ROSTER_SIZE = 16;
 
 // Build the KeeperPlanner inputs (only really used when isOwner is true)
-const plannerRoster: KeeperPlannerPlayer[] = roster.map((p) => ({
-  id: p.id,
-  name: p.name,
-  position: p.position,
-  team: p.team,
-  age: p.age,
-  espnId: p.espn_id,
-  status: p.status,
-}));
+const plannerStatsById = buildKeeperPlannerStats(selectedYear);
+const plannerRoster: KeeperPlannerPlayer[] = roster.map((p) => {
+  const stats = plannerStatsById.get(p.id);
+  return {
+    id: p.id,
+    name: p.name,
+    position: p.position,
+    team: p.team,
+    age: p.age,
+    espnId: p.espn_id,
+    status: p.status,
+    ppg: stats?.ppg ?? null,
+    gamesPlayed: stats?.gamesPlayed,
+    positionalFinish: stats?.positionalFinish ?? null,
+    dynastyAdpRank: stats?.dynastyAdpRank ?? null,
+    redraftAdpRank: stats?.redraftAdpRank ?? null,
+  };
+});
 
 const teamNameLookup = new Map<string, string>(
   allTeams.map((t) => [t.franchiseId, t.nameShort || t.name])
@@ -709,6 +725,7 @@ const pageConfig = {
 ---
 
 <TheLeagueLayout title={`AFL — ${selectedTeam.name} Roster`}>
+  <FrontOfficeNav leagueSlug="afl-fantasy" current="rosters" crumb="Rosters" bare />
   <CollegeLogoDarkStyles />
   <section class="roster-page" data-initial-view={initialView}>
     <!-- Team Header Card -->
@@ -887,7 +904,7 @@ const pageConfig = {
                             <a
                               slot="after-name"
                               class="trade-bait-link"
-                              href={`/afl-fantasy/trade-builder?from=${selectedFranchiseId}&player=${player.id}`}
+                              href={`/afl-fantasy/front-office/trade-builder?from=${selectedFranchiseId}&player=${player.id}`}
                               title="On trade block"
                               aria-label="On trade block"
                             >

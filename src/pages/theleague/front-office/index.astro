@@ -1,0 +1,70 @@
+---
+/**
+ * Front Office hub (TheLeague) — thin route wrapper.
+ *
+ * The hub's primary content is the League Planner
+ * (TheLeaguePlannerPanel.astro), duplicated from rosters.astro's
+ * `?view=planner` tab — see front-office-planner-data.ts's header for why.
+ * The team-switch cookie WRITE happens here, in the route, never in a
+ * component — a component writing `Astro.cookies` runs after the response
+ * headers are committed and throws (see the Sunday Ticket board precedent
+ * in CLAUDE.md). Reading the cookie is fine anywhere.
+ */
+import FrontOfficeHubPage from '../../../components/shared/front-office-hub/FrontOfficeHubPage.astro';
+import FrontOfficeTeamSwitcher from '../../../components/shared/front-office-hub/FrontOfficeTeamSwitcher.astro';
+import TheLeaguePlannerPanel from '../../../components/shared/front-office-hub/TheLeaguePlannerPanel.astro';
+import { buildFrontOfficePlannerData } from '../../../utils/front-office-planner-data';
+import { getAuthUser, isAuthorizedForLeague } from '../../../utils/auth';
+import { getLeagueBySlug } from '../../../config/leagues';
+import {
+  getTheLeaguePreference,
+  setTheLeaguePreference,
+  resolveTeamSelection,
+} from '../../../utils/team-preferences';
+
+export const prerender = false;
+
+// Both leagues have a franchise 0001 — without this check a TheLeague owner
+// browsing the AFL would be shown their own franchise id's AFL team.
+const league = getLeagueBySlug('theleague')!;
+const user = getAuthUser(Astro.request);
+const myFranchiseId = user && isAuthorizedForLeague(user, league.id) ? user.franchiseId : null;
+
+// Team selection: query param > cookie > signed-in owner > first team.
+// Mirrors rosters.astro's own resolution exactly (same priority order,
+// same param names) so a bookmarked `?myteam=`/`?franchise=` link behaves
+// identically on both pages.
+const myTeamParam = Astro.url.searchParams.get('myteam');
+const franchiseParam =
+  Astro.url.searchParams.get('franchise') ??
+  Astro.url.searchParams.get('team') ??
+  Astro.url.searchParams.get('franchiseId');
+
+// Cookie WRITE — route frontmatter only, before anything else touches the
+// response.
+if (myTeamParam) {
+  setTheLeaguePreference(Astro.cookies, myTeamParam);
+}
+const cookiePreference = getTheLeaguePreference(Astro.cookies);
+
+const selectedTeamId = resolveTeamSelection({
+  myTeamParam,
+  franchiseParam,
+  cookiePreference: cookiePreference?.franchiseId,
+  authUserFranchise: myFranchiseId,
+});
+
+const plannerData = await buildFrontOfficePlannerData(selectedTeamId);
+
+const myTeam = myFranchiseId
+  ? (() => {
+      const t = plannerData.teamsList.find((t) => t.id === myFranchiseId);
+      return t ? { id: t.id, name: t.name, icon: t.icon } : null;
+    })()
+  : null;
+---
+
+<FrontOfficeHubPage leagueSlug="theleague" myTeam={myTeam} leagueYear={plannerData.leagueYear}>
+  <FrontOfficeTeamSwitcher slot="switcher" teams={plannerData.teamsList} selectedTeamId={selectedTeamId} />
+  <TheLeaguePlannerPanel {...plannerData} selectedTeamId={selectedTeamId} />
+</FrontOfficeHubPage>

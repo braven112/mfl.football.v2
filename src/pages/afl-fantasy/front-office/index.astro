@@ -1,0 +1,51 @@
+---
+/**
+ * Front Office hub (AFL) — thin route wrapper.
+ *
+ * The hub's primary content is the Keeper Planner (AflKeeperPlannerPanel.astro),
+ * reusing the already-shared `<KeeperPlanner>` component exactly as
+ * `src/pages/afl-fantasy/rosters.astro`'s `?view=planner` tab does. Data
+ * assembly lives in front-office-keeper-data.ts, not here — see that
+ * module's header comment.
+ *
+ * No team switcher: the Keeper Planner only ever shows the signed-in owner's
+ * OWN team, so there's no `?franchise=` override here — that's the one
+ * simplification versus rosters.astro's version, which lets ANY visitor
+ * browse to any team's (read-only, for non-owners) planner tab.
+ */
+import FrontOfficeHubPage from '../../../components/shared/front-office-hub/FrontOfficeHubPage.astro';
+import AflKeeperPlannerPanel from '../../../components/shared/front-office-hub/AflKeeperPlannerPanel.astro';
+import { buildFrontOfficeKeeperPlannerData } from '../../../utils/front-office-keeper-data';
+import { getAuthUser } from '../../../utils/auth';
+import { getLeagueBySlug } from '../../../config/leagues';
+import { getLeagueYearForSlug } from '../../../utils/league-year';
+import { getTeam } from '../../../utils/afl-conference';
+
+export const prerender = false;
+
+const league = getLeagueBySlug('afl-fantasy')!;
+const authUser = getAuthUser(Astro.request);
+const signedIn = !!authUser && authUser.leagueId === league.id && !!authUser.franchiseId;
+const selectedFranchiseId = signedIn ? authUser!.franchiseId : null;
+const isOwner = signedIn;
+
+const leagueYear = getLeagueYearForSlug('afl-fantasy');
+
+const myTeamInfo = selectedFranchiseId ? getTeam(selectedFranchiseId) : undefined;
+const myTeam = myTeamInfo ? { id: myTeamInfo.franchiseId, name: myTeamInfo.name, icon: myTeamInfo.icon } : null;
+
+const keeperData = isOwner && selectedFranchiseId
+  ? await buildFrontOfficeKeeperPlannerData(selectedFranchiseId, leagueYear, league.id)
+  : { roster: [], draftPicks: [] };
+---
+
+<FrontOfficeHubPage leagueSlug="afl-fantasy" myTeam={myTeam} leagueYear={leagueYear}>
+  <AflKeeperPlannerPanel
+    isOwner={isOwner}
+    signedIn={signedIn}
+    franchiseId={selectedFranchiseId ?? ''}
+    year={leagueYear}
+    roster={keeperData.roster}
+    draftPicks={keeperData.draftPicks}
+  />
+</FrontOfficeHubPage>

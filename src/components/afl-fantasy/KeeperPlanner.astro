@@ -5,19 +5,30 @@
  * Owners can drag (or click-arrow) players above/below "the line".
  * Above the line = the 7 keepers they intend to protect. Below the
  * line = everyone who's going to get cut. Plan auto-saves to the
- * server (debounced) so it persists across devices.
+ * server (debounced) so it persists across devices — that part works
+ * year-round, on purpose: an owner should be able to sketch their plan
+ * whenever they think of it.
  *
  * The "Finalize keepers" CTA runs sequential POSTs to /api/cut-player
- * to actually drop the non-keepers from the MFL roster. AFL has no
- * formal keeper construct on MFL, so the "keepers" themselves are
- * implicit — they're just whoever's left after the bulk cut.
+ * to actually drop the non-keepers from the MFL roster — that part is
+ * NOT year-round. It's only rendered between the AFL's new season
+ * starting and the keeper deadline (newSeasonStartsFor / keeperDeadlineFor,
+ * src/utils/afl-mock-draft.ts) — the CTA that actually cuts real rosters
+ * shouldn't exist on the page the other ~10 months of the year, however
+ * disabled. AFL has no formal keeper construct on MFL, so the "keepers"
+ * themselves are implicit — they're just whoever's left after the bulk cut.
  *
  * Renders inert (no script wiring) on non-owner pages. The roster page
  * gates inclusion on isOwner, so unauthorized owners never see this UI.
  */
 
+import fs from 'node:fs';
+import path from 'node:path';
 import PlayerCell from '../theleague/PlayerCell.astro';
 import { KEEPER_LIMIT } from '../../utils/afl-keepers-storage';
+import { keeperDeadlineFor, newSeasonStartsFor } from '../../utils/afl-mock-draft';
+import { getTestDateFromSearchParams } from '../../utils/league-year';
+import { isDraftConducted } from '../../utils/draft-utils';
 
 export interface KeeperPlannerPlayer {
   id: string;
@@ -27,6 +38,16 @@ export interface KeeperPlannerPlayer {
   age: string;
   espnId?: string;
   status: string;
+  /** Last season's points per game, when weekly-results data exists for this year. */
+  ppg?: number | null;
+  /** Last season's games with a recorded score. */
+  gamesPlayed?: number;
+  /** 1-based rank at this position among everyone leaguewide who scored, e.g. 9 → "WR9". */
+  positionalFinish?: number | null;
+  /** Dynasty ADP rank (lower = valued higher). Only populated for years the AFL's ADP feed covers (2025+). */
+  dynastyAdpRank?: number | null;
+  /** Redraft ADP rank, same feed family as dynastyAdpRank. */
+  redraftAdpRank?: number | null;
 }
 
 export interface KeeperPlannerDraftPick {
@@ -71,6 +92,22 @@ const buildModalData = (p: KeeperPlannerPlayer) => ({
   franchiseId,
 });
 
+// A big gap between a player's dynasty ADP and his redraft ADP is the
+// cheapest available signal for "is the market pricing him above or below
+// his current-season output" — both ranks come from feeds already fetched
+// for the site's rankings pages. Small gaps are noise, not signal, so only
+// deltas past the threshold render a badge at all.
+const ADP_TREND_THRESHOLD = 15;
+type AdpTrend = { label: string; dir: 'up' | 'down' };
+const adpTrendFor = (p: KeeperPlannerPlayer): AdpTrend | null => {
+  if (p.dynastyAdpRank == null || p.redraftAdpRank == null) return null;
+  const delta = p.redraftAdpRank - p.dynastyAdpRank;
+  if (Math.abs(delta) < ADP_TREND_THRESHOLD) return null;
+  return delta > 0 ? { label: 'Ascending', dir: 'up' } : { label: 'Fading', dir: 'down' };
+};
+
+const cardsData = sortedRoster.map((player) => ({ player, trend: adpTrendFor(player) }));
+
 // Round labels (1st / 2nd / 3rd / 4th / Nth)
 const roundLabel = (round: string) => {
   const n = parseInt(round, 10);
@@ -83,6 +120,41 @@ const roundLabel = (round: string) => {
   if (ones === 3) return `${n}rd`;
   return `${n}th`;
 };
+
+// Finalize window: [new season starts, keeper deadline). Saving the plan
+// works any time — only the destructive "cut the roster" step is gated.
+// Honors ?testDate= like the rest of the AFL's date-dependent pages.
+//
+// Both bounds are FIXED dates that always fall in the same calendar year
+// (June 1 -> July 15), so this uses the plain calendar year of `now` —
+// NOT getAflLeagueYear(), whose June-1 flip answers a different question
+// ("which season's rosters are we managing") and reads a date in, say,
+// March as still belonging to the PRIOR calendar year's (already-closed)
+// window, misreporting "deadline passed" for what is actually "window
+// hasn't opened yet".
+const now = getTestDateFromSearchParams(Astro.url.searchParams) ?? new Date();
+const finalizeWindowStart = newSeasonStartsFor(now.getFullYear());
+const finalizeWindowEnd = keeperDeadlineFor(now.getFullYear());
+const canFinalize =
+  !!finalizeWindowStart && !!finalizeWindowEnd && now >= finalizeWindowStart && now < finalizeWindowEnd;
+const beforeFinalizeWindow = !!finalizeWindowStart && now < finalizeWindowStart;
+
+// "The keeper deadline has passed" only reads right for the narrow window
+// between the deadline and the AL's redraft of the cut players. Once that
+// draft has actually run, `year`'s roster is settled and being played —
+// the page should talk about the NEXT keeper decision (year + 1) instead of
+// dwelling on a deadline that's now old news. isDraftConducted flips true at
+// the first made pick (src/utils/draft-utils.ts), same signal the draft
+// pages already use to tell "upcoming order" from "history".
+const draftResultsPath = path.resolve(process.cwd(), `data/afl-fantasy/mfl-feeds/${year}/draftResults.json`);
+let draftConducted = false;
+try {
+  if (fs.existsSync(draftResultsPath)) {
+    draftConducted = isDraftConducted(JSON.parse(fs.readFileSync(draftResultsPath, 'utf8')));
+  }
+} catch {
+  // Missing/malformed feed — treat as not yet drafted (pre-draft framing).
+}
 ---
 
 <section
@@ -96,9 +168,24 @@ const roundLabel = (round: string) => {
     <h2 class="kp-intro__title">Keeper planner</h2>
     <p class="kp-intro__copy">
       Drag (or use the arrow buttons) to move up to {KEEPER_LIMIT} players above the line.
-      Everyone below the line gets cut when you finalize. Plan saves automatically.
+      {canFinalize
+        ? 'Everyone below the line gets cut when you finalize. Plan saves automatically.'
+        : 'Plan saves automatically — finalizing (which actually cuts your roster) opens once the new season starts and closes at the keeper deadline.'}
     </p>
   </header>
+
+  <!-- Filters / sort — act on the cut-pool list below, not the keeper slots -->
+  <div class="kp-toolbar" data-toolbar>
+    <label class="kp-toolbar__control">
+      <span class="kp-toolbar__label">Hide players over</span>
+      <input type="range" class="kp-age-slider" data-age-filter min="21" max="45" step="1" value="45" />
+      <span class="kp-toolbar__value" data-age-filter-value>All ages</span>
+    </label>
+    <label class="kp-toolbar__control kp-toolbar__control--checkbox">
+      <input type="checkbox" data-sort-my-rank />
+      <span>Sort by My Rank</span>
+    </label>
+  </div>
 
   <!-- Above-the-line: keepers -->
   <div
@@ -120,6 +207,13 @@ const roundLabel = (round: string) => {
       </span>
     </header>
 
+    <div class="kp-lineup-meter" data-lineup-meter aria-label="Starting lineup coverage from your keepers">
+      <span class="kp-lineup-meter__group" data-lineup-group="QB">QB <strong data-lineup-count>0</strong>/1</span>
+      <span class="kp-lineup-meter__group" data-lineup-group="FLEX">FLEX <strong data-lineup-count>0</strong>/6</span>
+      <span class="kp-lineup-meter__group" data-lineup-group="PK">PK <strong data-lineup-count>0</strong>/1</span>
+      <span class="kp-lineup-meter__group" data-lineup-group="Def">DEF <strong data-lineup-count>0</strong>/1</span>
+    </div>
+
     <div class="kp-slots" data-slots>
       {Array.from({ length: KEEPER_LIMIT }).map((_, i) => (
         <div class="kp-slot kp-slot--empty" data-slot-index={i} aria-label="Empty keeper slot">
@@ -135,9 +229,19 @@ const roundLabel = (round: string) => {
     <div class="kp-status" data-status>Ready</div>
     <div class="kp-actions">
       <button type="button" class="kp-btn kp-btn--ghost" data-action="reset">Reset</button>
-      <button type="button" class="kp-btn kp-btn--primary" data-action="finalize" disabled>
-        Finalize keepers
-      </button>
+      {canFinalize ? (
+        <button type="button" class="kp-btn kp-btn--primary" data-action="finalize" disabled>
+          Finalize keepers
+        </button>
+      ) : (
+        <span class="kp-finalize-note">
+          {beforeFinalizeWindow
+            ? 'Finalizing opens when the new season starts.'
+            : draftConducted
+              ? `Keeper planning for ${year + 1} opens when the next season starts.`
+              : 'The keeper deadline has passed for this season.'}
+        </span>
+      )}
     </div>
   </div>
 
@@ -162,11 +266,12 @@ const roundLabel = (round: string) => {
     </header>
 
     <ul class="kp-cards" data-cards>
-      {sortedRoster.map((player) => (
+      {cardsData.map(({ player, trend }) => (
         <li
           class="kp-card"
           data-card
           data-player-id={player.id}
+          data-age={player.age}
           draggable="true"
           tabindex="0"
         >
@@ -180,6 +285,25 @@ const roundLabel = (round: string) => {
               playerData={buildModalData(player)}
             />
           </div>
+          {(player.positionalFinish != null || player.ppg != null || trend) && (
+            <div class="kp-card__stats">
+              {(player.positionalFinish != null || player.ppg != null) && (
+                <span class="kp-card__stat-line">
+                  {player.positionalFinish != null && `${player.position}${player.positionalFinish}`}
+                  {player.ppg != null && ` · ${player.ppg.toFixed(1)} PPG`}
+                  {player.gamesPlayed ? ` · ${player.gamesPlayed} GP` : ''}
+                </span>
+              )}
+              {trend && (
+                <span
+                  class:list={['kp-card__trend', `kp-card__trend--${trend.dir}`]}
+                  title={`Dynasty ADP #${player.dynastyAdpRank} vs redraft ADP #${player.redraftAdpRank}`}
+                >
+                  {trend.dir === 'up' ? '▲' : '▼'} {trend.label}
+                </span>
+              )}
+            </div>
+          )}
           <div class="kp-card__meta">
             <span class="kp-card__age" title="Age">{player.age}</span>
             {player.status === 'INJURED_RESERVE' && <span class="kp-card__ir-pill">IR</span>}
@@ -266,6 +390,9 @@ const roundLabel = (round: string) => {
 </div>
 
 <script>
+  import { LINEUP_SLOTS, BENCH_CREDIT, slotGroupFor, type SlotGroup } from '../../utils/afl-keeper-analysis';
+  import { buildRankingLookup, onRankingsChanged, COMPOSITE_IMPORT_ID } from '../../utils/rankings-lookup';
+
   interface PlayerLookup {
     id: string;
     name: string;
@@ -275,6 +402,10 @@ const roundLabel = (round: string) => {
   // Module-scoped guard so the document-level Escape handler binds exactly
   // once, not once per ClientRouter navigation.
   let kpKeydownBound = false;
+  // Module-scoped so re-initializing after a ClientRouter navigation
+  // replaces the previous DOM's rankings-change subscription instead of
+  // stacking another one on top of it.
+  let unsubscribeRankingsListener: (() => void) | null = null;
 
   // Runs on first load AND after every ClientRouter navigation. Astro
   // evaluates this script module only once, so without re-running on
@@ -302,6 +433,14 @@ const roundLabel = (round: string) => {
     const statusEl = root.querySelector<HTMLElement>('[data-status]');
     const resetBtn = root.querySelector<HTMLButtonElement>('[data-action="reset"]');
     const finalizeBtn = root.querySelector<HTMLButtonElement>('[data-action="finalize"]');
+    const ageSlider = root.querySelector<HTMLInputElement>('[data-age-filter]');
+    const ageFilterValueEl = root.querySelector<HTMLElement>('[data-age-filter-value]');
+    const sortMyRankToggle = root.querySelector<HTMLInputElement>('[data-sort-my-rank]');
+    const lineupMeterGroups = new Map<SlotGroup, HTMLElement>();
+    root.querySelectorAll<HTMLElement>('[data-lineup-group]').forEach((el) => {
+      const group = el.dataset.lineupGroup as SlotGroup | undefined;
+      if (group) lineupMeterGroups.set(group, el);
+    });
 
     // Collect every card's data for fast lookup
     const cardData = new Map<string, PlayerLookup>();
@@ -318,6 +457,10 @@ const roundLabel = (round: string) => {
       list.push(card);
       initialCardsByPos.set(positionRaw, list);
     });
+
+    // Snapshot the server-rendered order (position, then name) so the My
+    // Rank sort toggle has something to restore when switched back off.
+    const initialOrderIds: string[] = [...cardData.keys()];
 
     // Local state — single source of truth, mirrored into the DOM each render.
     const keeperIds: string[] = [];
@@ -381,6 +524,30 @@ const roundLabel = (round: string) => {
       const keepZone = root.querySelector('[data-zone="keepers"]');
       if (keepZone) keepZone.classList.toggle('kp-zone--full', keeperIds.length >= KEEPER_LIMIT);
       if (finalizeBtn) finalizeBtn.disabled = keeperIds.length !== KEEPER_LIMIT;
+      updateLineupMeter();
+    }
+
+    // How many of your keepers start vs. back up each lineup group (1 QB /
+    // 1 PK / 1 Def / 6 flex). A group over its starter count still banks
+    // points as bench cover — see BENCH_CREDIT — just far less than a
+    // starter, and it's the single most common structural keeper mistake
+    // (a second QB or a kicker) that the rest of this board doesn't surface.
+    function updateLineupMeter() {
+      const counts: Record<SlotGroup, number> = { QB: 0, PK: 0, Def: 0, FLEX: 0 };
+      for (const id of keeperIds) {
+        const info = cardData.get(id);
+        const group = info ? slotGroupFor(info.position) : null;
+        if (group) counts[group] += 1;
+      }
+      for (const [group, el] of lineupMeterGroups) {
+        const countEl = el.querySelector('[data-lineup-count]');
+        if (countEl) countEl.textContent = String(counts[group]);
+        const over = counts[group] > LINEUP_SLOTS[group];
+        el.classList.toggle('kp-lineup-meter__group--over', over);
+        el.title = over
+          ? `Only ${LINEUP_SLOTS[group]} ${group} start${LINEUP_SLOTS[group] === 1 ? 's' : ''} a week — the extra keeper here banks about ${Math.round(BENCH_CREDIT[group] * 100)}% of a starter's points as bench cover.`
+          : '';
+      }
     }
 
     function findCard(playerId: string): HTMLLIElement | null {
@@ -770,6 +937,64 @@ const roundLabel = (round: string) => {
       }
     }
 
+    // ── Age filter — hides cut-pool cards above a chosen age, so an owner
+    // can quickly narrow in on who's aging out of their keeper window.
+    // Never touches a card already promoted to a keeper slot — those carry
+    // `hidden` via setCardVisibility regardless of this filter.
+    const AGE_FILTER_MAX = Number(ageSlider?.max ?? 45);
+    function applyAgeFilter() {
+      const threshold = ageSlider ? Number(ageSlider.value) : AGE_FILTER_MAX;
+      const noFilter = threshold >= AGE_FILTER_MAX;
+      root.querySelectorAll<HTMLLIElement>('[data-card]').forEach((card) => {
+        const age = Number(card.dataset.age);
+        const overAge = !noFilter && Number.isFinite(age) && age > threshold;
+        card.classList.toggle('kp-card--filtered', overAge);
+      });
+      if (ageFilterValueEl) {
+        ageFilterValueEl.textContent = noFilter ? 'All ages' : `Hiding > ${threshold}`;
+      }
+    }
+    ageSlider?.addEventListener('input', applyAgeFilter);
+
+    // ── Sort by My Rank — reorders the cut-pool list by the owner's
+    // composite ranking (rankings-lookup.ts), auto-scoped to the AFL bucket
+    // by activeRankingsScope(). No composite yet (fewer than 2 rankings
+    // imported) → falls back to the original position/name order.
+    function applyCardOrder() {
+      if (!cardsEl) return;
+      let orderIds = initialOrderIds;
+      if (sortMyRankToggle?.checked) {
+        const lookup = buildRankingLookup();
+        const compositeMap = lookup.byImport.get(COMPOSITE_IMPORT_ID);
+        if (compositeMap && compositeMap.size > 0) {
+          orderIds = [...initialOrderIds].sort((a, b) => {
+            const ra = compositeMap.get(a);
+            const rb = compositeMap.get(b);
+            if (ra == null && rb == null) return 0;
+            if (ra == null) return 1;
+            if (rb == null) return -1;
+            return ra - rb;
+          });
+        }
+      }
+      for (const id of orderIds) {
+        const card = findCard(id);
+        if (card) cardsEl.appendChild(card);
+      }
+    }
+    sortMyRankToggle?.addEventListener('change', applyCardOrder);
+    // Re-sort live if the owner imports/edits rankings in another tab while
+    // this page is open. Module-scoped guard mirrors kpKeydownBound: a fresh
+    // planner DOM re-subscribes on every ClientRouter navigation, so the
+    // PREVIOUS instance's listener (closing over now-detached elements) must
+    // be torn down first rather than left to stack.
+    unsubscribeRankingsListener?.();
+    unsubscribeRankingsListener = onRankingsChanged(() => {
+      if (sortMyRankToggle?.checked) applyCardOrder();
+    });
+
+    applyAgeFilter();
+    applyCardOrder();
     renderSlots();
     updateCounters();
     void loadPlan();
@@ -813,6 +1038,76 @@ const roundLabel = (round: string) => {
     font-size: 0.875rem;
     color: #4b5563;
     line-height: 1.5;
+  }
+
+  /* Toolbar — filters/sort acting on the cut-pool list below */
+  .kp-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 1rem;
+    background: #fff;
+    border-radius: 0.75rem;
+    padding: 0.75rem 1rem;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+    font-size: 0.8125rem;
+  }
+
+  .kp-toolbar__control {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: #374151;
+  }
+
+  .kp-toolbar__label {
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
+  .kp-age-slider {
+    width: 120px;
+  }
+
+  .kp-toolbar__value {
+    color: #6b7280;
+    white-space: nowrap;
+    min-width: 6.5rem;
+  }
+
+  .kp-toolbar__control--checkbox {
+    cursor: pointer;
+    font-weight: 600;
+  }
+
+  /* Lineup-slot fit meter — how many keepers start vs. back up each group */
+  .kp-lineup-meter {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .kp-lineup-meter__group {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #4b5563;
+    background: #f3f4f6;
+    border-radius: 0.375rem;
+    padding: 0.1875rem 0.5rem;
+  }
+
+  .kp-lineup-meter__group strong {
+    color: #111827;
+  }
+
+  .kp-lineup-meter__group--over {
+    background: #fef3c7;
+    color: #92400e;
+  }
+
+  .kp-lineup-meter__group--over strong {
+    color: #92400e;
   }
 
   /* Zones */
@@ -1005,7 +1300,14 @@ const roundLabel = (round: string) => {
 
   .kp-actions {
     display: flex;
+    align-items: center;
     gap: 0.5rem;
+  }
+
+  .kp-finalize-note {
+    font-size: 0.8125rem;
+    color: #6b7280;
+    font-style: italic;
   }
 
   .kp-btn {
@@ -1084,9 +1386,43 @@ const roundLabel = (round: string) => {
     display: none;
   }
 
+  /* Age-filtered out — same "not here right now" treatment as [hidden]. */
+  .kp-card.kp-card--filtered {
+    display: none;
+  }
+
   .kp-card__player {
     flex: 1;
     min-width: 0;
+  }
+
+  .kp-card__stats {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.125rem;
+    flex-shrink: 0;
+    margin-right: 0.25rem;
+  }
+
+  .kp-card__stat-line {
+    font-size: 0.6875rem;
+    color: #6b7280;
+    white-space: nowrap;
+  }
+
+  .kp-card__trend {
+    font-size: 0.625rem;
+    font-weight: 700;
+    white-space: nowrap;
+  }
+
+  .kp-card__trend--up {
+    color: var(--color-success-dark, #059669);
+  }
+
+  .kp-card__trend--down {
+    color: var(--color-error-dark, #991b1b);
   }
 
   .kp-card__meta {
@@ -1381,6 +1717,7 @@ const roundLabel = (round: string) => {
      ships as dead literal CSS.
      ────────────────────────────────────────────────────────────── */
   html.dark .kp-intro,
+  html.dark .kp-toolbar,
   html.dark .kp-zone,
   html.dark .kp-statusbar,
   html.dark .kp-picks {
@@ -1397,6 +1734,41 @@ const roundLabel = (round: string) => {
   html.dark .kp-counter,
   html.dark .kp-picks__count {
     color: var(--content-text-muted, #8a8a8a);
+  }
+
+  html.dark .kp-toolbar__control,
+  html.dark .kp-toolbar__value {
+    color: var(--content-text-muted, #8a8a8a);
+  }
+
+  html.dark .kp-lineup-meter__group {
+    background: var(--content-bg-muted, #181818);
+    color: var(--content-text-muted, #8a8a8a);
+  }
+
+  html.dark .kp-lineup-meter__group strong {
+    color: var(--page-text, #ededed);
+  }
+
+  html.dark .kp-lineup-meter__group--over {
+    background: color-mix(in srgb, #f59e0b 20%, var(--card-surface, #16283c));
+    color: #fcd34d;
+  }
+
+  html.dark .kp-lineup-meter__group--over strong {
+    color: #fcd34d;
+  }
+
+  html.dark .kp-card__stat-line {
+    color: var(--content-text-muted, #8a8a8a);
+  }
+
+  html.dark .kp-card__trend--up {
+    color: var(--color-success, #34d399);
+  }
+
+  html.dark .kp-card__trend--down {
+    color: var(--color-error, #f87171);
   }
 
   html.dark .kp-zone__title,
@@ -1583,6 +1955,15 @@ const roundLabel = (round: string) => {
 
     .kp-finalize__lists {
       grid-template-columns: 1fr;
+    }
+
+    .kp-toolbar {
+      flex-direction: column;
+      align-items: stretch;
+    }
+
+    .kp-age-slider {
+      width: 100%;
     }
   }
 </style>
