@@ -238,6 +238,22 @@ describe('the fixes that a scan is the only thing holding', () => {
     expect(BANNER).toMatch(/aria-hidden/);
   });
 
+  it('never prints a score for a league whose feed it could not read', () => {
+    // `0.0` is a real score. Printing it for a failed read says "nobody has
+    // scored yet" — the same "no games" / "couldn't read it" merge the whole
+    // live-scoring rule set exists to prevent, and on this board a dimmed
+    // panel of zeros is exactly what a pre-kickoff Sunday morning looks like.
+    expect(HEADER).toMatch(/const score = /);
+    expect(HEADER).toMatch(/readable/);
+    // The scores, the projections, the bar, the percentage and the leading
+    // emphasis are ALL assertions about numbers we do not have.
+    expect(HEADER).toMatch(/lbc__score">\{score\(/);
+    expect(HEADER).toMatch(/matchup\.opponent && readable &&/);
+    expect(HEADER).toMatch(/readable && mineLive >= theirsLive/);
+    // And it says so, rather than only going quiet.
+    expect(HEADER).toMatch(/Feed unavailable/);
+  });
+
   it('gives the board a document shell, so it has a font and a title', () => {
     // Rendered bare, the whole board fell back to the UA serif — which has no
     // `tabular-nums`, so every score would jitter its column width on a tick —

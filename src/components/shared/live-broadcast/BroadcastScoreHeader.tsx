@@ -28,6 +28,17 @@ interface Props {
 }
 
 const fmt = (n: number) => (Number.isFinite(n) ? n.toFixed(1) : '0.0');
+
+/**
+ * A number, or an em-dash when this league's feed could not be read.
+ *
+ * `0.0` is a real score. Printing it for a league whose upstream read FAILED
+ * says "nobody has scored yet", which is the same "no games" / "couldn't read
+ * it" merge the whole live-scoring rule set exists to prevent — and on this
+ * board it is worse than elsewhere, because a dimmed panel of zeros is exactly
+ * what a pre-kickoff Sunday morning looks like.
+ */
+const score = (n: number | undefined, ok: boolean) => (ok ? fmt(n ?? 0) : '—');
 const pct = (n: number) => `${Math.round(n * 100)}%`;
 
 /** The name form this tier survives on — resolved server-side, picked here. */
@@ -65,6 +76,13 @@ function BroadcastScoreHeader({ panels, scores, tier, hidden, games, meta }: Pro
           >
             <p className="lbc__panel-tag">{panel.leagueName}</p>
 
+            {/* A failed read says so even when it HAS pairings to draw. The
+                panel keeps its full height either way — removing one
+                mid-afternoon re-lays out every other panel. */}
+            {panel.status === 'unavailable' && panel.matchups.length > 0 && (
+              <p className="lbc__panel-note is-inline">Feed unavailable</p>
+            )}
+
             {panel.matchups.length === 0 ? (
               <p className="lbc__panel-note">
                 {panel.status === 'unavailable' ? 'Feed unavailable' : 'No matchup this week'}
@@ -80,6 +98,7 @@ function BroadcastScoreHeader({ panels, scores, tier, hidden, games, meta }: Pro
                   const mineLive = mine?.live ?? 0;
                   const theirsLive = theirs?.live ?? 0;
                   const clock = matchupGameClock(mine?.players ?? [], games, meta);
+                  const readable = panel.status !== 'unavailable';
 
                   return (
                     <div
@@ -99,54 +118,58 @@ function BroadcastScoreHeader({ panels, scores, tier, hidden, games, meta }: Pro
                       {/* A screen reader gets one sentence; the numerals and the
                           bar below are decoration it never has to assemble. */}
                       <p className="visually-hidden">
-                        {matchup.mine.name} {fmt(mineLive)}, projected {fmt(mine?.projectedFinal ?? 0)},{' '}
+                        {matchup.mine.name} {score(mineLive, readable)}, projected{' '}
+                        {score(mine?.projectedFinal, readable)},{' '}
                         {mine?.yetToPlay ?? 0} to play.{' '}
                         {matchup.opponent
-                          ? `${matchup.opponent.name} ${fmt(theirsLive)}, projected ${fmt(theirs?.projectedFinal ?? 0)}, ${theirs?.yetToPlay ?? 0} to play. Win probability ${pct(wp)}.`
+                          ? `${matchup.opponent.name} ${score(theirsLive, readable)}, projected ${score(theirs?.projectedFinal, readable)}, ${theirs?.yetToPlay ?? 0} to play. Win probability ${pct(wp)}.`
                           : 'No opponent this week.'}
+                        {readable ? '' : ' This league’s feed could not be read.'}
                       </p>
 
                       <div aria-hidden="true">
                         {cellCount > 1 && <p className="lbc__game-tag">Game {matchup.index + 1}</p>}
 
-                        <div className={`lbc__side${mineLive >= theirsLive ? ' is-leading' : ''}`}>
+                        <div className={`lbc__side${readable && mineLive >= theirsLive ? ' is-leading' : ''}`}>
                           {matchup.mine.iconSmall && (
                             <img className="lbc__crest" src={matchup.mine.iconSmall} alt="" />
                           )}
                           <span className="lbc__tn">{nameAt(matchup.mine, tier)}</span>
                           <span className="lbc__proj">
                             <span className="lbc__proj-word">Proj </span>
-                            {fmt(mine?.projectedFinal ?? 0)}
+                            {score(mine?.projectedFinal, readable)}
                           </span>
-                          <span className="lbc__score">{fmt(mineLive)}</span>
+                          <span className="lbc__score">{score(mineLive, readable)}</span>
                         </div>
 
                         {/* No opponent means no probability to state. A 50/50
                             bar against nobody asserts a coin flip that is not
                             happening — the visually-hidden sentence already
                             says "no opponent this week". */}
-                        {matchup.opponent && (
+                        {matchup.opponent && readable && (
                           <div className="lbc__wp">
                             <div className="lbc__wp-fill" style={{ width: pct(wp) }} />
                           </div>
                         )}
 
                         {matchup.opponent && (
-                          <div className={`lbc__side${theirsLive > mineLive ? ' is-leading' : ''}`}>
+                          <div className={`lbc__side${readable && theirsLive > mineLive ? ' is-leading' : ''}`}>
                             {matchup.opponent.iconSmall && (
                               <img className="lbc__crest" src={matchup.opponent.iconSmall} alt="" />
                             )}
                             <span className="lbc__tn">{nameAt(matchup.opponent, tier)}</span>
                             <span className="lbc__proj">
                               <span className="lbc__proj-word">Proj </span>
-                              {fmt(theirs?.projectedFinal ?? 0)}
+                              {score(theirs?.projectedFinal, readable)}
                             </span>
-                            <span className="lbc__score">{fmt(theirsLive)}</span>
+                            <span className="lbc__score">{score(theirsLive, readable)}</span>
                           </div>
                         )}
 
                         <div className="lbc__cell-foot">
-                          {matchup.opponent && <span className="lbc__wp-label">{pct(wp)} win</span>}
+                          {matchup.opponent && readable && (
+                            <span className="lbc__wp-label">{pct(wp)} win</span>
+                          )}
                           <span>{mine?.yetToPlay ?? 0} to play</span>
                           <span className="lbc__ytp-opp">{theirs?.yetToPlay ?? 0} theirs</span>
                           {/* The real ESPN clock, or NOTHING. Never a number

@@ -412,6 +412,17 @@
   margin: auto 0;
 }
 
+/* The same note beside cells that DO render, rather than in place of them.
+   Amber, because this is the board saying it could not read something — the
+   one colour it reserves for that. */
+.lbc__panel-note.is-inline {
+  align-self: flex-start;
+  margin: 0 0 0.3vh;
+  color: var(--lbc-alert);
+  font-size: max(2.2vh, 0.7rem);
+  font-weight: 700;
+}
+
 /* ── Red-zone banner ───────────────────────────────────────────────────────
    Layer 3 — ABOVE the stage, including takeovers. It is a persistent STATE,
    not an event: as a stage it would be preempted by the next reveal and the
