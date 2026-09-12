@@ -108,3 +108,72 @@ design spec.
   carries no `html.dark`, the page explaining why it does not call
   `Astro.redirect()`. A guard that fails loudest on the file that documents
   itself best is worse than no guard.
+
+## Sep 2026 — what the first cut got wrong about who scored
+
+Three findings from the follow-up pass, all of the same shape: the board drew
+the right thing for the wrong person, and every one of them looked plausible on
+screen.
+
+- **A team defense is a CLUB, not a person, so it has no ESPN athlete id and
+  can never appear in `play.playerIds`.** Every defensive touchdown, takeaway
+  and safety therefore produced no reveal at all — two of the four triggers
+  this board was specified to have, silently doing nothing, with nothing in the
+  logs and nothing missing from the screen to notice. Not a corner case: 32
+  team defenses are rostered in TheLeague and 28 in the AFL (`position: 'Def'`,
+  normalized to `'DEF'` by `player-map.ts`). A `Def` row must be joined by NFL
+  TEAM, never by athlete.
+
+  The join is `isTurnover`, and it is better than it looks: ESPN sets it
+  exactly when `start.team !== end.team`, and on every such play attributes the
+  play to the team that ENDED with the ball — the defense. So `play.nflTeam` is
+  already the scoring club, and one flag covers takeaways AND defensive
+  touchdowns, since a pick six is still a turnover. A "Fumble Recovery (Own)"
+  correctly arrives as `false`. Read backwards, this credits the defense that
+  just gave the ball away, which is why `tests/fixtures/espn-game-plays-turnovers.json`
+  pins the direction across eleven real turnovers — a mutation of it fails five
+  tests. MFL and ESPN disagree on team codes (`NEP` vs `NE`), so both sides go
+  through `normalizeTeamCode`.
+
+  **Still open:** a safety is not a turnover, and no recorded play carries one,
+  so which team ESPN attributes it to is unverified. Guessing credits the wrong
+  defense and looks fine, so it is deliberately not implemented.
+
+- **ESPN's `participants` lists everyone INVOLVED, not everyone credited**, and
+  the trap is `kicker`. Three real rows:
+
+  | Play | Roles |
+  |---|---|
+  | Field Goal Good | `kicker, scorer, snapper, holder` |
+  | Rushing Touchdown | `rusher, scorer, kicker, patScorer` |
+  | Kickoff | `kicker, returner, tackler, penalized, other` |
+
+  On the field goal the kicker IS the scorer (same athlete, deduped, so the
+  allowlist can drop `kicker` for free); on the kickoff he is the OTHER team's
+  placekicker, credited on a return he was trying to prevent. Participants
+  carry no team of their own — only `athlete`, `order`, `type` — so a role
+  allowlist is the only mechanism available.
+
+  Turnovers need a SECOND, narrower list: an interception lists `passer` and a
+  fumble return lists `receiver`, so the ordinary allowlist hands a full-screen
+  TOUCHDOWN to the quarterback who threw the pick and to the receiver who
+  fumbled — each named, at 68vh, for the worst play of their afternoon.
+  `patScorer` is excluded on purpose: the extra point is real scoring, but a
+  TOUCHDOWN takeover naming your kicker for someone else's touchdown is the
+  wrong framing for one point.
+
+- **Two crest fields assigned the same value is invisible at the call site.**
+  `icon` and `iconSmall` were both `brand.icon`, so the takeover's 68vh
+  background crest — ~734px on a 1080p TV — was the ~100px rail asset upscaled
+  7.3x. `resolveBroadcastCrest` already encoded the split (resolution-first for
+  the big surface, theme-first for the small ones) for the draft board; the
+  live board simply never called it. All 40 franchises resolve to 400x400
+  GroupMe art now, making it a 1.8x upscale.
+
+  Two things this surfaced. The manifest keys the AFL as `afl` while the route
+  directory is `afl-fantasy`, and passing the slug straight through finds no
+  measured stroke AT ALL — silently, with no AFL crest measured today to notice
+  it — so `crestLeagueKey` moved out of `hero-crest.ts` into
+  `dark-surface-crest.ts`, which owns the contract. And a guard for this has to
+  be BEHAVIOURAL: the regression was two fields holding the same string, which
+  no amount of reading the call site reveals.

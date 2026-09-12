@@ -3123,3 +3123,27 @@ was scoped to one page and several of those are shared by many.
 budget — adding it means trimming something else, which is a deliberate
 editorial call rather than a drive-by.)
 
+
+## 2026-09-12 — `design-token-guard` cannot see a COMPUTED custom-property name
+
+`tests/design-token-guard.test.ts` collects token DEFINITIONS by matching
+literal text — among them `/["'`]--([a-zA-Z][\w-]*)["'`]\s*:/` for a JS object
+key. So a token whose only definition is an inline style object is defined only
+as long as its name is written out in full.
+
+Parameterizing `crestStrokeProps(baseClass, color, prefix)` to serve both
+broadcast stylesheets turned `{ '--dbc-crest-stroke': color }` into
+``{ [`--${prefix}-crest-stroke`]: color }`` — which un-defined the token for the
+DRAFT board as well as failing to define it for the new one, and the guard
+reported four failures in `draft-broadcast.css`, a file the diff never touched.
+The runtime symptom would have been quieter: a crest that needs a white ring to
+survive a dark-in-both-themes board simply stops having one.
+
+Write both names out in full and branch on the prefix. Cast each branch
+separately too — a union of two custom-property literals has no overlap with
+`CSSProperties` and `ts(2352)` rejects a single cast over the union.
+
+The general rule: **a custom property that exists only in JS must appear as a
+literal string there.** Composing the name moves it out of every static
+analysis this repo has, and the failure is attributed to whatever stylesheet
+references it rather than to the file that broke it.
