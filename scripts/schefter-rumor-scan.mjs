@@ -442,7 +442,7 @@ const TRADE_BUILDER_LINK_LABEL = 'Open in Trade Builder →';
 const TRADE_BUILDER_GROUPME_PREFIX = 'Counter on the block?';
 
 function buildTradeBuilderPath(franchiseId) {
-  return `/${LEAGUE_SLUG}/trade-builder?b=${encodeURIComponent(franchiseId)}`;
+  return `/${LEAGUE_SLUG}/front-office/trade-builder?b=${encodeURIComponent(franchiseId)}`;
 }
 
 /**
@@ -466,7 +466,7 @@ function isTradeFlavoredTip(tip) {
  * to a single franchise (league-wide speculation, or a multi-franchise
  * cluster). Owners land on the empty builder and pick from there.
  */
-const TRADE_BUILDER_PATH = `/${LEAGUE_SLUG}/trade-builder`;
+const TRADE_BUILDER_PATH = `/${LEAGUE_SLUG}/front-office/trade-builder`;
 
 /**
  * Resolve the CTA for a post based on its primary bucket.

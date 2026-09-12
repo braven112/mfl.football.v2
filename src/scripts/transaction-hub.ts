@@ -184,8 +184,8 @@ function thmBuildTradeBuilderUrl(trade: any): string {
   // Keep the deep link inside the current league — the layout stamps the active
   // league on <html data-league> ('afl' | 'theleague'), which is domain-agnostic.
   const base = document.documentElement.dataset.league === 'afl'
-    ? '/afl-fantasy/trade-builder'
-    : '/theleague/trade-builder';
+    ? '/afl-fantasy/front-office/trade-builder'
+    : '/theleague/front-office/trade-builder';
   return `${base}?${params.toString()}`;
 }
 

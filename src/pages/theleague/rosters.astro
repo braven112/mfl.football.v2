@@ -1,5 +1,6 @@
 ---
 import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
+import FrontOfficeNav from '../../components/shared/front-office-nav/FrontOfficeNav.astro';
 import CollegeLogoDarkStyles from '../../components/CollegeLogoDarkStyles.astro';
 import { resolveLeaguePath } from '../../utils/nav-utils';
 import leagueAssets from '../../data/theleague.assets.json';
@@ -2040,9 +2041,14 @@ try {
 const defaultLastSeen = ownerActivityMap[defaultTeamId] ?? null;
 const defaultActivityLevel = getActivityLevel(defaultLastSeen);
 const defaultLastSeenText = formatLastSeen(defaultLastSeen);
+// Marks which Front Office strip item is current — presentational only,
+// independent of the client-side view-tab switching below.
+const frontOfficeCurrent = Astro.url.searchParams.get('view') === 'planner' ? 'league-planner' : 'rosters';
+const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Planner' : 'Roster / Salary';
 ---
 
 <TheLeagueLayout title="Team Rosters">
+  <FrontOfficeNav leagueSlug="theleague" current={frontOfficeCurrent} crumb={frontOfficeCrumb} bare />
   <CollegeLogoDarkStyles />
   <section class="roster-page">
     <!-- Team Header Card (separate from content) -->
@@ -2330,7 +2336,7 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
                     <Fragment slot="after-name">
                       {player.tradeBait && (
                         <a
-                          href={r(`/theleague/trade-builder?b=${player.franchiseId}`)}
+                          href={r(`/theleague/front-office/trade-builder?b=${player.franchiseId}`)}
                           class="trade-bait-link"
                           title="On Trade Block — Open in Trade Builder"
                         >
@@ -7357,7 +7363,7 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
             : '';
 
           const tradeBaitBadge = player.tradeBait
-            ? `<a href="${resolveLeaguePath(`/theleague/trade-builder?b=${player.franchiseId}`)}" class="trade-bait-link" title="On Trade Block — Open in Trade Builder">🏷️</a>`
+            ? `<a href="${resolveLeaguePath(`/theleague/front-office/trade-builder?b=${player.franchiseId}`)}" class="trade-bait-link" title="On Trade Block — Open in Trade Builder">🏷️</a>`
             : '';
 
           // August auto-cut badge — own team, cut window, active roster only
@@ -9017,7 +9023,7 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
                 const nameEl = playerRow.querySelector('.player-cell__name');
                 if (nameEl) {
                   const badge = document.createElement('a');
-                  badge.href = resolveLeaguePath('/theleague/trade-builder?b=' + (cdmPlayerData?.franchiseId || cdmPlayerData?._rawPlayer?.franchiseId || ''));
+                  badge.href = resolveLeaguePath('/theleague/front-office/trade-builder?b=' + (cdmPlayerData?.franchiseId || cdmPlayerData?._rawPlayer?.franchiseId || ''));
                   badge.className = 'trade-bait-link';
                   badge.title = 'On Trade Block \u2014 Open in Trade Builder';
                   badge.textContent = '\uD83C\uDFF7\uFE0F';
@@ -9055,7 +9061,7 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
           const pid = cdmPlayerData?._rawPlayer?.id || cdmPlayerData?.id || '';
           const playerFid = cdmPlayerData?._rawPlayer?.franchiseId || cdmPlayerData?.franchiseId || '';
           const myFid = config.authUser?.franchiseId || '';
-          let url = resolveLeaguePath('/theleague/trade-builder');
+          let url = resolveLeaguePath('/theleague/front-office/trade-builder');
           if (myFid && pid) {
             if (playerFid === myFid) {
               // Player is on my team — I'm sending them: Team A = me + player

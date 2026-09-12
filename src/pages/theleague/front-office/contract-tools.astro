@@ -1,15 +1,16 @@
 ---
-import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
-import leagueAssets from '../../data/theleague.assets.json';
-import { getFrozenSalaryAveragesYear } from '../../utils/salary-calculations';
-import { getActiveTeams, getCurrentIconPath } from '../../utils/league-assets';
+import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
+import FrontOfficeNav from '../../../components/shared/front-office-nav/FrontOfficeNav.astro';
+import leagueAssets from '../../../data/theleague.assets.json';
+import { getFrozenSalaryAveragesYear } from '../../../utils/salary-calculations';
+import { getActiveTeams, getCurrentIconPath } from '../../../utils/league-assets';
 
 const salarySummaryModules = import.meta.glob(
-  '../../data/mfl-salary-averages-*.json',
+  '../../../data/mfl-salary-averages-*.json',
   { eager: true }
 );
 const playerSalaryModules = import.meta.glob(
-  '../../data/mfl-player-salaries-*.json',
+  '../../../data/mfl-player-salaries-*.json',
   { eager: true }
 );
 
@@ -246,6 +247,7 @@ const serializedConfig = JSON.stringify({
 ---
 
 <TheLeagueLayout title="Contract Tools">
+  <FrontOfficeNav leagueSlug="theleague" current="contract-tools" crumb="Contract Tools" />
   <section class="calculator">
     <div class="calculator__card" id="rookie-extension-calculator">
       <h1>Contract Tools</h1>
@@ -1150,7 +1152,12 @@ const serializedConfig = JSON.stringify({
     input.value = formatCurrency(parseCurrency(input.value));
   };
 
-  document.addEventListener('DOMContentLoaded', () => {
+  // CLIENTROUTER-SAFE INIT (frontend.md, "Interactive scripts must re-init on
+  // astro:page-load"). Astro bundles this script, so it runs ONCE per
+  // document while the router swaps the DOM underneath it on every in-site
+  // navigation — a DOMContentLoaded-only init came back inert on a return
+  // visit. Every element below is re-read on each call.
+  function init() {
     const playerSearchInput = document.getElementById('playerSearch');
     const currentSalaryInput = document.getElementById('currentSalary');
     const selectedPlayerDisplay = document.getElementById('selectedPlayerDisplay');
@@ -1697,5 +1704,8 @@ Reference: ${referenceLabel}`;
     updateReferenceTables();
     updateSuggestions();
     toggleExtensionLength();
-  });
+  }
+
+  // Never call init() directly — astro:page-load fires on the FIRST load too.
+  document.addEventListener('astro:page-load', init);
 </script>

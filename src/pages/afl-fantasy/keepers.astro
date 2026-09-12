@@ -1,5 +1,6 @@
 ---
 import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
+import FrontOfficeNav from '../../components/shared/front-office-nav/FrontOfficeNav.astro';
 import aflConfig from '../../../data/afl-fantasy/afl.config.json';
 
 export const prerender = false;
@@ -19,6 +20,7 @@ const teams = (aflConfig.teams ?? []).slice().sort((a, b) => {
 ---
 
 <TheLeagueLayout title="Keepers | AFL">
+  <FrontOfficeNav leagueSlug="afl-fantasy" current="keepers" crumb="Keeper Planner" bare />
   <div class="afl-keepers">
     <header class="afl-keepers__hero">
       <h1>AFL Keepers</h1>
