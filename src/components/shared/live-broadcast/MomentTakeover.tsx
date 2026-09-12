@@ -12,10 +12,10 @@
  *
  * ── The figure ────────────────────────────────────────────────────────────
  *
- * The scorer is a LARGE CUTOUT on the right, outside any cell, next to the
- * franchise crest — the draft board's treatment, on the same hardware. He was
- * an 18vh circular chip inside the copy until Sep 2026, which read as a row of
- * the player strip blown up rather than as a moment.
+ * The scorer is a LARGE CUTOUT on the right, outside any cell, with the
+ * franchise crest centred behind him — the draft board's treatment, on the same
+ * hardware. He was an 18vh circular chip inside the copy until Sep 2026, which
+ * read as a row of the player strip blown up rather than as a moment.
  *
  * Four things here deliberately differ from `BroadcastRevealCard`, its
  * equivalent on the draft board:
@@ -34,9 +34,12 @@
  *    `z-index` instead, so a defender's shoulder can never cover the play text.
  *  - **No shuffle.** The draft board randomises which defenders show because
  *    the AFL can draft the same defense twice in one night. Here, seeing the
- *    same two men every time the Chiefs defense scores is a feature.
- *  - **Three faces ship, two show.** The spare backfills a 404 so a pair stays
- *    a pair.
+ *    same man every time the Chiefs defense scores is a feature.
+ *  - **ONE defender, not the draft board's pair.** Tried on the real
+ *    television, two men at full cutout scale filled the layer and left the
+ *    club unidentifiable without reading the caption. The unit's NAME carries
+ *    the club's mark instead, and one face stands beside it. Three faces still
+ *    ship: the spares are the 404 backfill.
  */
 
 import { memo, useMemo, useState } from 'react';
@@ -149,9 +152,9 @@ function MomentTakeover({
           over the 100x100 hand cut) and buys dark-board legibility back with a
           ring. Both crest fields were the same 100px icon until Sep 2026, which
           is what made this one visibly pixelated.
-          Anchored bottom-RIGHT, so it already sits under the figure column —
-          the crest-under-cutout overlap the draft board engineers on purpose
-          comes free here. Nothing about it needs to move. */}
+          CENTRED on the layer, with the scorer seated to its right — it used to
+          be anchored bottom-right, which put it entirely underneath the figure
+          once the cutout moved there and wasted the club's own mark. */}
       {team?.icon && (
         <img
           {...crestStrokeProps('lbc-reveal__crest', team.iconStroke, 'lbc')}
