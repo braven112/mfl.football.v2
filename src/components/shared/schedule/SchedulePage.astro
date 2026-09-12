@@ -39,8 +39,10 @@ import { chooseTeamName, resolveConfigForYear } from '../../../utils/team-names'
 import {
   findNextGame,
   franchiseSchedule,
+  lastPlayedWeek,
   opponentsByWeek,
   parseWeeklySchedule,
+  weekMatchups,
 } from '../../../utils/schedule-data.mjs';
 
 interface Props {
@@ -77,19 +79,30 @@ const standingsByYear = byYear(standingsFeeds);
 // getCurrentSeasonYear() is the results-shaped clock (rolls at Labor Day).
 // A season MFL has not created yet falls back to the newest feed on disk
 // rather than rendering an empty page for six months of the calendar.
-const requested = getCurrentSeasonYear();
+const liveYear = getCurrentSeasonYear();
 const availableYears = [...schedulesByYear.keys()].sort((a, b) => b - a);
 // Existence is not enough: MFL creates the new season's feed before it draws
-// the schedule, so `has(requested)` can be true with nothing in it. Fall back
+// the schedule, so `has(liveYear)` can be true with nothing in it. Fall back
 // to the newest season that actually carries matchups.
 const parsedByYear = new Map(availableYears.map((y) => [y, parseWeeklySchedule(schedulesByYear.get(y))]));
 const hasGames = (y: number) => (parsedByYear.get(y)?.length ?? 0) > 0;
-const year = hasGames(requested)
-  ? requested
-  : (availableYears.find(hasGames) ?? requested);
+const defaultYear = hasGames(liveYear)
+  ? liveYear
+  : (availableYears.find(hasGames) ?? liveYear);
+
+// `?year=` is a whitelist lookup, never a cast: an arbitrary number would ask
+// for a season with no feed and render an empty page. Anything not in the
+// seasons on disk falls back to the default rather than 404ing.
+const yearParam = Number(Astro.url.searchParams.get('year'));
+const year = availableYears.includes(yearParam) && hasGames(yearParam) ? yearParam : defaultYear;
+const seasonYears = availableYears.filter(hasGames);
+const isLiveSeason = year === liveYear;
 
 const weeks = parsedByYear.get(year) ?? [];
-const currentWeek = getCurrentNFLWeek(new Date(), year) ?? 1;
+// "Now" only means something in the season being played. Asking
+// getCurrentNFLWeek for a season that ended years ago returns a week number
+// that would highlight an arbitrary column of a finished grid as live.
+const currentWeek = isLiveSeason ? (getCurrentNFLWeek(new Date(), year) ?? 1) : -1;
 
 const teams = resolveConfigForYear(config as { teams: any[] }, year).teams ?? [];
 const teamById = new Map(teams.map((team: any) => [team.franchiseId, team]));
@@ -101,7 +114,28 @@ const nameOf = (id: string) => {
     'default',
   );
 };
-const abbrevOf = (id: string) => teamById.get(id)?.abbrev ?? id;
+/**
+ * A club's short tag for the grid tile.
+ *
+ * The fallback is a derived tag, NOT the franchise id: a historical identity
+ * may carry a name with no `abbrev` (ten AFL franchises' 2024 era entries do),
+ * and printing `0006` in the cell tells a reader nothing. The full name is
+ * always in the tile's label, so this only has to be recognisable.
+ */
+const abbrevOf = (id: string) => {
+  const team = teamById.get(id);
+  if (team?.abbrev) return team.abbrev;
+  const name = team ? nameOf(id) : '';
+  if (!name) return id;
+  const words = name.replace(/[^A-Za-z0-9 ]/g, ' ').split(/\s+/).filter(Boolean);
+  if (words.length === 0) return id;
+  // Multi-word names read better as initials (Mariachi Ninjas → MN) than as a
+  // truncated first word; a single word is simply clipped.
+  return (words.length > 1
+    ? words.map((word) => word[0]).join('')
+    : words[0].slice(0, 5)
+  ).toUpperCase();
+};
 const iconOf = (id: string) => teamById.get(id)?.icon ?? null;
 
 // MFL's standings order IS the standing — never re-sorted here.
@@ -161,6 +195,21 @@ if (conferences.length > 1) {
 const viewParam = Astro.url.searchParams.get('view');
 const canSeeMine = Boolean(viewerFranchiseId);
 const view: 'my' | 'league' = canSeeMine && viewParam !== 'league' ? 'my' : 'league';
+
+/**
+ * Every control on this page is a plain link, so the page ships no client JS
+ * and every state is bookmarkable — which means a season link must carry the
+ * current VIEW and a view link the current SEASON, or switching one silently
+ * resets the other. `year` is omitted for the default season so the canonical
+ * URL stays `/schedule`.
+ */
+const hrefFor = (toYear: number, toView: 'my' | 'league') => {
+  const params = new URLSearchParams();
+  if (toView === 'league' && canSeeMine) params.set('view', 'league');
+  if (toYear !== defaultYear) params.set('year', String(toYear));
+  const query = params.toString();
+  return `${r(`/${leagueSlug}/schedule`)}${query ? `?${query}` : ''}`;
+};
 
 const weekNumbers = weeks.map((entry) => entry.week);
 const firstWeek = weekNumbers[0] ?? 1;
@@ -314,8 +363,8 @@ const title = view === 'my' ? 'My Schedule' : 'Schedule';
             </div>
           ) : (
             <p class="sch-hero__lede">
-              Every week's matchups for the {year} season. Sign in to see your own schedule, your next
-              opponent and your results.
+              Every week's matchups and final scores for the {year} season. Sign in to see your own
+              schedule{isLiveSeason ? ', your next opponent' : ''} and your results.
             </p>
           )}
         </div>
@@ -359,11 +408,29 @@ const title = view === 'my' ? 'My Schedule' : 'Schedule';
       </div>
     </section>
 
-    {canSeeMine && (
-      <nav class="sch-tabs" aria-label="Schedule views">
-        <a href={r(`/${leagueSlug}/schedule`)} class:list={['sch-tab', { 'is-active': view === 'my' }]} aria-current={view === 'my' ? 'page' : undefined}>My schedule</a>
-        <a href={`${r(`/${leagueSlug}/schedule`)}?view=league`} class:list={['sch-tab', { 'is-active': view === 'league' }]} aria-current={view === 'league' ? 'page' : undefined}>League grid</a>
-      </nav>
+    {(canSeeMine || seasonYears.length > 1) && (
+    <div class="sch-controls">
+      {canSeeMine && (
+        <nav class="sch-tabs" aria-label="Schedule views">
+          <a href={hrefFor(year, 'my')} class:list={['sch-tab', { 'is-active': view === 'my' }]} aria-current={view === 'my' ? 'page' : undefined}>My schedule</a>
+          <a href={hrefFor(year, 'league')} class:list={['sch-tab', { 'is-active': view === 'league' }]} aria-current={view === 'league' ? 'page' : undefined}>League grid</a>
+        </nav>
+      )}
+      {seasonYears.length > 1 && (
+        <nav class="sch-seasons" aria-label="Season">
+          <span class="sch-seasons__label">Season</span>
+          <div class="sch-seasons__scroller">
+            {seasonYears.map((option) => (
+              <a
+                href={hrefFor(option, view)}
+                class:list={['sch-season', { 'is-active': option === year }]}
+                aria-current={option === year ? 'page' : undefined}
+              >{option}</a>
+            ))}
+          </div>
+        </nav>
+      )}
+    </div>
     )}
 
     {view === 'my' ? (
@@ -492,7 +559,17 @@ const title = view === 'my' ? 'My Schedule' : 'Schedule';
                                         : game.outcome === 'L'
                                           ? 'lost'
                                           : 'tied';
-                                    const label = `Week ${week}, ${game.isHome ? 'vs' : 'at'} ${nameOf(game.opponentId)}, ${outcomeWord}`;
+                                    // The printed score is rounded to keep 17
+                                    // columns legible, so the full one lives in
+                                    // the label a screen reader and a hover
+                                    // both get.
+                                    const scoreLine = game.played
+                                      ? `${Math.round(game.score ?? 0)}–${Math.round(game.opponentScore ?? 0)}`
+                                      : '';
+                                    const exact = game.played
+                                      ? `, ${(game.score ?? 0).toFixed(1)} to ${(game.opponentScore ?? 0).toFixed(1)}`
+                                      : '';
+                                    const label = `Week ${week}, ${game.isHome ? 'vs' : 'at'} ${nameOf(game.opponentId)}, ${outcomeWord}${exact}`;
                                     return (
                                       <span
                                         class:list={[
@@ -502,7 +579,10 @@ const title = view === 'my' ? 'My Schedule' : 'Schedule';
                                         role="img"
                                         aria-label={label}
                                         title={label}
-                                      >{abbrevOf(game.opponentId)}</span>
+                                      >
+                                        <span class="sch-tile__opp">{abbrevOf(game.opponentId)}</span>
+                                        {scoreLine && <span class="sch-tile__score">{scoreLine}</span>}
+                                      </span>
                                     );
                                   })
                                 )}
@@ -523,7 +603,7 @@ const title = view === 'my' ? 'My Schedule' : 'Schedule';
             <li><span class="sch-swatch is-loss" aria-hidden="true"></span>Lost</li>
             <li><span class="sch-swatch is-pending" aria-hidden="true"></span>To play</li>
             <li class="sch-legend__note">
-              Two tiles in one cell is a doubleheader.
+              Each played game shows its final score. Two tiles in one cell is a doubleheader.
               {playoffWeeks.length > 0 && ` Weeks ${playoffWeeks[0]}–${playoffWeeks[playoffWeeks.length - 1]} are the playoff window.`}
             </li>
           </ul>
@@ -801,7 +881,6 @@ const title = view === 'my' ? 'My Schedule' : 'Schedule';
     display: flex;
     gap: 0;
     border-bottom: 1px solid var(--content-border, #e2e8f0);
-    margin-bottom: var(--spacing-md, 1rem);
   }
   .sch-tab {
     flex: 0 0 auto;
@@ -1080,6 +1159,67 @@ const title = view === 'my' ? 'My Schedule' : 'Schedule';
   }
   .sch-tile.is-tie { background: var(--color-gray-100, #f3f4f6); color: var(--color-gray-600, #4b5563); }
   .sch-tile--bye { background: transparent; color: var(--color-gray-300, #d1d5db); }
+  /* Opponent over final score. The score is the smaller of the two because a
+     grid this wide is scanned for WHO first and HOW MANY second, and because
+     17 columns of two full-size numbers do not fit a phone. */
+  .sch-tile__opp { display: block; }
+  .sch-tile__score {
+    display: block;
+    font-size: 0.6875rem;
+    font-weight: var(--font-weight-medium, 500);
+    font-variant-numeric: tabular-nums;
+    opacity: 0.75;
+    letter-spacing: 0;
+  }
+
+  .sch-controls {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    margin: 1.25rem 0 0.75rem;
+  }
+  .sch-seasons { display: flex; align-items: center; gap: 0.5rem; min-width: 0; }
+  .sch-seasons__label {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--content-text-muted, #6b7280);
+    flex: none;
+  }
+  /* 20 seasons do not fit a phone, and wrapping them pushes the grid off the
+     first screen — so the list scrolls sideways instead of growing downward. */
+  .sch-seasons__scroller {
+    display: flex;
+    gap: 0.25rem;
+    overflow-x: auto;
+    scrollbar-width: thin;
+    padding-bottom: 0.125rem;
+  }
+  /* The season chips ride the page ground, so they take the same card tokens
+     the rest of this page uses rather than a grey literal — both are themed,
+     and an undefined token here would read correct in light and wrong in
+     dark. The active chip inverts onto --sch-accent, which each league
+     already redefines for its own chrome. */
+  .sch-season {
+    flex: none;
+    padding: 0.3125rem 0.5625rem;
+    border: 1px solid var(--card-border, #e2e8f0);
+    border-radius: var(--radius-sm, 0.25rem);
+    font-size: 0.8125rem;
+    font-variant-numeric: tabular-nums;
+    text-decoration: none;
+    color: var(--content-text-muted, #6b7280);
+    background: var(--card-bg, #fff);
+  }
+  .sch-season:hover { border-color: var(--sch-accent); color: var(--sch-accent); }
+  .sch-season.is-active {
+    color: var(--color-white, #fff);
+    background: var(--sch-accent);
+    border-color: var(--sch-accent);
+    font-weight: var(--font-weight-semibold, 600);
+  }
 
   .sch-legend {
     display: flex;

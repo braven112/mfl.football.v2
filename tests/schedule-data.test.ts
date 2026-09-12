@@ -225,3 +225,48 @@ describe('a played game MFL left unlabelled falls back to the score', () => {
     expect(franchiseSchedule(weeks, '0002')[0].games[0].outcome).toBe('L');
   });
 });
+
+/**
+ * The league grid prints the final score inside each cell, and a cell belongs
+ * to a ROW — so `score` must be that row's club, not whichever side MFL
+ * happened to list first. Printing the pair the wrong way round shows every
+ * club its opponent's score as its own, which reads as plausible right up
+ * until someone checks a game they remember.
+ */
+describe('opponentsByWeek carries the score from the row club\'s side', () => {
+  const weeks = parseWeeklySchedule({
+    schedule: {
+      weeklySchedule: [
+        {
+          week: '1',
+          matchup: {
+            // 0002 is listed FIRST here on purpose.
+            franchise: [
+              { id: '0002', isHome: '1', result: 'L', score: '99.0' },
+              { id: '0001', isHome: '0', result: 'W', score: '120.5' },
+            ],
+          },
+        },
+        {
+          week: '2',
+          matchup: { franchise: [{ id: '0001', isHome: '1' }, { id: '0002', isHome: '0' }] },
+        },
+      ],
+    },
+  });
+  const grid = opponentsByWeek(weeks);
+
+  it('gives each club its own score, not the first-listed one', () => {
+    expect(grid.get('0001')?.get(1)?.[0]).toMatchObject({ score: 120.5, opponentScore: 99.0, outcome: 'W' });
+    expect(grid.get('0002')?.get(1)?.[0]).toMatchObject({ score: 99.0, opponentScore: 120.5, outcome: 'L' });
+  });
+
+  it('leaves both scores null for a game that has not been played', () => {
+    expect(grid.get('0001')?.get(2)?.[0]).toMatchObject({
+      played: false,
+      score: null,
+      opponentScore: null,
+      outcome: null,
+    });
+  });
+});
