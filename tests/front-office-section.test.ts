@@ -6,25 +6,26 @@ import {
   FRONT_OFFICE_PAGES,
   FRONT_OFFICE_HUB_PATH,
   frontOfficePagesFor,
-  frontOfficeGroupsFor,
   routePathOf,
   type FrontOfficeLeagueSlug,
 } from '../src/components/shared/front-office-nav/front-office-pages';
 
 /**
- * The Front Office section: a hub and a strip tying every cap/contract/trade
- * page to every other one (mirrors docs/plans/draft-hub-and-results.md's
- * pattern). Unlike the draft section, TheLeague and the AFL are NOT at
- * parity here and are not meant to be — the AFL runs salaryCap:false /
- * contracts:false, so most of this section is TheLeague-only. That is why
- * this suite pins each league's list explicitly rather than asserting the
- * two are equal.
+ * The Front Office section: a hub whose PRIMARY content is now the League
+ * Planner (TheLeague) / Keeper Planner (AFL), plus a sidebar linking every
+ * other cap/contract/trade page (mirrors docs/plans/draft-hub-and-results.md's
+ * pattern for the sub-nav strip). Unlike the draft section, TheLeague and the
+ * AFL are NOT at parity here and are not meant to be — the AFL runs
+ * salaryCap:false / contracts:false, so most of this section is
+ * TheLeague-only. That is why this suite pins each league's list explicitly
+ * rather than asserting the two are equal.
  *
- * Several pages are deliberately UNMOVED (Roster/Salary, League Planner,
- * Keeper Planner, Keeper Report Card) — linked from the hub and the strip,
- * but kept at their existing URL. Roster/Salary in particular is the single
- * most-visited page on the site with its own required parity check
- * (scripts/roster-parity-check.mjs); moving it bought nothing but risk.
+ * `league-planner` and `keepers` are deliberately NOT registry entries —
+ * their content IS the hub now (see front-office-pages.ts's header). Roster/
+ * Salary and Keeper Report Card are still deliberately UNMOVED, linked pages
+ * — Roster/Salary is the single most-visited page on the site with its own
+ * required parity check (scripts/roster-parity-check.mjs); moving it bought
+ * nothing but risk.
  */
 
 const navLinks = navConfig.sections.flatMap((s: any) => s.links ?? []);
@@ -67,7 +68,6 @@ describe('the Front Office page registry', () => {
       'rosters',
       'contracts',
       'trade-builder',
-      'league-planner',
       'projected-free-agents',
       'contract-tools',
       'dead-money',
@@ -79,14 +79,14 @@ describe('the Front Office page registry', () => {
     expect(frontOfficePagesFor('afl-fantasy').map((p) => p.key)).toEqual([
       'rosters',
       'trade-builder',
-      'keepers',
       'keeper-analysis',
     ]);
   });
 
-  it('groups TheLeague (3+ groups) and keeps the AFL flat (< 3 groups)', () => {
-    expect(frontOfficeGroupsFor('theleague').length).toBeGreaterThanOrEqual(3);
-    expect(frontOfficeGroupsFor('afl-fantasy').length).toBeLessThan(3);
+  it('never re-lists league-planner or keepers — their content IS the hub now', () => {
+    const allKeys = FRONT_OFFICE_PAGES.map((p) => p.key);
+    expect(allKeys).not.toContain('league-planner');
+    expect(allKeys).not.toContain('keepers');
   });
 
   it('has a page-directory entry for every page it advertises', () => {
@@ -103,6 +103,73 @@ describe('the Front Office page registry', () => {
     }
     expect(covered('theleague', FRONT_OFFICE_HUB_PATH)).toBe(true);
     expect(covered('afl-fantasy', FRONT_OFFICE_HUB_PATH)).toBe(true);
+  });
+});
+
+describe('the hub is a real page now, not a links-only landing page', () => {
+  // The PO's read on the original all-links hub: "doesn't add any value".
+  // This pins the redesign's shape: real primary content (the League
+  // Planner / Keeper Planner) + a sidebar to everything else — and pins the
+  // PO's explicit rejection of the pill-strip nav above the headline.
+  const theLeagueHub = readFileSync('src/pages/theleague/front-office/index.astro', 'utf-8');
+  const aflHub = readFileSync('src/pages/afl-fantasy/front-office/index.astro', 'utf-8');
+  const hubShell = readFileSync('src/components/shared/front-office-hub/FrontOfficeHubPage.astro', 'utf-8');
+
+  it('renders the League Planner / Keeper Planner as the hub\'s own content', () => {
+    expect(theLeagueHub).toMatch(/<TheLeaguePlannerPanel\b/);
+    expect(aflHub).toMatch(/<AflKeeperPlannerPanel\b/);
+  });
+
+  it('renders the tool sidebar on both hubs', () => {
+    expect(hubShell).toMatch(/<FrontOfficeToolRail\b/);
+  });
+
+  it('never renders FrontOfficeNav\'s pill strip on the hub — the PO rejected it explicitly', () => {
+    for (const src of [theLeagueHub, aflHub, hubShell]) {
+      expect(src).not.toMatch(/<FrontOfficeNav\b/);
+    }
+  });
+
+  it('gives TheLeague a team switcher above the headline; the AFL none (Keeper Planner is owner-private)', () => {
+    expect(theLeagueHub).toMatch(/<FrontOfficeTeamSwitcher\b/);
+    expect(aflHub).not.toMatch(/FrontOfficeTeamSwitcher/);
+    // Above the H1: the switcher slot must appear before the header in the
+    // shared shell, not after — this is what "above the headline" means.
+    const switcherIdx = hubShell.indexOf('name="switcher"');
+    const headerIdx = hubShell.indexOf('<header');
+    expect(switcherIdx).toBeGreaterThan(-1);
+    expect(headerIdx).toBeGreaterThan(-1);
+    expect(switcherIdx).toBeLessThan(headerIdx);
+  });
+
+  it('writes the team-preference cookie only in the route, never in a component', () => {
+    // A component writing Astro.cookies runs after headers are committed
+    // and throws — see CLAUDE.md's Sunday Ticket board precedent.
+    expect(theLeagueHub).toMatch(/setTheLeaguePreference\(/);
+    for (const componentFile of [
+      'src/components/shared/front-office-hub/TheLeaguePlannerPanel.astro',
+      'src/components/shared/front-office-hub/FrontOfficeTeamSwitcher.astro',
+      'src/components/shared/front-office-hub/FrontOfficeHubPage.astro',
+    ]) {
+      expect(readFileSync(componentFile, 'utf-8')).not.toMatch(/setTheLeaguePreference\(/);
+    }
+  });
+
+  it('leaves the original planner/keeper views in place — Phase 1 duplicates, never cuts', () => {
+    // Phase 1 is deliberate duplication — see front-office-planner-data.ts
+    // and front-office-keeper-data.ts's header comments. Phase 2 (cutting
+    // the planner view out of rosters.astro) is explicitly future work; this
+    // pins that each original view's markers are still present so a future
+    // edit here can't silently remove them ahead of that phase.
+    expect(readFileSync('src/pages/theleague/rosters.astro', 'utf-8')).toMatch(
+      /data-view-content="nextyear"/,
+    );
+    expect(readFileSync('src/pages/afl-fantasy/rosters.astro', 'utf-8')).toMatch(
+      /data-view-content="planner"[\s\S]*?<KeeperPlanner/,
+    );
+    expect(readFileSync('src/pages/afl-fantasy/keepers.astro', 'utf-8')).toMatch(
+      /PLANNER_VIEW = 'view=planner'/,
+    );
   });
 });
 

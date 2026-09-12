@@ -1,0 +1,418 @@
+---
+/**
+ * TheLeague's League Planner — the Front Office hub's primary content.
+ * Duplicated from rosters.astro's "nextyear"/planner view (its template
+ * around lines 2701-2887, CSS around 3586-3642, and the team-switch panel
+ * logic around 7783-8004 and 11750-11876) — see front-office-planner-data.ts
+ * for why this is a duplicate and not an extraction.
+ *
+ * Two departures from rosters.astro's version, both from the approved design
+ * spec / PO review:
+ * - All four sections get a titled header (rosters.astro only titles
+ *   Extensions) — better screen-reader navigation on a long stacked page,
+ *   and it's what the approved mockup showed.
+ * - No live client-side cap-math recomputation. Front Office has no cut /
+ *   declare / extend actions, so every team's metrics are precomputed
+ *   server-side as display strings (front-office-planner-data.ts) and the
+ *   team switch just swaps which team's precomputed panels/strings show.
+ */
+import ChartCard from '../../theleague/ChartCard.astro';
+import MetricCard from '../../theleague/MetricCard.astro';
+import FranchiseOptions from '../../theleague/FranchiseOptions.astro';
+import VeteranExtensionCandidates from '../../theleague/VeteranExtensionCandidates.astro';
+import FreeAgentNeedsCard from '../../theleague/FreeAgentNeedsCard.astro';
+import DraftTeamAssetsView from '../../theleague/DraftTeamAssetsView.astro';
+import DraftPicksCard from '../../theleague/DraftPicksCard.astro';
+import { resolveLeaguePath } from '../../../utils/nav-utils';
+import { TARGET_ACTIVE_COUNT, RESERVE_FOR_ROOKIES } from '../../../utils/salary-calculations';
+import type { FrontOfficePlannerData } from '../../../utils/front-office-planner-data';
+
+interface Props extends FrontOfficePlannerData {
+  selectedTeamId: string;
+}
+
+const {
+  teamsList,
+  leagueYear,
+  plannerPhase,
+  extensionSeason,
+  salaryAveragesBySeason,
+  allPlayers,
+  freeAgentNeedsByTeam,
+  teamMetrics,
+  draftNextYear,
+  draftPredictions,
+  actualDraftPicks,
+  assetsPredictions,
+  assetTeamIds,
+  assets2027Predictions,
+  asset2027TeamIds,
+  selectedTeamId,
+} = Astro.props;
+
+const hideLeaguePrefix = Astro.locals.hideLeaguePrefix ?? false;
+const r = (path: string) => resolveLeaguePath(`/theleague${path}`, hideLeaguePrefix);
+
+const selectedMetrics = teamMetrics[selectedTeamId] ?? {
+  capSpaceDisplay: '—',
+  avgPerPlayerDisplay: '—',
+  playersSignedDisplay: '—',
+  cutHint: null,
+  deadMoneyDisplay: '—',
+  averageAgeDisplay: 'N/A',
+};
+
+// One JSON blob, precomputed display strings only — no cap math ships to
+// the client (see this file's header comment).
+const clientConfig = {
+  teams: Object.fromEntries(teamsList.map((t) => [t.id, teamMetrics[t.id]])),
+};
+---
+
+<div class="fo-planner" data-planner-phase={plannerPhase.phase}>
+  <div class="planner-section planner-section--extensions">
+    <h2 class="planner-section__title">Extensions</h2>
+    <div class="chart-grid">
+      <ChartCard title={`Franchise Tag Options (${leagueYear + 1})`} subtitle="Potential franchise tag candidates">
+        <FranchiseOptions
+          players={allPlayers as any}
+          salaryAverages={salaryAveragesBySeason as any}
+          season={extensionSeason}
+          franchiseId={selectedTeamId}
+        />
+      </ChartCard>
+      <ChartCard title="Veteran Extension Candidates" subtitle="Potential contract extension candidates">
+        <VeteranExtensionCandidates
+          players={allPlayers as any}
+          salaryAverages={salaryAveragesBySeason as any}
+          season={extensionSeason}
+          franchiseId={selectedTeamId}
+        />
+      </ChartCard>
+    </div>
+  </div>
+
+  <div class="planner-section planner-section--fa-needs">
+    <h2 class="planner-section__title">Free Agent Needs</h2>
+    <div id="fo-fa-needs-panels">
+      {teamsList.map((team) => (
+        <div
+          class="fa-needs-panel"
+          data-fa-needs-team-id={team.id}
+          style={`display: ${team.id === selectedTeamId ? 'block' : 'none'}`}
+        >
+          <FreeAgentNeedsCard needs={freeAgentNeedsByTeam[team.id] ?? []} franchiseId={team.id} />
+        </div>
+      ))}
+    </div>
+  </div>
+
+  <div class="planner-section planner-section--metrics">
+    <h2 class="planner-section__title">{leagueYear} at a Glance</h2>
+    <div class="chart-metrics">
+      <MetricCard label="Cap Space" value={selectedMetrics.capSpaceDisplay} valueId="fo-metric-cap" />
+      <MetricCard label="Avg per Player*" value={selectedMetrics.avgPerPlayerDisplay} valueId="fo-metric-avg" />
+      <MetricCard
+        label="Players Signed"
+        value={selectedMetrics.playersSignedDisplay}
+        valueId="fo-metric-signed"
+        hint={selectedMetrics.cutHint ?? undefined}
+        hintVariant="error"
+        hintId="fo-metric-signed-hint"
+      />
+      <MetricCard label="Dead Money" value={selectedMetrics.deadMoneyDisplay} valueId="fo-metric-dead" />
+      <MetricCard label="Average Age" value={selectedMetrics.averageAgeDisplay} valueId="fo-metric-age" />
+    </div>
+    <small class="chart-metrics__hint">
+      *Based on filling to {TARGET_ACTIVE_COUNT} active players. Reserves ${(RESERVE_FOR_ROOKIES / 1_000_000).toFixed(0)}M for practice squad rookies and free agents.
+    </small>
+  </div>
+
+  <div class="planner-section planner-section--draft-assets">
+    <h2 class="planner-section__title">Draft Assets</h2>
+    {plannerPhase.showDualDraftCards && assets2027Predictions.length > 0 ? (
+      <div class="draft-cards-grid">
+        <div class="draft-card-wrapper">
+          {assetsPredictions.length > 0 ? (
+            <ChartCard title={`${draftNextYear} Draft Assets`} subtitle="Picks your team owns after all trades">
+              <a href={r('/draft/order?view=assets')} class="chart-card-link" title="View full draft assets" slot="actions">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                  <path d="M8.5 1.5H2.5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V7.5M14.5 1.5l-6 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+                </svg>
+              </a>
+              <div id="fo-draft-assets-panels">
+                {assetTeamIds.map((teamId) => (
+                  <div
+                    class="draft-assets-panel"
+                    data-assets-team-id={teamId}
+                    style={`display: ${teamId === selectedTeamId ? 'block' : 'none'}`}
+                  >
+                    <DraftTeamAssetsView
+                      predictions={assetsPredictions}
+                      teams={teamsList}
+                      hideTeamSelector={true}
+                      franchiseId={teamId}
+                    />
+                  </div>
+                ))}
+              </div>
+            </ChartCard>
+          ) : draftPredictions.length > 0 ? (
+            <ChartCard title={`${draftNextYear} Draft Picks`} subtitle="Pick positions from the current draft order">
+              <a href={r('/draft/order')} class="chart-card-link" title="View full draft order" slot="actions">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                  <path d="M8.5 1.5H2.5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V7.5M14.5 1.5l-6 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+                </svg>
+              </a>
+              <DraftPicksCard
+                franchiseId={selectedTeamId}
+                draftPredictions={draftPredictions}
+                actualPicks={actualDraftPicks}
+                season={draftNextYear}
+              />
+            </ChartCard>
+          ) : null}
+        </div>
+        <div class="draft-card-wrapper">
+          <ChartCard title={`${draftNextYear + 1} Draft Assets`} subtitle="Future draft picks your team owns after all trades">
+            <div id="fo-draft-assets-2027-panels">
+              {asset2027TeamIds.map((teamId) => (
+                <div
+                  class="draft-assets-panel"
+                  data-assets-2027-team-id={teamId}
+                  style={`display: ${teamId === selectedTeamId ? 'block' : 'none'}`}
+                >
+                  <DraftTeamAssetsView
+                    predictions={assets2027Predictions}
+                    teams={teamsList}
+                    hideTeamSelector={true}
+                    franchiseId={teamId}
+                  />
+                </div>
+              ))}
+            </div>
+          </ChartCard>
+        </div>
+      </div>
+    ) : (
+      <Fragment>
+        {assetsPredictions.length > 0 ? (
+          <ChartCard title={`${draftNextYear} Draft Assets`} subtitle="Picks your team owns after all trades">
+            <a href={r('/draft/order?view=assets')} class="chart-card-link" title="View full draft assets" slot="actions">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                <path d="M8.5 1.5H2.5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V7.5M14.5 1.5l-6 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+              </svg>
+            </a>
+            <div id="fo-draft-assets-panels">
+              {assetTeamIds.map((teamId) => (
+                <div
+                  class="draft-assets-panel"
+                  data-assets-team-id={teamId}
+                  style={`display: ${teamId === selectedTeamId ? 'block' : 'none'}`}
+                >
+                  <DraftTeamAssetsView
+                    predictions={assetsPredictions}
+                    teams={teamsList}
+                    hideTeamSelector={true}
+                    franchiseId={teamId}
+                  />
+                </div>
+              ))}
+            </div>
+          </ChartCard>
+        ) : draftPredictions.length > 0 ? (
+          <ChartCard title={`${draftNextYear} Draft Picks`} subtitle="Pick positions from the current draft order">
+            <a href={r('/draft/order')} class="chart-card-link" title="View full draft order" slot="actions">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                <path d="M8.5 1.5H2.5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V7.5M14.5 1.5l-6 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+              </svg>
+            </a>
+            <DraftPicksCard
+              franchiseId={selectedTeamId}
+              draftPredictions={draftPredictions}
+              actualPicks={actualDraftPicks}
+              season={draftNextYear}
+            />
+          </ChartCard>
+        ) : null}
+      </Fragment>
+    )}
+  </div>
+</div>
+
+<script id="front-office-planner-config" type="application/json" set:html={JSON.stringify(clientConfig)}></script>
+
+<script>
+  // Team switching is display-only here — no cap math runs client-side (see
+  // this file's header comment). On `fo:team-change` (dispatched by
+  // FrontOfficeTeamSwitcher.astro, a SIBLING under a different slot, so this
+  // must listen on `document` rather than an ancestor of both):
+  //   - swap the precomputed metric strings for the newly selected team
+  //   - toggle the FA-needs / draft-assets panels by their team-id attribute
+  //   - mutate the two extension components' `data-current-team` so THEY
+  //     re-render (they already hold the full league-wide player list — see
+  //     FranchiseOptions.astro / VeteranExtensionCandidates.astro's own
+  //     scripts, which read `dataset.allPlayers` / `dataset.currentTeam`)
+  //
+  // Re-init on every ClientRouter navigation, guarded on DOM identity (never
+  // a module-scoped flag — see FrontOfficeTeamSwitcher.astro's own comment
+  // for why). The `document` listener is removed and re-added each time,
+  // using a module-scoped handler reference, to avoid the "document
+  // listeners stack across navigations" trap.
+  let currentHandler: ((event: Event) => void) | null = null;
+
+  function initTheLeaguePlannerPanel() {
+    const root = document.querySelector<HTMLElement>('.fo-planner');
+    if (!root) return; // AFL, or any page without this panel
+
+    const configEl = document.getElementById('front-office-planner-config');
+    const readConfig = (): { teams: Record<string, any> } => {
+      try {
+        return configEl ? JSON.parse(configEl.textContent || '{}') : { teams: {} };
+      } catch {
+        return { teams: {} };
+      }
+    };
+
+    if (currentHandler) document.removeEventListener('fo:team-change', currentHandler);
+
+    currentHandler = (event: Event) => {
+      const teamId = (event as CustomEvent<{ teamId: string }>).detail?.teamId;
+      if (!teamId) return;
+
+      const config = readConfig();
+      const metrics = config.teams?.[teamId];
+      if (metrics) {
+        const setText = (id: string, text: string) => {
+          const el = document.getElementById(id);
+          if (el) el.textContent = text;
+        };
+        setText('fo-metric-cap', metrics.capSpaceDisplay ?? '—');
+        setText('fo-metric-avg', metrics.avgPerPlayerDisplay ?? '—');
+        setText('fo-metric-signed', metrics.playersSignedDisplay ?? '—');
+        setText('fo-metric-dead', metrics.deadMoneyDisplay ?? '—');
+        setText('fo-metric-age', metrics.averageAgeDisplay ?? 'N/A');
+
+        const hintEl = document.getElementById('fo-metric-signed-hint');
+        if (hintEl) {
+          if (metrics.cutHint) {
+            hintEl.textContent = metrics.cutHint;
+            hintEl.style.display = '';
+          } else {
+            hintEl.textContent = '';
+            hintEl.style.display = 'none';
+          }
+        }
+      }
+
+      const togglePanels = (selector: string, attr: string) => {
+        const panels = document.querySelectorAll<HTMLElement>(selector);
+        panels.forEach((panel) => {
+          panel.style.display = panel.getAttribute(attr) === teamId ? 'block' : 'none';
+        });
+      };
+      togglePanels('[data-fa-needs-team-id]', 'data-fa-needs-team-id');
+      togglePanels('[data-assets-team-id]', 'data-assets-team-id');
+      togglePanels('[data-assets-2027-team-id]', 'data-assets-2027-team-id');
+
+      const franchiseTagEl = document.querySelector<HTMLElement>('.franchise-tag-eligibility');
+      if (franchiseTagEl) franchiseTagEl.dataset.currentTeam = teamId;
+      const veteranExtensionEl = document.querySelector<HTMLElement>('.veteran-extension-candidates');
+      if (veteranExtensionEl) veteranExtensionEl.dataset.currentTeam = teamId;
+    };
+
+    document.addEventListener('fo:team-change', currentHandler);
+  }
+
+  initTheLeaguePlannerPanel();
+  document.addEventListener('astro:page-load', initTheLeaguePlannerPanel);
+</script>
+
+<style>
+  .fo-planner {
+    container-type: inline-size;
+    container-name: fo-main;
+    display: grid;
+    gap: 1.5rem;
+    min-width: 0;
+  }
+
+  .fo-planner > * {
+    min-width: 0;
+  }
+
+  .planner-section__title {
+    margin: 0 0 0.75rem;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--page-text, #111827);
+    padding-left: 0.625rem;
+    border-left: 2px solid var(--league-accent, #1c497c);
+  }
+
+  :global(html.dark) .planner-section__title {
+    color: var(--page-text, #ededed);
+  }
+
+  .chart-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--padding-md, 1rem);
+    row-gap: var(--padding-lg, 1.5rem);
+  }
+
+  .chart-grid:has(> :only-child) {
+    grid-template-columns: 1fr;
+  }
+
+  .draft-cards-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--padding-md, 1rem);
+  }
+
+  @container fo-main (min-width: 1150px) {
+    .chart-grid,
+    .draft-cards-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .chart-grid:has(> :only-child) {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .chart-metrics {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(170px, 100%), 1fr));
+    gap: 0.75rem;
+  }
+
+  .chart-metrics__headline {
+    margin: 0 0 0.75rem;
+  }
+
+  .chart-metrics__hint {
+    display: block;
+    margin-top: 0.5rem;
+    color: var(--content-text-muted, #6b7280);
+    font-size: 0.78rem;
+  }
+
+  .chart-card-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 0.4rem;
+    color: var(--content-text-muted, #6b7280);
+  }
+
+  .chart-card-link:hover {
+    color: var(--league-accent, #1c497c);
+    background-color: var(--color-gray-50, #f9fafb);
+  }
+</style>

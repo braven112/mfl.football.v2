@@ -1,0 +1,254 @@
+---
+/**
+ * The Front Office hub's team switcher (TheLeague only — the AFL's Keeper
+ * Planner is owner-private with no cross-team view, so it renders no
+ * switcher at all). Renders above the H1, full width, per the PO's mockup
+ * feedback — NOT tucked inside the main content column.
+ *
+ * `role="radiogroup"`, not a tablist: switching a team re-renders four
+ * independent regions at once (Extensions, FA Needs, Metrics, Draft Assets),
+ * so there is no single tabpanel for `aria-controls` to honestly point at.
+ * Not bare `aria-pressed` buttons either — that models independent toggles,
+ * and this is "pick exactly one of N". A radiogroup gives a screen reader
+ * "Pacific Pigskins, radio button, selected, 3 of 16" for free.
+ *
+ * This component only owns the switcher UI + dispatching `fo:team-change`.
+ * It knows nothing about the planner panel that reacts to it — see
+ * TheLeaguePlannerPanel.astro for the listener side.
+ */
+interface Team {
+  id: string;
+  name: string;
+  icon?: string;
+}
+
+interface Props {
+  teams: Team[];
+  selectedTeamId: string;
+}
+
+const { teams, selectedTeamId } = Astro.props;
+---
+
+<div class="fo-switcher">
+  <p class="fo-switcher__label" id="fo-switcher-label">Viewing plan for</p>
+  <div
+    class="fo-switcher__chips"
+    role="radiogroup"
+    aria-labelledby="fo-switcher-label"
+    data-fo-team-switch
+  >
+    {teams.map((t) => (
+      <button
+        type="button"
+        class="fo-chip"
+        role="radio"
+        aria-checked={t.id === selectedTeamId ? 'true' : 'false'}
+        tabindex={t.id === selectedTeamId ? 0 : -1}
+        aria-label={t.name}
+        data-team-id={t.id}
+        data-active={t.id === selectedTeamId ? 'true' : 'false'}
+      >
+        {t.icon ? (
+          <img src={t.icon} alt="" class="fo-chip__img" width="32" height="32" loading="lazy" />
+        ) : (
+          <span class="fo-chip__fallback" aria-hidden="true">{t.name.slice(0, 2).toUpperCase()}</span>
+        )}
+      </button>
+    ))}
+  </div>
+</div>
+<div class="visually-hidden" role="status" aria-live="polite" aria-atomic="true" id="fo-team-announcer"></div>
+
+<script>
+  // Re-init on every ClientRouter navigation — module scope alone is
+  // once-per-session, not once-per-navigation. Guarded on DOM identity
+  // (a dataset flag on the fresh group element), never a module-scoped
+  // "already bound" flag, which would pin the listener to a detached node
+  // after the first swap.
+  function initFoTeamSwitcher() {
+    const group = document.querySelector<HTMLElement>('[data-fo-team-switch]');
+    if (!group) return; // AFL, or any page without the switcher
+    if (group.dataset.foBound === '1') return;
+    group.dataset.foBound = '1';
+
+    const chips = Array.from(group.querySelectorAll<HTMLButtonElement>('.fo-chip'));
+    if (chips.length === 0) return;
+
+    let announceTimer: number | null = null;
+    const announcer = document.getElementById('fo-team-announcer');
+
+    const centerChip = (chip: HTMLElement) => {
+      group.scrollLeft = chip.offsetLeft - (group.clientWidth - chip.offsetWidth) / 2;
+    };
+
+    const announce = (teamName: string) => {
+      if (!announcer) return;
+      announcer.textContent = `Showing plan for ${teamName}.`;
+      if (announceTimer) window.clearTimeout(announceTimer);
+      announceTimer = window.setTimeout(() => {
+        if (announcer) announcer.textContent = '';
+      }, 1000);
+    };
+
+    const selectChip = (chip: HTMLButtonElement, { focus = true } = {}) => {
+      const teamId = chip.dataset.teamId;
+      if (!teamId) return;
+
+      chips.forEach((c) => {
+        const isSelected = c === chip;
+        c.setAttribute('aria-checked', isSelected ? 'true' : 'false');
+        c.setAttribute('data-active', isSelected ? 'true' : 'false');
+        c.tabIndex = isSelected ? 0 : -1;
+      });
+
+      if (focus) chip.focus();
+      centerChip(chip);
+      announce(chip.getAttribute('aria-label') || teamId);
+
+      const url = new URL(window.location.href);
+      url.searchParams.set('myteam', teamId);
+      window.history.replaceState(window.history.state, '', url);
+
+      group.dispatchEvent(
+        new CustomEvent('fo:team-change', { bubbles: true, detail: { teamId } })
+      );
+    };
+
+    group.addEventListener('click', (event) => {
+      const chip = (event.target as HTMLElement).closest<HTMLButtonElement>('.fo-chip');
+      if (chip) selectChip(chip);
+    });
+
+    group.addEventListener('keydown', (event) => {
+      const current = document.activeElement as HTMLButtonElement | null;
+      const idx = current ? chips.indexOf(current) : -1;
+      if (idx === -1) return;
+
+      let nextIdx: number | null = null;
+      switch (event.key) {
+        case 'ArrowRight':
+        case 'ArrowDown':
+          nextIdx = (idx + 1) % chips.length;
+          break;
+        case 'ArrowLeft':
+        case 'ArrowUp':
+          nextIdx = (idx - 1 + chips.length) % chips.length;
+          break;
+        case 'Home':
+          nextIdx = 0;
+          break;
+        case 'End':
+          nextIdx = chips.length - 1;
+          break;
+        case ' ':
+        case 'Enter':
+          event.preventDefault();
+          selectChip(chips[idx]);
+          return;
+        default:
+          return;
+      }
+      event.preventDefault();
+      if (nextIdx !== null) selectChip(chips[nextIdx]);
+    });
+  }
+
+  initFoTeamSwitcher();
+  document.addEventListener('astro:page-load', initFoTeamSwitcher);
+</script>
+
+<style>
+  .fo-switcher {
+    margin: 0.75rem 0 1.25rem;
+  }
+
+  .fo-switcher__label {
+    margin: 0 0 0.5rem;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--content-text-muted, #6b7280);
+  }
+
+  :global(html.dark) .fo-switcher__label {
+    color: var(--color-gray-700, #c0c0c0);
+  }
+
+  .fo-switcher__chips {
+    display: flex;
+    gap: 0.5rem;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scroll-padding-inline: 0.5rem;
+    scroll-snap-type: x proximity;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+    padding: 0.15rem 0.15rem 1rem;
+    position: relative;
+  }
+
+  .fo-chip {
+    box-sizing: border-box;
+    flex: 0 0 auto;
+    scroll-snap-align: start;
+    position: relative;
+    width: 46px;
+    height: 46px;
+    min-width: 44px;
+    min-height: 44px;
+    padding: 0.2rem;
+    border: 2px solid transparent;
+    border-radius: var(--radius-md, 0.5rem);
+    background: var(--content-bg, #fff);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: transform 0.2s ease, border-color 0.2s ease;
+  }
+
+  @media (pointer: coarse) {
+    .fo-chip {
+      width: 48px;
+      height: 48px;
+    }
+  }
+
+  .fo-chip:hover {
+    border-color: var(--color-gray-200, #dddedf);
+    transform: scale(1.1);
+  }
+
+  .fo-chip[aria-checked='true'] {
+    background: color-mix(in srgb, var(--color-primary, #1c497c) 12%, var(--content-bg, white));
+    border-color: var(--color-primary, #1c497c);
+  }
+
+  .fo-chip:focus-visible {
+    outline: 2px solid var(--color-primary, #1c497c);
+    outline-offset: 3px;
+  }
+
+  .fo-chip__img {
+    max-width: 32px;
+    max-height: 32px;
+    object-fit: contain;
+  }
+
+  .fo-chip__fallback {
+    font-size: 0.68rem;
+    font-weight: 700;
+    color: var(--color-gray-700, #374151);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .fo-chip {
+      transition: none;
+    }
+    .fo-chip:hover {
+      transform: none;
+    }
+  }
+</style>
