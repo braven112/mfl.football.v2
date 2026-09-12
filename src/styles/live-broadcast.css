@@ -334,7 +334,11 @@
   display: flex;
   flex-direction: column;
   justify-content: center;
-  gap: 0.3vh;
+  /* Cell-relative, the principle `.lbc__score` already follows. A fixed 3.2px
+     put two 83px numerals close enough to read as one block from a couch while
+     ~94px of the cell went unspent — the "tight" report is a rhythm problem,
+     not a size one. */
+  gap: clamp(4px, 3.2cqh, 22px);
   min-width: 0;
   min-height: 0;
   /* The win-probability split doubles as the cell's top border at the
@@ -347,7 +351,36 @@
       var(--lbc-theirs, #334155) calc(var(--wp-split, 50%) + 0.2%) 100%
     )
     1;
+  /*
+   * The gradient is the TOP border and only the top border.
+   *
+   * `border-image-width` defaults to 1 — a MULTIPLE of each side's
+   * border-width — so the image paints on every border that has width. The
+   * doubleheader divider below is a 1px `border-left`, which meant it rendered
+   * the gradient's left slice: its 0% stop, `--lbc-mine`. A saturated
+   * full-height bar in the owner's own team colour, hard against Game 1's
+   * score numeral, where a hairline was intended.
+   *
+   * Load-bearing and easy to lose: the `border-image` SHORTHAND above resets
+   * this to 1 again, so it must stay after it.
+   */
+  border-image-width: 1 0 0 0;
   padding-top: 0.4vh;
+  /*
+   * Counter-drift on a 97s period, co-prime with the root's 90s, so the
+   * brightest persistent glyphs never retrace the same path.
+   *
+   * On the CELL, not on `.lbc__score`. Drifting the numeral alone moved it
+   * +/-5.8px horizontally and +/-3.2px vertically against a crest, a name and
+   * a projection that stayed put — so the row never settled, and on a
+   * doubleheader the numeral wandered into the divider. The whole matchup
+   * translates as a unit now, and the burn-in protection is unchanged.
+   *
+   * A transform does not affect container-query resolution, so `container-type:
+   * size` above still works.
+   */
+  transform: translate3d(var(--lbc-drift-x2, 0), var(--lbc-drift-y2, 0), 0);
+  transition: transform 12s ease-in-out;
 }
 
 .lbc__game-tag {
@@ -359,18 +392,45 @@
 
 .lbc__side {
   display: flex;
-  align-items: baseline;
-  gap: 0.5vw;
+  /*
+   * CENTRE, not baseline.
+   *
+   * Under baseline alignment the line's cross-size is ascent + descent, driven
+   * by an 83px numeral, so the shared text baseline sat ~75px down while the
+   * crest — `align-self: center` — centred at ~45px. The crest floated ~30px
+   * above the name it belongs to, and got worse as the tier got roomier.
+   *
+   * Centring also makes the line as tall as its tallest item rather than
+   * ascent + descent, which gives ~16px of cell height back per side — margin
+   * against the overflow-clipping failure `.lbc__cell` documents above.
+   */
+  align-items: center;
+  column-gap: clamp(8px, 0.5vw, 16px);
   min-width: 0;
 }
 
 .lbc__crest {
+  /* A SLOT, always present — see `.lbc__row-crest`. Rendered conditionally,
+     a matchup where only one franchise has artwork started the two team names
+     at different x, one above the other. */
+  display: flex;
+  align-items: center;
+  justify-content: center;
   width: min(14cqh, max(3.4vh, 1.1rem));
   height: min(14cqh, max(3.4vh, 1.1rem));
-  object-fit: contain;
   flex: none;
-  align-self: center;
+  /* An absolute ring, not a proportional one: this mark is ~37px and the
+     shared rule's 0.5px fallback is sub-pixel, so a light franchise cut had
+     no separating outline at all on the surface that is up for eight hours. */
+  --lbc-crest-ring-w: 1.5px;
 }
+
+.lbc__crest img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
 
 .lbc__tn {
   /*
@@ -402,10 +462,9 @@
   line-height: 0.9;
   color: var(--lbc-text-dim);
   flex: none;
-  /* Counter-drift on a 97s period, co-prime with the root's 90s, so the
-     brightest persistent glyphs on the board never retrace the same path. */
-  transform: translate3d(var(--lbc-drift-x2, 0), var(--lbc-drift-y2, 0), 0);
-  transition: transform 12s ease-in-out;
+  /* The counter-drift used to live HERE, on the numeral alone — see
+     `.lbc__cell`. It made the score the only moving thing in a row of static
+     neighbours, which is most of what "the scores are misaligned" was. */
 }
 
 /* The leading side is the one thing that is never dropped and never dimmed. */
@@ -711,12 +770,33 @@
 /* Which of the owner's teams this player is on — non-negotiable on a
    cross-league board. */
 .lbc__row-crest {
+  /*
+   * A SLOT that is always present, crest or not.
+   *
+   * Rendered conditionally, a crest-less franchise closed the row up by ~56px,
+   * so on a page mixing leagues some rows indented and others did not and the
+   * points column jumped between them. The draft board already holds its
+   * equivalent column open for exactly this reason
+   * (`.dbc-idle__row-crest`).
+   */
+  display: flex;
+  align-items: center;
+  justify-content: center;
   width: min(42cqh, 4vh);
   height: min(42cqh, 4vh);
-  object-fit: contain;
   flex: none;
+  /* Absolute: a 0.5px ring on a ~43px mark is sub-pixel, and this is the
+     other surface that is up for the whole afternoon. */
+  --lbc-crest-ring-w: 1.5px;
   opacity: 0.92;
 }
+
+.lbc__row-crest img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
 
 .lbc__pts {
   font-size: min(46cqh, 2.4rem);

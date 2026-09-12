@@ -508,7 +508,9 @@ describe('every crest surface can actually draw its ring', () => {
     // The strip is the crest surface visible most of the afternoon, so a
     // light franchise cut with no ring is the failure showing the longest.
     expect(LAYOUT).toMatch(/crestStroke/);
-    expect(STRIP).toMatch(/crestStrokeProps\('lbc__row-crest'/);
+    // The class moved onto the always-present wrapper slot, so assert what
+    // actually matters: the row's stroke reaches `crestStrokeProps` at all.
+    expect(STRIP).toMatch(/crestStrokeProps\([^)]*row\.crestStroke[^)]*'lbc'\)/);
   });
 
   it('sets a ring WIDTH on every surface that asks for a ring', () => {
