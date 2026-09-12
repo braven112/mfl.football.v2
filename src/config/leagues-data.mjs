@@ -33,6 +33,11 @@ export const LEAGUES = {
      */
     canonicalDomain: 'www.theleague.us',
     /**
+     * Stable staging hostnames for this league. Deliberately SEPARATE from
+     * `domains` — see the stagingDomains note above buildHostToSlugMap().
+     */
+    stagingDomains: ['staging.theleague.us'],
+    /**
      * Repo-relative league config + Schefter feed locations. TheLeague's
      * live under src/data (build-time imports); AFL's under its dataPath.
      * These are the single source of truth — consumers (article pipeline,
@@ -171,6 +176,8 @@ export const LEAGUES = {
     domains: ['afl-fantasy.com', 'www.afl-fantasy.com'],
     /** See TheLeague entry — canonical host for absolute URLs. */
     canonicalDomain: 'www.afl-fantasy.com',
+    /** See TheLeague entry — stable staging hostnames, never canonical. */
+    stagingDomains: ['staging.afl-fantasy.com'],
     /** See TheLeague entry — single source of truth for these locations. */
     configPath: 'data/afl-fantasy/afl.config.json',
     schefterFeedPath: 'data/afl-fantasy/schefter-feed.json',
@@ -335,6 +342,14 @@ export const LEAGUES = {
      * (#2, #3, …) will follow the same pattern.
      */
     domains: [],
+    /**
+     * Empty for the same reason `domains` is: bb1 is reachable only under a
+     * path prefix on the SHARED host, so its staging host is the shared
+     * host's own (staging.mfl.football) and must NOT map to a slug — a shared
+     * host that resolves to one league would rewrite every other league's
+     * paths under it.
+     */
+    stagingDomains: [],
     configPath: 'data/best-ball-1/bb1.config.json',
     schefterFeedPath: 'data/best-ball-1/schefter-feed.json',
     /**
@@ -473,6 +488,29 @@ export function defaultMflWriteHost(env = process.env) {
 export const SHARED_APP_ORIGIN = 'https://mfl.football';
 
 /**
+ * Every hostname that serves the shared app — production and its staging
+ * twin. These belong to NO league: they serve all of them by path prefix, so
+ * no single league's identity (PWA manifest, canonical origin) belongs on
+ * one, and they must never appear in HOST_TO_SLUG or they would rewrite every
+ * other league's paths under whichever slug they mapped to.
+ *
+ * A list rather than a comparison against SHARED_APP_ORIGIN alone: an exact
+ * compare recognises production and silently misses staging.mfl.football,
+ * which then behaves like a league's own host on the one site whose whole job
+ * is to reproduce production.
+ */
+const SHARED_APP_HOSTS = ['mfl.football', 'staging.mfl.football'];
+
+/**
+ * Is this hostname the shared multi-league app host (either environment)?
+ *
+ * @param {string} hostname
+ */
+export function isSharedAppHost(hostname) {
+  return SHARED_APP_HOSTS.includes(hostname);
+}
+
+/**
  * Canonical absolute origin for a league (e.g. 'https://www.theleague.us'),
  * or null when the league has no apex domain. THE way to build absolute
  * URLs to a league — session cookies are host-only, so every producer of
@@ -561,12 +599,30 @@ export function leagueUrl(league, path = '/') {
   return `${origin}${stripLeaguePrefix(league, withSlash)}`;
 }
 
-/** Apex hostname → canonical slug map, derived from each league's domains. */
+/**
+ * Apex hostname → canonical slug map, derived from each league's `domains`
+ * PLUS its `stagingDomains`. Consumed by src/utils/league-host-map.ts, which
+ * middleware uses to rewrite `/rosters` → `/theleague/rosters` on a
+ * league-owned host.
+ *
+ * Why `stagingDomains` is a separate field rather than more entries in
+ * `domains`: a staging host needs exactly ONE of the things `domains` grants
+ * — the host→slug rewrite — and none of the rest.
+ *   - `leagueOrigin()` picks the canonical host out of `domains`, and every
+ *     absolute URL we emit (nav switch links, GroupMe, OG tags) must keep
+ *     pointing at production. Session cookies are host-only, so an absolute
+ *     link that leaked a staging host would look like a vanished login.
+ *   - Registry invariants assume `domains` holds real apexes: every bare
+ *     domain needs a `www.` twin (tests/leagues-registry.test.ts), and every
+ *     entry needs prefix-strip redirects in vercel.json
+ *     (tests/league-url-prefix.test.ts).
+ * tests/league-staging-domains.test.ts pins that separation in both directions.
+ */
 export function buildHostToSlugMap() {
   /** @type {Record<string, string>} */
   const map = {};
   for (const league of ALL_LEAGUES) {
-    for (const domain of league.domains) {
+    for (const domain of [...league.domains, ...(league.stagingDomains ?? [])]) {
       map[domain] = league.slug;
     }
   }

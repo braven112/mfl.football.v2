@@ -15,7 +15,7 @@ import { execFileSync } from 'child_process';
 import { mkdtempSync, copyFileSync, rmSync } from 'fs';
 import { tmpdir } from 'os';
 import { join } from 'path';
-import { decide, BUILD, SKIP } from '../scripts/vercel-ignore-build.mjs';
+import { decide, BUILD, SKIP, STAGING_BRANCH } from '../scripts/vercel-ignore-build.mjs';
 
 /** Minimal preview env with everything the PR lookup needs. */
 const previewEnv = (overrides: Record<string, string> = {}) => ({
@@ -86,6 +86,44 @@ describe('the actual policy', () => {
   it('SKIPS a branch with no open PR — the whole point of the script', async () => {
     const { code } = await decide(previewEnv(), stubFetch([]));
     expect(code).toBe(SKIP);
+  });
+
+  it('builds the staging branch with no PR — the staging sites alias it', async () => {
+    // staging.theleague.us / staging.afl-fantasy.com are pinned to this branch's
+    // latest deployment. Skipping its build silently serves stale code on all
+    // three staging sites, and a skip only ever shows as CANCELED.
+    const { code, reason } = await decide(
+      previewEnv({ VERCEL_GIT_COMMIT_REF: STAGING_BRANCH }),
+      stubFetch([]),
+    );
+    expect(code).toBe(BUILD);
+    expect(reason).toContain(STAGING_BRANCH);
+  });
+
+  it('decides staging without asking GitHub at all', async () => {
+    // A GitHub outage or a 403 must never be able to stall a test-site
+    // deploy, so the branch check sits ahead of the network call.
+    let called = false;
+    const spy: typeof fetch = async (input) => {
+      called = true;
+      return stubFetch([])();
+    };
+    const { code } = await decide(
+      previewEnv({ VERCEL_GIT_COMMIT_REF: STAGING_BRANCH }),
+      spy,
+    );
+    expect(code).toBe(BUILD);
+    expect(called).toBe(false);
+  });
+
+  it('exempts ONLY staging — a lookalike branch still needs its PR', async () => {
+    for (const ref of [`${STAGING_BRANCH}-2`, `claude/${STAGING_BRANCH}`, 'stage']) {
+      const { code } = await decide(
+        previewEnv({ VERCEL_GIT_COMMIT_REF: ref }),
+        stubFetch([]),
+      );
+      expect(code, `${ref} must not inherit the staging exemption`).toBe(SKIP);
+    }
   });
 
   it('scopes the PR query to this owner and branch', async () => {

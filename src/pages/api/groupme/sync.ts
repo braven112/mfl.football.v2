@@ -3,12 +3,17 @@
  *
  * POST /api/groupme/sync
  *
- * Called by a scheduled task or manually by an admin.
+ * Called by a scheduled task or manually by an admin. Both are authenticated
+ * — see isAuthorizedSyncCaller. Scheduled runs normally go through
+ * scripts/groupme-sync.ts rather than this route.
+ *
  * Uses GROUPME_SERVICE_TOKEN to read the group chat.
  * Stores normalized messages in a Redis sorted set.
  */
 
 import type { APIRoute } from 'astro';
+import { getAuthUser, isCommissionerOrAdmin, isAuthorizedForLeague } from '../../../utils/auth';
+import { getLeagueBySlug } from '../../../config/leagues';
 import { fetchMessages, checkServiceTokenHealth } from '../../../utils/groupme-client';
 import { normalizeGroupMeMessage } from '../../../types/groupme';
 import {
@@ -27,7 +32,47 @@ function json(data: unknown, status = 200): Response {
   });
 }
 
-export const POST: APIRoute = async () => {
+/**
+ * Who may trigger a sync.
+ *
+ * Previously nobody was checked — the handler was `async ()` and did not even
+ * receive the request — so any anonymous caller could make us poll the
+ * GroupMe API, write to Redis, and (on the error path below) read back the
+ * Upstash/KV URL prefixes this route reports for debugging.
+ *
+ * Two callers are legitimate, matching this route's docstring:
+ *   - a scheduled run holding CRON_SECRET, the same bearer contract as
+ *     /api/cron/push-fanout;
+ *   - a commissioner triggering it by hand while signed in.
+ *
+ * The session is checked FIRST so that an environment with no CRON_SECRET set
+ * still lets a commissioner run it. An unset secret then authorizes nobody:
+ * accepting `Bearer undefined` from a stranger is precisely the hole this is
+ * closing, so the empty case returns false rather than falling through.
+ */
+/** The league whose GroupMe group GROUPME_GROUP_ID refers to. */
+const GROUPME_LEAGUE_ID = getLeagueBySlug('theleague')!.id;
+
+export function isAuthorizedSyncCaller(request: Request): boolean {
+  const user = getAuthUser(request);
+  // League-scoped, not merely commissioner: GROUPME_GROUP_ID names ONE group,
+  // TheLeague's, so another league's commissioner has no business driving this
+  // sync — or reading the Upstash/KV prefixes the error path reports. Same
+  // rule as CLAUDE.md's cross-league admin note.
+  if (user && isCommissionerOrAdmin(user) && isAuthorizedForLeague(user, GROUPME_LEAGUE_ID)) {
+    return true;
+  }
+
+  const secret = process.env.CRON_SECRET;
+  if (!secret) return false;
+  return request.headers.get('authorization') === `Bearer ${secret}`;
+}
+
+export const POST: APIRoute = async ({ request }) => {
+  if (!isAuthorizedSyncCaller(request)) {
+    return json({ error: 'Unauthorized' }, 401);
+  }
+
   try {
     if (!process.env.GROUPME_GROUP_ID) {
       return json({ error: 'GroupMe not configured' }, 503);

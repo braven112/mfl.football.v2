@@ -42,15 +42,20 @@
     {
       "name": "auth-and-url-safety",
       "paths": [
+        "src/middleware.ts",
+        "src/pages/api/auth/login.ts",
+        "src/pages/api/groupme/sync.ts",
         "src/utils/auth.ts",
+        "src/utils/client-ip.ts",
         "src/utils/rate-limit.ts",
-        "src/utils/url-guard.ts",
-        "src/middleware.ts"
+        "src/utils/url-guard.ts"
       ],
       "note": "Session JWT only — never re-add unsigned identity sources. See CLAUDE.md \"Auth — session JWT only\".",
       "tests": [
         "tests/url-guard.test.ts",
-        "tests/mfl-cookie-redirect-guard.test.ts"
+        "tests/mfl-cookie-redirect-guard.test.ts",
+        "tests/login-rate-limit.test.ts",
+        "tests/groupme-sync-auth.test.ts"
       ]
     },
     {
@@ -299,7 +304,8 @@
         "tests/league-url-prefix.test.ts",
         "tests/league-literal-guard.test.ts",
         "tests/rankings-scope.test.ts",
-        "tests/league-year-for-slug.test.ts"
+        "tests/league-year-for-slug.test.ts",
+        "tests/league-staging-domains.test.ts"
       ]
     },
     {
