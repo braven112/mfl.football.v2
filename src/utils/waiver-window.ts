@@ -190,17 +190,6 @@ export function resolveWaiverWindow(
  * claims land Thursday lunchtime. Until they choose, PT alone, exactly as
  * before — see `eventZonesFor`.
  */
-/**
- * Compact label for space-constrained UI (a mobile hero badge) — the full
- * sentence from `describeWaiverWindow` is still what a viewer needs, so pair
- * this with a tap-to-reveal disclosure rather than dropping the detail.
- */
-export function waiverWindowShortLabel(win: WaiverWindow): string {
-  if (win.mode === 'waiver') return 'Waivers open';
-  if (win.mode === 'fcfs') return 'Open now';
-  return 'Unknown';
-}
-
 export function describeWaiverWindow(win: WaiverWindow, clock: ViewerClock = DEFAULT_VIEWER_CLOCK): string {
   const when = win.changesAt ? formatForViewer(win.changesAt, clock, { weekday: true }) : null;
   if (win.mode === 'waiver') {

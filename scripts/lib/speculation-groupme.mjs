@@ -11,29 +11,17 @@
  *       → absolute URL pointing at #post-<id> on the feed page. theleague.us
  *         301s /theleague/news → /news, so we anchor on the canonical /news
  *         path (production) and rely on the same redirect locally.
- *   - buildSpeculationGroupMeText({ body, ctaUrl })
- *       → "<body>\n\n<CTA prefix> <url>" — the exact bytes we send. Takes the
- *         URL rather than building one: the destination is a PREFIXED internal
- *         route, and whether that prefix is kept or stripped depends on the
- *         base (see scripts/lib/schefter-public-url.mjs). Concatenating one
- *         here is how `theleague.us/theleague/trade-builder` ships.
- *   - postSpeculationToGroupMe({ post, ctaUrl, env, fetcher,
+ *   - buildSpeculationGroupMeText({ body, postId, publicBaseUrl })
+ *       → "<body>\n\n<CTA prefix> <url>" — the exact bytes we send.
+ *   - postSpeculationToGroupMe({ post, publicBaseUrl, env, fetcher,
  *                               dryRun, log, warn })
  *       → best-effort POST to GroupMe. NEVER throws — the post is already
  *         on disk + on the ledger by the time we get here, so a GroupMe
  *         outage cannot block the run.
  *
  * The CTA copy intentionally avoids "tip" / "whisper" framing — those route
- * to the tip page and apply to rumors, and a speculation post is algorithmic:
- * there is nothing to whisper back ABOUT, because nobody said anything.
- *
- * It used to send readers back to the feed entry — "Read the speculation →
- * /news?post=<id>" — which is a link to the thing they had just finished
- * reading in the chat. The post is a HYPOTHETICAL TRADE, so the one useful
- * next click is the Trade Builder, where an owner can actually build the deal
- * (or the counter it deserves). That is the same destination every other
- * trade-flavored Schefter post already uses; this lane was the odd one out
- * (owner report, 2026-09-11).
+ * to the tip page and apply to rumors. Speculation posts are algorithmic,
+ * so we direct readers back to the feed entry itself.
  */
 
 import { stripLinkAdjacentPunctuation } from '../../src/utils/link-punctuation.mjs';
@@ -42,10 +30,7 @@ import { isPlannedToday, describeRefusal } from './groupme-day-plan.mjs';
 
 const GROUPME_POST_URL = 'https://api.groupme.com/v3/bots/post';
 
-// Matches the rumor-mill's trade CTA voice (`Counter on the block?`) without
-// repeating it verbatim — this is a deal nobody has proposed, so the invitation
-// is to build it rather than to answer it.
-const SPECULATION_CTA_PREFIX = 'Build it yourself →';
+const SPECULATION_CTA_PREFIX = 'Read the speculation →';
 
 /**
  * Strip trailing slashes from a base URL so we can append a path safely.
@@ -57,18 +42,11 @@ function normalizeBaseUrl(raw) {
 }
 
 /**
- * Build the absolute deep-link to a specific feed post.
- *
- * No longer used by the GroupMe CTA — that points at the Trade Builder now
- * (see the module header) — but kept exported because
- * `scripts/resend-speculation-groupme.mjs` and the feed's own share surfaces
- * still need the canonical anchor for a post.
- *
- * Uses the canonical /news path because theleague.us redirects
- * /theleague/news → /news (see vercel.json). The id MUST match the post.id we
- * wrote into schefter-feed.json because the feed renderer applies
- * `id="post-${post.id}"` to each card (SchefterPostCard.astro), making the
- * anchor stable.
+ * Build the absolute deep-link to a specific feed post. Uses the canonical
+ * /news path because theleague.us redirects /theleague/news → /news (see
+ * vercel.json). The id MUST match the post.id we wrote into schefter-feed.json
+ * because the feed renderer applies `id="post-${post.id}"` to each card
+ * (SchefterPostCard.astro), making the anchor stable.
  *
  * The ?post=<id> query is for link unfurlers (GroupMe etc.), which strip the
  * #fragment before fetching: the SSR news page reads it and emits per-post
@@ -95,26 +73,24 @@ export function buildSpeculationDeepLink({ postId, publicBaseUrl }) {
  *
  *   <speculation copy from the feed post>
  *
- *   Build it yourself → <absolute Trade Builder URL>
+ *   Read the speculation → <absolute deep link>
  *
  * The body is taken verbatim from the persisted post — including the tier
  * emoji prefix (🟡) — so what owners see in GroupMe matches what they see
  * on the news page.
  *
- * @param {{ body: string, ctaUrl: string }} args
+ * @param {{ body: string, postId: string, publicBaseUrl?: string }} args
  */
-export function buildSpeculationGroupMeText({ body, ctaUrl }) {
+export function buildSpeculationGroupMeText({ body, postId, publicBaseUrl }) {
   if (typeof body !== 'string' || body.length === 0) {
     throw new Error('buildSpeculationGroupMeText: body is required');
   }
-  if (typeof ctaUrl !== 'string' || ctaUrl.length === 0) {
-    throw new Error('buildSpeculationGroupMeText: ctaUrl is required');
-  }
+  const url = buildSpeculationDeepLink({ postId, publicBaseUrl });
   // The body is LLM-written and regularly ends a sentence right after a link,
   // so scrub the whole composed message rather than just the CTA line. Done
   // here (not at POST time) so the returned `text` — which the dry-run log and
   // the unit tests both read — is the exact payload.
-  return stripLinkAdjacentPunctuation(`${body}\n\n${SPECULATION_CTA_PREFIX} ${ctaUrl}`);
+  return stripLinkAdjacentPunctuation(`${body}\n\n${SPECULATION_CTA_PREFIX} ${url}`);
 }
 
 /**
@@ -131,9 +107,7 @@ export function buildSpeculationGroupMeText({ body, ctaUrl }) {
  * @param {object} args
  * @param {object} args.post                  - the persisted feed post
  *                                              ({ id, body, ... })
- * @param {string} args.ctaUrl                - absolute URL the CTA points at,
- *                                              built by the caller through
- *                                              scripts/lib/schefter-public-url.mjs
+ * @param {string} [args.publicBaseUrl]       - origin used in the deep link
  * @param {Record<string,string|undefined>} [args.env] - env override for tests;
  *                                              defaults to process.env
  * @param {typeof fetch} [args.fetcher]       - fetch override for tests
@@ -147,7 +121,7 @@ export function buildSpeculationGroupMeText({ body, ctaUrl }) {
  */
 export async function postSpeculationToGroupMe({
   post,
-  ctaUrl,
+  publicBaseUrl,
   env = process.env,
   fetcher = globalThis.fetch,
   dryRun = false,
@@ -167,10 +141,8 @@ export async function postSpeculationToGroupMe({
 
   const text = buildSpeculationGroupMeText({
     body: post.body,
-    // The caller owns this: only it knows the league registry entry and the
-    // operator's base, which together decide whether the route keeps its
-    // league prefix.
-    ctaUrl: ctaUrl || post.link || '',
+    postId: post.id,
+    publicBaseUrl,
   });
 
   if (dryRun) {

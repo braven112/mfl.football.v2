@@ -108,14 +108,13 @@ describe('send-path wiring', () => {
   it('buildSpeculationGroupMeText sanitizes links inside the LLM body', () => {
     const text = buildSpeculationGroupMeText({
       body: 'Sources say the deal is close. More at https://www.theleague.us/trade-block.',
-      // The CTA points at the Trade Builder now, not back at the feed post —
-      // see tests/speculation-groupme.test.ts.
-      ctaUrl: 'https://www.theleague.us/trade-builder?b=0004',
+      postId: 'spec-1',
+      publicBaseUrl: 'https://www.theleague.us',
     });
     expect(text).toContain('More at https://www.theleague.us/trade-block\n');
     expect(text).not.toContain('trade-block.');
-    // The CTA link still ends the message, unpunctuated.
-    expect(text.endsWith('/trade-builder?b=0004')).toBe(true);
+    // The CTA deep link still ends the message, unpunctuated.
+    expect(text.endsWith('#post-spec-1')).toBe(true);
   });
 
   it('postAsBot sanitizes the text it POSTs', async () => {

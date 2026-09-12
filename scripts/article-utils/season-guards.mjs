@@ -4,14 +4,13 @@
  */
 
 import { getAugustCutdownDay } from '../lib/august-cutdown.mjs';
-import { CHAMPIONSHIP_WEEK } from '../../src/utils/fantasy-bracket.mjs';
 
 /**
- * Regular season + playoffs guard (weeks 1 through the title game).
+ * Regular season + playoffs guard (weeks 1-17).
  * Used by: weekly-recap, waiver-pickups, weekend-preview, matchup-preview
  */
 export function isRegularSeasonOrPlayoffs(week) {
-  return week >= 1 && week <= CHAMPIONSHIP_WEEK;
+  return week >= 1 && week <= 17;
 }
 
 /**
@@ -31,11 +30,11 @@ export function isCutWindow(now = new Date()) {
 }
 
 /**
- * Championship complete: the title week has all non-zero scores.
+ * Championship complete: week 17 has all non-zero scores.
  * @param {number} completedWeek - The last completed week from weekly results.
  */
 export function isChampionshipComplete(completedWeek) {
-  return completedWeek >= CHAMPIONSHIP_WEEK;
+  return completedWeek >= 17;
 }
 
 /**

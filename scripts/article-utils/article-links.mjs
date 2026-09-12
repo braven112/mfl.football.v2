@@ -87,7 +87,7 @@ export const DESTINATIONS = {
   calendar: { path: '/calendar', label: 'the league calendar', leagues: BOTH },
 
   // ── Site features worth a plug ──
-  'trade-builder': { path: '/front-office/trade-builder', label: 'the trade builder', leagues: BOTH },
+  'trade-builder': { path: '/trade-builder', label: 'the trade builder', leagues: BOTH },
   'import-rankings': { path: '/import-rankings', label: 'Import Rankings', leagues: BOTH },
   'custom-rankings': { path: '/cr', label: 'your custom rankings board', leagues: BOTH },
   rules: { path: '/rules', label: 'the constitution', leagues: BOTH },
@@ -98,11 +98,11 @@ export const DESTINATIONS = {
 
   // ── TheLeague only (a contract dynasty league; the AFL has no cap) ──
   contracts: { path: '/contracts', label: 'the contract board', leagues: ['theleague'] },
-  'contracts-manage': { path: '/front-office/contracts', label: 'your contract declarations', leagues: ['theleague'] },
-  calculator: { path: '/front-office/contract-tools', label: 'the contract calculator', leagues: ['theleague'] },
+  'contracts-manage': { path: '/contracts/manage', label: 'your contract declarations', leagues: ['theleague'] },
+  calculator: { path: '/calculator', label: 'the contract calculator', leagues: ['theleague'] },
   mvp: { path: '/mvp', label: 'the MVP tracker', leagues: ['theleague'] },
-  'dead-money': { path: '/front-office/dead-money', label: 'the dead money report', leagues: ['theleague'] },
-  'projected-free-agents': { path: '/front-office/projected-free-agents', label: "next year's free agent class", leagues: ['theleague'] },
+  'dead-money': { path: '/dead-money', label: 'the dead money report', leagues: ['theleague'] },
+  'projected-free-agents': { path: '/projected-free-agents', label: "next year's free agent class", leagues: ['theleague'] },
   // BOTH since the AFL got a conference-aware room: the AL's live board and
   // the NL's slow email draft are the same page, scoped by ?conference=.
   'draft-room': { path: '/draft/room', label: 'the draft room', leagues: BOTH },
@@ -110,7 +110,7 @@ export const DESTINATIONS = {
   // keepers left behind, so it only opens between the keeper cuts and the real
   // draft — but the PATH exists year-round and explains itself when shut.
   'mock-draft': { path: '/draft/mock', label: 'the mock draft room', leagues: BOTH },
-  salary: { path: '/front-office/salary-analytics', label: 'the salary benchmarks', leagues: ['theleague'] },
+  salary: { path: '/salary', label: 'the salary benchmarks', leagues: ['theleague'] },
   stats: { path: '/stats', label: 'the stats hub', leagues: ['theleague'] },
   'league-summary': { path: '/league-summary', label: 'the league summary', leagues: ['theleague'] },
   'throwback-settings': { path: '/throwback-settings', label: 'your throwback era', leagues: ['theleague', 'afl-fantasy'] },

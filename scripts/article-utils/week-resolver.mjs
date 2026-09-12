@@ -1,45 +1,49 @@
 /**
  * NFL week detection utilities.
  *
- * Determines the current NFL week from the published NFL schedule,
+ * Determines the current NFL week based on kickoff dates,
  * and finds the last completed week from scoring data.
  */
 
-import {
-  REGULAR_SEASON_WEEKS,
-  nflWeekFor,
-  nflWeekStartInstant,
-} from '../../src/utils/nfl-week-starts.mjs';
+/** NFL season kickoff dates (Thursday night, Week 1). */
+const KICKOFF_DATES = {
+  2024: new Date('2024-09-05T20:20:00-04:00'),
+  2025: new Date('2025-09-04T20:20:00-04:00'),
+  2026: new Date('2026-09-10T20:20:00-04:00'),
+  2027: new Date('2027-09-09T20:20:00-04:00'),
+};
 
 /**
- * The Week 1 kickoff instant for a season.
+ * The Week 1 Thursday kickoff for a season, or null if we don't have one.
  *
- * This used to be a hand-maintained `KICKOFF_DATES` map covering 2024-2027,
- * every entry of which assumed a Thursday. Its 2026 entry said Sep 10; the
- * season actually opened Wednesday Sep 9. The map is gone —
- * src/utils/nfl-week-starts.mjs reads MFL's published schedule and falls back
- * to the Labor Day derivation only for seasons the NFL has not released, so
- * this never returns null and never silently expires.
+ * Exported so callers can tell the two meanings of `getCurrentNFLWeek() === 0`
+ * apart: "the season hasn't started" and "this year isn't in the table, so the
+ * week math is dead". They look identical at the call site and only one of
+ * them is a normal Tuesday. The gameday health check fails loudly on the
+ * second rather than skipping its live-scoring probes in silence — a monitor
+ * that quietly stops monitoring is worse than one that cries wolf.
  *
  * @param {number} year
- * @returns {Date}
+ * @returns {Date | null}
  */
 export function getKickoffDate(year) {
-  return nflWeekStartInstant(year, 1);
+  return KICKOFF_DATES[year] ?? null;
 }
 
 /**
- * Get the current NFL week number for a given season year, capped at the
- * regular season. Returns 0 before the season's first game.
+ * Get the current NFL week number (1-18) for a given season year.
+ * Returns 0 if before the season, caps at 18 if after.
  *
- * The boundary rule lives in nflWeekFor: a week becomes current when the
- * PREVIOUS week ends (the Tuesday after it opened), not when its own first
- * game kicks off. Anchoring on the kickoff alone makes the week lag whenever
- * the next one opens late — 2026's week 18 is all-Sunday, so Jan 5-9 would
- * still report week 17 while MFL had long since advanced.
+ * NOTE: also returns 0 for a year absent from KICKOFF_DATES. Use
+ * `getKickoffDate` to distinguish that case when it matters.
  */
 export function getCurrentNFLWeek(year, now = new Date()) {
-  return Math.min(nflWeekFor(year, now), REGULAR_SEASON_WEEKS);
+  const kickoff = KICKOFF_DATES[year];
+  if (!kickoff) return 0;
+  const diff = now - kickoff;
+  if (diff < 0) return 0;
+  const week = Math.floor(diff / (7 * 24 * 60 * 60 * 1000)) + 1;
+  return Math.min(week, 18);
 }
 
 /**

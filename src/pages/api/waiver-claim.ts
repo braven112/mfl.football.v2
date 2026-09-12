@@ -49,7 +49,6 @@ import {
   readPendingWaiverPlayerIds,
   validateClaims,
   validateRound,
-  activeRosterIdsOf,
   conferenceOfFranchise,
   freeAgencyIsLeagueWide,
   type WaiverClaim,
@@ -167,27 +166,19 @@ export const POST: APIRoute = async ({ request }) => {
     const franchises = Array.isArray(leaguePayload.franchises?.franchise)
       ? leaguePayload.franchises.franchise
       : [leaguePayload.franchises?.franchise].filter(Boolean);
-    const myFranchise = franchises.find((f: any) => String(f.id) === String(user.franchiseId));
-    const availableBalance = Math.floor(Number(myFranchise?.bbidAvailableBalance ?? 0));
+    const mine = franchises.find((f: any) => String(f.id) === String(user.franchiseId));
+    const availableBalance = Math.floor(Number(mine?.bbidAvailableBalance ?? 0));
 
     const mflClient = createMFLApiClient({ leagueId, year: String(year), mflUserId: user.id });
-    // getRosterEntries, NOT getRosters: the roster-limit check below needs MFL's
-    // per-player `status`, and flattening it to ids is what made a legal 14-of-16
-    // AFL roster carrying two injured players read as 16/16 full — refusing every
-    // owner with somebody on IR (2026-09-09). IR and taxi squad sit under their
-    // OWN league limits (`injuredReserve`, `taxiSquad`), never against rosterSize.
-    const rosters = await mflClient.getRosterEntries();
+    const rosters = await mflClient.getRosters();
     // An empty roster set means a degraded MFL response, not an empty roster.
     // Proceeding would let "drop a player you don't own" through, so refuse.
     if (!(user.franchiseId in rosters)) {
       return fail('Could not verify your roster with MFL. No claim was submitted — try again shortly.', 502);
     }
-    const mine = rosters[user.franchiseId];
-    // Every player the franchise holds — this is DROP eligibility, where an
-    // injured player is as droppable as a starter.
-    const rosterPlayerIds = new Set<string>(mine.map((p) => String(p.id)));
-    // …and the subset that actually occupies one of the league's roster slots.
-    const activeRosterIds = activeRosterIdsOf(mine);
+    const rosterPlayerIds = new Set<string>(
+      (rosters[user.franchiseId] as any[]).map((p: any) => String(p.id ?? p))
+    );
     // In a duplicate-player league scoped by conference (the AFL), the same
     // player can be rostered by one franchise in EACH conference — so a rival
     // conference's roster says nothing about your availability, and treating it
@@ -211,7 +202,6 @@ export const POST: APIRoute = async ({ request }) => {
       rules: immediate ? { ...rules, system: 'priority', blindBid: false } : rules,
       availableBalance,
       rosterPlayerIds,
-      activeRosterIds,
       freeAgentIds,
       rosterLimit,
     });

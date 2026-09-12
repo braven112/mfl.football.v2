@@ -35,12 +35,7 @@ interface Props {
   userTeam?: Team;
   userConferenceName?: string;
   record?: { wins: number; losses: number; ties: number };
-  /**
-   * `isHome` drives the preposition. It was "vs." unconditionally while
-   * nothing populated this prop; now that the schedule feed does, an away game
-   * would have read "vs. X" here and "Away" on the Schedule page.
-   */
-  nextOpponent?: { name?: string; icon?: string; isHome?: boolean };
+  nextOpponent?: { name?: string; icon?: string };
   rosterCount?: number;
   /**
    * Set ONLY when `rosterCount` is not the current league year's roster —
@@ -162,9 +157,9 @@ const metrics: MetricDef[] = inferredVariant === 'in-season'
       },
       {
         label: 'Next Up',
-        value: nextOpponent?.name ? (nextOpponent.isHome === false ? 'at' : 'vs.') : 'TBD',
-        sub: nextOpponent?.name ?? 'see the schedule',
-        href: '/afl-fantasy/schedule',
+        value: nextOpponent?.name ? 'vs.' : 'TBD',
+        sub: nextOpponent?.name ?? 'check schedule',
+        href: '/afl-fantasy/standings',
         icon: 'exchange',
       },
     ]

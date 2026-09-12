@@ -223,7 +223,7 @@ const EVENT_VIEW: Record<string, EventViewBuilder> = {
       days <= 1
         ? 'The trade deadline is here. After today, rosters are locked for trades through the playoffs.'
         : `${days} days until the trade deadline. Line up your final moves in the trade builder.`,
-    link: '/theleague/front-office/trade-builder',
+    link: '/theleague/trade-builder',
     linkLabel: 'Open Trade Builder',
     icon: 'exchange',
     accent: accentFor(event),

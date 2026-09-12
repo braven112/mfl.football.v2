@@ -1,30 +1,21 @@
-Evaluate whether the current changes need a changelog entry, then write it.
-
-## The model, in one paragraph
-
-**Everything user-facing stages; the Monday rollup publishes.** One article a
-week per league, compiled by `scripts/weekly-changelog-rollup.mjs` from
-`src/data/weekly-changelog-staging.json`: a screenshot, a lede, then one line
-per change under **New this week** and **Fixes & polish**. Depth lives behind
-links — a `/guides` page for a feature, the marquee article for a big launch.
-
-This replaced 40 individually-written articles in 12 days that nobody read.
-**The default path is staging.** A standalone `whats-new.json` entry is the
-exception and needs the user's yes.
+Evaluate whether the current changes require a What's New or changelog entry, then write it.
 
 ## Step 1: Understand what changed
 
+Run:
 ```bash
 git diff main...HEAD --name-only
 git log main...HEAD --oneline
 ```
 
-No commits ahead of main → say "Nothing to document." and stop.
+If there are no commits ahead of main, say "Nothing to document." and stop.
 
-## Step 2: Classify
+## Step 2: Classify the change
 
-| Type | What it looks like |
-|------|-------------------|
+Read the commit messages and changed file list to determine which category applies:
+
+| Category | What it looks like |
+|----------|-------------------|
 | `new-page` | New file under `src/pages/` |
 | `new-feature` | New interactive element, tool, or mode on an existing page |
 | `enhancement` | Meaningful change to how an existing feature works |
@@ -32,132 +23,113 @@ No commits ahead of main → say "Nothing to document." and stop.
 | `style-tweak` | Visual-only polish, no behavior change |
 | `skip` | Refactor, data sync, internal tooling, test-only, docs-only |
 
-`skip` → say "No changelog entry needed — change is internal." and stop.
-Everything else stages. All five types go in the same `changes` array.
+## Step 3: Determine the league scope
 
-## Step 3: League scope (MANDATORY)
-
+Decide which league(s) the change affects — look at the changed file paths and page routes:
 - Pages/features under `/theleague/...` or `src/data/theleague/` → `theleague`
 - Pages/features under `/afl-fantasy/...` or `data/afl-fantasy/` → `afl`
-- Shared infrastructure visible on both sites → `both`
+- Shared infrastructure visible on both sites → both
 
-Display code fails closed (an untagged entry shows nowhere) and the rollup
-exits 1 on an untagged change. Valid slugs are `theleague` and `afl` — never
-`afl-fantasy`.
+This is MANDATORY. Display code fails closed (an untagged entry shows nowhere), and `tests/whats-new-data.test.ts` fails the build on a missing or invalid tag. The only valid slugs are `theleague` and `afl` (never `afl-fantasy`).
 
-**`both` means the two full-management leagues, NOT every league.** Best Ball
-is draft-only and is excluded automatically (via the registry's `bestBall`
-flag). Before checking `both`, ask whether the change is real for a league with
-no lineups, no in-season roster management, no Schefter feed and no
-`/notifications` route — if it is best-ball-only, tag that league by name
-instead.
+## Step 3b: Determine hero eligibility (new-page / new-feature / enhancement only)
 
-## Step 4: Write the staged change
+The homepage hero is reserved for **major** launches. Only a big new page or
+feature should headline it; enhancements and smaller updates that still deserve
+a What's New article should not. The gate is the `excludeFromHero: true` flag,
+which the hero resolver (`src/utils/hero-resolver.ts`) honors.
 
-Append to the `changes` array of `src/data/weekly-changelog-staging.json`:
+- **`enhancement`** → set `"excludeFromHero": true` on the entry. Enhancements
+  never take the hero.
+- **`new-page` / `new-feature`** → use `AskUserQuestion` to ask whether this is
+  a marquee launch worth the homepage hero. If **yes**, leave `excludeFromHero`
+  unset (eligible). If **no**, set `"excludeFromHero": true`.
 
+Ask this explicitly — don't decide silently. (When run via `/live`, this is the
+point at which the user gets to make the call.)
+
+## Step 4: Route to the right file
+
+**If `new-page`, `new-feature`, or `enhancement`:**
+
+Read `src/data/whats-new.json` (first 30 lines is enough to see the schema).
+
+Check if an entry already exists for this change (matching `link` path or `id`). If it does, confirm it's current and stop.
+
+If no entry exists, write a new one at the TOP of the array following the mandatory editorial voice from CLAUDE.md:
+- 2-3 paragraph `description` with opening hook, feature details, and callback close
+- Witty, self-aware, columnist voice — never dry release notes
+- Include a `summary` with personality too
+- `image` and `imageAlt` are required — take a Playwright screenshot if a dev server is running, otherwise note that a screenshot is still needed and set a placeholder filename. Screenshots are a light/dark THEME PAIR (`foo.webp` + `foo-dark.webp`) — capture both via `node scripts/capture-whats-new-screenshots.mjs <entry-id>`, which handles the pair automatically. The homepage hero renders this screenshot in a browser frame, so it's the entry's face — make it count.
+- `heroHeadline` / `heroAccentWord` (optional, AFL-tagged entries) — the AFL homepage hero renders a two-part display line: a plain phrase plus a colour-accented closing word ("GAMES ARE" / **"LIVE."**). With neither field set it derives the pair from `title` (last word accented), which works but runs long — article titles are 26-54 chars where the condensed display type wants ~20. For any AFL-tagged entry you expect in the hero, write the pair FOR the hero: short, present-tense, the accent word carrying the payoff. `heroAccentWord` alone is ignored — write both or neither. Casing is up to you; the hero uppercases.
+- `heroPlayerId` (optional) — set ONLY when the entry is about a specific player (his MFL id); the homepage hero then casts him instead of showing the screenshot. Optional `heroPlayerDescriptor` labels his caption chip (default "Featured"). Never set it just to have a face — the screenshot IS the intended art.
+- `leagues` is required — `["theleague"]`, `["afl"]`, or both (from Step 3). The entry's `link` must point into a league it's visible in; both-league entries need a league-neutral link or no link. If the `title`/`summary` names a league, the entry must be tagged for exactly that league — both-league entries need league-neutral copy.
+- `excludeFromHero` — set from Step 3b: `true` for enhancements and for any feature/page the user said isn't a marquee hero launch; omit it when the entry is hero-eligible.
+- **Inline links are mandatory** — see Step 4b. An article with nothing to click
+  does not ship.
+
+## Step 4b: Link to every feature the article names
+
+`description` blocks render through `set:html`, so they take real anchors —
+and every `new-page` / `new-feature` / `enhancement` entry must carry at least
+one. `tests/whats-new-links.test.ts` fails the build without it. This is the
+same rule Schefter got in August (`scripts/article-utils/article-links.mjs`)
+and it exists for the same reason: the Strength of Division launch named the
+standings, the franchise pages and the division page itself over six paragraphs
+and the reader could not click one of them.
+
+Five rules, all enforced by that test:
+
+1. **Write the href league-neutral** — `/standings`, never
+   `/theleague/standings`. One article body is rendered to every league it is
+   tagged for; the detail page prefixes each href for the reader it is serving
+   (`rewriteDescriptionLinks`, `src/utils/whats-new-links.ts`). A prefixed href
+   in a both-league entry sends half the audience to the other league's site.
+2. **Only link a page every tagged league actually has.** `/contracts`,
+   `/salary`, `/dead-money`, `/throwback-settings` and `/design-system` are
+   TheLeague-only; `/keepers`, `/keeper-analysis` and `/records` are AFL-only.
+   Best Ball has almost nothing — an entry tagged `bb1` can safely link
+   `/import-rankings`, `/rosters`, `/live-scoring`, `/rules`, `/draft-room`.
+   Naming one of those pages in a both-league article is fine; linking it is a
+   dead link for the other league, so leave it as plain text.
+3. **A link to a PAGE is what counts.** An `https://` link or an
+   `/assets/…webp` download does not satisfy the rule — the article still named
+   a feature it never let you open. Close every `<a>`: the renderer prefixes an
+   unclosed anchor's href and every guard skips it.
+4. **Anchor text is a place in a sentence, not a button.** Link the noun phrase
+   already in the prose ("…is on <a>the standings</a>"), never a raw URL and
+   never a tacked-on "click here" footer. Weave two to five links through the
+   body; the CTA button under the article points at one place and the article
+   usually names half a dozen.
+5. **Static files are not pages.** `/assets/...`, `/embed/...`, `/api/...` and
+   anything with a file extension are served at the root and deliberately never
+   league-prefixed. External URLs (`https://…`) are left alone too.
+
+**If `bug-fix` or `style-tweak`:**
+
+Read `src/data/weekly-changelog-staging.json`.
+
+Append an entry to the `changes` array:
 ```json
 {
   "date": "<today YYYY-MM-DD>",
-  "type": "new-page | new-feature | enhancement | bug-fix | style-tweak",
-  "summary": "One line. What changed and why it matters, naming its page.",
+  "type": "bug-fix | style-tweak",
+  "summary": "<user-facing description of what changed and why it matters>",
   "impact": "user | admin",
-  "area": "<a slug from AREA_LABELS in scripts/weekly-changelog-rollup.mjs>",
-  "league": "theleague | afl | both"
+  "area": "<closest match: free-agents | rosters | navigation | design-system | homepage | rankings | trade-builder | salary | league-summary | calendar | standings | playoffs | mvp | import-rankings | whats-new | other>",
+  "league": "<from Step 3: theleague | afl | both>"
 }
 ```
 
-**`summary` is ONE LINE — 200 visible characters, hard-enforced by
-`tests/whats-new-data.test.ts`.** It becomes a bullet in the one article
-everybody reads. Write it user-facing, not as a code description. If the
-change needs more than a line to explain, that is the signal it needs a guide
-(Step 6), not a longer bullet. Inline links are welcome and must be
-league-neutral (`/standings`, never `/theleague/standings`).
+Write `summary` as a user-facing improvement, not a code description. `league` is required — the Monday rollup generates one entry per league from it.
 
-`changes` is the ONLY array the rollup reads — anything parked under another
-key is silently dropped when staging resets.
+**If `skip`:**
 
-## Step 5: The featured change (for the week's face)
+Say "No What's New entry needed — change is internal." and stop.
 
-Exactly ONE staged change per league carries `featured: true` and supplies the
-article's headline, lede and top screenshot:
-
-```json
-{
-  "featured": true,
-  "headline": "The article title — written in the league's voice",
-  "lede": "One or two sentences. This is the homepage card and hero summary.",
-  "image": "week-2026-09-14.webp",
-  "imageAlt": "Descriptive alt text for the screenshot"
-}
-```
-
-- **Required whenever the week ships a `new-page`, `new-feature` or
-  `enhancement`.** A fixes-only week needs none — it gets a templated title.
-- Screenshots are a light/dark THEME PAIR. Capture both with
-  `node scripts/capture-whats-new-screenshots.mjs <id>`; the file goes in
-  `public/assets/whats-new/`.
-- A change tagged `both` featured for both leagues is correct only when the
-  screenshot depicts a shared surface. If it shows one league's UI, tag the
-  featured change to that league.
-- If a later change in the same week is clearly the bigger story, move the flag
-  rather than adding a second — the rollup exits 1 on two.
-
-For an AFL-tagged featured change you expect in the hero, also write
-`heroHeadline` / `heroAccentWord` — the AFL homepage hero renders a two-part
-display line (a plain phrase plus a colour-accented closing word) and otherwise
-derives it from the title, which runs long for that condensed type. Both fields
-or neither: half a pair is ignored.
-
-**Hero eligibility — ASK, don't decide.** Use `AskUserQuestion` on any
-`new-page` / `new-feature`: is this worth the homepage hero? Yes → add
-`"heroWorthy": true` to that change, which makes the whole week's article
-hero-eligible. No → leave it off. Enhancements and fixes are never hero-worthy.
-League events still outrank the article in the hero resolver, which is the
-intent: in season, the auction beats the changelog.
-
-## Step 6: Does it need a guide?
-
-A `/guides` page is the evergreen how-to the changelog line links to. Propose
-one — with `AskUserQuestion` — when a feature is non-obvious enough that a
-bullet cannot carry it: multiple steps, a non-obvious entry point, options
-worth explaining, or a rule people will get wrong. Do not write one for an
-enhancement that explains itself.
-
-If the user says yes:
-
-1. Add an entry to `src/data/guides.json` (shape in `src/types/guides.ts`).
-2. Body blocks are the same union What's New uses — prose strings, `list`
-   blocks with a heading and items, `image` blocks. **Guide screenshots live in
-   `public/assets/guides/`, not the changelog's directory.**
-3. Links are league-neutral and must resolve in EVERY tagged league —
-   `tests/guides-data.test.ts` fails the build otherwise. `/contracts` and
-   `/salary` are TheLeague-only; `/keepers` and `/records` AFL-only.
-4. Point the staged change at it: `"guide": "/guides/<slug>"`.
-
-The guide must exist before the change references it — the test checks the
-route resolves.
-
-## Step 7: The marquee exception
-
-A launch big enough to announce the day it ships — **a new page or a new
-top-level feature you'd tell someone about unprompted, roughly one a month.**
-An enhancement is never one. `AskUserQuestion` with a default answer of NO.
-
-If the user says yes:
-
-1. Write a full entry at the top of `src/data/whats-new.json` — the old rules
-   apply in full: editorial voice, 2-3 paragraph `description`, mandatory
-   `image`/`imageAlt`, mandatory league-neutral inline links
-   (`tests/whats-new-links.test.ts`), `leagues` tag, `excludeFromHero` per the
-   user's hero call.
-2. **Also stage a one-line change** carrying `"entryId": "<that entry's id>"`,
-   so Monday's article still names it and links to the full story. A change
-   never carries both `entryId` and `guide`.
-
-## Step 8: Confirm
+## Step 5: Confirm
 
 Tell the user:
-- Which file was updated, and the line or entry that was written
-- Whether a screenshot is still needed
-- Whether you proposed a guide, and the answer
+- Which file was updated (`whats-new.json` or `weekly-changelog-staging.json`)
+- The entry title/summary that was written
+- If a screenshot is still needed, say so explicitly

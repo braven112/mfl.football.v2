@@ -1,21 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import {
-  resolveCadence,
-  permitsPost,
-  calendarDaysUntil,
-  CADENCE_LADDER,
-  SPECULATION_CEILING_PER_DAY,
-} from '../scripts/lib/speculation-cadence.mjs';
-
-/**
- * These cases assert which LADDER TIER the calendar selects. They used to
- * assert the tier's rate as a proxy for its identity, which stopped meaning
- * that the day `SPECULATION_CEILING_PER_DAY` began clamping the resolved value
- * (one speculation post a week; see tests/schefter-trade-budget.test.ts).
- * `ladderId` states the intent directly, and `rateOf` keeps the ladder's own
- * declared number under test where that is what a case is about.
- */
-const rateOf = (id: string) => CADENCE_LADDER.find((r) => r.id === id)!.maxPerDay;
+import { resolveCadence, permitsPost, calendarDaysUntil, CADENCE_LADDER } from '../scripts/lib/speculation-cadence.mjs';
 
 const events = [
   { id: 'tagging-period', startDate: '2026-02-01T00:00:00.000Z' },
@@ -33,8 +17,7 @@ describe('resolveCadence — calendar-aware quota', () => {
     // Nov 10, 2026 = 3 days before Nov 13 deadline
     const cadence = resolveCadence({ events, now: new Date('2026-11-10T18:00:00Z') });
     expect(cadence.tag).toBe('trade-deadline-peak-week');
-    expect(rateOf('trade-deadline-peak-week')).toBe(2);
-    expect(cadence.maxPerDay).toBe(SPECULATION_CEILING_PER_DAY); // ceiling clamps the ladder
+    expect(cadence.maxPerDay).toBe(2);
     expect(cadence.reservesGlobalSlot).toBe(true);
   });
 
@@ -42,15 +25,13 @@ describe('resolveCadence — calendar-aware quota', () => {
     // Oct 28 = 16 days before Nov 13
     const cadence = resolveCadence({ events, now: new Date('2026-10-28T18:00:00Z') });
     expect(cadence.tag).toBe('trade-deadline-ramp');
-    expect(rateOf('trade-deadline-ramp')).toBe(1);
-    expect(cadence.maxPerDay).toBe(SPECULATION_CEILING_PER_DAY);
+    expect(cadence.maxPerDay).toBe(1);
   });
 
   it('hits NFL Draft window in the days leading up to the draft', () => {
     const cadence = resolveCadence({ events, now: new Date('2026-04-20T18:00:00Z') });
     expect(cadence.tag).toBe('nfl-draft-window');
-    expect(rateOf('nfl-draft-window')).toBe(1);
-    expect(cadence.maxPerDay).toBe(SPECULATION_CEILING_PER_DAY);
+    expect(cadence.maxPerDay).toBe(1);
   });
 
   it('lands on quiet-offseason fallback when nothing else matches (mid-July)', () => {
@@ -69,8 +50,7 @@ describe('resolveCadence — calendar-aware quota', () => {
     // Oct 1 is 43 days before Nov 13 — still inside the in-season but pre-ramp window
     const cadence = resolveCadence({ events, now: new Date('2026-10-01T18:00:00Z') });
     expect(cadence.tag).toBe('regular-season-default');
-    expect(rateOf('regular-season-default')).toBeCloseTo(1 / 5, 5);
-    expect(cadence.maxPerDay).toBe(SPECULATION_CEILING_PER_DAY);
+    expect(cadence.maxPerDay).toBeCloseTo(1 / 5, 5);
   });
 
   it('returns NO rule (0 quota) when no events are available', () => {

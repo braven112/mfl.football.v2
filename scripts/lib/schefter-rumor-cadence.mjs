@@ -29,12 +29,10 @@
 
 import {
   isTradeDeadlineWindow,
+  nflKickoffIsoDate,
   ptDateString,
   shiftIsoDate,
 } from '../../src/utils/trade-deadline.mjs';
-import { laborDayIsoDate } from '../../src/utils/labor-day.mjs';
-import { nflWeekEndIsoDate } from '../../src/utils/nfl-week-starts.mjs';
-import { CHAMPIONSHIP_WEEK } from '../../src/utils/fantasy-bracket.mjs';
 
 /** Rumor-mill posts per Pacific day while the league is awake. */
 export const IN_SEASON_MAX_RUMOR_POSTS_PER_DAY = 1;
@@ -66,30 +64,24 @@ export const IN_SEASON_MAX_RUMOR_POSTS_PER_DAY = 1;
  * the year. Owner report, 2026-09-08: two beats about the same trade offer one
  * second apart, 8:28am on the Tuesday after draft weekend.
  *
- * Held as an offset from LABOR DAY, which is what the NL draft is actually
- * anchored to. It used to be `kickoff - 11`, which reached the same Sunday
- * only while kickoff was assumed to be Labor Day + 3 — the assumption this
- * repo no longer makes. 2026 opened on Wednesday Sep 9, so `kickoff - 11`
- * landed on Aug 29, the AL draft Saturday, waking the loud cadence a day early
- * and undoing the very fix described above.
+ * Held as an offset FROM KICKOFF rather than from Labor Day so both ends of
+ * the window keep sharing a single anchor and cannot drift apart:
+ * (Labor Day + 3) - 11 = Labor Day - 8, the NL draft Sunday.
  */
-export const AWAKE_START_OFFSET_FROM_LABOR_DAY_DAYS = -8;
+export const AWAKE_START_OFFSET_FROM_KICKOFF_DAYS = -11;
 
 /**
- * The fantasy season ends with the league championship — the week before the
- * NFL's last regular-season week, derived in fantasy-bracket.mjs rather than
- * written as 17 (it was 16 before the NFL went to 18 weeks in 2021). The
- * window closes on that week's real Monday, which is NOT always start + 4:
- * 2024's week 17 opened on Christmas Wednesday and ran five days. The week closes on
- * Monday Night Football four days after it opens, so the season's last day is
- * week 17's real start + 4. Taken from the published start of week 17 rather
- * than counted forward from kickoff, so a moved week carries the end of the
- * season with it instead of dragging it a day early.
+ * The fantasy season ends with the league championship in NFL week 17 — QF
+ * week 15, SF week 16, final week 17 in both leagues. Week N starts at
+ * kickoff + (N-1)*7, and the week closes on Monday Night Football four days
+ * later, so the season's last day is kickoff + 16*7 + 4.
  *
  * Anchored to the CHAMPIONSHIP rather than to the NFL calendar on purpose:
  * the day the title is decided is the day the offseason conversation starts,
  * and that is when the league wants its rumor mill back.
  */
+export const CHAMPIONSHIP_WEEK = 17;
+const CHAMPIONSHIP_END_OFFSET_DAYS = (CHAMPIONSHIP_WEEK - 1) * 7 + 4;
 
 /**
  * `{ startIso, endIso }` for the stretch in which the league runs its own
@@ -102,15 +94,15 @@ export const AWAKE_START_OFFSET_FROM_LABOR_DAY_DAYS = -8;
  * being played" would be wrong for the whole of draft-and-cuts week — the
  * exact stretch that made this change necessary.
  *
- * Each end measures from ITS OWN anchor — draft weekend from Labor Day, the
- * close from NFL week 17 — rather than both from kickoff. Deriving `endIso`
- * from `startIso` would drag championship Monday eleven days earlier every
- * time the start moves, retiring the mill's quiet cap mid-playoffs.
+ * Both ends measure from kickoff. Deriving `endIso` from `startIso` instead
+ * would drag championship Monday eleven days earlier every time the start
+ * moves, retiring the mill's quiet cap in the middle of the playoffs.
  */
 export function leagueAwakeWindow(year) {
+  const kickoffIso = nflKickoffIsoDate(year);
   return {
-    startIso: shiftIsoDate(laborDayIsoDate(year), AWAKE_START_OFFSET_FROM_LABOR_DAY_DAYS),
-    endIso: nflWeekEndIsoDate(year, CHAMPIONSHIP_WEEK),
+    startIso: shiftIsoDate(kickoffIso, AWAKE_START_OFFSET_FROM_KICKOFF_DAYS),
+    endIso: shiftIsoDate(kickoffIso, CHAMPIONSHIP_END_OFFSET_DAYS),
   };
 }
 

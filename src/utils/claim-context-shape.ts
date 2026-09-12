@@ -26,33 +26,8 @@ export interface ClaimContext {
   system: 'bbid' | 'priority';
   franchiseId: string | null;
   rules: WaiverBidRules;
-  /**
-   * The viewer's own players, drop-picker order.
-   *
-   * `slot` is which MFL bucket the player sits in. It rides along per player
-   * rather than as a second list because the picker offers ALL of them — an
-   * injured player is perfectly droppable — but only `active` ones free a
-   * slot, and the form has to be able to say which is which.
-   *
-   * Three values, not a boolean: TheLeague runs a taxi squad as well as IR
-   * (`leagueHasFeature(slug, 'taxiSquad')`), and both sit outside `rosterSize`
-   * for the same reason but are different things to a reader. Collapsing them
-   * labels a practice-squad rookie "(IR)".
-   */
-  roster: Array<{ id: string; name: string; slot: 'active' | 'ir' | 'taxi' }>;
+  roster: Array<{ id: string; name: string }>;
   year: number;
-  /**
-   * How many of the viewer's players occupy a league roster slot, and how many
-   * slots there are (`rosterSize`).
-   *
-   * IR and taxi squad are NOT counted — they sit under their own MFL limits.
-   * Together these are what lets the form say "1 open active spot" before the
-   * owner submits, instead of leaving them to discover it from a rejection.
-   * Absent when the MFL read degraded; the form then says nothing rather than
-   * guessing.
-   */
-  activeRosterCount?: number;
-  rosterLimit?: number;
   balance?: number;
   windowMode: WaiverMode;
   windowLabel: string;

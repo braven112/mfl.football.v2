@@ -62,7 +62,7 @@ const ALLOWLIST: Record<string, string> = {
   // Intentionally desaturated "dead colors" treatment — must NOT go vibrant.
   'src/components/theleague/DeadMoneyComposite.astro': 'dead-colors composite',
   'src/components/theleague/DeadMoneyPlayerCard.astro': 'dead-colors card',
-  'src/pages/theleague/front-office/dead-money.astro': 'dead-colors page accents',
+  'src/pages/theleague/dead-money.astro': 'dead-colors page accents',
 
   // Client-side band/splash painters (white text on the colored area).
   'src/utils/player-modal-band.ts': 'player modal band painter',

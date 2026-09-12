@@ -237,10 +237,6 @@ Astro.cookies.set('whats_new_last_visit', new Date().toISOString().slice(0, 10),
     background: var(--cat-league-event);
   }
 
-  .wn-filters__tab--active.wn-filters__tab--weekly {
-    background: var(--cat-weekly);
-  }
-
   .wn-filters__count {
     font-size: 0.7rem;
     opacity: 0.8;
@@ -299,7 +295,6 @@ Astro.cookies.set('whats_new_last_visit', new Date().toISOString().slice(0, 10),
   .wn-card--enhancement { --entry-category-color: var(--cat-enhancement); }
   .wn-card--bug-fix { --entry-category-color: var(--cat-bug-fix); }
   .wn-card--league-event { --entry-category-color: var(--cat-league-event); }
-  .wn-card--weekly { --entry-category-color: var(--cat-weekly); }
 
   /* When a card has an image, move the border from left to bottom of thumbnail */
   .wn-card:has(.wn-card__thumbnail) {
@@ -480,7 +475,6 @@ Astro.cookies.set('whats_new_last_visit', new Date().toISOString().slice(0, 10),
   .wn-card__badge--enhancement { background: var(--cat-enhancement); }
   .wn-card__badge--bug-fix { background: var(--cat-bug-fix); }
   .wn-card__badge--league-event { background: var(--cat-league-event); }
-  .wn-card__badge--weekly { background: var(--cat-weekly); }
 
   /* Filled pill, not bare text. On cards with a thumbnail the meta row is
      absolutely positioned across the image/content seam (see the rule above),
@@ -655,7 +649,6 @@ Astro.cookies.set('whats_new_last_visit', new Date().toISOString().slice(0, 10),
   .wn-timeline__dot--enhancement { background: var(--cat-enhancement); }
   .wn-timeline__dot--bug-fix { background: var(--cat-bug-fix); }
   .wn-timeline__dot--league-event { background: var(--cat-league-event); }
-  .wn-timeline__dot--weekly { background: var(--cat-weekly); }
 
   .wn-timeline__dot--new {
     box-shadow: 0 0 0 2px var(--content-bg, #fff), 0 0 0 3px var(--cat-new-feature, #2e8743);

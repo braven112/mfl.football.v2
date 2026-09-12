@@ -17,7 +17,6 @@ interface Props {
 
 const CATEGORY_ORDER: Array<WhatsNewCategory | 'all'> = [
   'all',
-  'weekly',
   'new-page',
   'new-feature',
   'enhancement',

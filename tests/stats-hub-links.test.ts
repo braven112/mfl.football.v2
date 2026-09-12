@@ -136,7 +136,11 @@ const CONSUMERS: Record<string, { scope: boolean; href: boolean; why?: string }>
     href: false,
     why: 'returns bare paths; Footer.astro runs them through resolveDirectoryHref',
   },
-  'src/utils/site-analytics.ts': { scope: true, href: true },
+  'src/components/theleague/OwnerActivityReport.astro': {
+    scope: false,
+    href: false,
+    why: 'builds a path→title map for labels only — renders no link',
+  },
 };
 
 function sourceFilesUnder(dir: string): string[] {

@@ -1,32 +1,119 @@
 /**
  * Current NFL Week Calculator
- *
- * Determines the current NFL week from the PUBLISHED NFL schedule
- * (src/utils/nfl-week-starts.mjs), which falls back to the Labor Day
- * derivation only for seasons the NFL has not released yet.
- *
- * This file used to carry its own `SEASON_CONFIGS` table of Week 1 Thursdays,
- * two of them marked "estimated", plus a "first Thursday of September"
- * fallback. Its 2026 entry said Sep 10; the season opened Wednesday Sep 9. It
- * was one of six such tables in the repo, and they disagreed.
- *
- * Regular season is weeks 1-18; weeks 19-22 are the NFL playoffs, which we do
- * not hold start dates for and which run on a strict weekly cadence anyway.
+ * Automatically determines the current NFL week based on the season schedule
  */
 
-import { nflWeekFor } from './nfl-week-starts.mjs';
+/**
+ * NFL season structure for 2024-2025
+ * - Regular season: Weeks 1-18 (17 games per team)
+ * - Playoffs: Weeks 19-22
+ *
+ * Season start dates (Week 1 Thursday kickoff):
+ * - 2024: September 5, 2024
+ * - 2025: September 4, 2025 (estimated)
+ * - 2026: September 10, 2026 (estimated)
+ */
+
+interface SeasonConfig {
+  year: number;
+  week1Start: Date;
+  regularSeasonWeeks: number;
+  playoffWeeks: number;
+}
+
+const SEASON_CONFIGS: SeasonConfig[] = [
+  {
+    year: 2024,
+    week1Start: new Date('2024-09-05T20:20:00-04:00'), // Thursday Night Football
+    regularSeasonWeeks: 18,
+    playoffWeeks: 4,
+  },
+  {
+    year: 2025,
+    week1Start: new Date('2025-09-04T20:20:00-04:00'), // Thursday Night Football (Sept 4, 2025)
+    regularSeasonWeeks: 18,
+    playoffWeeks: 4,
+  },
+  {
+    year: 2026,
+    week1Start: new Date('2026-09-10T20:20:00-04:00'), // Estimated
+    regularSeasonWeeks: 18,
+    playoffWeeks: 4,
+  },
+];
 
 /**
- * Calculate the NFL week number for a given date.
+ * Get season configuration for a given year
+ */
+function getSeasonConfig(year: number): SeasonConfig | undefined {
+  return SEASON_CONFIGS.find(config => config.year === year);
+}
+
+/**
+ * Calculate the NFL week number for a given date
  *
  * @param date - The date to calculate the week for (defaults to now)
  * @param year - The NFL season year (defaults to current year if before September, otherwise next year)
- * @returns The NFL week number (1-22), or null if date is before the season's first game
+ * @returns The NFL week number (1-22), or null if date is before season starts
  */
 export function getCurrentNFLWeek(date: Date = new Date(), year?: number): number | null {
-  // NFL season runs Sep-Feb, so Jan-Aug uses the previous year's season.
+  // Determine the season year if not provided
+  // NFL season runs Sep-Feb, so Jan-Aug uses previous year's season
   const seasonYear = year ?? (date.getMonth() < 8 ? date.getFullYear() - 1 : date.getFullYear());
-  return nflWeekFor(seasonYear, date) || null;
+
+  const config = getSeasonConfig(seasonYear);
+
+  // If no config for this year, fall back to calculation based on September start
+  if (!config) {
+    return calculateWeekFromSeptemberStart(date, seasonYear);
+  }
+
+  const { week1Start, regularSeasonWeeks, playoffWeeks } = config;
+
+  // Check if date is before season starts
+  if (date < week1Start) {
+    return null;
+  }
+
+  // Calculate milliseconds since week 1 start
+  const msSinceStart = date.getTime() - week1Start.getTime();
+
+  // Convert to weeks (7 days = 1 week)
+  const weeksSinceStart = Math.floor(msSinceStart / (7 * 24 * 60 * 60 * 1000));
+
+  // Week number is weeks since start + 1
+  const weekNumber = weeksSinceStart + 1;
+
+  // Cap at max week number (regular season + playoffs)
+  const maxWeek = regularSeasonWeeks + playoffWeeks;
+
+  return Math.min(weekNumber, maxWeek);
+}
+
+/**
+ * Fallback calculation for years without explicit config
+ * Assumes season starts first Thursday of September
+ */
+function calculateWeekFromSeptemberStart(date: Date, year: number): number | null {
+  // Find first Thursday of September
+  const september1 = new Date(year, 8, 1); // Month is 0-indexed
+  const dayOfWeek = september1.getDay(); // 0 = Sunday, 4 = Thursday
+
+  // Calculate days until Thursday
+  const daysUntilThursday = dayOfWeek <= 4 ? 4 - dayOfWeek : 11 - dayOfWeek;
+
+  const week1Start = new Date(year, 8, 1 + daysUntilThursday, 20, 20); // 8:20 PM
+
+  if (date < week1Start) {
+    return null;
+  }
+
+  const msSinceStart = date.getTime() - week1Start.getTime();
+  const weeksSinceStart = Math.floor(msSinceStart / (7 * 24 * 60 * 60 * 1000));
+  const weekNumber = weeksSinceStart + 1;
+
+  // Cap at 22 weeks (18 regular + 4 playoffs)
+  return Math.min(weekNumber, 22);
 }
 
 /**

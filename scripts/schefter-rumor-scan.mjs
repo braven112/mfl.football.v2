@@ -124,18 +124,12 @@ import {
 import { getTopicPolicy, DRAINABLE_TOPIC_IDS } from '../src/config/schefter-topics.mjs';
 import {
   classifyTipKind,
-  isTradeFlavoredBatch,
   buildTopicBuckets,
   bucketPriorityScore,
   bucketFingerprint,
   isBucketStale,
   bucketStreakLength,
 } from './lib/schefter-bucket-logic.mjs';
-import {
-  MAX_TRADE_POSTS_PER_DAY,
-  tradePostsTodayKey,
-  tradeSlotsRemaining,
-} from './lib/speculation-budget.mjs';
 import { buildTipsterContext } from './lib/schefter-tipster-context.mjs';
 import {
   loadLedger,
@@ -162,12 +156,12 @@ import { postToGroupMe as sharedPostToGroupMe } from './lib/groupme.mjs';
 import { postToGroupMeCapped } from './lib/groupme-capped.mjs';
 import { sendPushFanout, broadcast } from './lib/push-fanout.mjs';
 import { LEAGUES as REGISTRY_LEAGUES } from '../src/config/leagues-data.mjs';
-// buildHostToSlugMap / stripLeaguePrefix / ensureLeaguePrefix moved out with
-// the CTA builder — see scripts/lib/schefter-public-url.mjs. Left imported here
-// they would read as dependencies this file still has.
-import { getLeagueBySlug } from '../src/config/leagues-data.mjs';
-import { createPublicUrl, normalizeBaseUrl } from './lib/schefter-public-url.mjs';
-import { leagueYearFor } from './lib/schefter-league-year.mjs';
+import {
+  getLeagueBySlug,
+  buildHostToSlugMap,
+  stripLeaguePrefix,
+  ensureLeaguePrefix,
+} from '../src/config/leagues-data.mjs';
 import { getSchefterLeague } from './lib/schefter-leagues.mjs';
 import {
   getPtHour,
@@ -221,9 +215,6 @@ const RUMOR_GOSSIP_POSTS_TODAY_KEY = schefterKey(NAV_SLUG, 'rumor:gossip_posts_t
 // rumor mill for the rest of the day (and vice versa). See
 // scripts/lib/schefter-rumor-cadence.mjs for why the cap is the lane's alone.
 const RUMOR_MILL_POSTS_TODAY_KEY = schefterKey(NAV_SLUG, 'rumor:mill_posts_today');
-// The day's TRADE-story count, shared with scripts/schefter-trade-speculation.mjs.
-// A topic ceiling rather than a post budget — see MAX_TRADE_POSTS_PER_DAY.
-const RUMOR_TRADE_POSTS_TODAY_KEY = tradePostsTodayKey(NAV_SLUG);
 // Counts GENERATION cycles (delivered or suppressed) — the aggregate
 // LLM-rate ceiling, NOT a posting budget. See checkGates and the
 // BUDGET-ON-DELIVERY sentinel for why the two are separate counters.
@@ -419,18 +410,79 @@ const FRIDAY_WEEKDAY_INDEX = 5; // 0=Sun … 5=Fri
 // absolute form, so the GroupMe CTA still reads `.../schefter/tip`.
 const TIP_PAGE_PATH = `/${LEAGUE_SLUG}/schefter/tip`;
 const TIP_PAGE_LINK_LABEL = 'Got a tip? Whisper to Schefter →';
-// The prefix-aware CTA builder now lives in scripts/lib/schefter-public-url.mjs
-// — the speculation lane needs the identical answer for its own GroupMe CTA,
-// and a second copy of "does this base strip or keep the league prefix" is the
-// shape this repo has already paid for once.
+/**
+ * Origin (+ optional path prefix) a route can be appended to. A base URL is
+ * not a place to carry a query or fragment: concatenating a route after one
+ * yields `https://www.theleague.us?x=1/theleague/schefter/tip`, which is
+ * simply a broken link. Drop them, along with any trailing slash, so the
+ * concatenation below is always well-formed.
+ *
+ * Throws on an unparseable value rather than limping on: this base is pasted
+ * into the CTA of every post the run ships, so a typo'd override would quietly
+ * poison a whole slate of GroupMe messages. Better to die at startup.
+ */
+function normalizeBaseUrl(raw) {
+  const trimmed = String(raw).replace(/\/+$/, '');
+  let u;
+  try {
+    u = new URL(trimmed);
+  } catch {
+    throw new Error(
+      `SCHEFTER_PUBLIC_BASE_URL is not a valid absolute URL: ${JSON.stringify(raw)}`,
+    );
+  }
+  return `${u.origin}${u.pathname}`.replace(/\/+$/, '');
+}
+
 const PUBLIC_BASE_URL = normalizeBaseUrl(
   process.env.SCHEFTER_PUBLIC_BASE_URL || SCHEFTER_LEAGUE.baseUrl,
 );
-const publicUrl = createPublicUrl({
-  baseUrl: PUBLIC_BASE_URL,
-  leagueSlug: LEAGUE_SLUG,
-  registryLeague: SCHEFTER_LEAGUE_REGISTRY,
-});
+
+/**
+ * Is `PUBLIC_BASE_URL` the ROOT of one of THIS league's own apex hosts — i.e.
+ * a base where the middleware rewrite actually runs, so the bare path resolves?
+ *
+ * Registry-derived (buildHostToSlugMap), not a string compare against the
+ * canonical origin: an operator can spell the same host a dozen equivalent
+ * ways — bare apex, uppercase, http://, an explicit :443 — and every one of
+ * them must still strip.
+ *
+ * But hostname alone is not enough. The rewrite is served at the domain root
+ * on the standard port, so a non-default port (`:444`) or a path-suffixed base
+ * (`https://www.theleague.us/preview`) is NOT the apex even though it shares a
+ * hostname — stripping there produces a path nothing serves. Those, like
+ * mfl.football and *.vercel.app previews, need the prefix kept.
+ *
+ * `new URL()` normalizes a scheme's default port to '', so any port left over
+ * is by definition non-default.
+ */
+const HOST_TO_LEAGUE_SLUG = buildHostToSlugMap();
+function isOwnApexBase(baseUrl) {
+  let u;
+  try {
+    u = new URL(baseUrl);
+  } catch {
+    return false;
+  }
+  if (u.port !== '') return false;
+  if (u.pathname !== '/') return false;
+  return HOST_TO_LEAGUE_SLUG[u.hostname.toLowerCase()] === LEAGUE_SLUG;
+}
+const PUBLIC_BASE_IS_OWN_APEX = isOwnApexBase(PUBLIC_BASE_URL);
+
+/**
+ * Absolute URL for a GroupMe CTA, from the PREFIXED internal path every feed
+ * link carries. Symmetric, and it keeps the operator's chosen origin rather
+ * than substituting the canonical one:
+ *   - own apex host  → STRIP the prefix (redundant; the prefixed form only
+ *     resolves via a 301, so pasting it ships `theleague.us/theleague/...`)
+ *   - anything else  → ENSURE the prefix (shared host / preview deploys have
+ *     no rewrite, so the bare path 404s)
+ */
+const publicUrl = (p) =>
+  PUBLIC_BASE_IS_OWN_APEX
+    ? `${PUBLIC_BASE_URL}${stripLeaguePrefix(SCHEFTER_LEAGUE_REGISTRY, p)}`
+    : `${PUBLIC_BASE_URL}${ensureLeaguePrefix(SCHEFTER_LEAGUE_REGISTRY, p)}`;
 
 const TIP_PAGE_ABSOLUTE_URL = publicUrl(TIP_PAGE_PATH);
 
@@ -442,7 +494,7 @@ const TRADE_BUILDER_LINK_LABEL = 'Open in Trade Builder →';
 const TRADE_BUILDER_GROUPME_PREFIX = 'Counter on the block?';
 
 function buildTradeBuilderPath(franchiseId) {
-  return `/${LEAGUE_SLUG}/front-office/trade-builder?b=${encodeURIComponent(franchiseId)}`;
+  return `/${LEAGUE_SLUG}/trade-builder?b=${encodeURIComponent(franchiseId)}`;
 }
 
 /**
@@ -466,7 +518,7 @@ function isTradeFlavoredTip(tip) {
  * to a single franchise (league-wide speculation, or a multi-franchise
  * cluster). Owners land on the empty builder and pick from there.
  */
-const TRADE_BUILDER_PATH = `/${LEAGUE_SLUG}/front-office/trade-builder`;
+const TRADE_BUILDER_PATH = `/${LEAGUE_SLUG}/trade-builder`;
 
 /**
  * Resolve the CTA for a post based on its primary bucket.
@@ -2880,52 +2932,6 @@ async function loadPlayers(year) {
 }
 
 /**
- * Who currently rosters each player, from the league's own rosters feed.
- *
- * This is the ground truth under every ownership claim the trade-offer lane
- * makes. A PENDING proposal has not executed, so a player being given up in it
- * is still on the roster of the franchise giving him up — which turns "does
- * this team own this player" from a thing we infer off MFL's field names into
- * a thing we look up. `attributeSides` uses it to validate (and, on a garbled
- * row, to repair) the side/franchise binding, and `buildExposure` uses it as
- * the per-player floor under the name it prints.
- *
- * Read through the registry's `feedFilePath`, never a joined league directory
- * — `tests/league-literal-guard.test.ts` forbids the literal and the registry
- * is the only thing that knows where a league's feeds live.
- *
- * A missing or unreadable file returns an EMPTY map, which the redactor treats
- * as "no evidence" and falls back to taking the row at its word. That is the
- * pre-2026-09-10 behaviour: a stale feed degrades the check, it does not
- * silence the lane.
- */
-async function loadRosterOwners(year) {
-  const map = new Map();
-  try {
-    const raw = JSON.parse(await fs.readFile(SCHEFTER_LEAGUE.feedFilePath(year, 'rosters.json'), 'utf8'));
-    const list = raw?.rosters?.franchise ?? [];
-    for (const franchise of Array.isArray(list) ? list : [list]) {
-      // Validate BEFORE padding. `''.padStart(4, '0')` is `'0000'` — truthy,
-      // and a real franchise id — so the emptiness check below never fired and
-      // a malformed row's players were attributed to a franchise that does not
-      // exist. That is not inert: `attributeSides` scores orientations off this
-      // map, so a phantom `0000` owner is false evidence in the one check the
-      // whole binding now rests on.
-      const rawFid = String(franchise?.id ?? '').trim();
-      if (!rawFid) continue;
-      const fid = rawFid.padStart(4, '0');
-      const players = franchise?.player ?? [];
-      for (const player of Array.isArray(players) ? players : [players]) {
-        if (player?.id) map.set(String(player.id), fid);
-      }
-    }
-  } catch (err) {
-    warn(`  [offer-scan] rosters file unreadable: ${err.message} — ownership checks degraded`);
-  }
-  return map;
-}
-
-/**
  * Load the league's ADP dynasty rank map. Used by the trade-offer redactor
  * to pick the marquee (highest-value) player for the graduated exposure
  * ladder — at signal=2+ we name players in best-first order, and ADP
@@ -3141,15 +3147,6 @@ async function scanTradeOffers({ redis, dryRun }) {
   const teams = await loadTeamsWithDivisions();
   const players = await loadPlayers(year);
   const adpRankByPlayerId = await loadAdpDynastyRanks(year);
-  // NOT `year`. The heuristic above advances on Feb 1 while TheLeague's MFL
-  // rollover is Feb 14 PT, so for those 13 days it names a league year MFL has
-  // not created — the rosters file is absent, the map comes back empty, and the
-  // ownership check silently degrades to trusting the row's own sides, which is
-  // the exact failure this whole branch exists to stop. `leagueYearFor` is the
-  // registry-aware clock and already carries each league's own rollover.
-  const rosterYear = leagueYearFor(SCHEFTER_LEAGUE, now);
-  const rosterOwnerByPlayerId = await loadRosterOwners(rosterYear);
-  log(`  [offer-scan] Roster ownership loaded for ${rosterOwnerByPlayerId.size} player(s)`);
 
   // Step 0: fold each franchise's saved trade-builder drafts into the
   // shopping-signal sorted sets. Drafts feed the player-escalation tier
@@ -3483,7 +3480,6 @@ async function scanTradeOffers({ redis, dryRun }) {
         // Held, not advanced — see the `closure` branch in redactTradeOffer.
         exposureCount: priorExposure,
         adpRankByPlayerId,
-        rosterOwnerByPlayerId,
         blockByFid,
         positionRuns,
         closure: {
@@ -3674,7 +3670,6 @@ async function scanTradeOffers({ redis, dryRun }) {
       offerAgeMs,
       exposureCount: priorExposure,
       adpRankByPlayerId,
-      rosterOwnerByPlayerId,
       blockByFid,
       positionRuns,
       previousShape: parseStoredShape(shapeByOfferId[offerId]),
@@ -4253,50 +4248,11 @@ async function main() {
   // optional second gossip beat stitched into the same post. Tips in
   // other buckets stay in the queue — slow-news leftovers bubble up on
   // the next cycle thanks to the age boost in bucketPriorityScore.
-  const allBuckets = buildTopicBuckets(freshTips);
+  const buckets = buildTopicBuckets(freshTips);
   log(
-    `  Buckets (${allBuckets.length}): ` +
-      allBuckets.map((b) => `${b.key}[${b.kind}×${b.tips.length}]`).join(', '),
+    `  Buckets (${buckets.length}): ` +
+      buckets.map((b) => `${b.key}[${b.kind}×${b.tips.length}]`).join(', '),
   );
-
-  // ── The day's TRADE budget ──
-  //
-  // Three lanes are trade-flavored (offers, trade-bait, and the speculation
-  // scanner) and every cap in this file counts POSTS, so trade could take the
-  // whole daily budget — 13 of 16 posts across Sept 4-10 2026, with three days
-  // running at 100%. This is a topic ceiling on top of the post budget: one
-  // trade story a day, league-wide, and the other slots stay open for
-  // non-trade beats so a quiet trade day is not a quiet feed.
-  //
-  // A losing trade bucket is HELD, never dropped. Its tips stay in the queue
-  // and the age boost in `bucketPriorityScore` floats them up tomorrow, which
-  // is the same partial-drain path an unchosen bucket already takes.
-  let tradePostsToday = 0;
-  try {
-    const raw = await redis.get(RUMOR_TRADE_POSTS_TODAY_KEY);
-    tradePostsToday = typeof raw === 'number' ? raw : parseInt(raw ?? '0', 10) || 0;
-  } catch (err) {
-    warn(`  [trade-budget] read failed: ${err.message} — treating today as unspent`);
-  }
-  let tradeSlots = tradeSlotsRemaining(tradePostsToday, MAX_TRADE_POSTS_PER_DAY);
-  const buckets = tradeSlots > 0
-    ? allBuckets
-    : allBuckets.filter((b) => !isTradeFlavoredBatch(b.tips));
-  if (buckets.length !== allBuckets.length) {
-    const held = allBuckets.filter((b) => !buckets.includes(b)).map((b) => b.key);
-    log(
-      `  [trade-budget] ${tradePostsToday}/${MAX_TRADE_POSTS_PER_DAY} trade post(s) today — `
-        + `holding ${held.length} trade bucket(s) for tomorrow: ${held.join(', ')}`,
-    );
-  } else {
-    log(`  [trade-budget] ${tradePostsToday}/${MAX_TRADE_POSTS_PER_DAY} used, ${tradeSlots} slot(s) open`);
-  }
-  // No `return` when the filter empties the list. `pickPrimaryBucket([])`
-  // already yields null, which lands on the existing "no bucket qualifies"
-  // path — the one that can still file a quiet-day post. And the Friday
-  // mailbag is resolved ABOVE this, off its own gossip pool, so the sweep that
-  // stops owner-submitted tips aging out is never blocked by a trade ceiling
-  // it was deliberately exempted from.
 
   // Per-tipster context — lifts a first-time voice over same-sized noise
   // from the league's chatty regulars, and discounts a burst-tipping
@@ -4521,17 +4477,6 @@ async function main() {
         // two posts against a cap of one. In season the secondary bucket waits
         // for tomorrow's slot instead.
         log(`  Holding ${secondaryBucket.key} for next cycle — rumor-mill cap is 1/day (${rumorMillCapReason(LEAGUE_SLUG, now)})`);
-      } else if (
-        isTradeFlavoredBatch(secondaryBucket.tips)
-        && tradeSlots <= (isTradeFlavoredBatch(batch) ? 1 : 0)
-      ) {
-        // The trade ceiling reaches the GOSSIP secondary too, not just the
-        // busy-morning trade split below. `trade_bait` classifies as gossip,
-        // so two franchises' block listings are two gossip buckets and two
-        // trade stories — the ceiling would be spent to 2/1 after the fact,
-        // with both posts already shipped. Gate on what this cycle is already
-        // spending: a trade primary leaves room only if two slots exist.
-        log(`  Holding ${secondaryBucket.key} for tomorrow — it is a trade story and the day's trade slot is spoken for`);
       } else if (gossipQueueDepth >= SECONDARY_GOSSIP_POST_PRESSURE) {
         secondaryBatch = secondaryBucket.tips.slice(0, MAX_TIPS_PER_BATCH);
         log(`  Second post bucket ${secondaryBucket.key} (size=${secondaryBucket.tips.length}, using ${secondaryBatch.length} tip(s)) — pressure ${gossipQueueDepth}/${SECONDARY_GOSSIP_POST_PRESSURE}`);
@@ -4562,17 +4507,11 @@ async function main() {
     const distinctTradeTipIds = new Set(
       primaryBucket.tips.map((t) => String(t?.id ?? '')),
     );
-    // `tradeSlots > 1` is the topic ceiling asserting itself INSIDE a cycle.
-    // The two gates above it both count posts against MAX_POSTS_PER_DAY, and
-    // this split deliberately ships two feed entries against ONE of those
-    // slots — which under a one-trade-story-a-day ceiling is one trade post
-    // too many. The second beat waits for tomorrow's trade slot.
     if (
       postKind === 'trade' &&
       distinctTradeTipIds.size >= BUSY_MORNING_TRADE_THRESHOLD &&
       isBusyMorningWindow(now) &&
-      allowsTwoPostCycle(LEAGUE_SLUG, now, MAX_POSTS_PER_DAY) &&
-      tradeSlots > 1
+      allowsTwoPostCycle(LEAGUE_SLUG, now, MAX_POSTS_PER_DAY)
     ) {
       const sortedTips = [...primaryBucket.tips].sort(
         (a, b) => (a.submittedAt ?? 0) - (b.submittedAt ?? 0),
@@ -5310,20 +5249,6 @@ async function main() {
           `${rumorMillDailyCap(LEAGUE_SLUG, now, MAX_POSTS_PER_DAY)} ` +
           `(${rumorMillCapReason(LEAGUE_SLUG, now)})`,
       );
-
-      // The TRADE counter, shared with the speculation lane. Incremented per
-      // delivered trade BEAT, not once per cycle like the two counters above:
-      // those two are post budgets and a double-post is two entries against
-      // one slot by design, whereas this is a topic ceiling and a reader
-      // counts stories, not cycles.
-      const deliveredTradeBeats = allowedBeats.filter((b) => isTradeFlavoredBatch(b.batch)).length;
-      if (deliveredTradeBeats > 0) {
-        const newTradeCount = await redis.incrby(RUMOR_TRADE_POSTS_TODAY_KEY, deliveredTradeBeats);
-        if (newTradeCount === deliveredTradeBeats) {
-          await redis.expire(RUMOR_TRADE_POSTS_TODAY_KEY, secondsUntilPtMidnight(now));
-        }
-        log(`  Trade-story counter: now ${newTradeCount}/${MAX_TRADE_POSTS_PER_DAY} for the PT day`);
-      }
 
       // Trade-offer repost cooldown anchor — stamped HERE, on delivery, not
       // where the tip was enqueued. scanTradeOffers only queues; roughly half

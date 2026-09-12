@@ -1,14 +1,7 @@
 ---
-// Shared presentational component for the Owner Activity page — the league's
-// SITE analytics: who reads it, what they read, how they get here, and which
-// of them we can still reach. League-agnostic: each page (theleague /
-// afl-fantasy) does its own data fetching + color resolution, then hands the
-// prepared data to this component to render.
-//
-// Everything derived lands here already computed (src/utils/site-analytics.ts,
-// src/utils/site-adoption.ts). Both league routes are forked siblings, so a
-// derivation done HERE would be done once, but a derivation done in the routes
-// would be two copies that drift — see tests/page-fork-ratchet.test.ts.
+// Shared presentational component for the Owner Activity page. League-agnostic:
+// each page (theleague / afl-fantasy) does its own data fetching + color
+// resolution, then hands the prepared data to this component to render.
 import Breadcrumbs from './Breadcrumbs.astro';
 import { type OwnerActivityRow, type LeagueSurfaceReport } from '../../utils/owner-activity';
 import {
@@ -17,17 +10,27 @@ import {
 	type SurfaceBreakdown,
 	type VisitContext,
 } from '../../utils/visit-surface';
-import { resolveLeaguePath } from '../../utils/nav-utils';
-import type {
-	EngagementRow,
-	PageInsights,
-	TrafficSummary,
-} from '../../utils/site-analytics';
-import type { AdoptionSection } from '../../utils/site-adoption';
+import pageDirectory from '../../data/page-directory.json';
+
+const PAGE_NAMES: Record<string, string> = Object.fromEntries(
+	pageDirectory.map((p: { path: string; title: string }) => [p.path, p.title])
+);
+function pageName(path: string): string {
+	return PAGE_NAMES[path] || path.replace(/^\//, '').replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()) || 'Homepage';
+}
 
 // The shared builder in owner-activity.ts owns this shape; both league routes
 // hand us rows straight out of it, so keep the alias rather than a second copy.
 type TeamActivity = OwnerActivityRow;
+
+interface TxLeaderboardEntry {
+	franchiseId: string;
+	name: string;
+	icon: string;
+	// `thirdStat` is a league-specific transaction count whose label is set via
+	// the `thirdStatLabel` prop (auction wins for TheLeague, waiver claims for AFL).
+	counts: { trades: number; freeAgents: number; thirdStat: number; total: number };
+}
 
 interface ChartTeam {
 	id: string;
@@ -47,14 +50,15 @@ interface Props {
 	leagueName: string;
 	leagueHref: string;
 	teams: TeamActivity[];
-	/** Page rows, per-owner lists, category mix and the quiet list. */
-	pages: PageInsights;
-	/** Daily totals + the headline numbers above them. */
-	traffic: TrafficSummary;
-	/** One row per franchise: views, active days, streaks, share. */
-	engagement: EngagementRow[];
+	txLeaderboard: TxLeaderboardEntry[];
+	globalPages: { page: string; count: number }[];
+	ownerPages: Record<string, { page: string; count: number }[]>;
 	chartTeams: ChartTeam[];
 	chartDates: string[];
+	// League-specific third transaction stat. Defaults to TheLeague's auctions;
+	// AFL (no auction) overrides these to surface waiver claims instead.
+	thirdStatLabel?: string;
+	txSubtitle?: string;
 	/**
 	 * PWA-vs-browser counters. Optional so a league (or a Redis outage) with
 	 * none simply drops the section rather than rendering an empty one.
@@ -64,30 +68,23 @@ interface Props {
 	ownerSurfaces?: Record<string, SurfaceBreakdown>;
 	/** franchiseId → the surface their most recent visit came from. */
 	lastSurfaces?: Record<string, VisitContext>;
-	/** Install + notification adoption. Optional for the same reason. */
-	adoption?: AdoptionSection;
 }
 
 const {
 	leagueName,
 	leagueHref,
 	teams,
-	pages,
-	traffic,
-	engagement,
+	txLeaderboard,
+	globalPages,
+	ownerPages,
 	chartTeams,
 	chartDates,
+	thirdStatLabel = 'Auctions',
+	txSubtitle = 'Trades, free agent moves, and auction wins this season',
 	surfaces,
 	ownerSurfaces = {},
 	lastSurfaces = {},
-	adoption,
 } = Astro.props;
-
-// Page hrefs arrive league-PREFIXED. On an apex host (theleague.us,
-// afl-fantasy.com) the visitor is browsing clean URLs, so strip it back off
-// the same way the footer and site search do.
-const hideLeaguePrefix = Astro.locals.hideLeaguePrefix ?? false;
-const href = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
 
 const hasAnyData = teams.some((t) => t.lastSeen !== null);
 // The surface split only exists for visits recorded since it shipped, so an
@@ -95,25 +92,6 @@ const hasAnyData = teams.some((t) => t.lastSeen !== null);
 // of zeroes claiming everyone browses.
 const hasSurfaceData = (surfaces?.all.total ?? 0) > 0;
 const hasChartData = chartTeams.some((t) => t.values.some((v) => v > 0));
-const hasTraffic = traffic.totalViews > 0;
-const hasEngagement = engagement.some((row) => row.views > 0);
-const hasAdoption = Boolean(
-	adoption && (adoption.install.installed > 0 || adoption.push.reachable > 0),
-);
-// Ranked lists are drawn against the leader, so the leader is the scale.
-const topPageViews = Math.max(1, pages.pages[0]?.views ?? 0);
-const topReach = Math.max(1, ...pages.pages.map((p) => p.reach));
-// Share bars are drawn against the busiest owner, not against 100%: in a
-// 16-team league nobody's share can exceed the low teens, and a bar that never
-// leaves its left edge compares nothing. The printed number stays the truth.
-const topShare = Math.max(1, ...engagement.map((row) => row.share));
-const busiestDayLabel = traffic.busiest
-	? new Date(`${traffic.busiest.date}T12:00:00`).toLocaleDateString(undefined, {
-			weekday: 'short',
-			month: 'short',
-			day: 'numeric',
-		})
-	: '—';
 ---
 
 <section class="activity-page" aria-labelledby="activity-page-title">
@@ -123,92 +101,8 @@ const busiestDayLabel = traffic.busiest
 			{ label: 'Owner Activity' },
 		]} />
 		<h1 class="activity-page__title" id="activity-page-title">Owner Activity</h1>
-		<p class="activity-page__subtitle">
-			How the site gets used — traffic, pages, devices, and who was here last
-		</p>
+		<p class="activity-page__subtitle">Last time each owner was around — here or on MFL</p>
 	</div>
-
-	<!-- League Traffic -->
-	{hasTraffic && (
-		<div class="traffic-section">
-			<div class="section-header">
-				<h2 class="section-header__title">League Traffic</h2>
-				<p class="section-header__sub">
-					Every page load over the last {traffic.days.length} days, signed in or not
-				</p>
-			</div>
-
-			<div class="surface-split__cards">
-				<div class="surface-card" data-surface="pwa">
-					<span class="surface-card__label">Page Views</span>
-					<span class="surface-card__value">{traffic.totalViews.toLocaleString()}</span>
-					<span class="surface-card__sub">{traffic.avgPerDay.toLocaleString()} a day</span>
-				</div>
-				<div class="surface-card">
-					<span class="surface-card__label">Signed Out</span>
-					<span class="surface-card__value">{traffic.anonymousShare}%</span>
-					<span class="surface-card__sub">
-						{traffic.anonymousViews.toLocaleString()} of those views
-					</span>
-				</div>
-				<div class="surface-card">
-					<span class="surface-card__label">Owners a Day</span>
-					<span class="surface-card__value">{traffic.avgActiveOwners}</span>
-					<span class="surface-card__sub">{traffic.ownersSeen} of {teams.length} in the window</span>
-				</div>
-				<div class="surface-card">
-					<span class="surface-card__label">Busiest Day</span>
-					<span class="surface-card__value">{traffic.busiest?.total.toLocaleString() ?? '—'}</span>
-					<span class="surface-card__sub">{busiestDayLabel}</span>
-				</div>
-			</div>
-
-			<div class="traffic-chart" id="trafficChart"></div>
-			<div class="traffic-legend">
-				<span class="traffic-legend__item">
-					<span class="traffic-legend__swatch" data-series="signed-in"></span>
-					Signed in
-				</span>
-				<span class="traffic-legend__item">
-					<span class="traffic-legend__swatch" data-series="anon"></span>
-					Signed out
-				</span>
-			</div>
-
-			{/*
-			  The same numbers as the strip above, for a screen reader and for
-			  anyone the colors do not work for. Collapsed because it is long, not
-			  because it is secondary.
-			*/}
-			<details class="traffic-table">
-				<summary>Traffic day by day</summary>
-				<div class="table-wrapper">
-					<table class="activity-table" aria-label="Page views per day">
-						<thead>
-							<tr>
-								<th scope="col" class="activity-table__th">Day</th>
-								<th scope="col" class="activity-table__th activity-table__th--stat">Signed in</th>
-								<th scope="col" class="activity-table__th activity-table__th--stat">Signed out</th>
-								<th scope="col" class="activity-table__th activity-table__th--stat">Total</th>
-								<th scope="col" class="activity-table__th activity-table__th--stat">Owners</th>
-							</tr>
-						</thead>
-						<tbody>
-							{[...traffic.days].reverse().map((day) => (
-								<tr class="activity-table__row">
-									<td class="activity-table__td">{day.date}</td>
-									<td class="activity-table__td activity-table__td--stat">{day.signedIn}</td>
-									<td class="activity-table__td activity-table__td--stat">{day.anonymous}</td>
-									<td class="activity-table__td activity-table__td--stat">{day.total}</td>
-									<td class="activity-table__td activity-table__td--stat">{day.activeOwners}</td>
-								</tr>
-							))}
-						</tbody>
-					</table>
-				</div>
-			</details>
-		</div>
-	)}
 
 	<!-- Daily Page Views Chart -->
 	<div class="chart-section">
@@ -236,75 +130,14 @@ const busiestDayLabel = traffic.busiest
 		</div>
 	</div>
 
-	<!-- Owner Engagement -->
-	{hasEngagement && (
-		<div class="section-header" style="margin-top:2rem">
-			<h2 class="section-header__title">Owner Engagement</h2>
-			<p class="section-header__sub">
-				How much of the last {traffic.days.length} days each owner spent here
-			</p>
-		</div>
-	)}
-
-	{hasEngagement && (
-		<div class="table-wrapper">
-		<table class="activity-table" aria-label="Owner engagement over the tracked window">
-			<thead>
-				<tr>
-					<th scope="col" class="activity-table__th activity-table__th--rank">#</th>
-					<th scope="col" class="activity-table__th activity-table__th--team">Team</th>
-					<th scope="col" class="activity-table__th activity-table__th--stat">Views</th>
-					<th scope="col" class="activity-table__th activity-table__th--stat">Days on</th>
-					<th scope="col" class="activity-table__th activity-table__th--stat">Streak</th>
-					<th scope="col" class="activity-table__th">Share of traffic</th>
-				</tr>
-			</thead>
-			<tbody>
-				{engagement.map((row, i) => (
-					<tr class="activity-table__row">
-						<td class="activity-table__td activity-table__td--rank">{i + 1}</td>
-						<td class="activity-table__td activity-table__td--team">
-							<div class="activity-team">
-								<img src={row.icon} alt="" class="activity-team__icon" width="32" height="32" loading="lazy" />
-								<span class="activity-team__name">{row.name}</span>
-							</div>
-						</td>
-						<td class="activity-table__td activity-table__td--stat">{row.views.toLocaleString()}</td>
-						<td class="activity-table__td activity-table__td--stat">
-							{row.activeDays}<span class="activity-table__of"> / {row.windowDays}</span>
-						</td>
-						<td class="activity-table__td activity-table__td--stat">
-							{row.currentStreak > 0 ? `${row.currentStreak}d` : '—'}
-							{row.longestStreak > row.currentStreak && (
-								<span class="activity-table__of"> (best {row.longestStreak}d)</span>
-							)}
-						</td>
-						<td class="activity-table__td">
-							<span class="share-bar" role="img" aria-label={`${row.share}% of league page views`}>
-								<span
-									class="share-bar__fill"
-									style={`width:${Math.round((row.share / topShare) * 100)}%`}
-								></span>
-							</span>
-							<span class="share-bar__value">{row.share}%</span>
-						</td>
-					</tr>
-				))}
-			</tbody>
-		</table>
-		</div>
-	)}
-
 	<!-- Popular Pages -->
 	<div class="popular-pages" style="margin-top:2rem">
 		<div class="section-header">
 			<h2 class="section-header__title">Popular Pages</h2>
-			<p class="section-header__sub">
-				What gets opened, by everyone who opens it
-			</p>
+			<p class="section-header__sub">Most visited pages across all owners</p>
 		</div>
 
-		{pages.pages.length === 0 ? (
+		{globalPages.length === 0 ? (
 			<div class="chart-empty">
 				<p>Page analytics will appear as owners browse the site.</p>
 			</div>
@@ -313,23 +146,16 @@ const busiestDayLabel = traffic.busiest
 				<div class="popular-pages__global">
 					<h3 class="popular-pages__heading">All Owners</h3>
 					<ol class="page-rank-list">
-						{pages.pages.slice(0, 16).map((entry) => (
+						{globalPages.slice(0, 16).map((entry) => (
 							<li class="page-rank-list__item">
-								<a class="page-rank-list__name" href={href(entry.href)}>{entry.title}</a>
+								<span class="page-rank-list__name">{pageName(entry.page)}</span>
 								<span class="page-rank-list__bar-wrap">
 									<span
 										class="page-rank-list__bar"
-										style={`width:${Math.round((entry.views / topPageViews) * 100)}%`}
+										style={`width:${Math.round((entry.count / (globalPages[0]?.count || 1)) * 100)}%`}
 									></span>
 								</span>
-								<span class="page-rank-list__count">
-									{entry.views}
-									{entry.anonymous > 0 && (
-										<span class="page-rank-list__split">
-											{' '}· {entry.anonymous} signed out
-										</span>
-									)}
-								</span>
+								<span class="page-rank-list__count">{entry.count}</span>
 							</li>
 						))}
 					</ol>
@@ -339,23 +165,23 @@ const busiestDayLabel = traffic.busiest
 					<h3 class="popular-pages__heading">By Owner</h3>
 					<div class="owner-pages-accordion" id="ownerPagesAccordion">
 						{[...teams].sort((a, b) => {
-						const aViews = (pages.ownerPages[a.franchiseId] || []).reduce((s, p) => s + p.count, 0);
-						const bViews = (pages.ownerPages[b.franchiseId] || []).reduce((s, p) => s + p.count, 0);
+						const aViews = (ownerPages[a.franchiseId] || []).reduce((s, p) => s + p.count, 0);
+						const bViews = (ownerPages[b.franchiseId] || []).reduce((s, p) => s + p.count, 0);
 						return bViews - aViews;
 					}).map((team) => {
-							const ownerRows = pages.ownerPages[team.franchiseId] || [];
-							if (ownerRows.length === 0) return null;
+							const pages = ownerPages[team.franchiseId] || [];
+							if (pages.length === 0) return null;
 							return (
 								<details class="owner-pages-detail">
 									<summary class="owner-pages-summary">
 										<img src={team.icon} alt="" class="owner-pages-icon" width="20" height="20" loading="lazy" />
 										<span>{team.name}</span>
-										<span class="owner-pages-total">{ownerRows.reduce((s, p) => s + p.count, 0)} views</span>
+										<span class="owner-pages-total">{pages.reduce((s, p) => s + p.count, 0)} views</span>
 									</summary>
 									<ol class="page-rank-list page-rank-list--compact">
-										{ownerRows.slice(0, 8).map((entry) => (
+										{pages.slice(0, 8).map((entry) => (
 											<li class="page-rank-list__item">
-												<a class="page-rank-list__name" href={href(entry.href)}>{entry.title}</a>
+												<span class="page-rank-list__name">{pageName(entry.page)}</span>
 												<span class="page-rank-list__count">{entry.count}</span>
 											</li>
 										))}
@@ -369,71 +195,47 @@ const busiestDayLabel = traffic.busiest
 		)}
 	</div>
 
-	<!-- Reach — the half a ranking by volume hides -->
-	{pages.pages.length > 0 && (
-		<div class="reach-section" style="margin-top:2rem">
-			<div class="section-header">
-				<h2 class="section-header__title">Reach</h2>
-				<p class="section-header__sub">
-					Pages ranked by how many owners open them, not how often — a page with
-					500 views from two owners is a private tool, not a league favorite
-				</p>
-			</div>
+	<!-- Transaction Activity -->
+	<div class="section-header" style="margin-top:2rem">
+		<h2 class="section-header__title">Transaction Activity</h2>
+		<p class="section-header__sub">{txSubtitle}</p>
+	</div>
 
-			<div class="popular-pages__grid">
-				<div>
-					<h3 class="popular-pages__heading">Most owners</h3>
-					<ol class="page-rank-list">
-						{[...pages.pages]
-							.sort((a, b) => b.reach - a.reach || b.views - a.views)
-							.slice(0, 8)
-							.map((entry) => (
-								<li class="page-rank-list__item">
-									<a class="page-rank-list__name" href={href(entry.href)}>{entry.title}</a>
-									<span class="page-rank-list__bar-wrap">
-										<span
-											class="page-rank-list__bar"
-											style={`width:${Math.round((entry.reach / topReach) * 100)}%`}
-										></span>
-									</span>
-									<span class="page-rank-list__count">
-										{entry.reach}<span class="activity-table__of"> owners</span>
-									</span>
-								</li>
-							))}
-					</ol>
-				</div>
-
-				<div>
-					<h3 class="popular-pages__heading">What owners come for</h3>
-					<ol class="page-rank-list">
-						{pages.categories.map((row) => (
-							<li class="page-rank-list__item">
-								<span class="page-rank-list__name">{row.label}</span>
-								<span class="page-rank-list__bar-wrap">
-									<span class="page-rank-list__bar" style={`width:${row.share}%`}></span>
-								</span>
-								<span class="page-rank-list__count">{row.share}%</span>
-							</li>
-						))}
-					</ol>
-
-					{pages.quiet.length > 0 && (
-						<details class="quiet-pages">
-							<summary>
-								{pages.quiet.length} of {pages.directoryPages} pages have never been opened
-							</summary>
-							<ul class="quiet-pages__list">
-								{pages.quiet.map((entry) => (
-									<li>
-										<a href={href(entry.href)}>{entry.title}</a>
-									</li>
-								))}
-							</ul>
-						</details>
-					)}
-				</div>
-			</div>
+	{txLeaderboard.every(t => t.counts.total === 0) ? (
+		<div class="chart-empty">
+			<p>No transactions recorded yet this season.</p>
+		</div>
+	) : (
+		<div class="table-wrapper">
+		<table class="activity-table" aria-label="Transaction activity leaderboard">
+			<thead>
+				<tr>
+					<th scope="col" class="activity-table__th activity-table__th--rank">#</th>
+					<th scope="col" class="activity-table__th activity-table__th--team">Team</th>
+					<th scope="col" class="activity-table__th activity-table__th--stat">Trades</th>
+					<th scope="col" class="activity-table__th activity-table__th--stat">FA</th>
+					<th scope="col" class="activity-table__th activity-table__th--stat">{thirdStatLabel}</th>
+					<th scope="col" class="activity-table__th activity-table__th--stat">Total</th>
+				</tr>
+			</thead>
+			<tbody>
+				{txLeaderboard.map((team, i) => (
+					<tr class="activity-table__row">
+						<td class="activity-table__td activity-table__td--rank">{i + 1}</td>
+						<td class="activity-table__td activity-table__td--team">
+							<div class="activity-team">
+								<img src={team.icon} alt="" class="activity-team__icon" width="32" height="32" loading="lazy" />
+								<span class="activity-team__name">{team.name}</span>
+							</div>
+						</td>
+						<td class="activity-table__td activity-table__td--stat">{team.counts.trades}</td>
+						<td class="activity-table__td activity-table__td--stat">{team.counts.freeAgents}</td>
+						<td class="activity-table__td activity-table__td--stat">{team.counts.thirdStat}</td>
+						<td class="activity-table__td activity-table__td--stat">{team.counts.total}</td>
+					</tr>
+				))}
+			</tbody>
+		</table>
 		</div>
 	)}
 
@@ -471,19 +273,6 @@ const busiestDayLabel = traffic.busiest
 					<span class="surface-card__value">{surfaces.anonymous.total.toLocaleString()}</span>
 					<span class="surface-card__sub">{surfaces.anonymous.pwaShare}% from the app</span>
 				</div>
-				{adoption && adoption.install.total > 0 && (
-					<div class="surface-card" data-surface="pwa">
-						<span class="surface-card__label">Owners Installed</span>
-						<span class="surface-card__value">
-							{adoption.install.installed}<span class="surface-card__of">/{adoption.install.total}</span>
-						</span>
-						<span class="surface-card__sub">
-							{adoption.install.sources.length > 0
-								? adoption.install.sources.map((src) => `${src.count} ${src.label.toLowerCase()}`).join(' · ')
-								: 'nobody yet'}
-						</span>
-					</div>
-				)}
 			</div>
 
 			<div class="table-wrapper">
@@ -518,61 +307,6 @@ const busiestDayLabel = traffic.busiest
 				</tbody>
 			</table>
 			</div>
-		</div>
-	)}
-
-	<!-- Notifications -->
-	{hasAdoption && adoption && (
-		<div class="adoption-section" style="margin-top:2rem">
-			<div class="section-header">
-				<h2 class="section-header__title">Notifications</h2>
-				<p class="section-header__sub">
-					Who can still be reached without the group chat, and what they have
-					left switched on. Counts only — a single owner's settings are theirs.
-				</p>
-			</div>
-
-			<div class="surface-split__cards">
-				<div class="surface-card" data-surface="pwa">
-					<span class="surface-card__label">Reachable</span>
-					<span class="surface-card__value">
-						{adoption.push.reachable}<span class="surface-card__of">/{adoption.push.total}</span>
-					</span>
-					<span class="surface-card__sub">{adoption.push.share}% of the league</span>
-				</div>
-				<div class="surface-card">
-					<span class="surface-card__label">Devices</span>
-					<span class="surface-card__value">{adoption.push.devices}</span>
-					<span class="surface-card__sub">browsers subscribed</span>
-				</div>
-			</div>
-
-			{adoption.push.categories.length > 0 && (
-				<div class="popular-pages__grid">
-					{/* Split in half rather than run one 17-row column down the page. */}
-					{[
-						adoption.push.categories.slice(0, Math.ceil(adoption.push.categories.length / 2)),
-						adoption.push.categories.slice(Math.ceil(adoption.push.categories.length / 2)),
-					].map((column) => (
-						<ol class="page-rank-list page-rank-list--wide">
-							{column.map((category) => (
-								<li class="page-rank-list__item">
-									<span class="page-rank-list__name">{category.label}</span>
-									<span class="page-rank-list__bar-wrap">
-										<span
-											class="page-rank-list__bar"
-											style={`width:${Math.round((category.on / Math.max(adoption.push.reachable, 1)) * 100)}%`}
-										></span>
-									</span>
-									<span class="page-rank-list__count">
-										{category.on}<span class="activity-table__of"> on</span>
-									</span>
-								</li>
-							))}
-						</ol>
-					))}
-				</div>
-			)}
 		</div>
 	)}
 
@@ -680,7 +414,6 @@ const busiestDayLabel = traffic.busiest
 </section>
 
 <script type="application/json" id="chart-data" set:html={JSON.stringify({ dates: chartDates, teams: chartTeams })}></script>
-<script type="application/json" id="traffic-data" set:html={JSON.stringify(traffic.days)}></script>
 
 <script>
 	function renderChart() {
@@ -862,138 +595,7 @@ const busiestDayLabel = traffic.busiest
 		});
 	}
 
-	/**
-	 * The League Traffic strip: one stacked bar per day, signed-in below and
-	 * signed-out above it.
-	 *
-	 * Two series of the SAME measure, so they are two weights of one hue rather
-	 * than two hues — a second color here would read as a second thing being
-	 * measured. The 2px gap between the segments is what keeps the boundary
-	 * legible when both are dark in dark mode; the accessible copy of these
-	 * numbers is the day-by-day table under the strip, not a tooltip.
-	 */
-	function renderTraffic() {
-		const el = document.getElementById('trafficChart');
-		const dataEl = document.getElementById('traffic-data');
-		if (!el || !dataEl) return;
-
-		const days = JSON.parse(dataEl.textContent || '[]') as {
-			date: string;
-			signedIn: number;
-			anonymous: number;
-			total: number;
-			activeOwners: number;
-		}[];
-		if (!days.length) return;
-
-		const W = 800;
-		const H = 120;
-		const PAD = { top: 8, right: 4, bottom: 18, left: 4 };
-		const plotH = H - PAD.top - PAD.bottom;
-		const plotW = W - PAD.left - PAD.right;
-		const slot = plotW / days.length;
-		const barW = Math.max(2, Math.min(slot - 3, 22));
-		const yMax = Math.max(1, ...days.map((d) => d.total));
-		const SVG_NS = 'http://www.w3.org/2000/svg';
-
-		const svg = document.createElementNS(SVG_NS, 'svg');
-		svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
-		svg.setAttribute('preserveAspectRatio', 'none');
-		svg.setAttribute('class', 'traffic-svg');
-		svg.setAttribute('role', 'img');
-		svg.setAttribute('aria-label', 'Page views per day, signed in and signed out');
-
-		days.forEach((day, i) => {
-			const x = PAD.left + i * slot + (slot - barW) / 2;
-			const signedInH = (day.signedIn / yMax) * plotH;
-			const anonH = (day.anonymous / yMax) * plotH;
-
-			if (signedInH > 0) {
-				const rect = document.createElementNS(SVG_NS, 'rect');
-				rect.setAttribute('x', String(x));
-				rect.setAttribute('y', String(PAD.top + plotH - signedInH));
-				rect.setAttribute('width', String(barW));
-				rect.setAttribute('height', String(signedInH));
-				rect.setAttribute('rx', '2');
-				rect.setAttribute('class', 'traffic-bar traffic-bar--signed-in');
-				svg.appendChild(rect);
-			}
-			if (anonH > 0) {
-				// 2px of surface between the segments so the split stays readable.
-				const height = Math.max(1, anonH - 2);
-				const rect = document.createElementNS(SVG_NS, 'rect');
-				rect.setAttribute('x', String(x));
-				rect.setAttribute('y', String(PAD.top + plotH - signedInH - 2 - height));
-				rect.setAttribute('width', String(barW));
-				rect.setAttribute('height', String(height));
-				rect.setAttribute('rx', '2');
-				rect.setAttribute('class', 'traffic-bar traffic-bar--anon');
-				svg.appendChild(rect);
-			}
-
-			const hit = document.createElementNS(SVG_NS, 'rect');
-			hit.setAttribute('x', String(PAD.left + i * slot));
-			hit.setAttribute('y', String(PAD.top));
-			hit.setAttribute('width', String(slot));
-			hit.setAttribute('height', String(plotH));
-			hit.setAttribute('fill', 'transparent');
-			hit.setAttribute('data-day', String(i));
-			svg.appendChild(hit);
-		});
-
-		// Only the ends are labeled — a date under every bar is unreadable at
-		// this height, and the table below carries the exact figures.
-		for (const [i, anchor] of [[0, 'start'], [days.length - 1, 'end']] as const) {
-			const label = document.createElementNS(SVG_NS, 'text');
-			label.setAttribute('x', String(PAD.left + i * slot + slot / 2));
-			label.setAttribute('y', String(H - 4));
-			label.setAttribute('text-anchor', anchor);
-			label.setAttribute('class', 'traffic-axis');
-			label.textContent = days[i].date.slice(5);
-			svg.appendChild(label);
-		}
-
-		el.replaceChildren(svg);
-
-		const tip = document.createElement('div');
-		tip.className = 'chart-tooltip';
-		tip.style.display = 'none';
-		el.appendChild(tip);
-
-		el.addEventListener('mouseover', (e) => {
-			const target = (e.target as Element).closest('[data-day]');
-			if (!target) return;
-			const day = days[Number(target.getAttribute('data-day'))];
-			if (!day) return;
-			tip.replaceChildren();
-			const date = document.createElement('div');
-			date.className = 'chart-tooltip__date';
-			date.textContent = day.date;
-			tip.appendChild(date);
-			for (const [label, value] of [
-				['Signed in', day.signedIn],
-				['Signed out', day.anonymous],
-				['Owners', day.activeOwners],
-			] as const) {
-				const row = document.createElement('div');
-				row.className = 'chart-tooltip__row';
-				row.appendChild(document.createTextNode(`${label}: `));
-				const strong = document.createElement('strong');
-				strong.textContent = String(value);
-				row.appendChild(strong);
-				tip.appendChild(row);
-			}
-			tip.style.display = '';
-		});
-		el.addEventListener('mouseleave', () => {
-			tip.style.display = 'none';
-		});
-	}
-
-	document.addEventListener('astro:page-load', () => {
-		renderChart();
-		renderTraffic();
-	});
+	document.addEventListener('astro:page-load', renderChart);
 </script>
 
 <style>
@@ -1072,8 +674,7 @@ const busiestDayLabel = traffic.busiest
 	      On any off-palette chip the guarantee doesn't hold — the old dark
 	      chip already swallowed the near-black franchise accents in LIGHT
 	      mode for the same reason. */
-	.chart-container :global(.chart-tooltip),
-	.traffic-chart :global(.chart-tooltip) {
+	.chart-container :global(.chart-tooltip) {
 		position: absolute;
 		top: 0.5rem;
 		right: 0.75rem;
@@ -1090,15 +691,13 @@ const busiestDayLabel = traffic.busiest
 		min-width: 8rem;
 	}
 
-	.chart-container :global(.chart-tooltip__date),
-	.traffic-chart :global(.chart-tooltip__date) {
+	.chart-container :global(.chart-tooltip__date) {
 		font-weight: 600;
 		margin-bottom: 0.25rem;
 		font-variant-numeric: tabular-nums;
 	}
 
-	.chart-container :global(.chart-tooltip__row),
-	.traffic-chart :global(.chart-tooltip__row) {
+	.chart-container :global(.chart-tooltip__row) {
 		display: flex;
 		align-items: center;
 		gap: 0.375rem;
@@ -1120,8 +719,7 @@ const busiestDayLabel = traffic.busiest
 	   hairline ring in the surface's own ink keeps the mark's SHAPE readable at
 	   any fill contrast, in both themes and both leagues, with the team name
 	   sitting right beside it to carry the meaning. */
-	.chart-container :global(.chart-tooltip__dot),
-	.traffic-chart :global(.chart-tooltip__dot) {
+	.chart-container :global(.chart-tooltip__dot) {
 		width: 0.5rem;
 		height: 0.5rem;
 		border-radius: 50%;
@@ -1175,20 +773,11 @@ const busiestDayLabel = traffic.busiest
 		box-shadow: 0 0 0 1px color-mix(in srgb, var(--page-text, #111827) 40%, transparent);
 	}
 
-	/* ── Franchise marks: CONTAIN, never crop ──
-	   A franchise icon is a logo, not an avatar. `border-radius: 50%` shaves
-	   the corners off a square mark and `object-fit: cover` throws away the
-	   edges of a wide one, so a club whose art fills its canvas came out
-	   clipped while a club with built-in padding looked untouched — which
-	   reads as some teams having circle crops and others not. `contain` fits
-	   the whole mark in the box, the same treatment `.activity-team__icon`
-	   already used in the tables below. The round DOTS in this component
-	   (`.chart-legend__swatch`, `.activity-dot`) are marks of our own making
-	   and stay circular. */
 	.chart-legend__icon {
 		width: 1rem;
 		height: 1rem;
-		object-fit: contain;
+		border-radius: 50%;
+		object-fit: cover;
 	}
 
 	.chart-legend__name {
@@ -1422,130 +1011,6 @@ const busiestDayLabel = traffic.busiest
 		background: var(--color-primary, #1c497c);
 	}
 
-	/* ── League Traffic ──
-	   A strip, not a chart with axes: the question it answers is "how busy, and
-	   how much of that is people who never sign in", both of which read off the
-	   shape. The exact numbers live in the day-by-day table below it. */
-	.traffic-chart {
-		position: relative;
-		margin-top: 1rem;
-		height: 120px;
-	}
-
-	.traffic-chart :global(.traffic-svg) {
-		width: 100%;
-		height: 100%;
-		display: block;
-	}
-
-	/* Two weights of ONE hue: the same measure split, not two measures. */
-	.traffic-chart :global(.traffic-bar--signed-in) {
-		fill: var(--color-primary, #1c497c);
-	}
-
-	.traffic-chart :global(.traffic-bar--anon) {
-		fill: color-mix(in srgb, var(--color-primary, #1c497c) 38%, transparent);
-	}
-
-	.traffic-chart :global(.traffic-axis) {
-		fill: var(--color-gray-500, #6b7280);
-		font-size: 10px;
-	}
-
-	.traffic-legend {
-		display: flex;
-		gap: 1rem;
-		margin-top: 0.5rem;
-		font-size: 0.75rem;
-		color: var(--color-gray-500, #6b7280);
-	}
-
-	.traffic-legend__item {
-		display: inline-flex;
-		align-items: center;
-		gap: 0.375rem;
-	}
-
-	.traffic-legend__swatch {
-		width: 0.625rem;
-		height: 0.625rem;
-		border-radius: 0.1875rem;
-		background: var(--color-primary, #1c497c);
-	}
-
-	.traffic-legend__swatch[data-series='anon'] {
-		background: color-mix(in srgb, var(--color-primary, #1c497c) 38%, transparent);
-	}
-
-	.traffic-table,
-	.quiet-pages {
-		margin-top: 0.75rem;
-		font-size: 0.8125rem;
-	}
-
-	.traffic-table > summary,
-	.quiet-pages > summary {
-		cursor: pointer;
-		color: var(--color-gray-600, #4b5563);
-		padding: 0.375rem 0;
-	}
-
-	.traffic-table > summary:hover,
-	.quiet-pages > summary:hover {
-		color: var(--color-primary, #1c497c);
-	}
-
-	.quiet-pages__list {
-		list-style: none;
-		margin: 0.25rem 0 0;
-		padding: 0;
-		display: flex;
-		flex-wrap: wrap;
-		gap: 0.25rem 0.75rem;
-	}
-
-	.quiet-pages__list a {
-		color: var(--color-gray-600, #4b5563);
-		text-decoration: none;
-		border-bottom: 1px dotted var(--color-gray-400, #9ca3af);
-	}
-
-	.quiet-pages__list a:hover {
-		color: var(--color-primary, #1c497c);
-	}
-
-	/* ── Engagement share bar ── */
-	.share-bar {
-		display: inline-block;
-		vertical-align: middle;
-		width: 4.5rem;
-		height: 0.5rem;
-		border-radius: 999px;
-		overflow: hidden;
-		background: color-mix(in srgb, var(--page-text, #111827) 12%, transparent);
-	}
-
-	.share-bar__fill {
-		display: block;
-		height: 100%;
-		background: var(--color-primary, #1c497c);
-	}
-
-	.share-bar__value {
-		margin-left: 0.5rem;
-		font-variant-numeric: tabular-nums;
-		color: var(--color-gray-600, #4b5563);
-	}
-
-	/* A denominator or unit riding along with a stat, one step quieter. */
-	.activity-table__of,
-	.surface-card__of,
-	.page-rank-list__split {
-		color: var(--color-gray-500, #6b7280);
-		font-size: 0.8125em;
-		font-weight: 400;
-	}
-
 	/* ── Last Seen cell ──
 	   Two lines: the blended value with a badge naming which signal won, and a
 	   quieter breakdown of both halves so a "3h ago" that came from a waiver
@@ -1662,25 +1127,6 @@ const busiestDayLabel = traffic.busiest
 
 	/* ── Mobile: hide status text label, keep dot ── */
 	@media (max-width: 639px) {
-		/*
-		 * ANCHOR THE CELL, or this screen-reader label scrolls the whole PAGE.
-		 *
-		 * `.activity-label` below is the standard visually-hidden box: absolute,
-		 * 1px, clipped. `clip` hides what is PAINTED, not what is laid out, and
-		 * with no `left`/`top` the box sits at its STATIC position — which here
-		 * is the last column of a table wider than the phone. Its containing
-		 * block was the page, not the `.table-wrapper` that scrolls, so those
-		 * 1px boxes landed ~58px past the right edge and gave the whole document
-		 * a horizontal scrollbar. (Reported on a phone: every other page sat
-		 * still, this one slid.)
-		 *
-		 * Positioning the cell makes the scroll container the label's clipping
-		 * ancestor, so it stays inside the table it belongs to.
-		 */
-		.activity-table__td--status {
-			position: relative;
-		}
-
 		.activity-label {
 			position: absolute;
 			width: 1px;
@@ -1689,7 +1135,6 @@ const busiestDayLabel = traffic.busiest
 			margin: -1px;
 			overflow: hidden;
 			clip: rect(0, 0, 0, 0);
-			clip-path: inset(50%);
 			white-space: nowrap;
 			border: 0;
 		}
@@ -1755,17 +1200,6 @@ const busiestDayLabel = traffic.busiest
 		white-space: nowrap;
 		overflow: hidden;
 		text-overflow: ellipsis;
-		text-decoration: none;
-	}
-
-	/* A list whose labels are sentences, not one-word page names. */
-	.page-rank-list--wide .page-rank-list__name {
-		width: 10rem;
-	}
-
-	a.page-rank-list__name:hover {
-		color: var(--color-primary, #1c497c);
-		text-decoration: underline;
 	}
 
 	.page-rank-list__bar-wrap {
@@ -1839,11 +1273,11 @@ const busiestDayLabel = traffic.busiest
 		transform: rotate(90deg);
 	}
 
-	/* Contain, not cover — see `.chart-legend__icon`. */
 	.owner-pages-icon {
 		width: 1.25rem;
 		height: 1.25rem;
-		object-fit: contain;
+		border-radius: 50%;
+		object-fit: cover;
 	}
 
 	.owner-pages-total {

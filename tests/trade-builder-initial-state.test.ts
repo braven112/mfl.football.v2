@@ -171,7 +171,7 @@ describe('resolveInitialTradeState', () => {
 
 describe('trade builder hydration wiring', () => {
   const island = read('src/components/theleague/trade-builder/TradeBuilder.tsx');
-  const page = read('src/pages/theleague/front-office/trade-builder.astro');
+  const page = read('src/pages/theleague/trade-builder.astro');
 
   it('the page hands the island the SERVER query string', () => {
     expect(page).toMatch(/initialSearch=\{Astro\.url\.search\}/);

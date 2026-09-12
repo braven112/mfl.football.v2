@@ -9,7 +9,6 @@ import {
 	getAllActivity,
 	getDailyPageViews,
 	getGlobalPagePopularity,
-	getAnonPagePopularity,
 	getAllOwnerPagePopularity,
 	buildOwnerActivityRow,
 	sortByLastSeen,
@@ -18,46 +17,26 @@ import {
 	type SurfaceSection,
 	type OwnerActivityRow,
 } from '../../utils/owner-activity';
-import {
-	ANON_PAGEVIEW_FIELD,
-	buildEngagementRows,
-	buildPageInsights,
-	sortEngagement,
-	summarizeTraffic,
-} from '../../utils/site-analytics';
-import {
-	getAdoptionSection,
-	mockAdoptionSection,
-	type AdoptionSection,
-} from '../../utils/site-adoption';
 import { lastMflMoveByFranchise, type MflMove } from '../../utils/mfl-activity';
 import { teamAccentVar } from '../../utils/team-accent-css';
 import { getCurrentLeagueYear } from '../../utils/league-year';
 import { getLeagueBySlug } from '../../config/leagues';
 
-const leagueDef = getLeagueBySlug('theleague')!;
-const leagueId = leagueDef.id;
-// The shape notification-categories.ts gates on: which alerts this league can
-// even offer. Registry-derived, never a second copy of the flags.
-const league = { features: leagueDef.features, ownersPoll: leagueDef.ownersPoll };
+const leagueId = getLeagueBySlug('theleague')!.id;
 const franchiseIds = leagueConfig.teams.map((t: any) => t.franchiseId);
 let activityMap: Record<string, number> = {};
 let pageViewData: { dates: string[]; data: Record<string, Record<string, number>> } = { dates: [], data: {} };
 let globalPages: { page: string; count: number }[] = [];
-let anonPages: { page: string; count: number }[] = [];
 let ownerPages: Record<string, { page: string; count: number }[]> = {};
 // App-vs-browser counters. Undefined until read, and the report drops the
 // section entirely when there is nothing recorded yet.
 let surfaceSection: SurfaceSection | undefined;
-// Install + notification adoption. Undefined until read, same contract.
-let adoption: AdoptionSection | undefined;
 
 // Mock data for local development — ?mock=true enables it
 const useMock = Astro.url.searchParams.has('mock');
 
 if (useMock) {
 	surfaceSection = mockSurfaceSection(franchiseIds);
-	adoption = mockAdoptionSection(franchiseIds, league);
 	// Seeded random for deterministic output
 	const seed = (s: number) => () => { s = (s * 16807 + 0) % 2147483647; return (s - 1) / 2147483646; };
 
@@ -108,12 +87,6 @@ if (useMock) {
 			const views = Math.max(0, Math.round(profile.baseViews * recencyBoost * weekendBoost * (0.3 + rng() * 1.4)));
 			if (views > 0) pvData[date][fid] = views;
 		}
-		// Signed-out traffic rides in the same daily hash under a reserved field.
-		// Roughly a third of a day's views, which is the shape the real counter
-		// has: more visitors than owners, fewer page loads each.
-		const anonRng = seed(parseInt(date.replace(/-/g, ''), 10));
-		const signedIn = Object.values(pvData[date]).reduce((sum, n) => sum + n, 0);
-		pvData[date][ANON_PAGEVIEW_FIELD] = Math.round(signedIn * (0.3 + anonRng() * 0.4));
 	}
 	pageViewData = { dates, data: pvData };
 
@@ -121,30 +94,21 @@ if (useMock) {
 	const pageWeights = [
 		{ page: '/rosters', weight: 320 },
 		{ page: '/players', weight: 185 },
-		{ page: '/front-office/trade-builder', weight: 142 },
+		{ page: '/trade-builder', weight: 142 },
 		{ page: '/standings', weight: 128 },
-		{ page: '/front-office/salary-analytics', weight: 97 },
+		{ page: '/salary', weight: 97 },
 		{ page: '/league-summary', weight: 84 },
 		{ page: '/draft/order', weight: 72 },
 		{ page: '/playoffs', weight: 61 },
-		{ page: '/front-office/contracts', weight: 55 },
+		{ page: '/contracts/manage', weight: 55 },
 		{ page: '/calendar', weight: 43 },
-		{ page: '/front-office/dead-money', weight: 38 },
+		{ page: '/dead-money', weight: 38 },
 		{ page: '/mvp', weight: 31 },
 		{ page: '/whats-new', weight: 27 },
 		{ page: '/activity', weight: 22 },
 		{ page: '/rules', weight: 14 },
 	];
 	globalPages = pageWeights.map(({ page, weight }) => ({ page, count: weight }));
-	// Signed-out visitors only ever reach the public pages, so the anon list is
-	// a short, differently-ordered subset rather than a scaled copy.
-	anonPages = [
-		{ page: '/standings', count: 96 },
-		{ page: '/', count: 74 },
-		{ page: '/playoffs', count: 41 },
-		{ page: '/rules', count: 28 },
-		{ page: '/players', count: 19 },
-	];
 
 	// Per-owner page popularity
 	ownerPages = {};
@@ -162,32 +126,51 @@ if (useMock) {
 	}
 } else {
 	try {
-		[activityMap, pageViewData, globalPages, anonPages, ownerPages, surfaceSection, adoption] =
-			await Promise.all([
-				getAllActivity(leagueId),
-				getDailyPageViews(leagueId, 30),
-				getGlobalPagePopularity(leagueId),
-				getAnonPagePopularity(leagueId),
-				getAllOwnerPagePopularity(leagueId, franchiseIds),
-				getSurfaceSection(leagueId, franchiseIds),
-				getAdoptionSection(leagueId, franchiseIds, league),
-			]);
+		[activityMap, pageViewData, globalPages, ownerPages, surfaceSection] = await Promise.all([
+			getAllActivity(leagueId),
+			getDailyPageViews(leagueId, 30),
+			getGlobalPagePopularity(leagueId),
+			getAllOwnerPagePopularity(leagueId, franchiseIds),
+			getSurfaceSection(leagueId, franchiseIds),
+		]);
 	} catch { /* Redis unavailable */ }
 }
 
-// ── MFL move recency ──
+// ── Transaction data ──
+interface TxCounts { trades: number; freeAgents: number; thirdStat: number; total: number; }
+const txCountMap: Record<string, TxCounts> = {};
 // Most recent owner-driven MFL move per franchise. This is the FALLBACK
-// MFL signal for the Last Seen table: MFL's own `lastVisit` (loaded below) is
-// a real login timestamp and strictly better, but it exists only for leagues
-// we are commissioner of and only once the sync workflow has run. Nothing here
-// counts transactions — this page is site analytics, and the transaction
-// leaderboard it used to carry lives on the league's own report pages.
+// MFL signal: MFL's own `lastVisit` (loaded below) is a real login timestamp
+// and strictly better, but it exists only for leagues we are commissioner of
+// and only once the sync workflow has run.
 let mflMoveMap: Record<string, MflMove> = {};
+const ensureFranchise = (id: string) => {
+	if (!txCountMap[id]) txCountMap[id] = { trades: 0, freeAgents: 0, thirdStat: 0, total: 0 };
+};
 
 // import.meta.glob must be at the top level (Vite requirement)
 const txFeeds = import.meta.glob('../../../data/theleague/mfl-feeds/*/transactions.json', { eager: true });
 
 if (useMock) {
+	// Mock transaction counts tied to activityProfiles intensity
+	const mockTxProfiles: Record<string, { trades: number; fa: number; auctions: number }> = {
+		'0001': { trades: 4, fa: 7, auctions: 12 },
+		'0002': { trades: 3, fa: 5, auctions: 9 },
+		'0003': { trades: 1, fa: 2, auctions: 3 },
+		'0004': { trades: 3, fa: 4, auctions: 8 },
+		'0005': { trades: 2, fa: 3, auctions: 6 },
+		'0006': { trades: 0, fa: 1, auctions: 1 },
+		'0007': { trades: 1, fa: 3, auctions: 4 },
+		'0008': { trades: 5, fa: 6, auctions: 11 },
+		'0009': { trades: 2, fa: 4, auctions: 7 },
+		'0010': { trades: 3, fa: 5, auctions: 10 },
+		'0011': { trades: 0, fa: 1, auctions: 2 },
+		'0012': { trades: 1, fa: 2, auctions: 5 },
+		'0013': { trades: 2, fa: 3, auctions: 6 },
+		'0014': { trades: 0, fa: 0, auctions: 0 },
+		'0015': { trades: 1, fa: 2, auctions: 3 },
+		'0016': { trades: 2, fa: 4, auctions: 8 },
+	};
 	const MOCK_MOVE_TYPES = ['TRADE', 'FREE_AGENT', 'AUCTION_WON', 'IR', 'TAXI'];
 	// Hours since each franchise's last MFL move. Deliberately NOT derived from
 	// the site-visit profile — the cases worth seeing in mock are the ones where
@@ -200,11 +183,15 @@ if (useMock) {
 		'0007': 60, '0008': 40, '0009': 50, '0010': 44, '0011': 2, '0012': 80,
 		'0013': 70, '0014': 9, '0016': 55,
 	};
-	for (const [fid, hours] of Object.entries(mockMflHoursAgo)) {
-		mflMoveMap[fid] = {
-			at: Date.now() - hours * 3_600_000,
-			type: MOCK_MOVE_TYPES[parseInt(fid, 10) % MOCK_MOVE_TYPES.length],
-		};
+	for (const [fid, p] of Object.entries(mockTxProfiles)) {
+		txCountMap[fid] = { trades: p.trades, freeAgents: p.fa, thirdStat: p.auctions, total: p.trades + p.fa + p.auctions };
+		const hours = mockMflHoursAgo[fid];
+		if (hours !== undefined) {
+			mflMoveMap[fid] = {
+				at: Date.now() - hours * 3_600_000,
+				type: MOCK_MOVE_TYPES[parseInt(fid, 10) % MOCK_MOVE_TYPES.length],
+			};
+		}
 	}
 } else {
 	const leagueYear = getCurrentLeagueYear();
@@ -216,7 +203,30 @@ if (useMock) {
 		: [];
 
 	mflMoveMap = lastMflMoveByFranchise(rawTx);
+
+	for (const tx of rawTx) {
+		if (tx.type === 'TRADE') {
+			ensureFranchise(tx.franchise); ensureFranchise(tx.franchise2);
+			txCountMap[tx.franchise].trades++; txCountMap[tx.franchise].total++;
+			txCountMap[tx.franchise2].trades++; txCountMap[tx.franchise2].total++;
+		} else if (tx.type === 'FREE_AGENT') {
+			ensureFranchise(tx.franchise);
+			txCountMap[tx.franchise].freeAgents++; txCountMap[tx.franchise].total++;
+		} else if (tx.type === 'AUCTION_WON') {
+			ensureFranchise(tx.franchise);
+			txCountMap[tx.franchise].thirdStat++; txCountMap[tx.franchise].total++;
+		}
+	}
 }
+
+const txLeaderboard = leagueConfig.teams
+	.map((team: any) => ({
+		franchiseId: team.franchiseId,
+		name: chooseTeamName({ fullName: team.name, nameMedium: team.nameMedium, nameShort: team.nameShort, abbrev: team.abbrev }),
+		icon: team.icon,
+		counts: txCountMap[team.franchiseId] || { trades: 0, freeAgents: 0, thirdStat: 0, total: 0 },
+	}))
+	.sort((a, b) => b.counts.total - a.counts.total);
 
 // MFL's own `lastVisit` — the real last-login timestamp per franchise, synced
 // by .github/workflows/sync-owner-last-visit.yml. A glob rather than a static
@@ -281,31 +291,6 @@ const chartTeams = leagueConfig.teams.map((team) => ({
 	values: pageViewData.dates.map((d) => pageViewData.data[d]?.[team.franchiseId] ?? 0),
 }));
 const chartDates = pageViewData.dates;
-
-// ── Derived analytics ──
-// All of it pure, all of it shared with the AFL's copy of this page.
-const traffic = summarizeTraffic(pageViewData);
-const engagement = sortEngagement(
-	buildEngagementRows(
-		leagueConfig.teams.map((team) => ({
-			franchiseId: team.franchiseId,
-			name: chooseTeamName({
-				fullName: team.name,
-				nameMedium: team.nameMedium,
-				nameShort: team.nameShort,
-				abbrev: team.abbrev,
-			}),
-			icon: team.icon,
-		})),
-		pageViewData,
-	),
-);
-const pageInsights = buildPageInsights({
-	league: leagueDef.slug,
-	globalPages,
-	anonPages,
-	ownerPages,
-});
 ---
 
 <TheLeagueLayout title="Owner Activity">
@@ -313,14 +298,13 @@ const pageInsights = buildPageInsights({
 		leagueName="The League"
 		leagueHref="/theleague"
 		teams={teams}
-		pages={pageInsights}
-		traffic={traffic}
-		engagement={engagement}
+		txLeaderboard={txLeaderboard}
+		globalPages={globalPages}
+		ownerPages={ownerPages}
 		chartTeams={chartTeams}
 		chartDates={chartDates}
 		surfaces={surfaceSection?.surfaces}
 		ownerSurfaces={surfaceSection?.ownerSurfaces}
 		lastSurfaces={surfaceSection?.lastSurfaces}
-		adoption={adoption}
 	/>
 </TheLeagueLayout>

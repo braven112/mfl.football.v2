@@ -69,25 +69,24 @@ describe('buildLiveScoringHeroProps', () => {
   const origin = new URL('https://example.test/');
 
   const capture = () => {
-    const calls: { leagueId: string; week: number }[] = [];
-    const loadImpl = (async (o: any) => {
-      calls.push({ leagueId: o.leagueId, week: o.week });
-      return { ok: true, week: o.week, matchups: [], scores: {}, remaining: {}, players: {}, bench: {}, playersYetToPlay: {} };
-    }) as never;
-    return { calls, loadImpl };
+    const urls: string[] = [];
+    const fetchImpl = (async (u: URL | string) => {
+      urls.push(String(u));
+      return { ok: true, json: async () => ({ matchups: [], scores: {}, remaining: {} }) };
+    }) as unknown as typeof fetch;
+    return { urls, fetchImpl };
   };
 
-  it('sends each league’s OWN MFL id, so the read cannot answer for the other', async () => {
+  it('sends each league’s OWN MFL id, so the poll cannot answer for the other', async () => {
     for (const league of [THELEAGUE, AFL]) {
-      const { calls, loadImpl } = capture();
+      const { urls, fetchImpl } = capture();
       const props = await buildLiveScoringHeroProps({
-        league: league.slug, week: 3, origin, teams, loadImpl,
+        league: league.slug, week: 3, origin, teams, fetchImpl,
       });
       // The registry field is `id`. Reading `leagueId` (which only
-      // getLeagueContext defines) yields undefined — and the loader resolves
-      // the MFL HOST from this id, so getting it wrong now pairs one league's
-      // id with another league's server, which MFL answers as a clean 200.
-      expect(calls[0]?.leagueId).toBe(league.id);
+      // getLeagueContext defines) yields undefined, fails the endpoint's
+      // /^\d+$/ check, and silently serves TheLeague to everyone.
+      expect(urls[0]).toContain(`L=${league.id}`);
       expect(props?.leagueId).toBe(league.id);
       expect(props?.leagueId).toMatch(/^\d+$/);
       expect(props?.leagueName).toBe(league.name);
@@ -99,9 +98,9 @@ describe('buildLiveScoringHeroProps', () => {
   });
 
   it('omits scopeFranchiseIds rather than sending an empty list', async () => {
-    const { loadImpl } = capture();
+    const { fetchImpl } = capture();
     const props = await buildLiveScoringHeroProps({
-      league: AFL.slug, week: 3, origin, teams, scopeFranchiseIds: [], loadImpl,
+      league: AFL.slug, week: 3, origin, teams, scopeFranchiseIds: [], fetchImpl,
     });
     expect(props && 'scopeFranchiseIds' in props).toBe(false);
   });
@@ -109,21 +108,20 @@ describe('buildLiveScoringHeroProps', () => {
   // Every way the feed can fail must return undefined, so the homepage keeps
   // its normal hero. Returning a props object renders a scoreboard with
   // nothing in it — worse than not offering one, because it looks broken.
-  //
-  // The read is in-process now (no self-fetch), so the transport failures a
-  // fetch could produce — non-2xx, a non-JSON body — are the LOADER's to
-  // absorb and it reports them all the same way: `ok: false`. That flag is
-  // therefore the case that matters most here, because it is the one that
-  // looks exactly like a healthy empty week unless it is read.
-  const failures: [string, () => never][] = [
-    ['the read throws', () => (async () => { throw new Error('network'); }) as never],
-    ['200 with ok:false', () => (async () => ({ ok: false, week: 3, matchups: [], scores: {}, remaining: {}, players: {}, bench: {}, playersYetToPlay: {} })) as never],
+  const failures: [string, () => typeof fetch][] = [
+    ['the request throws', () => (async () => { throw new Error('network'); }) as unknown as typeof fetch],
+    ['a non-2xx status', () => (async () => ({ ok: false, status: 500, json: async () => ({}) })) as unknown as typeof fetch],
+    ['a non-JSON body', () => (async () => ({ ok: true, json: async () => { throw new SyntaxError('<html>'); } })) as unknown as typeof fetch],
+    // 200 with ok:false is the UPSTREAM MFL failure. It is the one that looks
+    // exactly like a healthy empty week unless the flag is read.
+    ['200 with ok:false', () => (async () => ({ ok: true, json: async () => ({ ok: false, matchups: [], scores: {} }) })) as unknown as typeof fetch],
+    ['200 with an error key', () => (async () => ({ ok: true, json: async () => ({ error: 'Failed to fetch live scoring', matchups: [] }) })) as unknown as typeof fetch],
   ];
 
   for (const [label, make] of failures) {
     it(`returns undefined when ${label}`, async () => {
       expect(await buildLiveScoringHeroProps({
-        league: AFL.slug, week: 3, origin, teams, loadImpl: make(),
+        league: AFL.slug, week: 3, origin, teams, fetchImpl: make(),
       })).toBeUndefined();
     });
   }
@@ -132,11 +130,11 @@ describe('buildLiveScoringHeroProps', () => {
     // ok:true with no matchups is the offseason/bye shape. It must NOT be
     // confused with the outage above — that merge is the trap in
     // docs/claude/rules/lineups.md.
-    const loadImpl = (async () => ({
-      ok: true, week: 3, matchups: [], scores: {}, remaining: {}, players: {}, bench: {}, playersYetToPlay: {},
-    })) as never;
+    const fetchImpl = (async () => ({
+      ok: true, json: async () => ({ ok: true, matchups: [], scores: {}, remaining: {} }),
+    })) as unknown as typeof fetch;
     const props = await buildLiveScoringHeroProps({
-      league: AFL.slug, week: 3, origin, teams, loadImpl,
+      league: AFL.slug, week: 3, origin, teams, fetchImpl,
     });
     expect(props).toBeDefined();
     expect(props?.matchups).toEqual([]);

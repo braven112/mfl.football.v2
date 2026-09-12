@@ -1,151 +1,117 @@
 {
-  "weekOf": "2026-09-21",
+  "weekOf": "2026-09-14",
   "changes": [
     {
-      "date": "2026-09-10",
-      "type": "enhancement",
-      "summary": "<a href=\"/activity\">Owner Activity</a> is now site analytics: league traffic, per-owner engagement, page reach and app installs \u2014 and no transaction leaderboard.",
-      "impact": "user",
-      "area": "other",
-      "league": "theleague",
-      "featured": true,
-      "headline": "Owner Activity became the site's analytics page",
-      "lede": "Traffic day by day with signed-out visitors counted, how many days each owner showed up, which pages the most owners open, which have never been opened, and how much of the league has the app installed.",
-      "image": "owner-activity-analytics.webp",
-      "imageAlt": "The League's Owner Activity page showing traffic cards, a daily signed-in versus signed-out bar strip, and the per-owner page views chart"
-    },
-    {
-      "date": "2026-09-10",
-      "type": "enhancement",
-      "summary": "<a href=\"/activity\">Owner Activity</a> is now site analytics: league traffic, per-owner engagement, page reach and app installs \u2014 and no transaction leaderboard.",
-      "impact": "user",
-      "area": "other",
-      "league": "afl",
-      "featured": true,
-      "headline": "Owner Activity became the site's analytics page",
-      "lede": "Traffic day by day with signed-out visitors counted, how many days each owner showed up, which pages the most owners open, which have never been opened, and how much of the league has the app installed.",
-      "image": "afl-owner-activity-analytics.webp",
-      "imageAlt": "The AFL's Owner Activity page showing traffic cards, a daily signed-in versus signed-out bar strip, and the per-owner page views chart"
-    },
-    {
-      "date": "2026-09-10",
-      "type": "enhancement",
-      "summary": "Signed-out visits are counted now \u2014 <a href=\"/activity\">Owner Activity</a> shows how much of the traffic comes from people who never sign in, and which public pages they read.",
-      "impact": "user",
-      "area": "other",
-      "league": "both"
-    },
-    {
-      "date": "2026-09-10",
+      "date": "2026-09-09",
       "type": "bug-fix",
-      "summary": "Players on injured reserve no longer count against your active roster when you add a <a href=\"/players\">free agent</a> \u2014 the form now shows how many active spots you actually have.",
+      "summary": "The What's New card on the homepage stops running its story underneath the screenshot. The write-up and the framed screenshot beside it were each sized as if the other were not there, so on a lot of window widths the last words of every line disappeared behind the picture. The text column now reserves the frame's space at every width, on both sites.",
       "impact": "user",
-      "area": "free-agents",
+      "area": "homepage",
       "league": "both"
     },
     {
       "date": "2026-09-09",
       "type": "style-tweak",
-      "summary": "The game line on <a href=\"/lineup\">Set Lineup</a> now leads with the network's logo at text size and closes on a bigger opponent helmet \u2014 the channel was reading as the headline.",
+      "summary": "The What's New card on the AFL homepage now shows the first two lines of the write-up and sends you to the full story, the way TheLeague's does. Longer announcements were printing in full and stretching the card down the page.",
       "impact": "user",
-      "area": "rosters",
-      "league": "both"
-    },
-    {
-      "date": "2026-09-09",
-      "type": "bug-fix",
-      "summary": "<a href=\"/live-scoring\">Live Scoring</a> showed no fantasy matchups during the Wednesday opener \u2014 the board now loads its scores directly and keeps polling on any game night.",
-      "impact": "user",
-      "area": "live-scoring",
-      "league": "both"
-    },
-    {
-      "date": "2026-09-10",
-      "type": "bug-fix",
-      "summary": "<a href=\"/activity\">Owner Activity</a> no longer slides sideways on a phone \u2014 the Last Seen table scrolls on its own now, instead of dragging the page with it.",
-      "impact": "user",
-      "area": "other",
-      "league": "both"
-    },
-    {
-      "date": "2026-09-10",
-      "type": "style-tweak",
-      "summary": "Team logos on <a href=\"/activity\">Owner Activity</a> are no longer circle-cropped \u2014 every club's mark shows in full, corners and all.",
-      "impact": "user",
-      "area": "design-system",
-      "league": "both"
-    },
-    {
-      "date": "2026-09-10",
-      "type": "bug-fix",
-      "summary": "League dates now follow the official NFL schedule \u2014 2026 opened on a Wednesday, so Roger no longer announces the season a day late, and deadlines and playoff weeks track the real calendar.",
-      "impact": "user",
-      "area": "calendar",
-      "league": "both"
-    },
-    {
-      "date": "2026-09-11",
-      "type": "bug-fix",
-      "summary": "The AFL <a href=\"/calendar\">calendar</a> had Regular Season Ends on Dec 31 \u2014 two weeks after the playoffs start. It now reads Dec 17, when Week 14 closes and the bracket opens.",
-      "impact": "user",
-      "area": "calendar",
+      "area": "homepage",
       "league": "afl"
     },
     {
-      "date": "2026-09-10",
+      "date": "2026-09-09",
       "type": "bug-fix",
-"summary": "Schefter can no longer pair a team with a player it doesn't roster — trade-rumor posts now check ownership against the rosters before naming anyone.",
+      "summary": "The chevron that drops down every team on the Roster & Salary Cap page works on every visit now. Click into rosters from somewhere else on the site and that arrow was dead — nothing opened, no other teams to jump to — until you reloaded the page. It only ever wired itself up once, on the first roster page you opened all session.",
       "impact": "user",
-      "area": "schefter",
+      "area": "rosters",
       "league": "theleague"
     },
     {
-      "date": "2026-09-10",
+      "date": "2026-09-09",
       "type": "bug-fix",
-      "summary": "Schefter runs at most one trade story a day now, across every lane — and the invented trade-speculation pieces drop to one a week.",
+      "summary": "Win a player on waivers with nothing cut alongside him and you can set his contract length again. Any claim that did not come paired with a drop was landing on your roster with no way to declare years — no chip on the Yrs column, no Declare Contract in his action sheet — so the 24-hour window quietly ran out on a deal you never got to make. Fixed, and the acquisition now shows up within a couple of minutes instead of waiting on the next data sync.",
+      "impact": "user",
+      "area": "rosters",
+      "league": "theleague"
+    },
+    {
+      "date": "2026-09-08",
+      "type": "bug-fix",
+      "summary": "Schefter no longer files the same trade rumor twice. One offer could sit in his tip queue as two separate slips, and his morning catch-up read that as two stories — so the same deal went out to the chat twice, a second apart, with two different links under it.",
       "impact": "user",
       "area": "schefter",
       "league": "theleague"
     },
     {
-      "date": "2026-09-11",
-      "type": "enhancement",
-      "summary": "Schefter's trade-speculation posts now open the <a href=\"/front-office/trade-builder\">Trade Builder</a> with the named team loaded, instead of linking back to the post you just read.",
+      "date": "2026-09-08",
+      "type": "bug-fix",
+      "summary": "Schefter now goes quiet from draft weekend, not from kickoff. He was still running on his full offseason volume through the busiest roster week of the year — drafts done, cuts landing — when the league already has plenty to talk about without him.",
       "impact": "user",
       "area": "schefter",
+      "league": "both"
+    },
+    {
+      "date": "2026-09-08",
+      "type": "bug-fix",
+      "summary": "The Cap Space Rankings card on the homepage now sends you to the cap space rankings. Its arrow used to drop you on the playoff standings — a fine page, just not the one you were looking at — and it now opens League Summary already sorted by this year's cap space, top to bottom.",
+      "impact": "user",
+      "area": "homepage",
       "league": "theleague"
     },
     {
-      "date": "2026-09-11",
+      "date": "2026-09-09",
       "type": "style-tweak",
-      "summary": "<a href=\"/live-scoring\">Live Scoring</a>'s matchup view now runs edge-to-edge on a phone — tighter header, roomier player rows, and one more starter on screen without scrolling.",
+      "summary": "The AFL live scoreboard on the homepage now wears league navy instead of the blue it inherited from The League — your matchup border, the leading score and the YOUR GAME tag all match the rest of the AFL. Dark mode gets a lighter navy so the numbers still read against the navy card.",
       "impact": "user",
       "area": "live-scoring",
-      "league": "both"
+      "league": "afl"
     },
     {
-      "date": "2026-09-11",
-      "type": "enhancement",
-      "summary": "<a href=\"/players\">Free Agents</a> on mobile: the waiver status is now a small badge you tap for details, so the page gets to the player list without a wide banner running off-screen.",
+      "date": "2026-09-09",
+      "type": "bug-fix",
+      "summary": "League Summary was coloring six of its fourteen categories backwards. On Dead Money, Average Age, Expiring Contracts, Committed Salary %, Roster Holes and Salary-Weighted Age, the teams in the best shape were painted red and the teams in the worst shape green — so the team carrying $6.0M in dead money looked like the league's healthiest and the one carrying $213K looked like its sickest. Green now means good on every category.",
       "impact": "user",
-      "area": "free-agents",
-      "league": "both"
-    },
-    {
-      "date": "2026-09-11",
-      "type": "style-tweak",
-      "summary": "<a href=\"/players\">Free Agents</a>' toolbar on mobile now fits into two tidy rows instead of three, with Watch List grouped by the view toggles and My Rank by the action buttons.",
-      "impact": "user",
-      "area": "free-agents",
+      "area": "league-summary",
       "league": "theleague"
     },
     {
-      "date": "2026-09-11",
-      "type": "new-page",
-      "summary": "New <a href=\"/schedule\">Schedule</a> page: your own season week by week with scores and next opponent, plus the whole league's grid.",
+      "date": "2026-09-09",
+      "type": "bug-fix",
+      "summary": "On AFL trade deadline day, the Open Trade Builder button now opens the AFL trade builder. It was pointed at The League's — on the one card in the league whose entire job is telling you to go make a trade before midnight.",
       "impact": "user",
-      "area": "schedule",
+      "area": "trade-builder",
+      "league": "afl"
+    },
+    {
+      "date": "2026-09-09",
+      "type": "style-tweak",
+      "summary": "The AFL trade deadline countdown now wears the AFL's own red rather than a generic alert red — same crimson as the nav and the breadcrumb bar. Still red, because it is still a deadline.",
+      "impact": "user",
+      "area": "homepage",
+      "league": "afl"
+    },
+    {
+      "date": "2026-09-08",
+      "type": "bug-fix",
+      "summary": "The \"put this on your Home Screen\" banner no longer flattens the homepage. It was landing in the first column of the two-column layout and shoving everything else — hero, your team, standings, What's New — into the narrow sidebar track, where the paragraphs wrapped six words at a time next to an empty left half. It now runs across the top as a strip, the way it was always meant to.",
+      "impact": "user",
+      "area": "homepage",
       "league": "both"
+    },
+    {
+      "date": "2026-09-08",
+      "type": "bug-fix",
+      "summary": "Already have the app? Stop being asked to install it. The banner could only see the browser it was in, so an owner with the app on their phone still got pitched it on every desktop — and \"Not now\" only quieted that one browser for a while. There's now an \"I already have it\" option that settles it for good on every device you sign in on, and opening the installed app once does the same thing without you clicking anything.",
+      "impact": "user",
+      "area": "notifications",
+      "league": "both"
+    },
+    {
+      "date": "2026-09-09",
+      "type": "bug-fix",
+      "summary": "Contract declaration windows are a little harder to miss. When MFL processed two moves of the same kind for one team in the same second — which is exactly what a waiver run does, stamping every claim in the league with one timestamp — the site could quietly discard one of them while working out who you had just acquired. Rare, but the cost when it hit was a declaration window you never got told about. It now tells the two moves apart properly.",
+      "impact": "user",
+      "area": "rosters",
+      "league": "theleague"
     }
   ]
 }

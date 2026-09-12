@@ -54,9 +54,6 @@ import {
 } from '../../utils/live-scoring-hero-props';
 import { getAflWhatsNextTimeline } from '../../utils/league-event-resolver';
 import { getAflLeagueYear, getCurrentSeasonYear } from '../../utils/league-year';
-import { getCurrentNFLWeek } from '../../utils/current-week';
-import { findNextGame, franchiseSchedule, parseWeeklySchedule } from '../../utils/schedule-data.mjs';
-import { chooseTeamName } from '../../utils/team-names';
 import { loadAflDraftSlot } from '../../utils/afl-draft-slot';
 import { resolveAflTeamSpotlight } from '../../utils/afl-team-spotlight';
 import { resolveHeroFranchiseBackdrop } from '../../utils/hero-franchise-backdrop';
@@ -196,7 +193,6 @@ const heroState = resolveAflHeroState({
 // ── Standings + roster data ─────────────────────────────────────────────────
 const standingsFeeds = import.meta.glob('../../../data/afl-fantasy/mfl-feeds/*/standings.json', { eager: true });
 const rosterFeeds = import.meta.glob('../../../data/afl-fantasy/mfl-feeds/*/rosters.json', { eager: true });
-const scheduleFeeds = import.meta.glob('../../../data/afl-fantasy/mfl-feeds/*/schedule.json', { eager: true });
 
 function getModule(mod: any) {
   return mod && typeof mod === 'object' && 'default' in mod ? mod.default : mod;
@@ -256,33 +252,6 @@ const rosterFranchises = rostersFeed?.rosters?.franchise
 const userRosterEntry = rosterFranchises.find((r: any) => r.id === userFranchiseId);
 const rosterCount = userRosterEntry?.player
   ? (Array.isArray(userRosterEntry.player) ? userRosterEntry.player.length : 1)
-  : undefined;
-
-// Next opponent for the snapshot's "Next Up" tile. The tile has always had
-// the prop; nothing filled it, so it read "TBD" all season. `findNextGame`
-// skips played weeks, so a doubleheader week resolves to the first game still
-// to play rather than to the week's last one.
-const scheduleWeeks = parseWeeklySchedule(pickFeed(scheduleFeeds, 'schedule.json'));
-const nextGame = userFranchiseId
-  ? findNextGame(franchiseSchedule(scheduleWeeks, userFranchiseId), getCurrentNFLWeek(effectiveDate, seasonYear) ?? 1)
-  : null;
-const nextOpponentTeam = nextGame
-  ? aflConfig.teams.find((t: { franchiseId: string }) => t.franchiseId === nextGame.opponentId)
-  : undefined;
-const nextOpponent = nextOpponentTeam
-  ? {
-      name: chooseTeamName(
-        {
-          fullName: nextOpponentTeam.name,
-          nameMedium: nextOpponentTeam.nameMedium,
-          nameShort: nextOpponentTeam.nameShort,
-          abbrev: nextOpponentTeam.abbrev,
-        },
-        'default',
-      ),
-      icon: nextOpponentTeam.icon,
-      isHome: nextGame?.isHome,
-    }
   : undefined;
 
 // Record from standings feed
@@ -435,7 +404,6 @@ if (heroState.kind === 'regular-season' && heroState.slot === 'live-scoring' && 
         userTeam={userTeam}
         userConferenceName={userConferenceName}
         record={record}
-        nextOpponent={nextOpponent}
         rosterCount={rosterCount}
         rosterYear={rosterYear === aflLeagueYear ? undefined : rosterYear}
         rosterLimit={28}

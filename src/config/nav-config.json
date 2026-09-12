@@ -198,14 +198,6 @@
           "description": "Pick which legacy era your team wears in Week 8"
         },
         {
-          "id": "schedule",
-          "label": "Schedule",
-          "icon": "scoreboard-2",
-          "path": "/schedule",
-          "external": false,
-          "description": "Your season week by week, and the full league grid"
-        },
-        {
           "id": "standings",
           "label": "Standings",
           "icon": "shield",
@@ -363,7 +355,8 @@
     },
     {
       "id": "cap-contracts",
-      "label": "Front Office",
+      "label": "Cap & Contracts",
+      "labelAFL": "Roster & Trades",
       "phaseOrder": {
         "inSeason": 3,
         "offSeason": 3
@@ -371,12 +364,40 @@
       "defaultOpen": "never",
       "links": [
         {
-          "id": "front-office",
-          "label": "Front Office",
-          "icon": "wallet",
-          "path": "/front-office",
+          "id": "rosters",
+          "label": "Roster/Salary",
+          "labelAFL": "Rosters",
+          "icon": "banknote",
+          "iconAFL": "helmet",
+          "path": "/rosters",
           "external": false,
-          "description": "Contracts, cap space, trades and every salary report — one door"
+          "description": "View all team rosters and salary cap details"
+        },
+        {
+          "id": "contracts",
+          "label": "Contracts",
+          "icon": "file-text",
+          "path": "/contracts/manage",
+          "external": false,
+          "leagueOnly": "theleague",
+          "description": "View and manage your contract declarations"
+        },
+        {
+          "id": "trade-builder",
+          "label": "Trade Builder",
+          "icon": "transactions-2",
+          "path": "/trade-builder",
+          "external": false,
+          "description": "Simulate trades and see cap impact"
+        },
+        {
+          "id": "projected-free-agents",
+          "label": "Projected Free Agents",
+          "icon": "binoculars-front",
+          "path": "/projected-free-agents",
+          "external": false,
+          "leagueOnly": "theleague",
+          "description": "Players in their final contract year heading to free agency"
         }
       ]
     },
@@ -543,20 +564,18 @@
   "routeEquivalence": {
     "/rosters": "/rosters",
     "/rosters?view=nextyear": "/rosters?view=nextyear",
-    "/rosters?view=planner": "/rosters?view=planner",
     "/standings": "/standings",
     "/playoffs": "/playoffs",
-    "/front-office": "/front-office",
-    "/front-office/salary-analytics": "/front-office/salary-analytics",
-    "/front-office/salary-history": "/front-office/salary-history",
-    "/front-office/salary-archive": "/front-office/salary-archive",
+    "/salary": "/salary",
+    "/salary-history": "/salary-history",
+    "/salary-archive": "/salary-archive",
     "/mvp": "/mvp",
-    "/front-office/dead-money": "/front-office/dead-money",
+    "/dead-money": "/dead-money",
     "/draft/order": "/draft/order",
     "/icons": "/icons",
     "/assets": "/assets",
-    "/front-office/contracts": "/front-office/contracts",
-    "/front-office/trade-builder": "/front-office/trade-builder",
+    "/contracts/manage": "/contracts/manage",
+    "/trade-builder": "/trade-builder",
     "/players": "/players",
     "/calendar": "/calendar",
     "/whats-new": "/whats-new",

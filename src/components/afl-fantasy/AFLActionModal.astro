@@ -532,7 +532,7 @@
       const action = pendingAction;
 
       if (action === 'trade') {
-        const target = `/afl-fantasy/front-office/trade-builder?from=${encodeURIComponent(franchiseId ?? '')}&player=${encodeURIComponent(playerId)}`;
+        const target = `/afl-fantasy/trade-builder?from=${encodeURIComponent(franchiseId ?? '')}&player=${encodeURIComponent(playerId)}`;
         window.location.href = target;
         return;
       }

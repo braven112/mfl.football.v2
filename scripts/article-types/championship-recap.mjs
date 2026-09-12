@@ -12,10 +12,7 @@ import { isChampionshipComplete } from '../article-utils/season-guards.mjs';
 import { primaryLink, articleLink, featureLink, linkList } from '../article-utils/article-links.mjs';
 import { franchiseRecord } from '../article-utils/franchise-record.mjs';
 
-// Derived from the NFL's season length, not written as 17: the title game is
-// the week before the NFL's last regular-season week, and that moved once
-// already when the NFL went to 18 weeks in 2021.
-import { CHAMPIONSHIP_WEEK } from '../../src/utils/fantasy-bracket.mjs';
+const CHAMPIONSHIP_WEEK = 17;
 
 export const config = {
   id: (year) => `sf_${year}_championship_recap`,
@@ -62,7 +59,7 @@ export async function buildFactSheet(data, week, year, projectRoot) {
   // Find the championship matchup (typically the first matchup in week 17)
   const matchups = weekData.weeklyResults.matchup;
 
-  lines.push(`=== CHAMPIONSHIP GAME (Week ${CHAMPIONSHIP_WEEK}) ===`);
+  lines.push('=== CHAMPIONSHIP GAME (Week 17) ===');
   for (const matchup of matchups) {
     const [f1, f2] = matchup.franchise || [];
     if (!f1 || !f2) continue;

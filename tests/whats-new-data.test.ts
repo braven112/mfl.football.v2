@@ -7,14 +7,7 @@ import { ALL_LEAGUES } from '../src/config/leagues';
 import entries from '../src/data/whats-new.json';
 import stagingFile from '../src/data/weekly-changelog-staging.json';
 import { describeSpriteIconValidation } from './helpers/sprite-icons';
-import { astroRouteExists } from './helpers/astro-routes';
-import { stripTags } from '../src/utils/whats-new-links';
 import { WHATS_NEW_ACTIVE_MAX } from '../scripts/lib/retention-policy.mjs';
-import {
-  AREA_LABELS,
-  BOTH_TAG,
-  leaguesForStagedChange,
-} from '../scripts/lib/weekly-changelog-format.mjs';
 
 /**
  * What's New Data Validation
@@ -51,37 +44,11 @@ const archiveEntries: WhatsNewEntry[] = existsSync(ARCHIVE_DIR)
 const typedEntries: WhatsNewEntry[] = [...activeEntries, ...archiveEntries];
 
 describe('whats-new.json retention cap', () => {
-  /**
-   * An entry still inside its hero rotation window, which the cap deliberately
-   * retains past WHATS_NEW_ACTIVE_MAX.
-   *
-   * The hero resolver and the homepage row read whats-new-entries.ts, which
-   * imports the ACTIVE file only — so archiving a live promo pulls it off the
-   * homepage before its campaign ends. Publishing two entries into a full
-   * 40/40 file did that to the AFL's Throwback Week promo (14-day window, six
-   * days still to run). The cap bounds the bundle; it does not end campaigns.
-   */
-  const FEATURE_HERO_DAYS = 7;
-  const stillPromoting = (entry: WhatsNewEntry): boolean => {
-    if (entry.excludeFromHero === true) return false;
-    const at = Date.parse(`${entry.date}T12:00:00Z`);
-    if (Number.isNaN(at)) return false;
-    const days = (Date.now() - at) / 86_400_000;
-    return days >= 0 && days <= (entry.heroRotationDays ?? FEATURE_HERO_DAYS);
-  };
-
-  it(`active file stays within WHATS_NEW_ACTIVE_MAX (${WHATS_NEW_ACTIVE_MAX}), plus open hero windows`, () => {
+  it(`active file stays within WHATS_NEW_ACTIVE_MAX (${WHATS_NEW_ACTIVE_MAX})`, () => {
     // The weekly rollup enforces this (and `--cap-only` re-enforces it), so a
     // failure here means an entry was hand-prepended without running the cap —
     // run: node scripts/weekly-changelog-rollup.mjs --cap-only
-    const retained = activeEntries.filter(stillPromoting);
-    const capped = activeEntries.length - retained.length;
-    expect(
-      capped,
-      `${activeEntries.length} active entries, of which ${retained.length} are held past the ` +
-        `cap for an open hero window (${retained.map((e) => e.id).join(', ')}). ` +
-        `The rest must fit WHATS_NEW_ACTIVE_MAX.`,
-    ).toBeLessThanOrEqual(WHATS_NEW_ACTIVE_MAX);
+    expect(activeEntries.length).toBeLessThanOrEqual(WHATS_NEW_ACTIVE_MAX);
   });
 
   it('archive files only ever contain entries older than the newest active entry', () => {
@@ -267,22 +234,6 @@ describe('whats-new.json data integrity', () => {
     ).toEqual([]);
   });
 
-  it('a hero-eligible entry always has the art the hero renders', () => {
-    // The composite hero renders the entry's screenshot. An entry that is
-    // hero-eligible with no image puts a blank frame on the homepage — which
-    // the weekly rollup could produce, because `heroWorthy` is a per-change
-    // flag while the image only ever arrives via a `featured` change, and a
-    // fixes-only week is not required to have one.
-    const artless = typedEntries
-      .filter((e) => e.excludeFromHero !== true)
-      .filter((e) => !e.image && !e.heroArt && !e.heroPlayerId)
-      .map((e) => `${e.id} (${e.category}, ${e.date})`);
-    expect(
-      artless,
-      'Hero-eligible entries need an image, heroArt, or a heroPlayerId to cast.',
-    ).toEqual([]);
-  });
-
   it('all inline description images exist', () => {
     const missing: string[] = [];
     for (const entry of typedEntries) {
@@ -445,7 +396,7 @@ describe('whats-new.json league scoping', () => {
 
 // Derived from the same registry-backed list the display code uses, so the
 // PR-time gate and the Monday cron can never validate different vocabularies.
-const VALID_STAGING_LEAGUES = [...VALID_LEAGUE_SLUGS, BOTH_TAG];
+const VALID_STAGING_LEAGUES = [...VALID_LEAGUE_SLUGS, 'both'];
 
 describe('weekly-changelog-staging.json league scoping', () => {
   interface StagingChange {
@@ -455,19 +406,11 @@ describe('weekly-changelog-staging.json league scoping', () => {
     impact: string;
     area: string;
     league?: string;
-    featured?: boolean;
-    image?: string;
-    imageAlt?: string;
-    headline?: string;
-    lede?: string;
-    heroWorthy?: boolean;
-    guide?: string;
-    entryId?: string;
-    heroHeadline?: string;
-    heroAccentWord?: string;
   }
   interface StagingFile {
     changes?: StagingChange[];
+    featuredImage?: string;
+    featuredImageLeague?: string;
   }
   const staging = stagingFile as StagingFile;
   const changes = Array.isArray(staging.changes) ? staging.changes : [];
@@ -502,17 +445,21 @@ describe('weekly-changelog-staging.json league scoping', () => {
   // The rollup groups changes by `area` and prints `AREA_LABELS[area] || area`
   // as a section heading. That fallback means a typo'd slug does NOT fail the
   // Monday job — it ships the raw slug as a heading in the article owners read
-  // ("free-agent — ..." instead of "Free Agents — ..."). Imported from the
-  // rollup's own module rather than restated here, for the same reason
-  // VALID_STAGING_LEAGUES is derived: a second copy of the list is a second
-  // thing to forget to update. (This used to regex the script's source,
-  // because the script could not be imported without running the rollup —
-  // extracting the formatting half made a real import possible.)
-  const VALID_AREAS = Object.keys(AREA_LABELS);
+  // ("free-agent — ..." instead of "Free Agents — ..."). Read the vocabulary
+  // out of the script's own source rather than restating it, for the same
+  // reason VALID_STAGING_LEAGUES is derived: a second copy of the list is a
+  // second thing to forget to update.
+  const ROLLUP_SCRIPT = resolve(__dirname, '../scripts/weekly-changelog-rollup.mjs');
+  const VALID_AREAS = (() => {
+    const src = readFileSync(ROLLUP_SCRIPT, 'utf-8');
+    const block = src.match(/const AREA_LABELS = \{([\s\S]*?)\n\};/);
+    if (!block) throw new Error('Could not find AREA_LABELS in weekly-changelog-rollup.mjs');
+    return [...block[1].matchAll(/^\s*'([^']+)'\s*:/gm)].map((m) => m[1]);
+  })();
 
-  it('imports a non-trivial area vocabulary from the rollup module', () => {
-    // Guards the import: an empty or renamed AREA_LABELS would validate every
-    // staged change against [] and still report green.
+  it('parses a non-trivial area vocabulary out of the rollup script', () => {
+    // Guards the regex above: if the script is reformatted so the match breaks,
+    // fail here rather than silently validating every change against [].
     expect(VALID_AREAS.length).toBeGreaterThan(5);
     expect(VALID_AREAS).toContain('other');
   });
@@ -524,20 +471,14 @@ describe('weekly-changelog-staging.json league scoping', () => {
     expect(
       bad,
       `Staged changes must use an area slug defined in AREA_LABELS ` +
-        `(scripts/lib/weekly-changelog-format.mjs). Unknown slugs don't fail the rollup — ` +
+        `(scripts/weekly-changelog-rollup.mjs). Unknown slugs don't fail the rollup — ` +
         `they render raw as a section heading in the published entry. ` +
         `Valid: ${VALID_AREAS.join(' | ')}`,
     ).toEqual([]);
   });
 
   it('every staged change has a valid date, type, and impact', () => {
-    const VALID_TYPES = [
-      'new-page',
-      'new-feature',
-      'enhancement',
-      'bug-fix',
-      'style-tweak',
-    ];
+    const VALID_TYPES = ['bug-fix', 'style-tweak'];
     const VALID_IMPACTS = ['user', 'admin'];
     const problems: string[] = [];
     for (const c of changes) {
@@ -557,211 +498,19 @@ describe('weekly-changelog-staging.json league scoping', () => {
     expect(
       problems,
       'Staged changelog entries must carry the fields CLAUDE.md specifies. ' +
-        'Since Sept 2026 staging is the default path for ALL user-facing work — ' +
-        'only a marquee launch gets its own whats-new.json entry.',
+        'Anything bigger than a bug-fix or style-tweak belongs in whats-new.json ' +
+        'as its own entry, not in the weekly rollup.',
     ).toEqual([]);
   });
 
-  // ── The weekly article's shape ──────────────────────────────────────────
-  //
-  // The rollup is one scannable list, one line per change, with the depth
-  // behind a link. Every guard below protects that shape at PR time rather
-  // than at 8pm Monday, because the rollup PUBLISHES AND EMPTIES the queue —
-  // a failure there costs the week's changes, a failure here costs a rerun.
-
-  /**
-   * How the reader sees a line: markup stripped and entities resolved.
-   *
-   * Both halves matter. The strip uses the shared `stripTags`, which loops
-   * until stable — the single-pass `.replace()` this used to do leaves
-   * `<script>` behind on input like `<scr<x>ipt>` and CodeQL flags it as an
-   * incomplete multi-character sanitizer, the same finding that hardened the
-   * original. And an entity is ONE glyph to the reader but five or six
-   * characters here, so counting them raw makes the cap quietly stricter than
-   * it claims and pushes authors away from writing `&amp;` at all — a live
-   * case, since one shipped line reads "Roster & Salary Cap".
-   */
-  const ENTITIES: Record<string, string> = {
-    '&amp;': '&', '&lt;': '<', '&gt;': '>', '&quot;': '"', '&#39;': "'",
-    '&apos;': "'", '&nbsp;': ' ', '&mdash;': '—', '&ndash;': '–', '&hellip;': '…',
-  };
-  const visibleLength = (summary: string): number => {
-    let text = stripTags(String(summary ?? ''));
-    for (const [entity, glyph] of Object.entries(ENTITIES)) {
-      text = text.split(entity).join(glyph);
-    }
-    text = text.replace(/&#(\d+);/g, (_m, code) => String.fromCodePoint(Number(code)));
-    return text.trim().length;
-  };
-
-  /**
-   * One line means one line. Staged summaries used to be 250-430 character
-   * paragraphs, which the old rollup concatenated into a wall of prose nobody
-   * read — the reason this format exists. Detail belongs in a /guides page or
-   * in the marquee article, both of which the line can link to.
-   */
-  const MAX_SUMMARY_LENGTH = 200;
-
-  it(`every staged summary reads as one line (<= ${MAX_SUMMARY_LENGTH} visible chars)`, () => {
-    const tooLong = changes
-      .filter((c) => visibleLength(c.summary) > MAX_SUMMARY_LENGTH)
-      .map((c) => `${visibleLength(c.summary)} chars — "${String(c.summary).slice(0, 60)}..."`);
+  it('featuredImage (when set) declares which league the screenshot belongs to', () => {
+    if (!staging.featuredImage) return;
     expect(
-      tooLong,
-      `The weekly article renders one bullet per staged change. Anything longer than ` +
-        `${MAX_SUMMARY_LENGTH} characters is an article, not a bullet — write the line, ` +
-        `then put the detail in a /guides page and point the change's "guide" field at it.`,
-    ).toEqual([]);
-  });
-
-  const FEATURE_TYPES = ['new-page', 'new-feature', 'enhancement'];
-
-  /**
-   * Which league articles a staged change lands in.
-   *
-   * The rollup's own helper, imported rather than restated: a second copy of
-   * this answer is what let `both` mean "every league in the registry" here
-   * while the reader saw something else on the site.
-   */
-  const leaguesFor = (change: StagingChange): string[] =>
-    leaguesForStagedChange(change);
-
-  it('at most one staged change per league is flagged "featured"', () => {
-    const byLeague = new Map<string, StagingChange[]>();
-    for (const change of changes.filter((c) => c.featured === true)) {
-      for (const league of leaguesFor(change)) {
-        byLeague.set(league, [...(byLeague.get(league) ?? []), change]);
-      }
-    }
-    const clashes = [...byLeague.entries()]
-      .filter(([, list]) => list.length > 1)
-      .map(([league, list]) => `${league}: ${list.length} featured changes`);
-    expect(
-      clashes,
-      `Exactly one change per league supplies the week's headline, lede and screenshot. ` +
-        `More than one and the rollup exits 1 on Monday night without publishing.`,
-    ).toEqual([]);
-  });
-
-  it('a week that ships a feature flags one change as "featured"', () => {
-    const missing: string[] = [];
-    for (const league of VALID_LEAGUE_SLUGS) {
-      const forLeague = changes.filter((c) => leaguesFor(c).includes(league));
-      const hasFeature = forLeague.some((c) => FEATURE_TYPES.includes(c.type));
-      const hasFeatured = forLeague.some((c) => c.featured === true);
-      if (hasFeature && !hasFeatured) missing.push(league);
-    }
-    expect(
-      missing,
-      `A week with a new page or feature needs a "featured": true change to supply the ` +
-        `article's headline, lede and top screenshot. A fixes-only week does not.`,
-    ).toEqual([]);
-  });
-
-  it('every featured change carries a headline, a lede and a screenshot', () => {
-    const problems: string[] = [];
-    for (const change of changes.filter((c) => c.featured === true)) {
-      const label = `"${String(change.summary ?? '').slice(0, 40)}..."`;
-      if (!change.headline) problems.push(`${label} is missing "headline" (the article title)`);
-      if (!change.lede) problems.push(`${label} is missing "lede" (the card/hero summary)`);
-      if (!change.image) problems.push(`${label} is missing "image" (the week's screenshot)`);
-      if (change.image && !change.imageAlt) problems.push(`${label} has "image" but no "imageAlt"`);
-    }
-    expect(problems, 'The featured change IS the article\'s face.').toEqual([]);
-  });
-
-  it('every featured screenshot exists in public/assets/whats-new/', () => {
-    const missing = changes
-      .filter((c) => c.featured === true && c.image)
-      .map((c) => String(c.image).split('/').pop()!)
-      .filter((file) => !existsSync(resolve(WHATS_NEW_ASSETS_DIR, file)));
-    expect(
-      missing,
-      `Capture it before Monday: node scripts/capture-whats-new-screenshots.mjs <id>. ` +
-        `The rollup copies the filename through verbatim, so a missing file publishes a ` +
-        `broken image AND reds the screenshot test for everyone.`,
-    ).toEqual([]);
-  });
-
-  it('a staged heroAccentWord is never set without a heroHeadline', () => {
-    const orphans = changes
-      .filter((c) => (c as { heroAccentWord?: string }).heroAccentWord && !(c as { heroHeadline?: string }).heroHeadline)
-      .map((c) => `"${String(c.summary).slice(0, 50)}..."`);
-    expect(
-      orphans,
-      `The AFL hero renders a two-part display line. Half an authored pair is ignored, ` +
-        `leaving copy that reads worse than the line derived from the title — write both ` +
-        `or neither.`,
-    ).toEqual([]);
-  });
-
-  it('a change never carries both a guide and a marquee entryId', () => {
-    const both = changes
-      .filter((c) => c.guide && c.entryId)
-      .map((c) => `"${String(c.summary).slice(0, 50)}..."`);
-    expect(
-      both,
-      `A line gets ONE trailing link. "entryId" points at the marquee article that already ` +
-        `published; "guide" points at the evergreen how-to. Pick the fuller read.`,
-    ).toEqual([]);
-  });
-
-  it('every staged "guide" points at a real /guides page', () => {
-    const broken: string[] = [];
-    for (const change of changes.filter((c) => c.guide)) {
-      const href = String(change.guide).startsWith('/')
-        ? String(change.guide)
-        : `/guides/${change.guide}`;
-      for (const league of leaguesFor(change)) {
-        const prefix = ALL_LEAGUES.find((l) => l.navSlug === league)?.slug;
-        if (!prefix) continue;
-        if (!astroRouteExists(`/${prefix}${href}`)) {
-          broken.push(`${href} does not resolve for ${league}`);
-        }
-      }
-    }
-    expect(
-      broken,
-      `A staged "guide" becomes a link in Monday's article. Write the guide page first.`,
-    ).toEqual([]);
-  });
-
-  it('every staged "entryId" names a published What\'s New entry', () => {
-    const known = new Set(typedEntries.map((e) => e.id));
-    const missing = changes
-      .filter((c) => c.entryId)
-      .map((c) => String(c.entryId))
-      .filter((id) => !known.has(id));
-    expect(
-      missing,
-      `"entryId" links the Monday article back to a marquee entry that already published. ` +
-        `An id with no entry ships a dead link in the one article everybody reads.`,
-    ).toEqual([]);
-  });
-
-  it('every staged "entryId" is visible in each league the change lands in', () => {
-    // Existing-and-visible are different questions. The [id] route redirects an
-    // entry the reader's league is not tagged for straight back to the listing,
-    // so a `both`-tagged line pointing at a single-league entry ships a "Read
-    // the full story" link that goes nowhere for half the audience. The
-    // sibling `guide` check already resolves per league; this closes the same
-    // gap for the marquee link.
-    const byId = new Map(typedEntries.map((e) => [e.id, e]));
-    const broken: string[] = [];
-    for (const change of changes.filter((c) => c.entryId)) {
-      const entry = byId.get(String(change.entryId));
-      if (!entry) continue; // covered above
-      const visibleIn = Array.isArray(entry.leagues) ? entry.leagues : [];
-      for (const league of leaguesFor(change)) {
-        if (!visibleIn.includes(league as (typeof visibleIn)[number])) {
-          broken.push(`${change.entryId} is not visible in ${league}`);
-        }
-      }
-    }
-    expect(
-      broken,
-      `Tag the staged change to the leagues the entry is actually visible in, or widen the ` +
-        `entry's own \`leagues\`.`,
-    ).toEqual([]);
+      staging.featuredImageLeague,
+      `staging "featuredImage" is set, so "featuredImageLeague" must name the league the ` +
+        `screenshot depicts (${VALID_LEAGUE_SLUGS.join(' | ')}) — otherwise one league's ` +
+        `screenshot could ship on the other league's What's New entry.`,
+    ).toBeTruthy();
+    expect(VALID_LEAGUE_SLUGS as readonly string[]).toContain(staging.featuredImageLeague!);
   });
 });

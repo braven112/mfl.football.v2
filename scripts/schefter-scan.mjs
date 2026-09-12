@@ -56,7 +56,6 @@ import { isSeasonWindowOpen } from '../src/utils/pecking-order-season-window.mjs
 import { sendPushFanout, broadcast } from './lib/push-fanout.mjs';
 import { scanRogerReplies } from './roger-groupme-reply.mjs';
 import { parsePickToken, formatPickLabel } from '../src/utils/mfl-pick-tokens.mjs';
-import { nflWeekFor } from '../src/utils/nfl-week-starts.mjs';
 
 const projectRoot = path.resolve(fileURLToPath(new URL('..', import.meta.url)));
 const MFL_HOST = process.env.MFL_HOST || 'api.myfantasyleague.com';
@@ -2128,13 +2127,6 @@ async function scanEventReminders(league) {
   for (const event of eventsData.events) {
     if (event.isPast) continue;
 
-    // Calendar landmarks that are not deadlines opt out of every touch — push
-    // and chat alike (see `remind: false` in compute-league-events.mjs). The
-    // date still resolves and still shows on /calendar; there is just nothing
-    // to remind anyone about. Skipping here, before any post is built, is what
-    // keeps the dedup ids for a silenced event from ever being written.
-    if (event.remind === false) continue;
-
     // WHICH touch, if any, is this event's chat announcement.
     //
     // Default (an obligation on individual owners): the earliest touch its tier
@@ -2931,20 +2923,27 @@ const ODDS_TEMPLATES = [
   (g) => `${g.home} ${g.spread} hosting ${g.away}. O/U: ${g.overUnder}. Sharp money hasn't spoken yet.`,
 ];
 
-/**
- * Current NFL week, from the published NFL schedule.
- *
- * Was a local `seasonConfigs` map of Week 1 Thursdays plus a "first Thursday of
- * September" fallback — one of six such tables in this repo, all of which had
- * 2026 opening Thursday Sep 10 when it actually opened Wednesday Sep 9.
- * week-resolver walks the real week starts (see src/utils/nfl-week-starts.mjs).
- */
 function getCurrentNFLWeekForOdds() {
-  const seasonYear = new Date().getFullYear();
-  // 0 = offseason. Reads nflWeekFor directly rather than week-resolver's
-  // wrapper, which caps at the regular season — Vegas Vic prices the NFL
-  // playoff weeks too, as it always has.
-  return nflWeekFor(seasonYear, new Date());
+  const now = new Date();
+  const seasonYear = now.getFullYear();
+  const seasonConfigs = {
+    2024: new Date('2024-09-05T20:20:00-04:00'),
+    2025: new Date('2025-09-04T20:20:00-04:00'),
+    2026: new Date('2026-09-10T20:20:00-04:00'),
+  };
+
+  let week1Start = seasonConfigs[seasonYear];
+  if (!week1Start) {
+    const sept1 = new Date(seasonYear, 8, 1);
+    const dayOfWeek = sept1.getDay();
+    const daysUntilThursday = dayOfWeek <= 4 ? 4 - dayOfWeek : 11 - dayOfWeek;
+    week1Start = new Date(seasonYear, 8, 1 + daysUntilThursday, 20, 20);
+  }
+
+  if (now < week1Start) return 0; // Offseason
+  const msSinceStart = now.getTime() - week1Start.getTime();
+  const weeksSinceStart = Math.floor(msSinceStart / (7 * 24 * 60 * 60 * 1000));
+  return Math.min(weeksSinceStart + 1, 22);
 }
 
 async function scanOdds(league) {

@@ -12,7 +12,6 @@ import type { HeroState } from '../types/hero-state';
 import { TARGET_ACTIVE_COUNT } from './salary-calculations';
 import { getCurrentSeasonYear } from './league-year';
 import { getNthDayOfMonth, getNflDraftDate } from './league-event-resolver';
-import { nflKickoff } from './nfl-week-starts.mjs';
 import { isCutWatchUrgent } from './hero-resolver';
 import { normalizeTeamCode, getNFLTeamName } from './nfl-logo';
 import { getLeagueBySlug, type CanonicalLeagueSlug } from '../config/leagues';
@@ -1219,16 +1218,11 @@ function enrichDraftCountdown(state: HeroState): HeroState {
   return { ...state, draftCountdownProps: { nflDraftDate, daysUntilDraft } };
 }
 
-/**
- * NFL kickoff — the season's first game from the published schedule, with the
- * Labor Day derivation only as a fallback (src/utils/nfl-week-starts.mjs).
- * NOT "the Thursday after Labor Day": 2026 opened on Wednesday Sep 9.
- */
+/** NFL kickoff = Thursday after Labor Day (1st Monday of September). */
 function getKickoffDate(year: number): Date {
-  // The season's first game from the published NFL schedule — NOT "the
-  // Thursday after Labor Day". 2026 opened on Wednesday Sep 9, so the old
-  // derivation held the preseason hero up for a day after kickoff.
-  const kickoff = nflKickoff(year);
+  const laborDay = getNthDayOfMonth(year, 8, 1, 1); // 1st Monday of September
+  const kickoff = new Date(laborDay);
+  kickoff.setDate(kickoff.getDate() + 3); // Thursday = Monday + 3
   kickoff.setHours(0, 0, 0, 0);
   return kickoff;
 }

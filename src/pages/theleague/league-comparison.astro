@@ -1,29 +1,28 @@
 ---
-import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
-import FrontOfficeNav from '../../../components/shared/front-office-nav/FrontOfficeNav.astro';
-import leagueAssets from '../../../data/theleague.assets.json';
-import { getActiveTeams } from '../../../utils/league-assets';
-import ChartCard from '../../../components/theleague/ChartCard.astro';
-import BarChart from '../../../components/theleague/BarChart.astro';
-import LeagueRosterStrengthChart from '../../../components/theleague/LeagueRosterStrengthChart.astro';
-import PositionalRankingHeatmap from '../../../components/theleague/PositionalRankingHeatmap.astro';
-import ContractHealthBadges from '../../../components/theleague/ContractHealthBadges.astro';
-import PointsBreakdownTable from '../../../components/theleague/PointsBreakdownTable.astro';
-import DraftCapitalTable from '../../../components/theleague/DraftCapitalTable.astro';
+import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
+import leagueAssets from '../../data/theleague.assets.json';
+import { getActiveTeams } from '../../utils/league-assets';
+import ChartCard from '../../components/theleague/ChartCard.astro';
+import BarChart from '../../components/theleague/BarChart.astro';
+import LeagueRosterStrengthChart from '../../components/theleague/LeagueRosterStrengthChart.astro';
+import PositionalRankingHeatmap from '../../components/theleague/PositionalRankingHeatmap.astro';
+import ContractHealthBadges from '../../components/theleague/ContractHealthBadges.astro';
+import PointsBreakdownTable from '../../components/theleague/PointsBreakdownTable.astro';
+import DraftCapitalTable from '../../components/theleague/DraftCapitalTable.astro';
 import {
   aggregateByFranchise,
   rankByPosition,
   type FranchiseMetrics,
-} from '../../../utils/league-comparison-utils';
-import { parseNumber } from '../../../utils/formatters';
-import { getCurrentSeasonYear } from '../../../utils/league-year';
+} from '../../utils/league-comparison-utils';
+import { parseNumber } from '../../utils/formatters';
+import { getCurrentSeasonYear } from '../../utils/league-year';
 
 // Load roster and salary data
-const rosterModules = import.meta.glob('../../../data/mfl-player-salaries-*.json', {
+const rosterModules = import.meta.glob('../../data/mfl-player-salaries-*.json', {
   eager: true,
 });
 const salaryAdjustmentFeeds = import.meta.glob(
-  '../../../../data/theleague/mfl-feeds/*/salaryAdjustments.json',
+  '../../../data/theleague/mfl-feeds/*/salaryAdjustments.json',
   {
     eager: true,
   }
@@ -132,7 +131,6 @@ const totalLeagueSalary = franchiseMetrics.reduce((sum, f) => sum + f.totalSalar
 ---
 
 <TheLeagueLayout title="League Comparison">
-  <FrontOfficeNav leagueSlug="theleague" current="league-comparison" crumb="League Comparison" />
   <div class="league-comparison-container">
     <h1>League Comparison</h1>
     <p class="subtitle">League-wide metrics and team rankings for {currentYear}</p>

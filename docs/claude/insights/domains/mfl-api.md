@@ -3087,38 +3087,3 @@ the full year, so a missing row is never explained by the parameters. And rows
 present in BOTH the committed feed and a live `DAYS=3` fetch are byte-identical
 once key order is normalized (11/11), which is what makes a whole-row key safe
 against false splits when merging the two sources.
-
-## 2026-09-11 - An Unplayed Matchup In `TYPE=schedule` Already Says `result: "T"`
-
-**Context:** Building the Schedule page, which reads
-`data/<league>/mfl-feeds/<year>/schedule.json` for the whole season at once.
-
-**Insight:** MFL stamps every franchise entry with a `result` field the moment
-the schedule is created, and its value for a game that has not kicked off is
-`"T"` — the same letter a real tie carries. There is no `"P"`/`"pending"` and no
-flag distinguishing the two. Anything that derives an outcome from `result`
-alone therefore reports the entire remaining season as ties: a 0-0 team reads as
-"9 ties" in September.
-
-**The discriminator is `score`, not `result`.** An unplayed entry has no `score`
-key at all (it carries `spread: "0"` instead); a played one has both. So:
-
-```js
-const played = mine.score != null && opponent.score != null;
-const outcome = played ? mine.result : null;   // never the other way round
-```
-
-Both sides are checked deliberately — MFL has published a half-filled matchup
-mid-scoring, and a game with one score is not a result yet.
-
-`result` is still the right source for the outcome ONCE played: it applies the
-league's own tie rules, which a score comparison does not reproduce.
-
-This is the second shape in this export that reads as data but isn't:
-a franchise appears in TWO matchups in a doubleheader week (TheLeague 2026 runs
-weeks 1, 2, 3 and 12; the AFL 1, 2 and 12), so any per-franchise accessor must
-return an array per week. Which weeks those are moves every season — derive them
-from the feed, never from last year's numbers.
-
-Both are held in one place now (`src/utils/schedule-data.mjs`) rather than
-re-walked per page, and pinned by `tests/schedule-data.test.ts`.

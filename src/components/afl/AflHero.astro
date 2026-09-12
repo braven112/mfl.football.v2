@@ -86,7 +86,7 @@ const { state, config, standings, userFranchiseId, backdrop = null, liveScoring}
 
 // Built from the registry, never written as a literal — this component sits
 // under afl/ but the path it needs belongs to the league entry.
-const AFL_TRADE_BUILDER = ensureLeaguePrefix(getLeagueBySlug('afl-fantasy')!, '/front-office/trade-builder');
+const AFL_TRADE_BUILDER = ensureLeaguePrefix(getLeagueBySlug('afl-fantasy')!, '/trade-builder');
 ---
 
 {/* Live scoring outranks the composite during game windows: while games are

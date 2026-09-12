@@ -31,23 +31,16 @@
  * a bare `#anchor` — is left alone. Prefixing an external URL would break it.
  */
 
-import type { DescriptionBlock, DescriptionListBlock, WhatsNewEntry } from '../types/whats-new';
+import type { DescriptionBlock, WhatsNewEntry } from '../types/whats-new';
 
 /**
  * Categories whose articles must carry at least one inline link.
  *
- * An article announcing a page or a feature exists to send you there, while a
- * league-event note is a report about something that happened. `weekly` is in
- * the list for the stronger version of the same reason: the Monday rollup is
- * deliberately one line per change with the depth behind a link, so a rollup
- * that links nothing has thrown away the detail AND the way to reach it.
+ * Deliberately the same split as the screenshot requirement: an article
+ * announcing a page or a feature exists to send you there, while a bug-fix
+ * rollup and a league-event note are reports about something that happened.
  */
-export const LINK_REQUIRED_CATEGORIES = [
-  'new-page',
-  'new-feature',
-  'enhancement',
-  'weekly',
-] as const;
+export const LINK_REQUIRED_CATEGORIES = ['new-page', 'new-feature', 'enhancement'] as const;
 
 /** Does this entry's category owe the reader inline links? */
 export function requiresInlineLinks(category: string): boolean {
@@ -106,31 +99,9 @@ export function isLeagueScopedPath(href: string): boolean {
   return !FILE_EXTENSION.test(lastSegment);
 }
 
-/**
- * Every HTML fragment in a description: text blocks, plus each item of every
- * list block. Inline image blocks carry no markup and are skipped.
- *
- * LIST ITEMS ARE NOT OPTIONAL HERE. The weekly rollup puts most of its links
- * inside list items, and a fragment this function does not return is invisible
- * to every guard below AND to the reader-side rewriter — which is precisely
- * the "a link nothing validates ships pointing at the wrong league" failure
- * `countAnchorOpenTags` was written for. Anything that renders through
- * `set:html` must be reachable from here.
- */
-function htmlFragments(description: readonly DescriptionBlock[] | undefined): string[] {
-  const fragments: string[] = [];
-  for (const block of description ?? []) {
-    if (typeof block === 'string') {
-      fragments.push(block);
-      continue;
-    }
-    if (block && (block as DescriptionListBlock).type === 'list') {
-      for (const item of (block as DescriptionListBlock).items ?? []) {
-        if (typeof item === 'string') fragments.push(item);
-      }
-    }
-  }
-  return fragments;
+/** Text blocks of a description, ignoring inline image blocks. */
+function textBlocks(description: readonly DescriptionBlock[] | undefined): string[] {
+  return (description ?? []).filter((block): block is string => typeof block === 'string');
 }
 
 /** Every href in an article body, in document order, external ones included. */
@@ -138,7 +109,7 @@ export function extractDescriptionHrefs(
   description: readonly DescriptionBlock[] | undefined,
 ): string[] {
   const hrefs: string[] = [];
-  for (const block of htmlFragments(description)) {
+  for (const block of textBlocks(description)) {
     for (const match of block.matchAll(ANCHOR_PATTERN)) hrefs.push(match[2]);
   }
   return hrefs;
@@ -152,12 +123,8 @@ export function extractDescriptionHrefs(
  * incomplete multi-character sanitizer. Nothing here is rendered — this feeds
  * the "anchor text is not a bare URL" guard — but a stripper that silently
  * leaves markup behind would make that guard read the wrong string.
- *
- * Exported because the staged-summary length guard needs the same hardening:
- * it grew its own single-pass `.replace()` and CodeQL flagged the copy, which
- * is the argument for one implementation rather than two.
  */
-export function stripTags(html: string): string {
+function stripTags(html: string): string {
   let text = html;
   for (let previous = ''; previous !== text; ) {
     previous = text;
@@ -171,7 +138,7 @@ export function extractDescriptionLinks(
   description: readonly DescriptionBlock[] | undefined,
 ): Array<{ href: string; text: string }> {
   const links: Array<{ href: string; text: string }> = [];
-  for (const block of htmlFragments(description)) {
+  for (const block of textBlocks(description)) {
     for (const match of block.matchAll(ANCHOR_PATTERN)) {
       links.push({ href: match[2], text: stripTags(match[3]).trim() });
     }
@@ -191,7 +158,7 @@ export function countAnchorOpenTags(
   description: readonly DescriptionBlock[] | undefined,
 ): number {
   let count = 0;
-  for (const block of htmlFragments(description)) {
+  for (const block of textBlocks(description)) {
     for (const _ of block.matchAll(HREF_PATTERN)) count++;
   }
   return count;

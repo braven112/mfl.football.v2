@@ -237,7 +237,7 @@ export interface NavConfig {
   /**
    * Route equivalence mapping for league switching
    * Maps paths from one league to another
-   * Example: { '/rosters': '/rosters', '/front-office': '/front-office' }
+   * Example: { '/salary': '/salary', '/calculator': '/calculator' }
    */
   routeEquivalence?: Record<string, string>;
 }
