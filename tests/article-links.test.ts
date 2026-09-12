@@ -65,7 +65,7 @@ describe('the route resolver itself', () => {
   });
 
   it('strips the query before resolving', () => {
-    expect(routeExists('/theleague/trade-builder?b=0012')).toBe(true);
+    expect(routeExists('/theleague/front-office/trade-builder?b=0012')).toBe(true);
     expect(routeExists('/theleague/rosters?view=coach')).toBe(true);
   });
 });
@@ -200,7 +200,7 @@ describe('article links — the prompt directive', () => {
     const withPromo = [...links, featureLink('theleague', 'trade-builder')];
     const directive = linkDirective(withPromo);
     expect(directive).toContain('SITE FEATURES');
-    expect(directive).toContain('<a href="/theleague/trade-builder">the trade builder</a>');
+    expect(directive).toContain('<a href="/theleague/front-office/trade-builder">the trade builder</a>');
     expect(directive).toMatch(/plug at least ONE/);
     expect(directive).toMatch(/forced plug is worse than none/);
   });

@@ -65,12 +65,16 @@ import {
   checkGlobalBudgetGate,
   RUMOR_POSTS_TODAY_KEY,
   RUMOR_LAST_POST_TS_KEY,
+  TRADE_POSTS_TODAY_KEY,
+  MAX_TRADE_POSTS_PER_DAY,
+  tradeSlotsRemaining,
 } from './lib/speculation-budget.mjs';
 import { postSpeculationToGroupMe } from './lib/speculation-groupme.mjs';
+import { createPublicUrl, normalizeBaseUrl } from './lib/schefter-public-url.mjs';
 import { readActiveSeeds, seedSignals } from './lib/speculation-seeds.mjs';
 import { getRedisConfig, createUpstashClient } from './lib/redis.mjs';
 import { sendPushFanout, broadcast } from './lib/push-fanout.mjs';
-import { getLeagueBySlug } from '../src/config/leagues-data.mjs';
+import { getLeagueBySlug, leagueOrigin } from '../src/config/leagues-data.mjs';
 import { getPtHour, secondsUntilPtMidnight } from './lib/pt-date.mjs';
 
 const projectRoot = path.resolve(fileURLToPath(new URL('..', import.meta.url)));
@@ -86,7 +90,47 @@ const TEAMS_CONFIG_PATH = path.join(projectRoot, 'src', 'data', 'theleague.confi
 // Public origin used to build the deep-link back to the feed post in the
 // GroupMe message. theleague.us 301s /theleague/news → /news (vercel.json),
 // so the canonical anchor lives at /news#post-<id>.
-const PUBLIC_BASE_URL = (process.env.SCHEFTER_PUBLIC_BASE_URL || 'https://theleague.us').replace(/\/+$/, '');
+// `leagueOrigin` rather than a literal: it pins the canonical cookie-safe
+// `www.` host, and session cookies are host-only — a bare-apex link opens the
+// reader logged out.
+const LEAGUE_REGISTRY_ENTRY = getLeagueBySlug(LEAGUE_SLUG);
+const PUBLIC_BASE_URL = normalizeBaseUrl(
+  process.env.SCHEFTER_PUBLIC_BASE_URL || leagueOrigin(LEAGUE_REGISTRY_ENTRY),
+);
+
+/**
+ * Absolute URL for a PREFIXED internal route, through the one builder that
+ * knows whether this base strips the league prefix or keeps it. Never
+ * concatenate — `${base}/theleague/trade-builder` ships
+ * `theleague.us/theleague/trade-builder`, which docs/claude/rules/league-urls.md
+ * records as already having shipped from Schefter's Trade Builder CTAs once.
+ */
+const publicUrl = createPublicUrl({
+  baseUrl: PUBLIC_BASE_URL,
+  leagueSlug: LEAGUE_SLUG,
+  registryLeague: LEAGUE_REGISTRY_ENTRY,
+});
+
+/**
+ * Where a speculation post sends its readers.
+ *
+ * The post is a hypothetical trade, so the useful next click is the Trade
+ * Builder — not the feed entry the reader has just finished reading in the
+ * chat. `?b=<fid>` pre-loads a franchise's roster, the same convention the
+ * rumor mill's trade CTA uses, and the SELLER is the right side to load: the
+ * post's whole premise is that this is the team holding the player somebody
+ * else wants, so that is the roster an owner opens the builder to raid.
+ *
+ * PREFIXED, because `post.link` is persisted and rendered raw by the Schefter
+ * cards and the bare form 404s on the shared host. `publicUrl()` strips it for
+ * the absolute GroupMe form when the base is the league's own apex.
+ */
+const TRADE_BUILDER_LINK_LABEL = 'Open in Trade Builder →';
+function buildTradeBuilderPath(franchiseId) {
+  return franchiseId
+    ? `/${LEAGUE_SLUG}/front-office/trade-builder?b=${encodeURIComponent(franchiseId)}`
+    : `/${LEAGUE_SLUG}/front-office/trade-builder`;
+}
 
 // Match the rumor-mill's wire shape so the existing feed renderer treats
 // speculation posts as rumor-style cards (visual styling, anonymous
@@ -409,6 +453,34 @@ async function main() {
   }
   log(`  Global budget OK (posts_today=${globalPostsToday}, ceiling=${budgetGate.ceiling})`);
 
+  // 3b. The day's TRADE budget, shared with the rumor mill.
+  //
+  // Everything above counts POSTS. This lane is trade-flavored by definition —
+  // a hypothetical two-team trade is the only thing it publishes — so it
+  // spends a trade slot even when the post budget has room. Without this a
+  // morning trade-offer rumor and an afternoon speculation piece are both
+  // legal, four hours apart, and the league reads two trade stories in a day
+  // from a feed that is supposed to run one (owner report, 2026-09-10).
+  //
+  // Deliberately NOT covered by `reservesGlobalSlot`: the peak-week
+  // reservation lets a marquee speculation exceed the POST ceiling, which is a
+  // different question from whether the league has already heard a trade story
+  // today. A reserved slot is worth nothing if the piece is the day's second
+  // trade item.
+  let tradePostsToday = 0;
+  if (redis) {
+    const rawTrade = await redis.get(TRADE_POSTS_TODAY_KEY);
+    tradePostsToday = typeof rawTrade === 'number' ? rawTrade : parseInt(rawTrade ?? '0', 10) || 0;
+  }
+  if (tradeSlotsRemaining(tradePostsToday, MAX_TRADE_POSTS_PER_DAY) === 0) {
+    log(
+      `  Trade budget spent (${tradePostsToday}/${MAX_TRADE_POSTS_PER_DAY} trade post(s) today) `
+        + '— exiting',
+    );
+    return 0;
+  }
+  log(`  Trade budget OK (${tradePostsToday}/${MAX_TRADE_POSTS_PER_DAY} used today)`);
+
   // 4. Load league state.
   const season = detectCurrentSeason(now);
   const teams = await loadTeams();
@@ -516,6 +588,10 @@ async function main() {
     authorId: 'claude',
     franchiseIds: [winner.seller, winner.buyer],
     league: LEAGUE_SLUG,
+    // The feed card's CTA, matching the rumor mill's trade posts. PREFIXED —
+    // persisted and rendered raw by the Schefter cards.
+    link: buildTradeBuilderPath(winner.seller),
+    linkLabel: TRADE_BUILDER_LINK_LABEL,
     speculation: {
       seller: winner.seller,
       buyer: winner.buyer,
@@ -532,7 +608,7 @@ async function main() {
     log('\n  [dry-run] Would append to speculation history:', winner.signature);
     await postSpeculationToGroupMe({
       post,
-      publicBaseUrl: PUBLIC_BASE_URL,
+      ctaUrl: publicUrl(post.link),
       dryRun: true,
       log,
       warn,
@@ -564,6 +640,13 @@ async function main() {
       if (newCount === 1) {
         await redis.expire(RUMOR_POSTS_TODAY_KEY, secondsUntilPtMidnight(now));
       }
+      // Every post from this lane is a trade story, so every one of them
+      // spends the day's trade slot.
+      const newTradeCount = await redis.incr(TRADE_POSTS_TODAY_KEY);
+      if (newTradeCount === 1) {
+        await redis.expire(TRADE_POSTS_TODAY_KEY, secondsUntilPtMidnight(now));
+      }
+      log(`  trade_posts_today incremented → ${newTradeCount}/${MAX_TRADE_POSTS_PER_DAY}`);
       await redis.set(RUMOR_LAST_POST_TS_KEY, now.getTime());
       await redis.expire(RUMOR_LAST_POST_TS_KEY, secondsUntilPtMidnight(now));
       log(`  posts_today incremented → ${newCount}`);
@@ -577,7 +660,7 @@ async function main() {
   // errors and returns a status object we can log.
   await postSpeculationToGroupMe({
     post,
-    publicBaseUrl: PUBLIC_BASE_URL,
+    ctaUrl: publicUrl(post.link),
     log,
     warn,
   });

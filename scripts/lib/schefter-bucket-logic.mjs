@@ -19,6 +19,41 @@ export function classifyTipKind(tip) {
 }
 
 /**
+ * Is this tip a TRADE story, as a reader would count them?
+ *
+ * Deliberately wider than `classifyTipKind`, and the two are not
+ * interchangeable. `classifyTipKind` answers "which posting lane owns this",
+ * where only `trade_offer` gets its own lane and everything else rides the
+ * gossip lane. This answers "will the league read the resulting post as
+ * another trade story", which is the question the daily trade budget is
+ * asking, and by that measure a trade-BAIT post is plainly a trade story:
+ * "Pain's had Cyrus Allen on the block for days now" classifies as gossip and
+ * reads as trade.
+ *
+ * Getting this wrong in the narrow direction is what let 13 of 16 posts across
+ * Sept 4-10 2026 be trade stories — Sept 6, 7 and 8 were 100% trade — while
+ * every cap in the system reported itself as satisfied. The caps counted
+ * POSTS; nothing counted TOPICS.
+ */
+export function isTradeFlavoredTip(tip) {
+  if (!tip) return false;
+  if (tip.source === 'trade_offer' || tip.source === 'trade_bait') return true;
+  // Whisper-backs are excluded on the SAME terms the CTA predicate uses
+  // (`schefter-rumor-scan.mjs#isTradeFlavoredTip`): a reply to a non-trade
+  // rumor is routed to the tip page, not the Trade Builder, so it does not
+  // read as a trade story — and letting it spend the day's trade slot would
+  // let a reply suppress the actual trade story. Two predicates answering
+  // "is this about trades" must not disagree.
+  if (tip.repliesToPostId) return false;
+  return tip.topic === 'trade';
+}
+
+/** True when any tip in the batch would read as a trade story. */
+export function isTradeFlavoredBatch(tips) {
+  return (Array.isArray(tips) ? tips : []).some(isTradeFlavoredTip);
+}
+
+/**
  * Group tips into single-topic buckets. Bucket keys:
  *   - trade_offer tips           → 'trade:offer'
  *   - trade_bait tips            → 'topic:trade_bait:<franchiseId>'

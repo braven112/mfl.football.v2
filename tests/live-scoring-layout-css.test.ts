@@ -487,4 +487,83 @@ describe('the no-games board fits the phone', () => {
       /className="ls-card static"/,
     );
   });
+  it('goes full bleed by cancelling the named gutters, never with 100vw', () => {
+    // `100vw` resolves against the initial containing block, which INCLUDES a
+    // classic space-consuming scrollbar, while both this media query and
+    // `documentElement.clientWidth` exclude it. A desktop window under 760px on
+    // Windows or most Linux therefore gets a card ~15px wider than the viewport
+    // and a horizontal scrollbar off the whole page — and nothing up the chain
+    // clips it (`main`'s `container-type: inline-size` is layout containment,
+    // not paint). A mobile emulator uses overlay scrollbars and never shows it,
+    // which is why only a guard catches this one.
+    const bleed = declarationsFor(phone, '.ls-detail').map(([, v]) => v).join(' ');
+    expect(bleed, '.ls-detail must not size itself in vw').not.toMatch(/\d\s*vw/);
+    // It must still actually cancel BOTH ancestor gutters: the layout's `main`
+    // inline padding and `.ls-page`'s own. Either one alone leaves a visible
+    // asymmetric inset that reads as "nearly right".
+    const inline = valueOf(phone, '.ls-detail', 'margin-inline') ?? '';
+    expect(inline, 'must cancel main + .ls-page by token').toContain('--padding-sm');
+    expect(inline).toContain('--spacing-md');
+    expect(inline, 'a cancel is negative').toMatch(/-1|\* *-|-\(/);
+  });
+
+  it('does not pull the card up over the Throwback preview bar', () => {
+    // The pull-up cancels `.ls-page`'s `padding-top`, but `.ls-tb-preview` is a
+    // sibling of the island INSIDE `.ls-page` and carries a `margin-bottom` of
+    // that same token — so during Throwback Week an ungated cancel eats the gap
+    // under the bar and sits the card flush against it. The gate is on the
+    // bar's absence, so a browser without `:has()` drops the rule and keeps the
+    // band, which is the harmless half.
+    const gated = /\.ls-page:not\(:has\(\.ls-tb-preview\)\)[^{]*\.ls-detail[^{]*\{[^}]*margin-top/;
+    expect(phone, 'the margin-top cancel must be gated on the preview bar').toMatch(gated);
+    expect(
+      valueOf(phone, '.ls-detail', 'margin-top'),
+      'an ungated .ls-detail margin-top would apply during Throwback Week',
+    ).toBeUndefined();
+  });
+
+  it('ends the starter list on :last-of-type, not :last-child', () => {
+    // `.ls-mx-body`'s last element is the bench `<details>`, not the last
+    // starter row, so `:last-child` matches no row at all unless both benches
+    // are empty — leaving a rule hanging under the last player, over the bench
+    // disclosure. Both cascades: the base border and the phone hairline.
+    expect(stripped, 'base divider must end on :last-of-type')
+      .toMatch(/\.ls-mx-row:last-of-type\s*\{[^}]*border-bottom:\s*0/);
+    expect(stripped, '.ls-mx-row:last-child no longer selects the last row')
+      .not.toMatch(/\.ls-mx-row:last-child/);
+    expect(phone, 'phone hairline must end on :last-of-type')
+      .toMatch(/\.ls-mx-row:last-of-type::after/);
+    // The bench's own rows ARE last in their grid — that one is correct as is.
+    expect(stripped).toMatch(/\.ls-bench-row:last-child/);
+  });
+  it('pairs the folded yet-to-play line with the bar that duplicates it', () => {
+    // The phone hides `.ls-ytp.folded` because the counts also ride inside the
+    // win-probability labels. That is only true while the bar is RENDERED, and
+    // it is not: a final matchup draws none. So the two must be driven by the
+    // same condition — the bar on `!calc.isFinal`, the `folded` class on the
+    // same flag — or a final matchup hides its only copy of the counts and the
+    // information disappears from the screen AND the a11y tree.
+    expect(island, 'the detail bar is gated on !calc.isFinal').toMatch(
+      /!calc\.isFinal && \(?\s*\n?\s*<WinProbBar[^>]*awayYetToPlay=\{calc\.away\.yetToPlay\}/,
+    );
+    expect(island, 'the folded class must come from that same flag').toMatch(
+      /className=\{`ls-ytp\$\{calc\.isFinal \? '' : ' folded'\}`\}/,
+    );
+    // And the standalone line must still carry the counts in both branches —
+    // it is the only copy the accessibility tree ever sees.
+    expect(island).toMatch(/ls-ytp[\s\S]{0,200}\{calc\.away\.yetToPlay\} yet to play/);
+    // The in-bar copies are decorative: `.ls-wp` is role="img", so they are
+    // never announced. That is why the folded line is CLIPPED, not removed —
+    // and the role has to still be there, or this whole precaution is moot.
+    expect(island, '.ls-wp is what makes the folded copies unannounced').toMatch(
+      /className=\{`ls-wp\$\{mini \? ' mini' : ''\}`\} role="img"/,
+    );
+    expect(phone, '.ls-ytp.folded must be clipped, not removed').toMatch(
+      /\.ls-ytp\.folded\s*\{[^}]*clip:/,
+    );
+    expect(
+      valueOf(phone, '.ls-ytp.folded', 'display'),
+      '.ls-ytp.folded must not be display:none — role="img" hides the other copy from AT',
+    ).toBeUndefined();
+  });
 });

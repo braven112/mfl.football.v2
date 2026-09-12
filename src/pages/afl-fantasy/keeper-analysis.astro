@@ -10,6 +10,7 @@
  * full redraft and are not offered.
  */
 import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
+import FrontOfficeNav from '../../components/shared/front-office-nav/FrontOfficeNav.astro';
 import YearSelector from '../../components/theleague/YearSelector.astro';
 import KeeperAnalysisCard from '../../components/afl-fantasy/KeeperAnalysisCard.astro';
 import aflConfig from '../../../data/afl-fantasy/afl.config.json';
@@ -184,6 +185,7 @@ const fmtEff = (n: number) => `${Math.round(n * 100)}%`;
 ---
 
 <TheLeagueLayout title={`Keeper Report Card ${selectedYear} | AFL`}>
+  <FrontOfficeNav leagueSlug="afl-fantasy" current="keeper-analysis" crumb="Keeper Report Card" bare />
   <div class="keeper-analysis">
     <header class="ka-hero">
       <div class="ka-hero__text">

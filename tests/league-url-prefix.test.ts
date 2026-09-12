@@ -117,18 +117,21 @@ describe('announcement deep links', () => {
 });
 
 describe('scanner sources build absolute URLs through the registry helper', () => {
-  it('the rumor scanner routes CTA URLs through publicUrl(), not raw concatenation', () => {
-    const src = read('scripts/schefter-rumor-scan.mjs');
-    // The helper honors a SCHEFTER_PUBLIC_BASE_URL override (preview deploys
-    // need the prefix) and only strips on the league's own apex host.
-    expect(src).toMatch(/const\s+publicUrl\s*=\s*\(p\)\s*=>/);
-    expect(src).toMatch(/groupMeUrl:\s*publicUrl\(path\)/);
-    // No hand-rolled origin + prefixed-path concatenation left.
-    expect(src).not.toMatch(/groupMeUrl:\s*`\$\{PUBLIC_BASE_URL\}\$\{path\}`/);
+  /**
+   * The builder moved out of the rumor scanner into
+   * scripts/lib/schefter-public-url.mjs when the speculation lane needed the
+   * same answer for its own CTA (2026-09-11). These assertions follow it:
+   * what matters is that ONE implementation exists and that every lane that
+   * pastes a route into a chat message goes through it — a second copy of
+   * "does this base strip or keep the league prefix" is the failure this repo
+   * has already paid for, and the copy would have been the naive
+   * concatenation the speculation lane was already doing for `/news`.
+   */
+  it('the shared builder honors the override and only strips on the apex root', () => {
+    const src = read('scripts/lib/schefter-public-url.mjs');
     // Own-apex detection is registry-derived, not a string compare against the
     // canonical origin — an operator can spell the same host many ways.
     expect(src).toMatch(/buildHostToSlugMap\(\)/);
-    expect(src).not.toMatch(/PUBLIC_BASE_URL === SCHEFTER_LEAGUE\.baseUrl/);
     // ...and it requires the apex ROOT, not just a matching hostname: a
     // non-default port or a path suffix isn't served by the rewrite.
     expect(src).toMatch(/u\.port !== ''/);
@@ -136,11 +139,30 @@ describe('scanner sources build absolute URLs through the registry helper', () =
     // The base is normalized (query/fragment dropped) before anything is
     // concatenated onto it, and an unparseable override dies at startup
     // rather than poisoning every CTA the run ships.
-    expect(src).toMatch(/function normalizeBaseUrl/);
+    expect(src).toMatch(/export function normalizeBaseUrl/);
+    expect(src).toMatch(/stripLeaguePrefix/);
+    expect(src).toMatch(/ensureLeaguePrefix/);
+  });
+
+  it('the rumor scanner routes CTA URLs through the shared builder', () => {
+    const src = read('scripts/schefter-rumor-scan.mjs');
+    expect(src).toMatch(/from '\.\/lib\/schefter-public-url\.mjs'/);
+    expect(src).toMatch(/const\s+publicUrl\s*=\s*createPublicUrl\(/);
+    expect(src).toMatch(/groupMeUrl:\s*publicUrl\(path\)/);
+    // No hand-rolled origin + prefixed-path concatenation left.
+    expect(src).not.toMatch(/groupMeUrl:\s*`\$\{PUBLIC_BASE_URL\}\$\{path\}`/);
     expect(src).toMatch(/const PUBLIC_BASE_URL = normalizeBaseUrl\(/);
     // The tip path is PREFIXED — post.link is persisted and rendered raw, and
     // the bare form 404s on the shared host.
     expect(src).toMatch(/const\s+TIP_PAGE_PATH\s*=\s*`\/\$\{LEAGUE_SLUG\}\/schefter\/tip`/);
+  });
+
+  it('the speculation lane routes its CTA through the shared builder too', () => {
+    const src = read('scripts/schefter-trade-speculation.mjs');
+    expect(src).toMatch(/from '\.\/lib\/schefter-public-url\.mjs'/);
+    expect(src).toMatch(/createPublicUrl\(/);
+    // Its CTA path is the PREFIXED internal route, like every feed link.
+    expect(src).toMatch(/\/\$\{LEAGUE_SLUG\}\/front-office\/trade-builder/);
   });
 
   it('every apex-ROOT spelling strips; everything else keeps the prefix', () => {

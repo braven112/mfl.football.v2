@@ -9,13 +9,19 @@
  *   popularity, and the PWA-vs-browser surface, all keyed by the session's
  *   franchise. The league comes from the SESSION, never from the query string.
  *
- * - LOGGED OUT — the surface counters only, and only in aggregate: no page,
- *   no timestamp, no franchise. This is the half that makes the split honest,
- *   since an owner browsing signed out is exactly the traffic the
- *   authenticated counter cannot see. The one other thing this path writes is
- *   its own rate-limit counter, keyed by a salted HASH of the caller's IP with
- *   a 60-second TTL — the raw address is never stored, and the key is gone a
- *   minute later.
+ * - LOGGED OUT — aggregate counters only: no timestamp, no franchise, nothing
+ *   that could name the visitor. The surface split, the day's signed-out
+ *   total, and — only when the path is one the page directory already knows —
+ *   the page. That last condition is a BOUND, not a nicety: the field names of
+ *   an anonymous hash come from an unauthenticated caller, so an unchecked
+ *   path would let anyone grow it one invented string at a time (the same
+ *   reasoning that keeps the surface allowlist to eight fields). An unknown
+ *   path still counts toward the day's total; it just never names a page.
+ *   This is the half that makes the numbers honest, since someone browsing
+ *   signed out is exactly the traffic the authenticated counter cannot see.
+ *   The one other thing this path writes is its own rate-limit counter, keyed
+ *   by a salted HASH of the caller's IP with a 60-second TTL — the raw address
+ *   is never stored, and the key is gone a minute later.
  *
  * The `league` param exists only for that second path. A logged-out beacon
  * posts to `/api/track-visit`, a path with no league prefix, so on a preview
@@ -28,16 +34,21 @@
 import type { APIRoute } from 'astro';
 import { getAuthUser } from '../../utils/auth';
 import { createHmac, createHash } from 'node:crypto';
-import { recordVisit, recordAnonymousSurface } from '../../utils/owner-activity';
+import { recordVisit, recordAnonymousVisit } from '../../utils/owner-activity';
+import { canonicalPath, isDirectoryPath } from '../../utils/site-analytics';
 import { parseVisitContext } from '../../utils/visit-surface';
-import { getLeagueBySlug, ALL_LEAGUES } from '../../config/leagues';
+import {
+	getLeagueBySlug,
+	ALL_LEAGUES,
+	type LeagueDefinition,
+} from '../../config/leagues';
 
 /**
  * Per-caller cap on the anonymous path. The client debounces to one beacon per
  * minute per tab, so 30/minute already allows a browser full of tabs; the limit
  * is here because this is a write endpoint that needs no session, not because
  * normal traffic comes anywhere near it. It is applied inside the same Lua
- * script as the counters (see `recordAnonymousSurface`), so a visit costs one
+ * script as the counters (see `recordAnonymousVisit`), so a visit costs one
  * Upstash command whether it is counted or rejected, and it fails open.
  */
 const ANON_MAX_PER_MINUTE = 30;
@@ -80,11 +91,11 @@ function callerKey(request: Request): string {
  * the AFL's logged-out traffic under TheLeague. An unrecognized or missing
  * param drops the count instead.
  */
-function resolveAnonymousLeagueId(param: string | null): string | null {
+function resolveAnonymousLeague(param: string | null): LeagueDefinition | null {
 	if (!param) return null;
 	const bySlug = getLeagueBySlug(param);
-	if (bySlug) return bySlug.id;
-	return ALL_LEAGUES.find((l) => l.navSlug === param)?.id ?? null;
+	if (bySlug) return bySlug;
+	return ALL_LEAGUES.find((l) => l.navSlug === param) ?? null;
 }
 
 export const POST: APIRoute = async ({ request, url }) => {
@@ -93,17 +104,27 @@ export const POST: APIRoute = async ({ request, url }) => {
 		url.searchParams.get('platform'),
 	);
 
+	const rawPage = url.searchParams.get('page');
+
 	const user = getAuthUser(request);
 	if (!user?.franchiseId || !user?.leagueId) {
-		// Nothing to count for a logged-out visitor whose client could not tell
-		// us which surface it is — the page path alone is not worth a public
-		// write endpoint.
-		if (!visit) return new Response(null, { status: 204 });
+		// A beacon that reports neither a surface nor a page has nothing to
+		// count, and this endpoint needs no session — so it does no work.
+		if (!visit && !rawPage) return new Response(null, { status: 204 });
 
-		const leagueId = resolveAnonymousLeagueId(url.searchParams.get('league'));
-		if (!leagueId) return new Response(null, { status: 204 });
+		const league = resolveAnonymousLeague(url.searchParams.get('league'));
+		if (!league) return new Response(null, { status: 204 });
 
-		const { limited } = await recordAnonymousSurface(leagueId, visit, {
+		// Only a path the directory recognizes may name a page (see the header).
+		// Checked BEFORE canonicalizing — `isDirectoryPath` canonicalizes to
+		// answer, so an unknown path on this unauthenticated, uncapped route
+		// costs one pass instead of two.
+		const page =
+			rawPage && isDirectoryPath(rawPage, league.slug)
+				? canonicalPath(rawPage, league.slug)
+				: null;
+
+		const { limited } = await recordAnonymousVisit(league.id, { visit, page }, {
 			callerKey: callerKey(request),
 			max: ANON_MAX_PER_MINUTE,
 			windowSeconds: ANON_WINDOW_SECONDS,
@@ -111,7 +132,7 @@ export const POST: APIRoute = async ({ request, url }) => {
 		return new Response(null, { status: limited ? 429 : 204 });
 	}
 
-	const page = url.searchParams.get('page') || '/';
+	const page = rawPage || '/';
 	await recordVisit(user.leagueId, user.franchiseId, page, visit);
 	return new Response(null, { status: 204 });
 };

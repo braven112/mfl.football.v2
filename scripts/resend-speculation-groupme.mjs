@@ -26,10 +26,33 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { postSpeculationToGroupMe } from './lib/speculation-groupme.mjs';
+import { createPublicUrl, normalizeBaseUrl } from './lib/schefter-public-url.mjs';
+import { getLeagueBySlug, leagueOrigin } from '../src/config/leagues-data.mjs';
 
 const projectRoot = path.resolve(fileURLToPath(new URL('..', import.meta.url)));
 const FEED_PATH = path.join(projectRoot, 'src', 'data', 'theleague', 'schefter-feed.json');
-const PUBLIC_BASE_URL = (process.env.SCHEFTER_PUBLIC_BASE_URL || 'https://theleague.us').replace(/\/+$/, '');
+const LEAGUE_SLUG = 'theleague';
+const LEAGUE_REGISTRY_ENTRY = getLeagueBySlug(LEAGUE_SLUG);
+const PUBLIC_BASE_URL = normalizeBaseUrl(
+  process.env.SCHEFTER_PUBLIC_BASE_URL || leagueOrigin(LEAGUE_REGISTRY_ENTRY),
+);
+const publicUrl = createPublicUrl({
+  baseUrl: PUBLIC_BASE_URL,
+  leagueSlug: LEAGUE_SLUG,
+  registryLeague: LEAGUE_REGISTRY_ENTRY,
+});
+// Older speculation posts predate `post.link`, but they are not information-
+// free: every one carries `speculation.seller`, which is the same id
+// `buildTradeBuilderPath` would have used. Rebuild the preload from it rather
+// than dropping a resent reader on the bare builder — only a post with neither
+// falls all the way back.
+const ctaPathFor = (p) => {
+  if (p?.link) return p.link;
+  const seller = String(p?.speculation?.seller ?? '').trim();
+  return seller
+    ? `/${LEAGUE_SLUG}/front-office/trade-builder?b=${encodeURIComponent(seller)}`
+    : `/${LEAGUE_SLUG}/front-office/trade-builder`;
+};
 
 const args = process.argv.slice(2);
 const DRY_RUN = args.includes('--dry-run');
@@ -57,7 +80,7 @@ if (post.transactionSubType !== 'trade_speculation') {
 console.log(`Resending post ${postId} to GroupMe${DRY_RUN ? ' [DRY RUN]' : ''}…`);
 const result = await postSpeculationToGroupMe({
   post,
-  publicBaseUrl: PUBLIC_BASE_URL,
+  ctaUrl: publicUrl(ctaPathFor(post)),
   dryRun: DRY_RUN,
   log: (...a) => console.log(...a),
   warn: (...a) => console.warn(...a),

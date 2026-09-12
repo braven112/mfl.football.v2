@@ -485,7 +485,7 @@ const EVENT_VIEW: Record<string, ViewBuilder> = {
         days === 1
           ? 'Trade deadline is tomorrow. After Wednesday night, rosters are locked through the playoffs.'
           : `${days} days until the trade deadline. Use the trade builder to line up your final moves of the season.`,
-      link: '/afl-fantasy/trade-builder',
+      link: '/afl-fantasy/front-office/trade-builder',
       linkLabel: 'Open Trade Builder',
       // A player actually on YOUR block is the face, so this is a team story.
       // Red on the day itself — the same urgency flip the keeper deadline makes.
@@ -515,7 +515,7 @@ const EVENT_VIEW: Record<string, ViewBuilder> = {
       glow: GLOW_NAVY,
       player: randomHeroPlayer(now),
       countValue: days,
-      countLabel: 'Days to Week 13 finale',
+      countLabel: 'Days to Week 14 finale',
     };
   },
 

@@ -68,7 +68,7 @@ export const AFL_ALL_PLAY_PATH = '/afl-fantasy/standings?view=all_play';
  * Directory paths are inconsistently prefixed by design: AFL and best-ball
  * entries carry their own prefix, and everything else — whether written
  * `/theleague/lineup` or bare `/rosters` — is TheLeague's. A BARE path is NOT
- * "shared": `/league-comparison` and `/search` are TheLeague-only routes, and
+ * "shared": `/front-office/league-comparison` and `/search` are TheLeague-only routes, and
  * re-prefixing them for another league produces a guaranteed 404.
  *
  * Applied to the curated deck as well as Deep Cuts. The deck is hand-written,
@@ -178,6 +178,7 @@ const THELEAGUE_COLUMNS: ColumnMap = {
     'schefter-tip',
     'schefter-style-book',
     { id: 'suggestions', label: 'The Board' },
+    'guides',
     'whats-new',
     'about',
   ],
@@ -229,6 +230,7 @@ const AFL_COLUMNS: ColumnMap = {
     'afl-news',
     { id: 'afl-schefter-tip', label: 'Tip Schefter' },
     { id: 'afl-schefter-style-book', label: 'The Style Book' },
+    { id: 'afl-guides', label: 'Guides' },
     'afl-whats-new',
     { id: 'afl-about', label: 'About' },
   ],

@@ -1,5 +1,6 @@
 ---
 import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
+import FrontOfficeNav from '../../components/shared/front-office-nav/FrontOfficeNav.astro';
 import CollegeLogoDarkStyles from '../../components/CollegeLogoDarkStyles.astro';
 import PlayerCell from '../../components/theleague/PlayerCell.astro';
 import PlayerDetailsModal from '../../components/theleague/PlayerDetailsModal.astro';
@@ -709,6 +710,7 @@ const pageConfig = {
 ---
 
 <TheLeagueLayout title={`AFL — ${selectedTeam.name} Roster`}>
+  <FrontOfficeNav leagueSlug="afl-fantasy" current="rosters" crumb="Rosters" bare />
   <CollegeLogoDarkStyles />
   <section class="roster-page" data-initial-view={initialView}>
     <!-- Team Header Card -->
@@ -887,7 +889,7 @@ const pageConfig = {
                             <a
                               slot="after-name"
                               class="trade-bait-link"
-                              href={`/afl-fantasy/trade-builder?from=${selectedFranchiseId}&player=${player.id}`}
+                              href={`/afl-fantasy/front-office/trade-builder?from=${selectedFranchiseId}&player=${player.id}`}
                               title="On trade block"
                               aria-label="On trade block"
                             >

@@ -546,6 +546,79 @@ goals (0 to 0.01 of total score, seed-dependent).
 encroachment on the four-week target rather than failing on it, matching the
 ranking.
 
+## The NFL kickoff is not a derivation
+
+**Anything asking when an NFL week starts reads
+`src/utils/nfl-week-starts.mjs`.** It answers from MFL's published schedule
+(`src/data/nfl/week-starts.mjs`, refreshed by
+`node scripts/fetch-nfl-week-starts.mjs`) and keeps the old Labor Day rule as
+its ONLY fallback, for seasons the NFL has not released yet.
+
+The retired rule was "kickoff is the Thursday after Labor Day, and week N
+starts kickoff + (N-1)\*7". It was inlined in eight places and hardcoded as a
+Week 1 map in six more, and it is wrong three times in 2026 alone:
+
+| Week | The rule says | The NFL played |
+|---|---|---|
+| 1 | Thu Sep 10 | **Wed Sep 9** |
+| 12 | Thu Nov 26 | **Wed Nov 25** (Thanksgiving) |
+| 18 | Thu Jan 7 | **Sun Jan 10** (all-Sunday finale) |
+
+Owners saw the first one: Roger posted "TODAY: NFL Season Starts" to GroupMe
+on the morning of Thursday Sep 10 2026, the day after the season had already
+kicked off. 2024 and 2025 had their own misses (a Christmas Day week 17, and
+week 18 shifted both years) that nothing caught, because nothing was comparing.
+
+Three things that are load-bearing:
+
+- **Express a date as a WEEK, not as days from kickoff.** `weekStart(year, 11,
+  -1)` survives the NFL moving week 11; `kickoff + 10*7 - 1` does not. Both
+  trade deadlines, both playoff starts and both championship weeks are written
+  this way now, in `scripts/compute-league-events.mjs` and
+  `src/utils/league-event-resolver.ts` — the two files must stay in lockstep,
+  and `tests/roger-afl-draft-reminder.test.ts` reads both sources to check it.
+- **An offset whose real anchor is Labor Day must SAY Labor Day.** The rumor
+  mill's awake window opened at `kickoff - 11` and meant "the AFL's NL draft
+  Sunday, Labor Day - 8". Those coincide only while kickoff is Labor Day + 3,
+  so the Wednesday opener slid the loud 3-posts-a-day cadence onto AL draft
+  Saturday. It is `laborDayIsoDate(year) - 8` now.
+- **The fallback must not be deleted.** MFL 404s a season's schedule until the
+  NFL publishes it (checked 2026-09-10: 2027 is Not Found), so February
+  through May the next season has no official answer at all.
+
+Kickoff is a calendar landmark, not a deadline, so it carries `remind: false`
+and generates no Roger touch — the date still resolves and still shows on
+`/calendar` (owner call, 2026-09-10). Any event that is an obligation on owners
+must NOT set that flag.
+
+### The bracket is derived from the NFL's season length
+
+**Never write 15/16/17 for the fantasy bracket.** `src/utils/fantasy-bracket.mjs`
+derives it: the title game is the week BEFORE the NFL's final regular-season
+week, because that last week is when NFL teams with nothing to play for rest
+their starters.
+
+    FINAL_REGULAR_SEASON_WEEK          18   (the NFL's, from nfl-week-starts)
+    CHAMPIONSHIP_WEEK                  17   = final - 1
+    SEMIFINAL_WEEK                     16
+    PLAYOFFS_START_WEEK                15
+    FINAL_FANTASY_REGULAR_SEASON_WEEK  14
+
+This has already moved once. The AFL resolver carried the note: "The bracket
+shifted +1 with the 2021 move to a 17-game / 18-week NFL season: QF Week 15,
+SF Week 16, World Championship Week 17." Before 2021 the NFL played 17 weeks
+and the title game was week 16; the formula reproduces both eras, so the next
+expansion is one constant rather than a hunt through four files (it was
+hardcoded in `league-event-resolver.ts`, `compute-league-events.mjs`,
+`schefter-rumor-cadence.mjs` and `championship-recap.mjs`).
+
+Note the two "regular seasons" are different and must not be conflated: the
+NFL's is 18 weeks, the fantasy one ends at `PLAYOFFS_START_WEEK - 1` (14 —
+which is exactly what the AFL constitution states independently).
+
+Guard: `tests/nfl-kickoff-anchor-guard.test.ts`, plus
+`tests/nfl-week-starts.test.ts` for the module and the bracket derivation.
+
 ## The trap: bye weeks move, week numbers don't
 
 **The late doubleheader week is not a constant.** It is whichever of Week 12 or
@@ -790,6 +863,34 @@ simple repair. `balanceHomeAway` only exists on the constructive path.
 `mode: 'simple'` stays reachable per call — `--mode=simple`, or the page's
 Method selector — for a minimal in-season repair where re-drawing everyone's
 calendar is not acceptable.
+
+## Reading the schedule back out, for display
+
+Everything above builds a schedule. `src/utils/schedule-data.mjs` READS one,
+and it is the only thing that should: `/schedule` and the AFL homepage's Next
+Up tile both go through it. Three rules, each of which has a test in
+`tests/schedule-data.test.ts`:
+
+- **Read the committed feed, never the plan or the reveal lock.**
+  `data/<league>/mfl-feeds/<year>/schedule.json` is what is being played; the
+  plan is what was generated, and the commissioner pastes by hand, so the two
+  can legitimately disagree.
+- **`result` does not tell you whether a game happened.** MFL stamps
+  `result: "T"` on a matchup the moment it is created, so an unplayed week is
+  indistinguishable from a tie by that field alone — reading it without a score
+  check reports the whole remaining season as ties. A game is played when BOTH
+  sides carry a `score`; `result` is authoritative only after that (it applies
+  the league's tie rules, which comparing two numbers does not).
+- **A week with no `matchup` is not a week.** MFL creates the playoff weeks
+  before it draws them — the live 2026 feeds carry a bare `{"week":"15"}` for
+  TheLeague 15-17 and the AFL 15-18 — and rendering those produces a grid
+  column where every club shows a bye dash.
+
+Records and ranks on those surfaces come from `standings.json`, not from
+summing the schedule: the feed runs through the playoff and consolation weeks,
+so a season total computed from it disagrees with the standings table on the
+same page. The AFL seeds by CONFERENCE, so a rank there is an index into MFL's
+order filtered to that conference — filtered, never re-sorted.
 
 ## MFL has no schedule write API
 

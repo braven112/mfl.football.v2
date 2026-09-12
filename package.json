@@ -28,6 +28,7 @@
     "fetch:adp:rookies": "pnpm run fetch:adp:sleeper && pnpm run fetch:adp:ktc",
     "fetch:espn-ids": "node scripts/fetch-espn-athlete-ids.mjs",
     "fetch:nfl-draft-date": "node scripts/fetch-nfl-draft-date.mjs",
+    "fetch:nfl-week-starts": "node scripts/fetch-nfl-week-starts.mjs",
     "generate:vapid": "node scripts/generate-vapid-keys.mjs",
     "compute:franchise-history": "node scripts/compute-franchise-history.mjs",
     "compute:player-identity-union": "node scripts/compute-player-identity-union.mjs",

@@ -7,11 +7,14 @@ platform bucket, and `/activity` renders the split for both leagues.
 | Layer | Files |
 |---|---|
 | Vocabulary (allowlists, field encoding, summary math) | `src/utils/visit-surface.ts` |
-| Storage + readers | `src/utils/owner-activity.ts` (`recordVisit`, `recordAnonymousSurface`, `getSurfaceSection`) |
+| Storage + readers | `src/utils/owner-activity.ts` (`recordVisit`, `recordAnonymousVisit`, `getSurfaceSection`) |
 | Endpoint | `src/pages/api/track-visit.ts` |
 | Detection | `src/layouts/TheLeagueLayout.astro` (visit tracker script) |
 | UI | `src/components/theleague/OwnerActivityReport.astro`, both `activity.astro` routes |
 | Guard | `tests/visit-surface.test.ts` |
+
+Since 2026-09-10 the anonymous path counts more than the surface split — see
+`site-analytics.md`, which extends the cardinality rule below to page paths.
 
 Redis keys, all unexpiring hashes of `<surface>:<platform>` → count:
 `surface:{leagueId}` (everyone), `surface:{leagueId}:anon` (the logged-out

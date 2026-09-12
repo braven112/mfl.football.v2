@@ -12,7 +12,7 @@ import path from 'node:path';
 import {
   allowsTwoPostCycle,
   IN_SEASON_MAX_RUMOR_POSTS_PER_DAY,
-  AWAKE_START_OFFSET_FROM_KICKOFF_DAYS,
+  AWAKE_START_OFFSET_FROM_LABOR_DAY_DAYS,
   isLeagueAwake,
   MAILBAG_EXEMPT_FROM_MILL_CAP,
   leagueAwakeWindow,
@@ -28,6 +28,8 @@ import {
   upcomingTradeDeadline,
   TRADE_DEADLINE_WINDOW_DAYS,
 } from '../src/utils/trade-deadline.mjs';
+import { laborDayIsoDate } from '../src/utils/labor-day.mjs';
+import { nflWeekStartIsoDate } from '../src/utils/nfl-week-starts.mjs';
 import { MAX_POSTS_PER_DAY } from '../scripts/lib/schefter-groupme-budget.mjs';
 import { resolveDateForYear } from '../src/utils/league-event-resolver';
 
@@ -39,11 +41,14 @@ function atPT(iso: string): Date {
 const SHARED = MAX_POSTS_PER_DAY;
 
 describe('trade deadline — resolved from the registry, never inlined', () => {
-  it('derives the NFL kickoff Thursday for known seasons', () => {
-    // The real openers. If this drifts, every window below is wrong.
+  it('reports the real NFL opener for known seasons', () => {
+    // The real openers, from MFL's published schedule. If this drifts, every
+    // window below is wrong. 2026 is a WEDNESDAY — it read 2026-09-10 while
+    // this was derived as "the Thursday after Labor Day", which is how Roger
+    // came to tell the league the season started a day after it did.
     expect(nflKickoffIsoDate(2024)).toBe('2024-09-05');
     expect(nflKickoffIsoDate(2025)).toBe('2025-09-04');
-    expect(nflKickoffIsoDate(2026)).toBe('2026-09-10');
+    expect(nflKickoffIsoDate(2026)).toBe('2026-09-09');
   });
 
   it("keeps TheLeague's fixed Nov 13 deadline", () => {
@@ -149,17 +154,22 @@ describe('awake window — draft weekend through the championship', () => {
     // days before it. The anchor is the AFL's calendar and the window takes no
     // slug — TheLeague's own Cut to 22 is `third-sunday-august` (2026-08-16),
     // a fortnight earlier, so it stays loud through its own deadlines. A known
-    // gap, not a design goal: see AWAKE_START_OFFSET_FROM_KICKOFF_DAYS.
+    // gap, not a design goal: see AWAKE_START_OFFSET_FROM_LABOR_DAY_DAYS.
     expect(startIso).toBe('2026-08-30');
-    expect(startIso).toBe(shiftIsoDate(nflKickoffIsoDate(2026), -11));
-    expect(AWAKE_START_OFFSET_FROM_KICKOFF_DAYS).toBe(-11);
+    expect(startIso).toBe(shiftIsoDate(laborDayIsoDate(2026), -8));
+    expect(AWAKE_START_OFFSET_FROM_LABOR_DAY_DAYS).toBe(-8);
   });
 
   it('tracks the resolver’s real NL-draft date, not just its own arithmetic', () => {
-    // The offset is a constant, so asserting it against `shiftIsoDate(kickoff,
-    // -11)` is very nearly a tautology — it would still pass if the AFL moved
+    // The offset is a constant, so asserting it against `shiftIsoDate(laborDay,
+    // -8)` is very nearly a tautology — it would still pass if the AFL moved
     // its draft and the loud 3/day cadence started running over draft weekend.
     // Cross-check against the event resolver, which owns the date.
+    //
+    // This is the assertion that caught the anchor being wrong: the window used
+    // to measure from kickoff (`kickoff - 11`), which equals Labor Day - 8 only
+    // while kickoff is assumed to be Labor Day + 3. 2026 opened on Wednesday
+    // Sep 9, and the start slid onto AL draft Saturday.
     const nlDraft = { type: 'computed', rule: 'sunday-before-labor-day-weekend' } as const;
     for (const year of [2026, 2027, 2028, 2029, 2030]) {
       const resolved = resolveDateForYear(nlDraft as never, year);
@@ -173,10 +183,11 @@ describe('awake window — draft weekend through the championship', () => {
   });
 
   it('still closes on championship Monday — the start moving must not drag the end', () => {
-    // Both ends measure from KICKOFF. Deriving endIso from startIso would
+    // Each end measures from its own anchor: draft weekend from Labor Day, the
+    // close from NFL week 17's real start. Deriving endIso from startIso would
     // retire the quiet cap eleven days early, i.e. mid-playoffs.
     const { endIso } = leagueAwakeWindow(2026);
-    expect(endIso).toBe(shiftIsoDate(nflKickoffIsoDate(2026), 16 * 7 + 4));
+    expect(endIso).toBe(shiftIsoDate(nflWeekStartIsoDate(2026, 17), 4));
     expect(endIso).toBe('2027-01-04');
   });
 
@@ -184,7 +195,7 @@ describe('awake window — draft weekend through the championship', () => {
     expect(isLeagueAwake(atPT('2026-08-01'))).toBe(false);
     // 2026-08-29 is the AFL's AL Live Draft Saturday (Labor Day - 9). The
     // window opens the NEXT day, at the NL email draft — a deliberate choice
-    // of anchor, not an oversight: see AWAKE_START_OFFSET_FROM_KICKOFF_DAYS.
+    // of anchor, not an oversight: see AWAKE_START_OFFSET_FROM_LABOR_DAY_DAYS.
     expect(isLeagueAwake(atPT('2026-08-29'))).toBe(false);
     expect(isLeagueAwake(atPT('2026-08-30'))).toBe(true);
     expect(isLeagueAwake(atPT('2026-11-15'))).toBe(true);
