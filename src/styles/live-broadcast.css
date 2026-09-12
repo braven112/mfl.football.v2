@@ -1229,6 +1229,24 @@
   }
 }
 
+/* Fullscreen, idle: the board and nothing else.
+   The hover gate above is right on a laptop and wrong on the screen this page
+   exists for — a television's cursor is PARKED over the page and never leaves,
+   so `:hover` is permanently true and three buttons sit on the board all
+   afternoon. In fullscreen we gate on IDLENESS instead, the way a video player
+   does, and the cursor goes with them. Any pointer move, touch or key brings
+   both back for three seconds, so this can never trap someone in fullscreen —
+   which is why the old rule lived inside the pointer query in the first place.
+   Escape still exits regardless, on every browser. */
+.lbc.is-fullscreen.is-idle .lbc__chrome {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.lbc.is-fullscreen.is-idle {
+  cursor: none;
+}
+
 /* ── Laptop fallback — not a responsive target, just not broken ───────────── */
 @media (max-height: 950px) {
   .lbc { --lbc-header-h: 34%; }

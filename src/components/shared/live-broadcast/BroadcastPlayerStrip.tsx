@@ -56,7 +56,15 @@ function Row({ row, dim }: { row: StripRow | null; dim: boolean }) {
       <span className="lbc__who">
         <span className="lbc__name">{row.name}</span>
         <span className="lbc__meta">
-          {row.nflTeam && <img className="lbc__nfl" src={nflLogo(row.nflTeam)} alt="" />}
+          {/* DEF hides the meta-row logo — `BroadcastFace` opts a team defense
+              into its NFL logo AS the face ("a team defense is a crest, not a
+              person"), so rendering it again here is the same club's mark
+              twice on one row, a few pixels apart. `LiveScoreboard` has
+              suppressed this since the shared PlayerCell did; this row is the
+              surface that forgot to. */}
+          {row.nflTeam && row.position.toUpperCase() !== 'DEF' && (
+            <img className="lbc__nfl" src={nflLogo(row.nflTeam)} alt="" />
+          )}
           <span>{row.position}</span>
           <span>·</span>
           <span>{row.leagueName}</span>

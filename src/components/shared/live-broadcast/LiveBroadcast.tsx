@@ -443,6 +443,56 @@ export default function LiveBroadcast({ pageData }: Props) {
 
   // ── sound (opt-in) ───────────────────────────────────────────────────────
   const [sound, setSound] = useState(data.sound);
+
+  /**
+   * Fullscreen, and whether the viewer has touched anything lately.
+   *
+   * The chrome was hover-gated, which is correct on a laptop and wrong on the
+   * screen this page exists for: a television's cursor is PARKED over the page
+   * and never leaves, so `:hover` is permanently true and three buttons sit on
+   * the board all afternoon. Gate on idleness instead, the way a video player
+   * does — hidden while you watch, back the moment you move.
+   *
+   * Only in fullscreen. Windowed, the chrome keeps its hover behaviour, since
+   * that is the state you are in while still setting the board up.
+   */
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [idle, setIdle] = useState(false);
+
+  useEffect(() => {
+    const onChange = () => setIsFullscreen(Boolean(document.fullscreenElement));
+    onChange();
+    document.addEventListener('fullscreenchange', onChange);
+    return () => document.removeEventListener('fullscreenchange', onChange);
+  }, []);
+
+  useEffect(() => {
+    if (!isFullscreen) {
+      setIdle(false);
+      return;
+    }
+    let timer = 0;
+    const wake = () => {
+      setIdle(false);
+      window.clearTimeout(timer);
+      // Long enough to find the button you reached for, short enough that the
+      // board is clean again before the next play.
+      timer = window.setTimeout(() => setIdle(true), 3000);
+    };
+    wake();
+    // `pointermove` covers mouse and trackpad; `touchstart` and `keydown` are
+    // the two ways a television or a remote reaches this at all.
+    for (const ev of ['pointermove', 'pointerdown', 'touchstart', 'keydown'] as const) {
+      window.addEventListener(ev, wake, { passive: true });
+    }
+    return () => {
+      window.clearTimeout(timer);
+      for (const ev of ['pointermove', 'pointerdown', 'touchstart', 'keydown'] as const) {
+        window.removeEventListener(ev, wake);
+      }
+    };
+  }, [isFullscreen]);
+
   useEffect(() => {
     if (!sound || !current || current.side !== 'mine') return;
     // A short synthesized sting rather than an asset: there is no audio file
@@ -525,7 +575,11 @@ export default function LiveBroadcast({ pageData }: Props) {
   const outgoing = outgoingKey ? (pages.find((p) => p.key === outgoingKey) ?? null) : null;
 
   return (
-    <main className={`lbc${isStale ? ' is-stale' : ''}`} style={rootStyle} aria-label="Live scoring broadcast">
+    <main
+      className={`lbc${isStale ? ' is-stale' : ''}${isFullscreen ? ' is-fullscreen' : ''}${idle ? ' is-idle' : ''}`}
+      style={rootStyle}
+      aria-label="Live scoring broadcast"
+    >
       <BroadcastScoreHeader
         panels={data.panels}
         scores={scoresByLeague}

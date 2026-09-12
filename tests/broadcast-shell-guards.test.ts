@@ -521,3 +521,40 @@ describe('every crest surface can actually draw its ring', () => {
     }
   });
 });
+
+describe('the player cell follows the repo’s rules', () => {
+  const STRIP = code(read('src/components/shared/live-broadcast/BroadcastPlayerStrip.tsx'));
+
+  it('hides the meta-row NFL logo for a team defense', () => {
+    // `BroadcastFace` opts a DEF unit into its NFL logo AS the face ("a team
+    // defense is a crest, not a person"), so rendering it again in the meta
+    // line is the same club's mark twice on one row, a few pixels apart.
+    // `LiveScoreboard` has suppressed this since the shared PlayerCell did —
+    // this row is the surface that forgot to, and it shipped.
+    expect(STRIP).toMatch(/position\.toUpperCase\(\) !== 'DEF'/);
+  });
+});
+
+describe('fullscreen shows the board and nothing else', () => {
+  it('tracks fullscreen and idleness on the root', () => {
+    // The hover gate is right on a laptop and wrong on a television, whose
+    // cursor is PARKED over the page and never leaves — so `:hover` is
+    // permanently true and the chrome sits on the board all afternoon.
+    expect(ISLAND_CODE).toMatch(/fullscreenchange/);
+    expect(ISLAND_CODE).toMatch(/is-fullscreen/);
+    expect(ISLAND_CODE).toMatch(/is-idle/);
+  });
+
+  it('hides the chrome and the cursor only when BOTH hold', () => {
+    expect(CSS_CODE).toMatch(/\.lbc\.is-fullscreen\.is-idle \.lbc__chrome/);
+    expect(CSS_CODE).toMatch(/\.lbc\.is-fullscreen\.is-idle\s*\{[^}]*cursor:\s*none/);
+  });
+
+  it('wakes on every input a television can produce', () => {
+    // Never trap someone in fullscreen: this is why the ORIGINAL hide rule
+    // lived inside the pointer query. Touch and keys must both bring it back.
+    for (const ev of ['pointermove', 'pointerdown', 'touchstart', 'keydown']) {
+      expect(ISLAND_CODE).toContain(`'${ev}'`);
+    }
+  });
+});
