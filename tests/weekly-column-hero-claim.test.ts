@@ -70,6 +70,23 @@ describe('weekly columns do not claim the homepage hero', () => {
       const mod = await import(path.join(TYPES_DIR, `${type}.mjs`));
       expect(mod.config.tier).not.toBe('breaking');
     });
+
+    // The config is not what reaches the feed — `buildPost` is. Every type
+    // writes `tier: config.tier` today, but that is a convention, not a
+    // mechanism: a module could hardcode 'breaking' in buildPost and leave the
+    // config at 'standard', and a config-only check would pass while the
+    // homepage went back to being claimed. Assert at the boundary that
+    // actually persists.
+    it(`${type} emits a non-breaking tier from buildPost`, async () => {
+      const mod = await import(path.join(TYPES_DIR, `${type}.mjs`));
+      const post = mod.buildPost(
+        { headline: 'H', excerpt: 'E', content: ['<p>C</p>'] },
+        {},
+        `sf_2026_${type.replace(/-/g, '_')}_w05`,
+        { league: 'theleague' },
+      );
+      expect(post.tier).not.toBe('breaking');
+    });
   }
 
   it('still guards something — the hero selector gates on the breaking tier', () => {

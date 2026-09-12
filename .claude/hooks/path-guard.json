@@ -610,11 +610,13 @@
     },
     {
       "name": "schefter-columns",
-      "note": "A column on a weekly cron is NOT breaking news: tier:'breaking' hands the post the homepage at P0 for 48h (selectBreakingStory → resolveHeroState), and three weekly columns at that tier preempted the regular-season daily rotation ~4 days in 7. Every article type must also export the full pipeline interface and declare relatedLinks. See tests/weekly-column-hero-claim.test.ts.",
+      "rules": "docs/claude/rules/schefter.md",
+      "note": "A column on a weekly cron is NOT breaking news: tier:'breaking' hands the post the homepage at P0 for 48h (selectBreakingStory → resolveHeroState), and three weekly columns at that tier preempted the regular-season daily rotation ~4 days in 7. Every article type must also export the full pipeline interface and declare relatedLinks. See tests/weekly-column-hero-claim.test.ts. The workflow is in this domain deliberately: the guard derives the weekly set from its cron→type map, so an edit there must re-run the guard.",
       "paths": [
         "scripts/article-types/*.mjs",
         "scripts/article-utils/*.mjs",
-        "scripts/schefter-weekly-articles.mjs"
+        "scripts/schefter-weekly-articles.mjs",
+        ".github/workflows/schefter-articles.yml"
       ],
       "tests": [
         "tests/weekly-column-hero-claim.test.ts",
