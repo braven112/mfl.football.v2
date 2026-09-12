@@ -119,7 +119,12 @@
     },
     {
       "source": "/calculator",
-      "destination": "/front-office/contract-tools",
+      "destination": "/front-office",
+      "statusCode": 301
+    },
+    {
+      "source": "/front-office/contract-tools",
+      "destination": "/front-office",
       "statusCode": 301
     },
     {
@@ -164,7 +169,12 @@
     },
     {
       "source": "/theleague/calculator",
-      "destination": "/theleague/front-office/contract-tools",
+      "destination": "/theleague/front-office",
+      "statusCode": 301
+    },
+    {
+      "source": "/theleague/front-office/contract-tools",
+      "destination": "/theleague/front-office",
       "statusCode": 301
     },
     {

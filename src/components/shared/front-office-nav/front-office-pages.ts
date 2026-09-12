@@ -114,16 +114,6 @@ export const FRONT_OFFICE_PAGES: FrontOfficePage[] = [
     leagues: TL,
   },
   {
-    key: 'contract-tools',
-    label: 'Contract Tools',
-    shortLabel: 'Tools',
-    path: '/front-office/contract-tools',
-    icon: 'icon-money-bag',
-    blurb: 'Extension calculator and contract-cost tools.',
-    group: 'planning',
-    leagues: TL,
-  },
-  {
     key: 'dead-money',
     label: 'Dead Money',
     shortLabel: 'Dead Money',

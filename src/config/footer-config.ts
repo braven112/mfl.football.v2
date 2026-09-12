@@ -155,7 +155,6 @@ const THELEAGUE_COLUMNS: ColumnMap = {
     'salary-history',
     'salary-archive',
     'projected-free-agents',
-    { id: 'contract-calculator', label: 'Contract Tools' },
     'dead-money',
     'league-comparison',
   ],

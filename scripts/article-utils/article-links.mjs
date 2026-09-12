@@ -99,7 +99,6 @@ export const DESTINATIONS = {
   // ── TheLeague only (a contract dynasty league; the AFL has no cap) ──
   contracts: { path: '/contracts', label: 'the contract board', leagues: ['theleague'] },
   'contracts-manage': { path: '/front-office/contracts', label: 'your contract declarations', leagues: ['theleague'] },
-  calculator: { path: '/front-office/contract-tools', label: 'the contract calculator', leagues: ['theleague'] },
   mvp: { path: '/mvp', label: 'the MVP tracker', leagues: ['theleague'] },
   'dead-money': { path: '/front-office/dead-money', label: 'the dead money report', leagues: ['theleague'] },
   'projected-free-agents': { path: '/front-office/projected-free-agents', label: "next year's free agent class", leagues: ['theleague'] },

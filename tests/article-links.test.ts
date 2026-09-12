@@ -105,7 +105,7 @@ describe('article links — destinations are real pages', () => {
   it('returns null — not a broken link — for a page the league lacks', () => {
     // The AFL has no salary cap, so cap-flavoured plugs simply drop out.
     expect(articleLink('afl-fantasy', 'contracts')).toBeNull();
-    expect(featureLink('afl-fantasy', 'calculator')).toBeNull();
+    expect(featureLink('afl-fantasy', 'dead-money')).toBeNull();
     expect(articleLink('theleague', 'keepers')).toBeNull();
     expect(linkList(articleLink('afl-fantasy', 'contracts'), articleLink('afl-fantasy', 'standings'))).toHaveLength(1);
   });
