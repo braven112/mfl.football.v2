@@ -25,12 +25,23 @@ export interface BroadcastTeam {
   nameShort: string;
   /** `chooseTeamName(..., 'abbrev')`, resolved server-side. */
   abbrev: string;
-  /** Big crest for a reveal — `resolveBroadcastCrest` resolution order. */
+  /**
+   * Big crest for a reveal — `resolveBroadcastCrest`'s RESOLUTION-first order
+   * (`groupMeDark → groupMe → iconDark → icon`).
+   *
+   * The takeover paints this at 68vh, ~734px on a 1080p TV. The hand-authored
+   * `iconDark` cuts are 100x100 and the GroupMe art is 400x400, so taking the
+   * dark cut here to get the theme right would trade a 1.8x upscale for a 7x
+   * one. Both fields were assigned the same small `brand.icon` until Sep 2026,
+   * which is exactly the 7x upscale this order exists to avoid.
+   */
   icon: string;
-  /** Small crest for a player row — the dark-first order. */
+  /** Small crest for a player row — `resolveBroadcastCrest`'s theme-first order. */
   iconSmall: string;
-  /** Stroke index for the crest's inline ring; 0 when it needs none. */
-  crestStroke: number;
+  /** Outline colour for `icon`, set only when that art is a LIGHT cut. */
+  iconStroke?: string;
+  /** Outline colour for `iconSmall`, set only when that art is a LIGHT cut. */
+  iconSmallStroke?: string;
   /**
    * The takeover's field, lifted until it separates from the board's GROUND
    * while keeping white ink legible (`ensureFieldOn`).

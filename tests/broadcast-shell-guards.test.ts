@@ -9,6 +9,9 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { getLeagueTeamConfigs } from '../src/utils/league-team-brands';
+import { broadcastStrokeIndex, resolveBroadcastCrest } from '../src/utils/broadcast-crest';
+import { crestLeagueKey } from '../src/utils/dark-surface-crest';
 
 const read = (p: string) => readFileSync(join(process.cwd(), p), 'utf8');
 
@@ -416,5 +419,83 @@ describe('the island', () => {
     // mean two clocks and two queues.
     const directives = PAGE_CODE.match(/client:\w+/g) ?? [];
     expect(directives).toEqual(['client:load']);
+  });
+});
+
+describe('the board is on one clock, both halves', () => {
+  const ROUTE = code(read('src/pages/api/broadcast-live.ts'));
+
+  it('resolves the season year from ?testDate=, on the page AND the poll', () => {
+    // /rollover-check cannot exercise a page that reads the wall clock, and
+    // the Labor Day boundary is where this board's season year turns.
+    expect(PAGE_CODE).toMatch(/getTestDateFromSearchParams\(Astro\.url\.searchParams\)/);
+    expect(PAGE_CODE).toMatch(/getCurrentSeasonYear\(testDate\)/);
+    expect(ROUTE).toMatch(/getTestDateFromSearchParams\(url\.searchParams\)/);
+    expect(ROUTE).toMatch(/getCurrentSeasonYear\(testDate\)/);
+  });
+
+  it('forwards ?testDate= from the island, or the poll never sees it', () => {
+    // The server reads the parameter off the POLL's request, not the page's.
+    expect(ISLAND_CODE).toMatch(/params\.set\('testDate'/);
+  });
+
+  it('derives the default week from the same date as the year', () => {
+    expect(PAGE_CODE).toMatch(/getCurrentNFLWeek\(testDate \?\? new Date\(\)\)/);
+    expect(ROUTE).toMatch(/getCurrentNFLWeek\(testDate \?\? new Date\(\)\)/);
+  });
+
+  it('clamps the page week to the same 1-25 the poll enforces', () => {
+    // Unclamped, ?week=26 rendered an MFL board and then took 400s from the
+    // island forever — the two halves of the screen silently diverging.
+    expect(PAGE_CODE).toMatch(/parsedWeek >= 1 && parsedWeek <= 25/);
+  });
+});
+
+describe('the screensaver shows the whole week', () => {
+  const SAVER = code(read('src/components/shared/live-broadcast/BroadcastScreensaver.tsx'));
+
+  it('renders every matchup, not just the first', () => {
+    // A doubleheader is two real games against two different opponents, and
+    // this is the screen that says where the day ended.
+    expect(SAVER).not.toMatch(/panel\.matchups\[0\]/);
+    expect(SAVER).toMatch(/panel\.matchups\.map\(/);
+  });
+});
+
+describe('crest artwork', () => {
+  const BOARD = code(read('src/utils/broadcast-board.ts'));
+  const TAKEOVER = code(read('src/components/shared/live-broadcast/MomentTakeover.tsx'));
+
+  it('resolves the two crests through the shared resolver', () => {
+    // Both fields were the same ~100px `brand.icon` until Sep 2026, so the
+    // takeover's 68vh background crest was that icon upscaled 7x.
+    expect(BOARD).toMatch(/resolveBroadcastCrest\(/);
+  });
+
+  it('gives the BIG surface higher-resolution art than the small one', () => {
+    // Behavioural, not a scan: the regression was two fields holding the same
+    // string, which no amount of reading the call site reveals. The hand cuts
+    // under icons/ are 100x100 and the GroupMe art is 400x400, so at 68vh
+    // (~734px) the difference is a 7x upscale against a 1.8x one.
+    for (const slug of ['theleague', 'afl-fantasy']) {
+      const teams = getLeagueTeamConfigs(slug);
+      expect(teams.length).toBeGreaterThan(0);
+      const index = broadcastStrokeIndex(crestLeagueKey(slug), teams);
+      for (const team of teams) {
+        const crest = resolveBroadcastCrest({ ...team }, crestLeagueKey(slug), index);
+        if (!crest.icon) continue;
+        expect(crest.icon).not.toMatch(/\/icons\//);
+      }
+    }
+  });
+
+  it('keys the manifest by league KEY, never the route directory', () => {
+    // `afl-fantasy` finds no measured stroke at all, silently.
+    expect(BOARD).toMatch(/crestLeagueKey\(slug\)/);
+  });
+
+  it('paints the reveal with the BIG crest', () => {
+    expect(TAKEOVER).toMatch(/src=\{team\.icon\}/);
+    expect(TAKEOVER).not.toMatch(/lbc-reveal__crest[\s\S]{0,120}team\.iconSmall/);
   });
 });

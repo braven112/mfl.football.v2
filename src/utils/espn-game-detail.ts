@@ -405,6 +405,99 @@ export interface EspnScoringPlay {
 }
 
 /**
+ * The participant roles that EARN the play — the only ones a reveal may name.
+ *
+ * ESPN lists everyone involved, not everyone credited. One real game's roles:
+ *
+ *   Field Goal Good    kicker, scorer, snapper, holder
+ *   Rushing Touchdown  rusher, scorer, kicker, patScorer
+ *   Kickoff            kicker, returner, tackler, penalized, other
+ *
+ * Read those three rows together and `kicker` is the trap: on the field goal
+ * he IS the scorer, but on the kickoff he is the OTHER team's placekicker,
+ * credited on a 27-yard return he was trying to prevent. Taking every
+ * participant — which this did until Sep 2026 — therefore hands the kicking
+ * team's owner a reveal for the return team's play. `scorer` already covers
+ * the field goal (same athlete, deduped), so dropping `kicker` costs nothing.
+ *
+ * `patScorer` is left out for a different reason: the extra point is real
+ * fantasy scoring, but a FULL-SCREEN TOUCHDOWN takeover naming your kicker,
+ * for someone else's touchdown, is the wrong framing for one point. The
+ * reveal kinds this board draws are touchdowns, big plays, two-pointers,
+ * field goals, safeties and takeaways — an XP is on none of them.
+ *
+ * Participants carry no team of their own — only `athlete`, `order` and
+ * `type` — so a role allowlist is the only mechanism available here.
+ */
+const CREDITED_PARTICIPANT_ROLES = new Set([
+  'scorer',
+  'rusher',
+  'passer',
+  'receiver',
+  'returner',
+]);
+
+/**
+ * The credited roles on a play where POSSESSION CHANGED.
+ *
+ * A turnover lists both sides, and the offensive roles name the players who
+ * LOST the ball. Two real plays:
+ *
+ *   Interception Return Touchdown  passer, passDefender, returner, scorer, …
+ *   Fumble Return Touchdown        passer, receiver, forcedBy, recoverer,
+ *                                  tackler, scorer, …
+ *
+ * Judged by the ordinary allowlist, the first hands a TOUCHDOWN reveal to the
+ * quarterback who threw the interception and the second to the receiver who
+ * fumbled — each of them named, full-screen, for the worst play of their
+ * afternoon. So on a turnover the offense's roles come out and the roles that
+ * actually took the ball away go in.
+ *
+ * `isTurnover` is the right signal and not merely the convenient one: ESPN
+ * sets it exactly when `start.team !== end.team`, so a "Fumble Recovery (Own)"
+ * — recovered by the fumbling team — arrives as `false` and keeps the ordinary
+ * offensive credit it deserves.
+ */
+const TURNOVER_CREDITED_ROLES = new Set([
+  'scorer',
+  'returner',
+  'recoverer',
+  'passDefender',
+]);
+
+/**
+ * Distinct MFL-bound athlete ids CREDITED by one play, in participant order.
+ *
+ * An athlete appearing under both a credited and an uncredited role (the
+ * field goal's `kicker` + `scorer`) is kept — the allowlist gates the ROLE,
+ * and one credited role is enough.
+ *
+ * The fallback is deliberate and narrow: if not one participant carries a
+ * `type`, we cannot tell roles apart at all, and silently crediting nobody
+ * would delete every reveal for that play. Falling back to all participants
+ * restores the old behaviour for exactly that case and no other.
+ */
+function creditedAthleteIds(item: any): string[] {
+  const participants = (item?.participants ?? []) as any[];
+  const typed = participants.filter((p) => typeof p?.type === 'string' && p.type);
+  const allowed = item?.isTurnover === true
+    ? TURNOVER_CREDITED_ROLES
+    : CREDITED_PARTICIPANT_ROLES;
+  const pool = typed.length > 0
+    ? typed.filter((p) => allowed.has(String(p.type)))
+    : participants;
+
+  const ids: string[] = [];
+  for (const p of pool) {
+    const id = parseIdFromRef(p?.athlete?.$ref, 'athletes');
+    // The same athlete appears once per credited role (a rusher is also the
+    // scorer), so dedupe — otherwise one TD becomes several ticker rows.
+    if (id && !ids.includes(id)) ids.push(id);
+  }
+  return ids;
+}
+
+/**
  * Extract the scoring plays from a play-by-play page.
  *
  * `teamCodesById` comes from buildTeamCodesById() — the plays feed identifies a
@@ -423,13 +516,7 @@ export function parseScoringPlays(
     if (!isEspnPlayId(playId)) continue;
 
     const teamId = parseIdFromRef(item?.team?.$ref, 'teams');
-    const athleteIds: string[] = [];
-    for (const p of (item?.participants ?? []) as any[]) {
-      const id = parseIdFromRef(p?.athlete?.$ref, 'athletes');
-      // The same athlete appears once per credited role (a rusher is also the
-      // scorer), so dedupe — otherwise one TD becomes several ticker rows.
-      if (id && !athleteIds.includes(id)) athleteIds.push(id);
-    }
+    const athleteIds = creditedAthleteIds(item);
 
     out.push({
       playId,
@@ -590,11 +677,7 @@ export function parseNotablePlays(
     if (!isEspnPlayId(playId)) continue;
 
     const teamId = parseIdFromRef(item?.team?.$ref, 'teams');
-    const athleteIds: string[] = [];
-    for (const p of (item?.participants ?? []) as any[]) {
-      const id = parseIdFromRef(p?.athlete?.$ref, 'athletes');
-      if (id && !athleteIds.includes(id)) athleteIds.push(id);
-    }
+    const athleteIds = creditedAthleteIds(item);
 
     out.push({
       playId,

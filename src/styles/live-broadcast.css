@@ -811,7 +811,23 @@
   pointer-events: none;
 }
 
+/* A LIGHT franchise cut needs a ring to survive a board that is dark in BOTH
+   themes; `resolveBroadcastCrest` decides which crests get one and the colour
+   rides on the team record. A class, not an inline filter — every crest rule
+   below sets its own `filter` for the drop shadow, and an inline one would
+   replace it wholesale. The ring WIDTH belongs to the surface, since the three
+   crest surfaces here are 68vh, ~4vh and ~3vh. */
+.lbc .lbc-crest--stroked {
+  --lbc-crest-ring:
+    drop-shadow(var(--lbc-crest-ring-w, 0.5px) 0 0 var(--lbc-crest-stroke))
+    drop-shadow(calc(-1 * var(--lbc-crest-ring-w, 0.5px)) 0 0 var(--lbc-crest-stroke))
+    drop-shadow(0 var(--lbc-crest-ring-w, 0.5px) 0 var(--lbc-crest-stroke))
+    drop-shadow(0 calc(-1 * var(--lbc-crest-ring-w, 0.5px)) 0 var(--lbc-crest-stroke));
+  filter: var(--lbc-crest-ring);
+}
+
 .lbc-reveal__crest {
+  --lbc-crest-ring-w: 2px;
   position: absolute;
   right: -6vw;
   bottom: -10vh;
@@ -1019,6 +1035,13 @@
   gap: 1.2vh;
   width: 100%;
   max-width: 70vw;
+}
+
+/* The "· Game 2" qualifier, present only on a doubleheader. Quieter than the
+   league name it trails so the row still reads as one league at a glance. */
+.lbc-saver__game {
+  opacity: 0.6;
+  font-weight: 500;
 }
 
 .lbc-saver__row {

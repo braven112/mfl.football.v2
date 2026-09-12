@@ -130,6 +130,12 @@ export default function LiveBroadcast({ pageData }: Props) {
     if (data.demo) return;
     try {
       const params = new URLSearchParams({ leagues: data.enabled.join(','), week: String(data.week) });
+      // Forward `?testDate=` so the poll resolves the same SEASON the page
+      // rendered. The server reads it off this request, not off the page's,
+      // so leaving it out makes the two halves of one screen disagree across
+      // the Labor Day boundary — the one date anybody passes a test date for.
+      const testDate = new URLSearchParams(window.location.search).get('testDate');
+      if (testDate) params.set('testDate', testDate);
       const res = await fetch(`/api/broadcast-live?${params}`, {
         signal: AbortSignal.timeout(POLL_TIMEOUT_MS),
         headers: { accept: 'application/json' },

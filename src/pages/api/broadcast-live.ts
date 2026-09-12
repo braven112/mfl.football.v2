@@ -1,6 +1,6 @@
 import type { APIRoute } from 'astro';
 import { getAuthUser } from '../../utils/auth';
-import { getCurrentSeasonYear } from '../../utils/league-year';
+import { getCurrentSeasonYear, getTestDateFromSearchParams } from '../../utils/league-year';
 import { getCurrentNFLWeek } from '../../utils/current-week';
 import { assembleBroadcastBoard } from '../../utils/broadcast-board';
 import { BROADCAST_LEAGUE_COOKIE } from '../../utils/broadcast-selection';
@@ -50,10 +50,17 @@ const failed = (week: number): BroadcastPollResponse => ({
 });
 
 export const GET: APIRoute = async ({ request, url, cookies }) => {
+  // The page resolves its season year from `?testDate=` and the island forwards
+  // the parameter, so this route has to read it too. Deriving the year off the
+  // real clock here while the page derived it off a test date makes the two
+  // halves of one screen disagree about which SEASON they are showing — and
+  // only across the Labor Day boundary, which is precisely when someone is
+  // rendering with a test date.
+  const testDate = getTestDateFromSearchParams(url.searchParams) ?? undefined;
   const week = (() => {
     const raw = parseInt(url.searchParams.get('week') ?? '', 10);
     if (Number.isInteger(raw) && raw >= 1 && raw <= 25) return raw;
-    return getCurrentNFLWeek(new Date()) ?? 1;
+    return getCurrentNFLWeek(testDate ?? new Date()) ?? 1;
   })();
 
   const user = getAuthUser(request);
@@ -65,7 +72,7 @@ export const GET: APIRoute = async ({ request, url, cookies }) => {
       leaguesParam: url.searchParams.get('leagues'),
       leaguesCookie: cookies.get(BROADCAST_LEAGUE_COOKIE)?.value ?? null,
       week,
-      year: getCurrentSeasonYear(),
+      year: getCurrentSeasonYear(testDate),
       // Only the numbers. Panel identity — colours, crests, name forms —
       // cannot change during a Sunday and this route does not return it.
       mode: 'poll',

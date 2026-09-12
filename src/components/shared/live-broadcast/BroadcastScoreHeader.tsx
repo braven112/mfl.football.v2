@@ -12,6 +12,7 @@ import type { NflGame, PlayerMeta } from '../../../types/live-scoring';
 import { matchupGameClock } from '../../../utils/broadcast-layout';
 import type { DensityTier } from '../../../utils/broadcast-layout';
 import { dropClasses, nameContext } from '../../../utils/broadcast-layout';
+import { crestStrokeProps } from '../../../utils/draft-broadcast';
 
 interface Props {
   panels: readonly BroadcastLeaguePanel[];
@@ -136,7 +137,11 @@ function BroadcastScoreHeader({ panels, scores, tier, hidden, games, meta }: Pro
 
                         <div className={`lbc__side${readable && mineLive >= theirsLive ? ' is-leading' : ''}`}>
                           {matchup.mine.iconSmall && (
-                            <img className="lbc__crest" src={matchup.mine.iconSmall} alt="" />
+                            <img
+                              {...crestStrokeProps('lbc__crest', matchup.mine.iconSmallStroke, 'lbc')}
+                              src={matchup.mine.iconSmall}
+                              alt=""
+                            />
                           )}
                           <span className="lbc__tn">{nameAt(matchup.mine, tier)}</span>
                           <span className="lbc__proj">
@@ -159,7 +164,11 @@ function BroadcastScoreHeader({ panels, scores, tier, hidden, games, meta }: Pro
                         {matchup.opponent && (
                           <div className={`lbc__side${readable && theirsLive > mineLive ? ' is-leading' : ''}`}>
                             {matchup.opponent.iconSmall && (
-                              <img className="lbc__crest" src={matchup.opponent.iconSmall} alt="" />
+                              <img
+                              {...crestStrokeProps('lbc__crest', matchup.opponent.iconSmallStroke, 'lbc')}
+                              src={matchup.opponent.iconSmall}
+                              alt=""
+                            />
                             )}
                             <span className="lbc__tn">{nameAt(matchup.opponent, tier)}</span>
                             <span className="lbc__proj">

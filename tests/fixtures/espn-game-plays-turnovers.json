@@ -1,0 +1,3529 @@
+{
+ "__provenance": {
+  "source": "ESPN core plays API",
+  "events": [
+   "401772842",
+   "401772733",
+   "401772731",
+   "401772732"
+  ],
+  "recorded": "2026-09-12",
+  "why": "Turnover, defensive-touchdown and own-recovery shapes: no turnover existed in any recorded fixture, so DEF attribution and the turnover role split had nothing to assert against."
+ },
+ "items": [
+  {
+   "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772731/competitions/401772731/plays/4017727311904?lang=en&region=us",
+   "id": "4017727311904",
+   "sequenceNumber": "190400",
+   "type": {
+    "id": "39",
+    "text": "Fumble Return Touchdown",
+    "abbreviation": "TD"
+   },
+   "text": "(Shotgun) J.Browning pass short right to N.Fant to MIN 32 for 4 yards (I.Rodgers). FUMBLES (I.Rodgers), RECOVERED by MIN-I.Rodgers at MIN 34. I.Rodgers for 66 yards, TOUCHDOWN. W.Reichard extra point is GOOD, Center-A.DePaola, Holder-R.Wright.",
+   "shortText": "Isaiah Rodgers 66 Yd Fumble Recovery (Will Reichard Kick)",
+   "alternativeText": "(Shotgun) J.Browning pass short right to N.Fant to MIN 32 for 4 yards (I.Rodgers). FUMBLES (I.Rodgers), RECOVERED by MIN-I.Rodgers at MIN 34. I.Rodgers for 66 yards, TOUCHDOWN. W.Reichard extra point is GOOD, Center-A.DePaola, Holder-R.Wright.",
+   "shortAlternativeText": "Isaiah Rodgers 66 Yd Fumble Recovery (Will Reichard Kick)",
+   "awayScore": 3,
+   "homeScore": 24,
+   "period": {
+    "number": 2
+   },
+   "clock": {
+    "value": 107,
+    "displayValue": "1:47"
+   },
+   "scoringPlay": true,
+   "priority": false,
+   "scoreValue": 6,
+   "modified": "2026-02-11T17:50Z",
+   "team": {
+    "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2025/teams/16?lang=en&region=us"
+   },
+   "participants": [
+    {
+     "athlete": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2025/athletes/3886812?lang=en&region=us"
+     },
+     "position": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/positions/8?lang=en&region=us"
+     },
+     "statistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772731/competitions/401772731/plays/4017727311904/participants/3886812/statistics/1?lang=en&region=us"
+     },
+     "playStatistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772731/competitions/401772731/plays/4017727311904/participants/3886812/statistics/0?lang=en&region=us"
+     },
+     "order": 1,
+     "type": "passer"
+    },
+    {
+     "athlete": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2025/athletes/4036131?lang=en&region=us"
+     },
+     "position": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/positions/7?lang=en&region=us"
+     },
+     "statistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772731/competitions/401772731/plays/4017727311904/participants/4036131/statistics/1?lang=en&region=us"
+     },
+     "playStatistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772731/competitions/401772731/plays/4017727311904/participants/4036131/statistics/0?lang=en&region=us"
+     },
+     "order": 2,
+     "type": "receiver"
+    },
+    {
+     "athlete": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2025/athletes/4044540?lang=en&region=us"
+     },
+     "position": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/positions/29?lang=en&region=us"
+     },
+     "statistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772731/competitions/401772731/plays/4017727311904/participants/4044540/statistics/1?lang=en&region=us"
+     },
+     "playStatistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772731/competitions/401772731/plays/4017727311904/participants/4044540/statistics/0?lang=en&region=us"
+     },
+     "order": 3,
+     "type": "forcedBy"
+    },
+    {
+     "athlete": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2025/athletes/4044540?lang=en&region=us"
+     },
+     "position": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/positions/29?lang=en&region=us"
+     },
+     "statistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772731/competitions/401772731/plays/4017727311904/participants/4044540/statistics/1?lang=en&region=us"
+     },
+     "playStatistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772731/competitions/401772731/plays/4017727311904/participants/4044540/statistics/0?lang=en&region=us"
+     },
+     "order": 4,
+     "type": "recoverer"
+    },
+    {
+     "athlete": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2025/athletes/4044540?lang=en&region=us"
+     },
+     "position": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/positions/29?lang=en&region=us"
+     },
+     "statistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772731/competitions/401772731/plays/4017727311904/participants/4044540/statistics/1?lang=en&region=us"
+     },
+     "playStatistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772731/competitions/401772731/plays/4017727311904/participants/4044540/statistics/0?lang=en&region=us"
+     },
+     "order": 5,
+     "type": "tackler"
+    },
+    {
+     "athlete": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2025/athletes/4044540?lang=en&region=us"
+     },
+     "position": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/positions/29?lang=en&region=us"
+     },
+     "statistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772731/competitions/401772731/plays/4017727311904/participants/4044540/statistics/1?lang=en&region=us"
+     },
+     "playStatistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772731/competitions/401772731/plays/4017727311904/participants/4044540/statistics/0?lang=en&region=us"
+     },
+     "order": 6,
+     "type": "scorer"
+    },
+    {
+     "athlete": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2025/athletes/4567104?lang=en&region=us"
+     },
+     "position": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/positions/22?lang=en&region=us"
+     },
+     "statistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772731/competitions/401772731/plays/4017727311904/participants/4567104/statistics/1?lang=en&region=us"
+     },
+     "playStatistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772731/competitions/401772731/plays/4017727311904/participants/4567104/statistics/0?lang=en&region=us"
+     },
+     "order": 7,
+     "type": "kicker"
+    },
+    {
+     "athlete": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2025/athletes/4567104?lang=en&region=us"
+     },
+     "position": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/positions/22?lang=en&region=us"
+     },
+     "statistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772731/competitions/401772731/plays/4017727311904/participants/4567104/statistics/1?lang=en&region=us"
+     },
+     "playStatistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772731/competitions/401772731/plays/4017727311904/participants/4567104/statistics/0?lang=en&region=us"
+     },
+     "order": 8,
+     "type": "patScorer"
+    }
+   ],
+   "probability": {
+    "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772731/competitions/401772731/probabilities/4017727311904?lang=en&region=us"
+   },
+   "wallclock": "2025-09-21T18:26:42Z",
+   "teamParticipants": [
+    {
+     "team": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2025/teams/16?lang=en&region=us"
+     },
+     "id": "16",
+     "statistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772731/competitions/401772731/plays/4017727311904/teams/16/statistics/1?lang=en&region=us"
+     },
+     "playStatistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772731/competitions/401772731/plays/4017727311904/teams/16/statistics/0?lang=en&region=us"
+     },
+     "order": 1,
+     "type": "defense"
+    },
+    {
+     "team": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2025/teams/4?lang=en&region=us"
+     },
+     "id": "4",
+     "statistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772731/competitions/401772731/plays/4017727311904/teams/4/statistics/1?lang=en&region=us"
+     },
+     "playStatistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772731/competitions/401772731/plays/4017727311904/teams/4/statistics/0?lang=en&region=us"
+     },
+     "order": 2,
+     "type": "offense"
+    }
+   ],
+   "isPenalty": false,
+   "statYardage": 66,
+   "drive": {
+    "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772731/competitions/401772731/drives/40177273111?lang=en&region=us"
+   },
+   "start": {
+    "down": 1,
+    "distance": 10,
+    "yardLine": 36,
+    "yardsToEndzone": 36,
+    "downDistanceText": "1st & 10 at MIN 36",
+    "shortDownDistanceText": "1st & 10",
+    "possessionText": "MIN 36",
+    "team": {
+     "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2025/teams/4?lang=en&region=us"
+    }
+   },
+   "end": {
+    "down": -1,
+    "distance": 10,
+    "yardLine": 100,
+    "yardsToEndzone": 0,
+    "team": {
+     "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2025/teams/16?lang=en&region=us"
+    }
+   },
+   "scoringType": {
+    "name": "touchdown",
+    "displayName": "Touchdown",
+    "abbreviation": "TD"
+   },
+   "pointAfterAttempt": {
+    "id": 61,
+    "text": "Extra Point Good",
+    "abbreviation": "Extra Point Good",
+    "value": 1
+   },
+   "yardsAfterCatch": -30,
+   "isTurnover": true,
+   "__eventId": "401772731"
+  },
+  {
+   "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772731/competitions/401772731/plays/4017727312050?lang=en&region=us",
+   "id": "4017727312050",
+   "sequenceNumber": "205000",
+   "type": {
+    "id": "29",
+    "text": "Fumble Recovery (Opponent)"
+   },
+   "text": "(Shotgun) J.Browning pass short right to J.Chase to CIN 47 for 15 yards (I.Rodgers). FUMBLES (I.Rodgers), RECOVERED by MIN-J.Okudah at MIN 48. J.Okudah to MIN 48 for no gain (J.Chase).Penalty on CIN-T.Higgins, Illegal Motion, declined.Penalty on CIN-J.Browning, Illegal Forward Pass, declined.",
+   "shortText": "Jake Browning Pass Complete for 15 Yds to Ja'Marr Chase Ja'Marr Chase Fumble Jeff Okudah 0 Yd Fumble Recovery",
+   "alternativeText": "(Shotgun) J.Browning pass short right to J.Chase to CIN 47 for 15 yards (I.Rodgers). FUMBLES (I.Rodgers), RECOVERED by MIN-J.Okudah at MIN 48. J.Okudah to MIN 48 for no gain (J.Chase).Penalty on CIN-T.Higgins, Illegal Motion, declined.Penalty on CIN-J.Browning, Illegal Forward Pass, declined.",
+   "shortAlternativeText": "Jake Browning Pass Complete for 15 Yds to Ja'Marr Chase Ja'Marr Chase Fumble Jeff Okudah 0 Yd Fumble Recovery",
+   "awayScore": 3,
+   "homeScore": 24,
+   "period": {
+    "number": 2
+   },
+   "clock": {
+    "value": 91,
+    "displayValue": "1:31"
+   },
+   "scoringPlay": false,
+   "priority": false,
+   "scoreValue": 0,
+   "modified": "2026-02-11T17:50Z",
+   "team": {
+    "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2025/teams/16?lang=en&region=us"
+   },
+   "participants": [
+    {
+     "athlete": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2025/athletes/3886812?lang=en&region=us"
+     },
+     "position": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/positions/8?lang=en&region=us"
+     },
+     "statistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772731/competitions/401772731/plays/4017727312050/participants/3886812/statistics/1?lang=en&region=us"
+     },
+     "playStatistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772731/competitions/401772731/plays/4017727312050/participants/3886812/statistics/0?lang=en&region=us"
+     },
+     "order": 1,
+     "type": "passer"
+    },
+    {
+     "athlete": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2025/athletes/4362628?lang=en&region=us"
+     },
+     "position": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/positions/1?lang=en&region=us"
+     },
+     "statistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772731/competitions/401772731/plays/4017727312050/participants/4362628/statistics/1?lang=en&region=us"
+     },
+     "playStatistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772731/competitions/401772731/plays/4017727312050/participants/4362628/statistics/0?lang=en&region=us"
+     },
+     "order": 2,
+     "type": "receiver"
+    },
+    {
+     "athlete": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2025/athletes/4362628?lang=en&region=us"
+     },
+     "position": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/positions/1?lang=en&region=us"
+     },
+     "statistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772731/competitions/401772731/plays/4017727312050/participants/4362628/statistics/1?lang=en&region=us"
+     },
+     "playStatistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772731/competitions/401772731/plays/4017727312050/participants/4362628/statistics/0?lang=en&region=us"
+     },
+     "order": 3,
+     "type": "tackler"
+    },
+    {
+     "athlete": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2025/athletes/4362628?lang=en&region=us"
+     },
+     "position": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/positions/1?lang=en&region=us"
+     },
+     "statistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772731/competitions/401772731/plays/4017727312050/participants/4362628/statistics/1?lang=en&region=us"
+     },
+     "playStatistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772731/competitions/401772731/plays/4017727312050/participants/4362628/statistics/0?lang=en&region=us"
+     },
+     "order": 4,
+     "type": "fumbler"
+    },
+    {
+     "athlete": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2025/athletes/4044540?lang=en&region=us"
+     },
+     "position": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/positions/29?lang=en&region=us"
+     },
+     "statistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772731/competitions/401772731/plays/4017727312050/participants/4044540/statistics/1?lang=en&region=us"
+     },
+     "playStatistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772731/competitions/401772731/plays/4017727312050/participants/4044540/statistics/0?lang=en&region=us"
+     },
+     "order": 5,
+     "type": "forcedBy"
+    },
+    {
+     "athlete": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2025/athletes/4241984?lang=en&region=us"
+     },
+     "position": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/positions/29?lang=en&region=us"
+     },
+     "statistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772731/competitions/401772731/plays/4017727312050/participants/4241984/statistics/1?lang=en&region=us"
+     },
+     "playStatistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772731/competitions/401772731/plays/4017727312050/participants/4241984/statistics/0?lang=en&region=us"
+     },
+     "order": 6,
+     "type": "recoverer"
+    }
+   ],
+   "probability": {
+    "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772731/competitions/401772731/probabilities/4017727312050?lang=en&region=us"
+   },
+   "wallclock": "2025-09-21T18:32:03Z",
+   "teamParticipants": [
+    {
+     "team": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2025/teams/16?lang=en&region=us"
+     },
+     "id": "16",
+     "statistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772731/competitions/401772731/plays/4017727312050/teams/16/statistics/1?lang=en&region=us"
+     },
+     "playStatistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772731/competitions/401772731/plays/4017727312050/teams/16/statistics/0?lang=en&region=us"
+     },
+     "order": 1,
+     "type": "defense"
+    },
+    {
+     "team": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2025/teams/4?lang=en&region=us"
+     },
+     "id": "4",
+     "statistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772731/competitions/401772731/plays/4017727312050/teams/4/statistics/1?lang=en&region=us"
+     },
+     "playStatistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772731/competitions/401772731/plays/4017727312050/teams/4/statistics/0?lang=en&region=us"
+     },
+     "order": 2,
+     "type": "offense"
+    }
+   ],
+   "isPenalty": false,
+   "statYardage": 0,
+   "drive": {
+    "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772731/competitions/401772731/drives/40177273112?lang=en&region=us"
+   },
+   "start": {
+    "down": 2,
+    "distance": 5,
+    "yardLine": 68,
+    "yardsToEndzone": 68,
+    "downDistanceText": "2nd & 5 at CIN 32",
+    "shortDownDistanceText": "2nd & 5",
+    "possessionText": "CIN 32",
+    "team": {
+     "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2025/teams/4?lang=en&region=us"
+    }
+   },
+   "end": {
+    "down": 1,
+    "distance": 10,
+    "yardLine": 48,
+    "yardsToEndzone": 52,
+    "downDistanceText": "1st & 10 at MIN 48",
+    "shortDownDistanceText": "1st & 10",
+    "possessionText": "MIN 48",
+    "team": {
+     "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2025/teams/16?lang=en&region=us"
+    }
+   },
+   "yardsAfterCatch": 6,
+   "isTurnover": true,
+   "__eventId": "401772731"
+  },
+  {
+   "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772731/competitions/401772731/plays/4017727312248?lang=en&region=us",
+   "id": "4017727312248",
+   "sequenceNumber": "224800",
+   "type": {
+    "id": "29",
+    "text": "Fumble Recovery (Opponent)"
+   },
+   "text": "(Shotgun) S.Perine left guard to CIN 35 for 5 yards (J.Redmond). FUMBLES (J.Redmond), touched at CIN 47, RECOVERED by MIN-J.Allen at CIN 47.",
+   "shortText": "Samaje Perine 5 Yd Rush Samaje Perine Fumble Jonathan Allen 0 Yd Fumble Recovery",
+   "alternativeText": "(Shotgun) S.Perine left guard to CIN 35 for 5 yards (J.Redmond). FUMBLES (J.Redmond), touched at CIN 47, RECOVERED by MIN-J.Allen at CIN 47.",
+   "shortAlternativeText": "Samaje Perine 5 Yd Rush Samaje Perine Fumble Jonathan Allen 0 Yd Fumble Recovery",
+   "awayScore": 3,
+   "homeScore": 31,
+   "period": {
+    "number": 2
+   },
+   "clock": {
+    "value": 28,
+    "displayValue": "0:28"
+   },
+   "scoringPlay": false,
+   "priority": false,
+   "scoreValue": 0,
+   "modified": "2026-02-11T17:50Z",
+   "team": {
+    "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2025/teams/16?lang=en&region=us"
+   },
+   "participants": [
+    {
+     "athlete": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2025/athletes/3116389?lang=en&region=us"
+     },
+     "position": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/positions/9?lang=en&region=us"
+     },
+     "statistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772731/competitions/401772731/plays/4017727312248/participants/3116389/statistics/1?lang=en&region=us"
+     },
+     "playStatistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772731/competitions/401772731/plays/4017727312248/participants/3116389/statistics/0?lang=en&region=us"
+     },
+     "order": 1,
+     "type": "rusher"
+    },
+    {
+     "athlete": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2025/athletes/3116389?lang=en&region=us"
+     },
+     "position": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/positions/9?lang=en&region=us"
+     },
+     "statistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772731/competitions/401772731/plays/4017727312248/participants/3116389/statistics/1?lang=en&region=us"
+     },
+     "playStatistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772731/competitions/401772731/plays/4017727312248/participants/3116389/statistics/0?lang=en&region=us"
+     },
+     "order": 2,
+     "type": "fumbler"
+    },
+    {
+     "athlete": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2025/athletes/4360277?lang=en&region=us"
+     },
+     "position": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/positions/32?lang=en&region=us"
+     },
+     "statistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772731/competitions/401772731/plays/4017727312248/participants/4360277/statistics/1?lang=en&region=us"
+     },
+     "playStatistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772731/competitions/401772731/plays/4017727312248/participants/4360277/statistics/0?lang=en&region=us"
+     },
+     "order": 3,
+     "type": "forcedBy"
+    },
+    {
+     "athlete": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2025/athletes/3054840?lang=en&region=us"
+     },
+     "position": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/positions/32?lang=en&region=us"
+     },
+     "statistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772731/competitions/401772731/plays/4017727312248/participants/3054840/statistics/1?lang=en&region=us"
+     },
+     "playStatistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772731/competitions/401772731/plays/4017727312248/participants/3054840/statistics/0?lang=en&region=us"
+     },
+     "order": 4,
+     "type": "recoverer"
+    },
+    {
+     "athlete": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2025/athletes/4360277?lang=en&region=us"
+     },
+     "position": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/positions/32?lang=en&region=us"
+     },
+     "statistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772731/competitions/401772731/plays/4017727312248/participants/4360277/statistics/1?lang=en&region=us"
+     },
+     "playStatistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772731/competitions/401772731/plays/4017727312248/participants/4360277/statistics/0?lang=en&region=us"
+     },
+     "order": 5,
+     "type": "tackler"
+    }
+   ],
+   "probability": {
+    "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772731/competitions/401772731/probabilities/4017727312248?lang=en&region=us"
+   },
+   "wallclock": "2025-09-21T18:38:38Z",
+   "teamParticipants": [
+    {
+     "team": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2025/teams/16?lang=en&region=us"
+     },
+     "id": "16",
+     "statistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772731/competitions/401772731/plays/4017727312248/teams/16/statistics/1?lang=en&region=us"
+     },
+     "playStatistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772731/competitions/401772731/plays/4017727312248/teams/16/statistics/0?lang=en&region=us"
+     },
+     "order": 1,
+     "type": "defense"
+    },
+    {
+     "team": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2025/teams/4?lang=en&region=us"
+     },
+     "id": "4",
+     "statistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772731/competitions/401772731/plays/4017727312248/teams/4/statistics/1?lang=en&region=us"
+     },
+     "playStatistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772731/competitions/401772731/plays/4017727312248/teams/4/statistics/0?lang=en&region=us"
+     },
+     "order": 2,
+     "type": "offense"
+    }
+   ],
+   "isPenalty": false,
+   "statYardage": 0,
+   "drive": {
+    "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772731/competitions/401772731/drives/40177273114?lang=en&region=us"
+   },
+   "start": {
+    "down": 1,
+    "distance": 10,
+    "yardLine": 70,
+    "yardsToEndzone": 70,
+    "downDistanceText": "1st & 10 at CIN 30",
+    "shortDownDistanceText": "1st & 10",
+    "possessionText": "CIN 30",
+    "team": {
+     "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2025/teams/4?lang=en&region=us"
+    }
+   },
+   "end": {
+    "down": 1,
+    "distance": 10,
+    "yardLine": 53,
+    "yardsToEndzone": 47,
+    "downDistanceText": "1st & 10 at CIN 47",
+    "shortDownDistanceText": "1st & 10",
+    "possessionText": "CIN 47",
+    "team": {
+     "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2025/teams/16?lang=en&region=us"
+    }
+   },
+   "isTurnover": true,
+   "__eventId": "401772731"
+  },
+  {
+   "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772731/competitions/401772731/plays/4017727313088?lang=en&region=us",
+   "id": "4017727313088",
+   "sequenceNumber": "308800",
+   "type": {
+    "id": "26",
+    "text": "Pass Interception Return",
+    "abbreviation": "INTR"
+   },
+   "text": "(Shotgun) J.Browning pass short middle intended for M.Gesicki INTERCEPTED by J.Metellus at MIN 32. J.Metellus to MIN 32 for no gain (M.Gesicki).",
+   "shortText": "Joshua Metellus  Interception Return, No Gain",
+   "alternativeText": "(Shotgun) J.Browning pass short middle intended for M.Gesicki INTERCEPTED by J.Metellus at MIN 32. J.Metellus to MIN 32 for no gain (M.Gesicki).",
+   "shortAlternativeText": "Joshua Metellus  Interception Return, No Gain",
+   "awayScore": 3,
+   "homeScore": 41,
+   "period": {
+    "number": 3
+   },
+   "clock": {
+    "value": 235,
+    "displayValue": "3:55"
+   },
+   "scoringPlay": false,
+   "priority": false,
+   "scoreValue": 0,
+   "modified": "2026-02-11T17:50Z",
+   "team": {
+    "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2025/teams/16?lang=en&region=us"
+   },
+   "participants": [
+    {
+     "athlete": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2025/athletes/3886812?lang=en&region=us"
+     },
+     "position": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/positions/8?lang=en&region=us"
+     },
+     "statistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772731/competitions/401772731/plays/4017727313088/participants/3886812/statistics/1?lang=en&region=us"
+     },
+     "playStatistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772731/competitions/401772731/plays/4017727313088/participants/3886812/statistics/0?lang=en&region=us"
+     },
+     "order": 1,
+     "type": "passer"
+    },
+    {
+     "athlete": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2025/athletes/4046537?lang=en&region=us"
+     },
+     "position": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/positions/36?lang=en&region=us"
+     },
+     "statistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772731/competitions/401772731/plays/4017727313088/participants/4046537/statistics/1?lang=en&region=us"
+     },
+     "playStatistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772731/competitions/401772731/plays/4017727313088/participants/4046537/statistics/0?lang=en&region=us"
+     },
+     "order": 2,
+     "type": "passDefender"
+    },
+    {
+     "athlete": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2025/athletes/4046537?lang=en&region=us"
+     },
+     "position": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/positions/36?lang=en&region=us"
+     },
+     "statistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772731/competitions/401772731/plays/4017727313088/participants/4046537/statistics/1?lang=en&region=us"
+     },
+     "playStatistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772731/competitions/401772731/plays/4017727313088/participants/4046537/statistics/0?lang=en&region=us"
+     },
+     "order": 3,
+     "type": "returner"
+    },
+    {
+     "athlete": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2025/athletes/3116164?lang=en&region=us"
+     },
+     "position": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/positions/7?lang=en&region=us"
+     },
+     "statistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772731/competitions/401772731/plays/4017727313088/participants/3116164/statistics/1?lang=en&region=us"
+     },
+     "playStatistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772731/competitions/401772731/plays/4017727313088/participants/3116164/statistics/0?lang=en&region=us"
+     },
+     "order": 4,
+     "type": "tackler"
+    }
+   ],
+   "probability": {
+    "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772731/competitions/401772731/probabilities/4017727313088?lang=en&region=us"
+   },
+   "wallclock": "2025-09-21T19:24:23Z",
+   "teamParticipants": [
+    {
+     "team": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2025/teams/16?lang=en&region=us"
+     },
+     "id": "16",
+     "statistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772731/competitions/401772731/plays/4017727313088/teams/16/statistics/1?lang=en&region=us"
+     },
+     "playStatistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772731/competitions/401772731/plays/4017727313088/teams/16/statistics/0?lang=en&region=us"
+     },
+     "order": 1,
+     "type": "defense"
+    },
+    {
+     "team": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2025/teams/4?lang=en&region=us"
+     },
+     "id": "4",
+     "statistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772731/competitions/401772731/plays/4017727313088/teams/4/statistics/1?lang=en&region=us"
+     },
+     "playStatistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772731/competitions/401772731/plays/4017727313088/teams/4/statistics/0?lang=en&region=us"
+     },
+     "order": 2,
+     "type": "offense"
+    }
+   ],
+   "isPenalty": false,
+   "statYardage": 0,
+   "drive": {
+    "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772731/competitions/401772731/drives/40177273118?lang=en&region=us"
+   },
+   "start": {
+    "down": 2,
+    "distance": 10,
+    "yardLine": 46,
+    "yardsToEndzone": 46,
+    "downDistanceText": "2nd & 10 at MIN 46",
+    "shortDownDistanceText": "2nd & 10",
+    "possessionText": "MIN 46",
+    "team": {
+     "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2025/teams/4?lang=en&region=us"
+    }
+   },
+   "end": {
+    "down": 1,
+    "distance": 10,
+    "yardLine": 32,
+    "yardsToEndzone": 68,
+    "downDistanceText": "1st & 10 at MIN 32",
+    "shortDownDistanceText": "1st & 10",
+    "possessionText": "MIN 32",
+    "team": {
+     "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2025/teams/16?lang=en&region=us"
+    }
+   },
+   "isTurnover": true,
+   "__eventId": "401772731"
+  },
+  {
+   "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772731/competitions/401772731/plays/4017727313440?lang=en&region=us",
+   "id": "4017727313440",
+   "sequenceNumber": "344000",
+   "type": {
+    "id": "9",
+    "text": "Fumble Recovery (Own)"
+   },
+   "text": "J.Browning pass short left to C.Grandy to MIN 23 for 6 yards (T.Jackson). FUMBLES (T.Jackson), recovered by CIN-C.Jones at MIN 23.",
+   "shortText": "Jake Browning Pass Complete for 6 Yds to Cam Grandy Cam Grandy Fumble Charlie Jones 0 Yd Fumble Recovery",
+   "alternativeText": "J.Browning pass short left to C.Grandy to MIN 23 for 6 yards (T.Jackson). FUMBLES (T.Jackson), recovered by CIN-C.Jones at MIN 23.",
+   "shortAlternativeText": "Jake Browning Pass Complete for 6 Yds to Cam Grandy Cam Grandy Fumble Charlie Jones 0 Yd Fumble Recovery",
+   "awayScore": 3,
+   "homeScore": 48,
+   "period": {
+    "number": 4
+   },
+   "clock": {
+    "value": 823,
+    "displayValue": "13:43"
+   },
+   "scoringPlay": false,
+   "priority": false,
+   "scoreValue": 0,
+   "modified": "2026-02-11T17:50Z",
+   "team": {
+    "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2025/teams/4?lang=en&region=us"
+   },
+   "participants": [
+    {
+     "athlete": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2025/athletes/3886812?lang=en&region=us"
+     },
+     "position": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/positions/8?lang=en&region=us"
+     },
+     "statistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772731/competitions/401772731/plays/4017727313440/participants/3886812/statistics/1?lang=en&region=us"
+     },
+     "playStatistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772731/competitions/401772731/plays/4017727313440/participants/3886812/statistics/0?lang=en&region=us"
+     },
+     "order": 1,
+     "type": "passer"
+    },
+    {
+     "athlete": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2025/athletes/4700712?lang=en&region=us"
+     },
+     "position": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/positions/7?lang=en&region=us"
+     },
+     "statistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772731/competitions/401772731/plays/4017727313440/participants/4700712/statistics/1?lang=en&region=us"
+     },
+     "playStatistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772731/competitions/401772731/plays/4017727313440/participants/4700712/statistics/0?lang=en&region=us"
+     },
+     "order": 2,
+     "type": "receiver"
+    },
+    {
+     "athlete": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2025/athletes/4700712?lang=en&region=us"
+     },
+     "position": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/positions/7?lang=en&region=us"
+     },
+     "statistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772731/competitions/401772731/plays/4017727313440/participants/4700712/statistics/1?lang=en&region=us"
+     },
+     "playStatistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772731/competitions/401772731/plays/4017727313440/participants/4700712/statistics/0?lang=en&region=us"
+     },
+     "order": 3,
+     "type": "fumbler"
+    },
+    {
+     "athlete": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2025/athletes/4242436?lang=en&region=us"
+     },
+     "position": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/positions/36?lang=en&region=us"
+     },
+     "statistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772731/competitions/401772731/plays/4017727313440/participants/4242436/statistics/1?lang=en&region=us"
+     },
+     "playStatistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772731/competitions/401772731/plays/4017727313440/participants/4242436/statistics/0?lang=en&region=us"
+     },
+     "order": 4,
+     "type": "forcedBy"
+    },
+    {
+     "athlete": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2025/athletes/4242436?lang=en&region=us"
+     },
+     "position": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/positions/36?lang=en&region=us"
+     },
+     "statistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772731/competitions/401772731/plays/4017727313440/participants/4242436/statistics/1?lang=en&region=us"
+     },
+     "playStatistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772731/competitions/401772731/plays/4017727313440/participants/4242436/statistics/0?lang=en&region=us"
+     },
+     "order": 5,
+     "type": "tackler"
+    },
+    {
+     "athlete": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2025/athletes/4257188?lang=en&region=us"
+     },
+     "position": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/positions/1?lang=en&region=us"
+     },
+     "statistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772731/competitions/401772731/plays/4017727313440/participants/4257188/statistics/1?lang=en&region=us"
+     },
+     "playStatistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772731/competitions/401772731/plays/4017727313440/participants/4257188/statistics/0?lang=en&region=us"
+     },
+     "order": 6,
+     "type": "recoverer"
+    }
+   ],
+   "probability": {
+    "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772731/competitions/401772731/probabilities/4017727313440?lang=en&region=us"
+   },
+   "wallclock": "2025-09-21T19:41:25Z",
+   "teamParticipants": [
+    {
+     "team": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2025/teams/4?lang=en&region=us"
+     },
+     "id": "4",
+     "statistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772731/competitions/401772731/plays/4017727313440/teams/4/statistics/1?lang=en&region=us"
+     },
+     "playStatistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772731/competitions/401772731/plays/4017727313440/teams/4/statistics/0?lang=en&region=us"
+     },
+     "order": 1,
+     "type": "offense"
+    },
+    {
+     "team": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2025/teams/16?lang=en&region=us"
+     },
+     "id": "16",
+     "statistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772731/competitions/401772731/plays/4017727313440/teams/16/statistics/1?lang=en&region=us"
+     },
+     "playStatistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772731/competitions/401772731/plays/4017727313440/teams/16/statistics/0?lang=en&region=us"
+     },
+     "order": 2,
+     "type": "defense"
+    }
+   ],
+   "isPenalty": false,
+   "statYardage": 6,
+   "drive": {
+    "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772731/competitions/401772731/drives/40177273120?lang=en&region=us"
+   },
+   "start": {
+    "down": 2,
+    "distance": 9,
+    "yardLine": 29,
+    "yardsToEndzone": 29,
+    "downDistanceText": "2nd & 9 at MIN 29",
+    "shortDownDistanceText": "2nd & 9",
+    "possessionText": "MIN 29",
+    "team": {
+     "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2025/teams/4?lang=en&region=us"
+    }
+   },
+   "end": {
+    "down": 3,
+    "distance": 3,
+    "yardLine": 23,
+    "yardsToEndzone": 23,
+    "downDistanceText": "3rd & 3 at MIN 23",
+    "shortDownDistanceText": "3rd & 3",
+    "possessionText": "MIN 23",
+    "team": {
+     "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2025/teams/4?lang=en&region=us"
+    }
+   },
+   "yardsAfterCatch": 2,
+   "isTurnover": false,
+   "__eventId": "401772731"
+  },
+  {
+   "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772731/competitions/401772731/plays/4017727313685?lang=en&region=us",
+   "id": "4017727313685",
+   "sequenceNumber": "368500",
+   "type": {
+    "id": "9",
+    "text": "Fumble Recovery (Own)"
+   },
+   "text": "Z.Scott left tackle to MIN 36 for 1 yard (O.Burks). FUMBLES (O.Burks), recovered by MIN-B.Brandel at MIN 38.",
+   "shortText": "Zavier Scott 1 Yd Rush Zavier Scott Fumble Blake Brandel 0 Yd Fumble Recovery Blake Brandel Rush, No Gain",
+   "alternativeText": "Z.Scott left tackle to MIN 36 for 1 yard (O.Burks). FUMBLES (O.Burks), recovered by MIN-B.Brandel at MIN 38.",
+   "shortAlternativeText": "Zavier Scott 1 Yd Rush Zavier Scott Fumble Blake Brandel 0 Yd Fumble Recovery Blake Brandel Rush, No Gain",
+   "awayScore": 10,
+   "homeScore": 48,
+   "period": {
+    "number": 4
+   },
+   "clock": {
+    "value": 667,
+    "displayValue": "11:07"
+   },
+   "scoringPlay": false,
+   "priority": false,
+   "scoreValue": 0,
+   "modified": "2026-02-11T17:50Z",
+   "team": {
+    "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2025/teams/16?lang=en&region=us"
+   },
+   "participants": [
+    {
+     "athlete": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2025/athletes/4257364?lang=en&region=us"
+     },
+     "position": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/positions/9?lang=en&region=us"
+     },
+     "statistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772731/competitions/401772731/plays/4017727313685/participants/4257364/statistics/1?lang=en&region=us"
+     },
+     "playStatistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772731/competitions/401772731/plays/4017727313685/participants/4257364/statistics/0?lang=en&region=us"
+     },
+     "order": 1,
+     "type": "rusher"
+    },
+    {
+     "athlete": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2025/athletes/4257364?lang=en&region=us"
+     },
+     "position": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/positions/9?lang=en&region=us"
+     },
+     "statistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772731/competitions/401772731/plays/4017727313685/participants/4257364/statistics/1?lang=en&region=us"
+     },
+     "playStatistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772731/competitions/401772731/plays/4017727313685/participants/4257364/statistics/0?lang=en&region=us"
+     },
+     "order": 2,
+     "type": "fumbler"
+    },
+    {
+     "athlete": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2025/athletes/3051746?lang=en&region=us"
+     },
+     "position": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/positions/30?lang=en&region=us"
+     },
+     "statistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772731/competitions/401772731/plays/4017727313685/participants/3051746/statistics/1?lang=en&region=us"
+     },
+     "playStatistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772731/competitions/401772731/plays/4017727313685/participants/3051746/statistics/0?lang=en&region=us"
+     },
+     "order": 3,
+     "type": "forcedBy"
+    },
+    {
+     "athlete": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2025/athletes/3930270?lang=en&region=us"
+     },
+     "position": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/positions/4?lang=en&region=us"
+     },
+     "statistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772731/competitions/401772731/plays/4017727313685/participants/3930270/statistics/1?lang=en&region=us"
+     },
+     "playStatistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772731/competitions/401772731/plays/4017727313685/participants/3930270/statistics/0?lang=en&region=us"
+     },
+     "order": 4,
+     "type": "recoverer"
+    },
+    {
+     "athlete": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2025/athletes/3051746?lang=en&region=us"
+     },
+     "position": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/positions/30?lang=en&region=us"
+     },
+     "statistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772731/competitions/401772731/plays/4017727313685/participants/3051746/statistics/1?lang=en&region=us"
+     },
+     "playStatistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772731/competitions/401772731/plays/4017727313685/participants/3051746/statistics/0?lang=en&region=us"
+     },
+     "order": 5,
+     "type": "tackler"
+    }
+   ],
+   "probability": {
+    "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772731/competitions/401772731/probabilities/4017727313685?lang=en&region=us"
+   },
+   "wallclock": "2025-09-21T19:51:30Z",
+   "teamParticipants": [
+    {
+     "team": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2025/teams/16?lang=en&region=us"
+     },
+     "id": "16",
+     "statistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772731/competitions/401772731/plays/4017727313685/teams/16/statistics/1?lang=en&region=us"
+     },
+     "playStatistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772731/competitions/401772731/plays/4017727313685/teams/16/statistics/0?lang=en&region=us"
+     },
+     "order": 1,
+     "type": "offense"
+    },
+    {
+     "team": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2025/teams/4?lang=en&region=us"
+     },
+     "id": "4",
+     "statistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772731/competitions/401772731/plays/4017727313685/teams/4/statistics/1?lang=en&region=us"
+     },
+     "playStatistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772731/competitions/401772731/plays/4017727313685/teams/4/statistics/0?lang=en&region=us"
+     },
+     "order": 2,
+     "type": "defense"
+    }
+   ],
+   "isPenalty": false,
+   "statYardage": 3,
+   "drive": {
+    "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772731/competitions/401772731/drives/40177273121?lang=en&region=us"
+   },
+   "start": {
+    "down": 1,
+    "distance": 10,
+    "yardLine": 35,
+    "yardsToEndzone": 65,
+    "downDistanceText": "1st & 10 at MIN 35",
+    "shortDownDistanceText": "1st & 10",
+    "possessionText": "MIN 35",
+    "team": {
+     "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2025/teams/16?lang=en&region=us"
+    }
+   },
+   "end": {
+    "down": 2,
+    "distance": 7,
+    "yardLine": 38,
+    "yardsToEndzone": 62,
+    "downDistanceText": "2nd & 7 at MIN 38",
+    "shortDownDistanceText": "2nd & 7",
+    "possessionText": "MIN 38",
+    "team": {
+     "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2025/teams/16?lang=en&region=us"
+    }
+   },
+   "isTurnover": false,
+   "__eventId": "401772731"
+  },
+  {
+   "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772731/competitions/401772731/plays/401772731603?lang=en&region=us",
+   "id": "401772731603",
+   "sequenceNumber": "60300",
+   "type": {
+    "id": "9",
+    "text": "Fumble Recovery (Own)"
+   },
+   "text": "C.Brown right guard to MIN 29 for 1 yard (E.Wilson). FUMBLES (E.Wilson), and recovers at MIN 29.",
+   "shortText": "Chase Brown 1 Yd Rush Chase Brown Fumble Chase Brown 0 Yd Fumble Recovery Chase Brown Rush, No Gain",
+   "alternativeText": "C.Brown right guard to MIN 29 for 1 yard (E.Wilson). FUMBLES (E.Wilson), and recovers at MIN 29.",
+   "shortAlternativeText": "Chase Brown 1 Yd Rush Chase Brown Fumble Chase Brown 0 Yd Fumble Recovery Chase Brown Rush, No Gain",
+   "awayScore": 0,
+   "homeScore": 7,
+   "period": {
+    "number": 1
+   },
+   "clock": {
+    "value": 428,
+    "displayValue": "7:08"
+   },
+   "scoringPlay": false,
+   "priority": false,
+   "scoreValue": 0,
+   "modified": "2026-02-11T17:50Z",
+   "team": {
+    "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2025/teams/4?lang=en&region=us"
+   },
+   "participants": [
+    {
+     "athlete": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2025/athletes/4362238?lang=en&region=us"
+     },
+     "position": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/positions/9?lang=en&region=us"
+     },
+     "statistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772731/competitions/401772731/plays/401772731603/participants/4362238/statistics/1?lang=en&region=us"
+     },
+     "playStatistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772731/competitions/401772731/plays/401772731603/participants/4362238/statistics/0?lang=en&region=us"
+     },
+     "order": 1,
+     "type": "rusher"
+    },
+    {
+     "athlete": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2025/athletes/4362238?lang=en&region=us"
+     },
+     "position": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/positions/9?lang=en&region=us"
+     },
+     "statistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772731/competitions/401772731/plays/401772731603/participants/4362238/statistics/1?lang=en&region=us"
+     },
+     "playStatistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772731/competitions/401772731/plays/401772731603/participants/4362238/statistics/0?lang=en&region=us"
+     },
+     "order": 2,
+     "type": "recoverer"
+    },
+    {
+     "athlete": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2025/athletes/4362238?lang=en&region=us"
+     },
+     "position": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/positions/9?lang=en&region=us"
+     },
+     "statistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772731/competitions/401772731/plays/401772731603/participants/4362238/statistics/1?lang=en&region=us"
+     },
+     "playStatistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772731/competitions/401772731/plays/401772731603/participants/4362238/statistics/0?lang=en&region=us"
+     },
+     "order": 3,
+     "type": "fumbler"
+    },
+    {
+     "athlete": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2025/athletes/3056916?lang=en&region=us"
+     },
+     "position": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/positions/30?lang=en&region=us"
+     },
+     "statistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772731/competitions/401772731/plays/401772731603/participants/3056916/statistics/1?lang=en&region=us"
+     },
+     "playStatistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772731/competitions/401772731/plays/401772731603/participants/3056916/statistics/0?lang=en&region=us"
+     },
+     "order": 4,
+     "type": "forcedBy"
+    },
+    {
+     "athlete": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2025/athletes/3056916?lang=en&region=us"
+     },
+     "position": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/positions/30?lang=en&region=us"
+     },
+     "statistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772731/competitions/401772731/plays/401772731603/participants/3056916/statistics/1?lang=en&region=us"
+     },
+     "playStatistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772731/competitions/401772731/plays/401772731603/participants/3056916/statistics/0?lang=en&region=us"
+     },
+     "order": 5,
+     "type": "tackler"
+    }
+   ],
+   "probability": {
+    "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772731/competitions/401772731/probabilities/401772731603?lang=en&region=us"
+   },
+   "wallclock": "2025-09-21T17:25:57Z",
+   "teamParticipants": [
+    {
+     "team": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2025/teams/4?lang=en&region=us"
+     },
+     "id": "4",
+     "statistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772731/competitions/401772731/plays/401772731603/teams/4/statistics/1?lang=en&region=us"
+     },
+     "playStatistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772731/competitions/401772731/plays/401772731603/teams/4/statistics/0?lang=en&region=us"
+     },
+     "order": 1,
+     "type": "offense"
+    },
+    {
+     "team": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2025/teams/16?lang=en&region=us"
+     },
+     "id": "16",
+     "statistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772731/competitions/401772731/plays/401772731603/teams/16/statistics/1?lang=en&region=us"
+     },
+     "playStatistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772731/competitions/401772731/plays/401772731603/teams/16/statistics/0?lang=en&region=us"
+     },
+     "order": 2,
+     "type": "defense"
+    }
+   ],
+   "isPenalty": false,
+   "statYardage": 1,
+   "drive": {
+    "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772731/competitions/401772731/drives/4017727314?lang=en&region=us"
+   },
+   "start": {
+    "down": 1,
+    "distance": 10,
+    "yardLine": 30,
+    "yardsToEndzone": 30,
+    "downDistanceText": "1st & 10 at MIN 30",
+    "shortDownDistanceText": "1st & 10",
+    "possessionText": "MIN 30",
+    "team": {
+     "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2025/teams/4?lang=en&region=us"
+    }
+   },
+   "end": {
+    "down": 2,
+    "distance": 9,
+    "yardLine": 29,
+    "yardsToEndzone": 29,
+    "downDistanceText": "2nd & 9 at MIN 29",
+    "shortDownDistanceText": "2nd & 9",
+    "possessionText": "MIN 29",
+    "team": {
+     "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2025/teams/4?lang=en&region=us"
+    }
+   },
+   "isTurnover": false,
+   "__eventId": "401772731"
+  },
+  {
+   "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772731/competitions/401772731/plays/401772731641?lang=en&region=us",
+   "id": "401772731641",
+   "sequenceNumber": "64100",
+   "type": {
+    "id": "36",
+    "text": "Interception Return Touchdown",
+    "abbreviation": "TD"
+   },
+   "text": "(Shotgun) J.Browning pass deep right intended for C.Brown INTERCEPTED by I.Rodgers (H.Smith) [I.Pace] at MIN 13. I.Rodgers for 87 yards, TOUCHDOWN. W.Reichard extra point is GOOD, Center-A.DePaola, Holder-R.Wright.",
+   "shortText": "Isaiah Rodgers 87 Yd Interception Return (Will Reichard Kick)",
+   "alternativeText": "(Shotgun) J.Browning pass deep right intended for C.Brown INTERCEPTED by I.Rodgers (H.Smith) [I.Pace] at MIN 13. I.Rodgers for 87 yards, TOUCHDOWN. W.Reichard extra point is GOOD, Center-A.DePaola, Holder-R.Wright.",
+   "shortAlternativeText": "Isaiah Rodgers 87 Yd Interception Return (Will Reichard Kick)",
+   "awayScore": 0,
+   "homeScore": 14,
+   "period": {
+    "number": 1
+   },
+   "clock": {
+    "value": 368,
+    "displayValue": "6:08"
+   },
+   "scoringPlay": true,
+   "priority": false,
+   "scoreValue": 6,
+   "modified": "2026-02-11T17:50Z",
+   "team": {
+    "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2025/teams/16?lang=en&region=us"
+   },
+   "participants": [
+    {
+     "athlete": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2025/athletes/3886812?lang=en&region=us"
+     },
+     "position": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/positions/8?lang=en&region=us"
+     },
+     "statistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772731/competitions/401772731/plays/401772731641/participants/3886812/statistics/1?lang=en&region=us"
+     },
+     "playStatistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772731/competitions/401772731/plays/401772731641/participants/3886812/statistics/0?lang=en&region=us"
+     },
+     "order": 1,
+     "type": "passer"
+    },
+    {
+     "athlete": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2025/athletes/4044540?lang=en&region=us"
+     },
+     "position": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/positions/29?lang=en&region=us"
+     },
+     "statistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772731/competitions/401772731/plays/401772731641/participants/4044540/statistics/1?lang=en&region=us"
+     },
+     "playStatistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772731/competitions/401772731/plays/401772731641/participants/4044540/statistics/0?lang=en&region=us"
+     },
+     "order": 2,
+     "type": "passDefender"
+    },
+    {
+     "athlete": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2025/athletes/4044540?lang=en&region=us"
+     },
+     "position": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/positions/29?lang=en&region=us"
+     },
+     "statistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772731/competitions/401772731/plays/401772731641/participants/4044540/statistics/1?lang=en&region=us"
+     },
+     "playStatistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772731/competitions/401772731/plays/401772731641/participants/4044540/statistics/0?lang=en&region=us"
+     },
+     "order": 3,
+     "type": "returner"
+    },
+    {
+     "athlete": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2025/athletes/4044540?lang=en&region=us"
+     },
+     "position": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/positions/29?lang=en&region=us"
+     },
+     "statistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772731/competitions/401772731/plays/401772731641/participants/4044540/statistics/1?lang=en&region=us"
+     },
+     "playStatistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772731/competitions/401772731/plays/401772731641/participants/4044540/statistics/0?lang=en&region=us"
+     },
+     "order": 4,
+     "type": "scorer"
+    },
+    {
+     "athlete": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2025/athletes/4567104?lang=en&region=us"
+     },
+     "position": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/positions/22?lang=en&region=us"
+     },
+     "statistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772731/competitions/401772731/plays/401772731641/participants/4567104/statistics/1?lang=en&region=us"
+     },
+     "playStatistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772731/competitions/401772731/plays/401772731641/participants/4567104/statistics/0?lang=en&region=us"
+     },
+     "order": 5,
+     "type": "kicker"
+    },
+    {
+     "athlete": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2025/athletes/4567104?lang=en&region=us"
+     },
+     "position": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/positions/22?lang=en&region=us"
+     },
+     "statistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772731/competitions/401772731/plays/401772731641/participants/4567104/statistics/1?lang=en&region=us"
+     },
+     "playStatistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772731/competitions/401772731/plays/401772731641/participants/4567104/statistics/0?lang=en&region=us"
+     },
+     "order": 6,
+     "type": "patScorer"
+    },
+    {
+     "athlete": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2025/athletes/14945?lang=en&region=us"
+     },
+     "position": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/positions/36?lang=en&region=us"
+     },
+     "statistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772731/competitions/401772731/plays/401772731641/participants/14945/statistics/1?lang=en&region=us"
+     },
+     "playStatistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772731/competitions/401772731/plays/401772731641/participants/14945/statistics/0?lang=en&region=us"
+     },
+     "order": 7,
+     "type": "other"
+    },
+    {
+     "athlete": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2025/athletes/4430280?lang=en&region=us"
+     },
+     "position": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/positions/30?lang=en&region=us"
+     },
+     "statistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772731/competitions/401772731/plays/401772731641/participants/4430280/statistics/1?lang=en&region=us"
+     },
+     "playStatistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772731/competitions/401772731/plays/401772731641/participants/4430280/statistics/0?lang=en&region=us"
+     },
+     "order": 8,
+     "type": "other"
+    },
+    {
+     "athlete": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2025/athletes/4362238?lang=en&region=us"
+     },
+     "position": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/positions/9?lang=en&region=us"
+     },
+     "statistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772731/competitions/401772731/plays/401772731641/participants/4362238/statistics/1?lang=en&region=us"
+     },
+     "playStatistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772731/competitions/401772731/plays/401772731641/participants/4362238/statistics/0?lang=en&region=us"
+     },
+     "order": 9,
+     "type": "other"
+    }
+   ],
+   "probability": {
+    "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772731/competitions/401772731/probabilities/401772731641?lang=en&region=us"
+   },
+   "wallclock": "2025-09-21T17:26:40Z",
+   "teamParticipants": [
+    {
+     "team": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2025/teams/16?lang=en&region=us"
+     },
+     "id": "16",
+     "statistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772731/competitions/401772731/plays/401772731641/teams/16/statistics/1?lang=en&region=us"
+     },
+     "playStatistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772731/competitions/401772731/plays/401772731641/teams/16/statistics/0?lang=en&region=us"
+     },
+     "order": 1,
+     "type": "defense"
+    },
+    {
+     "team": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2025/teams/4?lang=en&region=us"
+     },
+     "id": "4",
+     "statistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772731/competitions/401772731/plays/401772731641/teams/4/statistics/1?lang=en&region=us"
+     },
+     "playStatistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772731/competitions/401772731/plays/401772731641/teams/4/statistics/0?lang=en&region=us"
+     },
+     "order": 2,
+     "type": "offense"
+    }
+   ],
+   "isPenalty": false,
+   "statYardage": 87,
+   "drive": {
+    "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772731/competitions/401772731/drives/4017727314?lang=en&region=us"
+   },
+   "start": {
+    "down": 2,
+    "distance": 9,
+    "yardLine": 29,
+    "yardsToEndzone": 29,
+    "downDistanceText": "2nd & 9 at MIN 29",
+    "shortDownDistanceText": "2nd & 9",
+    "possessionText": "MIN 29",
+    "team": {
+     "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2025/teams/4?lang=en&region=us"
+    }
+   },
+   "end": {
+    "down": -1,
+    "distance": 10,
+    "yardLine": 100,
+    "yardsToEndzone": 0,
+    "team": {
+     "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2025/teams/16?lang=en&region=us"
+    }
+   },
+   "scoringType": {
+    "name": "touchdown",
+    "displayName": "Touchdown",
+    "abbreviation": "TD"
+   },
+   "pointAfterAttempt": {
+    "id": 61,
+    "text": "Extra Point Good",
+    "abbreviation": "Extra Point Good",
+    "value": 1
+   },
+   "isTurnover": true,
+   "__eventId": "401772731"
+  },
+  {
+   "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772732/competitions/401772732/plays/401772732139?lang=en&region=us",
+   "id": "401772732139",
+   "sequenceNumber": "13900",
+   "type": {
+    "id": "29",
+    "text": "Fumble Recovery (Opponent)"
+   },
+   "text": "R.Stevenson right guard to NE 39 for 3 yards (C.Holcomb). FUMBLES (C.Holcomb), RECOVERED by PIT-D.Slay at NE 48. D.Slay to PIT 46 for -6 yards (W.Campbell).",
+   "shortText": "Rhamondre Stevenson 3 Yd Rush Rhamondre Stevenson Fumble Darius Slay -6 Yd Fumble Recovery",
+   "alternativeText": "R.Stevenson right guard to NE 39 for 3 yards (C.Holcomb). FUMBLES (C.Holcomb), RECOVERED by PIT-D.Slay at NE 48. D.Slay to PIT 46 for -6 yards (W.Campbell).",
+   "shortAlternativeText": "Rhamondre Stevenson 3 Yd Rush Rhamondre Stevenson Fumble Darius Slay -6 Yd Fumble Recovery",
+   "awayScore": 0,
+   "homeScore": 0,
+   "period": {
+    "number": 1
+   },
+   "clock": {
+    "value": 811,
+    "displayValue": "13:31"
+   },
+   "scoringPlay": false,
+   "priority": false,
+   "scoreValue": 0,
+   "modified": "2025-10-01T21:12Z",
+   "team": {
+    "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2025/teams/23?lang=en&region=us"
+   },
+   "participants": [
+    {
+     "athlete": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2025/athletes/4569173?lang=en&region=us"
+     },
+     "position": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/positions/9?lang=en&region=us"
+     },
+     "statistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772732/competitions/401772732/plays/401772732139/participants/4569173/statistics/1?lang=en&region=us"
+     },
+     "playStatistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772732/competitions/401772732/plays/401772732139/participants/4569173/statistics/0?lang=en&region=us"
+     },
+     "order": 1,
+     "type": "rusher"
+    },
+    {
+     "athlete": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2025/athletes/4569173?lang=en&region=us"
+     },
+     "position": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/positions/9?lang=en&region=us"
+     },
+     "statistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772732/competitions/401772732/plays/401772732139/participants/4569173/statistics/1?lang=en&region=us"
+     },
+     "playStatistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772732/competitions/401772732/plays/401772732139/participants/4569173/statistics/0?lang=en&region=us"
+     },
+     "order": 2,
+     "type": "fumbler"
+    },
+    {
+     "athlete": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2025/athletes/3116689?lang=en&region=us"
+     },
+     "position": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/positions/30?lang=en&region=us"
+     },
+     "statistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772732/competitions/401772732/plays/401772732139/participants/3116689/statistics/1?lang=en&region=us"
+     },
+     "playStatistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772732/competitions/401772732/plays/401772732139/participants/3116689/statistics/0?lang=en&region=us"
+     },
+     "order": 3,
+     "type": "forcedBy"
+    },
+    {
+     "athlete": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2025/athletes/15863?lang=en&region=us"
+     },
+     "position": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/positions/29?lang=en&region=us"
+     },
+     "statistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772732/competitions/401772732/plays/401772732139/participants/15863/statistics/1?lang=en&region=us"
+     },
+     "playStatistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772732/competitions/401772732/plays/401772732139/participants/15863/statistics/0?lang=en&region=us"
+     },
+     "order": 4,
+     "type": "recoverer"
+    },
+    {
+     "athlete": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2025/athletes/4685298?lang=en&region=us"
+     },
+     "position": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/positions/46?lang=en&region=us"
+     },
+     "order": 5,
+     "type": "tackler"
+    }
+   ],
+   "probability": {
+    "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772732/competitions/401772732/probabilities/401772732139?lang=en&region=us"
+   },
+   "wallclock": "2025-09-21T17:05:32Z",
+   "teamParticipants": [
+    {
+     "team": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2025/teams/23?lang=en&region=us"
+     },
+     "id": "23",
+     "statistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772732/competitions/401772732/plays/401772732139/teams/23/statistics/1?lang=en&region=us"
+     },
+     "playStatistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772732/competitions/401772732/plays/401772732139/teams/23/statistics/0?lang=en&region=us"
+     },
+     "order": 1,
+     "type": "defense"
+    },
+    {
+     "team": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2025/teams/17?lang=en&region=us"
+     },
+     "id": "17",
+     "statistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772732/competitions/401772732/plays/401772732139/teams/17/statistics/1?lang=en&region=us"
+     },
+     "playStatistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772732/competitions/401772732/plays/401772732139/teams/17/statistics/0?lang=en&region=us"
+     },
+     "order": 2,
+     "type": "offense"
+    }
+   ],
+   "isPenalty": false,
+   "statYardage": -6,
+   "drive": {
+    "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772732/competitions/401772732/drives/4017727321?lang=en&region=us"
+   },
+   "start": {
+    "down": 1,
+    "distance": 10,
+    "yardLine": 36,
+    "yardsToEndzone": 64,
+    "downDistanceText": "1st & 10 at NE 36",
+    "shortDownDistanceText": "1st & 10",
+    "possessionText": "NE 36",
+    "team": {
+     "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2025/teams/17?lang=en&region=us"
+    }
+   },
+   "end": {
+    "down": 1,
+    "distance": 10,
+    "yardLine": 54,
+    "yardsToEndzone": 54,
+    "downDistanceText": "1st & 10 at PIT 46",
+    "shortDownDistanceText": "1st & 10",
+    "possessionText": "PIT 46",
+    "team": {
+     "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2025/teams/23?lang=en&region=us"
+    }
+   },
+   "isTurnover": true,
+   "__eventId": "401772732"
+  },
+  {
+   "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772732/competitions/401772732/plays/4017727322107?lang=en&region=us",
+   "id": "4017727322107",
+   "sequenceNumber": "210700",
+   "type": {
+    "id": "26",
+    "text": "Pass Interception Return",
+    "abbreviation": "INTR"
+   },
+   "text": "(Shotgun) D.Maye pass short left intended for K.Boutte INTERCEPTED by B.Echols (Ca.Heyward) at PIT -7. Touchback.",
+   "shortText": "Brandin Echols  Interception Return, No Gain",
+   "alternativeText": "(Shotgun) D.Maye pass short left intended for K.Boutte INTERCEPTED by B.Echols (Ca.Heyward) at PIT -7. Touchback.",
+   "shortAlternativeText": "Brandin Echols  Interception Return, No Gain",
+   "awayScore": 14,
+   "homeScore": 7,
+   "period": {
+    "number": 2
+   },
+   "clock": {
+    "value": 12,
+    "displayValue": "0:12"
+   },
+   "scoringPlay": false,
+   "priority": false,
+   "scoreValue": 0,
+   "modified": "2025-10-01T21:12Z",
+   "team": {
+    "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2025/teams/23?lang=en&region=us"
+   },
+   "participants": [
+    {
+     "athlete": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2025/athletes/4431452?lang=en&region=us"
+     },
+     "position": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/positions/8?lang=en&region=us"
+     },
+     "statistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772732/competitions/401772732/plays/4017727322107/participants/4431452/statistics/1?lang=en&region=us"
+     },
+     "playStatistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772732/competitions/401772732/plays/4017727322107/participants/4431452/statistics/0?lang=en&region=us"
+     },
+     "order": 1,
+     "type": "passer"
+    },
+    {
+     "athlete": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2025/athletes/4567979?lang=en&region=us"
+     },
+     "position": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/positions/29?lang=en&region=us"
+     },
+     "statistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772732/competitions/401772732/plays/4017727322107/participants/4567979/statistics/1?lang=en&region=us"
+     },
+     "playStatistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772732/competitions/401772732/plays/4017727322107/participants/4567979/statistics/0?lang=en&region=us"
+     },
+     "order": 2,
+     "type": "passDefender"
+    },
+    {
+     "athlete": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2025/athletes/4567979?lang=en&region=us"
+     },
+     "position": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/positions/29?lang=en&region=us"
+     },
+     "statistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772732/competitions/401772732/plays/4017727322107/participants/4567979/statistics/1?lang=en&region=us"
+     },
+     "playStatistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772732/competitions/401772732/plays/4017727322107/participants/4567979/statistics/0?lang=en&region=us"
+     },
+     "order": 3,
+     "type": "returner"
+    },
+    {
+     "athlete": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2025/athletes/13977?lang=en&region=us"
+     },
+     "position": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/positions/32?lang=en&region=us"
+     },
+     "statistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772732/competitions/401772732/plays/4017727322107/participants/13977/statistics/1?lang=en&region=us"
+     },
+     "playStatistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772732/competitions/401772732/plays/4017727322107/participants/13977/statistics/0?lang=en&region=us"
+     },
+     "order": 4,
+     "type": "other"
+    },
+    {
+     "athlete": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2025/athletes/4429022?lang=en&region=us"
+     },
+     "position": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/positions/1?lang=en&region=us"
+     },
+     "statistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772732/competitions/401772732/plays/4017727322107/participants/4429022/statistics/1?lang=en&region=us"
+     },
+     "playStatistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772732/competitions/401772732/plays/4017727322107/participants/4429022/statistics/0?lang=en&region=us"
+     },
+     "order": 5,
+     "type": "other"
+    }
+   ],
+   "probability": {
+    "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772732/competitions/401772732/probabilities/4017727322107?lang=en&region=us"
+   },
+   "wallclock": "2025-09-21T18:21:16Z",
+   "teamParticipants": [
+    {
+     "team": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2025/teams/23?lang=en&region=us"
+     },
+     "id": "23",
+     "statistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772732/competitions/401772732/plays/4017727322107/teams/23/statistics/1?lang=en&region=us"
+     },
+     "playStatistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772732/competitions/401772732/plays/4017727322107/teams/23/statistics/0?lang=en&region=us"
+     },
+     "order": 1,
+     "type": "defense"
+    },
+    {
+     "team": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2025/teams/17?lang=en&region=us"
+     },
+     "id": "17",
+     "statistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772732/competitions/401772732/plays/4017727322107/teams/17/statistics/1?lang=en&region=us"
+     },
+     "playStatistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772732/competitions/401772732/plays/4017727322107/teams/17/statistics/0?lang=en&region=us"
+     },
+     "order": 2,
+     "type": "offense"
+    }
+   ],
+   "isPenalty": false,
+   "statYardage": 0,
+   "drive": {
+    "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772732/competitions/401772732/drives/4017727327?lang=en&region=us"
+   },
+   "start": {
+    "down": 3,
+    "distance": 2,
+    "yardLine": 98,
+    "yardsToEndzone": 2,
+    "downDistanceText": "3rd & Goal at PIT 2",
+    "shortDownDistanceText": "3rd & Goal",
+    "possessionText": "PIT 2",
+    "team": {
+     "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2025/teams/17?lang=en&region=us"
+    }
+   },
+   "end": {
+    "down": 1,
+    "distance": 10,
+    "yardLine": 80,
+    "yardsToEndzone": 80,
+    "downDistanceText": "1st & 10 at PIT 20",
+    "shortDownDistanceText": "1st & 10",
+    "possessionText": "PIT 20",
+    "team": {
+     "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2025/teams/23?lang=en&region=us"
+    }
+   },
+   "isTurnover": true,
+   "__eventId": "401772732"
+  },
+  {
+   "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772732/competitions/401772732/plays/4017727322251?lang=en&region=us",
+   "id": "4017727322251",
+   "sequenceNumber": "225100",
+   "type": {
+    "id": "26",
+    "text": "Pass Interception Return",
+    "abbreviation": "INTR"
+   },
+   "text": "(Shotgun) A.Rodgers pass short left intended for C.Austin INTERCEPTED by R.Spillane [K.Chaisson] at PIT 48. R.Spillane pushed ob at PIT 11 for 37 yards (D.Metcalf).",
+   "shortText": "Robert Spillane 37 Yd Interception Return",
+   "alternativeText": "(Shotgun) A.Rodgers pass short left intended for C.Austin INTERCEPTED by R.Spillane [K.Chaisson] at PIT 48. R.Spillane pushed ob at PIT 11 for 37 yards (D.Metcalf).",
+   "shortAlternativeText": "Robert Spillane 37 Yd Interception Return",
+   "awayScore": 14,
+   "homeScore": 7,
+   "period": {
+    "number": 3
+   },
+   "clock": {
+    "value": 826,
+    "displayValue": "13:46"
+   },
+   "scoringPlay": false,
+   "priority": false,
+   "scoreValue": 0,
+   "modified": "2025-10-01T21:12Z",
+   "team": {
+    "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2025/teams/17?lang=en&region=us"
+   },
+   "participants": [
+    {
+     "athlete": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2025/athletes/8439?lang=en&region=us"
+     },
+     "position": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/positions/8?lang=en&region=us"
+     },
+     "statistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772732/competitions/401772732/plays/4017727322251/participants/8439/statistics/1?lang=en&region=us"
+     },
+     "playStatistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772732/competitions/401772732/plays/4017727322251/participants/8439/statistics/0?lang=en&region=us"
+     },
+     "order": 1,
+     "type": "passer"
+    },
+    {
+     "athlete": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2025/athletes/3129446?lang=en&region=us"
+     },
+     "position": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/positions/30?lang=en&region=us"
+     },
+     "statistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772732/competitions/401772732/plays/4017727322251/participants/3129446/statistics/1?lang=en&region=us"
+     },
+     "playStatistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772732/competitions/401772732/plays/4017727322251/participants/3129446/statistics/0?lang=en&region=us"
+     },
+     "order": 2,
+     "type": "passDefender"
+    },
+    {
+     "athlete": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2025/athletes/3129446?lang=en&region=us"
+     },
+     "position": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/positions/30?lang=en&region=us"
+     },
+     "statistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772732/competitions/401772732/plays/4017727322251/participants/3129446/statistics/1?lang=en&region=us"
+     },
+     "playStatistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772732/competitions/401772732/plays/4017727322251/participants/3129446/statistics/0?lang=en&region=us"
+     },
+     "order": 3,
+     "type": "returner"
+    },
+    {
+     "athlete": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2025/athletes/4047650?lang=en&region=us"
+     },
+     "position": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/positions/1?lang=en&region=us"
+     },
+     "statistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772732/competitions/401772732/plays/4017727322251/participants/4047650/statistics/1?lang=en&region=us"
+     },
+     "playStatistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772732/competitions/401772732/plays/4017727322251/participants/4047650/statistics/0?lang=en&region=us"
+     },
+     "order": 4,
+     "type": "tackler"
+    },
+    {
+     "athlete": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2025/athletes/4242205?lang=en&region=us"
+     },
+     "position": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/positions/30?lang=en&region=us"
+     },
+     "statistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772732/competitions/401772732/plays/4017727322251/participants/4242205/statistics/1?lang=en&region=us"
+     },
+     "playStatistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772732/competitions/401772732/plays/4017727322251/participants/4242205/statistics/0?lang=en&region=us"
+     },
+     "order": 5,
+     "type": "other"
+    },
+    {
+     "athlete": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2025/athletes/4243389?lang=en&region=us"
+     },
+     "position": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/positions/1?lang=en&region=us"
+     },
+     "statistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772732/competitions/401772732/plays/4017727322251/participants/4243389/statistics/1?lang=en&region=us"
+     },
+     "playStatistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772732/competitions/401772732/plays/4017727322251/participants/4243389/statistics/0?lang=en&region=us"
+     },
+     "order": 6,
+     "type": "other"
+    }
+   ],
+   "probability": {
+    "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772732/competitions/401772732/probabilities/4017727322251?lang=en&region=us"
+   },
+   "wallclock": "2025-09-21T18:38:21Z",
+   "teamParticipants": [
+    {
+     "team": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2025/teams/17?lang=en&region=us"
+     },
+     "id": "17",
+     "statistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772732/competitions/401772732/plays/4017727322251/teams/17/statistics/1?lang=en&region=us"
+     },
+     "playStatistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772732/competitions/401772732/plays/4017727322251/teams/17/statistics/0?lang=en&region=us"
+     },
+     "order": 1,
+     "type": "defense"
+    },
+    {
+     "team": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2025/teams/23?lang=en&region=us"
+     },
+     "id": "23",
+     "statistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772732/competitions/401772732/plays/4017727322251/teams/23/statistics/1?lang=en&region=us"
+     },
+     "playStatistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772732/competitions/401772732/plays/4017727322251/teams/23/statistics/0?lang=en&region=us"
+     },
+     "order": 2,
+     "type": "offense"
+    }
+   ],
+   "isPenalty": false,
+   "statYardage": 37,
+   "drive": {
+    "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772732/competitions/401772732/drives/4017727329?lang=en&region=us"
+   },
+   "start": {
+    "down": 3,
+    "distance": 10,
+    "yardLine": 65,
+    "yardsToEndzone": 65,
+    "downDistanceText": "3rd & 10 at PIT 35",
+    "shortDownDistanceText": "3rd & 10",
+    "possessionText": "PIT 35",
+    "team": {
+     "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2025/teams/23?lang=en&region=us"
+    }
+   },
+   "end": {
+    "down": 1,
+    "distance": 10,
+    "yardLine": 89,
+    "yardsToEndzone": 11,
+    "downDistanceText": "1st & 10 at PIT 11",
+    "shortDownDistanceText": "1st & 10",
+    "possessionText": "PIT 11",
+    "team": {
+     "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2025/teams/17?lang=en&region=us"
+    }
+   },
+   "isTurnover": true,
+   "__eventId": "401772732"
+  },
+  {
+   "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772732/competitions/401772732/plays/4017727322303?lang=en&region=us",
+   "id": "4017727322303",
+   "sequenceNumber": "230300",
+   "type": {
+    "id": "29",
+    "text": "Fumble Recovery (Opponent)"
+   },
+   "text": "R.Stevenson right guard to PIT 1 for 1 yard (Ca.Heyward). FUMBLES (Ca.Heyward), touched at PIT 0, RECOVERED by PIT-P.Wilson at PIT -1. Touchback.",
+   "shortText": "Rhamondre Stevenson 1 Yd Rush Rhamondre Stevenson Fumble Payton Wilson 0 Yd Fumble Recovery",
+   "alternativeText": "R.Stevenson right guard to PIT 1 for 1 yard (Ca.Heyward). FUMBLES (Ca.Heyward), touched at PIT 0, RECOVERED by PIT-P.Wilson at PIT -1. Touchback.",
+   "shortAlternativeText": "Rhamondre Stevenson 1 Yd Rush Rhamondre Stevenson Fumble Payton Wilson 0 Yd Fumble Recovery",
+   "awayScore": 14,
+   "homeScore": 7,
+   "period": {
+    "number": 3
+   },
+   "clock": {
+    "value": 797,
+    "displayValue": "13:17"
+   },
+   "scoringPlay": false,
+   "priority": false,
+   "scoreValue": 0,
+   "modified": "2025-10-01T21:12Z",
+   "team": {
+    "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2025/teams/23?lang=en&region=us"
+   },
+   "participants": [
+    {
+     "athlete": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2025/athletes/4569173?lang=en&region=us"
+     },
+     "position": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/positions/9?lang=en&region=us"
+     },
+     "statistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772732/competitions/401772732/plays/4017727322303/participants/4569173/statistics/1?lang=en&region=us"
+     },
+     "playStatistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772732/competitions/401772732/plays/4017727322303/participants/4569173/statistics/0?lang=en&region=us"
+     },
+     "order": 1,
+     "type": "rusher"
+    },
+    {
+     "athlete": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2025/athletes/4569173?lang=en&region=us"
+     },
+     "position": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/positions/9?lang=en&region=us"
+     },
+     "statistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772732/competitions/401772732/plays/4017727322303/participants/4569173/statistics/1?lang=en&region=us"
+     },
+     "playStatistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772732/competitions/401772732/plays/4017727322303/participants/4569173/statistics/0?lang=en&region=us"
+     },
+     "order": 2,
+     "type": "fumbler"
+    },
+    {
+     "athlete": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2025/athletes/13977?lang=en&region=us"
+     },
+     "position": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/positions/32?lang=en&region=us"
+     },
+     "statistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772732/competitions/401772732/plays/4017727322303/participants/13977/statistics/1?lang=en&region=us"
+     },
+     "playStatistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772732/competitions/401772732/plays/4017727322303/participants/13977/statistics/0?lang=en&region=us"
+     },
+     "order": 3,
+     "type": "forcedBy"
+    },
+    {
+     "athlete": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2025/athletes/4361652?lang=en&region=us"
+     },
+     "position": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/positions/30?lang=en&region=us"
+     },
+     "statistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772732/competitions/401772732/plays/4017727322303/participants/4361652/statistics/1?lang=en&region=us"
+     },
+     "playStatistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772732/competitions/401772732/plays/4017727322303/participants/4361652/statistics/0?lang=en&region=us"
+     },
+     "order": 4,
+     "type": "recoverer"
+    },
+    {
+     "athlete": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2025/athletes/13977?lang=en&region=us"
+     },
+     "position": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/positions/32?lang=en&region=us"
+     },
+     "statistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772732/competitions/401772732/plays/4017727322303/participants/13977/statistics/1?lang=en&region=us"
+     },
+     "playStatistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772732/competitions/401772732/plays/4017727322303/participants/13977/statistics/0?lang=en&region=us"
+     },
+     "order": 5,
+     "type": "tackler"
+    },
+    {
+     "athlete": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2025/athletes/4242207?lang=en&region=us"
+     },
+     "position": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/positions/30?lang=en&region=us"
+     },
+     "statistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772732/competitions/401772732/plays/4017727322303/participants/4242207/statistics/1?lang=en&region=us"
+     },
+     "playStatistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772732/competitions/401772732/plays/4017727322303/participants/4242207/statistics/0?lang=en&region=us"
+     },
+     "order": 6,
+     "type": "other"
+    }
+   ],
+   "probability": {
+    "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772732/competitions/401772732/probabilities/4017727322303?lang=en&region=us"
+   },
+   "wallclock": "2025-09-21T18:42:44Z",
+   "teamParticipants": [
+    {
+     "team": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2025/teams/23?lang=en&region=us"
+     },
+     "id": "23",
+     "statistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772732/competitions/401772732/plays/4017727322303/teams/23/statistics/1?lang=en&region=us"
+     },
+     "playStatistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772732/competitions/401772732/plays/4017727322303/teams/23/statistics/0?lang=en&region=us"
+     },
+     "order": 1,
+     "type": "defense"
+    },
+    {
+     "team": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2025/teams/17?lang=en&region=us"
+     },
+     "id": "17",
+     "statistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772732/competitions/401772732/plays/4017727322303/teams/17/statistics/1?lang=en&region=us"
+     },
+     "playStatistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772732/competitions/401772732/plays/4017727322303/teams/17/statistics/0?lang=en&region=us"
+     },
+     "order": 2,
+     "type": "offense"
+    }
+   ],
+   "isPenalty": false,
+   "statYardage": 0,
+   "drive": {
+    "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772732/competitions/401772732/drives/40177273210?lang=en&region=us"
+   },
+   "start": {
+    "down": 2,
+    "distance": 1,
+    "yardLine": 98,
+    "yardsToEndzone": 2,
+    "downDistanceText": "2nd & 1 at PIT 2",
+    "shortDownDistanceText": "2nd & 1",
+    "possessionText": "PIT 2",
+    "team": {
+     "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2025/teams/17?lang=en&region=us"
+    }
+   },
+   "end": {
+    "down": 1,
+    "distance": 10,
+    "yardLine": 80,
+    "yardsToEndzone": 80,
+    "downDistanceText": "1st & 10 at PIT 20",
+    "shortDownDistanceText": "1st & 10",
+    "possessionText": "PIT 20",
+    "team": {
+     "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2025/teams/23?lang=en&region=us"
+    }
+   },
+   "isTurnover": true,
+   "__eventId": "401772732"
+  },
+  {
+   "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772732/competitions/401772732/plays/4017727322544?lang=en&region=us",
+   "id": "4017727322544",
+   "sequenceNumber": "254400",
+   "type": {
+    "id": "29",
+    "text": "Fumble Recovery (Opponent)"
+   },
+   "text": "(Shotgun) A.Gibson up the middle to PIT 42 for 1 yard (T.Watt; J.Peppers). FUMBLES (T.Watt), RECOVERED by PIT-J.Peppers at PIT 43.",
+   "shortText": "Antonio Gibson Rush, No Gain Antonio Gibson Fumble Jabrill Peppers 0 Yd Fumble Recovery",
+   "alternativeText": "(Shotgun) A.Gibson up the middle to PIT 42 for 1 yard (T.Watt; J.Peppers). FUMBLES (T.Watt), RECOVERED by PIT-J.Peppers at PIT 43.",
+   "shortAlternativeText": "Antonio Gibson Rush, No Gain Antonio Gibson Fumble Jabrill Peppers 0 Yd Fumble Recovery",
+   "awayScore": 14,
+   "homeScore": 7,
+   "period": {
+    "number": 3
+   },
+   "clock": {
+    "value": 613,
+    "displayValue": "10:13"
+   },
+   "scoringPlay": false,
+   "priority": false,
+   "scoreValue": 0,
+   "modified": "2025-10-01T21:12Z",
+   "team": {
+    "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2025/teams/23?lang=en&region=us"
+   },
+   "participants": [
+    {
+     "athlete": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2025/athletes/4360294?lang=en&region=us"
+     },
+     "position": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/positions/9?lang=en&region=us"
+     },
+     "statistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772732/competitions/401772732/plays/4017727322544/participants/4360294/statistics/1?lang=en&region=us"
+     },
+     "playStatistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772732/competitions/401772732/plays/4017727322544/participants/4360294/statistics/0?lang=en&region=us"
+     },
+     "order": 1,
+     "type": "rusher"
+    },
+    {
+     "athlete": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2025/athletes/4360294?lang=en&region=us"
+     },
+     "position": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/positions/9?lang=en&region=us"
+     },
+     "statistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772732/competitions/401772732/plays/4017727322544/participants/4360294/statistics/1?lang=en&region=us"
+     },
+     "playStatistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772732/competitions/401772732/plays/4017727322544/participants/4360294/statistics/0?lang=en&region=us"
+     },
+     "order": 2,
+     "type": "fumbler"
+    },
+    {
+     "athlete": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2025/athletes/3045282?lang=en&region=us"
+     },
+     "position": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/positions/30?lang=en&region=us"
+     },
+     "statistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772732/competitions/401772732/plays/4017727322544/participants/3045282/statistics/1?lang=en&region=us"
+     },
+     "playStatistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772732/competitions/401772732/plays/4017727322544/participants/3045282/statistics/0?lang=en&region=us"
+     },
+     "order": 3,
+     "type": "assistedBy"
+    },
+    {
+     "athlete": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2025/athletes/3115962?lang=en&region=us"
+     },
+     "position": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/positions/36?lang=en&region=us"
+     },
+     "statistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772732/competitions/401772732/plays/4017727322544/participants/3115962/statistics/1?lang=en&region=us"
+     },
+     "playStatistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772732/competitions/401772732/plays/4017727322544/participants/3115962/statistics/0?lang=en&region=us"
+     },
+     "order": 4,
+     "type": "assistedBy"
+    },
+    {
+     "athlete": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2025/athletes/3045282?lang=en&region=us"
+     },
+     "position": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/positions/30?lang=en&region=us"
+     },
+     "statistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772732/competitions/401772732/plays/4017727322544/participants/3045282/statistics/1?lang=en&region=us"
+     },
+     "playStatistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772732/competitions/401772732/plays/4017727322544/participants/3045282/statistics/0?lang=en&region=us"
+     },
+     "order": 5,
+     "type": "forcedBy"
+    },
+    {
+     "athlete": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2025/athletes/3115962?lang=en&region=us"
+     },
+     "position": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/positions/36?lang=en&region=us"
+     },
+     "statistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772732/competitions/401772732/plays/4017727322544/participants/3115962/statistics/1?lang=en&region=us"
+     },
+     "playStatistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772732/competitions/401772732/plays/4017727322544/participants/3115962/statistics/0?lang=en&region=us"
+     },
+     "order": 6,
+     "type": "recoverer"
+    }
+   ],
+   "probability": {
+    "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772732/competitions/401772732/probabilities/4017727322544?lang=en&region=us"
+   },
+   "wallclock": "2025-09-21T18:53:16Z",
+   "teamParticipants": [
+    {
+     "team": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2025/teams/23?lang=en&region=us"
+     },
+     "id": "23",
+     "statistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772732/competitions/401772732/plays/4017727322544/teams/23/statistics/1?lang=en&region=us"
+     },
+     "playStatistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772732/competitions/401772732/plays/4017727322544/teams/23/statistics/0?lang=en&region=us"
+     },
+     "order": 1,
+     "type": "defense"
+    },
+    {
+     "team": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2025/teams/17?lang=en&region=us"
+     },
+     "id": "17",
+     "statistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772732/competitions/401772732/plays/4017727322544/teams/17/statistics/1?lang=en&region=us"
+     },
+     "playStatistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772732/competitions/401772732/plays/4017727322544/teams/17/statistics/0?lang=en&region=us"
+     },
+     "order": 2,
+     "type": "offense"
+    }
+   ],
+   "isPenalty": false,
+   "statYardage": 0,
+   "drive": {
+    "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772732/competitions/401772732/drives/40177273212?lang=en&region=us"
+   },
+   "start": {
+    "down": 1,
+    "distance": 10,
+    "yardLine": 57,
+    "yardsToEndzone": 43,
+    "downDistanceText": "1st & 10 at PIT 43",
+    "shortDownDistanceText": "1st & 10",
+    "possessionText": "PIT 43",
+    "team": {
+     "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2025/teams/17?lang=en&region=us"
+    }
+   },
+   "end": {
+    "down": 1,
+    "distance": 10,
+    "yardLine": 57,
+    "yardsToEndzone": 57,
+    "downDistanceText": "1st & 10 at PIT 43",
+    "shortDownDistanceText": "1st & 10",
+    "possessionText": "PIT 43",
+    "team": {
+     "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2025/teams/23?lang=en&region=us"
+    }
+   },
+   "isTurnover": true,
+   "__eventId": "401772732"
+  },
+  {
+   "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772732/competitions/401772732/plays/4017727323483?lang=en&region=us",
+   "id": "4017727323483",
+   "sequenceNumber": "348300",
+   "type": {
+    "id": "80",
+    "text": "Sack Opp Fumble Recovery",
+    "abbreviation": "SFOP"
+   },
+   "text": "(Shotgun) D.Maye sacked at PIT 39 for -6 yards (N.Herbig). FUMBLES (N.Herbig) [N.Herbig], touched at PIT 37, RECOVERED by PIT-T.Watt at PIT 38. T.Watt to PIT 38 for no gain (M.Onwenu).",
+   "shortText": "Drake Maye Sacked Drake Maye Fumble T.J. Watt 0 Yd Fumble Recovery",
+   "alternativeText": "(Shotgun) D.Maye sacked at PIT 39 for -6 yards (N.Herbig). FUMBLES (N.Herbig) [N.Herbig], touched at PIT 37, RECOVERED by PIT-T.Watt at PIT 38. T.Watt to PIT 38 for no gain (M.Onwenu).",
+   "shortAlternativeText": "Drake Maye Sacked Drake Maye Fumble T.J. Watt 0 Yd Fumble Recovery",
+   "awayScore": 14,
+   "homeScore": 14,
+   "period": {
+    "number": 4
+   },
+   "clock": {
+    "value": 468,
+    "displayValue": "7:48"
+   },
+   "scoringPlay": false,
+   "priority": false,
+   "scoreValue": 0,
+   "modified": "2025-10-01T21:12Z",
+   "team": {
+    "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2025/teams/23?lang=en&region=us"
+   },
+   "participants": [
+    {
+     "athlete": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2025/athletes/4429164?lang=en&region=us"
+     },
+     "position": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/positions/30?lang=en&region=us"
+     },
+     "statistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772732/competitions/401772732/plays/4017727323483/participants/4429164/statistics/1?lang=en&region=us"
+     },
+     "playStatistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772732/competitions/401772732/plays/4017727323483/participants/4429164/statistics/0?lang=en&region=us"
+     },
+     "order": 1,
+     "type": "forcedBy"
+    },
+    {
+     "athlete": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2025/athletes/4429164?lang=en&region=us"
+     },
+     "position": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/positions/30?lang=en&region=us"
+     },
+     "statistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772732/competitions/401772732/plays/4017727323483/participants/4429164/statistics/1?lang=en&region=us"
+     },
+     "playStatistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772732/competitions/401772732/plays/4017727323483/participants/4429164/statistics/0?lang=en&region=us"
+     },
+     "order": 2,
+     "type": "sackedBy"
+    },
+    {
+     "athlete": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2025/athletes/4431452?lang=en&region=us"
+     },
+     "position": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/positions/8?lang=en&region=us"
+     },
+     "statistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772732/competitions/401772732/plays/4017727323483/participants/4431452/statistics/1?lang=en&region=us"
+     },
+     "playStatistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772732/competitions/401772732/plays/4017727323483/participants/4431452/statistics/0?lang=en&region=us"
+     },
+     "order": 3,
+     "type": "passer"
+    },
+    {
+     "athlete": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2025/athletes/4431452?lang=en&region=us"
+     },
+     "position": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/positions/8?lang=en&region=us"
+     },
+     "statistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772732/competitions/401772732/plays/4017727323483/participants/4431452/statistics/1?lang=en&region=us"
+     },
+     "playStatistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772732/competitions/401772732/plays/4017727323483/participants/4431452/statistics/0?lang=en&region=us"
+     },
+     "order": 4,
+     "type": "fumbler"
+    },
+    {
+     "athlete": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2025/athletes/3045282?lang=en&region=us"
+     },
+     "position": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/positions/30?lang=en&region=us"
+     },
+     "statistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772732/competitions/401772732/plays/4017727323483/participants/3045282/statistics/1?lang=en&region=us"
+     },
+     "playStatistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772732/competitions/401772732/plays/4017727323483/participants/3045282/statistics/0?lang=en&region=us"
+     },
+     "order": 5,
+     "type": "recoverer"
+    },
+    {
+     "athlete": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2025/athletes/4046545?lang=en&region=us"
+     },
+     "position": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/positions/73?lang=en&region=us"
+     },
+     "order": 6,
+     "type": "tackler"
+    }
+   ],
+   "probability": {
+    "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772732/competitions/401772732/probabilities/4017727323483?lang=en&region=us"
+   },
+   "wallclock": "2025-09-21T19:29:10Z",
+   "teamParticipants": [
+    {
+     "team": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2025/teams/23?lang=en&region=us"
+     },
+     "id": "23",
+     "statistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772732/competitions/401772732/plays/4017727323483/teams/23/statistics/1?lang=en&region=us"
+     },
+     "playStatistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772732/competitions/401772732/plays/4017727323483/teams/23/statistics/0?lang=en&region=us"
+     },
+     "order": 1,
+     "type": "defense"
+    },
+    {
+     "team": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2025/teams/17?lang=en&region=us"
+     },
+     "id": "17",
+     "statistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772732/competitions/401772732/plays/4017727323483/teams/17/statistics/1?lang=en&region=us"
+     },
+     "playStatistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772732/competitions/401772732/plays/4017727323483/teams/17/statistics/0?lang=en&region=us"
+     },
+     "order": 2,
+     "type": "offense"
+    }
+   ],
+   "isPenalty": false,
+   "statYardage": 0,
+   "drive": {
+    "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772732/competitions/401772732/drives/40177273216?lang=en&region=us"
+   },
+   "start": {
+    "down": 1,
+    "distance": 10,
+    "yardLine": 67,
+    "yardsToEndzone": 33,
+    "downDistanceText": "1st & 10 at PIT 33",
+    "shortDownDistanceText": "1st & 10",
+    "possessionText": "PIT 33",
+    "team": {
+     "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2025/teams/17?lang=en&region=us"
+    }
+   },
+   "end": {
+    "down": 1,
+    "distance": 10,
+    "yardLine": 62,
+    "yardsToEndzone": 62,
+    "downDistanceText": "1st & 10 at PIT 38",
+    "shortDownDistanceText": "1st & 10",
+    "possessionText": "PIT 38",
+    "team": {
+     "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2025/teams/23?lang=en&region=us"
+    }
+   },
+   "isTurnover": true,
+   "__eventId": "401772732"
+  },
+  {
+   "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772733/competitions/401772733/plays/401772733102?lang=en&region=us",
+   "id": "401772733102",
+   "sequenceNumber": "10200",
+   "type": {
+    "id": "36",
+    "text": "Interception Return Touchdown",
+    "abbreviation": "TD"
+   },
+   "text": "(Shotgun) C.Ward pass short right intended for T.Pollard INTERCEPTED by K.Moore at TEN 32. K.Moore for 32 yards, TOUCHDOWN. S.Shrader extra point is GOOD, Center-L.Rhodes, Holder-R.Sanchez.",
+   "shortText": "Kenny Moore II 32 Yd Interception Return (Spencer Shrader Kick)",
+   "alternativeText": "(Shotgun) C.Ward pass short right intended for T.Pollard INTERCEPTED by K.Moore at TEN 32. K.Moore for 32 yards, TOUCHDOWN. S.Shrader extra point is GOOD, Center-L.Rhodes, Holder-R.Sanchez.",
+   "shortAlternativeText": "Kenny Moore II 32 Yd Interception Return (Spencer Shrader Kick)",
+   "awayScore": 7,
+   "homeScore": 0,
+   "period": {
+    "number": 1
+   },
+   "clock": {
+    "value": 851,
+    "displayValue": "14:11"
+   },
+   "scoringPlay": true,
+   "priority": false,
+   "scoreValue": 6,
+   "modified": "2025-09-24T20:52Z",
+   "team": {
+    "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2025/teams/11?lang=en&region=us"
+   },
+   "participants": [
+    {
+     "athlete": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2025/athletes/4688380?lang=en&region=us"
+     },
+     "position": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/positions/8?lang=en&region=us"
+     },
+     "statistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772733/competitions/401772733/plays/401772733102/participants/4688380/statistics/1?lang=en&region=us"
+     },
+     "playStatistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772733/competitions/401772733/plays/401772733102/participants/4688380/statistics/0?lang=en&region=us"
+     },
+     "order": 1,
+     "type": "passer"
+    },
+    {
+     "athlete": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2025/athletes/4218312?lang=en&region=us"
+     },
+     "position": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/positions/29?lang=en&region=us"
+     },
+     "statistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772733/competitions/401772733/plays/401772733102/participants/4218312/statistics/1?lang=en&region=us"
+     },
+     "playStatistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772733/competitions/401772733/plays/401772733102/participants/4218312/statistics/0?lang=en&region=us"
+     },
+     "order": 2,
+     "type": "passDefender"
+    },
+    {
+     "athlete": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2025/athletes/4218312?lang=en&region=us"
+     },
+     "position": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/positions/29?lang=en&region=us"
+     },
+     "statistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772733/competitions/401772733/plays/401772733102/participants/4218312/statistics/1?lang=en&region=us"
+     },
+     "playStatistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772733/competitions/401772733/plays/401772733102/participants/4218312/statistics/0?lang=en&region=us"
+     },
+     "order": 3,
+     "type": "returner"
+    },
+    {
+     "athlete": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2025/athletes/4218312?lang=en&region=us"
+     },
+     "position": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/positions/29?lang=en&region=us"
+     },
+     "statistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772733/competitions/401772733/plays/401772733102/participants/4218312/statistics/1?lang=en&region=us"
+     },
+     "playStatistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772733/competitions/401772733/plays/401772733102/participants/4218312/statistics/0?lang=en&region=us"
+     },
+     "order": 4,
+     "type": "scorer"
+    },
+    {
+     "athlete": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2025/athletes/4571557?lang=en&region=us"
+     },
+     "position": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/positions/22?lang=en&region=us"
+     },
+     "statistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772733/competitions/401772733/plays/401772733102/participants/4571557/statistics/1?lang=en&region=us"
+     },
+     "playStatistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772733/competitions/401772733/plays/401772733102/participants/4571557/statistics/0?lang=en&region=us"
+     },
+     "order": 5,
+     "type": "kicker"
+    },
+    {
+     "athlete": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2025/athletes/4571557?lang=en&region=us"
+     },
+     "position": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/positions/22?lang=en&region=us"
+     },
+     "statistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772733/competitions/401772733/plays/401772733102/participants/4571557/statistics/1?lang=en&region=us"
+     },
+     "playStatistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772733/competitions/401772733/plays/401772733102/participants/4571557/statistics/0?lang=en&region=us"
+     },
+     "order": 6,
+     "type": "patScorer"
+    },
+    {
+     "athlete": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2025/athletes/3916148?lang=en&region=us"
+     },
+     "position": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/positions/9?lang=en&region=us"
+     },
+     "statistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772733/competitions/401772733/plays/401772733102/participants/3916148/statistics/1?lang=en&region=us"
+     },
+     "playStatistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772733/competitions/401772733/plays/401772733102/participants/3916148/statistics/0?lang=en&region=us"
+     },
+     "order": 7,
+     "type": "other"
+    }
+   ],
+   "probability": {
+    "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772733/competitions/401772733/probabilities/401772733102?lang=en&region=us"
+   },
+   "wallclock": "2025-09-21T17:04:54Z",
+   "teamParticipants": [
+    {
+     "team": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2025/teams/11?lang=en&region=us"
+     },
+     "id": "11",
+     "statistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772733/competitions/401772733/plays/401772733102/teams/11/statistics/1?lang=en&region=us"
+     },
+     "playStatistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772733/competitions/401772733/plays/401772733102/teams/11/statistics/0?lang=en&region=us"
+     },
+     "order": 1,
+     "type": "defense"
+    },
+    {
+     "team": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2025/teams/10?lang=en&region=us"
+     },
+     "id": "10",
+     "statistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772733/competitions/401772733/plays/401772733102/teams/10/statistics/1?lang=en&region=us"
+     },
+     "playStatistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772733/competitions/401772733/plays/401772733102/teams/10/statistics/0?lang=en&region=us"
+     },
+     "order": 2,
+     "type": "offense"
+    }
+   ],
+   "isPenalty": false,
+   "statYardage": 32,
+   "drive": {
+    "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772733/competitions/401772733/drives/4017727331?lang=en&region=us"
+   },
+   "start": {
+    "down": 3,
+    "distance": 9,
+    "yardLine": 36,
+    "yardsToEndzone": 64,
+    "downDistanceText": "3rd & 9 at TEN 36",
+    "shortDownDistanceText": "3rd & 9",
+    "possessionText": "TEN 36",
+    "team": {
+     "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2025/teams/10?lang=en&region=us"
+    }
+   },
+   "end": {
+    "down": -1,
+    "distance": 10,
+    "yardLine": 0,
+    "yardsToEndzone": 0,
+    "team": {
+     "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2025/teams/11?lang=en&region=us"
+    }
+   },
+   "scoringType": {
+    "name": "touchdown",
+    "displayName": "Touchdown",
+    "abbreviation": "TD"
+   },
+   "pointAfterAttempt": {
+    "id": 61,
+    "text": "Extra Point Good",
+    "abbreviation": "Extra Point Good",
+    "value": 1
+   },
+   "isTurnover": true,
+   "__eventId": "401772733"
+  },
+  {
+   "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772733/competitions/401772733/plays/4017727332057?lang=en&region=us",
+   "id": "4017727332057",
+   "sequenceNumber": "205700",
+   "type": {
+    "id": "18",
+    "text": "Blocked Field Goal",
+    "abbreviation": "BFG"
+   },
+   "text": "J.Slye 62 yard field goal is BLOCKED (G.Stewart), Center-M.Cox, Holder-J.Hekker.",
+   "shortText": "Joey Slye Missed 62 Yd FG Blocked",
+   "alternativeText": "J.Slye 62 yard field goal is BLOCKED (G.Stewart), Center-M.Cox, Holder-J.Hekker.",
+   "shortAlternativeText": "Joey Slye Missed 62 Yd FG Blocked",
+   "awayScore": 17,
+   "homeScore": 6,
+   "period": {
+    "number": 2
+   },
+   "clock": {
+    "value": 42,
+    "displayValue": "0:42"
+   },
+   "scoringPlay": false,
+   "priority": false,
+   "scoreValue": 0,
+   "modified": "2025-09-24T20:52Z",
+   "team": {
+    "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2025/teams/11?lang=en&region=us"
+   },
+   "participants": [
+    {
+     "athlete": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2025/athletes/3124084?lang=en&region=us"
+     },
+     "position": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/positions/22?lang=en&region=us"
+     },
+     "statistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772733/competitions/401772733/plays/4017727332057/participants/3124084/statistics/1?lang=en&region=us"
+     },
+     "playStatistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772733/competitions/401772733/plays/4017727332057/participants/3124084/statistics/0?lang=en&region=us"
+     },
+     "order": 1,
+     "type": "kicker"
+    },
+    {
+     "athlete": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2025/athletes/4058825?lang=en&region=us"
+     },
+     "position": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/positions/32?lang=en&region=us"
+     },
+     "statistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772733/competitions/401772733/plays/4017727332057/participants/4058825/statistics/1?lang=en&region=us"
+     },
+     "playStatistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772733/competitions/401772733/plays/4017727332057/participants/4058825/statistics/0?lang=en&region=us"
+     },
+     "order": 2,
+     "type": "other"
+    }
+   ],
+   "probability": {
+    "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772733/competitions/401772733/probabilities/4017727332057?lang=en&region=us"
+   },
+   "wallclock": "2025-09-21T18:23:57Z",
+   "teamParticipants": [
+    {
+     "team": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2025/teams/11?lang=en&region=us"
+     },
+     "id": "11",
+     "statistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772733/competitions/401772733/plays/4017727332057/teams/11/statistics/1?lang=en&region=us"
+     },
+     "playStatistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772733/competitions/401772733/plays/4017727332057/teams/11/statistics/0?lang=en&region=us"
+     },
+     "order": 1,
+     "type": "defense"
+    },
+    {
+     "team": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2025/teams/10?lang=en&region=us"
+     },
+     "id": "10",
+     "statistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772733/competitions/401772733/plays/4017727332057/teams/10/statistics/1?lang=en&region=us"
+     },
+     "playStatistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772733/competitions/401772733/plays/4017727332057/teams/10/statistics/0?lang=en&region=us"
+     },
+     "order": 2,
+     "type": "offense"
+    }
+   ],
+   "isPenalty": false,
+   "statYardage": 62,
+   "drive": {
+    "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772733/competitions/401772733/drives/40177273310?lang=en&region=us"
+   },
+   "start": {
+    "down": 4,
+    "distance": 6,
+    "yardLine": 56,
+    "yardsToEndzone": 44,
+    "downDistanceText": "4th & 6 at IND 44",
+    "shortDownDistanceText": "4th & 6",
+    "possessionText": "IND 44",
+    "team": {
+     "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2025/teams/10?lang=en&region=us"
+    }
+   },
+   "end": {
+    "down": 1,
+    "distance": 10,
+    "yardLine": 56,
+    "yardsToEndzone": 56,
+    "downDistanceText": "1st & 10 at IND 44",
+    "shortDownDistanceText": "1st & 10",
+    "possessionText": "IND 44",
+    "team": {
+     "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2025/teams/11?lang=en&region=us"
+    }
+   },
+   "isTurnover": true,
+   "__eventId": "401772733"
+  },
+  {
+   "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772842/competitions/401772842/plays/4017728421875?lang=en&region=us",
+   "id": "4017728421875",
+   "sequenceNumber": "187500",
+   "type": {
+    "id": "26",
+    "text": "Pass Interception Return",
+    "abbreviation": "INTR"
+   },
+   "text": "(Shotgun) J.Flacco pass deep left intended for J.Jeudy INTERCEPTED by X.McKinney [L.Van Ness] at GB 9. X.McKinney ran ob at GB 9 for no gain.",
+   "shortText": "Xavier McKinney  Interception Return, No Gain",
+   "alternativeText": "(Shotgun) J.Flacco pass deep left intended for J.Jeudy INTERCEPTED by X.McKinney [L.Van Ness] at GB 9. X.McKinney ran ob at GB 9 for no gain.",
+   "shortAlternativeText": "Xavier McKinney  Interception Return, No Gain",
+   "awayScore": 3,
+   "homeScore": 0,
+   "period": {
+    "number": 2
+   },
+   "clock": {
+    "value": 12,
+    "displayValue": "0:12"
+   },
+   "scoringPlay": false,
+   "priority": false,
+   "scoreValue": 0,
+   "modified": "2025-09-21T22:28Z",
+   "team": {
+    "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2025/teams/9?lang=en&region=us"
+   },
+   "participants": [
+    {
+     "athlete": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2025/athletes/11252?lang=en&region=us"
+     },
+     "position": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/positions/8?lang=en&region=us"
+     },
+     "statistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772842/competitions/401772842/plays/4017728421875/participants/11252/statistics/1?lang=en&region=us"
+     },
+     "playStatistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772842/competitions/401772842/plays/4017728421875/participants/11252/statistics/0?lang=en&region=us"
+     },
+     "order": 1,
+     "type": "passer"
+    },
+    {
+     "athlete": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2025/athletes/4241470?lang=en&region=us"
+     },
+     "position": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/positions/36?lang=en&region=us"
+     },
+     "statistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772842/competitions/401772842/plays/4017728421875/participants/4241470/statistics/1?lang=en&region=us"
+     },
+     "playStatistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772842/competitions/401772842/plays/4017728421875/participants/4241470/statistics/0?lang=en&region=us"
+     },
+     "order": 2,
+     "type": "passDefender"
+    },
+    {
+     "athlete": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2025/athletes/4241470?lang=en&region=us"
+     },
+     "position": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/positions/36?lang=en&region=us"
+     },
+     "statistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772842/competitions/401772842/plays/4017728421875/participants/4241470/statistics/1?lang=en&region=us"
+     },
+     "playStatistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772842/competitions/401772842/plays/4017728421875/participants/4241470/statistics/0?lang=en&region=us"
+     },
+     "order": 3,
+     "type": "returner"
+    },
+    {
+     "athlete": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2025/athletes/4686906?lang=en&region=us"
+     },
+     "position": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/positions/31?lang=en&region=us"
+     },
+     "statistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772842/competitions/401772842/plays/4017728421875/participants/4686906/statistics/1?lang=en&region=us"
+     },
+     "playStatistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772842/competitions/401772842/plays/4017728421875/participants/4686906/statistics/0?lang=en&region=us"
+     },
+     "order": 4,
+     "type": "other"
+    },
+    {
+     "athlete": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2025/athletes/4241463?lang=en&region=us"
+     },
+     "position": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/positions/1?lang=en&region=us"
+     },
+     "statistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772842/competitions/401772842/plays/4017728421875/participants/4241463/statistics/1?lang=en&region=us"
+     },
+     "playStatistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772842/competitions/401772842/plays/4017728421875/participants/4241463/statistics/0?lang=en&region=us"
+     },
+     "order": 5,
+     "type": "other"
+    }
+   ],
+   "probability": {
+    "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772842/competitions/401772842/probabilities/4017728421875?lang=en&region=us"
+   },
+   "wallclock": "2025-09-21T18:16:52Z",
+   "teamParticipants": [
+    {
+     "team": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2025/teams/9?lang=en&region=us"
+     },
+     "id": "9",
+     "statistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772842/competitions/401772842/plays/4017728421875/teams/9/statistics/1?lang=en&region=us"
+     },
+     "playStatistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772842/competitions/401772842/plays/4017728421875/teams/9/statistics/0?lang=en&region=us"
+     },
+     "order": 1,
+     "type": "defense"
+    },
+    {
+     "team": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2025/teams/5?lang=en&region=us"
+     },
+     "id": "5",
+     "statistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772842/competitions/401772842/plays/4017728421875/teams/5/statistics/1?lang=en&region=us"
+     },
+     "playStatistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772842/competitions/401772842/plays/4017728421875/teams/5/statistics/0?lang=en&region=us"
+     },
+     "order": 2,
+     "type": "offense"
+    }
+   ],
+   "isPenalty": false,
+   "statYardage": 0,
+   "drive": {
+    "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772842/competitions/401772842/drives/4017728427?lang=en&region=us"
+   },
+   "start": {
+    "down": 4,
+    "distance": 8,
+    "yardLine": 57,
+    "yardsToEndzone": 43,
+    "downDistanceText": "4th & 8 at GB 43",
+    "shortDownDistanceText": "4th & 8",
+    "possessionText": "GB 43",
+    "team": {
+     "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2025/teams/5?lang=en&region=us"
+    }
+   },
+   "end": {
+    "down": 1,
+    "distance": 10,
+    "yardLine": 91,
+    "yardsToEndzone": 91,
+    "downDistanceText": "1st & 10 at GB 9",
+    "shortDownDistanceText": "1st & 10",
+    "possessionText": "GB 9",
+    "team": {
+     "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2025/teams/9?lang=en&region=us"
+    }
+   },
+   "isTurnover": true,
+   "__eventId": "401772842"
+  },
+  {
+   "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772842/competitions/401772842/plays/4017728423865?lang=en&region=us",
+   "id": "4017728423865",
+   "sequenceNumber": "386500",
+   "type": {
+    "id": "26",
+    "text": "Pass Interception Return",
+    "abbreviation": "INTR"
+   },
+   "text": "(Shotgun) J.Love pass short left intended for D.Wicks INTERCEPTED by G.Delpit at GB 29. G.Delpit pushed ob at GB 4 for 25 yards (S.Rhyan).",
+   "shortText": "Grant Delpit 25 Yd Interception Return",
+   "alternativeText": "(Shotgun) J.Love pass short left intended for D.Wicks INTERCEPTED by G.Delpit at GB 29. G.Delpit pushed ob at GB 4 for 25 yards (S.Rhyan).",
+   "shortAlternativeText": "Grant Delpit 25 Yd Interception Return",
+   "awayScore": 10,
+   "homeScore": 3,
+   "period": {
+    "number": 4
+   },
+   "clock": {
+    "value": 198,
+    "displayValue": "3:18"
+   },
+   "scoringPlay": false,
+   "priority": false,
+   "scoreValue": 0,
+   "modified": "2025-09-21T22:28Z",
+   "team": {
+    "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2025/teams/5?lang=en&region=us"
+   },
+   "participants": [
+    {
+     "athlete": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2025/athletes/4036378?lang=en&region=us"
+     },
+     "position": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/positions/8?lang=en&region=us"
+     },
+     "statistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772842/competitions/401772842/plays/4017728423865/participants/4036378/statistics/1?lang=en&region=us"
+     },
+     "playStatistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772842/competitions/401772842/plays/4017728423865/participants/4036378/statistics/0?lang=en&region=us"
+     },
+     "order": 1,
+     "type": "passer"
+    },
+    {
+     "athlete": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2025/athletes/4242208?lang=en&region=us"
+     },
+     "position": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/positions/36?lang=en&region=us"
+     },
+     "statistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772842/competitions/401772842/plays/4017728423865/participants/4242208/statistics/1?lang=en&region=us"
+     },
+     "playStatistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772842/competitions/401772842/plays/4017728423865/participants/4242208/statistics/0?lang=en&region=us"
+     },
+     "order": 2,
+     "type": "passDefender"
+    },
+    {
+     "athlete": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2025/athletes/4242208?lang=en&region=us"
+     },
+     "position": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/positions/36?lang=en&region=us"
+     },
+     "statistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772842/competitions/401772842/plays/4017728423865/participants/4242208/statistics/1?lang=en&region=us"
+     },
+     "playStatistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772842/competitions/401772842/plays/4017728423865/participants/4242208/statistics/0?lang=en&region=us"
+     },
+     "order": 3,
+     "type": "returner"
+    },
+    {
+     "athlete": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2025/athletes/4426411?lang=en&region=us"
+     },
+     "position": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/positions/73?lang=en&region=us"
+     },
+     "statistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772842/competitions/401772842/plays/4017728423865/participants/4426411/statistics/1?lang=en&region=us"
+     },
+     "playStatistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772842/competitions/401772842/plays/4017728423865/participants/4426411/statistics/0?lang=en&region=us"
+     },
+     "order": 4,
+     "type": "tackler"
+    },
+    {
+     "athlete": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2025/athletes/4873706?lang=en&region=us"
+     },
+     "position": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/positions/46?lang=en&region=us"
+     },
+     "statistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772842/competitions/401772842/plays/4017728423865/participants/4873706/statistics/1?lang=en&region=us"
+     },
+     "playStatistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772842/competitions/401772842/plays/4017728423865/participants/4873706/statistics/0?lang=en&region=us"
+     },
+     "order": 5,
+     "type": "other"
+    },
+    {
+     "athlete": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2025/athletes/4428850?lang=en&region=us"
+     },
+     "position": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/positions/1?lang=en&region=us"
+     },
+     "statistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772842/competitions/401772842/plays/4017728423865/participants/4428850/statistics/1?lang=en&region=us"
+     },
+     "playStatistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772842/competitions/401772842/plays/4017728423865/participants/4428850/statistics/0?lang=en&region=us"
+     },
+     "order": 6,
+     "type": "other"
+    }
+   ],
+   "probability": {
+    "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772842/competitions/401772842/probabilities/4017728423865?lang=en&region=us"
+   },
+   "wallclock": "2025-09-21T19:44:39Z",
+   "teamParticipants": [
+    {
+     "team": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2025/teams/5?lang=en&region=us"
+     },
+     "id": "5",
+     "statistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772842/competitions/401772842/plays/4017728423865/teams/5/statistics/1?lang=en&region=us"
+     },
+     "playStatistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772842/competitions/401772842/plays/4017728423865/teams/5/statistics/0?lang=en&region=us"
+     },
+     "order": 1,
+     "type": "defense"
+    },
+    {
+     "team": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2025/teams/9?lang=en&region=us"
+     },
+     "id": "9",
+     "statistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772842/competitions/401772842/plays/4017728423865/teams/9/statistics/1?lang=en&region=us"
+     },
+     "playStatistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772842/competitions/401772842/plays/4017728423865/teams/9/statistics/0?lang=en&region=us"
+     },
+     "order": 2,
+     "type": "offense"
+    }
+   ],
+   "isPenalty": false,
+   "statYardage": 25,
+   "drive": {
+    "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772842/competitions/401772842/drives/40177284217?lang=en&region=us"
+   },
+   "start": {
+    "down": 3,
+    "distance": 3,
+    "yardLine": 75,
+    "yardsToEndzone": 75,
+    "downDistanceText": "3rd & 3 at GB 25",
+    "shortDownDistanceText": "3rd & 3",
+    "possessionText": "GB 25",
+    "team": {
+     "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2025/teams/9?lang=en&region=us"
+    }
+   },
+   "end": {
+    "down": 1,
+    "distance": 4,
+    "yardLine": 96,
+    "yardsToEndzone": 4,
+    "downDistanceText": "1st & Goal at GB 4",
+    "shortDownDistanceText": "1st & Goal",
+    "possessionText": "GB 4",
+    "team": {
+     "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2025/teams/5?lang=en&region=us"
+    }
+   },
+   "isTurnover": true,
+   "__eventId": "401772842"
+  },
+  {
+   "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772842/competitions/401772842/plays/4017728424227?lang=en&region=us",
+   "id": "4017728424227",
+   "sequenceNumber": "422700",
+   "type": {
+    "id": "18",
+    "text": "Blocked Field Goal",
+    "abbreviation": "BFG"
+   },
+   "text": "B.McManus 43 yard field goal is BLOCKED (S.Harris), Center-M.Orzech, Holder-D.Whelan, RECOVERED by CLV-G.Newsome at CLV 47.",
+   "shortText": "Blocked Kick Recovered by Greg Newsome II (CLV) Blocked Kick Recovered by Shelby Harris (CLV) Brandon McManus Missed 43 Yd FG Blocked",
+   "alternativeText": "B.McManus 43 yard field goal is BLOCKED (S.Harris), Center-M.Orzech, Holder-D.Whelan, RECOVERED by CLV-G.Newsome at CLV 47.",
+   "shortAlternativeText": "Blocked Kick Recovered by Greg Newsome II (CLV) Blocked Kick Recovered by Shelby Harris (CLV) Brandon McManus Missed 43 Yd FG Blocked",
+   "awayScore": 10,
+   "homeScore": 10,
+   "period": {
+    "number": 4
+   },
+   "clock": {
+    "value": 27,
+    "displayValue": "0:27"
+   },
+   "scoringPlay": false,
+   "priority": false,
+   "scoreValue": 0,
+   "modified": "2025-09-21T22:28Z",
+   "team": {
+    "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2025/teams/5?lang=en&region=us"
+   },
+   "participants": [
+    {
+     "athlete": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2025/athletes/16339?lang=en&region=us"
+     },
+     "position": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/positions/22?lang=en&region=us"
+     },
+     "statistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772842/competitions/401772842/plays/4017728424227/participants/16339/statistics/1?lang=en&region=us"
+     },
+     "playStatistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772842/competitions/401772842/plays/4017728424227/participants/16339/statistics/0?lang=en&region=us"
+     },
+     "order": 1,
+     "type": "kicker"
+    },
+    {
+     "athlete": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2025/athletes/16837?lang=en&region=us"
+     },
+     "position": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/positions/32?lang=en&region=us"
+     },
+     "statistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772842/competitions/401772842/plays/4017728424227/participants/16837/statistics/1?lang=en&region=us"
+     },
+     "playStatistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772842/competitions/401772842/plays/4017728424227/participants/16837/statistics/0?lang=en&region=us"
+     },
+     "order": 2,
+     "type": "other"
+    }
+   ],
+   "probability": {
+    "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772842/competitions/401772842/probabilities/4017728424227?lang=en&region=us"
+   },
+   "wallclock": "2025-09-21T20:00:51Z",
+   "teamParticipants": [
+    {
+     "team": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2025/teams/5?lang=en&region=us"
+     },
+     "id": "5",
+     "statistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772842/competitions/401772842/plays/4017728424227/teams/5/statistics/1?lang=en&region=us"
+     },
+     "playStatistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772842/competitions/401772842/plays/4017728424227/teams/5/statistics/0?lang=en&region=us"
+     },
+     "order": 1,
+     "type": "defense"
+    },
+    {
+     "team": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2025/teams/9?lang=en&region=us"
+     },
+     "id": "9",
+     "statistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772842/competitions/401772842/plays/4017728424227/teams/9/statistics/1?lang=en&region=us"
+     },
+     "playStatistics": {
+      "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772842/competitions/401772842/plays/4017728424227/teams/9/statistics/0?lang=en&region=us"
+     },
+     "order": 2,
+     "type": "offense"
+    }
+   ],
+   "isPenalty": false,
+   "statYardage": 43,
+   "drive": {
+    "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401772842/competitions/401772842/drives/40177284219?lang=en&region=us"
+   },
+   "start": {
+    "down": 4,
+    "distance": 13,
+    "yardLine": 25,
+    "yardsToEndzone": 25,
+    "downDistanceText": "4th & 13 at CLE 25",
+    "shortDownDistanceText": "4th & 13",
+    "possessionText": "CLE 25",
+    "team": {
+     "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2025/teams/9?lang=en&region=us"
+    }
+   },
+   "end": {
+    "down": 1,
+    "distance": 10,
+    "yardLine": 25,
+    "yardsToEndzone": 75,
+    "downDistanceText": "1st & 10 at CLE 25",
+    "shortDownDistanceText": "1st & 10",
+    "possessionText": "CLE 25",
+    "team": {
+     "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2025/teams/5?lang=en&region=us"
+    }
+   },
+   "isTurnover": true,
+   "__eventId": "401772842"
+  }
+ ]
+}

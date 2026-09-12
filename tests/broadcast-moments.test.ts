@@ -277,3 +277,113 @@ describe('the red-zone banner', () => {
     expect(selectRedZoneAlerts([game({ situation: null })], [league()], meta)).toEqual([]);
   });
 });
+
+describe('team defenses — a club scores, not a person', () => {
+  // A `Def` row is a CLUB. It carries no ESPN athlete id, so it can never
+  // appear in `play.playerIds`, so every defensive touchdown, takeaway and
+  // safety produced no reveal at all until Sep 2026 — two of the four triggers
+  // this board was specified to have, silently doing nothing. 32 team defenses
+  // are rostered in TheLeague and 28 in the AFL.
+  const defMeta: Record<string, PlayerMeta> = {
+    ...meta,
+    // MFL spells New England 'NEP' and ESPN spells it 'NE'; the join has to
+    // survive that or a real DEF never matches a real play.
+    '0504': { id: '0504', name: 'Patriots, New England', position: 'DEF', nflTeam: 'NEP', headshot: '', espnId: null, projected: 7 },
+    '0501': { id: '0501', name: 'Bills, Buffalo', position: 'DEF', nflTeam: 'BUF', headshot: '', espnId: null, projected: 8 },
+  };
+
+  const defLeague = (over: Partial<LeagueViewer> = {}) =>
+    league({
+      players: { '0001': [{ id: '1' }, { id: '0504' }], '0002': [{ id: '2' }, { id: '0501' }] },
+      ...over,
+    });
+
+  // A real shape: the play belongs to the team that ENDED with the ball.
+  const pick = (over: Partial<LiveScoringPlay> = {}) =>
+    play({
+      playId: 'int1',
+      typeAbbrev: '',
+      typeText: 'Pass Interception Return',
+      text: 'Marcus Jones 25 Yd Interception Return',
+      scoreValue: 0,
+      nflTeam: 'NE',
+      playerIds: [],
+      isTurnover: true,
+      ...over,
+    });
+
+  it('reveals a takeaway for the owner’s own defense', () => {
+    const moments = buildBroadcastMoments([pick()], [defLeague()], defMeta);
+    expect(moments).toHaveLength(1);
+    expect(moments[0].side).toBe('mine');
+    expect(moments[0].kind).toBe('turnover');
+    expect(moments[0].playerId).toBe('0504');
+    expect(moments[0].playerName).toBe('Patriots, New England');
+  });
+
+  it('reveals a defensive touchdown too — it is still a turnover', () => {
+    const moments = buildBroadcastMoments(
+      [pick({ typeAbbrev: 'TD', typeText: 'Interception Return Touchdown', scoreValue: 6 })],
+      [defLeague()],
+      defMeta,
+    );
+    expect(moments).toHaveLength(1);
+    expect(moments[0].kind).toBe('touchdown');
+    expect(moments[0].playerId).toBe('0504');
+  });
+
+  it('credits the OPPONENT’s defense to the opponent', () => {
+    const moments = buildBroadcastMoments([pick({ nflTeam: 'BUF' })], [defLeague()], defMeta);
+    expect(moments).toHaveLength(1);
+    expect(moments[0].side).toBe('opponent');
+    expect(moments[0].playerId).toBe('0501');
+  });
+
+  it('never credits the defense of the team that LOST the ball', () => {
+    // The join that matters. `nflTeam` is the club that ended with the ball;
+    // reading it as the offense would hand the takeaway to the defense that
+    // just gave it up, and look entirely plausible on screen.
+    const moments = buildBroadcastMoments([pick({ nflTeam: 'NE' })], [defLeague()], defMeta);
+    expect(moments.every((m) => m.playerId !== '0501')).toBe(true);
+  });
+
+  it('does NOT credit a defense on an ordinary offensive touchdown', () => {
+    // The NE OFFENSE scores while the viewer starts the NE defense. No
+    // possession changed, so no defense earned anything — but the play's team
+    // matches a rostered `Def` row, which is the only shape that can catch a
+    // missing `isTurnover` gate. Without it every offensive score by a club
+    // whose defense you start fires a second, bogus reveal.
+    const offensive = play({
+      playId: 'ne-td',
+      typeText: 'Rushing Touchdown',
+      text: 'Rhamondre Stevenson 3 Yd Rush',
+      nflTeam: 'NE',
+      playerIds: [],
+      isTurnover: false,
+    });
+    const moments = buildBroadcastMoments([offensive], [defLeague()], defMeta);
+    expect(moments).toHaveLength(0);
+  });
+
+  it('gives BOTH franchises a moment when they start the same defense', () => {
+    // The AFL duplicates rosters across its conferences, so one club's defense
+    // is routinely started by two franchises — the same reason `stake` is a
+    // list rather than a single franchise id.
+    const shared = buildBroadcastMoments(
+      [pick({ nflTeam: 'BUF' })],
+      [defLeague({
+        opponentIds: ['0002', '0003'],
+        opponentNames: { '0002': 'Rivals', '0003': 'Others' },
+        players: { '0001': [{ id: '1' }], '0002': [{ id: '0501' }], '0003': [{ id: '0501' }] },
+      })],
+      defMeta,
+    );
+    expect(shared).toHaveLength(2);
+    expect(new Set(shared.map((m) => m.franchiseId))).toEqual(new Set(['0002', '0003']));
+  });
+
+  it('stays silent when nobody in the league starts that defense', () => {
+    const moments = buildBroadcastMoments([pick({ nflTeam: 'DAL' })], [defLeague()], defMeta);
+    expect(moments).toHaveLength(0);
+  });
+});

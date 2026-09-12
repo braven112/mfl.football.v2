@@ -25,7 +25,7 @@ import {
   BROADCAST_LEAGUE_COOKIE,
   BROADCAST_SOUND_COOKIE,
 } from '../../../utils/broadcast-selection';
-import { getCurrentSeasonYear } from '../../../utils/league-year';
+import { getCurrentSeasonYear, getTestDateFromSearchParams } from '../../../utils/league-year';
 import { getCurrentNFLWeek } from '../../../utils/current-week';
 import type { AuthUser } from '../../../utils/auth';
 import '../../../styles/live-broadcast.css';
@@ -40,13 +40,23 @@ interface Props {
 
 const { user } = Astro.props;
 
+// `?testDate=YYYY-MM-DD` shifts the reference date server-side so the board can
+// be rendered at the Labor Day boundary, where its season year turns. Without
+// it `/rollover-check` cannot exercise this page at all — the repo's contract
+// for anything date-dependent — and the default week could not be tested
+// either, since it is derived from the same clock.
+const testDate = getTestDateFromSearchParams(Astro.url.searchParams) ?? undefined;
+
 // Results-shaped: the SEASON clock (Labor Day), never the league year.
-const year = getCurrentSeasonYear();
+const year = getCurrentSeasonYear(testDate);
 const weekParam = Astro.url.searchParams.get('week');
 const parsedWeek = weekParam ? parseInt(weekParam, 10) : NaN;
-const week = Number.isFinite(parsedWeek) && parsedWeek > 0
+// Clamped to the same 1-25 the poll endpoint enforces. Unclamped, `?week=26`
+// rendered an initial MFL board and then took 400s from the island forever,
+// so the NFL half of the screen silently stopped matching the MFL half.
+const week = Number.isFinite(parsedWeek) && parsedWeek >= 1 && parsedWeek <= 25
   ? parsedWeek
-  : (getCurrentNFLWeek(new Date()) ?? 1);
+  : (getCurrentNFLWeek(testDate ?? new Date()) ?? 1);
 
 const board = await assembleBroadcastBoard({
   user,
