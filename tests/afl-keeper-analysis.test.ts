@@ -145,6 +145,18 @@ describe('computeSeasonPoints', () => {
     expect(points.size).toBe(0);
     expect(maxCompletedWeek).toBe(0);
   });
+
+  it('counts one game per distinct scored week, deduped across conferences', () => {
+    const raw = [
+      week('1', [
+        { franchises: [{ id: '0001', players: [['100', '20.5']] }] },
+        { franchises: [{ id: '0013', players: [['100', '20.5']] }] },
+      ]),
+      week('2', [{ franchises: [{ id: '0001', players: [['100', '10.0']] }] }]),
+    ];
+    const { games } = computeSeasonPoints(raw);
+    expect(games.get('100')).toBe(2);
+  });
 });
 
 describe('keeper reconstruction', () => {
