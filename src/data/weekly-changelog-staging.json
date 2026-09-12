@@ -4,7 +4,7 @@
     {
       "date": "2026-09-10",
       "type": "enhancement",
-      "summary": "<a href=\"/activity\">Owner Activity</a> is now site analytics: league traffic, per-owner engagement, page reach and app installs \u2014 and no transaction leaderboard.",
+      "summary": "<a href=\"/activity\">Owner Activity</a> is now site analytics: league traffic, per-owner engagement, page reach and app installs — and no transaction leaderboard.",
       "impact": "user",
       "area": "other",
       "league": "theleague",
@@ -17,7 +17,7 @@
     {
       "date": "2026-09-10",
       "type": "enhancement",
-      "summary": "<a href=\"/activity\">Owner Activity</a> is now site analytics: league traffic, per-owner engagement, page reach and app installs \u2014 and no transaction leaderboard.",
+      "summary": "<a href=\"/activity\">Owner Activity</a> is now site analytics: league traffic, per-owner engagement, page reach and app installs — and no transaction leaderboard.",
       "impact": "user",
       "area": "other",
       "league": "afl",
@@ -30,7 +30,7 @@
     {
       "date": "2026-09-10",
       "type": "enhancement",
-      "summary": "Signed-out visits are counted now \u2014 <a href=\"/activity\">Owner Activity</a> shows how much of the traffic comes from people who never sign in, and which public pages they read.",
+      "summary": "Signed-out visits are counted now — <a href=\"/activity\">Owner Activity</a> shows how much of the traffic comes from people who never sign in, and which public pages they read.",
       "impact": "user",
       "area": "other",
       "league": "both"
@@ -38,7 +38,7 @@
     {
       "date": "2026-09-10",
       "type": "bug-fix",
-      "summary": "Players on injured reserve no longer count against your active roster when you add a <a href=\"/players\">free agent</a> \u2014 the form now shows how many active spots you actually have.",
+      "summary": "Players on injured reserve no longer count against your active roster when you add a <a href=\"/players\">free agent</a> — the form now shows how many active spots you actually have.",
       "impact": "user",
       "area": "free-agents",
       "league": "both"
@@ -46,7 +46,7 @@
     {
       "date": "2026-09-09",
       "type": "style-tweak",
-      "summary": "The game line on <a href=\"/lineup\">Set Lineup</a> now leads with the network's logo at text size and closes on a bigger opponent helmet \u2014 the channel was reading as the headline.",
+      "summary": "The game line on <a href=\"/lineup\">Set Lineup</a> now leads with the network's logo at text size and closes on a bigger opponent helmet — the channel was reading as the headline.",
       "impact": "user",
       "area": "rosters",
       "league": "both"
@@ -54,7 +54,7 @@
     {
       "date": "2026-09-09",
       "type": "bug-fix",
-      "summary": "<a href=\"/live-scoring\">Live Scoring</a> showed no fantasy matchups during the Wednesday opener \u2014 the board now loads its scores directly and keeps polling on any game night.",
+      "summary": "<a href=\"/live-scoring\">Live Scoring</a> showed no fantasy matchups during the Wednesday opener — the board now loads its scores directly and keeps polling on any game night.",
       "impact": "user",
       "area": "live-scoring",
       "league": "both"
@@ -62,7 +62,7 @@
     {
       "date": "2026-09-10",
       "type": "bug-fix",
-      "summary": "<a href=\"/activity\">Owner Activity</a> no longer slides sideways on a phone \u2014 the Last Seen table scrolls on its own now, instead of dragging the page with it.",
+      "summary": "<a href=\"/activity\">Owner Activity</a> no longer slides sideways on a phone — the Last Seen table scrolls on its own now, instead of dragging the page with it.",
       "impact": "user",
       "area": "other",
       "league": "both"
@@ -70,7 +70,7 @@
     {
       "date": "2026-09-10",
       "type": "style-tweak",
-      "summary": "Team logos on <a href=\"/activity\">Owner Activity</a> are no longer circle-cropped \u2014 every club's mark shows in full, corners and all.",
+      "summary": "Team logos on <a href=\"/activity\">Owner Activity</a> are no longer circle-cropped — every club's mark shows in full, corners and all.",
       "impact": "user",
       "area": "design-system",
       "league": "both"
@@ -78,7 +78,7 @@
     {
       "date": "2026-09-10",
       "type": "bug-fix",
-      "summary": "League dates now follow the official NFL schedule \u2014 2026 opened on a Wednesday, so Roger no longer announces the season a day late, and deadlines and playoff weeks track the real calendar.",
+      "summary": "League dates now follow the official NFL schedule — 2026 opened on a Wednesday, so Roger no longer announces the season a day late, and deadlines and playoff weeks track the real calendar.",
       "impact": "user",
       "area": "calendar",
       "league": "both"
@@ -86,7 +86,7 @@
     {
       "date": "2026-09-11",
       "type": "bug-fix",
-      "summary": "The AFL <a href=\"/calendar\">calendar</a> had Regular Season Ends on Dec 31 \u2014 two weeks after the playoffs start. It now reads Dec 17, when Week 14 closes and the bracket opens.",
+      "summary": "The AFL <a href=\"/calendar\">calendar</a> had Regular Season Ends on Dec 31 — two weeks after the playoffs start. It now reads Dec 17, when Week 14 closes and the bracket opens.",
       "impact": "user",
       "area": "calendar",
       "league": "afl"
@@ -94,7 +94,7 @@
     {
       "date": "2026-09-10",
       "type": "bug-fix",
-      "summary": "Schefter can no longer pair a team with a player it doesn't roster \u2014 trade-rumor posts now check ownership against the rosters before naming anyone.",
+      "summary": "Schefter can no longer pair a team with a player it doesn't roster — trade-rumor posts now check ownership against the rosters before naming anyone.",
       "impact": "user",
       "area": "schefter",
       "league": "theleague"
@@ -102,7 +102,7 @@
     {
       "date": "2026-09-10",
       "type": "bug-fix",
-      "summary": "Schefter runs at most one trade story a day now, across every lane \u2014 and the invented trade-speculation pieces drop to one a week.",
+      "summary": "Schefter runs at most one trade story a day now, across every lane — and the invented trade-speculation pieces drop to one a week.",
       "impact": "user",
       "area": "schefter",
       "league": "theleague"
@@ -118,7 +118,7 @@
     {
       "date": "2026-09-11",
       "type": "style-tweak",
-      "summary": "<a href=\"/live-scoring\">Live Scoring</a>'s matchup view now runs edge-to-edge on a phone \u2014 tighter header, roomier player rows, and one more starter on screen without scrolling.",
+      "summary": "<a href=\"/live-scoring\">Live Scoring</a>'s matchup view now runs edge-to-edge on a phone — tighter header, roomier player rows, and one more starter on screen without scrolling.",
       "impact": "user",
       "area": "live-scoring",
       "league": "both"
@@ -150,7 +150,7 @@
     {
       "date": "2026-09-12",
       "type": "bug-fix",
-      "summary": "The homepage hero is game day again \u2014 Schefter's weekly recap and previews no longer take it over as breaking news, so that slot is back to real trades and auction wins.",
+      "summary": "The homepage hero is game day again — Schefter's weekly recap and previews no longer take it over as breaking news, so that slot is back to real trades and auction wins.",
       "impact": "user",
       "area": "homepage",
       "league": "theleague"
@@ -158,7 +158,7 @@
     {
       "date": "2026-09-12",
       "type": "enhancement",
-      "summary": "<a href=\"/schedule\">Schedule</a> now prints the final score in every grid cell, and a season picker reaches back through every season on record \u2014 so old scores are two clicks away.",
+      "summary": "<a href=\"/schedule\">Schedule</a> now prints the final score in every grid cell, and a season picker reaches back through every season on record — so old scores are two clicks away.",
       "impact": "user",
       "area": "schedule",
       "league": "both"
@@ -166,7 +166,7 @@
     {
       "date": "2026-09-12",
       "type": "style-tweak",
-      "summary": "My Schedule on <a href=\"/schedule\">Schedule</a> now wears your club\u2019s colours and crest instead of the league\u2019s \u2014 the league grid keeps the league look.",
+      "summary": "My Schedule on <a href=\"/schedule\">Schedule</a> now wears your club’s colours and crest instead of the league’s — the league grid keeps the league look.",
       "impact": "user",
       "area": "schedule",
       "league": "both"
@@ -177,6 +177,14 @@
       "summary": "On <a href=\"/sunday-ticket\">Sunday Ticket</a>, the league and country pickers are now one line each that you swipe left and right, instead of five rows of chips above the board.",
       "impact": "user",
       "area": "other",
+      "league": "both"
+    },
+    {
+      "date": "2026-09-12",
+      "type": "new-page",
+      "summary": "New <a href=\"/broadcast\">Live Broadcast</a>: a second-screen TV board watching every league you’re in — scores, and a full-screen reveal whenever your player or your opponent’s scores.",
+      "impact": "user",
+      "area": "live-scoring",
       "league": "both"
     }
   ]
