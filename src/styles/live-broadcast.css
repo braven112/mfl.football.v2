@@ -311,7 +311,21 @@
 }
 
 .lbc__cells[data-games='2'] .lbc__cell + .lbc__cell {
-  border-left: 1px solid var(--lbc-hairline);
+  /*
+   * An inset SHADOW, not a `border-left`, and that is not a style choice.
+   *
+   * `.lbc__cell` carries a `border-image` for the win-probability gradient,
+   * and a border-image REPLACES `border-style` on every side — capping it with
+   * `border-image-width: 1 0 0 0` stops the gradient painting here but does
+   * not bring the border style back, so a `border-left` renders NOTHING.
+   *
+   * Both halves of that shipped: uncapped, this divider painted the gradient's
+   * 0% stop, a saturated bar in the owner's own team colour hard against Game
+   * 1's score. Capped, it vanished entirely. A shadow is unaffected by the
+   * border-image and is the only one of the three that actually draws a
+   * hairline.
+   */
+  box-shadow: inset 1px 0 0 var(--lbc-hairline);
   padding-left: 0.6vw;
 }
 
@@ -334,11 +348,19 @@
   display: flex;
   flex-direction: column;
   justify-content: center;
-  /* Cell-relative, the principle `.lbc__score` already follows. A fixed 3.2px
-     put two 83px numerals close enough to read as one block from a couch while
-     ~94px of the cell went unspent — the "tight" report is a rhythm problem,
-     not a size one. */
-  gap: clamp(4px, 3.2cqh, 22px);
+  /*
+   * NOT `cqh`. An element is never its own query container — `container-type`
+   * here makes the cell a container for its DESCENDANTS — so a `cqh` in this
+   * rule resolves against `.lbc__panel` instead and comes out larger than
+   * intended, in the box whose documented failure is `overflow: hidden` eating
+   * the opponent's side.
+   *
+   * A fixed 3.2px was the original, and it put two 83px numerals close enough
+   * to read as one block from a couch while ~94px of the cell went unspent —
+   * the "tight" report is a rhythm problem, not a size one. `vh` is the honest
+   * unit for a gap on a surface whose height IS the viewport.
+   */
+  gap: clamp(4px, 1.1vh, 22px);
   min-width: 0;
   min-height: 0;
   /* The win-probability split doubles as the cell's top border at the
@@ -1506,6 +1528,18 @@
   pointer-events: none;
 }
 
+/*
+ * ...unless something in it has keyboard focus. This rule has to out-specify
+ * the one above (0,3,0), which the plain `:focus-within` further up does not —
+ * so without it a keyboard user who tabbed to a button watches it disappear
+ * three seconds later while still holding focus, which is the one way this
+ * idle-hide could genuinely trap someone.
+ */
+.lbc.is-fullscreen.is-idle .lbc__chrome:focus-within {
+  opacity: 1;
+  pointer-events: auto;
+}
+
 .lbc.is-fullscreen.is-idle {
   cursor: none;
 }
@@ -1513,6 +1547,37 @@
 /* ── Laptop fallback — not a responsive target, just not broken ───────────── */
 @media (max-height: 950px) {
   .lbc { --lbc-header-h: 34%; }
+}
+
+/*
+ * PORTRAIT, at any width — the scorer becomes a backdrop.
+ *
+ * Split on ORIENTATION and not width, which is the lesson the draft board
+ * already paid for: a width-only rule misses a 1024x1366 tablet entirely. The
+ * figure track is sized from the LAYER'S HEIGHT (`height: 100%` x the cutout's
+ * 1.376 ratio), so on a tall portrait viewport the stand comes out ~1203px
+ * inside a ~942px content box and either crushes the copy's `minmax(0, 1fr)`
+ * track or overflows across it. Below 900px the phone block does this anyway;
+ * this is the same treatment for everything else that is taller than it is
+ * wide.
+ */
+@media (orientation: portrait) and (min-width: 901px) {
+  .lbc-reveal {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: 1fr;
+    gap: 0;
+  }
+  .lbc-reveal__body { align-self: center; }
+  .lbc-reveal__stand { height: auto; width: 100%; }
+  .lbc-reveal__figure {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    align-items: flex-end;
+    justify-content: center;
+    opacity: 0.55;
+    margin-inline-end: 0;
+  }
 }
 
 @media (max-width: 900px) {
