@@ -1,0 +1,149 @@
+---
+/**
+ * Live Scoring Broadcast — the shared page body.
+ *
+ * ONE implementation; the per-league routes are thin wrappers that own the
+ * auth gate and the cookie writes, because neither can live in a component:
+ * `Astro.redirect()` from a component's frontmatter merely stops rendering it
+ * and ships a blank 200, and `Astro.cookies.set()` from one runs after the
+ * headers are committed and throws.
+ *
+ * The board calls `assembleBroadcastBoard` IN PROCESS. It does not fetch
+ * `/api/broadcast-live` to render itself — a server that already knows the
+ * league's registry host has nothing to gain by asking its own edge for what
+ * it can read directly, and the hop that does has already silently stopped
+ * landing once, printing "scores will appear when games begin" over a live
+ * slate.
+ */
+import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
+import LiveBroadcast from './LiveBroadcast';
+import { assembleBroadcastBoard, toPageData } from '../../../utils/broadcast-board';
+import {
+  broadcastHref,
+  resolveBroadcastSound,
+  toggleLeagueSelection,
+  BROADCAST_LEAGUE_COOKIE,
+  BROADCAST_SOUND_COOKIE,
+} from '../../../utils/broadcast-selection';
+import { getCurrentSeasonYear } from '../../../utils/league-year';
+import { getCurrentNFLWeek } from '../../../utils/current-week';
+import type { AuthUser } from '../../../utils/auth';
+import '../../../styles/live-broadcast.css';
+// The global `.visually-hidden` — imported in FRONTMATTER, never with an
+// `@import` inside a <style> block, which Vite scopes and which would render
+// the live region as visible page text.
+import '../../../styles/utilities.css';
+
+interface Props {
+  user: AuthUser;
+}
+
+const { user } = Astro.props;
+
+// Results-shaped: the SEASON clock (Labor Day), never the league year.
+const year = getCurrentSeasonYear();
+const weekParam = Astro.url.searchParams.get('week');
+const parsedWeek = weekParam ? parseInt(weekParam, 10) : NaN;
+const week = Number.isFinite(parsedWeek) && parsedWeek > 0
+  ? parsedWeek
+  : (getCurrentNFLWeek(new Date()) ?? 1);
+
+const board = await assembleBroadcastBoard({
+  user,
+  leaguesParam: Astro.url.searchParams.get('leagues'),
+  leaguesCookie: Astro.cookies.get(BROADCAST_LEAGUE_COOKIE)?.value ?? null,
+  week,
+  year,
+});
+
+const sound = resolveBroadcastSound(
+  Astro.url.searchParams.get('sound'),
+  Astro.cookies.get(BROADCAST_SOUND_COOKIE)?.value ?? null,
+);
+
+/**
+ * `?demo=1` runs the scripted rehearsal. Deliberately NOT remembered in a
+ * cookie the way the league set and the sound are: a television left on a
+ * demo it silently resumed next Sunday is the failure this whole flag exists
+ * to avoid.
+ */
+const demo = Astro.url.searchParams.get('demo') === '1';
+
+const pageData = toPageData(board, { week, year, sound, pathname: Astro.url.pathname, demo });
+
+/** Back to the board, keeping the set the chips just built. */
+const doneHref = broadcastHref(
+  Astro.url.pathname,
+  board.enabled.length > 0 ? board.enabled : null,
+  Number.isFinite(parsedWeek) ? week : null,
+);
+
+/**
+ * Does the viewer want the picker?
+ *
+ * It used to render ONLY when nothing was enabled — and since the two
+ * full-management leagues are on by default, that branch never ran for a real
+ * owner. So Best Ball and every outside league were opt-in through a screen
+ * there was no way to reach, which makes them not opt-in at all. `?picker=1`
+ * (a link in the board's chrome) asks for it explicitly.
+ */
+const wantsPicker = Astro.url.searchParams.get('picker') === '1' || board.enabled.length === 0;
+
+/**
+ * The picker's chips. Each href carries the CUMULATIVE set with this league
+ * toggled, not just its own id — a chip that replaced the whole selection
+ * meant an owner could never watch two leagues at once.
+ */
+const allIds = board.leagues.map((l) => l.id);
+const chips = board.leagues.map((league) => ({
+  id: league.id,
+  name: league.name,
+  on: board.enabled.includes(league.id),
+  href: broadcastHref(
+    Astro.url.pathname,
+    toggleLeagueSelection(board.enabled, allIds, league.id, board.enabled),
+    Number.isFinite(parsedWeek) ? week : null,
+  ),
+}));
+
+const title = `Live Broadcast — Week ${week}`;
+---
+
+<TheLeagueLayout title={title} hideMobileNavIcons>
+{
+  wantsPicker ? (
+    <main class="lbc" aria-label="Live scoring broadcast">
+      <div class="lbc-setup">
+        <h1>Pick the leagues this TV watches</h1>
+        <p class="lbc-saver__sub">
+          Your scores and your opponents' will take the screen as they happen.
+          Tap a league to add or remove it.
+        </p>
+        <ul class="lbc-setup__list">
+          {chips.map((chip) => (
+            <li>
+              {/* A LINK, so it works with no JavaScript on a TV browser. The
+                  selected state is `aria-current`, not `aria-pressed`, which
+                  is not valid on an anchor. */}
+              <a class="lbc-setup__chip" href={chip.href} aria-current={chip.on ? 'true' : undefined}>
+                {chip.name}
+              </a>
+            </li>
+          ))}
+        </ul>
+        {board.enabled.length > 0 && (
+          <p><a class="lbc-setup__chip" href={doneHref}>Done — show the board</a></p>
+        )}
+        {board.leagues.length === 0 && (
+          <p class="lbc-saver__sub">
+            We could not reach MyFantasyLeague to list your leagues. The board will
+            still show the league you are signed in to.
+          </p>
+        )}
+      </div>
+    </main>
+  ) : (
+    <LiveBroadcast client:load pageData={JSON.stringify(pageData)} />
+  )
+}
+</TheLeagueLayout>

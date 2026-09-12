@@ -220,6 +220,21 @@ export interface LiveScoringPlay {
    * hold a college athlete id.
    */
   playerIds: string[];
+  /**
+   * ESPN's real-world timestamp for the play (ISO 8601); '' when absent.
+   *
+   * Carried across the response boundary because the broadcast board drops a
+   * moment older than 90 seconds rather than showing it late, and the game
+   * clock cannot date a play — it stops. A play with no wallclock cannot be
+   * aged and is therefore never reveal-eligible.
+   */
+  wallclock?: string;
+  /** Yards gained. 0 on a play ESPN gives no `statYardage` for. */
+  yards?: number;
+  /** ESPN's own flag that the ball changed hands. */
+  isTurnover?: boolean;
+  /** The touchdown converted a two-point attempt (read off `pointAfterAttempt`). */
+  twoPoint?: boolean;
 }
 
 /** API response from /api/nfl-game-detail. */
