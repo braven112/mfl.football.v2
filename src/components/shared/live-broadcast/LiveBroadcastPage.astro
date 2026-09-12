@@ -1,0 +1,82 @@
+---
+/**
+ * Live Scoring Broadcast — the shared page body.
+ *
+ * ONE implementation; the per-league routes are thin wrappers that own the
+ * auth gate and the cookie writes, because neither can live in a component:
+ * `Astro.redirect()` from a component's frontmatter merely stops rendering it
+ * and ships a blank 200, and `Astro.cookies.set()` from one runs after the
+ * headers are committed and throws.
+ *
+ * The board calls `assembleBroadcastBoard` IN PROCESS. It does not fetch
+ * `/api/broadcast-live` to render itself — a server that already knows the
+ * league's registry host has nothing to gain by asking its own edge for what
+ * it can read directly, and the hop that does has already silently stopped
+ * landing once, printing "scores will appear when games begin" over a live
+ * slate.
+ */
+import LiveBroadcast from './LiveBroadcast';
+import { assembleBroadcastBoard, toPageData } from '../../../utils/broadcast-board';
+import { resolveBroadcastSound, BROADCAST_LEAGUE_COOKIE, BROADCAST_SOUND_COOKIE } from '../../../utils/broadcast-selection';
+import { getCurrentSeasonYear } from '../../../utils/league-year';
+import { getCurrentNFLWeek } from '../../../utils/current-week';
+import type { AuthUser } from '../../../utils/auth';
+import '../../../styles/live-broadcast.css';
+// The global `.visually-hidden` — imported in FRONTMATTER, never with an
+// `@import` inside a <style> block, which Vite scopes and which would render
+// the live region as visible page text.
+import '../../../styles/utilities.css';
+
+interface Props {
+  user: AuthUser;
+}
+
+const { user } = Astro.props;
+
+// Results-shaped: the SEASON clock (Labor Day), never the league year.
+const year = getCurrentSeasonYear();
+const weekParam = Astro.url.searchParams.get('week');
+const parsedWeek = weekParam ? parseInt(weekParam, 10) : NaN;
+const week = Number.isFinite(parsedWeek) && parsedWeek > 0
+  ? parsedWeek
+  : (getCurrentNFLWeek(new Date()) ?? 1);
+
+const board = await assembleBroadcastBoard({
+  user,
+  leaguesParam: Astro.url.searchParams.get('leagues'),
+  leaguesCookie: Astro.cookies.get(BROADCAST_LEAGUE_COOKIE)?.value ?? null,
+  week,
+  year,
+});
+
+const sound = resolveBroadcastSound(
+  Astro.url.searchParams.get('sound'),
+  Astro.cookies.get(BROADCAST_SOUND_COOKIE)?.value ?? null,
+);
+
+const pageData = toPageData(board, { week, year, sound, pathname: Astro.url.pathname });
+---
+
+{
+  board.enabled.length === 0 ? (
+    <main class="lbc" aria-label="Live scoring broadcast">
+      <div class="lbc-setup">
+        <h1>Pick the leagues this TV watches</h1>
+        <p class="lbc-saver__sub">
+          Your scores and your opponents' will take the screen as they happen.
+        </p>
+        <ul class="lbc-setup__list">
+          {board.leagues.map((league) => (
+            <li>
+              <a class="lbc-setup__chip" href={`${Astro.url.pathname}?leagues=${league.id}`}>
+                {league.name}
+              </a>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </main>
+  ) : (
+    <LiveBroadcast client:load pageData={JSON.stringify(pageData)} />
+  )
+}

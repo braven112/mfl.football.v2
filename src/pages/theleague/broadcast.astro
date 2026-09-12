@@ -1,0 +1,36 @@
+---
+/**
+ * TheLeague Live Scoring Broadcast — thin route wrapper.
+ *
+ * The board itself is CROSS-LEAGUE: it watches every league the signed-in
+ * owner plays in, so both leagues' routes render the identical component and
+ * neither passes a league of its own. They exist so the board is reachable
+ * from either nav, and so each sends an unauthenticated visitor to its OWN
+ * login — a correct href still bounces a user cross-league if the gate
+ * redirects to the other league's sign-in.
+ *
+ * The auth gate and the cookie write both live HERE, and must:
+ * `Astro.redirect()` only redirects from a PAGE (from a component it merely
+ * stops rendering and ships a blank 200), and `Astro.cookies.set()` from a
+ * component runs after the headers are committed and throws.
+ */
+import LiveBroadcastPage from '../../components/shared/live-broadcast/LiveBroadcastPage.astro';
+import { getAuthUser } from '../../utils/auth';
+import { rememberBroadcastChoices } from '../../utils/broadcast-cookies';
+
+export const prerender = false;
+
+rememberBroadcastChoices(Astro.url, Astro.cookies);
+
+// Owner-scoped from end to end — there is nothing to show an anonymous
+// visitor, so this never renders a shell to one.
+const user = getAuthUser(Astro.request);
+if (!user) {
+  return Astro.redirect(
+    `/theleague/login?next=${encodeURIComponent(Astro.url.pathname + Astro.url.search)}`,
+    302,
+  );
+}
+---
+
+<LiveBroadcastPage user={user} />

@@ -1,0 +1,1026 @@
+/**
+ * Live Scoring Broadcast — the second-TV board.
+ *
+ * Sizing is `vh`/`vw`/`cqh`, never rem. There is exactly one job here: be
+ * legible across a room while the real games are on the other television. A
+ * rem scale tuned for a laptop reads as fine print at ten feet.
+ *
+ * ## This file references NO colour token, deliberately
+ *
+ * Every colour token in the repo either inverts under `html.dark`
+ * (`--color-gray-900` resolves to near-WHITE, so a "dark broadcast panel"
+ * painted with it turns white at night), or is floored against a surface this
+ * page does not have (`--team-accent-<fid>` guarantees 3:1 against
+ * `--card-surface` only, and that floor silently stops applying here), or
+ * flips brightness with the theme (`--league-accent`). This surface is dark in
+ * BOTH themes — franchise colours ARE the background — so ink is always white
+ * and no `html.dark` override exists or is wanted. Same posture as
+ * `draft-broadcast.css`. `tests/broadcast-theme-literals.test.ts` pins it.
+ *
+ * ## Contrast floor is stricter than AA
+ *
+ * The panel is dimmed to 0.86-0.72 for most of its life and a living room
+ * loses about a point of effective contrast to ambient wash, so: 7:1 under
+ * 4vh, 4.5:1 at or above. Measured against the literal, never the token.
+ * `#fff` on `#05070b` = 20.4:1; on `#0b1220` = 18.9:1. `#fbbf24` = 11.2:1.
+ * `#4ade80` = 10.7:1. `#16a34a` = 5.74:1 — FILL ONLY, never text.
+ */
+
+.lbc {
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+  border-radius: 0.75rem;
+
+  /* THE handoff duration — retune here and nowhere else. Both halves read it:
+     the layers' opacity transition, and the reveal's own fade-in. They must
+     stay equal. The stage layer deliberately carries NO in-transition: two
+     curves of the same length compound to their square and the layer beneath
+     dips toward black at the midpoint of every reveal. */
+  --lbc-fade: 930ms;
+
+  --lbc-ink: #05070b;
+  --lbc-panel: #0b1220;
+  --lbc-panel-2: #121c2e;
+  --lbc-hairline: rgba(255, 255, 255, 0.12);
+  --lbc-text: #ffffff;
+  --lbc-text-dim: rgba(255, 255, 255, 0.72);
+  --lbc-text-faint: rgba(255, 255, 255, 0.52);
+  --lbc-live: #16a34a;
+  --lbc-live-text: #4ade80;
+  --lbc-alert: #fbbf24;
+  --lbc-redzone: #b91c1c;
+  --lbc-redzone-hi: #dc2626;
+
+  /* ── Properties the ISLAND writes inline, declared here with their defaults.
+     Declaring them is not decoration: `design-token-guard` reads CSS only, so
+     a property that exists solely as a JS-set inline style is indistinguishable
+     from a typo'd token that silently resolves to its fallback in both themes —
+     which is the bug that guard exists to catch. Naming the default here states
+     the contract and keeps the board correct for one frame before the island
+     mounts, and for the whole of a no-JS render. */
+
+  /* Burn-in orbit, rewritten every 90s (root) and 97s (brightest glyphs). */
+  --lbc-drift-x: 0px;
+  --lbc-drift-y: 0px;
+  --lbc-drift-y2: 0px;
+  /* Luminance schedule: 1 live, .86 idle, .72 screensaver. */
+  --lbc-dim: 1;
+  /* The two franchises in one header cell, via resolveTeamColorPair against
+     --lbc-panel. Neutral slate until the island resolves the real pair — never
+     a franchise colour guessed in CSS. */
+  --lbc-mine: #64748b;
+  --lbc-theirs: #334155;
+  /* Win-probability split, as a percentage. 50% is an honest unknown. */
+  --wp-split: 50%;
+  /* One franchise's broadcast pair, via toBroadcastPair. */
+  --lbc-primary: #10161f;
+  --lbc-secondary: #1c497c;
+
+  /* Set per render from the resolved density tier. The takeover's inset, the
+     red-zone banner's top and the strip's height all read this one number. */
+  --lbc-header-h: 30vh;
+
+  height: max(30rem, calc(100vh - 12rem));
+  background: var(--lbc-ink);
+  color: var(--lbc-text);
+
+  /* Burn-in: an orbital drift written by the island every 90s. It MUST be a
+     transform — a layout-affecting drift re-lays out the whole board every 90
+     seconds for eight hours — and it lives on the ROOT so the header still
+     never moves relative to its own content. Sub-perceptual (~0.5 px/s), and
+     therefore deliberately EXEMPT from prefers-reduced-motion below: this is
+     hardware protection, not decoration. Do not "fix" it. */
+  transform: translate3d(var(--lbc-drift-x, 0), var(--lbc-drift-y, 0), 0);
+  transition: transform 12s ease-in-out, filter 2s linear;
+  filter: brightness(var(--lbc-dim, 1));
+}
+
+/* The headings MUST restate their colour. This surface is dark in both themes,
+   but it renders inside the league layout, whose global h1/h2 rules set a dark
+   ink that beats plain inheritance. Without this the player name renders
+   near-black on the franchise gradient — fine on a laptop in light mode,
+   invisible on the TV. */
+.lbc h1,
+.lbc h2,
+.lbc h3 {
+  color: var(--lbc-text);
+  margin: 0;
+}
+
+.lbc:fullscreen,
+.lbc:-webkit-full-screen {
+  border-radius: 0;
+  height: 100vh;
+}
+
+/* ── Layer stack ───────────────────────────────────────────────────────────
+   Six layers, fixed z-order. The front layer resolves to exactly ONE Stage per
+   render.
+
+   `occludes` is the load-bearing idea. The draft board hides its idle layer
+   whenever any stage exists; that is wrong here, because the lower-third card
+   must COEXIST with the idle deck — an opponent's score is not worth taking
+   the scoreboard away for. So the strip hides on `strip` or `all`, and the
+   header only on `all`. */
+
+.lbc__strip {
+  position: absolute;
+  inset: var(--lbc-header-h) 0 0 0;
+  container-type: size;
+  z-index: 0;
+  transition: opacity var(--lbc-fade) ease;
+}
+
+.lbc__header {
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: var(--lbc-header-h);
+  z-index: 1;
+  display: grid;
+  gap: 0.6vh 0.6vw;
+  padding: 0.8vh 0.8vw;
+  box-sizing: border-box;
+}
+
+.lbc__strip.is-hidden,
+.lbc__header.is-hidden {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity var(--lbc-fade) ease, visibility 0s linear var(--lbc-fade);
+}
+
+.lbc__stage {
+  position: absolute;
+  z-index: 2;
+  /* No in-transition here on purpose — see --lbc-fade above. */
+}
+
+.lbc__stage--takeover {
+  inset: var(--lbc-header-h) 0 0 0;
+}
+
+.lbc__stage--saver,
+.lbc__stage--setup {
+  inset: 0;
+}
+
+.lbc__stage--lower-third {
+  inset: auto 0 0 0;
+  height: 26vh;
+}
+
+/* ── Fixed scoreboard header ───────────────────────────────────────────────
+   Density tiers set the grid and the type scale. Nothing shrinks below the
+   2.2vh floor to fit — elements are DROPPED on a fixed ladder instead (the
+   `is-drop-*` classes the island applies). */
+
+.lbc__header[data-tier='1'] { grid-template-columns: 1fr; }
+.lbc__header[data-tier='2'] { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.lbc__header[data-tier='3'] { grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: repeat(2, minmax(0, 1fr)); }
+.lbc__header[data-tier='4'] { grid-template-columns: repeat(3, minmax(0, 1fr)); grid-template-rows: repeat(2, minmax(0, 1fr)); }
+.lbc__header[data-tier='5'] { grid-template-columns: repeat(4, minmax(0, 1fr)); grid-template-rows: repeat(2, minmax(0, 1fr)); }
+
+/* `minmax(0, 1fr)` everywhere above, never a bare `1fr`: `1fr` means
+   `minmax(auto, 1fr)` and that auto floor is min-content, so one long team
+   name blows the whole track out and every sibling panel stretches with it. */
+
+.lbc__panel {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  background: var(--lbc-panel);
+  border-radius: 0.5rem;
+  padding: 0.6vh 0.7vw;
+  box-sizing: border-box;
+  container-type: size;
+  overflow: hidden;
+}
+
+.lbc__panel-tag {
+  display: flex;
+  align-items: center;
+  gap: 0.4vw;
+  font-size: max(2.2vh, 0.7rem);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--lbc-text-faint);
+  margin-bottom: 0.4vh;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* A doubleheader puts two cells side by side inside ONE panel, sharing the
+   tag. The panel does not grow — a doubleheader is two matchups of
+   information in one league's share of the screen. */
+.lbc__cells {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0 0.6vw;
+  flex: 1;
+  min-height: 0;
+}
+
+.lbc__cells[data-games='2'] {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+}
+
+.lbc__cells[data-games='2'] .lbc__cell + .lbc__cell {
+  border-left: 1px solid var(--lbc-hairline);
+  padding-left: 0.6vw;
+}
+
+.lbc__cell {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 0.3vh;
+  min-width: 0;
+  min-height: 0;
+  /* The win-probability split doubles as the cell's top border at the
+     densest tiers, where the bar itself is dropped. */
+  border-top: 0.4vh solid transparent;
+  border-image: linear-gradient(
+      to right,
+      var(--lbc-mine, #64748b) 0 var(--wp-split, 50%),
+      var(--lbc-panel) var(--wp-split, 50%) calc(var(--wp-split, 50%) + 0.2%),
+      var(--lbc-theirs, #334155) calc(var(--wp-split, 50%) + 0.2%) 100%
+    )
+    1;
+  padding-top: 0.4vh;
+}
+
+.lbc__game-tag {
+  font-size: max(2.2vh, 0.66rem);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: var(--lbc-text-faint);
+}
+
+.lbc__side {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5vw;
+  min-width: 0;
+}
+
+.lbc__crest {
+  width: max(3.4vh, 1.1rem);
+  height: max(3.4vh, 1.1rem);
+  object-fit: contain;
+  flex: none;
+  align-self: center;
+}
+
+.lbc__tn {
+  flex: 1;
+  min-width: 0;
+  font-size: max(2.4vh, 0.78rem);
+  font-weight: 600;
+  color: var(--lbc-text-dim);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.lbc__score {
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  color: var(--lbc-text-dim);
+  flex: none;
+  /* Counter-drift on a 97s period, co-prime with the root's 90s, so the
+     brightest persistent glyphs on the board never retrace the same path. */
+  transform: translateY(var(--lbc-drift-y2, 0));
+  transition: transform 12s ease-in-out;
+}
+
+/* The leading side is the one thing that is never dropped and never dimmed. */
+.lbc__side.is-leading .lbc__score {
+  color: var(--lbc-text);
+  font-weight: 800;
+}
+
+.lbc__side.is-leading .lbc__tn {
+  color: var(--lbc-text);
+}
+
+.lbc__header[data-tier='1'] .lbc__score { font-size: 11vh; }
+.lbc__header[data-tier='2'] .lbc__score { font-size: 9vh; }
+.lbc__header[data-tier='3'] .lbc__score { font-size: 7vh; }
+.lbc__header[data-tier='4'] .lbc__score { font-size: 5.5vh; }
+.lbc__header[data-tier='5'] .lbc__score { font-size: max(4.2vh, 1.1rem); }
+
+.lbc__proj {
+  font-size: max(2.2vh, 0.7rem);
+  color: var(--lbc-text-faint);
+  font-variant-numeric: tabular-nums;
+  flex: none;
+}
+
+.lbc__wp {
+  position: relative;
+  height: 0.7vh;
+  border-radius: 999px;
+  background: var(--lbc-theirs, #334155);
+  overflow: hidden;
+  margin: 0.3vh 0;
+}
+
+.lbc__wp-fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  background: var(--lbc-mine, #64748b);
+  /* A hairline seam in the panel's own colour, so the split still reads when
+     the two franchise colours land close to each other. */
+  border-right: 1px solid var(--lbc-panel);
+}
+
+.lbc__cell-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.4vw;
+  font-size: max(2.2vh, 0.68rem);
+  color: var(--lbc-text-faint);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+/* The drop ladder. Each rung removes an element entirely. */
+.lbc__header.is-drop-oppytp .lbc__cell-foot .lbc__ytp-opp,
+.lbc__header.is-drop-wplabel .lbc__wp-label,
+.lbc__header.is-drop-projword .lbc__proj-word,
+.lbc__header.is-drop-clock .lbc__gameclock,
+.lbc__header.is-drop-proj .lbc__proj,
+.lbc__header.is-drop-wpbar .lbc__wp {
+  display: none;
+}
+
+.lbc__panel.is-unavailable .lbc__cell {
+  opacity: 0.5;
+}
+
+.lbc__panel-note {
+  font-size: max(2.4vh, 0.75rem);
+  color: var(--lbc-text-faint);
+  align-self: center;
+  margin: auto 0;
+}
+
+/* ── Red-zone banner ───────────────────────────────────────────────────────
+   Layer 3 — ABOVE the stage, including takeovers. It is a persistent STATE,
+   not an event: as a stage it would be preempted by the next reveal and the
+   drive would be invisible for fourteen seconds. "Your other guy's team is at
+   the 6" while a reveal is playing is exactly what this board is for.
+
+   Never animated at any rate. No blink, no pulse — a persistent flasher for a
+   whole drive is intolerable, and anything near 3 Hz is a photosensitivity
+   hazard. One 400ms entrance and then it holds still. */
+.lbc__redzone {
+  position: absolute;
+  top: var(--lbc-header-h);
+  left: 0;
+  right: 0;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  gap: 0.8vw;
+  height: 6.5vh;
+  padding: 0 1vw;
+  box-sizing: border-box;
+  background: var(--lbc-redzone);
+  border-bottom: 0.4vh solid var(--lbc-redzone-hi);
+  color: var(--lbc-text);
+  font-size: max(2.6vh, 0.85rem);
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  transform: translateY(var(--lbc-drift-y2, 0));
+  animation: lbc-rz-in 400ms ease-out;
+}
+
+@keyframes lbc-rz-in {
+  from { transform: translateY(-100%); }
+  to { transform: translateY(var(--lbc-drift-y2, 0)); }
+}
+
+.lbc__redzone-tag {
+  flex: none;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  font-size: max(2.2vh, 0.7rem);
+  background: rgba(0, 0, 0, 0.28);
+  padding: 0.3vh 0.6vw;
+  border-radius: 999px;
+}
+
+.lbc__redzone-who {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.lbc__redzone-dd {
+  margin-left: auto;
+  flex: none;
+  color: rgba(255, 255, 255, 0.88);
+  font-weight: 600;
+}
+
+/* ── Player strip ──────────────────────────────────────────────────────────
+   Rows size in `cqh` off the strip's own `container-type: size`, so a 4-row
+   page and a 7-row page both fit their container instead of one of them
+   overflowing. */
+
+.lbc__page {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5vh;
+  padding: 0.8vh 0.8vw;
+  box-sizing: border-box;
+  transition: opacity var(--lbc-fade) ease, transform var(--lbc-fade) ease;
+}
+
+.lbc__page.is-out {
+  opacity: 0;
+  transform: translateY(-1.2vh);
+}
+
+.lbc__page.is-in {
+  opacity: 1;
+  transform: none;
+}
+
+.lbc__page-tag {
+  font-size: max(2.2vh, 0.7rem);
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--lbc-text-faint);
+  flex: none;
+}
+
+.lbc__row {
+  display: flex;
+  align-items: center;
+  gap: 0.7vw;
+  flex: 1;
+  min-height: 0;
+  background: var(--lbc-panel);
+  border-radius: 0.4rem;
+  padding: 0 0.8vw 0 0;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+/* The row's only mine/theirs marker, running its full height. */
+.lbc__rail {
+  width: 0.5vw;
+  min-width: 4px;
+  align-self: stretch;
+  flex: none;
+  background: var(--lbc-row-accent, var(--lbc-text-faint));
+  border-radius: 0.4rem 0 0 0.4rem;
+}
+
+.lbc__row.is-theirs {
+  --lbc-row-accent: var(--lbc-alert);
+}
+
+.lbc__face {
+  width: min(54cqh, 7.5vh, 8vw);
+  height: min(54cqh, 7.5vh, 8vw);
+  border-radius: 50%;
+  object-fit: cover;
+  flex: none;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.lbc__who {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2vh;
+}
+
+.lbc__name {
+  font-size: min(17cqh, 1.6rem);
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.lbc__meta {
+  display: flex;
+  align-items: center;
+  gap: 0.4vw;
+  font-size: max(2.2vh, 0.68rem);
+  color: var(--lbc-text-faint);
+  white-space: nowrap;
+}
+
+.lbc__nfl {
+  width: max(2.6vh, 0.9rem);
+  height: max(2.6vh, 0.9rem);
+  object-fit: contain;
+  flex: none;
+}
+
+/* Which of the owner's teams this player is on — non-negotiable on a
+   cross-league board. */
+.lbc__row-crest {
+  width: min(24cqh, 4vh);
+  height: min(24cqh, 4vh);
+  object-fit: contain;
+  flex: none;
+  opacity: 0.92;
+}
+
+.lbc__pts {
+  font-size: min(24cqh, 2.4rem);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  flex: none;
+  min-width: 3.5vw;
+  text-align: right;
+}
+
+.lbc__clock {
+  display: flex;
+  align-items: center;
+  gap: 0.35vw;
+  font-size: max(2.2vh, 0.68rem);
+  color: var(--lbc-text-faint);
+  font-variant-numeric: tabular-nums;
+  flex: none;
+  min-width: 7vw;
+  justify-content: flex-end;
+  white-space: nowrap;
+}
+
+/* A FILL, never text: #16a34a is 5.74:1 and below the text floor. */
+.lbc__dot {
+  width: max(1.2vh, 0.45rem);
+  height: max(1.2vh, 0.45rem);
+  border-radius: 50%;
+  flex: none;
+}
+
+.lbc__dot.is-live {
+  background: var(--lbc-live);
+  animation: lbc-pulse 2s ease-in-out infinite;
+}
+
+.lbc__dot.is-pre {
+  border: 2px solid var(--lbc-text-faint);
+}
+
+.lbc__dot.is-final {
+  background: var(--lbc-text-faint);
+}
+
+@keyframes lbc-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.45; }
+}
+
+/* Rail-only filler so the strip never changes height on a short page. */
+.lbc__row.is-filler {
+  background: transparent;
+}
+
+.lbc__row.is-filler .lbc__rail {
+  opacity: 0;
+}
+
+/* ── Reveal: takeover (mine) ───────────────────────────────────────────────
+   A FIELD OF COLOUR means good news. That is the primary mine-vs-theirs
+   channel and it is spent once — no colour fills anywhere else on this page.
+
+   The gradient is split into background-color + background-image because
+   `background: var(--x)` is all-or-nothing: a value rejected for the property
+   resets `background` to transparent, not to the previous cascade winner. */
+.lbc-reveal {
+  position: relative;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 3vh 4vw;
+  box-sizing: border-box;
+  overflow: hidden;
+  background-color: #10161f;
+  background-image: var(
+    --lbc-gradient,
+    linear-gradient(115deg, var(--lbc-primary, #10161f) 0%, var(--lbc-secondary, #1c497c) 100%)
+  );
+  animation: lbc-reveal-in var(--lbc-fade) ease-out;
+}
+
+@keyframes lbc-reveal-in {
+  from { opacity: 0; transform: scale(0.96); }
+  to { opacity: 1; transform: none; }
+}
+
+.lbc-reveal__wash {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(120% 100% at 20% 30%, rgba(0, 0, 0, 0) 0%, rgba(0, 0, 0, 0.58) 100%);
+  pointer-events: none;
+}
+
+.lbc-reveal__crest {
+  position: absolute;
+  right: -6vw;
+  bottom: -10vh;
+  width: 68vh;
+  height: 68vh;
+  object-fit: contain;
+  opacity: 0.14;
+  pointer-events: none;
+}
+
+.lbc-reveal__body {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 1vh;
+  min-width: 0;
+}
+
+.lbc-reveal__kicker {
+  font-size: max(3vh, 1rem);
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--lbc-text);
+}
+
+.lbc-reveal__team {
+  font-size: max(2.6vh, 0.9rem);
+  color: rgba(255, 255, 255, 0.82);
+  font-weight: 600;
+}
+
+.lbc-reveal__name {
+  font-size: min(13vh, 6rem);
+  font-weight: 900;
+  line-height: 0.95;
+  letter-spacing: -0.02em;
+}
+
+.lbc-reveal__play {
+  font-size: max(3.2vh, 1rem);
+  color: rgba(255, 255, 255, 0.9);
+  max-width: 62vw;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.lbc-reveal__line {
+  display: flex;
+  align-items: center;
+  gap: 1.4vw;
+  font-size: max(2.8vh, 0.9rem);
+  color: rgba(255, 255, 255, 0.86);
+  font-variant-numeric: tabular-nums;
+}
+
+/* The points delta, huge and bottom-left — the draft card's ghost pick number
+   in its new job. */
+.lbc-reveal__delta {
+  position: absolute;
+  left: 3vw;
+  bottom: 2vh;
+  z-index: 1;
+  font-size: min(22vh, 11rem);
+  font-weight: 900;
+  line-height: 0.8;
+  color: rgba(255, 255, 255, 0.16);
+  font-variant-numeric: tabular-nums;
+  pointer-events: none;
+}
+
+/* ── Reveal: lower third (theirs) ──────────────────────────────────────────
+   House ink with a hairline of the opponent's colour. Their brand appears as
+   the rule and the crest, NEVER as a full field — that is what keeps "big
+   colour = mine" learnable in one Sunday. */
+.lbc-third {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  gap: 1.2vw;
+  padding: 0 2vw;
+  box-sizing: border-box;
+  background: #0b0f17;
+  border-top: 0.6vh solid var(--lbc-primary, #64748b);
+  animation: lbc-third-in 420ms ease-out;
+}
+
+@keyframes lbc-third-in {
+  from { transform: translateY(100%); }
+  to { transform: none; }
+}
+
+.lbc-third__crest {
+  width: 16vh;
+  height: 16vh;
+  object-fit: contain;
+  flex: none;
+}
+
+.lbc-third__who {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4vh;
+}
+
+.lbc-third__kicker {
+  font-size: max(2.6vh, 0.85rem);
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--lbc-alert);
+}
+
+.lbc-third__name {
+  font-size: max(4.2vh, 1.4rem);
+  font-weight: 800;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.lbc-third__meta {
+  font-size: max(2.6vh, 0.82rem);
+  color: var(--lbc-text-dim);
+}
+
+.lbc-third__play {
+  flex: 1;
+  min-width: 0;
+  font-size: max(2.6vh, 0.82rem);
+  color: var(--lbc-text-dim);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.lbc-third__pts {
+  font-size: max(5.5vh, 1.8rem);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  flex: none;
+}
+
+.lbc-third__clock {
+  font-size: max(2.6vh, 0.82rem);
+  color: var(--lbc-text-faint);
+  flex: none;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Screensaver / setup ───────────────────────────────────────────────────
+   Each scene anchors its content differently, so no glyph holds a pixel for
+   more than half a minute during the long idle stretches — which is where the
+   real burn-in risk lives. */
+.lbc-saver {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 2vh;
+  padding: 6vh 6vw;
+  box-sizing: border-box;
+  background: var(--lbc-ink);
+}
+
+.lbc-saver[data-anchor='center'] { justify-content: center; align-items: center; text-align: center; }
+.lbc-saver[data-anchor='start'] { justify-content: flex-start; align-items: flex-start; }
+.lbc-saver[data-anchor='end'] { justify-content: flex-end; align-items: flex-end; text-align: right; }
+
+.lbc-saver__title {
+  font-size: min(9vh, 4rem);
+  font-weight: 900;
+  letter-spacing: -0.02em;
+}
+
+.lbc-saver__sub {
+  font-size: max(3vh, 1rem);
+  color: var(--lbc-text-faint);
+}
+
+.lbc-saver__rows {
+  display: flex;
+  flex-direction: column;
+  gap: 1.2vh;
+  width: 100%;
+  max-width: 70vw;
+}
+
+.lbc-saver__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1vw;
+  font-size: max(3vh, 1rem);
+  border-bottom: 1px solid var(--lbc-hairline);
+  padding-bottom: 0.8vh;
+  font-variant-numeric: tabular-nums;
+}
+
+.lbc-saver__clock {
+  font-size: min(20vh, 9rem);
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+/* ── Setup (no leagues picked) ─────────────────────────────────────────────
+   The only screen on this page with real interaction, and therefore the only
+   one where the normal design system's touch-target and focus rules apply in
+   full. */
+.lbc-setup {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2.4vh;
+  padding: 6vh 6vw;
+  box-sizing: border-box;
+  background: var(--lbc-ink);
+}
+
+.lbc-setup__list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1vh 1vw;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.lbc-setup__chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5vw;
+  min-height: 44px;
+  padding: 0.8vh 1.4vw;
+  border-radius: 999px;
+  border: 2px solid var(--lbc-hairline);
+  background: var(--lbc-panel);
+  color: var(--lbc-text);
+  font-size: max(2.6vh, 0.9rem);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.lbc-setup__chip[aria-pressed='true'] {
+  border-color: var(--lbc-text);
+  background: var(--lbc-panel-2);
+}
+
+/* Inverse surface: the global focus ring is --color-primary, which is very
+   nearly invisible on #05070b. */
+.lbc :focus-visible {
+  outline: 3px solid var(--lbc-text);
+  outline-offset: 2px;
+}
+
+/* ── Status chip ───────────────────────────────────────────────────────────
+   Never blank, never zero. A dropped poll degrades to "numbers from 40 seconds
+   ago", which is why the chip states the FEED's state rather than asserting
+   the board is live. */
+.lbc__status {
+  position: absolute;
+  right: 1vw;
+  bottom: 1vh;
+  z-index: 4;
+  display: flex;
+  align-items: center;
+  gap: 0.5vw;
+  padding: 0.5vh 1vw;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.62);
+  font-size: max(2.2vh, 0.7rem);
+  color: var(--lbc-text-dim);
+  font-variant-numeric: tabular-nums;
+}
+
+.lbc__status.is-error {
+  color: var(--lbc-alert);
+}
+
+/* Past five minutes stale the whole board says so from ten feet. */
+.lbc.is-stale .lbc__header {
+  border-top: 0.5vh solid var(--lbc-alert);
+}
+
+.lbc.is-stale .lbc__score,
+.lbc.is-stale .lbc__pts {
+  opacity: 0.72;
+}
+
+/* ── Chrome ────────────────────────────────────────────────────────────────
+   Hover-gated, and the hide rule lives inside the pointer query so a touch
+   device never loses the only way out of fullscreen. `:hover` and
+   `:focus-visible` are SEPARATE rules, never one selector list — one
+   unsupported pseudo-class invalidates a whole list. */
+.lbc__chrome {
+  position: absolute;
+  top: 1vh;
+  right: 1vw;
+  z-index: 5;
+  display: flex;
+  gap: 0.5vw;
+}
+
+.lbc__chrome button {
+  min-height: 44px;
+  min-width: 44px;
+  padding: 0 1vw;
+  border-radius: 999px;
+  border: 1px solid var(--lbc-hairline);
+  background: rgba(0, 0, 0, 0.55);
+  color: var(--lbc-text);
+  font-size: max(2.2vh, 0.75rem);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .lbc__chrome {
+    opacity: 0;
+    transition: opacity 200ms ease;
+  }
+
+  .lbc:hover .lbc__chrome {
+    opacity: 1;
+  }
+
+  .lbc__chrome:focus-within {
+    opacity: 1;
+  }
+}
+
+/* ── Laptop fallback — not a responsive target, just not broken ───────────── */
+@media (max-height: 950px) {
+  .lbc { --lbc-header-h: 26vh; }
+}
+
+@media (max-width: 900px) {
+  .lbc__header[data-tier='2'],
+  .lbc__header[data-tier='3'],
+  .lbc__header[data-tier='4'],
+  .lbc__header[data-tier='5'] {
+    grid-template-columns: 1fr;
+    grid-template-rows: none;
+  }
+
+  .lbc-reveal { padding: 2vh 5vw; }
+  .lbc-reveal__name { font-size: min(9vh, 3rem); }
+  .lbc-third { flex-wrap: wrap; gap: 0.8vw; }
+  .lbc-third__play { display: none; }
+}
+
+/* ── Reduced motion ────────────────────────────────────────────────────────
+   THREE motion sources, not one. Killing @keyframes alone leaves the strip's
+   page transition and the reveal's gradient repaint moving — the playoffs
+   shimmer shipped exactly that way and kept animating.
+
+   The root drift is deliberately NOT disabled: it is sub-perceptual hardware
+   protection for an eight-hour session, not decoration. */
+@media (prefers-reduced-motion: reduce) {
+  .lbc__strip,
+  .lbc__strip.is-hidden,
+  .lbc__header.is-hidden,
+  .lbc__page,
+  .lbc-reveal,
+  .lbc-third,
+  .lbc__redzone,
+  .lbc__dot.is-live {
+    transition: none;
+    animation: none;
+  }
+
+  .lbc__page.is-out {
+    transform: none;
+  }
+
+  .lbc__dot.is-live {
+    opacity: 1;
+  }
+}
