@@ -5,12 +5,18 @@
  * Owners can drag (or click-arrow) players above/below "the line".
  * Above the line = the 7 keepers they intend to protect. Below the
  * line = everyone who's going to get cut. Plan auto-saves to the
- * server (debounced) so it persists across devices.
+ * server (debounced) so it persists across devices — that part works
+ * year-round, on purpose: an owner should be able to sketch their plan
+ * whenever they think of it.
  *
  * The "Finalize keepers" CTA runs sequential POSTs to /api/cut-player
- * to actually drop the non-keepers from the MFL roster. AFL has no
- * formal keeper construct on MFL, so the "keepers" themselves are
- * implicit — they're just whoever's left after the bulk cut.
+ * to actually drop the non-keepers from the MFL roster — that part is
+ * NOT year-round. It's only rendered between the AFL's new season
+ * starting and the keeper deadline (newSeasonStartsFor / keeperDeadlineFor,
+ * src/utils/afl-mock-draft.ts) — the CTA that actually cuts real rosters
+ * shouldn't exist on the page the other ~10 months of the year, however
+ * disabled. AFL has no formal keeper construct on MFL, so the "keepers"
+ * themselves are implicit — they're just whoever's left after the bulk cut.
  *
  * Renders inert (no script wiring) on non-owner pages. The roster page
  * gates inclusion on isOwner, so unauthorized owners never see this UI.
@@ -18,6 +24,8 @@
 
 import PlayerCell from '../theleague/PlayerCell.astro';
 import { KEEPER_LIMIT } from '../../utils/afl-keepers-storage';
+import { keeperDeadlineFor, newSeasonStartsFor } from '../../utils/afl-mock-draft';
+import { getTestDateFromSearchParams } from '../../utils/league-year';
 
 export interface KeeperPlannerPlayer {
   id: string;
@@ -83,6 +91,24 @@ const roundLabel = (round: string) => {
   if (ones === 3) return `${n}rd`;
   return `${n}th`;
 };
+
+// Finalize window: [new season starts, keeper deadline). Saving the plan
+// works any time — only the destructive "cut the roster" step is gated.
+// Honors ?testDate= like the rest of the AFL's date-dependent pages.
+//
+// Both bounds are FIXED dates that always fall in the same calendar year
+// (June 1 -> July 15), so this uses the plain calendar year of `now` —
+// NOT getAflLeagueYear(), whose June-1 flip answers a different question
+// ("which season's rosters are we managing") and reads a date in, say,
+// March as still belonging to the PRIOR calendar year's (already-closed)
+// window, misreporting "deadline passed" for what is actually "window
+// hasn't opened yet".
+const now = getTestDateFromSearchParams(Astro.url.searchParams) ?? new Date();
+const finalizeWindowStart = newSeasonStartsFor(now.getFullYear());
+const finalizeWindowEnd = keeperDeadlineFor(now.getFullYear());
+const canFinalize =
+  !!finalizeWindowStart && !!finalizeWindowEnd && now >= finalizeWindowStart && now < finalizeWindowEnd;
+const beforeFinalizeWindow = !!finalizeWindowStart && now < finalizeWindowStart;
 ---
 
 <section
@@ -96,7 +122,9 @@ const roundLabel = (round: string) => {
     <h2 class="kp-intro__title">Keeper planner</h2>
     <p class="kp-intro__copy">
       Drag (or use the arrow buttons) to move up to {KEEPER_LIMIT} players above the line.
-      Everyone below the line gets cut when you finalize. Plan saves automatically.
+      {canFinalize
+        ? 'Everyone below the line gets cut when you finalize. Plan saves automatically.'
+        : 'Plan saves automatically — finalizing (which actually cuts your roster) opens once the new season starts and closes at the keeper deadline.'}
     </p>
   </header>
 
@@ -135,9 +163,17 @@ const roundLabel = (round: string) => {
     <div class="kp-status" data-status>Ready</div>
     <div class="kp-actions">
       <button type="button" class="kp-btn kp-btn--ghost" data-action="reset">Reset</button>
-      <button type="button" class="kp-btn kp-btn--primary" data-action="finalize" disabled>
-        Finalize keepers
-      </button>
+      {canFinalize ? (
+        <button type="button" class="kp-btn kp-btn--primary" data-action="finalize" disabled>
+          Finalize keepers
+        </button>
+      ) : (
+        <span class="kp-finalize-note">
+          {beforeFinalizeWindow
+            ? 'Finalizing opens when the new season starts.'
+            : 'The keeper deadline has passed for this season.'}
+        </span>
+      )}
     </div>
   </div>
 
@@ -1005,7 +1041,14 @@ const roundLabel = (round: string) => {
 
   .kp-actions {
     display: flex;
+    align-items: center;
     gap: 0.5rem;
+  }
+
+  .kp-finalize-note {
+    font-size: 0.8125rem;
+    color: #6b7280;
+    font-style: italic;
   }
 
   .kp-btn {
