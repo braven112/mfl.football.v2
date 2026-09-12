@@ -1,35 +1,36 @@
 ---
 /**
- * The Front Office hub — the front door to contracts, cap, salary and trade
- * pages, shared by both leagues. Mirrors DraftHubPage.astro
- * (src/components/shared/draft-hub/) with one structural difference and one
- * bug fix, both recorded here rather than silently copied:
+ * The Front Office hub — no longer a links-only landing page. It now IS the
+ * League Planner (TheLeague) / Keeper Planner (AFL), with a sidebar of every
+ * other Front Office tool alongside it. Shared shell for both leagues; each
+ * league's route wrapper passes its own primary content into the default
+ * slot and an optional team switcher into the `switcher` slot.
  *
- * - No live-state band. The Draft Hub earns its countdown/status section
- *   because a draft is a dated event with three discrete states; nothing in
- *   the Front Office has an equivalent, and building one (a cap-space band,
- *   say) would need the full roster + contract feeds on a page whose only job
- *   is routing — exactly the duplication the performance review is briefed to
- *   catch, and TheLeague-only besides (AFL runs salaryCap:false). The one
- *   personal touch kept is the signed-in owner's team name in the header, at
- *   zero marginal cost (same team data the wrapper already resolves).
- * - Root is a `<div>`, not `<main>` — DraftHubPage.astro renders `<main
- *   class="dh">` INSIDE TheLeagueLayout, which already owns the page's one
- *   `<main>` landmark. Do not repeat that here.
+ * History: this used to be a pure link grid (mirroring DraftHubPage.astro).
+ * The PO's read after seeing it live: "doesn't add any value" — a page whose
+ * only job is routing elsewhere isn't worth a click of its own. This shell
+ * is the replacement: the hub is now a real destination, and the other
+ * Front Office pages are one sidebar away instead of the whole page.
  *
- * Groups render as headed sections when the league has 3+ populated groups
- * (TheLeague: Your Team / Cap Planning / Reports & Archive) and as one flat
- * grid otherwise (AFL: 2 groups, 4 cards) — a flat 4-card grid needs no
- * outline, and a grid of exactly 11 cards badly needs one. This is a rule
- * about GROUP COUNT, not a per-league branch, so a future league gets the
- * right treatment for free.
+ * Three departures from the old hub, each deliberate:
+ * - No `FrontOfficeNav` pill strip above the headline. The PO rejected it
+ *   explicitly during the mockup review — the sidebar rail already covers
+ *   every page that strip did, and a page whose OWN content is the planner
+ *   doesn't need a tab bar pointing at itself. `FrontOfficeNav` is untouched
+ *   and still renders on every OTHER Front Office page (Contracts, Trade
+ *   Builder, etc.) — only the hub stops rendering it.
+ * - Root is a `<div>`, not `<main>` — TheLeagueLayout owns the page's one
+ *   `<main>` landmark (carried over from the old hub, still correct here).
+ * - `max-width` is 1232px, not the old hub's 1100px — TheLeagueLayout's own
+ *   `<main>` caps at 1232px, and the two-column layout (content + a 220px
+ *   sticky rail) needs the room to read the planner cards at the same width
+ *   `/rosters?view=planner` renders them at.
  */
 import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
-import FrontOfficeNav from '../front-office-nav/FrontOfficeNav.astro';
-import { spriteUrl } from '../../../utils/sprite-url';
-import { resolveLeaguePath } from '../../../utils/nav-utils';
+import Breadcrumbs from '../../theleague/Breadcrumbs.astro';
+import FrontOfficeToolRail from './FrontOfficeToolRail.astro';
 import { getLeagueBySlug } from '../../../config/leagues';
-import { frontOfficeGroupsFor, type FrontOfficeLeagueSlug } from '../front-office-nav/front-office-pages';
+import type { FrontOfficeLeagueSlug } from '../front-office-nav/front-office-pages';
 
 interface Props {
   leagueSlug: FrontOfficeLeagueSlug;
@@ -40,10 +41,6 @@ interface Props {
 
 const { leagueSlug, myTeam, leagueYear } = Astro.props;
 const league = getLeagueBySlug(leagueSlug)!;
-const hideLeaguePrefix = Astro.locals.hideLeaguePrefix ?? false;
-const r = (path: string) => resolveLeaguePath(`/${leagueSlug}${path}`, hideLeaguePrefix);
-const groups = frontOfficeGroupsFor(leagueSlug);
-const grouped = groups.length >= 3;
 
 const subtitle =
   leagueSlug === 'afl-fantasy'
@@ -53,7 +50,9 @@ const subtitle =
 
 <TheLeagueLayout title={`${league.name} — Front Office`}>
   <div class="fo">
-    <FrontOfficeNav leagueSlug={leagueSlug} current="hub" />
+    <Breadcrumbs items={[{ label: 'Home', href: `/${leagueSlug}` }, { label: 'Front Office' }]} />
+
+    <slot name="switcher" />
 
     <header class="fo__head">
       <h1 class="fo__title">
@@ -68,47 +67,12 @@ const subtitle =
       <p class="fo__sub">{subtitle} · {leagueYear}</p>
     </header>
 
-    {grouped ? (
-      groups.map((g) => (
-        <section class="fo__group" aria-labelledby={`fo-g-${g.key}`}>
-          <h2 class="fo__group-title" id={`fo-g-${g.key}`}>{g.title}</h2>
-          <ul class="fo__cards">
-            {g.pages.map((p) => (
-              <li>
-                <a class="fo__card" href={r(p.path)}>
-                  <svg class="fo__card-icon" viewBox="0 0 512 512" aria-hidden="true">
-                    <use href={`${spriteUrl}#${p.icon}`} />
-                  </svg>
-                  <span class="fo__card-text">
-                    <span class="fo__card-title">{p.label}</span>
-                    <span class="fo__card-blurb">{p.blurb}</span>
-                  </span>
-                </a>
-              </li>
-            ))}
-          </ul>
-        </section>
-      ))
-    ) : (
-      <section class="fo__group" aria-labelledby="fo-tools">
-        <h2 class="fo__group-title" id="fo-tools">Front office tools</h2>
-        <ul class="fo__cards">
-          {groups.flatMap((g) => g.pages).map((p) => (
-            <li>
-              <a class="fo__card" href={r(p.path)}>
-                <svg class="fo__card-icon" viewBox="0 0 512 512" aria-hidden="true">
-                  <use href={`${spriteUrl}#${p.icon}`} />
-                </svg>
-                <span class="fo__card-text">
-                  <span class="fo__card-title">{p.label}</span>
-                  <span class="fo__card-blurb">{p.blurb}</span>
-                </span>
-              </a>
-            </li>
-          ))}
-        </ul>
-      </section>
-    )}
+    <div class="fo__layout">
+      <div class="fo__main">
+        <slot />
+      </div>
+      <FrontOfficeToolRail leagueSlug={leagueSlug} />
+    </div>
   </div>
 </TheLeagueLayout>
 
@@ -122,7 +86,7 @@ const subtitle =
     --fo-ink-muted: var(--content-text-muted, #666);
     --fo-on-accent: var(--btn-primary-text, #fff);
 
-    max-width: 1100px;
+    max-width: 1232px;
     margin: 0 auto;
     padding: 1rem;
   }
@@ -165,82 +129,21 @@ const subtitle =
     font-size: 0.875rem;
   }
 
-  .fo__group + .fo__group {
-    margin-top: 1.5rem;
-  }
-
-  .fo__group-title {
-    display: flex;
-    align-items: center;
-    margin: 0 0 0.6rem;
-    padding-left: 0.625rem;
-    border-left: 2px solid var(--fo-accent);
-    font-size: 0.75rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-    color: var(--fo-ink);
-  }
-
-  .fo__cards {
+  .fo__layout {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(min(255px, 100%), 1fr));
-    gap: 0.6rem;
-    margin: 0 0 1.5rem;
-    padding: 0;
-    list-style: none;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 1.5rem;
+    align-items: start;
   }
 
-  /* Equal-height cards WITHOUT a percentage height — see DraftHubPage's
-     .dh__cards comment: this repo has no global border-box, so a percentage
-     height plus the card's own padding/border overflows its row. */
-  .fo__cards > li {
-    display: flex;
+  @media (min-width: 900px) {
+    .fo__layout {
+      grid-template-columns: minmax(0, 1fr) 220px;
+    }
   }
 
-  .fo__card {
-    display: flex;
-    align-items: flex-start;
-    gap: 0.65rem;
-    flex: 1;
-    box-sizing: border-box;
-    padding: 0.85rem;
-    border: 1px solid var(--fo-border);
-    border-radius: 0.6rem;
-    background: var(--fo-surface);
-    text-decoration: none;
-  }
-
-  .fo__card:hover {
-    border-color: var(--fo-accent);
-    background: var(--fo-surface-muted);
-  }
-
-  .fo__card:focus-visible {
-    outline: 2px solid var(--fo-accent);
-    outline-offset: 2px;
-  }
-
-  .fo__card-icon {
-    width: 22px;
-    height: 22px;
-    flex: 0 0 auto;
-    fill: var(--fo-accent);
-    color: var(--fo-accent);
-  }
-
-  .fo__card-text { display: flex; flex-direction: column; gap: 0.15rem; }
-
-  .fo__card-title {
-    font-weight: 700;
-    font-size: 0.92rem;
-    color: var(--fo-ink);
-  }
-
-  .fo__card-blurb {
-    font-size: 0.78rem;
-    line-height: 1.35;
-    color: var(--fo-ink-muted);
+  .fo__main {
+    min-width: 0;
   }
 
   @media (max-width: 560px) {

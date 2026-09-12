@@ -4,18 +4,26 @@
  *
  * Unlike the draft section, the two leagues are NOT at parity here and are not
  * meant to be: AFL runs `salaryCap:false` / `contracts:false`, so its Front
- * Office is genuinely smaller (Roster/Salary, Trade Builder, Keeper Planner,
- * Keeper Report Card) than TheLeague's (11 pages, cap/contract/salary tools
- * included). `leagues` on each entry is what makes that honest — a league
- * shows what it HAS, never a page that would 404.
+ * Office is genuinely smaller (Roster/Salary, Trade Builder, Keeper Report
+ * Card) than TheLeague's (cap/contract/salary tools included). `leagues` on
+ * each entry is what makes that honest — a league shows what it HAS, never a
+ * page that would 404.
  *
- * Most pages physically live under `/front-office/*`. A few don't: Roster/
- * Salary, League Planner, Keeper Planner and Keeper Report Card are linked
- * here but keep their existing URLs — Roster/Salary is the single most
- * visited page on the site with its own required parity check
+ * The League Planner (TheLeague) and Keeper Planner (AFL) are deliberately
+ * NOT entries here anymore — their content is now the Front Office hub
+ * page's own primary content (see FrontOfficeHubPage.astro,
+ * TheLeaguePlannerPanel.astro, AflKeeperPlannerPanel.astro), not a link out.
+ * The underlying planner/keeper views still also live at their old URLs
+ * (`/rosters?view=planner`, and the AFL's `?view=planner`) — duplicated
+ * on purpose, not extracted, so this doesn't touch rosters.astro. See
+ * docs/plans (Front Office Phase 2) for the eventual cutover.
+ *
+ * Most pages physically live under `/front-office/*`. Roster/Salary is the
+ * one exception that keeps its existing URL — it's the single most visited
+ * page on the site with its own required parity check
  * (scripts/roster-parity-check.mjs) and three unrelated nav entries already
  * deep-linking into it by query string, so moving it bought nothing but risk.
- * `path` on those four is simply their real, unmoved address.
+ * `path` on that entry is simply its real, unmoved address.
  *
  * Paths are league-NEUTRAL and get prefixed per reader by `resolveLeaguePath`,
  * the same way nav-config.json's are and draft-pages.ts's are.
@@ -34,8 +42,13 @@ export interface FrontOfficePage {
   path: string;
   /** Sprite icon id, without the leading `#`. */
   icon: string;
-  /** What this page is for — the hub shows it; the strip doesn't. */
+  /** What this page is for — the hub's tool rail shows it; the strip doesn't. */
   blurb: string;
+  /**
+   * Historical grouping key, still read by FrontOfficeNav's strip ordering.
+   * The hub's tool rail (FrontOfficeToolRail.astro) renders one flat list —
+   * it does NOT group by this key.
+   */
   group: FrontOfficeGroupKey;
   leagues: FrontOfficeLeagueSlug[];
   /** Per-league text/icon overrides — one mechanism, not parallel *AFL fields. */
@@ -50,12 +63,6 @@ export interface FrontOfficePage {
 const TL: FrontOfficeLeagueSlug[] = ['theleague'];
 const AFL: FrontOfficeLeagueSlug[] = ['afl-fantasy'];
 const BOTH: FrontOfficeLeagueSlug[] = ['theleague', 'afl-fantasy'];
-
-export const FRONT_OFFICE_GROUPS: { key: FrontOfficeGroupKey; title: string }[] = [
-  { key: 'team', title: 'Your Team' },
-  { key: 'planning', title: 'Cap Planning' },
-  { key: 'reports', title: 'Reports & Archive' },
-];
 
 export const FRONT_OFFICE_HUB_PATH = '/front-office';
 
@@ -95,26 +102,6 @@ export const FRONT_OFFICE_PAGES: FrontOfficePage[] = [
     blurb: 'Simulate trades and see cap impact.',
     group: 'team',
     leagues: BOTH,
-  },
-  {
-    key: 'league-planner',
-    label: 'League Planner',
-    shortLabel: 'Planner',
-    path: '/rosters?view=planner',
-    icon: 'icon-clipboard',
-    blurb: 'Phase-aware offseason planner with free agent needs analysis.',
-    group: 'team',
-    leagues: TL,
-  },
-  {
-    key: 'keepers',
-    label: 'Keeper Planner',
-    shortLabel: 'Keepers',
-    path: '/keepers',
-    icon: 'icon-lock',
-    blurb: 'Plan and review your keeper selections.',
-    group: 'team',
-    leagues: AFL,
   },
   {
     key: 'projected-free-agents',
@@ -204,15 +191,4 @@ export function frontOfficePagesFor(league: FrontOfficeLeagueSlug): FrontOfficeP
     const o = p.overrides?.[league];
     return o ? { ...p, ...o } : p;
   });
-}
-
-/** Group key -> pages, in registry order. Groups with no pages for this league are omitted. */
-export function frontOfficeGroupsFor(
-  league: FrontOfficeLeagueSlug
-): { key: FrontOfficeGroupKey; title: string; pages: FrontOfficePage[] }[] {
-  const pages = frontOfficePagesFor(league);
-  return FRONT_OFFICE_GROUPS.map((g) => ({
-    ...g,
-    pages: pages.filter((p) => p.group === g.key),
-  })).filter((g) => g.pages.length > 0);
 }
