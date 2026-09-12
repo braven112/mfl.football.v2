@@ -15,6 +15,7 @@ import path from 'node:path';
 import { getAllTeams } from './afl-conference';
 import { getCachedRosterFranchises } from './mfl-roster-cache';
 import { buildKeeperPlannerStats } from './afl-keeper-planner-stats';
+import { calculateAge } from './age-utils';
 import type { KeeperPlannerPlayer, KeeperPlannerDraftPick } from '../components/afl-fantasy/KeeperPlanner.astro';
 
 const loadFeedJson = (leagueYearStr: string, filename: string): any => {
@@ -46,7 +47,10 @@ export async function buildFrontOfficeKeeperPlannerData(
       name: p.name || `Player ${p.id}`,
       position: p.position || 'N/A',
       team: p.team || 'FA',
-      age: p.age || 'N/A',
+      // MFL's players feed has no `age` field, only `birthdate` (Unix
+      // seconds) — see calculateAgeFromBirthdate's header comment in
+      // rosters.astro, which this mirrors via the shared age-utils helper.
+      age: String(calculateAge(p.birthdate) ?? 'N/A'),
       espn_id: p.espn_id,
     });
   }
