@@ -22,10 +22,13 @@
  * gates inclusion on isOwner, so unauthorized owners never see this UI.
  */
 
+import fs from 'node:fs';
+import path from 'node:path';
 import PlayerCell from '../theleague/PlayerCell.astro';
 import { KEEPER_LIMIT } from '../../utils/afl-keepers-storage';
 import { keeperDeadlineFor, newSeasonStartsFor } from '../../utils/afl-mock-draft';
 import { getTestDateFromSearchParams } from '../../utils/league-year';
+import { isDraftConducted } from '../../utils/draft-utils';
 
 export interface KeeperPlannerPlayer {
   id: string;
@@ -135,6 +138,23 @@ const finalizeWindowEnd = keeperDeadlineFor(now.getFullYear());
 const canFinalize =
   !!finalizeWindowStart && !!finalizeWindowEnd && now >= finalizeWindowStart && now < finalizeWindowEnd;
 const beforeFinalizeWindow = !!finalizeWindowStart && now < finalizeWindowStart;
+
+// "The keeper deadline has passed" only reads right for the narrow window
+// between the deadline and the AL's redraft of the cut players. Once that
+// draft has actually run, `year`'s roster is settled and being played —
+// the page should talk about the NEXT keeper decision (year + 1) instead of
+// dwelling on a deadline that's now old news. isDraftConducted flips true at
+// the first made pick (src/utils/draft-utils.ts), same signal the draft
+// pages already use to tell "upcoming order" from "history".
+const draftResultsPath = path.resolve(process.cwd(), `data/afl-fantasy/mfl-feeds/${year}/draftResults.json`);
+let draftConducted = false;
+try {
+  if (fs.existsSync(draftResultsPath)) {
+    draftConducted = isDraftConducted(JSON.parse(fs.readFileSync(draftResultsPath, 'utf8')));
+  }
+} catch {
+  // Missing/malformed feed — treat as not yet drafted (pre-draft framing).
+}
 ---
 
 <section
@@ -217,7 +237,9 @@ const beforeFinalizeWindow = !!finalizeWindowStart && now < finalizeWindowStart;
         <span class="kp-finalize-note">
           {beforeFinalizeWindow
             ? 'Finalizing opens when the new season starts.'
-            : 'The keeper deadline has passed for this season.'}
+            : draftConducted
+              ? `Keeper planning for ${year + 1} opens when the next season starts.`
+              : 'The keeper deadline has passed for this season.'}
         </span>
       )}
     </div>
