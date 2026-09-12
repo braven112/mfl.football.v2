@@ -185,18 +185,71 @@
 
 /* ── Board: chips + jump links ────────────────────────────────────────── */
 .st-board { display: flex; flex-direction: column; gap: var(--spacing-lg); }
-.st-chips { display: flex; flex-wrap: wrap; align-items: center; gap: 0.45rem; }
+.st-chips,
+.st-countries { display: flex; flex-wrap: wrap; align-items: center; gap: 0.45rem; }
+/* Each picker's CHIPS are a rail: one line that scrolls sideways, never a
+   stack of wrapped rows. With 24 leagues and five countries, wrapping turned
+   two rows into five on a phone and pushed the board below the fold. Only the
+   chips live in here — a trailing link out (Reset, Times in …) stays outside
+   it, where swiping cannot hide it. */
+.st-rail {
+  display: flex;
+  flex: 1 1 auto;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 0.45rem;
+  /* Without this the rail refuses to shrink below its content and the PAGE
+     scrolls sideways instead of the rail. */
+  min-width: 0;
+  overflow-x: auto;
+  /* The rail absorbs the swipe instead of handing it to the page/back-gesture. */
+  overscroll-behavior-x: contain;
+  -webkit-overflow-scrolling: touch;
+  /* The overflow box would clip a chip's focus ring; this is its room. */
+  padding: 0.2rem 0;
+  /* Cosmetic only — the rail still scrolls by touch, wheel and keyboard, and
+     the half-visible chip at the edge is what signals there is more. */
+  scrollbar-width: none;
+}
+.st-rail::-webkit-scrollbar { display: none; }
+/* The label is the one fixed thing on the rail: it stays put so a rail scrolled
+   halfway still says WHICH picker it is, and the chips slide under it. */
 .st-chips__label {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  flex: none;
+  /* Full-height, or the chip scrolling underneath shows its rounded ends above
+     and below a background only as tall as the text. */
+  align-self: stretch;
+  display: flex;
+  align-items: center;
   font-size: 0.68rem;
   font-weight: var(--font-weight-bold);
   letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--content-text-muted);
-  margin-right: 0.2rem;
+  padding-right: 0.2rem;
+  background: var(--page-bg);
+}
+/* Chips do not vanish under a hard edge — they fade out into the label. */
+.st-chips__label::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 100%;
+  width: 1.1rem;
+  background: linear-gradient(to right, var(--page-bg), transparent);
+  pointer-events: none;
 }
 .st-chip {
   display: inline-flex;
   align-items: center;
+  /* No chip shrinks to fit: a squeezed row reads as one line that fits, which
+     is exactly the cue that there is nothing to scroll to. */
+  flex: none;
+  white-space: nowrap;
   gap: 0.4rem;
   padding: 0.3rem 0.75rem;
   border-radius: var(--radius-full);
@@ -215,20 +268,26 @@
 .st-chip__ext { font-size: 0.7rem; opacity: 0.7; }
 .st-chip--all { border-style: dashed; }
 /* Outside leagues fold behind one chip; the disclosure opens when any is on. */
-.st-others { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 0.45rem; }
+.st-others { display: inline-flex; flex: none; flex-wrap: nowrap; align-items: center; gap: 0.45rem; }
 .st-others > summary { list-style: none; cursor: pointer; }
 .st-others > summary::-webkit-details-marker { display: none; }
 .st-others[open] > summary { border-color: color-mix(in srgb, var(--league-accent) 40%, transparent); }
 .st-others__count { font-weight: normal; color: var(--content-text-muted); font-size: 0.72rem; }
-.st-others__list { display: inline-flex; flex-wrap: wrap; gap: 0.45rem; padding-left: 0.2rem; border-left: 2px solid var(--card-border); }
+/* Opening the disclosure extends the SAME rail rather than starting a second
+   one, so the 22 outside leagues are further along one swipe. */
+.st-others__list { display: inline-flex; flex-wrap: nowrap; gap: 0.45rem; padding-left: 0.2rem; border-left: 2px solid var(--card-border); }
 .st-chip--outside { font-weight: normal; }
 .st-chip__franchise { font-size: 0.7rem; color: var(--content-text-muted); }
 .st-chip__franchise::before { content: '·'; margin-right: 0.3rem; }
-.st-countries { display: flex; flex-wrap: wrap; align-items: center; gap: 0.45rem; }
 /* The clocks are a viewer PREFERENCE (/preferences), not a param the board can
    toggle, so this one is a link out rather than another chip that switches. */
 .st-chip--prefs { margin-left: auto; border-style: dashed; }
-@media (max-width: 600px) { .st-chip--prefs { margin-left: 0; } }
+/* On a phone the rail takes the whole line, which puts the links out below it
+   rather than leaving them to fight the chips for a 360px row. */
+@media (max-width: 600px) {
+  .st-chip--prefs { margin-left: 0; }
+  .st-rail { flex-basis: 100%; }
+}
 .st-chip__flag { font-size: 0.95rem; line-height: 1; }
 /* Free-to-air line: the one thing the network map cannot say — which
    Sunday game a country's free channel picks up is that channel's call. */
