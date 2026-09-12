@@ -575,6 +575,36 @@ describe('fullscreen shows the board and nothing else', () => {
   });
 });
 
+describe('the idle-hide cannot strand a touch device', () => {
+  it('keeps the idle rule inside the pointer query', () => {
+    // Moving it out cost a phone its chrome three seconds after load with no
+    // interaction, and `pointer-events: none` then made the next tap a wake
+    // rather than a press — two taps for every control. A television is a
+    // `hover: hover` / `pointer: fine` device (its parked cursor is exactly why
+    // `:hover` stayed true), so it still matches; a coarse pointer never does.
+    const at = CSS_CODE.indexOf('.lbc.is-idle .lbc__chrome {');
+    const query = CSS_CODE.lastIndexOf('@media (hover: hover) and (pointer: fine)', at);
+    const close = CSS_CODE.indexOf('\n}', query);
+    expect(query).toBeGreaterThan(-1);
+    expect(at).toBeLessThan(close);
+  });
+});
+
+describe('portrait resets the desktop seat', () => {
+  it('unsets the model’s right offset in every portrait block', () => {
+    // The model is absolutely positioned at `right: -7.92%` to clear the
+    // centred crest. Left unreset in a portrait block it pushes the backdrop
+    // off the right edge, where `.lbc-reveal { overflow: hidden }` clips it —
+    // and `justify-content` cannot pull back an absolutely positioned child.
+    for (const q of ['@media (orientation: portrait)', '@media (max-width: 900px)']) {
+      const at = CSS_CODE.indexOf(q);
+      expect(at).toBeGreaterThan(-1);
+      const block = CSS_CODE.slice(at, CSS_CODE.indexOf('\n}\n', at));
+      expect(block).toMatch(/\.lbc-reveal__model \{ right: 0; \}/);
+    }
+  });
+});
+
 describe('the reveal features the scorer, not a chip', () => {
   const TAKEOVER = code(read('src/components/shared/live-broadcast/MomentTakeover.tsx'));
 
@@ -654,7 +684,12 @@ describe('the reveal features the scorer, not a chip', () => {
     expect(TAKEOVER).toMatch(/\.slice\(0, 1\)/);
     // A defense's name IS a club, so it takes the club's mark; a person's name
     // does not, because his own face already identifies him.
-    expect(TAKEOVER).toMatch(/isDef && nflTeam &&/);
+    expect(TAKEOVER).toMatch(/isDef && defLogo &&/);
+    // The DARK cut, not `getNFLTeamLogo`'s light `500` one: this board is dark
+    // in BOTH themes, so the `html.dark` swap never fires for a light-theme
+    // owner driving the TV and the outlined marks come out wrong.
+    expect(TAKEOVER).toMatch(/resolveNflDarkLogoUrl/);
+    expect(TAKEOVER).not.toMatch(/getNFLTeamLogo/);
     expect(CSS_CODE).toMatch(/\.lbc-reveal__name-logo/);
   });
 

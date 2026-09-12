@@ -897,10 +897,9 @@
    *
    * Was a centred flex column with the player as a chip inside the copy. The
    * wash, crest and delta are all absolutely positioned with NO grid
-   * placement, so they still resolve against this element's padding box and
-   * nothing about the crest moves — which is the point: it is already anchored
-   * bottom-right, under where the figure now goes, so the crest-behind-cutout
-   * overlap the draft board engineers on purpose comes free here.
+   * placement, so they still resolve against this element's padding box —
+   * which is what lets the crest be centred on the LAYER independently of
+   * these tracks, with the scorer seated to its right.
    *
    * The figure track is `auto`, not a `vw` constant: the stand is HEIGHT-
    * derived (see `.lbc-reveal__stand`), so only its own intrinsic width is the
@@ -1523,39 +1522,40 @@
 
 /* Idle: the board and nothing else.
 
-   Gated on IDLENESS ALONE, not on `:fullscreen`. The first cut required both,
-   and on a real television the chips stayed up through a fullscreen reveal —
-   because a TV browser is frequently just MAXIMISED and never enters the
-   Fullscreen API at all, so `document.fullscreenElement` is null and the
-   `is-fullscreen` half never matched. Idleness is the thing actually being
-   asked about, and it is true in both cases.
-   The hover gate above is right on a laptop and wrong on the screen this page
-   exists for — a television's cursor is PARKED over the page and never leaves,
-   so `:hover` is permanently true and three buttons sit on the board all
-   afternoon. In fullscreen we gate on IDLENESS instead, the way a video player
-   does, and the cursor goes with them. Any pointer move, touch or key brings
-   both back for three seconds, so this can never trap someone in fullscreen —
-   which is why the old rule lived inside the pointer query in the first place.
-   Escape still exits regardless, on every browser. */
-.lbc.is-idle .lbc__chrome {
-  opacity: 0;
-  pointer-events: none;
-}
+   Gated on IDLENESS rather than on `:fullscreen`, and kept INSIDE the pointer
+   query — both halves matter and they fix opposite failures.
 
-/*
- * ...unless something in it has keyboard focus. This rule has to out-specify
- * the one above (0,3,0), which the plain `:focus-within` further up does not —
- * so without it a keyboard user who tabbed to a button watches it disappear
- * three seconds later while still holding focus, which is the one way this
- * idle-hide could genuinely trap someone.
- */
-.lbc.is-idle .lbc__chrome:focus-within {
-  opacity: 1;
-  pointer-events: auto;
-}
+   Idleness, because a television browser is frequently just MAXIMISED and
+   never enters the Fullscreen API at all: `document.fullscreenElement` is
+   null, so an `is-fullscreen` conjunct never matched and the chips sat on the
+   board through a reveal on a real TV.
 
-.lbc.is-idle {
-  cursor: none;
+   Inside the pointer query, because the FIRST attempt at that moved it out —
+   and a phone, which has no hover and was therefore always meant to keep its
+   chrome, lost Leagues / Sound / Fullscreen three seconds after load without
+   the viewer touching anything. Worse, `pointer-events: none` turned the next
+   tap into a wake rather than a press, so every control needed two taps. The
+   television is a `hover: hover` / `pointer: fine` device — that is WHY its
+   parked cursor kept `:hover` true — so it still matches here, and a coarse
+   pointer never does. */
+@media (hover: hover) and (pointer: fine) {
+  .lbc.is-idle .lbc__chrome {
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  /* ...unless something in it has keyboard focus. Has to out-specify the rule
+     above, which the plain `:focus-within` further up does not — otherwise a
+     keyboard user who tabbed to a button watches it disappear three seconds
+     later while still holding focus. */
+  .lbc.is-idle .lbc__chrome:focus-within {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .lbc.is-idle {
+    cursor: none;
+  }
 }
 
 /* ── Laptop fallback — not a responsive target, just not broken ───────────── */
@@ -1583,6 +1583,13 @@
   }
   .lbc-reveal__body { align-self: center; }
   .lbc-reveal__stand { height: auto; width: 100%; }
+  /* Reset the desktop seat. The model is absolutely positioned at
+     `right: -7.92%` up there to clear the centred crest; left unreset it
+     pushes the backdrop ~8% of the layer off the right edge, where
+     `.lbc-reveal { overflow: hidden }` clips it — and `justify-content:
+     center` on the figure cannot pull back an absolutely positioned child. */
+  .lbc-reveal__model { right: 0; }
+  .lbc-reveal__face { right: 0; width: 100%; }
   .lbc-reveal__figure {
     position: absolute;
     inset: 0;
