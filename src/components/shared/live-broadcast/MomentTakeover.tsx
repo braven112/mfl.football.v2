@@ -44,6 +44,7 @@ import type { BroadcastMoment } from '../../../utils/broadcast-moments';
 import type { BroadcastDefenderFace, BroadcastTeam } from '../../../types/live-broadcast';
 import { isEspnCdnUrl } from '../../../utils/espn-cdn';
 import { crestStrokeProps } from '../../../utils/draft-broadcast';
+import { getNFLTeamLogo as nflLogo } from '../../../utils/nfl-logo';
 
 interface Props {
   moment: BroadcastMoment;
@@ -115,8 +116,17 @@ function MomentTakeover({
    */
   const [dead, setDead] = useState<ReadonlySet<string>>(() => new Set());
 
+  /**
+   * ONE defender, not two.
+   *
+   * The pair was the draft board's answer and it was tried here first; on the
+   * real television two men at full cutout scale filled the layer and left the
+   * club unidentifiable without reading the caption. A single face beside the
+   * unit's name, with the NFL mark on the name itself, says the same thing
+   * more quietly. The spare entries the server ships are the 404 backfill.
+   */
   const shown = useMemo(
-    () => (isDef ? (defenders ?? []).filter((d) => !dead.has(d.headshot)).slice(0, 2) : []),
+    () => (isDef ? (defenders ?? []).filter((d) => !dead.has(d.headshot)).slice(0, 1) : []),
     [isDef, defenders, dead],
   );
 
@@ -163,7 +173,15 @@ function MomentTakeover({
           Your {position || 'starter'} · {moment.leagueName}
           {team ? ` · ${team.name}` : ''}
         </p>
-        <h2 className="lbc-reveal__name">{moment.playerName}</h2>
+        <h2 className="lbc-reveal__name">
+          {/* A team defense's name IS a club, so it takes the club's mark —
+              the same pairing the player strip's meta line uses. A person's
+              name does not: his own face is already the identification. */}
+          {isDef && nflTeam && (
+            <img className="lbc-reveal__name-logo" src={nflLogo(nflTeam)} alt="" aria-hidden="true" />
+          )}
+          {moment.playerName}
+        </h2>
         {/* ESPN's own summary, never rewritten. */}
         <p className="lbc-reveal__play">{moment.text}</p>
         <p className="lbc-reveal__line">
@@ -195,7 +213,7 @@ function MomentTakeover({
             {shown.map((face) => (
               <img
                 key={face.headshot}
-                className="lbc-reveal__model lbc-reveal__model--def"
+                className="lbc-reveal__model"
                 src={face.headshot}
                 alt=""
                 aria-hidden="true"

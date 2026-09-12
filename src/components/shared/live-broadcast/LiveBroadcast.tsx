@@ -489,10 +489,9 @@ export default function LiveBroadcast({ pageData }: Props) {
   }, []);
 
   useEffect(() => {
-    if (!isFullscreen) {
-      setIdle(false);
-      return;
-    }
+    // Runs ALWAYS, not only in fullscreen. A television browser is often just
+    // maximised rather than in the Fullscreen API, so `isFullscreen` is false
+    // there and gating on it left the chrome up through a reveal on a real TV.
     let timer = 0;
     const wake = () => {
       setIdle(false);
@@ -513,7 +512,7 @@ export default function LiveBroadcast({ pageData }: Props) {
         window.removeEventListener(ev, wake);
       }
     };
-  }, [isFullscreen]);
+  }, []);
 
   useEffect(() => {
     if (!sound || !current || current.side !== 'mine') return;
