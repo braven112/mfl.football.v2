@@ -499,3 +499,25 @@ describe('crest artwork', () => {
     expect(TAKEOVER).not.toMatch(/lbc-reveal__crest[\s\S]{0,120}team\.iconSmall/);
   });
 });
+
+describe('every crest surface can actually draw its ring', () => {
+  const STRIP = code(read('src/components/shared/live-broadcast/BroadcastPlayerStrip.tsx'));
+  const LAYOUT = code(read('src/utils/broadcast-layout.ts'));
+
+  it('carries the stroke onto the player strip', () => {
+    // The strip is the crest surface visible most of the afternoon, so a
+    // light franchise cut with no ring is the failure showing the longest.
+    expect(LAYOUT).toMatch(/crestStroke/);
+    expect(STRIP).toMatch(/crestStrokeProps\('lbc__row-crest'/);
+  });
+
+  it('sets a ring WIDTH on every surface that asks for a ring', () => {
+    // The shared rule falls back to 0.5px, which is sub-pixel on anything
+    // bigger than a rail icon: the ring is applied and buys nothing.
+    for (const surface of ['.lbc-reveal__crest', '.lbc-third__crest']) {
+      const block = CSS_CODE.slice(CSS_CODE.indexOf(surface));
+      const decl = block.slice(0, block.indexOf('}'));
+      expect(decl).toMatch(/--lbc-crest-ring-w:/);
+    }
+  });
+});

@@ -393,6 +393,19 @@ export interface EspnScoringPlay {
   /** Distinct ESPN athlete ids credited on the play, in participant order. */
   espnAthleteIds: string[];
   /**
+   * Possession changed on this play — ESPN sets it when `start.team !==
+   * end.team`, which makes the play's own team the DEFENSE.
+   *
+   * On the SCORING side this is the pick six and the fumble-return
+   * touchdown, and it was missing here until Sep 2026 with no symptom that
+   * pointed at it: `parseNotablePlays` skips anything with
+   * `scoringPlay === true`, so the notable path never carried these either,
+   * and the board's team-defense credit — which gates on exactly this flag —
+   * silently produced nothing for the single most memorable defensive score
+   * there is.
+   */
+  isTurnover: boolean;
+  /**
    * ESPN's REAL-WORLD timestamp for the play (ISO 8601), '' when absent.
    *
    * The only honest basis for "is this still worth interrupting the screen
@@ -438,7 +451,7 @@ const CREDITED_PARTICIPANT_ROLES = new Set([
 ]);
 
 /**
- * The credited roles on a play where POSSESSION CHANGED.
+ * The credited roles on a play the DEFENSE earned — a turnover or a safety.
  *
  * A turnover lists both sides, and the offensive roles name the players who
  * LOST the ball. Two real plays:
@@ -453,17 +466,26 @@ const CREDITED_PARTICIPANT_ROLES = new Set([
  * afternoon. So on a turnover the offense's roles come out and the roles that
  * actually took the ball away go in.
  *
- * `isTurnover` is the right signal and not merely the convenient one: ESPN
- * sets it exactly when `start.team !== end.team`, so a "Fumble Recovery (Own)"
- * — recovered by the fumbling team — arrives as `false` and keeps the ordinary
- * offensive credit it deserves.
+ * `isTurnover` is the right signal for the first case and not merely the
+ * convenient one: ESPN sets it exactly when `start.team !== end.team`, so a
+ * "Fumble Recovery (Own)" — recovered by the fumbling team — arrives as
+ * `false` and keeps the ordinary offensive credit it deserves.
+ *
+ * A SAFETY is handled separately again — see `creditedAthleteIds`. It is not
+ * a turnover (`isTurnover: false`), and no participant role reliably names
+ * someone who earned it, so it credits no individual at all.
  */
-const TURNOVER_CREDITED_ROLES = new Set([
+const DEFENSIVE_CREDITED_ROLES = new Set([
   'scorer',
   'returner',
   'recoverer',
   'passDefender',
 ]);
+
+/** A safety — scored by the defending TEAM, and by no individual. */
+function isSafetyPlay(item: any): boolean {
+  return /\bsafety\b/i.test(String(item?.type?.text ?? ''));
+}
 
 /**
  * Distinct MFL-bound athlete ids CREDITED by one play, in participant order.
@@ -478,10 +500,21 @@ const TURNOVER_CREDITED_ROLES = new Set([
  * restores the old behaviour for exactly that case and no other.
  */
 function creditedAthleteIds(item: any): string[] {
+  // A SAFETY credits nobody individually. Both recorded safeties show why:
+  // one is `passer, penalized` on the same athlete — the quarterback called
+  // for intentional grounding in his own end zone — and the other has the
+  // SAME athlete as `passer` AND `recoverer`, because the offense fell on its
+  // own fumble in the end zone, which is what made it a safety. So `recoverer`
+  // is not reliably a defender here the way it is on a turnover, and there is
+  // no participant role that reliably names someone who EARNED the two points.
+  // The defending team did; `buildBroadcastMoments` credits its DEF unit by
+  // NFL team, and no participant is credited at all.
+  if (isSafetyPlay(item)) return [];
+
   const participants = (item?.participants ?? []) as any[];
   const typed = participants.filter((p) => typeof p?.type === 'string' && p.type);
   const allowed = item?.isTurnover === true
-    ? TURNOVER_CREDITED_ROLES
+    ? DEFENSIVE_CREDITED_ROLES
     : CREDITED_PARTICIPANT_ROLES;
   const pool = typed.length > 0
     ? typed.filter((p) => allowed.has(String(p.type)))
@@ -531,6 +564,7 @@ export function parseScoringPlays(
       awayScore: Number(item?.awayScore) || 0,
       homeScore: Number(item?.homeScore) || 0,
       espnAthleteIds: athleteIds,
+      isTurnover: item?.isTurnover === true,
       wallclock: typeof item?.wallclock === 'string' ? item.wallclock : '',
     });
   }

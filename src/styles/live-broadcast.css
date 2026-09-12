@@ -816,7 +816,8 @@
    rides on the team record. A class, not an inline filter — every crest rule
    below sets its own `filter` for the drop shadow, and an inline one would
    replace it wholesale. The ring WIDTH belongs to the surface, since the three
-   crest surfaces here are 68vh, ~4vh and ~3vh. */
+   crest surfaces here are 68vh, 16vh and ~3vh — set it on each, or the
+   0.5px fallback applies a ring nobody can see. */
 .lbc .lbc-crest--stroked {
   --lbc-crest-ring:
     drop-shadow(var(--lbc-crest-ring-w, 0.5px) 0 0 var(--lbc-crest-stroke))
@@ -941,6 +942,10 @@
 }
 
 .lbc-third__crest {
+  /* ~173px on a 1080p TV — the 0.5px fallback is sub-pixel here and buys
+     nothing, which is the whole failure mode of a ring width that is not set
+     per surface. */
+  --lbc-crest-ring-w: 1px;
   width: 16vh;
   height: 16vh;
   object-fit: contain;

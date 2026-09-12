@@ -242,14 +242,20 @@ export function buildBroadcastMoments(
         const holders = stake.get(playerId);
         if (holders) credits.push({ playerId, holders });
       }
+      // The two shapes the DEFENSE earns, and ESPN only flags one of them.
+      //
       // `isTurnover` is exactly "possession changed", and on every such play
       // ESPN attributes the play to the team that ENDED with the ball — the
-      // defense. Verified across eleven real turnovers in
-      // tests/fixtures/espn-game-plays-turnovers.json, which also pins that
-      // join: backwards, it credits the OPPOSING defense and reads as
-      // perfectly plausible on screen. It covers defensive touchdowns too,
-      // since an interception returned for a score is still a turnover.
-      if (play.isTurnover === true) {
+      // defense. That covers defensive touchdowns too, since an interception
+      // returned for a score is still a turnover. A SAFETY is not (`false`),
+      // so it is named separately, but it resolves the same way: both real
+      // safeties recorded put the play on the SCORING side.
+      //
+      // Verified across eleven turnovers and two safeties in
+      // tests/fixtures/espn-game-plays-turnovers.json, which also pins the
+      // join: backwards it credits the OPPOSING defense, and reads as
+      // perfectly plausible on screen.
+      if (play.isTurnover === true || kind === 'safety') {
         const defHolders = defStake.get(normalizeTeamCode(play.nflTeam));
         const defId = defPlayerIdFor(stake, meta, play.nflTeam);
         if (defHolders && defId && !credits.some((c) => c.playerId === defId)) {

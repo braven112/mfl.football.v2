@@ -96,6 +96,14 @@ export interface StripRow {
   headshot: string;
   /** The owner's franchise crest in this league — which team he is on. */
   crest: string;
+  /**
+   * Outline colour for `crest`, set only when that art is a LIGHT cut.
+   *
+   * Easy to leave off, and the most expensive place to: the strip is the
+   * crest surface VISIBLE MOST OF THE AFTERNOON, so a light franchise cut
+   * with no ring is the failure showing the longest.
+   */
+  crestStroke?: string;
   points: number;
   /** Real ESPN clock where we have the game; MFL's state where we do not. */
   clock: string;
@@ -144,7 +152,7 @@ function rowsFor(
   rows: readonly LivePlayerRow[],
   meta: Record<string, PlayerMeta>,
   games: readonly NflGame[],
-  ctx: { leagueId: string; leagueName: string; side: MomentSide; crest: string },
+  ctx: { leagueId: string; leagueName: string; side: MomentSide; crest: string; crestStroke?: string },
 ): StripRow[] {
   const byTeam = new Map<string, NflGame>();
   for (const g of games) {
@@ -167,6 +175,7 @@ function rowsFor(
       nflTeam: who?.nflTeam ?? '',
       headshot: who?.headshot ?? '',
       crest: ctx.crest,
+      ...(ctx.crestStroke ? { crestStroke: ctx.crestStroke } : {}),
       points: row.live,
       // The clock is ESPN's or it is a STATE word. Never a number derived from
       // MFL's `gameSecondsRemaining`, which does not tick and drifts all
@@ -211,6 +220,7 @@ export function buildStripPages(input: BuildStripInput): StripPage[] {
           leagueName: panel.leagueName,
           side: 'mine',
           crest: panel.matchups[0]?.mine.iconSmall ?? '',
+          crestStroke: panel.matchups[0]?.mine.iconSmallStroke,
         }),
       );
     }
@@ -227,6 +237,7 @@ export function buildStripPages(input: BuildStripInput): StripPage[] {
           leagueName: panel.leagueName,
           side: 'opponent',
           crest: opp.iconSmall,
+          crestStroke: opp.iconSmallStroke,
         }),
       });
     }

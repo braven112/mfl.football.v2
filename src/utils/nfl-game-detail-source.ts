@@ -329,7 +329,11 @@ export async function loadNflGameDetail(
         playerIds,
         wallclock: play.wallclock,
         yards: 'yards' in play ? play.yards : 0,
-        isTurnover: 'isTurnover' in play ? play.isTurnover : false,
+        // Both play shapes carry it now. The `in` narrowing it used to need
+        // was silently emitting `false` for every SCORING turnover — the pick
+        // six and the fumble-return touchdown — because only the notable shape
+        // declared the field.
+        isTurnover: play.isTurnover === true,
         twoPoint: detail.twoPointPlayIds.has(play.playId),
       });
     };

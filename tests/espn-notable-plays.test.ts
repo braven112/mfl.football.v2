@@ -306,3 +306,47 @@ describe('a turnover credits the side that TOOK the ball, never the side that lo
     }
   });
 });
+
+describe('a safety is the defense’s too, and ESPN does not flag it', () => {
+  const turnovers = JSON.parse(
+    readFileSync(join(process.cwd(), 'tests/fixtures/espn-game-plays-turnovers.json'), 'utf8'),
+  );
+  const safeties = turnovers.items.filter((i: any) => /\bsafety\b/i.test(i.type?.text ?? ''));
+  const roleOf = (item: any, type: string) =>
+    (item.participants ?? []).find((p: any) => p.type === type);
+  const athleteId = (p: any) =>
+    String(p?.athlete?.$ref ?? '').match(/athletes\/(\d+)/)?.[1] ?? '';
+  const teamId = (ref: string) => String(ref ?? '').match(/teams\/(\d+)/)?.[1] ?? '';
+
+  it('has real safeties to assert against', () => {
+    expect(safeties.length).toBeGreaterThanOrEqual(2);
+  });
+
+  it('is NOT a turnover — so it has to be named separately', () => {
+    // The whole reason this needs its own branch: gating the defensive-credit
+    // rules on `isTurnover` alone silently excludes every safety.
+    for (const item of safeties) expect(item.isTurnover).not.toBe(true);
+  });
+
+  it('still attributes the play to the SCORING side', () => {
+    for (const item of safeties) {
+      expect(teamId(item.team?.$ref)).toBe(teamId(item.end?.team?.$ref));
+      expect(teamId(item.start?.team?.$ref)).not.toBe(teamId(item.end?.team?.$ref));
+    }
+  });
+
+  it('never credits the quarterback who gave up the safety', () => {
+    // One recorded safety is "Penalty Dillon Gabriel Intentional Grounding for
+    // Safety", roles `passer, penalized`. Under the ordinary allowlist that is
+    // a full-screen SAFETY takeover on the screen of the owner who started him.
+    for (const item of safeties) {
+      const parsed = parseScoringPlays({ items: [item] });
+      if (parsed.length === 0) continue;
+      for (const role of ['passer', 'rusher', 'receiver', 'fumbler', 'penalized']) {
+        const p = roleOf(item, role);
+        if (!p) continue;
+        expect(parsed[0].espnAthleteIds).not.toContain(athleteId(p));
+      }
+    }
+  });
+});

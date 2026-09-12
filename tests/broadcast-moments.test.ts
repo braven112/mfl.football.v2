@@ -7,6 +7,9 @@
 
 import { describe, it, expect } from 'vitest';
 import type { LiveScoringPlay, NflGame, PlayerMeta } from '../src/types/live-scoring';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { parseScoringPlays } from '../src/utils/espn-game-detail';
 import {
   MOMENT_MAX_AGE_MS,
   REVEAL_MINE_MS,
@@ -385,5 +388,70 @@ describe('team defenses — a club scores, not a person', () => {
   it('stays silent when nobody in the league starts that defense', () => {
     const moments = buildBroadcastMoments([pick({ nflTeam: 'DAL' })], [defLeague()], defMeta);
     expect(moments).toHaveLength(0);
+  });
+});
+
+describe('the pick six, end to end through the real parse', () => {
+  // The bug this block exists for: every test above builds a LiveScoringPlay
+  // by hand, so all of them passed while the PARSE dropped `isTurnover` on
+  // scoring plays — `EspnScoringPlay` did not declare the field and
+  // `parseNotablePlays` skips anything already scoring. A pick six therefore
+  // reached the board with `isTurnover: false` and credited nobody at all:
+  // the DEF gate never fired, and the turnover role split had correctly
+  // dropped the quarterback. Assert against the recorded ESPN items, not
+  // against a play we wrote ourselves.
+  const raw = JSON.parse(
+    readFileSync(join(process.cwd(), 'tests/fixtures/espn-game-plays-turnovers.json'), 'utf8'),
+  );
+  const defensiveTds = raw.items.filter(
+    (i: any) => i.scoringPlay === true && i.isTurnover === true,
+  );
+
+  const toLivePlay = (p: any): LiveScoringPlay => ({
+    playId: p.playId,
+    gameId: 'g1',
+    sequence: p.sequence,
+    period: p.period,
+    clock: p.clock,
+    text: p.text,
+    typeAbbrev: p.typeAbbrev,
+    typeText: p.typeText,
+    // The recorded games are not NE/BUF, so pin the club to one the fixture
+    // league actually starts; the flag under test is `isTurnover`.
+    nflTeam: 'NE',
+    scoreValue: p.scoreValue,
+    playerIds: [],
+    wallclock: at(10),
+    isTurnover: p.isTurnover,
+    yards: 0,
+  });
+
+  const defMeta: Record<string, PlayerMeta> = {
+    ...meta,
+    '0504': { id: '0504', name: 'Patriots, New England', position: 'DEF', nflTeam: 'NEP', headshot: '', espnId: null, projected: 7 },
+  };
+  const defLeague = () =>
+    league({ players: { '0001': [{ id: '1' }, { id: '0504' }], '0002': [{ id: '2' }] } });
+
+  it('has recorded defensive touchdowns to assert against', () => {
+    expect(defensiveTds.length).toBeGreaterThanOrEqual(3);
+  });
+
+  it('carries isTurnover through parseScoringPlays', () => {
+    for (const item of defensiveTds) {
+      const [parsed] = parseScoringPlays({ items: [item] });
+      expect(parsed.isTurnover).toBe(true);
+    }
+  });
+
+  it('reveals every recorded pick six / fumble-return TD to the DEF’s owner', () => {
+    for (const item of defensiveTds) {
+      const [parsed] = parseScoringPlays({ items: [item] });
+      const moments = buildBroadcastMoments([toLivePlay(parsed)], [defLeague()], defMeta);
+      expect(moments).toHaveLength(1);
+      expect(moments[0].playerId).toBe('0504');
+      expect(moments[0].side).toBe('mine');
+      expect(moments[0].kind).toBe('touchdown');
+    }
   });
 });
