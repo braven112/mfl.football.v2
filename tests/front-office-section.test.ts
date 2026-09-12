@@ -69,7 +69,6 @@ describe('the Front Office page registry', () => {
       'contracts',
       'trade-builder',
       'projected-free-agents',
-      'contract-tools',
       'dead-money',
       'salary-analytics',
       'salary-history',
@@ -185,7 +184,6 @@ describe('rendering mode is preserved on every moved page', () => {
     'src/pages/theleague/front-office/salary-analytics.astro': 'absent',
     'src/pages/theleague/front-office/salary-history.astro': 'absent',
     'src/pages/theleague/front-office/salary-archive.astro': 'absent',
-    'src/pages/theleague/front-office/contract-tools.astro': 'absent',
     'src/pages/theleague/front-office/dead-money.astro': 'absent',
     'src/pages/theleague/front-office/league-comparison.astro': 'absent',
     'src/pages/afl-fantasy/front-office/trade-builder.astro': 'false',
@@ -214,7 +212,6 @@ describe('every Front Office page has a way back', () => {
       'src/pages/theleague/front-office/salary-analytics.astro',
       'src/pages/theleague/front-office/salary-history.astro',
       'src/pages/theleague/front-office/salary-archive.astro',
-      'src/pages/theleague/front-office/contract-tools.astro',
       'src/pages/theleague/front-office/dead-money.astro',
       'src/pages/theleague/front-office/league-comparison.astro',
       'src/pages/theleague/rosters.astro',
@@ -289,5 +286,49 @@ describe('nav', () => {
     const section = (navConfig.sections as any[]).find((s) => s.id === 'cap-contracts');
     expect(section?.label).toBe('Front Office');
     expect(section?.labelAFL).toBeUndefined();
+  });
+});
+
+describe('FrontOfficeNav renders breadcrumbs only, no per-page tab strip', () => {
+  // The strip (one tab per FRONT_OFFICE_PAGES entry) was redundant with the
+  // hub's own Tool Rail and got removed; the breadcrumb trail is the only
+  // "way back" chrome these pages carry now.
+  const NAV_SRC = readFileSync(
+    'src/components/shared/front-office-nav/FrontOfficeNav.astro',
+    'utf-8'
+  );
+
+  it('has no tab-strip markup left', () => {
+    expect(NAV_SRC).not.toMatch(/class="fonav"/);
+    expect(NAV_SRC).not.toMatch(/fonav__item/);
+    expect(NAV_SRC).not.toMatch(/fonav__list/);
+    expect(NAV_SRC).not.toMatch(/frontOfficePagesFor/);
+  });
+
+  it('still renders the breadcrumb trail', () => {
+    expect(NAV_SRC).toMatch(/<Breadcrumbs/);
+  });
+});
+
+describe('Contract Tools is retired, not just delisted', () => {
+  it('is gone from the registry, page directory, and footer', () => {
+    expect(FRONT_OFFICE_PAGES.map((p) => p.key)).not.toContain('contract-tools');
+    expect(directory.find((p) => p.id === 'contract-calculator')).toBeUndefined();
+  });
+
+  it('has no surviving route file', () => {
+    expect(existsSync('src/pages/theleague/front-office/contract-tools.astro')).toBe(false);
+  });
+
+  it('redirects both its own URL and its predecessor to the Front Office hub', () => {
+    const vercelConfig = JSON.parse(readFileSync('vercel.json', 'utf-8'));
+    const redirects = vercelConfig.redirects as Array<{ source: string; destination: string }>;
+    const byPath = (source: string) => redirects.find((r) => r.source === source)?.destination;
+    expect(byPath('/front-office/contract-tools')).toBe('/front-office');
+    expect(byPath('/theleague/front-office/contract-tools')).toBe('/theleague/front-office');
+    // The even-older /calculator alias must not still chain through the
+    // now-deleted page.
+    expect(byPath('/calculator')).toBe('/front-office');
+    expect(byPath('/theleague/calculator')).toBe('/theleague/front-office');
   });
 });
