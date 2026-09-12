@@ -94,7 +94,7 @@
     {
       "date": "2026-09-10",
       "type": "bug-fix",
-"summary": "Schefter can no longer pair a team with a player it doesn't roster — trade-rumor posts now check ownership against the rosters before naming anyone.",
+      "summary": "Schefter can no longer pair a team with a player it doesn't roster \u2014 trade-rumor posts now check ownership against the rosters before naming anyone.",
       "impact": "user",
       "area": "schefter",
       "league": "theleague"
@@ -102,7 +102,7 @@
     {
       "date": "2026-09-10",
       "type": "bug-fix",
-      "summary": "Schefter runs at most one trade story a day now, across every lane — and the invented trade-speculation pieces drop to one a week.",
+      "summary": "Schefter runs at most one trade story a day now, across every lane \u2014 and the invented trade-speculation pieces drop to one a week.",
       "impact": "user",
       "area": "schefter",
       "league": "theleague"
@@ -118,7 +118,7 @@
     {
       "date": "2026-09-11",
       "type": "style-tweak",
-      "summary": "<a href=\"/live-scoring\">Live Scoring</a>'s matchup view now runs edge-to-edge on a phone — tighter header, roomier player rows, and one more starter on screen without scrolling.",
+      "summary": "<a href=\"/live-scoring\">Live Scoring</a>'s matchup view now runs edge-to-edge on a phone \u2014 tighter header, roomier player rows, and one more starter on screen without scrolling.",
       "impact": "user",
       "area": "live-scoring",
       "league": "both"
@@ -146,6 +146,14 @@
       "impact": "user",
       "area": "schedule",
       "league": "both"
+    },
+    {
+      "date": "2026-09-12",
+      "type": "bug-fix",
+      "summary": "The homepage hero is game day again \u2014 Schefter's weekly recap and previews no longer take it over as breaking news, so that slot is back to real trades and auction wins.",
+      "impact": "user",
+      "area": "homepage",
+      "league": "theleague"
     }
   ]
 }

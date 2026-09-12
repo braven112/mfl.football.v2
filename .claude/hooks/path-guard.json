@@ -280,7 +280,8 @@
         "tests/hero-crest.test.ts",
         "tests/dark-surface-crest.test.ts",
         "tests/composite-hero-cta-nowrap.test.ts",
-        "tests/top-rostered-casting.test.ts"
+        "tests/top-rostered-casting.test.ts",
+        "tests/weekly-column-hero-claim.test.ts"
       ]
     },
     {
@@ -605,6 +606,23 @@
         "tests/league-url-prefix.test.ts",
         "tests/schefter-offer-beats.test.ts",
         "tests/speculation-seeds.test.ts"
+      ]
+    },
+    {
+      "name": "schefter-columns",
+      "rules": "docs/claude/rules/schefter.md",
+      "note": "A column on a weekly cron is NOT breaking news: tier:'breaking' hands the post the homepage at P0 for 48h (selectBreakingStory → resolveHeroState), and three weekly columns at that tier preempted the regular-season daily rotation ~4 days in 7. Every article type must also export the full pipeline interface and declare relatedLinks. See tests/weekly-column-hero-claim.test.ts. The workflow is in this domain deliberately: the guard derives the weekly set from its cron→type map, so an edit there must re-run the guard.",
+      "paths": [
+        "scripts/article-types/*.mjs",
+        "scripts/article-utils/*.mjs",
+        "scripts/schefter-weekly-articles.mjs",
+        ".github/workflows/schefter-articles.yml"
+      ],
+      "tests": [
+        "tests/weekly-column-hero-claim.test.ts",
+        "tests/preview-empty-week.test.ts",
+        "tests/article-type-interface.test.ts",
+        "tests/article-links.test.ts"
       ]
     },
     {
