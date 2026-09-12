@@ -948,8 +948,21 @@
 .lbc-reveal__crest {
   --lbc-crest-ring-w: 2px;
   position: absolute;
-  right: -6vw;
-  bottom: -10vh;
+  /*
+   * CENTRED on the layer. It sat bottom-right, bled off both edges, which put
+   * it wholly underneath the figure column once the scorer moved there.
+   *
+   * Anchored with `left`/`top` + a centring translate, and the old `right`/
+   * `bottom` are GONE rather than left alongside: an absolutely positioned
+   * element given both edges of an axis is pinned to both and stretches
+   * instead of moving, so leaving either one in re-anchors it on that axis.
+   * The draft board's crest has the mirror of this hazard written on it — it
+   * centres by default and has to unwind `left`, `top` AND `transform`
+   * together to move.
+   */
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
   width: 68vh;
   height: 68vh;
   object-fit: contain;
@@ -1005,7 +1018,13 @@
      OWN width, which is the trap that landed the draft board's first attempt
      at half the distance it intended. */
   margin-block: -3vh;
-  margin-inline-end: -4vw;
+  /*
+   * Further right than the layer's own padding, to clear the now-centred
+   * crest. An ESPN cutout is a transparent PNG with the player centred in the
+   * frame, so the first few vw of this bleed spend the empty margin rather
+   * than the man — measured, not assumed, before settling on the number.
+   */
+  margin-inline-end: -9vw;
   /* This never clips. `.lbc-reveal` is the only thing that does, so measure a
      bleed against the LAYER, not against this box. */
   overflow: visible;
