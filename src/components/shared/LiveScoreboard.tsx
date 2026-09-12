@@ -45,6 +45,9 @@ import {
   assignLineupSlots,
   benchPoints,
   buildMoments,
+  computeTeamTotals,
+  nflGameStateFromSeconds,
+  type TeamTotals,
   describeFeedFreshness,
   describeGameState,
   formatGameClock,
@@ -176,11 +179,8 @@ function useLiveScoring(props: LiveScoringPageProps, opts: { enabled: boolean; l
 
 // ── helpers ──
 
-function nflGameState(secondsRemaining: number): NflGameState {
-  if (secondsRemaining <= 0) return 'final';
-  if (secondsRemaining >= NFL_GAME_SECONDS) return 'not-started';
-  return 'in-progress';
-}
+/** Shared with the broadcast board — one definition, in live-scoring-view.ts. */
+const nflGameState = nflGameStateFromSeconds;
 
 const nflLogoUrl = (team: string) => (team ? `/assets/nfl-logos/${normalizeTeamCode(team)}.svg` : '');
 
@@ -226,13 +226,14 @@ function teamColorVars(home?: TeamInfo, away?: TeamInfo): Record<string, string>
   };
 }
 
-interface TeamCalc {
-  live: number;
-  projectedFinal: number;
-  remainingPoints: number;
-  yetToPlay: number;
-}
+type TeamCalc = TeamTotals;
 
+/**
+ * Thin adapter over the shared `computeTeamTotals`. The math moved to
+ * live-scoring-view.ts when the broadcast board needed the same four numbers
+ * for every league at once; this keeps the island's own by-franchise-id call
+ * shape without owning a second copy of the projected-final rule.
+ */
 function computeTeam(
   fid: string,
   scores: Record<string, number>,
@@ -240,25 +241,10 @@ function computeTeam(
   ytp: Record<string, number>,
   meta: Record<string, PlayerMeta>,
 ): TeamCalc {
-  const rows = players[fid] ?? [];
-  const live = scores[fid] ?? rows.reduce((s, r) => s + r.live, 0);
-  let remainingPoints = 0;
-  let notStarted = 0;
-  for (const r of rows) {
-    const projected = meta[r.id]?.projected ?? 0;
-    remainingPoints += projectPlayerRemaining({ live: r.live, projected, secondsRemaining: r.secondsRemaining });
-    if (nflGameState(r.secondsRemaining) === 'not-started') notStarted += 1;
-  }
-  return {
-    live,
-    projectedFinal: live + remainingPoints,
-    remainingPoints,
-    // Prefer the count we derive from each starter's game clock — it uses the
-    // same gameSecondsRemaining the scores do and doesn't depend on MFL's
-    // franchise-level `playersYetToPlay` attribute (name unverified). Fall back
-    // to the feed value only when we have no per-player rows to count.
-    yetToPlay: rows.length ? notStarted : (ytp[fid] ?? 0),
-  };
+  return computeTeamTotals(players[fid] ?? [], meta, {
+    score: scores[fid],
+    yetToPlayFallback: ytp[fid],
+  });
 }
 
 // ── win-probability bar ──

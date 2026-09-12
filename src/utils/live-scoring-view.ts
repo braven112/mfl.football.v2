@@ -14,6 +14,7 @@ import type {
   NflGameState,
   PlayerMeta,
 } from '../types/live-scoring';
+import { NFL_GAME_SECONDS, projectPlayerRemaining } from './live-win-probability';
 
 /**
  * The clock shown next to a starter.
@@ -504,4 +505,68 @@ export function selectSupportingMatchups<T extends { home: string; away: string 
   return matchups.filter(
     (m) => !ownMatchups.has(m) && (!inScope || inScope.has(m.home) || inScope.has(m.away)),
   );
+}
+
+// ── team totals ────────────────────────────────────────────────────────────
+
+/**
+ * Fantasy state of one franchise this week: what it has, what it can still
+ * get, and how much of its lineup has not taken the field.
+ *
+ * Extracted from `LiveScoreboard.tsx` (Sept 2026) when the broadcast board
+ * needed the same four numbers for every league at once. Copying them would
+ * have been a second implementation of the projected-final rule, and the two
+ * would have drifted the first time the model changed — the same reasoning
+ * that moved `parseLiveScoringPayload` out of the live-scoring route.
+ */
+export interface TeamTotals {
+  /** Live fantasy points. */
+  live: number;
+  /** Live points plus the projection still tied to unplayed game-time. */
+  projectedFinal: number;
+  /** Projected points still to come. Drives the win-probability spread. */
+  remainingPoints: number;
+  /** Starters whose NFL game has not kicked off. */
+  yetToPlay: number;
+}
+
+/** A starter's NFL game state from MFL's clock alone. ESPN overrides it where it has the game. */
+export function nflGameStateFromSeconds(secondsRemaining: number): NflGameState {
+  if (secondsRemaining <= 0) return 'final';
+  if (secondsRemaining >= NFL_GAME_SECONDS) return 'not-started';
+  return 'in-progress';
+}
+
+/**
+ * @param rows STARTERS only. A bench row folded in here inflates the projected
+ *   final and the win-probability bar with points that cannot be scored, which
+ *   is exactly why `LiveSnapshot` keeps bench rows in a map of their own.
+ */
+export function computeTeamTotals(
+  rows: readonly LivePlayerRow[],
+  meta: Record<string, PlayerMeta>,
+  opts: { score?: number; yetToPlayFallback?: number } = {},
+): TeamTotals {
+  const live = opts.score ?? rows.reduce((s, r) => s + r.live, 0);
+  let remainingPoints = 0;
+  let notStarted = 0;
+  for (const r of rows) {
+    const projected = meta[r.id]?.projected ?? 0;
+    remainingPoints += projectPlayerRemaining({
+      live: r.live,
+      projected,
+      secondsRemaining: r.secondsRemaining,
+    });
+    if (nflGameStateFromSeconds(r.secondsRemaining) === 'not-started') notStarted += 1;
+  }
+  return {
+    live,
+    projectedFinal: live + remainingPoints,
+    remainingPoints,
+    // Prefer the count derived from each starter's own game clock — it uses the
+    // same `gameSecondsRemaining` the scores do. MFL's franchise-level
+    // `playersYetToPlay` is the fallback for a franchise with no per-player
+    // rows at all.
+    yetToPlay: rows.length ? notStarted : (opts.yetToPlayFallback ?? 0),
+  };
 }
