@@ -475,8 +475,14 @@ export default function LiveBroadcast({ pageData }: Props) {
    * the board all afternoon. Gate on idleness instead, the way a video player
    * does — hidden while you watch, back the moment you move.
    *
-   * Only in fullscreen. Windowed, the chrome keeps its hover behaviour, since
-   * that is the state you are in while still setting the board up.
+   * Runs in EVERY state, not only fullscreen. A television browser is often
+   * just maximised and never enters the Fullscreen API, so gating on it left
+   * the chips up through a reveal on a real TV. The stylesheet keeps the hide
+   * inside `(hover: hover) and (pointer: fine)` so a touch device — which was
+   * always meant to keep its chrome — is unaffected.
+   *
+   * `isFullscreen` is still tracked because the root carries the class and the
+   * Fullscreen button reads the state; no CSS rule gates on it any more.
    */
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [idle, setIdle] = useState(false);

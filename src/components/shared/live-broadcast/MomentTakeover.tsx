@@ -47,7 +47,8 @@ import type { BroadcastMoment } from '../../../utils/broadcast-moments';
 import type { BroadcastDefenderFace, BroadcastTeam } from '../../../types/live-broadcast';
 import { isEspnCdnUrl } from '../../../utils/espn-cdn';
 import { crestStrokeProps } from '../../../utils/draft-broadcast';
-import { getNFLTeamLogo as nflLogo } from '../../../utils/nfl-logo';
+import { normalizeTeamCode } from '../../../utils/nfl-logo';
+import { resolveNflDarkLogoUrl } from '../../../utils/nfl-logo-dark-css';
 
 interface Props {
   moment: BroadcastMoment;
@@ -120,6 +121,25 @@ function MomentTakeover({
   const [dead, setDead] = useState<ReadonlySet<string>>(() => new Set());
 
   /**
+   * The club's mark for a team defense, as a DARK cut.
+   *
+   * `getNFLTeamLogo` returns ESPN's LIGHT `500` cut, which is wrong here for
+   * the reason `BroadcastFace` states on the same board: the `html.dark` swap
+   * only fires for a viewer whose SITE theme is dark, and this surface is dark
+   * in both — so a light-theme owner driving the television would get the
+   * dark-outlined marks (Raiders, Jets, Jaguars) that the swap exists to fix.
+   * Resolve it here instead, exactly as the face chip does.
+   *
+   * The `!== 'NFL'` guard matters too: an unresolvable defense would otherwise
+   * render the generic shield, which says nothing.
+   */
+  const [defLogo, setDefLogo] = useState<string | null>(() => {
+    if (!isDef) return null;
+    const code = nflTeam ? normalizeTeamCode(nflTeam) : '';
+    return code && code !== 'NFL' ? resolveNflDarkLogoUrl(code) : null;
+  });
+
+  /**
    * ONE defender, not two.
    *
    * The pair was the draft board's answer and it was tried here first; on the
@@ -180,8 +200,16 @@ function MomentTakeover({
           {/* A team defense's name IS a club, so it takes the club's mark —
               the same pairing the player strip's meta line uses. A person's
               name does not: his own face is already the identification. */}
-          {isDef && nflTeam && (
-            <img className="lbc-reveal__name-logo" src={nflLogo(nflTeam)} alt="" aria-hidden="true" />
+          {isDef && defLogo && (
+            <img
+              className="lbc-reveal__name-logo"
+              src={defLogo}
+              alt=""
+              aria-hidden="true"
+              // A broken-image glyph beside the club's name reads as a broken
+              // BOARD from ten feet, same as it does in the face chip.
+              onError={() => setDefLogo(null)}
+            />
           )}
           {moment.playerName}
         </h2>
