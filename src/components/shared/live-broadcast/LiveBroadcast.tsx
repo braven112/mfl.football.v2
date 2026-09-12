@@ -524,6 +524,11 @@ export default function LiveBroadcast({ pageData }: Props) {
       <RedZoneBanner alerts={poll.redZone} />
 
       <div className="lbc__chrome">
+        {/* A LINK, not a button: the picker is a server-rendered screen, and a
+            television browser may have no pointer to drive client state with. */}
+        <a className="lbc__chrome-link" href={`${data.pathname}?picker=1`}>
+          Leagues
+        </a>
         <button
           type="button"
           onClick={() => {

@@ -63,12 +63,28 @@ const sound = resolveBroadcastSound(
 
 const pageData = toPageData(board, { week, year, sound, pathname: Astro.url.pathname });
 
+/** Back to the board, keeping the set the chips just built. */
+const doneHref = broadcastHref(
+  Astro.url.pathname,
+  board.enabled.length > 0 ? board.enabled : null,
+  Number.isFinite(parsedWeek) ? week : null,
+);
+
 /**
- * The picker's chips, on the setup screen AND reachable afterwards via
- * `?leagues=`. Each href carries the CUMULATIVE set with this league toggled,
- * not just its own id — a chip that replaced the whole selection meant an
- * owner could never watch two leagues at once, and once anything was enabled
- * the setup screen never rendered again, so there was no way back.
+ * Does the viewer want the picker?
+ *
+ * It used to render ONLY when nothing was enabled — and since the two
+ * full-management leagues are on by default, that branch never ran for a real
+ * owner. So Best Ball and every outside league were opt-in through a screen
+ * there was no way to reach, which makes them not opt-in at all. `?picker=1`
+ * (a link in the board's chrome) asks for it explicitly.
+ */
+const wantsPicker = Astro.url.searchParams.get('picker') === '1' || board.enabled.length === 0;
+
+/**
+ * The picker's chips. Each href carries the CUMULATIVE set with this league
+ * toggled, not just its own id — a chip that replaced the whole selection
+ * meant an owner could never watch two leagues at once.
  */
 const allIds = board.leagues.map((l) => l.id);
 const chips = board.leagues.map((league) => ({
@@ -87,12 +103,13 @@ const title = `Live Broadcast — Week ${week}`;
 
 <TheLeagueLayout title={title} hideMobileNavIcons>
 {
-  board.enabled.length === 0 ? (
+  wantsPicker ? (
     <main class="lbc" aria-label="Live scoring broadcast">
       <div class="lbc-setup">
         <h1>Pick the leagues this TV watches</h1>
         <p class="lbc-saver__sub">
           Your scores and your opponents' will take the screen as they happen.
+          Tap a league to add or remove it.
         </p>
         <ul class="lbc-setup__list">
           {chips.map((chip) => (
@@ -106,6 +123,15 @@ const title = `Live Broadcast — Week ${week}`;
             </li>
           ))}
         </ul>
+        {board.enabled.length > 0 && (
+          <p><a class="lbc-setup__chip" href={doneHref}>Done — show the board</a></p>
+        )}
+        {board.leagues.length === 0 && (
+          <p class="lbc-saver__sub">
+            We could not reach MyFantasyLeague to list your leagues. The board will
+            still show the league you are signed in to.
+          </p>
+        )}
       </div>
     </main>
   ) : (

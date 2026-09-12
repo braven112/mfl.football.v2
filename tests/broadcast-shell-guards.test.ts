@@ -317,6 +317,29 @@ describe('nothing is sized against a box it does not live in', () => {
   });
 });
 
+describe('the league picker is reachable', () => {
+  it('does not gate the picker on having ZERO leagues enabled', () => {
+    // It used to render only when `enabled.length === 0`. The two
+    // full-management leagues are on by default, so that branch never ran for
+    // a real owner — which made Best Ball and every outside league "opt-in"
+    // through a screen there was no way to reach, i.e. not opt-in at all.
+    expect(PAGE_CODE).toMatch(/wantsPicker/);
+    expect(PAGE_CODE).toMatch(/picker'\) === '1'/);
+    // The board branch must key on the picker flag, not on the league count.
+    expect(PAGE_CODE).not.toMatch(/board\.enabled\.length === 0 \? \(/);
+  });
+
+  it('offers a way in from the board and a way back out', () => {
+    expect(ISLAND_CODE).toMatch(/picker=1/);
+    expect(PAGE_CODE).toMatch(/doneHref/);
+  });
+
+  it('lists every league the owner is in, not just the enabled ones', () => {
+    // The whole point of the screen is turning ON something that is off.
+    expect(PAGE_CODE).toMatch(/board\.leagues\.map/);
+  });
+});
+
 describe('the page never fetches its own API', () => {
   it('assembles the board in process', () => {
     // A server that already knows the league's registry host has nothing to
