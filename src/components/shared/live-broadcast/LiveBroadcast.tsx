@@ -30,6 +30,7 @@ import BroadcastScreensaver, { type SaverScene } from './BroadcastScreensaver';
 import MomentTakeover from './MomentTakeover';
 import MomentLowerThird from './MomentLowerThird';
 import RedZoneBanner from './RedZoneBanner';
+import { DEMO_PERIOD_MS, demoElapsed, demoLoopIndex, demoPollAt } from '../../../utils/broadcast-demo';
 
 /**
  * Poll cadence. Slower than the draft board's 4s: this payload is N leagues
@@ -113,7 +114,20 @@ export default function LiveBroadcast({ pageData }: Props) {
     errors: 0,
   });
 
+  /**
+   * The rehearsal's origin, fixed at mount. Everything else about the demo is
+   * a pure function of (now - this), so the loop is reproducible: the same
+   * second of the loop always renders the same way, which is what makes it
+   * usable for checking a fix rather than just watching something move.
+   */
+  const demoStartRef = useRef(Date.now());
+  const demoLoopRef = useRef(0);
+
   const runPoll = useCallback(async () => {
+    // The demo never touches the network, and the real poller never runs while
+    // it is on — a rehearsal that could be confused with live scores would be
+    // worse than no rehearsal.
+    if (data.demo) return;
     try {
       const params = new URLSearchParams({ leagues: data.enabled.join(','), week: String(data.week) });
       const res = await fetch(`/api/broadcast-live?${params}`, {
@@ -143,7 +157,44 @@ export default function LiveBroadcast({ pageData }: Props) {
     }
   }, [data.enabled, data.week]);
 
+  /**
+   * Drive the board from the script instead of the network.
+   *
+   * One second, not the poll's eight: the rehearsal is being watched
+   * deliberately, and a reveal landing up to eight seconds after its scripted
+   * moment makes the timing impossible to judge.
+   */
   useEffect(() => {
+    if (!data.demo) return;
+    const tick = () => {
+      const now = Date.now();
+      const loop = demoLoopIndex(now, demoStartRef.current);
+      // A new loop replays the same moments, so the shown-set has to let them
+      // through again — otherwise the rehearsal plays once and then sits idle.
+      if (loop !== demoLoopRef.current) {
+        demoLoopRef.current = loop;
+        shownRef.current.clear();
+        setShownVersion((v) => v + 1);
+      }
+      setPoll(
+        demoPollAt({
+          panels: data.panels,
+          base: data.initial,
+          playerMeta: data.playerMeta,
+          now,
+          startedAt: demoStartRef.current,
+        }),
+      );
+      setFetchedAt(now);
+      setStatus('ok');
+    };
+    tick();
+    const id = window.setInterval(tick, 1000);
+    return () => window.clearInterval(id);
+  }, [data.demo, data.panels, data.initial, data.playerMeta]);
+
+  useEffect(() => {
+    if (data.demo) return;
     let cancelled = false;
 
     const schedule = (ms: number) => {
@@ -176,7 +227,7 @@ export default function LiveBroadcast({ pageData }: Props) {
       if (pollRef.current.timer) window.clearTimeout(pollRef.current.timer);
       window.clearInterval(watchdog);
     };
-  }, [runPoll]);
+  }, [runPoll, data.demo]);
 
   /** A 1s heartbeat so the freshness age counts up and the saver clock ticks. */
   useEffect(() => {
@@ -565,6 +616,13 @@ export default function LiveBroadcast({ pageData }: Props) {
           {fetchedAt === 0
             ? 'Connecting…'
             : `Reconnecting — scores from ${Math.max(1, Math.round(ageMs / 60000))}m ago`}
+        </p>
+      )}
+
+      {data.demo && (
+        <p className="lbc__demo-badge">
+          Demo · {Math.floor(demoElapsed(nowTick, demoStartRef.current) / 1000)}s of{' '}
+          {DEMO_PERIOD_MS / 60_000}m · loops
         </p>
       )}
 

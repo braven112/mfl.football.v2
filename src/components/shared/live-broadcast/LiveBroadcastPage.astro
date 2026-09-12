@@ -61,7 +61,15 @@ const sound = resolveBroadcastSound(
   Astro.cookies.get(BROADCAST_SOUND_COOKIE)?.value ?? null,
 );
 
-const pageData = toPageData(board, { week, year, sound, pathname: Astro.url.pathname });
+/**
+ * `?demo=1` runs the scripted rehearsal. Deliberately NOT remembered in a
+ * cookie the way the league set and the sound are: a television left on a
+ * demo it silently resumed next Sunday is the failure this whole flag exists
+ * to avoid.
+ */
+const demo = Astro.url.searchParams.get('demo') === '1';
+
+const pageData = toPageData(board, { week, year, sound, pathname: Astro.url.pathname, demo });
 
 /** Back to the board, keeping the set the chips just built. */
 const doneHref = broadcastHref(

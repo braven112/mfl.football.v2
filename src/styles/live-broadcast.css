@@ -1127,6 +1127,26 @@
   opacity: 0.72;
 }
 
+/* The demo says so, always and unmissably. A rehearsal that could be read as
+   live scores is worse than no rehearsal. */
+.lbc__demo-badge {
+  position: absolute;
+  top: 1vh;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 6;
+  padding: 0.5vh 1.4vw;
+  border-radius: 999px;
+  background: var(--lbc-alert);
+  color: #0b1220;
+  font-size: max(2.4vh, 0.8rem);
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
 /* ── Chrome ────────────────────────────────────────────────────────────────
    Hover-gated, and the hide rule lives inside the pointer query so a touch
    device never loses the only way out of fullscreen. `:hover` and

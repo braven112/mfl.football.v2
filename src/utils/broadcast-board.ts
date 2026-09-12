@@ -343,7 +343,7 @@ export async function assembleBroadcastBoard(input: AssembleBoardInput): Promise
 /** The island's one-time props. */
 export function toPageData(
   board: AssembledBoard,
-  opts: { week: number; year: number; sound: boolean; pathname: string },
+  opts: { week: number; year: number; sound: boolean; pathname: string; demo?: boolean },
 ): LiveBroadcastPageData {
   return {
     week: opts.week,
@@ -353,6 +353,7 @@ export function toPageData(
     playerMeta: board.playerMeta,
     initial: board.poll,
     sound: opts.sound,
+    demo: opts.demo === true,
     available: board.leagues.map((l) => ({
       id: l.id,
       name: l.name,

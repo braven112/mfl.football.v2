@@ -150,6 +150,15 @@ export interface LiveBroadcastPageData {
   initial: BroadcastPollResponse;
   /** Sound is opt-in; see `resolveBroadcastSound`. */
   sound: boolean;
+  /**
+   * `?demo=1` — run the scripted ten-minute rehearsal instead of polling.
+   *
+   * The board cannot otherwise be SEEN outside a live NFL window: with no
+   * plays there is no reveal, no red-zone banner and no queue, so the only
+   * thing judgeable is how it looks when nothing is happening. The demo
+   * badges itself on screen and the real poller does not run while it is on.
+   */
+  demo: boolean;
   /** Every league the owner is in, for the picker. */
   available: { id: string; name: string; registered: boolean; enabled: boolean }[];
   /** Where the picker's links point. */
