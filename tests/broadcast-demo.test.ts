@@ -45,7 +45,6 @@ const team = (id: string) => ({
   abbrev: id,
   icon: '',
   iconSmall: '',
-  crestStroke: 0,
   primary: '#225588',
   secondary: '#113344',
   swatch: '#4499dd',

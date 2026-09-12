@@ -27,7 +27,6 @@ const team = (id: string, name: string) => ({
   abbrev: name.slice(0, 3).toUpperCase(),
   icon: `/icon-${id}.png`,
   iconSmall: `/small-${id}.png`,
-  crestStroke: 0,
   primary: '#123456',
   secondary: '#654321',
   // The MARK colour, judged against the header panel — a different question
