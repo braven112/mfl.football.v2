@@ -28,6 +28,8 @@ import { buildMflExportUrl } from './mfl-url';
 import { mflFetch } from './mfl-fetch';
 import { computeTeamTotals } from './live-scoring-view';
 import { winProbability } from './live-win-probability';
+import { getCurrentSeasonYear, getLeagueYearForSlug } from './league-year';
+import { projectionsForWeek, readLeagueFeed } from './sunday-ticket-sources';
 import type { MatchupPairing, PlayerMeta } from '../types/live-scoring';
 import type {
   BroadcastLeagueScore,
@@ -139,6 +141,17 @@ export function scoreLeague(
   ok: boolean,
   franchiseId: string,
   meta: Record<string, PlayerMeta>,
+  /**
+   * THIS league's full-game projections, player id → points.
+   *
+   * Per league, never global: two leagues score the same player differently,
+   * so one shared map would quietly rate a TheLeague lineup with the AFL's
+   * numbers. An EMPTY map is honest and survivable — every projection reads 0,
+   * so `projectedFinal` collapses to the live score and the win-probability
+   * bar goes hard 100/0. That is why the assembler treats a missing
+   * projections feed as a thing worth reporting rather than a default.
+   */
+  projections: ReadonlyMap<string, number> = new Map(),
 ): BroadcastLeagueScore {
   const teams: Record<string, BroadcastTeamScore> = {};
   const pairs = findOwnerMatchups(snapshot.matchups, franchiseId);
@@ -152,6 +165,7 @@ export function scoreLeague(
     const totals = computeTeamTotals(rows, meta, {
       score: snapshot.scores[fid],
       yetToPlayFallback: snapshot.playersYetToPlay[fid],
+      projections,
     });
     return { ...totals, players: rows };
   };
@@ -294,5 +308,58 @@ export async function readOutsideLiveSnapshot(
     return { leagueId: league.id, ok: true, snapshot: parseLiveScoringPayload(body) };
   } catch {
     return { leagueId: league.id, ok: false, snapshot: empty };
+  }
+}
+
+/**
+ * One league's full-game projections for the week, player id → points.
+ *
+ * Projections are what make "projected final" and the win-probability bar mean
+ * anything. Without them every player's remaining expectation is zero, so the
+ * projected final collapses onto the live score and `winProbability` takes its
+ * `remainingPoints <= 0` branch — a hard 100% / 0% off the current margin, at
+ * noon on a Sunday with nine starters yet to kick off. The board shipped that
+ * way for one afternoon of development and it is the reason this function
+ * exists.
+ *
+ * Two sources, because a league this site syncs already has the feed on disk:
+ *  - REGISTERED: the committed `projectedScores.json`, read at the league's OWN
+ *    year. Not the season year — `data/<league>/mfl-feeds/<leagueYear>/` is
+ *    where the sync writes, and the AFL's two clocks are three months apart.
+ *  - OUTSIDE: a live export with the owner's cookie, same path the outside
+ *    live-scoring read already takes.
+ *
+ * An empty map is a survivable answer, not a failure: the board still shows
+ * real live scores, and only the forward-looking numbers go flat.
+ */
+export async function loadLeagueProjections(
+  league: BoardLeague,
+  week: number,
+  mflUserCookie: string,
+): Promise<Map<string, number>> {
+  try {
+    if (league.registered) {
+      const leagueYear = getLeagueYearForSlug(league.registered.slug);
+      const payload = readLeagueFeed(league.registered, leagueYear, 'projectedScores.json');
+      return projectionsForWeek(payload, week);
+    }
+
+    if (!mflUserCookie || !league.host) return new Map();
+    const url = buildMflExportUrl({
+      type: 'projectedScores',
+      leagueId: league.id,
+      year: getCurrentSeasonYear(),
+      params: { W: week },
+      host: league.host,
+    });
+    const response = await mflFetch({ url, method: 'GET', mflUserCookie });
+    if (!response.ok) return new Map();
+    const body = await response.json().catch(() => null);
+    // A projections feed is for ONE week. Reading it for another would rank
+    // this Sunday by last Sunday's numbers, so `projectionsForWeek` treats a
+    // week mismatch as "no projections" rather than "close enough".
+    return projectionsForWeek(body, week);
+  } catch {
+    return new Map();
   }
 }

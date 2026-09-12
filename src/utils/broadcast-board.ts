@@ -20,6 +20,7 @@ import { resolveBroadcastLeagues } from './broadcast-selection';
 import {
   buildBoardLeagues,
   findOwnerMatchups,
+  loadLeagueProjections,
   loadLeagueSnapshot,
   readOutsideLiveSnapshot,
   scoreLeague,
@@ -53,6 +54,15 @@ export interface AssembleBoardInput {
   soundParam?: string | null;
   soundCookie?: string | null;
   pathname?: string;
+  /**
+   * `'full'` builds the panels — franchise colours, crests, every name form —
+   * for the island's one-time props. `'poll'` skips all of it.
+   *
+   * Panel identity cannot change during a Sunday, and `/api/broadcast-live`
+   * returns only `board.poll`, so building it on every 8-second poll was work
+   * computed and thrown away ~2,880 times per television per afternoon.
+   */
+  mode?: 'full' | 'poll';
 }
 
 export interface AssembledBoard {
@@ -81,13 +91,27 @@ const NEUTRAL: Omit<BroadcastTeam, 'franchiseId' | 'name' | 'nameShort' | 'abbre
  * chosen to sit apart from fifteen other lines, which is why one
  * black-and-red franchise's `color` is pink.
  */
-function teamFor(slug: string, franchiseId: string, fallbackName: string): BroadcastTeam {
-  let brand: { name: string; nameShort: string; colorPrimary: string; icon: string } | undefined;
+type BrandMap = Record<string, { name: string; nameShort: string; colorPrimary: string; icon: string }>;
+
+/**
+ * One league's brand map, resolved ONCE per league per assembly.
+ *
+ * `getLeagueTeamBrands` walks the league's whole config and builds a fresh
+ * Record every call, so looking it up inside `teamFor` meant rebuilding all
+ * 24 AFL franchises to read one of them — once per franchise, per league, per
+ * assembly. Throws for a league this site does not run, which is the normal
+ * case for an outside league and not an error.
+ */
+function brandsFor(slug: string): BrandMap {
   try {
-    brand = slug ? getLeagueTeamBrands(slug)[franchiseId] : undefined;
+    return slug ? (getLeagueTeamBrands(slug) as BrandMap) : {};
   } catch {
-    brand = undefined;
+    return {};
   }
+}
+
+function teamFor(brands: BrandMap, franchiseId: string, fallbackName: string): BroadcastTeam {
+  const brand = brands[franchiseId];
 
   const name = brand?.name || fallbackName || `Franchise ${franchiseId}`;
   const nameShort = brand?.nameShort || chooseTeamName({ fullName: name }, 'short');
@@ -114,18 +138,13 @@ function teamFor(slug: string, franchiseId: string, fallbackName: string): Broad
 }
 
 /** Every franchise name in one league, for naming opponents. */
-function namesFor(slug: string): Record<string, string> {
-  try {
-    if (!slug) return {};
-    const brands = getLeagueTeamBrands(slug);
-    return Object.fromEntries(Object.entries(brands).map(([fid, b]) => [fid, b.name]));
-  } catch {
-    return {};
-  }
+function namesFor(brands: BrandMap): Record<string, string> {
+  return Object.fromEntries(Object.entries(brands).map(([fid, b]) => [fid, b.name]));
 }
 
 export async function assembleBroadcastBoard(input: AssembleBoardInput): Promise<AssembledBoard> {
   const { user, week } = input;
+  const mode = input.mode ?? 'full';
   const year = input.year ?? getCurrentSeasonYear();
 
   // `myleagues` is keyed on the owner's MFL cookie, which the session carries
@@ -147,7 +166,7 @@ export async function assembleBroadcastBoard(input: AssembleBoardInput): Promise
   // Fan out: every enabled league's MFL snapshot, plus the two ESPN reads,
   // all at once. A league that fails contributes `ok: false` and nothing else
   // — one bad feed must not blank the board.
-  const [snapshots, scoreboard, detail] = await Promise.all([
+  const [snapshots, projectionSets, scoreboard, detail] = await Promise.all([
     Promise.all(
       on.map((league) =>
         loadLeagueSnapshot({ league, year, week }, (l, y, w) =>
@@ -155,11 +174,21 @@ export async function assembleBroadcastBoard(input: AssembleBoardInput): Promise
         ).catch(() => ({ leagueId: league.id, ok: false, snapshot: null as LiveSnapshot | null })),
       ),
     ),
+    // Per league, never pooled: two leagues score the same player differently,
+    // so one shared map would rate a TheLeague lineup with the AFL's numbers.
+    Promise.all(
+      on.map((league) =>
+        loadLeagueProjections(league, week, user.id)
+          .then((map) => [league.id, map] as const)
+          .catch(() => [league.id, new Map<string, number>()] as const),
+      ),
+    ),
     fetchNflScoreboard({ week, year }).catch(() => ({ ok: false, week, games: [] as NflGame[] })),
     loadNflGameDetail({ week, year }).catch(() => null),
   ]);
 
   const byLeague = new Map(snapshots.map((s) => [s.leagueId, s]));
+  const projectionsByLeague = new Map(projectionSets);
 
   // Player identity for everyone on the board. The season map is the right
   // one: this is results-shaped and a player's identity for scoring purposes
@@ -178,6 +207,11 @@ export async function assembleBroadcastBoard(input: AssembleBoardInput): Promise
       // Never shipped for JOINING — see the type. Present only because the
       // headshot cascade reads it, and it can be a COLLEGE id.
       espnId: null,
+      // Deliberately 0 in the SHIPPED payload. A projection belongs to a
+      // player IN A LEAGUE, and this map is player-keyed and shared across
+      // every league on the board, so there is no single right value to put
+      // here. Scoring uses the per-league maps instead (`scoreLeague`'s
+      // `projections`), and nothing on the client reads this field.
       projected: 0,
     };
   };
@@ -191,17 +225,23 @@ export async function assembleBroadcastBoard(input: AssembleBoardInput): Promise
     const snapshot = result?.snapshot ?? null;
     const ok = !!result?.ok && !!snapshot;
     const slug = league.registered?.slug ?? '';
-    const names = namesFor(slug);
+    const brands = brandsFor(slug);
+    const names = namesFor(brands);
 
     if (!snapshot) {
-      panels.push({
-        leagueId: league.id,
-        leagueName: league.name,
-        slug,
-        franchiseId: league.franchiseId,
-        matchups: [],
-        status: 'unavailable',
-      });
+      if (mode === 'full') {
+        // The panel still exists, at full height, saying so. Dropping it would
+        // re-lay out every other panel mid-afternoon, which is exactly the
+        // motion a fixed header exists to prevent.
+        panels.push({
+          leagueId: league.id,
+          leagueName: league.name,
+          slug,
+          franchiseId: league.franchiseId,
+          matchups: [],
+          status: 'unavailable',
+        });
+      }
       leagueScores.push({ leagueId: league.id, ok: false, live: false, teams: {}, winProbability: [] });
       continue;
     }
@@ -209,23 +249,34 @@ export async function assembleBroadcastBoard(input: AssembleBoardInput): Promise
     for (const rows of Object.values(snapshot.players)) for (const r of rows) addMeta(r.id);
 
     const pairs = findOwnerMatchups(snapshot.matchups, league.franchiseId);
-    const mine = teamFor(slug, league.franchiseId, league.franchiseName);
 
-    panels.push({
-      leagueId: league.id,
-      leagueName: league.name,
-      slug,
-      franchiseId: league.franchiseId,
-      matchups: pairs.map((pair, index) => ({
-        index,
-        mine,
-        opponent: teamFor(slug, pair.opponentId, names[pair.opponentId] ?? ''),
-      })),
-      // A league with a feed but no pairing is on a bye — a fact, not a fault.
-      status: ok ? (pairs.length > 0 ? 'ok' : 'no-matchup') : 'unavailable',
-    });
+    if (mode === 'full') {
+      const mine = teamFor(brands, league.franchiseId, league.franchiseName);
+      panels.push({
+        leagueId: league.id,
+        leagueName: league.name,
+        slug,
+        franchiseId: league.franchiseId,
+        matchups: pairs.map((pair, index) => ({
+          index,
+          mine,
+          opponent: teamFor(brands, pair.opponentId, names[pair.opponentId] ?? ''),
+        })),
+        // A league with a feed but no pairing is on a bye — a fact, not a fault.
+        status: ok ? (pairs.length > 0 ? 'ok' : 'no-matchup') : 'unavailable',
+      });
+    }
 
-    leagueScores.push(scoreLeague(league.id, snapshot, ok, league.franchiseId, playerMeta));
+    leagueScores.push(
+      scoreLeague(
+        league.id,
+        snapshot,
+        ok,
+        league.franchiseId,
+        playerMeta,
+        projectionsByLeague.get(league.id) ?? new Map(),
+      ),
+    );
     viewers.push(toLeagueViewer(league, snapshot, names));
   }
 

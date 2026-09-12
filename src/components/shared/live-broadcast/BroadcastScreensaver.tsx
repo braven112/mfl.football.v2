@@ -9,6 +9,7 @@
  * stretches are where the real burn-in risk lives, not the busy afternoon.
  */
 
+import { memo } from 'react';
 import type { BroadcastLeaguePanel, BroadcastLeagueScore } from '../../../types/live-broadcast';
 import type { NflGame } from '../../../types/live-scoring';
 
@@ -32,7 +33,7 @@ const ANCHORS: Record<SaverScene, 'center' | 'start' | 'end'> = {
 
 const fmt = (n: number) => (Number.isFinite(n) ? n.toFixed(1) : '0.0');
 
-export default function BroadcastScreensaver({ scene, panels, scores, games, now, today }: Props) {
+function BroadcastScreensaver({ scene, panels, scores, games, now, today }: Props) {
   const anchor = ANCHORS[scene];
 
   if (scene === 'clock') {
@@ -94,3 +95,14 @@ export default function BroadcastScreensaver({ scene, panels, scores, games, now
     </div>
   );
 }
+
+/**
+ * Memoised because the island ticks once a SECOND to age the freshness pill
+ * and drive the screensaver clock, and this component depends on none of that.
+ * Unmemoised, a 1 Hz heartbeat re-renders the whole visible board ~28,800
+ * times over an eight-hour Sunday — on set-top hardware, and concurrently
+ * with the reveal transitions that are the one thing on this screen allowed
+ * to cost a frame budget. Props here are already memoised upstream, so the
+ * bailout is free and changes no behaviour.
+ */
+export default memo(BroadcastScreensaver);

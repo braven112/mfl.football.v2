@@ -12,13 +12,14 @@
  * photosensitivity hazard.
  */
 
+import { memo } from 'react';
 import type { RedZoneAlert } from '../../../utils/broadcast-moments';
 
 interface Props {
   alerts: readonly RedZoneAlert[];
 }
 
-export default function RedZoneBanner({ alerts }: Props) {
+function RedZoneBanner({ alerts }: Props) {
   if (alerts.length === 0) return null;
 
   // One banner, however many drives — two red-zone drives at once is a real
@@ -36,3 +37,14 @@ export default function RedZoneBanner({ alerts }: Props) {
     </div>
   );
 }
+
+/**
+ * Memoised because the island ticks once a SECOND to age the freshness pill
+ * and drive the screensaver clock, and this component depends on none of that.
+ * Unmemoised, a 1 Hz heartbeat re-renders the whole visible board ~28,800
+ * times over an eight-hour Sunday — on set-top hardware, and concurrently
+ * with the reveal transitions that are the one thing on this screen allowed
+ * to cost a frame budget. Props here are already memoised upstream, so the
+ * bailout is free and changes no behaviour.
+ */
+export default memo(RedZoneBanner);

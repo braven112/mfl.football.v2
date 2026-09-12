@@ -160,6 +160,52 @@ describe('scoreLeague', () => {
     expect(scoreLeague(theLeague.id, snapshot(), false, '0001', meta).live).toBe(false);
   });
 
+  it('uses the league’s OWN projections, so the forward-looking numbers mean something', () => {
+    // Without projections every player's remaining expectation is zero, so
+    // `projectedFinal` collapses onto the live score and `winProbability`
+    // takes its `remainingPoints <= 0` branch — a hard 100%/0% off the current
+    // margin, at noon on a Sunday with the whole slate still to play. The
+    // board shipped exactly that for one afternoon of development.
+    const projections = new Map([['a', 24], ['b', 12]]);
+    const scored = scoreLeague(theLeague.id, snapshot(), true, '0001', meta, projections);
+
+    // 'a' is half-played on a 24-point projection: 12 still to come.
+    expect(scored.teams['0001'].remainingPoints).toBeCloseTo(12, 5);
+    expect(scored.teams['0001'].projectedFinal).toBeCloseTo(62, 5);
+    // Real uncertainty, not a certainty.
+    expect(scored.winProbability[0]).toBeGreaterThan(0.5);
+    expect(scored.winProbability[0]).toBeLessThan(1);
+  });
+
+  it('goes flat rather than wrong when a projections feed is missing', () => {
+    // The board's own `playerMeta` always carries `projected: 0` — a
+    // projection belongs to a player IN A LEAGUE and that map is shared across
+    // every league on the board, so there is no single right value to put
+    // there. This mirrors that: with no per-league map, the forward-looking
+    // half of the cell stops saying anything while the live scores stay real.
+    const flatMeta = Object.fromEntries(
+      Object.entries(meta).map(([id, m]) => [id, { ...m, projected: 0 }]),
+    );
+    const scored = scoreLeague(theLeague.id, snapshot(), true, '0001', flatMeta, new Map());
+    expect(scored.teams['0001'].remainingPoints).toBe(0);
+    expect(scored.teams['0001'].projectedFinal).toBe(scored.teams['0001'].live);
+  });
+
+  it('lets a per-league projection override whatever meta carries', () => {
+    // The precedence that makes the above safe: the league's own map wins, so
+    // a stale or zeroed `meta.projected` can never outrank a real projection.
+    const scored = scoreLeague(theLeague.id, snapshot(), true, '0001', meta, new Map([['a', 60]]));
+    expect(scored.teams['0001'].remainingPoints).toBeCloseTo(30, 5);
+  });
+
+  it('never lets one league’s projections score another league’s lineup', () => {
+    // A projection belongs to a player IN A LEAGUE — the same back is worth
+    // different points under two rule sets, so the maps must stay separate.
+    const rich = scoreLeague(theLeague.id, snapshot(), true, '0001', meta, new Map([['a', 40]]));
+    const lean = scoreLeague(afl.id, snapshot(), true, '0001', meta, new Map([['a', 4]]));
+    expect(rich.teams['0001'].projectedFinal).not.toBeCloseTo(lean.teams['0001'].projectedFinal, 5);
+  });
+
   it('scores both games of a doubleheader', () => {
     const dh = snapshot({
       matchups: [{ home: '0001', away: '0002' }, { home: '0001', away: '0003' }],

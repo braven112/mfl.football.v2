@@ -9,6 +9,7 @@
  * behind it, because bad news is not worth taking the board away for.
  */
 
+import { memo } from 'react';
 import type { BroadcastMoment } from '../../../utils/broadcast-moments';
 import type { BroadcastTeam } from '../../../types/live-broadcast';
 
@@ -19,7 +20,7 @@ interface Props {
   position: string;
 }
 
-export default function MomentLowerThird({ moment, team, scoreLine, position }: Props) {
+function MomentLowerThird({ moment, team, scoreLine, position }: Props) {
   return (
     <div
       className="lbc-third"
@@ -43,3 +44,14 @@ export default function MomentLowerThird({ moment, team, scoreLine, position }: 
     </div>
   );
 }
+
+/**
+ * Memoised because the island ticks once a SECOND to age the freshness pill
+ * and drive the screensaver clock, and this component depends on none of that.
+ * Unmemoised, a 1 Hz heartbeat re-renders the whole visible board ~28,800
+ * times over an eight-hour Sunday — on set-top hardware, and concurrently
+ * with the reveal transitions that are the one thing on this screen allowed
+ * to cost a frame budget. Props here are already memoised upstream, so the
+ * bailout is free and changes no behaviour.
+ */
+export default memo(MomentLowerThird);

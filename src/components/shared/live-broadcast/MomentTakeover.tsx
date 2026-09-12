@@ -11,6 +11,7 @@
  * the reveal mean something ("he scored, and here is what it did to me").
  */
 
+import { memo } from 'react';
 import type { BroadcastMoment } from '../../../utils/broadcast-moments';
 import type { BroadcastTeam } from '../../../types/live-broadcast';
 import { BroadcastFace } from '../draft-broadcast/BroadcastFace';
@@ -43,7 +44,7 @@ function kickerFor(moment: BroadcastMoment): string {
   }
 }
 
-export default function MomentTakeover({ moment, team, scoreLine, position, nflTeam, headshot }: Props) {
+function MomentTakeover({ moment, team, scoreLine, position, nflTeam, headshot }: Props) {
   const style: Record<string, string> = {};
   if (team) {
     style['--lbc-primary'] = team.primary;
@@ -88,3 +89,14 @@ export default function MomentTakeover({ moment, team, scoreLine, position, nflT
     </div>
   );
 }
+
+/**
+ * Memoised because the island ticks once a SECOND to age the freshness pill
+ * and drive the screensaver clock, and this component depends on none of that.
+ * Unmemoised, a 1 Hz heartbeat re-renders the whole visible board ~28,800
+ * times over an eight-hour Sunday — on set-top hardware, and concurrently
+ * with the reveal transitions that are the one thing on this screen allowed
+ * to cost a frame budget. Props here are already memoised upstream, so the
+ * bailout is free and changes no behaviour.
+ */
+export default memo(MomentTakeover);

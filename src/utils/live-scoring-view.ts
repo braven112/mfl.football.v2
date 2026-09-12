@@ -541,17 +541,29 @@ export function nflGameStateFromSeconds(secondsRemaining: number): NflGameState 
  * @param rows STARTERS only. A bench row folded in here inflates the projected
  *   final and the win-probability bar with points that cannot be scored, which
  *   is exactly why `LiveSnapshot` keeps bench rows in a map of their own.
+ * @param opts.projections PER-LEAGUE full-game projections, which override
+ *   `meta[id].projected` when supplied.
+ *
+ *   Separate from `meta` because a projection is a property of the PLAYER IN A
+ *   LEAGUE, not of the player: the same running back is worth different points
+ *   under two leagues' scoring rules, so a single player-keyed map cannot hold
+ *   both. A cross-league board reads several leagues at once and would
+ *   otherwise silently score one league's lineup with another's numbers.
  */
 export function computeTeamTotals(
   rows: readonly LivePlayerRow[],
   meta: Record<string, PlayerMeta>,
-  opts: { score?: number; yetToPlayFallback?: number } = {},
+  opts: {
+    score?: number;
+    yetToPlayFallback?: number;
+    projections?: ReadonlyMap<string, number>;
+  } = {},
 ): TeamTotals {
   const live = opts.score ?? rows.reduce((s, r) => s + r.live, 0);
   let remainingPoints = 0;
   let notStarted = 0;
   for (const r of rows) {
-    const projected = meta[r.id]?.projected ?? 0;
+    const projected = opts.projections?.get(r.id) ?? meta[r.id]?.projected ?? 0;
     remainingPoints += projectPlayerRemaining({
       live: r.live,
       projected,

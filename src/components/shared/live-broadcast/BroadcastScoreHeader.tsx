@@ -6,6 +6,7 @@
  * layout at the density it is handed.
  */
 
+import { memo } from 'react';
 import type { BroadcastLeaguePanel, BroadcastLeagueScore, BroadcastTeam } from '../../../types/live-broadcast';
 import type { DensityTier } from '../../../utils/broadcast-layout';
 import { dropClasses, nameContext } from '../../../utils/broadcast-layout';
@@ -28,7 +29,7 @@ function nameAt(team: BroadcastTeam, tier: DensityTier): string {
   return team.name;
 }
 
-export default function BroadcastScoreHeader({ panels, scores, tier, hidden }: Props) {
+function BroadcastScoreHeader({ panels, scores, tier, hidden }: Props) {
   return (
     <section
       className={`lbc__header ${dropClasses(tier)}${hidden ? ' is-hidden' : ''}`}
@@ -138,3 +139,14 @@ export default function BroadcastScoreHeader({ panels, scores, tier, hidden }: P
     </section>
   );
 }
+
+/**
+ * Memoised because the island ticks once a SECOND to age the freshness pill
+ * and drive the screensaver clock, and this component depends on none of that.
+ * Unmemoised, a 1 Hz heartbeat re-renders the whole visible board ~28,800
+ * times over an eight-hour Sunday — on set-top hardware, and concurrently
+ * with the reveal transitions that are the one thing on this screen allowed
+ * to cost a frame budget. Props here are already memoised upstream, so the
+ * bailout is free and changes no behaviour.
+ */
+export default memo(BroadcastScoreHeader);

@@ -46,6 +46,7 @@ import {
   type EspnScoringPlay,
 } from './espn-game-detail';
 import { buildEspnScoreboardUrl, resolveEspnTarget } from './espn-scoreboard-url';
+import { fetchRawScoreboard } from './nfl-scoreboard-source';
 import { mapWithConcurrency } from './fan-out';
 
 
@@ -242,7 +243,12 @@ export async function loadNflGameDetail(
   // one slate's games next to another slate's box scores.
   const target = resolveEspnTarget(url.searchParams, parsedWeek, year);
   const espnSlot = { ...target.slot, year: target.year, overridden: target.overridden };
-  const scoreboard = await fetchJson(buildEspnScoreboardUrl(target.slot, target.year));
+  // Through the SHARED cache, not a second independent fetch: the broadcast
+  // board asks for the parsed slate and the play-by-play in one assembly, and
+  // both need this same document. Two uncached calls per poll, every 8 seconds
+  // for eight hours, is thousands of avoidable requests per television against
+  // a host that has rejected us before.
+  const scoreboard = await fetchRawScoreboard(buildEspnScoreboardUrl(target.slot, target.year));
 
   // The scoreboard is the ONE call this route cannot do without: it supplies
   // the event ids to fan out over and the team-id → code map the plays feed

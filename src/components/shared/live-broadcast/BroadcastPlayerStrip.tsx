@@ -6,6 +6,7 @@
  * so the cross-fade has something to fade FROM.
  */
 
+import { memo } from 'react';
 import { BroadcastFace } from '../draft-broadcast/BroadcastFace';
 import { normalizeTeamCode } from '../../../utils/nfl-logo';
 import { padPage, type StripPage, type StripRow } from '../../../utils/broadcast-layout';
@@ -65,7 +66,7 @@ function Row({ row, dim }: { row: StripRow | null; dim: boolean }) {
   );
 }
 
-export default function BroadcastPlayerStrip({ page, rowsPerPage, hidden, dimTail }: Props) {
+function BroadcastPlayerStrip({ page, rowsPerPage, hidden, dimTail }: Props) {
   const rows = page ? padPage(page, rowsPerPage) : [];
   const dimFrom = dimTail > 0 ? rows.length - dimTail : rows.length;
 
@@ -86,3 +87,14 @@ export default function BroadcastPlayerStrip({ page, rowsPerPage, hidden, dimTai
     </div>
   );
 }
+
+/**
+ * Memoised because the island ticks once a SECOND to age the freshness pill
+ * and drive the screensaver clock, and this component depends on none of that.
+ * Unmemoised, a 1 Hz heartbeat re-renders the whole visible board ~28,800
+ * times over an eight-hour Sunday — on set-top hardware, and concurrently
+ * with the reveal transitions that are the one thing on this screen allowed
+ * to cost a frame budget. Props here are already memoised upstream, so the
+ * bailout is free and changes no behaviour.
+ */
+export default memo(BroadcastPlayerStrip);
