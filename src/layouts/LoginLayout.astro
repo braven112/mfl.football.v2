@@ -18,6 +18,7 @@ const { title, host, leagueId, year, staticHost } = Astro.props as Props;
 // Resolve theme preference (server-side). 'auto' renders no class — the
 // pre-paint ThemeScript resolves it against prefers-color-scheme.
 const themePref = getThemePreference(Astro.cookies);
+import StagingBanner from '../components/shared/StagingBanner.astro';
 ---
 
 <!DOCTYPE html>
@@ -33,6 +34,7 @@ const themePref = getThemePreference(Astro.cookies);
 		<title>{title}</title>
 	</head>
 	<body>
+		<StagingBanner />
 		<TheLeagueHeader {host} {leagueId} {year} {staticHost} />
 		<main>
 			<slot />

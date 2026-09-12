@@ -19,6 +19,7 @@ import { readPreferences } from './push-preferences';
 import { isCategoryEnabled } from '../config/notification-categories';
 import { getLeagueById } from '../config/leagues';
 import { isAdminFranchise } from '../config/nav-config';
+import { outboundAllowed } from './deploy-environment';
 
 export interface PushPayload {
   title: string;
@@ -76,6 +77,18 @@ export async function sendPushToFranchise(
 ): Promise<PushSendResult> {
   const result: PushSendResult = { sent: 0, failed: 0, pruned: 0, total: 0 };
   if (!isPushConfigured()) return result;
+
+  // Staging and preview deployments hold production's VAPID keys and read
+  // production's subscription store, so a push from one reaches real owners'
+  // phones. Refused here, at the single door every push already goes through.
+  //
+  // Returns zeros rather than throwing because this function's contract is
+  // that it never throws — a caller fanning out to 24 franchises must not be
+  // aborted by the first one. The warning is logged by the guard itself.
+  if (!outboundAllowed()) {
+    console.warn('[push] suppressed on a non-production deployment');
+    return result;
+  }
 
   const league = getLeagueById(leagueId);
   if (!league) {

@@ -360,13 +360,25 @@ system is not, because none of it can be undone:
 - **GroupMe posts.**
 - **Suggestion-box GitHub issue filing.**
 
-One `isStagingDeploy()` predicate, derived from the request host matching a
-`stagingDomains` entry — **not** from `VERCEL_ENV`, since every PR preview is
-also `preview`. Each of the four paths checks it and refuses. One guard test
-that fails when a new outbound path skips the check; this is the `/guard-test`
-shape exactly.
+**Built** — `src/utils/deploy-environment.ts`, guarded at four choke points,
+pinned by `tests/staging-outbound-guard.test.ts`. Full write-up in
+`docs/claude/staging-sites.md`.
 
-This is the one item that should block inviting anyone onto staging.
+One correction to what this section originally proposed, recorded because the
+reasoning matters more than the conclusion. The plan said to derive the
+predicate from the request host matching a `stagingDomains` entry, and
+explicitly **not** from `VERCEL_ENV`, "since every PR preview is also
+`preview`". That objection is right for identifying staging *specifically* —
+which is why `isStagingHost` still exists and still drives the banner and the
+noindex header — and backwards for *blocking outbound writes*: every PR preview
+carries the same production credentials and has no staging hostname, so a
+host-only predicate would have left every preview able to mutate the real
+league. Over-matching is the correct direction here. `VERCEL_ENV` also needs no
+plumbing, which matters because not every write site has a hostname in scope.
+
+The guard fails OPEN when `VERCEL_ENV` is unset — GitHub Actions and `pnpm dev`
+— so it protects against a deployed staging or preview site, not a
+misconfigured script.
 
 Also needed, smaller:
 
@@ -486,13 +498,13 @@ Ranked by what this repo specifically lacks, not by general merit.
 4. ~~CI branch filters (`ci.yml`, `codeql.yml`) and the audit of the other
    two~~ — **done**.
 5. ~~Chromatic retarget~~ — **done**.
-6. `isStagingDeploy()` + outbound-write guards + guard test. **Before** anyone
-   is invited to use staging — this is the highest priority of what remains.
-7. `noindex` + staging banner.
+6. ~~Outbound-write guards + guard test~~ — **done**.
+7. ~~`noindex` + staging banner~~ — **done**.
 8. `staging` branch, merge-down automation, branch protection (required checks
    for `staging`, now that the workflows report on it).
 9. Promotion workflow (fast-forward check, CI-green check, the `/release-review`
    GO gate); move the What's New rollup behind it.
 10. Smoke tests, version stamp, error monitoring.
 
-Steps 1–7 are worth doing regardless of whether the weekly cadence sticks.
+Steps 1–7 are done, and were worth doing regardless of whether the weekly
+cadence sticks. What remains (8–10) is the train itself.

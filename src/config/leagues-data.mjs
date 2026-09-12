@@ -511,6 +511,47 @@ export function isSharedAppHost(hostname) {
 }
 
 /**
+ * The shared host's staging twin. Named separately from SHARED_APP_HOSTS
+ * because that list answers "is this the multi-league host?" (either
+ * environment) while this answers "is this a staging host?" — two different
+ * questions that happen to share an entry.
+ */
+const SHARED_APP_STAGING_HOST = 'staging.mfl.football';
+
+/**
+ * Every staging hostname the site answers on: each league's `stagingDomains`
+ * plus the shared host's staging twin.
+ *
+ * Derived, never a second hand-maintained list — a staging host that exists in
+ * Vercel but not here is a host the write guard does not recognise, which is
+ * the failure this whole mechanism exists to prevent.
+ *
+ * @returns {string[]}
+ */
+export function stagingHosts() {
+  const hosts = [SHARED_APP_STAGING_HOST];
+  for (const league of ALL_LEAGUES) {
+    hosts.push(...(league.stagingDomains ?? []));
+  }
+  return hosts;
+}
+
+/**
+ * Is this hostname one of the staging sites?
+ *
+ * Used for the things that are decided by WHERE the viewer is — the noindex
+ * header and the staging banner. It is deliberately NOT the whole story for
+ * blocking outbound writes: see isNonProductionDeploy() in
+ * src/utils/deploy-environment.ts for why that question is answered by the
+ * deployment rather than the host.
+ *
+ * @param {string} hostname
+ */
+export function isStagingHost(hostname) {
+  return stagingHosts().includes(hostname);
+}
+
+/**
  * Canonical absolute origin for a league (e.g. 'https://www.theleague.us'),
  * or null when the league has no apex domain. THE way to build absolute
  * URLs to a league — session cookies are host-only, so every producer of

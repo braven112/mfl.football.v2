@@ -18,6 +18,8 @@
  * report into a stranger's tracker. Same literal the admin dashboard already
  * uses (`src/pages/api/admin/schefter-stats.ts`).
  */
+import { outboundAllowed } from './deploy-environment';
+
 export const SITE_REPO = 'braven112/mfl.football.v2';
 
 /**
@@ -61,6 +63,25 @@ export type CreateIssueResult =
 export async function createGitHubIssue(
   input: CreateIssueInput,
 ): Promise<CreateIssueResult> {
+  // The suggestion box files real issues on the real repo. A staging or
+  // preview deployment holds the same token, so without this an idea filed
+  // while testing lands in the actual backlog.
+  //
+  // Shaped as a normal failure result, not a throw: the route already renders
+  // `error` back to the owner, so this explains itself in the UI instead of
+  // becoming a 500. 503 matches the no-token case below — both mean "this
+  // server cannot file issues", which is exactly true here.
+  if (!outboundAllowed()) {
+    return {
+      ok: false,
+      status: 503,
+      error:
+        'Issue filing is disabled on this deployment. The staging and preview ' +
+        'sites share production credentials, so they never write to GitHub — ' +
+        'file this from the production site.',
+    };
+  }
+
   const token = getGitHubToken();
   if (!token) {
     return {

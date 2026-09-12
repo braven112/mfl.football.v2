@@ -264,6 +264,7 @@ const onForeignLeagueHost =
 // Resolve theme preference (server-side). For 'auto', render no class — the
 // pre-paint inline script (ThemeScript) resolves it against prefers-color-scheme.
 const themePref = getThemePreference(Astro.cookies);
+import StagingBanner from '../components/shared/StagingBanner.astro';
 ---
 
 <!DOCTYPE html>
@@ -341,6 +342,7 @@ const themePref = getThemePreference(Astro.cookies);
 		<ClientRouter />
 	</head>
 	<body>
+		<StagingBanner />
 		<!-- Navigation progress bar — shows instantly on internal link clicks -->
 		<div id="nav-progress" aria-hidden="true"></div>
 

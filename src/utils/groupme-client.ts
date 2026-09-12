@@ -8,6 +8,7 @@
 
 import type { GroupMeApiMessage, GroupMeMessagesResponse, GroupMeUserResponse, GroupMeGroupResponse, GroupMeMember } from '../types/groupme';
 import { stripLinkAdjacentPunctuation } from './link-punctuation.mjs';
+import { outboundAllowed } from './deploy-environment';
 
 const API_BASE = 'https://api.groupme.com/v3';
 
@@ -259,6 +260,11 @@ export async function fetchMessages(opts?: {
  * Requires that user's personal GroupMe access token.
  */
 export async function sendMessage(text: string, token: string): Promise<boolean> {
+  if (!outboundAllowed()) {
+    console.warn('[groupme] sendMessage suppressed on a non-production deployment');
+    return false;
+  }
+
   const groupId = getGroupId();
   const url = `${API_BASE}/groups/${groupId}/messages?token=${encodeURIComponent(token)}`;
 
@@ -287,6 +293,16 @@ export async function sendMessage(text: string, token: string): Promise<boolean>
  * Uses GROUPME_BOT_ID env var.
  */
 export async function postAsBot(text: string): Promise<boolean> {
+  // The live bot lane for Schefter's posts AND the owner-compose route, so a
+  // staging deploy that reached here would post to the real group chat with
+  // production's bot id. Refused before the send; `false` matches this
+  // function's existing "did not post" contract, which every caller already
+  // handles.
+  if (!outboundAllowed()) {
+    console.warn('[groupme] postAsBot suppressed on a non-production deployment');
+    return false;
+  }
+
   const botId = process.env.GROUPME_BOT_ID;
   if (!botId) {
     console.warn('[groupme] GROUPME_BOT_ID not configured, skipping bot post');

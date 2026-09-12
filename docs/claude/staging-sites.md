@@ -129,11 +129,70 @@ own HTML page, discarding the JSON body (see
 `docs/claude/insights/domains/deployment.md`, 2026-07-07). A staging site that
 cannot reproduce that is worth less than one behind an annoying rule.
 
+## Outbound writes are blocked; Redis writes are not
+
+The staging sites hold production's secrets, so without a guard they can do
+four things that cannot be undone: write MFL (lineups, contracts, waivers) in
+the real league, push notifications to real owners' devices with production's
+VAPID keys, post to the real GroupMe, and file real GitHub issues from the
+suggestion box.
+
+All four are refused. `src/utils/deploy-environment.ts` holds the predicate and
+each outbound path calls it immediately before its network call:
+
+| Path | Choke point | On refusal |
+|---|---|---|
+| MFL write | `mflFetch` (`src/utils/mfl-fetch.ts`) | throws `OutboundBlockedError` |
+| Web push | `sendPushToFranchise` (`src/utils/push-sender.ts`) | returns zeros — its contract is never to throw |
+| GroupMe | `sendMessage` / `postAsBot` (`src/utils/groupme-client.ts`) | returns `false` |
+| GitHub issue | `createGitHubIssue` (`src/utils/github-issues.ts`) | returns a 503 result the Board renders |
+
+Four things about the shape, each of which was a decision:
+
+- **The guard is at the choke point, not the route.** A dozen routes reach
+  these services; a route-layer check is one forgotten route away from failing
+  open. Five of the six MFL writer utils already funnel through `mflFetch`,
+  which is what makes one guard cover them all.
+- **It is the DEPLOYMENT that is checked, not the request host.** `VERCEL_ENV`
+  answers "is this production?" per deployment with no plumbing, and it covers
+  PR previews — which carry the same credentials and have no staging hostname,
+  so a host check would miss them entirely. `isStagingHost` is the separate
+  host question, used for the noindex header and the banner.
+- **Unknown fails OPEN.** `VERCEL_ENV` is unset in GitHub Actions, where the
+  cron scripts run against the real league and must keep working, and unset
+  under `pnpm dev`. This guard protects against a deployed staging or preview
+  site, not against a misconfigured script.
+- **Refusal happens at the send, not at the door.** Validation, authorization
+  and payload building all still run on staging — "does this request do the
+  right thing?" is exactly what staging is for. Only the send is withheld.
+
+`tests/staging-outbound-guard.test.ts` is the mechanical half: it fails when a
+choke point loses its guard, and when any other file reaches one of the four
+services directly. That is how this realistically breaks — nobody deletes the
+guard from `postAsBot`, someone adds a second sender a year from now.
+
+## Not indexed, and it says so
+
+- **`X-Robots-Tag: noindex, nofollow`** is set in `src/middleware.ts` for every
+  staging host and every preview deployment. A header rather than a `<meta>`
+  tag because it has to cover API routes, OG image endpoints and redirects too;
+  `public/robots.txt` cannot do it because one file ships with the deployment
+  and would answer every host the same way.
+- **A banner** (`src/components/shared/StagingBanner.astro`) names the
+  environment on every page, in all three layouts. Owners do end up on these
+  hosts, the site is pixel-identical to production and shows production's real
+  data, and guessing wrong runs both directions — a bug reported against a
+  week-old build, or a "why didn't my lineup save" when the write was refused
+  on purpose. Its colors are hard-coded rather than tokenised so it looks the
+  same in both themes; a warning that restyles itself into the page's palette
+  stops being noticed.
+
 ## What the staging sites are NOT
 
 - **Not isolated.** They share production's Upstash, so a click on test moves
-  real Board unread badges, watch lists and rankings. MFL writes hit the live
-  league — there is no sandbox league.
+  real Board unread badges, watch lists and rankings. Outbound writes (MFL,
+  push, GroupMe, GitHub) are blocked — see above — but Redis is not, and that
+  is deliberate: staging showing real data is the reason it exists.
 - **Not a closed world.** The nav league switcher goes through `leagueOrigin`,
   which is `canonicalDomain` by design, so switching leagues from
   `staging.theleague.us` lands on production `www.afl-fantasy.com`.
