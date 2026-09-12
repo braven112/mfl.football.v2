@@ -88,6 +88,101 @@
       "statusCode": 301
     },
     {
+      "source": "/contracts/manage",
+      "destination": "/front-office/contracts",
+      "statusCode": 301
+    },
+    {
+      "source": "/trade-builder",
+      "destination": "/front-office/trade-builder",
+      "statusCode": 301
+    },
+    {
+      "source": "/projected-free-agents",
+      "destination": "/front-office/projected-free-agents",
+      "statusCode": 301
+    },
+    {
+      "source": "/salary",
+      "destination": "/front-office/salary-analytics",
+      "statusCode": 301
+    },
+    {
+      "source": "/salary-history",
+      "destination": "/front-office/salary-history",
+      "statusCode": 301
+    },
+    {
+      "source": "/salary-archive",
+      "destination": "/front-office/salary-archive",
+      "statusCode": 301
+    },
+    {
+      "source": "/calculator",
+      "destination": "/front-office/contract-tools",
+      "statusCode": 301
+    },
+    {
+      "source": "/dead-money",
+      "destination": "/front-office/dead-money",
+      "statusCode": 301
+    },
+    {
+      "source": "/league-comparison",
+      "destination": "/front-office/league-comparison",
+      "statusCode": 301
+    },
+    {
+      "source": "/theleague/contracts/manage",
+      "destination": "/theleague/front-office/contracts",
+      "statusCode": 301
+    },
+    {
+      "source": "/theleague/trade-builder",
+      "destination": "/theleague/front-office/trade-builder",
+      "statusCode": 301
+    },
+    {
+      "source": "/theleague/projected-free-agents",
+      "destination": "/theleague/front-office/projected-free-agents",
+      "statusCode": 301
+    },
+    {
+      "source": "/theleague/salary",
+      "destination": "/theleague/front-office/salary-analytics",
+      "statusCode": 301
+    },
+    {
+      "source": "/theleague/salary-history",
+      "destination": "/theleague/front-office/salary-history",
+      "statusCode": 301
+    },
+    {
+      "source": "/theleague/salary-archive",
+      "destination": "/theleague/front-office/salary-archive",
+      "statusCode": 301
+    },
+    {
+      "source": "/theleague/calculator",
+      "destination": "/theleague/front-office/contract-tools",
+      "statusCode": 301
+    },
+    {
+      "source": "/theleague/dead-money",
+      "destination": "/theleague/front-office/dead-money",
+      "statusCode": 301
+    },
+    {
+      "source": "/theleague/league-comparison",
+      "destination": "/theleague/front-office/league-comparison",
+      "statusCode": 301
+    },
+    {
+      "source": "/afl-fantasy/trade-builder",
+      "destination": "/afl-fantasy/front-office/trade-builder",
+      "statusCode": 301
+    },
+    {
       "source": "/theleague/:path*",
       "destination": "/:path*",
       "has": [

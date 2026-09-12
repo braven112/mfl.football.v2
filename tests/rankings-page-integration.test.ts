@@ -112,11 +112,11 @@ describe('rankings reach every decision page', () => {
   });
 
   describe('Projected Free Agents', () => {
-    const PFA = 'src/pages/theleague/projected-free-agents.astro';
+    const PFA = 'src/pages/theleague/front-office/projected-free-agents.astro';
 
     it('injects its ranking columns via the shared module', () => {
       const src = read(PFA);
-      expect(src).toContain("from '../../utils/rankings-table'");
+      expect(src).toContain("from '../../../utils/rankings-table'");
       expect(src).toContain('initRankingTable(');
     });
 
