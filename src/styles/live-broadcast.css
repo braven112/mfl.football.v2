@@ -311,7 +311,21 @@
 }
 
 .lbc__cells[data-games='2'] .lbc__cell + .lbc__cell {
-  border-left: 1px solid var(--lbc-hairline);
+  /*
+   * An inset SHADOW, not a `border-left`, and that is not a style choice.
+   *
+   * `.lbc__cell` carries a `border-image` for the win-probability gradient,
+   * and a border-image REPLACES `border-style` on every side — capping it with
+   * `border-image-width: 1 0 0 0` stops the gradient painting here but does
+   * not bring the border style back, so a `border-left` renders NOTHING.
+   *
+   * Both halves of that shipped: uncapped, this divider painted the gradient's
+   * 0% stop, a saturated bar in the owner's own team colour hard against Game
+   * 1's score. Capped, it vanished entirely. A shadow is unaffected by the
+   * border-image and is the only one of the three that actually draws a
+   * hairline.
+   */
+  box-shadow: inset 1px 0 0 var(--lbc-hairline);
   padding-left: 0.6vw;
 }
 
@@ -334,7 +348,19 @@
   display: flex;
   flex-direction: column;
   justify-content: center;
-  gap: 0.3vh;
+  /*
+   * NOT `cqh`. An element is never its own query container — `container-type`
+   * here makes the cell a container for its DESCENDANTS — so a `cqh` in this
+   * rule resolves against `.lbc__panel` instead and comes out larger than
+   * intended, in the box whose documented failure is `overflow: hidden` eating
+   * the opponent's side.
+   *
+   * A fixed 3.2px was the original, and it put two 83px numerals close enough
+   * to read as one block from a couch while ~94px of the cell went unspent —
+   * the "tight" report is a rhythm problem, not a size one. `vh` is the honest
+   * unit for a gap on a surface whose height IS the viewport.
+   */
+  gap: clamp(4px, 1.1vh, 22px);
   min-width: 0;
   min-height: 0;
   /* The win-probability split doubles as the cell's top border at the
@@ -347,7 +373,36 @@
       var(--lbc-theirs, #334155) calc(var(--wp-split, 50%) + 0.2%) 100%
     )
     1;
+  /*
+   * The gradient is the TOP border and only the top border.
+   *
+   * `border-image-width` defaults to 1 — a MULTIPLE of each side's
+   * border-width — so the image paints on every border that has width. The
+   * doubleheader divider below is a 1px `border-left`, which meant it rendered
+   * the gradient's left slice: its 0% stop, `--lbc-mine`. A saturated
+   * full-height bar in the owner's own team colour, hard against Game 1's
+   * score numeral, where a hairline was intended.
+   *
+   * Load-bearing and easy to lose: the `border-image` SHORTHAND above resets
+   * this to 1 again, so it must stay after it.
+   */
+  border-image-width: 1 0 0 0;
   padding-top: 0.4vh;
+  /*
+   * Counter-drift on a 97s period, co-prime with the root's 90s, so the
+   * brightest persistent glyphs never retrace the same path.
+   *
+   * On the CELL, not on `.lbc__score`. Drifting the numeral alone moved it
+   * +/-5.8px horizontally and +/-3.2px vertically against a crest, a name and
+   * a projection that stayed put — so the row never settled, and on a
+   * doubleheader the numeral wandered into the divider. The whole matchup
+   * translates as a unit now, and the burn-in protection is unchanged.
+   *
+   * A transform does not affect container-query resolution, so `container-type:
+   * size` above still works.
+   */
+  transform: translate3d(var(--lbc-drift-x2, 0), var(--lbc-drift-y2, 0), 0);
+  transition: transform 12s ease-in-out;
 }
 
 .lbc__game-tag {
@@ -359,18 +414,45 @@
 
 .lbc__side {
   display: flex;
-  align-items: baseline;
-  gap: 0.5vw;
+  /*
+   * CENTRE, not baseline.
+   *
+   * Under baseline alignment the line's cross-size is ascent + descent, driven
+   * by an 83px numeral, so the shared text baseline sat ~75px down while the
+   * crest — `align-self: center` — centred at ~45px. The crest floated ~30px
+   * above the name it belongs to, and got worse as the tier got roomier.
+   *
+   * Centring also makes the line as tall as its tallest item rather than
+   * ascent + descent, which gives ~16px of cell height back per side — margin
+   * against the overflow-clipping failure `.lbc__cell` documents above.
+   */
+  align-items: center;
+  column-gap: clamp(8px, 0.5vw, 16px);
   min-width: 0;
 }
 
 .lbc__crest {
+  /* A SLOT, always present — see `.lbc__row-crest`. Rendered conditionally,
+     a matchup where only one franchise has artwork started the two team names
+     at different x, one above the other. */
+  display: flex;
+  align-items: center;
+  justify-content: center;
   width: min(14cqh, max(3.4vh, 1.1rem));
   height: min(14cqh, max(3.4vh, 1.1rem));
-  object-fit: contain;
   flex: none;
-  align-self: center;
+  /* An absolute ring, not a proportional one: this mark is ~37px and the
+     shared rule's 0.5px fallback is sub-pixel, so a light franchise cut had
+     no separating outline at all on the surface that is up for eight hours. */
+  --lbc-crest-ring-w: 1.5px;
 }
+
+.lbc__crest img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
 
 .lbc__tn {
   /*
@@ -402,10 +484,9 @@
   line-height: 0.9;
   color: var(--lbc-text-dim);
   flex: none;
-  /* Counter-drift on a 97s period, co-prime with the root's 90s, so the
-     brightest persistent glyphs on the board never retrace the same path. */
-  transform: translate3d(var(--lbc-drift-x2, 0), var(--lbc-drift-y2, 0), 0);
-  transition: transform 12s ease-in-out;
+  /* The counter-drift used to live HERE, on the numeral alone — see
+     `.lbc__cell`. It made the score the only moving thing in a row of static
+     neighbours, which is most of what "the scores are misaligned" was. */
 }
 
 /* The leading side is the one thing that is never dropped and never dimmed. */
@@ -711,12 +792,33 @@
 /* Which of the owner's teams this player is on — non-negotiable on a
    cross-league board. */
 .lbc__row-crest {
+  /*
+   * A SLOT that is always present, crest or not.
+   *
+   * Rendered conditionally, a crest-less franchise closed the row up by ~56px,
+   * so on a page mixing leagues some rows indented and others did not and the
+   * points column jumped between them. The draft board already holds its
+   * equivalent column open for exactly this reason
+   * (`.dbc-idle__row-crest`).
+   */
+  display: flex;
+  align-items: center;
+  justify-content: center;
   width: min(42cqh, 4vh);
   height: min(42cqh, 4vh);
-  object-fit: contain;
   flex: none;
+  /* Absolute: a 0.5px ring on a ~43px mark is sub-pixel, and this is the
+     other surface that is up for the whole afternoon. */
+  --lbc-crest-ring-w: 1.5px;
   opacity: 0.92;
 }
+
+.lbc__row-crest img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
 
 .lbc__pts {
   font-size: min(46cqh, 2.4rem);
@@ -785,9 +887,25 @@
 .lbc-reveal {
   position: relative;
   height: 100%;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
+  /*
+   * TWO COLUMNS: the copy, then the scorer.
+   *
+   * Was a centred flex column with the player as a chip inside the copy. The
+   * wash, crest and delta are all absolutely positioned with NO grid
+   * placement, so they still resolve against this element's padding box and
+   * nothing about the crest moves — which is the point: it is already anchored
+   * bottom-right, under where the figure now goes, so the crest-behind-cutout
+   * overlap the draft board engineers on purpose comes free here.
+   *
+   * The figure track is `auto`, not a `vw` constant: the stand is HEIGHT-
+   * derived (see `.lbc-reveal__stand`), so only its own intrinsic width is the
+   * right answer. A fixed track that came out narrower than the stand would
+   * push the man off the right edge by the difference and shave his arm.
+   */
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 2vw;
   padding: 3vh 4vw;
   box-sizing: border-box;
   overflow: hidden;
@@ -841,11 +959,20 @@
 
 .lbc-reveal__body {
   position: relative;
-  z-index: 1;
+  /*
+   * 2, not 1: the figure comes LATER in the DOM now, because the copy leads
+   * for a screen reader. Equal z-indexes would let a defender's shoulder paint
+   * over the play text. The draft board gets this ordering for free from a DOM
+   * order its own stylesheet documents as wrong.
+   */
+  z-index: 2;
   display: flex;
   flex-direction: column;
   gap: 1vh;
   min-width: 0;
+  /* The copy crosses the crest and, on a defensive reveal, the back man's
+     shoulder. Same shadow and same reason as the draft board's copy column. */
+  text-shadow: 0 0.2vh 1.4vh rgba(0, 0, 0, 0.55);
 }
 
 .lbc-reveal__kicker {
@@ -862,20 +989,177 @@
   font-weight: 600;
 }
 
-.lbc-reveal__face {
-  width: 18vh;
-  height: 18vh;
-  border-radius: 50%;
-  object-fit: cover;
-  flex: none;
-  background: rgba(255, 255, 255, 0.08);
+/* ── The figure ───────────────────────────────────────────────────────────
+   The scorer, large, outside any cell, beside the crest. `align-self: stretch`
+   so the stand has a definite height to derive its width from. */
+.lbc-reveal__figure {
+  z-index: 1;
+  align-self: stretch;
+  display: flex;
+  align-items: flex-end;
+  justify-content: flex-end;
+  min-width: 0;
+  /* Out through the layer's own padding on both axes, so the cutout reaches
+     the bottom edge to bleed and the right edge to run off screen. A MARGIN,
+     not a `translateX` — a percentage translate resolves against the element's
+     OWN width, which is the trap that landed the draft board's first attempt
+     at half the distance it intended. */
+  margin-block: -3vh;
+  margin-inline-end: -4vw;
+  /* This never clips. `.lbc-reveal` is the only thing that does, so measure a
+     bleed against the LAYER, not against this box. */
+  overflow: visible;
 }
 
-.lbc-reveal__nameline {
+/* ── The stand: exactly one cutout's box ──────────────────────────────────
+   An ESPN headshot is ~600x436 — LANDSCAPE — and this layer is only 64% of the
+   board tall (`.lbc__stage` insets by `--lbc-header-h`) while its column is
+   nearly half the board wide. So unlike the draft board's full-height card,
+   the scarce axis here is HEIGHT: its `width: 120%` of the column renders a man
+   ~770px tall inside a ~691px layer, and because the figure is bottom-anchored
+   and `.lbc-reveal` clips, the overflow lands at the TOP and takes his head
+   off. Fullscreen and inline both.
+
+   Full height at the art's own ratio makes this box one cutout by
+   construction. The model is `width: 100%` of it and nothing ever caps him
+   with a `max-height`, so the postage-stamp failure — which needs a
+   `max-width` binder — cannot happen either.
+
+   What it buys: every percentage below is a percentage of ONE MAN, which is
+   the invariant the draft board's column percentages were really expressing.
+   Its seats therefore transfer by dividing by 1.2 (a man is 120% of a column
+   there) and re-anchoring to the right edge. Do not re-derive them. */
+.lbc-reveal__stand {
+  position: relative;
+  flex: none;
+  height: 100%;
+  aspect-ratio: 600 / 436;
+}
+
+.lbc-reveal__model {
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  object-fit: contain;
+  object-position: bottom center;
+  filter: drop-shadow(0 1.4vh 2.4vh rgba(0, 0, 0, 0.55));
+}
+
+/* ── Team-defense pair ──
+   A defense is a UNIT, so it reveals as two of its stars rather than one man —
+   one reads as an ordinary player card with the wrong name over it. Each man
+   is a FULL cutout, not two shrunk to fit: two smaller men would read as a
+   lesser moment, and the whole point is that it is not a lesser card.
+
+   POSITIONED, never flexed. The draft board shipped this as flex items with a
+   negative margin on the assumption that `justify-content: center` splits the
+   overflow evenly. It does not — the pair hung entirely off one side, and on a
+   narrow screen the first man's face was sliced by the card edge. Offsets from
+   an edge are placed by construction and cannot drift with the line's width.
+
+   The seats: SPACING (40.83% of a man) is the composition and follows head
+   size — recompute it only if the cutouts change scale. The MIDPOINT is taste,
+   and slides by moving all three seats and the caption by a common delta. */
+.lbc-reveal__model.lbc-reveal__model--def {
+  position: absolute;
+  bottom: 0;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  /* Deliberately no `max-height`: the base rule and the breakpoints decide,
+     exactly as they do for a lone player. */
+}
+
+/* The higher-ranked man is in front, so his ear is never behind the other
+   man's shoulder. Source order alone would paint the second on top. */
+.lbc-reveal__model--def:nth-of-type(1) {
+  right: 32.92%;
+  z-index: 1;
+}
+
+.lbc-reveal__model--def:nth-of-type(2) {
+  right: -7.92%;
+}
+
+/* A 404 can leave one man standing. Seat him at the PAIR's centre — midway
+   between the two seats above — rather than leaving him in the first one,
+   which would park him well right of where the pair reads. Note this is the
+   pair's centre, NOT where a lone non-DEF cutout stands; different points. */
+.lbc-reveal__model--def:only-of-type {
+  right: 12.5%;
+}
+
+/* ── Defender caption ──
+   A team defense's headline is the UNIT ("Bills, Buffalo"), so these two are
+   faces the reveal would otherwise never name. One chip per man, each seated
+   under the head it names, across two equal seats spanning both heads. */
+.lbc-reveal__face {
+  position: absolute;
+  bottom: 3vh;
+  right: 21.67%;
+  width: 81.67%;
+  z-index: 2;
+  display: flex;
+  flex-direction: row;
+  align-items: flex-end;
+  margin: 0;
+  padding: 0;
+}
+
+.lbc-reveal__face-row {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  justify-content: center;
+}
+
+.lbc-reveal__face-chip {
   display: flex;
   align-items: center;
-  gap: 1.5vw;
+  gap: 0.5em;
+  /* This board escapes the layout's `main`-scoped border-box reset, so without
+     this the cap would land on the CONTENT box and the two plates would still
+     meet at 0px. */
+  box-sizing: border-box;
+  /* The air between the two chips, bought here rather than with a `gap` — a
+     gap between two `1fr` seats walks their centres away from the heads. */
+  max-width: calc(100% - 0.6em);
+  /* min beats max: without it the pill keeps its nowrap width and overflows. */
   min-width: 0;
+  white-space: nowrap;
+  padding: 0.35em 0.9em;
+  border-radius: 1em;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  font-size: max(2.2vh, 0.8rem);
+}
+
+.lbc-reveal__face-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-weight: 700;
+}
+
+.lbc-reveal__face-pos {
+  color: rgba(255, 255, 255, 0.72);
+  font-weight: 600;
+}
+
+/* Nothing to show — the one player with no cutout, a 404, or an unmapped
+   defense. Without this the figure column keeps its width as bare gradient.
+   A `:has()` rule and not a class because three separate places decide it, and
+   it is only SOUND because the error handlers null state and REMOVE the
+   `<img>`: a `display: none` fallback would still be there as far as `:has()`
+   is concerned. Note what is hidden is the empty BOX — the selector tests for
+   a model, so this can never hide the subject. */
+.lbc-reveal:not(:has(.lbc-reveal__model)) {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.lbc-reveal:not(:has(.lbc-reveal__model)) .lbc-reveal__figure {
+  display: none;
 }
 
 .lbc-reveal__name {
@@ -889,7 +1173,8 @@
 .lbc-reveal__play {
   font-size: max(3.2vh, 1rem);
   color: rgba(255, 255, 255, 0.9);
-  max-width: 62vw;
+  /* The grid column caps this now. 62vw would reach under the figure. */
+  max-width: 100%;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
@@ -1229,9 +1514,70 @@
   }
 }
 
+/* Fullscreen, idle: the board and nothing else.
+   The hover gate above is right on a laptop and wrong on the screen this page
+   exists for — a television's cursor is PARKED over the page and never leaves,
+   so `:hover` is permanently true and three buttons sit on the board all
+   afternoon. In fullscreen we gate on IDLENESS instead, the way a video player
+   does, and the cursor goes with them. Any pointer move, touch or key brings
+   both back for three seconds, so this can never trap someone in fullscreen —
+   which is why the old rule lived inside the pointer query in the first place.
+   Escape still exits regardless, on every browser. */
+.lbc.is-fullscreen.is-idle .lbc__chrome {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/*
+ * ...unless something in it has keyboard focus. This rule has to out-specify
+ * the one above (0,3,0), which the plain `:focus-within` further up does not —
+ * so without it a keyboard user who tabbed to a button watches it disappear
+ * three seconds later while still holding focus, which is the one way this
+ * idle-hide could genuinely trap someone.
+ */
+.lbc.is-fullscreen.is-idle .lbc__chrome:focus-within {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.lbc.is-fullscreen.is-idle {
+  cursor: none;
+}
+
 /* ── Laptop fallback — not a responsive target, just not broken ───────────── */
 @media (max-height: 950px) {
   .lbc { --lbc-header-h: 34%; }
+}
+
+/*
+ * PORTRAIT, at any width — the scorer becomes a backdrop.
+ *
+ * Split on ORIENTATION and not width, which is the lesson the draft board
+ * already paid for: a width-only rule misses a 1024x1366 tablet entirely. The
+ * figure track is sized from the LAYER'S HEIGHT (`height: 100%` x the cutout's
+ * 1.376 ratio), so on a tall portrait viewport the stand comes out ~1203px
+ * inside a ~942px content box and either crushes the copy's `minmax(0, 1fr)`
+ * track or overflows across it. Below 900px the phone block does this anyway;
+ * this is the same treatment for everything else that is taller than it is
+ * wide.
+ */
+@media (orientation: portrait) and (min-width: 901px) {
+  .lbc-reveal {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: 1fr;
+    gap: 0;
+  }
+  .lbc-reveal__body { align-self: center; }
+  .lbc-reveal__stand { height: auto; width: 100%; }
+  .lbc-reveal__figure {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    align-items: flex-end;
+    justify-content: center;
+    opacity: 0.55;
+    margin-inline-end: 0;
+  }
 }
 
 @media (max-width: 900px) {
@@ -1253,6 +1599,58 @@
 
   .lbc-reveal { padding: 2vh 5vw; }
   .lbc-reveal__name { font-size: min(9vh, 3rem); }
+
+  /*
+   * The scorer becomes a BACKDROP, not a second row.
+   *
+   * Stacking was tried first and cannot work here: on a 390x844 phone this
+   * whole layer is 375px tall, the copy needs ~270 of it, and a LANDSCAPE
+   * cutout in the ~96px left over measured 132x96 — the postage stamp this
+   * file's rules exist to prevent. Giving the figure row more only crops the
+   * copy, which is the one thing that must never be cropped.
+   *
+   * So he fills the layer behind the copy instead. Note what this is NOT: it
+   * is not hiding him to resolve a collision, which is the fix this repo has
+   * already made once and had to undo — he is still the largest thing on the
+   * screen, just underneath rather than beside. The copy already carries the
+   * text-shadow that makes it readable over him.
+   */
+  .lbc-reveal {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: 1fr;
+    gap: 0;
+  }
+  .lbc-reveal__body { align-self: center; }
+  /* Out of the grid entirely and behind the copy. Sized on WIDTH here, because
+     narrow-and-short flips which axis is scarce: the layer is 385px wide and
+     375 tall, so width is what a landscape cutout has to answer to. */
+  .lbc-reveal__stand {
+    height: auto;
+    width: 100%;
+  }
+
+  .lbc-reveal__figure {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    align-items: flex-end;
+    opacity: 0.55;
+    margin-inline-end: 0;
+    justify-content: center;
+    /* Must stay a ZERO. Reserving a height here so the absolutely-positioned
+       pair has a box would apply that floor to the two states with nothing to
+       show — a 404'd cutout and an unmapped defense — and read as a band of
+       bare gradient under the copy. A flexible row gives the pair its box for
+       free. */
+    min-height: 0;
+  }
+  /* Portrait relation: closer together and re-centred, since the column is the
+     whole width here rather than half of it. */
+  .lbc-reveal__model--def:nth-of-type(1) { right: 21.5%; }
+  .lbc-reveal__model--def:nth-of-type(2) { right: -21.5%; }
+  .lbc-reveal__model--def:only-of-type { right: 0; }
+  .lbc-reveal__face { right: 7%; width: 86%; }
+  .lbc-reveal__face-chip { flex-direction: column; align-items: flex-start; gap: 0; }
   .lbc-third { flex-wrap: wrap; gap: 0.8vw; }
   .lbc-third__play { display: none; }
 }

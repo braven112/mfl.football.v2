@@ -136,13 +136,15 @@ function BroadcastScoreHeader({ panels, scores, tier, hidden, games, meta }: Pro
                         {cellCount > 1 && <p className="lbc__game-tag">Game {matchup.index + 1}</p>}
 
                         <div className={`lbc__side${readable && mineLive >= theirsLive ? ' is-leading' : ''}`}>
-                          {matchup.mine.iconSmall && (
-                            <img
-                              {...crestStrokeProps('lbc__crest', matchup.mine.iconSmallStroke, 'lbc')}
-                              src={matchup.mine.iconSmall}
-                              alt=""
-                            />
-                          )}
+                          <span className="lbc__crest">
+                            {matchup.mine.iconSmall && (
+                              <img
+                                {...crestStrokeProps('', matchup.mine.iconSmallStroke, 'lbc')}
+                                src={matchup.mine.iconSmall}
+                                alt=""
+                              />
+                            )}
+                          </span>
                           <span className="lbc__tn">{nameAt(matchup.mine, tier)}</span>
                           <span className="lbc__proj">
                             <span className="lbc__proj-word">Proj </span>
@@ -163,13 +165,15 @@ function BroadcastScoreHeader({ panels, scores, tier, hidden, games, meta }: Pro
 
                         {matchup.opponent && (
                           <div className={`lbc__side${readable && theirsLive > mineLive ? ' is-leading' : ''}`}>
-                            {matchup.opponent.iconSmall && (
-                              <img
-                              {...crestStrokeProps('lbc__crest', matchup.opponent.iconSmallStroke, 'lbc')}
-                              src={matchup.opponent.iconSmall}
-                              alt=""
-                            />
-                            )}
+                            <span className="lbc__crest">
+                              {matchup.opponent.iconSmall && (
+                                <img
+                                  {...crestStrokeProps('', matchup.opponent.iconSmallStroke, 'lbc')}
+                                  src={matchup.opponent.iconSmall}
+                                  alt=""
+                                />
+                              )}
+                            </span>
                             <span className="lbc__tn">{nameAt(matchup.opponent, tier)}</span>
                             <span className="lbc__proj">
                               <span className="lbc__proj-word">Proj </span>

@@ -56,7 +56,15 @@ function Row({ row, dim }: { row: StripRow | null; dim: boolean }) {
       <span className="lbc__who">
         <span className="lbc__name">{row.name}</span>
         <span className="lbc__meta">
-          {row.nflTeam && <img className="lbc__nfl" src={nflLogo(row.nflTeam)} alt="" />}
+          {/* DEF hides the meta-row logo — `BroadcastFace` opts a team defense
+              into its NFL logo AS the face ("a team defense is a crest, not a
+              person"), so rendering it again here is the same club's mark
+              twice on one row, a few pixels apart. `LiveScoreboard` has
+              suppressed this since the shared PlayerCell did; this row is the
+              surface that forgot to. */}
+          {row.nflTeam && row.position.toUpperCase() !== 'DEF' && (
+            <img className="lbc__nfl" src={nflLogo(row.nflTeam)} alt="" />
+          )}
           <span>{row.position}</span>
           <span>·</span>
           <span>{row.leagueName}</span>
@@ -64,13 +72,15 @@ function Row({ row, dim }: { row: StripRow | null; dim: boolean }) {
       </span>
       {/* WHICH of the owner's teams this player is on — non-negotiable on a
           cross-league board, where the same man can be on two of them. */}
-      {row.crest && (
-        <img
-          {...crestStrokeProps('lbc__row-crest', row.crestStroke, 'lbc')}
-          src={row.crest}
-          alt=""
-        />
-      )}
+      {/* The SLOT is always here, crest or not — a franchise without one used
+          to close the row up by ~56px, so on a page mixing leagues some rows
+          indented and others did not and the points column jumped between
+          them. The draft board holds its equivalent column open the same way. */}
+      <span className="lbc__row-crest">
+        {row.crest && (
+          <img {...crestStrokeProps('', row.crestStroke, 'lbc')} src={row.crest} alt="" />
+        )}
+      </span>
       <span className="lbc__pts">{fmt(row.points)}</span>
       <span className="lbc__clock">
         <span

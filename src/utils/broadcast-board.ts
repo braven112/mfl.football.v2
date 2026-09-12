@@ -39,6 +39,9 @@ import { crestLeagueKey } from './dark-surface-crest';
 import { ensureContrastOn, ensureFieldOn } from './team-color-contrast';
 import { resolveBroadcastGradient } from './draft-broadcast';
 import { getPlayerMap } from './player-map';
+import { getDefSpotlightPlayers } from '../data/theleague/def-spotlight-players';
+import { getPlayerHeadshot } from '../constants/roster-constants';
+import { isEspnCdnUrl } from './espn-cdn';
 import { toBroadcastPair } from './draft-broadcast';
 
 /** The board's ground and its header panel — the two surfaces colour is judged against. */
@@ -48,6 +51,7 @@ import { chooseTeamName } from './team-names';
 import type { LiveSnapshot } from './live-scoring-snapshot';
 import type { NflGame, PlayerMeta } from '../types/live-scoring';
 import type {
+  BroadcastDefenderFace,
   BroadcastLeaguePanel,
   BroadcastPollResponse,
   BroadcastTeam,
@@ -82,6 +86,7 @@ export interface AssembledBoard {
   enabled: string[];
   panels: BroadcastLeaguePanel[];
   playerMeta: Record<string, PlayerMeta>;
+  defenseFaces: Record<string, BroadcastDefenderFace[]>;
   poll: BroadcastPollResponse;
 }
 
@@ -120,6 +125,60 @@ function brandsFor(slug: string): BrandMap {
   } catch {
     return {};
   }
+}
+
+/**
+ * Ship 3, show 2. The spare backfills when one man's cutout 404s, so a pair
+ * stays a pair rather than falling back to a lone figure.
+ */
+const DEFENSE_FACES_SHIPPED = 3;
+
+/**
+ * NFL club → marquee defenders, for the takeover's team-defense pair.
+ *
+ * A `Def` row is a CLUB, so it has no cutout of its own; the reveal borrows two
+ * of its stars. Resolved SERVER-side and shipped as URLs — never as `espnId`,
+ * which `src/types/live-broadcast.ts` forbids crossing to the client and which
+ * the draft board's equivalent does anyway.
+ *
+ * Two things here are load-bearing:
+ *
+ *  - **Call `getDefSpotlightPlayers`, never index `DEF_SPOTLIGHT_PLAYERS`.** A
+ *    DEF's team code arrives here already `normalizeTeamCode`d — so `WSH` —
+ *    while that table is keyed `WAS`, and MFL's own dialect (`GBP`, `KCC`,
+ *    `NEP`) misses eight more. The accessor does both hops. Iterating the table
+ *    instead forces the inverse mapping by hand, which is the direction that
+ *    silently drops nine defenses.
+ *  - **Key the OUTPUT by the raw `nflTeam` string**, so the island can do a
+ *    plain lookup without shipping a normalizer into the bundle.
+ *
+ * Board-scoped: only defenses actually started in an enabled league, three
+ * faces each, so a two-league board costs a few KB. The draft board's 101 KB
+ * came from hanging a pool off each of 320 pseudo-players; a flat table keyed
+ * by club cannot reproduce that.
+ */
+export function buildBroadcastDefenseFaces(
+  meta: Record<string, PlayerMeta>,
+): Record<string, BroadcastDefenderFace[]> {
+  const out: Record<string, BroadcastDefenderFace[]> = {};
+  for (const p of Object.values(meta)) {
+    if ((p.position || '').toUpperCase() !== 'DEF') continue;
+    const key = p.nflTeam || '';
+    if (!key || out[key]) continue;
+    const faces = getDefSpotlightPlayers(key)
+      .filter((d) => d.espnId)
+      .slice(0, DEFENSE_FACES_SHIPPED)
+      .map((d) => ({
+        name: d.name,
+        position: d.position ?? '',
+        headshot: getPlayerHeadshot(undefined, d.espnId),
+      }))
+      // A cutout or nothing: the figure collapses rather than show a silhouette
+      // where a person should be.
+      .filter((f) => isEspnCdnUrl(f.headshot));
+    if (faces.length > 0) out[key] = faces;
+  }
+  return out;
 }
 
 /**
@@ -402,7 +461,11 @@ export async function assembleBroadcastBoard(input: AssembleBoardInput): Promise
     games,
   };
 
-  return { leagues, enabled, panels, playerMeta, poll };
+  // Full mode only — same reasoning as `panels`. A poll carries numbers and
+  // events; this is identity, and identity cannot change during a Sunday.
+  const defenseFaces = mode === 'full' ? buildBroadcastDefenseFaces(playerMeta) : {};
+
+  return { leagues, enabled, panels, playerMeta, defenseFaces, poll };
 }
 
 /** The island's one-time props. */
@@ -416,6 +479,7 @@ export function toPageData(
     enabled: board.enabled,
     panels: board.panels,
     playerMeta: board.playerMeta,
+    defenseFaces: board.defenseFaces,
     initial: board.poll,
     sound: opts.sound,
     demo: opts.demo === true,

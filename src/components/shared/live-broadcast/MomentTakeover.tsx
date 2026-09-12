@@ -9,12 +9,40 @@
  *
  * It deliberately does NOT cover the fixed header: the header is what makes
  * the reveal mean something ("he scored, and here is what it did to me").
+ *
+ * ── The figure ────────────────────────────────────────────────────────────
+ *
+ * The scorer is a LARGE CUTOUT on the right, outside any cell, next to the
+ * franchise crest — the draft board's treatment, on the same hardware. He was
+ * an 18vh circular chip inside the copy until Sep 2026, which read as a row of
+ * the player strip blown up rather than as a moment.
+ *
+ * Four things here deliberately differ from `BroadcastRevealCard`, its
+ * equivalent on the draft board:
+ *
+ *  - **No `espnId` reaches this component.** `src/types/live-broadcast.ts`
+ *    forbids an ESPN athlete id crossing to the client at all, because a
+ *    college id and an NFL one are both plain digits. The draft board ships
+ *    `espnId` on `BroadcastDefenseFace` and builds the URL here; we take a
+ *    resolved URL instead, the way `PlayerMeta.headshot` already does. That
+ *    also rules out its college-headshot 404 hop, which needs the id — and
+ *    which would be the wrong cascade anyway, since this board's population is
+ *    rostered NFL players rather than pre-draft rookies.
+ *  - **The copy comes FIRST in the DOM.** The draft board's own stylesheet
+ *    admits its `order` swap is a bug; the defenders' names are real text and a
+ *    screen reader should reach the play before them. Paint order is held by
+ *    `z-index` instead, so a defender's shoulder can never cover the play text.
+ *  - **No shuffle.** The draft board randomises which defenders show because
+ *    the AFL can draft the same defense twice in one night. Here, seeing the
+ *    same two men every time the Chiefs defense scores is a feature.
+ *  - **Three faces ship, two show.** The spare backfills a 404 so a pair stays
+ *    a pair.
  */
 
-import { memo } from 'react';
+import { memo, useMemo, useState } from 'react';
 import type { BroadcastMoment } from '../../../utils/broadcast-moments';
-import type { BroadcastTeam } from '../../../types/live-broadcast';
-import { BroadcastFace } from '../draft-broadcast/BroadcastFace';
+import type { BroadcastDefenderFace, BroadcastTeam } from '../../../types/live-broadcast';
+import { isEspnCdnUrl } from '../../../utils/espn-cdn';
 import { crestStrokeProps } from '../../../utils/draft-broadcast';
 
 interface Props {
@@ -25,6 +53,12 @@ interface Props {
   position: string;
   nflTeam: string;
   headshot: string;
+  /**
+   * Marquee defenders, when the scorer is a team defense. Passed BY REFERENCE
+   * off the page data — slicing in the parent would defeat this component's
+   * `memo()` on every one-second tick.
+   */
+  defenders?: BroadcastDefenderFace[];
 }
 
 /** The kicker's headline word. Says WHAT happened, in one glance. */
@@ -45,7 +79,47 @@ function kickerFor(moment: BroadcastMoment): string {
   }
 }
 
-function MomentTakeover({ moment, team, scoreLine, position, nflTeam, headshot }: Props) {
+function MomentTakeover({
+  moment,
+  team,
+  scoreLine,
+  position,
+  nflTeam,
+  headshot,
+  defenders,
+}: Props) {
+  const isDef = position.toUpperCase() === 'DEF';
+
+  /**
+   * The solo cutout, or null.
+   *
+   * `!isDef && isEspnCdnUrl(headshot)` is `heroModelHasCutout`'s rule restated
+   * on a `PlayerMeta`. Don't import that helper — it takes a `HeroModel` and
+   * would drag `hero-casting.ts` into the browser bundle. `isEspnCdnUrl` is the
+   * leaf, and the leaf is the island-safe one.
+   *
+   * MFL's fallback JPG has a baked-in background that ruins the layering, so a
+   * player without a real cutout shows NO figure rather than a bad one — the
+   * grid collapses and the copy owns the layer.
+   */
+  const [cutout, setCutout] = useState<string | null>(() =>
+    !isDef && isEspnCdnUrl(headshot) ? headshot : null,
+  );
+
+  /**
+   * Cutouts that 404'd this reveal.
+   *
+   * Both initialisers only run on mount, which is exactly right and not an
+   * accident: `LiveBroadcast` keys the stage on the moment, so every reveal
+   * remounts this subtree.
+   */
+  const [dead, setDead] = useState<ReadonlySet<string>>(() => new Set());
+
+  const shown = useMemo(
+    () => (isDef ? (defenders ?? []).filter((d) => !dead.has(d.headshot)).slice(0, 2) : []),
+    [isDef, defenders, dead],
+  );
+
   const style: Record<string, string> = {};
   if (team) {
     style['--lbc-primary'] = team.primary;
@@ -55,6 +129,8 @@ function MomentTakeover({ moment, team, scoreLine, position, nflTeam, headshot }
     if (team.gradient) style['--lbc-gradient'] = team.gradient;
   }
 
+  const hasFigure = cutout !== null || shown.length > 0;
+
   return (
     <div className="lbc-reveal" style={style}>
       <div className="lbc-reveal__wash" aria-hidden="true" />
@@ -62,7 +138,10 @@ function MomentTakeover({ moment, team, scoreLine, position, nflTeam, headshot }
           takes `resolveBroadcastCrest`'s RESOLUTION-first art (400x400 GroupMe
           over the 100x100 hand cut) and buys dark-board legibility back with a
           ring. Both crest fields were the same 100px icon until Sep 2026, which
-          is what made this one visibly pixelated. */}
+          is what made this one visibly pixelated.
+          Anchored bottom-RIGHT, so it already sits under the figure column —
+          the crest-under-cutout overlap the draft board engineers on purpose
+          comes free here. Nothing about it needs to move. */}
       {team?.icon && (
         <img
           {...crestStrokeProps('lbc-reveal__crest', team.iconStroke, 'lbc')}
@@ -84,17 +163,7 @@ function MomentTakeover({ moment, team, scoreLine, position, nflTeam, headshot }
           Your {position || 'starter'} · {moment.leagueName}
           {team ? ` · ${team.name}` : ''}
         </p>
-        <div className="lbc-reveal__nameline">
-          {/* Its OWN size class. Reusing the strip's `lbc__face` resolved
-              `54cqh` against the strip's query container, which this layer is
-              not inside — so it collapsed to a 7.5vh thumbnail sitting on the
-              baseline of a 13vh heading. */}
-          <BroadcastFace
-            player={{ id: moment.playerId, mflId: moment.playerId, position, nflTeam, headshot }}
-            className="lbc-reveal__face"
-          />
-          <h2 className="lbc-reveal__name">{moment.playerName}</h2>
-        </div>
+        <h2 className="lbc-reveal__name">{moment.playerName}</h2>
         {/* ESPN's own summary, never rewritten. */}
         <p className="lbc-reveal__play">{moment.text}</p>
         <p className="lbc-reveal__line">
@@ -103,6 +172,61 @@ function MomentTakeover({ moment, team, scoreLine, position, nflTeam, headshot }
           <span>{scoreLine}</span>
         </p>
       </div>
+
+      {hasFigure && (
+        <div className="lbc-reveal__figure">
+          {/* One cutout's box, full height, at the art's own aspect ratio — so
+              every seat percentage below is a percentage of ONE MAN. See the
+              stylesheet for why this layer cannot use the draft board's
+              column percentages directly. */}
+          <div className="lbc-reveal__stand">
+            {cutout && (
+              <img
+                className="lbc-reveal__model"
+                src={cutout}
+                alt=""
+                aria-hidden="true"
+                // REMOVE the node, never `display: none` it — the empty-figure
+                // collapse is a `:has()` rule and a hidden element is still
+                // there as far as `:has()` is concerned.
+                onError={() => setCutout(null)}
+              />
+            )}
+            {shown.map((face) => (
+              <img
+                key={face.headshot}
+                className="lbc-reveal__model lbc-reveal__model--def"
+                src={face.headshot}
+                alt=""
+                aria-hidden="true"
+                onError={() =>
+                  setDead((prev) => {
+                    const next = new Set(prev);
+                    next.add(face.headshot);
+                    return next;
+                  })
+                }
+              />
+            ))}
+            {shown.length > 0 && (
+              /* A DEF's headline is the UNIT ("Bills, Buffalo"), so these two
+                 are faces the reveal would otherwise never name. */
+              <p className="lbc-reveal__face">
+                {shown.map((face) => (
+                  <span className="lbc-reveal__face-row" key={face.headshot}>
+                    <span className="lbc-reveal__face-chip">
+                      <span className="lbc-reveal__face-name">{face.name}</span>
+                      {face.position && (
+                        <span className="lbc-reveal__face-pos">{face.position}</span>
+                      )}
+                    </span>
+                  </span>
+                ))}
+              </p>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

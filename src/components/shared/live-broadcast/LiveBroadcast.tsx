@@ -314,6 +314,28 @@ export default function LiveBroadcast({ pageData }: Props) {
     [poll.games, poll.leagues],
   );
 
+  /**
+   * The marquee defenders for a team-defense moment, or undefined.
+   *
+   * Returned BY REFERENCE off the page data — no `.slice()`, no `.map()` here.
+   * Either would mint a new array every render and defeat `MomentTakeover`'s
+   * `memo()` on every one-second heartbeat, which is ~28,800 re-renders of the
+   * reveal over a Sunday. The component does its own slicing.
+   *
+   * Gated on position HERE rather than inside the component: without it a
+   * Kansas City wide receiver would resolve the Chiefs' defenders.
+   *
+   * Declared after `meta`, deliberately — it closes over it.
+   */
+  const defendersFor = useCallback(
+    (m: BroadcastMoment) => {
+      const who = meta[m.playerId];
+      if ((who?.position ?? '').toUpperCase() !== 'DEF') return undefined;
+      return data.defenseFaces[who?.nflTeam ?? ''];
+    },
+    [meta, data.defenseFaces],
+  );
+
   /** How long the board has had nothing to say. Drives the screensaver. */
   const quietSinceRef = useRef<number>(anyLive ? 0 : Date.now());
   useEffect(() => {
@@ -443,6 +465,56 @@ export default function LiveBroadcast({ pageData }: Props) {
 
   // ── sound (opt-in) ───────────────────────────────────────────────────────
   const [sound, setSound] = useState(data.sound);
+
+  /**
+   * Fullscreen, and whether the viewer has touched anything lately.
+   *
+   * The chrome was hover-gated, which is correct on a laptop and wrong on the
+   * screen this page exists for: a television's cursor is PARKED over the page
+   * and never leaves, so `:hover` is permanently true and three buttons sit on
+   * the board all afternoon. Gate on idleness instead, the way a video player
+   * does — hidden while you watch, back the moment you move.
+   *
+   * Only in fullscreen. Windowed, the chrome keeps its hover behaviour, since
+   * that is the state you are in while still setting the board up.
+   */
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [idle, setIdle] = useState(false);
+
+  useEffect(() => {
+    const onChange = () => setIsFullscreen(Boolean(document.fullscreenElement));
+    onChange();
+    document.addEventListener('fullscreenchange', onChange);
+    return () => document.removeEventListener('fullscreenchange', onChange);
+  }, []);
+
+  useEffect(() => {
+    if (!isFullscreen) {
+      setIdle(false);
+      return;
+    }
+    let timer = 0;
+    const wake = () => {
+      setIdle(false);
+      window.clearTimeout(timer);
+      // Long enough to find the button you reached for, short enough that the
+      // board is clean again before the next play.
+      timer = window.setTimeout(() => setIdle(true), 3000);
+    };
+    wake();
+    // `pointermove` covers mouse and trackpad; `touchstart` and `keydown` are
+    // the two ways a television or a remote reaches this at all.
+    for (const ev of ['pointermove', 'pointerdown', 'touchstart', 'keydown'] as const) {
+      window.addEventListener(ev, wake, { passive: true });
+    }
+    return () => {
+      window.clearTimeout(timer);
+      for (const ev of ['pointermove', 'pointerdown', 'touchstart', 'keydown'] as const) {
+        window.removeEventListener(ev, wake);
+      }
+    };
+  }, [isFullscreen]);
+
   useEffect(() => {
     if (!sound || !current || current.side !== 'mine') return;
     // A short synthesized sting rather than an asset: there is no audio file
@@ -525,7 +597,11 @@ export default function LiveBroadcast({ pageData }: Props) {
   const outgoing = outgoingKey ? (pages.find((p) => p.key === outgoingKey) ?? null) : null;
 
   return (
-    <main className={`lbc${isStale ? ' is-stale' : ''}`} style={rootStyle} aria-label="Live scoring broadcast">
+    <main
+      className={`lbc${isStale ? ' is-stale' : ''}${isFullscreen ? ' is-fullscreen' : ''}${idle ? ' is-idle' : ''}`}
+      style={rootStyle}
+      aria-label="Live scoring broadcast"
+    >
       <BroadcastScoreHeader
         panels={data.panels}
         scores={scoresByLeague}
@@ -555,6 +631,7 @@ export default function LiveBroadcast({ pageData }: Props) {
               position={meta[stage.moment.playerId]?.position ?? ''}
               nflTeam={meta[stage.moment.playerId]?.nflTeam ?? stage.moment.team}
               headshot={meta[stage.moment.playerId]?.headshot ?? ''}
+              defenders={defendersFor(stage.moment)}
             />
           )}
           {stage.kind === 'lower-third' && (
