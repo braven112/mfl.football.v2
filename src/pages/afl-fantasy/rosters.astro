@@ -46,6 +46,7 @@ import { getLeagueBySlug } from '../../config/leagues';
 import { parseTradeBaitPlayerIds, parseTradeBaitByFranchise } from '../../utils/trade-bait';
 import { getCachedTradeBait } from '../../utils/mfl-trade-bait-cache';
 import MyRankEditor from '../../components/shared/rankings/MyRankEditor.astro';
+import { buildKeeperPlannerStats } from '../../utils/afl-keeper-planner-stats';
 
 export const prerender = false;
 
@@ -386,15 +387,24 @@ const injuredReserve = roster.filter((p) => p.status === 'INJURED_RESERVE').leng
 const ROSTER_SIZE = 16;
 
 // Build the KeeperPlanner inputs (only really used when isOwner is true)
-const plannerRoster: KeeperPlannerPlayer[] = roster.map((p) => ({
-  id: p.id,
-  name: p.name,
-  position: p.position,
-  team: p.team,
-  age: p.age,
-  espnId: p.espn_id,
-  status: p.status,
-}));
+const plannerStatsById = buildKeeperPlannerStats(selectedYear);
+const plannerRoster: KeeperPlannerPlayer[] = roster.map((p) => {
+  const stats = plannerStatsById.get(p.id);
+  return {
+    id: p.id,
+    name: p.name,
+    position: p.position,
+    team: p.team,
+    age: p.age,
+    espnId: p.espn_id,
+    status: p.status,
+    ppg: stats?.ppg ?? null,
+    gamesPlayed: stats?.gamesPlayed,
+    positionalFinish: stats?.positionalFinish ?? null,
+    dynastyAdpRank: stats?.dynastyAdpRank ?? null,
+    redraftAdpRank: stats?.redraftAdpRank ?? null,
+  };
+});
 
 const teamNameLookup = new Map<string, string>(
   allTeams.map((t) => [t.franchiseId, t.nameShort || t.name])

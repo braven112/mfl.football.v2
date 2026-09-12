@@ -14,6 +14,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { getAllTeams } from './afl-conference';
 import { getCachedRosterFranchises } from './mfl-roster-cache';
+import { buildKeeperPlannerStats } from './afl-keeper-planner-stats';
 import type { KeeperPlannerPlayer, KeeperPlannerDraftPick } from '../components/afl-fantasy/KeeperPlanner.astro';
 
 const loadFeedJson = (leagueYearStr: string, filename: string): any => {
@@ -57,8 +58,10 @@ export async function buildFrontOfficeKeeperPlannerData(
   }
   const franchiseRoster = (rostersData?.rosters?.franchise as any[] | undefined)?.find((f) => f?.id === franchiseId);
   const rosterPlayers = (franchiseRoster?.player ?? []) as Array<{ id: string; status: string }>;
+  const statsById = buildKeeperPlannerStats(leagueYear);
   const roster: KeeperPlannerPlayer[] = rosterPlayers.map((p) => {
     const info = playersMap.get(p.id);
+    const stats = statsById.get(p.id);
     return {
       id: p.id,
       status: p.status || 'ROSTER',
@@ -67,6 +70,11 @@ export async function buildFrontOfficeKeeperPlannerData(
       team: info?.team || 'FA',
       age: info?.age || 'N/A',
       espnId: info?.espn_id,
+      ppg: stats?.ppg ?? null,
+      gamesPlayed: stats?.gamesPlayed,
+      positionalFinish: stats?.positionalFinish ?? null,
+      dynastyAdpRank: stats?.dynastyAdpRank ?? null,
+      redraftAdpRank: stats?.redraftAdpRank ?? null,
     };
   });
 

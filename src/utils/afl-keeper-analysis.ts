@@ -260,11 +260,13 @@ function asArray<T>(value: T[] | T | undefined | null): T[] {
  */
 const seasonPointsMemo = new WeakMap<
   WeeklyResultsRaw,
-  { points: Map<string, number>; maxCompletedWeek: number }
+  { points: Map<string, number>; games: Map<string, number>; maxCompletedWeek: number }
 >();
 
 export function computeSeasonPoints(weeklyRaw: WeeklyResultsRaw): {
   points: Map<string, number>;
+  /** Distinct scored weeks per player — the same (pid, week) dedupe as points. */
+  games: Map<string, number>;
   maxCompletedWeek: number;
 } {
   // The feed arrays come from eager import.meta.glob modules whose identity
@@ -316,11 +318,13 @@ export function computeSeasonPoints(weeklyRaw: WeeklyResultsRaw): {
   }
 
   const points = new Map<string, number>();
+  const games = new Map<string, number>();
   for (const [key, score] of perPlayerWeek) {
     const pid = key.slice(0, key.indexOf('|'));
     points.set(pid, (points.get(pid) ?? 0) + score);
+    games.set(pid, (games.get(pid) ?? 0) + 1);
   }
-  const result = { points, maxCompletedWeek };
+  const result = { points, games, maxCompletedWeek };
   if (weeklyRaw) seasonPointsMemo.set(weeklyRaw, result);
   return result;
 }
