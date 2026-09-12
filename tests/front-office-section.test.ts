@@ -68,12 +68,12 @@ describe('the Front Office page registry', () => {
       'rosters',
       'contracts',
       'trade-builder',
+      'league-comparison',
       'projected-free-agents',
       'dead-money',
       'salary-analytics',
       'salary-history',
       'salary-archive',
-      'league-comparison',
     ]);
     expect(frontOfficePagesFor('afl-fantasy').map((p) => p.key)).toEqual([
       'rosters',

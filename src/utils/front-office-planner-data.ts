@@ -319,7 +319,11 @@ export async function buildFrontOfficePlannerData(selectedTeamId: string): Promi
     const averageAge = calculateAverageAge(rows as any);
 
     teamMetrics[team.id] = {
-      capSpaceDisplay: formatCapSpaceDisplay(Math.max(capLimit - nextYearCapCharge, 0)),
+      // Deliberately NOT clamped to 0 like the avgPerPlayer math below: a team
+      // over the cap should read as a negative number ("-$36,255"), not as
+      // "$0" — clamping here would make an over-cap team look identical to
+      // one that's exactly at the wire.
+      capSpaceDisplay: formatCapSpaceDisplay(capLimit - nextYearCapCharge),
       avgPerPlayerDisplay: `${currencyFormatter.format(avgPerPlayer)} × ${remainingSlots}`,
       playersSignedDisplay: String(playersNextYear),
       cutHint:
