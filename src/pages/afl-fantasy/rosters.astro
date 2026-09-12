@@ -276,7 +276,12 @@ const roster: RosterEntry[] = rosterPlayers.map((p) => {
     name: info?.name || `Player ${p.id}`,
     position: info?.position || 'N/A',
     team: info?.team || 'FA',
-    age: info?.age || 'N/A',
+    // MFL's players feed has no `age` field at all, only `birthdate` (Unix
+    // seconds) — `info?.age` was always undefined here, silently shipping
+    // 'N/A' everywhere this field is read. calculateAgeFromBirthdate is
+    // defined below (hoisted; already this file's own convention for the
+    // Analytics view's age buckets).
+    age: String(calculateAgeFromBirthdate(info?.birthdate) ?? 'N/A'),
     college: info?.college || 'N/A',
     birthdate: info?.birthdate,
     height: info?.height,

@@ -10,6 +10,23 @@ import { readFileSync } from 'node:fs';
 import { buildKeeperPlannerStats } from '../src/utils/afl-keeper-planner-stats';
 
 const SRC = readFileSync('src/components/afl-fantasy/KeeperPlanner.astro', 'utf-8');
+const ROSTERS_SRC = readFileSync('src/pages/afl-fantasy/rosters.astro', 'utf-8');
+const FRONT_OFFICE_DATA_SRC = readFileSync('src/utils/front-office-keeper-data.ts', 'utf-8');
+
+describe('the age slider has real ages to filter on', () => {
+  it('AFL rosters.astro derives age from birthdate, never the nonexistent raw feed field', () => {
+    // MFL's players feed has no `age` field at all — only `birthdate`. A
+    // bare `info?.age || 'N/A'` silently shipped 'N/A' for every player and
+    // made the age slider a no-op. Both KeeperPlanner call sites must derive
+    // it instead.
+    expect(ROSTERS_SRC).toMatch(/age: String\(calculateAgeFromBirthdate\(info\?\.birthdate\) \?\? 'N\/A'\)/);
+  });
+
+  it('the Front Office panel data util derives age via the shared age-utils helper', () => {
+    expect(FRONT_OFFICE_DATA_SRC).toMatch(/from '\.\/age-utils'/);
+    expect(FRONT_OFFICE_DATA_SRC).toMatch(/age: String\(calculateAge\(p\.birthdate\) \?\? 'N\/A'\)/);
+  });
+});
 
 describe('KeeperPlanner decision-support features', () => {
   it('age filter hides cards above the chosen threshold, never the keeper slots', () => {
