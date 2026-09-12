@@ -29,7 +29,13 @@ import {
 import { buildBroadcastMoments, selectRedZoneAlerts } from './broadcast-moments';
 import { loadNflGameDetail } from './nfl-game-detail-source';
 import { fetchNflScoreboard } from './nfl-scoreboard-source';
-import { getLeagueTeamBrands, getLeagueTeamConfig } from './league-team-brands';
+import {
+  getLeagueTeamBrands,
+  getLeagueTeamConfig,
+  getLeagueTeamConfigs,
+} from './league-team-brands';
+import { broadcastStrokeIndex, resolveBroadcastCrest } from './broadcast-crest';
+import { crestLeagueKey } from './dark-surface-crest';
 import { ensureContrastOn, ensureFieldOn } from './team-color-contrast';
 import { resolveBroadcastGradient } from './draft-broadcast';
 import { getPlayerMap } from './player-map';
@@ -82,7 +88,6 @@ export interface AssembledBoard {
 const NEUTRAL: Omit<BroadcastTeam, 'franchiseId' | 'name' | 'nameShort' | 'abbrev'> = {
   icon: '',
   iconSmall: '',
-  crestStroke: 0,
   primary: '#334155',
   secondary: '#1e293b',
   swatch: '#64748b',
@@ -117,11 +122,57 @@ function brandsFor(slug: string): BrandMap {
   }
 }
 
+/**
+ * The two crests for one franchise, or empty strings when this site does not
+ * run the league (an outside `myleagues` entry has real names and no artwork).
+ *
+ * `crestLeagueKey` is load-bearing: the manifest keys the AFL as `afl` while
+ * the route directory is `afl-fantasy`, and passing the slug straight through
+ * finds no measured stroke at all — so a light crest would ship onto ink with
+ * no ring and nothing would say so.
+ */
+function crestsFor(
+  slug: string,
+  franchiseId: string,
+  cfg: any,
+  brand: { icon: string },
+  strokes?: Map<string, string | false | undefined>,
+): Pick<BroadcastTeam, 'icon' | 'iconSmall' | 'iconStroke' | 'iconSmallStroke'> {
+  // Without the raw config row there is no `groupMeDark`/`iconDark` to choose
+  // between, so the brand's own icon is the only art there is.
+  if (!cfg) return { icon: brand.icon || '', iconSmall: brand.icon || '' };
+
+  const crest = resolveBroadcastCrest(
+    { franchiseId, ...cfg },
+    crestLeagueKey(slug),
+    strokes,
+  );
+  return {
+    icon: crest.icon || brand.icon || '',
+    iconSmall: crest.iconSmall || brand.icon || '',
+    ...(crest.iconStroke ? { iconStroke: crest.iconStroke } : {}),
+    ...(crest.iconSmallStroke ? { iconSmallStroke: crest.iconSmallStroke } : {}),
+  };
+}
+
+/**
+ * The league's measured crest strokes, once per assembly. Mirrors `brandsFor`:
+ * throws for a league this site does not run, which is the ordinary case for
+ * an outside `myleagues` entry and not an error.
+ */
+function strokesFor(slug: string): Map<string, string | false | undefined> | undefined {
+  if (!slug) return undefined;
+  const teams = getLeagueTeamConfigs(slug);
+  if (teams.length === 0) return undefined;
+  return broadcastStrokeIndex(crestLeagueKey(slug), teams);
+}
+
 function teamFor(
   slug: string,
   brands: BrandMap,
   franchiseId: string,
   fallbackName: string,
+  strokes?: Map<string, string | false | undefined>,
 ): BroadcastTeam {
   const brand = brands[franchiseId];
   // The RAW config row, for the fields `TeamBrand` deliberately drops:
@@ -165,9 +216,18 @@ function teamFor(
     name,
     nameShort,
     abbrev,
-    icon: brand.icon || '',
-    iconSmall: brand.icon || '',
-    crestStroke: 0,
+    // Two crests, two different orders, because the two surfaces disagree
+    // about what matters. The takeover's is 68vh (~734px on a 1080p TV) and
+    // takes the HIGHEST-RESOLUTION art, buying dark-board legibility back with
+    // an outline; the header and lower-third crests are ~40-150px, where a
+    // 100px dark cut costs nothing and is simply the right artwork.
+    //
+    // Both fields were `brand.icon` until Sep 2026 — the same ~100px asset in
+    // both places — so the reveal's background crest was that small icon blown
+    // up 7x and visibly pixelated on the one screen this page exists for.
+    // `resolveBroadcastCrest` already encodes this split for the draft board;
+    // this is the second surface to need it, not a second copy of the rule.
+    ...crestsFor(slug, franchiseId, cfg, brand, strokes),
     primary,
     secondary,
     swatch,
@@ -268,6 +328,11 @@ export async function assembleBroadcastBoard(input: AssembleBoardInput): Promise
     const ok = !!result?.ok && !!snapshot;
     const slug = league.registered?.slug ?? '';
     const brands = brandsFor(slug);
+    // One measured-stroke index for the whole league rather than one per
+    // franchise: `crestStrokeIndex` walks the league's entire team list every
+    // call, so building it inside `teamFor` would rebuild all 24 AFL rows to
+    // read one of them, twice per matchup.
+    const strokes = strokesFor(slug);
     const names = namesFor(brands);
 
     if (!snapshot) {
@@ -293,7 +358,7 @@ export async function assembleBroadcastBoard(input: AssembleBoardInput): Promise
     const pairs = findOwnerMatchups(snapshot.matchups, league.franchiseId);
 
     if (mode === 'full') {
-      const mine = teamFor(slug, brands, league.franchiseId, league.franchiseName);
+      const mine = teamFor(slug, brands, league.franchiseId, league.franchiseName, strokes);
       panels.push({
         leagueId: league.id,
         leagueName: league.name,
@@ -302,7 +367,7 @@ export async function assembleBroadcastBoard(input: AssembleBoardInput): Promise
         matchups: pairs.map((pair, index) => ({
           index,
           mine,
-          opponent: teamFor(slug, brands, pair.opponentId, names[pair.opponentId] ?? ''),
+          opponent: teamFor(slug, brands, pair.opponentId, names[pair.opponentId] ?? '', strokes),
         })),
         // A league with a feed but no pairing is on a bye — a fact, not a fault.
         status: ok ? (pairs.length > 0 ? 'ok' : 'no-matchup') : 'unavailable',

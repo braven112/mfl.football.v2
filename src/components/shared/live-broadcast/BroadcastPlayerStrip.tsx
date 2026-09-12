@@ -10,6 +10,7 @@ import { memo } from 'react';
 import { BroadcastFace } from '../draft-broadcast/BroadcastFace';
 import { normalizeTeamCode } from '../../../utils/nfl-logo';
 import { padPage, type StripPage, type StripRow } from '../../../utils/broadcast-layout';
+import { crestStrokeProps } from '../../../utils/draft-broadcast';
 
 interface Props {
   page: StripPage | null;
@@ -63,7 +64,13 @@ function Row({ row, dim }: { row: StripRow | null; dim: boolean }) {
       </span>
       {/* WHICH of the owner's teams this player is on — non-negotiable on a
           cross-league board, where the same man can be on two of them. */}
-      {row.crest && <img className="lbc__row-crest" src={row.crest} alt="" />}
+      {row.crest && (
+        <img
+          {...crestStrokeProps('lbc__row-crest', row.crestStroke, 'lbc')}
+          src={row.crest}
+          alt=""
+        />
+      )}
       <span className="lbc__pts">{fmt(row.points)}</span>
       <span className="lbc__clock">
         <span

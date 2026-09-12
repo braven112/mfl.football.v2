@@ -7,6 +7,9 @@
 
 import { describe, it, expect } from 'vitest';
 import type { LiveScoringPlay, NflGame, PlayerMeta } from '../src/types/live-scoring';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { parseScoringPlays } from '../src/utils/espn-game-detail';
 import {
   MOMENT_MAX_AGE_MS,
   REVEAL_MINE_MS,
@@ -275,5 +278,180 @@ describe('the red-zone banner', () => {
 
   it('is derived fresh, so a drive that ends clears the banner', () => {
     expect(selectRedZoneAlerts([game({ situation: null })], [league()], meta)).toEqual([]);
+  });
+});
+
+describe('team defenses — a club scores, not a person', () => {
+  // A `Def` row is a CLUB. It carries no ESPN athlete id, so it can never
+  // appear in `play.playerIds`, so every defensive touchdown, takeaway and
+  // safety produced no reveal at all until Sep 2026 — two of the four triggers
+  // this board was specified to have, silently doing nothing. 32 team defenses
+  // are rostered in TheLeague and 28 in the AFL.
+  const defMeta: Record<string, PlayerMeta> = {
+    ...meta,
+    // MFL spells New England 'NEP' and ESPN spells it 'NE'; the join has to
+    // survive that or a real DEF never matches a real play.
+    '0504': { id: '0504', name: 'Patriots, New England', position: 'DEF', nflTeam: 'NEP', headshot: '', espnId: null, projected: 7 },
+    '0501': { id: '0501', name: 'Bills, Buffalo', position: 'DEF', nflTeam: 'BUF', headshot: '', espnId: null, projected: 8 },
+  };
+
+  const defLeague = (over: Partial<LeagueViewer> = {}) =>
+    league({
+      players: { '0001': [{ id: '1' }, { id: '0504' }], '0002': [{ id: '2' }, { id: '0501' }] },
+      ...over,
+    });
+
+  // A real shape: the play belongs to the team that ENDED with the ball.
+  const pick = (over: Partial<LiveScoringPlay> = {}) =>
+    play({
+      playId: 'int1',
+      typeAbbrev: '',
+      typeText: 'Pass Interception Return',
+      text: 'Marcus Jones 25 Yd Interception Return',
+      scoreValue: 0,
+      nflTeam: 'NE',
+      playerIds: [],
+      isTurnover: true,
+      ...over,
+    });
+
+  it('reveals a takeaway for the owner’s own defense', () => {
+    const moments = buildBroadcastMoments([pick()], [defLeague()], defMeta);
+    expect(moments).toHaveLength(1);
+    expect(moments[0].side).toBe('mine');
+    expect(moments[0].kind).toBe('turnover');
+    expect(moments[0].playerId).toBe('0504');
+    expect(moments[0].playerName).toBe('Patriots, New England');
+  });
+
+  it('reveals a defensive touchdown too — it is still a turnover', () => {
+    const moments = buildBroadcastMoments(
+      [pick({ typeAbbrev: 'TD', typeText: 'Interception Return Touchdown', scoreValue: 6 })],
+      [defLeague()],
+      defMeta,
+    );
+    expect(moments).toHaveLength(1);
+    expect(moments[0].kind).toBe('touchdown');
+    expect(moments[0].playerId).toBe('0504');
+  });
+
+  it('credits the OPPONENT’s defense to the opponent', () => {
+    const moments = buildBroadcastMoments([pick({ nflTeam: 'BUF' })], [defLeague()], defMeta);
+    expect(moments).toHaveLength(1);
+    expect(moments[0].side).toBe('opponent');
+    expect(moments[0].playerId).toBe('0501');
+  });
+
+  it('never credits the defense of the team that LOST the ball', () => {
+    // The join that matters. `nflTeam` is the club that ended with the ball;
+    // reading it as the offense would hand the takeaway to the defense that
+    // just gave it up, and look entirely plausible on screen.
+    const moments = buildBroadcastMoments([pick({ nflTeam: 'NE' })], [defLeague()], defMeta);
+    expect(moments.every((m) => m.playerId !== '0501')).toBe(true);
+  });
+
+  it('does NOT credit a defense on an ordinary offensive touchdown', () => {
+    // The NE OFFENSE scores while the viewer starts the NE defense. No
+    // possession changed, so no defense earned anything — but the play's team
+    // matches a rostered `Def` row, which is the only shape that can catch a
+    // missing `isTurnover` gate. Without it every offensive score by a club
+    // whose defense you start fires a second, bogus reveal.
+    const offensive = play({
+      playId: 'ne-td',
+      typeText: 'Rushing Touchdown',
+      text: 'Rhamondre Stevenson 3 Yd Rush',
+      nflTeam: 'NE',
+      playerIds: [],
+      isTurnover: false,
+    });
+    const moments = buildBroadcastMoments([offensive], [defLeague()], defMeta);
+    expect(moments).toHaveLength(0);
+  });
+
+  it('gives BOTH franchises a moment when they start the same defense', () => {
+    // The AFL duplicates rosters across its conferences, so one club's defense
+    // is routinely started by two franchises — the same reason `stake` is a
+    // list rather than a single franchise id.
+    const shared = buildBroadcastMoments(
+      [pick({ nflTeam: 'BUF' })],
+      [defLeague({
+        opponentIds: ['0002', '0003'],
+        opponentNames: { '0002': 'Rivals', '0003': 'Others' },
+        players: { '0001': [{ id: '1' }], '0002': [{ id: '0501' }], '0003': [{ id: '0501' }] },
+      })],
+      defMeta,
+    );
+    expect(shared).toHaveLength(2);
+    expect(new Set(shared.map((m) => m.franchiseId))).toEqual(new Set(['0002', '0003']));
+  });
+
+  it('stays silent when nobody in the league starts that defense', () => {
+    const moments = buildBroadcastMoments([pick({ nflTeam: 'DAL' })], [defLeague()], defMeta);
+    expect(moments).toHaveLength(0);
+  });
+});
+
+describe('the pick six, end to end through the real parse', () => {
+  // The bug this block exists for: every test above builds a LiveScoringPlay
+  // by hand, so all of them passed while the PARSE dropped `isTurnover` on
+  // scoring plays — `EspnScoringPlay` did not declare the field and
+  // `parseNotablePlays` skips anything already scoring. A pick six therefore
+  // reached the board with `isTurnover: false` and credited nobody at all:
+  // the DEF gate never fired, and the turnover role split had correctly
+  // dropped the quarterback. Assert against the recorded ESPN items, not
+  // against a play we wrote ourselves.
+  const raw = JSON.parse(
+    readFileSync(join(process.cwd(), 'tests/fixtures/espn-game-plays-turnovers.json'), 'utf8'),
+  );
+  const defensiveTds = raw.items.filter(
+    (i: any) => i.scoringPlay === true && i.isTurnover === true,
+  );
+
+  const toLivePlay = (p: any): LiveScoringPlay => ({
+    playId: p.playId,
+    gameId: 'g1',
+    sequence: p.sequence,
+    period: p.period,
+    clock: p.clock,
+    text: p.text,
+    typeAbbrev: p.typeAbbrev,
+    typeText: p.typeText,
+    // The recorded games are not NE/BUF, so pin the club to one the fixture
+    // league actually starts; the flag under test is `isTurnover`.
+    nflTeam: 'NE',
+    scoreValue: p.scoreValue,
+    playerIds: [],
+    wallclock: at(10),
+    isTurnover: p.isTurnover,
+    yards: 0,
+  });
+
+  const defMeta: Record<string, PlayerMeta> = {
+    ...meta,
+    '0504': { id: '0504', name: 'Patriots, New England', position: 'DEF', nflTeam: 'NEP', headshot: '', espnId: null, projected: 7 },
+  };
+  const defLeague = () =>
+    league({ players: { '0001': [{ id: '1' }, { id: '0504' }], '0002': [{ id: '2' }] } });
+
+  it('has recorded defensive touchdowns to assert against', () => {
+    expect(defensiveTds.length).toBeGreaterThanOrEqual(3);
+  });
+
+  it('carries isTurnover through parseScoringPlays', () => {
+    for (const item of defensiveTds) {
+      const [parsed] = parseScoringPlays({ items: [item] });
+      expect(parsed.isTurnover).toBe(true);
+    }
+  });
+
+  it('reveals every recorded pick six / fumble-return TD to the DEF’s owner', () => {
+    for (const item of defensiveTds) {
+      const [parsed] = parseScoringPlays({ items: [item] });
+      const moments = buildBroadcastMoments([toLivePlay(parsed)], [defLeague()], defMeta);
+      expect(moments).toHaveLength(1);
+      expect(moments[0].playerId).toBe('0504');
+      expect(moments[0].side).toBe('mine');
+      expect(moments[0].kind).toBe('touchdown');
+    }
   });
 });

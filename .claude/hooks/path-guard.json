@@ -332,12 +332,15 @@
         "src/types/live-broadcast.ts",
         "src/utils/broadcast-board.ts",
         "src/utils/broadcast-cookies.ts",
+        "src/utils/broadcast-crest.ts",
         "src/utils/broadcast-demo.ts",
         "src/utils/broadcast-layout.ts",
         "src/utils/broadcast-live-source.ts",
         "src/utils/broadcast-moments.ts",
         "src/utils/broadcast-selection.ts",
-        "src/utils/nfl-game-detail-source.ts"
+        "src/utils/espn-game-detail.ts",
+        "src/utils/nfl-game-detail-source.ts",
+        "src/utils/nfl-scoreboard-source.ts"
       ],
       "tests": [
         "tests/broadcast-moments.test.ts",
@@ -346,7 +349,8 @@
         "tests/broadcast-selection.test.ts",
         "tests/broadcast-shell-guards.test.ts",
         "tests/espn-notable-plays.test.ts",
-        "tests/broadcast-demo.test.ts"
+        "tests/broadcast-demo.test.ts",
+        "tests/nfl-live-routes.test.ts"
       ]
     },
     {

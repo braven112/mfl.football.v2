@@ -24,6 +24,7 @@
 
 import type { LiveScoringPlay, NflGame, PlayerMeta } from '../types/live-scoring';
 import { formatPlayClock } from './live-scoring-view';
+import { normalizeTeamCode } from './nfl';
 
 /**
  * How old a play may be and still be worth taking the screen for.
@@ -145,6 +146,25 @@ export function classifyPlay(play: LiveScoringPlay): MomentKind | null {
 }
 
 /**
+ * The MFL player id of the team defense for one NFL club, among the rows the
+ * viewer has a stake in. Undefined when nobody in this league starts it.
+ */
+function defPlayerIdFor(
+  stake: Map<string, string[]>,
+  meta: Record<string, PlayerMeta>,
+  nflTeam: string,
+): string | undefined {
+  const want = normalizeTeamCode(nflTeam);
+  if (!want) return undefined;
+  for (const playerId of stake.keys()) {
+    const m = meta[playerId];
+    if (!m || (m.position ?? '').toUpperCase() !== 'DEF') continue;
+    if (normalizeTeamCode(m.nflTeam ?? '') === want) return playerId;
+  }
+  return undefined;
+}
+
+/**
  * Every play in the slate, turned into per-owner moments across every league.
  *
  * The ownership map is per LEAGUE and its values are LISTS, and both halves of
@@ -190,13 +210,60 @@ export function buildBroadcastMoments(
     }
     if (stake.size === 0) continue;
 
+    // The TEAM DEFENSES the viewer has a stake in, keyed by NFL club.
+    //
+    // A `Def` row is a club, not a person, so it carries no ESPN athlete id and
+    // can never appear in `play.playerIds` — which meant defensive touchdowns,
+    // takeaways and safeties produced no reveal AT ALL until Sep 2026, while
+    // two of those are triggers this board was specified to have. 32 team
+    // defenses are rostered in TheLeague and 28 in the AFL, so this was not a
+    // corner case; it was every defensive score in both leagues.
+    const defStake = new Map<string, string[]>();
+    for (const [playerId, holders] of stake) {
+      if ((meta[playerId]?.position ?? '').toUpperCase() !== 'DEF') continue;
+      const code = normalizeTeamCode(meta[playerId]?.nflTeam ?? '');
+      if (!code) continue;
+      // Two franchises can start the same club's defense — the AFL duplicates
+      // rosters across its conferences — so this is a LIST for the same reason
+      // `stake` is.
+      const list = defStake.get(code);
+      if (list) for (const h of holders) { if (!list.includes(h)) list.push(h); }
+      else defStake.set(code, [...holders]);
+    }
+
     for (const play of plays) {
       const kind = classifyPlay(play);
       if (!kind) continue;
 
+      // Everyone with a stake in this play: the credited athletes, plus the
+      // team defense when the play is one the DEFENSE earned.
+      const credits: { playerId: string; holders: string[] }[] = [];
       for (const playerId of play.playerIds ?? []) {
         const holders = stake.get(playerId);
-        if (!holders) continue;
+        if (holders) credits.push({ playerId, holders });
+      }
+      // The two shapes the DEFENSE earns, and ESPN only flags one of them.
+      //
+      // `isTurnover` is exactly "possession changed", and on every such play
+      // ESPN attributes the play to the team that ENDED with the ball — the
+      // defense. That covers defensive touchdowns too, since an interception
+      // returned for a score is still a turnover. A SAFETY is not (`false`),
+      // so it is named separately, but it resolves the same way: both real
+      // safeties recorded put the play on the SCORING side.
+      //
+      // Verified across eleven turnovers and two safeties in
+      // tests/fixtures/espn-game-plays-turnovers.json, which also pins the
+      // join: backwards it credits the OPPOSING defense, and reads as
+      // perfectly plausible on screen.
+      if (play.isTurnover === true || kind === 'safety') {
+        const defHolders = defStake.get(normalizeTeamCode(play.nflTeam));
+        const defId = defPlayerIdFor(stake, meta, play.nflTeam);
+        if (defHolders && defId && !credits.some((c) => c.playerId === defId)) {
+          credits.push({ playerId: defId, holders: defHolders });
+        }
+      }
+
+      for (const { playerId, holders } of credits) {
 
         // Which franchises this play produces a moment for.
         //

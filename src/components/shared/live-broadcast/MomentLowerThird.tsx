@@ -12,6 +12,7 @@
 import { memo } from 'react';
 import type { BroadcastMoment } from '../../../utils/broadcast-moments';
 import type { BroadcastTeam } from '../../../types/live-broadcast';
+import { crestStrokeProps } from '../../../utils/draft-broadcast';
 
 interface Props {
   moment: BroadcastMoment;
@@ -26,7 +27,13 @@ function MomentLowerThird({ moment, team, scoreLine, position }: Props) {
       className="lbc-third"
       style={team ? ({ ['--lbc-primary' as string]: team.primary } as Record<string, string>) : undefined}
     >
-      {team?.iconSmall && <img className="lbc-third__crest" src={team.iconSmall} alt="" />}
+      {team?.iconSmall && (
+        <img
+          {...crestStrokeProps('lbc-third__crest', team.iconSmallStroke, 'lbc')}
+          src={team.iconSmall}
+          alt=""
+        />
+      )}
       <div className="lbc-third__who">
         <p className="lbc-third__kicker">Against you · {moment.leagueName}</p>
         <p className="lbc-third__name">{moment.playerName}</p>

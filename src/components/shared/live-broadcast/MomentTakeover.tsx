@@ -15,6 +15,7 @@ import { memo } from 'react';
 import type { BroadcastMoment } from '../../../utils/broadcast-moments';
 import type { BroadcastTeam } from '../../../types/live-broadcast';
 import { BroadcastFace } from '../draft-broadcast/BroadcastFace';
+import { crestStrokeProps } from '../../../utils/draft-broadcast';
 
 interface Props {
   moment: BroadcastMoment;
@@ -57,7 +58,19 @@ function MomentTakeover({ moment, team, scoreLine, position, nflTeam, headshot }
   return (
     <div className="lbc-reveal" style={style}>
       <div className="lbc-reveal__wash" aria-hidden="true" />
-      {team?.icon && <img className="lbc-reveal__crest" src={team.icon} alt="" aria-hidden="true" />}
+      {/* The biggest crest the board draws — 68vh, ~734px on a 1080p TV — so it
+          takes `resolveBroadcastCrest`'s RESOLUTION-first art (400x400 GroupMe
+          over the 100x100 hand cut) and buys dark-board legibility back with a
+          ring. Both crest fields were the same 100px icon until Sep 2026, which
+          is what made this one visibly pixelated. */}
+      {team?.icon && (
+        <img
+          {...crestStrokeProps('lbc-reveal__crest', team.iconStroke, 'lbc')}
+          src={team.icon}
+          alt=""
+          aria-hidden="true"
+        />
+      )}
 
       {moment.scoreValue > 0 && (
         <span className="lbc-reveal__delta" aria-hidden="true">

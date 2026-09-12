@@ -151,6 +151,30 @@ export function resolveCrestStroke(
 }
 
 /**
+ * Canonical league slug → the CREST MANIFEST's league key.
+ *
+ * They differ for the AFL: `afl-fantasy` is the route directory, `afl` is the
+ * manifest key, and every function in this module wants the latter. Passing
+ * the slug straight through silently finds no measured stroke, so a light
+ * crest ships onto ink with no ring — the exact bug this module exists to
+ * prevent, and one that stays invisible until the first AFL crest is measured.
+ *
+ * Lives here rather than in a caller because it is part of THIS module's
+ * contract; it was a private copy in `hero-crest.ts` until the live broadcast
+ * became the second surface that needed it.
+ */
+const CREST_LEAGUE_KEY: Record<string, string> = {
+  theleague: 'theleague',
+  'afl-fantasy': 'afl',
+  'best-ball-1': 'best-ball-1',
+};
+
+/** The manifest key for a canonical slug; unknown slugs pass through. */
+export function crestLeagueKey(slug: string): string {
+  return CREST_LEAGUE_KEY[slug] ?? slug;
+}
+
+/**
  * Build the `franchiseId -> stroke colour` lookup for one league, once per
  * page. Split out so the per-team resolver stays cheap in a `.map()`.
  *

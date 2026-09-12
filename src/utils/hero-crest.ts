@@ -27,25 +27,10 @@
  * the recap hero already made for the same reason; see dark-surface-crest.ts.
  */
 import { getLeagueTeamConfig } from './league-team-brands';
-import { resolveLargeSurfaceCrest } from './dark-surface-crest';
+import { crestLeagueKey, resolveLargeSurfaceCrest } from './dark-surface-crest';
 import { resolveHeroFranchiseBackdrop, type HeroFranchiseBackdrop } from './hero-franchise-backdrop';
 import { getNFLTeamLogo, isValidTeamCode } from './nfl-logo';
 import type { CanonicalLeagueSlug } from '../config/leagues';
-
-/**
- * Canonical slug → the CREST MANIFEST's league key. They differ for the AFL
- * (`afl-fantasy` is the route directory, `afl` is the manifest key) and
- * `resolveDarkSurfaceCrest` / `crestStrokeIndex` both want the latter. Passing
- * the slug straight through silently finds no measured stroke, so a light crest
- * ships onto ink with no ring — the exact bug dark-surface-crest.ts exists to
- * prevent. No AFL crest is measured today, which is precisely why this would
- * have gone unnoticed until one was.
- */
-const CREST_LEAGUE_KEY: Record<string, string> = {
-  theleague: 'theleague',
-  'afl-fantasy': 'afl',
-  'best-ball-1': 'best-ball-1',
-};
 
 export interface HeroCrest {
   src: string;
@@ -91,7 +76,7 @@ export function resolveHeroCrest({ franchiseId, league, nflTeam }: HeroCrestInpu
       // LARGE, not the default order: the hero's crest is `min(90%, 26rem)`
       // (~416px desktop, ~240px mobile), past the ~300px the theme-first order
       // is tuned for. Same call the draft broadcast's big crest makes.
-      const art = resolveLargeSurfaceCrest(team, CREST_LEAGUE_KEY[league] ?? league);
+      const art = resolveLargeSurfaceCrest(team, crestLeagueKey(league));
       if (art?.src) {
         return { src: art.src, ...(art.filter ? { filter: art.filter } : {}), kind: 'franchise' };
       }
@@ -134,5 +119,5 @@ export function resolveHeroFranchiseSkin(
   if (!franchiseId) return null;
   const team = getLeagueTeamConfig(league, franchiseId);
   if (!team) return null;
-  return resolveHeroFranchiseBackdrop(team, CREST_LEAGUE_KEY[league] ?? league);
+  return resolveHeroFranchiseBackdrop(team, crestLeagueKey(league));
 }

@@ -1057,16 +1057,31 @@ export function screensaverSceneMs(scene: ScreensaverScene): number {
  * its own `filter` for the drop shadow and an inline one would replace it
  * wholesale — the shadow would vanish at whichever sizes happened to need a
  * ring.
+ *
+ * `prefix` selects the stylesheet this renders against — `dbc` for the draft
+ * board, `lbc` for the live-scoring board. The two boards are separate
+ * stylesheets with no shared cascade, so the class and the custom property
+ * both have to move together; one helper rather than two keeps the "a light
+ * cut needs a ring" rule in a single place.
  */
 export function crestStrokeProps(
   baseClass: string,
-  color?: string
+  color?: string,
+  prefix: 'dbc' | 'lbc' = 'dbc'
 ): { className: string; style?: CSSProperties } {
   if (!color) return { className: baseClass };
+  // Both property names are written out IN FULL rather than composed from
+  // `prefix`. A computed key is the one form `tests/design-token-guard.test.ts`
+  // cannot see — it collects definitions by matching the literal `'--name':`
+  // — so building the string here silently un-defines the token for BOTH
+  // boards, and a crest that needs a ring just quietly stops having one.
+  // Cast each branch, not the union: a union of two custom-property literals
+  // has no overlap with CSSProperties and ts(2352) rejects the single cast.
+  const style: CSSProperties = prefix === 'lbc'
+    ? ({ '--lbc-crest-stroke': color } as CSSProperties)
+    : ({ '--dbc-crest-stroke': color } as CSSProperties);
   return {
-    className: `${baseClass} dbc-crest--stroked`,
-    // Custom properties are not in CSSProperties' key union — the cast is the
-    // same one `brandStyle` and the reveal card's own style object make.
-    style: { '--dbc-crest-stroke': color } as CSSProperties,
+    className: `${baseClass} ${prefix}-crest--stroked`,
+    style,
   };
 }

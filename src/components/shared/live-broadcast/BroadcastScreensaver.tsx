@@ -77,19 +77,37 @@ function BroadcastScreensaver({ scene, panels, scores, games, now, today }: Prop
       <div className="lbc-saver__rows">
         {panels.map((panel) => {
           const score = scores[panel.leagueId];
-          const matchup = panel.matchups[0];
-          const mine = matchup ? score?.teams[matchup.mine.franchiseId] : undefined;
-          const theirs = matchup?.opponent ? score?.teams[matchup.opponent.franchiseId] : undefined;
-          return (
-            <p className="lbc-saver__row" key={panel.leagueId}>
-              <span>{panel.leagueName}</span>
-              <span>
-                {matchup && mine
-                  ? `${fmt(mine.live)} – ${fmt(theirs?.live ?? 0)}`
-                  : 'No matchup this week'}
-              </span>
-            </p>
-          );
+          // EVERY matchup, not `matchups[0]`. A doubleheader is two real games
+          // against two different opponents, and this is the screen that shows
+          // where the day ended — taking only the first hid half the results
+          // of the week the board most needed to summarise.
+          if (panel.matchups.length === 0) {
+            return (
+              <p className="lbc-saver__row" key={panel.leagueId}>
+                <span>{panel.leagueName}</span>
+                <span>No matchup this week</span>
+              </p>
+            );
+          }
+          return panel.matchups.map((matchup) => {
+            const mine = score?.teams[matchup.mine.franchiseId];
+            const theirs = matchup.opponent ? score?.teams[matchup.opponent.franchiseId] : undefined;
+            return (
+              <p className="lbc-saver__row" key={`${panel.leagueId}:${matchup.index}`}>
+                <span>
+                  {panel.leagueName}
+                  {/* Only a doubleheader needs telling apart, so a single
+                      game keeps the bare league name it has always had. */}
+                  {panel.matchups.length > 1 && (
+                    <span className="lbc-saver__game"> · Game {matchup.index + 1}</span>
+                  )}
+                </span>
+                <span>
+                  {mine ? `${fmt(mine.live)} – ${fmt(theirs?.live ?? 0)}` : 'No matchup this week'}
+                </span>
+              </p>
+            );
+          });
         })}
       </div>
     </div>
