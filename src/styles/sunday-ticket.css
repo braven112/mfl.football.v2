@@ -266,6 +266,17 @@
   transition: border-color 0.15s ease, color 0.15s ease, background 0.15s ease;
 }
 .st-chip:hover { border-color: var(--league-accent); color: var(--page-text); }
+/* The site's focus ring is drawn 2px OUTSIDE the box, with a box-shadow beyond
+   that — and a rail is a scrollport that clips both. This is not a corner case:
+   tabbing to an off-screen chip scrolls it flush against that very edge, so the
+   normal keyboard path through a rail is the one that loses the indicator. Draw
+   it inside instead, the way the accounting tabs do (accounting.css). Covers the
+   `<summary>` chip too, which is focusable and carries `.st-chip`. */
+.st-rail .st-chip:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: -2px;
+  box-shadow: none;
+}
 .st-chip__dot { width: 0.5rem; height: 0.5rem; border-radius: 50%; background: var(--card-border); }
 .st-chip--on { color: var(--page-text); border-color: color-mix(in srgb, var(--league-accent) 55%, transparent); background: color-mix(in srgb, var(--league-accent) 10%, var(--card-surface)); }
 .st-chip--on .st-chip__dot { background: var(--league-accent); }

@@ -18,6 +18,10 @@
  *     because a background only as tall as the TEXT let a chip's rounded ends
  *     show above and below it as it scrolled underneath (caught in review).
  *
+ * A fifth joined them in review: inside a scrollport the site's focus ring —
+ * drawn outside the box — is clipped, and tabbing to an off-screen chip parks it
+ * flush against the clipping edge, so rail chips draw their ring inset.
+ *
  * And one markup rule the CSS cannot express: the links OUT — "Reset to my
  * leagues" and "Times in …" — live beside the rail, never inside it. An action
  * you can only reach by swiping past 24 league chips is the same as an action
@@ -87,6 +91,15 @@ describe('Sunday Ticket chip rails', () => {
     // the label and washes it at rest — the selected one, at every width.
     const fade = ruleBody('.st-chips__label::after');
     expect(fade).toContain('width: 0.45rem');
+  });
+
+  it('draws a chip\u2019s focus ring INSIDE the rail that would clip it', () => {
+    // The site ring is `outline-offset: 2px` plus a box-shadow, both outside the
+    // box and both clipped by the scrollport — and tabbing to an off-screen chip
+    // parks it flush against that edge, so this is the normal keyboard path.
+    const focus = ruleBody('.st-rail .st-chip:focus-visible');
+    expect(focus).toContain('outline-offset: -2px');
+    expect(focus).toContain('box-shadow: none');
   });
 
   it('never lets a chip shrink to fit', () => {
