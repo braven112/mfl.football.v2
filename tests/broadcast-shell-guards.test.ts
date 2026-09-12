@@ -34,6 +34,7 @@ const ISLAND = read('src/components/shared/live-broadcast/LiveBroadcast.tsx');
 const ISLAND_CODE = code(ISLAND);
 const PAGE = read('src/components/shared/live-broadcast/LiveBroadcastPage.astro');
 const PAGE_CODE = code(PAGE);
+const HEADER = code(read('src/components/shared/live-broadcast/BroadcastScoreHeader.tsx'));
 const ROUTES = [
   'src/pages/theleague/broadcast.astro',
   'src/pages/afl-fantasy/broadcast.astro',
@@ -187,7 +188,6 @@ describe('the reveal variants differ in more than wording', () => {
 });
 
 describe('the fixes that a scan is the only thing holding', () => {
-  const HEADER = code(read('src/components/shared/live-broadcast/BroadcastScoreHeader.tsx'));
   const STRIP = code(read('src/components/shared/live-broadcast/BroadcastPlayerStrip.tsx'));
   const BANNER = code(read('src/components/shared/live-broadcast/RedZoneBanner.tsx'));
   const BOARD = code(read('src/utils/broadcast-board.ts'));
@@ -260,6 +260,60 @@ describe('the fixes that a scan is the only thing holding', () => {
     // with no lang and no title.
     expect(PAGE_CODE).toMatch(/TheLeagueLayout/);
     expect(CSS).toMatch(/font-family:/);
+  });
+});
+
+describe('nothing is sized against a box it does not live in', () => {
+  // The whole family of clipping bugs had ONE cause: children sized in
+  // viewport units inside boxes whose height comes from flex or grid division.
+  // A row's height is a function of the viewport AND the row count AND the
+  // header's tier, so `vh` cannot express it — an 81px avatar landed in a 66px
+  // row, and a 97px score in a cell the grid had given 230px for two of them.
+  it('makes the cell and the row their own size containers', () => {
+    for (const sel of ['lbc__cell', 'lbc__row']) {
+      // Anchored to the start of a line: an unanchored `.lbc__cell` also
+      // matches `.lbc__cells[data-games='2'] .lbc__cell + .lbc__cell`, and
+      // reads that rule's body instead of the one being asserted about.
+      const block = new RegExp(`^\\.${sel}\\s*\\{([^}]*)\\}`, 'm').exec(CSS)?.[1] ?? '';
+      expect(block, `.${sel} must be a size container`).toMatch(/container-type:\s*size/);
+    }
+  });
+
+  it('sizes the score against the cell in BOTH axes', () => {
+    // Height alone is not enough: a short-but-narrow doubleheader cell let the
+    // numerals and the projection eat the team NAME down to nothing.
+    const rule = /\.lbc__score \{ font-size: ([^;]*);/.exec(CSS)?.[1] ?? '';
+    expect(rule).toMatch(/cqh/);
+    expect(rule).toMatch(/cqw/);
+  });
+
+  it('gives the team name a width floor', () => {
+    // It is the only thing on the row that says whose score this is, so it is
+    // the last thing that may give up width.
+    const block = /\.lbc__tn\s*\{([^}]*)\}/.exec(CSS)?.[1] ?? '';
+    expect(block).toMatch(/min-width:\s*\d+%/);
+  });
+
+  it('zeroes the UA paragraph margin', () => {
+    // Every label here is a <p>, and `margin: 1em 0` on a 22px tag is 44px of
+    // invisible margin inside a ~210px cell — which is what pushed the cell
+    // foot out of the bottom even after the type had been sized to fit.
+    expect(CSS).toMatch(/\.lbc p[\s\S]{0,40}\{\s*margin:\s*0/);
+  });
+
+  it('lays the header out by PANEL count, not by the type tier', () => {
+    // They are different counts. One league on a doubleheader week is one
+    // panel and two cells; keying the columns on the tier left half a 1080p
+    // screen empty.
+    expect(CSS).toMatch(/\.lbc__header\[data-panels='1'\]/);
+    expect(CSS).not.toMatch(/\.lbc__header\[data-tier='\d'\] \{ grid-template-columns/);
+    expect(HEADER).toMatch(/data-panels=/);
+  });
+
+  it('escapes the layout column so a television is not boxed into 1232px', () => {
+    const block = /^\.lbc \{([\s\S]*?)\n\}/m.exec(CSS)?.[1] ?? '';
+    expect(block).toMatch(/width:\s*100vw/);
+    expect(block).toMatch(/margin-left:\s*calc\(50% - 50vw\)/);
   });
 });
 

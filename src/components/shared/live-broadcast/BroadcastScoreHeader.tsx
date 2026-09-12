@@ -54,6 +54,10 @@ function BroadcastScoreHeader({ panels, scores, tier, hidden, games, meta }: Pro
     <section
       className={`lbc__header ${dropClasses(tier)}${hidden ? ' is-hidden' : ''}`}
       data-tier={tier}
+      // The grid follows PANELS; the tier only sets the type scale. Keying the
+      // columns on the tier left half a 1080p screen empty for one league on a
+      // doubleheader week — one panel, two cells, two columns.
+      data-panels={Math.min(panels.length, 8)}
       aria-label="Scoreboard"
       // `inert` flips the moment the handoff starts, not at the end of the
       // fade — otherwise anything focusable sits under an opacity-0 layer for

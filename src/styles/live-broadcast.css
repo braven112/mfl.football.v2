@@ -90,9 +90,31 @@
   --lbc-primary: #10161f;
   --lbc-secondary: #1c497c;
 
-  /* Set per render from the resolved density tier. The takeover's inset, the
-     red-zone banner's top and the strip's height all read this one number. */
-  --lbc-header-h: 30vh;
+  /*
+   * Set per render from the resolved density tier. The takeover's inset, the
+   * red-zone banner's top and the strip's height all read this one number.
+   *
+   * A PERCENTAGE of the board, not `vh`. The board is `100vh - 12rem` outside
+   * fullscreen, so a viewport-relative header claims a bigger share of a
+   * shorter board: at 30vh it took 36% of a 1080p TV but 67% of a phone in
+   * portrait, which left the strip 213px to divide into six rows — 18px each,
+   * with an 11px avatar. Percent is self-consistent at every height.
+   */
+  --lbc-header-h: 36%;
+
+  /*
+   * FULL-BLEED, out of the layout's centred column.
+   *
+   * The league layout caps `main` at 1232px with a gutter, which is right for
+   * every reading page on the site and wrong for this one: on a 1920-wide
+   * television it boxed the board into two thirds of the screen and left grey
+   * down both sides, which is also why the type read as oversized — the same
+   * numerals in a third less width. The standard escape, and it needs no
+   * change to the layout that every other page depends on.
+   */
+  width: 100vw;
+  max-width: 100vw;
+  margin-left: calc(50% - 50vw);
 
   height: max(30rem, calc(100vh - 12rem));
   background: var(--lbc-ink);
@@ -129,6 +151,19 @@
 .lbc h2,
 .lbc h3 {
   color: var(--lbc-text);
+  margin: 0;
+}
+
+/*
+ * Every label on this board is a `<p>`, and the UA gives those `margin: 1em 0`.
+ * At a 22px game tag that is 44px of invisible margin inside a cell whose whole
+ * budget is ~210px — which is what pushed the cell foot out of the bottom of
+ * the matchup on a 1080p TV even after the type had been sized to fit. Nothing
+ * here wants a paragraph's default rhythm; spacing on this surface is `gap`.
+ */
+.lbc p,
+.lbc ul,
+.lbc li {
   margin: 0;
 }
 
@@ -205,14 +240,27 @@
 
 .lbc__header { overflow: hidden; }
 
-/* Explicit rows at every tier. Without them tiers 1-2 fall to an implicit
-   `auto` row, so a panel grows past the header's fixed height and paints over
-   the strip beneath it (header z-index 1, strip 0). */
-.lbc__header[data-tier='1'] { grid-template-columns: 1fr; grid-template-rows: minmax(0, 1fr); }
-.lbc__header[data-tier='2'] { grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: minmax(0, 1fr); }
-.lbc__header[data-tier='3'] { grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: repeat(2, minmax(0, 1fr)); }
-.lbc__header[data-tier='4'] { grid-template-columns: repeat(3, minmax(0, 1fr)); grid-template-rows: repeat(2, minmax(0, 1fr)); }
-.lbc__header[data-tier='5'] { grid-template-columns: repeat(4, minmax(0, 1fr)); grid-template-rows: repeat(2, minmax(0, 1fr)); }
+/*
+ * The GRID follows the number of PANELS; the TIER only sets the type scale.
+ *
+ * These were both keyed on the tier, which is derived from matchup CELLS — so
+ * one league on a doubleheader week (one panel, two cells) resolved to tier 2
+ * and laid the header out in two columns, leaving the entire right half of a
+ * 1080p screen empty while the single panel squeezed its two games into the
+ * left. Cells and panels are different counts and they drive different things.
+ *
+ * Explicit rows throughout: without them a single implicit `auto` row lets a
+ * panel grow past the header's fixed height and paint over the strip beneath
+ * it (header z-index 1, strip 0).
+ */
+.lbc__header[data-panels='1'] { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); }
+.lbc__header[data-panels='2'] { grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: minmax(0, 1fr); }
+.lbc__header[data-panels='3'] { grid-template-columns: repeat(3, minmax(0, 1fr)); grid-template-rows: minmax(0, 1fr); }
+.lbc__header[data-panels='4'] { grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: repeat(2, minmax(0, 1fr)); }
+.lbc__header[data-panels='5'],
+.lbc__header[data-panels='6'] { grid-template-columns: repeat(3, minmax(0, 1fr)); grid-template-rows: repeat(2, minmax(0, 1fr)); }
+.lbc__header[data-panels='7'],
+.lbc__header[data-panels='8'] { grid-template-columns: repeat(4, minmax(0, 1fr)); grid-template-rows: repeat(2, minmax(0, 1fr)); }
 
 /* `minmax(0, 1fr)` everywhere above, never a bare `1fr`: `1fr` means
    `minmax(auto, 1fr)` and that auto floor is min-content, so one long team
@@ -268,6 +316,21 @@
 }
 
 .lbc__cell {
+  /*
+   * A SIZE CONTAINER, so everything inside is a fraction of the cell rather
+   * than of the viewport.
+   *
+   * This is the bug that clipped the opponent's score off a 1080p TV. The
+   * score was `9vh` — 97px on a 1080 screen — and a cell holding two of those
+   * plus a tag, a bar and a foot needs ~309px, in a box the grid had given
+   * 230px. `overflow: hidden` on the panel then silently removed whatever sat
+   * at the bottom, which is the OPPONENT'S side: the one thing the drop ladder
+   * deliberately places on no rung.
+   *
+   * A viewport unit cannot know how many panels and cells are sharing the
+   * header, so it cannot be the basis for anything inside one. `cqh` can.
+   */
+  container-type: size;
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -288,7 +351,7 @@
 }
 
 .lbc__game-tag {
-  font-size: max(2.2vh, 0.66rem);
+  font-size: min(11cqh, max(2.2vh, 0.66rem));
   font-weight: 700;
   letter-spacing: 0.06em;
   color: var(--lbc-text-faint);
@@ -302,17 +365,23 @@
 }
 
 .lbc__crest {
-  width: max(3.4vh, 1.1rem);
-  height: max(3.4vh, 1.1rem);
+  width: min(14cqh, max(3.4vh, 1.1rem));
+  height: min(14cqh, max(3.4vh, 1.1rem));
   object-fit: contain;
   flex: none;
   align-self: center;
 }
 
 .lbc__tn {
-  flex: 1;
-  min-width: 0;
-  font-size: max(2.4vh, 0.78rem);
+  /*
+   * A FLOOR, not just `min-width: 0`. The name is the only thing on the row
+   * that says whose score this is, so it must be the last thing to give up
+   * width — `flex-shrink: 0` on a basis of 25% means the projection and the
+   * numerals shrink around it instead of erasing it.
+   */
+  flex: 0 1 auto;
+  min-width: 25%;
+  font-size: min(12cqh, 8cqw, max(2.4vh, 0.78rem));
   font-weight: 600;
   color: var(--lbc-text-dim);
   white-space: nowrap;
@@ -321,6 +390,7 @@
 }
 
 .lbc__score {
+  flex: 0 0 auto;
   font-variant-numeric: tabular-nums;
   font-weight: 700;
   /* Load-bearing, not typographic taste. At 1.18 the two score rows alone ate
@@ -348,14 +418,32 @@
   color: var(--lbc-text);
 }
 
-.lbc__header[data-tier='1'] .lbc__score { font-size: 11vh; }
-.lbc__header[data-tier='2'] .lbc__score { font-size: 9vh; }
-.lbc__header[data-tier='3'] .lbc__score { font-size: 7vh; }
-.lbc__header[data-tier='4'] .lbc__score { font-size: 5.5vh; }
-.lbc__header[data-tier='5'] .lbc__score { font-size: max(4.2vh, 1.1rem); }
+/*
+ * Cell-relative FIRST, tier as a ceiling.
+ *
+ * 28cqh leaves room for two sides (2 x ~25% once line-height lands), the game
+ * tag, the win-probability bar and the foot, inside whatever height the grid
+ * actually gave this cell. The `vh` term only stops a very tall cell from
+ * growing the numerals past TV scale; it never decides the fit.
+ */
+/*
+ * Height AND width. A `cqh`-only score is correct in a short cell and ruinous
+ * in a narrow one: at 58px in a ~270px-wide doubleheader cell the numerals and
+ * the projection consumed the whole row and the TEAM NAME — a `flex: 1` with
+ * `min-width: 0` — collapsed to nothing, so the board showed "Proj 109.7 0.0"
+ * with no indication of whose it was. `cqw` is what stops that.
+ */
+.lbc__score { font-size: min(25cqh, 15cqw, 11vh); }
+.lbc__header[data-tier='2'] .lbc__score { font-size: min(25cqh, 15cqw, 9vh); }
+.lbc__header[data-tier='3'] .lbc__score { font-size: min(25cqh, 15cqw, 7vh); }
+.lbc__header[data-tier='4'] .lbc__score { font-size: min(24cqh, 14cqw, 5.5vh); }
+.lbc__header[data-tier='5'] .lbc__score { font-size: max(min(22cqh, 14cqw, 4.2vh), 0.9rem); }
 
 .lbc__proj {
-  font-size: max(2.2vh, 0.7rem);
+  /* Pushes itself and the score to the right edge, so the numerals line up in
+     a column the way a scoreboard's do rather than bunching against the name. */
+  margin-left: auto;
+  font-size: min(11cqh, 7cqw, max(2.2vh, 0.7rem));
   color: var(--lbc-text-faint);
   font-variant-numeric: tabular-nums;
   flex: none;
@@ -384,11 +472,19 @@
   align-items: center;
   justify-content: space-between;
   gap: 0.4vw;
-  font-size: max(2.2vh, 0.68rem);
+  font-size: min(11cqh, 6cqw, max(2.2vh, 0.68rem));
   color: var(--lbc-text-faint);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
   overflow: hidden;
+}
+
+/* Each part vanishes cleanly at the edge rather than half a word hanging off
+   the end of the cell ("9 to play 0 t"). */
+.lbc__cell-foot > * {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
 }
 
 /* The drop ladder. Each rung removes an element entirely. */
@@ -531,6 +627,18 @@
 }
 
 .lbc__row {
+  /*
+   * A SIZE CONTAINER, for the same reason the cell is one.
+   *
+   * A row's height is whatever the strip's flex division leaves it — six rows
+   * share the space, so it is a function of the viewport AND the row count AND
+   * the header's tier. Nothing inside it can be sized in `vh` without guessing
+   * at all three. The headshot was `min(54cqh, 7.5vh, 8vw)`, where the `cqh`
+   * resolved against the STRIP rather than the row: 81px of avatar inside a
+   * 66px row on a 1080p TV, which is what sliced the position line off the
+   * bottom of every player.
+   */
+  container-type: size;
   display: flex;
   align-items: center;
   gap: 0.7vw;
@@ -558,8 +666,9 @@
 }
 
 .lbc__face {
-  width: min(54cqh, 7.5vh, 8vw);
-  height: min(54cqh, 7.5vh, 8vw);
+  /* Of the ROW now, not the strip. 62% leaves the row's own padding clear. */
+  width: min(62cqh, 8vw);
+  height: min(62cqh, 8vw);
   border-radius: 50%;
   object-fit: cover;
   flex: none;
@@ -575,7 +684,8 @@
 }
 
 .lbc__name {
-  font-size: min(17cqh, 1.6rem);
+  /* Name + meta + the gap must fit ONE row: 34 + 16 + gap ≈ 55cqh. */
+  font-size: min(34cqh, 1.8rem);
   font-weight: 700;
   white-space: nowrap;
   overflow: hidden;
@@ -586,14 +696,14 @@
   display: flex;
   align-items: center;
   gap: 0.4vw;
-  font-size: max(2.2vh, 0.68rem);
+  font-size: min(18cqh, max(2.2vh, 0.68rem));
   color: var(--lbc-text-faint);
   white-space: nowrap;
 }
 
 .lbc__nfl {
-  width: max(2.6vh, 0.9rem);
-  height: max(2.6vh, 0.9rem);
+  width: min(18cqh, max(2.6vh, 0.9rem));
+  height: min(18cqh, max(2.6vh, 0.9rem));
   object-fit: contain;
   flex: none;
 }
@@ -601,15 +711,15 @@
 /* Which of the owner's teams this player is on — non-negotiable on a
    cross-league board. */
 .lbc__row-crest {
-  width: min(24cqh, 4vh);
-  height: min(24cqh, 4vh);
+  width: min(42cqh, 4vh);
+  height: min(42cqh, 4vh);
   object-fit: contain;
   flex: none;
   opacity: 0.92;
 }
 
 .lbc__pts {
-  font-size: min(24cqh, 2.4rem);
+  font-size: min(46cqh, 2.4rem);
   font-weight: 800;
   font-variant-numeric: tabular-nums;
   flex: none;
@@ -621,7 +731,7 @@
   display: flex;
   align-items: center;
   gap: 0.35vw;
-  font-size: max(2.2vh, 0.68rem);
+  font-size: min(20cqh, max(2.2vh, 0.68rem));
   color: var(--lbc-text-faint);
   font-variant-numeric: tabular-nums;
   flex: none;
@@ -632,8 +742,8 @@
 
 /* A FILL, never text: #16a34a is 5.74:1 and below the text floor. */
 .lbc__dot {
-  width: max(1.2vh, 0.45rem);
-  height: max(1.2vh, 0.45rem);
+  width: min(14cqh, max(1.2vh, 0.45rem));
+  height: min(14cqh, max(1.2vh, 0.45rem));
   border-radius: 50%;
   flex: none;
 }
@@ -1022,10 +1132,18 @@
    device never loses the only way out of fullscreen. `:hover` and
    `:focus-visible` are SEPARATE rules, never one selector list — one
    unsupported pseudo-class invalidates a whole list. */
+/*
+ * Bottom-LEFT, not top-right.
+ *
+ * Top-right put two buttons directly on top of the first panel's scores, and
+ * on a touch device the hover rule below never applies — so they sat there
+ * permanently covering the thing the board exists to show. Bottom-left is the
+ * only corner with nothing in it: the freshness pill owns bottom-right.
+ */
 .lbc__chrome {
   position: absolute;
-  top: 1vh;
-  right: 1vw;
+  bottom: 1vh;
+  left: 1vw;
   z-index: 5;
   display: flex;
   gap: 0.5vw;
@@ -1061,16 +1179,24 @@
 
 /* ── Laptop fallback — not a responsive target, just not broken ───────────── */
 @media (max-height: 950px) {
-  .lbc { --lbc-header-h: 26vh; }
+  .lbc { --lbc-header-h: 34%; }
 }
 
 @media (max-width: 900px) {
+  /*
+   * Stacking the panels into the SAME 30vh header is what crushed two leagues
+   * into ~50px each and overlapped them. If the panels go from side-by-side to
+   * one column, the header has to grow by roughly the same factor — and the
+   * strip gives up the room, since a phone shows fewer rows anyway.
+   */
+  .lbc { --lbc-header-h: 55%; }
+
   .lbc__header[data-tier='2'],
   .lbc__header[data-tier='3'],
   .lbc__header[data-tier='4'],
   .lbc__header[data-tier='5'] {
     grid-template-columns: 1fr;
-    grid-template-rows: none;
+    grid-template-rows: repeat(auto-fit, minmax(0, 1fr));
   }
 
   .lbc-reveal { padding: 2vh 5vw; }
