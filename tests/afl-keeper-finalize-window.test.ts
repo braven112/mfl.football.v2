@@ -37,6 +37,20 @@ describe('KeeperPlanner finalize window', () => {
     expect(SRC).toMatch(/beforeFinalizeWindow/);
   });
 
+  it('reframes the closed-window hint around next year once the AL draft has run', () => {
+    // "The keeper deadline has passed" only makes sense in the narrow gap
+    // between the deadline and the redraft of the cut players — once that
+    // draft has actually happened, the roster is settled and the page
+    // should talk about the NEXT keeper class (year + 1), not old news.
+    expect(SRC).toMatch(/from '\.\.\/\.\.\/utils\/draft-utils'/);
+    expect(SRC).toMatch(/isDraftConducted\(/);
+    expect(SRC).toMatch(/draftConducted/);
+    expect(SRC).toMatch(/Keeper planning for \$\{year \+ 1\} opens/);
+    // Missing/malformed draftResults must fail toward the OLD pre-draft
+    // copy, never silently toward the reframed one.
+    expect(SRC).toMatch(/let draftConducted = false;/);
+  });
+
   it('the finalize button click handler stays null-safe (optional chaining)', () => {
     // The button can be entirely absent from the DOM now — every reference
     // to it in the script must tolerate that.
