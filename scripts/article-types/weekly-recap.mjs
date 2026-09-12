@@ -32,8 +32,9 @@ export const config = {
   // in-season (recap Tue→Thu, preview Fri→Sun, matchup preview Sat→Mon),
   // preempting the regular-season daily rotation that was built for those
   // days. Tier drives the hero claim, the feed card's red treatment and the OG
-  // badge — nothing else; GroupMe and push are gated on buildGroupMePromo, not
-  // on tier, so these columns reach owners exactly as before.
+  // badge — nothing else. Chat and push are gated on whether the module exports
+  // buildGroupMePromo (only cut-watch, schedule-release and schedule-strength
+  // do), so this column has no chat or push path to lose either way.
   // Pinned by tests/weekly-column-hero-claim.test.ts.
   tier: 'standard',
   maxTokens: 4000,
