@@ -29,9 +29,15 @@ import {
 import { buildBroadcastMoments, selectRedZoneAlerts } from './broadcast-moments';
 import { loadNflGameDetail } from './nfl-game-detail-source';
 import { fetchNflScoreboard } from './nfl-scoreboard-source';
-import { getLeagueTeamBrands } from './league-team-brands';
+import { getLeagueTeamBrands, getLeagueTeamConfig } from './league-team-brands';
+import { ensureContrastOn, ensureFieldOn } from './team-color-contrast';
+import { resolveBroadcastGradient } from './draft-broadcast';
 import { getPlayerMap } from './player-map';
 import { toBroadcastPair } from './draft-broadcast';
+
+/** The board's ground and its header panel — the two surfaces colour is judged against. */
+const LBC_INK = '#05070b';
+const LBC_PANEL = '#0b1220';
 import { chooseTeamName } from './team-names';
 import type { LiveSnapshot } from './live-scoring-snapshot';
 import type { NflGame, PlayerMeta } from '../types/live-scoring';
@@ -79,6 +85,7 @@ const NEUTRAL: Omit<BroadcastTeam, 'franchiseId' | 'name' | 'nameShort' | 'abbre
   crestStroke: 0,
   primary: '#334155',
   secondary: '#1e293b',
+  swatch: '#64748b',
   gradient: '',
 };
 
@@ -110,19 +117,49 @@ function brandsFor(slug: string): BrandMap {
   }
 }
 
-function teamFor(brands: BrandMap, franchiseId: string, fallbackName: string): BroadcastTeam {
+function teamFor(
+  slug: string,
+  brands: BrandMap,
+  franchiseId: string,
+  fallbackName: string,
+): BroadcastTeam {
   const brand = brands[franchiseId];
+  // The RAW config row, for the fields `TeamBrand` deliberately drops:
+  // `colorSecondary`, `broadcastGradient` and `abbrev`. Without it the
+  // takeover's gradient had the same colour at both stops — a flat field, not
+  // a gradient — and a franchise that declares its own look never got it.
+  const cfg = slug ? getLeagueTeamConfig(slug, franchiseId) : undefined;
 
   const name = brand?.name || fallbackName || `Franchise ${franchiseId}`;
   const nameShort = brand?.nameShort || chooseTeamName({ fullName: name }, 'short');
-  const abbrev = chooseTeamName({ fullName: name, nameShort }, 'abbrev');
+  const abbrev =
+    cfg?.abbrev || chooseTeamName({ fullName: name, nameShort, abbrev: cfg?.abbrev }, 'abbrev');
 
   if (!brand) {
     // An outside league: real names, no artwork. Plainer, never broken.
     return { franchiseId, name, nameShort, abbrev, ...NEUTRAL };
   }
 
-  const pair = toBroadcastPair(brand.colorPrimary, brand.colorPrimary);
+  const rawPrimary = cfg?.colorPrimary || brand.colorPrimary;
+  const rawSecondary = cfg?.colorSecondary || rawPrimary;
+
+  // Two different jobs, two different answers.
+  //
+  //  - `toBroadcastPair` makes a colour safe to paint WHITE TEXT on. It only
+  //    ever darkens, so it cannot make a colour visible.
+  //  - `ensureFieldOn` then makes that result visible against the surface it
+  //    will sit on, without lifting it past the point where white ink fails.
+  //
+  // Running only the first is what put a near-black rectangle on screen for
+  // the seven TheLeague franchises branded `#181818`.
+  const pair = toBroadcastPair(rawPrimary, rawSecondary);
+  const primary = ensureFieldOn(pair.primary, LBC_INK);
+  const secondary = ensureFieldOn(pair.secondary, LBC_INK);
+
+  // The mark on the header panel is a third question again: a 0.7vh bar needs
+  // to separate from `--lbc-panel`, which is lighter than the ground.
+  const swatch = ensureContrastOn(rawPrimary, LBC_PANEL, 3);
+
   return {
     franchiseId,
     name,
@@ -131,9 +168,14 @@ function teamFor(brands: BrandMap, franchiseId: string, fallbackName: string): B
     icon: brand.icon || '',
     iconSmall: brand.icon || '',
     crestStroke: 0,
-    primary: pair.primary,
-    secondary: pair.secondary,
-    gradient: '',
+    primary,
+    secondary,
+    swatch,
+    // A franchise that declares its own broadcast gradient gets it; the helper
+    // validates the CSS and returns undefined for anything it will not vouch
+    // for, so an invalid value falls back to the derived pair rather than
+    // resetting `background-image` to nothing.
+    gradient: resolveBroadcastGradient(cfg) ?? '',
   };
 }
 
@@ -251,7 +293,7 @@ export async function assembleBroadcastBoard(input: AssembleBoardInput): Promise
     const pairs = findOwnerMatchups(snapshot.matchups, league.franchiseId);
 
     if (mode === 'full') {
-      const mine = teamFor(brands, league.franchiseId, league.franchiseName);
+      const mine = teamFor(slug, brands, league.franchiseId, league.franchiseName);
       panels.push({
         leagueId: league.id,
         leagueName: league.name,
@@ -260,7 +302,7 @@ export async function assembleBroadcastBoard(input: AssembleBoardInput): Promise
         matchups: pairs.map((pair, index) => ({
           index,
           mine,
-          opponent: teamFor(brands, pair.opponentId, names[pair.opponentId] ?? ''),
+          opponent: teamFor(slug, brands, pair.opponentId, names[pair.opponentId] ?? ''),
         })),
         // A league with a feed but no pairing is on a bye — a fact, not a fault.
         status: ok ? (pairs.length > 0 ? 'ok' : 'no-matchup') : 'unavailable',

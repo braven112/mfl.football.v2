@@ -54,6 +54,8 @@ const STALE_MS = 5 * 60_000;
 const QUIET_MS = 10 * 60_000;
 
 const STRIP_PAGE_MS = 12_000;
+/** Must equal `--lbc-fade` in live-broadcast.css — the handoff's one duration. */
+const FADE_MS = 930;
 const SAVER_SCENE_MS = 30_000;
 const SAVER_SCENES: SaverScene[] = ['slate', 'finals', 'clock'];
 
@@ -96,8 +98,13 @@ export default function LiveBroadcast({ pageData }: Props) {
   const [shownVersion, setShownVersion] = useState(0);
 
   const [pageIndex, setPageIndex] = useState(0);
+  /**
+   * The page the strip is fading OUT of, cleared once the fade has run.
+   * Without it only one page is ever mounted and the "cross-fade" is a cut.
+   */
+  const [outgoingKey, setOutgoingKey] = useState<string | null>(null);
   const [saverScene, setSaverScene] = useState(0);
-  const [drift, setDrift] = useState({ x: 0, y: 0, y2: 0 });
+  const [drift, setDrift] = useState({ x: 0, y: 0, x2: 0, y2: 0 });
 
   // ── the poll loop ────────────────────────────────────────────────────────
   const pollRef = useRef<{ timer: number | null; lastDone: number; errors: number }>({
@@ -188,10 +195,19 @@ export default function LiveBroadcast({ pageData }: Props) {
       setDrift((d) => ({ ...d, x: Math.cos(a) * 0.6, y: Math.sin(a * 1.5) * 0.6 }));
     }, DRIFT_ROOT_MS);
 
+    // A ring of its own, not a two-position flip.
+    //
+    // This was `(step % 2 ? 1 : -1) * 0.15` — a vertical square wave with a
+    // total excursion of 0.3vh, about 3px at 1080p. An 11vh score numeral has
+    // ~20px strokes, so the brightest, longest-lived pixels on the panel never
+    // left their own stroke cores: sub-perceptual, and sub-PROTECTIVE, which is
+    // the wrong side of that trade. Sized to roughly 1.5 stroke widths, still
+    // well under the motion threshold at ~0.5 px/s.
     let glyphStep = 0;
     const glyph = window.setInterval(() => {
       glyphStep += 1;
-      setDrift((d) => ({ ...d, y2: (glyphStep % 2 === 0 ? 1 : -1) * 0.15 }));
+      const a = (glyphStep / DRIFT_POINTS) * Math.PI * 2;
+      setDrift((d) => ({ ...d, x2: Math.sin(a) * 0.3, y2: Math.cos(a * 1.5) * 0.3 }));
     }, DRIFT_GLYPH_MS);
 
     return () => {
@@ -247,7 +263,19 @@ export default function LiveBroadcast({ pageData }: Props) {
     quietSinceRef.current = anyLive ? 0 : quietSinceRef.current || Date.now();
   }, [anyLive]);
 
-  const isQuiet = !anyLive && quietSinceRef.current > 0 && nowTick - quietSinceRef.current > QUIET_MS;
+  /**
+   * Has anything happened this session at all?
+   *
+   * `QUIET_MS` is the right grace period for "the games just went final" — it
+   * keeps the final scores up for a while. It is the WRONG answer for a board
+   * opened when nothing has kicked off, where it means ten minutes of an
+   * all-zero scoreboard: exactly the "screen of zeros, indistinguishable from
+   * a broken board" the screensaver exists to prevent.
+   */
+  const everLive = poll.games.some((g) => g.state !== 'pre') || poll.leagues.some((l) => l.live);
+  const isQuiet =
+    !anyLive &&
+    (!everLive || (quietSinceRef.current > 0 && nowTick - quietSinceRef.current > QUIET_MS));
 
   // ── the reveal queue ─────────────────────────────────────────────────────
   const queue = useMemo(
@@ -288,9 +316,19 @@ export default function LiveBroadcast({ pageData }: Props) {
 
   useEffect(() => {
     if (stripPaused || pages.length <= 1) return;
-    const id = window.setTimeout(() => setPageIndex((i) => (i + 1) % pages.length), STRIP_PAGE_MS);
+    const id = window.setTimeout(() => {
+      setOutgoingKey(pages[pageIndex]?.key ?? null);
+      setPageIndex((i) => (i + 1) % pages.length);
+    }, STRIP_PAGE_MS);
     return () => window.clearTimeout(id);
-  }, [stripPaused, pageIndex, pages.length]);
+  }, [stripPaused, pageIndex, pages.length]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  /** Unmount the outgoing page once its fade has finished. */
+  useEffect(() => {
+    if (!outgoingKey) return;
+    const id = window.setTimeout(() => setOutgoingKey(null), FADE_MS);
+    return () => window.clearTimeout(id);
+  }, [outgoingKey]);
 
   useEffect(() => {
     if (!isQuiet) return;
@@ -316,6 +354,26 @@ export default function LiveBroadcast({ pageData }: Props) {
   // Fires on stage OPEN only, never per poll. The queue already serializes, so
   // one sentence per reveal is the whole rate limit it needs.
   const [announcement, setAnnouncement] = useState('');
+
+  /**
+   * Red zone, announced once on ENTRY and once on EXIT — never re-read while
+   * the drive runs. The banner itself is `aria-hidden`, because its text
+   * carries down & distance and a live region would re-announce the whole
+   * thing every play, competing with the reveal announcer.
+   */
+  const redZoneKey = poll.redZone.map((a) => a.team).sort().join(',');
+  const lastRedZone = useRef('');
+  useEffect(() => {
+    if (redZoneKey === lastRedZone.current) return;
+    const entering = redZoneKey !== '';
+    const names = poll.redZone.flatMap((a) => a.players.map((p) => p.playerName));
+    lastRedZone.current = redZoneKey;
+    setAnnouncement(
+      entering ? `Red zone: ${names.join(', ')}.` : 'Red-zone drive over.',
+    );
+    const id = window.setTimeout(() => setAnnouncement(''), 1000);
+    return () => window.clearTimeout(id);
+  }, [redZoneKey]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (!current) return;
     const who = current.side === 'mine' ? 'Your' : 'Your opponent’s';
@@ -374,7 +432,16 @@ export default function LiveBroadcast({ pageData }: Props) {
       const panel = data.panels.find((p) => p.leagueId === m.leagueId);
       const league = scoresByLeague[m.leagueId];
       if (!panel || !league) return '';
-      const matchup = panel.matchups[0];
+      // The matchup this moment actually belongs to — NOT `matchups[0]`. On a
+      // doubleheader week that printed the other game's score under the
+      // reveal, and "what did it do to the matchup" is the takeover's whole
+      // justification.
+      const matchup =
+        panel.matchups.find(
+          (cell) =>
+            cell.mine.franchiseId === m.franchiseId ||
+            cell.opponent?.franchiseId === m.franchiseId,
+        ) ?? panel.matchups[0];
       if (!matchup) return '';
       const mine = league.teams[matchup.mine.franchiseId];
       const theirs = matchup.opponent ? league.teams[matchup.opponent.franchiseId] : undefined;
@@ -390,11 +457,15 @@ export default function LiveBroadcast({ pageData }: Props) {
   const rootStyle: Record<string, string> = {
     '--lbc-drift-x': `${drift.x}vw`,
     '--lbc-drift-y': `${drift.y}vh`,
+    '--lbc-drift-x2': `${drift.x2}vw`,
     '--lbc-drift-y2': `${drift.y2}vh`,
     '--lbc-dim': isQuiet ? '0.72' : anyLive ? '1' : '0.86',
+    // The strip insets itself by this, so the banner never covers row one.
+    '--lbc-redzone-h': poll.redZone.length > 0 ? '6.5vh' : '0px',
   };
 
   const page = pages[Math.min(pageIndex, Math.max(0, pages.length - 1))] ?? null;
+  const outgoing = outgoingKey ? (pages.find((p) => p.key === outgoingKey) ?? null) : null;
 
   return (
     <main className={`lbc${isStale ? ' is-stale' : ''}`} style={rootStyle} aria-label="Live scoring broadcast">
@@ -403,10 +474,13 @@ export default function LiveBroadcast({ pageData }: Props) {
         scores={scoresByLeague}
         tier={tier}
         hidden={occludes === 'all'}
+        games={poll.games}
+        meta={meta}
       />
 
       <BroadcastPlayerStrip
         page={page}
+        outgoing={outgoing}
         rowsPerPage={rowsPerPage}
         hidden={occludes !== 'none'}
         // The lower third covers the bottom of the strip; those rows dim rather
@@ -450,7 +524,23 @@ export default function LiveBroadcast({ pageData }: Props) {
       <RedZoneBanner alerts={poll.redZone} />
 
       <div className="lbc__chrome">
-        <button type="button" onClick={() => setSound((s) => !s)} aria-pressed={sound}>
+        <button
+          type="button"
+          onClick={() => {
+            const next = !sound;
+            setSound(next);
+            // Persist it. The cookie is not httpOnly precisely so the board can
+            // remember this without a round trip — a television is opened and
+            // walked away from, and a preference that silently reverts on the
+            // next reload is not a preference.
+            try {
+              document.cookie = `bc_sound=${next ? '1' : '0'}; path=/; max-age=${180 * 24 * 60 * 60}; samesite=lax`;
+            } catch {
+              /* a board that cannot remember is still a board */
+            }
+          }}
+          aria-pressed={sound}
+        >
           {sound ? 'Sound on' : 'Sound off'}
         </button>
         <button

@@ -186,6 +186,67 @@ describe('the reveal variants differ in more than wording', () => {
   });
 });
 
+describe('the fixes that a scan is the only thing holding', () => {
+  const HEADER = code(read('src/components/shared/live-broadcast/BroadcastScoreHeader.tsx'));
+  const STRIP = code(read('src/components/shared/live-broadcast/BroadcastPlayerStrip.tsx'));
+  const BANNER = code(read('src/components/shared/live-broadcast/RedZoneBanner.tsx'));
+  const BOARD = code(read('src/utils/broadcast-board.ts'));
+
+  it('passes `inert` as a real boolean', () => {
+    // React treats `inert=""` as FALSE and logs a warning, so the empty-string
+    // spelling silently never applied and the occluded layer stayed in the
+    // a11y tree for the whole 930ms visibility delay.
+    expect(HEADER).toMatch(/inert=\{hidden\}/);
+    expect(HEADER).not.toMatch(/inert:\s*''/);
+    expect(STRIP).not.toMatch(/inert:\s*''/);
+  });
+
+  it('renders the clock element its own drop ladder targets', () => {
+    // `.lbc__gameclock` had a drop rung and no producer, so rung 4 of 6
+    // dropped nothing and the header carried no clock at all.
+    expect(HEADER).toMatch(/lbc__gameclock/);
+    expect(CSS).toMatch(/\.lbc__gameclock/);
+  });
+
+  it('paints marks with the SWATCH and fields with the primary', () => {
+    // Two different legibility problems: a 0.7vh bar on `--lbc-panel` and a
+    // full-screen field on the darker ground. `toBroadcastPair` only darkens,
+    // so it can make a colour safe to write on but never visible.
+    expect(HEADER).toMatch(/--lbc-mine'.*\]:\s*matchup\.mine\.swatch/s);
+    expect(BOARD).toMatch(/ensureFieldOn/);
+    expect(BOARD).toMatch(/ensureContrastOn/);
+  });
+
+  it('resolves a franchise gradient and a real second stop', () => {
+    // `toBroadcastPair(primary, primary)` made every "gradient" a flat field,
+    // and a franchise declaring its own look never got it.
+    expect(BOARD).toMatch(/resolveBroadcastGradient/);
+    expect(BOARD).not.toMatch(/toBroadcastPair\(\s*rawPrimary,\s*rawPrimary\s*\)/);
+  });
+
+  it('mounts BOTH pages during a strip handoff', () => {
+    // A transition never runs on mount, so a single swapped page lands at its
+    // final state and every rotation is a hard cut.
+    expect(STRIP).toMatch(/outgoing/);
+    expect(CSS).toMatch(/@keyframes lbc-page-in/);
+  });
+
+  it('keeps the red-zone banner out of the live region', () => {
+    // Its text carries down & distance, which changes every play — a live
+    // region re-read the whole banner every few seconds for a whole drive.
+    expect(BANNER).not.toMatch(/aria-live/);
+    expect(BANNER).toMatch(/aria-hidden/);
+  });
+
+  it('gives the board a document shell, so it has a font and a title', () => {
+    // Rendered bare, the whole board fell back to the UA serif — which has no
+    // `tabular-nums`, so every score would jitter its column width on a tick —
+    // with no lang and no title.
+    expect(PAGE_CODE).toMatch(/TheLeagueLayout/);
+    expect(CSS).toMatch(/font-family:/);
+  });
+});
+
 describe('the page never fetches its own API', () => {
   it('assembles the board in process', () => {
     // A server that already knows the league's registry host has nothing to

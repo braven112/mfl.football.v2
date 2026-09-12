@@ -13,6 +13,15 @@ import { padPage, type StripPage, type StripRow } from '../../../utils/broadcast
 
 interface Props {
   page: StripPage | null;
+  /**
+   * The page being faded OUT, if any.
+   *
+   * Both pages have to be mounted for the cross-fade to have something to fade
+   * from — a transition does not run on mount, so a single swapped-in page
+   * lands already at its final state and every rotation is a hard cut. The
+   * island owns the handoff timing and hands both pages here for its duration.
+   */
+  outgoing: StripPage | null;
   rowsPerPage: number;
   hidden: boolean;
   /** Rows the lower-third band covers, dimmed rather than hidden. */
@@ -66,23 +75,44 @@ function Row({ row, dim }: { row: StripRow | null; dim: boolean }) {
   );
 }
 
-function BroadcastPlayerStrip({ page, rowsPerPage, hidden, dimTail }: Props) {
-  const rows = page ? padPage(page, rowsPerPage) : [];
+function Page({
+  page,
+  rowsPerPage,
+  dimTail,
+  out,
+}: {
+  page: StripPage;
+  rowsPerPage: number;
+  dimTail: number;
+  out: boolean;
+}) {
+  const rows = padPage(page, rowsPerPage);
   const dimFrom = dimTail > 0 ? rows.length - dimTail : rows.length;
+  return (
+    <div className={`lbc__page ${out ? 'is-out' : 'is-in'}`} aria-hidden={out || undefined}>
+      <p className="lbc__page-tag">{page.label}</p>
+      {rows.map((row, i) => (
+        <Row key={row?.key ?? `filler-${i}`} row={row} dim={i >= dimFrom} />
+      ))}
+    </div>
+  );
+}
+
+function BroadcastPlayerStrip({ page, outgoing, rowsPerPage, hidden, dimTail }: Props) {
 
   return (
     <div
       className={`lbc__strip${hidden ? ' is-hidden' : ''}`}
       aria-label="Your players"
-      {...(hidden ? { inert: '' as unknown as boolean } : {})}
+      // A real boolean: React treats `inert=""` as FALSE and warns, so the
+      // empty-string spelling silently never applied.
+      inert={hidden}
     >
+      {outgoing && outgoing.key !== page?.key && (
+        <Page key={outgoing.key} page={outgoing} rowsPerPage={rowsPerPage} dimTail={dimTail} out />
+      )}
       {page && (
-        <div className="lbc__page is-in" key={page.key}>
-          <p className="lbc__page-tag">{page.label}</p>
-          {rows.map((row, i) => (
-            <Row key={row?.key ?? `filler-${i}`} row={row} dim={i >= dimFrom} />
-          ))}
-        </div>
+        <Page key={page.key} page={page} rowsPerPage={rowsPerPage} dimTail={dimTail} out={false} />
       )}
     </div>
   );

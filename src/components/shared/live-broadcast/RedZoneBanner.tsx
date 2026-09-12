@@ -30,7 +30,12 @@ function RedZoneBanner({ alerts }: Props) {
   const downDistance = alerts.find((a) => a.downDistance)?.downDistance ?? '';
 
   return (
-    <div className="lbc__redzone" role="status" aria-live="polite">
+    // Deliberately NOT a live region. It was `role="status" aria-live="polite"`
+    // and its text includes down & distance, which changes every play — so a
+    // screen reader re-read the whole banner every few seconds for the length
+    // of a drive, competing with the reveal announcer. Entry and exit are
+    // announced once each through the island's single announcer instead.
+    <div className="lbc__redzone" aria-hidden="true">
       <span className="lbc__redzone-tag">Red zone</span>
       <span className="lbc__redzone-who">{names.join(' · ')}</span>
       {downDistance && <span className="lbc__redzone-dd">{downDistance}</span>}

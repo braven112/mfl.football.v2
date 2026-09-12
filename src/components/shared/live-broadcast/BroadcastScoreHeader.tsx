@@ -8,6 +8,8 @@
 
 import { memo } from 'react';
 import type { BroadcastLeaguePanel, BroadcastLeagueScore, BroadcastTeam } from '../../../types/live-broadcast';
+import type { NflGame, PlayerMeta } from '../../../types/live-scoring';
+import { matchupGameClock } from '../../../utils/broadcast-layout';
 import type { DensityTier } from '../../../utils/broadcast-layout';
 import { dropClasses, nameContext } from '../../../utils/broadcast-layout';
 
@@ -16,6 +18,13 @@ interface Props {
   scores: Record<string, BroadcastLeagueScore>;
   tier: DensityTier;
   hidden: boolean;
+  /**
+   * The live NFL slate. Used ONLY to name a real clock for a cell; a franchise
+   * with nobody in a game being played gets no clock rather than a placeholder.
+   */
+  games: readonly NflGame[];
+  /** Player identity, for mapping a starter to the NFL game he is in. */
+  meta: Record<string, PlayerMeta>;
 }
 
 const fmt = (n: number) => (Number.isFinite(n) ? n.toFixed(1) : '0.0');
@@ -29,19 +38,24 @@ function nameAt(team: BroadcastTeam, tier: DensityTier): string {
   return team.name;
 }
 
-function BroadcastScoreHeader({ panels, scores, tier, hidden }: Props) {
+function BroadcastScoreHeader({ panels, scores, tier, hidden, games, meta }: Props) {
   return (
     <section
       className={`lbc__header ${dropClasses(tier)}${hidden ? ' is-hidden' : ''}`}
       data-tier={tier}
       aria-label="Scoreboard"
       // `inert` flips the moment the handoff starts, not at the end of the
-      // fade — otherwise anything focusable sits under an opacity-0 layer.
-      {...(hidden ? { inert: '' as unknown as boolean } : {})}
+      // fade — otherwise anything focusable sits under an opacity-0 layer for
+      // the 930ms `visibility` delay.
+      //
+      // Must be a real boolean: React treats `inert=""` as FALSE and logs a
+      // warning, so the empty-string spelling silently never applied.
+      inert={hidden}
     >
       {panels.map((panel) => {
         const leagueScore = scores[panel.leagueId];
-        const games = Math.max(1, panel.matchups.length);
+        // How many matchup cells share this league's panel — 2 on a doubleheader.
+        const cellCount = Math.max(1, panel.matchups.length);
 
         return (
           <article
@@ -56,7 +70,7 @@ function BroadcastScoreHeader({ panels, scores, tier, hidden }: Props) {
                 {panel.status === 'unavailable' ? 'Feed unavailable' : 'No matchup this week'}
               </p>
             ) : (
-              <div className="lbc__cells" data-games={games}>
+              <div className="lbc__cells" data-games={cellCount}>
                 {panel.matchups.map((matchup) => {
                   const mine = leagueScore?.teams[matchup.mine.franchiseId];
                   const theirs = matchup.opponent
@@ -65,17 +79,20 @@ function BroadcastScoreHeader({ panels, scores, tier, hidden }: Props) {
                   const wp = leagueScore?.winProbability[matchup.index] ?? 0.5;
                   const mineLive = mine?.live ?? 0;
                   const theirsLive = theirs?.live ?? 0;
+                  const clock = matchupGameClock(mine?.players ?? [], games, meta);
 
                   return (
                     <div
                       key={matchup.index}
                       className="lbc__cell"
                       style={{
-                        // Both franchises' legible pair, resolved server-side
-                        // against --lbc-panel (NOT the live board's #262626 —
-                        // the wrong background gives a confident wrong answer).
-                        ['--lbc-mine' as string]: matchup.mine.primary,
-                        ['--lbc-theirs' as string]: matchup.opponent?.primary ?? '#334155',
+                        // The SWATCH, resolved server-side against
+                        // `--lbc-panel` — not `primary`, which is the
+                        // takeover's full-screen field and is judged against
+                        // the darker ground. A 0.7vh bar and a 100vh field are
+                        // different legibility problems.
+                        ['--lbc-mine' as string]: matchup.mine.swatch,
+                        ['--lbc-theirs' as string]: matchup.opponent?.swatch ?? '#334155',
                         ['--wp-split' as string]: pct(wp),
                       }}
                     >
@@ -90,7 +107,7 @@ function BroadcastScoreHeader({ panels, scores, tier, hidden }: Props) {
                       </p>
 
                       <div aria-hidden="true">
-                        {games > 1 && <p className="lbc__game-tag">Game {matchup.index + 1}</p>}
+                        {cellCount > 1 && <p className="lbc__game-tag">Game {matchup.index + 1}</p>}
 
                         <div className={`lbc__side${mineLive >= theirsLive ? ' is-leading' : ''}`}>
                           {matchup.mine.iconSmall && (
@@ -104,9 +121,15 @@ function BroadcastScoreHeader({ panels, scores, tier, hidden }: Props) {
                           <span className="lbc__score">{fmt(mineLive)}</span>
                         </div>
 
-                        <div className="lbc__wp">
-                          <div className="lbc__wp-fill" style={{ width: pct(wp) }} />
-                        </div>
+                        {/* No opponent means no probability to state. A 50/50
+                            bar against nobody asserts a coin flip that is not
+                            happening — the visually-hidden sentence already
+                            says "no opponent this week". */}
+                        {matchup.opponent && (
+                          <div className="lbc__wp">
+                            <div className="lbc__wp-fill" style={{ width: pct(wp) }} />
+                          </div>
+                        )}
 
                         {matchup.opponent && (
                           <div className={`lbc__side${theirsLive > mineLive ? ' is-leading' : ''}`}>
@@ -123,9 +146,14 @@ function BroadcastScoreHeader({ panels, scores, tier, hidden }: Props) {
                         )}
 
                         <div className="lbc__cell-foot">
-                          <span className="lbc__wp-label">{pct(wp)} win</span>
+                          {matchup.opponent && <span className="lbc__wp-label">{pct(wp)} win</span>}
                           <span>{mine?.yetToPlay ?? 0} to play</span>
                           <span className="lbc__ytp-opp">{theirs?.yetToPlay ?? 0} theirs</span>
+                          {/* The real ESPN clock, or NOTHING. Never a number
+                              derived from MFL's `gameSecondsRemaining`, which
+                              does not tick and drifts all afternoon into a
+                              confident-looking lie. */}
+                          {clock && <span className="lbc__gameclock">{clock}</span>}
                         </div>
                       </div>
                     </div>

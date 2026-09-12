@@ -31,10 +31,27 @@ export interface BroadcastTeam {
   iconSmall: string;
   /** Stroke index for the crest's inline ring; 0 when it needs none. */
   crestStroke: number;
-  /** `toBroadcastPair().primary` — safe to paint white text on. */
+  /**
+   * The takeover's field, lifted until it separates from the board's GROUND
+   * while keeping white ink legible (`ensureFieldOn`).
+   *
+   * Not the raw brand colour, and not `toBroadcastPair`'s output alone: that
+   * helper only ever darkens, so the seven TheLeague franchises whose
+   * `colorPrimary` is `#181818` came back untouched at 1.14:1 against the
+   * board's `#05070b` — a full-screen "field of the club's colour" rendered
+   * as a black rectangle indistinguishable from the idle screen.
+   */
   primary: string;
-  /** `toBroadcastPair().secondary`. */
+  /** The field's second stop — the franchise's real secondary, same treatment. */
   secondary: string;
+  /**
+   * The MARK colour: this franchise on the `--lbc-panel` header, for the
+   * win-probability bar and the lower third's rule. A different question from
+   * `primary` (which is a field you write on) and it needs its own answer —
+   * a brand that reads fine as a full-screen field can still vanish as a
+   * 0.7vh bar on a panel two shades away from it.
+   */
+  swatch: string;
   /** `resolveBroadcastGradient(team)`, or '' when the franchise declares none. */
   gradient: string;
 }

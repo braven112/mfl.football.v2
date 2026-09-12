@@ -43,13 +43,23 @@
   --lbc-panel: #0b1220;
   --lbc-panel-2: #121c2e;
   --lbc-hairline: rgba(255, 255, 255, 0.12);
-  --lbc-text: #ffffff;
-  --lbc-text-dim: rgba(255, 255, 255, 0.72);
-  --lbc-text-faint: rgba(255, 255, 255, 0.52);
+  /* Not pure white: the score numerals are the largest, brightest, longest-
+     lived glyphs on the panel, and a persistent 100% element is exactly what
+     burns in. 15.9:1 on `--lbc-panel` — the contrast cost is nil. */
+  --lbc-text: #ebebeb;
+  --lbc-text-dim: rgba(255, 255, 255, 0.78);
+  /*
+   * 0.52 measured 5.63:1 on `--lbc-panel` and 4.40:1 once `--lbc-dim` drops
+   * the board to its idle 0.86 — below the 7:1 floor this surface sets for
+   * type under 4vh, and below plain AA at the size every consumer uses. The
+   * dim schedule has to sit INSIDE the contrast budget, not on top of it,
+   * because the board spends most of its life dimmed.
+   */
+  --lbc-text-faint: rgba(255, 255, 255, 0.68);
   --lbc-live: #16a34a;
   --lbc-live-text: #4ade80;
   --lbc-alert: #fbbf24;
-  --lbc-redzone: #b91c1c;
+  --lbc-redzone: #991b1b;
   --lbc-redzone-hi: #dc2626;
 
   /* ── Properties the ISLAND writes inline, declared here with their defaults.
@@ -63,7 +73,10 @@
   /* Burn-in orbit, rewritten every 90s (root) and 97s (brightest glyphs). */
   --lbc-drift-x: 0px;
   --lbc-drift-y: 0px;
+  --lbc-drift-x2: 0px;
   --lbc-drift-y2: 0px;
+  /* 0 normally; the island sets it to the banner's height while a drive runs. */
+  --lbc-redzone-h: 0px;
   /* Luminance schedule: 1 live, .86 idle, .72 screensaver. */
   --lbc-dim: 1;
   /* The two franchises in one header cell, via resolveTeamColorPair against
@@ -85,6 +98,12 @@
   background: var(--lbc-ink);
   color: var(--lbc-text);
 
+  /* Stated, not inherited. Every weight-900 numeral, every tracked-out
+     uppercase kicker and — most of all — every `tabular-nums` on this board
+     was designed against a UI face. A serif fallback has no `tnum`, so the
+     scores would visibly jitter their column width on each tick. */
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+
   /* Burn-in: an orbital drift written by the island every 90s. It MUST be a
      transform — a layout-affecting drift re-lays out the whole board every 90
      seconds for eight hours — and it lives on the ROOT so the header still
@@ -94,6 +113,11 @@
   transform: translate3d(var(--lbc-drift-x, 0), var(--lbc-drift-y, 0), 0);
   transition: transform 12s ease-in-out, filter 2s linear;
   filter: brightness(var(--lbc-dim, 1));
+  /* The root drift translates the whole board by up to ±0.6vw/vh, which would
+     otherwise show a sliver of the page behind it down one edge outside
+     fullscreen. Paint past our own bounds rather than inset the content. */
+  outline: 1vw solid var(--lbc-ink);
+  outline-offset: -0.5vw;
 }
 
 /* The headings MUST restate their colour. This surface is dark in both themes,
@@ -126,7 +150,10 @@
 
 .lbc__strip {
   position: absolute;
-  inset: var(--lbc-header-h) 0 0 0;
+  /* The red-zone banner is 6.5vh of overlay pinned directly under the header.
+     Without this the strip's tag and first row sat beneath it for the length
+     of a drive — minutes, not a moment. */
+  inset: calc(var(--lbc-header-h) + var(--lbc-redzone-h, 0px)) 0 0 0;
   container-type: size;
   z-index: 0;
   transition: opacity var(--lbc-fade) ease;
@@ -176,8 +203,13 @@
    2.2vh floor to fit — elements are DROPPED on a fixed ladder instead (the
    `is-drop-*` classes the island applies). */
 
-.lbc__header[data-tier='1'] { grid-template-columns: 1fr; }
-.lbc__header[data-tier='2'] { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.lbc__header { overflow: hidden; }
+
+/* Explicit rows at every tier. Without them tiers 1-2 fall to an implicit
+   `auto` row, so a panel grows past the header's fixed height and paints over
+   the strip beneath it (header z-index 1, strip 0). */
+.lbc__header[data-tier='1'] { grid-template-columns: 1fr; grid-template-rows: minmax(0, 1fr); }
+.lbc__header[data-tier='2'] { grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: minmax(0, 1fr); }
 .lbc__header[data-tier='3'] { grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: repeat(2, minmax(0, 1fr)); }
 .lbc__header[data-tier='4'] { grid-template-columns: repeat(3, minmax(0, 1fr)); grid-template-rows: repeat(2, minmax(0, 1fr)); }
 .lbc__header[data-tier='5'] { grid-template-columns: repeat(4, minmax(0, 1fr)); grid-template-rows: repeat(2, minmax(0, 1fr)); }
@@ -291,11 +323,18 @@
 .lbc__score {
   font-variant-numeric: tabular-nums;
   font-weight: 700;
+  /* Load-bearing, not typographic taste. At 1.18 the two score rows alone ate
+     26vh of a 30vh header at tier 1, so the cell overflowed and
+     `.lbc__panel { overflow: hidden }` silently clipped whatever sat at the
+     bottom — the OPPONENT'S SCORE, which the drop ladder deliberately places
+     on no rung. Nothing shrinks below legibility here; things get dropped by
+     decision. A clipped score is neither. */
+  line-height: 0.9;
   color: var(--lbc-text-dim);
   flex: none;
   /* Counter-drift on a 97s period, co-prime with the root's 90s, so the
      brightest persistent glyphs on the board never retrace the same path. */
-  transform: translateY(var(--lbc-drift-y2, 0));
+  transform: translate3d(var(--lbc-drift-x2, 0), var(--lbc-drift-y2, 0), 0);
   transition: transform 12s ease-in-out;
 }
 
@@ -401,13 +440,13 @@
   font-weight: 700;
   white-space: nowrap;
   overflow: hidden;
-  transform: translateY(var(--lbc-drift-y2, 0));
+  transform: translate3d(var(--lbc-drift-x2, 0), var(--lbc-drift-y2, 0), 0);
   animation: lbc-rz-in 400ms ease-out;
 }
 
 @keyframes lbc-rz-in {
   from { transform: translateY(-100%); }
-  to { transform: translateY(var(--lbc-drift-y2, 0)); }
+  to { transform: translate3d(var(--lbc-drift-x2, 0), var(--lbc-drift-y2, 0), 0); }
 }
 
 .lbc__redzone-tag {
@@ -448,14 +487,27 @@
   transition: opacity var(--lbc-fade) ease, transform var(--lbc-fade) ease;
 }
 
+/* The OUTGOING page transitions out — it is already mounted, so a transition
+   is exactly right. */
 .lbc__page.is-out {
   opacity: 0;
   transform: translateY(-1.2vh);
+  pointer-events: none;
 }
 
+/* The INCOMING page must ANIMATE, not transition. A transition never runs on
+   mount: the element lands already at its final value, which is why the strip
+   hard-cut every twelve seconds while carrying a transition that looked
+   correct. */
 .lbc__page.is-in {
   opacity: 1;
   transform: none;
+  animation: lbc-page-in var(--lbc-fade) ease;
+}
+
+@keyframes lbc-page-in {
+  from { opacity: 0; transform: translateY(1.2vh); }
+  to { opacity: 1; transform: none; }
 }
 
 .lbc__page-tag {
@@ -672,7 +724,24 @@
   font-weight: 600;
 }
 
+.lbc-reveal__face {
+  width: 18vh;
+  height: 18vh;
+  border-radius: 50%;
+  object-fit: cover;
+  flex: none;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.lbc-reveal__nameline {
+  display: flex;
+  align-items: center;
+  gap: 1.5vw;
+  min-width: 0;
+}
+
 .lbc-reveal__name {
+  min-width: 0;
   font-size: min(13vh, 6rem);
   font-weight: 900;
   line-height: 0.95;
@@ -888,7 +957,7 @@
   text-decoration: none;
 }
 
-.lbc-setup__chip[aria-pressed='true'] {
+.lbc-setup__chip[aria-current='true'] {
   border-color: var(--lbc-text);
   background: var(--lbc-panel-2);
 }
@@ -925,8 +994,11 @@
 }
 
 /* Past five minutes stale the whole board says so from ten feet. */
+/* An inset shadow, not a border: `.lbc__header` is fixed-height and
+   `border-box`, so adding a border would shift the entire grid down 0.5vh at
+   the exact moment the feed goes stale — motion that reads as a fault. */
 .lbc.is-stale .lbc__header {
-  border-top: 0.5vh solid var(--lbc-alert);
+  box-shadow: inset 0 0.5vh 0 0 var(--lbc-alert);
 }
 
 .lbc.is-stale .lbc__score,

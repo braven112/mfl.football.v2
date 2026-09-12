@@ -71,13 +71,17 @@ function MomentTakeover({ moment, team, scoreLine, position, nflTeam, headshot }
           Your {position || 'starter'} · {moment.leagueName}
           {team ? ` · ${team.name}` : ''}
         </p>
-        <h2 className="lbc-reveal__name">
+        <div className="lbc-reveal__nameline">
+          {/* Its OWN size class. Reusing the strip's `lbc__face` resolved
+              `54cqh` against the strip's query container, which this layer is
+              not inside — so it collapsed to a 7.5vh thumbnail sitting on the
+              baseline of a 13vh heading. */}
           <BroadcastFace
             player={{ id: moment.playerId, mflId: moment.playerId, position, nflTeam, headshot }}
-            className="lbc__face"
+            className="lbc-reveal__face"
           />
-          {moment.playerName}
-        </h2>
+          <h2 className="lbc-reveal__name">{moment.playerName}</h2>
+        </div>
         {/* ESPN's own summary, never rewritten. */}
         <p className="lbc-reveal__play">{moment.text}</p>
         <p className="lbc-reveal__line">

@@ -15,9 +15,16 @@
  * landing once, printing "scores will appear when games begin" over a live
  * slate.
  */
+import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
 import LiveBroadcast from './LiveBroadcast';
 import { assembleBroadcastBoard, toPageData } from '../../../utils/broadcast-board';
-import { resolveBroadcastSound, BROADCAST_LEAGUE_COOKIE, BROADCAST_SOUND_COOKIE } from '../../../utils/broadcast-selection';
+import {
+  broadcastHref,
+  resolveBroadcastSound,
+  toggleLeagueSelection,
+  BROADCAST_LEAGUE_COOKIE,
+  BROADCAST_SOUND_COOKIE,
+} from '../../../utils/broadcast-selection';
 import { getCurrentSeasonYear } from '../../../utils/league-year';
 import { getCurrentNFLWeek } from '../../../utils/current-week';
 import type { AuthUser } from '../../../utils/auth';
@@ -55,8 +62,30 @@ const sound = resolveBroadcastSound(
 );
 
 const pageData = toPageData(board, { week, year, sound, pathname: Astro.url.pathname });
+
+/**
+ * The picker's chips, on the setup screen AND reachable afterwards via
+ * `?leagues=`. Each href carries the CUMULATIVE set with this league toggled,
+ * not just its own id — a chip that replaced the whole selection meant an
+ * owner could never watch two leagues at once, and once anything was enabled
+ * the setup screen never rendered again, so there was no way back.
+ */
+const allIds = board.leagues.map((l) => l.id);
+const chips = board.leagues.map((league) => ({
+  id: league.id,
+  name: league.name,
+  on: board.enabled.includes(league.id),
+  href: broadcastHref(
+    Astro.url.pathname,
+    toggleLeagueSelection(board.enabled, allIds, league.id, board.enabled),
+    Number.isFinite(parsedWeek) ? week : null,
+  ),
+}));
+
+const title = `Live Broadcast — Week ${week}`;
 ---
 
+<TheLeagueLayout title={title} hideMobileNavIcons>
 {
   board.enabled.length === 0 ? (
     <main class="lbc" aria-label="Live scoring broadcast">
@@ -66,10 +95,13 @@ const pageData = toPageData(board, { week, year, sound, pathname: Astro.url.path
           Your scores and your opponents' will take the screen as they happen.
         </p>
         <ul class="lbc-setup__list">
-          {board.leagues.map((league) => (
+          {chips.map((chip) => (
             <li>
-              <a class="lbc-setup__chip" href={`${Astro.url.pathname}?leagues=${league.id}`}>
-                {league.name}
+              {/* A LINK, so it works with no JavaScript on a TV browser. The
+                  selected state is `aria-current`, not `aria-pressed`, which
+                  is not valid on an anchor. */}
+              <a class="lbc-setup__chip" href={chip.href} aria-current={chip.on ? 'true' : undefined}>
+                {chip.name}
               </a>
             </li>
           ))}
@@ -80,3 +112,4 @@ const pageData = toPageData(board, { week, year, sound, pathname: Astro.url.path
     <LiveBroadcast client:load pageData={JSON.stringify(pageData)} />
   )
 }
+</TheLeagueLayout>

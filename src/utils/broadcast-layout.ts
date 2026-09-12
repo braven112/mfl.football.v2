@@ -287,3 +287,44 @@ export function padPage(page: StripPage, rowsPerPage: number): (StripRow | null)
   while (out.length < rowsPerPage) out.push(null);
   return out.slice(0, rowsPerPage);
 }
+
+/**
+ * The one real clock a matchup cell can honestly print.
+ *
+ * A fantasy matchup spans up to nine NFL games, so "the game clock" is not a
+ * single fact about it. Rather than invent an average — the exact fabrication
+ * `formatGameClock` exists to prevent — this names the game that most of the
+ * viewer's starters are actually in RIGHT NOW, which is the one an owner
+ * glancing up is watching.
+ *
+ * Returns '' when no starter is in a game being played: before kickoff and
+ * after the last whistle there is no clock, and an empty string renders
+ * nothing at all rather than a placeholder or a stale quarter.
+ */
+export function matchupGameClock(
+  rows: readonly LivePlayerRow[],
+  games: readonly NflGame[],
+  meta: Record<string, PlayerMeta>,
+): string {
+  const live = games.filter((g) => g.state === 'in');
+  if (live.length === 0 || rows.length === 0) return '';
+
+  const counts = new Map<string, number>();
+  for (const row of rows) {
+    const team = meta[row.id]?.nflTeam;
+    if (!team) continue;
+    const game = live.find((g) => g.home.code === team || g.away.code === team);
+    if (!game) continue;
+    counts.set(game.id, (counts.get(game.id) ?? 0) + 1);
+  }
+  if (counts.size === 0) return '';
+
+  // Most of my starters first; ties broken on the game id so two polls of
+  // identical data never swap the cell's clock back and forth.
+  const [bestId] = [...counts.entries()].sort(
+    (a, b) => b[1] - a[1] || (a[0] < b[0] ? -1 : 1),
+  )[0];
+  const game = live.find((g) => g.id === bestId);
+  // ESPN's own string ("8:12 - 3rd"), never one we assemble.
+  return game?.shortDetail ?? '';
+}
