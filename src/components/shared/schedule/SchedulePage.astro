@@ -39,11 +39,11 @@ import { chooseTeamName, resolveConfigForYear } from '../../../utils/team-names'
 import {
   findNextGame,
   franchiseSchedule,
-  lastPlayedWeek,
   opponentsByWeek,
   parseWeeklySchedule,
-  weekMatchups,
 } from '../../../utils/schedule-data.mjs';
+import { resolveHeroFranchiseSkin } from '../../../utils/hero-crest';
+import '../../../styles/hero-franchise-backdrop.css';
 
 interface Props {
   leagueSlug: CanonicalLeagueSlug;
@@ -280,17 +280,54 @@ const gridGroups = conferences.length > 1
 
 const playoffWeeks = weekNumbers.filter((week) => week >= PLAYOFFS_START_WEEK);
 const title = view === 'my' ? 'My Schedule' : 'Schedule';
+
+/**
+ * My Schedule wears the OWNER'S CLUB; the league grid keeps the league's own
+ * chrome. That is the site-wide rule `resolveHeroFranchiseSkin` exists to
+ * carry — a league surface wears the league, a surface about one team wears
+ * that team — so this takes the shared resolver rather than reaching for
+ * `colorPrimary` here. Doing it by hand would mean re-deriving the gradient,
+ * the wash, the measured accent and the crest artwork; and five TheLeague
+ * franchises share `#181818` as their primary, so the naive version paints
+ * five identical near-black heroes.
+ *
+ * Null for the league view, a signed-out visitor, and a club whose config
+ * carries no colours — each of which correctly falls back to league chrome.
+ */
+const heroSkin = view === 'my' ? resolveHeroFranchiseSkin(viewerFranchiseId, leagueSlug) : null;
 ---
 
 <TheLeagueLayout title={`${title} | ${league.name}`}>
   <div class="sch">
     <Breadcrumbs items={[{ label: league.name, href: r(`/${leagueSlug}`) }, { label: 'Schedule' }]} />
 
-    <section class="sch-hero">
+    <section
+      class:list={['sch-hero', { 'sch-hero--franchise': !!heroSkin }]}
+      style={heroSkin?.style}
+    >
       <div class="sch-hero__glow" aria-hidden="true"></div>
-      {viewerFranchiseId && iconOf(viewerFranchiseId) && (
+      {heroSkin ? (
+        <>
+          {/* Resolved SERVER-SIDE as the dark cut with its measured outline
+              inline: a franchise gradient is dark in BOTH themes, and the
+              site's html.dark crest machinery fires only for a viewer whose
+              SITE theme is dark. */}
+          {heroSkin.crest && (
+            <img
+              class="hero-fb__crest"
+              src={heroSkin.crest}
+              style={heroSkin.crestFilter ? `filter: ${heroSkin.crestFilter};` : undefined}
+              alt=""
+              aria-hidden="true"
+              loading="lazy"
+              decoding="async"
+            />
+          )}
+          <span class="hero-fb__wash" aria-hidden="true"></span>
+        </>
+      ) : viewerFranchiseId && iconOf(viewerFranchiseId) ? (
         <img src={iconOf(viewerFranchiseId)!} alt="" class="sch-hero__watermark" aria-hidden="true" />
-      )}
+      ) : null}
 
       <div class="sch-hero__inner">
         <div class="sch-hero__main">
@@ -676,6 +713,41 @@ const title = view === 'my' ? 'My Schedule' : 'Schedule';
     object-fit: contain;
     z-index: 0;
   }
+  /* ── The owner's club, on My Schedule only ──
+     The card swaps its league navy for the franchise gradient and every
+     league-accented mark inside it swaps to the measured franchise accent.
+     Which accent is NOT a style choice: the resolver clears `accent` to 3:1
+     over the copy band and `accent-panel` to 4.5:1 over the card's FAR end,
+     because one accent cannot serve both on a high-contrast gradient —
+     Midwestside runs gold at one end and black at the other. So the main
+     column takes `accent`, the slotted Up-next panel takes `accent-panel`,
+     and anything with a FILL takes the pill pair, whose ink is picked per
+     franchise rather than assumed to be white.
+
+     The league glow goes: it is a radial of --sch-glow, the league's own
+     colour, and leaving it on lights the franchise gradient's top-left
+     corner with the wrong brand. */
+  .sch-hero--franchise { background: var(--hero-fb-gradient); }
+  .sch-hero--franchise .sch-hero__glow { display: none; }
+  .sch-hero--franchise .sch-pill {
+    background: var(--hero-fb-pill-bg);
+    color: var(--hero-fb-pill-ink);
+  }
+  .sch-hero--franchise .sch-rail__bar.is-now { background: var(--hero-fb-accent); }
+  .sch-hero--franchise .sch-next__dot { background: var(--hero-fb-accent-panel); }
+  .sch-hero--franchise .sch-next__kicker { color: var(--hero-fb-accent-panel); }
+  .sch-hero--franchise .sch-btn {
+    background: var(--hero-fb-pill-bg);
+    color: var(--hero-fb-pill-ink);
+  }
+  .sch-hero--franchise .sch-btn:hover { color: var(--hero-fb-pill-ink); }
+  /* The ghost button is a translucent white on the card, so it keeps the
+     white ink the franchise fill does not apply to. */
+  .sch-hero--franchise .sch-btn--ghost {
+    background: var(--sch-raised);
+    color: var(--color-white, #fff);
+  }
+
   .sch-hero__inner {
     position: relative;
     z-index: 2;
@@ -1192,6 +1264,12 @@ const title = view === 'my' ? 'My Schedule' : 'Schedule';
      first screen — so the list scrolls sideways instead of growing downward. */
   .sch-seasons__scroller {
     display: flex;
+    /* min-width:0 is load-bearing, not tidiness: a flex item's default
+       min-width is its CONTENT width, so without it twenty season chips push
+       the whole page wider than the viewport instead of scrolling inside
+       this box. */
+    min-width: 0;
+    flex: 1;
     gap: 0.25rem;
     overflow-x: auto;
     scrollbar-width: thin;
@@ -1245,6 +1323,19 @@ const title = view === 'my' ? 'My Schedule' : 'Schedule';
   }
   @media (max-width: 640px) {
     .sch { padding-inline: 0.75rem; }
+    /* Stacked, not squeezed: side by side the season list takes enough of the
+       row to wrap "My schedule" onto two lines. Tabs get the full width and
+       the seasons scroll under them. */
+    /* nowrap matters as much as the direction: `wrap` on a COLUMN container
+       makes a multi-COLUMN flex box whose line is sized to its content, so the
+       season list stops being a scroll box and pushes the page 1156px wide. */
+    .sch-controls {
+      flex-direction: column;
+      flex-wrap: nowrap;
+      align-items: stretch;
+      gap: 0.625rem;
+    }
+    .sch-tabs { width: 100%; }
     .sch-row { gap: 0.6875rem; padding: 0.625rem 0.75rem; }
     .sch-row__week { width: 34px; }
     .sch-row__weeknum { font-size: 1.25rem; }
