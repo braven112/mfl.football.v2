@@ -232,14 +232,18 @@
   padding-right: 0.2rem;
   background: var(--page-bg);
 }
-/* Chips do not vanish under a hard edge — they fade out into the label. */
+/* Chips do not vanish under a hard edge — they fade out into the label. The
+   width is the rail's GAP, exactly: any wider and the gradient reaches past the
+   gap onto the first chip, washing the selected one at rest, unscrolled, at
+   every width — a permanent artifact to soften a moment that only happens
+   while a finger is down. */
 .st-chips__label::after {
   content: '';
   position: absolute;
   top: 0;
   bottom: 0;
   left: 100%;
-  width: 1.1rem;
+  width: 0.45rem;
   background: linear-gradient(to right, var(--page-bg), transparent);
   pointer-events: none;
 }

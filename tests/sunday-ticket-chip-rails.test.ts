@@ -77,6 +77,16 @@ describe('Sunday Ticket chip rails', () => {
     const rail = ruleBody('.st-rail');
     expect(rail).toContain('flex-wrap: nowrap');
     expect(rail).toContain('overflow-x: auto');
+    // The third of the trio, and the one that decides WHICH box scrolls: a rail
+    // that refuses to shrink below its content hands the overflow to the page.
+    expect(rail).toContain('min-width: 0');
+  });
+
+  it('keeps the label\u2019s fade inside the gap, off the first chip', () => {
+    // A gradient wider than the rail's 0.45rem gap reaches onto the chip beside
+    // the label and washes it at rest — the selected one, at every width.
+    const fade = ruleBody('.st-chips__label::after');
+    expect(fade).toContain('width: 0.45rem');
   });
 
   it('never lets a chip shrink to fit', () => {
