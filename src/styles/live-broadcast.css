@@ -514,11 +514,14 @@
  * `min-width: 0` — collapsed to nothing, so the board showed "Proj 109.7 0.0"
  * with no indication of whose it was. `cqw` is what stops that.
  */
-.lbc__score { font-size: min(25cqh, 15cqw, 11vh); }
-.lbc__header[data-tier='2'] .lbc__score { font-size: min(25cqh, 15cqw, 9vh); }
-.lbc__header[data-tier='3'] .lbc__score { font-size: min(25cqh, 15cqw, 7vh); }
-.lbc__header[data-tier='4'] .lbc__score { font-size: min(24cqh, 14cqw, 5.5vh); }
-.lbc__header[data-tier='5'] .lbc__score { font-size: max(min(22cqh, 14cqw, 4.2vh), 0.9rem); }
+/* Each rung ~12% down from where it was: at four panels on a 65" screen the
+   numerals were the loudest thing on a board whose job is the whole slate, and
+   the space they gave back is what buys the bar its margin below. */
+.lbc__score { font-size: min(22cqh, 13cqw, 9.6vh); }
+.lbc__header[data-tier='2'] .lbc__score { font-size: min(22cqh, 13cqw, 7.9vh); }
+.lbc__header[data-tier='3'] .lbc__score { font-size: min(22cqh, 13cqw, 6.2vh); }
+.lbc__header[data-tier='4'] .lbc__score { font-size: min(21cqh, 12.5cqw, 4.9vh); }
+.lbc__header[data-tier='5'] .lbc__score { font-size: max(min(20cqh, 12.5cqw, 3.8vh), 0.85rem); }
 
 .lbc__proj {
   /* Pushes itself and the score to the right edge, so the numerals line up in
@@ -536,7 +539,9 @@
   border-radius: 999px;
   background: var(--lbc-theirs, #334155);
   overflow: hidden;
-  margin: 0.3vh 0;
+  /* The bar separates the two sides of a matchup, so it needs to read as a
+     divider rather than as an underline on the score above it. */
+  margin: 1vh 0;
 }
 
 .lbc__wp-fill {
@@ -948,8 +953,21 @@
 .lbc-reveal__crest {
   --lbc-crest-ring-w: 2px;
   position: absolute;
-  right: -6vw;
-  bottom: -10vh;
+  /*
+   * CENTRED on the layer. It sat bottom-right, bled off both edges, which put
+   * it wholly underneath the figure column once the scorer moved there.
+   *
+   * Anchored with `left`/`top` + a centring translate, and the old `right`/
+   * `bottom` are GONE rather than left alongside: an absolutely positioned
+   * element given both edges of an axis is pinned to both and stretches
+   * instead of moving, so leaving either one in re-anchors it on that axis.
+   * The draft board's crest has the mirror of this hazard written on it — it
+   * centres by default and has to unwind `left`, `top` AND `transform`
+   * together to move.
+   */
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
   width: 68vh;
   height: 68vh;
   object-fit: contain;
@@ -1005,7 +1023,13 @@
      OWN width, which is the trap that landed the draft board's first attempt
      at half the distance it intended. */
   margin-block: -3vh;
-  margin-inline-end: -4vw;
+  /*
+   * Further right than the layer's own padding, to clear the now-centred
+   * crest. An ESPN cutout is a transparent PNG with the player centred in the
+   * frame, so the first few vw of this bleed spend the empty margin rather
+   * than the man — measured, not assumed, before settling on the number.
+   */
+  margin-inline-end: -9vw;
   /* This never clips. `.lbc-reveal` is the only thing that does, so measure a
      bleed against the LAYER, not against this box. */
   overflow: visible;
@@ -1037,6 +1061,18 @@
 }
 
 .lbc-reveal__model {
+  /*
+   * ONE seat, and every scorer takes it — a player, or the single defender who
+   * stands in for a team defense. It is the seat the SECOND man of the old
+   * defensive pair held (`right: -7.92%` of the stand), which is where Brandon
+   * wanted everyone once the crest moved to the centre.
+   *
+   * Positioned rather than laid out, so the seat is placed by construction and
+   * cannot drift with the figure's width.
+   */
+  position: absolute;
+  bottom: 0;
+  right: -7.92%;
   width: 100%;
   height: 100%;
   max-width: none;
@@ -1045,49 +1081,8 @@
   filter: drop-shadow(0 1.4vh 2.4vh rgba(0, 0, 0, 0.55));
 }
 
-/* ── Team-defense pair ──
-   A defense is a UNIT, so it reveals as two of its stars rather than one man —
-   one reads as an ordinary player card with the wrong name over it. Each man
-   is a FULL cutout, not two shrunk to fit: two smaller men would read as a
-   lesser moment, and the whole point is that it is not a lesser card.
-
-   POSITIONED, never flexed. The draft board shipped this as flex items with a
-   negative margin on the assumption that `justify-content: center` splits the
-   overflow evenly. It does not — the pair hung entirely off one side, and on a
-   narrow screen the first man's face was sliced by the card edge. Offsets from
-   an edge are placed by construction and cannot drift with the line's width.
-
-   The seats: SPACING (40.83% of a man) is the composition and follows head
-   size — recompute it only if the cutouts change scale. The MIDPOINT is taste,
-   and slides by moving all three seats and the caption by a common delta. */
-.lbc-reveal__model.lbc-reveal__model--def {
-  position: absolute;
-  bottom: 0;
-  width: 100%;
-  height: 100%;
-  max-width: none;
-  /* Deliberately no `max-height`: the base rule and the breakpoints decide,
-     exactly as they do for a lone player. */
-}
-
-/* The higher-ranked man is in front, so his ear is never behind the other
-   man's shoulder. Source order alone would paint the second on top. */
-.lbc-reveal__model--def:nth-of-type(1) {
-  right: 32.92%;
-  z-index: 1;
-}
-
-.lbc-reveal__model--def:nth-of-type(2) {
-  right: -7.92%;
-}
-
-/* A 404 can leave one man standing. Seat him at the PAIR's centre — midway
-   between the two seats above — rather than leaving him in the first one,
-   which would park him well right of where the pair reads. Note this is the
-   pair's centre, NOT where a lone non-DEF cutout stands; different points. */
-.lbc-reveal__model--def:only-of-type {
-  right: 12.5%;
-}
+/* The defensive stand-in uses the same single seat as any other scorer; the
+   two-man pair the draft board uses was tried here and filled the layer. */
 
 /* ── Defender caption ──
    A team defense's headline is the UNIT ("Bills, Buffalo"), so these two are
@@ -1096,8 +1091,9 @@
 .lbc-reveal__face {
   position: absolute;
   bottom: 3vh;
-  right: 21.67%;
-  width: 81.67%;
+  /* Centred under the one seat above, not spanning a pair. */
+  right: -7.92%;
+  width: 100%;
   z-index: 2;
   display: flex;
   flex-direction: row;
@@ -1168,6 +1164,17 @@
   font-weight: 900;
   line-height: 0.95;
   letter-spacing: -0.02em;
+}
+
+/* The club's mark beside a team defense's name. Sized off the heading so it
+   tracks the drop ladder, and nudged down a hair to sit on the cap height
+   rather than the ascender. */
+.lbc-reveal__name-logo {
+  height: 0.78em;
+  width: 0.78em;
+  object-fit: contain;
+  vertical-align: -0.08em;
+  margin-right: 0.28em;
 }
 
 .lbc-reveal__play {
@@ -1514,7 +1521,14 @@
   }
 }
 
-/* Fullscreen, idle: the board and nothing else.
+/* Idle: the board and nothing else.
+
+   Gated on IDLENESS ALONE, not on `:fullscreen`. The first cut required both,
+   and on a real television the chips stayed up through a fullscreen reveal —
+   because a TV browser is frequently just MAXIMISED and never enters the
+   Fullscreen API at all, so `document.fullscreenElement` is null and the
+   `is-fullscreen` half never matched. Idleness is the thing actually being
+   asked about, and it is true in both cases.
    The hover gate above is right on a laptop and wrong on the screen this page
    exists for — a television's cursor is PARKED over the page and never leaves,
    so `:hover` is permanently true and three buttons sit on the board all
@@ -1523,7 +1537,7 @@
    both back for three seconds, so this can never trap someone in fullscreen —
    which is why the old rule lived inside the pointer query in the first place.
    Escape still exits regardless, on every browser. */
-.lbc.is-fullscreen.is-idle .lbc__chrome {
+.lbc.is-idle .lbc__chrome {
   opacity: 0;
   pointer-events: none;
 }
@@ -1535,12 +1549,12 @@
  * three seconds later while still holding focus, which is the one way this
  * idle-hide could genuinely trap someone.
  */
-.lbc.is-fullscreen.is-idle .lbc__chrome:focus-within {
+.lbc.is-idle .lbc__chrome:focus-within {
   opacity: 1;
   pointer-events: auto;
 }
 
-.lbc.is-fullscreen.is-idle {
+.lbc.is-idle {
   cursor: none;
 }
 
@@ -1644,12 +1658,10 @@
        free. */
     min-height: 0;
   }
-  /* Portrait relation: closer together and re-centred, since the column is the
-     whole width here rather than half of it. */
-  .lbc-reveal__model--def:nth-of-type(1) { right: 21.5%; }
-  .lbc-reveal__model--def:nth-of-type(2) { right: -21.5%; }
-  .lbc-reveal__model--def:only-of-type { right: 0; }
-  .lbc-reveal__face { right: 7%; width: 86%; }
+  /* Centred here: the column is the whole width rather than half of it, so the
+     desktop seat's rightward offset would push him off the edge. */
+  .lbc-reveal__model { right: 0; }
+  .lbc-reveal__face { right: 0; width: 100%; }
   .lbc-reveal__face-chip { flex-direction: column; align-items: flex-start; gap: 0; }
   .lbc-third { flex-wrap: wrap; gap: 0.8vw; }
   .lbc-third__play { display: none; }

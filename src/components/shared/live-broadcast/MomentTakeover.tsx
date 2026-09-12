@@ -12,10 +12,10 @@
  *
  * ── The figure ────────────────────────────────────────────────────────────
  *
- * The scorer is a LARGE CUTOUT on the right, outside any cell, next to the
- * franchise crest — the draft board's treatment, on the same hardware. He was
- * an 18vh circular chip inside the copy until Sep 2026, which read as a row of
- * the player strip blown up rather than as a moment.
+ * The scorer is a LARGE CUTOUT on the right, outside any cell, with the
+ * franchise crest centred behind him — the draft board's treatment, on the same
+ * hardware. He was an 18vh circular chip inside the copy until Sep 2026, which
+ * read as a row of the player strip blown up rather than as a moment.
  *
  * Four things here deliberately differ from `BroadcastRevealCard`, its
  * equivalent on the draft board:
@@ -34,9 +34,12 @@
  *    `z-index` instead, so a defender's shoulder can never cover the play text.
  *  - **No shuffle.** The draft board randomises which defenders show because
  *    the AFL can draft the same defense twice in one night. Here, seeing the
- *    same two men every time the Chiefs defense scores is a feature.
- *  - **Three faces ship, two show.** The spare backfills a 404 so a pair stays
- *    a pair.
+ *    same man every time the Chiefs defense scores is a feature.
+ *  - **ONE defender, not the draft board's pair.** Tried on the real
+ *    television, two men at full cutout scale filled the layer and left the
+ *    club unidentifiable without reading the caption. The unit's NAME carries
+ *    the club's mark instead, and one face stands beside it. Three faces still
+ *    ship: the spares are the 404 backfill.
  */
 
 import { memo, useMemo, useState } from 'react';
@@ -44,6 +47,7 @@ import type { BroadcastMoment } from '../../../utils/broadcast-moments';
 import type { BroadcastDefenderFace, BroadcastTeam } from '../../../types/live-broadcast';
 import { isEspnCdnUrl } from '../../../utils/espn-cdn';
 import { crestStrokeProps } from '../../../utils/draft-broadcast';
+import { getNFLTeamLogo as nflLogo } from '../../../utils/nfl-logo';
 
 interface Props {
   moment: BroadcastMoment;
@@ -115,8 +119,17 @@ function MomentTakeover({
    */
   const [dead, setDead] = useState<ReadonlySet<string>>(() => new Set());
 
+  /**
+   * ONE defender, not two.
+   *
+   * The pair was the draft board's answer and it was tried here first; on the
+   * real television two men at full cutout scale filled the layer and left the
+   * club unidentifiable without reading the caption. A single face beside the
+   * unit's name, with the NFL mark on the name itself, says the same thing
+   * more quietly. The spare entries the server ships are the 404 backfill.
+   */
   const shown = useMemo(
-    () => (isDef ? (defenders ?? []).filter((d) => !dead.has(d.headshot)).slice(0, 2) : []),
+    () => (isDef ? (defenders ?? []).filter((d) => !dead.has(d.headshot)).slice(0, 1) : []),
     [isDef, defenders, dead],
   );
 
@@ -139,9 +152,9 @@ function MomentTakeover({
           over the 100x100 hand cut) and buys dark-board legibility back with a
           ring. Both crest fields were the same 100px icon until Sep 2026, which
           is what made this one visibly pixelated.
-          Anchored bottom-RIGHT, so it already sits under the figure column —
-          the crest-under-cutout overlap the draft board engineers on purpose
-          comes free here. Nothing about it needs to move. */}
+          CENTRED on the layer, with the scorer seated to its right — it used to
+          be anchored bottom-right, which put it entirely underneath the figure
+          once the cutout moved there and wasted the club's own mark. */}
       {team?.icon && (
         <img
           {...crestStrokeProps('lbc-reveal__crest', team.iconStroke, 'lbc')}
@@ -163,7 +176,15 @@ function MomentTakeover({
           Your {position || 'starter'} · {moment.leagueName}
           {team ? ` · ${team.name}` : ''}
         </p>
-        <h2 className="lbc-reveal__name">{moment.playerName}</h2>
+        <h2 className="lbc-reveal__name">
+          {/* A team defense's name IS a club, so it takes the club's mark —
+              the same pairing the player strip's meta line uses. A person's
+              name does not: his own face is already the identification. */}
+          {isDef && nflTeam && (
+            <img className="lbc-reveal__name-logo" src={nflLogo(nflTeam)} alt="" aria-hidden="true" />
+          )}
+          {moment.playerName}
+        </h2>
         {/* ESPN's own summary, never rewritten. */}
         <p className="lbc-reveal__play">{moment.text}</p>
         <p className="lbc-reveal__line">
@@ -195,7 +216,7 @@ function MomentTakeover({
             {shown.map((face) => (
               <img
                 key={face.headshot}
-                className="lbc-reveal__model lbc-reveal__model--def"
+                className="lbc-reveal__model"
                 src={face.headshot}
                 alt=""
                 aria-hidden="true"

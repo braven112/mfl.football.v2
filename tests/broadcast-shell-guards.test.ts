@@ -550,9 +550,20 @@ describe('fullscreen shows the board and nothing else', () => {
     expect(ISLAND_CODE).toMatch(/is-idle/);
   });
 
-  it('hides the chrome and the cursor only when BOTH hold', () => {
-    expect(CSS_CODE).toMatch(/\.lbc\.is-fullscreen\.is-idle \.lbc__chrome/);
-    expect(CSS_CODE).toMatch(/\.lbc\.is-fullscreen\.is-idle\s*\{[^}]*cursor:\s*none/);
+  it('hides the chrome and the cursor on IDLENESS ALONE', () => {
+    // Not `is-fullscreen.is-idle`. A television browser is frequently just
+    // MAXIMISED and never enters the Fullscreen API, so `fullscreenElement` is
+    // null there and requiring both left the chips up through a reveal on a
+    // real TV. Idleness is the thing actually being asked about.
+    expect(CSS_CODE).toMatch(/\.lbc\.is-idle \.lbc__chrome \{/);
+    expect(CSS_CODE).toMatch(/\.lbc\.is-idle\s*\{[^}]*cursor:\s*none/);
+    expect(CSS_CODE).not.toMatch(/\.lbc\.is-fullscreen\.is-idle/);
+  });
+
+  it('runs the idle timer unconditionally', () => {
+    // Same bug from the other side: an effect that returned early unless
+    // fullscreen never started the timer on a maximised TV.
+    expect(ISLAND_CODE).not.toMatch(/if \(!isFullscreen\) \{[\s\S]{0,80}return;/);
   });
 
   it('wakes on every input a television can produce', () => {
@@ -628,19 +639,23 @@ describe('the reveal features the scorer, not a chip', () => {
     expect(model.slice(0, model.indexOf('}'))).not.toMatch(/max-height:\s*\d+%/);
   });
 
-  it('keeps the pair’s seat arithmetic self-consistent', () => {
-    // Spacing is the COMPOSITION and follows head size; the midpoint is taste.
-    // Converted from the draft board's column percentages by /1.2.
-    const seat = (sel: string) => {
-      const at = CSS_CODE.indexOf(sel);
-      const block = CSS_CODE.slice(at, CSS_CODE.indexOf('}', at));
-      return parseFloat(block.match(/right:\s*(-?[\d.]+)%/)![1]);
-    };
-    const one = seat('.lbc-reveal__model--def:nth-of-type(1)');
-    const two = seat('.lbc-reveal__model--def:nth-of-type(2)');
-    const solo = seat('.lbc-reveal__model--def:only-of-type');
-    expect(one - two).toBeCloseTo(40.83, 1);
-    expect(solo).toBeCloseTo((one + two) / 2, 1);
+  it('seats every scorer in the SAME place, player or defense', () => {
+    // The two-man pair was tried and filled the layer on a real TV. One seat
+    // now, and a defense's stand-in takes it like anyone else — so a reveal
+    // never shifts its subject depending on who scored.
+    expect(CSS_CODE).not.toMatch(/lbc-reveal__model--def/);
+    const at = CSS_CODE.indexOf('.lbc-reveal__model {');
+    const block = CSS_CODE.slice(at, CSS_CODE.indexOf('}', at));
+    expect(block).toMatch(/position:\s*absolute/);
+    expect(parseFloat(block.match(/right:\s*(-?[\d.]+)%/)![1])).toBeCloseTo(-7.92, 2);
+  });
+
+  it('shows ONE defender, and marks the unit with its club logo', () => {
+    expect(TAKEOVER).toMatch(/\.slice\(0, 1\)/);
+    // A defense's name IS a club, so it takes the club's mark; a person's name
+    // does not, because his own face already identifies him.
+    expect(TAKEOVER).toMatch(/isDef && nflTeam &&/);
+    expect(CSS_CODE).toMatch(/\.lbc-reveal__name-logo/);
   });
 
   it('gives the figure’s space back when there is nothing to show', () => {
