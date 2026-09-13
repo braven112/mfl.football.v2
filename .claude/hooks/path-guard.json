@@ -351,16 +351,17 @@
         "src/utils/nfl-scoreboard-source.ts"
       ],
       "tests": [
-        "tests/broadcast-moments.test.ts",
+        "tests/broadcast-carry.test.ts",
+        "tests/broadcast-demo.test.ts",
         "tests/broadcast-layout.test.ts",
         "tests/broadcast-live-source.test.ts",
+        "tests/broadcast-moments.test.ts",
+        "tests/broadcast-projections-week.test.ts",
+        "tests/broadcast-score-header-ssr.test.ts",
         "tests/broadcast-selection.test.ts",
         "tests/broadcast-shell-guards.test.ts",
         "tests/espn-notable-plays.test.ts",
-        "tests/broadcast-demo.test.ts",
-        "tests/nfl-live-routes.test.ts",
-        "tests/broadcast-carry.test.ts",
-        "tests/broadcast-projections-week.test.ts"
+        "tests/nfl-live-routes.test.ts"
       ]
     },
     {

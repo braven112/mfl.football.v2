@@ -243,8 +243,14 @@ function BroadcastScoreHeader({
                               derived from MFL's `gameSecondsRemaining`, which
                               does not tick and drifts all afternoon into a
                               confident-looking lie. Spelled "3rd 4:08 left" so
-                              it cannot be read as one game's clock. */}
-                          {clock && <span className="lbc__gameclock">{clock}</span>}
+                              it cannot be read as one game's clock.
+
+                              Gated on `readable` with every other number in
+                              the cell: the clock is built from ESPN and the
+                              league's own starters, so a panel whose MFL read
+                              failed has em-dashes for scores and would print a
+                              confident clock beside them. */}
+                          {clock && readable && <span className="lbc__gameclock">{clock}</span>}
                         </div>
                       </div>
                     </div>

@@ -345,3 +345,14 @@ Also fixed in passing, and the reason to read the entry above this one: an
 unreadable panel used to print `0 to play` through the same `?? 0` that once
 printed `0.0 / Proj 0.0`. It now prints nothing — "the feed says nothing" and
 "we could not reach the feed" stay different facts all the way to the pixels.
+
+**What actually caught the last two.** `tests/broadcast-score-header-ssr.test.ts`
+renders the header and asserts on the STRING. Both bugs in this entry were
+computed correctly and then PLACED somewhere that said something else, which is
+invisible to a pure-function test and to a scan guard — and the render test
+immediately found a third of the same shape that review had not: an
+`unavailable` panel drew em-dashes for every number and printed a confident
+`3rd 8:17 left` beside them, because the clock is built from ESPN plus the
+league's own starters and never asked whether the league's read had failed.
+Anything this component prints belongs behind `readable`.
+
