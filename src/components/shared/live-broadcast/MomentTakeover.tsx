@@ -66,6 +66,29 @@ interface Props {
   defenders?: BroadcastDefenderFace[];
 }
 
+/**
+ * A team defense's headline name, without the city.
+ *
+ * `PlayerMeta.name` arrives as "Buffalo Bills" — `formatName` in
+ * `player-map.ts` builds it as `${city} ${nickname}` from MFL's
+ * "Bills, Buffalo". At reveal scale that is two words of very large type in a
+ * column that also seats the scorer, so "Washington Commanders" and "New
+ * England Patriots" wrapped to two lines and pushed the play text down.
+ *
+ * The nickname is the LAST whitespace-delimited token for all 32 clubs,
+ * because the city is what `formatName` puts in front of it — multi-word
+ * cities ("New York", "Kansas City", "Tampa Bay") are exactly the wrap this
+ * fixes, and none of them adds a token to the nickname's side.
+ * `tests/broadcast-shell-guards.test.ts` checks that against the real feed.
+ *
+ * The city is not information lost: the club's own mark sits beside the name,
+ * and ESPN's play summary below names the club in full.
+ */
+export function defenseNickname(name: string): string {
+  const parts = name.trim().split(/\s+/);
+  return parts.length > 1 ? parts[parts.length - 1] : name;
+}
+
 /** The kicker's headline word. Says WHAT happened, in one glance. */
 function kickerFor(moment: BroadcastMoment): string {
   switch (moment.kind) {
@@ -211,7 +234,7 @@ function MomentTakeover({
               onError={() => setDefLogo(null)}
             />
           )}
-          {moment.playerName}
+          {isDef ? defenseNickname(moment.playerName) : moment.playerName}
         </h2>
         {/* ESPN's own summary, never rewritten. */}
         <p className="lbc-reveal__play">{moment.text}</p>

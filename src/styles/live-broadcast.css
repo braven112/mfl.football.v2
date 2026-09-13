@@ -314,16 +314,18 @@
   /*
    * An inset SHADOW, not a `border-left`, and that is not a style choice.
    *
-   * `.lbc__cell` carries a `border-image` for the win-probability gradient,
-   * and a border-image REPLACES `border-style` on every side — capping it with
-   * `border-image-width: 1 0 0 0` stops the gradient painting here but does
-   * not bring the border style back, so a `border-left` renders NOTHING.
+   * `.lbc__cell` used to carry a `border-image` for the win-probability
+   * gradient, and a border-image REPLACES `border-style` on every side —
+   * capping it with `border-image-width: 1 0 0 0` stopped the gradient
+   * painting here but did not bring the border style back, so a `border-left`
+   * rendered NOTHING.
    *
    * Both halves of that shipped: uncapped, this divider painted the gradient's
    * 0% stop, a saturated bar in the owner's own team colour hard against Game
-   * 1's score. Capped, it vanished entirely. A shadow is unaffected by the
-   * border-image and is the only one of the three that actually draws a
-   * hairline.
+   * 1's score. Capped, it vanished entirely. The gradient is gone now, but the
+   * shadow stays — it was never the compromise, it is simply the hairline that
+   * always drew, and reinstating a border here would only re-arm the trap for
+   * the next gradient someone puts on this box.
    */
   box-shadow: inset 1px 0 0 var(--lbc-hairline);
   padding-left: 0.6vw;
@@ -363,31 +365,21 @@
   gap: clamp(4px, 1.1vh, 22px);
   min-width: 0;
   min-height: 0;
-  /* The win-probability split doubles as the cell's top border at the
-     densest tiers, where the bar itself is dropped. */
-  border-top: 0.4vh solid transparent;
-  border-image: linear-gradient(
-      to right,
-      var(--lbc-mine, #64748b) 0 var(--wp-split, 50%),
-      var(--lbc-panel) var(--wp-split, 50%) calc(var(--wp-split, 50%) + 0.2%),
-      var(--lbc-theirs, #334155) calc(var(--wp-split, 50%) + 0.2%) 100%
-    )
-    1;
   /*
-   * The gradient is the TOP border and only the top border.
+   * NO rule across the top of the cell — that edge is AIR.
    *
-   * `border-image-width` defaults to 1 — a MULTIPLE of each side's
-   * border-width — so the image paints on every border that has width. The
-   * doubleheader divider below is a 1px `border-left`, which meant it rendered
-   * the gradient's left slice: its 0% stop, `--lbc-mine`. A saturated
-   * full-height bar in the owner's own team colour, hard against Game 1's
-   * score numeral, where a hairline was intended.
+   * A 0.4vh win-probability gradient ran here until Sep 2026: a second,
+   * thinner copy of `.lbc__wp` drawn where the league tag meets the matchup.
+   * On a real television it did not read as this matchup's split at all; it
+   * read as a progress bar belonging to the panel above it, four of them
+   * stacked down a 65" screen, and it pinned the first score row hard against
+   * the tag. The split is stated ONCE, by the bar between the two sides.
    *
-   * Load-bearing and easy to lose: the `border-image` SHORTHAND above resets
-   * this to 1 again, so it must stay after it.
+   * Removing it also retires the `border-image` that drew it, which replaced
+   * `border-style` on EVERY side of this box — see the doubleheader divider
+   * above, which had to become a `box-shadow` to survive it.
    */
-  border-image-width: 1 0 0 0;
-  padding-top: 0.4vh;
+  padding-top: 1.6vh;
   /*
    * Counter-drift on a 97s period, co-prime with the root's 90s, so the
    * brightest persistent glyphs never retrace the same path.
@@ -403,13 +395,6 @@
    */
   transform: translate3d(var(--lbc-drift-x2, 0), var(--lbc-drift-y2, 0), 0);
   transition: transform 12s ease-in-out;
-}
-
-.lbc__game-tag {
-  font-size: min(11cqh, max(2.2vh, 0.66rem));
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  color: var(--lbc-text-faint);
 }
 
 .lbc__side {
@@ -540,8 +525,9 @@
   background: var(--lbc-theirs, #334155);
   overflow: hidden;
   /* The bar separates the two sides of a matchup, so it needs to read as a
-     divider rather than as an underline on the score above it. */
-  margin: 1vh 0;
+     divider rather than as an underline on the score above it. The height the
+     "Game N" label gave back is spent here. */
+  margin: 2.2vh 0;
 }
 
 .lbc__wp-fill {
@@ -1522,40 +1508,38 @@
 
 /* Idle: the board and nothing else.
 
-   Gated on IDLENESS rather than on `:fullscreen`, and kept INSIDE the pointer
-   query — both halves matter and they fix opposite failures.
+   Gated on IDLENESS ALONE — no `:fullscreen` conjunct and no pointer query,
+   and both omissions are deliberate.
 
-   Idleness, because a television browser is frequently just MAXIMISED and
-   never enters the Fullscreen API at all: `document.fullscreenElement` is
-   null, so an `is-fullscreen` conjunct never matched and the chips sat on the
-   board through a reveal on a real TV.
+   No fullscreen, because a television browser is frequently just MAXIMISED
+   and never enters the Fullscreen API: `document.fullscreenElement` is null,
+   so that conjunct never matched and the chips sat on the board through a
+   reveal on a real TV.
 
-   Inside the pointer query, because the FIRST attempt at that moved it out —
-   and a phone, which has no hover and was therefore always meant to keep its
-   chrome, lost Leagues / Sound / Fullscreen three seconds after load without
-   the viewer touching anything. Worse, `pointer-events: none` turned the next
-   tap into a wake rather than a press, so every control needed two taps. The
-   television is a `hover: hover` / `pointer: fine` device — that is WHY its
-   parked cursor kept `:hover` true — so it still matches here, and a coarse
-   pointer never does. */
-@media (hover: hover) and (pointer: fine) {
-  .lbc.is-idle .lbc__chrome {
-    opacity: 0;
-    pointer-events: none;
-  }
+   No pointer query either, even though the first correction added one to stop
+   a phone hiding its controls untouched. That fix depended on a television
+   reporting `hover: hover` / `pointer: fine`, which is an assumption about
+   someone else's hardware and not a measurement — and a TV that reports a
+   coarse pointer would have kept the chips forever. The phone is protected in
+   the ISLAND instead, by not arming the idle timer until the viewer has
+   actually interacted once; see `LiveBroadcast.tsx`. That holds whatever the
+   device reports. */
+.lbc.is-idle .lbc__chrome {
+  opacity: 0;
+  pointer-events: none;
+}
 
-  /* ...unless something in it has keyboard focus. Has to out-specify the rule
-     above, which the plain `:focus-within` further up does not — otherwise a
-     keyboard user who tabbed to a button watches it disappear three seconds
-     later while still holding focus. */
-  .lbc.is-idle .lbc__chrome:focus-within {
-    opacity: 1;
-    pointer-events: auto;
-  }
+/* ...unless something in it has keyboard focus. Has to out-specify the rule
+   above, which the plain `:focus-within` further up does not — otherwise a
+   keyboard user who tabbed to a button watches it disappear three seconds
+   later while still holding focus. */
+.lbc.is-idle .lbc__chrome:focus-within {
+  opacity: 1;
+  pointer-events: auto;
+}
 
-  .lbc.is-idle {
-    cursor: none;
-  }
+.lbc.is-idle {
+  cursor: none;
 }
 
 /* ── Laptop fallback — not a responsive target, just not broken ───────────── */

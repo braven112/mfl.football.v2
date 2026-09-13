@@ -133,7 +133,14 @@ function BroadcastScoreHeader({ panels, scores, tier, hidden, games, meta }: Pro
                       </p>
 
                       <div aria-hidden="true">
-                        {cellCount > 1 && <p className="lbc__game-tag">Game {matchup.index + 1}</p>}
+                        {/* No "Game 1 / Game 2" label. On a doubleheader the
+                            two cells sit side by side with a divider between
+                            them, which already says there are two — and the
+                            line cost a row of height in the box whose
+                            documented failure is `overflow: hidden` eating the
+                            opponent's score. The screensaver still names them,
+                            where the games are stacked and the label is the
+                            only thing telling them apart. */}
 
                         <div className={`lbc__side${readable && mineLive >= theirsLive ? ' is-leading' : ''}`}>
                           <span className="lbc__crest">
