@@ -413,6 +413,40 @@ the DEF-joins-by-team rule.
 feature flags, so a cross-league category is a genuine new shape there, not a
 new row.
 
+**Phase 6 — top scorer across all leagues.** Added to the plan 2026-09-13; built
+LAST, after the board is real. The one number an owner with six teams cannot get
+anywhere today: who is actually winning them their Sunday.
+
+**Open — which reading, decided before this is built.** The two are different
+features on the same data, and the answer changes the payload, not just the UI:
+
+- **Per matchup** — every team on the board carries its own best performer, so a
+  compact row reads `Cowboys 74.2 · Tre Tucker 16.4`. Answers "who is carrying
+  each of my teams, and each opponent". Needs nothing new: the starter rows are
+  already in the payload for the expansion, so this is a max over rows the board
+  already has.
+- **Across all leagues, one answer** — a single banner naming your best player
+  of the week anywhere: `Tre Tucker · 16.4 · AFL + Sunday Money`. Answers "what
+  is my best play this week". Needs a cross-league reduce and has to decide what
+  happens when one player is started in several leagues (the AFL's duplicate
+  rosters make that the normal case, not the edge one).
+
+Three things it inherits whichever way it goes:
+
+- **A projection is not a score.** Rank on points SCORED. A player yet to play
+  has no claim on "top scorer" however high his projection, and mixing the two
+  produces a leader who has not taken a snap.
+- **DEF cannot be a top scorer with a stat line.** Team defences carry no ESPN
+  athlete id, so they have an MFL score but no player detail. They are eligible
+  to WIN the title on points and must render without the stat line the others
+  get, rather than being silently excluded.
+- **A player started in two leagues is ONE player with two scores.** Different
+  rule sets, so the same afternoon is worth different points in each — the same
+  reason `broadcast-live-source` keeps projections per league rather than per
+  player. Sum, max, or list per league is a display decision, but the number
+  shown must name which league produced it.
+
+
 ## Rules this board inherits (each one is a bug that shipped)
 
 From `docs/claude/rules/live-scoring.md` and
