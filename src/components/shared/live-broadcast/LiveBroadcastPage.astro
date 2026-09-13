@@ -141,7 +141,12 @@ const title = `Live Broadcast — Week ${week}`;
           a television the page is scrolled to the board and this strip is
           simply off the top of the picture, while on a laptop or phone it is
           the obvious place to change leagues. */}
-      <BroadcastControls chips={chips} sound={sound} variant="strip" />
+      <BroadcastControls
+        chips={chips}
+        sound={sound}
+        variant="strip"
+        pickerHref={`${Astro.url.pathname}?picker=1`}
+      />
       <LiveBroadcast client:load pageData={JSON.stringify(pageData)} />
     </Fragment>
   )

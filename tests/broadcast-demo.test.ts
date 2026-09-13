@@ -80,6 +80,7 @@ const panel = (leagueId: string): BroadcastLeaguePanel => ({
   leagueName: `League ${leagueId}`,
   slug: 'theleague',
   franchiseId: '0001',
+  home: true,
   matchups: [{ index: 0, mine: team('0001'), opponent: team('0002') }],
   status: 'ok',
 });

@@ -118,6 +118,18 @@ export interface BroadcastLeaguePanel {
   slug: string;
   /** The viewer's franchise id in this league. */
   franchiseId: string;
+  /**
+   * Is this one of the board's HOME leagues (`isHomeLeague`)?
+   *
+   * Resolved SERVER-side, because the question is a registry one — a home
+   * league is registered and not `bestBall` — and `broadcast-layout.ts` is
+   * pure by contract. The layout needs the answer to keep TheLeague and the
+   * AFL at full size no matter how many outside leagues an owner adds; it
+   * cannot ask the registry for it, and a `slug !== ''` test here would
+   * quietly promote Best Ball, which is registered and deliberately not a
+   * home league.
+   */
+  home: boolean;
   matchups: BroadcastMatchup[];
   /**
    * Why this panel has no numbers, when it has none. The panel KEEPS its full

@@ -81,6 +81,81 @@ export function countCells(panels: readonly BroadcastLeaguePanel[]): number {
   return panels.reduce((n, p) => n + Math.max(1, p.matchups.length), 0);
 }
 
+// ── how many leagues get a full-size panel ─────────────────────────────────
+
+/**
+ * The most matchup CELLS the board draws at full size.
+ *
+ * Four, and it is a legibility number rather than a round one: the header is
+ * 36% of the board and the grid gives five or six panels two rows of three, at
+ * which point a cell's score is sized against a third of a third of the
+ * screen. An owner in six leagues was getting six equally unreadable ones.
+ *
+ * CELLS, not leagues — the same distinction `densityTier` makes. A
+ * doubleheader league is one panel and two games' worth of numbers, and it is
+ * the numbers that have to fit.
+ */
+export const MAX_FEATURED_CELLS = 4;
+
+/** The board's two shelves: full-size panels, and the compact overflow row. */
+export interface PanelSplit {
+  /** Drawn as full panels in the header grid. Never empty. */
+  featured: BroadcastLeaguePanel[];
+  /** Drawn as one thin row of scores beneath them. */
+  compact: BroadcastLeaguePanel[];
+}
+
+/**
+ * Split the enabled panels into the full-size grid and the compact row.
+ *
+ * Three rules, in order:
+ *
+ *  1. **A home league is never demoted.** TheLeague and the AFL are the
+ *     leagues this site manages and the reason the board exists; an owner who
+ *     adds four outside leagues must not push his own week into a 4vh row.
+ *     Two home leagues on a doubleheader week is exactly four cells, so this
+ *     rule can consume the budget but never exceed it.
+ *  2. **The rest fill the remaining slots**, in board order, up to
+ *     `maxCells`. A panel is never SPLIT across the two shelves: a
+ *     doubleheader's two games are one league's week and they stay together.
+ *  3. **Fill-in, not stop-at-first-miss.** A two-cell panel that does not fit
+ *     is passed over for a later one-cell panel rather than stranding the last
+ *     slot empty — the owner asked for four games and there are four to show.
+ *
+ * `featured` is never empty: the first panel is featured even when it alone
+ * exceeds the budget, because a board whose whole header is a compact row has
+ * nothing on it worth reading from ten feet.
+ *
+ * Pass `Number.POSITIVE_INFINITY` for the expanded view, which is the same
+ * home-first ordering with nothing demoted.
+ */
+export function splitPanels(
+  panels: readonly BroadcastLeaguePanel[],
+  maxCells: number = MAX_FEATURED_CELLS,
+): PanelSplit {
+  // Home leagues first, each group keeping the board's own order.
+  const ordered = [
+    ...panels.filter((p) => p.home),
+    ...panels.filter((p) => !p.home),
+  ];
+
+  const featured: BroadcastLeaguePanel[] = [];
+  const compact: BroadcastLeaguePanel[] = [];
+  let cells = 0;
+
+  for (const panel of ordered) {
+    const n = Math.max(1, panel.matchups.length);
+    if (panel.home || featured.length === 0 || cells + n <= maxCells) {
+      featured.push(panel);
+      cells += n;
+    } else {
+      compact.push(panel);
+    }
+  }
+
+  return { featured, compact };
+}
+
 // ── the rotating strip ─────────────────────────────────────────────────────
 
 /** One row of the strip, fully resolved for rendering. */

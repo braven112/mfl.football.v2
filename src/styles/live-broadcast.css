@@ -199,10 +199,29 @@
   inset: 0 0 auto 0;
   height: var(--lbc-header-h);
   z-index: 1;
-  display: grid;
-  gap: 0.6vh 0.6vw;
+  /*
+   * A FLEX COLUMN, not the grid itself: the panel grid is `.lbc__panels`
+   * inside it, and the compact overflow row sits under that.
+   *
+   * The grid's rows are declared explicitly on purpose (an implicit `auto`
+   * row lets a panel grow past this fixed height and paint over the strip
+   * beneath, z-index 1 over 0), so the overflow row could not be a ninth grid
+   * child without an extra `grid-template-rows` variant per panel count. A
+   * column that gives the grid `flex: 1` and the row its fixed height keeps
+   * both facts in one place.
+   */
+  display: flex;
+  flex-direction: column;
+  gap: 0.6vh;
   padding: 0.8vh 0.8vw;
   box-sizing: border-box;
+}
+
+.lbc__panels {
+  display: grid;
+  gap: 0.6vh 0.6vw;
+  flex: 1;
+  min-height: 0;
 }
 
 .lbc__strip.is-hidden,
@@ -249,18 +268,21 @@
  * 1080p screen empty while the single panel squeezed its two games into the
  * left. Cells and panels are different counts and they drive different things.
  *
+ * The count is the FEATURED panels only — the overflow row's leagues are not
+ * in this grid and must not widen it.
+ *
  * Explicit rows throughout: without them a single implicit `auto` row lets a
  * panel grow past the header's fixed height and paint over the strip beneath
  * it (header z-index 1, strip 0).
  */
-.lbc__header[data-panels='1'] { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); }
-.lbc__header[data-panels='2'] { grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: minmax(0, 1fr); }
-.lbc__header[data-panels='3'] { grid-template-columns: repeat(3, minmax(0, 1fr)); grid-template-rows: minmax(0, 1fr); }
-.lbc__header[data-panels='4'] { grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: repeat(2, minmax(0, 1fr)); }
-.lbc__header[data-panels='5'],
-.lbc__header[data-panels='6'] { grid-template-columns: repeat(3, minmax(0, 1fr)); grid-template-rows: repeat(2, minmax(0, 1fr)); }
-.lbc__header[data-panels='7'],
-.lbc__header[data-panels='8'] { grid-template-columns: repeat(4, minmax(0, 1fr)); grid-template-rows: repeat(2, minmax(0, 1fr)); }
+.lbc__panels[data-panels='1'] { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); }
+.lbc__panels[data-panels='2'] { grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: minmax(0, 1fr); }
+.lbc__panels[data-panels='3'] { grid-template-columns: repeat(3, minmax(0, 1fr)); grid-template-rows: minmax(0, 1fr); }
+.lbc__panels[data-panels='4'] { grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: repeat(2, minmax(0, 1fr)); }
+.lbc__panels[data-panels='5'],
+.lbc__panels[data-panels='6'] { grid-template-columns: repeat(3, minmax(0, 1fr)); grid-template-rows: repeat(2, minmax(0, 1fr)); }
+.lbc__panels[data-panels='7'],
+.lbc__panels[data-panels='8'] { grid-template-columns: repeat(4, minmax(0, 1fr)); grid-template-rows: repeat(2, minmax(0, 1fr)); }
 
 /* `minmax(0, 1fr)` everywhere above, never a bare `1fr`: `1fr` means
    `minmax(auto, 1fr)` and that auto floor is min-content, so one long team
@@ -590,6 +612,152 @@
   color: var(--lbc-alert);
   font-size: max(2.2vh, 0.7rem);
   font-weight: 700;
+}
+
+/* ── The compact overflow row ──────────────────────────────────────────────
+ *
+ * The leagues that did not fit the four-game budget, on one line under the
+ * panels, plus the one control the board carries.
+ *
+ * Fixed height, in NORMAL FLOW. Both halves of that matter. Fixed, because a
+ * row that grows with the number of leagues in it changes the panel grid's
+ * share of a fixed-height header every time a feed comes or goes. In flow,
+ * because "above/under the scores" and "hidden over the scores" are different
+ * fixes and only the first is true whatever the hardware reports — the
+ * stylesheet's "No chrome on the board" note records three attempts at the
+ * second.
+ *
+ * Nothing here may key off `:hover`, `@media (hover: …)` or an idle class. On
+ * a television the cursor is parked on the page and `:hover` is a constant;
+ * `tests/broadcast-shell-guards.test.ts` pins the absence.
+ */
+.lbc__extras {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 0.8vw;
+  min-height: 0;
+  height: 4.6vh;
+  padding: 0 0.2vw;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.lbc__extras-list {
+  display: flex;
+  align-items: center;
+  gap: 1.4vw;
+  flex: 1;
+  min-width: 0;
+  list-style: none;
+  padding: 0;
+  /* One LINE. A wrapped second line would overflow the fixed height and clip
+     mid-glyph rather than ellipsing, which reads as the board breaking. */
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.lbc__extra {
+  display: flex;
+  align-items: baseline;
+  gap: 0.4vw;
+  min-width: 0;
+  font-size: max(2.2vh, 0.7rem);
+  color: var(--lbc-text-dim);
+}
+
+/*
+ * The LEAGUE NAME is the only thing in this row allowed to shrink.
+ *
+ * Everything is a flex item with `min-width: 0`, so without this the row
+ * divided its overflow evenly and ellipsed a three-letter abbreviation down to
+ * "P…" — a score line naming neither team, which is worse than no row. A
+ * league name is the one part a reader can still recover from context ("that's
+ * the office one"); an abbreviated abbreviation is not.
+ */
+.lbc__extra-tag {
+  flex: 0 1 auto;
+  min-width: 0;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--lbc-text-faint);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.lbc__extra-team {
+  flex: 0 0 auto;
+  font-weight: 600;
+}
+
+/* The same lead indicator the full cell uses, and it is on NO drop rung: a
+   score with no way of telling who is ahead is not a score. Weight AND
+   brightness, never colour alone — this row is 2.4vh and a hue difference at
+   that size is the first thing a living room loses. */
+.lbc__extra-team.is-leading {
+  color: var(--lbc-text);
+  font-weight: 800;
+}
+
+.lbc__extra-score {
+  flex: 0 0 auto;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  color: var(--lbc-text);
+}
+
+.lbc__extra-dash,
+.lbc__extra-note {
+  color: var(--lbc-text-faint);
+}
+
+.lbc__extra-note {
+  font-weight: 600;
+}
+
+/*
+ * The toggle.
+ *
+ * Sized for a THUMBSTICK, not a mouse: on an Xbox the pointer is nudged with
+ * a stick, and a 2vh chip is not a target you can land on from a couch. The
+ * height floor is the whole row.
+ *
+ * `--lbc-text-dim` rather than `--lbc-text`: it is the one permanently lit,
+ * never-changing element on a panel that runs for eight hours, which is the
+ * definition of a burn-in risk. White at 0.78 over `--lbc-panel-2` composites
+ * to #cacdd0 for 10.7:1 — past the 7:1 this surface asks of type under 4vh
+ * with room for the idle dim.
+ */
+.lbc__extras-toggle {
+  flex: 0 0 auto;
+  height: 100%;
+  padding: 0 1.2vw;
+  border: 1px solid var(--lbc-hairline);
+  border-radius: 0.4rem;
+  background: var(--lbc-panel-2);
+  color: var(--lbc-text-dim);
+  font: inherit;
+  font-size: max(2.2vh, 0.7rem);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  /* No `cursor: pointer`. `.lbc.is-board:not(.is-awake)` hides the pointer
+     against burn-in, and an explicit cursor on a child beats the parent's
+     `none` — the one place on the board a parked cursor would still be lit. */
+}
+
+/* Keyboard and remote focus both land here. `:focus-visible` ALONE would give
+   a set-top browser that reports no focus-visible support no ring at all. */
+.lbc__extras-toggle:focus {
+  outline: 0.3vh solid var(--lbc-text);
+  outline-offset: 0.2vh;
+}
+
+/* Expanded, the row holds nothing but the toggle — every league is a panel
+   above it — so the control takes the right edge rather than sitting alone at
+   the left of an empty rule. */
+.lbc__extras[data-expanded='true'] {
+  justify-content: flex-end;
 }
 
 /* ── Red-zone banner ───────────────────────────────────────────────────────
@@ -1473,8 +1641,26 @@
  * a shortcut occupies no pixels that a burn-in-prone panel has to hold for
  * eight hours.
  *
- * Do not add a control to this file. If one is needed, it belongs on the
- * setup screen. */
+ * ## The one exception, and why it is not a fourth attempt
+ *
+ * `.lbc__extras-toggle` — the overflow row's expander — IS on the board. It
+ * exists because the keyboard half of the paragraph above is not true on the
+ * hardware this board was built for: an Xbox browser has no keyboard, so `F`,
+ * `M` and `L` are unreachable from the couch this is watched from.
+ *
+ * It is the opposite shape to the three that failed, and that is the whole
+ * argument. Those were a VISIBLE DEFAULT plus a condition that was supposed to
+ * hide it, and every condition turned out to be an assumption about set-top
+ * hardware. This is an UNCONDITIONAL element in normal flow: it renders
+ * whenever there is an overflow league to toggle and it is never hidden, never
+ * re-shown, never positioned over the scores, and its 4.6vh is subtracted from
+ * the panel grid rather than painted on top of it. Nothing about it can be
+ * wrong on a television it has not been tested on, because nothing about it is
+ * conditional.
+ *
+ * Do not add another control to this file. If one is needed, it belongs on the
+ * setup screen — and if it truly cannot, it must be unconditional and in flow
+ * like this one, never a hide. */
 
 /* The pointer is the last piece of chrome, and it gets the same treatment: a
    cursor parked over a television is a burn-in risk and a bright dot on a dark
@@ -1495,95 +1681,77 @@
   cursor: none;
 }
 
-/* ── The controls strip, ABOVE the board ───────────────────────────────────
+/* ── The toolbar, ABOVE the board ──────────────────────────────────────────
  *
- * Normal page flow, never `position: absolute` over the board. That is the
- * whole point: a control that OVERLAYS the scores covers them, and covering
- * them is what four rounds of hiding chips were trying and failing to avoid.
- * Above the board it costs the scores nothing, and on a television — where the
- * page is scrolled to the board or the board is fullscreen — it is simply not
- * in the picture.
+ * Three buttons — Leagues, Sound, Full screen — and nothing else. It is the
+ * least important thing on the page and is built to look it.
  *
- * Dark like the board rather than themed like the page: this file consumes no
- * colour token at all (every one of them either inverts under `html.dark` or
- * is floored against a surface this page does not have), and a strip attached
- * to the board should read as part of it in either theme. */
-.lbc-controls--strip {
-  /* Its OWN palette. `.lbc-setup__chip` reads `--lbc-panel`, `--lbc-hairline`
-     and `--lbc-text`, which are declared on `.lbc` — and this strip is a
-     SIBLING of the board, not a descendant, so inside it every one of those
-     `var()`s was invalid at computed-value time: the chips lost their
-     background and border entirely and `[aria-current]` stopped marking the
-     selected league. Redeclaring them here is what lets the chip class be
-     reused rather than forked. */
-  --lbc-panel: #0b1220;
-  --lbc-panel-2: #121c2e;
-  --lbc-hairline: rgba(255, 255, 255, 0.12);
-  --lbc-text: #ebebeb;
-  --lbc-text-faint: rgba(255, 255, 255, 0.52);
-
-  /* ONE compact row, in rem — never the setup screen's viewport units.
-     `.lbc-setup__chip` and `.lbc-saver__sub` are sized for a television read
-     from ten feet (`max(3vh, 1rem)`, 44px targets, 1vh gaps), and inherited
-     unchanged they made this strip taller than the scores it sits above and
-     pushed the board off the screen. A toolbar is not a screensaver. */
+ * Two rules it must keep:
+ *
+ * 1. NORMAL PAGE FLOW, never `position: absolute` over the board. A control
+ *    that overlays the scores covers them, and covering them is what four
+ *    rounds of hiding chips were trying and failing to avoid. Above the board
+ *    it costs the scores nothing, and on a television — where the page is
+ *    scrolled to the board, or the board is fullscreen — it is not in the
+ *    picture at all.
+ *
+ * 2. THEMED, unlike everything else in this file. The rest of this stylesheet
+ *    consumes no colour token deliberately: the BOARD is dark in both themes
+ *    because franchise colours are its background, and every token here either
+ *    inverts under `html.dark` or is floored against a surface the board does
+ *    not have. This toolbar is not the board. It is an ordinary page surface
+ *    sitting under the site nav, and hardcoding it near-black put a slab of
+ *    the board's palette on a light-mode page. Tokens are correct HERE and
+ *    nowhere else in this file; `tests/broadcast-shell-guards.test.ts` scopes
+ *    the no-token rule around exactly these rules.
+ */
+.lbc-bar {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 0.4rem 0.75rem;
-  /* Full width, like the board it belongs to — a narrower strip above an
-     edge-to-edge board reads as a different module. */
+  gap: 0.5rem;
   margin: 0 0 0.5rem;
-  padding: 0.5rem 0.75rem;
-  border-radius: 0.75rem;
-  background: #0b1220;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  color: #ebebeb;
-  font-size: 0.8125rem;
-  line-height: 1.35;
 }
 
-.lbc-controls__title {
-  margin: 0;
-  font-size: 0.6875rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.55);
+.lbc-bar__btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  /* 44px, the site's touch floor — and the floor that matters more here: an
+     Xbox pointer is nudged with a thumbstick, so a small target is not one. */
+  min-height: 2.75rem;
+  padding: 0 1rem;
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-md, 0.5rem);
+  background: var(--card-surface);
+  color: var(--content-text-muted);
+  font: inherit;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  line-height: 1;
+  text-decoration: none;
   white-space: nowrap;
 }
 
-/* The prose is the least important thing in a toolbar: it wraps to its own
-   full-width line rather than stretching the row. */
-.lbc-controls--strip .lbc-saver__sub {
-  flex: 1 0 100%;
-  order: 3;
-  margin: 0;
-  font-size: 0.75rem;
-  color: rgba(255, 255, 255, 0.52);
+/* The site's own link colour would make these read as navigation. They are
+   settings for the thing below them, so they stay muted until touched. */
+.lbc-bar__btn:hover,
+.lbc-bar__btn:focus {
+  color: var(--page-text);
 }
 
-/* The first sentence repeats what the board already shows; on the strip it is
-   the shortcut line that earns its space. */
-.lbc-controls--strip .lbc-saver__sub:first-of-type {
-  display: none;
+/* `:focus`, not `:focus-visible` alone — a set-top browser without
+   `:focus-visible` support would otherwise show no ring at all. */
+.lbc-bar__btn:focus {
+  outline: 2px solid var(--color-secondary, currentColor);
+  outline-offset: 2px;
 }
 
-.lbc-controls--strip .lbc-setup__list,
-.lbc-controls--strip p {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.4rem;
-  margin: 0;
-}
-
-.lbc-controls--strip .lbc-setup__chip {
-  min-height: 0;
-  gap: 0.35rem;
-  padding: 0.3rem 0.7rem;
-  border-width: 1px;
-  font-size: 0.8125rem;
+/* Sound ON is the one state worth marking: it is the only setting here whose
+   effect is not visible on screen. */
+.lbc-bar__btn[aria-pressed='true'] {
+  color: var(--page-text);
+  border-color: currentColor;
 }
 
 /* The shortcut letters read as keys rather than as emphasis. */
