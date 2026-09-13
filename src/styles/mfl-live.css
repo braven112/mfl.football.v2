@@ -1,0 +1,346 @@
+/**
+ * MFL Live — the cross-league board at mfl.football/live.
+ *
+ * Built on the design tokens, so light and dark resolve automatically under
+ * `html[data-league="mfl"]` / `html.dark[data-league="mfl"]`. The ONLY values
+ * hardcoded here are the two franchise colours per matchup, which arrive as
+ * inline `--tm-*` / `--to-*` custom properties resolved SERVER-side against
+ * each theme's card ground — a single colour cannot be legible on both.
+ *
+ * `--tm-` is MINE and `--to-` is the opponent's, named from the viewer's side
+ * to match `winProbability`. Home/away would swap meaning depending on which
+ * side of the pairing MFL put the owner on.
+ */
+
+.mlb {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-lg, 1.5rem);
+  max-width: 46rem;
+  margin: 0 auto;
+}
+
+/* Resolve the per-theme pair ONCE, here, so every rule below reads --tm/--to
+   and no call site has to know a theme exists. */
+.mlb-card {
+  --tm: var(--tm-light, #64748b);
+  --to: var(--to-light, #94a3b8);
+}
+html.dark .mlb-card {
+  --tm: var(--tm-dark, #64748b);
+  --to: var(--to-dark, #94a3b8);
+}
+
+/* ── header ── */
+.mlb-head {
+  display: flex;
+  align-items: baseline;
+  gap: var(--spacing-sm, 0.5rem);
+}
+.mlb-head__wk {
+  margin: 0;
+  font-size: clamp(1.25rem, 4vw, 1.5rem);
+  color: var(--page-text);
+}
+.mlb-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-left: auto;
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.7rem;
+  font-weight: var(--font-weight-bold, 700);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-success);
+  background: color-mix(in srgb, var(--color-success) 15%, transparent);
+}
+.mlb-pill.is-err {
+  color: var(--color-warning);
+  background: color-mix(in srgb, var(--color-warning) 15%, transparent);
+}
+.mlb-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+  flex: none;
+}
+
+/* ── league section ── */
+.mlb-league {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+.mlb-league__head {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+}
+.mlb-league__name {
+  margin: 0;
+  font-size: 0.75rem;
+  font-weight: var(--font-weight-bold, 700);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--color-text-secondary);
+}
+.mlb-tag {
+  font-size: 0.62rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--content-text-muted);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: 3px;
+  padding: 0.05rem 0.3rem;
+}
+
+/* ── matchup card ── */
+.mlb-card {
+  position: relative;
+  overflow: hidden;
+  box-sizing: border-box;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-lg, 1rem);
+  box-shadow: var(--shadow-card);
+}
+
+/* Two-colour split at the win-probability point, with a card-surface seam so
+   the halves read as two even when the colours land close in hue. */
+.mlb-card__bar {
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 4px;
+  z-index: 1;
+  background: linear-gradient(
+    90deg,
+    var(--tm) 0 calc(var(--wp-split, 50%) - 1px),
+    var(--card-bg) calc(var(--wp-split, 50%) - 1px) calc(var(--wp-split, 50%) + 1px),
+    var(--to) calc(var(--wp-split, 50%) + 1px) 100%
+  );
+}
+
+/* The whole head is the hit target — a 44px minimum is not negotiable on a
+   phone, and this is comfortably past it. */
+.mlb-card__head {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0.9rem 1rem 0.8rem;
+  border: 0;
+  background: none;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.mlb-card__head:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: -2px;
+}
+
+.mlb-teams {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+.mlb-team {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.25rem 0;
+}
+.mlb-crest {
+  width: 2.35rem;
+  height: 2.35rem;
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.mlb-crest img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.35));
+}
+.mlb-crest--text {
+  border-radius: 0.5rem;
+  background: var(--color-surface-3);
+  color: var(--color-text-primary);
+  font-size: 0.8rem;
+  font-weight: var(--font-weight-bold, 700);
+  letter-spacing: 0.02em;
+}
+.mlb-team__id {
+  min-width: 0;
+}
+.mlb-team__name {
+  font-size: 0.95rem;
+  color: var(--content-text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.mlb-team.is-leading .mlb-team__name {
+  color: var(--page-text);
+  font-weight: var(--font-weight-semibold, 600);
+}
+.mlb-team__sub {
+  font-size: 0.68rem;
+  color: var(--content-text-muted);
+  font-variant-numeric: tabular-nums;
+}
+.mlb-team__score {
+  font-size: 1.6rem;
+  line-height: 1;
+  min-width: 3.6rem;
+  text-align: right;
+  color: var(--content-text-muted);
+  font-variant-numeric: tabular-nums;
+}
+.mlb-team.is-leading .mlb-team__score {
+  color: var(--page-text);
+}
+
+/* ── win probability ── */
+.mlb-wp {
+  margin-top: 0.5rem;
+}
+.mlb-wp__track {
+  position: relative;
+  display: flex;
+  height: 7px;
+  border-radius: var(--radius-sm, 0.25rem);
+  overflow: hidden;
+  background: var(--content-bg-muted);
+}
+.mlb-wp__mine {
+  background: var(--tm);
+}
+.mlb-wp__theirs {
+  background: var(--to);
+}
+.mlb-wp__seam {
+  position: absolute;
+  top: -2px;
+  bottom: -2px;
+  width: 2px;
+  background: var(--card-bg);
+  opacity: 0.85;
+  transform: translateX(-50%);
+}
+.mlb-wp__labels {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 0.35rem;
+  font-size: 0.7rem;
+  font-weight: var(--font-weight-semibold, 600);
+  font-variant-numeric: tabular-nums;
+}
+.mlb-wp__mine-label {
+  color: var(--tm);
+}
+.mlb-wp__theirs-label {
+  color: var(--to);
+}
+.mlb-wp__open {
+  font-weight: var(--font-weight-semibold, 600);
+  color: var(--league-accent);
+}
+
+/* ── expanded detail ── */
+.mlb-detail {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.25rem;
+  padding: 0 1rem 0.9rem;
+  border-top: 1px solid var(--content-border);
+}
+@media (min-width: 34rem) {
+  .mlb-detail {
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+  }
+}
+.mlb-detail__title {
+  margin: 0.75rem 0 0.35rem;
+  font-size: 0.68rem;
+  font-weight: var(--font-weight-bold, 700);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--content-text-muted);
+}
+.mlb-players {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.mlb-player {
+  display: grid;
+  grid-template-columns: 2rem 1fr auto;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.4rem 0;
+  border-bottom: 1px solid var(--color-border-subtle);
+}
+.mlb-player:last-child {
+  border-bottom: 0;
+}
+.mlb-player__pos {
+  font-size: 0.62rem;
+  font-weight: var(--font-weight-bold, 700);
+  text-align: center;
+  padding: 0.15rem 0;
+  border-radius: 4px;
+  background: var(--color-surface-3);
+  color: var(--color-text-secondary);
+}
+.mlb-player__name {
+  min-width: 0;
+  font-size: 0.85rem;
+  color: var(--color-text-primary);
+  display: flex;
+  flex-direction: column;
+}
+.mlb-player__meta {
+  font-size: 0.65rem;
+  color: var(--content-text-muted);
+}
+.mlb-player__pts {
+  font-size: 0.95rem;
+  color: var(--page-text);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── empty states ── */
+.mlb-empty,
+.mlb-empty-note,
+.mlb-foot-note {
+  margin: 0;
+  padding: 0.9rem 1rem;
+  font-size: 0.85rem;
+  color: var(--content-text-muted);
+  background: var(--card-bg);
+  border: 1px dashed var(--card-border);
+  border-radius: var(--radius-lg, 1rem);
+}
+.mlb-empty--err {
+  color: var(--color-warning);
+  border-color: color-mix(in srgb, var(--color-warning) 45%, transparent);
+}
+.mlb-empty-note {
+  border: 0;
+  background: none;
+  padding: 0.4rem 0;
+}
+.mlb-foot-note {
+  border: 0;
+  background: none;
+  text-align: center;
+}

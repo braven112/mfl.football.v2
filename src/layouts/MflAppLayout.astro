@@ -38,6 +38,7 @@ import { ClientRouter } from 'astro:transitions';
 import ThemeScript from '../components/ThemeScript.astro';
 import ThemeToggle from '../components/ThemeToggle.astro';
 import NflLogoDarkStyles from '../components/NflLogoDarkStyles.astro';
+import TeamIconDarkStyles from '../components/TeamIconDarkStyles.astro';
 import { getThemePreference } from '../utils/theme-preference';
 import { getAuthUser } from '../utils/auth';
 import { ALL_LEAGUES, leagueUrl, isSharedAppHost } from '../config/leagues';
@@ -90,11 +91,17 @@ const leagueLinks = ALL_LEAGUES.map((league) => ({
 		<meta name="generator" content={Astro.generator} />
 		{description && <meta name="description" content={description} />}
 		<Font cssVariable="--font-vend-sans" />
-		{/* Swaps every NFL mark to the mirrored 500-dark cut under html.dark and
-		    rings the black-bodied ones. Inherited rather than reimplemented —
-		    it is the reason this board has a real dark theme instead of a
-		    permanently black ground. */}
+		{/* Both dark-mark swaps, because this board draws BOTH kinds of crest.
+		    NflLogoDarkStyles covers rung 2 of the identity ladder (a franchise
+		    named after an NFL club) by swapping in the mirrored 500-dark cut and
+		    ringing the black-bodied marks; TeamIconDarkStyles covers rung 1 (a
+		    league we run) by swapping in each franchise's own `iconDark` and
+		    white-stroking the illegible ones. Both key on the image `src`, so
+		    they reach React islands too. Inherited rather than reimplemented —
+		    which is the argument for this board having a real dark theme instead
+		    of a permanently black ground. */}
 		<NflLogoDarkStyles />
+		<TeamIconDarkStyles />
 		<ClientRouter />
 		<title>{title}</title>
 	</head>

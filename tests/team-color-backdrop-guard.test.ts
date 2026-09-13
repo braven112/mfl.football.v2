@@ -59,6 +59,18 @@ const ALLOWLIST: Record<string, string> = {
   'src/components/afl/AflEventHero.astro': 'AFL event hero glow',
   'src/components/afl/AflCompositeHero.astro': 'AFL composite hero glow',
 
+  // Colour CLAIM only — never painted raw.
+  //
+  // A different category from the composites above, and safe for a different
+  // reason. The MFL Live identity ladder reads a club's palette to answer
+  // "what colour does this franchise claim" and hands it straight to
+  // `resolveTeamColorPair`, which resolves it against a NAMED background —
+  // twice, once per theme, because that board has a light card and a dark
+  // one — and carries its own legibility nudge. Nothing downstream paints the
+  // value this file returns; the avatar helpers' luminance floor is for a
+  // chip behind a headshot, which this is not.
+  'src/utils/mfl-live-identity.ts': 'colour claim, resolved per theme by resolveTeamColorPair',
+
   // Intentionally desaturated "dead colors" treatment — must NOT go vibrant.
   'src/components/theleague/DeadMoneyComposite.astro': 'dead-colors composite',
   'src/components/theleague/DeadMoneyPlayerCard.astro': 'dead-colors card',

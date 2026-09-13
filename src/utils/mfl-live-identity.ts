@@ -29,7 +29,7 @@
 
 import { getLeagueTeamConfig } from './league-team-brands';
 import { matchNflTeamName } from './nfl-name-match';
-import { NFL_TEAM_COLORS } from './nfl-team-colors';
+import { getNflTeamColors } from './nfl-team-colors';
 import { getNFLTeamName } from './nfl-logo';
 
 /** Which rung answered. Shipped so the UI can render each honestly. */
@@ -131,7 +131,10 @@ export function resolveFranchiseIdentity(input: ResolveIdentityInput): Franchise
   // ── Rung 2: the name IS an NFL club ─────────────────────────────────────
   const nflCode = matchNflTeamName(franchiseName);
   if (nflCode) {
-    const brand = NFL_TEAM_COLORS[nflCode];
+    // Through the accessor, never the table: it normalizes the code and
+    // supplies the fallback, and `tests/team-color-backdrop-guard.test.ts`
+    // enforces that every surface goes the same way.
+    const brand = getNflTeamColors(nflCode);
     return {
       franchiseId,
       // The owner's own name, not the club's: they called it "Cowboys", so
