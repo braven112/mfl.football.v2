@@ -131,16 +131,20 @@ bye week, `week-unscheduled` and `read-failed` all still render the `<ol>` and
 the controller still initialises. It is also the only `#lineup-slots` in the
 repo. The cross-league case is F1.
 
-**Verification limits, honestly.** The guard was proven to fail against the
-pre-fix source on both leagues and pass after, and the full suite (448 files,
-10,855 tests) plus CI were green. But this is a *client-side* crash: it does not
-appear in Vercel's runtime-error telemetry (all four live clusters there are
-unrelated server-side issues), the preview build was `Ignored` because
-`vercel-ignore-build.mjs` ran before the PR existed, and the lineup page is
-auth-gated so the container could not exercise the real Set Lineup → Roster
-click-through. **Nobody has yet confirmed the fix on a real authenticated
-session.** That confirmation is the first thing `/followup` should get, before
-working any item — ask Brandon, or drive it with a real session.
+**Verification — CONFIRMED on production.** Brandon confirmed the fix on a real
+authenticated session on 2026-09-13, after `8988ce8` deployed: Set Lineup →
+Roster no longer throws. Nothing further to verify; work the items directly.
+
+For the record, on why that confirmation had to come from a person: this is a
+*client-side* crash, so it never appears in Vercel's runtime-error telemetry
+(all four live clusters there are unrelated server-side issues); the preview
+build was `Ignored` because `vercel-ignore-build.mjs` ran before the PR existed;
+and the lineup page is auth-gated, so the shipping session could not drive the
+click-through itself. The automated evidence was a guard proven to fail against
+the pre-fix source on both leagues and pass after, plus green CI and a green
+full suite (448 files, 10,855 tests). Worth remembering next hotfix: for a
+client-side crash behind auth, budget for a human tap-through — the telemetry
+step in `/hotfix` step 7 cannot see it.
 
 **Severity note for the audit.** Called P0 on the day: gameday eve, and Set
 Lineup → Roster is the single most-used flow of the week.
