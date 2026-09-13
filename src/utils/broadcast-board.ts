@@ -339,7 +339,7 @@ export async function assembleBroadcastBoard(input: AssembleBoardInput): Promise
     // so one shared map would rate a TheLeague lineup with the AFL's numbers.
     Promise.all(
       on.map((league) =>
-        loadLeagueProjections(league, week, user.id)
+        loadLeagueProjections(league, week, user.id, year)
           .then((map) => [league.id, map] as const)
           .catch(() => [league.id, new Map<string, number>()] as const),
       ),
