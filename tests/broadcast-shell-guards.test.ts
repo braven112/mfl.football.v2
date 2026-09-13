@@ -601,8 +601,23 @@ describe('the idle-hide cannot strand a touch device', () => {
 
     // The effect defines `wake` and hands it to listeners. A bare call in the
     // effect body is the arm-on-mount this rule forbids.
-    expect(ISLAND_CODE).toMatch(/const wake = \(\) =>/);
+    expect(ISLAND_CODE).toMatch(/const wake = \(e: Event\) =>/);
     expect(ISLAND_CODE).not.toMatch(/^\s*wake\(\);\s*$/m);
+  });
+
+  it('lets touch wake the chrome but never start the countdown', () => {
+    // Not arming on mount only defers the phone bug by one interaction: the
+    // first tap arms the timer, three seconds later the controls go to
+    // `pointer-events: none`, and the next tap is spent waking the board
+    // rather than pressing the button under the finger. Two taps for every
+    // control from then on. A touch device must never go idle at all.
+    expect(ISLAND_CODE).toMatch(/pointerType === 'touch'/);
+    expect(ISLAND_CODE).toMatch(/e\.type === 'touchstart'/);
+    // The bail must come BEFORE the timer is armed, or it rejects nothing.
+    const body = /const wake = \(e: Event\) => \{([\s\S]*?)\n    \};/.exec(ISLAND_CODE)?.[1] ?? '';
+    expect(body).not.toBe('');
+    expect(body.indexOf('isTouch(e)')).toBeGreaterThan(-1);
+    expect(body.indexOf('isTouch(e)')).toBeLessThan(body.indexOf('setTimeout'));
   });
 });
 

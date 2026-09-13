@@ -499,23 +499,47 @@ export default function LiveBroadcast({ pageData }: Props) {
     // maximised rather than in the Fullscreen API, so `isFullscreen` is false
     // there and gating on it left the chrome up through a reveal on a real TV.
     let timer = 0;
-    const wake = () => {
+
+    /**
+     * Touch WAKES the chrome but never starts the countdown.
+     *
+     * A tap is the whole interaction on a phone, so a countdown armed by one
+     * hides the controls three seconds later — and `pointer-events: none` then
+     * spends the next tap waking the board instead of pressing the button
+     * under the finger. Two taps for every control, forever, after the first.
+     * Arming only on mouse, pen and keys means a touch device never goes idle
+     * at all, which is the right answer for a surface whose controls are its
+     * only way in.
+     *
+     * A television arms on the `keydown` a remote produces and on the
+     * `pointermove` a cursor produces; the one device this could strand is a
+     * TV that emits nothing but synthetic touch, and there the failure is that
+     * the chrome STAYS — visible controls, not unreachable ones. That is the
+     * safe side to be wrong on, and it is why this reads the event rather than
+     * a `(pointer: fine)` media query: a query that guessed wrong about the
+     * hardware failed the other way.
+     */
+    const isTouch = (e: Event) =>
+      e.type === 'touchstart' ||
+      ('pointerType' in e && (e as PointerEvent).pointerType === 'touch');
+
+    const wake = (e: Event) => {
       setIdle(false);
       window.clearTimeout(timer);
+      if (isTouch(e)) return;
       // Long enough to find the button you reached for, short enough that the
       // board is clean again before the next play.
       timer = window.setTimeout(() => setIdle(true), 3000);
     };
     // NOT armed on mount, deliberately. Arming it here hid the controls three
-    // seconds after load on a device nobody had touched — which on a phone,
-    // where they are meant to stay put, also made the next tap a wake rather
-    // than a press. The countdown starts at the FIRST real interaction, so a
-    // viewer who has never reached for the chrome keeps it, and a television
-    // — where you always press something to set the board up — loses it three
-    // seconds after you stop. No assumption about what the device reports.
+    // seconds after load on a device nobody had touched. The countdown starts
+    // at the first real interaction, so a viewer who has never reached for the
+    // chrome keeps it, and a television — where you always press something to
+    // set the board up — loses it three seconds after you stop.
     //
     // `pointermove` covers mouse and trackpad; `touchstart` and `keydown` are
-    // the two ways a television or a remote reaches this at all.
+    // the two ways a television or a phone reaches this at all. All four are
+    // listened for; only what `isTouch` rejects starts the clock.
     for (const ev of ['pointermove', 'pointerdown', 'touchstart', 'keydown'] as const) {
       window.addEventListener(ev, wake, { passive: true });
     }
