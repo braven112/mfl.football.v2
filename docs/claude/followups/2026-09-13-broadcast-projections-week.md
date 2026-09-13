@@ -90,6 +90,24 @@ Files: `src/utils/broadcast-live-source.ts`, `src/utils/broadcast-board.ts`,
     findings and both were adjudicated BLOCKING — a hung or hammered MFL read on
     the SSR path is a new break, not a polish item.
 
+- [ ] **F5 — The committed-feed read ignores `?testDate=`, so it is cross-season there**
+  - Source: Copilot review, PR #1074 (`src/utils/broadcast-live-source.ts:411`, `:429`)
+  - Where: `loadLeagueProjections` reads the disk feed at
+    `getLeagueYearForSlug(slug)` with no reference date, so a
+    `?testDate=2026-09-06&week=2` render resolves the 2026 feed while the board
+    is showing the 2025 season — and accepts it, because week 2 matches.
+  - Why deferred: PRE-EXISTING (the read was already dateless before this PR;
+    the diff only added the year-aware fallback), and `?testDate=` is a
+    development affordance, not an owner path. Not a new break, so it lost to
+    the clock.
+  - Constraint for whoever takes it: thread the `testDate` ITSELF through
+    `AssembleBoardInput`, not the derived season year — a season year cannot be
+    mapped back to a league year, the two clocks are independent (Feb 14 vs
+    Labor Day) and the AFL's are months apart. The assembler also resolves
+    `getLeagueYearForSlug('theleague')` for `myleagues` on the same request, so
+    fixing one read and not the other trades this inconsistency for a worse one.
+  - Replied on the PR thread; left unresolved for the author.
+
 - [ ] **F4 — Post-merge reviewer findings**
   - Source: Copilot / CodeQL / Gemini, not waited on at step 5
   - Where: PR #1074 comments
