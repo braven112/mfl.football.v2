@@ -7,7 +7,7 @@ hotfix_pr: https://github.com/braven112/mfl.football.v2/pull/1072
 hotfix_sha: 8988ce8
 followup_issue: 1073
 followup_pr:
-followup_session:
+followup_session: session_01Sta1eGQbdQc3M5qmJz91oi
 ---
 
 # Follow-up: the lineup controller crashed every page you navigated to
