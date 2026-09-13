@@ -16,6 +16,13 @@ import { getAllTeams } from './afl-conference';
 import { getCachedRosterFranchises } from './mfl-roster-cache';
 import { buildKeeperPlannerStats } from './afl-keeper-planner-stats';
 import { calculateAge } from './age-utils';
+import {
+  buildRosterAnalytics,
+  groupByNflTeam,
+  groupByCollege,
+  type RosterAnalytics,
+  type RosterGroup,
+} from './afl-roster-analytics';
 import type { KeeperPlannerPlayer, KeeperPlannerDraftPick } from '../components/afl-fantasy/KeeperPlanner.astro';
 
 const loadFeedJson = (leagueYearStr: string, filename: string): any => {
@@ -28,9 +35,33 @@ const loadFeedJson = (leagueYearStr: string, filename: string): any => {
   return null;
 };
 
+/** A roster row with the extra fields the analytics cards and player-details
+ *  modal need (college, birthdate, draft/measurables) that KeeperPlanner
+ *  itself has no use for. */
+export interface FrontOfficeAnalyticsPlayer {
+  id: string;
+  name: string;
+  position: string;
+  team: string;
+  espnId?: string;
+  status: string;
+  college: string | null;
+  birthdate: string | null;
+  height: string | null;
+  weight: string | null;
+  jersey: string | null;
+  draftYear: number | null;
+  draftRound: number | null;
+  draftPick: number | null;
+  draftTeam: string | null;
+}
+
 export interface FrontOfficeKeeperData {
   roster: KeeperPlannerPlayer[];
   draftPicks: KeeperPlannerDraftPick[];
+  analytics: RosterAnalytics;
+  playersByNflTeam: RosterGroup<FrontOfficeAnalyticsPlayer>[];
+  playersByCollege: RosterGroup<FrontOfficeAnalyticsPlayer>[];
 }
 
 export async function buildFrontOfficeKeeperPlannerData(
@@ -41,7 +72,25 @@ export async function buildFrontOfficeKeeperPlannerData(
   const leagueYearStr = String(leagueYear);
 
   const playersData = loadFeedJson(leagueYearStr, 'players.json');
-  const playersMap = new Map<string, { name: string; position: string; team: string; age: string; espn_id?: string }>();
+  const playersMap = new Map<
+    string,
+    {
+      name: string;
+      position: string;
+      team: string;
+      age: string;
+      espn_id?: string;
+      college?: string;
+      birthdate?: string;
+      height?: string;
+      weight?: string;
+      jersey?: string;
+      draft_year?: string;
+      draft_round?: string;
+      draft_pick?: string;
+      draft_team?: string;
+    }
+  >();
   for (const p of (playersData?.players?.player ?? []) as any[]) {
     playersMap.set(p.id, {
       name: p.name || `Player ${p.id}`,
@@ -52,6 +101,15 @@ export async function buildFrontOfficeKeeperPlannerData(
       // rosters.astro, which this mirrors via the shared age-utils helper.
       age: String(calculateAge(p.birthdate) ?? 'N/A'),
       espn_id: p.espn_id,
+      college: p.college,
+      birthdate: p.birthdate,
+      height: p.height,
+      weight: p.weight,
+      jersey: p.jersey,
+      draft_year: p.draft_year,
+      draft_round: p.draft_round,
+      draft_pick: p.draft_pick,
+      draft_team: p.draft_team,
     });
   }
 
@@ -82,6 +140,33 @@ export async function buildFrontOfficeKeeperPlannerData(
     };
   });
 
+  // Richer rows for the analytics cards + player-details modal — kept
+  // separate from `roster` (KeeperPlannerPlayer[]) rather than widening that
+  // shared type with fields the planner board itself never reads.
+  const analyticsRoster: FrontOfficeAnalyticsPlayer[] = rosterPlayers.map((p) => {
+    const info = playersMap.get(p.id);
+    return {
+      id: p.id,
+      status: p.status || 'ROSTER',
+      name: info?.name || `Player ${p.id}`,
+      position: info?.position || 'N/A',
+      team: info?.team || 'FA',
+      espnId: info?.espn_id,
+      college: info?.college ?? null,
+      birthdate: info?.birthdate ?? null,
+      height: info?.height ?? null,
+      weight: info?.weight ?? null,
+      jersey: info?.jersey ?? null,
+      draftYear: info?.draft_year ? Number(info.draft_year) : null,
+      draftRound: info?.draft_round ? Number(info.draft_round) : null,
+      draftPick: info?.draft_pick ? Number(info.draft_pick) : null,
+      draftTeam: info?.draft_team ?? null,
+    };
+  });
+  const analytics = buildRosterAnalytics(analyticsRoster);
+  const playersByNflTeam = groupByNflTeam(analyticsRoster);
+  const playersByCollege = groupByCollege(analyticsRoster);
+
   const futurePicksData = loadFeedJson(leagueYearStr, 'futureDraftPicks.json');
   const allTeams = getAllTeams();
   const teamNameLookup = new Map<string, string>(allTeams.map((t) => [t.franchiseId, t.nameShort || t.name]));
@@ -104,5 +189,5 @@ export async function buildFrontOfficeKeeperPlannerData(
       .sort((a, b) => (a.year !== b.year ? a.year.localeCompare(b.year) : parseInt(a.round, 10) - parseInt(b.round, 10)));
   }
 
-  return { roster, draftPicks };
+  return { roster, draftPicks, analytics, playersByNflTeam, playersByCollege };
 }

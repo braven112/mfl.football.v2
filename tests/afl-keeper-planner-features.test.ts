@@ -118,6 +118,42 @@ describe('the Planner view carries its own copy of the roster analytics', () => 
   });
 });
 
+describe('the Front Office AFL panel carries the same roster analytics', () => {
+  // The panel used by /afl-fantasy/front-office (AflKeeperPlannerPanel.astro)
+  // is a DIFFERENT render path from rosters.astro's ?view=planner tab and
+  // never had analytics data at all — the Planner-view copy above doesn't
+  // reach it. This is its own wiring, via afl-roster-analytics.ts.
+  const PANEL_SRC = readFileSync(
+    'src/components/shared/front-office-hub/AflKeeperPlannerPanel.astro',
+    'utf-8',
+  );
+  const KEEPER_DATA_SRC = readFileSync('src/utils/front-office-keeper-data.ts', 'utf-8');
+
+  it('front-office-keeper-data.ts computes analytics via the shared util, not inline duplication', () => {
+    expect(KEEPER_DATA_SRC).toMatch(/from '\.\/afl-roster-analytics'/);
+    expect(KEEPER_DATA_SRC).toMatch(/buildRosterAnalytics\(/);
+    expect(KEEPER_DATA_SRC).toMatch(/groupByNflTeam\(/);
+    expect(KEEPER_DATA_SRC).toMatch(/groupByCollege\(/);
+  });
+
+  it('the panel renders the 4-card grid below KeeperPlanner, with NFL/College Stacks open by default', () => {
+    const keeperPlannerIdx = PANEL_SRC.indexOf('<KeeperPlanner');
+    const analyticsIdx = PANEL_SRC.indexOf('fo-afl-analytics"');
+    expect(keeperPlannerIdx).toBeGreaterThan(-1);
+    expect(analyticsIdx).toBeGreaterThan(keeperPlannerIdx);
+    expect(PANEL_SRC).toMatch(/Position composition/);
+    expect(PANEL_SRC).toMatch(/Age by position/);
+    expect(PANEL_SRC).toMatch(/Age distribution/);
+    const extra = PANEL_SRC.match(/<details class="fo-afl-analytics__extra"[\s\S]*?<\/details>/)?.[0] ?? '';
+    expect(extra).toMatch(/NFL and College Stacks/);
+    expect(extra).toMatch(/NFL Analysis/);
+    expect(extra).toMatch(/College Analysis/);
+    // Open by default here — unlike the rosters.astro Planner-view copy,
+    // which stays closed/de-emphasized.
+    expect(extra).toMatch(/<details class="fo-afl-analytics__extra" open>/);
+  });
+});
+
 describe('buildKeeperPlannerStats', () => {
   it('returns an empty map for a year with no committed feeds', () => {
     const stats = buildKeeperPlannerStats(1899);

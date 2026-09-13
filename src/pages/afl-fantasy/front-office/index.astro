@@ -16,6 +16,7 @@
 import FrontOfficeHubPage from '../../../components/shared/front-office-hub/FrontOfficeHubPage.astro';
 import AflKeeperPlannerPanel from '../../../components/shared/front-office-hub/AflKeeperPlannerPanel.astro';
 import { buildFrontOfficeKeeperPlannerData } from '../../../utils/front-office-keeper-data';
+import { buildRosterAnalytics } from '../../../utils/afl-roster-analytics';
 import { getAuthUser } from '../../../utils/auth';
 import { getLeagueBySlug } from '../../../config/leagues';
 import { getLeagueYearForSlug } from '../../../utils/league-year';
@@ -36,7 +37,7 @@ const myTeam = myTeamInfo ? { id: myTeamInfo.franchiseId, name: myTeamInfo.name,
 
 const keeperData = isOwner && selectedFranchiseId
   ? await buildFrontOfficeKeeperPlannerData(selectedFranchiseId, leagueYear, league.id)
-  : { roster: [], draftPicks: [] };
+  : { roster: [], draftPicks: [], analytics: buildRosterAnalytics([]), playersByNflTeam: [], playersByCollege: [] };
 ---
 
 <FrontOfficeHubPage leagueSlug="afl-fantasy" myTeam={myTeam} leagueYear={leagueYear}>
@@ -47,5 +48,8 @@ const keeperData = isOwner && selectedFranchiseId
     year={leagueYear}
     roster={keeperData.roster}
     draftPicks={keeperData.draftPicks}
+    analytics={keeperData.analytics}
+    playersByNflTeam={keeperData.playersByNflTeam}
+    playersByCollege={keeperData.playersByCollege}
   />
 </FrontOfficeHubPage>
