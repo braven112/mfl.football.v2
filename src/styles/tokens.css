@@ -729,6 +729,42 @@ html[data-league="bb1"] {
 }
 
 /* ========================================
+   MFL Live — the league-neutral app on the shared host
+   The AFL's design language with the navy family replaced by neutral
+   near-black: black is to this surface what --afl-navy is to the AFL's. The
+   red accent and the gold family are deliberately KEPT, because "match the
+   AFL, but black instead of the blue" is the brief — this is a sibling of
+   that theme, not a new identity.
+
+   Why a data-league value for a host that belongs to no league: the token
+   system keys every per-league palette off this attribute, and mfl.football
+   needs a palette. It is NOT a registry league and must never appear in
+   HOST_TO_SLUG or leagues-data.mjs — see MflAppLayout.astro, which sets the
+   attribute directly rather than deriving it from a league lookup.
+
+   Paired with html.dark[data-league="mfl"] in tokens-dark.css, which carries
+   the surface elevation ramp. Both blocks are complete on purpose: a
+   var(--x) defined in only one of them renders its fallback in the other,
+   which is how a theme ships looking perfect in light and white-on-black in
+   dark (docs/claude/rules/theming-and-assets.md).
+   ======================================== */
+html[data-league="mfl"] {
+  --mfl-ink: #14161a;                          /* the brand near-black — this theme's --afl-navy */
+  --mfl-ink-deep: #0b0c0f;                     /* deeper still: footer, breadcrumb strip */
+  --afl-gold: #d97706;                         /* shared amber accent — same values as the AFL block, redeclared because that block is scoped to its own data-league and resolves to nothing here */
+  --afl-trophy-gold: #c9a44c;                  /* metallic badge gold */
+  --afl-gold-text: #b45309;                    /* gold as FOREGROUND — 5.0:1 on a white card, where the other two fail AA */
+  --afl-trophy-gold-light: #e6c976;
+  --breadcrumb-bar-bg: var(--mfl-ink);         /* top strip */
+  --inverse-bg: var(--mfl-ink);                /* footer (via --inverse-content-bg) */
+  --league-accent: #c41e3a;                    /* accent — the AFL's red */
+  --header-nav-icon-color: var(--mfl-ink);            /* nav icons — near-black */
+  --header-nav-icon-hover-color: var(--league-accent); /* nav icons hover — red */
+  --header-nav-label-color: var(--league-accent);
+  --header-nav-label-hover-color: var(--league-accent);
+}
+
+/* ========================================
    Focus Visible Styles
    ======================================== */
 :focus-visible {

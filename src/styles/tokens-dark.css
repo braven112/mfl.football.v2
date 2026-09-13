@@ -554,6 +554,114 @@ html.dark[data-league="afl"] {
 }
 
 /* ========================================
+   MFL Live — dark-mode overrides for the shared-host app
+   The AFL's dark block with the navy family swapped for a NEUTRAL near-black
+   ramp: same structure, same step count, same reasoning — see the AFL block
+   above for why each group exists. Page floor is the brand --mfl-ink, cards
+   step lighter, borders are neutral-gray rather than blue-tinted, and the red
+   identity survives as the brightened #ef5350.
+
+   Complete on purpose, and it must stay that way: a token declared in
+   tokens.css's html[data-league="mfl"] block but omitted here falls back to
+   TheLeague's default dark value, which is a light-on-blue palette this
+   surface never intends.
+   ======================================== */
+html.dark[data-league="mfl"] {
+  --league-accent: #ef5350;                            /* accent — brightened red for dark (7.3:1 on the page floor) */
+  --afl-gold-text: var(--afl-trophy-gold, #c9a44c);    /* gold as foreground: the light amber muddies on near-black, so text gold becomes the metallic badge gold */
+
+  /* Headings + plain anchors go white with a red hover, so red stays the
+     accent rather than the body voice — same call the AFL block makes, and
+     for the same reason. --color-primary is deliberately NOT remapped: it
+     feeds FILLS (nav active pill, buttons, focus rings) where a white value
+     produces white-on-white. */
+  --link-color: #eef0f2;
+  --link-color-hover: #ef5350;
+  --link-color-focus: #ef5350;
+  --link-color-accent: #ef5350;
+  --link-color-accent-hover: #ff8a80;
+  --header-nav-icon-color: #ffffff;                    /* resting nav icons — white (near-black would vanish) */
+  --header-nav-icon-hover-color: var(--league-accent);
+  --header-nav-label-color: var(--league-accent);
+  --header-nav-label-hover-color: var(--league-accent);
+  --logo-name-primary-color: #ffffff;                  /* wordmark — white (html.dark's green is TheLeague's logo green) */
+
+  /* ── Neutral surface elevation ramp (from --mfl-ink #14161a) ── */
+  --page-bg: var(--mfl-ink, #14161a);                  /* page floor = brand near-black */
+  --color-surface-1: var(--mfl-ink, #14161a);
+  --content-bg: #1e2126;                               /* cards / panels — one step up */
+  --card-bg: #1e2126;
+  --card-surface: #1e2126;
+  --color-surface-2: #1e2126;
+  --nav-bg: #1e2126;
+  --table-row-bg: #1e2126;
+  --content-bg-muted: #17191e;                         /* recessed */
+  --table-header-bg: #17191e;
+  --input-bg: #17191e;
+  --nav-bg-subtle: #17191e;
+  --nav-switcher-bg: #17191e;
+  --table-row-bg-alt: #212429;
+  --color-surface-3: #282c33;                          /* elevated: dropdowns, tooltips, hover */
+  --table-row-bg-hover: #282c33;
+  --nav-hover-bg: #282c33;
+  --content-bg-accent: #282c33;
+  --accent-content-bg-color: #282c33;
+  --nav-tooltip-bg: #282c33;
+  --btn-inverse-bg: #282c33;
+  --btn-inverse-bg-hover: #333840;
+  --btn-inverse-bg-focus: #333840;
+  --inverse-bg: var(--mfl-ink-deep, #0b0c0f);          /* footer — deepest */
+  --inverse-border: #1e2126;
+  --nav-footer-bg: #0f1114;
+  --input-disabled-bg: #0f1114;
+
+  /* ── Borders (neutral, visible against the black ramp) ── */
+  --content-border: #3a3f47;
+  --card-border: #3a3f47;
+  --table-border: #3a3f47;
+  --color-border-default: #3a3f47;
+  --content-border-color: #3a3f47;
+  --input-border: #3a3f47;
+  --nav-border: #3a3f47;
+  --nav-switcher-border: #3a3f47;
+  --nav-footer-border: #2d323a;
+  --color-border-subtle: #2d323a;
+  --nav-border-subtle: #2d323a;
+  --accent-content-border-color: #3a3f47;
+
+  /* ── Inverted gray scale, neutral ──
+     50–300 are surfaces/borders in dark; 400+ are text grays. */
+  --color-gray-50: #17191e;
+  --color-gray-100: #1e2126;
+  --color-gray-200: #282c33;
+  --color-gray-300: #3a3f47;
+  --color-gray-400: #767b85;
+  --color-gray-500: #9aa0a9;
+  --color-gray-600: #a8aeb6;
+  --color-gray-700: #c2c7cd;
+  --color-gray-800: #dadde1;
+  --color-gray-900: #eef0f2;
+
+  /* ── Text ── */
+  --page-text: #eef0f2;
+  --color-text-primary: #e2e5e9;
+  --color-text-secondary: #9aa0a9;
+  --content-text-muted: #9aa0a9;
+  --input-placeholder: #767b85;
+  --input-text: #e2e5e9;
+  --nav-text: #dadde1;
+  --nav-text-muted: #9aa0a9;
+  --nav-text-subtle: #767b85;
+  --nav-scrollbar-thumb: #3a3f47;
+  --nav-scrollbar-thumb-hover: #4b515b;
+
+  /* ── Top strip — deeper than the page so it still reads as its own band,
+     with the red accent edge. ── */
+  --breadcrumb-bar-bg: var(--mfl-ink-deep, #0b0c0f);
+  --breadcrumb-bar-border: var(--league-accent, #ef5350);
+}
+
+/* ========================================
    Text Selection (Dark Mode)
    Without this, selected text keeps its muted dark-mode color on the
    browser's default highlight — near-unreadable slate-on-slate. Force
@@ -565,6 +673,11 @@ html.dark ::selection {
 }
 
 html.dark[data-league="afl"] ::selection {
+  background: rgba(239, 83, 80, 0.5);
+  color: #ffffff;
+}
+
+html.dark[data-league="mfl"] ::selection {
   background: rgba(239, 83, 80, 0.5);
   color: #ffffff;
 }

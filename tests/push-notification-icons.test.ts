@@ -45,14 +45,40 @@ function findManifests(dir: string, out: string[] = []): string[] {
   return out;
 }
 
+/**
+ * The shared-host app's manifest, which plays by DIFFERENT rules than a
+ * league's and must not be swept into the league assertions below.
+ *
+ * A league is served at the ROOT of its own apex, so its manifest scope is
+ * "/". mfl.football is the opposite case: it serves EVERY league by path
+ * prefix, so a scope of "/" there would make an installed MFL Live claim
+ * /theleague/* and /afl-fantasy/* as its own app. Its scope is "/live", and
+ * nothing 301s that prefix away, so the scope really does cover every page
+ * that links it. Pinned in its own describe block at the bottom.
+ */
+const SHARED_APP_MANIFEST = path.join(PUBLIC, 'assets', 'mfl-live', 'site.webmanifest');
+
+/** Manifests belonging to a league apex — everything but the shared-host app. */
+function leagueManifestsOnly(all: string[]): string[] {
+  return all.filter((f) => f !== SHARED_APP_MANIFEST);
+}
+
 describe('PWA manifests', () => {
   const manifests = findManifests(PUBLIC);
+  const leagueManifests = leagueManifestsOnly(manifests);
 
   it('finds every manifest we ship', () => {
     expect(manifests.length).toBeGreaterThanOrEqual(2);
   });
 
-  it.each(manifests)('%s is served at the apex root, not under a league prefix', (file) => {
+  it('still finds the shared-host app manifest where this file expects it', () => {
+    // If it moves, leagueManifestsOnly() silently stops excluding it and the
+    // league rules below start failing on a manifest they do not govern —
+    // which reads as "MFL Live is broken" rather than "this path is stale".
+    expect(fs.existsSync(SHARED_APP_MANIFEST), SHARED_APP_MANIFEST).toBe(true);
+  });
+
+  it.each(leagueManifests)('%s is served at the apex root, not under a league prefix', (file) => {
     const m = JSON.parse(fs.readFileSync(file, 'utf8'));
     // The whole bug in one assertion. A `/afl-fantasy/` scope on a domain
     // that 301s `/afl-fantasy/*` → `/*` makes the manifest inapplicable to
@@ -242,7 +268,9 @@ describe('service worker badge contract', () => {
 });
 
 describe('manifest shortcuts and share target', () => {
-  const manifests = findManifests(PUBLIC);
+  // League manifests only. The shared-host app is a board, not a league site:
+  // it has no /lineup or /tip to shortcut to, and no tip page to share into.
+  const manifests = leagueManifestsOnly(findManifests(PUBLIC));
 
   /**
    * Which league's pages a manifest's apex-relative URLs resolve against.
@@ -253,10 +281,18 @@ describe('manifest shortcuts and share target', () => {
    * or it dead-ends for one of them, and it dead-ends from the OS launcher,
    * where nobody is watching.
    */
+  //
+  // Keyed on the path relative to public/, NOT the basename: `site.webmanifest`
+  // is a conventional filename and more than one manifest in this repo already
+  // uses it, so a basename key silently resolves one manifest's shortcuts
+  // against another league's pages.
   const LEAGUE_DIR: Record<string, string> = {
     'manifest.json': 'theleague',
-    'site.webmanifest': 'afl-fantasy',
+    'assets/afl/favicons/site.webmanifest': 'afl-fantasy',
   };
+
+  const leagueDirFor = (file: string) =>
+    LEAGUE_DIR[path.relative(PUBLIC, file).split(path.sep).join('/')];
 
   function routeExists(leagueDir: string, url: string): boolean {
     const rel = url.replace(/^\//, '').split('?')[0];
@@ -279,7 +315,7 @@ describe('manifest shortcuts and share target', () => {
 
   it.each(manifests)('%s shortcuts point at real routes in that league', (file) => {
     const m = JSON.parse(fs.readFileSync(file, 'utf8'));
-    const leagueDir = LEAGUE_DIR[path.basename(file)];
+    const leagueDir = leagueDirFor(file);
     expect(leagueDir, `no league mapped for ${path.basename(file)}`).toBeTruthy();
     for (const shortcut of m.shortcuts) {
       expect(shortcut.name, 'every shortcut needs a name').toBeTruthy();
@@ -294,7 +330,7 @@ describe('manifest shortcuts and share target', () => {
 
   it.each(manifests)('%s share target lands on a real page, in scope', (file) => {
     const m = JSON.parse(fs.readFileSync(file, 'utf8'));
-    const leagueDir = LEAGUE_DIR[path.basename(file)];
+    const leagueDir = leagueDirFor(file);
     expect(m.share_target?.action, 'share_target.action').toBeTruthy();
     expect(m.share_target.action.startsWith('/')).toBe(true);
     // GET, because the tip form prefills from the query string. A POST target
@@ -315,5 +351,65 @@ describe('manifest shortcuts and share target', () => {
     params.set(text, 'B');
     params.set(url, 'U');
     expect(readSharedPayload(params)).toEqual({ title: 'T', text: 'B', url: 'U' });
+  });
+});
+
+/**
+ * Guard: the shared-host app's PWA identity.
+ *
+ * MFL Live installs from mfl.football, a host that belongs to no league and
+ * serves all of them by path prefix. Every rule here is the INVERSE of the
+ * league rules above, and each one is a way the two could be confused.
+ */
+describe('shared-host app manifest (MFL Live)', () => {
+  const manifest = JSON.parse(fs.readFileSync(SHARED_APP_MANIFEST, 'utf8'));
+
+  it('does NOT claim the whole shared origin', () => {
+    // The failure this prevents: scope "/" on mfl.football makes an installed
+    // MFL Live the app for /theleague/* and /afl-fantasy/* as well, so opening
+    // a league page from a link launches it inside the scoreboard app. The
+    // league rule ("scope must be /") is right for an apex and wrong here.
+    expect(manifest.scope, 'scope').not.toBe('/');
+    expect(manifest.scope, 'scope').toBe('/live');
+  });
+
+  it('starts inside its own scope', () => {
+    // A start_url outside scope makes the manifest inapplicable — the same
+    // class of bug as the AFL's /afl-fantasy/ scope, arrived at from the
+    // other direction.
+    expect(String(manifest.start_url).startsWith(manifest.scope)).toBe(true);
+  });
+
+  it('carries a distinct app id so it can never merge with a league app', () => {
+    // Ids default to start_url, and this manifest shares an origin with
+    // nothing today — but mfl.football is where every future shared-host page
+    // will live, so the id is explicit rather than inferred.
+    expect(manifest.id, 'id').toBeTruthy();
+    expect(manifest.id).toBe('/live');
+  });
+
+  it('is linked only on the shared host', () => {
+    // Mirror of "never serves one league's manifest on another league's apex".
+    // If /live/ is ever added to SKIP_REWRITE_PREFIXES so the app answers on
+    // theleague.us too, this gate is what stops MFL Live's manifest from
+    // landing on a league's origin and competing with that league's own app.
+    const layout = fs.readFileSync(path.join(ROOT, 'src/layouts/MflAppLayout.astro'), 'utf8');
+    const normalized = layout.replace(/\s+/g, ' ');
+    expect(normalized).toContain('const onSharedHost = isSharedAppHost(Astro.url.hostname)');
+    expect(normalized).toContain('{onSharedHost && (');
+    // And it must be THIS manifest behind that gate, not a league's.
+    expect(normalized).toContain('href="/assets/mfl-live/site.webmanifest"');
+    expect(isSharedAppHost('mfl.football'), 'registry still knows the shared host').toBe(true);
+  });
+
+  it('names no league', () => {
+    // The whole point of the surface. A league name in the installed app's
+    // title is the fastest way for this to stop being league-neutral.
+    const text = `${manifest.name} ${manifest.short_name} ${manifest.description}`.toLowerCase();
+    for (const league of ALL_LEAGUES) {
+      expect(text, `${league.name} named in the shared app manifest`).not.toContain(
+        league.name.toLowerCase(),
+      );
+    }
   });
 });

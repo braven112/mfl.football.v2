@@ -351,10 +351,31 @@ forward rather than gating: point the apex at the Vercel project (ops), and
 guard that the shared host never serves a league's manifest and that `/live`
 302s to a login when signed out.
 
-**Phase 1 (start here) — the shell.** `MflAppLayout`, `data-league="mfl"` tokens in both
-`tokens.css` and `tokens-dark.css`, the cross-league nav, the manifest. Ship
-this with a placeholder board so the branding can be reviewed on a preview
-before any data work lands.
+**Phase 1 — the shell. DONE.** `MflAppLayout` (sets `data-league="mfl"`,
+gates the manifest on `isSharedAppHost`, inherits `NflLogoDarkStyles`),
+complete `mfl` token blocks in `tokens.css` and `tokens-dark.css`, the bar with
+league links + theme toggle + sign-out, a `/live`-scoped PWA manifest with
+placeholder icons, and `/live` rendering a placeholder board. Verified: both
+token blocks are complete against the AFL's (74/74 dark tokens, no light gaps),
+11 contrast pairs pass, and the page renders signed-in and signed-out in both
+themes.
+
+Two things Phase 1 established that were not in the original plan:
+
+- **`/live` does not redirect when signed out.** `/theleague/login` validates
+  `?redirect=` with `startsWith('/theleague')`, so a bounce from here cannot
+  come back here. The signed-out state renders the shell and a sign-in CTA
+  instead — which is also what makes the branding reviewable on a preview
+  without a session.
+- **The manifest guard needed splitting, not relaxing.**
+  `tests/push-notification-icons.test.ts` asserted `scope === '/'` for every
+  manifest in `public/`, which is right for a league apex and exactly wrong for
+  the shared host — a `/` scope there makes an installed MFL Live claim
+  `/theleague/*` too. The league rules now run over league manifests only, and
+  a new describe block pins the shared-host manifest's inverse rules. It also
+  surfaced a latent bug: `LEAGUE_DIR` was keyed on BASENAME, and
+  `site.webmanifest` is not unique, so a second one silently resolved its
+  shortcuts against the AFL's pages. Now keyed on the public-relative path.
 
 **Phase 2 — the board, MFL data only.** `loadCrossLeagueSnapshot` extracted,
 compact rows, expansion, all-leagues-on default, per-league failure badges, the
@@ -413,9 +434,15 @@ From `docs/claude/rules/live-scoring.md` and
 
 ## Repo chores this feature owes
 
-- `src/data/page-directory.json` entries for `/live` and `/live/settings`,
-  10+ tags each (`tests/page-directory-data.test.ts` enforces the minimum;
-  nothing tells you to add the entry).
+- **NOT `src/data/page-directory.json`** — this chore was listed on a wrong
+  assumption and is deliberately skipped. The directory's paths are resolved
+  PER LEAGUE (`resolveLeaguePath`): a bare `/live` entry becomes
+  `/theleague/live` on TheLeague's apex, which the middleware rewrites and
+  404s, so an entry would put a broken link in both leagues' site search. No
+  entry uses an absolute URL and the schema has no notion of one. If `/live`
+  should be findable from the league sites, the mechanism is a `leagueUrl()`
+  link in the nav or a directory that understands absolute hrefs — a change
+  to the directory, not a row in it.
 - A staged one-line change in `src/data/weekly-changelog-staging.json`,
   `league` tagged. `heroWorthy` is a human call — ASK, do not decide.
 - A `/guides` page: this is a new top-level feature and a one-line bullet

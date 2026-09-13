@@ -1,0 +1,308 @@
+---
+/**
+ * MflAppLayout — the shell for MFL Live, the league-neutral app on the shared
+ * host (mfl.football / staging.mfl.football).
+ *
+ * Deliberately NOT TheLeagueLayout and NOT SplashLayout:
+ *
+ *  - TheLeagueLayout wears one league's identity — its crest, its nav, its
+ *    footer, its PWA manifest. This surface spans every league the signed-in
+ *    MFL account is in and must claim none of them.
+ *  - SplashLayout is chrome-free and sets no `data-league`, so it renders
+ *    TheLeague's default blue tokens. This app has a palette of its own.
+ *
+ * See docs/plans/mfl-live-app.md.
+ *
+ * ── WHY data-league="mfl" ON A HOST THAT BELONGS TO NO LEAGUE ─────────────
+ * The token system keys every palette off this attribute, and this app needs
+ * a palette (tokens.css + tokens-dark.css both carry an `mfl` block). The
+ * value is a THEME KEY, not a league: "mfl" is not in the registry, has no
+ * MFL id, and must never appear in HOST_TO_SLUG — which is exactly why it is
+ * written as a literal here rather than derived from a league lookup. There
+ * is no league to look up.
+ *
+ * ── THE MANIFEST IS GATED ─────────────────────────────────────────────────
+ * TheLeagueLayout already refuses to serve a league's manifest on a foreign
+ * host, because a manifest's scope claims the origin it is served from. The
+ * mirror of that rule applies here: MFL Live's manifest belongs on the shared
+ * host and nowhere else. `/live` only routes there today (a league apex
+ * rewrites it under the league prefix and 404s), but the gate is what keeps
+ * that true if `/live/` is ever added to SKIP_REWRITE_PREFIXES.
+ *
+ * Its `scope` is `/live`, not `/` — the shared host serves every league by
+ * path prefix, so an installed app that claimed the whole origin would
+ * swallow `/theleague/*` and `/afl-fantasy/*` too.
+ */
+import { Font } from 'astro:assets';
+import { ClientRouter } from 'astro:transitions';
+import ThemeScript from '../components/ThemeScript.astro';
+import ThemeToggle from '../components/ThemeToggle.astro';
+import NflLogoDarkStyles from '../components/NflLogoDarkStyles.astro';
+import { getThemePreference } from '../utils/theme-preference';
+import { getAuthUser } from '../utils/auth';
+import { ALL_LEAGUES, leagueUrl, isSharedAppHost } from '../config/leagues';
+// Global utility classes (.visually-hidden, …) — a frontmatter import so the
+// CSS ships unscoped; an @import inside the <style> block would get scoped.
+import '../styles/utilities.css';
+
+export interface Props {
+	title: string;
+	/** Meta description. Optional — the board itself is behind auth. */
+	description?: string;
+}
+
+const { title, description } = Astro.props as Props;
+
+// 'auto' renders no class — the pre-paint ThemeScript resolves it against
+// prefers-color-scheme before first paint.
+const themePref = getThemePreference(Astro.cookies);
+
+// See the manifest note above.
+const onSharedHost = isSharedAppHost(Astro.url.hostname);
+
+const authUser = getAuthUser(Astro.request);
+
+// Links out to the league sites this project runs. Absolute, via leagueUrl —
+// never an origin concatenated with a path (docs/claude/rules/league-urls.md),
+// and never a bare path, because these leave the shared host for a league's
+// own apex where the session cookie is a different one.
+const leagueLinks = ALL_LEAGUES.map((league) => ({
+	name: league.name,
+	href: leagueUrl(league, '/'),
+}));
+---
+
+<!DOCTYPE html>
+<html lang="en" data-league="mfl" class:list={[{ dark: themePref === 'dark' }]}>
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+		<ThemeScript />
+		<link rel="icon" type="image/svg+xml" href="/assets/mfl-live/icon.svg" />
+		<link rel="apple-touch-icon" href="/assets/mfl-live/apple-touch-icon.png" />
+		{onSharedHost && (
+			<link rel="manifest" href="/assets/mfl-live/site.webmanifest" crossorigin="use-credentials" />
+		)}
+		<meta name="theme-color" content="#14161a" data-theme-color-light="#14161a" />
+		<meta name="mobile-web-app-capable" content="yes" />
+		<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+		<meta name="apple-mobile-web-app-title" content="MFL Live" />
+		<meta name="generator" content={Astro.generator} />
+		{description && <meta name="description" content={description} />}
+		<Font cssVariable="--font-vend-sans" />
+		{/* Swaps every NFL mark to the mirrored 500-dark cut under html.dark and
+		    rings the black-bodied ones. Inherited rather than reimplemented —
+		    it is the reason this board has a real dark theme instead of a
+		    permanently black ground. */}
+		<NflLogoDarkStyles />
+		<ClientRouter />
+		<title>{title}</title>
+	</head>
+	<body>
+		<a class="mfl-skip" href="#mfl-main">Skip to content</a>
+
+		<header class="mfl-bar">
+			<a class="mfl-bar__brand" href="/live" aria-label="MFL Live — home">
+				<svg class="mfl-bar__mark" viewBox="0 0 156 100" aria-hidden="true" focusable="false">
+					<g
+						fill="none"
+						stroke="currentColor"
+						stroke-width="14"
+						stroke-linecap="round"
+						stroke-linejoin="round"
+					>
+						<path d="M7 85 L7 22 L29 58 L51 22 L51 85" />
+						<path d="M67 85 L67 22 L101 22" />
+						<path d="M67 53 L94 53" />
+						<path d="M117 22 L117 85 L149 85" />
+					</g>
+				</svg>
+				<span class="mfl-bar__live">Live</span>
+			</a>
+
+			<nav class="mfl-bar__nav" aria-label="League sites">
+				{leagueLinks.map((l) => (
+					<a class="mfl-bar__link" href={l.href}>{l.name}</a>
+				))}
+			</nav>
+
+			<div class="mfl-bar__end">
+				<ThemeToggle size="compact" />
+				{authUser ? (
+					<button type="button" class="mfl-bar__link mfl-bar__signout" data-mfl-signout>Sign out</button>
+				) : (
+					<a class="mfl-bar__link" href="/theleague/login?redirect=/live">Sign in</a>
+				)}
+			</div>
+		</header>
+
+		{/* Sign-out is a POST, so it cannot be a link. Same shape as
+		    NavFooter's: fetch + reload, bound on astro:page-load rather than
+		    DOMContentLoaded (ClientRouter fires no DOMContentLoaded on a soft
+		    navigation, so a once-only binding leaves the button dead after the
+		    first in-app nav), with a dataset guard so repeated page-loads do
+		    not stack listeners on a button that survived the swap. */}
+		<script is:inline>
+			(function () {
+				function initSignOut() {
+					var button = document.querySelector('[data-mfl-signout]');
+					if (!button) return;
+					if (button.dataset.signoutBound === '1') return;
+					button.dataset.signoutBound = '1';
+
+					button.addEventListener('click', async function () {
+						button.disabled = true;
+						try {
+							await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
+						} catch (e) {
+							// Clearing the cookie is the server's job. A failed call means
+							// we are still signed in, and reloading shows that honestly.
+						}
+						window.location.reload();
+					});
+				}
+				document.addEventListener('astro:page-load', initSignOut);
+			})();
+		</script>
+
+		<main id="mfl-main" class="mfl-main">
+			<slot />
+		</main>
+	</body>
+</html>
+
+<style>
+	@import '../styles/tokens.css';
+	/* Dark-mode token overrides (scoped under html.dark) — must come after tokens.css */
+	@import '../styles/tokens-dark.css';
+
+	:global(html) {
+		background: var(--page-bg);
+		color-scheme: light dark;
+	}
+
+	:global(body) {
+		margin: 0;
+		min-height: 100dvh;
+		background: var(--page-bg);
+		color: var(--page-text);
+		font-family: var(--font-vend-sans), system-ui, -apple-system, 'Segoe UI', sans-serif;
+		font-size: 1rem;
+		line-height: 1.5;
+		-webkit-font-smoothing: antialiased;
+	}
+
+	.mfl-skip {
+		position: absolute;
+		left: -9999px;
+		top: 0;
+		z-index: 100;
+		padding: 0.75rem 1rem;
+		background: var(--content-bg);
+		color: var(--page-text);
+		border-radius: 0 0 0.5rem 0;
+	}
+	.mfl-skip:focus {
+		left: 0;
+	}
+
+	/* ── The bar ──
+	   Sticky because this is a board you scroll for an afternoon, and the way
+	   back to the top of it should not be a scroll. `env(safe-area-inset-*)`
+	   because it is installed to a home screen and runs under the notch. */
+	.mfl-bar {
+		position: sticky;
+		top: 0;
+		z-index: 20;
+		display: flex;
+		align-items: center;
+		gap: 0.75rem;
+		padding: 0.5rem clamp(0.75rem, 3vw, 1.25rem);
+		padding-top: calc(0.5rem + env(safe-area-inset-top, 0px));
+		background: var(--breadcrumb-bar-bg);
+		border-bottom: 2px solid var(--league-accent);
+	}
+
+	.mfl-bar__brand {
+		display: inline-flex;
+		align-items: baseline;
+		gap: 0.4rem;
+		text-decoration: none;
+		/* The bar is the brand near-black in BOTH themes, so its ink is fixed
+		   white rather than a theme token — a token here would go near-black
+		   on near-black in light mode. */
+		color: #ffffff;
+	}
+
+	.mfl-bar__mark {
+		height: 1.05rem;
+		width: auto;
+		display: block;
+		align-self: center;
+	}
+
+	.mfl-bar__live {
+		font-size: 0.95rem;
+		font-weight: 600;
+		letter-spacing: 0.01em;
+		color: var(--league-accent);
+	}
+
+	.mfl-bar__nav {
+		display: flex;
+		gap: 0.75rem;
+		margin-inline-start: auto;
+		overflow-x: auto;
+		scrollbar-width: none;
+	}
+	.mfl-bar__nav::-webkit-scrollbar {
+		display: none;
+	}
+
+	.mfl-bar__end {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+	}
+
+	.mfl-bar__link {
+		white-space: nowrap;
+		font-size: 0.85rem;
+		text-decoration: none;
+		color: rgba(255, 255, 255, 0.72);
+		padding: 0.3rem 0.1rem;
+	}
+	.mfl-bar__link:hover,
+	.mfl-bar__link:focus-visible {
+		color: #ffffff;
+		text-decoration: underline;
+	}
+
+	.mfl-bar__signout {
+		border: 0;
+		background: none;
+		font: inherit;
+		font-size: 0.85rem;
+		cursor: pointer;
+	}
+	.mfl-bar__signout:disabled {
+		opacity: 0.5;
+		cursor: default;
+	}
+
+	.mfl-main {
+		padding: clamp(1rem, 4vw, 2rem) clamp(0.75rem, 3vw, 1.25rem);
+		padding-bottom: calc(2rem + env(safe-area-inset-bottom, 0px));
+	}
+
+	/* Phone first: the league links are the first thing to go. They are a way
+	   OUT of this app, and the board is the point. */
+	@media (max-width: 640px) {
+		.mfl-bar__nav {
+			display: none;
+		}
+		.mfl-bar__end {
+			margin-inline-start: auto;
+		}
+	}
+</style>
