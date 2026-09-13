@@ -215,7 +215,14 @@ describe('staging outbound-write guard', () => {
         if (!/(^|[^A-Za-z0-9_])fetch\(/.test(line)) return;
         // The URL may be on the call line or the next couple.
         const window = lines.slice(i, i + 3).join('\n');
-        if (MUTATING.test(window) && /myfantasyleague\.com/.test(window)) {
+        // `includes`, NOT a regex. An unanchored /myfantasyleague\.com/ is the
+        // shape CodeQL flags as a missing-anchor vulnerability, because in a
+        // URL check it also matches `evil-myfantasyleague.com.attacker.net`.
+        // Harmless here — this greps SOURCE TEXT for a hostname literal rather
+        // than validating a URL — but the literal check says exactly that and
+        // cannot be mistaken for validation by the next reader or the scanner.
+        // Do not "improve" it back into a regex.
+        if (MUTATING.test(window) && window.includes('myfantasyleague.com')) {
           offenders.push(`${file.path}:${i + 1}`);
         }
       });
