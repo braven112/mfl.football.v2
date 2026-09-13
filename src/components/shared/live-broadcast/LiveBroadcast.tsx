@@ -22,6 +22,7 @@ import {
   buildStripPages,
   countCells,
   densityTier,
+  splitPanels,
   type StripPage,
 } from '../../../utils/broadcast-layout';
 import BroadcastScoreHeader from './BroadcastScoreHeader';
@@ -81,6 +82,7 @@ interface Props {
 
 const fmt = (n: number) => (Number.isFinite(n) ? n.toFixed(1) : '0.0');
 
+
 export default function LiveBroadcast({ pageData }: Props) {
   const data = useMemo(() => JSON.parse(pageData) as LiveBroadcastPageData, [pageData]);
 
@@ -97,6 +99,17 @@ export default function LiveBroadcast({ pageData }: Props) {
   // what has already been shown.
   const shownRef = useRef<Set<string>>(new Set());
   const [shownVersion, setShownVersion] = useState(0);
+
+  /**
+   * Is the overflow row expanded into full panels?
+   *
+   * Starts COLLAPSED every time and is deliberately not remembered in a
+   * cookie. The board's default shape is the one an owner set up once and
+   * walked away from; a television that came back from a power cut showing
+   * six squeezed panels because of a click three Sundays ago is the failure
+   * this whole split is fixing.
+   */
+  const [extrasOpen, setExtrasOpen] = useState(false);
 
   const [pageIndex, setPageIndex] = useState(0);
   /**
@@ -291,7 +304,43 @@ export default function LiveBroadcast({ pageData }: Props) {
     [data.playerMeta, poll.playerMeta],
   );
 
-  const tier = useMemo(() => densityTier(countCells(data.panels)), [data.panels]);
+  /**
+   * Which leagues get a full-size panel, and which get the thin row.
+   *
+   * `base` is the collapsed answer and it is computed EITHER WAY, because it
+   * is the only thing that knows whether there are overflow leagues at all —
+   * the expanded split has an empty `compact` by construction, so asking it
+   * would make the control that collapses the row vanish the moment it was
+   * used.
+   */
+  const base = useMemo(() => splitPanels(data.panels), [data.panels]);
+  const hasExtras = base.compact.length > 0;
+  /**
+   * Expanded is still a SPLIT, not "every panel in the grid".
+   *
+   * `splitPanels` lifts the four-cell legibility cap here but keeps
+   * `MAX_GRID_PANELS`, because that one is not a judgement — the stylesheet
+   * declares columns and rows for eight panels and a ninth lands in an
+   * implicit row inside a fixed-height, `overflow: hidden` header, where it is
+   * not drawn at all. So an owner in nine leagues expands to eight panels and
+   * the ninth stays on the compact row, legible, rather than vanishing.
+   */
+  const expanded = useMemo(
+    () => splitPanels(data.panels, Number.POSITIVE_INFINITY),
+    [data.panels],
+  );
+  const { featured, compact } = extrasOpen ? expanded : base;
+
+  // `useCallback`, so the memoised header is not re-rendered by the 1 Hz
+  // heartbeat handing it a new function identity every second.
+  const toggleExtras = useCallback(() => setExtrasOpen((prev) => !prev), []);
+
+  /**
+   * Tier follows the FEATURED cells. The compact row is a fixed 4.6vh
+   * whatever is in it, so an overflow league costs the panels above it no
+   * type scale — which is the entire point of demoting it.
+   */
+  const tier = useMemo(() => densityTier(countCells(featured)), [featured]);
 
   // Rows per page is derived from the tier rather than measured: a measured
   // value changes on every resize and would reshuffle the strip under the room.
@@ -720,7 +769,11 @@ export default function LiveBroadcast({ pageData }: Props) {
       aria-label="Live scoring broadcast"
     >
       <BroadcastScoreHeader
-        panels={data.panels}
+        panels={featured}
+        compact={compact}
+        hasExtras={hasExtras}
+        expanded={extrasOpen}
+        onToggleExtras={toggleExtras}
         scores={scoresByLeague}
         tier={tier}
         hidden={occludes === 'all'}
@@ -780,7 +833,14 @@ export default function LiveBroadcast({ pageData }: Props) {
           separate reasons a conditional hide kept losing. They are on the
           setup screen now (`?picker=1`), which is where the viewer already is
           before casting this to a TV, and `F` / `M` reach fullscreen and
-          sound from here without occupying a pixel. */}
+          sound from here without occupying a pixel.
+
+          The header's overflow-row toggle is the ONE exception, and it is the
+          opposite shape: always rendered when it has something to toggle, in
+          normal flow inside the header, never hidden and never re-shown. A
+          keyboard shortcut is not reachable on the hardware this board is for
+          (an Xbox browser has no keyboard), so the choice was a fixed, known
+          4.6vh or a control the owner cannot reach at all. */}
 
       {(status === 'error' || isStale || fetchedAt === 0) && (
         <p className={`lbc__status${status === 'error' ? ' is-error' : ''}`}>

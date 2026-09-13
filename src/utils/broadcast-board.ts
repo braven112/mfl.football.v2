@@ -16,7 +16,7 @@ import type { AuthUser } from './auth';
 import { getCurrentSeasonYear, getLeagueYearForSlug } from './league-year';
 import { fetchMyLeagues } from './my-leagues';
 import type { BoardLeague } from './sunday-ticket-selection';
-import { resolveBroadcastLeagues } from './broadcast-selection';
+import { isHomeLeague, resolveBroadcastLeagues } from './broadcast-selection';
 import {
   buildBoardLeagues,
   findOwnerMatchups,
@@ -404,6 +404,7 @@ export async function assembleBroadcastBoard(input: AssembleBoardInput): Promise
           leagueName: league.name,
           slug,
           franchiseId: league.franchiseId,
+          home: isHomeLeague(league),
           matchups: [],
           status: 'unavailable',
         });
@@ -423,6 +424,10 @@ export async function assembleBroadcastBoard(input: AssembleBoardInput): Promise
         leagueName: league.name,
         slug,
         franchiseId: league.franchiseId,
+        // The registry's own answer, resolved here because the layout that
+        // consumes it is pure. A home league keeps a full-size panel however
+        // many outside leagues the owner adds.
+        home: isHomeLeague(league),
         matchups: pairs.map((pair, index) => ({
           index,
           mine,

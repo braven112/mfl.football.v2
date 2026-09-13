@@ -90,6 +90,23 @@ const doneHref = broadcastHref(
 );
 
 /**
+ * The Leagues button's destination — the setup screen, CARRYING THE WEEK.
+ *
+ * `broadcastHref`'s contract is that an explicit `?week=` survives a trip
+ * through the chips, and the picker is on that trip: `doneHref` reads
+ * `parsedWeek` off the PICKER's URL, so a link that dropped the week sent an
+ * owner looking at week 3 back to the current week the moment he opened
+ * Leagues and pressed Done. Same `Number.isFinite(parsedWeek)` test as every
+ * other href on this page — a week nobody asked for explicitly stays out of
+ * the URL.
+ */
+const pickerHref = `${broadcastHref(
+  Astro.url.pathname,
+  board.enabled.length > 0 ? board.enabled : null,
+  Number.isFinite(parsedWeek) ? week : null,
+)}&picker=1`;
+
+/**
  * Does the viewer want the picker?
  *
  * It used to render ONLY when nothing was enabled — and since the two
@@ -141,7 +158,12 @@ const title = `Live Broadcast — Week ${week}`;
           a television the page is scrolled to the board and this strip is
           simply off the top of the picture, while on a laptop or phone it is
           the obvious place to change leagues. */}
-      <BroadcastControls chips={chips} sound={sound} variant="strip" />
+      <BroadcastControls
+        chips={chips}
+        sound={sound}
+        variant="strip"
+        pickerHref={pickerHref}
+      />
       <LiveBroadcast client:load pageData={JSON.stringify(pageData)} />
     </Fragment>
   )

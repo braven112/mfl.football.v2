@@ -17,6 +17,7 @@ import { isEspnCdnUrl } from '../src/utils/espn-cdn';
 import { normalizeTeamCode } from '../src/utils/nfl';
 import { getPlayerMap } from '../src/utils/player-map';
 import { defenseNickname } from '../src/components/shared/live-broadcast/MomentTakeover';
+import { MAX_GRID_PANELS, splitPanels } from '../src/utils/broadcast-layout';
 
 const read = (p: string) => readFileSync(join(process.cwd(), p), 'utf8');
 
@@ -50,6 +51,18 @@ const ROUTES = [
   'src/pages/afl-fantasy/broadcast.astro',
 ].map((p) => [p, code(read(p))] as const);
 
+/**
+ * The stylesheet with the `.lbc-bar*` rules removed.
+ *
+ * The toolbar above the board is the ONE themed surface in this file and it is
+ * the only place a colour token belongs: it is an ordinary page element under
+ * the site nav, not part of the board. Everything else — the board, the setup
+ * screen, every reveal — is dark in both themes because franchise colours are
+ * its background, and a token there either inverts under `html.dark` or is
+ * floored against a surface that does not exist here.
+ */
+const CSS_BOARD = CSS.replace(/^\.lbc-bar[^{]*\{[^}]*\}/gm, '');
+
 describe('the broadcast surface consumes NO colour token', () => {
   it('references no --color-*, --card-*, --content-*, --page-* or --league-accent', () => {
     // Every one of them either inverts under html.dark (--color-gray-900
@@ -58,7 +71,19 @@ describe('the broadcast surface consumes NO colour token', () => {
     // brightness with the theme. Ink here is always white and the ground is
     // always dark, in both themes.
     const banned = /var\(\s*--(color|card|content|page|league-accent|team-accent)[\w-]*/g;
-    expect(CSS.match(banned) ?? []).toEqual([]);
+    expect(CSS_BOARD.match(banned) ?? []).toEqual([]);
+  });
+
+  it('themes the TOOLBAR, and only the toolbar', () => {
+    // The exception, pinned in both directions. A hardcoded near-black slab
+    // under a light-mode nav read as a piece of the board that had escaped
+    // onto the page — so the toolbar takes tokens and follows the theme...
+    const bar = (CSS.match(/^\.lbc-bar[^{]*\{[^}]*\}/gm) ?? []).join('\n');
+    expect(bar).toMatch(/var\(--card-surface\)/);
+    expect(bar).toMatch(/var\(--card-border\)/);
+    // ...and it carries no board palette of its own, which is what made the
+    // old strip a dark slab in the first place.
+    expect(bar).not.toMatch(/--lbc-panel|--lbc-ink|#0b1220/);
   });
 
   it('needs no html.dark override, and has none', () => {
@@ -311,13 +336,47 @@ describe('nothing is sized against a box it does not live in', () => {
     expect(CSS).toMatch(/\.lbc p[\s\S]{0,40}\{\s*margin:\s*0/);
   });
 
+  it('stacks the panels on a phone by reaching the GRID, not the header', () => {
+    // The grid moved onto `.lbc__panels` and the header became a flex column,
+    // so a `grid-template-columns` declaration on `.lbc__header` is silently
+    // inert — and the symptom is not a broken-looking selector, it is a phone
+    // keeping the desktop's 2/3/4 columns inside a 55%-height header.
+    const phone = /@media \(max-width: 900px\) \{([\s\S]*?)\n\}/.exec(CSS_CODE)?.[1] ?? '';
+    expect(phone).toMatch(/\.lbc__header\[data-tier='2'\] \.lbc__panels/);
+    expect(phone).not.toMatch(/\.lbc__header\[data-tier='\d'\],?\s*\n?\s*\{?\s*grid-template-columns/);
+  });
+
   it('lays the header out by PANEL count, not by the type tier', () => {
     // They are different counts. One league on a doubleheader week is one
     // panel and two cells; keying the columns on the tier left half a 1080p
-    // screen empty.
-    expect(CSS).toMatch(/\.lbc__header\[data-panels='1'\]/);
-    expect(CSS).not.toMatch(/\.lbc__header\[data-tier='\d'\] \{ grid-template-columns/);
-    expect(HEADER).toMatch(/data-panels=/);
+    // screen empty. The grid moved onto `.lbc__panels` when the compact
+    // overflow row joined the header — `data-panels` moved with the grid it
+    // describes, and must never be read off the header again.
+    expect(CSS).toMatch(/\.lbc__panels\[data-panels='1'\]/);
+    expect(CSS).not.toMatch(/\.lbc__header\[data-panels=/);
+    expect(CSS).not.toMatch(/\.lbc__(header|panels)\[data-tier='\d'\] \{ grid-template-columns/);
+    expect(HEADER).toMatch(/className="lbc__panels" data-panels=/);
+  });
+
+  it('keeps the header a fixed-height column the grid can flex inside', () => {
+    // The grid's rows are declared EXPLICITLY so a panel cannot grow past the
+    // header's height and paint over the strip (header z-index 1, strip 0).
+    // That is exactly why the overflow row could not be a ninth grid child:
+    // it would land in an implicit `auto` row and reintroduce the bug the
+    // explicit rows exist to prevent.
+    const header = /^\.lbc__header \{([\s\S]*?)\n\}/m.exec(CSS_CODE)?.[1] ?? '';
+    expect(header).toMatch(/display:\s*flex/);
+    expect(header).toMatch(/flex-direction:\s*column/);
+    expect(header).toMatch(/height:\s*var\(--lbc-header-h\)/);
+    const panels = /^\.lbc__panels \{([\s\S]*?)\n\}/m.exec(CSS_CODE)?.[1] ?? '';
+    expect(panels).toMatch(/display:\s*grid/);
+    expect(panels).toMatch(/flex:\s*1/);
+    expect(panels).toMatch(/min-height:\s*0/);
+    // Every panel-count variant still declares BOTH tracks.
+    for (const n of [1, 2, 3, 4, 5, 6, 7, 8]) {
+      const rule = new RegExp(`\\.lbc__panels\\[data-panels='${n}'\\]`);
+      expect(CSS_CODE, `data-panels='${n}' must be laid out`).toMatch(rule);
+    }
   });
 
   it('escapes the layout column so a television is not boxed into 1232px', () => {
@@ -574,9 +633,123 @@ describe('the board carries NO controls', () => {
 
   it('styles no chrome, and carries no :hover reveal anywhere', () => {
     expect(CSS_CODE).not.toMatch(/\.lbc__chrome/);
-    // The parked-cursor trap. No rule on this surface may key off `:hover` —
-    // on the one screen this page exists for, `:hover` is a constant.
-    expect(CSS_CODE).not.toMatch(/\.lbc[^{,]*:hover/);
+    // The parked-cursor trap. No rule on the BOARD may key off `:hover` — on
+    // the one screen this page exists for the cursor is parked and `:hover` is
+    // true all afternoon, which is how the second attempt at hiding chrome
+    // shipped it permanently visible. The toolbar above the board is exempt
+    // and only the toolbar: it is a page element read from a desk, its hover
+    // state changes a text colour rather than revealing anything, and it is
+    // not on the screen the trap is about.
+    const boardCode = CSS_CODE.replace(/^\.lbc-bar[^{]*\{[^}]*\}/gm, '');
+    expect(boardCode).not.toMatch(/\.lbc[^{,]*:hover/);
+    // Whatever the toolbar does on hover, it may not be a REVEAL.
+    const barHover = (CSS_CODE.match(/^\.lbc-bar[^{]*:hover[^{]*\{[^}]*\}/gm) ?? []).join('\n');
+    expect(barHover).not.toMatch(/opacity|visibility|display/);
+  });
+
+  describe('the ONE exception: the overflow row’s toggle', () => {
+    // It is on the board, and that is deliberate — the keys above are
+    // unreachable on an Xbox browser, which has no keyboard. These guards pin
+    // the property that makes it different from the three that failed: it is
+    // UNCONDITIONAL. Not a visible default plus a condition meant to hide it,
+    // which is the shape that shipped chrome onto a real television three
+    // times for three different reasons.
+
+    it('renders whenever there is something to toggle, and not otherwise', () => {
+      // The ROW is gated on `hasExtras`, never on `compact.length > 0`:
+      // expanding usually empties `compact`, so keying the row on it would
+      // delete the control the moment it was used. (The LIST inside the row is
+      // gated on `compact.length` — correctly, since past MAX_GRID_PANELS the
+      // row still carries leagues while expanded.)
+      expect(HEADER).toMatch(/\{hasExtras && \(/);
+      const row = /\{hasExtras && \([\s\S]*?aria-expanded=\{expanded\}/.exec(HEADER)?.[0] ?? '';
+      expect(row).not.toBe('');
+      expect(row).not.toMatch(/\{!expanded && \(\s*<div/);
+      // A real button with a real state, not a div with a click handler.
+      expect(HEADER).toMatch(/<button[\s\S]{0,200}lbc__extras-toggle/);
+      expect(HEADER).toMatch(/aria-expanded=\{expanded\}/);
+    });
+
+    it('is never hidden, dimmed to nothing, or positioned over the scores', () => {
+      // Every rule whose selector names the overflow row — comments already
+      // stripped, so this is the code and not the prose describing the trap.
+      const extras = (CSS_CODE.match(/^\.lbc__extra[^{]*\{[^}]*\}/gm) ?? []).join('\n');
+      expect(extras).toMatch(/\.lbc__extras \{/);
+      // The three failures, mechanically: an opacity hide, a hover reveal, a
+      // hover-capability media query, an idle class, or a `visibility` flip.
+      expect(extras).not.toMatch(/opacity:\s*0\b/);
+      expect(extras).not.toMatch(/visibility:\s*hidden/);
+      expect(extras).not.toMatch(/:hover/);
+      expect(extras).not.toMatch(/is-awake|is-idle/);
+      // In FLOW, under the panels — never absolute/fixed over them. "Above the
+      // scores" and "hidden over the scores" are different fixes and only the
+      // first is true whatever the hardware reports.
+      expect(extras).not.toMatch(/position:\s*(absolute|fixed|sticky)/);
+      expect(extras).toMatch(/flex:\s*0 0 auto/);
+      // A FIXED height, so a feed coming or going does not re-scale the panel
+      // grid inside a fixed-height header.
+      expect(extras).toMatch(/height:\s*[\d.]+vh/);
+    });
+
+    it('is sized for a thumbstick, not a mouse', () => {
+      // An Xbox pointer is nudged with a stick; a 2vh chip is not a target you
+      // can land on from a couch. The toggle takes the row's full height.
+      const rule = /\.lbc__extras-toggle \{([\s\S]*?)\n\}/.exec(CSS_CODE)?.[1] ?? '';
+      expect(rule).toMatch(/height:\s*100%/);
+      // Focus is visible for a remote too — `:focus-visible` alone leaves a
+      // set-top browser that does not support it with no ring at all.
+      expect(CSS_CODE).toMatch(/\.lbc__extras-toggle:focus \{[^}]*outline:/);
+    });
+
+    it('starts COLLAPSED and is not remembered', () => {
+      // A television that came back from a power cut showing six squeezed
+      // panels because of a click three Sundays ago is the failure the split
+      // exists to fix.
+      expect(ISLAND_CODE).toMatch(/useState\(false\)/);
+      expect(ISLAND_CODE).not.toMatch(/bc_extras/);
+    });
+
+    it('sizes the type off the FEATURED cells, not every enabled league', () => {
+      // Demoting a league to the compact row buys the panels above it nothing
+      // unless the tier stops counting it.
+      expect(ISLAND_CODE).toMatch(/densityTier\(countCells\(featured\)\)/);
+    });
+
+    it('keeps the memo bailout intact across the 1 Hz heartbeat', () => {
+      // The header is memo'd because the island ticks once a second to age the
+      // freshness pill. A fresh array or a fresh arrow function in its props
+      // breaks that bailout on every tick — ~28,800 re-renders over a Sunday,
+      // on set-top hardware. Both shelves come straight off a memoised split,
+      // so their identities are stable between ticks.
+      expect(ISLAND_CODE).toMatch(/const base = useMemo\(\(\) => splitPanels/);
+      expect(ISLAND_CODE).toMatch(/const expanded = useMemo\(/);
+      expect(ISLAND_CODE).toMatch(/const \{ featured, compact \} = extrasOpen \? expanded : base;/);
+      expect(ISLAND_CODE).toMatch(/const toggleExtras = useCallback/);
+    });
+
+    it('never hands the grid more panels than the stylesheet can place', () => {
+      // The grid declares one through eight and stops; the rows are explicit
+      // so a panel cannot grow past the fixed header height, which means a
+      // ninth panel lands in an implicit row inside an `overflow: hidden` box
+      // and is not drawn. "Show more leagues" that silently drops the ninth is
+      // the failure — it stays on the compact row instead.
+      const panels = (n: number) =>
+        Array.from({ length: n }, (_, i) => ({
+          leagueId: `l${i}`,
+          leagueName: `League ${i}`,
+          slug: '',
+          franchiseId: '0001',
+          home: false,
+          matchups: [],
+          status: 'no-matchup' as const,
+        }));
+      const split = splitPanels(panels(12), Number.POSITIVE_INFINITY);
+      expect(split.featured).toHaveLength(MAX_GRID_PANELS);
+      expect(split.compact).toHaveLength(4);
+      // And the label does not promise what the layout cannot keep.
+      expect(HEADER).toMatch(/'Show more leagues'/);
+      expect(HEADER).not.toMatch(/'Show all leagues'/);
+    });
   });
 
   it('offers leagues and sound off the board instead', () => {
@@ -588,17 +761,17 @@ describe('the board carries NO controls', () => {
     }
   });
 
-  it('places the strip ABOVE the board, in flow, never over it', () => {
+  it('places the toolbar ABOVE the board, in flow, never over it', () => {
     // "Above the board" and "hidden on the board" are not the same fix, and
     // only the first one is true no matter what the hardware reports. The
-    // strip must render BEFORE <LiveBroadcast> and must not be positioned.
+    // toolbar must render BEFORE <LiveBroadcast> and must not be positioned.
     const strip = PAGE_CODE.indexOf('variant="strip"');
     const board = PAGE_CODE.indexOf('<LiveBroadcast');
     expect(strip).toBeGreaterThan(-1);
     expect(board).toBeGreaterThan(-1);
     expect(strip).toBeLessThan(board);
 
-    const rule = /\.lbc-controls--strip \{([^}]*)\}/.exec(CSS_CODE)?.[1] ?? '';
+    const rule = /^\.lbc-bar \{([^}]*)\}/m.exec(CSS_CODE)?.[1] ?? '';
     expect(rule).not.toBe('');
     expect(rule).not.toMatch(/position:\s*(absolute|fixed|sticky)/);
   });
@@ -641,13 +814,106 @@ describe('the board carries NO controls', () => {
     expect(ISLAND_CODE).toMatch(/lbc:sound/);
   });
 
-  it('reaches fullscreen and sound by key, since there is no button left', () => {
+  it('reaches fullscreen and sound by key, since the board carries no chip', () => {
     // A keypress carries transient activation, which is what lets `F` request
     // fullscreen at all — fullscreen does not survive the navigation from the
     // setup screen, so it has to be asked for from inside this document.
     expect(ISLAND_CODE).toMatch(/requestFullscreen/);
     expect(ISLAND_CODE).toMatch(/key === 'f'/);
     expect(ISLAND_CODE).toMatch(/key === 'm'/);
+  });
+
+  it('also reaches fullscreen by BUTTON, for hardware with no keyboard', () => {
+    // The keys above are unreachable on the screen this board was built for:
+    // an Xbox browser has no keyboard, so `F` is not a fallback there, it is
+    // nothing. The button lives on the STRIP (a click carries the same
+    // transient activation a keypress does) and the board stays output-only.
+    expect(CONTROLS_CODE).toMatch(/lbc-fullscreen-toggle/);
+    expect(CONTROLS_CODE).toMatch(/requestFullscreen/);
+    // Assigned, not added — re-running init must not stack a second handler
+    // that enters fullscreen and immediately leaves it.
+    expect(CONTROLS_CODE).toMatch(/btn\.onclick = /);
+  });
+
+  it('fullscreens the BOARD, never the document element', () => {
+    // Fullscreening the document takes the site nav and this very strip with
+    // it — the centred 1232px layout is what the board exists to escape.
+    expect(CONTROLS_CODE).toMatch(/querySelector\('\.lbc\.is-board'\)/);
+    expect(CONTROLS_CODE).not.toMatch(/documentElement[\s\S]{0,40}\.call\(/);
+  });
+
+  it('hides the fullscreen button only where the API does not exist', () => {
+    // It ships `hidden` and reveals ITSELF once it has found an API to call:
+    // a browser with no Fullscreen API shows nothing rather than a control
+    // that silently does nothing, which on a television is indistinguishable
+    // from the board being broken. The support check is against the DOCUMENT
+    // element — support is a property of the browser — while the board is
+    // looked up inside the click, because this strip is server-rendered above
+    // a client:load island and the ClientRouter replaces that node.
+    expect(CONTROLS_CODE).toMatch(/id="lbc-fullscreen-toggle" hidden/);
+    expect(CONTROLS_CODE).toMatch(/requestFn\(document\.documentElement/);
+    expect(CONTROLS_CODE).toMatch(/btn\.hidden = false/);
+  });
+
+  it('carries every fullscreen prefix all the way through', () => {
+    // A prefix advertised in the REQUEST but missing from the state property
+    // or the change event is worse than not supporting it: the button reveals
+    // itself, enters fullscreen, then can neither report it nor leave it.
+    // Xbox's older EdgeHTML browser is an `ms`-prefixed engine, which is the
+    // hardware this button exists for.
+    for (const [req, state, ev] of [
+      ['requestFullscreen', 'fullscreenElement', "'fullscreenchange'"],
+      ['webkitRequestFullscreen', 'webkitFullscreenElement', "'webkitfullscreenchange'"],
+      ['msRequestFullscreen', 'msFullscreenElement', "'MSFullscreenChange'"],
+    ]) {
+      expect(CONTROLS_CODE, `${req} must be requestable`).toContain(req);
+      expect(CONTROLS_CODE, `${req} needs its state property`).toContain(state);
+      expect(CONTROLS_CODE, `${req} needs its change event`).toContain(ev);
+    }
+  });
+
+  it('lets the UA hide rule actually win on the fullscreen button', () => {
+    // `display: inline-flex` is an author rule and `[hidden] { display: none }`
+    // is the UA's, so the author rule wins: the button ships `hidden` and
+    // rendered anyway — the dead control on an unsupported browser that the
+    // `hidden` exists to prevent. This repo has no global `[hidden]` reset.
+    expect(CSS_CODE).toMatch(/\.lbc-bar__btn\[hidden\]\s*\{[^}]*display:\s*none/);
+  });
+
+  it('repaints the fullscreen label from the EVENT, not the click', () => {
+    // Esc and a TV remote's Back button both exit without going through the
+    // handler, so a label painted at click time reads "Exit full screen" on a
+    // windowed board. Both spellings: a set-top browser may only emit the
+    // prefixed one.
+    expect(CONTROLS_CODE).toMatch(/'fullscreenchange', 'webkitfullscreenchange'/);
+    expect(CONTROLS_CODE).toMatch(/paintFullscreenToggle/);
+  });
+
+  it('gives the toolbar exactly three controls, and no league chips', () => {
+    // It used to carry a heading, a sentence of prose, a chip per league and a
+    // paragraph of shortcuts — a block of chrome above the one page whose
+    // whole job is the scores, and six or eight chips deep for anyone in other
+    // people's leagues. The leagues are one tap away on the setup screen,
+    // which is the screen for choosing them.
+    const bar = /<nav class="lbc-bar"[\s\S]*?<\/nav>/.exec(CONTROLS_CODE)?.[0] ?? '';
+    expect(bar).not.toBe('');
+    expect((bar.match(/class="lbc-bar__btn"/g) ?? []).length).toBe(3);
+    // No chip, no heading, no shortcut paragraph on the toolbar.
+    expect(bar).not.toMatch(/lbc-setup__chip|chips\.map|<h1|<h2|<kbd/);
+    // Leagues is a LINK to the setup screen, so it works with no JavaScript.
+    expect(bar).toMatch(/<a class="lbc-bar__btn" href=\{pickerHref\}>Leagues<\/a>/);
+  });
+
+  it('keeps the setup screen whole — every league, and the shortcut keys', () => {
+    // Removing something from the toolbar is only correct if it still exists
+    // where it belongs; an unreachable opt-in is a bug this board has shipped.
+    const setup = /<section class="lbc-controls lbc-controls--setup"[\s\S]*?<\/section>/.exec(CONTROLS_CODE)?.[0] ?? '';
+    expect(setup).not.toBe('');
+    expect(setup).toMatch(/chips\.map\(/);
+    expect(setup).toMatch(/doneHref/);
+    for (const k of ['F', 'M', 'L']) {
+      expect(setup).toMatch(new RegExp(`<kbd>${k}</kbd>`));
+    }
   });
 
   it('still hides the CURSOR, which is the last piece of chrome', () => {
@@ -662,17 +928,19 @@ describe('the board carries NO controls', () => {
     expect(PAGE_CODE).not.toMatch(/is-board/);
   });
 
-  it('gives the strip its own --lbc-* palette', () => {
-    // The chip class reads `--lbc-panel` / `--lbc-hairline` / `--lbc-text`,
-    // declared on `.lbc`. The strip is a SIBLING of the board, so inside it
-    // every one of those var()s was invalid at computed-value time and the
-    // chips lost their background and border outright.
-    const rule = /\.lbc-controls--strip \{([^}]*)\}/.exec(CSS_CODE)?.[1] ?? '';
-    for (const v of ['--lbc-panel', '--lbc-hairline', '--lbc-text']) {
-      expect(rule, `${v} must be redeclared on the strip`).toMatch(
-        new RegExp(`\\${v}\\s*:`),
-      );
-    }
+  it('borrows no --lbc-* property it is not inside', () => {
+    // The old strip reused `.lbc-setup__chip`, whose `--lbc-panel` /
+    // `--lbc-hairline` / `--lbc-text` are declared on `.lbc` — and the strip
+    // was a SIBLING of the board, not a descendant, so every one of those
+    // `var()`s was invalid at computed-value time and the chips lost their
+    // background and border outright. The toolbar has its own class and its
+    // own tokens now: a fix that cannot regress, rather than a redeclaration
+    // that has to be kept in sync.
+    const bar = (CSS_CODE.match(/^\.lbc-bar[^{]*\{[^}]*\}/gm) ?? []).join('\n');
+    expect(bar).not.toBe('');
+    expect(bar).not.toMatch(/var\(\s*--lbc-/);
+    const nav = /<nav class="lbc-bar"[\s\S]*?<\/nav>/.exec(CONTROLS_CODE)?.[0] ?? '';
+    expect(nav).not.toMatch(/lbc-setup__chip/);
   });
 
   it('keeps the strip and the board agreeing about sound', () => {

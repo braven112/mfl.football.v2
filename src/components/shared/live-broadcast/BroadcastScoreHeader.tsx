@@ -15,7 +15,23 @@ import { dropClasses, nameContext } from '../../../utils/broadcast-layout';
 import { crestStrokeProps } from '../../../utils/draft-broadcast';
 
 interface Props {
+  /** The full-size panels — `splitPanels().featured`. */
   panels: readonly BroadcastLeaguePanel[];
+  /**
+   * The overflow leagues, drawn as one thin row under the grid. Usually empty
+   * while the row is expanded — expanding promotes them into `panels` — but
+   * NOT always: past `MAX_GRID_PANELS` the grid cannot place them, and a
+   * league the layout cannot draw belongs on this row rather than nowhere.
+   */
+  compact: readonly BroadcastLeaguePanel[];
+  /**
+   * Are there overflow leagues AT ALL? Not `compact.length > 0`: expanding
+   * empties `compact`, and the row has to keep rendering or the control that
+   * collapses it disappears with the thing it collapses.
+   */
+  hasExtras: boolean;
+  expanded: boolean;
+  onToggleExtras: () => void;
   scores: Record<string, BroadcastLeagueScore>;
   tier: DensityTier;
   hidden: boolean;
@@ -50,15 +66,22 @@ function nameAt(team: BroadcastTeam, tier: DensityTier): string {
   return team.name;
 }
 
-function BroadcastScoreHeader({ panels, scores, tier, hidden, games, meta }: Props) {
+function BroadcastScoreHeader({
+  panels,
+  compact,
+  hasExtras,
+  expanded,
+  onToggleExtras,
+  scores,
+  tier,
+  hidden,
+  games,
+  meta,
+}: Props) {
   return (
     <section
       className={`lbc__header ${dropClasses(tier)}${hidden ? ' is-hidden' : ''}`}
       data-tier={tier}
-      // The grid follows PANELS; the tier only sets the type scale. Keying the
-      // columns on the tier left half a 1080p screen empty for one league on a
-      // doubleheader week — one panel, two cells, two columns.
-      data-panels={Math.min(panels.length, 8)}
       aria-label="Scoreboard"
       // `inert` flips the moment the handoff starts, not at the end of the
       // fade — otherwise anything focusable sits under an opacity-0 layer for
@@ -68,6 +91,13 @@ function BroadcastScoreHeader({ panels, scores, tier, hidden, games, meta }: Pro
       // warning, so the empty-string spelling silently never applied.
       inert={hidden}
     >
+      {/* The GRID is this inner element, not the header itself. The header is
+          a flex column now — grid on top, the compact overflow row beneath —
+          because the grid's rows are declared EXPLICITLY (a single implicit
+          `auto` row lets a panel grow past the header's fixed height and paint
+          over the strip), so the extras row could not simply be a ninth grid
+          child. `data-panels` moved with the grid it describes. */}
+      <div className="lbc__panels" data-panels={Math.min(panels.length, 8)}>
       {panels.map((panel) => {
         const leagueScore = scores[panel.leagueId];
         // How many matchup cells share this league's panel — 2 on a doubleheader.
@@ -211,6 +241,99 @@ function BroadcastScoreHeader({ panels, scores, tier, hidden, games, meta }: Pro
           </article>
         );
       })}
+      </div>
+
+      {/*
+        The compact row, and the ONE control the board carries.
+
+        The board is output-only everywhere else, and the stylesheet's "No
+        chrome on the board" records three separate attempts to hide chrome
+        that all shipped it visible on a real television. This is the deliberate
+        exception and it is built the opposite way round: it is NOT a hidden
+        default that something re-shows. It renders whenever there are overflow
+        leagues, always, at a fixed size, in NORMAL FLOW under the panels rather
+        than positioned over them — so it costs the scores a known 4.6vh
+        instead of covering them, and no hardware assumption can turn it on or
+        off. A television browser with no keyboard (an Xbox) is the reason it is
+        a button at all: `F` / `M` / `L` need a key nobody on that couch has.
+      */}
+      {hasExtras && (
+        <div className="lbc__extras" data-expanded={expanded ? 'true' : 'false'}>
+          {compact.length > 0 && (
+            <ul className="lbc__extras-list">
+              {compact.map((panel) => {
+                const leagueScore = scores[panel.leagueId];
+                const readable = panel.status !== 'unavailable';
+
+                if (panel.matchups.length === 0) {
+                  return (
+                    <li key={panel.leagueId} className="lbc__extra">
+                      <span className="lbc__extra-tag">{panel.leagueName}</span>
+                      <span className="lbc__extra-note">
+                        {panel.status === 'unavailable' ? 'Feed unavailable' : 'No matchup'}
+                      </span>
+                    </li>
+                  );
+                }
+
+                // Every matchup, never `matchups[0]` — a doubleheader league in
+                // the overflow row is still two real games against two
+                // different opponents.
+                return panel.matchups.map((matchup) => {
+                  const mine = leagueScore?.teams[matchup.mine.franchiseId];
+                  const theirs = matchup.opponent
+                    ? leagueScore?.teams[matchup.opponent.franchiseId]
+                    : undefined;
+                  const mineLive = mine?.live ?? 0;
+                  const theirsLive = theirs?.live ?? 0;
+
+                  return (
+                    <li key={`${panel.leagueId}:${matchup.index}`} className="lbc__extra">
+                      <span className="lbc__extra-tag">{panel.leagueName}</span>
+                      <span
+                        className={`lbc__extra-team${readable && mineLive >= theirsLive ? ' is-leading' : ''}`}
+                      >
+                        {matchup.mine.abbrev || matchup.mine.nameShort || matchup.mine.name}
+                      </span>
+                      <span className="lbc__extra-score">{score(mineLive, readable)}</span>
+                      <span className="lbc__extra-dash" aria-hidden="true">
+                        –
+                      </span>
+                      <span className="lbc__extra-score">
+                        {matchup.opponent ? score(theirsLive, readable) : '—'}
+                      </span>
+                      <span
+                        className={`lbc__extra-team${readable && theirsLive > mineLive ? ' is-leading' : ''}`}
+                      >
+                        {matchup.opponent
+                          ? matchup.opponent.abbrev ||
+                            matchup.opponent.nameShort ||
+                            matchup.opponent.name
+                          : 'Bye'}
+                      </span>
+                    </li>
+                  );
+                });
+              })}
+            </ul>
+          )}
+
+          {/* A real <button>, sized for a ten-foot pointer rather than a mouse:
+              an Xbox cursor is nudged with a thumbstick, so a 2vh target is not
+              hittable from a couch. */}
+          <button
+            type="button"
+            className="lbc__extras-toggle"
+            onClick={onToggleExtras}
+            aria-expanded={expanded}
+          >
+            {/* "Show MORE", never "show all": past eight panels the grid
+                cannot place the rest and they stay on this row, so "all"
+                would be a promise the layout does not keep. */}
+            {expanded ? 'Show fewer leagues' : 'Show more leagues'}
+          </button>
+        </div>
+      )}
     </section>
   );
 }
