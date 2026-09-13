@@ -1713,6 +1713,19 @@
   margin: 0 0 0.5rem;
 }
 
+/*
+ * `[hidden]` FIRST, and it is not belt-and-braces.
+ *
+ * `display: inline-flex` below is an author rule and the UA's
+ * `[hidden] { display: none }` is not, so the author rule wins: the fullscreen
+ * button ships `hidden` and would have rendered anyway, which is the dead
+ * control the `hidden` exists to prevent. This repo has no global `[hidden]`
+ * reset — every stylesheet that hides something declares its own.
+ */
+.lbc-bar__btn[hidden] {
+  display: none;
+}
+
 .lbc-bar__btn {
   display: inline-flex;
   align-items: center;
@@ -1819,10 +1832,15 @@
    */
   .lbc { --lbc-header-h: 55%; }
 
-  .lbc__header[data-tier='2'],
-  .lbc__header[data-tier='3'],
-  .lbc__header[data-tier='4'],
-  .lbc__header[data-tier='5'] {
+  /* The GRID, not the header. `data-tier` still lives on the header and the
+     grid is `.lbc__panels` inside it, so this has to reach through — a rule
+     setting `grid-template-columns` on a flex column is silently inert, and
+     the symptom is a phone keeping the desktop's 2/3/4 columns inside a 55%
+     header rather than anything that looks like a broken selector. */
+  .lbc__header[data-tier='2'] .lbc__panels,
+  .lbc__header[data-tier='3'] .lbc__panels,
+  .lbc__header[data-tier='4'] .lbc__panels,
+  .lbc__header[data-tier='5'] .lbc__panels {
     grid-template-columns: 1fr;
     grid-template-rows: repeat(auto-fit, minmax(0, 1fr));
   }

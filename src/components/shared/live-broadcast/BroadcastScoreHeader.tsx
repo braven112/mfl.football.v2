@@ -18,8 +18,10 @@ interface Props {
   /** The full-size panels — `splitPanels().featured`. */
   panels: readonly BroadcastLeaguePanel[];
   /**
-   * The overflow leagues, drawn as one thin row under the grid. Empty while
-   * the row is expanded, because expanding promotes them into `panels`.
+   * The overflow leagues, drawn as one thin row under the grid. Usually empty
+   * while the row is expanded — expanding promotes them into `panels` — but
+   * NOT always: past `MAX_GRID_PANELS` the grid cannot place them, and a
+   * league the layout cannot draw belongs on this row rather than nowhere.
    */
   compact: readonly BroadcastLeaguePanel[];
   /**
@@ -257,7 +259,7 @@ function BroadcastScoreHeader({
       */}
       {hasExtras && (
         <div className="lbc__extras" data-expanded={expanded ? 'true' : 'false'}>
-          {!expanded && (
+          {compact.length > 0 && (
             <ul className="lbc__extras-list">
               {compact.map((panel) => {
                 const leagueScore = scores[panel.leagueId];
@@ -325,7 +327,10 @@ function BroadcastScoreHeader({
             onClick={onToggleExtras}
             aria-expanded={expanded}
           >
-            {expanded ? 'Show fewer leagues' : 'Show all leagues'}
+            {/* "Show MORE", never "show all": past eight panels the grid
+                cannot place the rest and they stay on this row, so "all"
+                would be a promise the layout does not keep. */}
+            {expanded ? 'Show fewer leagues' : 'Show more leagues'}
           </button>
         </div>
       )}

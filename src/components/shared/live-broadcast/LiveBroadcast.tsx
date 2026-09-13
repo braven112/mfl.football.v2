@@ -14,12 +14,7 @@
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import type {
-  LiveBroadcastPageData,
-  BroadcastLeaguePanel,
-  BroadcastLeagueScore,
-  BroadcastTeam,
-} from '../../../types/live-broadcast';
+import type { LiveBroadcastPageData, BroadcastLeagueScore, BroadcastTeam } from '../../../types/live-broadcast';
 import type { BroadcastPollResponse } from '../../../types/live-broadcast';
 import type { BroadcastMoment } from '../../../utils/broadcast-moments';
 import { revealDuration, selectRevealQueue } from '../../../utils/broadcast-moments';
@@ -87,13 +82,6 @@ interface Props {
 
 const fmt = (n: number) => (Number.isFinite(n) ? n.toFixed(1) : '0.0');
 
-/**
- * One frozen empty array, not a fresh `[]` per render. The header is `memo`'d
- * against a 1 Hz heartbeat, and a new literal would break that bailout every
- * single tick — ~28,800 re-renders over a Sunday, which is the exact cost the
- * memo exists to avoid.
- */
-const EMPTY_PANELS: readonly BroadcastLeaguePanel[] = [];
 
 export default function LiveBroadcast({ pageData }: Props) {
   const data = useMemo(() => JSON.parse(pageData) as LiveBroadcastPageData, [pageData]);
@@ -327,12 +315,21 @@ export default function LiveBroadcast({ pageData }: Props) {
    */
   const base = useMemo(() => splitPanels(data.panels), [data.panels]);
   const hasExtras = base.compact.length > 0;
-  const expandedPanels = useMemo(
-    () => splitPanels(data.panels, Number.POSITIVE_INFINITY).featured,
+  /**
+   * Expanded is still a SPLIT, not "every panel in the grid".
+   *
+   * `splitPanels` lifts the four-cell legibility cap here but keeps
+   * `MAX_GRID_PANELS`, because that one is not a judgement — the stylesheet
+   * declares columns and rows for eight panels and a ninth lands in an
+   * implicit row inside a fixed-height, `overflow: hidden` header, where it is
+   * not drawn at all. So an owner in nine leagues expands to eight panels and
+   * the ninth stays on the compact row, legible, rather than vanishing.
+   */
+  const expanded = useMemo(
+    () => splitPanels(data.panels, Number.POSITIVE_INFINITY),
     [data.panels],
   );
-  const featured = extrasOpen ? expandedPanels : base.featured;
-  const compact = extrasOpen ? EMPTY_PANELS : base.compact;
+  const { featured, compact } = extrasOpen ? expanded : base;
 
   // `useCallback`, so the memoised header is not re-rendered by the 1 Hz
   // heartbeat handing it a new function identity every second.

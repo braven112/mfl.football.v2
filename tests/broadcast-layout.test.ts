@@ -17,6 +17,7 @@ import {
   nameContext,
   padPage,
   MAX_FEATURED_CELLS,
+  MAX_GRID_PANELS,
   splitPanels,
 } from '../src/utils/broadcast-layout';
 import type { BroadcastLeaguePanel, BroadcastTeamScore } from '../src/types/live-broadcast';
@@ -180,6 +181,26 @@ describe('which leagues get a full-size panel', () => {
     const split = splitPanels(all, Number.POSITIVE_INFINITY);
     expect(split.compact).toEqual([]);
     expect(split.featured.map((p) => p.leagueId)).toEqual(['13522', '19621', 'a', 'b']);
+  });
+
+  it('never features more panels than the grid can place, even expanded', () => {
+    // The stylesheet declares columns and rows for one through eight and stops
+    // there — the rows are explicit so a panel cannot grow past the header's
+    // fixed height, which means a ninth panel lands in an implicit row inside
+    // an `overflow: hidden` box and is simply not drawn. A league the layout
+    // cannot draw belongs on the compact row, where it is at least legible.
+    const many = Array.from({ length: 12 }, (_, i) => outside(`x${i}`));
+    const split = splitPanels(many, Number.POSITIVE_INFINITY);
+    expect(split.featured).toHaveLength(MAX_GRID_PANELS);
+    expect(split.compact).toHaveLength(12 - MAX_GRID_PANELS);
+    expect([...split.featured, ...split.compact]).toHaveLength(12);
+  });
+
+  it('holds the grid ceiling collapsed too, where the cell cap binds first', () => {
+    const many = Array.from({ length: 12 }, (_, i) => outside(`x${i}`));
+    const split = splitPanels(many);
+    expect(split.featured.length).toBeLessThanOrEqual(MAX_GRID_PANELS);
+    expect(countCells(split.featured)).toBeLessThanOrEqual(MAX_FEATURED_CELLS);
   });
 
   it('loses no league between the two shelves', () => {

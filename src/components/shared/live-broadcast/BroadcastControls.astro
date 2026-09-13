@@ -260,12 +260,22 @@ const { chips, sound, doneHref, variant, empty = false, pickerHref = '?picker=1'
    *    `fullscreenchange` rather than from the click, because Esc and a TV
    *    remote's Back button both exit without going through this handler.
    */
+  /**
+   * Three spellings, and each one is carried all the way through.
+   *
+   * A prefix advertised in the REQUEST but missing from the state property and
+   * the change event is worse than not supporting it: the button reveals
+   * itself, enters fullscreen, then can neither report it nor leave it. Xbox's
+   * older EdgeHTML browser is exactly an `ms`-prefixed engine, which is the
+   * hardware this button exists for — so `ms` is handled, not dropped.
+   */
   type FsElement = Element & {
     webkitRequestFullscreen?: () => Promise<void> | void;
     msRequestFullscreen?: () => Promise<void> | void;
   };
   type FsDocument = Document & {
     webkitFullscreenElement?: Element | null;
+    msFullscreenElement?: Element | null;
     webkitExitFullscreen?: () => Promise<void> | void;
     msExitFullscreen?: () => Promise<void> | void;
   };
@@ -276,7 +286,7 @@ const { chips, sound, doneHref, variant, empty = false, pickerHref = '?picker=1'
 
   function fullscreenElement(): Element | null {
     const d = fsDoc();
-    return d.fullscreenElement ?? d.webkitFullscreenElement ?? null;
+    return d.fullscreenElement ?? d.webkitFullscreenElement ?? d.msFullscreenElement ?? null;
   }
 
   function paintFullscreenToggle(btn: HTMLElement) {
@@ -331,9 +341,11 @@ const { chips, sound, doneHref, variant, empty = false, pickerHref = '?picker=1'
 
   // Registered ONCE at module scope, like the sound listener above, and it
   // looks the button up per event: under the ClientRouter the element is
-  // replaced on every page load. Both spellings, because a set-top browser may
-  // only emit the prefixed one.
-  for (const ev of ['fullscreenchange', 'webkitfullscreenchange']) {
+  // replaced on every page load. All three spellings, matching the three the
+  // request and the state property handle — a set-top browser may emit only
+  // the prefixed one, and `MSFullscreenChange` is genuinely capitalised that
+  // way rather than lowercased like the others.
+  for (const ev of ['fullscreenchange', 'webkitfullscreenchange', 'MSFullscreenChange']) {
     document.addEventListener(ev, () => {
       const btn = document.getElementById('lbc-fullscreen-toggle');
       if (btn) paintFullscreenToggle(btn);

@@ -97,6 +97,23 @@ export function countCells(panels: readonly BroadcastLeaguePanel[]): number {
  */
 export const MAX_FEATURED_CELLS = 4;
 
+/**
+ * The most PANELS the header grid can lay out, expanded or not.
+ *
+ * The stylesheet declares columns and rows for one through eight and stops
+ * there — deliberately, because the rows are explicit so a panel cannot grow
+ * past the header's fixed height and paint over the strip beneath it. A ninth
+ * panel therefore lands in an implicit row inside a fixed-height,
+ * `overflow: hidden` box and is simply not drawn, which means "Show all
+ * leagues" would quietly show eight of nine. Anything past this stays on the
+ * compact row, where it is at least legible.
+ *
+ * A cap in CELLS (`MAX_FEATURED_CELLS`) and a cap in PANELS are different
+ * limits answering different questions: the first is what a viewer can read
+ * from ten feet, the second is what the grid can physically place.
+ */
+export const MAX_GRID_PANELS = 8;
+
 /** The board's two shelves: full-size panels, and the compact overflow row. */
 export interface PanelSplit {
   /** Drawn as full panels in the header grid. Never empty. */
@@ -126,8 +143,10 @@ export interface PanelSplit {
  * exceeds the budget, because a board whose whole header is a compact row has
  * nothing on it worth reading from ten feet.
  *
- * Pass `Number.POSITIVE_INFINITY` for the expanded view, which is the same
- * home-first ordering with nothing demoted.
+ * Pass `Number.POSITIVE_INFINITY` for the expanded view: the same home-first
+ * ordering with nothing demoted for its SIZE — but `MAX_GRID_PANELS` still
+ * holds, because that one is not a judgement about legibility, it is what the
+ * grid can place at all.
  */
 export function splitPanels(
   panels: readonly BroadcastLeaguePanel[],
@@ -145,7 +164,10 @@ export function splitPanels(
 
   for (const panel of ordered) {
     const n = Math.max(1, panel.matchups.length);
-    if (panel.home || featured.length === 0 || cells + n <= maxCells) {
+    // The grid's own ceiling, checked before anything else — a home league is
+    // never demoted for its size, but a ninth panel is not drawn at all.
+    const fits = featured.length < MAX_GRID_PANELS;
+    if (fits && (panel.home || featured.length === 0 || cells + n <= maxCells)) {
       featured.push(panel);
       cells += n;
     } else {

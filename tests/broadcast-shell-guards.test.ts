@@ -17,6 +17,7 @@ import { isEspnCdnUrl } from '../src/utils/espn-cdn';
 import { normalizeTeamCode } from '../src/utils/nfl';
 import { getPlayerMap } from '../src/utils/player-map';
 import { defenseNickname } from '../src/components/shared/live-broadcast/MomentTakeover';
+import { MAX_GRID_PANELS, splitPanels } from '../src/utils/broadcast-layout';
 
 const read = (p: string) => readFileSync(join(process.cwd(), p), 'utf8');
 
@@ -335,6 +336,16 @@ describe('nothing is sized against a box it does not live in', () => {
     expect(CSS).toMatch(/\.lbc p[\s\S]{0,40}\{\s*margin:\s*0/);
   });
 
+  it('stacks the panels on a phone by reaching the GRID, not the header', () => {
+    // The grid moved onto `.lbc__panels` and the header became a flex column,
+    // so a `grid-template-columns` declaration on `.lbc__header` is silently
+    // inert — and the symptom is not a broken-looking selector, it is a phone
+    // keeping the desktop's 2/3/4 columns inside a 55%-height header.
+    const phone = /@media \(max-width: 900px\) \{([\s\S]*?)\n\}/.exec(CSS_CODE)?.[1] ?? '';
+    expect(phone).toMatch(/\.lbc__header\[data-tier='2'\] \.lbc__panels/);
+    expect(phone).not.toMatch(/\.lbc__header\[data-tier='\d'\],?\s*\n?\s*\{?\s*grid-template-columns/);
+  });
+
   it('lays the header out by PANEL count, not by the type tier', () => {
     // They are different counts. One league on a doubleheader week is one
     // panel and two cells; keying the columns on the tier left half a 1080p
@@ -645,10 +656,15 @@ describe('the board carries NO controls', () => {
     // times for three different reasons.
 
     it('renders whenever there is something to toggle, and not otherwise', () => {
-      // `hasExtras`, never `compact.length > 0`: expanding empties `compact`,
-      // so keying on it would delete the control the moment it was used.
+      // The ROW is gated on `hasExtras`, never on `compact.length > 0`:
+      // expanding usually empties `compact`, so keying the row on it would
+      // delete the control the moment it was used. (The LIST inside the row is
+      // gated on `compact.length` — correctly, since past MAX_GRID_PANELS the
+      // row still carries leagues while expanded.)
       expect(HEADER).toMatch(/\{hasExtras && \(/);
-      expect(HEADER).not.toMatch(/\{compact\.length > 0 && \(/);
+      const row = /\{hasExtras && \([\s\S]*?aria-expanded=\{expanded\}/.exec(HEADER)?.[0] ?? '';
+      expect(row).not.toBe('');
+      expect(row).not.toMatch(/\{!expanded && \(\s*<div/);
       // A real button with a real state, not a div with a click handler.
       expect(HEADER).toMatch(/<button[\s\S]{0,200}lbc__extras-toggle/);
       expect(HEADER).toMatch(/aria-expanded=\{expanded\}/);
@@ -701,11 +717,38 @@ describe('the board carries NO controls', () => {
 
     it('keeps the memo bailout intact across the 1 Hz heartbeat', () => {
       // The header is memo'd because the island ticks once a second to age the
-      // freshness pill. A fresh `[]` or a fresh arrow function in the props
+      // freshness pill. A fresh array or a fresh arrow function in its props
       // breaks that bailout on every tick — ~28,800 re-renders over a Sunday,
-      // on set-top hardware.
-      expect(ISLAND_CODE).toMatch(/EMPTY_PANELS/);
+      // on set-top hardware. Both shelves come straight off a memoised split,
+      // so their identities are stable between ticks.
+      expect(ISLAND_CODE).toMatch(/const base = useMemo\(\(\) => splitPanels/);
+      expect(ISLAND_CODE).toMatch(/const expanded = useMemo\(/);
+      expect(ISLAND_CODE).toMatch(/const \{ featured, compact \} = extrasOpen \? expanded : base;/);
       expect(ISLAND_CODE).toMatch(/const toggleExtras = useCallback/);
+    });
+
+    it('never hands the grid more panels than the stylesheet can place', () => {
+      // The grid declares one through eight and stops; the rows are explicit
+      // so a panel cannot grow past the fixed header height, which means a
+      // ninth panel lands in an implicit row inside an `overflow: hidden` box
+      // and is not drawn. "Show more leagues" that silently drops the ninth is
+      // the failure — it stays on the compact row instead.
+      const panels = (n: number) =>
+        Array.from({ length: n }, (_, i) => ({
+          leagueId: `l${i}`,
+          leagueName: `League ${i}`,
+          slug: '',
+          franchiseId: '0001',
+          home: false,
+          matchups: [],
+          status: 'no-matchup' as const,
+        }));
+      const split = splitPanels(panels(12), Number.POSITIVE_INFINITY);
+      expect(split.featured).toHaveLength(MAX_GRID_PANELS);
+      expect(split.compact).toHaveLength(4);
+      // And the label does not promise what the layout cannot keep.
+      expect(HEADER).toMatch(/'Show more leagues'/);
+      expect(HEADER).not.toMatch(/'Show all leagues'/);
     });
   });
 
@@ -810,6 +853,31 @@ describe('the board carries NO controls', () => {
     expect(CONTROLS_CODE).toMatch(/id="lbc-fullscreen-toggle" hidden/);
     expect(CONTROLS_CODE).toMatch(/requestFn\(document\.documentElement/);
     expect(CONTROLS_CODE).toMatch(/btn\.hidden = false/);
+  });
+
+  it('carries every fullscreen prefix all the way through', () => {
+    // A prefix advertised in the REQUEST but missing from the state property
+    // or the change event is worse than not supporting it: the button reveals
+    // itself, enters fullscreen, then can neither report it nor leave it.
+    // Xbox's older EdgeHTML browser is an `ms`-prefixed engine, which is the
+    // hardware this button exists for.
+    for (const [req, state, ev] of [
+      ['requestFullscreen', 'fullscreenElement', "'fullscreenchange'"],
+      ['webkitRequestFullscreen', 'webkitFullscreenElement', "'webkitfullscreenchange'"],
+      ['msRequestFullscreen', 'msFullscreenElement', "'MSFullscreenChange'"],
+    ]) {
+      expect(CONTROLS_CODE, `${req} must be requestable`).toContain(req);
+      expect(CONTROLS_CODE, `${req} needs its state property`).toContain(state);
+      expect(CONTROLS_CODE, `${req} needs its change event`).toContain(ev);
+    }
+  });
+
+  it('lets the UA hide rule actually win on the fullscreen button', () => {
+    // `display: inline-flex` is an author rule and `[hidden] { display: none }`
+    // is the UA's, so the author rule wins: the button ships `hidden` and
+    // rendered anyway — the dead control on an unsupported browser that the
+    // `hidden` exists to prevent. This repo has no global `[hidden]` reset.
+    expect(CSS_CODE).toMatch(/\.lbc-bar__btn\[hidden\]\s*\{[^}]*display:\s*none/);
   });
 
   it('repaints the fullscreen label from the EVENT, not the click', () => {
