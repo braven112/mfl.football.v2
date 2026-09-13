@@ -1205,6 +1205,11 @@ try {
   }
 
   .kp-slot {
+    /* A grid item's automatic min-width is its own min-content, not 0 — a
+       long player name deep inside (even truncated via .kp-slot__player's
+       own min-width: 0) can still blow this item past its track and the
+       page past the viewport unless it's zeroed here too. */
+    min-width: 0;
     display: flex;
     align-items: center;
     gap: 0.5rem;
@@ -1405,6 +1410,12 @@ try {
   }
 
   .kp-card {
+    /* Same fix as .kp-slot above: this is a grid item of .kp-cards, and its
+       automatic min-width defaults to its own min-content — the stat-line/
+       trend badge next to the name is flex-shrink: 0 by design, so without
+       this the row (and the page) can only get as narrow as that content
+       demands, not as narrow as .kp-card__player's own min-width: 0 allows. */
+    min-width: 0;
     display: flex;
     align-items: center;
     gap: 0.5rem;

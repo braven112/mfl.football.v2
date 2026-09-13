@@ -40,6 +40,22 @@ describe('KeeperPlanner decision-support features', () => {
     expect(SRC).not.toMatch(/keeperIds\.splice[\s\S]{0,200}applyAgeFilter/);
   });
 
+  it('kp-card and kp-slot can shrink below their content size, so a long name/stat-line never pushes the page sideways', () => {
+    // Both are grid items (of .kp-cards / .kp-slots, each an auto-fill grid),
+    // and a grid item's automatic min-width is its own min-content, not 0 —
+    // true regardless of the min-width: 0 already set on .kp-card__player /
+    // .kp-slot__player for their OWN flex sizing. .kp-card__stats is
+    // deliberately flex-shrink: 0 (the stat-line/trend badge never
+    // truncates), so without this on .kp-card itself, a real long name plus
+    // that stats block was enough to blow the row past its grid track and
+    // the whole page past the viewport — reproduced and confirmed fixed live
+    // via Playwright, since jsdom doesn't lay out flex/grid.
+    const kpCard = SRC.match(/\.kp-card\s*\{[\s\S]*?\}/)?.[0] ?? '';
+    const kpSlot = SRC.match(/\.kp-slot\s*\{[\s\S]*?\}/)?.[0] ?? '';
+    expect(kpCard).toMatch(/min-width:\s*0/);
+    expect(kpSlot).toMatch(/min-width:\s*0/);
+  });
+
   it('re-applies the age filter whenever renderSlots rebuilds slot DOM, not just on slider input', () => {
     // renderSlots() replaces every slot's innerHTML on each call (drag,
     // load, reset), which would silently wipe a previously-applied
