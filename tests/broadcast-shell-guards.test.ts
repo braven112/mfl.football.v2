@@ -15,6 +15,8 @@ import { crestLeagueKey } from '../src/utils/dark-surface-crest';
 import { buildBroadcastDefenseFaces } from '../src/utils/broadcast-board';
 import { isEspnCdnUrl } from '../src/utils/espn-cdn';
 import { normalizeTeamCode } from '../src/utils/nfl';
+import { getPlayerMap } from '../src/utils/player-map';
+import { defenseNickname } from '../src/components/shared/live-broadcast/MomentTakeover';
 
 const read = (p: string) => readFileSync(join(process.cwd(), p), 'utf8');
 
@@ -576,17 +578,79 @@ describe('fullscreen shows the board and nothing else', () => {
 });
 
 describe('the idle-hide cannot strand a touch device', () => {
-  it('keeps the idle rule inside the pointer query', () => {
-    // Moving it out cost a phone its chrome three seconds after load with no
-    // interaction, and `pointer-events: none` then made the next tap a wake
-    // rather than a press — two taps for every control. A television is a
-    // `hover: hover` / `pointer: fine` device (its parked cursor is exactly why
-    // `:hover` stayed true), so it still matches; a coarse pointer never does.
+  it('starts the countdown at the first interaction, never on mount', () => {
+    // This is the whole protection, and it replaced a pointer-media query that
+    // only LOOKED like one.
+    //
+    // Arming the timer on mount hid the chrome three seconds after load on a
+    // device nobody had touched. On a phone, where the controls are meant to
+    // stay put, `pointer-events: none` then made the next tap a wake rather
+    // than a press — two taps for every control.
+    //
+    // The fix that shipped first was to scope the hide to
+    // `@media (hover: hover) and (pointer: fine)`, on the reasoning that a
+    // television matches and a phone never does. That rests on an ASSUMPTION
+    // about what a set-top browser reports, and a TV that reports coarse would
+    // have kept the chrome up for good — the exact symptom being fixed.
+    // Gating on interaction needs no such assumption: a viewer who never
+    // reaches for the chrome keeps it on any device, and a television, where
+    // you always press something to set the board up, goes clean three seconds
+    // after you stop.
     const at = CSS_CODE.indexOf('.lbc.is-idle .lbc__chrome {');
-    const query = CSS_CODE.lastIndexOf('@media (hover: hover) and (pointer: fine)', at);
-    const close = CSS_CODE.indexOf('\n}', query);
-    expect(query).toBeGreaterThan(-1);
-    expect(at).toBeLessThan(close);
+    expect(at).toBeGreaterThan(-1);
+
+    // The effect defines `wake` and hands it to listeners. A bare call in the
+    // effect body is the arm-on-mount this rule forbids.
+    expect(ISLAND_CODE).toMatch(/const wake = \(\) =>/);
+    expect(ISLAND_CODE).not.toMatch(/^\s*wake\(\);\s*$/m);
+  });
+});
+
+describe('the win-probability split is stated once', () => {
+  it('draws no bar across the top edge of a cell', () => {
+    // A 0.4vh copy of the gradient ran along `.lbc__cell`'s top border. From
+    // ten feet it did not read as this matchup's split; it read as a progress
+    // bar for the panel tag above it, one per cell down the screen. The bar
+    // between the two sides is the only place the split is drawn.
+    // Anchored to the line start: unanchored, the first match in the file is
+    // the doubleheader divider's `.lbc__cell + .lbc__cell {`, which never had
+    // a top border, so the guard passed on a board that still drew one.
+    const cell = /^\.lbc__cell \{([^}]*)\}/m.exec(CSS_CODE)?.[1] ?? '';
+    expect(cell).not.toBe('');
+    expect(cell).not.toMatch(/border-top/);
+    expect(cell).not.toMatch(/border-image/);
+    // And the survivor still exists, or the split is drawn nowhere at all.
+    expect(CSS_CODE).toMatch(/\.lbc__wp \{[^}]*background:\s*var\(--lbc-theirs/);
+  });
+});
+
+describe('a defense reveal names the club, not the city', () => {
+  it('takes the last token off every real defense name', () => {
+    // `formatName` builds a DEF as `${city} ${nickname}`, so the nickname is
+    // the last whitespace token — and the multi-word cities are exactly the
+    // names that wrapped the reveal's headline onto two lines. Checked against
+    // the live feed rather than a fixture list, because the rule depends on
+    // MFL's own "Bills, Buffalo" ordering staying what it is.
+    const defs = [...getPlayerMap(2026).values()].filter((p) => p.position === 'DEF');
+    expect(defs.length).toBe(32);
+    for (const d of defs) {
+      const nick = defenseNickname(d.name);
+      expect(nick).not.toContain(' ');
+      expect(d.name.endsWith(nick)).toBe(true);
+    }
+    // The cases that motivated it.
+    expect(defenseNickname('Washington Commanders')).toBe('Commanders');
+    expect(defenseNickname('New England Patriots')).toBe('Patriots');
+    expect(defenseNickname('Tampa Bay Buccaneers')).toBe('Buccaneers');
+    // A name with no city is left alone rather than emptied.
+    expect(defenseNickname('Bills')).toBe('Bills');
+  });
+
+  it('applies it to the DEF headline only', () => {
+    const takeover = code(read('src/components/shared/live-broadcast/MomentTakeover.tsx'));
+    // A person's name is not a city plus a nickname; running it through this
+    // would print his surname alone.
+    expect(takeover).toMatch(/isDef \? defenseNickname\(moment\.playerName\) : moment\.playerName/);
   });
 });
 

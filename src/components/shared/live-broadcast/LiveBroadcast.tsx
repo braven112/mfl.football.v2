@@ -506,7 +506,14 @@ export default function LiveBroadcast({ pageData }: Props) {
       // board is clean again before the next play.
       timer = window.setTimeout(() => setIdle(true), 3000);
     };
-    wake();
+    // NOT armed on mount, deliberately. Arming it here hid the controls three
+    // seconds after load on a device nobody had touched — which on a phone,
+    // where they are meant to stay put, also made the next tap a wake rather
+    // than a press. The countdown starts at the FIRST real interaction, so a
+    // viewer who has never reached for the chrome keeps it, and a television
+    // — where you always press something to set the board up — loses it three
+    // seconds after you stop. No assumption about what the device reports.
+    //
     // `pointermove` covers mouse and trackpad; `touchstart` and `keydown` are
     // the two ways a television or a remote reaches this at all.
     for (const ev of ['pointermove', 'pointerdown', 'touchstart', 'keydown'] as const) {
