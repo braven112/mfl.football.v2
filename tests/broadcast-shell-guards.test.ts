@@ -651,8 +651,45 @@ describe('the board carries NO controls', () => {
   });
 
   it('still hides the CURSOR, which is the last piece of chrome', () => {
-    expect(CSS_CODE).toMatch(/\.lbc:not\(\.is-awake\)\s*\{[^}]*cursor:\s*none/);
-    expect(ISLAND_CODE).toMatch(/is-awake/);
+    // Scoped to `.is-board`. The SETUP SCREEN is also a `.lbc` and never
+    // mounts the island, so nothing there sets `is-awake` — a bare
+    // `.lbc:not(.is-awake)` hid the cursor across the whole league picker,
+    // where every control is a pointer target.
+    expect(CSS_CODE).toMatch(/\.lbc\.is-board:not\(\.is-awake\)\s*\{[^}]*cursor:\s*none/);
+    expect(CSS_CODE).not.toMatch(/(?<!\.is-board)\.lbc:not\(\.is-awake\)/);
+    // Only the island's root may carry it.
+    expect(ISLAND_CODE).toMatch(/lbc is-board/);
+    expect(PAGE_CODE).not.toMatch(/is-board/);
+  });
+
+  it('gives the strip its own --lbc-* palette', () => {
+    // The chip class reads `--lbc-panel` / `--lbc-hairline` / `--lbc-text`,
+    // declared on `.lbc`. The strip is a SIBLING of the board, so inside it
+    // every one of those var()s was invalid at computed-value time and the
+    // chips lost their background and border outright.
+    const rule = /\.lbc-controls--strip \{([^}]*)\}/.exec(CSS_CODE)?.[1] ?? '';
+    for (const v of ['--lbc-panel', '--lbc-hairline', '--lbc-text']) {
+      expect(rule, `${v} must be redeclared on the strip`).toMatch(
+        new RegExp(`\\${v}\\s*:`),
+      );
+    }
+  });
+
+  it('keeps the strip and the board agreeing about sound', () => {
+    // Two ways they fell apart: the board's `M` key left the strip's label and
+    // data-on stale (so its next click computed from a stale value and failed
+    // to toggle), and the strip is clickable BEFORE the island hydrates, so a
+    // fast click dispatched into nothing.
+    //
+    // Each side names itself and ignores its own echo...
+    expect(CONTROLS_CODE).toMatch(/from: 'strip'/);
+    expect(ISLAND_CODE).toMatch(/from: 'board'/);
+    expect(CONTROLS_CODE).toMatch(/from === 'strip'/);
+    expect(ISLAND_CODE).toMatch(/from === 'board'/);
+    // ...and BOTH reconcile against the cookie when they start, which is what
+    // covers the click nobody was listening for.
+    expect(CONTROLS_CODE).toMatch(/bc_sound=\(\[01\]\)/);
+    expect(ISLAND_CODE).toMatch(/bc_sound=\(\[01\]\)/);
   });
 
   it('wakes on every input a television can produce', () => {

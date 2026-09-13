@@ -574,6 +574,11 @@ export default function LiveBroadcast({ pageData }: Props) {
         setSound((prev) => {
           const next = !prev;
           rememberSound(next);
+          // Announce it, or the strip above keeps its old label and computes
+          // its next click from a stale value — a toggle that does not toggle.
+          document.dispatchEvent(
+            new CustomEvent('lbc:sound', { detail: { on: next, from: 'board' } }),
+          );
           return next;
         });
         unlockAudio();
@@ -596,12 +601,22 @@ export default function LiveBroadcast({ pageData }: Props) {
    */
   useEffect(() => {
     const onSound = (e: Event) => {
-      const on = (e as CustomEvent<{ on: boolean }>).detail?.on;
-      if (typeof on === 'boolean') setSound(on);
+      const detail = (e as CustomEvent<{ on: boolean; from?: string }>).detail;
+      // Our own announcement, bounced back off the document.
+      if (detail?.from === 'board') return;
+      if (typeof detail?.on === 'boolean') setSound(detail.on);
       // The click that produced this IS the activation the audio clock needs.
       unlockAudio();
     };
     document.addEventListener('lbc:sound', onSound);
+
+    // The strip sits ABOVE this island and is clickable before it hydrates, so
+    // a fast click writes the cookie and dispatches into nothing. `data.sound`
+    // was read at RENDER and can already be stale by the time we mount; the
+    // cookie cannot be. Reconcile against it once.
+    const m = document.cookie.match(/(?:^|;\s*)bc_sound=([01])/);
+    if (m) setSound(m[1] === '1');
+
     return () => document.removeEventListener('lbc:sound', onSound);
   }, [unlockAudio]);
 
@@ -700,7 +715,7 @@ export default function LiveBroadcast({ pageData }: Props) {
 
   return (
     <main
-      className={`lbc${isStale ? ' is-stale' : ''}${awake ? ' is-awake' : ''}`}
+      className={`lbc is-board${isStale ? ' is-stale' : ''}${awake ? ' is-awake' : ''}`}
       style={rootStyle}
       aria-label="Live scoring broadcast"
     >

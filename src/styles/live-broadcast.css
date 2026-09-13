@@ -1479,8 +1479,19 @@
 /* The pointer is the last piece of chrome, and it gets the same treatment: a
    cursor parked over a television is a burn-in risk and a bright dot on a dark
    board. It reappears whenever the island sees a real input EVENT — never on
-   `:hover`, which a resting cursor holds true all afternoon. */
-.lbc:not(.is-awake) {
+   `:hover`, which a resting cursor holds true all afternoon.
+
+   `.is-board` is load-bearing, not decoration. The SETUP SCREEN is also a
+   `.lbc` (a `<main>`, for the dark surface below), and it never mounts the
+   island — so nothing there ever sets `is-awake` and a bare
+   `.lbc:not(.is-awake)` hid the cursor across the entire league picker, where
+   every control is a pointer target. Only the board itself carries
+   `is-board`.
+
+   A plain second class rather than `:has(.lbc-setup)`: an unsupported
+   selector invalidates the whole rule, and this one must not silently stop
+   protecting an eight-hour panel. */
+.lbc.is-board:not(.is-awake) {
   cursor: none;
 }
 
@@ -1498,6 +1509,19 @@
  * is floored against a surface this page does not have), and a strip attached
  * to the board should read as part of it in either theme. */
 .lbc-controls--strip {
+  /* Its OWN palette. `.lbc-setup__chip` reads `--lbc-panel`, `--lbc-hairline`
+     and `--lbc-text`, which are declared on `.lbc` — and this strip is a
+     SIBLING of the board, not a descendant, so inside it every one of those
+     `var()`s was invalid at computed-value time: the chips lost their
+     background and border entirely and `[aria-current]` stopped marking the
+     selected league. Redeclaring them here is what lets the chip class be
+     reused rather than forked. */
+  --lbc-panel: #0b1220;
+  --lbc-panel-2: #121c2e;
+  --lbc-hairline: rgba(255, 255, 255, 0.12);
+  --lbc-text: #ebebeb;
+  --lbc-text-faint: rgba(255, 255, 255, 0.52);
+
   /* ONE compact row, in rem — never the setup screen's viewport units.
      `.lbc-setup__chip` and `.lbc-saver__sub` are sized for a television read
      from ten feet (`max(3vh, 1rem)`, 44px targets, 1vh gaps), and inherited

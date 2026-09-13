@@ -106,41 +106,81 @@ const { chips, sound, doneHref, variant, empty = false } = Astro.props;
 
 <script>
   /**
-   * The sound toggle, wired where the button lives.
+   * The sound toggle. The COOKIE is the source of truth; the strip and the
+   * board are two views of it that keep each other honest.
    *
-   * Init runs TWICE over a page's life and that is deliberate:
+   * Two ways they fell out of sync, both real:
    *
-   *  - immediately, because a bundled Astro `<script>` is a deferred module
-   *    and on the FIRST load `astro:page-load` can have already fired by the
-   *    time it evaluates. Listening only for the event left the button inert
-   *    on a cold load, which is how it first shipped.
-   *  - on `astro:page-load`, because under the ClientRouter the module is
-   *    evaluated once per SESSION, so a one-shot init is dead after the first
-   *    in-site navigation (tests/clientrouter-init-ratchet.test.ts).
+   *  - The board's `M` key set the island's state and the cookie but left this
+   *    button's label and `data-on` untouched. The next click here then
+   *    computed its "next" from a stale `false` and turned sound ON when the
+   *    board already had it on — a toggle that does not toggle.
+   *  - This strip is server-rendered and sits ABOVE a `client:load` island, so
+   *    it is clickable before the island has mounted and registered its
+   *    listener. A fast click wrote the cookie and dispatched into nothing.
    *
-   * Re-running is safe: the element is looked up per call rather than captured
-   * at module scope, and the handler is ASSIGNED (`onclick =`) rather than
-   * added, so repeated inits replace it instead of stacking copies.
+   * So: every change is announced on `lbc:sound` with a `from` naming the
+   * sender, each side ignores its own, and both reconcile against the cookie
+   * when they start — which covers the click that happened before anyone was
+   * listening.
+   *
+   * Init runs immediately AND on `astro:page-load`: a bundled Astro script is
+   * a deferred module, so on a COLD load `astro:page-load` may already have
+   * fired (listening only for it left the button inert, which is how it first
+   * shipped) — while under the ClientRouter the module evaluates once per
+   * SESSION, so a one-shot init is dead after the first in-site navigation.
    */
+  function readSoundCookie() {
+    const m = document.cookie.match(/(?:^|;\s*)bc_sound=([01])/);
+    return m ? m[1] === '1' : null;
+  }
+
+  function paintSoundToggle(btn: HTMLElement, on: boolean) {
+    btn.dataset.on = on ? 'true' : 'false';
+    btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+    btn.textContent = on ? 'Sound on' : 'Sound off';
+  }
+
   function initBroadcastSoundToggle() {
     const btn = document.getElementById('lbc-sound-toggle');
     if (!btn) return;
+
+    // The cookie may already disagree with what the server rendered — a click
+    // landed before hydration, or the board's `M` key ran on a previous view.
+    const fromCookie = readSoundCookie();
+    if (fromCookie !== null) paintSoundToggle(btn, fromCookie);
+
+    // ASSIGNED, not added: re-running init replaces this handler rather than
+    // stacking a second copy that would toggle twice per click.
     btn.onclick = () => {
       const next = btn.dataset.on !== 'true';
-      btn.dataset.on = next ? 'true' : 'false';
-      btn.setAttribute('aria-pressed', next ? 'true' : 'false');
-      btn.textContent = next ? 'Sound on' : 'Sound off';
+      paintSoundToggle(btn, next);
       try {
         document.cookie =
           'bc_sound=' + (next ? '1' : '0') + '; path=/; max-age=' + 180 * 24 * 60 * 60 + '; samesite=lax';
       } catch {
         /* a control that cannot remember still sets the board up */
       }
-      // Tell the board on this same page, so the choice takes effect without a
-      // reload. The island owns the cookie too; this is the in-page handshake.
-      document.dispatchEvent(new CustomEvent('lbc:sound', { detail: { on: next } }));
+      document.dispatchEvent(
+        new CustomEvent('lbc:sound', { detail: { on: next, from: 'strip' } }),
+      );
     };
   }
+
+  // Registered ONCE, at module scope, so it cannot stack across navigations —
+  // and it looks the button up per event rather than capturing it, because
+  // under the ClientRouter the element is replaced on every page load.
+  // Annotated, because this file is type-checked: an untyped `e.detail` and
+  // two implicit-any parameters were five ts(2339)/ts(7006) errors against a
+  // ratcheted baseline that fails in EITHER direction. Astro compiles a
+  // `<script>` as TypeScript, so plain annotations work here — a JSDoc cast
+  // does not (it reports ts(80004) and leaves the error standing).
+  document.addEventListener('lbc:sound', (e: Event) => {
+    const detail = (e as CustomEvent<{ on: boolean; from?: string }>).detail;
+    if (detail?.from === 'strip') return;
+    const btn = document.getElementById('lbc-sound-toggle');
+    if (btn && typeof detail?.on === 'boolean') paintSoundToggle(btn, detail.on);
+  });
 
   initBroadcastSoundToggle();
   document.addEventListener('astro:page-load', initBroadcastSoundToggle);
