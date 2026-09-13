@@ -1,11 +1,14 @@
 # The staging release train
 
-**Status:** plan, not built. Decisions marked **[DECIDED]** came from Brandon;
-**[OPEN]** ones need a call before implementation starts.
+**Status:** mostly built — see *Build order* at the end for what is done and
+what remains. Decisions marked **[DECIDED]** came from Brandon; **[OPEN]** ones
+still need a call.
 
-Related: PR #1047 (`claude/vercel-per-league-test-sites-f3rk7w`) already builds
-the staging hosts this plan sits on top of. **That PR is the prerequisite — none
-of this works until it lands.**
+PR #1047 (the staging hosts this all sits on) **merged 2026-09-12**. What is
+built since: `/live` step 5c and its `staging` default, `/release-review`,
+`/promote`, `scripts/release-blackout.mjs`, the outbound-write guard, the
+noindex header and banner, CI coverage for `staging` PRs, the Chromatic
+retarget, and `.github/workflows/staging-merge-down.yml`.
 
 ## The idea
 
@@ -243,15 +246,16 @@ in the table above. `/hotfix` correctly stays on `main`.
 
 ### The promotion itself
 
-A workflow, not a habit. `promote-to-production.yml`:
+**Built as `/promote`** rather than a workflow — a release should be a thing a
+person decides to do, and the checks are the same either way. It refuses on: no
+`staging`, an empty range, a non-fast-forward (which means merge-down is broken
+and is not to be resolved on release day), a blackout window, red CI on
+`staging`'s tip, or a `/release-review` NO-GO. Then `merge --ff-only`, tag,
+verify production, announce.
 
-- `workflow_dispatch` plus a Tuesday cron, so it is repeatable and logged.
-- Refuses to run if `staging` is not a strict descendant of `main` (i.e. if the
-  promotion would not be a fast-forward). That failure means merge-down is
-  broken, and it should stop the release rather than resolve it.
-- Refuses to run if CI is not green on `staging`'s tip.
-- Opens the promotion PR (for the Chromatic gate above), or fast-forwards
-  directly if the decision below says no PR.
+`--ff-only` is the load-bearing flag: it fails rather than inventing a merge
+commit, so "cannot fast-forward" surfaces as information instead of being
+silently resolved.
 
 **[OPEN]** Cron-and-announce vs. one-button `workflow_dispatch`. Given the whole
 point is deliberate releases, a human pressing the button on Tuesday morning
@@ -411,9 +415,15 @@ moves to Tuesday 8pm PT: ship in the morning, announce at night.
 - Waiver processing, which is per-league-calendar rather than a fixed day —
   the release workflow should read the calendar rather than hardcode a rule.
 
-**[OPEN]** Whether blackouts are advisory (documented, human-enforced) or
-mechanical (the promotion workflow refuses). Mechanical is better and is not
-much more work, since the league calendar is already queryable.
+**Mechanical** [DECIDED] — `scripts/release-blackout.mjs`, run by `/promote`
+at step 3, exit 1 with the reason. It covers NFL game days in season
+(Thu/Sat/Sun/Mon), Feb 14 ±1, Labor Day through Labor Day + 3, and the AFL
+National League draft ±1, all evaluated in PT.
+
+One gap, stated rather than hidden: **TheLeague's own draft date** lives in the
+league-events registry rather than an `.mjs` the script can import, so it stays
+a human check in the `/promote` skill. Closing it means either exposing that
+date through an `.mjs`, or the script growing a TS import path.
 
 ## Rollback
 
@@ -500,10 +510,12 @@ Ranked by what this repo specifically lacks, not by general merit.
 5. ~~Chromatic retarget~~ — **done**.
 6. ~~Outbound-write guards + guard test~~ — **done**.
 7. ~~`noindex` + staging banner~~ — **done**.
-8. `staging` branch, merge-down automation, branch protection (required checks
-   for `staging`, now that the workflows report on it).
-9. Promotion workflow (fast-forward check, CI-green check, the `/release-review`
-   GO gate); move the What's New rollup behind it.
+8. ~~`staging` branch + merge-down automation~~ — **done**
+   (`.github/workflows/staging-merge-down.yml`). Branch protection (required
+   checks for `staging`) is a GitHub settings change, still to do by hand.
+9. ~~Promotion~~ — **done** as `/promote`, with the blackout windows mechanical
+   in `scripts/release-blackout.mjs`. Still to do: move the What's New rollup
+   behind the promotion so it cannot announce ahead of the deploy.
 10. Smoke tests, version stamp, error monitoring.
 
 Steps 1–7 are done, and were worth doing regardless of whether the weekly

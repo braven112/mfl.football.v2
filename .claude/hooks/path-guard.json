@@ -685,7 +685,7 @@
     },
     {
       "name": "staging-and-deploy-environment",
-      "note": "The staging sites share PRODUCTION'S database and PRODUCTION'S secrets. Reads and Redis writes are the accepted cost; the outbound half is not, because none of it can be undone \u2014 an MFL write mutates the real league, a push reaches real phones, a GroupMe post lands in the real chat, an issue lands in the real backlog. Every outbound path calls assertOutboundAllowed/outboundAllowed from src/utils/deploy-environment.ts immediately before the network call, never at the route layer (a dozen routes, and the one that forgot fails open). The predicate is the DEPLOYMENT (VERCEL_ENV), not the request host, so PR previews are covered too; isStagingHost is the separate host question, for the noindex header and the banner. Unknown fails OPEN so cron scripts and pnpm dev keep working. See docs/plans/staging-release-process.md.",
+      "note": "The staging sites share PRODUCTION'S database and PRODUCTION'S secrets. Reads and Redis writes are the accepted cost; the outbound half is not, because none of it can be undone \u2014 an MFL write mutates the real league, a push reaches real phones, a GroupMe post lands in the real chat, an issue lands in the real backlog. Every outbound path calls assertOutboundAllowed/outboundAllowed from src/utils/deploy-environment.ts immediately before the network call, never at the route layer (a dozen routes, and the one that forgot fails open). The predicate is the DEPLOYMENT (VERCEL_ENV), not the request host, so PR previews are covered too; isStagingHost is the separate host question, for the noindex header and the banner. Unknown fails OPEN so cron scripts and pnpm dev keep working. See docs/plans/staging-release-process.md. Release-day blackout windows are mechanical (scripts/release-blackout.mjs, run by /promote): NFL game days in season, the Feb 14 and Labor Day rollovers, and the AFL draft \u2014 all evaluated in PT, because the league's clock is PT and a UTC-evaluated Sunday starts at 4pm Saturday Pacific.",
       "paths": [
         "src/utils/deploy-environment.ts",
         "src/utils/mfl-fetch.ts",
@@ -693,10 +693,12 @@
         "src/utils/groupme-client.ts",
         "src/utils/github-issues.ts",
         "src/components/shared/StagingBanner.astro",
-        "src/middleware.ts"
+        "src/middleware.ts",
+        "scripts/release-blackout.mjs"
       ],
       "tests": [
-        "tests/staging-outbound-guard.test.ts"
+        "tests/staging-outbound-guard.test.ts",
+        "tests/release-blackout.test.ts"
       ]
     },
     {
