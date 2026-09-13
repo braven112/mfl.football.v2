@@ -14,8 +14,11 @@ import {
   densityTier,
   dropClasses,
   dropsForTier,
+  gameSecondsLeft,
+  matchupTimeLeft,
   nameContext,
   padPage,
+  progressClockLabel,
   MAX_FEATURED_CELLS,
   MAX_GRID_PANELS,
   splitPanels,
@@ -226,8 +229,19 @@ describe('the drop ladder', () => {
     }
   });
 
-  it('takes the opponent’s yet-to-play before the owner’s own numbers', () => {
-    expect(DROP_LADDER[0]).toBe('oppytp');
+  it('keeps BOTH yet-to-play counts at the ordinary Sunday density', () => {
+    // Four cells — two leagues with a doubleheader each — is tier 3, and it is
+    // what the board actually runs. `oppytp` was rung one, so that board
+    // printed a single bare "1 to play" that read as the matchup's rather than
+    // as one team's (owner, 2026-09-13).
+    expect(dropsForTier(3)).not.toContain('oppytp');
+    expect(dropClasses(3)).not.toMatch(/oppytp/);
+  });
+
+  it('still takes the opponent’s yet-to-play before the owner’s own', () => {
+    // The rung survives for tier 4+, where the cell genuinely cannot carry two.
+    expect(DROP_LADDER).toContain('oppytp');
+    expect(dropsForTier(4)).toContain('oppytp');
   });
 
   it('keeps the projected final longer than the clock', () => {
@@ -356,5 +370,84 @@ describe('the strip', () => {
 
   it('returns nothing rather than dividing by zero when no rows fit', () => {
     expect(buildStripPages({ panels: [panel()], scores, meta, games, rowsPerPage: 0 })).toEqual([]);
+  });
+});
+
+/**
+ * The matchup clock.
+ *
+ * It replaced "the ESPN clock of the game most of my starters are in", which
+ * late on a Sunday is whichever game kicked off LAST: a board with one starter
+ * left in the night game printed "1:33 - 1st" beside a slate that was
+ * otherwise over (owner, 2026-09-13). The string was true of that game and
+ * true of nothing the cell was showing.
+ */
+describe('the matchup clock', () => {
+  const meta: Record<string, PlayerMeta> = {
+    kc: { id: 'kc', name: 'KC Guy', position: 'RB', nflTeam: 'KC', headshot: '', espnId: null, projected: 10 },
+    sf: { id: 'sf', name: 'SF Guy', position: 'WR', nflTeam: 'SF', headshot: '', espnId: null, projected: 10 },
+    atl: { id: 'atl', name: 'ATL Guy', position: 'QB', nflTeam: 'ATL', headshot: '', espnId: null, projected: 10 },
+    bye: { id: 'bye', name: 'No Game', position: 'TE', nflTeam: 'ZZZ', headshot: '', espnId: null, projected: 10 },
+  };
+
+  const games: NflGame[] = [
+    // Kickoff of the LAST game of the day — the shape that used to take over
+    // the whole cell.
+    { id: 'g1', state: 'in', shortDetail: '1:33 - 1st', period: 1, clock: '1:33', home: { code: 'KC', score: 3 }, away: { code: 'LV', score: 0 }, possession: 'KC', date: '' },
+    { id: 'g2', state: 'pre', shortDetail: 'Sun 4:25 PM ET', period: 0, clock: '', home: { code: 'SF', score: 0 }, away: { code: 'SEA', score: 0 }, possession: null, date: '' },
+    { id: 'g3', state: 'post', shortDetail: 'Final', period: 4, clock: '0:00', home: { code: 'ATL', score: 24 }, away: { code: 'NO', score: 20 }, possession: null, date: '' },
+  ];
+
+  const row = (id: string, secondsRemaining = 3600) => ({ id, live: 0, secondsRemaining, status: 'starter' as const });
+
+  it('reads ESPN’s own period and clock, never MFL’s seconds', () => {
+    // 1:33 left in the 1st = three whole quarters plus 93s still to play.
+    expect(gameSecondsLeft(games[0], 3600)).toBe(2793);
+    expect(gameSecondsLeft(games[1], 0)).toBe(3600);
+    expect(gameSecondsLeft(games[2], 3600)).toBe(0);
+    // Overtime is not a fifth quarter — it is only what OT has left.
+    expect(gameSecondsLeft({ ...games[0], period: 5, clock: '2:00' }, 3600)).toBe(120);
+  });
+
+  it('falls back to MFL’s clock ONLY for a player with no resolvable game', () => {
+    expect(gameSecondsLeft(undefined, 1800)).toBe(1800);
+    expect(gameSecondsLeft(undefined, 99999)).toBe(3600);
+    expect(gameSecondsLeft(undefined, -5)).toBe(0);
+  });
+
+  it('prints a fraction of one game as a position on one game clock', () => {
+    expect(progressClockLabel(1)).toBe('1st 15:00 left');
+    expect(progressClockLabel(0.75)).toBe('2nd 15:00 left');
+    expect(progressClockLabel(0.5)).toBe('3rd 15:00 left');
+    expect(progressClockLabel(0.25)).toBe('4th 15:00 left');
+    expect(progressClockLabel(0.125)).toBe('4th 7:30 left');
+    expect(progressClockLabel(0)).toBe('Final');
+  });
+
+  it('never spells itself the way ESPN spells a real game clock', () => {
+    // ESPN prints "4:08 - 3rd". Anything printing that shape is asserting a
+    // single real game, which a matchup spanning eighteen of them is not.
+    for (const f of [1, 0.6, 0.33, 0.05]) {
+      expect(progressClockLabel(f)).not.toMatch(/^\d{1,2}:\d{2} - /);
+      expect(progressClockLabel(f)).toMatch(/left$/);
+    }
+  });
+
+  it('does not let the last game to kick off speak for the whole matchup', () => {
+    // Three starters: one final, one in a game that just kicked, one to come.
+    const clock = matchupTimeLeft([row('atl', 0), row('kc'), row('sf')], games, meta);
+    // (0 + 2793 + 3600) / 10800 = 59.2% of one game left — mid-2nd on the
+    // matchup's clock, NOT "1:33 - 1st".
+    expect(clock).toBe('2nd 5:31 left');
+    expect(clock).not.toContain('1st');
+  });
+
+  it('is Final only when every starter’s game is over', () => {
+    expect(matchupTimeLeft([row('atl', 0), row('atl', 0)], games, meta)).toBe('Final');
+    expect(matchupTimeLeft([row('atl', 0), row('kc')], games, meta)).not.toBe('Final');
+  });
+
+  it('prints nothing at all rather than a clock for no starters', () => {
+    expect(matchupTimeLeft([], games, meta)).toBe('');
   });
 });

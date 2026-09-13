@@ -302,3 +302,42 @@ alternating — each league was independently blanking and recovering.
   as `ok: false`. Worth reducing (skip the bracket read outside bracket weeks,
   or cache the assembly briefly), but the client must hold its numbers either
   way: no cadence makes an upstream feed infallible.
+
+## Sep 2026 — "1 to play, 1:33 - 1st" on a slate that was almost over
+
+Two complaints from one photograph of a real television, and they turned out to
+be the same mistake made twice: **a cell printed a fact about ONE thing where
+the viewer reads a fact about the MATCHUP.**
+
+- **"1 to play" was the owner's count alone, and nothing on the cell said so.**
+  Both counts lived in the cell foot (`1 to play` · `4 theirs`), and `oppytp`
+  was rung ONE of the drop ladder — so at three cells or more the opponent's
+  went and the survivor lost the only thing disambiguating it. Four cells is
+  not an edge case: it is two leagues with a doubleheader each, the ordinary
+  Sunday this board was built for. Both counts now sit on their own team's ROW,
+  next to the name whose count it is, and `oppytp` moved to rung three so it
+  only fires at tier 4 where the cell genuinely cannot carry two.
+- **The clock was the ESPN clock of the one game most of the owner's starters
+  were in.** True of that game, and true of nothing the cell was showing —
+  because late on a Sunday the only games still `in` are the ones that kicked
+  off LAST. An owner with a single starter left in the night game got
+  "1:33 - 1st" beside a board where everything else was final. The selection was
+  the bug, not the data.
+
+`matchupTimeLeft` replaces it: sum the real seconds left across every starter on
+BOTH sides — ESPN's `period` + `displayClock`, MFL's `gameSecondsRemaining` only
+for a starter whose game did not resolve at all — and print the fraction as a
+position on one 60-minute clock (`2nd 5:31 left`). Three constraints are what
+keep it from being the fabrication `clockLabel()` was, and each is pinned:
+
+- **The inputs tick.** ESPN's period and clock, never MFL's lagging number as
+  the primary source.
+- **It cannot be read as a game clock.** ESPN spells one `4:08 - 3rd`; this
+  spells `3rd 4:08 left`. A guard test asserts the shape, not just the values.
+- **Overtime is not a fifth quarter.** A 5th period contributes only what OT has
+  left, or the matchup gains fifteen minutes that cannot be played.
+
+Also fixed in passing, and the reason to read the entry above this one: an
+unreadable panel used to print `0 to play` through the same `?? 0` that once
+printed `0.0 / Proj 0.0`. It now prints nothing — "the feed says nothing" and
+"we could not reach the feed" stay different facts all the way to the pixels.
