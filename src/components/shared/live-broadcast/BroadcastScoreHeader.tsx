@@ -194,8 +194,10 @@ function BroadcastScoreHeader({
                               />
                             )}
                           </span>
-                          <span className="lbc__tn">{nameAt(matchup.mine, tier)}</span>
-                          <span className="lbc__ytp">{readable ? `${mine?.yetToPlay ?? 0} to play` : ''}</span>
+                          <span className="lbc__who">
+                            <span className="lbc__tn">{nameAt(matchup.mine, tier)}</span>
+                            <span className="lbc__ytp">{readable ? `${mine?.yetToPlay ?? 0} to play` : ''}</span>
+                          </span>
                           <span className="lbc__proj">
                             <span className="lbc__proj-word">Proj </span>
                             {score(mine?.projectedFinal, readable)}
@@ -224,8 +226,10 @@ function BroadcastScoreHeader({
                                 />
                               )}
                             </span>
-                            <span className="lbc__tn">{nameAt(matchup.opponent, tier)}</span>
-                            <span className="lbc__ytp is-opp">{readable ? `${theirs?.yetToPlay ?? 0} to play` : ''}</span>
+                            <span className="lbc__who">
+                              <span className="lbc__tn">{nameAt(matchup.opponent, tier)}</span>
+                              <span className="lbc__ytp is-opp">{readable ? `${theirs?.yetToPlay ?? 0} to play` : ''}</span>
+                            </span>
                             <span className="lbc__proj">
                               <span className="lbc__proj-word">Proj </span>
                               {score(theirs?.projectedFinal, readable)}

@@ -327,8 +327,10 @@ the viewer reads a fact about the MATCHUP.**
 `matchupTimeLeft` replaces it: sum the real seconds left across every starter on
 BOTH sides — ESPN's `period` + `displayClock`, MFL's `gameSecondsRemaining` only
 for a starter whose game did not resolve at all — and print the fraction as a
-position on one 60-minute clock (`2nd 5:31 left`). Three constraints are what
-keep it from being the fabrication `clockLabel()` was, and each is pinned:
+position on one 60-minute clock (`2nd 5:31 left`). It is NOT the fabrication `clockLabel()` was, and the distinction is the
+owner's: that rule is about asserting a real NFL game's state, and a matchup
+meter names no game to be wrong about. Three constraints keep it that way, each
+pinned:
 
 - **The inputs tick.** ESPN's period and clock, and only those. A starter ESPN
   could not place leaves both halves of the fraction — review caught the first
@@ -355,4 +357,14 @@ immediately found a third of the same shape that review had not: an
 `3rd 8:17 left` beside them, because the clock is built from ESPN plus the
 league's own starters and never asked whether the league's read had failed.
 Anything this component prints belongs behind `readable`.
+
+**The count went UNDER the name, not on the row.** Between the name and the
+projection it was competing for width with two numerals and a crest, and on a
+real doubleheader cell it ellipsised to `1 to ...` and `0 t...` — worse than
+not printing it. Stacked inside `.lbc__who` it costs the row no height at all:
+`.lbc__side` is centred and the score numeral is the tallest item (~5.6vh at
+tier 3 against ~4.4vh for two stacked lines), so the second line fits in height
+the row already had. The 25% width floor moved with it — it has to sit on the
+box the row's flex layout actually shrinks, which is now the column rather than
+the text inside it, and `tests/broadcast-shell-guards.test.ts` follows it there.
 

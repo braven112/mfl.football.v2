@@ -59,23 +59,31 @@ which is exactly why the split exists — verify parsing offline against
   `gameSecondsRemaining` by 900 and printed a confident "Q3 7:24" that was not
   the game clock and drifted all afternoon (the NFL clock stops; that number
   doesn't). With no ESPN game we now print the STATE and no numbers.
-- **The broadcast board's MATCHUP clock is the one derived clock, and it is
-  derived from ESPN.** `matchupTimeLeft` (`broadcast-layout.ts`) sums real
-  seconds left — ESPN's `period` + `displayClock`, and nothing else — across
-  both teams' starters and prints the fraction as a position on one 60-minute
-  clock. A starter ESPN could not place is out of BOTH halves of the fraction
-  (a bye starter has no football left; counting him as an unplayed game floors
-  the meter above zero so `Final` never prints), and with no starter placed at
-  all there is no clock — `assembleBroadcastBoard` substitutes `games: []` on
-  any ESPN error, and the empty string is what keeps that outage from printing
-  a confident clock made entirely of MFL's seconds. Two more things keep it
-  honest and both are pinned by test: the inputs TICK, and it is spelled
-  `3rd 4:08 left` where ESPN spells a real clock `4:08 - 3rd`, so it can never
-  be read as one game's. What it replaced was worse than a fabrication — the
-  real ESPN clock of the ONE game most of the viewer's starters were in, which
-  late on a Sunday is whichever game kicked off LAST: a board with a single
-  starter left in the night game printed "1:33 - 1st" beside a slate that was
-  otherwise final (owner, 2026-09-13).
+- **A MATCHUP clock is a different object from a GAME clock, and the rule above
+  does not reach it.** "Never fabricate a clock" is about asserting a real NFL
+  game's state — `Q3 7:24` next to a player is a claim that can be wrong. The
+  broadcast board's `matchupTimeLeft` (`broadcast-layout.ts`) asserts nothing
+  about any game: it sums the seconds left across both teams' starters and
+  prints that fraction as a position on one 60-minute clock, which is a fact
+  about the FANTASY matchup and cannot be false about a game it never names.
+  Owner's call, and the right one (2026-09-13).
+  What it must keep:
+  - **ESPN's `period` + `displayClock` are the inputs.** MFL's
+    `gameSecondsRemaining` does not tick, so a meter built on it drifts all
+    afternoon — the same reason the rule above exists, applied one level up.
+  - **A starter ESPN could not place is out of BOTH halves of the fraction.** A
+    bye starter has no football left; counting him as an unplayed game floors
+    the meter above zero so `Final` never prints. With no starter placed at all
+    there is no clock — `assembleBroadcastBoard` substitutes `games: []` on any
+    ESPN error, and the empty string is what keeps that outage from printing a
+    confident meter made of nothing.
+  - **It is spelled so it cannot be mistaken for a game clock.** ESPN writes
+    `4:08 - 3rd`; this writes `3rd 4:08 left`.
+  What it replaced was worse than either: the real ESPN clock of the ONE game
+  most of the viewer's starters were in, which late on a Sunday is whichever
+  game kicked off LAST — a board with a single starter left in the night game
+  printed "1:33 - 1st" beside a slate that was otherwise final (owner,
+  2026-09-13).
 - **The scoring ticker is DERIVED, not accumulated.** `/api/nfl-game-detail`
   returns the whole slate's plays every poll, so `buildMoments` recomputing is
   idempotent — no seen-set to drift. It dedupes per `playId:franchiseId`, since

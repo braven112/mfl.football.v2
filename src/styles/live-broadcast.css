@@ -461,15 +461,45 @@
 }
 
 
-.lbc__tn {
+/*
+ * The identity column: the team's name, and its yet-to-play count UNDER it.
+ *
+ * The count rode the row itself at first, between the name and the projection,
+ * where it was competing for width with two numerals and a crest — on a real
+ * doubleheader cell it ellipsised to "1 to ..." and "0 t...", which is worse
+ * than not printing it (owner, 2026-09-13). Stacked, it costs the row NO
+ * height: `.lbc__side` is centred and its tallest item is the score numeral
+ * (~5.6vh at tier 3 against ~4.4vh for the two stacked lines), so this fits
+ * inside height the row already had.
+ *
+ * The 25% FLOOR moved here with the name it protects — the name is the only
+ * thing on the row saying whose score this is, so the projection and the
+ * numerals shrink around this column rather than erasing it.
+ */
+.lbc__who {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
   /*
-   * A FLOOR, not just `min-width: 0`. The name is the only thing on the row
-   * that says whose score this is, so it must be the last thing to give up
-   * width — `flex-shrink: 0` on a basis of 25% means the projection and the
-   * numerals shrink around it instead of erasing it.
+   * GROWS, and off a much higher floor than the name alone had.
+   *
+   * `.lbc__proj` used to carry `margin-left: auto`, which absorbed every spare
+   * pixel on the row — so the name was pinned to its 25% floor while the gap
+   * in front of the numerals grew, and "Dangsters" showed as "Dangst…" beside
+   * an inch of empty blue. The slack belongs to the identity column: it takes
+   * it here, and pushing the projection and the score flush right is a side
+   * effect of that rather than a job for a margin.
    */
-  flex: 0 1 auto;
-  min-width: 25%;
+  flex: 1 1 auto;
+  min-width: 38%;
+  /* Tight, because the two lines have to stay inside the score's height. */
+  line-height: 1.15;
+  overflow: hidden;
+}
+
+.lbc__tn {
+  flex: none;
+  min-width: 0;
   font-size: min(12cqh, 8cqw, max(2.4vh, 0.78rem));
   font-weight: 600;
   color: var(--lbc-text-dim);
@@ -531,33 +561,38 @@
 .lbc__header[data-tier='5'] .lbc__score { font-size: max(min(20cqh, 12.5cqw, 3.8vh), 0.85rem); }
 
 /*
- * Each side's own yet-to-play count, on the row of the team it belongs to.
+ * Each side's own yet-to-play count, directly under that team's name.
  *
  * It used to sit in the cell foot with the opponent's, where "1 to play" read
  * as a fact about the MATCHUP rather than about one of the two teams — and at
  * three cells or more the drop ladder took the opponent's away entirely, so
- * the bare survivor had nothing to disambiguate it (owner, 2026-09-13). On the
- * row it is unambiguous without a word of explanation.
+ * the bare survivor had nothing to disambiguate it (owner, 2026-09-13). Under
+ * the name it is unambiguous without a word of explanation, and it is reading
+ * width it does not have to win from the numerals.
  *
- * It shrinks before the name does and clips rather than wrapping: a second
- * line in this row grows the cell, and `.lbc__panel { overflow: hidden }` eats
- * whatever that pushes past the bottom — the opponent's score.
+ * One line always: it clips rather than wrapping, because a THIRD line in this
+ * column is what would finally grow the cell past the height `.lbc__panel
+ * { overflow: hidden }` will silently eat the opponent's score out of.
  */
 .lbc__ytp {
-  flex: 0 1 auto;
+  flex: none;
   min-width: 0;
-  font-size: min(10cqh, 6.5cqw, max(2vh, 0.66rem));
+  font-size: min(9cqh, 6cqw, max(1.8vh, 0.62rem));
   color: var(--lbc-text-faint);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
+  /* On its own line in a 38% column this fits whole. It still clips rather
+     than wraps if it ever does not — and the COUNT leads the phrase, so what
+     a clip takes is the word "play", never the number. */
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
 .lbc__proj {
-  /* Pushes itself and the score to the right edge, so the numerals line up in
-     a column the way a scoreboard's do rather than bunching against the name. */
-  margin-left: auto;
+  /* The numerals still line up in a column the way a scoreboard's do — but
+     because `.lbc__who` claims the row's slack, rather than because an auto
+     start margin here swallowed it in front of them. */
+  margin-left: 0;
   font-size: min(11cqh, 7cqw, max(2.2vh, 0.7rem));
   color: var(--lbc-text-faint);
   font-variant-numeric: tabular-nums;
