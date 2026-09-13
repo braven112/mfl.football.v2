@@ -397,6 +397,7 @@ try {
     id: string;
     name: string;
     position: string;
+    age: number | null;
   }
 
   // Module-scoped guard so the document-level Escape handler binds exactly
@@ -452,7 +453,8 @@ try {
       const name = nameEl?.textContent?.trim() || `Player ${id}`;
       // Position label may include "QB - RC" style suffix; strip suffix.
       const positionRaw = posEl?.textContent?.trim().split('-')[0]?.trim() || '';
-      cardData.set(id, { id, name, position: positionRaw });
+      const parsedAge = Number(card.dataset.age);
+      cardData.set(id, { id, name, position: positionRaw, age: Number.isFinite(parsedAge) ? parsedAge : null });
       const list = initialCardsByPos.get(positionRaw) || [];
       list.push(card);
       initialCardsByPos.set(positionRaw, list);
@@ -605,6 +607,11 @@ try {
           delete slot.dataset.playerId;
         }
       });
+      // renderSlots() rebuilds every slot's DOM from scratch, which would
+      // silently drop any previously-applied age-filter styling — reapply
+      // it so a kept player over the threshold stays visually filtered
+      // across keeper moves, not just on the cut-pool list.
+      applyAgeFilter();
     }
 
     function setCardVisibility(playerId: string, hidden: boolean) {
@@ -938,10 +945,13 @@ try {
       }
     }
 
-    // ── Age filter — hides cut-pool cards above a chosen age, so an owner
-    // can quickly narrow in on who's aging out of their keeper window.
-    // Never touches a card already promoted to a keeper slot — those carry
-    // `hidden` via setCardVisibility regardless of this filter.
+    // ── Age filter — hides cards above a chosen age, cut pool AND keeper
+    // slots alike, so an owner can quickly narrow in on who's aging out of
+    // the keeper window regardless of which side of the line they're on
+    // right now. A filtered SLOT keeps its number and stays a real keeper
+    // (nothing here touches keeperIds) — it just visually stands in for
+    // "you can't see this one at the current age cutoff", the same as a
+    // filtered cut-pool card.
     const AGE_FILTER_MAX = Number(ageSlider?.max ?? 45);
     function applyAgeFilter() {
       const threshold = ageSlider ? Number(ageSlider.value) : AGE_FILTER_MAX;
@@ -950,6 +960,11 @@ try {
         const age = Number(card.dataset.age);
         const overAge = !noFilter && Number.isFinite(age) && age > threshold;
         card.classList.toggle('kp-card--filtered', overAge);
+      });
+      slotsEl?.querySelectorAll<HTMLElement>('.kp-slot--filled').forEach((slot) => {
+        const age = cardData.get(slot.dataset.playerId ?? '')?.age ?? null;
+        const overAge = !noFilter && age != null && age > threshold;
+        slot.classList.toggle('kp-slot--age-filtered', overAge);
       });
       if (ageFilterValueEl) {
         ageFilterValueEl.textContent = noFilter ? 'All ages' : `Hiding > ${threshold}`;
@@ -1213,6 +1228,32 @@ try {
 
   .kp-slot--filled.is-dragging {
     opacity: 0.5;
+  }
+
+  /* Age-filtered keeper — same idea as .kp-card--filtered, but a numbered
+     slot can't just disappear (it would look like an unfilled slot, which
+     is a lie: the player is still kept). Dim the real content and overlay
+     a label instead; pointer-events:none on the label keeps drag/click
+     working on the slot underneath. */
+  .kp-slot--age-filtered {
+    position: relative;
+  }
+
+  .kp-slot--age-filtered .kp-slot__player {
+    opacity: 0.15;
+  }
+
+  .kp-slot--age-filtered::after {
+    content: 'Filtered by age';
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.6875rem;
+    font-weight: 700;
+    color: #6b7280;
+    pointer-events: none;
   }
 
   .kp-slot__num {
@@ -1826,6 +1867,10 @@ try {
     background: var(--color-success, #34d399);
     color: #06281c;
     border-color: var(--color-success, #34d399);
+  }
+
+  html.dark .kp-slot--age-filtered::after {
+    color: var(--content-text-muted, #8a8a8a);
   }
 
   html.dark .kp-slot__name {

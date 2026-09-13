@@ -29,11 +29,23 @@ describe('the age slider has real ages to filter on', () => {
 });
 
 describe('KeeperPlanner decision-support features', () => {
-  it('age filter hides cards above the chosen threshold, never the keeper slots', () => {
+  it('age filter hides cards above the chosen threshold, cut pool AND keeper slots alike', () => {
     expect(SRC).toMatch(/data-age-filter/);
     expect(SRC).toMatch(/kp-card--filtered/);
+    expect(SRC).toMatch(/kp-slot--age-filtered/);
     // The filter reads age off the card itself, not the (age-free) slot clone.
     expect(SRC).toMatch(/data-age=\{player\.age\}/);
+    // A filtered keeper slot never loses its player from keeperIds — this is
+    // a display-only class toggle, not a state mutation.
+    expect(SRC).not.toMatch(/keeperIds\.splice[\s\S]{0,200}applyAgeFilter/);
+  });
+
+  it('re-applies the age filter whenever renderSlots rebuilds slot DOM, not just on slider input', () => {
+    // renderSlots() replaces every slot's innerHTML on each call (drag,
+    // load, reset), which would silently wipe a previously-applied
+    // kp-slot--age-filtered class if the filter weren't re-run afterward.
+    const renderSlots = SRC.match(/function renderSlots\(\)[\s\S]*?\n {4}\}/)?.[0] ?? '';
+    expect(renderSlots).toMatch(/applyAgeFilter\(\);/);
   });
 
   it('sort-by-My-Rank uses the shared composite lookup, scoped automatically', () => {
@@ -72,6 +84,37 @@ describe('KeeperPlanner decision-support features', () => {
     // missing for a historical year (no ADP feed, say) must never change
     // who gets cut.
     expect(SRC).toMatch(/body: JSON\.stringify\(\{ playerId: id, year: year > 0 \? year : undefined \}\)/);
+  });
+});
+
+describe('the Planner view carries its own copy of the roster analytics', () => {
+  // rosters.astro is duplicating (not extracting) the Analytics view's
+  // 4-card grid below the Planner's player list, ahead of the Roster/
+  // Analytics tabs eventually going away — see the Planner view's own
+  // comment. NFL/College Analysis come along too but de-emphasized behind
+  // a closed <details>, since they're "just for fun" next to age/position.
+  const plannerViewSrc =
+    ROSTERS_SRC.match(/<section class="view-container" data-view-content="planner"[\s\S]*/)?.[0] ?? '';
+
+  it('renders the 4-card analytics grid inside the owner branch of the Planner view', () => {
+    expect(plannerViewSrc).toMatch(/class="planner-analytics"/);
+    expect(plannerViewSrc).toMatch(/Position composition/);
+    expect(plannerViewSrc).toMatch(/Age by position/);
+    expect(plannerViewSrc).toMatch(/Age distribution/);
+  });
+
+  it('places it after (below) the KeeperPlanner component, not before', () => {
+    const keeperPlannerIdx = plannerViewSrc.indexOf('<KeeperPlanner');
+    const analyticsIdx = plannerViewSrc.indexOf('class="planner-analytics"');
+    expect(keeperPlannerIdx).toBeGreaterThan(-1);
+    expect(analyticsIdx).toBeGreaterThan(keeperPlannerIdx);
+  });
+
+  it('de-emphasizes NFL/College Analysis behind a closed <details>, not a fourth prominent card', () => {
+    const extra = plannerViewSrc.match(/<details class="planner-analytics__extra">[\s\S]*?<\/details>/)?.[0] ?? '';
+    expect(extra).toMatch(/NFL Analysis/);
+    expect(extra).toMatch(/College Analysis/);
+    expect(extra).not.toMatch(/\bopen\b/);
   });
 });
 
