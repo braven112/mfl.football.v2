@@ -95,6 +95,35 @@ describe.each(PAGES)('%s lineup page survives an in-site navigation', (_league, 
     expect(SCRIPT).not.toContain("throw new Error('Missing lineup data')");
     expect(SCRIPT).toMatch(/if \(!data\) return;/);
   });
+
+  it('gates on a node the router replaced, not on the window payload', () => {
+    // `init` lives on `document`, which the swap does NOT replace, so it fires
+    // on every in-site navigation for the rest of the session. `__LINEUP_DATA__`
+    // is a `window` global, so it is STILL this page's payload on the next
+    // page — which makes `if (!data) return` unfalsifiable after one lineup
+    // visit. init then ran its body on /rosters, `lineup-submit` answered null,
+    // and `submitBtn.querySelector(...)` threw an uncaught TypeError that took
+    // the whole page down. The gate has to ask the DOM, not the window.
+    const gate = SCRIPT.indexOf("if (!document.getElementById('lineup-slots')) return;");
+    expect(gate, 'init must bail when the lineup DOM is gone').toBeGreaterThan(-1);
+
+    // Before the first ref read, or the null deref happens anyway.
+    for (const read of [
+      "getElementById('lineup-submit')",
+      "getElementById('lineup-cdm')",
+      "getElementById('lineup-announcer')",
+    ]) {
+      expect(SCRIPT.indexOf(read), `the gate must precede ${read}`).toBeGreaterThan(gate);
+    }
+
+    // But AFTER the teardown: leaving the page is exactly when the surviving
+    // document/window registrations must come off, so an early return that
+    // skips the teardown leaks a devicemotion listener per navigation.
+    expect(
+      SCRIPT.indexOf("window.removeEventListener('devicemotion', onDeviceMotion)"),
+      'the teardown must still run on the way out',
+    ).toBeLessThan(gate);
+  });
 });
 
 describe('the two lineup pages stay siblings', () => {
@@ -103,7 +132,7 @@ describe('the two lineup pages stay siblings', () => {
     // that lands in one and not the other is how they drifted before.
     const [a, b] = PAGES.map(([, file]) => controllerScript(file));
     const shapeOf = (s: string) =>
-      s.split('\n').filter((l) => /init\(\)|astro:page-load|onDeviceMotion|onMotionPermissionClick|stopRankingsWatch/.test(l));
+      s.split('\n').filter((l) => /init\(\)|astro:page-load|onDeviceMotion|onMotionPermissionClick|stopRankingsWatch|getElementById\('lineup-slots'\)\) return/.test(l));
     expect(shapeOf(a)).toEqual(shapeOf(b));
   });
 });
