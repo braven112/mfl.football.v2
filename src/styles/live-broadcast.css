@@ -526,8 +526,9 @@
   overflow: hidden;
   /* The bar separates the two sides of a matchup, so it needs to read as a
      divider rather than as an underline on the score above it. The height the
-     "Game N" label gave back is spent here. */
-  margin: 2.2vh 0;
+     "Game N" label gave back is spent here — most of it, not all: at 2.2vh the
+     two sides read as two separate rows rather than as one matchup. */
+  margin: 1.9vh 0;
 }
 
 .lbc__wp-fill {
