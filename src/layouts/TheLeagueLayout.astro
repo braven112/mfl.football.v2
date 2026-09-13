@@ -792,6 +792,13 @@ import StagingBanner from '../components/shared/StagingBanner.astro';
 		line-height: var(--line-height-base);
 		text-rendering: optimizeLegibility;
 		-webkit-font-smoothing: antialiased;
+		/* Belt-and-suspenders for NavDrawer.astro's off-canvas drawer: it's
+		   `position: fixed; right: 0` then `translateX(100%)`, which some
+		   WebKit/Safari builds still factor into the document's scrollable
+		   width even though the box is visually off-screen — a slight
+		   horizontal rubber-band scroll on mobile Safari that never shows up
+		   in a desktop Chromium check. */
+		overflow-x: hidden;
 	}
 
 	:global(h1),
