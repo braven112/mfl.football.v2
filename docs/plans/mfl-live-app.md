@@ -46,7 +46,7 @@ of your pocket at 10:40 on a Sunday. Same data, opposite interaction model.
 | 9 | Shell | Full cross-league nav for the shared host | A neutral nav this page and every future `mfl.football` page share. |
 | 10 | Push | Close finishes only | One narrow alert: a matchup of yours within N points, late. No red-zone or every-score push. |
 | 11 | Branding | AFL's design language, **black where the AFL is navy**; **light AND dark themes** | New `data-league="mfl"` theme following the repo's existing token rules — `tokens.css` for light, `tokens-dark.css` under `html.dark`. Black is what navy is to the AFL: the dark theme's ground and the light theme's dark accent. NOT a black ground in both themes. See **Branding**. |
-| 12 | Deploy | Feature branch + PR preview | `claude/multi-league-live-scoring-kimyws`, PR opened so Vercel actually builds a preview (previews are cancelled without an open PR). |
+| 12 | Deploy | Feature branch + PR preview | `claude/multi-league-live-scoring-kimyws` → PR #1078. Previews are cancelled for a branch with no open PR, and `vercel-ignore-build.mjs` asks GitHub for one at build time — so a push made BEFORE the PR exists is skipped and does not retro-build when the PR opens. Open the PR first, or push again after. |
 | 13 | Artwork for outside leagues | **NFL fallback**: a franchise whose name exactly matches an NFL team gets that club's logo + colors | Quality-of-life win — far more leagues get artwork instead of text. Exact whole-name match only, tuned after owner feedback. See **NFL artwork**. |
 
 ## Before any UI — one solved, one real
@@ -88,6 +88,23 @@ it. Zero code change for v1.
 never `user.leagueId`.** The session's league is one of N and has no special
 claim on this page. A board that leans on it is both wrong today and unable to
 open to a stranger later.
+
+#### staging is not the deploy target either
+
+`staging` is a long-lived branch, 45 behind main and 14 ahead, and it reverted
+a MERGE commit (`d08f51d`, the nav redesign). Git treats that content as
+deliberately undone on staging's side, so merging main back in **silently drops
+48 files main has** — `live-scoring-source.ts`, `nfl-week-starts.mjs`, all of
+`/guides`, both `schedule.astro` pages, `site-analytics.ts` — with no conflict
+markers. Six test suites then fail to COLLECT rather than to assert, which is
+the tell. Restoring those 48 by hand still leaves ~97 source files divergent
+from main, only 6 of them because staging is stale.
+
+Nor is "revert the revert" the fix: main took the Schedule page and `/guides`
+from that nav branch but NOT its Front Office nav, so no reconstruction of
+staging's history lands on a tree that matches production. Whenever staging is
+wanted back, resetting it to main plus whatever is genuinely wanted on it is
+the cheap path. Attempted and abandoned 2026-09-13; nothing was pushed.
 
 #### The real blocker is DNS, not code
 
@@ -351,7 +368,7 @@ forward rather than gating: point the apex at the Vercel project (ops), and
 guard that the shared host never serves a league's manifest and that `/live`
 302s to a login when signed out.
 
-**Phase 1 — the shell. DONE.** `MflAppLayout` (sets `data-league="mfl"`,
+**Phase 1 — the shell. DONE — PR #1078.** `MflAppLayout` (sets `data-league="mfl"`,
 gates the manifest on `isSharedAppHost`, inherits `NflLogoDarkStyles`),
 complete `mfl` token blocks in `tokens.css` and `tokens-dark.css`, the bar with
 league links + theme toggle + sign-out, a `/live`-scoped PWA manifest with
