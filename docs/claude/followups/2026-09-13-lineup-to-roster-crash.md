@@ -1,12 +1,13 @@
 ---
 slug: lineup-to-roster-crash
-status: open
+status: shipped
 severity: P0
 opened: 2026-09-13
 hotfix_pr: https://github.com/braven112/mfl.football.v2/pull/1072
 hotfix_sha: 8988ce8
 followup_issue: 1073
-followup_pr:
+followup_pr: PENDING
+shipped: 2026-09-13
 followup_session: session_01Sta1eGQbdQc3M5qmJz91oi
 ---
 
@@ -47,7 +48,7 @@ surviving `document`/`window` registrations still come off on the way out.
 
 ## Deferred items
 
-- [ ] **F1 — The gate cannot tell the two leagues apart (cross-league double-bind)**
+- [x] **F1 — The gate cannot tell the two leagues apart (cross-league double-bind)** — WORKED
   - Source: Copilot review, PR #1072 — threads
     [r3999118278](https://github.com/braven112/mfl.football.v2/pull/1072#discussion_r3999118278)
     and [r3999118265](https://github.com/braven112/mfl.football.v2/pull/1072#discussion_r3999118265)
@@ -76,7 +77,7 @@ surviving `document`/`window` registrations still come off on the way out.
     `LineupGameStrip` carousel and any other per-league `astro:page-load` init
     have the same blind spot while you are in there.
 
-- [ ] **F2 — `AREA_LABELS` has no `lineups` slug**
+- [x] **F2 — `AREA_LABELS` has no `lineups` slug** — WORKED
   - Source: deferred at implementation
   - Where: `scripts/lib/weekly-changelog-format.mjs` (the `AREA_LABELS` map);
     surfaced by `tests/whats-new-data.test.ts:530`
@@ -88,7 +89,7 @@ surviving `document`/`window` registrations still come off on the way out.
     hotfix; it would have pulled `weekly-changelog-format` and its test into a
     P0 diff.
 
-- [ ] **F3 — The guard's positional assertions index raw script text, comments included**
+- [x] **F3 — The guard's positional assertions index raw script text, comments included** — WORKED
   - Source: deferred at implementation
   - Where: `tests/lineup-page-clientrouter.test.ts` — `controllerScript()` and
     the `indexOf` assertions in both "every ref is re-read inside init()" and
@@ -148,3 +149,77 @@ step in `/hotfix` step 7 cannot see it.
 
 **Severity note for the audit.** Called P0 on the day: gameday eve, and Set
 Lineup → Roster is the single most-used flow of the week.
+
+---
+
+## Outcome (2026-09-13)
+
+All three items **worked**; nothing dropped. Re-validated against `8988ce8`
+before building — the code each finding pointed at was unchanged and every
+concern held. No late reviewer comments landed on #1072 after the merge beyond
+the two Copilot threads already captured as F1.
+
+### F1 — worked, and it was wider than the brief assumed
+
+Two things the brief did not have:
+
+1. **It is one click away, not a hand-typed URL.** `buildSwitchUrl`
+   (`src/utils/nav-utils.ts:581`) returns the bare equivalent path whenever
+   `hideLeaguePrefix` is false — which is the case on the shared host. So on
+   `mfl.football` the nav header's own league-switch chevron emits a RELATIVE
+   href, and lineup -> lineup across leagues is a ClientRouter swap reachable
+   from the page itself. (On each league's apex domain the switch is
+   cross-origin and this cannot happen.)
+2. **`players.astro` has the same blind spot, and worse.** Both leagues' pages
+   gate on `#players-table` AND share the `dataset.init` flag key, so the
+   departing league's listener — registered first, therefore run first — wires
+   the wrong league's handlers and then sets the flag, which locks the arriving
+   league's own init out of running at all. Fixed alongside lineup, at the
+   user's direction.
+
+The fix is the shape the brief proposed: `data-league={...}` from the registry
+on the gated element, and `document.querySelector('<sel>[data-league="<slug>"]')`
+in the gate. The lineup pages keep the `#lineup-slots` check too, since the
+controller's first ref read is a non-null assertion on it.
+
+Also audited, per the brief's instruction to check other per-league
+`astro:page-load` inits:
+
+- `LineupGameStrip` — **clean.** It is one shared component, so both leagues run
+  the same module and there is only ever one listener; it already gates on a
+  router-replaced node with an element-scoped flag.
+- `initPlayerModalTrigger` (both players pages) — **clean.** Shares
+  `#player-table-body` across leagues, but the handler is fully league-agnostic
+  (it reads each row's own `data-player-modal` payload), so a cross-league bind
+  is a no-op difference.
+
+### F2 — worked
+
+`lineups: 'Set Lineup'` added to `AREA_LABELS`. Both staged changes that were
+mis-filed under `rosters` for want of the slug — the hotfix line and the
+2026-09-09 network-badge tweak — are retagged.
+
+### F3 — worked, and it reproduced on the first edit
+
+`tests/helpers/js-source.ts#stripComments` blanks line and block comments
+(preserving length, so offsets still map to the real file) and
+`controllerScript()` runs every positional assertion against that. The clearer
+comment wording is restored on both pages. Worth noting the guard failed the
+moment that wording went back in, which is the item demonstrating itself.
+
+### Guards
+
+- `tests/cross-league-init-gate.test.ts` — new, covers both pairs. Verified
+  failing against the pre-fix source on both pages and passing after. Wired into
+  the `client-scripts` path-guard domain, so it runs on every `src/pages/**`
+  edit.
+- `tests/lineup-page-clientrouter.test.ts` — positional assertions now
+  comment-blind; the sibling-parity check normalises the league slug, which is
+  the one thing that is supposed to differ between the two copies.
+
+### Rule recorded
+
+`docs/claude/rules/lineups.md` gains the league-marker half of the gate rule,
+and `CLAUDE.md` gains a cross-cutting subsection under "Second league's copy of
+a page" — that is where the hazard actually lives, since it is a property of
+forked siblings rather than of lineups.

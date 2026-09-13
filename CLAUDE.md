@@ -352,6 +352,33 @@ component. Note **why** the redirect and the data import stay in the route — a
 static import specifier can't be a runtime variable, and `Astro.redirect()` only
 redirects from a page (see the `/cr` note above).
 
+### A forked page's `astro:page-load` init must NAME ITS LEAGUE in its gate
+
+While a pair stays forked, each copy ships its own client script — and an init
+registered on `document` survives every ClientRouter swap, because `document` is
+one of the two nodes the router does not replace. Its "am I on my page?" gate
+must therefore ask a node the swap REPLACED (never a `window` global — that was
+the Sept 2026 lineup outage), **and that node must identify the league**: the
+siblings render the same element ids, and a cross-league navigation is
+same-origin, so it is a swap, not a fresh document. It is also one click away —
+on the shared host (`mfl.football`) the nav's own league switcher emits a
+relative href (`buildSwitchUrl`, `nav-utils.ts`).
+
+Gated on a bare id, the DEPARTING league's listener runs on the ARRIVING
+league's DOM. Both pairs that had this were genuinely broken, differently:
+`lineup.astro`'s two controllers bound the same nodes while posting to
+different endpoints (`/api/lineup` vs `/api/afl-fantasy/lineup` — a lineup
+submitted into the wrong league), and `players.astro`'s two shared one
+`dataset.init` flag, so the wrong league's init wired the table and then
+locked the right one out entirely.
+
+The shape: `data-league={<registryEntry>.slug}` on the gated element, and
+`document.querySelector('<sel>[data-league="<slug>"]')` in the gate.
+`tests/cross-league-init-gate.test.ts` pins it for every pair it lists and runs
+on every `src/pages/**` edit via path-guard — add new forked pairs to it.
+Unforking the pair removes the hazard outright, which is the better fix when
+it is available.
+
 ## Changelog — one article a week, everything else stages
 
 **Every user-facing change stages; the Monday rollup publishes.** Append to the

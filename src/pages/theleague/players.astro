@@ -1039,7 +1039,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
         </span>
       </div>
 
-      <table class="players-table" id="players-table">
+      <table class="players-table" id="players-table" data-league={theLeagueDef.slug}>
         <thead>
           <tr>
             <th class="sortable col-rank" data-sort="rank">
@@ -2485,8 +2485,20 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
   document.dispatchEvent(new CustomEvent('rankings:page-ready'));
 
   function init() {
-    // Prevent duplicate listeners on re-init (Astro view transitions)
-    const table = document.getElementById('players-table');
+    // Prevent duplicate listeners on re-init (Astro view transitions), and
+    // make sure this is OUR league's table before touching it.
+    //
+    // `init` is registered on `document`, which the ClientRouter does not
+    // replace, so a listener registered on this page keeps firing on every
+    // in-site navigation for the rest of the session. Both leagues' players
+    // pages render `#players-table` with the same `dataset.init` flag, and on
+    // the shared host (mfl.football) the nav's own league switcher emits a
+    // same-origin href — so players -> players ACROSS leagues is a swap, not a
+    // fresh document. Gated on the id alone the departing league's listener
+    // runs first on the arriving page, wires the wrong league's handlers, and
+    // then sets the shared flag, which locks the arriving league's own init out
+    // entirely. Naming the league in the selector is what separates them.
+    const table = document.querySelector('#players-table[data-league="theleague"]');
     if (!table || table.dataset.init) return;
     table.dataset.init = 'true';
 

@@ -16,23 +16,41 @@
 import { describe, it, expect } from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
+import { stripComments } from './helpers/js-source';
 
 const PAGES = [
-  ['TheLeague', 'src/pages/theleague/lineup.astro'],
-  ['the AFL', 'src/pages/afl-fantasy/lineup.astro'],
+  ['TheLeague', 'src/pages/theleague/lineup.astro', 'theleague'],
+  ['the AFL', 'src/pages/afl-fantasy/lineup.astro', 'afl-fantasy'],
 ] as const;
 
-/** Just the page's bundled controller `<script>`, never the markup or styles. */
+/** The whole page file, markup and styles included. */
+function pageSource(file: string): string {
+  return fs.readFileSync(path.join(process.cwd(), file), 'utf-8');
+}
+
+/**
+ * Just the page's bundled controller `<script>`, never the markup or styles,
+ * and with comments blanked out.
+ *
+ * Comments are blanked because every assertion below that measures WHERE
+ * something sits does it with `indexOf`. On raw text an explanatory comment
+ * quoting `getElementById('lineup-submit')` shifts those offsets and fails a
+ * correct file — that happened twice while writing the Sept 2026 hotfix, and
+ * the workaround was to reword the comment, which is the guard constraining
+ * prose. Blanking also stops a commented-out call from satisfying an
+ * assertion. `stripComments` preserves length, so offsets still map to the
+ * real file.
+ */
 function controllerScript(file: string): string {
-  const src = fs.readFileSync(path.join(process.cwd(), file), 'utf-8');
+  const src = pageSource(file);
   const start = src.indexOf('\n  <script>\n');
   const end = src.indexOf('\n  </script>', start);
   expect(start, `${file}: no bundled controller script`).toBeGreaterThan(-1);
   expect(end, `${file}: unterminated controller script`).toBeGreaterThan(start);
-  return src.slice(start, end);
+  return stripComments(src.slice(start, end));
 }
 
-describe.each(PAGES)('%s lineup page survives an in-site navigation', (_league, file) => {
+describe.each(PAGES)('%s lineup page survives an in-site navigation', (_league, file, slug) => {
   const SCRIPT = controllerScript(file);
 
   it('wires everything inside an init() registered on astro:page-load', () => {
@@ -104,8 +122,15 @@ describe.each(PAGES)('%s lineup page survives an in-site navigation', (_league, 
     // visit. init then ran its body on /rosters, `lineup-submit` answered null,
     // and `submitBtn.querySelector(...)` threw an uncaught TypeError that took
     // the whole page down. The gate has to ask the DOM, not the window.
-    const gate = SCRIPT.indexOf("if (!document.getElementById('lineup-slots')) return;");
-    expect(gate, 'init must bail when the lineup DOM is gone').toBeGreaterThan(-1);
+    const gate = SCRIPT.indexOf(`if (!document.querySelector('.lineup-page[data-league="${slug}"]')) return;`);
+    expect(gate, "init must bail when this league's lineup DOM is gone").toBeGreaterThan(-1);
+
+    // The slots list is still checked too: the controller's first ref read is a
+    // non-null assertion on it, so "right league, no slots" must bail as well.
+    expect(
+      SCRIPT.indexOf("if (!document.getElementById('lineup-slots')) return;"),
+      'the slots node must still be checked',
+    ).toBeGreaterThan(gate);
 
     // Before the first ref read, or the null deref happens anyway.
     for (const read of [
@@ -124,15 +149,25 @@ describe.each(PAGES)('%s lineup page survives an in-site navigation', (_league, 
       'the teardown must still run on the way out',
     ).toBeLessThan(gate);
   });
+
 });
 
 describe('the two lineup pages stay siblings', () => {
   it('applies the identical ClientRouter shape to both', () => {
     // These pages are near-line-identical (docs/claude/rules/lineups.md); a fix
     // that lands in one and not the other is how they drifted before.
-    const [a, b] = PAGES.map(([, file]) => controllerScript(file));
+    //
+    // The league slug is the one thing that is SUPPOSED to differ — the whole
+    // point of the cross-league gate — so it is normalised out before the
+    // comparison. Everything else still has to match line for line.
     const shapeOf = (s: string) =>
-      s.split('\n').filter((l) => /init\(\)|astro:page-load|onDeviceMotion|onMotionPermissionClick|stopRankingsWatch|getElementById\('lineup-slots'\)\) return/.test(l));
+      s
+        .split('\n')
+        .filter((l) =>
+          /init\(\)|astro:page-load|onDeviceMotion|onMotionPermissionClick|stopRankingsWatch|data-league="[^"]+"\]'\)\) return|getElementById\('lineup-slots'\)\) return/.test(l),
+        )
+        .map((l) => l.replace(/data-league="[^"]+"/g, 'data-league="<slug>"'));
+    const [a, b] = PAGES.map(([, file]) => controllerScript(file));
     expect(shapeOf(a)).toEqual(shapeOf(b));
   });
 });

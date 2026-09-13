@@ -62,6 +62,10 @@ const requestedWeek = parseInt(Astro.url.searchParams.get('week') || '', 10) || 
 const week = Math.max(1, Math.min(22, requestedWeek));
 
 const MFL_LEAGUE_ID = getLeagueBySlug('theleague')!.id;
+// Stamped on the page root so the controller below can tell THIS league's
+// lineup page from the sibling league's, which carries the same element ids.
+// See the gate in init() for why a shared id is not enough.
+const PAGE_LEAGUE_SLUG = getLeagueBySlug('theleague')!.slug;
 // Whose channel lineup the opponent line names — CBS at home, DAZN in Canada,
 // Kayo in Australia. READ, never resolved: the resolver writes preference
 // cookies, which a page that has none of its own to set must not do, and this
@@ -603,7 +607,7 @@ const ownersPollTeams = Object.values(getLeagueTeamBrands(ownersPollLeague.slug)
 ---
 
 <TheLeagueLayout title="Set Lineup">
-  <div class="lineup-page">
+  <div class="lineup-page" data-league={PAGE_LEAGUE_SLUG}>
     {ownersPollConfig.enabled && (
       <LineupBallotStrip
         client:idle
@@ -922,16 +926,29 @@ const ownersPollTeams = Object.values(getLeagueTeamBrands(ownersPollLeague.slug)
       // ---------------------------------------------------------------------------
       // State
       // ---------------------------------------------------------------------------
-      // Am I still on the lineup page? Ask a node the ROUTER REPLACED.
+      // Am I still on THIS LEAGUE's lineup page? Ask a node the ROUTER REPLACED.
+      //
       // `init` is registered on `document`, which the swap does not replace, so
       // it fires on EVERY in-site navigation for the rest of the session — and
       // `__LINEUP_DATA__` is a `window` global, so it is still this page's
       // payload after the owner leaves. That made the `!data` check below
       // unfalsifiable after the first lineup visit: init ran its body on the
-      // next page, the Submit button id resolved to null, and
+      // next page, `getElementById('lineup-submit')` answered null, and
       // `submitBtn.querySelector(...)` threw an uncaught TypeError that took
-      // the whole page down (Set Lineup -> Roster, Sept 2026). The teardown
-      // above still has to run first, so this gate goes here and not earlier.
+      // the whole page down (Set Lineup -> Roster, Sept 2026).
+      //
+      // The LEAGUE marker is what makes this a real gate and not just a shape
+      // check. Both leagues' lineup pages render `#lineup-slots`, and on the
+      // shared host (mfl.football) the nav's own league switcher emits a
+      // same-origin href — so the chevron on Set Lineup is a lineup -> lineup
+      // ClientRouter swap. Gated on the id alone, the DEPARTING league's
+      // controller passes on the ARRIVING league's DOM and both bind; their
+      // submit handlers post to different endpoints, so a dual-league owner
+      // can write their lineup into the wrong league.
+      //
+      // The teardown above still has to run first, so this gate goes here and
+      // not earlier.
+      if (!document.querySelector('.lineup-page[data-league="theleague"]')) return;
       if (!document.getElementById('lineup-slots')) return;
 
       // Re-read per load, never captured beside the imports. The `is:inline`
