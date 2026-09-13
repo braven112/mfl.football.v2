@@ -287,6 +287,48 @@ legacy CODES, so this extends an existing idea to legacy NAMES:
 - **No MFL-hosted franchise icons.** Reading an outside league's own uploaded
   icon (one anonymous `TYPE=league` read per league) is a follow-up, not this.
 
+### Revisit after release — per-team overrides, then fuzzy matching
+
+Brandon, 2026-09-13, to be worked AFTER the board ships. It supersedes the
+"exact match only, forever" reading of the rule above, and the reasoning is
+better than what shipped:
+
+1. **TheLeague and the AFL use our own crests and icons, only.** Already true
+   — rung 1 wins unconditionally — but state it as a rule rather than an
+   ordering, because everything below relaxes matching and none of it may ever
+   reach a league we run.
+2. **Every other league gets a per-team CHOICE**: an NFL club, or none. Set by
+   the owner, and auto-filled from an exact name match on first sight.
+3. **With an override in place, fuzzy matching becomes safe.** That is the
+   whole unlock. Today the rule has to be exact because a wrong mark is
+   permanent and silent; once a wrong guess is one tap from being corrected,
+   the cost of a miss collapses and a good guess is worth more than a blank.
+
+**The signal that makes fuzzy matching actually accurate is LEAGUE DENSITY,
+not the string.** If ten of twelve franchises in a league exactly match NFL
+clubs, that league is obviously using NFL names, and "Titsburgh Feelers" in it
+almost certainly means the Steelers. In TheLeague, where ZERO of sixteen match,
+no fuzzy rule should ever fire at any threshold. So the fuzzy pass is gated on
+the league's own exact-match rate — a per-league decision, computed once from
+the franchises we can already resolve, rather than a per-name judgement call.
+That also means the guard test's zero-false-positive property survives intact:
+our leagues score 0/16 and 0/24, so they never open the gate.
+
+Open, to decide when this is built:
+
+- **Whose override is it?** "Per team for each user" reads as per-USER storage,
+  so two owners in the same league could see different marks. Reasonable (it is
+  their board) but it means the same league renders differently for different
+  people, and an auto-match then has to be stored per user too, or the override
+  layer sits on top of a shared auto-match. Cheaper and more predictable: store
+  the auto-match as a derivation and only persist the OVERRIDES.
+- **Where it lives.** Redis, keyed by the MFL user id — and the key must carry
+  the league id, because both leagues have a franchise 0001 and this board is
+  the one surface that holds several leagues at once.
+- **What the density threshold is**, and whether "none" is distinguishable from
+  "not set yet" — it has to be, or an owner who deliberately cleared a mark
+  gets it auto-filled again on the next sight.
+
 ### Guard test
 
 `tests/nfl-name-match.test.ts`: asserts **zero** matches across every franchise
