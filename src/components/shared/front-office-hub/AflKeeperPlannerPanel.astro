@@ -423,6 +423,12 @@ const stripMapY = (lane: PositionLane, stackIndex: number) => stripLaneCenter(la
   }
 
   .chart-card {
+    /* A grid item's automatic min-width is its own content's min-content —
+       not 0 — regardless of any `overflow: hidden` set on a descendant
+       (that zeroing rule only applies to the grid/flex item itself). A long
+       nowrap name in .age-stats__row-name was enough to blow this card, its
+       whole grid track, and the page past the viewport width. */
+    min-width: 0;
     background: var(--content-bg, #fff);
     border-radius: 0.75rem;
     padding: 1.25rem;
@@ -562,6 +568,13 @@ const stripMapY = (lane: PositionLane, stackIndex: number) => stripLaneCenter(la
 
   .age-stats__minmax {
     flex: 1;
+    /* The actual overflow source: as a flex item of .age-stats, this box's
+       own automatic minimum width is its min-content (driven by the nowrap
+       name in the row below) unless overridden — `flex: 1` alone doesn't
+       shrink it past that. Without this, it silently grows past .age-stats
+       and the card, and the whole page scrolls sideways for the length of
+       one long player name. */
+    min-width: 0;
     display: flex;
     flex-direction: column;
     gap: 0.5rem;
@@ -581,6 +594,11 @@ const stripMapY = (lane: PositionLane, stackIndex: number) => stripLaneCenter(la
 
   .age-stats__row-name {
     flex: 1;
+    /* A flex item's default min-width is auto (its content size), which
+       overrides `overflow: hidden` below and lets a long name (e.g.
+       "Okonkwo, Chigoziem") push this row — and the whole analytics grid
+       under it — wider than the viewport instead of truncating. */
+    min-width: 0;
     color: var(--page-text, #1a1a1a);
     overflow: hidden;
     text-overflow: ellipsis;

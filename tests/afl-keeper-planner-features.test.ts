@@ -152,6 +152,25 @@ describe('the Front Office AFL panel carries the same roster analytics', () => {
     // which stays closed/de-emphasized.
     expect(extra).toMatch(/<details class="fo-afl-analytics__extra" open>/);
   });
+
+  it('the Age card can shrink a long name without pushing the page sideways', () => {
+    // A grid/flex item's automatic min-width is its own content's
+    // min-content, not 0, regardless of `overflow: hidden` set on a
+    // descendant several levels down (that zeroing rule only applies to the
+    // flex/grid item measured directly). A long real name (e.g. "Okonkwo,
+    // Chigoziem") was enough to blow .chart-card past its grid track and the
+    // whole page past the viewport on mobile — reproduced and confirmed
+    // fixed live via Playwright, since jsdom doesn't lay out flex/grid.
+    // Every box between the analytics grid and the ellipsis-truncated name
+    // needs its own min-width: 0 or the chain breaks at whichever link is
+    // missing it.
+    const chartCard = PANEL_SRC.match(/\.chart-card\s*\{[\s\S]*?\}/)?.[0] ?? '';
+    const minmax = PANEL_SRC.match(/\.age-stats__minmax\s*\{[\s\S]*?\}/)?.[0] ?? '';
+    const rowName = PANEL_SRC.match(/\.age-stats__row-name\s*\{[\s\S]*?\}/)?.[0] ?? '';
+    expect(chartCard).toMatch(/min-width:\s*0/);
+    expect(minmax).toMatch(/min-width:\s*0/);
+    expect(rowName).toMatch(/min-width:\s*0/);
+  });
 });
 
 describe('buildKeeperPlannerStats', () => {
