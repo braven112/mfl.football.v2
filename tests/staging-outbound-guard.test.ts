@@ -52,6 +52,16 @@ const CHOKE_POINTS: { file: string; why: string }[] = [
     file: 'src/utils/github-issues.ts',
     why: 'createGitHubIssue files the suggestion box into the real repo',
   },
+  {
+    file: 'src/pages/api/admin/schefter-announce.ts',
+    why:
+      'dispatches schefter-announce.yml with ref:main and dry_run:false — the ' +
+      'workflow commits the feed and posts to GroupMe with Actions secrets',
+  },
+  {
+    file: 'src/pages/api/cron/roster-sync.ts',
+    why: 'dispatches roster-sync.yml, which syncs rosters and commits to main',
+  },
 ];
 
 /**
@@ -72,6 +82,13 @@ const DIRECT_REACHES: { pattern: RegExp; owner: string; label: string }[] = [
     pattern: /api\.github\.com\/repos\/[^'"`]*\/issues/,
     owner: 'src/utils/github-issues.ts',
     label: 'GitHub issues API',
+  },
+  {
+    // A dispatch is a write one hop away: the workflow it starts commits and
+    // posts with Actions secrets. Guarding only direct calls left this open.
+    pattern: /actions\/workflows\/[^'"`]*\/dispatches/,
+    owner: 'src/pages/api/admin/schefter-announce.ts',
+    label: 'GitHub Actions workflow dispatch',
   },
   {
     // The CALL and the IMPORT, never the bare phrase. An earlier version
@@ -180,13 +197,57 @@ describe('staging outbound-write guard', () => {
     },
   );
 
-  it('the MFL write predicate treats POST and /import as writes', async () => {
+  // A bespoke check rather than a DIRECT_REACHES entry, because the generic
+  // shape cannot express it: a bare `myfantasyleague.com` rule flags 20+ files
+  // that build a URL and hand it to the guarded mflFetch, and muting those with
+  // an allowlist would hide the one case that matters. The bypass shape is
+  // narrower — a RAW fetch aimed at a MUTATING MFL endpoint.
+  it('no raw fetch() reaches a mutating MFL endpoint outside mflFetch', () => {
+    const MUTATING = /\/(import|add_drop|csetup)\b/;
+    const offenders: string[] = [];
+
+    for (const file of SOURCE_FILES) {
+      if (file.path === 'src/utils/mfl-fetch.ts') continue;
+      const lines = file.body.split('\n');
+      lines.forEach((line, i) => {
+        // `fetch(` not preceded by an identifier character, so `mflFetch(`
+        // — the guarded path — does not match.
+        if (!/(^|[^A-Za-z0-9_])fetch\(/.test(line)) return;
+        // The URL may be on the call line or the next couple.
+        const window = lines.slice(i, i + 3).join('\n');
+        if (MUTATING.test(window) && /myfantasyleague\.com/.test(window)) {
+          offenders.push(`${file.path}:${i + 1}`);
+        }
+      });
+    }
+
+    expect(
+      offenders,
+      `These raw fetch() calls target a mutating MFL endpoint, bypassing ` +
+        `mflFetch and its deployment guard:\n  ${offenders.join('\n  ')}\n\n` +
+        `Route the call through mflFetch — it is the only place the staging ` +
+        `guard can stop a write to the real league.`,
+    ).toEqual([]);
+  });
+
+  it('the MFL write predicate treats POST, /import and GET mutations as writes', async () => {
     const { isMflWrite } = await import('../src/utils/mfl-fetch');
 
     // Writes.
     expect(isMflWrite('POST', 'https://www49.myfantasyleague.com/2026/import?TYPE=salaries')).toBe(true);
     expect(isMflWrite('GET', 'https://www49.myfantasyleague.com/2026/import?TYPE=myWatchList')).toBe(true);
     expect(isMflWrite('post', 'https://api.myfantasyleague.com/2026/export?TYPE=rosters')).toBe(true);
+
+    // The one that got away first time round. MFL's own page cancels a filed
+    // waiver claim with a plain GET, and src/pages/api/waiver-claims.ts
+    // replays exactly that — so a POST-or-/import test let staging delete a
+    // real owner's claim.
+    expect(
+      isMflWrite('GET', 'https://www49.myfantasyleague.com/2026/add_drop?L=13522&F=0001&DELETE=1_1234_0000'),
+    ).toBe(true);
+    // Same shape: the Custom Waiver Order form is the only way to write
+    // waiver priority, and it is a page, not an import.
+    expect(isMflWrite('GET', 'https://www49.myfantasyleague.com/2026/csetup?L=13522&C=WAIVORD')).toBe(true);
 
     // Reads stay reads — over-blocking would break every export on staging,
     // and staging showing real data is the entire reason it exists.

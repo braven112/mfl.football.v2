@@ -24,21 +24,81 @@
  * Exit 0 = clear to promote. Exit 1 = blacked out (reason on stdout).
  */
 
-import { ptParts } from '../src/utils/nfl-week-starts.mjs';
+import { ptParts, REGULAR_SEASON_WEEKS, nflWeekStartIsoDate } from '../src/utils/nfl-week-starts.mjs';
 import { isSeasonWindowOpen } from '../src/utils/pecking-order-season-window.mjs';
 import { laborDayIsoDate } from '../src/utils/labor-day.mjs';
 import { aflNationalLeagueDraft } from '../src/utils/schedule-release.mjs';
+import { LEAGUES } from '../src/config/leagues-data.mjs';
 
 /**
- * Weekdays that carry NFL games, as JS day numbers (0 = Sunday).
+ * Weekdays that routinely carry NFL games, as JS day numbers (0 = Sunday):
+ * Thursday, Saturday, Sunday, Monday.
  *
- * Thursday, Saturday, Sunday, Monday. Saturday only carries games from ~week 15
- * on, but it is included year-round-in-season deliberately: the cost of a false
- * blackout is waiting a day, and the cost of a miss is deploying into a live
- * slate. Tuesday, Wednesday and Friday are clear — which is why Tuesday is the
- * train's day.
+ * Saturday only carries games from ~week 15 on, but is included whenever the
+ * season is open: a false blackout costs a day's wait, a miss deploys into a
+ * live slate.
+ *
+ * THIS SET IS NOT THE WHOLE ANSWER, and treating it as such was a bug. The
+ * NFL's opening week and its Thanksgiving week do not start on Thursday —
+ * 2026 week 1 is WEDNESDAY Sep 9 and week 12 is WEDNESDAY Nov 25 — so a fixed
+ * weekday list reported "clear to promote" on two live game days. CLAUDE.md
+ * says it outright: kickoff is not a derivation, read the schedule. Hence
+ * `officialWeekStartDays()` below, which adds whatever days the real calendar
+ * says a week begins on.
  */
-const GAME_WEEKDAYS = new Set([0, 1, 4, 6]);
+const ROUTINE_GAME_WEEKDAYS = new Set([0, 1, 4, 6]);
+
+/**
+ * The ISO days a season's weeks actually begin on, from the committed
+ * schedule. Derived per season rather than assumed, for the reason above.
+ *
+ * @param {number} seasonYear
+ * @returns {Set<string>}
+ */
+function officialWeekStartDays(seasonYear) {
+  const days = new Set();
+  for (let week = 1; week <= REGULAR_SEASON_WEEKS; week++) {
+    try {
+      days.add(nflWeekStartIsoDate(seasonYear, week));
+    } catch {
+      // A season with no schedule yet contributes nothing; the routine
+      // weekday set still covers it.
+    }
+  }
+  return days;
+}
+
+/**
+ * The NFL SEASON year for a calendar day — which is not the calendar year.
+ *
+ * Week 18 of the 2026 season starts 2027-01-10. Asking
+ * `isSeasonWindowOpen(2027, …)` on that day compares against a kickoff still
+ * eight months away and answers "not in season" for a live game day. The
+ * season clock turns at Labor Day, exactly as CLAUDE.md's two-clocks rule
+ * says, so resolve it that way before asking anything about the season.
+ *
+ * @param {{ iso: string, year: number }} today
+ */
+function seasonYearOf(today) {
+  return today.iso >= laborDayIsoDate(today.year) ? today.year : today.year - 1;
+}
+
+/**
+ * Every league's MFL league-year rollover, as `{ slug, month, day }`.
+ *
+ * Read from the registry, never hardcoded: TheLeague rolls on Feb 14, but the
+ * AFL and Best Ball declare `leagueYearRollover` of June 1 because their MFL
+ * leagues are created in late spring. A blackout that knew only about Feb 14
+ * would promote straight through the AFL's transition — the exact class of
+ * calendar boundary this check exists to avoid.
+ */
+function leagueRollovers() {
+  return Object.values(LEAGUES).map((league) => ({
+    slug: league.slug,
+    month: league.leagueYearRollover?.month ?? 2,
+    day: league.leagueYearRollover?.day ?? 14,
+  }));
+}
 
 const WEEKDAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
@@ -82,7 +142,7 @@ function isoOf(date) {
  * believes the JSDoc over the `return`.
  *
  * @param {Date} now
- * @returns {{ blocked: boolean, reasons: string[], date: string, weekday: string, inSeason: boolean }}
+ * @returns {{ blocked: boolean, reasons: string[], date: string, weekday: string, inSeason: boolean, seasonYear: number }}
  */
 export function resolveBlackout(now = new Date()) {
   const today = ptDay(now);
@@ -94,26 +154,44 @@ export function resolveBlackout(now = new Date()) {
   // own answer to "is the season actually being played" and is deliberately not
   // `month >= 9` — see CLAUDE.md on the Sunday that named 17 AFL teams for not
   // setting a lineup nobody could set yet.
-  const inSeason = isSeasonWindowOpen(today.year, now);
-  if (inSeason && GAME_WEEKDAYS.has(today.weekday)) {
-    reasons.push(
-      `${WEEKDAY_NAMES[today.weekday]} in season — NFL games run Thu/Sat/Sun/Mon, ` +
-        `and live scoring is the surface owners are actually watching`,
-    );
+  //
+  // The season year is resolved on the Labor Day clock first: in January the
+  // calendar year is already the NEXT one, and asking about that season reports
+  // a week-18 Sunday as the offseason.
+  const seasonYear = seasonYearOf(today);
+  const inSeason = isSeasonWindowOpen(seasonYear, now);
+
+  if (inSeason) {
+    const isWeekStart = officialWeekStartDays(seasonYear).has(today.iso);
+    if (isWeekStart) {
+      // Whatever weekday the real schedule opens this week on — Wednesday for
+      // 2026's week 1 and week 12.
+      reasons.push(
+        `${WEEKDAY_NAMES[today.weekday]} ${today.iso} is an NFL week start in the ` +
+          `${seasonYear} season schedule — games are being played today`,
+      );
+    } else if (ROUTINE_GAME_WEEKDAYS.has(today.weekday)) {
+      reasons.push(
+        `${WEEKDAY_NAMES[today.weekday]} in the ${seasonYear} season — games run ` +
+          `Thu/Sat/Sun/Mon, and live scoring is the surface owners are watching`,
+      );
+    }
   }
 
-  // 2. The MFL league-year rollover, Feb 14 at 8:45 PT.
+  // 2. Each league's MFL league-year rollover.
   //
-  // ±1 day: the rollover moves every roster, contract and cap number in the
-  // app, and the day after is when a bug in that transition surfaces. Shipping
-  // code into the middle of it makes the two indistinguishable.
-  const rolloverGap = daysBetween(today.iso, `${today.year}-02-14`);
-  if (Math.abs(rolloverGap) <= 1) {
-    reasons.push(
-      rolloverGap === 0
-        ? 'MFL league-year rollover is today (Feb 14, 8:45 PT)'
-        : `MFL league-year rollover is ${rolloverGap > 0 ? 'tomorrow' : 'yesterday'} (Feb 14)`,
-    );
+  // ±1 day: the rollover moves every roster, contract and cap number in that
+  // league, and the day after is when a bug in the transition surfaces.
+  // Shipping code into the middle of it makes the two indistinguishable.
+  //
+  // Per-league, from the registry — Feb 14 for TheLeague, June 1 for the AFL
+  // and Best Ball. One hardcoded date would sail through two of the three.
+  for (const rollover of leagueRollovers()) {
+    const iso = `${today.year}-${String(rollover.month).padStart(2, '0')}-${String(rollover.day).padStart(2, '0')}`;
+    const gap = daysBetween(today.iso, iso);
+    if (Math.abs(gap) > 1) continue;
+    const when = gap === 0 ? 'today' : gap > 0 ? 'tomorrow' : 'yesterday';
+    reasons.push(`${rollover.slug}'s MFL league-year rollover is ${when} (${iso})`);
   }
 
   // 3. Labor Day through Labor Day + 3 — the season-year rollover.
@@ -147,9 +225,15 @@ export function resolveBlackout(now = new Date()) {
           `(${aflDraft}) — draft room, broadcast and PartyKit are live`,
       );
     }
-  } catch {
-    // A derivation failure must not block a release. Say nothing and let the
-    // human check in the skill carry it.
+  } catch (err) {
+    // A safety check that could not run is NOT an all-clear. Swallowing this
+    // turned "we do not know whether today is draft day" into "today is fine",
+    // which is the opposite of what a blackout is for. Surface it as a reason
+    // so the promotion stops and a human answers the question.
+    reasons.push(
+      `could not evaluate the AFL draft date (${err?.message ?? err}) — ` +
+        `check the league calendar by hand before promoting`,
+    );
   }
 
   return {
@@ -158,6 +242,7 @@ export function resolveBlackout(now = new Date()) {
     date: today.iso,
     weekday: WEEKDAY_NAMES[today.weekday],
     inSeason,
+    seasonYear,
   };
 }
 

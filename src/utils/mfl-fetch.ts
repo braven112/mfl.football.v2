@@ -13,17 +13,37 @@
 import { assertOutboundAllowed } from './deploy-environment';
 
 /**
+ * MFL endpoints that mutate the league, whatever HTTP method reaches them.
+ *
+ * `/import` is the documented write API. The others are MFL's own web pages,
+ * which we drive by replaying their links and forms — and **they mutate on a
+ * plain GET**:
+ *
+ *   - `add_drop?…&DELETE=<round>_<add>_<drop>` cancels a filed waiver claim.
+ *     `src/pages/api/waiver-claims.ts` issues exactly that as a GET, copying
+ *     how MFL's own page links it.
+ *   - `csetup?C=WAIVORD` is the Custom Waiver Order form
+ *     (`src/utils/afl-waiver-order.ts`), the only way to write waiver priority.
+ *
+ * A method-only test misses every one of these. That is not hypothetical: the
+ * first version of this guard checked POST-or-`/import`, and a staging deploy
+ * could still have deleted a real owner's waiver claim.
+ */
+const MFL_MUTATING_PATHS = ['/import', '/add_drop', '/csetup'];
+
+/**
  * Is this call a WRITE rather than an export read?
  *
- * Two signals, because neither alone is complete: MFL's mutating endpoint is
- * `/import`, and every write is a POST. An export is a GET to `/export`. The
- * OR is deliberate — a future write shape that is POSTed to something other
- * than `/import`, or an `/import` issued as a GET, should still be caught.
- * Over-matching here costs a blocked read on staging; under-matching costs a
- * real mutation in the real league.
+ * Over-matching costs a blocked read on staging; under-matching costs a real,
+ * irreversible mutation in the real league. So the bar is deliberately low:
+ * any POST, or any URL touching a mutating endpoint above.
+ *
+ * Reads stay reads — `/export` is where every read lives, and nothing here
+ * matches it.
  */
 export function isMflWrite(method: string, url: string): boolean {
-  return method.toUpperCase() === 'POST' || /\/import(\?|$)/.test(url);
+  if (method.toUpperCase() === 'POST') return true;
+  return MFL_MUTATING_PATHS.some((path) => url.includes(path));
 }
 
 interface MflFetchOptions {

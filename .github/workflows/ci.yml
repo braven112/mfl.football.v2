@@ -10,6 +10,14 @@ on:
   # See docs/plans/staging-release-process.md.
   pull_request:
     branches: [main, staging]
+  # The staging TIP needs its own run, not just its PRs. `/promote` gates on
+  # green checks for the exact SHA it is about to fast-forward, and that SHA is
+  # usually a merge commit no PR ever built: staging-merge-down.yml writes one
+  # every time main moves (~30 bot data commits a week). Without this the gate
+  # could never be satisfied, and a PR's synthetic merge check is a different
+  # commit.
+  push:
+    branches: [staging]
   workflow_dispatch:
 
 concurrency:

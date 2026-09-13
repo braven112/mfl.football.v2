@@ -13,6 +13,7 @@
  */
 
 import type { APIRoute } from 'astro';
+import { outboundAllowed } from '../../../utils/deploy-environment';
 
 export const GET: APIRoute = async ({ request }) => {
   // Verify the request is from Vercel Cron
@@ -29,6 +30,21 @@ export const GET: APIRoute = async ({ request }) => {
     return new Response(
       JSON.stringify({ error: 'GH_PAT not configured' }),
       { status: 500, headers: { 'Content-Type': 'application/json' } },
+    );
+  }
+
+  // Same one-hop write as the announce route: this POST is harmless, but the
+  // workflow it starts syncs rosters and commits to main with Actions secrets.
+  // Staging holds the same GH_PAT.
+  if (!outboundAllowed()) {
+    return new Response(
+      JSON.stringify({
+        error: 'Workflow dispatch is disabled on this deployment.',
+        detail:
+          'Staging and preview share production credentials, so they never dispatch ' +
+          'the roster sync — run it from production or the Actions tab.',
+      }),
+      { status: 503, headers: { 'Content-Type': 'application/json' } },
     );
   }
 

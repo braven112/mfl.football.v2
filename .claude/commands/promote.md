@@ -64,31 +64,55 @@ here would paper over a broken one.
 node scripts/release-blackout.mjs
 ```
 
-Exit 0 is clear; exit 1 prints the reason. It covers, in PT: NFL game days in
-season (Thu/Sat/Sun/Mon), the Feb 14 MFL league-year rollover ±1 day, Labor Day
-through Labor Day + 3, and the AFL National League draft ±1 day.
+Exit 0 is clear; exit 1 prints every applicable reason. It covers, in PT:
+
+- **NFL game days in season** — the routine Thu/Sat/Sun/Mon, *plus whatever day
+  the real schedule opens a week on*. That second half is not decoration: 2026's
+  week 1 is a Wednesday and so is week 12, and a fixed weekday list called both
+  of them clear. The season year is resolved on the Labor Day clock first, so a
+  January week-18 Sunday is still in season.
+- **Each league's MFL league-year rollover** ±1 day, read from the registry —
+  Feb 14 for TheLeague, June 1 for the AFL and Best Ball.
+- **Labor Day through Labor Day + 3**, the season-year rollover.
+- **The AFL National League draft** ±1 day, derived per year.
 
 **One gap it cannot check.** TheLeague's own draft date lives in the
 league-events registry rather than an `.mjs` this script can import, so it is
 not mechanical. If TheLeague's draft is within a day, hold the release —
 `/promote` will not stop you.
 
+If the script reports that it *could not evaluate* a rule, that is a blackout,
+not a pass. A safety check that failed to run has told you nothing.
+
 A blackout is not a veto you route around; it is a reason to ship Wednesday
 instead. Overriding one is the user's call, made explicitly, never yours.
 
 ## Step 4: CI is green on staging's tip
 
+Pin the query to the **exact SHA** you are about to promote. Listing recent
+runs by branch is not the same check — a green run from an older commit reads
+as sufficient while the tip itself has never been built, which is precisely the
+state a merge-down commit creates.
+
 ```bash
-gh run list --branch staging --limit 5 \
-  --json conclusion,name,headSha,status
+SHA=$(git rev-parse origin/staging)
+gh api "repos/braven112/mfl.football.v2/commits/$SHA/check-runs" \
+  --jq '.check_runs[] | "\(.name)\t\(.status)\t\(.conclusion // "-")"'
 ```
 
-Every required check must be **green on `staging`'s current head SHA**, not on
-an older commit. A run that is still in progress means wait, not proceed.
+Three failure modes, all of which stop the promotion:
 
-Red CI on `staging` blocks the promotion outright. `staging` is a
-production-level branch — if its tip is broken, that is a bug already live on
-`staging.theleague.us`, and promoting it makes it live everywhere.
+- **Any conclusion other than `success`** (or `neutral`/`skipped` for a check
+  that legitimately does not apply) — red CI on `staging` is a bug already live
+  on `staging.theleague.us`, and promoting makes it live everywhere.
+- **Any check still `in_progress` or `queued`** — that means wait, not proceed.
+- **No check runs at all for this SHA** — treat as blocking, not as a pass.
+  `ci.yml` runs on pushes to `staging` precisely so the tip always has one; an
+  empty result means that job did not fire and the tip is untested.
+
+`Tests` and `Type baseline` are the two that must be green. CodeQL runs on PRs
+into `staging` rather than on the tip — deliberately, and `codeql.yml` explains
+why — so its absence here is expected, not a gap.
 
 ## Step 5: The `/release-review` GO
 
@@ -100,6 +124,32 @@ call: fix the blocking item and re-run the review, or pull the offending
 feature off `staging` and promote the rest. Never promote past a NO-GO.
 
 Filing a follow-up is a GO, not a deferred NO-GO — the review's own rule.
+
+## Step 5b: Capture the visual diffs BEFORE the fast-forward
+
+Chromatic's PR trigger is scoped to `branches: [main]`, and this command
+fast-forwards with a direct push — so **no pull request into `main` is ever
+created, and nothing here would trigger a capture.** The `push` to `main` that
+follows runs with `--auto-accept-changes`, which would then bless the week's
+visual changes as the new baseline with nobody having looked: the exact
+"visual test that certifies the bug" failure `chromatic.yml`'s own comments
+exist to prevent.
+
+So capture on `staging`'s tip, explicitly, before promoting:
+
+```bash
+gh workflow run chromatic.yml --ref staging
+```
+
+Dispatched on `staging` rather than `main`, the workflow runs plain
+`chromatic` — diffs land **pending** for a human to accept or reject in the
+Chromatic UI, which is the review this whole placement is for. Wait for it,
+review the diffs, and only promote once they are accepted. The subsequent
+`--auto-accept-changes` on `main` is then blessing snapshots that were already
+reviewed, which is what makes it safe.
+
+Skip this only when the range touches nothing in the story import closure
+(`chromatic.yml` lists it) — then there is nothing to capture.
 
 ## Step 6: Promote
 
@@ -162,3 +212,5 @@ answerable in a minute.
 - Never resolve a merge-down conflict inside this command — fix the job.
 - Never skip step 7. A release nobody looked at is a release nobody knows
   failed.
+- Never skip step 5b on a diff that renders. A direct push to `main` is the one
+  path where `--auto-accept-changes` can bless an unreviewed visual change.

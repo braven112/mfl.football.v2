@@ -35,41 +35,22 @@ import {
 import { shouldBlockIndexing } from './utils/deploy-environment';
 
 export const onRequest = defineMiddleware(async (context, next) => {
-  // Runs before the league-host rewrite so the trimmed path goes through the
-  // normal resolution afterwards, and so the URL bar gets cleaned up too
-  // (a rewrite would leave the broken URL visible and shareable). The whole
-  // decision — method gate, open-redirect guard, query forwarding — lives in
-  // resolvePunctuationRedirect so it can be unit-tested rather than grepped.
-  const punctuationRedirect = resolvePunctuationRedirect(context.request.method, context.url);
-  if (punctuationRedirect !== null) {
-    // 302, not 301: a permanent redirect is cached indefinitely by browsers,
-    // and this normalization is defensive rather than canonical. `no-store`
-    // is what actually makes it revocable — Cloudflare fronts the apex
-    // domains and has stamped its own max-age on responses regardless of
-    // status before (the NFL-logo saga), so the status code alone is not the
-    // protection it looks like.
-    return new Response(null, {
-      status: PUNCTUATION_REDIRECT_STATUS,
-      headers: { Location: punctuationRedirect, 'Cache-Control': 'no-store' },
-    });
-  }
-
-  const hostname = context.url.hostname;
-  const isLeagueHost = Boolean(HOST_TO_SLUG[hostname]);
-
-  context.locals.hideLeaguePrefix = isLeagueHost;
-
   // Keep staging and preview deployments out of search indexes.
   //
-  // A HEADER rather than a <meta> tag, and set here rather than in the
-  // layouts, because it has to cover what a layout cannot: API routes, the OG
-  // image endpoints, redirects, and any route that renders without going
-  // through TheLeagueLayout. `staging.theleague.us` is a real subdomain of a
-  // real domain, so left alone it gets crawled and becomes duplicate content
+  // A HEADER rather than a <meta> tag, and set here rather than in the layouts,
+  // because it has to cover what a layout cannot: API routes, the OG image
+  // endpoints, redirects, and any route that renders without going through
+  // TheLeagueLayout. `staging.theleague.us` is a real subdomain of a real
+  // domain, so left alone it gets crawled and becomes duplicate content
   // competing with theleague.us.
   //
   // public/robots.txt cannot do this job: one file ships with the deployment
   // and would have to serve every host the same answer.
+  //
+  // Declared ABOVE the punctuation redirect on purpose. It sat below on first
+  // write, which meant the 302 returned from that early exit carried no
+  // X-Robots-Tag — a redirect is exactly one of the responses the comment
+  // claimed to cover, and the only one that could still be crawled.
   const blockIndexing = shouldBlockIndexing(context.url);
   const stamp = (response: Response): Response => {
     // Header sets can throw on an immutable Response (one constructed from a
@@ -84,6 +65,32 @@ export const onRequest = defineMiddleware(async (context, next) => {
     }
     return response;
   };
+
+  // Runs before the league-host rewrite so the trimmed path goes through the
+  // normal resolution afterwards, and so the URL bar gets cleaned up too
+  // (a rewrite would leave the broken URL visible and shareable). The whole
+  // decision — method gate, open-redirect guard, query forwarding — lives in
+  // resolvePunctuationRedirect so it can be unit-tested rather than grepped.
+  const punctuationRedirect = resolvePunctuationRedirect(context.request.method, context.url);
+  if (punctuationRedirect !== null) {
+    // 302, not 301: a permanent redirect is cached indefinitely by browsers,
+    // and this normalization is defensive rather than canonical. `no-store`
+    // is what actually makes it revocable — Cloudflare fronts the apex
+    // domains and has stamped its own max-age on responses regardless of
+    // status before (the NFL-logo saga), so the status code alone is not the
+    // protection it looks like.
+    return stamp(
+      new Response(null, {
+        status: PUNCTUATION_REDIRECT_STATUS,
+        headers: { Location: punctuationRedirect, 'Cache-Control': 'no-store' },
+      }),
+    );
+  }
+
+  const hostname = context.url.hostname;
+  const isLeagueHost = Boolean(HOST_TO_SLUG[hostname]);
+
+  context.locals.hideLeaguePrefix = isLeagueHost;
 
   if (!isLeagueHost) return stamp(await next());
 

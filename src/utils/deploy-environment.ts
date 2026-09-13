@@ -15,6 +15,11 @@
  *   - Web push — production VAPID keys, real owners' devices
  *   - GroupMe posts
  *   - Suggestion-box GitHub issue filing
+ *   - GitHub Actions workflow dispatches — the sneakiest of the five, because
+ *     the write happens one hop away: `/api/admin/schefter-announce` dispatches
+ *     schefter-announce.yml with `ref: main` and `dry_run: false`, and THAT
+ *     workflow commits the feed and posts to GroupMe using Actions secrets.
+ *     Guarding only the direct calls would have left this open.
  *
  * A staging deploy holding production's credentials can do all four. So each
  * of those paths calls `assertOutboundAllowed()` before it reaches the
@@ -67,7 +72,8 @@ export type OutboundAction =
   | 'MFL write'
   | 'web push'
   | 'GroupMe post'
-  | 'GitHub issue';
+  | 'GitHub issue'
+  | 'workflow dispatch';
 
 /**
  * Thrown when an outbound write is attempted from a non-production deployment.

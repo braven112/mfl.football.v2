@@ -19,10 +19,18 @@ on:
   # a week later at the promotion.
   pull_request:
     branches: [main, staging]
-  # Push stays main-only on purpose: this run populates the Security tab's
-  # baseline for the default branch, and a second branch scanning into the same
-  # tab produces duplicate alerts for code that is about to fast-forward into
-  # main anyway. The PR trigger above is what actually gates a merge.
+  # Push stays main-only on purpose, and unlike ci.yml that leaves no gap.
+  #
+  # This run populates the Security tab's baseline for the default branch; a
+  # second branch scanning into the same tab produces duplicate alerts. The
+  # staging tip is still covered, because every line in it was scanned by one
+  # of the two triggers above: feature code on its PR into staging, and main's
+  # code on main's own push. A merge-down commit introduces no third kind of
+  # code — it only combines those two.
+  #
+  # ci.yml DOES need a staging push run, because unit tests can fail on a
+  # combination that neither side failed alone. Static analysis of unchanged
+  # lines cannot.
   push:
     branches: [main]
   schedule:

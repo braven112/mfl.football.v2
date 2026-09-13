@@ -29,10 +29,30 @@ describe('release blackout — NFL game days', () => {
     expect(blocked('2026-11-21'), 'Saturday').toBe(true);
   });
 
-  it('leaves Tuesday, Wednesday and Friday clear — Tuesday is the train day', () => {
+  it('leaves an ordinary Tuesday, Wednesday and Friday clear — Tuesday is the train day', () => {
     expect(blocked('2026-11-17'), 'Tuesday').toBe(false);
     expect(blocked('2026-11-18'), 'Wednesday').toBe(false);
     expect(blocked('2026-11-20'), 'Friday').toBe(false);
+  });
+
+  it('blocks the WEDNESDAY week starts the real schedule carries', () => {
+    // The bug this pins: a fixed Thu/Sat/Sun/Mon weekday set said "clear to
+    // promote" on two live game days. 2026 week 1 is Wed Sep 9 and week 12 is
+    // Wed Nov 25 (src/data/nfl/week-starts.mjs). CLAUDE.md says it directly —
+    // kickoff is not a derivation, read the schedule.
+    expect(reasonsOf('2026-11-25')).toMatch(/NFL week start/);
+    expect(blocked('2026-11-25'), 'Thanksgiving-week Wednesday').toBe(true);
+    expect(blocked('2026-09-09'), 'opening Wednesday').toBe(true);
+  });
+
+  it('resolves the season year on the Labor Day clock, so January still counts', () => {
+    // Week 18 of the 2026 season starts 2027-01-10. Asking about calendar year
+    // 2027 compares against a kickoff eight months out and calls a live game
+    // day the offseason.
+    const weekEighteen = resolveBlackout(at('2027-01-10'));
+    expect(weekEighteen.seasonYear).toBe(2026);
+    expect(weekEighteen.inSeason).toBe(true);
+    expect(weekEighteen.blocked).toBe(true);
   });
 
   it('does not treat an out-of-season Sunday as a game day', () => {
@@ -46,10 +66,20 @@ describe('release blackout — NFL game days', () => {
 });
 
 describe('release blackout — the two year-rollover clocks', () => {
-  it('blocks Feb 14 and the day either side', () => {
-    expect(reasonsOf('2027-02-13')).toMatch(/league-year rollover is tomorrow/);
-    expect(reasonsOf('2027-02-14')).toMatch(/league-year rollover is today/);
-    expect(reasonsOf('2027-02-15')).toMatch(/league-year rollover is yesterday/);
+  it("blocks TheLeague's Feb 14 rollover and the day either side", () => {
+    expect(reasonsOf('2027-02-13')).toMatch(/theleague.*rollover is tomorrow/);
+    expect(reasonsOf('2027-02-14')).toMatch(/theleague.*rollover is today/);
+    expect(reasonsOf('2027-02-15')).toMatch(/theleague.*rollover is yesterday/);
+  });
+
+  it("blocks the AFL's June 1 rollover, which is NOT Feb 14", () => {
+    // Read from the registry per league. Hardcoding Feb 14 sailed straight
+    // through the AFL and Best Ball transitions, which roll on June 1 because
+    // their MFL leagues are created in late spring.
+    expect(reasonsOf('2026-06-01')).toMatch(/afl-fantasy.*rollover is today/);
+    expect(blocked('2026-06-01')).toBe(true);
+    // And an ordinary June Tuesday stays clear.
+    expect(blocked('2026-06-16')).toBe(false);
   });
 
   it('clears two days out from Feb 14', () => {
@@ -92,12 +122,16 @@ describe('release blackout — the AFL draft', () => {
 
 describe('release blackout — shape', () => {
   it('reports every applicable reason, not just the first', () => {
-    // Labor Day is a Monday, so in a season that has begun it trips both the
-    // game-day rule and the rollover rule. A promotion held for two reasons
-    // should say both — fixing one and retrying should not surprise anyone.
-    const laborDay = resolveBlackout(at('2026-09-07'));
-    expect(laborDay.reasons.length).toBeGreaterThanOrEqual(1);
-    expect(laborDay.blocked).toBe(true);
+    // Needs a date where two rules genuinely overlap, and asserts BOTH.
+    // 2026-09-10 is Labor Day + 3 AND a Thursday in season; the earlier
+    // version used Sep 7, where only one rule applies and a
+    // `toBeGreaterThanOrEqual(1)` would have passed with a reason dropped.
+    const overlap = resolveBlackout(at('2026-09-10'));
+    expect(overlap.blocked).toBe(true);
+    const joined = overlap.reasons.join(' | ');
+    expect(joined, 'the Labor Day rollover reason').toMatch(/Labor Day \+ 3/);
+    expect(joined, 'the game-day reason').toMatch(/Thursday/);
+    expect(overlap.reasons.length).toBeGreaterThanOrEqual(2);
   });
 
   it('names the weekday and date it judged, so a wrong answer is debuggable', () => {
