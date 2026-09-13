@@ -56,7 +56,7 @@
       "type": "style-tweak",
       "summary": "The game line on <a href=\"/lineup\">Set Lineup</a> now leads with the network's logo at text size and closes on a bigger opponent helmet — the channel was reading as the headline.",
       "impact": "user",
-      "area": "rosters",
+      "area": "lineups",
       "league": "both"
     },
     {
@@ -208,7 +208,15 @@
       "type": "bug-fix",
       "summary": "Fixed a crash that blanked the next page with a red error box when you left Set Lineup for your <a href=\"/rosters\">Roster</a> or any other page.",
       "impact": "user",
-      "area": "rosters",
+      "area": "lineups",
+      "league": "both"
+    },
+    {
+      "date": "2026-09-13",
+      "type": "bug-fix",
+      "summary": "Fixed a mix-up for owners in both leagues: switching leagues from <a href=\"/lineup\">Set Lineup</a> or <a href=\"/players\">Players</a> could leave the league you just left still driving the page.",
+      "impact": "user",
+      "area": "lineups",
       "league": "both"
     },
     {

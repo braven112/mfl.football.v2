@@ -73,6 +73,7 @@ function leaguesForStagedChange(change) {
 export const AREA_LABELS = {
   'free-agents': 'Free Agents',
   'rosters': 'Rosters',
+  'lineups': 'Set Lineup',
   'navigation': 'Navigation & Routing',
   'design-system': 'Design System & Theming',
   'homepage': 'Homepage',
