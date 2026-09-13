@@ -65,9 +65,21 @@ export interface Props {
   roster: KeeperPlannerPlayer[];
   /** Future draft picks the franchise currently owns for this year. */
   draftPicks?: KeeperPlannerDraftPick[];
+  /**
+   * Render a ⋮ kebab (PlayerActionModal's Watch action) on every card/slot
+   * and self-wire the player-details modal trigger on this component's own
+   * root. OFF by default: rosters.astro's `?view=planner` tab renders this
+   * same component but wires both of those itself at the PAGE level
+   * (`.roster-page` container + no watch-list bridge at all today) — turning
+   * this on unconditionally would either double-open the details modal there
+   * (two delegated listeners on the same click) or ship a kebab with no
+   * listener behind it. The Front Office hub panel is the one caller that
+   * needs this component to be fully self-sufficient.
+   */
+  showActions?: boolean;
 }
 
-const { franchiseId, year, roster, draftPicks = [] } = Astro.props;
+const { franchiseId, year, roster, draftPicks = [], showActions = false } = Astro.props;
 
 // Position group order for the cut pool sort
 const POSITION_ORDER = ['QB', 'RB', 'WR', 'TE', 'PK', 'Def', 'DEF'];
@@ -163,6 +175,7 @@ try {
   data-franchise-id={franchiseId}
   data-year={year}
   data-keeper-limit={KEEPER_LIMIT}
+  data-show-actions={showActions ? 'true' : 'false'}
 >
   <header class="kp-intro">
     <h2 class="kp-intro__title">Keeper planner</h2>
@@ -272,6 +285,8 @@ try {
           data-card
           data-player-id={player.id}
           data-age={player.age}
+          data-team={player.team}
+          data-espn={player.espnId ?? ''}
           draggable="true"
           tabindex="0"
         >
@@ -319,6 +334,29 @@ try {
               <path d="M5 15l7-7 7 7" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />
             </svg>
           </button>
+          {showActions && (
+            <button
+              type="button"
+              class="pa-kebab"
+              data-pa-open
+              data-pa-claimable="false"
+              data-pa-id={player.id}
+              data-pa-name={player.name}
+              data-pa-pos={player.position}
+              data-pa-team={player.team}
+              data-pa-espn={player.espnId ?? ''}
+              data-pa-franchise={franchiseId}
+              data-pa-sub="On your roster"
+              aria-label={`Actions for ${player.name}`}
+              title="Player actions"
+            >
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <circle cx="12" cy="5" r="2"></circle>
+                <circle cx="12" cy="12" r="2"></circle>
+                <circle cx="12" cy="19" r="2"></circle>
+              </svg>
+            </button>
+          )}
         </li>
       ))}
     </ul>
@@ -392,6 +430,7 @@ try {
 <script>
   import { LINEUP_SLOTS, BENCH_CREDIT, slotGroupFor, type SlotGroup } from '../../utils/afl-keeper-analysis';
   import { buildRankingLookup, onRankingsChanged, COMPOSITE_IMPORT_ID } from '../../utils/rankings-lookup';
+  import { initPlayerModalTrigger } from '../../utils/player-modal-trigger';
 
   interface PlayerLookup {
     id: string;
@@ -426,6 +465,11 @@ try {
     const franchiseId = root.dataset.franchiseId || '';
     const year = Number(root.dataset.year || '0');
     const KEEPER_LIMIT = Number(root.dataset.keeperLimit || '7');
+    const showActions = root.dataset.showActions === 'true';
+    // The Front Office hub panel (the one caller that sets showActions) does
+    // not wire this itself the way rosters.astro's page-level script does
+    // for its own `.roster-page` container — see the Props comment.
+    if (showActions) initPlayerModalTrigger(root);
 
     const slotsEl = root.querySelector<HTMLElement>('[data-slots]');
     const cardsEl = root.querySelector<HTMLElement>('[data-cards]');
@@ -597,6 +641,26 @@ try {
           arrow.title = 'Send back to cut pool';
           arrow.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M19 9l-7 7-7-7" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" /></svg>';
           slot.appendChild(arrow);
+
+          if (showActions) {
+            const kebab = document.createElement('button');
+            kebab.type = 'button';
+            kebab.className = 'pa-kebab';
+            kebab.dataset.paOpen = '';
+            kebab.dataset.paClaimable = 'false';
+            kebab.dataset.paId = playerId;
+            kebab.dataset.paName = info?.name || playerId;
+            kebab.dataset.paPos = info?.position || '';
+            kebab.dataset.paTeam = card?.dataset.team || '';
+            kebab.dataset.paEspn = card?.dataset.espn || '';
+            kebab.dataset.paFranchise = franchiseId;
+            kebab.dataset.paSub = 'On your roster';
+            kebab.setAttribute('aria-label', `Actions for ${info?.name || playerId}`);
+            kebab.title = 'Player actions';
+            kebab.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg>';
+            slot.appendChild(kebab);
+          }
+
           slot.draggable = true;
           slot.dataset.playerId = playerId;
         } else {
@@ -1533,6 +1597,14 @@ try {
   .kp-arrow:hover {
     border-color: var(--color-gray-300, #9ca3af);
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  }
+
+  /* .pa-kebab's shared stylesheet (player-action-button.css, loaded by
+     whichever host mounts WatchListBridge) has no flex-shrink of its own —
+     pin it here so it holds its size next to .kp-arrow instead of getting
+     squeezed as the row's real slack, .kp-card__player, absorbs the squeeze. */
+  .keeper-planner .pa-kebab {
+    flex-shrink: 0;
   }
 
   .kp-arrow:focus-visible {

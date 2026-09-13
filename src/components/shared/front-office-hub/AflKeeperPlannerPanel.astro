@@ -27,6 +27,8 @@ import KeeperPlanner, {
   type KeeperPlannerPlayer,
   type KeeperPlannerDraftPick,
 } from '../../afl-fantasy/KeeperPlanner.astro';
+import PlayerDetailsModal from '../../theleague/PlayerDetailsModal.astro';
+import WatchListBridge from '../WatchListBridge.astro';
 import PlayerCell from '../../theleague/PlayerCell.astro';
 import CollegeLogoDarkStyles from '../../CollegeLogoDarkStyles.astro';
 import { getNFLTeamName, getNFLTeamLogo } from '../../../utils/nfl-logo';
@@ -100,7 +102,9 @@ const stripMapY = (lane: PositionLane, stackIndex: number) => stripLaneCenter(la
 
 {isOwner ? (
   <Fragment>
-    <KeeperPlanner franchiseId={franchiseId} year={year} roster={roster} draftPicks={draftPicks} />
+    <PlayerDetailsModal hideContract />
+    <WatchListBridge signedIn={isOwner} claimVerb="Claim" />
+    <KeeperPlanner franchiseId={franchiseId} year={year} roster={roster} draftPicks={draftPicks} showActions />
 
     {analytics.rosterSize > 0 && (
       <div class="fo-afl-analytics">
@@ -344,6 +348,26 @@ const stripMapY = (lane: PositionLane, stackIndex: number) => stripLaneCenter(la
     )}
   </div>
 )}
+
+<script>
+  // KeeperPlanner wires its OWN root when given `showActions` (see that
+  // component's Props comment), but the "Roster at a glance" / NFL and
+  // College Stacks markup below it is rendered by THIS component, outside
+  // KeeperPlanner's root — a separate delegated listener on its own
+  // container, matching FreeAgentNeedsCard.astro's own self-wiring.
+  import { initPlayerModalTrigger } from '../../../utils/player-modal-trigger';
+
+  function initAflAnalyticsModalTrigger() {
+    document.querySelectorAll<HTMLElement>('.fo-afl-analytics').forEach((el) => {
+      if (el.dataset.modalInit === '1') return;
+      el.dataset.modalInit = '1';
+      initPlayerModalTrigger(el);
+    });
+  }
+
+  initAflAnalyticsModalTrigger();
+  document.addEventListener('astro:page-load', initAflAnalyticsModalTrigger);
+</script>
 
 <style>
   .fo-afl-coming-soon {

@@ -23,12 +23,18 @@ import VeteranExtensionCandidates from '../../theleague/VeteranExtensionCandidat
 import FreeAgentNeedsCard from '../../theleague/FreeAgentNeedsCard.astro';
 import DraftTeamAssetsView from '../../theleague/DraftTeamAssetsView.astro';
 import DraftPicksCard from '../../theleague/DraftPicksCard.astro';
+import PlayerDetailsModal from '../../theleague/PlayerDetailsModal.astro';
+import WatchListBridge from '../WatchListBridge.astro';
 import { resolveLeaguePath } from '../../../utils/nav-utils';
 import { TARGET_ACTIVE_COUNT, RESERVE_FOR_ROOKIES } from '../../../utils/salary-calculations';
 import type { FrontOfficePlannerData } from '../../../utils/front-office-planner-data';
 
 interface Props extends FrontOfficePlannerData {
   selectedTeamId: string;
+  /** Whether the viewer is signed in as a TheLeague owner (any team — the
+   *  team switcher lets a signed-in owner browse a different team than
+   *  their own, and watching a player is a viewer-level action either way). */
+  signedIn: boolean;
 }
 
 const {
@@ -48,6 +54,7 @@ const {
   assets2027Predictions,
   asset2027TeamIds,
   selectedTeamId,
+  signedIn,
 } = Astro.props;
 
 const hideLeaguePrefix = Astro.locals.hideLeaguePrefix ?? false;
@@ -68,6 +75,9 @@ const clientConfig = {
   teams: Object.fromEntries(teamsList.map((t) => [t.id, teamMetrics[t.id]])),
 };
 ---
+
+<PlayerDetailsModal />
+<WatchListBridge signedIn={signedIn} claimVerb="Bid" />
 
 <div class="fo-planner" data-planner-phase={plannerPhase.phase}>
   <div class="planner-section planner-section--extensions">
@@ -101,7 +111,7 @@ const clientConfig = {
           data-fa-needs-team-id={team.id}
           style={`display: ${team.id === selectedTeamId ? 'block' : 'none'}`}
         >
-          <FreeAgentNeedsCard needs={freeAgentNeedsByTeam[team.id] ?? []} franchiseId={team.id} />
+          <FreeAgentNeedsCard needs={freeAgentNeedsByTeam[team.id] ?? []} franchiseId={team.id} showActions />
         </div>
       ))}
     </div>

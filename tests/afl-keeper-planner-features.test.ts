@@ -189,6 +189,59 @@ describe('the Front Office AFL panel carries the same roster analytics', () => {
   });
 });
 
+describe('the AFL Front Office panel turns on the player modal and a manage/watch kebab', () => {
+  const PANEL_SRC = readFileSync(
+    'src/components/shared/front-office-hub/AflKeeperPlannerPanel.astro',
+    'utf-8',
+  );
+
+  it('mounts PlayerDetailsModal and WatchListBridge, and turns on showActions', () => {
+    // Neither component wired itself here before: KeeperPlanner's own
+    // playerData/data-player-modal attributes had nothing listening for a
+    // click on this page, and there was no kebab at all — clicking a name
+    // did nothing.
+    expect(PANEL_SRC).toMatch(/<PlayerDetailsModal\s+hideContract\s*\/>/);
+    expect(PANEL_SRC).toMatch(/<WatchListBridge signedIn=\{isOwner\} claimVerb="Claim" \/>/);
+    expect(PANEL_SRC).toMatch(/<KeeperPlanner[\s\S]*?showActions/);
+  });
+
+  it("wires the NFL/College Stacks section's own player-modal trigger separately", () => {
+    // That markup is a sibling of <KeeperPlanner>, not a descendant, so
+    // KeeperPlanner's own (opt-in) delegated listener never sees clicks in
+    // it — this component needs its own, on its own .fo-afl-analytics root.
+    expect(PANEL_SRC).toMatch(/from '\.\.\/\.\.\/\.\.\/utils\/player-modal-trigger'/);
+    expect(PANEL_SRC).toMatch(/initPlayerModalTrigger\(el\)/);
+    expect(PANEL_SRC).toMatch(/document\.querySelectorAll<HTMLElement>\('\.fo-afl-analytics'\)/);
+  });
+});
+
+describe('KeeperPlanner showActions (kebab + modal trigger), opt-in only', () => {
+  it('defaults to off so rosters.astro (which wires the modal at the page level itself) is unaffected', () => {
+    expect(SRC).toMatch(/showActions\s*=\s*false/);
+    expect(SRC).toMatch(/data-show-actions=\{showActions \? 'true' : 'false'\}/);
+  });
+
+  it('renders a .pa-kebab on cut-pool cards only when showActions, carrying the player context', () => {
+    expect(SRC).toMatch(/\{showActions && \(/);
+    expect(SRC).toMatch(/class="pa-kebab"/);
+    expect(SRC).toMatch(/data-pa-claimable="false"/);
+    expect(SRC).toMatch(/data-pa-sub="On your roster"/);
+  });
+
+  it('calls initPlayerModalTrigger on its own root only when showActions, never unconditionally', () => {
+    expect(SRC).toMatch(/from '\.\.\/\.\.\/utils\/player-modal-trigger'/);
+    expect(SRC).toMatch(/if \(showActions\) initPlayerModalTrigger\(root\);/);
+  });
+
+  it('renderSlots() builds the same kebab for a kept player, reading team/espn off the source card', () => {
+    const renderSlots = SRC.match(/function renderSlots\(\)[\s\S]*?\n {4}\}/)?.[0] ?? '';
+    expect(renderSlots).toMatch(/if \(showActions\) \{/);
+    expect(renderSlots).toMatch(/kebab\.className = 'pa-kebab';/);
+    expect(renderSlots).toMatch(/card\?\.dataset\.team/);
+    expect(renderSlots).toMatch(/card\?\.dataset\.espn/);
+  });
+});
+
 describe('buildKeeperPlannerStats', () => {
   it('returns an empty map for a year with no committed feeds', () => {
     const stats = buildKeeperPlannerStats(1899);

@@ -66,5 +66,5 @@ const myTeam = myFranchiseId
 
 <FrontOfficeHubPage leagueSlug="theleague" myTeam={myTeam} leagueYear={plannerData.leagueYear}>
   <FrontOfficeTeamSwitcher slot="switcher" teams={plannerData.teamsList} selectedTeamId={selectedTeamId} />
-  <TheLeaguePlannerPanel {...plannerData} selectedTeamId={selectedTeamId} />
+  <TheLeaguePlannerPanel {...plannerData} selectedTeamId={selectedTeamId} signedIn={!!myFranchiseId} />
 </FrontOfficeHubPage>
