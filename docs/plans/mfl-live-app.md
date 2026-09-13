@@ -36,7 +36,7 @@ of your pocket at 10:40 on a Sunday. Same data, opposite interaction model.
 | # | Question | Decision | Why / consequence |
 |---|---|---|---|
 | 1 | Relationship to existing boards | New page, reuse the `/live-scoring` visual system | `/broadcast` and `/sunday-ticket` are untouched. New chrome, borrowed data layer. |
-| 2 | Who can sign in | Existing site owners (TheLeague / AFL / BB1) for v1 | A league-less MFL login is a later drop-in — but the session/data layer must not assume `user.leagueId` is meaningful. See **Auth**, below: there is a real gap here. |
+| 2 | Who can sign in | Existing site owners; sign in via **TheLeague** by default | Works today on `staging.mfl.football`. The MFL cookie is account-wide, so the league chosen at login does not limit what the board reads. A league-less login is a later drop-in. |
 | 3 | Board content | Scores only; tap to expand | Compact row = both totals, yet-to-play, projected final, win probability. Expanded = starter rows. Cheapest first paint, best on a phone. |
 | 4 | Default league set | **All** leagues on; toggle off in settings | Deliberately NOT the other boards' default (home on, outside off). The promise is "all your leagues", so it has to be true on first load. Cost is real — see **Fan-out**. |
 | 5 | Features in v1 | Core scores + starters, NFL games strip, scoring ticker, red-zone alerts | All four. The last two carry the per-NFL-game ESPN fan-out. |
@@ -48,45 +48,73 @@ of your pocket at 10:40 on a Sunday. Same data, opposite interaction model.
 | 11 | Branding | AFL's design language, **black where the AFL is navy** | New `data-league="mfl"` theme. AFL gold/amber accents stay. See **Branding**. |
 | 12 | Deploy | Feature branch + PR preview | `claude/multi-league-live-scoring-kimyws`, PR opened so Vercel actually builds a preview (previews are cancelled without an open PR). |
 
-## Two problems to solve before any UI
+## Before any UI — one solved, one real
 
-### Auth — the session cookie does not reach mfl.football
+### Auth — mostly already works; the apex does not
 
-This is the biggest unresolved risk and it is not a UI problem.
+**Verified live on 2026-09-13, not inferred.** An earlier draft of this plan
+called auth "the biggest unresolved risk". That was wrong on both halves and is
+corrected here.
 
-- **Session cookies are host-only.** An owner signed in at `www.theleague.us`
-  is *not* signed in at `mfl.football`. CLAUDE.md already records this as the
-  reason `leagueUrl()` must agree on one canonical host.
-- **`mfl.football/login` does not exist.** `src/pages/login.astro` is a bare
-  `301 → /theleague/login`. On the shared host that bounces a visitor into
-  TheLeague's branded login and issues a cookie for TheLeague's apex, not for
-  `mfl.football`.
-- **Login is league-scoped.** `loginToMFL(user, pass, leagueId)` resolves a
-  franchise by matching `leagueId` against the `myleagues` payload and errors
-  `Your account is not a member of league <id>` otherwise. There is no
-  "sign in and tell me my leagues" path.
+**You can sign in to the shared host today.** `staging.mfl.football/login`
+301s to `staging.mfl.football/theleague/login` (200), and `/afl-fantasy/login`
+answers too. The redirect is RELATIVE, so it never leaves the host you started
+on, and `createSessionCookie` sets `Path=/; HttpOnly; SameSite=Lax; Secure`
+with **no `Domain` attribute** — host-only to the host you signed in on, which
+is exactly what `/live` needs.
 
-Decision 2 says owners-only for v1, but that does not make this go away: an
-owner still has to be able to *sign in on this host*. Minimum viable shape:
+**Either league works as the default, and the choice is nearly cosmetic.**
+Step 1 of login posts to `https://api.myfantasyleague.com/<year>/login` — the
+ACCOUNT-wide host, not a league host — so the `MFL_USER_ID` it returns is an
+account credential that works across MFL's numbered hosts. (Evidence: one
+`secrets.MFL_USER_ID` reads `calendar` for both leagues, which live on `www49`
+and `www44`; and `readOutsideLiveSnapshot` already sends the owner cookie to
+arbitrary `league.host` values in production.) Whichever door you come through,
+`myleagues` returns the same full list.
 
-1. A real `/login` on the shared host — league-neutral chrome, MFL
-   username + password.
-2. Call the existing two-step (`/login?XML=1` → `MFL_USER_ID` cookie →
-   `export?TYPE=myleagues`) with **no target league**.
-3. Match the returned leagues against the registry. Exactly one registry
-   league → mint today's session for it. More than one (Brandon is in all
-   three) → the session picks a **primary** and the board uses the MFL cookie,
-   not `leagueId`, for everything cross-league. Zero registry leagues → v1
-   says "this app is for TheLeague/AFL owners today" (decision 2), and that
-   branch is the seam decision 2's "open it later" swaps out.
-4. `user.id` **is** the MFL cookie — that is what `fetchMyLeagues` already
-   keys on, and it is what makes the whole cross-league read work with one
-   sign-in.
+What the `leagueId` at login DOES decide, all session-local and none of it
+visible on this board: `session.leagueId` + `session.franchiseId` (the "home"
+league), which team-preference cookie is set, and a `fetchCommissionerSession`
+hop that `mfl-login.ts` itself documents as inert. AFL's login page also
+forwards a `seasonYear` from `getAflLeagueYear()` where TheLeague's forwards
+none; that only changes the year segment of the login URL.
 
-**Rule for every new module here: read the MFL cookie (`user.id`), never
-`user.leagueId`.** A board that leans on the session's league is a board that
-cannot be opened to a stranger later, and it is also just wrong — the session
-league is one of N and has no special claim on this page.
+**Decision: default to TheLeague.** It is already `DEFAULT_LEAGUE_SLUG`, and
+`/api/auth/login`'s `else setTheLeaguePreference(…)` fallback already assumes
+it. Zero code change for v1.
+
+**THE RULE THAT MAKES THAT DEFAULT SAFE — read the MFL cookie (`user.id`),
+never `user.leagueId`.** The session's league is one of N and has no special
+claim on this page. A board that leans on it is both wrong today and unable to
+open to a stranger later.
+
+#### The real blocker is DNS, not code
+
+`https://mfl.football/` returns **200 serving an unrelated 2018 "MFLaddons"
+template page** (`last-modified: Sat, 01 Sep 2018`, Cloudflare in front); every
+league path 404s there. Only `staging.mfl.football` is attached to this app.
+Pointing the apex at the Vercel project is an ops task and a prerequisite for
+the name in this plan's title — it is not something a branch can fix.
+
+#### What is still genuinely missing
+
+Small, and none of it blocks development:
+
+1. **The form always sends a leagueId.** `LoginForm.astro` defaults
+   `leagueId = DEFAULT_LEAGUE_ID` and the client reads
+   `dataset.leagueId || DEFAULT_LEAGUE_ID`, so the league-less branch never runs
+   from the UI. A stranger gets `Your account is not a member of league 13522`
+   → 401. Irrelevant while v1 is owners-only.
+2. **`leagueList[0]` is an arbitrary pick.** `loginToMFL` already supports a
+   league-less call (`const targetLeague = leagueId ? find(…) : leagueList[0]`),
+   but MFL array order is nondeterministic. Opening up means replacing that with
+   a deliberate choice — prefer a registry league in registry order, else the
+   first from `myleagues`.
+3. **`/api/auth/login`'s preference fallback is `else setTheLeaguePreference(…)`**
+   — anyone not in AFL/BB1 gets TheLeague's cookie, including someone with no
+   TheLeague team.
+4. **Cosmetic:** the login wears `TheLeagueLayout` and redirects to
+   `/theleague`. Phase 1 gives it MFL Live chrome and a `/live` return path.
 
 ### Fan-out — "all leagues on" is unbounded
 
@@ -232,12 +260,13 @@ manifest.** MFL Live needs its own (`/live/manifest.webmanifest`, distinct
 
 ## Phases
 
-**Phase 0 — auth on the shared host.** League-neutral `/login`, league-less
-MFL sign-in, session minted for `mfl.football`. Nothing else can be tested
-without it. Guard test: the shared host never serves a league's manifest, and
-`/live` 302s to `/login` when signed out.
+**Phase 0 — not a blocker.** Sign-in on the shared host already works via
+`/theleague/login`; develop against `staging.mfl.football`. Two items carry
+forward rather than gating: point the apex at the Vercel project (ops), and
+guard that the shared host never serves a league's manifest and that `/live`
+302s to a login when signed out.
 
-**Phase 1 — the shell.** `MflAppLayout`, `data-league="mfl"` tokens in both
+**Phase 1 (start here) — the shell.** `MflAppLayout`, `data-league="mfl"` tokens in both
 `tokens.css` and `tokens-dark.css`, the cross-league nav, the manifest. Ship
 this with a placeholder board so the branding can be reviewed on a preview
 before any data work lands.
