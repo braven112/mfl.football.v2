@@ -216,9 +216,17 @@ league's crest. That asset does not exist yet — see **Open**.
 2. **Any franchise whose name IS an NFL team** — that club's logo and brand
    colors from this repo. See below.
 3. **Everything else** — text only. League and franchise names from the
-   `myleagues` payload, a neutral surface, no invented colour and no generated
-   monogram. This is already how `broadcast-board.ts` treats an outside league;
-   reuse that path, do not write a second one.
+   `myleagues` payload, up to two initials on a neutral field, and **no
+   invented colour**: one shared grey, nothing derived from the name. A hue
+   picked by hashing a string looks like a brand and is not one — an owner
+   would reasonably read it as their team's colour, and it would change the
+   day they renamed. The two sides of a matchup are separated by
+   `resolveTeamColorPair` off that one neutral, which is a legibility decision
+   rather than a claim about anybody's colours.
+
+   (An earlier draft of this line said "no generated monogram". Initials are
+   a text LABEL, which is what this rung is — the ban is on fabricating a
+   crest or a brand hue, not on writing the team's own name short.)
 
 Rung 1 always wins. A TheLeague franchise called "Cowboys" keeps its own crest.
 
