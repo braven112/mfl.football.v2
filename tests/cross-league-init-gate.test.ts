@@ -47,10 +47,28 @@ interface GuardedPage {
   label: string;
   file: string;
   slug: string;
-  /** The exact gate selector this page's init must use. */
+  /**
+   * The gate AS THE INITIALIZER WRITES IT — the whole statement, not just the
+   * selector. Matching the selector alone would stay green if a regression put
+   * the bare gate back in `init()` and left an unused `querySelector` sitting
+   * somewhere else in the file.
+   */
   gate: string;
-  /** Markup proving the league marker is rendered on the gated element. */
+  /**
+   * The league-blind form that must NOT appear. Scoped to the initializer's
+   * own statement, because these files legitimately reference the same element
+   * elsewhere (e.g. players.astro's module-scope `OWN_TABLE`).
+   */
+  forbidden?: string;
+  /** The exact marker attribute, expression included, as the markup writes it. */
   marker: string;
+  /**
+   * The frontmatter binding proving that marker expression resolves to THIS
+   * page's slug. Without it the marker check passes on a page that renders the
+   * SIBLING's slug — which would make the gate never match and ship the page
+   * inert, the opposite failure but just as dead.
+   */
+  markerBinding: string;
 }
 
 const PAIRS: Record<string, GuardedPage[]> = {
@@ -59,15 +77,17 @@ const PAIRS: Record<string, GuardedPage[]> = {
       label: 'TheLeague',
       file: 'src/pages/theleague/lineup.astro',
       slug: 'theleague',
-      gate: `document.querySelector('.lineup-page[data-league="theleague"]')`,
-      marker: '<div class="lineup-page" data-league={',
+      gate: `if (!document.querySelector('.lineup-page[data-league="theleague"]')) return;`,
+      marker: '<div class="lineup-page" data-league={PAGE_LEAGUE_SLUG}>',
+      markerBinding: `const PAGE_LEAGUE_SLUG = getLeagueBySlug('theleague')!.slug;`,
     },
     {
       label: 'the AFL',
       file: 'src/pages/afl-fantasy/lineup.astro',
       slug: 'afl-fantasy',
-      gate: `document.querySelector('.lineup-page[data-league="afl-fantasy"]')`,
-      marker: '<div class="lineup-page" data-league={',
+      gate: `if (!document.querySelector('.lineup-page[data-league="afl-fantasy"]')) return;`,
+      marker: '<div class="lineup-page" data-league={PAGE_LEAGUE_SLUG}>',
+      markerBinding: `const PAGE_LEAGUE_SLUG = getLeagueBySlug('afl-fantasy')!.slug;`,
     },
   ],
   Players: [
@@ -75,15 +95,19 @@ const PAIRS: Record<string, GuardedPage[]> = {
       label: 'TheLeague',
       file: 'src/pages/theleague/players.astro',
       slug: 'theleague',
-      gate: `document.querySelector('#players-table[data-league="theleague"]')`,
-      marker: '<table class="players-table" id="players-table" data-league={',
+      gate: `const table = document.querySelector('#players-table[data-league="theleague"]');`,
+      forbidden: `const table = document.getElementById('players-table');`,
+      marker: '<table class="players-table" id="players-table" data-league={theLeagueDef.slug}>',
+      markerBinding: `const theLeagueDef = getLeagueBySlug('theleague');`,
     },
     {
       label: 'the AFL',
       file: 'src/pages/afl-fantasy/players.astro',
       slug: 'afl-fantasy',
-      gate: `document.querySelector('#players-table[data-league="afl-fantasy"]')`,
-      marker: '<table class="players-table" id="players-table" data-league={',
+      gate: `const table = document.querySelector('#players-table[data-league="afl-fantasy"]');`,
+      forbidden: `const table = document.getElementById('players-table');`,
+      marker: '<table class="players-table" id="players-table" data-league={aflLeague.slug}>',
+      markerBinding: `const aflLeague = getLeagueBySlug('afl-fantasy')!;`,
     },
   ],
 };
@@ -120,6 +144,14 @@ describe.each(Object.entries(PAIRS))('%s — cross-league init gate', (_pair, pa
       expect(code, `${page.file}: the init gate must name its own league`)
         .toContain(page.gate);
 
+      // The league-blind form must be gone from the initializer, or a
+      // regression could satisfy the check above with an unused selector
+      // parked elsewhere in the file while `init()` kept the old gate.
+      if (page.forbidden) {
+        expect(code, `${page.file}: the initializer must not keep the league-blind gate`)
+          .not.toContain(page.forbidden);
+      }
+
       // And never a sibling's — that is the bug this guard exists for.
       for (const other of REGISTRY_SLUGS) {
         if (other === page.slug) continue;
@@ -128,11 +160,16 @@ describe.each(Object.entries(PAIRS))('%s — cross-league init gate', (_pair, pa
       }
 
       // The marker has to be RENDERED, or the gate never matches and the page
-      // ships inert. `data-league={` (an expression, not a quoted literal) is
-      // also what keeps the slug coming from the registry — CLAUDE.md's
-      // "never hardcode league constants" rule.
-      expect(read(page.file), `${page.file}: the gated element must carry its league marker`)
+      // ships inert. The expression is matched exactly, not just its `{`
+      // prefix, so the sibling's expression cannot be swapped in unnoticed.
+      const markup = read(page.file);
+      expect(markup, `${page.file}: the gated element must carry its league marker`)
         .toContain(page.marker);
+
+      // …and that expression has to resolve to THIS page's slug, from the
+      // registry. This is the half the marker check alone cannot see.
+      expect(markup, `${page.file}: the marker must be bound to its own registry entry`)
+        .toContain(page.markerBinding);
     },
   );
 });
