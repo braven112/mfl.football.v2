@@ -467,99 +467,171 @@ export default function LiveBroadcast({ pageData }: Props) {
   const [sound, setSound] = useState(data.sound);
 
   /**
-   * Fullscreen, and whether the viewer has touched anything lately.
+   * Whether the viewer has touched anything lately.
    *
-   * The chrome was hover-gated, which is correct on a laptop and wrong on the
-   * screen this page exists for: a television's cursor is PARKED over the page
-   * and never leaves, so `:hover` is permanently true and three buttons sit on
-   * the board all afternoon. Gate on idleness instead, the way a video player
-   * does — hidden while you watch, back the moment you move.
-   *
-   * Runs in EVERY state, not only fullscreen. A television browser is often
-   * just maximised and never enters the Fullscreen API, so gating on it left
-   * the chips up through a reveal on a real TV. The stylesheet keeps the hide
-   * inside `(hover: hover) and (pointer: fine)` so a touch device — which was
-   * always meant to keep its chrome — is unaffected.
-   *
-   * `isFullscreen` is still tracked because the root carries the class and the
-   * Fullscreen button reads the state; no CSS rule gates on it any more.
+   * This drives the CURSOR and nothing else now — the board carries no
+   * controls at all (see the stylesheet's "No chrome on the board"). A cursor
+   * parked over a television is a bright dot burning into a dark panel for
+   * eight hours, so it goes away with everything else and comes back on a real
+   * input EVENT. Never on `:hover`, which a resting cursor holds true all
+   * afternoon — that was one of the three reasons the chrome kept shipping
+   * visible.
    */
-  const [isFullscreen, setIsFullscreen] = useState(false);
-  const [idle, setIdle] = useState(false);
+  const [awake, setAwake] = useState(false);
 
-  useEffect(() => {
-    const onChange = () => setIsFullscreen(Boolean(document.fullscreenElement));
-    onChange();
-    document.addEventListener('fullscreenchange', onChange);
-    return () => document.removeEventListener('fullscreenchange', onChange);
+  /**
+   * The board's one AudioContext, unlocked by a real gesture.
+   *
+   * The sting used to build a NEW `AudioContext` per moment on the claim that
+   * "autoplay policy is satisfied by the user having turned sound on". It is
+   * not: the preference is a cookie read at render, and a preference carried
+   * from a previous document is not transient activation. A context
+   * constructed without activation starts SUSPENDED, `osc.start()` schedules
+   * against a clock that never advances, and nothing throws — so the board
+   * appeared to work and made no sound at all, which is exactly what it did.
+   *
+   * One context, created on the first real input and resumed then and before
+   * every sting. If nobody ever touches the television there is no sound;
+   * that is a browser rule, not something to paper over, and the setup screen
+   * says so rather than leaving it a mystery.
+   */
+  const audioRef = useRef<AudioContext | null>(null);
+
+  const unlockAudio = useCallback(() => {
+    try {
+      const Ctx =
+        window.AudioContext ??
+        (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+      if (!Ctx) return;
+      if (!audioRef.current) audioRef.current = new Ctx();
+      if (audioRef.current.state === 'suspended') void audioRef.current.resume().catch(() => {});
+    } catch {
+      /* a board that cannot make a noise is still a board */
+    }
+  }, []);
+
+  /** Persist the sound choice, so a television left on remembers it. */
+  const rememberSound = useCallback((next: boolean) => {
+    try {
+      document.cookie = `bc_sound=${next ? '1' : '0'}; path=/; max-age=${180 * 24 * 60 * 60}; samesite=lax`;
+    } catch {
+      /* a board that cannot remember is still a board */
+    }
   }, []);
 
   useEffect(() => {
-    // Runs ALWAYS, not only in fullscreen. A television browser is often just
-    // maximised rather than in the Fullscreen API, so `isFullscreen` is false
-    // there and gating on it left the chrome up through a reveal on a real TV.
     let timer = 0;
-
-    /**
-     * Touch WAKES the chrome but never starts the countdown.
-     *
-     * A tap is the whole interaction on a phone, so a countdown armed by one
-     * hides the controls three seconds later — and `pointer-events: none` then
-     * spends the next tap waking the board instead of pressing the button
-     * under the finger. Two taps for every control, forever, after the first.
-     * Arming only on mouse, pen and keys means a touch device never goes idle
-     * at all, which is the right answer for a surface whose controls are its
-     * only way in.
-     *
-     * A television arms on the `keydown` a remote produces and on the
-     * `pointermove` a cursor produces; the one device this could strand is a
-     * TV that emits nothing but synthetic touch, and there the failure is that
-     * the chrome STAYS — visible controls, not unreachable ones. That is the
-     * safe side to be wrong on, and it is why this reads the event rather than
-     * a `(pointer: fine)` media query: a query that guessed wrong about the
-     * hardware failed the other way.
-     */
-    const isTouch = (e: Event) =>
-      e.type === 'touchstart' ||
-      ('pointerType' in e && (e as PointerEvent).pointerType === 'touch');
-
-    const wake = (e: Event) => {
-      setIdle(false);
+    const wake = () => {
+      setAwake(true);
       window.clearTimeout(timer);
-      if (isTouch(e)) return;
-      // Long enough to find the button you reached for, short enough that the
-      // board is clean again before the next play.
-      timer = window.setTimeout(() => setIdle(true), 3000);
+      timer = window.setTimeout(() => setAwake(false), 3000);
     };
-    // NOT armed on mount, deliberately. Arming it here hid the controls three
-    // seconds after load on a device nobody had touched. The countdown starts
-    // at the first real interaction, so a viewer who has never reached for the
-    // chrome keeps it, and a television — where you always press something to
-    // set the board up — loses it three seconds after you stop.
-    //
-    // `pointermove` covers mouse and trackpad; `touchstart` and `keydown` are
-    // the two ways a television or a phone reaches this at all. All four are
-    // listened for; only what `isTouch` rejects starts the clock.
+    // Any real input is also the activation the audio clock needs. Doing it
+    // here rather than in a button handler is the point: there is no button.
+    const onInput = () => {
+      wake();
+      unlockAudio();
+    };
+    // `pointermove` covers mouse and trackpad; `pointerdown`, `touchstart` and
+    // `keydown` are the ways a television, a remote or a phone reaches this.
     for (const ev of ['pointermove', 'pointerdown', 'touchstart', 'keydown'] as const) {
-      window.addEventListener(ev, wake, { passive: true });
+      window.addEventListener(ev, onInput, { passive: true });
     }
     return () => {
       window.clearTimeout(timer);
       for (const ev of ['pointermove', 'pointerdown', 'touchstart', 'keydown'] as const) {
-        window.removeEventListener(ev, wake);
+        window.removeEventListener(ev, onInput);
       }
     };
-  }, []);
+  }, [unlockAudio]);
+
+  /**
+   * The board's only controls, and they occupy no pixels.
+   *
+   * A keypress carries transient activation, which is what lets `F` request
+   * fullscreen where the setup screen's link cannot — fullscreen does not
+   * survive a navigation, so it has to be asked for from inside this document.
+   * Everything else about the board is chosen up front on the setup screen.
+   *
+   * Single letters only, and never while something is focused for typing: this
+   * page has no text input today, but a shortcut that eats a keystroke is the
+   * kind of thing that is discovered much later.
+   */
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+      const el = document.activeElement as HTMLElement | null;
+      if (el && (el.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName))) return;
+
+      const key = e.key.toLowerCase();
+      if (key === 'f') {
+        e.preventDefault();
+        const root = document.querySelector('.lbc');
+        if (!document.fullscreenElement) void root?.requestFullscreen?.().catch(() => {});
+        else void document.exitFullscreen().catch(() => {});
+      } else if (key === 'm') {
+        e.preventDefault();
+        setSound((prev) => {
+          const next = !prev;
+          rememberSound(next);
+          // Announce it, or the strip above keeps its old label and computes
+          // its next click from a stale value — a toggle that does not toggle.
+          document.dispatchEvent(
+            new CustomEvent('lbc:sound', { detail: { on: next, from: 'board' } }),
+          );
+          return next;
+        });
+        unlockAudio();
+      } else if (key === 'l') {
+        // Back to the setup screen. It is the only way off the board now that
+        // the Leagues link is gone, and it stays a KEY rather than a chip for
+        // the same reason the other two do: nothing may occupy pixels here.
+        e.preventDefault();
+        window.location.href = `${data.pathname}?picker=1`;
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [data.pathname, rememberSound, unlockAudio]);
+
+  /**
+   * The strip above the board and the board are on the same page, so the
+   * toggle up there has to reach the island — otherwise the cookie changes and
+   * nothing happens until a reload, which on a television is never.
+   */
+  useEffect(() => {
+    const onSound = (e: Event) => {
+      const detail = (e as CustomEvent<{ on: boolean; from?: string }>).detail;
+      // Our own announcement, bounced back off the document.
+      if (detail?.from === 'board') return;
+      if (typeof detail?.on === 'boolean') setSound(detail.on);
+      // The click that produced this IS the activation the audio clock needs.
+      unlockAudio();
+    };
+    document.addEventListener('lbc:sound', onSound);
+
+    // The strip sits ABOVE this island and is clickable before it hydrates, so
+    // a fast click writes the cookie and dispatches into nothing. `data.sound`
+    // was read at RENDER and can already be stale by the time we mount; the
+    // cookie cannot be. Reconcile against it once.
+    const m = document.cookie.match(/(?:^|;\s*)bc_sound=([01])/);
+    if (m) setSound(m[1] === '1');
+
+    return () => document.removeEventListener('lbc:sound', onSound);
+  }, [unlockAudio]);
 
   useEffect(() => {
     if (!sound || !current || current.side !== 'mine') return;
     // A short synthesized sting rather than an asset: there is no audio file
-    // in the repo to ship, autoplay policy is satisfied by the user having
-    // turned sound on, and a failure here must never break the board.
+    // in the repo to ship, and a failure here must never break the board.
+    //
+    // Reuses the ONE context and resumes it first. A context that is still
+    // suspended here — nobody has touched the television — plays nothing, and
+    // that is the honest outcome rather than a silent pretence of sound.
+    const ctx = audioRef.current;
+    if (!ctx) return;
     try {
-      const Ctx = window.AudioContext ?? (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
-      if (!Ctx) return;
-      const ctx = new Ctx();
+      if (ctx.state === 'suspended') void ctx.resume().catch(() => {});
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
       osc.type = 'triangle';
@@ -571,7 +643,16 @@ export default function LiveBroadcast({ pageData }: Props) {
       osc.connect(gain).connect(ctx.destination);
       osc.start();
       osc.stop(ctx.currentTime + 0.52);
-      osc.onended = () => void ctx.close().catch(() => {});
+      // The context is NOT closed here — it is the board's one context and
+      // closing it would un-unlock the audio for every later moment.
+      osc.onended = () => {
+        try {
+          osc.disconnect();
+          gain.disconnect();
+        } catch {
+          /* already torn down */
+        }
+      };
     } catch {
       /* a board that cannot make a noise is still a board */
     }
@@ -634,7 +715,7 @@ export default function LiveBroadcast({ pageData }: Props) {
 
   return (
     <main
-      className={`lbc${isStale ? ' is-stale' : ''}${isFullscreen ? ' is-fullscreen' : ''}${idle ? ' is-idle' : ''}`}
+      className={`lbc is-board${isStale ? ' is-stale' : ''}${awake ? ' is-awake' : ''}`}
       style={rootStyle}
       aria-label="Live scoring broadcast"
     >
@@ -693,42 +774,13 @@ export default function LiveBroadcast({ pageData }: Props) {
 
       <RedZoneBanner alerts={poll.redZone} />
 
-      <div className="lbc__chrome">
-        {/* A LINK, not a button: the picker is a server-rendered screen, and a
-            television browser may have no pointer to drive client state with. */}
-        <a className="lbc__chrome-link" href={`${data.pathname}?picker=1`}>
-          Leagues
-        </a>
-        <button
-          type="button"
-          onClick={() => {
-            const next = !sound;
-            setSound(next);
-            // Persist it. The cookie is not httpOnly precisely so the board can
-            // remember this without a round trip — a television is opened and
-            // walked away from, and a preference that silently reverts on the
-            // next reload is not a preference.
-            try {
-              document.cookie = `bc_sound=${next ? '1' : '0'}; path=/; max-age=${180 * 24 * 60 * 60}; samesite=lax`;
-            } catch {
-              /* a board that cannot remember is still a board */
-            }
-          }}
-          aria-pressed={sound}
-        >
-          {sound ? 'Sound on' : 'Sound off'}
-        </button>
-        <button
-          type="button"
-          onClick={() => {
-            const el = document.querySelector('.lbc');
-            if (!document.fullscreenElement) void el?.requestFullscreen?.().catch(() => {});
-            else void document.exitFullscreen().catch(() => {});
-          }}
-        >
-          Fullscreen
-        </button>
-      </div>
+      {/* No Leagues / Sound / Fullscreen chips. They lived here, at the
+          bottom-left, and shipped visible on a real television three times
+          running — see the stylesheet's "No chrome on the board" for the three
+          separate reasons a conditional hide kept losing. They are on the
+          setup screen now (`?picker=1`), which is where the viewer already is
+          before casting this to a TV, and `F` / `M` reach fullscreen and
+          sound from here without occupying a pixel. */}
 
       {(status === 'error' || isStale || fetchedAt === 0) && (
         <p className={`lbc__status${status === 'error' ? ' is-error' : ''}`}>

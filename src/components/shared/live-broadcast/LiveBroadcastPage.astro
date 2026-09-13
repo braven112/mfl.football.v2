@@ -17,6 +17,7 @@
  */
 import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
 import LiveBroadcast from './LiveBroadcast';
+import BroadcastControls from './BroadcastControls.astro';
 import { assembleBroadcastBoard, toPageData } from '../../../utils/broadcast-board';
 import {
   broadcastHref,
@@ -124,36 +125,25 @@ const title = `Live Broadcast — Week ${week}`;
   wantsPicker ? (
     <main class="lbc" aria-label="Live scoring broadcast">
       <div class="lbc-setup">
-        <h1>Pick the leagues this TV watches</h1>
-        <p class="lbc-saver__sub">
-          Your scores and your opponents' will take the screen as they happen.
-          Tap a league to add or remove it.
-        </p>
-        <ul class="lbc-setup__list">
-          {chips.map((chip) => (
-            <li>
-              {/* A LINK, so it works with no JavaScript on a TV browser. The
-                  selected state is `aria-current`, not `aria-pressed`, which
-                  is not valid on an anchor. */}
-              <a class="lbc-setup__chip" href={chip.href} aria-current={chip.on ? 'true' : undefined}>
-                {chip.name}
-              </a>
-            </li>
-          ))}
-        </ul>
-        {board.enabled.length > 0 && (
-          <p><a class="lbc-setup__chip" href={doneHref}>Done — show the board</a></p>
-        )}
-        {board.leagues.length === 0 && (
-          <p class="lbc-saver__sub">
-            We could not reach MyFantasyLeague to list your leagues. The board will
-            still show the league you are signed in to.
-          </p>
-        )}
+        <BroadcastControls
+          chips={chips}
+          sound={sound}
+          doneHref={board.enabled.length > 0 ? doneHref : undefined}
+          variant="setup"
+          empty={board.leagues.length === 0}
+        />
       </div>
     </main>
   ) : (
-    <LiveBroadcast client:load pageData={JSON.stringify(pageData)} />
+    <Fragment>
+      {/* ABOVE the board, in normal page flow — never over it. The controls
+          used to float at the board's bottom-left and covered the scores; on
+          a television the page is scrolled to the board and this strip is
+          simply off the top of the picture, while on a laptop or phone it is
+          the obvious place to change leagues. */}
+      <BroadcastControls chips={chips} sound={sound} variant="strip" />
+      <LiveBroadcast client:load pageData={JSON.stringify(pageData)} />
+    </Fragment>
   )
 }
 </TheLeagueLayout>

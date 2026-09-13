@@ -1453,94 +1453,150 @@
   white-space: nowrap;
 }
 
-/* ── Chrome ────────────────────────────────────────────────────────────────
-   Hover-gated, and the hide rule lives inside the pointer query so a touch
-   device never loses the only way out of fullscreen. `:hover` and
-   `:focus-visible` are SEPARATE rules, never one selector list — one
-   unsupported pseudo-class invalidates a whole list. */
-/*
- * Bottom-LEFT, not top-right.
+/* ── No chrome on the board ────────────────────────────────────────────────
  *
- * Top-right put two buttons directly on top of the first panel's scores, and
- * on a touch device the hover rule below never applies — so they sat there
- * permanently covering the thing the board exists to show. Bottom-left is the
- * only corner with nothing in it: the freshness pill owns bottom-right.
- */
-.lbc__chrome {
-  position: absolute;
-  bottom: 1vh;
-  left: 1vw;
-  z-index: 5;
-  display: flex;
-  gap: 0.5vw;
-}
+ * There are no Leagues / Sound / Fullscreen chips on this screen, and that is
+ * the design rather than an omission. Three attempts to HIDE them all shipped
+ * them visible on a real television, for three different reasons — the
+ * `opacity: 0` lived inside `@media (hover: hover) and (pointer: fine)` so a
+ * coarse-pointer set-top box never received it; on a fine-pointer TV
+ * `.lbc:hover` was permanently true because the cursor is parked on the page
+ * and never leaves; and the JS idle timer needed an interaction a remote may
+ * never deliver. Every one of those was a conditional hide over a VISIBLE
+ * default, which is the shape that keeps failing.
+ *
+ * So the controls moved to the setup screen (`?picker=1`), which is where you
+ * already are before you cast this to a television — leagues, sound, and the
+ * keyboard shortcuts, chosen once, up front. The board itself is output only.
+ * On the board, `F` toggles fullscreen and `M` toggles sound: a keypress is
+ * transient activation, so it can request fullscreen where a link cannot, and
+ * a shortcut occupies no pixels that a burn-in-prone panel has to hold for
+ * eight hours.
+ *
+ * Do not add a control to this file. If one is needed, it belongs on the
+ * setup screen. */
 
-.lbc__chrome a,
-.lbc__chrome button {
-  min-height: 44px;
-  min-width: 44px;
-  padding: 0 1vw;
-  border-radius: 999px;
-  border: 1px solid var(--lbc-hairline);
-  background: rgba(0, 0, 0, 0.55);
-  color: var(--lbc-text);
-  font-size: max(2.2vh, 0.75rem);
-  font-weight: 600;
-  cursor: pointer;
-  text-decoration: none;
-  display: inline-flex;
-  align-items: center;
-}
+/* The pointer is the last piece of chrome, and it gets the same treatment: a
+   cursor parked over a television is a burn-in risk and a bright dot on a dark
+   board. It reappears whenever the island sees a real input EVENT — never on
+   `:hover`, which a resting cursor holds true all afternoon.
 
-@media (hover: hover) and (pointer: fine) {
-  .lbc__chrome {
-    opacity: 0;
-    transition: opacity 200ms ease;
-  }
+   `.is-board` is load-bearing, not decoration. The SETUP SCREEN is also a
+   `.lbc` (a `<main>`, for the dark surface below), and it never mounts the
+   island — so nothing there ever sets `is-awake` and a bare
+   `.lbc:not(.is-awake)` hid the cursor across the entire league picker, where
+   every control is a pointer target. Only the board itself carries
+   `is-board`.
 
-  .lbc:hover .lbc__chrome {
-    opacity: 1;
-  }
-
-  .lbc__chrome:focus-within {
-    opacity: 1;
-  }
-}
-
-/* Idle: the board and nothing else.
-
-   Gated on IDLENESS ALONE — no `:fullscreen` conjunct and no pointer query,
-   and both omissions are deliberate.
-
-   No fullscreen, because a television browser is frequently just MAXIMISED
-   and never enters the Fullscreen API: `document.fullscreenElement` is null,
-   so that conjunct never matched and the chips sat on the board through a
-   reveal on a real TV.
-
-   No pointer query either, even though the first correction added one to stop
-   a phone hiding its controls untouched. That fix depended on a television
-   reporting `hover: hover` / `pointer: fine`, which is an assumption about
-   someone else's hardware and not a measurement — and a TV that reports a
-   coarse pointer would have kept the chips forever. The phone is protected in
-   the ISLAND instead, by not arming the idle timer until the viewer has
-   actually interacted once; see `LiveBroadcast.tsx`. That holds whatever the
-   device reports. */
-.lbc.is-idle .lbc__chrome {
-  opacity: 0;
-  pointer-events: none;
-}
-
-/* ...unless something in it has keyboard focus. Has to out-specify the rule
-   above, which the plain `:focus-within` further up does not — otherwise a
-   keyboard user who tabbed to a button watches it disappear three seconds
-   later while still holding focus. */
-.lbc.is-idle .lbc__chrome:focus-within {
-  opacity: 1;
-  pointer-events: auto;
-}
-
-.lbc.is-idle {
+   A plain second class rather than `:has(.lbc-setup)`: an unsupported
+   selector invalidates the whole rule, and this one must not silently stop
+   protecting an eight-hour panel. */
+.lbc.is-board:not(.is-awake) {
   cursor: none;
+}
+
+/* ── The controls strip, ABOVE the board ───────────────────────────────────
+ *
+ * Normal page flow, never `position: absolute` over the board. That is the
+ * whole point: a control that OVERLAYS the scores covers them, and covering
+ * them is what four rounds of hiding chips were trying and failing to avoid.
+ * Above the board it costs the scores nothing, and on a television — where the
+ * page is scrolled to the board or the board is fullscreen — it is simply not
+ * in the picture.
+ *
+ * Dark like the board rather than themed like the page: this file consumes no
+ * colour token at all (every one of them either inverts under `html.dark` or
+ * is floored against a surface this page does not have), and a strip attached
+ * to the board should read as part of it in either theme. */
+.lbc-controls--strip {
+  /* Its OWN palette. `.lbc-setup__chip` reads `--lbc-panel`, `--lbc-hairline`
+     and `--lbc-text`, which are declared on `.lbc` — and this strip is a
+     SIBLING of the board, not a descendant, so inside it every one of those
+     `var()`s was invalid at computed-value time: the chips lost their
+     background and border entirely and `[aria-current]` stopped marking the
+     selected league. Redeclaring them here is what lets the chip class be
+     reused rather than forked. */
+  --lbc-panel: #0b1220;
+  --lbc-panel-2: #121c2e;
+  --lbc-hairline: rgba(255, 255, 255, 0.12);
+  --lbc-text: #ebebeb;
+  --lbc-text-faint: rgba(255, 255, 255, 0.52);
+
+  /* ONE compact row, in rem — never the setup screen's viewport units.
+     `.lbc-setup__chip` and `.lbc-saver__sub` are sized for a television read
+     from ten feet (`max(3vh, 1rem)`, 44px targets, 1vh gaps), and inherited
+     unchanged they made this strip taller than the scores it sits above and
+     pushed the board off the screen. A toolbar is not a screensaver. */
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem 0.75rem;
+  /* Full width, like the board it belongs to — a narrower strip above an
+     edge-to-edge board reads as a different module. */
+  margin: 0 0 0.5rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.75rem;
+  background: #0b1220;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #ebebeb;
+  font-size: 0.8125rem;
+  line-height: 1.35;
+}
+
+.lbc-controls__title {
+  margin: 0;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.55);
+  white-space: nowrap;
+}
+
+/* The prose is the least important thing in a toolbar: it wraps to its own
+   full-width line rather than stretching the row. */
+.lbc-controls--strip .lbc-saver__sub {
+  flex: 1 0 100%;
+  order: 3;
+  margin: 0;
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.52);
+}
+
+/* The first sentence repeats what the board already shows; on the strip it is
+   the shortcut line that earns its space. */
+.lbc-controls--strip .lbc-saver__sub:first-of-type {
+  display: none;
+}
+
+.lbc-controls--strip .lbc-setup__list,
+.lbc-controls--strip p {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0;
+}
+
+.lbc-controls--strip .lbc-setup__chip {
+  min-height: 0;
+  gap: 0.35rem;
+  padding: 0.3rem 0.7rem;
+  border-width: 1px;
+  font-size: 0.8125rem;
+}
+
+/* The shortcut letters read as keys rather than as emphasis. */
+.lbc-controls kbd {
+  display: inline-block;
+  min-width: 1.5em;
+  padding: 0.05em 0.35em;
+  border-radius: 0.3rem;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  background: rgba(255, 255, 255, 0.08);
+  font: inherit;
+  font-weight: 700;
+  text-align: center;
 }
 
 /* ── Laptop fallback — not a responsive target, just not broken ───────────── */

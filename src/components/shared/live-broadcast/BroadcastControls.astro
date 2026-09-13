@@ -1,0 +1,187 @@
+---
+/**
+ * Every control the broadcast has — and none of them is on the board.
+ *
+ * The board itself is OUTPUT ONLY. Leagues / Sound / Fullscreen chips used to
+ * float at its bottom-left and shipped visible on a real television three
+ * times running, because all three attempts hid a VISIBLE DEFAULT behind a
+ * condition that turned out to be an assumption about set-top hardware (the
+ * stylesheet's "No chrome on the board" records which). Nothing OVERLAYS the
+ * scores now — the controls sit in normal page flow ABOVE the board, between
+ * the site nav and the scores. That is the distinction that matters and it is
+ * not the same as "off the screen": being above the board costs the scores no
+ * pixels and cannot cover a reveal, while a chip positioned over the board
+ * does both no matter how carefully it is hidden.
+ *
+ * One component, two placements — the setup screen (`?picker=1`, which is
+ * still the zero-leagues landing) and the strip above the board. A second copy
+ * is how this repo grew 24 forked siblings; see CLAUDE.md.
+ */
+interface Chip {
+  id: string;
+  name: string;
+  on: boolean;
+  href: string;
+}
+
+interface Props {
+  chips: Chip[];
+  sound: boolean;
+  /** Present only on the setup screen, which has a board to return to. */
+  doneHref?: string;
+  /** The setup screen is a full page; the strip above the board is not. */
+  variant: 'setup' | 'strip';
+  /** Shown when MFL could not be reached to list the owner's leagues. */
+  empty?: boolean;
+}
+
+const { chips, sound, doneHref, variant, empty = false } = Astro.props;
+---
+
+<section
+  class={`lbc-controls lbc-controls--${variant}`}
+  aria-label="Broadcast settings"
+>
+  {
+    variant === 'setup' ? (
+      <h1>Pick the leagues this TV watches</h1>
+    ) : (
+      <h2 class="lbc-controls__title">Leagues on this board</h2>
+    )
+  }
+
+  <p class="lbc-saver__sub">
+    Your scores and your opponents' will take the screen as they happen.
+    {variant === 'setup' ? ' Tap a league to add or remove it.' : ' Pick which leagues it watches.'}
+  </p>
+
+  <ul class="lbc-setup__list">
+    {chips.map((chip) => (
+      <li>
+        {/* A LINK, so it works with no JavaScript on a TV browser. The
+            selected state is `aria-current`, not `aria-pressed`, which is not
+            valid on an anchor. */}
+        <a class="lbc-setup__chip" href={chip.href} aria-current={chip.on ? 'true' : undefined}>
+          {chip.name}
+        </a>
+      </li>
+    ))}
+  </ul>
+
+  {
+    empty && (
+      <p class="lbc-saver__sub">
+        We could not reach MyFantasyLeague to list your leagues. The board will
+        still show the league you are signed in to.
+      </p>
+    )
+  }
+
+  {/* A `<button>` rather than a link because the choice is a cookie, and this
+      file is a shared COMPONENT: `Astro.cookies.set()` from one runs after the
+      response headers are committed and blanks the page (CLAUDE.md records the
+      Sunday Ticket board shipping exactly that). The island has always written
+      this cookie from the client; so does this. */}
+  <p>
+    <button
+      type="button"
+      class="lbc-setup__chip"
+      id="lbc-sound-toggle"
+      data-on={sound ? 'true' : 'false'}
+      aria-pressed={sound ? 'true' : 'false'}
+    >
+      {sound ? 'Sound on' : 'Sound off'}
+    </button>
+    {doneHref && <a class="lbc-setup__chip" href={doneHref}>Done — show the board</a>}
+  </p>
+
+  {/* The board carries no controls, so the ones that must be reachable WHILE
+      it is on a television are keys. This is the only place to learn them. */}
+  <p class="lbc-saver__sub">
+    On the board: <kbd>F</kbd> fullscreen, <kbd>M</kbd> sound, <kbd>L</kbd> leagues.
+    Sound needs one key or tap on the television first — a browser will not make
+    noise on a page nobody has touched.
+  </p>
+</section>
+
+<script>
+  /**
+   * The sound toggle. The COOKIE is the source of truth; the strip and the
+   * board are two views of it that keep each other honest.
+   *
+   * Two ways they fell out of sync, both real:
+   *
+   *  - The board's `M` key set the island's state and the cookie but left this
+   *    button's label and `data-on` untouched. The next click here then
+   *    computed its "next" from a stale `false` and turned sound ON when the
+   *    board already had it on — a toggle that does not toggle.
+   *  - This strip is server-rendered and sits ABOVE a `client:load` island, so
+   *    it is clickable before the island has mounted and registered its
+   *    listener. A fast click wrote the cookie and dispatched into nothing.
+   *
+   * So: every change is announced on `lbc:sound` with a `from` naming the
+   * sender, each side ignores its own, and both reconcile against the cookie
+   * when they start — which covers the click that happened before anyone was
+   * listening.
+   *
+   * Init runs immediately AND on `astro:page-load`: a bundled Astro script is
+   * a deferred module, so on a COLD load `astro:page-load` may already have
+   * fired (listening only for it left the button inert, which is how it first
+   * shipped) — while under the ClientRouter the module evaluates once per
+   * SESSION, so a one-shot init is dead after the first in-site navigation.
+   */
+  function readSoundCookie() {
+    const m = document.cookie.match(/(?:^|;\s*)bc_sound=([01])/);
+    return m ? m[1] === '1' : null;
+  }
+
+  function paintSoundToggle(btn: HTMLElement, on: boolean) {
+    btn.dataset.on = on ? 'true' : 'false';
+    btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+    btn.textContent = on ? 'Sound on' : 'Sound off';
+  }
+
+  function initBroadcastSoundToggle() {
+    const btn = document.getElementById('lbc-sound-toggle');
+    if (!btn) return;
+
+    // The cookie may already disagree with what the server rendered — a click
+    // landed before hydration, or the board's `M` key ran on a previous view.
+    const fromCookie = readSoundCookie();
+    if (fromCookie !== null) paintSoundToggle(btn, fromCookie);
+
+    // ASSIGNED, not added: re-running init replaces this handler rather than
+    // stacking a second copy that would toggle twice per click.
+    btn.onclick = () => {
+      const next = btn.dataset.on !== 'true';
+      paintSoundToggle(btn, next);
+      try {
+        document.cookie =
+          'bc_sound=' + (next ? '1' : '0') + '; path=/; max-age=' + 180 * 24 * 60 * 60 + '; samesite=lax';
+      } catch {
+        /* a control that cannot remember still sets the board up */
+      }
+      document.dispatchEvent(
+        new CustomEvent('lbc:sound', { detail: { on: next, from: 'strip' } }),
+      );
+    };
+  }
+
+  // Registered ONCE, at module scope, so it cannot stack across navigations —
+  // and it looks the button up per event rather than capturing it, because
+  // under the ClientRouter the element is replaced on every page load.
+  // Annotated, because this file is type-checked: an untyped `e.detail` and
+  // two implicit-any parameters were five ts(2339)/ts(7006) errors against a
+  // ratcheted baseline that fails in EITHER direction. Astro compiles a
+  // `<script>` as TypeScript, so plain annotations work here — a JSDoc cast
+  // does not (it reports ts(80004) and leaves the error standing).
+  document.addEventListener('lbc:sound', (e: Event) => {
+    const detail = (e as CustomEvent<{ on: boolean; from?: string }>).detail;
+    if (detail?.from === 'strip') return;
+    const btn = document.getElementById('lbc-sound-toggle');
+    if (btn && typeof detail?.on === 'boolean') paintSoundToggle(btn, detail.on);
+  });
+
+  initBroadcastSoundToggle();
+  document.addEventListener('astro:page-load', initBroadcastSoundToggle);
+</script>
