@@ -75,8 +75,14 @@ function isoOf(date) {
  * Pure — takes the instant, returns the decision — so the rules are testable at
  * every boundary without touching the system clock.
  *
+ * `inSeason` is part of the contract, not a debug extra: callers and tests use
+ * it to distinguish "clear because it is the offseason" from "clear because it
+ * is a Tuesday", and those are different answers. Leaving it off this
+ * annotation is what raised the type-error baseline by one — TypeScript
+ * believes the JSDoc over the `return`.
+ *
  * @param {Date} now
- * @returns {{ blocked: boolean, reasons: string[], date: string, weekday: string }}
+ * @returns {{ blocked: boolean, reasons: string[], date: string, weekday: string, inSeason: boolean }}
  */
 export function resolveBlackout(now = new Date()) {
   const today = ptDay(now);
