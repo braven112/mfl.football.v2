@@ -314,16 +314,18 @@
   /*
    * An inset SHADOW, not a `border-left`, and that is not a style choice.
    *
-   * `.lbc__cell` carries a `border-image` for the win-probability gradient,
-   * and a border-image REPLACES `border-style` on every side — capping it with
-   * `border-image-width: 1 0 0 0` stops the gradient painting here but does
-   * not bring the border style back, so a `border-left` renders NOTHING.
+   * `.lbc__cell` used to carry a `border-image` for the win-probability
+   * gradient, and a border-image REPLACES `border-style` on every side —
+   * capping it with `border-image-width: 1 0 0 0` stopped the gradient
+   * painting here but did not bring the border style back, so a `border-left`
+   * rendered NOTHING.
    *
    * Both halves of that shipped: uncapped, this divider painted the gradient's
    * 0% stop, a saturated bar in the owner's own team colour hard against Game
-   * 1's score. Capped, it vanished entirely. A shadow is unaffected by the
-   * border-image and is the only one of the three that actually draws a
-   * hairline.
+   * 1's score. Capped, it vanished entirely. The gradient is gone now, but the
+   * shadow stays — it was never the compromise, it is simply the hairline that
+   * always drew, and reinstating a border here would only re-arm the trap for
+   * the next gradient someone puts on this box.
    */
   box-shadow: inset 1px 0 0 var(--lbc-hairline);
   padding-left: 0.6vw;
@@ -363,31 +365,21 @@
   gap: clamp(4px, 1.1vh, 22px);
   min-width: 0;
   min-height: 0;
-  /* The win-probability split doubles as the cell's top border at the
-     densest tiers, where the bar itself is dropped. */
-  border-top: 0.4vh solid transparent;
-  border-image: linear-gradient(
-      to right,
-      var(--lbc-mine, #64748b) 0 var(--wp-split, 50%),
-      var(--lbc-panel) var(--wp-split, 50%) calc(var(--wp-split, 50%) + 0.2%),
-      var(--lbc-theirs, #334155) calc(var(--wp-split, 50%) + 0.2%) 100%
-    )
-    1;
   /*
-   * The gradient is the TOP border and only the top border.
+   * NO rule across the top of the cell — that edge is AIR.
    *
-   * `border-image-width` defaults to 1 — a MULTIPLE of each side's
-   * border-width — so the image paints on every border that has width. The
-   * doubleheader divider below is a 1px `border-left`, which meant it rendered
-   * the gradient's left slice: its 0% stop, `--lbc-mine`. A saturated
-   * full-height bar in the owner's own team colour, hard against Game 1's
-   * score numeral, where a hairline was intended.
+   * A 0.4vh win-probability gradient ran here until Sep 2026: a second,
+   * thinner copy of `.lbc__wp` drawn where the league tag meets the matchup.
+   * On a real television it did not read as this matchup's split at all; it
+   * read as a progress bar belonging to the panel above it, four of them
+   * stacked down a 65" screen, and it pinned the first score row hard against
+   * the tag. The split is stated ONCE, by the bar between the two sides.
    *
-   * Load-bearing and easy to lose: the `border-image` SHORTHAND above resets
-   * this to 1 again, so it must stay after it.
+   * Removing it also retires the `border-image` that drew it, which replaced
+   * `border-style` on EVERY side of this box — see the doubleheader divider
+   * above, which had to become a `box-shadow` to survive it.
    */
-  border-image-width: 1 0 0 0;
-  padding-top: 0.4vh;
+  padding-top: 1.6vh;
   /*
    * Counter-drift on a 97s period, co-prime with the root's 90s, so the
    * brightest persistent glyphs never retrace the same path.
@@ -403,13 +395,6 @@
    */
   transform: translate3d(var(--lbc-drift-x2, 0), var(--lbc-drift-y2, 0), 0);
   transition: transform 12s ease-in-out;
-}
-
-.lbc__game-tag {
-  font-size: min(11cqh, max(2.2vh, 0.66rem));
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  color: var(--lbc-text-faint);
 }
 
 .lbc__side {
@@ -540,8 +525,10 @@
   background: var(--lbc-theirs, #334155);
   overflow: hidden;
   /* The bar separates the two sides of a matchup, so it needs to read as a
-     divider rather than as an underline on the score above it. */
-  margin: 1vh 0;
+     divider rather than as an underline on the score above it. The height the
+     "Game N" label gave back is spent here — most of it, not all: at 2.2vh the
+     two sides read as two separate rows rather than as one matchup. */
+  margin: 1.9vh 0;
 }
 
 .lbc__wp-fill {
@@ -897,10 +884,9 @@
    *
    * Was a centred flex column with the player as a chip inside the copy. The
    * wash, crest and delta are all absolutely positioned with NO grid
-   * placement, so they still resolve against this element's padding box and
-   * nothing about the crest moves — which is the point: it is already anchored
-   * bottom-right, under where the figure now goes, so the crest-behind-cutout
-   * overlap the draft board engineers on purpose comes free here.
+   * placement, so they still resolve against this element's padding box —
+   * which is what lets the crest be centred on the LAYER independently of
+   * these tracks, with the scorer seated to its right.
    *
    * The figure track is `auto`, not a `vw` constant: the stand is HEIGHT-
    * derived (see `.lbc-reveal__stand`), so only its own intrinsic width is the
@@ -1523,32 +1509,31 @@
 
 /* Idle: the board and nothing else.
 
-   Gated on IDLENESS ALONE, not on `:fullscreen`. The first cut required both,
-   and on a real television the chips stayed up through a fullscreen reveal —
-   because a TV browser is frequently just MAXIMISED and never enters the
-   Fullscreen API at all, so `document.fullscreenElement` is null and the
-   `is-fullscreen` half never matched. Idleness is the thing actually being
-   asked about, and it is true in both cases.
-   The hover gate above is right on a laptop and wrong on the screen this page
-   exists for — a television's cursor is PARKED over the page and never leaves,
-   so `:hover` is permanently true and three buttons sit on the board all
-   afternoon. In fullscreen we gate on IDLENESS instead, the way a video player
-   does, and the cursor goes with them. Any pointer move, touch or key brings
-   both back for three seconds, so this can never trap someone in fullscreen —
-   which is why the old rule lived inside the pointer query in the first place.
-   Escape still exits regardless, on every browser. */
+   Gated on IDLENESS ALONE — no `:fullscreen` conjunct and no pointer query,
+   and both omissions are deliberate.
+
+   No fullscreen, because a television browser is frequently just MAXIMISED
+   and never enters the Fullscreen API: `document.fullscreenElement` is null,
+   so that conjunct never matched and the chips sat on the board through a
+   reveal on a real TV.
+
+   No pointer query either, even though the first correction added one to stop
+   a phone hiding its controls untouched. That fix depended on a television
+   reporting `hover: hover` / `pointer: fine`, which is an assumption about
+   someone else's hardware and not a measurement — and a TV that reports a
+   coarse pointer would have kept the chips forever. The phone is protected in
+   the ISLAND instead, by not arming the idle timer until the viewer has
+   actually interacted once; see `LiveBroadcast.tsx`. That holds whatever the
+   device reports. */
 .lbc.is-idle .lbc__chrome {
   opacity: 0;
   pointer-events: none;
 }
 
-/*
- * ...unless something in it has keyboard focus. This rule has to out-specify
- * the one above (0,3,0), which the plain `:focus-within` further up does not —
- * so without it a keyboard user who tabbed to a button watches it disappear
- * three seconds later while still holding focus, which is the one way this
- * idle-hide could genuinely trap someone.
- */
+/* ...unless something in it has keyboard focus. Has to out-specify the rule
+   above, which the plain `:focus-within` further up does not — otherwise a
+   keyboard user who tabbed to a button watches it disappear three seconds
+   later while still holding focus. */
 .lbc.is-idle .lbc__chrome:focus-within {
   opacity: 1;
   pointer-events: auto;
@@ -1583,6 +1568,13 @@
   }
   .lbc-reveal__body { align-self: center; }
   .lbc-reveal__stand { height: auto; width: 100%; }
+  /* Reset the desktop seat. The model is absolutely positioned at
+     `right: -7.92%` up there to clear the centred crest; left unreset it
+     pushes the backdrop ~8% of the layer off the right edge, where
+     `.lbc-reveal { overflow: hidden }` clips it — and `justify-content:
+     center` on the figure cannot pull back an absolutely positioned child. */
+  .lbc-reveal__model { right: 0; }
+  .lbc-reveal__face { right: 0; width: 100%; }
   .lbc-reveal__figure {
     position: absolute;
     inset: 0;

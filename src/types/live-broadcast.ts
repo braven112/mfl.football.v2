@@ -91,12 +91,18 @@ export interface BroadcastTeam {
 /**
  * One matchup on the board.
  *
- * `index` is its position within the league's week, so a doubleheader renders
- * "Game 1 / Game 2" without the component having to count. A doubleheader is
- * detected from the FEED — the viewer's franchise appearing in two of MFL's
- * pairings — never from the calendar: the late doubleheader week is whichever
- * of Week 12/13 is bye-free that year, and copying last year's number has
- * shipped a doubleheader onto a bye twice.
+ * `index` is its position within the league's week. It is the key into
+ * `BroadcastLeagueScore.winProbability`, the React key for the cell, and the
+ * "Game N" the SCREENSAVER prints — the header stopped printing one in Sep
+ * 2026, where two cells side by side with a divider between them already say
+ * there are two and the label cost a row of height in a box that clips. The
+ * screensaver stacks its games, so there the label is the only thing telling
+ * them apart.
+ *
+ * A doubleheader is detected from the FEED — the viewer's franchise appearing
+ * in two of MFL's pairings — never from the calendar: the late doubleheader
+ * week is whichever of Week 12/13 is bye-free that year, and copying last
+ * year's number has shipped a doubleheader onto a bye twice.
  */
 export interface BroadcastMatchup {
   index: number;

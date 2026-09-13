@@ -47,7 +47,8 @@ import type { BroadcastMoment } from '../../../utils/broadcast-moments';
 import type { BroadcastDefenderFace, BroadcastTeam } from '../../../types/live-broadcast';
 import { isEspnCdnUrl } from '../../../utils/espn-cdn';
 import { crestStrokeProps } from '../../../utils/draft-broadcast';
-import { getNFLTeamLogo as nflLogo } from '../../../utils/nfl-logo';
+import { normalizeTeamCode } from '../../../utils/nfl-logo';
+import { resolveNflDarkLogoUrl } from '../../../utils/nfl-logo-dark-css';
 
 interface Props {
   moment: BroadcastMoment;
@@ -63,6 +64,29 @@ interface Props {
    * `memo()` on every one-second tick.
    */
   defenders?: BroadcastDefenderFace[];
+}
+
+/**
+ * A team defense's headline name, without the city.
+ *
+ * `PlayerMeta.name` arrives as "Buffalo Bills" — `formatName` in
+ * `player-map.ts` builds it as `${city} ${nickname}` from MFL's
+ * "Bills, Buffalo". At reveal scale that is two words of very large type in a
+ * column that also seats the scorer, so "Washington Commanders" and "New
+ * England Patriots" wrapped to two lines and pushed the play text down.
+ *
+ * The nickname is the LAST whitespace-delimited token for all 32 clubs,
+ * because the city is what `formatName` puts in front of it — multi-word
+ * cities ("New York", "Kansas City", "Tampa Bay") are exactly the wrap this
+ * fixes, and none of them adds a token to the nickname's side.
+ * `tests/broadcast-shell-guards.test.ts` checks that against the real feed.
+ *
+ * The city is not information lost: the club's own mark sits beside the name,
+ * and ESPN's play summary below names the club in full.
+ */
+export function defenseNickname(name: string): string {
+  const parts = name.trim().split(/\s+/);
+  return parts.length > 1 ? parts[parts.length - 1] : name;
 }
 
 /** The kicker's headline word. Says WHAT happened, in one glance. */
@@ -118,6 +142,25 @@ function MomentTakeover({
    * remounts this subtree.
    */
   const [dead, setDead] = useState<ReadonlySet<string>>(() => new Set());
+
+  /**
+   * The club's mark for a team defense, as a DARK cut.
+   *
+   * `getNFLTeamLogo` returns ESPN's LIGHT `500` cut, which is wrong here for
+   * the reason `BroadcastFace` states on the same board: the `html.dark` swap
+   * only fires for a viewer whose SITE theme is dark, and this surface is dark
+   * in both — so a light-theme owner driving the television would get the
+   * dark-outlined marks (Raiders, Jets, Jaguars) that the swap exists to fix.
+   * Resolve it here instead, exactly as the face chip does.
+   *
+   * The `!== 'NFL'` guard matters too: an unresolvable defense would otherwise
+   * render the generic shield, which says nothing.
+   */
+  const [defLogo, setDefLogo] = useState<string | null>(() => {
+    if (!isDef) return null;
+    const code = nflTeam ? normalizeTeamCode(nflTeam) : '';
+    return code && code !== 'NFL' ? resolveNflDarkLogoUrl(code) : null;
+  });
 
   /**
    * ONE defender, not two.
@@ -180,10 +223,18 @@ function MomentTakeover({
           {/* A team defense's name IS a club, so it takes the club's mark —
               the same pairing the player strip's meta line uses. A person's
               name does not: his own face is already the identification. */}
-          {isDef && nflTeam && (
-            <img className="lbc-reveal__name-logo" src={nflLogo(nflTeam)} alt="" aria-hidden="true" />
+          {isDef && defLogo && (
+            <img
+              className="lbc-reveal__name-logo"
+              src={defLogo}
+              alt=""
+              aria-hidden="true"
+              // A broken-image glyph beside the club's name reads as a broken
+              // BOARD from ten feet, same as it does in the face chip.
+              onError={() => setDefLogo(null)}
+            />
           )}
-          {moment.playerName}
+          {isDef ? defenseNickname(moment.playerName) : moment.playerName}
         </h2>
         {/* ESPN's own summary, never rewritten. */}
         <p className="lbc-reveal__play">{moment.text}</p>
