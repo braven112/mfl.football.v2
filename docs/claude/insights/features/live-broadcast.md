@@ -256,3 +256,49 @@ Xbox browser, where those keys are not a fallback. They are nothing.
   `parsedWeek` off the PICKER's own URL, so a Leagues link that dropped the
   week sent an owner watching week 3 back to the current week the moment he
   pressed Done.
+
+## Sep 2026 — the board reset a live 87.0 to zero, every few polls
+
+Reported from the couch mid-slate: the scores "keep going back to zero and
+then slowly get set again". Four photographs of the same television minutes
+apart showed TheLeague populated with the AFL at 0.0, then both populated,
+then both at 0.0, then the AFL populated with TheLeague at 0.0. Nothing was
+alternating — each league was independently blanking and recovering.
+
+- **The retention rule existed, at the wrong granularity.** `/api/broadcast-live`
+  answers `ok: false` only when the ASSEMBLER fails, and the island already
+  threw on that and kept its last good payload. But an assembly in which one
+  league's MFL read failed is a SUCCESSFUL assembly — `assembleBroadcastBoard`
+  says so on purpose ("one dead feed is not an outage") and contributes
+  `{ ok: false, live: false, teams: {}, winProbability: [] }` for that league.
+  `body.ok === false` is true at the top, so the guard passes and
+  `setPoll(body)` shipped the empty league straight to the screen.
+- **No client code reads a league's own `ok`, so the failure had no pixels of
+  its own — it had everyone else's.** An absent `teams[franchiseId]` is not a
+  visible gap: `BroadcastScoreHeader` renders `mine?.yetToPlay ?? 0` and scores
+  through a `0.0` formatter, and `buildStripPages` takes `scores[leagueId] ?? {}`.
+  The board therefore drew a complete, confident, well-typed "0.0 / Proj 0.0 /
+  0 to play" with an empty player strip — the exact rendering of a game nobody
+  has played, over one in the second quarter. The two facts this feature
+  separates everywhere else, "the feed says nothing" and "we could not reach
+  the feed", were merged by a `??` in a presentational component.
+- **The fix is `carryLeagueScores` (`broadcast-carry.ts`), per LEAGUE.** Same
+  rule as the whole-response one, applied at the granularity the payload
+  actually fails at. Two things in it are load-bearing:
+  - **Carry on `ok: false` ONLY.** `ok: true` with empty `teams` is the healthy
+    shape of a bye or an unplayed week, and carrying over it would print last
+    week's score on a game nobody played — the same merge in the other
+    direction.
+  - **A carry ages out on the last good READ, not on the last poll that failed
+    to replace it.** Refreshing the timestamp on each failure carries a league
+    forever on the strength of its own outage. Bounded by the island's own
+    `STALE_MS`, so the board gives up on a league at the same age it stops
+    claiming to be current.
+- **Suspected upstream cause, not fixed here.** Each poll costs 2 MFL reads per
+  registered league — `liveScoring` and `playoffBrackets`, the latter useless
+  in week 2 — so a two-league board is 4 MFL reads every 8 seconds, ~30/min
+  sustained for eight hours per television. MFL answers a throttled request
+  with an HTML page under a 200, which `loadLiveScoringPayload` correctly reads
+  as `ok: false`. Worth reducing (skip the bracket read outside bracket weeks,
+  or cache the assembly briefly), but the client must hold its numbers either
+  way: no cadence makes an upstream feed infallible.

@@ -32,6 +32,7 @@ import MomentTakeover from './MomentTakeover';
 import MomentLowerThird from './MomentLowerThird';
 import RedZoneBanner from './RedZoneBanner';
 import { DEMO_PERIOD_MS, demoElapsed, demoLoopIndex, demoPollAt } from '../../../utils/broadcast-demo';
+import { carryLeagueScores, seedCarry, type CarriedLeagueScore } from '../../../utils/broadcast-carry';
 
 /**
  * Poll cadence. Slower than the draft board's 4s: this payload is N leagues
@@ -128,6 +129,21 @@ export default function LiveBroadcast({ pageData }: Props) {
   });
 
   /**
+   * Each league's last good numbers.
+   *
+   * A poll in which ONE league's MFL read failed is a successful poll — the
+   * server says so on purpose ("one dead feed is not an outage") — so it
+   * sails past the `body.ok === false` guard below carrying `teams: {}` for
+   * that league, which renders as 0.0 / Proj 0.0 / 0 to play / an empty
+   * strip. That is how a live 87.0 reset itself to zero every few polls on a
+   * real Sunday. Seeded from the first paint so the very first poll can
+   * already carry.
+   */
+  const carryRef = useRef<Map<string, CarriedLeagueScore>>(
+    seedCarry(data.initial.leagues, Date.parse(data.initial.fetchedAt) || Date.now()),
+  );
+
+  /**
    * The rehearsal's origin, fixed at mount. Everything else about the demo is
    * a pure function of (now - this), so the loop is reproducible: the same
    * second of the loop always renders the same way, which is what makes it
@@ -161,7 +177,15 @@ export default function LiveBroadcast({ pageData }: Props) {
       // board while the freshness pill still reported the poll healthy.
       if (!res.ok || body?.ok === false) throw new Error('poll not ok');
 
-      setPoll(body);
+      // Per-league retention, same rule as the whole-response one above and
+      // for the same reason. Bounded by STALE_MS: past the age at which this
+      // board stops claiming to be current, a frozen score is worse than an
+      // honest empty one.
+      const now = Date.now();
+      const { leagues, carried } = carryLeagueScores(body.leagues, carryRef.current, now, STALE_MS);
+      carryRef.current = carried;
+
+      setPoll({ ...body, leagues });
       setFetchedAt(Date.parse(body.fetchedAt) || Date.now());
       setStatus('ok');
       pollRef.current.errors = 0;

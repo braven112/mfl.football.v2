@@ -210,6 +210,14 @@
       "impact": "user",
       "area": "rosters",
       "league": "both"
+    },
+    {
+      "date": "2026-09-13",
+      "type": "bug-fix",
+      "summary": "Fixed live scores on the <a href=\"/broadcast\">Live Broadcast</a> board resetting to 0.0 and creeping back up: one league's feed blinking no longer wipes that league's numbers off the screen.",
+      "impact": "user",
+      "area": "other",
+      "league": "both"
     }
   ]
 }
