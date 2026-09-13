@@ -41,6 +41,8 @@ const CSS_CODE = code(CSS);
 const ISLAND = read('src/components/shared/live-broadcast/LiveBroadcast.tsx');
 const ISLAND_CODE = code(ISLAND);
 const PAGE = read('src/components/shared/live-broadcast/LiveBroadcastPage.astro');
+const CONTROLS = read('src/components/shared/live-broadcast/BroadcastControls.astro');
+const CONTROLS_CODE = code(CONTROLS);
 const PAGE_CODE = code(PAGE);
 const HEADER = code(read('src/components/shared/live-broadcast/BroadcastScoreHeader.tsx'));
 const ROUTES = [
@@ -338,7 +340,13 @@ describe('the league picker is reachable', () => {
   });
 
   it('offers a way in from the board and a way back out', () => {
+    // Still reachable FROM the board — but by the `L` key, not a chip. The
+    // board carries no visible controls at all (see "the board carries NO
+    // controls"), and a setup screen with no way back to it would be the
+    // unreachable-opt-in bug above, reintroduced by the fix for a different
+    // one.
     expect(ISLAND_CODE).toMatch(/picker=1/);
+    expect(ISLAND_CODE).toMatch(/key === 'l'/);
     expect(PAGE_CODE).toMatch(/doneHref/);
   });
 
@@ -542,82 +550,138 @@ describe('the player cell follows the repo’s rules', () => {
   });
 });
 
-describe('fullscreen shows the board and nothing else', () => {
-  it('tracks fullscreen and idleness on the root', () => {
-    // The hover gate is right on a laptop and wrong on a television, whose
-    // cursor is PARKED over the page and never leaves — so `:hover` is
-    // permanently true and the chrome sits on the board all afternoon.
-    expect(ISLAND_CODE).toMatch(/fullscreenchange/);
-    expect(ISLAND_CODE).toMatch(/is-fullscreen/);
-    expect(ISLAND_CODE).toMatch(/is-idle/);
+describe('the board carries NO controls', () => {
+  // Three separate attempts shipped the Leagues / Sound / Fullscreen chips
+  // visible on a real television, because all three hid a VISIBLE DEFAULT
+  // conditionally and every condition turned out to be an assumption about
+  // set-top hardware:
+  //
+  //   1. `opacity: 0` sat inside `@media (hover: hover) and (pointer: fine)`,
+  //      so a coarse-pointer TV never received it at all.
+  //   2. On a fine-pointer TV, `.lbc:hover .lbc__chrome` re-showed them
+  //      permanently — the cursor is PARKED on the page and never leaves, so
+  //      `:hover` is true for the whole afternoon.
+  //   3. `.lbc.is-idle` needed a JS timer armed by an interaction a remote may
+  //      never deliver to the page.
+  //
+  // The controls are on the setup screen now. These guards pin the absence,
+  // because "hidden" is the state that kept failing and "not there" cannot.
+
+  it('renders no chrome element at all', () => {
+    expect(ISLAND_CODE).not.toMatch(/className="lbc__chrome"/);
+    expect(ISLAND_CODE).not.toMatch(/lbc__chrome-link/);
   });
 
-  it('hides the chrome and the cursor on IDLENESS ALONE', () => {
-    // Not `is-fullscreen.is-idle`. A television browser is frequently just
-    // MAXIMISED and never enters the Fullscreen API, so `fullscreenElement` is
-    // null there and requiring both left the chips up through a reveal on a
-    // real TV. Idleness is the thing actually being asked about.
-    expect(CSS_CODE).toMatch(/\.lbc\.is-idle \.lbc__chrome \{/);
-    expect(CSS_CODE).toMatch(/\.lbc\.is-idle\s*\{[^}]*cursor:\s*none/);
-    expect(CSS_CODE).not.toMatch(/\.lbc\.is-fullscreen\.is-idle/);
+  it('styles no chrome, and carries no :hover reveal anywhere', () => {
+    expect(CSS_CODE).not.toMatch(/\.lbc__chrome/);
+    // The parked-cursor trap. No rule on this surface may key off `:hover` —
+    // on the one screen this page exists for, `:hover` is a constant.
+    expect(CSS_CODE).not.toMatch(/\.lbc[^{,]*:hover/);
   });
 
-  it('runs the idle timer unconditionally', () => {
-    // Same bug from the other side: an effect that returned early unless
-    // fullscreen never started the timer on a maximised TV.
-    expect(ISLAND_CODE).not.toMatch(/if \(!isFullscreen\) \{[\s\S]{0,80}return;/);
+  it('offers leagues and sound off the board instead', () => {
+    // Removing a control is only correct if it still exists somewhere.
+    expect(CONTROLS_CODE).toMatch(/lbc-sound-toggle/);
+    expect(CONTROLS_CODE).toMatch(/lbc-setup__chip/);
+    for (const k of ['F', 'M', 'L']) {
+      expect(CONTROLS).toMatch(new RegExp(`<kbd>${k}</kbd>`));
+    }
+  });
+
+  it('places the strip ABOVE the board, in flow, never over it', () => {
+    // "Above the board" and "hidden on the board" are not the same fix, and
+    // only the first one is true no matter what the hardware reports. The
+    // strip must render BEFORE <LiveBroadcast> and must not be positioned.
+    const strip = PAGE_CODE.indexOf('variant="strip"');
+    const board = PAGE_CODE.indexOf('<LiveBroadcast');
+    expect(strip).toBeGreaterThan(-1);
+    expect(board).toBeGreaterThan(-1);
+    expect(strip).toBeLessThan(board);
+
+    const rule = /\.lbc-controls--strip \{([^}]*)\}/.exec(CSS_CODE)?.[1] ?? '';
+    expect(rule).not.toBe('');
+    expect(rule).not.toMatch(/position:\s*(absolute|fixed|sticky)/);
+  });
+
+  it('builds ONE controls component, not a copy per placement', () => {
+    // Two near-identical copies is how this repo grew 24 forked siblings.
+    expect(PAGE_CODE).toMatch(/BroadcastControls/);
+    expect((PAGE_CODE.match(/lbc-setup__chip/g) ?? []).length).toBe(0);
+  });
+
+  it('writes the sound cookie from the CLIENT, never Astro.cookies.set', () => {
+    // These are shared components, not routes. `Astro.cookies.set()` here runs
+    // after the response headers are committed and blanks the page — CLAUDE.md
+    // records the Sunday Ticket board shipping exactly that.
+    expect(CONTROLS_CODE).not.toMatch(/Astro\.cookies\.set/);
+    expect(PAGE_CODE).not.toMatch(/Astro\.cookies\.set/);
+    expect(CONTROLS_CODE).toMatch(/document\.cookie/);
+  });
+
+  it('initialises the toggle immediately AND on astro:page-load', () => {
+    // Both, and neither is redundant. A bundled Astro script is a deferred
+    // module, so on a COLD load `astro:page-load` can already have fired by
+    // the time it evaluates — listening only for the event left the button
+    // inert, which is how it first shipped. And under the ClientRouter the
+    // module evaluates once per SESSION, so a one-shot init is dead after the
+    // first in-site navigation.
+    expect(CONTROLS_CODE).toMatch(/astro:page-load/);
+    expect(CONTROLS_CODE).not.toMatch(/DOMContentLoaded/);
+    expect(CONTROLS_CODE).toMatch(/^\s*initBroadcastSoundToggle\(\);\s*$/m);
+    // Assigned, not added: re-running init must replace the handler, never
+    // stack a second copy that fires the toggle twice.
+    expect(CONTROLS_CODE).toMatch(/btn\.onclick = /);
+  });
+
+  it('reaches the board from the strip without a reload', () => {
+    // The strip and the board are on the same page. A toggle that only wrote
+    // the cookie would do nothing until a reload, which on a television is
+    // never.
+    expect(CONTROLS_CODE).toMatch(/lbc:sound/);
+    expect(ISLAND_CODE).toMatch(/lbc:sound/);
+  });
+
+  it('reaches fullscreen and sound by key, since there is no button left', () => {
+    // A keypress carries transient activation, which is what lets `F` request
+    // fullscreen at all — fullscreen does not survive the navigation from the
+    // setup screen, so it has to be asked for from inside this document.
+    expect(ISLAND_CODE).toMatch(/requestFullscreen/);
+    expect(ISLAND_CODE).toMatch(/key === 'f'/);
+    expect(ISLAND_CODE).toMatch(/key === 'm'/);
+  });
+
+  it('still hides the CURSOR, which is the last piece of chrome', () => {
+    expect(CSS_CODE).toMatch(/\.lbc:not\(\.is-awake\)\s*\{[^}]*cursor:\s*none/);
+    expect(ISLAND_CODE).toMatch(/is-awake/);
   });
 
   it('wakes on every input a television can produce', () => {
-    // Never trap someone in fullscreen: this is why the ORIGINAL hide rule
-    // lived inside the pointer query. Touch and keys must both bring it back.
     for (const ev of ['pointermove', 'pointerdown', 'touchstart', 'keydown']) {
       expect(ISLAND_CODE).toContain(`'${ev}'`);
     }
   });
 });
 
-describe('the idle-hide cannot strand a touch device', () => {
-  it('starts the countdown at the first interaction, never on mount', () => {
-    // This is the whole protection, and it replaced a pointer-media query that
-    // only LOOKED like one.
-    //
-    // Arming the timer on mount hid the chrome three seconds after load on a
-    // device nobody had touched. On a phone, where the controls are meant to
-    // stay put, `pointer-events: none` then made the next tap a wake rather
-    // than a press — two taps for every control.
-    //
-    // The fix that shipped first was to scope the hide to
-    // `@media (hover: hover) and (pointer: fine)`, on the reasoning that a
-    // television matches and a phone never does. That rests on an ASSUMPTION
-    // about what a set-top browser reports, and a TV that reports coarse would
-    // have kept the chrome up for good — the exact symptom being fixed.
-    // Gating on interaction needs no such assumption: a viewer who never
-    // reaches for the chrome keeps it on any device, and a television, where
-    // you always press something to set the board up, goes clean three seconds
-    // after you stop.
-    const at = CSS_CODE.indexOf('.lbc.is-idle .lbc__chrome {');
-    expect(at).toBeGreaterThan(-1);
-
-    // The effect defines `wake` and hands it to listeners. A bare call in the
-    // effect body is the arm-on-mount this rule forbids.
-    expect(ISLAND_CODE).toMatch(/const wake = \(e: Event\) =>/);
-    expect(ISLAND_CODE).not.toMatch(/^\s*wake\(\);\s*$/m);
+describe('the sting can actually be heard', () => {
+  it('keeps ONE AudioContext and resumes it on a real gesture', () => {
+    // It used to build a NEW context per moment, on the stated claim that
+    // "autoplay policy is satisfied by the user having turned sound on". It is
+    // not: the preference is a cookie read at render, and a preference carried
+    // from a previous document is not transient activation. A context built
+    // without activation starts SUSPENDED, `osc.start()` schedules against a
+    // clock that never advances, and nothing throws — so the board made no
+    // sound at all while appearing to work.
+    expect(ISLAND_CODE).toMatch(/audioRef/);
+    expect(ISLAND_CODE).toMatch(/\.resume\(\)/);
+    // One context for the life of the board: constructed only behind the
+    // "do I already have one" check.
+    expect(ISLAND_CODE).toMatch(/if \(!audioRef\.current\) audioRef\.current = new Ctx\(\)/);
   });
 
-  it('lets touch wake the chrome but never start the countdown', () => {
-    // Not arming on mount only defers the phone bug by one interaction: the
-    // first tap arms the timer, three seconds later the controls go to
-    // `pointer-events: none`, and the next tap is spent waking the board
-    // rather than pressing the button under the finger. Two taps for every
-    // control from then on. A touch device must never go idle at all.
-    expect(ISLAND_CODE).toMatch(/pointerType === 'touch'/);
-    expect(ISLAND_CODE).toMatch(/e\.type === 'touchstart'/);
-    // The bail must come BEFORE the timer is armed, or it rejects nothing.
-    const body = /const wake = \(e: Event\) => \{([\s\S]*?)\n    \};/.exec(ISLAND_CODE)?.[1] ?? '';
-    expect(body).not.toBe('');
-    expect(body.indexOf('isTouch(e)')).toBeGreaterThan(-1);
-    expect(body.indexOf('isTouch(e)')).toBeLessThan(body.indexOf('setTimeout'));
+  it('never closes the shared context after a sting', () => {
+    // Closing it un-unlocks the audio for every later moment — the board would
+    // play at most one sound per gesture.
+    expect(ISLAND_CODE).not.toMatch(/ctx\.close\(\)/);
   });
 });
 
