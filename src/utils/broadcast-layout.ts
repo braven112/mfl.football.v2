@@ -11,6 +11,7 @@
 import type { BroadcastLeaguePanel, BroadcastTeamScore } from '../types/live-broadcast';
 import type { LivePlayerRow, NflGame, PlayerMeta } from '../types/live-scoring';
 import type { MomentSide } from './broadcast-moments';
+import { NFL_GAME_SECONDS } from './live-win-probability';
 import { resolveGameState } from './live-scoring-view';
 import { nflGameStateFromSeconds } from './live-scoring-view';
 
@@ -35,19 +36,26 @@ export function densityTier(cellCount: number): DensityTier {
  * than shrinking it.
  *
  * The ordering is an editorial judgement about what an owner is actually
- * asking the screen: the opponent's yet-to-play count goes before his own
- * (the real question is "how much is left for ME"), the win-probability
- * NUMBER goes before its bar (a split bar reads at ten feet; two digits do
- * not), and the projected final is last to go because it is the only thing on
- * the cell that says where the matchup is HEADING.
+ * asking the screen: the win-probability NUMBER goes before its bar (a split
+ * bar reads at ten feet; two digits do not), the word "Proj" goes before the
+ * number it labels, and the projected final is last to go because it is the
+ * only thing on the cell that says where the matchup is HEADING.
+ *
+ * `oppytp` used to be rung ONE, on the reasoning that the real question is
+ * "how much is left for ME". It isn't: a lead means nothing without the other
+ * side's count next to it, and a board at four cells — two leagues with a
+ * doubleheader each, the ordinary Sunday — dropped it at tier 3 and printed a
+ * bare "1 to play" that read as the MATCHUP's, not one team's (owner,
+ * 2026-09-13). Both counts now ride their own team's row and the rung only
+ * fires at tier 4, where the cell genuinely cannot carry two.
  *
  * My score, the opponent's score and the lead indicator are on no rung. If
  * those three cannot fit, the league does not belong on this television.
  */
 export const DROP_LADDER = [
-  'oppytp',
   'wplabel',
   'projword',
+  'oppytp',
   'clock',
   'proj',
   'wpbar',
@@ -396,43 +404,114 @@ export function padPage(page: StripPage, rowsPerPage: number): (StripRow | null)
   return out.slice(0, rowsPerPage);
 }
 
+/** One quarter, in seconds. */
+const QUARTER_SECONDS = 900;
+
 /**
- * The one real clock a matchup cell can honestly print.
+ * ESPN's `displayClock` ("4:08", "0:47") as seconds.
  *
- * A fantasy matchup spans up to nine NFL games, so "the game clock" is not a
- * single fact about it. Rather than invent an average — the exact fabrication
- * `formatGameClock` exists to prevent — this names the game that most of the
- * viewer's starters are actually in RIGHT NOW, which is the one an owner
- * glancing up is watching.
- *
- * Returns '' when no starter is in a game being played: before kickoff and
- * after the last whistle there is no clock, and an empty string renders
- * nothing at all rather than a placeholder or a stale quarter.
+ * Anything that does not parse is 0 rather than a guess — a missing clock on a
+ * live game means we know the QUARTER and not the time inside it, and counting
+ * the quarter as untouched would overstate what is left.
  */
-export function matchupGameClock(
+export function parseDisplayClock(clock: string): number {
+  const m = /^\s*(\d{1,2}):(\d{2})\s*$/.exec(clock ?? '');
+  if (!m) return 0;
+  return Number(m[1]) * 60 + Number(m[2]);
+}
+
+/**
+ * Real NFL seconds still to be played in ONE game.
+ *
+ * ESPN's `period` + `displayClock` is the only source, and it takes a GAME
+ * rather than a game-or-a-fallback on purpose. MFL's `gameSecondsRemaining`
+ * does not tick, so a starter whose game did not resolve — a bye, an unmapped
+ * team code, a scoreboard fetch that failed — contributes nothing to the
+ * matchup's clock instead of contributing a stale number to it. A bye starter
+ * has no football left by definition; the alternative floors the meter at
+ * `4th 6:40 left` on a Monday with the slate final, forever.
+ *
+ * Overtime returns only what OT has left: a 5th period is not a 5th quarter,
+ * and treating it as one hands the matchup fifteen minutes that cannot exist.
+ */
+export function gameSecondsLeft(game: NflGame): number {
+  if (game.state === 'post') return 0;
+  if (game.state === 'pre') return NFL_GAME_SECONDS;
+  const inQuarter = parseDisplayClock(game.clock);
+  if (game.period >= 5) return inQuarter;
+  const quartersAfter = Math.max(0, 4 - Math.max(1, game.period));
+  return quartersAfter * QUARTER_SECONDS + inQuarter;
+}
+
+/** "1st" … "4th". */
+function ordinal(quarter: number): string {
+  return ['1st', '2nd', '3rd', '4th'][Math.min(3, Math.max(0, quarter - 1))];
+}
+
+/**
+ * A fraction of one game still to play, printed as a position on ONE game clock.
+ *
+ * Half the matchup's football left reads "2nd 15:00 left"; a quarter of it,
+ * "4th 15:00 left". Nothing left is "Final".
+ */
+export function progressClockLabel(fractionLeft: number): string {
+  const secs = Math.round(Math.min(1, Math.max(0, fractionLeft)) * NFL_GAME_SECONDS);
+  if (secs <= 0) return 'Final';
+  const quarter = 5 - Math.ceil(secs / QUARTER_SECONDS);
+  const inQuarter = secs - (4 - quarter) * QUARTER_SECONDS;
+  const mm = Math.floor(inQuarter / 60);
+  const ss = String(inQuarter % 60).padStart(2, '0');
+  return `${ordinal(quarter)} ${mm}:${ss} left`;
+}
+
+/**
+ * How much football this matchup has left, as one clock.
+ *
+ * A fantasy matchup spans up to eighteen NFL games, so "the game clock" is not
+ * a single fact about it. This used to name the ONE game most of the viewer's
+ * starters were in — which late on a Sunday is whichever game kicked off last,
+ * so a board whose owner had a single starter left in the night game printed
+ * "1:33 - 1st" while every other game on it was over (owner, 2026-09-13). The
+ * string was ESPN's and it was true of that game; it was not true of anything
+ * the cell was showing.
+ *
+ * So: SUM the real seconds left across every starter in the matchup, divide by
+ * the seconds those starters started with, and print that fraction as a
+ * position on one 60-minute clock. It is a MATCHUP meter, not a game clock,
+ * and it is spelled so it cannot be read as one — ESPN prints "4:08 - 3rd",
+ * this prints "3rd 4:08 left".
+ *
+ * The rule this does NOT break: the numbers come from ESPN's `period` and
+ * `displayClock`, which tick. MFL's `gameSecondsRemaining` is the per-player
+ * fallback for a game that did not resolve, never the source of the clock.
+ */
+export function matchupTimeLeft(
   rows: readonly LivePlayerRow[],
   games: readonly NflGame[],
   meta: Record<string, PlayerMeta>,
 ): string {
-  const live = games.filter((g) => g.state === 'in');
-  if (live.length === 0 || rows.length === 0) return '';
+  if (rows.length === 0) return '';
 
-  const counts = new Map<string, number>();
+  const byTeam = new Map<string, NflGame>();
+  for (const g of games) {
+    byTeam.set(g.home.code, g);
+    byTeam.set(g.away.code, g);
+  }
+
+  let left = 0;
+  let counted = 0;
   for (const row of rows) {
     const team = meta[row.id]?.nflTeam;
-    if (!team) continue;
-    const game = live.find((g) => g.home.code === team || g.away.code === team);
+    const game = team ? byTeam.get(team) : undefined;
+    // Only starters ESPN could place in a game. With none — the scoreboard
+    // fetch failed and `games` is `[]`, which `assembleBroadcastBoard`
+    // substitutes on any ESPN error — there is NO clock to print, and the
+    // board prints nothing rather than one derived entirely from MFL's
+    // non-ticking seconds. That is the whole rule this function lives under.
     if (!game) continue;
-    counts.set(game.id, (counts.get(game.id) ?? 0) + 1);
+    left += gameSecondsLeft(game);
+    counted += 1;
   }
-  if (counts.size === 0) return '';
-
-  // Most of my starters first; ties broken on the game id so two polls of
-  // identical data never swap the cell's clock back and forth.
-  const [bestId] = [...counts.entries()].sort(
-    (a, b) => b[1] - a[1] || (a[0] < b[0] ? -1 : 1),
-  )[0];
-  const game = live.find((g) => g.id === bestId);
-  // ESPN's own string ("8:12 - 3rd"), never one we assemble.
-  return game?.shortDetail ?? '';
+  if (counted === 0) return '';
+  return progressClockLabel(left / (counted * NFL_GAME_SECONDS));
 }

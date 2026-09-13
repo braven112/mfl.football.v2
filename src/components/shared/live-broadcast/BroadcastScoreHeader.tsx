@@ -9,7 +9,7 @@
 import { memo } from 'react';
 import type { BroadcastLeaguePanel, BroadcastLeagueScore, BroadcastTeam } from '../../../types/live-broadcast';
 import type { NflGame, PlayerMeta } from '../../../types/live-scoring';
-import { matchupGameClock } from '../../../utils/broadcast-layout';
+import { matchupTimeLeft } from '../../../utils/broadcast-layout';
 import type { DensityTier } from '../../../utils/broadcast-layout';
 import { dropClasses, nameContext } from '../../../utils/broadcast-layout';
 import { crestStrokeProps } from '../../../utils/draft-broadcast';
@@ -132,7 +132,14 @@ function BroadcastScoreHeader({
                   const wp = leagueScore?.winProbability[matchup.index] ?? 0.5;
                   const mineLive = mine?.live ?? 0;
                   const theirsLive = theirs?.live ?? 0;
-                  const clock = matchupGameClock(mine?.players ?? [], games, meta);
+                  // Both sides' starters, not just mine: the cell prints ONE
+                  // clock and it is the matchup's, so a night game on the
+                  // opponent's roster has to count toward it.
+                  const clock = matchupTimeLeft(
+                    [...(mine?.players ?? []), ...(theirs?.players ?? [])],
+                    games,
+                    meta,
+                  );
                   const readable = panel.status !== 'unavailable';
 
                   return (
@@ -153,12 +160,17 @@ function BroadcastScoreHeader({
                       {/* A screen reader gets one sentence; the numerals and the
                           bar below are decoration it never has to assemble. */}
                       <p className="visually-hidden">
+                        {/* Every number here is gated on `readable` for the
+                            same reason the visible ones are: an unreachable
+                            feed announced as "0 to play" is the outage-as-a-
+                            shutout merge, read aloud. */}
                         {matchup.mine.name} {score(mineLive, readable)}, projected{' '}
-                        {score(mine?.projectedFinal, readable)},{' '}
-                        {mine?.yetToPlay ?? 0} to play.{' '}
+                        {score(mine?.projectedFinal, readable)}
+                        {readable ? `, ${mine?.yetToPlay ?? 0} to play` : ''}.{' '}
                         {matchup.opponent
-                          ? `${matchup.opponent.name} ${score(theirsLive, readable)}, projected ${score(theirs?.projectedFinal, readable)}, ${theirs?.yetToPlay ?? 0} to play. Win probability ${pct(wp)}.`
+                          ? `${matchup.opponent.name} ${score(theirsLive, readable)}, projected ${score(theirs?.projectedFinal, readable)}${readable ? `, ${theirs?.yetToPlay ?? 0} to play` : ''}.${readable ? ` Win probability ${pct(wp)}.` : ''}`
                           : 'No opponent this week.'}
+                        {clock && readable ? ` ${clock} in this matchup.` : ''}
                         {readable ? '' : ' This league’s feed could not be read.'}
                       </p>
 
@@ -183,6 +195,7 @@ function BroadcastScoreHeader({
                             )}
                           </span>
                           <span className="lbc__tn">{nameAt(matchup.mine, tier)}</span>
+                          <span className="lbc__ytp">{readable ? `${mine?.yetToPlay ?? 0} to play` : ''}</span>
                           <span className="lbc__proj">
                             <span className="lbc__proj-word">Proj </span>
                             {score(mine?.projectedFinal, readable)}
@@ -212,6 +225,7 @@ function BroadcastScoreHeader({
                               )}
                             </span>
                             <span className="lbc__tn">{nameAt(matchup.opponent, tier)}</span>
+                            <span className="lbc__ytp is-opp">{readable ? `${theirs?.yetToPlay ?? 0} to play` : ''}</span>
                             <span className="lbc__proj">
                               <span className="lbc__proj-word">Proj </span>
                               {score(theirs?.projectedFinal, readable)}
@@ -224,13 +238,19 @@ function BroadcastScoreHeader({
                           {matchup.opponent && readable && (
                             <span className="lbc__wp-label">{pct(wp)} win</span>
                           )}
-                          <span>{mine?.yetToPlay ?? 0} to play</span>
-                          <span className="lbc__ytp-opp">{theirs?.yetToPlay ?? 0} theirs</span>
-                          {/* The real ESPN clock, or NOTHING. Never a number
+                          {/* How much football this MATCHUP has left, summed
+                              off ESPN's own period and clock — never a number
                               derived from MFL's `gameSecondsRemaining`, which
                               does not tick and drifts all afternoon into a
-                              confident-looking lie. */}
-                          {clock && <span className="lbc__gameclock">{clock}</span>}
+                              confident-looking lie. Spelled "3rd 4:08 left" so
+                              it cannot be read as one game's clock.
+
+                              Gated on `readable` with every other number in
+                              the cell: the clock is built from ESPN and the
+                              league's own starters, so a panel whose MFL read
+                              failed has em-dashes for scores and would print a
+                              confident clock beside them. */}
+                          {clock && readable && <span className="lbc__gameclock">{clock}</span>}
                         </div>
                       </div>
                     </div>

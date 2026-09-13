@@ -59,6 +59,23 @@ which is exactly why the split exists — verify parsing offline against
   `gameSecondsRemaining` by 900 and printed a confident "Q3 7:24" that was not
   the game clock and drifted all afternoon (the NFL clock stops; that number
   doesn't). With no ESPN game we now print the STATE and no numbers.
+- **The broadcast board's MATCHUP clock is the one derived clock, and it is
+  derived from ESPN.** `matchupTimeLeft` (`broadcast-layout.ts`) sums real
+  seconds left — ESPN's `period` + `displayClock`, and nothing else — across
+  both teams' starters and prints the fraction as a position on one 60-minute
+  clock. A starter ESPN could not place is out of BOTH halves of the fraction
+  (a bye starter has no football left; counting him as an unplayed game floors
+  the meter above zero so `Final` never prints), and with no starter placed at
+  all there is no clock — `assembleBroadcastBoard` substitutes `games: []` on
+  any ESPN error, and the empty string is what keeps that outage from printing
+  a confident clock made entirely of MFL's seconds. Two more things keep it
+  honest and both are pinned by test: the inputs TICK, and it is spelled
+  `3rd 4:08 left` where ESPN spells a real clock `4:08 - 3rd`, so it can never
+  be read as one game's. What it replaced was worse than a fabrication — the
+  real ESPN clock of the ONE game most of the viewer's starters were in, which
+  late on a Sunday is whichever game kicked off LAST: a board with a single
+  starter left in the night game printed "1:33 - 1st" beside a slate that was
+  otherwise final (owner, 2026-09-13).
 - **The scoring ticker is DERIVED, not accumulated.** `/api/nfl-game-detail`
   returns the whole slate's plays every poll, so `buildMoments` recomputing is
   idempotent — no seen-set to drift. It dedupes per `playId:franchiseId`, since

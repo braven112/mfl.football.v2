@@ -530,6 +530,30 @@
 .lbc__header[data-tier='4'] .lbc__score { font-size: min(21cqh, 12.5cqw, 4.9vh); }
 .lbc__header[data-tier='5'] .lbc__score { font-size: max(min(20cqh, 12.5cqw, 3.8vh), 0.85rem); }
 
+/*
+ * Each side's own yet-to-play count, on the row of the team it belongs to.
+ *
+ * It used to sit in the cell foot with the opponent's, where "1 to play" read
+ * as a fact about the MATCHUP rather than about one of the two teams — and at
+ * three cells or more the drop ladder took the opponent's away entirely, so
+ * the bare survivor had nothing to disambiguate it (owner, 2026-09-13). On the
+ * row it is unambiguous without a word of explanation.
+ *
+ * It shrinks before the name does and clips rather than wrapping: a second
+ * line in this row grows the cell, and `.lbc__panel { overflow: hidden }` eats
+ * whatever that pushes past the bottom — the opponent's score.
+ */
+.lbc__ytp {
+  flex: 0 1 auto;
+  min-width: 0;
+  font-size: min(10cqh, 6.5cqw, max(2vh, 0.66rem));
+  color: var(--lbc-text-faint);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .lbc__proj {
   /* Pushes itself and the score to the right edge, so the numerals line up in
      a column the way a scoreboard's do rather than bunching against the name. */
@@ -583,7 +607,7 @@
 }
 
 /* The drop ladder. Each rung removes an element entirely. */
-.lbc__header.is-drop-oppytp .lbc__cell-foot .lbc__ytp-opp,
+.lbc__header.is-drop-oppytp .lbc__ytp.is-opp,
 .lbc__header.is-drop-wplabel .lbc__wp-label,
 .lbc__header.is-drop-projword .lbc__proj-word,
 .lbc__header.is-drop-clock .lbc__gameclock,
