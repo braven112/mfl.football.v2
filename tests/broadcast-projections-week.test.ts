@@ -121,21 +121,51 @@ describe('loadLeagueProjections — the committed feed is only right when its we
     expect((await loadLeagueProjections(registered(), 1, 'cookie', 2026)).size).toBe(0);
   });
 
-  it('does not re-fetch the same week on every poll, and never caches an empty answer', async () => {
+  it('bounds the fallback so a hung MFL costs the board its numbers, not its render', async () => {
+    // `mflFetch` re-sends on every redirect hop, so its 10s default is up to
+    // ~40s against a `maxDuration` of 30 — and this now runs in the PAGE
+    // render, not just the poll.
+    readLeagueFeed.mockReturnValue(feed('2', { '100': '31.0' }));
+    respond(feed('1', { '100': '18.4' }));
+
+    await loadLeagueProjections(registered(), 1, 'cookie', 2026);
+
+    const timeout = mflFetch.mock.calls[0][0].timeoutMs;
+    expect(timeout).toBeGreaterThan(0);
+    expect(timeout).toBeLessThanOrEqual(8000);
+  });
+
+  it('does not re-fetch the same week on every poll', async () => {
     readLeagueFeed.mockReturnValue(feed('2', { '100': '31.0' }));
     respond(feed('1', { '100': '18.4' }));
 
     await loadLeagueProjections(registered(), 1, 'cookie', 2026);
     await loadLeagueProjections(registered(), 1, 'cookie', 2026);
     expect(mflFetch).toHaveBeenCalledTimes(1);
+  });
 
-    // A different week is a different answer, and a failed read must not be
-    // remembered — a board pinned flat for ten minutes off one bad poll is the
-    // bug wearing a cache.
-    mflFetch.mockResolvedValueOnce(new Response('nope', { status: 503 }));
-    respond(feed('3', { '100': '27.0' }));
-    expect((await loadLeagueProjections(registered(), 3, 'cookie', 2026)).size).toBe(0);
-    expect((await loadLeagueProjections(registered(), 3, 'cookie', 2026)).size).toBe(1);
+  it('holds a failed read briefly, then lets it recover', async () => {
+    vi.useFakeTimers();
+    try {
+      readLeagueFeed.mockReturnValue(feed('2', { '100': '31.0' }));
+      mflFetch.mockResolvedValueOnce(new Response('nope', { status: 503 }));
+
+      // Empty is cached too — on gameday this path runs on every render and
+      // every poll, so re-fetching a throttled MFL with no backoff is how the
+      // board gets itself throttled harder.
+      expect((await loadLeagueProjections(registered(), 3, 'cookie', 2026)).size).toBe(0);
+      expect((await loadLeagueProjections(registered(), 3, 'cookie', 2026)).size).toBe(0);
+      expect(mflFetch).toHaveBeenCalledTimes(1);
+
+      // But only briefly: a recovered feed is back within a poll cycle, which
+      // is the whole difference between a backoff and a board pinned flat.
+      vi.advanceTimersByTime(61_000);
+      respond(feed('3', { '100': '27.0' }));
+      expect((await loadLeagueProjections(registered(), 3, 'cookie', 2026)).size).toBe(1);
+      expect(mflFetch).toHaveBeenCalledTimes(2);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('leaves the outside-league path asking for the week by number, as it already did', async () => {

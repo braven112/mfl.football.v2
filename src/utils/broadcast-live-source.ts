@@ -321,6 +321,17 @@ export async function readOutsideLiveSnapshot(
  * fetches once.
  */
 const PROJECTION_TTL_MS = 10 * 60 * 1000;
+/**
+ * A read that answered with NOTHING is remembered too, but only briefly.
+ *
+ * Not caching it at all sounds safer and is not: on gameday this fallback is
+ * the normal path, so a throttled MFL — or a week that genuinely has no
+ * projections — would be re-fetched on every render and every poll, per viewer
+ * per league, with no backoff. That is how a board gets itself throttled
+ * HARDER. A minute is short enough that a recovered feed is back within one
+ * poll cycle and long enough to stop the loop.
+ */
+const PROJECTION_EMPTY_TTL_MS = 60 * 1000;
 const projectionCache = new Map<string, { at: number; map: Map<string, number> }>();
 
 /** Exported for tests only — a module-level cache would otherwise leak between them. */
@@ -355,7 +366,9 @@ async function readRegisteredProjections(
 ): Promise<Map<string, number>> {
   const key = `${leagueId}:${year}:w${week}`;
   const hit = projectionCache.get(key);
-  if (hit && Date.now() - hit.at < PROJECTION_TTL_MS) return hit.map;
+  if (hit && Date.now() - hit.at < (hit.map.size > 0 ? PROJECTION_TTL_MS : PROJECTION_EMPTY_TTL_MS)) {
+    return hit.map;
+  }
 
   const url = buildMflExportUrl({
     type: 'projectedScores',
@@ -364,12 +377,16 @@ async function readRegisteredProjections(
     params: { W: week },
     host: resolveHost(null, leagueId),
   });
-  const response = await mflFetch({ url, method: 'GET', mflUserCookie });
-  if (!response.ok) return new Map();
-  const map = projectionsForWeek(await response.json().catch(() => null), week);
-  // Only a real answer is worth remembering. Caching an empty map would pin
-  // the whole board flat for ten minutes off one throttled read.
-  if (map.size > 0) projectionCache.set(key, { at: Date.now(), map });
+  // BOUNDED, because this runs inside the PAGE render as well as the poll —
+  // `mflFetch` re-sends on each redirect hop, so its 10s default is up to ~40s
+  // against a `maxDuration` of 30. A hung MFL must cost the board its forward
+  // numbers, never its render.
+  const response = await mflFetch({ url, method: 'GET', mflUserCookie, timeoutMs: 6000 });
+  const map = response.ok
+    ? projectionsForWeek(await response.json().catch(() => null), week)
+    : new Map<string, number>();
+  // Both outcomes are cached, at very different TTLs — see PROJECTION_EMPTY_TTL_MS.
+  projectionCache.set(key, { at: Date.now(), map });
   return map;
 }
 
