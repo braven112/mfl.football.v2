@@ -7,7 +7,7 @@ hotfix_pr: https://github.com/braven112/mfl.football.v2/pull/1079
 hotfix_sha: c7623ba
 followup_issue: 1080
 followup_pr:
-followup_session:
+followup_session: session_01KvjeQTyQKQ6dXp9mBvGVCd
 ---
 
 # Follow-up: the broadcast board's to-play counts and matchup clock
