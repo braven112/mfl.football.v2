@@ -2,8 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
-import { processWeeklyScores as processFromCoachData } from '../src/utils/coach-data';
-import { processWeeklyScores as processFromWeeklyScores } from '../src/utils/weekly-scores';
+import { processWeeklyScores } from '../src/utils/coach-data';
 
 /**
  * Guard: MFL omits `matchup` for a week it has not paired up.
@@ -23,18 +22,30 @@ import { processWeeklyScores as processFromWeeklyScores } from '../src/utils/wee
  * whole SSR render died. Astro served the 404 page for a throw, so the failure
  * looked like a missing route rather than a crash.
  *
- * `processWeeklyScores` has been copy-pasted into three files. `coach-data.ts`
- * already carried the guards; the other two did not. This test pins all three,
- * so the next copy cannot ship without them.
+ * `processWeeklyScores` had been copy-pasted into three files. `coach-data.ts`
+ * already carried the guards; the other two did not. The hotfix pinned all
+ * three; the follow-up collapsed them, so there is one implementation left to
+ * pin — and the point of the scan below is now that it stays that way.
+ *
+ * `src/utils/weekly-scores.ts` was deleted outright (dead code with no
+ * importers, carrying the same live landmine) and `rosters.astro` imports
+ * `coach-data.ts` instead of redeclaring the function. See
+ * docs/claude/followups/2026-09-08-roster-page-unpaired-week-404.md (F2).
  */
 
 const ROOT = process.cwd();
 
-/** Every file carrying a copy of `processWeeklyScores`. */
-const IMPLEMENTATIONS = [
-  'src/utils/coach-data.ts',
-  'src/utils/weekly-scores.ts',
+/**
+ * The one file allowed to carry an implementation of `processWeeklyScores`.
+ * Everything else imports it.
+ */
+const CANONICAL_IMPLEMENTATION = 'src/utils/coach-data.ts';
+
+/** Files that consume it, and must keep consuming rather than redeclaring. */
+const CONSUMERS = [
   'src/pages/theleague/rosters.astro',
+  'src/pages/theleague/lineup.astro',
+  'src/pages/afl-fantasy/lineup.astro',
 ];
 
 /**
@@ -69,27 +80,24 @@ const FEED_WITH_AN_UNPAIRED_WEEK = [
 ];
 
 describe('processWeeklyScores tolerates a week MFL has not paired into matchups', () => {
-  for (const [name, fn] of [
-    ['utils/coach-data', processFromCoachData],
-    ['utils/weekly-scores', processFromWeeklyScores],
-  ] as const) {
-    it(`${name} does not throw, and still reads the paired week`, () => {
-      const scores = fn(FEED_WITH_AN_UNPAIRED_WEEK, 15);
+  it('does not throw, and still reads the paired week', () => {
+    const scores = processWeeklyScores(FEED_WITH_AN_UNPAIRED_WEEK, 15);
 
-      expect(scores.get('13593')).toEqual({ 1: 18.5 });
-      expect(scores.get('14001')).toEqual({ 1: 9.25 });
-    });
+    expect(scores.get('13593')).toEqual({ 1: 18.5 });
+    expect(scores.get('14001')).toEqual({ 1: 9.25 });
+  });
 
-    it(`${name} survives a weeklyResults with an explicitly undefined matchup`, () => {
-      expect(() => fn([{ weeklyResults: { week: '15', matchup: undefined } }], 15)).not.toThrow();
-      expect(() => fn([{ weeklyResults: { week: '15', matchup: [undefined] } }], 15)).not.toThrow();
-      expect(() => fn([{ weeklyResults: { week: '15', matchup: { franchise: undefined } } }], 15)).not.toThrow();
-    });
-  }
+  it('survives a weeklyResults with an explicitly undefined matchup', () => {
+    const fn = processWeeklyScores;
+    expect(() => fn([{ weeklyResults: { week: '15', matchup: undefined } }], 15)).not.toThrow();
+    expect(() => fn([{ weeklyResults: { week: '15', matchup: [undefined] } }], 15)).not.toThrow();
+    expect(() => fn([{ weeklyResults: { week: '15', matchup: { franchise: undefined } } }], 15)).not.toThrow();
+  });
 });
 
-describe('every copy of processWeeklyScores keeps the guards', () => {
-  for (const file of IMPLEMENTATIONS) {
+describe('the canonical processWeeklyScores keeps the guards', () => {
+  {
+    const file = CANONICAL_IMPLEMENTATION;
     const source = readFileSync(join(ROOT, file), 'utf8');
 
     it(`${file} never wraps a bare weekResults.matchup into an array`, () => {
@@ -108,6 +116,27 @@ describe('every copy of processWeeklyScores keeps the guards', () => {
         .toMatch(/if\s*\(\s*!matchup\s*\)\s*return/);
       expect(source, `${file} is missing \`if (!franchise) return\``)
         .toMatch(/if\s*\(\s*!franchise\s*\)\s*return/);
+    });
+  }
+});
+
+describe('nobody re-grows a second copy of processWeeklyScores', () => {
+  // The defect shipped because the page held its own copy that drifted from
+  // the util's. A consumer that DECLARES the function instead of importing it
+  // is the start of the next drift, so the shape is what gets pinned, not just
+  // the guards inside it.
+  const DECLARES = /(?:function\s+processWeeklyScores|(?:const|let|var)\s+processWeeklyScores\s*=)/;
+
+  for (const file of CONSUMERS) {
+    it(`${file} imports processWeeklyScores rather than declaring its own`, () => {
+      const source = readFileSync(join(ROOT, file), 'utf8');
+
+      expect(source, `${file} does not import processWeeklyScores`)
+        .toMatch(/import\s*\{[^}]*\bprocessWeeklyScores\b[^}]*\}\s*from\s*['"][^'"]*coach-data['"]/);
+      expect(
+        DECLARES.test(source),
+        `${file} declares its own processWeeklyScores — import the one in ${CANONICAL_IMPLEMENTATION} instead`,
+      ).toBe(false);
     });
   }
 });

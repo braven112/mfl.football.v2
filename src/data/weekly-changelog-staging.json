@@ -2,6 +2,14 @@
   "weekOf": "2026-09-21",
   "changes": [
     {
+      "date": "2026-09-08",
+      "type": "bug-fix",
+      "summary": "A page that breaks now returns a real error page — it says the fumble is on our end and gives you a button to try again, instead of the same “Page Not Found” card a mistyped URL gets.",
+      "impact": "user",
+      "area": "navigation",
+      "league": "both"
+    },
+    {
       "date": "2026-09-10",
       "type": "enhancement",
       "summary": "<a href=\"/activity\">Owner Activity</a> is now site analytics: league traffic, per-owner engagement, page reach and app installs — and no transaction leaderboard.",
