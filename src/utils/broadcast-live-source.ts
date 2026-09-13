@@ -17,7 +17,7 @@ import type { LeagueDefinition } from '../config/leagues';
 import { ALL_LEAGUES, getLeagueById } from '../config/leagues';
 import type { MyLeague } from './my-leagues';
 import type { BoardLeague } from './sunday-ticket-selection';
-import { loadLiveScoringPayload } from './live-scoring-source';
+import { loadLiveScoringPayload, resolveHost } from './live-scoring-source';
 import {
   emptyLiveSnapshot,
   hasLiveSignal,
@@ -312,6 +312,85 @@ export async function readOutsideLiveSnapshot(
 }
 
 /**
+ * How long a registered league's live projections stay good in process.
+ *
+ * A full-game projection is a number for the WEEK, not for the minute — MFL
+ * does not move it while the games run. Without this the fallback below would
+ * re-fetch it on every poll of every league, all afternoon, for a number that
+ * did not change. Per-instance and best-effort by design: a cold lambda just
+ * fetches once.
+ */
+const PROJECTION_TTL_MS = 10 * 60 * 1000;
+/**
+ * A read that answered with NOTHING is remembered too, but only briefly.
+ *
+ * Not caching it at all sounds safer and is not: on gameday this fallback is
+ * the normal path, so a throttled MFL — or a week that genuinely has no
+ * projections — would be re-fetched on every render and every poll, per viewer
+ * per league, with no backoff. That is how a board gets itself throttled
+ * HARDER. A minute is short enough that a recovered feed is back within one
+ * poll cycle and long enough to stop the loop.
+ */
+const PROJECTION_EMPTY_TTL_MS = 60 * 1000;
+const projectionCache = new Map<string, { at: number; map: Map<string, number> }>();
+
+/** Exported for tests only — a module-level cache would otherwise leak between them. */
+export function clearProjectionCache(): void {
+  projectionCache.clear();
+}
+
+/**
+ * A registered league's projections for THIS week, read live from MFL.
+ *
+ * The committed `projectedScores.json` is synced with **W omitted**, and MFL
+ * answers that with whatever week it considers current — which rolls to the
+ * NEXT week once the current week's games are under way. Verified against
+ * TheLeague on 2026-09-13, mid-afternoon of week 1: W omitted answered
+ * `week: "2"`, `W=1` answered `week: "1"`. `projectionsForWeek` then refuses
+ * the mismatch — correctly, because next week's numbers are not this week's —
+ * every projection reads 0, and the projected final collapses onto the live
+ * score. So on the one day this board exists for, the committed feed is
+ * reliably the wrong week, and the only way to get this week's numbers is to
+ * ask for the week BY NUMBER.
+ *
+ * The host comes from the REGISTRY via `resolveHost`, never from a hint: `L`
+ * and the host are one composite key and MFL validates neither against the
+ * other, so a server asked for a league it does not host answers with its OWN
+ * league — a 200, right schema, wrong league.
+ */
+async function readRegisteredProjections(
+  leagueId: string,
+  year: number,
+  week: number,
+  mflUserCookie: string,
+): Promise<Map<string, number>> {
+  const key = `${leagueId}:${year}:w${week}`;
+  const hit = projectionCache.get(key);
+  if (hit && Date.now() - hit.at < (hit.map.size > 0 ? PROJECTION_TTL_MS : PROJECTION_EMPTY_TTL_MS)) {
+    return hit.map;
+  }
+
+  const url = buildMflExportUrl({
+    type: 'projectedScores',
+    leagueId,
+    year,
+    params: { W: week },
+    host: resolveHost(null, leagueId),
+  });
+  // BOUNDED, because this runs inside the PAGE render as well as the poll —
+  // `mflFetch` re-sends on each redirect hop, so its 10s default is up to ~40s
+  // against a `maxDuration` of 30. A hung MFL must cost the board its forward
+  // numbers, never its render.
+  const response = await mflFetch({ url, method: 'GET', mflUserCookie, timeoutMs: 6000 });
+  const map = response.ok
+    ? projectionsForWeek(await response.json().catch(() => null), week)
+    : new Map<string, number>();
+  // Both outcomes are cached, at very different TTLs — see PROJECTION_EMPTY_TTL_MS.
+  projectionCache.set(key, { at: Date.now(), map });
+  return map;
+}
+
+/**
  * One league's full-game projections for the week, player id → points.
  *
  * Projections are what make "projected final" and the win-probability bar mean
@@ -322,10 +401,13 @@ export async function readOutsideLiveSnapshot(
  * way for one afternoon of development and it is the reason this function
  * exists.
  *
- * Two sources, because a league this site syncs already has the feed on disk:
- *  - REGISTERED: the committed `projectedScores.json`, read at the league's OWN
- *    year. Not the season year — `data/<league>/mfl-feeds/<leagueYear>/` is
- *    where the sync writes, and the AFL's two clocks are three months apart.
+ * Three reads, in order:
+ *  - REGISTERED, committed: `projectedScores.json` at the league's OWN year.
+ *    Not the season year — `data/<league>/mfl-feeds/<leagueYear>/` is where the
+ *    sync writes, and the AFL's two clocks are three months apart.
+ *  - REGISTERED, live: the same export asked for THIS week by number, when the
+ *    committed copy is for another one. See `readRegisteredProjections` — on
+ *    gameday that is the normal case, not the exception.
  *  - OUTSIDE: a live export with the owner's cookie, same path the outside
  *    live-scoring read already takes.
  *
@@ -336,19 +418,26 @@ export async function loadLeagueProjections(
   league: BoardLeague,
   week: number,
   mflUserCookie: string,
+  /** SEASON year, matching the `liveScoring` read these numbers are scored against. */
+  year: number = getCurrentSeasonYear(),
 ): Promise<Map<string, number>> {
   try {
     if (league.registered) {
       const leagueYear = getLeagueYearForSlug(league.registered.slug);
       const payload = readLeagueFeed(league.registered, leagueYear, 'projectedScores.json');
-      return projectionsForWeek(payload, week);
+      const committed = projectionsForWeek(payload, week);
+      if (committed.size > 0) return committed;
+      // Empty here means the committed copy is for a DIFFERENT week (or the
+      // sync has not written one yet) — never "this week has no projections",
+      // because MFL publishes them for every week of the season.
+      return await readRegisteredProjections(league.id, year, week, mflUserCookie);
     }
 
     if (!mflUserCookie || !league.host) return new Map();
     const url = buildMflExportUrl({
       type: 'projectedScores',
       leagueId: league.id,
-      year: getCurrentSeasonYear(),
+      year,
       params: { W: week },
       host: league.host,
     });
