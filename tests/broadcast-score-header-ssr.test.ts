@@ -95,11 +95,17 @@ const ssr = (over: Record<string, unknown> = {}) =>
   );
 
 describe('BroadcastScoreHeader — what the cell prints', () => {
-  it('gives EACH team its own to-play count, on that team’s row', () => {
+  it('gives EACH team its own to-play count, stacked under that team’s name', () => {
     const html = ssr();
-    // Both counts, and each inside the same row as the name it belongs to.
-    expect(html).toMatch(/Pigskins<\/span><span class="lbc__ytp">1 to play<\/span>/);
-    expect(html).toMatch(/Pain<\/span><span class="lbc__ytp is-opp">4 to play<\/span>/);
+    // Both counts, each immediately after the name it belongs to and inside
+    // that name's own column — not loose on the row, where it ellipsised to
+    // "1 to ..." against the numerals on a real doubleheader cell.
+    expect(html).toMatch(
+      /<span class="lbc__who"><span class="lbc__tn">Pigskins<\/span><span class="lbc__ytp">1 to play<\/span><\/span>/,
+    );
+    expect(html).toMatch(
+      /<span class="lbc__who"><span class="lbc__tn">Pain<\/span><span class="lbc__ytp is-opp">4 to play<\/span><\/span>/,
+    );
   });
 
   it('keeps both counts at the ordinary four-cell density', () => {
