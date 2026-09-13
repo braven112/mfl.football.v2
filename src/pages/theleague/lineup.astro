@@ -922,6 +922,18 @@ const ownersPollTeams = Object.values(getLeagueTeamBrands(ownersPollLeague.slug)
       // ---------------------------------------------------------------------------
       // State
       // ---------------------------------------------------------------------------
+      // Am I still on the lineup page? Ask a node the ROUTER REPLACED.
+      // `init` is registered on `document`, which the swap does not replace, so
+      // it fires on EVERY in-site navigation for the rest of the session — and
+      // `__LINEUP_DATA__` is a `window` global, so it is still this page's
+      // payload after the owner leaves. That made the `!data` check below
+      // unfalsifiable after the first lineup visit: init ran its body on the
+      // next page, the Submit button id resolved to null, and
+      // `submitBtn.querySelector(...)` threw an uncaught TypeError that took
+      // the whole page down (Set Lineup -> Roster, Sept 2026). The teardown
+      // above still has to run first, so this gate goes here and not earlier.
+      if (!document.getElementById('lineup-slots')) return;
+
       // Re-read per load, never captured beside the imports. The `is:inline`
       // payload script above is re-executed by the router on every arrival, so
       // a captured `data` would be the week (or the page) the owner just left.

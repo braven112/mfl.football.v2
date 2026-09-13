@@ -120,6 +120,19 @@ comes out 0.0 on any week MFL hasn't recorded starters for.
   `init()` directly; `astro:page-load` fires on the first load too.
   `tests/lineup-page-clientrouter.test.ts` pins the shape on both pages, plus
   a parity check so the next fix cannot land on only one of them.
+- **That `init()` needs a DOM gate, and `__LINEUP_DATA__` cannot be it.** The
+  listener lives on `document`, which the swap does NOT replace, so once an
+  owner has opened Set Lineup the lineup controller re-runs on EVERY page they
+  visit for the rest of the session. The payload it read as its "am I on this
+  page" check is a `window` global, equally un-replaced, so `if (!data) return`
+  was unfalsifiable after the first visit: on the next page the Submit button
+  id answered null and `submitBtn.querySelector(...)` threw an uncaught
+  TypeError that took the whole page down — Set Lineup -> Roster rendered the
+  red error box, in the one week of the year it is the most-used flow. The gate
+  has to ask for a node the router actually replaced
+  (`document.getElementById('lineup-slots')`), and it has to sit AFTER the
+  teardown above, because leaving the page is exactly when those surviving
+  `document`/`window` registrations must come off.
 - **The AFL watermark takes `iconDark` first, ungated.** The panel is a
   team-color gradient over near-black in BOTH themes, so the site-wide
   `html.dark` crest swap (`TeamIconDarkStyles`) never fires on it. Nine of the
