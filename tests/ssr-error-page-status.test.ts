@@ -89,6 +89,37 @@ describe('a crash leaves one greppable line in the runtime logs', () => {
     const [, template = ''] = read(ERROR_PAGE).split(/^---$/m).slice(1);
     expect(template).not.toMatch(/\{\s*error\b/);
   });
+
+  it('does not log a bare visit to /500', () => {
+    // A health check, a probe or a stale link hitting /500 directly is not an
+    // incident, and logging those buries the line this exists to make
+    // greppable. The guard is on the CONDITION rather than on any one spelling
+    // of it: what must not come back is an unconditional console.error.
+    const source = read(ERROR_PAGE);
+    expect(
+      source,
+      'Guard the [ssr-500] line so a bare GET /500 does not log. Copilot ' +
+        'flagged this on PR #1023.',
+    ).toMatch(/failedPath\s*!==\s*['"]\/500['"]/);
+    expect(source).toMatch(/if\s*\([^)]*\)\s*\{[\s\S]*console\.error\(\s*`\[ssr-500\]/);
+  });
+
+  it('keeps a real crash logged even if Astro hands it no error prop', () => {
+    // The expensive failure is losing the line on a genuine outage, so the
+    // condition must not be `error` alone — a crash renders this route at the
+    // path that threw, and that path is the durable signal.
+    expect(read(ERROR_PAGE)).toMatch(/error\s*!==\s*undefined\s*\|\|/);
+  });
+
+  it('flattens the stack so one crash is one log record', () => {
+    // Vercel's log viewer splits on newlines: a raw multi-line stack becomes N
+    // entries and only the first carries the `[ssr-500]` tag, so filtering
+    // finds the header and hides the stack underneath it.
+    expect(
+      read(ERROR_PAGE),
+      'Replace newlines in the logged detail before it reaches console.error.',
+    ).toMatch(/\.replace\(\s*\/\\s\*\\n\\s\*\/g/);
+  });
 });
 
 describe('the retry link cannot leave the site', () => {

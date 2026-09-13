@@ -40,10 +40,28 @@ const { error } = Astro.props as { error?: unknown };
 // of an afternoon. Server-side only — the stack never reaches the browser,
 // which is the whole reason production hid it in the first place.
 const failedPath = Astro.url.pathname + Astro.url.search;
-console.error(
-  `[ssr-500] ${Astro.request.method} ${failedPath} —`,
-  error instanceof Error ? (error.stack ?? error.message) : (error ?? 'no error provided'),
-);
+
+// A crash renders this route at the path that THREW, so `failedPath` is the
+// broken URL and not `/500`. A bare `GET /500` — a health check, a probe, an
+// owner following a stale link — is the one case that is not an incident, and
+// logging it would bury the line this exists to make greppable.
+//
+// The test is the path rather than `error` alone, deliberately: if Astro ever
+// renders this without handing us `initialProps`, a real crash still leaves a
+// record. Losing the line on a genuine outage is the expensive failure here;
+// one extra line on a probe of a broken path is not.
+const isIncident = error !== undefined || failedPath !== '/500';
+
+if (isIncident) {
+  const detail =
+    error instanceof Error ? (error.stack ?? error.message) : (error ?? 'no error provided');
+  // Flattened to ONE record. Vercel's log viewer splits on newlines, so a raw
+  // multi-line stack becomes N entries of which only the first carries the
+  // `[ssr-500]` tag — the filter would find the header and hide the stack.
+  console.error(
+    `[ssr-500] ${Astro.request.method} ${failedPath} — ${String(detail).replace(/\s*\n\s*/g, ' ⇢ ')}`,
+  );
+}
 
 // Set explicitly rather than inherited: it makes a direct GET /500 honest too,
 // and it is the assignment `[...path].astro` uses to pin 404, so the two error
