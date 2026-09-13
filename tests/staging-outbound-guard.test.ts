@@ -203,7 +203,12 @@ describe('staging outbound-write guard', () => {
   // an allowlist would hide the one case that matters. The bypass shape is
   // narrower — a RAW fetch aimed at a MUTATING MFL endpoint.
   it('no raw fetch() reaches a mutating MFL endpoint outside mflFetch', () => {
-    const MUTATING = /\/(import|add_drop|csetup)\b/;
+    // MFL's mutating endpoints by their full query signature. Matching the
+    // ENDPOINT rather than the host is what makes the host check unnecessary:
+    // `import?TYPE=`, `add_drop?` and `csetup?` are MFL's own URL shapes and
+    // appear nowhere else, whereas a bare `/import` also matches this repo's
+    // own /api/accounting/import route.
+    const MUTATING = /\/(import\?TYPE=|add_drop\?|csetup\?)/;
     const offenders: string[] = [];
 
     for (const file of SOURCE_FILES) {
@@ -213,16 +218,27 @@ describe('staging outbound-write guard', () => {
         // `fetch(` not preceded by an identifier character, so `mflFetch(`
         // — the guarded path — does not match.
         if (!/(^|[^A-Za-z0-9_])fetch\(/.test(line)) return;
-        // The URL may be on the call line or the next couple.
-        const window = lines.slice(i, i + 3).join('\n');
-        // `includes`, NOT a regex. An unanchored /myfantasyleague\.com/ is the
-        // shape CodeQL flags as a missing-anchor vulnerability, because in a
-        // URL check it also matches `evil-myfantasyleague.com.attacker.net`.
-        // Harmless here — this greps SOURCE TEXT for a hostname literal rather
-        // than validating a URL — but the literal check says exactly that and
-        // cannot be mistaken for validation by the next reader or the scanner.
-        // Do not "improve" it back into a regex.
-        if (MUTATING.test(window) && window.includes('myfantasyleague.com')) {
+        // Look BOTH WAYS around the call, not just forward. The usual shape is
+        //   const url = `https://…/add_drop?…&DELETE=…`;
+        //   await fetch(url, { method: 'GET' });
+        // — the URL is assigned on an EARLIER line, which a forward-only window
+        // misses entirely. A probe of exactly that shape slipped through the
+        // first version of this check.
+        const window = lines.slice(Math.max(0, i - 3), i + 3).join('\n');
+        // NO HOSTNAME CHECK, deliberately, and this is the third shape of
+        // this line. A regex `/myfantasyleague\.com/` tripped CodeQL's
+        // missing-anchor rule; rewriting it as `.includes('myfantasyleague.com')`
+        // tripped incomplete-URL-substring-sanitization instead. Both alerts
+        // are false here — this greps SOURCE TEXT, it does not validate a URL —
+        // but "silence the scanner" is the wrong lesson, and splitting the
+        // literal to hide it from the scanner would be worse.
+        //
+        // The right answer was that the host check earned nothing. The
+        // endpoint signatures above are MFL's alone, so a raw fetch at one of
+        // them is the bypass whatever host string sits beside it — and a
+        // future MFL host rename cannot slip past a check that never looked at
+        // the host.
+        if (MUTATING.test(window)) {
           offenders.push(`${file.path}:${i + 1}`);
         }
       });
