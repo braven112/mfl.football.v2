@@ -177,3 +177,82 @@ screen.
   `dark-surface-crest.ts`, which owns the contract. And a guard for this has to
   be BEHAVIOURAL: the regression was two fields holding the same string, which
   no amount of reading the call site reveals.
+
+## Sep 2026 — the TV that has no keyboard (#1069)
+
+The board's controls had been reasoned about entirely as a placement problem —
+"not on the screen" — and four rounds of that produced a screen whose only
+controls were `F`, `M` and `L`. Then the actual hardware turned out to be an
+Xbox browser, where those keys are not a fallback. They are nothing.
+
+- **"No chrome on the board" was the right rule stated one level too
+  literally.** The failure it was built from is not *a control on the board*,
+  it is *a visible default plus a condition meant to hide it* — and every
+  condition turned out to be an assumption about set-top hardware (a
+  coarse-pointer TV never receiving the `@media (hover: hover)` rule, a
+  fine-pointer TV holding `:hover` true all afternoon because the cursor is
+  parked, an idle timer waiting on an interaction a remote never sends). The
+  overflow row's toggle is on the board and is not a fourth attempt, because it
+  is unconditional: always rendered when it has something to toggle, in normal
+  flow, its 4.6vh subtracted from the panel grid rather than painted over it.
+  Nothing about it can be wrong on hardware it was not tested on, because
+  nothing about it is conditional. Guarded in `broadcast-shell-guards` by
+  asserting the ABSENCE of `opacity: 0`, `visibility`, `:hover` and any idle
+  class in its rules — the shape, not the pixel.
+
+- **An author `display` beats the UA's `[hidden]`, and this repo has no global
+  reset.** The fullscreen button ships `hidden` and reveals itself once it has
+  found an API to call, which is the whole mechanism keeping a dead control off
+  a browser without the Fullscreen API — and `display: inline-flex` on its
+  class silently defeated it. Every stylesheet here that hides something
+  declares its own `[hidden]` rule; this one now does too. No runtime symptom
+  on a browser that DOES support fullscreen, so only a scan catches it.
+
+- **A vendor prefix has three parts and they are one decision.** Advertising
+  `msRequestFullscreen` while reading only `fullscreenElement` /
+  `webkitFullscreenElement` and listening only for the lowercase events is
+  worse than not supporting `ms` at all: the button reveals itself, enters
+  fullscreen, then can neither report it nor leave it. `MSFullscreenChange` is
+  genuinely capitalised differently from the other two. That engine is Xbox's
+  older EdgeHTML — the hardware the button exists for.
+
+- **Moving a grid moves every rule that targets it.** The header became a flex
+  column with the grid on `.lbc__panels` (the overflow row could not be a ninth
+  grid child: the rows are explicit precisely so a panel cannot grow past the
+  fixed height and paint over the strip). The `max-width: 900px` block kept
+  setting `grid-template-columns` on `.lbc__header` — now a flex container, so
+  the declarations are inert with no warning anywhere. The symptom is not a
+  selector that looks broken; it is a phone keeping the desktop's 2/3/4 columns
+  inside a 55%-height header.
+
+- **Two different caps, answering two different questions.**
+  `MAX_FEATURED_CELLS` (4) is what a viewer can READ from ten feet;
+  `MAX_GRID_PANELS` (8) is what the stylesheet can PLACE. Lifting the first for
+  the expanded view while forgetting the second put the ninth panel in an
+  implicit row inside an `overflow: hidden` box, where it is not drawn — so
+  "Show all leagues" showed eight of nine. Both hold in both states now, and
+  the label reads "Show more leagues" rather than promising an "all" the layout
+  cannot keep.
+
+- **The board is dark in both themes; the toolbar above it is not the board.**
+  This stylesheet consumes no colour token deliberately — franchise colours are
+  the board's background and every token either inverts under `html.dark` or is
+  floored against a surface the board does not have. The controls strip
+  inherited that reasoning by proximity and shipped a hardcoded near-black slab
+  sitting under a light-mode site nav, reading as a piece of the board that had
+  escaped onto the page. It is an ordinary page element and takes page tokens;
+  the no-token guard is scoped around exactly those rules rather than dropped.
+
+- **A toolbar is not a settings screen.** It had grown a heading, a sentence of
+  prose, a chip per league (six or eight deep for anyone in other people's
+  leagues) and a paragraph of keyboard shortcuts — above the one page whose
+  entire job is the scores. Three buttons now: Leagues, Sound, Full screen.
+  Leagues is a link to `?picker=1`, which is the screen for choosing leagues
+  and still carries every chip, the sound toggle and the shortcut keys.
+
+- **Carry the week through every hop, including the ones that are not the
+  board.** `broadcastHref`'s contract is that an explicit `?week=` survives a
+  trip through the chips, and the picker is ON that trip: `doneHref` reads
+  `parsedWeek` off the PICKER's own URL, so a Leagues link that dropped the
+  week sent an owner watching week 3 back to the current week the moment he
+  pressed Done.
