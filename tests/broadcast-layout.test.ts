@@ -402,17 +402,26 @@ describe('the matchup clock', () => {
 
   it('reads ESPN’s own period and clock, never MFL’s seconds', () => {
     // 1:33 left in the 1st = three whole quarters plus 93s still to play.
-    expect(gameSecondsLeft(games[0], 3600)).toBe(2793);
-    expect(gameSecondsLeft(games[1], 0)).toBe(3600);
-    expect(gameSecondsLeft(games[2], 3600)).toBe(0);
+    expect(gameSecondsLeft(games[0])).toBe(2793);
+    expect(gameSecondsLeft(games[1])).toBe(3600);
+    expect(gameSecondsLeft(games[2])).toBe(0);
     // Overtime is not a fifth quarter — it is only what OT has left.
-    expect(gameSecondsLeft({ ...games[0], period: 5, clock: '2:00' }, 3600)).toBe(120);
+    expect(gameSecondsLeft({ ...games[0], period: 5, clock: '2:00' })).toBe(120);
   });
 
-  it('falls back to MFL’s clock ONLY for a player with no resolvable game', () => {
-    expect(gameSecondsLeft(undefined, 1800)).toBe(1800);
-    expect(gameSecondsLeft(undefined, 99999)).toBe(3600);
-    expect(gameSecondsLeft(undefined, -5)).toBe(0);
+  it('prints NO clock when ESPN placed none of the starters', () => {
+    // `assembleBroadcastBoard` substitutes `games: []` on any scoreboard
+    // error. Every row would then fall to MFL's non-ticking seconds, which is
+    // the one thing this must never print a clock from.
+    expect(matchupTimeLeft([row('kc'), row('sf')], [], meta)).toBe('');
+    expect(matchupTimeLeft([row('bye')], games, meta)).toBe('');
+  });
+
+  it('leaves a starter with no game out of the denominator, not just the numerator', () => {
+    // A bye starter has no football left BY DEFINITION. Counting him as a full
+    // unplayed game floors the meter above zero, so `Final` never prints and a
+    // Monday board reads "4th 6:40 left" over a finished slate.
+    expect(matchupTimeLeft([row('atl', 0), row('bye')], games, meta)).toBe('Final');
   });
 
   it('prints a fraction of one game as a position on one game clock', () => {

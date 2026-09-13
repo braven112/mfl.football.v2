@@ -61,9 +61,14 @@ which is exactly why the split exists — verify parsing offline against
   doesn't). With no ESPN game we now print the STATE and no numbers.
 - **The broadcast board's MATCHUP clock is the one derived clock, and it is
   derived from ESPN.** `matchupTimeLeft` (`broadcast-layout.ts`) sums real
-  seconds left — ESPN's `period` + `displayClock` per game, MFL's seconds only
-  for a starter whose game did not resolve — across both teams' starters and
-  prints the fraction as a position on one 60-minute clock. Two things keep it
+  seconds left — ESPN's `period` + `displayClock`, and nothing else — across
+  both teams' starters and prints the fraction as a position on one 60-minute
+  clock. A starter ESPN could not place is out of BOTH halves of the fraction
+  (a bye starter has no football left; counting him as an unplayed game floors
+  the meter above zero so `Final` never prints), and with no starter placed at
+  all there is no clock — `assembleBroadcastBoard` substitutes `games: []` on
+  any ESPN error, and the empty string is what keeps that outage from printing
+  a confident clock made entirely of MFL's seconds. Two more things keep it
   honest and both are pinned by test: the inputs TICK, and it is spelled
   `3rd 4:08 left` where ESPN spells a real clock `4:08 - 3rd`, so it can never
   be read as one game's. What it replaced was worse than a fabrication — the

@@ -423,17 +423,18 @@ export function parseDisplayClock(clock: string): number {
 /**
  * Real NFL seconds still to be played in ONE game.
  *
- * ESPN's `period` + `displayClock` is the only source that ticks. `fallback`
- * is MFL's `gameSecondsRemaining`, used ONLY for a player whose game did not
- * resolve at all (a bye, an unmapped team code, a failed scoreboard fetch) —
- * it lags all afternoon, which is why it is never allowed to print a clock on
- * its own.
+ * ESPN's `period` + `displayClock` is the only source, and it takes a GAME
+ * rather than a game-or-a-fallback on purpose. MFL's `gameSecondsRemaining`
+ * does not tick, so a starter whose game did not resolve — a bye, an unmapped
+ * team code, a scoreboard fetch that failed — contributes nothing to the
+ * matchup's clock instead of contributing a stale number to it. A bye starter
+ * has no football left by definition; the alternative floors the meter at
+ * `4th 6:40 left` on a Monday with the slate final, forever.
  *
  * Overtime returns only what OT has left: a 5th period is not a 5th quarter,
  * and treating it as one hands the matchup fifteen minutes that cannot exist.
  */
-export function gameSecondsLeft(game: NflGame | undefined, fallback: number): number {
-  if (!game) return Math.min(NFL_GAME_SECONDS, Math.max(0, fallback));
+export function gameSecondsLeft(game: NflGame): number {
   if (game.state === 'post') return 0;
   if (game.state === 'pre') return NFL_GAME_SECONDS;
   const inQuarter = parseDisplayClock(game.clock);
@@ -498,9 +499,19 @@ export function matchupTimeLeft(
   }
 
   let left = 0;
+  let counted = 0;
   for (const row of rows) {
     const team = meta[row.id]?.nflTeam;
-    left += gameSecondsLeft(team ? byTeam.get(team) : undefined, row.secondsRemaining);
+    const game = team ? byTeam.get(team) : undefined;
+    // Only starters ESPN could place in a game. With none — the scoreboard
+    // fetch failed and `games` is `[]`, which `assembleBroadcastBoard`
+    // substitutes on any ESPN error — there is NO clock to print, and the
+    // board prints nothing rather than one derived entirely from MFL's
+    // non-ticking seconds. That is the whole rule this function lives under.
+    if (!game) continue;
+    left += gameSecondsLeft(game);
+    counted += 1;
   }
-  return progressClockLabel(left / (rows.length * NFL_GAME_SECONDS));
+  if (counted === 0) return '';
+  return progressClockLabel(left / (counted * NFL_GAME_SECONDS));
 }

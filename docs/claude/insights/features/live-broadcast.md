@@ -330,8 +330,12 @@ for a starter whose game did not resolve at all — and print the fraction as a
 position on one 60-minute clock (`2nd 5:31 left`). Three constraints are what
 keep it from being the fabrication `clockLabel()` was, and each is pinned:
 
-- **The inputs tick.** ESPN's period and clock, never MFL's lagging number as
-  the primary source.
+- **The inputs tick.** ESPN's period and clock, and only those. A starter ESPN
+  could not place leaves both halves of the fraction — review caught the first
+  cut keeping MFL's seconds as a per-player fallback, which printed a clock
+  made 100% of non-ticking numbers the moment the scoreboard fetch failed
+  (`games: []`), and floored a bye starter's matchup above `Final` forever.
+  No starter placed, no clock.
 - **It cannot be read as a game clock.** ESPN spells one `4:08 - 3rd`; this
   spells `3rd 4:08 left`. A guard test asserts the shape, not just the values.
 - **Overtime is not a fifth quarter.** A 5th period contributes only what OT has

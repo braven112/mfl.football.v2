@@ -160,11 +160,15 @@ function BroadcastScoreHeader({
                       {/* A screen reader gets one sentence; the numerals and the
                           bar below are decoration it never has to assemble. */}
                       <p className="visually-hidden">
+                        {/* Every number here is gated on `readable` for the
+                            same reason the visible ones are: an unreachable
+                            feed announced as "0 to play" is the outage-as-a-
+                            shutout merge, read aloud. */}
                         {matchup.mine.name} {score(mineLive, readable)}, projected{' '}
-                        {score(mine?.projectedFinal, readable)},{' '}
-                        {mine?.yetToPlay ?? 0} to play.{' '}
+                        {score(mine?.projectedFinal, readable)}
+                        {readable ? `, ${mine?.yetToPlay ?? 0} to play` : ''}.{' '}
                         {matchup.opponent
-                          ? `${matchup.opponent.name} ${score(theirsLive, readable)}, projected ${score(theirs?.projectedFinal, readable)}, ${theirs?.yetToPlay ?? 0} to play. Win probability ${pct(wp)}.`
+                          ? `${matchup.opponent.name} ${score(theirsLive, readable)}, projected ${score(theirs?.projectedFinal, readable)}${readable ? `, ${theirs?.yetToPlay ?? 0} to play` : ''}.${readable ? ` Win probability ${pct(wp)}.` : ''}`
                           : 'No opponent this week.'}
                         {clock && readable ? ` ${clock} in this matchup.` : ''}
                         {readable ? '' : ' This league’s feed could not be read.'}
