@@ -5,7 +5,7 @@ severity: P3
 opened: 2026-09-13
 found_in_pr: https://github.com/braven112/mfl.football.v2/pull/1076
 followup_issue: 1077
-followup_pr:
+followup_pr: (see #1077)
 ---
 
 # Follow-up: the AFL rosters controller binds TheLeague's rosters page
