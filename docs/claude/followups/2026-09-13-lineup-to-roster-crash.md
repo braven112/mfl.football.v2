@@ -223,3 +223,23 @@ moment that wording went back in, which is the item demonstrating itself.
 and `CLAUDE.md` gains a cross-cutting subsection under "Second league's copy of
 a page" — that is where the hazard actually lives, since it is a property of
 forked siblings rather than of lineups.
+
+### One more pair found, and deliberately NOT fixed here
+
+The cross-cutting review pass on the follow-up PR turned up a **third**
+instance of the same bug class, in the ROSTERS pair:
+`afl-fantasy/rosters.astro` gates on a bare `.roster-page`, which TheLeague's
+rosters page also renders, so an AFL -> TheLeague swap carries the AFL
+controller onto that page (its `switchView` relabels the header "AFL Roster"
+and force-sets `display: grid`). The reverse direction was already safe —
+TheLeague's init gates on `#roster-config`, which only its own page renders.
+
+P3, and cosmetic: no wrong-league write, and TheLeague's own init is not
+locked out. The two-line fix was written and verified (guard failing pre-fix,
+passing after) and then **backed out of this PR**, because any `rosters.astro`
+edit owes a `scripts/roster-parity-check.mjs` run before and after
+(`docs/plans/rosters-page-split.md`) and that needs a dev server plus
+`.env.local`, neither of which this cloud session had. Shipping an unverified
+edit to that page was the wrong trade for a P3.
+
+Tracked as its own follow-up: `docs/claude/followups/2026-09-13-rosters-cross-league-init-gate.md`, issue #1077.

@@ -88,6 +88,15 @@ const PAIRS: Record<string, GuardedPage[]> = {
   ],
 };
 
+// NOT here yet, deliberately: the ROSTERS pair. `afl-fantasy/rosters.astro`
+// gates on a bare `.roster-page`, which TheLeague's rosters page also renders,
+// so an AFL -> TheLeague swap carries the AFL controller onto that page (its
+// `switchView` relabels the header "AFL Roster" and force-sets `display: grid`).
+// The reverse direction is already safe — TheLeague's init gates on
+// `#roster-config`, which only its own page renders. Left out of this PR
+// because any `rosters.astro` edit owes a `scripts/roster-parity-check.mjs`
+// run that needs a dev server. Tracked as its own follow-up.
+
 const REGISTRY_SLUGS = new Set(ALL_LEAGUES.map((l: { slug: string }) => l.slug));
 
 function read(file: string): string {
