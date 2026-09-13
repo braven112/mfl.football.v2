@@ -45,8 +45,9 @@ of your pocket at 10:40 on a Sunday. Same data, opposite interaction model.
 | 8 | Off-season / pre-kickoff | Honest empty state | No sample replay. Gate on `hasLiveSignal` so a zeros payload can never render as a real 0-0. |
 | 9 | Shell | Full cross-league nav for the shared host | A neutral nav this page and every future `mfl.football` page share. |
 | 10 | Push | Close finishes only | One narrow alert: a matchup of yours within N points, late. No red-zone or every-score push. |
-| 11 | Branding | AFL's design language, **black where the AFL is navy** | New `data-league="mfl"` theme. AFL gold/amber accents stay. See **Branding**. |
+| 11 | Branding | AFL's design language, **black where the AFL is navy**; **light AND dark themes** | New `data-league="mfl"` theme following the repo's existing token rules — `tokens.css` for light, `tokens-dark.css` under `html.dark`. Black is what navy is to the AFL: the dark theme's ground and the light theme's dark accent. NOT a black ground in both themes. See **Branding**. |
 | 12 | Deploy | Feature branch + PR preview | `claude/multi-league-live-scoring-kimyws`, PR opened so Vercel actually builds a preview (previews are cancelled without an open PR). |
+| 13 | Artwork for outside leagues | **NFL fallback**: a franchise whose name exactly matches an NFL team gets that club's logo + colors | Quality-of-life win — far more leagues get artwork instead of text. Exact whole-name match only, tuned after owner feedback. See **NFL artwork**. |
 
 ## Before any UI — one solved, one real
 
@@ -143,14 +144,22 @@ If a real account turns out to be in 20+ leagues, the fallback is decision 4's
 rejected option — everything on up to a cap, the rest as off-chips — and that
 is a one-line change in the default selector, not a redesign.
 
-## Branding — AFL's language, black ground
+## Branding — AFL's language, black where the AFL is navy
 
-The AFL theme is `html[data-league="afl"]`: `--afl-navy #0f1e2e` as the ground,
-a navy elevation ramp in `tokens-dark.css`, and gold/amber accents
-(`--afl-gold #d97706`, `--afl-trophy-gold #c9a44c`, `--afl-gold-text #b45309`).
+The AFL theme is `html[data-league="afl"]`: `--afl-navy #0f1e2e` as the brand
+colour, a navy elevation ramp under `html.dark[data-league="afl"]`, and
+gold/amber accents (`--afl-gold #d97706`, `--afl-trophy-gold #c9a44c`,
+`--afl-gold-text #b45309`).
 
-MFL Live gets `html[data-league="mfl"]` — the same structure with the navy
-family replaced by a neutral near-black ramp, gold accents kept.
+MFL Live gets `html[data-league="mfl"]`: the same structure, the navy family
+replaced by a neutral near-black ramp, gold accents kept.
+
+**It has a light theme AND a dark theme, by the repo's existing rules** — light
+tokens on bare `html[data-league="mfl"]`, the dark ramp under
+`html.dark[data-league="mfl"]`, resolved by the same theme script every other
+page uses. Black is what navy is to the AFL: the dark theme's ground and the
+light theme's dark accent. It is *not* a black ground in both themes, and this
+board invents no theming mechanism of its own.
 
 Three traps, all of which this repo has already paid for:
 
@@ -158,32 +167,108 @@ Three traps, all of which this repo has already paid for:
   Light looks perfect, dark ships white-on-black. The new theme needs a
   COMPLETE token set in `tokens.css` *and* `tokens-dark.css` — not a partial
   override of the AFL block. `docs/claude/rules/theming-and-assets.md`.
-- **A black ground makes the franchise-colour problem worse, not the same.**
-  `toBroadcastPair` only ever DARKENS, so it cannot make a colour visible;
-  seven TheLeague franchises are `#181818`, which was already 1.14:1 against
-  the broadcast board's `#05070b`. Against a black MFL ground every one of
-  them disappears. `ensureFieldOn` (`team-color-contrast.ts`) is the fix and
-  it must be applied to this board's ground value, not the broadcast's.
+- **Near-black franchise colours still need `ensureFieldOn`, in the dark
+  theme.** `toBroadcastPair` only ever DARKENS, so it cannot make a colour
+  visible; seven TheLeague franchises are `#181818`, already 1.14:1 against the
+  broadcast board's `#05070b`. Against this board's dark ground they vanish the
+  same way. `ensureFieldOn` (`team-color-contrast.ts`) is the fix, applied
+  against THIS board's ground value — and the ground differs by theme, so it is
+  resolved per theme, not once. The same applies to the near-black NFL
+  primaries rung 2 introduces (LV `#101820`, CHI `#0b162a`, NO `#101820`).
 - **`SplashLayout` sets no `data-league`**, so `mfl.football` renders
   TheLeague's default blue tokens today. The new shell sets the attribute; the
-  splash page either moves onto it or stays as-is (decision 1 leaves the splash
-  unchanged, so: new layout, splash untouched).
+  splash page stays as it is (decision 1), so: new layout, splash untouched.
+
+**NFL marks on the dark theme are already solved.** `nfl-logo-dark-css.ts`
+generates a `html.dark`-keyed swap to the mirrored `500-dark` cut for every
+mark that carries dark outlines (Raiders, Steelers, Jets, Bengals), plus a
+white-ring filter for black-bodied marks via `NFL_DARK_STROKE_CODES`. Because
+this board has a real `html.dark` rather than a permanent black ground, that
+machinery applies unchanged — which is a direct argument for the light/dark
+decision over a single black theme. Include `NflLogoDarkStyles.astro` in the
+new layout's head and inherit it; do not write a second swap.
 
 Logo/wordmark for the installed app icon: a neutral "MFL" mark, not any
 league's crest. That asset does not exist yet — see **Open**.
 
-### League identity on the cards
+### League identity on the cards — a three-rung ladder
 
-Per the brief:
+1. **TheLeague / AFL / Best Ball** — their existing crests and franchise icons,
+   read through `getLeagueTeamBrands` / `resolveBroadcastCrest`, exactly as
+   `/broadcast` does. Never overridden by rung 2.
+2. **Any franchise whose name IS an NFL team** — that club's logo and brand
+   colors from this repo. See below.
+3. **Everything else** — text only. League and franchise names from the
+   `myleagues` payload, a neutral surface, no invented colour and no generated
+   monogram. This is already how `broadcast-board.ts` treats an outside league;
+   reuse that path, do not write a second one.
 
-- **TheLeague / AFL / Best Ball** — their existing crests and franchise icons,
-  read through `getLeagueTeamBrands` / `resolveBroadcastCrest`, exactly as
-  `/broadcast` does.
-- **Every other league** — text only. League name and franchise names from the
-  `myleagues` payload, a neutral surface, no invented colour and no generated
-  monogram. This is already how `broadcast-board.ts` treats an outside league
-  ("an outside `myleagues` entry has real names and no artwork") — reuse that
-  path, do not write a second one.
+Rung 1 always wins. A TheLeague franchise called "Cowboys" keeps its own crest.
+
+## NFL artwork — matching a fantasy team name to a real club
+
+Everything needed already exists in the repo; the only new code is the lookup.
+
+| Asset | Where |
+|---|---|
+| 32 full names by code | `NFL_TEAM_NAMES` (`src/utils/nfl-logo.ts`) |
+| Primary + secondary brand colors | `NFL_TEAM_COLORS` (`src/utils/nfl-team-colors.ts`) |
+| Local SVG marks | `public/assets/nfl-logos/` (53 files, legacy code aliases included) |
+| Dark-optimised marks | `public/assets/nfl-logos/dark/` + `nfl-dark-logos-manifest.json` |
+| Code normalisation | `normalizeTeamCode`, `TEAM_CODE_MAP`, `canonicalNflCode` |
+
+**What does not exist: a name → code reverse lookup.** That is the new module.
+
+### The rule
+
+Match only when the **entire** franchise name resolves to an NFL club, after:
+lowercase → strip punctuation to spaces → drop a leading `the` → collapse
+whitespace. Accept the full name (`dallas cowboys`) or the bare nickname
+(`cowboys`). A name that merely *contains* a nickname never matches.
+
+**All 32 nicknames are unique** — verified, no collisions — which is what makes
+the bare-nickname rung safe.
+
+### Verified against real data
+
+Run over all 40 live franchise names in TheLeague and the AFL, where every
+candidate is a false positive:
+
+```
+OUR 40 FRANCHISES -> matches: 0
+```
+
+Correctly rejected: `Cowboy Up`, `The Boondock Saints`, `Titsburgh Feelers`,
+`Music City Mafia`, `Get off my Ditka`, `Bills Mafia`, `Chiefs of Staff`,
+`Lions Den`. Correctly matched: `Cowboys`, `The Cowboys`, `Dallas Cowboys`,
+`DALLAS COWBOYS`, `49ers`, `San Francisco 49ers`.
+
+### Relocations and renames map to the current club
+
+An explicit table, not an algorithm — `TEAM_CODE_MAP` already does this for
+legacy CODES, so this extends an existing idea to legacy NAMES:
+
+`Oakland Raiders` / `Los Angeles Raiders` → LV · `San Diego Chargers` → LAC ·
+`St. Louis Rams` → LAR · `Houston Oilers` / `Tennessee Oilers` → TEN ·
+`Washington Redskins` / `Washington Football Team` → WSH
+
+### Deliberately NOT in v1
+
+- **No fuzzy or substring matching.** The whole win is that the rule cannot be
+  wrong; a substring rule puts the Saints' mark on `The Boondock Saints`.
+- **No nickname aliases** (`Niners`, `Bucs`, `Pats`, `Da Bears`). The alias
+  table is the extension point and ships holding only the relocations above.
+  Owner feedback decides what gets added — that was the explicit call.
+- **No MFL-hosted franchise icons.** Reading an outside league's own uploaded
+  icon (one anonymous `TYPE=league` read per league) is a follow-up, not this.
+
+### Guard test
+
+`tests/nfl-name-match.test.ts`: asserts **zero** matches across every franchise
+name in every league config, asserts the 32 nicknames stay collision-free, and
+pins the accept/reject lists above. A future alias that breaks the zero-false-
+positive property fails the build — which is exactly the review anyone adding
+an alias should have to pass.
 
 ## Architecture
 
@@ -273,7 +358,9 @@ before any data work lands.
 
 **Phase 2 — the board, MFL data only.** `loadCrossLeagueSnapshot` extracted,
 compact rows, expansion, all-leagues-on default, per-league failure badges, the
-honest empty state gated on `hasLiveSignal`. No ESPN.
+honest empty state gated on `hasLiveSignal`. No ESPN. Includes the three-rung
+identity ladder and the NFL name matcher + its guard test — artwork is what
+makes an outside league feel like a real card rather than a row of text.
 
 **Phase 3 — `/live/settings`.** League toggles, ordering, persistence. Cookie
 or Redis is still open (see below).
@@ -336,18 +423,24 @@ From `docs/claude/rules/live-scoring.md` and
 - `tests/page-fork-ratchet.test.ts` — this adds no forked sibling (one page,
   one host), so the baseline should not move. If it does, something got copied.
 - `path-guard` map entry if a new domain of files appears.
+- `tests/nfl-name-match.test.ts` — the zero-false-positive guard (see **NFL
+  artwork**), wired into the path-guard map.
 - `pnpm test:types` re-measured before the PR.
 
 ## Open
 
 1. **The neutral MFL mark.** No asset exists. Wordmark only, or a mark?
-   Needed for the install icon, the nav, and the empty state.
-2. **`/live/settings` persistence** — cookie (per device, zero new storage) or
+   Needed for the install icon, the nav, and the empty state. Blocking for
+   Phase 1; a plain wordmark stands in until decided.
+2. **Which NFL nickname aliases to add**, once owners have used it. The table
+   ships holding relocations only. Candidates when feedback arrives: `Niners`,
+   `Bucs`, `Pats`, `Da Bears`, `Hawks`, `Jags`.
+3. **`/live/settings` persistence** — cookie (per device, zero new storage) or
    Redis against the MFL user id (follows you across devices, needs a scoped
    key). Decision 7 chose the *route*, not the *storage*.
-3. **Close-finish thresholds** — how many points, and how late? "Within 10 with
+4. **Close-finish thresholds** — how many points, and how late? "Within 10 with
    your last starter playing" is a different alert from "within 10 at the two
    minute warning".
-4. **Signed-out `/live`** — bounce to `/login`, or a public demo state? The
+5. **Signed-out `/live`** — bounce to `/login`, or a public demo state? The
    honest empty state (decision 8) gives us a page that renders with no data,
    which makes a demo cheap if it's wanted.
