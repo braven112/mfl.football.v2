@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import type { MflLiveBoard as Board, MflLiveLeaguePanel, MflLiveMatchup, MflLiveTeam } from '../../../types/mfl-live';
 import type { LivePlayerRow, NflGame, PlayerMeta } from '../../../types/live-scoring';
 import { positionLabel } from '../../../utils/mfl-live-lineup';
+import { PlayerCell } from '../../theleague/PlayerCell';
 import type { BroadcastMoment, RedZoneAlert } from '../../../utils/broadcast-moments';
 import { shouldPollLive } from '../../../hooks/useNflScoreboard';
 
@@ -214,16 +215,38 @@ function PlayerRows({
               is an MFL-ism no owner uses. The ORDER these rows arrive in is
               the server's (orderLineupRows) — nothing here re-sorts, so the
               two sides of a matchup cannot drift apart.
+
+              The chip stays on the LEFT even though PlayerCell prints the
+              position in its own meta row (which this list hides in CSS): the
+              lineup is GROUPED by position, and a left-hand column is what
+              makes the grouping scannable. `position` is still handed to
+              PlayerCell because that is what selects the DEF lockup.
             */}
             <span className="mlb-player__pos">{positionLabel(who?.position) || '—'}</span>
-            <span className="mlb-player__name">
-              {who?.name || `Player ${row.id}`}
-              <span className="mlb-player__meta">
-                {who?.nflTeam || ''}
-                {who?.nflTeam ? ' · ' : ''}
-                {final ? 'Final' : 'In progress'}
-              </span>
-            </span>
+
+            {/*
+              The SHARED cell, not a hand-rolled one. It already carries the
+              team-colour avatar, the DEF lockup (a bare full-bleed crest, no
+              chip — the same lockup the roster and lineup pages use), the
+              headshot fallback chain, and the dark-mode logo swap. A second
+              implementation here would be the fifth on the site and the first
+              to get DEF wrong.
+            */}
+            <PlayerCell
+              size="compact"
+              className="mlb-player__cell"
+              name={who?.name || `Player ${row.id}`}
+              headshot={who?.headshot}
+              position={who?.position}
+              nflTeam={who?.nflTeam}
+              mflId={row.id}
+              metaSlot={
+                <span className={`mlb-player__state${final ? '' : ' is-live'}`}>
+                  {final ? 'Final' : 'In progress'}
+                </span>
+              }
+            />
+
             <span className="mlb-player__pts">{fmt(row.live)}</span>
           </li>
         );
@@ -356,7 +379,20 @@ export default function MflLiveBoard({ initialBoard, ownerName, isLive = false }
   const [board, setBoard] = useState<Board>(initialBoard);
   const [status, setStatus] = useState<FeedStatus>('ok');
   const [openKeys, setOpenKeys] = useState<Set<string>>(() => new Set());
-  const [now, setNow] = useState(() => Date.now());
+  /**
+   * NULL until mounted, deliberately.
+   *
+   * `Date.now()` in a useState initializer runs TWICE — once on the server
+   * during SSR, once on the client at hydration — at different wall-clock
+   * times. The pill rendered "Live · 0s ago" into the HTML and "Live · 1s ago"
+   * on hydration, and React responded by discarding the ENTIRE server-rendered
+   * board and rebuilding it on the client. One character's difference threw
+   * away the whole point of server-rendering the scores.
+   *
+   * "How long ago" is a client-only fact, so the server renders the pill
+   * without it and the effect below fills it in on mount.
+   */
+  const [now, setNow] = useState<number | null>(null);
   const boardRef = useRef(board);
   boardRef.current = board;
 
@@ -421,6 +457,9 @@ export default function MflLiveBoard({ initialBoard, ownerName, isLive = false }
   // The pill counts up between polls, so a stalled feed looks stalled rather
   // than frozen at whatever the last successful poll said.
   useEffect(() => {
+    // Immediately, then on a cadence: the first call is what replaces the
+    // server's bare "Live" with a real age, and it must not wait 5s.
+    setNow(Date.now());
     const id = setInterval(() => setNow(Date.now()), 5000);
     return () => clearInterval(id);
   }, []);
@@ -433,7 +472,11 @@ export default function MflLiveBoard({ initialBoard, ownerName, isLive = false }
         <h1 className="mlb-head__wk">Week {board.week}</h1>
         <span className={`mlb-pill${status === 'error' ? ' is-err' : ''}`}>
           <span className="mlb-dot" />
-          {status === 'error' ? 'Reconnecting' : `Live · ${ago(board.fetchedAt, now)}`}
+          {status === 'error'
+            ? 'Reconnecting'
+            : now === null
+              ? 'Live'
+              : `Live · ${ago(board.fetchedAt, now)}`}
         </span>
       </header>
 

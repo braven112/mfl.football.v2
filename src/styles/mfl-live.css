@@ -301,16 +301,33 @@ html.dark .mlb-card {
   background: var(--color-surface-3);
   color: var(--color-text-secondary);
 }
-.mlb-player__name {
+/* The shared PlayerCell sits in the middle column. `min-width: 0` is
+   load-bearing on BOTH the grid cell and the cell's own text column: without
+   it a long name refuses to shrink below its content width and pushes the
+   points off the right edge of a phone. */
+.mlb-player__cell {
   min-width: 0;
-  font-size: 0.85rem;
-  color: var(--color-text-primary);
-  display: flex;
-  flex-direction: column;
 }
-.mlb-player__meta {
+.mlb-player__cell .player-cell__info {
+  min-width: 0;
+}
+.mlb-player__cell .player-cell__name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* PlayerCell prints the position in its meta row; this list already has it as
+   the left-hand grouping chip, so showing it twice on one row is noise. The
+   NFL logo beside it stays — that is the point of the meta row here. */
+.mlb-player__cell .player-meta__pos {
+  display: none;
+}
+.mlb-player__state {
   font-size: 0.65rem;
   color: var(--content-text-muted);
+}
+.mlb-player__state.is-live {
+  color: var(--league-accent);
 }
 .mlb-player__pts {
   font-size: 0.95rem;

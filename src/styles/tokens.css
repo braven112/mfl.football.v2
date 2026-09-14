@@ -792,6 +792,29 @@ html[data-league="mfl"] {
   --accent-content-boxshadow-color: #c41e3a35;
   --primary-content-boxshadow-color: #c41e3a28;
   --secondary-content-boxshadow-color: #c41e3a28;
+
+  /* ── Tokens html.dark defines and bare :root does NOT ──
+     `mfl-live.css` reads these 20 times with no fallback. Defined only in
+     tokens-dark.css, they resolve to nothing in LIGHT, and CSS does not fail
+     quietly in the same way for each kind:
+
+       color:        invalid at computed-value time -> INHERITS, so every
+                     "secondary" string rendered at full body colour and the
+                     board had no text hierarchy at all in light mode.
+       background:   -> transparent, which is why the position chip was a chip
+                     in dark and bare text in light.
+       border-color: -> currentColor, so a hairline separator drew at TEXT
+                     colour instead of a faint rule.
+
+     This is the "a var(--x) with no definition renders its fallback in BOTH
+     themes" trap from CLAUDE.md, in its nastier form: there was no fallback,
+     and light was the theme that lost. Defined here rather than patched at
+     each call site so one place answers for all twenty. */
+  --color-text-primary: #111827;               /* 17.7:1 on a white card */
+  --color-text-secondary: #646b76;             /* 5.4:1 on white, and 4.6:1 on the chip fill below — the chip is 0.62rem bold, too small for the large-text exemption */
+  --color-surface-3: #eceef1;                  /* elevated: the position chip, raised off the white card */
+  --color-border-subtle: #e8eaed;              /* hairline row separators */
+  --color-border-default: #dfe3e8;             /* the slightly stronger rule above the bench */
 }
 
 /* ========================================
