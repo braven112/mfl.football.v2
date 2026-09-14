@@ -14,6 +14,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { getAllTeams } from './afl-conference';
 import { getCachedRosterFranchises } from './mfl-roster-cache';
+import { getCachedTradeBait } from './mfl-trade-bait-cache';
+import { parseTradeBaitByFranchise } from './trade-bait';
 import { buildKeeperPlannerStats } from './afl-keeper-planner-stats';
 import { calculateAge } from './age-utils';
 import {
@@ -68,6 +70,14 @@ export async function buildFrontOfficeKeeperPlannerData(
   franchiseId: string,
   leagueYear: number,
   leagueId: string,
+  /**
+   * The viewer's own MFL cookie (authUser.id). MFL's tradeBait export is
+   * owner-gated for a private league like the AFL and this deployment holds
+   * no server-level MFL credentials, so without it the trade-block state is
+   * simply unknown — the action sheet then offers "Add to trade block" for
+   * everyone, which the API handles idempotently (it reads, merges, writes).
+   */
+  viewerMflCookie?: string,
 ): Promise<FrontOfficeKeeperData> {
   const leagueYearStr = String(leagueYear);
 
@@ -121,6 +131,15 @@ export async function buildFrontOfficeKeeperPlannerData(
   const franchiseRoster = (rostersData?.rosters?.franchise as any[] | undefined)?.find((f) => f?.id === franchiseId);
   const rosterPlayers = (franchiseRoster?.player ?? []) as Array<{ id: string; status: string }>;
   const statsById = buildKeeperPlannerStats(leagueYear);
+
+  // Which of these players the owner already has on the trade block, so the
+  // action sheet offers Remove rather than Add. Redis-cached (2 min) and
+  // owner-gated — null on any failure, which reads as "none on the block".
+  const liveTradeBait = await getCachedTradeBait(leagueYearStr, leagueId, viewerMflCookie);
+  const tradeBaitSet = liveTradeBait
+    ? (parseTradeBaitByFranchise({ franchises: liveTradeBait })?.get(franchiseId) ?? new Set<string>())
+    : new Set<string>();
+
   const roster: KeeperPlannerPlayer[] = rosterPlayers.map((p) => {
     const info = playersMap.get(p.id);
     const stats = statsById.get(p.id);
@@ -132,6 +151,8 @@ export async function buildFrontOfficeKeeperPlannerData(
       team: info?.team || 'FA',
       age: info?.age || 'N/A',
       espnId: info?.espn_id,
+      birthdate: info?.birthdate ? Number(info.birthdate) : null,
+      isOnTradeBait: tradeBaitSet.has(p.id),
       ppg: stats?.ppg ?? null,
       gamesPlayed: stats?.gamesPlayed,
       positionalFinish: stats?.positionalFinish ?? null,

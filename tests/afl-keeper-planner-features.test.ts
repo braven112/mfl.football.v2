@@ -195,13 +195,17 @@ describe('the AFL Front Office panel turns on the player modal and a manage/watc
     'utf-8',
   );
 
-  it('mounts PlayerDetailsModal and WatchListBridge, and turns on showActions', () => {
+  it('mounts PlayerDetailsModal and AFLActionModal, and turns on showActions', () => {
     // Neither component wired itself here before: KeeperPlanner's own
     // playerData/data-player-modal attributes had nothing listening for a
     // click on this page, and there was no kebab at all — clicking a name
     // did nothing.
     expect(PANEL_SRC).toMatch(/<PlayerDetailsModal\s+hideContract\s*\/>/);
-    expect(PANEL_SRC).toMatch(/<WatchListBridge signedIn=\{isOwner\} claimVerb="Claim" \/>/);
+    // AFLActionModal, NOT the generic WatchListBridge sheet: this is the
+    // owner's own roster, so the sheet has to carry the real roster writes
+    // (IR / Cut / Trade block) the AFL roster page offers, not Watch alone.
+    expect(PANEL_SRC).toMatch(/<AFLActionModal \/>/);
+    expect(PANEL_SRC).not.toMatch(/WatchListBridge/);
     expect(PANEL_SRC).toMatch(/<KeeperPlanner[\s\S]*?showActions/);
   });
 
@@ -221,11 +225,20 @@ describe('KeeperPlanner showActions (kebab + modal trigger), opt-in only', () =>
     expect(SRC).toMatch(/data-show-actions=\{showActions \? 'true' : 'false'\}/);
   });
 
-  it('renders a .pa-kebab on cut-pool cards only when showActions, carrying the player context', () => {
+  it('renders a .pa-kebab on cut-pool cards only when showActions, carrying the AFL sheet payload', () => {
     expect(SRC).toMatch(/\{showActions && \(/);
     expect(SRC).toMatch(/class="pa-kebab"/);
-    expect(SRC).toMatch(/data-pa-claimable="false"/);
-    expect(SRC).toMatch(/data-pa-sub="On your roster"/);
+    // Trade-block state has to ride along or the sheet offers "Add" to a
+    // player already on the block (isOnTradeBait undefined reads as false).
+    expect(SRC).toMatch(/data-kp-bait=\{player\.isOnTradeBait \? 'true' : 'false'\}/);
+    expect(SRC).toMatch(/data-kp-status=\{player\.status\}/);
+  });
+
+  it('opens AFLActionModal from the kebab, and stays inert when no host mounted it', () => {
+    expect(SRC).toMatch(/openAFLActionModal/);
+    // A missing opener must not throw — a host can render the kebab without
+    // the sheet and get an inert button, not a broken page.
+    expect(SRC).toMatch(/if \(typeof opener !== 'function'\) return;/);
   });
 
   it('calls initPlayerModalTrigger on its own root only when showActions, never unconditionally', () => {
@@ -233,12 +246,36 @@ describe('KeeperPlanner showActions (kebab + modal trigger), opt-in only', () =>
     expect(SRC).toMatch(/if \(showActions\) initPlayerModalTrigger\(root\);/);
   });
 
-  it('renderSlots() builds the same kebab for a kept player, reading team/espn off the source card', () => {
+  it('renderSlots() builds the same kebab for a kept player, reading state off the source card', () => {
     const renderSlots = SRC.match(/function renderSlots\(\)[\s\S]*?\n {4}\}/)?.[0] ?? '';
     expect(renderSlots).toMatch(/if \(showActions\) \{/);
     expect(renderSlots).toMatch(/kebab\.className = 'pa-kebab';/);
-    expect(renderSlots).toMatch(/card\?\.dataset\.team/);
-    expect(renderSlots).toMatch(/card\?\.dataset\.espn/);
+    expect(renderSlots).toMatch(/card\?\.dataset\.bait/);
+    expect(renderSlots).toMatch(/card\?\.dataset\.status/);
+  });
+
+  it('reconciles the board on afl-action:done, via a handle that survives navigation', () => {
+    // The sheet's own optimistic updates edit roster <tr>s, which the board
+    // has none of — without this a just-cut player sits on the board until
+    // reload. And because it listens on `document` (the sheet is a sibling),
+    // the handler must be REPLACED per navigation, not stacked: a stale one
+    // still closes over the previous board's keeperIds.
+    expect(SRC).toMatch(/let aflActionDoneHandler/);
+    expect(SRC).toMatch(/document\.removeEventListener\('afl-action:done', aflActionDoneHandler\)/);
+    expect(SRC).toMatch(/document\.addEventListener\('afl-action:done', aflActionDoneHandler\)/);
+    // A cut has to leave the saved plan too, not just the DOM.
+    expect(SRC).toMatch(/keeperIds\.splice\(keptIdx, 1\)/);
+  });
+});
+
+describe('AFLActionModal announces its writes', () => {
+  const MODAL_SRC = readFileSync('src/components/afl-fantasy/AFLActionModal.astro', 'utf-8');
+
+  it('dispatches afl-action:done so non-table surfaces can update themselves', () => {
+    // Its three optimistic helpers all query `tr[data-player-id]` and bail
+    // when there is none, which is every surface that is not a roster table.
+    expect(MODAL_SRC).toMatch(/new CustomEvent\('afl-action:done'/);
+    expect(MODAL_SRC).toMatch(/detail: \{ action, playerId \}/);
   });
 });
 

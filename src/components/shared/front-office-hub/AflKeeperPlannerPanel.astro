@@ -28,7 +28,7 @@ import KeeperPlanner, {
   type KeeperPlannerDraftPick,
 } from '../../afl-fantasy/KeeperPlanner.astro';
 import PlayerDetailsModal from '../../theleague/PlayerDetailsModal.astro';
-import WatchListBridge from '../WatchListBridge.astro';
+import AFLActionModal from '../../afl-fantasy/AFLActionModal.astro';
 import PlayerCell from '../../theleague/PlayerCell.astro';
 import CollegeLogoDarkStyles from '../../CollegeLogoDarkStyles.astro';
 import { getNFLTeamName, getNFLTeamLogo } from '../../../utils/nfl-logo';
@@ -103,7 +103,7 @@ const stripMapY = (lane: PositionLane, stackIndex: number) => stripLaneCenter(la
 {isOwner ? (
   <Fragment>
     <PlayerDetailsModal hideContract />
-    <WatchListBridge signedIn={isOwner} claimVerb="Claim" />
+    <AFLActionModal />
     <KeeperPlanner franchiseId={franchiseId} year={year} roster={roster} draftPicks={draftPicks} showActions />
 
     {analytics.rosterSize > 0 && (

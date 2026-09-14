@@ -36,7 +36,7 @@ const myTeamInfo = selectedFranchiseId ? getTeam(selectedFranchiseId) : undefine
 const myTeam = myTeamInfo ? { id: myTeamInfo.franchiseId, name: myTeamInfo.name, icon: myTeamInfo.icon } : null;
 
 const keeperData = isOwner && selectedFranchiseId
-  ? await buildFrontOfficeKeeperPlannerData(selectedFranchiseId, leagueYear, league.id)
+  ? await buildFrontOfficeKeeperPlannerData(selectedFranchiseId, leagueYear, league.id, authUser?.id)
   : { roster: [], draftPicks: [], analytics: buildRosterAnalytics([]), playersByNflTeam: [], playersByCollege: [] };
 ---
 

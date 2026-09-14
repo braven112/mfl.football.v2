@@ -25,6 +25,10 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import PlayerCell from '../theleague/PlayerCell.astro';
+// The ⋮ kebab's styles. Imported here rather than left to the host: the
+// free-agent pages get this via WatchListBridge, but the Front Office panel
+// mounts AFLActionModal instead, which carries no stylesheet of its own.
+import '../../styles/player-action-button.css';
 import { KEEPER_LIMIT } from '../../utils/afl-keepers-storage';
 import { keeperDeadlineFor, newSeasonStartsFor } from '../../utils/afl-mock-draft';
 import { getTestDateFromSearchParams } from '../../utils/league-year';
@@ -38,6 +42,10 @@ export interface KeeperPlannerPlayer {
   age: string;
   espnId?: string;
   status: string;
+  /** Unix-seconds birthdate (MFL format) — drives the action sheet's age pill. */
+  birthdate?: number | null;
+  /** Already on the owner's MFL trade block, so the sheet offers Remove not Add. */
+  isOnTradeBait?: boolean;
   /** Last season's points per game, when weekly-results data exists for this year. */
   ppg?: number | null;
   /** Last season's games with a recorded score. */
@@ -66,15 +74,17 @@ export interface Props {
   /** Future draft picks the franchise currently owns for this year. */
   draftPicks?: KeeperPlannerDraftPick[];
   /**
-   * Render a ⋮ kebab (PlayerActionModal's Watch action) on every card/slot
-   * and self-wire the player-details modal trigger on this component's own
-   * root. OFF by default: rosters.astro's `?view=planner` tab renders this
-   * same component but wires both of those itself at the PAGE level
-   * (`.roster-page` container + no watch-list bridge at all today) — turning
-   * this on unconditionally would either double-open the details modal there
-   * (two delegated listeners on the same click) or ship a kebab with no
-   * listener behind it. The Front Office hub panel is the one caller that
-   * needs this component to be fully self-sufficient.
+   * Render a ⋮ kebab on every card/slot that opens AFLActionModal (Watch,
+   * Move to IR / Activate, Cut, Trade block, Trade), and self-wire the
+   * player-details modal trigger on this component's own root.
+   *
+   * OFF by default: rosters.astro's `?view=planner` tab renders this same
+   * component but already wires the details-modal trigger itself at the PAGE
+   * level (`.roster-page` container), so turning this on unconditionally
+   * would double-open that modal there — two delegated listeners, one click.
+   * The Front Office hub panel is the one caller that needs this component
+   * fully self-sufficient. A host that sets this must also mount
+   * <AFLActionModal />; without it the kebab is inert rather than broken.
    */
   showActions?: boolean;
 }
@@ -287,6 +297,9 @@ try {
           data-age={player.age}
           data-team={player.team}
           data-espn={player.espnId ?? ''}
+          data-status={player.status}
+          data-bait={player.isOnTradeBait ? 'true' : 'false'}
+          data-birthdate={player.birthdate ?? ''}
           draggable="true"
           tabindex="0"
         >
@@ -338,17 +351,16 @@ try {
             <button
               type="button"
               class="pa-kebab"
-              data-pa-open
-              data-pa-claimable="false"
-              data-pa-id={player.id}
-              data-pa-name={player.name}
-              data-pa-pos={player.position}
-              data-pa-team={player.team}
-              data-pa-espn={player.espnId ?? ''}
-              data-pa-franchise={franchiseId}
-              data-pa-sub="On your roster"
-              aria-label={`Actions for ${player.name}`}
-              title="Player actions"
+              data-kp-action
+              data-kp-id={player.id}
+              data-kp-name={player.name}
+              data-kp-status={player.status}
+              data-kp-pos={player.position}
+              data-kp-team={player.team}
+              data-kp-bait={player.isOnTradeBait ? 'true' : 'false'}
+              data-kp-birthdate={player.birthdate ?? ''}
+              aria-label={`Manage ${player.name}`}
+              title="Manage player"
             >
               <svg viewBox="0 0 24 24" aria-hidden="true">
                 <circle cx="12" cy="5" r="2"></circle>
@@ -446,6 +458,10 @@ try {
   // replaces the previous DOM's rankings-change subscription instead of
   // stacking another one on top of it.
   let unsubscribeRankingsListener: (() => void) | null = null;
+  // Same reason as the two above: this one listens on `document` (the sheet
+  // is a sibling, not a descendant), so a ClientRouter navigation would stack
+  // a second handler still closing over the PREVIOUS board's keeperIds.
+  let aflActionDoneHandler: ((e: Event) => void) | null = null;
 
   // Runs on first load AND after every ClientRouter navigation. Astro
   // evaluates this script module only once, so without re-running on
@@ -643,20 +659,24 @@ try {
           slot.appendChild(arrow);
 
           if (showActions) {
+            // Mirrors the cut-pool card's kebab. The source card is the one
+            // place this data lives client-side, so a kept player's sheet
+            // carries the same payload as the same player's sheet below the
+            // line — including trade-block state, which a stale copy would
+            // get backwards (offering Add for someone already on the block).
             const kebab = document.createElement('button');
             kebab.type = 'button';
             kebab.className = 'pa-kebab';
-            kebab.dataset.paOpen = '';
-            kebab.dataset.paClaimable = 'false';
-            kebab.dataset.paId = playerId;
-            kebab.dataset.paName = info?.name || playerId;
-            kebab.dataset.paPos = info?.position || '';
-            kebab.dataset.paTeam = card?.dataset.team || '';
-            kebab.dataset.paEspn = card?.dataset.espn || '';
-            kebab.dataset.paFranchise = franchiseId;
-            kebab.dataset.paSub = 'On your roster';
-            kebab.setAttribute('aria-label', `Actions for ${info?.name || playerId}`);
-            kebab.title = 'Player actions';
+            kebab.dataset.kpAction = '';
+            kebab.dataset.kpId = playerId;
+            kebab.dataset.kpName = info?.name || playerId;
+            kebab.dataset.kpStatus = card?.dataset.status || 'ROSTER';
+            kebab.dataset.kpPos = info?.position || '';
+            kebab.dataset.kpTeam = card?.dataset.team || '';
+            kebab.dataset.kpBait = card?.dataset.bait || 'false';
+            kebab.dataset.kpBirthdate = card?.dataset.birthdate || '';
+            kebab.setAttribute('aria-label', `Manage ${info?.name || playerId}`);
+            kebab.title = 'Manage player';
             kebab.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg>';
             slot.appendChild(kebab);
           }
@@ -722,6 +742,77 @@ try {
       if (direction === 'up') moveToKeepers(playerId);
       else if (direction === 'down') moveToCuts(playerId);
     });
+
+    // ── ⋮ kebab → AFLActionModal (IR / Cut / Trade block / Watch) ──
+    // Only bound when the host turned actions on, and only useful when that
+    // host also mounted <AFLActionModal />; a missing opener is a no-op
+    // rather than a thrown error, so a caller that renders the kebab without
+    // the sheet degrades to an inert button instead of a broken page.
+    if (showActions) {
+      root.addEventListener('click', (e) => {
+        const btn = (e.target as HTMLElement).closest<HTMLElement>('[data-kp-action]');
+        if (!btn) return;
+        e.stopPropagation();
+        const opener = (window as any).openAFLActionModal as ((p: Record<string, unknown>) => void) | undefined;
+        if (typeof opener !== 'function') return;
+        const d = btn.dataset;
+        const id = d.kpId || '';
+        if (!id) return;
+        // The avatar the PlayerCell actually resolved (NFL photo, college
+        // photo or the team-colour placeholder) — same source the roster
+        // page's sheet reads, so the hero matches what the row shows.
+        const host = btn.closest('[data-card], [data-slot-index]');
+        const headshot =
+          (host?.querySelector('.player-cell__avatar img') as HTMLImageElement | null)?.src || undefined;
+        const birthdate = Number(d.kpBirthdate);
+        opener({
+          playerId: id,
+          playerName: d.kpName || id,
+          status: d.kpStatus || 'ROSTER',
+          isOnTradeBait: d.kpBait === 'true',
+          franchiseId,
+          headshot,
+          position: d.kpPos || undefined,
+          nflTeam: d.kpTeam || undefined,
+          birthdate: Number.isFinite(birthdate) && birthdate > 0 ? birthdate : null,
+          isOwner: true,
+          signedIn: true,
+        });
+      });
+
+      // The sheet's own optimistic updates edit roster <tr>s and no-op here,
+      // so the board reconciles itself: a cut player leaves entirely (card,
+      // keeper slot and saved plan), and the other writes just restamp the
+      // state the next sheet opens with.
+      if (aflActionDoneHandler) document.removeEventListener('afl-action:done', aflActionDoneHandler);
+      aflActionDoneHandler = (e: Event) => {
+        const detail = (e as CustomEvent<{ action?: string; playerId?: string }>).detail;
+        const playerId = detail?.playerId;
+        if (!playerId) return;
+        const card = findCard(playerId);
+        if (!card) return; // a different AFL surface on the page — not ours
+        if (detail?.action === 'cut') {
+          const keptIdx = keeperIds.indexOf(playerId);
+          if (keptIdx !== -1) keeperIds.splice(keptIdx, 1);
+          card.remove();
+          renderSlots();
+          updateCounters();
+          scheduleSave();
+          return;
+        }
+        if (detail?.action === 'ir-to') card.dataset.status = 'INJURED_RESERVE';
+        if (detail?.action === 'ir-from') card.dataset.status = 'ROSTER';
+        if (detail?.action === 'trade-bait-add') card.dataset.bait = 'true';
+        if (detail?.action === 'trade-bait-remove') card.dataset.bait = 'false';
+        const cardKebab = card.querySelector<HTMLElement>('[data-kp-action]');
+        if (cardKebab) {
+          cardKebab.dataset.kpStatus = card.dataset.status || 'ROSTER';
+          cardKebab.dataset.kpBait = card.dataset.bait || 'false';
+        }
+        renderSlots();
+      };
+      document.addEventListener('afl-action:done', aflActionDoneHandler);
+    }
 
     // ── Drag and drop ──
     let dragId: string | null = null;
