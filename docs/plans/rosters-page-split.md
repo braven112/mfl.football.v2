@@ -284,6 +284,62 @@ per-symbol arguments, and exercise it with a forced-open cut window (a
 1. **Contract Declaration Modal** (~3,000 lines) — the wizard, step by step.
 2. **Demo/tutorial** (~400 lines) — behind a dynamic import too.
 
+### Phase 6a — the CDM parity harness *(done, 2026-09-14)*
+
+Phase 0 says it is "the only thing that makes the rest of the plan safe," and
+it **does not cover the CDM** — grep `roster-parity-check.mjs` for `cdm`, there
+are no hits. It fingerprints the roster table; the modal is behind owner auth,
+an eligibility check and a click. So the wizard had no safety net at all, and
+extracting it would have repeated the trade Phase 5 was deferred to avoid.
+
+`scripts/cdm-parity-check.mjs` is that net. Measured, not estimated:
+
+| | |
+|---|---:|
+| Eligible players on the owner's roster | 25 |
+| Modals opened | 25/25 |
+| Flow screens walked | 51 |
+| Captured values | 4,409 |
+| Diffs across two unchanged runs | **0** |
+
+```bash
+JWT_SECRET=x pnpm dev --port 4399 &
+node scripts/cdm-parity-check.mjs --secret x --out before.json
+# ...extract...
+node scripts/cdm-parity-check.mjs --secret x --out after.json
+node scripts/cdm-parity-check.mjs --compare before.json after.json
+```
+
+It captures what the modal RENDERS per player and per flow — identity band,
+stepper, contract metrics, deadline, action options, year options, and the
+tag / cut / extension panels with their real cap math (`$2.50M` dead money,
+`50% dead money + 25% spread to next season`) — plus the submit button's label
+and disabled state.
+
+**It never writes.** The modal's submit is a real MFL write, so: submit is
+never clicked; the flows that write on the first tap are never entered (Watch
+is one-tap by design, IR and Trade write or navigate away); and every write
+endpoint is aborted at the network layer regardless. `tests/cdm-parity-harness.test.ts`
+pins all three, because "the harness doesn't write" is exactly the kind of
+property that decays silently.
+
+**What it does not cover, and what that means for the extraction:**
+
+- **Submit itself.** Everything up to the write is pinned; the write is not.
+  Post-extraction, one flow should be submitted by hand against a throwaway
+  declaration before trusting it.
+- **The autocut entanglement.** The CDM's "Mark for August auto-cut" toggle
+  shares its save plumbing with the Cutdown Plan panel (`// ---- Save plumbing
+  (shared by CDM toggle + panel Save)`, and `// ---- CDM action-option toggle`
+  sits *inside* the autocut section). That seam is Phase 5 territory, which is
+  deferred as unverifiable until the June 2027 cut window. Cut the CDM out
+  *around* it — leave the autocut hooks as injected callbacks — rather than
+  dragging Phase 5 along.
+- **Closure surface.** The region (lines ~8029–9369) pulls ~30–40 symbols from
+  `initRosterPage`, including two that mutate page state (`updateView`,
+  `applyContractAction`). Same advice as Phase 5: one explicit context object,
+  not per-symbol arguments.
+
 The module boundary also **fixes a bug class**: the July 2026 whole-page crash
 was a temporal-dead-zone read inside one giant function body. Imports hoist;
 that failure mode cannot survive extraction.
