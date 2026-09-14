@@ -464,6 +464,14 @@
 /*
  * The identity column: the team's name, and its yet-to-play count UNDER it.
  *
+ * NOT `.lbc__who` — that is the player strip's name column, 500 lines down in
+ * this same global stylesheet. Both were bare single-class rules, so the
+ * LATER one won at equal specificity and this block's width floor shipped
+ * inert the day it was written (Copilot, #1081): with `.lbc__tn`'s own floor
+ * already given up in favour of it, the board went from a 25% floor to none
+ * at all. `tests/broadcast-shell-guards.test.ts` now fails on any class two
+ * broadcast components both claim.
+ *
  * The count rode the row itself at first, between the name and the projection,
  * where it was competing for width with two numerals and a crest — on a real
  * doubleheader cell it ellipsised to "1 to ..." and "0 t...", which is worse
@@ -476,7 +484,7 @@
  * thing on the row saying whose score this is, so the projection and the
  * numerals shrink around this column rather than erasing it.
  */
-.lbc__who {
+.lbc__ident {
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -590,7 +598,7 @@
 
 .lbc__proj {
   /* The numerals still line up in a column the way a scoreboard's do — but
-     because `.lbc__who` claims the row's slack, rather than because an auto
+     because `.lbc__ident` claims the row's slack, rather than because an auto
      start margin here swallowed it in front of them. */
   margin-left: 0;
   font-size: min(11cqh, 7cqw, max(2.2vh, 0.7rem));

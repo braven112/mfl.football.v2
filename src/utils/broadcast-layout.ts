@@ -433,14 +433,23 @@ export function parseDisplayClock(clock: string): number {
  *
  * Overtime returns only what OT has left: a 5th period is not a 5th quarter,
  * and treating it as one hands the matchup fifteen minutes that cannot exist.
+ *
+ * A game ESPN still calls `in` never returns zero, because zero is what the
+ * cell reads as `Final`. Two shapes reach it honestly: the 4th quarter at
+ * `0:00`, which is the window between the end of regulation and ESPN flipping
+ * to period 5, and any live game whose `displayClock` does not parse —
+ * `parseDisplayClock` answers 0 for a blank or a word, deliberately, since a
+ * missing clock means we know the quarter and not the time inside it. With
+ * every other starter final, either one summed to exactly nothing and the
+ * matchup said `Final` over a game going to overtime. `post` is the ONLY
+ * state that may contribute zero.
  */
 export function gameSecondsLeft(game: NflGame): number {
   if (game.state === 'post') return 0;
   if (game.state === 'pre') return NFL_GAME_SECONDS;
   const inQuarter = parseDisplayClock(game.clock);
-  if (game.period >= 5) return inQuarter;
-  const quartersAfter = Math.max(0, 4 - Math.max(1, game.period));
-  return quartersAfter * QUARTER_SECONDS + inQuarter;
+  const quartersAfter = game.period >= 5 ? 0 : Math.max(0, 4 - Math.max(1, game.period));
+  return Math.max(1, quartersAfter * QUARTER_SECONDS + inQuarter);
 }
 
 /** "1st" … "4th". */
@@ -453,10 +462,19 @@ function ordinal(quarter: number): string {
  *
  * Half the matchup's football left reads "2nd 15:00 left"; a quarter of it,
  * "4th 15:00 left". Nothing left is "Final".
+ *
+ * `Final` is the one label here that ASSERTS something rather than measuring
+ * it, so it may print only for a fraction of exactly nothing. Everything
+ * positive floors at one second: `matchupTimeLeft` hands over the slate's
+ * remaining seconds divided by the starter count, so a rounded `0` is not an
+ * over-count of nothing left — with nine starters it is four real seconds of
+ * football, and the cell called a game still being played `Final` (Copilot,
+ * #1079). The last second of a matchup reads "4th 0:01 left".
  */
 export function progressClockLabel(fractionLeft: number): string {
-  const secs = Math.round(Math.min(1, Math.max(0, fractionLeft)) * NFL_GAME_SECONDS);
-  if (secs <= 0) return 'Final';
+  const clamped = Math.min(1, Math.max(0, fractionLeft));
+  if (clamped <= 0) return 'Final';
+  const secs = Math.max(1, Math.round(clamped * NFL_GAME_SECONDS));
   const quarter = 5 - Math.ceil(secs / QUARTER_SECONDS);
   const inQuarter = secs - (4 - quarter) * QUARTER_SECONDS;
   const mm = Math.floor(inQuarter / 60);

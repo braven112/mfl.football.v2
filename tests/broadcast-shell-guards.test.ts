@@ -7,7 +7,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { readFileSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { getLeagueTeamConfigs } from '../src/utils/league-team-brands';
 import { broadcastStrokeIndex, resolveBroadcastCrest } from '../src/utils/broadcast-crest';
@@ -62,6 +62,34 @@ const ROUTES = [
  * floored against a surface that does not exist here.
  */
 const CSS_BOARD = CSS.replace(/^\.lbc-bar[^{]*\{[^}]*\}/gm, '');
+
+/**
+ * The value of `prop` on `.<cls>` as the CASCADE leaves it — the LAST bare
+ * single-class block in the file that declares it, not the first one a regex
+ * finds.
+ *
+ * This is the bug the guards below exist to catch, and they had it themselves.
+ * `live-broadcast.css` is one global sheet for nine components, so a class can
+ * be declared in two places at equal specificity and the later block wins; a
+ * `/\.lbc__x\s*\{([^}]*)\}/.exec(CSS)` reads the block it found and reports
+ * on a rule that is not in effect. That is exactly how `.lbc__who`'s 38% width
+ * floor passed its own guard while `min-width: 0` 500 lines down overrode it
+ * on every screen (Copilot, #1081).
+ *
+ * Equal-specificity bare rules only — a descendant or attribute selector
+ * (`.lbc__header[data-tier='5'] .lbc__score`) outranks these and is a
+ * deliberate override, not an accident.
+ */
+const declared = (cls: string, prop: string): string => {
+  const blocks = [...CSS_CODE.matchAll(new RegExp(`(?:^|[}{;])\\s*\\.${cls}\\s*\\{([^}]*)\\}`, 'g'))];
+  let value = '';
+  for (const [, body] of blocks) {
+    for (const [, v] of body.matchAll(new RegExp(`(?:^|;)\\s*${prop}\\s*:\\s*([^;]+)`, 'g'))) {
+      value = v.trim();
+    }
+  }
+  return value;
+};
 
 describe('the broadcast surface consumes NO colour token', () => {
   it('references no --color-*, --card-*, --content-*, --page-* or --league-accent', () => {
@@ -325,11 +353,10 @@ describe('nothing is sized against a box it does not live in', () => {
   it('gives the team name a width floor', () => {
     // It is the only thing on the row that says whose score this is, so it is
     // the last thing that may give up width. The floor lives on the identity
-    // COLUMN (`.lbc__who`) now that the yet-to-play count is stacked under the
-    // name — it has to be on whichever box the row's flex layout shrinks, and
-    // that is the column, not the text inside it.
-    const column = /\.lbc__who\s*\{([^}]*)\}/.exec(CSS)?.[1] ?? '';
-    expect(column).toMatch(/min-width:\s*\d+%/);
+    // COLUMN (`.lbc__ident`) now that the yet-to-play count is stacked under
+    // the name — it has to be on whichever box the row's flex layout shrinks,
+    // and that is the column, not the text inside it.
+    expect(declared('lbc__ident', 'min-width')).toMatch(/^\d+%$/);
     // And the name itself still clips rather than wrapping: a second line in
     // that column is height the cell does not have.
     const name = /\.lbc__tn\s*\{([^}]*)\}/.exec(CSS)?.[1] ?? '';
@@ -342,10 +369,59 @@ describe('nothing is sized against a box it does not live in', () => {
     // name sat pinned at its floor with an inch of empty blue in front of the
     // numerals — "Dangsters" rendering as "Dangst…" on a cell that had the
     // room for it (owner, 2026-09-13).
-    const column = /\.lbc__who\s*\{([^}]*)\}/.exec(CSS)?.[1] ?? '';
-    expect(column, 'the identity column must be the one that grows').toMatch(/flex:\s*1\s/);
+    expect(declared('lbc__ident', 'flex'), 'the identity column must be the one that grows').toMatch(
+      /^1\s/,
+    );
     const proj = /\.lbc__proj\s*\{([^}]*)\}/.exec(CSS)?.[1] ?? '';
     expect(proj).not.toMatch(/margin-left:\s*auto/);
+  });
+
+  it('never lets two broadcast components claim the same class name', () => {
+    // ONE global stylesheet, nine components, and a bare single-class rule has
+    // no scope: when two components share a name, the LATER rule in the file
+    // wins at equal specificity and the earlier one ships inert with no error
+    // anywhere. `.lbc__who` was the scoreboard's identity column AND the
+    // player strip's name column 500 lines apart, so the 38% width floor
+    // written to stop "Dangst…" on a 65" panel was overridden by the strip's
+    // `min-width: 0` the same day it landed — and because that change had
+    // already handed `.lbc__tn`'s own 25% floor over to the column, the board
+    // went from one floor to none (Copilot, #1081).
+    const dir = 'src/components/shared/live-broadcast';
+    const owners = new Map<string, Set<string>>();
+    // Files only, and only the ones that can carry a className: the first
+    // subfolder added under this directory would otherwise reach `readFileSync`
+    // and fail this suite — which path-guard runs on every edit in the domain —
+    // with an EISDIR that names nothing about the board.
+    const components = readdirSync(join(process.cwd(), dir))
+      .filter((f) => /\.(tsx|ts|astro)$/.test(f))
+      .sort();
+    expect(components.length, 'the component scan found nothing to read').toBeGreaterThan(1);
+    for (const file of components) {
+      // Comments stripped: this file's prose names other components' classes
+      // constantly, and a guard that reads those reports collisions that do
+      // not exist.
+      for (const [cls] of code(read(`${dir}/${file}`)).matchAll(/\blbc__[A-Za-z0-9_-]+/g)) {
+        const seen = owners.get(cls) ?? new Set<string>();
+        seen.add(file);
+        owners.set(cls, seen);
+      }
+    }
+
+    // Only a class the stylesheet styles BY ITSELF collides this way. One
+    // reached solely through a descendant selector (`.lbc__row .lbc__name`)
+    // is already scoped to its container and may be shared freely.
+    const bare = new Set<string>();
+    const rule = /(?:^|[}{;])\s*((?:\.lbc__[A-Za-z0-9_-]+)(?:\s*,\s*\.lbc__[A-Za-z0-9_-]+)*)\s*\{/g;
+    for (const [, selectors] of CSS_CODE.matchAll(rule)) {
+      for (const sel of selectors.split(',')) bare.add(sel.trim().slice(1));
+    }
+
+    const shared = [...owners]
+      .filter(([cls, files]) => files.size > 1 && bare.has(cls))
+      .map(([cls, files]) => `.${cls} — ${[...files].join(' + ')}`);
+    expect(shared, 'give each component its own class, or scope the rule to its container').toEqual(
+      [],
+    );
   });
 
   it('zeroes the UA paragraph margin', () => {

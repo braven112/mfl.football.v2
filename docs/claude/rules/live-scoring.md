@@ -79,6 +79,17 @@ which is exactly why the split exists — verify parsing offline against
     confident meter made of nothing.
   - **It is spelled so it cannot be mistaken for a game clock.** ESPN writes
     `4:08 - 3rd`; this writes `3rd 4:08 left`.
+  - **`Final` may print only for a fraction of EXACTLY nothing.** It is the one
+    label on that meter that asserts something rather than measuring it. The
+    fraction arrives as the slate's remaining seconds over the starter COUNT,
+    so `round()` on it is not rounding toward "nothing left" — with nine
+    starters, four real seconds of football rounded to zero and the cell said
+    `Final` over a game still being played (Copilot on #1079). Every positive
+    fraction floors at one second: `4th 0:01 left`. The NUMERATOR has the same
+    floor for the same reason — a game ESPN still calls `in` may not contribute
+    zero, or the 4th quarter at `0:00` and any live game whose `displayClock`
+    does not parse sum to nothing and say `Final` over a game going to
+    overtime. `post` is the one state that may be zero.
   What it replaced was worse than either: the real ESPN clock of the ONE game
   most of the viewer's starters were in, which late on a Sunday is whichever
   game kicked off LAST — a board with a single starter left in the night game
