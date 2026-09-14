@@ -100,6 +100,7 @@ const PARALLEL = [
   { name: 'fetch:adp', cmd: 'pnpm run fetch:adp', previewSkip: true },
   { name: 'fetch:ranking-sources', cmd: 'pnpm run fetch:ranking-sources', previewSkip: true },
   { name: 'fetch:nfl-draft-date', cmd: 'pnpm run fetch:nfl-draft-date', previewSkip: true },
+  { name: 'fetch:nfl-week-starts', cmd: 'pnpm run fetch:nfl-week-starts', previewSkip: true },
   { name: 'fetch:espn-ids', cmd: 'pnpm run fetch:espn-ids', previewSkip: true },
   { name: 'fetch:nfl-news-digest', cmd: 'pnpm run fetch:nfl-news-digest', previewSkip: true },
   { name: 'fetch:nfl-dark-logos', cmd: 'pnpm run fetch:nfl-dark-logos', previewSkip: true },

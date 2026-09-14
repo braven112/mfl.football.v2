@@ -1,0 +1,1418 @@
+---
+/**
+ * Schedule — shared render for every league.
+ *
+ * Two views behind one route, switched by `?view=` with plain links so the
+ * page ships no client JS and every state is bookmarkable:
+ *
+ *   my     — the signed-in owner's own season: form rail, next opponent, and
+ *            one row per game with the result once it has been played.
+ *   league — the compact weeks x clubs grid, club column pinned.
+ *
+ * `my` is the default for an owner and unavailable to everyone else, so a
+ * signed-out visitor lands on `league` rather than on an empty personal view.
+ *
+ * ── What this page reads, and what it must not ─────────────────────────────
+ *
+ * The matchups come from the committed `schedule.json` feed (see
+ * `src/utils/schedule-data.mjs` for the two shapes in it that bite). Records
+ * come from `standings.json` and are printed as MFL wrote them: its row ORDER
+ * already applies the constitution's tiebreakers, including head-to-head we
+ * cannot reproduce, so the rank shown here is the feed's own position and
+ * nothing re-sorts it.
+ *
+ * Week dates come from `nfl-week-starts.mjs` and the playoff boundary from
+ * `fantasy-bracket.mjs`. Neither is derived locally: kickoff is not "the
+ * Thursday after Labor Day" (2026 opened on a Wednesday) and the bracket is
+ * not a literal 15/16/17.
+ */
+import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
+import Breadcrumbs from '../../theleague/Breadcrumbs.astro';
+import { getLeagueBySlug } from '../../../config/leagues';
+import type { CanonicalLeagueSlug } from '../../../config/leagues';
+import { resolveLeaguePath } from '../../../utils/nav-utils';
+import { getCurrentSeasonYear, getTestDateFromSearchParams } from '../../../utils/league-year';
+import { getCurrentNFLWeek } from '../../../utils/current-week';
+import { nflWeekStartIsoDate } from '../../../utils/nfl-week-starts.mjs';
+import { PLAYOFFS_START_WEEK } from '../../../utils/fantasy-bracket.mjs';
+import {
+  chooseTeamName,
+  resolveConfigForYear,
+  resolvePreferredTeamIdForYear,
+} from '../../../utils/team-names';
+import {
+  findNextGame,
+  franchiseSchedule,
+  opponentsByWeek,
+  parseWeeklySchedule,
+} from '../../../utils/schedule-data.mjs';
+import { resolveHeroFranchiseSkin } from '../../../utils/hero-crest';
+import '../../../styles/hero-franchise-backdrop.css';
+
+interface Props {
+  leagueSlug: CanonicalLeagueSlug;
+  /** The league's own config file, imported by the route wrapper. */
+  config: { teams: any[]; conferences?: { name: string; code: string }[] };
+  /** `import.meta.glob` of that league's schedule feeds, keyed by file path. */
+  scheduleFeeds: Record<string, unknown>;
+  /** Same, for standings — the only source of a club's record. */
+  standingsFeeds: Record<string, unknown>;
+  /** The viewer's franchise IN THIS LEAGUE, already league-checked. */
+  viewerFranchiseId: string | null;
+}
+
+const { leagueSlug, config, scheduleFeeds, standingsFeeds, viewerFranchiseId } = Astro.props;
+const league = getLeagueBySlug(leagueSlug)!;
+const hideLeaguePrefix = Astro.locals.hideLeaguePrefix ?? false;
+const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
+
+/** `…/mfl-feeds/2026/schedule.json` → `2026`. */
+const yearOf = (path: string) => Number(path.match(/mfl-feeds\/(\d{4})\//)?.[1]);
+function byYear(feeds: Record<string, unknown>) {
+  const out = new Map<number, unknown>();
+  for (const [path, feed] of Object.entries(feeds)) {
+    const year = yearOf(path);
+    if (Number.isFinite(year)) out.set(year, feed);
+  }
+  return out;
+}
+
+const schedulesByYear = byYear(scheduleFeeds);
+const standingsByYear = byYear(standingsFeeds);
+
+// getCurrentSeasonYear() is the results-shaped clock (rolls at Labor Day).
+// A season MFL has not created yet falls back to the newest feed on disk
+// rather than rendering an empty page for six months of the calendar.
+// ?testDate= drives BOTH clocks on this page, so /rollover-check can render
+// the Labor Day boundary — and the "Now" column with it — without touching the
+// system clock. A page that reads the wall clock directly cannot be tested at
+// the two dates where its year actually turns.
+const testDate = getTestDateFromSearchParams(Astro.url.searchParams) ?? undefined;
+const liveYear = getCurrentSeasonYear(testDate);
+const availableYears = [...schedulesByYear.keys()].sort((a, b) => b - a);
+// Existence is not enough: MFL creates the new season's feed before it draws
+// the schedule, so `has(liveYear)` can be true with nothing in it. Fall back
+// to the newest season that actually carries matchups.
+const parsedByYear = new Map(availableYears.map((y) => [y, parseWeeklySchedule(schedulesByYear.get(y))]));
+const hasGames = (y: number) => (parsedByYear.get(y)?.length ?? 0) > 0;
+const defaultYear = hasGames(liveYear)
+  ? liveYear
+  : (availableYears.find(hasGames) ?? liveYear);
+
+// `?year=` is a whitelist lookup, never a cast: an arbitrary number would ask
+// for a season with no feed and render an empty page. Anything not in the
+// seasons on disk falls back to the default rather than 404ing.
+const yearParam = Number(Astro.url.searchParams.get('year'));
+const year = availableYears.includes(yearParam) && hasGames(yearParam) ? yearParam : defaultYear;
+const seasonYears = availableYears.filter(hasGames);
+const isLiveSeason = year === liveYear;
+
+const weeks = parsedByYear.get(year) ?? [];
+// "Now" only means something in the season being played. Asking
+// getCurrentNFLWeek for a season that ended years ago returns a week number
+// that would highlight an arbitrary column of a finished grid as live.
+const currentWeek = isLiveSeason ? (getCurrentNFLWeek(testDate ?? new Date(), year) ?? 1) : -1;
+
+const teams = resolveConfigForYear(config as { teams: any[] }, year).teams ?? [];
+
+/**
+ * The viewer's franchise IN THE SEASON BEING SHOWN — not the slot they hold
+ * today.
+ *
+ * MFL franchise ids get REASSIGNED. TheLeague's 0011 was franchise 0010 from
+ * 2011-2015 and has been 0011 only since 2019, so reading `?year=2013` off the
+ * raw id presents ANOTHER owner's 2013 season as "My Schedule", and 2016-2018
+ * is a gap year that must resolve to nothing rather than to someone else.
+ * `/standings` and `/playoffs` already do this for their own season pickers
+ * (both call the same helper); this page needed it the moment it grew one.
+ */
+const viewerTeamIdForYear = resolvePreferredTeamIdForYear(
+  config as { teams: any[] },
+  viewerFranchiseId,
+  year,
+) ?? null;
+const teamById = new Map(teams.map((team: any) => [team.franchiseId, team]));
+const nameOf = (id: string) => {
+  const team = teamById.get(id);
+  if (!team) return `Franchise ${id}`;
+  return chooseTeamName(
+    { fullName: team.name, nameMedium: team.nameMedium, nameShort: team.nameShort, abbrev: team.abbrev },
+    'default',
+  );
+};
+/**
+ * A club's short tag for the grid tile.
+ *
+ * The fallback is a derived tag, NOT the franchise id: a historical identity
+ * may carry a name with no `abbrev` (ten AFL franchises' 2024 era entries do),
+ * and printing `0006` in the cell tells a reader nothing. The full name is
+ * always in the tile's label, so this only has to be recognisable.
+ */
+const abbrevOf = (id: string) => {
+  const team = teamById.get(id);
+  if (team?.abbrev) return team.abbrev;
+  // A franchise with NO config entry keeps its raw id. `nameOf` answers
+  // "Franchise 0034" for one, and deriving initials from that placeholder
+  // renders every defunct club as "F0" — the AFL's 2003-2005 schedules carry
+  // ten ids their standings never listed, so this path is reached.
+  if (!team) return id;
+  const name = nameOf(id);
+  if (!name) return id;
+  const words = name.replace(/[^A-Za-z0-9 ]/g, ' ').split(/\s+/).filter(Boolean);
+  if (words.length === 0) return id;
+  // Multi-word names read better as initials (Mariachi Ninjas → MN) than as a
+  // truncated first word; a single word is simply clipped.
+  return (words.length > 1
+    ? words.map((word) => word[0]).join('')
+    : words[0].slice(0, 5)
+  ).toUpperCase();
+};
+const iconOf = (id: string) => teamById.get(id)?.icon ?? null;
+
+// MFL's standings order IS the standing — never re-sorted here.
+const standingsRows: any[] = (() => {
+  const feed: any = standingsByYear.get(year);
+  const rows = feed?.leagueStandings?.franchise;
+  return Array.isArray(rows) ? rows : rows ? [rows] : [];
+})();
+const recordOf = new Map<string, string>();
+const pointsForOf = new Map<string, number>();
+standingsRows.forEach((row: any) => {
+  const id = String(row?.id ?? '');
+  if (!id) return;
+  // MFL writes W-L-T; the tie segment is noise in a league that rarely ties,
+  // so it is shown only when there is one.
+  if (row?.h2hwlt) {
+    const [w = '0', l = '0', t = '0'] = String(row.h2hwlt).split('-');
+    recordOf.set(id, Number(t) > 0 ? `${w}-${l}-${t}` : `${w}-${l}`);
+  }
+  const pf = Number(row?.pf);
+  if (Number.isFinite(pf)) pointsForOf.set(id, pf);
+});
+
+const conferences: { name: string; code: string }[] = Array.isArray(config.conferences) ? config.conferences : [];
+const conferenceOf = (id: string) => String(teamById.get(id)?.conference ?? '');
+
+/**
+ * Rank within the group this page actually shows, taken by FILTERING MFL's
+ * order rather than re-sorting it — the order already carries the
+ * constitution's tiebreakers.
+ *
+ * The AFL seeds by conference, and this page groups its grid the same way, so
+ * a league-wide index is the wrong number twice over: franchise 0008 finished
+ * 1st in the American League and reads 3rd of 24 against the full list, and
+ * the AL block's rank column would run 3, 5, 6, 7, 9. TheLeague has one table
+ * and keeps the league-wide index.
+ */
+const rankOf = new Map<string, number>();
+const groupSizeOf = new Map<string, number>();
+if (conferences.length > 1) {
+  for (const conference of conferences) {
+    const inConference = standingsRows.filter((row: any) => conferenceOf(String(row?.id ?? '')) === conference.code);
+    inConference.forEach((row: any, index: number) => {
+      const id = String(row?.id ?? '');
+      rankOf.set(id, index + 1);
+      groupSizeOf.set(id, inConference.length);
+    });
+  }
+} else {
+  standingsRows.forEach((row: any, index: number) => {
+    const id = String(row?.id ?? '');
+    rankOf.set(id, index + 1);
+    groupSizeOf.set(id, standingsRows.length);
+  });
+}
+
+const viewParam = Astro.url.searchParams.get('view');
+const canSeeMine = Boolean(viewerFranchiseId);
+const view: 'my' | 'league' = canSeeMine && viewParam !== 'league' ? 'my' : 'league';
+
+/**
+ * Every control on this page is a plain link, so the page ships no client JS
+ * and every state is bookmarkable — which means a season link must carry the
+ * current VIEW and a view link the current SEASON, or switching one silently
+ * resets the other. `year` is omitted for the default season so the canonical
+ * URL stays `/schedule`.
+ */
+const hrefFor = (toYear: number, toView: 'my' | 'league') => {
+  const params = new URLSearchParams();
+  if (toView === 'league' && canSeeMine) params.set('view', 'league');
+  if (toYear !== defaultYear) params.set('year', String(toYear));
+  const query = params.toString();
+  return `${r(`/${leagueSlug}/schedule`)}${query ? `?${query}` : ''}`;
+};
+
+const weekNumbers = weeks.map((entry) => entry.week);
+const firstWeek = weekNumbers[0] ?? 1;
+const lastWeek = weekNumbers[weekNumbers.length - 1] ?? firstWeek;
+
+const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+function weekDate(week: number) {
+  const iso = nflWeekStartIsoDate(year, week);
+  if (!iso) return { short: '', month: '', long: '' };
+  const [y, m, d] = iso.split('-').map(Number);
+  const month = MONTHS[m - 1] ?? '';
+  return {
+    short: `${month.slice(0, 3)} ${d}`,
+    month: `${month} ${y}`,
+    long: `${month.slice(0, 3)} ${d}, ${y}`,
+  };
+}
+
+// ── My schedule ────────────────────────────────────────────────────────────
+const mySchedule = viewerTeamIdForYear ? franchiseSchedule(weeks, viewerTeamIdForYear) : [];
+const nextGame = findNextGame(mySchedule, currentWeek);
+const myRank = viewerTeamIdForYear ? rankOf.get(viewerTeamIdForYear) ?? null : null;
+// Record and points come from standings, not from summing this page's own
+// rows: the feed runs through the playoff and consolation weeks, so summing it
+// gave the hero 13-8 / 1927.4 beside a grid printing MFL's 11-7 / 1613.30 for
+// the same club. One number, one source.
+const myRecord = viewerTeamIdForYear ? recordOf.get(viewerTeamIdForYear) ?? null : null;
+const myPointsFor = viewerTeamIdForYear ? pointsForOf.get(viewerTeamIdForYear) ?? null : null;
+const ordinal = (n: number) => {
+  const mod = n % 100;
+  if (mod >= 11 && mod <= 13) return `${n}th`;
+  return `${n}${({ 1: 'st', 2: 'nd', 3: 'rd' } as Record<number, string>)[n % 10] ?? 'th'}`;
+};
+
+/** One row per GAME, so a doubleheader week contributes two. */
+const myRows = mySchedule.flatMap(({ week, games }) =>
+  games.map((game: any, index: number) => ({
+    ...game,
+    week,
+    isDoubleheader: games.length > 1,
+    doubleheaderLabel: games.length > 1 ? `Game ${index + 1} of ${games.length}` : '',
+    showWeek: index === 0,
+    date: weekDate(week),
+  })),
+);
+const myMonths: { label: string; rows: typeof myRows }[] = [];
+for (const row of myRows) {
+  const label = row.date.month || `Week ${row.week}`;
+  const last = myMonths[myMonths.length - 1];
+  if (last && last.label === label) last.rows.push(row);
+  else myMonths.push({ label, rows: [row] });
+}
+
+// ── League grid ────────────────────────────────────────────────────────────
+const gridByFranchise = opponentsByWeek(weeks);
+/** Standings order where MFL gave us one, config order otherwise. */
+const orderedTeams = [...teams].sort((a: any, b: any) => {
+  const ra = rankOf.get(a.franchiseId) ?? Number.MAX_SAFE_INTEGER;
+  const rb = rankOf.get(b.franchiseId) ?? Number.MAX_SAFE_INTEGER;
+  return ra - rb;
+});
+const gridGroups = conferences.length > 1
+  ? conferences.map((conference) => ({
+      label: conference.name,
+      teams: orderedTeams.filter((team: any) => conferenceOf(team.franchiseId) === conference.code),
+    })).filter((group) => group.teams.length > 0)
+  : [{ label: '', teams: orderedTeams }];
+
+const playoffWeeks = weekNumbers.filter((week) => week >= PLAYOFFS_START_WEEK);
+const title = view === 'my' ? 'My Schedule' : 'Schedule';
+
+/**
+ * My Schedule wears the OWNER'S CLUB; the league grid keeps the league's own
+ * chrome. That is the site-wide rule `resolveHeroFranchiseSkin` exists to
+ * carry — a league surface wears the league, a surface about one team wears
+ * that team — so this takes the shared resolver rather than reaching for
+ * `colorPrimary` here. Doing it by hand would mean re-deriving the gradient,
+ * the wash, the measured accent and the crest artwork; and five TheLeague
+ * franchises share `#181818` as their primary, so the naive version paints
+ * five identical near-black heroes.
+ *
+ * Null for the league view, a signed-out visitor, and a club whose config
+ * carries no colours — each of which correctly falls back to league chrome.
+ */
+// Gated on the owner still holding the SAME slot that season, because the
+// resolver looks a franchise up in TODAY'S config: for a season where they
+// held a different id, that id's current colours belong to whoever holds it
+// now — a rival's palette on your own page. Always true for the live season,
+// so the common case is unaffected and a reassigned season falls back to
+// league chrome rather than to the wrong club.
+const heroSkin =
+  view === 'my' && viewerTeamIdForYear === viewerFranchiseId
+    ? resolveHeroFranchiseSkin(viewerFranchiseId, leagueSlug)
+    : null;
+---
+
+<TheLeagueLayout title={`${title} | ${league.name}`}>
+  <div class="sch">
+    <Breadcrumbs items={[{ label: league.name, href: r(`/${leagueSlug}`) }, { label: 'Schedule' }]} />
+
+    <section
+      class:list={['sch-hero', { 'sch-hero--franchise': !!heroSkin }]}
+      style={heroSkin?.style}
+    >
+      <div class="sch-hero__glow" aria-hidden="true"></div>
+      {heroSkin ? (
+        <>
+          {/* Resolved SERVER-SIDE as the dark cut with its measured outline
+              inline: a franchise gradient is dark in BOTH themes, and the
+              site's html.dark crest machinery fires only for a viewer whose
+              SITE theme is dark. */}
+          {heroSkin.crest && (
+            <img
+              class="hero-fb__crest"
+              src={heroSkin.crest}
+              style={heroSkin.crestFilter ? `filter: ${heroSkin.crestFilter};` : undefined}
+              alt=""
+              aria-hidden="true"
+              loading="lazy"
+              decoding="async"
+            />
+          )}
+          <span class="hero-fb__wash" aria-hidden="true"></span>
+        </>
+      ) : viewerTeamIdForYear && iconOf(viewerTeamIdForYear) ? (
+        <img src={iconOf(viewerTeamIdForYear)!} alt="" class="sch-hero__watermark" aria-hidden="true" />
+      ) : null}
+
+      <div class="sch-hero__inner">
+        <div class="sch-hero__main">
+          <div class="sch-hero__eyebrow">
+            <span class="sch-pill">{view === 'my' ? 'My Schedule' : 'League Schedule'}</span>
+            <span class="sch-hero__meta">{year} season · weeks {firstWeek}–{lastWeek}</span>
+          </div>
+
+          {viewerTeamIdForYear ? (
+            <div class="sch-hero__identity">
+              {/* One crest source per hero: with a franchise skin the big
+                  watermark is the resolver's dark cut, so the small mark takes
+                  the same art rather than pairing an era crest with it. */}
+              {(heroSkin?.crest || iconOf(viewerTeamIdForYear)) && (
+                <img
+                  src={heroSkin?.crest || iconOf(viewerTeamIdForYear)!}
+                  alt=""
+                  class="sch-hero__crest"
+                  width="54"
+                  height="54"
+                  style={heroSkin?.crestFilter ? `filter: ${heroSkin.crestFilter};` : undefined}
+                />
+              )}
+              <h1 class="sch-hero__title">{nameOf(viewerTeamIdForYear)}</h1>
+            </div>
+          ) : (
+            <h1 class="sch-hero__title">{league.name}</h1>
+          )}
+
+          {viewerTeamIdForYear && myRows.length > 0 && (
+            <div class="sch-rail">
+              <div class="sch-rail__bars">
+                {myRows.map((row) => (
+                  <span
+                    class:list={[
+                      'sch-rail__bar',
+                      row.played ? (row.outcome === 'W' ? 'is-win' : row.outcome === 'L' ? 'is-loss' : 'is-tie') : '',
+                      !row.played && row.week === currentWeek ? 'is-now' : '',
+                      !row.played && row.week !== currentWeek ? 'is-future' : '',
+                    ]}
+                    title={`Week ${row.week} · ${nameOf(row.opponentId)}${row.played ? ` · ${row.outcome}` : ''}`}
+                  ></span>
+                ))}
+              </div>
+              <div class="sch-rail__scale">
+                <span>Week {firstWeek}</span>
+                {nextGame && <span class="sch-rail__now">Week {nextGame.week} · up next</span>}
+                <span>Week {lastWeek}</span>
+              </div>
+            </div>
+          )}
+
+          {viewerTeamIdForYear ? (
+            <div class="sch-stats">
+              <div class="sch-stat">
+                <span class="sch-stat__value">{myRecord ?? '0-0'}</span>
+                <span class="sch-stat__label">Record</span>
+              </div>
+              {myRank && (
+                <>
+                  <span class="sch-stat__rule" aria-hidden="true"></span>
+                  <div class="sch-stat">
+                    <span class="sch-stat__value sch-stat__value--sm">{ordinal(myRank)}</span>
+                    <span class="sch-stat__label">
+                      of {groupSizeOf.get(viewerTeamIdForYear) || standingsRows.length || teams.length}
+                      {conferences.length > 1 ? ` in the ${conferences.find((c) => c.code === conferenceOf(viewerTeamIdForYear))?.name ?? 'conference'}` : ''}
+                    </span>
+                  </div>
+                </>
+              )}
+              {myPointsFor != null && (
+                <>
+                  <span class="sch-stat__rule" aria-hidden="true"></span>
+                  <div class="sch-stat">
+                    <span class="sch-stat__value sch-stat__value--sm">{myPointsFor.toFixed(0)}</span>
+                    <span class="sch-stat__label">Points for</span>
+                  </div>
+                </>
+              )}
+            </div>
+          ) : (
+            <p class="sch-hero__lede">
+              Every week's matchups and final scores for the {year} season. Sign in to see your own
+              schedule{isLiveSeason ? ', your next opponent' : ''} and your results.
+            </p>
+          )}
+        </div>
+
+        {viewerTeamIdForYear && nextGame ? (
+          <aside class="sch-next" aria-label="Next matchup">
+            <div class="sch-next__head">
+              <span class="sch-next__dot" aria-hidden="true"></span>
+              <span class="sch-next__kicker">Up next · Week {nextGame.week}</span>
+            </div>
+            <div class="sch-next__team">
+              {iconOf(nextGame.opponentId) && (
+                <img src={iconOf(nextGame.opponentId)!} alt="" width="46" height="46" class="sch-next__crest" />
+              )}
+              <div class="sch-next__names">
+                <span class="sch-next__name">{nameOf(nextGame.opponentId)}</span>
+                <span class="sch-next__sub">
+                  {recordOf.get(nextGame.opponentId) ?? 'No record yet'} · {nextGame.isHome ? 'at home' : 'away'}
+                </span>
+              </div>
+            </div>
+            <p class="sch-next__when">{weekDate(nextGame.week).long} · lineup locks at kickoff</p>
+            <div class="sch-next__actions">
+              <a href={r(`/${leagueSlug}/lineup`)} class="sch-btn">Set lineup</a>
+              <a href={r(`/${leagueSlug}/live-scoring`)} class="sch-btn sch-btn--ghost">Live scoring</a>
+            </div>
+          </aside>
+        ) : !viewerFranchiseId ? (
+          <aside class="sch-next" aria-label="Sign in">
+            <div class="sch-next__head">
+              <span class="sch-next__kicker">Your team</span>
+            </div>
+            <p class="sch-next__when">
+              Sign in with your MFL account to see your own season, your next opponent and your results.
+            </p>
+            <div class="sch-next__actions">
+              <a href={r(`/${leagueSlug}/login`)} class="sch-btn">Log in</a>
+            </div>
+          </aside>
+        ) : null}
+      </div>
+    </section>
+
+    {(canSeeMine || seasonYears.length > 1) && (
+    <div class="sch-controls">
+      {canSeeMine && (
+        <nav class="sch-tabs" aria-label="Schedule views">
+          <a href={hrefFor(year, 'my')} class:list={['sch-tab', { 'is-active': view === 'my' }]} aria-current={view === 'my' ? 'page' : undefined}>My schedule</a>
+          <a href={hrefFor(year, 'league')} class:list={['sch-tab', { 'is-active': view === 'league' }]} aria-current={view === 'league' ? 'page' : undefined}>League grid</a>
+        </nav>
+      )}
+      {seasonYears.length > 1 && (
+        <nav class="sch-seasons" aria-label="Season">
+          <span class="sch-seasons__label">Season</span>
+          <div class="sch-seasons__scroller">
+            {seasonYears.map((option) => (
+              <a
+                href={hrefFor(option, view)}
+                class:list={['sch-season', { 'is-active': option === year }]}
+                aria-current={option === year ? 'page' : undefined}
+              >{option}</a>
+            ))}
+          </div>
+        </nav>
+      )}
+    </div>
+    )}
+
+    {view === 'my' ? (
+      myRows.length === 0 ? (
+        <p class="sch-empty">
+          {viewerFranchiseId && !viewerTeamIdForYear
+            ? `You did not have a team in ${year}.`
+            : `No schedule has been published for ${year} yet.`}
+        </p>
+      ) : (
+        <div class="sch-card">
+          {myMonths.map((group) => (
+            <div>
+              <div class="sch-month">
+                <span class="sch-month__label">{group.label}</span>
+                <span class="sch-month__rule" aria-hidden="true"></span>
+                <span class="sch-month__meta">
+                  {group.rows.filter((row) => row.played).length} of {group.rows.length} played
+                </span>
+              </div>
+              {group.rows.map((row) => (
+                <div class:list={['sch-row', { 'is-now': !row.played && row.week === currentWeek }]}>
+                  <div class="sch-row__week">
+                    <span class="sch-row__weeknum">{row.showWeek ? row.week : ''}</span>
+                    <span class="sch-row__date">{row.showWeek ? row.date.short : ''}</span>
+                  </div>
+                  <span
+                    class:list={[
+                      'sch-chip',
+                      row.played ? (row.outcome === 'W' ? 'is-win' : row.outcome === 'L' ? 'is-loss' : 'is-tie') : '',
+                      !row.played && row.week === currentWeek ? 'is-now' : '',
+                    ]}
+                  >{row.played ? row.outcome : row.week === currentWeek ? '•' : ''}</span>
+                  {iconOf(row.opponentId) && (
+                    <img src={iconOf(row.opponentId)!} alt="" width="34" height="34" class="sch-row__crest" loading="lazy" />
+                  )}
+                  <div class="sch-row__team">
+                    <div class="sch-row__nameline">
+                      <span class="sch-row__name">{nameOf(row.opponentId)}</span>
+                      {row.isDoubleheader && <span class="sch-tag">Doubleheader</span>}
+                      {!row.played && row.week === currentWeek && <span class="sch-tag sch-tag--now">This week</span>}
+                    </div>
+                    <span class="sch-row__sub">
+                      {row.isHome ? 'Home' : 'Away'} · {recordOf.get(row.opponentId) ?? 'no record yet'}
+                      {row.doubleheaderLabel ? ` · ${row.doubleheaderLabel}` : ''}
+                    </span>
+                  </div>
+                  <div class="sch-row__score">
+                    {row.played ? (
+                      <>
+                        <span class="sch-row__points">{row.score?.toFixed(1)} – {row.opponentScore?.toFixed(1)}</span>
+                        <span class:list={['sch-row__margin', row.outcome === 'W' ? 'is-win' : row.outcome === 'L' ? 'is-loss' : '']}>
+                          {(row.score ?? 0) - (row.opponentScore ?? 0) > 0 ? '+' : ''}
+                          {((row.score ?? 0) - (row.opponentScore ?? 0)).toFixed(1)} margin
+                        </span>
+                      </>
+                    ) : (
+                      <>
+                        <span class="sch-row__points sch-row__points--pending">{row.date.short}</span>
+                        <span class="sch-row__margin">Not played</span>
+                      </>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          ))}
+        </div>
+      )
+    ) : (
+      weekNumbers.length === 0 ? (
+        <p class="sch-empty">No schedule has been published for {year} yet.</p>
+      ) : (
+        <>
+          <div class="sch-card sch-scroller">
+            <table class="sch-grid">
+              <thead>
+                <tr>
+                  <th scope="col" class="sch-grid__club">Club</th>
+                  {weekNumbers.map((week) => (
+                    <th
+                      scope="col"
+                      class:list={['sch-grid__wk', { 'is-now': week === currentWeek, 'is-playoff': week >= PLAYOFFS_START_WEEK }]}
+                    >
+                      <span class="sch-grid__wknum">{week}</span>
+                      <span class="sch-grid__wkdate">{week === currentWeek ? 'Now' : weekDate(week).short}</span>
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {gridGroups.map((group) => (
+                  <>
+                    {group.label && (
+                      <tr class="sch-grid__grouprow">
+                        <th scope="rowgroup" class="sch-grid__group" colspan={weekNumbers.length + 1}>{group.label}</th>
+                      </tr>
+                    )}
+                    {group.teams.map((team: any) => {
+                      const id = team.franchiseId;
+                      const row = gridByFranchise.get(id);
+                      const mine = id === viewerTeamIdForYear;
+                      return (
+                        <tr class:list={['sch-grid__row', { 'is-mine': mine }]}>
+                          <th scope="row" class:list={['sch-grid__club', { 'is-mine': mine }]}>
+                            <div class="sch-grid__clubinner">
+                              <span class="sch-grid__rank">{rankOf.get(id) ?? ''}</span>
+                              {team.icon && <img src={team.icon} alt="" width="26" height="26" class="sch-grid__crest" loading="lazy" />}
+                              <span class="sch-grid__name">{nameOf(id)}</span>
+                              <span class="sch-grid__record">{recordOf.get(id) ?? ''}</span>
+                            </div>
+                          </th>
+                          {weekNumbers.map((week) => {
+                            const games = row?.get(week) ?? [];
+                            return (
+                              <td class:list={['sch-grid__cell', { 'is-now': week === currentWeek }]}>
+                                {games.length === 0 ? (
+                                  <span class="sch-tile sch-tile--bye">—</span>
+                                ) : (
+                                  games.map((game: any) => {
+                                    // The result is carried by tint and an
+                                    // edge bar, which a screen reader cannot
+                                    // see, and the legend is not associated
+                                    // with the cell — so each tile states its
+                                    // own outcome.
+                                    const outcomeWord = !game.played
+                                      ? 'still to play'
+                                      : game.outcome === 'W'
+                                        ? 'won'
+                                        : game.outcome === 'L'
+                                          ? 'lost'
+                                          : 'tied';
+                                    // Rounded to keep 17 columns legible, with
+                                    // the exact score in the label a screen
+                                    // reader and a hover both get — EXCEPT
+                                    // where rounding would print a decided
+                                    // game as a tie. 97 of the archive's 8,413
+                                    // decided games are sub-point, and
+                                    // "115–115" inside a green WIN tile reads
+                                    // as a bug in the tile, not as rounding.
+                                    const mine = game.score ?? 0;
+                                    const theirs = game.opponentScore ?? 0;
+                                    const roundsToATie =
+                                      Math.round(mine) === Math.round(theirs) && mine !== theirs;
+                                    const fmt = (n: number) =>
+                                      roundsToATie ? n.toFixed(1) : String(Math.round(n));
+                                    const scoreLine = game.played ? `${fmt(mine)}–${fmt(theirs)}` : '';
+                                    // The feed's own value, unformatted: 15,333
+                                    // archived scores carry hundredths, and
+                                    // toFixed(1) here silently restated 82.54
+                                    // as 82.5 in the one place this UI promises
+                                    // the exact score.
+                                    const exact = game.played ? `, ${mine} to ${theirs}` : '';
+                                    const label = `Week ${week}, ${game.isHome ? 'vs' : 'at'} ${nameOf(game.opponentId)}, ${outcomeWord}${exact}`;
+                                    return (
+                                      <span
+                                        class:list={[
+                                          'sch-tile',
+                                          game.played ? (game.outcome === 'W' ? 'is-win' : game.outcome === 'L' ? 'is-loss' : 'is-tie') : 'is-pending',
+                                        ]}
+                                        role="img"
+                                        aria-label={label}
+                                        title={label}
+                                      >
+                                        <span class="sch-tile__opp">{abbrevOf(game.opponentId)}</span>
+                                        {scoreLine && <span class="sch-tile__score">{scoreLine}</span>}
+                                      </span>
+                                    );
+                                  })
+                                )}
+                              </td>
+                            );
+                          })}
+                        </tr>
+                      );
+                    })}
+                  </>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          <ul class="sch-legend">
+            <li><span class="sch-swatch is-win" aria-hidden="true"></span>Won</li>
+            <li><span class="sch-swatch is-loss" aria-hidden="true"></span>Lost</li>
+            <li><span class="sch-swatch is-pending" aria-hidden="true"></span>To play</li>
+            <li class="sch-legend__note">
+              Each played game shows its final score. Two tiles in one cell is a doubleheader.
+              {playoffWeeks.length > 0 && ` Weeks ${playoffWeeks[0]}–${playoffWeeks[playoffWeeks.length - 1]} are the playoff window.`}
+            </li>
+          </ul>
+        </>
+      )
+    )}
+  </div>
+</TheLeagueLayout>
+
+<style>
+  /* The hero is a dark brand card in BOTH themes, exactly as the event heroes
+     are (AflEventHero / EventHeroShell): AFL keeps its navy in light and dark,
+     TheLeague deepens. Hence literal values here rather than surface tokens —
+     these ARE the brand chrome, not the page surface. */
+  .sch {
+    --sch-hero: #1c497c;
+    /* AA at 13px in both directions: white on this is 6.4:1 (the pill, the
+       CTA) and this on the page ground is 6.0:1 (the active tab). #3b82f6 was
+       3.7:1 and 3.0:1 — the reason this is a darker blue than the hero's. */
+    --sch-accent: #1d4ed8;
+    --sch-accent-ink: #93bbfd;
+    --sch-glow: rgba(28, 73, 124, 0.55);
+    --sch-accent-soft: rgba(59, 130, 246, 0.08);
+    --sch-ink-soft: rgba(255, 255, 255, 0.72);
+    --sch-ink-faint: rgba(255, 255, 255, 0.6);
+    --sch-divider: rgba(255, 255, 255, 0.16);
+    --sch-raised: rgba(255, 255, 255, 0.07);
+    max-width: var(--container-max-width, 1232px);
+    margin: 0 auto;
+    padding: 0 var(--spacing-md, 1rem) var(--spacing-2xl, 3rem);
+  }
+  :global(html.dark) .sch {
+    --sch-hero: #0f1e2e;
+  }
+  /* Same specificity as the dark rule and later in source, so the AFL navy
+     survives in dark mode too — the league's chrome, not a light-mode look. */
+  :global(html[data-league='afl']) .sch {
+    --sch-hero: #002244;
+    --sch-accent: #c41e3a;
+    --sch-accent-ink: #c9a94e;
+    --sch-glow: rgba(196, 30, 58, 0.6);
+    --sch-accent-soft: rgba(196, 30, 58, 0.07);
+  }
+
+  /* ── Hero ── */
+  .sch-hero {
+    position: relative;
+    overflow: hidden;
+    border-radius: var(--radius-lg, 1rem);
+    background: var(--sch-hero);
+    color: var(--color-white, #fff);
+    box-shadow: var(--shadow-lg);
+    isolation: isolate;
+    margin-bottom: var(--spacing-md, 1rem);
+  }
+  .sch-hero__glow {
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(86% 92% at 3% -4%, var(--sch-glow), transparent 64%);
+    pointer-events: none;
+    z-index: 1;
+  }
+  .sch-hero__watermark {
+    position: absolute;
+    right: clamp(1rem, 4vw, 2.75rem);
+    top: 50%;
+    transform: translateY(-50%);
+    width: clamp(150px, 22vw, 240px);
+    opacity: 0.14;
+    object-fit: contain;
+    z-index: 0;
+  }
+  /* ── The owner's club, on My Schedule only ──
+     The card swaps its league navy for the franchise gradient and every
+     league-accented mark inside it swaps to the measured franchise accent.
+     Which accent is NOT a style choice: the resolver clears `accent` to 3:1
+     over the copy band and `accent-panel` to 4.5:1 over the card's FAR end,
+     because one accent cannot serve both on a high-contrast gradient —
+     Midwestside runs gold at one end and black at the other. So the main
+     column takes `accent`, the slotted Up-next panel takes `accent-panel`,
+     and anything with a FILL takes the pill pair, whose ink is picked per
+     franchise rather than assumed to be white.
+
+     The league glow goes: it is a radial of --sch-glow, the league's own
+     colour, and leaving it on lights the franchise gradient's top-left
+     corner with the wrong brand. */
+  /* Literal fallback like both sibling heroes carry: an undefined custom
+     property here would paint the card transparent in BOTH themes. */
+  .sch-hero--franchise { background: var(--hero-fb-gradient, #10161f); }
+  .sch-hero--franchise .sch-hero__glow { display: none; }
+  .sch-hero--franchise .sch-pill {
+    background: var(--hero-fb-pill-bg);
+    color: var(--hero-fb-pill-ink);
+  }
+  .sch-hero--franchise .sch-rail__bar.is-now { background: var(--hero-fb-accent); }
+  .sch-hero--franchise .sch-rail__now { color: var(--hero-fb-accent); }
+  .sch-hero--franchise .sch-next__dot { background: var(--hero-fb-accent-panel); }
+  .sch-hero--franchise .sch-next__kicker { color: var(--hero-fb-accent-panel); }
+  .sch-hero--franchise .sch-btn {
+    background: var(--hero-fb-pill-bg);
+    color: var(--hero-fb-pill-ink);
+  }
+  .sch-hero--franchise .sch-btn:hover { color: var(--hero-fb-pill-ink); }
+  /* The ghost button is a translucent white on the card, so it keeps the
+     white ink the franchise fill does not apply to. */
+  .sch-hero--franchise .sch-btn--ghost {
+    background: var(--sch-raised);
+    color: var(--color-white, #fff);
+  }
+
+  .sch-hero__inner {
+    position: relative;
+    z-index: 2;
+    display: flex;
+    gap: var(--spacing-xl, 2rem);
+    padding: clamp(1.25rem, 3vw, 1.75rem) clamp(1.25rem, 3vw, 1.875rem);
+  }
+  .sch-hero__main {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-md, 1rem);
+  }
+  .sch-hero__eyebrow {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+  }
+  .sch-pill {
+    font-family: var(--font-display, 'UFC Sans Condensed', 'Arial Narrow', sans-serif);
+    font-weight: var(--font-weight-bold, 700);
+    font-size: 0.8125rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 0.375rem 0.875rem;
+    border-radius: var(--radius-full, 999px);
+    background: var(--sch-accent);
+    color: var(--color-white, #fff);
+  }
+  .sch-hero__meta {
+    font-size: var(--font-size-xs, 0.75rem);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--sch-ink-faint);
+  }
+  .sch-hero__identity {
+    display: flex;
+    align-items: center;
+    gap: 0.875rem;
+  }
+  /* A crest is square art with ink to its own corners — contain, never crop. */
+  .sch-hero__crest {
+    width: 54px;
+    height: 54px;
+    object-fit: contain;
+    flex-shrink: 0;
+  }
+  .sch-hero__title {
+    margin: 0;
+    font-family: var(--font-display, 'UFC Sans Condensed', 'Arial Narrow', sans-serif);
+    font-weight: var(--font-weight-semibold, 600);
+    font-size: clamp(2rem, 4.4vw, 3.25rem);
+    line-height: 1;
+    letter-spacing: -0.01em;
+    /* Explicit, not inherited: the global heading rule colors every h1 with
+       --page-text, which on this navy card is navy on navy. */
+    color: var(--color-white, #fff);
+  }
+  .sch-hero__lede {
+    margin: 0;
+    max-width: 46ch;
+    font-size: var(--font-size-sm, 0.875rem);
+    line-height: var(--line-height-base, 1.5);
+    color: var(--sch-ink-soft);
+  }
+
+  /* The season as one shape: bar per game, tall when played, ghosted ahead. */
+  .sch-rail {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4375rem;
+    max-width: 520px;
+  }
+  .sch-rail__bars {
+    display: flex;
+    align-items: flex-end;
+    gap: 3px;
+    height: 26px;
+  }
+  .sch-rail__bar {
+    flex: 1;
+    border-radius: 2px;
+    height: 10px;
+    background: rgba(255, 255, 255, 0.14);
+  }
+  .sch-rail__bar.is-win { height: 18px; background: #34d399; }
+  .sch-rail__bar.is-loss { height: 18px; background: #f87171; }
+  .sch-rail__bar.is-tie { height: 18px; background: var(--color-gray-400, #9ca3af); }
+  .sch-rail__bar.is-now { height: 26px; background: var(--sch-accent-ink); }
+  .sch-rail__scale {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    font-size: 0.625rem;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: var(--sch-ink-faint);
+  }
+  .sch-rail__now { color: var(--sch-accent-ink); }
+
+  .sch-stats {
+    display: flex;
+    align-items: center;
+    gap: 1.375rem;
+    margin-top: auto;
+    flex-wrap: wrap;
+  }
+  .sch-stat { display: flex; flex-direction: column; }
+  .sch-stat__value {
+    font-size: 2.4rem;
+    font-weight: var(--font-weight-bold, 700);
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.02em;
+  }
+  .sch-stat__value--sm { font-size: 1.4rem; line-height: 1.15; }
+  .sch-stat__label {
+    font-family: var(--font-display, 'UFC Sans Condensed', 'Arial Narrow', sans-serif);
+    font-size: 0.6875rem;
+    font-weight: var(--font-weight-semibold, 600);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--sch-ink-faint);
+    margin-top: 0.1875rem;
+  }
+  .sch-stat__rule { width: 1px; height: 38px; background: var(--sch-divider); }
+
+  /* ── Up next ── */
+  .sch-next {
+    width: 318px;
+    flex-shrink: 0;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    gap: 0.875rem;
+    padding: 1.125rem 1.25rem;
+    border-radius: var(--radius-md, 0.5rem);
+    background: var(--sch-raised);
+    border: 1px solid var(--sch-divider);
+  }
+  .sch-next__head { display: flex; align-items: center; gap: 0.5625rem; }
+  .sch-next__dot { width: 7px; height: 7px; border-radius: 50%; background: var(--sch-accent-ink); }
+  .sch-next__kicker {
+    font-family: var(--font-display, 'UFC Sans Condensed', 'Arial Narrow', sans-serif);
+    font-size: 0.6875rem;
+    font-weight: var(--font-weight-semibold, 600);
+    letter-spacing: 0.11em;
+    text-transform: uppercase;
+    color: var(--sch-accent-ink);
+  }
+  .sch-next__team { display: flex; align-items: center; gap: 0.75rem; }
+  .sch-next__crest { width: 46px; height: 46px; object-fit: contain; flex-shrink: 0; }
+  .sch-next__names { display: flex; flex-direction: column; min-width: 0; }
+  .sch-next__name {
+    font-size: 1rem;
+    font-weight: var(--font-weight-semibold, 600);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .sch-next__sub { font-size: var(--font-size-xs, 0.75rem); color: var(--sch-ink-soft); margin-top: 0.125rem; }
+  .sch-next__when {
+    margin: 0;
+    padding-top: 0.75rem;
+    border-top: 1px solid var(--sch-divider);
+    font-size: var(--font-size-xs, 0.75rem);
+    line-height: 1.45;
+    color: var(--sch-ink-soft);
+  }
+  .sch-next__actions { display: flex; gap: 0.5rem; margin-top: auto; }
+  .sch-btn {
+    flex: 1;
+    box-sizing: border-box;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: 44px;
+    padding: 0 1rem;
+    border-radius: var(--radius-md, 0.5rem);
+    background: var(--sch-accent);
+    color: var(--color-white, #fff);
+    font-family: var(--font-display, 'UFC Sans Condensed', 'Arial Narrow', sans-serif);
+    font-weight: var(--font-weight-bold, 700);
+    font-size: 0.9375rem;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    text-decoration: none;
+    white-space: nowrap;
+    transition: filter var(--transition-fast, 150ms ease);
+  }
+  .sch-btn:hover { filter: brightness(0.92); color: var(--color-white, #fff); }
+  .sch-btn--ghost {
+    background: var(--sch-raised);
+    border: 1px solid var(--sch-divider);
+  }
+  .sch-btn--ghost:hover { background: rgba(255, 255, 255, 0.14); filter: none; }
+
+  /* ── Tabs ── */
+  .sch-tabs {
+    display: flex;
+    gap: 0;
+    border-bottom: 1px solid var(--content-border, #e2e8f0);
+  }
+  .sch-tab {
+    flex: 0 0 auto;
+    min-width: 140px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: 44px;
+    padding: 0 1.25rem;
+    font-size: var(--font-size-sm, 0.875rem);
+    font-weight: var(--font-weight-semibold, 600);
+    color: var(--content-text-muted, #6b7280);
+    text-decoration: none;
+    border-bottom: 2px solid transparent;
+  }
+  .sch-tab.is-active {
+    color: var(--sch-accent);
+    border-bottom-color: var(--sch-accent);
+    font-weight: var(--font-weight-bold, 700);
+  }
+
+  /* ── Cards, rows ── */
+  .sch-card {
+    background: var(--card-bg, #fff);
+    border: 1px solid var(--card-border, #e2e8f0);
+    border-radius: var(--radius-md, 0.5rem);
+    box-shadow: var(--shadow-md);
+    overflow: hidden;
+  }
+  .sch-empty {
+    padding: var(--spacing-xl, 2rem);
+    text-align: center;
+    color: var(--content-text-muted, #6b7280);
+    background: var(--card-bg, #fff);
+    border: 1px solid var(--card-border, #e2e8f0);
+    border-radius: var(--radius-md, 0.5rem);
+  }
+  .sch-month {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem 1.25rem 0.5rem;
+    background: var(--table-header-bg, #f9fafb);
+    border-bottom: 1px solid var(--table-border, #e2e8f0);
+  }
+  .sch-month__label {
+    font-family: var(--font-display, 'UFC Sans Condensed', 'Arial Narrow', sans-serif);
+    font-size: var(--font-size-xs, 0.75rem);
+    font-weight: var(--font-weight-semibold, 600);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--color-gray-700, #374151);
+  }
+  .sch-month__rule { flex: 1; height: 1px; background: var(--table-border, #e2e8f0); }
+  .sch-month__meta { font-size: 0.6875rem; color: var(--content-text-muted, #6b7280); }
+
+  .sch-row {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.6875rem 1.25rem;
+    border-bottom: 1px solid var(--table-border, #e2e8f0);
+    border-left: 3px solid transparent;
+  }
+  .sch-row.is-now {
+    background: var(--sch-accent-soft);
+    border-left-color: var(--sch-accent);
+  }
+  .sch-row__week { width: 52px; flex-shrink: 0; }
+  .sch-row__weeknum {
+    display: block;
+    font-family: var(--font-display, 'UFC Sans Condensed', 'Arial Narrow', sans-serif);
+    font-size: 1.625rem;
+    font-weight: var(--font-weight-semibold, 600);
+    line-height: 1;
+    color: var(--color-gray-700, #374151);
+  }
+  .sch-row.is-now .sch-row__weeknum { color: var(--sch-accent); }
+  .sch-row__date {
+    display: block;
+    font-size: 0.625rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--content-text-muted, #6b7280);
+    margin-top: 0.1875rem;
+  }
+  .sch-chip {
+    width: 26px;
+    height: 26px;
+    flex-shrink: 0;
+    border-radius: 7px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: var(--font-size-xs, 0.75rem);
+    font-weight: var(--font-weight-bold, 700);
+  }
+  .sch-chip.is-win { background: var(--badge-success-bg); color: var(--badge-success-text); }
+  .sch-chip.is-loss { background: var(--badge-error-bg); color: var(--badge-error-text); }
+  .sch-chip.is-tie { background: var(--color-gray-100, #f3f4f6); color: var(--color-gray-600, #4b5563); }
+  .sch-chip.is-now { background: var(--sch-accent); color: var(--color-white, #fff); }
+  .sch-row__crest { width: 34px; height: 34px; object-fit: contain; flex-shrink: 0; }
+  .sch-row__team { flex: 1; min-width: 0; }
+  .sch-row__nameline { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
+  .sch-row__name {
+    font-size: 0.9375rem;
+    font-weight: var(--font-weight-semibold, 600);
+    color: var(--page-text, #111827);
+  }
+  .sch-tag {
+    flex-shrink: 0;
+    padding: 1px 7px;
+    border-radius: var(--radius-sm, 0.25rem);
+    font-size: 0.5625rem;
+    font-weight: var(--font-weight-bold, 700);
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    background: var(--color-gray-100, #f3f4f6);
+    color: var(--content-text-muted, #6b7280);
+  }
+  .sch-tag--now { background: var(--sch-accent); color: var(--color-white, #fff); }
+  .sch-row__sub {
+    display: block;
+    font-size: 0.6875rem;
+    color: var(--content-text-muted, #6b7280);
+    margin-top: 0.1875rem;
+  }
+  .sch-row__score { text-align: right; flex-shrink: 0; min-width: 132px; }
+  .sch-row__points {
+    display: block;
+    font-size: 0.9375rem;
+    font-weight: var(--font-weight-bold, 700);
+    font-variant-numeric: tabular-nums;
+    color: var(--page-text, #111827);
+  }
+  .sch-row__points--pending { color: var(--content-text-muted, #6b7280); font-weight: var(--font-weight-semibold, 600); }
+  .sch-row__margin {
+    display: block;
+    font-size: 0.6875rem;
+    font-variant-numeric: tabular-nums;
+    color: var(--content-text-muted, #6b7280);
+    margin-top: 0.125rem;
+  }
+  .sch-row__margin.is-win { color: var(--color-success-dark, #059669); }
+  .sch-row__margin.is-loss { color: var(--color-error-dark, #b91c1c); }
+
+  /* ── Grid ── */
+  .sch-scroller { overflow-x: auto; }
+  .sch-grid { border-collapse: collapse; white-space: nowrap; width: 100%; }
+  .sch-grid__club {
+    position: sticky;
+    left: 0;
+    z-index: 1;
+    min-width: 232px;
+    max-width: 232px;
+    box-sizing: border-box;
+    padding: 0.375rem 1rem;
+    text-align: left;
+    font-weight: var(--font-weight-normal, 400);
+    background: var(--card-bg, #fff);
+    border-right: 1px solid var(--table-border, #e2e8f0);
+    border-bottom: 1px solid var(--table-border, #e2e8f0);
+    border-left: 3px solid transparent;
+  }
+  thead .sch-grid__club {
+    z-index: 2;
+    padding: 0.75rem 1rem 0.625rem;
+    font-size: 0.625rem;
+    font-weight: var(--font-weight-bold, 700);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--table-header-text, #9ca3af);
+    background: var(--table-header-bg, #f9fafb);
+  }
+  .sch-grid__row.is-mine .sch-grid__club {
+    background: var(--sch-accent-soft);
+    border-left-color: var(--sch-accent);
+  }
+  /* Flex, not a float: a long club name wrapped under a floated record and
+     pushed the pinned column to two lines. */
+  .sch-grid__clubinner { display: flex; align-items: center; gap: 0.5rem; }
+  .sch-grid__rank {
+    flex-shrink: 0;
+    width: 16px;
+    font-size: 0.6875rem;
+    font-weight: var(--font-weight-semibold, 600);
+    font-variant-numeric: tabular-nums;
+    color: var(--content-text-muted, #6b7280);
+  }
+  .sch-grid__crest { width: 26px; height: 26px; object-fit: contain; flex-shrink: 0; }
+  .sch-grid__name {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-size: 0.8125rem;
+    font-weight: var(--font-weight-semibold, 600);
+    color: var(--page-text, #111827);
+  }
+  .sch-grid__record {
+    flex-shrink: 0;
+    font-size: 0.6875rem;
+    font-weight: var(--font-weight-semibold, 600);
+    font-variant-numeric: tabular-nums;
+    color: var(--color-gray-700, #374151);
+  }
+  .sch-grid__group {
+    text-align: left;
+    padding: 0.5rem 1rem;
+    font-family: var(--font-display, 'UFC Sans Condensed', 'Arial Narrow', sans-serif);
+    font-size: 0.6875rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--content-text-muted, #6b7280);
+    background: var(--table-header-bg, #f9fafb);
+    border-bottom: 1px solid var(--table-border, #e2e8f0);
+    position: sticky;
+    left: 0;
+  }
+  .sch-grid__wk {
+    min-width: 64px;
+    padding: 0.625rem 0.25rem 0.5rem;
+    text-align: center;
+    background: var(--table-header-bg, #f9fafb);
+    border-bottom: 1px solid var(--table-border, #e2e8f0);
+    border-top: 2px solid transparent;
+  }
+  .sch-grid__wk.is-playoff { border-top-color: var(--trophy-gold, #e6c976); }
+  .sch-grid__wk.is-now { background: var(--sch-accent-soft); }
+  .sch-grid__wknum {
+    display: block;
+    font-family: var(--font-display, 'UFC Sans Condensed', 'Arial Narrow', sans-serif);
+    font-size: 0.9375rem;
+    font-weight: var(--font-weight-semibold, 600);
+    line-height: 1;
+    color: var(--color-gray-700, #374151);
+  }
+  .sch-grid__wk.is-now .sch-grid__wknum { color: var(--sch-accent); }
+  .sch-grid__wkdate {
+    display: block;
+    font-size: 0.5625rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--content-text-muted, #6b7280);
+    margin-top: 0.25rem;
+  }
+  .sch-grid__cell {
+    padding: 0.25rem 0.1875rem;
+    text-align: center;
+    border-bottom: 1px solid var(--table-border, #e2e8f0);
+  }
+  .sch-grid__cell.is-now { background: var(--sch-accent-soft); }
+  .sch-tile {
+    display: block;
+    border-radius: var(--radius-sm, 0.25rem);
+    padding: 0.375rem 0.125rem;
+    font-family: var(--font-display, 'UFC Sans Condensed', 'Arial Narrow', sans-serif);
+    font-size: 0.8125rem;
+    font-weight: var(--font-weight-semibold, 600);
+    letter-spacing: 0.02em;
+    background: var(--color-gray-100, #f3f4f6);
+    color: var(--color-gray-700, #374151);
+  }
+  /* Result as an edge bar plus a faint wash, not a flood: a full season is
+     200+ cells, and flooding every one turns the grid into a heat map. */
+  .sch-tile + .sch-tile { margin-top: 0.1875rem; }
+  .sch-tile.is-win {
+    background: var(--badge-success-bg);
+    color: var(--badge-success-text);
+    box-shadow: inset 3px 0 0 var(--color-success, #10b981);
+  }
+  .sch-tile.is-loss {
+    background: var(--badge-error-bg);
+    color: var(--badge-error-text);
+    box-shadow: inset 3px 0 0 var(--color-error, #dc2626);
+  }
+  .sch-tile.is-tie { background: var(--color-gray-100, #f3f4f6); color: var(--color-gray-600, #4b5563); }
+  .sch-tile--bye { background: transparent; color: var(--color-gray-300, #d1d5db); }
+  /* Opponent over final score. The score is the smaller of the two because a
+     grid this wide is scanned for WHO first and HOW MANY second, and because
+     17 columns of two full-size numbers do not fit a phone. */
+  .sch-tile__opp { display: block; }
+  .sch-tile__score {
+    display: block;
+    font-size: 0.6875rem;
+    font-weight: var(--font-weight-medium, 500);
+    font-variant-numeric: tabular-nums;
+    opacity: 0.75;
+    letter-spacing: 0;
+  }
+
+  .sch-controls {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    margin: 1.25rem 0 0.75rem;
+  }
+  .sch-seasons { display: flex; align-items: center; gap: 0.5rem; min-width: 0; }
+  .sch-seasons__label {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--content-text-muted, #6b7280);
+    flex: none;
+  }
+  /* 20 seasons do not fit a phone, and wrapping them pushes the grid off the
+     first screen — so the list scrolls sideways instead of growing downward. */
+  .sch-seasons__scroller {
+    display: flex;
+    /* min-width:0 is load-bearing, not tidiness: a flex item's default
+       min-width is its CONTENT width, so without it twenty season chips push
+       the whole page wider than the viewport instead of scrolling inside
+       this box. */
+    min-width: 0;
+    flex: 1;
+    gap: 0.25rem;
+    overflow-x: auto;
+    scrollbar-width: thin;
+    padding-bottom: 0.125rem;
+  }
+  /* The season chips ride the page ground, so they take the same card tokens
+     the rest of this page uses rather than a grey literal — both are themed,
+     and an undefined token here would read correct in light and wrong in
+     dark. The active chip inverts onto --sch-accent, which each league
+     already redefines for its own chrome. */
+  .sch-season {
+    flex: none;
+    padding: 0.3125rem 0.5625rem;
+    border: 1px solid var(--card-border, #e2e8f0);
+    border-radius: var(--radius-sm, 0.25rem);
+    font-size: 0.8125rem;
+    font-variant-numeric: tabular-nums;
+    text-decoration: none;
+    color: var(--content-text-muted, #6b7280);
+    background: var(--card-bg, #fff);
+  }
+  .sch-season:hover { border-color: var(--sch-accent); color: var(--sch-accent); }
+  .sch-season.is-active {
+    color: var(--color-white, #fff);
+    background: var(--sch-accent);
+    border-color: var(--sch-accent);
+    font-weight: var(--font-weight-semibold, 600);
+  }
+
+  .sch-legend {
+    display: flex;
+    align-items: center;
+    gap: 1.25rem;
+    flex-wrap: wrap;
+    list-style: none;
+    margin: var(--spacing-md, 1rem) 0 0;
+    padding: 0;
+    font-size: 0.6875rem;
+    color: var(--content-text-muted, #6b7280);
+  }
+  .sch-legend li { display: inline-flex; align-items: center; gap: 0.4375rem; }
+  .sch-legend__note { margin-left: auto; }
+  .sch-swatch { width: 16px; height: 16px; border-radius: var(--radius-sm, 0.25rem); background: var(--color-gray-100, #f3f4f6); }
+  .sch-swatch.is-win { background: var(--badge-success-bg); box-shadow: inset 3px 0 0 var(--color-success, #10b981); }
+  .sch-swatch.is-loss { background: var(--badge-error-bg); box-shadow: inset 3px 0 0 var(--color-error, #dc2626); }
+
+  @media (max-width: 900px) {
+    .sch-hero__inner { flex-direction: column; }
+    .sch-next { width: 100%; }
+    .sch-hero__watermark { opacity: 0.1; }
+  }
+  @media (max-width: 640px) {
+    .sch { padding-inline: 0.75rem; }
+    /* Stacked, not squeezed: side by side the season list takes enough of the
+       row to wrap "My schedule" onto two lines. Tabs get the full width and
+       the seasons scroll under them. */
+    /* nowrap matters as much as the direction: `wrap` on a COLUMN container
+       makes a multi-COLUMN flex box whose line is sized to its content, so the
+       season list stops being a scroll box and pushes the page 1156px wide. */
+    .sch-controls {
+      flex-direction: column;
+      flex-wrap: nowrap;
+      align-items: stretch;
+      gap: 0.625rem;
+    }
+    .sch-tabs { width: 100%; }
+    .sch-row { gap: 0.6875rem; padding: 0.625rem 0.75rem; }
+    .sch-row__week { width: 34px; }
+    .sch-row__weeknum { font-size: 1.25rem; }
+    .sch-row__crest { width: 30px; height: 30px; }
+    .sch-row__score { min-width: 88px; }
+    .sch-chip { display: none; }
+    .sch-grid__club { min-width: 124px; max-width: 124px; padding-inline: 0.5rem; }
+    .sch-grid__rank { display: none; }
+    .sch-grid__record { display: none; }
+    .sch-tab { flex: 1; min-width: 0; }
+  }
+</style>

@@ -213,6 +213,7 @@ const enriched = enrichEntries(sorted.slice(0, count), lastVisitDate);
   .wnr-card--enhancement { --wnr-category-color: var(--cat-enhancement); }
   .wnr-card--bug-fix { --wnr-category-color: var(--cat-bug-fix); }
   .wnr-card--league-event { --wnr-category-color: var(--cat-league-event); }
+  .wnr-card--weekly { --wnr-category-color: var(--cat-weekly); }
 
   /* When card has a thumbnail, move border to bottom of thumbnail */
   .wnr-card:has(.wnr-card__thumbnail) {
@@ -323,6 +324,7 @@ const enriched = enrichEntries(sorted.slice(0, count), lastVisitDate);
   .wnr-card__badge--enhancement { background: var(--cat-enhancement); }
   .wnr-card__badge--bug-fix { background: var(--cat-bug-fix); }
   .wnr-card__badge--league-event { background: var(--cat-league-event); }
+  .wnr-card__badge--weekly { background: var(--cat-weekly); }
 
   /* Filled pill, not bare text — with a thumbnail the meta row is absolutely
      positioned across the image/content seam, so a transparent badge sits on

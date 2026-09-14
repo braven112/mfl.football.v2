@@ -1,0 +1,191 @@
+---
+/**
+ * Guides index — shared implementation for every league.
+ *
+ * Rendered by the thin per-league route wrappers
+ * (src/pages/<slug>/guides/index.astro). Everything that varies between
+ * leagues is resolved from the registry via `leagueSlug`.
+ *
+ * Server-rendered with no island: a shelf of a dozen cards needs filtering
+ * about as much as a bookmarks bar does. What's New has a React listing
+ * because it has 140 dated entries; this does not, and adding one would ship
+ * hydration for a list you can read in a glance.
+ */
+import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
+import Breadcrumbs from '../../theleague/Breadcrumbs.astro';
+import { spriteUrl } from '../../../utils/sprite-url';
+import { getVisibleGuides } from '../../../utils/guides';
+import { resolveDirectoryHref, resolveLeaguePath } from '../../../utils/nav-utils';
+import { getLeagueBySlug } from '../../../config/leagues';
+import type { CanonicalLeagueSlug } from '../../../config/leagues';
+
+interface Props {
+  /** Canonical registry slug of the league whose guides to render. */
+  leagueSlug: CanonicalLeagueSlug;
+  /** Page <title>. */
+  title: string;
+}
+
+const { leagueSlug, title } = Astro.props as Props;
+
+const league = getLeagueBySlug(leagueSlug)!;
+const hideLeaguePrefix = Astro.locals.hideLeaguePrefix ?? false;
+/** League-neutral path in, the reader's own path out. */
+const r = (path: string) =>
+  resolveLeaguePath(resolveDirectoryHref(path, league.navSlug), hideLeaguePrefix);
+
+const guides = getVisibleGuides(Astro.request, league.navSlug);
+
+const formatUpdated = (date: string) =>
+  new Date(`${date}T12:00:00`).toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  });
+---
+
+<TheLeagueLayout title={title}>
+  <div class="guides">
+    <Breadcrumbs items={[{ label: 'Home', href: `/${league.slug}` }, { label: 'Guides' }]} />
+
+    <header class="guides__header">
+      <h1 class="guides__title">Guides</h1>
+      <p class="guides__subtitle">
+        How to use what's on the site — one page per feature, kept current.
+        For what changed <em>this week</em>, see <a href={r('/whats-new')}>What's New</a>.
+      </p>
+    </header>
+
+    {guides.length === 0 ? (
+      <p class="guides__empty">No guides yet. They arrive as features do.</p>
+    ) : (
+      <ul class="guides__grid">
+        {guides.map((guide) => (
+          <li class="guides__item">
+            <a class="guide-card" href={r(`/guides/${guide.slug}`)}>
+              <span class="guide-card__icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" width="20" height="20">
+                  <use href={`${spriteUrl}#icon-${guide.icon ?? 'file-text'}`} />
+                </svg>
+              </span>
+              <span class="guide-card__body">
+                <span class="guide-card__title">{guide.title}</span>
+                <span class="guide-card__summary">{guide.summary}</span>
+                <span class="guide-card__meta">Updated {formatUpdated(guide.updated)}</span>
+              </span>
+            </a>
+          </li>
+        ))}
+      </ul>
+    )}
+  </div>
+</TheLeagueLayout>
+
+<style>
+  .guides {
+    max-width: 60rem;
+    margin: 0 auto;
+    padding: var(--spacing-lg, 1.5rem);
+  }
+
+  .guides__header {
+    margin: 0 0 var(--spacing-lg, 1.5rem);
+  }
+
+  .guides__title {
+    font-size: 1.75rem;
+    font-weight: 800;
+    color: var(--color-gray-900, #111827);
+    margin: 0 0 0.375rem;
+  }
+
+  .guides__subtitle {
+    font-size: 0.9375rem;
+    line-height: 1.6;
+    color: var(--color-gray-600, #4b5563);
+    margin: 0;
+    max-width: 44rem;
+  }
+
+  .guides__subtitle a {
+    color: var(--color-primary, #1c497c);
+    font-weight: 600;
+  }
+
+  .guides__empty {
+    font-size: 0.9375rem;
+    color: var(--color-gray-600, #4b5563);
+  }
+
+  .guides__grid {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(17rem, 1fr));
+    gap: var(--spacing-md, 1rem);
+  }
+
+  .guide-card {
+    display: flex;
+    gap: 0.75rem;
+    height: 100%;
+    padding: var(--spacing-md, 1rem);
+    border: 1px solid var(--card-border);
+    border-radius: var(--card-radius);
+    background: var(--card-bg);
+    text-decoration: none;
+    transition:
+      border-color 0.15s ease,
+      transform 0.15s ease;
+  }
+
+  .guide-card:hover {
+    border-color: var(--color-primary, #1c497c);
+    transform: translateY(-2px);
+  }
+
+  .guide-card__icon {
+    flex: 0 0 auto;
+    display: grid;
+    place-items: center;
+    width: 2.25rem;
+    height: 2.25rem;
+    border-radius: var(--radius-md);
+    background: var(--color-primary, #1c497c);
+    color: #ffffff;
+  }
+
+  .guide-card__body {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    min-width: 0;
+  }
+
+  .guide-card__title {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--color-gray-900, #111827);
+  }
+
+  .guide-card__summary {
+    font-size: 0.8125rem;
+    line-height: 1.55;
+    color: var(--color-gray-600, #4b5563);
+  }
+
+  .guide-card__meta {
+    font-size: 0.6875rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--color-gray-500, #6b7280);
+    margin-top: 0.125rem;
+  }
+
+  @media (max-width: 640px) {
+    .guides {
+      padding: var(--spacing-md, 1rem);
+    }
+  }
+</style>

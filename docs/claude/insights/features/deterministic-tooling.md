@@ -61,3 +61,62 @@ makes every edit slow, which nothing catches except noticing.
 Guard: `tests/path-guard-map.test.ts`, `tests/scan-guard-helper.test.ts`,
 `tests/rebase-conflict-classifier.test.ts`, `tests/clientrouter-init-ratchet.test.ts`,
 `tests/mfl-fixture-canonicalize.test.ts`, `tests/workflow-feature-flag-guard.test.ts`.
+
+## 2026-09-11 - A Guard Test Can Stop Asserting Anything, Years After It Was Proved Red
+
+**Context:** `tests/redact-trade-offer-attribution.test.ts` was written against
+a shipped bug (a Schefter post naming a team beside a player it did not own),
+mutation-checked, and green ever since. On 2026-09-10 the same class of bug
+shipped again through a different mechanism, and the guard was green
+throughout — not because it missed the new mechanism, which would be fair, but
+because **it had stopped asserting anything at all.**
+
+Its cases ran at `exposureCount: 1` → signal 2. Some time later
+`plannedPlayerCount` halved the disclosure cadence to name a player every
+*other* signal, which makes `exposure.players` empty at signal 2. Every
+assertion in the suite sat behind `if (exposure.players.length > 0)`. The guard
+had been a no-op for as long as the cadence had been halved, and nothing said
+so: it passed, quickly, in the right file, with a correct-sounding name.
+
+**The mechanism:** `/guard-test`'s mutation check ("a guard never seen red is a
+guess") runs ONCE, when the guard is written. Nothing re-checks it afterwards.
+So a guard is proved against the constants of the day it was authored, and any
+later change to a constant it reads — a cadence, a threshold, a default — can
+move its fixtures into a branch where the assertions are unreachable. The test
+does not fail. It evaporates.
+
+**What makes a guard vulnerable:** it derives its fixture from a tunable rather
+than pinning one. `exposureCount: 1` is a coordinate in a cadence that is
+allowed to change; the *behaviour* being guarded (a named player belongs to the
+named team) is not. A guard should sit at a fixture chosen so the assertion is
+reachable by construction, and say why in a comment, so the next person moving
+the constant sees what depends on it.
+
+**Two cheap detections, both used here:**
+
+- **Assert the precondition, not just the conclusion.** The repaired cases run
+  at signal 3 and assert `expect(exposure.players.length).toBeGreaterThan(0)`
+  BEFORE checking who those players belong to. The assertion that the guard has
+  something to check is itself an assertion, so the guard now fails loudly if a
+  cadence change empties it again instead of going quiet.
+- **Never guard behind an `if`.** A conditional around the assertions is the
+  signature: it converts "this case did not apply" into "this case passed".
+  Prefer a fixture where the branch cannot be taken, or split the case in two.
+
+**It happens to new guards too, immediately.** Writing
+`tests/schefter-trade-budget.test.ts` for the new one-a-week speculation
+ceiling, the natural fixture was `resolveCadence({ events: [] })` — which falls
+through to the 1-every-14-days offseason tier, *already under* the ceiling
+being tested. The clamp would never have engaged and the test would have been
+born vacuous. Its cases now use real deadline and in-season calendars so the
+2/day and 1/5 tiers are the ones actually being clamped.
+
+**Related, from the same branch:** a scan-style guard that asserts WHERE code
+lives (`tests/league-url-prefix.test.ts` matched `const publicUrl = (p) =>`
+inside `schefter-rumor-scan.mjs`) correctly goes red when that code is
+extracted to a shared module. That red is the guard working, and the fix is to
+follow the code and widen the rule — here, "one prefix-aware builder, used by
+every lane", asserted against the new module AND against each lane importing
+it. Inlining the code back to satisfy the guard would be the guard steering the
+architecture, which is the failure mode the "read the test before working
+around it" line in CLAUDE.md is pointing at.

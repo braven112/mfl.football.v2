@@ -21,7 +21,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { describe, it, expect } from 'vitest';
-import { resolveWaiverWindow, describeWaiverWindow, type MflCalendarEvent } from '../src/utils/waiver-window';
+import { resolveWaiverWindow, describeWaiverWindow, waiverWindowShortLabel, type MflCalendarEvent } from '../src/utils/waiver-window';
 
 const at = (iso: string) => String(Math.floor(new Date(iso).getTime() / 1000));
 
@@ -181,6 +181,22 @@ describe('describeWaiverWindow', () => {
 
   it('says plainly when it does not know, rather than implying a mode', () => {
     expect(describeWaiverWindow(resolveWaiverWindow([]))).toMatch(/unknown — MFL will decide/);
+  });
+});
+
+describe('waiverWindowShortLabel', () => {
+  const events: MflCalendarEvent[] = [
+    { type: 'WAIVER_LOCK', start_time: at('2026-09-13T17:00:00Z') },
+    { type: 'WAIVER_BBID', start_time: at('2026-09-17T04:00:00Z') },
+  ];
+
+  it('gives the mobile badge a one-word status per mode', () => {
+    const open = resolveWaiverWindow(events, new Date('2026-09-15T12:00:00Z'));
+    expect(waiverWindowShortLabel(open)).toBe('Waivers open');
+    const fcfs = resolveWaiverWindow(events, new Date('2026-09-18T12:00:00Z'));
+    expect(waiverWindowShortLabel(fcfs)).toBe('Open now');
+    const unknown = resolveWaiverWindow([]);
+    expect(waiverWindowShortLabel(unknown)).toBe('Unknown');
   });
 });
 

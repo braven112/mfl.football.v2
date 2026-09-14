@@ -23,6 +23,7 @@ import {
   buildHostToSlugMap,
   leagueOrigin,
   leagueUrl,
+  isSharedAppHost,
 } from '../src/config/leagues';
 import { HOST_TO_SLUG, resolveLeagueRewrite } from '../src/utils/league-host-map';
 
@@ -89,6 +90,20 @@ describe('league stagingDomains', () => {
           apexes.some((apex) => host.endsWith(`.${apex}`)),
           `${host} is not a subdomain of any of ${league.slug}'s apex domains`,
         ).toBe(true);
+      }
+    }
+  });
+
+  it('recognises the shared host in BOTH environments', () => {
+    // An exact compare against SHARED_APP_ORIGIN recognised production and
+    // silently missed the staging twin, so TheLeagueLayout served a
+    // per-league PWA identity on the one host whose job is to reproduce
+    // production. The shared host belongs to no league in either environment.
+    expect(isSharedAppHost('mfl.football')).toBe(true);
+    expect(isSharedAppHost('staging.mfl.football')).toBe(true);
+    for (const league of ALL_LEAGUES) {
+      for (const host of [...league.domains, ...(league.stagingDomains ?? [])]) {
+        expect(isSharedAppHost(host), `${host} is a league host, not the shared one`).toBe(false);
       }
     }
   });

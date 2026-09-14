@@ -120,6 +120,38 @@ comes out 0.0 on any week MFL hasn't recorded starters for.
   `init()` directly; `astro:page-load` fires on the first load too.
   `tests/lineup-page-clientrouter.test.ts` pins the shape on both pages, plus
   a parity check so the next fix cannot land on only one of them.
+- **That `init()` needs a DOM gate, and `__LINEUP_DATA__` cannot be it.** The
+  listener lives on `document`, which the swap does NOT replace, so once an
+  owner has opened Set Lineup the lineup controller re-runs on EVERY page they
+  visit for the rest of the session. The payload it read as its "am I on this
+  page" check is a `window` global, equally un-replaced, so `if (!data) return`
+  was unfalsifiable after the first visit: on the next page the Submit button
+  id answered null and `submitBtn.querySelector(...)` threw an uncaught
+  TypeError that took the whole page down — Set Lineup -> Roster rendered the
+  red error box, in the one week of the year it is the most-used flow. The gate
+  has to ask for a node the router actually replaced
+  (`document.getElementById('lineup-slots')`), and it has to sit AFTER the
+  teardown above, because leaving the page is exactly when those surviving
+  `document`/`window` registrations must come off.
+- **…and that node has to NAME ITS LEAGUE, because both lineup pages render the
+  same ids.** A node the router replaced is necessary but not sufficient: these
+  are forked siblings, so `#lineup-slots` exists on `/theleague/lineup` AND
+  `/afl-fantasy/lineup`. A cross-league navigation is same-origin, so it is a
+  ClientRouter SWAP rather than a fresh document — and on the shared host
+  (`mfl.football`) the nav header's own league switcher emits a RELATIVE href
+  (`buildSwitchUrl` in `nav-utils.ts` returns the bare equivalent path whenever
+  the league prefix is not hidden), so the chevron on Set Lineup is exactly
+  that swap, one click away. Gated on the id alone the DEPARTING league's
+  surviving listener passes on the ARRIVING league's DOM and both controllers
+  bind the same nodes — and their submit handlers post to different endpoints
+  (`/api/lineup` vs `/api/afl-fantasy/lineup`), so a dual-league owner can
+  write their lineup into the wrong league. The page root therefore carries
+  `data-league={...}` from the registry and the gate reads
+  `document.querySelector('.lineup-page[data-league="<slug>"]')`.
+  `tests/cross-league-init-gate.test.ts` pins that for every forked pair,
+  the players pages included — theirs was worse, because both sides guarded
+  with the same `dataset.init` flag, so the wrong league's controller not only
+  bound the table but locked the right one out of running at all.
 - **The AFL watermark takes `iconDark` first, ungated.** The panel is a
   team-color gradient over near-black in BOTH themes, so the site-wide
   `html.dark` crest swap (`TeamIconDarkStyles`) never fires on it. Nine of the

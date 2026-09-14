@@ -9,8 +9,22 @@
 import { ALL_LEAGUES } from '../config/leagues';
 import type { LeagueSlug } from './nav';
 
-/** Entry category determines badge color and hero accent */
-export type WhatsNewCategory = 'new-page' | 'new-feature' | 'enhancement' | 'bug-fix' | 'league-event';
+/**
+ * Entry category determines badge color and hero accent.
+ *
+ * `weekly` is the Monday rollup — the ONE article a week that compiles every
+ * staged change for a league. Since Sept 2026 it is the default publishing
+ * path for all user-facing work; `new-page` / `new-feature` / `enhancement`
+ * survive for the marquee exception (a launch big enough to announce the day
+ * it ships) and for the whole back catalogue, which still renders.
+ */
+export type WhatsNewCategory =
+  | 'new-page'
+  | 'new-feature'
+  | 'enhancement'
+  | 'bug-fix'
+  | 'league-event'
+  | 'weekly';
 
 /** An inline image block within an article description */
 export interface DescriptionImageBlock {
@@ -23,8 +37,29 @@ export interface DescriptionImageBlock {
   caption?: string;
 }
 
-/** A single block in the article description — either a text paragraph or an inline image */
-export type DescriptionBlock = string | DescriptionImageBlock;
+/**
+ * A scannable list of changes within an article body.
+ *
+ * The weekly rollup's whole shape: a heading ("New this week", "Fixes &
+ * polish") over one line per change. Items are inline HTML like a text block,
+ * so they take anchors — and every link guard in `whats-new-links.ts` reads
+ * them, because a link the guards cannot see is a link that ships unprefixed
+ * into the wrong league.
+ *
+ * A list is NOT a paragraph: a `<ul>` inside the `<p>` that string blocks
+ * render into is invalid HTML the browser silently un-nests, which is why this
+ * is its own block type rather than markup smuggled into a string.
+ */
+export interface DescriptionListBlock {
+  type: 'list';
+  /** Section heading rendered above the list */
+  heading?: string;
+  /** One line per change. Inline HTML — anchors encouraged, block tags not. */
+  items: string[];
+}
+
+/** A single block in the article description — text, an inline image, or a list */
+export type DescriptionBlock = string | DescriptionImageBlock | DescriptionListBlock;
 
 /**
  * Custom artwork for the composite hero, replacing the cast player.
@@ -216,4 +251,5 @@ export const WHATS_NEW_CATEGORY_LABELS: Record<WhatsNewCategory, string> = {
   'enhancement': 'Enhancement',
   'bug-fix': 'Bug Fix',
   'league-event': 'League Event',
+  'weekly': 'This Week',
 };

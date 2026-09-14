@@ -28,6 +28,67 @@ export const RESERVED_PEAK_SLOT = 1;
 export const MIN_SPACING_MS = 4 * 60 * 60 * 1000;
 
 /**
+ * ── The TOPIC budget, alongside the post budget ──
+ *
+ * Everything above counts POSTS. Nothing counted TOPICS, and three separate
+ * lanes are all trade-flavored — the trade-offer rumor lane, the trade-bait
+ * lane, and this speculation lane — so trade could take the whole day's
+ * budget, and did. Across Sept 4-10 2026, 13 of 16 Schefter posts were trade
+ * stories; Sept 6, 7 and 8 were 100% trade. Every gate in the system reported
+ * itself satisfied the entire time, because each one was answering "have we
+ * posted too much today" and the complaint was "is this all he talks about".
+ *
+ * ONE trade story a day, across every RUMOR lane. The remaining slots stay open
+ * for non-trade beats — this is a topic ceiling, not a smaller post budget, so a
+ * quiet trade day does not become a quiet feed.
+ *
+ * "Rumor lane" is the scope, and it is deliberate. `schefter-scan.mjs` also
+ * publishes `trade_pending_rumor` posts — a trade sitting on the commissioner's
+ * desk — and those are NOT capped here. They are tier `breaking`: a real,
+ * imminent, already-submitted transaction, which is the one thing a beat
+ * reporter should never sit on. Capping it would mean withholding news of an
+ * actual trade because a rumor or an invented hypothetical spent the slot
+ * first, which inverts the whole point. The lanes this governs are the
+ * discretionary ones: trade offers, trade bait, and speculation.
+ *
+ * A trade-flavored bucket that loses to this ceiling is HELD, not dropped: the
+ * rumor mill leaves its tips in the queue and the age boost in
+ * `bucketPriorityScore` floats them up tomorrow. Nothing is thrown away, it
+ * just waits its turn.
+ */
+export const MAX_TRADE_POSTS_PER_DAY = 1;
+
+/**
+ * Redis key for the day's trade-story count, per league.
+ *
+ * A factory rather than a constant because the rumor mill builds its keys off
+ * its own `NAV_SLUG` — the speculation lane is TheLeague-only today and takes
+ * the default, but a bare constant here would be the module-level literal that
+ * put one league's listings in another league's chat once already (see the
+ * trade-bait lane note in docs/claude/rules/schefter.md).
+ */
+export function tradePostsTodayKey(navSlug = DEFAULT_SCHEFTER_NAV_SLUG) {
+  return schefterKey(navSlug, 'rumor:trade_posts_today');
+}
+
+/** TheLeague's key, for the lanes that are TheLeague-only. */
+export const TRADE_POSTS_TODAY_KEY = tradePostsTodayKey();
+
+/**
+ * How many more trade stories today's budget allows. Never negative.
+ *
+ * Returned as a REMAINING count rather than a boolean because the rumor mill
+ * needs the number: a single cycle can build two beats, and "one slot left"
+ * has to stop the second one. The busy-morning trade split was the concrete
+ * case — it ships two trade posts a second apart against one slot of the post
+ * budget, which under a one-a-day topic ceiling is one post too many.
+ */
+export function tradeSlotsRemaining(tradePostsToday, cap = MAX_TRADE_POSTS_PER_DAY) {
+  const used = Number.isFinite(tradePostsToday) ? Math.max(0, Math.floor(tradePostsToday)) : 0;
+  return Math.max(0, cap - used);
+}
+
+/**
  * @param {object} args
  * @param {{ reservesGlobalSlot:boolean }} args.cadence - resolved cadence object
  * @param {number} args.globalPostsToday - current value of the shared counter

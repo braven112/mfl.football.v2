@@ -65,6 +65,12 @@ describe('GET /api/nfl-scoreboard', () => {
   beforeEach(() => {
     fetchMock = vi.fn();
     vi.stubGlobal('fetch', fetchMock);
+    // The raw scoreboard document is cached process-locally so the broadcast
+    // board's two consumers share one upstream call instead of issuing the
+    // same request twice per poll. Same reset the game-detail block below
+    // does, and for the same reason: a cached payload from the previous test
+    // would answer the next one's mocked failure with a success.
+    (globalThis as any).__nflScoreboardRawCache = new Map();
   });
   afterEach(() => vi.unstubAllGlobals());
 
@@ -157,6 +163,7 @@ describe('GET /api/nfl-game-detail', () => {
     // The route memoizes per event id across invocations by design; a fresh
     // map per test keeps the cases independent.
     (globalThis as any).__nflGameDetailCache = new Map();
+    (globalThis as any).__nflScoreboardRawCache = new Map();
   });
   afterEach(() => vi.unstubAllGlobals());
 
@@ -281,9 +288,16 @@ describe('GET /api/nfl-game-detail', () => {
     await (await load())(ctx('?week=1&year=2025'));
     const first = fetchMock.mock.calls.length;
     await (await load())(ctx('?week=1&year=2025'));
-    // Second call re-reads the scoreboard (cheap, one request) but serves every
-    // per-game expansion from the TTL cache.
-    expect(fetchMock.mock.calls.length).toBe(first + 1);
+    // A second call within the TTL costs NOTHING upstream: every per-game
+    // expansion comes from the game cache, and the scoreboard itself now comes
+    // from the shared raw cache rather than a repeat request.
+    //
+    // That last part changed when the broadcast board landed. The board reads
+    // the parsed slate AND the play-by-play in one assembly, and both need the
+    // same scoreboard document — so it was fetched twice per poll, every 8
+    // seconds, for an eight-hour Sunday, per open television. This asserted
+    // `first + 1` before, which encoded that duplicate as expected.
+    expect(fetchMock.mock.calls.length).toBe(first);
   });
 
   it('does NOT memoize a partial read — a hiccup must not pin itself in front of everyone', async () => {

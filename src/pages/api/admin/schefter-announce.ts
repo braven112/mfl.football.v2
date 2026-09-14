@@ -29,6 +29,7 @@ import {
   buildGroupMeText,
   validateAnnounceInput,
 } from '../../../utils/schefter-announce-core.mjs';
+import { outboundAllowed } from '../../../utils/deploy-environment';
 
 export const prerender = false;
 
@@ -147,6 +148,24 @@ export const POST: APIRoute = async ({ request }) => {
     // Cloudflare/Vercel replace an origin 5xx with their own HTML error page,
     // which swallowed our JSON detail — so the admin UI only saw a bare 502.
     return json({ ok: false, error: 'GH_PAT is not configured in the Vercel environment.' }, 200);
+  }
+
+  // A dispatch is an outbound write with an extra hop: this POST is harmless
+  // on its own, but the workflow it starts runs against `ref: main` with
+  // `dry_run: false` — committing the feed and posting to the real GroupMe
+  // with Actions secrets. Staging holds the same GitHub token, so without this
+  // an announce sent while testing reaches every owner.
+  if (!outboundAllowed()) {
+    return json(
+      {
+        ok: false,
+        error: 'Announcements are disabled on this deployment.',
+        detail:
+          'The staging and preview sites share production credentials, so they never ' +
+          'dispatch the announce workflow — send this from the production site.',
+      },
+      200,
+    );
   }
 
   console.log('[announce] send: dispatching', WORKFLOW_FILE, { owner, repo, leagues });

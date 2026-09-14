@@ -39,3 +39,16 @@ jobs:
           commit-message: 'chore: weekly changelog rollup'
           no-changes-message: 'No changelog changes to commit.'
           git-user-name: 'Changelog Bot'
+
+      # AFTER the commit, deliberately: the notification links to the article's
+      # permalink, which does not exist on the live site until this commit
+      # deploys. Ordering it here starts the deploy first. The race is not
+      # fully closed — the deploy takes a few minutes and the job does not wait
+      # for it — but the [id] route redirects an unknown id to /whats-new
+      # rather than 404ing, so the worst case is an early tap landing on the
+      # listing. A failed push is logged, never fatal: the article is published
+      # either way, and a red job here would read as a broken rollup.
+      - name: Notify owners (site-update)
+        run: node ./scripts/push-weekly-changelog.mjs
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}

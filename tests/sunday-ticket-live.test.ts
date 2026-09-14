@@ -343,8 +343,13 @@ describe('live-layer rendering contracts', () => {
     // MFL answers a throttled request with an HTML page under a 200 often
     // enough to matter; an unguarded .json() escapes to the outer handler and
     // turns a degradable condition into a hard failure.
-    const route = read('../src/pages/api/live-scoring.ts');
-    expect(route).toContain('.json().catch(() => null)');
+    //
+    // The fetch moved out of the route in Sept 2026 (the PAGE now calls the
+    // same loader in-process instead of fetching its own API to render
+    // itself), so the guard follows it to where the parse actually happens.
+    const source = read('../src/utils/live-scoring-source.ts');
+    expect(source).toContain('.json().catch(() => null)');
+    expect(read('../src/pages/api/live-scoring.ts')).toContain('loadLiveScoringPayload');
   });
 
   it('leaves a server-rendered value alone when the feed omits that franchise', () => {

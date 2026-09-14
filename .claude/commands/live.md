@@ -1,10 +1,10 @@
-Push the current branch, create a PR, gather advisory reviews (Claude + Codex in-session, CodeQL + Copilot on the PR, Gemini on request), adjudicate the findings yourself, auto-approve if nothing confirmed-critical remains, enable auto-merge, then monitor until the PR is merged.
+Push the current branch to **`staging`**, create a PR, gather advisory reviews (Claude correctness + cross-cutting + quality in-session, Codex in-session, CodeQL + Copilot on the PR, Gemini on request), adjudicate the findings yourself, auto-approve if nothing confirmed-critical remains, enable auto-merge, then monitor until the PR is merged.
 
 **Reviewer lineup and what each costs.** No reviewer here bills money; every one is either a subscription you already hold or free tier. Never add one that needs a funded API key.
 
 | Reviewer | Where | Lens | Cost |
 |---|---|---|---|
-| Claude | in-session | correctness (5) + **cross-cutting (5b)** | Claude subscription |
+| Claude | in-session | correctness (5) + **cross-cutting (5b)** + **quality (5c)** | Claude subscription |
 | Codex | in-session, **laptop only** | correctness & security | ChatGPT Pro |
 | CodeQL | CI | static security analysis | free (public repo) |
 | Copilot | CI | line-level defects | included |
@@ -36,7 +36,24 @@ Both are non-blocking — if nothing needs updating they say so and move on.
 
 ### 2. Verify there's something to push
 
-Run `git status` and `git log main..HEAD --oneline`. If there are no commits ahead of main, tell the user there's nothing to ship and stop.
+**First, resolve the target branch.** Since the release train landed
+(`docs/plans/staging-release-process.md`), `/live` ships to **`staging`**, not
+`main`. `staging` is held to production standards — full CI, full review, full
+quality pass — because it serves real owners at `staging.theleague.us` and it is
+what `main` fast-forwards to on Tuesday.
+
+```bash
+BASE=staging   # default
+```
+
+Use `main` instead only for the bypass classes: a bug fix, anything
+time-sensitive to the league calendar, or a cron/data-pipeline fix. Those are
+`/hotfix`'s territory when production is broken now, and a `--to main` `/live`
+otherwise. **A new feature never targets `main` directly.**
+
+If `staging` does not exist yet, fall back to `main` and say so in one line.
+
+Run `git status` and `git log $BASE..HEAD --oneline`. If there are no commits ahead of the base, tell the user there's nothing to ship and stop.
 
 If there are uncommitted changes, stage and commit them first using the repo's commit style (conventional commits, short imperative subject, Co-Authored-By trailer).
 
@@ -59,11 +76,11 @@ Check if a PR already exists for this branch:
 gh pr view --json number,url,state 2>/dev/null
 ```
 
-If no PR exists, create one:
+If no PR exists, create one — **`--base "$BASE"` from step 2, never the default**:
 ```bash
-gh pr create --title "<imperative subject from latest commit>" --body "$(cat <<'EOF'
+gh pr create --base "$BASE" --title "<imperative subject from latest commit>" --body "$(cat <<'EOF'
 ## Summary
-<bullet points from commits on this branch vs main>
+<bullet points from commits on this branch vs the base>
 
 ## Test plan
 - [ ] CI passes
@@ -143,6 +160,53 @@ Report the result in the step 7 adjudication table as a reviewer in its own
 right (`Claude (cross-cutting)`), with its own findings. If it found nothing,
 say what you checked — "cross-cutting: clean" with no evidence is the failure
 mode this step exists to prevent.
+
+### 5c. Code quality pass (mandatory — reuse, simplification, efficiency, altitude)
+
+Steps 5–5b ask *"is this correct?"*. This one asks *"is this the right code?"*,
+and it is a separate question with a separate answer. A PR can be perfectly
+correct and still add the fourth copy of a helper, hydrate an island that did
+not need hydrating, or bolt a fifth special case onto a function that is asking
+to be split.
+
+**Quality is settled here, on the PR, while the code is fresh and the author is
+you.** It is deliberately not deferred to the weekly `/release-review` — that
+pass exists for findings which are *invisible in a single PR* (see its own
+scope note), and it cannot be the safety net for work this step skipped.
+
+Run `/simplify`'s lens over the diff — reuse, simplification, efficiency,
+altitude. Four things worth pointing it at explicitly in this repo:
+
+- **Reuse against `src/utils/`.** 247 utils exist and nobody remembers them all.
+  Before accepting any new helper, search for the thing it might already be.
+- **The collapsed boundaries.** `buildAttributor` (owner tenures),
+  `rankings-scope.ts` (per-league storage keys), `leagueUrl()` (absolute URLs),
+  `leaguesForStagedChange()` (changelog fan-out). Each had multiple copies once
+  and some disagreed. Guards cover the known shapes; a near-miss outside a
+  guard's glob is this step's find.
+- **Hydration and rendering.** A new `client:load` island, an SSR route that
+  could prerender, request-time work that belongs in `scripts/prebuild.mjs`
+  (new steps are picked up off the step list with no extra wiring). Launch
+  `astro-performance-expert` if the diff touches pages or components.
+- **Shared components over a second page.** If the diff adds a route that a
+  sibling league already has, `tests/page-fork-ratchet.test.ts` will fail — but
+  catching it here is cheaper than catching it in CI.
+
+**What to do with each finding — apply the safe ones, ask on the rest:**
+
+| Finding | Action |
+|---|---|
+| Swap in an existing util for a new duplicate; delete dead code; collapse a repeated literal into an existing constant | **Apply it now**, in this PR, as its own commit |
+| Anything that changes behavior, a stored shape, a public signature, or the structure of code you deliberately reasoned about | **Report it** — one line each, with `path:line` and the proposed change. Brandon decides |
+| A real refactor with its own blast radius (unify a page pair, extract an abstraction) | **File a follow-up** in `docs/claude/followups/`. Do not grow the PR |
+
+Never restructure a PR silently. The applied bucket is limited to changes whose
+diff is obviously equivalent — if you have to explain why it is still correct,
+it belongs in the reported bucket.
+
+Report as its own reviewer row in the step 7 adjudication table
+(`Claude (quality)`), listing what you applied and what you are asking about. If
+it found nothing, say what you checked — same rule as 5b.
 
 ### 6. Request the external reviewer (Gemini) — only when it earns its keep
 

@@ -1,0 +1,44 @@
+---
+/**
+ * Schedule (The League) — thin route wrapper.
+ *
+ * Shared implementation lives in components/shared/schedule/SchedulePage.
+ *
+ * The feeds and the config are imported HERE because a static import specifier
+ * can't be a runtime variable, and globbing both leagues' feeds inside the
+ * shared component would ship the other league's season on every render of
+ * either route.
+ *
+ * The viewer's franchise is resolved here too: `franchiseIdForLeague` is the
+ * one answer to "is this visitor an owner HERE" — both leagues have a
+ * franchise 0001, so a bare franchiseId would show a TheLeague owner the AFL
+ * club with the same id. Null covers signed out, signed into the other league,
+ * and no franchise, and the page falls back to the league grid for all three.
+ */
+import SchedulePage from '../../components/shared/schedule/SchedulePage.astro';
+import leagueConfig from '../../data/theleague.config.json';
+import { franchiseIdForLeague, getAuthUser } from '../../utils/auth';
+import { getLeagueBySlug } from '../../config/leagues';
+
+export const prerender = false;
+
+const scheduleFeeds = import.meta.glob('../../../data/theleague/mfl-feeds/*/schedule.json', {
+  eager: true,
+  import: 'default',
+});
+const standingsFeeds = import.meta.glob('../../../data/theleague/mfl-feeds/*/standings.json', {
+  eager: true,
+  import: 'default',
+});
+
+const league = getLeagueBySlug('theleague')!;
+const viewerFranchiseId = franchiseIdForLeague(getAuthUser(Astro.request), league.id);
+---
+
+<SchedulePage
+  leagueSlug="theleague"
+  config={leagueConfig}
+  scheduleFeeds={scheduleFeeds}
+  standingsFeeds={standingsFeeds}
+  viewerFranchiseId={viewerFranchiseId}
+/>

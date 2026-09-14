@@ -348,6 +348,39 @@ export async function loadPostHistory({ log = console.log, warn = console.warn, 
 }
 
 /**
+ * Post-history entries, newest first, regardless of how the file happened to
+ * be ordered on disk.
+ *
+ * `post-history.json` has TWO writers and they disagreed about direction.
+ * `appendPostHistory` below pushed onto the end and pruned with `slice(-30)`
+ * (oldest-first), while `mergeHistory` in scripts/lib/merge-schefter-feed.mjs
+ * sorts newest-first and caps with `slice(0, cap)`. The merge runs on every
+ * commit — the two scan lanes share this file on overlapping crons — so the
+ * merge's direction is the one that survives, and every reader assuming the
+ * other direction was reading the file backwards.
+ *
+ * What that cost: `buildRecentPostsPromptBlock` took `posts.slice(-5)` and got
+ * the five OLDEST entries. On 2026-09-10 the live file held 30 posts spanning
+ * May to September and the "recent posts" block handed the model five posts
+ * from May 5-7 — so the do-not-repeat-these-openers memory had been pointed at
+ * four-month-old output, silently, for as long as both writers had existed.
+ * The same inversion made every `appendPostHistory` call prune the NEWEST
+ * entry off the top before writing.
+ *
+ * Sorting on the timestamp rather than trusting either order is what makes
+ * this immune to the next writer that picks a direction. Entries with no
+ * usable timestamp sort last and are kept — a malformed row should not vanish.
+ */
+export function postsNewestFirst(posts) {
+  const list = Array.isArray(posts) ? [...posts] : [];
+  const at = (p) => {
+    const parsed = Date.parse(p?.timestamp ?? p?.publishedAt ?? p?.date ?? '');
+    return Number.isFinite(parsed) ? parsed : -Infinity;
+  };
+  return list.sort((x, y) => at(y) - at(x));
+}
+
+/**
  * Build the "RECENT POSTS" block for the user prompt. Returns a string
  * suitable for concatenation into the user message. Empty string when history
  * is empty.
@@ -388,7 +421,11 @@ export function buildRecentPostsPromptBlock(
 ) {
   if (!posts || posts.length === 0) return '';
 
-  const recent = posts.slice(-limit);
+  // Newest `limit`, selected by timestamp — NOT `slice(-limit)`, which read
+  // the file backwards and fed the model months-old posts. See
+  // `postsNewestFirst`. Rendered oldest-first within the block so the model
+  // reads them in the order they were published.
+  const recent = postsNewestFirst(posts).slice(0, limit).reverse();
   const openers = new Set();
   const closers = new Set();
   const bodies = [];
@@ -516,9 +553,15 @@ export function tagPost(body) {
 export async function appendPostHistory(entry, { log = console.log, warn = console.warn, navSlug = 'theleague' } = {}) {
   try {
     const { raw, posts } = await loadPostHistory({ log, warn, navSlug });
-    const next = Array.isArray(posts) ? [...posts, entry] : [entry];
-    // Keep newest MAX_HISTORY_ENTRIES
-    const pruned = next.slice(-MAX_HISTORY_ENTRIES);
+    // Newest-first on the way out, matching `mergeHistory` in
+    // scripts/lib/merge-schefter-feed.mjs — the merge runs on every commit, so
+    // its direction is the one the file actually keeps and a second direction
+    // here just means the file flips shape between writes. This used to push
+    // onto the end and prune with `slice(-MAX_HISTORY_ENTRIES)`, which on the
+    // newest-first file the merge leaves behind dropped the NEWEST entry on
+    // every append.
+    const pruned = postsNewestFirst([...(Array.isArray(posts) ? posts : []), entry])
+      .slice(0, MAX_HISTORY_ENTRIES);
 
     const output = {
       ...(raw && typeof raw === 'object' ? raw : {}),

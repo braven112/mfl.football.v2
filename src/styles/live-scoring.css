@@ -318,6 +318,10 @@ html.dark .ls-detail {
 .ls-wp-l { color: var(--ta); }
 .ls-wp-r { color: var(--th); }
 .ls-wp-tag { font-size: 0.6rem; letter-spacing: 0.12em; color: var(--content-text-muted); font-weight: var(--font-weight-bold); }
+/* Yet-to-play folded into the percentage labels. HIDDEN here on purpose: on a
+   desktop the header has the room for `.ls-ytp`'s own line and this would print
+   the same two counts twice. The 760px block swaps which of the two shows. */
+.ls-wp-ytp { display: none; font-style: normal; font-size: 0.66rem; color: var(--ls-pre); }
 .ls-wp.mini { margin: 0.4rem 0 0; }
 .ls-wp.mini .ls-wp-track { height: 7px; }
 
@@ -435,7 +439,15 @@ html.dark .ls-detail {
   align-items: stretch;
   border-bottom: 1px solid var(--content-border);
 }
-.ls-mx-row:last-child { border-bottom: 0; }
+/* `:last-of-TYPE`, not `:last-child`. The last element in `.ls-mx-body` is the
+   bench `<details>`, not the last starter row, so `:last-child` matched no row
+   at all unless BOTH benches were empty and `BenchSection` rendered nothing —
+   and the lineup kept a rule under its last player, hanging over the bench
+   disclosure. `.ls-mx-row` is the only `div` type among those siblings once
+   rows exist (`.ls-empty` renders only when there are none), so this selects
+   the real last row. `.ls-bench-row:last-child` below is genuinely last in its
+   own grid and stays as it is. */
+.ls-mx-row:last-of-type { border-bottom: 0; }
 .ls-mx-pos {
   /* NOT stretched, even though its siblings are. `.ls-mx-row` switched to
      `align-items: stretch` so the two player cells share a bottom edge; that
@@ -795,16 +807,68 @@ html.dark .ls-headshot.def { box-shadow: none; }
 
 
 @media (max-width: 760px) {
+  /* ══ Phone: the detail card goes FULL BLEED ══
+     Three gutters stacked on each side before a player's name could start —
+     the layout's `main` inline padding, `.ls-page`'s own, and the card border —
+     roughly 30px a side, 16% of a 390px screen, spent on chrome the phone does
+     not need. The card reads as a card because it has a surface and a header,
+     not because it is inset from an edge it cannot use.
+
+     Cancel the two gutters by NAME, not with the `100vw` centring trick. That
+     trick is tempting because it needs no knowledge of the ancestors — but
+     `100vw` resolves against the initial containing block, which INCLUDES a
+     classic space-consuming scrollbar, while both `documentElement.clientWidth`
+     and this `max-width` query exclude it. A desktop window under 760px on any
+     platform with classic scrollbars (Windows, most Linux) therefore gets a
+     card ~15px wider than the viewport and a horizontal scrollbar off the whole
+     page, with nothing up the chain to clip it — `main`'s `container-type:
+     inline-size` is layout containment, not paint. It does not reproduce in a
+     mobile emulator, which is exactly why it would have shipped.
+
+     Both tokens below are what all three leagues' `live-scoring.astro` declare
+     `.ls-page` with, and `main`'s inline padding only leaves `--padding-sm` at
+     `min-width: 768px` — above this query, never inside it. If either moves,
+     this leaves a small symmetric gap, which is visible and harmless; the
+     `100vw` failure is a scrollbar on a phone, which is neither.
+
+     No `width` needed: `.ls-root` is a column flex container, so the stretched
+     item grows by exactly the margins it is given.
+     Bottom border stays — it is the seam against the games rail below. */
+  .ls-detail {
+    margin-inline: calc((var(--padding-sm) + var(--spacing-md)) * -1);
+    border-left: 0;
+    border-right: 0;
+    border-radius: 0;
+    box-shadow: none;
+  }
+  /* Cancels `.ls-page`'s own `padding-top: var(--spacing-lg)` — the SAME token
+     it is declared with, so the two cannot drift apart. Behind a rounded, inset
+     card that padding read as the margin around it; behind a full-bleed one only
+     its top edge survives, as a band of page background with nothing beside it
+     to explain what it is (plain in light mode, invisible in dark). It is also
+     24px of the lineup on a screen this view is trying to give back.
+
+     Gated on the Throwback preview bar's ABSENCE. `.ls-detail` is the only child
+     `.ls-root` renders here, but `.ls-root` is not what the margin is cancelling
+     — `.ls-tb-preview` is a sibling of the island inside `.ls-page`, and carries
+     a `margin-bottom` of this very token, so during Throwback Week the pull-up
+     would eat the gap under the bar and sit the card flush against it instead.
+     Written as `:not(:has(…))` so a browser without `:has()` drops the rule and
+     keeps the band — the harmless half of the two outcomes. */
+  .ls-page:not(:has(.ls-tb-preview)) .ls-detail {
+    margin-top: calc(var(--spacing-lg) * -1);
+  }
+
   /* Stack each team vertically (crest + name above the big score) so the
      three columns stay narrow enough to fit a phone without overflowing. */
-  .ls-scorehead { gap: 0.4rem; padding: 0.8rem 0.6rem; align-items: center; }
+  .ls-scorehead { gap: 0.4rem; padding: 0.55rem 0.6rem; align-items: center; }
   .ls-mx-team { flex-direction: column; align-items: center; gap: 0.2rem; text-align: center; min-width: 0; }
   .ls-mx-team.home { flex-direction: column-reverse; justify-content: flex-start; }
   .ls-mx-tn { align-items: center; }
   .ls-mx-team.home .ls-mx-tn { text-align: center; }
   .ls-mx-tn b { font-size: 0.9rem; overflow-wrap: anywhere; }
-  .ls-mx-total { font-size: 1.9rem; }
-  .ls-mx-crest { width: 2.2rem; height: 2.2rem; }
+  .ls-mx-total { font-size: 1.7rem; }
+  .ls-mx-crest { width: 1.9rem; height: 1.9rem; }
   .ls-mx-center { min-width: 0; }
   .ls-mx-projline { white-space: normal; }
 
@@ -818,16 +882,48 @@ html.dark .ls-headshot.def { box-shadow: none; }
      side tracks use minmax(0) so a long name reflows inside its column instead
      of overflowing the row. `.ls-mx-pos` is display:none, so the row's three
      DOM children collapse to the two side columns. */
+  /* The body carries NO inline padding of its own now — the card is full bleed,
+     so the one gutter a row needs belongs on the row (`.ls-prow` below), where
+     it is also the inset the row divider measures against. Two nested paddings
+     here only bought a second, narrower margin nobody could see. */
   .ls-mx-body {
     --ls-slot-w: 1.4rem;
     --ls-face-w: 30px;
     --ls-row-gap: 0.35rem;
-    --ls-row-pad-y: 0.45rem;
-    padding: 0.4rem 0.25rem 0.8rem;
+    --ls-row-pad-y: 0.55rem;
+    padding: 0.5rem 0 0.8rem;
   }
   .ls-mx-pos { display: none; }
   .ls-mx-row { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 0.35rem; }
   .ls-mx-row > div { min-width: 0; }
+
+  /* ── Row dividers: inset hairlines, not full-bleed rules ──
+     Full bleed removed the card's frame, which left nine edge-to-edge lines as
+     the strongest horizontal marks on the screen — louder than the scores they
+     separate. Inset to the row's own gutter and mixed back toward the surface,
+     they separate without competing.
+     A pseudo-element rather than `border-bottom` because the row is a grid with
+     no inline padding to inset a border against; absolutely positioned, it is
+     out of flow and so never becomes a grid item among the subgrid children.
+     The bench keeps its DASHED stroke — that is what says "these don't count"
+     — and only changes inset and weight. */
+  .ls-mx-row,
+  .ls-bench-row { position: relative; border-bottom: 0; }
+  .ls-mx-row::after,
+  .ls-bench-row::after {
+    content: "";
+    position: absolute;
+    left: 0.55rem;
+    right: 0.55rem;
+    bottom: 0;
+    border-top: 1px solid color-mix(in srgb, var(--content-border) 45%, transparent);
+  }
+  .ls-bench-row::after { border-top-style: dashed; }
+  /* `:last-of-type` for the starter rows, for the reason on the base rule: the
+     bench `<details>` is `.ls-mx-body`'s last child, so `:last-child` never
+     reaches the last row. The bench's own rows ARE last in their grid. */
+  .ls-mx-row:last-of-type::after,
+  .ls-bench-row:last-child::after { content: none; }
 
   /* ── The two sides of a pair SHARE their row tracks ──
      This is what finally makes the scores agree. Reserving two lines for the
@@ -912,7 +1008,10 @@ html.dark .ls-headshot.def { box-shadow: none; }
     align-items: center;
     column-gap: var(--ls-row-gap);
     row-gap: 0.1rem;
-    padding: var(--ls-row-pad-y) 0.1rem;
+    /* The card's whole inline gutter, now that `.ls-mx-body` has none. Applied
+       per ROW rather than to the body so the divider below can inset to exactly
+       this and land under the content instead of running to the screen edge. */
+    padding: var(--ls-row-pad-y) 0.55rem;
     min-width: 0;
   }
   /* Mirrored, not re-ordered: grid areas ignore DOM order, so the home side
@@ -1016,7 +1115,49 @@ html.dark .ls-headshot.def { box-shadow: none; }
   .ls-head-right { flex-wrap: wrap; gap: 0.5rem var(--spacing-md); }
   .ls-status { font-size: 0.72rem; gap: 0.3rem; }
   .ls-status-sub { display: none; }
+
+  /* ── Phone: reclaim the detail header, which IS the first screen ──
+     Back row + score row + win-prob bar + its labels + the yet-to-play line ran
+     to ~230px before the first player, on a viewport that has 844. Four trims,
+     none of which drops a number:
+       - the back row and the score row lose padding, the crests and the totals
+         a step of size (they are still the largest thing on the screen);
+       - the yet-to-play counts FOLD into the win-probability labels, which had
+         a whole line to themselves for two percentages. `.ls-ytp.folded` is
+         the copy the markup marks as duplicated — a FINAL matchup draws no bar,
+         and then `.ls-ytp` is unfolded and carries the counts as before.
+     The ~50px that frees is spent below, on the player rows. */
+  /* `.ls-detail-top`'s 0.6rem inset is NOT free to move with the rest of this
+     block: it is what puts the back label and the wrapped freshness pill on the
+     same x as `.ls-scorehead`'s content below (see the base rule's comment, and
+     `tests/live-scoring-layout-css.test.ts`). Only the BLOCK padding is the
+     header's to give back — and on `.ls-back` it has to stay a longhand, since
+     the shorthand would reset the inline padding whose negative margin keeps
+     the label flush with the row's edge. */
   .ls-detail-top { padding: 0 0.6rem; }
+  .ls-back { padding-top: 0.45rem; padding-bottom: 0.45rem; }
+  .ls-detail .ls-wp { padding: 0.5rem 1.2rem 0; margin: 0.2rem 0 0; }
+  .ls-detail .ls-wp-labels { margin-top: 0.35rem; }
+  .ls-wp-ytp { display: inline; }
+  /* VISUALLY hidden, not `display: none` — the folded copies above are inside
+     `.ls-wp`, which carries `role="img"`, so its subtree is replaced by the
+     bar's aria-label and never announced. Removing this line from the box AND
+     the a11y tree would therefore take the yet-to-play counts away from screen
+     readers on a phone entirely. This keeps exactly one announced copy at every
+     width. (The rules are `.visually-hidden`'s from utilities.css, inlined: a
+     class cannot be applied at one breakpoint and not another.) */
+  .ls-ytp.folded {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+  .ls-ytp { padding-bottom: 0.5rem; }
 
   /* ── Featured "YOUR MATCHUP" row card ──
      Desktop sits the two big scores either side of a center "@", which collides
@@ -1044,7 +1185,10 @@ html.dark .ls-headshot.def { box-shadow: none; }
      two teams' benches in a single scroll column with nothing but the caption
      to say which is which. minmax(0) for the same reason .ls-mx-row uses it —
      a long name must reflow inside its column, not widen the grid track. */
-  .ls-bench-grid { padding: 0 0.15rem 0.5rem; }
+  /* No inline padding, same as `.ls-mx-body`: the bench rows are `.ls-prow`s
+     and already carry the card's gutter themselves, so the starters above and
+     the bench below sit on one left edge. */
+  .ls-bench-grid { padding: 0 0 0.5rem; }
   .ls-bench-caps,
   .ls-bench-row { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); column-gap: 0.25rem; }
   .ls-bench-head { padding: 0.5rem 0.5rem; gap: 0.35rem; }
@@ -1053,7 +1197,18 @@ html.dark .ls-headshot.def { box-shadow: none; }
   /* Scaled with the desktop caption, but not all the way: two captions share
      the phone's width, so the crest shrinks and the name stops short of the
      player names it sits above. */
-  .ls-bench-cap { font-size: 0.78rem; gap: 0.3rem; padding: 0.2rem 0.2rem 0.3rem; }
+  /* Inline padding matches `.ls-prow`'s gutter, not the old body inset: the
+     caption has to start on the same x as the bench names beneath it, and both
+     ancestors that used to supply that offset are now zero. Same for the empty
+     state, which `.ls-bench-row > div { display: contents }` promotes to a
+     grid item of its own. */
+  .ls-bench-cap { font-size: 0.78rem; gap: 0.3rem; padding: 0.2rem 0.55rem 0.3rem; }
+  /* Same weight as the row dividers above it. Left at full strength it was the
+     one hard rule left on the screen, sitting directly on top of the rows this
+     block just softened — which is the thing the divider comment above is
+     about, one element further down. */
+  .ls-bench-cap { border-bottom-color: color-mix(in srgb, var(--content-border) 45%, transparent); }
   .ls-bench-cap img { width: 24px; height: 24px; }
+  .ls-bench-none { padding-left: 0.55rem; padding-right: 0.55rem; }
   .ls-bench-note { font-size: 0.62rem; padding: 0 0.5rem 0.35rem; }
 }

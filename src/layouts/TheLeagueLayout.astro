@@ -40,7 +40,7 @@ import type { NavTeamInfo, LeagueSlug } from '../types/nav';
 import { NAV_COOKIES } from '../types/nav';
 import { getAFLPreference, getTheLeaguePreference, getBestBall1Preference } from '../utils/team-preferences';
 import { getAuthUser, isCommissionerOrAdmin } from '../utils/auth';
-import { getLeagueBySlug, getLeagueByNavSlug, SHARED_APP_ORIGIN } from '../config/leagues';
+import { getLeagueBySlug, getLeagueByNavSlug, isSharedAppHost } from '../config/leagues';
 import { HOST_TO_SLUG } from '../utils/league-host-map';
 import { buildTransactionHubConfig } from '../utils/transaction-hub-config';
 import leagueConfigData from '../data/theleague.config.json';
@@ -255,13 +255,16 @@ const ownLeagueSlug = getLeagueByNavSlug(league).slug;
 // mfl.football serves EVERY league by path prefix and belongs to none of them,
 // so no single league's PWA identity belongs on it either — it is foreign to
 // all three, not merely unknown.
-const onSharedMultiLeagueHost = Astro.url.hostname === new URL(SHARED_APP_ORIGIN).hostname;
+// Registry-owned so the staging twin counts too — an exact compare against
+// SHARED_APP_ORIGIN recognised production and missed staging.mfl.football.
+const onSharedMultiLeagueHost = isSharedAppHost(Astro.url.hostname);
 const onForeignLeagueHost =
 	onSharedMultiLeagueHost || (hostLeagueSlug !== null && hostLeagueSlug !== ownLeagueSlug);
 
 // Resolve theme preference (server-side). For 'auto', render no class — the
 // pre-paint inline script (ThemeScript) resolves it against prefers-color-scheme.
 const themePref = getThemePreference(Astro.cookies);
+import StagingBanner from '../components/shared/StagingBanner.astro';
 ---
 
 <!DOCTYPE html>
@@ -339,6 +342,7 @@ const themePref = getThemePreference(Astro.cookies);
 		<ClientRouter />
 	</head>
 	<body>
+		<StagingBanner />
 		<!-- Navigation progress bar — shows instantly on internal link clicks -->
 		<div id="nav-progress" aria-hidden="true"></div>
 

@@ -15,7 +15,7 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'fs';
 import { join } from 'path';
-import { getClientIp } from '../src/utils/client-ip';
+import { getClientIdentity } from '../src/utils/client-ip';
 
 const ROOT = join(__dirname, '..');
 const LOGIN = readFileSync(join(ROOT, 'src/pages/api/auth/login.ts'), 'utf8');
@@ -28,12 +28,38 @@ describe('login route rate limiting', () => {
     expect(LOGIN).toMatch(/checkRateLimit\(/);
   });
 
-  it('keys the limit on the client IP, not a franchiseId', () => {
-    // A session-keyed limit is unreachable here: the caller is anonymous.
-    expect(LOGIN).toMatch(/getClientIp\(/);
-    const call = LOGIN.slice(LOGIN.indexOf('checkRateLimit('), LOGIN.indexOf('checkRateLimit(') + 200);
-    expect(call).toMatch(/clientIp/);
-    expect(call).not.toMatch(/franchiseId/);
+  it('keys the fine limit on caller AND username, not the address alone', () => {
+    // Address-alone locks a whole office, draft party or CGNAT range out of
+    // each other's accounts after ten attempts nobody got wrong.
+    expect(LOGIN).toMatch(/getClientIdentity\(/);
+    expect(LOGIN).toMatch(/identity\.client/);
+    expect(LOGIN).toMatch(/\$\{identity\.client\}\|\$\{account\}/);
+    // Scoped to the limiter call: login.ts legitimately uses franchiseId
+    // further down, when it builds the session.
+    const fineAt = LOGIN.indexOf("'login',");
+    expect(fineAt).toBeGreaterThan(-1);
+    expect(LOGIN.slice(fineAt, fineAt + 200)).not.toMatch(/franchiseId/);
+  });
+
+  it('also enforces a ceiling on the un-forgeable nearest hop', () => {
+    // CF-Connecting-IP is caller-supplied on the *.vercel.app URLs that
+    // bypass Cloudflare, so a fine limit keyed on it alone is no limit there.
+    expect(LOGIN).toMatch(/identity\.nearestHop/);
+    expect(LOGIN).toMatch(/'login-hop'/);
+  });
+
+  it('gives the hop ceiling a far looser cap than the per-account limit', () => {
+    // Behind Cloudflare the hop key is an edge address shared by many real
+    // owners at once, so a per-user-sized cap there would lock them out.
+    const fine = Number(LOGIN.match(/LOGIN_MAX_ATTEMPTS = (\d+)/)?.[1]);
+    const hop = Number(LOGIN.match(/LOGIN_MAX_PER_HOP = (\d+)/)?.[1]);
+    expect(fine).toBeGreaterThan(0);
+    expect(hop).toBeGreaterThan(fine);
+  });
+
+  it('bounds the caller-supplied username before it reaches a Redis key', () => {
+    expect(LOGIN).toMatch(/USERNAME_KEY_MAX/);
+    expect(LOGIN).toMatch(/\.slice\(0, USERNAME_KEY_MAX\)/);
   });
 
   it('throttles BEFORE authenticating with MFL', () => {
@@ -54,33 +80,60 @@ describe('login route rate limiting', () => {
   });
 });
 
-describe('getClientIp', () => {
-  it('prefers CF-Connecting-IP — Cloudflare overwrites it, so it cannot be forged', () => {
-    const ip = getClientIp(
+describe('getClientIdentity', () => {
+  it('prefers CF-Connecting-IP for the caller — Cloudflare overwrites it', () => {
+    const id = getClientIdentity(
       req({ 'cf-connecting-ip': '203.0.113.7', 'x-forwarded-for': '198.51.100.1' }),
     );
-    expect(ip).toBe('203.0.113.7');
+    expect(id.client).toBe('203.0.113.7');
   });
 
-  it('falls back to the leftmost X-Forwarded-For entry', () => {
-    expect(getClientIp(req({ 'x-forwarded-for': '198.51.100.1, 10.0.0.1, 10.0.0.2' })))
+  it('falls back to the leftmost X-Forwarded-For entry for the caller', () => {
+    expect(getClientIdentity(req({ 'x-forwarded-for': '198.51.100.1, 10.0.0.1, 10.0.0.2' })).client)
       .toBe('198.51.100.1');
   });
 
-  it('falls back to X-Real-IP last', () => {
-    expect(getClientIp(req({ 'x-real-ip': '198.51.100.9' }))).toBe('198.51.100.9');
+  it('takes the LAST chain entry as the nearest hop', () => {
+    // The hop our own infrastructure appended — the one a caller cannot move.
+    expect(getClientIdentity(req({ 'x-forwarded-for': '198.51.100.1, 10.0.0.1, 10.0.0.2' })).nearestHop)
+      .toBe('10.0.0.2');
   });
 
-  it('returns null when no header identifies the caller', () => {
-    // The login route treats null as "cannot count this one" and proceeds,
-    // matching checkRateLimit's own fail-open contract — a Redis or header
-    // problem must never lock every owner out of the site.
-    expect(getClientIp(req({}))).toBeNull();
+  it('does not let a forged CF-Connecting-IP move the nearest hop', () => {
+    // The whole point: rotating this header must not mint a fresh hop bucket.
+    const a = getClientIdentity(req({ 'cf-connecting-ip': '1.1.1.1', 'x-forwarded-for': '203.0.113.9' }));
+    const b = getClientIdentity(req({ 'cf-connecting-ip': '2.2.2.2', 'x-forwarded-for': '203.0.113.9' }));
+    expect(a.client).not.toBe(b.client);
+    expect(a.nearestHop).toBe(b.nearestHop);
+    expect(a.nearestHop).toBe('203.0.113.9');
   });
 
-  it('ignores empty and whitespace-only header values', () => {
-    expect(getClientIp(req({ 'cf-connecting-ip': '   ', 'x-forwarded-for': '198.51.100.1' })))
-      .toBe('198.51.100.1');
-    expect(getClientIp(req({ 'x-forwarded-for': ' , 10.0.0.1' }))).toBe(null);
+  it('reads a single-entry chain as both caller and nearest hop', () => {
+    // Holds whether the platform APPENDS to a caller-supplied chain or
+    // REPLACES it: in the replace case last === first === the real address.
+    const id = getClientIdentity(req({ 'x-forwarded-for': '198.51.100.1' }));
+    expect(id.client).toBe('198.51.100.1');
+    expect(id.nearestHop).toBe('198.51.100.1');
+  });
+
+  it('falls back to X-Real-IP for both', () => {
+    const id = getClientIdentity(req({ 'x-real-ip': '198.51.100.9' }));
+    expect(id.client).toBe('198.51.100.9');
+    expect(id.nearestHop).toBe('198.51.100.9');
+  });
+
+  it('returns nulls when no header identifies the caller', () => {
+    // The route treats null as "cannot count this one" and proceeds, matching
+    // checkRateLimit's fail-open contract — a header or Redis problem must
+    // never lock every owner out of the site.
+    const id = getClientIdentity(req({}));
+    expect(id.client).toBeNull();
+    expect(id.nearestHop).toBeNull();
+  });
+
+  it('ignores empty and whitespace-only entries', () => {
+    const id = getClientIdentity(req({ 'cf-connecting-ip': '   ', 'x-forwarded-for': ' , 198.51.100.1 ,  ' }));
+    expect(id.client).toBe('198.51.100.1');
+    expect(id.nearestHop).toBe('198.51.100.1');
   });
 });
