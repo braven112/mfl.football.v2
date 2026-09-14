@@ -412,11 +412,44 @@ manifest.** MFL Live needs its own (`/live/manifest.webmanifest`, distinct
 
 ## Phases
 
-**Phase 0 — not a blocker.** Sign-in on the shared host already works via
-`/theleague/login`; develop against `staging.mfl.football`. Two items carry
-forward rather than gating: point the apex at the Vercel project (ops), and
-guard that the shared host never serves a league's manifest and that `/live`
-302s to a login when signed out.
+**Phase 0 — sign-in. DONE.** Borrowing `/theleague/login` turned out not to be
+free, and the bill came in two parts.
+
+Its `?redirect=` is validated with `startsWith('/theleague')` and falls back to
+`/theleague` — correct for that league's own site, and it silently dropped the
+trip back to the board, so owners signing in from `/live` landed on TheLeague's
+homepage. The app now has its OWN `/login`, with `resolveMflLoginRedirect`
+owning the decision.
+
+**The page is at `/login`, not `/live/login`.** `/live` is one FEATURE of this
+app, not its root; signing in is an app-level act that outlives the board being
+the only thing here. For the same reason the resolver allows any SAME-ORIGIN
+path rather than checking a `/live` prefix — a prefix check would need widening
+for every feature added beside it, and the first person to forget would reship
+this exact bug. Off-origin destinations, and `/login` itself, are refused:
+`tests/mfl-login-redirect.test.ts`.
+
+**The gate for who still gets a league's own login is the host→slug map, NOT
+`isSharedAppHost`.** That helper lists exactly two hostnames, so every Vercel
+preview URL fails it — gating on it would make this page unreachable on the one
+environment it can be tested in before release. "Not a league's apex" is the
+honest test, and it makes previews and localhost behave like the shared host.
+
+The second part was not login's fault at all: `--color-primary` was never
+overridden for `data-league="mfl"` — see the branding section above, which now
+records the two-red ramp and why one red cannot do both jobs.
+
+Also fixed here: the shared `LoginForm` bound its submit handler at MODULE
+scope. Both layouts that render it mount the ClientRouter, and a module script
+runs once per DOCUMENT, so `/login → /live → /login` swapped in a form whose
+Sign In button did nothing.
+
+Two items still carry forward rather than gating: point the apex at the Vercel
+project (ops), and guard that the shared host never serves a league's manifest.
+League-less login (`loginToMFL` already falls back to the account's first
+league) remains the planned follow-up — today the session is scoped to
+TheLeague by registry default, which only decides the SESSION's league, since
+the board discovers the rest from `myleagues`.
 
 **Phase 1 — the shell. DONE — PR #1078.** `MflAppLayout` (sets `data-league="mfl"`,
 gates the manifest on `isSharedAppHost`, inherits `NflLogoDarkStyles`),
@@ -516,6 +549,39 @@ pre-existing `/api/nfl-scoreboard` returns empty locally for the same reason,
 which is how you tell it apart from your own wiring. Verify the ESPN layer on
 the Vercel preview, never locally — the preview returns a real slate with live
 games, situations and broadcasts.
+
+**Matchup detail order — QB, RB, WR, TE, K, DEF, then the bench. DONE.**
+Starters in position order with several of a position sitting together, then
+the bench in the same order, labelled and dimmed.
+
+**There is deliberately NO FLEX group, and the first cut's was reverted.** MFL's
+`liveScoring` says WHO is starting, never WHERE, so a flex label has to be
+derived by filling the required slots and calling the leftovers flex — which
+makes "the flex" whichever back the feed happened to list second. MFL returns
+arrays in nondeterministic order, so that chip can swap between two polls of an
+UNCHANGED lineup. It also cost a request per league: flex cannot be derived
+without that league's starting requirements, and this board is routinely
+looking at leagues this site has never heard of, so each would need its own
+`TYPE=league` export purely to label a chip. Position comes free with
+`PlayerMeta`. (The reverted work — `readLeagueLineupRules`, a 6-hour in-process
+cache, a shared `parseStarterRules` — is in the history if a later feature
+genuinely needs per-league lineup shapes.)
+
+**The sort's last tiebreak is the player id, never the row's index in the
+feed** — same nondeterminism. An all-zero lineup, which is every Sunday morning
+before kickoff, would otherwise reshuffle itself between polls having changed
+nothing. `tests/mfl-live-lineup.test.ts` pins that as a property over shuffled
+inputs.
+
+**The bench is its own field, not a flag on the starter list**, and is read
+straight from the snapshot's bench map rather than from `scoreLeague`, which
+deliberately carries starters alone. A bench row summed into a team's total
+inflates the projected final and the win-probability bar with points that
+cannot be scored — two lists is what makes that impossible rather than merely
+unlikely. It is labelled and dimmed as a group in the UI for the same reason:
+an unlabelled second run of rows under the starters reads as more starters.
+
+Chips say K, not MFL's PK.
 
 **Phase 5 — close-finish push.** New cross-league notification category. Note
 `NOTIFICATION_CATEGORIES` entries carry `requiresFeature` against a *league's*
