@@ -1,0 +1,96 @@
+name: Staging merge-down
+
+# Keep `staging` containing everything on `main`, continuously.
+#
+# THIS IS WHAT MAKES THE TUESDAY PROMOTION A FAST-FORWARD. If `staging` always
+# contains every commit on `main`, promotion is `main` advancing to `staging`'s
+# tip — no merge commit, no conflict resolution on release day, no chance of a
+# botched three-way merge shipping something nobody reviewed. The moment the two
+# diverge, release day becomes a merge, and `/promote` refuses it.
+#
+# Main moves constantly and mostly not from features: ~30 bot data commits a
+# week (roster sync, Schefter, owner activity, stats, rankings) plus hotfixes.
+# That traffic is exactly why this runs on every push rather than nightly —
+# a week of accumulated data commits is a week of drift to resolve at the worst
+# possible moment.
+#
+# MERGE, not rebase. This is the one place the repo's standing "always rebase"
+# rule (CLAUDE.md, *Merge conflicts*) does not apply: `staging` is a shared
+# branch that feature branches are cut from, so rebasing it would force-push
+# history out from under every open feature branch. A merge commit keeps every
+# checkout valid.
+#
+# See docs/plans/staging-release-process.md.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  # Never cancel: a superseded run leaves staging behind main, which is the one
+  # state this workflow exists to prevent. Queue them instead — they are fast,
+  # and a later push merges cleanly on top of an earlier one.
+  group: staging-merge-down
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  merge-down:
+    name: Merge main into staging
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          # Full history: a merge needs both sides' commits, and the default
+          # fetch-depth of 1 cannot produce a merge base.
+          fetch-depth: 0
+
+      - name: Check whether staging exists
+        id: check
+        run: |
+          if git ls-remote --exit-code --heads origin staging >/dev/null 2>&1; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::No staging branch yet — nothing to merge into. This is a no-op, not a failure."
+          fi
+
+      - name: Merge
+        if: steps.check.outputs.exists == 'true'
+        run: |
+          set -euo pipefail
+
+          git config user.name  "Staging Merge-Down Bot"
+          git config user.email "noreply@anthropic.com"
+
+          git fetch origin main staging
+          git checkout -B staging origin/staging
+
+          # Already contains main? Then the promotion is still a fast-forward
+          # and there is nothing to do. Common: a push to main that was itself
+          # the promotion.
+          if git merge-base --is-ancestor origin/main HEAD; then
+            echo "staging already contains origin/main — nothing to merge"
+            exit 0
+          fi
+
+          # --no-edit keeps the default merge message; the commit is bookkeeping,
+          # not a change anyone reads.
+          if git merge --no-edit origin/main; then
+            git push origin staging
+            echo "merged origin/main into staging"
+            exit 0
+          fi
+
+          # A conflict here is a real event, not a retry: main and staging both
+          # changed the same code. Leaving it silent would let the two branches
+          # drift until release day, which is precisely the failure this job
+          # exists to prevent — so fail loudly and stop.
+          echo "::error::Merge conflict bringing main into staging. Resolve it on a branch and push to staging; until then the Tuesday promotion will NOT be a fast-forward and /promote will refuse."
+          git merge --abort || true
+          git diff --name-only --diff-filter=U origin/main...HEAD || true
+          exit 1

@@ -10,6 +10,42 @@
  * the Location URL, and re-sends the request with the Cookie header intact.
  */
 
+import { assertOutboundAllowed } from './deploy-environment';
+
+/**
+ * MFL endpoints that mutate the league, whatever HTTP method reaches them.
+ *
+ * `/import` is the documented write API. The others are MFL's own web pages,
+ * which we drive by replaying their links and forms — and **they mutate on a
+ * plain GET**:
+ *
+ *   - `add_drop?…&DELETE=<round>_<add>_<drop>` cancels a filed waiver claim.
+ *     `src/pages/api/waiver-claims.ts` issues exactly that as a GET, copying
+ *     how MFL's own page links it.
+ *   - `csetup?C=WAIVORD` is the Custom Waiver Order form
+ *     (`src/utils/afl-waiver-order.ts`), the only way to write waiver priority.
+ *
+ * A method-only test misses every one of these. That is not hypothetical: the
+ * first version of this guard checked POST-or-`/import`, and a staging deploy
+ * could still have deleted a real owner's waiver claim.
+ */
+const MFL_MUTATING_PATHS = ['/import', '/add_drop', '/csetup'];
+
+/**
+ * Is this call a WRITE rather than an export read?
+ *
+ * Over-matching costs a blocked read on staging; under-matching costs a real,
+ * irreversible mutation in the real league. So the bar is deliberately low:
+ * any POST, or any URL touching a mutating endpoint above.
+ *
+ * Reads stay reads — `/export` is where every read lives, and nothing here
+ * matches it.
+ */
+export function isMflWrite(method: string, url: string): boolean {
+  if (method.toUpperCase() === 'POST') return true;
+  return MFL_MUTATING_PATHS.some((path) => url.includes(path));
+}
+
 interface MflFetchOptions {
   /** Full URL to the MFL endpoint (api.myfantasyleague.com or www49) */
   url: string;
@@ -50,6 +86,21 @@ export async function mflFetch(opts: MflFetchOptions): Promise<Response | MflFet
   let url = opts.url;
   let method = opts.method;
   let body: string | undefined = opts.body;
+
+  // Every authenticated MFL write in the app funnels through here — five of
+  // the six writer utils call mflFetch, each building its own `import?TYPE=`
+  // URL — which makes this the one place a staging or preview deployment can
+  // be stopped from mutating the real league. Deliberately NOT at the route
+  // layer: there are a dozen routes and the one that forgot would fail open.
+  //
+  // Throws rather than returning a synthetic Response on purpose. MFL reports
+  // its own errors as HTTP 200 (docs/claude/rules/lineups.md), so callers here
+  // are already in the habit of reading a body to decide whether a write
+  // worked — a fake 403 Response would be read as "MFL said no" instead of
+  // "we never asked".
+  if (isMflWrite(method, url)) {
+    assertOutboundAllowed('MFL write');
+  }
 
   // Build cookie header with both MFL_USER_ID and MFL_IS_COMMISH (if available)
   const cookieParts = [`MFL_USER_ID=${mflUserCookie}`];
