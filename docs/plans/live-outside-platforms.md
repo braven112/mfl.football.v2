@@ -82,11 +82,55 @@ a userId to a franchiseId). So this drop builds, from nothing:
 None of that is exotic, but none of it exists to copy from, so it is the bulk
 of the estimate — not the fetching.
 
+### What is verified, and what is not
+
+Checked live on 2026-09-14, so the plan is not resting on recollection:
+
+| Claim | Status |
+|---|---|
+| Yahoo has no anonymous read | **Verified** — `GET /fantasy/v2/game/nfl` unauthenticated returns `401` |
+| The API is current, not deprecated | **Verified** — Yahoo describes "real-time fantasy data … including leagues, teams, players, and matchups" |
+| `users;use_login=1 … /leagues` is the "my leagues" resource | **Verified** — documented at `/fantasy/v2/users;use_login=1/games/leagues` |
+| The scoreboard carries the numbers a live row needs | **Verified in the docs' own sample** — `<team_points><coverage_type>week</coverage_type><week>16</week><total>112.82</total></team_points>` and `<team_projected_points>…<total>108.87</total>` |
+| Per-player points on a roster | **NOT confirmed.** `/fantasy/v2/team/{team_key}/roster;week={week}` documents players as a sub-resource but shows no sample with point fields. The expand payload is the one data question the docs do not close. |
+| How fast points move during games | **NOT confirmed**, and not confirmable without a token |
+| Getting access at all | **NOT confirmed — see below** |
+
+### The real long pole is ACCESS, not code
+
+This is the correction that matters most, and it invalidates the "register an
+app in five minutes" assumption an earlier draft of this plan was built on.
+
+Yahoo no longer hands out a fantasy API key self-serve. Their developer page
+(checked 2026-09-14) describes three steps: **submit an application, await
+review, receive access if approved.** No timeline and no approval bar are
+published.
+
+So the honest shape of this integration is not "N days of work". It is:
+
+1. an application to Yahoo with an unknown review time and a non-zero chance
+   of "no", which we do not control; then
+2. work that is well understood, against documented fields.
+
+Start (1) immediately and independently of any code — it costs nothing but a
+form, and everything else is unblocked by it rather than the other way around.
+Nothing should be built against Yahoo until access is granted.
+
+### JSON is undocumented; XML is the published contract
+
+`format=json` works and every third-party Yahoo client uses it. Yahoo does not
+document it — the official docs are XML-only.
+
+That inverts the earlier recommendation. The awkward collection-keyed-object
+JSON is an **undocumented translation** of a documented XML contract, and
+building the normalizer against the undocumented side means the shape can move
+with no notice and no changelog. Prefer parsing the XML. Revisit only if a live
+payload shows the XML is worse in some way the docs hide.
+
 ### Blocking prerequisite — an ops task, not a code one
 
-A Yahoo app must be registered at `developer.yahoo.com` with **Fantasy Sports —
-Read** permission, yielding a client ID and secret. This cannot be done from
-the repo.
+Once access is approved, the app is registered with **Fantasy Sports — Read**
+permission, yielding a client ID and secret. This cannot be done from the repo.
 
 **The redirect URI is the constraint that shapes the deploy.** Yahoo requires a
 fixed HTTPS callback, and Vercel preview URLs are per-deployment — so previews

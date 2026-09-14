@@ -12,12 +12,19 @@
  * public leagues answer unauthenticated, every Yahoo Fantasy endpoint requires
  * a user token — so "probe it without an account" is not an option that exists.
  *
- * ── Setup (once, ~5 minutes, a human) ──────────────────────────────────────
- *   1. https://developer.yahoo.com/apps/create
- *        Application Type : Web Application
+ * ── Setup (a human, and NOT necessarily quick) ─────────────────────────────
+ *   1. Apply for API access at https://sports.yahoo.com/developer
+ *
+ *      This is no longer the old self-serve "create an app, get a key in two
+ *      minutes" flow. Yahoo's own page (checked 2026-09-14) describes three
+ *      steps: submit an application, AWAIT REVIEW, receive access if approved.
+ *      Neither the timeline nor the approval bar is published. Treat getting
+ *      access as the long pole of this integration, not as setup.
+ *
+ *   2. Once approved, register the app with:
  *        Redirect URI     : https://localhost:8080
  *        API Permissions  : Fantasy Sports — Read
- *   2. Copy the Client ID and Client Secret into .env.local:
+ *   3. Copy the Client ID and Client Secret into .env.local:
  *        YAHOO_CLIENT_ID=...
  *        YAHOO_CLIENT_SECRET=...
  *
@@ -36,6 +43,15 @@
  *
  * Run `probe` a second time DURING a Sunday afternoon window: the static shape
  * is answerable any day, but "do the points actually move" is not.
+ *
+ * ── One thing this probe is deliberately testing about ITSELF ──────────────
+ * It asks for `format=json`, which every third-party Yahoo client uses and
+ * which works — but which Yahoo does NOT document. The official docs are
+ * XML-only. So the awkward JSON shape this file's walker handles is an
+ * UNDOCUMENTED surface, and the documented one is the XML it is translated
+ * from. If the walker struggles here, that is not a reason to fight it: it is
+ * the argument for the real integration parsing XML instead, against a
+ * contract Yahoo actually publishes.
  */
 import fs from 'node:fs';
 import path from 'node:path';
