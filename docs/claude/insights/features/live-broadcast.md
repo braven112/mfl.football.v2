@@ -412,3 +412,21 @@ at one second (`4th 0:01 left`); only exactly nothing prints `Final`. Rounding
 is fine for a label that measures — it is not fine for the one value that
 changes what the label MEANS.
 
+Review of the fix found the other half of it, which is the more interesting
+one: the floor belonged on the NUMERATOR too. `gameSecondsLeft` returned 0 for
+a game ESPN still called `in` — the 4th quarter at `0:00`, the window before
+ESPN flips to period 5, and any live game whose `displayClock` does not parse
+(`parseDisplayClock` answers 0 for a blank on purpose, since a missing clock
+means we know the quarter and not the time inside it). With every other starter
+final, either shape summed to exactly nothing and the cell said `Final` over a
+game going to overtime. `post` is now the only state that may contribute zero.
+Flooring the label alone would have left a `Final` that no longer came from
+rounding and was just as wrong.
+
+And the guards that pin the width floor had the same defect they exist to
+catch: `/\.lbc__ident\s*\{([^}]*)\}/.exec(CSS)` reads the FIRST block, so a
+second `.lbc__ident` block would override the floor with all 102 guards green —
+the #1081 failure exactly, one class name later. They read `declared(cls, prop)`
+now: the last bare single-class declaration in file order, which is what the
+cascade leaves in effect at equal specificity.
+

@@ -472,6 +472,26 @@ describe('the matchup clock', () => {
     expect(progressClockLabel(-1)).toBe('Final');
   });
 
+  it('never lets a game ESPN still calls live contribute exactly nothing', () => {
+    // Zero is what the cell reads as `Final`, so only a `post` game may send
+    // it. Two live shapes summed to zero: the 4th quarter at 0:00 — the window
+    // between the end of regulation and ESPN flipping to period 5 — and a live
+    // game whose `displayClock` does not parse, which `parseDisplayClock`
+    // answers 0 for on purpose.
+    const endOfRegulation = { ...games[0], state: 'in' as const, period: 4, clock: '0:00' };
+    const noClock = { ...games[0], state: 'in' as const, period: 4, clock: '' };
+    expect(gameSecondsLeft(endOfRegulation)).toBeGreaterThan(0);
+    expect(gameSecondsLeft(noClock)).toBeGreaterThan(0);
+    // Overtime at 0:00 is the same shape one period up.
+    expect(gameSecondsLeft({ ...games[0], state: 'in', period: 5, clock: '0:00' })).toBeGreaterThan(0);
+    // `post` is still the one state that may be zero.
+    expect(gameSecondsLeft(games[2])).toBe(0);
+
+    // End to end: every other starter final, one game going to overtime.
+    const rows = [row('kc'), ...Array.from({ length: 8 }, () => row('atl', 0))];
+    expect(matchupTimeLeft(rows, [endOfRegulation, games[2]], meta)).not.toBe('Final');
+  });
+
   it('floors the whole way through matchupTimeLeft, not just the label', () => {
     // Nine starters, one game with a single second left on ESPN's clock.
     const oneSecond = { ...games[0], period: 4, clock: '0:01' };

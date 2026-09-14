@@ -63,6 +63,34 @@ const ROUTES = [
  */
 const CSS_BOARD = CSS.replace(/^\.lbc-bar[^{]*\{[^}]*\}/gm, '');
 
+/**
+ * The value of `prop` on `.<cls>` as the CASCADE leaves it — the LAST bare
+ * single-class block in the file that declares it, not the first one a regex
+ * finds.
+ *
+ * This is the bug the guards below exist to catch, and they had it themselves.
+ * `live-broadcast.css` is one global sheet for nine components, so a class can
+ * be declared in two places at equal specificity and the later block wins; a
+ * `/\.lbc__x\s*\{([^}]*)\}/.exec(CSS)` reads the block it found and reports
+ * on a rule that is not in effect. That is exactly how `.lbc__who`'s 38% width
+ * floor passed its own guard while `min-width: 0` 500 lines down overrode it
+ * on every screen (Copilot, #1081).
+ *
+ * Equal-specificity bare rules only — a descendant or attribute selector
+ * (`.lbc__header[data-tier='5'] .lbc__score`) outranks these and is a
+ * deliberate override, not an accident.
+ */
+const declared = (cls: string, prop: string): string => {
+  const blocks = [...CSS_CODE.matchAll(new RegExp(`(?:^|[}{;])\\s*\\.${cls}\\s*\\{([^}]*)\\}`, 'g'))];
+  let value = '';
+  for (const [, body] of blocks) {
+    for (const [, v] of body.matchAll(new RegExp(`(?:^|;)\\s*${prop}\\s*:\\s*([^;]+)`, 'g'))) {
+      value = v.trim();
+    }
+  }
+  return value;
+};
+
 describe('the broadcast surface consumes NO colour token', () => {
   it('references no --color-*, --card-*, --content-*, --page-* or --league-accent', () => {
     // Every one of them either inverts under html.dark (--color-gray-900
@@ -328,8 +356,7 @@ describe('nothing is sized against a box it does not live in', () => {
     // COLUMN (`.lbc__ident`) now that the yet-to-play count is stacked under
     // the name — it has to be on whichever box the row's flex layout shrinks,
     // and that is the column, not the text inside it.
-    const column = /\.lbc__ident\s*\{([^}]*)\}/.exec(CSS)?.[1] ?? '';
-    expect(column).toMatch(/min-width:\s*\d+%/);
+    expect(declared('lbc__ident', 'min-width')).toMatch(/^\d+%$/);
     // And the name itself still clips rather than wrapping: a second line in
     // that column is height the cell does not have.
     const name = /\.lbc__tn\s*\{([^}]*)\}/.exec(CSS)?.[1] ?? '';
@@ -342,8 +369,9 @@ describe('nothing is sized against a box it does not live in', () => {
     // name sat pinned at its floor with an inch of empty blue in front of the
     // numerals — "Dangsters" rendering as "Dangst…" on a cell that had the
     // room for it (owner, 2026-09-13).
-    const column = /\.lbc__ident\s*\{([^}]*)\}/.exec(CSS)?.[1] ?? '';
-    expect(column, 'the identity column must be the one that grows').toMatch(/flex:\s*1\s/);
+    expect(declared('lbc__ident', 'flex'), 'the identity column must be the one that grows').toMatch(
+      /^1\s/,
+    );
     const proj = /\.lbc__proj\s*\{([^}]*)\}/.exec(CSS)?.[1] ?? '';
     expect(proj).not.toMatch(/margin-left:\s*auto/);
   });
@@ -360,7 +388,15 @@ describe('nothing is sized against a box it does not live in', () => {
     // went from one floor to none (Copilot, #1081).
     const dir = 'src/components/shared/live-broadcast';
     const owners = new Map<string, Set<string>>();
-    for (const file of readdirSync(join(process.cwd(), dir)).sort()) {
+    // Files only, and only the ones that can carry a className: the first
+    // subfolder added under this directory would otherwise reach `readFileSync`
+    // and fail this suite — which path-guard runs on every edit in the domain —
+    // with an EISDIR that names nothing about the board.
+    const components = readdirSync(join(process.cwd(), dir))
+      .filter((f) => /\.(tsx|ts|astro)$/.test(f))
+      .sort();
+    expect(components.length, 'the component scan found nothing to read').toBeGreaterThan(1);
+    for (const file of components) {
       // Comments stripped: this file's prose names other components' classes
       // constantly, and a guard that reads those reports collisions that do
       // not exist.
