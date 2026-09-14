@@ -9,7 +9,8 @@
  * would be a type that describes neither.
  */
 
-import type { LivePlayerRow, PlayerMeta } from './live-scoring';
+import type { LivePlayerRow, NflGame, PlayerMeta } from './live-scoring';
+import type { BroadcastMoment, RedZoneAlert } from '../utils/broadcast-moments';
 import type { IdentityRung } from '../utils/mfl-live-identity';
 
 /** One franchise on the board: who they are, and what they have scored. */
@@ -96,6 +97,34 @@ export interface MflLiveBoard {
   year: number;
   fetchedAt: string;
   leagues: MflLiveLeaguePanel[];
+  /**
+   * The NFL slate for the week — the rail across the top.
+   *
+   * ESPN's scoreboard is a WEEK, not a day: Thursday through Monday arrive
+   * together. Anything deciding "is football happening" from this has to read
+   * the CLOCK rather than count states, because "some game is `pre`" is true
+   * from Thursday lunchtime to Monday night.
+   */
+  games: NflGame[];
+  /**
+   * Scoring and big plays, already attributed to an owner in a league.
+   *
+   * A play can legitimately appear MORE than once. The same NFL player is
+   * routinely started in several of an owner's leagues — and in the AFL, whose
+   * rosters duplicate players, by both sides of one matchup — so one touchdown
+   * really is several pieces of news. Each row names its league and franchise,
+   * which is what keeps that honest rather than confusing; collapsing them
+   * would silently drop the credit from every league but one.
+   */
+  moments: BroadcastMoment[];
+  /**
+   * Teams of the viewer's with the ball inside the 20, right now.
+   *
+   * Derived fresh every poll rather than latched: a drive that ends in a
+   * score, a turnover or a punt simply stops producing an alert and the
+   * banner goes away by itself.
+   */
+  redZone: RedZoneAlert[];
   /**
    * Player identity for every starter on the board, keyed by MFL player id.
    * Shipped once alongside the rows rather than per row — the same player is

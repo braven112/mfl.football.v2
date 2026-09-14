@@ -12,20 +12,26 @@
  * the edge never reaches the route. `tests/live-scoring-self-fetch-guard.test.ts`
  * pins the rule for that page; this one is built to it from the start.
  *
- * SERVER-SIDE ONLY. It reads MFL with the owner's own cookie, and no ESPN
- * athlete id ever reaches the client (phase 2 ships no ESPN at all).
+ * SERVER-SIDE ONLY. It reads MFL with the owner's own cookie and ESPN without
+ * one, and translates every ESPN athlete id to an MFL player id before
+ * anything leaves — `PlayerMeta.espnId` can hold a COLLEGE athlete id, and
+ * college and NFL ids are both plain digits, so a bad join downstream would
+ * resolve a different person rather than failing.
  */
 
 import type { AuthUser } from './auth';
 import { getCurrentSeasonYear } from './league-year';
 import { discoverBoardLeagues, readCrossLeagueLive, type LeagueLiveRead } from './cross-league-live';
-import { findOwnerMatchups, scoreLeague } from './broadcast-live-source';
+import { findOwnerMatchups, scoreLeague, toLeagueViewer } from './broadcast-live-source';
+import { buildBroadcastMoments, selectRedZoneAlerts, type LeagueViewer } from './broadcast-moments';
+import { loadNflGameDetail } from './nfl-game-detail-source';
+import { fetchNflScoreboard } from './nfl-scoreboard-source';
 import { resolveMflLiveLeagues } from './mfl-live-selection';
 import { resolveFranchiseIdentity, identityIconAlt, type FranchiseColorClaim } from './mfl-live-identity';
 import { resolveTeamColorPair } from './team-color-contrast';
 import { getPlayerMap } from './player-map';
 import { getLeagueTeamBrands } from './league-team-brands';
-import type { PlayerMeta } from '../types/live-scoring';
+import type { NflGame, PlayerMeta } from '../types/live-scoring';
 import type {
   MflLiveBoard,
   MflLiveLeaguePanel,
@@ -138,7 +144,17 @@ export async function assembleMflLiveBoard(
   const { enabled } = resolveMflLiveLeagues(input.leaguesParam, input.leaguesCookie, leagues);
   const on = leagues.filter((l) => enabled.includes(l.id));
 
-  const reads = await readCrossLeagueLive({ user, leagues: on, week, year });
+  // The league fan-out and the two ESPN reads run together. ESPN is fetched
+  // WITHOUT the owner's cookie and is per-NFL-GAME rather than per league, so
+  // it does not grow with how many leagues an owner is in — the reason the
+  // ticker and the red-zone banner are affordable on an all-leagues-on board.
+  // Either can fail without costing the scores: the board simply has no rail
+  // and no ticker, which is visibly less rather than wrong.
+  const [reads, scoreboard, detail] = await Promise.all([
+    readCrossLeagueLive({ user, leagues: on, week, year }),
+    fetchNflScoreboard({ week, year }).catch(() => ({ ok: false, week, games: [] as NflGame[] })),
+    loadNflGameDetail({ week, year }).catch(() => null),
+  ]);
 
   // Player identity for everyone on the board. The SEASON map: this is
   // results-shaped, and a player's identity for scoring purposes belongs to
@@ -165,6 +181,14 @@ export async function assembleMflLiveBoard(
   };
 
   const panels: MflLiveLeaguePanel[] = [];
+  /**
+   * Who the owner is in each league, for the ticker and the red-zone banner.
+   *
+   * Built from the SNAPSHOT rather than from the panels: a league with no
+   * pairing still has starters, and dropping it here would cost the owner his
+   * own touchdowns in a week he happens to be on a bye.
+   */
+  const viewers: LeagueViewer[] = [];
 
   for (const read of reads) {
     const { league, snapshot } = read;
@@ -251,7 +275,10 @@ export async function assembleMflLiveBoard(
       status: 'ok',
       matchups,
     });
+    viewers.push(toLeagueViewer(league, snapshot, names));
   }
+
+  const games = scoreboard.games ?? [];
 
   return {
     board: {
@@ -262,6 +289,13 @@ export async function assembleMflLiveBoard(
       year,
       fetchedAt: new Date().toISOString(),
       leagues: panels,
+      games,
+      // Both of these translate every ESPN athlete id to an MFL player id
+      // before returning — nothing ESPN-keyed crosses to the client, because a
+      // college athlete id and an NFL one are both plain digits and a bad join
+      // resolves a different person rather than failing.
+      moments: buildBroadcastMoments(detail?.plays ?? [], viewers, playerMeta),
+      redZone: selectRedZoneAlerts(games, viewers, playerMeta),
       playerMeta,
     },
     allLeagues: leagues.map((l) => ({ id: l.id, name: l.name, registered: !!l.registered })),

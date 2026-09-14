@@ -344,3 +344,363 @@ html.dark .mlb-card {
   background: none;
   text-align: center;
 }
+
+/* ══ the ESPN layer: slate, red zone, ticker ═══════════════════════════════ */
+
+/* ── NFL slate ──
+   Scrolls rather than wraps: ESPN's scoreboard is a WEEK, so this is Thursday
+   through Monday and the finals are most of it by Sunday evening. */
+.mlb-strip {
+  display: flex;
+  gap: 0.5rem;
+  overflow-x: auto;
+  scrollbar-width: none;
+  /* Bleed to the viewport edge so the rail reads as scrollable on a phone
+     rather than as a clipped row. */
+  margin-inline: calc(-1 * clamp(0.75rem, 3vw, 1.25rem));
+  padding-inline: clamp(0.75rem, 3vw, 1.25rem);
+}
+.mlb-strip::-webkit-scrollbar {
+  display: none;
+}
+.mlb-game {
+  flex: none;
+  width: 6.5rem;
+  padding: 0.5rem 0.55rem;
+  border-radius: var(--radius-md, 0.5rem);
+  background: var(--content-bg-muted);
+  border: 1px solid var(--color-border-subtle);
+}
+.mlb-game__row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0.4rem;
+}
+.mlb-game__tm {
+  font-size: 0.72rem;
+  font-weight: var(--font-weight-semibold, 600);
+  color: var(--color-text-secondary);
+  letter-spacing: 0.02em;
+}
+.mlb-game__sc {
+  font-size: 0.8rem;
+  color: var(--page-text);
+  font-variant-numeric: tabular-nums;
+}
+.mlb-game__st {
+  margin-top: 0.3rem;
+  font-size: 0.6rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--content-text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.mlb-game__st.is-live {
+  color: var(--color-success);
+}
+
+/* ── red zone ──
+   A persistent STATE that coexists with the board, not an event that replaces
+   it: a drive is worth keeping on screen for as long as it lasts. */
+.mlb-rz {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.mlb-rz__row {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  padding: 0.7rem 0.85rem;
+  border-radius: var(--radius-lg, 1rem);
+  background: color-mix(in srgb, var(--league-accent) 16%, transparent);
+  border: 1px solid color-mix(in srgb, var(--league-accent) 45%, transparent);
+}
+.mlb-rz__pulse {
+  width: 9px;
+  height: 9px;
+  margin-top: 0.3rem;
+  border-radius: 50%;
+  flex: none;
+  background: var(--league-accent);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--league-accent) 22%, transparent);
+}
+.mlb-rz__title {
+  font-size: 0.72rem;
+  font-weight: var(--font-weight-bold, 700);
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--league-accent);
+}
+.mlb-rz__who {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.25rem;
+}
+.mlb-rz__p {
+  font-size: 0.82rem;
+  color: var(--content-text-muted);
+}
+.mlb-rz__p.is-mine {
+  color: var(--page-text);
+  font-weight: var(--font-weight-semibold, 600);
+}
+.mlb-rz__lg {
+  margin-left: 0.3rem;
+  font-size: 0.65rem;
+  color: var(--content-text-muted);
+}
+
+/* ── ticker ── */
+.mlb-tick {
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-lg, 1rem);
+  background: var(--card-bg);
+  overflow: hidden;
+}
+.mlb-tick__head {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.65rem 0.9rem;
+  background: var(--content-bg-muted);
+  border-bottom: 1px solid var(--color-border-subtle);
+  font-size: 0.66rem;
+  font-weight: var(--font-weight-bold, 700);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--color-text-secondary);
+}
+.mlb-tick__all {
+  margin-left: auto;
+  font-weight: var(--font-weight-normal, 400);
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--content-text-muted);
+}
+.mlb-tick__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.mlb-tick__row {
+  display: grid;
+  grid-template-columns: 3px 1fr auto;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 0.6rem 0.9rem 0.6rem 0;
+  border-bottom: 1px solid var(--color-border-subtle);
+}
+.mlb-tick__row:last-child {
+  border-bottom: 0;
+}
+.mlb-tick__stripe {
+  align-self: stretch;
+  border-radius: 0 2px 2px 0;
+  /* Yours in the accent, your opponents' in grey — the fastest read on the
+     whole board is "is this good news". */
+  background: var(--color-gray-400);
+}
+.mlb-tick__row.is-mine .mlb-tick__stripe {
+  background: var(--league-accent);
+}
+.mlb-tick__text {
+  font-size: 0.85rem;
+  color: var(--color-text-primary);
+}
+.mlb-tick__meta {
+  margin-top: 0.15rem;
+  font-size: 0.66rem;
+  color: var(--content-text-muted);
+}
+.mlb-tick__pts {
+  font-size: 0.9rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--content-text-muted);
+}
+.mlb-tick__row.is-mine .mlb-tick__pts {
+  color: var(--color-success);
+  font-weight: var(--font-weight-semibold, 600);
+}
+
+/* ── the switch as a button ──
+   It is a real <button role="switch"> now, not a link: the knob has to slide
+   under the thumb, which needs the element to survive the change rather than
+   be replaced by a fresh server render. */
+.mls__switch {
+  border: 0;
+  padding: 0;
+  appearance: none;
+  cursor: pointer;
+}
+.mls__switch:disabled {
+  cursor: default;
+}
+.mls__failed {
+  color: var(--color-warning);
+}
+/* Respect a viewer who has asked for less motion — the knob still moves,
+   it just does not animate there. */
+@media (prefers-reduced-motion: reduce) {
+  .mls__knob {
+    transition: none;
+  }
+}
+
+/* ══ /live/settings ════════════════════════════════════════════════════════
+   These live HERE, not in settings.astro's <style> block, and that is
+   load-bearing: Astro SCOPES a page's style block with a data-astro-cid
+   attribute, and a React island's markup is produced by React without it — so
+   scoped rules never reach it and the switches rendered with no size at all,
+   invisible. Caught by driving the page in a browser; it looked perfect in
+   the source. Same trap as the Storybook rule about a component's own
+   frontmatter CSS never reaching the canvas.
+   ══════════════════════════════════════════════════════════════════════════ */
+  .mls {
+    max-width: 40rem;
+    margin: 0 auto;
+  }
+  .mls__back {
+    display: inline-block;
+    margin-bottom: 0.75rem;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--league-accent);
+    text-decoration: none;
+  }
+  .mls__title {
+    margin: 0 0 0.35rem;
+    font-size: clamp(1.4rem, 5vw, 1.9rem);
+    color: var(--page-text);
+  }
+  .mls__lede {
+    margin: 0 0 1.25rem;
+    font-size: 0.9rem;
+    color: var(--color-text-secondary);
+  }
+  .mls__cta {
+    display: inline-block;
+    padding: 0.7rem 1.15rem;
+    border-radius: 0.5rem;
+    background: var(--league-accent);
+    color: #ffffff;
+    font-weight: 600;
+    text-decoration: none;
+  }
+
+  .mls__list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+  .mls__row {
+    display: grid;
+    grid-template-columns: 2.25rem 1fr auto;
+    align-items: center;
+    gap: 0.75rem;
+    /* 60px min — a switch smaller than a thumb is a switch that gets
+       mis-tapped, and this page exists to be used one-handed. */
+    min-height: 3.75rem;
+    padding: 0.6rem 0;
+    border-bottom: 1px solid var(--color-border-subtle);
+  }
+  .mls__row:last-child {
+    border-bottom: 0;
+  }
+  .mls__mark {
+    width: 2.25rem;
+    height: 2.25rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .mls__mark img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+  }
+  .mls__mark--text {
+    border-radius: 0.5rem;
+    background: var(--color-surface-3);
+    color: var(--color-text-primary);
+    font-size: 0.72rem;
+    font-weight: 700;
+  }
+  .mls__id {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+  }
+  .mls__name {
+    font-size: 0.98rem;
+    color: var(--page-text);
+  }
+  .mls__sub {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.72rem;
+    color: var(--content-text-muted);
+  }
+  .mls__tag {
+    font-size: 0.6rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    border: 1px solid var(--color-border-subtle);
+    border-radius: 3px;
+    padding: 0 0.25rem;
+  }
+
+  /* A link styled as a switch. No JS: the href carries the resulting
+     selection and the route writes the cookie. */
+  .mls__switch {
+    position: relative;
+    display: block;
+    width: 3.25rem;
+    height: 2rem;
+    border-radius: 1rem;
+    flex: none;
+    text-decoration: none;
+    transition: background-color var(--transition-fast, 150ms);
+  }
+  .mls__switch.is-on {
+    background: var(--league-accent);
+  }
+  .mls__switch.is-off {
+    background: var(--color-gray-300);
+  }
+  .mls__switch.is-locked {
+    opacity: 0.55;
+    cursor: not-allowed;
+  }
+  .mls__knob {
+    position: absolute;
+    top: 0.1875rem;
+    width: 1.625rem;
+    height: 1.625rem;
+    border-radius: 50%;
+    background: #ffffff;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+    transition: left var(--transition-fast, 150ms), right var(--transition-fast, 150ms);
+  }
+  .mls__switch.is-on .mls__knob {
+    right: 0.1875rem;
+  }
+  .mls__switch.is-off .mls__knob {
+    left: 0.1875rem;
+  }
+  .mls__switch:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+  }
+
+  .mls__note {
+    margin: 1.25rem 0 0;
+    font-size: 0.78rem;
+    line-height: 1.55;
+    color: var(--content-text-muted);
+  }

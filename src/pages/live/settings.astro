@@ -15,14 +15,13 @@
  * route-only.
  */
 import MflAppLayout from '../../layouts/MflAppLayout.astro';
+import LeagueToggles from '../../components/shared/mfl-live/LeagueToggles';
 import { getAuthUser } from '../../utils/auth';
 import { discoverBoardLeagues } from '../../utils/cross-league-live';
 import {
   MFL_LIVE_LEAGUE_COOKIE,
-  leagueSelectionHref,
   rememberMflLiveChoice,
   resolveMflLiveLeagues,
-  toggleMflLiveLeague,
 } from '../../utils/mfl-live-selection';
 import { resolveFranchiseIdentity } from '../../utils/mfl-live-identity';
 import '../../styles/mfl-live.css';
@@ -52,18 +51,18 @@ if (authUser) {
   }
 }
 
-const allIds = leagues.map((l) => l.id);
-
-/** One row's state, resolved server-side so the markup is a plain list. */
+/**
+ * The rows, as plain data for the island.
+ *
+ * The identity ladder runs SERVER-side so the marks and names are in the first
+ * paint rather than appearing after hydration — and so the client never needs
+ * the league configs the ladder reads.
+ */
 const rows = leagues.map((league) => {
-  const on = enabled.includes(league.id);
-  const { selection, refused } = toggleMflLiveLeague(enabled, allIds, league.id);
-  // The identity ladder's name, not `league.franchiseName`. `myleagues`
-  // supplies that for a real MFL cookie, but the session FALLBACK — the path
-  // that puts the owner's own league on the board when myleagues omitted it —
-  // leaves it blank, and an empty sub-line reads as broken. For a league we
-  // run the ladder answers from the config ("Pacific Pigskins"); for an
-  // outside one it passes MFL's name straight through.
+  // The ladder's name, not `league.franchiseName`. `myleagues` fills that for
+  // a real MFL cookie, but the session FALLBACK — the path that puts the
+  // owner's own league on the board when myleagues omitted it — leaves it
+  // blank, and an empty sub-line reads as broken.
   const identity = resolveFranchiseIdentity({
     franchiseId: league.franchiseId,
     franchiseName: league.franchiseName,
@@ -74,17 +73,11 @@ const rows = leagues.map((league) => {
     name: league.name,
     franchiseName: identity.name,
     registered: !!league.registered,
-    on,
-    // Refused = this is the last league still on. The control is rendered as
-    // disabled rather than as a link that would turn every league back on.
-    refused,
-    href: leagueSelectionHref('/live/settings', selection, null),
-    // Rung 1/2/3, so a row shows the same mark the board will.
-    identity,
+    icon: identity.icon,
+    initials: identity.initials,
   };
 });
 
-const onCount = rows.filter((r) => r.on).length;
 ---
 
 <MflAppLayout title="Leagues — MFL Live" description="Choose which leagues the board watches.">
@@ -118,199 +111,9 @@ const onCount = rows.filter((r) => r.on).length;
 					it can take a few minutes to appear.
 				</p>
 			) : (
-				<ul class="mls__list">
-					{rows.map((row) => (
-						<li class="mls__row">
-							<span
-								class:list={['mls__mark', { 'mls__mark--text': !row.identity.icon }]}
-								aria-hidden="true"
-							>
-								{row.identity.icon ? (
-									<img src={row.identity.icon} alt="" loading="lazy" decoding="async" />
-								) : (
-									row.identity.initials
-								)}
-							</span>
-
-							<span class="mls__id">
-								<span class="mls__name">{row.name}</span>
-								<span class="mls__sub">
-									{row.franchiseName && <span>{row.franchiseName}</span>}
-									{!row.registered && <span class="mls__tag">Not on this site</span>}
-								</span>
-							</span>
-
-							{row.refused ? (
-								<span class="mls__switch is-on is-locked" title="At least one league has to stay on">
-									<span class="mls__knob" />
-									<span class="visually-hidden">{row.name} is on and cannot be switched off — it is your last one</span>
-								</span>
-							) : (
-								<a
-									class:list={['mls__switch', { 'is-on': row.on, 'is-off': !row.on }]}
-									href={row.href}
-									aria-label={`${row.on ? 'Switch off' : 'Switch on'} ${row.name}`}
-								>
-									<span class="mls__knob" />
-								</a>
-							)}
-						</li>
-					))}
-				</ul>
+				<LeagueToggles client:load leagues={rows} initialEnabled={enabled} />
 			)}
-
-			<p class="mls__note">
-				{onCount} of {rows.length} on. Switching a league off stops the board fetching it
-				at all — which is what keeps a Sunday quick when you are in a lot of them.
-				Choices are remembered on this device.
-			</p>
 		</section>
 	)}
 </MflAppLayout>
 
-<style>
-	.mls {
-		max-width: 40rem;
-		margin: 0 auto;
-	}
-	.mls__back {
-		display: inline-block;
-		margin-bottom: 0.75rem;
-		font-size: 0.85rem;
-		font-weight: 600;
-		color: var(--league-accent);
-		text-decoration: none;
-	}
-	.mls__title {
-		margin: 0 0 0.35rem;
-		font-size: clamp(1.4rem, 5vw, 1.9rem);
-		color: var(--page-text);
-	}
-	.mls__lede {
-		margin: 0 0 1.25rem;
-		font-size: 0.9rem;
-		color: var(--color-text-secondary);
-	}
-	.mls__cta {
-		display: inline-block;
-		padding: 0.7rem 1.15rem;
-		border-radius: 0.5rem;
-		background: var(--league-accent);
-		color: #ffffff;
-		font-weight: 600;
-		text-decoration: none;
-	}
-
-	.mls__list {
-		list-style: none;
-		margin: 0;
-		padding: 0;
-	}
-	.mls__row {
-		display: grid;
-		grid-template-columns: 2.25rem 1fr auto;
-		align-items: center;
-		gap: 0.75rem;
-		/* 60px min — a switch smaller than a thumb is a switch that gets
-		   mis-tapped, and this page exists to be used one-handed. */
-		min-height: 3.75rem;
-		padding: 0.6rem 0;
-		border-bottom: 1px solid var(--color-border-subtle);
-	}
-	.mls__row:last-child {
-		border-bottom: 0;
-	}
-	.mls__mark {
-		width: 2.25rem;
-		height: 2.25rem;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-	}
-	.mls__mark img {
-		width: 100%;
-		height: 100%;
-		object-fit: contain;
-	}
-	.mls__mark--text {
-		border-radius: 0.5rem;
-		background: var(--color-surface-3);
-		color: var(--color-text-primary);
-		font-size: 0.72rem;
-		font-weight: 700;
-	}
-	.mls__id {
-		min-width: 0;
-		display: flex;
-		flex-direction: column;
-	}
-	.mls__name {
-		font-size: 0.98rem;
-		color: var(--page-text);
-	}
-	.mls__sub {
-		display: flex;
-		align-items: center;
-		gap: 0.4rem;
-		font-size: 0.72rem;
-		color: var(--content-text-muted);
-	}
-	.mls__tag {
-		font-size: 0.6rem;
-		letter-spacing: 0.06em;
-		text-transform: uppercase;
-		border: 1px solid var(--color-border-subtle);
-		border-radius: 3px;
-		padding: 0 0.25rem;
-	}
-
-	/* A link styled as a switch. No JS: the href carries the resulting
-	   selection and the route writes the cookie. */
-	.mls__switch {
-		position: relative;
-		display: block;
-		width: 3.25rem;
-		height: 2rem;
-		border-radius: 1rem;
-		flex: none;
-		text-decoration: none;
-		transition: background-color var(--transition-fast, 150ms);
-	}
-	.mls__switch.is-on {
-		background: var(--league-accent);
-	}
-	.mls__switch.is-off {
-		background: var(--color-gray-300);
-	}
-	.mls__switch.is-locked {
-		opacity: 0.55;
-		cursor: not-allowed;
-	}
-	.mls__knob {
-		position: absolute;
-		top: 0.1875rem;
-		width: 1.625rem;
-		height: 1.625rem;
-		border-radius: 50%;
-		background: #ffffff;
-		box-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
-		transition: left var(--transition-fast, 150ms), right var(--transition-fast, 150ms);
-	}
-	.mls__switch.is-on .mls__knob {
-		right: 0.1875rem;
-	}
-	.mls__switch.is-off .mls__knob {
-		left: 0.1875rem;
-	}
-	.mls__switch:focus-visible {
-		outline: 2px solid var(--color-primary);
-		outline-offset: 2px;
-	}
-
-	.mls__note {
-		margin: 1.25rem 0 0;
-		font-size: 0.78rem;
-		line-height: 1.55;
-		color: var(--content-text-muted);
-	}
-</style>

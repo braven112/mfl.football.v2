@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { MflLiveBoard as Board, MflLiveLeaguePanel, MflLiveMatchup, MflLiveTeam } from '../../../types/mfl-live';
-import type { PlayerMeta } from '../../../types/live-scoring';
+import type { NflGame, PlayerMeta } from '../../../types/live-scoring';
+import type { BroadcastMoment, RedZoneAlert } from '../../../utils/broadcast-moments';
+import { shouldPollLive } from '../../../hooks/useNflScoreboard';
 
 /**
  * MFL Live — every matchup from every league the account is in.
@@ -53,6 +55,114 @@ function Crest({ team }: { team: MflLiveTeam }) {
     <span className="mlb-crest mlb-crest--text" aria-hidden="true">
       {team.initials}
     </span>
+  );
+}
+
+/**
+ * The NFL slate.
+ *
+ * ESPN's scoreboard is a WEEK, so this is Thursday through Monday in one rail
+ * — which is why it scrolls rather than wraps, and why the finished games are
+ * not filtered out: on a Sunday evening the finals ARE most of the week.
+ */
+function GamesStrip({ games }: { games: NflGame[] }) {
+  if (games.length === 0) return null;
+  return (
+    <div className="mlb-strip" role="list" aria-label="NFL games this week">
+      {games.map((g) => {
+        const live = g.state === 'in';
+        const pre = g.state === 'pre';
+        return (
+          <div className="mlb-game" role="listitem" key={g.id}>
+            <div className="mlb-game__row">
+              <span className="mlb-game__tm">{g.away?.abbreviation ?? ''}</span>
+              <span className="mlb-game__sc">{pre ? '—' : (g.away?.score ?? '')}</span>
+            </div>
+            <div className="mlb-game__row">
+              <span className="mlb-game__tm">{g.home?.abbreviation ?? ''}</span>
+              <span className="mlb-game__sc">{pre ? '—' : (g.home?.score ?? '')}</span>
+            </div>
+            <div className={`mlb-game__st${live ? ' is-live' : ''}`}>{g.statusDetail || g.status || ''}</div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+/**
+ * A team of the viewer's with the ball inside the 20.
+ *
+ * A persistent STATE, not an event: it sits above the board for as long as the
+ * drive lasts rather than being preempted by the next thing to happen. It is
+ * also derived fresh each poll, never latched, so a drive that ends in a score,
+ * a turnover or a punt simply stops producing an alert and this disappears by
+ * itself.
+ */
+function RedZoneBanner({ alerts }: { alerts: RedZoneAlert[] }) {
+  if (alerts.length === 0) return null;
+  return (
+    <div className="mlb-rz" role="status">
+      {alerts.map((a) => (
+        <div className="mlb-rz__row" key={a.team}>
+          <span className="mlb-rz__pulse" aria-hidden="true" />
+          <div className="mlb-rz__body">
+            <div className="mlb-rz__title">
+              Red zone · {a.team}
+              {a.downDistance ? ` · ${a.downDistance}` : ''}
+            </div>
+            <div className="mlb-rz__who">
+              {a.players.map((p) => (
+                <span className={`mlb-rz__p${p.side === 'mine' ? ' is-mine' : ''}`} key={`${p.leagueId}-${p.playerId}`}>
+                  {p.playerName}
+                  <span className="mlb-rz__lg">{p.leagueName}</span>
+                </span>
+              ))}
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/**
+ * Scoring across every league at once.
+ *
+ * A play can appear MORE THAN ONCE and that is correct, not a duplicate: the
+ * same NFL player is routinely started in several of an owner's leagues, and
+ * in the AFL — whose rosters duplicate players — by both sides of one matchup.
+ * One touchdown really is several pieces of news. Every row therefore names
+ * its league AND its franchise, which is what makes the repetition read as
+ * information; collapsing them would silently drop the credit from every
+ * league but one.
+ *
+ * Yours in colour, your opponents' in grey.
+ */
+function Ticker({ moments }: { moments: BroadcastMoment[] }) {
+  if (moments.length === 0) return null;
+  return (
+    <section className="mlb-tick" aria-label="Scoring across your leagues">
+      <header className="mlb-tick__head">
+        <span>Scoring</span>
+        <span className="mlb-tick__all">All your leagues</span>
+      </header>
+      <ul className="mlb-tick__list">
+        {moments.map((m) => (
+          <li className={`mlb-tick__row${m.side === 'mine' ? ' is-mine' : ''}`} key={m.key}>
+            <span className="mlb-tick__stripe" aria-hidden="true" />
+            <div className="mlb-tick__body">
+              <div className="mlb-tick__text">{m.text}</div>
+              <div className="mlb-tick__meta">
+                {m.leagueName} · {m.franchiseName}
+                {m.clock ? ` · ${m.clock}` : ''}
+              </div>
+            </div>
+            {m.scoreValue > 0 && <span className="mlb-tick__pts">+{m.scoreValue}</span>}
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }
 
@@ -222,15 +332,22 @@ export default function MflLiveBoard({ initialBoard, ownerName, isLive = false }
       } finally {
         if (!cancelled) {
           setNow(Date.now());
-          // The hint may only RAISE the cadence. Polling itself is
-          // unconditional — a flag that can be wrong must never be able to
-          // stop the board asking for a score.
-          timer = setTimeout(tick, isLive ? POLL_LIVE_MS : POLL_IDLE_MS);
+          // Cadence off the REAL NFL clock now that a slate is loaded.
+          // `isLive` is `getDailySlot`, fixed for the life of the page and
+          // open long past the last whistle, so trusting it once data exists
+          // is what pins a board to the fast cadence for hours after the
+          // slate goes final. It is only good as the seed, which is exactly
+          // what `shouldPollLive` uses it for.
+          //
+          // Polling itself stays unconditional either way — a flag that can
+          // be wrong must never be able to stop the board asking for a score.
+          const live = shouldPollLive(boardRef.current.games ?? [], isLive);
+          timer = setTimeout(tick, live ? POLL_LIVE_MS : POLL_IDLE_MS);
         }
       }
     };
 
-    timer = setTimeout(tick, isLive ? POLL_LIVE_MS : POLL_IDLE_MS);
+    timer = setTimeout(tick, shouldPollLive(board.games ?? [], isLive) ? POLL_LIVE_MS : POLL_IDLE_MS);
     return () => {
       cancelled = true;
       clearTimeout(timer);
@@ -255,6 +372,9 @@ export default function MflLiveBoard({ initialBoard, ownerName, isLive = false }
           {status === 'error' ? 'Reconnecting' : `Live · ${ago(board.fetchedAt, now)}`}
         </span>
       </header>
+
+      <RedZoneBanner alerts={board.redZone ?? []} />
+      <GamesStrip games={board.games ?? []} />
 
       {board.leagues.length === 0 ? (
         <p className="mlb-empty">
@@ -288,6 +408,8 @@ export default function MflLiveBoard({ initialBoard, ownerName, isLive = false }
           </section>
         ))
       )}
+
+      <Ticker moments={board.moments ?? []} />
 
       {board.leagues.length > 0 && withMatchups === 0 && (
         <p className="mlb-foot-note">
