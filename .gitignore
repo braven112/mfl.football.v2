@@ -79,3 +79,8 @@ build-storybook.log
 
 # Diagnostic output from scripts/roster-parity-check.mjs (written to cwd).
 roster-parity.json
+
+# scripts/probe-yahoo.mjs — OAuth tokens and raw API dumps from the Yahoo
+# feasibility probe. Real user credentials; never committable.
+.yahoo-probe.json
+tmp/yahoo-probe/
