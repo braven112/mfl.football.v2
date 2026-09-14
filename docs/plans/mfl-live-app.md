@@ -695,6 +695,15 @@ From `docs/claude/rules/live-scoring.md` and
 4. **Close-finish thresholds** — how many points, and how late? "Within 10 with
    your last starter playing" is a different alert from "within 10 at the two
    minute warning".
-5. **Signed-out `/live`** — bounce to `/login`, or a public demo state? The
-   honest empty state (decision 8) gives us a page that renders with no data,
-   which makes a demo cheap if it's wanted.
+5. **A public demo state for signed-out `/live`.** The bounce-vs-render half
+   of this is CLOSED and shipped: `/live` renders its own signed-out shell —
+   board chrome, an explanation, and a sign-in CTA to `/login`, whose own
+   default destination is this board — rather than bouncing, because a
+   redirect away from the app's headline URL tells a first-time visitor
+   nothing about what the page is. What is still
+   open is whether that shell should show real SCORES to a signed-out
+   visitor: the honest empty state (decision 8) gives us a page that renders
+   with no data, so a demo is cheap, but every matchup on this board belongs
+   to a private league and there is no league whose scores we can show
+   without an owner's say-so. Worth asking only if someone actually links the
+   board publicly.
