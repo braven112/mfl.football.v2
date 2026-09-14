@@ -194,7 +194,7 @@ function BroadcastScoreHeader({
                               />
                             )}
                           </span>
-                          <span className="lbc__who">
+                          <span className="lbc__ident">
                             <span className="lbc__tn">{nameAt(matchup.mine, tier)}</span>
                             <span className="lbc__ytp">{readable ? `${mine?.yetToPlay ?? 0} to play` : ''}</span>
                           </span>
@@ -226,7 +226,7 @@ function BroadcastScoreHeader({
                                 />
                               )}
                             </span>
-                            <span className="lbc__who">
+                            <span className="lbc__ident">
                               <span className="lbc__tn">{nameAt(matchup.opponent, tier)}</span>
                               <span className="lbc__ytp is-opp">{readable ? `${theirs?.yetToPlay ?? 0} to play` : ''}</span>
                             </span>

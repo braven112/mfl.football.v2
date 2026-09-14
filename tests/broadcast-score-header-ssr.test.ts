@@ -101,10 +101,10 @@ describe('BroadcastScoreHeader — what the cell prints', () => {
     // that name's own column — not loose on the row, where it ellipsised to
     // "1 to ..." against the numerals on a real doubleheader cell.
     expect(html).toMatch(
-      /<span class="lbc__who"><span class="lbc__tn">Pigskins<\/span><span class="lbc__ytp">1 to play<\/span><\/span>/,
+      /<span class="lbc__ident"><span class="lbc__tn">Pigskins<\/span><span class="lbc__ytp">1 to play<\/span><\/span>/,
     );
     expect(html).toMatch(
-      /<span class="lbc__who"><span class="lbc__tn">Pain<\/span><span class="lbc__ytp is-opp">4 to play<\/span><\/span>/,
+      /<span class="lbc__ident"><span class="lbc__tn">Pain<\/span><span class="lbc__ytp is-opp">4 to play<\/span><\/span>/,
     );
   });
 

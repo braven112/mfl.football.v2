@@ -1,13 +1,15 @@
 ---
 slug: broadcast-matchup-clock
-status: open
+status: shipped
 severity: P1
 opened: 2026-09-13
 hotfix_pr: https://github.com/braven112/mfl.football.v2/pull/1079
 hotfix_sha: c7623ba
 followup_issue: 1080
-followup_pr:
+followup_pr: PENDING
+shipped: 2026-09-14
 followup_session: session_01KvjeQTyQKQ6dXp9mBvGVCd
+worked_session: session_01YDGskVyKiYsDz2YtKeBZsb
 ---
 
 # Follow-up: the broadcast board's to-play counts and matchup clock
@@ -52,7 +54,7 @@ em-dashes.
 
 ## Deferred items
 
-- [ ] **F1 — `progressClockLabel` rounds a live matchup to `Final`**
+- [x] **F1 — `progressClockLabel` rounds a live matchup to `Final`** — WORKED
   - Source: Copilot review (suppressed comment), PR #1079
   - Where: `src/utils/broadcast-layout.ts` — `progressClockLabel`,
     `const secs = Math.round(...)`
@@ -65,8 +67,16 @@ em-dashes.
     the kind this PR exists to remove.
   - Fix shape: floor at one second for any positive fraction, and add a
     multi-starter boundary case to `tests/broadcast-layout.test.ts`.
+  - **Re-validated 2026-09-14: still true.** The code was unchanged and the
+    arithmetic reproduces exactly as described.
+  - **Shipped as written.** `progressClockLabel` clamps first, returns `Final`
+    only for a fraction of exactly nothing, and floors every positive fraction
+    at one second — the last second of a matchup reads `4th 0:01 left`. Two
+    cases in `tests/broadcast-layout.test.ts` (the label at 4/9s of a second,
+    and the same through `matchupTimeLeft` with nine starters); both fail
+    against the pre-fix code and pass after.
 
-- [ ] **F2 — Nobody has seen this on a television**
+- [~] **F2 — Nobody has seen this on a television** — OVERTAKEN, and it was right
   - Source: deferred at implementation
   - Where: `src/styles/live-broadcast.css` — `.lbc__ytp`
   - What: the counts moved onto a row whose width budget is already documented
@@ -81,6 +91,42 @@ em-dashes.
   - Fix shape: look at `/broadcast` at tiers 3, 4 and 5 during games. If the
     count crowds the name at tier 4, its drop rung (`oppytp`) already exists —
     consider a second rung for the owner's own, below `clock`.
+  - **Re-validated 2026-09-14: overtaken by #1081, which happened the same
+    evening.** The board WAS looked at on the television and the item's worry
+    was exactly right: on a real doubleheader cell the counts ellipsised to
+    `1 to ...` and `0 t...`. #1081 took a different route from the one
+    suggested here — rather than a second drop rung, the count moved OFF the
+    row and under the name, into a new identity column, and `.lbc__proj`'s
+    `margin-left: auto` (which had been eating the row's slack) came off.
+  - **But #1081 shipped inert, which is F3.** Nothing to do for F2 itself; the
+    outcome it wanted is what F3 delivers. What is still unseen on a panel is
+    the 38% floor, which takes effect for the first time with this PR.
+
+- [x] **F3 — `.lbc__who` is two components, so #1081's width floor never
+  applied** — WORKED (folded in after the fact)
+  - Source: Copilot review on #1081, posted 2026-09-13 23:30 UTC — after that
+    PR merged, and after the brief was written. Not in the original item list.
+  - Where: `src/styles/live-broadcast.css` — `.lbc__who` at two top-level
+    blocks, ~500 lines apart.
+  - What: `live-broadcast.css` is one global sheet for nine components and a
+    bare single-class rule has no scope. #1081 named the scoreboard's new
+    identity column `.lbc__who`, which the player strip had already been
+    using. Same specificity, later rule wins, so the strip's
+    `flex: 1; min-width: 0` overrode the scoreboard's
+    `flex: 1 1 auto; min-width: 38%` on every screen — and because #1081 had
+    also handed `.lbc__tn`'s old 25% floor over to that column, the board went
+    from one width floor to none at all. `tests/broadcast-shell-guards.test.ts`
+    passed throughout: its `/\.lbc__who\s*\{([^}]*)\}/` matched the FIRST
+    block, which is not the one that wins.
+  - Severity: this is F2's user-visible bug, still live in production.
+  - Shipped: the scoreboard's column is `.lbc__ident` (CSS, both JSX sites,
+    both tests); `.lbc__who` stays the strip's. New guard in
+    `tests/broadcast-shell-guards.test.ts` fails on ANY `lbc__*` class that two
+    components under `src/components/shared/live-broadcast/` both use and the
+    stylesheet styles with a bare single-class rule — comments stripped, and
+    descendant-scoped rules deliberately exempt. Exactly one violation existed
+    across nine components: this one. Verified failing against the collision
+    and passing after.
 
 ## Context to start cold
 

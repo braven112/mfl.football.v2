@@ -23,6 +23,7 @@ import {
   MAX_GRID_PANELS,
   splitPanels,
 } from '../src/utils/broadcast-layout';
+import { NFL_GAME_SECONDS } from '../src/utils/live-win-probability';
 import type { BroadcastLeaguePanel, BroadcastTeamScore } from '../src/types/live-broadcast';
 import type { NflGame, PlayerMeta } from '../src/types/live-scoring';
 
@@ -454,6 +455,28 @@ describe('the matchup clock', () => {
   it('is Final only when every starter’s game is over', () => {
     expect(matchupTimeLeft([row('atl', 0), row('atl', 0)], games, meta)).toBe('Final');
     expect(matchupTimeLeft([row('atl', 0), row('kc')], games, meta)).not.toBe('Final');
+  });
+
+  it('never ROUNDS a matchup still being played down to Final', () => {
+    // The fraction is the slate's remaining seconds over the starter COUNT, so
+    // a nine-starter lineup with four real seconds left is 4/9 of a second on
+    // the meter — which rounded to zero and printed `Final` over a live game
+    // (Copilot, #1079). Every positive fraction floors at one second.
+    const nine = 9 * NFL_GAME_SECONDS;
+    expect(progressClockLabel(4 / nine)).toBe('4th 0:01 left');
+    expect(progressClockLabel(1 / nine)).toBe('4th 0:01 left');
+    // And a whole second of a one-starter matchup is still a second.
+    expect(progressClockLabel(1 / NFL_GAME_SECONDS)).toBe('4th 0:01 left');
+    // Nothing left is the only thing that may say Final.
+    expect(progressClockLabel(0)).toBe('Final');
+    expect(progressClockLabel(-1)).toBe('Final');
+  });
+
+  it('floors the whole way through matchupTimeLeft, not just the label', () => {
+    // Nine starters, one game with a single second left on ESPN's clock.
+    const oneSecond = { ...games[0], period: 4, clock: '0:01' };
+    const rows = [row('kc'), ...Array.from({ length: 8 }, () => row('atl', 0))];
+    expect(matchupTimeLeft(rows, [oneSecond, games[2]], meta)).toBe('4th 0:01 left');
   });
 
   it('prints nothing at all rather than a clock for no starters', () => {

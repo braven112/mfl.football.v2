@@ -361,10 +361,54 @@ Anything this component prints belongs behind `readable`.
 **The count went UNDER the name, not on the row.** Between the name and the
 projection it was competing for width with two numerals and a crest, and on a
 real doubleheader cell it ellipsised to `1 to ...` and `0 t...` — worse than
-not printing it. Stacked inside `.lbc__who` it costs the row no height at all:
+not printing it. Stacked inside `.lbc__ident` it costs the row no height at all:
 `.lbc__side` is centred and the score numeral is the tallest item (~5.6vh at
 tier 3 against ~4.4vh for two stacked lines), so the second line fits in height
 the row already had. The 25% width floor moved with it — it has to sit on the
 box the row's flex layout actually shrinks, which is now the column rather than
 the text inside it, and `tests/broadcast-shell-guards.test.ts` follows it there.
+
+## 2026-09-14 — the follow-up: an inert floor, and a rounded `Final`
+
+Both items here are the hotfix's deferred work (#1080), and the first one is
+the more useful lesson.
+
+**A duplicated class name in this stylesheet is a SILENT override, and the
+guard that read the first block could not see it.** `live-broadcast.css` is one
+global sheet for nine components, and a bare single-class rule has no scope. The
+entry above gave the scoreboard's new identity column the name `.lbc__who` —
+which the player strip had already been using, 500 lines down. Same specificity,
+later rule wins: the strip's `flex: 1; min-width: 0` overrode the scoreboard's
+`flex: 1 1 auto; min-width: 38%`, so the width floor written *that afternoon to
+fix a truncation seen on the television* never applied on any screen. Worse than
+a no-op — the same change had handed `.lbc__tn`'s old 25% floor over to the
+column, so the board went from one floor to none at all, and the CSS, the
+component and the guard test all still read as if the fix were live.
+
+Two things make that class of bug mechanical now:
+
+- The scoreboard's column is `.lbc__ident`; `.lbc__who` stays the strip's.
+- `tests/broadcast-shell-guards.test.ts` fails on **any** `lbc__*` class that
+  two components in `src/components/shared/live-broadcast/` both use AND the
+  stylesheet styles with a bare single-class rule. It reads the components with
+  comments stripped — this repo's prose names other components' classes
+  constantly — and it deliberately ignores a class reached only through a
+  descendant selector, which is already scoped to its container. There was
+  exactly one violation across nine components: this one.
+
+The general shape, which is not specific to the board: **a guard that extracts
+"the rule for `.x`" with a first-match regex asserts about the block it found,
+not about the one that wins.** It passed the whole time.
+
+**`Final` is an assertion; everything else on that clock is a measurement.**
+Copilot's suppressed comment on #1079, and correct. `matchupTimeLeft` hands
+`progressClockLabel` the slate's remaining seconds over the starter COUNT, so
+the label computed `round(left / N)` — with nine starters, four real seconds of
+football rounded to zero and the cell called a game still being played `Final`.
+It self-corrected on the next poll, which is why it was deferred and not why it
+was acceptable: it is the same failure the whole hotfix existed to remove, a
+confident string true of nothing on the cell. Every positive fraction now floors
+at one second (`4th 0:01 left`); only exactly nothing prints `Final`. Rounding
+is fine for a label that measures — it is not fine for the one value that
+changes what the label MEANS.
 
