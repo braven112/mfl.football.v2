@@ -19,9 +19,14 @@
  * about exactly this kind of "almost the same" duplication.
  */
 
-import { parseLeagueSelection, toggleLeagueSelection, type BoardLeague } from './sunday-ticket-selection';
+import {
+  leagueSelectionHref,
+  parseLeagueSelection,
+  toggleLeagueSelection,
+  type BoardLeague,
+} from './sunday-ticket-selection';
 
-export { parseLeagueSelection, toggleLeagueSelection };
+export { parseLeagueSelection, toggleLeagueSelection, leagueSelectionHref };
 export type { BoardLeague };
 
 /**
@@ -76,4 +81,58 @@ export function resolveMflLiveLeagues(
   if (fromCookie) return { enabled: fromCookie, explicit: true };
 
   return { enabled: defaultMflLiveSelection(available), explicit: false };
+}
+
+// ── Remembering the choice — from the ROUTE, never a component ───────────
+
+/** The slice of `Astro.cookies` this needs, typed structurally so the module stays runtime-free. */
+export interface CookieJar {
+  set(name: string, value: string, options: { maxAge: number; path: string; sameSite: 'lax' }): void;
+}
+
+/**
+ * Write `?leagues=` to this board's cookie when the URL carries one.
+ *
+ * Call from the PAGE's frontmatter — `src/pages/live/index.astro` and
+ * `src/pages/live/settings.astro` — and never from a component it imports.
+ * `Astro.cookies.set()` inside an imported component runs after the response
+ * headers are committed, throws `ResponseSentError` and blanks the page; the
+ * Sunday Ticket board shipped exactly that on its first click. Reads are safe
+ * anywhere. Only the write is route-only.
+ */
+export function rememberMflLiveChoice(url: URL, cookies: CookieJar): void {
+  const leagues = url.searchParams.get('leagues');
+  if (leagues === null) return;
+  cookies.set(MFL_LIVE_LEAGUE_COOKIE, leagues.trim() || 'default', {
+    maxAge: MFL_LIVE_LEAGUE_MAX_AGE,
+    path: '/',
+    sameSite: 'lax',
+  });
+}
+
+/**
+ * The selection after toggling one league, or `null` for "the default".
+ *
+ * Two things differ from a straight `toggleLeagueSelection` call, both because
+ * this board's default is EVERYTHING rather than a subset:
+ *
+ *  - **The last league on cannot be switched off.** The shared helper returns
+ *    `null` for an empty result, and `null` means "use the default" — which
+ *    here is every league. So turning off your last one would switch them all
+ *    back ON, which is the opposite of what the tap asked for. The settings
+ *    page disables that control instead; a board with no leagues is not a
+ *    board, and silently doing the reverse is worse than refusing.
+ *  - **Collapsing back to `null` when everything is on is correct and wanted.**
+ *    The cookie then reads "default" rather than pinning today's list, so a
+ *    league joined next month appears by itself — which is the promise this
+ *    board makes.
+ */
+export function toggleMflLiveLeague(
+  enabled: readonly string[],
+  allIds: readonly string[],
+  id: string,
+): { selection: string[] | null; refused: boolean } {
+  const turningOff = enabled.includes(id);
+  if (turningOff && enabled.length <= 1) return { selection: enabled.slice(), refused: true };
+  return { selection: toggleLeagueSelection(enabled, allIds, id, allIds), refused: false };
 }

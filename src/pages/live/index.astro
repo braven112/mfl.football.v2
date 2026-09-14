@@ -26,7 +26,7 @@ import { getAuthUser } from '../../utils/auth';
 import { getCurrentNFLWeek } from '../../utils/current-week';
 import { getDailySlot } from '../../utils/hero-resolver';
 import { assembleMflLiveBoard } from '../../utils/mfl-live-board';
-import { MFL_LIVE_LEAGUE_COOKIE } from '../../utils/mfl-live-selection';
+import { MFL_LIVE_LEAGUE_COOKIE, rememberMflLiveChoice } from '../../utils/mfl-live-selection';
 import type { MflLiveBoard as Board } from '../../types/mfl-live';
 import '../../styles/mfl-live.css';
 
@@ -34,6 +34,12 @@ import '../../styles/mfl-live.css';
 export const prerender = false;
 
 const authUser = getAuthUser(Astro.request);
+
+// Route-only write, before anything reads the cookie back — so a link that
+// carries a league set sticks for next time. `Astro.cookies.set()` from an
+// imported component throws after the headers are committed and blanks the
+// page, which is why this lives here rather than inside the board.
+if (authUser) rememberMflLiveChoice(Astro.url, Astro.cookies);
 
 const now = new Date();
 // The RAW resolver result, never clamped up to 1. MFL serves no live scoring
