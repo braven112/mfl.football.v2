@@ -30,6 +30,7 @@
  */
 
 import type { LivePlayerRow, PlayerMeta } from '../types/live-scoring';
+import { normalizePosition as sharedNormalizePosition } from './normalize-position';
 
 /**
  * Reading order. MFL's own vocabulary — `PK` for the kicker and `DEF` for a
@@ -44,20 +45,24 @@ const POSITION_LABELS: Record<string, string> = { PK: 'K' };
 /**
  * Fold the spellings of one position together.
  *
- * MFL is not self-consistent: `league.starters` spells a team defence `Def`
- * while the player feed spells it `DEF`, and a kicker is `PK` in both but `K`
- * everywhere a human writes it. An unrecognised position is returned as-is and
- * sorts last rather than being forced into a bucket it is not in — a rookie
- * the player map has not caught up with is the least trustworthy row on the
- * board, and filing him under TE because that is where a fallback landed would
- * be a quiet lie about exactly the row that deserves none.
+ * A THIN ADAPTER over the shared `normalizePosition`, not a second copy of the
+ * mapping — that table already folds `K`/`KICKER` to `PK` and
+ * `DST`/`D/ST`/`DEFENSE` to `DEF`, which is exactly what this board needs
+ * (MFL is not self-consistent: `league.starters` spells a team defence `Def`
+ * while the player feed spells it `DEF`). The repo carries eight
+ * `normalizePosition` functions already; this is deliberately not a ninth.
+ *
+ * All this adds is the NULLABLE input the shared one does not take, because a
+ * position here comes from `meta[id]?.position` and is routinely undefined.
+ *
+ * An unrecognised position passes through unchanged and sorts last rather than
+ * being forced into a bucket it is not in — a rookie the player map has not
+ * caught up with is the least trustworthy row on the board, and filing him
+ * under TE because that is where a fallback landed would be a quiet lie about
+ * exactly the row that deserves none.
  */
 export function normalizePosition(raw: string | null | undefined): string {
-  const pos = (raw ?? '').trim().toUpperCase();
-  if (!pos) return '';
-  if (pos === 'K') return 'PK';
-  if (pos === 'DST' || pos === 'D/ST' || pos === 'DEFENSE') return 'DEF';
-  return pos;
+  return sharedNormalizePosition(raw ?? '');
 }
 
 /** The chip's text for a position. */

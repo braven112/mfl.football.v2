@@ -97,6 +97,16 @@ export interface ReadCrossLeagueInput {
   /** SEASON year. Results-shaped, so it defaults to the results clock. */
   year?: number;
   concurrency?: number;
+  /**
+   * Also read each unregistered league's franchise NAMES (one `TYPE=league`
+   * export per league, cached an hour).
+   *
+   * OPT-IN, and off by default, because this read is shared. `/broadcast`
+   * calls it too and never looks at the names — so defaulting it on would
+   * charge a live television surface a request per outside league for data it
+   * discards. A feature does not get to add network work to its neighbours.
+   */
+  withFranchiseNames?: boolean;
 }
 
 /**
@@ -141,6 +151,7 @@ export async function readCrossLeagueLive(
   const { user, leagues, week } = input;
   const year = input.year ?? getCurrentSeasonYear();
   const limit = input.concurrency ?? CROSS_LEAGUE_FAN_OUT_LIMIT;
+  const wantNames = input.withFranchiseNames === true;
 
   const settled = await mapWithConcurrency(leagues, limit, async (league) => {
     // Both reads for one league share a lane, so the bound counts LEAGUES
@@ -150,14 +161,15 @@ export async function readCrossLeagueLive(
         readOutsideLiveSnapshot(l, y, w, user.id),
       ).catch(() => null),
       loadLeagueProjections(league, week, user.id, year).catch(() => new Map<string, number>()),
-      // Registered leagues have committed brands, so this is skipped for them
-      // entirely rather than fetched and thrown away. For everyone else it is
-      // cached for an hour in process, so it is not a per-poll request.
-      league.registered
-        ? Promise.resolve<Record<string, string>>({})
-        : readLeagueFranchiseNames(league, year, user.id).catch(
+      // Skipped unless the caller asked, and skipped for a registered league
+      // either way: those have committed brands, which carry the name plus
+      // colours and a crest. For everyone else it is cached for an hour in
+      // process, so it is not a per-poll request.
+      wantNames && !league.registered
+        ? readLeagueFranchiseNames(league, year, user.id).catch(
             (): Record<string, string> => ({}),
-          ),
+          )
+        : Promise.resolve<Record<string, string>>({}),
     ]);
 
     const snapshot = result?.snapshot ?? null;

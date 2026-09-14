@@ -88,24 +88,41 @@ describe('readCrossLeagueLive — franchise names', () => {
     loadLeagueSnapshot.mockResolvedValue({ leagueId: 'x', ok: true, snapshot: livePayload() });
   });
 
-  it('fetches names for a league this site does not host', async () => {
+  it('fetches names for a league this site does not host, when ASKED', async () => {
     readLeagueFranchiseNames.mockResolvedValue({ '0015': 'Cowboys', '0032': 'Chiefs' });
-    const [read] = await readCrossLeagueLive({ user, leagues: [league('999')], week: 2, year: 2026 });
+    const [read] = await readCrossLeagueLive({
+      user, leagues: [league('999')], week: 2, year: 2026, withFranchiseNames: true,
+    });
     expect(read.franchiseNames).toEqual({ '0015': 'Cowboys', '0032': 'Chiefs' });
     expect(readLeagueFranchiseNames).toHaveBeenCalledTimes(1);
   });
 
+  /**
+   * OPT-IN, because this read is SHARED. `/broadcast` calls it and never looks
+   * at the names, so a default-on flag would charge a live television surface
+   * one `TYPE=league` request per outside league for data it discards.
+   */
+  it('fetches nothing when the caller did not ask', async () => {
+    const [read] = await readCrossLeagueLive({ user, leagues: [league('999')], week: 2, year: 2026 });
+    expect(readLeagueFranchiseNames).not.toHaveBeenCalled();
+    expect(read.franchiseNames).toEqual({});
+  });
+
   /** A registered league has committed brands with colours and crests. */
-  it('does not fetch them for a registered league', async () => {
+  it('does not fetch them for a registered league, even when asked', async () => {
     const registered = league('13522', { registered: { slug: 'theleague' } });
-    const [read] = await readCrossLeagueLive({ user, leagues: [registered], week: 2, year: 2026 });
+    const [read] = await readCrossLeagueLive({
+      user, leagues: [registered], week: 2, year: 2026, withFranchiseNames: true,
+    });
     expect(readLeagueFranchiseNames).not.toHaveBeenCalled();
     expect(read.franchiseNames).toEqual({});
   });
 
   it('degrades to no names rather than failing the league', async () => {
     readLeagueFranchiseNames.mockRejectedValue(new Error('MFL timed out'));
-    const [read] = await readCrossLeagueLive({ user, leagues: [league('999')], week: 2, year: 2026 });
+    const [read] = await readCrossLeagueLive({
+      user, leagues: [league('999')], week: 2, year: 2026, withFranchiseNames: true,
+    });
     expect(read.franchiseNames).toEqual({});
     // The league itself still reads — names are decoration, scores are not.
     expect(read.ok).toBe(true);
@@ -115,7 +132,7 @@ describe('readCrossLeagueLive — franchise names', () => {
     readLeagueFranchiseNames.mockImplementation(async (l: any) =>
       l.id === 'a' ? { '0001': 'Bears' } : { '0001': 'Packers' });
     const reads = await readCrossLeagueLive({
-      user, leagues: [league('a'), league('b')], week: 2, year: 2026,
+      user, leagues: [league('a'), league('b')], week: 2, year: 2026, withFranchiseNames: true,
     });
     expect(reads[0].franchiseNames['0001']).toBe('Bears');
     expect(reads[1].franchiseNames['0001']).toBe('Packers');

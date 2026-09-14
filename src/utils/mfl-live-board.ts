@@ -172,7 +172,9 @@ export async function assembleMflLiveBoard(
   // Either can fail without costing the scores: the board simply has no rail
   // and no ticker, which is visibly less rather than wrong.
   const [reads, scoreboard, detail] = await Promise.all([
-    readCrossLeagueLive({ user, leagues: on, week, year }),
+    // This board NAMES every franchise, including in leagues the site does
+    // not host, so it is the caller that wants the extra read.
+    readCrossLeagueLive({ user, leagues: on, week, year, withFranchiseNames: true }),
     fetchNflScoreboard({ week, year }).catch(() => ({ ok: false, week, games: [] as NflGame[] })),
     loadNflGameDetail({ week, year }).catch(() => null),
   ]);

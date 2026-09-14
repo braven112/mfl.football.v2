@@ -2,6 +2,10 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import type { MflLiveBoard as Board, MflLiveLeaguePanel, MflLiveMatchup, MflLiveTeam } from '../../../types/mfl-live';
 import type { LivePlayerRow, NflGame, PlayerMeta } from '../../../types/live-scoring';
 import { positionLabel } from '../../../utils/mfl-live-lineup';
+// The bench total is the SHARED helper — the live-scoring board already had
+// this exact reduce, and "points that must never reach the score" is a rule
+// worth having in one place rather than two.
+import { benchPoints } from '../../../utils/live-scoring-view';
 import { PlayerCell } from '../../theleague/PlayerCell';
 import type { BroadcastMoment, RedZoneAlert } from '../../../utils/broadcast-moments';
 import { shouldPollLive } from '../../../hooks/useNflScoreboard';
@@ -279,7 +283,7 @@ function PlayerList({ team, meta }: { team: MflLiveTeam; meta: Record<string, Pl
         <>
           <div className="mlb-bench-head">
             <span>Bench</span>
-            <span className="mlb-bench-head__pts">{fmt(benchTotal(team.bench))}</span>
+            <span className="mlb-bench-head__pts">{fmt(benchPoints(team.bench))}</span>
           </div>
           <PlayerRows rows={team.bench} team={team} meta={meta} bench />
         </>
@@ -288,14 +292,6 @@ function PlayerList({ team, meta }: { team: MflLiveTeam; meta: Record<string, Pl
   );
 }
 
-/**
- * What the bench scored — shown so the owner can see it, never added to
- * anything. It is the answer to "how much did I leave on it", which is only
- * a question because these points did NOT count.
- */
-function benchTotal(rows: LivePlayerRow[]): number {
-  return rows.reduce((sum, r) => sum + (Number.isFinite(r.live) ? r.live : 0), 0);
-}
 
 function MatchupCard({
   matchup,
