@@ -340,6 +340,63 @@ property that decays silently.
   `applyContractAction`). Same advice as Phase 5: one explicit context object,
   not per-symbol arguments.
 
+### Phase 6.1 — the CDM, slice by slice
+
+**Corrected scope, measured 2026-09-14:** the wizard is not one ~3,000-line
+block. It is **~2,100 lines in three non-contiguous regions**, and the autocut
+section sits *between* two of them:
+
+| Region | Lines | What |
+|---|---|---|
+| A | 8029–9369 | open/close, year buttons, action options, trade sub-options, roster-move step |
+| — | 9370–10868 | **autocut — Phase 5, does not move** |
+| B | 10869–~11620 | the `goTo*` step functions, `executeCutPlayer`, the submit handler |
+| C | 6538 | `extractPlayerDataFromRow` |
+
+`getPlayerEligibility` (5477) and `applyContractAction` (5832) are already
+outside `initRosterPage`. The autocut coupling is real and narrow: the CDM's
+"Mark for August auto-cut" toggle shares save plumbing with the Cutdown Plan
+panel, and `// ---- CDM action-option toggle` is *inside* the autocut section.
+Cut around it; leave those as injected callbacks.
+
+**Slice 1 — presentation primitives *(done)*.** `src/utils/cdm-ui.ts`:
+`createActionOption`, `createYearButton`, `formatDraftLine`, `cdmAge`.
+
+The seam is what a control LOOKS like versus what happens when you click it.
+The shape moves; the handler stays with the state it mutates. So
+`createYearButton` returns an unbound button and the ~40-line handler that
+sets `cdmSelectedYears` and drives the stepper stays in the page until that
+state moves with it.
+
+What it found on the way, both the same class Phases 3 and 4 kept hitting:
+
+- **Three byte-identical copies** of the year-button builder (8383, 8571,
+  10929), one per flow. Now one.
+- **A third copy of `age-utils`' `calculateAge`.** The CDM's version added two
+  real guards the canonical one lacks — an unparseable birthdate and a future
+  birthdate must both read as "no age" so the pill hides rather than rendering
+  `NaN yrs` or `-1 yrs`. The module keeps the guards and delegates the
+  arithmetic, rather than adding options to a function with 15 callers.
+
+Verified: `cdm-parity-check` **0 diffs across 4,409 values**, roster harness
+clean across 12 renders, `astro check` **1699 → 1693**. That −6 is the
+mechanism this plan predicted — an exported function needs a signature.
+
+Only the pure functions are unit-tested (`tests/cdm-ui.test.ts`). The suite
+runs `environment: 'node'` with no DOM library, and the two DOM builders
+already have better coverage than jsdom would give them: the parity harness
+fingerprints what they render in a real browser, across every eligible player
+and flow.
+
+**Remaining slices**, in the order they get safer to do:
+
+2. The `goTo*` step functions (Region B) — cohesive, and the harness already
+   walks the screens they produce.
+3. `openDeclarationModal` / `closeDeclarationModal` / `populateCdmActionOptions`
+   plus the wizard's mutable state, behind one context object.
+4. The submit handler — last, and the one the harness does not cover. Submit a
+   throwaway declaration by hand before trusting it.
+
 The module boundary also **fixes a bug class**: the July 2026 whole-page crash
 was a temporal-dead-zone read inside one giant function body. Imports hoist;
 that failure mode cannot survive extraction.
