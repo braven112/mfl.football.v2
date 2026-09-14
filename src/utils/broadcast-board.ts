@@ -13,19 +13,11 @@
  */
 
 import type { AuthUser } from './auth';
-import { getCurrentSeasonYear, getLeagueYearForSlug } from './league-year';
-import { fetchMyLeagues } from './my-leagues';
+import { getCurrentSeasonYear } from './league-year';
 import type { BoardLeague } from './sunday-ticket-selection';
 import { isHomeLeague, resolveBroadcastLeagues } from './broadcast-selection';
-import {
-  buildBoardLeagues,
-  findOwnerMatchups,
-  loadLeagueProjections,
-  loadLeagueSnapshot,
-  readOutsideLiveSnapshot,
-  scoreLeague,
-  toLeagueViewer,
-} from './broadcast-live-source';
+import { findOwnerMatchups, scoreLeague, toLeagueViewer } from './broadcast-live-source';
+import { discoverBoardLeagues, readCrossLeagueLive } from './cross-league-live';
 import { buildBroadcastMoments, selectRedZoneAlerts } from './broadcast-moments';
 import { loadNflGameDetail } from './nfl-game-detail-source';
 import { fetchNflScoreboard } from './nfl-scoreboard-source';
@@ -48,7 +40,6 @@ import { toBroadcastPair } from './draft-broadcast';
 const LBC_INK = '#05070b';
 const LBC_PANEL = '#0b1220';
 import { chooseTeamName } from './team-names';
-import type { LiveSnapshot } from './live-scoring-snapshot';
 import type { NflGame, PlayerMeta } from '../types/live-scoring';
 import type {
   BroadcastDefenderFace,
@@ -308,15 +299,12 @@ export async function assembleBroadcastBoard(input: AssembleBoardInput): Promise
   const mode = input.mode ?? 'full';
   const year = input.year ?? getCurrentSeasonYear();
 
-  // `myleagues` is keyed on the owner's MFL cookie, which the session carries
-  // as `user.id` (see mfl-login). Its own league year, not the season year:
-  // MFL lists the leagues of the year whose directory it created.
-  const leagueYear = getLeagueYearForSlug('theleague');
-  const myLeagues = await fetchMyLeagues(user.id, leagueYear).catch(() => ({ ok: false, leagues: [] }));
-  const leagues = buildBoardLeagues(myLeagues.leagues ?? [], {
-    leagueId: user.leagueId,
-    franchiseId: user.franchiseId,
-  });
+  // Which leagues this owner is in — the shared cross-league read
+  // (`cross-league-live.ts`), which MFL Live calls too. This board keeps its
+  // own selection rule and its own view assembly on top of it; what is shared
+  // is which host a league is read from, whether a payload that parsed is
+  // really a payload, and what a failed league costs the rest of the board.
+  const leagues = await discoverBoardLeagues(user);
 
   // The param narrows what the SESSION already allows; it can never widen it,
   // because `resolveBroadcastLeagues` only ever returns ids present in
@@ -324,32 +312,20 @@ export async function assembleBroadcastBoard(input: AssembleBoardInput): Promise
   const { enabled } = resolveBroadcastLeagues(input.leaguesParam, input.leaguesCookie, leagues);
   const on = leagues.filter((l) => enabled.includes(l.id));
 
-  // Fan out: every enabled league's MFL snapshot, plus the two ESPN reads,
-  // all at once. A league that fails contributes `ok: false` and nothing else
-  // — one bad feed must not blank the board.
-  const [snapshots, projectionSets, scoreboard, detail] = await Promise.all([
-    Promise.all(
-      on.map((league) =>
-        loadLeagueSnapshot({ league, year, week }, (l, y, w) =>
-          readOutsideLiveSnapshot(l, y, w, user.id),
-        ).catch(() => ({ leagueId: league.id, ok: false, snapshot: null as LiveSnapshot | null })),
-      ),
-    ),
-    // Per league, never pooled: two leagues score the same player differently,
-    // so one shared map would rate a TheLeague lineup with the AFL's numbers.
-    Promise.all(
-      on.map((league) =>
-        loadLeagueProjections(league, week, user.id, year)
-          .then((map) => [league.id, map] as const)
-          .catch(() => [league.id, new Map<string, number>()] as const),
-      ),
-    ),
+  // The league fan-out and the two ESPN reads run together. A league that
+  // fails contributes `ok: false` and nothing else — one bad feed must not
+  // blank the board.
+  const [reads, scoreboard, detail] = await Promise.all([
+    readCrossLeagueLive({ user, leagues: on, week, year }),
     fetchNflScoreboard({ week, year }).catch(() => ({ ok: false, week, games: [] as NflGame[] })),
     loadNflGameDetail({ week, year }).catch(() => null),
   ]);
 
-  const byLeague = new Map(snapshots.map((s) => [s.leagueId, s]));
-  const projectionsByLeague = new Map(projectionSets);
+  const byLeague = new Map(reads.map((r) => [r.league.id, r]));
+  // Still per league, never pooled — the shared reader keeps them apart for
+  // the same reason this board did: two leagues score the same player
+  // differently.
+  const projectionsByLeague = new Map(reads.map((r) => [r.league.id, r.projections]));
 
   // Player identity for everyone on the board. The season map is the right
   // one: this is results-shaped and a player's identity for scoring purposes

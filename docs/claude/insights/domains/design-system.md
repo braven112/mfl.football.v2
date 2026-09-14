@@ -15,7 +15,7 @@
 |---|---|---|
 | Defined nowhere | Hardcoded fallback renders in BOTH themes | **Yes** |
 | Defined only in another file's scoped block | Same — but repo-wide "defined" satisfies the guard | No |
-| Defined light-only | Light value renders in dark mode | No |
+| Defined in ONE theme only | The other theme breaks — dark-only is per-property | No |
 | Ink tokenized, surface hardcoded | Inverted ink on a fixed light surface — worst contrast of all | No |
 | Defined and valid, value rejected *for that property* | Property resets to its **initial** value | No |
 
@@ -136,6 +136,50 @@ Set the browser's color scheme and reload — **do not** toggle `html.dark`; on 
 numbers. For SVG ink use an alpha bounding box over rendered pixels: `getBBox()`
 excludes stroke, and the halo on every `-dark` badge *is* a stroke.
 <!-- /CURATED-HEAD -->
+
+## 2026-09-14 - A Token Defined DARK-Only Breaks LIGHT, And Not The Same Way Twice
+
+**Context:** MFL Live's stylesheet read five tokens — `--color-text-primary`,
+`--color-text-secondary`, `--color-surface-3`, `--color-border-subtle`,
+`--color-border-default` — twenty times, with no fallback on any of them. All
+five are declared in `tokens-dark.css` and in no light sheet. Dark mode was
+pixel-perfect. Light mode had been wrong since the first commit and nobody,
+including the person who wrote it, noticed across four review passes.
+
+**Insight:** the repo's stated trap is "a `var(--x)` with no definition renders
+its fallback in *both* themes — light looks perfect, dark ships white-on-black"
+(CLAUDE.md). This is the MIRROR, and it is worse in two ways.
+
+First, LIGHT is the theme that loses — the one people look at, and the one a
+dark-mode screenshot review cannot catch.
+
+Second, with no fallback the declaration is **invalid at computed-value time**,
+and that does not mean one thing. It means whatever the property's own rules
+say, and they disagree:
+
+| Property | Falls back to | What ships |
+|---|---|---|
+| `color` | **inherit** | Every "secondary" string renders at full body colour — the page has no text hierarchy at all |
+| `background` / `background-color` | `transparent` (initial) | A position chip was a grey pill in dark and bare floating text in light |
+| `border-color` | **`currentColor`** | A hairline row separator drawn at TEXT colour |
+
+None of the three throws, logs, or fails a build. The composite symptom is a
+light page that reads as *flat* rather than broken, which is precisely why it
+survives review: there is nothing to point at.
+
+**The guard shape** (`tests/mfl-live-token-coverage.test.ts`): scan every
+`var(--x)` in the stylesheet, and require each token to be declared in BOTH
+token files **or** to carry a fallback at *every* use. One bare use is enough —
+counting uses-with-fallback against total uses is the check, not "does it ever
+have a fallback". Exclude tokens set at runtime (inline per-row styles, the
+sheet's own `:root` block) or the scan reports noise and gets muted.
+
+**Corollary for a new theme block.** `html[data-league="mfl"]` re-points
+`--color-primary` and the button/focus tokens follow, because bare `:root`
+declares them as `var(--color-primary)`. `html.dark` does NOT — it hardcodes
+`#2563eb` into each one. So a new theme needs ONE override in light and a dozen
+in dark, and testing only dark hides the light gap while testing only light
+hides the dark one.
 
 ---
 

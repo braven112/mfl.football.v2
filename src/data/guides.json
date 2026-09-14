@@ -7,7 +7,10 @@
     "featureLabel": "Open Sunday Ticket",
     "icon": "goals",
     "updated": "2026-09-09",
-    "leagues": ["theleague", "afl"],
+    "leagues": [
+      "theleague",
+      "afl"
+    ],
     "body": [
       "Sunday Ticket answers one question: given every league you play in, which NFL games have the most of your players in them? It reads your rosters, works out where your starters actually are on a Sunday, and ranks the games so the four boxes on your multiview are the four worth having.",
       {
@@ -29,6 +32,42 @@
         ]
       },
       "Your country and clock preferences change what Sunday Ticket prints beside each game — kickoff times in your own clock, and the TV channel for where you actually live. Both are set on <a href=\"/preferences\">Preferences</a>."
+    ]
+  },
+  {
+    "slug": "mfl-live",
+    "title": "MFL Live",
+    "summary": "Every team you own, in every MyFantasyLeague league, scoring on one page — including the leagues this site does not run.",
+    "icon": "scoreboard-2",
+    "updated": "2026-09-14",
+    "leagues": [
+      "theleague",
+      "afl"
+    ],
+    "body": [
+      "Every other scoreboard on this site shows you one league. MFL Live shows you all of them: sign in once with your MyFantasyLeague account and it reads every league that account plays in — this league, the other one, and the ones nobody here has ever heard of — then puts every matchup on a single page. It lives at <a href=\"https://mfl.football/live\">its own address</a> rather than under a league, because it does not belong to one.",
+      {
+        "type": "list",
+        "heading": "What's on the board",
+        "items": [
+          "<strong>The NFL games strip, up top.</strong> The whole week's real games with live scores and clocks, so you can see what is still to come before you look at what it did to you.",
+          "<strong>One panel per league.</strong> Your matchup, both live totals, projected finals, how many starters each side has left, and a bar showing your share of the win. Doubleheader weeks show both games.",
+          "<strong>Tap a matchup for the lineups.</strong> Both teams, starters first in QB, RB, WR, TE, K, DEF order with several of a position grouped together, then the bench underneath with its own total — what you left on it, which is a different question from what you scored.",
+          "<strong>Scoring, across everything.</strong> A running list of every play that scored you points in any league. The same touchdown can appear more than once, and that is the point: one player started in three leagues really is three pieces of news.",
+          "<strong>Red zone.</strong> When one of your players' teams has the ball inside the twenty, it says so, and names who you have in the drive."
+        ]
+      },
+      {
+        "type": "list",
+        "heading": "Crests and names",
+        "items": [
+          "Teams in this league and the other one wear the crests you already know.",
+          "A team in an outside league whose name is a real NFL club — <em>Cowboys</em>, <em>Chiefs</em>, <em>New Orleans Saints</em> — gets that club's mark automatically. The match has to be exact, because a wrong crest is worse than none: <em>The Boondock Saints</em> is not the Saints.",
+          "Everyone else gets their initials. Nothing is guessed."
+        ]
+      },
+      "Switch leagues off in the board's own settings and it stops reading them altogether, which is what keeps a Sunday quick when you are in six of them. The choice is remembered on that device, so your phone and your laptop can watch different sets.",
+      "Scores refresh on their own while games are being played and ease off once everything is final. The pill beside the week number says when the board last actually heard from MyFantasyLeague — a page that says \"live\" but has not been confirmed in an hour is not live, and that is how you tell."
     ]
   }
 ]

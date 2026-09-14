@@ -1,0 +1,30 @@
+{
+  "id": "/live",
+  "name": "MFL Live",
+  "short_name": "MFL Live",
+  "description": "Live scoring for every one of your MyFantasyLeague teams, in one place",
+  "start_url": "/live",
+  "scope": "/live",
+  "display": "standalone",
+  "orientation": "portrait",
+  "theme_color": "#14161a",
+  "background_color": "#14161a",
+  "icons": [
+    {
+      "src": "/assets/mfl-live/icon-192.png",
+      "type": "image/png",
+      "sizes": "192x192"
+    },
+    {
+      "src": "/assets/mfl-live/icon-512.png",
+      "type": "image/png",
+      "sizes": "512x512"
+    },
+    {
+      "src": "/assets/mfl-live/icon-maskable-512.png",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "maskable"
+    }
+  ]
+}

@@ -1,0 +1,132 @@
+---
+/**
+ * MFL Live — which leagues the board watches.
+ *
+ * SSR shell around ONE hydrated island, and the island is load-bearing.
+ *
+ * The first cut was link-only: each toggle an `<a>` carrying the resulting
+ * `?leagues=` for this route to write. Correct, needed no JavaScript, and it
+ * felt like a page refresh on every tap because that is exactly what it was.
+ * `LeagueToggles` replaced it with optimistic state and a background POST to
+ * `/api/live-leagues`. THERE IS NO LINK FALLBACK LEFT — the switches are the
+ * only way to change the selection, which is why they hydrate on load rather
+ * than idle.
+ *
+ * THE COOKIE IS STILL WRITTEN HERE, IN THE ROUTE, for the `?leagues=` a link
+ * elsewhere may still carry. `Astro.cookies.set()` from an imported component
+ * runs after the response headers are committed, throws `ResponseSentError`
+ * and blanks the page — the Sunday Ticket board shipped exactly that on its
+ * first click. Reads are fine anywhere; only the write is route-only.
+ */
+import MflAppLayout from '../../layouts/MflAppLayout.astro';
+import LeagueToggles from '../../components/shared/mfl-live/LeagueToggles';
+import { getAuthUser } from '../../utils/auth';
+import { discoverBoardLeagues, readViewerFranchiseNames } from '../../utils/cross-league-live';
+import {
+  MFL_LIVE_LEAGUE_COOKIE,
+  rememberMflLiveChoice,
+  resolveMflLiveLeagues,
+} from '../../utils/mfl-live-selection';
+import { resolveFranchiseIdentity } from '../../utils/mfl-live-identity';
+import '../../styles/mfl-live.css';
+
+export const prerender = false;
+
+const authUser = getAuthUser(Astro.request);
+
+// Route-only, and BEFORE anything reads the cookie back, so a click's own
+// choice is what this render reflects.
+if (authUser) rememberMflLiveChoice(Astro.url, Astro.cookies);
+
+let leagues: Awaited<ReturnType<typeof discoverBoardLeagues>> = [];
+let enabled: string[] = [];
+/** League id -> the viewer's own franchise name, for leagues myleagues left blank. */
+let viewerNames: Record<string, string> = {};
+let loadFailed = false;
+
+if (authUser) {
+  try {
+    leagues = await discoverBoardLeagues(authUser);
+    ({ enabled } = resolveMflLiveLeagues(
+      Astro.url.searchParams.get('leagues'),
+      Astro.cookies.get(MFL_LIVE_LEAGUE_COOKIE)?.value ?? null,
+      leagues,
+    ));
+    // Never fatal: a missing name costs a sub-line, and this page's job is
+    // the toggles.
+    viewerNames = await readViewerFranchiseNames(authUser, leagues).catch(() => ({}));
+  } catch {
+    loadFailed = true;
+  }
+}
+
+/**
+ * The rows, as plain data for the island.
+ *
+ * The identity ladder runs SERVER-side so the marks and names are in the first
+ * paint rather than appearing after hydration — and so the client never needs
+ * the league configs the ladder reads.
+ */
+const rows = leagues.map((league) => {
+  // The ladder's name, not `league.franchiseName`. `myleagues` fills that for
+  // a real MFL cookie, but the session FALLBACK — the path that puts the
+  // owner's own league on the board when myleagues omitted it — leaves it
+  // blank, and an empty sub-line reads as broken.
+  const identity = resolveFranchiseIdentity({
+    franchiseId: league.franchiseId,
+    // The league's OWN export first: `myleagues` leaves `franchise_name`
+    // blank for most leagues this site does not host, which is what made
+    // every one of them read "Franchise 0015" here — and, on the board, what
+    // stopped their NFL crests resolving at all.
+    franchiseName: viewerNames[league.id] || league.franchiseName,
+    leagueSlug: league.registered?.slug ?? null,
+  });
+  return {
+    id: league.id,
+    name: league.name,
+    franchiseName: identity.name,
+    registered: !!league.registered,
+    icon: identity.icon,
+    initials: identity.initials,
+  };
+});
+
+---
+
+<MflAppLayout title="Leagues — MFL Live" description="Choose which leagues the board watches.">
+	{!authUser ? (
+		<section class="mls">
+			<h1 class="mls__title">Leagues</h1>
+			<p class="mls__lede">Sign in to choose which leagues the board watches.</p>
+			<a class="mls__cta" href="/login?redirect=/live/settings">Sign in with MyFantasyLeague</a>
+		</section>
+	) : loadFailed ? (
+		<section class="mls">
+			<h1 class="mls__title">Leagues</h1>
+			<p class="mls__lede">
+				Couldn&rsquo;t read your leagues from MyFantasyLeague just now. Your choices are
+				safe — nothing was changed.
+			</p>
+			<a class="mls__back" href="/live">Back to the board</a>
+		</section>
+	) : (
+		<section class="mls">
+			<a class="mls__back" href="/live">&larr; Board</a>
+			<h1 class="mls__title">Leagues</h1>
+			<p class="mls__lede">
+				Every league your MyFantasyLeague account is in is on by default. Switch one
+				off and the board stops reading it.
+			</p>
+
+			{rows.length === 0 ? (
+				<p class="mls__lede">
+					MFL didn&rsquo;t list any leagues for this account. If you have just joined one,
+					it can take a few minutes to appear.
+				</p>
+			) : (
+				<LeagueToggles client:load leagues={rows} initialEnabled={enabled} />
+			)}
+		</section>
+	)}
+</MflAppLayout>
+

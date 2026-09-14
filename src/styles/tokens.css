@@ -729,6 +729,95 @@ html[data-league="bb1"] {
 }
 
 /* ========================================
+   MFL Live — the league-neutral app on the shared host
+   The AFL's design language with the navy family replaced by neutral
+   near-black: black is to this surface what --afl-navy is to the AFL's. The
+   red accent and the gold family are deliberately KEPT, because "match the
+   AFL, but black instead of the blue" is the brief — this is a sibling of
+   that theme, not a new identity.
+
+   Why a data-league value for a host that belongs to no league: the token
+   system keys every per-league palette off this attribute, and mfl.football
+   needs a palette. It is NOT a registry league and must never appear in
+   HOST_TO_SLUG or leagues-data.mjs — see MflAppLayout.astro, which sets the
+   attribute directly rather than deriving it from a league lookup.
+
+   Paired with html.dark[data-league="mfl"] in tokens-dark.css, which carries
+   the surface elevation ramp. Both blocks are complete on purpose: a
+   var(--x) defined in only one of them renders its fallback in the other,
+   which is how a theme ships looking perfect in light and white-on-black in
+   dark (docs/claude/rules/theming-and-assets.md).
+   ======================================== */
+html[data-league="mfl"] {
+  --mfl-ink: #14161a;                          /* the brand near-black — this theme's --afl-navy */
+  --mfl-ink-deep: #0b0c0f;                     /* deeper still: footer, breadcrumb strip */
+  --afl-gold: #d97706;                         /* shared amber accent — same values as the AFL block, redeclared because that block is scoped to its own data-league and resolves to nothing here */
+  --afl-trophy-gold: #c9a44c;                  /* metallic badge gold */
+  --afl-gold-text: #b45309;                    /* gold as FOREGROUND — 5.0:1 on a white card, where the other two fail AA */
+  --afl-trophy-gold-light: #e6c976;
+  --breadcrumb-bar-bg: var(--mfl-ink);         /* top strip */
+  --inverse-bg: var(--mfl-ink);                /* footer (via --inverse-content-bg) */
+  --league-accent: #c41e3a;                    /* accent — the AFL's red */
+  --header-nav-icon-color: var(--mfl-ink);            /* nav icons — near-black */
+  --header-nav-icon-hover-color: var(--league-accent); /* nav icons hover — red */
+  --header-nav-label-color: var(--league-accent);
+  --header-nav-label-hover-color: var(--league-accent);
+
+  /* ── Primary = the league accent, not TheLeague blue ──
+     `--color-primary` is TheLeague's #1c497c on bare :root, and almost every
+     button, input-focus and nav-active token is declared as
+     `var(--color-primary)` there. Both that declaration and this block sit on
+     <html>, so re-pointing the ONE variable re-points all of them — a red
+     Sign In button, red focus rings, a red nav pill — without restating the
+     component tokens. Undefined here, they render TheLeague blue on the black
+     board in BOTH themes, which is the classic missing-token trap.
+
+     #c41e3a is the same red already used for --league-accent above, so the
+     accent and the fills are one colour rather than two nearly-equal ones.
+     White on it is 5.84:1 (AA). */
+  --color-primary: #c41e3a;
+  --color-primary-dark: #a8172c;               /* hover/active step — white 7.44:1 */
+  /* Deliberately DARKER than --color-primary, despite the name. It feeds
+     --link-color-accent, which is TEXT on a white card: the lighter step this
+     name implies (#e04a60) is 3.95:1 and fails AA. Same call, and the same
+     reason, as --afl-gold-text. */
+  --color-primary-light: #a8172c;
+
+  /* The rgba() literals the base :root hardcodes off TheLeague blue. These
+     carry no var(), so the re-point above cannot reach them. */
+  --shadow-focus-ring: 0 0 0 3px rgba(196, 30, 58, 0.25);
+  --nav-active-bg: rgba(196, 30, 58, 0.1);
+  --nav-verify-bg: rgba(196, 30, 58, 0.05);
+  --nav-verify-hover-bg: rgba(196, 30, 58, 0.1);
+  --accent-content-boxshadow-color: #c41e3a35;
+  --primary-content-boxshadow-color: #c41e3a28;
+  --secondary-content-boxshadow-color: #c41e3a28;
+
+  /* ── Tokens html.dark defines and bare :root does NOT ──
+     `mfl-live.css` reads these 20 times with no fallback. Defined only in
+     tokens-dark.css, they resolve to nothing in LIGHT, and CSS does not fail
+     quietly in the same way for each kind:
+
+       color:        invalid at computed-value time -> INHERITS, so every
+                     "secondary" string rendered at full body colour and the
+                     board had no text hierarchy at all in light mode.
+       background:   -> transparent, which is why the position chip was a chip
+                     in dark and bare text in light.
+       border-color: -> currentColor, so a hairline separator drew at TEXT
+                     colour instead of a faint rule.
+
+     This is the "a var(--x) with no definition renders its fallback in BOTH
+     themes" trap from CLAUDE.md, in its nastier form: there was no fallback,
+     and light was the theme that lost. Defined here rather than patched at
+     each call site so one place answers for all twenty. */
+  --color-text-primary: #111827;               /* 17.7:1 on a white card */
+  --color-text-secondary: #646b76;             /* 5.4:1 on white, and 4.6:1 on the chip fill below — the chip is 0.62rem bold, too small for the large-text exemption */
+  --color-surface-3: #eceef1;                  /* elevated: the position chip, raised off the white card */
+  --color-border-subtle: #e8eaed;              /* hairline row separators */
+  --color-border-default: #dfe3e8;             /* the slightly stronger rule above the bench */
+}
+
+/* ========================================
    Focus Visible Styles
    ======================================== */
 :focus-visible {
