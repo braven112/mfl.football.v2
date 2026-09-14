@@ -486,7 +486,36 @@ multi-league Sunday.
 **Phase 4 — ESPN layer.** NFL games strip, cross-league scoring ticker,
 red-zone banner. Carries the AFL duplicate-player attribution rules
 (`playerId -> fid[]`, and the opposite dedupe for a merged matchup list) and
-the DEF-joins-by-team rule.
+the DEF-joins-by-team rule. BUILT.
+
+**Feed the strip `NflGame`'s real field names.** The first cut of `GamesStrip`
+read `away.abbreviation`, `statusDetail` and `status` — none of which exist on
+the type. All three are `undefined` at runtime, so every game in the rail would
+have rendered as two blank team codes over a blank status, with only the scores
+real. The type ratchet caught it as +4 errors and nothing else would have: an
+invented field name has no runtime symptom until someone looks at the page
+during a live slate.
+
+The real shape is `home`/`away` as `{ code, score }` — both REQUIRED, so no
+optional chaining — and ONE status string, `shortDetail`, which ESPN already
+formats for all three states ("Sun 1:00 PM ET" / "8:12 - 3rd" / "Final"). The
+strip therefore needs no per-state branching, and the shipped `NflGamesStrip`
+reads it exactly the same way; the `Q{period} {clock}` fallback is only for the
+rare live game ESPN serves with the detail blank.
+
+There is no bespoke guard for this and there should not be: no MFL Live file
+contains a single `any` or `as` cast, so `tsc` covers every field access in the
+feature and `pnpm test:types` IS the guard. The lesson is to run it before
+pushing, not to write a second checker.
+
+**ESPN is unreachable from the dev sandbox — that is not a bug in this code.**
+`site.api.espn.com` sits behind an Akamai WAF that 403s the sandbox's egress:
+`curl` gets a 200, node's `fetch` gets an "Access Denied" HTML page (setting
+`User-Agent: curl/8.5.0` on the same node fetch flips it back to 200). The
+pre-existing `/api/nfl-scoreboard` returns empty locally for the same reason,
+which is how you tell it apart from your own wiring. Verify the ESPN layer on
+the Vercel preview, never locally — the preview returns a real slate with live
+games, situations and broadcasts.
 
 **Phase 5 — close-finish push.** New cross-league notification category. Note
 `NOTIFICATION_CATEGORIES` entries carry `requiresFeature` against a *league's*
