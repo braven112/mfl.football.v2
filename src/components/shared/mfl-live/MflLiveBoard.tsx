@@ -75,14 +75,22 @@ function GamesStrip({ games }: { games: NflGame[] }) {
         return (
           <div className="mlb-game" role="listitem" key={g.id}>
             <div className="mlb-game__row">
-              <span className="mlb-game__tm">{g.away?.abbreviation ?? ''}</span>
-              <span className="mlb-game__sc">{pre ? '—' : (g.away?.score ?? '')}</span>
+              <span className="mlb-game__tm">{g.away.code}</span>
+              <span className="mlb-game__sc">{pre ? '—' : g.away.score}</span>
             </div>
             <div className="mlb-game__row">
-              <span className="mlb-game__tm">{g.home?.abbreviation ?? ''}</span>
-              <span className="mlb-game__sc">{pre ? '—' : (g.home?.score ?? '')}</span>
+              <span className="mlb-game__tm">{g.home.code}</span>
+              <span className="mlb-game__sc">{pre ? '—' : g.home.score}</span>
             </div>
-            <div className={`mlb-game__st${live ? ' is-live' : ''}`}>{g.statusDetail || g.status || ''}</div>
+            {/*
+              `shortDetail` is ESPN's one string for all three states — "Sun 1:00 PM
+              ET", "8:12 - 3rd", "Final" — so the strip needs no per-state
+              formatting. The clock fallback is for the rare live game ESPN
+              serves with the detail blank.
+            */}
+            <div className={`mlb-game__st${live ? ' is-live' : ''}`}>
+              {g.shortDetail || (live ? `Q${g.period} ${g.clock}` : '')}
+            </div>
           </div>
         );
       })}
