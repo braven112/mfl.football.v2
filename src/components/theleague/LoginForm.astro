@@ -33,6 +33,17 @@ export interface Props {
   logoAlt?: string;
   /** Subtitle override under "Sign In" */
   subtitle?: string;
+  /**
+   * Where to land when no redirect can be resolved, AND the floor every
+   * resolved redirect is checked against.
+   *
+   * A prop rather than a constant because this component is no longer
+   * TheLeague's alone — the MFL app renders it too, and an owner who signs in
+   * at mfl.football/login must not be dropped on TheLeague's homepage.
+   */
+  fallbackRedirect?: string;
+  /** Accessible name for the <form>. Names the surface being signed in to. */
+  formLabel?: string;
   /** Optional class for consumer styling hooks */
   class?: string;
 }
@@ -46,6 +57,8 @@ const {
   logoSrc = '/assets/logos/theleague-logo.svg',
   logoAlt = 'The League logo',
   subtitle = 'Enter your MFL credentials',
+  fallbackRedirect = '/theleague',
+  formLabel = 'Sign in to The League',
   class: className,
 } = Astro.props;
 ---
@@ -53,6 +66,7 @@ const {
 <div
   class:list={['login-form', { 'login-form--compact': compact }, className]}
   data-redirect-url={redirectUrl}
+  data-fallback-redirect={fallbackRedirect}
   data-league-id={leagueId}
   data-season-year={seasonYear != null ? String(seasonYear) : ''}
 >
@@ -75,7 +89,7 @@ const {
   <form
     class="login-form__form"
     id="login-form"
-    aria-label="Sign in to The League"
+    aria-label={formLabel}
   >
     <!-- Error Banner -->
     <div
@@ -145,8 +159,22 @@ const {
 <script>
   import { DEFAULT_LEAGUE_ID } from '../../config/leagues';
 
+  /**
+   * Bound on astro:page-load, NOT at module scope.
+   *
+   * Both layouts that render this form mount the ClientRouter, and a module
+   * script runs ONCE PER DOCUMENT: it executes the first time a page carrying
+   * it is loaded and never again. Navigating /login -> /live -> /login
+   * therefore swapped in a fresh form with no submit handler on it, and the
+   * Sign In button did nothing. The dataset guard is the other half —
+   * astro:page-load fires on EVERY navigation, so without it a form that
+   * survived the swap would stack a second handler and post twice.
+   */
+  function initLoginForms() {
   // Multi-instance safe — each .login-form gets its own handler
   document.querySelectorAll<HTMLElement>('.login-form').forEach((formWrapper) => {
+    if (formWrapper.dataset.loginBound === '1') return;
+    formWrapper.dataset.loginBound = '1';
     const form = formWrapper.querySelector('form') as HTMLFormElement | null;
     const submitBtn = formWrapper.querySelector('.login-form__submit') as HTMLButtonElement | null;
     const errorContainer = formWrapper.querySelector('.login-form__error');
@@ -170,6 +198,9 @@ const {
 
     // Server-rendered redirect from component prop (highest priority)
     const componentRedirect = formWrapper.dataset.redirectUrl;
+    // The floor for every branch below. TheLeague's homepage only when the
+    // consumer did not say otherwise — the MFL app passes /live.
+    const fallbackRedirect = formWrapper.dataset.fallbackRedirect || '/theleague';
     const leagueId = formWrapper.dataset.leagueId || DEFAULT_LEAGUE_ID;
     const seasonYearAttr = formWrapper.dataset.seasonYear || '';
     const seasonYear = /^\d{4}$/.test(seasonYearAttr) ? Number(seasonYearAttr) : null;
@@ -222,18 +253,18 @@ const {
 
         let finalUrl = componentRedirect
           || sessionStorage.getItem('loginRedirectUrl')
-          || '/theleague';
+          || fallbackRedirect;
 
         if (finalUrl.includes('://')) {
           try { finalUrl = new URL(finalUrl).pathname; }
-          catch { finalUrl = '/theleague'; }
+          catch { finalUrl = fallbackRedirect; }
         }
 
         // Same-origin paths only: protocol-relative (`//evil.com`) and
         // scheme-only (`javascript:…`) values slip past the '://' check
         // above but both fail this one.
         if (!finalUrl.startsWith('/') || finalUrl.startsWith('//')) {
-          finalUrl = '/theleague';
+          finalUrl = fallbackRedirect;
         }
 
         sessionStorage.removeItem('loginRedirectUrl');
@@ -274,6 +305,9 @@ const {
       }
     });
   });
+  }
+
+  document.addEventListener('astro:page-load', initLoginForms);
 </script>
 
 <style>

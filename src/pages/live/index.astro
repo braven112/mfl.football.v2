@@ -15,10 +15,14 @@
  *
  * ── WHY THIS DOES NOT REDIRECT WHEN SIGNED OUT ────────────────────────────
  * A signed-out visitor gets the shell and a sign-in call to action, not a
- * bounce. `/theleague/login` validates its `?redirect=` against
- * `startsWith('/theleague')`, so a bounce from here could not come back here —
- * and the board's empty state is designed to render with no data at all, so
- * there is a real page to show.
+ * bounce. The board's empty state is designed to render with no data at all,
+ * so there is a real page to show, and a board you can look at before signing
+ * in explains itself better than a login form does.
+ *
+ * Sign-in goes to the app's OWN `/login`, which defaults back here. It used to
+ * point at `/theleague/login`, whose `?redirect=` is validated against
+ * `startsWith('/theleague')` — so the trip back to this page was silently
+ * dropped and owners landed on TheLeague's homepage instead.
  */
 import MflAppLayout from '../../layouts/MflAppLayout.astro';
 import MflLiveBoard from '../../components/shared/mfl-live/MflLiveBoard';
@@ -87,7 +91,7 @@ if (authUser && week) {
 				Every matchup from every league your MyFantasyLeague account is in, scoring
 				live on one screen.
 			</p>
-			<a class="mfl-live-intro__cta" href="/theleague/login">Sign in with MyFantasyLeague</a>
+			<a class="mfl-live-intro__cta" href="/login">Sign in with MyFantasyLeague</a>
 		</section>
 	) : !week ? (
 		<section class="mfl-live-intro">
@@ -104,7 +108,7 @@ if (authUser && week) {
 				Something went wrong reading MyFantasyLeague. Refreshing usually sorts it; if
 				it doesn&rsquo;t, your MFL sign-in may have expired.
 			</p>
-			<a class="mfl-live-intro__cta" href="/theleague/login">Sign in again</a>
+			<a class="mfl-live-intro__cta" href="/login">Sign in again</a>
 		</section>
 	) : (
 		<MflLiveBoard

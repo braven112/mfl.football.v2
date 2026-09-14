@@ -762,6 +762,36 @@ html[data-league="mfl"] {
   --header-nav-icon-hover-color: var(--league-accent); /* nav icons hover — red */
   --header-nav-label-color: var(--league-accent);
   --header-nav-label-hover-color: var(--league-accent);
+
+  /* ── Primary = the league accent, not TheLeague blue ──
+     `--color-primary` is TheLeague's #1c497c on bare :root, and almost every
+     button, input-focus and nav-active token is declared as
+     `var(--color-primary)` there. Both that declaration and this block sit on
+     <html>, so re-pointing the ONE variable re-points all of them — a red
+     Sign In button, red focus rings, a red nav pill — without restating the
+     component tokens. Undefined here, they render TheLeague blue on the black
+     board in BOTH themes, which is the classic missing-token trap.
+
+     #c41e3a is the same red already used for --league-accent above, so the
+     accent and the fills are one colour rather than two nearly-equal ones.
+     White on it is 5.84:1 (AA). */
+  --color-primary: #c41e3a;
+  --color-primary-dark: #a8172c;               /* hover/active step — white 7.44:1 */
+  /* Deliberately DARKER than --color-primary, despite the name. It feeds
+     --link-color-accent, which is TEXT on a white card: the lighter step this
+     name implies (#e04a60) is 3.95:1 and fails AA. Same call, and the same
+     reason, as --afl-gold-text. */
+  --color-primary-light: #a8172c;
+
+  /* The rgba() literals the base :root hardcodes off TheLeague blue. These
+     carry no var(), so the re-point above cannot reach them. */
+  --shadow-focus-ring: 0 0 0 3px rgba(196, 30, 58, 0.25);
+  --nav-active-bg: rgba(196, 30, 58, 0.1);
+  --nav-verify-bg: rgba(196, 30, 58, 0.05);
+  --nav-verify-hover-bg: rgba(196, 30, 58, 0.1);
+  --accent-content-boxshadow-color: #c41e3a35;
+  --primary-content-boxshadow-color: #c41e3a28;
+  --secondary-content-boxshadow-color: #c41e3a28;
 }
 
 /* ========================================

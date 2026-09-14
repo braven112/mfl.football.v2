@@ -146,7 +146,7 @@ const leagueLinks = ALL_LEAGUES.map((league) => ({
 				{authUser ? (
 					<button type="button" class="mfl-bar__link mfl-bar__signout" data-mfl-signout>Sign out</button>
 				) : (
-					<a class="mfl-bar__link" href="/theleague/login?redirect=/live">Sign in</a>
+					<a class="mfl-bar__link" href={`/login?redirect=${encodeURIComponent(Astro.url.pathname + Astro.url.search)}`}>Sign in</a>
 				)}
 			</div>
 		</header>

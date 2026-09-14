@@ -1,3 +1,109 @@
 ---
-return Astro.redirect('/theleague/login', 301);
+/**
+ * Sign in to the MFL app.
+ *
+ * This route used to be an unconditional 301 to `/theleague/login`, from the
+ * days when the shared host served nothing of its own. It now serves the app's
+ * OWN sign-in — MFL chrome, MFL theme — and sends you to the board afterwards.
+ *
+ * ── WHY THE PAGE LIVES AT THE ROOT, NOT AT /live/login ────────────────────
+ * `/live` is one FEATURE of this app, not its root. Signing in is an
+ * app-level act that will outlive the board being the only thing here, so it
+ * sits beside the features rather than inside one of them.
+ *
+ * ── WHO STILL GETS THE REDIRECT ───────────────────────────────────────────
+ * A league's OWN apex (theleague.us, afl-fantasy.com, and their staging
+ * twins) still belongs to that league, so `/login` there goes to that
+ * league's own sign-in. The gate is the host->slug map rather than
+ * `isSharedAppHost`, deliberately: that helper lists exactly two hostnames,
+ * so every Vercel preview URL would fail it and this page would be
+ * unreachable on the one environment it can be tested in. "Not a league's
+ * apex" is the honest test, and it is what makes previews and localhost
+ * behave like the shared host.
+ *
+ * ── WHICH LEAGUE THE CREDENTIALS GO TO ────────────────────────────────────
+ * TheLeague, via the registry default. MFL's own login is account-wide, and
+ * the board discovers every league from `myleagues` afterwards, so this only
+ * decides which league the SESSION is scoped to. The league-less variant
+ * (`loginToMFL` already falls back to the account's first league) is the
+ * planned follow-up — see docs/plans/mfl-live-app.md.
+ */
+import MflAppLayout from '../layouts/MflAppLayout.astro';
+import LoginForm from '../components/theleague/LoginForm.astro';
+import { getAuthUser } from '../utils/auth';
+import { buildHostToSlugMap } from '../config/leagues';
+import { getCurrentLeagueYear } from '../utils/league-year';
+import {
+  MFL_LOGIN_DEFAULT_REDIRECT,
+  resolveMflLoginRedirect,
+} from '../utils/mfl-login-redirect';
+
+export const prerender = false;
+
+// A league's own apex keeps its own sign-in. `Astro.url.search` rides along so
+// a `?redirect=` survives the hop.
+const leagueSlug = buildHostToSlugMap()[Astro.url.hostname];
+if (leagueSlug) {
+  return Astro.redirect(`/${leagueSlug}/login${Astro.url.search}`, 301);
+}
+
+// `next` as well as `redirect`, matching both league login pages.
+const target = resolveMflLoginRedirect(
+  Astro.url.searchParams.get('redirect') ?? Astro.url.searchParams.get('next'),
+);
+
+// Already signed in? Go where you were going. The franchise check keeps a
+// franchise-less JWT on the form rather than bouncing it to a board that
+// cannot resolve a team for it.
+const authUser = getAuthUser(Astro.request);
+if (authUser?.franchiseId) {
+  return Astro.redirect(target);
+}
+
+const seasonYear = getCurrentLeagueYear();
 ---
+
+<MflAppLayout title="Sign in — MFL" description="Sign in with your MyFantasyLeague account.">
+	<section class="mfl-login">
+		<LoginForm
+			redirectUrl={target}
+			fallbackRedirect={MFL_LOGIN_DEFAULT_REDIRECT}
+			formLabel="Sign in to MFL"
+			showLogo={false}
+			seasonYear={seasonYear}
+			subtitle="Use your MyFantasyLeague username and password"
+		/>
+
+		<p class="mfl-login__note">
+			One sign-in covers every league your MyFantasyLeague account is in. The board reads
+			them all; you choose which ones it watches.
+		</p>
+	</section>
+</MflAppLayout>
+
+<style>
+	/*
+	   Scoped styles are fine here — everything below styles THIS page's own
+	   markup, not the imported component's. `LoginForm` carries its own scoped
+	   CSS and reads the theme tokens, so it turns black-and-red under
+	   `data-league="mfl"` with nothing needed from this file.
+	*/
+	.mfl-login {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: 1.5rem;
+		/* Not vertically centred: on a phone the keyboard opening would shove
+		   the form up past the top of the viewport. */
+		padding: clamp(2rem, 8vh, 4.5rem) 1rem 3rem;
+	}
+
+	.mfl-login__note {
+		max-width: 400px;
+		margin: 0;
+		text-align: center;
+		font-size: 0.8125rem;
+		line-height: 1.55;
+		color: var(--color-text-secondary, var(--color-gray-500));
+	}
+</style>

@@ -659,6 +659,50 @@ html.dark[data-league="mfl"] {
      with the red accent edge. ── */
   --breadcrumb-bar-bg: var(--mfl-ink-deep, #0b0c0f);
   --breadcrumb-bar-border: var(--league-accent, #ef5350);
+
+  /* ── Primary = red, restated as literals ──
+     The light block re-points ONE variable and the component tokens follow,
+     because bare :root declares them as var(--color-primary). html.dark does
+     NOT: it hardcodes #2563eb / #3b82f6 / rgba(59,130,246,…) into each one.
+     So every fill, ring and active state has to be named here or the black
+     board ships bright-blue buttons in dark mode.
+
+     TWO reds, because one cannot do both jobs on this ramp:
+
+       FILL  #d81b41 — white text 5.06:1 (AA) AND 3.19:1 against the #1e2126
+             card, so the button reads as a button. The obvious choice, the
+             light theme's #c41e3a, is only 2.76:1 against that card and
+             sinks into it.
+       TEXT  #ef5350 — the --league-accent above, 4.63:1 on the card. As a
+             FILL it carries white at just 3.49:1 and fails AA, which is
+             exactly why it is not the button. */
+  --color-primary: #d81b41;
+  --color-primary-dark: #c41e3a;
+  --color-primary-light: #ef5350;              /* accent links / brighter step */
+
+  --btn-primary-bg: #d81b41;
+  --btn-primary-bg-hover: #e02a4d;             /* brighter on hover, as the rest of this ramp does */
+  --btn-primary-bg-focus: #e02a4d;
+  --btn-primary-border: #d81b41;
+  --btn-primary-border-hover: #ef5350;
+
+  --input-border-focus: #ef5350;
+  --shadow-focus-ring: 0 0 0 3px rgba(239, 83, 80, 0.4);
+  --shadow-btn-hover: 0 10px 30px rgba(216, 27, 65, 0.3);
+  --btn-icon-text-focus: #ef5350;
+
+  --nav-active-bg: rgba(216, 27, 65, 0.15);
+  --nav-active-text: #ef5350;
+  --nav-active-border-left: #ef5350;
+  --nav-focus-ring: 0 0 0 2px #ef5350;
+  --nav-verify-border: #d81b41;
+  --nav-verify-text: #ef5350;                  /* TEXT, so the text red — not the fill */
+  --nav-switcher-active-bg: #d81b41;           /* FILL behind white, so the fill red */
+  --inverse-bg-accent: #d81b41;
+
+  /* --color-info and the info badge/alert stay BLUE on purpose: they are the
+     semantic "information" colour, not the brand, and turning them red would
+     collide with --color-error. */
 }
 
 /* ========================================
