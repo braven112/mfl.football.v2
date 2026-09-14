@@ -8,8 +8,8 @@
  * down can happen afterwards.
  *
  * So the island flips optimistically and calls this in the background. The
- * links stay in the markup as the no-JS path, which this endpoint does not
- * replace.
+ * links did NOT stay as a no-JS path — they were removed with the rewrite, so
+ * this endpoint is the only writer the switches have.
  *
  * POST rather than GET: it changes stored state, so it must not be something a
  * prefetch or a crawler can trigger.

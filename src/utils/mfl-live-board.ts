@@ -235,10 +235,25 @@ export async function assembleMflLiveBoard(
       continue;
     }
 
-    // BOTH maps. The bench is rendered now, and a bench row with no meta has
-    // no name, no position and therefore no place in the order.
-    for (const rows of Object.values(snapshot.players)) for (const r of rows) addMeta(r.id);
-    for (const rows of Object.values(snapshot.bench)) for (const r of rows) addMeta(r.id);
+    // ONLY the franchises the viewer has a stake in — his own and whoever he
+    // is playing. `snapshot.players`/`bench` are keyed by EVERY franchise in
+    // the league, and iterating them shipped the whole league's rosters in
+    // `playerMeta`: measured at 338 entries where 65 were renderable, 81%
+    // waste, on a payload that refreshes every 25-90s for every connected
+    // client. Nothing reads the excess — `scoreLeague`, `orderLineupRows`,
+    // `buildBroadcastMoments` and `selectRedZoneAlerts` are all called for
+    // this same narrow set.
+    //
+    // `toLeagueViewer` (broadcast-live-source.ts) already narrows exactly this
+    // way, for exactly this reason. This is the same rule applied to the map
+    // that actually crosses the wire.
+    //
+    // BOTH maps per franchise: the bench is rendered now, and a bench row with
+    // no meta has no name, no position and therefore no place in the order.
+    for (const fid of [league.franchiseId, ...pairs.map((p) => p.opponentId)]) {
+      for (const r of snapshot.players[fid] ?? []) addMeta(r.id);
+      for (const r of snapshot.bench[fid] ?? []) addMeta(r.id);
+    }
 
     const scores = scoreLeague(
       league.id,

@@ -2,17 +2,21 @@
 /**
  * MFL Live — which leagues the board watches.
  *
- * SSR with NO island, deliberately. Each toggle is a LINK carrying the
- * resulting `?leagues=` and the route below writes the cookie — the same shape
- * Sunday Ticket's chips use. A board-settings page that needs JavaScript to
- * record a preference is a page that silently does nothing when the bundle is
- * slow, and there is no interaction here worth a hydration boundary.
+ * SSR shell around ONE hydrated island, and the island is load-bearing.
  *
- * THE COOKIE IS WRITTEN HERE, IN THE ROUTE. `Astro.cookies.set()` from an
- * imported component runs after the response headers are committed, throws
- * `ResponseSentError` and blanks the page — the Sunday Ticket board shipped
- * exactly that on its first click. Reads are fine anywhere; only the write is
- * route-only.
+ * The first cut was link-only: each toggle an `<a>` carrying the resulting
+ * `?leagues=` for this route to write. Correct, needed no JavaScript, and it
+ * felt like a page refresh on every tap because that is exactly what it was.
+ * `LeagueToggles` replaced it with optimistic state and a background POST to
+ * `/api/live-leagues`. THERE IS NO LINK FALLBACK LEFT — the switches are the
+ * only way to change the selection, which is why they hydrate on load rather
+ * than idle.
+ *
+ * THE COOKIE IS STILL WRITTEN HERE, IN THE ROUTE, for the `?leagues=` a link
+ * elsewhere may still carry. `Astro.cookies.set()` from an imported component
+ * runs after the response headers are committed, throws `ResponseSentError`
+ * and blanks the page — the Sunday Ticket board shipped exactly that on its
+ * first click. Reads are fine anywhere; only the write is route-only.
  */
 import MflAppLayout from '../../layouts/MflAppLayout.astro';
 import LeagueToggles from '../../components/shared/mfl-live/LeagueToggles';
