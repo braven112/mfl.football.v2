@@ -450,8 +450,38 @@ honest empty state gated on `hasLiveSignal`. No ESPN. Includes the three-rung
 identity ladder and the NFL name matcher + its guard test — artwork is what
 makes an outside league feel like a real card rather than a row of text.
 
-**Phase 3 — `/live/settings`.** League toggles, ordering, persistence. Cookie
-or Redis is still open (see below).
+**Phase 3 — `/live/settings`. DONE.** League toggles, SSR with no island —
+each control is a link carrying `?leagues=` and the route writes the cookie.
+
+**Persistence decided: the COOKIE, per device.** The plan left this open; the
+call is that a phone-first board you install to a home screen is set up once
+on the phone, and a per-device answer is honest about that. `live_leagues`,
+180 days, its own cookie — never `st_leagues` or `bc_leagues`, because three
+screens asking the same question must not rewrite each other. Redis against
+the MFL user id stays a clean drop-in if cross-device sync is ever wanted:
+`resolveMflLiveLeagues` is the only reader and takes the stored value as an
+argument.
+
+Two things this phase turned up:
+
+- **The shared toggle helper is dangerous with an all-on default.**
+  `toggleLeagueSelection` returns `null` for an empty result and `null` means
+  "the default", which here is EVERY league — so switching off your last one
+  would have switched them all back on. `toggleMflLiveLeague` refuses that and
+  the page locks the control, because silently doing the reverse of a tap is
+  worse than declining it. Collapsing to `null` when everything IS on is kept
+  deliberately: the cookie then reads "default" rather than pinning today's
+  list, so a league joined next month appears by itself.
+- **`league.franchiseName` is blank on the session-fallback path.** `myleagues`
+  fills it for a real MFL cookie, but the fallback that puts the owner's own
+  league on the board when myleagues omitted it does not — so rows read the
+  identity ladder's name instead. Found by rendering the page, not by reading
+  it.
+
+**Ordering is NOT built** and is deliberately deferred: with one league it has
+nothing to sort, and the right ordering (most-watched first? your closest
+matchup first?) is a question worth asking once the board has seen a real
+multi-league Sunday.
 
 **Phase 4 — ESPN layer.** NFL games strip, cross-league scoring ticker,
 red-zone banner. Carries the AFL duplicate-player attribution rules
@@ -563,9 +593,10 @@ From `docs/claude/rules/live-scoring.md` and
 2. **Which NFL nickname aliases to add**, once owners have used it. The table
    ships holding relocations only. Candidates when feedback arrives: `Niners`,
    `Bucs`, `Pats`, `Da Bears`, `Hawks`, `Jags`.
-3. **`/live/settings` persistence** — cookie (per device, zero new storage) or
-   Redis against the MFL user id (follows you across devices, needs a scoped
-   key). Decision 7 chose the *route*, not the *storage*.
+3. **How `/live` should ORDER the leagues.** Settled: persistence is the
+   cookie, per device (see phase 3). Still open is the sort — registry leagues
+   first? closest matchup first? most recently opened? Worth asking after a
+   real multi-league Sunday rather than guessing now.
 4. **Close-finish thresholds** — how many points, and how late? "Within 10 with
    your last starter playing" is a different alert from "within 10 at the two
    minute warning".
