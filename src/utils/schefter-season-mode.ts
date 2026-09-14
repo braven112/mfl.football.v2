@@ -40,8 +40,11 @@
  *   That constant is the Pecking Order's own tuning; sharing it would mean
  *   retuning that column silently moves the feed, and vice versa. Only the
  *   kickoff math is shared, because that part is a fact about the NFL.
- * - `isInSeason()` from current-week.ts is table-driven off SEASON_CONFIGS
- *   (2024-2026 only) and expires. The Labor Day-derived math does not.
+ * - `isInSeason()` from current-week.ts answers "is a week in progress",
+ *   which closes the moment week 22 lapses. This module needs the wider feed
+ *   window that runs through the Super Bowl. Both now read the same published
+ *   schedule underneath (src/utils/nfl-week-starts.mjs); they differ in where
+ *   they choose to end, not in what they believe about the calendar.
  */
 
 import { readFileSync } from 'node:fs';

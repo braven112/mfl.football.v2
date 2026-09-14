@@ -65,10 +65,10 @@
     {
       "id": "afl-regular-season-ends",
       "name": "Regular Season Ends",
-      "description": "Week 13 closes the regular season. Premier/D-League cutoff and conference seeds lock.",
+      "description": "Week 14 closes the regular season. Premier/D-League cutoff and conference seeds lock.",
       "category": "regular-season",
       "icon": "gavel",
-      "startDate": { "type": "computed", "rule": "after-week-16" },
+      "startDate": { "type": "computed", "rule": "afl-regular-season-ends" },
       "urgencyDays": 7,
       "sortOrder": 8
     },

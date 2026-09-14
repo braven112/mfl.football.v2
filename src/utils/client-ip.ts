@@ -1,36 +1,59 @@
 /**
- * Resolve the calling client's IP address from proxy headers.
+ * Resolve who is calling, from proxy headers, for rate-limiting an
+ * UNAUTHENTICATED endpoint — there is no session there, so the shared
+ * limiter's franchiseId key is unavailable.
  *
- * Used to key rate limits on UNAUTHENTICATED endpoints, where there is no
- * session and therefore no franchiseId for `checkRateLimit` to key on.
+ * Two values, because no single header is both fine-grained AND trustworthy:
  *
- * Header order is a trust ranking, not a convenience:
+ * - `client` identifies the individual caller. Behind Cloudflare that is
+ *   `CF-Connecting-IP`, which Cloudflare overwrites on every request. But
+ *   this app is ALSO reachable on its raw `*.vercel.app` deployment URLs,
+ *   which bypass Cloudflare entirely (deployment protection is off
+ *   project-wide, and cannot be turned on without 401ing the staging sites,
+ *   which are preview deployments). On that path nothing overwrites the
+ *   header, so a caller can send their own and rotate it per request. Treat
+ *   `client` as attacker-controlled.
  *
- * 1. `CF-Connecting-IP` — authoritative. Cloudflare OVERWRITES it on every
- *    request, so a client cannot forge it. Every real hostname for this site
- *    is proxied through Cloudflare (they resolve to Cloudflare IPs), so this
- *    is the header that will actually be present in production.
- * 2. `X-Forwarded-For` — best effort. Vercel sets it, but on a URL that
- *    bypasses Cloudflare (a raw *.vercel.app deployment) a caller can send
- *    their own and shift the leftmost entry. Treat a limit keyed on this as
- *    a speed bump, not a control.
- * 3. `X-Real-IP` — last resort, same caveat.
+ * - `nearestHop` is the last entry of `X-Forwarded-For`: the hop closest to
+ *   us, appended by our own infrastructure rather than supplied by the
+ *   caller. It is coarse — behind Cloudflare it is a Cloudflare edge address
+ *   shared by many real users, so it must never carry a per-user-sized limit
+ *   — but it is the one value a caller cannot forge, which makes it the
+ *   right key for a ceiling. Taking the LAST entry rather than the first is
+ *   what makes this hold whether the platform appends to a caller-supplied
+ *   chain or replaces it outright: in the replace case there is one entry and
+ *   last == first == the real address.
  *
- * Returns null when no header yields anything usable. Callers must decide
- * what that means for them; for a rate limit the safe reading is "cannot
- * identify this caller", not "this caller is fine".
+ * A limit keyed only on `client` is not a limit at all against a caller who
+ * can reach the origin directly; a limit keyed only on `nearestHop` locks out
+ * everyone behind one Cloudflare edge. Use both — see
+ * src/pages/api/auth/login.ts.
  */
-export function getClientIp(request: Request): string | null {
-  const cf = request.headers.get('cf-connecting-ip')?.trim();
-  if (cf) return cf;
+export interface ClientIdentity {
+  /** Best available identifier for the individual caller. Forgeable. */
+  client: string | null;
+  /** Nearest proxy hop, as our infrastructure saw it. Not forgeable. */
+  nearestHop: string | null;
+}
 
-  // Leftmost entry is the original client; the rest are proxy hops.
-  const forwarded = request.headers.get('x-forwarded-for');
-  if (forwarded) {
-    const first = forwarded.split(',')[0]?.trim();
-    if (first) return first;
-  }
+/** Split an X-Forwarded-For header into its non-empty, trimmed entries. */
+function forwardedChain(request: Request): string[] {
+  const raw = request.headers.get('x-forwarded-for');
+  if (!raw) return [];
+  return raw
+    .split(',')
+    .map((entry) => entry.trim())
+    .filter(Boolean);
+}
 
-  const real = request.headers.get('x-real-ip')?.trim();
-  return real || null;
+export function getClientIdentity(request: Request): ClientIdentity {
+  const chain = forwardedChain(request);
+  const realIp = request.headers.get('x-real-ip')?.trim() || null;
+  const cf = request.headers.get('cf-connecting-ip')?.trim() || null;
+
+  return {
+    // Leftmost chain entry is the original client; the rest are proxy hops.
+    client: cf ?? chain[0] ?? realIp,
+    nearestHop: chain[chain.length - 1] ?? realIp,
+  };
 }

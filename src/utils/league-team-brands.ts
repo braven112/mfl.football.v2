@@ -78,6 +78,19 @@ export function getLeagueTeamConfig(slug: string, franchiseId: string): any | un
 }
 
 /**
+ * Every franchise's RAW config entry for one league, in config order.
+ *
+ * The plural of `getLeagueTeamConfig`, for callers that need the whole list
+ * rather than one row — `crestStrokeIndex` walks a league's full team array to
+ * build its measured-stroke map. Returns [] for an unknown league, matching
+ * the singular's "no is a normal answer" contract rather than the brands
+ * accessor's throw.
+ */
+export function getLeagueTeamConfigs(slug: string): any[] {
+  return CONFIGS[slug]?.teams ?? [];
+}
+
+/**
  * Every franchise's brand in this league, keyed by MFL franchise id.
  * Throws on a league this module doesn't know.
  */

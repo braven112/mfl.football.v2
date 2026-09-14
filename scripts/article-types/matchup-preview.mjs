@@ -22,7 +22,19 @@ export const config = {
   id: (year, week) => `sf_${year}_matchup_preview_w${String(week).padStart(2, '0')}`,
   requiredData: ['weekly-results-raw', 'projectedScores', 'standings', 'players', 'rosters', 'league'],
   postType: 'article',
-  tier: 'breaking',
+  // NOT 'breaking'. The homepage's breaking-story hero takes the freshest
+  // tier:'breaking' post under 48h old at P0 (src/utils/offseason-hero-data.ts
+  // selectBreakingStory → hero-resolver.ts), which is built for a trade or
+  // auction bomb. A COLUMN THAT RUNS ON A CRON IS NOT BREAKING NEWS: at
+  // 'breaking' the three weekly columns held the homepage ~4 of every 7 days
+  // in-season (recap Tue→Thu, preview Fri→Sun, matchup preview Sat→Mon),
+  // preempting the regular-season daily rotation that was built for those
+  // days. Tier drives the hero claim, the feed card's red treatment and the OG
+  // badge — nothing else. Chat and push are gated on whether the module exports
+  // buildGroupMePromo (only cut-watch, schedule-release and schedule-strength
+  // do), so this column has no chat or push path to lose either way.
+  // Pinned by tests/weekly-column-hero-claim.test.ts.
+  tier: 'standard',
   maxTokens: 5000,
 };
 
@@ -67,6 +79,19 @@ export async function buildFactSheet(data, week, year, projectRoot) {
   }
 
   const pairings = getMatchupPairings(data['weekly-results-raw'], week);
+  // A preview of a week with no matchups is not an article — it is the "Week 0:
+  // TheLeague Waits for Kickoff" post, whose whole body was "there are no
+  // matchups scheduled". That happens because the runner targets completedWeek
+  // (schefter-weekly-articles.mjs) while this forward-looking column guards on
+  // currentWeek, so before the season's first week completes the target is 0.
+  // Declining here is the pipeline's documented clean skip (step 7: a null
+  // fact sheet exits 0 without spending an Anthropic call), and it is what
+  // keeps an empty preview out of the feed and out of ArticleHero's Friday
+  // slot, which matches on a headline regex and would front it.
+  if (pairings.length === 0) {
+    console.log(`  [skip] No matchups scheduled for week ${week} — nothing to preview.`);
+    return null;
+  }
   // Weeks 1, 2, 3 and 12 are doubleheaders — every franchise appears in the
   // pairings TWICE. Unlabelled, that reads as a duplicate rather than the format.
   const weekFormat = summarizeWeekFormat(pairings);

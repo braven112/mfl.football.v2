@@ -24,7 +24,19 @@ export const config = {
   id: (year, week) => `sf_${year}_weekly_recap_w${String(week).padStart(2, '0')}`,
   requiredData: ['weekly-results-raw', 'weekly-results', 'standings', 'players', 'league'],
   postType: 'article',
-  tier: 'breaking',
+  // NOT 'breaking'. The homepage's breaking-story hero takes the freshest
+  // tier:'breaking' post under 48h old at P0 (src/utils/offseason-hero-data.ts
+  // selectBreakingStory → hero-resolver.ts), which is built for a trade or
+  // auction bomb. A COLUMN THAT RUNS ON A CRON IS NOT BREAKING NEWS: at
+  // 'breaking' the three weekly columns held the homepage ~4 of every 7 days
+  // in-season (recap Tue→Thu, preview Fri→Sun, matchup preview Sat→Mon),
+  // preempting the regular-season daily rotation that was built for those
+  // days. Tier drives the hero claim, the feed card's red treatment and the OG
+  // badge — nothing else. Chat and push are gated on whether the module exports
+  // buildGroupMePromo (only cut-watch, schedule-release and schedule-strength
+  // do), so this column has no chat or push path to lose either way.
+  // Pinned by tests/weekly-column-hero-claim.test.ts.
+  tier: 'standard',
   maxTokens: 4000,
 };
 

@@ -99,6 +99,61 @@ export function parseScoreboardEvent(event: any): NflGame {
 }
 
 /**
+ * The RAW scoreboard JSON, cached briefly and shared.
+ *
+ * Two consumers want the same upstream document for different reasons:
+ * `fetchNflScoreboard` below parses it into `NflGame[]`, and
+ * `nfl-game-detail-source.ts` needs it unparsed for the event ids to fan out
+ * over and the team-id → code map the plays feed cannot be read without.
+ *
+ * Before this cache the broadcast board asked ESPN for the SAME document
+ * twice on every poll — once through each path — which on an 8-second cadence
+ * for an eight-hour Sunday is thousands of avoidable requests per open
+ * television, against a host this repo has already been rate-limited by
+ * (see the User-Agent note in nfl-game-detail-source.ts).
+ *
+ * The TTL is deliberately shorter than the board's poll interval, so a cache
+ * hit only ever collapses the duplicate calls WITHIN one assembly, never
+ * serves a board a slate older than its own cadence.
+ */
+const RAW_TTL_MS = 6_000;
+
+declare global {
+  // eslint-disable-next-line no-var
+  var __nflScoreboardRawCache: Map<string, { at: number; data: any }> | undefined;
+}
+
+const rawCache = (): Map<string, { at: number; data: any }> => {
+  if (!globalThis.__nflScoreboardRawCache) globalThis.__nflScoreboardRawCache = new Map();
+  return globalThis.__nflScoreboardRawCache;
+};
+
+/** Fetch the raw scoreboard document for a slot, or null. Never throws. */
+export async function fetchRawScoreboard(
+  url: string,
+  signal?: AbortSignal,
+): Promise<any | null> {
+  const cache = rawCache();
+  const hit = cache.get(url);
+  if (hit && Date.now() - hit.at < RAW_TTL_MS) return hit.data;
+
+  try {
+    const res = await fetch(url, { signal });
+    if (!res.ok) return null;
+    const data = await res.json();
+    cache.set(url, { at: Date.now(), data });
+    // Bounded: one entry per slot URL, and a slate is one URL per week.
+    if (cache.size > 8) {
+      const oldest = [...cache.entries()].sort((a, b) => a[1].at - b[1].at)[0];
+      if (oldest) cache.delete(oldest[0]);
+    }
+    return data;
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Fetch and parse the slate. NEVER throws — an ESPN outage comes back as
  * `ok: false` with an empty `games`, because both callers render a page and
  * neither should 500 over a decorative rail.
@@ -117,9 +172,8 @@ export async function fetchNflScoreboard(query: ScoreboardQuery): Promise<NflSco
   const signal = query.signal ? AbortSignal.any([query.signal, timeout]) : timeout;
 
   try {
-    const res = await fetch(espnUrl, { signal });
-    if (!res.ok) return { ok: false, week, games: [], espnSlot };
-    const data = await res.json();
+    const data = await fetchRawScoreboard(espnUrl, signal);
+    if (!data) return { ok: false, week, games: [], espnSlot };
     const events: any[] = data?.events ?? [];
     return { ok: true, week, games: events.map(parseScoreboardEvent), espnSlot };
   } catch (error) {

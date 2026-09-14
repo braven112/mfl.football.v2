@@ -1,0 +1,20 @@
+---
+/**
+ * Guide detail (The League) — thin route wrapper.
+ *
+ * Shared implementation lives in components/shared/guides/GuideDetailPage.
+ * The redirect for an unknown slug lives HERE and must: `Astro.redirect()`
+ * only redirects from a PAGE — returned from a component's frontmatter it
+ * merely stops rendering that component, and the response is still a 200 with
+ * a blank body.
+ */
+import GuideDetailPage from '../../../components/shared/guides/GuideDetailPage.astro';
+import { resolveGuideDetail } from '../../../utils/guides';
+
+export const prerender = false;
+
+const result = resolveGuideDetail(Astro, 'theleague');
+if (result.redirectTo !== undefined) return Astro.redirect(result.redirectTo);
+---
+
+<GuideDetailPage leagueSlug="theleague" guide={result.guide} />

@@ -392,6 +392,142 @@ export interface EspnScoringPlay {
   homeScore: number;
   /** Distinct ESPN athlete ids credited on the play, in participant order. */
   espnAthleteIds: string[];
+  /**
+   * Possession changed on this play — ESPN sets it when `start.team !==
+   * end.team`, which makes the play's own team the DEFENSE.
+   *
+   * On the SCORING side this is the pick six and the fumble-return
+   * touchdown, and it was missing here until Sep 2026 with no symptom that
+   * pointed at it: `parseNotablePlays` skips anything with
+   * `scoringPlay === true`, so the notable path never carried these either,
+   * and the board's team-defense credit — which gates on exactly this flag —
+   * silently produced nothing for the single most memorable defensive score
+   * there is.
+   */
+  isTurnover: boolean;
+  /**
+   * ESPN's REAL-WORLD timestamp for the play (ISO 8601), '' when absent.
+   *
+   * The only honest basis for "is this still worth interrupting the screen
+   * for". The game clock cannot answer it — an NFL clock stops, and "Q1 11:49"
+   * is equally true five seconds and three hours after the play. Present on
+   * 192 of 193 plays in the recorded game; a play WITHOUT one cannot be aged,
+   * so it must never be treated as fresh.
+   */
+  wallclock: string;
+}
+
+/**
+ * The participant roles that EARN the play — the only ones a reveal may name.
+ *
+ * ESPN lists everyone involved, not everyone credited. One real game's roles:
+ *
+ *   Field Goal Good    kicker, scorer, snapper, holder
+ *   Rushing Touchdown  rusher, scorer, kicker, patScorer
+ *   Kickoff            kicker, returner, tackler, penalized, other
+ *
+ * Read those three rows together and `kicker` is the trap: on the field goal
+ * he IS the scorer, but on the kickoff he is the OTHER team's placekicker,
+ * credited on a 27-yard return he was trying to prevent. Taking every
+ * participant — which this did until Sep 2026 — therefore hands the kicking
+ * team's owner a reveal for the return team's play. `scorer` already covers
+ * the field goal (same athlete, deduped), so dropping `kicker` costs nothing.
+ *
+ * `patScorer` is left out for a different reason: the extra point is real
+ * fantasy scoring, but a FULL-SCREEN TOUCHDOWN takeover naming your kicker,
+ * for someone else's touchdown, is the wrong framing for one point. The
+ * reveal kinds this board draws are touchdowns, big plays, two-pointers,
+ * field goals, safeties and takeaways — an XP is on none of them.
+ *
+ * Participants carry no team of their own — only `athlete`, `order` and
+ * `type` — so a role allowlist is the only mechanism available here.
+ */
+const CREDITED_PARTICIPANT_ROLES = new Set([
+  'scorer',
+  'rusher',
+  'passer',
+  'receiver',
+  'returner',
+]);
+
+/**
+ * The credited roles on a play the DEFENSE earned — a turnover or a safety.
+ *
+ * A turnover lists both sides, and the offensive roles name the players who
+ * LOST the ball. Two real plays:
+ *
+ *   Interception Return Touchdown  passer, passDefender, returner, scorer, …
+ *   Fumble Return Touchdown        passer, receiver, forcedBy, recoverer,
+ *                                  tackler, scorer, …
+ *
+ * Judged by the ordinary allowlist, the first hands a TOUCHDOWN reveal to the
+ * quarterback who threw the interception and the second to the receiver who
+ * fumbled — each of them named, full-screen, for the worst play of their
+ * afternoon. So on a turnover the offense's roles come out and the roles that
+ * actually took the ball away go in.
+ *
+ * `isTurnover` is the right signal for the first case and not merely the
+ * convenient one: ESPN sets it exactly when `start.team !== end.team`, so a
+ * "Fumble Recovery (Own)" — recovered by the fumbling team — arrives as
+ * `false` and keeps the ordinary offensive credit it deserves.
+ *
+ * A SAFETY is handled separately again — see `creditedAthleteIds`. It is not
+ * a turnover (`isTurnover: false`), and no participant role reliably names
+ * someone who earned it, so it credits no individual at all.
+ */
+const DEFENSIVE_CREDITED_ROLES = new Set([
+  'scorer',
+  'returner',
+  'recoverer',
+  'passDefender',
+]);
+
+/** A safety — scored by the defending TEAM, and by no individual. */
+function isSafetyPlay(item: any): boolean {
+  return /\bsafety\b/i.test(String(item?.type?.text ?? ''));
+}
+
+/**
+ * Distinct MFL-bound athlete ids CREDITED by one play, in participant order.
+ *
+ * An athlete appearing under both a credited and an uncredited role (the
+ * field goal's `kicker` + `scorer`) is kept — the allowlist gates the ROLE,
+ * and one credited role is enough.
+ *
+ * The fallback is deliberate and narrow: if not one participant carries a
+ * `type`, we cannot tell roles apart at all, and silently crediting nobody
+ * would delete every reveal for that play. Falling back to all participants
+ * restores the old behaviour for exactly that case and no other.
+ */
+function creditedAthleteIds(item: any): string[] {
+  // A SAFETY credits nobody individually. Both recorded safeties show why:
+  // one is `passer, penalized` on the same athlete — the quarterback called
+  // for intentional grounding in his own end zone — and the other has the
+  // SAME athlete as `passer` AND `recoverer`, because the offense fell on its
+  // own fumble in the end zone, which is what made it a safety. So `recoverer`
+  // is not reliably a defender here the way it is on a turnover, and there is
+  // no participant role that reliably names someone who EARNED the two points.
+  // The defending team did; `buildBroadcastMoments` credits its DEF unit by
+  // NFL team, and no participant is credited at all.
+  if (isSafetyPlay(item)) return [];
+
+  const participants = (item?.participants ?? []) as any[];
+  const typed = participants.filter((p) => typeof p?.type === 'string' && p.type);
+  const allowed = item?.isTurnover === true
+    ? DEFENSIVE_CREDITED_ROLES
+    : CREDITED_PARTICIPANT_ROLES;
+  const pool = typed.length > 0
+    ? typed.filter((p) => allowed.has(String(p.type)))
+    : participants;
+
+  const ids: string[] = [];
+  for (const p of pool) {
+    const id = parseIdFromRef(p?.athlete?.$ref, 'athletes');
+    // The same athlete appears once per credited role (a rusher is also the
+    // scorer), so dedupe — otherwise one TD becomes several ticker rows.
+    if (id && !ids.includes(id)) ids.push(id);
+  }
+  return ids;
 }
 
 /**
@@ -413,13 +549,7 @@ export function parseScoringPlays(
     if (!isEspnPlayId(playId)) continue;
 
     const teamId = parseIdFromRef(item?.team?.$ref, 'teams');
-    const athleteIds: string[] = [];
-    for (const p of (item?.participants ?? []) as any[]) {
-      const id = parseIdFromRef(p?.athlete?.$ref, 'athletes');
-      // The same athlete appears once per credited role (a rusher is also the
-      // scorer), so dedupe — otherwise one TD becomes several ticker rows.
-      if (id && !athleteIds.includes(id)) athleteIds.push(id);
-    }
+    const athleteIds = creditedAthleteIds(item);
 
     out.push({
       playId,
@@ -434,6 +564,8 @@ export function parseScoringPlays(
       awayScore: Number(item?.awayScore) || 0,
       homeScore: Number(item?.homeScore) || 0,
       espnAthleteIds: athleteIds,
+      isTurnover: item?.isTurnover === true,
+      wallclock: typeof item?.wallclock === 'string' ? item.wallclock : '',
     });
   }
 
@@ -465,4 +597,153 @@ export function parseBroadcast(competition: any): string {
     ?? national.find((g) => g?.type?.shortName !== 'Radio'); // a streaming carrier is a channel; Westwood One is not
   const shortName = geo?.media?.shortName;
   return typeof shortName === 'string' ? shortName.trim() : '';
+}
+
+// ── plays: notable NON-scoring plays ───────────────────────────────────────
+
+/**
+ * A play worth interrupting a broadcast for that produced no points.
+ *
+ * `parseScoringPlays` above skips everything with `scoringPlay !== true`, which
+ * is right for a scoring ticker and wrong for the broadcast board: the two
+ * things an owner most wants shouted across the room — his running back
+ * breaking a 57-yard run, or his defense taking the ball away — are frequently
+ * not scores. Both live in the SAME already-fetched plays page, so this is a
+ * second read of one payload, never a second fetch.
+ *
+ * ## Why a type allowlist and not just a yardage threshold
+ *
+ * `statYardage` is a distance, not a judgement, and plenty of long plays are
+ * the opposite of a highlight. Measured against one real game's 193 plays
+ * (WAS@GB, 2026-09-12), the plays clearing 40 yards were: a 57-yard completion
+ * and a 37-yard completion (real), two made field goals of 51 and 56 (already
+ * scoring plays), **a 58-yard MISSED field goal, a 48-yard MISSED field goal,
+ * a 52-yard MISSED field goal**, and four kickoff returns of 25-50 yards.
+ *
+ * So a bare `statYardage >= BIG_PLAY_YARDS` puts "Matt Gay Missed 58 Yd FG
+ * Wide Left" on a 65-inch screen under a banner that says something good
+ * happened. The threshold is the SECOND test; the first is whether the play is
+ * a type an owner's fantasy player gains yards on.
+ *
+ * Kickoff and punt returns are excluded for a second reason beyond taste:
+ * neither scores in either league's rules, so a return that is not a
+ * touchdown is worth nothing to the owner watching.
+ *
+ * `priority` is NOT the flag to use for this. It exists on every play and was
+ * `false` on all 193 of them.
+ */
+const BIG_PLAY_TYPES = new Set([
+  'rush',
+  'pass reception',
+  'passing touchdown',
+  'rushing touchdown',
+  'fumble recovery (own)',
+  'fumble recovery (opponent)',
+  'fumble return touchdown',
+  'interception',
+  'interception return',
+  'interception return touchdown',
+  'safety',
+  'blocked punt',
+  'blocked field goal',
+  'blocked punt touchdown',
+  'blocked field goal touchdown',
+]);
+
+/** Yards from scrimmage past which a non-scoring play is worth the screen. */
+export const BIG_PLAY_YARDS = 40;
+
+/**
+ * A takeaway is reveal-worthy at ANY yardage — a 0-yard interception in the
+ * end zone is the play of the game. These are the types where `isTurnover`
+ * alone is enough, without clearing the distance threshold.
+ */
+const TURNOVER_TYPES = new Set([
+  'interception',
+  'interception return',
+  'interception return touchdown',
+  'fumble recovery (opponent)',
+  'fumble return touchdown',
+]);
+
+/** A non-scoring play the broadcast board should interrupt itself for. */
+export interface EspnNotablePlay extends EspnScoringPlay {
+  /** Yards gained on the play; 0 when ESPN omits `statYardage`. */
+  yards: number;
+  /** ESPN's own flag — the ball changed hands. */
+  isTurnover: boolean;
+}
+
+const playTypeText = (item: any): string => String(item?.type?.text ?? '').trim().toLowerCase();
+
+/**
+ * Is this non-scoring play worth a reveal? Type first, then the reason.
+ *
+ * Exported so the guard test can state the rule directly rather than through a
+ * whole parse — "a missed 58-yard field goal is not a big play" is the
+ * sentence that has to stay true.
+ */
+export function isNotablePlay(item: any): boolean {
+  if (item?.scoringPlay === true) return false; // scoring plays have their own parse
+  const type = playTypeText(item);
+  if (!BIG_PLAY_TYPES.has(type)) return false;
+  if (item?.isTurnover === true && TURNOVER_TYPES.has(type)) return true;
+  return Number(item?.statYardage) >= BIG_PLAY_YARDS;
+}
+
+/**
+ * Extract the notable non-scoring plays from a play-by-play page.
+ *
+ * Same payload, same team-code map and same chronological sort as
+ * `parseScoringPlays` — this is deliberately its mirror so the broadcast can
+ * merge the two lists into one timeline without re-sorting on `sequence`,
+ * which orders plays only WITHIN a game.
+ */
+export function parseNotablePlays(
+  plays: any,
+  teamCodesById: Map<string, string> = new Map(),
+): EspnNotablePlay[] {
+  const out: EspnNotablePlay[] = [];
+
+  for (const item of (plays?.items ?? []) as any[]) {
+    if (!isNotablePlay(item)) continue;
+    const playId = item?.id != null ? String(item.id) : '';
+    if (!isEspnPlayId(playId)) continue;
+
+    const teamId = parseIdFromRef(item?.team?.$ref, 'teams');
+    const athleteIds = creditedAthleteIds(item);
+
+    out.push({
+      playId,
+      sequence: Number(item?.sequenceNumber) || 0,
+      period: Number(item?.period?.number) || 0,
+      clock: typeof item?.clock?.displayValue === 'string' ? item.clock.displayValue : '',
+      text: String(item?.shortText ?? item?.text ?? ''),
+      typeAbbrev: String(item?.type?.abbreviation ?? ''),
+      typeText: String(item?.type?.text ?? ''),
+      teamCode: (teamId && teamCodesById.get(teamId)) || '',
+      scoreValue: 0,
+      awayScore: Number(item?.awayScore) || 0,
+      homeScore: Number(item?.homeScore) || 0,
+      espnAthleteIds: athleteIds,
+      wallclock: typeof item?.wallclock === 'string' ? item.wallclock : '',
+      yards: Number(item?.statYardage) || 0,
+      isTurnover: item?.isTurnover === true,
+    });
+  }
+
+  return out.sort(comparePlaysChronologically);
+}
+
+/**
+ * Did a scoring play convert a two-point attempt?
+ *
+ * ESPN reports it on the TOUCHDOWN play, not as a play of its own:
+ * `pointAfterAttempt.text` reads "Extra Point Good" or "Two Point Pass" /
+ * "Two Point Rush". There is no separate two-point play to classify, so a
+ * board that looks for one finds nothing and silently never fires this trigger.
+ */
+export function isTwoPointConversion(item: any): boolean {
+  const text = String(item?.pointAfterAttempt?.text ?? '').toLowerCase();
+  return text.startsWith('two point');
 }

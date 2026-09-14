@@ -20,14 +20,18 @@ import { createSessionToken } from '../src/utils/session';
 import { getLeagueBySlug } from '../src/config/leagues';
 
 const THELEAGUE = getLeagueBySlug('theleague')!;
+const AFL = getLeagueBySlug('afl-fantasy')!;
 
 /** A request carrying a real signed session cookie for `role`. */
-const signedInAs = (role: 'owner' | 'commissioner' | 'admin') => {
+const signedInAs = (
+  role: 'owner' | 'commissioner' | 'admin',
+  leagueId: string = THELEAGUE.id,
+) => {
   const token = createSessionToken({
     userId: 'u1',
     username: 'tester',
     franchiseId: '0002', // not an admin-fallback franchise
-    leagueId: THELEAGUE.id,
+    leagueId,
     role,
   });
   return new Request('https://www.theleague.us/api/groupme/sync', {
@@ -90,6 +94,14 @@ describe('isAuthorizedSyncCaller', () => {
     // environment with no cron secret configured.
     delete process.env.CRON_SECRET;
     expect(isAuthorizedSyncCaller(signedInAs('commissioner'))).toBe(true);
+  });
+
+  it("rejects another league's commissioner", () => {
+    // GROUPME_GROUP_ID names ONE group, TheLeague's. An AFL commissioner has
+    // no business driving that sync, or reading the Upstash/KV prefixes the
+    // route's error path reports. CLAUDE.md's cross-league admin rule.
+    expect(isAuthorizedSyncCaller(signedInAs('commissioner', AFL.id))).toBe(false);
+    expect(isAuthorizedSyncCaller(signedInAs('admin', AFL.id))).toBe(false);
   });
 
   it('rejects a forged / unsigned session cookie', () => {

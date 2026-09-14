@@ -357,7 +357,7 @@ describe('assignLineupSlots', () => {
       RULES,
     );
     expect(out.map((x) => x.slot)).toEqual([
-      'QB', 'RB', 'WR', 'TE', 'PK', 'DEF', 'FLEX', 'FLEX', 'FLEX',
+      'QB', 'RB', 'WR', 'TE', 'FLEX', 'FLEX', 'FLEX', 'PK', 'DEF',
     ]);
     // Flex keeps FEED order among themselves (w2 came before r2 in the input),
     // which is the stable-sort guarantee — not position order.

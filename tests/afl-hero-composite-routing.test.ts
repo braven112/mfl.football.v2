@@ -80,8 +80,9 @@ describe('AFL composite hero routing', () => {
       scope: 'league',
     });
 
-    // Day zero — "Kickoff tonight · 5:20 PM PT".
-    const night = at('2026-09-10T18:00:00Z');
+    // Day zero — "Kickoff tonight · 5:20 PM PT". The 2026 season opened on
+    // WEDNESDAY Sep 9, not the Thursday the old Labor-Day derivation assumed.
+    const night = at('2026-09-09T18:00:00Z');
     expect(night.view.countValue).toBe(0);
     expect(night.view.composite.tone).toBe('red');
   });

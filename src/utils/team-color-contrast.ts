@@ -263,3 +263,48 @@ export function resolveTeamColorPair(
 
   return { home: homeColor, away: awayColor };
 }
+
+/**
+ * A brand colour lifted until it reads as a FIELD on a dark surface — without
+ * lifting it so far that white text on top of it stops being legible.
+ *
+ * `toBroadcastPair` and `darkenForWhiteText` only ever DARKEN: they guarantee
+ * white ink on a franchise's colour, and a colour that already clears that bar
+ * comes back untouched. That is correct for a fill you write on, and it leaves
+ * a hole for a fill you have to SEE. Seven of TheLeague's sixteen franchises
+ * carry a near-black `colorPrimary` (`#181818`), which measures 1.14:1 against
+ * the broadcast board's `#05070b` ground — so a "full-screen field of the
+ * club's colour", the whole mine-vs-theirs signal on that board, rendered as a
+ * black rectangle indistinguishable from the idle screen.
+ *
+ * There is a wide safe band between the two constraints: a field only needs
+ * ~2:1 to separate from near-black, while white text survives down to roughly
+ * 4.5:1, which a field does not reach until it is far lighter. This walks up
+ * from the brand colour and stops at the first shade satisfying both, so a
+ * franchise that needs no help is returned EXACTLY as it was.
+ *
+ * @param background the surface the field sits on (the board's ground).
+ * @param minField how far the field must separate from that ground.
+ * @param minInk how legible white ink must stay on the result.
+ */
+export function ensureFieldOn(
+  color: string,
+  background: string,
+  minField = 2.2,
+  minInk = 4.5,
+): string {
+  if (!isHex(color) || !isHex(background)) return color;
+  if (contrastRatio(color, background) >= minField) return color;
+
+  const dir = relativeLuminance(background) < 0.5 ? 1 : -1;
+  let best = color;
+  for (let step = 0.05; step <= 1.0001; step += 0.05) {
+    const candidate = shiftLightness(color, dir * step);
+    // Never trade the ink away for the field: a field nobody can read text on
+    // is a worse failure than one that sits a little close to the ground.
+    if (contrastRatio(candidate, '#ffffff') < minInk) break;
+    best = candidate;
+    if (contrastRatio(candidate, background) >= minField) return candidate;
+  }
+  return best;
+}

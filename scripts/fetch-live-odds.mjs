@@ -19,6 +19,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { writeJsonIfChanged } from './lib/canonical-json.mjs';
+import { nflWeekFor } from '../src/utils/nfl-week-starts.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -27,30 +28,19 @@ const root = path.resolve(__dirname, '..');
 const ESPN_API = 'https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard';
 
 /**
- * Calculate current NFL week
+ * Current NFL week, from the published NFL schedule.
+ *
+ * Was a local `seasonConfigs` map of Week 1 Thursdays plus a "first Thursday of
+ * September" fallback — one of six such tables in this repo, all of which had
+ * 2026 opening Thursday Sep 10 when it actually opened Wednesday Sep 9.
+ * nflWeekFor walks the real week starts. It is read directly rather than
+ * through week-resolver's wrapper, which caps at the regular season — these
+ * fetchers pull NFL data through the postseason (weeks 19-22) and always have.
  */
 function getCurrentNFLWeek() {
   const seasonYear = new Date().getFullYear();
-  const seasonConfigs = {
-    2024: new Date('2024-09-05T20:20:00-04:00'),
-    2025: new Date('2025-09-04T20:20:00-04:00'),
-    2026: new Date('2026-09-10T20:20:00-04:00'),
-  };
-
-  let week1Start = seasonConfigs[seasonYear];
-  if (!week1Start) {
-    const sept1 = new Date(seasonYear, 8, 1);
-    const dayOfWeek = sept1.getDay();
-    const daysUntilThursday = dayOfWeek <= 4 ? 4 - dayOfWeek : 11 - dayOfWeek;
-    week1Start = new Date(seasonYear, 8, 1 + daysUntilThursday, 20, 20);
-  }
-
-  const now = new Date();
-  if (now < week1Start) return 1;
-
-  const msSinceStart = now.getTime() - week1Start.getTime();
-  const weeksSinceStart = Math.floor(msSinceStart / (7 * 24 * 60 * 60 * 1000));
-  return Math.min(weeksSinceStart + 1, 22);
+  // Before the season opens, preview week 1 rather than reporting no week.
+  return nflWeekFor(seasonYear, new Date()) || 1;
 }
 
 /**

@@ -27,7 +27,8 @@ import { execFileSync } from 'node:child_process';
 import { readPng } from '../scripts/lib/png-raw.mjs';
 import { leaguePushIcon, leaguePushBadge } from '../src/utils/push-notify-trade';
 import { readSharedPayload } from '../src/utils/share-target';
-import { ALL_LEAGUES } from '../src/config/leagues';
+import { ALL_LEAGUES, isSharedAppHost } from '../src/config/leagues';
+import { HOST_TO_SLUG } from '../src/utils/league-host-map';
 
 const ROOT = path.resolve(__dirname, '..');
 const PUBLIC = path.join(ROOT, 'public');
@@ -138,8 +139,20 @@ describe('manifest host gating', () => {
     // mfl.football serves every league by path prefix and is in no league's
     // `domains`, so a bare HOST_TO_SLUG lookup misses it and both manifests
     // would land on that one origin.
+    //
+    // Pinned through the registry predicate rather than the literal
+    // expression that used to be here (`new URL(SHARED_APP_ORIGIN).hostname`):
+    // an exact compare against the production origin recognised mfl.football
+    // and silently missed staging.mfl.football, which then served a per-league
+    // identity on the one host whose job is to reproduce production. Assert
+    // the BEHAVIOUR — every shared host is foreign — so the next
+    // implementation change cannot quietly narrow it again.
     expect(layout).toMatch(/onSharedMultiLeagueHost/);
-    expect(layout).toMatch(/new URL\(SHARED_APP_ORIGIN\)\.hostname/);
+    expect(layout).toMatch(/isSharedAppHost\(Astro\.url\.hostname\)/);
+    for (const host of ['mfl.football', 'staging.mfl.football']) {
+      expect(isSharedAppHost(host), `${host} must be foreign to every league`).toBe(true);
+      expect(HOST_TO_SLUG[host], `${host} must not map to a league slug`).toBeUndefined();
+    }
   });
 
   it('suppresses only on a known foreign apex, so localhost and previews keep theirs', () => {

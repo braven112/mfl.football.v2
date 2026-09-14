@@ -1,0 +1,362 @@
+---
+/**
+ * Every control the broadcast has — and none of them is on the board.
+ *
+ * The board itself is OUTPUT ONLY. Leagues / Sound / Fullscreen chips used to
+ * float at its bottom-left and shipped visible on a real television three
+ * times running, because all three attempts hid a VISIBLE DEFAULT behind a
+ * condition that turned out to be an assumption about set-top hardware (the
+ * stylesheet's "No chrome on the board" records which). Nothing OVERLAYS the
+ * scores now — the controls sit in normal page flow ABOVE the board, between
+ * the site nav and the scores. That is the distinction that matters and it is
+ * not the same as "off the screen": being above the board costs the scores no
+ * pixels and cannot cover a reveal, while a chip positioned over the board
+ * does both no matter how carefully it is hidden.
+ *
+ * One component, two placements, and they are deliberately NOT the same
+ * screen:
+ *
+ *  - `setup` (`?picker=1`, still the zero-leagues landing) is the whole
+ *    decision — every league the owner is in, the sound choice, the shortcut
+ *    keys. It is a television screen, sized to be read from ten feet.
+ *  - `strip` is a TOOLBAR above the scores and nothing more: three buttons,
+ *    Leagues / Sound / Full screen. It used to carry the title, a sentence of
+ *    prose, a chip per league and a paragraph of keyboard shortcuts, which is
+ *    a block of chrome above the one page whose entire job is the scores. The
+ *    leagues live one tap away on the setup screen, which is the screen for
+ *    choosing them.
+ *
+ * A second copy is how this repo grew 24 forked siblings; see CLAUDE.md.
+ */
+interface Chip {
+  id: string;
+  name: string;
+  on: boolean;
+  href: string;
+}
+
+interface Props {
+  chips: Chip[];
+  sound: boolean;
+  /** Present only on the setup screen, which has a board to return to. */
+  doneHref?: string;
+  /** The setup screen is a full page; the strip above the board is not. */
+  variant: 'setup' | 'strip';
+  /** Shown when MFL could not be reached to list the owner's leagues. */
+  empty?: boolean;
+  /** The strip's Leagues button — the setup screen for this board. */
+  pickerHref?: string;
+}
+
+const { chips, sound, doneHref, variant, empty = false, pickerHref = '?picker=1' } = Astro.props;
+---
+{
+  /*
+    THE TOOLBAR. Three buttons, themed and quiet.
+
+    It is the least important thing on this page and it is built to look it:
+    subtle, in one row, out of the way of the scores. Everything that used to
+    be here — the heading, the sentence of prose, a chip per league, a
+    paragraph of keyboard shortcuts — is on the setup screen, one tap behind
+    the Leagues button.
+
+    Unlike the board, this is an ordinary PAGE surface in normal flow, so it
+    takes the site's colour tokens and follows light and dark like everything
+    else around it. A hardcoded near-black slab under a light-mode nav read as
+    a piece of the board that had escaped onto the page.
+  */
+}
+{variant === 'strip' ? (
+  <nav class="lbc-bar" aria-label="Broadcast controls">
+    {/* A LINK, so it works with no JavaScript on a TV browser, and because the
+        league set is a whole screen rather than a toggle. */}
+    <a class="lbc-bar__btn" href={pickerHref}>Leagues</a>
+
+    {/* A `<button>` rather than a link because the choice is a cookie, and this
+        file is a shared COMPONENT: `Astro.cookies.set()` from one runs after
+        the response headers are committed and blanks the page (CLAUDE.md
+        records the Sunday Ticket board shipping exactly that). The island has
+        always written this cookie from the client; so does this. */}
+    <button
+      type="button"
+      class="lbc-bar__btn"
+      id="lbc-sound-toggle"
+      data-on={sound ? 'true' : 'false'}
+      aria-pressed={sound ? 'true' : 'false'}
+    >
+      {sound ? 'Sound on' : 'Sound off'}
+    </button>
+
+    {/*
+      Fullscreen, and it exists because `F` is not reachable on the hardware
+      this board is for: a television browser (an Xbox) has no keyboard.
+
+      A click carries transient activation, so it can ask for fullscreen where
+      the setup screen's link cannot — fullscreen does not survive the
+      navigation to the board, so it has to be requested from the document the
+      board is already in.
+
+      It is here rather than on the board because the board is output only (see
+      the stylesheet's "No chrome on the board"). This toolbar is a sibling
+      ABOVE it, so going fullscreen on `.lbc.is-board` takes this button off
+      screen with the rest of the page — which is the point; Esc, or a TV
+      remote's Back button, comes back out.
+
+      `hidden` until the script proves the API exists: a set-top browser
+      without it would otherwise show a button that silently does nothing,
+      which on a television is indistinguishable from the board being broken.
+    */}
+    <button type="button" class="lbc-bar__btn" id="lbc-fullscreen-toggle" hidden>
+      Full screen
+    </button>
+  </nav>
+) : (
+  <section class="lbc-controls lbc-controls--setup" aria-label="Broadcast settings">
+    <h1>Pick the leagues this TV watches</h1>
+
+    <p class="lbc-saver__sub">
+      Your scores and your opponents' will take the screen as they happen. Tap a
+      league to add or remove it.
+    </p>
+
+    <ul class="lbc-setup__list">
+      {chips.map((chip) => (
+        <li>
+          {/* A LINK, so it works with no JavaScript on a TV browser. The
+              selected state is `aria-current`, not `aria-pressed`, which is not
+              valid on an anchor. */}
+          <a class="lbc-setup__chip" href={chip.href} aria-current={chip.on ? 'true' : undefined}>
+            {chip.name}
+          </a>
+        </li>
+      ))}
+    </ul>
+
+    {empty && (
+      <p class="lbc-saver__sub">
+        We could not reach MyFantasyLeague to list your leagues. The board will
+        still show the league you are signed in to.
+      </p>
+    )}
+
+    <p>
+      <button
+        type="button"
+        class="lbc-setup__chip"
+        id="lbc-sound-toggle"
+        data-on={sound ? 'true' : 'false'}
+        aria-pressed={sound ? 'true' : 'false'}
+      >
+        {sound ? 'Sound on' : 'Sound off'}
+      </button>
+      {doneHref && <a class="lbc-setup__chip" href={doneHref}>Done — show the board</a>}
+    </p>
+
+    {/* The keys still work and are still worth knowing on a laptop — but they
+        are NOT the way this board is reached on the hardware it was built for,
+        which is why the toolbar above the scores carries real buttons. */}
+    <p class="lbc-saver__sub">
+      On the board: <kbd>F</kbd> fullscreen, <kbd>M</kbd> sound, <kbd>L</kbd> leagues.
+      Come back out of full screen with <kbd>Esc</kbd>, or the B / Back button on
+      a TV remote. Sound needs one key, click or tap on the television first — a
+      browser will not make noise on a page nobody has touched.
+    </p>
+  </section>
+)}
+
+<script>
+  /**
+   * The sound toggle. The COOKIE is the source of truth; the strip and the
+   * board are two views of it that keep each other honest.
+   *
+   * Two ways they fell out of sync, both real:
+   *
+   *  - The board's `M` key set the island's state and the cookie but left this
+   *    button's label and `data-on` untouched. The next click here then
+   *    computed its "next" from a stale `false` and turned sound ON when the
+   *    board already had it on — a toggle that does not toggle.
+   *  - This strip is server-rendered and sits ABOVE a `client:load` island, so
+   *    it is clickable before the island has mounted and registered its
+   *    listener. A fast click wrote the cookie and dispatched into nothing.
+   *
+   * So: every change is announced on `lbc:sound` with a `from` naming the
+   * sender, each side ignores its own, and both reconcile against the cookie
+   * when they start — which covers the click that happened before anyone was
+   * listening.
+   *
+   * Init runs immediately AND on `astro:page-load`: a bundled Astro script is
+   * a deferred module, so on a COLD load `astro:page-load` may already have
+   * fired (listening only for it left the button inert, which is how it first
+   * shipped) — while under the ClientRouter the module evaluates once per
+   * SESSION, so a one-shot init is dead after the first in-site navigation.
+   */
+  function readSoundCookie() {
+    const m = document.cookie.match(/(?:^|;\s*)bc_sound=([01])/);
+    return m ? m[1] === '1' : null;
+  }
+
+  function paintSoundToggle(btn: HTMLElement, on: boolean) {
+    btn.dataset.on = on ? 'true' : 'false';
+    btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+    btn.textContent = on ? 'Sound on' : 'Sound off';
+  }
+
+  function initBroadcastSoundToggle() {
+    const btn = document.getElementById('lbc-sound-toggle');
+    if (!btn) return;
+
+    // The cookie may already disagree with what the server rendered — a click
+    // landed before hydration, or the board's `M` key ran on a previous view.
+    const fromCookie = readSoundCookie();
+    if (fromCookie !== null) paintSoundToggle(btn, fromCookie);
+
+    // ASSIGNED, not added: re-running init replaces this handler rather than
+    // stacking a second copy that would toggle twice per click.
+    btn.onclick = () => {
+      const next = btn.dataset.on !== 'true';
+      paintSoundToggle(btn, next);
+      try {
+        document.cookie =
+          'bc_sound=' + (next ? '1' : '0') + '; path=/; max-age=' + 180 * 24 * 60 * 60 + '; samesite=lax';
+      } catch {
+        /* a control that cannot remember still sets the board up */
+      }
+      document.dispatchEvent(
+        new CustomEvent('lbc:sound', { detail: { on: next, from: 'strip' } }),
+      );
+    };
+  }
+
+  // Registered ONCE, at module scope, so it cannot stack across navigations —
+  // and it looks the button up per event rather than capturing it, because
+  // under the ClientRouter the element is replaced on every page load.
+  // Annotated, because this file is type-checked: an untyped `e.detail` and
+  // two implicit-any parameters were five ts(2339)/ts(7006) errors against a
+  // ratcheted baseline that fails in EITHER direction. Astro compiles a
+  // `<script>` as TypeScript, so plain annotations work here — a JSDoc cast
+  // does not (it reports ts(80004) and leaves the error standing).
+  document.addEventListener('lbc:sound', (e: Event) => {
+    const detail = (e as CustomEvent<{ on: boolean; from?: string }>).detail;
+    if (detail?.from === 'strip') return;
+    const btn = document.getElementById('lbc-sound-toggle');
+    if (btn && typeof detail?.on === 'boolean') paintSoundToggle(btn, detail.on);
+  });
+
+  /**
+   * The fullscreen button.
+   *
+   * Three things are load-bearing here:
+   *
+   *  - It targets `.lbc.is-board`, NOT the document element. Fullscreening the
+   *    document would take the site nav and this strip with it, which is the
+   *    layout the board exists to escape; `is-board` is on the island's root
+   *    only, never on the setup screen's `.lbc`.
+   *  - The request is made INSIDE the click handler. Fullscreen needs
+   *    transient activation and does not survive a navigation, which is why
+   *    this cannot be a link from the setup screen.
+   *  - The button reveals ITSELF once it has found an API to call. It ships
+   *    `hidden`, so a browser with no Fullscreen API shows nothing rather than
+   *    a control that does nothing — and the label is repainted from
+   *    `fullscreenchange` rather than from the click, because Esc and a TV
+   *    remote's Back button both exit without going through this handler.
+   */
+  /**
+   * Three spellings, and each one is carried all the way through.
+   *
+   * A prefix advertised in the REQUEST but missing from the state property and
+   * the change event is worse than not supporting it: the button reveals
+   * itself, enters fullscreen, then can neither report it nor leave it. Xbox's
+   * older EdgeHTML browser is exactly an `ms`-prefixed engine, which is the
+   * hardware this button exists for — so `ms` is handled, not dropped.
+   */
+  type FsElement = Element & {
+    webkitRequestFullscreen?: () => Promise<void> | void;
+    msRequestFullscreen?: () => Promise<void> | void;
+  };
+  type FsDocument = Document & {
+    webkitFullscreenElement?: Element | null;
+    msFullscreenElement?: Element | null;
+    webkitExitFullscreen?: () => Promise<void> | void;
+    msExitFullscreen?: () => Promise<void> | void;
+  };
+
+  function fsDoc() {
+    return document as FsDocument;
+  }
+
+  function fullscreenElement(): Element | null {
+    const d = fsDoc();
+    return d.fullscreenElement ?? d.webkitFullscreenElement ?? d.msFullscreenElement ?? null;
+  }
+
+  function paintFullscreenToggle(btn: HTMLElement) {
+    const on = fullscreenElement() !== null;
+    btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+    btn.textContent = on ? 'Exit full screen' : 'Full screen';
+  }
+
+  function requestFn(el: FsElement | null) {
+    if (!el) return null;
+    const fn = el.requestFullscreen ?? el.webkitRequestFullscreen ?? el.msRequestFullscreen;
+    return typeof fn === 'function' ? fn : null;
+  }
+
+  function initBroadcastFullscreenToggle() {
+    const btn = document.getElementById('lbc-fullscreen-toggle');
+    if (!btn) return;
+
+    // Support is checked against the DOCUMENT element, and the BOARD is looked
+    // up inside the click. This strip is server-rendered above a `client:load`
+    // island, so binding to whatever `.lbc.is-board` is in the DOM at init
+    // would either capture a node the ClientRouter later replaces or find
+    // nothing at all — and a button that hid itself over that would never come
+    // back. Support is a property of the browser; the board is a property of
+    // the moment.
+    if (!requestFn(document.documentElement as FsElement)) return;
+
+    btn.hidden = false;
+    paintFullscreenToggle(btn);
+
+    // ASSIGNED, not added: re-running init replaces the handler rather than
+    // stacking a second copy that would enter and immediately exit.
+    btn.onclick = () => {
+      const d = fsDoc();
+      if (fullscreenElement()) {
+        const exit = d.exitFullscreen ?? d.webkitExitFullscreen ?? d.msExitFullscreen;
+        if (typeof exit === 'function') void Promise.resolve(exit.call(d)).catch(() => {});
+        return;
+      }
+      // The BOARD, never the document element: fullscreening the document
+      // takes the site nav and this strip with it, which is the layout the
+      // board exists to escape.
+      const board = document.querySelector('.lbc.is-board') as FsElement | null;
+      const request = requestFn(board);
+      if (!board || !request) return;
+      void Promise.resolve(request.call(board)).catch(() => {
+        // A refused request is not a broken board — it stays windowed, and the
+        // label is repainted from the event that never came, i.e. not at all.
+      });
+    };
+  }
+
+  // Registered ONCE at module scope, like the sound listener above, and it
+  // looks the button up per event: under the ClientRouter the element is
+  // replaced on every page load. All three spellings, matching the three the
+  // request and the state property handle — a set-top browser may emit only
+  // the prefixed one, and `MSFullscreenChange` is genuinely capitalised that
+  // way rather than lowercased like the others.
+  for (const ev of ['fullscreenchange', 'webkitfullscreenchange', 'MSFullscreenChange']) {
+    document.addEventListener(ev, () => {
+      const btn = document.getElementById('lbc-fullscreen-toggle');
+      if (btn) paintFullscreenToggle(btn);
+    });
+  }
+
+  function initBroadcastControls() {
+    initBroadcastSoundToggle();
+    initBroadcastFullscreenToggle();
+  }
+
+  initBroadcastControls();
+  document.addEventListener('astro:page-load', initBroadcastControls);
+</script>

@@ -31,9 +31,11 @@ describe('NFL week date derivation', () => {
     expect(getLaborDay(2027).getTime()).toBe(new Date(2027, 8, 6).getTime());
   });
 
-  it('kickoff is the Thursday after Labor Day', () => {
+  it('kickoff comes from the published schedule, falling back to Labor Day + 3', () => {
     expect(getNflKickoff(2025).getTime()).toBe(new Date(2025, 8, 4).getTime());
-    expect(getNflKickoff(2026).getTime()).toBe(new Date(2026, 8, 10).getTime());
+    // 2026 opened on WEDNESDAY Sep 9 — the Labor-Day derivation said Sep 10.
+    expect(getNflKickoff(2026).getTime()).toBe(new Date(2026, 8, 9).getTime());
+    // 2027 is not published yet, so the derivation still answers.
     expect(getNflKickoff(2027).getTime()).toBe(new Date(2027, 8, 9).getTime());
   });
 

@@ -7,6 +7,10 @@
  * Zero client JS. The chips are links carrying `?leagues=` (the page writes
  * the choice to a cookie), the window "tabs" are jump links. The repo's rule:
  * a control whose only job is switching a URL param is an `<a href>`.
+ *
+ * Each picker is ONE line — a `.st-rail` that scrolls sideways, never a block
+ * that wraps. The trailing links ("Reset to my leagues", "Times in …") sit
+ * OUTSIDE the rail so they stay on screen while the chips scroll.
  */
 import { formatKickoffZones, type SundayTicketSlate } from '../../../utils/sunday-ticket-slate';
 import {
@@ -76,47 +80,51 @@ const logo = (code: string) => `/assets/nfl-logos/${code}.svg`;
 <div class="st-board" data-personalized={slate.personalized ? 'true' : 'false'}>
   {showChips && (
     <nav class="st-chips" aria-label="Leagues on the board">
-      <span class="st-chips__label">Leagues</span>
-      {homeLeagues.map((l) => {
-        const { on, href } = chipFor(l);
-        return (
-          <a
-            class:list={['st-chip', on && 'st-chip--on', l.isSession && 'st-chip--session']}
-            aria-current={on ? 'true' : undefined}
-            href={href}
-            title={l.franchiseName ? `${l.name} — ${l.franchiseName}` : l.name}
-          >
-            <span class="st-chip__dot" aria-hidden="true" />
-            {l.name}
-          </a>
-        );
-      })}
-      {outsideLeagues.length > 0 && (
-        <details class="st-others" open={outsideOn > 0}>
-          <summary class="st-chip st-chip--others">
-            <span class="st-chip__dot" aria-hidden="true" />
-            Other leagues
-            <span class="st-others__count">{outsideOn > 0 ? `${outsideOn} of ${outsideLeagues.length} on` : `${outsideLeagues.length}`}</span>
-          </summary>
-          <div class="st-others__list">
-            {outsideLeagues.map((l) => {
-              const { on, href } = chipFor(l);
-              return (
-                <a
-                  class:list={['st-chip', 'st-chip--outside', on && 'st-chip--on']}
-                  aria-current={on ? 'true' : undefined}
-                  href={href}
-                  title={l.franchiseName ? `${l.name} — ${l.franchiseName}` : l.name}
-                >
-                  <span class="st-chip__dot" aria-hidden="true" />
-                  {l.name}
-                  {l.franchiseName && <span class="st-chip__franchise">{l.franchiseName}</span>}
-                </a>
-              );
-            })}
-          </div>
-        </details>
-      )}
+      <div class="st-rail">
+        <span class="st-chips__label">Leagues</span>
+        {homeLeagues.map((l) => {
+          const { on, href } = chipFor(l);
+          return (
+            <a
+              class:list={['st-chip', on && 'st-chip--on', l.isSession && 'st-chip--session']}
+              aria-current={on ? 'true' : undefined}
+              href={href}
+              title={l.franchiseName ? `${l.name} — ${l.franchiseName}` : l.name}
+            >
+              <span class="st-chip__dot" aria-hidden="true" />
+              {l.name}
+            </a>
+          );
+        })}
+        {outsideLeagues.length > 0 && (
+          <details class="st-others" open={outsideOn > 0}>
+            <summary class="st-chip st-chip--others">
+              <span class="st-chip__dot" aria-hidden="true" />
+              Other leagues
+              <span class="st-others__count">{outsideOn > 0 ? `${outsideOn} of ${outsideLeagues.length} on` : `${outsideLeagues.length}`}</span>
+            </summary>
+            <div class="st-others__list">
+              {outsideLeagues.map((l) => {
+                const { on, href } = chipFor(l);
+                return (
+                  <a
+                    class:list={['st-chip', 'st-chip--outside', on && 'st-chip--on']}
+                    aria-current={on ? 'true' : undefined}
+                    href={href}
+                    title={l.franchiseName ? `${l.name} — ${l.franchiseName}` : l.name}
+                  >
+                    <span class="st-chip__dot" aria-hidden="true" />
+                    {l.name}
+                    {l.franchiseName && <span class="st-chip__franchise">{l.franchiseName}</span>}
+                  </a>
+                );
+              })}
+            </div>
+          </details>
+        )}
+      </div>
+      {/* Outside the rail: an action you would never find by swiping past 24
+          league chips is the same as an action that is not there. */}
       {!isDefault && (
         <a class="st-chip st-chip--all" href={leagueSelectionHref(pathname, null, weekParam)}>Reset to my leagues</a>
       )}
@@ -124,17 +132,21 @@ const logo = (code: string) => `/assets/nfl-logos/${code}.svg`;
   )}
 
   <nav class="st-countries" aria-label="Broadcast country and kickoff times">
-    <span class="st-chips__label">Channels for</span>
-    {countries.map((c) => (
-      <a
-        class:list={['st-chip', 'st-chip--country', c.code === country && 'st-chip--on']}
-        aria-current={c.code === country ? 'true' : undefined}
-        href={countryHref(pathname, c.code, weekParam)}
-      >
-        <span class="st-chip__flag" aria-hidden="true">{c.flag}</span>
-        {c.name}
-      </a>
-    ))}
+    <div class="st-rail">
+      <span class="st-chips__label">Channels for</span>
+      {countries.map((c) => (
+        <a
+          class:list={['st-chip', 'st-chip--country', c.code === country && 'st-chip--on']}
+          aria-current={c.code === country ? 'true' : undefined}
+          href={countryHref(pathname, c.code, weekParam)}
+        >
+          <span class="st-chip__flag" aria-hidden="true">{c.flag}</span>
+          {c.name}
+        </a>
+      ))}
+    </div>
+    {/* Also outside the rail, and for the same reason — the clock is a link
+        OUT to /preferences, not one of the countries being scrolled. */}
     {preferencesPath && clockLabel && (
       <a class="st-chip st-chip--prefs" href={preferencesPath}>
         Times in {clockLabel}

@@ -70,6 +70,20 @@ jobs:
         run: node scripts/fetch-nfl-bye-weeks.mjs
         continue-on-error: true
 
+      - name: Refresh the NFL week starts
+        # Same source, same cadence, same reason: it lands when the NFL
+        # publishes, not when we ask. Every season-relative date in the repo
+        # anchors on it (see docs/claude/rules/schedule-optimization.md "The NFL
+        # kickoff is not a derivation"), and a season we have no schedule for
+        # falls back to the Labor Day derivation — which is what shipped Roger's
+        # "TODAY: NFL Season Starts" a day after the 2026 season opened.
+        #
+        # 404s for a season the NFL has not released and leaves the file alone,
+        # so running daily year-round costs one request and changes nothing
+        # until mid-May.
+        run: node scripts/fetch-nfl-week-starts.mjs
+        continue-on-error: true
+
       - name: Draw the schedules
         # Only draws what is missing; an existing plan is reused, because
         # redrawing gives a DIFFERENT valid schedule and the reveal must match
@@ -121,16 +135,16 @@ jobs:
           if [ "$INPUT_DRY_RUN" = "true" ]; then ARGS+=("--dry-run"); fi
           node scripts/lock-schedule-release.mjs "${ARGS[@]}"
 
-      - name: Commit the bye calendar and any archived reveal
+      - name: Commit the NFL calendar data and any archived reveal
         run: |
           git config user.name "Schedule Release Bot"
           git config user.email "actions@users.noreply.github.com"
-          git add data/nfl/bye-weeks.json 'data/*/schedule-release' 'data/*/schedule-plan' 2>/dev/null || true
+          git add data/nfl/bye-weeks.json src/data/nfl/week-starts.mjs 'data/*/schedule-release' 'data/*/schedule-plan' 2>/dev/null || true
           if git diff --cached --quiet; then
             echo "nothing to commit"
             exit 0
           fi
-          git commit -m "chore: schedule release — lock and archive"
+          git commit -m "chore: schedule release — refresh NFL calendar, lock and archive"
           # Another cron may have pushed while this ran; rebase rather than fail.
           git pull --rebase origin main
           git push origin HEAD:main

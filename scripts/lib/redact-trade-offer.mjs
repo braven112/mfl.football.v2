@@ -24,6 +24,13 @@
  *                       signal 4 → team + a market beat, no new name, etc.
  *                     A name lands every OTHER signal now — see
  *                     `plannedPlayerCount` in schefter-offer-beats.mjs.
+ *   rosterOwnerByPlayerId — Map<playerId, franchiseId> from the league's own
+ *                     rosters feed. A pending proposal has not executed, so
+ *                     every player in it is still rostered by the franchise
+ *                     giving him up — which makes this an exact check on the
+ *                     row's side/franchise binding rather than a heuristic.
+ *                     Optional; absent, the row is taken at its word (the
+ *                     pre-2026-09-10 behaviour).
  *   blockByFid      — Map<franchiseId, Set<playerId>> of each franchise's
  *                     PUBLIC trade block. Optional; a MISSING franchise and an
  *                     EMPTY block mean different things, which is why it is a
@@ -94,6 +101,174 @@ function pickDisplayTeam(team) {
 }
 
 /**
+ * Does the league's roster data place `asset` on `fid`?
+ *
+ * `true` when the rosters have never heard of the player: a feed snapshot that
+ * predates a rookie must not be able to veto an otherwise sound row.
+ */
+function rosterAgrees(rosterOwnerByPlayerId, asset, fid) {
+  const owner = rosterOwnerByPlayerId?.get?.(String(asset?.playerId));
+  return !owner || padFid(owner) === padFid(fid);
+}
+
+/**
+ * Which franchise is giving up which side.
+ *
+ * `franchise1_gave_up` is fid1's players and `franchise2_gave_up` is fid2's —
+ * that is what the field names say, and when the row is well-formed the trade
+ * itself tells us who owns whom with nothing else consulted. The failure mode
+ * is that the row is not always well-formed. Rows reach this lane from three
+ * places — the commish's league-wide read, a per-franchise read, and an owner
+ * self-report normalized by `src/utils/owner-trade-reports.ts#normalizeRaw` —
+ * and only the first is guaranteed to carry MFL's commish-view semantics. The
+ * other two derive `franchise` (the ORIGINATOR) separately from the two asset
+ * strings, so a row can arrive with its ids right and its SIDES INVERTED, and
+ * nothing downstream could tell.
+ *
+ * That shipped on 2026-09-10: "Fire have been shopping Cyrus Allen and a 2027
+ * second — looking for a running back". Cyrus Allen is a Bring The Pain player;
+ * Fire Ready Aim was the team being ASKED. `buildExposure` did exactly what it
+ * was told — name the chosen franchise's own side — and the chosen franchise's
+ * own side held somebody else's players. Replaying the real offer through the
+ * plausible row shapes reproduces that sentence from exactly one of them: ids
+ * correct, sides swapped.
+ *
+ * So the row STATES the binding and the roster PROVES it. A pending proposal
+ * has not executed, so every player in it is still rostered by the franchise
+ * giving him up — which makes roster ownership an exact check here rather than
+ * a heuristic:
+ *
+ *   - Two DISTINCT, non-empty ids or nothing. `sidesByFid` is an object
+ *     literal: `fid1 === fid2` silently drops one side on top of the other and
+ *     hands BOTH teams' players to one franchise, and an empty id parks a side
+ *     under `''`, where `buildDealShape`'s `getsFid` scan skips it and the deal
+ *     loses its other half. Neither is recoverable from — refuse to attribute.
+ *   - Score both orientations against the rosters and take the winner.
+ *   - Refuse on any other outcome. A tie with evidence on both sides, or a
+ *     winner the rosters still contradict, means the row disagrees with itself;
+ *     a post that names nobody is a post nobody is accused by.
+ *
+ * The franchise ORDER (`fids`) is the row's, never the orientation's, so
+ * correcting a swapped row does not move the coin flip in `buildExposure` and
+ * a later signal about the same offer still names the same team.
+ *
+ * `attributable: false` carries an EMPTY map, which is what makes every
+ * downstream name surface — exposure, deal shape, the block beats — degrade to
+ * naming nobody rather than naming a guess.
+ */
+export function attributeSides({ fid1, fid2, side1, side2, rosterOwnerByPlayerId }) {
+  let a = padFid(fid1);
+  let b = padFid(fid2);
+  /**
+   * Annotated because the refuse path returns a bare `{}`, which unions with
+   * the success path's `{ [fid]: side }` to `{} | { [x: string]: any }` — and
+   * indexing the `{}` half is an implicit any at every call site and in every
+   * test. The empty map is a real value here (it is what makes an
+   * unattributable row name nobody), so the fix is to say its type once.
+   * @type {(reason: string) => { sidesByFid: Record<string, any[]>, fids: string[], attributable: boolean, verified: boolean, corrected: boolean, reason: string }}
+   */
+  const refuse = (reason) => ({
+    sidesByFid: /** @type {Record<string, any[]>} */ ({}),
+    fids: [],
+    attributable: false,
+    verified: false,
+    corrected: false,
+    reason,
+  });
+
+  // The one franchise the rosters put EVERY known player on this side with.
+  // Empty when the side is picks-only, when no player on it is rostered, or
+  // when its players are split across franchises (which is not a side).
+  const inferFrom = (side) => {
+    const owners = new Set();
+    for (const asset of side || []) {
+      if (!asset || asset.kind !== 'player' || !asset.playerId) continue;
+      const owner = rosterOwnerByPlayerId?.get?.(String(asset.playerId));
+      if (owner) owners.add(padFid(owner));
+    }
+    return owners.size === 1 ? [...owners][0] : '';
+  };
+
+  // An id that is missing, or the SAME on both halves, cannot key a side.
+  // Rather than drop the proposal, ask the rosters who is giving each side up
+  // — which is the question the ids were standing in for. Only a pair of
+  // distinct, confident answers is accepted; anything less refuses, because a
+  // half-inferred pair is a guess wearing a fact's clothes.
+  let inferred = false;
+  if (!a || !b || a === b) {
+    const inferredA = inferFrom(side1);
+    const inferredB = inferFrom(side2);
+    if (inferredA && inferredB && inferredA !== inferredB) {
+      a = inferredA;
+      b = inferredB;
+      inferred = true;
+    } else if (!a || !b) {
+      return refuse('missing franchise id, and the rosters cannot supply it');
+    } else {
+      return refuse(`both sides resolved to ${a}, and the rosters cannot separate them`);
+    }
+  }
+
+  // +1 per player the rosters place on the side being scored, -1 per player
+  // they place elsewhere, 0 for a player they do not know.
+  const agreement = (side, fid) => (side || []).reduce((n, asset) => {
+    if (!asset || asset.kind !== 'player' || !asset.playerId) return n;
+    const owner = rosterOwnerByPlayerId?.get?.(String(asset.playerId));
+    if (!owner) return n;
+    return padFid(owner) === fid ? n + 1 : n - 1;
+  }, 0);
+
+  const asIs = agreement(side1, a) + agreement(side2, b);
+  const swapped = agreement(side1, b) + agreement(side2, a);
+
+  // How many players the rosters can actually speak to. Counted separately
+  // from the scores because a score of zero has two meanings and they must not
+  // be merged: "nobody in this deal is on a roster we hold" is no evidence,
+  // while "the evidence cancels out" is a row contradicting itself. Reading
+  // both as the former took a deal whose two sides claimed the SAME
+  // franchise's player and shipped it on the row's word.
+  const known = [side1, side2].reduce((n, side) => n + (side || []).filter(
+    (asset) => asset && asset.kind === 'player' && asset.playerId
+      && rosterOwnerByPlayerId?.get?.(String(asset.playerId)),
+  ).length, 0);
+
+  // No roster evidence at all (no roster file, or only unknown players): take
+  // the row at its word. This is the pre-roster behaviour, kept so a missing
+  // feed degrades to "as good as we were" rather than to silence.
+  if (known === 0) {
+    return {
+      sidesByFid: { [a]: side1, [b]: side2 },
+      fids: [a, b],
+      attributable: true,
+      verified: inferred,
+      corrected: false,
+      ...(inferred ? { inferred: true } : {}),
+    };
+  }
+  if (asIs > swapped && asIs > 0) {
+    return {
+      sidesByFid: { [a]: side1, [b]: side2 },
+      fids: [a, b],
+      attributable: true,
+      verified: true,
+      corrected: false,
+      ...(inferred ? { inferred: true } : {}),
+    };
+  }
+  if (swapped > asIs && swapped > 0) {
+    return {
+      sidesByFid: { [a]: side2, [b]: side1 },
+      fids: [a, b],
+      attributable: true,
+      verified: true,
+      corrected: true,
+      ...(inferred ? { inferred: true } : {}),
+    };
+  }
+  return refuse(`rosters contradict both orientations (asIs=${asIs}, swapped=${swapped})`);
+}
+
+/**
  * Build the `exposure` block from the redaction inputs. Returns null when
  * exposureCount is 0 (no prior posts → no exposure yet, which signals
  * "this is the first post — exposure starts at signal=1").
@@ -122,27 +297,31 @@ function pickDisplayTeam(team) {
 function buildExposure({
   signal,
   offerId,
-  offeringFid,
-  rawOffer,
   teamMap,
   playersByFid,
+  candidateFids,
+  rosterOwnerByPlayerId,
   adpRankByPlayerId,
 }) {
   if (!Number.isFinite(signal) || signal < 1) return null;
 
-  // Padded on the same terms as the caller's `sidesByFid` keys — this function
-  // looks players up in that object by these ids, so an unpadded id here finds
-  // nothing, the coin-flip decides the team has no players of its own, and it
-  // silently names the OTHER side. Padding in the caller alone left this half
-  // of the lookup on the old form.
-  const fid1 = padFid(rawOffer.franchise ?? offeringFid);
-  const fid2 = padFid(
-    rawOffer.franchise2 ?? rawOffer.offeredto ?? (fid1 === padFid(offeringFid) ? '' : offeringFid),
-  );
-  const candidates = [fid1, fid2].filter((f) => f);
+  // The ids come from `attributeSides`, which is also what keyed
+  // `playersByFid` — one derivation, so the coin flip and the roster lookup
+  // cannot disagree about which franchise is which. This function used to
+  // re-derive them off `rawOffer`, in parallel with the caller doing the same,
+  // and two derivations of one fact is the shape every bug in this file has
+  // had.
+  const candidates = (candidateFids ?? []).map((f) => padFid(f)).filter((f) => f);
   if (candidates.length === 0) return null;
 
-  const ownPlayers = (fid) => (playersByFid?.[fid] ?? []).filter((a) => a && a.kind === 'player' && a.name);
+  // A player is nameable beside a franchise only when the ROSTERS put him
+  // there. The orientation check upstream fixes a swapped row wholesale; this
+  // is the per-player floor under it, and it is the assertion that actually
+  // reaches an owner: "the [team] have [Player] on the table" is a claim about
+  // that owner's roster, so it is checked against that owner's roster.
+  const ownPlayers = (fid) => (playersByFid?.[fid] ?? []).filter(
+    (a) => a && a.kind === 'player' && a.name && rosterAgrees(rosterOwnerByPlayerId, a, fid),
+  );
 
   // Deterministic single-team pick: hash the offerId so subsequent signals
   // about the same offer always reference the same team. "Either team but
@@ -255,6 +434,33 @@ const TIER_RANK = { base: 0, tightened_circle: 1, named: 2 };
 /**
  * Core redactor. Returns { tip, debug } or { skip: true, reason } if the
  * offer shouldn't be tipped (e.g. no resolvable assets).
+ *
+ * The `@param` block is load-bearing, not decoration. Destructured options in
+ * a .mjs are inferred from the destructuring alone: a bare name is REQUIRED
+ * (so every honest caller omitting an optional one is a ts(2345) — two of
+ * those were sitting in the type baseline), and `= undefined` is inferred as
+ * the type `undefined` (so passing a real value is a ts(2322)). Only a
+ * declared signature says "optional, and of this type", which is what the
+ * header above has claimed since it was written.
+ *
+ * @param {object} args
+ * @param {Record<string, any>} args.rawOffer
+ * @param {string} args.offeringFid
+ * @param {Map<string, any>} args.playerMap
+ * @param {Map<string, any>} args.teamMap
+ * @param {Record<string, any>} args.counts
+ * @param {number} args.currentYear
+ * @param {string} [args.framingHint]
+ * @param {number} [args.offerAgeMs]
+ * @param {number} [args.exposureCount]
+ * @param {Map<string, number>} [args.adpRankByPlayerId]
+ * @param {Map<string, string>} [args.rosterOwnerByPlayerId]
+ * @param {Map<string, Set<string>>} [args.blockByFid]
+ * @param {Map<string, number>} [args.positionRuns]
+ * @param {Record<string, any> | null} [args.previousShape]
+ * @param {number} [args.priorPairCount]
+ * @param {Record<string, any> | null} [args.closure]
+ * @param {number} [args.nowMs]
  */
 export function redactTradeOffer({
   rawOffer,
@@ -267,6 +473,7 @@ export function redactTradeOffer({
   offerAgeMs = 0,
   exposureCount = 0,
   adpRankByPlayerId,
+  rosterOwnerByPlayerId,
   blockByFid,
   positionRuns,
   previousShape,
@@ -381,22 +588,32 @@ export function redactTradeOffer({
   // rows and "0007" on others, and an unpadded key misses both maps: the team
   // lookup returns undefined, `buildExposure` bails, and the post loses its
   // whole name surface rather than failing loudly.
-  const fid1 = padFid(rawOffer.franchise ?? offeringFid);
-  const fid2 = padFid(rawOffer.franchise2 ?? rawOffer.offeredto);
-  const sidesByFid = {
-    [fid1]: side1,
-    [fid2]: side2,
-  };
-
-  const exposureBuilt = buildExposure({
-    signal: exposureSignal,
-    offerId,
-    offeringFid,
-    rawOffer,
-    teamMap,
-    playersByFid: sidesByFid,
-    adpRankByPlayerId,
+  //
+  // The binding itself goes through `attributeSides`, which validates the two
+  // ids and checks the row's orientation against the rosters — see its header
+  // for the row shapes that arrive with the ids right and the sides inverted.
+  // An unattributable row yields an EMPTY map, and every name surface below
+  // reads from that map, so the whole post degrades to naming nobody.
+  const attribution = attributeSides({
+    fid1: rawOffer.franchise ?? offeringFid,
+    fid2: rawOffer.franchise2 ?? rawOffer.offeredto,
+    side1,
+    side2,
+    rosterOwnerByPlayerId,
   });
+  const sidesByFid = attribution.sidesByFid;
+
+  const exposureBuilt = attribution.attributable
+    ? buildExposure({
+      signal: exposureSignal,
+      offerId,
+      teamMap,
+      playersByFid: sidesByFid,
+      candidateFids: attribution.fids,
+      rosterOwnerByPlayerId,
+      adpRankByPlayerId,
+    })
+    : null;
 
   // The named team, taken from the id `buildExposure` actually chose rather
   // than by matching its display name back through `teamMap` — two franchises
@@ -417,10 +634,15 @@ export function redactTradeOffer({
     : null;
 
   // A named team makes escalatedPlayer an ownership claim too — re-pick it from
-  // that team's own side. Without a named team nobody is being credited with
-  // the player, so the unscoped pick stands.
+  // that team's own side, and through the same roster floor `buildExposure`
+  // uses. At tier `named` the playbook prints this player's name beside
+  // `exposure.team`, so an unchecked pick here reproduces the wrong-team-plus-
+  // player pairing through a second field. Without a named team nobody is
+  // being credited with the player, so the unscoped pick stands.
   if (exposure?.team && namedFid) {
-    escalatedPlayer = pickEscalated(sidesByFid[namedFid] ?? []);
+    escalatedPlayer = pickEscalated(
+      (sidesByFid[namedFid] ?? []).filter((a) => rosterAgrees(rosterOwnerByPlayerId, a, namedFid)),
+    );
   }
 
   // ── Beats: the drip layer (see scripts/lib/schefter-offer-beats.mjs) ──
@@ -488,7 +710,14 @@ export function redactTradeOffer({
   // matcher to detect when a web/groupme tip's franchiseHint is on either
   // side of this offer. Internal-only metadata; never reaches the LLM (the
   // anonymizer drops it before the LLM sees the safe-shape tip).
-  const partnerFranchiseId = padFid(offeringFid) === fid1 ? fid2 : fid1;
+  //
+  // Read off the ROW's two ids, not the attributed sides: this is "who is in
+  // this conversation", a question the ids answer whichever way the assets
+  // were bound, and it must still answer it for a row too garbled to name
+  // anyone from.
+  const rowFid1 = padFid(rawOffer.franchise ?? offeringFid);
+  const rowFid2 = padFid(rawOffer.franchise2 ?? rawOffer.offeredto);
+  const partnerFranchiseId = padFid(offeringFid) === rowFid1 ? rowFid2 : rowFid1;
 
   // Lower-cased player names for substring matching against web tip text.
   // Internal-only — never surfaces to the LLM. Even at non-named tier where
@@ -542,6 +771,12 @@ export function redactTradeOffer({
         tier: tierForDistinctOfferers(playerHistory.get(a.playerId) ?? 0),
       })),
     antiLeak,
+    attribution: {
+      attributable: attribution.attributable,
+      verified: attribution.verified,
+      corrected: attribution.corrected,
+      ...(attribution.reason ? { reason: attribution.reason } : {}),
+    },
     finalTokens: {
       positionTokens: finalPositionTokens,
       pickTokens: finalPickTokens,

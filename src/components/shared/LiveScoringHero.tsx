@@ -38,6 +38,13 @@ function useLiveScoring(
       const res = await fetch(`/api/live-scoring?week=${week}&L=${encodeURIComponent(leagueId)}`);
       if (!res.ok) return;
       const data: LiveScoringResponse = await res.json();
+      // `res.ok` is not "the data is good". Our own route answers 200 with
+      // `ok: false` and EMPTY collections when the upstream MFL read failed,
+      // and `{}` is truthy — so writing it through repaints every matchup on
+      // the homepage as `0.0 – 0.0`. Keep the last good scores instead: "we
+      // couldn't reach the feed" and "nothing is happening" are different
+      // facts (docs/claude/rules/live-scoring.md).
+      if (data.ok === false) return;
       setScores(data.scores);
       setRemaining(data.remaining);
       if (data.matchups?.length) setMatchups(data.matchups);
@@ -47,12 +54,17 @@ function useLiveScoring(
   }, [week, leagueId]);
 
   useEffect(() => {
-    if (!isLive) return;
+    // NOT gated on `isLive`. That flag is `getDailySlot(now).slot ===
+    // 'live-scoring'` — a hero schedule that knows Thursday, Sunday and Monday
+    // and nothing else — so on the 2026 Wednesday-night opener it was false and
+    // this hero froze at its server snapshot for the whole game, exactly as the
+    // live-scoring board did. The hint sets the CADENCE below; it does not get
+    // to decide whether there is anything to poll.
 
     // Immediate first fetch
     poll();
 
-    intervalRef.current = setInterval(poll, POLL_INTERVAL_LIVE);
+    intervalRef.current = setInterval(poll, isLive ? POLL_INTERVAL_LIVE : POLL_INTERVAL_STALE);
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
@@ -60,8 +72,6 @@ function useLiveScoring(
 
   // Slow down polling when all games are finished
   useEffect(() => {
-    if (!isLive) return;
-
     const allDone = Object.keys(remaining).length > 0 &&
       Object.values(remaining).every(r => r === 0);
 
@@ -69,7 +79,7 @@ function useLiveScoring(
       clearInterval(intervalRef.current);
       intervalRef.current = setInterval(poll, POLL_INTERVAL_STALE);
     }
-  }, [remaining, isLive, poll]);
+  }, [remaining, poll]);
 
   return { scores, remaining, matchups };
 }

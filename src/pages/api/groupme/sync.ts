@@ -12,7 +12,8 @@
  */
 
 import type { APIRoute } from 'astro';
-import { getAuthUser, isCommissionerOrAdmin } from '../../../utils/auth';
+import { getAuthUser, isCommissionerOrAdmin, isAuthorizedForLeague } from '../../../utils/auth';
+import { getLeagueBySlug } from '../../../config/leagues';
 import { fetchMessages, checkServiceTokenHealth } from '../../../utils/groupme-client';
 import { normalizeGroupMeMessage } from '../../../types/groupme';
 import {
@@ -49,9 +50,18 @@ function json(data: unknown, status = 200): Response {
  * accepting `Bearer undefined` from a stranger is precisely the hole this is
  * closing, so the empty case returns false rather than falling through.
  */
+/** The league whose GroupMe group GROUPME_GROUP_ID refers to. */
+const GROUPME_LEAGUE_ID = getLeagueBySlug('theleague')!.id;
+
 export function isAuthorizedSyncCaller(request: Request): boolean {
   const user = getAuthUser(request);
-  if (user && isCommissionerOrAdmin(user)) return true;
+  // League-scoped, not merely commissioner: GROUPME_GROUP_ID names ONE group,
+  // TheLeague's, so another league's commissioner has no business driving this
+  // sync — or reading the Upstash/KV prefixes the error path reports. Same
+  // rule as CLAUDE.md's cross-league admin note.
+  if (user && isCommissionerOrAdmin(user) && isAuthorizedForLeague(user, GROUPME_LEAGUE_ID)) {
+    return true;
+  }
 
   const secret = process.env.CRON_SECRET;
   if (!secret) return false;

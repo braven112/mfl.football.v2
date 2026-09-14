@@ -59,6 +59,42 @@ which is exactly why the split exists — verify parsing offline against
   `gameSecondsRemaining` by 900 and printed a confident "Q3 7:24" that was not
   the game clock and drifted all afternoon (the NFL clock stops; that number
   doesn't). With no ESPN game we now print the STATE and no numbers.
+- **A MATCHUP clock is a different object from a GAME clock, and the rule above
+  does not reach it.** "Never fabricate a clock" is about asserting a real NFL
+  game's state — `Q3 7:24` next to a player is a claim that can be wrong. The
+  broadcast board's `matchupTimeLeft` (`broadcast-layout.ts`) asserts nothing
+  about any game: it sums the seconds left across both teams' starters and
+  prints that fraction as a position on one 60-minute clock, which is a fact
+  about the FANTASY matchup and cannot be false about a game it never names.
+  Owner's call, and the right one (2026-09-13).
+  What it must keep:
+  - **ESPN's `period` + `displayClock` are the inputs.** MFL's
+    `gameSecondsRemaining` does not tick, so a meter built on it drifts all
+    afternoon — the same reason the rule above exists, applied one level up.
+  - **A starter ESPN could not place is out of BOTH halves of the fraction.** A
+    bye starter has no football left; counting him as an unplayed game floors
+    the meter above zero so `Final` never prints. With no starter placed at all
+    there is no clock — `assembleBroadcastBoard` substitutes `games: []` on any
+    ESPN error, and the empty string is what keeps that outage from printing a
+    confident meter made of nothing.
+  - **It is spelled so it cannot be mistaken for a game clock.** ESPN writes
+    `4:08 - 3rd`; this writes `3rd 4:08 left`.
+  - **`Final` may print only for a fraction of EXACTLY nothing.** It is the one
+    label on that meter that asserts something rather than measuring it. The
+    fraction arrives as the slate's remaining seconds over the starter COUNT,
+    so `round()` on it is not rounding toward "nothing left" — with nine
+    starters, four real seconds of football rounded to zero and the cell said
+    `Final` over a game still being played (Copilot on #1079). Every positive
+    fraction floors at one second: `4th 0:01 left`. The NUMERATOR has the same
+    floor for the same reason — a game ESPN still calls `in` may not contribute
+    zero, or the 4th quarter at `0:00` and any live game whose `displayClock`
+    does not parse sum to nothing and say `Final` over a game going to
+    overtime. `post` is the one state that may be zero.
+  What it replaced was worse than either: the real ESPN clock of the ONE game
+  most of the viewer's starters were in, which late on a Sunday is whichever
+  game kicked off LAST — a board with a single starter left in the night game
+  printed "1:33 - 1st" beside a slate that was otherwise final (owner,
+  2026-09-13).
 - **The scoring ticker is DERIVED, not accumulated.** `/api/nfl-game-detail`
   returns the whole slate's plays every poll, so `buildMoments` recomputing is
   idempotent — no seen-set to drift. It dedupes per `playId:franchiseId`, since
@@ -141,6 +177,40 @@ which is exactly why the split exists — verify parsing offline against
   now falls back to the registry entry for `L`, and only to the default league
   when `L` names nothing known. Callers may therefore send `L` alone.
   `tests/live-scoring-host-resolution.test.ts` pins all four cases.
+- **`res.ok` cannot decide `ok` — a body you could not READ is a failed read.**
+  MFL answers a throttled request with an HTML page under a 200. That parses to
+  an empty snapshot, and `ok: true` + no matchups is exactly the OFFSEASON
+  shape, so the live-scoring page swapped in last season's sample replay —
+  "Sample data" badge and all — in the middle of an in-season outage, which is
+  the one thing its own comment promises not to do. `loadLiveScoringPayload`
+  parses once and sets `ok: false` when the body is not JSON or carries an
+  `error` key; only a readable payload can be `ok: true`. (Caught by Copilot on
+  PR #1046; it had been true since the logic lived in the route.)
+- **A page must never fetch its OWN API to render itself.** The live-scoring
+  page's SSR first paint called `https://<our domain>/api/live-scoring?…` —
+  our own edge, over the public internet, from inside the render. On
+  2026-09-09 that hop stopped landing and the board printed "Scores will
+  appear here when games begin" over a live slate: the assembler got
+  `ok: false` with zero matchups, which is not even the offseason sample's
+  trigger (that needs `ok`), so nothing downstream could tell "the feed is
+  off" from "we could not reach ourselves". It was invisible in the logs too —
+  a request blocked at the edge never reaches the route, so there is no failing
+  entry next to the page render, only a page render with no API call beside it.
+  `loadLiveScoringPayload` (`src/utils/live-scoring-source.ts`) is now the ONE
+  implementation of the fetch + playoff-bracket merge; the route is a thin
+  wrapper over it and the page calls it in-process. A server that already knows
+  the league's registry host has nothing to gain by asking itself for what it
+  can read directly. `tests/live-scoring-self-fetch-guard.test.ts` pins it.
+- **`isLive` may set the CADENCE; it may never decide whether to poll.**
+  `props.isLive` is `getDailySlot(now).slot === 'live-scoring'` — a HERO
+  schedule that knows Thursday, Sunday and Monday and nothing else. The 2026
+  season opener was a WEDNESDAY night game, so the flag was false and
+  `useLiveScoring`'s `if (!isLive) return;` meant the board never asked MFL for
+  a score all game: whatever the server rendered was what you got until you
+  reloaded. The MFL poller now runs in every mode except the bundled sample
+  (where a live fetch would overwrite the replay), and its interval comes from
+  `shouldPollLive(nflSlate, props.isLive)` — the real NFL clock, which a flexed
+  kickoff or a midweek game cannot surprise. Same guard test.
 - **A `host=<hostname>` param on a public URL reads like SSRF to a WAF.** A
   since-removed pre-kickoff health check probed both leagues' live-scoring
   routes from a GitHub runner and got HTTP 403, with NO matching entry in the

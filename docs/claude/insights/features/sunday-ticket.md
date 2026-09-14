@@ -171,3 +171,34 @@ matchup with both crests. What that taught, beyond the rules that went into
   three accept one. A feature that only fires inside a season window is
   untestable until its clock is injectable, so wiring the override is part of
   building it, not a follow-up.
+
+## 2026-09-12 — The chip pickers became rails
+
+Both pickers wrapped, which at 412px turned two rows into five and pushed the
+board itself below the fold. They are one line each now, scrolled sideways
+(`.st-rail`, guarded by `tests/sunday-ticket-chip-rails.test.ts`). Three things
+were not obvious going in:
+
+- **A sticky label in a scroller must be the rail's FULL height.** `position:
+  sticky; left: 0` plus `background: var(--page-bg)` looks complete and is not:
+  the label box is only as tall as its text, so a chip scrolling underneath
+  showed its rounded top and bottom edges above and below the label — reading
+  as a rendering artifact rather than as a z-order mistake. `align-self:
+  stretch` (with the label itself a flex box to keep the text centred) is the
+  fix, and it is invisible in review because every declaration involved was
+  already present.
+- **A link OUT does not belong in the rail.** "Reset to my leagues" and "Times
+  in PT" were chips in the same row; once the row scrolled, both sat past 24
+  league chips where nobody would find them. They are siblings of the rail now,
+  and at ≤600px the rail takes `flex-basis: 100%` so they wrap to their own
+  line — which is exactly where they already rendered before the change. The
+  general rule: a scroller holds the SET being chosen from, never the actions
+  on it.
+- **`<details>` can live inside a rail without breaking the line.** `.st-others`
+  is `inline-flex`, so its `<summary>` and its `<div>` of outside leagues are
+  flex items side by side rather than stacked; with `nowrap` on both, opening
+  the disclosure extends the SAME rail (scrollWidth 364 → 3942 with 22 leagues)
+  instead of starting a second row under it.
+
+Verified at 412px and 1280px in both themes, and the one measurement that
+matters for any rail: the rail scrolls and `documentElement` does not.

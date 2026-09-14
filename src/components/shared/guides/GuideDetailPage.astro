@@ -1,0 +1,268 @@
+---
+/**
+ * Guide detail — shared implementation for every league.
+ *
+ * Rendered by the thin per-league route wrappers
+ * (src/pages/<slug>/guides/[slug].astro), which resolve the guide and own the
+ * redirect for an unknown slug — `Astro.redirect()` only redirects from a
+ * PAGE, so a gate returned from here would just render a blank 200.
+ *
+ * Body blocks go through `rewriteDescriptionLinks` for the same reason What's
+ * New articles do: hrefs are stored league-neutral and must be re-pointed at
+ * whichever league's reader is on the page. Images resolve against
+ * /assets/guides/, not the changelog's directory.
+ */
+import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
+import Breadcrumbs from '../../theleague/Breadcrumbs.astro';
+import type { GuideEntry } from '../../../types/guides';
+import type {
+  DescriptionImageBlock,
+  DescriptionListBlock,
+} from '../../../types/whats-new';
+import { rewriteDescriptionLinks } from '../../../utils/whats-new-links';
+import { resolveDirectoryHref, resolveLeaguePath } from '../../../utils/nav-utils';
+import { getLeagueBySlug } from '../../../config/leagues';
+import type { CanonicalLeagueSlug } from '../../../config/leagues';
+
+interface Props {
+  leagueSlug: CanonicalLeagueSlug;
+  guide: GuideEntry;
+}
+
+const { leagueSlug, guide } = Astro.props as Props;
+
+const league = getLeagueBySlug(leagueSlug)!;
+const hideLeaguePrefix = Astro.locals.hideLeaguePrefix ?? false;
+
+/** League-neutral path in, the reader's own path out. Same resolver the
+ *  changelog's detail page uses, so a link behaves identically in both. */
+const r = (path: string) =>
+  resolveLeaguePath(resolveDirectoryHref(path, league.navSlug), hideLeaguePrefix);
+
+const updatedDisplay = new Date(`${guide.updated}T12:00:00`).toLocaleDateString('en-US', {
+  month: 'long',
+  day: 'numeric',
+  year: 'numeric',
+});
+---
+
+<TheLeagueLayout title={`${guide.title} — Guide`}>
+  <div class="guide">
+    <Breadcrumbs
+      items={[
+        { label: 'Home', href: `/${league.slug}` },
+        { label: 'Guides', href: `/${league.slug}/guides` },
+        { label: guide.title },
+      ]}
+    />
+
+    <article class="guide__article">
+      <header class="guide__header">
+        <h1 class="guide__title">{guide.title}</h1>
+        <p class="guide__summary">{guide.summary}</p>
+        <p class="guide__updated">Updated {updatedDisplay}</p>
+      </header>
+
+      <div class="guide__body">
+        {guide.body.map((block) =>
+          typeof block === 'string' ? (
+            <p set:html={rewriteDescriptionLinks(block, r)} />
+          ) : (block as DescriptionImageBlock).type === 'image' ? (
+            <figure class="guide__figure">
+              <img
+                src={`/assets/guides/${(block as DescriptionImageBlock).src}`}
+                alt={(block as DescriptionImageBlock).alt}
+                class="guide__img"
+                loading="lazy"
+              />
+              {(block as DescriptionImageBlock).caption && (
+                <figcaption class="guide__caption">
+                  {(block as DescriptionImageBlock).caption}
+                </figcaption>
+              )}
+            </figure>
+          ) : (block as DescriptionListBlock).type === 'list' ? (
+            <div class="guide__steps">
+              {(block as DescriptionListBlock).heading && (
+                <h2 class="guide__steps-heading">{(block as DescriptionListBlock).heading}</h2>
+              )}
+              <ul class="guide__steps-list">
+                {((block as DescriptionListBlock).items ?? []).map((item) => (
+                  <li class="guide__step" set:html={rewriteDescriptionLinks(item, r)} />
+                ))}
+              </ul>
+            </div>
+          ) : null,
+        )}
+      </div>
+
+      {guide.featurePath && (
+        <div class="guide__cta">
+          <a href={r(guide.featurePath)} class="guide__cta-link">
+            {guide.featureLabel ?? 'Open it'}
+          </a>
+        </div>
+      )}
+    </article>
+
+    <p class="guide__back">
+      <a href={r('/guides')}>&larr; All guides</a>
+    </p>
+  </div>
+</TheLeagueLayout>
+
+<style>
+  .guide {
+    max-width: 48rem;
+    margin: 0 auto;
+    padding: var(--spacing-lg, 1.5rem);
+  }
+
+  .guide__article {
+    border: 1px solid var(--card-border);
+    border-radius: var(--card-radius);
+    background: var(--card-bg);
+    padding: var(--spacing-lg, 1.5rem);
+  }
+
+  .guide__header {
+    padding-bottom: var(--spacing-md, 1rem);
+    border-bottom: 1px solid var(--color-gray-200, #e5e7eb);
+    margin-bottom: var(--spacing-lg, 1.5rem);
+  }
+
+  .guide__title {
+    font-size: 1.75rem;
+    font-weight: 800;
+    line-height: 1.2;
+    color: var(--color-gray-900, #111827);
+    margin: 0 0 0.5rem;
+  }
+
+  .guide__summary {
+    font-size: 1rem;
+    line-height: 1.6;
+    color: var(--color-gray-700, #374151);
+    margin: 0 0 0.5rem;
+  }
+
+  .guide__updated {
+    font-size: 0.6875rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--color-gray-500, #6b7280);
+    margin: 0;
+  }
+
+  .guide__body {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-md, 1rem);
+  }
+
+  .guide__body :global(p) {
+    font-size: 0.9375rem;
+    line-height: 1.75;
+    color: var(--color-gray-700, #374151);
+    margin: 0;
+  }
+
+  .guide__body :global(a) {
+    color: var(--color-primary, #1c497c);
+    font-weight: 600;
+  }
+
+  .guide__steps-heading {
+    font-size: 0.8125rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--color-primary, #1c497c);
+    margin: 0 0 0.625rem;
+  }
+
+  .guide__steps-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .guide__step {
+    position: relative;
+    padding-left: 1.125rem;
+    font-size: 0.9375rem;
+    line-height: 1.7;
+    color: var(--color-gray-700, #374151);
+  }
+
+  /* A dot rather than a list marker so the hanging indent survives a wrap. */
+  .guide__step::before {
+    content: '';
+    position: absolute;
+    left: 0.25rem;
+    top: 0.75rem;
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: var(--color-secondary, #2e8743);
+  }
+
+  .guide__figure {
+    margin: 0;
+  }
+
+  .guide__img {
+    width: 100%;
+    height: auto;
+    display: block;
+    border: 1px solid var(--card-border);
+    border-radius: var(--radius-md);
+  }
+
+  .guide__caption {
+    font-size: 0.8125rem;
+    color: var(--color-gray-500, #6b7280);
+    margin-top: 0.5rem;
+    font-style: italic;
+    text-align: center;
+  }
+
+  .guide__cta {
+    margin-top: var(--spacing-lg, 1.5rem);
+    padding-top: var(--spacing-md, 1rem);
+    border-top: 1px solid var(--color-gray-200, #e5e7eb);
+  }
+
+  .guide__cta-link {
+    display: inline-block;
+    padding: 0.5rem 1rem;
+    border-radius: var(--radius-md);
+    background: var(--color-primary, #1c497c);
+    color: #ffffff;
+    font-size: 0.875rem;
+    font-weight: 600;
+    text-decoration: none;
+  }
+
+  .guide__back {
+    margin: var(--spacing-md, 1rem) 0 0;
+    font-size: 0.875rem;
+  }
+
+  .guide__back a {
+    color: var(--color-primary, #1c497c);
+    font-weight: 600;
+  }
+
+  @media (max-width: 640px) {
+    .guide {
+      padding: var(--spacing-md, 1rem);
+    }
+    .guide__article {
+      padding: var(--spacing-md, 1rem);
+    }
+  }
+</style>

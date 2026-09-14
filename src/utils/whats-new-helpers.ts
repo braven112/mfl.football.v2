@@ -147,6 +147,7 @@ export function getCategoryCounts(
     enhancement: 0,
     'bug-fix': 0,
     'league-event': 0,
+    weekly: 0,
   };
 
   for (const entry of entries) {

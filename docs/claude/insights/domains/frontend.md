@@ -133,6 +133,132 @@ hrefs to local copies, and open it in the bundled Chromium — it isolates
 
 ---
 
+## 2026-09-12 - `flex-wrap: wrap` on a COLUMN Container Makes a Multi-COLUMN Box, and an Inner Scroller Stops Scrolling
+
+**Context:** The schedule page's controls row (view tabs + a 20-season picker)
+is `display: flex; flex-wrap: wrap` on desktop. The mobile rule stacked it with
+`flex-direction: column; align-items: stretch` so the tabs would stop wrapping
+onto two lines. That change alone pushed the page to **1156px wide at a 390px
+viewport** — the season list, an `overflow-x: auto` scroll box, stopped
+scrolling and grew to its content.
+
+**Insight:** `flex-wrap: wrap` is not "wrap if needed" — it makes a
+**multi-line** flex container, and on `flex-direction: column` the lines are
+COLUMNS. Each line's cross size (here, width) is sized to its own content, so
+the container is free to be wider than its parent and `align-items: stretch` is
+measured against that content width rather than the parent's. Every
+containment trick applied inside is then inert: `min-width: 0` and `flex: 1`
+on the scroller were both already set and both did nothing, because the box
+they were shrinking into was itself content-sized.
+
+The symptom is the misleading part. It reads as an overflow bug in the scroll
+box — which is where you go looking — while the cause is a wrap declaration
+three rules up that was correct for the row layout it was written for.
+
+**Evidence:** Computed styles at 390px with the column rule but no
+`flex-wrap` reset: `.sch-controls` width 350 (correct), `.sch-seasons` width
+**1156**, `.sch-seasons__scroller` width **1100** — the parent was 350 and the
+child 1156, which is only possible because the flex line, not the parent, was
+doing the sizing. Adding `flex-wrap: nowrap` to the same mobile rule gave
+`.sch-seasons` 350 and the scroller 294.
+
+**Recommendation:** Any breakpoint that flips a wrapping flex row to
+`flex-direction: column` must reset `flex-wrap: nowrap` in the same rule —
+`wrap` almost never means what you want on a column. Catch it mechanically
+rather than by eye: assert `document.documentElement.scrollWidth <=
+clientWidth` in the mobile screenshot script. A 1156px page at 390px does not
+necessarily *look* wrong in a screenshot (the visible column renders fine); it
+shows up only as a sideways scroll the reader finds later.
+
+## 2026-09-12 - A Named Import That No Longer Exists Survives `astro dev` and Only Fails the Bundled Build
+
+**Context:** A scoreboard view was drafted, then simplified away before the
+first commit. The two helpers it needed (`weekMatchups`, `lastPlayedWeek`) were
+reverted out of `src/utils/schedule-data.mjs`, but `SchedulePage.astro` kept
+importing them by name. The page rendered correctly in `pnpm dev`, all 436 test
+files passed, and the branch was committed and pushed in that state.
+
+**Insight:** `astro dev` transforms modules with esbuild and does not link them,
+so a named import with no matching export is simply `undefined` at runtime —
+and stays invisible as long as nothing calls it. A production build bundles
+through Rollup, which *does* resolve named exports and errors on a missing one.
+So the whole local signal set — the page renders, the unit suite is green — can
+be clean while the build is broken.
+
+This makes the usual "I verified it in the browser" evidence worthless for this
+specific bug class, and it is an easy state to reach: any revert of a helper
+that leaves its import behind.
+
+**Evidence:** `grep -c` on the page found 2 references to the two names;
+`grep -c 'export function'` on the util found 0. `pnpm test:unit` (436 files)
+and a live render both passed with the mismatch in place. `pnpm test:types`
+(the `astro check` baseline) is the check that catches it — a missing export is
+a `ts(2305)` and moves the ratcheted total, which is exactly what the baseline
+exists to detect.
+
+**Recommendation:** After reverting or renaming anything exported from a
+`.mjs`/`.ts` util, grep its importers before committing — the dev server will
+not tell you. Treat `pnpm test:types` as the gate for any diff that removed an
+export, not just for type work: it is the cheapest thing in the repo that links
+modules. This is the same family as the `ts(2307) Cannot find module` rule in
+CLAUDE.md (an erased `import type` voiding a file's types with no runtime
+symptom) — a broken import edge that no runtime check can see.
+
+## 2026-09-11 - A Page Has TWO Ancestor Gutters, Not One — Full-Bleed by Viewport, Never by Summing Them
+
+**Context:** Making Live Scoring's matchup detail run edge-to-edge on a phone.
+
+**Insight:** Content on a TheLeague page is inset by **two** independent paddings
+before its own box starts, and the second is easy to miss:
+
+| Where | Declaration | Phone value |
+|---|---|---|
+| `TheLeagueLayout`'s `main` | `padding-inline: var(--padding-sm)` | 8px |
+| the page wrapper (e.g. `.ls-page`) | `padding: … var(--spacing-md) …` | 16px |
+
+Plus a card border, that is ~30px a side — 16% of a 390px screen. A negative
+margin written against the gutter you happened to notice (`calc(var(--spacing-md)
+* -1)`) leaves the other 8px behind, and the mistake reads as "nearly right",
+which is worse than obviously wrong.
+
+**Recommendation:** Go full bleed against the VIEWPORT, so the rule does not have
+to know either ancestor:
+
+```css
+.ls-detail {                        /* inside @media (max-width: 760px) */
+  width: 100vw;
+  margin-inline: calc(50% - 50vw);
+  border-left: 0; border-right: 0; border-radius: 0; box-shadow: none;
+}
+```
+
+`50% - 50vw` resolves the percentage against the parent's inline size, so it
+lands on the viewport edge for any centred column — which `main`
+(`margin-inline: auto` + `max-width`) and the page wrapper (`margin: 0 auto`)
+both are. It survives either padding changing. Verified at 320/390/430/760px:
+`documentElement.scrollWidth === innerWidth` at every width, so no horizontal
+scrollbar — the failure mode this technique is usually blamed for, and which
+only bites when the element is NOT centred or a desktop scrollbar is in play.
+
+Two consequences worth planning for rather than discovering:
+
+- **The page wrapper's `padding-top` becomes a visible band.** Behind an inset,
+  rounded card it read as the margin around it; behind a full-bleed one only its
+  top edge survives, as a stripe of page background with nothing beside it
+  (obvious in light mode, invisible in dark — check both). Cancel it with the
+  same token it is declared with: `margin-top: calc(var(--spacing-lg) * -1)`.
+- **Full-width row rules get much louder** once the card's frame is gone. Insetting
+  them to the row's own gutter needs a pseudo-element rather than a
+  `border-bottom` when the row is a grid with no inline padding — and an
+  absolutely positioned `::after` is out of flow, so it does **not** become a
+  grid item among `display: contents` / `subgrid` children.
+
+**Evidence:** `src/styles/live-scoring.css` 760px block;
+`src/layouts/TheLeagueLayout.astro` `main`; `src/pages/theleague/live-scoring.astro`
+`.ls-page`.
+
+---
+
 ## 2026-09-09 - Two Percentages, Two Boxes: Why "58% + 38%" Overlapped
 
 **Context:** the What's New hero ran its paragraph underneath the browser-framed
@@ -3319,3 +3445,40 @@ Two smaller traps found in the same page, both also silent:
   `params.get()` reads only the first and silently narrows the filter to one
   value. Use `getAll()`, and split on commas too if hand-written links are also
   supported.
+
+## 2026-09-11 - Moving a Button Out of Its Delegated-Click Container Silently Kills the Click
+
+**Context:** `theleague/players.astro`'s Free Agents toolbar reorganizes which
+row each button sits in for mobile ("My Watch List" with the view toggles vs.
+"My Rank" with the action buttons) across two follow-up passes in the same PR.
+`#col-group-toggles` has ONE delegated listener (`colGroupToggles.addEventListener('click', …)`
+matching `.col-group-btn` via `e.target.closest`) that drives every view-toggle
+button, including the Watch List button — because Watch List is also a
+`.col-group-btn`, just visually relocated.
+
+**Insight:** Moving an element to a new DOM parent does not move the
+listeners bound to its OLD parent — a delegated click handler is scoped to
+the container it was attached to, not to "wherever this class of button
+lives now." Relocating "My Watch List" button out of `#col-group-toggles`
+into `.toolbar-right` (first pass) silently broke its click, because the
+delegated listener never sees clicks outside its own subtree; it had to grow
+a second, standalone listener on the button by id. Moving it back into
+`#col-group-toggles` (second pass, this same PR) made that standalone
+listener redundant — worth deleting, not just leaving as harmless dead code,
+since a stray reference to a removed id is exactly the kind of thing that
+looks intentional to the next reader. **When relocating a button that's
+driven by event delegation, first find where the listener is actually bound
+(`grep` the id/class inside `<script>`, not just the markup) and either move
+the button back inside that container, widen the listener to a shared
+ancestor, or add a dedicated listener — do not assume "it's still `.col-group-btn`,
+so it still works."**
+- **A new page that calls `getLeagueBySlug(slug)` without `!` fails
+  `pnpm test:types` even though it only adds ~3 errors.** The helper returns
+  `League | null`, and the null-safety class outside `rosters.astro` is pinned
+  at ZERO in `tests/fixtures/typecheck-baseline.json` (`clearedClasses`), so
+  three `'league' is possibly 'null'` errors fail the "cleared classes stay at
+  zero" assertion as well as the total. The repo's convention for a prop already
+  typed `CanonicalLeagueSlug` is the non-null assertion —
+  `const league = getLeagueBySlug(leagueSlug)!;` — which is what every shared
+  page component does (division-strength, draft-hub, guides, custom-rankings).
+  Worth knowing before the 2.5-minute type run, not after it.

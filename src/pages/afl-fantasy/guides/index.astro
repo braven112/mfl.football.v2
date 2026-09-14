@@ -1,0 +1,11 @@
+---
+/**
+ * Guides index (AFL Fantasy) — thin route wrapper.
+ * Shared implementation lives in components/shared/guides/GuidesIndexPage.
+ */
+import GuidesIndexPage from '../../../components/shared/guides/GuidesIndexPage.astro';
+
+export const prerender = false;
+---
+
+<GuidesIndexPage leagueSlug="afl-fantasy" title="Guides - AFL Fantasy" />
