@@ -26,6 +26,7 @@ import {
   buildBoardLeagues,
   loadLeagueProjections,
   loadLeagueSnapshot,
+  readLeagueFranchiseNames,
   readOutsideLiveSnapshot,
 } from './broadcast-live-source';
 import { hasLiveSignal, type LiveSnapshot } from './live-scoring-snapshot';
@@ -75,6 +76,17 @@ export interface LeagueLiveRead {
    * read fine but nothing played (`ok` true, this false), and live.
    */
   hasSignal: boolean;
+  /**
+   * Every franchise's NAME in this league, by id — EMPTY for a registered
+   * league, which has committed brands the caller prefers.
+   *
+   * `myleagues` carries at most the viewer's own franchise name and often not
+   * even that, so without this a league this site does not host had no name
+   * for anybody: the board showed "Franchise 0015" against "Franchise 0032",
+   * and their NFL crests never resolved because the matcher had no name to
+   * match.
+   */
+  franchiseNames: Record<string, string>;
 }
 
 export interface ReadCrossLeagueInput {
@@ -133,11 +145,19 @@ export async function readCrossLeagueLive(
   const settled = await mapWithConcurrency(leagues, limit, async (league) => {
     // Both reads for one league share a lane, so the bound counts LEAGUES
     // rather than requests — which is the number that grows with the owner.
-    const [result, projections] = await Promise.all([
+    const [result, projections, franchiseNames] = await Promise.all([
       loadLeagueSnapshot({ league, year, week }, (l, y, w) =>
         readOutsideLiveSnapshot(l, y, w, user.id),
       ).catch(() => null),
       loadLeagueProjections(league, week, user.id, year).catch(() => new Map<string, number>()),
+      // Registered leagues have committed brands, so this is skipped for them
+      // entirely rather than fetched and thrown away. For everyone else it is
+      // cached for an hour in process, so it is not a per-poll request.
+      league.registered
+        ? Promise.resolve<Record<string, string>>({})
+        : readLeagueFranchiseNames(league, year, user.id).catch(
+            (): Record<string, string> => ({}),
+          ),
     ]);
 
     const snapshot = result?.snapshot ?? null;
@@ -147,6 +167,7 @@ export async function readCrossLeagueLive(
       ok,
       snapshot,
       projections,
+      franchiseNames,
       // Only a snapshot we actually read can carry signal. A failed read is
       // never "no games yet" — conflating them is what let an outage render
       // as an offseason.
@@ -162,7 +183,48 @@ export async function readCrossLeagueLive(
           ok: false,
           snapshot: null,
           projections: new Map<string, number>(),
+          franchiseNames: {},
           hasSignal: false,
         },
   );
+}
+
+/**
+ * Each league's OWN franchise name for the viewer, for surfaces that list
+ * leagues without reading their scores (`/live/settings`).
+ *
+ * `myleagues` carries at most `franchise_name` and frequently leaves it blank,
+ * which is what made the settings list read "Franchise 0015" for every league
+ * this site does not host — the same blank the board suffered. Registered
+ * leagues are skipped: `resolveFranchiseIdentity` already has their committed
+ * brands.
+ *
+ * Cheap in practice despite the fan-out: `readLeagueFranchiseNames` caches for
+ * an hour in the same process the board uses, so a visit to settings after
+ * looking at the board makes no requests at all. Bounded and fault-isolated
+ * for the same reasons the live read is — a name is decoration, and one slow
+ * league must not hold the page.
+ */
+export async function readViewerFranchiseNames(
+  user: AuthUser,
+  leagues: readonly BoardLeague[],
+  year: number = getCurrentSeasonYear(),
+  concurrency: number = CROSS_LEAGUE_FAN_OUT_LIMIT,
+): Promise<Record<string, string>> {
+  const targets = leagues.filter((l) => !l.registered && l.host);
+  if (targets.length === 0) return {};
+
+  const settled = await mapWithConcurrency(targets, concurrency, async (league) => {
+    const names = await readLeagueFranchiseNames(league, year, user.id).catch(
+      (): Record<string, string> => ({}),
+    );
+    return { id: league.id, name: names[league.franchiseId] ?? '' };
+  });
+
+  const out: Record<string, string> = {};
+  for (const outcome of settled) {
+    if (outcome.status !== 'fulfilled') continue;
+    if (outcome.value.name) out[outcome.value.id] = outcome.value.name;
+  }
+  return out;
 }

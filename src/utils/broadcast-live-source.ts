@@ -452,3 +452,93 @@ export async function loadLeagueProjections(
     return new Map();
   }
 }
+
+// ── franchise names for leagues this site does not host ────────────────────
+
+/**
+ * How long a league's franchise names stay good in process.
+ *
+ * An owner renaming his team should show up the same afternoon, but not on
+ * every poll — matched to `my-leagues`' own hour. Per-instance and
+ * best-effort: a cold lambda just fetches once.
+ */
+const FRANCHISE_NAMES_TTL_MS = 60 * 60 * 1000;
+
+const franchiseNamesCache = (): Map<string, { at: number; names: Record<string, string> }> => {
+  const g = globalThis as {
+    __mflFranchiseNamesCache?: Map<string, { at: number; names: Record<string, string> }>;
+  };
+  if (!g.__mflFranchiseNamesCache) g.__mflFranchiseNamesCache = new Map();
+  return g.__mflFranchiseNamesCache;
+};
+
+/**
+ * Every franchise's NAME in one league, keyed by franchise id.
+ *
+ * WHY THIS EXISTS. `myleagues` carries at most the viewer's OWN
+ * `franchise_name`, and frequently not even that — so a league this site does
+ * not host had no name for anybody. The board rendered "Franchise 0015" vs
+ * "Franchise 0032" with F0 initials on grey for entire leagues, which is also
+ * why their NFL crests never appeared: `matchNflTeamName` cannot match a name
+ * nobody fetched. One `TYPE=league` export fixes both at once.
+ *
+ * REGISTERED LEAGUES DO NOT COME HERE. They have committed team brands with
+ * colours and crests (`getLeagueTeamBrands`), which is strictly more than this
+ * returns; the caller prefers those and only falls back to this.
+ *
+ * Never throws. An unreadable league returns `{}` and the board degrades to
+ * the franchise-id labels it showed before — worse than names, better than
+ * nothing rendering.
+ */
+export async function readLeagueFranchiseNames(
+  league: BoardLeague,
+  year: number,
+  mflUserCookie: string,
+): Promise<Record<string, string>> {
+  if (!mflUserCookie || !league.host) return {};
+
+  const key = `${league.id}:${year}`;
+  const cache = franchiseNamesCache();
+  const hit = cache.get(key);
+  if (hit && Date.now() - hit.at < FRANCHISE_NAMES_TTL_MS) return hit.names;
+
+  try {
+    const url = buildMflExportUrl({
+      type: 'league',
+      leagueId: league.id,
+      year,
+      host: league.host,
+    });
+    const response = await mflFetch({ url, method: 'GET', mflUserCookie });
+    if (!response.ok) return {};
+    const body = await response.json().catch(() => null);
+    // `res.ok` is not "the data is good": MFL answers errors with a 200 and a
+    // throttled MFL answers with HTML, so this reads defensively rather than
+    // trusting the status.
+    const raw = (body as { league?: { franchises?: { franchise?: unknown } } } | null)
+      ?.league?.franchises?.franchise;
+    const rows = Array.isArray(raw) ? raw : raw ? [raw] : [];
+
+    const names: Record<string, string> = {};
+    for (const row of rows) {
+      const f = (row ?? {}) as { id?: unknown; name?: unknown };
+      const id = `${f.id ?? ''}`.trim();
+      const name = `${f.name ?? ''}`.trim();
+      // A blank name is NOT recorded. The caller falls back to its own label,
+      // and an empty string would override that with nothing at all.
+      if (id && name) names[id.padStart(4, '0')] = name;
+    }
+
+    if (Object.keys(names).length === 0) return {};
+    cache.set(key, { at: Date.now(), names });
+    // Bounded: one entry per league-year, and an owner in 40 leagues is
+    // already an outlier.
+    if (cache.size > 64) {
+      const oldest = [...cache.entries()].sort((a, b) => a[1].at - b[1].at)[0];
+      if (oldest) cache.delete(oldest[0]);
+    }
+    return names;
+  } catch {
+    return {};
+  }
+}

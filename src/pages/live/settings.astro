@@ -17,7 +17,7 @@
 import MflAppLayout from '../../layouts/MflAppLayout.astro';
 import LeagueToggles from '../../components/shared/mfl-live/LeagueToggles';
 import { getAuthUser } from '../../utils/auth';
-import { discoverBoardLeagues } from '../../utils/cross-league-live';
+import { discoverBoardLeagues, readViewerFranchiseNames } from '../../utils/cross-league-live';
 import {
   MFL_LIVE_LEAGUE_COOKIE,
   rememberMflLiveChoice,
@@ -36,6 +36,8 @@ if (authUser) rememberMflLiveChoice(Astro.url, Astro.cookies);
 
 let leagues: Awaited<ReturnType<typeof discoverBoardLeagues>> = [];
 let enabled: string[] = [];
+/** League id -> the viewer's own franchise name, for leagues myleagues left blank. */
+let viewerNames: Record<string, string> = {};
 let loadFailed = false;
 
 if (authUser) {
@@ -46,6 +48,9 @@ if (authUser) {
       Astro.cookies.get(MFL_LIVE_LEAGUE_COOKIE)?.value ?? null,
       leagues,
     ));
+    // Never fatal: a missing name costs a sub-line, and this page's job is
+    // the toggles.
+    viewerNames = await readViewerFranchiseNames(authUser, leagues).catch(() => ({}));
   } catch {
     loadFailed = true;
   }
@@ -65,7 +70,11 @@ const rows = leagues.map((league) => {
   // blank, and an empty sub-line reads as broken.
   const identity = resolveFranchiseIdentity({
     franchiseId: league.franchiseId,
-    franchiseName: league.franchiseName,
+    // The league's OWN export first: `myleagues` leaves `franchise_name`
+    // blank for most leagues this site does not host, which is what made
+    // every one of them read "Franchise 0015" here — and, on the board, what
+    // stopped their NFL crests resolving at all.
+    franchiseName: viewerNames[league.id] || league.franchiseName,
     leagueSlug: league.registered?.slug ?? null,
   });
   return {

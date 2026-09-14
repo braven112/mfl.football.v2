@@ -112,14 +112,34 @@ function matchupColorVars(mine: FranchiseColorClaim, theirs: FranchiseColorClaim
  * names — so an outside opponent is named by their franchise id until phase 3
  * reads that league's own roster. Honest, and never a blank.
  */
-function opponentNames(slug: string | null): Record<string, string> {
-  if (!slug) return {};
+/**
+ * Every franchise's name in one league, by id.
+ *
+ * TWO SOURCES, in priority order, because the two kinds of league know
+ * different amounts about themselves:
+ *
+ *  - A REGISTERED league has committed team brands, which carry colours and
+ *    crests as well as the name. Always preferred.
+ *  - Any other league gets the names the cross-league read fetched from its
+ *    own `TYPE=league` export. Without them the board printed "Franchise
+ *    0015" against "Franchise 0032" for whole leagues, and their NFL crests
+ *    could never resolve — `matchNflTeamName` cannot match a name nobody
+ *    fetched.
+ */
+function franchiseNamesFor(
+  slug: string | null,
+  fetched: Record<string, string>,
+): Record<string, string> {
+  if (!slug) return fetched;
   try {
-    return Object.fromEntries(
+    const brands = Object.fromEntries(
       Object.entries(getLeagueTeamBrands(slug)).map(([fid, brand]) => [fid, (brand as { name: string }).name]),
     );
+    // The fetched map underneath, so a franchise the committed brands somehow
+    // miss still gets a name rather than an id.
+    return { ...fetched, ...brands };
   } catch {
-    return {};
+    return fetched;
   }
 }
 
@@ -227,7 +247,7 @@ export async function assembleMflLiveBoard(
       read.projections,
     );
 
-    const names = opponentNames(slug);
+    const names = franchiseNamesFor(slug, read.franchiseNames);
     const identityFor = (fid: string, fallbackName: string) =>
       resolveFranchiseIdentity({
         franchiseId: fid,

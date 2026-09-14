@@ -75,6 +75,7 @@ const read = (over: Record<string, unknown>) => ({
   ok: true,
   snapshot: played(),
   projections: new Map<string, number>(),
+  franchiseNames: {} as Record<string, string>,
   hasSignal: true,
   ...over,
 });
@@ -226,5 +227,62 @@ describe('selection', () => {
       leaguesParam: 'a,someone-elses-league',
     });
     expect(enabled).toEqual(['a']);
+  });
+});
+
+
+/**
+ * A league this site does not host gets its names from its own TYPE=league
+ * export, and those names are what let the NFL crest resolve.
+ *
+ * The bug: `myleagues` carries at most the viewer's own `franchise_name` and
+ * often not even that, so entire leagues rendered as "Franchise 0015" against
+ * "Franchise 0032" with F0 initials on grey — and no crest could ever appear,
+ * because `matchNflTeamName` cannot match a name nobody fetched. The two
+ * symptoms had one cause.
+ */
+describe('franchise names in a league this site does not host', () => {
+  it('names both sides from the fetched map, not the franchise id', async () => {
+    readCrossLeagueLive.mockResolvedValue([
+      read({ franchiseNames: { '0001': 'Green Bay Packers', '0002': 'Chicago Bears' } }),
+    ]);
+    const { board } = await assembleMflLiveBoard({ user, week: 2, year: 2026 });
+    const m = board.leagues[0].matchups[0]!;
+    expect(m.mine.name).toBe('Green Bay Packers');
+    expect(m.opponent.name).toBe('Chicago Bears');
+  });
+
+  it('an NFL team name resolves to that club\u2019s crest, not initials', async () => {
+    readCrossLeagueLive.mockResolvedValue([
+      read({ franchiseNames: { '0001': 'Green Bay Packers', '0002': 'Chicago Bears' } }),
+    ]);
+    const { board } = await assembleMflLiveBoard({ user, week: 2, year: 2026 });
+    const m = board.leagues[0].matchups[0]!;
+    // Rung 2 of the identity ladder: a real club mark, served locally so the
+    // dark-mode swap applies.
+    expect(m.mine.icon).toBe('/assets/nfl-logos/GB.svg');
+    expect(m.opponent.icon).toBe('/assets/nfl-logos/CHI.svg');
+    expect(m.mine.rung).not.toBe('text');
+  });
+
+  it('a name that is NOT an NFL team still gets its name, and falls to initials', async () => {
+    readCrossLeagueLive.mockResolvedValue([
+      read({ franchiseNames: { '0001': 'Make Football Great Again', '0002': 'Sunday Funday' } }),
+    ]);
+    const { board } = await assembleMflLiveBoard({ user, week: 2, year: 2026 });
+    const m = board.leagues[0].matchups[0]!;
+    expect(m.mine.name).toBe('Make Football Great Again');
+    expect(m.mine.icon).toBe('');
+    // The point of the fix: even with no crest, the row says a NAME rather
+    // than "Franchise 0001".
+    expect(m.mine.name).not.toMatch(/^Franchise /);
+  });
+
+  it('falls back to the franchise id label when MFL gave no names at all', async () => {
+    readCrossLeagueLive.mockResolvedValue([read({ franchiseNames: {} })]);
+    const { board } = await assembleMflLiveBoard({ user, week: 2, year: 2026 });
+    const m = board.leagues[0].matchups[0]!;
+    // Not a crash, and not an empty string — the old behaviour, kept as the floor.
+    expect(m.opponent.name).toMatch(/0002/);
   });
 });

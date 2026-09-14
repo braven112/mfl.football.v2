@@ -24,11 +24,13 @@ const loadLeagueProjections = vi.fn();
 const readOutsideLiveSnapshot = vi.fn();
 const buildBoardLeagues = vi.fn();
 const fetchMyLeagues = vi.fn();
+const readLeagueFranchiseNames = vi.fn();
 
 vi.mock('../src/utils/broadcast-live-source', () => ({
   loadLeagueSnapshot: (...a: unknown[]) => loadLeagueSnapshot(...a),
   loadLeagueProjections: (...a: unknown[]) => loadLeagueProjections(...a),
   readOutsideLiveSnapshot: (...a: unknown[]) => readOutsideLiveSnapshot(...a),
+  readLeagueFranchiseNames: (...a: unknown[]) => readLeagueFranchiseNames(...a),
   buildBoardLeagues: (...a: unknown[]) => buildBoardLeagues(...a),
 }));
 
@@ -71,6 +73,53 @@ function unplayedPayload(): LiveSnapshot {
 beforeEach(() => {
   vi.clearAllMocks();
   loadLeagueProjections.mockResolvedValue(new Map());
+  readLeagueFranchiseNames.mockResolvedValue({});
+});
+
+/**
+ * The bug this fixes: a league this site does not host had NO name for
+ * anybody. `myleagues` carries at most the viewer's own `franchise_name` and
+ * often not even that, so the board rendered "Franchise 0015" against
+ * "Franchise 0032" — and their NFL crests never resolved either, because
+ * `matchNflTeamName` cannot match a name nobody fetched.
+ */
+describe('readCrossLeagueLive — franchise names', () => {
+  beforeEach(() => {
+    loadLeagueSnapshot.mockResolvedValue({ leagueId: 'x', ok: true, snapshot: livePayload() });
+  });
+
+  it('fetches names for a league this site does not host', async () => {
+    readLeagueFranchiseNames.mockResolvedValue({ '0015': 'Cowboys', '0032': 'Chiefs' });
+    const [read] = await readCrossLeagueLive({ user, leagues: [league('999')], week: 2, year: 2026 });
+    expect(read.franchiseNames).toEqual({ '0015': 'Cowboys', '0032': 'Chiefs' });
+    expect(readLeagueFranchiseNames).toHaveBeenCalledTimes(1);
+  });
+
+  /** A registered league has committed brands with colours and crests. */
+  it('does not fetch them for a registered league', async () => {
+    const registered = league('13522', { registered: { slug: 'theleague' } });
+    const [read] = await readCrossLeagueLive({ user, leagues: [registered], week: 2, year: 2026 });
+    expect(readLeagueFranchiseNames).not.toHaveBeenCalled();
+    expect(read.franchiseNames).toEqual({});
+  });
+
+  it('degrades to no names rather than failing the league', async () => {
+    readLeagueFranchiseNames.mockRejectedValue(new Error('MFL timed out'));
+    const [read] = await readCrossLeagueLive({ user, leagues: [league('999')], week: 2, year: 2026 });
+    expect(read.franchiseNames).toEqual({});
+    // The league itself still reads — names are decoration, scores are not.
+    expect(read.ok).toBe(true);
+  });
+
+  it('keeps them per league, never pooled', async () => {
+    readLeagueFranchiseNames.mockImplementation(async (l: any) =>
+      l.id === 'a' ? { '0001': 'Bears' } : { '0001': 'Packers' });
+    const reads = await readCrossLeagueLive({
+      user, leagues: [league('a'), league('b')], week: 2, year: 2026,
+    });
+    expect(reads[0].franchiseNames['0001']).toBe('Bears');
+    expect(reads[1].franchiseNames['0001']).toBe('Packers');
+  });
 });
 
 describe('readCrossLeagueLive — partial results', () => {
