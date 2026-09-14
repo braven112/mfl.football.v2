@@ -704,3 +704,34 @@ html.dark .mlb-card {
     line-height: 1.55;
     color: var(--content-text-muted);
   }
+
+/* ── Bench ──────────────────────────────────────────────────────────────
+   Labelled and recessed, never just a longer list. On a board whose whole
+   job is the score, a second run of rows under the starters reads as more
+   starters — and these points explicitly do not count. */
+.mlb-bench-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+  padding: 0.35rem 0 0.3rem;
+  border-top: 1px solid var(--color-border-default);
+  font-size: 0.68rem;
+  font-weight: var(--font-weight-bold, 700);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-text-secondary);
+}
+.mlb-bench-head__pts {
+  letter-spacing: 0;
+  font-variant-numeric: tabular-nums;
+}
+/* Dimmed as a GROUP rather than per row, so the starters stay the thing your
+   eye lands on when the card opens. */
+.mlb-players--bench {
+  opacity: 0.72;
+}
+.mlb-players--bench .mlb-player__pts {
+  font-weight: var(--font-weight-normal, 400);
+}

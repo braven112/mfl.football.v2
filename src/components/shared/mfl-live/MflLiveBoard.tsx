@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { MflLiveBoard as Board, MflLiveLeaguePanel, MflLiveMatchup, MflLiveTeam } from '../../../types/mfl-live';
-import type { NflGame, PlayerMeta } from '../../../types/live-scoring';
+import type { LivePlayerRow, NflGame, PlayerMeta } from '../../../types/live-scoring';
+import { positionLabel } from '../../../utils/mfl-live-lineup';
 import type { BroadcastMoment, RedZoneAlert } from '../../../utils/broadcast-moments';
 import { shouldPollLive } from '../../../hooks/useNflScoreboard';
 
@@ -190,18 +191,31 @@ function TeamRow({ team, leading }: { team: MflLiveTeam; leading: boolean }) {
   );
 }
 
-function PlayerList({ team, meta }: { team: MflLiveTeam; meta: Record<string, PlayerMeta> }) {
-  if (team.players.length === 0) {
-    return <p className="mlb-empty-note">No starters in this lineup.</p>;
-  }
+function PlayerRows({
+  rows,
+  team,
+  meta,
+  bench,
+}: {
+  rows: LivePlayerRow[];
+  team: MflLiveTeam;
+  meta: Record<string, PlayerMeta>;
+  bench?: boolean;
+}) {
   return (
-    <ul className="mlb-players">
-      {team.players.map((row) => {
+    <ul className={`mlb-players${bench ? ' mlb-players--bench' : ''}`}>
+      {rows.map((row) => {
         const who = meta[row.id];
         const final = row.secondsRemaining === 0;
         return (
           <li className="mlb-player" key={`${team.franchiseId}-${row.id}`}>
-            <span className="mlb-player__pos">{who?.position || '—'}</span>
+            {/*
+              `positionLabel`, not the raw meta: MFL calls a kicker PK, which
+              is an MFL-ism no owner uses. The ORDER these rows arrive in is
+              the server's (orderLineupRows) — nothing here re-sorts, so the
+              two sides of a matchup cannot drift apart.
+            */}
+            <span className="mlb-player__pos">{positionLabel(who?.position) || '—'}</span>
             <span className="mlb-player__name">
               {who?.name || `Player ${row.id}`}
               <span className="mlb-player__meta">
@@ -216,6 +230,48 @@ function PlayerList({ team, meta }: { team: MflLiveTeam; meta: Record<string, Pl
       })}
     </ul>
   );
+}
+
+/**
+ * One team's lineup: starters, then bench, both in position order.
+ *
+ * The bench is LABELLED and visually recessed rather than merely listed
+ * after. An unlabelled second list reads as more starters, which on this board
+ * would be a lie about the score — the whole reason bench rows are kept in a
+ * map of their own upstream is that they cannot count.
+ */
+function PlayerList({ team, meta }: { team: MflLiveTeam; meta: Record<string, PlayerMeta> }) {
+  if (team.players.length === 0 && team.bench.length === 0) {
+    return <p className="mlb-empty-note">No lineup for this team.</p>;
+  }
+  return (
+    <>
+      {team.players.length === 0 ? (
+        <p className="mlb-empty-note">No starters in this lineup.</p>
+      ) : (
+        <PlayerRows rows={team.players} team={team} meta={meta} />
+      )}
+
+      {team.bench.length > 0 && (
+        <>
+          <div className="mlb-bench-head">
+            <span>Bench</span>
+            <span className="mlb-bench-head__pts">{fmt(benchTotal(team.bench))}</span>
+          </div>
+          <PlayerRows rows={team.bench} team={team} meta={meta} bench />
+        </>
+      )}
+    </>
+  );
+}
+
+/**
+ * What the bench scored — shown so the owner can see it, never added to
+ * anything. It is the answer to "how much did I leave on it", which is only
+ * a question because these points did NOT count.
+ */
+function benchTotal(rows: LivePlayerRow[]): number {
+  return rows.reduce((sum, r) => sum + (Number.isFinite(r.live) ? r.live : 0), 0);
 }
 
 function MatchupCard({

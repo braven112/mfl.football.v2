@@ -27,6 +27,7 @@ import { buildBroadcastMoments, selectRedZoneAlerts, type LeagueViewer } from '.
 import { loadNflGameDetail } from './nfl-game-detail-source';
 import { fetchNflScoreboard } from './nfl-scoreboard-source';
 import { resolveMflLiveLeagues } from './mfl-live-selection';
+import { orderLineupRows } from './mfl-live-lineup';
 import { resolveFranchiseIdentity, identityIconAlt, type FranchiseColorClaim } from './mfl-live-identity';
 import { resolveTeamColorPair } from './team-color-contrast';
 import { getPlayerMap } from './player-map';
@@ -212,7 +213,10 @@ export async function assembleMflLiveBoard(
       continue;
     }
 
+    // BOTH maps. The bench is rendered now, and a bench row with no meta has
+    // no name, no position and therefore no place in the order.
     for (const rows of Object.values(snapshot.players)) for (const r of rows) addMeta(r.id);
+    for (const rows of Object.values(snapshot.bench)) for (const r of rows) addMeta(r.id);
 
     const scores = scoreLeague(
       league.id,
@@ -247,7 +251,14 @@ export async function assembleMflLiveBoard(
         live: s?.live ?? 0,
         projectedFinal: s?.projectedFinal ?? 0,
         yetToPlay: s?.yetToPlay ?? 0,
-        players: s?.players ?? [],
+        // Ordered HERE, server-side, so the island renders a list rather than
+        // sorting one on every poll — and so both sides of a matchup are
+        // ordered by the same code path.
+        players: orderLineupRows(s?.players ?? [], playerMeta),
+        // Straight from the snapshot's own bench map, never from `s`:
+        // `scoreLeague` deliberately carries starters alone so nothing
+        // downstream can sum a bench row into the score.
+        bench: orderLineupRows(snapshot.bench[fid] ?? [], playerMeta),
       };
     };
 

@@ -29,11 +29,17 @@ export interface MflLiveTeam {
   projectedFinal: number;
   yetToPlay: number;
   /**
-   * STARTERS only, for the expanded view. Bench rows travel in their own map
-   * upstream precisely so nothing can sum them by accident — a bench row here
-   * inflates the projected final with points that cannot be scored.
+   * STARTERS only, in reading order: QB, RB, WR, TE, K, DEF, with several of
+   * a position sitting together. See `orderLineupRows`.
+   *
+   * Bench rows travel SEPARATELY, below, precisely so nothing can sum them by
+   * accident — a bench row folded in here inflates the projected final with
+   * points that cannot be scored. Two lists rather than one list with a flag,
+   * which is what makes that mistake impossible rather than merely unlikely.
    */
   players: LivePlayerRow[];
+  /** The bench, ordered exactly the same way. Never summed into the score. */
+  bench: LivePlayerRow[];
 }
 
 export interface MflLiveMatchup {
