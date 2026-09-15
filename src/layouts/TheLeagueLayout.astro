@@ -275,8 +275,19 @@ const onForeignLeagueHost =
  */
 const pwaGateLeague = getLeagueBySlug(ownLeagueSlug)!;
 const pwaGateLoginPath = loginPathFor(pwaGateLeague);
+/**
+ * The prefix comes off only on THIS league's OWN apex, never merely on "an
+ * apex". `hideLeaguePrefix` says the host belongs to some league; a league's
+ * apex serves its own pages unprefixed but keeps every other league's prefix,
+ * which is what makes a cross-league deep link like
+ * `theleague.us/afl-fantasy/lineup` resolve to the AFL page at all
+ * (SKIP_REWRITE_PREFIXES in league-host-map.ts). Stripping there would hand
+ * the AFL's owner `/login`, which theleague.us answers with TheLeague's
+ * sign-in — the wrong-league bounce this gate was rewritten to fix.
+ */
+const pwaGateOwnApex = hideLeaguePrefix && hostLeagueSlug === ownLeagueSlug;
 const pwaGate = {
-	loginPath: resolveLeaguePath(pwaGateLoginPath, hideLeaguePrefix),
+	loginPath: resolveLeaguePath(pwaGateLoginPath, pwaGateOwnApex),
 	loginPaths: [pwaGateLoginPath, resolveLeaguePath(pwaGateLoginPath, true), '/login'],
 };
 

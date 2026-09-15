@@ -10,7 +10,7 @@
  */
 
 import { ALL_LEAGUES, DEFAULT_LEAGUE_ID, getLeagueById } from '../../config/leagues';
-import { loginFallbackPath, safeReturnPath } from '../../utils/login-redirect';
+import { loginFallbackPath, sameOriginPath } from '../../utils/login-redirect';
 import '../../styles/loading.css';
 
 export interface Props {
@@ -72,10 +72,16 @@ const {
 // same-ORIGIN only, so a stale parked path could survive a sign-in to a
 // DIFFERENT league. Both are decided here now, per league.
 const formLeague = getLeagueById(leagueId) ?? getLeagueById(DEFAULT_LEAGUE_ID)!;
-// Server-validate the prop too: every caller passes a server-computed value
-// today, but this component is public API and the client must not be the only
-// thing standing between a crafted prop and a redirect.
-const safeRedirectUrl = safeReturnPath(redirectUrl, formLeague) ?? undefined;
+// Server-validate the prop, but LEAGUE-AGNOSTICALLY. Every caller already
+// resolved it with the validator that fits its own context — the three league
+// login pages use resolveLoginDestination, the MFL app uses
+// resolveMflLoginRedirect — so this is defence in depth, not the decision.
+//
+// It must NOT be safeReturnPath: that rewrites a path into THIS form's league
+// prefix, and this form is shared with the league-less MFL app, whose board is
+// `/live`. Coercing that to `/theleague/live` 404'd every sign-in on the
+// shared host.
+const safeRedirectUrl = sameOriginPath(redirectUrl) ?? undefined;
 /**
  * Where a sign-in lands when the redirect is missing or fails validation.
  *

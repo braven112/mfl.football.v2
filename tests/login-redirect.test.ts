@@ -6,6 +6,7 @@ import {
   loginPathFor,
   loginUrlFor,
   loginUrlForRequest,
+  sameOriginPath,
   readReturnPath,
   resolveLoginDestination,
   safeReturnPath,
@@ -226,13 +227,18 @@ describe('loginUrlForRequest', () => {
         .toBe(`/afl-fantasy/login?${RETURN_PARAM}=${encodeURIComponent('/afl-fantasy/lineup')}`);
     });
 
-    it('never emits a prefix on an apex host', () => {
+    it('never emits a prefix on the league OWN apex', () => {
+      // The host must be the league's REAL apex, from the registry. An
+      // arbitrary host with hideLeaguePrefix set is not the same thing —
+      // `theleague.us` serving an `/afl-fantasy/*` path is exactly that case,
+      // and it must KEEP the prefix (see the cross-league block below).
       for (const league of [theleague, afl]) {
+        const apexHost = league.canonicalDomain;
         const url = loginUrlForRequest(
-          ctx(`https://example.test/${league.slug}/anything`, true),
+          ctx(`https://${apexHost}/${league.slug}/anything`, true),
           league,
         );
-        expect(url).not.toContain(`/${league.slug}`);
+        expect(url, `${league.slug} on its own apex`).not.toContain(`/${league.slug}`);
       }
     });
   });
@@ -240,6 +246,70 @@ describe('loginUrlForRequest', () => {
   it('tolerates locals with no hideLeaguePrefix set', () => {
     expect(loginUrlForRequest({ url: new URL('https://mfl.football/theleague/lineup'), locals: {} }, theleague))
       .toContain('/theleague/login?');
+  });
+});
+
+describe('cross-league URLs on a league apex host', () => {
+  /**
+   * `theleague.us/afl-fantasy/lineup` is a SUPPORTED url: a league's apex
+   * serves its own pages unprefixed but keeps every other league's prefix, so
+   * cross-league deep links resolve (SKIP_REWRITE_PREFIXES in
+   * league-host-map.ts). `Astro.locals.hideLeaguePrefix` is true there because
+   * the HOST belongs to a league — not because THIS league's prefix is
+   * redundant. Stripping on the flag alone sent an AFL owner to
+   * `/login?next=/lineup`, which theleague.us answers with TheLeague's sign-in
+   * and TheLeague's lineup: the exact cross-league bounce this module exists
+   * to stop.
+   */
+  const apex = (host: string, path: string) => ({
+    url: new URL(`https://${host}${path}`),
+    locals: { hideLeaguePrefix: true },
+  });
+
+  it('keeps the OTHER league\'s prefix on a league apex host', () => {
+    expect(loginUrlForRequest(apex('www.theleague.us', '/afl-fantasy/lineup'), afl)).toBe(
+      `/afl-fantasy/login?${RETURN_PARAM}=${encodeURIComponent('/afl-fantasy/lineup')}`,
+    );
+    expect(loginUrlForRequest(apex('www.afl-fantasy.com', '/theleague/lineup'), theleague)).toBe(
+      `/theleague/login?${RETURN_PARAM}=${encodeURIComponent('/theleague/lineup')}`,
+    );
+  });
+
+  it('still drops the prefix on the league OWN apex', () => {
+    expect(loginUrlForRequest(apex('www.theleague.us', '/lineup'), theleague)).toBe(
+      `/login?${RETURN_PARAM}=${encodeURIComponent('/lineup')}`,
+    );
+    expect(loginUrlForRequest(apex('www.afl-fantasy.com', '/lineup'), afl)).toBe(
+      `/login?${RETURN_PARAM}=${encodeURIComponent('/lineup')}`,
+    );
+  });
+
+  it('keeps prefixes on the shared host, which is nobody apex', () => {
+    const shared = { url: new URL('https://mfl.football/afl-fantasy/lineup'), locals: {} };
+    expect(loginUrlForRequest(shared, afl)).toBe(
+      `/afl-fantasy/login?${RETURN_PARAM}=${encodeURIComponent('/afl-fantasy/lineup')}`,
+    );
+  });
+});
+
+describe('sameOriginPath', () => {
+  /**
+   * The league-less half, for a caller that belongs to no league. LoginForm is
+   * shared with the MFL app at `/login`, whose board is `/live` — running that
+   * through safeReturnPath rewrote it to `/theleague/live`, a route that does
+   * not exist, so every sign-in on the shared host landed on a 404.
+   */
+  it('passes a league-less app path through untouched', () => {
+    expect(sameOriginPath('/live')).toBe('/live');
+    expect(sameOriginPath('/live/settings')).toBe('/live/settings');
+    // Emphatically NOT prefixed, which is the whole point.
+    expect(safeReturnPath('/live', theleague)).toBe('/theleague/live');
+  });
+
+  it('still rejects everything that leaves the site', () => {
+    for (const bad of ['//evil.com', 'https://evil.com', 'javascript:alert(1)', '/\\evil.com', 'relative', '']) {
+      expect(sameOriginPath(bad), bad).toBeNull();
+    }
   });
 });
 

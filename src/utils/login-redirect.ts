@@ -40,6 +40,9 @@ import {
   ensureLeaguePrefix,
   stripLeaguePrefix,
 } from '../config/leagues';
+// The prebuilt map, not buildHostToSlugMap() — this runs on every gated page
+// load and the constant is built once at module load from the same registry.
+import { HOST_TO_SLUG } from './league-host-map';
 
 /**
  * The query parameter every gate writes.
@@ -72,34 +75,18 @@ export function safeReturnPath(
   requested: string | null | undefined,
   league: LeagueDefinition,
 ): string | null {
-  if (!requested) return null;
-
-  // Reject control characters and whitespace outright rather than trimming
-  // them away: a value containing them was not produced by our own gates, and
-  // a newline in a Location header is a response-splitting shape.
-  if (/[\u0000-\u0020\u007f]/.test(requested)) return null;
-
-  // Backslashes are normalized to `/` by some engines, so `/\evil.com` and
-  // `\\evil.com` are protocol-relative in disguise.
-  if (requested.includes('\\')) return null;
-
-  // Any scheme at all — `https://`, and the `javascript:`/`data:` family that
-  // carries no `//` and so slips past a `://` check.
-  if (requested.includes('://') || /^[a-z][a-z0-9+.-]*:/i.test(requested)) return null;
-
-  // Must be an absolute path, and must not be protocol-relative.
-  if (!requested.startsWith('/') || requested.startsWith('//')) return null;
+  // Everything that is not league-specific — off-site values, control
+  // characters, protocol-relative and scheme-only strings, `..` segments —
+  // is the same question `sameOriginPath` answers, so ask it once.
+  const sameOrigin = sameOriginPath(requested);
+  if (!sameOrigin) return null;
 
   // `/theleague/lineup?week=3#roster` → compare only the path portion, but
   // preserve the query and hash on the way back out. A gate that carried its
   // own query (schefter/tip does) must not lose it at the door.
-  const pathEnd = requested.search(/[?#]/);
-  const pathOnly = pathEnd === -1 ? requested : requested.slice(0, pathEnd);
-  const suffix = pathEnd === -1 ? '' : requested.slice(pathEnd);
-
-  // `..` cannot escape anywhere useful once we require a leading `/`, but it
-  // can disguise a cross-league path from the prefix check below.
-  if (pathOnly.split('/').includes('..')) return null;
+  const pathEnd = sameOrigin.search(/[?#]/);
+  const pathOnly = pathEnd === -1 ? sameOrigin : sameOrigin.slice(0, pathEnd);
+  const suffix = pathEnd === -1 ? '' : sameOrigin.slice(pathEnd);
 
   // Normalize to the internal, prefixed form. On an apex host the visitor's
   // path has no prefix, so this is what makes `/lineup` and
@@ -113,6 +100,39 @@ export function safeReturnPath(
   if (prefixed !== ownPrefix && !prefixed.startsWith(`${ownPrefix}/`)) return null;
 
   return prefixed + suffix;
+}
+
+/**
+ * Same-origin path validation WITHOUT the league check or the prefix rewrite.
+ *
+ * `safeReturnPath` does three things — rejects off-site values, rewrites the
+ * path into this league's prefixed form, and rejects other leagues' paths.
+ * The middle one is wrong for a caller that belongs to no league: LoginForm is
+ * shared with the MFL app at `/login`, whose board lives at `/live`, and
+ * running that through the league validator rewrote it to `/theleague/live` —
+ * a route that does not exist, so every sign-in on the shared host 404'd.
+ *
+ * So this is the half a league-less caller wants: is it a plain, same-origin
+ * path? Nothing more.
+ *
+ * YES, THIS OVERLAPS `resolveMflLoginRedirect` in mfl-login-redirect.ts, and
+ * the two are deliberately NOT merged. That module is dependency-free on
+ * purpose (its header says so, and it has zero imports) because it is the
+ * security-relevant half of the shared host's login and is exercised directly;
+ * this file imports the league registry. Collapsing them would either drag the
+ * registry into that module or move this one's league logic out. The sibling
+ * also carries two rules this does not — it refuses `/login` itself and drops
+ * the fragment — so they are not the same function wearing two names.
+ */
+export function sameOriginPath(requested: string | null | undefined): string | null {
+  if (!requested) return null;
+  if (/[\u0000-\u0020\u007f]/.test(requested)) return null;
+  if (requested.includes('\\')) return null;
+  if (requested.includes('://') || /^[a-z][a-z0-9+.-]*:/i.test(requested)) return null;
+  if (!requested.startsWith('/') || requested.startsWith('//')) return null;
+  const pathOnly = requested.split(/[?#]/)[0] ?? '';
+  if (pathOnly.split('/').includes('..')) return null;
+  return requested;
 }
 
 /** Where a gate sends someone when there is no usable return path. */
@@ -225,8 +245,28 @@ export function loginUrlForRequest(
   return loginUrlFor({
     league,
     returnTo: ctx.url.pathname + ctx.url.search,
-    hideLeaguePrefix: ctx.locals?.hideLeaguePrefix ?? false,
+    hideLeaguePrefix: hostHidesPrefixFor(ctx, league),
   });
+}
+
+/**
+ * May this host serve THIS league's paths without their prefix?
+ *
+ * `Astro.locals.hideLeaguePrefix` answers "is this a league apex host", which
+ * is not the same question. A league's apex serves its OWN pages unprefixed
+ * but keeps every other league's prefix — `SKIP_REWRITE_PREFIXES` in
+ * league-host-map.ts lists all of them precisely so a cross-league deep link
+ * (`theleague.us/afl-fantasy/lineup`) still resolves to the AFL page.
+ *
+ * Stripping on the flag alone turned the AFL gate on that URL into
+ * `/login?next=/lineup`, which theleague.us answers with TheLeague's sign-in
+ * and TheLeague's lineup — the exact cross-league bounce this module exists to
+ * stop. So the prefix comes off only when the league being signed into is the
+ * host's own.
+ */
+function hostHidesPrefixFor(ctx: LoginRedirectContext, league: LeagueDefinition): boolean {
+  if (!ctx.locals?.hideLeaguePrefix) return false;
+  return HOST_TO_SLUG[ctx.url.hostname] === league.slug;
 }
 
 /**
