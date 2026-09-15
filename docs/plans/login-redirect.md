@@ -1,6 +1,6 @@
 # Sign-in return paths — plan
 
-**Status:** stages 1-7 SHIPPED. Stages 8-9 (401 recovery, guard tests) not started.
+**Status:** SHIPPED, stages 1-9. Guard: `tests/login-redirect-guard.test.ts`.
 **Branch:** `claude/login-redirect-feature-v2049a`
 
 ## Goal
@@ -232,8 +232,8 @@ this end-to-end for waiver claims (`src/utils/claim-resume.ts`). The work is
 | 5 | ✅ Every sign-in link/button carries a return path, all through the builder | 16 files |
 | 6 | ✅ PWA gate registry-driven; two bugs fixed | `TheLeagueLayout.astro` |
 | 7 | ✅ Roger 403 + all 11 admin gates split | 1 component, 2 routes, 11 gates |
-| 8 | Generalized resume + `handle401` | ~8 files |
-| 9 | Guard tests, page-directory entries, What's New | tests + data |
+| 8 | ✅ Generalized sign-in park + `handleAuthExpiry` | 7 files |
+| 9 | ✅ Emitter guard wired into path-guard; changelog staged | tests + data |
 
 Stages 1-4 are the core and shipped together. Verified against a running dev
 server: all 15 gates 302 with the right `?next=`, all three login pages render

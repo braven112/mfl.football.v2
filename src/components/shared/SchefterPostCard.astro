@@ -296,7 +296,6 @@ const whisperLoginHref = (league: string | undefined) =>
           />
           {isTipRumor && (
             <SchefterWhisperBack
-              base={post.league === 'afl' ? '/afl-fantasy' : '/theleague'}
               loginHref={whisperLoginHref(post.league)}
               client:idle
               postId={post.id}
