@@ -6,7 +6,7 @@ opened: 2026-09-15
 hotfix_pr: https://github.com/braven112/mfl.football.v2/pull/1085
 hotfix_sha: 415bbf0ac2b15b82426c2299a9ef68f128689a3f
 followup_issue: 1086
-followup_pr:
+followup_pr: https://github.com/braven112/mfl.football.v2/pull/1102
 followup_session: https://claude.ai/code/session_01J3Y9GEjiYTBnikrKQf16HQ
 ---
 
@@ -78,7 +78,9 @@ is threaded through `AflCastingInput`, rather than re-derived inside the casting
 **Both halves of the scope travel together** — `recap?: { seasonYear, week }`,
 not just a week. The brief's own closing note was the reason: the cast read the
 `leagueYear` feed while the label's week came from the `getCurrentSeasonYear`
-one, and those disagree February to May. Passing only a week would have checked
+one, and those diverge from June 1 to Labor Day — the league year advances
+first, so through that window the league year is already the new season's while
+the season year is still last season's. Passing only a week would have checked
 one season's week number against another season's rows, which is a subtler
 version of the same bug rather than a fix for it.
 

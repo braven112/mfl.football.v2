@@ -540,7 +540,10 @@ describe('castAflHeroModel', () => {
    *
    * The season matters as much as the week: the caller derives the week from
    * `getCurrentSeasonYear` (Labor Day) while this casting runs on `leagueYear`
-   * (June 1), and those disagree February to May.
+   * (June 1), and those diverge from June 1 to Labor Day — the league year
+   * advances first. They agree through the season itself, so the season half is
+   * defensive; it is pinned anyway, because nothing else would notice it
+   * rotting.
    */
   describe('the recap cast is scoped to the week the card is captioned with', () => {
     const recapFor = (week: number, seasonYear = YEAR) =>
