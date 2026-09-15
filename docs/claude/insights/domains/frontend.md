@@ -3482,3 +3482,56 @@ so it still works."**
   `const league = getLeagueBySlug(leagueSlug)!;` — which is what every shared
   page component does (division-strength, draft-hub, guides, custom-rankings).
   Worth knowing before the 2.5-minute type run, not after it.
+
+## 2026-09-15 - Two Season Years On One Page Answer Different Questions — Merging Them Is The Tempting Wrong Fix
+
+**Context:** issue #1086 F2, filed as "the AFL homepage resolves the recap
+season year differently from the rest of the page" with the suggested fix
+"use `resolveSeasonYearWithData()` for both". Taking that at face value would
+have shipped a regression.
+
+**The finding:** `src/pages/afl-fantasy/index.astro` resolves two season years
+on purpose, and they answer different questions:
+
+- `seasonYear` — **what the page DISPLAYS.** Walks back from
+  `getCurrentSeasonYear` to the most recent year with populated standings,
+  because MFL creates the new season at kickoff and leaves it empty until games
+  are played. An empty standings table helps nobody, so the page shows last
+  season's.
+- `liveSeasonYear` — **what is being PLAYED.** Never walks back. This is what
+  the recap hero asks about.
+
+They diverge in exactly one window: kickoff until the first week's results
+land. That is precisely the window where sharing one value does damage. A
+walked-back recap during the NEW season announces "Week 18 is in the books"
+over LAST season's championship and links its scoreboard. **A stale recap reads
+as current in a way a stale standings table does not** — the table is visibly
+an archive, the "TUESDAY RECAP / THE WEEK IN REVIEW" card is a claim about
+right now. So the page walking back is right and the recap walking back is not.
+
+The actual defect in that window was the COPY, not the year. With no completed
+week the card read "The week is in the books — top scorers, biggest swings, and
+the games that moved the standings" and sent the reader to the news feed to go
+find them: a finished week asserted, content promised, neither real.
+
+**Two things to carry forward:**
+
+1. **"These two values disagree" is a question, not a bug report.** Before
+   unifying them, establish which question each answers and whether one answer
+   is right for both consumers. Here the divergence was correct and the
+   copy downstream of it was not.
+
+2. **Frontmatter ORDER is a real constraint when a resolver closes over an
+   `import.meta.glob` const.** `resolveSeasonYearWithData` is a hoisted function
+   declaration, so it *looks* callable from anywhere in the frontmatter — but it
+   reads `standingsFeeds`, a `const` holding the glob. Calling it above that
+   declaration is a temporal-dead-zone `ReferenceError` at request time, not a
+   wrong answer, and nothing in the type system or the unit tests catches it.
+   The fix is to hoist the glob and the resolver together, above every consumer;
+   `tests/hero-recap-destination.test.ts` pins that ordering.
+
+**Recommendation:** verify a frontmatter reorder by RENDERING the page, not by
+running the suite — a TDZ error is invisible to vitest because no test executes
+an `.astro` frontmatter. `curl` the route at the dates that exercise each
+branch (`?testDate=`) and grep the HTML for `ReferenceError` alongside the copy
+you expect.
