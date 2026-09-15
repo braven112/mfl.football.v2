@@ -738,8 +738,13 @@ const SLOT_VIEW: Record<SlotKey, (ctx: SlotContext) => EventHeroView> = {
 
   'slot:recap': ({ now, week, recap }) => ({
     pill: 'TUESDAY RECAP',
-    headline: 'THE WEEK IN',
-    accentWord: 'REVIEW.',
+    // No completed week means there is no week in review to headline. The
+    // season has started (this slot only runs inside it) but MFL has not
+    // populated a result yet — the kickoff-to-first-results window, which is
+    // also the window where the page's own `seasonYear` has walked back to last
+    // season while this stays on the live one (issue #1086 F2).
+    headline: recap?.week ? 'THE WEEK IN' : 'THE SEASON IS',
+    accentWord: recap?.week ? 'REVIEW.' : 'UNDER WAY.',
     // The week in the BOOKS, which is not `week`. `getCurrentNFLWeek` rolls to
     // the upcoming week on Tuesday — the morning this slot runs — so it read
     // "Week 2 is in the books" on Sep 15 2026 over a Week 1 nobody had
@@ -747,7 +752,13 @@ const SLOT_VIEW: Record<SlotKey, (ctx: SlotContext) => EventHeroView> = {
     // `recap.week` or nothing. Falling back to `week` here would restate the
     // very bug this fixes — `getCurrentNFLWeek` is the UPCOMING week on a
     // Tuesday, so "Week N is in the books" would name games not yet played.
-    summary: `${recap?.week ? `Week ${recap.week}` : 'The week'} is in the books — top scorers, biggest swings, and the games that moved the standings.`,
+    //
+    // And with NO completed week, "The week is in the books" was simply false —
+    // it asserted a finished week, promised top scorers and swings, and sent
+    // the reader to the news feed to look for them.
+    summary: recap?.week
+      ? `Week ${recap.week} is in the books — top scorers, biggest swings, and the games that moved the standings.`
+      : 'No week is in the books yet. Here is the latest from around the league while the first results come in.',
     // Schefter's recap column when he wrote one, else the completed week's own
     // scoreboard. NOT `/afl-fantasy/news`: a card headlined "THE WEEK IN
     // REVIEW." that lands on the undifferentiated feed makes the reader go
@@ -1188,8 +1199,12 @@ function buildRegularSeasonHero(slot: DailySlot, week: number | undefined, gameW
         source: 'event',
         // Same rule as the view: never `weekLabel`, which is built from the
         // upcoming week.
-        title: recap?.week ? `Week ${recap.week} Recap` : 'Weekly Recap',
-        summary: 'Top performances, biggest blowouts, and the AL/NL games that swung the standings.',
+        title: recap?.week ? `Week ${recap.week} Recap` : 'Around The League',
+        // Same correction as the view: with no completed week there are no top
+        // performances or blowouts to promise.
+        summary: recap?.week
+          ? 'Top performances, biggest blowouts, and the AL/NL games that swung the standings.'
+          : 'No week is in the books yet — here is the latest from around the league.',
         link: recap?.href ?? '/afl-fantasy/news',
         linkLabel: recap?.label ?? 'Read the recap',
         icon: 'commenting',
