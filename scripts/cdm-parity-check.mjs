@@ -284,6 +284,7 @@ async function probeFlow(page, playerId, label, sent) {
 
   // Long enough for the fulfilled response to land, short enough to capture
   // before the handler's own 1.5s close/reload timer fires.
+  await waitForRequest(page, sent);
   const captured = { via: clicked, request: sent[0] ?? null, after: await settleAfterSubmit(page) };
   // Past the handler's 1.5s close/reload timer, so the caller's navigation is
   // not racing it.
@@ -330,6 +331,7 @@ async function probeDirectOpeners(page, url, args, sent) {
       return true;
     });
     if (!clicked) continue;
+    await waitForRequest(page, sent);
     out[opener.label] = {
       playerId: opened,
       request: sent[0] ?? null,
@@ -348,6 +350,29 @@ async function probeDirectOpeners(page, url, args, sent) {
  * loses with `net::ERR_ABORTED`. Waiting the timer out first and retrying once
  * is the whole fix.
  */
+/**
+ * Waits for the page to actually ISSUE the request, not just to look settled.
+ *
+ * `settleAfterSubmit` alone is not enough for this: its condition is also
+ * satisfied by "the modal is no longer active", which on some flows is true
+ * the instant submit is clicked — so `sent[0]` got read before the fetch had
+ * been issued and the captured request came back null. In a before/after
+ * comparison that reads as a scattered, direction-less set of diffs on
+ * `probes.*.request`, which is exactly what a flaky harness looks like and
+ * exactly what a real regression does not.
+ *
+ * Flows that legitimately issue nothing (an action-select flow applies
+ * locally) just spend the timeout and record `null`, which is the right
+ * answer for them.
+ */
+async function waitForRequest(page, sent, timeoutMs = 2000) {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    if (sent.length) return;
+    await page.waitForTimeout(50);
+  }
+}
+
 /**
  * Waits for the submit to visibly RESOLVE rather than for a fixed delay.
  *
