@@ -99,8 +99,16 @@ describe('league stagingDomains', () => {
     // silently missed the staging twin, so TheLeagueLayout served a
     // per-league PWA identity on the one host whose job is to reproduce
     // production. The shared host belongs to no league in either environment.
-    expect(isSharedAppHost('mfl.football')).toBe(true);
-    expect(isSharedAppHost('staging.mfl.football')).toBe(true);
+    // v2.mfl.football is where the app actually serves today. It is NOT the
+    // canonical origin (SHARED_APP_ORIGIN is still the apex, which is being
+    // pointed at Vercel separately), and that is exactly why it has to be
+    // listed: membership is "does this host serve every league by path
+    // prefix?", never "is this the canonical name?". It shipped absent, so
+    // production served TheLeague's scope-`/` manifest on a host carrying
+    // every league, and suppressed MFL Live's own.
+    for (const host of ['mfl.football', 'v2.mfl.football', 'staging.mfl.football']) {
+      expect(isSharedAppHost(host), `${host} serves every league by path prefix`).toBe(true);
+    }
     for (const league of ALL_LEAGUES) {
       for (const host of [...league.domains, ...(league.stagingDomains ?? [])]) {
         expect(isSharedAppHost(host), `${host} is a league host, not the shared one`).toBe(false);
@@ -113,7 +121,7 @@ describe('league stagingDomains', () => {
     // its staging twin) to a slug would rewrite every OTHER league's paths
     // under that one slug. Path-only leagues therefore declare no staging
     // host of their own — staging.mfl.football is attached in Vercel only.
-    for (const host of ['mfl.football', 'www.mfl.football', 'staging.mfl.football']) {
+    for (const host of ['mfl.football', 'www.mfl.football', 'v2.mfl.football', 'staging.mfl.football']) {
       expect(HOST_TO_SLUG[host]).toBeUndefined();
       expect(resolveLeagueRewrite(host, '/rosters')).toBeNull();
     }

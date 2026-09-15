@@ -484,8 +484,20 @@ export function defaultMflWriteHost(env = process.env) {
  * The shared app host that serves every league under its path prefix
  * (/theleague/*, /afl-fantasy/*). Fallback target for absolute cross-league
  * URLs when a league has no apex domain of its own.
+ *
+ * This is v2, not the apex, and that is deliberate as of Sep 2026. The apex
+ * `mfl.football` still answers 406 — it is being pointed at Vercel on its own
+ * schedule, expected to take months — and this constant is not decoration:
+ * it is the ONLY origin Best Ball #1 has (`domains: []`), so it is what every
+ * absolute bb1 link, the league-switcher fallback and any GroupMe message
+ * built by `leagueUrl` resolve to. Pointed at a host that 406s, those are
+ * dead links in owners' chat clients, not a cosmetic inaccuracy.
+ *
+ * Flip this back to the apex once it serves, and delete nothing else — the
+ * apex stays in SHARED_APP_HOSTS below either way, so both hosts behave
+ * correctly through the switch and the flip is a one-line change.
  */
-export const SHARED_APP_ORIGIN = 'https://mfl.football';
+export const SHARED_APP_ORIGIN = 'https://v2.mfl.football';
 
 /**
  * Every hostname that serves the shared app — production and its staging
@@ -497,9 +509,17 @@ export const SHARED_APP_ORIGIN = 'https://mfl.football';
  * A list rather than a comparison against SHARED_APP_ORIGIN alone: an exact
  * compare recognises production and silently misses staging.mfl.football,
  * which then behaves like a league's own host on the one site whose whole job
- * is to reproduce production.
+ * is to reproduce production. v2.mfl.football is the third case and the one
+ * that proves the point — it is where the app actually serves today, it is
+ * NOT the canonical origin, and an origin-derived check misses it entirely.
+ *
+ * Membership here is decided by ONE question: does this hostname serve every
+ * league under a path prefix? Not "is it canonical", not "is it production".
+ * v2 answers yes (/theleague and /afl-fantasy both resolve on it), so a
+ * single league's PWA identity must not be served there, regardless of what
+ * SHARED_APP_ORIGIN says.
  */
-const SHARED_APP_HOSTS = ['mfl.football', 'staging.mfl.football'];
+const SHARED_APP_HOSTS = ['mfl.football', 'v2.mfl.football', 'staging.mfl.football'];
 
 /**
  * Is this hostname the shared multi-league app host (either environment)?
