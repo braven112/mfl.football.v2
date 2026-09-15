@@ -68,6 +68,12 @@ jobs:
         # cookie itself died"), and skips itself when the secret is absent.
         id: cookie
         if: always()
+        env:
+          # The RAW secret, deliberately — see the script. $GITHUB_ENV carries
+          # the mint step's freshly-minted MFL_USER_ID, and this check is about
+          # the stored one. Distinct name so it cannot shadow the session the
+          # other steps use.
+          MFL_STORED_USER_ID: ${{ secrets.MFL_USER_ID }}
         run: node scripts/check-owner-cookie-replay.mjs
 
   rollback:

@@ -84,19 +84,31 @@ describe('mfl-integration-test fresh-session step', () => {
     expect(text).toContain('MFL_PASSWORD: ${{ secrets.MFL_PASSWORD }}');
   });
 
-  it('the stored cookie secret is read only by the mint step (as its fallback)', () => {
+  it('the stored cookie secret is read by exactly two steps, for opposite reasons', () => {
+    // The mint step uses it as its FALLBACK. The replay canary uses it as its
+    // SUBJECT — under a distinct name, because $GITHUB_ENV carries the minted
+    // session and reading that would make the canary pass for a reason that
+    // says nothing about the stored secret it guards.
+    //
+    // Any THIRD read is the original trap: a step-level env that shadows
+    // $GITHUB_ENV and quietly puts the stale cookie back in front of the tests.
     const reads = text.match(/secrets\.MFL_USER_ID/g) ?? [];
-    expect(reads).toHaveLength(1);
+    expect(reads, 'an unexpected step reads the stored cookie secret').toHaveLength(2);
+
     const mintStep = text.indexOf('- name: Mint a fresh MFL session');
     const nextStep = text.indexOf('- name:', mintStep + 1);
-    const only = text.indexOf('secrets.MFL_USER_ID');
-    expect(only).toBeGreaterThan(mintStep);
-    expect(only).toBeLessThan(nextStep);
+    const fallback = text.indexOf('secrets.MFL_USER_ID');
+    expect(fallback).toBeGreaterThan(mintStep);
+    expect(fallback).toBeLessThan(nextStep);
+
+    const canaryStep = text.indexOf('- name: Owner cookie replay check');
+    const subject = text.indexOf('MFL_STORED_USER_ID: ${{ secrets.MFL_USER_ID }}');
+    expect(subject, 'the canary does not read the stored secret under its own name').toBeGreaterThan(canaryStep);
   });
 });
 
 describe('mint-mfl-session', () => {
-  it('prefers a complete fresh pair, falls back to the stored pair, then to nothing', async () => {
+  it('prefers a fresh login, falls back to the stored pair, then to nothing', async () => {
     const { pickMflSession } = await import('../scripts/mint-mfl-session.mjs');
     const stored = { userId: 'old', isCommish: 'old-c' };
     expect(pickMflSession({ mflUserId: 'new', mflIsCommish: 'new-c' }, stored)).toEqual({
@@ -108,21 +120,45 @@ describe('mint-mfl-session', () => {
     expect(pickMflSession(null, {})).toEqual({ source: 'none' });
   });
 
-  it('never pairs a fresh identity with the STORED commissioner flag (MFL refuses the mismatch)', async () => {
+  // THE REGRESSION THIS FILE NOW EXISTS FOR.
+  //
+  // This case used to assert the opposite — a login without a commissioner
+  // cookie lost to the stored pair. That looked like conservatism and was
+  // actually an unreachable login: no MFL request issues MFL_IS_COMMISH (the
+  // 2026-09-05 probe walked every candidate), so `login.mflIsCommish` is
+  // always undefined, and the stored secret is always set. The script logged
+  // in on every run, discarded the result, and exported the expiring pair it
+  // was written to stop depending on. It expired on 2026-09-08 and every
+  // contract write failed until the cookies were rotated by hand.
+  it('uses a fresh login even when it carries NO commissioner flag', async () => {
     const { pickMflSession } = await import('../scripts/mint-mfl-session.mjs');
     const stored = { userId: 'old', isCommish: 'old-c' };
-    // Login came back without the commissioner cookie: keep the stored pair whole.
     expect(pickMflSession({ mflUserId: 'new' }, stored)).toEqual({
-      source: 'stored',
-      userId: 'old',
-      isCommish: 'old-c',
+      source: 'login',
+      userId: 'new',
+      isCommish: undefined,
     });
-    // No commissioner flag anywhere: a plain fresh session is fine.
+    // …and with no stored flag either, unchanged.
     expect(pickMflSession({ mflUserId: 'new' }, { userId: 'old' })).toEqual({
       source: 'login',
       userId: 'new',
       isCommish: undefined,
     });
+  });
+
+  it('never pairs a fresh identity with the STORED commissioner flag (MFL refuses the mismatch)', async () => {
+    const { pickMflSession } = await import('../scripts/mint-mfl-session.mjs');
+    // The rule that survives: each source is used WHOLE. Whatever comes back,
+    // it is never {login identity + stored flag}.
+    for (const [login, stored] of [
+      [{ mflUserId: 'new' }, { userId: 'old', isCommish: 'old-c' }],
+      [{ mflUserId: 'new', mflIsCommish: 'new-c' }, { userId: 'old', isCommish: 'old-c' }],
+      [null, { userId: 'old', isCommish: 'old-c' }],
+    ] as const) {
+      const picked = pickMflSession(login, stored);
+      const mixed = picked.userId === 'new' && picked.isCommish === 'old-c';
+      expect(mixed, `mixed a fresh identity with the stored flag: ${JSON.stringify(picked)}`).toBe(false);
+    }
   });
 
   it('reads both cookies from one response, taking MFL_USER_ID from the body when only the flag is a header', async () => {

@@ -714,3 +714,39 @@ per-colo and propagate asynchronously. That is normal and not a
 misconfiguration — the rule crushes sustained volume but will not give a clean
 cutoff at request N, so never test one by asserting "request 11 is the first
 429".
+
+---
+
+## 2026-09-15 - `cond && '' || secrets.X` does not withhold a secret
+
+**Context:** Building a run that had to execute with *only*
+`MFL_USERNAME`/`MFL_PASSWORD` in scope, so an ACCEPTED write had exactly one
+possible explanation.
+
+**Insight:** The obvious way to make a secret conditional is the ternary idiom:
+
+```yaml
+env:
+  MFL_IS_COMMISH: ${{ inputs.withhold && '' || secrets.MFL_IS_COMMISH }}
+```
+
+**It passes the secret anyway.** GitHub expressions use JavaScript truthiness
+and `''` is falsy, so when `inputs.withhold` is true the `&&` yields `''`, the
+`||` sees a falsy left side, and it falls through to the secret. The run looks
+like a proof and proves nothing — worse than not running it, because the green
+result gets cited later.
+
+**Do this instead:** two steps with `if:` conditions, one passing the secret and
+one not. The second benefit is bigger than the first: **the step NAME lands in
+the log**, so the run records which credentials were in scope instead of asking
+a future reader to reconstruct it from the inputs. A proof whose conditions you
+cannot read afterwards is not evidence.
+
+**Related:** a value exported to `$GITHUB_ENV` by an earlier step is in scope
+for every later step in the job. To exclude one, set it to a literal empty value
+at step level (`MFL_IS_COMMISH: ''`) — an override, not a conditional secret
+read, and the one case where re-declaring the name is correct rather than the
+trap `tests/mfl-integration-rollback-guard.test.ts` pins.
+
+**No guard pins this yet.** It was found while building a proof run that was
+then cut as scaffolding, so the knowledge outlived the workflow it came from.

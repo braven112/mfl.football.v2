@@ -17,9 +17,16 @@
 
 import { mflFetch, extractMyLeagues } from './lib/mfl-api.mjs';
 
-const cookie = process.env.MFL_USER_ID;
+// MFL_STORED_USER_ID, not MFL_USER_ID. This canary exists to prove the STORED
+// secret still authenticates, because the August cuts job replays owners'
+// stored cookies. mint-mfl-session.mjs exports a freshly-minted MFL_USER_ID to
+// $GITHUB_ENV, and once the login is preferred that fresh cookie is what this
+// step would otherwise read — so the check would pass for a reason that says
+// nothing about the mechanism it guards, and go on passing after the stored
+// secret died. Falls back to MFL_USER_ID so a local run still works.
+const cookie = process.env.MFL_STORED_USER_ID || process.env.MFL_USER_ID;
 if (!cookie) {
-  console.log('::notice::MFL_USER_ID not set — skipping owner-cookie replay check.');
+  console.log('::notice::No stored cookie set — skipping owner-cookie replay check.');
   process.exit(0);
 }
 
