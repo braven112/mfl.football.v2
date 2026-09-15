@@ -45,8 +45,10 @@
         "src/middleware.ts",
         "src/pages/api/auth/login.ts",
         "src/pages/api/groupme/sync.ts",
+        "src/pages/login.astro",
         "src/utils/auth.ts",
         "src/utils/client-ip.ts",
+        "src/utils/mfl-login-redirect.ts",
         "src/utils/rate-limit.ts",
         "src/utils/url-guard.ts"
       ],
@@ -55,7 +57,8 @@
         "tests/url-guard.test.ts",
         "tests/mfl-cookie-redirect-guard.test.ts",
         "tests/login-rate-limit.test.ts",
-        "tests/groupme-sync-auth.test.ts"
+        "tests/groupme-sync-auth.test.ts",
+        "tests/mfl-login-redirect.test.ts"
       ]
     },
     {

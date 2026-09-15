@@ -129,3 +129,56 @@ the adjudication table ("7 callers, all updated"), and
 `tests/pr-review-external.test.ts` asserts the step still exists in `live.md`
 with its checklist intact — because deleting it and re-adding `synchronize` to
 the workflow both restore the old failure without anything going red.
+
+## 2026-09-15 - A File No Reviewer Can See Reads As A File Every Reviewer Passed
+
+**Context:** PR #1078 (MFL Live) shipped `src/utils/mfl-login-redirect.ts` — the
+resolver that decides where a half-authenticated visitor is sent, i.e. the one
+open-redirect guard in the branch. It cleared the entire pipeline: Claude's
+correctness pass, the cross-cutting pass, the quality pass, Copilot, CodeQL.
+Nobody saw a line of it. It landed in the PR as `Bin 0 -> 3120 bytes`.
+
+The cause was three bytes. The control-character rejection was written as
+`/[<NUL>-<0x1f><0x7f>\\]/` — the literal bytes — where `/[\x00-\x1f\x7f\\]/`,
+the escape sequences, was meant. **The regex was correct.** In a regex character
+class the byte and its escape are the same thing, so the code did exactly what
+it claimed and all 45 of its tests passed. There was never a runtime symptom,
+and there never would have been.
+
+**Insight 1 — this is the same class as the two entries above, one layer
+further in.** 2026-08 was the *transport* failing silently; 2026-09-04 was the
+*format* failing silently; this is the *input* failing silently. In all three a
+reviewer that saw nothing rendered identically to a reviewer that saw everything
+and approved. Fixing the first two did not fix this one, and nothing about the
+pipeline's own output hinted at it: the PR showed five green checks and two
+Copilot findings, both on a docs file.
+
+**Insight 2 — git's binary rule is the whole mechanism, and it is all-or-
+nothing.** One NUL anywhere in a blob makes the entire file binary. There is no
+partial degradation and no warning: no diff on the PR, nothing for Copilot or
+CodeQL to analyse, no `git blame`, and a future merge conflict there would have
+had no textual sides to resolve. `.gitattributes` never enters into it — this is
+content sniffing, not configuration.
+
+**Insight 3 — it is undetectable by every means a reviewer normally uses.** The
+bytes do not render in an editor, do not appear in `grep` output, do not upset
+`node --check`, and do not fail a test. `file` reports `data`. Reading the file
+in-session shows nothing wrong, because the terminal swallows the control
+characters too. **Only a byte scan finds it**, which is why this one is a guard
+test rather than a rule in a doc: there is no "remember to look", because
+looking does not work.
+
+**The fix, and its shape:** `tests/source-binary-guard.test.ts` scans every
+tracked source file under `src/`, `tests/`, `scripts/`, `docs/` and `.github/`
+for raw control bytes (tab, LF and CR excepted), failing with the path and byte
+offset. It has the vacuous-pass guard the scan idiom needs — a `> 500` file-count
+assertion, so a broken glob fails loudly rather than passing on an empty set —
+and it was verified by reintroducing the NUL and watching it fail, because a
+guard nobody has seen fail is decoration. `tests/rules-qa-flags.test.ts` had the
+same bug already (NUL + `0x1b`, from an ANSI-stripping test) and was fixed in the
+same commit; it had been invisible since it was written.
+
+**Watch for:** the tempting response to "a reviewer missed it" is to add a
+reviewer. That would not have helped here and neither would a sixth one — the
+file was not reviewed badly, it was *not shown to anybody*. When a finding is
+that a reviewer missed something, check first whether the reviewer was given it.
