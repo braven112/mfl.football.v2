@@ -423,14 +423,57 @@ inline script body out of every `.astro` file and parses it on its own: 385
 files, ~300ms, and it fails on exactly this. Use it, not the transform, when
 editing an inline script.
 
+**Slice 3 — the `goTo*` step transitions *(done)*.** `src/utils/cdm-steps.ts`
+now owns all seven — `goToActionSelectStep`, `goToDeclareContractStep`,
+`goToFranchiseTagStep2`, `goToTeamOptionStep2`, `goToRookieExtReview`,
+`goToVetExtYearStep`, `goToCutStep2` — ~550 lines that sat on the far side of
+the autocut section from the rest of the modal. 548 lines left the page for a
+41-line factory call.
+
+It exports `createCdmSteps(ctx)` rather than free functions, because these are
+not pure: they read and write `cdmState`, drive DOM handles the page owns, and
+call back into the parts of the modal that have not moved. The twenty-one
+things they actually depend on are now a declared `CdmStepsContext` instead of
+an implicit reach into a 12,000-line closure. Two entries are shaped
+deliberately:
+
+- **`setSelectedPlayer` is a setter, not a value.** The cut flow's "Simulate
+  Cut" option *assigns* the page's `selectedPlayer`, and an assignment cannot
+  cross a module boundary as a plain reference.
+- **`executeCutPlayer` goes through `ctx`, not the destructure.** It is
+  declared *below* the factory call in the page, so destructuring it when the
+  factory runs would capture `undefined`. Called through `ctx` at click time it
+  resolves exactly as the page's own forward reference did.
+
+**The ratchet caught a real thing, and it was not the total.** The first
+measurement failed the *clearedClasses* guard, not the count:
+`nullSafetyOutsideRosters` came back from 0 to **34**, every one in the new
+module. They are not new bugs — the page's inline script is not strictly
+checked, so 31 `document.getElementById('cdm-x').style` dereferences had been
+unguarded since the wizard was written and only became *visible* once they
+lived in a `.ts`. Fixed at the guard: a `cdmNode(id)` helper narrows the type
+**without** adding `?.`, on purpose — every one of those ids is static markup
+in `ContractDeclarationModal.astro`, and turning a missing node into a silent
+no-op trades a loud `TypeError` for a half-painted wizard screen, which is
+strictly worse to debug. Where the original *did* guard (the stepper dots, the
+type badge, the review panel) the `if (…)` is still there. The module
+typechecks clean under full `--strict`; the page dropped **1645 → 1564**.
+
+**What was deliberately NOT done.** The "Step 2 of 2" stepper block — six
+`getElementById` calls and the same eight class toggles — is repeated almost
+verbatim in five of the seven, and `goToCutStep2`'s copy *differs*: it never
+hides dot 3 or line 2. Unifying that is a **behavior** question, not a move, so
+it is not in the same commit. It is now a 550-line module where it can be
+cleaned up against unit tests instead of a page where it cannot.
+
+**Harness gotcha found here:** `roster-parity-check.mjs` picks "first 4 teams +
+owner team" by default, and *which* teams that is drifted between two runs
+minutes apart (0012 → 0009), producing six phantom "present only in" diffs.
+Pin the set with `--teams` when comparing across a change, or the comparison is
+not apples-to-apples.
+
 **Remaining slices**, in the order they get safer to do:
 
-3. The `goTo*` step functions (Region B, ~550 lines) — cohesive, the harness
-   already walks the screens they produce, and `cdmState` is now threadable.
-   Their other ~29 closure deps are: the two DOM handles (`cdmSubmitBtn`,
-   `cdmBackBtn`), page data (`config`, `season`, `user`, `selectedPlayer`),
-   three formatters, five canonical calculators, seven sibling CDM functions,
-   and `applyContractAction`.
 4. `openDeclarationModal` / `closeDeclarationModal` / `populateCdmActionOptions`.
 5. The submit handler — last, and the one the harness does not cover. Submit a
    throwaway declaration by hand before trusting it.
