@@ -191,6 +191,9 @@
       ],
       "paths": [
         "scripts/compute-franchise-history.mjs",
+        "scripts/badges.mjs",
+        "scripts/lib/franchise-milestone-posts.mjs",
+        "scripts/lib/theleague-season-complete.mjs",
         "scripts/compute-owner-tenures.mjs",
         "scripts/compute-afl-awards.mjs",
         "scripts/lib/owner-tenure-inputs.mjs",
@@ -203,7 +206,11 @@
         "tests/owner-tenures-data.test.ts",
         "tests/owner-boundary-parity.test.ts",
         "tests/owner-history-boundaries.test.ts",
-        "tests/afl-awards.test.ts"
+        "tests/afl-awards.test.ts",
+        "tests/badges-season-complete.test.ts",
+        "tests/franchise-history-season-complete-data.test.ts",
+        "tests/franchise-history-producer.test.ts",
+        "tests/milestone-emission-lane.test.ts"
       ]
     },
     {
@@ -733,12 +740,15 @@
         "scripts/fetch-mfl-feeds.mjs",
         "scripts/prebuild.mjs",
         "scripts/lib/archived-feed-files.mjs",
-        "scripts/commit-feed-and-push.mjs"
+        "scripts/commit-feed-and-push.mjs",
+        ".github/workflows/schefter-trade-speculation.yml",
+        ".github/workflows/backfill-historical-feeds.yml"
       ],
       "tests": [
         "tests/canonical-mfl-json.test.ts",
         "tests/archived-feed-files.test.ts",
-        "tests/current-era-feed-globs.test.ts"
+        "tests/current-era-feed-globs.test.ts",
+        "tests/milestone-emission-lane.test.ts"
       ]
     },
     {

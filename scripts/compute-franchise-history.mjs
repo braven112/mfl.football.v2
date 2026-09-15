@@ -37,6 +37,7 @@ import {
   diffNewAwards,
   buildMilestonePost,
   mergeMilestonePosts,
+  resolveMilestoneEmission,
 } from './lib/franchise-milestone-posts.mjs';
 import { isSeasonComplete } from './lib/theleague-season-complete.mjs';
 import { aliasDivisionName, isUsableDivisionName } from '../src/utils/division-aliases.mjs';
@@ -125,9 +126,17 @@ const resolveTargetPath = (spec) =>
 
 const LEAGUE_CONFIG_PATH = resolveTargetPath(TARGET.configPath);
 const CHAMPIONSHIP_HISTORY_PATH = path.join(ROOT, LEAGUE.dataPath, 'championship-history.json');
-const OUTPUT_PATH = path.join(ROOT, LEAGUE.dataPath, 'derived/franchise-history.json');
-const SEASON_LEDGER_PATH = path.join(ROOT, LEAGUE.dataPath, 'derived/season-ledger.json');
-const SCHEFTER_FEED_PATH = resolveTargetPath(TARGET.schefterFeedPath);
+// --output-root=<dir> re-roots everything this script WRITES (and the previous
+// snapshot + feed it reads back to diff against) under another directory, keeping
+// the same relative layout. Inputs still come from the repo. It exists so
+// tests/franchise-history-producer.test.ts can run the real producer without
+// touching committed files.
+const outputRootArg = args.find((a) => a.startsWith('--output-root='))?.slice('--output-root='.length);
+const OUTPUT_ROOT = outputRootArg ? path.resolve(outputRootArg) : ROOT;
+const reRoot = (absPath) => path.join(OUTPUT_ROOT, path.relative(ROOT, absPath));
+const OUTPUT_PATH = reRoot(path.join(ROOT, LEAGUE.dataPath, 'derived/franchise-history.json'));
+const SEASON_LEDGER_PATH = reRoot(path.join(ROOT, LEAGUE.dataPath, 'derived/season-ledger.json'));
+const SCHEFTER_FEED_PATH = reRoot(resolveTargetPath(TARGET.schefterFeedPath));
 const RECONSTRUCTED_BRACKETS_PATH = TARGET.reconstructedBracketsPath
   ? resolveTargetPath(TARGET.reconstructedBracketsPath)
   : null;
@@ -1543,9 +1552,12 @@ if (TARGET.badges) {
 // franchise-history.json is the snapshot we diff against — if it's missing
 // (fresh checkout / first run) we silently seed and emit nothing so we
 // don't flood the feed with retroactive posts for every existing badge.
+// Opt-in: only a run that commits the feed passes the flag — see
+// resolveMilestoneEmission for why prebuild must not write posts.
 const previousOutput = readJson(OUTPUT_PATH);
-if (!TARGET.milestonePosts) {
-  console.log(`[franchise-history] milestone posts disabled for ${LEAGUE_SLUG}`);
+const milestoneEmission = resolveMilestoneEmission(args, TARGET);
+if (!milestoneEmission.emit) {
+  console.log(`[franchise-history] ${milestoneEmission.reason} (${LEAGUE_SLUG})`);
 } else if (!previousOutput?.franchises) {
   console.log('[franchise-history] no previous snapshot — milestone diff skipped (silent seed)');
 } else {

@@ -26,7 +26,10 @@ const franchises = {
   },
   '0016': {
     franchiseId: '0016',
-    yearByYear: [season(2025, 2, 12, 2, 1500), season(2026, 2, 0, 1, 164)],
+    // 2026's 2,400 beats every finished season on purpose: below 2025's 2,100
+    // the highest-scoring-season exclusion could be deleted and nothing here
+    // would notice (Copilot, PR #1090).
+    yearByYear: [season(2025, 2, 12, 2, 1500), season(2026, 2, 0, 1, 2400)],
     highlights: {},
     trades: [],
   },
@@ -61,6 +64,7 @@ describe('single-season badges wait for the season to finish', () => {
     expect(seasonYears('0016', true)).toEqual([
       'best-record:2026',
       'cellar-dweller:2025',
+      'highest-scoring-season-ever:2026',
       'top-scorer:2026',
     ]);
     expect(seasonYears('0006', true)).toContain('cellar-dweller:2026');

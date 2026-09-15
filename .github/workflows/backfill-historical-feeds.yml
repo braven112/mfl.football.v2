@@ -107,8 +107,10 @@ jobs:
             --league=${{ inputs.league }} \
             --years=${{ steps.coverage.outputs.gap_years }} || true
 
+      # Commits TheLeague's feed below, so it may write milestone posts (the
+      # flag is a no-op for the AFL, whose target has milestonePosts: false).
       - name: Recompute franchise history
-        run: node ./scripts/compute-franchise-history.mjs --league=${{ inputs.league }}
+        run: node ./scripts/compute-franchise-history.mjs --league=${{ inputs.league }} --emit-milestone-posts
 
       # The record book is derived from the same schedules this job just
       # backfilled, and the commit step below ships all of derived/. Without

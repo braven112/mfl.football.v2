@@ -42,6 +42,17 @@ regrows a 7 GB `.git` or a 30 MB server chunk:
   `archivedThroughTimestamp` watermark stops the 15-minute scans from
   resurrecting archived posts. Article permalinks and the OG renderer
   fall back to the archives — new single-post surfaces must too.
+- **The build never writes a committed feed.** Only a run that COMMITS
+  `schefter-feed.json` may add posts to it. `prebuild` recomputes
+  `franchise-history.json` on every production deploy, and until Sept 2026
+  that run also prepended milestone posts to the DEPLOYED feed: three week-1
+  "season honor" posts were live on theleague.us and in no commit, so git
+  and production disagreed and a bad post could only be removed by
+  redeploying. Milestone emission is opt-in (`--emit-milestone-posts`),
+  passed only by `schefter-trade-speculation.yml` and
+  `backfill-historical-feeds.yml`; `tests/milestone-emission-lane.test.ts`
+  pins both halves. A new prebuild step that writes a feed needs the same
+  split: compute in the build, post from the committing workflow.
 - **Retention rules live in `scripts/lib/retention-policy.mjs`** (What's
   New active cap + archive, roster-history keeper window / weekly
   keyframes). The July 16-31 roster snapshots are the official AFL keeper
