@@ -297,16 +297,17 @@ function conferenceHeader(confId: '00' | '01', name: string) {
 // its only wild card and left the AL's actual 4th seed with no pill at all.
 // Same shape the league (conference) view bands its rows with, so the two views
 // cannot disagree about who is in.
-const conferenceStandingsByCode: Record<string, typeof conferenceAStandings> = {
-  '00': conferenceAStandings,
-  '01': conferenceBStandings,
-};
-// Division winners counted from the groups that actually have teams, not from
-// the declared division list — an era whose conference declares a division with
-// no franchises would otherwise band a wild card as a winner.
+const conferenceStandings = [conferenceAStandings, conferenceBStandings];
+// Resolve the division's conference off the SAME list getConferenceStandings
+// filtered on, rather than the divisionToConference map, so the lookup cannot
+// disagree with the standings it is labelling. Division winners are counted
+// from the groups that actually have teams, not from the declared division
+// list — an era whose conference declares a division with no franchises would
+// otherwise band a wild card as a winner. An unresolvable division gets NO
+// badges: falling through to the league-wide ladder is the bug this fixes.
 function divisionBadgeSeeding(divisionName: string) {
-  const conference = conferenceStandingsByCode[divisionToConf[divisionName]];
-  return conference ? TIERING.conferenceSeed(conference.divisionWinners.length) : undefined;
+  const conference = conferenceStandings.find(c => c.conference.divisions.includes(divisionName));
+  return conference ? TIERING.conferenceSeed(conference.divisionWinners.length) : TIERING.none;
 }
 
 // Division view: NL divisions glow conference blue, everything else league red.

@@ -225,6 +225,14 @@ export const TIERING = {
       { name: 'toilet-bowl' },
     ],
   },
+  /** No playoff bands at all — every row resolves to no badge. The safe answer
+   *  for a conference league whose season structure we could not resolve: a
+   *  missing pill is a gap, a pill on the wrong ladder is a wrong claim about
+   *  who is in. Never falls back to `leagueSeed`, which IS the bug. */
+  none: {
+    seedField: 'conferenceSeed',
+    bands: [{ name: 'eliminated' }],
+  },
   conferenceSeed: (dwCount: number): StandingsTiering => ({
     seedField: 'conferenceSeed',
     bands: [
