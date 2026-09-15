@@ -63,11 +63,17 @@ jobs:
       # commit-feed-and-push rebuilds on the newest origin tip and merges the
       # feed by post id, so a concurrent feed writer is never clobbered. The
       # derived files go in verbatim, as one set.
+      # Commits to the ref this run was launched on, never a hardcoded main: a
+      # scheduled run is already on the default branch, and a dispatch used to
+      # test the lane on a branch would otherwise push its output to main.
+      # Through env + quotes because a ref name is not shell-safe.
       - name: Commit and push the chain + milestone posts
+        env:
+          TARGET_BRANCH: ${{ github.ref_name }}
         run: |
           git config user.name "Derived History Bot"
           git config user.email "actions@users.noreply.github.com"
           node ./scripts/commit-feed-and-push.mjs \
-            --branch main \
+            --branch "$TARGET_BRANCH" \
             --message "chore: recompute franchise-history derived chain" \
             --files "$(node ./scripts/recompute-derived-chain.mjs --print-outputs)"

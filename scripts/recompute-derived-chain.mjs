@@ -63,9 +63,33 @@ export const CHAIN_FILES = [
 ];
 
 /**
- * The data suites a lane must pass before it commits. Each reads a chain file
- * from disk and compares it to another chain file or to the feeds. A lane that
- * fails them commits nothing, so main keeps the last set that agreed.
+ * The data suites a lane must pass before it commits. Every one reads a chain
+ * file from disk and compares it against another chain file or against the
+ * feeds, so a lane that fails them commits nothing and main keeps the last set
+ * that agreed:
+ *
+ *   season-ledger                      each attributed row vs its yearByYear
+ *                                      entry, and the row count vs the feeds'
+ *                                      own standings
+ *   owner-tenures-data                 every ledger row on exactly one owner
+ *   division-strength-data             every played ledger row in exactly one
+ *                                      division, carried through unchanged
+ *   owner-boundary-parity              the shared attributor over the real
+ *                                      ledger, plus the no-local-walk-back scan
+ *   owners-registry                    the registry owner tenures are built from
+ *   franchise-history-season-complete  the snapshot's own seasonComplete verdict
+ *   theleague-division-titles          division titles vs that season's feeds
+ *   historical-divisions               divisions vs each year's league.json
+ *   playoff-field-size                 the ledger vs the bracket feeds
+ *   rivalries                          the head-to-head ledger in the snapshot
+ *   afl-awards                         awards-history vs the AFL snapshot on
+ *                                      which slot won each title/division
+ *
+ * NOT here: `tests/record-book.test.ts`. The record book is a different
+ * producer (`compute-record-book.mjs`, built straight from the feeds and
+ * deliberately not from the snapshot), the chain never writes it, and that
+ * suite pins its own season constants — so gating on it would let a stale
+ * record book block a chain commit that is perfectly consistent.
  */
 export const CHAIN_GUARD_TESTS = [
   'tests/season-ledger.test.ts',
@@ -78,7 +102,6 @@ export const CHAIN_GUARD_TESTS = [
   'tests/historical-divisions.test.ts',
   'tests/playoff-field-size.test.ts',
   'tests/rivalries.test.ts',
-  'tests/record-book.test.ts',
   'tests/afl-awards.test.ts',
 ];
 
@@ -128,8 +151,14 @@ const withoutGeneratedAt = (text) => {
 
 /**
  * True when two serializations differ only in their top-level `generatedAt`.
- * Order-SENSITIVE on purpose: this decides whether to keep bytes on disk, and a
- * reordered array is a real rewrite here, not an MFL shuffle.
+ *
+ * Deliberately NOT `jsonEquivalent(a, b, { ignoreKeys: ['generatedAt'] })` from
+ * scripts/lib/canonical-json.mjs, which is the right tool one layer down: it is
+ * order-BLIND because MFL returns arrays in arbitrary order, so a producer whose
+ * row order genuinely changed reads as equal there. These files are written by
+ * our own deterministic code, this decides whether to throw away bytes already
+ * on disk, and a reordered `yearByYear` is a real rewrite — so the comparison
+ * here is order-sensitive.
  */
 export const isTimestampOnlyChange = (before, after) => {
   if (before === after) return true;
