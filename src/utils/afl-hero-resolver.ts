@@ -737,6 +737,13 @@ const SLOT_VIEW: Record<SlotKey, (ctx: SlotContext) => EventHeroView> = {
   }),
 
   'slot:recap': ({ now, week, recap }) => ({
+    // The pill, the composite wordmark and the content kicker stay 'RECAP' even
+    // with no week. Considered varying them and did not: they name the SLOT,
+    // and it genuinely is Tuesday's recap slot — the falsehood was never the
+    // branding, it was the headline/summary/title asserting a finished week and
+    // promising its content. `wordmark` is also a treatment the /showcase
+    // gallery enumerates (tests/hero-showcase-content.test.ts), so a second
+    // value for the same treatment needs a card, for no reader benefit.
     pill: 'TUESDAY RECAP',
     // No completed week means there is no week in review to headline. The
     // season has started (this slot only runs inside it) but MFL has not

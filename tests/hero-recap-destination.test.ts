@@ -192,6 +192,14 @@ describe('the AFL recap hero renders the resolved destination', () => {
     expect(state.content.title).toBe('Around The League');
     // The headline cannot announce a review of a week that did not happen.
     expect(`${state.view.headline} ${state.view.accentWord}`).not.toMatch(/WEEK IN REVIEW/);
+    // The BRANDING deliberately does not change. A review raised that the card
+    // still says RECAP here; it stays, because the pill, wordmark and kicker
+    // name the SLOT — it really is Tuesday's recap slot, with nothing to recap
+    // yet — and `wordmark` is a treatment the /showcase gallery enumerates, so
+    // a second value needs a gallery card for no reader benefit. What must not
+    // survive is the CLAIM, asserted above.
+    expect(state.view.pill).toBe('TUESDAY RECAP');
+    expect(state.view.composite.wordmark).toBe('RECAP');
   });
 
   it('still headlines the week in review once a week IS in the books', () => {
@@ -201,6 +209,8 @@ describe('the AFL recap hero renders the resolved destination', () => {
     expect(`${state.view.headline} ${state.view.accentWord}`).toBe('THE WEEK IN REVIEW.');
     expect(state.view.summary).toContain('Week 3 is in the books');
     expect(state.view.summary).toContain('top scorers');
+    expect(state.view.pill).toBe('TUESDAY RECAP');
+    expect(state.content.kicker).toBe('Weekly Recap');
   });
 
   it('links Schefter’s column when there is one', () => {
@@ -255,10 +265,23 @@ describe('the AFL homepage does not feed the walked-back year to the recap', () 
     // resolveSeasonYearWithData closes over an import.meta.glob const, so
     // calling it above that declaration is a temporal-dead-zone ReferenceError
     // rather than a wrong answer. Ordering is the contract.
-    expect(PAGE.indexOf('const seasonYear = resolveSeasonYearWithData();'))
-      .toBeLessThan(PAGE.indexOf('resolveRecapDestination({'));
-    expect(PAGE.indexOf('const standingsFeeds = import.meta.glob'))
-      .toBeLessThan(PAGE.indexOf('function resolveSeasonYearWithData'));
+    //
+    // The constraint is on the CALL, not on the function declaration —
+    // `function resolveSeasonYearWithData` is hoisted, so where it sits is
+    // irrelevant and asserting against it is vacuous. What must hold is that
+    // `const standingsFeeds` is initialised before the call runs.
+    const glob = PAGE.indexOf('const standingsFeeds = import.meta.glob');
+    const call = PAGE.indexOf('const seasonYear = resolveSeasonYearWithData();');
+    const hero = PAGE.indexOf('resolveRecapDestination({');
+    expect(glob).toBeGreaterThan(-1);
+    expect(call).toBeGreaterThan(-1);
+    expect(hero).toBeGreaterThan(-1);
+
+    // The glob must be initialised before the walk-back is CALLED…
+    expect(glob).toBeLessThan(call);
+    // …and the whole resolution must precede the hero block that reads it.
+    expect(call).toBeLessThan(hero);
+    expect(glob).toBeLessThan(hero);
   });
 });
 
