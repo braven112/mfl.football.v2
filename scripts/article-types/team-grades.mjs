@@ -61,7 +61,7 @@ export async function buildFactSheet(data, week, year, projectRoot, { league = D
   }
 
   const lines = [];
-  lines.push(`${year} PRE-SEASON TEAM GRADES — TheLeague`);
+  lines.push(`${year} PRE-SEASON TEAM GRADES — ${LEAGUES[league].name}`);
   lines.push(`Salary cap: ${formatSalary(SALARY_CAP)}`);
   lines.push('');
 

@@ -79,7 +79,7 @@ export async function buildFactSheet(data, week, year, projectRoot, { league = D
   }
 
   const lines = [];
-  lines.push(`${year} ROOKIE DRAFT GRADES — TheLeague`);
+  lines.push(`${year} ROOKIE DRAFT GRADES — ${LEAGUES[league].name}`);
   lines.push(`Total picks made: ${completedPicks.length}`);
   lines.push('');
 

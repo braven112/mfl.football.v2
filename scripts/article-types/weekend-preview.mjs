@@ -117,7 +117,7 @@ export async function buildFactSheet(data, week, year, projectRoot, { league = D
   }
 
   const lines = [];
-  lines.push(`WEEK ${week} WEEKEND PREVIEW — TheLeague (${year} Season)`);
+  lines.push(`WEEK ${week} WEEKEND PREVIEW — ${LEAGUES[league].name} (${year} Season)`);
   lines.push(`FORMAT: ${weekFormat.label}`);
   lines.push('');
   const dhBriefing = doubleheaderBriefing(weekFormat);

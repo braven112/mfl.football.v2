@@ -55,7 +55,7 @@ export async function buildFactSheet(data, week, year, projectRoot, { league = D
   );
 
   const lines = [];
-  lines.push(`${year} CHAMPIONSHIP RECAP — TheLeague`);
+  lines.push(`${year} CHAMPIONSHIP RECAP — ${LEAGUES[league].name}`);
   lines.push('');
 
   if (!weekData?.weeklyResults?.matchup) {

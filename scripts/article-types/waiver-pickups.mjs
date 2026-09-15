@@ -92,7 +92,7 @@ export async function buildFactSheet(data, week, year, projectRoot, { league = D
   }
 
   const lines = [];
-  lines.push(`WEEK ${week} WAIVER PICKUPS — TheLeague (${year} Season)`);
+  lines.push(`WEEK ${week} WAIVER PICKUPS — ${LEAGUES[league].name} (${year} Season)`);
   lines.push(`Total claims this week: ${txns.length}`);
   lines.push(`Total spent: ${formatSalary(totalSpent)}`);
   lines.push('');
