@@ -712,13 +712,17 @@
         "src/utils/playoff*",
         "src/utils/*bracket*",
         "scripts/*bracket*",
-        "scripts/*standings*"
+        "scripts/*standings*",
+        "src/components/theleague/standings/*",
+        "src/components/theleague/PlayoffBadge.astro",
+        "src/pages/*/standings.astro"
       ],
       "tests": [
         "tests/standings-all-play.test.ts",
         "tests/afl-bracket-kind.test.ts",
         "tests/draft-order-phase.test.ts",
-        "tests/playoff-round-data.test.ts"
+        "tests/playoff-round-data.test.ts",
+        "tests/playoff-badge-seeding.test.ts"
       ]
     },
     {

@@ -100,6 +100,13 @@ export interface StandingsTableProps {
   teamCell: TeamCellMode;
   teamCellFallback?: TeamCellFallback;
   tiering?: StandingsTiering;
+  /** Which playoff ladder the `playoffBadge` column reads. Independent of
+   *  `tiering` on purpose — `tiering` also selects the table's visual variant
+   *  and row banding, which a division card must NOT take on. Defaults to
+   *  `TIERING.leagueSeed` (TheLeague: 4 division winners + 3 wild cards off the
+   *  league-wide seed). Conference leagues pass `TIERING.conferenceSeed(n)`;
+   *  see `resolvePlayoffBadgeStatus`. */
+  badgeSeeding?: StandingsTiering;
   header?: StandingsHeader;
   year?: number;
   preferredTeamId?: string;
@@ -227,6 +234,34 @@ export const TIERING = {
     ],
   }),
 } satisfies Record<string, StandingsTiering | ((n: number) => StandingsTiering)>;
+
+/** The seed a tiering config ranks a team by — the field its bands are cut on. */
+export function seedValueFor(team: TeamStanding, tiering: StandingsTiering): number | undefined {
+  return tiering.seedField === 'conferenceSeed' ? team.conferenceSeed : team.seed;
+}
+
+/**
+ * Playoff badge (DIV / WC) for a team, under the ladder the caller nominates.
+ *
+ * The badge is a statement about the PLAYOFF FIELD, so it has to be drawn on
+ * the ladder that field is seeded from. TheLeague seeds one league-wide bracket
+ * (4 division winners + 3 wild cards), so `TIERING.leagueSeed` is right there.
+ * The AFL seeds a bracket PER CONFERENCE — N division winners plus wild cards to
+ * 4, on each side — so on the league-wide ladder its two conferences share one
+ * 1..7 scale and whichever side's wild cards sort lower falls off the end. That
+ * is exactly how the AL's division view shipped badging one wild card instead of
+ * two (Sept 2026): AL #6 got a WC pill, the AL's real 4th seed got nothing, and
+ * the division winners read #2/#3 off a ladder their bracket never uses.
+ */
+export function resolvePlayoffBadgeStatus(
+  team: TeamStanding,
+  tiering: StandingsTiering
+): 'division_winner' | 'wild_card' | null {
+  const band = resolveBand(seedValueFor(team, tiering), tiering);
+  if (band === 'division-winners') return 'division_winner';
+  if (band === 'wild-cards') return 'wild_card';
+  return null;
+}
 
 /** Resolve the tier-band name for a seed value under a tiering config.
  *  Returns '' for a missing/zero seed (no band). */
