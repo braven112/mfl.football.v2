@@ -1,13 +1,14 @@
 ---
 slug: hero-recap-routing
-status: open
+status: shipped
 severity: P1
 opened: 2026-09-15
+shipped: 2026-09-15
 hotfix_pr: https://github.com/braven112/mfl.football.v2/pull/1085
-hotfix_sha:
-followup_issue:
-followup_pr:
-followup_session:
+hotfix_sha: 415bbf0ac2b15b82426c2299a9ef68f128689a3f
+followup_issue: 1086
+followup_pr: https://github.com/braven112/mfl.football.v2/pull/1088
+followup_session: session_01KYQjLYnr3VBRDqVDah1fAh
 ---
 
 # Follow-up: the Tuesday recap hero pointed at the news feed and named the wrong week
@@ -169,6 +170,33 @@ object — they both render), `src/pages/afl-fantasy/index.astro`,
     `cut-watch` and `schedule-strength` already used. `schedule-release` and
     `schedule-strength` were already correct. Guard:
     `tests/article-type-league-option.test.ts`.
+  - **AND THE TAG WAS ONLY THE FIRST OF THREE LAYERS (#1094, #1096).** Reviewing
+    the above found the same bug twice more, each invisible from the others,
+    because a league gets named in three independent places:
+    1. *The tag and permalink* — `buildPost`. Fixed above.
+    2. *The facts* — `buildFactSheet`. Threading `{ league }` into `loadTeams`
+       was not enough: the fact-sheet HEADER still read `— TheLeague`, so
+       `--league afl-fantasy` produced prose headed with the wrong league over
+       right-league data. Six types, plus `matchup-preview.mjs:156` one scope
+       down. Fixed in #1094 with `LEAGUES[league].name`.
+    3. *The persona* — `getSystemPrompt`. The last to fall, because
+       `scripts/schefter-weekly-articles.mjs` called it with NO ARGUMENTS: a
+       type had nothing to honour, so no amount of `{ league }` plumbing
+       elsewhere reached it. `BASE_SYSTEM_PROMPT` told every type it wrote for
+       "TheLeague — a **16-team** dynasty fantasy football league". The AFL is
+       24 teams in two conferences, so this handed the model a league size
+       wrong by eight, with authority, above a fact sheet it is separately told
+       is the only source of truth. Fixed in #1096.
+  - The #1096 fix is worth remembering for its shape: it is deliberately NOT a
+    league-aware `BASE_SYSTEM_PROMPT`. That block carries
+    `cache_control: ephemeral` and is reused across types AND leagues, so a
+    league name in it forks one prompt-cache entry into one per league. The
+    cached block names no league; `buildCachedSystem(text, { league })` appends
+    the `LEAGUE:` line to the uncached block instead —
+    `scripts/lib/pecking-order-ai.mjs` had reached the same conclusion
+    independently. Rule: `docs/claude/rules/schefter.md`.
+  - Still open, filed separately: nothing. The remaining hardcodes in these
+    files are comments.
 
 ## Context to start cold
 
