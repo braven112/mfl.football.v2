@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { isDuplicate } from '../scripts/article-utils/feed-writer.mjs';
 import { guardSeason, config } from '../scripts/article-types/schedule-release.mjs';
+import { nflWeekStartInstant } from '../src/utils/nfl-week-starts.mjs';
 
 /**
  * Once-per-season Schefter articles must not re-publish after the original
@@ -61,13 +62,18 @@ describe('schedule-release is a preseason column', () => {
     expect(config.id(2026, 0, 'theleague')).toBe(ID);
   });
 
+  // Compared as instants, so the result cannot depend on the process TZ (the
+  // GitHub runner is UTC; a local-midnight kickoff there is 5pm PT the day before).
+  const kickoff = nflWeekStartInstant(2026, 1).getTime();
+
   it('may fire before the 2026 kickoff (Wed Sep 9)', () => {
     expect(guardSeason(0, 2026, new Date('2026-08-23T00:52:00Z'))).toBe(true);
     expect(guardSeason(0, 2026, new Date('2026-09-08T20:00:00-07:00'))).toBe(true);
+    expect(guardSeason(0, 2026, new Date(kickoff - 60_000))).toBe(true);
   });
 
   it('refuses once the season has kicked off', () => {
-    expect(guardSeason(0, 2026, new Date('2026-09-09T12:00:00-07:00'))).toBe(false);
+    expect(guardSeason(0, 2026, new Date(kickoff))).toBe(false);
     expect(guardSeason(0, 2026, new Date('2026-09-15T20:48:52Z'))).toBe(false);
   });
 });
