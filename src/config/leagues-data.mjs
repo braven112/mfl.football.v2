@@ -531,6 +531,54 @@ export function isSharedAppHost(hostname) {
 }
 
 /**
+ * Does this league live somewhere OTHER than the shared host?
+ *
+ * A league with an apex of its own (theleague.us, afl-fantasy.com) has a real
+ * front door, so the shared host is a second, unwanted one for it. A league
+ * with `domains: []` — Best Ball #1, and every best-ball sister after it —
+ * has NO other address: the shared host's path prefix is the only place it
+ * exists, so hiding it there would delete it from the internet.
+ *
+ * That is why this is DERIVED from `domains` rather than a list of two slugs.
+ * A hardcoded ['theleague', 'afl-fantasy'] would silently hide best-ball #2
+ * the day it is given an apex, and silently expose a fourth full league the
+ * day one is added without anyone remembering this file.
+ *
+ * @param {{ domains?: string[] }} league Registry entry.
+ */
+export function leagueHasOwnFrontDoor(league) {
+  return (league.domains?.length ?? 0) > 0;
+}
+
+/**
+ * The league whose pages must NOT be served at this hostname + path, or null.
+ *
+ * `mfl.football` and `v2.mfl.football` are the MFL app: MFL Live, the splash,
+ * sign-in, and the path-only leagues. They are deliberately NOT a second way
+ * into TheLeague or the AFL — those have their own domains, and a league
+ * reachable at two addresses is two sets of links, two things to index and two
+ * places to keep an owner signed in.
+ *
+ * Returns the league so the caller can say WHICH one, not just that something
+ * is hidden. Matches the prefix exactly or as a path segment, so `/theleague`
+ * and `/theleague/rosters` are hidden while a future `/theleague-archive`
+ * would not be caught by accident.
+ *
+ * @param {string} hostname
+ * @param {string} pathname
+ * @returns {object | null}
+ */
+export function resolveSharedHostHiddenLeague(hostname, pathname) {
+  if (!isSharedAppHost(hostname)) return null;
+  for (const league of ALL_LEAGUES) {
+    if (!leagueHasOwnFrontDoor(league)) continue;
+    const prefix = `/${league.slug}`;
+    if (pathname === prefix || pathname.startsWith(`${prefix}/`)) return league;
+  }
+  return null;
+}
+
+/**
  * The shared host's staging twin. Named separately from SHARED_APP_HOSTS
  * because that list answers "is this the multi-league host?" (either
  * environment) while this answers "is this a staging host?" — two different

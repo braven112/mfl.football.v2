@@ -22,6 +22,8 @@ import {
   defaultMflWriteHost,
   SHARED_APP_ORIGIN,
   isSharedAppHost,
+  leagueHasOwnFrontDoor,
+  resolveSharedHostHiddenLeague as rawResolveSharedHostHiddenLeague,
 } from './leagues-data.mjs';
 
 /** Canonical slug: the path segment under src/pages/ */
@@ -348,4 +350,16 @@ export function ensureLeaguePrefix(league: LeagueDefinition, path: string): stri
   return rawEnsureLeaguePrefix(league, path) as string;
 }
 
-export { buildHostToSlugMap, defaultMflWriteHost, SHARED_APP_ORIGIN, isSharedAppHost };
+export { buildHostToSlugMap, defaultMflWriteHost, SHARED_APP_ORIGIN, isSharedAppHost, leagueHasOwnFrontDoor };
+
+/**
+ * The league whose pages must not be served at this hostname + path, or null.
+ * Typed wrapper over the registry's resolver — see its comment for why the
+ * rule is derived from `domains` rather than a list of slugs.
+ */
+export function resolveSharedHostHiddenLeague(
+  hostname: string,
+  pathname: string,
+): LeagueDefinition | null {
+  return rawResolveSharedHostHiddenLeague(hostname, pathname) as LeagueDefinition | null;
+}

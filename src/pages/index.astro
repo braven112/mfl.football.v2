@@ -1,6 +1,6 @@
 ---
 import SplashLayout from '../layouts/SplashLayout.astro';
-import { ALL_LEAGUES } from '../config/leagues';
+import { ALL_LEAGUES, isSharedAppHost, leagueUrl, resolveSharedHostHiddenLeague } from '../config/leagues';
 import type { CanonicalLeagueSlug } from '../config/leagues';
 import { getLatestWhatsNewAcrossLeagues } from '../utils/whats-new-cross-league';
 
@@ -45,6 +45,29 @@ const COUNT_WORDS = ['Zero', 'One', 'Two', 'Three', 'Four', 'Five', 'Six'];
 const countWord = COUNT_WORDS[leagueCount] ?? String(leagueCount);
 
 const entries = getLatestWhatsNewAcrossLeagues(6);
+
+// This splash renders on every NON-league host: the shared app host, and also
+// localhost and Vercel previews. On the shared host TheLeague and the AFL are
+// not served — `/theleague` 404s there — so their panels must leave for the
+// league's own domain rather than link to a path this host refuses.
+//
+// Gated on the host, not applied unconditionally, and that is the load-bearing
+// part: absolute links everywhere would send a preview build's visitor to
+// PRODUCTION theleague.us the moment they clicked a panel, so the branch being
+// tested becomes untestable past its front page. Off the shared host these
+// stay relative and every league keeps working locally.
+//
+// Best Ball #1 is never rewritten. `leagueUrl` would resolve it to the shared
+// origin anyway (it has no apex), but a same-host relative path is the honest
+// link when you are already on that host.
+const onSharedHost = isSharedAppHost(Astro.url.hostname);
+
+const linkOut = (path: string): string => {
+  if (!onSharedHost) return path;
+  const hidden = resolveSharedHostHiddenLeague(Astro.url.hostname, path);
+  if (!hidden) return path;
+  return leagueUrl(hidden, path.slice(`/${hidden.slug}`.length) || '/');
+};
 ---
 
 <SplashLayout title="MFL Fantasy Football">
@@ -57,7 +80,7 @@ const entries = getLatestWhatsNewAcrossLeagues(6);
     {ALL_LEAGUES.map((league) => {
       const meta = PANEL_META[league.slug];
       return (
-        <a class="panel" data-league={league.navSlug} href={`/${league.slug}`}>
+        <a class="panel" data-league={league.navSlug} href={linkOut(`/${league.slug}`)}>
           <img class="watermark" src={meta.logo} alt="" aria-hidden="true" loading="lazy" />
           <p class="kicker">Est. {meta.estYear} · {league.bestBall ? 'Best Ball' : 'Dynasty'}</p>
           <span class="lockup">
@@ -76,7 +99,7 @@ const entries = getLatestWhatsNewAcrossLeagues(6);
     <ul class="wn-grid">
       {entries.map((entry) => (
         <li>
-          <a class="wn-card" href={entry.detailPath}>
+          <a class="wn-card" href={linkOut(entry.detailPath)}>
             <span class="wn-meta">
               {entry.leagues.map((slug) => (
                 <span class={`chip chip--${slug}`}>{CHIP_LABELS[slug] ?? slug}</span>
