@@ -183,6 +183,33 @@ const lineupSubmitted =
       })
     : null;
 
+// ── Standings + roster data ─────────────────────────────────────────────────
+const standingsFeeds = import.meta.glob('../../../data/afl-fantasy/mfl-feeds/*/standings.json', { eager: true });
+const rosterFeeds = import.meta.glob('../../../data/afl-fantasy/mfl-feeds/*/rosters.json', { eager: true });
+const scheduleFeeds = import.meta.glob('../../../data/afl-fantasy/mfl-feeds/*/schedule.json', { eager: true });
+
+function getModule(mod: any) {
+  return mod && typeof mod === 'object' && 'default' in mod ? mod.default : mod;
+}
+
+// The season this page DISPLAYS, which is not always the season being PLAYED.
+// MFL creates the new year at kickoff and leaves it empty until games are
+// played, so this walks back from getCurrentSeasonYear to the most recent year
+// with populated standings rather than rendering an empty table.
+//
+// Deliberately NOT the year the recap hero asks about — see `liveSeasonYear`
+// below, which is computed from the same clock but never walks back.
+function resolveSeasonYearWithData(): number {
+  const preferred = getCurrentSeasonYear(effectiveDate);
+  for (let y = preferred; y >= preferred - 5; y--) {
+    const feed = getModule(standingsFeeds[`../../../data/afl-fantasy/mfl-feeds/${y}/standings.json`]) as { leagueStandings?: { franchise: any[] } } | undefined;
+    if (feed?.leagueStandings?.franchise?.length) return y;
+  }
+  return preferred;
+}
+
+const seasonYear = resolveSeasonYearWithData();
+
 // Where Tuesday's recap hero points. Resolved here, not in the resolver, for
 // the same reason as the reveal flag above: this reads two feeds off disk and
 // the resolver stays synchronous.
@@ -193,11 +220,25 @@ const lineupSubmitted =
 // `getLatestScoredWeek`, which reads a one-week feed that MFL rolls on the same
 // morning and would name the unplayed week from the other direction. See
 // hero-recap-destination.ts and getWeekInTheBooks.
-const aflRecapSeasonYear = getCurrentSeasonYear(effectiveDate);
+//
+// The YEAR is `getCurrentSeasonYear`, and pointedly NOT the walked-back
+// `seasonYear` the rest of the page renders. They diverge for exactly one
+// window — kickoff until the first week's results land, when MFL has created
+// the new season but not populated it — and that is the window where sharing
+// one value does damage. The page walking back is right: an empty standings
+// table helps nobody, so it shows last season's. A recap hero walking back is
+// WRONG: during the new season it would announce "Week 18 is in the books" over
+// last season's championship and link its scoreboard. A stale recap reads as
+// current in a way a stale standings table does not.
+//
+// So the recap stays on the live season and simply has no week yet, which
+// `resolveRecapDestination` already degrades correctly (week 0 → the news
+// feed). The copy for that state is handled in afl-hero-resolver's `slot:recap`.
+const liveSeasonYear = getCurrentSeasonYear(effectiveDate);
 const aflRecap = resolveRecapDestination({
   league: AFL.slug,
-  seasonYear: aflRecapSeasonYear,
-  completedWeek: getWeekInTheBooks(aflRecapSeasonYear, AFL.slug, effectiveDate),
+  seasonYear: liveSeasonYear,
+  completedWeek: getWeekInTheBooks(liveSeasonYear, AFL.slug, effectiveDate),
   posts: (feedData as FeedType).posts,
 });
 
@@ -213,29 +254,6 @@ const heroState = resolveAflHeroState({
   recap: aflRecap,
 });
 
-// ── Standings + roster data ─────────────────────────────────────────────────
-const standingsFeeds = import.meta.glob('../../../data/afl-fantasy/mfl-feeds/*/standings.json', { eager: true });
-const rosterFeeds = import.meta.glob('../../../data/afl-fantasy/mfl-feeds/*/rosters.json', { eager: true });
-const scheduleFeeds = import.meta.glob('../../../data/afl-fantasy/mfl-feeds/*/schedule.json', { eager: true });
-
-function getModule(mod: any) {
-  return mod && typeof mod === 'object' && 'default' in mod ? mod.default : mod;
-}
-
-// Resolve the AFL season year by walking from getCurrentSeasonYear backward
-// to the most recent year that actually has populated standings data.
-// (MFL rolls the year over at kickoff so the "current" season is often empty
-//  until games are played — fall back to last completed year.)
-function resolveSeasonYearWithData(): number {
-  const preferred = getCurrentSeasonYear(effectiveDate);
-  for (let y = preferred; y >= preferred - 5; y--) {
-    const feed = getModule(standingsFeeds[`../../../data/afl-fantasy/mfl-feeds/${y}/standings.json`]) as { leagueStandings?: { franchise: any[] } } | undefined;
-    if (feed?.leagueStandings?.franchise?.length) return y;
-  }
-  return preferred;
-}
-
-const seasonYear = resolveSeasonYearWithData();
 
 /**
  * Rosters run on the LEAGUE year, which is NOT the season year — the two clocks

@@ -82,7 +82,7 @@ object — they both render), `src/pages/afl-fantasy/index.astro`,
     feed and the preseason read. The three recap call sites (`RecapHero`,
     `RecapCompositeHero`, the AFL homepage) now use it.
 
-- [ ] **F2 — The AFL homepage resolves the recap season year differently from the rest of the page**
+- [x] **F2 — The AFL homepage resolves the recap season year differently from the rest of the page** — FIXED, but NOT by merging the two
   - Source: Claude review, `/code-review`
   - Where: `src/pages/afl-fantasy/index.astro:193` (`getCurrentSeasonYear(effectiveDate)`)
     vs `resolveSeasonYearWithData()` defined ~20 lines below at `:215`
@@ -93,6 +93,35 @@ object — they both render), `src/pages/afl-fantasy/index.astro`,
     so using it means reordering the page's frontmatter — more churn than a
     hotfix diff should carry, and the degradation is to the pre-existing
     behaviour rather than to something worse.
+  - **RESOLVED Sept 2026, and the suggested fix was rejected on inspection.**
+    Adopting `resolveSeasonYearWithData` for the recap would have been a
+    REGRESSION. The two values differ in exactly one window — kickoff until the
+    first results land — and that is the window where sharing one does damage:
+    during the NEW season the walked-back year would have the recap announce
+    "Week 18 is in the books" over LAST season's championship and link its
+    scoreboard. A stale recap reads as current in a way a stale standings table
+    does not. The page walking back is right; the recap walking back is not.
+  - What was actually wrong in that window was the COPY, not the year. With no
+    completed week the card read "The week is in the books — top scorers,
+    biggest swings, and the games that moved the standings" and sent the reader
+    to the news feed to find them: a finished week asserted, content promised,
+    neither real. Both render paths (`slot:recap` view and the `case 'recap'`
+    content object) now say there is no week yet, and the headline stops
+    announcing a review of a week that did not happen.
+  - The structural hazard is gone too: the glob, `getModule` and the walk-back
+    are hoisted above the hero block, so both resolutions sit together and are
+    named for the question each answers (`seasonYear` = what the page DISPLAYS,
+    `liveSeasonYear` = what is being PLAYED). The ordering is a real constraint,
+    not style — `resolveSeasonYearWithData` closes over an `import.meta.glob`
+    const, so calling it above that declaration is a temporal-dead-zone
+    ReferenceError rather than a wrong answer.
+  - Verified by rendering, not just by test: `/afl-fantasy/?testDate=2027-09-14`
+    (inside the window) renders "THE SEASON IS UNDER WAY" + "No week is in the
+    books yet" → `/afl-fantasy/news`; `?testDate=2026-09-15` still renders "THE
+    WEEK IN REVIEW" + "Week 1 is in the books". No ReferenceError at any probe.
+  - Guards: `tests/hero-recap-destination.test.ts` — the walked-back year may
+    not reach `resolveRecapDestination`, both resolutions must precede the hero
+    block, and the week-0 copy may neither name a week nor claim one finished.
 
 - [x] **F3 — No weekly recap article has generated for either league all 2026
       season** — RESOLVED BY REMOVAL, Sept 2026.

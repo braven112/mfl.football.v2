@@ -167,14 +167,40 @@ describe('the AFL recap hero renders the resolved destination', () => {
     expect(state.content.title).toBe('Week 1 Recap');
   });
 
-  it('never names a week when none is in the books', () => {
-    // The week-0 fallback must not reach for `getCurrentNFLWeek` — that is the
-    // upcoming week, i.e. the original bug restated.
+  it('never names a week when none is in the books, and does not claim one finished', () => {
+    // TWO rules here, and the second was added after the first shipped.
+    //
+    // 1. The week-0 fallback must not reach for `getCurrentNFLWeek` — that is
+    //    the upcoming week, i.e. the original bug restated.
+    // 2. It must not assert a COMPLETED week either. The old copy read "The
+    //    week is in the books — top scorers, biggest swings, and the games that
+    //    moved the standings" with no week in the books at all: a finished week
+    //    claimed, content promised, and the reader sent to the news feed to go
+    //    find it. That state is real — kickoff until the first results land
+    //    (issue #1086 F2), the same window where the page's own seasonYear has
+    //    walked back to last season while the recap stays on the live one.
     const state = at({ week: 0, href: '/afl-fantasy/news', label: 'Read the latest', isArticle: false });
-    expect(state.view.summary).toContain('The week is in the books');
+
     expect(state.view.summary).not.toMatch(/Week \d/);
-    expect(state.content.title).toBe('Weekly Recap');
     expect(state.content.title).not.toMatch(/Week \d/);
+
+    // Says there is no week, rather than that there is one.
+    expect(state.view.summary).toMatch(/No week is in the books yet/);
+    // And promises none of the content a finished week would have.
+    expect(state.view.summary).not.toMatch(/top scorers|biggest swings/);
+    expect(state.content.summary).not.toMatch(/Top performances|biggest blowouts/);
+    expect(state.content.title).toBe('Around The League');
+    // The headline cannot announce a review of a week that did not happen.
+    expect(`${state.view.headline} ${state.view.accentWord}`).not.toMatch(/WEEK IN REVIEW/);
+  });
+
+  it('still headlines the week in review once a week IS in the books', () => {
+    const state = at({
+      week: 3, href: '/afl-fantasy/live-scoring?week=3', label: 'See the scores', isArticle: false,
+    });
+    expect(`${state.view.headline} ${state.view.accentWord}`).toBe('THE WEEK IN REVIEW.');
+    expect(state.view.summary).toContain('Week 3 is in the books');
+    expect(state.view.summary).toContain('top scorers');
   });
 
   it('links Schefter’s column when there is one', () => {
@@ -183,6 +209,56 @@ describe('the AFL recap hero renders the resolved destination', () => {
     });
     expect(state.view.link).toBe('/theleague/news/x');
     expect(state.view.linkLabel).toBe('READ THE RECAP');
+  });
+});
+
+/**
+ * The AFL homepage resolves TWO season years and they must not be merged
+ * (issue #1086 F2).
+ *
+ * `seasonYear` walks back from `getCurrentSeasonYear` to the most recent year
+ * with populated standings, because MFL creates the new season at kickoff and
+ * leaves it empty until games are played — an empty standings table helps
+ * nobody, so the page shows last season's.
+ *
+ * The recap hero must NOT share that walk-back. In the one window where the two
+ * differ — kickoff until the first results land — a walked-back recap would
+ * announce "Week 18 is in the books" over LAST season's championship and link
+ * its scoreboard, during the new season. A stale recap reads as current in a
+ * way a stale standings table does not, so the recap stays on the live season
+ * and simply has no week yet.
+ */
+describe('the AFL homepage does not feed the walked-back year to the recap', () => {
+  const PAGE = readFileSync('src/pages/afl-fantasy/index.astro', 'utf8');
+
+  it('computes the recap year from the live clock, never the walk-back', () => {
+    expect(PAGE).toMatch(/const liveSeasonYear = getCurrentSeasonYear\(effectiveDate\);/);
+    // The walk-back still exists for what the page RENDERS.
+    expect(PAGE).toMatch(/const seasonYear = resolveSeasonYearWithData\(\);/);
+    // …and is not what the recap is built from.
+    expect(PAGE).not.toMatch(/const liveSeasonYear = resolveSeasonYearWithData/);
+  });
+
+  it('passes the live year into resolveRecapDestination, both fields', () => {
+    const call = PAGE.slice(
+      PAGE.indexOf('resolveRecapDestination({'),
+      PAGE.indexOf('resolveRecapDestination({') + 400,
+    );
+    expect(call).toContain('seasonYear: liveSeasonYear');
+    expect(call).toContain('getWeekInTheBooks(liveSeasonYear');
+    // The bare `seasonYear` (the walked-back one) must not appear as the value.
+    expect(call).not.toMatch(/seasonYear:\s*seasonYear\b/);
+    expect(call).not.toMatch(/getWeekInTheBooks\(seasonYear\b/);
+  });
+
+  it('resolves both years BEFORE the hero block that consumes one', () => {
+    // resolveSeasonYearWithData closes over an import.meta.glob const, so
+    // calling it above that declaration is a temporal-dead-zone ReferenceError
+    // rather than a wrong answer. Ordering is the contract.
+    expect(PAGE.indexOf('const seasonYear = resolveSeasonYearWithData();'))
+      .toBeLessThan(PAGE.indexOf('resolveRecapDestination({'));
+    expect(PAGE.indexOf('const standingsFeeds = import.meta.glob'))
+      .toBeLessThan(PAGE.indexOf('function resolveSeasonYearWithData'));
   });
 });
 
