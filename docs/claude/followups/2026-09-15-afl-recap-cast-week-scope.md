@@ -1,3 +1,15 @@
+---
+slug: afl-recap-cast-week-scope
+status: open
+severity: P3
+opened: 2026-09-15
+hotfix_pr: https://github.com/braven112/mfl.football.v2/pull/1085
+hotfix_sha: 415bbf0ac2b15b82426c2299a9ef68f128689a3f
+followup_issue: 1086
+followup_pr:
+followup_session:
+---
+
 # Follow-up: the AFL recap card labels one week and casts from another
 
 Found during the cross-cutting pass on the #1086 F1/F3/F4 PR. Not a regression
