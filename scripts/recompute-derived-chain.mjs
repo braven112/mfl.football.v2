@@ -188,14 +188,28 @@ const headContent = (file) => {
  * a quiet day commits a timestamp-only rewrite of several megabytes (the
  * nightly did exactly that to franchise-history.json every day).
  */
+/**
+ * The file's current bytes, or null if it is not there. Reads and handles the
+ * failure rather than asking `existsSync` first: the answer to that question is
+ * already stale by the time the read runs (CodeQL js/file-system-race), and a
+ * producer that wrote nothing should skip, not throw.
+ */
+const currentContent = (abs) => {
+  try {
+    return fs.readFileSync(abs, 'utf8');
+  } catch {
+    return null;
+  }
+};
+
 function restoreTimestampOnlyRewrites() {
   const restored = [];
   for (const file of chainDerivedFiles()) {
     const abs = path.join(ROOT, file);
-    if (!fs.existsSync(abs)) continue;
+    const current = currentContent(abs);
+    if (current === null) continue;
     const committed = headContent(file);
     if (committed === null) continue;
-    const current = fs.readFileSync(abs, 'utf8');
     if (current !== committed && isTimestampOnlyChange(committed, current)) {
       fs.writeFileSync(abs, committed);
       restored.push(file);
@@ -210,7 +224,11 @@ function assertSnapshotsCommitted() {
     .map((league) => derivedPath(league, 'franchise-history.json'))
     .filter((file) => {
       const committed = headContent(file);
-      return committed !== null && fs.readFileSync(path.join(ROOT, file), 'utf8') !== committed;
+      if (committed === null) return false;
+      const current = currentContent(path.join(ROOT, file));
+      // A snapshot that is tracked but missing on disk is not a safe baseline
+      // either — the producer would read no previous badges and post nothing.
+      return current === null || current !== committed;
     });
   if (dirty.length > 0) {
     console.error(
