@@ -1,5 +1,25 @@
 # Franchise History Pages — Insights
 
+## 2026-09-15 - Division titles waited for a finished season; season BADGES did not
+
+**Context:** One week into 2026 the feed carried "Music City Mafia closed 2026 at
+the bottom of the standings", plus a top-seed and a scoring-title post for the
+week-1 leader. Reproduced by running `compute-franchise-history.mjs` against the
+week-1 standings feed: three `sf_milestone_*-y2026` posts.
+
+- `isSeasonComplete` (`scripts/lib/theleague-season-complete.mjs`) gated
+  division titles and playoff appearances, but `scripts/badges.mjs` read
+  `regSeasonRank` / `pointsFor` straight off the in-progress year. Any
+  single-season verdict built from a mid-season table is wrong, and the
+  milestone diff makes it AUDIBLE, not just a stale chip.
+- The gate now rides `yearSummaries[].seasonComplete` into
+  `buildBadgeContext` (`ctx.incompleteYears`) and is applied ONCE in
+  `computeBadgesFor` for every `tier: 'season'` badge, plus the two context
+  aggregates (scoring champ, highest-scoring season). A new season badge
+  inherits it without remembering to.
+- Single-GAME records are deliberately not gated: a played game is final.
+- `tests/badges-season-complete.test.ts` pins it.
+
 ## 2026-09-05 - Five copies of the ownership boundary became one, and the proof was a dump, not a screenshot
 
 **Context:** PR 3 of `docs/plans/owners-feature.md`. `compute-franchise-history.mjs`,

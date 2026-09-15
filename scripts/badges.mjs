@@ -280,11 +280,19 @@ export function buildBadgeContext(franchises, yearSummaries = []) {
     mostTradesEver: null,
     topScorerByYear: {},
     leagueSizeByYear: {},
+    // Seasons still being played. A mid-season standings table is a valid
+    // ORDER but not a FINAL one — see scripts/lib/theleague-season-complete.mjs.
+    // Only an explicit `seasonComplete: false` counts, so a summary without the
+    // field (older snapshots, tests) keeps its badges.
+    incompleteYears: new Set(),
   };
 
   for (const ys of yearSummaries) {
     if (ys?.year != null && ys.leagueSize != null) {
       ctx.leagueSizeByYear[ys.year] = ys.leagueSize;
+    }
+    if (ys?.year != null && ys.seasonComplete === false) {
+      ctx.incompleteYears.add(Number(ys.year));
     }
   }
 
@@ -314,12 +322,14 @@ export function buildBadgeContext(franchises, yearSummaries = []) {
     }
   }
 
-  // All-time highest single-season points-for. Skip not-yet-played seasons.
+  // All-time highest single-season points-for. Skip not-yet-played and
+  // in-progress seasons — a partial season's total is not a season total.
   for (const [fid, fr] of Object.entries(franchises)) {
     for (const y of fr.yearByYear) {
       if (y.wins + y.losses + y.ties === 0 && (!y.pointsFor || y.pointsFor === 0)) {
         continue;
       }
+      if (ctx.incompleteYears.has(Number(y.year))) continue;
       if (
         !ctx.highestScoringSeasonEver ||
         y.pointsFor > ctx.highestScoringSeasonEver.pointsFor
@@ -360,6 +370,7 @@ export function buildBadgeContext(franchises, yearSummaries = []) {
       if (y.wins + y.losses + y.ties === 0 && (!y.pointsFor || y.pointsFor === 0)) {
         continue;
       }
+      if (ctx.incompleteYears.has(Number(y.year))) continue;
       const stat = yearStats.get(y.year) || { topScorer: null };
       if (!stat.topScorer || y.pointsFor > stat.topScorer.pointsFor) {
         stat.topScorer = { fid, pointsFor: y.pointsFor };
@@ -387,6 +398,12 @@ export function computeBadgesFor(fr, ctx) {
     } catch (err) {
       console.error(`[badges] ${def.id} failed for ${fr.franchiseId}:`, err);
       continue;
+    }
+    // Every single-season badge is a verdict on a FINISHED season. Gate them
+    // here, once, rather than per definition: a new season badge that forgets
+    // its own check would post a week-1 "champion" to the Schefter feed.
+    if (def.tier === 'season' && Array.isArray(awards) && ctx.incompleteYears) {
+      awards = awards.filter((a) => a?.year == null || !ctx.incompleteYears.has(Number(a.year)));
     }
     if (Array.isArray(awards) && awards.length > 0) {
       earned.push({

@@ -1424,6 +1424,10 @@ for (const year of years) {
   yearSummaries.push({
     year,
     leagueSize: standingsRows.length,
+    // Read by scripts/badges.mjs: single-season badges (best record, cellar
+    // dweller, scoring champ...) must not be awarded off a week-1 table, or the
+    // milestone diff posts "closed 2026 at the bottom" after one week.
+    seasonComplete,
     champion: champResult?.champion ?? null,
     runnerUp: champResult?.runnerUp ?? null,
     thirdPlace: champResult?.thirdPlace ?? null,
