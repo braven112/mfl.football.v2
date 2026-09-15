@@ -514,10 +514,60 @@ weakening: it asserted `rosters.astro` itself contains the
 file that paints its band, and keeps the "no old avatar chip" half pointed at
 the page.
 
-**Remaining slice:**
+**Slice 5 — the submit path *(done)*. Phase 6.1 is complete.**
+`executeCutPlayer`, `submitDeclaration`, the submit dispatcher and the modal's
+close bindings. The wizard is whole in `src/utils/cdm-wizard.ts`; the page
+keeps only the openers that call into it.
 
-5. The submit handler — last, and the one the harness does not cover. Submit a
-   throwaway declaration by hand before trusting it.
+**The Escape listener was the one judgement call.** It is `document`-level and
+the page re-added it on every `initRosterPage`, which stacks one handler per
+navigation under the ClientRouter — CLAUDE.md's lifecycle rule, and the shape
+five pages shipped as a bug in one week. The effect here was benign (closing a
+closed modal is a no-op), but moving a known-wrong shape into a module is not
+a move, so it is now a module-scoped handle that each init removes and re-adds.
+Two casts were added and both are annotated as checker-only:
+`(err as Error).message` on a catch the page read untyped, and
+`clearInterval(x ?? undefined)` where the page passed a bare `let`.
+
+Type baseline **1480 → 1448**. Across the four slices: **1699 → 1448**.
+
+### How the submit path was actually verified
+
+This doc used to say "submit a throwaway declaration by hand". Don't — and as
+of today you cannot anyway. `scripts/cdm-parity-check.mjs --probe` drives
+submit with `/api/contracts/declare` and `/api/cut-player` **fulfilled from a
+canned response inside the browser**, so the request is fingerprinted and
+dropped rather than sent. Neither the dev server nor MFL sees a write. It runs
+twice, against a success and against a rejection, so the handler's catch branch
+is covered. Result for this slice: **102 submits driven, 11,040 captured
+values, zero diffs.**
+
+Three things to know before trusting that mode again:
+
+- **Run it twice against identical code first.** The first version of the probe
+  read `sent[0]` before the fetch had been issued, and produced 60 scattered,
+  direction-less diffs on `probes.*.request` — which reads exactly like a
+  regression and was not one. It polls for the request now, and the
+  self-consistency run is the check that would have caught it.
+- **`/api/contracts/declare` is NOT covered, and cannot be today.** The only
+  openers that reach it are `.yrs-chip--eligible` / `.yrs-chip--pending`, and
+  no player on the current roster is in a declarable state — the page renders
+  25 inert `.yrs-chip`s and zero eligible ones. Everything reachable from the
+  action sheet applies LOCALLY (`applyContractAction`) and issues no request at
+  all, which the probe records as `request: null` and would flag if that ever
+  changed. Add the chip openers to `DIRECT_OPENERS` the moment a declaration
+  window is open, and re-run this comparison against the current module.
+- **The handler's own timers fight the harness.** The cut success path runs
+  `setTimeout(() => location.reload(), 1500)`, which is why captures wait for a
+  visible outcome rather than a fixed delay and navigations retry once.
+
+### What is left in `rosters.astro` from the modal
+
+The openers (`extractPlayerDataFromRow` and the four click bindings),
+`showTradeSubOptions`, `goToRosterMoveStep` and `toggleCdmWatch`. Those last
+three are not modal internals — they are the roster's own write actions that
+the action sheet happens to surface, and they belong with the autocut work in
+Phase 5 rather than with the wizard.
 
 The module boundary also **fixes a bug class**: the July 2026 whole-page crash
 was a temporal-dead-zone read inside one giant function body. Imports hoist;

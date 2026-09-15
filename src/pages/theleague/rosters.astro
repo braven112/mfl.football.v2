@@ -10063,14 +10063,17 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
     initCutdownPanelBindings();
 
     // ----------------------------------------------------------------
-    // The wizard's seven step transitions now live in src/utils/cdm-steps.ts
-    // (Phase 6.1 slice 3 of docs/plans/rosters-page-split.md). They were ~550
-    // lines here, on the far side of the autocut section from the rest of the
-    // modal. What they depend on is the interface above the factory; two of
-    // the entries are shaped deliberately — `setSelectedPlayer` because the
-    // simulate-cut option ASSIGNS the page's `selectedPlayer`, and
-    // `executeCutPlayer` as a thunk because it is declared below this line
-    // and only ever called from a click handler.
+    // The Contract Declaration Modal — all of it — lives in
+    // src/utils/cdm-wizard.ts (Phase 6.1 of docs/plans/rosters-page-split.md).
+    // It was ~1,500 lines in three non-contiguous regions of this function,
+    // with the deferred autocut section sandwiched between two of them.
+    //
+    // Everything it reaches for is the interface above the factory. The
+    // entries that are functions rather than values are the ones the page
+    // REASSIGNS (`selectedPlayer`, `currentTeam`, `lastViewContext`,
+    // `demoActive`) or declares below this line (`updateView`,
+    // `applyEligibilityStyling`) — nothing else is indirected for its own
+    // sake. The autocut four are the Phase 5 seam.
     // ----------------------------------------------------------------
     const {
       openDeclarationModal,
@@ -10122,255 +10125,23 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
       getMarkedOnRoster,
       computeAutocutSlate,
       toggleAutocutMark,
-      // Declared below this call; only ever invoked from a click handler.
-      executeCutPlayer: () => executeCutPlayer(),
+      cdmOverlay,
+      cdmCloseBtn,
+      // Mutated IN PLACE on a successful submit — the objects cross, not copies.
+      localDeclarations,
+      declarationsByPlayer,
+      // Another page `let`: the Contract Demo turns it on and off.
+      isDemoActive: () => demoActive,
+      updateView: () => updateView(),
+      applyEligibilityStyling: () => applyEligibilityStyling(),
     });
 
     // ----------------------------------------------------------------
-    // executeCutPlayer — inline confirm → API call to actually cut
+    // executeCutPlayer, submitDeclaration, the submit dispatcher and the
+    // modal's close bindings moved to src/utils/cdm-wizard.ts — Phase 6.1
+    // slice 5, the last of the modal. The wizard is now whole in one module;
+    // what is left here is the openers that call into it.
     // ----------------------------------------------------------------
-    const executeCutPlayer = async () => {
-      const cutBtn = document.querySelector<HTMLButtonElement>('.cdm-action-option--cut-real');
-      if (!cutBtn) return;
-
-      // First click: transform to danger confirmation state
-      if (!cdmState.cutConfirmed) {
-        cdmState.cutConfirmed = true;
-        cutBtn.classList.add('cdm-action-option--danger');
-        const label = cutBtn.querySelector('.cdm-action-option__label');
-        const desc = cutBtn.querySelector('.cdm-action-option__desc');
-        if (label) label.textContent = 'Confirm Cut';
-        if (desc) desc.textContent = 'This cannot be undone — click again to confirm';
-        return;
-      }
-
-      // Second click: execute the cut
-      const playerId = cdmState.playerData?.id;
-      if (!playerId) return;
-
-      // Loading state
-      cutBtn.disabled = true;
-      cutBtn.classList.add('loading');
-      const label = cutBtn.querySelector('.cdm-action-option__label');
-      const desc = cutBtn.querySelector('.cdm-action-option__desc');
-      if (label) label.textContent = 'Cutting...';
-      if (desc) desc.textContent = '';
-      cdmError.style.display = 'none';
-
-      // Disable the simulate button too
-      const simBtn = document.querySelector<HTMLButtonElement>('.cdm-action-option--cut-simulate');
-      if (simBtn) simBtn.disabled = true;
-
-      try {
-        const res = await fetch('/api/cut-player', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ playerId: String(playerId) }),
-        });
-
-        const data = await res.json();
-
-        if (data.success) {
-          // Show success
-          const playerName = cdmState.playerData?._rawPlayer?.name || 'Player';
-          cutBtn.style.display = 'none';
-          if (simBtn) simBtn.style.display = 'none';
-          cdmSuccess.style.display = 'flex';
-          const successSpan = cdmSuccess.querySelector('span');
-          if (successSpan) successSpan.textContent = `${playerName} has been released.`;
-          setTimeout(() => window.location.reload(), 1500);
-        } else {
-          cdmError.textContent = data.message || 'Failed to cut player. Please try again.';
-          cdmError.style.display = 'flex';
-          // Re-enable
-          cutBtn.disabled = false;
-          cutBtn.classList.remove('loading');
-          if (label) label.textContent = 'Confirm Cut';
-          if (desc) desc.textContent = 'This cannot be undone — click again to confirm';
-          if (simBtn) simBtn.disabled = false;
-        }
-      } catch (err) {
-        cdmError.textContent = 'Network error. Please check your connection and try again.';
-        cdmError.style.display = 'flex';
-        cutBtn.disabled = false;
-        cutBtn.classList.remove('loading');
-        if (label) label.textContent = 'Confirm Cut';
-        if (desc) desc.textContent = 'This cannot be undone — click again to confirm';
-        if (simBtn) simBtn.disabled = false;
-      }
-    };
-
-    const submitDeclaration = async () => {
-      if (!cdmState.playerData || cdmState.selectedYears === null) return;
-
-      const origBtnText = cdmSubmitBtn.textContent;
-      cdmSubmitBtn.classList.add('is-loading');
-      cdmSubmitBtn.disabled = true;
-      cdmSubmitBtn.setAttribute('aria-busy', 'true');
-      cdmSubmitBtn.textContent = 'Submitting...';
-      cdmError.style.display = 'none';
-
-      const elig = cdmState.playerData.eligibility;
-      const isCancelling = cdmState.selectedYears === elig?.currentYears;
-
-      // Demo mode: skip API call, show success immediately
-      const isDemoPlayer = demoActive && String(cdmState.playerData.id).startsWith('DEMO_');
-      if (isDemoPlayer) {
-        if (isCancelling) {
-          delete localDeclarations[cdmState.playerData.id];
-          delete declarationsByPlayer[cdmState.playerData.id];
-        } else {
-          localDeclarations[cdmState.playerData.id] = {
-            status: 'pending',
-            years: cdmState.selectedYears,
-          };
-        }
-        cdmSubmitBtn.classList.remove('is-loading');
-        cdmSubmitBtn.removeAttribute('aria-busy');
-        cdmSubmitBtn.style.display = 'none';
-        cdmSuccess.style.display = 'flex';
-        updateView();
-        applyEligibilityStyling();
-        setTimeout(closeDeclarationModal, 1500);
-        return;
-      }
-      const franchiseId = config.authUser?.franchiseId ?? currentTeam;
-      const franchiseName = config.teams?.[franchiseId]?.name ?? franchiseId;
-      const leagueId = config.authUser?.leagueId ?? config.defaultLeagueId;
-
-      // cdmState.flowType tracks the current step flow; cdmState.submitType overrides for specific sub-choices.
-      // For action-select flows, use cdmState.flowType; otherwise fall back to cdmState.submitType then elig.type
-      const effectiveType = (cdmState.flowType && cdmState.flowType !== 'action-select') ? cdmState.flowType : (cdmState.submitType ?? elig.type);
-
-      // Determine requestedContractInfo based on declaration type
-      let requestedContractInfo;
-      if (effectiveType === 'franchise-tag') requestedContractInfo = 'F';
-      else if (effectiveType === 'rookie-extension') requestedContractInfo = ''; // graduating from RC
-      else if (effectiveType === 'team-option') requestedContractInfo = ''; // TO designation removed
-
-      try {
-        const res = await fetch('/api/contracts/declare', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            leagueId,
-            playerId: cdmState.playerData.id,
-            playerName: cdmState.playerData.name,
-            franchiseId,
-            franchiseName,
-            type: effectiveType,
-            currentYears: elig.currentYears,
-            currentSalary: elig.currentSalary,
-            currentContractInfo: elig.contractInfo ?? '',
-            requestedYears: cdmState.selectedYears,
-            requestedSalary: cdmState.selectedSalary ?? undefined,
-            requestedContractInfo,
-            deadlineAt: elig.deadlineTimestamp
-              ? new Date(elig.deadlineTimestamp * 1000).toISOString()
-              : undefined,
-            acquisitionTimestamp: elig.acquisitionTimestamp,
-          }),
-        });
-
-        const result = await res.json();
-        if (!res.ok) throw new Error(result.error || 'Declaration failed');
-
-        if (result.cancelled) {
-          delete localDeclarations[cdmState.playerData.id];
-          delete declarationsByPlayer[cdmState.playerData.id];
-        } else {
-          // Optimistic update
-          localDeclarations[cdmState.playerData.id] = {
-            status: 'pending',
-            years: cdmState.selectedYears,
-          };
-        }
-
-        cdmSubmitBtn.classList.remove('is-loading');
-        cdmSubmitBtn.removeAttribute('aria-busy');
-        cdmSubmitBtn.style.display = 'none';
-        cdmSuccess.style.display = 'flex';
-
-        // Refresh the years cells
-        updateView();
-        applyEligibilityStyling();
-
-        // Auto-close after short delay
-        setTimeout(closeDeclarationModal, 1500);
-      } catch (err) {
-        cdmError.textContent = err.message;
-        cdmError.style.display = '';
-        cdmSubmitBtn.classList.remove('is-loading');
-        cdmSubmitBtn.disabled = false;
-        cdmSubmitBtn.removeAttribute('aria-busy');
-        cdmSubmitBtn.textContent = origBtnText;
-      }
-    };
-
-    // Wire up modal close/submit
-    cdmOverlay?.addEventListener('click', closeDeclarationModal);
-    cdmCloseBtn?.addEventListener('click', closeDeclarationModal);
-    cdmSubmitBtn?.addEventListener('click', () => {
-      // Via action-select flow: apply locally (sandbox, no API call)
-      if (cdmState.viaActionSelect) {
-        if (cdmState.flowType === 'franchise-tag') {
-          if (!cdmState.playerData) return;
-          selectedPlayer = cdmState.playerData._rawPlayer;
-          applyContractAction('franchise');
-          closeDeclarationModal();
-          return;
-        }
-        if (cdmState.flowType === 'veteran-extension') {
-          if (!cdmState.selectedYears || !cdmState.playerData) return;
-          selectedPlayer = cdmState.playerData._rawPlayer;
-          applyContractAction('extension', cdmState.selectedYears);
-          closeDeclarationModal();
-          return;
-        }
-        if (cdmState.flowType === 'team-option') {
-          if (!cdmState.playerData) return;
-          selectedPlayer = cdmState.playerData._rawPlayer;
-          applyContractAction('team-option');
-          closeDeclarationModal();
-          return;
-        }
-        if (cdmState.flowType === 'rookie-extension') {
-          if (!cdmState.playerData) return;
-          selectedPlayer = cdmState.playerData._rawPlayer;
-          applyContractAction('rookie-extension', 2);
-          closeDeclarationModal();
-          return;
-        }
-      }
-      // Team option from direct TO cell click — apply locally for cap impact simulation
-      if (cdmState.flowType === 'team-option' && cdmState.playerData) {
-        const elig = cdmState.playerData.eligibility;
-        selectedPlayer = cdmState.playerData._rawPlayer || {
-          id: cdmState.playerData.id,
-          name: cdmState.playerData.name,
-          position: cdmState.playerData.position,
-          salary: elig?.currentSalary ?? 0,
-          years: elig?.currentYears ?? 1,
-        };
-        applyContractAction('team-option');
-        closeDeclarationModal();
-        return;
-      }
-      // Veteran extension via yrs-chip: staged (batch-submitted later via Submit Tags/Extensions)
-      if (cdmState.playerData?.eligibility?.type === 'veteran-extension') {
-        if (!cdmState.selectedYears || !cdmState.playerData) return;
-        selectedPlayer = cdmState.playerData._rawPlayer;
-        applyContractAction('extension', cdmState.selectedYears);
-        closeDeclarationModal();
-        return;
-      }
-      submitDeclaration();
-    });
-    document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape' && cdmModal?.classList.contains('active')) {
-        closeDeclarationModal();
-      }
-    });
 
     const updateView = () => {
       clearSecondaryWarmup();

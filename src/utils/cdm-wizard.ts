@@ -16,15 +16,10 @@
  * things this region actually depends on are now a declared list instead of
  * an implicit reach into a 12,000-line closure.
  *
- * Two of the twenty-one are shaped the way they are for a reason:
- *
- * - `setSelectedPlayer` is a setter, not a value. The cut flow's "Simulate
- *   Cut" option ASSIGNS the page's `selectedPlayer`, and an assignment cannot
- *   cross a module boundary as a plain reference.
- * - `executeCutPlayer` is called through `deps` rather than destructured. It
- *   is declared BELOW this region in the page, so destructuring it when the
- *   factory runs would capture `undefined`; going through `deps` at click time
- *   resolves it the same way the page's own forward reference used to.
+ * One entry is shaped the way it is for a reason:
+ * - `setSelectedPlayer` is the only assignment that crosses as a setter, for
+ *   the same reason: the six places that reassign the page's `selectedPlayer`
+ *   cannot do it through a plain reference.
  *
  * Render identity is proven by `scripts/cdm-parity-check.mjs`, which walks all
  * 25 eligible players, steps into every safe flow, and fingerprints the
@@ -100,8 +95,21 @@ export interface CdmWizardContext {
   toggleAutocutMark: (playerId: string, isMarked: boolean) => void;
   /** Assigns the page's `selectedPlayer` — see the note above. */
   setSelectedPlayer: (player: any) => void;
-  /** Late-bound; called through `deps` — see the note above. */
-  executeCutPlayer: () => void;
+  /** The two remaining modal chrome handles; both close the wizard. */
+  cdmOverlay: HTMLElement | null;
+  cdmCloseBtn: HTMLElement | null;
+  /**
+   * The page's two optimistic declaration stores. Mutated IN PLACE on a
+   * successful submit, so they cross as the objects themselves — replacing
+   * either with a copy would strand the page's own reads.
+   */
+  localDeclarations: Record<string, any>;
+  declarationsByPlayer: Record<string, any>;
+  /** The Contract Demo's flag — a page `let` that startDemo/exitDemo move. */
+  isDemoActive: () => boolean;
+  /** Re-render hooks the submit path calls after a write lands. */
+  updateView: () => void;
+  applyEligibilityStyling: () => void;
 }
 
 /**
@@ -115,6 +123,13 @@ export interface CdmWizardContext {
  * leaves the failure mode alone. Where the original DID guard — the stepper
  * dots, the type badge, the review panel — the `if (…)` is still there.
  */
+/**
+ * The Escape-to-close handler, held at MODULE scope so each init can REPLACE
+ * it. With the ClientRouter one module instance outlives a navigation, so a
+ * handler that is only ever added accumulates one copy per page visit.
+ */
+let escapeHandler: ((e: KeyboardEvent) => void) | null = null;
+
 function cdmNode(id: string): HTMLElement {
   return document.getElementById(id) as HTMLElement;
 }
@@ -152,6 +167,13 @@ export function createCdmWizard(deps: CdmWizardContext) {
     getMarkedOnRoster,
     computeAutocutSlate,
     toggleAutocutMark,
+    cdmOverlay,
+    cdmCloseBtn,
+    localDeclarations,
+    declarationsByPlayer,
+    isDemoActive,
+    updateView,
+    applyEligibilityStyling,
   } = deps;
 
   /**
@@ -1455,7 +1477,7 @@ export function createCdmWizard(deps: CdmWizardContext) {
 
       actionOptions.appendChild(makeCdmActionBtn(
         'cut-real', 'Cut Player', 'Permanently release — cannot be undone',
-        () => deps.executeCutPlayer(),
+        () => executeCutPlayer(),
         false, 'icon-user-times'
       ));
     }
@@ -1469,6 +1491,261 @@ export function createCdmWizard(deps: CdmWizardContext) {
       reviewPanel.classList.add('panel-enter');
     }
   };
+  // ----------------------------------------------------------------
+  // executeCutPlayer — inline confirm → API call to actually cut
+  // ----------------------------------------------------------------
+  const executeCutPlayer = async () => {
+    const cutBtn = document.querySelector<HTMLButtonElement>('.cdm-action-option--cut-real');
+    if (!cutBtn) return;
+
+    // First click: transform to danger confirmation state
+    if (!cdmState.cutConfirmed) {
+      cdmState.cutConfirmed = true;
+      cutBtn.classList.add('cdm-action-option--danger');
+      const label = cutBtn.querySelector('.cdm-action-option__label');
+      const desc = cutBtn.querySelector('.cdm-action-option__desc');
+      if (label) label.textContent = 'Confirm Cut';
+      if (desc) desc.textContent = 'This cannot be undone — click again to confirm';
+      return;
+    }
+
+    // Second click: execute the cut
+    const playerId = cdmState.playerData?.id;
+    if (!playerId) return;
+
+    // Loading state
+    cutBtn.disabled = true;
+    cutBtn.classList.add('loading');
+    const label = cutBtn.querySelector('.cdm-action-option__label');
+    const desc = cutBtn.querySelector('.cdm-action-option__desc');
+    if (label) label.textContent = 'Cutting...';
+    if (desc) desc.textContent = '';
+    cdmError.style.display = 'none';
+
+    // Disable the simulate button too
+    const simBtn = document.querySelector<HTMLButtonElement>('.cdm-action-option--cut-simulate');
+    if (simBtn) simBtn.disabled = true;
+
+    try {
+      const res = await fetch('/api/cut-player', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ playerId: String(playerId) }),
+      });
+
+      const data = await res.json();
+
+      if (data.success) {
+        // Show success
+        const playerName = cdmState.playerData?._rawPlayer?.name || 'Player';
+        cutBtn.style.display = 'none';
+        if (simBtn) simBtn.style.display = 'none';
+        cdmSuccess.style.display = 'flex';
+        const successSpan = cdmSuccess.querySelector('span');
+        if (successSpan) successSpan.textContent = `${playerName} has been released.`;
+        setTimeout(() => window.location.reload(), 1500);
+      } else {
+        cdmError.textContent = data.message || 'Failed to cut player. Please try again.';
+        cdmError.style.display = 'flex';
+        // Re-enable
+        cutBtn.disabled = false;
+        cutBtn.classList.remove('loading');
+        if (label) label.textContent = 'Confirm Cut';
+        if (desc) desc.textContent = 'This cannot be undone — click again to confirm';
+        if (simBtn) simBtn.disabled = false;
+      }
+    } catch (err) {
+      cdmError.textContent = 'Network error. Please check your connection and try again.';
+      cdmError.style.display = 'flex';
+      cutBtn.disabled = false;
+      cutBtn.classList.remove('loading');
+      if (label) label.textContent = 'Confirm Cut';
+      if (desc) desc.textContent = 'This cannot be undone — click again to confirm';
+      if (simBtn) simBtn.disabled = false;
+    }
+  };
+
+  const submitDeclaration = async () => {
+    if (!cdmState.playerData || cdmState.selectedYears === null) return;
+
+    const origBtnText = cdmSubmitBtn.textContent;
+    cdmSubmitBtn.classList.add('is-loading');
+    cdmSubmitBtn.disabled = true;
+    cdmSubmitBtn.setAttribute('aria-busy', 'true');
+    cdmSubmitBtn.textContent = 'Submitting...';
+    cdmError.style.display = 'none';
+
+    const elig = cdmState.playerData.eligibility;
+    const isCancelling = cdmState.selectedYears === elig?.currentYears;
+
+    // Demo mode: skip API call, show success immediately
+    const isDemoPlayer = isDemoActive() && String(cdmState.playerData.id).startsWith('DEMO_');
+    if (isDemoPlayer) {
+      if (isCancelling) {
+        delete localDeclarations[cdmState.playerData.id];
+        delete declarationsByPlayer[cdmState.playerData.id];
+      } else {
+        localDeclarations[cdmState.playerData.id] = {
+          status: 'pending',
+          years: cdmState.selectedYears,
+        };
+      }
+      cdmSubmitBtn.classList.remove('is-loading');
+      cdmSubmitBtn.removeAttribute('aria-busy');
+      cdmSubmitBtn.style.display = 'none';
+      cdmSuccess.style.display = 'flex';
+      updateView();
+      applyEligibilityStyling();
+      setTimeout(closeDeclarationModal, 1500);
+      return;
+    }
+    const franchiseId = config.authUser?.franchiseId ?? getCurrentTeam();
+    const franchiseName = config.teams?.[franchiseId]?.name ?? franchiseId;
+    const leagueId = config.authUser?.leagueId ?? config.defaultLeagueId;
+
+    // cdmState.flowType tracks the current step flow; cdmState.submitType overrides for specific sub-choices.
+    // For action-select flows, use cdmState.flowType; otherwise fall back to cdmState.submitType then elig.type
+    const effectiveType = (cdmState.flowType && cdmState.flowType !== 'action-select') ? cdmState.flowType : (cdmState.submitType ?? elig.type);
+
+    // Determine requestedContractInfo based on declaration type
+    let requestedContractInfo;
+    if (effectiveType === 'franchise-tag') requestedContractInfo = 'F';
+    else if (effectiveType === 'rookie-extension') requestedContractInfo = ''; // graduating from RC
+    else if (effectiveType === 'team-option') requestedContractInfo = ''; // TO designation removed
+
+    try {
+      const res = await fetch('/api/contracts/declare', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          leagueId,
+          playerId: cdmState.playerData.id,
+          playerName: cdmState.playerData.name,
+          franchiseId,
+          franchiseName,
+          type: effectiveType,
+          currentYears: elig.currentYears,
+          currentSalary: elig.currentSalary,
+          currentContractInfo: elig.contractInfo ?? '',
+          requestedYears: cdmState.selectedYears,
+          requestedSalary: cdmState.selectedSalary ?? undefined,
+          requestedContractInfo,
+          deadlineAt: elig.deadlineTimestamp
+            ? new Date(elig.deadlineTimestamp * 1000).toISOString()
+            : undefined,
+          acquisitionTimestamp: elig.acquisitionTimestamp,
+        }),
+      });
+
+      const result = await res.json();
+      if (!res.ok) throw new Error(result.error || 'Declaration failed');
+
+      if (result.cancelled) {
+        delete localDeclarations[cdmState.playerData.id];
+        delete declarationsByPlayer[cdmState.playerData.id];
+      } else {
+        // Optimistic update
+        localDeclarations[cdmState.playerData.id] = {
+          status: 'pending',
+          years: cdmState.selectedYears,
+        };
+      }
+
+      cdmSubmitBtn.classList.remove('is-loading');
+      cdmSubmitBtn.removeAttribute('aria-busy');
+      cdmSubmitBtn.style.display = 'none';
+      cdmSuccess.style.display = 'flex';
+
+      // Refresh the years cells
+      updateView();
+      applyEligibilityStyling();
+
+      // Auto-close after short delay
+      setTimeout(closeDeclarationModal, 1500);
+    } catch (err) {
+      // `(err as Error)` only to satisfy the checker — the page read
+      // `err.message` off an untyped catch and every throw on this path is an
+      // Error, including the one the !res.ok branch above constructs.
+      cdmError.textContent = (err as Error).message;
+      cdmError.style.display = '';
+      cdmSubmitBtn.classList.remove('is-loading');
+      cdmSubmitBtn.disabled = false;
+      cdmSubmitBtn.removeAttribute('aria-busy');
+      cdmSubmitBtn.textContent = origBtnText;
+    }
+  };
+
+  // Wire up modal close/submit
+  cdmOverlay?.addEventListener('click', closeDeclarationModal);
+  cdmCloseBtn?.addEventListener('click', closeDeclarationModal);
+  cdmSubmitBtn?.addEventListener('click', () => {
+    // Via action-select flow: apply locally (sandbox, no API call)
+    if (cdmState.viaActionSelect) {
+      if (cdmState.flowType === 'franchise-tag') {
+        if (!cdmState.playerData) return;
+        setSelectedPlayer(cdmState.playerData._rawPlayer);
+        applyContractAction('franchise');
+        closeDeclarationModal();
+        return;
+      }
+      if (cdmState.flowType === 'veteran-extension') {
+        if (!cdmState.selectedYears || !cdmState.playerData) return;
+        setSelectedPlayer(cdmState.playerData._rawPlayer);
+        applyContractAction('extension', cdmState.selectedYears);
+        closeDeclarationModal();
+        return;
+      }
+      if (cdmState.flowType === 'team-option') {
+        if (!cdmState.playerData) return;
+        setSelectedPlayer(cdmState.playerData._rawPlayer);
+        applyContractAction('team-option');
+        closeDeclarationModal();
+        return;
+      }
+      if (cdmState.flowType === 'rookie-extension') {
+        if (!cdmState.playerData) return;
+        setSelectedPlayer(cdmState.playerData._rawPlayer);
+        applyContractAction('rookie-extension', 2);
+        closeDeclarationModal();
+        return;
+      }
+    }
+    // Team option from direct TO cell click — apply locally for cap impact simulation
+    if (cdmState.flowType === 'team-option' && cdmState.playerData) {
+      const elig = cdmState.playerData.eligibility;
+      setSelectedPlayer(cdmState.playerData._rawPlayer || {
+        id: cdmState.playerData.id,
+        name: cdmState.playerData.name,
+        position: cdmState.playerData.position,
+        salary: elig?.currentSalary ?? 0,
+        years: elig?.currentYears ?? 1,
+      });
+      applyContractAction('team-option');
+      closeDeclarationModal();
+      return;
+    }
+    // Veteran extension via yrs-chip: staged (batch-submitted later via Submit Tags/Extensions)
+    if (cdmState.playerData?.eligibility?.type === 'veteran-extension') {
+      if (!cdmState.selectedYears || !cdmState.playerData) return;
+      setSelectedPlayer(cdmState.playerData._rawPlayer);
+      applyContractAction('extension', cdmState.selectedYears);
+      closeDeclarationModal();
+      return;
+    }
+    submitDeclaration();
+  });
+  // Document-level, so it is REPLACED per init rather than added again. The
+  // page added it fresh on every initRosterPage, which stacks one handler per
+  // navigation under the ClientRouter — see CLAUDE.md's lifecycle rule. The
+  // effect was benign (closing a closed modal is a no-op); the shape is not.
+  if (escapeHandler) document.removeEventListener('keydown', escapeHandler);
+  escapeHandler = (e: KeyboardEvent) => {
+    if (e.key === 'Escape' && cdmModal?.classList.contains('active')) {
+      closeDeclarationModal();
+    }
+  };
+  document.addEventListener('keydown', escapeHandler);
+
   return {
     openDeclarationModal,
     closeDeclarationModal,
