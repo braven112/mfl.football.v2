@@ -70,7 +70,7 @@ const chevronSvg = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" 
 // With exactly one other league the chevron is a direct switch link (one
 // tap). With two or more (a 3+-league registry) it opens a dropdown listing
 // every league, current one marked.
-const switchTargets = getLeagueSwitchTargets(league, currentPath, hideLeaguePrefix);
+const switchTargets = getLeagueSwitchTargets(league, currentPath, hideLeaguePrefix, Astro.url.hostname);
 const useDropdown = switchTargets.length > 1;
 const directTarget = switchTargets[0];
 ---

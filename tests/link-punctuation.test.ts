@@ -307,7 +307,13 @@ describe('middleware onRequest — the wiring, executed for real', () => {
   it('lets a clean path fall through to the rest of the chain', async () => {
     const { onRequest } = await import('../src/middleware');
     const next = vi.fn().mockResolvedValue(new Response('ok'));
-    const context = ctx('GET', 'https://mfl.football/theleague/rosters');
+    // NOT a /theleague path on this host: the shared app host stops serving
+    // the leagues that have a domain of their own, so that URL now rewrites to
+    // the catch-all instead of falling through — which is the change working,
+    // not a clean path being swallowed. Best Ball #1 is path-only and has no
+    // other address, so it is the honest "clean path on the shared host" case.
+    // See tests/shared-host-league-hiding.test.ts.
+    const context = ctx('GET', 'https://mfl.football/best-ball-1/draft');
 
     await (onRequest as never)(context, next);
     expect(next).toHaveBeenCalledTimes(1);

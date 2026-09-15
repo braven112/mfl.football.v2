@@ -28,6 +28,7 @@
 import './utils/ensure-pt-timezone';
 import { defineMiddleware } from 'astro:middleware';
 import { HOST_TO_SLUG, resolveLeagueRewrite } from './utils/league-host-map';
+import { resolveSharedHostHiddenLeague } from './config/leagues';
 import {
   PUNCTUATION_REDIRECT_STATUS,
   resolvePunctuationRedirect,
@@ -91,6 +92,25 @@ export const onRequest = defineMiddleware(async (context, next) => {
   const isLeagueHost = Boolean(HOST_TO_SLUG[hostname]);
 
   context.locals.hideLeaguePrefix = isLeagueHost;
+
+  // The shared app host is not a second front door for a league that has its
+  // own. TheLeague and the AFL are served at theleague.us and afl-fantasy.com;
+  // reaching them at mfl.football/theleague/* as well means two sets of links
+  // to keep alive, two things for a search engine to index, and two places an
+  // owner can be signed in. Best Ball #1 is deliberately unaffected — it has
+  // no apex, so the path prefix here is the only address it has.
+  //
+  // Rewritten to a path no route claims rather than answered inline, so the
+  // catch-all renders it: `[...path].astro` is where this repo's real 404
+  // status lives (`Astro.response.status = 404`), and the visitor gets the
+  // styled page. A bare `new Response(null, { status: 404 })` would be a blank
+  // screen, and rewriting to `/404` would be a SOFT 404 — that page sets no
+  // status, so it answers 200 and stays indexed, which is the opposite of
+  // hiding it. The target is outside every league prefix, so this cannot
+  // re-enter the branch even where a rewrite re-runs middleware.
+  if (resolveSharedHostHiddenLeague(hostname, context.url.pathname)) {
+    return stamp(await context.rewrite(new URL('/_not-found', context.url)));
+  }
 
   if (!isLeagueHost) return stamp(await next());
 

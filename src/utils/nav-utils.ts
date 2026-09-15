@@ -24,6 +24,7 @@ import {
   getLeagueByNavSlug,
   leagueOrigin,
   SHARED_APP_ORIGIN,
+  crossHostLeagueHref,
   type CanonicalLeagueSlug,
 } from '../config/leagues';
 import type { LeagueDefinition } from '../config/leagues';
@@ -570,9 +571,10 @@ export function getEquivalentRoute(
 export function getLeagueSwitchUrl(
   currentPath: string,
   targetLeague: LeagueSlug,
-  hideLeaguePrefix: boolean
+  hideLeaguePrefix: boolean,
+  hostname: string
 ): string {
-  return buildSwitchUrl(currentPath, getLeagueByNavSlug(targetLeague), hideLeaguePrefix);
+  return buildSwitchUrl(currentPath, getLeagueByNavSlug(targetLeague), hideLeaguePrefix, hostname);
 }
 
 /** Shared body for getLeagueSwitchUrl/getLeagueSwitchTargets — takes the
@@ -581,9 +583,24 @@ export function getLeagueSwitchUrl(
 function buildSwitchUrl(
   currentPath: string,
   target: LeagueDefinition,
-  hideLeaguePrefix: boolean
+  hideLeaguePrefix: boolean,
+  hostname: string
 ): string {
   const equivalent = getEquivalentRoute(currentPath, target.navSlug);
+
+  // `hideLeaguePrefix` answers "am I on a league apex?", which used to be the
+  // same question as "can I link to the other league relatively?". It is not
+  // any more: the shared app host serves neither TheLeague nor the AFL, so a
+  // relative switch link from the one league it DOES still serve there (Best
+  // Ball, which has no apex of its own) is a 404. `hostname` is required
+  // rather than optional precisely so a future caller cannot reintroduce that
+  // by omission — the honest answer needs to know where you are standing.
+  //
+  // Shared with the splash rather than re-decided here: "is this league hidden
+  // at this host, and if so where does it live" has one right answer.
+  const fromHere = crossHostLeagueHref(hostname, equivalent);
+  if (fromHere !== equivalent) return fromHere;
+
   if (!hideLeaguePrefix) return equivalent;
 
   const origin = leagueOrigin(target);
@@ -612,12 +629,13 @@ export interface LeagueSwitchTarget {
 export function getLeagueSwitchTargets(
   currentLeague: LeagueSlug,
   currentPath: string,
-  hideLeaguePrefix: boolean
+  hideLeaguePrefix: boolean,
+  hostname: string
 ): LeagueSwitchTarget[] {
   return ALL_LEAGUES.filter((l) => l.navSlug !== currentLeague).map((l) => ({
     navSlug: l.navSlug,
     name: l.name,
-    href: buildSwitchUrl(currentPath, l, hideLeaguePrefix),
+    href: buildSwitchUrl(currentPath, l, hideLeaguePrefix, hostname),
   }));
 }
 

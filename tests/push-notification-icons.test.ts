@@ -175,7 +175,7 @@ describe('manifest host gating', () => {
     // implementation change cannot quietly narrow it again.
     expect(layout).toMatch(/onSharedMultiLeagueHost/);
     expect(layout).toMatch(/isSharedAppHost\(Astro\.url\.hostname\)/);
-    for (const host of ['mfl.football', 'staging.mfl.football']) {
+    for (const host of ['mfl.football', 'v2.mfl.football', 'staging.mfl.football']) {
       expect(isSharedAppHost(host), `${host} must be foreign to every league`).toBe(true);
       expect(HOST_TO_SLUG[host], `${host} must not map to a league slug`).toBeUndefined();
     }

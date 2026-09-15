@@ -484,8 +484,20 @@ export function defaultMflWriteHost(env = process.env) {
  * The shared app host that serves every league under its path prefix
  * (/theleague/*, /afl-fantasy/*). Fallback target for absolute cross-league
  * URLs when a league has no apex domain of its own.
+ *
+ * This is v2, not the apex, and that is deliberate as of Sep 2026. The apex
+ * `mfl.football` still answers 406 — it is being pointed at Vercel on its own
+ * schedule, expected to take months — and this constant is not decoration:
+ * it is the ONLY origin Best Ball #1 has (`domains: []`), so it is what every
+ * absolute bb1 link, the league-switcher fallback and any GroupMe message
+ * built by `leagueUrl` resolve to. Pointed at a host that 406s, those are
+ * dead links in owners' chat clients, not a cosmetic inaccuracy.
+ *
+ * Flip this back to the apex once it serves, and delete nothing else — the
+ * apex stays in SHARED_APP_HOSTS below either way, so both hosts behave
+ * correctly through the switch and the flip is a one-line change.
  */
-export const SHARED_APP_ORIGIN = 'https://mfl.football';
+export const SHARED_APP_ORIGIN = 'https://v2.mfl.football';
 
 /**
  * Every hostname that serves the shared app — production and its staging
@@ -497,9 +509,17 @@ export const SHARED_APP_ORIGIN = 'https://mfl.football';
  * A list rather than a comparison against SHARED_APP_ORIGIN alone: an exact
  * compare recognises production and silently misses staging.mfl.football,
  * which then behaves like a league's own host on the one site whose whole job
- * is to reproduce production.
+ * is to reproduce production. v2.mfl.football is the third case and the one
+ * that proves the point — it is where the app actually serves today, it is
+ * NOT the canonical origin, and an origin-derived check misses it entirely.
+ *
+ * Membership here is decided by ONE question: does this hostname serve every
+ * league under a path prefix? Not "is it canonical", not "is it production".
+ * v2 answers yes (/theleague and /afl-fantasy both resolve on it), so a
+ * single league's PWA identity must not be served there, regardless of what
+ * SHARED_APP_ORIGIN says.
  */
-const SHARED_APP_HOSTS = ['mfl.football', 'staging.mfl.football'];
+const SHARED_APP_HOSTS = ['mfl.football', 'v2.mfl.football', 'staging.mfl.football'];
 
 /**
  * Is this hostname the shared multi-league app host (either environment)?
@@ -508,6 +528,54 @@ const SHARED_APP_HOSTS = ['mfl.football', 'staging.mfl.football'];
  */
 export function isSharedAppHost(hostname) {
   return SHARED_APP_HOSTS.includes(hostname);
+}
+
+/**
+ * Does this league live somewhere OTHER than the shared host?
+ *
+ * A league with an apex of its own (theleague.us, afl-fantasy.com) has a real
+ * front door, so the shared host is a second, unwanted one for it. A league
+ * with `domains: []` — Best Ball #1, and every best-ball sister after it —
+ * has NO other address: the shared host's path prefix is the only place it
+ * exists, so hiding it there would delete it from the internet.
+ *
+ * That is why this is DERIVED from `domains` rather than a list of two slugs.
+ * A hardcoded ['theleague', 'afl-fantasy'] would silently hide best-ball #2
+ * the day it is given an apex, and silently expose a fourth full league the
+ * day one is added without anyone remembering this file.
+ *
+ * @param {{ domains?: string[] }} league Registry entry.
+ */
+export function leagueHasOwnFrontDoor(league) {
+  return (league.domains?.length ?? 0) > 0;
+}
+
+/**
+ * The league whose pages must NOT be served at this hostname + path, or null.
+ *
+ * `mfl.football` and `v2.mfl.football` are the MFL app: MFL Live, the splash,
+ * sign-in, and the path-only leagues. They are deliberately NOT a second way
+ * into TheLeague or the AFL — those have their own domains, and a league
+ * reachable at two addresses is two sets of links, two things to index and two
+ * places to keep an owner signed in.
+ *
+ * Returns the league so the caller can say WHICH one, not just that something
+ * is hidden. Matches the prefix exactly or as a path segment, so `/theleague`
+ * and `/theleague/rosters` are hidden while a future `/theleague-archive`
+ * would not be caught by accident.
+ *
+ * @param {string} hostname
+ * @param {string} pathname
+ * @returns {object | null}
+ */
+export function resolveSharedHostHiddenLeague(hostname, pathname) {
+  if (!isSharedAppHost(hostname)) return null;
+  for (const league of ALL_LEAGUES) {
+    if (!leagueHasOwnFrontDoor(league)) continue;
+    const prefix = `/${league.slug}`;
+    if (pathname === prefix || pathname.startsWith(`${prefix}/`)) return league;
+  }
+  return null;
 }
 
 /**

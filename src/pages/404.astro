@@ -1,6 +1,6 @@
 ---
 import TheLeagueLayout from '../layouts/TheLeagueLayout.astro';
-import { getLeagueBySlug, getLeagueByPath } from '../config/leagues';
+import { getLeagueBySlug, getLeagueByPath, isSharedAppHost } from '../config/leagues';
 import { HOST_TO_SLUG } from '../utils/league-host-map';
 import { resolveLeaguePath } from '../utils/nav-utils';
 
@@ -9,12 +9,19 @@ import { resolveLeaguePath } from '../utils/nav-utils';
 // AFL); off-apex (localhost, previews) we fall back to the path prefix the
 // middleware rewrites in (/afl-fantasy/… → AFL). getLeagueByPath defaults to
 // The League for unprefixed paths.
+//
+// The shared app host is the exception, and it has to be: it does not serve
+// TheLeague or the AFL at all, so the league-derived answer there is
+// `/theleague`, which is itself a 404 on that host — an escape hatch that
+// lands you back where you started. Its home is the splash at `/`, which is
+// the one page on that host that leads somewhere for every league.
+const onSharedHost = isSharedAppHost(Astro.url.hostname);
 const hostSlug = HOST_TO_SLUG[Astro.url.hostname];
 const league =
   (hostSlug && getLeagueBySlug(hostSlug)) || getLeagueByPath(Astro.url.pathname);
 const hideLeaguePrefix = Astro.locals.hideLeaguePrefix ?? false;
-const homeHref = resolveLeaguePath(`/${league.slug}`, hideLeaguePrefix);
-const homeLabel = `Back to ${league.name}`;
+const homeHref = onSharedHost ? '/' : resolveLeaguePath(`/${league.slug}`, hideLeaguePrefix);
+const homeLabel = onSharedHost ? 'Back to MFL Fantasy Football' : `Back to ${league.name}`;
 
 // Chyron ticker lines — Schefter breaking-news voice. Duplicated in the
 // markup below so the marquee loops seamlessly.

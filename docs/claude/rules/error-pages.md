@@ -76,6 +76,45 @@ the 2026-09-08 log window the interleaved 200s were AFL requests (league
 intermittent; it was not. Split the log by league before concluding anything
 about consistency.
 
+## Serving a 404 on purpose: rewrite to the catch-all, never to `/404`
+
+Middleware that wants to refuse a path has an obvious move and a correct one,
+and they are different.
+
+`context.rewrite('/404')` renders the right-looking page with **HTTP 200**.
+`src/pages/404.astro` sets no status of its own — it is the *markup*, and the
+status is pinned by `[...path].astro`, which imports it and sets
+`Astro.response.status = 404`. A 200 carrying a "not found" page is a **soft
+404**: browsers show it, but crawlers index it and monitoring reads it as a
+healthy page, so a route you are deliberately hiding stays in search results
+and nothing alerts.
+
+Rewrite to a path **no route claims** instead. The catch-all picks it up and
+supplies the real status:
+
+```ts
+// hiding /theleague/* on the shared app host
+if (resolveSharedHostHiddenLeague(hostname, url.pathname)) {
+  return stamp(await context.rewrite(new URL('/_not-found', context.url)));
+}
+```
+
+Two things to keep right, both cheap to get wrong:
+
+- **The target must be outside whatever the rule matches**, or a rewrite that
+  re-runs middleware re-enters the branch. `/_not-found` is outside every
+  league prefix, so the loop is impossible rather than merely unobserved.
+- **`404.astro` renders with the REWRITTEN pathname**, so anything it derives
+  from the URL is now derived from the sentinel. Its "get me home" CTA reads
+  the league out of the path and defaulted to `/theleague` — which on the
+  shared host is itself hidden, so the escape hatch pointed back at the
+  trapdoor. Derive that CTA from the HOSTNAME, which a rewrite does not touch.
+
+A bare `new Response(null, { status: 404 })` gets the status right and gives
+the visitor a blank screen. Guard: `tests/shared-host-league-hiding.test.ts`
+asserts the rewrite target is not `/404`, is not a real page, and is not
+itself caught by the rule.
+
 ## The error pages are not in the page directory, on purpose
 
 `src/data/page-directory.json` is the site-search index. `404.astro` and

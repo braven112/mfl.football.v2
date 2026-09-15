@@ -58,7 +58,8 @@
         "tests/mfl-cookie-redirect-guard.test.ts",
         "tests/login-rate-limit.test.ts",
         "tests/groupme-sync-auth.test.ts",
-        "tests/mfl-login-redirect.test.ts"
+        "tests/mfl-login-redirect.test.ts",
+        "tests/shared-host-league-hiding.test.ts"
       ]
     },
     {
@@ -417,9 +418,10 @@
         "src/pages/500.astro",
         "src/pages/*path*.astro"
       ],
-      "note": "Astro finds its error page by the EXACT route `/500`. Delete src/pages/500.astro and the lookup falls through to `[...path].astro`, which pins 404 \u2014 so every SSR crash on the site renders as a missing page, which is how a P0 outage got triaged as a deleted route on 2026-09-08.",
+      "note": "Astro finds its error page by the EXACT route `/500`. Delete src/pages/500.astro and the lookup falls through to `[...path].astro`, which pins 404 \u2014 so every SSR crash on the site renders as a missing page, which is how a P0 outage got triaged as a deleted route on 2026-09-08. Serving a 404 deliberately? Rewrite to a path no route claims, never to `/404` \u2014 that page sets no status, so it answers 200 and stays indexed.",
       "tests": [
-        "tests/ssr-error-page-status.test.ts"
+        "tests/ssr-error-page-status.test.ts",
+        "tests/shared-host-league-hiding.test.ts"
       ]
     },
     {

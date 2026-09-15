@@ -4,7 +4,7 @@ import {
   getLeagueSwitchUrl,
   getLeagueSwitchTargets,
 } from '../src/utils/nav-utils';
-import { ALL_LEAGUES, leagueOrigin, SHARED_APP_ORIGIN } from '../src/config/leagues';
+import { ALL_LEAGUES, getLeagueByNavSlug, leagueOrigin, SHARED_APP_ORIGIN } from '../src/config/leagues';
 
 // NavHeader's league switcher consumes getEquivalentRoute (via
 // getLeagueSwitchUrl/getLeagueSwitchTargets). These tests lock in the
@@ -124,27 +124,46 @@ describe('getEquivalentRoute', () => {
 // "Switch to AFL" on theleague.us linked to /rosters, which the middleware
 // rewrote straight back to TheLeague. The switch never switched.
 describe('getLeagueSwitchUrl', () => {
-  // -- Shared host (mfl.football, localhost, previews): relative prefixed paths --
+  // -- localhost and Vercel previews: relative prefixed paths --
+  //
+  // This used to say "shared host, localhost, previews" and treat them as one
+  // case. They split when the shared app host stopped serving TheLeague and
+  // the AFL: a relative link there is now a 404, so only the hosts that still
+  // serve every league get one. See the shared-host block below.
 
-  it('returns a relative prefixed path on the shared host', () => {
-    expect(getLeagueSwitchUrl('/theleague/rosters', 'afl', false)).toBe(
-      '/afl-fantasy/rosters'
-    );
-    expect(getLeagueSwitchUrl('/afl-fantasy/rosters', 'theleague', false)).toBe(
-      '/theleague/rosters'
-    );
+  it('returns a relative prefixed path on localhost and previews', () => {
+    for (const host of ['localhost', 'mfl-football-v2-git-branch.vercel.app']) {
+      expect(getLeagueSwitchUrl('/theleague/rosters', 'afl', false, host), host).toBe(
+        '/afl-fantasy/rosters'
+      );
+      expect(getLeagueSwitchUrl('/afl-fantasy/rosters', 'theleague', false, host), host).toBe(
+        '/theleague/rosters'
+      );
+    }
+  });
+
+  // -- The shared app host: absolute, because it does not serve these leagues --
+
+  it('leaves the shared host for the league’s own domain, not a path it refuses', () => {
+    for (const host of ['mfl.football', 'v2.mfl.football', 'staging.mfl.football']) {
+      // From Best Ball — the one league the shared host still serves — the
+      // switcher must not offer /theleague/rosters, which 404s there.
+      const href = getLeagueSwitchUrl('/best-ball-1/rosters', 'theleague', false, host);
+      expect(href, host).toBe(`${leagueOrigin(getLeagueByNavSlug('theleague'))}/rosters`);
+      expect(href.startsWith('/'), `${host} must not produce a relative link`).toBe(false);
+    }
   });
 
   // -- League apex hosts: absolute URL to the OTHER league's domain --
 
   it('links to the AFL apex domain when switching from theleague.us', () => {
-    expect(getLeagueSwitchUrl('/theleague/rosters', 'afl', true)).toBe(
+    expect(getLeagueSwitchUrl('/theleague/rosters', 'afl', true, 'www.theleague.us')).toBe(
       'https://www.afl-fantasy.com/rosters'
     );
   });
 
   it('links to the TheLeague apex domain when switching from afl-fantasy.com', () => {
-    expect(getLeagueSwitchUrl('/afl-fantasy/rosters', 'theleague', true)).toBe(
+    expect(getLeagueSwitchUrl('/afl-fantasy/rosters', 'theleague', true, 'www.afl-fantasy.com')).toBe(
       'https://www.theleague.us/rosters'
     );
   });
@@ -152,21 +171,21 @@ describe('getLeagueSwitchUrl', () => {
   it('never returns a bare de-prefixed same-host path on an apex host', () => {
     // '/rosters' on theleague.us is TheLeague's roster page — the exact
     // regression this helper exists to prevent.
-    expect(getLeagueSwitchUrl('/theleague/rosters', 'afl', true)).not.toBe(
+    expect(getLeagueSwitchUrl('/theleague/rosters', 'afl', true, 'www.theleague.us')).not.toBe(
       '/rosters'
     );
   });
 
   it('falls back to the target league home (clean path) on an apex host', () => {
     // /contracts has no AFL counterpart → AFL home on the AFL domain
-    expect(getLeagueSwitchUrl('/theleague/contracts', 'afl', true)).toBe(
+    expect(getLeagueSwitchUrl('/theleague/contracts', 'afl', true, 'www.theleague.us')).toBe(
       'https://www.afl-fantasy.com/'
     );
   });
 
   it('preserves query strings across the domain switch', () => {
     expect(
-      getLeagueSwitchUrl('/theleague/standings?year=2024', 'afl', true)
+      getLeagueSwitchUrl('/theleague/standings?year=2024', 'afl', true, 'www.theleague.us')
     ).toBe('https://www.afl-fantasy.com/standings?year=2024');
   });
 });
@@ -178,7 +197,7 @@ describe('getLeagueSwitchUrl', () => {
 describe('getLeagueSwitchTargets', () => {
   it('lists every league except the current one, for each league', () => {
     for (const current of ALL_LEAGUES) {
-      const targets = getLeagueSwitchTargets(current.navSlug, `/${current.slug}/rosters`, false);
+      const targets = getLeagueSwitchTargets(current.navSlug, `/${current.slug}/rosters`, false, 'localhost');
       expect(targets.map((t) => t.navSlug)).toEqual(
         ALL_LEAGUES.filter((l) => l.navSlug !== current.navSlug).map((l) => l.navSlug)
       );
@@ -193,7 +212,7 @@ describe('getLeagueSwitchTargets', () => {
   it('resolves every target to the other league (never a same-league URL)', () => {
     for (const current of ALL_LEAGUES) {
       // Apex-host mode: every target must be absolute to the target's own domain
-      const targets = getLeagueSwitchTargets(current.navSlug, `/${current.slug}/rosters`, true);
+      const targets = getLeagueSwitchTargets(current.navSlug, `/${current.slug}/rosters`, true, leagueOrigin(current)?.replace('https://', '') ?? 'localhost');
       for (const t of targets) {
         const def = ALL_LEAGUES.find((l) => l.navSlug === t.navSlug)!;
         // The canonical origin is the registry's single source of truth
@@ -215,7 +234,7 @@ describe('getLeagueSwitchTargets', () => {
 
   it('returns relative prefixed paths on the shared host', () => {
     for (const current of ALL_LEAGUES) {
-      const targets = getLeagueSwitchTargets(current.navSlug, `/${current.slug}/rosters`, false);
+      const targets = getLeagueSwitchTargets(current.navSlug, `/${current.slug}/rosters`, false, 'localhost');
       for (const t of targets) {
         const def = ALL_LEAGUES.find((l) => l.navSlug === t.navSlug)!;
         expect(t.href.startsWith(`/${def.slug}`)).toBe(true);
