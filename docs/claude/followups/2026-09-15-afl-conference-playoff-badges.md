@@ -7,7 +7,7 @@ hotfix_pr: https://github.com/braven112/mfl.football.v2/pull/1087
 hotfix_sha: b652cc5
 followup_issue: 1089
 followup_pr:
-followup_session:
+followup_session: session_01BePrY8NpRnaGRvq5SWz4WJ
 ---
 
 # Follow-up: the AL's division standings badged one wild card instead of two
