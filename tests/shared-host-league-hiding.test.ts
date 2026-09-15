@@ -7,6 +7,7 @@ import {
   leagueHasOwnFrontDoor,
   resolveSharedHostHiddenLeague,
 } from '../src/config/leagues';
+import { getLeagueSwitchTargets } from '../src/utils/nav-utils';
 
 const ROOT = join(__dirname, '..');
 const read = (rel: string) => readFileSync(join(ROOT, rel), 'utf8');
@@ -191,5 +192,49 @@ describe('nothing on the shared host links into a hidden league', () => {
 
   it('the splash keeps relative links off the shared host, so previews stay drivable', () => {
     expect(read('src/pages/index.astro')).toMatch(/if \(!onSharedHost\) return path;/);
+  });
+});
+
+/**
+ * The regression that is invisible in the diff.
+ *
+ * Best Ball #1 still renders on the shared host — it has no other address —
+ * and it renders the SHARED nav, whose league switcher offered a relative
+ * `/theleague/rosters`. That became a 404 the moment the host stopped serving
+ * TheLeague, in a file the hiding change never touched.
+ */
+describe('the nav switcher does not offer a link the current host refuses', () => {
+  it('goes absolute for a hidden league, from the one league still served there', () => {
+    for (const host of ['mfl.football', 'v2.mfl.football', 'staging.mfl.football']) {
+      const targets = getLeagueSwitchTargets('bb1', '/best-ball-1/rosters', false, host);
+      expect(targets.length, 'the premise: other leagues exist to switch to').toBeGreaterThan(0);
+      for (const t of targets) {
+        expect(
+          resolveSharedHostHiddenLeague(host, t.href),
+          `${host} switcher offers ${t.href}, which 404s there`,
+        ).toBeNull();
+        expect(t.href.startsWith('http'), `${t.name} must leave the shared host`).toBe(true);
+      }
+    }
+  });
+
+  it('still links relatively on localhost and previews, so they stay drivable', () => {
+    for (const host of ['localhost', 'mfl-football-v2-git-branch.vercel.app']) {
+      for (const t of getLeagueSwitchTargets('bb1', '/best-ball-1/rosters', false, host)) {
+        expect(t.href.startsWith('/'), `${host} should keep ${t.name} relative`).toBe(true);
+      }
+    }
+  });
+
+  /**
+   * Required, not optional: an optional hostname would let a future caller
+   * reintroduce the dead link by simply not passing it.
+   */
+  it('requires the hostname rather than defaulting it away', () => {
+    const src = readFileSync(join(ROOT, 'src/utils/nav-utils.ts'), 'utf8');
+    expect(src).toMatch(/hostname: string\n\): string \{/);
+    expect(src, 'an optional hostname is a footgun').not.toMatch(/hostname\?: string/);
+    expect(readFileSync(join(ROOT, 'src/components/nav/NavHeader.astro'), 'utf8'))
+      .toContain('Astro.url.hostname');
   });
 });

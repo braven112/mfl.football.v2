@@ -170,6 +170,42 @@ Tests verify:
 4. **Keep tests fast** - Avoid real network calls in unit tests
 5. **Group related tests** - Use `describe` blocks for organization
 
+## A guard must not assert a rule against the code implementing it
+
+The failure is quiet and total: the test passes no matter what the rule says.
+
+A guard was written for "the shared host hides a league **iff** that league
+declares a domain of its own". It looped every league and asserted:
+
+```ts
+// WRONG — leagueHasOwnFrontDoor is the thing under test
+expect(hidden?.slug ?? null).toBe(leagueHasOwnFrontDoor(league) ? league.slug : null);
+```
+
+Both sides move together. Replacing the helper's body with a hardcoded
+`['theleague', 'afl-fantasy'].includes(league.slug)` — exactly the mistake the
+guard existed to prevent — passed **15/15**. The expectation is computed from
+the registry's own `domains` data now, not from the helper:
+
+```ts
+const ownsADomain = (league.domains?.length ?? 0) > 0;   // the DATA, not the rule
+```
+
+**Derive the expected value from data or from a literal you wrote in the test.
+If the assertion calls the function under test on both sides, it is a tautology.**
+
+Two things follow, and the second is the one usually skipped:
+
+- **A "derived, not hardcoded" rule needs its source read, not just its
+  output.** Behaviour-only assertions still pass for a slug list that happens
+  to match today's registry — which is the whole failure mode, since it
+  diverges silently the next time a league is added. So the guard also reads
+  the rule's body and fails if it names a league.
+- **Run the mutation.** Break the rule on purpose, watch the test go red, put
+  it back. A guard nobody has seen fail is decoration, and this one was
+  decoration until the mutation was actually run. `/guard-test` writes guards;
+  it does not verify them for you.
+
 ## Adding New Tests
 
 1. Create test file in `tests/` directory
