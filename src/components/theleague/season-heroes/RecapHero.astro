@@ -2,14 +2,23 @@
 /**
  * RecapHero — Tuesday AM weekly recap hero.
  *
- * Shows the most recent recap article from the Schefter feed with
- * headline stats. Falls back to RecapHeroStub if no recap article exists.
+ * Shows THE completed week's recap column from the Schefter feed. Falls back to
+ * RecapHeroStub when Schefter did not write one.
+ *
+ * The match is on the generated post id (`findWeeklyRecapPost`), not on the
+ * headline. This used to grep headlines for /recap|review|results|week \d+/ and
+ * then fall back to `recentArticles[0]` — any article from the last seven days —
+ * so a cut-watch column or a schedule breakdown would render under "Weekly
+ * Recap" with a "Read full recap" button pointing at it.
  */
 import type { HeroState } from '../../../types/hero-state';
 import type { SchefterFeed, SchefterPost } from '../../../types/schefter';
 import { getAuthor, getAuthorAvatar } from '../../../types/schefter';
 import RecapHeroStub from '../hero-stubs/RecapHeroStub.astro';
 import feedData from '../../../data/theleague/schefter-feed.json';
+import { findWeeklyRecapPost } from '../../../utils/hero-recap-destination';
+import { getCurrentSeasonYear } from '../../../utils/league-year';
+import { getLatestScoredWeek } from '../../../utils/offseason-hero-data';
 
 export interface Props {
   state: HeroState;
@@ -18,14 +27,11 @@ export interface Props {
 const { state } = Astro.props;
 const feed = feedData as SchefterFeed;
 
-// Find the most recent recap article (within 7 days)
-const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
-const recentArticles = feed.posts.filter(
-  p => p.type === 'article' && new Date(p.timestamp).getTime() > sevenDaysAgo
-);
-
-const recap = recentArticles.find(p => /recap|review|results|week\s+\d+/i.test(p.headline))
-  ?? recentArticles[0];
+// The recap for the week actually in the books, matched by id. No date window
+// is needed: the id names the week, so a stale post cannot pass for a fresh one.
+const seasonYear = getCurrentSeasonYear();
+const completedWeek = getLatestScoredWeek(seasonYear, 'theleague');
+const recap: SchefterPost | null = findWeeklyRecapPost(feed.posts, seasonYear, completedWeek);
 
 const author = recap ? getAuthor(recap.authorId) : null;
 const avatarUrl = author ? getAuthorAvatar(author) : null;

@@ -265,6 +265,7 @@
         "src/components/afl/AflHero.astro",
         "src/components/theleague/*CompositeHero.astro",
         "src/components/theleague/season-heroes/RecapCompositeHero.astro",
+        "src/components/theleague/season-heroes/RecapHero.astro",
         "src/styles/composite-hero.css",
         "src/styles/composite-panel-board.css",
         "src/types/composite-hero.ts",
@@ -290,7 +291,8 @@
         "tests/dark-surface-crest.test.ts",
         "tests/composite-hero-cta-nowrap.test.ts",
         "tests/top-rostered-casting.test.ts",
-        "tests/weekly-column-hero-claim.test.ts"
+        "tests/weekly-column-hero-claim.test.ts",
+        "tests/hero-recap-destination.test.ts"
       ]
     },
     {
@@ -404,7 +406,7 @@
         "src/pages/500.astro",
         "src/pages/*path*.astro"
       ],
-      "note": "Astro finds its error page by the EXACT route `/500`. Delete src/pages/500.astro and the lookup falls through to `[...path].astro`, which pins 404 — so every SSR crash on the site renders as a missing page, which is how a P0 outage got triaged as a deleted route on 2026-09-08.",
+      "note": "Astro finds its error page by the EXACT route `/500`. Delete src/pages/500.astro and the lookup falls through to `[...path].astro`, which pins 404 \u2014 so every SSR crash on the site renders as a missing page, which is how a P0 outage got triaged as a deleted route on 2026-09-08.",
       "tests": [
         "tests/ssr-error-page-status.test.ts"
       ]
