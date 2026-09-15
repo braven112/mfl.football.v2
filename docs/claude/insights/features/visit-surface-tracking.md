@@ -11,7 +11,7 @@ platform bucket, and `/activity` renders the split for both leagues.
 | Endpoint | `src/pages/api/track-visit.ts` |
 | Detection | `src/layouts/TheLeagueLayout.astro` (visit tracker script) |
 | UI | `src/components/theleague/OwnerActivityReport.astro`, both `activity.astro` routes |
-| Guard | `tests/visit-surface.test.ts` |
+| Guard | `tests/visit-surface.test.ts`, `tests/track-visit-beacon.test.ts` |
 
 Since 2026-09-10 the anonymous path counts more than the surface split — see
 `site-analytics.md`, which extends the cardinality rule below to page paths.
@@ -20,6 +20,41 @@ Redis keys, all unexpiring hashes of `<surface>:<platform>` → count:
 `surface:{leagueId}` (everyone), `surface:{leagueId}:anon` (the logged-out
 SUBSET, not the complement), `surface:{leagueId}:f:{franchiseId}`, and
 `surface-last:{leagueId}` (franchiseId → last surface field).
+
+---
+
+## 2026-09-15 — A body-less beacon is 403'd by Astro before the endpoint runs, and it looks exactly like an owner who never visits
+
+**Context:** Five AFL owners read 0 views / 0 of 30 days on `/activity`, one of
+whom had just debugged a Set Lineup submit with the commissioner — a page that
+redirects anyone without an AFL session, so a signed-in visit had certainly
+happened.
+
+**Insight:** the beacon was `navigator.sendBeacon('/api/track-visit?…')` with
+no body, hence no `Content-Type`. Astro's `security.checkOrigin` (default on)
+forbids a POST with no content type unless `Origin` matches exactly, so any
+browser that omits or nulls `Origin` got `403 Cross-site POST form submissions
+are forbidden` and nothing was written. Production showed 116 × 204 and
+28 × 403 on that path in a day. Every other POST on the site sends JSON, which
+the check exempts — so sign-in and lineup submits worked for the same owners
+whose visits vanished. Fix: send `new Blob(['{}'], { type: 'application/json' })`
+as the body (the endpoint still reads only the query string). A `text/plain`
+string body is NOT a fix; that type is checked too.
+
+**Why it hid:** a rejected beacon is invisible from every place you would look.
+`sendBeacon` returns `true` (queued, not delivered), the endpoint never runs so
+nothing logs, and Redis simply lacks the franchise — indistinguishable from an
+owner who never came. A browser that always drops `Origin` drops EVERY visit, so
+the symptom is a stable set of permanent zeros, not noisy undercounting. The
+Chromium Browser pane sends `Origin` and passes, so a pane probe proves nothing
+about the failing browsers; which ones they are was never identified (Vercel's
+runtime logs carry no host or user agent).
+
+**Diagnosing next time:** compare a suspect owner against
+`data/<league>/owner-last-visit.json` (MFL's own login time) — active on MFL,
+zero on the site means the beacon, not the owner. Then Vercel runtime logs with
+`group_by: statusCode` and `query: track-visit`. Retention is one day on Pro,
+and a 7-day query for individual lines times out; the grouped count does not.
 
 ---
 

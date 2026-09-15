@@ -881,6 +881,19 @@
       ]
     },
     {
+      "name": "visit-tracking",
+      "paths": [
+        "src/layouts/TheLeagueLayout.astro",
+        "src/pages/api/track-visit.ts",
+        "src/utils/owner-activity.ts",
+        "src/utils/visit-surface.ts"
+      ],
+      "tests": [
+        "tests/track-visit-beacon.test.ts",
+        "tests/visit-surface.test.ts"
+      ]
+    },
+    {
       "name": "watch-list",
       "paths": [
         "src/utils/mfl-watch-list.ts",
