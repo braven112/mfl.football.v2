@@ -100,6 +100,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       await fetch('/api/auth/logout', {
         method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
       });
 

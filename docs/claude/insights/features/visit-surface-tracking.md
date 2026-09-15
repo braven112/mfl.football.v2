@@ -11,7 +11,7 @@ platform bucket, and `/activity` renders the split for both leagues.
 | Endpoint | `src/pages/api/track-visit.ts` |
 | Detection | `src/layouts/TheLeagueLayout.astro` (visit tracker script) |
 | UI | `src/components/theleague/OwnerActivityReport.astro`, both `activity.astro` routes |
-| Guard | `tests/visit-surface.test.ts`, `tests/track-visit-beacon.test.ts` |
+| Guard | `tests/visit-surface.test.ts`, `tests/origin-check-content-type.test.ts` (every browser POST/DELETE/beacon, not just this one) |
 
 Since 2026-09-10 the anonymous path counts more than the surface split — see
 `site-analytics.md`, which extends the cardinality rule below to page paths.
@@ -39,7 +39,13 @@ are forbidden` and nothing was written. Production showed 116 × 204 and
 the check exempts — so sign-in and lineup submits worked for the same owners
 whose visits vanished. Fix: send `new Blob(['{}'], { type: 'application/json' })`
 as the body (the endpoint still reads only the query string). A `text/plain`
-string body is NOT a fix; that type is checked too.
+string body is NOT a fix; that type is checked too. The same sweep found 14
+body-less browser `fetch` POST/DELETE calls with the identical exposure
+(logout, tip retraction, keeper reset, Board deletes, trade-draft delete,
+contract reconcile, …); they now send `Content-Type: application/json` too, and
+`tests/origin-check-content-type.test.ts` scans every non-GET fetch. The one
+exposure left is the Board's multipart image upload, which cannot be JSON
+without changing its endpoint.
 
 **Why it hid:** a rejected beacon is invisible from every place you would look.
 `sendBeacon` returns `true` (queued, not delivered), the endpoint never runs so

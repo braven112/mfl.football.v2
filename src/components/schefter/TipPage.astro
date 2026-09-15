@@ -1989,7 +1989,7 @@ const preselectTeam = (() => {
     if (!lastSubmission) return;
     undoBtn.disabled = true;
     try {
-      const res = await fetch(`/api/schefter/tip/${encodeURIComponent(lastSubmission.tipId)}`, { method: 'DELETE' });
+      const res = await fetch(`/api/schefter/tip/${encodeURIComponent(lastSubmission.tipId)}`, { method: 'DELETE', headers: { 'Content-Type': 'application/json' } });
       const data = await res.json().catch(() => ({}));
       if (res.ok && data?.ok) {
         // Restore what they wrote so a typo fix is one edit away.

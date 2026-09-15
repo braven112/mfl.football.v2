@@ -586,7 +586,7 @@ import StagingBanner from '../components/shared/StagingBanner.astro';
 					// that omits or nulls Origin had its visits silently thrown
 					// away (five AFL owners read as "never visited" in Sep 2026).
 					// A JSON-typed body is exempt from that check.
-					// Guard: tests/track-visit-beacon.test.ts.
+					// Guard: tests/origin-check-content-type.test.ts.
 					navigator.sendBeacon(
 						`/api/track-visit?${params}`,
 						new Blob(['{}'], { type: 'application/json' }),

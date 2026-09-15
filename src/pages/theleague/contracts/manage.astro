@@ -782,7 +782,7 @@ const getHeadshot = (playerId: string, espnId?: string) => {
       reconcileBtn.textContent = 'Checking...';
 
       try {
-        const res = await fetch('/api/contracts/reconcile', { method: 'POST' });
+        const res = await fetch('/api/contracts/reconcile', { method: 'POST', headers: { 'Content-Type': 'application/json' } });
         const data = await res.json();
 
         if (!res.ok) {

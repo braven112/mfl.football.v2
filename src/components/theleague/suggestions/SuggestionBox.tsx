@@ -102,6 +102,7 @@ export default function SuggestionBox({ isAuthenticated, isAdmin, teamIcons, use
     if (!confirm('Delete this idea? This cannot be undone.')) return;
     const res = await fetch(`/api/suggestions/ideas/${id}`, {
       method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
     });
     if (res.ok) {
@@ -157,6 +158,7 @@ export default function SuggestionBox({ isAuthenticated, isAdmin, teamIcons, use
     if (!confirm('Delete this comment?')) return;
     const res = await fetch(`/api/suggestions/comments/${commentId}`, {
       method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
     });
     if (res.ok) {
@@ -265,6 +267,7 @@ export default function SuggestionBox({ isAuthenticated, isAdmin, teamIcons, use
   const handleFileGithubIssue = useCallback(async (ideaId: string): Promise<string | null> => {
     const res = await fetch(`/api/suggestions/ideas/${ideaId}/github-issue`, {
       method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
     });
     const data = await res.json().catch(() => null);
@@ -307,6 +310,7 @@ export default function SuggestionBox({ isAuthenticated, isAdmin, teamIcons, use
     if (!confirm('Remove the poll from this idea?')) return;
     const res = await fetch(`/api/suggestions/ideas/${ideaId}/poll`, {
       method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
     });
     const data = await res.json();
@@ -318,7 +322,7 @@ export default function SuggestionBox({ isAuthenticated, isAdmin, teamIcons, use
   // Mark last-seen on mount
   useEffect(() => {
     if (!isAuthenticated) return;
-    fetch('/api/suggestions/activity', { method: 'POST', credentials: 'include' }).catch(() => {});
+    fetch('/api/suggestions/activity', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include' }).catch(() => {});
   }, [isAuthenticated]);
 
   const selectedIdea = selectedIdeaId ? ideas.find(i => i.id === selectedIdeaId) : null;

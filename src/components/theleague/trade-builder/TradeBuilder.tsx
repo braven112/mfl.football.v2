@@ -576,6 +576,7 @@ export default function TradeBuilder({
     try {
       const res = await fetch(`/api/trades/drafts?id=${encodeURIComponent(draftId)}`, {
         method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
       });
       json = await res.json();

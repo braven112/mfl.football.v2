@@ -881,6 +881,19 @@
       ]
     },
     {
+      "name": "origin-check",
+      "note": "Astro's checkOrigin 403s a non-GET request with no content type (or a form-like one) unless Origin matches exactly, and some browsers omit Origin. Every browser POST/DELETE and sendBeacon sends Content-Type: application/json. See docs/claude/insights/features/visit-surface-tracking.md.",
+      "paths": [
+        "src/components/**/*.tsx",
+        "src/components/**/*.astro",
+        "src/pages/**/*.astro",
+        "src/layouts/*.astro"
+      ],
+      "tests": [
+        "tests/origin-check-content-type.test.ts"
+      ]
+    },
+    {
       "name": "visit-tracking",
       "paths": [
         "src/layouts/TheLeagueLayout.astro",
@@ -889,7 +902,7 @@
         "src/utils/visit-surface.ts"
       ],
       "tests": [
-        "tests/track-visit-beacon.test.ts",
+        "tests/origin-check-content-type.test.ts",
         "tests/visit-surface.test.ts"
       ]
     },
