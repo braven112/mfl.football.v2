@@ -31,7 +31,8 @@
 import MflAppLayout from '../layouts/MflAppLayout.astro';
 import LoginForm from '../components/theleague/LoginForm.astro';
 import { getAuthUser } from '../utils/auth';
-import { buildHostToSlugMap } from '../config/leagues';
+import { buildHostToSlugMap, getLeagueBySlug } from '../config/leagues';
+import { loginPathFor } from '../utils/login-redirect';
 import { getCurrentLeagueYear } from '../utils/league-year';
 import {
   MFL_LOGIN_DEFAULT_REDIRECT,
@@ -44,7 +45,7 @@ export const prerender = false;
 // a `?redirect=` survives the hop.
 const leagueSlug = buildHostToSlugMap()[Astro.url.hostname];
 if (leagueSlug) {
-  return Astro.redirect(`/${leagueSlug}/login${Astro.url.search}`, 301);
+  return Astro.redirect(loginPathFor(getLeagueBySlug(leagueSlug)!) + Astro.url.search, 301);
 }
 
 // `next` as well as `redirect`, matching both league login pages.
