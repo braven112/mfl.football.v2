@@ -282,6 +282,22 @@
       "impact": "user",
       "area": "other",
       "league": "afl"
+    },
+    {
+      "date": "2026-09-15",
+      "type": "enhancement",
+      "summary": "<a href=\"/login\">Signing in</a> now returns you to the page you were headed for instead of the homepage — from any link, any button, or a session that expired mid-action.",
+      "impact": "user",
+      "area": "navigation",
+      "league": "both"
+    },
+    {
+      "date": "2026-09-15",
+      "type": "enhancement",
+      "summary": "A commissioner-only page now tells you it's commissioner-only, instead of silently bouncing you to the homepage with no explanation.",
+      "impact": "user",
+      "area": "navigation",
+      "league": "both"
     }
   ]
 }

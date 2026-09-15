@@ -34,6 +34,7 @@
  * swallow `/theleague/*` and `/afl-fantasy/*` too.
  */
 import { Font } from 'astro:assets';
+import { mflLoginUrl } from '../utils/mfl-login-redirect';
 import { ClientRouter } from 'astro:transitions';
 import ThemeScript from '../components/ThemeScript.astro';
 import ThemeToggle from '../components/ThemeToggle.astro';
@@ -146,7 +147,7 @@ const leagueLinks = ALL_LEAGUES.map((league) => ({
 				{authUser ? (
 					<button type="button" class="mfl-bar__link mfl-bar__signout" data-mfl-signout>Sign out</button>
 				) : (
-					<a class="mfl-bar__link" href={`/login?redirect=${encodeURIComponent(Astro.url.pathname + Astro.url.search)}`}>Sign in</a>
+					<a class="mfl-bar__link" href={mflLoginUrl(Astro.url.pathname + Astro.url.search)}>Sign in</a>
 				)}
 			</div>
 		</header>

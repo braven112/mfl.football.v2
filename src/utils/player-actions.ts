@@ -13,7 +13,6 @@
  */
 
 import { isWatched, toggleWatch, getWatchListAuth } from './watch-list-client';
-import { getLeagueBySlug } from '../config/leagues';
 
 export interface PlayerActionPlayer {
   id: string;
@@ -123,24 +122,8 @@ export function openPlayerActionModal(payload: PlayerActionPayload): boolean {
 /**
  * Put the sign-in dialog on screen, or fall back to the league's login page.
  *
- * SignInModal is mounted only where a page chose to; a surface that lives on
- * every page (the player details modal) cannot assume it. When the dialog is
- * absent the league's login route takes a `?redirect=` back to this page,
- * which is the same landing the modal delivers.
+ * Re-exported rather than defined here: `watch-list-client.ts` needs the same
+ * opener for an expired session, and it is imported BY this module — so owning
+ * the implementation here would be an import cycle. See signin-resume.ts.
  */
-export function requestSignIn(): void {
-  const dialog = document.getElementById('signin-modal') as HTMLDialogElement | null;
-  if (dialog && typeof dialog.showModal === 'function') {
-    if (!dialog.open) dialog.showModal();
-    (dialog.querySelector('[autocomplete="username"]') as HTMLInputElement | null)?.focus();
-    return;
-  }
-  // On a league's own apex host the middleware hides the league prefix, so
-  // the first path segment is the PAGE ("standings"), not the league. Only
-  // a segment that is a registry slug is a prefix; otherwise the bare
-  // /login resolves through the root catch-all to this league's login.
-  const [, first] = window.location.pathname.split('/');
-  const prefix = first && getLeagueBySlug(first) ? `/${first}` : '';
-  const back = `${window.location.pathname}${window.location.search}`;
-  window.location.href = `${prefix}/login?redirect=${encodeURIComponent(back)}`;
-}
+export { openSignIn as requestSignIn } from './signin-resume';

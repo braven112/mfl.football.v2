@@ -14,12 +14,11 @@ import InstallAppPrompt from '../../components/shared/pwa/InstallAppPrompt.astro
 import NotificationCommandCenter from '../../components/shared/notifications/NotificationCommandCenter';
 import '../../styles/notification-command-center.css';
 import { getAuthUser } from '../../utils/auth';
+import { loginUrlForRequest } from '../../utils/login-redirect';
 import { getLeagueBySlug } from '../../config/leagues';
 
 const user = getAuthUser(Astro.request);
-if (!user?.franchiseId) {
-  return Astro.redirect('/theleague/login?redirect=/theleague/notifications');
-}
+if (!user?.franchiseId) return Astro.redirect(loginUrlForRequest(Astro, getLeagueBySlug('theleague')!));
 
 // League scoping: AFL franchise ids fully overlap TheLeague's — a session
 // from the other league must not manage subscriptions under this path.

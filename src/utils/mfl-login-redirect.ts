@@ -65,3 +65,30 @@ function splitQuery(value: string): [string, string] {
   if (at === -1) return [withoutHash, ''];
   return [withoutHash.slice(0, at), withoutHash.slice(at + 1)];
 }
+
+/**
+ * Build a link to the MFL app's sign-in, carrying where to come back to.
+ *
+ * THE BUILDER HALF of this module. The validator above existed without one, so
+ * the app's own sign-in links assembled their URLs by hand
+ * (`/login?redirect=${encodeURIComponent(...)}` in MflAppLayout, and a
+ * hardcoded `/login?redirect=/live/settings` on the settings page) — the exact
+ * shape that split the LEAGUE login pages three ways before
+ * `src/utils/login-redirect.ts` unified them.
+ * `tests/login-redirect-guard.test.ts` now forbids it on both sides.
+ *
+ * This is deliberately NOT `loginUrlFor` from login-redirect.ts. That builder
+ * is league-SCOPED: it validates the return path against one league's prefix
+ * and emits the apex-host shape. The MFL app belongs to no league and accepts
+ * any same-origin path (see the note at the top of this file), so the two
+ * answer different questions and a single builder would have to be told which
+ * one it was being asked.
+ *
+ * `next` is the emitted param, matching every league gate on the site. The
+ * page still READS `redirect` too, so links already in the wild keep working.
+ */
+export function mflLoginUrl(returnTo?: string | null): string {
+  const safe = resolveMflLoginRedirect(returnTo, '');
+  if (!safe) return LOGIN_PATH;
+  return `${LOGIN_PATH}?next=${encodeURIComponent(safe)}`;
+}

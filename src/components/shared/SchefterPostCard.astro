@@ -22,6 +22,8 @@ import SchefterReplyThread from './SchefterReplyThread.tsx';
 import SchefterWhisperBack from './SchefterWhisperBack.tsx';
 import SocialEmbed from './SocialEmbed.tsx';
 import type { WatchHit } from '../../utils/schefter-watching';
+import { loginUrlForRequest } from '../../utils/login-redirect';
+import { getLeagueBySlug } from '../../config/leagues';
 
 interface Props {
   post: SchefterPost;
@@ -98,6 +100,12 @@ for (const url of allUrlsToStrip) {
   gmDisplayBody = gmDisplayBody.replace(url, '');
 }
 gmDisplayBody = gmDisplayBody.replace(/\n{3,}/g, '\n\n').trim();
+
+// A feed can mix both leagues' posts, so the whisper-back sign-in follows the
+// POST's league rather than the page's. Built here because the React island
+// can reach neither the registry nor Astro.locals.
+const whisperLoginHref = (league: string | undefined) =>
+  loginUrlForRequest(Astro, getLeagueBySlug(league === 'afl' ? 'afl-fantasy' : 'theleague')!);
 ---
 
 <article id={`post-${post.id}`} class={tierClass} data-post-id={post.id} data-tier={post.tier} data-post-type={post.transactionSubType ?? post.type} data-author={post.authorId ?? 'claude'} data-rumor-impression={isRumorLike ? 'true' : undefined} data-watching={isWatching ? 'true' : undefined} aria-label={`${displayName}: ${post.headline || post.body?.replace(/<[^>]+>/g, '').slice(0, 80) || 'Post'}`}>
@@ -288,7 +296,7 @@ gmDisplayBody = gmDisplayBody.replace(/\n{3,}/g, '\n\n').trim();
           />
           {isTipRumor && (
             <SchefterWhisperBack
-              base={post.league === 'afl' ? '/afl-fantasy' : '/theleague'}
+              loginHref={whisperLoginHref(post.league)}
               client:idle
               postId={post.id}
               isAuthenticated={isAuthenticated}

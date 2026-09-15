@@ -16,6 +16,7 @@ export const prerender = false;
 import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
 import AccountingConsole from '../../../components/shared/AccountingConsole.astro';
 import { getAuthUser, isCommissionerOrAdmin, isAuthorizedForLeague } from '../../../utils/auth';
+import { loginUrlForRequest, forbiddenPathFor } from '../../../utils/login-redirect';
 import { getLeagueBySlug } from '../../../config/leagues';
 import { getCurrentSeasonYear } from '../../../utils/league-year';
 import { leagueYearFor } from '../../../utils/accounting-request';
@@ -23,14 +24,12 @@ import { loadFranchises } from '../../../utils/accounting-season-data';
 
 const user = getAuthUser(Astro.request);
 const league = getLeagueBySlug('afl-fantasy');
-if (
-  !user ||
-  !isCommissionerOrAdmin(user) ||
-  !league ||
-  !isAuthorizedForLeague(user, league.id) ||
-  !league.features.accounting
-) {
-  return Astro.redirect('/afl-fantasy');
+if (!user) return Astro.redirect(loginUrlForRequest(Astro, getLeagueBySlug('afl-fantasy')!));
+// A league without the accounting feature has no such page at all, so this
+// is a 'does not exist' answer, not a 'not for you' one.
+if (!league || !league.features.accounting) return Astro.redirect('/afl-fantasy');
+if (!isCommissionerOrAdmin(user) || !isAuthorizedForLeague(user, league.id)) {
+  return Astro.rewrite(forbiddenPathFor(league, isCommissionerOrAdmin(user) ? 'league' : 'commissioner'));
 }
 
 // Two clocks, deliberately: `year` is the MFL LEAGUE year whose ledger we

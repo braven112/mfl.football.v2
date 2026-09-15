@@ -1,4 +1,12 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useState, useEffect } from 'react';
+import { handleAuthExpiry, takeParkedForSignIn } from '../../utils/signin-resume';
+
+/**
+ * Where a whisper-in-progress waits out a sign-in. Keyed per POST, because the
+ * feed renders many of these islands at once and a single key would restore
+ * one post's draft into another post's box.
+ */
+const whisperDraftKey = (postId: string) => `signin.whisperDraft.${postId}`;
 
 /**
  * Whisper-back — inline follow-up tip form for rumor cards (Phase 7).
@@ -11,14 +19,20 @@ import React, { useCallback, useState } from 'react';
 
 interface Props {
   postId: string;
-  /** League URL base for auth links, e.g. '/theleague' or '/afl-fantasy'. */
-  base?: string;
+  /**
+   * Server-built sign-in URL carrying the return path. Built by
+   * loginUrlForRequest in the rendering .astro component — this island can
+   * reach neither the league registry nor Astro.locals, and a `${base}/login`
+   * it assembled itself would be exactly the hand-built URL that split this
+   * repo's sign-in behavior three ways. REQUIRED for that reason.
+   */
+  loginHref: string;
   isAuthenticated: boolean;
 }
 
 const MAX_CHARS = 500;
 
-export default function SchefterWhisperBack({ postId, isAuthenticated, base = '/theleague' }: Props) {
+export default function SchefterWhisperBack({ postId, isAuthenticated, loginHref }: Props) {
   const [open, setOpen] = useState(false);
   const [text, setText] = useState('');
   const [topic, setTopic] = useState<'trade' | 'roster' | 'prediction' | 'commish' | 'other'>('other');
@@ -26,6 +40,27 @@ export default function SchefterWhisperBack({ postId, isAuthenticated, base = '/
     { kind: 'idle', message: '' },
   );
   const [loading, setLoading] = useState(false);
+
+  /**
+   * The other half of the sign-in park: after the reload, put the whisper they
+   * were mid-way through back in the box and open it.
+   *
+   * Runs once per island, and only for a signed-in reader — the parked draft
+   * exists precisely because the session expired, so it is only useful once
+   * the new session is live. `takeParkedForSignIn` read-and-clears, so a draft
+   * cannot reappear on a later navigation.
+   */
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    const parked = takeParkedForSignIn<{ text?: string; topic?: typeof topic }>(
+      whisperDraftKey(postId),
+    );
+    if (!parked?.text) return;
+    setText(parked.text);
+    if (parked.topic) setTopic(parked.topic);
+    setOpen(true);
+    setStatus({ kind: 'idle', message: 'Signed back in — your whisper is still here.' });
+  }, [isAuthenticated, postId]);
 
   const submit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
@@ -44,6 +79,12 @@ export default function SchefterWhisperBack({ postId, isAuthenticated, base = '/
           repliesToPostId: postId,
         }),
       });
+      // Session died while they were typing: offer a way back in and keep the
+      // draft, rather than printing "Please sign in" at someone with no button.
+      if (handleAuthExpiry(res, { resume: { key: whisperDraftKey(postId), payload: { postId, text: trimmed, topic } } })) {
+        setStatus({ kind: 'error', message: 'Your session expired — sign in and your whisper is still here.' });
+        return;
+      }
       const data = await res.json().catch(() => ({}));
       if (res.ok && data?.ok) {
         setStatus({ kind: 'success', message: 'Schefter will fold it into the next report.' });
@@ -51,7 +92,6 @@ export default function SchefterWhisperBack({ postId, isAuthenticated, base = '/
       } else {
         const fallback =
           res.status === 429 ? "You've hit the 3-tips-per-24h cap. Try again tomorrow." :
-          res.status === 401 ? 'Please sign in to whisper back.' :
           res.status === 404 ? 'That rumor is no longer in the feed.' :
           res.status === 400 && data?.code === 'reply_too_old' ? 'That rumor is too old to whisper back on.' :
           'Something went wrong. Try again.';
@@ -66,7 +106,7 @@ export default function SchefterWhisperBack({ postId, isAuthenticated, base = '/
 
   if (!isAuthenticated) {
     return (
-      <a href={`${base}/login?redirect=${base}/news`} className="sfc-whisper__signin">
+      <a href={loginHref} className="sfc-whisper__signin">
         Sign in to whisper back
       </a>
     );

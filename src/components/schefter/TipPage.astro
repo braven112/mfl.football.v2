@@ -1543,6 +1543,14 @@ const preselectTeam = (() => {
 })} />
 
 <script>
+  import { handleAuthExpiry, takeParkedForSignIn } from '../../utils/signin-resume';
+
+  /**
+   * Where a tip-in-progress waits out a sign-in. One key: unlike the feed's
+   * whisper islands there is only ever one tip form on this page.
+   */
+  const TIP_DRAFT_KEY = 'signin.tipDraft';
+
   const form = document.getElementById('tip-form') as HTMLFormElement | null;
   const textarea = document.getElementById('tip-text') as HTMLTextAreaElement | null;
   const counter = document.getElementById('tip-counter');
@@ -2051,10 +2059,13 @@ const preselectTeam = (() => {
         syncPlaceholder();
         syncCommishOption();
         refreshRemaining();
+      } else if (handleAuthExpiry(res, { resume: { key: TIP_DRAFT_KEY, payload: { text, topic, franchiseHint } } })) {
+        // Session expired mid-tip. The dialog (or the login page) is now up and
+        // the draft is parked, so say why rather than printing a dead end.
+        setStatus('Your session expired — sign in and your tip is still here.', 'error');
       } else {
         const msg = (data && typeof data.error === 'string' && data.error) ||
           (res.status === 429 ? "You've hit the 3-tips-per-24h cap. Try again tomorrow." :
-           res.status === 401 ? 'Please sign in to tip Schefter.' :
            res.status === 503 ? 'Tip system is temporarily unavailable. Try again shortly.' :
            'Something went wrong. Try again.');
         setStatus(msg, 'error');
@@ -2067,4 +2078,26 @@ const preselectTeam = (() => {
       submitBtn.disabled = false;
     }
   });
+
+  /**
+   * The other half of the sign-in park: after the reload, put the tip they were
+   * mid-way through back in the textarea.
+   *
+   * read-and-clear, so a draft cannot reappear on a later visit — and guarded
+   * on the textarea existing, because this script also loads on the signed-out
+   * render of the page, where there is no form to restore into.
+   */
+  (function restoreParkedTip() {
+    if (!textarea || !form) return;
+    const parked = takeParkedForSignIn<{ text?: string; topic?: string; franchiseHint?: string }>(TIP_DRAFT_KEY);
+    if (!parked?.text) return;
+    textarea.value = parked.text;
+    if (parked.topic) {
+      const topicField = form.querySelector<HTMLSelectElement>('[name="topic"]');
+      if (topicField) topicField.value = parked.topic;
+    }
+    updateCounter();
+    setStatus('Signed back in — your tip is still here.', '');
+  })();
+
 </script>

@@ -11,6 +11,7 @@
  * the rosters rather than the calendar.
  */
 import DraftMockLobby from '../../../../components/shared/draft-mock/DraftMockLobby.astro';
+import { loginUrlForRequest } from '../../../../utils/login-redirect';
 import aflConfigData from '../../../../../data/afl-fantasy/afl.config.json';
 import { getAuthUser, isAuthorizedForLeague, isCommissionerOrAdmin } from '../../../../utils/auth';
 import { getLeagueBySlug } from '../../../../config/leagues';
@@ -51,7 +52,7 @@ const { room, context, gate } = resolution;
   heading={`${room.selected.short} Mock Draft`}
   subtitle={aflMockSubtitle(resolution)}
   basePath={AFL_MOCK_BASE_PATH}
-  loginPath="/afl-fantasy/login"
+  loginPath={loginUrlForRequest(Astro, getLeagueBySlug('afl-fantasy')!)}
   signedIn={!!user}
   userFranchiseId={room.userTeamId || undefined}
   isAdmin={user ? isCommissionerOrAdmin(user) : false}

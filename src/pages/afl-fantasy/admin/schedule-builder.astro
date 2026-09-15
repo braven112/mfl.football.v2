@@ -16,13 +16,18 @@ export const prerender = false;
 import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
 import SchedulePlannerPanel from '../../../components/shared/SchedulePlannerPanel.astro';
 import { getAuthUser, isCommissionerOrAdmin, isAuthorizedForLeague } from '../../../utils/auth';
+import { loginUrlForRequest, forbiddenPathFor } from '../../../utils/login-redirect';
 import { getLeagueBySlug } from '../../../config/leagues';
 import { schedulableSeasons } from '../../../utils/nfl-bye-weeks';
 
 const user = getAuthUser(Astro.request);
 const league = getLeagueBySlug('afl-fantasy');
-if (!user || !isCommissionerOrAdmin(user) || !league || !isAuthorizedForLeague(user, league.id)) {
-  return Astro.redirect('/afl-fantasy');
+if (!user) return Astro.redirect(loginUrlForRequest(Astro, getLeagueBySlug('afl-fantasy')!));
+// A missing registry entry is a build fault, not a permission one — it
+// still cannot render, but it is not the reader's doing.
+if (!league) return Astro.redirect('/afl-fantasy');
+if (!isCommissionerOrAdmin(user) || !isAuthorizedForLeague(user, league.id)) {
+  return Astro.rewrite(forbiddenPathFor(league, isCommissionerOrAdmin(user) ? 'league' : 'commissioner'));
 }
 
 // NOT getCurrentSeasonYear(): it rolls at Labor Day, so all summer it still

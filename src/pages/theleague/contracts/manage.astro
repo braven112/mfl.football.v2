@@ -312,6 +312,7 @@ const getHeadshot = (playerId: string, espnId?: string) => {
   </div>
 
   <script type="module">
+  import { handleAuthExpiry } from '../../../utils/signin-resume';
     // --- Toast notification system ---
     const toastContainer = document.createElement('div');
     toastContainer.id = 'toastContainer';
@@ -524,8 +525,9 @@ const getHeadshot = (playerId: string, espnId?: string) => {
         if (!res.ok) {
           // Show specific error so user knows what went wrong
           const msg = data.error || 'Unknown error';
-          if (res.status === 401) {
-            showToast('Session expired. Please log in again via the sidebar, then retry.');
+          if (handleAuthExpiry(res)) {
+            // Sign-in is now on screen; "go find the sidebar" was a dead end.
+            showToast('Session expired — sign in and try that again.');
           } else if (res.status === 403) {
             showToast('Commissioner access required. Please log in as commissioner via the sidebar.');
           } else if (res.status === 502) {

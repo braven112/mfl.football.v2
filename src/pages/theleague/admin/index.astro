@@ -9,13 +9,14 @@
  */
 import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
 import { getAuthUser, isCommissionerOrAdmin } from '../../../utils/auth';
+import { loginUrlForRequest, forbiddenPathFor } from '../../../utils/login-redirect';
+import { getLeagueBySlug } from '../../../config/leagues';
 
 export const prerender = false;
 
 const user = getAuthUser(Astro.request);
-if (!user || !isCommissionerOrAdmin(user)) {
-  return Astro.redirect('/theleague');
-}
+if (!user) return Astro.redirect(loginUrlForRequest(Astro, getLeagueBySlug('theleague')!));
+if (!isCommissionerOrAdmin(user)) return Astro.rewrite(forbiddenPathFor(getLeagueBySlug('theleague')!));
 
 type AdminLink = {
   href: string;

@@ -6,6 +6,8 @@
  */
 import { spriteUrl } from '../../../utils/sprite-url';
 import { resolveLeaguePath } from '../../../utils/nav-utils';
+import { loginUrlForRequest } from '../../../utils/login-redirect';
+import { getLeagueBySlug } from '../../../config/leagues';
 import { formatCompactNumber } from '../../../utils/formatters';
 import { SALARY_CAP, TARGET_ACTIVE_COUNT } from '../../../utils/salary-calculations';
 import type { TeamSummary } from '../../../utils/league-summary-utils';
@@ -23,6 +25,9 @@ interface Props {
 const { isAuthenticated, userFranchiseId, teamSummaries, userTeamName, userTeamIcon, activeRosterCount } = Astro.props;
 const hideLeaguePrefix = Astro.locals.hideLeaguePrefix ?? false;
 const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
+// Sign-in returns to THIS page. loginUrlForRequest already applies the
+// host's prefix visibility, so it does not go through `r`.
+const loginHref = loginUrlForRequest(Astro, getLeagueBySlug('theleague')!);
 
 // Find the user's team summary
 const userSummary = userFranchiseId
@@ -118,7 +123,7 @@ const metrics: MetricDef[] = [
         <p class="hp-snapshot__guest-heading">Your team at a glance</p>
         <p class="hp-snapshot__guest-desc">Log in to see your cap space, roster status, and expiring contracts.</p>
       </div>
-      <a href={r('/theleague/login')} class="hp-snapshot__guest-btn">Log in</a>
+      <a href={loginHref} class="hp-snapshot__guest-btn">Log in</a>
     </div>
   </section>
 )}

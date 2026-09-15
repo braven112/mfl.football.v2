@@ -19,6 +19,7 @@
  * first click. Reads are fine anywhere; only the write is route-only.
  */
 import MflAppLayout from '../../layouts/MflAppLayout.astro';
+import { mflLoginUrl } from '../../utils/mfl-login-redirect';
 import LeagueToggles from '../../components/shared/mfl-live/LeagueToggles';
 import { getAuthUser } from '../../utils/auth';
 import { discoverBoardLeagues, readViewerFranchiseNames } from '../../utils/cross-league-live';
@@ -98,7 +99,7 @@ const rows = leagues.map((league) => {
 		<section class="mls">
 			<h1 class="mls__title">Leagues</h1>
 			<p class="mls__lede">Sign in to choose which leagues the board watches.</p>
-			<a class="mls__cta" href="/login?redirect=/live/settings">Sign in with MyFantasyLeague</a>
+			<a class="mls__cta" href={mflLoginUrl('/live/settings')}>Sign in with MyFantasyLeague</a>
 		</section>
 	) : loadFailed ? (
 		<section class="mls">

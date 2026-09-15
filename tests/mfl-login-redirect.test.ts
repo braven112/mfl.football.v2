@@ -197,14 +197,39 @@ describe('LoginForm is league-neutral where it has to be', () => {
     expect(src).toMatch(/fallbackRedirect\?: string/);
   });
 
-  it('uses that prop everywhere finalUrl is assigned, so no /theleague literal is left', () => {
-    // Three assignments: the initial resolve, the bad-URL catch, and the
-    // not-same-origin guard. A '/theleague' literal surviving in any of them
-    // is the bug, since those are exactly the fallback paths.
+  it('resolves the post-login fallback per league, with no /theleague literal left', () => {
+    // THE INVARIANT: no branch of the client redirect can land on a hardcoded
+    // league. It used to be spelled `finalUrl = '/theleague'` in three places
+    // (the initial resolve, the bad-URL catch, the not-same-origin guard), and
+    // the first fix threaded a `fallbackRedirect` prop through all three.
+    //
+    // The mechanism has since moved SERVER-side: the three branches collapsed
+    // into resolveFinalUrl(), whose floor is `data-fallback-path` — the
+    // consumer's own fallback when it passed one (the MFL app passes /live),
+    // else THIS form's league home from the registry. That is strictly more
+    // correct than the prop default it replaced, which was still '/theleague'
+    // and therefore still the wrong league on two of the three league pages.
+    //
+    // So the assertion follows the invariant, not the old spelling.
     const script = src.slice(src.indexOf('<script>'));
-    const literals = script.match(/finalUrl = '\/theleague'/g) ?? [];
-    expect(literals).toEqual([]);
-    expect(script).toContain('|| fallbackRedirect');
+    expect(script.match(/finalUrl = '\/theleague'/g) ?? []).toEqual([]);
+    // CODE only — the comment above resolveFinalUrl names the old literal to
+    // explain why it is gone, and a scan that fails on its own documentation
+    // teaches people to delete the documentation.
+    const code = script
+      .split('\n')
+      .filter((l) => {
+        const t = l.trim();
+        return !t.startsWith('//') && !t.startsWith('*') && !t.startsWith('/*');
+      })
+      .join('\n');
+    expect(code).not.toMatch(/'\/theleague'/);
+
+    // The fallback still reaches the client, and is still resolved rather than
+    // assumed: server side from the prop, client side off the data attribute.
+    expect(src).toMatch(/const effectiveFallback = fallbackRedirect \?\? loginFallbackPath\(formLeague\)/);
+    expect(src).toMatch(/data-fallback-path=\{effectiveFallback\}/);
+    expect(script).toContain("formWrapper.dataset.fallbackPath");
   });
 
   it('names the form from a prop rather than hardcoding The League', () => {

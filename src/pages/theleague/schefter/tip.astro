@@ -11,6 +11,7 @@ export const prerender = false;
 import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
 import TipPage from '../../../components/schefter/TipPage.astro';
 import { getAuthUser, isAuthorizedForLeague } from '../../../utils/auth';
+import { loginUrlForRequest } from '../../../utils/login-redirect';
 import { getLeagueBySlug } from '../../../config/leagues';
 import { getSchefterFeed, getSchefterLeagueConfig } from '../../../utils/schefter-league-data';
 
@@ -23,10 +24,9 @@ if (
   !user?.franchiseId ||
   !isAuthorizedForLeague(user, getLeagueBySlug('theleague')!.id)
 ) {
-  // TheLeague's LoginForm honors `?redirect=` client-side; carry the query
-  // string so a whisper-back CTA's ?target= pre-selection survives login.
-  const redirect = encodeURIComponent(`/theleague/schefter/tip${Astro.url.search}`);
-  return Astro.redirect(`/theleague/login?redirect=${redirect}`);
+  // The query string rides along so a whisper-back CTA's ?target=
+  // pre-selection survives the login round-trip.
+  return Astro.redirect(loginUrlForRequest(Astro, getLeagueBySlug('theleague')!));
 }
 
 const league = getLeagueBySlug('theleague')!;

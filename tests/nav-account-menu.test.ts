@@ -176,7 +176,7 @@ describe('Nav account menu', () => {
   it('resolves every internal link against the apex-domain prefix rule', () => {
     // vercel.json 301s `/theleague/:path*` to `/:path*` on theleague.us, so a
     // prefixed href costs every apex visitor a redirect hop.
-    for (const link of ['rosters', 'login', 'preferences', 'notifications']) {
+    for (const link of ['rosters', 'preferences', 'notifications']) {
       const pattern = new RegExp(
         `resolveLeaguePath\\(\`\\$\\{leagueBase\\}/${link}\`, hideLeaguePrefix\\)`
       );
@@ -185,6 +185,23 @@ describe('Nav account menu', () => {
         `The ${link} link must go through resolveLeaguePath, or it is prefixed on an apex host`
       ).toMatch(pattern);
     }
+  });
+
+  it('builds the sign-in link through loginUrlFor, still honoring the apex prefix rule', () => {
+    // The login link is the one that must ALSO carry a return path, so it goes
+    // through src/utils/login-redirect.ts rather than resolveLeaguePath. That
+    // builder applies the same prefix rule internally — but only if it is
+    // actually handed `hideLeaguePrefix`, so that argument is the thing to pin.
+    // (tests/login-redirect.test.ts proves the builder strips the prefix.)
+    expect(source).toMatch(/loginUrlFor\(\{/);
+    expect(
+      source,
+      'loginUrlFor must receive hideLeaguePrefix, or the drawer link is prefixed on an apex host'
+    ).toMatch(/loginUrlFor\(\{[\s\S]{0,200}?hideLeaguePrefix,?[\s\S]{0,40}?\}\)/);
+    expect(
+      source,
+      'The sign-in link must carry where the visitor was, or signing in dumps them on the league home'
+    ).toMatch(/returnTo:\s*Astro\.url\.pathname \+ Astro\.url\.search/);
   });
 
   it('ships the panel closed, and opens it from the disclosure button', () => {

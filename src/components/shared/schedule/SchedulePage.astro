@@ -31,6 +31,7 @@ import Breadcrumbs from '../../theleague/Breadcrumbs.astro';
 import { getLeagueBySlug } from '../../../config/leagues';
 import type { CanonicalLeagueSlug } from '../../../config/leagues';
 import { resolveLeaguePath } from '../../../utils/nav-utils';
+import { loginUrlForRequest } from '../../../utils/login-redirect';
 import { getCurrentSeasonYear, getTestDateFromSearchParams } from '../../../utils/league-year';
 import { getCurrentNFLWeek } from '../../../utils/current-week';
 import { nflWeekStartIsoDate } from '../../../utils/nfl-week-starts.mjs';
@@ -65,6 +66,8 @@ const { leagueSlug, config, scheduleFeeds, standingsFeeds, viewerFranchiseId } =
 const league = getLeagueBySlug(leagueSlug)!;
 const hideLeaguePrefix = Astro.locals.hideLeaguePrefix ?? false;
 const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
+// Sign-in returns to the schedule you were looking at, week query and all.
+const loginHref = loginUrlForRequest(Astro, getLeagueBySlug(leagueSlug)!);
 
 /** `…/mfl-feeds/2026/schedule.json` → `2026`. */
 const yearOf = (path: string) => Number(path.match(/mfl-feeds\/(\d{4})\//)?.[1]);
@@ -488,7 +491,7 @@ const heroSkin =
               Sign in with your MFL account to see your own season, your next opponent and your results.
             </p>
             <div class="sch-next__actions">
-              <a href={r(`/${leagueSlug}/login`)} class="sch-btn">Log in</a>
+              <a href={loginHref} class="sch-btn">Log in</a>
             </div>
           </aside>
         ) : null}

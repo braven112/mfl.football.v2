@@ -8,6 +8,7 @@
 import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
 import LoginForm from '../../components/theleague/LoginForm.astro';
 import { getAuthUser } from '../../utils/auth';
+import { resolveLoginDestination } from '../../utils/login-redirect';
 import { getLeagueYearForSlug } from '../../utils/league-year';
 import { getLeagueBySlug } from '../../config/leagues';
 
@@ -16,15 +17,18 @@ export const prerender = false;
 const BB1 = getLeagueBySlug('best-ball-1')!;
 const BB1_LOGIN_YEAR = getLeagueYearForSlug(BB1.slug);
 
-// Already signed in to this league → straight to the league home.
+// Where a successful sign-in lands: the requested page, else this league's
+// home. This page used to read `?next=` ALONE, so a `?redirect=` link — the
+// param TheLeague's gates emitted for years — was silently dropped and the
+// owner landed on the league home wondering what happened.
+// `resolveLoginDestination` reads both and validates against THIS league.
+const safeNext = resolveLoginDestination(Astro.url, BB1);
+
+// Already signed in to this league → follow the deep link, not just the home.
 const authUser = getAuthUser(Astro.request);
 if (authUser?.leagueId === BB1.id) {
-  return Astro.redirect('/best-ball-1');
+  return Astro.redirect(safeNext);
 }
-
-// Honor ?next= deep links within this league only.
-const next = Astro.url.searchParams.get('next');
-const safeNext = next && next.startsWith('/best-ball-1') ? next : '/best-ball-1';
 ---
 
 <TheLeagueLayout title={`Sign In — ${BB1.name}`}>

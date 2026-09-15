@@ -25,6 +25,7 @@ import path from 'node:path';
 import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
 import PlayerCell from '../../../components/theleague/PlayerCell.astro';
 import { getAuthUser, isCommissionerOrAdmin } from '../../../utils/auth';
+import { loginUrlForRequest, forbiddenPathFor } from '../../../utils/login-redirect';
 import { getRedis } from '../../../utils/redis-client';
 import { getCutList, type AutocutList } from '../../../utils/autocut-storage';
 import { getCurrentLeagueYear } from '../../../utils/league-year';
@@ -33,7 +34,7 @@ import { TARGET_ACTIVE_COUNT } from '../../../utils/salary-calculations';
 import { selectAutoMoves } from '../../../utils/august-cut-selection';
 import { getPlayerMap } from '../../../utils/player-map';
 import { chooseTeamName } from '../../../utils/team-names';
-import { DEFAULT_LEAGUE } from '../../../config/leagues';
+import { DEFAULT_LEAGUE, getLeagueBySlug } from '../../../config/leagues';
 import leagueConfig from '../../../data/theleague.config.json';
 // Same decision logic the deadline job runs — attempt parsing can't drift.
 import { parseDoneValue, MAX_ATTEMPTS } from '../../../utils/august-cuts-logic.mjs';
@@ -47,9 +48,8 @@ import { parsePausedValue } from '../../api/admin/autocut-control';
 export const prerender = false;
 
 const user = getAuthUser(Astro.request);
-if (!user || !isCommissionerOrAdmin(user)) {
-  return Astro.redirect('/theleague');
-}
+if (!user) return Astro.redirect(loginUrlForRequest(Astro, getLeagueBySlug('theleague')!));
+if (!isCommissionerOrAdmin(user)) return Astro.rewrite(forbiddenPathFor(getLeagueBySlug('theleague')!));
 
 const year = getCurrentLeagueYear();
 const deadline = getAugustCutdownDate(year);

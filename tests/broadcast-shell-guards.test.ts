@@ -539,11 +539,27 @@ describe('the routes own the gate and the cookie', () => {
   it('sends each league’s visitor to its OWN login', () => {
     // A correct href still bounces a user cross-league if the gate redirects
     // to the other league's sign-in.
+    //
+    // The gate no longer spells the login path out — it names its LEAGUE and
+    // lets src/utils/login-redirect.ts build the URL (which is also what
+    // carries the return path and the apex-host prefix shape). So the property
+    // is checked on the league passed to the builder: naming the wrong league
+    // here is exactly the cross-league bounce this test exists to catch.
     const [[, theleague], [, afl]] = ROUTES;
-    expect(theleague).toMatch(/\/theleague\/login/);
-    expect(theleague).not.toMatch(/\/afl-fantasy\/login/);
-    expect(afl).toMatch(/\/afl-fantasy\/login/);
-    expect(afl).not.toMatch(/\/theleague\/login/);
+    expect(theleague).toMatch(/loginUrlForRequest\(Astro, getLeagueBySlug\('theleague'\)!\)/);
+    expect(theleague).not.toMatch(/afl-fantasy/);
+    expect(afl).toMatch(/loginUrlForRequest\(Astro, getLeagueBySlug\('afl-fantasy'\)!\)/);
+    expect(afl).not.toMatch(/getLeagueBySlug\('theleague'\)/);
+  });
+
+  it('builds the sign-in URL through the shared builder, never by hand', () => {
+    // A hand-built `/<slug>/login?next=…` drops back into the three-way split
+    // this repo just unified: TheLeague emitted ?redirect=, the AFL ?next=,
+    // and best-ball read only one of them. See src/utils/login-redirect.ts.
+    for (const [path, src] of ROUTES) {
+      expect(src, `${path} must use the builder`).toMatch(/loginUrlForRequest|loginUrlFor\(/);
+      expect(src, `${path} must not hand-build a login URL`).not.toMatch(/login\?(next|redirect)=/);
+    }
   });
 
   it('writes cookies only from the route', () => {

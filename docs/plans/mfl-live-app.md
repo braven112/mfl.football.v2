@@ -415,11 +415,21 @@ manifest.** MFL Live needs its own (`/live/manifest.webmanifest`, distinct
 **Phase 0 — sign-in. DONE.** Borrowing `/theleague/login` turned out not to be
 free, and the bill came in two parts.
 
-Its `?redirect=` is validated with `startsWith('/theleague')` and falls back to
+Its `?redirect=` was validated with `startsWith('/theleague')` and fell back to
 `/theleague` — correct for that league's own site, and it silently dropped the
 trip back to the board, so owners signing in from `/live` landed on TheLeague's
 homepage. The app now has its OWN `/login`, with `resolveMflLoginRedirect`
 owning the decision.
+
+The league side has since been unified too (`src/utils/login-redirect.ts`, see
+`docs/plans/login-redirect.md`), and the two validators stay deliberately
+separate: that one is league-SCOPED — it rewrites a path into one league's
+prefix and rejects the others — while this one belongs to no league and takes
+any same-origin path. Handing `/live` to the league validator turns it into
+`/theleague/live`, which does not exist, so the split is load-bearing rather
+than tidy. `mflLoginUrl()` is this side's builder; every sign-in link on the
+shared host goes through it, and `tests/login-redirect-guard.test.ts` fails on
+one that does not.
 
 **The page is at `/login`, not `/live/login`.** `/live` is one FEATURE of this
 app, not its root; signing in is an app-level act that outlives the board being
