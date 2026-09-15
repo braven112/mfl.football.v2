@@ -447,9 +447,9 @@ export async function buildFactSheet(data, week, year, projectRoot, opts = {}) {
   };
 }
 
-export function getSystemPrompt() {
+export function getSystemPrompt({ league = DEFAULT_LEAGUE_SLUG } = {}) {
   return buildCachedSystem(`\n\nARTICLE TYPE: Cut Watch
-Channel the urgency of NFL roster cut day. Name names — who's on the chopping block? Which teams are in the toughest spots? Who has easy decisions vs. gut-wrenching ones? Talk about salary implications of keeping vs. cutting players.`);
+Channel the urgency of NFL roster cut day. Name names — who's on the chopping block? Which teams are in the toughest spots? Who has easy decisions vs. gut-wrenching ones? Talk about salary implications of keeping vs. cutting players.`, { league });
 }
 
 export function getUserPrompt(factSheet) {

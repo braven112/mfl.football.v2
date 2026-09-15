@@ -23,7 +23,7 @@ import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import { buildCachedSystem } from '../article-utils/ai-client.mjs';
 import { resolveMainRepo } from '../article-utils/data-loaders.mjs';
-import { LEAGUES, leagueUrl } from '../../src/config/leagues-data.mjs';
+import { LEAGUES, leagueUrl, DEFAULT_LEAGUE_SLUG } from '../../src/config/leagues-data.mjs';
 import {
   describeSeries,
   rivalryPairKey,
@@ -378,7 +378,7 @@ export function buildGroupMePromo(post, enrichment, { league = 'theleague' } = {
   );
 }
 
-export function getSystemPrompt() {
+export function getSystemPrompt({ league = DEFAULT_LEAGUE_SLUG } = {}) {
   return buildCachedSystem(`\n\nARTICLE TYPE: Schedule Release
 The schedule for the coming season just dropped. This is a release-day column:
 energy first, analysis second. Lead with the games people will circle, not with
@@ -402,7 +402,7 @@ playing whom and what happened the last dozen times. The fact sheet ranks the
 pairings this schedule renews, with all-time records — use them. A game between
 two teams that have split twenty meetings is worth more words than a
 construction fact. Cite the record when you name a rivalry; never estimate one,
-and never say a team leads a series unless the fact sheet says so.`);
+and never say a team leads a series unless the fact sheet says so.`, { league });
 }
 
 export function getUserPrompt(factSheet) {

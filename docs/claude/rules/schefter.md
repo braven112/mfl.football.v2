@@ -1333,3 +1333,41 @@ step by name.
 real cap. Note its escape hatch matches a CALL with import lines stripped — a
 bare identifier regex is satisfied by the import statement alone, which let a
 lane delete its gate and stay green.
+
+## The article persona names its league in the UNCACHED block
+
+An article type names its league in three independent places, and they were
+fixed in three separate passes because each is invisible from the others
+(issue #1086 F4, then the follow-up):
+
+1. **The feed tag and permalink** — `buildPost`'s `league` and `link`.
+2. **The facts** — `buildFactSheet`'s `loadTeams(projectRoot, league)`, and the
+   fact-sheet header line.
+3. **The persona** — `getSystemPrompt`, which is the one that survived longest,
+   because the runner called `mod.getSystemPrompt()` with **no arguments**: a
+   type had nothing to honour, so no amount of `{ league }` plumbing elsewhere
+   reached it.
+
+The persona bug was not a mis-naming the model could shrug off.
+`BASE_SYSTEM_PROMPT` opened *"beat reporter and league insider for TheLeague —
+a **16-team** dynasty fantasy football league"* for every league. The AFL is 24
+teams in two conferences, so an AFL column was written by a reporter who had
+been told, with authority, a league size wrong by eight — above a fact sheet he
+was separately instructed to treat as the only source of truth.
+
+**The fix is NOT a league-aware `BASE_SYSTEM_PROMPT`**, and this is the part
+worth remembering. That block carries `cache_control: { type: 'ephemeral' }`:
+it is tokenized once and reused across every generation in the window, across
+types *and across leagues*. Baking a league name into it forks one cache entry
+into one per league, so each league's first article of a window pays full
+tokenization for a preamble identical apart from a proper noun.
+
+So the cached block names **no** league, and `buildCachedSystem(text, { league })`
+appends the `LEAGUE:` line to the *second*, uncached block.
+`scripts/lib/pecking-order-ai.mjs` worked this out independently and names its
+league inline in the per-issue text — it passes no `league`, which is why the
+option is optional rather than required.
+
+Guard: `tests/article-type-league-option.test.ts` pins all three places, derived
+from the directory rather than a list, plus that the cached block stays
+byte-identical between the two leagues and asserts no `\d+-team` size anywhere.

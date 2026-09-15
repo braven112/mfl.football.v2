@@ -133,9 +133,9 @@ export async function buildFactSheet(data, week, year, projectRoot, { league = D
   };
 }
 
-export function getSystemPrompt() {
+export function getSystemPrompt({ league = DEFAULT_LEAGUE_SLUG } = {}) {
   return buildCachedSystem(`\n\nARTICLE TYPE: Draft Grades
-Grade each team's rookie draft class. Be harsh with reaches (players picked too early relative to projections), praise value picks. Dynasty drafts are about upside — young players with high ceilings are more valuable. Consider roster fit and how many picks each team had to work with.`);
+Grade each team's rookie draft class. Be harsh with reaches (players picked too early relative to projections), praise value picks. Dynasty drafts are about upside — young players with high ceilings are more valuable. Consider roster fit and how many picks each team had to work with.`, { league });
 }
 
 export function getUserPrompt(factSheet) {
