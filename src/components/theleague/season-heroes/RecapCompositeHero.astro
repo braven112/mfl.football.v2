@@ -49,8 +49,12 @@ const players = getPlayerMap(year);
 // yields no candidates — and the stub — rather than a confidently wrong card.
 // `referenceDate` is the clock the slot itself was resolved on, so ?testDate
 // moves the cap with it.
+// `week` is 0 when nothing is in the books yet, or when the cap and the feed
+// disagree. Passing `undefined` there would DISABLE the filter and caption an
+// unfiltered top scorer as "Week 0" — the confidently-wrong card this scoping
+// exists to prevent — so a weekless read yields no candidates instead.
 const week = getWeekInTheBooks(year, 'theleague', state.metadata.referenceDate);
-const candidates = getWeeklyTopScorerCandidates(year, 'theleague', week || undefined);
+const candidates = week > 0 ? getWeeklyTopScorerCandidates(year, 'theleague', week) : [];
 const model = candidates.length > 0 ? castBestScoredModel(candidates, players, undefined, 'Top Scorer') : null;
 
 // The winning candidate carries the score + rostering franchise.

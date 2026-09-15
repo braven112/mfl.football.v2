@@ -101,7 +101,7 @@ export async function buildFactSheet(data, week, year, projectRoot, { league = D
   const weekFormat = summarizeWeekFormat(pairings);
 
   const lines = [];
-  lines.push(`WEEK ${week} MATCHUP PREVIEW + BROADCAST GUIDE — TheLeague (${year} Season)`);
+  lines.push(`WEEK ${week} MATCHUP PREVIEW + BROADCAST GUIDE — ${LEAGUES[league].name} (${year} Season)`);
   lines.push(`FORMAT: ${weekFormat.label}`);
   lines.push('');
   const dhBriefing = doubleheaderBriefing(weekFormat);
@@ -153,7 +153,7 @@ export async function buildFactSheet(data, week, year, projectRoot, { league = D
 
   // NFL Broadcast Guide
   lines.push('=== NFL BROADCAST GUIDE ===');
-  lines.push('Key NFL games featuring TheLeague rostered starters:');
+  lines.push(`Key NFL games featuring ${LEAGUES[league].name} rostered starters:`);
 
   // Load broadcast mappings
   const mainRepo = projectRoot.includes('.claude/worktrees/')
