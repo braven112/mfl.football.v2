@@ -45,6 +45,10 @@ export interface TeamStanding extends StandingsFranchise {
   teamIcon: string;
   teamBanner: string;
   seed?: number;
+  /** Seed WITHIN the team's conference (1..N). Set by `getConferenceStandings`
+   *  and, for conference leagues, by `getDivisionStandings` — the AFL's playoff
+   *  field is per conference, so this is the ladder its badges must read. */
+  conferenceSeed?: number;
   playoffStatus?: 'division_winner' | 'wild_card' | 'playoff_team' | 'play_in' | 'toilet_bowl';
 }
 

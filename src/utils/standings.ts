@@ -239,6 +239,22 @@ export function getDivisionStandings(
   const leagueStandings = getLeagueStandings(franchises, config, opts);
   const seedMap = new Map(leagueStandings.map(t => [t.id, t.seed]));
 
+  // …and the CONFERENCE seed, for leagues that have conferences. The league-wide
+  // seed numbers one ladder for the whole league, which is right for TheLeague
+  // (4 division winners + 3 wild cards) and wrong for the AFL, whose playoff
+  // field is per conference (N division winners + wild cards to 4, EACH side).
+  // Read off the league ladder, the AFL's two conferences share one 1..7 scale,
+  // so whichever conference's wild cards sorted lower simply falls off the end —
+  // which is how the AL shipped with only one wild card badged instead of two.
+  const conferenceSeedMap = new Map<string, number | undefined>();
+  if (config.conferences && config.divisionToConference) {
+    for (const conference of config.conferences) {
+      for (const team of getConferenceStandings(franchises, config, conference.code, opts).allTeams) {
+        conferenceSeedMap.set(team.id, team.conferenceSeed);
+      }
+    }
+  }
+
   const divisions: { [key: string]: TeamStanding[] } = {};
 
   // Group by division and enrich data
@@ -247,6 +263,7 @@ export function getDivisionStandings(
     const div = standing.division;
     // Add seed from league standings
     standing.seed = seedMap.get(standing.id);
+    standing.conferenceSeed = conferenceSeedMap.get(standing.id);
 
     if (!divisions[div]) {
       divisions[div] = [];
