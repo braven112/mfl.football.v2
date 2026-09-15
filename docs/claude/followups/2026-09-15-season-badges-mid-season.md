@@ -78,6 +78,16 @@ Forward fix, PR #1090.
     (build path never passes it; committing workflows always do). Rule recorded
     in `docs/claude/rules/storage-and-build.md`. Cost: a badge's post lags the
     page by up to one nightly run.
+  - **Review round on the follow-up PR (#1093):**
+    - Copilot — path-guard missing the data test: overtaken (already wired in
+      `8752195`). Data test all-skipped: **confirmed, fixed** with the producer
+      test. Lane test only scans source: **confirmed, fixed** — the producer
+      test runs both flag states on identical inputs; making Phase 5 ignore
+      the resolver fails it. Weak 4th data assertion: removed.
+    - Codex — `realpathSync` failure falls back to the raw path and exits 0:
+      **rejected**, unreachable (Node just loaded the module from that path)
+      and identical to the pre-PR behavior.
+    - Gemini — did not run (API 503, transient).
   - **Found while working it, spun off (not in this PR):**
     - Every npm-install workflow (nightly, Schefter scans, rumor scan, lineup
       reminders, schedule-release) has failed since 2026-09-11 on an npm
@@ -106,6 +116,11 @@ Forward fix, PR #1090.
       break the derived-chain data tests — see below), so the suite skips
       snapshots generated before #1090 merged and enforces from the first
       nightly after it. That nightly is itself blocked by the npm outage below.
+      Because that left it inert on this PR (Copilot on #1093), the ACTIVE
+      coverage is `tests/franchise-history-producer.test.ts`: it runs the real
+      producer with `--output-root` into a temp dir and checks the emitted
+      `seasonComplete` and season awards. Mutation-checked: dropping the field
+      from the producer fails it.
     - fixture didn't prove the highest-scoring-season exclusion — **worked**:
       2026 total raised above every finished season; mutation of that skip now
       fails the test.

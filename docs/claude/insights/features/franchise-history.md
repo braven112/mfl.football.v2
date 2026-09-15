@@ -57,6 +57,12 @@ milestone posts to the DEPLOYED feed with the build's timestamp.
   the clock. It skips snapshots generated before #1090 merged (they cannot
   carry the field); `generatedAt` only moves forward, so it cannot skip again
   once a post-hotfix snapshot lands.
+- **A skipped data test is not coverage.** Until that snapshot lands, the live
+  check is `tests/franchise-history-producer.test.ts`: `--output-root=<dir>`
+  re-roots every write (and the snapshot + feed read back for the diff) into a
+  temp dir, so the test runs the REAL producer in under a second — both flag
+  states on byte-identical inputs, plus the emitted `seasonComplete`. Reach for
+  `--output-root` before hand-building a fixture of this script's output.
 
 ## 2026-09-05 - Five copies of the ownership boundary became one, and the proof was a dump, not a screenshot
 

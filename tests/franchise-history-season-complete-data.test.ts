@@ -10,14 +10,15 @@
  * actually commits.
  *
  * A snapshot generated before the hotfix merged cannot carry the field, so the
- * suite enforces from the first snapshot produced after it. `generatedAt` only
+ * suite enforces from the first snapshot produced after it. Until then the
+ * active coverage is tests/franchise-history-producer.test.ts, which runs the
+ * producer itself. `generatedAt` only
  * moves forward, so once a post-hotfix snapshot lands this can never skip again.
  */
 
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'fs';
 import { isSeasonComplete } from '../scripts/lib/theleague-season-complete.mjs';
-import { buildBadgeContext, computeBadgesFor } from '../scripts/badges.mjs';
 
 type YearSummary = { year: number; champion: string | null; seasonComplete?: unknown };
 type Award = { year?: number };
@@ -69,18 +70,6 @@ describe.skipIf(generatedAt < PRODUCER_WRITES_FIELD_SINCE)(
           .filter((b) => b.tier === 'season')
           .flatMap((b) => b.awards.filter((a) => a.year != null && incomplete.has(a.year)))
           .map((a) => `${fid}:${a.year}`)
-      );
-      expect(offenders).toEqual([]);
-    });
-
-    it('recomputing badges from the committed summaries awards nothing for an unfinished season', () => {
-      const ctx = buildBadgeContext(snapshot.franchises, snapshot.yearSummaries);
-      const offenders = Object.values(snapshot.franchises).flatMap((fr) =>
-        (computeBadgesFor(fr, ctx) as Badge[])
-          .filter((b) => b.tier === 'season')
-          .flatMap((b) =>
-            b.awards.filter((a) => a.year != null && ctx.incompleteYears.has(Number(a.year)))
-          )
       );
       expect(offenders).toEqual([]);
     });

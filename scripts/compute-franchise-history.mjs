@@ -126,9 +126,17 @@ const resolveTargetPath = (spec) =>
 
 const LEAGUE_CONFIG_PATH = resolveTargetPath(TARGET.configPath);
 const CHAMPIONSHIP_HISTORY_PATH = path.join(ROOT, LEAGUE.dataPath, 'championship-history.json');
-const OUTPUT_PATH = path.join(ROOT, LEAGUE.dataPath, 'derived/franchise-history.json');
-const SEASON_LEDGER_PATH = path.join(ROOT, LEAGUE.dataPath, 'derived/season-ledger.json');
-const SCHEFTER_FEED_PATH = resolveTargetPath(TARGET.schefterFeedPath);
+// --output-root=<dir> re-roots everything this script WRITES (and the previous
+// snapshot + feed it reads back to diff against) under another directory, keeping
+// the same relative layout. Inputs still come from the repo. It exists so
+// tests/franchise-history-producer.test.ts can run the real producer without
+// touching committed files.
+const outputRootArg = args.find((a) => a.startsWith('--output-root='))?.slice('--output-root='.length);
+const OUTPUT_ROOT = outputRootArg ? path.resolve(outputRootArg) : ROOT;
+const reRoot = (absPath) => path.join(OUTPUT_ROOT, path.relative(ROOT, absPath));
+const OUTPUT_PATH = reRoot(path.join(ROOT, LEAGUE.dataPath, 'derived/franchise-history.json'));
+const SEASON_LEDGER_PATH = reRoot(path.join(ROOT, LEAGUE.dataPath, 'derived/season-ledger.json'));
+const SCHEFTER_FEED_PATH = reRoot(resolveTargetPath(TARGET.schefterFeedPath));
 const RECONSTRUCTED_BRACKETS_PATH = TARGET.reconstructedBracketsPath
   ? resolveTargetPath(TARGET.reconstructedBracketsPath)
   : null;
