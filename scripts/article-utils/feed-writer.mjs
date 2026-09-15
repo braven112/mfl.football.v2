@@ -21,13 +21,12 @@ async function archivedIds(feedPath) {
   }
   for (const name of names) {
     if (!name.endsWith('.json')) continue;
-    try {
-      const parsed = JSON.parse(await fs.readFile(path.join(dir, name), 'utf8'));
-      const posts = Array.isArray(parsed) ? parsed : parsed?.posts;
-      for (const p of Array.isArray(posts) ? posts : []) if (p?.id) ids.add(p.id);
-    } catch {
-      // unreadable shard — ignore
-    }
+    // No catch: an unreadable shard must FAIL CLOSED. Ignoring it would read
+    // its ids as "never posted" and re-publish exactly what this check exists
+    // to stop — a failed run is the safer outcome.
+    const parsed = JSON.parse(await fs.readFile(path.join(dir, name), 'utf8'));
+    const posts = Array.isArray(parsed) ? parsed : parsed?.posts;
+    for (const p of Array.isArray(posts) ? posts : []) if (p?.id) ids.add(p.id);
   }
   return ids;
 }

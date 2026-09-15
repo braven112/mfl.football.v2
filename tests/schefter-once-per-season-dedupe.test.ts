@@ -48,6 +48,12 @@ describe('isDuplicate reads the season archive', () => {
     writeFileSync(path.join(dir, 'schefter-archive', '2027.json'), JSON.stringify({ posts: [{ id: ID }] }));
     expect(await isDuplicate(feedPath, ID)).toBe(true);
   });
+
+  it('fails closed on an unreadable archive shard instead of reading "never posted"', async () => {
+    mkdirSync(path.join(dir, 'schefter-archive'));
+    writeFileSync(path.join(dir, 'schefter-archive', '2026.json'), '[{"id": "sf_2026_sched');
+    await expect(isDuplicate(feedPath, ID)).rejects.toThrow();
+  });
 });
 
 describe('schedule-release is a preseason column', () => {
