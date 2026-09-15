@@ -16,6 +16,7 @@ import { franchiseRecord } from '../article-utils/franchise-record.mjs';
 // the week before the NFL's last regular-season week, and that moved once
 // already when the NFL went to 18 weeks in 2021.
 import { CHAMPIONSHIP_WEEK } from '../../src/utils/fantasy-bracket.mjs';
+import { LEAGUES, DEFAULT_LEAGUE_SLUG } from '../../src/config/leagues-data.mjs';
 
 export const config = {
   id: (year) => `sf_${year}_championship_recap`,
@@ -175,7 +176,12 @@ export function relatedLinks(_enrichment, { league = 'theleague' } = {}) {
   );
 }
 
-export function buildPost(aiOutput, enrichment, articleId) {
+export function buildPost(aiOutput, enrichment, articleId, { league = DEFAULT_LEAGUE_SLUG } = {}) {
+  // The runner invokes this type for --league afl-fantasy too, so the
+  // permalink and the feed tag must both come from the league actually
+  // being written. Hardcoding them landed AFL posts in the AFL feed
+  // carrying a TheLeague link and a theleague tag (issue #1086 F4).
+  const slug = LEAGUES[league].slug;
   return {
     id: articleId,
     timestamp: new Date().toISOString(),
@@ -185,9 +191,9 @@ export function buildPost(aiOutput, enrichment, articleId) {
     headline: aiOutput.headline,
     body: aiOutput.excerpt,
     franchiseIds: [],
-    link: `/theleague/news/${articleId}`,
+    link: `/${slug}/news/${articleId}`,
     linkLabel: 'Read championship recap',
-    league: 'theleague',
+    league: slug,
     authorId: 'claude',
     content: aiOutput.content,
   };

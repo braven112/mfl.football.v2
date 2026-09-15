@@ -11,6 +11,7 @@ import { buildCachedSystem } from '../article-utils/ai-client.mjs';
 import { isRegularSeasonOrPlayoffs } from '../article-utils/season-guards.mjs';
 import { pickHeroPlayer } from '../article-utils/hero-player.mjs';
 import { primaryLink, articleLink, featureLink, linkList } from '../article-utils/article-links.mjs';
+import { LEAGUES, DEFAULT_LEAGUE_SLUG } from '../../src/config/leagues-data.mjs';
 
 export const config = {
   id: (year, week) => `sf_${year}_waiver_pickups_w${String(week).padStart(2, '0')}`,
@@ -182,7 +183,12 @@ export function relatedLinks(_enrichment, { league = 'theleague' } = {}) {
   );
 }
 
-export function buildPost(aiOutput, enrichment, articleId) {
+export function buildPost(aiOutput, enrichment, articleId, { league = DEFAULT_LEAGUE_SLUG } = {}) {
+  // The runner invokes this type for --league afl-fantasy too, so the
+  // permalink and the feed tag must both come from the league actually
+  // being written. Hardcoding them landed AFL posts in the AFL feed
+  // carrying a TheLeague link and a theleague tag (issue #1086 F4).
+  const slug = LEAGUES[league].slug;
   return {
     id: articleId,
     timestamp: new Date().toISOString(),
@@ -192,9 +198,9 @@ export function buildPost(aiOutput, enrichment, articleId) {
     headline: aiOutput.headline,
     body: aiOutput.excerpt,
     franchiseIds: [],
-    link: `/theleague/news/${articleId}`,
+    link: `/${slug}/news/${articleId}`,
     linkLabel: 'Read full article',
-    league: 'theleague',
+    league: slug,
     authorId: 'claude',
     content: aiOutput.content,
     ...(enrichment.heroPlayerId

@@ -12,7 +12,7 @@ import type { HeroState } from '../types/hero-state';
 import { TARGET_ACTIVE_COUNT } from './salary-calculations';
 import { getCurrentSeasonYear } from './league-year';
 import { getNthDayOfMonth, getNflDraftDate } from './league-event-resolver';
-import { nflKickoff } from './nfl-week-starts.mjs';
+import { nflKickoff, nflWeekFor } from './nfl-week-starts.mjs';
 import { isCutWatchUrgent } from './hero-resolver';
 import { normalizeTeamCode, getNFLTeamName } from './nfl-logo';
 import { getLeagueBySlug, type CanonicalLeagueSlug } from '../config/leagues';
@@ -493,6 +493,47 @@ export function getLatestScoredWeek(
     if (Number.isFinite(w) && w > maxWeek) maxWeek = w;
   }
   return maxWeek;
+}
+
+/**
+ * The week actually IN THE BOOKS — what a recap may name and link.
+ *
+ * `getLatestScoredWeek` alone cannot answer this. MFL's `playerScores` export
+ * is fetched with no `W=`, so it holds exactly ONE week: whatever MFL currently
+ * considers live (verified — the 2026 feed carries 484 rows, all week 1; the
+ * frozen 2025 feed carries 473, all week 17). The moment MFL rolls that feed to
+ * the upcoming week the max week in it jumps, with nothing played, and every
+ * caller that trusted it named and linked a week nobody had played. That is the
+ * Tuesday-morning window the recap hero runs in (issue #1086 F1).
+ *
+ * So the feed gets a CEILING from the calendar. `nflWeekFor` hands week N over
+ * to week N+1 on the TUESDAY after N opened, so during week N's window the last
+ * week that can possibly be complete is N-1. Capping at that is enough:
+ *
+ *   - feed 1, calendar week 2 (Tue Sep 15 2026) → 1, the week that was played
+ *   - feed ROLLED to 2, calendar week 2         → 1, instead of the old 2
+ *   - frozen 2025 archive read in 2026          → 17; `nflWeekFor` saturates at
+ *     MAX_WEEK (22) for a season long past, so the ceiling never bites there
+ *   - preseason, or no feed at all              → 0
+ *
+ * A ceiling and not a floor: the feed still decides, it just cannot run ahead of
+ * the calendar. That keeps a league whose scores land late honest rather than
+ * inventing a week the data does not have.
+ *
+ * NOT a replacement for `getLatestScoredWeek`, which stays as-is for
+ * `getMarqueeGame` — "which game do I feature" is a different question from
+ * "which week is finished", and it is asked on days this cap would shift.
+ */
+export function getWeekInTheBooks(
+  seasonYear: number,
+  league: CanonicalLeagueSlug = 'theleague',
+  now: Date = new Date(),
+): number {
+  const scored = getLatestScoredWeek(seasonYear, league);
+  if (scored <= 0) return 0;
+  const currentWeek = nflWeekFor(seasonYear, now);
+  const ceiling = currentWeek > 0 ? currentWeek - 1 : 0;
+  return Math.max(0, Math.min(scored, ceiling));
 }
 
 /** playerId → actual points from the playerScores feed (the completed week). */

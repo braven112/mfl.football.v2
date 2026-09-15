@@ -19,7 +19,7 @@
 import type { HeroState } from '../../../types/hero-state';
 import { getCurrentSeasonYear } from '../../../utils/league-year';
 import { getPlayerMap } from '../../../utils/player-map';
-import { getWeeklyTopScorerCandidates, getLatestScoredWeek } from '../../../utils/offseason-hero-data';
+import { getWeeklyTopScorerCandidates, getWeekInTheBooks } from '../../../utils/offseason-hero-data';
 import { castBestScoredModel } from '../../../utils/hero-casting';
 import { normalizeTeamCode } from '../../../utils/nfl-logo';
 import { getFranchiseBrand } from '../../../utils/franchise-brand';
@@ -43,7 +43,7 @@ const { state, resolveLeaguePath: r } = Astro.props;
 const year = getCurrentSeasonYear();
 const players = getPlayerMap(year);
 const candidates = getWeeklyTopScorerCandidates(year);
-const week = getLatestScoredWeek(year);
+const week = getWeekInTheBooks(year);
 const model = candidates.length > 0 ? castBestScoredModel(candidates, players, undefined, 'Top Scorer') : null;
 
 // The winning candidate carries the score + rostering franchise.

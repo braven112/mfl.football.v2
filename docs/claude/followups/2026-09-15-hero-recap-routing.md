@@ -49,7 +49,7 @@ object — they both render), `src/pages/afl-fantasy/index.astro`,
 
 ## Deferred items
 
-- [ ] **F1 — `getLatestScoredWeek` and `getCompletedWeek` are different derivations**
+- [x] **F1 — `getLatestScoredWeek` and `getCompletedWeek` are different derivations** — FIXED
   - Source: Claude review, `/code-review`
   - Where: `src/utils/hero-recap-destination.ts:99`,
     `src/utils/offseason-hero-data.ts:483`,
@@ -68,13 +68,19 @@ object — they both render), `src/pages/afl-fantasy/index.astro`,
   - Suggested fix: one derivation, shared between the hero and the generator.
     Probably `getCompletedWeek`'s "every franchise scored" rule, exposed from
     `src/`, with the generator importing it rather than keeping its own copy.
-  - **NARROWED by the F3 removal (Sept 2026).** There is no recap generator left
-    to disagree with, so the id-lookup half of this cannot happen any more. What
-    remains is real and unchanged: `getLatestScoredWeek` reads a `playerScores`
-    feed fetched with no `W=`, so if MFL rolls it before Tuesday morning the
-    hero still NAMES and LINKS the unplayed week — now landing on an empty
-    scoreboard rather than missing an article. The fix is the same one
-    derivation; only the second consumer is gone.
+  - **NARROWED by the F3 removal, then FIXED (Sept 2026).** The id-lookup half
+    died with the generator. The real half — `getLatestScoredWeek` reading a
+    `playerScores` feed fetched with no `W=`, and so naming an unplayed week the
+    moment MFL rolls it — is fixed by `getWeekInTheBooks`
+    (`src/utils/offseason-hero-data.ts`), which caps the feed's week at the
+    calendar's last completable week (`nflWeekFor - 1`). A CEILING, not a floor:
+    the feed still decides, it just cannot run ahead of the games.
+    `getLatestScoredWeek` is deliberately unchanged and still backs
+    `getMarqueeGame` — "which game do I feature" is a different question from
+    "which week is finished", and it is asked on days the cap would shift.
+    Guard: `tests/offseason-hero-data.test.ts`, 6 cases including the rolled
+    feed and the preseason read. The three recap call sites (`RecapHero`,
+    `RecapCompositeHero`, the AFL homepage) now use it.
 
 - [ ] **F2 — The AFL homepage resolves the recap season year differently from the rest of the page**
   - Source: Claude review, `/code-review`
@@ -109,8 +115,8 @@ object — they both render), `src/pages/afl-fantasy/index.astro`,
     branch, which is the destination the hotfix built. The article branch stays
     in the module, dormant, so a back-filled archive would still resolve.
 
-- [ ] **F4 — `buildPost` in weekly-recap.mjs ignores its own `{ league }` option**
-      — MOOT IN ITS ORIGINAL FORM; the audit it implies is still open.
+- [x] **F4 — `buildPost` in weekly-recap.mjs ignores its own `{ league }` option**
+      — MOOT IN ITS ORIGINAL FORM (file deleted); the audit it implied is DONE.
   - **The named file was deleted by the F3 removal (Sept 2026)**, so the specific
     defect below can no longer fire. Kept open for the last bullet only: the
     same hardcode may sit in other article types, and nothing has checked.
@@ -124,7 +130,16 @@ object — they both render), `src/pages/afl-fantasy/index.astro`,
     else reading the feed will believe.
   - Why deferred: the hero is immune now, and fixing the generator means checking
     every other article type for the same hardcode — wider than a hotfix diff.
-  - Worth auditing all of `scripts/article-types/*.mjs` for the same pattern.
+  - **AUDIT DONE, AND IT WAS NOT JUST THIS ONE (Sept 2026).** Six other article
+    types carried the identical hardcode — `championship-recap`, `draft-grades`,
+    `matchup-preview`, `team-grades`, `waiver-pickups`, `weekend-preview` — each
+    declaring `buildPost(aiOutput, enrichment, articleId)` with no `{ league }`
+    parameter at all while `scripts/schefter-weekly-articles.mjs:239` passed one.
+    All six now take `{ league = DEFAULT_LEAGUE_SLUG }` and build both the
+    permalink and the feed tag from `LEAGUES[league].slug`, matching the pattern
+    `cut-watch` and `schedule-strength` already used. `schedule-release` and
+    `schedule-strength` were already correct. Guard:
+    `tests/article-type-league-option.test.ts`.
 
 ## Context to start cold
 

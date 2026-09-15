@@ -6,9 +6,11 @@ import {
   isDraftComplete,
   areAllDraftPicksFilled,
   getLatestScoredWeek,
+  getWeekInTheBooks,
   getMarqueeGameStars,
   getWeeklyTopScorerCandidates,
 } from '../src/utils/offseason-hero-data';
+import { nflWeekFor } from '../src/utils/nfl-week-starts.mjs';
 import { castBestScoredModel } from '../src/utils/hero-casting';
 import { getPlayerMap } from '../src/utils/player-map';
 
@@ -123,6 +125,67 @@ describe('getLatestScoredWeek', () => {
   // missing-feed path (→ 0) is covered by the non-existent year below.
   it('returns 0 for a non-existent year (no feed on disk)', () => {
     expect(getLatestScoredWeek(1999)).toBe(0);
+  });
+});
+
+/**
+ * THE BUG THIS EXISTS FOR (issue #1086 F1).
+ *
+ * MFL's playerScores export is fetched with no `W=`, so the feed on disk holds
+ * exactly ONE week — whatever MFL currently considers live. The recap hero read
+ * the max week in it and called that "the week in the books". The moment MFL
+ * rolls the feed to the upcoming week, with nothing played, that number jumps
+ * and the hero names and links a week nobody has played — which is the same
+ * Tuesday-morning failure the hero was just fixed for from the `getCurrentNFLWeek`
+ * side. The calendar supplies the ceiling the feed cannot.
+ */
+describe('getWeekInTheBooks — the feed may never outrun the calendar', () => {
+  // nflWeekFor hands week N over to N+1 on the TUESDAY after N opened, so
+  // inside week N's window the last week that CAN be complete is N-1.
+  const TUE_WEEK_2 = new Date('2026-09-15T06:00:00-07:00'); // week 2's window
+  const TUE_WEEK_3 = new Date('2026-09-22T06:00:00-07:00'); // week 3's window
+  const PRESEASON = new Date('2026-08-01T06:00:00-07:00');
+
+  it('agrees with the feed when the feed is behind the calendar', () => {
+    // The live case on the day this shipped: week 1 played, week 2 under way.
+    expect(getLatestScoredWeek(2026, 'theleague')).toBe(1);
+    expect(getWeekInTheBooks(2026, 'theleague', TUE_WEEK_2)).toBe(1);
+    expect(getWeekInTheBooks(2026, 'afl-fantasy', TUE_WEEK_2)).toBe(1);
+  });
+
+  it('does not invent a week the feed has no scores for', () => {
+    // A ceiling, not a floor. Deep into week 3's window the feed still only
+    // carries week 1, so week 1 is still the answer.
+    expect(getWeekInTheBooks(2026, 'theleague', TUE_WEEK_3)).toBe(1);
+  });
+
+  it('CAPS a feed that has rolled ahead of the games', () => {
+    // The F1 failure, simulated: the 2025 feed carries week 17, read at a date
+    // inside the 2025 season when only week 4 could possibly be complete. The
+    // raw reading is 17; the answer must be 4. This is exactly the shape of
+    // "MFL rolled playerScores before Tuesday morning".
+    const insideWeek5 = new Date('2025-10-07T06:00:00-07:00');
+    expect(getLatestScoredWeek(2025)).toBe(17);
+    const capped = getWeekInTheBooks(2025, 'theleague', insideWeek5);
+    expect(capped).toBeLessThan(17);
+    expect(capped).toBe(nflWeekFor(2025, insideWeek5) - 1);
+  });
+
+  it('is 0 before the season has played a down', () => {
+    // The committed 2026 feed carries week 1 rows year-round, so the raw
+    // reading says 1 even in August. No week is in the books in August.
+    expect(getLatestScoredWeek(2026, 'theleague')).toBe(1);
+    expect(getWeekInTheBooks(2026, 'theleague', PRESEASON)).toBe(0);
+  });
+
+  it('leaves a frozen archive season alone', () => {
+    // nflWeekFor saturates at MAX_WEEK for a season long past, so the ceiling
+    // never bites on an archive year and the hero still reads its real week.
+    expect(getWeekInTheBooks(2025, 'theleague', TUE_WEEK_2)).toBe(17);
+  });
+
+  it('returns 0 when there is no feed at all', () => {
+    expect(getWeekInTheBooks(1999, 'theleague', TUE_WEEK_2)).toBe(0);
   });
 });
 
