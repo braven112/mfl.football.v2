@@ -1,5 +1,54 @@
 # Franchise History Pages — Insights
 
+## 2026-09-15 - The derived chain had three partial committers; now one script commits it whole
+
+**Context:** follow-up to the milestone entries below. `franchise-history.json`
+and `season-ledger.json` (one run) → `owner-tenures.json` →
+`division-strength.json`, and their data tests demand row-for-row agreement.
+The Schefter nightly committed TheLeague's history alone, `fetch-owner-names.yml`
+committed tenures + division strength on top of whatever ledger was on disk, and
+NOTHING committed the AFL's history or ledger. The first in-season nightly would
+have failed `season-ledger.test.ts` on main. That nightly had been down since
+09-11 on an unrelated npm ERESOLVE, which hid the problem.
+
+- **The AFL was already stale, not just at risk.** `compute-division-strength`
+  replays the live `mfl-feeds/<year>/schedule.json`, which roster-sync commits
+  every few minutes. On an untouched tree it rewrote both leagues'
+  division-strength (AFL: `latestPlayedYear` 2025 → 2026, plus an empty 2026
+  membership era) against ledgers whose 2026 rows still said
+  `seasonNotStarted`. A producer that reads a live feed lets its committed
+  inputs go stale without anyone touching them.
+- **Relaxing the tests was the wrong fix.** Regenerating the WHOLE chain from
+  the week-1 feeds passes all 12 suites that read it (413 tests); only a
+  partial commit fails. The tests were right, and the lanes were wrong.
+- `scripts/recompute-derived-chain.mjs` owns the order (every league's history,
+  then tenures, then division strength). It also owns the commit list
+  (`--print-outputs`, whose feed paths come from the registry) and the gate
+  (`--print-guard-tests`). `.github/workflows/derived-history-chain.yml` runs it
+  daily, gates, and commits through `commit-feed-and-push`.
+  `backfill-historical-feeds.yml` and `fetch-owner-names.yml` call the same
+  script, and the speculation job no longer touches history.
+- **The milestone baseline is now mechanical.** With `--emit-milestone-posts`
+  the script refuses to run if any `franchise-history.json` already differs
+  from HEAD, since the diff would then be against a snapshot nobody committed.
+  Every lane that commits the snapshot passes the flag, so
+  `diffNewAwards(main, regenerated)` happens in the run itself instead of being
+  a step someone has to remember.
+- **Timestamp-only rewrites are restored.** Every producer stamps
+  `generatedAt`, and the nightly had committed a 2-line `franchise-history.json`
+  diff every day, each one triggering a production build. Verified by
+  committing a regenerated chain and re-running it: all six rewritten files
+  were restored, division strength was already `unchanged`, and there was
+  nothing to commit.
+- `tests/derived-chain-lane.test.ts` fails on any workflow that runs a chain
+  producer directly, names a chain file, or commits before gating. `prebuild`
+  still recomputes the chain without committing, which is fine because nothing
+  it writes reaches git.
+- **Committing by hand:** start from main's derived files, run
+  `node scripts/recompute-derived-chain.mjs --emit-milestone-posts` and then
+  `pnpm vitest run $(node scripts/recompute-derived-chain.mjs --print-guard-tests)`,
+  and commit every path `--print-outputs` lists, the feed included.
+
 ## 2026-09-15 - Division titles waited for a finished season; season BADGES did not
 
 **Context:** One week into 2026 the feed carried "Music City Mafia closed 2026 at
@@ -29,8 +78,10 @@ milestone posts to the DEPLOYED feed with the build's timestamp.
 
 - Emission is now opt-in: `--emit-milestone-posts`
   (`resolveMilestoneEmission`, `scripts/lib/franchise-milestone-posts.mjs`).
-  Only the two workflows that commit the feed beside the snapshot pass it —
-  `schefter-trade-speculation.yml` and `backfill-historical-feeds.yml`.
+  Only the workflows that commit the feed beside the snapshot pass it. At the
+  time those were `schefter-trade-speculation.yml` and
+  `backfill-historical-feeds.yml`; today it is the three lanes that call
+  `recompute-derived-chain.mjs` (see the entry above).
   Default-OFF so a new caller (prebuild, a local run) cannot re-split git from
   production by forgetting a flag. A local recompute no longer dirties the feed.
 - Cost: a newly earned badge shows on the franchise page at the next deploy but
@@ -42,14 +93,13 @@ milestone posts to the DEPLOYED feed with the build's timestamp.
 - **Before committing a regenerated `franchise-history.json` by hand, run
   `diffNewAwards(mainSnapshot, regenerated)`.** The snapshot is the milestone
   diff's baseline: any award in it that the nightly has not posted is never
-  posted.
+  posted. (Now enforced by `recompute-derived-chain.mjs --emit-milestone-posts`,
+  per the entry above.)
 - **And don't commit it alone.** `season-ledger.json` (same run),
   `owner-tenures.json` and `division-strength.json` are derived from it and
-  their data tests demand row-for-row agreement; regenerating only part of the
-  chain fails `season-ledger.test.ts` or `division-strength-data.test.ts`, and
-  regenerating all of it rewrites the AFL copies too. The three are committed
-  by different lanes today — a known break waiting for the first in-season
-  nightly.
+  their data tests demand row-for-row agreement. Regenerating only part of the
+  chain fails `season-ledger.test.ts` or `division-strength-data.test.ts`.
+  **Resolved** by the single chain lane in the entry above.
 - The badge unit test fed `seasonComplete` in by hand, and the gate reads a
   missing field as complete — so renaming the producer field would stay green.
   `tests/franchise-history-season-complete-data.test.ts` now checks the

@@ -6,9 +6,9 @@ on:
     # scripts/lib/speculation-cadence.mjs) decides whether to actually post —
     # the cron just gives the scanner a once-a-day chance.
     #
-    # This same cron also runs the franchise-history recompute below, which
-    # diffs new badges against the committed snapshot and auto-posts
-    # milestone events to the Schefter feed (Phase 5).
+    # Milestone posts used to ride this job too. They moved to
+    # derived-history-chain.yml, which commits the franchise history together
+    # with every file derived from it — this job committed the snapshot alone.
     - cron: "0 20 * * *"
   workflow_dispatch:
     inputs:
@@ -49,16 +49,6 @@ jobs:
           MFL_LEAGUE_SLUG: theleague
         run: node scripts/fetch-trade-bait.mjs
 
-      - name: Recompute franchise history (milestone diff)
-        # Runs the badge engine and diffs against the committed
-        # franchise-history.json snapshot. Newly-earned badges emit
-        # Schefter posts directly into src/data/theleague/schefter-feed.json
-        # (idempotent — dedup by deterministic post id).
-        # --emit-milestone-posts is opt-in: this job COMMITS the feed, so it
-        # may write posts; prebuild runs the same script without the flag.
-        if: github.event.inputs.dry_run != 'true'
-        run: node scripts/compute-franchise-history.mjs --emit-milestone-posts
-
       - name: Run speculation scanner
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
@@ -83,12 +73,12 @@ jobs:
           # schefter-feed.json is append-only and written by several workflows
           # on overlapping crons; a plain `git pull --rebase` collides on it
           # (merge=binary) and the push fails. commit-feed-and-push reconciles the
-          # feed by post id on top of the latest origin and retries; the derived
-          # snapshots and raw mfl-feeds directory are taken as-is. "Nothing
-          # changed" is guarded inside the script.
+          # feed by post id on top of the latest origin and retries; the
+          # speculation ledger and raw mfl-feeds directory are taken as-is.
+          # "Nothing changed" is guarded inside the script.
           git config user.name "Schefter Bot"
           git config user.email "actions@users.noreply.github.com"
           node scripts/commit-feed-and-push.mjs \
             --branch main \
-            --message "chore: schefter daily — speculation + milestone scan" \
-            --files "src/data/theleague/schefter-feed.json,data/theleague/derived/speculation-history.json,data/theleague/derived/franchise-history.json,data/theleague/mfl-feeds"
+            --message "chore: schefter daily — speculation scan" \
+            --files "src/data/theleague/schefter-feed.json,data/theleague/derived/speculation-history.json,data/theleague/mfl-feeds"

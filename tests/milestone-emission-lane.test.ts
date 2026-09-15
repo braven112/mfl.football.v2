@@ -19,6 +19,8 @@ import {
   EMIT_MILESTONE_POSTS_FLAG,
   resolveMilestoneEmission,
 } from '../scripts/lib/franchise-milestone-posts.mjs';
+import { chainOutputs } from '../scripts/recompute-derived-chain.mjs';
+import { ALL_LEAGUES } from '../src/config/leagues-data.mjs';
 
 const read = (p: string) => readFileSync(p, 'utf8');
 
@@ -59,19 +61,39 @@ describe('the build path never writes milestone posts', () => {
   });
 });
 
+/**
+ * Committing workflows reach the producer through recompute-derived-chain.mjs,
+ * which commits the snapshot together with the files derived from it
+ * (tests/derived-chain-lane.test.ts pins that no workflow calls it directly).
+ * Every such run commits the snapshot, so every one must post its awards.
+ */
 describe('the committing workflows still write them', () => {
-  const computeLines = (workflow: string) =>
+  const chainRunLines = (workflow: string) =>
     read(workflow)
       .split('\n')
-      .filter((l) => /run:.*compute-franchise-history\.mjs/.test(l));
+      .filter((l) => /run:.*recompute-derived-chain\.mjs/.test(l) && !/--print-/.test(l));
 
   it.each([
-    ['.github/workflows/schefter-trade-speculation.yml', 'src/data/theleague/schefter-feed.json'],
-    ['.github/workflows/backfill-historical-feeds.yml', 'src/data/theleague/schefter-feed.json'],
-  ])('%s passes the flag and commits the feed it writes', (workflow, feed) => {
-    const lines = computeLines(workflow);
+    '.github/workflows/derived-history-chain.yml',
+    '.github/workflows/backfill-historical-feeds.yml',
+    '.github/workflows/fetch-owner-names.yml',
+  ])('%s passes the flag and commits the chain outputs, feed included', (workflow) => {
+    const lines = chainRunLines(workflow);
     expect(lines.length).toBeGreaterThan(0);
     for (const line of lines) expect(line).toContain(EMIT_MILESTONE_POSTS_FLAG);
-    expect(read(workflow)).toContain(feed);
+    expect(read(workflow)).toMatch(/recompute-derived-chain\.mjs --print-outputs/);
+  });
+
+  it('the chain outputs include the feed milestone posts are written to', () => {
+    const theleague = (ALL_LEAGUES as { slug: string; schefterFeedPath: string }[]).find(
+      (l) => l.slug === 'theleague'
+    )!;
+    expect(chainOutputs()).toContain(theleague.schefterFeedPath);
+  });
+
+  it('the speculation job no longer commits the snapshot it stopped computing', () => {
+    expect(read('.github/workflows/schefter-trade-speculation.yml')).not.toMatch(
+      /compute-franchise-history|franchise-history\.json/
+    );
   });
 });
