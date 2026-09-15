@@ -27,6 +27,9 @@ import {
 } from './standings-cells';
 import {
   resolveBand,
+  resolvePlayoffBadgeStatus,
+  seedValueFor,
+  TIERING,
   type StandingsColumn,
   type StandingsTableProps,
 } from './standings-table-config';
@@ -38,6 +41,7 @@ const {
   teamCell,
   teamCellFallback = 'name',
   tiering,
+  badgeSeeding,
   header,
   year = new Date().getFullYear(),
   preferredTeamId,
@@ -118,11 +122,12 @@ function colClass(col: StandingsColumn): string {
 }
 const cellClass = (col: StandingsColumn) => `${colClass(col)}${col.hideBelow === 'sm' ? ' hide-sm' : ''}`;
 
-function getPlayoffStatus(seed: number | undefined): 'division_winner' | 'wild_card' | null {
-  if (seed && seed <= 4) return 'division_winner';
-  if (seed && seed >= 5 && seed <= 7) return 'wild_card';
-  return null;
-}
+// Which ladder the DIV / WC pills are drawn on. TheLeague seeds one league-wide
+// bracket, so the default is the league seed; the AFL seeds one bracket PER
+// CONFERENCE and passes TIERING.conferenceSeed(n). The seed the pill PRINTS has
+// to come from the same ladder as the pill itself — a DIV pill reading a seed
+// off a bracket the team isn't in is the bug this replaced.
+const badgeTiering = badgeSeeding ?? TIERING.leagueSeed;
 
 // Text content for the simple (non-markup) column keys.
 function cellText(col: StandingsColumn, team: (typeof teams)[number]): string {
@@ -353,7 +358,10 @@ const bannerLabelFor = (name: string) =>
                 {columns.map((col) => (
                   <td class={cellClass(col)}>
                     {col.key === 'playoffBadge' && (
-                      <PlayoffBadge status={getPlayoffStatus(team.seed)} seed={team.seed} />
+                      <PlayoffBadge
+                        status={resolvePlayoffBadgeStatus(team, badgeTiering)}
+                        seed={seedValueFor(team, badgeTiering)}
+                      />
                     )}
                     {col.key === 'seedPlain' && <span class="seed-number">#{team.seed}</span>}
                     {col.key === 'seedAccent' && <span class="seed-number">#{team.conferenceSeed}</span>}

@@ -290,6 +290,26 @@ function conferenceHeader(confId: '00' | '01', name: string) {
   };
 }
 
+// The AFL's playoff field is per CONFERENCE — each side seeds its division
+// winners first, then wild cards out to 4 — so the DIV / WC pills in the
+// division view have to be cut on the CONFERENCE ladder. On the league-wide
+// ladder the two conferences share one 1..7 scale, which badged the AL's #6 as
+// its only wild card and left the AL's actual 4th seed with no pill at all.
+// Same shape the league (conference) view bands its rows with, so the two views
+// cannot disagree about who is in.
+const conferenceStandings = [conferenceAStandings, conferenceBStandings];
+// Resolve the division's conference off the SAME list getConferenceStandings
+// filtered on, rather than the divisionToConference map, so the lookup cannot
+// disagree with the standings it is labelling. Division winners are counted
+// from the groups that actually have teams, not from the declared division
+// list — an era whose conference declares a division with no franchises would
+// otherwise band a wild card as a winner. An unresolvable division gets NO
+// badges: falling through to the league-wide ladder is the bug this fixes.
+function divisionBadgeSeeding(divisionName: string) {
+  const conference = conferenceStandings.find(c => c.conference.divisions.includes(divisionName));
+  return conference ? TIERING.conferenceSeed(conference.divisionWinners.length) : TIERING.none;
+}
+
 // Division view: NL divisions glow conference blue, everything else league red.
 // The conference logo heads each division card; the defending champion (name
 // only for AFL) reads as a text line.
@@ -367,6 +387,7 @@ function divisionHeader(name: string, confId?: '00' | '01') {
               teamCell="banner"
               teamCellFallback="name"
               accent={aflAccent(divisionToConf[division.name])}
+              badgeSeeding={divisionBadgeSeeding(division.name)}
               year={selectedYear}
               preferredTeamId={yearPreferredTeamId}
               rosterBaseUrl={`${baseUrl}/rosters`}
@@ -383,7 +404,7 @@ function divisionHeader(name: string, confId?: '00' | '01') {
             columns={COLUMNS.conferenceSeeded}
             teamCell="banner"
             teamCellFallback="blank"
-            tiering={TIERING.conferenceSeed(conferenceAStandings.conference.divisions.length)}
+            tiering={TIERING.conferenceSeed(conferenceAStandings.divisionWinners.length)}
             accent={aflAccent('00')}
             header={conferenceHeader('00', conferenceAStandings.conference.name)}
             year={selectedYear}
@@ -395,7 +416,7 @@ function divisionHeader(name: string, confId?: '00' | '01') {
             columns={COLUMNS.conferenceSeeded}
             teamCell="banner"
             teamCellFallback="blank"
-            tiering={TIERING.conferenceSeed(conferenceBStandings.conference.divisions.length)}
+            tiering={TIERING.conferenceSeed(conferenceBStandings.divisionWinners.length)}
             accent={aflAccent('01')}
             header={conferenceHeader('01', conferenceBStandings.conference.name)}
             year={selectedYear}
