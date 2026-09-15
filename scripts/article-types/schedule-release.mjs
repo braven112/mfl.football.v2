@@ -30,6 +30,7 @@ import {
   rivalrySeriesByPair,
 } from '../../src/utils/rivalry-intensity.mjs';
 import { RIVALRY_MEETINGS_TO_MENTION } from '../../src/utils/schedule-release.mjs';
+import { nflWeekStartInstant } from '../../src/utils/nfl-week-starts.mjs';
 import {
   describeDivisionByeSplit,
   divisionByeSplit,
@@ -51,12 +52,18 @@ export const config = {
 };
 
 /**
- * No week or season window — a schedule release happens in the offseason, when
+ * No week window — a schedule release happens in the offseason, when
  * `completedWeek` refers to a season that finished months ago. The real gate is
  * in buildFactSheet, which needs the reveal AND the matching live schedule.
+ *
+ * But it is a PRESEASON column: once the NFL season has kicked off it never
+ * fires, whatever the dedup says. Kickoff comes from nfl-week-starts (never
+ * "the Thursday after Labor Day" — 2026 opened on a Wednesday), as an exact
+ * INSTANT: the local-midnight `nflKickoff()` is UTC midnight on the GitHub
+ * runner, which would cut the last preseason evening off.
  */
-export function guardSeason() {
-  return true;
+export function guardSeason(_week, year, now = new Date()) {
+  return now < nflWeekStartInstant(year, 1);
 }
 
 const asArray = (v) => (Array.isArray(v) ? v : v == null ? [] : [v]);
