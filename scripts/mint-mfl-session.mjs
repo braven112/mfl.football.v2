@@ -15,12 +15,16 @@
  * alive.
  *
  * ── THE LOGIN IS LEAGUE-SCOPED, ON THE LEAGUE'S OWN HOST ─────────────────
- * `api.myfantasyleague.com/<year>/login` has no league in scope, so it has no
- * commissioner to grant: it issues MFL_USER_ID and nothing else. Only
- * `<www## host>/<year>/login?L=<id>` issues MFL_IS_COMMISH, and every
- * commissioner write needs that host plus BOTH cookies
- * (docs/claude/insights/domains/mfl-api.md, 2026-09-05). `loginToMFL` in
- * scripts/lib/mfl-api.mjs is api-host-only, which is why it is not used here.
+ * `api.myfantasyleague.com/<year>/login` has no league in scope, so it issues
+ * MFL_USER_ID and nothing else. This logs in at `<www## host>/<year>/login?L=`
+ * because the session should belong to the host the writes hit.
+ *
+ * CORRECTED 2026-09-15: this header used to say that league login issues
+ * MFL_IS_COMMISH and that every commissioner write needs BOTH cookies. Neither
+ * is true. The 2026-09-05 probe walked every candidate request and NONE issued
+ * that cookie, and a commissioner's session cookie alone is accepted for
+ * `import?TYPE=salaries`. Believing otherwise is what put an unreachable
+ * condition in pickMflSession below.
  *
  * ── BOTH COOKIES FROM ONE RESPONSE, OR NEITHER ────────────────────────────
  * A fresh MFL_USER_ID paired with the STORED MFL_IS_COMMISH is one session's
@@ -153,7 +157,12 @@ export async function loginToLeague({ username, password, leagueId, year, host, 
     const errorMatch = body.match(/<error[^>]*>(.*?)<\/error>/s);
     if (errorMatch) throw new Error(`MFL login failed: ${errorMatch[1].trim()}`);
 
-    last = parseSessionCookies(res.headers.getSetCookie?.() ?? [], body);
+    // MERGE across hops, never replace. MFL can set MFL_USER_ID on one hop and
+    // nothing on the next; reassigning `last` threw the first hop's cookie away
+    // and fell back to the expiring stored pair with a good session in hand.
+    // (The early return below cannot fire — nothing issues MFL_IS_COMMISH — so
+    // the merged value at the end of the loop IS the result.)
+    last = { ...last, ...parseSessionCookies(res.headers.getSetCookie?.() ?? [], body) };
     if (last.mflIsCommish && last.mflUserId) return last;
 
     if (res.status < 300 || res.status >= 400) break;

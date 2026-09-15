@@ -157,6 +157,7 @@ async function main() {
   // write (2026-09-05 probe, .github/workflows/probe-commish-cookie.yml).
   let mflUserId;
   let mflIsCommish;
+  let loginError;
   if (username && password) {
     try {
       ({ mflUserId, mflIsCommish } = await loginToMFL(username, password));
@@ -164,6 +165,7 @@ async function main() {
     } catch (err) {
       // Never fail here: MFL being briefly unreachable should fall through to
       // the stored cookie rather than strand a queue that retries anyway.
+      loginError = err.message;
       console.warn(`[apply-contracts] MFL login failed, falling back to the stored cookie: ${err.message}`);
     }
   }
@@ -173,7 +175,14 @@ async function main() {
     console.log('[apply-contracts] Authenticated by the stored cookie (fallback).');
   }
   if (!mflUserId) {
-    throw new Error('No MFL credentials available. Set MFL_USERNAME + MFL_PASSWORD (preferred) or MFL_USER_ID.');
+    // Say what happened, not what to configure: on a REJECTED login the
+    // secrets are already set, and an operator told to set them looks in
+    // the wrong place. MFL's own reason is the useful half.
+    throw new Error(
+      loginError
+        ? `MFL login was rejected and no stored cookie is available. MFL said: ${loginError}`
+        : 'No MFL credentials available. Set MFL_USERNAME + MFL_PASSWORD (preferred) or MFL_USER_ID.',
+    );
   }
   const cookies = { MFL_USER_ID: mflUserId, MFL_IS_COMMISH: mflIsCommish };
 

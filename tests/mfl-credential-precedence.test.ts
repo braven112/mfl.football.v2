@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { readFileSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 
 /**
@@ -60,11 +60,62 @@ const EXEMPT = new Map([
   // the flag from a write that currently works. Unproven is not the same as
   // safe, so it keeps the cookie-first ordering until its own probe run.
   ['scripts/export-best-ball-draft.mjs', 'writes TYPE=draftResults, which no probe has measured; needs its own proof before the rule applies'],
+  // The file the rule CAME from, and already correct. It reads the stored
+  // cookie into a mutable `userCookie` BEFORE logging in and overwrites it on
+  // success — so the ordering lives in the overwrite, not in a branch, and the
+  // index heuristic below reads the early assignment as an inversion. Widening
+  // the patterns to accept it would blind the scan to the real thing.
+  ['scripts/accounting-carry-over.ts', 'reads the stored cookie into a variable then overwrites it from the login; ordering is in the overwrite, which a line scan cannot see'],
+  // A manual spike, not a scheduled job: its primary path is an OWNER cookie
+  // replayed from Redis, which is a different mechanism from this rule.
+  ['scripts/spike-owner-add-drop.mjs', 'manual spike; replays an owner cookie from Redis rather than resolving service credentials'],
+  // The two probes are EXPERIMENTS, and the ordering rule would invert their
+  // meaning: each exists to compare a login-derived cookie against a stored
+  // one, so "prefer the login" is the thing being measured, not a rule to
+  // impose. They are dispatch-only and write nothing on a schedule.
+  ['scripts/probe-commish-cookie.mjs', 'a read-only experiment that compares credential paths; the ordering is its subject, not its rule'],
+  ['scripts/probe-write-auth.mjs', 'an experiment that compares credential paths; APPEND=1 is what this file is guarded on instead'],
 ]);
+
+/**
+ * Every script that reads BOTH MFL_USERNAME and MFL_USER_ID must be accounted
+ * for — scanned or exempted. A roster that silently omits a consumer reads as
+ * coverage while leaving it unguarded, which is the failure this whole file
+ * exists to prevent one level down.
+ */
+function discoverCredentialConsumers(): string[] {
+  const dir = path.join(REPO_ROOT, 'scripts');
+  const found: string[] = [];
+  const walk = (d: string) => {
+    for (const e of readdirSync(d, { withFileTypes: true })) {
+      const full = path.join(d, e.name);
+      if (e.isDirectory()) { walk(full); continue; }
+      if (!/\.(mjs|ts)$/.test(e.name)) continue;
+      const src = readFileSync(full, 'utf8');
+      if (src.includes('MFL_USERNAME') && src.includes('MFL_USER_ID')) {
+        found.push(path.relative(REPO_ROOT, full).split(path.sep).join('/'));
+      }
+    }
+  };
+  walk(dir);
+  return found.sort();
+}
 
 const read = (rel: string) => readFileSync(path.join(REPO_ROOT, rel), 'utf8');
 
 describe('MFL credential precedence', () => {
+  it('every script reading both credential kinds is either scanned or exempted', () => {
+    const accounted = new Set([...CREDENTIAL_CONSUMERS, ...EXEMPT.keys()]);
+    const missing = discoverCredentialConsumers().filter((f) => !accounted.has(f));
+    expect(
+      missing,
+      'These scripts read MFL_USERNAME and MFL_USER_ID but are neither scanned nor EXEMPT. '
+        + 'Add them to CREDENTIAL_CONSUMERS, or to EXEMPT with a reason — an unlisted consumer '
+        + 'is unguarded while the suite reads as green.\n'
+        + missing.join('\n'),
+    ).toEqual([]);
+  });
+
   it('every credential consumer still reads both a login pair and a stored cookie', () => {
     // If this fails the file was restructured — re-point the guard rather than
     // deleting it, or the ordering rule below stops being checked at all.

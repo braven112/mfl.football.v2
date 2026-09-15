@@ -84,14 +84,26 @@ describe('mfl-integration-test fresh-session step', () => {
     expect(text).toContain('MFL_PASSWORD: ${{ secrets.MFL_PASSWORD }}');
   });
 
-  it('the stored cookie secret is read only by the mint step (as its fallback)', () => {
+  it('the stored cookie secret is read by exactly two steps, for opposite reasons', () => {
+    // The mint step uses it as its FALLBACK. The replay canary uses it as its
+    // SUBJECT — under a distinct name, because $GITHUB_ENV carries the minted
+    // session and reading that would make the canary pass for a reason that
+    // says nothing about the stored secret it guards.
+    //
+    // Any THIRD read is the original trap: a step-level env that shadows
+    // $GITHUB_ENV and quietly puts the stale cookie back in front of the tests.
     const reads = text.match(/secrets\.MFL_USER_ID/g) ?? [];
-    expect(reads).toHaveLength(1);
+    expect(reads, 'an unexpected step reads the stored cookie secret').toHaveLength(2);
+
     const mintStep = text.indexOf('- name: Mint a fresh MFL session');
     const nextStep = text.indexOf('- name:', mintStep + 1);
-    const only = text.indexOf('secrets.MFL_USER_ID');
-    expect(only).toBeGreaterThan(mintStep);
-    expect(only).toBeLessThan(nextStep);
+    const fallback = text.indexOf('secrets.MFL_USER_ID');
+    expect(fallback).toBeGreaterThan(mintStep);
+    expect(fallback).toBeLessThan(nextStep);
+
+    const canaryStep = text.indexOf('- name: Owner cookie replay check');
+    const subject = text.indexOf('MFL_STORED_USER_ID: ${{ secrets.MFL_USER_ID }}');
+    expect(subject, 'the canary does not read the stored secret under its own name').toBeGreaterThan(canaryStep);
   });
 });
 
