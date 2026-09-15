@@ -25,24 +25,12 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { readFileSync, readdirSync, statSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import path from 'node:path';
+import { REPO_ROOT, walkFiles } from './helpers/scan-guard';
 // Not in astro's package exports, so it is imported by file path. If an
 // upgrade moves it, find the new home of `isForbiddenCrossOriginRequest`.
 import { isForbiddenCrossOriginRequest } from '../node_modules/astro/dist/core/app/origin-check.js';
-
-const REPO_ROOT = path.resolve(__dirname, '..');
-const SRC = path.join(REPO_ROOT, 'src');
-
-function walk(dir: string): string[] {
-	const out: string[] = [];
-	for (const entry of readdirSync(dir)) {
-		const full = path.join(dir, entry);
-		if (statSync(full).isDirectory()) out.push(...walk(full));
-		else if (/\.(astro|ts|tsx|js|mjs)$/.test(entry)) out.push(full);
-	}
-	return out;
-}
 
 /** The full argument text of each `navigator.sendBeacon(...)` call, paren-balanced. */
 function beaconCalls(source: string): string[] {
@@ -64,11 +52,8 @@ function beaconCalls(source: string): string[] {
 }
 
 describe('visit beacon — every sendBeacon call carries a JSON-typed body', () => {
-	const calls = walk(SRC).flatMap((file) =>
-		beaconCalls(readFileSync(file, 'utf8')).map((args) => ({
-			file: path.relative(REPO_ROOT, file),
-			args,
-		})),
+	const calls = walkFiles({ roots: ['src'], extensions: ['.astro', '.ts', '.tsx', '.js', '.mjs'] }).flatMap((file) =>
+		beaconCalls(readFileSync(path.join(REPO_ROOT, file), 'utf8')).map((args) => ({ file, args })),
 	);
 
 	it('finds the track-visit beacon (the scan is not vacuous)', () => {
