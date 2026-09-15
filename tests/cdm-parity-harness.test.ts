@@ -10,6 +10,14 @@
  * here rather than remembered: the flows that write on the first tap are never
  * entered, submit is never clicked, and every write endpoint is aborted at the
  * network layer even if a click gets past the first two.
+ *
+ * `--probe` is the one mode that DOES click submit, because verifying the
+ * submit handler is the whole point of it. The guarantee is the same and is
+ * moved down a layer: the two endpoints it drives are answered from a canned
+ * response INSIDE the browser, so the request is recorded and dropped rather
+ * than forwarded. Nothing reaches the dev server, and nothing reaches MFL. The
+ * cases below pin both halves — that the ordinary walk still never clicks
+ * submit, and that the probe never lets a write out.
  */
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
@@ -17,9 +25,35 @@ import { readFileSync } from 'node:fs';
 const SRC = readFileSync('scripts/cdm-parity-check.mjs', 'utf-8');
 
 describe('the CDM parity harness cannot write to the league', () => {
-  it('never clicks the modal submit', () => {
-    expect(SRC).not.toMatch(/cdm-submit'\)\s*(\??\.)?click\(\)/);
-    expect(SRC).not.toMatch(/click\(\s*['"]#cdm-submit/);
+  it('only clicks submit from inside --probe', () => {
+    // Both call sites of the submit-driving helpers must be behind args.probe.
+    // If a third appears, or either loses its gate, this fails rather than
+    // quietly letting the default walk start writing.
+    const calls = [...SRC.matchAll(/await (?:probeFlow|probeDirectOpeners)\(/g)];
+    expect(calls, 'submit-driving call sites').toHaveLength(2);
+    expect(SRC).toContain('if (args.probe && entry.step1.open) {');
+    expect(SRC).toContain('const direct = args.probe ? await probeDirectOpeners(');
+  });
+
+  it('answers a probed write in the browser instead of forwarding it', () => {
+    const handler = SRC.match(/if \(args\.probe\) \{[\s\S]*?\n  \}\n/)?.[0] ?? '';
+    expect(handler, 'the probe route handler').toBeTruthy();
+
+    // The request is recorded and answered locally. `route.continue()` — the
+    // one call that would let it out — may appear exactly once, on the GET
+    // line, because the page still has to load.
+    expect(handler).toContain('route.fulfill(');
+    const continues = [...handler.matchAll(/route\.continue\(\)/g)];
+    expect(continues, 'forwarding calls in the probe handler').toHaveLength(1);
+    expect(handler).toMatch(/if \(req\.method\(\) === 'GET'\) return route\.continue\(\);/);
+
+    // And only these two endpoints are probed; the rest stay aborted.
+    const probed = SRC.match(/const PROBE_ENDPOINTS = \[([\s\S]*?)\];/)?.[1] ?? '';
+    expect(probed).toContain('api/contracts/declare');
+    expect(probed).toContain('api/cut-player');
+    expect(probed).not.toContain('watch-list');
+    expect(probed).not.toContain('move-to-ir');
+    expect(probed).not.toContain('trade-bait');
   });
 
   it('aborts every known write endpoint at the network layer', () => {

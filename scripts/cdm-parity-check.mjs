@@ -16,11 +16,23 @@
  * screen too. Same idea as the roster harness: text, not markup, so a wrapper
  * span is not a diff but a salary is.
  *
- * WHAT IT NEVER DOES: submit. The modal's writes are real (declarations, tags,
- * extensions, cuts), so `cdm-submit` is never clicked, the flows that write on
- * the first tap are never entered (see SAFE_FLOWS), and every known write
- * endpoint is aborted at the network layer regardless. A harness that can
- * mutate the league is not a harness.
+ * WHAT IT NEVER DOES: reach the server with a write. The modal's writes are
+ * real (declarations, tags, extensions, cuts), so in the default walk
+ * `cdm-submit` is never clicked, the flows that write on the first tap are
+ * never entered (see SAFE_FLOWS), and every known write endpoint is aborted at
+ * the network layer regardless. A harness that can mutate the league is not a
+ * harness.
+ *
+ * `--probe` covers the one thing that walk cannot: the submit handler itself.
+ * It drives each flow to a submittable state and CLICKS submit, with
+ * `/api/contracts/declare` and `/api/cut-player` FULFILLED in the browser from
+ * a canned response instead of being sent. Nothing reaches the dev server, and
+ * nothing reaches MFL — the request is intercepted before it leaves the page —
+ * so what gets fingerprinted is the outgoing request (method, url, parsed
+ * body) plus how the modal reacts to the answer. It runs twice, once against a
+ * success response and once against a failure, so the handler's catch branch
+ * is covered too. That is the verification the split plan used to describe as
+ * "submit a throwaway declaration by hand", without writing to a live league.
  *
  * Usage:
  *   JWT_SECRET=x pnpm dev --port 4399 &
@@ -73,6 +85,7 @@ function parseArgs(argv) {
     league: 'theleague',
     franchiseId: '0001',
     limit: 0, // 0 = every eligible player
+    probe: false, // drive submit with the write intercepted (see header)
     out: null,
     compare: null,
     timeout: 180000,
@@ -84,6 +97,7 @@ function parseArgs(argv) {
     else if (a === '--league') args.league = argv[++i];
     else if (a === '--franchise') args.franchiseId = argv[++i];
     else if (a === '--limit') args.limit = Number(argv[++i]);
+    else if (a === '--probe') args.probe = true;
     else if (a === '--out') args.out = argv[++i];
     else if (a === '--compare') args.compare = [argv[++i], argv[++i]];
     else if (a === '--timeout') args.timeout = Number(argv[++i]);
@@ -213,6 +227,171 @@ const CAPTURE_MODAL = () => {
   };
 };
 
+/**
+ * The two endpoints --probe answers locally. Everything else in
+ * WRITE_ENDPOINTS stays aborted even in probe mode.
+ */
+const PROBE_ENDPOINTS = ['**/api/contracts/declare', '**/api/cut-player'];
+
+/** The canned answers. Both branches of the handler get exercised. */
+const PROBE_RESPONSES = {
+  ok: { status: 200, body: { success: true, ok: true } },
+  fail: { status: 400, body: { success: false, error: 'PROBE_REJECTED', message: 'PROBE_REJECTED' } },
+};
+
+/**
+ * Drives one flow to a submittable state and clicks submit.
+ *
+ * Returns what the page TRIED to send and how it reacted — never what the
+ * server did, because the request never gets there.
+ */
+async function probeFlow(page, playerId, label, sent) {
+  const entered = await page.evaluate((wanted) => {
+    const opt = [...document.querySelectorAll('#cdm-action-options .cdm-action-option')].find(
+      (o) => o.querySelector('.cdm-action-option__label')?.textContent?.trim() === wanted,
+    );
+    if (!opt || opt.disabled) return false;
+    opt.click();
+    return true;
+  }, label);
+  if (!entered) return null;
+  await page.waitForTimeout(250);
+
+  // A year picker gates submit on the flows that have one. Always the first
+  // option, so the captured request body is deterministic.
+  await page.evaluate(() => {
+    const first = document.querySelector('#cdm-year-options .cdm-year-btn');
+    if (first && !first.disabled) first.click();
+  });
+  await page.waitForTimeout(150);
+
+  sent.length = 0;
+  const clicked = await page.evaluate(() => {
+    // The cut flow submits from its own action option and needs two taps —
+    // the first only arms the confirmation.
+    const cut = document.querySelector('.cdm-action-option--cut-real');
+    if (cut && getComputedStyle(cut).display !== 'none' && !cut.disabled) {
+      cut.click();
+      cut.click();
+      return 'cut';
+    }
+    const submit = document.getElementById('cdm-submit');
+    if (!submit || submit.disabled || getComputedStyle(submit).display === 'none') return null;
+    submit.click();
+    return 'submit';
+  });
+  if (!clicked) return null;
+
+  // Long enough for the fulfilled response to land, short enough to capture
+  // before the handler's own 1.5s close/reload timer fires.
+  const captured = { via: clicked, request: sent[0] ?? null, after: await settleAfterSubmit(page) };
+  // Past the handler's 1.5s close/reload timer, so the caller's navigation is
+  // not racing it.
+  await page.waitForTimeout(1400);
+  return captured;
+}
+
+/**
+ * The openers that reach the submit handler WITHOUT going through the step-1
+ * action sheet. They matter because the dispatcher branches on exactly that:
+ * an action-select flow applies locally (sandbox), while these do not.
+ *
+ * The yrs-chip openers (`.yrs-chip--eligible` / `.yrs-chip--pending`) belong
+ * in this list and are deliberately absent — see the note in
+ * docs/plans/rosters-page-split.md. They are the only route to
+ * `/api/contracts/declare`, and no player on the current roster is in a
+ * declarable state, so the page renders 25 inert `.yrs-chip`s and zero
+ * eligible ones. Add them here the moment a declaration window is open.
+ */
+const DIRECT_OPENERS = [
+  { label: 'team-option cell', selector: '.salary-cell--team-option-eligible[data-player-id]' },
+];
+
+/** Submits opened straight from a cell, one per matching element. */
+async function probeDirectOpeners(page, url, args, sent) {
+  const out = {};
+  for (const opener of DIRECT_OPENERS) {
+    await gotoStable(page, url, args.timeout);
+    await page.waitForTimeout(2500);
+    const opened = await page.evaluate((sel) => {
+      const el = document.querySelector(sel);
+      if (!el) return null;
+      el.click();
+      return el.dataset.playerId ?? true;
+    }, opener.selector);
+    if (!opened) continue;
+    await page.waitForTimeout(300);
+
+    sent.length = 0;
+    const clicked = await page.evaluate(() => {
+      const submit = document.getElementById('cdm-submit');
+      if (!submit || submit.disabled || getComputedStyle(submit).display === 'none') return false;
+      submit.click();
+      return true;
+    });
+    if (!clicked) continue;
+    out[opener.label] = {
+      playerId: opened,
+      request: sent[0] ?? null,
+      after: await settleAfterSubmit(page),
+    };
+    await page.waitForTimeout(1400);
+  }
+  return out;
+}
+
+/**
+ * `page.goto` that survives the handler's own navigation.
+ *
+ * The cut success path runs `setTimeout(() => location.reload(), 1500)`, so a
+ * probe that captures at 600ms and navigates immediately races that reload and
+ * loses with `net::ERR_ABORTED`. Waiting the timer out first and retrying once
+ * is the whole fix.
+ */
+/**
+ * Waits for the submit to visibly RESOLVE rather than for a fixed delay.
+ *
+ * A fixed wait races the handler's own 1.5s close/reload timer from both
+ * sides: too short and the response has not landed, too long and the page has
+ * navigated out from under the capture. Waiting for the outcome to appear
+ * makes the fingerprint deterministic instead of timing-dependent.
+ */
+async function settleAfterSubmit(page) {
+  const shown = (el) => el && !el.hidden && getComputedStyle(el).display !== 'none';
+  try {
+    await page.waitForFunction(() => {
+      const vis = (id) => {
+        const el = document.getElementById(id);
+        return el && !el.hidden && getComputedStyle(el).display !== 'none';
+      };
+      const modal = document.getElementById('contract-declaration-modal');
+      return vis('cdm-success') || vis('cdm-error') || !modal?.classList.contains('active');
+    }, { timeout: 2500 });
+  } catch { /* no visible outcome — captured as-is, which is itself a fingerprint */ }
+  void shown;
+  try {
+    return await page.evaluate(CAPTURE_MODAL);
+  } catch (err) {
+    // The handler navigated (the cut path reloads). Let it land, then capture
+    // the page it left behind rather than crashing the run.
+    if (!String(err).includes('Execution context was destroyed')) throw err;
+    await page.waitForLoadState('load').catch(() => {});
+    return { open: false, navigatedAway: true };
+  }
+}
+
+async function gotoStable(page, url, timeout) {
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    try {
+      await page.goto(url, { waitUntil: 'load', timeout });
+      return;
+    } catch (err) {
+      if (!String(err).includes('ERR_ABORTED') || attempt === 2) throw err;
+      await page.waitForTimeout(1200);
+    }
+  }
+}
+
 async function closeModal(page) {
   await page.evaluate(() => {
     document.querySelector('#contract-declaration-modal .cdm-close')?.click();
@@ -242,6 +421,29 @@ async function run(args) {
     await context.route(pattern, (route) =>
       route.request().method() === 'GET' ? route.continue() : route.abort(),
     );
+  }
+
+  // Playwright matches routes in REVERSE registration order, so these are
+  // registered last in order to win over the aborting handlers above. They
+  // answer from PROBE_RESPONSES; the request is recorded and dropped, never
+  // forwarded, so neither the dev server nor MFL sees a write.
+  const sent = [];
+  if (args.probe) {
+    for (const pattern of PROBE_ENDPOINTS) {
+      await context.route(pattern, async (route) => {
+        const req = route.request();
+        if (req.method() === 'GET') return route.continue();
+        let body = null;
+        try { body = JSON.parse(req.postData() ?? 'null'); } catch { body = req.postData() ?? null; }
+        sent.push({ method: req.method(), url: new URL(req.url()).pathname, body });
+        const canned = PROBE_RESPONSES[args.probeResponse];
+        return route.fulfill({
+          status: canned.status,
+          contentType: 'application/json',
+          body: JSON.stringify(canned.body),
+        });
+      });
+    }
   }
 
   const page = await context.newPage();
@@ -307,16 +509,52 @@ async function run(args) {
       }
     }
 
+    if (args.probe && entry.step1.open) {
+      entry.probes = {};
+      const labels = entry.step1.actionOptions
+        .map((o) => o.label)
+        .filter((l) => l && SAFE_FLOWS.some((sf) => l.toLowerCase().includes(sf)));
+      for (const label of labels) {
+        // Each submit is driven from a FRESH page: the handler's success path
+        // sets a close/reload timer and rewrites the table, so reusing the
+        // same DOM would make the next probe depend on the last one.
+        await gotoStable(page, url, args.timeout);
+        await page.waitForTimeout(2500);
+        const opened = await page.evaluate((id) => {
+          const btn = document.querySelector(`.ufa-action-btn[data-player-id="${id}"]`);
+          if (!btn) return false;
+          btn.click();
+          return true;
+        }, t.playerId);
+        if (!opened) continue;
+        await page.waitForTimeout(250);
+        const probe = await probeFlow(page, t.playerId, label, sent);
+        if (probe) entry.probes[label] = probe;
+      }
+      await gotoStable(page, url, args.timeout);
+      await page.waitForTimeout(2500);
+    }
+
     players.push(entry);
     await closeModal(page);
     process.stdout.write(
       `  ✓ ${String(t.name ?? t.playerId).padEnd(24)} ${entry.step1.open ? entry.step1.mode : 'DID NOT OPEN'}` +
-        ` — ${Object.keys(entry.flows).length} flow(s)\n`,
+        ` — ${Object.keys(entry.flows).length} flow(s)` +
+        (args.probe ? `, ${Object.keys(entry.probes ?? {}).length} probe(s)` : '') + '\n',
     );
   }
 
+  const direct = args.probe ? await probeDirectOpeners(page, url, args, sent) : null;
+
   await browser.close();
-  return { league: args.league, franchiseId: args.franchiseId, players, pageErrors };
+  return {
+    direct,
+    league: args.league,
+    franchiseId: args.franchiseId,
+    probeResponse: args.probe ? args.probeResponse : null,
+    players,
+    pageErrors,
+  };
 }
 
 // ------------------------------------------------------------- compare ----
@@ -365,6 +603,36 @@ function compare(beforePath, afterPath) {
 const args = parseArgs(process.argv);
 if (args.compare) {
   process.exit(compare(args.compare[0], args.compare[1]));
+} else if (args.probe) {
+  // Both branches of the handler: what it sends, and what it does with a
+  // success and with a rejection. Nothing is written either way.
+  const runs = {};
+  for (const which of ['ok', 'fail']) {
+    process.stdout.write(`\n=== probe: ${which} response ===\n`);
+    runs[which] = await run({ ...args, probeResponse: which });
+  }
+  const captured = ['ok', 'fail'].reduce(
+    (n, k) => n + flatten(runs[k].players, '', new Map()).size, 0,
+  );
+  const probes = ['ok', 'fail'].reduce(
+    (n, k) => n + runs[k].players.reduce((m, p) => m + Object.keys(p.probes ?? {}).length, 0), 0,
+  );
+  const errs = ['ok', 'fail'].flatMap((k) => runs[k].pageErrors);
+  process.stdout.write(`\n${probes} submits driven, ${captured} captured values\n`);
+  if (errs.length) {
+    process.stdout.write(`! ${errs.length} page error(s):\n`);
+    for (const e of errs.slice(0, 5)) process.stdout.write(`  ${e}\n`);
+  }
+  if (args.out) {
+    // Shaped like a normal run so --compare needs no probe-specific branch.
+    writeFileSync(args.out, JSON.stringify({ probe: true, players: runs }, null, 2));
+    const directCount = ['ok', 'fail'].reduce(
+      (n, k) => n + Object.keys(runs[k].direct ?? {}).length, 0,
+    );
+    process.stdout.write(`  (${directCount} of those opened straight from a cell)\n`);
+    process.stdout.write(`wrote ${args.out}\n`);
+  }
+  process.exit(errs.length ? 1 : 0);
 } else {
   const result = await run(args);
   const captured = flatten(result.players, '', new Map()).size;
