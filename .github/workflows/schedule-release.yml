@@ -52,17 +52,11 @@ jobs:
           ssh-key: ${{ secrets.DEPLOY_KEY }}
           fetch-depth: 0
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-
-      - name: Setup Node
-        uses: actions/setup-node@v6
-        with:
-          node-version: 22
-          cache: pnpm
-
-      - name: Install
-        run: pnpm install --frozen-lockfile
+      # The shared action pins the pnpm version. A bare pnpm/action-setup
+      # with no `version:` fails "No pnpm version is specified" (package.json
+      # carries no packageManager field) — this job failed that way every day.
+      - name: Setup pnpm + Node + install
+        uses: ./.github/actions/setup
 
       - name: Refresh the NFL bye calendar
         # The reveal cannot happen without it, and it is the one input that
