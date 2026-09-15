@@ -29,7 +29,10 @@ Forward fix, PR #1098.
   into `src/data/theleague/schefter-archive/2026.json` at 14:57 UTC, so the
   18:00 cron read it as never posted.
 - `scripts/article-types/schedule-release.mjs`: `guardSeason` now returns
-  `now < nflKickoff(year)`. Before, it always returned `true`.
+  `now < nflWeekStartInstant(year, 1)`, the exact kickoff instant. Before, it
+  always returned `true`. It is deliberately NOT the local-midnight `nflKickoff()`,
+  which on a UTC GitHub runner cuts off at 5pm PT the day before kickoff (Copilot
+  caught this on the PR).
 - `scripts/schefter-retract-post.mjs`: new `--feed-only` flag. It retracted the
   Sept 15 duplicate from the live feed only, because both copies share the id
   `sf_2026_schedule_release_theleague` and the archived original must stay.
