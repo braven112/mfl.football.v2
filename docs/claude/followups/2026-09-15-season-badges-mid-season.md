@@ -1,12 +1,13 @@
 ---
 slug: season-badges-mid-season
-status: open
+status: shipped
+shipped: 2026-09-15
 severity: P1
 opened: 2026-09-15
 hotfix_pr: https://github.com/braven112/mfl.football.v2/pull/1090
 hotfix_sha: 8fda2d2
 followup_issue: 1091
-followup_pr:
+followup_pr: https://github.com/braven112/mfl.football.v2/pull/1093
 followup_session:
 ---
 
