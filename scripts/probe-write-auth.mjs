@@ -112,7 +112,13 @@ const body = new URLSearchParams({ DATA: xml }).toString();
 
 // ── Step 4: the matrix ────────────────────────────────────────────────────
 async function attempt(label, { host, cookies }) {
-  const url = `https://${host}/${year}/import?TYPE=salaries&L=${leagueId}`;
+  // APPEND=1 IS NOT OPTIONAL. src/utils/mfl-contract-writer.ts marks it
+  // CRITICAL: without it MFL treats the payload as the WHOLE salary table and
+  // erases every player not named in it. This probe posts ONE player, so a
+  // non-APPEND write would reduce the league to that single row. It was
+  // missing here while the script was a one-off manual experiment; it must not
+  // be missing now that the write runs on a schedule.
+  const url = `https://${host}/${year}/import?TYPE=salaries&L=${leagueId}&APPEND=1`;
   try {
     const res = await mflFetch({ url, method: 'POST', cookies, body });
     const text = (await res.text()).trim();

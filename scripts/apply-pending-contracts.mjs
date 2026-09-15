@@ -25,8 +25,8 @@
  *   node scripts/apply-pending-contracts.mjs --dry-run     # just print
  *
  * Env:
- *   MFL_USER_ID + (optional) MFL_IS_COMMISH  preferred (cookie-based, no login)
- *   MFL_USERNAME + MFL_PASSWORD              fallback (logs in to get cookie)
+ *   MFL_USERNAME + MFL_PASSWORD              PREFERRED (logs in; does not expire)
+ *   MFL_USER_ID + (optional) MFL_IS_COMMISH  fallback, for when MFL's login is down
  *   MFL_LEAGUE_ID                  defaults to '13522'
  *   UPSTASH_REDIS_REST_URL/TOKEN   (or KV_REST_API_URL/TOKEN, or
  *                                   STORAGE_REST_API_URL/TOKEN) required
@@ -137,15 +137,43 @@ async function main() {
   const username = process.env.MFL_USERNAME;
   const password = process.env.MFL_PASSWORD;
 
+  // LOG IN FIRST; the stored cookie is the FALLBACK, not the preference.
+  //
+  // This used to read `if (envUserId)`, which could never reach the login: the
+  // failure mode of a cookie secret is that it is PRESENT AND EXPIRED, and a
+  // present cookie is a non-empty string forever. So the login sat behind a
+  // branch that only fired when the secret was missing — i.e. never — and on
+  // 2026-09-08 the stored cookie expired and every queued declaration failed
+  // to reach MFL until it was rotated by hand.
+  //
+  // docs/claude/rules/accounting.md records this exact lesson from the
+  // accounting job ("a login must be PREFERRED over a stored cookie, not used
+  // only when one is missing"); it was never ported here. The credentials do
+  // not expire, so preferring them removes the manual rotation entirely.
+  //
+  // Each source is used WHOLE — a fresh identity is never paired with the
+  // stored commissioner flag, which MFL refuses as "not authorized". A
+  // commissioner's freshly-logged-in MFL_USER_ID alone is accepted for this
+  // write (2026-09-05 probe, .github/workflows/probe-commish-cookie.yml).
   let mflUserId;
   let mflIsCommish;
-  if (envUserId) {
+  if (username && password) {
+    try {
+      ({ mflUserId, mflIsCommish } = await loginToMFL(username, password));
+      console.log('[apply-contracts] Authenticated by login.');
+    } catch (err) {
+      // Never fail here: MFL being briefly unreachable should fall through to
+      // the stored cookie rather than strand a queue that retries anyway.
+      console.warn(`[apply-contracts] MFL login failed, falling back to the stored cookie: ${err.message}`);
+    }
+  }
+  if (!mflUserId && envUserId) {
     mflUserId = envUserId;
     mflIsCommish = envCommish;
-  } else if (username && password) {
-    ({ mflUserId, mflIsCommish } = await loginToMFL(username, password));
-  } else {
-    throw new Error('No MFL credentials available. Set MFL_USER_ID (preferred) or MFL_USERNAME + MFL_PASSWORD.');
+    console.log('[apply-contracts] Authenticated by the stored cookie (fallback).');
+  }
+  if (!mflUserId) {
+    throw new Error('No MFL credentials available. Set MFL_USERNAME + MFL_PASSWORD (preferred) or MFL_USER_ID.');
   }
   const cookies = { MFL_USER_ID: mflUserId, MFL_IS_COMMISH: mflIsCommish };
 

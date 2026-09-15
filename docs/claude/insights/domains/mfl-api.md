@@ -31,8 +31,8 @@
 - **Never send `FRANCHISE_ID` on an owner-authenticated write.** It is
   commissioner-only and silently switches MFL to a stricter validation path.
 - **Writes need the `www##` host, NOT `MFL_IS_COMMISH`** — `MFL_USER_ID` alone
-  is accepted, as MFL's own sample sends. Measured, not assumed:
-  `scripts/probe-write-auth.mjs` (2026-09-05).
+  is accepted for salaries; nothing issues `MFL_IS_COMMISH`, so code awaiting
+  one hangs. `probe-write-auth.mjs` (2026-09).
 - **Normalize every filtered export.** A one-result query returns a bare object,
   not a one-element array. Use `asArray` (`src/utils/mfl-normalize.ts`) *inside
   shared utils*, not at call sites. Offseason feeds ship a truthy object with
@@ -3235,3 +3235,54 @@ needs no special case for an archive season: `nflWeekFor` saturates at
 `getMarqueeGame` — "which game do I feature" is a different question from "which
 week is finished", and it is asked on days the cap would shift the answer.
 Guard: `tests/offseason-hero-data.test.ts`.
+
+---
+
+## 2026-09-15 - The commissioner cookie cannot be obtained, and two jobs waited for it anyway
+
+**Context:** Approved contract declarations stopped reaching MFL when the stored
+`MFL_USER_ID` secret expired, and the MFL Integration Test went red on nine
+consecutive runs on main.
+
+**Insight:** Three facts, and the third only bites because of the first two.
+
+1. **No MFL request issues `MFL_IS_COMMISH`.** The 2026-09-05 probe
+   (`.github/workflows/probe-commish-cookie.yml`) walked every candidate — the
+   api login, the league login with `XML=1`, the same login *without* `XML=1`,
+   a commissioner-only `csetup` page, and the league home as a control — and
+   none set it. It appears to come only from MFL's interactive browser flow,
+   which is why every copy in this repo traces back to a manual paste.
+2. **The write does not need it.** A commissioner's freshly-logged-in
+   `MFL_USER_ID` **alone** is ACCEPTED for `import?TYPE=salaries`. The cookie
+   the code waited for is neither obtainable nor required. Measured for
+   `TYPE=salaries` ONLY — `TYPE=draftResults` has never been tested, which is
+   why `export-best-ball-draft.mjs` keeps the old ordering.
+3. **So a condition requiring it is unreachable.** `pickMflSession` gated the
+   fresh login on `login.mflUserId && (login.mflIsCommish || !stored.isCommish)`.
+   The middle term is always undefined by (1); the right is false whenever the
+   secret is set. The script logged in successfully on every run and threw the
+   session away, exporting the very expiring pair its header says it exists to
+   survive.
+
+**The reusable shape, and it is not MFL-specific:** *a credential that fails by
+being PRESENT AND EXPIRED defeats every fallback written as "use the login only
+if the cookie is missing".* A present cookie is a non-empty string forever.
+`apply-pending-contracts.mjs` and `sync-draft-pick-contracts.mjs` had the plain
+version; `mint-mfl-session.mjs` had it behind a condition subtle enough that
+nobody noticed. `docs/claude/rules/accounting.md` had already recorded the
+lesson from the accounting job — never ported, which is the real failure.
+`tests/mfl-credential-precedence.test.ts` now scans for the ordering, comparing
+the `loginToMFL()` call against the first USE of the stored cookie as a value:
+an earlier version matched on the shape of the `if (…)` line and passed
+vacuously for the very files it was written to protect.
+
+**A diagnostic naming the wrong cause is worse than none.** The mint script
+warned *"this account is not its commissioner, or the credentials are wrong"*
+and sent an incident after the commissioner's league access, which was fine
+throughout. It was reporting (1), a normal condition, as a misconfiguration.
+
+**Still open:** (2) rests on ONE dated probe run, not continuous evidence. A CI
+proof job was built and then cut — it was most of the change's risk for none of
+its value. Before deleting the stored cookie secrets, put the proof somewhere
+that re-answers "is it still true", and note `probe-write-auth.mjs` reports its
+matrix and exits 0, so it needs a failure mode first.
