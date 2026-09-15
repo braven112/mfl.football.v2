@@ -472,9 +472,50 @@ minutes apart (0012 → 0009), producing six phantom "present only in" diffs.
 Pin the set with `--teams` when comparing across a change, or the comparison is
 not apples-to-apples.
 
-**Remaining slices**, in the order they get safer to do:
+**Slice 4 — the rest of the modal *(done)*.** `openDeclarationModal`,
+`closeDeclarationModal`, `updateProjectionTable`, `updateCapImpact`,
+`buildVetExtYearButtons`, `makeCdmActionBtn` and `populateCdmActionOptions` —
+741 more lines — moved into the **same factory** as the step transitions, which
+is why `cdm-steps.ts` is now **`src/utils/cdm-wizard.ts`**.
 
-4. `openDeclarationModal` / `closeDeclarationModal` / `populateCdmActionOptions`.
+Merging rather than adding a second module is the point. A separate
+`cdm-panel.ts` would have had to be wired *mutually* with the steps module
+(`populateCdmActionOptions` calls `goToDeclareContractStep`;
+`goToActionSelectStep` calls `populateCdmActionOptions`), threaded through the
+page in both directions. In one factory they are ordinary sibling closures, and
+**six entries left the context object** instead of joining it. `let
+cdmDeadlineInterval` came along too — every read and write of it was inside the
+region, so it is now module-local rather than a page `let`.
+
+Four things worth knowing:
+
+- **`capLimit` and `salaryYears` were real name errors waiting to happen.**
+  Both are destructured off `config` a thousand lines up in the page, and the
+  modal read them as free variables. In a module they simply do not resolve, so
+  they now cross explicitly.
+- **Two page `let`s cross as getters**, not values: `currentTeam` (the team
+  switcher reassigns it) and `lastViewContext` (a re-render does). Captured once
+  at wiring time, the cap-impact table would price against whichever team was
+  open when the page booted.
+- **The autocut seam held.** `isAutocutOwnView`, `getMarkedOnRoster`,
+  `computeAutocutSlate` and `toggleAutocutMark` are injected callbacks, so
+  Phase 5's 1,300 unverifiable lines stayed where they are.
+- **`cdmAge` shadowed itself.** The age-pill block declared `const cdmAge =
+  cdmCalcAge(data.birthdate)` — fine in the page, where the import was named
+  `cdmCalcAge`, and a TDZ self-reference the moment the module imports the real
+  name. It is `playerAgeYears` now. Worth remembering for the remaining slice:
+  a page-level *alias* can be hiding a collision that only appears on the way
+  out.
+
+Type baseline **1564 → 1480**; the module typechecks clean under full
+`--strict`. `tests/franchise-band-brand.test.ts` needed following, not
+weakening: it asserted `rosters.astro` itself contains the
+`applyPlayerModalBand(… 'cdm-band')` call. It now pairs each opener with the
+file that paints its band, and keeps the "no old avatar chip" half pointed at
+the page.
+
+**Remaining slice:**
+
 5. The submit handler — last, and the one the harness does not cover. Submit a
    throwaway declaration by hand before trusting it.
 

@@ -418,14 +418,25 @@ describe('band wiring', () => {
     // caller that was missed.
     expect(src).not.toContain('cdm-hero');
     expect(src).not.toContain('cdm-headshot');
-    for (const caller of [
-      'src/pages/theleague/rosters.astro',
-      'src/components/theleague/hp-sections/HpUnsignedFaCard.astro',
-    ]) {
-      const callerSrc = read(caller);
-      expect(callerSrc, caller).not.toContain('cdm-headshot');
-      expect(callerSrc, caller).not.toContain('cdm-avatar');
-      expect(callerSrc, caller).toContain("applyPlayerModalBand(document.getElementById('cdm-band')");
+    // Each opener of this modal, paired with the file that paints its band.
+    // They are the same file for the homepage card; the roster page's wizard
+    // moved to src/utils/cdm-wizard.ts (Phase 6.1 of the split plan), so the
+    // band call is asserted there while the "no old avatar chip" rule stays
+    // on the page itself — a missed caller would still show up as markup.
+    const CALLERS: [opener: string, band: string][] = [
+      ['src/pages/theleague/rosters.astro', 'src/utils/cdm-wizard.ts'],
+      [
+        'src/components/theleague/hp-sections/HpUnsignedFaCard.astro',
+        'src/components/theleague/hp-sections/HpUnsignedFaCard.astro',
+      ],
+    ];
+    for (const [opener, bandFile] of CALLERS) {
+      const openerSrc = read(opener);
+      expect(openerSrc, opener).not.toContain('cdm-headshot');
+      expect(openerSrc, opener).not.toContain('cdm-avatar');
+      expect(read(bandFile), bandFile).toContain(
+        "applyPlayerModalBand(document.getElementById('cdm-band')",
+      );
     }
   });
 });
