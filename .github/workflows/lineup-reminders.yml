@@ -41,13 +41,8 @@ jobs:
           ssh-key: ${{ secrets.DEPLOY_KEY }}
           fetch-depth: 0
 
-      - name: Use Node.js
-        uses: actions/setup-node@v6
-        with:
-          node-version: 22
-
-      - name: Install dependencies
-        run: npm ci --omit=dev --ignore-scripts || npm install --omit=dev --ignore-scripts
+      - name: Setup pnpm + Node + install
+        uses: ./.github/actions/setup
 
       # One invocation covers every lineup-playing league in the registry
       # (best-ball leagues are skipped by the bestBall flag). Per-league
