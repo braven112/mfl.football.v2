@@ -38,6 +38,7 @@ import { resolveFeatureHeadline } from './whats-new-hero-headline';
 import { MFL_EMAIL_DRAFT_OPTION, buildMflLiveDraftUrl, buildMflOptionUrl } from './mfl-url';
 import type { CompositeHeroTreatment } from '../types/composite-hero';
 import { LEAGUES } from '../config/leagues';
+import { resolveRecapDestination, type RecapDestination } from './hero-recap-destination';
 
 /** How long a fresh What's New entry stays in the hero. */
 const FEATURE_HERO_DAYS = 7;
@@ -183,6 +184,14 @@ export interface AflHeroResolverInput {
   scheduleReleaseRevealed?: boolean;
   /** Owner's lineup for the week is in (true), not (false), or unknown / signed out (null). The page reads it (hasSubmittedLineup) only on Saturday evening. */
   lineupSubmitted?: boolean | null;
+  /**
+   * Where Tuesday's recap hero points, and which week it is about. Resolved by
+   * the page (`resolveRecapDestination`) because it reads the Schefter feed and
+   * the playerScores feed off disk, and this resolver stays synchronous — same
+   * reason `scheduleReleaseRevealed` is passed in. Omitted → the recap slot
+   * degrades to the news feed, which is what it did before it could do better.
+   */
+  recap?: RecapDestination;
   /**
    * Injectable random source (0..1) for the lead-up hero pool below; defaults
    * to Math.random. Override in tests for deterministic results. The pool is
@@ -593,6 +602,8 @@ interface SlotContext {
   whatsNewEntry?: WhatsNewEntry;
   /** Owner's lineup for the week is in (true), not (false), or unknown / signed out (null). */
   lineupSubmitted?: boolean | null;
+  /** Tuesday recap destination + the week actually in the books. See AflHeroResolverInput.recap. */
+  recap?: RecapDestination;
 }
 
 const GAME_WINDOW_LABEL: Record<NonNullable<GameWindow>, string> = {
@@ -725,13 +736,21 @@ const SLOT_VIEW: Record<SlotKey, (ctx: SlotContext) => EventHeroView> = {
     player: randomHeroPlayer(now),
   }),
 
-  'slot:recap': ({ now, week }) => ({
+  'slot:recap': ({ now, week, recap }) => ({
     pill: 'TUESDAY RECAP',
     headline: 'THE WEEK IN',
     accentWord: 'REVIEW.',
-    summary: `${week ? `Week ${week}` : 'The week'} is in the books — top scorers, biggest swings, and the games that moved the standings.`,
-    link: '/afl-fantasy/news',
-    linkLabel: 'READ THE RECAP',
+    // The week in the BOOKS, which is not `week`. `getCurrentNFLWeek` rolls to
+    // the upcoming week on Tuesday — the morning this slot runs — so it read
+    // "Week 2 is in the books" on Sep 15 2026 over a Week 1 nobody had
+    // followed up. `recap.week` comes from the scores themselves.
+    summary: `${recap?.week ? `Week ${recap.week}` : week ? `Week ${week}` : 'The week'} is in the books — top scorers, biggest swings, and the games that moved the standings.`,
+    // Schefter's recap column when he wrote one, else the completed week's own
+    // scoreboard. NOT `/afl-fantasy/news`: a card headlined "THE WEEK IN
+    // REVIEW." that lands on the undifferentiated feed makes the reader go
+    // find the recap, and for all of 2026 there was none there to find.
+    link: recap?.href ?? '/afl-fantasy/news',
+    linkLabel: (recap?.label ?? 'Read the recap').toUpperCase(),
     icon: 'commenting',
     // The recap's headline IS a franchise's week — the top scorer is cast
     // deterministically and the card wears the club that rosters him, exactly
@@ -1129,7 +1148,7 @@ function eventToHero(event: ResolvedLeagueEvent): HeroContent {
   };
 }
 
-function buildRegularSeasonHero(slot: DailySlot, week: number | undefined, gameWindow: GameWindow, now: Date = new Date(), lineupSubmitted: boolean | null = null): HeroContent {
+function buildRegularSeasonHero(slot: DailySlot, week: number | undefined, gameWindow: GameWindow, now: Date = new Date(), lineupSubmitted: boolean | null = null, recap?: RecapDestination): HeroContent {
   const weekLabel = week ? `Week ${week}` : 'Regular Season';
   switch (slot) {
     case 'live-scoring': {
@@ -1158,12 +1177,16 @@ function buildRegularSeasonHero(slot: DailySlot, week: number | undefined, gameW
         kicker: 'Standings',
       };
     case 'recap':
+      // Same two corrections as the `slot:recap` view above — the completed
+      // week rather than the upcoming one, and the recap itself rather than
+      // the feed. Both objects render, so fixing one and not the other ships
+      // the old link on whichever surface reads `content`.
       return {
         source: 'event',
-        title: `${weekLabel} Recap`,
+        title: `${recap?.week ? `Week ${recap.week}` : weekLabel} Recap`,
         summary: 'Top performances, biggest blowouts, and the AL/NL games that swung the standings.',
-        link: '/afl-fantasy/news',
-        linkLabel: 'Read the recap',
+        link: recap?.href ?? '/afl-fantasy/news',
+        linkLabel: recap?.label ?? 'Read the recap',
         icon: 'commenting',
         accentColor: 'var(--cat-regular-season, #1c497c)',
         kicker: 'Weekly Recap',
@@ -1441,7 +1464,7 @@ export function resolveAflHeroState(input: AflHeroResolverInput): AflHeroState {
     const week = getCurrentNFLWeek(now) ?? undefined;
     const slotKey = `slot:${slot}` as SlotKey;
     const builder = SLOT_VIEW[slotKey] ?? SLOT_VIEW['slot:article'];
-    const view = builder({ now, slot, gameWindow, week, lineupSubmitted: input.lineupSubmitted ?? null });
+    const view = builder({ now, slot, gameWindow, week, lineupSubmitted: input.lineupSubmitted ?? null, recap: input.recap });
     return {
       kind: 'regular-season',
       priority: 'P0',
@@ -1452,7 +1475,7 @@ export function resolveAflHeroState(input: AflHeroResolverInput): AflHeroState {
       // and the games stop at 8:30. This is what stops the hero polling all
       // evening and badging finished games LIVE.
       isLive: isGameLive(now),
-      content: buildRegularSeasonHero(slot, week, gameWindow, now, input.lineupSubmitted ?? null),
+      content: buildRegularSeasonHero(slot, week, gameWindow, now, input.lineupSubmitted ?? null, input.recap),
       view,
     };
   }

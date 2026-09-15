@@ -26,6 +26,9 @@ import { getFranchiseBrand } from '../../../utils/franchise-brand';
 import { resolveHeroCrest, resolveHeroFranchiseSkin } from '../../../utils/hero-crest';
 import CompositeHero from '../../shared/CompositeHero.astro';
 import RecapHero from './RecapHero.astro';
+import { resolveRecapDestination } from '../../../utils/hero-recap-destination';
+import feedData from '../../../data/theleague/schefter-feed.json';
+import type { SchefterFeed } from '../../../types/schefter';
 
 export interface Props {
   state: HeroState;
@@ -56,6 +59,17 @@ const franchiseColor = brand?.color ?? '#1c497c';
 const crest = resolveHeroCrest({ franchiseId: winner?.franchiseId, league: 'theleague', nflTeam: model?.nflTeam });
 // A TEAM event — it is this franchise's week — so the card wears their colours.
 const franchise = resolveHeroFranchiseSkin(winner?.franchiseId, 'theleague');
+
+// Where "see the full week" goes. It used to be /theleague/standings — the
+// race, not the week — so a card built entirely out of the completed week's box
+// score handed the reader a table that says nothing about it. Schefter's recap
+// column when he wrote one, else that week's own scoreboard.
+const recap = resolveRecapDestination({
+  league: 'theleague',
+  seasonYear: year,
+  completedWeek: week,
+  posts: (feedData as SchefterFeed).posts,
+});
 
 const teamCode = model ? normalizeTeamCode(model.nflTeam) : '';
 const points = winner ? winner.score.toFixed(1) : '';
@@ -88,8 +102,8 @@ const summary = franchiseName
         <span class="cmh__stat-label" aria-hidden="true">Points · Week {week}</span>
       </div>
       <span class="cmh__divider" aria-hidden="true"></span>
-      <a class="cmh__cta" href={r('/theleague/standings')}>
-        See the full week
+      <a class="cmh__cta" href={r(recap.href)}>
+        {recap.isArticle ? 'Read the recap' : 'See the full week'}
         <span aria-hidden="true">→</span>
       </a>
     </div>
