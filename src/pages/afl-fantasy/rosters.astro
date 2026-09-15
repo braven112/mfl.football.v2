@@ -42,6 +42,7 @@ import {
 import { getAflLeagueYear, getTestDateFromSearchParams } from '../../utils/league-year';
 import { getCachedRosterFranchises } from '../../utils/mfl-roster-cache';
 import { getLeagueBySlug } from '../../config/leagues';
+import { loginUrlFor } from '../../utils/login-redirect';
 import { parseTradeBaitPlayerIds, parseTradeBaitByFranchise } from '../../utils/trade-bait';
 import { getCachedTradeBait } from '../../utils/mfl-trade-bait-cache';
 import MyRankEditor from '../../components/shared/rankings/MyRankEditor.astro';
@@ -217,6 +218,14 @@ if (isValidFranchiseId(queryFranchiseId)) {
 } else {
   selectedFranchiseId = fallbackTeamId;
 }
+
+// The planner is a DEEP link — it carries the franchise and the view — so the
+// sign-in return path is that URL, not merely "this page".
+const plannerLoginHref = loginUrlFor({
+  league: getLeagueBySlug('afl-fantasy')!,
+  returnTo: `/afl-fantasy/rosters?franchise=${selectedFranchiseId}&view=planner`,
+  hideLeaguePrefix: Astro.locals.hideLeaguePrefix ?? false,
+});
 
 const selectedTeam: AFLTeam = getTeam(selectedFranchiseId) ?? allTeams[0]!;
 const conferenceName = getConferenceName(selectedTeam.conference);
@@ -1268,7 +1277,7 @@ const pageConfig = {
           <p>The keeper planner is private to each team owner.</p>
           {!authUser && (
             <p>
-              <a class="coming-soon__cta" href={`/afl-fantasy/login?next=${encodeURIComponent(`/afl-fantasy/rosters?franchise=${selectedFranchiseId}&view=planner`)}`}>
+              <a class="coming-soon__cta" href={plannerLoginHref}>
                 Sign in to AFL →
               </a>
             </p>

@@ -19,6 +19,7 @@ import { spriteUrl } from '../../utils/sprite-url';
 import leagueConfigData from '../../data/theleague.config.json';
 import ThemeToggle from '../ThemeToggle.astro';
 import { getLeaguePrefix, resolveLeaguePath } from '../../utils/nav-utils';
+import { loginUrlFor } from '../../utils/login-redirect';
 import { getLeagueByNavSlug, leagueClock } from '../../config/leagues';
 import { isSpotlightActive, spotlightNow } from '../../utils/feature-spotlight';
 import '../../styles/feature-spotlight.css';
@@ -63,7 +64,14 @@ const {
 // theleague.us, so a prefixed href costs every apex visitor a redirect hop.
 const leagueBase = getLeaguePrefix(league);
 const rosterUrl = resolveLeaguePath(`${leagueBase}/rosters`, hideLeaguePrefix);
-const loginUrl = resolveLeaguePath(`${leagueBase}/login`, hideLeaguePrefix);
+// The drawer's sign-in link renders on every page, so it is the single
+// biggest source of "signed in, now where was I?" — it returns you to the
+// page you opened the drawer from.
+const loginUrl = loginUrlFor({
+  league: getLeagueByNavSlug(league),
+  returnTo: Astro.url.pathname + Astro.url.search,
+  hideLeaguePrefix,
+});
 
 // Account-menu destinations.
 // Both rows are registry-gated: best-ball publishes neither page, and a menu

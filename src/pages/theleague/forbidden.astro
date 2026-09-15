@@ -1,0 +1,41 @@
+---
+/**
+ * 403 — "You didn't ask Roger first."
+ *
+ * A thin route wrapper around the shared component, per CLAUDE.md's
+ * "Second league's copy of a page" rule. Two things must live HERE rather
+ * than in the component:
+ *
+ *   - `Astro.response.status`, for the same reason `Astro.redirect()` and
+ *     `Astro.cookies.set()` are route-only: from an imported component it
+ *     runs after the headers are committed.
+ *   - the league lookup, because a static import specifier cannot be a
+ *     runtime variable.
+ *
+ * Gates reach this with `Astro.rewrite()`, which renders it at the URL the
+ * visitor actually asked for — so the address bar still shows the admin page
+ * they were denied, and the page is shareable back to the commissioner.
+ */
+import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
+import AskRogerFirst from '../../components/shared/AskRogerFirst.astro';
+import { getLeagueBySlug } from '../../config/leagues';
+
+export const prerender = false;
+
+const league = getLeagueBySlug('theleague')!;
+
+// The reason is a query param so one route serves every denial, and it is
+// NEVER echoed to the page — an attacker-controlled string rendered on an
+// error page is a stored-XSS shape. It only selects from a fixed table.
+const REASONS: Record<string, string> = {
+  commissioner: 'This page is commissioner-only.',
+  league: `This page belongs to a league you don't own a team in.`,
+};
+const reason = REASONS[Astro.url.searchParams.get('why') ?? ''] ?? REASONS.commissioner;
+
+Astro.response.status = 403;
+---
+
+<TheLeagueLayout title={`Not your call — ${league.name}`}>
+  <AskRogerFirst league={league} reason={reason} />
+</TheLeagueLayout>

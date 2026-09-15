@@ -13,12 +13,18 @@ interface Props {
   postId: string;
   /** League URL base for auth links, e.g. '/theleague' or '/afl-fantasy'. */
   base?: string;
+  /**
+   * Server-built sign-in URL carrying the return path. Built by
+   * loginUrlForRequest in the rendering .astro component — this island
+   * cannot reach the league registry or Astro.locals itself.
+   */
+  loginHref?: string;
   isAuthenticated: boolean;
 }
 
 const MAX_CHARS = 500;
 
-export default function SchefterWhisperBack({ postId, isAuthenticated, base = '/theleague' }: Props) {
+export default function SchefterWhisperBack({ postId, isAuthenticated, base = '/theleague', loginHref }: Props) {
   const [open, setOpen] = useState(false);
   const [text, setText] = useState('');
   const [topic, setTopic] = useState<'trade' | 'roster' | 'prediction' | 'commish' | 'other'>('other');
@@ -66,7 +72,7 @@ export default function SchefterWhisperBack({ postId, isAuthenticated, base = '/
 
   if (!isAuthenticated) {
     return (
-      <a href={`${base}/login?redirect=${base}/news`} className="sfc-whisper__signin">
+      <a href={loginHref ?? `${base}/login`} className="sfc-whisper__signin">
         Sign in to whisper back
       </a>
     );

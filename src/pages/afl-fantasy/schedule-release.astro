@@ -16,14 +16,17 @@ export const prerender = false;
 import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
 import ScheduleReleaseIsland from '../../components/shared/ScheduleRelease.tsx';
 import { getAuthUser, isAuthorizedForLeague } from '../../utils/auth';
+import { loginUrlForRequest, forbiddenPathFor } from '../../utils/login-redirect';
 import { getLeagueBySlug } from '../../config/leagues';
 import { spriteUrl } from '../../utils/sprite-url';
 import '../../styles/schedule-release.css';
 
 const user = getAuthUser(Astro.request);
 const league = getLeagueBySlug('afl-fantasy');
-if (!user || !league || !isAuthorizedForLeague(user, league.id)) {
-  return Astro.redirect('/afl-fantasy');
+if (!user) return Astro.redirect(loginUrlForRequest(Astro, getLeagueBySlug('afl-fantasy')!));
+if (!league) return Astro.redirect('/afl-fantasy');
+if (!isAuthorizedForLeague(user, league.id)) {
+  return Astro.rewrite(forbiddenPathFor(league, 'league'));
 }
 ---
 

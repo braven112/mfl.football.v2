@@ -1,0 +1,254 @@
+---
+/**
+ * "You didn't ask Roger first." — the 403 body.
+ *
+ * WHY THIS EXISTS. Every commissioner-only page in both leagues answered a
+ * signed-out visitor and an unauthorized one exactly the same way:
+ * `Astro.redirect('/theleague')`. A commissioner following an admin link with
+ * an expired session was dumped on the homepage with no explanation and no
+ * way back, and a non-admin was told nothing at all. Those are two different
+ * answers now — signed out goes to sign-in carrying a return path, and
+ * everyone else lands here.
+ *
+ * WHY A 403 AND NOT A REDIRECT. The URL stays put, so the page is shareable
+ * back to the commissioner ("I get this on /admin/accounting") instead of
+ * collapsing to a homepage that says nothing. The status is set by the ROUTE
+ * that renders this — see src/pages/<league>/forbidden.astro — because
+ * `Astro.response.status` from an imported component runs after the headers
+ * are committed, the same boundary that makes `Astro.redirect()` and
+ * `Astro.cookies.set()` route-only (CLAUDE.md, the `/cr` note).
+ *
+ * THE JOKE IS THE HEADLINE, the real reason sits under it. This fires on
+ * genuine permission denials — a stale admin link out of GroupMe reaches it —
+ * so the reader has to learn *why* without hunting for it.
+ */
+import type { LeagueDefinition } from '../../config/leagues';
+import { resolveLeaguePath } from '../../utils/nav-utils';
+
+export interface Props {
+  /** The league whose page was denied. Drives both CTAs. */
+  league: LeagueDefinition;
+  /**
+   * The real reason, in plain words, under the joke. Defaults to the
+   * commissioner case because that is every current caller.
+   */
+  reason?: string;
+}
+
+const { league, reason = 'This page is commissioner-only.' } = Astro.props;
+
+const hideLeaguePrefix = Astro.locals.hideLeaguePrefix ?? false;
+const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
+
+// ONE way out, deliberately. An error page that offers a menu invites the
+// reader to shop for a door that opens; the only honest next step here is
+// back to the league.
+const homeHref = r(`/${league.slug}`);
+---
+
+<section class="roger-403" aria-labelledby="roger-403-headline">
+  <article class="roger-403__card">
+    <header class="roger-403__strip">
+      <span class="roger-403__badge">
+        <span class="roger-403__badge-dot" aria-hidden="true"></span>
+        LEAGUE OFFICE
+      </span>
+      <span class="roger-403__slug">RULING</span>
+    </header>
+
+    <div class="roger-403__body">
+      <img
+        class="roger-403__portrait"
+        src="/assets/commissioner-avatar.webp?v=5"
+        alt="Roger, the league's AI rules expert"
+        width="128"
+        height="128"
+        loading="eager"
+        decoding="async"
+      />
+
+      <p class="roger-403__code">403</p>
+
+      <h1 id="roger-403-headline" class="roger-403__headline">
+        You didn&rsquo;t ask Roger first.
+      </h1>
+
+      <p class="roger-403__reason">{reason}</p>
+
+      <p class="roger-403__lede">
+        You&rsquo;re signed in &mdash; you just don&rsquo;t have the keys to
+        this one. If you think that&rsquo;s wrong, the commissioner can sort it
+        out faster than I can.
+      </p>
+
+      <div class="roger-403__links">
+        <a href={homeHref} class="roger-403__btn roger-403__btn--primary">
+          Back to {league.name}
+        </a>
+      </div>
+    </div>
+  </article>
+</section>
+
+<style>
+  .roger-403 {
+    display: flex;
+    justify-content: center;
+    padding: var(--spacing-2xl, 3rem) var(--spacing-lg, 1.5rem);
+  }
+
+  .roger-403__card {
+    width: 100%;
+    max-width: 34rem;
+    background: var(--content-bg);
+    border: 1px solid var(--content-border);
+    border-radius: var(--radius-lg, 12px);
+    box-shadow: var(--box-shadow-lg);
+    overflow: hidden;
+  }
+
+  .roger-403__strip {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--spacing-sm, 0.5rem);
+    padding: var(--spacing-sm, 0.5rem) var(--spacing-md, 1rem);
+    background: var(--content-bg-muted);
+    border-bottom: 1px solid var(--content-border);
+  }
+
+  .roger-403__badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    color: var(--alert-warning-text);
+  }
+
+  .roger-403__badge-dot {
+    width: 0.5rem;
+    height: 0.5rem;
+    border-radius: var(--radius-full, 999px);
+    background: currentColor;
+  }
+
+  .roger-403__slug {
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    color: var(--content-text-muted);
+  }
+
+  .roger-403__body {
+    padding: var(--spacing-xl, 2rem) var(--spacing-lg, 1.5rem) var(--spacing-2xl, 3rem);
+    text-align: center;
+  }
+
+  .roger-403__portrait {
+    width: 128px;
+    height: 128px;
+    border-radius: var(--radius-full, 999px);
+    object-fit: cover;
+    border: 3px solid var(--content-border);
+    background: var(--content-bg-muted);
+  }
+
+  .roger-403__code {
+    margin: var(--spacing-md, 1rem) 0 0;
+    font-size: 0.8rem;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    color: var(--content-text-muted);
+  }
+
+  .roger-403__headline {
+    margin: var(--spacing-xs, 0.25rem) 0 var(--spacing-sm, 0.5rem);
+    font-size: clamp(1.5rem, 4vw, 2rem);
+    line-height: 1.15;
+  }
+
+  /* The actual reason. Deliberately the loudest thing after the joke — this
+     page fires on real permission denials, not only as a gag. */
+  .roger-403__reason {
+    margin: 0 0 var(--spacing-md, 1rem);
+    font-size: 1rem;
+    font-weight: 600;
+  }
+
+  .roger-403__lede {
+    margin: 0 auto var(--spacing-xl, 2rem);
+    max-width: 30rem;
+    color: var(--content-text-muted);
+    line-height: 1.6;
+  }
+
+  .roger-403__links {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: var(--spacing-sm, 0.75rem);
+  }
+
+  /* FILLED, not outlined — the --btn-secondary-* set is designed as a filled
+     button, so its `text` token is white in LIGHT mode and near-black in dark.
+     Taking the border and text but not the background rendered "Back to The
+     League" as white-on-white and the button looked empty. Use the trio
+     together, or none of it. (docs/claude/rules/theming-and-assets.md: a
+     token's light and dark values differ — check the LIGHT one.) */
+  .roger-403__btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 2.75rem;
+    padding: 0 var(--spacing-lg, 1.25rem);
+    border-radius: var(--radius-md, 8px);
+    background: var(--btn-secondary-bg);
+    border: 1px solid var(--btn-secondary-border);
+    color: var(--btn-secondary-text);
+    font-weight: 600;
+    text-decoration: none;
+  }
+
+  .roger-403__btn:hover {
+    background: var(--btn-secondary-bg-hover);
+    border-color: var(--btn-secondary-border-hover);
+  }
+
+  .roger-403__btn--primary {
+    background: var(--btn-primary-bg);
+    border-color: var(--btn-primary-border);
+    color: var(--btn-primary-text);
+  }
+
+  .roger-403__btn--primary:hover {
+    background: var(--btn-primary-bg-hover);
+    border-color: var(--btn-primary-border-hover);
+  }
+
+  /* The lone button is wide enough to read as the way out without being a
+     full-width slab on desktop. */
+  .roger-403__btn {
+    min-width: 14rem;
+  }
+
+  .roger-403__btn:focus-visible {
+    outline: none;
+    box-shadow: var(--box-shadow-focus-ring);
+  }
+
+  @media (max-width: 640px) {
+    .roger-403 {
+      padding: var(--spacing-xl, 2rem) var(--spacing-md, 1rem);
+    }
+
+    .roger-403__links {
+      flex-direction: column;
+    }
+
+    .roger-403__btn {
+      width: 100%;
+    }
+  }
+</style>

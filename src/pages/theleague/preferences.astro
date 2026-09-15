@@ -11,10 +11,11 @@
  * signing in only makes it follow you to another device.
  */
 import PreferencesPage from '../../components/shared/preferences/PreferencesPage.astro';
+import { loginUrlForRequest } from '../../utils/login-redirect';
 import { getAuthUser } from '../../utils/auth';
 import { resolveViewerPreferences, hasPreferenceParams } from '../../utils/viewer-preferences-page';
 import { resolveLeaguePath } from '../../utils/nav-utils';
-import { leagueClock } from '../../config/leagues';
+import { getLeagueBySlug, leagueClock } from '../../config/leagues';
 
 export const prerender = false;
 
@@ -34,6 +35,6 @@ const { prefs, savedToAccount } = await resolveViewerPreferences(Astro.url, Astr
   sundayTicketPath={sundayTicketPath}
   justSaved={hasPreferenceParams(Astro.url)}
   syncedToAccount={savedToAccount}
-  loginPath={user ? null : r(`/theleague/login?next=${encodeURIComponent(pathname)}`)}
+  loginPath={user ? null : loginUrlForRequest(Astro, getLeagueBySlug('theleague')!)}
   officialClock={leagueClock('theleague')}
 />

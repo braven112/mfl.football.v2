@@ -8,7 +8,8 @@ import ContractDeclarationModal from '../ContractDeclarationModal.astro';
 import { resolveLeaguePath } from '../../../utils/nav-utils';
 import { formatCompactNumber } from '../../../utils/formatters';
 import { getContractWindow } from '../../../utils/contract-validation';
-import { DEFAULT_LEAGUE_ID } from '../../../config/leagues';
+import { DEFAULT_LEAGUE_ID, getLeagueBySlug } from '../../../config/leagues';
+import { loginUrlForRequest } from '../../../utils/login-redirect';
 import type { UnsignedFaAlert } from '../../../utils/homepage-dashboard';
 
 interface Props {
@@ -31,6 +32,8 @@ const {
 
 const hideLeaguePrefix = Astro.locals.hideLeaguePrefix ?? false;
 const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
+// Sign-in returns to THIS page; loginUrlForRequest applies prefix visibility.
+const loginHref = loginUrlForRequest(Astro, getLeagueBySlug('theleague')!);
 
 const needsActionAlerts = alerts.filter((a) => !a.declarationStatus);
 const declaredAlerts = alerts.filter((a) => !!a.declarationStatus);
@@ -234,7 +237,7 @@ function getPickupLabel(type: UnsignedFaAlert['acquisitionType']): string {
       <h3 class="hp-fa__guest-title">Unsigned FA Adds</h3>
       <p class="hp-fa__guest-desc">Log in to see recent pickups that still need contract years declared.</p>
     </div>
-    <a href={r('/theleague/login')} class="hp-fa__guest-btn">Log in</a>
+    <a href={loginHref} class="hp-fa__guest-btn">Log in</a>
   </section>
 )}
 

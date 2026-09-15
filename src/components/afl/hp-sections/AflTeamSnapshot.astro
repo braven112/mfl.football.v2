@@ -9,6 +9,8 @@
  * streak -> all-time record). Guests see a team picker prompt.
  */
 import { spriteUrl } from '../../../utils/sprite-url';
+import { loginUrlForRequest } from '../../../utils/login-redirect';
+import { getLeagueBySlug } from '../../../config/leagues';
 import ThemeImage from '../../ThemeImage.astro';
 import { getTierLogo, getTierLogoDark, PREMIER_LEAGUE, D_LEAGUE } from '../../../utils/afl-tier-logo';
 import type { AflSpotlight } from '../../../utils/afl-team-spotlight';
@@ -72,6 +74,11 @@ const {
   spotlight,
   variant,
 } = Astro.props;
+
+// Sign-in returns to THIS page. Previously a bare `/afl-fantasy/login`
+// href: no return path, and on afl-fantasy.com the prefix cost every click
+// a 301 hop through vercel.json. loginUrlForRequest fixes both.
+const loginHref = loginUrlForRequest(Astro, getLeagueBySlug('afl-fantasy')!);
 
 const inferredVariant: 'in-season' | 'offseason' = variant ?? (record ? 'in-season' : 'offseason');
 
@@ -267,7 +274,7 @@ const metrics: MetricDef[] = inferredVariant === 'in-season'
         <p class="afl-snapshot__guest-heading">Sign in to personalize</p>
         <p class="afl-snapshot__guest-desc">Log in with your MFL account to unlock standings, keepers, and the rotating hero tailored to your franchise.</p>
       </div>
-      <a href="/afl-fantasy/login" class="afl-snapshot__guest-btn">Log in</a>
+      <a href={loginHref} class="afl-snapshot__guest-btn">Log in</a>
     </div>
   </section>
 )}

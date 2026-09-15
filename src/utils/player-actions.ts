@@ -142,5 +142,5 @@ export function requestSignIn(): void {
   const [, first] = window.location.pathname.split('/');
   const prefix = first && getLeagueBySlug(first) ? `/${first}` : '';
   const back = `${window.location.pathname}${window.location.search}`;
-  window.location.href = `${prefix}/login?redirect=${encodeURIComponent(back)}`;
+  window.location.href = `${prefix}/login?next=${encodeURIComponent(back)}`;
 }

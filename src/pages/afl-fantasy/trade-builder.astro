@@ -2,6 +2,7 @@
 import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
 import PlayerCell from '../../components/theleague/PlayerCell.astro';
 import { getAuthUser } from '../../utils/auth';
+import { loginUrlForRequest } from '../../utils/login-redirect';
 import {
   getAllTeams,
   getTeam,
@@ -11,6 +12,7 @@ import {
   type ConferenceId,
 } from '../../utils/afl-conference';
 import { getLeagueBySlug } from '../../config/leagues';
+
 import { parseTradeBaitPlayerIds, parseTradeBaitByFranchise } from '../../utils/trade-bait';
 import { getCachedTradeBait } from '../../utils/mfl-trade-bait-cache';
 import { getAflLeagueYear, getTestDateFromSearchParams } from '../../utils/league-year';
@@ -56,6 +58,9 @@ const tradeBaitByFranchiseData = getModuleData(
 
 // Auth — must be an AFL owner
 const authUser = getAuthUser(Astro.request);
+// Sign-in returns to the trade builder, carrying any query already on it —
+// the old href hardcoded the bare path and dropped it.
+const loginHref = loginUrlForRequest(Astro, getLeagueBySlug('afl-fantasy')!);
 const isAflOwner =
   !!authUser && authUser.leagueId === getLeagueBySlug('afl-fantasy')!.id && !!authUser.franchiseId;
 
@@ -291,7 +296,7 @@ const pageConfig = {
       <section class="tb-gate">
         <h1>Trade Builder</h1>
         <p>Sign in as an AFL owner to draft trade proposals.</p>
-        <a href="/afl-fantasy/login?next=/afl-fantasy/trade-builder" class="tb-btn tb-btn--primary">Sign in</a>
+        <a href={loginHref} class="tb-btn tb-btn--primary">Sign in</a>
       </section>
     ) : !toTeam ? (
       <section class="tb-gate">

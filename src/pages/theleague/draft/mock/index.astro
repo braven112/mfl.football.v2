@@ -7,6 +7,7 @@
  * its keepers left behind, and only inside a window.
  */
 import DraftMockLobby from '../../../../components/shared/draft-mock/DraftMockLobby.astro';
+import { loginUrlForRequest } from '../../../../utils/login-redirect';
 import leagueConfigData from '../../../../data/theleague.config.json';
 import { getAuthUser, isAuthorizedForLeague, isCommissionerOrAdmin } from '../../../../utils/auth';
 import { getCurrentLeagueYear } from '../../../../utils/league-year';
@@ -47,7 +48,7 @@ const rankingSources = [
   heading="Mock Draft"
   subtitle={`Practice your ${leagueYear} rookie draft strategy before the real thing.`}
   basePath="/theleague/draft/mock"
-  loginPath="/theleague/login"
+  loginPath={loginUrlForRequest(Astro, getLeagueBySlug('theleague')!)}
   signedIn={!!user}
   userFranchiseId={user?.franchiseId}
   isAdmin={user ? isCommissionerOrAdmin(user) : false}

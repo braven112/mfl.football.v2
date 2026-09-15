@@ -11,6 +11,7 @@ import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
 import { getLeagueBySlug } from '../../config/leagues';
 import { getLeagueYearForSlug } from '../../utils/league-year';
 import { getAuthUser } from '../../utils/auth';
+import { loginUrlForRequest } from '../../utils/login-redirect';
 import { fetchOfficialDraftSession } from '../../utils/best-ball-draft';
 
 export const prerender = false;
@@ -20,6 +21,9 @@ const leagueYear = getLeagueYearForSlug(BB1.slug);
 
 const user = getAuthUser(Astro.request);
 const isSignedIn = user?.leagueId === BB1.id;
+// Sign-in returns to this page rather than dropping the visitor on it again
+// with no memory of why they clicked.
+const loginHref = loginUrlForRequest(Astro, BB1);
 
 const session = await fetchOfficialDraftSession(BB1, leagueYear);
 const madeCount = (session?.picks ?? []).filter((p) => p.playerId).length;
@@ -77,7 +81,7 @@ const hero = HERO_COPY[phase];
       <p class="bb-home__body">{hero.body}</p>
       <div class="bb-home__actions">
         <a class="bb-home__cta" href={hero.ctaHref}>{hero.cta} →</a>
-        {!isSignedIn && <a class="bb-home__signin" href="/best-ball-1/login">Sign in</a>}
+        {!isSignedIn && <a class="bb-home__signin" href={loginHref}>Sign in</a>}
       </div>
     </section>
 

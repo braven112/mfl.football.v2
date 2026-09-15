@@ -1,6 +1,6 @@
 # Sign-in return paths — plan
 
-**Status:** stages 1-4 SHIPPED (the core). Stages 5-9 not started.
+**Status:** stages 1-7 SHIPPED. Stages 8-9 (401 recovery, guard tests) not started.
 **Branch:** `claude/login-redirect-feature-v2049a`
 
 ## Goal
@@ -229,9 +229,9 @@ this end-to-end for waiver claims (`src/utils/claim-resume.ts`). The work is
 | 2 | ✅ All 15 page gates on `loginUrlForRequest`; every emitter now writes `?next=` | 15 files |
 | 3 | ✅ All three login pages read via `resolveLoginDestination`, all pass `redirectUrl` | 3 files |
 | 4 | ✅ `LoginForm`: referrer/sessionStorage chain removed, league-aware fallback | 1 file |
-| 5 | "Log in" links and buttons carry `?next=` | 7 files |
-| 6 | PWA gate becomes registry-driven | `TheLeagueLayout.astro` |
-| 7 | Roger 403 page + split the admin gates | 1 component, ~6 wrappers, ~9 gates |
+| 5 | ✅ Every sign-in link/button carries a return path, all through the builder | 16 files |
+| 6 | ✅ PWA gate registry-driven; two bugs fixed | `TheLeagueLayout.astro` |
+| 7 | ✅ Roger 403 + all 11 admin gates split | 1 component, 2 routes, 11 gates |
 | 8 | Generalized resume + `handle401` | ~8 files |
 | 9 | Guard tests, page-directory entries, What's New | tests + data |
 
@@ -288,6 +288,19 @@ Three things worth recording, because they will bite the later stages too:
    import in `afl-fantasy/login.astro` as +1 (1741 → 1742). Fixed rather than
    absorbed; the baseline is unchanged at 1741.
 
+## Two more lessons from stages 5-7
+
+4. **A scan guard that pins a SHAPE breaks when the shape improves.**
+   `nav-account-menu` required `resolveLeaguePath(...login...)` and
+   `broadcast-shell-guards` required a literal `/theleague/login`. Both
+   properties still hold — the builder applies prefix visibility and names the
+   league — so both guards were re-pointed at the new shape rather than
+   loosened. Re-read a failing guard before assuming it is stale.
+5. **Verify a guard actually covers new code.** `design-token-guard` passed on
+   the new 403 component; injecting a fake token proved it genuinely scans the
+   file rather than skipping it. Cheap, and the alternative is trusting a green
+   run that never looked.
+
 ## Risks / things to get right
 
 1. **Apex hosts — handled, but NOT verified live.** `safeReturnPath` normalizes
@@ -313,6 +326,29 @@ Three things worth recording, because they will bite the later stages too:
 6. **The 403 page needs page-directory entries?** No — `visibility` has no
    "never" value and an error page should not be searchable. Confirm before
    skipping, since nothing enforces the omission either way.
+
+## Stages 5-7, as shipped
+
+**Stage 5** turned up three more sign-in links than the plan listed:
+`schedule/SchedulePage.astro` (missed in the original sweep), and both
+leagues' `broadcast.astro` (added to main while this branch was open). It also
+fixed `src/pages/login.astro`, the bare `/login` alias, which 301'd with the
+query string DROPPED — so a shared or bookmarked `/login?next=…`, and the PWA
+gate's own URL shape, lost the deep link at the door.
+
+**Stage 6** found a second PWA bug beyond the known one. The gate's
+"am I already on a login page?" check listed only `/login` and
+`/theleague/login`, so on `/afl-fantasy/login` it did not match: an
+unauthenticated AFL owner standing on their own sign-in page was redirected
+away from it. Both that and the wrong-league bounce came from spelling
+TheLeague's paths into a script that runs on every league's pages.
+
+**Stage 7** ships as a real 403 at the URL the visitor was denied, via
+`Astro.rewrite()` — verified: signed out gets a 302 to sign-in carrying the
+return path, signed-in-not-admin gets `403` with zero redirects. The CTA is a
+single "Back to <league>"; an earlier draft also offered "Ask Roger" and that
+was cut, so the `rulesChat` registry flag added to gate it was reverted rather
+than left unread.
 
 ## Open question for Brandon
 

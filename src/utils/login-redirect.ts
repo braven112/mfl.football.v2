@@ -120,6 +120,34 @@ export function loginFallbackPath(league: LeagueDefinition): string {
   return `/${league.slug}`;
 }
 
+/** Why a gate refused someone. Selects a fixed message on the 403 route. */
+export type ForbiddenReason = 'commissioner' | 'league';
+
+/**
+ * The 403 route for a league — "You didn't ask Roger first."
+ *
+ * THE OTHER HALF OF A GATE. A gate answers two different questions and they
+ * had collapsed into one `Astro.redirect('/theleague')`:
+ *
+ *   - NOT SIGNED IN → `loginUrlForRequest`, carrying a return path. Signing in
+ *     may well be all they needed; a commissioner with an expired session hit
+ *     this constantly and was simply dumped on the homepage.
+ *   - SIGNED IN, NOT ALLOWED → here. Signing in again cannot help, so sending
+ *     them to a login form would be a loop with extra steps.
+ *
+ * Use it with `Astro.rewrite()`, not `Astro.redirect()`, so the URL stays on
+ * the page they were denied:
+ *
+ *     if (!user) return Astro.redirect(loginUrlForRequest(Astro, league));
+ *     if (!isCommissionerOrAdmin(user)) return Astro.rewrite(forbiddenPathFor(league));
+ */
+export function forbiddenPathFor(
+  league: LeagueDefinition,
+  reason: ForbiddenReason = 'commissioner',
+): string {
+  return `/${league.slug}/forbidden?why=${reason}`;
+}
+
 /** The league's sign-in route, in internal (prefixed) form. */
 export function loginPathFor(league: LeagueDefinition): string {
   return `/${league.slug}/login`;

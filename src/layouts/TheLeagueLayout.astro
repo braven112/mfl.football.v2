@@ -42,6 +42,7 @@ import { getAFLPreference, getTheLeaguePreference, getBestBall1Preference } from
 import { getAuthUser, isCommissionerOrAdmin } from '../utils/auth';
 import { getLeagueBySlug, getLeagueByNavSlug, isSharedAppHost } from '../config/leagues';
 import { HOST_TO_SLUG } from '../utils/league-host-map';
+import { loginPathFor } from '../utils/login-redirect';
 import { buildTransactionHubConfig } from '../utils/transaction-hub-config';
 import leagueConfigData from '../data/theleague.config.json';
 
@@ -261,6 +262,24 @@ const onSharedMultiLeagueHost = isSharedAppHost(Astro.url.hostname);
 const onForeignLeagueHost =
 	onSharedMultiLeagueHost || (hostLeagueSlug !== null && hostLeagueSlug !== ownLeagueSlug);
 
+/**
+ * What the installed-app auth gate needs, resolved HERE where the registry is
+ * reachable. The gate is an `is:inline` script — it cannot import, and it
+ * cannot infer the league from the path (an apex host serves no prefix), so
+ * both values are handed to it.
+ *
+ * `loginPaths` carries BOTH shapes of this league's sign-in route, because the
+ * gate compares against `window.location.pathname`: prefixed on the shared
+ * host, clean on the league's own domain. Missing either one redirects a
+ * signed-out owner off the very page they need.
+ */
+const pwaGateLeague = getLeagueBySlug(ownLeagueSlug)!;
+const pwaGateLoginPath = loginPathFor(pwaGateLeague);
+const pwaGate = {
+	loginPath: resolveLeaguePath(pwaGateLoginPath, hideLeaguePrefix),
+	loginPaths: [pwaGateLoginPath, resolveLeaguePath(pwaGateLoginPath, true), '/login'],
+};
+
 // Resolve theme preference (server-side). For 'auto', render no class — the
 // pre-paint inline script (ThemeScript) resolves it against prefers-color-scheme.
 const themePref = getThemePreference(Astro.cookies);
@@ -368,8 +387,25 @@ import StagingBanner from '../components/shared/StagingBanner.astro';
 			<TheLeagueFooter hideLeaguePrefix={hideLeaguePrefix} franchiseId={sessionFranchiseId} />
 		</div>
 
-		<!-- PWA Auth Gate: require login when running as installed app -->
-		<script is:inline>
+		<!-- PWA Auth Gate: require login when running as installed app.
+
+		     TWO BUGS LIVED HERE, both from spelling TheLeague's paths out in a
+		     script that runs on EVERY league's pages:
+
+		     1. `path.startsWith('/theleague') ? '/theleague/login' : '/login'`
+		        sent an AFL or best-ball owner to /login, which 301s to
+		        TheLeague's sign-in — so they authenticated against the wrong
+		        league and none of their owner-only UI appeared.
+		     2. The "am I already on the login page?" check listed only
+		        '/login' and '/theleague/login'. On /afl-fantasy/login it did
+		        not match, so an unauthenticated AFL owner standing on their own
+		        sign-in page was redirected AWAY from it.
+
+		     Both are fixed by handing the script this page's own league from
+		     the registry (pwaGate below) instead of letting it guess from the
+		     path — which it cannot do anyway on an apex host, where the prefix
+		     is absent. -->
+		<script is:inline define:vars={{ pwaGate }}>
 			(function() {
 				var mqStandalone = window.matchMedia('(display-mode: standalone)').matches;
 				var navStandalone = !!navigator.standalone;
@@ -377,15 +413,16 @@ import StagingBanner from '../components/shared/StagingBanner.astro';
 				if (!isStandalone) return;
 
 				var path = window.location.pathname;
-				if (path === '/login' || path === '/theleague/login') return;
+				// Never bounce someone off a sign-in page. Both shapes count:
+				// the prefixed route and the apex host's clean one.
+				if (pwaGate.loginPaths.indexOf(path) !== -1) return;
 
 				fetch('/api/auth/me', { credentials: 'include' })
 					.then(function(r) { return r.json(); })
 					.then(function(data) {
 						if (!data.authenticated) {
-							var loginPath = path.startsWith('/theleague') ? '/theleague/login' : '/login';
-							var redirect = encodeURIComponent(path + window.location.search);
-							window.location.href = loginPath + '?redirect=' + redirect;
+							var next = encodeURIComponent(path + window.location.search);
+							window.location.href = pwaGate.loginPath + '?next=' + next;
 						}
 					})
 					.catch(function() {});

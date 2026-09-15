@@ -26,6 +26,7 @@ import { getCurrentNFLWeek } from '../../../utils/current-week';
 import { getDailySlot, parseTestDate } from '../../../utils/hero-resolver';
 import { getPlayerMap } from '../../../utils/player-map';
 import { resolveLeaguePath } from '../../../utils/nav-utils';
+import { loginUrlForRequest } from '../../../utils/login-redirect';
 import { checkRateLimit } from '../../../utils/rate-limit';
 import { fetchMyLeagues, type MyLeague } from '../../../utils/my-leagues';
 import { findWeekMatchups } from '../../../utils/lineup-sources';
@@ -77,6 +78,9 @@ const ctx = getLeagueContext(Astro.url);
 const pageLeague = getLeagueBySlug(ctx.slug)!;
 const r = (p: string) => resolveLeaguePath(p, Astro.locals.hideLeaguePrefix ?? false);
 const pathname = r(`/${pageLeague.slug}/sunday-ticket`);
+// Both sign-in prompts on this board return here. `pageLeague` is the league
+// whose board is being viewed, which is not always the viewer's own.
+const loginHref = loginUrlForRequest(Astro, pageLeague);
 const preferencesPath = r(`/${pageLeague.slug}/preferences`);
 
 // `?testDate=` is how this repo tests anything date-dependent, and this page
@@ -358,14 +362,14 @@ const title = `Sunday Ticket — Week ${week}`;
         {personalized
           ? "MFL didn't list any leagues for your sign-in this season, so only the leagues this site syncs are on the board. "
           : "MFL didn't list any leagues for your sign-in this season, so this is the league-wide board. "}
-        If your sign-in has expired, <a href={r(`/${pageLeague.slug}/login?next=${encodeURIComponent(pathname)}`)}>sign in again</a>
+        If your sign-in has expired, <a href={loginHref}>sign in again</a>
         {personalized ? ' to add your other leagues.' : ' to see your own players.'}
       </p>
     )}
 
     {!user && !cookieDead && (
       <p class="st-banner st-banner--note">
-        <a href={r(`/${pageLeague.slug}/login?next=${encodeURIComponent(pathname)}`)}>Sign in</a> and the board is built from your rosters — in every league you're in.
+        <a href={loginHref}>Sign in</a> and the board is built from your rosters — in every league you're in.
       </p>
     )}
 
