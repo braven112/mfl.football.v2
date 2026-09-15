@@ -20,6 +20,50 @@ week-1 standings feed: three `sf_milestone_*-y2026` posts.
 - Single-GAME records are deliberately not gated: a played game is final.
 - `tests/badges-season-complete.test.ts` pins it.
 
+## 2026-09-15 - Follow-up: milestone posts were written by the BUILD, not by a commit
+
+**Context:** follow-up to the entry below (#1091). The three week-1 posts were
+live on theleague.us and in no commit. `prebuild` runs
+`compute-franchise-history` on every production deploy, and Phase 5 prepended
+milestone posts to the DEPLOYED feed with the build's timestamp.
+
+- Emission is now opt-in: `--emit-milestone-posts`
+  (`resolveMilestoneEmission`, `scripts/lib/franchise-milestone-posts.mjs`).
+  Only the two workflows that commit the feed beside the snapshot pass it —
+  `schefter-trade-speculation.yml` and `backfill-historical-feeds.yml`.
+  Default-OFF so a new caller (prebuild, a local run) cannot re-split git from
+  production by forgetting a flag. A local recompute no longer dirties the feed.
+- Cost: a newly earned badge shows on the franchise page at the next deploy but
+  its Schefter post waits for the nightly (≤ 24 h). Accepted — the post is then
+  in git and removable with a commit.
+- `tests/milestone-emission-lane.test.ts` pins both halves: the build path never
+  passes the flag, the committing workflows always do (a flag nobody passes
+  would kill the lane silently).
+- **Before committing a regenerated `franchise-history.json` by hand, run
+  `diffNewAwards(mainSnapshot, regenerated)`.** The snapshot is the milestone
+  diff's baseline: any award in it that the nightly has not posted is never
+  posted.
+- **And don't commit it alone.** `season-ledger.json` (same run),
+  `owner-tenures.json` and `division-strength.json` are derived from it and
+  their data tests demand row-for-row agreement; regenerating only part of the
+  chain fails `season-ledger.test.ts` or `division-strength-data.test.ts`, and
+  regenerating all of it rewrites the AFL copies too. The three are committed
+  by different lanes today — a known break waiting for the first in-season
+  nightly.
+- The badge unit test fed `seasonComplete` in by hand, and the gate reads a
+  missing field as complete — so renaming the producer field would stay green.
+  `tests/franchise-history-season-complete-data.test.ts` now checks the
+  committed snapshot against `isSeasonComplete`, with `generatedAt`'s year as
+  the clock. It skips snapshots generated before #1090 merged (they cannot
+  carry the field); `generatedAt` only moves forward, so it cannot skip again
+  once a post-hotfix snapshot lands.
+- **A skipped data test is not coverage.** Until that snapshot lands, the live
+  check is `tests/franchise-history-producer.test.ts`: `--output-root=<dir>`
+  re-roots every write (and the snapshot + feed read back for the diff) into a
+  temp dir, so the test runs the REAL producer in under a second — both flag
+  states on byte-identical inputs, plus the emitted `seasonComplete`. Reach for
+  `--output-root` before hand-building a fixture of this script's output.
+
 ## 2026-09-05 - Five copies of the ownership boundary became one, and the proof was a dump, not a screenshot
 
 **Context:** PR 3 of `docs/plans/owners-feature.md`. `compute-franchise-history.mjs`,
