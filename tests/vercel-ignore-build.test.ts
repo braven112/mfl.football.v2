@@ -12,7 +12,7 @@
 
 import { describe, it, expect } from 'vitest';
 import { execFileSync } from 'child_process';
-import { mkdtempSync, copyFileSync, rmSync } from 'fs';
+import { mkdtempSync, copyFileSync, rmSync, realpathSync, symlinkSync } from 'fs';
 import { tmpdir } from 'os';
 import { join } from 'path';
 import { decide, BUILD, SKIP, STAGING_BRANCH } from '../scripts/vercel-ignore-build.mjs';
@@ -192,6 +192,36 @@ describe('the CLI guard must not fail closed', () => {
       expect(code).toBe(1);
     } finally {
       rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  /**
+   * Node resolves symlinks before setting import.meta.url; argv[1] stays as
+   * typed. macOS's tmpdir() is /var/… → /private/var/…, so the test above
+   * exited 0 on every Mac while passing on Linux CI. This one builds the
+   * symlink itself, so Linux CI pins it too.
+   */
+  it('still BUILDs when invoked through a symlinked directory', () => {
+    const real = realpathSync(mkdtempSync(join(tmpdir(), 'ignore-build-real-')));
+    const link = `${real}-link`;
+    try {
+      copyFileSync('scripts/vercel-ignore-build.mjs', join(real, 'vercel-ignore-build.mjs'));
+      symlinkSync(real, link, 'dir');
+
+      let code = 0;
+      try {
+        execFileSync(process.execPath, [join(link, 'vercel-ignore-build.mjs')], {
+          env: { ...process.env, VERCEL_ENV: 'production' },
+          encoding: 'utf8',
+        });
+      } catch (err) {
+        code = (err as { status: number }).status;
+      }
+
+      expect(code).toBe(1);
+    } finally {
+      rmSync(link, { force: true });
+      rmSync(real, { recursive: true, force: true });
     }
   });
 });

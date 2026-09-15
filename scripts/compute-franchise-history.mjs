@@ -37,6 +37,7 @@ import {
   diffNewAwards,
   buildMilestonePost,
   mergeMilestonePosts,
+  resolveMilestoneEmission,
 } from './lib/franchise-milestone-posts.mjs';
 import { isSeasonComplete } from './lib/theleague-season-complete.mjs';
 import { aliasDivisionName, isUsableDivisionName } from '../src/utils/division-aliases.mjs';
@@ -1543,9 +1544,12 @@ if (TARGET.badges) {
 // franchise-history.json is the snapshot we diff against — if it's missing
 // (fresh checkout / first run) we silently seed and emit nothing so we
 // don't flood the feed with retroactive posts for every existing badge.
+// Opt-in: only a run that commits the feed passes the flag — see
+// resolveMilestoneEmission for why prebuild must not write posts.
 const previousOutput = readJson(OUTPUT_PATH);
-if (!TARGET.milestonePosts) {
-  console.log(`[franchise-history] milestone posts disabled for ${LEAGUE_SLUG}`);
+const milestoneEmission = resolveMilestoneEmission(args, TARGET);
+if (!milestoneEmission.emit) {
+  console.log(`[franchise-history] ${milestoneEmission.reason} (${LEAGUE_SLUG})`);
 } else if (!previousOutput?.franchises) {
   console.log('[franchise-history] no previous snapshot — milestone diff skipped (silent seed)');
 } else {

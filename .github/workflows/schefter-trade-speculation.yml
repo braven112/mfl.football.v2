@@ -59,8 +59,10 @@ jobs:
         # franchise-history.json snapshot. Newly-earned badges emit
         # Schefter posts directly into src/data/theleague/schefter-feed.json
         # (idempotent — dedup by deterministic post id).
+        # --emit-milestone-posts is opt-in: this job COMMITS the feed, so it
+        # may write posts; prebuild runs the same script without the flag.
         if: github.event.inputs.dry_run != 'true'
-        run: node scripts/compute-franchise-history.mjs
+        run: node scripts/compute-franchise-history.mjs --emit-milestone-posts
 
       - name: Run speculation scanner
         env:

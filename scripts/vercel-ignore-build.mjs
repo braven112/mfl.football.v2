@@ -32,6 +32,7 @@
  * Runs BEFORE `pnpm install`, so it uses Node builtins only.
  */
 
+import { realpathSync } from 'fs';
 import { pathToFileURL } from 'url';
 
 /** Vercel's exit codes. Inverted on purpose — see the header. */
@@ -131,8 +132,20 @@ export async function decide(env = process.env, fetchImpl = globalThis.fetch) {
 // naive comparison false. That would skip the CLI block and exit 0 — which
 // Vercel reads as IGNORE, silently cancelling every deployment including
 // production. The one fail-CLOSED path in a fail-open script.
+//
+// realpathSync, because Node resolves symlinks before it sets import.meta.url
+// but leaves argv[1] exactly as typed. On macOS tmpdir() is /var/… which is a
+// symlink to /private/var/…, so a script run from there compared unequal and
+// exited 0 — the same silent IGNORE, reached through a different door.
+const resolveArgvPath = (argvPath) => {
+  try {
+    return realpathSync(argvPath);
+  } catch {
+    return argvPath;
+  }
+};
 const invokedDirectly =
-  process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href;
+  process.argv[1] && import.meta.url === pathToFileURL(resolveArgvPath(process.argv[1])).href;
 
 if (invokedDirectly) {
   const { code, reason } = await decide();

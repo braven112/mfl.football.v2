@@ -12,6 +12,40 @@
  * personality.md (short, deadpan, no exclamation marks).
  */
 
+/**
+ * Posting milestones is OPT-IN, per invocation.
+ *
+ * Sept 2026: every production deploy ran compute-franchise-history in prebuild,
+ * which diffed against the committed snapshot and prepended new milestone posts
+ * to the DEPLOYED feed with the build's timestamp. Those posts were live on the
+ * site and existed in no commit, so git and production disagreed about the feed
+ * and a bad post could only be removed by redeploying. Only a run that COMMITS
+ * the feed beside the refreshed franchise-history.json may write posts — the
+ * nightly Schefter workflow and the historical backfill. Everything else
+ * (prebuild, a local run, a one-off recompute) recomputes badges and leaves the
+ * feed alone. Default-off, so a new caller cannot re-create the split by
+ * forgetting a flag. tests/milestone-emission-lane.test.ts pins both halves.
+ */
+export const EMIT_MILESTONE_POSTS_FLAG = '--emit-milestone-posts';
+
+/**
+ * @param {string[]} args CLI args (process.argv.slice(2)).
+ * @param {{ milestonePosts?: boolean }} target The league's LEAGUE_TARGETS entry.
+ * @returns {{ emit: boolean, reason: string }}
+ */
+export function resolveMilestoneEmission(args, target) {
+  if (!target?.milestonePosts) {
+    return { emit: false, reason: 'milestone posts disabled for this league' };
+  }
+  if (!args.includes(EMIT_MILESTONE_POSTS_FLAG)) {
+    return {
+      emit: false,
+      reason: `milestone posts not requested (pass ${EMIT_MILESTONE_POSTS_FLAG} from a run that commits the feed)`,
+    };
+  }
+  return { emit: true, reason: 'milestone posts requested' };
+}
+
 const SLUG_RE = /[^a-z0-9]+/g;
 
 const slug = (s) =>
