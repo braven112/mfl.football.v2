@@ -10,7 +10,8 @@
  * upcoming week on TUESDAY, which is the exact morning the recap slot runs, so
  * on Tue Sep 15 2026 the hero read "Week 2 is in the books" while Week 1 was
  * what had just finished and Week 2 had not kicked off. The link and the copy
- * both key off `getLatestScoredWeek` now.
+ * both key off `getWeekInTheBooks` now — the scored week, capped at the
+ * calendar's last completable one (see tests/offseason-hero-data.test.ts).
  *
  * These are the three things that must not rot.
  */
@@ -30,13 +31,15 @@ const recapPost = (year: number, week: number, extra: Record<string, unknown> = 
   ...extra,
 });
 
-describe('weeklyRecapPostId matches the generator', () => {
-  it('is the id scripts/article-types/weekly-recap.mjs actually writes', () => {
-    // The whole match depends on this staying in lockstep. The generator's
-    // config.id is the source of truth; if it is reworded, this fails rather
-    // than the hero silently never finding a recap again.
-    const src = readFileSync('scripts/article-types/weekly-recap.mjs', 'utf8');
-    expect(src).toContain('sf_${year}_weekly_recap_w${String(week).padStart(2, \'0\')}');
+describe('weeklyRecapPostId is the archive id format', () => {
+  it('keeps the shape the recap generator used to write', () => {
+    // NOTHING WRITES THIS ID ANY MORE. scripts/article-types/weekly-recap.mjs
+    // and its Tuesday 6am PT cron were removed (issue #1086 F3) — a weekly
+    // recap column is not something owners wanted to read every week, and none
+    // had generated for either league all 2026 season anyway. The lookup below
+    // stays because the hero must keep working if a recap is ever back-filled
+    // or an old archive is re-imported, and the id it matches on is fixed by
+    // that history, not by a generator it can no longer be checked against.
     expect(weeklyRecapPostId(2026, 2)).toBe('sf_2026_weekly_recap_w02');
     expect(weeklyRecapPostId(2026, 12)).toBe('sf_2026_weekly_recap_w12');
   });
@@ -82,14 +85,12 @@ describe('resolveRecapDestination', () => {
   });
 
   it('builds the href from THIS league, ignoring the post’s own link', () => {
-    // scripts/article-types/weekly-recap.mjs `buildPost` hardcodes
-    // `/theleague/news/<id>` and `league: 'theleague'` while ignoring its own
-    // `{ league }` option, and the workflow runs it for --league afl-fantasy.
-    // Trusting that link sends AFL readers to a TheLeague permalink for a post
-    // that only exists in the AFL's feed.
-    const src = readFileSync('scripts/article-types/weekly-recap.mjs', 'utf8');
-    expect(src).toContain('link: `/theleague/news/${articleId}`');
-
+    // The removed generator hardcoded `/theleague/news/<id>` and
+    // `league: 'theleague'` while ignoring its own `{ league }` option, and the
+    // workflow ran it for --league afl-fantasy too. Any recap still sitting in
+    // an AFL feed therefore carries a TheLeague permalink for a post that only
+    // exists in the AFL's — so the href stays CONSTRUCTED from the reader's
+    // league rather than trusted from the post.
     const d = resolveRecapDestination({
       league: 'afl-fantasy',
       seasonYear: 2026,

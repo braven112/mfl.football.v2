@@ -3188,3 +3188,50 @@ loading pages, because every page just renders signed-out; attempt a login, or
 run `pnpm dlx vercel env ls` and read which environments each variable targets
 (Vercel's UI ticks Production/Preview/Development by default, so a variable
 added that way is usually already there).
+
+## 2026-09-15 - `playerScores` Holds ONE Week, So Its Max Week Is Not "The Last Completed Week"
+
+**Context:** issue #1086 F1. The Tuesday recap hero had just been fixed (PR
+#1085) for naming an unplayed week — `getCurrentNFLWeek` rolls to the UPCOMING
+week on Tuesday, the exact morning the recap slot runs. The fix moved the hero
+onto `getLatestScoredWeek`, which reads the scores rather than the calendar. The
+review then pointed out that reading the scores has the same failure, arriving
+from the other direction.
+
+**The finding:** `data/<league>/mfl-feeds/<year>/playerScores.json` is fetched
+with no `W=`, and MFL defaults that to the current week — so the committed file
+holds **exactly one week's rows**, not the season. Measured: the 2026 file is
+484 rows, every one `week: "1"`; the frozen 2025 file is 473 rows, every one
+`week: "17"`. (The one-week shape is also noted in the 2026-08-10 entry above,
+which found `W=YTD` is the only full-pool source. This is its consequence.)
+
+That makes `max(row.week)` — the obvious reading of "the latest scored week" —
+a value that tracks **whatever week MFL currently considers live**, not what has
+been played. The moment MFL rolls the feed, the number jumps with nothing
+played, and it jumps on exactly the morning a Tuesday job runs. Nor can the feed
+recover the real answer once it has rolled: the completed week's rows are simply
+gone from the file, so no rule reading that file alone — not "require a nonzero
+score", not "require every franchise to have scored" — can return the week that
+was actually played. It can only return zero.
+
+Note the trap in the obvious alternative: `getCompletedWeek`
+(`scripts/article-utils/week-resolver.mjs`) applies the right rule — every
+franchise scored — but reads `weekly-results.json`, and **both leagues' 2026
+copies carry `scores: {}` for all 17 weeks**. Switching to it looks like
+consolidating on the stricter derivation and actually returns 0 year-round.
+That empty feed is the same root cause that had stopped the weekly recap article
+from generating all season (#1086 F3).
+
+**Recommendation:** treat the feed as a lower bound and the CALENDAR as the
+ceiling. `getWeekInTheBooks` (`src/utils/offseason-hero-data.ts`) is
+`min(feed week, nflWeekFor(year, now) - 1)` — `nflWeekFor` hands week N to N+1
+on the Tuesday after N opened, so inside week N's window the last week that can
+possibly be complete is N-1. A ceiling and not a floor, so a league whose scores
+land late still reads honestly instead of having a week invented for it. It
+needs no special case for an archive season: `nflWeekFor` saturates at
+`MAX_WEEK` (22) for a season long past, so the cap never bites there.
+
+`getLatestScoredWeek` was deliberately left unchanged and still backs
+`getMarqueeGame` — "which game do I feature" is a different question from "which
+week is finished", and it is asked on days the cap would shift the answer.
+Guard: `tests/offseason-hero-data.test.ts`.

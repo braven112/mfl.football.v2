@@ -117,7 +117,7 @@ These ideas don't need a single new endpoint — they slot into existing Schefte
 | Rookie report cards (#7) | One-time generation, Week 8 + Week 14 |
 | Trash heap weekly (#8) | New Friday script, posts alongside tips |
 | Live reactions (#9) | Extend `scripts/schefter-groupme-listen.mjs` |
-| End-of-year roast (#10) | Existing weekly-recap pipeline; Week 18 special issue |
+| End-of-year roast (#10) | Needs a home. The weekly-recap pipeline this originally leaned on was REMOVED in Sept 2026 (issue #1086 F3) — owners did not want a recap column every week. A Week 18 one-off is still the right shape; build it as its own article type, or hang it off `championship-recap`, which is already the season-end column. |
 
 ## Sequencing
 

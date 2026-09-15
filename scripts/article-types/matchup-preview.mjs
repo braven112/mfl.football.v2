@@ -17,6 +17,7 @@ import {
   summarizeWeekFormat,
   doubleheaderBriefing,
 } from '../article-utils/franchise-record.mjs';
+import { LEAGUES, DEFAULT_LEAGUE_SLUG } from '../../src/config/leagues-data.mjs';
 
 export const config = {
   id: (year, week) => `sf_${year}_matchup_preview_w${String(week).padStart(2, '0')}`,
@@ -42,7 +43,7 @@ export function guardSeason(week, year, now, { currentWeek }) {
   return isRegularSeasonOrPlayoffs(currentWeek);
 }
 
-export async function buildFactSheet(data, week, year, projectRoot) {
+export async function buildFactSheet(data, week, year, projectRoot, { league = DEFAULT_LEAGUE_SLUG } = {}) {
   const players = new Map();
   for (const p of data.players.players.player) {
     if (p.id) {
@@ -56,7 +57,10 @@ export async function buildFactSheet(data, week, year, projectRoot) {
     }
   }
 
-  const teams = await loadTeams(projectRoot);
+  // Franchise names must come from the league being written. Defaulting
+  // this to TheLeague built AFL prose from TheLeague's team names —
+  // invisible, because both leagues have a franchise 0001 (#1086 F4).
+  const teams = await loadTeams(projectRoot, league);
 
   // Projections
   const projections = new Map();
@@ -241,7 +245,12 @@ export function relatedLinks(_enrichment, { league = 'theleague' } = {}) {
   );
 }
 
-export function buildPost(aiOutput, enrichment, articleId) {
+export function buildPost(aiOutput, enrichment, articleId, { league = DEFAULT_LEAGUE_SLUG } = {}) {
+  // The runner invokes this type for --league afl-fantasy too, so the
+  // permalink and the feed tag must both come from the league actually
+  // being written. Hardcoding them landed AFL posts in the AFL feed
+  // carrying a TheLeague link and a theleague tag (issue #1086 F4).
+  const slug = LEAGUES[league].slug;
   return {
     id: articleId,
     timestamp: new Date().toISOString(),
@@ -251,9 +260,9 @@ export function buildPost(aiOutput, enrichment, articleId) {
     headline: aiOutput.headline,
     body: aiOutput.excerpt,
     franchiseIds: [],
-    link: `/theleague/news/${articleId}`,
+    link: `/${slug}/news/${articleId}`,
     linkLabel: 'Read matchup preview',
-    league: 'theleague',
+    league: slug,
     authorId: 'claude',
     content: aiOutput.content,
   };

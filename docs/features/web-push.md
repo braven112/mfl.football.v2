@@ -238,7 +238,7 @@ Every category in the registry is live as of Sept 2026. The senders:
 | `player-news` | `scripts/push-player-news.mjs` (Roster Sync) |
 | `scoring-final` / `scoring-swing` | `scripts/push-gameday-alerts.mjs` (Roster Sync) |
 | owners-poll categories | `scripts/generate-pecking-order.mjs` + the poll close pass |
-| `weekly-recap` etc. | `scripts/schefter-weekly-articles.mjs` |
+| `weekend-preview` etc. | `scripts/schefter-weekly-articles.mjs` |
 
 The last two scripts ride Roster Sync rather than taking crons of their own:
 it already runs every five minutes with a checkout, and both read feeds it

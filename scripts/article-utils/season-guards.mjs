@@ -8,7 +8,7 @@ import { CHAMPIONSHIP_WEEK } from '../../src/utils/fantasy-bracket.mjs';
 
 /**
  * Regular season + playoffs guard (weeks 1 through the title game).
- * Used by: weekly-recap, waiver-pickups, weekend-preview, matchup-preview
+ * Used by: waiver-pickups, weekend-preview, matchup-preview
  */
 export function isRegularSeasonOrPlayoffs(week) {
   return week >= 1 && week <= CHAMPIONSHIP_WEEK;

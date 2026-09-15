@@ -11,6 +11,7 @@ import { buildCachedSystem } from '../article-utils/ai-client.mjs';
 import { isRegularSeasonOrPlayoffs } from '../article-utils/season-guards.mjs';
 import { pickHeroPlayer } from '../article-utils/hero-player.mjs';
 import { primaryLink, articleLink, featureLink, linkList } from '../article-utils/article-links.mjs';
+import { LEAGUES, DEFAULT_LEAGUE_SLUG } from '../../src/config/leagues-data.mjs';
 
 export const config = {
   id: (year, week) => `sf_${year}_waiver_pickups_w${String(week).padStart(2, '0')}`,
@@ -24,7 +25,7 @@ export function guardSeason(week, year, now, { completedWeek }) {
   return isRegularSeasonOrPlayoffs(completedWeek);
 }
 
-export async function buildFactSheet(data, week, year, projectRoot) {
+export async function buildFactSheet(data, week, year, projectRoot, { league = DEFAULT_LEAGUE_SLUG } = {}) {
   const players = new Map();
   // Raw feed records (position + espn_id) for hero-player selection.
   const playerMeta = new Map();
@@ -41,7 +42,10 @@ export async function buildFactSheet(data, week, year, projectRoot) {
     }
   }
 
-  const teams = await loadTeams(projectRoot);
+  // Franchise names must come from the league being written. Defaulting
+  // this to TheLeague built AFL prose from TheLeague's team names —
+  // invisible, because both leagues have a franchise 0001 (#1086 F4).
+  const teams = await loadTeams(projectRoot, league);
 
   // Filter BBID_WAIVER and FREE_AGENT transactions from the past 7 days
   const now = Date.now() / 1000; // Unix seconds
@@ -182,7 +186,12 @@ export function relatedLinks(_enrichment, { league = 'theleague' } = {}) {
   );
 }
 
-export function buildPost(aiOutput, enrichment, articleId) {
+export function buildPost(aiOutput, enrichment, articleId, { league = DEFAULT_LEAGUE_SLUG } = {}) {
+  // The runner invokes this type for --league afl-fantasy too, so the
+  // permalink and the feed tag must both come from the league actually
+  // being written. Hardcoding them landed AFL posts in the AFL feed
+  // carrying a TheLeague link and a theleague tag (issue #1086 F4).
+  const slug = LEAGUES[league].slug;
   return {
     id: articleId,
     timestamp: new Date().toISOString(),
@@ -192,9 +201,9 @@ export function buildPost(aiOutput, enrichment, articleId) {
     headline: aiOutput.headline,
     body: aiOutput.excerpt,
     franchiseIds: [],
-    link: `/theleague/news/${articleId}`,
+    link: `/${slug}/news/${articleId}`,
     linkLabel: 'Read full article',
-    league: 'theleague',
+    league: slug,
     authorId: 'claude',
     content: aiOutput.content,
     ...(enrichment.heroPlayerId

@@ -10,6 +10,7 @@ import { loadTeams, flipName, normalizePosition, formatDefName } from '../articl
 import { buildCachedSystem } from '../article-utils/ai-client.mjs';
 import { isDraftComplete } from '../article-utils/season-guards.mjs';
 import { primaryLink, articleLink, featureLink, linkList } from '../article-utils/article-links.mjs';
+import { LEAGUES, DEFAULT_LEAGUE_SLUG } from '../../src/config/leagues-data.mjs';
 
 const VALID_GRADES = ['A+', 'A', 'A-', 'B+', 'B', 'B-', 'C+', 'C', 'C-', 'D+', 'D', 'D-', 'F'];
 
@@ -27,7 +28,7 @@ export function guardSeason(week, year, now, extra) {
   return true;
 }
 
-export async function buildFactSheet(data, week, year, projectRoot) {
+export async function buildFactSheet(data, week, year, projectRoot, { league = DEFAULT_LEAGUE_SLUG } = {}) {
   if (!isDraftComplete(data.draftResults)) {
     throw new Error('Draft not complete — no picks with player selections found.');
   }
@@ -45,7 +46,10 @@ export async function buildFactSheet(data, week, year, projectRoot) {
     }
   }
 
-  const teams = await loadTeams(projectRoot);
+  // Franchise names must come from the league being written. Defaulting
+  // this to TheLeague built AFL prose from TheLeague's team names —
+  // invisible, because both leagues have a franchise 0001 (#1086 F4).
+  const teams = await loadTeams(projectRoot, league);
 
   // Build projections map
   const projections = new Map();
@@ -202,7 +206,12 @@ export function relatedLinks(_enrichment, { league = 'theleague' } = {}) {
   );
 }
 
-export function buildPost(aiOutput, enrichment, articleId) {
+export function buildPost(aiOutput, enrichment, articleId, { league = DEFAULT_LEAGUE_SLUG } = {}) {
+  // The runner invokes this type for --league afl-fantasy too, so the
+  // permalink and the feed tag must both come from the league actually
+  // being written. Hardcoding them landed AFL posts in the AFL feed
+  // carrying a TheLeague link and a theleague tag (issue #1086 F4).
+  const slug = LEAGUES[league].slug;
   // Build abbrev→ID lookup for fallback resolution (AI sometimes uses abbrevs)
   const abbrevToId = new Map();
   if (enrichment.teams) {
@@ -246,9 +255,9 @@ export function buildPost(aiOutput, enrichment, articleId) {
     headline: aiOutput.headline,
     body: aiOutput.excerpt,
     franchiseIds: [],
-    link: `/theleague/news/${articleId}`,
+    link: `/${slug}/news/${articleId}`,
     linkLabel: 'Read draft grades',
-    league: 'theleague',
+    league: slug,
     authorId: 'claude',
     intro: aiOutput.intro,
     grades,

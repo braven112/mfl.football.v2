@@ -94,7 +94,6 @@ export const EXEMPT_KINDS = new Set([
  */
 export const PUSH_ONLY_KINDS = new Set([
   'transaction',
-  'weekly-recap',
   'waiver-pickups',
 ]);
 

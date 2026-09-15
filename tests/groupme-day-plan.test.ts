@@ -96,7 +96,7 @@ describe('exemptions', () => {
   });
 
   it('does NOT exempt routine editorial', () => {
-    for (const kind of ['pecking-order', 'transaction', 'rumor', 'weekly-recap']) {
+    for (const kind of ['pecking-order', 'transaction', 'rumor', 'waiver-pickups']) {
       expect(isExempt(kind), kind).toBe(false);
     }
   });
