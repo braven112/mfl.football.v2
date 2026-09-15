@@ -28,7 +28,7 @@ export function guardSeason(week, year, now, extra) {
   return true;
 }
 
-export async function buildFactSheet(data, week, year, projectRoot) {
+export async function buildFactSheet(data, week, year, projectRoot, { league = DEFAULT_LEAGUE_SLUG } = {}) {
   if (!isDraftComplete(data.draftResults)) {
     throw new Error('Draft not complete — no picks with player selections found.');
   }
@@ -46,7 +46,10 @@ export async function buildFactSheet(data, week, year, projectRoot) {
     }
   }
 
-  const teams = await loadTeams(projectRoot);
+  // Franchise names must come from the league being written. Defaulting
+  // this to TheLeague built AFL prose from TheLeague's team names —
+  // invisible, because both leagues have a franchise 0001 (#1086 F4).
+  const teams = await loadTeams(projectRoot, league);
 
   // Build projections map
   const projections = new Map();

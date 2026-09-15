@@ -14,8 +14,11 @@
  * rolls to the upcoming week on TUESDAY — the exact morning this slot runs — so
  * on Tue Sep 15 2026 it answered 2 while Week 1 was what had just finished, and
  * the hero read "Week 2 is in the books" over games nobody had played. Callers
- * pass the week the scores actually cover (`getLatestScoredWeek`, which reads
- * the playerScores feed) and both the copy and the link key off that.
+ * pass `getWeekInTheBooks` (`src/utils/offseason-hero-data.ts`) — the scored
+ * week, capped at the calendar's last completable one — and both the copy and
+ * the link key off that. Not the raw `getLatestScoredWeek`: the playerScores
+ * feed holds only whatever week MFL considers live, so once MFL rolls it, it
+ * names the unplayed week too.
  *
  * **2. The article is matched by ID, never by headline.** A recap column's id
  * is `sf_<year>_weekly_recap_w<NN>`, so asking for that exact id answers "is
@@ -88,7 +91,13 @@ export interface ResolveRecapDestinationInput {
   league: CanonicalLeagueSlug;
   /** Season the scores belong to — used to build the recap article's id. */
   seasonYear: number;
-  /** The week actually in the books (getLatestScoredWeek), NOT getCurrentNFLWeek. */
+  /**
+   * The week actually in the books — `getWeekInTheBooks`
+   * (`src/utils/offseason-hero-data.ts`). NOT `getCurrentNFLWeek`, which rolls to
+   * the upcoming week on the Tuesday morning this slot runs, and NOT the raw
+   * `getLatestScoredWeek`, which reads a one-week feed MFL rolls on that same
+   * morning and so names the unplayed week from the other direction.
+   */
   completedWeek: number;
   /** The league's Schefter feed posts, loaded by the caller (a static import specifier can't be a runtime variable). */
   posts?: readonly RecapCandidatePost[];

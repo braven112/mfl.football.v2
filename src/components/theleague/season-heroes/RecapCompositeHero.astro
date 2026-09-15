@@ -42,8 +42,15 @@ const { state, resolveLeaguePath: r } = Astro.props;
 // the date; this hero just reads the box score).
 const year = getCurrentSeasonYear();
 const players = getPlayerMap(year);
-const candidates = getWeeklyTopScorerCandidates(year);
-const week = getWeekInTheBooks(year);
+// One week drives BOTH the label and the numbers under it. The week is capped
+// at the calendar (getWeekInTheBooks) while the feed holds whatever week MFL
+// considers live, so reading the scores unfiltered could caption week N's top
+// scorer as week N-1's. Scoping the read to the same week means a disagreement
+// yields no candidates — and the stub — rather than a confidently wrong card.
+// `referenceDate` is the clock the slot itself was resolved on, so ?testDate
+// moves the cap with it.
+const week = getWeekInTheBooks(year, 'theleague', state.metadata.referenceDate);
+const candidates = getWeeklyTopScorerCandidates(year, 'theleague', week || undefined);
 const model = candidates.length > 0 ? castBestScoredModel(candidates, players, undefined, 'Top Scorer') : null;
 
 // The winning candidate carries the score + rostering franchise.

@@ -139,6 +139,28 @@ describe('getLatestScoredWeek', () => {
  * Tuesday-morning failure the hero was just fixed for from the `getCurrentNFLWeek`
  * side. The calendar supplies the ceiling the feed cannot.
  */
+describe('getWeeklyTopScorerCandidates — week scoping keeps label and data honest', () => {
+  // The recap card labels its top scorer with a week. That label is capped at
+  // the calendar while the feed holds whatever week MFL considers live, so the
+  // read has to be scoped to the SAME week or the card can caption week N's
+  // numbers as week N-1's. A disagreement must yield nothing, not a wrong card.
+  it('returns the feed week\'s scorers when asked for that week', () => {
+    const scoped = getWeeklyTopScorerCandidates(2025, 'theleague', 17);
+    expect(scoped.length).toBeGreaterThan(0);
+    // Same answer as the unfiltered read, because the feed IS week 17.
+    expect(scoped.length).toBe(getWeeklyTopScorerCandidates(2025).length);
+  });
+
+  it('returns NOTHING when asked for a week the feed does not hold', () => {
+    expect(getWeeklyTopScorerCandidates(2025, 'theleague', 16)).toEqual([]);
+    expect(getWeeklyTopScorerCandidates(2025, 'theleague', 18)).toEqual([]);
+  });
+
+  it('is unfiltered when no week is given (the AFL casting path)', () => {
+    expect(getWeeklyTopScorerCandidates(2025).length).toBeGreaterThan(0);
+  });
+});
+
 describe('getWeekInTheBooks — the feed may never outrun the calendar', () => {
   // nflWeekFor hands week N over to N+1 on the TUESDAY after N opened, so
   // inside week N's window the last week that CAN be complete is N-1.

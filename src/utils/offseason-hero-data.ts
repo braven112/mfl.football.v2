@@ -834,10 +834,17 @@ export function selectBreakingStory(
 export function getWeeklyTopScorerCandidates(
   leagueYear: number,
   league: CanonicalLeagueSlug = 'theleague',
+  week?: number,
 ): Array<{ playerId: string; franchiseId: string; franchiseIds: string[]; score: number }> {
   const data = readJsonFile(feedPath(league, leagueYear, 'playerScores.json'));
   const list = data?.playerScores?.playerScore;
   if (!list) return [];
+  // Pass `week` when the caller is also LABELLING the result with a week.
+  // The feed holds whichever week MFL considers live (see getWeekInTheBooks),
+  // which is not necessarily the week a capped label names — and a card
+  // reading "Week 4 top scorer" over week 5's numbers is worse than no card.
+  // Unfiltered stays the default so a caller that only wants "the latest
+  // scorer in the feed" is unaffected.
 
   const ownersByPlayer = getOwnersByPlayer(leagueYear, league);
   const scores = Array.isArray(list) ? list : [list];
@@ -848,6 +855,7 @@ export function getWeeklyTopScorerCandidates(
     score: number;
   }> = [];
   for (const ps of scores) {
+    if (week !== undefined && parseInt(ps?.week, 10) !== week) continue;
     const score = parseFloat(ps?.score || '');
     const franchiseIds = ps?.id ? ownersByPlayer.get(ps.id) ?? [] : [];
     if (!ps?.id || franchiseIds.length === 0 || !Number.isFinite(score) || score <= 0) continue;

@@ -10,7 +10,8 @@
  * upcoming week on TUESDAY, which is the exact morning the recap slot runs, so
  * on Tue Sep 15 2026 the hero read "Week 2 is in the books" while Week 1 was
  * what had just finished and Week 2 had not kicked off. The link and the copy
- * both key off `getLatestScoredWeek` now.
+ * both key off `getWeekInTheBooks` now — the scored week, capped at the
+ * calendar's last completable one (see tests/offseason-hero-data.test.ts).
  *
  * These are the three things that must not rot.
  */

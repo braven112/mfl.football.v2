@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { readdirSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { LEAGUES } from '../src/config/leagues-data.mjs';
 
@@ -73,6 +73,22 @@ describe('article types honour their { league } option', () => {
       const mod = await import(path.join(TYPES_DIR, file));
       const post = mod.buildPost(AI_OUTPUT, {}, `sf_2026_${type.replace(/-/g, '_')}_w05`);
       expect(post.league).toBe(LEAGUES['theleague'].slug);
+    });
+
+    /**
+     * The tag is only half of it. `buildFactSheet` decides what the article
+     * SAYS, and `loadTeams(projectRoot)` defaults to TheLeague — so an
+     * `--league afl-fantasy` run built AFL prose out of TheLeague's franchise
+     * names. That mismatch is invisible rather than loud, because both leagues
+     * have a franchise 0001, so every id resolves to a real-looking wrong team.
+     *
+     * Asserted on the source because reaching the behaviour needs both
+     * leagues' feed files on disk; the call shape is the whole rule.
+     */
+    it(`${type} — loads franchise names for the league, not the default`, () => {
+      const src = readFileSync(path.join(TYPES_DIR, file), 'utf8');
+      const bareCalls = src.match(/loadTeams\(\s*projectRoot\s*\)/g) ?? [];
+      expect(bareCalls, `${file} calls loadTeams without a league`).toEqual([]);
     });
   }
 });

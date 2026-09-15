@@ -25,7 +25,7 @@ export function guardSeason(week, year, now, { completedWeek }) {
   return isRegularSeasonOrPlayoffs(completedWeek);
 }
 
-export async function buildFactSheet(data, week, year, projectRoot) {
+export async function buildFactSheet(data, week, year, projectRoot, { league = DEFAULT_LEAGUE_SLUG } = {}) {
   const players = new Map();
   // Raw feed records (position + espn_id) for hero-player selection.
   const playerMeta = new Map();
@@ -42,7 +42,10 @@ export async function buildFactSheet(data, week, year, projectRoot) {
     }
   }
 
-  const teams = await loadTeams(projectRoot);
+  // Franchise names must come from the league being written. Defaulting
+  // this to TheLeague built AFL prose from TheLeague's team names —
+  // invisible, because both leagues have a franchise 0001 (#1086 F4).
+  const teams = await loadTeams(projectRoot, league);
 
   // Filter BBID_WAIVER and FREE_AGENT transactions from the past 7 days
   const now = Date.now() / 1000; // Unix seconds
