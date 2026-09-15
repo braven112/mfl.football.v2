@@ -2,6 +2,7 @@
  * Anthropic API client for Schefter article generation.
  * Uses raw fetch (same pattern as schefter-article.mjs).
  */
+import { LEAGUES } from '../../src/config/leagues-data.mjs';
 
 const MODEL = 'claude-haiku-4-5-20251001';
 const API_URL = 'https://api.anthropic.com/v1/messages';
@@ -120,18 +121,50 @@ export async function callAnthropic(systemPrompt, userPrompt, maxTokens = 4000) 
  * marked ephemeral so repeated article generations within the cache window
  * skip re-tokenizing the shared voice/rules preamble.
  *
+ * The league is named in the SECOND block, never the cached one. Two reasons,
+ * and the first is why this is not simply a league-aware base string:
+ *
+ * 1. The cached block is shared across every type AND every league. Baking a
+ *    league name into it splits one cache entry into one per league, so each
+ *    league's first article of a window pays full tokenization for a preamble
+ *    that is identical apart from a proper noun.
+ * 2. It is the half that must never be wrong. The base used to open "beat
+ *    reporter and league insider for TheLeague — a 16-team dynasty fantasy
+ *    football league", which the workflow then handed to `--league afl-fantasy`
+ *    runs (issue #1086). The AFL is 24 teams in two conferences, so that was
+ *    not a mis-naming the model could shrug off — it stated a league size it
+ *    would then reason from.
+ *
+ * `scripts/lib/pecking-order-ai.mjs` reached the same conclusion independently
+ * and names its league inline in the per-issue text; it passes no `league` here
+ * and is unaffected.
+ *
  * @param {string} typeSpecificText - Article-type-specific additions appended after BASE.
+ * @param {object} [options]
+ * @param {string} [options.league] - Canonical slug. Names the league in the
+ *   uncached block. Omit only when the caller names it in `typeSpecificText`.
  * @returns {Array<{type:'text',text:string,cache_control?:object}>}
  */
-export function buildCachedSystem(typeSpecificText) {
+export function buildCachedSystem(typeSpecificText, { league } = {}) {
+  const registry = league ? LEAGUES[league] : null;
+  if (league && !registry) throw new Error(`Unknown league: ${league}`);
+  const leagueLine = registry
+    ? `\n\nLEAGUE: this column covers ${registry.name}. Never name any other league, and never state a league size or structure that is not in the fact sheet.`
+    : '';
   return [
     { type: 'text', text: BASE_SYSTEM_PROMPT, cache_control: { type: 'ephemeral' } },
-    { type: 'text', text: typeSpecificText },
+    { type: 'text', text: `${typeSpecificText}${leagueLine}` },
   ];
 }
 
-/** Base Schefter system prompt shared by all article types. */
-export const BASE_SYSTEM_PROMPT = `You are Claude Schefter, beat reporter and league insider for TheLeague — a 16-team dynasty fantasy football league.
+/**
+ * Base Schefter system prompt shared by all article types AND all leagues.
+ *
+ * Deliberately names no league: this is the cache-eligible block, and it is
+ * reused verbatim for every league the workflow runs (see buildCachedSystem).
+ * The league arrives in the uncached block that follows.
+ */
+export const BASE_SYSTEM_PROMPT = `You are Claude Schefter, beat reporter and league insider for the fantasy football league named below.
 
 VOICE: Channel Adam Schefter's high-energy breaking news style.
 - Use "I'm told...", "League sources tell me...", "Boom!", "Money is nice, but championships are better"

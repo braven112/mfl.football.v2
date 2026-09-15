@@ -171,9 +171,9 @@ export async function buildFactSheet(data, week, year, projectRoot, { league = D
   return { factSheet: lines.join('\n'), enrichment: { heroPlayerId } };
 }
 
-export function getSystemPrompt() {
+export function getSystemPrompt({ league = DEFAULT_LEAGUE_SLUG } = {}) {
   return buildCachedSystem(`\n\nARTICLE TYPE: Weekend Preview
-Build anticipation for the upcoming week. Identify the matchup of the week. Call out teams that need a win. Make bold predictions. This should feel like a Friday hype piece — get the owners excited about the weekend.\nIf the fact sheet's FORMAT line says DOUBLEHEADER, say so early — it is the week's defining feature. A team appearing in two matchups is the schedule, not a duplicate, and the stakes are doubled.`);
+Build anticipation for the upcoming week. Identify the matchup of the week. Call out teams that need a win. Make bold predictions. This should feel like a Friday hype piece — get the owners excited about the weekend.\nIf the fact sheet's FORMAT line says DOUBLEHEADER, say so early — it is the week's defining feature. A team appearing in two matchups is the schedule, not a duplicate, and the stakes are doubled.`, { league });
 }
 
 export function getUserPrompt(factSheet) {

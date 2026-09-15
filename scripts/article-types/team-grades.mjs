@@ -146,9 +146,9 @@ export async function buildFactSheet(data, week, year, projectRoot, { league = D
   };
 }
 
-export function getSystemPrompt() {
+export function getSystemPrompt({ league = DEFAULT_LEAGUE_SLUG } = {}) {
   return buildCachedSystem(`\n\nARTICLE TYPE: Pre-Season Team Grades
-Grade every roster top to bottom. Who's a contender? Who's rebuilding? Who's stuck in the middle with no plan? Factor in cap health, contract structure, projected starters, and bench depth. This is the definitive pre-season power ranking in grade form.`);
+Grade every roster top to bottom. Who's a contender? Who's rebuilding? Who's stuck in the middle with no plan? Factor in cap health, contract structure, projected starters, and bench depth. This is the definitive pre-season power ranking in grade form.`, { league });
 }
 
 export function getUserPrompt(factSheet) {

@@ -90,5 +90,76 @@ describe('article types honour their { league } option', () => {
       const bareCalls = src.match(/loadTeams\(\s*projectRoot\s*\)/g) ?? [];
       expect(bareCalls, `${file} calls loadTeams without a league`).toEqual([]);
     });
+
+    /**
+     * The PERSONA is the third place a league can be named, and it was the
+     * last to be fixed. `BASE_SYSTEM_PROMPT` used to open "beat reporter and
+     * league insider for TheLeague — a 16-team dynasty fantasy football
+     * league" for every type and every league. That is not a cosmetic
+     * mis-naming: the AFL is 24 teams in two conferences, so the model was
+     * handed a league size to reason from that was wrong by eight teams.
+     *
+     * It survived the #1086 F4 pass because the runner called
+     * `mod.getSystemPrompt()` with NO arguments — a type had nothing to
+     * honour. Both halves are pinned here: the call must accept the option,
+     * and the prompt must use it.
+     */
+    it(`${type} — names the reader's league in its system prompt`, async () => {
+      const mod = await import(path.join(TYPES_DIR, file));
+      const text = mod
+        .getSystemPrompt({ league: 'afl-fantasy' })
+        .map((b: { text: string }) => b.text)
+        .join('');
+
+      expect(text, `${type} never names the AFL`).toContain(LEAGUES['afl-fantasy'].name);
+      expect(text, `${type} names TheLeague in an AFL prompt`).not.toContain(
+        LEAGUES['theleague'].name,
+      );
+      // The old hardcode, and the specific claim that made it more than a typo.
+      expect(text, `${type} still asserts a hardcoded league size`).not.toMatch(/\d+-team/);
+    });
   }
+});
+
+/**
+ * The shared preamble carries `cache_control: ephemeral`, so it is tokenized
+ * once and reused across every article generation in the window. It is shared
+ * across LEAGUES too, which is why the league is named in the second block
+ * instead of baked into this one: a league name here would fork one cache
+ * entry into one per league, and each league's first article of a window would
+ * pay full tokenization for a preamble identical apart from a proper noun.
+ *
+ * `scripts/lib/pecking-order-ai.mjs` reached this conclusion first and names
+ * its league inline in the per-issue text, passing no `league` — so the
+ * no-option call must keep working, unnamed, rather than throwing.
+ */
+describe('the cached preamble stays league-neutral', () => {
+  it('is byte-identical for both leagues, and names neither', async () => {
+    const { buildCachedSystem } = await import('../scripts/article-utils/ai-client.mjs');
+
+    const cachedFor = (league: string) =>
+      buildCachedSystem('TYPE TEXT', { league }).find(
+        (b: { cache_control?: unknown }) => b.cache_control,
+      )!.text;
+
+    expect(cachedFor('theleague')).toBe(cachedFor('afl-fantasy'));
+    for (const slug of ['theleague', 'afl-fantasy'] as const) {
+      expect(cachedFor(slug)).not.toContain(LEAGUES[slug].name);
+    }
+    expect(cachedFor('theleague')).not.toMatch(/\d+-team/);
+  });
+
+  it('still builds without a league, for the caller that names its own', async () => {
+    const { buildCachedSystem } = await import('../scripts/article-utils/ai-client.mjs');
+    const blocks = buildCachedSystem('TYPE TEXT');
+    expect(blocks).toHaveLength(2);
+    expect(blocks[1].text).toBe('TYPE TEXT');
+  });
+
+  it('refuses a league the registry does not have', async () => {
+    const { buildCachedSystem } = await import('../scripts/article-utils/ai-client.mjs');
+    expect(() => buildCachedSystem('TYPE TEXT', { league: 'not-a-league' })).toThrow(
+      /Unknown league/,
+    );
+  });
 });

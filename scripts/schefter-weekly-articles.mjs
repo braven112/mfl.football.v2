@@ -222,7 +222,7 @@ async function main() {
   console.log(`  Links: ${links.map((l) => l.href).join(', ') || 'none'}`);
 
   console.log('  Generating Schefter article...');
-  const systemPrompt = mod.getSystemPrompt();
+  const systemPrompt = mod.getSystemPrompt({ league });
   const userPrompt = mod.getUserPrompt(withLinkDirective(factSheet, links));
   const aiOutput = await callAnthropic(systemPrompt, userPrompt, mod.config.maxTokens);
   console.log(`  Headline: ${aiOutput.headline}`);

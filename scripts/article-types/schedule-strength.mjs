@@ -16,7 +16,7 @@ import path from 'node:path';
 import { buildCachedSystem } from '../article-utils/ai-client.mjs';
 import { isRegularSeasonOrPlayoffs } from '../article-utils/season-guards.mjs';
 import { resolveMainRepo } from '../article-utils/data-loaders.mjs';
-import { LEAGUES, leagueUrl } from '../../src/config/leagues-data.mjs';
+import { LEAGUES, leagueUrl, DEFAULT_LEAGUE_SLUG } from '../../src/config/leagues-data.mjs';
 import { primaryLink, articleLink, featureLink, linkList } from '../article-utils/article-links.mjs';
 
 function leagueMeta(league) {
@@ -147,7 +147,7 @@ export async function buildFactSheet(data, week, year, projectRoot, { league = '
   };
 }
 
-export function getSystemPrompt() {
+export function getSystemPrompt({ league = DEFAULT_LEAGUE_SLUG } = {}) {
   return buildCachedSystem(`\n\nARTICLE TYPE: The Gauntlet (Weekly Schedule-Strength Column)
 This is YOUR named weekly analytics column — own it. Lead with the single
 spiciest finding (a contender walking into a buzz saw, a record built on a
@@ -155,7 +155,7 @@ soft schedule, a trap week). Frame difficulty numbers as roads ahead:
 gauntlets, breathers, buzz saws, cupcake runs. Reference specific teams and
 numbers from the fact sheet only. Close by pointing readers at the full
 dashboard (heat map + week-by-week grid). Do NOT invent matchups, records,
-or numbers not in the fact sheet.`);
+or numbers not in the fact sheet.`, { league });
 }
 
 export function getUserPrompt(factSheet) {
