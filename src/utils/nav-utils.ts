@@ -24,7 +24,7 @@ import {
   getLeagueByNavSlug,
   leagueOrigin,
   SHARED_APP_ORIGIN,
-  resolveSharedHostHiddenLeague,
+  crossHostLeagueHref,
   type CanonicalLeagueSlug,
 } from '../config/leagues';
 import type { LeagueDefinition } from '../config/leagues';
@@ -595,9 +595,13 @@ function buildSwitchUrl(
   // Ball, which has no apex of its own) is a 404. `hostname` is required
   // rather than optional precisely so a future caller cannot reintroduce that
   // by omission — the honest answer needs to know where you are standing.
-  const hiddenHere = resolveSharedHostHiddenLeague(hostname, equivalent) !== null;
+  //
+  // Shared with the splash rather than re-decided here: "is this league hidden
+  // at this host, and if so where does it live" has one right answer.
+  const fromHere = crossHostLeagueHref(hostname, equivalent);
+  if (fromHere !== equivalent) return fromHere;
 
-  if (!hideLeaguePrefix && !hiddenHere) return equivalent;
+  if (!hideLeaguePrefix) return equivalent;
 
   const origin = leagueOrigin(target);
   if (origin) return `${origin}${resolveLeaguePath(equivalent, true)}`;

@@ -7,6 +7,7 @@ import {
   leagueHasOwnFrontDoor,
   resolveSharedHostHiddenLeague,
 } from '../src/config/leagues';
+import { crossHostLeagueHref } from '../src/config/leagues';
 import { getLeagueSwitchTargets } from '../src/utils/nav-utils';
 
 const ROOT = join(__dirname, '..');
@@ -180,18 +181,43 @@ describe('nothing on the shared host links into a hidden league', () => {
     expect(src).toMatch(/onSharedHost\s*\?\s*'\/'/);
   });
 
-  it('the splash links hidden leagues out to their own domain', () => {
-    const src = read('src/pages/index.astro');
-    expect(src).toContain('resolveSharedHostHiddenLeague');
-    expect(src).toContain('leagueUrl');
-    // Both link surfaces go through the helper — the panels and the
-    // What's New cards, whose detailPath is itself a league path.
-    expect(src).toMatch(/href=\{linkOut\(`\/\$\{league\.slug\}`\)\}/);
-    expect(src).toMatch(/href=\{linkOut\(entry\.detailPath\)\}/);
+  /**
+   * One rule, one implementation. The splash panels, the What's New cards and
+   * the nav switcher all ask "is this league hidden here, and where does it
+   * live?" — `crossHostLeagueHref` is the single answer, so these assert its
+   * BEHAVIOUR rather than the shape of any one call site.
+   */
+  it('rewrites a hidden league’s path to its own domain, on every shared host', () => {
+    for (const host of ['mfl.football', 'v2.mfl.football', 'staging.mfl.football']) {
+      for (const p of ['/theleague', '/afl-fantasy/rosters', '/theleague/whats-new/abc']) {
+        const href = crossHostLeagueHref(host, p);
+        expect(href.startsWith('https://'), `${host} ${p} -> ${href}`).toBe(true);
+        expect(resolveSharedHostHiddenLeague(host, href), `${href} must not itself be hidden`)
+          .toBeNull();
+      }
+    }
   });
 
-  it('the splash keeps relative links off the shared host, so previews stay drivable', () => {
-    expect(read('src/pages/index.astro')).toMatch(/if \(!onSharedHost\) return path;/);
+  it('leaves everything else exactly as it was', () => {
+    // Best Ball on the shared host, and every league off it. An unchanged
+    // return is what keeps previews drivable and bb1 reachable.
+    expect(crossHostLeagueHref('v2.mfl.football', '/best-ball-1/draft')).toBe('/best-ball-1/draft');
+    for (const host of ['localhost', 'mfl-football-v2-git-branch.vercel.app']) {
+      for (const p of ['/theleague/rosters', '/afl-fantasy', '/best-ball-1']) {
+        expect(crossHostLeagueHref(host, p), `${host} ${p}`).toBe(p);
+      }
+    }
+  });
+
+  it('both splash link surfaces go through it — the panels AND the cards', () => {
+    const src = read('src/pages/index.astro');
+    expect(src).toContain('crossHostLeagueHref');
+    expect(src).toMatch(/href=\{hrefFromHere\(`\/\$\{league\.slug\}`\)\}/);
+    expect(src).toMatch(/href=\{hrefFromHere\(entry\.detailPath\)\}/);
+  });
+
+  it('the switcher shares that helper rather than re-deciding it', () => {
+    expect(read('src/utils/nav-utils.ts')).toContain('crossHostLeagueHref');
   });
 });
 

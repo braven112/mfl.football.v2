@@ -353,6 +353,26 @@ export function ensureLeaguePrefix(league: LeagueDefinition, path: string): stri
 export { buildHostToSlugMap, defaultMflWriteHost, SHARED_APP_ORIGIN, isSharedAppHost, leagueHasOwnFrontDoor };
 
 /**
+ * An href for a league-prefixed path that actually WORKS from this hostname.
+ *
+ * Returns the path untouched when this host serves it, and an absolute URL to
+ * the league's own domain when it does not. That makes it safe to wrap every
+ * league-prefixed href on a page that renders on more than one host: on
+ * localhost and Vercel previews nothing changes, so a branch stays drivable,
+ * and on the shared app host the two leagues it no longer serves leave for
+ * their own domains instead of pointing at a 404.
+ *
+ * One rule, one implementation. The splash panels, the What's New cards and
+ * the nav's league switcher all had to make this decision, and three copies of
+ * "is it hidden here, and if so where does it live" is how they drift apart.
+ */
+export function crossHostLeagueHref(hostname: string, path: string): string {
+  const hidden = resolveSharedHostHiddenLeague(hostname, path);
+  if (!hidden) return path;
+  return leagueUrl(hidden, path.slice(`/${hidden.slug}`.length) || '/');
+}
+
+/**
  * The league whose pages must not be served at this hostname + path, or null.
  * Typed wrapper over the registry's resolver — see its comment for why the
  * rule is derived from `domains` rather than a list of slugs.
