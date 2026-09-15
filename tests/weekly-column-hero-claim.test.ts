@@ -12,8 +12,9 @@ import path from 'node:path';
  * live game. That slot was built for a trade or an auction bomb.
  *
  * Three scheduled columns shipped at 'breaking' anyway, and 48h windows from a
- * weekly cron tile the calendar: recap Tue 6am→Thu 6am, weekend preview
- * Fri 8am→Sun 8am, matchup preview Sat 9am→Mon 9am. The homepage hero was a
+ * weekly cron tile the calendar: weekend preview Fri 8am→Sun 8am, matchup
+ * preview Sat 9am→Mon 9am, and the since-removed Tuesday recap (issue #1086
+ * F3) Tue 6am→Thu 6am. The homepage hero was a
  * Schefter column roughly four days in seven all season, and the game-day /
  * kickoff / live states it preempted were the ones written for those exact
  * days. It surfaced when the Friday column published a WEEK 0 preview — "no
@@ -58,7 +59,6 @@ describe('weekly columns do not claim the homepage hero', () => {
     const weekly = weeklyColumnTypes();
     // If a workflow rewrite breaks the derivation this set empties and every
     // assertion below passes vacuously, which is the failure mode to catch.
-    expect(weekly).toContain('weekly-recap');
     expect(weekly).toContain('weekend-preview');
     expect(weekly).toContain('matchup-preview');
     // The daily, event-gated release column is not a weekly column.

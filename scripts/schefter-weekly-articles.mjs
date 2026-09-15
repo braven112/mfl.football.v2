@@ -9,10 +9,9 @@
  * The AI only adds voice/commentary — it never interprets raw data.
  *
  * Usage:
- *   node scripts/schefter-weekly-articles.mjs --type weekly-recap [--week 3] [--year 2026] [--dry-run]
+ *   node scripts/schefter-weekly-articles.mjs --type waiver-pickups [--week 3] [--year 2026] [--dry-run]
  *
  * Article types:
- *   weekly-recap        Week N recap (Tuesday)
  *   waiver-pickups      BBID waiver claims (Wednesday)
  *   weekend-preview     Upcoming NFL weekend (Friday)
  *   matchup-preview     Fantasy matchups + broadcast guide (Saturday)
@@ -41,7 +40,6 @@ import { withLinkDirective, applyArticleLinks } from './article-utils/article-li
 const projectRoot = path.resolve(fileURLToPath(new URL('..', import.meta.url)));
 
 const VALID_TYPES = [
-  'weekly-recap',
   'waiver-pickups',
   'weekend-preview',
   'matchup-preview',

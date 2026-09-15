@@ -17,21 +17,29 @@
  * pass the week the scores actually cover (`getLatestScoredWeek`, which reads
  * the playerScores feed) and both the copy and the link key off that.
  *
- * **2. The article is matched by ID, never by headline.** The recap column's id
- * is generated as `sf_<year>_weekly_recap_w<NN>` (scripts/article-types/weekly-recap.mjs
- * `config.id`), so asking for that exact id answers "did Schefter write THIS
- * week's recap" with no false positives. `RecapHero.astro` greps headlines for
- * /recap|review|results|week \d+/ and then falls back to `recentArticles[0]` —
- * i.e. any article from the last 7 days — which is how a cut-watch column or a
- * schedule breakdown ends up behind a "Read full recap" button.
+ * **2. The article is matched by ID, never by headline.** A recap column's id
+ * is `sf_<year>_weekly_recap_w<NN>`, so asking for that exact id answers "is
+ * there a recap for THIS week" with no false positives. `RecapHero.astro` greps
+ * headlines for /recap|review|results|week \d+/ and then falls back to
+ * `recentArticles[0]` — i.e. any article from the last 7 days — which is how a
+ * cut-watch column or a schedule breakdown ends up behind a "Read full recap"
+ * button.
  *
- * When no recap column exists — which is the common case, since a recap has not
- * generated for either league all 2026 season — the fallback is the completed
- * week's own scoreboard (`/<league>/live-scoring?week=N`), which renders every
- * matchup with final scores and per-player detail. The schedule page carries
- * final scores too but is a whole-SEASON grid with no week scoping, so it does
- * not read as "the week that just ended". Only a league year with nothing
- * scored at all falls through to the news feed.
+ * **The scoreboard is now the only live path.** The weekly recap GENERATOR is
+ * gone: `scripts/article-types/weekly-recap.mjs` and its Tuesday 6am PT cron
+ * were removed in Sept 2026 (issue #1086 F3) because a recap column every week
+ * is not something owners wanted to read, and none had generated for either
+ * league all season regardless. No feed in either league contains a post with
+ * this id, so the article branch below is dormant rather than reachable. It is
+ * kept — not deleted — so a back-filled or re-imported archive still resolves
+ * correctly instead of silently landing on the scoreboard.
+ *
+ * The fallback, and in practice the answer, is the completed week's own
+ * scoreboard (`/<league>/live-scoring?week=N`), which renders every matchup
+ * with final scores and per-player detail. The schedule page carries final
+ * scores too but is a whole-SEASON grid with no week scoping, so it does not
+ * read as "the week that just ended". Only a league year with nothing scored at
+ * all falls through to the news feed.
  */
 import type { CanonicalLeagueSlug } from '../config/leagues';
 
@@ -53,9 +61,9 @@ export interface RecapDestination {
 }
 
 /**
- * The id `scripts/article-types/weekly-recap.mjs` generates for a week's recap.
- * Kept in lockstep with that module's `config.id` — pinned by
- * tests/hero-recap-destination.test.ts.
+ * The id a week's recap carries. Fixed by the removed generator's `config.id`
+ * and by whatever it wrote before it was removed, so it is history now rather
+ * than a contract with live code — pinned by tests/hero-recap-destination.test.ts.
  */
 export function weeklyRecapPostId(year: number, week: number): string {
   return `sf_${year}_weekly_recap_w${String(week).padStart(2, '0')}`;
@@ -102,13 +110,13 @@ export function resolveRecapDestination({
   if (article) {
     return {
       week,
-      // CONSTRUCTED, never `article.link`. The generator's `buildPost`
-      // hardcodes `link: '/theleague/news/<id>'` and `league: 'theleague'`
-      // and ignores its own `{ league }` option (scripts/article-types/weekly-recap.mjs),
-      // while the workflow runs that type for `--league afl-fantasy` too — so
-      // the first AFL recap to generate carries a TheLeague permalink for a
-      // post that only exists in the AFL's feed. The canonical route is
-      // `/<league>/news/<id>` in both leagues; building it is immune to that.
+      // CONSTRUCTED, never `article.link`. The removed generator's `buildPost`
+      // hardcoded `link: '/theleague/news/<id>'` and `league: 'theleague'` and
+      // ignored its own `{ league }` option, while the workflow ran that type
+      // for `--league afl-fantasy` too — so any recap sitting in an AFL feed
+      // carries a TheLeague permalink for a post that only exists in the AFL's.
+      // The canonical route is `/<league>/news/<id>` in both leagues; building
+      // it is immune to that.
       href: `/${league}/news/${article.id}`,
       label: 'Read the recap',
       isArticle: true,

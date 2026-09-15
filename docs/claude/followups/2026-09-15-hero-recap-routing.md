@@ -68,6 +68,13 @@ object — they both render), `src/pages/afl-fantasy/index.astro`,
   - Suggested fix: one derivation, shared between the hero and the generator.
     Probably `getCompletedWeek`'s "every franchise scored" rule, exposed from
     `src/`, with the generator importing it rather than keeping its own copy.
+  - **NARROWED by the F3 removal (Sept 2026).** There is no recap generator left
+    to disagree with, so the id-lookup half of this cannot happen any more. What
+    remains is real and unchanged: `getLatestScoredWeek` reads a `playerScores`
+    feed fetched with no `W=`, so if MFL rolls it before Tuesday morning the
+    hero still NAMES and LINKS the unplayed week — now landing on an empty
+    scoreboard rather than missing an article. The fix is the same one
+    derivation; only the second consumer is gone.
 
 - [ ] **F2 — The AFL homepage resolves the recap season year differently from the rest of the page**
   - Source: Claude review, `/code-review`
@@ -81,24 +88,34 @@ object — they both render), `src/pages/afl-fantasy/index.astro`,
     hotfix diff should carry, and the degradation is to the pre-existing
     behaviour rather than to something worse.
 
-- [ ] **F3 — No weekly recap article has generated for either league all 2026 season**
+- [x] **F3 — No weekly recap article has generated for either league all 2026
+      season** — RESOLVED BY REMOVAL, Sept 2026.
   - Source: found during diagnosis, not a review finding
-  - Where: `scripts/article-types/weekly-recap.mjs:45` (`guardSeason`),
-    `scripts/article-utils/week-resolver.mjs:53` (`getCompletedWeek`),
-    `data/<league>/mfl-feeds/2026/weekly-results.json`
-  - Both leagues' `weekly-results.json` carry **zero scores for every week**, so
-    `getCompletedWeek` returns 0, `isRegularSeasonOrPlayoffs(0)` is false, and
-    the Tuesday 6am PT cron skips silently. TheLeague's 2026 archive has 9
-    articles and none is a weekly recap; the AFL's has 1 (the schedule release).
-  - Why deferred: the user scoped this hotfix to routing explicitly ("just the
-    routing"). It is a data-pipeline problem, not a hero problem.
-  - **This is why the article branch of the hotfix is currently unreachable** and
-    the scoreboard fallback is the live path. Worth fixing first in the
-    follow-up: it makes the rest of this feature real.
+  - Was: both leagues' `weekly-results.json` carry **zero scores for every
+    week**, so `getCompletedWeek` returned 0, `isRegularSeasonOrPlayoffs(0)` was
+    false, and the Tuesday 6am PT cron skipped silently all season.
+  - **Resolution: the column was removed, not repaired.** A recap article every
+    week is not something owners wanted to read, so fixing the pipeline would
+    have shipped an unwanted column rather than a missing one. Deleted:
+    `scripts/article-types/weekly-recap.mjs`, the `0 13 * * 2` cron and the
+    `weekly-recap` `workflow_dispatch` choice in
+    `.github/workflows/schefter-articles.yml`, the `VALID_TYPES` entry in
+    `scripts/schefter-weekly-articles.mjs`, and the `PUSH_ONLY_KINDS` entry in
+    `scripts/lib/groupme-day-plan.mjs`.
+  - **F1 and F4 die with it** — both were defects in the generator or in the id
+    handshake with it. See their entries.
+  - The hero is untouched and keeps working: with no recap in any feed,
+    `resolveRecapDestination` always takes the `/<league>/live-scoring?week=N`
+    branch, which is the destination the hotfix built. The article branch stays
+    in the module, dormant, so a back-filled archive would still resolve.
 
 - [ ] **F4 — `buildPost` in weekly-recap.mjs ignores its own `{ league }` option**
+      — MOOT IN ITS ORIGINAL FORM; the audit it implies is still open.
+  - **The named file was deleted by the F3 removal (Sept 2026)**, so the specific
+    defect below can no longer fire. Kept open for the last bullet only: the
+    same hardcode may sit in other article types, and nothing has checked.
   - Source: Claude review (the blocking half was fixed; the root cause was not)
-  - Where: `scripts/article-types/weekly-recap.mjs:270-271`
+  - Where: `scripts/article-types/weekly-recap.mjs:270-271` (deleted)
   - It hardcodes `link: '/theleague/news/${articleId}'` and `league: 'theleague'`
     while the workflow runs the type for `--league afl-fantasy` too. The hotfix
     worked around it by CONSTRUCTING the href from the reader's league rather

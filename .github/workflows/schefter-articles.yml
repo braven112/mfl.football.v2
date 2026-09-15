@@ -2,8 +2,6 @@ name: Schefter Articles
 
 on:
   schedule:
-    # Tuesday 6am PT (13:00 UTC) — weekly-recap
-    - cron: "0 13 * * 2"
     # Tuesday 7am PT (14:00 UTC) — pecking-order (The Pecking Order weekly
     # column; self-guards in the offseason and dedups on the issue file)
     - cron: "0 14 * * 2"
@@ -53,7 +51,6 @@ on:
         required: true
         type: choice
         options:
-          - weekly-recap
           - waiver-pickups
           - weekend-preview
           - matchup-preview
@@ -109,7 +106,6 @@ jobs:
             # to the wrong article type.
             TYPE=""
             case "$CRON_EXPR" in
-              "0 13 * * 2") TYPE="weekly-recap" ;;
               "0 14 * * 2") TYPE="pecking-order" ;;
               "0 16 * * 3") TYPE="schedule-strength" ;;
               "0 16 * * 4") TYPE="owners-poll-nag" ;;
