@@ -527,6 +527,69 @@ describe('castAflHeroModel', () => {
     expect(['Top Scorer', 'Headliner']).toContain(model!.descriptor);
   });
 
+  /**
+   * THE BUG THIS EXISTS FOR (the #1086 F2 follow-up,
+   * docs/claude/followups/2026-09-15-afl-recap-cast-week-scope.md).
+   *
+   * The recap card captions a Top Scorer with a week. The cast used to read
+   * `getWeeklyTopScorerCandidates(leagueYear, AFL)` UNFILTERED, and
+   * `playerScores.json` holds whichever single week MFL currently considers
+   * live — so the moment MFL rolled that feed, the card put week N's top scorer
+   * under a "Week N-1" label. TheLeague's RecapCompositeHero was fixed for this
+   * first; this is the AFL half.
+   *
+   * The season matters as much as the week: the caller derives the week from
+   * `getCurrentSeasonYear` (Labor Day) while this casting runs on `leagueYear`
+   * (June 1), and those disagree February to May.
+   */
+  describe('the recap cast is scoped to the week the card is captioned with', () => {
+    const recapFor = (week: number, seasonYear = YEAR) =>
+      castAflHeroModel(seasonSlot('recap'), input({ recap: { seasonYear, week } }));
+
+    /**
+     * Whichever single week the committed AFL feed actually holds, found by
+     * probing rather than hardcoded — the feed advances as the season plays,
+     * and a pinned number would go stale (or, worse, quietly make every
+     * assertion below vacuous).
+     */
+    const feedWeek = () => {
+      for (let w = 1; w <= 18; w += 1) {
+        if (getWeeklyTopScorerCandidates(YEAR, AFL, w).length > 0) return w;
+      }
+      return 0;
+    };
+
+    it('casts a Top Scorer for the week the feed actually holds', () => {
+      const week = feedWeek();
+      if (week === 0) return; // offseason feed — nothing to assert against
+      const model = recapFor(week);
+      expect(model).not.toBeNull();
+      expect(model!.descriptor).toBe('Top Scorer');
+    });
+
+    it('casts NOBODY for a week the feed does not hold — never another week’s scorer', () => {
+      // The rolled-feed case. A week with no rows must not silently fall back
+      // to an unfiltered read; the ladder gives a generic headliner instead.
+      const model = recapFor(feedWeek() + 5);
+      expect(model).not.toBeNull();
+      expect(model!.descriptor).toBe('Headliner');
+    });
+
+    it('casts no Top Scorer when the caller vouches for no week at all', () => {
+      // week 0, and the omitted case — the caller could not name a week, so the
+      // card must not wear a descriptor that implies one.
+      expect(recapFor(0)!.descriptor).toBe('Headliner');
+      expect(castAflHeroModel(seasonSlot('recap'), input())!.descriptor).toBe('Headliner');
+    });
+
+    it('reads the SEASON it was handed, not leagueYear', () => {
+      // A season with no feed on disk yields no candidates, even though
+      // `leagueYear` (YEAR) would have. If this ever casts a Top Scorer, the
+      // year is being ignored and the two clocks are back in disagreement.
+      expect(recapFor(1, 1999)!.descriptor).toBe('Headliner');
+    });
+  });
+
   it('standings slot casts the leader’s headliner when a leader is known', () => {
     const headliners = getFranchiseHeadliners(YEAR, AFL);
     const leader = headliners[0];

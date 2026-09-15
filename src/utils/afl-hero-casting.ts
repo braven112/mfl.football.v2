@@ -57,6 +57,21 @@ export interface AflCastingInput {
   userFranchiseId?: string;
   /** Franchise currently leading the standings — for the Monday standings slot. */
   standingsLeaderId?: string;
+  /**
+   * The recap card's week, and the SEASON that week was derived from.
+   *
+   * Both halves matter. The recap slot captions a Top Scorer with a week, so
+   * the cast has to come from that same week or the card puts one week's
+   * numbers under another week's label. It also has to come from the same
+   * SEASON: the caller derives the week from `getCurrentSeasonYear` (Labor Day
+   * rollover) while this casting runs on `leagueYear` (the AFL's June 1 league
+   * year), and those disagree from February to May — so reading the week out of
+   * the `leagueYear` feed would check one season's week against another's rows.
+   *
+   * Omitted, or a week of 0, means the caller cannot vouch for a week, and the
+   * slot casts a generic headliner rather than a "Top Scorer" it cannot place.
+   */
+  recap?: { seasonYear: number; week: number };
 }
 
 /**
@@ -202,13 +217,25 @@ export function castAflHeroModel(state: AflHeroState, input: AflCastingInput): H
           return model ?? headliner('Headliner');
         }
         case 'recap': {
-          // Deterministic: the week's top scorer IS the recap's headline.
-          const top = castBestScoredModel(
-            getWeeklyTopScorerCandidates(leagueYear, AFL),
-            players,
-            undefined,
-            'Top Scorer',
-          );
+          // Deterministic: the week's top scorer IS the recap's headline — but
+          // it must be THAT week's scorer, out of THAT season's feed.
+          //
+          // This used to read `getWeeklyTopScorerCandidates(leagueYear, AFL)`
+          // unfiltered. `playerScores.json` holds whichever single week MFL
+          // currently considers live, so once MFL rolls it the card captioned
+          // week N's top scorer as week N-1's. Scoping the read to the captioned
+          // week means a disagreement casts nobody, and the ladder falls through
+          // to a generic headliner instead of a confidently mislabelled card.
+          const scope = input.recap;
+          const top =
+            scope && scope.week > 0
+              ? castBestScoredModel(
+                  getWeeklyTopScorerCandidates(scope.seasonYear, AFL, scope.week),
+                  players,
+                  undefined,
+                  'Top Scorer',
+                )
+              : null;
           return top ?? headliner('Headliner');
         }
         case 'standings':
