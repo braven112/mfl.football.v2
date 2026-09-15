@@ -207,7 +207,7 @@ const vapidPublicKey = (import.meta.env.PUBLIC_VAPID_PUBLIC_KEY as string | unde
       testBtn.disabled = true;
       setStatus('Sending test notification…');
       try {
-        const res = await fetch('/api/push/test', { method: 'POST' });
+        const res = await fetch('/api/push/test', { method: 'POST', headers: { 'Content-Type': 'application/json' } });
         const data = await res.json().catch(() => ({}));
         if (data.success) {
           setStatus(
