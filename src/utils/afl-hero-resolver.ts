@@ -744,7 +744,10 @@ const SLOT_VIEW: Record<SlotKey, (ctx: SlotContext) => EventHeroView> = {
     // the upcoming week on Tuesday — the morning this slot runs — so it read
     // "Week 2 is in the books" on Sep 15 2026 over a Week 1 nobody had
     // followed up. `recap.week` comes from the scores themselves.
-    summary: `${recap?.week ? `Week ${recap.week}` : week ? `Week ${week}` : 'The week'} is in the books — top scorers, biggest swings, and the games that moved the standings.`,
+    // `recap.week` or nothing. Falling back to `week` here would restate the
+    // very bug this fixes — `getCurrentNFLWeek` is the UPCOMING week on a
+    // Tuesday, so "Week N is in the books" would name games not yet played.
+    summary: `${recap?.week ? `Week ${recap.week}` : 'The week'} is in the books — top scorers, biggest swings, and the games that moved the standings.`,
     // Schefter's recap column when he wrote one, else the completed week's own
     // scoreboard. NOT `/afl-fantasy/news`: a card headlined "THE WEEK IN
     // REVIEW." that lands on the undifferentiated feed makes the reader go
@@ -1183,7 +1186,9 @@ function buildRegularSeasonHero(slot: DailySlot, week: number | undefined, gameW
       // the old link on whichever surface reads `content`.
       return {
         source: 'event',
-        title: `${recap?.week ? `Week ${recap.week}` : weekLabel} Recap`,
+        // Same rule as the view: never `weekLabel`, which is built from the
+        // upcoming week.
+        title: recap?.week ? `Week ${recap.week} Recap` : 'Weekly Recap',
         summary: 'Top performances, biggest blowouts, and the AL/NL games that swung the standings.',
         link: recap?.href ?? '/afl-fantasy/news',
         linkLabel: recap?.label ?? 'Read the recap',

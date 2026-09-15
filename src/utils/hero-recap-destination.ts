@@ -102,9 +102,14 @@ export function resolveRecapDestination({
   if (article) {
     return {
       week,
-      // The generator writes an absolute `link`; fall back to the canonical
-      // article route so a post saved without one still resolves.
-      href: article.link || `/${league}/news/${article.id}`,
+      // CONSTRUCTED, never `article.link`. The generator's `buildPost`
+      // hardcodes `link: '/theleague/news/<id>'` and `league: 'theleague'`
+      // and ignores its own `{ league }` option (scripts/article-types/weekly-recap.mjs),
+      // while the workflow runs that type for `--league afl-fantasy` too — so
+      // the first AFL recap to generate carries a TheLeague permalink for a
+      // post that only exists in the AFL's feed. The canonical route is
+      // `/<league>/news/<id>` in both leagues; building it is immune to that.
+      href: `/${league}/news/${article.id}`,
       label: 'Read the recap',
       isArticle: true,
     };

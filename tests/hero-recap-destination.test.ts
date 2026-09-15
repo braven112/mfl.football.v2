@@ -81,6 +81,25 @@ describe('resolveRecapDestination', () => {
     });
   });
 
+  it('builds the href from THIS league, ignoring the post’s own link', () => {
+    // scripts/article-types/weekly-recap.mjs `buildPost` hardcodes
+    // `/theleague/news/<id>` and `league: 'theleague'` while ignoring its own
+    // `{ league }` option, and the workflow runs it for --league afl-fantasy.
+    // Trusting that link sends AFL readers to a TheLeague permalink for a post
+    // that only exists in the AFL's feed.
+    const src = readFileSync('scripts/article-types/weekly-recap.mjs', 'utf8');
+    expect(src).toContain('link: `/theleague/news/${articleId}`');
+
+    const d = resolveRecapDestination({
+      league: 'afl-fantasy',
+      seasonYear: 2026,
+      completedWeek: 1,
+      posts: [recapPost(2026, 1, { link: '/theleague/news/sf_2026_weekly_recap_w01' })],
+    });
+    expect(d.href).toBe('/afl-fantasy/news/sf_2026_weekly_recap_w01');
+    expect(d.href).not.toContain('theleague');
+  });
+
   it('falls back to the completed week’s SCOREBOARD, never the news feed', () => {
     // The fallback is the thing the user actually asked for: a recap of the
     // games, not a dump of every wire item. No recap has generated for either
@@ -145,6 +164,16 @@ describe('the AFL recap hero renders the resolved destination', () => {
     expect(state.view.summary).toContain('Week 1 is in the books');
     expect(state.view.summary).not.toContain('Week 2');
     expect(state.content.title).toBe('Week 1 Recap');
+  });
+
+  it('never names a week when none is in the books', () => {
+    // The week-0 fallback must not reach for `getCurrentNFLWeek` — that is the
+    // upcoming week, i.e. the original bug restated.
+    const state = at({ week: 0, href: '/afl-fantasy/news', label: 'Read the latest', isArticle: false });
+    expect(state.view.summary).toContain('The week is in the books');
+    expect(state.view.summary).not.toMatch(/Week \d/);
+    expect(state.content.title).toBe('Weekly Recap');
+    expect(state.content.title).not.toMatch(/Week \d/);
   });
 
   it('links Schefter’s column when there is one', () => {

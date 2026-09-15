@@ -103,7 +103,7 @@ const summary = franchiseName
       </div>
       <span class="cmh__divider" aria-hidden="true"></span>
       <a class="cmh__cta" href={r(recap.href)}>
-        {recap.isArticle ? 'Read the recap' : 'See the full week'}
+        {recap.isArticle ? 'Read the recap' : recap.week ? 'See the full week' : 'Read the latest'}
         <span aria-hidden="true">→</span>
       </a>
     </div>
