@@ -388,13 +388,51 @@ already have better coverage than jsdom would give them: the parity harness
 fingerprints what they render in a real browser, across every eligible player
 and flow.
 
+**Slice 2 — one state object *(done)*.** The blocker for moving any wizard
+function was never the function; it was the **eight `let`s** it reads and
+writes — `cdmPlayerData`, `cdmCurrentStep`, `cdmFlowType`, `cdmSelectedYears`,
+`cdmSelectedSalary`, `cdmViaActionSelect`, `cdmSubmitType`, `cutConfirmed`.
+A module cannot close over a `let` in the page. 165 references across three
+regions, all inside `rosters.astro`, now read `cdmState.*`.
+
+It retires a live hazard on the way: `cutConfirmed` was declared **~545 lines
+below** `goToActionSelectStep`, which resets it. Legal, because a `let` in the
+same function scope is initialized before any of those run — and the same
+shape as the temporal-dead-zone read that took the whole page down in July
+2026. The plan already claims extraction kills this bug class; this is one.
+
+**Annotate the object, do not let it infer.** The first version measured
+**+20** on the type ratchet. A bare `null` initializer on an object PROPERTY
+infers the type `null` and does not widen, so every later
+`cdmState.selectedYears = 2` is an error — where the eight `let`s it replaced
+widened to `any` and hid it. Declaring the eight property types turned that
++20 into **−48** (1693 → 1645).
+
+**The near-miss worth knowing about.** A `sed` over those 165 references also
+rewrote the new object's own key, leaving `cdmState.cutConfirmed: false,`
+inside the literal. The symptom: `/theleague/rosters` served the **404 page** —
+no error in the dev server log, no overlay, no failing test. A whole page
+silently stopped existing.
+
+And **the check this doc recommends does not catch it.** Running the file
+through `@astrojs/compiler` then esbuild reports OK, because a `<script>`
+carrying any attribute is treated as `is:inline` and the compiler emits its
+body as TEXT — esbuild is handed a module with the broken code inside a string
+literal. That is why `tests/inline-script-syntax.test.ts` now pulls every
+inline script body out of every `.astro` file and parses it on its own: 385
+files, ~300ms, and it fails on exactly this. Use it, not the transform, when
+editing an inline script.
+
 **Remaining slices**, in the order they get safer to do:
 
-2. The `goTo*` step functions (Region B) — cohesive, and the harness already
-   walks the screens they produce.
-3. `openDeclarationModal` / `closeDeclarationModal` / `populateCdmActionOptions`
-   plus the wizard's mutable state, behind one context object.
-4. The submit handler — last, and the one the harness does not cover. Submit a
+3. The `goTo*` step functions (Region B, ~550 lines) — cohesive, the harness
+   already walks the screens they produce, and `cdmState` is now threadable.
+   Their other ~29 closure deps are: the two DOM handles (`cdmSubmitBtn`,
+   `cdmBackBtn`), page data (`config`, `season`, `user`, `selectedPlayer`),
+   three formatters, five canonical calculators, seven sibling CDM functions,
+   and `applyContractAction`.
+4. `openDeclarationModal` / `closeDeclarationModal` / `populateCdmActionOptions`.
+5. The submit handler — last, and the one the harness does not cover. Submit a
    throwaway declaration by hand before trusting it.
 
 The module boundary also **fixes a bug class**: the July 2026 whole-page crash

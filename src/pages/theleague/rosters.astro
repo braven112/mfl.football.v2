@@ -7997,14 +7997,55 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
     const cdmError = document.getElementById('cdm-error');
     const cdmSuccess = document.getElementById('cdm-success');
     const cdmBackBtn = document.getElementById('cdm-back-btn');
-    let cdmSelectedYears = null;
-    let cdmSelectedSalary = null; // Pre-computed for franchise-tag and extension types
-    let cdmSubmitType = null;     // Overrides elig.type for team-option sub-choices
-    let cdmPlayerData = null;
+    /**
+     * The wizard's mutable state, in one object.
+     *
+     * These were eight separate `let`s spread across the script, read and
+     * written by CDM code in three non-contiguous regions — which is exactly
+     * why the modal could not leave the page: a module cannot close over a
+     * `let` that lives here. Phase 6.1 of docs/plans/rosters-page-split.md
+     * threads this object instead, so the next slice can move functions out
+     * and still share the state they drive.
+     *
+     * It also retires a live hazard. `cutConfirmed` was declared ~545 lines
+     * BELOW `goToActionSelectStep`, which resets it — legal only because a
+     * `let` in the same function scope is initialized before any of these run,
+     * and the same shape as the temporal-dead-zone read that took the whole
+     * page down in July 2026.
+     */
+    // Annotated rather than inferred, and not optional: a bare `null`
+    // initializer on an OBJECT PROPERTY infers the type `null` and does not
+    // widen, so every later `cdmState.selectedYears = 2` is an error. The
+    // eight `let`s this replaced widened to `any` instead, which is why the
+    // first version of this object measured +20 on the type ratchet.
+    const cdmState: {
+      /** Selected contract term, in years. */
+      selectedYears: number | null;
+      /** Pre-computed for franchise-tag and extension types. */
+      selectedSalary: number | null;
+      /** Overrides elig.type for team-option sub-choices. */
+      submitType: string | null;
+      /** The row's extracted player payload — see extractPlayerDataFromRow. */
+      playerData: Record<string, any> | null;
+      /** 'action-select' | 'franchise-tag' | 'veteran-extension' | 'rookie-extension' | … */
+      flowType: string | null;
+      /** 1, 2, or 3. */
+      currentStep: number;
+      /** True when opened via ufa-action-btn → action-select CDM. */
+      viaActionSelect: boolean;
+      /** First click of the inline cut confirmation has been made. */
+      cutConfirmed: boolean;
+    } = {
+      selectedYears: null,
+      selectedSalary: null,
+      submitType: null,
+      playerData: null,
+      flowType: null,
+      currentStep: 1,
+      viaActionSelect: false,
+      cutConfirmed: false,
+    };
     let cdmDeadlineInterval = null;
-    let cdmFlowType = null; // 'action-select' | 'franchise-tag' | 'veteran-extension' | 'rookie-extension' | etc.
-    let cdmCurrentStep = 1; // 1, 2, or 3
-    let cdmViaActionSelect = false; // true when opened via ufa-action-btn → action-select CDM
 
     // Wire formula accordion toggle — use onclick to prevent stacking on re-init
     const formulaToggleEl = document.getElementById('cdm-formula-toggle');
@@ -8070,10 +8111,10 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
 
     const openDeclarationModal = (data, preSelectedYears = null) => {
       if (!cdmModal) return;
-      cdmPlayerData = data;
-      cdmSelectedYears = null;
-      cdmSelectedSalary = null;
-      cdmSubmitType = null;
+      cdmState.playerData = data;
+      cdmState.selectedYears = null;
+      cdmState.selectedSalary = null;
+      cdmState.submitType = null;
       cdmError.style.display = 'none';
       cdmSuccess.style.display = 'none';
       cdmSubmitBtn.disabled = true;
@@ -8245,9 +8286,9 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
 
       if (type === 'action-select') {
         // Step 1: Action selection (salary-tool flow via ufa-action-btn)
-        cdmFlowType = 'action-select';
-        cdmCurrentStep = 1;
-        cdmViaActionSelect = true;
+        cdmState.flowType = 'action-select';
+        cdmState.currentStep = 1;
+        cdmState.viaActionSelect = true;
         if (cdmModal) cdmModal.dataset.cdmMode = 'action-select';
 
         // Show stepper at step 1 of ? — hide dot-2/line-1 until action is chosen
@@ -8274,9 +8315,9 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
 
       } else if (type === 'franchise-tag') {
         // Franchise tag (direct from yrs-chip): fixed 1 year, show salary comparison
-        cdmFlowType = 'franchise-tag';
-        cdmCurrentStep = 1;
-        cdmViaActionSelect = false;
+        cdmState.flowType = 'franchise-tag';
+        cdmState.currentStep = 1;
+        cdmState.viaActionSelect = false;
         tagSection.style.display = '';
         document.getElementById('cdm-tag-current').textContent = formatSalaryCompact(elig.currentSalary);
         document.getElementById('cdm-tag-new').textContent = formatSalaryCompact(elig.tagSalary);
@@ -8284,16 +8325,16 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
           ? 'Based on the top 3 salaries at position'
           : 'Based on 120% of current salary';
         document.getElementById('cdm-tag-basis-text').textContent = basisText;
-        cdmSelectedYears = 1;
-        cdmSelectedSalary = elig.tagSalary ?? null;
+        cdmState.selectedYears = 1;
+        cdmState.selectedSalary = elig.tagSalary ?? null;
         cdmSubmitBtn.disabled = false;
         cdmSubmitBtn.textContent = 'Apply Franchise Tag';
 
       } else if (type === 'veteran-extension') {
         // Veteran extension (direct from yrs-chip or contract-modal): step 1 = year selection, step 2 = review
-        cdmFlowType = 'veteran-extension';
-        cdmCurrentStep = 1;
-        cdmViaActionSelect = false;
+        cdmState.flowType = 'veteran-extension';
+        cdmState.currentStep = 1;
+        cdmState.viaActionSelect = false;
         if (cdmModal) cdmModal.dataset.cdmMode = 'direct-vet-ext';
 
         yearSection.style.display = '';
@@ -8320,16 +8361,16 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
         document.getElementById('cdm-ext-new').textContent = formatSalaryCompact(extSalary);
         updateProjectionTable(extSalary, extYears, null, config.salaryYears?.[0]);
         updateCapImpact(extSalary, extYears, config.salaryYears?.[0]);
-        cdmSelectedYears = extYears;
-        cdmSelectedSalary = extSalary;
+        cdmState.selectedYears = extYears;
+        cdmState.selectedSalary = extSalary;
         cdmSubmitBtn.disabled = false;
         cdmSubmitBtn.textContent = 'Extend Contract';
 
       } else if (type === 'team-option') {
         // Team option (direct from yrs-chip): go straight to step 2 review
-        cdmFlowType = 'team-option';
-        cdmCurrentStep = 1;
-        cdmViaActionSelect = false;
+        cdmState.flowType = 'team-option';
+        cdmState.currentStep = 1;
+        cdmState.viaActionSelect = false;
         goToTeamOptionStep2();
 
       } else {
@@ -8345,7 +8386,7 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
           btn.addEventListener('click', () => {
             yearContainer.querySelectorAll('.cdm-year-btn').forEach(b => b.classList.remove('selected'));
             btn.classList.add('selected');
-            cdmSelectedYears = yr;
+            cdmState.selectedYears = yr;
             cdmSubmitBtn.disabled = false;
             updateProjectionTable(elig.currentSalary, yr, null, config.salaryYears?.[0]);
             updateCapImpact(elig.currentSalary, yr, config.salaryYears?.[0]);
@@ -8358,7 +8399,7 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
           const matchBtn = yearContainer.querySelector('[data-years="' + preSelectedYears + '"]');
           if (matchBtn) {
             matchBtn.classList.add('selected');
-            cdmSelectedYears = preSelectedYears;
+            cdmState.selectedYears = preSelectedYears;
             cdmSubmitBtn.disabled = false;
             updateProjectionTable(elig.currentSalary, preSelectedYears, null, config.salaryYears?.[0]);
             updateCapImpact(elig.currentSalary, preSelectedYears, config.salaryYears?.[0]);
@@ -8372,7 +8413,7 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
 
     // Reset veteran-extension back to step 1 — legacy path (direct vet-ext, not via action-select)
     const goToVetExtStep1 = () => {
-      cdmCurrentStep = 1;
+      cdmState.currentStep = 1;
       const cdmStepDot1 = document.getElementById('cdm-step-dot-1');
       const cdmStepDot2 = document.getElementById('cdm-step-dot-2');
       const cdmStepLine1 = document.getElementById('cdm-step-line-1');
@@ -8396,8 +8437,8 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
 
       // Clear year selection and disable submit
       document.querySelectorAll('.cdm-year-btn').forEach(b => b.classList.remove('selected'));
-      cdmSelectedYears = null;
-      cdmSelectedSalary = null;
+      cdmState.selectedYears = null;
+      cdmState.selectedSalary = null;
       cdmSubmitBtn.disabled = true;
 
       // Hide back button — step 1 doesn't have a Back action
@@ -8409,7 +8450,7 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
       cdmModal.classList.remove('active');
       document.body.style.overflow = '';
       if (cdmDeadlineInterval) clearInterval(cdmDeadlineInterval);
-      cdmPlayerData = null;
+      cdmState.playerData = null;
     };
 
     const updateProjectionTable = (baseSalary, years, currentAge = null, startYear = null) => {
@@ -8500,7 +8541,7 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
     // ----------------------------------------------------------------
     // buildVetExtYearButtons — creates year option buttons for vet-ext
     // Works for both direct (step 1→2 of 2) and action-select (step 2→3 of 3)
-    // cdmCurrentStep must be set before calling
+    // cdmState.currentStep must be set before calling
     // ----------------------------------------------------------------
     const buildVetExtYearButtons = (elig, data) => {
       const yearContainer = document.getElementById('cdm-year-options');
@@ -8516,7 +8557,7 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
         btn.addEventListener('click', () => {
           yearContainer.querySelectorAll('.cdm-year-btn').forEach(b => b.classList.remove('selected'));
           btn.classList.add('selected');
-          cdmSelectedYears = yr;
+          cdmState.selectedYears = yr;
 
           const extSection = document.getElementById('cdm-extension-section');
           const yearSection = document.getElementById('cdm-year-section');
@@ -8542,18 +8583,18 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
           const line2 = document.getElementById('cdm-step-line-2');
           const stepLabel = document.getElementById('cdm-stepper-label');
 
-          if (cdmCurrentStep === 2) {
+          if (cdmState.currentStep === 2) {
             if (dot2) { dot2.classList.remove('active'); dot2.classList.add('completed'); dot2.removeAttribute('disabled'); }
             if (dot3) { dot3.classList.remove('completed'); dot3.classList.add('active'); }
             if (line2) line2.classList.add('completed');
             if (stepLabel) stepLabel.textContent = 'Step 3 of 3';
-            cdmCurrentStep = 3;
+            cdmState.currentStep = 3;
           } else {
             if (dot1) { dot1.classList.remove('active'); dot1.classList.add('completed'); }
             if (dot2) { dot2.classList.remove('completed'); dot2.classList.add('active'); }
             if (line1) line1.classList.add('completed');
             if (stepLabel) stepLabel.textContent = 'Step 2 of 2';
-            cdmCurrentStep = 2;
+            cdmState.currentStep = 2;
           }
           if (cdmBackBtn) cdmBackBtn.style.display = '';
 
@@ -8563,7 +8604,7 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
           const denominator = existingYears + yr;
           const proratedPortion = denominator > 0 ? (avgSalary * yr) / denominator : 0;
           const newSalary = Math.round(proratedPortion + baseSalary);
-          cdmSelectedSalary = newSalary;
+          cdmState.selectedSalary = newSalary;
 
           if (extSection) extSection.style.display = '';
           document.getElementById('cdm-ext-current').textContent = formatSalaryCompact(baseSalary);
@@ -8752,7 +8793,7 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
         // gate the auto-cut option on isAutocutOwnView() (real fid + not demo),
         // never isAutocutEnabled(). Keeps the option absent in demo and on any
         // team that isn't the authenticated owner's own.
-        const autocutPid = String(cdmPlayerData?._rawPlayer?.id || cdmPlayerData?.id || '');
+        const autocutPid = String(cdmState.playerData?._rawPlayer?.id || cdmState.playerData?.id || '');
         if (
           tag === 'active' &&
           isAutocutOwnView() &&
@@ -8819,8 +8860,8 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
       actionOptions.replaceChildren();
 
       // Advance stepper to Step 2 of 2
-      cdmCurrentStep = 2;
-      cdmFlowType = 'trade';
+      cdmState.currentStep = 2;
+      cdmState.flowType = 'trade';
       const dot1 = document.getElementById('cdm-step-dot-1');
       const dot2 = document.getElementById('cdm-step-dot-2');
       const line1 = document.getElementById('cdm-step-line-1');
@@ -8839,21 +8880,21 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
       backBtn.textContent = '\u2190 Back to Actions';
       backBtn.addEventListener('click', () => {
         goToActionSelectStep();
-        populateCdmActionOptions(cdmPlayerData.eligibility);
+        populateCdmActionOptions(cdmState.playerData.eligibility);
       });
       actionOptions.appendChild(backBtn);
 
       actionOptions.appendChild(makeCdmActionBtn(
         'trade-simulate', 'Simulate Trade', 'Track cap impact locally — no roster changes',
         () => {
-          selectedPlayer = { ...cdmPlayerData._rawPlayer };
+          selectedPlayer = { ...cdmState.playerData._rawPlayer };
           applyContractAction('trade');
           closeDeclarationModal();
         },
         false, 'icon-bar-chart'
       ));
 
-      const isOnTradeBlock = cdmPlayerData?.tradeBait || cdmPlayerData?._rawPlayer?.tradeBait || false;
+      const isOnTradeBlock = cdmState.playerData?.tradeBait || cdmState.playerData?._rawPlayer?.tradeBait || false;
       const tradeBlockAction = isOnTradeBlock ? 'remove' : 'add';
       const tradeBlockLabel = isOnTradeBlock ? 'Remove from Trade Block' : 'Add to Trade Block';
       const tradeBlockDesc = !isLoggedIn
@@ -8866,7 +8907,7 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
         'trade-block', tradeBlockLabel,
         tradeBlockDesc,
         isLoggedIn ? async () => {
-          const playerId = cdmPlayerData?._rawPlayer?.id || cdmPlayerData?.id || '';
+          const playerId = cdmState.playerData?._rawPlayer?.id || cdmState.playerData?.id || '';
           if (!playerId) return;
 
           // Find the button and show loading state
@@ -8905,8 +8946,8 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
             }
 
             // Update the CDM player data for future toggles
-            if (cdmPlayerData) cdmPlayerData.tradeBait = newTradeBait;
-            if (cdmPlayerData?._rawPlayer) cdmPlayerData._rawPlayer.tradeBait = newTradeBait;
+            if (cdmState.playerData) cdmState.playerData.tradeBait = newTradeBait;
+            if (cdmState.playerData?._rawPlayer) cdmState.playerData._rawPlayer.tradeBait = newTradeBait;
 
             // Update the ufa-action-btn data attribute for future CDM opens
             const ufaBtn = document.querySelector<HTMLElement>(`.ufa-action-btn[data-player-id="${playerId}"]`);
@@ -8921,7 +8962,7 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
                 const nameEl = playerRow.querySelector('.player-cell__name');
                 if (nameEl) {
                   const badge = document.createElement('a');
-                  badge.href = resolveLeaguePath('/theleague/front-office/trade-builder?b=' + (cdmPlayerData?.franchiseId || cdmPlayerData?._rawPlayer?.franchiseId || ''));
+                  badge.href = resolveLeaguePath('/theleague/front-office/trade-builder?b=' + (cdmState.playerData?.franchiseId || cdmState.playerData?._rawPlayer?.franchiseId || ''));
                   badge.className = 'trade-bait-link';
                   badge.title = 'On Trade Block \u2014 Open in Trade Builder';
                   badge.textContent = '\uD83C\uDFF7\uFE0F';
@@ -8956,8 +8997,8 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
       actionOptions.appendChild(makeCdmActionBtn(
         'trade-builder', 'Add to Trade Builder', 'Open trade builder with this player pre-loaded',
         () => {
-          const pid = cdmPlayerData?._rawPlayer?.id || cdmPlayerData?.id || '';
-          const playerFid = cdmPlayerData?._rawPlayer?.franchiseId || cdmPlayerData?.franchiseId || '';
+          const pid = cdmState.playerData?._rawPlayer?.id || cdmState.playerData?.id || '';
+          const playerFid = cdmState.playerData?._rawPlayer?.franchiseId || cdmState.playerData?.franchiseId || '';
           const myFid = config.authUser?.franchiseId || '';
           let url = resolveLeaguePath('/theleague/front-office/trade-builder');
           if (myFid && pid) {
@@ -8990,8 +9031,8 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
       if (!actionOptions) return;
       actionOptions.replaceChildren();
 
-      cdmCurrentStep = 2;
-      cdmFlowType = target === 'ir' ? 'roster-move-ir' : 'roster-move-practice';
+      cdmState.currentStep = 2;
+      cdmState.flowType = target === 'ir' ? 'roster-move-ir' : 'roster-move-practice';
 
       // Advance stepper
       const dot1 = document.getElementById('cdm-step-dot-1');
@@ -9011,12 +9052,12 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
       backBtn.textContent = '← Back to Actions';
       backBtn.addEventListener('click', () => {
         goToActionSelectStep();
-        populateCdmActionOptions(cdmPlayerData.eligibility);
+        populateCdmActionOptions(cdmState.playerData.eligibility);
       });
       actionOptions.appendChild(backBtn);
 
-      const playerName = cdmPlayerData?._rawPlayer?.name || cdmPlayerData?.name || 'this player';
-      const playerId = cdmPlayerData?._rawPlayer?.id || cdmPlayerData?.id || '';
+      const playerName = cdmState.playerData?._rawPlayer?.name || cdmState.playerData?.name || 'this player';
+      const playerId = cdmState.playerData?._rawPlayer?.id || cdmState.playerData?.id || '';
 
       // Subtitle
       const subtitle = document.createElement('p');
@@ -9043,7 +9084,7 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
         card.setAttribute('role', 'group');
         card.setAttribute('aria-label', 'Cap impact preview');
 
-        const baseSalary = Number(cdmPlayerData?._rawPlayer?.salary ?? 0);
+        const baseSalary = Number(cdmState.playerData?._rawPlayer?.salary ?? 0);
         const activePct = (typeof getCapPercent === 'function') ? getCapPercent('ACTIVE', true) : 1;
         const practicePct = (typeof getCapPercent === 'function') ? getCapPercent('PRACTICE', true) : 0.1;
         const fromPct = direction === 'to' ? activePct : practicePct;
@@ -9729,7 +9770,7 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
         }
         // Do NOT auto-close the modal (unlike trade-block) — re-render the
         // option in place so the owner can keep marking players.
-        if (cdmPlayerData) populateCdmActionOptions(cdmPlayerData.eligibility);
+        if (cdmState.playerData) populateCdmActionOptions(cdmState.playerData.eligibility);
         // The rebuild destroyed the clicked button — restore keyboard focus
         // to the fresh toggle so repeated marking doesn't drop focus.
         document
@@ -10768,10 +10809,10 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
     // goToActionSelectStep — returns to step 1 action selection
     // ----------------------------------------------------------------
     const goToActionSelectStep = () => {
-      cdmCurrentStep = 1;
-      cdmFlowType = 'action-select';
-      cdmViaActionSelect = true;
-      cutConfirmed = false;
+      cdmState.currentStep = 1;
+      cdmState.flowType = 'action-select';
+      cdmState.viaActionSelect = true;
+      cdmState.cutConfirmed = false;
       const cdmEl = document.getElementById('contract-declaration-modal');
       if (cdmEl) cdmEl.dataset.cdmMode = 'action-select';
 
@@ -10808,29 +10849,29 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
       if (metricsEl) metricsEl.style.display = '';
 
       if (cdmBackBtn) cdmBackBtn.style.display = 'none';
-      cdmSelectedYears = null;
-      cdmSelectedSalary = null;
+      cdmState.selectedYears = null;
+      cdmState.selectedSalary = null;
       cdmSubmitBtn.disabled = true;
       cdmSubmitBtn.style.display = 'none';
 
-      if (cdmPlayerData) populateCdmActionOptions(cdmPlayerData.eligibility);
+      if (cdmState.playerData) populateCdmActionOptions(cdmState.playerData.eligibility);
     };
 
     // ----------------------------------------------------------------
     // goToDeclareContractStep — year selection for new-acquisition /
     // rookie-override players entered via the action sheet. This is a
-    // real declaration (submits to the API), so cdmViaActionSelect is
+    // real declaration (submits to the API), so cdmState.viaActionSelect is
     // cleared after entry. Mirrors the yrs-chip flow.
     // ----------------------------------------------------------------
     const goToDeclareContractStep = () => {
-      const elig = cdmPlayerData?.eligibility;
+      const elig = cdmState.playerData?.eligibility;
       if (!elig?.declareType) return;
       const declareType = elig.declareType;
 
       // Switch out of sandbox/action-select mode so submit hits the API
-      cdmViaActionSelect = false;
-      cdmCurrentStep = 2;
-      cdmFlowType = declareType;
+      cdmState.viaActionSelect = false;
+      cdmState.currentStep = 2;
+      cdmState.flowType = declareType;
       const cdmEl = document.getElementById('contract-declaration-modal');
       if (cdmEl) cdmEl.dataset.cdmMode = 'declare-contract';
 
@@ -10881,8 +10922,8 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
         btn.addEventListener('click', () => {
           yearContainer.querySelectorAll('.cdm-year-btn').forEach(b => b.classList.remove('selected'));
           btn.classList.add('selected');
-          cdmSelectedYears = yr;
-          cdmSelectedSalary = elig.currentSalary;
+          cdmState.selectedYears = yr;
+          cdmState.selectedSalary = elig.currentSalary;
           cdmSubmitBtn.disabled = false;
           updateProjectionTable(elig.currentSalary, yr, null, config.salaryYears?.[0]);
           updateCapImpact(elig.currentSalary, yr, config.salaryYears?.[0]);
@@ -10892,11 +10933,11 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
 
       // Make sure the underlying eligibility surface used by the API submit path
       // carries the real type/timestamps from the eligibility engine.
-      cdmPlayerData.eligibility.type = declareType;
-      cdmPlayerData.eligibility.yearOptions = yearOptions;
+      cdmState.playerData.eligibility.type = declareType;
+      cdmState.playerData.eligibility.yearOptions = yearOptions;
 
-      cdmSelectedYears = null;
-      cdmSelectedSalary = null;
+      cdmState.selectedYears = null;
+      cdmState.selectedSalary = null;
       cdmSubmitBtn.disabled = true;
       cdmSubmitBtn.style.display = '';
       cdmSubmitBtn.textContent = 'Declare Contract';
@@ -10906,8 +10947,8 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
     // goToFranchiseTagStep2 — franchise tag review (step 2 of 2)
     // ----------------------------------------------------------------
     const goToFranchiseTagStep2 = () => {
-      cdmCurrentStep = 2;
-      cdmFlowType = 'franchise-tag';
+      cdmState.currentStep = 2;
+      cdmState.flowType = 'franchise-tag';
 
       const typeBadge = document.getElementById('cdm-type-badge');
       if (typeBadge) {
@@ -10937,8 +10978,8 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
       const actionSection = document.getElementById('cdm-action-section');
       if (actionSection) actionSection.style.display = 'none';
 
-      const elig = cdmPlayerData.eligibility;
-      const tagResult = calculateFranchiseTag(elig.currentSalary, cdmPlayerData.position, config.extensionSeason);
+      const elig = cdmState.playerData.eligibility;
+      const tagResult = calculateFranchiseTag(elig.currentSalary, cdmState.playerData.position, config.extensionSeason);
       const tagSalary = tagResult.newSalary;
       const tagBasis = tagSalary > Math.round(elig.currentSalary * 1.2) ? 'top 3 average' : '120% of current salary';
 
@@ -10949,7 +10990,7 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
       document.getElementById('cdm-tag-basis-text').textContent =
         tagBasis === 'top 3 average' ? 'Based on the top 3 salaries at position' : 'Based on 120% of current salary';
 
-      const playerAge = cdmPlayerData.birthdate ? calculateAge(cdmPlayerData.birthdate) : null;
+      const playerAge = cdmState.playerData.birthdate ? calculateAge(cdmState.playerData.birthdate) : null;
       updateProjectionTable(tagSalary, 1, playerAge, config.salaryYears?.[0]);
       updateCapImpact(tagSalary, 1, config.salaryYears?.[0]);
 
@@ -10960,8 +11001,8 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
         reviewPanel.classList.add('panel-enter');
       }
 
-      cdmSelectedYears = 1;
-      cdmSelectedSalary = tagSalary;
+      cdmState.selectedYears = 1;
+      cdmState.selectedSalary = tagSalary;
       cdmSubmitBtn.style.display = '';
       cdmSubmitBtn.disabled = false;
       cdmSubmitBtn.textContent = 'Apply Franchise Tag';
@@ -10971,8 +11012,8 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
     // goToTeamOptionStep2 — team option review (step 2 of 2)
     // ----------------------------------------------------------------
     const goToTeamOptionStep2 = () => {
-      cdmCurrentStep = 2;
-      cdmFlowType = 'team-option';
+      cdmState.currentStep = 2;
+      cdmState.flowType = 'team-option';
 
       const typeBadge = document.getElementById('cdm-type-badge');
       if (typeBadge) {
@@ -11002,8 +11043,8 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
       const actionSection = document.getElementById('cdm-action-section');
       if (actionSection) actionSection.style.display = 'none';
 
-      const elig = cdmPlayerData.eligibility;
-      const teamOptionResult = calculateTeamOption(elig.currentSalary, cdmPlayerData.position, config.extensionSeason);
+      const elig = cdmState.playerData.eligibility;
+      const teamOptionResult = calculateTeamOption(elig.currentSalary, cdmState.playerData.position, config.extensionSeason);
       const optionSalary = teamOptionResult.newSalary;
 
       const tagSection = document.getElementById('cdm-tag-section');
@@ -11013,7 +11054,7 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
       const teamOptionYear = (config.salaryYears?.[0] ?? 2026) + elig.currentYears;
       document.getElementById('cdm-tag-basis-text').textContent = `Estimate based on the top 10 salaries in ${config.extensionSeason}`;
 
-      const playerAge = cdmPlayerData.birthdate ? calculateAge(cdmPlayerData.birthdate) : null;
+      const playerAge = cdmState.playerData.birthdate ? calculateAge(cdmState.playerData.birthdate) : null;
       const ageAtOption = playerAge !== null ? playerAge + elig.currentYears : null;
       updateProjectionTable(optionSalary, 1, ageAtOption, teamOptionYear);
       updateCapImpact(optionSalary, 1, teamOptionYear);
@@ -11025,9 +11066,9 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
         reviewPanel.classList.add('panel-enter');
       }
 
-      cdmSelectedYears = 1;
-      cdmSelectedSalary = optionSalary;
-      cdmSubmitType = 'team-option';
+      cdmState.selectedYears = 1;
+      cdmState.selectedSalary = optionSalary;
+      cdmState.submitType = 'team-option';
       cdmSubmitBtn.style.display = '';
       cdmSubmitBtn.disabled = false;
       cdmSubmitBtn.textContent = 'Exercise Team Option';
@@ -11039,8 +11080,8 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
     // picker, just a confirmation/review step.
     // ----------------------------------------------------------------
     const goToRookieExtReview = () => {
-      cdmCurrentStep = 2;
-      cdmFlowType = 'rookie-extension';
+      cdmState.currentStep = 2;
+      cdmState.flowType = 'rookie-extension';
 
       const typeBadge = document.getElementById('cdm-type-badge');
       if (typeBadge) {
@@ -11070,11 +11111,11 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
       const actionSection = document.getElementById('cdm-action-section');
       if (actionSection) actionSection.style.display = 'none';
 
-      const elig = cdmPlayerData.eligibility;
+      const elig = cdmState.playerData.eligibility;
       const existingYears = Number(elig.currentYears) || 0;
       const baseSalary = Number(elig.currentSalary) || 0;
       const extYears = 2; // Always 2 for rookie extension
-      const avgSalary = getReferenceSalary(cdmPlayerData.position, 'extension', config.extensionSeason);
+      const avgSalary = getReferenceSalary(cdmState.playerData.position, 'extension', config.extensionSeason);
       const denominator = existingYears + extYears;
       const proratedPortion = denominator > 0 ? (avgSalary * extYears) / denominator : 0;
       const newSalary = Math.round(proratedPortion + baseSalary);
@@ -11134,7 +11175,7 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
         }
       }
 
-      const playerAge = cdmPlayerData.birthdate ? calculateAge(cdmPlayerData.birthdate) : null;
+      const playerAge = cdmState.playerData.birthdate ? calculateAge(cdmState.playerData.birthdate) : null;
       updateProjectionTable(newSalary, denominator, playerAge, config.salaryYears?.[0]);
       updateCapImpact(newSalary, denominator, config.salaryYears?.[0]);
 
@@ -11145,9 +11186,9 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
         reviewPanel.classList.add('panel-enter');
       }
 
-      cdmSelectedYears = extYears;
-      cdmSelectedSalary = newSalary;
-      cdmSubmitType = 'rookie-extension';
+      cdmState.selectedYears = extYears;
+      cdmState.selectedSalary = newSalary;
+      cdmState.submitType = 'rookie-extension';
       cdmSubmitBtn.style.display = '';
       cdmSubmitBtn.disabled = false;
       cdmSubmitBtn.textContent = 'Add Extension';
@@ -11157,8 +11198,8 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
     // goToVetExtYearStep — vet-ext year selection (step 2 of 3)
     // ----------------------------------------------------------------
     const goToVetExtYearStep = () => {
-      cdmCurrentStep = 2;
-      cdmFlowType = 'veteran-extension';
+      cdmState.currentStep = 2;
+      cdmState.flowType = 'veteran-extension';
 
       const typeBadge = document.getElementById('cdm-type-badge');
       if (typeBadge) {
@@ -11205,11 +11246,11 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
       if (fToggle) fToggle.setAttribute('aria-expanded', 'false');
       if (fBody) fBody.classList.remove('expanded');
 
-      const elig = cdmPlayerData.eligibility;
-      buildVetExtYearButtons(elig, cdmPlayerData);
+      const elig = cdmState.playerData.eligibility;
+      buildVetExtYearButtons(elig, cdmState.playerData);
 
-      cdmSelectedYears = null;
-      cdmSelectedSalary = null;
+      cdmState.selectedYears = null;
+      cdmState.selectedSalary = null;
       cdmSubmitBtn.disabled = true;
       cdmSubmitBtn.style.display = '';
       cdmSubmitBtn.textContent = 'Add Extension';
@@ -11219,8 +11260,8 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
     // goToCutStep2 — cut financial review (step 2 of 2)
     // ----------------------------------------------------------------
     const goToCutStep2 = () => {
-      cdmCurrentStep = 2;
-      cdmFlowType = 'cut';
+      cdmState.currentStep = 2;
+      cdmState.flowType = 'cut';
 
       // Reveal and advance stepper to Step 2 of 2
       const dot1 = document.getElementById('cdm-step-dot-1');
@@ -11249,7 +11290,7 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
       if (cdmBackBtn) cdmBackBtn.style.display = '';
 
       // Hide action section, then rebuild with cut options
-      const elig = cdmPlayerData.eligibility;
+      const elig = cdmState.playerData.eligibility;
       const salary = elig.currentSalary;
       const years = elig.currentYears;
       const penalty = calculateCutPenalty(salary, years);
@@ -11282,14 +11323,14 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
         backBtn.textContent = '\u2190 Back to Actions';
         backBtn.addEventListener('click', () => {
           goToActionSelectStep();
-          populateCdmActionOptions(cdmPlayerData.eligibility);
+          populateCdmActionOptions(cdmState.playerData.eligibility);
         });
         actionOptions.appendChild(backBtn);
 
         actionOptions.appendChild(makeCdmActionBtn(
           'cut-simulate', 'Simulate Cut', 'Track cap impact locally — no roster changes',
           () => {
-            selectedPlayer = { ...cdmPlayerData._rawPlayer };
+            selectedPlayer = { ...cdmState.playerData._rawPlayer };
             applyContractAction('cut');
             closeDeclarationModal();
           },
@@ -11316,14 +11357,13 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
     // ----------------------------------------------------------------
     // executeCutPlayer — inline confirm → API call to actually cut
     // ----------------------------------------------------------------
-    let cutConfirmed = false;
     const executeCutPlayer = async () => {
       const cutBtn = document.querySelector<HTMLButtonElement>('.cdm-action-option--cut-real');
       if (!cutBtn) return;
 
       // First click: transform to danger confirmation state
-      if (!cutConfirmed) {
-        cutConfirmed = true;
+      if (!cdmState.cutConfirmed) {
+        cdmState.cutConfirmed = true;
         cutBtn.classList.add('cdm-action-option--danger');
         const label = cutBtn.querySelector('.cdm-action-option__label');
         const desc = cutBtn.querySelector('.cdm-action-option__desc');
@@ -11333,7 +11373,7 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
       }
 
       // Second click: execute the cut
-      const playerId = cdmPlayerData?.id;
+      const playerId = cdmState.playerData?.id;
       if (!playerId) return;
 
       // Loading state
@@ -11360,7 +11400,7 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
 
         if (data.success) {
           // Show success
-          const playerName = cdmPlayerData?._rawPlayer?.name || 'Player';
+          const playerName = cdmState.playerData?._rawPlayer?.name || 'Player';
           cutBtn.style.display = 'none';
           if (simBtn) simBtn.style.display = 'none';
           cdmSuccess.style.display = 'flex';
@@ -11389,7 +11429,7 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
     };
 
     const submitDeclaration = async () => {
-      if (!cdmPlayerData || cdmSelectedYears === null) return;
+      if (!cdmState.playerData || cdmState.selectedYears === null) return;
 
       const origBtnText = cdmSubmitBtn.textContent;
       cdmSubmitBtn.classList.add('is-loading');
@@ -11398,19 +11438,19 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
       cdmSubmitBtn.textContent = 'Submitting...';
       cdmError.style.display = 'none';
 
-      const elig = cdmPlayerData.eligibility;
-      const isCancelling = cdmSelectedYears === elig?.currentYears;
+      const elig = cdmState.playerData.eligibility;
+      const isCancelling = cdmState.selectedYears === elig?.currentYears;
 
       // Demo mode: skip API call, show success immediately
-      const isDemoPlayer = demoActive && String(cdmPlayerData.id).startsWith('DEMO_');
+      const isDemoPlayer = demoActive && String(cdmState.playerData.id).startsWith('DEMO_');
       if (isDemoPlayer) {
         if (isCancelling) {
-          delete localDeclarations[cdmPlayerData.id];
-          delete declarationsByPlayer[cdmPlayerData.id];
+          delete localDeclarations[cdmState.playerData.id];
+          delete declarationsByPlayer[cdmState.playerData.id];
         } else {
-          localDeclarations[cdmPlayerData.id] = {
+          localDeclarations[cdmState.playerData.id] = {
             status: 'pending',
-            years: cdmSelectedYears,
+            years: cdmState.selectedYears,
           };
         }
         cdmSubmitBtn.classList.remove('is-loading');
@@ -11426,9 +11466,9 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
       const franchiseName = config.teams?.[franchiseId]?.name ?? franchiseId;
       const leagueId = config.authUser?.leagueId ?? config.defaultLeagueId;
 
-      // cdmFlowType tracks the current step flow; cdmSubmitType overrides for specific sub-choices.
-      // For action-select flows, use cdmFlowType; otherwise fall back to cdmSubmitType then elig.type
-      const effectiveType = (cdmFlowType && cdmFlowType !== 'action-select') ? cdmFlowType : (cdmSubmitType ?? elig.type);
+      // cdmState.flowType tracks the current step flow; cdmState.submitType overrides for specific sub-choices.
+      // For action-select flows, use cdmState.flowType; otherwise fall back to cdmState.submitType then elig.type
+      const effectiveType = (cdmState.flowType && cdmState.flowType !== 'action-select') ? cdmState.flowType : (cdmState.submitType ?? elig.type);
 
       // Determine requestedContractInfo based on declaration type
       let requestedContractInfo;
@@ -11442,16 +11482,16 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             leagueId,
-            playerId: cdmPlayerData.id,
-            playerName: cdmPlayerData.name,
+            playerId: cdmState.playerData.id,
+            playerName: cdmState.playerData.name,
             franchiseId,
             franchiseName,
             type: effectiveType,
             currentYears: elig.currentYears,
             currentSalary: elig.currentSalary,
             currentContractInfo: elig.contractInfo ?? '',
-            requestedYears: cdmSelectedYears,
-            requestedSalary: cdmSelectedSalary ?? undefined,
+            requestedYears: cdmState.selectedYears,
+            requestedSalary: cdmState.selectedSalary ?? undefined,
             requestedContractInfo,
             deadlineAt: elig.deadlineTimestamp
               ? new Date(elig.deadlineTimestamp * 1000).toISOString()
@@ -11464,13 +11504,13 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
         if (!res.ok) throw new Error(result.error || 'Declaration failed');
 
         if (result.cancelled) {
-          delete localDeclarations[cdmPlayerData.id];
-          delete declarationsByPlayer[cdmPlayerData.id];
+          delete localDeclarations[cdmState.playerData.id];
+          delete declarationsByPlayer[cdmState.playerData.id];
         } else {
           // Optimistic update
-          localDeclarations[cdmPlayerData.id] = {
+          localDeclarations[cdmState.playerData.id] = {
             status: 'pending',
-            years: cdmSelectedYears,
+            years: cdmState.selectedYears,
           };
         }
 
@@ -11500,43 +11540,43 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
     cdmCloseBtn?.addEventListener('click', closeDeclarationModal);
     cdmSubmitBtn?.addEventListener('click', () => {
       // Via action-select flow: apply locally (sandbox, no API call)
-      if (cdmViaActionSelect) {
-        if (cdmFlowType === 'franchise-tag') {
-          if (!cdmPlayerData) return;
-          selectedPlayer = cdmPlayerData._rawPlayer;
+      if (cdmState.viaActionSelect) {
+        if (cdmState.flowType === 'franchise-tag') {
+          if (!cdmState.playerData) return;
+          selectedPlayer = cdmState.playerData._rawPlayer;
           applyContractAction('franchise');
           closeDeclarationModal();
           return;
         }
-        if (cdmFlowType === 'veteran-extension') {
-          if (!cdmSelectedYears || !cdmPlayerData) return;
-          selectedPlayer = cdmPlayerData._rawPlayer;
-          applyContractAction('extension', cdmSelectedYears);
+        if (cdmState.flowType === 'veteran-extension') {
+          if (!cdmState.selectedYears || !cdmState.playerData) return;
+          selectedPlayer = cdmState.playerData._rawPlayer;
+          applyContractAction('extension', cdmState.selectedYears);
           closeDeclarationModal();
           return;
         }
-        if (cdmFlowType === 'team-option') {
-          if (!cdmPlayerData) return;
-          selectedPlayer = cdmPlayerData._rawPlayer;
+        if (cdmState.flowType === 'team-option') {
+          if (!cdmState.playerData) return;
+          selectedPlayer = cdmState.playerData._rawPlayer;
           applyContractAction('team-option');
           closeDeclarationModal();
           return;
         }
-        if (cdmFlowType === 'rookie-extension') {
-          if (!cdmPlayerData) return;
-          selectedPlayer = cdmPlayerData._rawPlayer;
+        if (cdmState.flowType === 'rookie-extension') {
+          if (!cdmState.playerData) return;
+          selectedPlayer = cdmState.playerData._rawPlayer;
           applyContractAction('rookie-extension', 2);
           closeDeclarationModal();
           return;
         }
       }
       // Team option from direct TO cell click — apply locally for cap impact simulation
-      if (cdmFlowType === 'team-option' && cdmPlayerData) {
-        const elig = cdmPlayerData.eligibility;
-        selectedPlayer = cdmPlayerData._rawPlayer || {
-          id: cdmPlayerData.id,
-          name: cdmPlayerData.name,
-          position: cdmPlayerData.position,
+      if (cdmState.flowType === 'team-option' && cdmState.playerData) {
+        const elig = cdmState.playerData.eligibility;
+        selectedPlayer = cdmState.playerData._rawPlayer || {
+          id: cdmState.playerData.id,
+          name: cdmState.playerData.name,
+          position: cdmState.playerData.position,
           salary: elig?.currentSalary ?? 0,
           years: elig?.currentYears ?? 1,
         };
@@ -11545,10 +11585,10 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
         return;
       }
       // Veteran extension via yrs-chip: staged (batch-submitted later via Submit Tags/Extensions)
-      if (cdmPlayerData?.eligibility?.type === 'veteran-extension') {
-        if (!cdmSelectedYears || !cdmPlayerData) return;
-        selectedPlayer = cdmPlayerData._rawPlayer;
-        applyContractAction('extension', cdmSelectedYears);
+      if (cdmState.playerData?.eligibility?.type === 'veteran-extension') {
+        if (!cdmState.selectedYears || !cdmState.playerData) return;
+        selectedPlayer = cdmState.playerData._rawPlayer;
+        applyContractAction('extension', cdmState.selectedYears);
         closeDeclarationModal();
         return;
       }
