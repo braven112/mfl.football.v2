@@ -261,6 +261,23 @@ describe('the AFL homepage does not feed the walked-back year to the recap', () 
     expect(call).not.toMatch(/getWeekInTheBooks\(seasonYear\b/);
   });
 
+  it('hands the CAST the same week and season the card is captioned with', () => {
+    // The card's label and its Top Scorer must name one week. The casting is
+    // wired from the page (`castAflHeroModel`), so nothing but a scan of this
+    // file can prove the right pair is handed over: swapping in the walked-back
+    // `seasonYear`, or `heroState.week` (the UPCOMING week — the original #1085
+    // bug) for `aflRecap.week`, leaves the rest of the suite green.
+    const call = PAGE.slice(
+      PAGE.indexOf('castAflHeroModel(heroState, {'),
+      PAGE.indexOf('castAflHeroModel(heroState, {') + 800,
+    );
+    expect(call).toContain('recap: { seasonYear: liveSeasonYear, week: aflRecap.week }');
+    // Not the walked-back year, and not the upcoming week.
+    expect(call).not.toMatch(/recap:\s*\{[^}]*seasonYear:\s*seasonYear\b/);
+    expect(call).not.toMatch(/week:\s*heroState\.week/);
+    expect(call).not.toMatch(/week:\s*currentNflWeekForHero/);
+  });
+
   it('resolves both years BEFORE the hero block that consumes one', () => {
     // resolveSeasonYearWithData closes over an import.meta.glob const, so
     // calling it above that declaration is a temporal-dead-zone ReferenceError

@@ -57,6 +57,26 @@ export interface AflCastingInput {
   userFranchiseId?: string;
   /** Franchise currently leading the standings — for the Monday standings slot. */
   standingsLeaderId?: string;
+  /**
+   * The recap card's week, and the SEASON that week was derived from.
+   *
+   * Both halves matter. The recap slot captions a Top Scorer with a week, so
+   * the cast has to come from that same week or the card puts one week's
+   * numbers under another week's label. It also has to come from the same
+   * SEASON: the caller derives the week from `getCurrentSeasonYear` (Labor Day
+   * rollover) while this casting runs on `leagueYear` (the AFL's June 1 league
+   * year). Those AGREE from Labor Day round to May 31 — measured, not assumed:
+   * on 2027-03-15 both read 2026 — and DIVERGE from June 1 to Labor Day, when
+   * the league year has advanced and the season year has not (2027-07-15 reads
+   * leagueYear 2027, seasonYear 2026). Reading the week out of the `leagueYear`
+   * feed would check one season's week against another season's rows. The recap
+   * slot only runs inside the season, where they agree, so this is defensive —
+   * but it is the half that stays correct if the slot's gating ever widens.
+   *
+   * Omitted, or a week of 0, means the caller cannot vouch for a week, and the
+   * slot casts a generic headliner rather than a "Top Scorer" it cannot place.
+   */
+  recap?: { seasonYear: number; week: number };
 }
 
 /**
@@ -202,13 +222,35 @@ export function castAflHeroModel(state: AflHeroState, input: AflCastingInput): H
           return model ?? headliner('Headliner');
         }
         case 'recap': {
-          // Deterministic: the week's top scorer IS the recap's headline.
-          const top = castBestScoredModel(
-            getWeeklyTopScorerCandidates(leagueYear, AFL),
-            players,
-            undefined,
-            'Top Scorer',
-          );
+          // Deterministic: the week's top scorer IS the recap's headline — but
+          // it must be THAT week's scorer, out of THAT season's feed.
+          //
+          // This used to read `getWeeklyTopScorerCandidates(leagueYear, AFL)`
+          // unfiltered. `playerScores.json` holds whichever single week MFL
+          // currently considers live, so once MFL rolls it the card captioned
+          // week N's top scorer as week N-1's. Scoping the read to the captioned
+          // week means a disagreement casts nobody, and the ladder falls through
+          // to a generic headliner instead of a confidently mislabelled card.
+          //
+          // THE TRADE-OFF, stated: this slot runs Tuesday before 2pm PT, which
+          // is the window MFL rolls the feed in. If the roll ever lands BEFORE
+          // the render, the capped week is N-1 while the feed holds only N, so
+          // this casts nobody and the card wears a generic face every week —
+          // there is no per-week archive to fall back to. That is still the
+          // right outcome: a correct label over a generic face beats another
+          // week's scorer under this week's. It is also not what happens today
+          // — on Tue 2026-09-15 the feed held week 1 and the card captioned
+          // week 1, and the page rendered a real Top Scorer.
+          const scope = input.recap;
+          const top =
+            scope && scope.week > 0
+              ? castBestScoredModel(
+                  getWeeklyTopScorerCandidates(scope.seasonYear, AFL, scope.week),
+                  players,
+                  undefined,
+                  'Top Scorer',
+                )
+              : null;
           return top ?? headliner('Headliner');
         }
         case 'standings':

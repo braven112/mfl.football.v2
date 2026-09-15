@@ -371,6 +371,11 @@ if ('view' in heroState) {
     leagueYear: heroLeagueYear,
     userFranchiseId,
     standingsLeaderId,
+    // The recap card captions its Top Scorer with `aflRecap.week`, so the cast
+    // has to be scoped to that week — and to `liveSeasonYear`, the season that
+    // week was derived from, which is NOT `heroLeagueYear` between June 1 and
+    // Labor Day (the league year advances first). See AflCastingInput.recap.
+    recap: { seasonYear: liveSeasonYear, week: aflRecap.week },
   });
   // Tint the glow with the viewer's OWN franchise when their conference
   // rosters the cast player — the hero is then visibly about their team, not

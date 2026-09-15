@@ -1,13 +1,13 @@
 ---
 slug: afl-recap-cast-week-scope
-status: open
+status: shipped
 severity: P3
 opened: 2026-09-15
 hotfix_pr: https://github.com/braven112/mfl.football.v2/pull/1085
 hotfix_sha: 415bbf0ac2b15b82426c2299a9ef68f128689a3f
 followup_issue: 1086
-followup_pr:
-followup_session:
+followup_pr: https://github.com/braven112/mfl.football.v2/pull/1102
+followup_session: https://claude.ai/code/session_01J3Y9GEjiYTBnikrKQf16HQ
 ---
 
 # Follow-up: the AFL recap card labels one week and casts from another
@@ -69,3 +69,37 @@ Guard to add with the fix: extend
 `tests/offseason-hero-data.test.ts`'s week-scoping block to the AFL casting
 path, or assert in `tests/afl-hero-casting.test.ts` that the recap cast and the
 resolved `recap.week` name the same week.
+
+## SHIPPED, Sept 2026
+
+Taken the first way the brief suggested: the page's already-computed recap week
+is threaded through `AflCastingInput`, rather than re-derived inside the casting.
+
+**Both halves of the scope travel together** — `recap?: { seasonYear, week }`,
+not just a week. The brief's own closing note was the reason: the cast read the
+`leagueYear` feed while the label's week came from the `getCurrentSeasonYear`
+one, and those diverge from June 1 to Labor Day — the league year advances
+first, so through that window the league year is already the new season's while
+the season year is still last season's. Passing only a week would have checked
+one season's week number against another season's rows, which is a subtler
+version of the same bug rather than a fix for it.
+
+`case 'recap'` now casts only when the caller vouches for a week (`week > 0`),
+and reads `getWeeklyTopScorerCandidates(scope.seasonYear, AFL, scope.week)`. A
+week the feed does not hold casts nobody and the ladder falls through to
+`headliner('Headliner')` — a generic face under a correct label, never another
+week's scorer under this week's. Omitting `recap` entirely does the same: a
+caller that cannot name a week does not get a "Top Scorer" descriptor.
+
+Guard: `tests/afl-hero-casting.test.ts` — "the recap cast is scoped to the week
+the card is captioned with", four cases (the feed's real week casts a Top
+Scorer; a week the feed lacks casts a Headliner; week 0 and the omitted case
+cast a Headliner; a season with no feed casts a Headliner even though
+`leagueYear` would have). The feed's week is found by probing rather than
+pinned, so the suite does not go stale as the season advances.
+Negative-checked: restoring the unfiltered `leagueYear` read fails three of the
+four.
+
+Verified by rendering: `/afl-fantasy/?testDate=2026-09-15` still casts a **Top
+Scorer** beside "Week 1 is in the books"; `?testDate=2027-09-14` casts no Top
+Scorer beside "No week is in the books yet".
