@@ -84,10 +84,34 @@ export function thisWeeksArticleUrls({ entries, monday }) {
   return urls;
 }
 
-/** One probe. 200 means the article is really there; a redirect means not yet. */
-async function isLive(url, fetchImpl = fetch) {
+/**
+ * One probe. 200 means the article is really there; a redirect means not yet.
+ *
+ * `redirect: 'manual'` is the load-bearing part: the `[id]` route redirects an
+ * unknown id to /whats-new, so a follow-redirects fetch would see 200 for a
+ * page that does not have the article on it and declare victory immediately.
+ *
+ * The abort budget is load-bearing too, for the same reason the gate has one:
+ * the caller's deadline is only checked BETWEEN probes, so a stalled connect
+ * with no signal would hang past it and the documented non-fatal timeout would
+ * never be reached. Any failure — abort, DNS, TLS, a 5xx — reads as "not yet",
+ * which is the safe direction: it costs another poll, never a false green.
+ *
+ * Exported for tests. It is the whole contract of this script.
+ *
+ * @param {string} url
+ * @param {object} [options]
+ * @param {(url: string, init?: RequestInit) => Promise<{ status: number }>} [options.fetchImpl]
+ * @param {number} [options.timeoutMs]
+ * @returns {Promise<boolean>}
+ */
+export async function isLive(url, { fetchImpl = fetch, timeoutMs = 15_000 } = {}) {
   try {
-    const res = await fetchImpl(url, { redirect: 'manual', headers: { 'User-Agent': 'whats-new-live-check' } });
+    const res = await fetchImpl(url, {
+      redirect: 'manual',
+      signal: AbortSignal.timeout(timeoutMs),
+      headers: { 'User-Agent': 'whats-new-live-check' },
+    });
     return res.status === 200;
   } catch {
     return false;

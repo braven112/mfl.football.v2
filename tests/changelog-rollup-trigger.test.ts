@@ -29,6 +29,7 @@ import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { shouldPublish, fetchAheadBy } from '../scripts/changelog-rollup-gate.mjs';
+import { isLive, thisWeeksArticleUrls } from '../scripts/wait-for-whats-new-live.mjs';
 
 const ROOT = resolve(__dirname, '..');
 const WORKFLOW = readFileSync(
@@ -49,12 +50,16 @@ describe('the rollup workflow is wired to the release, not only to the clock', (
     expect(WORKFLOW).toMatch(/ref:\s*main/);
   });
 
-  it('gates every publishing step on the gate, not just the rollup itself', () => {
-    // The rollup, the commit, the live-check and the notification must all sit
-    // behind the same condition. Gating only the first would still commit an
-    // empty change and still fire a notification for an article nobody wrote.
-    const gated = WORKFLOW.match(/if: steps\.gate\.outputs\.publish == 'true'/g) ?? [];
-    expect(gated.length).toBeGreaterThanOrEqual(4);
+  it('gates the publishing steps on the gate, and only those', () => {
+    // Two conditions, deliberately, because they answer different questions.
+    // `gate.publish` is "may this run publish at all" and belongs to the rollup
+    // and to the check that reads whether it wrote anything. `published.new` is
+    // "did an article actually land" and is what wait/notify hang off — see the
+    // suite below. The cap step is under NEITHER, on purpose.
+    const onGate = WORKFLOW.match(/if: steps\.gate\.outputs\.publish == 'true'/g) ?? [];
+    expect(onGate.length).toBe(2);
+    const onPublished = WORKFLOW.match(/if: steps\.published\.outputs\.new == 'true'/g) ?? [];
+    expect(onPublished.length).toBe(2);
   });
 
   it('waits for the permalink before notifying', () => {
@@ -130,5 +135,104 @@ describe('fetchAheadBy', () => {
 
   it('returns null (fail open) with no token', async () => {
     expect(await fetchAheadBy({ repo: 'o/r', token: '' })).toBeNull();
+  });
+});
+
+describe('isLive — the live-check contract', () => {
+  // The whole point of this probe is to not notify owners about a page that is
+  // not deployed yet. Every case below is a way that could silently go wrong.
+  const probe = (status: number) => async () => ({ status });
+
+  it('200 means the article is really there', async () => {
+    expect(await isLive('https://x/a', { fetchImpl: probe(200) })).toBe(true);
+  });
+
+  it('a 3xx is NOT live — the [id] route redirects an unknown id to /whats-new', async () => {
+    // This is why `redirect: 'manual'` is load-bearing. Following redirects
+    // would turn this exact case into a 200 on the listing page and declare an
+    // undeployed article live.
+    expect(await isLive('https://x/a', { fetchImpl: probe(302) })).toBe(false);
+    expect(await isLive('https://x/a', { fetchImpl: probe(301) })).toBe(false);
+  });
+
+  it('passes redirect: manual to fetch', async () => {
+    let seen: any = null;
+    await isLive('https://x/a', {
+      fetchImpl: async (_u: string, init?: any) => {
+        seen = init;
+        return { status: 200 };
+      },
+    });
+    expect(seen?.redirect).toBe('manual');
+    expect(seen?.signal).toBeDefined();
+  });
+
+  it('a 404 or 5xx reads as not-yet, never as live', async () => {
+    expect(await isLive('https://x/a', { fetchImpl: probe(404) })).toBe(false);
+    expect(await isLive('https://x/a', { fetchImpl: probe(503) })).toBe(false);
+  });
+
+  it('a thrown fetch (DNS, TLS, abort) reads as not-yet rather than crashing', async () => {
+    const boom = async () => {
+      throw new Error('ECONNREFUSED');
+    };
+    expect(await isLive('https://x/a', { fetchImpl: boom })).toBe(false);
+  });
+});
+
+describe('thisWeeksArticleUrls', () => {
+  const MONDAY = '2026-09-14';
+
+  it('builds one absolute URL per league that actually published', () => {
+    const entries = [
+      { id: `weekly-rollup-${MONDAY}` },
+      { id: `weekly-rollup-${MONDAY}-afl` },
+    ];
+    const urls = thisWeeksArticleUrls({ entries, monday: MONDAY });
+    expect(urls).toHaveLength(2);
+    // Absolute, and each on its own league's apex — built by leagueUrl(),
+    // never by concatenating an origin with a path.
+    for (const u of urls) expect(u.url).toMatch(/^https:\/\/[^/]+\/whats-new\/weekly-rollup-/);
+    expect(urls.map((u) => u.id)).toEqual(entries.map((e) => e.id));
+  });
+
+  it('skips a league with no article this week rather than inventing a URL', () => {
+    // A league can legitimately not publish — the rollup skips one whose
+    // staged changes are empty. Waiting on a URL nobody wrote would burn the
+    // whole timeout and warn for no reason.
+    const urls = thisWeeksArticleUrls({ entries: [{ id: `weekly-rollup-${MONDAY}` }], monday: MONDAY });
+    expect(urls).toHaveLength(1);
+    expect(urls[0].id).toBe(`weekly-rollup-${MONDAY}`);
+  });
+
+  it('returns nothing when this week published nothing at all', () => {
+    expect(thisWeeksArticleUrls({ entries: [{ id: 'weekly-rollup-2020-01-06' }], monday: MONDAY })).toEqual([]);
+  });
+});
+
+describe('the workflow only notifies for an article this run actually wrote', () => {
+  it('gates wait + notify on the published step, not on the gate', () => {
+    // `publish == true` is not "an article landed": the rollup exits 0 without
+    // writing on an empty queue and again when the week's id is already taken.
+    // Notifying on those pushes owners at an article this run did not write.
+    expect(WORKFLOW).toMatch(/id: published/);
+    const waitBlock = WORKFLOW.slice(WORKFLOW.indexOf('Wait for the article to be live'));
+    expect(waitBlock).toMatch(/if: steps\.published\.outputs\.new == 'true'/);
+    const notifyBlock = WORKFLOW.slice(WORKFLOW.indexOf('Notify owners'));
+    expect(notifyBlock).toMatch(/if: steps\.published\.outputs\.new == 'true'/);
+  });
+
+  it('re-enforces the cap on EVERY run, not only when it publishes', () => {
+    // The rollup exits at its no-changes check long before enforcing the cap,
+    // so an empty-queue week never re-enforces — which is the exact red of
+    // 2026-09-16. An unconditional step is the only placement that covers it.
+    const capIdx = WORKFLOW.indexOf('Re-enforce the active cap');
+    const after = WORKFLOW.slice(capIdx, capIdx + 400);
+    expect(after).not.toMatch(/if: steps\./);
+  });
+
+  it('serializes itself — three triggers now write the same files on main', () => {
+    expect(WORKFLOW).toMatch(/concurrency:\s*\n\s*group: weekly-changelog-rollup/);
+    expect(WORKFLOW).toMatch(/cancel-in-progress: false/);
   });
 });

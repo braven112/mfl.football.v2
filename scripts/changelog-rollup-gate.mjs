@@ -142,13 +142,19 @@ export function shouldPublish({ trigger, aheadBy }) {
  * @param {string} [options.token] A token with read access to the repo.
  * @param {(url: string, init?: RequestInit) => Promise<{ ok: boolean, status: number, json: () => Promise<any> }>} [options.fetchImpl]
  *   Injected by tests; defaults to the global `fetch`.
+ * @param {number} [options.timeoutMs] Abort budget for the request. Without one
+ *   a stalled DNS/TCP/TLS connect leaves this awaiting `fetch` forever, and the
+ *   fail-open path below — the whole safety net — is never reached: the job
+ *   hangs instead of publishing. `catch` turns the abort into the documented
+ *   `null`.
  * @returns {Promise<number|null>} Commits `staging` has that `main` lacks, or
  *   `null` when the comparison could not be made.
  */
-export async function fetchAheadBy({ repo, token, fetchImpl = fetch } = {}) {
+export async function fetchAheadBy({ repo, token, fetchImpl = fetch, timeoutMs = 20_000 } = {}) {
   if (!repo || !token) return null;
   try {
     const res = await fetchImpl(`${GITHUB_API}/repos/${repo}/compare/main...staging`, {
+      signal: AbortSignal.timeout(timeoutMs),
       headers: {
         Authorization: `Bearer ${token}`,
         Accept: 'application/vnd.github+json',

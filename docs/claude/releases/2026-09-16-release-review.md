@@ -218,7 +218,10 @@ Neither blocks the promotion, but both are first-run-only and both are live
 foot-guns on Tuesday. From `docs/plans/staging-release-process.md`, build order
 items 8 and 9:
 
-1. **The What's New rollup fires ahead of the promotion.**
+1. **The What's New rollup fires ahead of the promotion.** *(Pre-fix snapshot —
+   resolved; see above. The diagnosis here is also wrong in an instructive way:
+   the cron reads MAIN's queue, so it could not have announced an unpromoted
+   feature. The real defect was the opposite one.)*
    `weekly-changelog-rollup.yml` is `0 4 * * 2` — Monday 9pm PT — while the
    promotion is Tuesday morning. It publishes the article and pushes the
    `site-update` notification, so owners get told to go look at features that
@@ -254,5 +257,10 @@ are not mechanical:
    range touches a lot of rendering. Expect a large batch: it is three weeks,
    not one.
 3. **TheLeague's draft date** — the one blackout the script cannot read.
-4. **The What's New rollup ordering** (below). Worth settling before the
-   promotion rather than after, since 40 changes are queued behind it.
+4. ~~**The What's New rollup ordering**~~ — **resolved after this review was
+   written.** The rollup now fires on the release tag `/promote` pushes, with
+   the Monday cron kept as a floor behind a stand-down gate. The section below
+   is the PRE-FIX snapshot and is kept as the record of what the review found,
+   not as an outstanding item; `docs/plans/staging-release-process.md` carries
+   the current design, including the correction that this was a LATE
+   announcement rather than an early one.
