@@ -79,6 +79,13 @@ const SEQUENTIAL = [
   // never change for past seasons, so this is a no-op unless the payload
   // logic in scripts/lib/roster-season-payload.mjs changed.
   { name: 'compute:roster-payloads', cmd: 'pnpm run compute:roster-payloads', previewSkip: true },
+  // Top Players leaderboards. Reads player-scores-weekly.json — the only feed
+  // that sees the FREE-AGENT pool (weekly-results-raw.json records a score
+  // only for weeks a player sat on some roster), joins players/rosters/league,
+  // and emits one finished file per league. previewSkip because the result is
+  // committed: preview builds read the artifact, same as every step here.
+  { name: 'compute:top-players', cmd: 'pnpm run compute:top-players', previewSkip: true },
+  { name: 'compute:top-players:afl', cmd: 'pnpm run compute:top-players:afl', previewSkip: true },
 ];
 
 const PARALLEL = [

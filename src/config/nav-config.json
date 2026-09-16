@@ -247,6 +247,14 @@
           "external": false,
           "leagueOnly": "afl",
           "description": "Browse available AFL free agents with ADP and projected points"
+        },
+        {
+          "id": "top-players",
+          "label": "Top Players",
+          "icon": "bar-chart",
+          "path": "/top-players",
+          "external": false,
+          "description": "Weekly scores, totals and position ranks for every player"
         }
       ]
     },
@@ -569,7 +577,8 @@
     "/division-strength": "/division-strength",
     "/draft": "/draft",
     "/draft/results": "/draft/results",
-    "/draft/broadcast": "/draft/broadcast"
+    "/draft/broadcast": "/draft/broadcast",
+    "/top-players": "/top-players"
   },
   "verifyTeamUrl": {
     "theleague": "https://{host}/{year}/home/{leagueId}?MODULE=MESSAGE20",

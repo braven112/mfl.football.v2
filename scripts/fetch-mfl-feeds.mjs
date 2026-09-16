@@ -38,6 +38,7 @@ import { mflFetch } from './lib/mfl-api.mjs';
 import { getNonEmpty } from './lib/env.mjs';
 import { getLeagueById, DEFAULT_LEAGUE_SLUG } from '../src/config/leagues-data.mjs';
 import { writeJsonIfChanged, jsonEquivalent } from './lib/canonical-json.mjs';
+import { isSeasonWindowOpen } from '../src/utils/pecking-order-season-window.mjs';
 import { isKeeperWindowDate } from './lib/retention-policy.mjs';
 
 /**
@@ -1088,6 +1089,127 @@ const run = async () => {
     } catch (err) {
       console.error('Failed current-week weeklyResults:', err.message);
     }
+  }
+
+  // ── Per-week playerScores — the only full-pool source of weekly scores ──
+  //
+  // `weekly-results-raw.json` records a player's score only for weeks he sat
+  // on some roster, so the free-agent pool is structurally invisible in it.
+  // Measured live 2026-09-16, TheLeague week 1: 484 scoring players against
+  // 394 rostered — 163 scorers on nobody's roster, a third of the pool. See
+  // docs/claude/insights/domains/mfl-api.md § 2026-08-10 (which reached the
+  // same conclusion from the keeper report card) and docs/plans/top-players-page.md.
+  //
+  // THE WEEK RANGE COMES FROM league.json, never a constant. `startWeek` /
+  // `endWeek` differ per league and per year (TheLeague 2026: 1–17, with
+  // lastRegularSeasonWeek 14). The weeklyResults loop above hardcodes 17 —
+  // do not copy that; CLAUDE.md is explicit that an NFL week is not a
+  // derivation.
+  {
+    const KEY = 'player-scores-weekly';
+    const weeklyFile = path.join(outDir, `${KEY}.json`);
+
+    // MFL answers an UNSCORED week with a single BLANK row at HTTP 200 —
+    // {"isAvailable":"1","id":"","score":"","week":"2"} — not an error and
+    // not an empty array (verified live 2026-09-16 against week 2, which had
+    // not kicked off). A row with no id is not data, and committing one would
+    // blank a good week. This is the same zero-row guard the removed
+    // playerScores-ytd entry carried.
+    const scoredRows = (payload) => {
+      const list = payload?.playerScores?.playerScore;
+      const rows = Array.isArray(list) ? list : list ? [list] : [];
+      return rows.filter((r) => r?.id && r.score !== '' && r.score != null);
+    };
+    const weekOf = (payload) => Number(payload?.playerScores?.week);
+
+    let weeks = [];
+    try {
+      const parsed = JSON.parse(fs.readFileSync(weeklyFile, 'utf8'));
+      if (Array.isArray(parsed)) weeks = parsed;
+    } catch {
+      weeks = []; // first run for this league-year
+    }
+
+    // Replace a week in place, or insert it in week order. Only ever called
+    // with a payload that already passed `scoredRows`, so a good committed
+    // week can never be replaced by a blank one.
+    const mergeWeek = (payload) => {
+      const w = weekOf(payload);
+      if (!Number.isInteger(w) || w < 1) return false;
+      const at = weeks.findIndex((entry) => weekOf(entry) === w);
+      if (at >= 0) weeks[at] = payload;
+      else {
+        weeks.push(payload);
+        weeks.sort((a, b) => weekOf(a) - weekOf(b));
+      }
+      return true;
+    };
+
+    // Offseason guard. Outside the season window every week answers with the
+    // blank-row payload, so the loop is 17 calls a day to learn nothing —
+    // twice, across both leagues, for ~7 months. "The feed has no completed
+    // week" is NOT an offseason guard (CLAUDE.md): Feb → Labor Day resolves to
+    // a season whose feeds are complete by definition. `isSeasonWindowOpen` is.
+    //
+    // Deliberately conditioned on ALREADY HAVING the weeks: a historical
+    // backfill (MFL_YEAR=2025) targets a season whose window is long closed,
+    // and must still be able to build the file the first time. --force also
+    // overrides, which is how you re-pull a finished season.
+    const windowClosed = !isSeasonWindowOpen(Number(year)) && weeks.length > 0 && !force;
+    if (windowClosed) {
+      console.log(`${KEY}: ${year} is outside the season window and already has ${weeks.length} week(s); skipping the per-week loop.`);
+    }
+
+    if (!skipDailyFeeds && !windowClosed) {
+      let startWeek = 1;
+      let endWeek = 17;
+      try {
+        const lg = JSON.parse(fs.readFileSync(path.join(outDir, 'league.json'), 'utf8'));
+        const s = Number(lg?.league?.startWeek);
+        const e = Number(lg?.league?.endWeek);
+        if (Number.isInteger(s) && s > 0) startWeek = s;
+        if (Number.isInteger(e) && e >= startWeek) endWeek = e;
+      } catch {
+        console.warn(
+          `::warning::${KEY}: could not read league.json week range; falling back to ${startWeek}-${endWeek}.`,
+        );
+      }
+
+      console.log(`Fetching ${KEY} for weeks ${startWeek}-${endWeek}`);
+      for (let weekNum = startWeek; weekNum <= endWeek; weekNum += 1) {
+        const weekUrl = `${host}/${year}/export?TYPE=playerScores&L=${leagueId}&W=${weekNum}&JSON=1`;
+        try {
+          const parsed = JSON.parse(await fetchTextWithRetry(weekUrl, 4, 2000));
+          const rows = scoredRows(parsed);
+          if (rows.length === 0) {
+            // Unplayed or unscored — expected for every week after the one in
+            // progress, so this is a log line, not a warning.
+            console.log(`  week ${weekNum}: no scored rows yet; leaving it out.`);
+          } else if (mergeWeek(parsed)) {
+            console.log(`  week ${weekNum}: ${rows.length} scored rows.`);
+          }
+        } catch (err) {
+          console.error(`Failed ${KEY} week ${weekNum}:`, err.message);
+        }
+        // Same courtesy delay as the weeklyResults loop.
+        await delay(1200);
+      }
+    } else if (skipDailyFeeds) {
+      // Live refresh: no extra request. The W-less `playerScores` entry in
+      // FEEDS above already ran this cycle and holds whatever week MFL calls
+      // current, so merge that file rather than asking again — the same
+      // reasoning as the current-week weeklyResults merge, minus the call.
+      try {
+        const live = JSON.parse(fs.readFileSync(path.join(outDir, 'playerScores.json'), 'utf8'));
+        if (scoredRows(live).length > 0 && mergeWeek(live)) {
+          console.log(`Live refresh: merged week ${weekOf(live)} into ${KEY}.`);
+        }
+      } catch {
+        // No current-week file yet; the daily loop fills it.
+      }
+    }
+
+    if (weeks.length > 0) writeOut(KEY, weeks);
   }
 
   // Fetch playoff brackets (metadata + individual bracket details)

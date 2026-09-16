@@ -27,8 +27,6 @@ import { resolveHeroCrest, resolveHeroFranchiseSkin } from '../../../utils/hero-
 import CompositeHero from '../../shared/CompositeHero.astro';
 import RecapHero from './RecapHero.astro';
 import { resolveRecapDestination } from '../../../utils/hero-recap-destination';
-import feedData from '../../../data/theleague/schefter-feed.json';
-import type { SchefterFeed } from '../../../types/schefter';
 
 export interface Props {
   state: HeroState;
@@ -71,15 +69,13 @@ const crest = resolveHeroCrest({ franchiseId: winner?.franchiseId, league: 'thel
 // A TEAM event — it is this franchise's week — so the card wears their colours.
 const franchise = resolveHeroFranchiseSkin(winner?.franchiseId, 'theleague');
 
-// Where "see the full week" goes. It used to be /theleague/standings — the
-// race, not the week — so a card built entirely out of the completed week's box
-// score handed the reader a table that says nothing about it. Schefter's recap
-// column when he wrote one, else that week's own scoreboard.
+// Where the CTA goes. It used to be /theleague/standings — the race, not the
+// week — so a card built entirely out of the completed week's box score handed
+// the reader a table that says nothing about it. Now it lands on the page that
+// ranks exactly what this card is about: the week's top scorers.
 const recap = resolveRecapDestination({
   league: 'theleague',
-  seasonYear: year,
   completedWeek: week,
-  posts: (feedData as SchefterFeed).posts,
 });
 
 const teamCode = model ? normalizeTeamCode(model.nflTeam) : '';
@@ -114,7 +110,7 @@ const summary = franchiseName
       </div>
       <span class="cmh__divider" aria-hidden="true"></span>
       <a class="cmh__cta" href={r(recap.href)}>
-        {recap.isArticle ? 'Read the recap' : recap.week ? 'See the full week' : 'Read the latest'}
+        {recap.label}
         <span aria-hidden="true">→</span>
       </a>
     </div>

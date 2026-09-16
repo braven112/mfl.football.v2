@@ -69,69 +69,51 @@ describe('findWeeklyRecapPost', () => {
 });
 
 describe('resolveRecapDestination', () => {
-  it('prefers Schefter’s own recap column when he wrote one', () => {
-    const d = resolveRecapDestination({
-      league: 'theleague',
-      seasonYear: 2026,
-      completedWeek: 2,
-      posts: [recapPost(2026, 2)],
-    });
-    expect(d).toEqual({
-      week: 2,
-      href: '/theleague/news/sf_2026_weekly_recap_w02',
-      label: 'Read the recap',
-      isArticle: true,
-    });
-  });
-
-  it('builds the href from THIS league, ignoring the post’s own link', () => {
-    // The removed generator hardcoded `/theleague/news/<id>` and
-    // `league: 'theleague'` while ignoring its own `{ league }` option, and the
-    // workflow ran it for --league afl-fantasy too. Any recap still sitting in
-    // an AFL feed therefore carries a TheLeague permalink for a post that only
-    // exists in the AFL's — so the href stays CONSTRUCTED from the reader's
-    // league rather than trusted from the post.
-    const d = resolveRecapDestination({
-      league: 'afl-fantasy',
-      seasonYear: 2026,
-      completedWeek: 1,
-      posts: [recapPost(2026, 1, { link: '/theleague/news/sf_2026_weekly_recap_w01' })],
-    });
-    expect(d.href).toBe('/afl-fantasy/news/sf_2026_weekly_recap_w01');
-    expect(d.href).not.toContain('theleague');
-  });
-
-  it('falls back to the completed week’s SCOREBOARD, never the news feed', () => {
-    // The fallback is the thing the user actually asked for: a recap of the
-    // games, not a dump of every wire item. No recap has generated for either
-    // league all 2026 season, so this is the common path, not the edge case.
+  it('sends the reader to that week on Top Players, in either league', () => {
+    // The card casts the week's highest scorer, so it lands on the page that
+    // ranks exactly that — rostered players and free agents alike.
     for (const league of ['theleague', 'afl-fantasy'] as const) {
-      const d = resolveRecapDestination({ league, seasonYear: 2026, completedWeek: 1, posts: [] });
-      expect(d.href).toBe(`/${league}/live-scoring?week=1`);
-      expect(d.isArticle).toBe(false);
-      expect(d.week).toBe(1);
-      expect(d.href).not.toContain('/news');
-      expect(d.href).not.toContain('/standings');
+      const d = resolveRecapDestination({ league, completedWeek: 1 });
+      expect(d).toEqual({
+        week: 1,
+        href: `/${league}/top-players?week=1`,
+        label: "See the week's top scorers",
+      });
     }
   });
 
-  it('pins the link to the week in the books, not the week number handed in', () => {
-    const d = resolveRecapDestination({
-      league: 'afl-fantasy',
-      seasonYear: 2026,
-      completedWeek: 1,
-      posts: [recapPost(2026, 2, { link: '/afl-fantasy/news/sf_2026_weekly_recap_w02' })],
-    });
-    // Week 2's recap exists but week 1 is what is complete — the hero must not
-    // hand the reader a recap of games that have not been played.
-    expect(d.href).toBe('/afl-fantasy/live-scoring?week=1');
+  it('links the week in the BOOKS, which is the whole reason this module exists', () => {
+    // getCurrentNFLWeek rolls to the UPCOMING week on Tuesday, the morning
+    // this slot runs. Callers pass getLatestScoredWeek; the href must carry
+    // exactly that, or the reader lands on a week nobody has played — which
+    // Top Players would then degrade to season totals, silently losing the
+    // point of the link.
+    expect(resolveRecapDestination({ league: 'afl-fantasy', completedWeek: 1 }).href).toBe(
+      '/afl-fantasy/top-players?week=1',
+    );
+  });
+
+  it('no longer routes through Schefter’s recap column', () => {
+    // The weekly recap column is being retired, and its branch was already
+    // dead: no recap generated for either league all 2026 season (F3 of
+    // docs/claude/followups/2026-09-15-hero-recap-routing.md). The CTA is
+    // unconditional now — no post input can change where it points.
+    const d = resolveRecapDestination({ league: 'theleague', completedWeek: 2 });
+    expect(d.href).not.toContain('/news/');
+    expect(d.href).not.toContain('live-scoring');
+    expect(d.href).not.toContain('/standings');
+    expect(d).not.toHaveProperty('isArticle');
   });
 
   it('only degrades to the feed when nothing at all has been scored', () => {
-    const d = resolveRecapDestination({
-      league: 'afl-fantasy', seasonYear: 2026, completedWeek: 0, posts: [],
-    });
-    expect(d).toEqual({ week: 0, href: '/afl-fantasy/news', label: 'Read the latest', isArticle: false });
+    const d = resolveRecapDestination({ league: 'afl-fantasy', completedWeek: 0 });
+    expect(d).toEqual({ week: 0, href: '/afl-fantasy/news', label: 'Read the latest' });
+  });
+
+  it('treats a nonsense week as nothing scored rather than building a bad link', () => {
+    for (const completedWeek of [-1, Number.NaN, Infinity]) {
+      expect(resolveRecapDestination({ league: 'theleague', completedWeek }).week).toBe(0);
+    }
   });
 });
 
@@ -149,18 +131,18 @@ describe('the AFL recap hero renders the resolved destination', () => {
 
   it('uses the recap href + label rather than the news feed', () => {
     const state = at({
-      week: 1, href: '/afl-fantasy/live-scoring?week=1', label: 'See the scores', isArticle: false,
+      week: 1, href: '/afl-fantasy/top-players?week=1', label: "See the week's top scorers",
     });
-    expect(state.view.link).toBe('/afl-fantasy/live-scoring?week=1');
-    expect(state.view.linkLabel).toBe('SEE THE SCORES');
+    expect(state.view.link).toBe('/afl-fantasy/top-players?week=1');
+    expect(state.view.linkLabel).toBe("SEE THE WEEK'S TOP SCORERS");
     // `content` is a second object that also renders — fixing only `view`
     // leaves the old link live on whichever surface reads it.
-    expect(state.content.link).toBe('/afl-fantasy/live-scoring?week=1');
+    expect(state.content.link).toBe('/afl-fantasy/top-players?week=1');
   });
 
   it('names the COMPLETED week in the copy, not the upcoming one', () => {
     const state = at({
-      week: 1, href: '/afl-fantasy/live-scoring?week=1', label: 'See the scores', isArticle: false,
+      week: 1, href: '/afl-fantasy/top-players?week=1', label: "See the week's top scorers",
     });
     expect(state.view.summary).toContain('Week 1 is in the books');
     expect(state.view.summary).not.toContain('Week 2');
@@ -179,7 +161,7 @@ describe('the AFL recap hero renders the resolved destination', () => {
     //    find it. That state is real — kickoff until the first results land
     //    (issue #1086 F2), the same window where the page's own seasonYear has
     //    walked back to last season while the recap stays on the live one.
-    const state = at({ week: 0, href: '/afl-fantasy/news', label: 'Read the latest', isArticle: false });
+    const state = at({ week: 0, href: '/afl-fantasy/news', label: 'Read the latest' });
 
     expect(state.view.summary).not.toMatch(/Week \d/);
     expect(state.content.title).not.toMatch(/Week \d/);
@@ -204,7 +186,7 @@ describe('the AFL recap hero renders the resolved destination', () => {
 
   it('still headlines the week in review once a week IS in the books', () => {
     const state = at({
-      week: 3, href: '/afl-fantasy/live-scoring?week=3', label: 'See the scores', isArticle: false,
+      week: 3, href: '/afl-fantasy/top-players?week=3', label: "See the week's top scorers",
     });
     expect(`${state.view.headline} ${state.view.accentWord}`).toBe('THE WEEK IN REVIEW.');
     expect(state.view.summary).toContain('Week 3 is in the books');
@@ -213,12 +195,15 @@ describe('the AFL recap hero renders the resolved destination', () => {
     expect(state.content.kicker).toBe('Weekly Recap');
   });
 
-  it('links Schefter’s column when there is one', () => {
+  it('renders the destination it is handed, on both objects', () => {
+    // `content` is a second object that also renders — fixing only `view`
+    // leaves the old link live on whichever surface reads the other.
     const state = at({
-      week: 1, href: '/theleague/news/x', label: 'Read the recap', isArticle: true,
+      week: 1, href: '/afl-fantasy/top-players?week=1', label: "See the week's top scorers",
     });
-    expect(state.view.link).toBe('/theleague/news/x');
-    expect(state.view.linkLabel).toBe('READ THE RECAP');
+    expect(state.view.link).toBe('/afl-fantasy/top-players?week=1');
+    expect(state.view.linkLabel).toBe("SEE THE WEEK'S TOP SCORERS");
+    expect(state.content.link).toBe('/afl-fantasy/top-players?week=1');
   });
 });
 
@@ -249,16 +234,19 @@ describe('the AFL homepage does not feed the walked-back year to the recap', () 
     expect(PAGE).not.toMatch(/const liveSeasonYear = resolveSeasonYearWithData/);
   });
 
-  it('passes the live year into resolveRecapDestination, both fields', () => {
+  it('builds the recap week from the live year, never the walk-back', () => {
+    // This used to check two fields. `resolveRecapDestination` no longer takes
+    // `seasonYear` at all — it needs only the week, now that the destination is
+    // Top Players rather than an article whose id had to be minted from a year
+    // — so the week is the ONE place the live clock can still be swapped for
+    // the walked-back one. The negative assertions are the real protection.
     const call = PAGE.slice(
       PAGE.indexOf('resolveRecapDestination({'),
       PAGE.indexOf('resolveRecapDestination({') + 400,
     );
-    expect(call).toContain('seasonYear: liveSeasonYear');
     expect(call).toContain('getWeekInTheBooks(liveSeasonYear');
-    // The bare `seasonYear` (the walked-back one) must not appear as the value.
-    expect(call).not.toMatch(/seasonYear:\s*seasonYear\b/);
     expect(call).not.toMatch(/getWeekInTheBooks\(seasonYear\b/);
+    expect(call).not.toMatch(/seasonYear:\s*seasonYear\b/);
   });
 
   it('hands the CAST the same week and season the card is captioned with', () => {
