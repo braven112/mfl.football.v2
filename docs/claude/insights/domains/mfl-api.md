@@ -3362,3 +3362,37 @@ was exact. Revisit with the YTD feed only if a waiver pickup's total reads low.
 playerScores-derived values exactly (one week played, so they must); a full
 2025 season was hand-summed; and the roster parity harness showed the change
 was a single inserted column across 48 renders / 1,051 rows.
+---
+
+## 2026-09-16 - A Doubleheader Week Lists Every Player Twice — Sum Per Week, Not Per Matchup
+
+**Context:** the Dead Money and MVP pages, and the franchise-history salary
+awards, all read `points` from `mfl-player-salaries-<year>.json`. Those totals
+were high by 20-30% in every season on record.
+
+**Insight:** in a doubleheader week MFL lists a franchise under BOTH of its
+matchups, and repeats its entire lineup — same players, same scores — in each.
+So `sum(matchup[].franchise[].player[].score)` counts every doubleheader week
+twice. This is the player-side mirror of the franchise-side trap noted under
+"2026-09-01 - `h2hw` Is The TOTAL" above (a franchise-keyed map keeps only the
+SECOND game); one mistake drops data, the other duplicates it.
+
+TheLeague schedules far more of these than "Weeks 1, 2, 3 and 12" suggests.
+Within the week-1-to-14 salary window: every season from 2007 had at least
+three, 2013 had eleven, and 2024 had four (1, 2, 3, 13). Saquon Barkley's 2024
+figure was 373.35 against MFL's own per-week total of 278.25 — the four weeks a
+second time, to the cent.
+
+**Recommendation:** key the accumulator by `(playerId, week)` and let a repeat
+overwrite — `scripts/lib/player-season-points.mjs#buildPlayerPoints`, the same
+shape `src/utils/afl-keeper-analysis.ts` already used. A RATE over the naive sum
+survives (points and games both double), which is why a PPG built on it looks
+right and hides the bug. Before "correcting" committed history, prove the old
+summation reproduces each file exactly at some cutoff and apply the fix at that
+same cutoff — `scripts/repair-salary-points-doubling.mjs` does, and it is what
+exposed that two of the 2025 copies were frozen before week 14 was scored.
+
+**Evidence:** the repair reproduced all 5,908 committed player totals for
+2007-2024 exactly under the old logic before rewriting them; the fixed logic
+matches MFL's per-week `playerScores` for every rostered player in 2024
+(410/410) and 2025 (405/405). Pinned in `tests/player-season-points.test.ts`.
