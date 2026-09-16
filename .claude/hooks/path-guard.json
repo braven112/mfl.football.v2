@@ -721,7 +721,7 @@
     },
     {
       "name": "staging-and-deploy-environment",
-      "note": "The staging sites share PRODUCTION'S database and PRODUCTION'S secrets. Reads and Redis writes are the accepted cost; the outbound half is not, because none of it can be undone — an MFL write mutates the real league, a push reaches real phones, a GroupMe post lands in the real chat, an issue lands in the real backlog. Every outbound path calls assertOutboundAllowed/outboundAllowed from src/utils/deploy-environment.ts immediately before the network call, never at the route layer (a dozen routes, and the one that forgot fails open). The predicate is the DEPLOYMENT (VERCEL_ENV), not the request host, so PR previews are covered too; isStagingHost is the separate host question, for the noindex header and the banner. Unknown fails OPEN so cron scripts and pnpm dev keep working. See docs/plans/staging-release-process.md. Release-day blackout windows are mechanical (scripts/release-blackout.mjs, run by /promote): NFL game days in season, the Feb 14 and Labor Day rollovers, and the AFL draft — all evaluated in PT, because the league's clock is PT and a UTC-evaluated Sunday starts at 4pm Saturday Pacific.",
+      "note": "The staging sites share PRODUCTION'S database and PRODUCTION'S secrets. Reads and Redis writes are the accepted cost; the outbound half is not, because none of it can be undone — an MFL write mutates the real league, a push reaches real phones, a GroupMe post lands in the real chat, an issue lands in the real backlog. Every outbound path calls assertOutboundAllowed/outboundAllowed from src/utils/deploy-environment.ts immediately before the network call, never at the route layer (a dozen routes, and the one that forgot fails open). The predicate is the DEPLOYMENT (VERCEL_ENV), not the request host, so PR previews are covered too; isStagingHost is the separate host question, for the noindex header and the banner. Unknown fails OPEN so cron scripts and pnpm dev keep working. A blocked write must also REPORT itself: every MFL write's catch runs through describeMflFailure (src/utils/mfl-fetch.ts), which is why the writer utils and write routes are routed here — collapsed into the network-failure branch, a staging refusal reached owners as HTTP 502 \"Could not reach MFL\". See docs/plans/staging-release-process.md. Release-day blackout windows are mechanical (scripts/release-blackout.mjs, run by /promote): NFL game days in season, the Feb 14 and Labor Day rollovers, and the AFL draft — all evaluated in PT, because the league's clock is PT and a UTC-evaluated Sunday starts at 4pm Saturday Pacific.",
       "paths": [
         "src/utils/deploy-environment.ts",
         "src/utils/mfl-fetch.ts",
@@ -730,7 +730,17 @@
         "src/utils/github-issues.ts",
         "src/components/shared/StagingBanner.astro",
         "src/middleware.ts",
-        "scripts/release-blackout.mjs"
+        "scripts/release-blackout.mjs",
+        "src/utils/mfl-*.ts",
+        "src/utils/lineup-route.ts",
+        "src/pages/api/watch-list.ts",
+        "src/pages/api/draft-list.ts",
+        "src/pages/api/cut-player.ts",
+        "src/pages/api/waiver-claim.ts",
+        "src/pages/api/waiver-claims.ts",
+        "src/pages/api/trades/*.ts",
+        "src/pages/api/accounting/*.ts",
+        "src/pages/api/contracts/*.ts"
       ],
       "tests": [
         "tests/staging-outbound-guard.test.ts",

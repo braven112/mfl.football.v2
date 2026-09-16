@@ -105,7 +105,9 @@ export const POST: APIRoute = async (context) => {
     mflCommishCookie: ctx.mflCommishCookie,
   });
 
-  if (!result.ok) return json({ error: result.error }, 502);
+  // 503 when THIS deployment refused to send (staging/preview), 502 when MFL
+  // answered badly — see mfl-fetch#describeMflFailure.
+  if (!result.ok) return json({ error: result.error, blocked: result.blocked === true }, result.blocked ? 503 : 502);
 
   // MFL can accept an import and apply nothing, so the response is not proof.
   // Confirm against the ledger before telling anyone the money moved.
