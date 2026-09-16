@@ -1,16 +1,36 @@
 ---
 slug: salary-averages-doubleheader-double-count
-status: open
+status: shipped
+shipped: 2026-09-16
 severity: P2
 opened: 2026-09-15
 found_by: /live step 5b cross-cutting sweep on the Free Agents season-points PR
-source_pr: (this branch — claude/free-agents-stats-points-2f56dc)
+source_pr: https://github.com/braven112/mfl.football.v2/pull/1129
 followup_issue:
-followup_pr:
+followup_pr: https://github.com/braven112/mfl.football.v2/pull/1140
 followup_session:
 ---
 
 # Follow-up: `update-salary-averages.mjs` sums player points the doubled way
+
+## Resolution (2026-09-16, PR #1140)
+
+Shipped, and wider than this brief scoped. Two things turned out differently:
+
+- **The damage was historical, not just going-forward.** Every season since 2007
+  had at least three doubleheader weeks inside the week-1-14 window (2013 had
+  eleven; this brief assumed "one late-season week"), and the inflated totals
+  are DISPLAYED on the MVP page and drive the Dead Money and franchise-history
+  awards. So the fix corrected all 44 committed salary files, proven
+  doubling-only per file by `scripts/repair-salary-points-doubling.mjs`, and 11
+  of 57 franchise-history awards changed winner — by explicit decision.
+- **The P2 reasoning below was wrong about scale.** It is not "full-season
+  players stay comparable": the doubleheader weeks differ by season, and within
+  the window a full-season starter was inflated ~34% in 2024.
+
+The fix itself is `scripts/lib/player-season-points.mjs`, keyed by
+`(player, week)` as proposed below. A separate bug found during the repair is
+filed as `2026-09-16-salary-freeze-before-week-scored.md`.
 
 ## What was found
 
