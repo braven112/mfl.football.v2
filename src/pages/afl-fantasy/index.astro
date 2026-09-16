@@ -73,7 +73,7 @@ import {
 import { getAuthUser } from '../../utils/auth';
 import InstallAppPrompt from '../../components/shared/pwa/InstallAppPrompt.astro';
 import { spriteUrl } from '../../utils/sprite-url';
-import { getLeagueBySlug } from '../../config/leagues';
+import { getLeagueBySlug, leagueClock } from '../../config/leagues';
 import { readInstallState } from '../../utils/app-install-state';
 import { resolveSchefterRail } from '../../utils/schefter-rail-view';
 
@@ -212,13 +212,20 @@ const aflCalendarModules = import.meta.glob(
   '../../../data/afl-fantasy/mfl-feeds/20{2[5-9],[3-9][0-9]}/calendar.json',
   { eager: true }
 );
+// Keyed by the AFL's MFL LEAGUE year, not the season-results year: the AFL
+// rolls its feed year on June 1, so between then and Labor Day
+// `getCurrentSeasonYear` still names last season and this lookup would read
+// the PRIOR year's calendar — stale marks, or no file at all → `unknown` →
+// a hero that names no day. `/players` selects this same feed with
+// `getAflLeagueYear` (players.astro `claimYear`); match it.
+const aflWaiverCalendarYear = getAflLeagueYear(effectiveDate);
 const aflCalendarEvents =
-  (Object.entries(aflCalendarModules).find(([path]) => path.includes(`/${aflRecapSeasonYear}/`))?.[1] as any)?.default ?? [];
+  (Object.entries(aflCalendarModules).find(([path]) => path.includes(`/${aflWaiverCalendarYear}/`))?.[1] as any)?.default ?? [];
 // READ-only: a page render must never WRITE a preference cookie (that throws
 // ResponseSentError from anywhere but the route, and blanks the page).
 const aflViewerClock = await readViewerClock(Astro.cookies, authUser, AFL.slug);
 const aflWaiverCopy = waiverDeadlineCopy(
-  resolveWaiverWindow(aflCalendarEvents, effectiveDate),
+  resolveWaiverWindow(aflCalendarEvents, effectiveDate, leagueClock(AFL.slug).zone),
   { now: effectiveDate, clock: aflViewerClock },
 );
 
