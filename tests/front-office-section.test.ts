@@ -9,6 +9,7 @@ import {
   routePathOf,
   type FrontOfficeLeagueSlug,
 } from '../src/components/shared/front-office-nav/front-office-pages';
+import { getVisibleLinks, getLinkLabel } from '../src/utils/nav-utils';
 
 /**
  * The Front Office section: a hub whose PRIMARY content is now the League
@@ -322,14 +323,18 @@ describe('nav', () => {
     // and the same for "Free Agents"), and exactly one of each pair renders.
     // What must never happen is one league seeing the same name twice — which
     // is what a second "League Planner" would have been.
-    for (const league of ['theleague', 'afl'] as const) {
+    //
+    // Both filter and label come from nav-utils, not from a copy of its rules:
+    // a hand-rolled `labelAFL ?? label` would keep passing if the renderer's
+    // own resolution ever changed, which is the one thing this guard exists to
+    // notice. `franchiseId: '0001'` is an admin in every league, so the set
+    // checked is the WIDEST any viewer sees — an owner-only or admin-only link
+    // colliding with a public one is still a collision.
+    for (const league of ['theleague', 'afl', 'bb1'] as const) {
       for (const section of navConfig.sections as any[]) {
         if (section.leagueOnly && section.leagueOnly !== league) continue;
-        const visible = (section.links ?? []).filter(
-          (l: any) => !l.leagueOnly || l.leagueOnly === league,
-        );
-        const names = visible.map((l: any) =>
-          league === 'afl' && l.labelAFL ? l.labelAFL : l.label,
+        const names = getVisibleLinks(section, league, '0001').map((link) =>
+          getLinkLabel(link, league),
         );
         expect(
           new Set(names).size,
