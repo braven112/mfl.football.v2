@@ -1019,7 +1019,16 @@ const run = async () => {
 
       // Never let a malformed or empty payload eat a committed week — same
       // rule the playoff-bracket flow below follows.
-      if (!Number.isInteger(liveWeek) || !hasMatchups || !Array.isArray(existing)) {
+      const committed = Array.isArray(existing)
+        ? existing.find((entry) => Number(entry?.weeklyResults?.week) === liveWeek)
+        : null;
+      // A week already carrying scores must never be downgraded to one that
+      // carries none. This runs 288×/day, so a single odd MFL response would
+      // otherwise blank a finished week until the next daily loop 24h later.
+      const hasScores = (payload) => /"score"\s*:/.test(JSON.stringify(payload ?? null));
+      const wouldDowngrade = hasScores(committed) && !hasScores(live);
+
+      if (!Number.isInteger(liveWeek) || !hasMatchups || !Array.isArray(existing) || wouldDowngrade) {
         console.log('Current-week weeklyResults unusable; leaving the committed weeks alone.');
       } else {
         const merged = existing.map((entry) =>
