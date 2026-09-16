@@ -207,3 +207,35 @@ Related: the rotation is deterministic per PT day across ALL entries still
 inside their 7-day window, so a new entry does not take the hero every day — it
 alternates with the others in the pool. A hero-eligible entry not showing today
 is normal; verify by checking pool membership, not by reloading the homepage.
+
+## 2026-09-16 — Append to `weekly-changelog-staging.json`, never re-serialize it
+
+Staging a change is one object on the end of `changes`, and the obvious way to
+do it — `json.load`, append, `json.dump` — is wrong twice over.
+
+The file's escaping is **mixed**: at the time of writing, 36 literal em dashes
+against 2 `—` escapes, because different sessions wrote it with different
+tools. So no `ensure_ascii` setting round-trips it. `ensure_ascii=True`
+re-escapes 38 lines of other people's entries; `ensure_ascii=False` unescapes
+them. Both showed up as a ~40-line diff for a one-entry addition, in opposite
+directions, in two consecutive PRs.
+
+That churn is not cosmetic. **This file conflicted on three of the last four
+rebases**, and every line a dump rewrites is a line the next rebase can
+conflict on — a one-entry append that rewrites forty lines manufactures its own
+conflicts. `rerere` replays the resolution, which hides the cost rather than
+removing it.
+
+Splice the text instead, leaving every existing byte alone:
+
+```python
+entry = ',\n    {\n      "date": ...\n    }'
+marker = "\n  ]\n}"
+i = s.rindex(marker)
+s = s[:i] + entry + s[i:]
+```
+
+Then `json.loads` the result to prove it still parses. The diff is
+insertions-only — 8 added, 0 removed — which is what a staged change should
+look like. The same reasoning applies to any append-only committed JSON that
+several sessions write.
