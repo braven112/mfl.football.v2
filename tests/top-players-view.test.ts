@@ -24,6 +24,7 @@ const row = (over: Partial<TopPlayerRow> & { name: string }): TopPlayerRow => ({
   id: over.name,
   position: 'QB',
   team: 'CHI',
+  espnId: null,
   owners: [],
   weeks: {},
   total: 0,
