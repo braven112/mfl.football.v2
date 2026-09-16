@@ -37,6 +37,7 @@ import { resolveAuctionWindow } from '../../utils/auction-window';
 import { NO_HEADSHOT_SILHOUETTE, getPlayerAvatarBackground, getPlayerAvatarBorder, getPlayerAvatarRing, getPlayerAvatarRingDark, getPlayerAvatarStyleMaps } from '../../utils/nfl-team-colors';
 import { isDraftComplete } from '../../utils/draft-utils';
 import { resolveSnapCounts } from '../../utils/snap-count-season.mjs';
+import { resolveStatsSeasonYear, parseYtdPlayerScores } from '../../utils/stats-season.mjs';
 import { DEF_SPOTLIGHT_PLAYERS, getDefSpotlightPlayer } from '../../data/theleague/def-spotlight-players';
 import MyRankEditor from '../../components/shared/rankings/MyRankEditor.astro';
 
@@ -114,8 +115,15 @@ const adpRedraftModules = import.meta.glob(
   '../../../data/theleague/mfl-feeds/*/adp-redraft.json',
   { eager: true }
 );
-const lastYearWeeklyModules = import.meta.glob(
+const seasonWeeklyModules = import.meta.glob(
   '../../../data/theleague/mfl-feeds/20{2[5-9],[3-9][0-9]}/weekly-results-raw.json',
+  { eager: true }
+);
+// Season-to-date points for the WHOLE player pool. weekly-results-raw sees a
+// player only for the weeks he sat on a roster, which on a free-agent page is
+// blind to almost every row — see src/utils/stats-season.mjs.
+const seasonYtdModules = import.meta.glob(
+  '../../../data/theleague/mfl-feeds/20{2[5-9],[3-9][0-9]}/playerScores-ytd.json',
   { eager: true }
 );
 // NFL facts, not league data — one file serves both free-agent pages. See
@@ -194,13 +202,25 @@ function buildAdpMap(modules: Record<string, any>): Map<string, number> {
 const adpDynMap = buildAdpMap(adpDynastyModules);
 const adpRdfMap = buildAdpMap(adpRedraftModules);
 
-// Last year total points + games played (from weekly results)
-const lastSeasonYear = getCurrentSeasonYear();
-const lastYearData = findForYear(lastYearWeeklyModules, lastSeasonYear);
-const lastYrPtsMap = new Map<string, number>();
-const lastYrGamesMap = new Map<string, number>();
-if (Array.isArray(lastYearData)) {
-  for (const weekPayload of lastYearData) {
+// ── Season points ──
+// Which season's totals the Pts column carries. getCurrentSeasonYear() rolls at
+// LABOR DAY, which names a season with no games played until kickoff; the
+// league's real start day is NFL week 1, so resolveStatsSeasonYear holds last
+// season's finished total until then and switches to this season's running
+// total from kickoff on — the same rule the snap-count columns beside it use.
+const statsSeasonYear = resolveStatsSeasonYear(getCurrentSeasonYear(nowRef), nowRef);
+const seasonWeeklyData = findForYear(seasonWeeklyModules, statsSeasonYear);
+// The YTD feed is the ONLY source for the points column, and the weekly sum
+// below is deliberately not a fallback for it: it cannot see an unrostered
+// player at all, and where it can see one it over-counts him — a franchise
+// appears in two matchups in a doubleheader week, which billed every one of
+// TheLeague's 260 scored 2026 players at exactly 2x his real total. The weekly
+// maps stay for the rostered-weeks rate below, where that double cancels out.
+const ytdPtsMap = parseYtdPlayerScores(findForYear(seasonYtdModules, statsSeasonYear));
+const weeklyPtsMap = new Map<string, number>();
+const weeklyGamesMap = new Map<string, number>();
+if (Array.isArray(seasonWeeklyData)) {
+  for (const weekPayload of seasonWeeklyData) {
     const matchups = weekPayload?.weeklyResults?.matchup;
     if (!matchups) continue;
     const matchupArr = Array.isArray(matchups) ? matchups : [matchups];
@@ -212,8 +232,8 @@ if (Array.isArray(lastYearData)) {
           if (!p?.id || !p?.score) continue;
           const score = parseFloat(p.score);
           if (!isNaN(score) && score > 0) {
-            lastYrPtsMap.set(p.id, (lastYrPtsMap.get(p.id) || 0) + score);
-            lastYrGamesMap.set(p.id, (lastYrGamesMap.get(p.id) || 0) + 1);
+            weeklyPtsMap.set(p.id, (weeklyPtsMap.get(p.id) || 0) + score);
+            weeklyGamesMap.set(p.id, (weeklyGamesMap.get(p.id) || 0) + 1);
           }
         }
       }
@@ -222,12 +242,12 @@ if (Array.isArray(lastYearData)) {
 }
 
 // Build weekly player results for the modal's Season Results table
-const nflScheduleData = findForYear(nflScheduleModules, lastSeasonYear);
-const fpaData = findForYear(fpaModules, lastSeasonYear);
-const leagueData = findForYear(leagueModules, lastSeasonYear);
-const playersDataForSeason = findForYear(playerModules, lastSeasonYear) || playersData;
-const weeklyPlayerResults = (nflScheduleData && Array.isArray(lastYearData))
-  ? buildWeeklyPlayerResults(lastYearData, nflScheduleData, fpaData, playersDataForSeason, leagueData)
+const nflScheduleData = findForYear(nflScheduleModules, statsSeasonYear);
+const fpaData = findForYear(fpaModules, statsSeasonYear);
+const leagueData = findForYear(leagueModules, statsSeasonYear);
+const playersDataForSeason = findForYear(playerModules, statsSeasonYear) || playersData;
+const weeklyPlayerResults = (nflScheduleData && Array.isArray(seasonWeeklyData))
+  ? buildWeeklyPlayerResults(seasonWeeklyData, nflScheduleData, fpaData, playersDataForSeason, leagueData)
   : {};
 
 // Snap counts (GP / Snaps / Snap%).
@@ -462,7 +482,7 @@ interface PlayerRow {
   weight: number | null;
   adpDyn: number | null;
   adpRdf: number | null;
-  lastYrPts: number | null;
+  seasonPts: number | null;
   snaps: number | null;
   snapPct: number | null;
   rookie: boolean;
@@ -565,11 +585,15 @@ if (Array.isArray(allPlayers)) {
       weight: weightLbs,
       adpDyn: adpDynMap.get(p.id) ?? null,
       adpRdf: adpRdfMap.get(p.id) ?? null,
-      lastYrPts: lastYrPtsMap.has(p.id) ? Math.round((lastYrPtsMap.get(p.id)!) * 10) / 10 : null,
+      seasonPts: (() => {
+        const pts = ytdPtsMap.get(p.id);
+        return pts != null ? Math.round(pts * 10) / 10 : null;
+      })(),
       snaps: snapCountMap.has(p.id) ? snapCountMap.get(p.id)!.snaps : null,
       snapPct: snapCountMap.has(p.id) ? snapCountMap.get(p.id)!.pct : null,
       // GP belongs to the snap-count group beside it (same season, same
-      // source). Feeding it from lastYrGamesMap put a fantasy-scoring
+      // source). Feeding it from the weekly-results games count put a
+      // fantasy-scoring
       // games count from a DIFFERENT season next to the snap totals, and
       // an empty current season rendered it as a dash beside 529 snaps.
       // Named `snapGames`, not `games`: the AFL's rows already carry a
@@ -585,9 +609,12 @@ if (Array.isArray(allPlayers)) {
       salary: rosterInfo?.salary ?? null,
       contractYrs: rosterInfo?.contractYrs ?? null,
       franchiseId: rosterInfo?.franchiseId ?? null,
+      // Rostered-weeks rate, on the weekly pair rather than the YTD total: that
+      // payload carries no games-played field, so pairing it with this
+      // denominator would price a one-week rental's whole season as one game.
       ppg: (() => {
-        const pts = lastYrPtsMap.get(p.id);
-        const gp = lastYrGamesMap.get(p.id);
+        const pts = weeklyPtsMap.get(p.id);
+        const gp = weeklyGamesMap.get(p.id);
         return (pts && gp && gp > 0) ? Math.round((pts / gp) * 10) / 10 : null;
       })(),
       salaryYear1: historicalSalaryByYearMap.get(p.id)?.[salaryYear1] ?? null,
@@ -613,7 +640,7 @@ playerList.sort((a, b) => {
 });
 
 const hasProjected = projectedMap.size > 0;
-const hasLastYrPts = lastYrPtsMap.size > 0;
+const hasSeasonPts = ytdPtsMap.size > 0;
 
 // Count free agents by position for category tabs. Mirrors the client's
 // initial filter state: rookies only count once the draft is complete, so
@@ -1119,12 +1146,16 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
                 <div class="th-content"><span class="th-label">Snap%<small class="th-season">{snapSeasonLabel}</small></span></div>
               </th>
             )}
-            {hasLastYrPts && (
-              <th class="sortable col-num col-group--stats" data-sort="lastYrPts">
-                <div class="th-content">Last Yr</div>
+            {hasSeasonPts && (
+              <th
+                class="sortable col-num col-group--stats"
+                data-sort="seasonPts"
+                title={`Total fantasy points, ${statsSeasonYear} season`}
+              >
+                <div class="th-content">{statsSeasonYear} Pts</div>
               </th>
             )}
-            {hasLastYrPts && hasSnapCounts && (
+            {hasSeasonPts && hasSnapCounts && (
               <th class="sortable col-num col-group--stats col-value-ppg" data-sort="ppg">
                 <div class="th-content">PPG</div>
               </th>
@@ -1217,7 +1248,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
 {!claimFranchiseId && <SignInModal config={signInConfig} />}
 <WatchListBridge signedIn={watchSignedIn} claimVerb={claimVerb} promptSignIn={promptSignIn} />
 
-<script define:vars={{ canClaim, promptSignIn, playerDataJson, hasProjected, hasLastYrPts, hasSnapCounts, nflTeamsJson, hasSurplusData, hasAuctionData, isAuctionSeason, auctionEndMs, isAdmin, currentYear, mflHost, mflLeagueId, mflActionYear, franchiseNamesJson, franchiseBannersJson, defSpotlightJson, nflAvatarBgJson, nflAvatarBgFallback, nflAvatarBorderJson, nflAvatarBorderFallback, nflAvatarRingJson, nflAvatarRingFallback, nflAvatarRingDarkJson, nflAvatarRingDarkFallback, noHeadshot, logoOnerror: NFL_LOGO_ONERROR, collegeLogoOnerror: COLLEGE_LOGO_ONERROR, collegeLogoOnload: COLLEGE_LOGO_ONLOAD, rookieDraftComplete }}>
+<script define:vars={{ canClaim, promptSignIn, playerDataJson, hasProjected, hasSeasonPts, hasSnapCounts, nflTeamsJson, hasSurplusData, hasAuctionData, isAuctionSeason, auctionEndMs, isAdmin, currentYear, mflHost, mflLeagueId, mflActionYear, franchiseNamesJson, franchiseBannersJson, defSpotlightJson, nflAvatarBgJson, nflAvatarBgFallback, nflAvatarBorderJson, nflAvatarBorderFallback, nflAvatarRingJson, nflAvatarRingFallback, nflAvatarRingDarkJson, nflAvatarRingDarkFallback, noHeadshot, logoOnerror: NFL_LOGO_ONERROR, collegeLogoOnerror: COLLEGE_LOGO_ONERROR, collegeLogoOnload: COLLEGE_LOGO_ONLOAD, rookieDraftComplete }}>
   // define:vars creates const — copy to let so polling can update at runtime
   let _hasAuctionData = hasAuctionData;
   const players = JSON.parse(playerDataJson);
@@ -1885,9 +1916,12 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
           aVal = a.weight ?? -1;
           bVal = b.weight ?? -1;
           break;
-        case 'lastYrPts':
-          aVal = a.lastYrPts ?? -1;
-          bVal = b.lastYrPts ?? -1;
+        // -99999, not -1: a season total can legitimately be NEGATIVE (a
+        // defense can finish under zero), and -1 would file those under
+        // "no data".
+        case 'seasonPts':
+          aVal = a.seasonPts ?? -99999;
+          bVal = b.seasonPts ?? -99999;
           break;
         case 'snaps':
           aVal = a.snaps ?? -1;
@@ -2247,11 +2281,11 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
         html += `<td class="cell-num col-group--stats">${p.snapPct != null ? p.snapPct.toFixed(1) + '%' : '<span class="na">-</span>'}</td>`;
       }
 
-      if (hasLastYrPts) {
-        html += `<td class="cell-num col-group--stats">${p.lastYrPts != null ? p.lastYrPts.toFixed(1) : '<span class="na">-</span>'}</td>`;
+      if (hasSeasonPts) {
+        html += `<td class="cell-num col-group--stats">${p.seasonPts != null ? p.seasonPts.toFixed(1) : '<span class="na">-</span>'}</td>`;
       }
 
-      if (hasLastYrPts && hasSnapCounts) {
+      if (hasSeasonPts && hasSnapCounts) {
         html += `<td class="cell-num col-group--stats col-value-ppg">${p.ppg != null ? p.ppg.toFixed(1) : '<span class="na">-</span>'}</td>`;
       }
 
@@ -2459,7 +2493,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
   }
 
   // Columns that default to desc when first clicked
-  const descDefaults = new Set(['projected', 'exp', 'height', 'weight', 'lastYrPts', 'snaps', 'snapPct', 'contractYrs', 'salary', 'snapGames', 'ppg', 'estimatedCost', 'salaryYear1', 'salaryYear2', 'salaryYear3', 'dollarValue', 'surplusValue', 'stealValue', 'auctionBid', 'auctionInitTime', 'auctionBidTime']);
+  const descDefaults = new Set(['projected', 'exp', 'height', 'weight', 'seasonPts', 'snaps', 'snapPct', 'contractYrs', 'salary', 'snapGames', 'ppg', 'estimatedCost', 'salaryYear1', 'salaryYear2', 'salaryYear3', 'dollarValue', 'surplusValue', 'stealValue', 'auctionBid', 'auctionInitTime', 'auctionBidTime']);
 
   // CustomEvent-based API for the rankings module script to interact with this page.
   // All events use the document as the event bus — no global window properties needed.

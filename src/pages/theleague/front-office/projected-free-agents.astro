@@ -19,6 +19,7 @@ import { NFL_LOGO_ONERROR, positionOrder } from '../../../constants/roster-const
 import { getCurrentLeagueYear, getCurrentSeasonYear } from '../../../utils/league-year';
 import { getPlayerMap } from '../../../utils/player-map';
 import { buildWeeklyPlayerResults } from '../../../utils/weekly-player-results';
+import { resolveStatsSeasonYear, parseYtdPlayerScores } from '../../../utils/stats-season.mjs';
 import { getCachedRosters } from '../../../utils/mfl-roster-cache';
 import { chooseTeamName } from '../../../utils/team-names';
 import { NO_HEADSHOT_SILHOUETTE, getPlayerAvatarBackground, getPlayerAvatarBorder, getPlayerAvatarRing, getPlayerAvatarRingDark, getPlayerAvatarStyleMaps } from '../../../utils/nfl-team-colors';
@@ -27,12 +28,16 @@ import leagueConfig from '../../../data/theleague.config.json';
 import { getLeagueBySlug } from '../../../config/leagues';
 
 const currentYear = getCurrentLeagueYear();
-const currentSeasonYear = getCurrentSeasonYear();
+// The season whose point totals this page reports. getCurrentSeasonYear() rolls
+// at LABOR DAY, which names a season with no games played until kickoff;
+// resolveStatsSeasonYear moves that edge to the league's start day. Same rule,
+// same helper, as the two Free Agents pages.
+const statsSeasonYear = resolveStatsSeasonYear(getCurrentSeasonYear());
 const mflHost = getLeagueBySlug('theleague')!.mflHost;
 
 // ── Load MFL data feeds ──
 // Year-filtered (2025+): this page reads only currentLeagueYear +
-// currentSeasonYear; the bare glob baked ~22 MB of historical players.json
+// statsSeasonYear; the bare glob baked ~22 MB of historical players.json
 // into the server chunk. tests/current-era-feed-globs.test.ts guards it.
 const playerModules = import.meta.glob(
   '../../../../data/theleague/mfl-feeds/20{2[5-9],[3-9][0-9]}/players.json',
@@ -46,8 +51,13 @@ const projectedScoresModules = import.meta.glob(
   '../../../../data/theleague/mfl-feeds/*/projectedScores.json',
   { eager: true }
 );
-const lastYearWeeklyModules = import.meta.glob(
+const seasonWeeklyModules = import.meta.glob(
   '../../../../data/theleague/mfl-feeds/20{2[5-9],[3-9][0-9]}/weekly-results-raw.json',
+  { eager: true }
+);
+// Full-pool season-to-date scoring — see src/utils/stats-season.mjs.
+const seasonYtdModules = import.meta.glob(
+  '../../../../data/theleague/mfl-feeds/20{2[5-9],[3-9][0-9]}/playerScores-ytd.json',
   { eager: true }
 );
 const nflScheduleModules = import.meta.glob(
@@ -129,12 +139,19 @@ if (projectedScoresData?.projectedScores?.playerScore) {
 }
 
 // ── Build last season stats ──
-const lastSeasonYear = getCurrentSeasonYear();
-const lastYearData = findForYear(lastYearWeeklyModules, lastSeasonYear);
-const lastYrPtsMap = new Map<string, number>();
-const lastYrGamesMap = new Map<string, number>();
-if (Array.isArray(lastYearData)) {
-  for (const weekPayload of lastYearData) {
+// Points come from playerScores W=YTD, NOT from the weekly sum below. A
+// franchise appears in two matchups in a doubleheader week, so adding player
+// scores across matchups bills the same performance twice — every one of
+// TheLeague's 260 scored 2026 players came out at exactly 2x his real total,
+// and this column shipped those doubled figures (Isaiah Likely's 27.8 read as
+// 55.6). The weekly maps stay for the rostered-weeks games count and the PPG
+// built on it, where the double appears in numerator AND denominator.
+const seasonWeeklyData = findForYear(seasonWeeklyModules, statsSeasonYear);
+const ytdPtsMap = parseYtdPlayerScores(findForYear(seasonYtdModules, statsSeasonYear));
+const weeklyPtsMap = new Map<string, number>();
+const weeklyGamesMap = new Map<string, number>();
+if (Array.isArray(seasonWeeklyData)) {
+  for (const weekPayload of seasonWeeklyData) {
     const matchups = weekPayload?.weeklyResults?.matchup;
     if (!matchups) continue;
     const matchupArr = Array.isArray(matchups) ? matchups : [matchups];
@@ -146,8 +163,8 @@ if (Array.isArray(lastYearData)) {
           if (!p?.id || !p?.score) continue;
           const score = parseFloat(p.score);
           if (!isNaN(score) && score > 0) {
-            lastYrPtsMap.set(p.id, (lastYrPtsMap.get(p.id) || 0) + score);
-            lastYrGamesMap.set(p.id, (lastYrGamesMap.get(p.id) || 0) + 1);
+            weeklyPtsMap.set(p.id, (weeklyPtsMap.get(p.id) || 0) + score);
+            weeklyGamesMap.set(p.id, (weeklyGamesMap.get(p.id) || 0) + 1);
           }
         }
       }
@@ -180,7 +197,7 @@ interface ProjectedFARow {
   salary: number;
   age: number | null;
   projected: number | null;
-  lastYrPts: number | null;
+  seasonPts: number | null;
   games: number | null;
   ppg: number | null;
   birthdate: number | null;
@@ -211,10 +228,14 @@ function buildPlayerRow(
     }
   }
 
-  const lastYrPts = lastYrPtsMap.has(playerId) ? Math.round((lastYrPtsMap.get(playerId)!) * 10) / 10 : null;
-  const gamesPlayed = lastYrGamesMap.get(playerId) ?? null;
-  const ppg = (lastYrPts && gamesPlayed && gamesPlayed > 0)
-    ? Math.round((lastYrPts / gamesPlayed) * 10) / 10
+  const ytdPts = ytdPtsMap.get(playerId);
+  const seasonPts = ytdPts != null ? Math.round(ytdPts * 10) / 10 : null;
+  // PPG stays on the weekly pair: the YTD payload carries no games-played
+  // field, so it has no denominator of its own.
+  const weeklyPts = weeklyPtsMap.get(playerId);
+  const gamesPlayed = weeklyGamesMap.get(playerId) ?? null;
+  const ppg = (weeklyPts && gamesPlayed && gamesPlayed > 0)
+    ? Math.round((weeklyPts / gamesPlayed) * 10) / 10
     : null;
 
   const fInfo = franchiseMap.get(franchiseId);
@@ -236,7 +257,7 @@ function buildPlayerRow(
     salary,
     age,
     projected: projectedMap.get(playerId) ?? null,
-    lastYrPts,
+    seasonPts,
     games: gamesPlayed,
     ppg,
     birthdate: info.birthdate ? parseInt(info.birthdate, 10) : null,
@@ -329,12 +350,12 @@ for (const p of expiringPlayers) {
 }
 
 // ── Build weekly player results for modal ──
-const nflScheduleData = findForYear(nflScheduleModules, lastSeasonYear);
-const fpaData = findForYear(fpaModules, lastSeasonYear);
-const leagueData = findForYear(leagueModules, lastSeasonYear);
-const playersDataForSeason = findForYear(playerModules, lastSeasonYear) || playersData;
-const weeklyPlayerResults = (nflScheduleData && Array.isArray(lastYearData))
-  ? buildWeeklyPlayerResults(lastYearData, nflScheduleData, fpaData, playersDataForSeason, leagueData)
+const nflScheduleData = findForYear(nflScheduleModules, statsSeasonYear);
+const fpaData = findForYear(fpaModules, statsSeasonYear);
+const leagueData = findForYear(leagueModules, statsSeasonYear);
+const playersDataForSeason = findForYear(playerModules, statsSeasonYear) || playersData;
+const weeklyPlayerResults = (nflScheduleData && Array.isArray(seasonWeeklyData))
+  ? buildWeeklyPlayerResults(seasonWeeklyData, nflScheduleData, fpaData, playersDataForSeason, leagueData)
   : {};
 
 // ── Serialize for client ──
@@ -487,8 +508,12 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
             <th class="sortable col-projected" data-sort="projected">
               <div class="th-content">Proj</div>
             </th>
-            <th class="sortable col-lastyr col-hide-mobile" data-sort="lastYrPts">
-              <div class="th-content">Last Yr</div>
+            <th
+              class="sortable col-lastyr col-hide-mobile"
+              data-sort="seasonPts"
+              title={`Total fantasy points, ${statsSeasonYear} season`}
+            >
+              <div class="th-content">{statsSeasonYear} Pts</div>
             </th>
             <th class="sortable col-ppg col-hide-mobile" data-sort="ppg">
               <div class="th-content">PPG</div>
@@ -679,7 +704,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
       + '<td class="cell-salary">' + formatSalary(p.salary) + '</td>'
       + '<td class="cell-age">' + (p.age != null ? p.age : '\u2014') + '</td>'
       + '<td class="cell-projected">' + (p.projected != null ? p.projected.toFixed(1) : '\u2014') + '</td>'
-      + '<td class="cell-lastyr col-hide-mobile">' + (p.lastYrPts != null ? p.lastYrPts.toFixed(1) : '\u2014') + '</td>'
+      + '<td class="cell-lastyr col-hide-mobile">' + (p.seasonPts != null ? p.seasonPts.toFixed(1) : '\u2014') + '</td>'
       + '<td class="cell-ppg col-hide-mobile">' + (p.ppg != null ? p.ppg.toFixed(1) : '\u2014') + '</td>'
       + rankingCells
     + '</tr>';
@@ -890,7 +915,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     document.addEventListener('rankings:get-sort', function(e) {
       if (!isLivePage()) return;
       e.detail.currentSort = currentSort;
-      e.detail.descDefaults = new Set(['projected', 'lastYrPts', 'ppg', 'salary', 'age']);
+      e.detail.descDefaults = new Set(['projected', 'seasonPts', 'ppg', 'salary', 'age']);
     });
 
     // Initial render

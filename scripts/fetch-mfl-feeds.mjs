@@ -607,6 +607,35 @@ const endpoints = [
     url: `${host}/${year}/export?TYPE=playerScores&L=${leagueId}&JSON=1`,
     parser: (t) => JSON.parse(t),
   },
+  {
+    // Season-to-date scores for EVERY player, not just rostered ones.
+    // `weekly-results-raw` records points only for the weeks a player sat on
+    // somebody's roster, so the free-agent pool is structurally invisible in
+    // it — which is what left the Free Agents pages' points column a wall of
+    // dashes. W=YTD is the only full-pool source (see
+    // docs/claude/insights/domains/mfl-api.md, 2026-08-10); the plain
+    // `playerScores` feed above is ONE week, not a season total.
+    //
+    // Verified live 2026-09-15 (the entry above was written while the param
+    // was still unprobed): both leagues answer with real season totals, free
+    // agents included.
+    key: 'playerScores-ytd',
+    url: `${host}/${year}/export?TYPE=playerScores&L=${leagueId}&W=YTD&JSON=1`,
+    // Two things to refuse, both of which arrive as HTTP 200. A rejected
+    // param comes back as an error body (the IS_KEEPER=D incident), and a
+    // season with no games yet comes back as a SINGLE BLANK ROW
+    // (`{ id: '', score: '' }`) — which a plain row COUNT accepts, and which
+    // is exactly what got committed over both leagues in the offseason.
+    // Require at least one row with a real id and a real score.
+    parser: (t) => {
+      const data = JSON.parse(t);
+      const rows = data?.playerScores?.playerScore;
+      const list = Array.isArray(rows) ? rows : rows ? [rows] : [];
+      const scored = list.filter((r) => r?.id && parseFloat(r.score) > 0).length;
+      if (scored === 0) throw new Error('playerScores W=YTD returned no scored rows — refusing to overwrite');
+      return data;
+    },
+  },
 ];
 
 // Redact the APIKEY from anything logged — workflow logs are visible to
