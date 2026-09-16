@@ -154,12 +154,12 @@ function resolveCurrentYear() {
 }
 
 const currentYear = resolveCurrentYear();
-// Which season's points the page shows. getCurrentSeasonYear() rolls at LABOR
-// DAY, which names a season with no games played until kickoff;
-// resolveStatsSeasonYear moves that edge to the league's actual start day, so
-// the column carries last season's finished total right up to week 1 and this
-// season's running total from kickoff on. See src/utils/stats-season.mjs.
-const statsSeasonYear = resolveStatsSeasonYear(getCurrentSeasonYear());
+// Which season's points the page shows. NOT getCurrentSeasonYear() (the local
+// port below): that rolls at LABOR DAY and names a season with no games played
+// until kickoff. This turns over on the league's actual start day, NFL week 1,
+// so the column carries last season's finished total right up to kickoff and
+// this season's running total after it. See src/utils/stats-season.mjs.
+const statsSeasonYear = resolveStatsSeasonYear();
 
 const playersData = readFeed(currentYear, 'players.json');
 const rostersData = readFeed(currentYear, 'rosters.json');

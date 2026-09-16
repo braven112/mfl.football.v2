@@ -12,7 +12,7 @@ import CollegeLogoDarkStyles from '../../components/CollegeLogoDarkStyles.astro'
 import PlayerDetailsModal from '../../components/theleague/PlayerDetailsModal.astro';
 import { resolveLeaguePath } from '../../utils/nav-utils';
 import { NFL_LOGO_ONERROR, NFL_LOGO_ONLOAD, COLLEGE_LOGO_ONERROR, COLLEGE_LOGO_ONLOAD, positionOrder } from '../../constants/roster-constants';
-import { getCurrentLeagueYear, getCurrentSeasonYear, getTestDateFromSearchParams } from '../../utils/league-year';
+import { getCurrentLeagueYear, getTestDateFromSearchParams } from '../../utils/league-year';
 import { getPlayerMap } from '../../utils/player-map';
 import { buildWeeklyPlayerResults } from '../../utils/weekly-player-results';
 import { getFrozenSalaryAveragesYear } from '../../utils/salary-calculations';
@@ -203,12 +203,13 @@ const adpDynMap = buildAdpMap(adpDynastyModules);
 const adpRdfMap = buildAdpMap(adpRedraftModules);
 
 // ── Season points ──
-// Which season's totals the Pts column carries. getCurrentSeasonYear() rolls at
-// LABOR DAY, which names a season with no games played until kickoff; the
-// league's real start day is NFL week 1, so resolveStatsSeasonYear holds last
-// season's finished total until then and switches to this season's running
-// total from kickoff on — the same rule the snap-count columns beside it use.
-const statsSeasonYear = resolveStatsSeasonYear(getCurrentSeasonYear(nowRef), nowRef);
+// Which season's totals the Pts column carries. It is NOT getCurrentSeasonYear()
+// — that rolls at LABOR DAY and so names a season with no games played until
+// kickoff, which emptied this column for waiver week. The league's real start
+// day is NFL week 1, so this holds last season's finished total until then and
+// switches to this season's running total from kickoff on. Literally the same
+// function the snap-count columns beside it use, so the two can never disagree.
+const statsSeasonYear = resolveStatsSeasonYear(nowRef);
 const seasonWeeklyData = findForYear(seasonWeeklyModules, statsSeasonYear);
 // The YTD feed is the ONLY source for the points column, and the weekly sum
 // below is deliberately not a fallback for it: it cannot see an unrostered

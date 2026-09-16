@@ -16,7 +16,7 @@ import RelatedReports from '../../../components/theleague/RelatedReports.astro';
 import PlayerDetailsModal from '../../../components/theleague/PlayerDetailsModal.astro';
 import { resolveLeaguePath } from '../../../utils/nav-utils';
 import { NFL_LOGO_ONERROR, positionOrder } from '../../../constants/roster-constants';
-import { getCurrentLeagueYear, getCurrentSeasonYear } from '../../../utils/league-year';
+import { getCurrentLeagueYear } from '../../../utils/league-year';
 import { getPlayerMap } from '../../../utils/player-map';
 import { buildWeeklyPlayerResults } from '../../../utils/weekly-player-results';
 import { resolveStatsSeasonYear, parseYtdPlayerScores } from '../../../utils/stats-season.mjs';
@@ -28,11 +28,11 @@ import leagueConfig from '../../../data/theleague.config.json';
 import { getLeagueBySlug } from '../../../config/leagues';
 
 const currentYear = getCurrentLeagueYear();
-// The season whose point totals this page reports. getCurrentSeasonYear() rolls
-// at LABOR DAY, which names a season with no games played until kickoff;
-// resolveStatsSeasonYear moves that edge to the league's start day. Same rule,
-// same helper, as the two Free Agents pages.
-const statsSeasonYear = resolveStatsSeasonYear(getCurrentSeasonYear());
+// The season whose point totals this page reports. It is NOT
+// getCurrentSeasonYear(): that rolls at LABOR DAY, naming a season with no
+// games played until kickoff. This turns over on the league's start day, NFL
+// week 1 — same rule, same function, as the two Free Agents pages.
+const statsSeasonYear = resolveStatsSeasonYear();
 const mflHost = getLeagueBySlug('theleague')!.mflHost;
 
 // ── Load MFL data feeds ──

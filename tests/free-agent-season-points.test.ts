@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { resolveStatsSeasonYear, parseYtdPlayerScores } from '../src/utils/stats-season.mjs';
+import { kickedOffSeason, snapCountSeason } from '../src/utils/snap-count-season.mjs';
 
 /**
  * The Free Agents points column, pinned.
@@ -22,7 +23,7 @@ import { resolveStatsSeasonYear, parseYtdPlayerScores } from '../src/utils/stats
 const POINTS_COLUMN_PAGES = [
   'src/pages/theleague/players.astro',
   'src/pages/afl-fantasy/players.astro',
-  'src/pages/theleague/projected-free-agents.astro',
+  'src/pages/theleague/front-office/projected-free-agents.astro',
 ];
 
 describe('stats season resolves on the league start day, not Labor Day', () => {
@@ -32,22 +33,30 @@ describe('stats season resolves on the league start day, not Labor Day', () => {
   const at = (iso: string) => new Date(`${iso}T12:00:00-07:00`);
 
   it('holds last season right through the Labor Day → kickoff gap', () => {
-    // getCurrentSeasonYear has already rolled to 2026 here; the points column
-    // must not follow it until there are games.
-    expect(resolveStatsSeasonYear(2026, at('2026-09-07'))).toBe(2025);
-    expect(resolveStatsSeasonYear(2026, at('2026-09-08'))).toBe(2025);
+    // getCurrentSeasonYear() has already rolled to 2026 on both these days.
+    // The points column must not follow it until there are games.
+    expect(resolveStatsSeasonYear(at('2026-09-07'))).toBe(2025);
+    expect(resolveStatsSeasonYear(at('2026-09-08'))).toBe(2025);
   });
 
   it('switches to the current season once week 1 has kicked off', () => {
-    expect(resolveStatsSeasonYear(2026, at('2026-09-10'))).toBe(2026);
-    expect(resolveStatsSeasonYear(2026, at('2026-12-01'))).toBe(2026);
+    expect(resolveStatsSeasonYear(at('2026-09-10'))).toBe(2026);
+    expect(resolveStatsSeasonYear(at('2026-12-01'))).toBe(2026);
   });
 
   it('keeps the just-finished season through the offseason', () => {
-    // Feb → Labor Day, getCurrentSeasonYear still names the finished season.
-    // Subtracting a year here would show a two-year-old total.
-    expect(resolveStatsSeasonYear(2025, at('2026-06-15'))).toBe(2025);
-    expect(resolveStatsSeasonYear(2026, at('2027-03-01'))).toBe(2026);
+    // Feb → Labor Day. Naming the season before this one would show a
+    // two-year-old total.
+    expect(resolveStatsSeasonYear(at('2026-06-15'))).toBe(2025);
+    expect(resolveStatsSeasonYear(at('2027-03-01'))).toBe(2026);
+  });
+
+  it('is the SAME function the snap-count columns use, not a copy', () => {
+    // GP / Snaps / Snap% and Pts sit next to each other on both Free Agents
+    // pages. Two implementations of one season boundary is how they end up
+    // naming different years, so this is identity, not equality.
+    expect(resolveStatsSeasonYear).toBe(kickedOffSeason);
+    expect(snapCountSeason).toBe(kickedOffSeason);
   });
 });
 
@@ -107,17 +116,17 @@ describe('both Free Agents pages read the full-pool feed', () => {
     // the builder script rather than the page.
     const sources = [
       'src/pages/theleague/players.astro',
-      'src/pages/theleague/projected-free-agents.astro',
+      'src/pages/theleague/front-office/projected-free-agents.astro',
       'scripts/compute-afl-free-agents.mjs',
     ];
     for (const file of sources) {
       const src = readFileSync(file, 'utf8');
       expect(src, file).toContain('parseYtdPlayerScores');
-      // The composition is the rule: the Labor Day clock's answer must be fed
-      // THROUGH the kickoff gate. Assigning getCurrentSeasonYear() straight to
-      // the season variable is exactly how all three of these pages shipped,
-      // and it reads identically at a glance.
-      expect(src, file).toMatch(/resolveStatsSeasonYear\(\s*getCurrentSeasonYear\(/);
+      expect(src, file).toContain('resolveStatsSeasonYear');
+      // The Labor Day clock must not be what names the season here. All three
+      // of these pages shipped with `getCurrentSeasonYear()` assigned straight
+      // to the season variable, and it reads identically at a glance.
+      expect(src, file).not.toMatch(/=\s*getCurrentSeasonYear\(/);
     }
   });
 

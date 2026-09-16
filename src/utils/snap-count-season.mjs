@@ -43,13 +43,31 @@ import { nflWeekOneKickoff } from './pecking-order-season-window.mjs';
 import { ptParts } from './nfl-week-starts.mjs';
 
 /**
- * The season whose snap counts should be on screen at `now`:
- * the most recent season whose week 1 has kicked off.
+ * The most recent season whose week 1 has kicked off, at `now`.
+ *
+ * This is the whole rule above, and it is NOT snap-specific — it is the answer
+ * to "which season's numbers belong on screen" for any per-player stat. The
+ * Free Agents points column asks the identical question, so it imports THIS
+ * rather than carrying a second copy (src/utils/stats-season.mjs); two
+ * implementations of one season boundary is how two columns beside each other
+ * end up naming different years.
+ *
+ * Deliberately NOT `isSeasonWindowOpen`: that window CLOSES 20 weeks after
+ * kickoff, and from February to Labor Day the answer here is still the season
+ * that just finished, not the one before it. Only the opening edge moves it.
  */
-export function snapCountSeason(now = new Date()) {
+export function kickedOffSeason(now = new Date()) {
   const year = ptParts(now).year;
   return now >= nflWeekOneKickoff(year) ? year : year - 1;
 }
+
+/**
+ * The season whose snap counts should be on screen at `now`.
+ *
+ * A named alias kept for the snap-count callers that already read this way;
+ * the rule itself is `kickedOffSeason`.
+ */
+export const snapCountSeason = kickedOffSeason;
 
 /**
  * Choose a snap-count season from the ones we actually hold on disk.

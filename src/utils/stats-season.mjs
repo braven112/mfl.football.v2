@@ -9,15 +9,12 @@
  *    Labor Day until kickoff that names a season with no games played, so the
  *    column emptied for the week owners care about it most (waiver season).
  *    The season that should be on screen turns over at the league's start day
- *    — NFL week 1 kickoff, `nflWeekOneKickoff` — the same gate the Pecking
- *    Order, Schefter and the release blackout already use. Before kickoff the
- *    answer is last season's finished total; from kickoff on it is this
- *    season's running total.
- *
- *    Note this is NOT `isSeasonWindowOpen`: that window CLOSES 20 weeks after
- *    kickoff, and from February to Labor Day we still want the season that
- *    just finished rather than the one before it. Only the opening edge moves
- *    the answer here.
+ *    — NFL week 1 kickoff — which is exactly the rule the snap-count columns
+ *    beside this one already resolved through `kickedOffSeason`
+ *    (src/utils/snap-count-season.mjs). This module re-exports that rather than
+ *    re-deriving it: GP / Snaps / Snap% and Pts sit next to each other, and two
+ *    implementations of one season boundary is how they end up naming
+ *    different years.
  *
  * 2. THE SOURCE COULD NOT SEE FREE AGENTS.
  *    Totals were summed from `weekly-results-raw.json`, which records a score
@@ -28,21 +25,18 @@
  *    it is committed per league-year as `playerScores-ytd.json`.
  */
 
-import { nflWeekOneKickoff } from './pecking-order-season-window.mjs';
+import { kickedOffSeason } from './snap-count-season.mjs';
 
 /**
  * The season whose point totals belong on screen right now.
  *
- * @param {number} currentSeasonYear `getCurrentSeasonYear()` — the Labor Day
- *   clock's answer. Passed in rather than imported because the one
- *   implementation lives in TypeScript (`src/utils/league-year.ts`) and node
- *   build scripts cannot import it; they carry a documented port.
- * @param {Date} [now]
- * @returns {number}
+ * A re-export of `kickedOffSeason`, which the snap-count columns on these same
+ * pages already use — GP / Snaps / Snap% and Pts must never name different
+ * years while sitting next to each other, and the only way to guarantee that
+ * is to have one implementation. Exported under this name so a points caller
+ * reads as a points caller; it is the same function, not a wrapper.
  */
-export function resolveStatsSeasonYear(currentSeasonYear, now = new Date()) {
-  return now >= nflWeekOneKickoff(currentSeasonYear) ? currentSeasonYear : currentSeasonYear - 1;
-}
+export const resolveStatsSeasonYear = kickedOffSeason;
 
 /**
  * playerId → season-to-date fantasy points, from a `playerScores&W=YTD` payload.
