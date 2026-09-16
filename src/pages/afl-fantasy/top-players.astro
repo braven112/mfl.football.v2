@@ -1,0 +1,27 @@
+---
+/**
+ * Top Players (AFL) — thin route wrapper.
+ *
+ * Shared implementation lives in components/shared/top-players/TopPlayersPage.
+ *
+ * The derived file is imported HERE because static import specifiers can't be
+ * runtime variables, and importing both leagues' files in the shared component
+ * would ship the other league's leaderboard on every render of either route.
+ */
+import TopPlayersPage from '../../components/shared/top-players/TopPlayersPage.astro';
+import topPlayersData from '../../../data/afl-fantasy/derived/top-players.json';
+import { resolveTopPlayersView } from '../../utils/top-players-view';
+import { resolveLeaguePath } from '../../utils/nav-utils';
+import type { TopPlayersFile } from '../../types/top-players';
+
+export const prerender = false;
+
+const data = topPlayersData as unknown as TopPlayersFile;
+const basePath = resolveLeaguePath(
+  '/afl-fantasy/top-players',
+  Astro.locals.hideLeaguePrefix ?? false
+);
+const view = resolveTopPlayersView(Astro.url, data);
+---
+
+<TopPlayersPage leagueSlug="afl-fantasy" data={data} view={view} basePath={basePath} />

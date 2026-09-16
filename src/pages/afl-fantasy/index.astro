@@ -240,9 +240,7 @@ const seasonYear = resolveSeasonYearWithData();
 const liveSeasonYear = getCurrentSeasonYear(effectiveDate);
 const aflRecap = resolveRecapDestination({
   league: AFL.slug,
-  seasonYear: liveSeasonYear,
   completedWeek: getWeekInTheBooks(liveSeasonYear, AFL.slug, effectiveDate),
-  posts: (feedData as FeedType).posts,
 });
 
 // ── The waiver deadline the hero shouts about ───────────────────────────────

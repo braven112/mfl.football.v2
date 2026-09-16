@@ -521,25 +521,76 @@ precisely so MFL's nondeterministic row order cannot leak into the output.
 Week 1 sanity check, TheLeague: **Caleb Williams #1 (QB1, 41.26)** — the same
 player the recap hero cast, which is the §5 link landing where it should.
 
-**Phase 3 — shared component.** `TopPlayersPage.astro` + client script,
-reusing the pieces in §2. Overall view first, then the position filter and the
-leaderboards view, then the row expand.
+**Phase 3 — shared component. ✅ DONE 2026-09-16.**
+`TopPlayersPage.astro` (584 lines) plus `src/utils/top-players-view.ts` and
+`src/types/top-players.ts`. Reuses `PlayerDetailsModal`, `buildPlayerCellHTML`,
+`initPlayerModalTrigger` and `player-cell.css` exactly as §2 planned.
 
-**Phase 4 — routes.** Both thin wrappers, auth gates in the routes, page
-directory entry. Verify the fork ratchet still passes and `/rollover-check`
-reports the right year at all six boundaries.
+The design landed simpler than specced: **every control is an `<a href>`** and
+the view is resolved server-side, so the whole table renders without
+JavaScript, every view is bookmarkable (which is what makes §5's deep link
+work), and the only script is the row expander. `tests/top-players-view.test.ts`
+pins 19 cases, most of them degradations — a `?week=` the page cannot honour
+falls back to season totals rather than an empty table, because "nobody scored"
+and "your link is stale" look identical to a reader.
 
-**Phase 5 — the week view and the hero link.** `?week=N` mode plus the week
-selector, then repoint `resolveRecapDestination` and update
-`tests/hero-recap-destination.test.ts`. Do these together: the hero link is
-only correct once the week view exists, and shipping the resolver change first
-points both homepages at a param the page ignores. Check the Tuesday case
-explicitly — render the homepage at a Tuesday with `?testDate=` and confirm the
-href carries the **completed** week, not the upcoming one.
+That test caught a real bug before it shipped: `Number.parseInt('1.5')` is `1`,
+so `?week=1.5` silently served week 1. The parse is strict now.
 
-**Phase 6 — polish.** Mobile (the table is the risk — the summary row is
-deliberately narrow so the week detail can live in the expand), dark mode
-tokens, empty state before week 1 of a season, changelog + screenshot.
+**Phase 4 — routes and registries. ✅ DONE 2026-09-16.**
+Both wrappers are 27 lines — well under the 80-line fork threshold, and
+`tests/page-fork-ratchet.test.ts` passes. No auth gate: this is public league
+data, like `/standings`.
+
+THREE registries, not one: `page-directory.json` (two entries, 41 tags each),
+`nav-config.json` (a nav item under "This Week" **and** a `routeEquivalence`
+entry, which is what the league switcher uses to land on the same page in the
+other league), and a new `player-stats` section in `stats.astro` — without it
+the page is absent from the `/stats` hub, which groups on a hardcoded section
+list none of whose five entries fit.
+
+Rendered and checked at every view: leaders (60 rows), overall (484), a single
+position, week mode, both leagues, and junk params degrading correctly.
+
+**Phase 5 — the hero link. ✅ DONE 2026-09-16.**
+`resolveRecapDestination` now returns `/<league>/top-players?week=N`
+unconditionally, and the article branch, `isArticle`, `seasonYear` and the
+`posts` input are gone with it — along with the Schefter feed import that
+`RecapCompositeHero` was only loading to supply them.
+
+**Verified at the clock that matters:** both homepages rendered with
+`?testDate=2026-09-15` (a Tuesday) carry `?week=1` — the week in the books —
+not the week 2 that `getCurrentNFLWeek` would have named that morning.
+
+One thing the plan got wrong. Deleting `findWeeklyRecapPost` broke
+`RecapHero.astro`, which renders the recap COLUMN itself — headline, excerpt,
+byline — rather than choosing where a button points. Those are different jobs,
+so the lookup pair stays and only the destination resolver's dependency on it
+was removed. When the weekly recap type is retired, that component and the pair
+go together.
+
+**Phase 6 — polish. ✅ DONE 2026-09-16.**
+Mobile checked at 390px: the chips wrap, the table scrolls horizontally, and
+the summary row stays narrow because the weekly detail lives in the expander
+rather than in 17 more columns. Every colour is an existing token from
+`tokens.css`, verified to exist — a `var(--x)` with no definition renders its
+fallback in BOTH themes, which is how light ships perfect and dark ships
+white-on-black. An empty state covers a season with nothing scored yet.
+
+Two bugs the screenshots caught that no test would have: `.sr-only` is not a
+class this repo defines anywhere global (see the note in `draft-room.css`), so
+the toggle column's label rendered as visible "WEEKLY DETAIL" text — it has a
+locally defined rule now; and the `#` column showed the player's SEASON rank in
+a filtered view, producing "1, 2, 3, 5, 6, 9", which reads as a rendering bug.
+It shows the row's ordinal in the current listing now, with the true season
+rank still carried by the Pos column.
+
+Changelog staged as a `new-page`, `league: "both"`, with a league-neutral
+inline link. **NOT `featured`** — the Owner Activity change already holds that
+slot for both leagues, and two featured changes for one league fails the Monday
+job. If Top Players should lead Monday's article instead, swap which one
+carries `featured`; that is an editorial call, not a mechanical one. No
+`heroWorthy`, per the 2026-09-16 decision.
 
 ---
 

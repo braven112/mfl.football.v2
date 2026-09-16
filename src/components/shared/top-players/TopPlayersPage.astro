@@ -1,0 +1,598 @@
+---
+/**
+ * Top Players — shared render for both leagues.
+ *
+ * A stats page: who scored, how much, when. It is the results counterpart to
+ * /players, which answers availability.
+ *
+ * ── The data is full-pool, and that is the whole point ─────────────────────
+ *
+ * Rows come from data/<league>/derived/top-players.json, which is built from
+ * `player-scores-weekly.json` rather than `weekly-results-raw.json`. The latter
+ * records a player's score only for weeks he sat on some roster, so the
+ * free-agent pool is structurally invisible in it — 163 of TheLeague's 484
+ * week-1 scorers were on nobody's roster. A leaderboard built the other way
+ * would quietly omit a third of the league's production.
+ *
+ * ── State lives in the URL ─────────────────────────────────────────────────
+ *
+ * Every control is an `<a href>` that changes a param, resolved server-side by
+ * `resolveTopPlayersView`. That is the repo's rule (see DivisionStrengthPage),
+ * and here it also earns its keep twice over: every view is bookmarkable, which
+ * is what lets the Tuesday recap hero deep-link `?week=N`; and the page renders
+ * its whole table without JavaScript, so a reader with a cold cache sees the
+ * leaderboard rather than a spinner.
+ *
+ * The only script is the row expander, and it degrades to "the detail row stays
+ * hidden" — the same weekly numbers are one click away in PlayerDetailsModal.
+ */
+import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
+import Breadcrumbs from '../../theleague/Breadcrumbs.astro';
+import PlayerDetailsModal from '../../theleague/PlayerDetailsModal.astro';
+import { getLeagueBySlug } from '../../../config/leagues';
+import type { CanonicalLeagueSlug } from '../../../config/leagues';
+import type { TopPlayersFile, TopPlayerRow } from '../../../types/top-players';
+import {
+  type SortKey,
+  type TopPlayersView,
+  leaderboardsFor,
+  orderedPositions,
+  pointsFor,
+  rowsFor,
+  sortHref,
+  viewHref,
+} from '../../../utils/top-players-view';
+import { buildPlayerCellHTML } from '../../../utils/player-cell-html';
+import '../../../styles/player-cell.css';
+
+interface Props {
+  leagueSlug: CanonicalLeagueSlug;
+  data: TopPlayersFile;
+  view: TopPlayersView;
+  basePath: string;
+}
+
+const { leagueSlug, data, view, basePath } = Astro.props;
+const league = getLeagueBySlug(leagueSlug);
+if (!league) throw new Error(`Top Players: unknown league "${leagueSlug}"`);
+
+const positions = orderedPositions(data);
+const sections =
+  view.mode === 'leaders'
+    ? leaderboardsFor(data, view)
+    : [{ position: view.position ?? 'Overall', rows: rowsFor(data, view) }];
+
+const isWeek = view.week > 0;
+const pointsLabel = isWeek ? `Wk ${view.week}` : 'Points';
+/** Weeks 15+ are the fantasy playoffs — worth marking so a thin field reads. */
+const isPlayoffWeek = (w: number) =>
+  data.lastRegularSeasonWeek != null && w > data.lastRegularSeasonWeek;
+
+const scoringWeeks = data.completedWeeks;
+const hasAnyScores = data.players.length > 0 && scoringWeeks.length > 0;
+
+const playerCell = (p: TopPlayerRow) =>
+  buildPlayerCellHTML({
+    name: p.name,
+    position: p.position,
+    nflTeam: p.team ?? undefined,
+    mflId: p.id,
+    size: 'compact',
+    playerData: {
+      id: p.id,
+      name: p.name,
+      position: p.position,
+      nflTeam: p.team ?? undefined,
+      points: p.total,
+      franchiseId: p.owners[0]?.id ?? null,
+    },
+  });
+
+const fmt = (n: number) => n.toFixed(2);
+
+// Columns are declared once and rendered for every section, so the
+// leaderboards view and the full table can never drift apart.
+const COLUMNS: { key: SortKey; label: string; title: string }[] = isWeek
+  ? [
+      { key: 'points', label: pointsLabel, title: `Points scored in week ${view.week}` },
+      { key: 'games', label: 'G', title: 'Weeks scored this season' },
+      { key: 'rank', label: 'Season', title: 'Overall season rank' },
+    ]
+  : [
+      { key: 'points', label: 'Points', title: 'Total points this season' },
+      { key: 'avg', label: 'Avg', title: 'Points per week scored' },
+      { key: 'games', label: 'G', title: 'Weeks scored this season' },
+      { key: 'best', label: 'Best', title: 'Highest single week' },
+    ];
+---
+
+<TheLeagueLayout title={`Top Players · ${data.seasonYear}`}>
+  <div class="tp" data-league={league.slug}>
+    <Breadcrumbs
+      items={[{ label: league.name, href: `/${league.slug}` }, { label: 'Top Players' }]}
+    />
+
+    <header class="tp-head">
+      <h1>Top Players</h1>
+      <p class="tp-head__sub">
+        {isWeek
+          ? `Week ${view.week} scoring, every player in ${league.name} — rostered or not.`
+          : `${data.seasonYear} scoring, every player in ${league.name} — rostered or not.`}
+      </p>
+    </header>
+
+    {!hasAnyScores && (
+      <p class="tp-empty">
+        No games have been scored yet for {data.seasonYear}. Weekly points appear here once
+        the season kicks off.
+      </p>
+    )}
+
+    {hasAnyScores && (
+      <>
+        <nav class="tp-controls" aria-label="Choose a view">
+          <div class="tp-controls__group">
+            <span class="tp-controls__label" id="tp-week-label">Week</span>
+            <div class="tp-chips" role="group" aria-labelledby="tp-week-label">
+              <a
+                href={viewHref(basePath, view, { week: 0 })}
+                class:list={['tp-chip', { 'is-active': !isWeek }]}
+                aria-current={!isWeek ? 'true' : undefined}
+              >Season</a>
+              {scoringWeeks.map((w) => (
+                <a
+                  href={viewHref(basePath, view, { week: w })}
+                  class:list={['tp-chip', { 'is-active': view.week === w, 'tp-chip--po': isPlayoffWeek(w) }]}
+                  aria-current={view.week === w ? 'true' : undefined}
+                  title={isPlayoffWeek(w) ? `Week ${w} — fantasy playoffs` : `Week ${w}`}
+                >{w}</a>
+              ))}
+            </div>
+          </div>
+
+          <div class="tp-controls__group">
+            <span class="tp-controls__label" id="tp-view-label">Position</span>
+            <div class="tp-chips" role="group" aria-labelledby="tp-view-label">
+              <a
+                href={viewHref(basePath, view, { mode: 'leaders', position: null })}
+                class:list={['tp-chip', { 'is-active': view.mode === 'leaders' }]}
+                aria-current={view.mode === 'leaders' ? 'true' : undefined}
+              >Leaders</a>
+              <a
+                href={viewHref(basePath, view, { mode: 'overall', position: null })}
+                class:list={['tp-chip', { 'is-active': view.mode === 'overall' }]}
+                aria-current={view.mode === 'overall' ? 'true' : undefined}
+              >Overall</a>
+              {positions.map((pos) => (
+                <a
+                  href={viewHref(basePath, view, { mode: 'position', position: pos })}
+                  class:list={['tp-chip', { 'is-active': view.position === pos }]}
+                  aria-current={view.position === pos ? 'true' : undefined}
+                >{pos}</a>
+              ))}
+            </div>
+          </div>
+        </nav>
+
+        {sections.map((section) => (
+          <section class="tp-section">
+            {view.mode === 'leaders' && (
+              <h2 class="tp-section__title">
+                {section.position}
+                <a class="tp-section__more" href={viewHref(basePath, view, { mode: 'position', position: section.position })}>
+                  All {section.position}
+                </a>
+              </h2>
+            )}
+
+            <div class="tp-table-wrap">
+              <table class="tp-table">
+                <thead>
+                  <tr>
+                    <th scope="col" class="tp-col-rank">#</th>
+                    <th scope="col" class="tp-col-player">
+                      {view.mode === 'leaders'
+                        ? 'Player'
+                        : <a href={sortHref(basePath, view, 'name')} class="tp-sort">Player</a>}
+                    </th>
+                    <th scope="col" class="tp-col-pos">Pos</th>
+                    <th scope="col" class="tp-col-owner">Owner</th>
+                    {COLUMNS.map((col) => (
+                      <th scope="col" class="tp-col-num" title={col.title}>
+                        {view.mode === 'leaders'
+                          ? col.label
+                          : (
+                            <a
+                              href={sortHref(basePath, view, col.key)}
+                              class:list={['tp-sort', { 'is-active': view.sort === col.key }]}
+                              aria-sort={view.sort === col.key ? (view.dir === 'asc' ? 'ascending' : 'descending') : undefined}
+                            >{col.label}{view.sort === col.key ? (view.dir === 'asc' ? ' ▲' : ' ▼') : ''}</a>
+                          )}
+                      </th>
+                    ))}
+                    <th scope="col" class="tp-col-toggle"><span class="tp-sr">Weekly detail</span></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {section.rows.map((p, i) => (
+                    <>
+                      <tr class="tp-row">
+                        <td class="tp-col-rank">{i + 1}</td>
+                        <td class="tp-col-player"><Fragment set:html={playerCell(p)} /></td>
+                        <td class="tp-col-pos"><span class="tp-posrank">{p.position}{p.posRank}</span></td>
+                        <td class="tp-col-owner">
+                          {p.owners.length === 0
+                            ? <span class="tp-fa">Free agent</span>
+                            : p.owners.map((o) => <span class="tp-owner">{o.name}</span>)}
+                        </td>
+                        {COLUMNS.map((col) => (
+                          <td class="tp-col-num">
+                            {col.key === 'points' && <strong>{fmt(pointsFor(p, view.week))}</strong>}
+                            {col.key === 'avg' && fmt(p.avg)}
+                            {col.key === 'games' && p.games}
+                            {col.key === 'best' && fmt(p.best)}
+                            {col.key === 'rank' && `#${p.rank}`}
+                          </td>
+                        ))}
+                        <td class="tp-col-toggle">
+                          <button
+                            type="button"
+                            class="tp-toggle"
+                            data-tp-toggle
+                            aria-expanded="false"
+                            aria-label={`Weekly scores for ${p.name}`}
+                          >▾</button>
+                        </td>
+                      </tr>
+                      <tr class="tp-detail" hidden>
+                        <td colspan={5 + COLUMNS.length}>
+                          <ol class="tp-weeks" aria-label={`${p.name} by week`}>
+                            {Array.from(
+                              { length: data.endWeek - data.startWeek + 1 },
+                              (_, k) => data.startWeek + k,
+                            ).map((w) => {
+                              const pts = p.weeks[String(w)];
+                              const played = pts !== undefined;
+                              const future = !scoringWeeks.includes(w);
+                              return (
+                                <li
+                                  class:list={[
+                                    'tp-week',
+                                    {
+                                      'is-best': played && pts === p.best && p.games > 0,
+                                      'is-current': w === view.week,
+                                      'is-future': future,
+                                      'is-out': !played && !future,
+                                    },
+                                  ]}
+                                >
+                                  <span class="tp-week__n">{w}{isPlayoffWeek(w) ? '*' : ''}</span>
+                                  <span class="tp-week__p">
+                                    {played ? fmt(pts) : future ? '·' : '—'}
+                                  </span>
+                                </li>
+                              );
+                            })}
+                          </ol>
+                          <p class="tp-weeks__key">
+                            <span>—</span> no score that week
+                            {data.lastRegularSeasonWeek != null && <> · <span>*</span> fantasy playoffs</>}
+                          </p>
+                        </td>
+                      </tr>
+                    </>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {section.rows.length === 0 && (
+              <p class="tp-empty">No {section.position} scored in this view.</p>
+            )}
+          </section>
+        ))}
+      </>
+    )}
+  </div>
+
+  <PlayerDetailsModal />
+</TheLeagueLayout>
+
+<script>
+  import { initPlayerModalTrigger } from '../../../utils/player-modal-trigger';
+
+  /**
+   * Row expander + player modal wiring.
+   *
+   * Registered on `astro:page-load`, NOT DOMContentLoaded: with the
+   * ClientRouter a client-side navigation never fires DOMContentLoaded again,
+   * so a one-shot init leaves the second visit inert.
+   *
+   * Nothing is captured at module scope. One module instance survives every
+   * swap — including a cross-league navigation, which the nav's own league
+   * switcher makes one click away on the shared host — so the root is
+   * re-queried each time and the listeners go on THAT node. They die with it
+   * when the router replaces the DOM, which is why nothing stacks.
+   */
+  function initTopPlayers() {
+    const root = document.querySelector<HTMLElement>('.tp[data-league]');
+    if (!root) return;
+
+    root.addEventListener('click', (event) => {
+      const button = (event.target as HTMLElement).closest<HTMLButtonElement>('[data-tp-toggle]');
+      if (!button) return;
+      const row = button.closest('tr');
+      const detail = row?.nextElementSibling as HTMLElement | null;
+      if (!detail?.classList.contains('tp-detail')) return;
+      const open = button.getAttribute('aria-expanded') === 'true';
+      button.setAttribute('aria-expanded', open ? 'false' : 'true');
+      detail.hidden = open;
+    });
+
+    initPlayerModalTrigger(root);
+  }
+
+  document.addEventListener('astro:page-load', initTopPlayers);
+</script>
+
+<style>
+  .tp {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 0 16px 48px;
+  }
+
+  .tp-head {
+    margin: 12px 0 20px;
+  }
+  .tp-head h1 {
+    margin: 0 0 4px;
+    color: var(--page-text);
+  }
+  .tp-head__sub {
+    margin: 0;
+    color: var(--content-text-muted);
+  }
+
+  .tp-empty {
+    padding: 24px;
+    text-align: center;
+    color: var(--content-text-muted);
+    background: var(--content-bg-muted);
+    border: 1px solid var(--content-border);
+    border-radius: var(--radius-md);
+  }
+
+  .tp-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+  .tp-controls__group {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .tp-controls__label {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--content-text-muted);
+    min-width: 58px;
+  }
+  .tp-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .tp-chip {
+    display: inline-block;
+    padding: 4px 10px;
+    border: 1px solid var(--content-border);
+    border-radius: var(--radius-md);
+    background: var(--card-bg);
+    color: var(--page-text);
+    text-decoration: none;
+    font-size: 0.85rem;
+    line-height: 1.4;
+    transition: var(--transition-base);
+  }
+  .tp-chip:hover {
+    background: var(--table-row-bg-hover);
+  }
+  .tp-chip.is-active {
+    background: var(--league-accent);
+    border-color: var(--league-accent);
+    color: #fff;
+    font-weight: 600;
+  }
+  .tp-chip--po::after {
+    content: '*';
+    opacity: 0.7;
+  }
+
+  .tp-section {
+    margin-bottom: 28px;
+  }
+  .tp-section__title {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    margin: 0 0 8px;
+    font-size: 1.05rem;
+    color: var(--page-text);
+  }
+  .tp-section__more {
+    font-size: 0.8rem;
+    font-weight: 400;
+    color: var(--league-accent);
+    text-decoration: none;
+  }
+  .tp-section__more:hover {
+    text-decoration: underline;
+  }
+
+  /* The table is the one thing that can overflow a phone; scroll it rather
+     than shrinking type to unreadable. The summary row is deliberately narrow
+     so the weekly detail lives in the expander instead of adding 17 columns. */
+  .tp-table-wrap {
+    overflow-x: auto;
+    border: 1px solid var(--content-border);
+    border-radius: var(--radius-md);
+    background: var(--card-bg);
+  }
+  .tp-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9rem;
+  }
+  .tp-table th,
+  .tp-table td {
+    padding: 8px 10px;
+    text-align: left;
+    border-bottom: 1px solid var(--content-border);
+    color: var(--page-text);
+  }
+  .tp-table thead th {
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--content-text-muted);
+    background: var(--content-bg-muted);
+    white-space: nowrap;
+  }
+  .tp-table tbody tr.tp-row:hover {
+    background: var(--table-row-bg-hover);
+  }
+  .tp-col-rank {
+    width: 44px;
+    color: var(--content-text-muted);
+    font-variant-numeric: tabular-nums;
+  }
+  .tp-col-num {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+  .tp-col-toggle {
+    width: 40px;
+    text-align: center;
+  }
+  /* Defined here, not borrowed: this repo has no globally loaded
+     .visually-hidden (see the note in src/styles/draft-room.css), so a bare
+     `sr-only` class rendered this header label as visible text. */
+  .tp-sr {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+  .tp-posrank {
+    font-variant-numeric: tabular-nums;
+    color: var(--content-text-muted);
+  }
+  .tp-owner + .tp-owner::before {
+    content: ' · ';
+    color: var(--content-text-muted);
+  }
+  .tp-fa {
+    color: var(--content-text-muted);
+    font-style: italic;
+  }
+
+  .tp-sort {
+    color: inherit;
+    text-decoration: none;
+  }
+  .tp-sort:hover {
+    text-decoration: underline;
+  }
+  .tp-sort.is-active {
+    color: var(--league-accent);
+  }
+
+  .tp-toggle {
+    background: none;
+    border: 0;
+    cursor: pointer;
+    color: var(--content-text-muted);
+    font-size: 0.9rem;
+    line-height: 1;
+    padding: 4px 6px;
+    border-radius: var(--radius-md);
+  }
+  .tp-toggle:hover {
+    background: var(--table-row-bg-hover);
+    color: var(--page-text);
+  }
+  .tp-toggle[aria-expanded='true'] {
+    transform: rotate(180deg);
+  }
+
+  .tp-detail > td {
+    background: var(--content-bg-muted);
+  }
+  .tp-weeks {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .tp-week {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-width: 46px;
+    padding: 4px 2px;
+    border: 1px solid var(--content-border);
+    border-radius: var(--radius-md);
+    background: var(--card-bg);
+  }
+  .tp-week__n {
+    font-size: 0.65rem;
+    color: var(--content-text-muted);
+  }
+  .tp-week__p {
+    font-size: 0.82rem;
+    font-variant-numeric: tabular-nums;
+    color: var(--page-text);
+  }
+  .tp-week.is-best {
+    border-color: var(--league-accent);
+    font-weight: 600;
+  }
+  .tp-week.is-current {
+    outline: 2px solid var(--league-accent);
+  }
+  .tp-week.is-future .tp-week__p,
+  .tp-week.is-out .tp-week__p {
+    color: var(--content-text-muted);
+  }
+  .tp-weeks__key {
+    margin: 8px 0 0;
+    font-size: 0.72rem;
+    color: var(--content-text-muted);
+  }
+
+  @media (max-width: 640px) {
+    .tp-controls__label {
+      min-width: 0;
+    }
+    .tp-col-owner {
+      max-width: 110px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+  }
+</style>
