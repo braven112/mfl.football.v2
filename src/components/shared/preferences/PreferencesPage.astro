@@ -72,8 +72,13 @@ export interface Props {
    * account all arrive here as `null` rather than as an empty section.
    */
   throwback?: ThrowbackPickerView | null;
-  /** This league's live-scoring path, prefix already resolved — preview links. */
-  scoreboardPath?: string;
+  /**
+   * This league's live-scoring path, prefix already resolved — the picker's
+   * preview links. REQUIRED rather than defaulted: an empty string would make
+   * every "Preview →" href a bare `?week=N&demo=1`, which resolves against
+   * this page and silently reloads it instead of opening the scoreboard.
+   */
+  scoreboardPath: string;
   /**
    * This league's official clock, from the registry. A PROP rather than a
    * registry lookup because this component is deliberately props-only — the
@@ -94,7 +99,7 @@ const {
   sampleKickoff = nextSundayKickoffEpoch(),
   officialClock = LEAGUE_CLOCK,
   throwback = null,
-  scoreboardPath = '',
+  scoreboardPath,
 } = Astro.props;
 
 const countries = countryOptions();
