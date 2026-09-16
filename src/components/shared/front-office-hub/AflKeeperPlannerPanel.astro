@@ -37,6 +37,8 @@ import collegeLogos from '../../../data/college-logos.json';
 import type { FrontOfficeAnalyticsPlayer } from '../../../utils/front-office-keeper-data';
 import type { RosterAnalytics, RosterGroup } from '../../../utils/afl-roster-analytics';
 import { POSITION_LANES, POSITION_COLORS, type PositionLane } from '../../../utils/afl-roster-analytics';
+import { loginUrlFor } from '../../../utils/login-redirect';
+import { getLeagueBySlug } from '../../../config/leagues';
 
 interface Props {
   isOwner: boolean;
@@ -52,6 +54,15 @@ interface Props {
 
 const { isOwner, signedIn, franchiseId, year, roster, draftPicks, analytics, playersByNflTeam, playersByCollege } =
   Astro.props;
+
+// Built by loginUrlFor, never by hand: it picks the return param, validates
+// the path against the league, and emits the apex-host shape.
+// tests/login-redirect-guard.ts pins that.
+const signInHref = loginUrlFor({
+  league: getLeagueBySlug('afl-fantasy')!,
+  returnTo: `/afl-fantasy/front-office?franchise=${franchiseId}`,
+  hideLeaguePrefix: Astro.locals.hideLeaguePrefix,
+});
 
 const buildPlayerModalData = (p: FrontOfficeAnalyticsPlayer) => ({
   id: p.id,
@@ -340,7 +351,7 @@ const stripMapY = (lane: PositionLane, stackIndex: number) => stripLaneCenter(la
       <p>
         <a
           class="fo-afl-coming-soon__cta"
-          href={`/afl-fantasy/login?next=${encodeURIComponent(`/afl-fantasy/front-office?franchise=${franchiseId}`)}`}
+          href={signInHref}
         >
           Sign in to AFL →
         </a>
