@@ -794,13 +794,19 @@ const SLOT_VIEW: Record<SlotKey, (ctx: SlotContext) => EventHeroView> = {
       { mode: 'unknown', changesAt: null, nextMode: 'unknown', reason: 'No waiver copy supplied to the hero.' },
       { now },
     );
+    // `cleared` is `mode === 'fcfs'`, NOT `!open`. Three states, two
+    // presentations: an unreadable calendar is neither open nor cleared, and
+    // reading it as cleared rendered "CLAIMS HAVE SOON." over a summary saying
+    // claims were still queued. Unknown takes the claim-window wording,
+    // because this slot only runs inside that window in both leagues.
+    const cleared = copy.mode === 'fcfs';
     return {
-      pill: copy.open ? 'WAIVER DAY' : 'WAIVERS CLEARED',
-      headline: copy.open ? 'CLAIMS RUN' : 'CLAIMS HAVE',
+      pill: cleared ? 'WAIVERS CLEARED' : 'WAIVER DAY',
+      headline: cleared ? 'CLAIMS HAVE' : 'CLAIMS RUN',
       accentWord: copy.accentWord,
       summary: copy.summary,
       link: '/afl-fantasy/rosters',
-      linkLabel: copy.open ? 'SET YOUR CLAIMS' : 'BROWSE FREE AGENTS',
+      linkLabel: cleared ? 'BROWSE FREE AGENTS' : 'SET YOUR CLAIMS',
       icon: 'binoculars',
       // The face is a FREE AGENT — nobody rosters him, so there is no club whose
       // colours this could honestly wear. League event.
@@ -1236,15 +1242,17 @@ function buildRegularSeasonHero(slot: DailySlot, week: number | undefined, gameW
         { now },
       );
       const when = copy.word.charAt(0) + copy.word.slice(1).toLowerCase();
+      // Same three-state rule as the view above.
+      const cleared = copy.mode === 'fcfs';
       return {
         source: 'event',
-        title: copy.open ? `Waivers Process ${when}` : 'Waivers Have Cleared',
+        title: cleared ? 'Waivers Have Cleared' : `Waivers Process ${when}`,
         summary: copy.summary,
         link: '/afl-fantasy/rosters',
-        linkLabel: copy.open ? 'Set Your Claims' : 'Browse Free Agents',
+        linkLabel: cleared ? 'Browse Free Agents' : 'Set Your Claims',
         icon: 'binoculars',
         accentColor: 'var(--cat-free-agency, #2e8743)',
-        kicker: copy.open ? 'Waiver Day' : 'Free Agency',
+        kicker: cleared ? 'Free Agency' : 'Waiver Day',
       };
     }
     case 'game-day-preview':

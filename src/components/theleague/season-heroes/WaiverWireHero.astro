@@ -125,7 +125,9 @@ if (hasData) {
 const lockIso = waiver?.at ? waiver.at.toISOString() : null;
 // "Wed 7:00 PM PT", or "Thu 12:00 PM AEST · Wed 7:00 PM PT" from Sydney.
 const lockLine = waiver?.line ?? '';
-const waiversOpen = waiver?.open ?? true;
+// `mode === 'fcfs'` is the ONLY cleared state — `!open` would also catch an
+// unreadable calendar, which is neither. See waiver-deadline-copy.ts.
+const waiversOpen = waiver ? waiver.mode !== 'fcfs' : true;
 
 const week = projData?.projectedScores?.week ?? projData?.default?.projectedScores?.week ?? '?';
 ---

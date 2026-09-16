@@ -38,7 +38,18 @@ import type { WaiverWindow } from './waiver-window';
 export interface WaiverDeadlineCopy {
   /** Claims process (or waivers reopen) at this moment, per MFL's calendar. */
   at: Date | null;
-  /** True while claims are being queued; false once they have processed. */
+  /**
+   * The window the calendar reports, passed through UNCOLLAPSED.
+   *
+   * Callers must branch on this, never on `!open`, because there are THREE
+   * states and only two of them have a presentation. `open` answers "are
+   * claims being queued", so it is false for `fcfs` AND for `unknown` — and a
+   * hero that read `!open` as "waivers have cleared" rendered the headline
+   * "CLAIMS HAVE SOON." over a summary that said the opposite, the moment the
+   * calendar could not be read. Only `fcfs` means cleared.
+   */
+  mode: WaiverWindow['mode'];
+  /** True while claims are being queued; false once they have processed OR when the calendar is unreadable. */
   open: boolean;
   /**
    * The relative word for the accent slot: `TONIGHT`, `TODAY`, `TOMORROW`,
@@ -134,6 +145,7 @@ export function waiverDeadlineCopy(
   if (!at || window.mode === 'unknown') {
     return {
       at: null,
+      mode: window.mode,
       open,
       word: 'SOON',
       line: '',
@@ -154,6 +166,7 @@ export function waiverDeadlineCopy(
     // in TheLeague, whose deadline is 7pm against a slot that ends at 8pm.
     return {
       at,
+      mode: window.mode,
       open,
       word,
       line,
@@ -166,6 +179,7 @@ export function waiverDeadlineCopy(
 
   return {
     at,
+    mode: window.mode,
     open,
     word,
     line,

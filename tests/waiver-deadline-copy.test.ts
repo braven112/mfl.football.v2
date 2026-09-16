@@ -17,6 +17,7 @@ import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { relativeDayWord, waiverDeadlineCopy } from '../src/utils/waiver-deadline-copy';
 import { resolveWaiverWindow } from '../src/utils/waiver-window';
+import { resolveAflHeroState } from '../src/utils/afl-hero-resolver';
 import type { ViewerClock } from '../src/utils/viewer-preferences';
 import { leagueClock } from '../src/config/leagues';
 
@@ -183,6 +184,32 @@ describe('waiverDeadlineCopy — the viewer’s clock', () => {
 });
 
 describe('waiverDeadlineCopy — an unreadable calendar', () => {
+  it('is neither open nor CLEARED — three states, two presentations', () => {
+    // `open` answers "are claims being queued", so it is false for `fcfs` AND
+    // for `unknown`. A hero that read `!open` as "waivers have cleared"
+    // rendered the headline "CLAIMS HAVE SOON." over a summary saying claims
+    // were still queued, the moment the calendar could not be read — and the
+    // export is owner-gated, so that is a real production state.
+    const now = new Date('2026-09-15T18:19:00-07:00');
+    const copy = waiverDeadlineCopy(resolveWaiverWindow([], now), { now });
+    expect(copy.mode).toBe('unknown');
+    expect(copy.mode).not.toBe('fcfs'); // what the heroes branch on
+  });
+
+  it('renders a coherent AFL hero when the calendar cannot be read', () => {
+    const now = new Date('2026-09-15T18:19:00-07:00');
+    const waiver = waiverDeadlineCopy(resolveWaiverWindow([], now), { now });
+    const state = resolveAflHeroState({ referenceDate: now, waiver, rng: () => 0.99 } as never) as {
+      view?: { headline?: string; accentWord?: string; pill?: string };
+      content?: { title?: string };
+    };
+    const headline = `${state.view?.headline} ${state.view?.accentWord}`;
+    expect(headline).toBe('CLAIMS RUN SOON.');
+    expect(headline).not.toContain('CLAIMS HAVE'); // the garbled shipped form
+    expect(state.view?.pill).toBe('WAIVER DAY');
+    expect(state.content?.title).not.toBe('Waivers Have Cleared');
+  });
+
   it('names no day at all rather than guessing Wednesday', () => {
     // The calendar export is owner-gated; an empty read is a real production
     // possibility, and it must not fall back to prose.
