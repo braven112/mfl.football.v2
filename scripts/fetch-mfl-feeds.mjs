@@ -38,6 +38,7 @@ import { mflFetch } from './lib/mfl-api.mjs';
 import { getNonEmpty } from './lib/env.mjs';
 import { getLeagueById, DEFAULT_LEAGUE_SLUG } from '../src/config/leagues-data.mjs';
 import { writeJsonIfChanged, jsonEquivalent } from './lib/canonical-json.mjs';
+import { isSeasonWindowOpen } from '../src/utils/pecking-order-season-window.mjs';
 import { isKeeperWindowDate } from './lib/retention-policy.mjs';
 
 /**
@@ -1144,7 +1145,22 @@ const run = async () => {
       return true;
     };
 
-    if (!skipDailyFeeds) {
+    // Offseason guard. Outside the season window every week answers with the
+    // blank-row payload, so the loop is 17 calls a day to learn nothing —
+    // twice, across both leagues, for ~7 months. "The feed has no completed
+    // week" is NOT an offseason guard (CLAUDE.md): Feb → Labor Day resolves to
+    // a season whose feeds are complete by definition. `isSeasonWindowOpen` is.
+    //
+    // Deliberately conditioned on ALREADY HAVING the weeks: a historical
+    // backfill (MFL_YEAR=2025) targets a season whose window is long closed,
+    // and must still be able to build the file the first time. --force also
+    // overrides, which is how you re-pull a finished season.
+    const windowClosed = !isSeasonWindowOpen(Number(year)) && weeks.length > 0 && !force;
+    if (windowClosed) {
+      console.log(`${KEY}: ${year} is outside the season window and already has ${weeks.length} week(s); skipping the per-week loop.`);
+    }
+
+    if (!skipDailyFeeds && !windowClosed) {
       let startWeek = 1;
       let endWeek = 17;
       try {
@@ -1178,7 +1194,7 @@ const run = async () => {
         // Same courtesy delay as the weeklyResults loop.
         await delay(1200);
       }
-    } else {
+    } else if (skipDailyFeeds) {
       // Live refresh: no extra request. The W-less `playerScores` entry in
       // FEEDS above already ran this cycle and holds whatever week MFL calls
       // current, so merge that file rather than asking again — the same
