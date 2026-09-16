@@ -2,9 +2,11 @@ import { describe, it, expect, afterAll } from 'vitest';
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-// js-yaml, not `yaml`: tests/schefter-league-contract.test.ts already reads
-// workflow YAML with it, so this adds no new dependency surface.
-import yaml from 'js-yaml';
+// `yaml`, not js-yaml: js-yaml has no bundled types and no @types package
+// installed here, so importing it is an implicit `any` — a +1 on the
+// type-error baseline, which is a ratchet this repo enforces in both
+// directions. `yaml` ships its own .d.ts.
+import { parse as parseYaml } from 'yaml';
 import { expectClean, scanForbidden, walkFiles, REPO_ROOT } from './helpers/scan-guard';
 import { moduleGraph } from './helpers/module-graph';
 
@@ -181,7 +183,7 @@ describe('no-install jobs run dependency-free scripts', () => {
   const jobs: Job[] = walkFiles({ roots: [WORKFLOWS], extensions: EXTS }).flatMap((file) => {
     let doc: { jobs?: Record<string, { steps?: { uses?: unknown; run?: unknown }[] }> };
     try {
-      doc = yaml.load(readFileSync(path.join(REPO_ROOT, file), 'utf8')) as typeof doc;
+      doc = parseYaml(readFileSync(path.join(REPO_ROOT, file), 'utf8'));
     } catch (err) {
       // A workflow we cannot read is a workflow we are not guarding. Say so.
       parseFailures.push(`${file}: ${(err as Error).message}`);
