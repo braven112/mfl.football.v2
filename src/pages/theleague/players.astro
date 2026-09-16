@@ -642,6 +642,11 @@ playerList.sort((a, b) => {
 
 const hasProjected = projectedMap.size > 0;
 const hasSeasonPts = ytdPtsMap.size > 0;
+// PPG is gated on its OWN source, not on the points column's. The two used to
+// share a map; now that points come from the YTD feed and the rate still comes
+// from the weekly sum, a season with no YTD feed would otherwise hide a PPG
+// column that has everything it needs.
+const hasPpg = weeklyPtsMap.size > 0;
 
 // Count free agents by position for category tabs. Mirrors the client's
 // initial filter state: rookies only count once the draft is complete, so
@@ -1156,7 +1161,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
                 <div class="th-content">{statsSeasonYear} Pts</div>
               </th>
             )}
-            {hasSeasonPts && hasSnapCounts && (
+            {hasPpg && hasSnapCounts && (
               <th class="sortable col-num col-group--stats col-value-ppg" data-sort="ppg">
                 <div class="th-content">PPG</div>
               </th>
@@ -1249,7 +1254,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
 {!claimFranchiseId && <SignInModal config={signInConfig} />}
 <WatchListBridge signedIn={watchSignedIn} claimVerb={claimVerb} promptSignIn={promptSignIn} />
 
-<script define:vars={{ canClaim, promptSignIn, playerDataJson, hasProjected, hasSeasonPts, hasSnapCounts, nflTeamsJson, hasSurplusData, hasAuctionData, isAuctionSeason, auctionEndMs, isAdmin, currentYear, mflHost, mflLeagueId, mflActionYear, franchiseNamesJson, franchiseBannersJson, defSpotlightJson, nflAvatarBgJson, nflAvatarBgFallback, nflAvatarBorderJson, nflAvatarBorderFallback, nflAvatarRingJson, nflAvatarRingFallback, nflAvatarRingDarkJson, nflAvatarRingDarkFallback, noHeadshot, logoOnerror: NFL_LOGO_ONERROR, collegeLogoOnerror: COLLEGE_LOGO_ONERROR, collegeLogoOnload: COLLEGE_LOGO_ONLOAD, rookieDraftComplete }}>
+<script define:vars={{ canClaim, promptSignIn, playerDataJson, hasProjected, hasSeasonPts, hasPpg, hasSnapCounts, nflTeamsJson, hasSurplusData, hasAuctionData, isAuctionSeason, auctionEndMs, isAdmin, currentYear, mflHost, mflLeagueId, mflActionYear, franchiseNamesJson, franchiseBannersJson, defSpotlightJson, nflAvatarBgJson, nflAvatarBgFallback, nflAvatarBorderJson, nflAvatarBorderFallback, nflAvatarRingJson, nflAvatarRingFallback, nflAvatarRingDarkJson, nflAvatarRingDarkFallback, noHeadshot, logoOnerror: NFL_LOGO_ONERROR, collegeLogoOnerror: COLLEGE_LOGO_ONERROR, collegeLogoOnload: COLLEGE_LOGO_ONLOAD, rookieDraftComplete }}>
   // define:vars creates const — copy to let so polling can update at runtime
   let _hasAuctionData = hasAuctionData;
   const players = JSON.parse(playerDataJson);
@@ -2286,7 +2291,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
         html += `<td class="cell-num col-group--stats">${p.seasonPts != null ? p.seasonPts.toFixed(1) : '<span class="na">-</span>'}</td>`;
       }
 
-      if (hasSeasonPts && hasSnapCounts) {
+      if (hasPpg && hasSnapCounts) {
         html += `<td class="cell-num col-group--stats col-value-ppg">${p.ppg != null ? p.ppg.toFixed(1) : '<span class="na">-</span>'}</td>`;
       }
 

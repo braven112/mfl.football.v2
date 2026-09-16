@@ -31,10 +31,14 @@ import { kickedOffSeason } from './snap-count-season.mjs';
  * The season whose point totals belong on screen right now.
  *
  * A re-export of `kickedOffSeason`, which the snap-count columns on these same
- * pages already use — GP / Snaps / Snap% and Pts must never name different
- * years while sitting next to each other, and the only way to guarantee that
- * is to have one implementation. Exported under this name so a points caller
- * reads as a points caller; it is the same function, not a wrapper.
+ * pages already use — one implementation, so the two columns can never answer
+ * the boundary differently. Exported under this name so a points caller reads
+ * as a points caller; it is the same function, not a wrapper.
+ *
+ * That guarantees the RULE is shared, not that two columns always print the
+ * same year: the AFL's points are baked at build time while its snap columns
+ * resolve per request, so between kickoff and the next deploy they can differ.
+ * Which is why every one of these columns names its own season on screen.
  */
 export const resolveStatsSeasonYear = kickedOffSeason;
 

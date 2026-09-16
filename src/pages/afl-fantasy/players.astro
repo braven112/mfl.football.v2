@@ -128,8 +128,13 @@ const players = liveView.players;
 const nflTeamsList = freeAgentsData.nflTeamsList as string[];
 const hasProjected = freeAgentsData.hasProjected;
 const hasSeasonPts = freeAgentsData.hasSeasonPts;
-// The season the Pts column reports. Resolved in the builder off the league's
-// start day (NFL week 1 kickoff), the same edge the snap-count columns use.
+// The season the Pts column reports, resolved off the league's start day (NFL
+// week 1 kickoff) — the same edge the snap columns use, but resolved at BUILD
+// time here, because the totals themselves are baked into the snapshot. The
+// snap columns beside it are request-time. So in the window between kickoff
+// and the next deploy the two headers can name different years, and that is
+// why each names its own: the label always matches the data under it, and a
+// deploy (every data-sync commit) closes the gap.
 const statsSeasonYear = freeAgentsData.statsSeasonYear;
 const hasAdp = freeAgentsData.hasAdp;
 const defaultSort = freeAgentsData.defaultSort;
