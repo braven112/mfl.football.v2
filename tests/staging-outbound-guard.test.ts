@@ -380,6 +380,36 @@ describe('a blocked MFL write says so', () => {
     expect(network.message).toBe('Could not reach MFL: fetch failed');
   });
 
+  it('a bulk ledger write refuses every row once, not row by row', async () => {
+    // The refusal belongs to the DEPLOYMENT, so row 2 cannot fare better than
+    // row 1. The loop used to attempt all of them and report each as its own
+    // row-level MFL failure, which reads like a partially-applied batch — the
+    // one thing an accounting write must never be ambiguous about.
+    const previous = process.env.VERCEL_ENV;
+    process.env.VERCEL_ENV = 'preview';
+    try {
+      const { writeAccountingRecords } = await import('../src/utils/mfl-accounting');
+      const { MFL_WRITE_BLOCKED_MESSAGE } = await import('../src/utils/mfl-fetch');
+      const rows = [
+        { franchiseId: '0001', amount: 10, description: 'one' },
+        { franchiseId: '0002', amount: 20, description: 'two' },
+        { franchiseId: '0003', amount: 30, description: 'three' },
+      ];
+      const results = await writeAccountingRecords(rows, {
+        league: { id: '13522', slug: 'theleague', mflHost: 'www49.myfantasyleague.com' } as never,
+        year: 2026,
+        mflUserCookie: 'unused — the guard throws before the network',
+      } as never);
+
+      expect(results).toHaveLength(rows.length);
+      expect(results.every((r) => r.ok === false && r.blocked === true)).toBe(true);
+      expect(results.every((r) => r.error === MFL_WRITE_BLOCKED_MESSAGE)).toBe(true);
+    } finally {
+      if (previous === undefined) delete process.env.VERCEL_ENV;
+      else process.env.VERCEL_ENV = previous;
+    }
+  });
+
   it('every MFL write routes its catch through describeMflFailure', () => {
     // A write is an mflFetch call carrying method: 'POST'. Reads are exempt —
     // the guard never blocks an export, so there is nothing to describe.

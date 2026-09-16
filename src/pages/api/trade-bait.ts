@@ -164,8 +164,11 @@ export const POST: APIRoute = async ({ request }) => {
       );
     } else {
       return new Response(
-        JSON.stringify({ error: result.error || 'Failed to update trade block' }),
-        { status: 500, headers: JSON_HEADERS },
+        JSON.stringify({
+          error: result.error || 'Failed to update trade block',
+          blocked: result.blocked === true,
+        }),
+        { status: result.blocked ? 503 : 500, headers: JSON_HEADERS },
       );
     }
   } catch (error) {

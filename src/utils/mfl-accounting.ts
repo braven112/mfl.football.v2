@@ -429,6 +429,8 @@ export interface BulkWriteResult {
   row: BulkWriteRow;
   ok: boolean;
   error?: string;
+  /** True when this deployment refused to send — see describeMflFailure. */
+  blocked?: boolean;
 }
 
 /**
@@ -447,10 +449,25 @@ export async function writeAccountingRecords(
   opts: WriteRecordOptions
 ): Promise<BulkWriteResult[]> {
   const results: BulkWriteResult[] = [];
-  for (const row of rows) {
+  for (const [index, row] of rows.entries()) {
     try {
       const result = await writeAccountingRecord(row, opts);
-      results.push({ row, ok: result.ok, ...(result.error ? { error: result.error } : {}) });
+      results.push({
+        row,
+        ok: result.ok,
+        ...(result.error ? { error: result.error } : {}),
+        ...(result.blocked ? { blocked: true } : {}),
+      });
+      // A refusal is a property of the DEPLOYMENT, not of the row: every
+      // remaining row would be refused identically. Report them as refused
+      // rather than attempting them, so the caller still gets one result per
+      // row and the count of "landed" stays honest at zero.
+      if (result.blocked) {
+        for (const skipped of rows.slice(index + 1)) {
+          results.push({ row: skipped, ok: false, error: result.error, blocked: true });
+        }
+        break;
+      }
     } catch (error) {
       results.push({ row, ok: false, error: (error as Error).message });
     }
