@@ -29,6 +29,7 @@
 import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
 import Breadcrumbs from '../../theleague/Breadcrumbs.astro';
 import PlayerDetailsModal from '../../theleague/PlayerDetailsModal.astro';
+import TeamIconCell from '../../TeamIconCell.astro';
 import { getLeagueBySlug } from '../../../config/leagues';
 import type { CanonicalLeagueSlug } from '../../../config/leagues';
 import type { TopPlayersFile, TopPlayerRow } from '../../../types/top-players';
@@ -77,12 +78,14 @@ const playerCell = (p: TopPlayerRow) =>
     position: p.position,
     nflTeam: p.team ?? undefined,
     mflId: p.id,
+    espnId: p.espnId ?? undefined,
     size: 'compact',
     playerData: {
       id: p.id,
       name: p.name,
       position: p.position,
       nflTeam: p.team ?? undefined,
+      espnId: p.espnId ?? undefined,
       points: p.total,
       franchiseId: p.owners[0]?.id ?? null,
     },
@@ -222,8 +225,10 @@ const COLUMNS: { key: SortKey; label: string; title: string }[] = isWeek
                         <td class="tp-col-pos"><span class="tp-posrank">{p.position}{p.posRank}</span></td>
                         <td class="tp-col-owner">
                           {p.owners.length === 0
-                            ? <span class="tp-fa">Free agent</span>
-                            : p.owners.map((o) => <span class="tp-owner">{o.name}</span>)}
+                            ? <span class="tp-fa">FA</span>
+                            : p.owners.map((o) => (
+                              <span class="tp-owner"><TeamIconCell icon={o.icon ?? undefined} name={o.name} /></span>
+                            ))}
                         </td>
                         {COLUMNS.map((col) => (
                           <td class="tp-col-num">
@@ -499,9 +504,18 @@ const COLUMNS: { key: SortKey; label: string; title: string }[] = isWeek
     font-variant-numeric: tabular-nums;
     color: var(--content-text-muted);
   }
-  .tp-owner + .tp-owner::before {
-    content: ' · ';
-    color: var(--content-text-muted);
+  /* The crest is the row's only owner identifier, so give it a real size.
+     TeamIconCell reads --team-icon-size and reveals the NAME if the image
+     404s, which matters more here than at a normal call site. */
+  .tp-col-owner {
+    --team-icon-size: 26px;
+  }
+  .tp-owner {
+    display: inline-flex;
+    align-items: center;
+  }
+  .tp-owner + .tp-owner {
+    margin-left: 4px;
   }
   .tp-fa {
     color: var(--content-text-muted);
@@ -587,12 +601,6 @@ const COLUMNS: { key: SortKey; label: string; title: string }[] = isWeek
   @media (max-width: 640px) {
     .tp-controls__label {
       min-width: 0;
-    }
-    .tp-col-owner {
-      max-width: 110px;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
     }
   }
 </style>

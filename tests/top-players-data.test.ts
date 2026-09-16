@@ -30,12 +30,14 @@ import { LEAGUES } from '../src/config/leagues-data.mjs';
 interface Owner {
   id: string;
   name: string;
+  icon: string | null;
 }
 interface TopPlayerRow {
   id: string;
   name: string;
   position: string;
   team: string | null;
+  espnId: string | null;
   owners: Owner[];
   weeks: Record<string, number>;
   total: number;
@@ -126,6 +128,29 @@ describe('top-players derived payload', () => {
           expect(ranks, `${position} posRanks`).toEqual(ranks.map((_, i) => i + 1));
         }
         expect([...byPosition.keys()].sort()).toEqual(payload.positions);
+      });
+
+      it('carries the espn id that draws the headshot', () => {
+        // Without `espnId`, getPlayerHeadshot cannot build a URL and every
+        // avatar falls through to the grey silhouette — which is how the page
+        // first shipped. DEF rows are exempt: they render a team logo.
+        const offence = players.filter((p) => p.position !== 'DEF');
+        const withId = offence.filter((p) => p.espnId);
+        expect(withId.length / offence.length).toBeGreaterThan(0.9);
+        for (const p of players) {
+          if (p.espnId !== null) expect(p.espnId, `${p.name} espnId`).toMatch(/^\d+$/);
+        }
+      });
+
+      it('gives every owner a crest, because the Owner column renders one', () => {
+        // The crest is that column's only identifier now. A null icon makes
+        // TeamIconCell fall back to the name, which is correct but means the
+        // league config lost a `team.icon` — worth failing on.
+        const owners = players.flatMap((p) => p.owners);
+        expect(owners.length).toBeGreaterThan(0);
+        for (const o of owners) {
+          expect(o.icon, `${o.name} has no crest`).toBeTruthy();
+        }
       });
 
       it('agrees with rosters.json about who owns whom — as a LIST', () => {

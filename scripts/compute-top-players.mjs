@@ -100,6 +100,19 @@ const franchiseNames = new Map(
     .map((f) => [f.id, (f.name ?? '').trim() || f.id]),
 );
 
+// Franchise CRESTS, from the league's own config (registry `configPath`), so
+// the Owner column can show the mark rather than a name that truncates to
+// "Dead Ca…" on a phone. Only the light `icon` is carried: `TeamIconDarkStyles`
+// in the shared layout head swaps to `iconDark` by CSS keyed on the light src,
+// and picking a theme's src server-side is wrong anyway — with theme
+// preference 'auto' the server cannot know the resolved theme.
+const leagueConfig = readJson(path.join(ROOT, league.configPath)) ?? {};
+const franchiseIcons = new Map(
+  asArray(leagueConfig.teams)
+    .filter((t) => t?.franchiseId && t?.icon)
+    .map((t) => [t.franchiseId, t.icon]),
+);
+
 // ── Ownership is a LIST, never a scalar ──
 // The AFL is `duplicatePlayers: true` — the same NFL player is routinely
 // rostered once per conference — so a `franchiseId ===` compare is the exact
@@ -115,6 +128,15 @@ for (const f of asArray(readFeed(seasonYear, 'rosters.json')?.rosters?.franchise
 }
 
 // ── Player identity ──
+// ESPN ids drive the headshot (`getPlayerHeadshot`); without one every avatar
+// falls through to the grey silhouette — which is exactly how this page first
+// shipped. players.json carries `espn_id` for most of the pool; the college-id
+// map covers rookies whose NFL headshot does not exist yet. Same two sources,
+// same order, as /players.
+const espnCollegeIds =
+  readJson(path.join(ROOT, getLeagueBySlug('theleague').dataPath, 'espn-college-ids.json'))
+    ?.players ?? {};
+
 const playerInfo = new Map();
 for (const p of asArray(readFeed(seasonYear, 'players.json')?.players?.player)) {
   if (!p?.id) continue;
@@ -128,6 +150,7 @@ for (const p of asArray(readFeed(seasonYear, 'players.json')?.players?.player)) 
       : String(p.name ?? ''),
     position,
     team: p.team ?? null,
+    espnId: p.espn_id || espnCollegeIds[p.id]?.espnCollegeId || null,
   });
 }
 
@@ -170,12 +193,14 @@ for (const [id, byWeek] of scoresByPlayer) {
   const owners = (ownersByPlayer.get(id) ?? []).map((fid) => ({
     id: fid,
     name: franchiseNames.get(fid) ?? fid,
+    icon: franchiseIcons.get(fid) ?? null,
   }));
   players.push({
     id,
     name: info.name,
     position: info.position || 'UNK',
     team: info.team,
+    espnId: info.espnId,
     owners,
     weeks: byWeek,
     total: Math.round(total * 100) / 100,
@@ -213,7 +238,9 @@ fs.mkdirSync(OUTPUT_DIR, { recursive: true });
 writeJsonIfChanged(OUTPUT_PATH, output);
 
 const freeAgents = players.filter((p) => p.owners.length === 0).length;
+const withHeadshot = players.filter((p) => p.espnId).length;
 console.log(
   `[compute-top-players] ${league.slug} season=${seasonYear} weeks=${completedWeeks.join(',') || 'none'} ` +
-    `players=${players.length} freeAgents=${freeAgents} unlabelled=${unknownIds} → ${path.relative(ROOT, OUTPUT_PATH)}`,
+    `players=${players.length} freeAgents=${freeAgents} espnIds=${withHeadshot} ` +
+    `crests=${franchiseIcons.size} unlabelled=${unknownIds} → ${path.relative(ROOT, OUTPUT_PATH)}`,
 );
