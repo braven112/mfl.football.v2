@@ -416,7 +416,7 @@ Each of these is a bug that shipped here before.
 
 ---
 
-## 7. Scale, and the three unknowns to settle in Phase 1
+## 7. Scale, and what the live probes settled
 
 **The table is small.** Week 1 2026 returns **484 rows** per league from
 `playerScores`, of which **369** (TheLeague) and **337** (AFL) scored above
@@ -425,29 +425,59 @@ hundreds, not thousands. That means a plain client-side sorted table with
 expandable rows is fine — **no virtualization, no pagination, no server-side
 sort.** Do not build for a scale this does not have.
 
-Three things the first real fetch has to confirm, because they cannot be
-checked from here (MFL egress is proxy-blocked from Claude Code web sandboxes —
-`CONNECT tunnel failed, response 403`, noted twice in
-`insights/domains/mfl-api.md`; don't burn time trying to curl it):
+### Probed live 2026-09-16 — MFL is reachable from this sandbox
 
-1. **Is 484 the pool, or a default `COUNT` cap?** `playerScores` takes an
-   optional `COUNT` param (`docs/features/mfl-api.md`). 484 identical rows for
-   two different leagues is consistent with either "the same NFL pool" or "the
-   same default limit". If it is a cap, the page silently loses the tail of
-   every position — exactly the failure the keeper report card hit from the
-   other direction. Check the row count against an explicit high `COUNT` on the
-   first run and pin whichever answer is true in the fetch entry's comment.
-2. **Does `W=<n>` work for a *past* week the way `W=YTD` was never verified
-   to?** The YTD entry was removed before anyone confirmed it live. Fetch week
-   1 and week 2 separately and assert they differ before trusting the loop.
-3. **What does this cost `.git`?** `playerScores.json` is 55 KB for one week,
-   so `player-scores-weekly.json` lands near **1 MB per league per season**,
-   rewritten daily in-season. That is ~4× `weekly-results-raw.json` (278 KB)
-   and it is why the canonical sorted write is not optional: MFL returns arrays
-   in nondeterministic order, and a plain `writeFileSync` + byte diff is what
-   regrew `.git` to 7 GB once already
-   (`docs/claude/rules/storage-and-build.md`). Confirm a re-run of an unchanged
-   week produces a **zero-byte diff** before letting the cron near it.
+`insights/domains/mfl-api.md` says MFL egress is proxy-blocked from Claude Code
+web sessions (`CONNECT tunnel failed, response 403`). **That is stale** — it was
+recorded 2026-08-10 against `www44.myfantasyleague.com`. A `TYPE=league` request
+to `www49` returns **HTTP 200 in 0.58s**. Re-probe rather than inheriting the
+note; the questions below were answered by actually asking MFL.
+
+**1. The premise holds — `playerScores` really does see free agents.** Week 1
+2026, TheLeague:
+
+| | count |
+|---|---|
+| scoring rows in `playerScores` | 484 |
+| players on some roster (`rosters.json`) | 394 |
+| scoring **and** rostered | 321 |
+| **scoring, on nobody's roster** | **163** |
+
+A third of the week's scoring pool is invisible to `weekly-results-raw.json`.
+That is the number that justifies the whole new feed; it is no longer an
+inference from the keeper-card insight.
+
+**2. 484 is the real pool, not a `COUNT` cap.** `W=1&COUNT=2000` returns the
+same 484 rows with the same leaders. No pagination to handle.
+
+**3. `W=<n>` works for a completed past week.** 2025 `W=5` returns 426 scored
+rows. The loop is sound.
+
+Two payload shapes the parser must handle, both seen live:
+
+- **An unscored week returns one EMPTY object — not an error, not an empty
+  array.** Today `W=2` (week 2 opens Sep 17) answers
+  `{"isAvailable":"1","id":"","score":"","week":"2"}`: a single row with blank
+  id and score, at HTTP 200. That is the same shape as the stale
+  `playerScores-ytd.json` stub. **Reject it** — a row with no id is not data,
+  and writing it would blank a good committed week. This is exactly the
+  zero-row guard the deleted YTD entry carried; keep it.
+- **`isAvailable` is tempting and wrong for ownership.** Every row has it
+  (`"0"` rostered, `"1"` available), which looks like a free rostered/FA flag.
+  It reflects availability **now**, not during the week fetched — on a 2025 W=5
+  row it describes today's rosters. It also cannot express the AFL, where a
+  player is rostered per-conference. Derive ownership from `rosters.json` as
+  planned; treat `isAvailable` as decoration.
+
+### Still unverified — the one for Phase 1
+
+**What this costs `.git`.** `playerScores.json` is 55 KB for one week, so
+`player-scores-weekly.json` lands near **1 MB per league per season**, rewritten
+daily in-season — ~4× `weekly-results-raw.json` (278 KB). This is why the
+canonical sorted write is not optional: MFL returns arrays in nondeterministic
+order, and a plain `writeFileSync` + byte diff is what regrew `.git` to 7 GB
+once already (`docs/claude/rules/storage-and-build.md`). Confirm a re-run of an
+unchanged week produces a **zero-byte diff** before letting the cron near it.
 
 **Playoff weeks count.** `league.json` carries `lastRegularSeasonWeek: 14` and
 `endWeek: 17`, so weeks 15–17 are the fantasy playoffs. Player scores exist for
@@ -462,8 +492,8 @@ so a reader knows why the field thins.
 **Phase 1 — data.** Add the per-week `playerScores` loop to
 `fetch-mfl-feeds.mjs` (week range from `league.json`, daily-only, live-week
 merge, error-body guard). Run it once against both leagues, commit the feeds,
-eyeball week 1 against the known top scorers, and settle all three unknowns in
-§7 before moving on. *Nothing renders yet; this is the phase that can't be
+eyeball week 1 against the known top scorers, and confirm the one open item in
+§7 — the zero-byte re-run diff — before letting the cron near it. *Nothing renders yet; this is the phase that can't be
 faked.*
 
 **Phase 2 — derived payload.** `scripts/compute-top-players.mjs` + prebuild
