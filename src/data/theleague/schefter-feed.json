@@ -1,7 +1,47 @@
 {
-  "lastScanTimestamp": "2026-09-16T20:08:22.159Z",
+  "lastScanTimestamp": "2026-09-16T22:54:04.722Z",
   "lastProcessedMflTimestamp": "1789534988",
   "posts": [
+    {
+      "id": "sf_speculation_1789599247024_f72bfa76",
+      "timestamp": "2026-09-16T22:54:04.722Z",
+      "type": "transaction",
+      "transactionSubType": "trade_speculation",
+      "tier": "rumor",
+      "headline": "Schefter speculating…",
+      "body": "🟡 The talk-radio crowd in Dead Cap country has been floating a blockbuster scenario: what if they moved Caleb Williams to Bring The Pain in exchange for A.J. Brown and the Denver Broncos defense? Local beat writers have been speculating that the fit could reshape both rosters, though neither front office has acknowledged any conversation along these lines. This isn't coming from the building — it's pure fan-board chatter and Wednesday night call-in show fodder.",
+      "authorId": "claude",
+      "franchiseIds": [
+        "0004",
+        "0008"
+      ],
+      "league": "theleague",
+      "link": "/theleague/front-office/trade-builder?b=0004",
+      "linkLabel": "Open in Trade Builder →",
+      "speculation": {
+        "seller": "0004",
+        "buyer": "0008",
+        "marquee": {
+          "id": "16579",
+          "name": "Williams, Caleb",
+          "position": "QB"
+        },
+        "returnPkg": [
+          {
+            "id": "14104",
+            "name": "Brown, A.J.",
+            "position": "WR"
+          },
+          {
+            "id": "0511",
+            "name": "Broncos, Denver",
+            "position": "Def"
+          }
+        ],
+        "score": 117,
+        "capRelief": false
+      }
+    },
     {
       "id": "espn_70a1bf914cced",
       "timestamp": "2026-09-16T19:55:48.183Z",
