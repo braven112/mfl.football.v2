@@ -243,6 +243,11 @@ export const buildHistoricalContext = (years) => {
     fantasyPointsAllowedBySeason: {},
     trendWeeks: [],
     playerScoresMap: new Map(),
+    // Historical seasons carry no coach-column data at all — Trend, Avg and
+    // Total all render "-", which is what the page produced before any of
+    // them existed. `playerScores-ytd.json` is written for the current league
+    // year only, so there is nothing to read here even if we wanted it.
+    ytdPointsByPlayer: new Map(),
     espnCollegeIds,
     getPlayerHeadshot,
     getCollegeAssets,

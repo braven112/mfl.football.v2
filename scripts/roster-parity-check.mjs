@@ -38,6 +38,11 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { LEAGUES, DEFAULT_LEAGUE_SLUG } from '../src/config/leagues-data.mjs';
 
+/**
+ * The sandbox's prebuilt Chromium. Absent on a developer Mac, where Playwright's
+ * own download (~/Library/Caches/ms-playwright) is the right binary — so this is
+ * a preference, not a requirement, or the harness cannot run outside CI.
+ */
 const CHROMIUM = '/opt/pw-browsers/chromium';
 
 /** 1x1 transparent GIF — a real, decodable image (see the route handler). */
@@ -220,7 +225,9 @@ async function settle(page, { quietMs = 700, pollMs = 100, timeoutMs = 30000 } =
 
 async function capture(args) {
   const { chromium } = await import('playwright');
-  const browser = await chromium.launch({ executablePath: CHROMIUM });
+  const browser = await chromium.launch(
+    fs.existsSync(CHROMIUM) ? { executablePath: CHROMIUM } : {},
+  );
   const token = forgeSessionToken(args.secret, args);
   const origin = new URL(args.url);
 

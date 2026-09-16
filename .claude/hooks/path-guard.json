@@ -453,11 +453,13 @@
       "name": "mfl-weekly-results",
       "paths": [
         "src/utils/coach-data.ts",
-        "src/utils/weekly-player-results.ts"
+        "src/utils/weekly-player-results.ts",
+        "src/utils/afl-player-scoring.ts"
       ],
       "note": "MFL omits `matchup` on a week it has not paired up and lists the franchises on weeklyResults instead — array-wrapping that undefined 404'd the roster page. Prove every optional MFL node truthy before making a list of it.",
       "tests": [
-        "tests/weekly-results-matchup-guard.test.ts"
+        "tests/weekly-results-matchup-guard.test.ts",
+        "tests/afl-season-scoring.test.ts"
       ]
     },
     {

@@ -23,10 +23,11 @@ import { normalizeTeamCode, getNFLTeamName, getNFLTeamLogo } from '../../utils/n
 import { NFL_LOGO_ONERROR, NFL_LOGO_ONLOAD, COLLEGE_LOGO_ONERROR, COLLEGE_LOGO_ONLOAD } from '../../constants/roster-constants';
 import collegeLogos from '../../data/college-logos.json';
 import {
-  loadAflPlayerScores,
+  loadAflSeasonScores,
   loadAflProjections,
-  aggregateScores,
+  summarizeSeasonScores,
 } from '../../utils/afl-player-scoring';
+import { resolveStatsSeasonYear, parseYtdPlayerScores } from '../../utils/stats-season.mjs';
 import { getAuthUser } from '../../utils/auth';
 import {
   setAFLPreference,
@@ -70,6 +71,15 @@ const rostersFeeds = import.meta.glob('../../../data/afl-fantasy/mfl-feeds/*/ros
 const playersFeeds = import.meta.glob('../../../data/afl-fantasy/mfl-feeds/*/players.json', {
   eager: true,
 });
+// Season-to-date points for the whole pool, the SAME source the Free Agents
+// column reads (src/utils/stats-season.mjs). Not a weekly-results sum: that
+// feed sees a player only for the weeks a roster held him, and summing its rows
+// bills a doubleheader week twice. Committed from 2025 on, so the year glob
+// matches what theleague/players.astro uses.
+const ytdScoresFeeds = import.meta.glob(
+  '../../../data/afl-fantasy/mfl-feeds/20{2[5-9],[3-9][0-9]}/playerScores-ytd.json',
+  { eager: true }
+);
 const tradeBaitFeeds = import.meta.glob('../../../data/afl-fantasy/mfl-feeds/*/tradeBait.json', {
   eager: true,
 });
@@ -334,16 +344,48 @@ const sortedTableRoster: RosterEntry[] = [...activeRosterPlayers, ...irRosterPla
 // position. Both sources gracefully no-op outside the regular season.
 //
 // We use TheLeague's fantasyPointsAllowed.json file — it's NFL-wide data
-// (not league-specific) so the same snapshot serves both league sites.
+// (not league-specific) so the same snapshot serves both league sites. It is
+// rebuilt every Tuesday morning from the season's completed weeks, so Opp Avg
+// is a CURRENT-season number, not a career or prior-year one.
+//
+// The season year is `resolveStatsSeasonYear`, NOT `new Date().getFullYear()`
+// and NOT `getCurrentSeasonYear()`. The calendar year is already the NEXT
+// season's from January to Labor Day, and it only rendered correctly because
+// the `?? year - 1` fallback caught the missing file. The Labor Day clock is
+// the bug the Free Agents points column shipped (see
+// src/utils/stats-season.mjs): it names a season with no games played until
+// kickoff, so a per-player stat that follows it empties for waiver week. Both
+// columns here are season stats, so both turn over on the league's start day.
 const nflWeek = getCurrentWeek();
-const nflYear = new Date().getFullYear();
+const nflYear = resolveStatsSeasonYear(testDate ?? undefined);
 const fpaData = loadFantasyPointsAllowed(nflYear) ?? loadFantasyPointsAllowed(nflYear - 1);
 const oddsMap = await fetchNflMatchups(nflWeek, { year: nflYear });
 
-// AFL per-player scoring (Avg, Last week) + projected points. Both readers
-// gracefully return empty maps when the snapshot files are absent so the
-// page still renders during offseason / before MFL produces the feed.
-const aflScores = loadAflPlayerScores(selectedYear);
+// AFL per-player season scoring + this week's projection, all keyed on
+// selectedYear so the year picker's archive seasons show THEIR numbers. Every
+// reader returns empty when its snapshot is absent, so the page still renders
+// during the offseason / before MFL produces the feed.
+//
+// TWO SOURCES ON PURPOSE, and they are not interchangeable:
+//
+//   Total ← `playerScores-ytd.json`, MFL's own season total for the WHOLE
+//     pool. The weekly feed is not a degraded version of this one, it is a
+//     wrong one for a total: it cannot see a week nobody rostered the player,
+//     and summing its rows bills a doubleheader twice (every one of
+//     TheLeague's 260 scored 2026 players came out at exactly 2x — see
+//     docs/claude/insights/features/free-agent-season-points.md). Absent → "—",
+//     never a weekly fallback.
+//   Avg ← the weekly map, because a RATE over it survives: any double lands in
+//     both numerator and denominator and cancels. It also has the games-played
+//     count the YTD payload does not carry at all — dividing a YTD total by a
+//     weekly game count is the mistake that prices a one-week rental's whole
+//     season as a single game.
+const aflSeasonScores = loadAflSeasonScores(selectedYear);
+const aflYtdPoints = parseYtdPlayerScores(
+  getModuleData(
+    ytdScoresFeeds[`../../../data/afl-fantasy/mfl-feeds/${selectedYear}/playerScores-ytd.json`]
+  )
+);
 const aflProjections = loadAflProjections(selectedYear);
 
 interface PlayerMatchup {
@@ -351,13 +393,13 @@ interface PlayerMatchup {
   oppRank: number | null;
   oppAvg: number | null;
   oppCode: string | null;
-  /** Player's last-week score from playerScores.json (null if missing). */
-  lastScore: number | null;
   /** Projected points for the week — from projectedScores.json. */
   projected: number | null;
-  /** Sample-size of the average; renders the column as "—" when zero. */
-  scoreSampleSize: number;
-  /** Mean of all per-week scores we have on file. */
+  /** MFL's own season total (YTD feed); null when the feed has no row. */
+  scoreTotal: number | null;
+  /** Weeks with a recorded score — the Avg column's denominator. */
+  scoreGames: number;
+  /** Points per game played, over the weeks a roster held him. */
   scoreAverage: number | null;
 }
 const matchupByPlayerId = new Map<string, PlayerMatchup>();
@@ -366,16 +408,16 @@ for (const player of sortedTableRoster) {
   const matchup = teamCode ? oddsMap[teamCode] ?? null : null;
   const oppCode = matchup ? normalizeTeamCode(matchup.opponent) : null;
   const fpa = oppCode ? getOpponentFpa(fpaData, oppCode, player.position) : null;
-  const agg = aggregateScores(aflScores, player.id);
+  const season = summarizeSeasonScores(aflSeasonScores, player.id);
   matchupByPlayerId.set(player.id, {
     matchup,
     oppRank: fpa?.rank ?? null,
     oppAvg: fpa?.avg ?? null,
     oppCode,
-    lastScore: agg.lastScore,
     projected: aflProjections.get(player.id) ?? null,
-    scoreSampleSize: agg.sampleSize,
-    scoreAverage: agg.average,
+    scoreTotal: aflYtdPoints.get(player.id) ?? null,
+    scoreGames: season.games,
+    scoreAverage: season.average,
   });
 }
 
@@ -877,8 +919,9 @@ const pageConfig = {
                         <th data-column="opponent">Opponent</th>
                         <th data-column="ou">O/U</th>
                         <th data-column="weather">Weather</th>
-                        <th data-column="oppAvg">Opp Avg</th>
-                        <th data-column="avg">Avg</th>
+                        <th data-column="oppAvg" title={`Fantasy points the opponent allows to this position per game, ${nflYear} season`}>Opp Avg</th>
+                        <th data-column="total" title={`Total fantasy points scored in ${selectedYear}`}>Total</th>
+                        <th data-column="avg" title={`${selectedYear} points per game played`}>Avg</th>
                         <th data-column="projected">Proj</th>
                       </tr>
                     </thead>
@@ -889,6 +932,8 @@ const pageConfig = {
                   const oppCode = m?.oppCode ?? null;
                   const oppRank = m?.oppRank ?? null;
                   const oppAvg = m?.oppAvg ?? null;
+                  const total = m?.scoreTotal ?? null;
+                  const games = m?.scoreGames ?? 0;
                   const avg = m?.scoreAverage ?? null;
                   const projected = m?.projected ?? null;
                   const tier = oppRank != null ? fpaTier(oppRank) : null;
@@ -974,7 +1019,13 @@ const pageConfig = {
                       <td data-column="oppAvg">
                         <span class="num-cell">{formatPoints(oppAvg)}</span>
                       </td>
-                      <td data-column="avg">
+                      <td data-column="total">
+                        <span class="num-cell num-cell--total">{formatPoints(total)}</span>
+                      </td>
+                      <td
+                        data-column="avg"
+                        title={games > 0 ? `${games} ${games === 1 ? 'game' : 'games'} played` : undefined}
+                      >
                         <span class="num-cell">{formatPoints(avg)}</span>
                       </td>
                       <td data-column="projected">
@@ -2178,6 +2229,7 @@ const pageConfig = {
     .roster-table th[data-column="ou"] { width: 56px; text-align: right; }
     .roster-table th[data-column="weather"] { width: 64px; text-align: right; }
     .roster-table th[data-column="oppAvg"] { width: 64px; text-align: right; }
+    .roster-table th[data-column="total"] { width: 60px; text-align: right; }
     .roster-table th[data-column="avg"] { width: 56px; text-align: right; }
     .roster-table th[data-column="projected"] { width: 56px; text-align: right; }
     .roster-table th[data-column="actions"] { width: 48px; }
@@ -2203,6 +2255,7 @@ const pageConfig = {
     .roster-table td[data-column="ou"],
     .roster-table td[data-column="weather"],
     .roster-table td[data-column="oppAvg"],
+    .roster-table td[data-column="total"],
     .roster-table td[data-column="avg"],
     .roster-table td[data-column="projected"] {
       text-align: right;
@@ -2217,6 +2270,13 @@ const pageConfig = {
 
     .num-cell--strong {
       font-weight: 700;
+      color: var(--color-gray-900, #111827);
+    }
+
+    /* Season total — the row's headline season number, but a notch below the
+       week's projection so the two right-hand columns don't compete. */
+    .num-cell--total {
+      font-weight: 600;
       color: var(--color-gray-900, #111827);
     }
 

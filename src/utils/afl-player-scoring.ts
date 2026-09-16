@@ -1,19 +1,53 @@
 /**
  * AFL player-scoring helpers.
  *
- * Surfaces per-player weekly scoring data for the Coach-mode columns on
- * the AFL roster page. Mirrors how TheLeague's roster page computes
- * Avg / Projected, but reads the AFL feeds (data/afl-fantasy/mfl-feeds/...).
+ * Surfaces season scoring (total points, games, average) and the week's
+ * projection for the Coach-mode columns on the AFL roster page, reading the
+ * AFL feeds under `data/afl-fantasy/mfl-feeds/<year>/`.
  *
- * The committed snapshots vary in coverage: most seasons only have the
- * latest week of scores plus a (sometimes empty) projection. Helpers
- * here are defensive — every getter returns null when data is missing,
- * so the caller can render an em dash.
+ * THE PER-GAME RATE COMES FROM `weekly-results-raw.json`, NOT
+ * `playerScores.json`. That is the whole point of this module. MFL's
+ * `TYPE=playerScores` export is fetched with no `W=`, and MFL answers a W-less
+ * request with the CURRENT WEEK ALONE
+ * (`docs/claude/insights/domains/mfl-api.md`, 2026-08-10). Averaging that file
+ * gives you last week's score with a season label on it — which is exactly what
+ * the roster page shipped: an "Avg" column that silently meant "most recent
+ * week" from week 2 onward. `weekly-results-raw.json` carries every week of the
+ * season and is refreshed for the live week every 5 minutes by the roster sync,
+ * so it is both complete and current for the weeks a roster held the player.
+ *
+ * Two AFL-specific traps make a naive sum wrong, and `processWeeklyScores`
+ * (src/utils/coach-data.ts) sidesteps both by keying scores per WEEK rather
+ * than accumulating them:
+ *
+ *   1. The AFL rosters the same NFL player in BOTH conferences — Breece Hall
+ *      sat on 0001 (AL) and 0024 (NL) every week of 2025 — so every player
+ *      appears at least twice per week in this feed.
+ *   2. The AFL plays double-header weeks (three in 2026), where a franchise
+ *      appears in two matchups and its players' scores are listed twice more.
+ *
+ * Summing the rows would have doubled or quadrupled every total.
+ *
+ * WHAT THIS IS FOR, AND WHAT IT IS NOT FOR. The numbers here are a RATE and
+ * its denominator — points per game played, over the weeks a roster held the
+ * player. `total` exists to be divided; it must NOT be rendered as the season
+ * total. A displayed total comes from `playerScores-ytd.json` via
+ * `parseYtdPlayerScores` (src/utils/stats-season.mjs), because this feed
+ * cannot see a week nobody rostered him, and because the rate survives a
+ * double-count that a total does not: any duplicate lands in both numerator
+ * and denominator and cancels. See
+ * docs/claude/insights/features/free-agent-season-points.md.
+ *
+ * Coverage note: `data/` feeds older than the three most recent seasons are
+ * deliberately kept out of the Vercel function (scripts/lib/archived-feed-files.mjs),
+ * so an archive season reads back empty here and the caller renders an em dash —
+ * the same behaviour the old playerScores reader had.
  */
 
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { asArray as ensureArray } from './mfl-normalize';
+import { processWeeklyScores } from './coach-data';
 
 interface ScoreEntry {
   id: string;
@@ -21,26 +55,33 @@ interface ScoreEntry {
   score: string;
 }
 
-interface PlayerScoresFile {
-  playerScores?: { week?: string; playerScore?: ScoreEntry | ScoreEntry[] };
-}
-
 interface ProjectedScoresFile {
   projectedScores?: { week?: string; playerScore?: ScoreEntry | ScoreEntry[] };
 }
 
-export interface PlayerScoreAggregate {
-  /** Most recent week's score for this player, if available. */
-  lastScore: number | null;
-  /** Week number that lastScore came from. */
-  lastWeek: number | null;
-  /** Mean of every recorded weekly score (null when no entries). */
+/** Per-player week→score map, exactly as `processWeeklyScores` returns it. */
+export type SeasonScores = Map<string, Record<number, number>>;
+
+export interface PlayerSeasonScoring {
+  /**
+   * The AVERAGE'S NUMERATOR, not a season total — points over the weeks a
+   * roster held this player. Named for the job it does because `total` is the
+   * word that would invite someone to render it, and rendering it is the
+   * forbidden weekly total: it cannot see a week nobody rostered him. A
+   * displayed total comes from `parseYtdPlayerScores`.
+   */
+  pointsInScoredWeeks: number | null;
+  /** Weeks with a recorded score. A bye carries no score and is not counted. */
+  games: number;
+  /** pointsInScoredWeeks / games (null when games is 0). */
   average: number | null;
-  /** Number of weeks the average is computed across. */
-  sampleSize: number;
+  /** Most recent scored week's points. */
+  lastScore: number | null;
+  /** Week number `lastScore` came from. */
+  lastWeek: number | null;
 }
 
-const playerScoresCache = new Map<string, Map<string, ScoreEntry[]>>();
+const seasonScoresCache = new Map<string, SeasonScores>();
 const projectionsCache = new Map<string, Map<string, number>>();
 
 function readJson<T>(path: string): T | null {
@@ -52,33 +93,26 @@ function readJson<T>(path: string): T | null {
 }
 
 /**
- * Load every available playerScores.json for the given AFL season and
- * fold them into a {playerId → score entries} map. Cached per year.
+ * Load every scored week of the given AFL season as a
+ * {playerId → {week → score}} map. Cached per year.
+ *
+ * Returns an empty map when the feed is absent (offseason, archive seasons
+ * excluded from the serverless bundle) so callers can render an em dash.
  */
-export function loadAflPlayerScores(year: number): Map<string, ScoreEntry[]> {
+export function loadAflSeasonScores(year: number): SeasonScores {
   const cacheKey = String(year);
-  const hit = playerScoresCache.get(cacheKey);
+  const hit = seasonScoresCache.get(cacheKey);
   if (hit) return hit;
 
   const path = resolve(
     process.cwd(),
-    `data/afl-fantasy/mfl-feeds/${year}/playerScores.json`
+    `data/afl-fantasy/mfl-feeds/${year}/weekly-results-raw.json`
   );
-  const file = readJson<PlayerScoresFile>(path);
-  const entries = ensureArray(file?.playerScores?.playerScore);
-
-  const map = new Map<string, ScoreEntry[]>();
-  for (const entry of entries) {
-    if (!entry?.id || !entry?.week) continue;
-    const list = map.get(entry.id) ?? [];
-    list.push(entry);
-    map.set(entry.id, list);
-  }
-  // Newest-first within each player's list so the "last week" pull is O(1)
-  for (const list of map.values()) {
-    list.sort((a, b) => Number(b.week) - Number(a.week));
-  }
-  playerScoresCache.set(cacheKey, map);
+  const file = readJson<unknown>(path);
+  // The second argument is the current week, which the canonical
+  // implementation does not use; every scored week counts.
+  const map = processWeeklyScores(file ?? [], 0);
+  seasonScoresCache.set(cacheKey, map);
   return map;
 }
 
@@ -110,32 +144,45 @@ export function loadAflProjections(year: number): Map<string, number> {
 }
 
 /**
- * Compute the per-player aggregate (last score, week, average) from a
- * pre-loaded scoreboard map. Returns nulls when no entries exist.
+ * Games played and points per game for one player, from a pre-loaded season map.
+ *
+ * A scored 0.00 counts as a game played — MFL records a real zero for a player
+ * who suited up and did nothing, and omits the score field entirely on a bye
+ * (verified across Breece Hall's 2025: every week carries a score except NYJ's
+ * week 9 bye, which carries none). Dropping zeros would flatter every average
+ * by hiding the weeks an owner actually lost.
  */
-export function aggregateScores(
-  scoresByPlayer: Map<string, ScoreEntry[]>,
+export function summarizeSeasonScores(
+  scoresByPlayer: SeasonScores,
   playerId: string
-): PlayerScoreAggregate {
-  const entries = scoresByPlayer.get(playerId);
-  if (!entries || entries.length === 0) {
-    return { lastScore: null, lastWeek: null, average: null, sampleSize: 0 };
+): PlayerSeasonScoring {
+  const byWeek = scoresByPlayer.get(playerId);
+  const weeks = byWeek
+    ? Object.keys(byWeek)
+        .map((w) => Number(w))
+        .filter((w) => Number.isFinite(w))
+        .sort((a, b) => a - b)
+    : [];
+
+  if (weeks.length === 0) {
+    return {
+      pointsInScoredWeeks: null,
+      games: 0,
+      average: null,
+      lastScore: null,
+      lastWeek: null,
+    };
   }
-  let total = 0;
-  let count = 0;
-  for (const e of entries) {
-    const n = parseFloat(e.score);
-    if (Number.isFinite(n)) {
-      total += n;
-      count += 1;
-    }
-  }
-  const first = entries[0]; // already newest-first
-  const last = parseFloat(first.score);
+
+  let points = 0;
+  for (const week of weeks) points += byWeek![week];
+  const lastWeek = weeks[weeks.length - 1];
+
   return {
-    lastScore: Number.isFinite(last) ? last : null,
-    lastWeek: first.week ? parseInt(first.week, 10) : null,
-    average: count > 0 ? total / count : null,
-    sampleSize: count,
+    pointsInScoredWeeks: points,
+    games: weeks.length,
+    average: points / weeks.length,
+    lastScore: byWeek![lastWeek],
+    lastWeek,
   };
 }
