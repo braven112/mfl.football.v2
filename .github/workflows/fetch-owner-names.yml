@@ -133,36 +133,42 @@ jobs:
 
       # The derived files carry displayName through to `title`, so a registry
       # written without this would commit named people beside owner pages still
-      # titled by their team identities. division-strength copies that same
-      # `title` onto every owner row, so it is chained here exactly as prebuild
-      # chains it. Nothing user-visible depends on that copy — the division
-      # page labels by team on purpose — but leaving it behind commits an
-      # artifact that no longer matches its generator, and the next unrelated
-      # compute run inherits the diff.
-      - name: Recompute owner tenures and division strength
+      # titled by their team identities. It is the WHOLE chain, not just tenures
+      # + division strength: division strength also replays the live schedules
+      # roster-sync commits, so rebuilding it on top of a ledger nobody
+      # refreshed commits a set its data tests reject. The flag is there
+      # because this commit carries the history snapshot, the milestone
+      # baseline, and its posts must ride with it.
+      - name: Recompute the derived history chain
         if: inputs.write
-        run: node ./scripts/compute-owner-tenures.mjs && node ./scripts/compute-division-strength.mjs
+        run: node ./scripts/recompute-derived-chain.mjs --emit-milestone-posts
 
       # The registry guard tests are the backstop for a bad name landing:
       # overlapping claims, a name that is really contact info, a shared team
-      # declared on only one side. Cheaper to fail here than to commit it.
+      # declared on only one side. The chain's own suites (owners-registry and
+      # owner-tenures-data among them) prove the set agrees. Cheaper to fail
+      # here than to commit it.
       - name: Verify registry and derived data
         if: inputs.write
-        run: |
-          pnpm vitest run \
-            tests/owners-registry.test.ts \
-            tests/owner-tenures-data.test.ts \
-            tests/fetch-owner-names.test.ts
+        run: pnpm vitest run tests/fetch-owner-names.test.ts $(node ./scripts/recompute-derived-chain.mjs --print-guard-tests)
 
+      # commit-feed-and-push, not the generic commit-push action: the chain now
+      # carries the Schefter feed (milestone posts) into this commit, and the
+      # feed has several writers on overlapping crons — a plain push loses the
+      # race and this job's names go with it. The helper rebuilds on the fetched
+      # tip, merges the feed by post id and retries. "Nothing changed" is
+      # guarded inside it.
       - name: Commit and push
         if: inputs.write
-        uses: ./.github/actions/commit-push
-        with:
-          add-paths: 'src/data/owners-registry.json data/theleague/derived/owner-tenures.json data/afl-fantasy/derived/owner-tenures.json data/theleague/derived/division-strength.json data/afl-fantasy/derived/division-strength.json'
-          commit-message: 'chore: name owners from MFL (${{ inputs.league }})'
-          no-changes-message: 'No new owner names — nothing to commit.'
-          git-user-name: 'Owner Names Bot'
-          push-ref: ${{ github.ref_name }}
+        env:
+          TARGET_BRANCH: ${{ github.ref_name }}
+        run: |
+          git config user.name "Owner Names Bot"
+          git config user.email "actions@users.noreply.github.com"
+          node ./scripts/commit-feed-and-push.mjs \
+            --branch "$TARGET_BRANCH" \
+            --message "chore: name owners from MFL (${{ inputs.league }})" \
+            --files "src/data/owners-registry.json,$(node ./scripts/recompute-derived-chain.mjs --print-outputs)"
 
       - name: Say what happens next
         if: always()

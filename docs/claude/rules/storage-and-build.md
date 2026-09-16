@@ -49,10 +49,14 @@ regrows a 7 GB `.git` or a 30 MB server chunk:
   "season honor" posts were live on theleague.us and in no commit, so git
   and production disagreed and a bad post could only be removed by
   redeploying. Milestone emission is opt-in (`--emit-milestone-posts`),
-  passed only by `schefter-trade-speculation.yml` and
-  `backfill-historical-feeds.yml`; `tests/milestone-emission-lane.test.ts`
-  pins both halves. A new prebuild step that writes a feed needs the same
-  split: compute in the build, post from the committing workflow.
+  passed only by the lanes that commit the franchise-history chain through
+  `scripts/recompute-derived-chain.mjs` (`derived-history-chain.yml`,
+  `backfill-historical-feeds.yml`, `fetch-owner-names.yml`), which commit the
+  snapshot, everything derived from it, and the feed together.
+  `tests/milestone-emission-lane.test.ts` and
+  `tests/derived-chain-lane.test.ts` pin that. A new prebuild step that writes
+  a feed needs the same split: compute in the build, post from the committing
+  workflow.
 - **Retention rules live in `scripts/lib/retention-policy.mjs`** (What's
   New active cap + archive, roster-history keeper window / weekly
   keyframes). The July 16-31 roster snapshots are the official AFL keeper

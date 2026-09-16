@@ -23,6 +23,11 @@
  * Usage:
  *   node scripts/schefter-retract-post.mjs --league theleague --id A --id B
  *   node scripts/schefter-retract-post.mjs --league theleague --id A --dry-run
+ *   node scripts/schefter-retract-post.mjs --league theleague --id A --feed-only
+ *
+ * `--feed-only` leaves the archive alone. Use it to remove a DUPLICATE that
+ * re-published under an id whose original already rotated into the archive —
+ * the original stays, and the dedup keeps reading it there.
  */
 
 import { promises as fs } from 'node:fs';
@@ -31,6 +36,7 @@ import { getSchefterLeague } from './lib/schefter-leagues.mjs';
 
 const args = process.argv.slice(2);
 const DRY_RUN = args.includes('--dry-run');
+const FEED_ONLY = args.includes('--feed-only');
 
 function argValues(flag) {
   const out = [];
@@ -52,6 +58,7 @@ const targets = new Set(ids);
 /** Feed file plus every archive shard beside it. */
 async function filesToScan() {
   const files = [league.feedPath];
+  if (FEED_ONLY) return files;
   const archiveDir = path.join(path.dirname(league.feedPath), 'schefter-archive');
   try {
     for (const name of await fs.readdir(archiveDir)) {

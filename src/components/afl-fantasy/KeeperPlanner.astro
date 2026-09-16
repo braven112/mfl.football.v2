@@ -551,6 +551,7 @@ const roundLabel = (round: string) => {
         setStatus('Resetting…', 'work');
         const res = await fetch(`/api/afl-keepers?franchise=${franchiseId}&year=${year}`, {
           method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
         });
         if (!res.ok) throw new Error('Reset failed.');
         flashStatus('Cleared.', 'ok');
@@ -718,7 +719,7 @@ const roundLabel = (round: string) => {
         retryIds = null;
         // Clear the saved plan since cuts are now permanent.
         try {
-          await fetch(`/api/afl-keepers?franchise=${franchiseId}&year=${year}`, { method: 'DELETE' });
+          await fetch(`/api/afl-keepers?franchise=${franchiseId}&year=${year}`, { method: 'DELETE', headers: { 'Content-Type': 'application/json' } });
         } catch {}
         // Land on an explicit success state instead of silently reloading —
         // a keeper cutdown is a big, irreversible action and deserves clear

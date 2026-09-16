@@ -627,7 +627,18 @@ import StagingBanner from '../components/shared/StagingBanner.astro';
 						platform: detectPlatform(),
 						league,
 					});
-					navigator.sendBeacon(`/api/track-visit?${params}`);
+					// The JSON body is load-bearing, not payload (the endpoint reads
+					// only the query string). Astro's origin check 403s any POST
+					// that has NO content-type unless its Origin header matches
+					// exactly, and a body-less beacon has none — so every browser
+					// that omits or nulls Origin had its visits silently thrown
+					// away (five AFL owners read as "never visited" in Sep 2026).
+					// A JSON-typed body is exempt from that check.
+					// Guard: tests/origin-check-content-type.test.ts.
+					navigator.sendBeacon(
+						`/api/track-visit?${params}`,
+						new Blob(['{}'], { type: 'application/json' }),
+					);
 				} catch (_) {}
 			}
 			document.addEventListener('astro:page-load', trackVisit);

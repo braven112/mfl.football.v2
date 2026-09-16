@@ -3160,6 +3160,15 @@ Watch for the second-order leak too: that route's `catch` reports
 `upstashUrlPrefix`/`kvUrlPrefix` for debugging, so an anonymous caller who
 could force an error also read back the Redis hostname.
 
+**Correction (2026-09-15):** "only the three form content types" is incomplete.
+In Astro 7.1.3 (`astro/dist/core/app/origin-check.js`) a non-GET request with
+**no `Content-Type` at all** is also forbidden unless `Origin` equals the URL's
+origin exactly — which is why the bare curl above 403'd. The same rule cuts the
+other way for our OWN browser traffic: a body-less `navigator.sendBeacon` has
+no content type, so every browser that omits or nulls `Origin` had its visit
+beacon silently 403'd (see `features/visit-surface-tracking.md`). JSON is the
+only exempt shape; `text/plain` (a string body's default) is checked too.
+
 ---
 
 ## 2026-09-10 - A Missing `JWT_SECRET` On Vercel Throws; The Random-Secret Fallback Is Local-Dev ONLY

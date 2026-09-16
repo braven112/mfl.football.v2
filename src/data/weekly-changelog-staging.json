@@ -298,6 +298,30 @@
       "impact": "user",
       "area": "navigation",
       "league": "both"
+    },
+    {
+      "date": "2026-09-15",
+      "type": "bug-fix",
+      "summary": "Schefter no longer re-posts a once-a-season column after it ages out of the feed — the 2026 schedule release went to the group chat a second time mid-season.",
+      "impact": "user",
+      "area": "other",
+      "league": "both"
+    },
+    {
+      "date": "2026-09-15",
+      "type": "bug-fix",
+      "summary": "Schefter scans, the rumor mill and Roger lineup reminders are running again after a CI install failure silenced them from Sep 11–15.",
+      "impact": "user",
+      "area": "other",
+      "league": "both"
+    },
+    {
+      "date": "2026-09-15",
+      "type": "bug-fix",
+      "summary": "<a href=\"/activity\">Owner Activity</a> was dropping visits from some browsers, so owners who use the site read as never visiting. Those visits count now.",
+      "impact": "user",
+      "area": "other",
+      "league": "both"
     }
   ]
 }

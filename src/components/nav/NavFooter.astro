@@ -520,7 +520,7 @@ const spotlightAccountMenu = showAccountMenu && isSpotlightActive(SPOTLIGHT_ID, 
     button.addEventListener('click', async () => {
       button.disabled = true;
       try {
-        await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
+        await fetch('/api/auth/logout', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include' });
       } catch {
         // The cookie clear is the server's job; a failed call means we are
         // still signed in, and reloading shows that honestly.

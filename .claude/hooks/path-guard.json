@@ -215,12 +215,17 @@
         "scripts/compute-owner-tenures.mjs",
         "scripts/compute-afl-awards.mjs",
         "scripts/lib/owner-tenure-inputs.mjs",
+        "scripts/compute-division-strength.mjs",
+        "scripts/recompute-derived-chain.mjs",
+        ".github/workflows/derived-history-chain.yml",
+        ".github/workflows/fetch-owner-names.yml",
         "src/utils/owner*",
         "src/utils/franchise-eras.ts",
         "src/pages/*/owners/**",
         "src/pages/*/franchises/**"
       ],
       "tests": [
+        "tests/derived-chain-lane.test.ts",
         "tests/owner-tenures-data.test.ts",
         "tests/owner-boundary-parity.test.ts",
         "tests/owner-history-boundaries.test.ts",
@@ -270,7 +275,8 @@
       "tests": [
         "tests/workflow-feature-flag-guard.test.ts",
         "tests/league-literal-guard.test.ts",
-        "tests/mfl-integration-rollback-guard.test.ts"
+        "tests/mfl-integration-rollback-guard.test.ts",
+        "tests/workflow-install-guard.test.ts"
       ]
     },
     {
@@ -762,13 +768,15 @@
         "scripts/lib/archived-feed-files.mjs",
         "scripts/commit-feed-and-push.mjs",
         ".github/workflows/schefter-trade-speculation.yml",
-        ".github/workflows/backfill-historical-feeds.yml"
+        ".github/workflows/backfill-historical-feeds.yml",
+        ".github/workflows/derived-history-chain.yml"
       ],
       "tests": [
         "tests/canonical-mfl-json.test.ts",
         "tests/archived-feed-files.test.ts",
         "tests/current-era-feed-globs.test.ts",
-        "tests/milestone-emission-lane.test.ts"
+        "tests/milestone-emission-lane.test.ts",
+        "tests/derived-chain-lane.test.ts"
       ]
     },
     {
@@ -897,6 +905,32 @@
         "tests/viewer-clock.test.ts",
         "tests/nav-account-menu.test.ts",
         "tests/league-official-clock.test.ts"
+      ]
+    },
+    {
+      "name": "origin-check",
+      "note": "Astro's checkOrigin 403s a non-GET request with no content type (or a form-like one) unless Origin matches exactly, and some browsers omit Origin. Every browser POST/DELETE and sendBeacon sends Content-Type: application/json. See docs/claude/insights/features/visit-surface-tracking.md.",
+      "paths": [
+        "src/components/**/*.tsx",
+        "src/components/**/*.astro",
+        "src/pages/**/*.astro",
+        "src/layouts/*.astro"
+      ],
+      "tests": [
+        "tests/origin-check-content-type.test.ts"
+      ]
+    },
+    {
+      "name": "visit-tracking",
+      "paths": [
+        "src/layouts/TheLeagueLayout.astro",
+        "src/pages/api/track-visit.ts",
+        "src/utils/owner-activity.ts",
+        "src/utils/visit-surface.ts"
+      ],
+      "tests": [
+        "tests/origin-check-content-type.test.ts",
+        "tests/visit-surface.test.ts"
       ]
     },
     {

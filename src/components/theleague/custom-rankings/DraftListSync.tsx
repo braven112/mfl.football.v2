@@ -249,7 +249,7 @@ export default function DraftListSync({
     setPhase('restoring');
     say('Restoring your previous MFL list…');
     try {
-      const res = await fetch(apiUrl('&restore=1'), { method: 'POST' });
+      const res = await fetch(apiUrl('&restore=1'), { method: 'POST', headers: { 'Content-Type': 'application/json' } });
       const data = await res.json();
       if (!res.ok || !data?.ok) {
         say(data?.error ?? 'Could not restore your previous list.', true);
