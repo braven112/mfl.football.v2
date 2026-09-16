@@ -580,8 +580,9 @@ const playerScoresMap = processWeeklyScores(weeklyResultsRawData, currentWeekNum
 // Same full-pool source and parser the Free Agents points column reads
 // (src/utils/stats-season.mjs). Keyed to the season being PLAYED, so the
 // coach columns and the points column can never name different years.
+const statsSeasonYear = resolveStatsSeasonYear();
 const ytdPointsByPlayer = parseYtdPlayerScores(
-  loadFeedJson(String(resolveStatsSeasonYear()), 'playerScores-ytd.json'),
+  loadFeedJson(String(statsSeasonYear), 'playerScores-ytd.json'),
 );
 
 // Build weekly player results for the modal's Season Results table
@@ -2186,7 +2187,7 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
                 </button>
                 <span>Trend</span> <span class="sort-arrow"></span>
               </th>
-              <th scope="col" data-column="totalSeason" class="coach-col" style="display:none; text-align: right;" data-sortable data-sort-key="totalSeason" title="Season points to date">Total <span class="sort-arrow"></span></th>
+              <th scope="col" data-column="totalSeason" class="coach-col" style="display:none; text-align: right;" data-sortable data-sort-key="totalSeason" title={`Total fantasy points, ${statsSeasonYear} season`}>{statsSeasonYear} Pts <span class="sort-arrow"></span></th>
               <th scope="col" data-column="avgSeason" class="coach-col" style="display:none; text-align: right;" data-sortable data-sort-key="avgSeason" title="Points per game played">Avg <span class="sort-arrow"></span></th>
               <th scope="col" data-column="oppAvg" class="coach-col" style="display:none" data-sortable data-sort-key="oppAvg">Opp Avg <span class="sort-arrow"></span></th>
               <th scope="col" data-column="projected" class="coach-col" style="display:none; text-align: right;" data-sortable data-sort-key="projectedPoints">Proj <span class="sort-arrow"></span></th>

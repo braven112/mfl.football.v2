@@ -5,16 +5,16 @@
  * projection for the Coach-mode columns on the AFL roster page, reading the
  * AFL feeds under `data/afl-fantasy/mfl-feeds/<year>/`.
  *
- * SEASON TOTALS COME FROM `weekly-results-raw.json`, NOT `playerScores.json`.
- * That is the whole point of this module. MFL's `TYPE=playerScores` export is
- * fetched with no `W=`, and MFL answers a W-less request with the CURRENT WEEK
- * ALONE (`docs/claude/insights/domains/mfl-api.md`, 2026-08-10). Averaging that
- * file gives you last week's score with a season label on it, and there is no
- * total to compute at all — which is exactly what the roster page shipped: an
- * "Avg" column that silently meant "most recent week" from week 2 onward.
- * `weekly-results-raw.json` carries every week of the season and is refreshed
- * for the live week every 5 minutes by the roster sync, so it is both complete
- * and current.
+ * THE PER-GAME RATE COMES FROM `weekly-results-raw.json`, NOT
+ * `playerScores.json`. That is the whole point of this module. MFL's
+ * `TYPE=playerScores` export is fetched with no `W=`, and MFL answers a W-less
+ * request with the CURRENT WEEK ALONE
+ * (`docs/claude/insights/domains/mfl-api.md`, 2026-08-10). Averaging that file
+ * gives you last week's score with a season label on it — which is exactly what
+ * the roster page shipped: an "Avg" column that silently meant "most recent
+ * week" from week 2 onward. `weekly-results-raw.json` carries every week of the
+ * season and is refreshed for the live week every 5 minutes by the roster sync,
+ * so it is both complete and current for the weeks a roster held the player.
  *
  * Two AFL-specific traps make a naive sum wrong, and `processWeeklyScores`
  * (src/utils/coach-data.ts) sidesteps both by keying scores per WEEK rather

@@ -242,6 +242,11 @@ export async function buildFrontOfficePlannerData(selectedTeamId: string): Promi
     fantasyPointsAllowedBySeason: {},
     trendWeeks: [],
     playerScoresMap: new Map(),
+    // Stated rather than omitted: the planner renders no scoring column at
+    // all (same reason playerScoresMap is empty above), so Trend, Avg and
+    // Total are all "-" here by choice. The builder reads this optionally, so
+    // leaving it out would look identical and mean nothing.
+    ytdPointsByPlayer: new Map<string, number>(),
     espnCollegeIds,
     // buildSeasonPayloadShared's JSDoc-inferred context type wants a
     // 2-arg (mflId, espnId) shape; the real getPlayerHeadshot also takes an
