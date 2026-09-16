@@ -8,7 +8,13 @@
  * `resolveViewerPreferences` does both and hands back what to render.
  *
  * No auth gate — the preference is a cookie first, so it works signed out;
- * signing in only makes it follow you to another device.
+ * signing in only makes it follow you to another device. The Throwback Week
+ * era is the exception: it belongs to a franchise, so the route resolves it
+ * only for a session that IS one of this league's franchises and otherwise
+ * passes nothing. The league check is not decoration — the AFL's franchise
+ * ids fully overlap TheLeague's, so an AFL session would resolve to a
+ * same-numbered team here. The config import lives in the route because a
+ * static import specifier can't be a runtime variable.
  */
 import PreferencesPage from '../../components/shared/preferences/PreferencesPage.astro';
 import { loginUrlForRequest } from '../../utils/login-redirect';
@@ -16,6 +22,9 @@ import { getAuthUser } from '../../utils/auth';
 import { resolveViewerPreferences, hasPreferenceParams } from '../../utils/viewer-preferences-page';
 import { resolveLeaguePath } from '../../utils/nav-utils';
 import { getLeagueBySlug, leagueClock } from '../../config/leagues';
+import { buildThrowbackPickerView } from '../../utils/throwback-settings-view';
+import type { TeamConfig } from '../../utils/team-names';
+import leagueConfig from '../../data/theleague.config.json';
 
 export const prerender = false;
 
@@ -26,6 +35,15 @@ const sundayTicketPath = r('/theleague/sunday-ticket');
 
 const user = getAuthUser(Astro.request);
 const { prefs, savedToAccount } = await resolveViewerPreferences(Astro.url, Astro.cookies, user);
+
+const ownsAFranchise = Boolean(user?.franchiseId) && user?.leagueId === getLeagueBySlug('theleague')?.id;
+const throwback = ownsAFranchise
+  ? await buildThrowbackPickerView(
+      user as typeof user & { franchiseId: string },
+      ((leagueConfig as any).teams ?? []) as TeamConfig[],
+      'theleague'
+    )
+  : null;
 ---
 
 <PreferencesPage
@@ -37,4 +55,6 @@ const { prefs, savedToAccount } = await resolveViewerPreferences(Astro.url, Astr
   syncedToAccount={savedToAccount}
   loginPath={user ? null : loginUrlForRequest(Astro, getLeagueBySlug('theleague')!)}
   officialClock={leagueClock('theleague')}
+  throwback={throwback}
+  scoreboardPath={r('/theleague/live-scoring')}
 />

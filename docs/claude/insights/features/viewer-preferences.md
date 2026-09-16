@@ -172,3 +172,34 @@ game-day heroes turned up four things the original build could not have known.
   test pins the distinction by checking a country whose default is NOT the
   league clock (CA → `ET · PT`), because an assertion that only exercises the
   converged case would pass just as happily against a merged implementation.
+
+## 2026-09-15 — A setting that is NOT a viewer preference, on the preferences page
+
+The Throwback Week era picker moved onto `/preferences`, under the clock. It is
+worth recording because the obvious next step — folding it into
+`ViewerPreferences` so the page has one shape — would be wrong in four
+directions at once, and the page now demonstrates the boundary rather than
+describing it.
+
+- **It is scoped to a FRANCHISE, not a device.** The country and the clock are
+  true of a laptop in a hotel; the era is true of a team. That is why it needs
+  a session, why its storage is `throwback:<scope>:<franchiseId>` in Redis
+  rather than a cookie, and why there is no "kept on this device" story for it.
+- **It saves on change, not on the button.** Two save models on one page is a
+  copy problem, not an architecture problem: the section carries a line saying
+  the Save button above is for the country and the clock. The alternative —
+  routing the era through the GET form — would have meant the era only persists
+  for someone who also presses Save.
+- **It cannot live INSIDE that form.** Forms do not nest, and an `eraKey` radio
+  inside the country/clock form would ride along on submit. The section sits
+  after the form, which is also what "after your clock" means visually.
+- **The page has no auth gate, so the gating is the ROUTE's.** Signed out, no
+  franchise, or a session from the other league → the route passes
+  `throwback={null}` and the page renders exactly as it did before. The
+  league check is load-bearing: both leagues have a franchise 0001, so without
+  it an AFL owner on TheLeague's page would be offered TheLeague 0001's eras.
+
+The component is shared with `/throwback-settings` rather than copied, which
+also disposed of the cross-league init hazard: one script, one bind flag on a
+node the ClientRouter replaces, and an endpoint that takes its scope from the
+session. See `docs/claude/insights/features/throwback-week.md` for the split.

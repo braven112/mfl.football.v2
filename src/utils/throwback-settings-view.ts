@@ -72,7 +72,14 @@ export interface ThrowbackCommishRow {
   eras: ThrowbackCommishEra[];
 }
 
-export interface ThrowbackSettingsView {
+/**
+ * The OWNER-facing half: everything the era picker renders, and nothing that
+ * costs a league-wide Redis read. `/preferences` shows the picker beside the
+ * country and clock, and a commissioner opening that page must not pay for
+ * every franchise's stored pick to render their own three cards — so the
+ * commissioner panel's data is a separate build on top of this one.
+ */
+export interface ThrowbackPickerView {
   /** The signed-in owner's own team. */
   team: TeamConfig;
   /**
@@ -90,6 +97,9 @@ export interface ThrowbackSettingsView {
   ownDefaultKey: string | null;
   /** The league's throwback week, for preview links. Never a baked-in 4. */
   previewWeek: number;
+}
+
+export interface ThrowbackSettingsView extends ThrowbackPickerView {
   isAdmin: boolean;
   storageAvailable: boolean;
   commishRows: ThrowbackCommishRow[];
@@ -129,15 +139,18 @@ function defaultEraFor(
 }
 
 /**
- * Assemble the page. Callers must have already established that `user` belongs
- * to this scope's league — the route wrapper does that, because only a page
- * can redirect.
+ * The picker alone — what an owner may wear and what they wear today.
+ *
+ * Callers must have already established that `user` belongs to this scope's
+ * league. On `/throwback-settings` the route wrapper redirects when they do
+ * not (only a page can redirect); on `/preferences`, which has no auth gate at
+ * all, the route simply passes no picker.
  */
-export async function buildThrowbackSettingsView(
+export async function buildThrowbackPickerView(
   user: AuthUser & { franchiseId: string },
   teams: TeamConfig[],
   scope: ThrowbackScope
-): Promise<ThrowbackSettingsView | null> {
+): Promise<ThrowbackPickerView | null> {
   const team = teams.find((t) => t.franchiseId === user.franchiseId);
   if (!team) return null;
 
@@ -145,11 +158,33 @@ export async function buildThrowbackSettingsView(
   const eligibleEras = imposed ? [] : getEligibleThrowbackEras(team, scope, teams);
   const preference = await getThrowbackPreference(user.franchiseId, scope);
   const selectedKey = preference ? throwbackPickKey(preference) : null;
-  const ownDefaultKey =
-    (() => {
-      const era = defaultEraFor(eligibleEras, user.franchiseId, scope);
-      return era ? eraPickKey(era) : null;
-    })();
+  const ownDefaultKey = (() => {
+    const era = defaultEraFor(eligibleEras, user.franchiseId, scope);
+    return era ? eraPickKey(era) : null;
+  })();
+
+  return {
+    team,
+    imposedEra: imposed ? toEraView(imposed) : null,
+    eligibleEras,
+    selectedKey,
+    ownDefaultKey,
+    previewWeek: throwbackRules(scope).weeks[0] ?? 4,
+  };
+}
+
+/**
+ * Assemble the settings page: the picker above, plus the commissioner panel.
+ * Callers must have already established that `user` belongs to this scope's
+ * league — the route wrapper does that, because only a page can redirect.
+ */
+export async function buildThrowbackSettingsView(
+  user: AuthUser & { franchiseId: string },
+  teams: TeamConfig[],
+  scope: ThrowbackScope
+): Promise<ThrowbackSettingsView | null> {
+  const picker = await buildThrowbackPickerView(user, teams, scope);
+  if (!picker) return null;
 
   const isAdmin = isCommissionerOrAdmin(user);
   let storageAvailable = true;
@@ -203,12 +238,7 @@ export async function buildThrowbackSettingsView(
   }
 
   return {
-    team,
-    imposedEra: imposed ? toEraView(imposed) : null,
-    eligibleEras,
-    selectedKey,
-    ownDefaultKey,
-    previewWeek: throwbackRules(scope).weeks[0] ?? 4,
+    ...picker,
     isAdmin,
     storageAvailable,
     commishRows,
