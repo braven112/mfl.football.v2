@@ -3,75 +3,65 @@
  *
  * Downloads per-game snap counts from the NFLverse GitHub releases,
  * aggregates to season totals, and fuzzy-matches players to MFL IDs.
+ * The arithmetic lives in scripts/lib/snap-counts.mjs, which documents what
+ * each field means and which two of them were wrong.
  *
  * ── Snap Count Lifecycle ────────────────────────────────────────────────────
  *
- * Snap count data follows the NFL regular season calendar:
+ *   Offseason (end of season → kickoff):
+ *     The last completed season's file is what the page shows. No fetch is
+ *     needed; the final in-season run already captured it.
  *
- *   Offseason (Feb – Labor Day):
- *     Use cached data from the most recent completed season.
- *     No fetches needed — run once at end of season and reuse all offseason.
+ *   Regular season (kickoff → week 18):
+ *     .github/workflows/snap-counts-sync.yml refetches every Tuesday at
+ *     noon PT, after Monday night finalizes. The page switches to the new
+ *     season the moment week 1 kicks off, so the first Tuesday run is what
+ *     fills it in.
  *
- *   Regular Season (Labor Day – end of Week 18):
- *     Fetch weekly on Tuesdays at noon (after games finalize).
- *     NFLverse updates their CSV after each week's games.
- *     Use --force to overwrite the cached file with latest weekly data.
- *
- *   After Season Ends:
- *     Final fetch captures the complete season. This becomes the cached
- *     data used through the following offseason until the next NFL season.
- *
- * Year selection:
- *   - Before Labor Day: uses previous calendar year (last completed season)
- *   - After Labor Day: uses current calendar year (active season)
- *   - Override with --year flag for manual control
+ * The season this script fetches and the season the page displays are ONE
+ * decision, made by src/utils/snap-count-season.mjs. Do not re-derive it here
+ * — a fetcher and a reader that disagree is exactly how the page spent the
+ * 2026 opener showing 2025 totals. `--year` overrides for backfills.
  *
  * ── Usage ────────────────────────────────────────────────────────────────────
  *
- *   node scripts/fetch-snap-counts.mjs              # Auto-detect year, use cache
- *   node scripts/fetch-snap-counts.mjs --force      # Re-fetch current year
- *   node scripts/fetch-snap-counts.mjs --year 2024  # Specific year
+ *   node scripts/fetch-snap-counts.mjs              # Current season, use cache
+ *   node scripts/fetch-snap-counts.mjs --force      # Re-fetch (what the cron runs)
+ *   node scripts/fetch-snap-counts.mjs --year 2024  # Specific season
  *
  * Output: data/theleague/nfl-cache/snap-counts-{YEAR}.json
- *
- * ── Scheduled Usage (CI / Cron) ─────────────────────────────────────────────
- *
- *   During regular season, schedule weekly:
- *     0 12 * * 2 node scripts/fetch-snap-counts.mjs --force
- *     (Every Tuesday at noon)
- *
- *   No schedule needed during offseason — cached data is reused automatically.
  */
 import fs from 'node:fs';
 import path from 'node:path';
 import { gunzipSync } from 'node:zlib';
 
+import { snapCountSeason } from '../src/utils/snap-count-season.mjs';
+import { isSeasonWindowOpen } from '../src/utils/pecking-order-season-window.mjs';
+import { writeJsonIfChanged } from './lib/canonical-json.mjs';
+import {
+  parseCSV,
+  aggregateSnapCounts,
+  matchToMflPlayers,
+} from './lib/snap-counts.mjs';
+
 // ── Config ──────────────────────────────────────────────────────────────────
 const force = process.argv.includes('--force');
 
-// ── Year calculation ────────────────────────────────────────────────────────
-// Snap counts follow the NFL season year:
-// Before Labor Day → previous year (completed season)
-// After Labor Day → current year (active season)
-
-const getLaborDay = (yr) => {
-  const sept1 = new Date(yr, 8, 1);
-  const dow = sept1.getDay();
-  const offset = dow === 1 ? 0 : dow === 0 ? 1 : 8 - dow;
-  return new Date(yr, 8, 1 + offset);
-};
-
 const now = new Date();
 const calendarYear = now.getFullYear();
-const laborDay = getLaborDay(calendarYear);
-const autoYear = now >= laborDay ? calendarYear : calendarYear - 1;
 
 const yearFlag = process.argv.find((_, i, a) => a[i - 1] === '--year');
-const SNAP_YEAR = yearFlag ? parseInt(yearFlag, 10) : autoYear;
+const SNAP_YEAR = yearFlag ? parseInt(yearFlag, 10) : snapCountSeason(now);
 
 const NFLVERSE_URL = `https://github.com/nflverse/nflverse-data/releases/download/snap_counts/snap_counts_${SNAP_YEAR}.csv.gz`;
 
 // MFL data — use current league year for player ID matching
+const laborDay = (() => {
+  const sept1 = new Date(calendarYear, 8, 1);
+  const dow = sept1.getDay();
+  const offset = dow === 1 ? 0 : dow === 0 ? 1 : 8 - dow;
+  return new Date(calendarYear, 8, 1 + offset);
+})();
 const getCurrentLeagueYear = () => {
   const febCutoff = new Date(Date.UTC(calendarYear, 1, 15, 4, 45, 0, 0));
   const baseYear = now >= laborDay ? calendarYear : calendarYear - 1;
@@ -85,185 +75,19 @@ const MFL_PLAYERS_FALLBACK = path.join('data', 'theleague', 'mfl-feeds', String(
 const OUT_DIR = path.join('data', 'theleague', 'nfl-cache');
 const OUT_FILE = path.join(OUT_DIR, `snap-counts-${SNAP_YEAR}.json`);
 
-// ── NFLverse team code → standard code mapping ─────────────────────────────
-// NFLverse uses standard 2-3 letter codes, but some need normalization
-const NFLVERSE_TEAM_MAP = {
-  LA: 'LAR',   // NFLverse uses LA for Rams
-  OAK: 'LV',   // Historical
-  SD: 'LAC',   // Historical
-  STL: 'LAR',  // Historical
-};
-
-// MFL uses non-standard team codes — map to standard
-const MFL_TEAM_MAP = {
-  GBP: 'GB', KCC: 'KC', NEP: 'NE', NOS: 'NO',
-  SFO: 'SF', TBB: 'TB', LVR: 'LV', HST: 'HOU',
-  BLT: 'BAL', CLV: 'CLE', ARZ: 'ARI', JAC: 'JAX',
-};
-
-function normalizeMflTeam(code) {
-  if (!code) return '';
-  return MFL_TEAM_MAP[code] || code;
-}
-
-function normalizeNflverseTeam(code) {
-  if (!code) return '';
-  return NFLVERSE_TEAM_MAP[code] || code;
-}
-
-// ── Name normalization (mirrors rankings-importer.ts) ───────────────────────
-function normalizeName(name) {
-  return name
-    .toLowerCase()
-    .replace(/\./g, '')
-    .replace(/'/g, '')
-    .replace(/\s+jr\.?$/i, '')
-    .replace(/\s+sr\.?$/i, '')
-    .replace(/\s+iii$/i, '')
-    .replace(/\s+ii$/i, '')
-    .replace(/\s+iv$/i, '')
-    .replace(/\s+v$/i, '')
-    .replace(/[^\w\s]/g, '')
-    .replace(/\s+/g, ' ')
-    .trim();
-}
-
-// ── CSV Parser ──────────────────────────────────────────────────────────────
-function parseCSV(text) {
-  const lines = text.split('\n');
-  if (lines.length < 2) return [];
-
-  const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
-  const rows = [];
-
-  for (let i = 1; i < lines.length; i++) {
-    const line = lines[i].trim();
-    if (!line) continue;
-
-    // Simple CSV split (snap count data doesn't have commas in values)
-    const values = line.split(',').map(v => v.trim().replace(/"/g, ''));
-    const row = {};
-    for (let j = 0; j < headers.length; j++) {
-      row[headers[j]] = values[j] || '';
-    }
-    rows.push(row);
-  }
-
-  return rows;
-}
-
-// ── Aggregate snap counts per player ────────────────────────────────────────
-function aggregateSnapCounts(rows) {
-  const playerMap = new Map();
-
-  for (const row of rows) {
-    const name = row.player || '';
-    const team = normalizeNflverseTeam(row.team || '');
-    const position = row.position || '';
-    const offenseSnaps = parseInt(row.offense_snaps, 10) || 0;
-    const offensePct = parseFloat(row.offense_pct) || 0;
-    const gameType = row.game_type || '';
-
-    // Only count regular season games
-    if (gameType !== 'REG') continue;
-    // Skip players with no offense snaps (defensive/ST-only players)
-    if (offenseSnaps === 0 && offensePct === 0) continue;
-    // Only fantasy-relevant positions
-    if (!['QB', 'RB', 'WR', 'TE', 'K'].includes(position)) continue;
-
-    const key = `${name}|${team}|${position}`;
-    if (!playerMap.has(key)) {
-      playerMap.set(key, {
-        name,
-        team,
-        position: position === 'K' ? 'PK' : position,
-        totalOffenseSnaps: 0,
-        offensePctSum: 0,
-        gamesPlayed: 0,
-      });
-    }
-
-    const entry = playerMap.get(key);
-    entry.totalOffenseSnaps += offenseSnaps;
-    entry.offensePctSum += offensePct;
-    entry.gamesPlayed += 1;
-  }
-
-  // Calculate averages
-  const result = [];
-  for (const entry of playerMap.values()) {
-    result.push({
-      name: entry.name,
-      team: entry.team,
-      position: entry.position,
-      offenseSnaps: entry.totalOffenseSnaps,
-      offensePct: entry.gamesPlayed > 0
-        ? Math.round((entry.offensePctSum / entry.gamesPlayed) * 1000) / 10
-        : 0,
-      gamesPlayed: entry.gamesPlayed,
-    });
-  }
-
-  return result;
-}
-
-// ── Match to MFL player IDs ────────────────────────────────────────────────
-function matchToMflPlayers(snapPlayers, mflPlayers) {
-  // Build lookup by normalized name + position
-  const mflByNamePos = new Map();
-  for (const p of mflPlayers) {
-    if (!p.id || !p.name || !p.position) continue;
-    const pos = p.position === 'Def' ? 'DEF' : p.position;
-
-    // MFL name format: "LastName, FirstName"
-    const parts = p.name.split(', ');
-    const fullName = parts.length === 2 ? `${parts[1]} ${parts[0]}` : p.name;
-    const normalized = normalizeName(fullName);
-    const team = normalizeMflTeam(p.team || '');
-
-    // Primary key: name + position (most reliable)
-    const key = `${normalized}|${pos}`;
-    if (!mflByNamePos.has(key)) {
-      mflByNamePos.set(key, []);
-    }
-    mflByNamePos.get(key).push({ id: p.id, name: fullName, team });
-  }
-
-  const matched = {};
-  let matchCount = 0;
-  let missCount = 0;
-
-  for (const snap of snapPlayers) {
-    const normalizedSnapName = normalizeName(snap.name);
-    const key = `${normalizedSnapName}|${snap.position}`;
-    const candidates = mflByNamePos.get(key);
-
-    if (candidates && candidates.length > 0) {
-      // If multiple matches, prefer same team
-      let best = candidates[0];
-      if (candidates.length > 1) {
-        const sameTeam = candidates.find(c => c.team === snap.team);
-        if (sameTeam) best = sameTeam;
-      }
-
-      matched[best.id] = {
-        offenseSnaps: snap.offenseSnaps,
-        offensePct: snap.offensePct,
-        gamesPlayed: snap.gamesPlayed,
-      };
-      matchCount++;
-    } else {
-      missCount++;
-    }
-  }
-
-  console.log(`Matched ${matchCount} players to MFL IDs (${missCount} unmatched)`);
-  return matched;
-}
-
 // ── Main ────────────────────────────────────────────────────────────────────
 async function run() {
-  console.log(`Snap count year: ${SNAP_YEAR} (auto-detected from ${now >= laborDay ? 'active season' : 'last completed season'})`);
+  console.log(`Snap count season: ${SNAP_YEAR}${yearFlag ? ' (--year)' : ' (kickoff-gated)'}`);
+
+  // The Tuesday cron runs year-round; this job may only DO anything while the
+  // season it would fetch is being played. "The file already exists" is not a
+  // schedule guard — `fetchedAt` moves every run, so an offseason refetch
+  // commits a new file every week to say nothing changed. A backfill (--year)
+  // is a deliberate human act and skips the gate.
+  if (!yearFlag && !isSeasonWindowOpen(SNAP_YEAR, now)) {
+    console.log(`The ${SNAP_YEAR} season is not in progress — nothing to refresh.`);
+    return;
+  }
 
   // Check cache
   if (!force && fs.existsSync(OUT_FILE)) {
@@ -288,6 +112,13 @@ async function run() {
   console.log(`Downloading snap counts from ${NFLVERSE_URL}`);
   const response = await fetch(NFLVERSE_URL, { redirect: 'follow' });
   if (!response.ok) {
+    // Before the season's first Tuesday NFLverse has no file for it yet. The
+    // page falls back to the last completed season and labels it, so this is
+    // a normal state, not a failure worth failing the job over.
+    if (response.status === 404) {
+      console.log(`NFLverse has no ${SNAP_YEAR} snap counts yet (404) — nothing to update.`);
+      return;
+    }
     throw new Error(`Failed to download snap counts: ${response.status} ${response.statusText}`);
   }
 
@@ -300,22 +131,34 @@ async function run() {
 
   // Aggregate to season totals
   const snapPlayers = aggregateSnapCounts(rows);
-  console.log(`Aggregated ${snapPlayers.length} unique player-seasons`);
+  console.log(`Aggregated ${snapPlayers.length} unique players`);
 
   // Match to MFL IDs
-  const matched = matchToMflPlayers(snapPlayers, mflPlayers);
+  const { matched, matchCount, missCount } = matchToMflPlayers(snapPlayers, mflPlayers);
+  console.log(`Matched ${matchCount} players to MFL IDs (${missCount} unmatched)`);
 
-  // Write output
+  // The weeks covered are what tells a reader a 58% is one game, not a season.
+  const weeksCovered = rows.reduce((max, r) => {
+    if ((r.game_type || '') !== 'REG') return max;
+    const wk = parseInt(r.week, 10) || 0;
+    return wk > max ? wk : max;
+  }, 0);
+
+  // Write output. `fetchedAt` moves on every run, so it is excluded from the
+  // comparison — a bye-week-quiet refetch must not produce a commit.
   fs.mkdirSync(OUT_DIR, { recursive: true });
   const output = {
     season: SNAP_YEAR,
+    weeksCovered,
     fetchedAt: new Date().toISOString(),
     source: NFLVERSE_URL,
     players: matched,
   };
 
-  fs.writeFileSync(OUT_FILE, JSON.stringify(output, null, 2), 'utf8');
-  console.log(`Saved snap counts -> ${OUT_FILE} (${Object.keys(matched).length} players)`);
+  const wrote = writeJsonIfChanged(OUT_FILE, output, { ignoreKeys: ['fetchedAt'] });
+  console.log(wrote
+    ? `Saved snap counts -> ${OUT_FILE} (${Object.keys(matched).length} players, through week ${weeksCovered})`
+    : `Snap counts unchanged for ${SNAP_YEAR} — left ${OUT_FILE} untouched.`);
 }
 
 run().catch(err => {

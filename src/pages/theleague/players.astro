@@ -35,6 +35,7 @@ import { getLeagueBySlug } from '../../config/leagues';
 import { resolveAuctionWindow } from '../../utils/auction-window';
 import { NO_HEADSHOT_SILHOUETTE, getPlayerAvatarBackground, getPlayerAvatarBorder, getPlayerAvatarRing, getPlayerAvatarRingDark, getPlayerAvatarStyleMaps } from '../../utils/nfl-team-colors';
 import { isDraftComplete } from '../../utils/draft-utils';
+import { pickSnapCountSeason, snapCountSeason } from '../../utils/snap-count-season.mjs';
 import { DEF_SPOTLIGHT_PLAYERS, getDefSpotlightPlayer } from '../../data/theleague/def-spotlight-players';
 import MyRankEditor from '../../components/shared/rankings/MyRankEditor.astro';
 
@@ -74,6 +75,11 @@ function normalizeMflTeam(code: string): string {
 
 // Load player data
 const currentYear = getCurrentLeagueYear();
+
+// One reference instant for every date-shaped decision on this page — the
+// auction window below and the snap-count season above it — so `?testDate=`
+// moves them together instead of leaving the page half in another year.
+const nowRef = getTestDateFromSearchParams(Astro.url.searchParams) ?? new Date();
 
 // MFL host/id from the league registry — never hardcode these (CLAUDE.md).
 // Used to build the per-player "Bid" and generic "Add" deep-links on each row.
@@ -221,26 +227,43 @@ const weeklyPlayerResults = (nflScheduleData && Array.isArray(lastYearData))
   ? buildWeeklyPlayerResults(lastYearData, nflScheduleData, fpaData, playersDataForSeason, leagueData)
   : {};
 
-// Build snap count lookup (keyed by MFL player ID)
+// Build snap count lookup (keyed by MFL player ID).
+//
+// The file is chosen by SEASON, never by "newest filename wins". Once the
+// season's official kickoff has passed these columns show that season, however
+// few weeks it holds; before kickoff they show the last completed one. The
+// rule lives in src/utils/snap-count-season.mjs — picking by sort order is how
+// the page spent the 2026 opener showing Kareem Hunt's 529 snaps from 2025.
 const snapCountMap = new Map<string, { snaps: number, pct: number, games: number }>();
-{
-  // Find the most recent snap count file
-  const snapKeys = Object.keys(snapCountModules).sort().reverse();
-  for (const key of snapKeys) {
-    const data = getModuleData(snapCountModules[key]);
-    if (data?.players) {
-      for (const [mflId, stats] of Object.entries(data.players) as [string, any][]) {
-        snapCountMap.set(mflId, {
-          snaps: stats.offenseSnaps ?? 0,
-          pct: stats.offensePct ?? 0,
-          games: stats.gamesPlayed ?? 0,
-        });
-      }
-      break; // Use only the most recent file
-    }
-  }
+const snapFilesBySeason = new Map<number, any>();
+for (const [key, mod] of Object.entries(snapCountModules)) {
+  const data = getModuleData(mod);
+  if (!data?.players) continue;
+  const season = Number(data.season ?? key.match(/snap-counts-(\d{4})\.json$/)?.[1]);
+  if (Number.isFinite(season)) snapFilesBySeason.set(season, data);
+}
+const snapSeason = pickSnapCountSeason(snapFilesBySeason.keys(), nowRef);
+const snapData = snapSeason != null ? snapFilesBySeason.get(snapSeason) : null;
+for (const [mflId, stats] of Object.entries(snapData?.players ?? {}) as [string, any][]) {
+  snapCountMap.set(mflId, {
+    snaps: stats.offenseSnaps ?? 0,
+    pct: stats.offensePct ?? 0,
+    games: stats.gamesPlayed ?? 0,
+  });
 }
 const hasSnapCounts = snapCountMap.size > 0;
+// Label every snap column with the season it is actually reporting. In week 2
+// of a new season "Snaps 529" and "Snaps 41" are both plausible-looking
+// numbers; only the year tells them apart. `weeksCovered` is what makes a 58%
+// off one game legible as a one-game sample.
+const snapSeasonLabel = snapSeason != null ? `'${String(snapSeason).slice(2)}` : '';
+const snapWeeks: number = snapData?.weeksCovered ?? 0;
+const snapIsCurrentSeason = snapSeason === snapCountSeason(nowRef);
+const snapScopeTitle = snapSeason == null
+  ? ''
+  : snapIsCurrentSeason
+    ? `${snapSeason} regular season, through week ${snapWeeks}`
+    : `${snapSeason} regular season (complete) \u2014 the ${snapCountSeason(nowRef)} season has no snap data yet`;
 
 // Build projected scores lookup
 const projectedMap = new Map<string, number>();
@@ -388,12 +411,12 @@ const auctionMap = new Map<string, { bid: number; franchise: string; status: str
 const hasAuctionData = auctionMap.size > 0;
 
 // Auction season: 3rd Thursday of March through 3rd Sunday of August.
-// `?testDate=YYYY-MM-DD` overrides "now" so the phase-aware row action (Bid vs
-// Add) can be previewed in the browser. It only shifts the auction-window
-// comparison — data loading stays keyed to the real currentYear so a test date
-// can't request a year we have no feed data for. The auction window itself is
-// computed from the test date's league year so cross-year dates resolve correctly.
-const nowRef = getTestDateFromSearchParams(Astro.url.searchParams) ?? new Date();
+// `?testDate=YYYY-MM-DD` (nowRef, defined above) overrides "now" so the
+// phase-aware row action (Bid vs Add) can be previewed in the browser. It
+// shifts date COMPARISONS only — MFL feed loading stays keyed to the real
+// currentYear, so a test date can't request a year we have no feed data for.
+// The auction window itself is computed from the test date's league year so
+// cross-year dates resolve correctly.
 // The window itself lives in src/utils/auction-window.ts, because the player
 // modal's claim context now has to answer the same question from the SERVER,
 // away from this page. Two copies of a date formula is how two surfaces end up
@@ -565,7 +588,11 @@ if (Array.isArray(allPlayers)) {
       lastYrPts: lastYrPtsMap.has(p.id) ? Math.round((lastYrPtsMap.get(p.id)!) * 10) / 10 : null,
       snaps: snapCountMap.has(p.id) ? snapCountMap.get(p.id)!.snaps : null,
       snapPct: snapCountMap.has(p.id) ? snapCountMap.get(p.id)!.pct : null,
-      games: lastYrGamesMap.get(p.id) ?? null,
+      // GP belongs to the snap-count group beside it (same season, same
+      // source). Feeding it from lastYrGamesMap put a fantasy-scoring
+      // games count from a DIFFERENT season next to the snap totals, and
+      // an empty current season rendered it as a dash beside 529 snaps.
+      games: snapCountMap.get(p.id)?.games ?? null,
       rookie: p.status === 'R',
       birthdate: p.birthdate ? parseInt(p.birthdate, 10) : null,
       jersey: p.jersey || null,
@@ -1095,18 +1122,18 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
               <div class="th-content">Wt</div>
             </th>
             {hasSnapCounts && (
-              <th class="sortable col-sm col-group--stats" data-sort="games">
-                <div class="th-content">GP</div>
+              <th class="sortable col-sm col-group--stats" data-sort="games" title={`Games with an offensive snap \u2014 ${snapScopeTitle}`}>
+                <div class="th-content"><span class="th-label">GP<small class="th-season">{snapSeasonLabel}</small></span></div>
               </th>
             )}
             {hasSnapCounts && (
-              <th class="sortable col-sm col-group--stats" data-sort="snaps">
-                <div class="th-content">Snaps</div>
+              <th class="sortable col-sm col-group--stats" data-sort="snaps" title={`Offensive snaps \u2014 ${snapScopeTitle}`}>
+                <div class="th-content"><span class="th-label">Snaps<small class="th-season">{snapSeasonLabel}</small></span></div>
               </th>
             )}
             {hasSnapCounts && (
-              <th class="sortable col-num col-group--stats" data-sort="snapPct">
-                <div class="th-content">Snap%</div>
+              <th class="sortable col-num col-group--stats" data-sort="snapPct" title={`Share of his team's offensive plays in the games he played \u2014 ${snapScopeTitle}`}>
+                <div class="th-content"><span class="th-label">Snap%<small class="th-season">{snapSeasonLabel}</small></span></div>
               </th>
             )}
             {hasLastYrPts && (
@@ -3936,6 +3963,25 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
   .sort-arrow {
     font-size: 0.55rem;
     opacity: 0.8;
+  }
+  /* Season-stamped headers (GP / Snaps / Snap%). The year stacks UNDER the
+     label so the column keeps its width, and it sits inside .th-label rather
+     than .th-content so the sort arrow still lands beside the label. */
+  .th-label {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    line-height: 1.05;
+  }
+  .col-num .th-label { align-items: flex-end; }
+  .th-season {
+    /* The header colour is already muted; fading it further makes the one
+       thing these columns needed — which season this is — the least legible
+       text on the page. 0.85 keeps it subordinate and still readable. */
+    font-size: 0.6rem;
+    font-weight: 600;
+    opacity: 0.85;
+    letter-spacing: 0.02em;
   }
 
   /* Columns */
