@@ -118,6 +118,18 @@ describe('the Auction view belongs to the auction window', () => {
     expect(source).toMatch(/if \(isAuctionSeason\) startAuctionPolling\(\);/);
   });
 
+  it('gates BOTH auction timers, not just the poll', () => {
+    // The 60s poll lives in startAuctionPolling(); the 10s freshness/bid-tier
+    // sweep lives at script top level. Gating one and not the other left a
+    // DOM sweep running on every Free Agents page all year.
+    const idx = source.indexOf('auctionFreshnessTimer = setInterval(');
+    expect(idx, 'the 10s freshness timer has moved or been renamed').toBeGreaterThan(-1);
+    const before = source.slice(Math.max(0, idx - 700), idx);
+    expect(before, 'the 10s freshness/bid-tier timer is not gated on isAuctionSeason').toContain(
+      'if (isAuctionSeason) {'
+    );
+  });
+
   it('keeps the countdown and bid-status chrome out of the DOM out of season', () => {
     expect(source).toMatch(/\{isAuctionSeason && \(\s*\n\s*<span class="auction-countdown"/);
     expect(source).toMatch(/\{isAuctionSeason && \(\s*\n\s*<div class="bid-legend"/);

@@ -3062,22 +3062,31 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
   }
 
   // ── Periodic tier recalculation + freshness (10s) ──
-  if (auctionFreshnessTimer) clearInterval(auctionFreshnessTimer);
-  auctionFreshnessTimer = setInterval(() => {
-    updateAuctionFreshness();
-    // Recalculate bid tier classes on visible rows (time-based tiers shift)
-    document.querySelectorAll('td.col-value-bid').forEach(td => {
-      const row = td.closest('tr');
-      if (!row) return;
-      const pid = row.getAttribute('data-player-id');
-      if (!pid) return;
-      const player = players.find(p => p.id === pid);
-      if (!player || player.auctionStatus !== 'active') return;
-      const newClass = getBidTierClass(player.auctionStatus, player.auctionBidTime);
-      td.classList.remove('col-value-bid--hot', 'col-value-bid--warm', 'col-value-bid--cool');
-      td.classList.add(newClass);
-    });
-  }, 10000);
+  // In season only, for the same reason the 60s poll is. Both halves of the
+  // bid-tier machinery have to be gated together: this one lives at script
+  // top level rather than inside startAuctionPolling(), so gating only the
+  // poll would have left a 10-second DOM sweep running on every Free Agents
+  // page all year. Out of season it is provably inert anyway — the tiers it
+  // repaints are the `active` ones, and `active` is only ever set by the poll
+  // that no longer runs (the server seeds `won` and nothing else).
+  if (isAuctionSeason) {
+    if (auctionFreshnessTimer) clearInterval(auctionFreshnessTimer);
+    auctionFreshnessTimer = setInterval(() => {
+      updateAuctionFreshness();
+      // Recalculate bid tier classes on visible rows (time-based tiers shift)
+      document.querySelectorAll('td.col-value-bid').forEach(td => {
+        const row = td.closest('tr');
+        if (!row) return;
+        const pid = row.getAttribute('data-player-id');
+        if (!pid) return;
+        const player = players.find(p => p.id === pid);
+        if (!player || player.auctionStatus !== 'active') return;
+        const newClass = getBidTierClass(player.auctionStatus, player.auctionBidTime);
+        td.classList.remove('col-value-bid--hot', 'col-value-bid--warm', 'col-value-bid--cool');
+        td.classList.add(newClass);
+      });
+    }, 10000);
+  }
 
   // Cleanup on navigation (View Transitions)
   document.addEventListener('astro:before-swap', function () {
