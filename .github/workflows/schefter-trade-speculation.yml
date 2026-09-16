@@ -59,6 +59,23 @@ jobs:
         if: github.event.inputs.dry_run != 'true'
         run: node scripts/compute-franchise-history.mjs --emit-milestone-posts
 
+      # The recompute above advances season-ledger.json, and owner-tenures /
+      # division-strength are derived FROM that ledger — division-strength.json
+      # pins its played-row count against it (tests/division-strength-data.test.ts).
+      # Advancing the ledger without these would break that pin on main every
+      # day, the same way committing franchise-history.json alone broke
+      # tests/season-ledger.test.ts. --league=theleague because this job only
+      # commits TheLeague's paths; the AFL's copies are refreshed by its own
+      # backfill run, and the chain must not write files this job will discard.
+      # Chained, not two steps, and in this order: division-strength reads the
+      # owner tenures the first command writes (same reasoning as the
+      # 'compute:owner-tenures → division-strength' entry in scripts/prebuild.mjs).
+      - name: Recompute owner tenures + division strength (ledger consumers)
+        if: github.event.inputs.dry_run != 'true'
+        run: |
+          node scripts/compute-owner-tenures.mjs --league=theleague
+          node scripts/compute-division-strength.mjs --league=theleague
+
       - name: Run speculation scanner
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
@@ -86,9 +103,23 @@ jobs:
           # feed by post id on top of the latest origin and retries; the derived
           # snapshots and raw mfl-feeds directory are taken as-is. "Nothing
           # changed" is guarded inside the script.
+          #
+          # compute-franchise-history.mjs writes BOTH franchise-history.json and
+          # season-ledger.json from one parse, so BOTH must be committed here.
+          # Committing only the history left the ledger frozen at whatever the
+          # last human PR regenerated — 11 days stale, with every 2026 row still
+          # 0-0-0 / rank null while the history beside it carried live records.
+          # That is the divergence tests/season-ledger.test.ts exists to catch,
+          # and it is a preview-build data bug too: preview and `pnpm dev` read
+          # the committed ledger rather than recomputing it (previewSkip in
+          # scripts/prebuild.mjs), so division-strength and owner-tenures were
+          # built from the stale copy. tests/franchise-history-commit-paths.test.ts
+          # pins the pairing; the two ledger CONSUMERS recomputed above are here
+          # for the same reason — a fresher ledger beside a Sep-4 division report
+          # fails tests/division-strength-data.test.ts on main.
           git config user.name "Schefter Bot"
           git config user.email "actions@users.noreply.github.com"
           node scripts/commit-feed-and-push.mjs \
             --branch main \
             --message "chore: schefter daily — speculation + milestone scan" \
-            --files "src/data/theleague/schefter-feed.json,data/theleague/derived/speculation-history.json,data/theleague/derived/franchise-history.json,data/theleague/mfl-feeds"
+            --files "src/data/theleague/schefter-feed.json,data/theleague/derived/speculation-history.json,data/theleague/derived/franchise-history.json,data/theleague/derived/season-ledger.json,data/theleague/derived/owner-tenures.json,data/theleague/derived/division-strength.json,data/theleague/mfl-feeds"

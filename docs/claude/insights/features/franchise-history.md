@@ -1,5 +1,60 @@
 # Franchise History Pages — Insights
 
+## 2026-09-15 - A script that writes two files, in a workflow that commits one
+
+**Context:** `pnpm vitest run tests/season-ledger.test.ts` failed on main —
+`theleague 0001 2026 diverged`, the ledger row 0-0-0 / `regSeasonRank: null`
+against a `yearByYear` entry carrying 1-1 / 99.11 / rank 10.
+
+The obvious reading is wrong. `season-ledger.test.ts`'s header promises the two
+files come from one parse, so a divergence looks like the emitter having grown a
+second code path for the in-progress season. It has not: `compute-franchise-history.mjs`
+builds ONE `seasonRow` object and pushes it to both `ledgerRows` and
+`fr.yearByYear`, and it writes both files unconditionally. Nothing in the script
+can make them disagree.
+
+**The break was at the commit boundary, one directory away from the code.**
+`schefter-trade-speculation.yml` runs the recompute nightly and then listed only
+`franchise-history.json` in `commit-feed-and-push --files`. The ledger was
+regenerated correctly in the runner every night and thrown away with it. Its
+last real commit was a human PR 11 days earlier — which `git log` says plainly,
+and is the fastest way to see this:
+
+```
+git log --oneline -3 -- data/theleague/derived/franchise-history.json   # nightly
+git log --oneline -3 -- data/theleague/derived/season-ledger.json       # PRs only
+```
+
+Not just a red test. `compute:franchise-history` is `previewSkip: true` in
+`scripts/prebuild.mjs`, so preview builds and `pnpm dev` READ the committed
+ledger instead of recomputing it — every preview since Sep 4 built
+division-strength and owner-tenures from a ledger whose 2026 rows were all
+`seasonNotStarted`. Production, which runs the full prebuild, was fine. That
+split is the signature: a derived artifact that is correct in prod and stale in
+preview is a commit-list bug, not a compute bug.
+
+- **The fix is the file list, plus the ledger's CONSUMERS.** Committing the pair
+  alone just moves the breakage: `owner-tenures.json` and `division-strength.json`
+  are derived FROM the ledger, and `division-strength-data.test.ts` pins its
+  played-row count against it (it failed 304 vs 320 the moment the ledger
+  advanced). The nightly now runs `compute-owner-tenures` then
+  `compute-division-strength`, both `--league=theleague`, and commits all four
+  derived files. Chained and ordered for the same reason `prebuild.mjs` chains
+  them: the second reads what the first writes.
+- **`--league=theleague` is load-bearing.** Both scripts default to every league.
+  Unscoped, the nightly would rewrite the AFL's copies and then not commit them —
+  re-creating in one step the exact write-more-than-you-commit shape being fixed.
+- **`tests/franchise-history-commit-paths.test.ts`** reads the output basenames
+  out of the script's own `dataPath, 'derived/…'` literals and fails any workflow
+  that commits a strict subset of them. A third output added to the script is
+  caught until it is committed too.
+
+**Recommendation:** when a derived-data test fails and the emitter looks
+single-path, check whether the two files were ever committed together before
+reading the emitter at all — `git log` per file costs one command and answers
+it. A cron that commits a subset of what its script writes is invisible in every
+diff, because the file it skips never appears in one.
+
 ## 2026-09-15 - Division titles waited for a finished season; season BADGES did not
 
 **Context:** One week into 2026 the feed carried "Music City Mafia closed 2026 at
