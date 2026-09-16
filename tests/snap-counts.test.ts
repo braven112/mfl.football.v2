@@ -208,6 +208,14 @@ describe.each(PLAYER_PAGES)('%s', (page) => {
     expect(pageSource).toMatch(/define:vars=\{\{[^}]*hasSnapCounts/);
   });
 
+  it('honours ?testDate= rather than reading the clock directly', () => {
+    // Two forked siblings calling one shared resolver must not disagree about
+    // which instant they are asking about — and /rollover-check needs the
+    // kickoff switch to be reachable on both.
+    expect(pageSource).toMatch(/resolveSnapCounts\(snapCountModules, \w*[nN]owRef\)/);
+    expect(pageSource).not.toMatch(/resolveSnapCounts\(snapCountModules, new Date\(\)\)/);
+  });
+
   it('ships the shared header stylesheet rather than a scoped copy', () => {
     expect(pageSource).toContain("styles/snap-columns.css");
   });
@@ -232,6 +240,12 @@ describe('the fetcher', () => {
     // page on a half-finished season behind a green weekly job — the same
     // silent staleness this change exists to end.
     expect(src).toMatch(/response\.status === 404 && !fs\.existsSync\(OUT_FILE\)/);
+  });
+
+  it('prunes seasons the pages could never select', () => {
+    expect(src).toMatch(/function pruneOldSeasons\(\)/);
+    expect(src).toMatch(/const keepFrom = SNAP_YEAR - 1;/);
+    expect(src).toMatch(/pruneOldSeasons\(\);/);
   });
 
   it('gates itself on the season being played, not on the file existing', () => {
@@ -262,6 +276,15 @@ describe('the sync workflow', () => {
 describe('the committed snap-count data', () => {
   const dir = path.join('data', 'nfl');
   const files = fs.readdirSync(dir).filter((f) => /^snap-counts-\d{4}\.json$/.test(f));
+
+  it('holds at most two seasons, because both pages eager-glob this directory', () => {
+    // Everything an eager import.meta.glob matches is bundled into the single
+    // shared _render function, and a multi-year glob on the AFL's own players
+    // page errored a deploy at 256MB in July 2026
+    // (docs/claude/insights/domains/deployment.md). The glob pattern cannot
+    // bound itself, so fetch-snap-counts.mjs prunes and this pins it.
+    expect(files.length).toBeLessThanOrEqual(2);
+  });
 
   it('holds a file for the season the page will ask for', () => {
     const seasons = files.map((f) => Number(f.match(/(\d{4})/)![1]));

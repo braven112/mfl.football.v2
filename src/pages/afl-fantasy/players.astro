@@ -45,7 +45,7 @@ import { claimVerb as claimVerbFor } from '../../utils/claim-context';
 import { readWaiverSortOrder } from '../../utils/waiver-order';
 import { resolveWaiverWindow, describeWaiverWindow, waiverWindowShortLabel } from '../../utils/waiver-window';
 import { readViewerClock } from '../../utils/viewer-preferences-page';
-import { getAflLeagueYear } from '../../utils/league-year';
+import { getAflLeagueYear, getTestDateFromSearchParams } from '../../utils/league-year';
 import { resolveSnapCounts } from '../../utils/snap-count-season.mjs';
 import WaiverClaimsPanel from '../../components/shared/WaiverClaimsPanel.astro';
 import WaiverPriorityModal from '../../components/shared/WaiverPriorityModal.astro';
@@ -112,7 +112,12 @@ const snapCountModules = import.meta.glob(
   '../../../data/nfl/snap-counts-*.json',
   { eager: true }
 );
-const snapCounts = resolveSnapCounts(snapCountModules, new Date());
+// `?testDate=` so /rollover-check can see the kickoff switch here too, and so
+// this page and TheLeague's — forked siblings calling one shared resolver —
+// cannot disagree about which instant they are asking about. Today it reaches
+// only these columns; the rest of this page still reads the real clock.
+const snapNowRef = getTestDateFromSearchParams(Astro.url.searchParams) ?? new Date();
+const snapCounts = resolveSnapCounts(snapCountModules, snapNowRef);
 const hasSnapCounts = snapCounts.has;
 const snapSeasonLabel = snapCounts.seasonLabel;
 const snapScopeTitle = snapCounts.scopeTitle;
@@ -324,15 +329,20 @@ const topFaHeadOnerror = topFaHeadEspnId
 // `games` is a DIFFERENT number — fantasy games, counted once per conference,
 // so it is doubled for a player rostered in both — which is why these three
 // carry their own names on both pages.
-const playersWithSnaps = players.map((p: any) => {
-  const snap = snapCounts.byPlayerId.get(p.id);
-  return {
-    ...p,
-    snaps: snap?.snaps ?? null,
-    snapPct: snap?.pct ?? null,
-    snapGames: snap?.games ?? null,
-  };
-});
+// Skipped entirely when there is nothing to show: with no snap data the map
+// would copy every row to add three nulls, and ship them in the inline JSON,
+// for three columns that are not rendered.
+const playersWithSnaps = hasSnapCounts
+  ? players.map((p: any) => {
+      const snap = snapCounts.byPlayerId.get(p.id);
+      return {
+        ...p,
+        snaps: snap?.snaps ?? null,
+        snapPct: snap?.pct ?? null,
+        snapGames: snap?.games ?? null,
+      };
+    })
+  : players;
 const playerDataJson = JSON.stringify(playersWithSnaps);
 const defSpotlightJson = JSON.stringify(DEF_SPOTLIGHT_PLAYERS);
 const conferenceMetaJson = JSON.stringify(conferenceMeta ?? null);

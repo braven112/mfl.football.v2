@@ -79,6 +79,32 @@ const MFL_PLAYERS_FALLBACK = path.join('data', 'theleague', 'mfl-feeds', String(
 const OUT_DIR = path.join('data', 'nfl');
 const OUT_FILE = path.join(OUT_DIR, `snap-counts-${SNAP_YEAR}.json`);
 
+/**
+ * Keep at most the current season and the one before it on disk.
+ *
+ * Both free-agent pages read this directory with an eager
+ * `import.meta.glob('data/nfl/snap-counts-*.json')`, and everything an eager
+ * glob matches is bundled into the single shared `_render` serverless
+ * function. That is not a hypothetical: an eager multi-year glob on
+ * /afl-fantasy/players.astro pushed the function to 256MB and ERRORED the
+ * deploy in July 2026 (docs/claude/insights/domains/deployment.md, 2026-07-08).
+ *
+ * A `snap-counts-*.json` glob grows by one file every January forever, so the
+ * bound has to live in the DIRECTORY — the glob pattern cannot express it.
+ * Two seasons is everything the reader can select: the current one, and the
+ * previous one it falls back to before kickoff. Older seasons are one
+ * `--year` away if anyone wants them back.
+ */
+function pruneOldSeasons() {
+  const keepFrom = SNAP_YEAR - 1;
+  for (const file of fs.readdirSync(OUT_DIR)) {
+    const year = Number(file.match(/^snap-counts-(\d{4})\.json$/)?.[1]);
+    if (!Number.isFinite(year) || year >= keepFrom) continue;
+    fs.unlinkSync(path.join(OUT_DIR, file));
+    console.log(`Pruned ${file} — the pages can only ever select ${keepFrom} or ${SNAP_YEAR}.`);
+  }
+}
+
 // ── Main ────────────────────────────────────────────────────────────────────
 async function run() {
   console.log(`Snap count season: ${SNAP_YEAR}${yearFlag ? ' (--year)' : ' (kickoff-gated)'}`);
@@ -166,6 +192,8 @@ async function run() {
   console.log(wrote
     ? `Saved snap counts -> ${OUT_FILE} (${Object.keys(matched).length} players, through week ${weeksCovered})`
     : `Snap counts unchanged for ${SNAP_YEAR} — left ${OUT_FILE} untouched.`);
+
+  pruneOldSeasons();
 }
 
 run().catch(err => {
