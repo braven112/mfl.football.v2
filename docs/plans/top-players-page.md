@@ -493,12 +493,23 @@ so a reader knows why the field thins.
 
 ## 8. Phases
 
-**Phase 1 — data.** Add the per-week `playerScores` loop to
-`fetch-mfl-feeds.mjs` (week range from `league.json`, daily-only, live-week
-merge, error-body guard). Run it once against both leagues, commit the feeds,
-eyeball week 1 against the known top scorers, and confirm the one open item in
-§7 — the zero-byte re-run diff — before letting the cron near it. *Nothing renders yet; this is the phase that can't be
-faked.*
+**Phase 1 — data. ✅ DONE 2026-09-16.** Per-week `playerScores` loop in
+`fetch-mfl-feeds.mjs`, with the week range read from each league's own
+`league.json` (TheLeague 1-17, the AFL 1-18 — the weeklyResults loop above
+hardcodes 17, which would have dropped the AFL's last week).
+
+Four guards, each for a shape or cost seen live: a blank-week payload is
+rejected rather than committed; weeks merge into the committed array instead of
+replacing it, so a week that later comes back blank cannot erase a scored one;
+an `isSeasonWindowOpen` gate skips the loop in the offseason, conditioned on
+already having the weeks so a historical backfill can still build the file the
+first time (`--force` overrides); and the live path merges the W-less
+`playerScores.json` already fetched each cycle rather than spending another
+request.
+
+`player-scores-weekly.json` committed for both leagues. Re-running reports the
+feed unchanged, so the daily cron will not churn ~1 MB per league per season
+into `.git`.
 
 **Phase 2 — derived payload. ✅ DONE 2026-09-16.**
 `scripts/compute-top-players.mjs` → `data/<league>/derived/top-players.json`
