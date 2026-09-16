@@ -374,10 +374,18 @@
     {
       "date": "2026-09-15",
       "type": "bug-fix",
-      "summary": "The <a href=\"/players\">Free Agents</a> GP, Snaps and Snap% columns were still showing last season and now track the season being played \u2014 each stamped with the year it reports. The AFL has them now too.",
+      "summary": "<a href=\"/players\">Free Agents</a> was showing last season's snap counts \u2014 GP, Snaps and Snap% now track the season being played, and each column is stamped with the year it reports.",
       "impact": "user",
       "area": "free-agents",
-      "league": "both"
+      "league": "theleague"
+    },
+    {
+      "date": "2026-09-15",
+      "type": "enhancement",
+      "summary": "<a href=\"/players\">Free Agents</a> now shows GP, Snaps and Snap% for every player, so you can see who is actually on the field before you claim them.",
+      "impact": "user",
+      "area": "free-agents",
+      "league": "afl"
     }
   ]
 }
