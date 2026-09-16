@@ -133,6 +133,79 @@ hrefs to local copies, and open it in the bundled Chromium — it isolates
 
 ---
 
+## 2026-09-15 - An `auto-fill` Track Minimum Is a READABILITY Budget; and `container-type` Silently Becomes a Containing Block for `position: fixed`
+
+**Context:** The AFL keeper planner (`src/components/afl-fantasy/KeeperPlanner.astro`)
+shipped with `repeat(auto-fill, minmax(220px, 1fr))` on its keeper slots and
+`minmax(260px, 1fr)` on its cut pool. Inside the front-office hub — which
+reserves a 220px sidebar, leaving the panel a ~870px content column — that
+auto-filled to three ~285px tracks, and **five of a nine-player cut pool had
+their names ellipsised**.
+
+**Insight 1 — the minimum decides the column COUNT, so it is a readability
+budget, not just an overflow guard.** The head's rule for intrinsic content
+(`repeat(auto-fit, minmax(min(300px, 100%), 1fr))`) is stated as "it cannot
+blow out", and that framing is what misleads: too small an N does not overflow
+and does not look broken in code review — it silently packs in one column too
+many and the text truncates. Every other part of these rows is
+`flex-shrink: 0` (rank badge, avatar, position line, age, trend badge, two
+buttons), so the name was the only thing that could give.
+
+Pick N by measuring where truncation starts, not by eye. Measured here against
+the component's own `<style>` block and the real `PlayerCell` markup:
+
+| Track | Names ellipsised (9-player pool) |
+|---|---|
+| 285px (what 220px auto-filled to) | 5 |
+| 340px | 2 |
+| 350px+ | 0 |
+
+340px fixed the 870px case but still let a 1040–1147px container land on three
+341px tracks — a *narrower* card than the two-column layout it replaced. **A
+larger container can produce a smaller track**, so check the width just past
+each column-count boundary, not just the width you were handed. 380px was the
+first minimum that skipped that state.
+
+**Insight 2 — `container-type` makes the element a containing block for
+`position: fixed` descendants.** Converting the panel's one `@media (max-width:
+720px)` breakpoint to `@container` meant adding `container-type: inline-size`
+to `.keeper-planner`, and that is not a free annotation: any `position: fixed`
+descendant would start resolving against the panel instead of the viewport,
+which turns a full-screen modal into a box inside a card. It was safe here only
+because nothing fixed renders inside — the component has no `<slot>`, and all
+three fixed dialogs (`PlayerDetailsModal`, `AFLActionModal`, and the planner's
+own `.kp-finalize`) are mounted as SIBLINGS of the container root. Check that
+before adding `container-type`, not after.
+
+**Corollary — the viewport was the wrong question all along.** This panel
+renders at widths the window does not predict: the hub reserves a sidebar,
+`/rosters` gives it the full content column, `/draft/order` less again. A
+500px-wide panel inside a 1400px window kept the toolbar in a row with the age
+slider squeezed to a stub, because 1400 is nowhere near 720. Verified by
+pinning the viewport at 1400 and driving only the panel width.
+
+Two rules did NOT need converting, and the distinction is the useful part:
+
+- `.kp-slots` / `.kp-cards` lost their breakpoint **entirely** rather than
+  gaining a container query. `minmax(min(380px, 100%), 1fr)` already measures
+  the grid's own box, so it collapses to one column below a 768px panel on its
+  own. Intrinsic sizing beats a container query when the rule is "fit what
+  fits" — a breakpoint would only be a second, less accurate copy of it.
+- `.kp-finalize__lists` **kept** its media query, because `.kp-finalize` is
+  `position: fixed` and a sibling of the container — it really is window-sized.
+
+**Verifying an auth-gated component's layout without auth.** The page is behind
+a session gate, so the measurements above came from a harness built by
+extracting the component's `<style>` block and `src/styles/player-cell.css`
+into a static page with the real `PlayerCell` markup. The step that makes this
+trustworthy: **reproduce the known-bad state first.** A first pass using
+simplified avatars and text buttons reported zero truncation at 285px — it
+disagreed with the screenshot, which proved the harness, not the CSS, was
+wrong. Only after real markup reproduced the 5-name failure were its "after"
+numbers worth anything.
+
+---
+
 ## 2026-09-12 - `flex-wrap: wrap` on a COLUMN Container Makes a Multi-COLUMN Box, and an Inner Scroller Stops Scrolling
 
 **Context:** The schedule page's controls row (view tabs + a 20-season picker)
