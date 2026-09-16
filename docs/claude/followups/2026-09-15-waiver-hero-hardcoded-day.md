@@ -57,7 +57,7 @@ That math is gone.
 
 ## Deferred items
 
-- [ ] **F1 — DST drift in `resolveWaiverWindow`'s recurrence expansion**
+- [x] **F1 — DST drift in `resolveWaiverWindow`'s recurrence expansion** — **FIXED**, not deferred after all: Brandon asked for it immediately. See the note at the end of this item.
   - Source: Claude review, `/code-review --comment` on #1122
   - Where: `src/utils/waiver-window.ts:87` (`occurrences()`), consumed at
     `src/utils/waiver-deadline-copy.ts:149`
@@ -89,6 +89,22 @@ That math is gone.
     `tests/waiver-window.test.ts`'s existing cadence assertions — that suite
     deliberately pins the SHAPE (in-season processing lands Wednesday evening
     PT) and never the hour, so it will NOT catch this on its own.
+  - **RESOLVED.** Fixed as described, in `addWeeksOnWallClock`
+    (`src/utils/waiver-window.ts`), which reuses the two-pass zone solve
+    `nextSundayKickoffEpoch` already uses and takes `zoneOffsetMs` from
+    `viewer-preferences.ts` (now exported) rather than adding a third copy.
+    Guard: `tests/waiver-window-dst.test.ts`, 8 cases.
+  - **Two things the fix turned up that the deferral had not known.** First,
+    the premise was verified against MFL's OWN 2025 transaction log rather
+    than assumed: 141 AFL awards at Wed 20:00 PT and 58 TheLeague awards at
+    Wed 19:00 PT, the wall-clock hour constant straight through the
+    2025-11-02 transition. Second, and the reason deferring it was the wrong
+    call on reflection: this was never only cosmetic. `/api/waiver-claim:161`
+    does `const immediate = window.mode === 'fcfs'` to pick the MFL endpoint,
+    so in the wrong hour — AFL 7–8 PM PT, TheLeague 6–7 PM PT, every week
+    after Nov 1 — a live claim would have been submitted as an instant FCFS
+    add against a pool MFL still had LOCKED. That is the failure this very
+    file's header documents from 2026-09-03, where every pickup 502'd.
 
 - [ ] **F3 — the open branch never consults `window.nextMode`**
   - Source: Claude review, `/code-review --comment` on #1122

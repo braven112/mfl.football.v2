@@ -419,8 +419,15 @@ export { COUNTRY_CODES };
  * formatting the instant IN the zone and reading the wall clock back, which is
  * the only way to get it right across a DST boundary — a fixed offset per zone
  * is wrong for half the year.
+ *
+ * Exported for `waiver-window.ts`, which expands MFL's weekly recurrences on
+ * WALL CLOCK rather than on epoch time and needs the same primitive. It is
+ * exported rather than copied because there were already two implementations
+ * of this in the repo (here and `owners-poll-window.mjs`) and a third would be
+ * the copy that eventually disagrees. Pure, and adds no dependency — this
+ * module is in Storybook's rendering graph and stays dependency-light.
  */
-function zoneOffsetMs(instant: number, zone: string): number {
+export function zoneOffsetMs(instant: number, zone: string): number {
   const parts = new Intl.DateTimeFormat('en-US', {
     timeZone: zone,
     year: 'numeric', month: '2-digit', day: '2-digit',

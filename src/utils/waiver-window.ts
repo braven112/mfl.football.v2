@@ -21,7 +21,7 @@
  * credentials.
  */
 
-import { DEFAULT_VIEWER_CLOCK, type ViewerClock } from './viewer-preferences';
+import { DEFAULT_VIEWER_CLOCK, LEAGUE_CLOCK, zoneOffsetMs, type ViewerClock } from './viewer-preferences';
 import { formatForViewer } from './viewer-clock';
 
 /** One MFL calendar event, as the export returns it. */
@@ -76,15 +76,52 @@ const PROCESS_TYPES = new Set(['WAIVER_BBID', 'WAIVER_REVERSE', 'WAIVER_UNLOCK']
 const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
 
 /**
- * Expand a possibly-recurring event into the concrete occurrences that could
- * bracket `now`. `HAPPENS=n` means "same time each week for n more weeks".
+ * MFL RECURS ON THE WALL CLOCK, NOT ON EPOCH TIME.
+ *
+ * `HAPPENS=n` means "the same time each week", and MFL means the same time a
+ * HUMAN reads, not the same number of seconds. Adding a fixed `7 × 24h` is
+ * therefore right for eight months of the year and an hour wrong for the rest:
+ * after the November DST change every expanded occurrence lands an hour early.
+ *
+ * This is not a deduction, it is what MFL did. Its own 2025 transaction log
+ * records every waiver run it processed, and the wall-clock hour is constant
+ * straight through the 2025-11-02 transition:
+ *
+ *   AFL        Wed 20:00 PDT  Sep 10 … Oct 29   →  Wed 20:00 PST  Nov 5 … Dec 31
+ *   TheLeague  Wed 19:00 PDT  Aug 27 … Oct 22   →  Wed 19:00 PST  Nov 5 … Dec 17
+ *
+ * 141 AFL awards and 58 TheLeague awards, all on the hour, on both sides of the
+ * boundary. Under the old fixed-epoch step the November occurrences came out at
+ * 19:00 and 18:00 — which is what made the hero read "claims have processed"
+ * for the last hour of a window that was still open, and, worse, could route a
+ * live claim through the FCFS endpoint while the pool was still locked.
+ *
+ * Solved in two passes for the same reason `nextSundayKickoffEpoch` is: the
+ * first guess can land on the wrong side of a transition. A weekly waiver run
+ * is never scheduled inside the ambiguous 1–2am hour, so the second pass
+ * settles it.
  */
-function occurrences(event: MflCalendarEvent): number[] {
+function addWeeksOnWallClock(startMs: number, weeks: number, zone: string): number {
+  if (weeks === 0) return startMs;
+  // The start's wall clock, expressed as if it were UTC. Adding whole weeks to
+  // THAT advances the calendar date and leaves the time of day alone, because
+  // UTC has no DST of its own.
+  const wall = startMs + zoneOffsetMs(startMs, zone) + weeks * SEVEN_DAYS_MS;
+  const guess = wall - zoneOffsetMs(wall, zone);
+  return wall - zoneOffsetMs(guess, zone);
+}
+
+/**
+ * Expand a possibly-recurring event into the concrete occurrences that could
+ * bracket `now`. `HAPPENS=n` means "same time each week for n more weeks" —
+ * same WALL-CLOCK time, per `addWeeksOnWallClock`.
+ */
+function occurrences(event: MflCalendarEvent, zone: string): number[] {
   const start = Number(event.start_time) * 1000;
   if (!Number.isFinite(start) || start <= 0) return [];
   const repeats = Math.max(0, Math.min(Number(event.happens) || 0, 30));
   const out: number[] = [];
-  for (let i = 0; i <= repeats; i++) out.push(start + i * SEVEN_DAYS_MS);
+  for (let i = 0; i <= repeats; i++) out.push(addWeeksOnWallClock(start, i, zone));
   return out;
 }
 
@@ -97,7 +134,15 @@ function occurrences(event: MflCalendarEvent): number[] {
  */
 export function resolveWaiverWindow(
   events: MflCalendarEvent[] | null | undefined,
-  now: Date = new Date()
+  now: Date = new Date(),
+  /**
+   * The zone MFL keeps this league's schedule in — its recurrences repeat on
+   * THAT wall clock (see `addWeeksOnWallClock`). Defaults to the registry's
+   * fallback league clock, Pacific, which is what every league in the registry
+   * is set to today; a caller that knows its league can pass
+   * `leagueClock(slug).zone` and stay correct if one ever isn't.
+   */
+  zone: string = LEAGUE_CLOCK.zone
 ): WaiverWindow {
   const list = Array.isArray(events) ? events : [];
   if (list.length === 0) {
@@ -110,7 +155,7 @@ export function resolveWaiverWindow(
     const opens = OPEN_TYPES.has(type);
     const closes = PROCESS_TYPES.has(type);
     if (!opens && !closes) continue;
-    for (const at of occurrences(event)) marks.push({ at, opens });
+    for (const at of occurrences(event, zone)) marks.push({ at, opens });
   }
 
   if (marks.length === 0) {
