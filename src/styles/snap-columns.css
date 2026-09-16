@@ -1,0 +1,37 @@
+/**
+ * Season-stamped table headers for the GP / Snaps / Snap% columns.
+ *
+ * A plain .css import rather than a scoped <style> block, for the reason
+ * src/styles/fa-claim-button.css exists: BOTH free-agent pages render these
+ * columns, and a rule that lives inside one page's scoped styles is missing
+ * from the other — which is how the AFL's Claim button once shipped as raw
+ * browser chrome. One copy, imported from both pages' frontmatter.
+ *
+ * The year stacks UNDER the label so a 48px column keeps its width, and it
+ * sits inside .th-label rather than .th-content so the sort arrow — appended
+ * to .th-content by each page's client script — still lands beside the label
+ * rather than under it.
+ */
+
+.th-label {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  line-height: 1.05;
+}
+
+.col-num .th-label {
+  align-items: flex-end;
+}
+
+.th-season {
+  /* The header colour is already muted; fading it further makes the one thing
+     these columns needed — which season this is — the least legible text on
+     the page. 0.85 keeps it subordinate and still readable in both themes.
+     No colour of its own: it inherits the th's, so it tracks light/dark
+     without a second declaration to keep in sync. */
+  font-size: 0.6rem;
+  font-weight: 600;
+  opacity: 0.85;
+  letter-spacing: 0.02em;
+}

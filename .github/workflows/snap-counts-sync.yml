@@ -1,6 +1,6 @@
 name: Snap Counts Sync
 
-# Refresh NFL snap counts from NFLverse so the Free Agents page's GP / Snaps /
+# Refresh NFL snap counts from NFLverse so both Free Agents pages' GP / Snaps /
 # Snap% columns track the season being played rather than the last one we
 # happened to fetch. Nothing scheduled this before, so the columns sat on the
 # 2025 season (captured in Feb 2026) through the 2026 opener.
@@ -44,7 +44,7 @@ jobs:
       - name: Commit and push updates
         uses: ./.github/actions/commit-push
         with:
-          add-paths: 'data/theleague/nfl-cache/'
+          add-paths: 'data/nfl/'
           commit-message: 'chore: refresh NFL snap counts'
           no-changes-message: 'No snap count changes to commit.'
           git-user-name: 'Snap Counts Bot'

@@ -29,7 +29,9 @@
  *   node scripts/fetch-snap-counts.mjs --force      # Re-fetch (what the cron runs)
  *   node scripts/fetch-snap-counts.mjs --year 2024  # Specific season
  *
- * Output: data/theleague/nfl-cache/snap-counts-{YEAR}.json
+ * Output: data/nfl/snap-counts-{YEAR}.json — league-neutral, because NFLverse
+ * snap counts are NFL facts and MFL player ids are global across leagues, so
+ * BOTH free-agent pages read this one file.
  */
 import fs from 'node:fs';
 import path from 'node:path';
@@ -72,7 +74,7 @@ const leagueYear = getCurrentLeagueYear();
 const MFL_PLAYERS_PATH = path.join('data', 'theleague', 'mfl-feeds', String(leagueYear), 'players.json');
 const MFL_PLAYERS_FALLBACK = path.join('data', 'theleague', 'mfl-feeds', String(leagueYear - 1), 'players.json');
 
-const OUT_DIR = path.join('data', 'theleague', 'nfl-cache');
+const OUT_DIR = path.join('data', 'nfl');
 const OUT_FILE = path.join(OUT_DIR, `snap-counts-${SNAP_YEAR}.json`);
 
 // ── Main ────────────────────────────────────────────────────────────────────

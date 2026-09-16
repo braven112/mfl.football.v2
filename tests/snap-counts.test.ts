@@ -25,8 +25,16 @@ import { aggregateSnapCounts, matchToMflPlayers } from '../scripts/lib/snap-coun
 import { snapCountSeason, pickSnapCountSeason } from '../src/utils/snap-count-season.mjs';
 import { nflWeekOneKickoff } from '../src/utils/pecking-order-season-window.mjs';
 
-const PLAYERS_PAGE = path.join('src', 'pages', 'theleague', 'players.astro');
-const pageSource = fs.readFileSync(PLAYERS_PAGE, 'utf8');
+/**
+ * BOTH free-agent pages carry these columns and they are forked siblings, so
+ * every page assertion below runs over each of them. A rule that only one copy
+ * obeys is the bug class this repo calls sibling drift.
+ */
+const PLAYER_PAGES = [
+  path.join('src', 'pages', 'theleague', 'players.astro'),
+  path.join('src', 'pages', 'afl-fantasy', 'players.astro'),
+];
+const pageSources = new Map(PLAYER_PAGES.map((p) => [p, fs.readFileSync(p, 'utf8')]));
 
 /** One NFLverse row. `offense_pct` is a fraction (0-1), as NFLverse ships it. */
 const row = (over: Record<string, unknown>) => ({
@@ -155,30 +163,58 @@ describe('snap count aggregation', () => {
   });
 });
 
-describe('the Free Agents page', () => {
-  it('picks its snap file by season, never by filename sort', () => {
-    expect(pageSource).toContain('pickSnapCountSeason');
-    // `Object.keys(snapCountModules).sort().reverse()` is the original bug.
+describe.each(PLAYER_PAGES)('%s', (page) => {
+  const pageSource = pageSources.get(page)!;
+
+  it('resolves its snap season through the one shared rule', () => {
+    // Not a second copy of the pick, and not "newest filename wins" — which
+    // is the line that shipped the bug.
+    expect(pageSource).toContain('resolveSnapCounts');
     expect(pageSource).not.toMatch(/snapCountModules\)\s*\.sort\(\)\s*\.reverse\(\)/);
   });
 
-  it('feeds GP from the snap data beside it, not another season', () => {
-    expect(pageSource).toMatch(/games:\s*snapCountMap\.get\(p\.id\)\?\.games/);
+  it('reads the league-neutral snap file, not one league\'s copy', () => {
+    expect(pageSource).toContain("data/nfl/snap-counts-*.json");
+    expect(pageSource).not.toContain('nfl-cache/snap-counts');
+  });
+
+  it('keeps GP on the snap data beside it, not another season', () => {
+    // TheLeague fed this from lastYrGamesMap (fantasy scoring, a different
+    // season, empty in week 2) and rendered a dash next to 529 snaps. The
+    // AFL's rows carry a `games` of their own that means something else
+    // again, which is why the field is named for what it is.
+    expect(pageSource).toMatch(/data-sort="snapGames"/);
+    expect(pageSource).not.toMatch(/data-sort="games"/);
     expect(pageSource).not.toMatch(/games:\s*lastYrGamesMap\.get\(p\.id\)/);
   });
 
   it('stamps the season on every snap column', () => {
-    const headers = pageSource.match(/data-sort="(games|snaps|snapPct)"[\s\S]*?<\/th>/g) ?? [];
+    const headers = pageSource.match(/data-sort="(snapGames|snaps|snapPct)"[\s\S]*?<\/th>/g) ?? [];
     expect(headers).toHaveLength(3);
     for (const header of headers) {
       expect(header).toContain('snapSeasonLabel');
       expect(header).toContain('snapScopeTitle');
     }
   });
+
+  it('gates the header and the cell on the same flag, so columns cannot misalign', () => {
+    // A <th> the client's row builder has no matching <td> for shifts every
+    // column after it by one.
+    const headerGates = (pageSource.match(/\{hasSnapCounts && \(/g) ?? []).length;
+    expect(headerGates).toBe(3);
+    expect(pageSource).toMatch(/if \(hasSnapCounts\) \{/);
+    // The row builder runs in the browser and can only see what define:vars
+    // hands it.
+    expect(pageSource).toMatch(/define:vars=\{\{[^}]*hasSnapCounts/);
+  });
+
+  it('ships the shared header stylesheet rather than a scoped copy', () => {
+    expect(pageSource).toContain("styles/snap-columns.css");
+  });
 });
 
 describe('the committed snap-count data', () => {
-  const dir = path.join('data', 'theleague', 'nfl-cache');
+  const dir = path.join('data', 'nfl');
   const files = fs.readdirSync(dir).filter((f) => /^snap-counts-\d{4}\.json$/.test(f));
 
   it('holds a file for the season the page will ask for', () => {

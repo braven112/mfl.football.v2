@@ -28,6 +28,7 @@ import WatchListBridge from '../../components/shared/WatchListBridge.astro';
 import '../../styles/player-cell.css';
 import '../../styles/ranking-columns.css';
 import '../../styles/fa-claim-button.css';
+import '../../styles/snap-columns.css';
 import collegeLogos from '../../data/college-logos.json';
 import espnCollegeIds from '../../../data/theleague/espn-college-ids.json';
 import leagueConfig from '../../data/theleague.config.json';
@@ -35,7 +36,7 @@ import { getLeagueBySlug } from '../../config/leagues';
 import { resolveAuctionWindow } from '../../utils/auction-window';
 import { NO_HEADSHOT_SILHOUETTE, getPlayerAvatarBackground, getPlayerAvatarBorder, getPlayerAvatarRing, getPlayerAvatarRingDark, getPlayerAvatarStyleMaps } from '../../utils/nfl-team-colors';
 import { isDraftComplete } from '../../utils/draft-utils';
-import { pickSnapCountSeason, snapCountSeason } from '../../utils/snap-count-season.mjs';
+import { resolveSnapCounts } from '../../utils/snap-count-season.mjs';
 import { DEF_SPOTLIGHT_PLAYERS, getDefSpotlightPlayer } from '../../data/theleague/def-spotlight-players';
 import MyRankEditor from '../../components/shared/rankings/MyRankEditor.astro';
 
@@ -117,8 +118,10 @@ const lastYearWeeklyModules = import.meta.glob(
   '../../../data/theleague/mfl-feeds/20{2[5-9],[3-9][0-9]}/weekly-results-raw.json',
   { eager: true }
 );
+// NFL facts, not league data — one file serves both free-agent pages. See
+// src/utils/snap-count-season.mjs.
 const snapCountModules = import.meta.glob(
-  '../../../data/theleague/nfl-cache/snap-counts-*.json',
+  '../../../data/nfl/snap-counts-*.json',
   { eager: true }
 );
 const nflScheduleModules = import.meta.glob(
@@ -227,43 +230,20 @@ const weeklyPlayerResults = (nflScheduleData && Array.isArray(lastYearData))
   ? buildWeeklyPlayerResults(lastYearData, nflScheduleData, fpaData, playersDataForSeason, leagueData)
   : {};
 
-// Build snap count lookup (keyed by MFL player ID).
+// Snap counts (GP / Snaps / Snap%).
 //
 // The file is chosen by SEASON, never by "newest filename wins". Once the
 // season's official kickoff has passed these columns show that season, however
 // few weeks it holds; before kickoff they show the last completed one. The
-// rule lives in src/utils/snap-count-season.mjs — picking by sort order is how
-// the page spent the 2026 opener showing Kareem Hunt's 529 snaps from 2025.
-const snapCountMap = new Map<string, { snaps: number, pct: number, games: number }>();
-const snapFilesBySeason = new Map<number, any>();
-for (const [key, mod] of Object.entries(snapCountModules)) {
-  const data = getModuleData(mod);
-  if (!data?.players) continue;
-  const season = Number(data.season ?? key.match(/snap-counts-(\d{4})\.json$/)?.[1]);
-  if (Number.isFinite(season)) snapFilesBySeason.set(season, data);
-}
-const snapSeason = pickSnapCountSeason(snapFilesBySeason.keys(), nowRef);
-const snapData = snapSeason != null ? snapFilesBySeason.get(snapSeason) : null;
-for (const [mflId, stats] of Object.entries(snapData?.players ?? {}) as [string, any][]) {
-  snapCountMap.set(mflId, {
-    snaps: stats.offenseSnaps ?? 0,
-    pct: stats.offensePct ?? 0,
-    games: stats.gamesPlayed ?? 0,
-  });
-}
-const hasSnapCounts = snapCountMap.size > 0;
-// Label every snap column with the season it is actually reporting. In week 2
-// of a new season "Snaps 529" and "Snaps 41" are both plausible-looking
-// numbers; only the year tells them apart. `weeksCovered` is what makes a 58%
-// off one game legible as a one-game sample.
-const snapSeasonLabel = snapSeason != null ? `'${String(snapSeason).slice(2)}` : '';
-const snapWeeks: number = snapData?.weeksCovered ?? 0;
-const snapIsCurrentSeason = snapSeason === snapCountSeason(nowRef);
-const snapScopeTitle = snapSeason == null
-  ? ''
-  : snapIsCurrentSeason
-    ? `${snapSeason} regular season, through week ${snapWeeks}`
-    : `${snapSeason} regular season (complete) \u2014 the ${snapCountSeason(nowRef)} season has no snap data yet`;
+// whole decision — including the labels that name the season on screen — lives
+// in src/utils/snap-count-season.mjs and is shared with the AFL's page.
+// Picking by sort order is how this page spent the 2026 opener showing Kareem
+// Hunt's 529 snaps from 2025.
+const snapCounts = resolveSnapCounts(snapCountModules, nowRef);
+const snapCountMap = snapCounts.byPlayerId;
+const hasSnapCounts = snapCounts.has;
+const snapSeasonLabel = snapCounts.seasonLabel;
+const snapScopeTitle = snapCounts.scopeTitle;
 
 // Build projected scores lookup
 const projectedMap = new Map<string, number>();
@@ -495,7 +475,7 @@ interface PlayerRow {
   contractYrs: number | null;
   /** Fantasy franchise that rosters him, or null for a true free agent. */
   franchiseId: string | null;
-  games: number | null;
+  snapGames: number | null;
   ppg: number | null;
   salaryYear1: number | null;
   salaryYear2: number | null;
@@ -592,7 +572,10 @@ if (Array.isArray(allPlayers)) {
       // source). Feeding it from lastYrGamesMap put a fantasy-scoring
       // games count from a DIFFERENT season next to the snap totals, and
       // an empty current season rendered it as a dash beside 529 snaps.
-      games: snapCountMap.get(p.id)?.games ?? null,
+      // Named `snapGames`, not `games`: the AFL's rows already carry a
+      // `games` of their own (fantasy games, doubled by its duplicate-player
+      // conferences), and the two pages must not use one name for two things.
+      snapGames: snapCountMap.get(p.id)?.games ?? null,
       rookie: p.status === 'R',
       birthdate: p.birthdate ? parseInt(p.birthdate, 10) : null,
       jersey: p.jersey || null,
@@ -1122,7 +1105,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
               <div class="th-content">Wt</div>
             </th>
             {hasSnapCounts && (
-              <th class="sortable col-sm col-group--stats" data-sort="games" title={`Games with an offensive snap \u2014 ${snapScopeTitle}`}>
+              <th class="sortable col-sm col-group--stats" data-sort="snapGames" title={`Games with an offensive snap \u2014 ${snapScopeTitle}`}>
                 <div class="th-content"><span class="th-label">GP<small class="th-season">{snapSeasonLabel}</small></span></div>
               </th>
             )}
@@ -1926,9 +1909,9 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
           aVal = a.salary ?? a.auctionBid ?? -1;
           bVal = b.salary ?? b.auctionBid ?? -1;
           break;
-        case 'games':
-          aVal = a.games ?? -1;
-          bVal = b.games ?? -1;
+        case 'snapGames':
+          aVal = a.snapGames ?? -1;
+          bVal = b.snapGames ?? -1;
           break;
         case 'ppg':
           aVal = a.ppg ?? -1;
@@ -2259,7 +2242,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
       }
 
       if (hasSnapCounts) {
-        html += `<td class="cell-sm col-group--stats">${p.games != null ? p.games : '<span class="na">-</span>'}</td>`;
+        html += `<td class="cell-sm col-group--stats">${p.snapGames != null ? p.snapGames : '<span class="na">-</span>'}</td>`;
         html += `<td class="cell-sm col-group--stats">${p.snaps != null ? p.snaps : '<span class="na">-</span>'}</td>`;
         html += `<td class="cell-num col-group--stats">${p.snapPct != null ? p.snapPct.toFixed(1) + '%' : '<span class="na">-</span>'}</td>`;
       }
@@ -2476,7 +2459,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
   }
 
   // Columns that default to desc when first clicked
-  const descDefaults = new Set(['projected', 'exp', 'height', 'weight', 'lastYrPts', 'snaps', 'snapPct', 'contractYrs', 'salary', 'games', 'ppg', 'estimatedCost', 'salaryYear1', 'salaryYear2', 'salaryYear3', 'dollarValue', 'surplusValue', 'stealValue', 'auctionBid', 'auctionInitTime', 'auctionBidTime']);
+  const descDefaults = new Set(['projected', 'exp', 'height', 'weight', 'lastYrPts', 'snaps', 'snapPct', 'contractYrs', 'salary', 'snapGames', 'ppg', 'estimatedCost', 'salaryYear1', 'salaryYear2', 'salaryYear3', 'dollarValue', 'surplusValue', 'stealValue', 'auctionBid', 'auctionInitTime', 'auctionBidTime']);
 
   // CustomEvent-based API for the rankings module script to interact with this page.
   // All events use the document as the event bus — no global window properties needed.
@@ -3963,25 +3946,6 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
   .sort-arrow {
     font-size: 0.55rem;
     opacity: 0.8;
-  }
-  /* Season-stamped headers (GP / Snaps / Snap%). The year stacks UNDER the
-     label so the column keeps its width, and it sits inside .th-label rather
-     than .th-content so the sort arrow still lands beside the label. */
-  .th-label {
-    display: inline-flex;
-    flex-direction: column;
-    align-items: center;
-    line-height: 1.05;
-  }
-  .col-num .th-label { align-items: flex-end; }
-  .th-season {
-    /* The header colour is already muted; fading it further makes the one
-       thing these columns needed — which season this is — the least legible
-       text on the page. 0.85 keeps it subordinate and still readable. */
-    font-size: 0.6rem;
-    font-weight: 600;
-    opacity: 0.85;
-    letter-spacing: 0.02em;
   }
 
   /* Columns */
