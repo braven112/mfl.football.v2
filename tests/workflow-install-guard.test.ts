@@ -1,5 +1,5 @@
 import { describe, it, expect, afterAll } from 'vitest';
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { expectClean, scanForbidden, walkFiles, REPO_ROOT } from './helpers/scan-guard';
@@ -117,9 +117,24 @@ describe('pnpm version is single-sourced', () => {
  * transitively and fails with the exact `workflow → script → package` chain.
  */
 describe('no-install workflows run dependency-free scripts', () => {
-  // `node [--flags] scripts/x.mjs` / `node ./src/y.mjs`. `node -e` / `node -p`
-  // are inline code with no repo script and are not matched.
-  const NODE_SCRIPT_RE = /\bnode\s+(?:--?[^\s]+\s+)*(?:\.\/)?((?:scripts|src)\/[A-Za-z0-9._/-]+\.(?:mjs|js|ts))/g;
+  // A runner, then any number of intervening tokens, then a repo script.
+  // The tolerant middle is deliberate: the first version required every token
+  // between `node` and the path to start with a dash, so it missed
+  // `node --import tsx scripts/foo.ts` and every `npx`/`pnpm exec`/`tsx` form.
+  // Over-matching here is harmless (we check a script that may not run);
+  // under-matching means a job is never checked at all.
+  const RUNNERS = String.raw`(?:node|npx|tsx|ts-node|pnpm\s+exec|pnpm\s+dlx)`;
+  const SCRIPT_PATH = String.raw`(?:\.\/)?((?:scripts|src)\/[A-Za-z0-9._/-]+\.(?:mjs|js|ts))`;
+  const NODE_SCRIPT_RE = new RegExp(String.raw`\b${RUNNERS}\s+(?:[^\s;|&]+\s+)*?${SCRIPT_PATH}`, 'g');
+  // Any runner invocation at all — used to prove we classified every one.
+  // NOTE: these two are NOT global. `.test()` on a /g/ regex advances its
+  // lastIndex, and a shared instance then makes the NEXT file's matchAll start
+  // mid-string — which silently emptied the entrypoint list for every workflow
+  // sorted after the first one carrying a runner.
+  const ANY_RUNNER_TEST = new RegExp(String.raw`(^|[;&|(\s])${RUNNERS}(\s|$)`);
+  const NODE_SCRIPT_TEST = new RegExp(String.raw`\b${RUNNERS}\s+(?:[^\s;|&]+\s+)*?${SCRIPT_PATH}`);
+  // Inline code and version probes run no repo script and need no install.
+  const INLINE_NODE_RE = /\bnode\s+(?:-e|-p|--eval|--print|--check|-c|--version|-v)\b/;
   const INSTALLS_RE = /^[^#\n]*uses:\s*\.\/\.github\/actions\/setup\s*$/m;
 
   const workflows = walkFiles({ roots: [WORKFLOWS], extensions: EXTS }).map((file) => {
@@ -129,10 +144,23 @@ describe('no-install workflows run dependency-free scripts', () => {
         src
           .split('\n')
           .filter((line) => !line.trimStart().startsWith('#'))
-          .flatMap((line) => [...line.matchAll(NODE_SCRIPT_RE)].map((m) => m[1])),
+          .flatMap((line) => {
+            NODE_SCRIPT_RE.lastIndex = 0;
+            return [...line.matchAll(NODE_SCRIPT_RE)].map((m) => m[1]);
+          }),
       ),
     ].sort();
-    return { file, installs: INSTALLS_RE.test(src), entrypoints };
+    const unclassifiedRunners = src
+      .split('\n')
+      .map((line, i) => ({ line, n: i + 1 }))
+      .filter(({ line }) => !line.trimStart().startsWith('#'))
+      .filter(({ line }) => {
+        if (!ANY_RUNNER_TEST.test(line)) return false;
+        if (INLINE_NODE_RE.test(line)) return false;
+        return !NODE_SCRIPT_TEST.test(line);
+      })
+      .map(({ line, n }) => `${file}:${n}  ${line.trim()}`);
+    return { file, installs: INSTALLS_RE.test(src), entrypoints, unclassifiedRunners };
   });
 
   it('finds the node entrypoints it is meant to check', () => {
@@ -145,13 +173,25 @@ describe('no-install workflows run dependency-free scripts', () => {
   });
 
   it('every entrypoint a workflow names actually exists', () => {
-    const missing: string[] = [];
-    for (const { file, entrypoints } of workflows) {
-      for (const entry of entrypoints) {
-        if (!moduleGraph(entry).files.includes(entry)) missing.push(`${file} -> ${entry}`);
-      }
-    }
+    // existsSync, not moduleGraph().files — asking the walker whether it saw
+    // the file it was handed is a question it used to answer yes to for a
+    // path that does not exist, which made this assertion vacuous.
+    const missing = workflows.flatMap(({ file, entrypoints }) =>
+      entrypoints.filter((entry) => !existsSync(path.join(REPO_ROOT, entry))).map((entry) => `${file} -> ${entry}`),
+    );
     expect(missing, `workflows referencing scripts that are not on disk:\n  ${missing.join('\n  ')}`).toEqual([]);
+  });
+
+  it('classifies every runner invocation in a no-install workflow', () => {
+    // A guard that silently skips what it cannot parse is a guard that passes.
+    const unclassified = workflows.filter((w) => !w.installs).flatMap((w) => w.unclassifiedRunners);
+    expect(
+      unclassified,
+      'These lines invoke a runner in a workflow that installs nothing, but no repo script could be\n' +
+        'extracted from them — so nothing was checked. Either they are inline code (add the form to\n' +
+        'INLINE_NODE_RE), or the entrypoint regex needs to learn the shape:\n  ' +
+        unclassified.join('\n  '),
+    ).toEqual([]);
   });
 
   it('a workflow with no install reaches no node_modules package', () => {
@@ -159,8 +199,14 @@ describe('no-install workflows run dependency-free scripts', () => {
     for (const { file, installs, entrypoints } of workflows) {
       if (installs) continue;
       for (const entry of entrypoints) {
-        for (const [pkgName, importer] of moduleGraph(entry).packages) {
+        const graph = moduleGraph(entry);
+        for (const [pkgName, importer] of graph.packages) {
           offenders.push(`${file} -> ${entry} needs "${pkgName}" (imported by ${importer})`);
+        }
+        // An import we cannot resolve is unknown, not absent. Saying nothing
+        // about it is exactly the false negative this guard exists to prevent.
+        for (const dyn of graph.dynamicUnresolved) {
+          offenders.push(`${file} -> ${entry} has an unresolvable dynamic import: ${dyn}`);
         }
       }
     }
@@ -244,6 +290,38 @@ describe('moduleGraph sees every import shape', () => {
       ].join('\n'),
     );
     expect([...moduleGraph(entry).packages.keys()]).toEqual([]);
+  });
+
+  it('sees a specifier split across lines', () => {
+    // Valid JS, and invisible to a line-by-line scan — the shape a reviewer
+    // found missing in the first version of this walker.
+    const entry = write(
+      'multiline.mjs',
+      ['export async function p() {', "  return await import(", "    'pkg-wrapped'", '  );', '}'].join('\n'),
+    );
+    expect([...moduleGraph(entry).packages.keys()]).toEqual(['pkg-wrapped']);
+  });
+
+  it('expands a template-literal local import to the directory it names', () => {
+    mkdirSync(path.join(fixture, 'kinds'), { recursive: true });
+    writeFileSync(path.join(fixture, 'kinds', 'alpha.mjs'), "import 'pkg-from-alpha';\nexport const a = 1;\n");
+    writeFileSync(path.join(fixture, 'kinds', 'beta.mjs'), 'export const b = 2;\n');
+    const entry = write('loader.mjs', ['export const load = (k) => import(`./kinds/${k}.mjs`);'].join('\n'));
+
+    const graph = moduleGraph(entry);
+    expect([...graph.packages.keys()]).toEqual(['pkg-from-alpha']);
+    expect(graph.dynamicUnresolved).toEqual([]);
+  });
+
+  it('reports a dynamic import it cannot expand rather than ignoring it', () => {
+    const entry = write('opaque.mjs', ['export const load = (p) => import(`${p}`);'].join('\n'));
+    expect(moduleGraph(entry).dynamicUnresolved).toHaveLength(1);
+  });
+
+  it('does not report a file that does not exist as seen', () => {
+    // files.includes(entry) is used as an existence check; it must not just
+    // echo its argument back.
+    expect(moduleGraph('scripts/definitely-not-a-real-script.mjs').files).toEqual([]);
   });
 
   it('agrees with the real files the guard depends on', () => {
