@@ -60,14 +60,15 @@ export function parseYtdPlayerScores(payload) {
   const list = Array.isArray(rows) ? rows : rows ? [rows] : [];
   const map = new Map();
   for (const row of list) {
+    // A blank id is the placeholder row, never a player.
     if (!row?.id) continue;
     const score = parseFloat(row.score);
-    // Exact zero is dropped, anything else kept. MFL lists every player it has
-    // ever scored, so the pool is mostly 0.00 rows for people who have not
-    // played — those read better as "no data" than as a column of zeroes.
-    // NEGATIVES are kept on purpose: a defense can finish a season below zero,
-    // and that is a real total, not a missing one.
-    if (Number.isFinite(score) && score !== 0) map.set(String(row.id), score);
+    // EVERY finite score is kept, including 0 and negatives. A total MFL
+    // reports as 0.00 is a total we know; rendering it as "-" would claim we
+    // have no data on a player we do. Dropping zeroes also made the rule
+    // indefensible next to the negatives, which are kept because a defense can
+    // genuinely finish a season below zero — if -4.4 is a real total, so is 0.
+    if (Number.isFinite(score)) map.set(String(row.id), score);
   }
   return map;
 }

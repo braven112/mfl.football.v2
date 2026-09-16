@@ -626,7 +626,15 @@ const endpoints = [
     // season with no games yet comes back as a SINGLE BLANK ROW
     // (`{ id: '', score: '' }`) — which a plain row COUNT accepts, and which
     // is exactly what got committed over both leagues in the offseason.
-    // Require at least one row with a real id and a real score.
+    // Require at least one row with a real id and a POSITIVE score.
+    //
+    // Deliberately stricter than `parseYtdPlayerScores`, which keeps every
+    // finite score including 0. That asymmetry is the protection: the reader
+    // is describing a payload we already trust, while this is deciding whether
+    // to overwrite a good committed feed with a fresh one. A payload of all
+    // zeroes is what a season looks like BEFORE it has been played, so
+    // accepting it here would let the preseason quietly flatten a real feed.
+    // Do not "fix" the mismatch by relaxing this side.
     parser: (t) => {
       const data = JSON.parse(t);
       const rows = data?.playerScores?.playerScore;

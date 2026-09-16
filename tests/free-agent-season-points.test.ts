@@ -61,7 +61,7 @@ describe('stats season resolves on the league start day, not Labor Day', () => {
 });
 
 describe('YTD payload parsing', () => {
-  it('reads real scores, keeps negatives, drops zeroes and blank rows', () => {
+  it('reads real scores, keeps negatives AND zeroes, drops blank rows', () => {
     const map = parseYtdPlayerScores({
       playerScores: {
         week: 'YTD',
@@ -77,7 +77,10 @@ describe('YTD payload parsing', () => {
     });
     expect(map.get('13589')).toBe(414.62);
     expect(map.get('0507')).toBe(-4.4);
-    expect(map.has('15929')).toBe(false);
+    // 0.00 is a total we KNOW, not a total we are missing. Rendering it as a
+    // dash would claim no data on a player MFL just reported on, and would be
+    // impossible to square with keeping the negative above.
+    expect(map.get('15929')).toBe(0);
     expect(map.has('')).toBe(false);
   });
 
