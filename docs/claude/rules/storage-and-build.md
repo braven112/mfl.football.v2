@@ -127,6 +127,46 @@ walks each no-install workflow's `node …` entrypoints transitively
 `package.json`.
 
 
+## A job that PUSHES must check out with the deploy key
+
+GitHub will not start a workflow from a push made with the default
+`GITHUB_TOKEN`. That is deliberate loop-prevention on their side, and it is
+**silent**: the push succeeds, the branch moves, and nothing runs.
+
+`staging-merge-down.yml` checked out without `ssh-key`, so every commit it put
+on `staging` arrived under that token. `ci.yml` declares
+`push: branches: [staging]` and had never once fired for them — measured
+2026-09-16: **zero** workflow runs on staging's tip, and zero on the three
+merge-down commits before it. Two things broke, neither of which announced
+itself:
+
+- `staging` is not a scratch branch. Real owners browse it at
+  `staging.theleague.us` and it writes to production's Upstash, and it had been
+  serving merge-down commits no test ever ran against.
+- `/promote` step 4 refuses a tip with no check runs — the right call — and the
+  tip is a merge-down commit on almost every release, because `main` takes ~30
+  bot data commits a week. The release gate would have blocked essentially every
+  promotion, for a reason that reads like a broken check rather than a real
+  finding, which is the fastest way to teach someone to wave a gate through.
+
+So: **if a job pushes commits or tags, that job's checkout carries
+`ssh-key: ${{ secrets.DEPLOY_KEY }}`.** This is not about permission — the
+default token can push fine — it is about whether anything downstream notices.
+
+Pushing is **three** mechanisms, not one, and a guard that knows only the first
+passes the rest by never looking at them: `git push` in a `run:` step, the
+shared `./.github/actions/commit-push`, and `scripts/commit-feed-and-push.mjs`
+(the concurrent-safe commit+push helper ten workflows invoke).
+
+Guard: `tests/workflow-push-triggers-ci.test.ts` — parses each workflow and
+checks per JOB, not per file, because `mfl-integration-test.yml` has two
+checkouts and a file-level match lets the key on the non-pushing one vouch for
+the pushing one. It also refuses to mistake prose for a push:
+`roger-date-audit.yml` names `git push` in a header comment and in an `echo`
+telling a human what to run locally, and pushes nothing. Routed by the
+`github-workflows` domain.
+
+
 ## Astro 7 — strict Rust compiler, pinned compressHTML
 
 Upgraded to Astro 7 (Vite 8/Rolldown, @astrojs/vercel 11) in July 2026.

@@ -45,6 +45,30 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
         with:
+          # THE DEPLOY KEY IS WHAT MAKES CI RUN ON `staging` AT ALL.
+          #
+          # Without it this job pushes with the default GITHUB_TOKEN, and
+          # GitHub's loop-prevention rule says a push made with GITHUB_TOKEN
+          # triggers NO workflows. `ci.yml` declares `push: branches: [staging]`
+          # and still never fired, because every commit reaching staging from
+          # here arrived under that token.
+          #
+          # Two consequences, both found on 2026-09-16 while running /promote
+          # for the first time:
+          #
+          #   1. `staging` — which real owners browse at staging.theleague.us —
+          #      had been serving merge-down commits that no test ever ran
+          #      against. Measured: 0 workflow runs on staging's tip, and 0 on
+          #      the three merge-down commits before it.
+          #   2. /promote step 4 refuses a tip with no check runs ("an empty
+          #      result means that job did not fire and the tip is untested"),
+          #      and the tip is a merge-down commit on almost every release —
+          #      so the gate would have blocked essentially every promotion, for
+          #      a reason that looks like a broken check rather than a real one.
+          #
+          # weekly-changelog-rollup.yml already pushes with this key for the
+          # same reason. Never drop back to the default token here.
+          ssh-key: ${{ secrets.DEPLOY_KEY }}
           # Full history: a merge needs both sides' commits, and the default
           # fetch-depth of 1 cannot produce a merge base.
           fetch-depth: 0
