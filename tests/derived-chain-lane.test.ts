@@ -91,6 +91,29 @@ describe('the chain script', () => {
   });
 });
 
+/**
+ * prebuild runs the same producers, step by step, and commits nothing. That
+ * duplication is deliberate — `pipelineScripts()` derives the set a preview
+ * build must watch from prebuild's own `pnpm run` names, so hiding the
+ * producers behind the chain script would let an edit to one preview against
+ * the stale committed file. This pins the two lists together.
+ */
+describe('prebuild recomputes the same chain, without committing it', () => {
+  it('runs every chain producer as a watched step', async () => {
+    const { pipelineScripts } = await import('../scripts/prebuild.mjs');
+    const watched = pipelineScripts();
+    for (const step of chainSteps()) {
+      expect(watched.has(step.script), `${step.script} is not a watched prebuild step`).toBe(true);
+    }
+  });
+
+  it('never passes the milestone flag from the build path', () => {
+    expect(readFileSync(path.join(ROOT, 'scripts/prebuild.mjs'), 'utf8')).not.toContain(
+      EMIT_MILESTONE_POSTS_FLAG
+    );
+  });
+});
+
 describe('timestamp-only rewrites', () => {
   const doc = (generatedAt: string, rows: unknown[]) =>
     JSON.stringify({ generatedAt, league: 'x', rows }, null, 2);
