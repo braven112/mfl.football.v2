@@ -155,6 +155,8 @@ EDIT scripts/fetch-mfl-feeds.mjs                           # + per-week playerSc
 EDIT scripts/prebuild.mjs                                  # + compute:top-players
 EDIT package.json                                          # + compute:top-players script
 EDIT src/data/page-directory.json                          # + entry, 10+ tags
+EDIT src/config/nav-config.json                            # + nav item AND routeEquivalence entry
+EDIT src/pages/theleague/stats.astro                       # + a section for the new subcategory
 EDIT src/data/weekly-changelog-staging.json                # + one-line staged change
 EDIT src/utils/hero-recap-destination.ts                   # /top-players?week=N; drop the article branch
 EDIT tests/hero-recap-destination.test.ts                  # asserts the exact objects, both leagues
@@ -382,16 +384,87 @@ Each of these is a bug that shipped here before.
 8. **Guard test.** Wire the new files into `.claude/hooks/path-guard.json` so
    the suite runs on every edit in this territory;
    `tests/path-guard-map.test.ts` fails on a glob that matches nothing.
+9. **Nav is a SECOND registry, and `page-directory.json` is not it.**
+   `src/config/nav-config.json` needs two separate additions:
+   - an item under the right `sections[].items[]` (no `leagueOnly`, since both
+     leagues get the page — contrast `/players`, which is listed **twice** with
+     `leagueOnly: "theleague"` and `leagueOnly: "afl"` because its two copies
+     carry different descriptions);
+   - a `routeEquivalence` entry (`"/top-players": "/top-players"`). That map
+     feeds `getEquivalentRoute` → `buildSwitchUrl` (`src/utils/nav-utils.ts:507`),
+     which is what the nav's league switcher uses to land you on the *same*
+     page in the other league.
+
+   **Note what that second entry does to rule 4.** Adding it is what makes
+   `/theleague/top-players` → `/afl-fantasy/top-players` a one-click,
+   same-origin navigation — i.e. a ClientRouter *swap*, not a fresh document.
+   The `data-league` gate is therefore load-bearing from the moment this entry
+   exists, not a theoretical precaution.
+10. **The `/stats` hub renders by `subcategory`, and none of the five existing
+   sections fits.** `src/pages/theleague/stats.astro` groups on a hardcoded
+   `SECTIONS` list — `team-comparisons`, `league-history`, `salary-analytics`,
+   `awards`, `free-agency`. A page-directory entry with no `subcategory` (or an
+   unlisted one) is simply absent from the hub. Add a **`player-stats`** section
+   to that list and tag the entry with it; otherwise the page is reachable only
+   from nav and search. This is also the natural home for `/mvp` later.
+11. **Do not add `prerender = true`.** `astro.config.ts` sets `output: 'server'`,
+   so SSR is the default and nothing needs declaring. A prerendered target is a
+   static CDN file with no SSR route, which 404s the apex-domain rewrite — the
+   reasoning is written out at the top of `src/pages/afl-fantasy/players.astro`.
+12. **No service-worker work.** `public/sw.js` precaches only `OFFLINE_URL`;
+   there is no per-route list to add to. Checked, not assumed.
 
 ---
 
-## 7. Phases
+## 7. Scale, and the three unknowns to settle in Phase 1
+
+**The table is small.** Week 1 2026 returns **484 rows** per league from
+`playerScores`, of which **369** (TheLeague) and **337** (AFL) scored above
+zero. A season's union of anyone who scored at least one week lands in the high
+hundreds, not thousands. That means a plain client-side sorted table with
+expandable rows is fine — **no virtualization, no pagination, no server-side
+sort.** Do not build for a scale this does not have.
+
+Three things the first real fetch has to confirm, because they cannot be
+checked from here (MFL egress is proxy-blocked from Claude Code web sandboxes —
+`CONNECT tunnel failed, response 403`, noted twice in
+`insights/domains/mfl-api.md`; don't burn time trying to curl it):
+
+1. **Is 484 the pool, or a default `COUNT` cap?** `playerScores` takes an
+   optional `COUNT` param (`docs/features/mfl-api.md`). 484 identical rows for
+   two different leagues is consistent with either "the same NFL pool" or "the
+   same default limit". If it is a cap, the page silently loses the tail of
+   every position — exactly the failure the keeper report card hit from the
+   other direction. Check the row count against an explicit high `COUNT` on the
+   first run and pin whichever answer is true in the fetch entry's comment.
+2. **Does `W=<n>` work for a *past* week the way `W=YTD` was never verified
+   to?** The YTD entry was removed before anyone confirmed it live. Fetch week
+   1 and week 2 separately and assert they differ before trusting the loop.
+3. **What does this cost `.git`?** `playerScores.json` is 55 KB for one week,
+   so `player-scores-weekly.json` lands near **1 MB per league per season**,
+   rewritten daily in-season. That is ~4× `weekly-results-raw.json` (278 KB)
+   and it is why the canonical sorted write is not optional: MFL returns arrays
+   in nondeterministic order, and a plain `writeFileSync` + byte diff is what
+   regrew `.git` to 7 GB once already
+   (`docs/claude/rules/storage-and-build.md`). Confirm a re-run of an unchanged
+   week produces a **zero-byte diff** before letting the cron near it.
+
+**Playoff weeks count.** `league.json` carries `lastRegularSeasonWeek: 14` and
+`endWeek: 17`, so weeks 15–17 are the fantasy playoffs. Player scores exist for
+them regardless of whose fantasy team is still alive, so the season total spans
+`startWeek..endWeek` and does not stop at 14. Mark 15–17 in the week selector
+so a reader knows why the field thins.
+
+---
+
+## 8. Phases
 
 **Phase 1 — data.** Add the per-week `playerScores` loop to
 `fetch-mfl-feeds.mjs` (week range from `league.json`, daily-only, live-week
 merge, error-body guard). Run it once against both leagues, commit the feeds,
-eyeball week 1 against the known top scorers. *Nothing renders yet; this is
-the phase that can't be faked.*
+eyeball week 1 against the known top scorers, and settle all three unknowns in
+§7 before moving on. *Nothing renders yet; this is the phase that can't be
+faked.*
 
 **Phase 2 — derived payload.** `scripts/compute-top-players.mjs` + prebuild
 wiring + `tests/top-players-data.test.ts` pinning: totals equal the sum of
@@ -421,7 +494,7 @@ tokens, empty state before week 1 of a season, changelog + screenshot.
 
 ---
 
-## 8. Deferred, on purpose
+## 9. Deferred, on purpose
 
 - **Career / all-time totals.** Needs full-pool weekly data for 2007–2026,
   which would be a one-time backfill of ~18 × 20 years × 2 leagues ≈ 700 MFL
@@ -436,6 +509,10 @@ tokens, empty state before week 1 of a season, changelog + screenshot.
   lines and kills the cross-league init-gate hazard for that pair outright.
 - **Projections alongside actuals.** `projectedScores.json` is already fetched
   per league; a "vs projection" column is cheap once the table exists.
+- **A `/guides` page.** `src/data/guides.json` has exactly **one** entry
+  (`sunday-ticket`), so guides are reserved for features a changelog line
+  genuinely cannot carry. A sortable stats table probably is not one. Revisit
+  only if the week view or the position modes need explaining.
 - **A Schefter link, not asked for.** `DESTINATIONS` in
   `scripts/article-utils/article-links.mjs` is the registry Schefter columns
   link through, and `weekly-recap.mjs` already builds a "top scorers per team"
