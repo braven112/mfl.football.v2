@@ -1009,7 +1009,14 @@ const run = async () => {
       console.log(`Fetching current-week weeklyResults from ${redactUrl(liveUrl)}`);
       const live = JSON.parse(await fetchTextWithRetry(liveUrl, 3, 1500));
       const liveWeek = Number(live?.weeklyResults?.week);
-      const hasMatchups = live?.weeklyResults?.matchup != null;
+      // `!= null` is not enough: MFL's `matchup` is a bare object when a week
+      // has one pairing, an array when it has several, and an EMPTY array is a
+      // week it has nothing to say about. An empty array is non-null, so it
+      // would sail past a null check and replace a committed week with nothing.
+      const liveMatchup = live?.weeklyResults?.matchup;
+      const hasMatchups = Array.isArray(liveMatchup)
+        ? liveMatchup.length > 0
+        : liveMatchup != null;
       let existing = [];
       try {
         existing = JSON.parse(fs.readFileSync(path.join(outDir, 'weekly-results-raw.json'), 'utf8'));
