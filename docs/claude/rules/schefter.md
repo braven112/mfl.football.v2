@@ -314,6 +314,21 @@ season.
   archives — the opposite failure, a warning that silently never posts.
   `assistantPostId` carries the season year for exactly this reason, and it
   throws rather than defaulting one.
+- **Which is why this check is NOT for every dedup in the system.** Two other
+  shapes are deliberately live-feed-only and must stay that way:
+  - **Watermark-driven scanners.** `schefter-scan.mjs`'s ESPN and NFL-wire
+    lanes gate on `pubDate > watermarkDate` and only then check the feed; the
+    watermark is the real protection and the feed check is a belt (its own
+    comment says "in case watermark got out of sync"). Nothing can rotate out
+    from under a watermark.
+  - **Recurring reminders with season-less ids.** `roger_<eventId>_<touchId>`
+    (`schefter-scan.mjs`) is built from constants like `trading-deadline` and
+    `rookie-draft` — the SAME id every year. Live-feed-only is what makes next
+    season's trade-deadline reminder fire at all; make it archive-aware and
+    every recurring Roger reminder goes silent forever after its first
+    rotation. If that id ever needs the archive check, it needs a season in it
+    FIRST — and note that changing it mid-season re-posts the live reminders
+    once.
 - **`--week` does not waive the season guard for a type whose id ignores the
   week.** `schefter-weekly-articles.mjs` derives that from `config.id` rather
   than a per-type flag. For `schedule-release`, `draft-grades`, `team-grades`,
