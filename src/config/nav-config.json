@@ -260,6 +260,24 @@
       "defaultOpen": "off-season",
       "links": [
         {
+          "id": "league-planner",
+          "label": "League Planner",
+          "icon": "wallet",
+          "path": "/front-office",
+          "external": false,
+          "description": "Plan next season's roster — extensions, cap space and every salary tool"
+        },
+        {
+          "id": "rosters",
+          "label": "Roster/Salary",
+          "labelAFL": "Rosters",
+          "icon": "banknote",
+          "iconAFL": "helmet",
+          "path": "/rosters",
+          "external": false,
+          "description": "View all team rosters and salary cap details"
+        },
+        {
           "id": "schedule-release",
           "label": "Schedule Release",
           "icon": "calendar",
@@ -334,15 +352,6 @@
           "description": "Hindsight grades for every keeper class — hits, misses, and the ones that got away"
         },
         {
-          "id": "next-year",
-          "label": "League Planner",
-          "icon": "chalkboard",
-          "path": "/rosters?view=planner",
-          "external": false,
-          "leagueOnly": "theleague",
-          "description": "Phase-aware offseason planner with free agent needs analysis"
-        },
-        {
           "id": "import-rankings",
           "label": "Import Rankings",
           "icon": "clipboard",
@@ -358,25 +367,6 @@
           "external": false,
           "visibility": "admin",
           "description": "Personalized player rankings with drag-and-drop reordering"
-        }
-      ]
-    },
-    {
-      "id": "cap-contracts",
-      "label": "Front Office",
-      "phaseOrder": {
-        "inSeason": 3,
-        "offSeason": 3
-      },
-      "defaultOpen": "never",
-      "links": [
-        {
-          "id": "front-office",
-          "label": "Front Office",
-          "icon": "wallet",
-          "path": "/front-office",
-          "external": false,
-          "description": "Contracts, cap space, trades and every salary report — one door"
         }
       ]
     },

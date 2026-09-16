@@ -1091,3 +1091,47 @@ per DOCUMENT rather than per `astro:page-load` — the ClientRouter keeps one
 document, so a per-load registration stacks a listener per page visited. The
 per-load pass is only the sweep that clears what this device already
 dismissed. `NavFooter` keeps no copy; the guard test fails if one grows back.
+
+## 2026-09-16 — The Highest-Popularity Page Fell Out of the Nav
+
+Collapsing Cap & Contracts into one Front Office entry took `/rosters` out of
+the drawer with it. That page is `popularity: 100` in `page-directory.json`,
+the highest on the site, and the AFL was left with **no** `/rosters` link at
+all — TheLeague at least kept `?view=coach` and `?view=planner`, both
+`theleague`-only. Both are back now: League Planner first in Offseason War
+Room, Rosters second, and the Front Office section is gone (a category wrapping
+one self-titled link).
+
+Two things worth keeping.
+
+**A `?view=` alias can live four lines below the list you read.** The removed
+"League Planner" entry pointed at `/rosters?view=planner`, tagged
+`theleague`-only, and TheLeague's `rosters.astro` has no `planner` tab and no
+`data-view-content="planner"` container — its view containers are `roster`,
+`analytics` and `nextyear`. I called the link dead on that evidence and was
+wrong: the client script's `validViews` array (~line 10381) is followed
+immediately by an alias, `urlViewParam === 'planner' ? 'nextyear'`, and the
+`nextyear` tab's own `aria-label` is literally "League Planner". The link
+worked. **Grepping `data-view-content` is necessary and not sufficient — read
+the switch that consumes the param, not just the containers it can land on.**
+
+That makes this change a REPOINT, not a cleanup: TheLeague's nav League
+Planner moves from the `rosters.astro` planner tab to `/front-office`, which
+is the deliberate narrowed re-derivation of it (see
+`src/utils/front-office-planner-data.ts`'s header). Intended — but it leaves
+the footer and site search naming the OLD one, because both resolve the
+page-directory id `league-planner`, whose path is still
+`/rosters?view=planner`. Two chrome surfaces, one name, two destinations. The
+duplicate-label guard below is nav-only and cannot see that.
+
+**Duplicate-label checks belong PER RENDERED LEAGUE, not per section.**
+`/front-office` renders the League Planner for TheLeague and the Keeper Planner
+for the AFL, so `labelAFL: "Keeper Planner"` looked right — and collided with
+the existing `/keepers` entry of that exact name, giving the AFL two different
+pages under one label. The entry is plain "League Planner" in both leagues now.
+The guard added for it failed on its first run against that very change, then
+failed AGAIN incorrectly when written per section: several sections carry a
+deliberate `theleague`/`afl` pair (This Week has two "Live Scoring" and two
+"Free Agents", exactly one of each rendering). The invariant is that no single
+league sees a repeated name — filter by `leagueOnly` first, resolve `labelAFL`,
+then compare. `tests/front-office-section.test.ts` pins it.

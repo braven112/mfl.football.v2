@@ -9,6 +9,7 @@ import {
   routePathOf,
   type FrontOfficeLeagueSlug,
 } from '../src/components/shared/front-office-nav/front-office-pages';
+import { getVisibleLinks, getLinkLabel } from '../src/utils/nav-utils';
 
 /**
  * The Front Office section: a hub whose PRIMARY content is now the League
@@ -270,22 +271,77 @@ describe('every Front Office page has a way back', () => {
 });
 
 describe('nav', () => {
-  it('collapses Cap & Contracts down to one Front Office link', () => {
-    const link = navLinks.find((l: any) => l.id === 'front-office');
-    expect(link?.path).toBe('/front-office');
-    expect(link?.leagueOnly).toBeUndefined();
+  const warRoom = (navConfig.sections as any[]).find((s) => s.id === 'offseason-war-room');
+
+  it('has no Front Office section — the hub is a link, not a category', () => {
+    expect((navConfig.sections as any[]).find((s) => s.id === 'cap-contracts')).toBeUndefined();
+    expect(navLinks.find((l: any) => l.id === 'front-office')).toBeUndefined();
   });
 
   it('drops the old per-page nav links', () => {
-    for (const id of ['rosters', 'contracts', 'trade-builder', 'projected-free-agents']) {
+    // `rosters` is deliberately NOT in this list — see below. These three
+    // moved into the hub's tool rail and have no nav entry of their own.
+    for (const id of ['contracts', 'trade-builder', 'projected-free-agents']) {
       expect(navLinks.find((l: any) => l.id === id)).toBeUndefined();
     }
   });
 
-  it('names the section "Front Office" for both leagues, not "Roster & Trades"', () => {
-    const section = (navConfig.sections as any[]).find((s) => s.id === 'cap-contracts');
-    expect(section?.label).toBe('Front Office');
-    expect(section?.labelAFL).toBeUndefined();
+  it('opens Offseason War Room with League Planner, then Rosters', () => {
+    expect(warRoom.links[0].id).toBe('league-planner');
+    expect(warRoom.links[0].path).toBe('/front-office');
+    expect(warRoom.links[1].id).toBe('rosters');
+    expect(warRoom.links[1].path).toBe('/rosters');
+  });
+
+  it('serves both full-format leagues from one untagged entry each', () => {
+    // nav-utils reads an untagged link as "every full-format league" and
+    // best-ball is opt-in, so one entry covers TheLeague and the AFL while
+    // Best Ball keeps its own tagged Rosters and gains no duplicate. Each
+    // carries an AFL label because the AFL calls both of these something else.
+    for (const link of warRoom.links.slice(0, 2)) {
+      expect(link.leagueOnly, `${link.id} should not be league-tagged`).toBeUndefined();
+    }
+    // Rosters carries an AFL label because the AFL drops the "/Salary" half.
+    expect(warRoom.links[1].labelAFL).toBe('Rosters');
+    // League Planner deliberately does NOT: an AFL label of "Keeper Planner"
+    // would collide with the existing /keepers entry of that name.
+    expect(warRoom.links[0].labelAFL).toBeUndefined();
+  });
+
+  it('sends League Planner to /front-office, not the rosters planner tab', () => {
+    // Both destinations work — `?view=planner` aliases to rosters.astro's
+    // `nextyear` view, whose own tab is labelled "League Planner" — so this is
+    // a repoint, not a dead-link cleanup. One name, one destination:
+    // /front-office is the surface that renders a planner in BOTH leagues,
+    // while the rosters tab is TheLeague's alone.
+    expect(navLinks.find((l: any) => l.path === '/rosters?view=planner')).toBeUndefined();
+  });
+
+  it('never shows one league two links with the same name in a section', () => {
+    // Per RENDERED league, not per section: several sections carry a tagged
+    // pair on purpose (This Week has a theleague and an afl "Live Scoring",
+    // and the same for "Free Agents"), and exactly one of each pair renders.
+    // What must never happen is one league seeing the same name twice — which
+    // is what a second "League Planner" would have been.
+    //
+    // Both filter and label come from nav-utils, not from a copy of its rules:
+    // a hand-rolled `labelAFL ?? label` would keep passing if the renderer's
+    // own resolution ever changed, which is the one thing this guard exists to
+    // notice. `franchiseId: '0001'` is an admin in every league, so the set
+    // checked is the WIDEST any viewer sees — an owner-only or admin-only link
+    // colliding with a public one is still a collision.
+    for (const league of ['theleague', 'afl', 'bb1'] as const) {
+      for (const section of navConfig.sections as any[]) {
+        if (section.leagueOnly && section.leagueOnly !== league) continue;
+        const names = getVisibleLinks(section, league, '0001').map((link) =>
+          getLinkLabel(link, league),
+        );
+        expect(
+          new Set(names).size,
+          `${league} sees a repeated name in ${section.id}: ${names.join(', ')}`,
+        ).toBe(names.length);
+      }
+    }
   });
 });
 
