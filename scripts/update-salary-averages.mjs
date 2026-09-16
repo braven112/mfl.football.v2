@@ -5,6 +5,7 @@ import os from 'node:os';
 import { getNonEmpty } from './lib/env.mjs';
 import { ALL_LEAGUES, getLeagueById, LEAGUES, DEFAULT_LEAGUE_SLUG, DEFAULT_LEAGUE_ID } from '../src/config/leagues-data.mjs';
 import { writeJsonIfChanged } from './lib/canonical-json.mjs';
+import { buildPlayerPoints } from './lib/player-season-points.mjs';
 
 const projectRoot = path.resolve(fileURLToPath(new URL('..', import.meta.url)));
 const dataDir = path.join(projectRoot, 'src', 'data');
@@ -701,28 +702,9 @@ const writeJson = async (filePath, data) => {
 
 const timestampSlug = () => new Date().toISOString().replace(/[:]/g, '-');
 
-const buildPlayerPoints = (weeklyPayload, maxWeek = null) => {
-  const totals = new Map();
-  const weeklyResults = ensureArray(
-    weeklyPayload?.allWeeklyResults?.weeklyResults ??
-      weeklyPayload?.weeklyResults
-  );
-  weeklyResults.forEach((entry) => {
-    const weekNumber = Number.parseInt(entry?.week ?? entry?.weekNumber ?? entry?.W ?? 0, 10) || 0;
-    if (maxWeek && weekNumber > maxWeek) return;
-    ensureArray(entry?.matchup).forEach((matchup) => {
-      ensureArray(matchup?.franchise).forEach((franchise) => {
-        ensureArray(franchise?.player).forEach((player) => {
-          const id = player?.id;
-          const score = Number.parseFloat(player?.score ?? 0);
-          if (!id || Number.isNaN(score)) return;
-          totals.set(id, (totals.get(id) ?? 0) + score);
-        });
-      });
-    });
-  });
-  return totals;
-};
+// Per-player points, each week counted ONCE — a doubleheader week lists the
+// same lineup under both of a franchise's games. See the module header.
+// (scripts/lib/player-season-points.mjs)
 
 const dataDirName = `mfl-salary-cache-${leagueId}-${season}`;
 const cacheDir =

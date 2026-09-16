@@ -2,6 +2,16 @@
   "$comment": "Path → guard-tests → rules-doc map consumed by .claude/hooks/path-guard.mjs on every Write/Edit. Globs use Node's path.matchesGlob against repo-relative paths. Keep each domain's tests FAST (scan-style guards, pure-function suites) — they run on every edit that matches. tests/path-guard-map.test.ts validates this file: every glob must match a real file, every test and rules doc must exist, and every docs/claude/rules/*.md must be routed by at least one domain.",
   "domains": [
     {
+      "name": "salary-points",
+      "paths": [
+        "scripts/update-salary-averages.mjs",
+        "scripts/lib/player-season-points.mjs"
+      ],
+      "tests": [
+        "tests/player-season-points.test.ts"
+      ]
+    },
+    {
       "name": "accounting",
       "rules": "docs/claude/rules/accounting.md",
       "paths": [
