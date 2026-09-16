@@ -291,7 +291,8 @@
         "tests/workflow-feature-flag-guard.test.ts",
         "tests/league-literal-guard.test.ts",
         "tests/mfl-integration-rollback-guard.test.ts",
-        "tests/workflow-install-guard.test.ts"
+        "tests/workflow-install-guard.test.ts",
+        "tests/changelog-rollup-trigger.test.ts"
       ]
     },
     {
@@ -566,6 +567,9 @@
         "src/components/shared/guides/*.astro",
         "src/pages/*/guides/*.astro",
         "scripts/weekly-changelog-rollup.mjs",
+        "scripts/changelog-rollup-gate.mjs",
+        "scripts/wait-for-whats-new-live.mjs",
+        "src/data/whats-new-archive/*.json",
         "scripts/push-weekly-changelog.mjs",
         "scripts/lib/weekly-changelog-format.mjs",
         "src/components/shared/whats-new/*.astro",
@@ -580,7 +584,8 @@
         "tests/whats-new-cross-league.test.ts",
         "tests/guides-data.test.ts",
         "tests/weekly-changelog-format.test.ts",
-        "tests/whats-new-category-styles.test.ts"
+        "tests/whats-new-category-styles.test.ts",
+        "tests/changelog-rollup-trigger.test.ts"
       ]
     },
     {
