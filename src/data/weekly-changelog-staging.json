@@ -322,6 +322,14 @@
       "impact": "user",
       "area": "free-agents",
       "league": "both"
+    },
+    {
+      "date": "2026-09-15",
+      "type": "bug-fix",
+      "summary": "Waiver deadlines keep the right hour after the November clock change. They were about to read an hour early, closing claims on the site while the window was still open.",
+      "impact": "user",
+      "area": "free-agents",
+      "league": "both"
     }
   ]
 }
