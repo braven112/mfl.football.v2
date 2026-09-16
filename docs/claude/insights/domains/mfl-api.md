@@ -3313,3 +3313,52 @@ proof job was built and then cut — it was most of the change's risk for none o
 its value. Before deleting the stored cookie secrets, put the proof somewhere
 that re-answers "is it still true", and note `probe-write-auth.mjs` reports its
 matrix and exits 0, so it needs a failure mode first.
+
+---
+
+## 2026-09-15 - `playerScores` Has No Season In It, And Summing `weekly-results-raw` Double-Counts In The AFL
+
+**Context:** The AFL roster page showed an "Avg" column and no season total.
+The user asked for total points and for Avg to use current-season stats.
+
+**Insight 1 — averaging `playerScores.json` is averaging one week.** The feed
+is fetched with no `W=`, and MFL answers a W-less `TYPE=playerScores` with the
+CURRENT WEEK ALONE (the 2026-08-10 entry above established the shape; this is
+the second consumer it bit). `aggregateScores` took the mean of every entry in
+the file, which is the mean of one week — so from week 2 onward the column
+silently meant "last week's score" under a season label, and there was no total
+to compute at all. It looked correct in week 1, which is exactly when someone
+would have checked it.
+
+**Insight 2 — the fix's own trap: never SUM per-player rows in
+`weekly-results-raw`.** Two AFL facts multiply a naive sum:
+
+- the same NFL player is routinely rostered in BOTH conferences (Breece Hall
+  sat on 0001 and 0024 every week of 2025), and
+- the AFL plays double-header weeks (weeks 1 and 12 in 2026; 1, 2 and 13 in
+  2025), where a franchise appears in two matchups and its players' scores are
+  listed again.
+
+A player therefore appears 2× in a normal week and 4× in a double-header. The
+canonical `processWeeklyScores` (`src/utils/coach-data.ts`) returns
+`Map<playerId, Record<week, score>>` — keyed by week, so duplicates collapse by
+construction. Anything computing a season total must go through it, never over
+the rows.
+
+**The denominator, verified against a full season.** A bye carries NO `score`
+key at all (Hall's week 9, NYJ's 2025 bye); a real 0.00 is present. So
+"weeks with a numeric score" is games played, and total ÷ that is points per
+game. Hall's 2025: 209.7 in 16 games = 13.1 — matches hand-summing his scored
+weeks with the bye excluded and no double count.
+
+**Coverage limit, measured rather than assumed:** `weekly-results-raw` records
+a player only for weeks some roster held him, so free-agent weeks are invisible
+(`playerScores&W=YTD` is the only full-pool source and ships no games count).
+Against the live 2026 rosters: of 397 rostered AFL slots, 26 had no week-1
+entry and **none of them had scored a week-1 point**, so every total rendered
+was exact. Revisit with the YTD feed only if a waiver pickup's total reads low.
+
+**Confidence: High** — cross-checked three ways: 2026 totals reproduce the old
+playerScores-derived values exactly (one week played, so they must); a full
+2025 season was hand-summed; and the roster parity harness showed the change
+was a single inserted column across 48 renders / 1,051 rows.

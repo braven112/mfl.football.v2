@@ -115,6 +115,13 @@ node scripts/roster-parity-check.mjs --all-teams --seasons 2026,2025,2013,2007 -
 node scripts/roster-parity-check.mjs --compare before.json after.json
 ```
 
+On a laptop it uses Playwright's own Chromium; the hardcoded
+`/opt/pw-browsers/chromium` is the sandbox's and is preferred only when present
+(it was required until 2026-09-15, which meant the harness could not run on a
+Mac at all). It needs the dev server's `JWT_SECRET` to forge the owner cookie —
+without it every render is captured as a signed-out visitor, which is a valid
+before/after baseline but exercises less of the page.
+
 64 renders in ~23s; 29,472 captured leaf values (88% non-empty) plus 3,879
 image srcs.
 
