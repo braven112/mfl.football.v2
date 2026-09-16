@@ -65,8 +65,10 @@ jobs:
       # Advancing the ledger without these would break that pin on main every
       # day, the same way committing franchise-history.json alone broke
       # tests/season-ledger.test.ts. --league=theleague because this job only
-      # commits TheLeague's paths; the AFL's copies are refreshed by its own
-      # backfill run, and the chain must not write files this job will discard.
+      # commits TheLeague's paths, and the chain must not write files this job
+      # will discard; both scripts default to EVERY league. The AFL's copies are
+      # refreshed where they are also committed — backfill-historical-feeds.yml
+      # and fetch-owner-names.yml, the latter running this same pair unscoped.
       # Chained, not two steps, and in this order: division-strength reads the
       # owner tenures the first command writes (same reasoning as the
       # 'compute:owner-tenures → division-strength' entry in scripts/prebuild.mjs).

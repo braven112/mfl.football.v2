@@ -67,6 +67,32 @@ personalization first.
 (git sizes, commit rates, feed sizes, `--ttfb` for prod timings); baseline
 from 2026-08-16 is committed under `data/perf-baseline/`.
 
+### A cron commits EVERY file the script it just ran wrote
+
+`commit-feed-and-push --files` and `commit-push`'s `add-paths` are an explicit
+allow-list, so a script that writes more derived files than the list names has
+the rest silently discarded with the runner. `compute-franchise-history.mjs`
+writes `franchise-history.json` AND `season-ledger.json` from one parse; the
+nightly listed only the first, and the ledger sat 11 days stale on main until
+`tests/season-ledger.test.ts` caught it.
+
+Two things make this hard to see and are worth knowing before you edit a
+commit list:
+
+- **It is invisible in every diff** — the skipped file simply never appears in
+  one. `git log --oneline -3 -- <path>` per file is what exposes it: one file
+  moving on the cron cadence beside a sibling moving only on human PRs.
+- **Production hides it.** Prebuild regenerates these artifacts, so prod is
+  correct while preview and `pnpm dev` read the stale committed copy
+  (`previewSkip`). A derived file that is right in prod and wrong in preview is
+  a commit-list bug, not a compute bug.
+
+Committing the file is half the fix — anything DERIVED from it must be
+recomputed and committed in the same job, or its own guard breaks instead
+(`division-strength.json` pins its row count against the ledger). Scope those
+recomputes with `--league=` to exactly what the job commits.
+`tests/franchise-history-commit-paths.test.ts` enforces the whole rule.
+
 
 ## Astro 7 — strict Rust compiler, pinned compressHTML
 
