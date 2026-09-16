@@ -1530,6 +1530,24 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     activeView = viewParam === 'watchlist' && !watchListSignedIn() ? 'stats' : viewParam;
   }
 
+  // A saved pref or a ?view= param can still name the Auction view long after
+  // the auction closed — most active owners have `auction` in localStorage from
+  // last March. applyGroupVisibility() normalizes it away, but it runs at the
+  // END of the first render, AFTER filterPlayers() has already chosen the rows:
+  // and the auction view's filter deliberately admits ROSTERED players that
+  // carry a bid (104 of them in the seeded feed today — every player won at
+  // auction this year). So the normalization has to happen before the first
+  // filter, not after it. Clamped in MEMORY only — deliberately not written
+  // back, because the saved `auction` is still the right preference and the
+  // window reopens: persisting the clamp would quietly convert "I watch the
+  // auction board" into "I watch Stats" and greet that owner with the wrong
+  // view next March. Clearing hasExplicitViewPref gives them the default an
+  // out-of-season visitor gets (Rankings if they have imports, else Stats).
+  if (activeView === 'auction' && !isAuctionSeason) {
+    activeView = 'stats';
+    hasExplicitViewPref = false;
+  }
+
   const posOrder = { QB: 1, RB: 2, WR: 3, TE: 4, PK: 5, DEF: 6 };
 
 

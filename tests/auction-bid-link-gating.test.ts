@@ -136,6 +136,21 @@ describe('the Auction view belongs to the auction window', () => {
     expect(source).toMatch(/const showAuctionIndicators = isAuctionSeason && /);
   });
 
+  it('normalizes a stale `auction` view pref BEFORE the first filterPlayers()', () => {
+    // applyGroupVisibility() also falls back off an unavailable view, but it
+    // runs at the end of render() — after the rows have been chosen. The
+    // auction filter admits rostered players carrying a bid, so a fallback
+    // that late leaves them painted under the Stats header.
+    const clampIdx = source.indexOf("if (activeView === 'auction' && !isAuctionSeason) {");
+    expect(clampIdx, 'the stale-pref clamp is gone').toBeGreaterThan(-1);
+    const initIdx = source.indexOf('function init()');
+    expect(initIdx).toBeGreaterThan(-1);
+    expect(
+      clampIdx,
+      'the clamp must sit above init(), which calls filterPlayers() with whatever view the pref named'
+    ).toBeLessThan(initIdx);
+  });
+
   it('takes the countdown target from the resolved window, never a date literal', () => {
     // `new Date('2026-08-16…')` was right for exactly one year and would have
     // pinned the countdown to a past date every year after it.
