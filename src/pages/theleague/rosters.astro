@@ -523,7 +523,11 @@ const feedYears = [...new Set([currentLeagueYearStr, currentSeasonYearStr])];
 
 const tradeBaitBySeason = {};
 const projectedScoresBySeason = {};
-const weeklyResultsRawBySeason = {};
+// Typed, unlike its neighbours: every read of it is a string index, and on a
+// bare `{}` that is an implicit-any ts(7053) per access. This PR added a
+// second read, which is a type error the baseline ratchet counts — so the
+// index signature it always wanted goes on here instead.
+const weeklyResultsRawBySeason: Record<string, any> = {};
 const fantasyPointsAllowedBySeason = {};
 
 // Fetch trade bait live from MFL so changes are reflected immediately on refresh
