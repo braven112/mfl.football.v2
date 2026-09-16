@@ -21,6 +21,15 @@ average and rank-within-position. It is the *results* counterpart to
 | Season scope | **Current season only for v1.** Career deferred (see "Deferred") |
 | Positions | **All three**: position filter, position-rank column, and a per-position leaderboard view |
 | Leagues | **Both from day one** — one shared component, thin wrapper per league |
+| Entry point | **The Tuesday recap hero** on both homepages links here, as its primary CTA, always |
+| Landing state | **Single-week ranking** — `?week=N` re-ranks the table by that week's points |
+| Changelog hero | **No.** The staged change carries `heroWorthy: false` |
+
+> **Two different "heroes" in this plan.** The **recap hero** is the homepage
+> card that casts the week's top scorer (Caleb Williams in week 1) — it is this
+> page's main entry point, §5. The **changelog hero** is whether Monday's
+> What's New article gets promoted on the homepage — that one is a **no**.
+> They are unrelated; do not let a skim merge them.
 
 ---
 
@@ -147,6 +156,9 @@ EDIT scripts/prebuild.mjs                                  # + compute:top-playe
 EDIT package.json                                          # + compute:top-players script
 EDIT src/data/page-directory.json                          # + entry, 10+ tags
 EDIT src/data/weekly-changelog-staging.json                # + one-line staged change
+EDIT src/utils/hero-recap-destination.ts                   # /top-players?week=N as the primary CTA
+EDIT tests/hero-recap-destination.test.ts                  # asserts the exact objects, both leagues
+EDIT src/components/theleague/season-heroes/RecapCompositeHero.astro  # CTA label + secondary recap link
 EDIT .claude/hooks/path-guard.json                         # route the new files to a guard suite
 ```
 
@@ -175,6 +187,30 @@ The three position answers resolve into one control, a view selector:
 
 The AFL adds IDP positions only if its `league.json` roster slots carry them —
 read the feed, don't assume.
+
+### Season vs. week — the URL is the state
+
+Two modes, one table:
+
+- **Season (default, no param).** Ranked by total points. This is `/top-players`.
+- **Week (`?week=N`).** The table re-ranks by **week N's** points alone — week
+  N's highest scorers, league-wide. Rank, Total and Avg collapse to that week's
+  score; the expand still shows the full season strip with week N marked.
+
+A week selector in the header switches between them and rewrites the URL
+(`history.replaceState`) so the state is always shareable — which is the whole
+point, because §5's hero link is exactly this URL.
+
+Rules for the param:
+
+- **Validate against the completed weeks in the payload.** A `?week=` that is
+  out of range, unscored, or not a number degrades to the **season view**, never
+  to an empty table. `?week=0` is season.
+- **Re-read it on every `astro:page-load`**, never captured at module scope.
+  One shared component means one module instance surviving a cross-league
+  navigation, and the league switcher is one click away on the shared host.
+- The param is a **view**, not an input to a fetch — no auth, no server trust
+  question. It only picks which number in an already-rendered row to sort on.
 
 ### The row
 
@@ -209,7 +245,81 @@ The ⋮ kebab still opens `PlayerActionModal`, and the player name still opens
 
 ---
 
-## 5. Repo rules this must obey
+## 5. The Tuesday recap hero is the entry point
+
+The homepage **recap hero** in both leagues casts the week's top scorer —
+Caleb Williams in week 1 — via `getWeeklyTopScorerCandidates`
+(`src/utils/offseason-hero-data.ts`). Its CTA is resolved by
+`src/utils/hero-recap-destination.ts`, today as: Schefter's recap column if one
+exists for the week, else `/<league>/live-scoring?week=N`, else `/<league>/news`.
+
+**Change: `/<league>/top-players?week=N` becomes the primary destination,
+always.** The card is about a player, so it lands on players.
+
+```
+resolveRecapDestination({ league, seasonYear, completedWeek, posts })
+  → { week: N, href: '/<league>/top-players?week=N',
+      label: "See the week's top scorers", isArticle: <unchanged> }
+```
+
+Load-bearing details:
+
+- **The week is the one in the BOOKS.** `completedWeek` comes from
+  `getLatestScoredWeek`, never `getCurrentNFLWeek` / `nflWeekFor` — the latter
+  rolls to the *upcoming* week on **Tuesday morning, the exact morning this
+  slot runs**. On Tue Sep 15 2026 it answered 2 while week 1 was what had just
+  finished, and the hero read "Week 2 is in the books" over games nobody had
+  played. That trap is already written up as rule 1 at the top of
+  `hero-recap-destination.ts`; the link inherits it, because a hero pointing at
+  `?week=2` on Tuesday lands the reader on an empty week.
+- **Query strings are a supported shape here.** `routeExists` strips the query
+  before resolving — `/theleague/trade-builder?b=0012` is an explicitly tested
+  case in `tests/article-links.test.ts`. Nothing needs loosening.
+- **Both leagues, one resolver.** Three call sites:
+  `src/components/theleague/season-heroes/RecapCompositeHero.astro`,
+  `src/pages/afl-fantasy/index.astro`, and `src/utils/afl-hero-resolver.ts`.
+  Changing the resolver changes all three — that is the point, and it is also
+  why `tests/hero-recap-destination.test.ts` (204 lines, asserts the exact
+  returned objects for both leagues) must be updated in the same commit.
+- **Week 0 still falls through to `/news`.** A season with nothing scored has
+  no week to rank; `?week=0` is not a destination.
+
+### Don't orphan the recap column
+
+`RecapCompositeHero.astro:106` currently picks its button label off
+`recap.isArticle`. With top-players as the permanent primary, that branch goes
+dead and Schefter's recap column — when one is actually written — loses its
+only surface.
+
+**Proposal (strike it if you'd rather keep one button):** keep
+`findWeeklyRecapPost` and the `isArticle` flag, which still carry true
+information ("a recap column exists for this week"), and use them for a small
+secondary text link under the CTA rather than for the CTA itself. The primary
+stays top-players unconditionally, as decided; the column stays reachable.
+
+### The hero and the page will sometimes disagree — on purpose
+
+`getWeeklyTopScorerCandidates` filters to **rostered players only**
+(`franchiseIds.length === 0 → continue`) and reads the one-week
+`playerScores.json`. The page is **full-pool**. So if a free agent outscores
+everyone in a week, the hero casts the top *rostered* scorer and the page's
+week view is led by someone else.
+
+That is correct, not a bug, and the plan keeps it: the hero renders its
+subject's franchise colours, crest and accent
+(`hero-franchise-accent.ts`, `hero-crest.ts`) — a free agent has no franchise
+to key any of that off. The hero answers "whose player went off this week";
+the page answers "who went off this week". Write that into the module comment
+so the next person doesn't "fix" the filter.
+
+Note also that ownership is a **list** — `getWeeklyTopScorerCandidates` already
+uses `getOwnersByPlayer`, because an AFL player is routinely rostered in both
+conferences and a `franchiseId ===` compare is what put a rival's player on
+someone's own homepage.
+
+---
+
+## 6. Repo rules this must obey
 
 Each of these is a bug that shipped here before.
 
@@ -244,9 +354,10 @@ Each of these is a bug that shipped here before.
    fantasy points, season stats".
 6. **Changelog.** Stage one line (≤200 visible chars) in
    `src/data/weekly-changelog-staging.json` with `league: "both"`. This is a
-   `new-page`, so it needs `featured: true` for its league and a screenshot —
-   and **hero eligibility is a human call**: ask Brandon for `heroWorthy`
-   rather than deciding.
+   `new-page`, so it needs `featured: true` for its league and a screenshot.
+   **`heroWorthy: false`** — decided 2026-09-16, no homepage promotion for the
+   What's New article. (Unrelated to the recap hero in §5, which does link
+   here.)
 7. **Type baseline.** `pnpm test:types` fails if the count moves in *either*
    direction. Re-measure and retighten after.
 8. **Guard test.** Wire the new files into `.claude/hooks/path-guard.json` so
@@ -255,7 +366,7 @@ Each of these is a bug that shipped here before.
 
 ---
 
-## 6. Phases
+## 7. Phases
 
 **Phase 1 — data.** Add the per-week `playerScores` loop to
 `fetch-mfl-feeds.mjs` (week range from `league.json`, daily-only, live-week
@@ -277,13 +388,21 @@ leaderboards view, then the row expand.
 directory entry. Verify the fork ratchet still passes and `/rollover-check`
 reports the right year at all six boundaries.
 
-**Phase 5 — polish.** Mobile (the table is the risk — the summary row is
+**Phase 5 — the week view and the hero link.** `?week=N` mode plus the week
+selector, then repoint `resolveRecapDestination` and update
+`tests/hero-recap-destination.test.ts`. Do these together: the hero link is
+only correct once the week view exists, and shipping the resolver change first
+points both homepages at a param the page ignores. Check the Tuesday case
+explicitly — render the homepage at a Tuesday with `?testDate=` and confirm the
+href carries the **completed** week, not the upcoming one.
+
+**Phase 6 — polish.** Mobile (the table is the risk — the summary row is
 deliberately narrow so the week detail can live in the expand), dark mode
 tokens, empty state before week 1 of a season, changelog + screenshot.
 
 ---
 
-## 7. Deferred, on purpose
+## 8. Deferred, on purpose
 
 - **Career / all-time totals.** Needs full-pool weekly data for 2007–2026,
   which would be a one-time backfill of ~18 × 20 years × 2 leagues ≈ 700 MFL
@@ -298,6 +417,12 @@ tokens, empty state before week 1 of a season, changelog + screenshot.
   lines and kills the cross-league init-gate hazard for that pair outright.
 - **Projections alongside actuals.** `projectedScores.json` is already fetched
   per league; a "vs projection" column is cheap once the table exists.
+- **A Schefter link, not asked for.** `DESTINATIONS` in
+  `scripts/article-utils/article-links.mjs` is the registry Schefter columns
+  link through, and `weekly-recap.mjs` already builds a "top scorers per team"
+  fact sheet. Adding a `top-players` destination there would let the Tuesday
+  column link here too. Cheap, but out of scope until asked — the hero in §5 is
+  the entry point that was actually requested.
 - **Best Ball.** Draft-only, no live MFL syncing
   (`docs/claude/rules/best-ball.md`), so there is no scoring data behind a
   leaderboard there.
