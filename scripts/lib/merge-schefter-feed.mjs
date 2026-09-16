@@ -140,6 +140,34 @@ export function mergeFeed(theirs, ours) {
       });
     }
   }
+
+  // Retraction tombstones: ids taken down by scripts/schefter-retract-post.mjs.
+  //
+  // The union above resurrects them. A retraction removes the post from the
+  // feed on main, but any scan job that CHECKED OUT before the retraction
+  // landed still carries the post in its own `ours` and pushes it straight
+  // back — the every-15-minute crons make that a race we lose eventually, and
+  // `archivedThroughTimestamp` only protects posts old enough to be archived.
+  // A retracted post is typically hours old, so nothing protected it.
+  //
+  // Unioning the list (never replacing it) is what makes this safe under any
+  // interleaving: a runner with a stale feed has a SHORTER list, and taking
+  // both sides' entries means its copy can't shorten main's.
+  //
+  // A tombstone is permanent by design — re-publishing a retracted id means
+  // deleting its entry by hand, which is the right amount of friction for
+  // putting back something that was taken down on purpose.
+  const retracted = new Set([
+    ...(Array.isArray(t.retractedIds) ? t.retractedIds : []),
+    ...(Array.isArray(o.retractedIds) ? o.retractedIds : []),
+  ].filter((id) => typeof id === 'string' && id));
+  if (retracted.size) {
+    result.retractedIds = [...retracted].sort();
+    result.posts = result.posts.filter((p) => !retracted.has(p?.id));
+  } else {
+    delete result.retractedIds;
+  }
+
   return result;
 }
 

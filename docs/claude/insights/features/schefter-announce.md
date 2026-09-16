@@ -88,6 +88,26 @@ Two safety patterns baked into the seeder, worth reusing:
 2. **No double-ping** — GroupMe only fires when `appendToFeed` returned `true`
    (post newly written this run), so a re-run can't re-buzz the chat.
 
+**Both of those quietly expired in Aug 2026, and nothing in this file changed.**
+The weekly archiver (`scripts/archive-schefter-feed.mjs`, added later, 300-post
+cap) moves the feed's long tail into `schefter-archive/<year>.json`, and
+`appendToFeed` was checking the live feed alone — so an announcement's id reads
+as "never posted" the moment it rotates. `sf_announce_dark-mode` and
+`sf_announce_dark-mode-afl` had both already archived; re-running either slug
+would have written a second post AND buzzed the chat a second time. Fixed by
+making the dedup read the archive too (`isPublished` in
+`scripts/article-utils/feed-writer.mjs`), after the same bug re-published
+TheLeague's 2026 schedule-release column on Sept 15.
+
+**The transferable lesson is about WHERE the invariant lived.** Nobody edited
+this script, this doc, or its tests. A different subsystem — retention — moved
+the ground the idempotency claim stood on, and the claim was documented as a
+property of the seeder rather than as a property of the DEDUP. An invariant
+that depends on a post staying in a file needs to be restated, and tested,
+every time something else gains the right to move that file. Ask of any
+"re-running this is a no-op" claim: no-op against WHAT, and who else can empty
+it?
+
 **Evidence:** Feed paths differ per league and are load-bearing (do NOT
 normalize): TheLeague feed is `src/data/theleague/schefter-feed.json`, AFL is
 `data/afl-fantasy/schefter-feed.json` — mirrored from the canonical map in

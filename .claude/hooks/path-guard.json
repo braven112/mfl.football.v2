@@ -678,13 +678,15 @@
         "tests/speculation-groupme.test.ts",
         "tests/league-url-prefix.test.ts",
         "tests/schefter-offer-beats.test.ts",
-        "tests/speculation-seeds.test.ts"
+        "tests/speculation-seeds.test.ts",
+        "tests/schefter-once-per-season-dedupe.test.ts",
+        "tests/merge-schefter-feed.test.ts"
       ]
     },
     {
       "name": "schefter-columns",
       "rules": "docs/claude/rules/schefter.md",
-      "note": "A column on a weekly cron is NOT breaking news: tier:'breaking' hands the post the homepage at P0 for 48h (selectBreakingStory \u2192 resolveHeroState), and three weekly columns at that tier preempted the regular-season daily rotation ~4 days in 7. Every article type must also export the full pipeline interface and declare relatedLinks. See tests/weekly-column-hero-claim.test.ts. The workflow is in this domain deliberately: the guard derives the weekly set from its cron\u2192type map, so an edit there must re-run the guard.",
+      "note": "A column on a weekly cron is NOT breaking news: tier:'breaking' hands the post the homepage at P0 for 48h (selectBreakingStory \u2192 resolveHeroState), and three weekly columns at that tier preempted the regular-season daily rotation ~4 days in 7. Every article type must also export the full pipeline interface and declare relatedLinks. See tests/weekly-column-hero-claim.test.ts. The workflow is in this domain deliberately: the guard derives the weekly set from its cron\u2192type map, so an edit there must re-run the guard. Dedup for a once-per-season id must read the season ARCHIVE, not just the live feed: the weekly archiver rotating the original out is what re-posted the 2026 schedule-release column to GroupMe six days into the season. isDuplicate and appendToFeed share that check and fail closed on an unreadable shard, and --week does not waive the season guard for a type whose id ignores the week.",
       "paths": [
         "scripts/article-types/*.mjs",
         "scripts/article-utils/*.mjs",
@@ -695,7 +697,8 @@
         "tests/weekly-column-hero-claim.test.ts",
         "tests/preview-empty-week.test.ts",
         "tests/article-type-interface.test.ts",
-        "tests/article-links.test.ts"
+        "tests/article-links.test.ts",
+        "tests/schefter-once-per-season-dedupe.test.ts"
       ]
     },
     {

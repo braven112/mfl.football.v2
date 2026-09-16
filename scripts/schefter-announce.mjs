@@ -18,6 +18,14 @@
  * only sent when the feed post was NEWLY written this run, so an accidental
  * re-run cannot double-ping the chat.
  *
+ * That guarantee only holds because `appendToFeed` checks the season ARCHIVE
+ * as well as the live feed. Announcement slugs are hand-chosen and never
+ * repeat, so they are long-lived by construction — `sf_announce_dark-mode` had
+ * already rotated out of both leagues' live feeds by Sept 2026. Against the
+ * live feed alone, re-running that slug would have written a second post and
+ * buzzed the chat a second time: the same archive-rotation bug that re-posted
+ * the 2026 schedule-release column (see article-utils/feed-writer.mjs).
+ *
  * Roger's bot is NEVER a fallback for Schefter (same rule the scanners enforce):
  * if the Schefter bot id is unset we skip GroupMe rather than borrow Roger's.
  *
