@@ -41,7 +41,7 @@
  * read path is free to use the api gateway. Same rule as mfl-contract-writer.
  */
 
-import { mflFetch } from './mfl-fetch';
+import { mflFetch, describeMflFailure } from './mfl-fetch';
 import { buildMflExportUrl } from './mfl-url';
 import type { LeagueDefinition } from '../config/leagues';
 
@@ -286,6 +286,8 @@ export interface WriteRecordOptions {
 export interface WriteRecordResult {
   ok: boolean;
   error?: string;
+  /** True when this deployment refused to send — see describeMflFailure. */
+  blocked?: boolean;
 }
 
 /** MFL rejects an empty DESCRIPTION, and a ledger of blank lines is useless anyway. */
@@ -350,7 +352,8 @@ export async function writeAccountingRecord(
       body,
     });
   } catch (error) {
-    return { ok: false, error: `Could not reach MFL: ${(error as Error).message}` };
+    const failure = describeMflFailure(error);
+    return { ok: false, error: failure.message, blocked: failure.blocked };
   }
 
   if (!response.ok) return { ok: false, error: `MFL returned HTTP ${response.status}` };

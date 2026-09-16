@@ -28,7 +28,7 @@
 import type { APIRoute } from 'astro';
 import { getAuthUser } from '../../utils/auth';
 import { getCurrentLeagueYear, getRolloverLeagueYear } from '../../utils/league-year';
-import { mflFetch } from '../../utils/mfl-fetch';
+import { mflFetch, describeMflFailure } from '../../utils/mfl-fetch';
 import { createMFLApiClient } from '../../utils/mfl-matchup-api';
 import { getLeagueById, getLeagueBySlug, DEFAULT_LEAGUE_ID, DEFAULT_LEAGUE_SLUG } from '../../config/leagues';
 import { bustRosterCaches } from '../../utils/mfl-roster-cache';
@@ -246,6 +246,15 @@ export const POST: APIRoute = async ({ request }) => {
       { status: 200, headers: JSON_HEADERS }
     );
   } catch (error) {
+    // Staging and previews refuse the add_drop POST on purpose; say so instead
+    // of "Internal server error" (see mfl-fetch#describeMflFailure).
+    const failure = describeMflFailure(error);
+    if (failure.blocked) {
+      return new Response(
+        JSON.stringify({ success: false, message: failure.message, blocked: true }),
+        { status: 503, headers: JSON_HEADERS }
+      );
+    }
     console.error('[cut-player] Error:', error);
     return new Response(
       JSON.stringify({ success: false, message: 'Internal server error. Please try again.' }),

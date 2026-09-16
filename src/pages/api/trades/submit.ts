@@ -19,7 +19,7 @@ import type { APIRoute } from 'astro';
 import { getAuthUser } from '../../../utils/auth';
 import { getLeagueYearForMflId } from '../../../utils/league-year';
 import { LEAGUES } from '../../../config/leagues';
-import { mflFetch } from '../../../utils/mfl-fetch';
+import { mflFetch, describeMflFailure } from '../../../utils/mfl-fetch';
 import { createMFLApiClient } from '../../../utils/mfl-matchup-api';
 import { reportOwnerTrades } from '../../../utils/owner-trade-reports';
 import { buildMflExportUrl } from '../../../utils/mfl-url';
@@ -180,6 +180,15 @@ export const POST: APIRoute = async ({ request }) => {
       { status: 200, headers: JSON_HEADERS }
     );
   } catch (error) {
+    // A staging/preview deployment refuses the send itself — report that,
+    // not an outage or an internal error (mfl-fetch#describeMflFailure).
+    const failure = describeMflFailure(error);
+    if (failure.blocked) {
+      return new Response(
+        JSON.stringify({ success: false, message: failure.message, blocked: true }),
+        { status: 503, headers: JSON_HEADERS }
+      );
+    }
     console.error('[trades/submit] Error:', error);
     return new Response(
       JSON.stringify({ success: false, message: 'Internal server error' }),

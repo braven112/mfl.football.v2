@@ -27,7 +27,7 @@
 import type { APIRoute } from 'astro';
 import { getAuthUser } from '../../utils/auth';
 import { getCurrentLeagueYear, getRolloverLeagueYear } from '../../utils/league-year';
-import { mflFetch } from '../../utils/mfl-fetch';
+import { mflFetch, describeMflFailure } from '../../utils/mfl-fetch';
 import { getLeagueById, getLeagueBySlug, DEFAULT_LEAGUE_ID, DEFAULT_LEAGUE_SLUG } from '../../config/leagues';
 import { JSON_HEADERS_NO_STORE as JSON_HEADERS } from '../../utils/api-response';
 import { checkRateLimit } from '../../utils/rate-limit';
@@ -239,6 +239,10 @@ export const POST: APIRoute = async ({ request }) => {
 
     return fail('Unknown action.', 400);
   } catch (error) {
+    // A staging/preview deployment refuses the send itself — report that,
+    // not an outage or an internal error (mfl-fetch#describeMflFailure).
+    const failure = describeMflFailure(error);
+    if (failure.blocked) return fail(failure.message, 503, { confirmUrl });
     console.error('[waiver-claims]', error);
     return fail('Something went wrong talking to MFL. Nothing was changed.', 500, { confirmUrl });
   }

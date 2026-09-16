@@ -348,3 +348,55 @@ describe('deployment environment predicate', () => {
     }
   });
 });
+
+/**
+ * A blocked write must report itself, not impersonate an MFL outage.
+ *
+ * The guard above stops the send. This describe block is about what the OWNER
+ * is told afterwards, which was wrong everywhere: `Watch player` on staging
+ * answered HTTP 502 "Could not reach MFL" (someone spent an hour hunting a bug
+ * in the roster code), a lineup submit answered "Internal server error", and
+ * the contract writer retried the refusal three times with backoff before
+ * reporting it. `OutboundBlockedError` is a distinct class precisely so a
+ * caller can tell "we refused on purpose" from "the network failed" —
+ * `describeMflFailure` is the one place that does it, and this pins that every
+ * MFL write goes through it.
+ */
+describe('a blocked MFL write says so', () => {
+  it('describes the refusal in the owner’s words, and a real failure in its own', async () => {
+    const { describeMflFailure, MFL_WRITE_BLOCKED_MESSAGE } =
+      await import('../src/utils/mfl-fetch');
+    const { OutboundBlockedError } = await import('../src/utils/deploy-environment');
+
+    const blocked = describeMflFailure(new OutboundBlockedError('MFL write'));
+    expect(blocked.blocked).toBe(true);
+    expect(blocked.message).toBe(MFL_WRITE_BLOCKED_MESSAGE);
+    // The owner-facing copy must not read as an outage, and must not send an
+    // owner looking at a source file.
+    expect(blocked.message).not.toMatch(/Could not reach MFL|src\/utils/);
+
+    const network = describeMflFailure(new Error('fetch failed'));
+    expect(network.blocked).toBe(false);
+    expect(network.message).toBe('Could not reach MFL: fetch failed');
+  });
+
+  it('every MFL write routes its catch through describeMflFailure', () => {
+    // A write is an mflFetch call carrying method: 'POST'. Reads are exempt —
+    // the guard never blocks an export, so there is nothing to describe.
+    const offenders = SOURCE_FILES.filter((f) => {
+      if (f.path === 'src/utils/mfl-fetch.ts') return false;
+      const writes = [...f.body.matchAll(/mflFetch\(/g)].some((m) =>
+        /method:\s*'POST'/.test(f.body.slice(m.index! + m[0].length, m.index! + m[0].length + 400)),
+      );
+      return writes && !/describeMflFailure/.test(f.body);
+    }).map((f) => f.path);
+
+    expect(
+      offenders,
+      `These files POST to MFL but never call describeMflFailure, so a staging ` +
+        `refusal reaches the owner as an outage or an internal error:\n  ` +
+        `${offenders.join('\n  ')}\n\n` +
+        `Import it from src/utils/mfl-fetch.ts and branch on \`blocked\` in the catch.`,
+    ).toEqual([]);
+  });
+});

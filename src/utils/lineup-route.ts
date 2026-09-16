@@ -23,7 +23,7 @@
 
 import type { APIRoute } from 'astro';
 import { getAuthUser } from './auth';
-import { mflFetch } from './mfl-fetch';
+import { mflFetch, describeMflFailure } from './mfl-fetch';
 import { getLeagueYearForSlug } from './league-year';
 import { invalidateAppBadge } from './app-badge-cache';
 import { getCurrentWeekForYear } from './current-week';
@@ -90,6 +90,11 @@ export function createLineupRoute(slug: CanonicalLeagueSlug): { GET: APIRoute; P
       console.warn('[lineup] Unexpected MFL response:', text.slice(0, 500));
       return json({ error: 'Unexpected response from MFL. Your lineup may or may not have been saved.' }, 500);
     } catch (error) {
+      // A staging/preview deployment refusing to send is not an outage, and
+      // "Internal server error" is what it used to say — the one message that
+      // tells an owner validating a lineup change nothing at all.
+      const failure = describeMflFailure(error);
+      if (failure.blocked) return json({ error: failure.message, blocked: true }, 503);
       console.error('[lineup] Submit error:', error);
       return json({ error: 'Internal server error. Please try again.' }, 500);
     }

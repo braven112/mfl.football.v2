@@ -32,7 +32,7 @@
  *   for a 300-player board. Going direct to www44/www49 skips the hop.
  */
 
-import { mflFetch } from './mfl-fetch';
+import { mflFetch, describeMflFailure } from './mfl-fetch';
 import type { LeagueDefinition } from '../config/leagues';
 
 export interface DraftListResult {
@@ -45,6 +45,8 @@ export interface DraftListResult {
 export interface DraftListWriteResult {
   ok: boolean;
   error?: string;
+  /** True when this deployment refused to send — see describeMflFailure. */
+  blocked?: boolean;
 }
 
 interface DraftListParams {
@@ -196,7 +198,8 @@ export async function pushDraftList(
       };
     }
   } catch (err) {
-    return { ok: false, error: `Could not reach MFL: ${(err as Error).message}` };
+    const failure = describeMflFailure(err);
+    return { ok: false, error: failure.message, blocked: failure.blocked };
   }
 
   const error = parseMflError(text);
