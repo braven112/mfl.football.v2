@@ -161,8 +161,33 @@ async function main() {
   // Step 2: Dynamic import of article type module
   const mod = await import(`./article-types/${type}.mjs`);
 
-  // Step 3: Season guard (skip if week explicitly overridden via --week)
-  const guardResult = opts.week != null
+  // Step 3: Season guard.
+  //
+  // `--week` waives it — a manual "generate week 5's recap now" is deliberate,
+  // and the guard would refuse because we are past week 5. But that waiver is
+  // only meaningful for a type whose id actually VARIES by week. For a
+  // once-per-season column (schedule-release, draft-grades, team-grades,
+  // championship-recap) or a date-scoped one (cut-watch), `--week` changes
+  // nothing about the article it would write, so letting it buy a guard
+  // bypass hands an operator a silent way to publish the preseason schedule
+  // column in December. Derived rather than declared: a flag on each type is
+  // one more thing to forget, and the id function already knows the answer.
+  // tests/schefter-once-per-season-dedupe.test.ts pins the classification for
+  // every type, so an id change that flips one is a test failure, not a
+  // behaviour change nobody noticed.
+  //
+  // Probed THREE times, not two: cut-watch builds its id from `new Date()`, so
+  // a run that crosses midnight between two calls would see two different ids
+  // and read a date-scoped type as week-scoped. Re-probing week 1 catches that
+  // drift and falls back to "does not vary", which runs the guard — the safe
+  // direction.
+  const idAtWeek1 = mod.config.id(year, 1, league);
+  const idAtWeek2 = mod.config.id(year, 2, league);
+  const idVariesByWeek = idAtWeek1 !== idAtWeek2 && idAtWeek1 === mod.config.id(year, 1, league);
+  if (opts.week != null && !idVariesByWeek) {
+    console.log(`  [note] --week does not apply to "${type}" (its id ignores the week) — running the season guard anyway.`);
+  }
+  const guardResult = opts.week != null && idVariesByWeek
     ? true
     : mod.guardSeason(week, year, new Date(), { completedWeek, currentWeek });
   if (guardResult === false) {

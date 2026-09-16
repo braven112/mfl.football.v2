@@ -1,12 +1,13 @@
 ---
 slug: schefter-once-per-season-dedupe
-status: open
+status: shipped
 severity: P1
 opened: 2026-09-15
 hotfix_pr: https://github.com/braven112/mfl.football.v2/pull/1098
 hotfix_sha: 1ec6334
 followup_issue: 1100
-followup_pr:
+followup_pr: https://github.com/braven112/mfl.football.v2/pull/1109
+followup_shipped: 2026-09-15
 followup_session:
 ---
 
@@ -41,47 +42,97 @@ Forward fix, PR #1098.
 
 ## Deferred items
 
-- [ ] **F1: `appendToFeed` still dedupes against the live feed only**
-  - Source: deferred at implementation
-  - Where: `scripts/article-utils/feed-writer.mjs` (`appendToFeed`), also used by
-    `scripts/schefter-announce.mjs:39` and `scripts/lib/schefter-assistant-post.mjs:27`
-  - What: its "belt + suspenders" check doesn't see archived ids. The weekly
-    runner is safe because it calls `isDuplicate` first, but the announce and
-    assistant lanes rely on `appendToFeed` alone. Decide whether their ids can
-    repeat. If they can, route them through the archive-aware check.
-  - Why deferred: those lanes use unique ids today and didn't cause this
-    incident; widening the check there widens the diff.
+All four re-validated against `origin/main` on 2026-09-15 before any code was
+written. **All four were still true; none were dropped.** Post-merge review
+comments on #1098 were checked — Gemini/Copilot/CodeQL added nothing after the
+merge, and the two Copilot findings that predate it were already resolved in
+the PR's own follow-up commits.
 
-- [ ] **F2: A retraction can be undone by a cron that started before it landed**
-  - Source: diagnosis during the hotfix
-  - Where: `scripts/lib/merge-schefter-feed.mjs:105` (`mergeFeed` unions posts by id)
-  - What: `commit-feed-and-push` unions origin's posts with the run's own posts.
-    A scan job that checked out before the retraction and pushes after it brings
-    the retracted post back. Only posts at or before `archivedThroughTimestamp`
-    are protected. Consider a `retractedIds` tombstone list that `mergeFeed`
-    filters on.
-  - Why deferred: a tombstone changes the feed schema that every writer shares;
-    the race window for this one retraction was minutes, and it can be checked
-    after merge.
+- [x] **F1: `appendToFeed` still dedupes against the live feed only** — WORKED,
+  and it was live rather than latent. `sf_announce_dark-mode` (TheLeague) and
+  `sf_announce_dark-mode-afl` had ALREADY rotated into their 2026 archive
+  shards, so re-running either slug would have written a second feed post and
+  fired GroupMe again — the incident shape, with a chat ping. The script's own
+  header claimed "an accidental re-run cannot double-ping the chat"; that claim
+  was false and nobody had edited the script.
 
-- [ ] **F3: Write the rule into the Schefter rules doc**
-  - Source: deferred at implementation
-  - Where: `docs/claude/rules/schefter.md`, near the retraction paragraph (~line 273)
-  - What: "dedup for once-per-season ids must read the archive" and "retracting
-    a re-published duplicate uses `--feed-only`". Add
-    `tests/schefter-once-per-season-dedupe.test.ts` to the
-    `.claude/hooks/path-guard.json` schefter-columns domain.
-  - Why deferred: docs and hook wiring aren't needed to stop the repost.
+  Fix: `isDuplicate` and `appendToFeed` now share ONE check (`isPublished`), so
+  the archive half cannot be present on one path and missing on the other. The
+  brief's "decide whether their ids can repeat" resolved differently per lane:
+  - **Announce** — slugs are hand-chosen and never repeat. Archive-aware is
+    simply correct.
+  - **Assistant** — `assist_<league>_<fid>_<kind>_w<week>` carried NO season, so
+    ids repeat every year. Applying the archive check to that id as-written
+    would have been the opposite bug: 2027's week-5 lineup warning permanently
+    suppressed because 2026's had archived. So the id is season-scoped first
+    (`..._<year>_w<week>`, and it throws rather than defaulting a year), which
+    makes the shared check sound for that lane too. Free to change — zero
+    assistant posts exist in either league's feed or archive yet.
 
-- [ ] **F4: `--week` skips the kickoff guard for schedule-release**
-  - Source: Copilot (suppressed comment on PR #1098, `schedule-release.mjs:64`)
-  - Where: `scripts/schefter-weekly-articles.mjs:164` (`opts.week != null ? true : mod.guardSeason(...)`)
-  - What: a manual run with `--week` skips `guardSeason`, so it could post the
-    preseason column after kickoff if the dedupe also missed. Options: always
-    run the guard for types that don't use a week, or reject `--week` for
-    `schedule-release`.
-  - Why deferred: the cron never passes `--week` for this type, and a manual
-    override is deliberate. Not on the path that shipped the duplicate.
+  The archive read is memoized per feed path (the assistant lane appends in a
+  sequential per-franchise loop and would otherwise re-parse a ~1 MB shard 24
+  times). A rejection is cached too, keeping the fail-closed behaviour.
+
+- [x] **F2: A retraction can be undone by a cron that started before it landed**
+  — WORKED, with the `retractedIds` tombstone the brief proposed. `mergeFeed`
+  unions both sides' lists (never replaces: a stale runner has the SHORTER one)
+  and filters posts by the union, so it is correct under any interleaving.
+  `schefter-retract-post.mjs` writes the tombstone onto the live feed only —
+  archive shards may be bare arrays with nowhere to keep it — and writes it even
+  when the run removed no rows, so a re-run re-asserts the bar. Not conditioned
+  on `--feed-only`: the duplicate case is exactly the one that needs it.
+  The schema change turned out additive and cheap, contrary to the deferral note.
+
+  NOT done: the Sept 15 duplicate was not retroactively tombstoned. Its race
+  window closed hours before this branch existed and the post is gone from
+  origin; editing a cron-written data file to add a tombstone nobody needs would
+  only invite a merge conflict.
+
+- [x] **F3: Write the rule into the Schefter rules doc** — WORKED. New
+  `### Dedup for a long-lived id must read the ARCHIVE, not just the feed`
+  section in `docs/claude/rules/schefter.md`, plus the tombstone rule and the
+  `--feed-only` rule folded into the existing retraction paragraph.
+  `tests/schefter-once-per-season-dedupe.test.ts` is wired into the
+  `schefter-columns` path-guard domain (and, with
+  `tests/merge-schefter-feed.test.ts`, into `schefter`). The CLAUDE.md router
+  row for Schefter already exists and already points at that doc.
+
+- [x] **F4: `--week` skips the kickoff guard for schedule-release** — WORKED,
+  by a third route rather than either option in the brief. `--week` now waives
+  `guardSeason` only for a type whose id actually VARIES by week, derived from
+  `config.id` rather than declared per type — a flag is one more thing to forget,
+  and the id function already knows the answer. That covers `schedule-release`
+  and, for free, the other four types `--week` means nothing to
+  (`championship-recap`, `cut-watch`, `draft-grades`, `team-grades`). Nothing
+  legitimate is blocked: the two truly manual-only types return `true`
+  unconditionally, and the other two have guards that should hold. The
+  classification for all ten types is pinned in the guard test, so an id change
+  that reclassifies one fails rather than silently changing behaviour.
+
+## What the incident actually taught
+
+Nobody edited `schefter-announce.mjs`, its doc, or its tests — and both of its
+documented safety properties still stopped being true. A different subsystem
+(retention, added later) gained the right to move posts out of the file the
+idempotency claim was standing on. The claim had been written down as a property
+of the SEEDER when it was really a property of the DEDUP.
+
+So: of any "re-running this is a no-op" claim, ask *no-op against what, and who
+else is allowed to empty it?* Recorded in
+`docs/claude/insights/features/schefter-announce.md`.
+
+## Verification
+
+- `pnpm test:unit` — full suite green after rebasing onto current `origin/main`.
+- Each new guard was confirmed RED against the pre-fix code before being kept.
+- `node --check` on every edited `.mjs` file.
+- A `tests/season-ledger.test.ts` failure seen mid-review was a STALE WORKTREE,
+  not a real one: this branch was based on a main that predated
+  [#1107](https://github.com/braven112/mfl.football.v2/pull/1107), which commits
+  the franchise-history derived chain whole. CI was green throughout because a
+  PR's checks run the merge ref, which already had #1107. Rebasing fixed it.
+  Worth recording because the failure looked exactly like a live data bug and
+  the wrong diagnosis was one `git fetch` away from being filed as real work.
 
 ## Context to start cold
 

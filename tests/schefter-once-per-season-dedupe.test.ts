@@ -2,7 +2,8 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { isDuplicate } from '../scripts/article-utils/feed-writer.mjs';
+import { readFileSync, readdirSync } from 'node:fs';
+import { isDuplicate, appendToFeed, _resetArchiveCache } from '../scripts/article-utils/feed-writer.mjs';
 import { guardSeason, config } from '../scripts/article-types/schedule-release.mjs';
 import { nflWeekStartInstant } from '../src/utils/nfl-week-starts.mjs';
 
@@ -23,6 +24,7 @@ describe('isDuplicate reads the season archive', () => {
   let feedPath: string;
 
   beforeEach(() => {
+    _resetArchiveCache();
     dir = mkdtempSync(path.join(tmpdir(), 'schefter-dedupe-'));
     feedPath = path.join(dir, 'schefter-feed.json');
     writeFileSync(feedPath, JSON.stringify({ posts: [{ id: 'sf_other' }] }));
@@ -50,6 +52,18 @@ describe('isDuplicate reads the season archive', () => {
     expect(await isDuplicate(feedPath, ID)).toBe(true);
   });
 
+  /**
+   * The listing half of fail-closed. A missing DIRECTORY is benign — the
+   * league has no archive yet. An unreadable one is not: swallowing EACCES or
+   * EIO returns an empty id set, which reads every archived post as never
+   * published. Simulated with a plain file where the directory belongs, which
+   * makes readdir raise ENOTDIR.
+   */
+  it('fails closed when the archive directory exists but cannot be listed', async () => {
+    writeFileSync(path.join(dir, 'schefter-archive'), 'not a directory');
+    await expect(isDuplicate(feedPath, ID)).rejects.toThrow();
+  });
+
   it('fails closed on an unreadable archive shard instead of reading "never posted"', async () => {
     mkdirSync(path.join(dir, 'schefter-archive'));
     writeFileSync(path.join(dir, 'schefter-archive', '2026.json'), '[{"id": "sf_2026_sched');
@@ -75,5 +89,208 @@ describe('schedule-release is a preseason column', () => {
   it('refuses once the season has kicked off', () => {
     expect(guardSeason(0, 2026, new Date(kickoff))).toBe(false);
     expect(guardSeason(0, 2026, new Date('2026-09-15T20:48:52Z'))).toBe(false);
+  });
+});
+
+
+/**
+ * F1 — the WRITE-time check has to read the archive too.
+ *
+ * `isDuplicate` is a pre-flight that only the weekly-article runner calls. The
+ * other two writers — schefter-announce.mjs and lib/schefter-assistant-post.mjs
+ * — go straight to `appendToFeed`, and both gate a side effect on its return
+ * value (announce sends GroupMe only when it wrote). Against the live feed
+ * alone that gate silently expires: `sf_announce_dark-mode` had already rotated
+ * into src/data/theleague/schefter-archive/2026.json by Sept 2026, so re-running
+ * that slug would have written a second post AND buzzed the chat a second time.
+ */
+describe('appendToFeed refuses an id that only survives in the archive', () => {
+  let dir: string;
+  let feedPath: string;
+
+  const post = (id: string) => ({ id, timestamp: '2026-09-15T20:48:52.000Z', headline: id, body: id });
+
+  beforeEach(() => {
+    _resetArchiveCache();
+    dir = mkdtempSync(path.join(tmpdir(), 'schefter-append-'));
+    feedPath = path.join(dir, 'schefter-feed.json');
+    writeFileSync(feedPath, JSON.stringify({ posts: [] }));
+  });
+  afterEach(() => rmSync(dir, { recursive: true, force: true }));
+
+  it('writes an id that was never published', async () => {
+    expect(await appendToFeed(feedPath, post('sf_announce_brand-new'))).toBe(true);
+    expect(JSON.parse(readFileSync(feedPath, 'utf8')).posts).toHaveLength(1);
+  });
+
+  it('refuses a second write of the same id while it is still live', async () => {
+    await appendToFeed(feedPath, post('sf_announce_dark-mode'));
+    expect(await appendToFeed(feedPath, post('sf_announce_dark-mode'))).toBe(false);
+  });
+
+  it('refuses an id that has rotated out of the live feed into the archive', async () => {
+    mkdirSync(path.join(dir, 'schefter-archive'));
+    writeFileSync(
+      path.join(dir, 'schefter-archive', '2026.json'),
+      JSON.stringify([{ id: 'sf_announce_dark-mode' }]),
+    );
+    expect(await appendToFeed(feedPath, post('sf_announce_dark-mode'))).toBe(false);
+    expect(JSON.parse(readFileSync(feedPath, 'utf8')).posts).toHaveLength(0);
+  });
+
+  /**
+   * A retracted id is published. Without this, a full retraction (which clears
+   * the live feed AND every archive shard) makes the id read as never posted:
+   * the next run regenerates the article, appendToFeed reports a write, the
+   * caller buzzes GroupMe with a deep link — and mergeFeed then filters the
+   * post right back out on the same tombstone. The chat gets a dead link.
+   */
+  it('refuses an id that was retracted, even though no row remains anywhere', async () => {
+    writeFileSync(
+      feedPath,
+      JSON.stringify({ posts: [], retractedIds: ['sf_2026_draft_grades'] }),
+    );
+    expect(await appendToFeed(feedPath, post('sf_2026_draft_grades'))).toBe(false);
+    expect(await isDuplicate(feedPath, 'sf_2026_draft_grades')).toBe(true);
+    expect(JSON.parse(readFileSync(feedPath, 'utf8')).posts).toHaveLength(0);
+  });
+
+  it('still writes a different id alongside a tombstone', async () => {
+    writeFileSync(feedPath, JSON.stringify({ posts: [], retractedIds: ['sf_other'] }));
+    expect(await appendToFeed(feedPath, post('sf_2026_draft_grades'))).toBe(true);
+  });
+
+  it('fails closed on an unreadable shard rather than writing a duplicate', async () => {
+    mkdirSync(path.join(dir, 'schefter-archive'));
+    writeFileSync(path.join(dir, 'schefter-archive', '2026.json'), '[{"id": "sf_ann');
+    await expect(appendToFeed(feedPath, post('sf_announce_dark-mode'))).rejects.toThrow();
+  });
+});
+
+/**
+ * The two lanes that never call `isDuplicate`. If either one grows its own
+ * dedup, or stops gating its side effect on the write, the archive check above
+ * stops protecting it — and neither failure is visible in a unit test of the
+ * lane itself.
+ */
+describe('the announce and assistant lanes rely on appendToFeed alone', () => {
+  const announce = readFileSync('scripts/schefter-announce.mjs', 'utf8');
+  const assistant = readFileSync('scripts/lib/schefter-assistant-post.mjs', 'utf8');
+
+  it('announce still gates its GroupMe send on the feed write', () => {
+    expect(announce).toMatch(/written = await appendToFeed\(/);
+    expect(announce).toMatch(/if \(sendGroupMeFlag && written\)/);
+  });
+
+  it('neither lane has grown a second, live-feed-only dedup', () => {
+    for (const src of [announce, assistant]) {
+      expect(src).not.toMatch(/feed\.posts\.some\(/);
+    }
+  });
+
+  // NOTE: that the assistant id carries the season is NOT asserted here.
+  // Scanning the template literal would be a second, weaker copy of
+  // tests/schefter-assistant-post.test.ts, which proves it behaviourally —
+  // 2026's and 2027's week-6 ids differ, and a missing year throws.
+});
+
+/**
+ * F4 — `--week` may only waive the season guard for a type whose id actually
+ * varies by week. For the rest it changes nothing about the article, so a
+ * bypass is a silent lever for publishing the preseason schedule column in
+ * December. The runner derives this from `config.id`; this table is what makes
+ * an id change that flips a type visible.
+ */
+describe('--week only waives the guard where the week is part of the id', () => {
+  const WEEK_SCOPED = ['matchup-preview', 'schedule-strength', 'waiver-pickups', 'weekend-preview', 'weekly-recap'];
+  const NOT_WEEK_SCOPED = ['championship-recap', 'cut-watch', 'draft-grades', 'schedule-release', 'team-grades'];
+
+  it('covers every article type — a new one must be classified here', () => {
+    const types = readdirSync('scripts/article-types')
+      .filter((f) => f.endsWith('.mjs'))
+      .map((f) => f.replace(/\.mjs$/, ''))
+      .sort();
+    expect(types).toEqual([...WEEK_SCOPED, ...NOT_WEEK_SCOPED].sort());
+  });
+
+  it.each(WEEK_SCOPED)('%s: id varies by week', async (type) => {
+    const mod = await import(`../scripts/article-types/${type}.mjs`);
+    expect(mod.config.id(2026, 1, 'theleague')).not.toBe(mod.config.id(2026, 2, 'theleague'));
+  });
+
+  it.each(NOT_WEEK_SCOPED)('%s: id ignores the week', async (type) => {
+    const mod = await import(`../scripts/article-types/${type}.mjs`);
+    expect(mod.config.id(2026, 1, 'theleague')).toBe(mod.config.id(2026, 2, 'theleague'));
+  });
+
+  it('the runner derives the waiver from the id, not from a per-type flag', () => {
+    const src = readFileSync('scripts/schefter-weekly-articles.mjs', 'utf8');
+    expect(src).toMatch(/opts\.week != null && idVariesByWeek/);
+    // The unconditional bypass that shipped the risk.
+    expect(src).not.toMatch(/opts\.week != null\s*\n?\s*\?\s*true/);
+  });
+
+  /**
+   * cut-watch's id is built from `new Date()`, so a run crossing midnight
+   * between two probes would see two different ids and read a DATE-scoped type
+   * as week-scoped — handing back the very guard bypass this section removes.
+   * Re-probing week 1 detects the drift; a type whose id is unstable must
+   * classify as "does not vary", which runs the guard.
+   */
+  it('a clock-derived id that drifts mid-probe classifies as NOT week-scoped', () => {
+    const classify = (id: (y: number, w: number, l: string) => string) =>
+      id(2026, 1, 'theleague') !== id(2026, 2, 'theleague') &&
+      id(2026, 1, 'theleague') === id(2026, 1, 'theleague');
+
+    // A stable week-scoped id: varies by week, same answer on a re-probe.
+    expect(classify((_y, w) => `sf_w${w}`)).toBe(true);
+    // A date-derived id that ticks over between probes — every call differs.
+    let tick = 0;
+    expect(classify(() => `sf_cut_watch_${tick++}`)).toBe(false);
+  });
+});
+
+/**
+ * F2 — the retract script has to LEAVE the tombstone, or mergeFeed has nothing
+ * to filter on. The tombstone's behaviour is pinned in
+ * tests/merge-schefter-feed.test.ts; what cannot be reached behaviourally is
+ * this script, which is a top-level-await CLI bound to the real registry
+ * paths. Scanned instead of executed.
+ */
+describe('schefter-retract-post records the tombstone', () => {
+  const src = readFileSync('scripts/schefter-retract-post.mjs', 'utf8');
+
+  it('writes retractedIds onto the live feed', () => {
+    expect(src).toMatch(/retractedIds: nextTombstones/);
+    expect(src).toMatch(/const isLiveFeed = file === league\.feedPath;/);
+  });
+
+  it('does not put a tombstone on an archive shard, which has nowhere to keep it', () => {
+    expect(src).toMatch(/\.\.\.\(isLiveFeed \? \{ retractedIds: nextTombstones \} : \{\}\)/);
+  });
+
+  /**
+   * --feed-only is the DUPLICATE case: the archived original stays, and the id
+   * must still be barred from the live feed. A tombstone written only on a
+   * full retraction would leave exactly the incident case unprotected.
+   */
+  it('is not conditioned on --feed-only', () => {
+    const block = src.slice(src.indexOf('const isLiveFeed'), src.indexOf('const missing'));
+    expect(block).not.toMatch(/FEED_ONLY/);
+  });
+
+  it('still writes when this run removed nothing, so a re-run re-asserts the bar', () => {
+    expect(src).toMatch(/if \(removed === 0 && tombstonesAdded === 0\) continue;/);
+  });
+
+  /**
+   * Writing only a tombstone is a SUCCESS. The row is often already absent
+   * from this checkout while a stale cron still carries it — the exact race
+   * the tombstone exists for. Exiting 1 there makes a `node … && git commit`
+   * wrapper skip committing the bar that was the point of the run.
+   */
+  it('does not exit non-zero when it wrote a tombstone but removed no rows', () => {
+    expect(src).toMatch(/if \(removedTotal === 0 && tombstonedTotal === 0\) process\.exitCode = 1;/);
+    expect(src).not.toMatch(/if \(removedTotal === 0\) process\.exitCode = 1;/);
   });
 });

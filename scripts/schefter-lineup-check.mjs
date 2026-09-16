@@ -422,6 +422,7 @@ async function checkLeague(league, now = new Date()) {
           league: schefterLeague,
           franchiseId: w.franchiseId,
           kind: 'lineup',
+          year,
           week,
           headline: w.noLineup ? 'No lineup submitted' : 'Check your lineup',
           body: formatWarningLine(w).replace(/^• /, ''),

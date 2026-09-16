@@ -275,6 +275,79 @@ never a hand edit — the feeds are cron-written, so a hand edit is invisible in
 review. It deliberately leaves the scanner's `posted`/exposure state alone, or
 the same offer regenerates the same wrong post on the next scan.
 
+**Removing the row is not the retraction.** `mergeFeed` unions our posts with
+origin's on every push, so a scan job that CHECKED OUT before the retraction
+landed pushes the post straight back — and `archivedThroughTimestamp`, the
+other resurrection guard, only shields posts old enough to have been archived,
+which a just-published post never is. The retraction is the `retractedIds`
+tombstone the script writes onto the live feed; `mergeFeed` unions that list
+(never replaces it — a stale runner has the SHORTER one) and filters posts by
+it, so it holds under any interleaving. A tombstone is permanent by design.
+Pinned by `tests/merge-schefter-feed.test.ts`.
+
+Retracting a re-published DUPLICATE is `--feed-only`. Both copies share one id,
+so the default sweep would delete the archived ORIGINAL along with the
+duplicate — and the dedup below reads the archive, so deleting it there is how
+you arrange for the column to publish a third time.
+
+### Dedup for a long-lived id must read the ARCHIVE, not just the feed
+
+The weekly archiver (`scripts/archive-schefter-feed.mjs`, 300-post cap) moves
+the feed's long tail into `schefter-archive/<year>.json`. An id checked against
+the live feed alone therefore reads as "never posted" the moment it rotates —
+which is how TheLeague's 2026 schedule-release column went out to GroupMe a
+second time on Sept 15, three weeks after the real one, six days into the NFL
+season.
+
+- **`isDuplicate` and `appendToFeed` share one check** (`isPublished` in
+  `scripts/article-utils/feed-writer.mjs`), because two of the three writers —
+  `schefter-announce.mjs` and `lib/schefter-assistant-post.mjs` — never call
+  `isDuplicate` at all and gate a side effect on `appendToFeed`'s return value.
+  Announce sends GroupMe only when it wrote; against the live feed alone that
+  no-double-ping guarantee silently expired the moment the slug archived, and
+  `sf_announce_dark-mode` had already archived in both leagues.
+- **It FAILS CLOSED — on the listing as well as the parse.** An unreadable
+  shard throws rather than being skipped, because skipping it reads its ids as
+  never posted, which is the repost this exists to stop. The same rule governs
+  the DIRECTORY read: only `ENOENT` is benign (that league has no archive yet),
+  and every other code means the archive is there but unlistable. The first cut
+  guarded the parse and swallowed every listing error, which left the guarantee
+  open to an `EACCES`.
+- **So every id must be unique for as long as it must not repeat.** The check
+  is permanent, so a season-less id is suppressed FOREVER the first time it
+  archives — the opposite failure, a warning that silently never posts.
+  `assistantPostId` carries the season year for exactly this reason, and it
+  throws rather than defaulting one.
+- **Which is why this check is NOT for every dedup in the system.** Two other
+  shapes are deliberately live-feed-only and must stay that way:
+  - **Watermark-driven scanners.** `schefter-scan.mjs`'s ESPN and NFL-wire
+    lanes gate on `pubDate > watermarkDate` and only then check the feed; the
+    watermark is the real protection and the feed check is a belt (its own
+    comment says "in case watermark got out of sync"). Nothing can rotate out
+    from under a watermark.
+  - **Recurring reminders with season-less ids.** `roger_<eventId>_<touchId>`
+    (`schefter-scan.mjs`) is built from constants like `trading-deadline` and
+    `rookie-draft` — the SAME id every year. Live-feed-only is what makes next
+    season's trade-deadline reminder fire at all; make it archive-aware and
+    every recurring Roger reminder goes silent forever after its first
+    rotation. If that id ever needs the archive check, it needs a season in it
+    FIRST — and note that changing it mid-season re-posts the live reminders
+    once.
+- **`--week` does not waive the season guard for a type whose id ignores the
+  week.** `schefter-weekly-articles.mjs` derives that from `config.id` rather
+  than a per-type flag. For `schedule-release`, `draft-grades`, `team-grades`,
+  `championship-recap` and `cut-watch`, `--week` changes nothing about the
+  article it would write, so letting it bypass the guard is a silent lever for
+  publishing the preseason schedule column in December.
+- **The kickoff gate is an INSTANT, not a local midnight.** `guardSeason` in
+  `schedule-release.mjs` compares against `nflWeekStartInstant(year, 1)`;
+  `nflKickoff()`'s local midnight is 5pm PT the day before on a UTC GitHub
+  runner, cutting off the last preseason evening.
+
+`tests/schefter-once-per-season-dedupe.test.ts` pins all of it, including a
+table of which article types are week-scoped — so an id change that reclassifies
+one is a test failure rather than a behaviour change nobody noticed.
+
 ### Every cap counts POSTS; one has to count TOPICS
 
 Schefter's rate limiting was thorough and measured the wrong thing. A shared

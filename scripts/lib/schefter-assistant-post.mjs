@@ -14,10 +14,14 @@
  *   no player at all ("no lineup submitted"), so the For You feed cannot find
  *   it by player id. `postConcernsFranchise` in src/utils/schefter-watching.ts
  *   is the matching half; keep them in step.
- * - **The id is deterministic**, so a re-run is a no-op rather than a
- *   duplicate. `appendToFeed` already refuses a post whose id is present, and
- *   these jobs re-run: the lineup check has an hourly-ish window and a manual
- *   dispatch, and a workflow retry replays the whole step.
+ * - **The id is deterministic AND season-scoped**, so a re-run is a no-op
+ *   rather than a duplicate. `appendToFeed` refuses a post whose id was ever
+ *   published, and these jobs re-run: the lineup check has an hourly-ish
+ *   window and a manual dispatch, and a workflow retry replays the whole step.
+ *   The season year is load-bearing, not decoration: that check reads the
+ *   season ARCHIVE as well as the live feed, so a season-less
+ *   `..._lineup_w5` would be suppressed forever the first time week 5 rotated
+ *   out — next season's week-5 warning would silently never post.
  *
  * This module does NOT push. Pushes for these events already exist under their
  * own categories, and doubling them up is how push permission gets revoked
@@ -27,12 +31,15 @@
 import { appendToFeed } from '../article-utils/feed-writer.mjs';
 
 /**
- * Deterministic post id. Scoped by league + franchise + kind + week so the
- * same warning in week 5 and week 6 are two posts, but two runs in week 5 are
- * one.
+ * Deterministic post id. Scoped by league + franchise + kind + SEASON + week,
+ * so week 5 and week 6 are two posts and two runs in week 5 are one — while
+ * 2026's week 5 and 2027's week 5 stay distinct. `year` has no default on
+ * purpose: deriving a season from a calendar date here would be a second copy
+ * of the rollover pivot, and the one caller already resolved it.
  */
-export function assistantPostId({ navSlug, franchiseId, kind, week }) {
-  return `assist_${navSlug}_${franchiseId}_${kind}_w${week}`;
+export function assistantPostId({ navSlug, franchiseId, kind, year, week }) {
+  if (year == null) throw new Error('assistantPostId: year is required (season-scoped id)');
+  return `assist_${navSlug}_${franchiseId}_${kind}_${year}_w${week}`;
 }
 
 /**
@@ -43,6 +50,7 @@ export function assistantPostId({ navSlug, franchiseId, kind, week }) {
  * @param {{navSlug: string}} args.league  Schefter league (navSlug-shaped slug)
  * @param {string} args.franchiseId
  * @param {string} args.kind      Stable slug for the nudge type, e.g. 'lineup'
+ * @param {number} args.year      Season year — required, keeps the id unique across seasons
  * @param {number} args.week
  * @param {string} args.headline
  * @param {string} args.body
@@ -56,6 +64,7 @@ export function buildAssistantPost({
   league,
   franchiseId,
   kind,
+  year,
   week,
   headline,
   body,
@@ -66,7 +75,7 @@ export function buildAssistantPost({
   now = new Date(),
 }) {
   return {
-    id: assistantPostId({ navSlug: league.navSlug, franchiseId, kind, week }),
+    id: assistantPostId({ navSlug: league.navSlug, franchiseId, kind, year, week }),
     timestamp: now.toISOString(),
     type: 'assistant',
     tier,
