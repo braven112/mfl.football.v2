@@ -1244,6 +1244,20 @@ const ownersPollTeams = Object.values(getLeagueTeamBrands(ownersPollLeague.slug)
        * Set Optimal, Clear, and the restored draft on init).
        */
       function renderBench() {
+        // A DELAYED call can outlive this page. Submit success schedules
+        // updateSubmitBar() 2s later, and an in-flight submit resolves whenever
+        // it resolves — by then the owner can be on the OTHER league's lineup
+        // page, one click away on the shared host via the nav's league switcher
+        // (a same-origin href, so a ClientRouter swap rather than a fresh
+        // document). Everything else in updateSubmitBar() touches nodes this
+        // closure captured, which are detached and harmless. refreshRankChips()
+        // does NOT: applyRankChips sweeps the LIVE document, so it would strip
+        // the arriving page's chips and re-apply the DEPARTED league's board to
+        // its rows — the cross-league bleed rankings-scope.ts exists to stop.
+        // Ask the node, not a flag: it is the same "did the router replace me"
+        // question init()'s own gate asks.
+        if (!benchList.isConnected) return;
+
         const bench = selectBenchPlayers(data.roster as LineupPlayer[], currentSlots);
         benchList.innerHTML = bench
           .map((p) => buildBenchRowHTML(p, getGame(p)))

@@ -50,7 +50,16 @@ export interface PlayerCellOptions {
   isLogoAvatar?: boolean;
 }
 
-function esc(str: string | null | undefined): string {
+/**
+ * Escape a value for interpolation into HTML text or a double-quoted attribute.
+ *
+ * Exported because this exact body had been re-typed privately in four other
+ * `src/utils/*` modules by Sept 2026, and a fifth was about to land with
+ * `lineup-bench.ts` — there was no exported one to reach for, which is why
+ * there were five. See docs/claude/followups/2026-09-15-html-escape-duplication.md
+ * for collapsing the rest; this is the home they should collapse into.
+ */
+export function escapeHtml(str: string | null | undefined): string {
   // Some callers build this from a raw feed player record (e.g. the Cutdown
   // Plan panel's findAutocutPlayer lookup) where `name` isn't guaranteed —
   // str.replace on undefined/null used to throw and, with no try/catch above
@@ -61,6 +70,9 @@ function esc(str: string | null | undefined): string {
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;');
 }
+
+/** Internal alias — this module's ~20 call sites read better as `esc`. */
+const esc = escapeHtml;
 
 export function buildPlayerCellHTML(opts: PlayerCellOptions): string {
   const {

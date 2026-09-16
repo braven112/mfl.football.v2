@@ -18,7 +18,7 @@
  */
 
 import { NFL_LOGO_ONERROR, NFL_LOGO_ONLOAD } from '../constants/roster-constants';
-import { buildPlayerCellHTML } from './player-cell-html';
+import { buildPlayerCellHTML, escapeHtml as esc } from './player-cell-html';
 
 /** The slot fields the bench derivation cares about. */
 export interface BenchSlot {
@@ -60,14 +60,6 @@ export function selectBenchPlayers<T extends { id: string; projection: number | 
   return roster
     .filter((p) => !seated.has(p.id))
     .sort((a, b) => (b.projection ?? -1) - (a.projection ?? -1));
-}
-
-function esc(str: string | null | undefined): string {
-  return String(str ?? '')
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
 }
 
 /**

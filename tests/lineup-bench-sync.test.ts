@@ -172,6 +172,23 @@ describe.each(PAGES)('%s lineup page keeps its bench in sync', (_league, file) =
     expect(missing, 'the client row is missing classes the server row emits').toEqual([]);
   });
 
+  it('refuses to run once the router has replaced its page', () => {
+    // Submit success schedules updateSubmitBar() 2s later, and an in-flight
+    // submit resolves whenever it resolves. Everything else in that function
+    // touches nodes the closure captured — detached, harmless. renderBench()
+    // reaches the LIVE document through refreshRankChips(), so a delayed call
+    // from the DEPARTED league strips the arriving league's rank chips and
+    // re-applies the wrong board to its rows. Caught by Codex on PR #1120.
+    const start = SCRIPT.indexOf('function renderBench()');
+    const body = SCRIPT.slice(start, SCRIPT.indexOf('\n      }', start));
+    expect(body, 'renderBench must bail when its node is no longer in the document')
+      .toContain('if (!benchList.isConnected) return;');
+    expect(
+      body.indexOf('isConnected'),
+      'the guard must precede the render, not follow it',
+    ).toBeLessThan(body.indexOf('benchList.innerHTML'));
+  });
+
   it('hangs renderBench() off the funnel EVERY mutation path already goes through', () => {
     // performSwap, undoLastSwap, undoClear, setOptimalLineup, clearLineup and
     // the init-time draft restore all call updateSubmitBar(). Calling renderBench
