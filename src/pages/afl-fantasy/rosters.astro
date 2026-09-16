@@ -776,9 +776,11 @@ const pageConfig = {
 ---
 
 <TheLeagueLayout title={`AFL — ${selectedTeam.name} Roster`}>
-  <FrontOfficeNav leagueSlug="afl-fantasy" current="rosters" crumb="Rosters" bare />
   <CollegeLogoDarkStyles />
   <section class="roster-page" data-initial-view={initialView}>
+    <!-- Breadcrumbs live inside the centered column so they share its left
+         edge with the team card; outside it they sat at the layout's edge. -->
+    <FrontOfficeNav leagueSlug="afl-fantasy" current="rosters" crumb="Rosters" bare />
     <!-- Team Header Card -->
     <div class="team-card" data-team-identity>
       {selectedTeam.icon && (
