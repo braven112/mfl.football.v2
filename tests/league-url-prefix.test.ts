@@ -162,7 +162,7 @@ describe('scanner sources build absolute URLs through the registry helper', () =
     expect(src).toMatch(/from '\.\/lib\/schefter-public-url\.mjs'/);
     expect(src).toMatch(/createPublicUrl\(/);
     // Its CTA path is the PREFIXED internal route, like every feed link.
-    expect(src).toMatch(/\/\$\{LEAGUE_SLUG\}\/trade-builder/);
+    expect(src).toMatch(/\/\$\{LEAGUE_SLUG\}\/front-office\/trade-builder/);
   });
 
   it('every apex-ROOT spelling strips; everything else keeps the prefix', () => {

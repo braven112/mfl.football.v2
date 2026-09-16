@@ -532,7 +532,7 @@
       const action = pendingAction;
 
       if (action === 'trade') {
-        const target = `/afl-fantasy/trade-builder?from=${encodeURIComponent(franchiseId ?? '')}&player=${encodeURIComponent(playerId)}`;
+        const target = `/afl-fantasy/front-office/trade-builder?from=${encodeURIComponent(franchiseId ?? '')}&player=${encodeURIComponent(playerId)}`;
         window.location.href = target;
         return;
       }
@@ -577,6 +577,15 @@
         if (action === 'cut') removeRowAfterCut(playerId);
         if (action === 'trade-bait-add') refreshRowAfterTradeBait(playerId, true);
         if (action === 'trade-bait-remove') refreshRowAfterTradeBait(playerId, false);
+
+        // Every optimistic update above edits a roster TABLE ROW and no-ops
+        // anywhere else. The Keeper Planner board is cards and slots, not
+        // rows, so it listens for this instead — otherwise a player the owner
+        // just cut sits on the board until a reload. Dispatched for every
+        // action so a surface can react to whichever ones it cares about.
+        document.dispatchEvent(
+          new CustomEvent('afl-action:done', { detail: { action, playerId } }),
+        );
 
         successEl.textContent = `${playerName} — done.`;
         successEl.hidden = false;

@@ -18,7 +18,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 const PAGE = fs.readFileSync(
-  path.join(process.cwd(), 'src/pages/theleague/salary.astro'),
+  path.join(process.cwd(), 'src/pages/theleague/front-office/salary-analytics.astro'),
   'utf-8',
 );
 const EXPORT_HANDLER = fs.readFileSync(

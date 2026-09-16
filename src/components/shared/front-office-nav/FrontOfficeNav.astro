@@ -1,0 +1,58 @@
+---
+/**
+ * FrontOfficeNav — the breadcrumb chrome ("Home / Front Office / <page>")
+ * that sits on top of every page in the Front Office section.
+ *
+ * Used to also render a horizontal tab strip listing every other Front
+ * Office page (one per FRONT_OFFICE_PAGES entry) — removed by request: the
+ * Front Office hub's own Tool Rail (FrontOfficeToolRail.astro) is now the
+ * way to move between these pages, and duplicating that list as a second,
+ * per-page tab row was redundant chrome. The breadcrumb trail stays, since
+ * "which page am I on, and how do I get back to the hub" is still worth
+ * one glance without a rail in view.
+ *
+ * `current` and `bare` stay accepted props (many callers already pass them)
+ * even though `current` no longer drives anything here — dropping them would
+ * mean editing every calling page for a prop that's harmless to keep.
+ */
+import Breadcrumbs from '../../theleague/Breadcrumbs.astro';
+import { FRONT_OFFICE_HUB_PATH, type FrontOfficeLeagueSlug } from './front-office-pages';
+
+interface Props {
+  leagueSlug: FrontOfficeLeagueSlug;
+  /** `key` of the page rendering this strip, or 'hub'. No longer used for
+   *  tab-highlighting (the strip is gone) — kept so existing callers don't
+   *  need to drop the prop. */
+  current?: string;
+  /** Trailing breadcrumb for this page. Omit on the hub. */
+  crumb?: string;
+  /**
+   * Drop the chrome's own top padding — for a page (Roster/Salary, Keeper
+   * Planner, …) that already owns its page-level gutter, so the breadcrumbs
+   * do not get a second one stacked on top.
+   */
+  bare?: boolean;
+}
+
+const { leagueSlug, crumb, bare = false } = Astro.props;
+const trail = [
+  { label: 'Home', href: `/${leagueSlug}` },
+  ...(crumb
+    ? [{ label: 'Front Office', href: `/${leagueSlug}${FRONT_OFFICE_HUB_PATH}` }, { label: crumb }]
+    : [{ label: 'Front Office' }]),
+];
+---
+
+<div class:list={['fonav-chrome', { 'fonav-chrome--bare': bare }]}>
+  <Breadcrumbs items={trail} />
+</div>
+
+<style>
+  .fonav-chrome {
+    padding: 0.75rem 1rem 0;
+  }
+
+  .fonav-chrome--bare {
+    padding: 0 0 0;
+  }
+</style>

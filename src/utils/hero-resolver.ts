@@ -959,7 +959,7 @@ export function resolveHeroState(
         source: 'event',
         title: 'Trade Deadline',
         summary: 'Make your moves before midnight PT. After today, rosters are locked for trades.',
-        link: '/theleague/trade-builder',
+        link: '/theleague/front-office/trade-builder',
         linkLabel: 'Open Trade Builder',
         icon: 'handshake',
         accentColor: 'var(--color-error, #dc2626)',

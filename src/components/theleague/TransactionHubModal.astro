@@ -51,7 +51,7 @@ const { hideLeaguePrefix = false, config } = Astro.props;
 // Keep the "Trade Builder" links inside the current league.
 const isAFL = getLeagueContext(Astro.url).slug === 'afl-fantasy';
 const tradeBuilderHref = resolveLeaguePath(
-  isAFL ? '/afl-fantasy/trade-builder' : '/theleague/trade-builder',
+  isAFL ? '/afl-fantasy/front-office/trade-builder' : '/theleague/front-office/trade-builder',
   hideLeaguePrefix
 );
 ---

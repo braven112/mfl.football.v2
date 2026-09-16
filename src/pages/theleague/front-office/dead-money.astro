@@ -1,25 +1,25 @@
 ---
-import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
-import Breadcrumbs from '../../components/theleague/Breadcrumbs.astro';
-import DeadMoneyComposite from '../../components/theleague/DeadMoneyComposite.astro';
-import DeadMoneyPlayerCard from '../../components/theleague/DeadMoneyPlayerCard.astro';
-import RelatedReports from '../../components/theleague/RelatedReports.astro';
-import leagueConfig from '../../data/theleague.config.json';
-import { getPlayerImageUrl, resolveHeadshotSrc } from '../../constants/roster-constants';
-import { getCurrentSeasonYear } from '../../utils/league-year';
-import { getTeamIdentityForYear, chooseTeamName } from '../../utils/team-names';
-import { normalizeTeamCode } from '../../utils/nfl-logo';
-import { getGlobalPlayerMap } from '../../utils/player-map';
-import { resolveCutoutUrl } from '../../utils/player-modal-band';
-import { buildNoHeadshotPlaceholder, getNflTeamColors } from '../../utils/nfl-team-colors';
-import { isEspnCdnUrl } from '../../utils/espn-cdn';
+import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
+import FrontOfficeNav from '../../../components/shared/front-office-nav/FrontOfficeNav.astro';
+import DeadMoneyComposite from '../../../components/theleague/DeadMoneyComposite.astro';
+import DeadMoneyPlayerCard from '../../../components/theleague/DeadMoneyPlayerCard.astro';
+import RelatedReports from '../../../components/theleague/RelatedReports.astro';
+import leagueConfig from '../../../data/theleague.config.json';
+import { getPlayerImageUrl, resolveHeadshotSrc } from '../../../constants/roster-constants';
+import { getCurrentSeasonYear } from '../../../utils/league-year';
+import { getTeamIdentityForYear, chooseTeamName } from '../../../utils/team-names';
+import { normalizeTeamCode } from '../../../utils/nfl-logo';
+import { getGlobalPlayerMap } from '../../../utils/player-map';
+import { resolveCutoutUrl } from '../../../utils/player-modal-band';
+import { buildNoHeadshotPlaceholder, getNflTeamColors } from '../../../utils/nfl-team-colors';
+import { isEspnCdnUrl } from '../../../utils/espn-cdn';
 
 // Minimum salary to qualify for individual Brock Osweiler / Position Worst awards.
 // Filters out minimum-contract players — we want big-money busts, not dart throws.
 const INDIVIDUAL_AWARD_MIN_SALARY = 1_500_000;
 
 const playerModules = import.meta.glob(
-  '../../data/mfl-player-salaries-*.json',
+  '../../../data/mfl-player-salaries-*.json',
   { eager: true }
 );
 
@@ -364,14 +364,10 @@ for (const [season, rankings] of jerryJonesStartersBySeason) {
 ---
 
 <TheLeagueLayout title="Dead Money Awards">
+  <FrontOfficeNav leagueSlug="theleague" current="dead-money" crumb="Dead Money" />
   <div class="visually-hidden" role="status" aria-live="polite" aria-atomic="true" id="filter-announcer"></div>
   <section class="dead-money">
     <header class="page-header">
-      <Breadcrumbs items={[
-        { label: 'The League', href: '/theleague' },
-        { label: 'Stats & Reports', href: '/theleague/stats' },
-        { label: 'Dead Money Awards' },
-      ]} />
       <h1>The Dead Money Awards</h1>
       <p class="page-subtitle">
         Celebrating the league's finest examples of financial mismanagement.
@@ -1300,11 +1296,12 @@ for (const [season, rankings] of jerryJonesStartersBySeason) {
     yearFilter?.addEventListener('change', applyFilters);
   }
 
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', setupDeadMoneyFilters);
-  } else {
-    setupDeadMoneyFilters();
-  }
-
-  document.addEventListener('astro:after-swap', setupDeadMoneyFilters);
+  // CLIENTROUTER-SAFE INIT (frontend.md, "Interactive scripts must re-init on
+  // astro:page-load"). Never call setupDeadMoneyFilters() directly —
+  // astro:page-load fires on the FIRST load too, so a direct call plus this
+  // listener would double-bind on that load (the "Initial-Load Double-Init"
+  // trap: the change listeners below have no removeEventListener, so a second
+  // bind fires every filter change twice). astro:after-swap fired too early
+  // for a re-query to be reliable and isn't what the rest of the repo uses.
+  document.addEventListener('astro:page-load', setupDeadMoneyFilters);
 </script>

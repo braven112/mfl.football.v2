@@ -55,6 +55,8 @@ export const AFL_MOCK_ROUNDS: number = (aflConfig as { draftRounds?: number }).d
 
 /** Id of the keeper-deadline event in the AFL's calendar. */
 const KEEPER_DEADLINE_EVENT_ID = 'afl-keeper-deadline';
+/** Id of the "new AFL season starts" event in the AFL's calendar. */
+const NEW_SEASON_STARTS_EVENT_ID = 'afl-new-season-starts';
 
 interface FixedEventDate {
   type?: string;
@@ -64,13 +66,14 @@ interface FixedEventDate {
 }
 
 /**
- * The keeper deadline for a season, read from the league calendar rather than
- * re-typed. The calendar is what the site already shows owners, and a second
- * copy of "July 15" here is a second thing to forget at the next rule change.
+ * Resolve a FIXED-date event's start as a real Date for a given year, read
+ * from the league calendar rather than re-typed — the calendar is what the
+ * site already shows owners, and a second copy of a date here is a second
+ * thing to forget at the next rule change.
  */
-export function keeperDeadlineFor(year: number): Date | null {
+function fixedEventDateFor(eventId: string, year: number): Date | null {
   const event = (aflEvents.events as Array<{ id: string; startDate?: FixedEventDate }>).find(
-    (e) => e.id === KEEPER_DEADLINE_EVENT_ID
+    (e) => e.id === eventId
   );
   const start = event?.startDate;
   if (!start || start.type !== 'fixed' || !start.month || !start.day) return null;
@@ -83,6 +86,22 @@ export function keeperDeadlineFor(year: number): Date | null {
     Number.isFinite(hours) ? hours : 0,
     Number.isFinite(minutes) ? minutes : 0
   );
+}
+
+/** The keeper deadline for a season. */
+export function keeperDeadlineFor(year: number): Date | null {
+  return fixedEventDateFor(KEEPER_DEADLINE_EVENT_ID, year);
+}
+
+/**
+ * When the AFL's new season — and with it, the Keeper Planner's Finalize
+ * window — starts for a season. Paired with {@link keeperDeadlineFor} to
+ * bracket the window a franchise may actually execute cuts in; outside it,
+ * planning (drag/save) still works, only the destructive finalize step is
+ * gated.
+ */
+export function newSeasonStartsFor(year: number): Date | null {
+  return fixedEventDateFor(NEW_SEASON_STARTS_EVENT_ID, year);
 }
 
 // ── Rosters ────────────────────────────────────────────────────────────────

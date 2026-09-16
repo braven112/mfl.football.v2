@@ -101,9 +101,9 @@ describe('getEquivalentRoute', () => {
 
   // -- Nested / tricky paths --
 
-  it('handles nested routes like /contracts/manage', () => {
-    expect(getEquivalentRoute('/theleague/contracts/manage', 'afl')).toBe(
-      '/afl-fantasy/contracts/manage'
+  it('handles nested routes like /front-office/trade-builder', () => {
+    expect(getEquivalentRoute('/theleague/front-office/trade-builder', 'afl')).toBe(
+      '/afl-fantasy/front-office/trade-builder'
     );
   });
 

@@ -13,9 +13,19 @@ import type { PositionNeed } from '../../utils/free-agent-needs';
 export interface Props {
   needs: PositionNeed[];
   franchiseId: string;
+  /**
+   * Render a ⋮ kebab (WatchListBridge's PlayerActionModal — Watch, plus a
+   * Bid/Claim action once the client resolves eligibility) next to every
+   * row. OFF by default: this card also renders on rosters.astro's
+   * `nextyear`/planner view, which does not mount WatchListBridge, so an
+   * unconditional kebab there would be a dead button. The Front Office
+   * hub's TheLeaguePlannerPanel.astro is the caller that mounts the bridge
+   * and turns this on.
+   */
+  showActions?: boolean;
 }
 
-const { needs, franchiseId } = Astro.props;
+const { needs, franchiseId, showActions = false } = Astro.props;
 const cardId = `fa-needs-${franchiseId}`;
 const hasNeeds = needs.length > 0;
 ---
@@ -57,6 +67,7 @@ const hasNeeds = needs.length > 0;
                 <th class="fa-needs__th fa-needs__th--rank"></th>
                 <th class="fa-needs__th fa-needs__th--player"></th>
                 <th class="fa-needs__th fa-needs__th--pts">PTS</th>
+                {showActions && <th class="fa-needs__th col-player-actions"></th>}
               </tr>
             </thead>
             <tbody class="fa-needs__list">
@@ -75,6 +86,30 @@ const hasNeeds = needs.length > 0;
                     />
                   </td>
                   <td class="fa-needs__proj">{fa.projectedScore.toFixed(1)}</td>
+                  {showActions && (
+                    <td class="col-player-actions">
+                      <button
+                        type="button"
+                        class="pa-kebab"
+                        data-pa-open
+                        data-pa-claimable="true"
+                        data-pa-id={fa.id}
+                        data-pa-name={fa.name}
+                        data-pa-pos={fa.position}
+                        data-pa-team={fa.nflTeam}
+                        data-pa-headshot={fa.headshot ?? ''}
+                        data-pa-sub="Free agent"
+                        aria-label={`Actions for ${fa.name}`}
+                        title="Player actions"
+                      >
+                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                          <circle cx="12" cy="5" r="2"></circle>
+                          <circle cx="12" cy="12" r="2"></circle>
+                          <circle cx="12" cy="19" r="2"></circle>
+                        </svg>
+                      </button>
+                    </td>
+                  )}
                 </tr>
               ))}
             </tbody>

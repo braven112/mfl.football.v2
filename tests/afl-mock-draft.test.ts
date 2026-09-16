@@ -9,6 +9,7 @@ import {
   buildRepeatingOrder,
   isMockWindowOpen,
   keeperDeadlineFor,
+  newSeasonStartsFor,
   picksMadeIn,
   resolveMockWindow,
   rosterCutState,
@@ -176,6 +177,24 @@ describe('the keeper deadline comes from the league calendar', () => {
 
   it('tracks the season it is asked about', () => {
     expect(keeperDeadlineFor(2031)!.getFullYear()).toBe(2031);
+  });
+});
+
+describe('the new-season-starts date comes from the league calendar', () => {
+  it('June 1, midnight — read, not re-typed', () => {
+    const start = newSeasonStartsFor(2026)!;
+    expect(start.getMonth()).toBe(5); // June
+    expect(start.getDate()).toBe(1);
+  });
+
+  it('tracks the season it is asked about', () => {
+    expect(newSeasonStartsFor(2031)!.getFullYear()).toBe(2031);
+  });
+
+  it('always precedes that same season\'s keeper deadline', () => {
+    for (const year of [2026, 2027, 2031]) {
+      expect(newSeasonStartsFor(year)!.getTime()).toBeLessThan(keeperDeadlineFor(year)!.getTime());
+    }
   });
 });
 

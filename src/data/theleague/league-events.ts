@@ -222,7 +222,7 @@ export const THE_LEAGUE_EVENTS: LeagueEventDefinition[] = [
     actionLinks: [
       {
         label: 'Trade Builder',
-        url: '/theleague/trade-builder',
+        url: '/theleague/front-office/trade-builder',
         external: false,
       },
     ],

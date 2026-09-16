@@ -128,8 +128,8 @@ const publicUrl = createPublicUrl({
 const TRADE_BUILDER_LINK_LABEL = 'Open in Trade Builder →';
 function buildTradeBuilderPath(franchiseId) {
   return franchiseId
-    ? `/${LEAGUE_SLUG}/trade-builder?b=${encodeURIComponent(franchiseId)}`
-    : `/${LEAGUE_SLUG}/trade-builder`;
+    ? `/${LEAGUE_SLUG}/front-office/trade-builder?b=${encodeURIComponent(franchiseId)}`
+    : `/${LEAGUE_SLUG}/front-office/trade-builder`;
 }
 
 // Match the rumor-mill's wire shape so the existing feed renderer treats

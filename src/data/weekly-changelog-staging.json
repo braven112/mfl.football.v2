@@ -15,12 +15,7 @@
       "summary": "<a href=\"/activity\">Owner Activity</a> is now site analytics: league traffic, per-owner engagement, page reach and app installs — and no transaction leaderboard.",
       "impact": "user",
       "area": "other",
-      "league": "theleague",
-      "featured": true,
-      "headline": "Owner Activity became the site's analytics page",
-      "lede": "Traffic day by day with signed-out visitors counted, how many days each owner showed up, which pages the most owners open, which have never been opened, and how much of the league has the app installed.",
-      "image": "owner-activity-analytics.webp",
-      "imageAlt": "The League's Owner Activity page showing traffic cards, a daily signed-in versus signed-out bar strip, and the per-owner page views chart"
+      "league": "theleague"
     },
     {
       "date": "2026-09-10",
@@ -28,12 +23,33 @@
       "summary": "<a href=\"/activity\">Owner Activity</a> is now site analytics: league traffic, per-owner engagement, page reach and app installs — and no transaction leaderboard.",
       "impact": "user",
       "area": "other",
+      "league": "afl"
+    },
+    {
+      "date": "2026-09-12",
+      "type": "new-page",
+      "summary": "<a href=\"/front-office\">Front Office</a> now opens straight into your League Planner — extensions, free agent needs, cap metrics and draft assets — with every contract and trade tool one click away in the sidebar.",
+      "impact": "user",
+      "area": "navigation",
+      "league": "theleague",
+      "featured": true,
+      "headline": "Front Office is now your League Planner's home",
+      "lede": "One page for the whole offseason: extensions, free agent needs, this year's cap picture and next year's draft assets, switchable to any team in the league — with contracts, trades and every salary tool a click away.",
+      "image": "front-office-hub.jpg",
+      "imageAlt": "TheLeague's Front Office page showing the team switcher, Extensions and Veteran Extension Candidates cards, and the Front Office Tools sidebar"
+    },
+    {
+      "date": "2026-09-12",
+      "type": "new-page",
+      "summary": "<a href=\"/front-office\">Front Office</a> now opens straight into your Keeper Planner — drag players above the line to keep them — with Rosters, Trade Builder and the Keeper Report Card a click away.",
+      "impact": "user",
+      "area": "navigation",
       "league": "afl",
       "featured": true,
-      "headline": "Owner Activity became the site's analytics page",
-      "lede": "Traffic day by day with signed-out visitors counted, how many days each owner showed up, which pages the most owners open, which have never been opened, and how much of the league has the app installed.",
-      "image": "afl-owner-activity-analytics.webp",
-      "imageAlt": "The AFL's Owner Activity page showing traffic cards, a daily signed-in versus signed-out bar strip, and the per-owner page views chart"
+      "headline": "Front Office is now your Keeper Planner's home",
+      "lede": "Drag your 7 keepers above the line and everyone else gets cut when you finalize — right on the page Front Office now opens to, with Rosters, Trade Builder and the Keeper Report Card one click away.",
+      "image": "afl-front-office-hub.jpg",
+      "imageAlt": "The AFL's Front Office page showing the Keeper Planner's above-the-line keeper slots and the below-the-line cut list, with the Front Office Tools sidebar"
     },
     {
       "date": "2026-09-10",
@@ -118,7 +134,7 @@
     {
       "date": "2026-09-11",
       "type": "enhancement",
-      "summary": "Schefter's trade-speculation posts now open the <a href=\"/trade-builder\">Trade Builder</a> with the named team loaded, instead of linking back to the post you just read.",
+      "summary": "Schefter's trade-speculation posts now open the <a href=\"/front-office/trade-builder\">Trade Builder</a> with the named team loaded, instead of linking back to the post you just read.",
       "impact": "user",
       "area": "schefter",
       "league": "theleague"
@@ -330,6 +346,30 @@
       "impact": "user",
       "area": "free-agents",
       "league": "theleague"
+    },
+    {
+      "date": "2026-09-16",
+      "type": "enhancement",
+      "summary": "Player names on the <a href=\"/front-office\">Front Office</a> planner open the full player card now, and a ⋮ menu on each row manages your own players or adds a free agent to your watch list.",
+      "impact": "user",
+      "area": "rosters",
+      "league": "both"
+    },
+    {
+      "date": "2026-09-16",
+      "type": "enhancement",
+      "summary": "The AFL's <a href=\"/front-office\">Front Office</a> planner now carries Roster at a glance plus NFL and College Stacks — your age curve, and which of your players share a team.",
+      "impact": "user",
+      "area": "keeper-analysis",
+      "league": "afl"
+    },
+    {
+      "date": "2026-09-16",
+      "type": "bug-fix",
+      "summary": "The AFL <a href=\"/front-office\">Front Office</a> page no longer slides sideways on a phone — a long player name now truncates inside its card instead of pushing the whole page over.",
+      "impact": "user",
+      "area": "keeper-analysis",
+      "league": "afl"
     }
   ]
 }
