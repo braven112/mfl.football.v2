@@ -598,7 +598,8 @@
       "note": "A route under two league directories is a sibling: build a shared component, not a second page. See CLAUDE.md \"Second league's copy of a page\".",
       "tests": [
         "tests/page-fork-ratchet.test.ts",
-        "tests/clientrouter-init-ratchet.test.ts"
+        "tests/clientrouter-init-ratchet.test.ts",
+        "tests/glob-lookup-key-depth.test.ts"
       ]
     },
     {
