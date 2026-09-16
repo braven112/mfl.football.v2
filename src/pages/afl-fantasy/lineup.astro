@@ -39,6 +39,7 @@ import { resolveThrowbackIdentity } from '../../utils/throwback-identity';
 import { isThrowbackWeekForScope } from '../../utils/throwback-scope';
 import { getAllThrowbackPreferences } from '../../utils/throwback-store';
 import { resolveSubmitButtonState } from '../../utils/lineup-submit-state';
+import { selectBenchPlayers } from '../../utils/lineup-bench';
 import { getCurrentWeekForYear } from '../../utils/current-week';
 import { getAflLeagueYear } from '../../utils/league-year';
 import { normalizeTeamCode } from '../../utils/nfl-logo';
@@ -451,6 +452,11 @@ const fillState = resolveLineupFillState({
   weekScheduled,
   franchiseListed: weekLineup.franchiseListed,
 });
+// The bench is whoever the nine slots did not seat — derived from the slots
+// themselves, through the same helper the client re-render uses, so the two
+// can never disagree about who is down here.
+const benchRoster = selectBenchPlayers(roster, slots);
+
 const canSubmitUnsaved = fillState.canSubmitUnsaved;
 const canSubmitEdits = fillState.canSubmitEdits;
 // The server-rendered button comes from the SAME resolver the client uses, so
@@ -819,10 +825,10 @@ const ownersPollTeams = Object.values(getLeagueTeamBrands(ownersPollLeague.slug)
     <section class="lineup-bench" aria-labelledby="bench-heading">
       <div class="lineup-bench__header">
         <h2 class="section-title" id="bench-heading">Bench</h2>
-        <span class="count-display"><strong id="bench-count">{roster.length - slots.filter(s => s.playerId).length}</strong> players</span>
+        <span class="count-display"><strong id="bench-count">{benchRoster.length}</strong> players</span>
       </div>
       <ul class="lineup-bench-list" id="lineup-bench-list">
-        {roster.filter(p => !usedPlayerIds.has(p.id)).sort((a, b) => (b.projection ?? -1) - (a.projection ?? -1)).map(player => {
+        {benchRoster.map(player => {
           const game = player.gameIndex != null ? schedule[player.gameIndex] : null;
           const oppTeam = game ? (player.nflTeam === game.home ? game.away : game.home) : null;
           const isHome = game ? player.nflTeam === game.home : false;
@@ -929,6 +935,7 @@ const ownersPollTeams = Object.values(getLeagueTeamBrands(ownersPollLeague.slug)
     import { buildPlayerCellHTML } from '../../utils/player-cell-html';
     import { NFL_LOGO_ONERROR, NFL_LOGO_ONLOAD } from '../../constants/roster-constants';
     import { resolveSubmitButtonState } from '../../utils/lineup-submit-state';
+    import { selectBenchPlayers, buildBenchRowHTML } from '../../utils/lineup-bench';
     import { loadLineupRankings, byRank, applyRankChips, onRankingsChanged } from '../../utils/lineup-rankings';
     import type { LineupPlayer } from '../../types/lineups';
     /**
@@ -1032,6 +1039,8 @@ const ownersPollTeams = Object.values(getLeagueTeamBrands(ownersPollLeague.slug)
       const optimalBtn = document.getElementById('lineup-optimal') as HTMLButtonElement;
       const clearBtn = document.getElementById('lineup-clear') as HTMLButtonElement;
       const statusEl = document.getElementById('lineup-status')!;
+      const benchList = document.getElementById('lineup-bench-list')!;
+      const benchCount = document.getElementById('bench-count')!;
 
       let activeSlotIndex: number | null = null;
 
@@ -1107,6 +1116,7 @@ const ownersPollTeams = Object.values(getLeagueTeamBrands(ownersPollLeague.slug)
         changesEl.querySelector('strong')!.textContent = String(changes);
 
         updateFaceoffTotal();
+        renderBench();
         saveDraft();
       }
 
@@ -1222,6 +1232,24 @@ const ownersPollTeams = Object.values(getLeagueTeamBrands(ownersPollLeague.slug)
           { rowSelector: '.lineup-slot[data-player-id]', afterSelector: '.lineup-slot__player' },
           { rowSelector: '.lineup-bench-row[data-player-id]', afterSelector: '.lineup-bench-row__player' },
         ]);
+      }
+
+      /**
+       * The bench is a DERIVED VIEW of the slots, so it has to be re-rendered
+       * wherever they change — it shipped as a server render that never moved
+       * again, which showed a player an owner had just seated BOTH in his new
+       * slot and still on the bench, and dropped the man he replaced off the
+       * page entirely. This hangs off updateSubmitBar() because that is already
+       * the funnel every mutation path goes through (swap, undo, undo-clear,
+       * Set Optimal, Clear, and the restored draft on init).
+       */
+      function renderBench() {
+        const bench = selectBenchPlayers(data.roster as LineupPlayer[], currentSlots);
+        benchList.innerHTML = bench
+          .map((p) => buildBenchRowHTML(p, getGame(p)))
+          .join('');
+        benchCount.textContent = String(bench.length);
+        refreshRankChips();
       }
 
       function renderSlotCard(slotIndex: number) {
