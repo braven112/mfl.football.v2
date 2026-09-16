@@ -148,6 +148,19 @@ That math is gone.
     names the day waivers REOPEN. That third case is the regression the
     narrower fix would have caused, pinned as itself.
 
+  - **Review on the follow-up PR (#1131) caught a second conflation in the F3
+    fix, and it was right.** The first cut set `processes` from `PROCESS_TYPES`,
+    which contains `WAIVER_UNLOCK` — and an unlock is "free agency opens"
+    (`docs/features/mfl-api.md:865`), not a run. A bare unlock would have been
+    worded as a claim deadline and counted down to, which is the same class of
+    bug F3 exists to stop. `RUN_TYPES` (`WAIVER_BBID`, `WAIVER_REVERSE`) is now
+    a strict subset of `PROCESS_TYPES`, read only by `nextProcesses`: the
+    closing set still decides the pool's next STATE, the run set decides whether
+    there is a deadline to name. Not reachable in committed data — the AFL's one
+    2026 `WAIVER_UNLOCK` shares its instant with a `WAIVER_REVERSE`, so the
+    collapse ORs the run back in — and pinned anyway by three cases in
+    `tests/waiver-deadline-copy.test.ts`, including that simultaneous shape.
+
 - [x] **F4 — post-merge reviewer findings** — **FIXED**, two real ones.
   - Source: Copilot review on #1122, which `/hotfix` deliberately did not wait
     for. Gemini did not run (opt-in, not requested); CodeQL passed clean.
@@ -187,6 +200,14 @@ That math is gone.
     every `resolveWaiverWindow(` call in `src/` and fails on one that does not
     name a zone. A scan is the only thing that can hold this: while the no-op
     is total, nothing else would say the day it stops being one.
+
+  - Review on #1131 also flagged that the guard's caller list was hard-coded,
+    which made it exactly the thing it was written to prevent: a new route
+    calling the resolver on the fallback zone would have left the suite green.
+    The suite now WALKS `src/` for callers and checks each one it finds, with
+    the known six kept only as a tripwire so a broken discovery fails loudly
+    rather than passing over an empty set. Verified by adding a throwaway
+    caller with no zone and watching the suite fail on it by name.
 
 - [x] **F6 — the brief's F1 item contradicted itself** — **FIXED** (this file).
   - Source: Copilot review on #1126, nit (1 vote)

@@ -29,23 +29,68 @@
  *      rule.
  */
 import { describe, it, expect } from 'vitest';
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
+import { join } from 'node:path';
 
-/** Everything in `src/` that resolves a waiver window for production. */
-const CALLERS = [
-  'src/pages/afl-fantasy/index.astro',
-  'src/pages/theleague/index.astro',
-  'src/pages/afl-fantasy/players.astro',
-  'src/pages/theleague/players.astro',
-  'src/utils/claim-context.ts',
-  'src/pages/api/waiver-claim.ts',
+/**
+ * Every production caller, DISCOVERED rather than listed.
+ *
+ * A hard-coded list is the failure mode this suite exists to prevent: a new
+ * route that calls `resolveWaiverWindow` on the fallback zone would leave a
+ * static list green, and nothing would say so. So the files are found by
+ * walking `src/`. `EXPECTED` is kept alongside purely as a tripwire — if
+ * discovery ever finds nothing (a rename, a glob that stops matching) the
+ * suite must fail loudly rather than vacuously pass over an empty set.
+ */
+const SRC_ROOT = 'src';
+
+function walk(dir: string): string[] {
+  const out: string[] = [];
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    const full = join(dir, entry.name);
+    if (entry.isDirectory()) out.push(...walk(full));
+    else if (/\.(ts|tsx|astro|mts|mjs)$/.test(entry.name)) out.push(full);
+  }
+  return out;
+}
+
+/** Files under `src/` that CALL the resolver (importing it is not enough). */
+const CALLERS = walk(SRC_ROOT)
+  .filter((f) => f !== join('src', 'utils', 'waiver-window.ts'))
+  .filter((f) => /resolveWaiverWindow\s*\(/.test(readFileSync(f, 'utf8')))
+  .sort();
+
+/**
+ * The callers as of this suite's last review. Discovery is authoritative — this
+ * only proves discovery is still WORKING, so a new caller is covered
+ * automatically and a vanished one is noticed.
+ */
+const EXPECTED_AT_LEAST = [
+  join('src', 'pages', 'afl-fantasy', 'index.astro'),
+  join('src', 'pages', 'afl-fantasy', 'players.astro'),
+  join('src', 'pages', 'api', 'waiver-claim.ts'),
+  join('src', 'pages', 'theleague', 'index.astro'),
+  join('src', 'pages', 'theleague', 'players.astro'),
+  join('src', 'utils', 'claim-context.ts'),
 ];
+
+describe('the caller scan finds what it claims to', () => {
+  it('discovers every known caller — a vacuous pass is a failed guard', () => {
+    for (const f of EXPECTED_AT_LEAST) {
+      expect(
+        CALLERS,
+        `${f} calls resolveWaiverWindow but the scan did not find it — discovery is broken, ` +
+          `so every rule in this file is passing vacuously.`,
+      ).toContain(f);
+    }
+  });
+});
 
 /**
  * The year clocks that are correct for an MFL feed directory. `getAflLeagueYear`
  * is the AFL's (June 1); `getCurrentLeagueYear` / `getLeagueYearForSlug` /
- * `getRolloverLeagueYear` are the general ones. `claimLeagueYear` and
- * `claimYear` are the free-agent pages' own already-correct derivations.
+ * `getRolloverLeagueYear` are the general ones. `claimLeagueYear` is the
+ * free-agent pages' own already-correct derivation.
  */
 const LEAGUE_YEAR_FNS = [
   'getAflLeagueYear',

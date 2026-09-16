@@ -313,3 +313,42 @@ describe('waiverDeadlineCopy — naming the day needs a RUN, not just a transiti
     expect(copy.at).not.toBeNull();
   });
 });
+
+/**
+ * `WAIVER_UNLOCK` closes the waiver window without running anything — MFL
+ * documents it as "free agency opens" — so it is in `PROCESS_TYPES` (it decides
+ * the pool's next state) but NOT in `RUN_TYPES` (nothing processes).
+ * Conflating the two would word a bare unlock as a claim deadline.
+ */
+describe('a bare WAIVER_UNLOCK closes the window but runs no claims', () => {
+  const lockThenUnlock: MflCalendarEvent[] = [
+    { type: 'WAIVER_LOCK', start_time: String(Date.UTC(2026, 8, 14, 1, 0, 0) / 1000) },
+    { type: 'WAIVER_UNLOCK', start_time: String(Date.UTC(2026, 8, 17, 2, 0, 0) / 1000) },
+  ];
+  const now = new Date('2026-09-15T12:00:00-07:00');
+
+  it('reports the window closing without calling it a processing run', () => {
+    const win = resolveWaiverWindow(lockThenUnlock, now, PT);
+    expect(win.mode).toBe('waiver');
+    expect(win.nextMode).toBe('fcfs'); // the unlock does end the window…
+    expect(win.nextProcesses).toBe(false); // …but nothing processes at it
+  });
+
+  it('names no deadline for it, and offers no countdown', () => {
+    const copy = waiverDeadlineCopy(resolveWaiverWindow(lockThenUnlock, now, PT), { now });
+    expect(copy.summary).not.toMatch(/Waivers process (Sun|Mon|Tue|Wed|Thu|Fri|Sat)/);
+    expect(copy.at).toBeNull();
+  });
+
+  it('still names the deadline when a real run shares the unlock instant', () => {
+    // The AFL's only 2026 WAIVER_UNLOCK sits on the same minute as a
+    // WAIVER_REVERSE, and the collapse ORs that run back in.
+    const withRun: MflCalendarEvent[] = [
+      ...lockThenUnlock,
+      { type: 'WAIVER_REVERSE', start_time: String(Date.UTC(2026, 8, 17, 2, 0, 0) / 1000) },
+    ];
+    const win = resolveWaiverWindow(withRun, now, PT);
+    expect(win.nextProcesses).toBe(true);
+    expect(waiverDeadlineCopy(win, { now }).summary).toMatch(/Waivers process/);
+  });
+});

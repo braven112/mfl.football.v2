@@ -56,6 +56,9 @@ export interface WaiverWindow {
    *     hero counting down to it is counting down to a real deadline.
    *   - A bare `WAIVER_LOCK` with no run on it — a pool RE-lock. Nothing
    *     processes, so naming it as a deadline invents one.
+   *   - A bare `WAIVER_UNLOCK` — free agency simply opens. It CLOSES the waiver
+   *     window (so it is in `PROCESS_TYPES`) but runs no claims, which is why
+   *     this reads `RUN_TYPES` and not that set.
    *
    * False whenever there is no next mark at all.
    */
@@ -89,6 +92,24 @@ export interface WaiverWindow {
 const OPEN_TYPES = new Set(['WAIVER_LOCK']);
 /** Events that CLOSE it: claims process and/or the pool unlocks, so adds are FCFS again. */
 const PROCESS_TYPES = new Set(['WAIVER_BBID', 'WAIVER_REVERSE', 'WAIVER_UNLOCK']);
+
+/**
+ * The subset of those that actually RUN claims — a strict subset, and the
+ * distinction is not pedantic.
+ *
+ * `WAIVER_UNLOCK` is "free agency opens" (docs/features/mfl-api.md): it ends the
+ * waiver window by unlocking the pool, without processing anything. It belongs
+ * in `PROCESS_TYPES` because it closes the window — that set answers "what is
+ * the pool's state after this" — but treating it as a run would let a bare
+ * unlock be worded as "Waivers process <then>" and counted down to, which is a
+ * deadline that does not exist. Only `nextProcesses` reads this set.
+ *
+ * Both leagues' in-season marks are real runs (`WAIVER_REVERSE` for the AFL,
+ * `WAIVER_BBID` for TheLeague), so this changes nothing there; the AFL's one
+ * `WAIVER_UNLOCK` of 2026 shares its instant with a `WAIVER_REVERSE`, and the
+ * collapse ORs the run back in.
+ */
+const RUN_TYPES = new Set(['WAIVER_BBID', 'WAIVER_REVERSE']);
 
 const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
 
@@ -171,8 +192,9 @@ export function resolveWaiverWindow(
     const type = String(event?.type ?? '').toUpperCase();
     const opens = OPEN_TYPES.has(type);
     const closes = PROCESS_TYPES.has(type);
+    const runs = RUN_TYPES.has(type);
     if (!opens && !closes) continue;
-    for (const at of occurrences(event, zone)) marks.push({ at, opens, processes: closes });
+    for (const at of occurrences(event, zone)) marks.push({ at, opens, processes: runs });
   }
 
   if (marks.length === 0) {
