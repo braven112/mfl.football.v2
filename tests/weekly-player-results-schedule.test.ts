@@ -3,6 +3,7 @@ import { readFileSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 
 import { buildWeeklyPlayerResults } from '../src/utils/weekly-player-results';
+import { getCurrentSeasonYear } from '../src/utils/league-year';
 
 /**
  * Guard: the modal's Season Results table lost the NFL schedule the day the
@@ -80,14 +81,27 @@ describe('the W=ALL schedule feed', () => {
   });
 
   it('is committed for the current season in every full-management league', () => {
-    // Season year, not league year: this table is results-shaped.
-    const seasonYear = new Date() >= new Date(`${new Date().getFullYear()}-09-01`)
-      ? new Date().getFullYear()
-      : new Date().getFullYear() - 1;
+    // Season year, not league year: this table is results-shaped. And read it
+    // from the shared helper rather than re-deriving — the clock rolls on
+    // LABOR DAY, so a hand-rolled Sep 1 cutoff checks the wrong season for the
+    // first week of every September.
+    const seasonYear = getCurrentSeasonYear();
 
     for (const league of ['theleague', 'afl-fantasy']) {
-      const file = join(ROOT, `data/${league}/mfl-feeds/${seasonYear}/nflSchedule-full.json`);
-      if (!existsSync(file)) continue; // a season the cron has not opened yet
+      const dir = join(ROOT, `data/${league}/mfl-feeds/${seasonYear}`);
+      // Skip only a league-year the cron has never opened at all. Once its
+      // weekly results are being synced, the full schedule is not optional:
+      // its absence IS the regression this suite exists to catch, so a silent
+      // `continue` here would let the suite pass while the site shows a season
+      // of byes.
+      if (!existsSync(join(dir, 'weekly-results-raw.json'))) continue;
+
+      const file = join(dir, 'nflSchedule-full.json');
+      expect(
+        existsSync(file),
+        `${league}/${seasonYear} syncs weekly results but has no nflSchedule-full.json — ` +
+          'without it every week renders as a bye',
+      ).toBe(true);
       const feed = JSON.parse(readFileSync(file, 'utf8'));
       expect(feed?.error, `${league}: committed an MFL error payload`).toBeUndefined();
       expect(
