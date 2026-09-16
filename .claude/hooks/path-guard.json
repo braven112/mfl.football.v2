@@ -38,7 +38,8 @@
         "tests/waiver-priority-league-gate.test.ts",
         "tests/waiver-window.test.ts",
         "tests/waiver-deadline-copy.test.ts",
-        "tests/waiver-window-dst.test.ts"
+        "tests/waiver-window-dst.test.ts",
+        "tests/waiver-window-callers.test.ts"
       ]
     },
     {
@@ -247,7 +248,8 @@
         "tests/player-claim-offer.test.ts",
         "tests/players-injected-styles.test.ts",
         "tests/waiver-claim.test.ts",
-        "tests/waiver-filed-claims.test.ts"
+        "tests/waiver-filed-claims.test.ts",
+        "tests/waiver-window-callers.test.ts"
       ]
     },
     {
@@ -289,7 +291,9 @@
         "src/styles/hero-showcase.css",
         "src/types/hero-showcase.ts",
         "src/pages/*/showcase.astro",
-        "src/utils/hero-crest.ts"
+        "src/utils/hero-crest.ts",
+        "src/pages/theleague/index.astro",
+        "src/pages/afl-fantasy/index.astro"
       ],
       "tests": [
         "tests/hero-casting.test.ts",
@@ -308,7 +312,8 @@
         "tests/top-rostered-casting.test.ts",
         "tests/weekly-column-hero-claim.test.ts",
         "tests/hero-recap-destination.test.ts",
-        "tests/waiver-deadline-copy.test.ts"
+        "tests/waiver-deadline-copy.test.ts",
+        "tests/waiver-window-callers.test.ts"
       ]
     },
     {
@@ -995,7 +1000,8 @@
         "tests/league-year-rollover.test.ts",
         "tests/afl-league-year.test.ts",
         "tests/league-year-node-safe.test.ts",
-        "tests/league-year-for-slug.test.ts"
+        "tests/league-year-for-slug.test.ts",
+        "tests/waiver-window-callers.test.ts"
       ]
     }
   ]

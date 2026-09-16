@@ -43,6 +43,23 @@ export interface WaiverWindow {
   changesAt: Date | null;
   /** The mode that begins at `changesAt`. */
   nextMode: WaiverMode;
+  /**
+   * Whether a claim-processing RUN happens at `changesAt`.
+   *
+   * `nextMode` is not enough to answer this, because the collapse below folds a
+   * simultaneous run-and-re-lock down to its resulting STATE and throws the run
+   * away. Both shapes report `nextMode: 'waiver'` and they say opposite things
+   * to an owner:
+   *
+   *   - TheLeague, Wed 2026-09-02 19:00 — `WAIVER_LOCK` + `WAIVER_BBID` at one
+   *     instant. Claims DO process then; the pool simply shuts again after. A
+   *     hero counting down to it is counting down to a real deadline.
+   *   - A bare `WAIVER_LOCK` with no run on it — a pool RE-lock. Nothing
+   *     processes, so naming it as a deadline invents one.
+   *
+   * False whenever there is no next mark at all.
+   */
+  nextProcesses: boolean;
   /** Why we concluded this — surfaced in the UI when the answer is `unknown`. */
   reason: string;
 }
@@ -146,16 +163,16 @@ export function resolveWaiverWindow(
 ): WaiverWindow {
   const list = Array.isArray(events) ? events : [];
   if (list.length === 0) {
-    return { mode: 'unknown', changesAt: null, nextMode: 'unknown', reason: 'No league calendar available.' };
+    return { mode: 'unknown', changesAt: null, nextMode: 'unknown', nextProcesses: false, reason: 'No league calendar available.' };
   }
 
-  const marks: Array<{ at: number; opens: boolean }> = [];
+  const marks: Array<{ at: number; opens: boolean; processes: boolean }> = [];
   for (const event of list) {
     const type = String(event?.type ?? '').toUpperCase();
     const opens = OPEN_TYPES.has(type);
     const closes = PROCESS_TYPES.has(type);
     if (!opens && !closes) continue;
-    for (const at of occurrences(event, zone)) marks.push({ at, opens });
+    for (const at of occurrences(event, zone)) marks.push({ at, opens, processes: closes });
   }
 
   if (marks.length === 0) {
@@ -163,6 +180,7 @@ export function resolveWaiverWindow(
       mode: 'unknown',
       changesAt: null,
       nextMode: 'unknown',
+      nextProcesses: false,
       reason: 'The league calendar has no waiver open/process events.',
     };
   }
@@ -190,11 +208,17 @@ export function resolveWaiverWindow(
   // and the pool's state at the end of that moment is what the next window is.
   // Locked wins because a lock is a STATE while a run is an EVENT: after both
   // have happened the pool is shut, so the only way in is a claim.
-  const collapsed: Array<{ at: number; opens: boolean }> = [];
+  // `processes` is OR'd alongside `opens` rather than being decided by it: the
+  // collapse answers what the pool's STATE is afterwards, and that deliberately
+  // loses the fact that a run happened at the same instant. Anything wording a
+  // deadline needs the run back — see `nextProcesses`.
+  const collapsed: Array<{ at: number; opens: boolean; processes: boolean }> = [];
   for (const mark of marks) {
     const last = collapsed[collapsed.length - 1];
-    if (last && last.at === mark.at) last.opens = last.opens || mark.opens;
-    else collapsed.push({ ...mark });
+    if (last && last.at === mark.at) {
+      last.opens = last.opens || mark.opens;
+      last.processes = last.processes || mark.processes;
+    } else collapsed.push({ ...mark });
   }
 
   const t = now.getTime();
@@ -210,6 +234,7 @@ export function resolveWaiverWindow(
       mode: first.opens ? 'fcfs' : 'waiver',
       changesAt: new Date(first.at),
       nextMode: first.opens ? 'waiver' : 'fcfs',
+      nextProcesses: first.processes,
       reason: 'Before the first waiver event on the calendar.',
     };
   }
@@ -220,6 +245,7 @@ export function resolveWaiverWindow(
     mode,
     changesAt: next ? new Date(next.at) : null,
     nextMode: next ? (next.opens ? 'waiver' : 'fcfs') : 'unknown',
+    nextProcesses: next ? next.processes : false,
     reason: last.opens
       ? 'Waivers are open — claims are queued until they process.'
       : 'Waivers have processed — adds are first-come, first-served.',

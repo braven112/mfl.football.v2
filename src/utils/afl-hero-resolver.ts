@@ -791,7 +791,7 @@ const SLOT_VIEW: Record<SlotKey, (ctx: SlotContext) => EventHeroView> = {
   // Absent, the fallback names no day at all rather than guessing one.
   'slot:waiver-wire': ({ now, waiver }) => {
     const copy = waiver ?? waiverDeadlineCopy(
-      { mode: 'unknown', changesAt: null, nextMode: 'unknown', reason: 'No waiver copy supplied to the hero.' },
+      { mode: 'unknown', changesAt: null, nextMode: 'unknown', nextProcesses: false, reason: 'No waiver copy supplied to the hero.' },
       { now },
     );
     // `cleared` is `mode === 'fcfs'`, NOT `!open`. Three states, two
@@ -1238,7 +1238,7 @@ function buildRegularSeasonHero(slot: DailySlot, week: number | undefined, gameW
       // fixing only the view ships "Process Tonight" on a Tuesday to whichever
       // surface reads `content`. Same rule as the recap slot above.
       const copy = waiver ?? waiverDeadlineCopy(
-        { mode: 'unknown', changesAt: null, nextMode: 'unknown', reason: 'No waiver copy supplied to the hero.' },
+        { mode: 'unknown', changesAt: null, nextMode: 'unknown', nextProcesses: false, reason: 'No waiver copy supplied to the hero.' },
         { now },
       );
       const when = copy.word.charAt(0) + copy.word.slice(1).toLowerCase();

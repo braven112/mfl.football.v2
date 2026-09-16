@@ -31,7 +31,7 @@ import '../../styles/fa-claim-button.css';
 import collegeLogos from '../../data/college-logos.json';
 import espnCollegeIds from '../../../data/theleague/espn-college-ids.json';
 import leagueConfig from '../../data/theleague.config.json';
-import { getLeagueBySlug } from '../../config/leagues';
+import { getLeagueBySlug, leagueClock } from '../../config/leagues';
 import { resolveAuctionWindow } from '../../utils/auction-window';
 import { NO_HEADSHOT_SILHOUETTE, getPlayerAvatarBackground, getPlayerAvatarBorder, getPlayerAvatarRing, getPlayerAvatarRingDark, getPlayerAvatarStyleMaps } from '../../utils/nfl-team-colors';
 import { isDraftComplete } from '../../utils/draft-utils';
@@ -730,7 +730,7 @@ const calendarModules = import.meta.glob(
 );
 const calendarEvents =
   (Object.entries(calendarModules).find(([p]) => p.includes(`/${currentYear}/`))?.[1] as any)?.default ?? [];
-const waiverWindow = resolveWaiverWindow(calendarEvents);
+const waiverWindow = resolveWaiverWindow(calendarEvents, new Date(), leagueClock(theLeagueDef.slug).zone);
 // The deadline in the header line, on the viewer's own clock when they have
 // named one (PT alone until then). Read-only: a page render must never write a
 // preference cookie, and only /preferences and the Sunday Ticket chips do.

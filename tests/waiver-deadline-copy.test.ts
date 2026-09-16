@@ -16,7 +16,7 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { relativeDayWord, waiverDeadlineCopy } from '../src/utils/waiver-deadline-copy';
-import { resolveWaiverWindow } from '../src/utils/waiver-window';
+import { resolveWaiverWindow, type MflCalendarEvent } from '../src/utils/waiver-window';
 import { resolveAflHeroState } from '../src/utils/afl-hero-resolver';
 import type { ViewerClock } from '../src/utils/viewer-preferences';
 import { leagueClock } from '../src/config/leagues';
@@ -251,5 +251,65 @@ describe('the heroes carry no hardcoded waiver day', () => {
     // `+ 7 * 60 * 60 * 1000` that corrected for it is PDT-only.
     expect(code).not.toMatch(/7\s*\*\s*60\s*\*\s*60\s*\*\s*1000/);
     expect(code).not.toMatch(/daysUntilWed/);
+  });
+});
+
+/**
+ * The open branch promises claims PROCESS at `changesAt`. That promise needs
+ * the calendar to actually have a run there — `changesAt` is only the next
+ * TRANSITION, and `resolveWaiverWindow` does not guarantee the marks alternate.
+ *
+ * The reviewer who found this proposed guarding on `nextMode === 'waiver'`.
+ * That is wrong, and the tests below pin why: in the one span the committed
+ * calendars actually reach, the next mark is a simultaneous run AND re-lock, so
+ * the day is real and suppressing it would have deleted correct copy.
+ */
+describe('waiverDeadlineCopy — naming the day needs a RUN, not just a transition', () => {
+  it('still names the day when the next mark runs AND re-locks', () => {
+    // TheLeague, Thu 2026-08-20: mode=waiver, nextMode=waiver, and the Sep 2
+    // 7:00 PM mark carries WAIVER_LOCK *and* WAIVER_BBID. Claims do process
+    // then — the pool just shuts again after — so this is a real deadline.
+    const now = new Date('2026-08-20T12:00:00-07:00');
+    const win = resolveWaiverWindow(theLeagueEvents, now, leagueClock('theleague').zone);
+    expect(win.mode).toBe('waiver');
+    expect(win.nextMode).toBe('waiver'); // the shape the reviewer flagged
+    expect(win.nextProcesses).toBe(true); // …but a run IS scheduled on it
+
+    const copy = waiverDeadlineCopy(win, { now });
+    expect(copy.summary).toMatch(/Waivers process Wed 7:00 PM PT/);
+    expect(copy.at).not.toBeNull(); // the hero has a genuine countdown target
+  });
+
+  it('names no day when the next mark is a bare re-lock with no run on it', () => {
+    // Two WAIVER_LOCKs in a row and nothing else: the second one processes
+    // nothing, so "Waivers process <then>" would invent a deadline.
+    const events: MflCalendarEvent[] = [
+      { type: 'WAIVER_LOCK', start_time: String(Date.UTC(2026, 7, 17, 4, 0, 0) / 1000) },
+      { type: 'WAIVER_LOCK', start_time: String(Date.UTC(2026, 8, 3, 2, 0, 0) / 1000) },
+    ];
+    const now = new Date('2026-08-20T12:00:00-07:00');
+    const win = resolveWaiverWindow(events, now, PT);
+    expect(win.mode).toBe('waiver');
+    expect(win.nextMode).toBe('waiver');
+    expect(win.nextProcesses).toBe(false);
+
+    const copy = waiverDeadlineCopy(win, { now });
+    expect(copy.summary).not.toMatch(/Waivers process (Sun|Mon|Tue|Wed|Thu|Fri|Sat)/);
+    expect(copy.countLabel).toBe('Claims process at the league deadline');
+    expect(copy.at).toBeNull(); // nothing to count down to
+    expect(copy.mode).toBe('waiver'); // still uncollapsed — claims ARE queued
+  });
+
+  it('keeps naming the day the window REOPENS while waivers are cleared', () => {
+    // The fcfs branch's next mark is a LOCK, which processes nothing — so a
+    // guard written on `nextProcesses` must not reach this branch and blank it.
+    const now = new Date('2026-09-10T12:00:00-07:00');
+    const win = resolveWaiverWindow(theLeagueEvents, now, leagueClock('theleague').zone);
+    expect(win.mode).toBe('fcfs');
+    expect(win.nextProcesses).toBe(false);
+
+    const copy = waiverDeadlineCopy(win, { now });
+    expect(copy.countLabel).toMatch(/^Waivers reopen (Sun|Mon|Tue|Wed|Thu|Fri|Sat)/);
+    expect(copy.at).not.toBeNull();
   });
 });

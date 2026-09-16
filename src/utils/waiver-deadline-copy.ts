@@ -140,23 +140,29 @@ export function waiverDeadlineCopy(
   const at = window.changesAt;
   const open = window.mode === 'waiver';
 
-  // No calendar, or no transition ahead of us: say what is true without
-  // naming a day. "Before the deadline" is always true; "Wednesday" is not.
-  if (!at || window.mode === 'unknown') {
-    return {
-      at: null,
-      mode: window.mode,
-      open,
-      word: 'SOON',
-      line: '',
-      accentWord: 'SOON.',
-      summary: open
-        ? `Claims are queued now and process together at the league deadline. After that, free agents go first-come, first-served through ${fcfsThrough}.`
-        : `Free agents are first-come, first-served — the next claim window opens before ${fcfsThrough}.`,
-      countLabel: 'Claims process at the league deadline',
-      countValue: 'SOON',
-    };
-  }
+  /**
+   * Everything that is true without naming a day. "Before the deadline" is
+   * always true; "Wednesday" is not.
+   *
+   * Reachable two ways — an unreadable calendar, and an open window whose next
+   * mark is a pool re-lock rather than a run (below) — so it is written once.
+   */
+  const noDayNamed = (): WaiverDeadlineCopy => ({
+    at: null,
+    mode: window.mode,
+    open,
+    word: 'SOON',
+    line: '',
+    accentWord: 'SOON.',
+    summary: open
+      ? `Claims are queued now and process together at the league deadline. After that, free agents go first-come, first-served through ${fcfsThrough}.`
+      : `Free agents are first-come, first-served — the next claim window opens before ${fcfsThrough}.`,
+    countLabel: 'Claims process at the league deadline',
+    countValue: 'SOON',
+  });
+
+  // No calendar, or no transition ahead of us.
+  if (!at || window.mode === 'unknown') return noDayNamed();
 
   const line = formatForViewer(at, clock, { weekday: true });
   const word = relativeDayWord(now, at, lead.zone);
@@ -176,6 +182,23 @@ export function waiverDeadlineCopy(
       countValue: 'OPEN NOW',
     };
   }
+
+  // Claims are queued, and this sentence is about to promise they PROCESS at
+  // `changesAt`. `changesAt` is only the next TRANSITION, and the marks are not
+  // guaranteed to alternate: TheLeague's committed 2026 calendar runs
+  // `WAIVER_LOCK` Sun Aug 16 9:00 PM → Wed Sep 2 7:00 PM with no mode change
+  // between, so across that span the window resolves `mode: 'waiver'` AND
+  // `nextMode: 'waiver'`.
+  //
+  // `nextMode` is NOT the thing to guard on, and guarding on it would be wrong
+  // in the only case the committed calendars actually reach: the Sep 2 mark
+  // carries `WAIVER_LOCK` *and* `WAIVER_BBID` at one instant, so claims
+  // genuinely do process then — the pool merely shuts again afterwards — and
+  // "Waivers process Wed 7:00 PM PT" is true, with a real deadline to count
+  // down to. What decides it is whether a RUN sits on that mark at all, which
+  // is what the resolver answers with `nextProcesses`. A bare re-lock has no
+  // run on it, so there is no deadline to name and no countdown to offer.
+  if (!window.nextProcesses) return noDayNamed();
 
   return {
     at,
