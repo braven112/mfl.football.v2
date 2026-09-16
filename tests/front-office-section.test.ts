@@ -30,7 +30,13 @@ import { getVisibleLinks, getLinkLabel } from '../src/utils/nav-utils';
  */
 
 const navLinks = navConfig.sections.flatMap((s: any) => s.links ?? []);
-const directory = pageDirectory as { id: string; path: string; visibility: string }[];
+const directory = pageDirectory as {
+  id: string;
+  title: string;
+  path: string;
+  visibility: string;
+  tags: string[];
+}[];
 
 describe('the Front Office page registry', () => {
   it('keeps every path league-NEUTRAL', () => {
@@ -328,13 +334,13 @@ describe('nav', () => {
     expect(navLinks.find((l: any) => l.path === '/rosters?view=planner')).toBeUndefined();
 
     const directoryEntries = directory.filter(
-      (p: any) => p.path === '/rosters?view=planner' || p.id === 'league-planner',
+      (p) => p.path === '/rosters?view=planner' || p.id === 'league-planner',
     );
     expect(directoryEntries).toEqual([]);
 
     // ...and the old name still FINDS it, so search for "league planner" is not
     // a dead end while the tabs are still shipping.
-    const hub = directory.find((p: any) => p.id === 'front-office');
+    const hub = directory.find((p) => p.id === 'front-office');
     expect(hub?.title).toBe('Front Office');
     expect(hub?.tags).toContain('league planner');
   });
