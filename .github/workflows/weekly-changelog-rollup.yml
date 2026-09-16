@@ -1,10 +1,48 @@
 name: Weekly Changelog Rollup
 
 on:
+  # THE RELEASE TAG IS THE REAL TRIGGER. `/promote` pushes `vYYYY.MM.DD`
+  # immediately after fast-forwarding `main` to `staging`, so the article lands
+  # the same day as the code and cannot precede it.
+  #
+  # Note this fixes a LATE announcement, not an early one — the reasoning in
+  # docs/plans/staging-release-process.md is out of date and the correction is
+  # written up in scripts/changelog-rollup-gate.mjs. This job runs on `main` and
+  # reads MAIN's queue, so it never sees an unpromoted feature's entry; what it
+  # sees is a release's worth of entries arriving all at once at the promotion,
+  # with nothing to publish them until the following Monday.
+  push:
+    tags:
+      - 'v*'
+
+  # The cron is a FLOOR, not a second publisher. Bug fixes, cron and
+  # data-pipeline fixes bypass the train and go straight to `main`, and they
+  # stage changelog entries like anything else; a week of pure hotfixes has no
+  # promotion to wait for and still deserves its article.
+  #
+  # It publishes only when nothing is waiting on `staging`. That check is
+  # scripts/changelog-rollup-gate.mjs and it is not optional: the article id is
+  # `weekly-rollup-<monday>` and the rollup will not publish a second one for
+  # the same week, so a cron firing the night before a promotion BURNS THE
+  # WEEK'S ID ON HOTFIXES ALONE and pushes the release's own entries to the
+  # Monday after.
   schedule:
-    # Run every Monday at 8 PM PT (Tuesday 4 AM UTC)
+    # Every Monday at 8 PM PT (Tuesday 4 AM UTC)
     - cron: "0 4 * * 2"
+
   workflow_dispatch:
+
+# Three triggers now write the same files on `main` — a release tag, the Monday
+# cron, and a manual dispatch — so two runs can check out the same commit,
+# generate the same week's files and race on the push. The loser is rejected as
+# non-fast-forward and the RELEASE run is the one that loses its notification.
+#
+# Never cancel: a superseded run here is one that has already published an
+# article and not yet pushed it. Queue instead, same reasoning as
+# staging-merge-down.yml.
+concurrency:
+  group: weekly-changelog-rollup
+  cancel-in-progress: false
 
 permissions:
   contents: write
@@ -17,12 +55,62 @@ jobs:
         uses: actions/checkout@v6
         with:
           ssh-key: ${{ secrets.DEPLOY_KEY }}
+          # A tag push checks out the tag. The rollup commits to `main`, so it
+          # has to be ON main — otherwise commit-push pushes to a detached HEAD
+          # and the article never lands.
+          ref: main
 
       - name: Setup pnpm + Node + install
         uses: ./.github/actions/setup
 
+      # Decides whether a SCHEDULED run should publish at all. A tag push or a
+      # manual dispatch always does. Fails open by design — see the script.
+      - name: Should this run publish?
+        id: gate
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: node ./scripts/changelog-rollup-gate.mjs --trigger "${{ github.event_name }}"
+
       - name: Run weekly changelog rollup
+        if: steps.gate.outputs.publish == 'true'
         run: node ./scripts/weekly-changelog-rollup.mjs
+
+      # Did an article actually land? `publish == true` is not the same thing:
+      # the rollup exits 0 without writing when the staging queue is empty, and
+      # again when this week's id is already taken (its `alreadyPublished`
+      # guard). Notifying on either would push owners at an article this run did
+      # not write — a stale one, tagged to replace the copy they already got.
+      # whats-new.json changing is the honest signal, and it is read BEFORE the
+      # cap step, which also writes that file.
+      - name: Did a new article land?
+        id: published
+        if: steps.gate.outputs.publish == 'true'
+        run: |
+          if git diff --quiet -- src/data/whats-new.json; then
+            echo "new=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "new=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      # EVERY run, not just the ones that publish, and not just the skip path.
+      #
+      # `enforceWhatsNewCap` may hold an entry PAST the 40-item cap while its
+      # hero window is still open — correct, since the cap bounds the bundle
+      # rather than ending a campaign. But that condition is TIME-DEPENDENT and
+      # the rollup only reaches the cap when it has changes to publish: it exits
+      # at its no-changes check (weekly-changelog-rollup.mjs, "No changes in
+      # staging file") long before enforcing anything. So the file silently
+      # falls out of compliance the moment the last retained window closes, with
+      # no job watching — which is exactly what happened on 2026-09-16, when two
+      # 09-09 entries aged out at 12:00Z and left whats-new.json at 41/40,
+      # turning tests/whats-new-data.test.ts red on main AND staging with no
+      # commit involved.
+      #
+      # Running it unconditionally costs nothing (it no-ops at or under the cap)
+      # and is the only placement that covers the empty-queue week the red
+      # actually happened in.
+      - name: Re-enforce the active cap
+        run: node ./scripts/weekly-changelog-rollup.mjs --cap-only
 
       - name: Commit and push updates
         uses: ./.github/actions/commit-push
@@ -42,13 +130,28 @@ jobs:
 
       # AFTER the commit, deliberately: the notification links to the article's
       # permalink, which does not exist on the live site until this commit
-      # deploys. Ordering it here starts the deploy first. The race is not
-      # fully closed — the deploy takes a few minutes and the job does not wait
-      # for it — but the [id] route redirects an unknown id to /whats-new
-      # rather than 404ing, so the worst case is an early tap landing on the
-      # listing. A failed push is logged, never fatal: the article is published
-      # either way, and a red job here would read as a broken rollup.
+      # deploys. Ordering it here starts the deploy first.
+      #
+      # That ordering used to leave a race open — the deploy takes a few minutes
+      # and the job did not wait for it — which was an acceptable trade while
+      # this was a lone Monday cron, because the [id] route redirects an unknown
+      # id to /whats-new rather than 404ing. It is a worse trade now the rollup
+      # also fires on the release tag, which lands at the START of the
+      # production deploy rather than well after the previous one, so the window
+      # is reliably open rather than occasionally open.
+      #
+      # This step closes it by asking for the article's own URL. Never fatal:
+      # on timeout it warns and lets the notification go out, which restores the
+      # old behaviour as the floor rather than trading a cosmetic race for
+      # owners silently never being told.
+      - name: Wait for the article to be live in production
+        if: steps.published.outputs.new == 'true'
+        run: node ./scripts/wait-for-whats-new-live.mjs --timeout-seconds 600
+
+      # A failed push is logged, never fatal: the article is published either
+      # way, and a red job here would read as a broken rollup.
       - name: Notify owners (site-update)
+        if: steps.published.outputs.new == 'true'
         run: node ./scripts/push-weekly-changelog.mjs
         env:
           CRON_SECRET: ${{ secrets.CRON_SECRET }}

@@ -184,12 +184,26 @@ touched any of it: Redis writes (expand/contract is what makes them
 survivable), MFL writes, notifications already sent, and data files a cron has
 since rewritten.
 
-## Step 8: Announce
+## Step 8: Announce — automatic now, but verify it
 
-The What's New rollup publishes the week's article. Confirm it ran **after**
-the promotion, not before — an article that lands first tells owners to go look
-at a feature that is not there yet, and pushes a `site-update` notification
-saying so.
+**Step 6's tag is what publishes the article.** `weekly-changelog-rollup.yml`
+fires on `push: tags: ['v*']`, so the release's What's New article and its
+`site-update` notification go out on the back of the tag you just pushed. You do
+not dispatch anything.
+
+What to verify, because it is a cron-shaped job and nobody watches those:
+
+- The run exists and is green. It publishes ONE article per league covering the
+  whole week, then empties the staging queue.
+- It waited for the permalink. `scripts/wait-for-whats-new-live.mjs` polls the
+  article's real URL before the notification goes out and prints a `::warning::`
+  if it gave up — that warning means owners may have been notified a minute
+  before the page resolved, not that anything is broken.
+- If a Monday cron already published this week's article, the tag-triggered run
+  finds the id taken and stands down, PRESERVING the queue. That should not
+  happen — `scripts/changelog-rollup-gate.mjs` makes the cron yield whenever a
+  release is pending — but if it does, the release's entries roll to the next
+  run rather than being lost.
 
 ## Step 9: Report
 
