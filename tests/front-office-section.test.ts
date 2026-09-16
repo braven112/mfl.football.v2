@@ -277,9 +277,29 @@ describe('nav', () => {
   });
 
   it('drops the old per-page nav links', () => {
-    for (const id of ['rosters', 'contracts', 'trade-builder', 'projected-free-agents']) {
+    // `rosters` is deliberately NOT in this list — see the case below. The
+    // other three moved into the hub's tool rail and have no nav entry.
+    for (const id of ['contracts', 'trade-builder', 'projected-free-agents']) {
       expect(navLinks.find((l: any) => l.id === id)).toBeUndefined();
     }
+  });
+
+  it('keeps Rosters in the nav, first in Offseason War Room', () => {
+    // Collapsing Cap & Contracts took the site's most-visited page
+    // (popularity 100 in the directory) out of the nav entirely, and for the
+    // AFL left no `/rosters` entry at all — TheLeague at least kept the
+    // ?view=coach and ?view=planner entries, both theleague-only. It is back
+    // by request, at the top of the War Room rather than in the hub, because
+    // the hub is a door to the salary tools and this is the roster itself.
+    const warRoom = (navConfig.sections as any[]).find((s) => s.id === 'offseason-war-room');
+    expect(warRoom.links[0].id).toBe('rosters');
+    expect(warRoom.links[0].path).toBe('/rosters');
+
+    // Untagged on purpose: nav-utils reads an untagged link as "every
+    // full-format league" and best-ball is opt-in, so this one entry serves
+    // TheLeague and the AFL while Best Ball keeps its own tagged Rosters.
+    expect(warRoom.links[0].leagueOnly).toBeUndefined();
+    expect(warRoom.links[0].labelAFL).toBeTruthy();
   });
 
   it('names the section "Front Office" for both leagues, not "Roster & Trades"', () => {
