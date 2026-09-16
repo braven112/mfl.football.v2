@@ -2,13 +2,23 @@
 /**
  * Preferences — shared page body for every league.
  *
- * Two choices today: the COUNTRY whose channels you see, and which of that
- * country's CLOCKS kickoffs print in. Sunday Ticket is the first reader (it
- * used to derive both from the country alone); anything else that names a
- * channel or a kickoff time can take the same two values through
- * `viewer-preferences.ts`.
+ * Three choices today. Two are viewer-scoped and cookie-backed: the COUNTRY
+ * whose channels you see, and which of that country's CLOCKS kickoffs print
+ * in. Sunday Ticket is the first reader (it used to derive both from the
+ * country alone); anything else that names a channel or a kickoff time can
+ * take the same two values through `viewer-preferences.ts`.
  *
- * ZERO client JS, on purpose. The form is a plain GET back to this route —
+ * The third is THROWBACK WEEK's era, and it is a different animal: it belongs
+ * to a FRANCHISE rather than a device, so it needs a session, it stores in
+ * Redis rather than a cookie, and it saves on change instead of on the button.
+ * It is rendered here as the same `ThrowbackEraPicker` `/throwback-settings`
+ * shows — one implementation, two mounts — and it sits OUTSIDE the country /
+ * clock form, because a form cannot nest and its radios are not that form's
+ * to submit. A route that passes no `throwback` (signed out, another league's
+ * session, no franchise) renders the page exactly as before.
+ *
+ * ZERO client JS in the country/clock half, on purpose. The form is a plain
+ * GET back to this route —
  * the route's frontmatter writes the cookies and the account mirror, because
  * `Astro.cookies.set()` from an imported component runs after the response
  * headers are committed and throws `ResponseSentError` (the Sunday Ticket
@@ -21,6 +31,8 @@
  * the thin route wrapper.
  */
 import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
+import ThrowbackEraPicker from '../ThrowbackEraPicker.astro';
+import type { ThrowbackPickerView } from '../../../utils/throwback-settings-view';
 import { formatKickoffZones } from '../../../utils/sunday-ticket-slate';
 import { countryOptions, sundayTicketProvider } from '../../../utils/broadcast-channels';
 import {
@@ -54,6 +66,15 @@ export interface Props {
   /** Overridable so a story renders a fixed clock. */
   sampleKickoff?: number;
   /**
+   * The signed-in owner's Throwback Week era picker, or null when there is
+   * nobody to pick for. The ROUTE decides: this page has no auth gate, so a
+   * signed-out visitor, a session from the other league and a franchise-less
+   * account all arrive here as `null` rather than as an empty section.
+   */
+  throwback?: ThrowbackPickerView | null;
+  /** This league's live-scoring path, prefix already resolved — preview links. */
+  scoreboardPath?: string;
+  /**
    * This league's official clock, from the registry. A PROP rather than a
    * registry lookup because this component is deliberately props-only — the
    * thin route knows its league and nothing here should have to guess. It
@@ -72,12 +93,16 @@ const {
   loginPath = null,
   sampleKickoff = nextSundayKickoffEpoch(),
   officialClock = LEAGUE_CLOCK,
+  throwback = null,
+  scoreboardPath = '',
 } = Astro.props;
 
 const countries = countryOptions();
 const provider = sundayTicketProvider(prefs.country);
 const preview = formatKickoffZones(sampleKickoff, kickoffZonesFor(prefs, officialClock));
 const leagueClockLabel = zoneShortName(officialClock);
+/** "Week 8" etc. — never TheLeague's Week 4 by assumption. */
+const throwbackWeekLabel = throwback ? `Week ${throwback.previewWeek}` : '';
 ---
 
 <TheLeagueLayout title={title}>
@@ -90,6 +115,7 @@ const leagueClockLabel = zoneShortName(officialClock);
         <a href={sundayTicketPath}>Sunday Ticket</a> uses both — channels, carrier and every kickoff
         time — and so does everything else with a clock on it: the draft's start time, the waiver
         window, the ballot deadline. Pick nothing and you stay on the league's PT, exactly as before.
+        {throwback && ' Below them, the era your team wears on Throwback Week.'}
       </p>
     </header>
 
@@ -184,6 +210,19 @@ const leagueClockLabel = zoneShortName(officialClock);
         </span>
       </div>
     </form>
+
+    {throwback && (
+      <section class="pf-field pf-throwback" aria-labelledby="pf-throwback-title">
+        <h2 id="pf-throwback-title" class="pf-field__legend pf-field__legend--standalone">
+          Throwback Week
+        </h2>
+        <ThrowbackEraPicker view={throwback} scoreboardPath={scoreboardPath} />
+        <p class="pf-field__note">
+          {throwbackWeekLabel} is this season's Throwback Week. Your era saves the moment you pick
+          it — the button above carries the country and the clock, and nothing else.
+        </p>
+      </section>
+    )}
 
     <footer class="pf-foot">
       <p>
@@ -338,6 +377,13 @@ const leagueClockLabel = zoneShortName(officialClock);
   }
   .pf-save:hover { background: color-mix(in srgb, var(--league-accent) 30%, var(--card-surface)); }
   .pf-actions__note { font-size: 0.82rem; color: var(--content-text-muted); }
+
+  /* The picker is its own component with its own scoped styles; this only
+     gives it the same card the two fieldsets above it sit in. `.pf-field` is
+     a <fieldset> rule that applies cleanly to a <section> — the legend
+     variant below is the one thing an <h2> needs that a <legend> does not. */
+  .pf-throwback { display: block; }
+  .pf-field__legend--standalone { margin: 0 0 0.35rem; padding: 0; font-size: 1rem; }
 
   .pf-foot { margin-top: 0.5rem; }
   .pf-foot p { margin: 0; font-size: 0.8rem; color: var(--content-text-muted); line-height: 1.55; }

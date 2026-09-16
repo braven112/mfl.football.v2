@@ -12,6 +12,30 @@ const configs = [
 const erasOf = (teams: any[]) =>
   teams.flatMap((t) => (t.history ?? []).map((e: any) => ({ team: t, era: e })));
 
+/**
+ * The banner slots live in two components now — the owner-facing picker
+ * (shared by `/throwback-settings` and `/preferences`) and the commissioner
+ * panel that stayed on the settings page. Find each class wherever it is
+ * DEFINED, and insist it is defined exactly once: a second copy of one of
+ * these rules is the fork this split was made to avoid.
+ */
+const BANNER_SOURCES = [
+  'src/components/shared/ThrowbackEraPicker.astro',
+  'src/components/shared/ThrowbackSettingsPage.astro',
+] as const;
+
+function bannerRule(cls: string): string {
+  const owners = BANNER_SOURCES.map((f) => [f, readFileSync(f, 'utf8')] as const).filter(
+    ([, src]) => src.includes(`.${cls} {`),
+  );
+  expect(
+    owners.map(([f]) => f),
+    `.${cls} must be styled in exactly one component`,
+  ).toHaveLength(1);
+  const block = owners[0][1].slice(owners[0][1].indexOf(`.${cls} {`));
+  return block.slice(0, block.indexOf('}'));
+}
+
 describe('era banner backdrop', () => {
   it('paints the letterbox with the era palette', () => {
     expect(eraBannerStyle({ colorPrimary: '#123456', colorSecondary: '#abcdef' })).toBe(
@@ -62,11 +86,8 @@ describe('era banner backdrop', () => {
     // to a ~6:1 strip is a horizontal sliver with no way to tell whose it is.
     // The gradient exists so `contain` no longer looks unfinished — if a slot
     // ever flips to `cover`, the gradient is decoration on top of a crop.
-    const page = readFileSync('src/components/shared/ThrowbackSettingsPage.astro', 'utf8');
     for (const cls of ['tbw-imposed__banner', 'tbw-card__banner', 'tbw-cg__banner']) {
-      const block = page.slice(page.indexOf(`.${cls} {`));
-      const rule = block.slice(0, block.indexOf('}'));
-      expect(rule, `${cls} must letterbox, not crop`).toContain('object-fit: contain');
+      expect(bannerRule(cls), `${cls} must letterbox, not crop`).toContain('object-fit: contain');
     }
   });
 
@@ -74,9 +95,6 @@ describe('era banner backdrop', () => {
     // `height: auto` on a full-width img renders an 850x589 legacy logo as a
     // 589px-tall page header. The Throwback Rebrand is reassigned every year
     // and the next assignment may be any shape at all.
-    const page = readFileSync('src/components/shared/ThrowbackSettingsPage.astro', 'utf8');
-    const block = page.slice(page.indexOf('.tbw-imposed__banner {'));
-    const rule = block.slice(0, block.indexOf('}'));
-    expect(rule).toMatch(/height:\s*\d+px/);
+    expect(bannerRule('tbw-imposed__banner')).toMatch(/height:\s*\d+px/);
   });
 });

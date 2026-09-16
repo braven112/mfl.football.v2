@@ -477,3 +477,42 @@ sync, so a regeneration sweeps in whatever drifted since the last manual run.
 The Sept 2026 pass left nine entries pointing at files it had deleted; the next
 `sync:afl` fixes them and shows up as ~390 lines you did not write. Look at the
 deletions before assuming the diff is noise.
+
+
+---
+
+## The era picker has two mounts and one implementation (September 2026)
+
+The picker moved onto `/preferences`, under the country and the clock, because
+that is where an owner looks for a setting — and `/throwback-settings` keeps
+it, since that route is also the commissioner panel's home and the nav links
+to it.
+
+Two mounts, and the one thing that mattered was not building a second picker:
+the cards, the save-on-change script and the imposed-rebrand panel all live in
+`src/components/shared/ThrowbackEraPicker.astro`, which both pages render.
+`ThrowbackSettingsPage` kept the `<h1>` and the commissioner rows; the
+preferences page supplies its own `<h2>` and a one-line note that the Save
+button above carries the country and the clock and nothing else.
+
+Three things that shaped the split:
+
+- **The data split follows the cost.** `buildThrowbackSettingsView` was doing a
+  league-wide `getAllThrowbackPreferences` for any admin, which on a settings
+  page is the point and on a preferences page is a Redis fan-out to render your
+  own three cards. `buildThrowbackPickerView` is the owner-facing half;
+  `buildThrowbackSettingsView` now builds on it and adds the commissioner rows.
+- **The picker cannot go INSIDE the country/clock form.** That form is a plain
+  GET the route reads back; forms do not nest, and an `eraKey` radio inside it
+  would ride along on Save. It sits after the form as its own section.
+- **`/preferences` has no auth gate, so the gating is the ROUTE's.** It passes
+  `throwback={null}` for a signed-out visitor, a franchise-less account, or a
+  session belonging to the other league — the franchise ids fully overlap, so
+  without that check an AFL owner would be offered TheLeague 0001's eras.
+
+The ClientRouter gate needs no league name here, which is the payoff of sharing
+rather than forking: there is ONE script, its bind flag sits on the form the
+router replaces, and the endpoint takes its scope from the session.
+`tests/era-banner-style.test.ts` now resolves each banner rule in whichever of
+the two components defines it and fails if one is defined in both — the guard
+against the fork this split exists to avoid.

@@ -5,6 +5,20 @@ channels they see, and the **one clock** kickoff times print in. Shipped Sep
 2026 with `/preferences` in both leagues; Sunday Ticket was the first reader,
 and the league surfaces below joined it in the same month.
 
+**A third choice lives on the page and is NOT one of these.** Since Sep 2026
+`/preferences` also renders the Throwback Week era picker, under the clock. It
+is deliberately a different animal and must not be folded into this system: it
+belongs to a FRANCHISE rather than a device, so it needs a session, it stores
+in Redis (`throwback:<scope>:<franchiseId>`) rather than a cookie, and it saves
+on change rather than on the form's button — which is why it sits OUTSIDE the
+country/clock `<form>` (forms do not nest, and its radios are not that form's
+to submit) and why the page's "zero client JS" note now covers only the
+country/clock half. The markup is `ThrowbackEraPicker`, the SAME component
+`/throwback-settings` mounts; the ROUTE decides whether there is anything to
+pick for, and passes `throwback={null}` for a signed-out visitor, a
+franchise-less account, or a session from the other league — that last one is
+not decoration, since both leagues have a franchise 0001.
+
 **Files.** `src/utils/viewer-preferences.ts` (pure: catalog, parsing, defaults)
 · `src/utils/viewer-preferences-page.ts` (cookies, precedence, the Redis
 mirror — route-only) · `src/utils/viewer-preferences-store.ts` (the mirror) ·
