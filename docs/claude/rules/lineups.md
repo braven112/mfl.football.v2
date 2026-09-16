@@ -51,6 +51,39 @@ week switch is a full page reload. Three things that bit us (owner report,
   evidence of absence.
 
 
+## The bench is a DERIVED VIEW of the slots, not a list
+
+Both pages rendered the bench once, server-side, from the `usedPlayerIds` set
+the auto-fill happened to accumulate — and then never touched it again, while
+the nine slots above it were re-rendered by the page's own client script on
+every swap. So the first time an owner seated someone off the bench, the page
+showed him **twice** (in his new slot and still on the bench) and dropped the
+man he replaced off the page entirely; nothing was wrong with the lineup, only
+with the picture of it, which is the worst version — the owner re-fixes a
+lineup that was already right. Reported 2026-09-15: "I added DJ Moore to my
+starting lineup but he still shows on the bottom."
+
+- **`src/utils/lineup-bench.ts` is the one definition, and BOTH renders go
+  through it.** `selectBenchPlayers(roster, slots)` derives the list from the
+  SLOTS THEMSELVES — never from a set accumulated during the fill, which is
+  only correct at the instant the page renders and has no client-side
+  equivalent. `buildBenchRowHTML` is the client's row, and it is a *pair* with
+  the `.astro` branch: one stylesheet addresses both, and `applyRankChips`
+  finds its rows by `.lineup-bench-row[data-player-id]`, so a class in only one
+  of them is an unstyled row after the first swap.
+- **`renderBench()` hangs off `updateSubmitBar()`**, which is already the funnel
+  every mutation path goes through (swap, undo, undo-clear, Set Optimal, Clear,
+  and the init-time draft restore). Six call sites is six chances for the
+  seventh mutation path to forget. `innerHTML` wipes the rank chips, so the
+  re-render reapplies them.
+- **The bench COUNT is the derived list's length**, not `roster.length` minus
+  the filled slots. The subtraction agreed with the list only by luck and could
+  not move at all client-side.
+
+`tests/lineup-bench-sync.test.ts` pins the derivation, the row markup, the
+server/client class parity, and that both pages call it from the funnel.
+
+
 ## A week can schedule more than ONE game
 
 BOTH leagues run double-header weeks — TheLeague's 2026 weeks 1-3 and 13 list
