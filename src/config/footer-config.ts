@@ -196,6 +196,10 @@ const AFL_COLUMNS: ColumnMap = {
     'afl-rosters',
     'afl-keepers',
     'afl-trade-builder',
+    // Same slot TheLeague gives it, after trade-builder. Relabelled because
+    // the directory title carries an "(AFL)" suffix that disambiguates it from
+    // TheLeague's entry in site search and is noise inside the AFL's own footer.
+    { id: 'afl-front-office', label: 'Front Office' },
     { id: 'afl-notifications', label: 'Notifications' },
   ],
   'This Week': [
