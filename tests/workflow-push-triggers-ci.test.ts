@@ -1,5 +1,5 @@
 /**
- * A workflow that PUSHES to a branch must push with the deploy key.
+ * A JOB that pushes must check out with the deploy key.
  *
  * THE BUG THIS EXISTS TO STOP
  * ---------------------------
@@ -15,8 +15,9 @@
  *
  * Two things broke because of it, and neither announced itself:
  *
- *   1. `staging` serves real owners at staging.theleague.us, and it had been
- *      serving code no test had run against.
+ *   1. `staging` serves real owners at staging.theleague.us and writes to
+ *      production's database, and it had been serving code no test had run
+ *      against.
  *   2. `/promote` step 4 treats "no check runs for this SHA" as blocking — the
  *      right call — and the tip is a merge-down commit on almost every release.
  *      So the release gate would have refused nearly every promotion, for a
@@ -24,90 +25,194 @@
  *
  * THE RULE
  * --------
- * If a workflow pushes commits or tags to the repo, its checkout must carry
- * `ssh-key: ${{ secrets.DEPLOY_KEY }}`. That is not about permission — the
- * default token can push fine — it is about whether anything downstream
- * notices.
+ * If a job pushes commits or tags, ITS checkout must carry
+ * `ssh-key: ${{ secrets.DEPLOY_KEY }}`. Not about permission — the default
+ * token can push fine — but about whether anything downstream notices.
+ * Recorded in docs/claude/rules/storage-and-build.md.
  *
- * Checked by reading the workflow rather than by trusting a comment: the
- * failure mode is invisible at runtime, so a green pipeline proves nothing.
+ * WHY THIS PARSES YAML PER JOB RATHER THAN GREPPING THE FILE
+ * ---------------------------------------------------------
+ * Three ways a text scan gets this wrong, all of them real here:
+ *
+ *   - A file can hold TWO checkouts (`mfl-integration-test.yml` does). Matching
+ *     the whole body passes when the key sits on an unrelated checkout while
+ *     the job that actually pushes still uses the default token.
+ *   - `git push` appears in workflows that never run it —
+ *     `roger-date-audit.yml` names it in a header comment and in an `echo`
+ *     telling a human what to run locally. A guard that fails on prose earns an
+ *     allowlist and then stops meaning anything.
+ *   - Dropping every line containing `echo` to dodge that would discard a real
+ *     `echo starting && git push origin main`.
+ *
+ * So: parse the document, take each job's own steps, and ask whether THAT job
+ * pushes and whether THAT job's checkout carries the key.
+ *
+ * PUSHING IS THREE MECHANISMS, NOT ONE
+ * ------------------------------------
+ * `git push` in a run step, the shared `actions/commit-push`, and
+ * `scripts/commit-feed-and-push.mjs` — a concurrent-safe commit+push helper
+ * that ten workflows invoke. Missing the helper is not theoretical: those ten
+ * were absent from the scan entirely, so they passed by never being looked at,
+ * and dropping the key from any of them would have gone unnoticed.
  */
 
 import { describe, it, expect } from 'vitest';
-import { readFileSync, readdirSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { readFileSync } from 'node:fs';
+import path from 'node:path';
+import { parse as parseYaml } from 'yaml';
+import { walkFiles, REPO_ROOT } from './helpers/scan-guard';
 
-const WORKFLOW_DIR = resolve(__dirname, '../.github/workflows');
+const WORKFLOWS = path.join(REPO_ROOT, '.github/workflows');
 
-/**
- * Does this workflow actually push?
- *
- * Derived rather than listed, so a new pusher cannot join the repo unnoticed —
- * but derived CAREFULLY, because `git push` appears in workflows that never
- * run it. `roger-date-audit.yml` names it twice, once in a header comment and
- * once in an `echo` telling a human what to run locally after a failure; it
- * pushes nothing. A guard that fails on prose trains people to add exemptions,
- * which is how it stops meaning anything.
- *
- * So: comment lines and `echo` lines are stripped before looking, and the
- * shared commit-push action counts as a push wherever it appears.
- */
-function pushes(body: string): boolean {
-  if (/uses:\s*\.\/\.github\/actions\/commit-push/.test(body)) return true;
-  return body
+// `.yml` only, matching both this repo's actual convention (every workflow is
+// .yml) and the path-guard glob that runs this suite. Discovering an extension
+// the hook does not route would mean CI catches a pusher that the edit-time
+// guard silently skips.
+const EXTS = ['.yml'];
+
+// Matched against the VALUE of `with.ssh-key` once YAML has parsed it, which
+// is the expression alone — the key name is not part of it. Getting that wrong
+// is why the first run of this suite flagged all 24 pushers as missing a key
+// they plainly had.
+const DEPLOY_KEY_VALUE = /\$\{\{\s*secrets\.DEPLOY_KEY\s*\}\}/;
+// The same expression as it appears in raw workflow TEXT, for the file-level
+// assertions further down.
+const DEPLOY_KEY_TEXT = /ssh-key:\s*\$\{\{\s*secrets\.DEPLOY_KEY\s*\}\}/;
+const PUSH_HELPER = 'commit-feed-and-push';
+const COMMIT_PUSH_ACTION = './.github/actions/commit-push';
+
+type Step = { uses?: unknown; run?: unknown; with?: Record<string, unknown> };
+type PushingJob = { file: string; job: string; hasKey: boolean };
+
+/** Strip comments and the text an `echo` prints, keeping the rest of the line. */
+function commandText(run: string): string {
+  return run
     .split('\n')
-    .filter((line) => !/^\s*#/.test(line) && !/\becho\b/.test(line))
-    .some((line) => /(^|[;&|]|\s)git\s+push\b/.test(line));
+    .map((line) => line.replace(/#.*$/, ''))
+    // Remove the echo and its argument up to a command separator, so
+    // `echo "run: git push" && git push origin main` keeps the real push and
+    // drops the quoted one.
+    .map((line) => line.replace(/\becho\b\s+(?:"[^"]*"|'[^']*'|[^;&|\n]*)/g, ''))
+    .join('\n');
 }
 
-function pushingWorkflows(): { file: string; body: string }[] {
-  return readdirSync(WORKFLOW_DIR)
-    .filter((f) => f.endsWith('.yml') || f.endsWith('.yaml'))
-    .map((f) => ({ file: f, body: readFileSync(resolve(WORKFLOW_DIR, f), 'utf-8') }))
-    .filter(({ body }) => pushes(body));
+function stepPushes(step: Step): boolean {
+  const uses = typeof step?.uses === 'string' ? step.uses.trim() : '';
+  if (uses === COMMIT_PUSH_ACTION) return true;
+  const run = typeof step?.run === 'string' ? step.run : '';
+  if (!run) return false;
+  const cmd = commandText(run);
+  if (cmd.includes(PUSH_HELPER)) return true;
+  return /(^|[;&|(]|\s)git\s+(?:-C\s+\S+\s+)?push\b/.test(cmd);
 }
 
-describe('a workflow that pushes must push with the deploy key', () => {
-  it('finds the pushing workflows at all (a zero here would pass vacuously)', () => {
-    expect(pushingWorkflows().length).toBeGreaterThan(0);
+function stepIsCheckoutWithKey(step: Step): boolean {
+  const uses = typeof step?.uses === 'string' ? step.uses : '';
+  if (!uses.startsWith('actions/checkout')) return false;
+  const raw = step?.with?.['ssh-key'];
+  return typeof raw === 'string' && DEPLOY_KEY_VALUE.test(raw);
+}
+
+function pushingJobs(): PushingJob[] {
+  return walkFiles({ roots: [WORKFLOWS], extensions: EXTS }).flatMap((file) => {
+    let doc: { jobs?: Record<string, { steps?: Step[] }> };
+    try {
+      doc = parseYaml(readFileSync(file, 'utf-8'));
+    } catch {
+      // Unparseable workflows are already the business of
+      // tests/workflow-install-guard.test.ts, which fails on them by name.
+      return [];
+    }
+    return Object.entries(doc?.jobs ?? {}).flatMap(([job, def]) => {
+      const steps = Array.isArray(def?.steps) ? def.steps : [];
+      if (!steps.some(stepPushes)) return [];
+      return [
+        {
+          file: path.relative(REPO_ROOT, file),
+          job,
+          hasKey: steps.some(stepIsCheckoutWithKey),
+        },
+      ];
+    });
+  });
+}
+
+describe('a job that pushes must check out with the deploy key', () => {
+  const jobs = pushingJobs();
+
+  it('finds pushing jobs at all (a zero here would pass vacuously)', () => {
+    // The whole suite is only worth anything if the scan actually resolves
+    // jobs. This repo has well over a dozen pushers.
+    expect(jobs.length).toBeGreaterThan(10);
   });
 
-  it.each(pushingWorkflows().map((w) => w.file))(
-    '%s checks out with ssh-key: secrets.DEPLOY_KEY',
-    (file) => {
-      const body = readFileSync(resolve(WORKFLOW_DIR, file), 'utf-8');
-      expect(
-        body,
-        `${file} pushes to the repo but checks out without the deploy key, so it will push ` +
-          `with the default GITHUB_TOKEN — and GitHub starts NO workflow from such a push. ` +
-          `Whatever is meant to run on that branch (CI, a downstream job) will silently not ` +
-          `run. Add "ssh-key: \${{ secrets.DEPLOY_KEY }}" to its checkout.`,
-      ).toMatch(/ssh-key:\s*\$\{\{\s*secrets\.DEPLOY_KEY\s*\}\}/);
-    },
-  );
+  it('sees all three push mechanisms, not just the obvious one', () => {
+    // Pinned because the helper was the one this guard originally missed, and
+    // a refactor that quietly drops a mechanism would otherwise look green.
+    const files = new Set(jobs.map((j) => j.file));
+    expect(files).toContain('.github/workflows/staging-merge-down.yml'); // git push
+    expect(files).toContain('.github/workflows/weekly-changelog-rollup.yml'); // commit-push action
+    expect(files).toContain('.github/workflows/schefter-announce.yml'); // commit-feed-and-push.mjs
+  });
+
+  it('every pushing job carries the key on its own checkout', () => {
+    const missing = jobs.filter((j) => !j.hasKey).map((j) => `${j.file} (job: ${j.job})`);
+    expect(
+      missing,
+      `these jobs push but check out without the deploy key, so they push with the default ` +
+        `GITHUB_TOKEN — and GitHub starts NO workflow from such a push. Whatever is meant to ` +
+        `run on that branch (CI, a downstream job) silently will not. Add ` +
+        `"ssh-key: \${{ secrets.DEPLOY_KEY }}" to the checkout in that job.`,
+    ).toEqual([]);
+  });
+});
+
+describe('the detector itself', () => {
+  it('does not mistake prose for a push', () => {
+    // roger-date-audit.yml names `git push` twice — a header comment and an
+    // echo telling a human what to run locally — and pushes nothing.
+    const files = new Set(pushingJobs().map((j) => j.file));
+    expect(files).not.toContain('.github/workflows/roger-date-audit.yml');
+  });
+
+  it('still sees a real push that shares a line with an echo', () => {
+    expect(stepPushes({ run: 'echo "then run: git push" && git push origin main' })).toBe(true);
+    expect(stepPushes({ run: 'echo "then run: git push"' })).toBe(false);
+    expect(stepPushes({ run: '# git push origin main' })).toBe(false);
+  });
+
+  it('matches a push per job rather than per file', () => {
+    // mfl-integration-test.yml has two checkouts. A file-level match would let
+    // a key on the non-pushing one vouch for the pushing one.
+    const body = readFileSync(path.join(WORKFLOWS, 'mfl-integration-test.yml'), 'utf-8');
+    expect((body.match(/uses: actions\/checkout/g) ?? []).length).toBeGreaterThan(1);
+    const jobs = pushingJobs().filter((j) => j.file.endsWith('mfl-integration-test.yml'));
+    expect(jobs.length).toBeGreaterThan(0);
+    for (const j of jobs) expect(j.hasKey).toBe(true);
+  });
 });
 
 describe('staging-merge-down specifically', () => {
   // Called out on its own because this is the one whose breakage reached
-  // owners: it is the only workflow that moves the branch the staging hosts
-  // serve, and /promote's step 4 reads that branch's tip.
-  const body = readFileSync(resolve(WORKFLOW_DIR, 'staging-merge-down.yml'), 'utf-8');
+  // owners: it moves the branch the staging hosts serve, and /promote step 4
+  // reads that branch's tip.
+  const body = readFileSync(path.join(WORKFLOWS, 'staging-merge-down.yml'), 'utf-8');
 
   it('pushes with the deploy key so ci.yml actually fires on staging', () => {
-    expect(body).toMatch(/ssh-key:\s*\$\{\{\s*secrets\.DEPLOY_KEY\s*\}\}/);
+    expect(DEPLOY_KEY_TEXT.test(body)).toBe(true);
   });
 
   it('still fetches full history, which the merge base needs', () => {
-    // The deploy key goes next to fetch-depth, and dropping the latter while
-    // adding the former would trade a silent no-CI bug for a silent no-merge
-    // one.
+    // The key goes next to fetch-depth; dropping the latter while adding the
+    // former trades a silent no-CI bug for a silent no-merge-base one.
     expect(body).toMatch(/fetch-depth:\s*0/);
   });
 
   it('ci.yml really does want to run on staging pushes', () => {
-    // If this ever stopped being true the deploy key would be pointless here,
-    // and the guard above would be enforcing a rule with no consequence.
-    const ci = readFileSync(resolve(WORKFLOW_DIR, 'ci.yml'), 'utf-8');
+    // If this stopped being true, the key would be pointless here and this
+    // guard would enforce a rule with no consequence — re-read it rather than
+    // keep it.
+    const ci = readFileSync(path.join(WORKFLOWS, 'ci.yml'), 'utf-8');
     expect(ci).toMatch(/push:\s*\n\s*branches:\s*\[staging\]/);
   });
 });
