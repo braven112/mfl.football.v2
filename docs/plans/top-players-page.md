@@ -21,7 +21,7 @@ average and rank-within-position. It is the *results* counterpart to
 | Season scope | **Current season only for v1.** Career deferred (see "Deferred") |
 | Positions | **All three**: position filter, position-rank column, and a per-position leaderboard view |
 | Leagues | **Both from day one** — one shared component, thin wrapper per league |
-| Entry point | **The Tuesday recap hero** on both homepages links here, as its primary CTA, always |
+| Entry point | **The Tuesday recap hero** on both homepages links here. The recap-column branch is removed, not kept as a fallback |
 | Landing state | **Single-week ranking** — `?week=N` re-ranks the table by that week's points |
 | Changelog hero | **No.** The staged change carries `heroWorthy: false` |
 
@@ -156,9 +156,11 @@ EDIT scripts/prebuild.mjs                                  # + compute:top-playe
 EDIT package.json                                          # + compute:top-players script
 EDIT src/data/page-directory.json                          # + entry, 10+ tags
 EDIT src/data/weekly-changelog-staging.json                # + one-line staged change
-EDIT src/utils/hero-recap-destination.ts                   # /top-players?week=N as the primary CTA
+EDIT src/utils/hero-recap-destination.ts                   # /top-players?week=N; drop the article branch
 EDIT tests/hero-recap-destination.test.ts                  # asserts the exact objects, both leagues
-EDIT src/components/theleague/season-heroes/RecapCompositeHero.astro  # CTA label + secondary recap link
+EDIT src/pages/afl-fantasy/index.astro                     # drop the now-unused posts argument
+EDIT src/utils/afl-hero-resolver.ts                        # drop the now-unused posts argument
+EDIT src/components/theleague/season-heroes/RecapCompositeHero.astro  # drop the isArticle ternary + feed load
 EDIT .claude/hooks/path-guard.json                         # route the new files to a guard suite
 ```
 
@@ -253,14 +255,44 @@ Caleb Williams in week 1 — via `getWeeklyTopScorerCandidates`
 `src/utils/hero-recap-destination.ts`, today as: Schefter's recap column if one
 exists for the week, else `/<league>/live-scoring?week=N`, else `/<league>/news`.
 
-**Change: `/<league>/top-players?week=N` becomes the primary destination,
-always.** The card is about a player, so it lands on players.
+**Change: `/<league>/top-players?week=N` becomes the destination.** The card is
+about a player, so it lands on players.
+
+The **weekly recap column is being removed** in a separate session, so the
+article branch goes with it rather than being preserved. That is not a
+judgement call here — it is already dead code in practice: F3 of
+`docs/claude/followups/2026-09-15-hero-recap-routing.md` records that no weekly
+recap has generated for either league all 2026 season (both
+`weekly-results.json` files carry zero scores for every week, so `getCompletedWeek`
+returns 0 and the Tuesday cron skips silently), and that "the article branch of
+the hotfix is currently unreachable."
+
+So the resolver collapses to two cases:
 
 ```
-resolveRecapDestination({ league, seasonYear, completedWeek, posts })
-  → { week: N, href: '/<league>/top-players?week=N',
-      label: "See the week's top scorers", isArticle: <unchanged> }
+resolveRecapDestination({ league, seasonYear, completedWeek })
+  week > 0 → { week, href: '/<league>/top-players?week=N',
+               label: "See the week's top scorers" }
+  week = 0 → { week: 0, href: '/<league>/news', label: 'Read the latest' }
 ```
+
+What that deletes, all of it now unreachable:
+
+- `findWeeklyRecapPost` and `weeklyRecapPostId` — the id-matching pair whose
+  only consumer was the article branch.
+- the `isArticle` flag on `RecapDestination`, and the `recap.isArticle` ternary
+  at `RecapCompositeHero.astro:106` that picked the button label off it.
+- the `posts` input to `ResolveRecapDestinationInput`, and the feed-loading each
+  call site did only to supply it — `RecapCompositeHero.astro`,
+  `src/pages/afl-fantasy/index.astro`, `src/utils/afl-hero-resolver.ts`.
+- the `isArticle: true` assertions in `tests/hero-recap-destination.test.ts`.
+
+**Scope boundary:** this plan removes the hero's *dependency* on the recap
+column. Deleting `scripts/article-types/weekly-recap.mjs`, its cron entry and
+its `relatedLinks` belongs to the session that owns that decision — the two
+should not race each other in the same files. If that lands first, this section
+is unaffected; if this lands first, the article type is simply orphaned rather
+than broken. Coordinate on order, not on content.
 
 Load-bearing details:
 
@@ -283,19 +315,6 @@ Load-bearing details:
   returned objects for both leagues) must be updated in the same commit.
 - **Week 0 still falls through to `/news`.** A season with nothing scored has
   no week to rank; `?week=0` is not a destination.
-
-### Don't orphan the recap column
-
-`RecapCompositeHero.astro:106` currently picks its button label off
-`recap.isArticle`. With top-players as the permanent primary, that branch goes
-dead and Schefter's recap column — when one is actually written — loses its
-only surface.
-
-**Proposal (strike it if you'd rather keep one button):** keep
-`findWeeklyRecapPost` and the `isArticle` flag, which still carry true
-information ("a recap column exists for this week"), and use them for a small
-secondary text link under the CTA rather than for the CTA itself. The primary
-stays top-players unconditionally, as decided; the column stays reachable.
 
 ### The hero and the page will sometimes disagree — on purpose
 
