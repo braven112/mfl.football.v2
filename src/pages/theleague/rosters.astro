@@ -572,8 +572,15 @@ feedYears.forEach((yr) => {
 const weeklyResultsRawData = weeklyResultsRawBySeason[currentSeasonYearStr] ?? {};
 const playerScoresMap = processWeeklyScores(weeklyResultsRawData, currentWeekNum);
 
-// Build weekly player results for the modal's Season Results table
-const nflScheduleData = loadFeedJson(currentSeasonYearStr, 'nflSchedule.json');
+// Build weekly player results for the modal's Season Results table.
+// nflSchedule-full.json (MFL's W=ALL export) first: from week 1 onward the
+// plain nflSchedule.json carries only the CURRENT week, and a schedule missing
+// every other week made this table render all 17 as "Bye". Older seasons were
+// synced in the offseason and have the full shape in nflSchedule.json, so the
+// fallback is what keeps them working.
+const nflScheduleData =
+  loadFeedJson(currentSeasonYearStr, 'nflSchedule-full.json') ??
+  loadFeedJson(currentSeasonYearStr, 'nflSchedule.json');
 const leagueJsonData = loadFeedJson(currentSeasonYearStr, 'league.json');
 const playersJsonData = loadFeedJson(currentSeasonYearStr, 'players.json');
 const weeklyPlayerResults = (nflScheduleData && weeklyResultsRawData && Array.isArray(weeklyResultsRawData))

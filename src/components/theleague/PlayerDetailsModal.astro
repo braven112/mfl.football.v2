@@ -1857,7 +1857,7 @@ const t = (value?: string) => value ?? '\u2014';
           // Update metric cards with actual season data
           if (gamesPlayed > 0) {
             setText('metric-points-value', totalPts.toFixed(1));
-            setText('metric-points-label', gamesPlayed + ' Games');
+            setText('metric-points-label', gamesPlayed + (gamesPlayed === 1 ? ' Game' : ' Games'));
             setText('metric-ppg-value', (totalPts / gamesPlayed).toFixed(1));
           }
         } else {

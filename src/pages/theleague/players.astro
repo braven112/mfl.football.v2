@@ -119,6 +119,14 @@ const nflScheduleModules = import.meta.glob(
   '../../../data/theleague/mfl-feeds/*/nflSchedule.json',
   { eager: true }
 );
+// MFL's W=ALL export — every week of the season. The plain nflSchedule.json
+// above carries only the CURRENT week from week 1 onward, which made the
+// modal's Season Results table render all 17 weeks as "Bye". Seasons synced in
+// the offseason have the full shape in nflSchedule.json, hence the fallback.
+const nflScheduleFullModules = import.meta.glob(
+  '../../../data/theleague/mfl-feeds/20{2[5-9],[3-9][0-9]}/nflSchedule-full.json',
+  { eager: true }
+);
 const fpaModules = import.meta.glob(
   '../../../data/theleague/mfl-feeds/*/fantasyPointsAllowed.json',
   { eager: true }
@@ -213,7 +221,9 @@ if (Array.isArray(lastYearData)) {
 }
 
 // Build weekly player results for the modal's Season Results table
-const nflScheduleData = findForYear(nflScheduleModules, lastSeasonYear);
+const nflScheduleData =
+  findForYear(nflScheduleFullModules, lastSeasonYear) ??
+  findForYear(nflScheduleModules, lastSeasonYear);
 const fpaData = findForYear(fpaModules, lastSeasonYear);
 const leagueData = findForYear(leagueModules, lastSeasonYear);
 const playersDataForSeason = findForYear(playerModules, lastSeasonYear) || playersData;
