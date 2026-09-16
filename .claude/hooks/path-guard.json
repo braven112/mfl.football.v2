@@ -256,8 +256,9 @@
         "src/scripts/transaction-hub.ts",
         "src/components/theleague/TransactionHubModal.astro"
       ],
-      "note": "The ⋮ menu sits right after the Player column (it was nine columns off-screen on a phone, #974) and its header carries the league's own verb; the acquisition itself lives in PlayerDetailsModal, so it reaches every page the modal does — which means WaiverClaimModal is mounted by that modal and by no page, the offer is a SESSION verdict from /api/claim-context (both leagues have a franchise 0001), and the form must survive landing before or after the context does. The waiver priority dialog opens on the synced order and time-boxes the live read; the page's signed-in verdict is computed ONCE (franchiseIdForLeague) and read back off #watch-list-bridge[data-signed-in], never a second copy. See docs/claude/insights/features/waiver-claims.md and watch-list.md.",
+      "note": "The ⋮ menu sits right after the Player column (it was nine columns off-screen on a phone, #974) and its header carries the league's own verb; the acquisition itself lives in PlayerDetailsModal, so it reaches every page the modal does — which means WaiverClaimModal is mounted by that modal and by no page, the offer is a SESSION verdict from /api/claim-context (both leagues have a franchise 0001), and the form must survive landing before or after the context does. The waiver priority dialog opens on the synced order and time-boxes the live read; the page's signed-in verdict is computed ONCE (franchiseIdForLeague) and read back off #watch-list-bridge[data-signed-in], never a second copy. The Auction view is a LIVE board (Place Bid deep links, a 60s poll, a 36h clock), so it belongs to resolveAuctionWindow and not to `hasAuctionData` — the auction RESULTS feed keeps its rows all year, which left the board on the page in September. See docs/claude/insights/features/waiver-claims.md and watch-list.md.",
       "tests": [
+        "tests/auction-bid-link-gating.test.ts",
         "tests/free-agents-action-placement.test.ts",
         "tests/free-agent-session.test.ts",
         "tests/player-claim-offer.test.ts",

@@ -9,20 +9,27 @@
  * The Free Agents page carried three of these. The main acquisition column had
  * always chosen per phase (`isAuctionSeason ? O=43 : add_drop`). The Value view's
  * Bid column and the Auction view's Bid column had not — and the Auction TAB
- * itself is shown whenever the feed carries any auction data at all
- * (`canShowAuctionView = _hasAuctionData`), which is true year-round. So out of
- * season the page still handed owners a live "Bid ↗".
+ * itself was shown whenever the feed carried any auction data at all
+ * (`canShowAuctionView = _hasAuctionData`), which is true year-round, because
+ * the auction RESULTS feed keeps its rows long after the auction is over. So
+ * out of season the page still handed owners a live "Bid ↗".
+ *
+ * The tab is now gated on the window too (second describe below): the Auction
+ * view is a live bidding board — a Place Bid column, a 60-second poll of
+ * /api/live-auction, a 36-hour clock per player — not an archive, so it leaves
+ * the page when the auction closes and comes back when the next one opens.
  *
  * On 2026-09-03, during a waiver week with the free-agent pool locked, an owner
  * used it: MFL recorded `AUCTION_INIT 0006 8851|425000|` — an auction on a
  * player every other owner had to file a blind bid for.
  *
- * Two separate things are pinned below, because hiding a column is NOT the same
- * as not rendering the link:
+ * Three separate things are pinned below, because hiding a column is NOT the
+ * same as not rendering the link:
  *   1. every `O=43` render site is gated on `isAuctionSeason`, so no live link
  *      exists in the DOM out of season (a `display: none` column still holds a
  *      working anchor for find-in-page and the accessibility tree);
- *   2. the columns are hidden too, so neither view shows an orphan header.
+ *   2. the columns are hidden too, so neither view shows an orphan header;
+ *   3. the view, its toggle and its polling are gated on the window as well.
  */
 import { describe, it, expect } from 'vitest';
 import fs from 'node:fs';
@@ -88,5 +95,43 @@ describe('MFL Place Bid deep-links on Free Agents', () => {
     // the main column unconditional, so pin its ternary too.
     expect(source).toMatch(/isAuctionSeason\s*\n?\s*\?\s*`https:\/\/\$\{mflHost\}\/\$\{mflActionYear\}\/options\?L=\$\{mflLeagueId\}&O=43/);
     expect(source).toContain('add_drop?L=${mflLeagueId}');
+  });
+});
+
+/**
+ * The whole auction SURFACE — not just the links inside it — belongs to the
+ * window. Every condition below was `_hasAuctionData` alone at some point,
+ * which is why the board was still on the page in September.
+ */
+describe('the Auction view belongs to the auction window', () => {
+  it('gates the Auction tab on isAuctionSeason, not on having auction data', () => {
+    expect(source).toMatch(/const canShowAuctionView\s*=\s*_hasAuctionData\s*&&\s*isAuctionSeason\s*;/);
+  });
+
+  it('does not render the Auction toggle button out of season', () => {
+    // A `display: none` button is still in the accessibility tree and still
+    // findable; out of season the element must not exist at all.
+    expect(source).toMatch(/\{isAuctionSeason && <button[^>]*data-group="auction"/);
+  });
+
+  it('does not poll /api/live-auction out of season', () => {
+    expect(source).toMatch(/if \(isAuctionSeason\) startAuctionPolling\(\);/);
+  });
+
+  it('keeps the countdown and bid-status chrome out of the DOM out of season', () => {
+    expect(source).toMatch(/\{isAuctionSeason && \(\s*\n\s*<span class="auction-countdown"/);
+    expect(source).toMatch(/\{isAuctionSeason && \(\s*\n\s*<div class="bid-legend"/);
+    expect(source).toMatch(/const showAuctionIndicators = isAuctionSeason && /);
+  });
+
+  it('takes the countdown target from the resolved window, never a date literal', () => {
+    // `new Date('2026-08-16…')` was right for exactly one year and would have
+    // pinned the countdown to a past date every year after it.
+    expect(source).toContain('const AUCTION_END = auctionEndMs;');
+    expect(source).toContain('const auctionEndMs = auctionWindow.end ? auctionWindow.end.getTime() : 0;');
+    const auctionEndLine = source
+      .split('\n')
+      .find((line) => line.includes('AUCTION_END') && line.includes('new Date('));
+    expect(auctionEndLine, 'AUCTION_END is being built from a hardcoded date again').toBeUndefined();
   });
 });

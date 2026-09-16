@@ -405,6 +405,11 @@ const isAuctionSeason = auctionWindow.open;
 // cross-year ?testDate can't show one year's auction while linking another.
 // For real requests (no testDate) this equals currentYear.
 const mflActionYear = auctionWindowYear;
+// The countdown's target. Read from the resolved window rather than written as
+// a literal: a hardcoded end date is right for one year and silently wrong for
+// every year after it, and this page's whole auction surface now turns itself
+// back on from the same window.
+const auctionEndMs = auctionWindow.end ? auctionWindow.end.getTime() : 0;
 
 // Player salary by each of the last 3 completed league years.
 const salaryYear1 = currentYear - 1;
@@ -857,7 +862,13 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
           <span class="col-group-toggles__label">View:</span>
           <button class="col-group-btn active" data-group="stats" type="button" aria-pressed="true">Stats</button>
           <button class="col-group-btn" data-group="rankings" id="col-group-btn-rankings" type="button" aria-pressed="false">Rankings</button>
-          <button class="col-group-btn" data-group="auction" id="col-group-btn-auction" type="button" aria-pressed="false">Auction</button>
+          {/* The Auction view is a LIVE bidding board, not an archive: it
+              renders a Place Bid column, polls /api/live-auction and ticks a
+              36-hour clock per player. The auction results feed keeps its rows
+              all year, so gating the tab on "we have auction data" left it on
+              the page every month of the year. Gate on the window instead — it
+              comes back on its own when the next auction opens. */}
+          {isAuctionSeason && <button class="col-group-btn" data-group="auction" id="col-group-btn-auction" type="button" aria-pressed="false">Auction</button>}
           {isAdmin && (hasSurplusData || hasAuctionData) && <button class="col-group-btn" data-group="value" id="col-group-btn-value" type="button" aria-pressed="false">Value</button>}
           {/* aria-label carries the full "My Watch List" regardless of
               breakpoint — "My " visually dropping via CSS at narrow widths
@@ -873,14 +884,18 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
           <button class="watch-scope-btn" data-scope="fa" type="button" aria-pressed="false">Free agents</button>
           <button class="watch-scope-btn" data-scope="rostered" type="button" aria-pressed="false">Rostered</button>
         </div>
-        <button class="auction-freshness" id="auction-freshness" type="button" aria-label="Refresh auction data" title="Click to refresh auction data" style="display: none;">
-          <span class="freshness__dot" aria-hidden="true"></span>
-          Updated <span id="auction-freshness-time">&mdash;</span>
-        </button>
-        <span class="auction-countdown" id="auction-countdown" role="timer" aria-live="off" aria-label="Auction ends in" style="display: none;">
-          <span class="countdown__label">Ends in</span>
-          <span class="countdown__value" id="countdown-value">&mdash;</span>
-        </span>
+        {isAuctionSeason && (
+          <button class="auction-freshness" id="auction-freshness" type="button" aria-label="Refresh auction data" title="Click to refresh auction data" style="display: none;">
+            <span class="freshness__dot" aria-hidden="true"></span>
+            Updated <span id="auction-freshness-time">&mdash;</span>
+          </button>
+        )}
+        {isAuctionSeason && (
+          <span class="auction-countdown" id="auction-countdown" role="timer" aria-live="off" aria-label="Auction ends in" style="display: none;">
+            <span class="countdown__label">Ends in</span>
+            <span class="countdown__value" id="countdown-value">&mdash;</span>
+          </span>
+        )}
       </div>
       <div class="toolbar-center"></div>
       <div class="toolbar-right">
@@ -1017,6 +1032,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     <!-- Table -->
     <div class="table-wrapper">
       <!-- Bid Status Legend (inside table-wrapper so it's visually attached) -->
+      {isAuctionSeason && (
       <div class="bid-legend" id="bid-legend" style="display: none;">
         <span class="bid-legend__title">Bid Status:</span>
         <span class="bid-legend__item bid-legend__item--hot">
@@ -1038,6 +1054,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
           No bid
         </span>
       </div>
+      )}
 
       <table class="players-table" id="players-table" data-league={theLeagueDef.slug}>
         <thead>
@@ -1190,7 +1207,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
 {!claimFranchiseId && <SignInModal config={signInConfig} />}
 <WatchListBridge signedIn={watchSignedIn} claimVerb={claimVerb} promptSignIn={promptSignIn} />
 
-<script define:vars={{ canClaim, promptSignIn, playerDataJson, hasProjected, hasLastYrPts, hasSnapCounts, nflTeamsJson, hasSurplusData, hasAuctionData, isAuctionSeason, isAdmin, currentYear, mflHost, mflLeagueId, mflActionYear, franchiseNamesJson, franchiseBannersJson, defSpotlightJson, nflAvatarBgJson, nflAvatarBgFallback, nflAvatarBorderJson, nflAvatarBorderFallback, nflAvatarRingJson, nflAvatarRingFallback, nflAvatarRingDarkJson, nflAvatarRingDarkFallback, noHeadshot, logoOnerror: NFL_LOGO_ONERROR, collegeLogoOnerror: COLLEGE_LOGO_ONERROR, collegeLogoOnload: COLLEGE_LOGO_ONLOAD, rookieDraftComplete }}>
+<script define:vars={{ canClaim, promptSignIn, playerDataJson, hasProjected, hasLastYrPts, hasSnapCounts, nflTeamsJson, hasSurplusData, hasAuctionData, isAuctionSeason, auctionEndMs, isAdmin, currentYear, mflHost, mflLeagueId, mflActionYear, franchiseNamesJson, franchiseBannersJson, defSpotlightJson, nflAvatarBgJson, nflAvatarBgFallback, nflAvatarBorderJson, nflAvatarBorderFallback, nflAvatarRingJson, nflAvatarRingFallback, nflAvatarRingDarkJson, nflAvatarRingDarkFallback, noHeadshot, logoOnerror: NFL_LOGO_ONERROR, collegeLogoOnerror: COLLEGE_LOGO_ONERROR, collegeLogoOnload: COLLEGE_LOGO_ONLOAD, rookieDraftComplete }}>
   // define:vars creates const — copy to let so polling can update at runtime
   let _hasAuctionData = hasAuctionData;
   const players = JSON.parse(playerDataJson);
@@ -1218,7 +1235,9 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
   let auctionFreshnessTimer = null;
   let countdownTimer = null;
   const changedPlayerIds = new Set();
-  const AUCTION_END = new Date('2026-08-16T20:45:00-07:00').getTime(); // 3rd Sunday of August — offseason FA closes
+  // 3rd Sunday of August, 8:45 PM PT — resolved on the server from the same
+  // auction window that gates every other auction surface here.
+  const AUCTION_END = auctionEndMs;
   const BID_WINDOW_MS = 36 * 60 * 60 * 1000; // 36-hour bid timer, resets only when proxy bid is exceeded
   let auctionTimerInterval = null;
   const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -1285,7 +1304,9 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
   function applyGroupVisibility() {
     const canShowRankingsView = hasRankingColumns;
     const canShowValueView = isAdmin && (hasSurplusData || _hasAuctionData);
-    const canShowAuctionView = _hasAuctionData;
+    // In season only — see the toggle-bar comment. `_hasAuctionData` is true
+    // from the results feed all year, so it cannot be the whole condition.
+    const canShowAuctionView = _hasAuctionData && isAuctionSeason;
 
     if (activeView === 'rankings' && !canShowRankingsView) {
       activeView = canShowAuctionView ? 'auction' : (canShowValueView ? 'value' : 'stats');
@@ -1358,10 +1379,9 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
           el.style.display = 'none';
         });
       }
-      // The Auction view is available YEAR-ROUND (`canShowAuctionView` is just
-      // "the feed has auction data"), so outside the auction window it is a
-      // record of what happened — not a place to start something. Drop the
-      // Place Bid column; the rest of the view still reads.
+      // Belt and braces: the view no longer renders outside the auction
+      // window at all (`canShowAuctionView`), but Place Bid OPENS an auction,
+      // so the column keeps its own gate rather than inheriting one.
       if (!isAuctionSeason) {
         document.querySelectorAll('.col-auction-placebid').forEach(el => {
           el.style.display = 'none';
@@ -1413,8 +1433,9 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     const scopeBar = document.getElementById('watch-scope');
     if (scopeBar) scopeBar.style.display = activeView === 'watchlist' ? '' : 'none';
 
-    // Show/hide auction indicators in Value/Stats/Auction views
-    const showAuctionIndicators = showValue || showAuctionView || showStats;
+    // Show/hide auction indicators in Value/Stats/Auction views. Out of season
+    // the elements are not rendered at all; the guard keeps the intent local.
+    const showAuctionIndicators = isAuctionSeason && (showValue || showAuctionView || showStats);
     const freshnessEl = document.getElementById('auction-freshness');
     if (freshnessEl) {
       freshnessEl.style.display = (showAuctionIndicators && lastAuctionFetchTime > 0) ? '' : 'none';
@@ -2774,7 +2795,9 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     filterPlayers();
 
     // ── Auction polling (60s interval) ──
-    startAuctionPolling();
+    // Only while the window is open: out of season /api/live-auction has
+    // nothing to report and the freshness/countdown chrome it feeds is gone.
+    if (isAuctionSeason) startAuctionPolling();
   }
 
   // ── Bid tier classification ──
