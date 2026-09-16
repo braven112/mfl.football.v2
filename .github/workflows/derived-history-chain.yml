@@ -1,0 +1,79 @@
+name: Derived History Chain
+
+# THE lane that commits the franchise-history derived chain:
+#
+#   franchise-history.json + season-ledger.json   (one run per league)
+#     -> owner-tenures.json -> division-strength.json
+#
+# Each file is derived from the ones before it, and their data tests demand
+# row-for-row agreement, so a commit carrying only part of a regenerated chain
+# breaks main. Before this lane three workflows each committed a different part,
+# and none committed the AFL's history. See the 2026-09-15 entries in
+# docs/claude/insights/features/franchise-history.md.
+#
+# scripts/recompute-derived-chain.mjs owns the order, the file list and the
+# guard suites; this workflow only schedules it. The two manual lanes that also
+# touch the chain (backfill-historical-feeds, fetch-owner-names) call the same
+# script. tests/derived-chain-lane.test.ts fails on any workflow that runs a
+# chain producer directly or names a chain file.
+#
+# Milestone posts: --emit-milestone-posts diffs new badges against the
+# COMMITTED franchise-history.json (this checkout) and writes the posts into the
+# feed committed beside the new snapshot. A snapshot committed without its posts
+# is a baseline whose awards are never posted.
+#
+# Not season-gated: out of season nothing changes, the script restores
+# timestamp-only rewrites, and the commit step finds nothing to commit.
+on:
+  schedule:
+    # Daily at 20:30 UTC = 1:30 PM PDT / 12:30 PM PST, half an hour after the
+    # Schefter speculation job, the other daily writer of TheLeague's feed.
+    - cron: "30 20 * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: derived-history-chain
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  recompute:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          ssh-key: ${{ secrets.DEPLOY_KEY }}
+          fetch-depth: 0
+
+      - name: Setup pnpm + Node + install
+        uses: ./.github/actions/setup
+
+      - name: Recompute the chain (every league, milestone diff)
+        run: node ./scripts/recompute-derived-chain.mjs --emit-milestone-posts
+
+      # The gate. A chain that fails its own data tests is never committed:
+      # main keeps the last set that agreed, and this run goes red instead.
+      - name: Verify the chain agrees with itself
+        run: pnpm vitest run $(node ./scripts/recompute-derived-chain.mjs --print-guard-tests)
+
+      # commit-feed-and-push rebuilds on the newest origin tip and merges the
+      # feed by post id, so a concurrent feed writer is never clobbered. The
+      # derived files go in verbatim, as one set.
+      # Commits to the ref this run was launched on, never a hardcoded main: a
+      # scheduled run is already on the default branch, and a dispatch used to
+      # test the lane on a branch would otherwise push its output to main.
+      # Through env + quotes because a ref name is not shell-safe.
+      - name: Commit and push the chain + milestone posts
+        env:
+          TARGET_BRANCH: ${{ github.ref_name }}
+        run: |
+          git config user.name "Derived History Bot"
+          git config user.email "actions@users.noreply.github.com"
+          node ./scripts/commit-feed-and-push.mjs \
+            --branch "$TARGET_BRANCH" \
+            --message "chore: recompute franchise-history derived chain" \
+            --files "$(node ./scripts/recompute-derived-chain.mjs --print-outputs)"

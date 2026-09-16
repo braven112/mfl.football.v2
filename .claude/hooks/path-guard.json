@@ -197,12 +197,17 @@
         "scripts/compute-owner-tenures.mjs",
         "scripts/compute-afl-awards.mjs",
         "scripts/lib/owner-tenure-inputs.mjs",
+        "scripts/compute-division-strength.mjs",
+        "scripts/recompute-derived-chain.mjs",
+        ".github/workflows/derived-history-chain.yml",
+        ".github/workflows/fetch-owner-names.yml",
         "src/utils/owner*",
         "src/utils/franchise-eras.ts",
         "src/pages/*/owners/**",
         "src/pages/*/franchises/**"
       ],
       "tests": [
+        "tests/derived-chain-lane.test.ts",
         "tests/owner-tenures-data.test.ts",
         "tests/owner-boundary-parity.test.ts",
         "tests/owner-history-boundaries.test.ts",
@@ -743,13 +748,15 @@
         "scripts/lib/archived-feed-files.mjs",
         "scripts/commit-feed-and-push.mjs",
         ".github/workflows/schefter-trade-speculation.yml",
-        ".github/workflows/backfill-historical-feeds.yml"
+        ".github/workflows/backfill-historical-feeds.yml",
+        ".github/workflows/derived-history-chain.yml"
       ],
       "tests": [
         "tests/canonical-mfl-json.test.ts",
         "tests/archived-feed-files.test.ts",
         "tests/current-era-feed-globs.test.ts",
-        "tests/milestone-emission-lane.test.ts"
+        "tests/milestone-emission-lane.test.ts",
+        "tests/derived-chain-lane.test.ts"
       ]
     },
     {

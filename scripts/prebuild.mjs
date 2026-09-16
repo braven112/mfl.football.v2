@@ -42,6 +42,15 @@ const SEQUENTIAL = [
   { name: 'build:styles', cmd: 'pnpm run build:styles' },
   { name: 'build:bookmarklets', cmd: 'pnpm run build:bookmarklets' },
   { name: 'update:salary:all', cmd: 'pnpm run update:salary:all' },
+  // The franchise-history derived chain also runs here, step by step, because
+  // the build needs the files and nothing here commits anything. The lanes that
+  // COMMIT it must go through scripts/recompute-derived-chain.mjs instead, which
+  // keeps the set consistent and posts the milestone diff — see
+  // tests/derived-chain-lane.test.ts. The producers stay listed individually on
+  // purpose: pipelineScripts() below derives what a preview build must watch
+  // from these `pnpm run` names, so hiding them behind one wrapper would let an
+  // edit to a producer preview against the stale committed file. A guard in that
+  // test fails if a chain producer stops appearing in this list.
   { name: 'compute:franchise-history', cmd: 'pnpm run compute:franchise-history', previewSkip: true },
   { name: 'compute:afl-free-agents', cmd: 'pnpm run compute:afl-free-agents', previewSkip: true },
   // compute:franchise-history above defaults to TheLeague, so the AFL's copy
