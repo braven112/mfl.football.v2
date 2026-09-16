@@ -86,9 +86,16 @@ jobs:
           # feed by post id on top of the latest origin and retries; the derived
           # snapshots and raw mfl-feeds directory are taken as-is. "Nothing
           # changed" is guarded inside the script.
+          #
+          # franchise-history.json and season-ledger.json are written by the
+          # SAME run of compute-franchise-history.mjs and must be committed
+          # TOGETHER. Listing only the first is not a smaller commit, it is a
+          # silent drift: this job committed a fresh history against a frozen
+          # ledger every day from 2026-09-04, and tests/season-ledger.test.ts
+          # (which asserts the two agree field-for-field) went red on main.
           git config user.name "Schefter Bot"
           git config user.email "actions@users.noreply.github.com"
           node scripts/commit-feed-and-push.mjs \
             --branch main \
             --message "chore: schefter daily — speculation + milestone scan" \
-            --files "src/data/theleague/schefter-feed.json,data/theleague/derived/speculation-history.json,data/theleague/derived/franchise-history.json,data/theleague/mfl-feeds"
+            --files "src/data/theleague/schefter-feed.json,data/theleague/derived/speculation-history.json,data/theleague/derived/franchise-history.json,data/theleague/derived/season-ledger.json,data/theleague/mfl-feeds"
