@@ -1355,7 +1355,22 @@ try {
   /* Slots */
   .kp-slots {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    /* The track minimum is what decides the column COUNT, and every fixed
+       part of a row (rank badge, avatar, position line, the two buttons)
+       is flex-shrink: 0 — so the name is the only thing that gives. A track
+       merely "wide enough to lay out" therefore ellipsises most of the
+       roster rather than dropping a column.
+
+       380px is measured, not guessed. The front-office hub gives this panel
+       a ~870px content column; at the 220px minimum that column auto-filled
+       to three 285px tracks and five names in a nine-player cut pool
+       ellipsised. 340px fixes 870px but still lets a 1040-1147px container
+       land on three 341px tracks, which truncates two — 380px is the first
+       minimum that skips that state, so the hub gets two readable cards and
+       a third column only appears once there is real room for it.
+
+       min() keeps the track from overflowing a container narrower than it. */
+    grid-template-columns: repeat(auto-fill, minmax(min(380px, 100%), 1fr));
     gap: 0.5rem;
   }
 
@@ -1560,7 +1575,10 @@ try {
     margin: 0;
     padding: 0;
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    /* Same reasoning as .kp-slots above — plus the cut pool carries a stat
+       line and a trend badge between the name and the buttons, so it needs
+       at least as much room per card, never less. */
+    grid-template-columns: repeat(auto-fill, minmax(min(380px, 100%), 1fr));
     gap: 0.5rem;
   }
 
