@@ -30,7 +30,13 @@ import { getVisibleLinks, getLinkLabel } from '../src/utils/nav-utils';
  */
 
 const navLinks = navConfig.sections.flatMap((s: any) => s.links ?? []);
-const directory = pageDirectory as { id: string; path: string; visibility: string }[];
+const directory = pageDirectory as {
+  id: string;
+  title: string;
+  path: string;
+  visibility: string;
+  tags: string[];
+}[];
 
 describe('the Front Office page registry', () => {
   it('keeps every path league-NEUTRAL', () => {
@@ -274,8 +280,13 @@ describe('nav', () => {
   const warRoom = (navConfig.sections as any[]).find((s) => s.id === 'offseason-war-room');
 
   it('has no Front Office section — the hub is a link, not a category', () => {
+    // The `front-office` LINK is expected (it opens the War Room, below). What
+    // must not come back is the section that wrapped it: a category holding one
+    // self-titled link, which is how /rosters fell out of the drawer.
     expect((navConfig.sections as any[]).find((s) => s.id === 'cap-contracts')).toBeUndefined();
-    expect(navLinks.find((l: any) => l.id === 'front-office')).toBeUndefined();
+    expect(
+      (navConfig.sections as any[]).filter((s) => (s.links ?? []).length === 1).map((s) => s.id),
+    ).not.toContain('cap-contracts');
   });
 
   it('drops the old per-page nav links', () => {
@@ -286,8 +297,12 @@ describe('nav', () => {
     }
   });
 
-  it('opens Offseason War Room with League Planner, then Rosters', () => {
-    expect(warRoom.links[0].id).toBe('league-planner');
+  it('opens Offseason War Room with Front Office, then Rosters', () => {
+    // "Front Office" is the name of this page everywhere now — nav, footer and
+    // site search — because the rosters planner tabs it used to share the name
+    // "League Planner" with are on their way out.
+    expect(warRoom.links[0].id).toBe('front-office');
+    expect(warRoom.links[0].label).toBe('Front Office');
     expect(warRoom.links[0].path).toBe('/front-office');
     expect(warRoom.links[1].id).toBe('rosters');
     expect(warRoom.links[1].path).toBe('/rosters');
@@ -308,13 +323,26 @@ describe('nav', () => {
     expect(warRoom.links[0].labelAFL).toBeUndefined();
   });
 
-  it('sends League Planner to /front-office, not the rosters planner tab', () => {
-    // Both destinations work — `?view=planner` aliases to rosters.astro's
-    // `nextyear` view, whose own tab is labelled "League Planner" — so this is
-    // a repoint, not a dead-link cleanup. One name, one destination:
-    // /front-office is the surface that renders a planner in BOTH leagues,
-    // while the rosters tab is TheLeague's alone.
+  it('leaves ONE surface named Front Office, and no planner-tab link', () => {
+    // The collision this closes: nav said "League Planner" -> /front-office
+    // while the footer and site search said "League Planner" ->
+    // /rosters?view=planner. Both destinations worked (?view=planner aliases to
+    // rosters.astro's `nextyear` view, whose tab is itself labelled "League
+    // Planner"), which is what made it a naming problem rather than a dead
+    // link. The rosters planner tabs are being retired, so the hub took the
+    // name and the directory entry that pointed at the tab is gone.
     expect(navLinks.find((l: any) => l.path === '/rosters?view=planner')).toBeUndefined();
+
+    const directoryEntries = directory.filter(
+      (p) => p.path === '/rosters?view=planner' || p.id === 'league-planner',
+    );
+    expect(directoryEntries).toEqual([]);
+
+    // ...and the old name still FINDS it, so search for "league planner" is not
+    // a dead end while the tabs are still shipping.
+    const hub = directory.find((p) => p.id === 'front-office');
+    expect(hub?.title).toBe('Front Office');
+    expect(hub?.tags).toContain('league planner');
   });
 
   it('never shows one league two links with the same name in a section', () => {

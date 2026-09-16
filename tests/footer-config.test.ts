@@ -114,3 +114,27 @@ describe('deep cuts', () => {
     expect(getDeepCuts('best-ball-1', getFooterColumns('best-ball-1'))).toEqual([]);
   });
 });
+
+describe('a footer column header never doubles as a link name', () => {
+  // Twice now the chrome has had one name meaning two things. First "League
+  // Planner" pointed at /front-office in the nav and at the rosters planner tab
+  // in the footer and site search; the fix gave the hub the name outright. That
+  // put a LINK called "Front Office" in My Team directly above a COLUMN called
+  // "Front Office" holding six different pages — a header and a link are drawn
+  // differently, but the reader still sees the word twice meaning two things.
+  // The column is "Data" now. This pins that shape rather than the one string.
+  for (const league of ['theleague', 'afl-fantasy'] as const) {
+    it(`holds for ${league}`, () => {
+      const columns = getFooterColumns(league, '0001');
+      const headers = new Set(columns.map((c) => c.title));
+      for (const column of columns) {
+        for (const link of column.links) {
+          expect(
+            headers.has(link.label),
+            `${league}: "${link.label}" is both a column header and a link in ${column.title}`,
+          ).toBe(false);
+        }
+      }
+    });
+  }
+});
