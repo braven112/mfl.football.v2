@@ -46,6 +46,15 @@ export function queuePath(projectRoot) {
  *   has exactly one home (the generator); a second copy is a second thing to
  *   get wrong, and Roger's bot must never become Schefter's fallback.
  * @property {{franchiseIds: string[], title: string, body: string, url: string, tag: string}|null} push
+ * @property {string} [pushCategory] Notification category for `push` —
+ *   src/config/notification-categories.ts. Defaults to 'article'; the Pecking
+ *   Order sends 'column'. Owners subscribe per category, so a wrong one is
+ *   silently dropped by the server rather than delivered to someone who did
+ *   not ask for it.
+ * @property {Array<object>|null} [voterPushes] Pre-built PER-RECIPIENT
+ *   notifications (the Owners' Poll open and reveal), sent through
+ *   `sendVoterPushes`. Separate from `push` because it is not a broadcast:
+ *   each owner gets different copy, and only voters get it at all.
  * @property {boolean} [dryRun]
  */
 

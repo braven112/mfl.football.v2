@@ -27,6 +27,7 @@ import { fileURLToPath } from 'node:url';
 import { LEAGUES } from '../src/config/leagues-data.mjs';
 import { postToGroupMeCapped } from './lib/groupme-capped.mjs';
 import { sendPushFanout, broadcast } from './lib/push-fanout.mjs';
+import { sendVoterPushes } from './lib/owners-poll-posts.mjs';
 import { awaitPublished } from './lib/await-published.mjs';
 import { readAnnounceQueue, clearAnnounceQueue, queuePath } from './lib/announce-queue.mjs';
 
@@ -92,14 +93,29 @@ export async function announceOne(entry, { dryRun = false, log = console, wait =
     const result = await sendPushFanout({
       league,
       dryRun: isDry,
-      category: 'article',
+      // Owners subscribe per category, so this must be the category the copy
+      // actually belongs to — a wrong one is dropped server-side.
+      category: entry.pushCategory ?? 'article',
       notifications: broadcast(entry.push),
       log,
     });
     pushed = result.sent ?? 0;
   }
 
-  return { announced: true, live: published.live, posted, pushed };
+  // Per-recipient pushes (the Owners' Poll open and reveal). Not a broadcast:
+  // each owner gets different copy and only voters get the reveal at all, so
+  // these arrive pre-built and go out through the poll's own sender.
+  let voterPushed = 0;
+  if (entry.voterPushes?.length) {
+    if (isDry) {
+      log.log?.(`  [dry-run] Would send ${entry.voterPushes.length} per-voter push(es).`);
+    } else {
+      const result = await sendVoterPushes({ league, notifications: entry.voterPushes, log });
+      voterPushed = result.sent ?? 0;
+    }
+  }
+
+  return { announced: true, live: published.live, posted, pushed, voterPushed };
 }
 
 async function main() {

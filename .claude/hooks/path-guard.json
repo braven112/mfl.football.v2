@@ -562,8 +562,11 @@
         "tests/owners-poll-window.test.ts",
         "tests/owners-poll-voters.test.ts",
         "tests/owners-poll-posts.test.ts",
-        "tests/owners-poll-lineup-styles.test.ts"
-      ]
+        "tests/owners-poll-lineup-styles.test.ts",
+        "tests/owners-poll-chat-budget.test.ts",
+        "tests/schefter-announce-pending.test.ts"
+      ],
+      "note": "The poll's chat budget is TWO posts a week (the column, with the ballot invite folded in, and the reveal) and the nag is push-only. Neither the column nor the reveal is SENT here any more: generate-pecking-order.mjs queues them (scripts/lib/announce-queue.mjs) and scripts/schefter-announce-pending.mjs delivers after the commit, once the issue is live \u2014 announcing before the deploy pointed owners at last week's column and a ballot that was not on the page yet. The readiness probe is the ISSUE PERMALINK (prerendered, so it 404s until deployed), never /pecking-order, which answers 200 every week of the season."
     },
     {
       "name": "page-directory-and-whats-new",

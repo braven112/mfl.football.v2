@@ -232,6 +232,61 @@ describe('the generator queues; the workflow sends after the push', () => {
   });
 });
 
+describe('the Pecking Order queues too — same race, softer symptom', () => {
+  /**
+   * The column's announcement links `/pecking-order`, a page that exists every
+   * week of the year. So instead of a redirect, a pre-deploy tap showed LAST
+   * week's column to everyone the message had just told to read this one — and
+   * the ballot it invites them to vote in lives inside the issue file, so the
+   * poll section was not there either.
+   */
+  let generator = '';
+  beforeEach(async () => {
+    generator ||= await fs.readFile(
+      path.join(REPO_ROOT, 'scripts/generate-pecking-order.mjs'),
+      'utf8',
+    );
+  });
+
+  it('waits on the ISSUE PERMALINK, not on /pecking-order', () => {
+    // `/pecking-order` answers 200 in every week of the season, so it proves
+    // nothing. `/<league>/pecking-order/<year>/<week>` is prerendered from a
+    // glob over the committed issues: no file, no path, 404 — which is the
+    // readiness signal this needs.
+    expect(generator).toMatch(/pecking-order\/\$\{year\}\/\$\{week\}/);
+    const queuedPaths = generator.match(/verifyPath: [^\n]+/g) ?? [];
+    expect(queuedPaths).toHaveLength(2);
+    expect(queuedPaths.join('\n')).not.toMatch(/verifyPath: '\/pecking-order'/);
+  });
+
+  it("the reveal waits on the feed post that rides its own commit", () => {
+    // The issue permalink has existed since Tuesday and would answer 200 while
+    // still showing an open ballot. The reveal's feed post is NEW and lands in
+    // the same commit as the amended issue, so its permalink going live means
+    // the tally is live.
+    expect(generator).toMatch(/revealPostId \? `\/\$\{league\.slug\}\/news\/\$\{revealPostId\}` : null/);
+    expect(generator).toMatch(/return post\.id;/);
+  });
+
+  it('carries the column push category and the ballot pushes with it', () => {
+    // 'column', not 'article' — owners subscribe per category, and a wrong one
+    // is dropped server-side rather than delivered to someone who did not ask.
+    expect(generator).toMatch(/pushCategory: 'column'/);
+    // The ballot-open pushes ride in the same queue entry, so they cannot land
+    // before the page carrying the ballot does.
+    expect(generator).toMatch(/voterPushes: pollBlock/);
+  });
+
+  it('leaves the push-only nag sending inline — it waits on nothing', () => {
+    const nag = generator.slice(
+      generator.indexOf('async function runNagPoll'),
+      generator.indexOf('/** Every earlier issue of this season'),
+    );
+    expect(nag).toMatch(/sendVoterPushes/);
+    expect(nag).not.toMatch(/enqueueAnnounce/);
+  });
+});
+
 describe('announceOne', () => {
   it('a dry run never touches the day claim', async () => {
     // postToGroupMeCapped claims the league's one slot for the day BEFORE it

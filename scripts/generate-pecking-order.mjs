@@ -37,8 +37,6 @@ import { callAnthropic } from './article-utils/ai-client.mjs';
 import { getCompletedWeek } from './article-utils/week-resolver.mjs';
 import { currentSeasonYear } from './lib/schefter-recurrence-ledger.mjs';
 import { isSeasonWindowOpen } from '../src/utils/pecking-order-season-window.mjs';
-import { postToGroupMe } from './lib/groupme.mjs';
-import { postToGroupMeCapped } from './lib/groupme-capped.mjs';
 import {
   openPoll,
   closePoll,
@@ -49,7 +47,6 @@ import {
   buildRevealMessage,
   normalizeFranchiseIds,
 } from './lib/owners-poll-pass.mjs';
-import { sendPushFanout, broadcast } from './lib/push-fanout.mjs';
 import {
   buildVoterPushes,
   sendVoterPushes,
@@ -72,6 +69,9 @@ import {
   describeMethodology,
 } from './lib/pecking-order-math.mjs';
 import { num, int } from './lib/team-strength.mjs';
+// Announcements are QUEUED here and sent by scripts/schefter-announce-pending.mjs
+// after the commit, once the issue is live. See scripts/lib/await-published.mjs.
+import { enqueueAnnounce } from './lib/announce-queue.mjs';
 
 const projectRoot = path.resolve(fileURLToPath(new URL('..', import.meta.url)));
 
@@ -707,23 +707,41 @@ export function buildGroupMeAnnouncement(issue, teams, league) {
   return lines.join('\n');
 }
 
-async function postAnnouncement(issue, teams, league) {
-  const text = buildGroupMeAnnouncement(issue, teams, league);
-  const botEnv = GROUPME_BOT_ENV[league.slug];
-  // Tuesday's designated post. The ballot invite rides along inside it rather
-  // than being a second message.
-  const { posted } = await postToGroupMeCapped({
-    league,
+/**
+ * The issue's own permalink — the readiness probe for this week's column.
+ *
+ * `/<league>/pecking-order/<year>/<week>` is PRERENDERED from a getStaticPaths
+ * glob over the committed issue files, so a week that has not deployed yet has
+ * no path at all and answers 404. That makes it the honest "is this week live"
+ * signal, where `/pecking-order` is not: that page exists every week of the
+ * year and would simply show LAST week's column to everyone the announcement
+ * just told to go read this one.
+ */
+const issuePermalink = (league, year, week) =>
+  `/${league.slug}/pecking-order/${year}/${week}`;
+
+/**
+ * Queue Tuesday's announcement. It is SENT by
+ * scripts/schefter-announce-pending.mjs, after the workflow's commit step and
+ * once the issue is actually live — see scripts/lib/await-published.mjs for
+ * the bug that split these apart. The ballot invite rides along inside this
+ * one message rather than being a second post.
+ */
+async function queueAnnouncement(issue, teams, league, { year, week, push, voterPushes, dryRun }) {
+  const { file, size } = await enqueueAnnounce(projectRoot, {
+    league: league.slug,
     kind: 'pecking-order',
-    botId: process.env[botEnv],
-    text,
-    checkStatus: true,
-    onMissingBotId: () => console.log(`  [groupme] ${botEnv} not set — skipping announcement.`),
-    onPosted: () => console.log('  [groupme] announcement posted.'),
-    onHttpError: (status) => console.warn(`  [groupme] announcement failed: HTTP ${status}`),
-    onFetchError: (err) => console.warn(`  [groupme] announcement failed: ${err.message}`),
+    postId: `pecking-order-${year}-${week}`,
+    verifyPath: issuePermalink(league, year, week),
+    groupMeText: buildGroupMeAnnouncement(issue, teams, league),
+    botEnv: GROUPME_BOT_ENV[league.slug],
+    push,
+    pushCategory: 'column',
+    voterPushes,
+    dryRun,
   });
-  if (!posted) console.log('  [groupme] announcement not delivered (see above).');
+  console.log(`  [announce] Queued for after the deploy (${size} pending → ${file}).`);
+  console.log('  [announce] Send with: node scripts/schefter-announce-pending.mjs');
 }
 
 /**
@@ -818,43 +836,72 @@ async function runClosePoll(opts, league) {
   // the site, not an announcement, and a dry operator run that skips chat
   // still wants the archive correct. Replace-by-id, so a re-run cannot leave
   // two Owners' Poll posts for the same week.
-  await writeRevealFeedPost({ league, issue, teams: teamsConfig.teams, priorIssues });
+  const revealPostId = await writeRevealFeedPost({
+    league, issue, teams: teamsConfig.teams, priorIssues,
+  });
 
   if (opts.publish) {
     const callback = buildCallback({ issue, priorIssues, teams: teamsConfig.teams });
     const text = buildRevealMessage({ league, issue, teams: teamsConfig.teams, callback });
-    if (text) await postPollMessage(text, league, 'reveal');
 
     // Personal, per voter, and only to voters. The chat post is a broadcast;
-    // this is the payoff that makes voting worth doing. Never fatal — the
-    // issue is already committed and the reveal already went out, so a push
-    // outage must not turn a successful week into a failed job.
+    // this is the payoff that makes voting worth doing.
     const previousIssue = await tryLoadJSON(
       issueFilePath(league, redisWindowYear, week - 1),
     );
-    const notifications = buildVoterPushes({
+    const voterPushes = buildVoterPushes({
       league,
       issue,
       teams: teamsConfig.teams,
       previousIssue,
     });
-    await sendVoterPushes({ league, notifications });
+
+    if (!text && voterPushes.length === 0) return;
+
+    // QUEUED, not sent — same reason as the Tuesday column. The reveal names
+    // a tally that only exists in the amended issue file, so announcing
+    // before the deploy sends every owner to a page still showing an open
+    // ballot. `revealPostId` is the probe: that feed post and the amended
+    // issue are in the SAME commit, so its permalink going live means the
+    // tally is live. No post (a league that wrote none) → nothing to wait on.
+    const { file, size } = await enqueueAnnounce(projectRoot, {
+      league: league.slug,
+      kind: 'owners-poll-close',
+      postId: revealPostId ?? `owners-poll-close-${redisWindowYear}-${week}`,
+      verifyPath: revealPostId ? `/${league.slug}/news/${revealPostId}` : null,
+      groupMeText: text || null,
+      botEnv: GROUPME_BOT_ENV[league.slug],
+      push: null,
+      voterPushes,
+      dryRun: opts.dryRun,
+    });
+    console.log(`  [announce] Reveal queued for after the deploy (${size} pending → ${file}).`);
+    console.log('  [announce] Send with: node scripts/schefter-announce-pending.mjs');
   }
 }
 
-/** Write (or replace) the Owners' Poll reveal post in the league's feed. */
+/**
+ * Write (or replace) the Owners' Poll reveal post in the league's feed.
+ *
+ * RETURNS the post id, because that permalink is the readiness probe for the
+ * whole close pass: the reveal post and the amended issue ride the SAME
+ * commit, so `/news/<id>` answering 200 means the tally is live on the issue
+ * page too. The issue's own permalink cannot serve — it has existed since
+ * Tuesday and would answer 200 while still showing an open ballot.
+ */
 async function writeRevealFeedPost({ league, issue, teams, priorIssues = [] }) {
   const post = buildRevealFeedPost({ league, issue, teams, priorIssues });
-  if (!post) return;
+  if (!post) return null;
 
   const feedPath = path.join(projectRoot, league.schefterFeedPath);
   const feed = await tryLoadJSON(feedPath);
   if (!feed) {
     console.warn(`  [poll] No feed at ${league.schefterFeedPath} — skipping the reveal post.`);
-    return;
+    return null;
   }
   await fs.writeFile(feedPath, JSON.stringify(upsertFeedPost(feed, post), null, 2) + '\n', 'utf8');
   console.log(`  ✓ Feed post ${post.id}`);
+  return post.id;
 }
 
 /**
@@ -969,24 +1016,6 @@ async function resolveLatestIssueWeek(league, year) {
   return weeks.length ? Math.max(...weeks) : null;
 }
 
-async function postPollMessage(text, league, label) {
-  const botEnv = GROUPME_BOT_ENV[league.slug];
-  // Thursday's designated post: the poll result. The reminder that used to
-  // share this day is push-only now.
-  const { posted } = await postToGroupMeCapped({
-    league,
-    kind: 'owners-poll-close',
-    botId: process.env[botEnv],
-    text,
-    checkStatus: true,
-    onMissingBotId: () => console.log(`  [groupme] ${botEnv} not set — skipping ${label}.`),
-    onPosted: () => console.log(`  [groupme] ${label} posted.`),
-    onHttpError: (status) => console.warn(`  [groupme] ${label} failed: HTTP ${status}`),
-    onFetchError: (err) => console.warn(`  [groupme] ${label} failed: ${err.message}`),
-  });
-  if (!posted) console.log(`  [groupme] ${label} not delivered (see above).`);
-}
-
 async function main() {
   const opts = parseArgs();
   const league = LEAGUES[opts.league];
@@ -1076,39 +1105,39 @@ async function main() {
 
   // Announce only on a fresh write (dedup above guarantees this) so a re-run
   // can never re-buzz the chat. Missing bot id skips silently by design.
+  //
+  // QUEUED, not sent: the issue above is a file in the Actions runner, and the
+  // commit + Vercel build are still ahead of us. Announcing here told owners
+  // to go read a week the site could not serve yet — the column permalink
+  // 404s until it deploys, and /pecking-order still showed LAST week. The
+  // three channels are handed over together so they cannot drift apart.
   if (opts.publish) {
-    // ONE chat post: the column, with the ballot invite folded in.
-    await postAnnouncement(issue, teams, league);
-
-    // The column itself, to owners who asked for it. Separate from the ballot
-    // push below: an owner can want the rankings without the weekly ask, or
-    // the ask without the rankings.
-    await sendPushFanout({
-      league,
-      dryRun: opts.dryRun,
-      category: 'column',
-      notifications: broadcast({
+    await queueAnnouncement(issue, teams, league, {
+      year,
+      week,
+      // The column itself, to owners who asked for it. Separate from the
+      // ballot push below: an owner can want the rankings without the weekly
+      // ask, or the ask without the rankings.
+      push: {
         franchiseIds: normalizeFranchiseIds(teams.keys()),
         title: `The Pecking Order — Week ${week}`,
         body: issue.headline,
         url: '/pecking-order',
         tag: `pecking-order-${year}-${week}`,
-      }),
+      },
+      // Everyone gets the open on their phone. At open there are no voters
+      // yet, and a push that lands with the column is the one most likely to
+      // be acted on straight away — but only once the ballot it links to is
+      // actually on the page, which is the same deploy.
+      voterPushes: pollBlock
+        ? buildOpenPushes({
+            issue,
+            teams,
+            eligibleFranchiseIds: normalizeFranchiseIds(teams.keys()),
+          })
+        : null,
+      dryRun: opts.dryRun,
     });
-
-    // Everyone gets the open on their phone. At open there are no voters yet,
-    // and a push that lands with the column is the one most likely to be acted
-    // on straight away.
-    if (pollBlock) {
-      await sendVoterPushes({
-        league,
-        notifications: buildOpenPushes({
-          issue,
-          teams,
-          eligibleFranchiseIds: normalizeFranchiseIds(teams.keys()),
-        }),
-      });
-    }
   }
 }
 

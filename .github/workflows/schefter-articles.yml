@@ -222,9 +222,10 @@ jobs:
         run: node scripts/schefter-tag-players.mjs
 
       - name: Commit and push
-        # owners-poll-nag posts to chat and touches no file — running the
+        # owners-poll-nag is push-only and touches no file — running the
         # committer for it would be a no-op that still costs a checkout race
-        # against the other article crons.
+        # against the other article crons. It also queues nothing, so it has
+        # nothing waiting on the announce step below.
         if: steps.resolve.outputs.type != '' && steps.resolve.outputs.type != 'owners-poll-nag'
         env:
           ARTICLE_TYPE: ${{ steps.resolve.outputs.type }}
@@ -253,19 +254,20 @@ jobs:
             --message "chore: schefter article — $ARTICLE_TYPE" \
             --files "$FILES"
 
-      # Announce LAST, and only once the article is actually reachable.
+      # Announce LAST, and only once the article or issue is actually reachable.
       #
-      # The generator no longer sends: it queues. This step waits for the
-      # permalink to answer 200 on the live site, then posts the GroupMe promo
-      # (subject to the one-a-day cap) and the push fan-out. Before this split,
-      # the promo went out while the commit was still in a later step and the
-      # Vercel build had not started — so the link redirected every owner who
-      # tapped it to the Schefter index for the first few minutes of its life.
+      # Neither generator sends any more: both queue. This step waits for the
+      # permalink to answer 200 on the live site, then posts the GroupMe
+      # message (subject to the one-a-day cap) and the pushes. Before this
+      # split, the chat post went out while the commit was still in a later
+      # step and the Vercel build had not started — a Schefter column's link
+      # redirected to the news index, and the Pecking Order's announcement sent
+      # owners to a page still showing LAST week.
       #
       # Placed after "Commit and push" ON PURPOSE: a run whose commit failed
-      # never reaches this step, and so can never advertise an article that is
-      # not in main. An empty queue (a clean skip, or a type that posts its own
-      # chat message) is a no-op.
+      # never reaches this step, and so can never advertise something that is
+      # not in main. An empty queue (a clean skip, or the push-only nag) is a
+      # no-op.
       - name: Announce after the deploy is live
         if: steps.resolve.outputs.type != ''
         env:
