@@ -63,11 +63,17 @@ interface ProjectedScoresFile {
 export type SeasonScores = Map<string, Record<number, number>>;
 
 export interface PlayerSeasonScoring {
-  /** Season points to date (null when no week has been scored). */
-  total: number | null;
+  /**
+   * The AVERAGE'S NUMERATOR, not a season total — points over the weeks a
+   * roster held this player. Named for the job it does because `total` is the
+   * word that would invite someone to render it, and rendering it is the
+   * forbidden weekly total: it cannot see a week nobody rostered him. A
+   * displayed total comes from `parseYtdPlayerScores`.
+   */
+  pointsInScoredWeeks: number | null;
   /** Weeks with a recorded score. A bye carries no score and is not counted. */
   games: number;
-  /** total / games (null when games is 0). */
+  /** pointsInScoredWeeks / games (null when games is 0). */
   average: number | null;
   /** Most recent scored week's points. */
   lastScore: number | null;
@@ -138,7 +144,7 @@ export function loadAflProjections(year: number): Map<string, number> {
 }
 
 /**
- * Season total / games / average for one player, from a pre-loaded season map.
+ * Games played and points per game for one player, from a pre-loaded season map.
  *
  * A scored 0.00 counts as a game played — MFL records a real zero for a player
  * who suited up and did nothing, and omits the score field entirely on a bye
@@ -159,17 +165,23 @@ export function summarizeSeasonScores(
     : [];
 
   if (weeks.length === 0) {
-    return { total: null, games: 0, average: null, lastScore: null, lastWeek: null };
+    return {
+      pointsInScoredWeeks: null,
+      games: 0,
+      average: null,
+      lastScore: null,
+      lastWeek: null,
+    };
   }
 
-  let total = 0;
-  for (const week of weeks) total += byWeek![week];
+  let points = 0;
+  for (const week of weeks) points += byWeek![week];
   const lastWeek = weeks[weeks.length - 1];
 
   return {
-    total,
+    pointsInScoredWeeks: points,
     games: weeks.length,
-    average: total / weeks.length,
+    average: points / weeks.length,
     lastScore: byWeek![lastWeek],
     lastWeek,
   };

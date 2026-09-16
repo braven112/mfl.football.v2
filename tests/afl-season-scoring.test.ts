@@ -84,7 +84,7 @@ describe('AFL season scoring counts each week once', () => {
     const season = summarizeSeasonScores(scores, '15708');
 
     // 16.50 once (not 66.00) + 5.80. Week 3 is a bye and contributes nothing.
-    expect(season.total).toBeCloseTo(22.3, 5);
+    expect(season.pointsInScoredWeeks).toBeCloseTo(22.3, 5);
     expect(season.games).toBe(2);
     expect(season.average).toBeCloseTo(11.15, 5);
   });
@@ -99,7 +99,7 @@ describe('AFL season scoring counts each week once', () => {
   it('counts a real 0.00 as a game played', () => {
     const season = summarizeSeasonScores(scores, '16579');
 
-    expect(season.total).toBe(0);
+    expect(season.pointsInScoredWeeks).toBe(0);
     expect(season.games).toBe(1);
     expect(season.average).toBe(0);
   });
@@ -108,7 +108,7 @@ describe('AFL season scoring counts each week once', () => {
     const season = summarizeSeasonScores(scores, '99999');
 
     expect(season).toEqual({
-      total: null,
+      pointsInScoredWeeks: null,
       games: 0,
       average: null,
       lastScore: null,
@@ -149,7 +149,7 @@ describe('loadAflSeasonScores degrades instead of throwing', () => {
     const empty = new Map([['16579', {}]]);
 
     expect(summarizeSeasonScores(empty, '16579')).toEqual({
-      total: null,
+      pointsInScoredWeeks: null,
       games: 0,
       average: null,
       lastScore: null,
