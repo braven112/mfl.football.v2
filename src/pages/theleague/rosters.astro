@@ -1514,6 +1514,7 @@ if (testEligibility) {
       projectedPoints: '-',
       recentScores: [],
       avgRecent: '-',
+      totalSeason: '-',
       avgSeason: '-',
       nflTeam: 'BAL',
       opponent: 'BYE',
@@ -1571,6 +1572,7 @@ if (testEligibility) {
       projectedPoints: '-',
       recentScores: [],
       avgRecent: '-',
+      totalSeason: '-',
       avgSeason: '-',
       nflTeam: 'LVR',
       opponent: 'BYE',
@@ -1628,6 +1630,7 @@ if (testEligibility) {
       projectedPoints: '-',
       recentScores: [],
       avgRecent: '-',
+      totalSeason: '-',
       avgSeason: '-',
       nflTeam: 'DAL',
       opponent: 'BYE',
@@ -1685,6 +1688,7 @@ if (testEligibility) {
       projectedPoints: '-',
       recentScores: [],
       avgRecent: '-',
+      totalSeason: '-',
       avgSeason: '-',
       nflTeam: 'PIT',
       opponent: 'BYE',
@@ -2170,7 +2174,8 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
                 </button>
                 <span>Trend</span> <span class="sort-arrow"></span>
               </th>
-              <th scope="col" data-column="avgSeason" class="coach-col" style="display:none; text-align: right;" data-sortable data-sort-key="avgSeason">Avg <span class="sort-arrow"></span></th>
+              <th scope="col" data-column="totalSeason" class="coach-col" style="display:none; text-align: right;" data-sortable data-sort-key="totalSeason" title="Season points to date">Total <span class="sort-arrow"></span></th>
+              <th scope="col" data-column="avgSeason" class="coach-col" style="display:none; text-align: right;" data-sortable data-sort-key="avgSeason" title="Points per game played">Avg <span class="sort-arrow"></span></th>
               <th scope="col" data-column="oppAvg" class="coach-col" style="display:none" data-sortable data-sort-key="oppAvg">Opp Avg <span class="sort-arrow"></span></th>
               <th scope="col" data-column="projected" class="coach-col" style="display:none; text-align: right;" data-sortable data-sort-key="projectedPoints">Proj <span class="sort-arrow"></span></th>
 
@@ -2400,6 +2405,9 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
                       </div>
                     );
                   })()}
+                </td>
+                <td data-label="Total (Szn)" data-column="totalSeason" class="coach-col" style="display:none; text-align: right;">
+                  <span class="total-points">{player.totalSeason || '-'}</span>
                 </td>
                 <td data-label="Avg (Szn)" data-column="avgSeason" class="coach-col" style="display:none; text-align: right;">
                   <span class="avg-points">{player.avgSeason}</span>
@@ -4903,7 +4911,9 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
   :global(.roster-table th[data-column="avgRecent"]),
   :global(.roster-table td[data-column="avgRecent"]),
   :global(.roster-table th[data-column="avgSeason"]),
-  :global(.roster-table td[data-column="avgSeason"]) {
+  :global(.roster-table td[data-column="avgSeason"]),
+  :global(.roster-table th[data-column="totalSeason"]),
+  :global(.roster-table td[data-column="totalSeason"]) {
     text-align: right !important;
   }
 
@@ -5026,9 +5036,12 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
     content: '▲';
   }
 
+  /* Third literal in this table that did not invert (see .avg-points and
+     .trend-cell). 3.7:1 on the dark table — legible, but under AA, and the
+     odd one out once its neighbours moved onto tokens. */
   :global(.vs-at) {
     font-size: 0.75rem;
-    color: #64748b;
+    color: var(--color-gray-500, #6b7280);
     font-weight: 500;
     width: 1.25rem;
     text-align: center;
@@ -5088,15 +5101,34 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
     font-size: 1rem;
   }
 
+  /* Trend + Avg. The literal #666 this replaces did not invert, so in dark mode
+     it sat near-black on the navy table — the one column of the Coach tab you
+     could not read. --color-gray-500 is the muted-text step of the scale and
+     flips to #8fa0b3 under html.dark (src/styles/tokens-dark.css); the fallback
+     is its light value, so an unloaded token cannot resurrect the old bug. */
   :global(.avg-points) {
     font-weight: 600;
-    color: #666;
+    color: var(--color-gray-500, #6b7280);
     font-size: 0.95rem;
   }
 
+  /* Season total — the darker of the season pair, so Total reads as the figure
+     and Avg as its rate. --color-gray-900, not --content-text: the latter is
+     not a token here, and an undefined var renders its light fallback in dark
+     mode too (same note as src/styles/my-rank-editor.css). */
+  :global(.total-points) {
+    font-weight: 700;
+    color: var(--color-gray-900, #111827);
+    font-size: 0.95rem;
+  }
+
+  /* The per-week score cells behind the Trend toggle — the same literal-color
+     bug as .avg-points above, and worse: #475569 on the dark table is 2.2:1,
+     so W1…Wn were unreadable. --color-gray-600's light value (#4b5563) is
+     within a hair of the literal it replaces, so light mode is unchanged. */
   :global(.trend-cell) {
     font-size: 0.75rem;
-    color: #475569;
+    color: var(--color-gray-600, #4b5563);
   }
 
   :global(.trend-header) {
@@ -6186,6 +6218,7 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
         case 'overUnder': return parseFloat(player.gameOdds?.overUnder) || 0;
         case 'temperature': return player.gameOdds?.weather?.temperature ?? 0;
         case 'avgRecent': return parseFloat(player.avgRecent) || 0;
+        case 'totalSeason': return parseFloat(player.totalSeason) || 0;
         case 'avgSeason': return parseFloat(player.avgSeason) || 0;
         case 'oppAvg': return parseFloat(player.oppStats?.avg) || 0;
         case 'projectedPoints': return parseFloat(player.projectedPoints) || 0;
@@ -7261,6 +7294,16 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
             `;
           })();
 
+          // `as any` matches (player as any).contractInfo elsewhere in this
+          // script: `player` infers as `never` here, so every property read
+          // around it is already a ts(2339). The cast keeps this line from
+          // adding a 1717th to the ratcheted baseline.
+          const totalSeasonCell = `
+            <td data-label="Total (Szn)" data-column="totalSeason" class="coach-col" style="display:none; text-align: right;">
+              <span class="total-points">${(player as any).totalSeason || '-'}</span>
+            </td>
+          `;
+
           const avgSeasonCell = `
             <td data-label="Avg (Szn)" data-column="avgSeason" class="coach-col" style="display:none; text-align: right;">
               <span class="avg-points">${player.avgSeason || '-'}</span>
@@ -7375,6 +7418,7 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
             ${weatherCell}
             ${trendCells}
             ${avgRecentCell}
+            ${totalSeasonCell}
             ${avgSeasonCell}
             ${oppAvgCell}
             ${projectedCell}
@@ -10435,6 +10479,7 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
         projectedPoints: '-',
         recentScores: [],
         avgRecent: '-',
+        totalSeason: '-',
         avgSeason: '-',
         nflTeam: 'BAL',
         opponent: 'BYE',
@@ -10491,6 +10536,7 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
         projectedPoints: '-',
         recentScores: [],
         avgRecent: '-',
+        totalSeason: '-',
         avgSeason: '-',
         nflTeam: 'LVR',
         opponent: 'BYE',
@@ -10549,6 +10595,7 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
         projectedPoints: '-',
         recentScores: [],
         avgRecent: '-',
+        totalSeason: '-',
         avgSeason: '-',
         nflTeam: 'DAL',
         opponent: 'BYE',
@@ -10606,6 +10653,7 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
         projectedPoints: '-',
         recentScores: [],
         avgRecent: '-',
+        totalSeason: '-',
         avgSeason: '-',
         nflTeam: 'PIT',
         opponent: 'BYE',

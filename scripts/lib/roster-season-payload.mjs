@@ -557,11 +557,22 @@ export const buildSeasonPayload = (context, season, rawData, tradeBaitPlayerIds 
       ? (recentNumericScores.reduce((sum, s) => sum + s, 0) / recentNumericScores.length).toFixed(1)
       : '-';
 
-    // Calculate Season Average (All Weeks)
+    // Calculate Season Total and Average (All Weeks)
+    //
+    // `playerScoresMap` is keyed week → score (processWeeklyScores), so a week
+    // MFL lists more than once — a double-header, or a player rostered by two
+    // franchises — contributes once. Summing the feed's rows instead would
+    // multiply the total.
+    //
+    // A bye carries no score in that feed and so is absent from the
+    // denominator; a real 0.00 is present and counts as a game played. Both
+    // seasons' columns therefore answer "per game played", not "per week".
     const playerAllScores = playerScoresMap.get(player.id) || {};
     const seasonScores = Object.values(playerAllScores).filter(s => typeof s === 'number');
+    const seasonPoints = seasonScores.reduce((sum, s) => sum + s, 0);
+    const totalSeason = seasonScores.length > 0 ? seasonPoints.toFixed(1) : '-';
     const avgSeason = seasonScores.length > 0
-      ? (seasonScores.reduce((sum, s) => sum + s, 0) / seasonScores.length).toFixed(1)
+      ? (seasonPoints / seasonScores.length).toFixed(1)
       : '-';
 
     const feedPlayer = feedPlayers[player.id] ?? null;
@@ -595,6 +606,7 @@ export const buildSeasonPayload = (context, season, rawData, tradeBaitPlayerIds 
       projectedPoints: projectionMap.get(player.id) || '-',
       recentScores,
       avgRecent,
+      totalSeason,
       avgSeason,
       nflTeam,
       opponent,

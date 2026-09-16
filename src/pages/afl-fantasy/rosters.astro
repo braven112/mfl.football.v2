@@ -23,9 +23,9 @@ import { normalizeTeamCode, getNFLTeamName, getNFLTeamLogo } from '../../utils/n
 import { NFL_LOGO_ONERROR, NFL_LOGO_ONLOAD, COLLEGE_LOGO_ONERROR, COLLEGE_LOGO_ONLOAD } from '../../constants/roster-constants';
 import collegeLogos from '../../data/college-logos.json';
 import {
-  loadAflPlayerScores,
+  loadAflSeasonScores,
   loadAflProjections,
-  aggregateScores,
+  summarizeSeasonScores,
 } from '../../utils/afl-player-scoring';
 import { getAuthUser } from '../../utils/auth';
 import {
@@ -40,7 +40,11 @@ import {
   getTeam,
   type AFLTeam,
 } from '../../utils/afl-conference';
-import { getAflLeagueYear, getTestDateFromSearchParams } from '../../utils/league-year';
+import {
+  getAflLeagueYear,
+  getCurrentSeasonYear,
+  getTestDateFromSearchParams,
+} from '../../utils/league-year';
 import { getCachedRosterFranchises } from '../../utils/mfl-roster-cache';
 import { getLeagueBySlug } from '../../config/leagues';
 import { loginUrlFor } from '../../utils/login-redirect';
@@ -334,16 +338,27 @@ const sortedTableRoster: RosterEntry[] = [...activeRosterPlayers, ...irRosterPla
 // position. Both sources gracefully no-op outside the regular season.
 //
 // We use TheLeague's fantasyPointsAllowed.json file — it's NFL-wide data
-// (not league-specific) so the same snapshot serves both league sites.
+// (not league-specific) so the same snapshot serves both league sites. It is
+// rebuilt every Tuesday morning from the season's completed weeks, so Opp Avg
+// is a CURRENT-season number, not a career or prior-year one.
+//
+// The season year comes from getCurrentSeasonYear (rolls at Labor Day), NOT
+// from `new Date().getFullYear()`: from January to Labor Day the calendar year
+// is already the NEXT season's, and it only rendered correctly because the
+// `?? year - 1` fallback caught the missing file. The day a preseason
+// fantasyPointsAllowed.json exists for that year, the fallback stops firing and
+// every Opp Avg on the page goes to "—" for eight months. Per CLAUDE.md's two
+// clocks: results-shaped data reads the SEASON year.
 const nflWeek = getCurrentWeek();
-const nflYear = new Date().getFullYear();
+const nflYear = getCurrentSeasonYear(testDate ?? undefined);
 const fpaData = loadFantasyPointsAllowed(nflYear) ?? loadFantasyPointsAllowed(nflYear - 1);
 const oddsMap = await fetchNflMatchups(nflWeek, { year: nflYear });
 
-// AFL per-player scoring (Avg, Last week) + projected points. Both readers
-// gracefully return empty maps when the snapshot files are absent so the
-// page still renders during offseason / before MFL produces the feed.
-const aflScores = loadAflPlayerScores(selectedYear);
+// AFL per-player season scoring (Total, Avg) + this week's projection. Both
+// readers gracefully return empty maps when the snapshot files are absent so
+// the page still renders during offseason / before MFL produces the feed.
+// Keyed on selectedYear so the year picker's archive seasons show THEIR totals.
+const aflSeasonScores = loadAflSeasonScores(selectedYear);
 const aflProjections = loadAflProjections(selectedYear);
 
 interface PlayerMatchup {
@@ -351,13 +366,13 @@ interface PlayerMatchup {
   oppRank: number | null;
   oppAvg: number | null;
   oppCode: string | null;
-  /** Player's last-week score from playerScores.json (null if missing). */
-  lastScore: number | null;
   /** Projected points for the week — from projectedScores.json. */
   projected: number | null;
-  /** Sample-size of the average; renders the column as "—" when zero. */
-  scoreSampleSize: number;
-  /** Mean of all per-week scores we have on file. */
+  /** Season points to date; null when no week has been scored. */
+  scoreTotal: number | null;
+  /** Weeks with a recorded score — the Avg column's denominator. */
+  scoreGames: number;
+  /** scoreTotal / scoreGames. */
   scoreAverage: number | null;
 }
 const matchupByPlayerId = new Map<string, PlayerMatchup>();
@@ -366,16 +381,16 @@ for (const player of sortedTableRoster) {
   const matchup = teamCode ? oddsMap[teamCode] ?? null : null;
   const oppCode = matchup ? normalizeTeamCode(matchup.opponent) : null;
   const fpa = oppCode ? getOpponentFpa(fpaData, oppCode, player.position) : null;
-  const agg = aggregateScores(aflScores, player.id);
+  const season = summarizeSeasonScores(aflSeasonScores, player.id);
   matchupByPlayerId.set(player.id, {
     matchup,
     oppRank: fpa?.rank ?? null,
     oppAvg: fpa?.avg ?? null,
     oppCode,
-    lastScore: agg.lastScore,
     projected: aflProjections.get(player.id) ?? null,
-    scoreSampleSize: agg.sampleSize,
-    scoreAverage: agg.average,
+    scoreTotal: season.total,
+    scoreGames: season.games,
+    scoreAverage: season.average,
   });
 }
 
@@ -877,8 +892,9 @@ const pageConfig = {
                         <th data-column="opponent">Opponent</th>
                         <th data-column="ou">O/U</th>
                         <th data-column="weather">Weather</th>
-                        <th data-column="oppAvg">Opp Avg</th>
-                        <th data-column="avg">Avg</th>
+                        <th data-column="oppAvg" title={`Fantasy points the opponent allows to this position per game, ${nflYear} season`}>Opp Avg</th>
+                        <th data-column="total" title={`Total fantasy points scored in ${selectedYear}`}>Total</th>
+                        <th data-column="avg" title={`${selectedYear} points per game played`}>Avg</th>
                         <th data-column="projected">Proj</th>
                       </tr>
                     </thead>
@@ -889,6 +905,8 @@ const pageConfig = {
                   const oppCode = m?.oppCode ?? null;
                   const oppRank = m?.oppRank ?? null;
                   const oppAvg = m?.oppAvg ?? null;
+                  const total = m?.scoreTotal ?? null;
+                  const games = m?.scoreGames ?? 0;
                   const avg = m?.scoreAverage ?? null;
                   const projected = m?.projected ?? null;
                   const tier = oppRank != null ? fpaTier(oppRank) : null;
@@ -974,7 +992,13 @@ const pageConfig = {
                       <td data-column="oppAvg">
                         <span class="num-cell">{formatPoints(oppAvg)}</span>
                       </td>
-                      <td data-column="avg">
+                      <td data-column="total">
+                        <span class="num-cell num-cell--total">{formatPoints(total)}</span>
+                      </td>
+                      <td
+                        data-column="avg"
+                        title={games > 0 ? `${games} ${games === 1 ? 'game' : 'games'} played` : undefined}
+                      >
                         <span class="num-cell">{formatPoints(avg)}</span>
                       </td>
                       <td data-column="projected">
@@ -2178,6 +2202,7 @@ const pageConfig = {
     .roster-table th[data-column="ou"] { width: 56px; text-align: right; }
     .roster-table th[data-column="weather"] { width: 64px; text-align: right; }
     .roster-table th[data-column="oppAvg"] { width: 64px; text-align: right; }
+    .roster-table th[data-column="total"] { width: 60px; text-align: right; }
     .roster-table th[data-column="avg"] { width: 56px; text-align: right; }
     .roster-table th[data-column="projected"] { width: 56px; text-align: right; }
     .roster-table th[data-column="actions"] { width: 48px; }
@@ -2203,6 +2228,7 @@ const pageConfig = {
     .roster-table td[data-column="ou"],
     .roster-table td[data-column="weather"],
     .roster-table td[data-column="oppAvg"],
+    .roster-table td[data-column="total"],
     .roster-table td[data-column="avg"],
     .roster-table td[data-column="projected"] {
       text-align: right;
@@ -2217,6 +2243,13 @@ const pageConfig = {
 
     .num-cell--strong {
       font-weight: 700;
+      color: var(--color-gray-900, #111827);
+    }
+
+    /* Season total — the row's headline season number, but a notch below the
+       week's projection so the two right-hand columns don't compete. */
+    .num-cell--total {
+      font-weight: 600;
       color: var(--color-gray-900, #111827);
     }
 
