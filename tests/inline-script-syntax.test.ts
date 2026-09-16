@@ -27,17 +27,32 @@ import * as esbuild from 'esbuild';
 
 const files = globSync('src/**/*.astro');
 
-/** `<script>` bodies worth parsing — JSON payload blocks are data, not code. */
+/**
+ * `<script>` bodies worth parsing — JSON payload blocks are data, not code.
+ *
+ * The tag and attribute matches are case-INSENSITIVE because HTML tag names
+ * and attribute names are, so `<SCRIPT>` is a perfectly ordinary script
+ * element. CodeQL's js/bad-tag-filter caught that this was not: its security
+ * rationale (a sanitizer bypassed by case) does not apply to a test that reads
+ * the repo's own source, but the defect it names does — a mis-cased tag would
+ * have been skipped SILENTLY, leaving a file unchecked while the suite stayed
+ * green. That is the exact failure this test exists to prevent, and the reason
+ * it carries a non-vacuity case below.
+ *
+ * `set:html` is deliberately left case-SENSITIVE: it is an Astro directive,
+ * not HTML, and Astro's compiler does not recognize `SET:HTML`. Matching it
+ * loosely would skip a body that really does need parsing.
+ */
 function codeScripts(source: string): { body: string; startLine: number }[] {
   const out: { body: string; startLine: number }[] = [];
-  const re = /<script\b([^>]*)>([\s\S]*?)<\/script>/g;
+  const re = /<script\b([^>]*)>([\s\S]*?)<\/script>/gi;
   let m: RegExpExecArray | null;
   while ((m = re.exec(source))) {
     const [full, attrs, body] = m;
     if (!body.trim()) continue;
     // `type="application/json"` / `type="speculationrules"` carry data, and
     // `set:html={...}` bodies are interpolated at render time.
-    if (/type\s*=\s*["'](application\/json|speculationrules|importmap)["']/.test(attrs)) continue;
+    if (/type\s*=\s*["'](application\/json|speculationrules|importmap)["']/i.test(attrs)) continue;
     if (/\bset:html\b/.test(attrs)) continue;
     out.push({ body, startLine: source.slice(0, m.index).split('\n').length });
   }
