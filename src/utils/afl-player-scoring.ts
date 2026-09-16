@@ -28,14 +28,15 @@
  *
  * Summing the rows would have doubled or quadrupled every total.
  *
- * Known limit: this feed records a player's score only for weeks he sat on
- * SOME roster, so points scored while he was a free agent are invisible here
- * (`docs/claude/insights/domains/mfl-api.md`, 2026-08-10 — `playerScores&W=YTD`
- * is the only full-pool source, and it ships no games-played field to divide
- * by). Measured against the live 2026 rosters the day this landed: of 397
- * rostered slots, 26 had no week-1 entry and not one of them had scored a
- * week-1 point, so the totals shown were exact. Revisit with the YTD feed if a
- * waiver pickup's total ever reads low.
+ * WHAT THIS IS FOR, AND WHAT IT IS NOT FOR. The numbers here are a RATE and
+ * its denominator — points per game played, over the weeks a roster held the
+ * player. `total` exists to be divided; it must NOT be rendered as the season
+ * total. A displayed total comes from `playerScores-ytd.json` via
+ * `parseYtdPlayerScores` (src/utils/stats-season.mjs), because this feed
+ * cannot see a week nobody rostered him, and because the rate survives a
+ * double-count that a total does not: any duplicate lands in both numerator
+ * and denominator and cancels. See
+ * docs/claude/insights/features/free-agent-season-points.md.
  *
  * Coverage note: `data/` feeds older than the three most recent seasons are
  * deliberately kept out of the Vercel function (scripts/lib/archived-feed-files.mjs),

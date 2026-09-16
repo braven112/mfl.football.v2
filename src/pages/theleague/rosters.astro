@@ -57,6 +57,7 @@ import { getCurrentWeek } from '../../utils/current-week';
 // copies existed; two of them were wrong. See
 // docs/claude/followups/2026-09-08-roster-page-unpaired-week-404.md (F2).
 import { processWeeklyScores } from '../../utils/coach-data';
+import { resolveStatsSeasonYear, parseYtdPlayerScores } from '../../utils/stats-season.mjs';
 import {
   parseNumber,
   currencyFormatter,
@@ -569,9 +570,19 @@ feedYears.forEach((yr) => {
   if (fpa) fantasyPointsAllowedBySeason[yr] = fpa;
 });
 
-// Now compute playerScoresMap from the loaded weekly results
+// Now compute playerScoresMap from the loaded weekly results. This is the
+// RATE pair's input (Trend, Avg) — never the season total: it records a player
+// only for weeks a roster held him, and a doubleheader lists a franchise in two
+// matchups. The average survives that (the double cancels top and bottom); a
+// total does not. The total comes from MFL's own YTD feed below.
 const weeklyResultsRawData = weeklyResultsRawBySeason[currentSeasonYearStr] ?? {};
 const playerScoresMap = processWeeklyScores(weeklyResultsRawData, currentWeekNum);
+// Same full-pool source and parser the Free Agents points column reads
+// (src/utils/stats-season.mjs). Keyed to the season being PLAYED, so the
+// coach columns and the points column can never name different years.
+const ytdPointsByPlayer = parseYtdPlayerScores(
+  loadFeedJson(String(resolveStatsSeasonYear()), 'playerScores-ytd.json'),
+);
 
 // Build weekly player results for the modal's Season Results table
 const nflScheduleData = loadFeedJson(currentSeasonYearStr, 'nflSchedule.json');
@@ -952,6 +963,7 @@ const seasonPayloadContext = {
   fantasyPointsAllowedBySeason,
   trendWeeks,
   playerScoresMap,
+  ytdPointsByPlayer,
   espnCollegeIds,
   getPlayerHeadshot,
   getCollegeAssets,

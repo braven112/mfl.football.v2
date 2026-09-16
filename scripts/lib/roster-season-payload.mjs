@@ -381,7 +381,12 @@ export const buildSeasonRecords = (data) => {
  * @property {Record<string, any>} fantasyPointsAllowedBySeason
  * @property {number[]} trendWeeks - last completed weeks ([] historical)
  * @property {Map<string, Record<number, number>>} playerScoresMap
- *   playerId → (week → score) (empty Map for historical builds)
+ *   playerId → (week → score) (empty Map for historical builds). A RATE's
+ *   inputs only — see `ytdPointsByPlayer` for the displayed season total.
+ * @property {Map<string, number>} [ytdPointsByPlayer] playerId → MFL's own
+ *   season total, from `playerScores-ytd.json` via `parseYtdPlayerScores`
+ *   (src/utils/stats-season.mjs). Absent/empty for historical builds, which
+ *   renders the Total column as "-" exactly as Avg already does.
  * @property {{players?: Record<string, {espnCollegeId?: string}>}} espnCollegeIds
  *   parsed data/theleague/espn-college-ids.json
  * @property {(mflId?: string, espnId?: string|null) => string} getPlayerHeadshot
@@ -418,6 +423,7 @@ export const buildSeasonPayload = (context, season, rawData, tradeBaitPlayerIds 
     fantasyPointsAllowedBySeason,
     trendWeeks,
     playerScoresMap,
+    ytdPointsByPlayer,
     espnCollegeIds,
     getPlayerHeadshot,
     getCollegeAssets,
@@ -569,11 +575,15 @@ export const buildSeasonPayload = (context, season, rawData, tradeBaitPlayerIds 
     // seasons' columns therefore answer "per game played", not "per week".
     const playerAllScores = playerScoresMap.get(player.id) || {};
     const seasonScores = Object.values(playerAllScores).filter(s => typeof s === 'number');
-    const seasonPoints = seasonScores.reduce((sum, s) => sum + s, 0);
-    const totalSeason = seasonScores.length > 0 ? seasonPoints.toFixed(1) : '-';
     const avgSeason = seasonScores.length > 0
-      ? (seasonPoints / seasonScores.length).toFixed(1)
+      ? (seasonScores.reduce((sum, s) => sum + s, 0) / seasonScores.length).toFixed(1)
       : '-';
+    // The TOTAL is MFL's own, never a sum of the weekly map above. That map
+    // cannot see a week nobody rostered the player, and its rows double in a
+    // doubleheader week — which the average survives (the double cancels top
+    // and bottom) and a total does not.
+    const ytdTotal = ytdPointsByPlayer?.get(player.id);
+    const totalSeason = Number.isFinite(ytdTotal) ? ytdTotal.toFixed(1) : '-';
 
     const feedPlayer = feedPlayers[player.id] ?? null;
     const identity = playerIdentityMap.get(player.id);

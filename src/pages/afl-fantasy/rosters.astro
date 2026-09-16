@@ -27,6 +27,7 @@ import {
   loadAflProjections,
   summarizeSeasonScores,
 } from '../../utils/afl-player-scoring';
+import { resolveStatsSeasonYear, parseYtdPlayerScores } from '../../utils/stats-season.mjs';
 import { getAuthUser } from '../../utils/auth';
 import {
   setAFLPreference,
@@ -40,11 +41,7 @@ import {
   getTeam,
   type AFLTeam,
 } from '../../utils/afl-conference';
-import {
-  getAflLeagueYear,
-  getCurrentSeasonYear,
-  getTestDateFromSearchParams,
-} from '../../utils/league-year';
+import { getAflLeagueYear, getTestDateFromSearchParams } from '../../utils/league-year';
 import { getCachedRosterFranchises } from '../../utils/mfl-roster-cache';
 import { getLeagueBySlug } from '../../config/leagues';
 import { loginUrlFor } from '../../utils/login-redirect';
@@ -74,6 +71,15 @@ const rostersFeeds = import.meta.glob('../../../data/afl-fantasy/mfl-feeds/*/ros
 const playersFeeds = import.meta.glob('../../../data/afl-fantasy/mfl-feeds/*/players.json', {
   eager: true,
 });
+// Season-to-date points for the whole pool, the SAME source the Free Agents
+// column reads (src/utils/stats-season.mjs). Not a weekly-results sum: that
+// feed sees a player only for the weeks a roster held him, and summing its rows
+// bills a doubleheader week twice. Committed from 2025 on, so the year glob
+// matches what theleague/players.astro uses.
+const ytdScoresFeeds = import.meta.glob(
+  '../../../data/afl-fantasy/mfl-feeds/20{2[5-9],[3-9][0-9]}/playerScores-ytd.json',
+  { eager: true }
+);
 const tradeBaitFeeds = import.meta.glob('../../../data/afl-fantasy/mfl-feeds/*/tradeBait.json', {
   eager: true,
 });
@@ -342,23 +348,44 @@ const sortedTableRoster: RosterEntry[] = [...activeRosterPlayers, ...irRosterPla
 // rebuilt every Tuesday morning from the season's completed weeks, so Opp Avg
 // is a CURRENT-season number, not a career or prior-year one.
 //
-// The season year comes from getCurrentSeasonYear (rolls at Labor Day), NOT
-// from `new Date().getFullYear()`: from January to Labor Day the calendar year
-// is already the NEXT season's, and it only rendered correctly because the
-// `?? year - 1` fallback caught the missing file. The day a preseason
-// fantasyPointsAllowed.json exists for that year, the fallback stops firing and
-// every Opp Avg on the page goes to "—" for eight months. Per CLAUDE.md's two
-// clocks: results-shaped data reads the SEASON year.
+// The season year is `resolveStatsSeasonYear`, NOT `new Date().getFullYear()`
+// and NOT `getCurrentSeasonYear()`. The calendar year is already the NEXT
+// season's from January to Labor Day, and it only rendered correctly because
+// the `?? year - 1` fallback caught the missing file. The Labor Day clock is
+// the bug the Free Agents points column shipped (see
+// src/utils/stats-season.mjs): it names a season with no games played until
+// kickoff, so a per-player stat that follows it empties for waiver week. Both
+// columns here are season stats, so both turn over on the league's start day.
 const nflWeek = getCurrentWeek();
-const nflYear = getCurrentSeasonYear(testDate ?? undefined);
+const nflYear = resolveStatsSeasonYear(testDate ?? undefined);
 const fpaData = loadFantasyPointsAllowed(nflYear) ?? loadFantasyPointsAllowed(nflYear - 1);
 const oddsMap = await fetchNflMatchups(nflWeek, { year: nflYear });
 
-// AFL per-player season scoring (Total, Avg) + this week's projection. Both
-// readers gracefully return empty maps when the snapshot files are absent so
-// the page still renders during offseason / before MFL produces the feed.
-// Keyed on selectedYear so the year picker's archive seasons show THEIR totals.
+// AFL per-player season scoring + this week's projection, all keyed on
+// selectedYear so the year picker's archive seasons show THEIR numbers. Every
+// reader returns empty when its snapshot is absent, so the page still renders
+// during the offseason / before MFL produces the feed.
+//
+// TWO SOURCES ON PURPOSE, and they are not interchangeable:
+//
+//   Total ← `playerScores-ytd.json`, MFL's own season total for the WHOLE
+//     pool. The weekly feed is not a degraded version of this one, it is a
+//     wrong one for a total: it cannot see a week nobody rostered the player,
+//     and summing its rows bills a doubleheader twice (every one of
+//     TheLeague's 260 scored 2026 players came out at exactly 2x — see
+//     docs/claude/insights/features/free-agent-season-points.md). Absent → "—",
+//     never a weekly fallback.
+//   Avg ← the weekly map, because a RATE over it survives: any double lands in
+//     both numerator and denominator and cancels. It also has the games-played
+//     count the YTD payload does not carry at all — dividing a YTD total by a
+//     weekly game count is the mistake that prices a one-week rental's whole
+//     season as a single game.
 const aflSeasonScores = loadAflSeasonScores(selectedYear);
+const aflYtdPoints = parseYtdPlayerScores(
+  getModuleData(
+    ytdScoresFeeds[`../../../data/afl-fantasy/mfl-feeds/${selectedYear}/playerScores-ytd.json`]
+  )
+);
 const aflProjections = loadAflProjections(selectedYear);
 
 interface PlayerMatchup {
@@ -368,11 +395,11 @@ interface PlayerMatchup {
   oppCode: string | null;
   /** Projected points for the week — from projectedScores.json. */
   projected: number | null;
-  /** Season points to date; null when no week has been scored. */
+  /** MFL's own season total (YTD feed); null when the feed has no row. */
   scoreTotal: number | null;
   /** Weeks with a recorded score — the Avg column's denominator. */
   scoreGames: number;
-  /** scoreTotal / scoreGames. */
+  /** Points per game played, over the weeks a roster held him. */
   scoreAverage: number | null;
 }
 const matchupByPlayerId = new Map<string, PlayerMatchup>();
@@ -388,7 +415,7 @@ for (const player of sortedTableRoster) {
     oppAvg: fpa?.avg ?? null,
     oppCode,
     projected: aflProjections.get(player.id) ?? null,
-    scoreTotal: season.total,
+    scoreTotal: aflYtdPoints.get(player.id) ?? null,
     scoreGames: season.games,
     scoreAverage: season.average,
   });

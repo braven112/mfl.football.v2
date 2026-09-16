@@ -128,12 +128,32 @@ describe('loadAflSeasonScores degrades instead of throwing', () => {
   it('reads the committed current-season feed as a per-week map', () => {
     const scores = loadAflSeasonScores(2026);
 
-    expect(scores.size).toBeGreaterThan(0);
-    for (const byWeek of scores.values()) {
+    // NOT `size > 0`: `processWeeklyScores` creates an entry for every player
+    // it sees and only then fills in the weeks that carry a score, so the map
+    // is non-empty even for a feed with no scores in it at all — which is
+    // exactly the state of the committed 2026 feed on some bases. That
+    // assertion passed vacuously; this one checks the shape it promises.
+    for (const [playerId, byWeek] of scores) {
+      expect(typeof playerId).toBe('string');
       for (const [week, score] of Object.entries(byWeek)) {
         expect(Number(week)).toBeGreaterThanOrEqual(1);
+        expect(Number(week)).toBeLessThanOrEqual(22);
         expect(Number.isFinite(score)).toBe(true);
       }
     }
+  });
+
+  it('summarizes a player with an entry but no scored week as no data', () => {
+    // The shape above: a roster listing with no scores yet. It must read as
+    // "we have nothing", never as a 0.0 season the owner did not have.
+    const empty = new Map([['16579', {}]]);
+
+    expect(summarizeSeasonScores(empty, '16579')).toEqual({
+      total: null,
+      games: 0,
+      average: null,
+      lastScore: null,
+      lastWeek: null,
+    });
   });
 });
