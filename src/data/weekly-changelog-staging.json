@@ -398,7 +398,7 @@
     {
       "date": "2026-09-16",
       "type": "style-tweak",
-      "summary": "Offseason War Room now opens with League Planner and Rosters \u2014 the cap, contract and salary tools live inside the planner rather than in their own menu section.",
+      "summary": "Offseason War Room now opens with League Planner and Rosters — the cap, contract and salary tools live inside the planner rather than in their own menu section.",
       "impact": "user",
       "area": "navigation",
       "league": "both"
@@ -406,7 +406,7 @@
     {
       "date": "2026-09-16",
       "type": "style-tweak",
-      "summary": "The planner at the top of Offseason War Room is now called <a href=\"/front-office\">Front Office</a> everywhere \u2014 menu, footer and search all point at the same page.",
+      "summary": "The planner at the top of Offseason War Room is now called <a href=\"/front-office\">Front Office</a> everywhere — menu, footer and search all point at the same page.",
       "impact": "user",
       "area": "navigation",
       "league": "both"
@@ -446,7 +446,7 @@
     {
       "date": "2026-09-15",
       "type": "enhancement",
-      "summary": "AFL <a href=\"/rosters\">rosters</a> now carry a Total column \u2014 season points to date \u2014 and Avg is a real per-game average instead of last week\u2019s score.",
+      "summary": "AFL <a href=\"/rosters\">rosters</a> now carry a Total column — season points to date — and Avg is a real per-game average instead of last week’s score.",
       "impact": "user",
       "area": "rosters",
       "league": "afl"
@@ -454,7 +454,7 @@
     {
       "date": "2026-09-15",
       "type": "enhancement",
-      "summary": "The Coach tab on <a href=\"/rosters\">Roster &amp; Salary Cap</a> has a new Total column \u2014 season points to date, sortable, beside the per-game Avg.",
+      "summary": "The Coach tab on <a href=\"/rosters\">Roster &amp; Salary Cap</a> has a new Total column — season points to date, sortable, beside the per-game Avg.",
       "impact": "user",
       "area": "rosters",
       "league": "theleague"
@@ -462,7 +462,7 @@
     {
       "date": "2026-09-15",
       "type": "bug-fix",
-      "summary": "In dark mode the Coach tab\u2019s Avg, weekly-score and opponent labels were near-black on the dark table. All three now use colors that invert with the theme.",
+      "summary": "In dark mode the Coach tab’s Avg, weekly-score and opponent labels were near-black on the dark table. All three now use colors that invert with the theme.",
       "impact": "user",
       "area": "rosters",
       "league": "theleague"
@@ -506,6 +506,14 @@
       "impact": "user",
       "area": "schefter",
       "league": "both"
+    },
+    {
+      "date": "2026-09-16",
+      "type": "enhancement",
+      "summary": "Draft picks on the <a href=\"/trade-builder\">Trade Builder</a> are now listed up front, above the players in the deal — no more hunting for a collapsed Add Pick link.",
+      "impact": "user",
+      "area": "trade-builder",
+      "league": "theleague"
     }
   ]
 }

@@ -24,7 +24,10 @@ export default function DraftPickSelector({
   onAdd,
   onRemove,
 }: Props) {
-  const [expanded, setExpanded] = useState(false);
+  // Open by default: the picks are a first-class trade asset, not an extra.
+  // Collapsed, the section read as "this team has no picks" — the available
+  // list only appeared after a click nobody made.
+  const [expanded, setExpanded] = useState(true);
 
   const availablePicks = draftPicks.filter(
     (dp) =>

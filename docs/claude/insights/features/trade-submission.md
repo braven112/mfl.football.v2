@@ -70,3 +70,13 @@ The draft handlers in `TradeBuilder.tsx` (`handleSaveDraft`/`handleDeleteDraft`/
 **Lesson:** `if (json.successField)` is not error handling — it silently drops the failure path. Branch explicitly on `res.ok && json.success`, and surface `json.error` (the drafts API already returns `{ success: false, error }`). For save, `TradeBuilder` shows a transient inline `.trade-builder__draft-error` banner plus `Saving…`/`Saved ✓` button states; for delete/rename, the handlers now `throw new Error(json.error)` so `PendingTradesPanel` catches and renders `.ptp-draft-error` in the Drafts section — the same parent-throws/child-catches contract already used for the accept/reject/revoke actions above. Error styling reuses the `.ptc-error`/`.tcm-error` token set (`--color-error`, `--color-error-light`, `--color-error-border`).
 
 **Keep it non-blocking:** drafts are a convenience. Errors auto-clear (2s for `Saved ✓`, 6s for the error banner) and never disable the builder or block trade submission.
+
+## "Draft Picks Aren't Showing" Is Usually the Data, Not a Bug (2026-09-16)
+
+Triage for a report that TheLeague's trade builder has no picks — check these before editing code:
+
+- **Where the list comes from.** `trade-builder.astro` merges two league-year feeds: `draftResults.json` picks with no `player` (the current year's picks still unused) and `futureDraftPicks.json`. After the rookie draft finishes, the first source is empty by design. MFL's `futureDraftPicks` for TheLeague publishes **one** future year only (Sept 2026: 48 picks = 16 teams × next year's rounds 1–3). "Only 2027 shows" is MFL, not us. Tradeable 2028+ picks would have to come from the commissioner's MFL settings.
+- **The control proves the data.** `DraftPickSelector` renders `+ Add Pick`/`Hide` only when `draftPicks.length > 0`, and "No draft picks available" otherwise. If the toggle is on screen, the picks reached the island.
+- **The actual complaint was layout.** The selector started collapsed and sat below "In This Trade", so a panel with three picks looked empty in a screenshot. It now opens by default and sits above the selected players. Don't collapse it again.
+- **Latent rollover trap (not fixed).** Both feeds resolve with `findFeed(..., getCurrentLeagueYear())` and have no fallback year. If `mfl-feeds/<new year>/futureDraftPicks.json` hasn't been fetched when the league year rolls on Feb 14, every team shows "No draft picks available".
+- **The AFL builder is a different implementation.** `afl-fantasy/trade-builder.astro` is a server-rendered page with its own `picksFor()`. It doesn't use this React island, so a change to `DraftPickSelector`/`TeamPanel` affects TheLeague only.
