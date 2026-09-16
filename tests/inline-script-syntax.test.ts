@@ -39,13 +39,18 @@ const files = globSync('src/**/*.astro');
  * green. That is the exact failure this test exists to prevent, and the reason
  * it carries a non-vacuity case below.
  *
+ * The closing tag allows whitespace before the `>` — `</script >` is valid
+ * HTML and CodeQL flagged that as the SECOND defect in this same regex, once
+ * the casing one was fixed. Same consequence either way: a skipped file, and
+ * a suite that stays green while covering less than it claims.
+ *
  * `set:html` is deliberately left case-SENSITIVE: it is an Astro directive,
  * not HTML, and Astro's compiler does not recognize `SET:HTML`. Matching it
  * loosely would skip a body that really does need parsing.
  */
 function codeScripts(source: string): { body: string; startLine: number }[] {
   const out: { body: string; startLine: number }[] = [];
-  const re = /<script\b([^>]*)>([\s\S]*?)<\/script>/gi;
+  const re = /<script\b([^>]*)>([\s\S]*?)<\/script\s*>/gi;
   let m: RegExpExecArray | null;
   while ((m = re.exec(source))) {
     const [full, attrs, body] = m;
