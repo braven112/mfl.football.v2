@@ -165,6 +165,18 @@ Four things about the shape, each of which was a decision:
 - **Refusal happens at the send, not at the door.** Validation, authorization
   and payload building all still run on staging — "does this request do the
   right thing?" is exactly what staging is for. Only the send is withheld.
+- **A refusal must not read as an outage.** `OutboundBlockedError` is its own
+  class so a caller can tell "we refused on purpose" from "the network failed",
+  and for MFL writes `describeMflFailure` (`src/utils/mfl-fetch.ts`) is the one
+  place that reads it. Every MFL write's `catch` goes through it, and the
+  routes answer **503** for a blocked send versus **502** for a bad MFL answer.
+  Skipping this is expensive in exactly the moment staging is meant to help:
+  before it existed, a `Watch player` click on staging answered HTTP 502 "Could
+  not update your watch list", which read as a bug in the roster/front-office
+  work; a lineup submit answered "Internal server error"; and the contract
+  writer retried the refusal three times with backoff. The scan in
+  `tests/staging-outbound-guard.test.ts` fails on a POST-to-MFL file that does
+  not call it.
 
 `tests/staging-outbound-guard.test.ts` is the mechanical half: it fails when a
 choke point loses its guard, and when any other file reaches one of the four

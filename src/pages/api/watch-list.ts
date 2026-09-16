@@ -143,7 +143,13 @@ export const POST: APIRoute = async ({ request }) => {
     remove,
   });
   if (!write.ok) {
-    return json({ ok: false, error: write.error ?? 'MFL rejected the change.' }, 502);
+    // 502 is "MFL answered badly"; 503 is "this deployment does not send at
+    // all" (staging and previews — see mfl-fetch#describeMflFailure). Same
+    // shape either way, but the status no longer claims MFL was the problem.
+    return json(
+      { ok: false, error: write.error ?? 'MFL rejected the change.', blocked: write.blocked === true },
+      write.blocked ? 503 : 502,
+    );
   }
 
   // MFL accepted the change. Apply the same change on top of a RECONCILED

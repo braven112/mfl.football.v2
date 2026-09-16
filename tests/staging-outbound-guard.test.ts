@@ -348,3 +348,85 @@ describe('deployment environment predicate', () => {
     }
   });
 });
+
+/**
+ * A blocked write must report itself, not impersonate an MFL outage.
+ *
+ * The guard above stops the send. This describe block is about what the OWNER
+ * is told afterwards, which was wrong everywhere: `Watch player` on staging
+ * answered HTTP 502 "Could not reach MFL" (someone spent an hour hunting a bug
+ * in the roster code), a lineup submit answered "Internal server error", and
+ * the contract writer retried the refusal three times with backoff before
+ * reporting it. `OutboundBlockedError` is a distinct class precisely so a
+ * caller can tell "we refused on purpose" from "the network failed" —
+ * `describeMflFailure` is the one place that does it, and this pins that every
+ * MFL write goes through it.
+ */
+describe('a blocked MFL write says so', () => {
+  it('describes the refusal in the owner’s words, and a real failure in its own', async () => {
+    const { describeMflFailure, MFL_WRITE_BLOCKED_MESSAGE } =
+      await import('../src/utils/mfl-fetch');
+    const { OutboundBlockedError } = await import('../src/utils/deploy-environment');
+
+    const blocked = describeMflFailure(new OutboundBlockedError('MFL write'));
+    expect(blocked.blocked).toBe(true);
+    expect(blocked.message).toBe(MFL_WRITE_BLOCKED_MESSAGE);
+    // The owner-facing copy must not read as an outage, and must not send an
+    // owner looking at a source file.
+    expect(blocked.message).not.toMatch(/Could not reach MFL|src\/utils/);
+
+    const network = describeMflFailure(new Error('fetch failed'));
+    expect(network.blocked).toBe(false);
+    expect(network.message).toBe('Could not reach MFL: fetch failed');
+  });
+
+  it('a bulk ledger write refuses every row once, not row by row', async () => {
+    // The refusal belongs to the DEPLOYMENT, so row 2 cannot fare better than
+    // row 1. The loop used to attempt all of them and report each as its own
+    // row-level MFL failure, which reads like a partially-applied batch — the
+    // one thing an accounting write must never be ambiguous about.
+    const previous = process.env.VERCEL_ENV;
+    process.env.VERCEL_ENV = 'preview';
+    try {
+      const { writeAccountingRecords } = await import('../src/utils/mfl-accounting');
+      const { MFL_WRITE_BLOCKED_MESSAGE } = await import('../src/utils/mfl-fetch');
+      const rows = [
+        { franchiseId: '0001', amount: 10, description: 'one' },
+        { franchiseId: '0002', amount: 20, description: 'two' },
+        { franchiseId: '0003', amount: 30, description: 'three' },
+      ];
+      const results = await writeAccountingRecords(rows, {
+        league: { id: '13522', slug: 'theleague', mflHost: 'www49.myfantasyleague.com' } as never,
+        year: 2026,
+        mflUserCookie: 'unused — the guard throws before the network',
+      } as never);
+
+      expect(results).toHaveLength(rows.length);
+      expect(results.every((r) => r.ok === false && r.blocked === true)).toBe(true);
+      expect(results.every((r) => r.error === MFL_WRITE_BLOCKED_MESSAGE)).toBe(true);
+    } finally {
+      if (previous === undefined) delete process.env.VERCEL_ENV;
+      else process.env.VERCEL_ENV = previous;
+    }
+  });
+
+  it('every MFL write routes its catch through describeMflFailure', () => {
+    // A write is an mflFetch call carrying method: 'POST'. Reads are exempt —
+    // the guard never blocks an export, so there is nothing to describe.
+    const offenders = SOURCE_FILES.filter((f) => {
+      if (f.path === 'src/utils/mfl-fetch.ts') return false;
+      const writes = [...f.body.matchAll(/mflFetch\(/g)].some((m) =>
+        /method:\s*'POST'/.test(f.body.slice(m.index! + m[0].length, m.index! + m[0].length + 400)),
+      );
+      return writes && !/describeMflFailure/.test(f.body);
+    }).map((f) => f.path);
+
+    expect(
+      offenders,
+      `These files POST to MFL but never call describeMflFailure, so a staging ` +
+        `refusal reaches the owner as an outage or an internal error:\n  ` +
+        `${offenders.join('\n  ')}\n\n` +
+        `Import it from src/utils/mfl-fetch.ts and branch on \`blocked\` in the catch.`,
+    ).toEqual([]);
+  });
+});

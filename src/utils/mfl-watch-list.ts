@@ -31,7 +31,7 @@
  * - TYPE/L in the query string, and writes go to the league's own host.
  */
 
-import { mflFetch } from './mfl-fetch';
+import { mflFetch, describeMflFailure } from './mfl-fetch';
 import { parseMflError, normalizePlayerIds } from './mfl-draft-list';
 import type { LeagueDefinition } from '../config/leagues';
 
@@ -45,6 +45,8 @@ export interface WatchListResult {
 export interface WatchListWriteResult {
   ok: boolean;
   error?: string;
+  /** True when this deployment refused to send — see describeMflFailure. */
+  blocked?: boolean;
 }
 
 interface WatchListParams {
@@ -165,7 +167,8 @@ export async function updateWatchList(
       };
     }
   } catch (err) {
-    return { ok: false, error: `Could not reach MFL: ${(err as Error).message}` };
+    const failure = describeMflFailure(err);
+    return { ok: false, error: failure.message, blocked: failure.blocked };
   }
 
   const error = parseMflError(text);

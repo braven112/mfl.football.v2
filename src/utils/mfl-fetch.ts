@@ -10,7 +10,7 @@
  * the Location URL, and re-sends the request with the Cookie header intact.
  */
 
-import { assertOutboundAllowed } from './deploy-environment';
+import { assertOutboundAllowed, OutboundBlockedError } from './deploy-environment';
 
 /**
  * MFL endpoints that mutate the league, whatever HTTP method reaches them.
@@ -44,6 +44,47 @@ const MFL_MUTATING_PATHS = ['/import', '/add_drop', '/csetup'];
 export function isMflWrite(method: string, url: string): boolean {
   if (method.toUpperCase() === 'POST') return true;
   return MFL_MUTATING_PATHS.some((path) => url.includes(path));
+}
+
+/**
+ * The one message an owner sees when a deployment refuses to send.
+ *
+ * Written for an owner, not a developer: it says what did NOT happen, why the
+ * site is not broken, and where the same click will work.
+ */
+export const MFL_WRITE_BLOCKED_MESSAGE =
+  'Nothing was sent to MFL — staging and preview builds never write to the real league. '
+  + 'Everything up to the send worked; try it on the live site.';
+
+export interface MflFailureDescription {
+  /** What to show the owner. */
+  message: string;
+  /** True when THIS deployment refused on purpose — not an MFL outage. */
+  blocked: boolean;
+}
+
+/**
+ * Turn a thrown `mflFetch` failure into the message a caller reports.
+ *
+ * Every write util used to wrap the throw in "Could not reach MFL: …", which
+ * is true for a network error and a lie for the deploy guard: staging refuses
+ * on purpose. `OutboundBlockedError` has its own class precisely so the two
+ * can be told apart (see deploy-environment.ts) — and collapsing them is not
+ * cosmetic. Before this existed (Sep 2026): a blocked Watch-player click on
+ * staging surfaced as a 502 and sent someone hunting a bug in the roster code
+ * for an hour, a blocked lineup submit read "Internal server error", and the
+ * contract writer retried the refusal three times with backoff — because from
+ * inside a catch block a refusal looks exactly like a flaky network.
+ *
+ * Every `catch` around an MFL write goes through here —
+ * `tests/staging-outbound-guard.test.ts` fails on one that does not.
+ */
+export function describeMflFailure(err: unknown): MflFailureDescription {
+  if (err instanceof OutboundBlockedError) {
+    return { message: MFL_WRITE_BLOCKED_MESSAGE, blocked: true };
+  }
+  const detail = err instanceof Error ? err.message : String(err);
+  return { message: `Could not reach MFL: ${detail}`, blocked: false };
 }
 
 interface MflFetchOptions {

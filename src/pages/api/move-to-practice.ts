@@ -175,9 +175,15 @@ export const POST: APIRoute = async ({ request }) => {
     const result = await mflClient.movePlayerToTaxi(playerId, user.franchiseId, direction);
 
     if (!result.success) {
+      // 503 for a deployment that refused to send, not 400/500 — a blocked
+      // staging write is neither the owner's mistake nor an MFL failure.
       return new Response(
-        JSON.stringify({ success: false, message: result.error || 'MFL rejected the practice squad move.' }),
-        { status: 400, headers: JSON_HEADERS },
+        JSON.stringify({
+          success: false,
+          message: result.error || 'MFL rejected the practice squad move.',
+          blocked: result.blocked === true,
+        }),
+        { status: result.blocked ? 503 : 400, headers: JSON_HEADERS },
       );
     }
 

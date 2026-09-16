@@ -9,7 +9,7 @@
 
 import { readFileSync, writeFileSync, mkdirSync, existsSync, readdirSync, unlinkSync } from 'node:fs';
 import { join, basename } from 'node:path';
-import { mflFetch } from './mfl-fetch';
+import { mflFetch, describeMflFailure } from './mfl-fetch';
 import { LEAGUES, DEFAULT_LEAGUE_SLUG, defaultMflWriteHost } from '../config/leagues';
 import { buildMflExportUrl } from './mfl-url';
 
@@ -42,6 +42,8 @@ export interface ContractWriteResult {
   error?: string;
   backupFile?: string;
   attempts: number;
+  /** True when this deployment refused to send — see describeMflFailure. */
+  blocked?: boolean;
 }
 
 interface MFLSalaryExport {
@@ -262,7 +264,19 @@ export async function writeContractToMFL(
         console.error(`[mfl-writer] attempt ${attempt + 1} failed:`, lastError);
       }
     } catch (error) {
-      lastError = error instanceof Error ? error.message : String(error);
+      // A refusal is not a flaky network: retrying a deployment guard just
+      // burns two backoffs and reports the wrong cause three times.
+      const failure = describeMflFailure(error);
+      if (failure.blocked) {
+        return {
+          success: false,
+          error: failure.message,
+          blocked: true,
+          backupFile: backupFile || undefined,
+          attempts: attempt + 1,
+        };
+      }
+      lastError = failure.message;
       console.error(`[mfl-writer] attempt ${attempt + 1} error:`, lastError);
     }
 
@@ -351,7 +365,17 @@ export async function writeMultipleContractsToMFL(
         console.error(`[mfl-writer] batch attempt ${attempt + 1} failed:`, lastError);
       }
     } catch (error) {
-      lastError = error instanceof Error ? error.message : String(error);
+      const failure = describeMflFailure(error);
+      if (failure.blocked) {
+        return {
+          success: false,
+          error: failure.message,
+          blocked: true,
+          backupFile: backupFile || undefined,
+          attempts: attempt + 1,
+        };
+      }
+      lastError = failure.message;
       console.error(`[mfl-writer] batch attempt ${attempt + 1} error:`, lastError);
     }
 

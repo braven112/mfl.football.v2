@@ -384,6 +384,26 @@ The guard fails OPEN when `VERCEL_ENV` is unset — GitHub Actions and `pnpm dev
 — so it protects against a deployed staging or preview site, not a
 misconfigured script.
 
+**What a blocked write must LOOK like, and why that is not cosmetic.** Blocking
+the send is only half the job; the other half is that the person validating on
+staging can tell a refusal from an outage. Every write path originally
+collapsed the two, because `assertOutboundAllowed` throws and every caller's
+`catch` already said "Could not reach MFL". The result (Sep 2026): a Watch
+player click on `staging.theleague.us` answered **HTTP 502 "Could not update
+your watch list"**, which was read as a bug in the roster/front-office work and
+cost an hour; a lineup submit answered "Internal server error"; and the
+contract writer retried the refusal three times with backoff before giving up.
+`OutboundBlockedError` exists to keep the two apart —
+`describeMflFailure` (`src/utils/mfl-fetch.ts`) is the single place that reads
+it, every MFL write's `catch` goes through it, and the routes answer **503
+(this deployment does not send) rather than 502 (MFL answered badly)**. The
+scan in `tests/staging-outbound-guard.test.ts` fails on a POST-to-MFL file that
+does not call it.
+
+Net: the MFL write paths can be validated on staging up to the send — auth,
+validation, payload, and the UI's own error handling all run — and the send
+itself can only be validated in production. Staging now says so in those words.
+
 Also needed, smaller:
 
 - **`noindex` on staging hosts.** Three real subdomains of real domains will

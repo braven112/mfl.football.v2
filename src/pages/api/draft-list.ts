@@ -202,7 +202,12 @@ export const POST: APIRoute = async ({ request }) => {
   });
 
   if (!result.ok) {
-    return json({ ok: false, error: result.error ?? 'MFL rejected the draft list.' }, 502);
+    // 503, not 502, when THIS deployment refused to send (staging/preview) —
+    // see mfl-fetch#describeMflFailure. 502 would blame MFL for our own rule.
+    return json(
+      { ok: false, error: result.error ?? 'MFL rejected the draft list.', blocked: result.blocked === true },
+      result.blocked ? 503 : 502,
+    );
   }
 
   return json({ ok: true, count: playerIds.length, snapshotSaved, restored: restoring });

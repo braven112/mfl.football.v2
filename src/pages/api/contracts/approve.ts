@@ -134,11 +134,14 @@ export const POST: APIRoute = async ({ request }) => {
     return new Response(
       JSON.stringify({
         success: false,
-        error: `MFL sync failed: ${mflResult.error}`,
+        // A blocked staging write already says exactly what happened; the
+        // "MFL sync failed" prefix would put the blame back on MFL.
+        error: mflResult.blocked ? mflResult.error : `MFL sync failed: ${mflResult.error}`,
+        blocked: mflResult.blocked === true,
         declarationId,
         status: 'pending',
       }),
-      { status: 502, headers: JSON_HEADERS },
+      { status: mflResult.blocked ? 503 : 502, headers: JSON_HEADERS },
     );
   } catch (error) {
     console.error('Apply declaration error:', error);

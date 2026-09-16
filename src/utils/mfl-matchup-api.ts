@@ -4,7 +4,7 @@
  */
 
 import type { FantasyPlayer, StartingLineup, PlayerStatus, FantasyTeam } from '../types/matchup-previews';
-import { mflFetch } from './mfl-fetch';
+import { mflFetch, describeMflFailure } from './mfl-fetch';
 import { asArray } from './mfl-normalize';
 import { LEAGUES, DEFAULT_LEAGUE_SLUG } from '../config/leagues';
 
@@ -516,6 +516,8 @@ export class MFLMatchupApiClient {
   ): Promise<{
     success: boolean;
     error?: string;
+    /** True when this deployment refused to send — see describeMflFailure. */
+    blocked?: boolean;
     allPlayerIds?: string[];
     byFranchise?: Record<string, { playerIds: string[]; willGiveUpComment: string; willTakeComment: string }>;
   }> {
@@ -673,6 +675,10 @@ export class MFLMatchupApiClient {
 
       return { success: true, allPlayerIds: Array.from(allPlayerIds), byFranchise };
     } catch (error) {
+      // A deployment that refuses to send says so in the owner's words; every
+      // other throw keeps its own message (mfl-fetch#describeMflFailure).
+      const failure = describeMflFailure(error);
+      if (failure.blocked) return { success: false, error: failure.message, blocked: true };
       console.error('Failed to update trade bait:', error);
       return {
         success: false,
@@ -703,7 +709,7 @@ export class MFLMatchupApiClient {
     playerId: string,
     franchiseId: string,
     direction: 'to' | 'from' = 'to',
-  ): Promise<{ success: boolean; error?: string }> {
+  ): Promise<{ success: boolean; error?: string; blocked?: boolean }> {
     return this.runRosterMove({
       type: 'ir',
       onParam: 'DEACTIVATE',
@@ -733,7 +739,7 @@ export class MFLMatchupApiClient {
     playerId: string,
     franchiseId: string,
     direction: 'to' | 'from' = 'to',
-  ): Promise<{ success: boolean; error?: string }> {
+  ): Promise<{ success: boolean; error?: string; blocked?: boolean }> {
     return this.runRosterMove({
       type: 'taxi_squad',
       onParam: 'DEMOTE',
@@ -755,7 +761,7 @@ export class MFLMatchupApiClient {
     playerId: string;
     franchiseId: string;
     direction: 'to' | 'from';
-  }): Promise<{ success: boolean; error?: string }> {
+  }): Promise<{ success: boolean; error?: string; blocked?: boolean }> {
     if (!this.config.mflUserId) {
       return { success: false, error: 'Authentication required for roster moves' };
     }
@@ -822,6 +828,8 @@ export class MFLMatchupApiClient {
 
       return { success: true };
     } catch (error) {
+      const failure = describeMflFailure(error);
+      if (failure.blocked) return { success: false, error: failure.message, blocked: true };
       console.error(`Failed to ${opts.direction === 'to' ? 'move to' : 'remove from'} ${opts.type}:`, error);
       return {
         success: false,
