@@ -44,6 +44,12 @@ jobs:
       - name: Commit and push updates
         uses: ./.github/actions/commit-push
         with:
+          # Scope the dirty-check to the same paths as the add. Without it the
+          # check is whole-tree while `git add` is narrow, so ANY unrelated dirt
+          # stages nothing and `git commit` exits non-zero — a red job instead
+          # of a quiet no-op. Every other narrow-scope sync here passes this
+          # (def-spotlight, ranking-sources, marquee-defenders).
+          check-paths: 'data/nfl'
           add-paths: 'data/nfl/'
           commit-message: 'chore: refresh NFL snap counts'
           no-changes-message: 'No snap count changes to commit.'

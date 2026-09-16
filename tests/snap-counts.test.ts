@@ -213,6 +213,52 @@ describe.each(PLAYER_PAGES)('%s', (page) => {
   });
 });
 
+describe('the fetcher', () => {
+  const src = fs.readFileSync(path.join('scripts', 'fetch-snap-counts.mjs'), 'utf8');
+
+  it('does not double-advance the league year', () => {
+    // CLAUDE.md, "Year rollover — two independent clocks": the pivot is ALWAYS
+    // calendarYear - 1 and the Feb 14 cutoff is the only thing that advances
+    // it. A base year that ALSO moves at Labor Day gets +1'd twice — the bug
+    // that shipped in five files. This script had it: from Labor Day to New
+    // Year it asked for NEXT year's players.json and only worked because that
+    // feed does not exist yet.
+    expect(src).toMatch(/const baseYear = calendarYear - 1;/);
+    expect(src).not.toMatch(/baseYear = now >= laborDay/);
+  });
+
+  it('only survives a 404 while it has nothing to go stale', () => {
+    // Swallowing every 404 means a moved or broken NFLverse release leaves the
+    // page on a half-finished season behind a green weekly job — the same
+    // silent staleness this change exists to end.
+    expect(src).toMatch(/response\.status === 404 && !fs\.existsSync\(OUT_FILE\)/);
+  });
+
+  it('gates itself on the season being played, not on the file existing', () => {
+    // "The feeds have a completed week" is not an offseason guard (CLAUDE.md).
+    // `fetchedAt` moves every run, so a cache check alone would commit a new
+    // file every offseason Tuesday to say nothing changed.
+    expect(src).toMatch(/isSeasonWindowOpen\(SNAP_YEAR, now\)/);
+    expect(src).toMatch(/writeJsonIfChanged\(OUT_FILE, output, \{ ignoreKeys: \['fetchedAt'\] \}\)/);
+  });
+});
+
+describe('the sync workflow', () => {
+  const wf = fs.readFileSync(path.join('.github', 'workflows', 'snap-counts-sync.yml'), 'utf8');
+
+  it('scopes its dirty-check to the paths it adds', () => {
+    // An unscoped check with a narrow add stages nothing when the tree is
+    // dirty elsewhere, and `git commit` then exits non-zero — a red job
+    // instead of a quiet no-op.
+    expect(wf).toMatch(/check-paths: 'data\/nfl'/);
+    expect(wf).toMatch(/add-paths: 'data\/nfl\/'/);
+  });
+
+  it('gates the job in code, never on a GitHub Actions variable', () => {
+    expect(wf).not.toMatch(/vars\./);
+  });
+});
+
 describe('the committed snap-count data', () => {
   const dir = path.join('data', 'nfl');
   const files = fs.readdirSync(dir).filter((f) => /^snap-counts-\d{4}\.json$/.test(f));

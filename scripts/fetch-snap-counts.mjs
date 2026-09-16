@@ -57,16 +57,18 @@ const SNAP_YEAR = yearFlag ? parseInt(yearFlag, 10) : snapCountSeason(now);
 
 const NFLVERSE_URL = `https://github.com/nflverse/nflverse-data/releases/download/snap_counts/snap_counts_${SNAP_YEAR}.csv.gz`;
 
-// MFL data — use current league year for player ID matching
-const laborDay = (() => {
-  const sept1 = new Date(calendarYear, 8, 1);
-  const dow = sept1.getDay();
-  const offset = dow === 1 ? 0 : dow === 0 ? 1 : 8 - dow;
-  return new Date(calendarYear, 8, 1 + offset);
-})();
+// MFL data — use the current league year for player ID matching.
+//
+// The pivot is ALWAYS `calendarYear - 1`, and the Feb 14 cutoff is the only
+// thing that advances it (CLAUDE.md, "Year rollover — two independent
+// clocks"). A base year that ALSO advances at Labor Day gets +1'd twice —
+// this file had that, so from Labor Day to New Year it asked for NEXT year's
+// players.json and only worked because that feed does not exist yet and the
+// fallback caught it. `getCurrentLeagueYear` in src/utils/league-year.ts owns
+// the real formula; this is the .mjs restatement of it, not a new derivation.
 const getCurrentLeagueYear = () => {
   const febCutoff = new Date(Date.UTC(calendarYear, 1, 15, 4, 45, 0, 0));
-  const baseYear = now >= laborDay ? calendarYear : calendarYear - 1;
+  const baseYear = calendarYear - 1;
   return now >= febCutoff ? baseYear + 1 : baseYear;
 };
 const leagueYear = getCurrentLeagueYear();
@@ -114,10 +116,13 @@ async function run() {
   console.log(`Downloading snap counts from ${NFLVERSE_URL}`);
   const response = await fetch(NFLVERSE_URL, { redirect: 'follow' });
   if (!response.ok) {
-    // Before the season's first Tuesday NFLverse has no file for it yet. The
-    // page falls back to the last completed season and labels it, so this is
-    // a normal state, not a failure worth failing the job over.
-    if (response.status === 404) {
+    // A 404 is expected in exactly one window: the season has kicked off but
+    // NFLverse has not published its first file yet. Once we HAVE a file for
+    // this season, a 404 means the release moved or broke — and swallowing
+    // that would leave the page on a half-finished season behind a green
+    // weekly job, which is the same silent staleness this whole change exists
+    // to end. So it is only survivable while we have nothing to go stale.
+    if (response.status === 404 && !fs.existsSync(OUT_FILE)) {
       console.log(`NFLverse has no ${SNAP_YEAR} snap counts yet (404) — nothing to update.`);
       return;
     }
