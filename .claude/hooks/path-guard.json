@@ -241,6 +241,10 @@
       "paths": [
         "src/pages/theleague/players.astro",
         "src/pages/afl-fantasy/players.astro",
+        "src/utils/snap-count-season.mjs",
+        "src/styles/snap-columns.css",
+        "scripts/lib/snap-counts.mjs",
+        "scripts/fetch-snap-counts.mjs",
         "src/components/shared/WatchListBridge.astro",
         "src/components/shared/WaiverPriorityModal.astro",
         "src/components/shared/WaiverClaimModal.astro",
@@ -263,6 +267,7 @@
         "tests/free-agent-session.test.ts",
         "tests/player-claim-offer.test.ts",
         "tests/players-injected-styles.test.ts",
+        "tests/snap-counts.test.ts",
         "tests/waiver-claim.test.ts",
         "tests/waiver-filed-claims.test.ts"
       ]

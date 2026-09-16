@@ -33,6 +33,7 @@ import { NFL_LOGO_ONERROR, NFL_LOGO_ONLOAD, COLLEGE_LOGO_ONERROR, COLLEGE_LOGO_O
 import { NO_HEADSHOT_SILHOUETTE, getPlayerAvatarBackground, getPlayerAvatarBorder, getPlayerAvatarRing, getPlayerAvatarRingDark, getPlayerAvatarStyleMaps } from '../../utils/nfl-team-colors';
 import '../../styles/player-cell.css';
 import '../../styles/ranking-columns.css';
+import '../../styles/snap-columns.css';
 // Build-time-derived free-agent snapshot. All the heavy multi-year feed reads +
 // row assembly live in scripts/compute-afl-free-agents.mjs (wired into prebuild);
 // this page imports only the finished ~400KB result. See the SSR note below.
@@ -44,7 +45,8 @@ import { claimVerb as claimVerbFor } from '../../utils/claim-context';
 import { readWaiverSortOrder } from '../../utils/waiver-order';
 import { resolveWaiverWindow, describeWaiverWindow, waiverWindowShortLabel } from '../../utils/waiver-window';
 import { readViewerClock } from '../../utils/viewer-preferences-page';
-import { getAflLeagueYear } from '../../utils/league-year';
+import { getAflLeagueYear, getTestDateFromSearchParams } from '../../utils/league-year';
+import { resolveSnapCounts } from '../../utils/snap-count-season.mjs';
 import WaiverClaimsPanel from '../../components/shared/WaiverClaimsPanel.astro';
 import WaiverPriorityModal from '../../components/shared/WaiverPriorityModal.astro';
 import SignInModal from '../../components/shared/SignInModal.astro';
@@ -98,6 +100,28 @@ const mflHost = aflLeague.mflHost;
 // to the baked flags when MFL is unreachable) — moves surface within about a
 // minute. Only membership is live; the player pool itself still refreshes at
 // deploy time.
+// ── Snap counts (GP / Snaps / Snap%) ──
+// NFL facts, not league data: `data/nfl/snap-counts-*.json` is the same file
+// TheLeague's page reads, and it is correct for both because MFL player ids
+// are global across leagues (every one of the AFL's 2026 players resolves to
+// the same id in TheLeague's feed). ~150KB of JSON, so it stays in the page
+// rather than the derived snapshot — and it MUST, because which season these
+// columns show is a request-time question (`resolveSnapCounts` switches at
+// kickoff) and the snapshot freezes at deploy time.
+const snapCountModules = import.meta.glob(
+  '../../../data/nfl/snap-counts-*.json',
+  { eager: true }
+);
+// `?testDate=` so /rollover-check can see the kickoff switch here too, and so
+// this page and TheLeague's — forked siblings calling one shared resolver —
+// cannot disagree about which instant they are asking about. Today it reaches
+// only these columns; the rest of this page still reads the real clock.
+const snapNowRef = getTestDateFromSearchParams(Astro.url.searchParams) ?? new Date();
+const snapCounts = resolveSnapCounts(snapCountModules, snapNowRef);
+const hasSnapCounts = snapCounts.has;
+const snapSeasonLabel = snapCounts.seasonLabel;
+const snapScopeTitle = snapCounts.scopeTitle;
+
 const snapshot = freeAgentsData as unknown as FaSnapshot;
 const liveView = applyLiveRosters(snapshot, await fetchLiveAflRosters(snapshot.generatedForYear, snapshot));
 const players = liveView.players;
@@ -301,7 +325,25 @@ const topFaHeadOnerror = topFaHeadEspnId
   ? `this.onerror=function(){this.onerror=null;this.style.visibility='hidden'};this.src='https://a.espncdn.com/i/headshots/college-football/players/full/${topFaHeadEspnId}.png'`
   : undefined;
 
-const playerDataJson = JSON.stringify(players);
+// Snap counts ride along on the row the client builder renders. The row's own
+// `games` is a DIFFERENT number — fantasy games, counted once per conference,
+// so it is doubled for a player rostered in both — which is why these three
+// carry their own names on both pages.
+// Skipped entirely when there is nothing to show: with no snap data the map
+// would copy every row to add three nulls, and ship them in the inline JSON,
+// for three columns that are not rendered.
+const playersWithSnaps = hasSnapCounts
+  ? players.map((p: any) => {
+      const snap = snapCounts.byPlayerId.get(p.id);
+      return {
+        ...p,
+        snaps: snap?.snaps ?? null,
+        snapPct: snap?.pct ?? null,
+        snapGames: snap?.games ?? null,
+      };
+    })
+  : players;
+const playerDataJson = JSON.stringify(playersWithSnaps);
 const defSpotlightJson = JSON.stringify(DEF_SPOTLIGHT_PLAYERS);
 const conferenceMetaJson = JSON.stringify(conferenceMeta ?? null);
 const activeConfIdJson = JSON.stringify(activeConfId);
@@ -594,6 +636,21 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
             <th class="sortable col-text col-group--stats col-college" data-sort="college" title="College" aria-label="College"><div class="th-content">C</div></th>
             <th class="sortable col-sm" data-sort="height"><div class="th-content">Ht</div></th>
             <th class="sortable col-sm" data-sort="weight"><div class="th-content">Wt</div></th>
+            {hasSnapCounts && (
+              <th class="sortable col-sm col-group--stats" data-sort="snapGames" title={`Games with an offensive snap \u2014 ${snapScopeTitle}`}>
+                <div class="th-content"><span class="th-label">GP<small class="th-season">{snapSeasonLabel}</small></span></div>
+              </th>
+            )}
+            {hasSnapCounts && (
+              <th class="sortable col-sm col-group--stats" data-sort="snaps" title={`Offensive snaps \u2014 ${snapScopeTitle}`}>
+                <div class="th-content"><span class="th-label">Snaps<small class="th-season">{snapSeasonLabel}</small></span></div>
+              </th>
+            )}
+            {hasSnapCounts && (
+              <th class="sortable col-num col-group--stats" data-sort="snapPct" title={`Share of his team's offensive plays in the games he played \u2014 ${snapScopeTitle}`}>
+                <div class="th-content"><span class="th-label">Snap%<small class="th-season">{snapSeasonLabel}</small></span></div>
+              </th>
+            )}
             {hasAdp && (
               <th class="sortable col-num col-group--stats" data-sort="adpDyn"><div class="th-content">ADP</div></th>
             )}
@@ -631,7 +688,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
   <PlayerDetailsModal hideContract={true} />
 </TheLeagueLayout>
 
-<script define:vars={{ playerDataJson, hasProjected, hasLastYrPts, hasAdp, defaultSort, defaultDir, mflHost, defSpotlightJson, conferenceMetaJson, activeConfIdJson, nflAvatarBgJson, nflAvatarBorderJson, nflAvatarBgFallback, nflAvatarBorderFallback, nflAvatarRingJson, nflAvatarRingFallback, nflAvatarRingDarkJson, nflAvatarRingDarkFallback, noHeadshot, logoOnerror: NFL_LOGO_ONERROR, collegeLogoOnerror: COLLEGE_LOGO_ONERROR, collegeLogoOnload: COLLEGE_LOGO_ONLOAD }}>
+<script define:vars={{ playerDataJson, hasProjected, hasLastYrPts, hasAdp, hasSnapCounts, defaultSort, defaultDir, mflHost, defSpotlightJson, conferenceMetaJson, activeConfIdJson, nflAvatarBgJson, nflAvatarBorderJson, nflAvatarBgFallback, nflAvatarBorderFallback, nflAvatarRingJson, nflAvatarRingFallback, nflAvatarRingDarkJson, nflAvatarRingDarkFallback, noHeadshot, logoOnerror: NFL_LOGO_ONERROR, collegeLogoOnerror: COLLEGE_LOGO_ONERROR, collegeLogoOnload: COLLEGE_LOGO_ONLOAD }}>
   const players = JSON.parse(playerDataJson);
   // Duplicate-player conference metadata (null = single shared pool).
   const conferenceMeta = JSON.parse(conferenceMetaJson);
@@ -1036,6 +1093,9 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
         case 'weight':   aVal = a.weight ?? -1; bVal = b.weight ?? -1; break;
         case 'adpDyn':   aVal = a.adpDyn ?? 9999; bVal = b.adpDyn ?? 9999; break;
         case 'lastYrPts': aVal = a.lastYrPts ?? -1; bVal = b.lastYrPts ?? -1; break;
+        case 'snapGames': aVal = a.snapGames ?? -1; bVal = b.snapGames ?? -1; break;
+        case 'snaps':     aVal = a.snaps ?? -1;     bVal = b.snaps ?? -1;     break;
+        case 'snapPct':   aVal = a.snapPct ?? -1;   bVal = b.snapPct ?? -1;   break;
         case 'projected': aVal = a.projected ?? -1; bVal = b.projected ?? -1; break;
         default:         aVal = a.projected ?? -1; bVal = b.projected ?? -1;
       }
@@ -1257,6 +1317,12 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
         html += `<td class="cell-num col-group--rankings${avgCls}${compositeCls}${borderCls}">${rnk != null ? rnk : '<span class="na">-</span>'}</td>`;
       }
 
+      if (hasSnapCounts) {
+        html += `<td class="cell-sm col-group--stats">${p.snapGames != null ? p.snapGames : '<span class="na">-</span>'}</td>`;
+        html += `<td class="cell-sm col-group--stats">${p.snaps != null ? p.snaps : '<span class="na">-</span>'}</td>`;
+        html += `<td class="cell-num col-group--stats">${p.snapPct != null ? p.snapPct.toFixed(1) + '%' : '<span class="na">-</span>'}</td>`;
+      }
+
       if (hasAdp) {
         html += `<td class="cell-num col-group--stats">${p.adpDyn != null ? p.adpDyn.toFixed(1) : '<span class="na">-</span>'}</td>`;
       }
@@ -1307,7 +1373,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
   }
 
   // Columns that default to descending on first click
-  const descDefaults = new Set(['projected', 'exp', 'height', 'weight', 'lastYrPts']);
+  const descDefaults = new Set(['projected', 'exp', 'height', 'weight', 'lastYrPts', 'snapGames', 'snaps', 'snapPct']);
   // Columns that default to ascending (lower = better)
   const ascDefaults = new Set(['adpDyn', 'draftRd', 'age']);
 
