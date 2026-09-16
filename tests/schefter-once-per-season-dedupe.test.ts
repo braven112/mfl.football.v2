@@ -154,14 +154,10 @@ describe('the announce and assistant lanes rely on appendToFeed alone', () => {
     }
   });
 
-  /**
-   * Season-scoped because the archive check is permanent: a bare
-   * `assist_theleague_0001_lineup_w5` would be refused forever once week 5 of
-   * any season rotated out.
-   */
-  it('assistant ids carry the season, so the archive check stays sound', () => {
-    expect(assistant).toMatch(/assist_\$\{navSlug\}_\$\{franchiseId\}_\$\{kind\}_\$\{year\}_w\$\{week\}/);
-  });
+  // NOTE: that the assistant id carries the season is NOT asserted here.
+  // Scanning the template literal would be a second, weaker copy of
+  // tests/schefter-assistant-post.test.ts, which proves it behaviourally —
+  // 2026's and 2027's week-6 ids differ, and a missing year throws.
 });
 
 /**
