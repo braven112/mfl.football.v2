@@ -425,7 +425,7 @@ hundreds, not thousands. That means a plain client-side sorted table with
 expandable rows is fine — **no virtualization, no pagination, no server-side
 sort.** Do not build for a scale this does not have.
 
-### Probed live 2026-09-16 — MFL is reachable from this sandbox
+### Probed live 2026-09-16 — all settled, nothing deferred
 
 `insights/domains/mfl-api.md` says MFL egress is proxy-blocked from Claude Code
 web sessions (`CONNECT tunnel failed, response 403`). **That is stale** — it was
@@ -469,15 +469,19 @@ Two payload shapes the parser must handle, both seen live:
   player is rostered per-conference. Derive ownership from `rosters.json` as
   planned; treat `isAvailable` as decoration.
 
-### Still unverified — the one for Phase 1
+**4. The re-run is a zero-byte diff.** Settled by running the real fetch twice:
+the second run logs `Unchanged player-scores-weekly; leaving …  untouched`.
+`writeOut` → `writeJsonIfChanged` (`scripts/lib/canonical-json.mjs`) already
+canonicalises MFL's nondeterministic array order, so nothing extra was needed —
+but this is the check that had to happen before the cron touched a ~1 MB per
+league per season file (60,724 bytes for week 1 alone, ~4× `weekly-results-raw.json`).
+A plain `writeFileSync` + byte diff is what regrew `.git` to 7 GB once already
+(`docs/claude/rules/storage-and-build.md`).
 
-**What this costs `.git`.** `playerScores.json` is 55 KB for one week, so
-`player-scores-weekly.json` lands near **1 MB per league per season**, rewritten
-daily in-season — ~4× `weekly-results-raw.json` (278 KB). This is why the
-canonical sorted write is not optional: MFL returns arrays in nondeterministic
-order, and a plain `writeFileSync` + byte diff is what regrew `.git` to 7 GB
-once already (`docs/claude/rules/storage-and-build.md`). Confirm a re-run of an
-unchanged week produces a **zero-byte diff** before letting the cron near it.
+**5. The week range really is per-league.** `league.json` gives TheLeague
+**1–17** and the AFL **1–18**. Hardcoding 17 — as the weeklyResults loop above
+does — would have silently dropped the AFL's last week. This is the rule paying
+for itself on its first use, not a hypothetical.
 
 **Playoff weeks count.** `league.json` carries `lastRegularSeasonWeek: 14` and
 `endWeek: 17`, so weeks 15–17 are the fantasy playoffs. Player scores exist for
