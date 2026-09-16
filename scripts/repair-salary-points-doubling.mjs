@@ -75,8 +75,13 @@ function legacyDoubledPoints(payload, maxWeek) {
   return totals;
 }
 
+// Both sides are rounded to the cent, so an exact match differs only by float
+// noise. Half a cent is the tolerance: 0.011 would accept a one-cent mismatch
+// (10.01 vs 10.00) and quietly weaken "reproduces EVERY value exactly".
+const sameCents = (a, b) => Math.abs(a - b) < 0.005;
 const reproduces = (players, totals) =>
-  players.every((p) => Math.abs(round2(totals.get(p.id) ?? 0) - (Number(p.points) || 0)) < 0.011);
+  players.every((p) => sameCents(round2(totals.get(p.id) ?? 0), Number(p.points) || 0));
+const correctedFor = (players, totals) => players.map((p) => round2(totals.get(p.id) ?? 0));
 
 const report = [];
 for (const dir of SALARY_DIRS) {
@@ -100,11 +105,27 @@ for (const dir of SALARY_DIRS) {
     }
     const feed = JSON.parse(fs.readFileSync(feedPath, 'utf8'));
 
-    let cutoff = null;
+    // EVERY cutoff that reproduces the file, not just the first. When weeks past
+    // the real cutoff hold no scores, several reproduce it (the live 2026 file
+    // matches all eighteen) — which is only safe if they all yield the same
+    // correction. If two of them disagree, the file's week range is genuinely
+    // ambiguous and it is not rewritten.
+    const matching = [];
     for (let w = 1; w <= MAX_WEEK; w++) {
-      if (reproduces(players, legacyDoubledPoints(feed, w))) {
-        cutoff = w;
-        break;
+      if (reproduces(players, legacyDoubledPoints(feed, w))) matching.push(w);
+    }
+    const cutoff = matching[0] ?? null;
+    if (cutoff != null) {
+      const reference = correctedFor(players, buildPlayerPoints(feed, cutoff));
+      const ambiguous = matching.some((w) =>
+        correctedFor(players, buildPlayerPoints(feed, w)).some((v, i) => !sameCents(v, reference[i])),
+      );
+      if (ambiguous) {
+        report.push({
+          file: rel,
+          status: `SKIPPED: cutoffs ${matching.join(',')} reproduce it but correct it differently`,
+        });
+        continue;
       }
     }
     if (cutoff == null) {
@@ -131,7 +152,7 @@ for (const dir of SALARY_DIRS) {
       const next = round2(fixed.get(p.id) ?? 0);
       before += old;
       after += next;
-      if (Math.abs(next - old) >= 0.011) {
+      if (!sameCents(next, old)) {
         changed++;
         p.points = next;
       }
