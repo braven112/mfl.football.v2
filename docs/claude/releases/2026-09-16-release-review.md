@@ -1,8 +1,11 @@
 # Release review — 2026-09-16
 
-**Verdict: NO-GO** — `staging` does not contain `main`, because
-`.github/workflows/staging-merge-down.yml` is failing on three code conflicts.
-`/promote` step 2 will refuse, correctly. Nothing else in the range blocks.
+**Verdict: GO** — opened NO-GO on a broken merge-down; that has since been
+resolved and pushed, and `main` is now contained in `staging`. `/promote` step 2
+passes. Nothing else in the range blocks.
+
+Both states are kept below rather than overwritten: what blocked, and what
+cleared it.
 
 This is the **first** run of this gate and the first promotion the release train
 has ever attempted, so the range is ~3 weeks of accumulation rather than one.
@@ -26,9 +29,9 @@ has ever attempted, so the range is ~3 weeks of accumulation rather than one.
 
 ---
 
-## Blocks promotion
+## Blocks promotion — RESOLVED 2026-09-16
 
-**1. Merge-down is broken — `staging` is 17 commits behind `main`.**
+**1. Merge-down was broken — `staging` is 17 commits behind `main`.**
 
 `staging-merge-down.yml` run #59 (and every run since `366ae27`, 2026-09-15
 17:09) failed with content conflicts in three files:
@@ -52,6 +55,55 @@ must run before **and** after, per `docs/plans/rosters-page-split.md`.
 **Shorter path: fix, not pull.** Pulling #1129/#1134 off the train would not
 help — the conflict is against hotfixes that are already in production, so the
 same merge has to happen either way.
+
+### How it was cleared
+
+Branched off `staging`, merged `origin/main`, resolved, validated, pushed —
+`staging` is now `0e7d1d4c`, which contains `main` at `3c13e65d`.
+
+**Seven conflicts, not the three the workflow log printed.**
+
+| File | Class | Resolution |
+|---|---|---|
+| `theleague/players.astro` | 4 | staging's `statsSeasonYear` / `seasonWeeklyData` **+** main's `nflScheduleFullModules ?? nflScheduleModules` fallback |
+| `front-office/projected-free-agents.astro` | 4 | the same, plus main's path rename into `front-office/` |
+| `theleague/rosters.astro` | 4 | staging's `modalWeeklyResultsRaw` and its pinning comment **+** main's `nflSchedule-full.json ?? nflSchedule.json` |
+| `.claude/hooks/path-guard.json` | 5 | main's richer notes; both sides' `tests` arrays **unioned**, so all four newly-registered guards survive |
+| `insights/domains/deployment.md`, `frontend.md` | 5 | both sides' journal entries kept |
+| `weekly-changelog-staging.json` | 3-ish | merged entry-by-entry on RAW TEXT, 57 + 4 = 61 entries, +32 lines and no reflow — #1133 records that this file must be appended rather than re-serialized, because its escaping is mixed and a dump manufactures the next conflict |
+
+Taking main's side verbatim on any of the three code files would have broken the
+build: staging had renamed `lastSeasonYear` / `lastYearData` out of existence.
+This is CLAUDE.md class 4 exactly — keep main's structural change, re-apply the
+branch's behavioral change on top.
+
+**One semantic conflict git could not see.** Main added
+`tests/schefter-once-per-season-dedupe.test.ts`, whose `WEEK_SCOPED` list names
+`weekly-recap`; staging deleted `scripts/article-types/weekly-recap.mjs` in
+#1088. Neither diff touched the other's file, so both merged clean and the
+result failed twice. Fixed by dropping the name, with the reason inline — the
+list is a completeness guard over what is on disk, so a name with no module
+behind it is a permanent red rather than a check.
+
+**Validation**
+
+- **Roster parity** (`scripts/roster-parity-check.mjs`, before and after, 12
+  renders × 3 seasons × 4 teams): **426 value diffs, 423 of them `"-"` → a real
+  number, and ZERO regressions** — nothing went value → `"-"`, nothing changed
+  value → different value. The other three are noise: client config +2,731
+  bytes and two console errors swapping arrival order.
+
+  Cause traced rather than assumed: every diff is in columns 5/6/8 (Trend, Avg,
+  Total) and only on LIVE seasons. Staging's committed
+  `data/theleague/mfl-feeds/2026/weekly-results-raw.json` was 157,986 bytes with
+  no scores; main's week-1 backfill makes it 278,696. 2024 is unchanged because
+  it is a frozen season served from the committed payloads file. So the merge
+  *restores* data staging was missing — which is what merging main down is for.
+- **`pnpm test:unit`**: 495 files, **12,049 passed, 0 failed**, 3 skipped.
+- **`pnpm test:types`**: passes at **1438**. The ratchet fails in either
+  direction, so this is a real re-measure per CLAUDE.md class 6 — main's 17
+  commits neither added nor cleared a type error against staging's number, so
+  no retighten was needed.
 
 ## Stored-shape compatibility
 
@@ -187,11 +239,20 @@ items 8 and 9:
 cannot check — TheLeague's own draft date, which lives in the league-events
 registry rather than an `.mjs` — still needs a human look before `/promote`.
 
-## What clears the NO-GO
+## What remains before `/promote`
 
-One thing: land the merge-down. Cut a branch from `staging`, `git merge
-origin/main`, resolve the three conflicts by intent (both sides changed season
-resolution on the same pages), run `scripts/roster-parity-check.mjs` before and
-after, `pnpm test:unit`, re-measure `pnpm test:types`, push to `staging`. Then
-re-run step 2 — `git merge-base --is-ancestor origin/main origin/staging` — and
-this review's verdict becomes GO.
+The gate is GO. The promotion itself still owes its own steps, and two of them
+are not mechanical:
+
+1. **CI green on `staging`'s exact tip** (`/promote` step 4) — pin the query to
+   `0e7d1d4c`, not to the branch. A green run from an older commit is not this
+   check.
+2. **Chromatic on `staging` BEFORE the fast-forward** (`/promote` step 5b).
+   `gh workflow run chromatic.yml --ref staging`, then review and accept the
+   batch in the Chromatic UI. This is the one path where the `main` push's
+   `--auto-accept-changes` could bless an unreviewed visual change, and this
+   range touches a lot of rendering. Expect a large batch: it is three weeks,
+   not one.
+3. **TheLeague's draft date** — the one blackout the script cannot read.
+4. **The What's New rollup ordering** (below). Worth settling before the
+   promotion rather than after, since 40 changes are queued behind it.
