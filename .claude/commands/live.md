@@ -459,7 +459,24 @@ done
 When the PR is merged, print:
 - The PR URL (clickable)
 - The squash commit SHA
-- "Deployed to main ✓"
+- `Deployed to $BASE ✓` — the branch from step 2, which is `staging` for a
+  feature. Do not hardcode "main"; a feature does not go there until Tuesday's
+  `/promote`.
+- **The live page link, for every page route the PR added or changed.** Brandon
+  asks for this every time, so produce it rather than waiting to be asked. One
+  clickable URL per league, on the deployed host:
+  - `staging` → the league's `stagingDomains[0]`
+    (`staging.theleague.us`, `staging.afl-fantasy.com`)
+  - `main` → its `canonicalDomain` (`www.theleague.us`, `www.afl-fantasy.com`)
+
+  Both are in the registry (`src/config/leagues-data.mjs`) — read them, never
+  type a host. **Drop the league prefix**: these are apex domains, where
+  `resolveLeaguePath` strips it, so the route is `/top-players`, NOT
+  `/theleague/top-players`. A league with no entry for that host simply has no
+  link; say so in the same line rather than inventing one.
+
+  A deploy is not instant — if the URL 404s, say the deploy is still running
+  rather than reporting the page broken.
 - Any findings you REJECTED during adjudication, one line each. They shipped
   unaddressed on your judgement, so the user gets a last look at that call.
 
