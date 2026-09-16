@@ -78,6 +78,12 @@ permissions:
 jobs:
   generate:
     runs-on: ubuntu-latest
+    env:
+      # Where the generator parks an announcement for the post-deploy step to
+      # send. RUNNER_TEMP, not the workspace: the queue is never committed, and
+      # the Gauntlet's two per-league invocations are separate processes that
+      # have to append to the SAME file. See scripts/lib/announce-queue.mjs.
+      SCHEFTER_ANNOUNCE_QUEUE: ${{ runner.temp }}/schefter-announce-queue.json
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -246,3 +252,30 @@ jobs:
             --branch main \
             --message "chore: schefter article — $ARTICLE_TYPE" \
             --files "$FILES"
+
+      # Announce LAST, and only once the article is actually reachable.
+      #
+      # The generator no longer sends: it queues. This step waits for the
+      # permalink to answer 200 on the live site, then posts the GroupMe promo
+      # (subject to the one-a-day cap) and the push fan-out. Before this split,
+      # the promo went out while the commit was still in a later step and the
+      # Vercel build had not started — so the link redirected every owner who
+      # tapped it to the Schefter index for the first few minutes of its life.
+      #
+      # Placed after "Commit and push" ON PURPOSE: a run whose commit failed
+      # never reaches this step, and so can never advertise an article that is
+      # not in main. An empty queue (a clean skip, or a type that posts its own
+      # chat message) is a no-op.
+      - name: Announce after the deploy is live
+        if: steps.resolve.outputs.type != ''
+        env:
+          GROUPME_SCHEFTER_BOT_ID: ${{ secrets.GROUPME_SCHEFTER_BOT_ID }}
+          GROUPME_AFL_SCHEFTER_BOT_ID: ${{ secrets.GROUPME_AFL_SCHEFTER_BOT_ID }}
+          # The day-cap claim (Redis) and the push fan-out (which POSTs back to
+          # the site) both moved here with the senders.
+          UPSTASH_REDIS_REST_URL: ${{ secrets.UPSTASH_REDIS_REST_URL }}
+          UPSTASH_REDIS_REST_TOKEN: ${{ secrets.UPSTASH_REDIS_REST_TOKEN }}
+          KV_REST_API_URL: ${{ secrets.KV_REST_API_URL }}
+          KV_REST_API_TOKEN: ${{ secrets.KV_REST_API_TOKEN }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: node scripts/schefter-announce-pending.mjs

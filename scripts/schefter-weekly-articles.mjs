@@ -31,10 +31,7 @@ import { loadJSON, resolveDataDir, getFeedPath, loadTeams } from './article-util
 import { getSeasonYear, getCurrentNFLWeek, getCompletedWeek } from './article-utils/week-resolver.mjs';
 import { callAnthropic } from './article-utils/ai-client.mjs';
 import { isDuplicate, appendToFeed } from './article-utils/feed-writer.mjs';
-import { postToGroupMe } from './lib/groupme.mjs';
-import { postToGroupMeCapped } from './lib/groupme-capped.mjs';
-import { sendPushFanout, broadcast } from './lib/push-fanout.mjs';
-import { LEAGUES } from '../src/config/leagues-data.mjs';
+import { enqueueAnnounce } from './lib/announce-queue.mjs';
 import { withLinkDirective, applyArticleLinks } from './article-utils/article-links.mjs';
 
 const projectRoot = path.resolve(fileURLToPath(new URL('..', import.meta.url)));
@@ -276,44 +273,43 @@ async function main() {
     console.log(`\n✅ Article "${post.headline}" appended to feed.`);
   }
 
-  // Step 11: GroupMe promo — only for article types that define one, and only
-  // when the feed write actually happened this run (a re-run must never
-  // re-buzz the chat; same no-double-ping rule as schefter-announce.mjs).
+  // Step 11: ENQUEUE the announcement — do not send it here.
+  //
+  // This step used to post the GroupMe promo and the push the moment
+  // `appendToFeed` resolved. But that write is a file in the Actions runner:
+  // the commit lands in a later workflow step and Vercel then has to build, so
+  // for the next few minutes the permalink we were advertising did not exist
+  // and `news/[id].astro` redirected every owner who tapped it to the Schefter
+  // index. `schefter-announce-pending.mjs` runs after the push, waits for the
+  // page to answer 200, and sends then. See scripts/lib/await-published.mjs.
+  //
+  // Still gated on `written`: a re-run must never re-buzz the chat (same
+  // no-double-ping rule as schefter-announce.mjs).
   if (written && typeof mod.buildGroupMePromo === 'function') {
     const text = mod.buildGroupMePromo(post, enrichment, { league });
     if (text) {
-      const botId = process.env[GROUPME_BOT_ENV[league]];
-      // Capped: the article TYPE is the post kind, and the weekday calendar
-      // decides whether it is today's one chat post. A held promo is not a
-      // failure — the article is still written and still on the site.
-      const { posted, refused } = await postToGroupMeCapped({
-        league: LEAGUES[league],
+      const { file, size } = await enqueueAnnounce(projectRoot, {
+        league,
+        // The article TYPE is the day-cap kind; the weekday calendar decides
+        // whether it is today's one chat post. A held promo is not a failure —
+        // the article is still written and still on the site.
         kind: opts.type,
-        botId,
-        text,
-        checkStatus: true,
-        onMissingBotId: () => console.log(`  [groupme] ${GROUPME_BOT_ENV[league]} not set — skipping promo.`),
-        onPosted: () => console.log('  [groupme] promo posted.'),
-        onHttpError: (status) => console.warn(`  [groupme] promo failed: HTTP ${status}`),
-        onFetchError: (err) => console.warn(`  [groupme] promo failed: ${err.message}`),
-      });
-      if (!posted && !refused) console.log('  [groupme] promo not delivered (see above).');
-
-      // Most article types are held out of the chat by the daily cap, so push
-      // is how they reach anyone at all. Sent whether or not the chat post
-      // went out: the two are separate channels an owner chooses separately.
-      await sendPushFanout({
-        league: LEAGUES[league],
-        dryRun,
-        category: 'article',
-        notifications: broadcast({
+        postId: post.id,
+        // The PERMALINK, which is what a pending deploy answers with a
+        // redirect — not `post.link`, which a type may point elsewhere.
+        verifyPath: `/${league}/news/${post.id}`,
+        groupMeText: text,
+        botEnv: GROUPME_BOT_ENV[league],
+        push: {
           franchiseIds: [...(await loadTeams(projectRoot, league)).keys()],
           title: post.headline,
           body: post.body?.slice(0, 160) ?? '',
           url: post.link ?? '/news',
           tag: post.id,
-        }),
+        },
+        dryRun,
       });
+      console.log(`  [announce] Queued for after the deploy (${size} pending → ${file}).`);
     }
   }
 }
