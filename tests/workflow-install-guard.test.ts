@@ -1,5 +1,6 @@
-import { describe, it, expect } from 'vitest';
-import { readFileSync } from 'node:fs';
+import { describe, it, expect, afterAll } from 'vitest';
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { expectClean, scanForbidden, walkFiles, REPO_ROOT } from './helpers/scan-guard';
 import { moduleGraph } from './helpers/module-graph';
@@ -170,5 +171,84 @@ describe('no-install workflows run dependency-free scripts', () => {
         'Either add the shared setup step, or keep the script dependency-free:\n  ' +
         offenders.sort().join('\n  '),
     ).toEqual([]);
+  });
+});
+
+/**
+ * The graph walker's own self-test.
+ *
+ * Everything above rests on `moduleGraph()` seeing every dependency, and a
+ * FALSE NEGATIVE here is silent in both directions: the guard passes, the
+ * workflow keeps its no-install step, and the package is still missing at
+ * runtime. The four specifier shapes are pinned because a regex built around
+ * `from '…'` misses `import 'x';` — that gap once reported a file pinned into
+ * production as dead (docs/claude/insights/features/dead-code-detection.md).
+ */
+describe('moduleGraph sees every import shape', () => {
+  const fixture = mkdtempSync(path.join(tmpdir(), 'module-graph-'));
+  afterAll(() => rmSync(fixture, { recursive: true, force: true }));
+
+  const write = (name: string, body: string) => {
+    const file = path.join(fixture, name);
+    writeFileSync(file, body);
+    return file;
+  };
+
+  it('catches static, side-effect, dynamic and require specifiers', () => {
+    const entry = write(
+      'entry.mjs',
+      [
+        "import { a } from 'pkg-static';",
+        "import 'pkg-side-effect';",
+        "const b = await import('pkg-dynamic');",
+        "const c = require('pkg-require');",
+        "import { d } from './local.mjs';",
+        'export { a, b, c, d };',
+      ].join('\n'),
+    );
+    write('local.mjs', "export { e } from 'pkg-transitive';\n");
+
+    const { packages } = moduleGraph(entry);
+    expect([...packages.keys()].sort()).toEqual([
+      'pkg-dynamic',
+      'pkg-require',
+      'pkg-side-effect',
+      'pkg-static',
+      'pkg-transitive',
+    ]);
+  });
+
+  it('scopes @org/name as one package, and ignores node builtins', () => {
+    const entry = write(
+      'scoped.mjs',
+      [
+        "import { Redis } from '@upstash/redis';",
+        "import { deep } from '@scope/pkg/sub/path.js';",
+        "import fs from 'node:fs';",
+        "import path from 'path';",
+        'export { Redis, deep, fs, path };',
+      ].join('\n'),
+    );
+    expect([...moduleGraph(entry).packages.keys()].sort()).toEqual(['@scope/pkg', '@upstash/redis']);
+  });
+
+  it('does not count a specifier quoted in a comment', () => {
+    const entry = write(
+      'commented.mjs',
+      [
+        '/**',
+        " * Callers do `import { x } from 'pkg-in-doc-comment'`.",
+        ' */',
+        "// import 'pkg-in-line-comment';",
+        'export const x = 1;',
+      ].join('\n'),
+    );
+    expect([...moduleGraph(entry).packages.keys()]).toEqual([]);
+  });
+
+  it('agrees with the real files the guard depends on', () => {
+    // The whole split exists so these two answers differ.
+    expect([...moduleGraph('scripts/lib/redis-client.mjs').packages.keys()]).toEqual(['@upstash/redis']);
+    expect([...moduleGraph('scripts/lib/redis.mjs').packages.keys()]).toEqual([]);
   });
 });

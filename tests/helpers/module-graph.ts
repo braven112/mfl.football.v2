@@ -14,6 +14,14 @@ import { REPO_ROOT } from './scan-guard';
  * that by hand is a one-time answer to a question that changes every time
  * someone adds an import three modules deep.
  *
+ * The four import shapes below are not a guess — `import 'x';` (side-effect,
+ * no `from`) is the one a specifier regex built around `from` misses, and
+ * missing it once reported a file pinned into production as dead. See
+ * docs/claude/insights/features/dead-code-detection.md § "Building the graph".
+ * A false NEGATIVE here is the expensive direction: it makes the guard that
+ * depends on this pass while the dependency is real, so the shapes are pinned
+ * by test.
+ *
  * Deliberate limits, because a guard that lies is worse than none:
  *  - Only literal specifiers are seen. `await import(someVar)` is invisible.
  *  - Comment lines (`//`, `*`, `/*`) are skipped, so a specifier quoted in a
