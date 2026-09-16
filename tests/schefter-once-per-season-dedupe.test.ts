@@ -52,6 +52,18 @@ describe('isDuplicate reads the season archive', () => {
     expect(await isDuplicate(feedPath, ID)).toBe(true);
   });
 
+  /**
+   * The listing half of fail-closed. A missing DIRECTORY is benign — the
+   * league has no archive yet. An unreadable one is not: swallowing EACCES or
+   * EIO returns an empty id set, which reads every archived post as never
+   * published. Simulated with a plain file where the directory belongs, which
+   * makes readdir raise ENOTDIR.
+   */
+  it('fails closed when the archive directory exists but cannot be listed', async () => {
+    writeFileSync(path.join(dir, 'schefter-archive'), 'not a directory');
+    await expect(isDuplicate(feedPath, ID)).rejects.toThrow();
+  });
+
   it('fails closed on an unreadable archive shard instead of reading "never posted"', async () => {
     mkdirSync(path.join(dir, 'schefter-archive'));
     writeFileSync(path.join(dir, 'schefter-archive', '2026.json'), '[{"id": "sf_2026_sched');

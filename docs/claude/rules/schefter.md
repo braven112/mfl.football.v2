@@ -306,9 +306,13 @@ season.
   Announce sends GroupMe only when it wrote; against the live feed alone that
   no-double-ping guarantee silently expired the moment the slug archived, and
   `sf_announce_dark-mode` had already archived in both leagues.
-- **It FAILS CLOSED.** An unreadable shard throws rather than being skipped:
-  skipping it reads its ids as never posted, which is the repost this exists to
-  stop. A failed run is the safer outcome.
+- **It FAILS CLOSED — on the listing as well as the parse.** An unreadable
+  shard throws rather than being skipped, because skipping it reads its ids as
+  never posted, which is the repost this exists to stop. The same rule governs
+  the DIRECTORY read: only `ENOENT` is benign (that league has no archive yet),
+  and every other code means the archive is there but unlistable. The first cut
+  guarded the parse and swallowed every listing error, which left the guarantee
+  open to an `EACCES`.
 - **So every id must be unique for as long as it must not repeat.** The check
   is permanent, so a season-less id is suppressed FOREVER the first time it
   archives — the opposite failure, a warning that silently never posts.

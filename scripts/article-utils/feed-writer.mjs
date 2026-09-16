@@ -34,8 +34,15 @@ async function readArchivedIds(feedPath) {
   let names = [];
   try {
     names = await fs.readdir(dir);
-  } catch {
-    return ids; // no archive for this league yet
+  } catch (err) {
+    // ENOENT is the ONLY benign case: this league genuinely has no archive
+    // yet, so there are no archived ids. Every other code (EACCES, EIO,
+    // EMFILE, ENOTDIR) means the archive exists but could not be listed, and
+    // returning an empty set there reads every archived id as "never posted"
+    // — the exact repost this check exists to stop. Same fail-closed rule the
+    // shard parse below follows; leaving it out here was the half of it.
+    if (err?.code !== 'ENOENT') throw err;
+    return ids;
   }
   for (const name of names) {
     if (!name.endsWith('.json')) continue;
