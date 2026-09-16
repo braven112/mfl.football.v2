@@ -47,13 +47,13 @@ const availableYears = Object.entries(rostersFeeds)
 
 const selectedYear = availableYears[0] ?? FALLBACK_YEAR;
 
-const rostersData = getModuleData(rostersFeeds[`../../../data/afl-fantasy/mfl-feeds/${selectedYear}/rosters.json`]) as any;
-const playersData = getModuleData(playersFeeds[`../../../data/afl-fantasy/mfl-feeds/${selectedYear}/players.json`]) as any;
-const adpData = getModuleData(adpFeeds[`../../../data/afl-fantasy/mfl-feeds/${selectedYear}/adp-dynasty.json`]) as any;
-const picksData = getModuleData(picksFeeds[`../../../data/afl-fantasy/mfl-feeds/${selectedYear}/futureDraftPicks.json`]) as any;
-const tradeBaitData = getModuleData(tradeBaitFeeds[`../../../data/afl-fantasy/mfl-feeds/${selectedYear}/tradeBait.json`]);
+const rostersData = getModuleData(rostersFeeds[`../../../../data/afl-fantasy/mfl-feeds/${selectedYear}/rosters.json`]) as any;
+const playersData = getModuleData(playersFeeds[`../../../../data/afl-fantasy/mfl-feeds/${selectedYear}/players.json`]) as any;
+const adpData = getModuleData(adpFeeds[`../../../../data/afl-fantasy/mfl-feeds/${selectedYear}/adp-dynasty.json`]) as any;
+const picksData = getModuleData(picksFeeds[`../../../../data/afl-fantasy/mfl-feeds/${selectedYear}/futureDraftPicks.json`]) as any;
+const tradeBaitData = getModuleData(tradeBaitFeeds[`../../../../data/afl-fantasy/mfl-feeds/${selectedYear}/tradeBait.json`]);
 const tradeBaitByFranchiseData = getModuleData(
-  tradeBaitByFranchiseFeeds[`../../../data/afl-fantasy/mfl-feeds/${selectedYear}/tradeBait-by-franchise.json`]
+  tradeBaitByFranchiseFeeds[`../../../../data/afl-fantasy/mfl-feeds/${selectedYear}/tradeBait-by-franchise.json`]
 );
 
 // Auth — must be an AFL owner

@@ -99,6 +99,18 @@ export default function TeamPanel({
             rankingLookup={rankingLookup}
           />
 
+          <DraftPickSelector
+            draftPicks={selectedTeam.draftPicks}
+            selectedPicks={tradeSide.draftPicks}
+            teamFranchiseId={selectedTeam.franchiseId}
+            onAdd={(pick) =>
+              dispatch({ type: 'ADD_DRAFT_PICK', side, pick })
+            }
+            onRemove={(pick) =>
+              dispatch({ type: 'REMOVE_DRAFT_PICK', side, pick })
+            }
+          />
+
           {selectedPlayers.length > 0 && (
             <div className="team-panel__selected">
               <h3 className="team-panel__section-title">In This Trade</h3>
@@ -122,18 +134,6 @@ export default function TeamPanel({
               ))}
             </div>
           )}
-
-          <DraftPickSelector
-            draftPicks={selectedTeam.draftPicks}
-            selectedPicks={tradeSide.draftPicks}
-            teamFranchiseId={selectedTeam.franchiseId}
-            onAdd={(pick) =>
-              dispatch({ type: 'ADD_DRAFT_PICK', side, pick })
-            }
-            onRemove={(pick) =>
-              dispatch({ type: 'REMOVE_DRAFT_PICK', side, pick })
-            }
-          />
 
           <CapImpactCard
             team={selectedTeam}
