@@ -111,6 +111,39 @@ export function shouldPublish({ trigger, aheadBy }) {
  * The API rather than git ancestry on purpose: the rollup's checkout is
  * shallow, and deepening it to run one `merge-base` costs more than one
  * request. Returns `null` on any failure — the caller treats that as fail-open.
+ *
+ * THE DECLARED PARAMETER BLOCK BELOW IS LOAD-BEARING, not decoration. A
+ * destructured option bag in a `.mjs` is typed from the destructuring ALONE,
+ * so a bare name with no default contributes nothing to the inferred shape:
+ * `{ repo, token, fetchImpl = fetch }` infers as `{ fetchImpl?: … }` and every
+ * caller passing `repo` is a ts(2353). That is the `staleOptionShapes` class,
+ * driven to zero and pinned there by tests/typecheck-baseline.typecheck.ts —
+ * the same trap `redactTradeOffer` hit, recorded in the baseline's own
+ * provenance note. Declaring the parameters is the fix; a `= undefined`
+ * default is not, because it infers the type AS `undefined` and breaks every
+ * caller passing a real value.
+ *
+ * And do not name a JSDoc tag in the prose of a doc comment. Writing the tag
+ * name inline here is what broke this block on the first attempt: the parser
+ * read it as a real tag, took the next word as the parameter name, and
+ * discarded the genuine declarations underneath — so the comment explaining
+ * the fix was the thing defeating it.
+ *
+ * The injected fetch is typed as the SLICE actually used — a URL, optional
+ * init, and a response read for `ok`, `status` and `json()` — rather than as
+ * `typeof fetch`. The real `fetch` still satisfies it (its parameter is wider,
+ * which contravariance allows, and `Response` carries all three members), and
+ * a test can hand over a three-property stub without an `as unknown as` cast.
+ * Casting at the call sites would have been the other way to green, and the
+ * worse one: it suppresses exactly the mismatch this type exists to catch.
+ *
+ * @param {object} [options]
+ * @param {string} [options.repo] `owner/name`, normally `GITHUB_REPOSITORY`.
+ * @param {string} [options.token] A token with read access to the repo.
+ * @param {(url: string, init?: RequestInit) => Promise<{ ok: boolean, status: number, json: () => Promise<any> }>} [options.fetchImpl]
+ *   Injected by tests; defaults to the global `fetch`.
+ * @returns {Promise<number|null>} Commits `staging` has that `main` lacks, or
+ *   `null` when the comparison could not be made.
  */
 export async function fetchAheadBy({ repo, token, fetchImpl = fetch } = {}) {
   if (!repo || !token) return null;
