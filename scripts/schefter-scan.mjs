@@ -48,6 +48,7 @@ import { getRedisConfig } from './lib/redis.mjs';
 import { createUpstashClient } from './lib/redis-client.mjs';
 import { getNonEmpty } from './lib/env.mjs';
 import { leagueYearFor } from './lib/schefter-league-year.mjs';
+import { isApprovalQueueRow, isLockoutImpersonationError } from './lib/pending-trade-rows.mjs';
 import { postToGroupMe as sharedPostToGroupMe } from './lib/groupme.mjs';
 import { postToGroupMeCapped } from './lib/groupme-capped.mjs';
 import { resolveFranchiseMentions } from './lib/groupme-mentions.mjs';
@@ -1162,13 +1163,9 @@ async function loadTeamsWithShortNames(configPath) {
  * queue for the whole league. For all other user-specific write endpoints, use
  * the owner's cookie via getAuthUser() per repo auth rules.
  */
-async function fetchPendingCommishTrades(leagueId, year) {
-  const mflCookie = process.env.MFL_USER_ID;
-  if (!mflCookie) {
-    console.log('  [rumor-mill] MFL_USER_ID not set — cannot fetch pending commish trades');
-    return { trades: null, error: 'MFL_USER_ID env missing' };
-  }
-  const url = `https://${MFL_HOST}/${year}/export?TYPE=pendingTrades&L=${leagueId}&FRANCHISE_ID=0000&JSON=1`;
+async function readPendingTradesExport(leagueId, year, mflCookie, franchiseId) {
+  const fidParam = franchiseId ? `&FRANCHISE_ID=${franchiseId}` : '';
+  const url = `https://${MFL_HOST}/${year}/export?TYPE=pendingTrades&L=${leagueId}${fidParam}&JSON=1`;
   try {
     // mflFetch, NOT a bare fetch: MFL_HOST defaults to api.myfantasyleague.com,
     // which 302s to the league's www## host, and undici DROPS the Cookie header
@@ -1187,7 +1184,9 @@ async function fetchPendingCommishTrades(leagueId, year) {
     if (text.trim().startsWith('<')) return { trades: null, error: 'Got HTML — auth likely failed' };
     let data;
     try { data = JSON.parse(text); } catch { return { trades: null, error: 'Invalid JSON' }; }
-    if (data?.error) return { trades: null, error: `MFL error: ${JSON.stringify(data.error)}` };
+    if (data?.error) {
+      return { trades: null, error: `MFL error: ${JSON.stringify(data.error)}`, lockout: isLockoutImpersonationError(data.error) };
+    }
     const pending = data?.pendingTrades;
     if (!pending || pending === '') return { trades: [] };
     const raw = pending?.pendingTrade ?? pending?.trade;
@@ -1196,6 +1195,44 @@ async function fetchPendingCommishTrades(leagueId, year) {
   } catch (err) {
     return { trades: null, error: err.message };
   }
+}
+
+/**
+ * Fetch trades pending commish approval. Requires MFL_USER_ID env (the
+ * commish cookie). Only ACCEPTED trades are in that queue, never open offers.
+ *
+ * NOTE: This is the ONE non-contract context that uses the commish cookie
+ * for a READ — justified because only the commish can see the "pending approval"
+ * queue for the whole league. For all other user-specific write endpoints, use
+ * the owner's cookie via getAuthUser() per repo auth rules.
+ *
+ * FRANCHISE_ID=0000 is MFL's impersonation parameter, and with the league's
+ * "commissioner lockout" on (both leagues, `lockout: "Yes"`) MFL refuses it:
+ * "Commissioner can not impersonate another franchise with lockout on." That
+ * refusal was logged as one quiet line on every scan, and the lane never
+ * posted. On that refusal, read the commissioner's OWN view (no FRANCHISE_ID),
+ * which does not impersonate anyone. Rows are always filtered through
+ * isApprovalQueueRow, so the commish's own open proposals are never announced.
+ */
+async function fetchPendingCommishTrades(leagueId, year) {
+  const mflCookie = process.env.MFL_USER_ID;
+  if (!mflCookie) {
+    console.log('  [rumor-mill] MFL_USER_ID not set — cannot fetch pending commish trades');
+    return { trades: null, error: 'MFL_USER_ID env missing' };
+  }
+  let result = await readPendingTradesExport(leagueId, year, mflCookie, '0000');
+  if (result.lockout) {
+    console.log('  [rumor-mill] Commissioner lockout refused FRANCHISE_ID=0000 — reading the commissioner\'s own view instead');
+    result = await readPendingTradesExport(leagueId, year, mflCookie, null);
+  }
+  if (!result.trades) return result;
+  const trades = result.trades.filter(isApprovalQueueRow);
+  const skipped = result.trades.length - trades.length;
+  if (skipped) {
+    const shapes = result.trades.filter((t) => !isApprovalQueueRow(t)).map((t) => Object.keys(t).sort().join(','));
+    console.log(`  [rumor-mill] Ignored ${skipped} row(s) not shaped like an approval-queue trade (open proposals are never announced). Keys: ${[...new Set(shapes)].join(' | ')}`);
+  }
+  return { trades };
 }
 
 /** Build the natural-language asset phrase for a side of the trade */
@@ -1217,7 +1254,7 @@ function generatePendingTradeTemplate(trade, players, teams) {
   const side1 = describeSide(trade.franchise1_gave_up, players, teams);
   const side2 = describeSide(trade.franchise2_gave_up, players, teams);
 
-  return `Hearing a deal is on the commish's desk between the ${team1} and the ${team2} — ${side1} going one way, ${side2} coming back. The league awaits. Developing.`;
+  return `Deal agreed, per sources: the ${team1} and the ${team2} have a trade on the commish's desk — ${side1} going one way, ${side2} coming back. Only the sign-off remains. Developing.`;
 }
 
 /**
@@ -1235,7 +1272,7 @@ async function generatePendingTradeAiBody(templateBody, trade, players, teams, {
   const { playerNames: gave1Players, pickNames: gave1Picks } = parseTradeAssets(trade.franchise1_gave_up, players, teams);
   const { playerNames: gave2Players, pickNames: gave2Picks } = parseTradeAssets(trade.franchise2_gave_up, players, teams);
 
-  let system = `You are Claude Schefter — a dynasty fantasy football beat reporter channeling Adam Schefter's rumor-mill energy. You've just heard a trade has landed on the commissioner's desk awaiting approval. Voice: breaking-news tease, "I'm told...", "League sources tell me...", "hearing...". 2-3 sentences. End with "Developing." or a similar tease. Reference both franchises by name and loosely name the key assets. Do NOT include a @Brandon tag — that will be appended separately. Never break character.`;
+  let system = `You are Claude Schefter — a dynasty fantasy football beat reporter channeling Adam Schefter's rumor-mill energy. You've just heard a trade has landed on the commissioner's desk awaiting approval. Both sides have already agreed — frame it as essentially done, with only the commish's sign-off left, never as talks or an offer. Voice: breaking-news tease, "I'm told...", "League sources tell me...", "hearing...". 2-3 sentences. End with "Developing." or a similar tease. Reference both franchises by name and loosely name the key assets. Do NOT include a @Brandon tag — that will be appended separately. Never break character.`;
 
   // Append personality + lore + bits when available. Falls back silently.
   if (lore && lore.ok && lore.assembledSuffix) {
@@ -1304,7 +1341,10 @@ async function scanPendingTrades(league) {
   const prevWatermark = Array.isArray(feed.pendingTradeWatermark) ? feed.pendingTradeWatermark : [];
 
   const now = new Date();
-  const year = now.getMonth() >= 1 ? now.getFullYear() : now.getFullYear() - 1;
+  // The league's OWN MFL year (AFL rolls June 1, TheLeague Feb 14). A calendar
+  // Feb-1 heuristic names an AFL league year MFL has not created yet for four
+  // months of the year.
+  const year = leagueYearFor(league, now);
 
   const [result, players, teams] = await Promise.all([
     fetchPendingCommishTrades(league.leagueId, year),
@@ -1333,7 +1373,9 @@ async function scanPendingTrades(league) {
   console.log(`  Already posted: ${prevWatermark.length}, new: ${newPending.length}`);
 
   const newPosts = [];
-  const leagueSlug = 'theleague';
+  // The SCANNED league. This was a 'theleague' literal, so an AFL pending
+  // trade would have been tagged as TheLeague's.
+  const leagueSlug = league.slug;
 
   // Load personality + lore + bits + rolling post-memory ONCE per scan cycle.
   // If anything is missing the lore loader falls back and logs a warning;
@@ -1431,10 +1473,13 @@ async function scanPendingTrades(league) {
         feed.posts = feedWithPost.posts;
       }
 
-      // GroupMe: Schefter is the voice of the league — require his bot, never fall back to Roger
-      const schefterBotId = process.env.GROUPME_SCHEFTER_BOT_ID;
+      // GroupMe: Schefter is the voice of the league — require his bot, never
+      // fall back to Roger. The bot is the SCANNED league's: this read
+      // GROUPME_SCHEFTER_BOT_ID directly, which is TheLeague's bot, so an AFL
+      // pending trade would have been announced in TheLeague's group chat.
+      const schefterBotId = league.groupMeSchefterBotId;
       if (!schefterBotId) {
-        console.warn('  [GroupMe] GROUPME_SCHEFTER_BOT_ID not set — skipping GroupMe post (Roger bot is reserved for deadlines)');
+        console.warn(`  [GroupMe] No Schefter bot id for ${league.slug} — skipping GroupMe post (Roger bot is reserved for deadlines)`);
       } else if (DRY_RUN) {
         console.log(`  [dry-run] Would post to GroupMe:\n${post.headline}\n\n${post.body}\n\n@Brandon the league awaits.`);
       } else {

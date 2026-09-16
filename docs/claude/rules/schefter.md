@@ -376,6 +376,18 @@ trade-offer rumor lane, the trade-bait lane, and the speculation scanner. So:
   actual trade because a rumor or an invented hypothetical spent the slot
   first. The three lanes this governs are trade offers, trade bait and
   speculation.
+- **The pending-trade lane reads the commissioner's APPROVAL queue, never
+  proposals, and it must never impersonate.** `FRANCHISE_ID=0000` is MFL's
+  impersonation parameter, and with commissioner lockout on (`lockout: "Yes"`,
+  both leagues) MFL refuses it with "Commissioner can not impersonate another
+  franchise with lockout on." The lane logged that on every scan until Sep 2026
+  and never posted. On that refusal it now reads the commissioner's own view,
+  and every row passes `isApprovalQueueRow` (`scripts/lib/pending-trade-rows.mjs`),
+  so an owner-view open proposal (`will_give_up`/`offeredto`) is never
+  announced as nearly done. The lane is also league-scoped: bot from
+  `league.groupMeSchefterBotId`, year from `leagueYearFor`. It had read
+  TheLeague's bot directly, so the first AFL pending trade would have been
+  announced in TheLeague's chat. Guard: `tests/schefter-pending-trade-lane.test.ts`.
 - **The whisper-back exclusion is shared with the CTA predicate.** The
   scanner's `isTradeFlavoredTip` (the CTA router) drops a tip with
   `repliesToPostId` before checking `topic`, because the owner chose to reply
