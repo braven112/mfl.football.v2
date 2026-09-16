@@ -169,7 +169,7 @@ const leagueLinks = ALL_LEAGUES.map((league) => ({
 					button.addEventListener('click', async function () {
 						button.disabled = true;
 						try {
-							await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
+							await fetch('/api/auth/logout', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include' });
 						} catch (e) {
 							// Clearing the cookie is the server's job. A failed call means
 							// we are still signed in, and reloading shows that honestly.
