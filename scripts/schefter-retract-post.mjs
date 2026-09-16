@@ -40,6 +40,17 @@
  *
  * A tombstone is permanent. Putting a retracted id back means deleting its
  * entry from `retractedIds` by hand — deliberate friction.
+ *
+ * KNOWN GAP — the ARCHIVE leg is not race-protected, only the live feed is.
+ * `mergeByPath` (lib/merge-schefter-feed.mjs) reconciles schefter-feed.json and
+ * post-history.json; every other path, archive shards included, is taken from
+ * our checkout VERBATIM. So a weekly archive job that checked out before a
+ * retraction and commits after it writes its shard back with the post still in
+ * it, and `/news/<id>` and the OG renderer both fall back to archive shards.
+ * The live feed stays clean — `retractedIds` covers that — but the post can
+ * still resolve from the archive. After retracting anything, check that no
+ * archive run raced you and re-run if one did. Tracked in
+ * docs/claude/followups/2026-09-16-retraction-archive-shard-race.md.
  */
 
 import { promises as fs } from 'node:fs';
@@ -83,6 +94,7 @@ async function filesToScan() {
 }
 
 let removedTotal = 0;
+let tombstonedTotal = 0;
 
 for (const file of await filesToScan()) {
   let parsed;
@@ -117,6 +129,7 @@ for (const file of await filesToScan()) {
   }
 
   removedTotal += removed;
+  tombstonedTotal += tombstonesAdded;
   if (DRY_RUN) {
     console.log(`  [dry-run] would remove ${removed} post(s) from ${file}`);
     if (tombstonesAdded) console.log(`  [dry-run] would tombstone ${tombstonesAdded} id(s) in ${file}`);
@@ -131,5 +144,13 @@ for (const file of await filesToScan()) {
 }
 
 const missing = [...targets].filter(Boolean);
-console.log(`\n${DRY_RUN ? '[dry-run] ' : ''}retracted ${removedTotal} post row(s) for ${missing.length} id(s).`);
-if (removedTotal === 0) process.exitCode = 1;
+console.log(
+  `\n${DRY_RUN ? '[dry-run] ' : ''}retracted ${removedTotal} post row(s) ` +
+    `and wrote ${tombstonedTotal} tombstone(s) for ${missing.length} id(s).`
+);
+// Writing ONLY a tombstone is a success, not a no-op. The row may already be
+// absent from this checkout while a stale cron still carries it — which is
+// precisely the race the tombstone exists for. Exiting 1 there would make a
+// `node … && git commit` wrapper skip committing the bar that was the whole
+// point of the run. Failure means nothing happened at all.
+if (removedTotal === 0 && tombstonedTotal === 0) process.exitCode = 1;

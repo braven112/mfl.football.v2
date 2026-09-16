@@ -126,6 +126,28 @@ describe('appendToFeed refuses an id that only survives in the archive', () => {
     expect(JSON.parse(readFileSync(feedPath, 'utf8')).posts).toHaveLength(0);
   });
 
+  /**
+   * A retracted id is published. Without this, a full retraction (which clears
+   * the live feed AND every archive shard) makes the id read as never posted:
+   * the next run regenerates the article, appendToFeed reports a write, the
+   * caller buzzes GroupMe with a deep link — and mergeFeed then filters the
+   * post right back out on the same tombstone. The chat gets a dead link.
+   */
+  it('refuses an id that was retracted, even though no row remains anywhere', async () => {
+    writeFileSync(
+      feedPath,
+      JSON.stringify({ posts: [], retractedIds: ['sf_2026_draft_grades'] }),
+    );
+    expect(await appendToFeed(feedPath, post('sf_2026_draft_grades'))).toBe(false);
+    expect(await isDuplicate(feedPath, 'sf_2026_draft_grades')).toBe(true);
+    expect(JSON.parse(readFileSync(feedPath, 'utf8')).posts).toHaveLength(0);
+  });
+
+  it('still writes a different id alongside a tombstone', async () => {
+    writeFileSync(feedPath, JSON.stringify({ posts: [], retractedIds: ['sf_other'] }));
+    expect(await appendToFeed(feedPath, post('sf_2026_draft_grades'))).toBe(true);
+  });
+
   it('fails closed on an unreadable shard rather than writing a duplicate', async () => {
     mkdirSync(path.join(dir, 'schefter-archive'));
     writeFileSync(path.join(dir, 'schefter-archive', '2026.json'), '[{"id": "sf_ann');
@@ -191,12 +213,28 @@ describe('--week only waives the guard where the week is part of the id', () => 
 
   it('the runner derives the waiver from the id, not from a per-type flag', () => {
     const src = readFileSync('scripts/schefter-weekly-articles.mjs', 'utf8');
-    expect(src).toMatch(
-      /const idVariesByWeek = mod\.config\.id\(year, 1, league\) !== mod\.config\.id\(year, 2, league\);/,
-    );
     expect(src).toMatch(/opts\.week != null && idVariesByWeek/);
     // The unconditional bypass that shipped the risk.
     expect(src).not.toMatch(/opts\.week != null\s*\n?\s*\?\s*true/);
+  });
+
+  /**
+   * cut-watch's id is built from `new Date()`, so a run crossing midnight
+   * between two probes would see two different ids and read a DATE-scoped type
+   * as week-scoped — handing back the very guard bypass this section removes.
+   * Re-probing week 1 detects the drift; a type whose id is unstable must
+   * classify as "does not vary", which runs the guard.
+   */
+  it('a clock-derived id that drifts mid-probe classifies as NOT week-scoped', () => {
+    const classify = (id: (y: number, w: number, l: string) => string) =>
+      id(2026, 1, 'theleague') !== id(2026, 2, 'theleague') &&
+      id(2026, 1, 'theleague') === id(2026, 1, 'theleague');
+
+    // A stable week-scoped id: varies by week, same answer on a re-probe.
+    expect(classify((_y, w) => `sf_w${w}`)).toBe(true);
+    // A date-derived id that ticks over between probes — every call differs.
+    let tick = 0;
+    expect(classify(() => `sf_cut_watch_${tick++}`)).toBe(false);
   });
 });
 
@@ -231,5 +269,16 @@ describe('schefter-retract-post records the tombstone', () => {
 
   it('still writes when this run removed nothing, so a re-run re-asserts the bar', () => {
     expect(src).toMatch(/if \(removed === 0 && tombstonesAdded === 0\) continue;/);
+  });
+
+  /**
+   * Writing only a tombstone is a SUCCESS. The row is often already absent
+   * from this checkout while a stale cron still carries it — the exact race
+   * the tombstone exists for. Exiting 1 there makes a `node … && git commit`
+   * wrapper skip committing the bar that was the point of the run.
+   */
+  it('does not exit non-zero when it wrote a tombstone but removed no rows', () => {
+    expect(src).toMatch(/if \(removedTotal === 0 && tombstonedTotal === 0\) process\.exitCode = 1;/);
+    expect(src).not.toMatch(/if \(removedTotal === 0\) process\.exitCode = 1;/);
   });
 });

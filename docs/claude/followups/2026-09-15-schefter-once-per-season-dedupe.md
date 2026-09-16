@@ -123,14 +123,16 @@ else is allowed to empty it?* Recorded in
 
 ## Verification
 
-- `pnpm test:unit` — 462/463 suites pass. The one failure,
-  `tests/season-ledger.test.ts` (`theleague 0001 2026 diverged`), reproduces on
-  a clean `origin/main` worktree and touches no file in this diff: it is the
-  roster-sync cron's live-season data drifting between
-  `franchise-history.json` and `season-ledger.json`. Pre-existing, reported
-  separately.
+- `pnpm test:unit` — full suite green after rebasing onto current `origin/main`.
 - Each new guard was confirmed RED against the pre-fix code before being kept.
-- `node --check` on all seven edited `.mjs` files.
+- `node --check` on every edited `.mjs` file.
+- A `tests/season-ledger.test.ts` failure seen mid-review was a STALE WORKTREE,
+  not a real one: this branch was based on a main that predated
+  [#1107](https://github.com/braven112/mfl.football.v2/pull/1107), which commits
+  the franchise-history derived chain whole. CI was green throughout because a
+  PR's checks run the merge ref, which already had #1107. Rebasing fixed it.
+  Worth recording because the failure looked exactly like a live data bug and
+  the wrong diagnosis was one `git fetch` away from being filed as real work.
 
 ## Context to start cold
 

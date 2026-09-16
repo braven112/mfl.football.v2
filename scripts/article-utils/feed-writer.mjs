@@ -75,8 +75,16 @@ export function _resetArchiveCache() {
  * not repeat — `sf_<year>_…` for a season, `assist_…_<year>_w<week>` for a
  * week of one season. A season-less id would be permanently suppressed by this
  * check the first time it archived, which is why assistantPostId carries a year.
+ *
+ * A RETRACTED id counts as published, and that is the point of the tombstone.
+ * A full retraction removes the row from the live feed AND every archive shard,
+ * so without this branch the id reads as never posted: the next run regenerates
+ * the article, `appendToFeed` reports a write, the caller buzzes GroupMe with a
+ * deep link — and then `mergeFeed` filters the post out again at push time on
+ * the same tombstone. The chat gets a link to a post that will never exist.
  */
 async function isPublished(feedPath, id, feed) {
+  if (Array.isArray(feed.retractedIds) && feed.retractedIds.includes(id)) return true;
   if (feed.posts.some(p => p.id === id)) return true;
   return (await archivedIds(feedPath)).has(id);
 }
