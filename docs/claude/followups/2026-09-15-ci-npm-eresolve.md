@@ -104,10 +104,16 @@ back materially **worse** than it was written, and grew a guard.
   - Corepack: verified locally, not assumed. Corepack fetched 10.24.0 with no
     interactive prompt, and `pnpm install --frozen-lockfile` under 10.24.0
     reported "Lockfile is up to date" and left `pnpm-lock.yaml` untouched.
-  - Vercel: verified by this PR's own preview build (it installs through
-    Vercel, not the composite action). CI verifies the action half — 34
-    workflows including `ci.yml` go through it, so a bad resolve is a red PR,
-    not a silent cron.
+  - Vercel: verified by this PR's own preview build — Vercel installs on its
+    own, not through the composite action, so it is the only thing that
+    exercises the `packageManager` field the way production will. Note the
+    first push produced NO build: `vercel.json`'s `ignoreCommand` cancels a
+    build for a branch with no open PR, and the branch was pushed before the
+    PR existed, so the reassuring "Vercel ✓" on that commit was a CANCELED
+    build, not a passing one. A skipped build and a green one look alike in
+    the checks list; re-check after the PR is open.
+  - CI verifies the action half — 34 workflows including `ci.yml` install
+    through it, so a bad resolve is a red PR, not a silent cron.
   - Guard: `packageManager` must be pinned, and the shared action must not
     carry a `version:`.
 

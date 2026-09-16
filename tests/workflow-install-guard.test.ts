@@ -135,22 +135,37 @@ describe('pnpm version is single-sourced', () => {
  * we find out when something does.
  */
 describe('no-install jobs run dependency-free scripts', () => {
-  // A runner, then any number of intervening tokens, then a repo script.
-  // The tolerant middle is deliberate: the first version required every token
-  // between `node` and the path to start with a dash, so it missed
-  // `node --import tsx scripts/foo.ts` and every `npx`/`pnpm exec`/`tsx` form.
-  // Over-matching here is harmless (we check a script that may not run);
-  // under-matching means a job is never checked at all.
-  const RUNNERS = String.raw`(?:node|npx|tsx|ts-node|pnpm\s+exec|pnpm\s+dlx)`;
-  const SCRIPT_PATH = String.raw`(?:\.\/)?((?:scripts|src)\/[A-Za-z0-9._/-]+\.(?:mjs|js|ts))`;
-  const NODE_SCRIPT_RE = new RegExp(String.raw`\b${RUNNERS}\s+(?:[^\s;|&]+\s+)*?${SCRIPT_PATH}`, 'g');
-  // NOT global. `.test()` on a /g/ regex advances its lastIndex, and a shared
-  // instance then makes the NEXT subject start mid-string — which silently
-  // emptied the entrypoint list for every workflow after the first.
-  const ANY_RUNNER_TEST = new RegExp(String.raw`(^|[;&|(\s])${RUNNERS}(\s|$)`);
-  const NODE_SCRIPT_TEST = new RegExp(String.raw`\b${RUNNERS}\s+(?:[^\s;|&]+\s+)*?${SCRIPT_PATH}`);
+  // Tokenize the line rather than matching "runner … script" with one regex.
+  // The regex form needed a `(?:[^\s;|&]+\s+)*?` middle to tolerate flags like
+  // `node --import tsx scripts/x.ts`, and nested quantifiers of that shape are
+  // a ReDoS (CodeQL js/redos, severity error, on this very line). Splitting on
+  // shell separators is both safer and easier to read.
+  const RUNNER_TOKENS = new Set(['node', 'npx', 'tsx', 'ts-node', 'pnpm']);
+  const SCRIPT_TOKEN_RE = /^(?:\.\/)?((?:scripts|src)\/[A-Za-z0-9._/-]+\.(?:mjs|js|ts))$/;
   // Inline code and version probes run no repo script and need no install.
   const INLINE_NODE_RE = /\bnode\s+(?:-e|-p|--eval|--print|--check|-c|--version|-v)\b/;
+
+  const tokensOf = (line: string): string[] => line.split(/[\s;|&()]+/).filter(Boolean);
+  const hasRunner = (line: string): boolean => tokensOf(line).some((t) => RUNNER_TOKENS.has(t));
+
+  /**
+   * Every repo script named after a runner on this line. Over-matching is
+   * harmless (we check a script that may not run); under-matching means a job
+   * is never checked at all, which is the failure this guard exists to stop.
+   */
+  const entrypointsIn = (line: string): string[] => {
+    const found: string[] = [];
+    let sawRunner = false;
+    for (const token of tokensOf(line)) {
+      if (RUNNER_TOKENS.has(token)) {
+        sawRunner = true;
+        continue;
+      }
+      const match = SCRIPT_TOKEN_RE.exec(token);
+      if (match && sawRunner) found.push(match[1]);
+    }
+    return found;
+  };
   const SHARED_SETUP_USES = './.github/actions/setup';
 
   interface Job {
@@ -178,17 +193,10 @@ describe('no-install jobs run dependency-free scripts', () => {
       const runs = steps.map((s) => (typeof s?.run === 'string' ? s.run : '')).filter(Boolean);
       const lines = runs.flatMap((run) => run.split('\n')).filter((line) => !line.trimStart().startsWith('#'));
 
-      const entrypoints = [
-        ...new Set(
-          lines.flatMap((line) => {
-            NODE_SCRIPT_RE.lastIndex = 0;
-            return [...line.matchAll(NODE_SCRIPT_RE)].map((m) => m[1]);
-          }),
-        ),
-      ].sort();
+      const entrypoints = [...new Set(lines.flatMap(entrypointsIn))].sort();
 
       const unclassifiedRunners = lines
-        .filter((line) => ANY_RUNNER_TEST.test(line) && !INLINE_NODE_RE.test(line) && !NODE_SCRIPT_TEST.test(line))
+        .filter((line) => hasRunner(line) && !INLINE_NODE_RE.test(line) && entrypointsIn(line).length === 0)
         .map((line) => `${file} [${name}]  ${line.trim()}`);
 
       return { workflow: file, job: name, installs, entrypoints, unclassifiedRunners };
