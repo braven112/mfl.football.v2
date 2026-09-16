@@ -189,9 +189,18 @@ export function aggregateSnapCounts(rows) {
 }
 
 /**
+ * A player's season totals as the page reads them.
+ *
+ * @typedef {object} SnapCountTotals
+ * @property {number} offenseSnaps every REG offensive snap, across every team
+ * @property {number} offensePct   share of his team's plays in the games he played
+ * @property {number} gamesPlayed  games with at least one offensive snap
+ */
+
+/**
  * Match aggregated players to MFL ids by normalized name + position.
  *
- * @returns {{ matched: Record<string, object>, matchCount: number, missCount: number }}
+ * @returns {{ matched: Record<string, SnapCountTotals>, matchCount: number, missCount: number }}
  */
 export function matchToMflPlayers(snapPlayers, mflPlayers) {
   const mflByNamePos = new Map();
