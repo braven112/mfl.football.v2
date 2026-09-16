@@ -270,42 +270,73 @@ describe('every Front Office page has a way back', () => {
 });
 
 describe('nav', () => {
-  it('collapses Cap & Contracts down to one Front Office link', () => {
-    const link = navLinks.find((l: any) => l.id === 'front-office');
-    expect(link?.path).toBe('/front-office');
-    expect(link?.leagueOnly).toBeUndefined();
+  const warRoom = (navConfig.sections as any[]).find((s) => s.id === 'offseason-war-room');
+
+  it('has no Front Office section — the hub is a link, not a category', () => {
+    expect((navConfig.sections as any[]).find((s) => s.id === 'cap-contracts')).toBeUndefined();
+    expect(navLinks.find((l: any) => l.id === 'front-office')).toBeUndefined();
   });
 
   it('drops the old per-page nav links', () => {
-    // `rosters` is deliberately NOT in this list — see the case below. The
-    // other three moved into the hub's tool rail and have no nav entry.
+    // `rosters` is deliberately NOT in this list — see below. These three
+    // moved into the hub's tool rail and have no nav entry of their own.
     for (const id of ['contracts', 'trade-builder', 'projected-free-agents']) {
       expect(navLinks.find((l: any) => l.id === id)).toBeUndefined();
     }
   });
 
-  it('keeps Rosters in the nav, first in Offseason War Room', () => {
-    // Collapsing Cap & Contracts took the site's most-visited page
-    // (popularity 100 in the directory) out of the nav entirely, and for the
-    // AFL left no `/rosters` entry at all — TheLeague at least kept the
-    // ?view=coach and ?view=planner entries, both theleague-only. It is back
-    // by request, at the top of the War Room rather than in the hub, because
-    // the hub is a door to the salary tools and this is the roster itself.
-    const warRoom = (navConfig.sections as any[]).find((s) => s.id === 'offseason-war-room');
-    expect(warRoom.links[0].id).toBe('rosters');
-    expect(warRoom.links[0].path).toBe('/rosters');
-
-    // Untagged on purpose: nav-utils reads an untagged link as "every
-    // full-format league" and best-ball is opt-in, so this one entry serves
-    // TheLeague and the AFL while Best Ball keeps its own tagged Rosters.
-    expect(warRoom.links[0].leagueOnly).toBeUndefined();
-    expect(warRoom.links[0].labelAFL).toBeTruthy();
+  it('opens Offseason War Room with League Planner, then Rosters', () => {
+    expect(warRoom.links[0].id).toBe('league-planner');
+    expect(warRoom.links[0].path).toBe('/front-office');
+    expect(warRoom.links[1].id).toBe('rosters');
+    expect(warRoom.links[1].path).toBe('/rosters');
   });
 
-  it('names the section "Front Office" for both leagues, not "Roster & Trades"', () => {
-    const section = (navConfig.sections as any[]).find((s) => s.id === 'cap-contracts');
-    expect(section?.label).toBe('Front Office');
-    expect(section?.labelAFL).toBeUndefined();
+  it('serves both full-format leagues from one untagged entry each', () => {
+    // nav-utils reads an untagged link as "every full-format league" and
+    // best-ball is opt-in, so one entry covers TheLeague and the AFL while
+    // Best Ball keeps its own tagged Rosters and gains no duplicate. Each
+    // carries an AFL label because the AFL calls both of these something else.
+    for (const link of warRoom.links.slice(0, 2)) {
+      expect(link.leagueOnly, `${link.id} should not be league-tagged`).toBeUndefined();
+    }
+    // Rosters carries an AFL label because the AFL drops the "/Salary" half.
+    expect(warRoom.links[1].labelAFL).toBe('Rosters');
+    // League Planner deliberately does NOT: an AFL label of "Keeper Planner"
+    // would collide with the existing /keepers entry of that name.
+    expect(warRoom.links[0].labelAFL).toBeUndefined();
+  });
+
+  it('no longer carries the stale /rosters?view=planner link', () => {
+    // It was labelled "League Planner" but TheLeague's rosters page has no
+    // `planner` tab or content container — its views are roster / analytics /
+    // nextyear, with `planner` left over only in the script's validViews list.
+    // Pre-existing, not introduced by the Front Office work. /front-office is
+    // the surface that actually renders a planner in each league.
+    expect(navLinks.find((l: any) => l.path === '/rosters?view=planner')).toBeUndefined();
+  });
+
+  it('never shows one league two links with the same name in a section', () => {
+    // Per RENDERED league, not per section: several sections carry a tagged
+    // pair on purpose (This Week has a theleague and an afl "Live Scoring",
+    // and the same for "Free Agents"), and exactly one of each pair renders.
+    // What must never happen is one league seeing the same name twice — which
+    // is what a second "League Planner" would have been.
+    for (const league of ['theleague', 'afl'] as const) {
+      for (const section of navConfig.sections as any[]) {
+        if (section.leagueOnly && section.leagueOnly !== league) continue;
+        const visible = (section.links ?? []).filter(
+          (l: any) => !l.leagueOnly || l.leagueOnly === league,
+        );
+        const names = visible.map((l: any) =>
+          league === 'afl' && l.labelAFL ? l.labelAFL : l.label,
+        );
+        expect(
+          new Set(names).size,
+          `${league} sees a repeated name in ${section.id}: ${names.join(', ')}`,
+        ).toBe(names.length);
+      }
+    }
   });
 });
 
