@@ -1091,3 +1091,40 @@ per DOCUMENT rather than per `astro:page-load` — the ClientRouter keeps one
 document, so a per-load registration stacks a listener per page visited. The
 per-load pass is only the sweep that clears what this device already
 dismissed. `NavFooter` keeps no copy; the guard test fails if one grows back.
+
+## 2026-09-16 — A Nav Link Can Point at a View Its Page Does Not Have
+
+Collapsing Cap & Contracts into one Front Office entry took `/rosters` out of
+the drawer with it. That page is `popularity: 100` in `page-directory.json`,
+the highest on the site, and the AFL was left with **no** `/rosters` link at
+all — TheLeague at least kept `?view=coach` and `?view=planner`, both
+`theleague`-only. Both are back now: League Planner first in Offseason War
+Room, Rosters second, and the Front Office section is gone (a category wrapping
+one self-titled link).
+
+Two things worth keeping.
+
+**`validViews` is not the view list.** The removed "League Planner" entry
+pointed at `/rosters?view=planner` and was tagged `theleague`-only — but
+TheLeague's `rosters.astro` has no `planner` tab and no
+`data-view-content="planner"` container. Its views are `roster`, `analytics`
+and `nextyear`. The only trace of `planner` is the client script's
+`validViews` array (~line 10381), which happily accepts the param and then
+activates a view that does not exist. So the link could not reach a planner,
+silently. The AFL is the league that HAS `?view=planner`, and it was the one
+with no link to it. Predates the Front Office work — unchanged at `df8e6c6` —
+so it is not a regression from that, just something the collapse surfaced.
+**A `?view=` link is only as good as the container it names; grep for the
+`data-view-content` before trusting one.**
+
+**Duplicate-label checks belong PER RENDERED LEAGUE, not per section.**
+`/front-office` renders the League Planner for TheLeague and the Keeper Planner
+for the AFL, so `labelAFL: "Keeper Planner"` looked right — and collided with
+the existing `/keepers` entry of that exact name, giving the AFL two different
+pages under one label. The entry is plain "League Planner" in both leagues now.
+The guard added for it failed on its first run against that very change, then
+failed AGAIN incorrectly when written per section: several sections carry a
+deliberate `theleague`/`afl` pair (This Week has two "Live Scoring" and two
+"Free Agents", exactly one of each rendering). The invariant is that no single
+league sees a repeated name — filter by `leagueOnly` first, resolve `labelAFL`,
+then compare. `tests/front-office-section.test.ts` pins it.
