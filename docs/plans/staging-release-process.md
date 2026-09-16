@@ -219,24 +219,53 @@ PR is the right direction against a 5,000/month plan. `/release-review` step 6c
 compensates by naming which commits touched the story closure, so Tuesday's
 batch can be attributed to features rather than guessed at.
 
-### The What's New rollup fires before the release
+### The What's New rollup is wired to the release tag — **done**
 
-`weekly-changelog-rollup.yml` runs `0 4 * * 2` — **Monday 8pm PT**. It publishes
-the week's What's New article and pushes the `site-update` notification to
-owners who opted in.
+**The concern as first written here was wrong, and the correction is worth
+keeping.** This section used to say the Monday rollup "announces features that
+are not live yet" and that owners "tap through and the feature isn't there."
+Measured against the built train on 2026-09-16, it does not: the rollup runs on
+`main` and reads **main's** copy of `weekly-changelog-staging.json`, while a
+feature PR stages its entry on `staging`. That entry only reaches main at the
+promotion, so the cron structurally never sees an unpromoted feature. The worry
+was correct *before* the train existed, when everything landed on main; building
+the train fixed it as a side effect.
 
-Under a Tuesday release, that article announces features that are not live yet.
-Owners get a push notification, tap through, and the feature isn't there.
+**The real defect is the opposite one: the announcement is LATE.** At the
+promotion a release's worth of entries lands on main all at once — 21 of them in
+the first release — and nothing publishes them until the following Monday. Worse
+than a delay, because the article id is `weekly-rollup-<monday>` and the rollup
+refuses a second article for a week that already has one: a Monday cron firing
+the night before a promotion spends that week's id on hotfixes alone and defers
+the release's own entries a further week.
 
-Two ways out, and this needs a call:
+So the rollup now fires on **`push: tags: ['v*']`** — the release tag `/promote`
+pushes right after the fast-forward, which cannot exist before main carries the
+code. The article lands the same day as the release. The plan's original
+instinct was right ("structural rather than two schedules that happen to agree"),
+for a better reason than it gave.
 
-- **[OPEN, recommended]** Move the rollup to fire *after* Tuesday's promotion —
-  either shift the cron a day (`0 4 * * 3`, Tuesday 8pm PT) or trigger it from
-  the promotion workflow so it can never run ahead of the deploy.
-- Or move the release to Monday morning and leave the rollup where it is.
+Three parts, all load-bearing and pinned by
+`tests/changelog-rollup-trigger.test.ts`:
 
-Triggering from the promotion is strictly better than a cron shift: it makes the
-ordering structural rather than two schedules that happen to agree.
+- **The tag trigger**, above.
+- **The cron survives as a floor.** The bypass lane is real — hotfixes and
+  pipeline fixes go straight to main, have no promotion to wait for, and still
+  deserve an article.
+- **`scripts/changelog-rollup-gate.mjs` makes that floor safe.** On a scheduled
+  run it publishes only when `staging` is not ahead of `main`; if a release is
+  pending the cron stands down so the week's id stays free for the promotion's
+  own article. It **fails open** — same rule as `vercel-ignore-build.mjs` — and
+  the cost of that is one release's article deferring a week, which is exactly
+  the behaviour it replaces.
+
+`scripts/wait-for-whats-new-live.mjs` then closes the notification race the
+workflow's own comment used to admit was open. It polls the article's real
+permalink (`redirect: 'manual'` — the `[id]` route's redirect to `/whats-new` is
+precisely what "not deployed yet" looks like) before the push goes out, and
+warns rather than failing on timeout. That race mattered less under a lone
+Monday cron; under the tag trigger the job starts at the *beginning* of the
+production deploy, so the window is reliably open rather than occasionally.
 
 ### `/live` targets the wrong branch
 
@@ -514,8 +543,9 @@ Ranked by what this repo specifically lacks, not by general merit.
    (`.github/workflows/staging-merge-down.yml`). Branch protection (required
    checks for `staging`) is a GitHub settings change, still to do by hand.
 9. ~~Promotion~~ — **done** as `/promote`, with the blackout windows mechanical
-   in `scripts/release-blackout.mjs`. Still to do: move the What's New rollup
-   behind the promotion so it cannot announce ahead of the deploy.
+   in `scripts/release-blackout.mjs`. ~~Move the What's New rollup behind the
+   promotion~~ — **done**, as a release-tag trigger plus a stand-down gate for
+   the cron; see the rollup section above for the correction to why.
 10. Smoke tests, version stamp, error monitoring.
 
 Steps 1–7 are done, and were worth doing regardless of whether the weekly
