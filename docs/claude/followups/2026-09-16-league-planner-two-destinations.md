@@ -1,10 +1,12 @@
 ---
 slug: league-planner-two-destinations
-status: open
+status: shipped
 severity: P3
 opened: 2026-09-16
 found_in_pr: https://github.com/braven112/mfl.football.v2/pull/1127
 found_session: session_012N2ocehj5VUdEL55tkYmPG
+resolved: 2026-09-16
+resolution: renamed-to-front-office
 ---
 
 # Follow-up: "League Planner" names two different pages
@@ -60,3 +62,42 @@ it iterates `nav-config.json` sections and cannot see the footer or the
 directory. A guard that catches this class would have to resolve all three
 surfaces for one league and assert that a label maps to one path. Worth writing
 alongside whichever option is chosen, not before.
+
+---
+
+## Resolved — 2026-09-16
+
+Brandon: *"Front office is the new name. We will remove the planner pages
+eventually."*
+
+Taken as **option 1's destination with option 2's mechanism**: rather than
+repointing the `league-planner` directory id at `/front-office`, the hub took
+the name and that entry was deleted.
+
+- `src/config/nav-config.json` — War Room's first link is now
+  `id: front-office`, `label: "Front Office"`.
+- `src/data/page-directory.json` — the `league-planner` entry is gone; its
+  tags (plus a literal `"league planner"`) folded into `front-office`, whose
+  `popularity` rose 62 → 65 to inherit the traffic.
+- `src/config/footer-config.ts` — TheLeague's My Team column swapped
+  `'league-planner'` for `'front-office'`; and the footer column HEADER that
+  read "Front Office" (six salary/cap sub-reports, in both leagues) was renamed
+  **"Data"**, because the new link would otherwise sit under a same-named
+  heading meaning something else. `tests/footer-config.test.ts` now fails if any
+  column header equals a link label in the same footer.
+
+**Deliberately NOT changed:** `src/pages/theleague/rosters.astro`'s own
+`?view=planner` breadcrumb and tab still read "League Planner". That tab is
+the page being retired; renaming an in-page tab that is scheduled for deletion
+buys nothing, and the collision this follow-up was about was between CHROME
+surfaces, which now agree.
+
+**Still open, but a different gap:** the AFL's footer has no Front Office link
+at all (`AFL_COLUMNS`' My Team is lineup / rosters / keepers / trade-builder /
+notifications). The AFL reaches its hub from the nav only. Not a naming
+problem, so not fixed here.
+
+The guard gap named above is now partly closed — the nav guard also asserts no
+directory entry points at `/rosters?view=planner`, and that the hub keeps the
+old name as a searchable tag. A guard that resolves all three chrome surfaces
+at once still does not exist.

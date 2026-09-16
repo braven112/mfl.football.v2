@@ -1118,11 +1118,40 @@ the switch that consumes the param, not just the containers it can land on.**
 That makes this change a REPOINT, not a cleanup: TheLeague's nav League
 Planner moves from the `rosters.astro` planner tab to `/front-office`, which
 is the deliberate narrowed re-derivation of it (see
-`src/utils/front-office-planner-data.ts`'s header). Intended — but it leaves
-the footer and site search naming the OLD one, because both resolve the
-page-directory id `league-planner`, whose path is still
+`src/utils/front-office-planner-data.ts`'s header). Intended — but it left the
+footer and site search naming the OLD one, because both resolve the
+page-directory id `league-planner`, whose path was still
 `/rosters?view=planner`. Two chrome surfaces, one name, two destinations. The
-duplicate-label guard below is nav-only and cannot see that.
+duplicate-label guard below is nav-only and could not see that.
+
+**Resolved the next day by renaming rather than repointing.** Brandon's call:
+*"Front office is the new name. We will remove the planner pages eventually."*
+So the hub took the name outright — nav link `front-office` / "Front Office",
+the footer's My Team column swapped to that directory id, and the
+`league-planner` directory entry (the one pointing at the doomed tab) was
+folded into `front-office`'s, tags and all. **The old name is kept as a TAG,
+not as an entry**: searching "league planner" still lands on the hub, which
+matters precisely because the tabs have not been removed yet.
+
+Worth naming the general shape, because the first instinct was wrong: when one
+name points at two live destinations, the fix is not always to repoint the
+stragglers at the winner. If one destination is scheduled for deletion, the
+cheaper move is to give its NAME to the survivor and delete the entry — a
+repoint leaves a directory row that has to be deleted again later, and leaves
+the retired page still answering to the name in search. The one thing a rename
+must carry forward is searchability, which is what the tag is for.
+
+**A rename can hand the collision to a different surface.** Giving the hub the
+name "Front Office" put a LINK called Front Office in the footer's My Team
+column directly above a COLUMN HEADER called Front Office holding six other
+pages. A header and a link are drawn differently, so this is milder than the
+first collision — but it is the same word meaning two things on one screen, and
+it appeared only because the first fix landed. The column is **"Data"** now
+(`DECK_COLUMNS` in `src/config/footer-config.ts`; it is a typed union, so the
+rename is three literals TypeScript polices). `tests/footer-config.test.ts`
+pins the SHAPE rather than the string: no column header may equal any link
+label in the same league's footer. Check the surface a rename lands next to,
+not just the one it leaves.
 
 **Duplicate-label checks belong PER RENDERED LEAGUE, not per section.**
 `/front-office` renders the League Planner for TheLeague and the Keeper Planner

@@ -26,7 +26,7 @@ import { getSearchPath } from '../utils/nav-utils';
 export const DECK_COLUMNS = [
   'My Team',
   'This Week',
-  'Front Office',
+  'Data',
   'Record Book',
   'League Office',
 ] as const;
@@ -135,7 +135,7 @@ const THELEAGUE_COLUMNS: ColumnMap = {
     'contracts-manage',
     'franchise-tags',
     'trade-builder',
-    'league-planner',
+    'front-office',
     'import-rankings',
     'notifications',
   ],
@@ -150,7 +150,7 @@ const THELEAGUE_COLUMNS: ColumnMap = {
     'draft-room',
     'mock-draft',
   ],
-  'Front Office': [
+  'Data': [
     'salary-analytics',
     'salary-history',
     'salary-archive',
@@ -186,8 +186,8 @@ const THELEAGUE_COLUMNS: ColumnMap = {
 /**
  * AFL — same five headers, its own links.
  *
- * AFL runs contracts:false / salaryCap:false, so none of TheLeague's Front
- * Office pages exist here; its Front Office is the league-wide tools instead.
+ * AFL runs contracts:false / salaryCap:false, so none of TheLeague's salary
+ * pages exist here; its Data column is the league-wide tools instead.
  * One entry is `soon` — a page Brandon is building.
  */
 const AFL_COLUMNS: ColumnMap = {
@@ -207,7 +207,7 @@ const AFL_COLUMNS: ColumnMap = {
     'afl-players',
     'afl-calendar',
   ],
-  'Front Office': [
+  'Data': [
     'afl-draft-predictor',
     'afl-keeper-analysis',
     { id: 'afl-schedule-strength', label: 'The Gauntlet' },
