@@ -307,12 +307,12 @@ describe('nav', () => {
     expect(warRoom.links[0].labelAFL).toBeUndefined();
   });
 
-  it('no longer carries the stale /rosters?view=planner link', () => {
-    // It was labelled "League Planner" but TheLeague's rosters page has no
-    // `planner` tab or content container — its views are roster / analytics /
-    // nextyear, with `planner` left over only in the script's validViews list.
-    // Pre-existing, not introduced by the Front Office work. /front-office is
-    // the surface that actually renders a planner in each league.
+  it('sends League Planner to /front-office, not the rosters planner tab', () => {
+    // Both destinations work — `?view=planner` aliases to rosters.astro's
+    // `nextyear` view, whose own tab is labelled "League Planner" — so this is
+    // a repoint, not a dead-link cleanup. One name, one destination:
+    // /front-office is the surface that renders a planner in BOTH leagues,
+    // while the rosters tab is TheLeague's alone.
     expect(navLinks.find((l: any) => l.path === '/rosters?view=planner')).toBeUndefined();
   });
 

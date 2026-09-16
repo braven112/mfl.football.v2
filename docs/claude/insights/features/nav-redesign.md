@@ -1092,7 +1092,7 @@ document, so a per-load registration stacks a listener per page visited. The
 per-load pass is only the sweep that clears what this device already
 dismissed. `NavFooter` keeps no copy; the guard test fails if one grows back.
 
-## 2026-09-16 — A Nav Link Can Point at a View Its Page Does Not Have
+## 2026-09-16 — The Highest-Popularity Page Fell Out of the Nav
 
 Collapsing Cap & Contracts into one Front Office entry took `/rosters` out of
 the drawer with it. That page is `popularity: 100` in `page-directory.json`,
@@ -1104,18 +1104,25 @@ one self-titled link).
 
 Two things worth keeping.
 
-**`validViews` is not the view list.** The removed "League Planner" entry
-pointed at `/rosters?view=planner` and was tagged `theleague`-only — but
-TheLeague's `rosters.astro` has no `planner` tab and no
-`data-view-content="planner"` container. Its views are `roster`, `analytics`
-and `nextyear`. The only trace of `planner` is the client script's
-`validViews` array (~line 10381), which happily accepts the param and then
-activates a view that does not exist. So the link could not reach a planner,
-silently. The AFL is the league that HAS `?view=planner`, and it was the one
-with no link to it. Predates the Front Office work — unchanged at `df8e6c6` —
-so it is not a regression from that, just something the collapse surfaced.
-**A `?view=` link is only as good as the container it names; grep for the
-`data-view-content` before trusting one.**
+**A `?view=` alias can live four lines below the list you read.** The removed
+"League Planner" entry pointed at `/rosters?view=planner`, tagged
+`theleague`-only, and TheLeague's `rosters.astro` has no `planner` tab and no
+`data-view-content="planner"` container — its view containers are `roster`,
+`analytics` and `nextyear`. I called the link dead on that evidence and was
+wrong: the client script's `validViews` array (~line 10381) is followed
+immediately by an alias, `urlViewParam === 'planner' ? 'nextyear'`, and the
+`nextyear` tab's own `aria-label` is literally "League Planner". The link
+worked. **Grepping `data-view-content` is necessary and not sufficient — read
+the switch that consumes the param, not just the containers it can land on.**
+
+That makes this change a REPOINT, not a cleanup: TheLeague's nav League
+Planner moves from the `rosters.astro` planner tab to `/front-office`, which
+is the deliberate narrowed re-derivation of it (see
+`src/utils/front-office-planner-data.ts`'s header). Intended — but it leaves
+the footer and site search naming the OLD one, because both resolve the
+page-directory id `league-planner`, whose path is still
+`/rosters?view=planner`. Two chrome surfaces, one name, two destinations. The
+duplicate-label guard below is nav-only and cannot see that.
 
 **Duplicate-label checks belong PER RENDERED LEAGUE, not per section.**
 `/front-office` renders the League Planner for TheLeague and the Keeper Planner
