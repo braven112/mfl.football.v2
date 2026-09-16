@@ -1,12 +1,31 @@
 ---
 /**
- * WaiverWireHero — Tuesday PM through Wednesday 8pm PT hero.
+ * WaiverWireHero — the Tuesday-PM-through-Wednesday waiver slot.
  *
- * Shows top 3 projected free agents (unrostered players) with a countdown
- * timer to the Wednesday 8pm PT waiver deadline.
+ * Shows top 3 projected free agents (unrostered players) with a countdown to
+ * the deadline MFL's own calendar names, and the deadline itself printed in the
+ * viewer's chosen clock.
  * Falls back to WaiverWireHeroStub if no projection data is available.
+ *
+ * THE DEADLINE IS NOT OURS TO COMPUTE. This file used to build it by hand:
+ * "next Wednesday, hour 20" via `new Date(y, m, d, 20, 0, 0)` plus a hardcoded
+ * `+7h`. Three things were wrong with that and only one was visible.
+ *
+ *  - `new Date(y, m, d, 20, …)` is SERVER-LOCAL. It landed on 8pm PT only
+ *    because Vercel runs UTC and 20:00 UTC + 7h is 03:00 UTC — 8pm PT. On a
+ *    developer's Pacific machine the same line counted down to 3am.
+ *  - The `+7h` is PDT. It is an hour out for every waiver run between the
+ *    November clock change and the end of the playoffs.
+ *  - TheLeague does not process at 8pm at all. Its calendar says `WAIVER_BBID`
+ *    **Wed 7:00 PM PT**, so the countdown was a full hour late every week, and
+ *    it read "Closed" for the last hour of a slot that was genuinely over.
+ *
+ * `waiver` now carries the moment, resolved from the calendar by the route.
+ * Without it the countdown is simply not rendered — a deadline we cannot read
+ * is not a deadline to invent.
  */
 import type { HeroState } from '../../../types/hero-state';
+import type { WaiverDeadlineCopy } from '../../../utils/waiver-deadline-copy';
 import { getCurrentSeasonYear } from '../../../utils/league-year';
 import { getPlayerMap as getUnifiedPlayerMap } from '../../../utils/player-map';
 import PlayerCell from '../PlayerCell.astro';
@@ -15,9 +34,16 @@ import WaiverWireHeroStub from '../hero-stubs/WaiverWireHeroStub.astro';
 export interface Props {
   state: HeroState;
   resolveLeaguePath: (path: string) => string;
+  /**
+   * The deadline, worded — day, hour and clock resolved from MFL's calendar
+   * and the viewer's preference by the ROUTE. A component cannot read the
+   * preference itself: resolving it writes a cookie, and a cookie write from
+   * an imported component throws after the headers are committed.
+   */
+  waiver?: WaiverDeadlineCopy | null;
 }
 
-const { state, resolveLeaguePath: r } = Astro.props;
+const { state, resolveLeaguePath: r, waiver = null } = Astro.props;
 
 const year = getCurrentSeasonYear(state.metadata.referenceDate);
 
@@ -93,35 +119,13 @@ if (hasData) {
   }
 }
 
-// Compute waiver lock time (next Wednesday 8pm PT) for countdown
-// PT offset: PST = UTC-8, PDT = UTC-7. We pass an ISO string and let the client handle it.
-const ref = state.metadata.referenceDate;
-const ptFormatter = new Intl.DateTimeFormat('en-US', {
-  timeZone: 'America/Los_Angeles',
-  weekday: 'short', year: 'numeric', month: 'numeric', day: 'numeric',
-  hour: 'numeric', minute: 'numeric', hour12: false,
-});
-const ptParts = ptFormatter.formatToParts(ref);
-const getPart = (type: Intl.DateTimeFormatPartTypes) => ptParts.find(p => p.type === type)?.value ?? '';
-const ptDay = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].indexOf(getPart('weekday'));
-const ptMonth = parseInt(getPart('month'));
-const ptDate = parseInt(getPart('day'));
-const ptYear = parseInt(getPart('year'));
-
-// Days until next Wednesday (3)
-let daysUntilWed = (3 - ptDay + 7) % 7;
-if (daysUntilWed === 0) {
-  // It's Wednesday — check if before or after 8pm
-  const ptHour = parseInt(getPart('hour'));
-  if (ptHour >= 20) daysUntilWed = 7; // past deadline, next week
-}
-
-// Build the lock date in PT then convert to a rough ISO for the client
-// The client will parse this and count down
-const lockDatePT = new Date(ptYear, ptMonth - 1, ptDate + daysUntilWed, 20, 0, 0);
-// Approximate UTC by adding 7-8 hours (we use 7 for PDT as a reasonable default during NFL season)
-const lockDateUTC = new Date(lockDatePT.getTime() + 7 * 60 * 60 * 1000);
-const lockIso = lockDateUTC.toISOString();
+// The lock moment comes from the calendar, already resolved. No local date
+// arithmetic here at all — see the header note for the three ways the old
+// hand-rolled version was wrong.
+const lockIso = waiver?.at ? waiver.at.toISOString() : null;
+// "Wed 7:00 PM PT", or "Thu 12:00 PM AEST · Wed 7:00 PM PT" from Sydney.
+const lockLine = waiver?.line ?? '';
+const waiversOpen = waiver?.open ?? true;
 
 const week = projData?.projectedScores?.week ?? projData?.default?.projectedScores?.week ?? '?';
 ---
@@ -133,14 +137,27 @@ const week = projData?.projectedScores?.week ?? projData?.default?.projectedScor
         <h3 class="ww-hero__section-title">Waiver Wire</h3>
         <span class="ww-hero__week-badge">Week {week}</span>
       </div>
-      <div class="ww-hero__countdown-row">
-        <span class="ww-hero__countdown-label">Locks in</span>
-        <span class="ww-hero__countdown" data-lock={lockIso} aria-live="polite">--:--:--</span>
-      </div>
+      {lockIso && waiversOpen && (
+        <div class="ww-hero__countdown-row">
+          <span class="ww-hero__countdown-label">Locks in</span>
+          <span class="ww-hero__countdown" data-lock={lockIso} aria-live="polite">--:--:--</span>
+        </div>
+      )}
+      {lockIso && !waiversOpen && (
+        <div class="ww-hero__countdown-row">
+          <span class="ww-hero__countdown-label">First come</span>
+          <span class="ww-hero__countdown">Open now</span>
+        </div>
+      )}
     </div>
 
     <div class="ww-hero__subhead">
       <span class="ww-hero__subhead-text">Top projected free agents</span>
+      {lockLine && (
+        <span class="ww-hero__deadline">
+          {waiversOpen ? `Claims process ${lockLine}` : `Waivers reopen ${lockLine}`}
+        </span>
+      )}
     </div>
 
     <ol class="ww-hero__list">
@@ -263,6 +280,17 @@ const week = projData?.projectedScores?.week ?? projData?.default?.projectedScor
 
   .ww-hero__subhead {
     margin-bottom: 0.75rem;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.5rem;
+  }
+
+  .ww-hero__deadline {
+    font-size: 0.6875rem;
+    font-weight: 600;
+    color: var(--dh-accent);
+    letter-spacing: 0.02em;
   }
 
   .ww-hero__subhead-text {

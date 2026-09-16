@@ -39,6 +39,7 @@ import { MFL_EMAIL_DRAFT_OPTION, buildMflLiveDraftUrl, buildMflOptionUrl } from 
 import type { CompositeHeroTreatment } from '../types/composite-hero';
 import { LEAGUES } from '../config/leagues';
 import { resolveRecapDestination, type RecapDestination } from './hero-recap-destination';
+import { waiverDeadlineCopy, type WaiverDeadlineCopy } from './waiver-deadline-copy';
 
 /** How long a fresh What's New entry stays in the hero. */
 const FEATURE_HERO_DAYS = 7;
@@ -192,6 +193,19 @@ export interface AflHeroResolverInput {
    * degrades to the news feed, which is what it did before it could do better.
    */
   recap?: RecapDestination;
+  /**
+   * The waiver deadline, already worded — day, hour and clock resolved from
+   * MFL's own calendar and the viewer's chosen zone.
+   *
+   * Passed in for the same reason `recap` is: the calendar feed lives on disk
+   * and the viewer's clock is a cookie/Redis read, and this resolver is
+   * synchronous and pure. Omitted → the slot degrades to copy that names no
+   * day, which is the honest answer when nobody has told us one. It must NEVER
+   * degrade to "Wednesday": this slot runs from Tuesday 2pm PT, so a hardcoded
+   * Wednesday told owners for ten hours a week that claims ran that night when
+   * they ran the next.
+   */
+  waiver?: WaiverDeadlineCopy;
   /**
    * Injectable random source (0..1) for the lead-up hero pool below; defaults
    * to Math.random. Override in tests for deterministic results. The pool is
@@ -604,6 +618,8 @@ interface SlotContext {
   lineupSubmitted?: boolean | null;
   /** Tuesday recap destination + the week actually in the books. See AflHeroResolverInput.recap. */
   recap?: RecapDestination;
+  /** Calendar-derived waiver deadline copy. See AflHeroResolverInput.waiver. */
+  waiver?: WaiverDeadlineCopy;
 }
 
 const GAME_WINDOW_LABEL: Record<NonNullable<GameWindow>, string> = {
@@ -764,23 +780,38 @@ const SLOT_VIEW: Record<SlotKey, (ctx: SlotContext) => EventHeroView> = {
     player: randomHeroPlayer(now),
   }),
 
-  'slot:waiver-wire': ({ now }) => ({
-    pill: 'WAIVER DAY',
-    headline: 'CLAIMS RUN',
-    accentWord: 'TONIGHT.',
-    summary: 'Waivers process Wednesday at 8PM PT. After that, free agents go first-come, first-served through Sunday kickoff.',
-    link: '/afl-fantasy/rosters',
-    linkLabel: 'SET YOUR CLAIMS',
-    icon: 'binoculars',
-    // The face is a FREE AGENT — nobody rosters him, so there is no club whose
-    // colours this could honestly wear. League event.
-    composite: { wordmark: 'WAIVERS', accent: 'navy', tone: null, scope: 'league' },
-    accent: ACCENT_GREEN,
-    glow: GLOW_GREEN,
-    player: randomHeroPlayer(now),
-    countValue: 'TONIGHT',
-    countLabel: 'Process at 8PM PT',
-  }),
+  // WAIVER DAY IS NOT ONE DAY, AND ITS DAY IS NOT OURS TO HARDCODE.
+  //
+  // This slot runs Tuesday 2pm PT → Wednesday 8pm PT (`getDailySlot`), and the
+  // copy here used to read "CLAIMS RUN TONIGHT · Waivers process Wednesday at
+  // 8PM PT" for the whole span. On Tuesday that is wrong twice over — the run
+  // is tomorrow, not tonight — and it is wrong again on the Tuesday, Dec 29
+  // 2026 run that MFL's calendar actually schedules. `waiver` carries the day,
+  // the hour and the viewer's clock, all read from that calendar by the page.
+  // Absent, the fallback names no day at all rather than guessing one.
+  'slot:waiver-wire': ({ now, waiver }) => {
+    const copy = waiver ?? waiverDeadlineCopy(
+      { mode: 'unknown', changesAt: null, nextMode: 'unknown', reason: 'No waiver copy supplied to the hero.' },
+      { now },
+    );
+    return {
+      pill: copy.open ? 'WAIVER DAY' : 'WAIVERS CLEARED',
+      headline: copy.open ? 'CLAIMS RUN' : 'CLAIMS HAVE',
+      accentWord: copy.accentWord,
+      summary: copy.summary,
+      link: '/afl-fantasy/rosters',
+      linkLabel: copy.open ? 'SET YOUR CLAIMS' : 'BROWSE FREE AGENTS',
+      icon: 'binoculars',
+      // The face is a FREE AGENT — nobody rosters him, so there is no club whose
+      // colours this could honestly wear. League event.
+      composite: { wordmark: 'WAIVERS', accent: 'navy', tone: null, scope: 'league' },
+      accent: ACCENT_GREEN,
+      glow: GLOW_GREEN,
+      player: randomHeroPlayer(now),
+      countValue: copy.countValue,
+      countLabel: copy.countLabel,
+    };
+  },
 
   'slot:game-day-preview': (ctx) => gameDayPreviewSlotView(ctx),
 
@@ -1151,7 +1182,7 @@ function eventToHero(event: ResolvedLeagueEvent): HeroContent {
   };
 }
 
-function buildRegularSeasonHero(slot: DailySlot, week: number | undefined, gameWindow: GameWindow, now: Date = new Date(), lineupSubmitted: boolean | null = null, recap?: RecapDestination): HeroContent {
+function buildRegularSeasonHero(slot: DailySlot, week: number | undefined, gameWindow: GameWindow, now: Date = new Date(), lineupSubmitted: boolean | null = null, recap?: RecapDestination, waiver?: WaiverDeadlineCopy): HeroContent {
   const weekLabel = week ? `Week ${week}` : 'Regular Season';
   switch (slot) {
     case 'live-scoring': {
@@ -1196,17 +1227,26 @@ function buildRegularSeasonHero(slot: DailySlot, week: number | undefined, gameW
         accentColor: 'var(--cat-regular-season, #1c497c)',
         kicker: 'Weekly Recap',
       };
-    case 'waiver-wire':
+    case 'waiver-wire': {
+      // Both objects render, so the same correction has to land here too —
+      // fixing only the view ships "Process Tonight" on a Tuesday to whichever
+      // surface reads `content`. Same rule as the recap slot above.
+      const copy = waiver ?? waiverDeadlineCopy(
+        { mode: 'unknown', changesAt: null, nextMode: 'unknown', reason: 'No waiver copy supplied to the hero.' },
+        { now },
+      );
+      const when = copy.word.charAt(0) + copy.word.slice(1).toLowerCase();
       return {
         source: 'event',
-        title: 'Waivers Process Tonight',
-        summary: 'Waiver claims run Wednesday at 8pm PT. After that, free agents go first-come, first-served through Sunday kickoff.',
+        title: copy.open ? `Waivers Process ${when}` : 'Waivers Have Cleared',
+        summary: copy.summary,
         link: '/afl-fantasy/rosters',
-        linkLabel: 'Set Your Claims',
+        linkLabel: copy.open ? 'Set Your Claims' : 'Browse Free Agents',
         icon: 'binoculars',
         accentColor: 'var(--cat-free-agency, #2e8743)',
-        kicker: 'Waiver Day',
+        kicker: copy.open ? 'Waiver Day' : 'Free Agency',
       };
+    }
     case 'game-day-preview':
       if (showSundayTicketHero(now, lineupSubmitted)) {
         return {
@@ -1469,7 +1509,7 @@ export function resolveAflHeroState(input: AflHeroResolverInput): AflHeroState {
     const week = getCurrentNFLWeek(now) ?? undefined;
     const slotKey = `slot:${slot}` as SlotKey;
     const builder = SLOT_VIEW[slotKey] ?? SLOT_VIEW['slot:article'];
-    const view = builder({ now, slot, gameWindow, week, lineupSubmitted: input.lineupSubmitted ?? null, recap: input.recap });
+    const view = builder({ now, slot, gameWindow, week, lineupSubmitted: input.lineupSubmitted ?? null, recap: input.recap, waiver: input.waiver });
     return {
       kind: 'regular-season',
       priority: 'P0',
@@ -1480,7 +1520,7 @@ export function resolveAflHeroState(input: AflHeroResolverInput): AflHeroState {
       // and the games stop at 8:30. This is what stops the hero polling all
       // evening and badging finished games LIVE.
       isLive: isGameLive(now),
-      content: buildRegularSeasonHero(slot, week, gameWindow, now, input.lineupSubmitted ?? null, input.recap),
+      content: buildRegularSeasonHero(slot, week, gameWindow, now, input.lineupSubmitted ?? null, input.recap, input.waiver),
       view,
     };
   }

@@ -48,6 +48,9 @@ import { castAflHeroModel } from '../../utils/afl-hero-casting';
 import { resolveHeroFranchiseAccent } from '../../utils/hero-franchise-accent';
 import { getLatestScoredWeek, getOwnersByPlayer } from '../../utils/offseason-hero-data';
 import { resolveRecapDestination } from '../../utils/hero-recap-destination';
+import { resolveWaiverWindow } from '../../utils/waiver-window';
+import { waiverDeadlineCopy } from '../../utils/waiver-deadline-copy';
+import { readViewerClock } from '../../utils/viewer-preferences-page';
 import { getFranchiseConference } from '../../utils/afl-conference';
 import {
   buildLiveScoringHeroProps,
@@ -198,6 +201,27 @@ const aflRecap = resolveRecapDestination({
   posts: (feedData as FeedType).posts,
 });
 
+// ── The waiver deadline the hero shouts about ───────────────────────────────
+// The DAY and the HOUR come from MFL's own calendar, never from prose: the
+// league's rules doc says in as many words that the documented time is not the
+// source of truth, and the 2026 feed has the AFL processing Wednesday 8pm PT
+// all season EXCEPT a Tuesday run on Dec 29. The hero slot itself spans Tuesday
+// 2pm → Wednesday 8pm PT, so a hardcoded "tonight" was wrong for ten hours a
+// week. Same glob shape as /players, which reads the same feed.
+const aflCalendarModules = import.meta.glob(
+  '../../../data/afl-fantasy/mfl-feeds/20{2[5-9],[3-9][0-9]}/calendar.json',
+  { eager: true }
+);
+const aflCalendarEvents =
+  (Object.entries(aflCalendarModules).find(([path]) => path.includes(`/${aflRecapSeasonYear}/`))?.[1] as any)?.default ?? [];
+// READ-only: a page render must never WRITE a preference cookie (that throws
+// ResponseSentError from anywhere but the route, and blanks the page).
+const aflViewerClock = await readViewerClock(Astro.cookies, authUser, AFL.slug);
+const aflWaiverCopy = waiverDeadlineCopy(
+  resolveWaiverWindow(aflCalendarEvents, effectiveDate),
+  { now: effectiveDate, clock: aflViewerClock },
+);
+
 const heroState = resolveAflHeroState({
   referenceDate: effectiveDate,
   lineupSubmitted,
@@ -208,6 +232,7 @@ const heroState = resolveAflHeroState({
   userTier: userTeam?.tier,
   scheduleReleaseRevealed: aflScheduleReleaseRevealed,
   recap: aflRecap,
+  waiver: aflWaiverCopy,
 });
 
 // ── Standings + roster data ─────────────────────────────────────────────────

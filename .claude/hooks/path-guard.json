@@ -36,7 +36,8 @@
         "tests/waiver-claim.test.ts",
         "tests/waiver-order-display.test.ts",
         "tests/waiver-priority-league-gate.test.ts",
-        "tests/waiver-window.test.ts"
+        "tests/waiver-window.test.ts",
+        "tests/waiver-deadline-copy.test.ts"
       ]
     },
     {
@@ -278,6 +279,7 @@
         "src/components/theleague/*CompositeHero.astro",
         "src/components/theleague/season-heroes/RecapCompositeHero.astro",
         "src/components/theleague/season-heroes/RecapHero.astro",
+        "src/components/theleague/season-heroes/WaiverWireHero.astro",
         "src/styles/composite-hero.css",
         "src/styles/composite-panel-board.css",
         "src/types/composite-hero.ts",
@@ -304,7 +306,8 @@
         "tests/composite-hero-cta-nowrap.test.ts",
         "tests/top-rostered-casting.test.ts",
         "tests/weekly-column-hero-claim.test.ts",
-        "tests/hero-recap-destination.test.ts"
+        "tests/hero-recap-destination.test.ts",
+        "tests/waiver-deadline-copy.test.ts"
       ]
     },
     {
