@@ -202,7 +202,11 @@ describe('the announce and assistant lanes rely on appendToFeed alone', () => {
  * an id change that flips a type visible.
  */
 describe('--week only waives the guard where the week is part of the id', () => {
-  const WEEK_SCOPED = ['matchup-preview', 'schedule-strength', 'waiver-pickups', 'weekend-preview', 'weekly-recap'];
+  // `weekly-recap` is deliberately absent: #1088 removed the weekly recap
+  // generator, and this list is a completeness guard over what is actually in
+  // scripts/article-types/ — carrying a name with no module behind it turns
+  // the guard into a permanent red rather than a check.
+  const WEEK_SCOPED = ['matchup-preview', 'schedule-strength', 'waiver-pickups', 'weekend-preview'];
   const NOT_WEEK_SCOPED = ['championship-recap', 'cut-watch', 'draft-grades', 'schedule-release', 'team-grades'];
 
   it('covers every article type — a new one must be classified here', () => {
