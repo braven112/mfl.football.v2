@@ -1062,6 +1062,17 @@
         "tests/league-year-for-slug.test.ts",
         "tests/waiver-window-callers.test.ts"
       ]
+    },
+    {
+      "name": "top-players",
+      "rules": "docs/plans/top-players-page.md",
+      "paths": [
+        "scripts/compute-top-players.mjs"
+      ],
+      "note": "The leaderboard reads player-scores-weekly.json, NOT weekly-results-raw.json: the latter records a player's score only for weeks he sat on some roster, so the free-agent pool is structurally invisible in it (163 of 484 scorers in TheLeague's week 1 2026). Ownership is a LIST \u2014 the AFL rosters the same NFL player once per conference. The week range comes from each league's own league.json (TheLeague 1-17, the AFL 1-18), never a constant. Page and component globs join `paths` in the phases that create them.",
+      "tests": [
+        "tests/top-players-data.test.ts"
+      ]
     }
   ]
 }

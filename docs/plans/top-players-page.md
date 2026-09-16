@@ -500,11 +500,26 @@ eyeball week 1 against the known top scorers, and confirm the one open item in
 §7 — the zero-byte re-run diff — before letting the cron near it. *Nothing renders yet; this is the phase that can't be
 faked.*
 
-**Phase 2 — derived payload.** `scripts/compute-top-players.mjs` + prebuild
-wiring + `tests/top-players-data.test.ts` pinning: totals equal the sum of
-weeks, `G` excludes unscored weeks, posRank is dense and gapless within a
-position, every row's owner list is consistent with `rosters.json`, and the
-free-agent pool is non-empty (the invariant the keeper card lacked).
+**Phase 2 — derived payload. ✅ DONE 2026-09-16.**
+`scripts/compute-top-players.mjs` → `data/<league>/derived/top-players.json`
+(167 KB each), wired into prebuild as `compute:top-players` /
+`compute:top-players:afl` with `previewSkip: true`.
+`tests/top-players-data.test.ts` pins 24 invariants: totals equal the sum of
+weeks, `games` counts only weeks actually scored and drives `avg`/`best`,
+ranks run 1..N by total desc, each position numbers 1..N with no gaps, every
+owner list matches `rosters.json` **as a set**, the week range comes from each
+league's `league.json`, `completedWeeks` exactly equals the weeks players
+scored in, and the free-agent pool is non-empty — the invariant the keeper card
+lacked. Registered as its own `top-players` path-guard domain.
+
+Two things the run confirmed. Every scoring id resolved to a `players.json` row
+(`unlabelled=0`), so the "drop what we cannot label" branch is a guard rather
+than a live path. And re-running the script produces a **zero-byte diff**, so
+the prebuild step will not churn `.git` — the sort is `total desc, name asc`
+precisely so MFL's nondeterministic row order cannot leak into the output.
+
+Week 1 sanity check, TheLeague: **Caleb Williams #1 (QB1, 41.26)** — the same
+player the recap hero cast, which is the §5 link landing where it should.
 
 **Phase 3 — shared component.** `TopPlayersPage.astro` + client script,
 reusing the pieces in §2. Overall view first, then the position filter and the
