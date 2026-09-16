@@ -42,6 +42,7 @@ import {
   confsForPlayer,
   ownersForPlayer,
 } from '../src/utils/afl-conference-rosters.mjs';
+import { resolveStatsSeasonYear, parseYtdPlayerScores } from '../src/utils/stats-season.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -153,14 +154,20 @@ function resolveCurrentYear() {
 }
 
 const currentYear = resolveCurrentYear();
-const seasonYear = getCurrentSeasonYear();
+// Which season's points the page shows. NOT getCurrentSeasonYear() (the local
+// port below): that rolls at LABOR DAY and names a season with no games played
+// until kickoff. This turns over on the league's actual start day, NFL week 1,
+// so the column carries last season's finished total right up to kickoff and
+// this season's running total after it. See src/utils/stats-season.mjs.
+const statsSeasonYear = resolveStatsSeasonYear();
 
 const playersData = readFeed(currentYear, 'players.json');
 const rostersData = readFeed(currentYear, 'rosters.json');
 const leagueData = readFeed(currentYear, 'league.json');
 const projectedScoresData = readFeed(currentYear, 'projectedScores.json');
 const adpDynastyData = readFeed(currentYear, 'adp-dynasty.json');
-const lastYearData = readFeed(seasonYear, 'weekly-results-raw.json');
+const seasonWeeklyData = readFeed(statsSeasonYear, 'weekly-results-raw.json');
+const seasonYtdData = readFeed(statsSeasonYear, 'playerScores-ytd.json');
 
 // Dynasty ADP (current year only)
 const adpDynMap = new Map();
@@ -190,11 +197,28 @@ if (projectedScoresData?.projectedScores?.playerScore) {
   }
 }
 
-// Last completed season's total points + games played (from weekly results)
-const lastYrPtsMap = new Map();
-const lastYrGamesMap = new Map();
-if (Array.isArray(lastYearData)) {
-  for (const weekPayload of lastYearData) {
+// Season totals for EVERY player, free agents included.
+//
+// `playerScores&W=YTD` is the ONLY source for this column, and the weekly sum
+// below is deliberately NOT a fallback for it. Two independent reasons:
+//
+//  1. weekly-results-raw sees a player only for the weeks he sat on somebody's
+//     roster, so on a FREE-AGENT page it is blind to almost the entire
+//     subject — the column it produced was a wall of dashes broken only by
+//     players who had since been dropped.
+//  2. Where it CAN see a player it over-counts him. A franchise appears in
+//     two matchups in a doubleheader week, so summing player scores across
+//     matchups bills the same performance twice: every one of TheLeague's 260
+//     scored players came out at exactly 2x his real 2026 total, and Khalil
+//     Shakir's 9.00 shipped on the AFL page as 18.0.
+//
+// The weekly maps survive only as what they always were — the rostered-weeks
+// games count and the rate built on it, where the double cancels out.
+const ytdPtsMap = parseYtdPlayerScores(seasonYtdData);
+const weeklyPtsMap = new Map();
+const weeklyGamesMap = new Map();
+if (Array.isArray(seasonWeeklyData)) {
+  for (const weekPayload of seasonWeeklyData) {
     const matchups = weekPayload?.weeklyResults?.matchup;
     if (!matchups) continue;
     const matchupArr = Array.isArray(matchups) ? matchups : [matchups];
@@ -206,8 +230,8 @@ if (Array.isArray(lastYearData)) {
           if (!p?.id || !p?.score) continue;
           const score = parseFloat(p.score);
           if (!isNaN(score) && score > 0) {
-            lastYrPtsMap.set(p.id, (lastYrPtsMap.get(p.id) || 0) + score);
-            lastYrGamesMap.set(p.id, (lastYrGamesMap.get(p.id) || 0) + 1);
+            weeklyPtsMap.set(p.id, (weeklyPtsMap.get(p.id) || 0) + score);
+            weeklyGamesMap.set(p.id, (weeklyGamesMap.get(p.id) || 0) + 1);
           }
         }
       }
@@ -328,8 +352,13 @@ if (Array.isArray(allPlayers)) {
     }
     if (p.weight) weightLbs = parseInt(p.weight, 10) || null;
 
-    const pts = lastYrPtsMap.get(p.id);
-    const gp = lastYrGamesMap.get(p.id);
+    const pts = ytdPtsMap.get(p.id);
+    // Rostered-weeks rate. Kept on the weekly pair for the reason above, and
+    // it could not use the YTD total anyway: that payload has no games-played
+    // field, so pairing it with this denominator would price a one-week
+    // rental's whole season into a single game.
+    const weeklyPts = weeklyPtsMap.get(p.id);
+    const gp = weeklyGamesMap.get(p.id);
 
     // Conferences currently holding this player; "rostered" (= hidden by the
     // page's default filter) only when EVERY conference holds him.
@@ -361,9 +390,9 @@ if (Array.isArray(allPlayers)) {
       height: heightInches,
       weight: weightLbs,
       adpDyn: adpDynMap.get(p.id) ?? null,
-      lastYrPts: pts != null ? Math.round(pts * 10) / 10 : null,
+      seasonPts: pts != null ? Math.round(pts * 10) / 10 : null,
       games: gp ?? null,
-      ppg: (pts && gp && gp > 0) ? Math.round((pts / gp) * 10) / 10 : null,
+      ppg: (weeklyPts && gp && gp > 0) ? Math.round((weeklyPts / gp) * 10) / 10 : null,
       rookie: p.status === 'R',
       birthdate: p.birthdate ? parseInt(p.birthdate, 10) : null,
       jersey: p.jersey || null,
@@ -375,11 +404,11 @@ if (Array.isArray(allPlayers)) {
 }
 
 const hasProjected = projectedMap.size > 0;
-const hasLastYrPts = lastYrPtsMap.size > 0;
+const hasSeasonPts = ytdPtsMap.size > 0;
 const hasAdp = adpDynMap.size > 0;
 
-// Default sort: projected points when available, else dynasty ADP, else last-year pts.
-const defaultSort = hasProjected ? 'projected' : (hasAdp ? 'adpDyn' : 'lastYrPts');
+// Default sort: projected points when available, else dynasty ADP, else season pts.
+const defaultSort = hasProjected ? 'projected' : (hasAdp ? 'adpDyn' : 'seasonPts');
 const defaultDir = defaultSort === 'adpDyn' ? 'asc' : 'desc';
 playerList.sort((a, b) => {
   if (defaultSort === 'adpDyn') {
@@ -387,8 +416,10 @@ playerList.sort((a, b) => {
     const bVal = b.adpDyn ?? Infinity;
     return aVal - bVal;
   }
-  const aVal = a[defaultSort] ?? -1;
-  const bVal = b[defaultSort] ?? -1;
+  // -99999 rather than -1: a season total can be NEGATIVE (a defense can
+  // finish under zero), and -1 would sort those above players with no data.
+  const aVal = a[defaultSort] ?? -99999;
+  const bVal = b[defaultSort] ?? -99999;
   return bVal - aVal;
 });
 
@@ -422,14 +453,17 @@ const nflTeamsList = [...nflTeamsSet].sort();
 
 const output = {
   generatedForYear: currentYear,
-  seasonYear,
+  // The season the points column is reporting. Shipped to the page so its
+  // header can NAME the year rather than leaving the reader to guess whether
+  // a total is this season's or last one's.
+  statsSeasonYear,
   mflHost,
   // Conference metadata for the live roster overlay + per-conference
   // availability tags (null when the league has one shared player pool).
   conferences: conferenceStructure,
   rosterFranchiseCount,
   hasProjected,
-  hasLastYrPts,
+  hasSeasonPts,
   hasAdp,
   defaultSort,
   defaultDir,
@@ -442,6 +476,7 @@ const output = {
 fs.mkdirSync(OUTPUT_DIR, { recursive: true });
 fs.writeFileSync(OUTPUT_PATH, JSON.stringify(output) + '\n');
 console.log(
-  `[compute-afl-free-agents] year=${currentYear} season=${seasonYear} ` +
-    `players=${playerList.length} freeAgents=${freeAgents.length} → ${path.relative(ROOT, OUTPUT_PATH)}`
+  `[compute-afl-free-agents] year=${currentYear} statsSeason=${statsSeasonYear} ` +
+    `ytdScores=${ytdPtsMap.size} players=${playerList.length} freeAgents=${freeAgents.length} ` +
+    `→ ${path.relative(ROOT, OUTPUT_PATH)}`
 );

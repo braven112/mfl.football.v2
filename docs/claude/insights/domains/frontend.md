@@ -3608,3 +3608,33 @@ running the suite — a TDZ error is invisible to vitest because no test execute
 an `.astro` frontmatter. `curl` the route at the dates that exercise each
 branch (`?testDate=`) and grep the HTML for `ReferenceError` alongside the copy
 you expect.
+## 2026-09-15 - The silent-404 class is wider than `*/`: ANY frontmatter parse error drops the route
+
+The 2026-09-09 entry above blames a `*/` inside a comment for a route
+vanishing into the styled 404. The mechanism is more general and worth stating
+without the specific trigger: **anything that stops an `.astro` page's
+frontmatter from parsing or evaluating drops that route from the manifest, and
+the request falls through to `src/pages/[...path].astro`.** No compiler error,
+no 500, no line in the dev-server log — just `[404] /theleague/players 18ms`.
+
+This time the trigger was a **duplicate `const`**. Hoisting a `nowRef`
+declaration up the frontmatter to use it earlier, without deleting the original
+40 lines below, is a `SyntaxError: Identifier 'nowRef' has already been
+declared` — which never reaches you. A 4,700-line page that had been rendering
+all session simply started 404ing.
+
+Two things the earlier entry's advice does not cover, because it assumed a
+BRAND-NEW page:
+
+- **The probe-page trick doesn't apply to a page that used to work.** Compare
+  the route against its own last-committed self instead:
+  `cp page.astro /tmp/mine && git show HEAD:page.astro > page.astro`, curl,
+  then restore. A 200/404 flip across that swap pins the break to your edit in
+  about ten seconds, with no bisect.
+- **The response time is the tell.** A page that renders in 400 ms and 404s in
+  18 ms did not "fail to find data" — it was never invoked. Check the timing in
+  the dev log before theorising about middleware, trailing slashes or auth.
+
+Cheapest prevention when hoisting a declaration: `grep -n 'const <name>'` the
+file afterwards and confirm there is exactly one. The same edit in a `.ts`
+module surfaces as a real build error; only `.astro` pages swallow it.

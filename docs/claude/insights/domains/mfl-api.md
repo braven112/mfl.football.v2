@@ -2314,11 +2314,29 @@ league-blind smell. Regression test: `tests/trades-pending-league-teams.test.ts`
 
 ## 2026-08-10 - `weekly-results-raw` Can't See Free Agents — `playerScores&W=YTD` Is the Only Full-Pool Source
 
-> **Note (same day):** the keeper report card dropped points-over-replacement
-> for fixed backup credits (see `features/keeper-report-card.md`), so the
-> `playerScores-ytd` fetch entry was removed from `fetch-mfl-feeds.mjs` —
-> nothing consumes it today. The feed-shape facts below stay true and this
-> is still the recipe if a future feature needs full-pool scoring data.
+> **Note (2026-08-10, same day):** the keeper report card dropped
+> points-over-replacement for fixed backup credits (see
+> `features/keeper-report-card.md`), so the `playerScores-ytd` fetch entry was
+> removed from `fetch-mfl-feeds.mjs` — nothing consumed it.
+>
+> **Restored 2026-09-15**, and the "Unverified" caveat at the bottom of this
+> entry is now settled: `W=YTD` was probed live in-season against BOTH leagues
+> and returns real season-to-date totals for the whole pool, free agents
+> included (484 rows each, week 1 of 2026). The Free Agents pages' points
+> column is the consumer. Two things that entry could not know:
+>
+> - **Before a season's first game, `W=YTD` answers with a SINGLE BLANK ROW**
+>   (`{ id: '', score: '' }`), not an empty list. The old guard counted rows,
+>   so that placeholder passed it and got committed over both leagues' feeds
+>   in the offseason. The guard now requires a row with a real id AND a
+>   positive score.
+> - **The weekly sum is not a lesser version of this feed, it is a wrong
+>   one.** A franchise appears in two matchups in a doubleheader week, so
+>   summing player scores across `weekly-results-raw` matchups bills the same
+>   performance twice: all 260 of TheLeague's scored 2026 players came out at
+>   exactly 2x their real total, and Khalil Shakir's 9.00 shipped on the AFL
+>   page as 18.0. Never fall back from YTD to that sum — show nothing instead.
+>   (A rate over it survives, because the double cancels.)
 
 **Context:** The keeper report card needed replacement level ("what would a freely available player at this slot have returned?"), which by definition is set by players *nobody rostered*.
 
@@ -2328,7 +2346,7 @@ league-blind smell. Regression test: `tests/trades-pending-league-teams.test.ts`
 
 **Recommendation:** Any future feature reasoning about scarcity, replacement, or waiver-wire value must use the YTD feed and fall back visibly (not silently) when it's absent — the removed PoR implementation did this with a `replacementFromFullPool` summary flag driving an on-page note rather than letting an estimated baseline pass as fact; copy that pattern. Guard the fetch's parser against MFL's HTTP-200 error bodies so a rejected `W=YTD` can't overwrite a good committed feed (the deleted entry's parser refused zero-row payloads).
 
-**Unverified:** MFL egress is proxy-blocked from Claude Code web sandboxes (`CONNECT tunnel failed, response 403` for `www44.myfantasyleague.com` — same block noted in the `IS_KEEPER` entry above). `W=YTD` could not be probed live; the first CI fetch confirms it. Don't burn time trying to curl MFL from a web session — check `$HTTPS_PROXY/__agentproxy/status` and move on.
+**Unverified at the time, SETTLED 2026-09-15:** MFL egress is proxy-blocked from Claude Code *web* sandboxes (`CONNECT tunnel failed, response 403` for `www44.myfantasyleague.com` — same block noted in the `IS_KEEPER` entry above), which is why `W=YTD` sat unprobed for five weeks. A **local desktop session reaches MFL directly** — a plain `curl` from Bash works — so the probe is one command there, and the browser pane is a second path when it is not. Don't burn time on it from a web session (check `$HTTPS_PROXY/__agentproxy/status` and move on), but don't assume the block applies locally either.
 
 ---
 

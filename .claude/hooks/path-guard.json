@@ -245,6 +245,8 @@
         "src/styles/snap-columns.css",
         "scripts/lib/snap-counts.mjs",
         "scripts/fetch-snap-counts.mjs",
+        "src/utils/stats-season.mjs",
+        "scripts/compute-afl-free-agents.mjs",
         "src/components/shared/WatchListBridge.astro",
         "src/components/shared/WaiverPriorityModal.astro",
         "src/components/shared/WaiverClaimModal.astro",
@@ -264,6 +266,7 @@
       "tests": [
         "tests/auction-bid-link-gating.test.ts",
         "tests/free-agents-action-placement.test.ts",
+        "tests/free-agent-season-points.test.ts",
         "tests/free-agent-session.test.ts",
         "tests/player-claim-offer.test.ts",
         "tests/players-injected-styles.test.ts",
