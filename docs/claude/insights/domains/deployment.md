@@ -241,6 +241,17 @@ missing `pnpm/action-setup` or using `npm` instead are signals of intentional
 divergence; leave them out of the composite and note why, rather than
 "fixing" them to match the majority pattern.
 
+> **PARTLY OVERTURNED 2026-09-15 — the npm half was not a deliberate
+> deviation, it was a time bomb.** "Leave them out and note why" is right for
+> the *no-install* workflows and wrong for the npm ones: on 2026-09-11 an
+> upstream vite publish made `npm ci` answer ERESOLVE, and all five
+> npm-installing workflows died at the install step for four days. They are
+> now on the shared action. The other claim here — "those scripts apparently
+> only touch built-in Node modules" — was true but unverified, and five of
+> those workflows were in fact one function call away from needing
+> `@upstash/redis`. It is now checked mechanically, not assumed. See
+> 2026-09-15 below.
+
 ## 2026-07-21 - The Vercel Adapter's Fallback Route Forces `status: 404` Onto Every Clean Apex URL
 
 **Context:** Schefter's GroupMe tip link (`afl-fantasy.com/schefter/tip?target=0014`)
@@ -714,3 +725,52 @@ per-colo and propagate asynchronously. That is normal and not a
 misconfiguration — the rule crushes sustained volume but will not give a clean
 cutoff at request N, so never test one by asserting "request 11 is the first
 429".
+
+## 2026-09-15 - "This Script Only Uses Built-Ins" Is A Claim About The Whole Import Graph, And Nothing Was Checking It
+
+**Context:** Follow-up to the ERESOLVE hotfix (#1103). Four of the deferred
+items were polish; the fourth asked for an audit of the ~8 workflows that run
+`node scripts/*.mjs` with `actions/setup-node` and **no install at all** —
+the pattern the 2026-07-13 entry above blessed as intentional.
+
+**Insight:** The dangerous CI failure is not the loud one. `npm ci` dying on
+ERESOLVE at least turned the run red. A job with no install does not fail:
+nearly every package in `scripts/` is reached through a dynamic `import()`
+inside a try/catch, so an empty `node_modules` surfaces the way
+`schefter-scan.mjs`'s own comment records — "Redis import failed", exit 0, no
+posts, green check. And whether a job needs an install is not a property of
+its entrypoint; it is a property of the entrypoint's entire transitive import
+graph, three modules deep, changed by anyone adding a line to a shared lib.
+
+**Evidence:** Walking the graph turned the hand-audit's answer inside out.
+By hand, all eight looked clean — every one of them uses only
+`redisCommand()`, which is plain `fetch`. Mechanically, five of them
+(`apply-august-cuts`, `apply-pending-contracts`, `phase0-owner-cookie-spike`,
+and `schefter-articles` twice) *reached* `@upstash/redis`, because
+`scripts/lib/redis.mjs` held both the REST helpers and
+`createUpstashClient()` — the SDK factory they never call. Eleven REST-only
+scripts were declaring a dependency they did not use. Nobody was one refactor
+away from a broken cron; they were one *call site* away, which is much less
+visible.
+
+**Recommendation:** Two things, and the second is the general one.
+1. Keep the dependency boundary where the import graph can see it. The SDK
+   factory now lives alone in `scripts/lib/redis-client.mjs`, and
+   `scripts/lib/redis.mjs` is dependency-free — so "does this job need an
+   install?" is answerable by reading imports.
+2. When a rule's premise is a claim about code that will keep changing
+   ("these scripts only use built-ins"), the prose is not the fix — the prose
+   is how it rots. `tests/workflow-install-guard.test.ts` now walks each
+   no-install workflow's entrypoints via `tests/helpers/module-graph.ts` and
+   fails with the exact `workflow -> script -> package` chain. It caught all
+   five of the above the first time it ran, which is five more than two
+   months of the doc did.
+
+**Also settled here:** the pnpm version had no single home — the composite
+action pinned `10.24.0`, `package.json` had no `packageManager`, and Vercel
+and local corepack picked their own. It is now `packageManager` in
+package.json alone; `pnpm/action-setup` reads it when given no `version:`,
+and *throws* if both exist and disagree, so a second copy is worse than none.
+Verified locally: corepack fetched 10.24.0 without prompting and
+`pnpm install --frozen-lockfile` left the lockfile untouched.
+

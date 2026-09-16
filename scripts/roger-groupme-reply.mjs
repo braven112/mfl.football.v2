@@ -31,7 +31,8 @@
 
 import fs from 'node:fs/promises';
 
-import { getRedisConfig, createUpstashClient } from './lib/redis.mjs';
+import { getRedisConfig } from './lib/redis.mjs';
+import { createUpstashClient } from './lib/redis-client.mjs';
 import { postToGroupMe } from './lib/groupme.mjs';
 import { isQuietHours, secondsUntilPtMidnight } from './lib/schefter-groupme-budget.mjs';
 import { getCurrentYears } from './lib/league-years.mjs';
