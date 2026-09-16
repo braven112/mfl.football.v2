@@ -1188,6 +1188,14 @@ try {
   .keeper-planner {
     display: grid;
     gap: 1rem;
+    /* This panel is laid out at widths the viewport does not predict: the
+       front-office hub reserves a 220px sidebar beside it, /rosters gives it
+       the full content column, and the draft order page narrower still. Every
+       breakpoint below therefore asks THIS element's width, not the window's.
+       inline-size is safe here — the width still comes from the parent, only
+       the height keeps depending on content. */
+    container-type: inline-size;
+    container-name: kp-panel;
   }
 
   .kp-intro {
@@ -2182,19 +2190,13 @@ try {
     border-color: color-mix(in srgb, var(--color-error, #f87171) 35%, transparent);
   }
 
-  @media (max-width: 720px) {
-    .kp-slots {
-      grid-template-columns: 1fr;
-    }
-
-    .kp-cards {
-      grid-template-columns: 1fr;
-    }
-
-    .kp-finalize__lists {
-      grid-template-columns: 1fr;
-    }
-
+  /* .kp-slots and .kp-cards used to be forced to a single column here. They
+     no longer need a breakpoint at all: repeat(auto-fill, minmax(min(380px,
+     100%), 1fr)) already measures the grid's own box, so it collapses to one
+     column below a 768px panel and never overflows a narrower one. */
+  @container kp-panel (max-width: 560px) {
+    /* Below this the slider and the checkbox can no longer share a row
+       without the slider being squeezed to a stub. */
     .kp-toolbar {
       flex-direction: column;
       align-items: stretch;
@@ -2202,6 +2204,15 @@ try {
 
     .kp-age-slider {
       width: 100%;
+    }
+  }
+
+  /* .kp-finalize is position: fixed and a SIBLING of .keeper-planner — it sits
+     outside the container above, and is sized by the window, so this one stays
+     a viewport query on purpose. */
+  @media (max-width: 720px) {
+    .kp-finalize__lists {
+      grid-template-columns: 1fr;
     }
   }
 </style>
